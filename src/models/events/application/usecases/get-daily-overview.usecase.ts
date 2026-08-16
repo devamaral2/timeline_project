@@ -1,5 +1,5 @@
 import type { DailyOverviewDto } from "../dtos/daily-overview.dto";
-import type { EventRepository, DomainEvent } from "../contracts/event-repository";
+import type { EventRepository } from "../contracts/event-repository";
 import type { FoodEvent } from "../../domain/entities/food-event.entity";
 import type { SleepEvent } from "../../domain/entities/sleep-event.entity";
 import type { TrainingEvent } from "../../domain/entities/training-event.entity";
@@ -8,18 +8,36 @@ export class GetDailyOverviewUseCase {
   constructor(private readonly eventRepository: EventRepository) {}
 
   async execute(input: { date: string; timeZone?: string }): Promise<DailyOverviewDto> {
+    const timeZone = input.timeZone ?? "America/Sao_Paulo";
     const events = await this.eventRepository.listByDay({
       date: input.date,
-      timeZone: input.timeZone ?? "America/Sao_Paulo",
+      timeZone,
     });
 
     return buildDailyOverview(
       input.date,
       events.filter((event): event is SleepEvent => event.type === "sleep"),
-      events.filter((event): event is FoodEvent => event.type === "food"),
-      events.filter((event): event is TrainingEvent => event.type === "training"),
+      events.filter(
+        (event): event is FoodEvent =>
+          event.type === "food" && dateInTimeZone(event.startedAt, timeZone) === input.date,
+      ),
+      events.filter(
+        (event): event is TrainingEvent =>
+          event.type === "training" && dateInTimeZone(event.startedAt, timeZone) === input.date,
+      ),
     );
   }
+}
+
+function dateInTimeZone(value: Date, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(value);
+  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((item) => item.type === type)?.value;
+  return `${part("year")}-${part("month")}-${part("day")}`;
 }
 
 function buildDailyOverview(

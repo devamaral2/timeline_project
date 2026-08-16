@@ -12,10 +12,18 @@ export class ListTimelineEventsController {
     if (type && !eventTypes.includes(type as EventType)) {
       return Response.json({ error: "Invalid event type" }, { status: 400 });
     }
+    const from = query.get("from");
+    if (from && Number.isNaN(new Date(from).getTime())) {
+      return Response.json({ error: "Invalid from date" }, { status: 400 });
+    }
+    const to = query.get("to");
+    if (to && Number.isNaN(new Date(to).getTime())) {
+      return Response.json({ error: "Invalid to date" }, { status: 400 });
+    }
 
     const events = await this.useCase.execute({
-      from: query.get("from") ?? undefined,
-      to: query.get("to") ?? undefined,
+      from: from ?? undefined,
+      to: to ?? undefined,
       type: type as EventType | null ?? undefined,
       tag: query.get("tag") ?? undefined,
     });

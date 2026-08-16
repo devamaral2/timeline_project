@@ -64,3 +64,63 @@ test("builds the daily overview for a Sao Paulo day", async () => {
   expect(overview.macros.protein).toBe(32);
   expect(overview.sleep?.score).toBe(88);
 });
+
+test("does not attribute overnight food or training totals to the following day", async () => {
+  const repository = new InMemoryEventRepository([
+    FoodEvent.create({
+      userId: "user-1",
+      name: "Late dinner",
+      description: "Dinner before midnight",
+      startedAt: new Date("2026-08-16T23:30:00-03:00"),
+      finishedAt: new Date("2026-08-17T00:30:00-03:00"),
+      tags: [],
+      interruptions: [],
+      data: {
+        inputText: "jantar",
+        items: [],
+        totals: {
+          totalCaloriesKcal: 700,
+          totalProteinGrams: 40,
+          totalCarbohydrateGrams: 60,
+          totalFatGrams: 20,
+          totalFiberGrams: 10,
+          totalMicronutrients: { ironMg: 5 },
+        },
+        modelProvider: "stub",
+        modelName: "stub-model",
+        parsedAt: new Date("2026-08-16T23:30:00-03:00"),
+      },
+    }),
+    TrainingEvent.create({
+      userId: "user-1",
+      name: "Late training",
+      description: "Workout before midnight",
+      startedAt: new Date("2026-08-16T23:30:00-03:00"),
+      finishedAt: new Date("2026-08-17T00:30:00-03:00"),
+      tags: [],
+      interruptions: [],
+      data: { caloriesBurned: 300 },
+    }),
+    SleepEvent.create({
+      userId: "user-1",
+      name: "Night sleep",
+      description: "Overnight sleep remains visible",
+      startedAt: new Date("2026-08-16T23:00:00-03:00"),
+      finishedAt: new Date("2026-08-17T07:00:00-03:00"),
+      tags: [],
+      interruptions: [],
+      data: { trackedSleepTime: 8, score: 90 },
+    }),
+  ]);
+
+  const overview = await new GetDailyOverviewUseCase(repository).execute({
+    date: "2026-08-17",
+    timeZone: "America/Sao_Paulo",
+  });
+
+  expect(overview.caloriesConsumed).toBe(0);
+  expect(overview.caloriesBurned).toBe(0);
+  expect(overview.foodEvents).toEqual([]);
+  expect(overview.trainingEvents).toEqual([]);
+  expect(overview.sleep?.score).toBe(90);
+});

@@ -10,7 +10,6 @@ export class GetDailyOverviewController {
 
     const overview = await this.useCase.execute({
       date,
-      timeZone: query.get("timeZone") ?? undefined,
     });
     return Response.json(overview);
   }
