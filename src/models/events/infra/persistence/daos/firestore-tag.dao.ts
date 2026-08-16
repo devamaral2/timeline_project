@@ -2,6 +2,7 @@ import {
   collection,
   documentId,
   endAt,
+  getDoc,
   getDocs,
   limit,
   orderBy,
@@ -17,7 +18,12 @@ export class FirestoreTagDao {
   constructor(private readonly database: Firestore) {}
 
   async upsert(documentData: TagDocument): Promise<void> {
-    await setDoc(doc(this.database, "tags", documentData.id), documentData, { merge: true });
+    const tagReference = doc(this.database, "tags", documentData.id);
+    const existing = await getDoc(tagReference);
+    const createdAt = existing.exists()
+      ? (existing.data() as TagDocument).createdAt
+      : documentData.createdAt;
+    await setDoc(tagReference, { ...documentData, createdAt }, { merge: true });
   }
 
   async suggest(queryText: string, maxResults: number): Promise<TagDocument[]> {

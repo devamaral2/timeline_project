@@ -12,6 +12,7 @@
       "collectionGroup": "events",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "type", "order": "ASCENDING" },
         { "fieldPath": "tags", "arrayConfig": "CONTAINS" },
         { "fieldPath": "startedAt", "order": "DESCENDING" }
       ]

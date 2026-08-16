@@ -8,8 +8,8 @@ export type DomainEvent = RoutineEvent | FoodEvent | TrainingEvent | SleepEvent;
 
 export interface EventRepository {
   save(event: DomainEvent): Promise<void>;
-  update(event: DomainEvent): Promise<void>;
-  delete(eventId: string): Promise<void>;
+  update(event: DomainEvent, actorUserId: string): Promise<void>;
+  delete(eventId: string, actorUserId: string): Promise<void>;
   findById(eventId: string): Promise<DomainEvent | null>;
   listTimeline(params: {
     from?: Date;

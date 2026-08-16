@@ -9,11 +9,15 @@ export class FirestoreEventRepository implements EventRepository {
     await this.eventDao.create(EventDocumentMapper.toPersistence(event));
   }
 
-  async update(event: DomainEvent): Promise<void> {
+  async update(event: DomainEvent, actorUserId: string): Promise<void> {
+    this.assertOwner(event.userId, actorUserId);
     await this.eventDao.update(EventDocumentMapper.toPersistence(event));
   }
 
-  async delete(eventId: string): Promise<void> {
+  async delete(eventId: string, actorUserId: string): Promise<void> {
+    const event = await this.eventDao.findById(eventId);
+    if (!event) return;
+    this.assertOwner(event.userId, actorUserId);
     await this.eventDao.delete(eventId);
   }
 
@@ -37,6 +41,12 @@ export class FirestoreEventRepository implements EventRepository {
     return documents
       .filter((document) => dateInTimeZone(document.startedAt, params.timeZone) === params.date)
       .map(EventDocumentMapper.toDomain);
+  }
+
+  private assertOwner(ownerUserId: string, actorUserId: string): void {
+    if (ownerUserId !== actorUserId) {
+      throw new Error("Only the event owner can modify it");
+    }
   }
 }
 
