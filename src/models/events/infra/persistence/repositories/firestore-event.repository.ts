@@ -10,7 +10,9 @@ export class FirestoreEventRepository implements EventRepository {
   }
 
   async update(event: DomainEvent, actorUserId: string): Promise<void> {
-    this.assertOwner(event.userId, actorUserId);
+    const storedEvent = await this.eventDao.findById(event.id);
+    if (!storedEvent) return;
+    this.assertOwner(storedEvent.userId, actorUserId);
     await this.eventDao.update(EventDocumentMapper.toPersistence(event));
   }
 
