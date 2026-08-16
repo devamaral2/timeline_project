@@ -1,0 +1,7 @@
+interface:
+  display_name: "Frontend Design"
+  short_description: "Distinctive UI direction for frontend work"
+  default_prompt: "Use $frontend-design to shape a frontend concept into a distinctive visual direction before coding."
+
+policy:
+  allow_implicit_invocation: true
