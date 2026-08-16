@@ -41,7 +41,11 @@ export class FirestoreEventRepository implements EventRepository {
   async listByDay(params: Parameters<EventRepository["listByDay"]>[0]): Promise<DomainEvent[]> {
     const documents = await this.eventDao.list();
     return documents
-      .filter((document) => dateInTimeZone(document.startedAt, params.timeZone) === params.date)
+      .filter((document) => {
+        const startedDate = dateInTimeZone(document.startedAt, params.timeZone);
+        const finishedDate = dateInTimeZone(document.finishedAt ?? document.startedAt, params.timeZone);
+        return startedDate <= params.date && finishedDate >= params.date;
+      })
       .map(EventDocumentMapper.toDomain);
   }
 
