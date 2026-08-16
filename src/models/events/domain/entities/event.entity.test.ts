@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { SleepEvent } from "./sleep-event.entity";
 import { TrainingEvent } from "./training-event.entity";
+import { Interruption } from "../value-objects/interruption";
 
 describe("Event entities", () => {
   test("rejects a finishedAt earlier than startedAt", () => {
@@ -32,5 +33,16 @@ describe("Event entities", () => {
 
     expect(sleepEvent.data.trackedSleepTime).toBe(6.5);
     expect(sleepEvent.getDurationMinutes()).toBe(480);
+  });
+
+  test("rejects an interruption ending before it starts", () => {
+    expect(() =>
+      Interruption.create({
+        name: "Coffee break",
+        description: "Short pause",
+        startedAt: new Date("2026-08-16T09:00:00-03:00"),
+        finishedAt: new Date("2026-08-16T08:00:00-03:00"),
+      }),
+    ).toThrow("finishedAt must be equal to or after startedAt");
   });
 });

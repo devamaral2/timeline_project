@@ -14,6 +14,10 @@ export class Interruption {
   ) {}
 
   static create(props: InterruptionProps): Interruption {
+    if (props.finishedAt < props.startedAt) {
+      throw new Error("finishedAt must be equal to or after startedAt");
+    }
+
     return new Interruption(props.name, props.description, props.startedAt, props.finishedAt);
   }
 }
