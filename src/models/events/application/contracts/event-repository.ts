@@ -11,6 +11,7 @@ export interface EventRepository {
   update(event: DomainEvent, actorUserId: string): Promise<void>;
   delete(eventId: string, actorUserId: string): Promise<void>;
   findById(eventId: string): Promise<DomainEvent | null>;
+  findLatestOpenByUserId(userId: string): Promise<DomainEvent | null>;
   listTimeline(params: {
     from?: Date;
     to?: Date;

@@ -40,6 +40,15 @@ export class FirestoreEventDao {
     return snapshot.exists() ? (snapshot.data() as EventDocument) : null;
   }
 
+  async findLatestOpenByUserId(userId: string): Promise<EventDocument | null> {
+    const snapshot = await getDocs(
+      query(collection(this.database, "events"), where("userId", "==", userId), orderBy("startedAt", "desc")),
+    );
+    return snapshot.docs
+      .map((item) => item.data() as EventDocument)
+      .find((event) => !event.finishedAt) ?? null;
+  }
+
   async list(filters: EventDocumentFilters = {}): Promise<EventDocument[]> {
     const constraints = [];
     if (filters.type) constraints.push(where("type", "==", filters.type));

@@ -4,6 +4,36 @@ import { FirestoreEventDao } from "../daos/firestore-event.dao";
 import { EventDocumentMapper } from "./mappers/event-document.mapper";
 import { FirestoreEventRepository } from "./firestore-event.repository";
 
+test("finds the most recently started open event for a user", async () => {
+  const previousOpenEvent = TrainingEvent.create({
+    id: "01K2TESTOPENPREVIOUS1234567",
+    userId: "user-1",
+    name: "Treino",
+    description: "",
+    startedAt: new Date("2026-08-17T08:00:00.000Z"),
+    tags: [],
+    interruptions: [],
+    data: { workouts: [] },
+  });
+  const latestOpenEvent = TrainingEvent.create({
+    id: "01K2TESTOPENLATEST12345678",
+    userId: "user-1",
+    name: "Treino",
+    description: "",
+    startedAt: new Date("2026-08-17T09:00:00.000Z"),
+    tags: [],
+    interruptions: [],
+    data: { workouts: [] },
+  });
+  const repository = new FirestoreEventRepository({
+    list: async () => [EventDocumentMapper.toPersistence(previousOpenEvent), EventDocumentMapper.toPersistence(latestOpenEvent)],
+  } as unknown as FirestoreEventDao);
+
+  await expect(repository.findLatestOpenByUserId("user-1")).resolves.toMatchObject({
+    id: latestOpenEvent.id,
+  });
+});
+
 test("rejects an update from someone other than the event owner", async () => {
   const event = TrainingEvent.create({
     userId: "owner-1",
@@ -12,7 +42,7 @@ test("rejects an update from someone other than the event owner", async () => {
     startedAt: new Date("2026-08-16T18:00:00-03:00"),
     tags: [],
     interruptions: [],
-    data: { caloriesBurned: 420 },
+    data: { workouts: [{ type: "free", calories: 420, duration: 60 }] },
   });
   const repository = new FirestoreEventRepository({
     findById: async () => EventDocumentMapper.toPersistence(event),
@@ -31,7 +61,7 @@ test("rejects an update when the submitted event forges the actor as its owner",
     startedAt: new Date("2026-08-16T18:00:00-03:00"),
     tags: [],
     interruptions: [],
-    data: { caloriesBurned: 420 },
+    data: { workouts: [{ type: "free", calories: 420, duration: 60 }] },
   });
   const repository = new FirestoreEventRepository({
     findById: async () => EventDocumentMapper.toPersistence(storedEvent),
@@ -45,7 +75,7 @@ test("rejects an update when the submitted event forges the actor as its owner",
     startedAt: new Date("2026-08-16T18:00:00-03:00"),
     tags: [],
     interruptions: [],
-    data: { caloriesBurned: 420 },
+    data: { workouts: [{ type: "free", calories: 420, duration: 60 }] },
   });
 
   await expect(repository.update(forgedEvent, "attacker-1")).rejects.toThrow(

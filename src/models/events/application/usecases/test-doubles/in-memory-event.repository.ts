@@ -29,6 +29,14 @@ export class InMemoryEventRepository implements EventRepository {
     return this.events.find((event) => event.id === eventId) ?? null;
   }
 
+  async findLatestOpenByUserId(userId: string): Promise<DomainEvent | null> {
+    return (
+      this.events
+        .filter((event) => event.userId === userId && !event.finishedAt)
+        .sort((left, right) => right.startedAt.getTime() - left.startedAt.getTime())[0] ?? null
+    );
+  }
+
   async listTimeline(params: Parameters<EventRepository["listTimeline"]>[0]): Promise<DomainEvent[]> {
     return this.events.filter((event) => {
       if (params.from && event.startedAt < params.from) return false;

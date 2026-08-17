@@ -1,9 +1,9 @@
 import type { EventRepository, DomainEvent } from "../../../application/contracts/event-repository";
-import { FirestoreEventDao } from "../daos/firestore-event.dao";
+import type { EventDao } from "../daos/admin-firestore-event.dao";
 import { EventDocumentMapper } from "./mappers/event-document.mapper";
 
 export class FirestoreEventRepository implements EventRepository {
-  constructor(private readonly eventDao: FirestoreEventDao) {}
+  constructor(private readonly eventDao: EventDao) {}
 
   async save(event: DomainEvent): Promise<void> {
     await this.eventDao.create(EventDocumentMapper.toPersistence(event));
@@ -25,6 +25,14 @@ export class FirestoreEventRepository implements EventRepository {
 
   async findById(eventId: string): Promise<DomainEvent | null> {
     const document = await this.eventDao.findById(eventId);
+    return document ? EventDocumentMapper.toDomain(document) : null;
+  }
+
+  async findLatestOpenByUserId(userId: string): Promise<DomainEvent | null> {
+    const documents = await this.eventDao.list();
+    const document = documents
+      .filter((event) => event.userId === userId && !event.finishedAt)
+      .sort((left, right) => new Date(right.startedAt).getTime() - new Date(left.startedAt).getTime())[0];
     return document ? EventDocumentMapper.toDomain(document) : null;
   }
 
