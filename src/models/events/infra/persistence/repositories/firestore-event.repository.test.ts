@@ -26,7 +26,10 @@ test("finds the most recently started open event for a user", async () => {
     data: { workouts: [] },
   });
   const repository = new FirestoreEventRepository({
-    list: async () => [EventDocumentMapper.toPersistence(previousOpenEvent), EventDocumentMapper.toPersistence(latestOpenEvent)],
+    findLatestOpenByUserId: async () => EventDocumentMapper.toPersistence(latestOpenEvent),
+    list: async () => {
+      throw new Error("findLatestOpenByUserId must not load all events");
+    },
   } as unknown as FirestoreEventDao);
 
   await expect(repository.findLatestOpenByUserId("user-1")).resolves.toMatchObject({

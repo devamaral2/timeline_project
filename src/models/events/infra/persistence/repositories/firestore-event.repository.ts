@@ -29,10 +29,7 @@ export class FirestoreEventRepository implements EventRepository {
   }
 
   async findLatestOpenByUserId(userId: string): Promise<DomainEvent | null> {
-    const documents = await this.eventDao.list();
-    const document = documents
-      .filter((event) => event.userId === userId && !event.finishedAt)
-      .sort((left, right) => new Date(right.startedAt).getTime() - new Date(left.startedAt).getTime())[0];
+    const document = await this.eventDao.findLatestOpenByUserId(userId);
     return document ? EventDocumentMapper.toDomain(document) : null;
   }
 
