@@ -21,6 +21,7 @@ test("POST /api/events ignores forbidden create fields from the client payload",
     headers: { authorization: "Bearer test-token" },
     body: JSON.stringify({
       type: "sleep",
+      userId: "attacker-1",
       name: "Hack",
       startedAt: "2020-01-01T00:00:00.000Z",
       finishedAt: "2020-01-01T01:00:00.000Z",
@@ -34,6 +35,7 @@ test("POST /api/events ignores forbidden create fields from the client payload",
 
   expect(response.status).toBe(201);
   expect(persistedEvent).toBeInstanceOf(SleepEvent);
+  expect(persistedEvent?.userId).toBe("firebase-user-1");
   expect(persistedEvent?.startedAt.toISOString()).not.toBe("2020-01-01T00:00:00.000Z");
   expect(persistedEvent?.finishedAt).toBeUndefined();
   expect(persistedEvent?.name).toBe("Sono");
