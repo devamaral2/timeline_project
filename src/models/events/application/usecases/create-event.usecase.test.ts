@@ -6,6 +6,7 @@ import { InMemoryEventRepository } from "./test-doubles/in-memory-event.reposito
 import { InMemoryTagRepository } from "./test-doubles/in-memory-tag.repository";
 import { StubFoodParsingGateway } from "./test-doubles/stub-food-parsing.gateway";
 import { FoodEvent } from "../../domain/entities/food-event.entity";
+import { SleepEvent } from "../../domain/entities/sleep-event.entity";
 import { TrainingEvent } from "../../domain/entities/training-event.entity";
 
 const workout = {
@@ -41,6 +42,37 @@ test("creates a training event with server-defined timestamps and name", async (
   expect(savedEvent?.finishedAt).toBeUndefined();
   expect(savedEvent?.interruptions).toEqual([]);
   expect(tagRepository.upsertedTags).toEqual(["gym"]);
+});
+
+test("creates a sleep event with the fixed name and default optional data", async () => {
+  const eventRepository = new InMemoryEventRepository();
+  const tagRepository = new InMemoryTagRepository();
+  const result = await new CreateEventUseCase(
+    eventRepository,
+    tagRepository,
+    new StubFoodParsingGateway(),
+  ).execute({ type: "sleep" }, { userId: "firebase-user-1" });
+
+  const savedEvent = await eventRepository.findById(result.eventId);
+
+  expect(savedEvent).toBeInstanceOf(SleepEvent);
+  expect(savedEvent).toMatchObject({
+    type: "sleep",
+    name: "Sono",
+    data: { trackedSleepTime: 0, score: 0 },
+  });
+});
+
+test("keeps routine names supplied by the user", async () => {
+  const eventRepository = new InMemoryEventRepository();
+  const tagRepository = new InMemoryTagRepository();
+  const result = await new CreateEventUseCase(
+    eventRepository,
+    tagRepository,
+    new StubFoodParsingGateway(),
+  ).execute({ type: "routine", name: "Planejamento" }, { userId: "firebase-user-1" });
+
+  expect((await eventRepository.findById(result.eventId))?.name).toBe("Planejamento");
 });
 
 test("finishes the latest open event before creating a new one", async () => {
