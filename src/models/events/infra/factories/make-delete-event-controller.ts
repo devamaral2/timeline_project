@@ -1,10 +1,9 @@
-import { getFirestore } from "firebase/firestore";
-import { getClientApp } from "@/lib/firebase/client-app";
+import { getAdminFirestore } from "@/lib/firebase/admin-firestore";
 import { DeleteEventUseCase } from "../../application/usecases/delete-event.usecase";
 import { DeleteEventController } from "../http/controller/delete-event.controller";
-import { makeFirestoreEventRepository } from "./make-firestore-event-repository";
+import { makeAdminFirestoreEventRepository } from "./make-admin-firestore-event-repository";
 
 export function makeDeleteEventController(): DeleteEventController {
-  const repository = makeFirestoreEventRepository(getFirestore(getClientApp()));
+  const repository = makeAdminFirestoreEventRepository(getAdminFirestore());
   return new DeleteEventController(new DeleteEventUseCase(repository));
 }

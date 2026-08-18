@@ -3,18 +3,10 @@ import { render, screen } from "@testing-library/react";
 import { expect, test } from "vitest";
 import TimelinePage from "./page";
 
-test("renders the public app shell links", () => {
+test("renders the hello world placeholder", () => {
   render(<TimelinePage />);
 
   expect(
-    screen.getByRole("heading", { name: /all tracker/i }),
+    screen.getByRole("heading", { level: 1, name: /hello world/i }),
   ).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: /timeline/i })).toHaveAttribute(
-    "href",
-    "/",
-  );
-  expect(screen.getByRole("link", { name: /daily overview/i })).toHaveAttribute(
-    "href",
-    "/daily",
-  );
 });

@@ -9,7 +9,7 @@ npm install
 npm run dev
 ```
 
-The public timeline is available at `http://localhost:3000/`, and the daily overview is at `http://localhost:3000/daily`.
+The app currently serves a temporary `Hello World` page at `http://localhost:3000/`.
 
 Run the focused smoke test with `npm run test -- src/app/page.test.tsx`. Run the full test suite with `npm test`, and create a production build with `npm run build`.
 

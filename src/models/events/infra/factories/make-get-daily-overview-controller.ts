@@ -1,10 +1,9 @@
-import { getFirestore } from "firebase/firestore";
-import { getClientApp } from "@/lib/firebase/client-app";
+import { getAdminFirestore } from "@/lib/firebase/admin-firestore";
 import { GetDailyOverviewUseCase } from "../../application/usecases/get-daily-overview.usecase";
 import { GetDailyOverviewController } from "../http/controller/get-daily-overview.controller";
-import { makeFirestoreEventRepository } from "./make-firestore-event-repository";
+import { makeAdminFirestoreEventRepository } from "./make-admin-firestore-event-repository";
 
 export function makeGetDailyOverviewController(): GetDailyOverviewController {
-  const repository = makeFirestoreEventRepository(getFirestore(getClientApp()));
+  const repository = makeAdminFirestoreEventRepository(getAdminFirestore());
   return new GetDailyOverviewController(new GetDailyOverviewUseCase(repository));
 }

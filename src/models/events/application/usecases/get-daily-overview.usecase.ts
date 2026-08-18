@@ -80,7 +80,6 @@ function buildDailyOverview(
         }
       : null,
     caloriesConsumed: foodCards.reduce((total, event) => total + event.kcal, 0),
-    caloriesBurned: trainingEvents.reduce((total, event) => total + event.data.caloriesBurned, 0),
     macros: {
       protein: foodCards.reduce((total, event) => total + event.protein, 0),
       carbohydrate: foodCards.reduce((total, event) => total + event.carbohydrate, 0),
@@ -94,7 +93,7 @@ function buildDailyOverview(
       description: event.description,
       startedAt: event.startedAt.toISOString(),
       finishedAt: event.finishedAt?.toISOString(),
-      kcal: event.data.caloriesBurned,
+      workouts: event.data.workouts,
     })),
   };
 }

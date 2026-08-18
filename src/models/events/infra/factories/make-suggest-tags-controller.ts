@@ -1,10 +1,9 @@
-import { getFirestore } from "firebase/firestore";
-import { getClientApp } from "@/lib/firebase/client-app";
+import { getAdminFirestore } from "@/lib/firebase/admin-firestore";
 import { SuggestTagsUseCase } from "../../application/usecases/suggest-tags.usecase";
 import { SuggestTagsController } from "../http/controller/suggest-tags.controller";
-import { makeFirestoreTagRepository } from "./make-firestore-tag-repository";
+import { makeAdminFirestoreTagRepository } from "./make-admin-firestore-tag-repository";
 
 export function makeSuggestTagsController(): SuggestTagsController {
-  const repository = makeFirestoreTagRepository(getFirestore(getClientApp()));
+  const repository = makeAdminFirestoreTagRepository(getAdminFirestore());
   return new SuggestTagsController(new SuggestTagsUseCase(repository));
 }

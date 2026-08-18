@@ -5,6 +5,12 @@ import { SleepEvent } from "@/models/events/domain/entities/sleep-event.entity";
 import { TrainingEvent } from "@/models/events/domain/entities/training-event.entity";
 import { FoodEvent } from "@/models/events/domain/entities/food-event.entity";
 
+const workout = {
+  type: "free" as const,
+  calories: 420,
+  duration: 60,
+};
+
 test("builds the daily overview for a Sao Paulo day", async () => {
   const repository = new InMemoryEventRepository([
     SleepEvent.create({
@@ -25,7 +31,7 @@ test("builds the daily overview for a Sao Paulo day", async () => {
       finishedAt: new Date("2026-08-16T19:00:00-03:00"),
       tags: ["gym"],
       interruptions: [],
-      data: { caloriesBurned: 420 },
+      data: { workouts: [workout] },
     }),
     FoodEvent.create({
       userId: "user-1",
@@ -60,7 +66,6 @@ test("builds the daily overview for a Sao Paulo day", async () => {
   });
 
   expect(overview.caloriesConsumed).toBe(560);
-  expect(overview.caloriesBurned).toBe(420);
   expect(overview.macros.protein).toBe(32);
   expect(overview.sleep?.score).toBe(88);
 });
@@ -99,7 +104,7 @@ test("does not attribute overnight food or training totals to the following day"
       finishedAt: new Date("2026-08-17T00:30:00-03:00"),
       tags: [],
       interruptions: [],
-      data: { caloriesBurned: 300 },
+      data: { workouts: [{ ...workout, calories: 300 }] },
     }),
     SleepEvent.create({
       userId: "user-1",
@@ -119,7 +124,6 @@ test("does not attribute overnight food or training totals to the following day"
   });
 
   expect(overview.caloriesConsumed).toBe(0);
-  expect(overview.caloriesBurned).toBe(0);
   expect(overview.foodEvents).toEqual([]);
   expect(overview.trainingEvents).toEqual([]);
   expect(overview.sleep?.score).toBe(90);

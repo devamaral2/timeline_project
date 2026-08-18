@@ -3,7 +3,7 @@ import "../styles/globals.css";
 
 export const metadata: Metadata = {
   title: "All Tracker",
-  description: "A personal timeline and daily overview.",
+  description: "Temporary placeholder frontend.",
 };
 
 export default function RootLayout({
