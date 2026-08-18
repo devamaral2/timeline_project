@@ -33,7 +33,7 @@ export function mergeEventUpdate(
   if (existingEvent instanceof SleepEvent) {
     return SleepEvent.create({
       ...sharedProps,
-      data: { ...existingEvent.data, ...(hasSleepData(input.data) ? input.data : {}) },
+      data: mergeSleepData(existingEvent.data, input.data),
     });
   }
 
@@ -126,6 +126,17 @@ function hasWorkouts(data: UpdateEventInput["data"]): data is { workouts: Workou
 
 function hasFoodItems(data: UpdateEventInput["data"]): data is { items: FoodItem[] } {
   return Boolean(data && "items" in data && data.items);
+}
+
+function mergeSleepData(
+  existingData: SleepEvent["data"],
+  inputData: UpdateEventInput["data"],
+): SleepEvent["data"] {
+  const update = hasSleepData(inputData) ? inputData : {};
+  return {
+    score: update.score ?? existingData.score,
+    trackedSleepTime: update.trackedSleepTime ?? existingData.trackedSleepTime,
+  };
 }
 
 function hasSleepData(

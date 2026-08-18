@@ -3,6 +3,7 @@ import { FoodEvent } from "../../domain/entities/food-event.entity";
 import { SleepEvent } from "../../domain/entities/sleep-event.entity";
 import { Interruption } from "../../domain/value-objects/interruption";
 import { TrainingEvent } from "../../domain/entities/training-event.entity";
+import type { UpdateEventInput } from "../dtos/update-event.input";
 import { UpdateEventUseCase } from "./update-event.usecase";
 import { InMemoryEventRepository } from "./test-doubles/in-memory-event.repository";
 import { InMemoryTagRepository } from "./test-doubles/in-memory-tag.repository";
@@ -170,7 +171,7 @@ test("updates food items without changing food or id", async () => {
   expect((savedEvent as FoodEvent).data.items[1].id).toMatch(/[0-9A-HJKMNP-TV-Z]{26}/);
 });
 
-test("does not add unrelated data to a sleep event", async () => {
+test("updates sleep metrics without retaining unrelated data", async () => {
   const sleepEvent = SleepEvent.create({
     id: "01K2R1J5M8S0Y2Z7ABCD123459",
     userId: "firebase-user-1",
@@ -188,12 +189,14 @@ test("does not add unrelated data to a sleep event", async () => {
     new StubFoodParsingGateway(),
   );
 
-  await updateUseCase.execute(
-    { eventId: sleepEvent.id, data: { items: [] } },
-    { userId: "firebase-user-1" },
-  );
+  const input = {
+    eventId: sleepEvent.id,
+    data: { score: 85, unexpected: "discard me" },
+  } as unknown as UpdateEventInput;
+
+  await updateUseCase.execute(input, { userId: "firebase-user-1" });
 
   const savedEvent = await eventRepository.findById(sleepEvent.id);
   expect(savedEvent).toBeInstanceOf(SleepEvent);
-  expect((savedEvent as SleepEvent).data).toEqual({ score: 70, trackedSleepTime: 420 });
+  expect((savedEvent as SleepEvent).data).toEqual({ score: 85, trackedSleepTime: 420 });
 });
