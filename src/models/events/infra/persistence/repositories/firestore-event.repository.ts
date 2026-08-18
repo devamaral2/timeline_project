@@ -9,6 +9,13 @@ export class FirestoreEventRepository implements EventRepository {
     await this.eventDao.create(EventDocumentMapper.toPersistence(event));
   }
 
+  async saveClosingLatestOpen(event: DomainEvent, finishedAt: Date): Promise<void> {
+    await this.eventDao.createClosingLatestOpen(
+      EventDocumentMapper.toPersistence(event),
+      finishedAt.toISOString(),
+    );
+  }
+
   async update(event: DomainEvent, actorUserId: string): Promise<void> {
     const storedEvent = await this.eventDao.findById(event.id);
     if (!storedEvent) return;

@@ -41,3 +41,24 @@ test("replaces training workouts and assigns ids to new nested records", () => {
   if (workout.type !== "weightlifting") throw new Error("Expected weightlifting workout");
   expect(workout.sets[0].id).toMatch(/[0-9A-HJKMNP-TV-Z]{26}/);
 });
+
+test("preserves legacy calories when a training update does not replace workouts", () => {
+  const event = TrainingEvent.create({
+    userId: "user-1",
+    name: "Legacy training",
+    description: "",
+    startedAt: new Date("2026-08-16T18:00:00.000Z"),
+    tags: [],
+    interruptions: [],
+    data: { caloriesBurned: 420 },
+  });
+
+  const updated = mergeEventUpdate(
+    event,
+    { eventId: event.id, description: "Imported workout" },
+    new Date("2026-08-16T19:00:00.000Z"),
+  );
+
+  expect(updated).toBeInstanceOf(TrainingEvent);
+  expect((updated as TrainingEvent).data).toEqual({ caloriesBurned: 420, workouts: [] });
+});

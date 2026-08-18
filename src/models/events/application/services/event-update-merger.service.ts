@@ -38,11 +38,12 @@ export function mergeEventUpdate(
   }
 
   if (existingEvent instanceof TrainingEvent) {
+    const data = hasWorkouts(input.data)
+      ? { workouts: input.data.workouts }
+      : existingEvent.data;
     return TrainingEvent.create({
       ...sharedProps,
-      data: {
-        workouts: hasWorkouts(input.data) ? input.data.workouts : existingEvent.data.workouts,
-      },
+      data,
     });
   }
 

@@ -1,4 +1,8 @@
 import type { DomainEvent, EventRepository } from "../../contracts/event-repository";
+import { FoodEvent } from "../../../domain/entities/food-event.entity";
+import { RoutineEvent } from "../../../domain/entities/routine-event.entity";
+import { SleepEvent } from "../../../domain/entities/sleep-event.entity";
+import { TrainingEvent } from "../../../domain/entities/training-event.entity";
 
 export class InMemoryEventRepository implements EventRepository {
   private events: DomainEvent[];
@@ -8,6 +12,15 @@ export class InMemoryEventRepository implements EventRepository {
   }
 
   async save(event: DomainEvent): Promise<void> {
+    this.events.push(event);
+  }
+
+  async saveClosingLatestOpen(event: DomainEvent, finishedAt: Date): Promise<void> {
+    const previousOpenEvent = await this.findLatestOpenByUserId(event.userId);
+    if (previousOpenEvent) {
+      const index = this.events.findIndex((storedEvent) => storedEvent.id === previousOpenEvent.id);
+      this.events[index] = recreateWithFinishedAt(previousOpenEvent, finishedAt);
+    }
     this.events.push(event);
   }
 
@@ -58,6 +71,13 @@ export class InMemoryEventRepository implements EventRepository {
   private assertOwner(ownerUserId: string, actorUserId: string): void {
     if (ownerUserId !== actorUserId) throw new Error("Only the event owner can modify it");
   }
+}
+
+function recreateWithFinishedAt(event: DomainEvent, finishedAt: Date): DomainEvent {
+  if (event instanceof RoutineEvent) return RoutineEvent.create({ ...event, finishedAt });
+  if (event instanceof TrainingEvent) return TrainingEvent.create({ ...event, finishedAt });
+  if (event instanceof SleepEvent) return SleepEvent.create({ ...event, finishedAt });
+  return FoodEvent.create({ ...event, finishedAt });
 }
 
 function dateInTimeZone(value: Date, timeZone: string): string {

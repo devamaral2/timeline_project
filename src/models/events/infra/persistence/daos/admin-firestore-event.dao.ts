@@ -3,6 +3,7 @@ import type { EventDocument } from "../repositories/mappers/event-document.mappe
 
 export interface EventDao {
   create(documentData: EventDocument): Promise<void>;
+  createClosingLatestOpen(documentData: EventDocument, finishedAt: string): Promise<void>;
   update(documentData: EventDocument): Promise<void>;
   delete(eventId: string): Promise<void>;
   findById(eventId: string): Promise<EventDocument | null>;
@@ -24,6 +25,30 @@ export class AdminFirestoreEventDao implements EventDao {
     await this.database.collection("events").doc(documentData.id).set(documentData);
   }
 
+  async createClosingLatestOpen(
+    documentData: EventDocument,
+    finishedAt: string,
+  ): Promise<void> {
+    const events = this.database.collection("events");
+    const latestEventQuery = events
+      .where("userId", "==", documentData.userId)
+      .orderBy("startedAt", "desc")
+      .limit(1);
+
+    await this.database.runTransaction(async (transaction) => {
+      const latestEventSnapshot = await transaction.get(latestEventQuery);
+      const latestEvent = latestEventSnapshot.docs[0];
+      if (latestEvent && !latestEvent.data().finishedAt) {
+        transaction.set(
+          latestEvent.ref,
+          { finishedAt, updatedAt: finishedAt },
+          { merge: true },
+        );
+      }
+      transaction.set(events.doc(documentData.id), documentData);
+    });
+  }
+
   async update(documentData: EventDocument): Promise<void> {
     const { createdAt: _createdAt, ...updateData } = documentData;
     await this.database.collection("events").doc(documentData.id).set(updateData, { merge: true });
@@ -43,10 +68,10 @@ export class AdminFirestoreEventDao implements EventDao {
       .collection("events")
       .where("userId", "==", userId)
       .orderBy("startedAt", "desc")
+      .limit(1)
       .get();
-    return snapshot.docs
-      .map((item) => item.data() as EventDocument)
-      .find((event) => !event.finishedAt) ?? null;
+    const latestEvent = snapshot.docs[0]?.data() as EventDocument | undefined;
+    return latestEvent && !latestEvent.finishedAt ? latestEvent : null;
   }
 
   async list(filters: EventDocumentFilters = {}): Promise<EventDocument[]> {

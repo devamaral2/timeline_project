@@ -8,6 +8,8 @@ import type { Interruption } from "../../domain/value-objects/interruption";
 import { ulid } from "ulid";
 import { getFoodEventName } from "./food-event-name.service";
 
+const EVENT_TIME_ZONE = "America/Sao_Paulo";
+
 type NormalizedEventProps<TData> = Omit<EventProps<TData>, "id" | "userId" | "finishedAt"> & {
   finishedAt: undefined;
 };
@@ -37,17 +39,22 @@ export function normalizeCreateEventInput(input: CreateEventInput, now: Date): N
         data: { trackedSleepTime: input.data?.trackedSleepTime ?? 0, score: input.data?.score ?? 0 },
         ...common,
       };
-    case "training":
+    case "training": {
+      const workouts = normalizeWorkouts(input.data?.workouts ?? []);
       return {
         type: "training",
         name: "Treino",
-        data: { workouts: normalizeWorkouts(input.data?.workouts ?? []) },
+        data: {
+          workouts,
+          caloriesBurned: workouts.reduce((total, workout) => total + workout.calories, 0),
+        },
         ...common,
       };
+    }
     case "food":
       return {
         type: "food",
-        name: getFoodEventName(now),
+        name: getFoodEventName(now, EVENT_TIME_ZONE),
         inputText: input.inputText,
         data: { inputText: input.inputText },
         ...common,

@@ -24,7 +24,7 @@ export interface EventDocument {
 export class EventDocumentMapper {
   static toPersistence(event: DomainEvent): EventDocument {
     const now = new Date().toISOString();
-    return {
+    return this.removeUndefined({
       id: event.id,
       type: event.type,
       userId: event.userId,
@@ -34,6 +34,7 @@ export class EventDocumentMapper {
       finishedAt: event.finishedAt?.toISOString(),
       tags: event.tags,
       interruptions: event.interruptions.map((interruption) => ({
+        id: interruption.id,
         name: interruption.name,
         description: interruption.description,
         startedAt: interruption.startedAt.toISOString(),
@@ -42,7 +43,7 @@ export class EventDocumentMapper {
       data: this.toPersistenceData(event),
       createdAt: now,
       updatedAt: now,
-    };
+    }) as EventDocument;
   }
 
   static toDomain(document: EventDocument): DomainEvent {
@@ -56,6 +57,7 @@ export class EventDocumentMapper {
       tags: document.tags,
       interruptions: document.interruptions.map((interruption) =>
         Interruption.create({
+          id: interruption.id,
           name: interruption.name,
           description: interruption.description,
           startedAt: new Date(interruption.startedAt),
@@ -81,5 +83,21 @@ export class EventDocumentMapper {
   private static toPersistenceData(event: DomainEvent): Record<string, unknown> {
     if (!(event instanceof FoodEvent)) return event.data as Record<string, unknown>;
     return { ...event.data, parsedAt: event.data.parsedAt.toISOString() };
+  }
+
+  private static removeUndefined(value: unknown): unknown {
+    if (Array.isArray(value)) {
+      return value.map((item) => this.removeUndefined(item));
+    }
+
+    if (value && typeof value === "object") {
+      return Object.fromEntries(
+        Object.entries(value)
+          .filter(([, item]) => item !== undefined)
+          .map(([key, item]) => [key, this.removeUndefined(item)]),
+      );
+    }
+
+    return value;
   }
 }

@@ -4,9 +4,11 @@ import {
   doc,
   getDoc,
   getDocs,
+  limit,
   orderBy,
   query,
   setDoc,
+  writeBatch,
   type Firestore,
   where,
 } from "firebase/firestore";
@@ -26,6 +28,23 @@ export class FirestoreEventDao {
     await setDoc(doc(this.database, "events", documentData.id), documentData);
   }
 
+  async createClosingLatestOpen(
+    documentData: EventDocument,
+    finishedAt: string,
+  ): Promise<void> {
+    const latestEvent = await this.findLatestOpenByUserId(documentData.userId);
+    const batch = writeBatch(this.database);
+    if (latestEvent) {
+      batch.set(
+        doc(this.database, "events", latestEvent.id),
+        { finishedAt, updatedAt: finishedAt },
+        { merge: true },
+      );
+    }
+    batch.set(doc(this.database, "events", documentData.id), documentData);
+    await batch.commit();
+  }
+
   async update(documentData: EventDocument): Promise<void> {
     const { createdAt: _createdAt, ...updateData } = documentData;
     await setDoc(doc(this.database, "events", documentData.id), updateData, { merge: true });
@@ -42,11 +61,15 @@ export class FirestoreEventDao {
 
   async findLatestOpenByUserId(userId: string): Promise<EventDocument | null> {
     const snapshot = await getDocs(
-      query(collection(this.database, "events"), where("userId", "==", userId), orderBy("startedAt", "desc")),
+      query(
+        collection(this.database, "events"),
+        where("userId", "==", userId),
+        orderBy("startedAt", "desc"),
+        limit(1),
+      ),
     );
-    return snapshot.docs
-      .map((item) => item.data() as EventDocument)
-      .find((event) => !event.finishedAt) ?? null;
+    const latestEvent = snapshot.docs[0]?.data() as EventDocument | undefined;
+    return latestEvent && !latestEvent.finishedAt ? latestEvent : null;
   }
 
   async list(filters: EventDocumentFilters = {}): Promise<EventDocument[]> {

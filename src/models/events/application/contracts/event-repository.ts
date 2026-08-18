@@ -8,6 +8,7 @@ export type DomainEvent = RoutineEvent | FoodEvent | TrainingEvent | SleepEvent;
 
 export interface EventRepository {
   save(event: DomainEvent): Promise<void>;
+  saveClosingLatestOpen(event: DomainEvent, finishedAt: Date): Promise<void>;
   update(event: DomainEvent, actorUserId: string): Promise<void>;
   delete(eventId: string, actorUserId: string): Promise<void>;
   findById(eventId: string): Promise<DomainEvent | null>;

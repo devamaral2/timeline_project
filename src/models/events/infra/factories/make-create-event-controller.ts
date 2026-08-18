@@ -1,18 +1,17 @@
-import { getFirestore } from "firebase/firestore";
-import { getClientApp } from "@/lib/firebase/client-app";
+import { getAdminFirestore } from "@/lib/firebase/admin-firestore";
 import { CreateEventUseCase } from "../../application/usecases/create-event.usecase";
-import { StubFoodParsingGateway } from "../../application/usecases/test-doubles/stub-food-parsing.gateway";
+import { OpenRouterFoodParsingGateway } from "../gateways/openrouter-food-parsing.gateway";
 import { CreateEventController } from "../http/controller/create-event.controller";
-import { makeFirestoreEventRepository } from "./make-firestore-event-repository";
-import { makeFirestoreTagRepository } from "./make-firestore-tag-repository";
+import { makeAdminFirestoreEventRepository } from "./make-admin-firestore-event-repository";
+import { makeAdminFirestoreTagRepository } from "./make-admin-firestore-tag-repository";
 
 export function makeCreateEventController(): CreateEventController {
-  const database = getFirestore(getClientApp());
+  const database = getAdminFirestore();
   return new CreateEventController(
     new CreateEventUseCase(
-      makeFirestoreEventRepository(database),
-      makeFirestoreTagRepository(database),
-      new StubFoodParsingGateway(),
+      makeAdminFirestoreEventRepository(database),
+      makeAdminFirestoreTagRepository(database),
+      new OpenRouterFoodParsingGateway(),
     ),
   );
 }

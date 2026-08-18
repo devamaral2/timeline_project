@@ -47,10 +47,20 @@ export type Workout = TreadmillWorkout | RunningWorkout | WeightliftingWorkout |
 
 export interface TrainingEventData {
   workouts: Workout[];
+  caloriesBurned: number;
 }
 
+export interface TrainingEventInputData {
+  workouts?: Workout[];
+  caloriesBurned?: number;
+}
+
+type TrainingEventProps = Omit<EventProps<TrainingEventData>, "data"> & {
+  data: TrainingEventInputData;
+};
+
 export class TrainingEvent extends Event<TrainingEventData> {
-  private constructor(props: EventProps<TrainingEventData>) {
+  private constructor(props: TrainingEventProps) {
     super(
       props.id ?? EventId.create(),
       "training",
@@ -65,28 +75,32 @@ export class TrainingEvent extends Event<TrainingEventData> {
     );
   }
 
-  static create(props: EventProps<TrainingEventData>): TrainingEvent {
+  static create(props: TrainingEventProps): TrainingEvent {
     return new TrainingEvent(props);
   }
 }
 
-function normalizeTrainingEventData(data: TrainingEventData): TrainingEventData {
+function normalizeTrainingEventData(data: TrainingEventInputData): TrainingEventData {
+  const workouts = (data.workouts ?? []).map((workout) => {
+    const normalizedWorkout = {
+      ...workout,
+      id: workout.id ?? ulid(),
+    };
+
+    if (normalizedWorkout.type !== "weightlifting") return normalizedWorkout;
+
+    return {
+      ...normalizedWorkout,
+      sets: normalizedWorkout.sets.map((set) => ({
+        ...set,
+        id: set.id ?? ulid(),
+      })),
+    };
+  });
+
   return {
-    workouts: data.workouts.map((workout) => {
-      const normalizedWorkout = {
-        ...workout,
-        id: workout.id ?? ulid(),
-      };
-
-      if (normalizedWorkout.type !== "weightlifting") return normalizedWorkout;
-
-      return {
-        ...normalizedWorkout,
-        sets: normalizedWorkout.sets.map((set) => ({
-          ...set,
-          id: set.id ?? ulid(),
-        })),
-      };
-    }),
+    workouts,
+    caloriesBurned:
+      data.caloriesBurned ?? workouts.reduce((total, workout) => total + workout.calories, 0),
   };
 }

@@ -19,18 +19,11 @@ export class CreateEventUseCase {
     private readonly tagRepository: TagRepository,
     private readonly foodParsingGateway: FoodParsingGateway,
     private readonly foodTotalsService: FoodTotalsService = new FoodTotalsService(),
+    private readonly clock: () => Date = () => new Date(),
   ) {}
 
   async execute(input: CreateEventInput, actor: AuthenticatedUser): Promise<{ eventId: string }> {
-    const now = new Date();
-    const previousOpenEvent = await this.eventRepository.findLatestOpenByUserId(actor.userId);
-    if (previousOpenEvent && !previousOpenEvent.finishedAt) {
-      await this.eventRepository.update(
-        recreateEventWithChanges(previousOpenEvent, { finishedAt: now }),
-        actor.userId,
-      );
-    }
-
+    const now = this.clock();
     const normalized = normalizeCreateEventInput(input, now);
     const event =
       normalized.type === "food"
@@ -41,8 +34,8 @@ export class CreateEventUseCase {
             this.foodTotalsService,
           )
         : buildDomainEvent(normalized, actor.userId);
-    await this.eventRepository.save(event);
     await this.tagRepository.upsertMany(event.tags, actor.userId);
+    await this.eventRepository.saveClosingLatestOpen(event, now);
     return { eventId: event.id };
   }
 }
@@ -104,34 +97,7 @@ async function createFoodEventFromNormalizedInput(
       totals: foodTotalsService.calculate(parsedMeal.items),
       modelProvider: parsedMeal.modelProvider,
       modelName: parsedMeal.modelName,
-      parsedAt: new Date(),
+      parsedAt: input.startedAt,
     },
   });
 }
-
-function recreateEventWithChanges(
-  event: DomainEvent,
-  changes: Pick<DomainEvent, "finishedAt">,
-): DomainEvent {
-  if (event instanceof RoutineEvent) return RoutineEvent.create({ ...event, ...changes });
-  if (event instanceof TrainingEvent) return TrainingEvent.create({ ...event, ...changes });
-  if (event instanceof SleepEvent) return SleepEvent.create({ ...event, ...changes });
-  return FoodEvent.create({ ...event, ...changes });
-}
-
-// Kept temporarily for the update use case while its patch semantics are implemented in Task 3.
-export const createDomainEventFromInput = (input: unknown, userId: string): DomainEvent =>
-  buildDomainEvent(input as Exclude<NormalizedCreateEvent, { type: "food" }>, userId);
-
-export const createFoodEventFromInput = (
-  input: unknown,
-  userId: string,
-  foodParsingGateway: FoodParsingGateway,
-  foodTotalsService: FoodTotalsService,
-): Promise<FoodEvent> =>
-  createFoodEventFromNormalizedInput(
-    input as Extract<NormalizedCreateEvent, { type: "food" }>,
-    userId,
-    foodParsingGateway,
-    foodTotalsService,
-  );

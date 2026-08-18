@@ -2,7 +2,7 @@ import { expect, test } from "vitest";
 import { TrainingEvent } from "../../../domain/entities/training-event.entity";
 import { SleepEvent } from "../../../domain/entities/sleep-event.entity";
 import { FirestoreEventDao } from "../daos/firestore-event.dao";
-import { EventDocumentMapper } from "./mappers/event-document.mapper";
+import { EventDocumentMapper, type EventDocument } from "./mappers/event-document.mapper";
 import { FirestoreEventRepository } from "./firestore-event.repository";
 
 test("finds the most recently started open event for a user", async () => {
@@ -51,7 +51,7 @@ test("persists server-derived fields for an open sleep event", async () => {
   });
   let storedDocument: ReturnType<typeof EventDocumentMapper.toPersistence> | undefined;
   const repository = new FirestoreEventRepository({
-    create: async (document) => {
+    create: async (document: EventDocument) => {
       storedDocument = document;
     },
   } as unknown as FirestoreEventDao);

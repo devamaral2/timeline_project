@@ -1,9 +1,9 @@
 import type { TagRepository, TagSuggestionDto } from "../../../application/contracts/tag-repository";
-import { FirestoreTagDao } from "../daos/firestore-tag.dao";
+import type { TagDao } from "../daos/admin-firestore-tag.dao";
 import { TagDocumentMapper } from "./mappers/tag-document.mapper";
 
 export class FirestoreTagRepository implements TagRepository {
-  constructor(private readonly tagDao: FirestoreTagDao) {}
+  constructor(private readonly tagDao: TagDao) {}
 
   async upsertMany(tags: string[], createdBy: string): Promise<void> {
     await Promise.all(
