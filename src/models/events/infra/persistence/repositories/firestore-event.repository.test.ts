@@ -1,5 +1,6 @@
 import { expect, test } from "vitest";
 import { TrainingEvent } from "../../../domain/entities/training-event.entity";
+import { SleepEvent } from "../../../domain/entities/sleep-event.entity";
 import { FirestoreEventDao } from "../daos/firestore-event.dao";
 import { EventDocumentMapper } from "./mappers/event-document.mapper";
 import { FirestoreEventRepository } from "./firestore-event.repository";
@@ -35,6 +36,35 @@ test("finds the most recently started open event for a user", async () => {
   await expect(repository.findLatestOpenByUserId("user-1")).resolves.toMatchObject({
     id: latestOpenEvent.id,
   });
+});
+
+test("persists server-derived fields for an open sleep event", async () => {
+  const event = SleepEvent.create({
+    id: "01K2R1J5M8S0Y2Z7ABCD123460",
+    userId: "user-1",
+    name: "Sono",
+    description: "",
+    startedAt: new Date("2026-08-17T08:00:00.000Z"),
+    tags: [],
+    interruptions: [],
+    data: { trackedSleepTime: 0, score: 0 },
+  });
+  let storedDocument: ReturnType<typeof EventDocumentMapper.toPersistence> | undefined;
+  const repository = new FirestoreEventRepository({
+    create: async (document) => {
+      storedDocument = document;
+    },
+  } as unknown as FirestoreEventDao);
+
+  await repository.save(event);
+
+  expect(storedDocument).toMatchObject({
+    id: event.id,
+    name: "Sono",
+    startedAt: "2026-08-17T08:00:00.000Z",
+    interruptions: [],
+  });
+  expect(storedDocument).not.toHaveProperty("finishedAt");
 });
 
 test("rejects an update from someone other than the event owner", async () => {
