@@ -1,8 +1,10 @@
 import { Event, type EventProps } from "./event.entity";
 import { EventId } from "../value-objects/event-id";
 import { TagList } from "../value-objects/tag-list";
+import { ulid } from "ulid";
 
 export interface FoodItem {
+  id?: string;
   food: string;
   portion: string;
   approximateWeightGrams: number;
@@ -47,11 +49,21 @@ export class FoodEvent extends Event<FoodEventData> {
       props.finishedAt,
       TagList.create(props.tags),
       props.interruptions,
-      props.data,
+      normalizeFoodEventData(props.data),
     );
   }
 
   static create(props: EventProps<FoodEventData>): FoodEvent {
     return new FoodEvent(props);
   }
+}
+
+function normalizeFoodEventData(data: FoodEventData): FoodEventData {
+  return {
+    ...data,
+    items: data.items.map((item) => ({
+      ...item,
+      id: item.id ?? ulid(),
+    })),
+  };
 }
