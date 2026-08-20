@@ -5,6 +5,7 @@ import { ChevronDown } from "lucide-react";
 import type { TimelineEventCardDto } from "@/models/events/application/dtos/timeline-event-card.dto";
 import { formatTime } from "@/lib/timeline/format-date";
 import { cn } from "@/lib/utils";
+import { tagColorStyle } from "@/lib/tags/tag-color";
 import { typeIcons, typeStyles } from "./event-visuals";
 
 interface EventCardProps {
@@ -31,21 +32,19 @@ export function EventCard({ event, defaultExpanded = false }: EventCardProps) {
       <span aria-hidden className={cn("absolute inset-y-0 left-0 w-1", styles.bar)} />
 
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 pl-2">
-        <div className="flex min-w-0 items-start gap-2.5">
-          <span
-            className={cn("mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg", styles.iconBg)}
-          >
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className={cn("grid size-8 shrink-0 place-items-center rounded-lg", styles.iconBg)}>
             <Icon aria-hidden className={cn("size-4", styles.icon)} />
           </span>
           <div className="min-w-0">
-            <h3 className="truncate text-[17px] font-semibold leading-6 text-card-foreground">
+            <h3 className="truncate text-[14.5px] font-semibold leading-5 text-card-foreground">
               {event.name}
             </h3>
           </div>
         </div>
 
         <div className="flex flex-col items-end gap-1">
-          <p className="flex items-center justify-end gap-2 text-[12.5px] font-medium leading-5 text-muted-foreground">
+          <p className="flex items-center justify-end gap-2 text-[11.5px] font-medium leading-4 text-muted-foreground">
             {isRunning ? (
               <span aria-hidden className="relative flex size-2">
                 <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary/70" />
@@ -58,7 +57,7 @@ export function EventCard({ event, defaultExpanded = false }: EventCardProps) {
               {event.finishedAt ? formatTime(event.finishedAt) : "em andamento"}
             </span>
           </p>
-          <p className="text-[11px] font-medium text-muted-foreground/80">{event.durationLabel}</p>
+          <p className="text-[10.5px] font-medium text-muted-foreground/80">{event.durationLabel}</p>
         </div>
       </div>
 
@@ -67,7 +66,8 @@ export function EventCard({ event, defaultExpanded = false }: EventCardProps) {
           {event.tags.map((tag) => (
             <li
               key={tag}
-              className="rounded-full bg-secondary px-2 py-0.5 text-[11.5px] font-medium text-muted-foreground"
+              style={tagColorStyle(tag)}
+              className="rounded-full px-2 py-0.5 text-[11.5px] font-medium"
             >
               #{tag}
             </li>
@@ -82,7 +82,7 @@ export function EventCard({ event, defaultExpanded = false }: EventCardProps) {
             onClick={() => setExpanded((value) => !value)}
             aria-expanded={expanded}
             aria-controls={detailsId}
-            className="mt-3 flex min-h-11 w-full items-center justify-between gap-2 rounded-lg px-2 text-[13px] font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            className="mt-2 flex min-h-8 w-full items-center justify-between gap-2 rounded-lg px-2 py-1 text-[13px] font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           >
             {expanded ? "Ocultar detalhes" : "Ver detalhes"}
             <ChevronDown
@@ -97,14 +97,7 @@ export function EventCard({ event, defaultExpanded = false }: EventCardProps) {
               className="mt-1 space-y-4 border-t border-border pl-2 pt-3 duration-200 animate-in fade-in slide-in-from-top-1"
             >
               {event.description ? (
-                <div>
-                  <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Descrição
-                  </h4>
-                  <p className="mt-1.5 text-[13.5px] leading-6 text-card-foreground">
-                    {event.description}
-                  </p>
-                </div>
+                <p className="text-[13.5px] leading-6 text-card-foreground">{event.description}</p>
               ) : null}
 
               {event.interruptions.length ? (

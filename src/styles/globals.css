@@ -73,6 +73,11 @@
   --routine: oklch(0.554 0.046 257.417);
   --shadow-card: 0 1px 2px 0 oklch(0.208 0.042 265.755 / 0.05);
   --shadow-card-hover: 0 6px 18px -8px oklch(0.208 0.042 265.755 / 0.18);
+  /* Paleta de cores para tags geradas por hash: mesma luminosidade/croma dos
+     tokens de tipo de evento acima, variando apenas o matiz (hue), para que
+     qualquer cor de tag permaneça harmonica com o resto da UI. */
+  --tag-lightness: 0.55;
+  --tag-chroma: 0.15;
 }
 
 .dark {
@@ -99,6 +104,8 @@
   --routine: oklch(0.704 0.04 256.788);
   --shadow-card: 0 1px 2px 0 oklch(0 0 0 / 0.3);
   --shadow-card-hover: 0 6px 18px -8px oklch(0 0 0 / 0.5);
+  --tag-lightness: 0.75;
+  --tag-chroma: 0.14;
 }
 
 @layer base {
