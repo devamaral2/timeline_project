@@ -13,12 +13,14 @@ export class ListTimelineEventsUseCase {
   constructor(private readonly eventRepository: EventRepository) {}
 
   async execute(input: {
+    userId: string;
     from?: string;
     to?: string;
     type?: EventType;
     tag?: string;
   }): Promise<TimelineEventCardDto[]> {
     const events = await this.eventRepository.listTimeline({
+      userId: input.userId,
       from: input.from ? new Date(input.from) : undefined,
       to: input.to ? new Date(input.to) : undefined,
       type: input.type,

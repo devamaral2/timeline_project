@@ -8,6 +8,10 @@ export class ListTimelineEventsController {
 
   async handle(request: Request): Promise<Response> {
     const query = new URL(request.url).searchParams;
+    const userId = query.get("userId");
+    if (!userId) {
+      return Response.json({ error: "Missing userId" }, { status: 400 });
+    }
     const type = query.get("type");
     if (type && !eventTypes.includes(type as EventType)) {
       return Response.json({ error: "Invalid event type" }, { status: 400 });
@@ -22,6 +26,7 @@ export class ListTimelineEventsController {
     }
 
     const events = await this.useCase.execute({
+      userId,
       from: from ?? undefined,
       to: to ?? undefined,
       type: type as EventType | null ?? undefined,

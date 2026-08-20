@@ -52,6 +52,7 @@ export class InMemoryEventRepository implements EventRepository {
 
   async listTimeline(params: Parameters<EventRepository["listTimeline"]>[0]): Promise<DomainEvent[]> {
     return this.events.filter((event) => {
+      if (event.userId !== params.userId) return false;
       if (params.from && event.startedAt < params.from) return false;
       if (params.to && event.startedAt > params.to) return false;
       if (params.type && event.type !== params.type) return false;

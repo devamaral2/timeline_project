@@ -14,6 +14,7 @@ export interface EventRepository {
   findById(eventId: string): Promise<DomainEvent | null>;
   findLatestOpenByUserId(userId: string): Promise<DomainEvent | null>;
   listTimeline(params: {
+    userId: string;
     from?: Date;
     to?: Date;
     type?: EventType;

@@ -12,6 +12,7 @@ export interface EventDao {
 }
 
 export interface EventDocumentFilters {
+  userId?: string;
   from?: string;
   to?: string;
   type?: EventDocument["type"];
@@ -77,6 +78,7 @@ export class AdminFirestoreEventDao implements EventDao {
   async list(filters: EventDocumentFilters = {}): Promise<EventDocument[]> {
     let eventQuery: FirebaseFirestore.Query = this.database.collection("events");
 
+    if (filters.userId) eventQuery = eventQuery.where("userId", "==", filters.userId);
     if (filters.type) eventQuery = eventQuery.where("type", "==", filters.type);
     if (filters.tag) eventQuery = eventQuery.where("tags", "array-contains", filters.tag);
     if (filters.from) eventQuery = eventQuery.where("startedAt", ">=", filters.from);

@@ -42,6 +42,7 @@ export class FirestoreEventRepository implements EventRepository {
 
   async listTimeline(params: Parameters<EventRepository["listTimeline"]>[0]): Promise<DomainEvent[]> {
     const documents = await this.eventDao.list({
+      userId: params.userId,
       from: params.from?.toISOString(),
       to: params.to?.toISOString(),
       type: params.type,

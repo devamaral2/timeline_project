@@ -15,6 +15,7 @@ import {
 import type { EventDocument } from "../repositories/mappers/event-document.mapper";
 
 export interface EventDocumentFilters {
+  userId?: string;
   from?: string;
   to?: string;
   type?: EventDocument["type"];
@@ -74,6 +75,7 @@ export class FirestoreEventDao {
 
   async list(filters: EventDocumentFilters = {}): Promise<EventDocument[]> {
     const constraints = [];
+    if (filters.userId) constraints.push(where("userId", "==", filters.userId));
     if (filters.type) constraints.push(where("type", "==", filters.type));
     if (filters.tag) constraints.push(where("tags", "array-contains", filters.tag));
     if (filters.from) constraints.push(where("startedAt", ">=", filters.from));
