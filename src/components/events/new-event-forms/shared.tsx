@@ -83,9 +83,17 @@ interface FormActionsProps {
   onBack: () => void;
   submitting: boolean;
   submitLabel?: string;
+  submittingLabel?: string;
+  backLabel?: string;
 }
 
-export function FormActions({ onBack, submitting, submitLabel = "Criar evento" }: FormActionsProps) {
+export function FormActions({
+  onBack,
+  submitting,
+  submitLabel = "Criar evento",
+  submittingLabel = "Criando...",
+  backLabel = "Voltar",
+}: FormActionsProps) {
   return (
     <div className="mt-1 flex items-center justify-between gap-3">
       <button
@@ -93,14 +101,14 @@ export function FormActions({ onBack, submitting, submitLabel = "Criar evento" }
         onClick={onBack}
         className="inline-flex h-10 items-center rounded-full border border-border bg-card px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent"
       >
-        Voltar
+        {backLabel}
       </button>
       <button
         type="submit"
         disabled={submitting}
         className="inline-flex h-10 items-center rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-card transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {submitting ? "Criando..." : submitLabel}
+        {submitting ? submittingLabel : submitLabel}
       </button>
     </div>
   );
