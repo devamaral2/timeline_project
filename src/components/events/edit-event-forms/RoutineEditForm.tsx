@@ -7,6 +7,7 @@ import {
   type EditEventFormProps,
   FinishedAtField,
   FormActions,
+  StartedAtField,
   fieldInputClass,
   fieldLabelClass,
   fromDatetimeLocalValue,
@@ -26,6 +27,7 @@ export function RoutineEditForm({
   const [name, setName] = useState(event.name);
   const [description, setDescription] = useState(event.description);
   const [tags, setTags] = useState<string[]>(event.tags);
+  const [startedAt, setStartedAt] = useState(toDatetimeLocalValue(event.startedAt));
   const [finishedAt, setFinishedAt] = useState(toDatetimeLocalValue(event.finishedAt));
   const [validationError, setValidationError] = useState<string | null>(null);
   const { submit, submitting, error } = useSubmitEventUpdate({ eventId, onUpdated, onClose });
@@ -42,6 +44,7 @@ export function RoutineEditForm({
       name: name.trim(),
       description: description.trim(),
       tags,
+      startedAt: fromDatetimeLocalValue(startedAt),
       finishedAt: fromDatetimeLocalValue(finishedAt),
     });
   }
@@ -70,6 +73,7 @@ export function RoutineEditForm({
         onTagsChange={setTags}
       />
 
+      <StartedAtField value={startedAt} onChange={setStartedAt} />
       <FinishedAtField value={finishedAt} onChange={setFinishedAt} />
 
       {validationError || error ? (

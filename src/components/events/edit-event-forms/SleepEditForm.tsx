@@ -7,6 +7,7 @@ import {
   type EditEventFormProps,
   FinishedAtField,
   FormActions,
+  StartedAtField,
   fieldInputClass,
   fieldLabelClass,
   fromDatetimeLocalValue,
@@ -21,6 +22,7 @@ export function SleepEditForm({ eventId, event, onCancel, onClose, onUpdated }: 
   const [score, setScore] = useState(String(event.data.score));
   const [description, setDescription] = useState(event.description);
   const [tags, setTags] = useState<string[]>(event.tags);
+  const [startedAt, setStartedAt] = useState(toDatetimeLocalValue(event.startedAt));
   const [finishedAt, setFinishedAt] = useState(toDatetimeLocalValue(event.finishedAt));
   const { submit, submitting, error } = useSubmitEventUpdate({ eventId, onUpdated, onClose });
 
@@ -34,6 +36,7 @@ export function SleepEditForm({ eventId, event, onCancel, onClose, onUpdated }: 
       },
       description: description.trim(),
       tags,
+      startedAt: fromDatetimeLocalValue(startedAt),
       finishedAt: fromDatetimeLocalValue(finishedAt),
     });
   }
@@ -81,6 +84,7 @@ export function SleepEditForm({ eventId, event, onCancel, onClose, onUpdated }: 
         onTagsChange={setTags}
       />
 
+      <StartedAtField value={startedAt} onChange={setStartedAt} />
       <FinishedAtField value={finishedAt} onChange={setFinishedAt} />
 
       {error ? <p className="text-xs text-destructive">{error}</p> : null}

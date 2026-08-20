@@ -11,6 +11,7 @@ import {
   type EditEventFormProps,
   FinishedAtField,
   FormActions,
+  StartedAtField,
   fromDatetimeLocalValue,
   toDatetimeLocalValue,
   useSubmitEventUpdate,
@@ -80,6 +81,7 @@ export function FoodEditForm({ eventId, event, onCancel, onClose, onUpdated }: E
   const [items, setItems] = useState<ItemDraft[]>(event.data.items.map(draftFromItem));
   const [description, setDescription] = useState(event.description);
   const [tags, setTags] = useState<string[]>(event.tags);
+  const [startedAt, setStartedAt] = useState(toDatetimeLocalValue(event.startedAt));
   const [finishedAt, setFinishedAt] = useState(toDatetimeLocalValue(event.finishedAt));
   const { submit, submitting, error } = useSubmitEventUpdate({ eventId, onUpdated, onClose });
 
@@ -110,6 +112,7 @@ export function FoodEditForm({ eventId, event, onCancel, onClose, onUpdated }: E
       data: { items: builtItems },
       description: description.trim(),
       tags,
+      startedAt: fromDatetimeLocalValue(startedAt),
       finishedAt: fromDatetimeLocalValue(finishedAt),
     });
   }
@@ -242,6 +245,7 @@ export function FoodEditForm({ eventId, event, onCancel, onClose, onUpdated }: E
         onTagsChange={setTags}
       />
 
+      <StartedAtField value={startedAt} onChange={setStartedAt} />
       <FinishedAtField value={finishedAt} onChange={setFinishedAt} />
 
       {error ? <p className="text-xs text-destructive">{error}</p> : null}

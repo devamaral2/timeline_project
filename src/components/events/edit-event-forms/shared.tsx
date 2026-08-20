@@ -16,9 +16,9 @@ interface UseSubmitEventUpdateOptions {
 
 /**
  * PATCH so envia os campos que o usuario de fato alterou nesta tela. Campos
- * como type, userId, startedAt e eventId nunca sao enviados: a rota os ignora
- * (sao imutaveis / vem do proprio recurso) e o merge no backend preserva
- * qualquer coisa que nao seja enviada.
+ * como type, userId e eventId nunca sao enviados: a rota os ignora (sao
+ * imutaveis / vem do proprio recurso) e o merge no backend preserva qualquer
+ * coisa que nao seja enviada.
  */
 export function useSubmitEventUpdate({ eventId, onUpdated, onClose }: UseSubmitEventUpdateOptions) {
   const [submitting, setSubmitting] = useState(false);
@@ -69,6 +69,29 @@ export function toDatetimeLocalValue(iso: string | undefined): string {
 export function fromDatetimeLocalValue(value: string): string | undefined {
   if (!value) return undefined;
   return new Date(value).toISOString();
+}
+
+interface StartedAtFieldProps {
+  value: string;
+  onChange: (value: string) => void;
+}
+
+export function StartedAtField({ value, onChange }: StartedAtFieldProps) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor="event-started-at" className={fieldLabelClass}>
+        Iniciado em
+      </label>
+      <input
+        id="event-started-at"
+        type="datetime-local"
+        required
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className={fieldInputClass}
+      />
+    </div>
+  );
 }
 
 interface FinishedAtFieldProps {

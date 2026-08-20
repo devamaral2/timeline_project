@@ -33,7 +33,6 @@ test("PATCH /api/events/:eventId keeps server-owned fields when they are sent by
       eventId: "different-event-id",
       type: "sleep",
       userId: "attacker-1",
-      startedAt: "2020-01-01T00:00:00.000Z",
       name: "Updated training",
     }),
   });
@@ -49,4 +48,32 @@ test("PATCH /api/events/:eventId keeps server-owned fields when they are sent by
     name: "Updated training",
   });
   expect(persistedEvent?.startedAt.toISOString()).toBe("2026-08-16T18:00:00.000Z");
+});
+
+test("PATCH /api/events/:eventId updates startedAt when the client sends it", async () => {
+  const event = TrainingEvent.create({
+    id: "01K2R1J5M8S0Y2Z7ABCD123456",
+    userId: "firebase-user-1",
+    name: "Treino",
+    description: "Gym session",
+    startedAt: new Date("2026-08-16T18:00:00.000Z"),
+    tags: ["gym"],
+    interruptions: [],
+    data: { workouts: [] },
+  });
+  const eventRepository = new InMemoryEventRepository([event]);
+  const controller = new UpdateEventController(
+    new UpdateEventUseCase(eventRepository, new InMemoryTagRepository(), new StubFoodParsingGateway()),
+  );
+  const request = new Request(`http://localhost/api/events/${event.id}`, {
+    method: "PATCH",
+    headers: { authorization: "Bearer test-token" },
+    body: JSON.stringify({ startedAt: "2026-08-16T17:00:00.000Z" }),
+  });
+
+  const response = await controller.handle(request, { params: Promise.resolve({ eventId: event.id }) });
+  const persistedEvent = await eventRepository.findById(event.id);
+
+  expect(response.status).toBe(204);
+  expect(persistedEvent?.startedAt.toISOString()).toBe("2026-08-16T17:00:00.000Z");
 });

@@ -19,6 +19,7 @@ export interface UpdateEventInput {
   eventId: string;
   name?: string;
   description?: string;
+  startedAt?: string;
   finishedAt?: string;
   tags?: string[];
   interruptions?: InterruptionPatchInput[];

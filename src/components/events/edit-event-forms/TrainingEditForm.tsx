@@ -11,6 +11,7 @@ import {
   type EditEventFormProps,
   FinishedAtField,
   FormActions,
+  StartedAtField,
   fromDatetimeLocalValue,
   toDatetimeLocalValue,
   useSubmitEventUpdate,
@@ -92,6 +93,7 @@ export function TrainingEditForm({
   const [workouts, setWorkouts] = useState<WorkoutDraft[]>(event.data.workouts.map(draftFromWorkout));
   const [description, setDescription] = useState(event.description);
   const [tags, setTags] = useState<string[]>(event.tags);
+  const [startedAt, setStartedAt] = useState(toDatetimeLocalValue(event.startedAt));
   const [finishedAt, setFinishedAt] = useState(toDatetimeLocalValue(event.finishedAt));
   const { submit, submitting, error } = useSubmitEventUpdate({ eventId, onUpdated, onClose });
 
@@ -134,6 +136,7 @@ export function TrainingEditForm({
       data: { workouts: builtWorkouts },
       description: description.trim(),
       tags,
+      startedAt: fromDatetimeLocalValue(startedAt),
       finishedAt: fromDatetimeLocalValue(finishedAt),
     });
   }
@@ -301,6 +304,7 @@ export function TrainingEditForm({
         onTagsChange={setTags}
       />
 
+      <StartedAtField value={startedAt} onChange={setStartedAt} />
       <FinishedAtField value={finishedAt} onChange={setFinishedAt} />
 
       {error ? <p className="text-xs text-destructive">{error}</p> : null}

@@ -20,7 +20,7 @@ export function mergeEventUpdate(
     userId: existingEvent.userId,
     name: input.name ?? existingEvent.name,
     description: input.description ?? existingEvent.description,
-    startedAt: existingEvent.startedAt,
+    startedAt: input.startedAt ? new Date(input.startedAt) : existingEvent.startedAt,
     finishedAt: input.finishedAt ? new Date(input.finishedAt) : existingEvent.finishedAt,
     tags: input.tags ?? existingEvent.tags,
     interruptions: mergeInterruptions(existingEvent.interruptions, input.interruptions, now),
