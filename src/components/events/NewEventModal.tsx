@@ -37,7 +37,7 @@ export function NewEventModal({ onClose, onCreated }: NewEventModalProps) {
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm duration-200 animate-in fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 p-4 py-8 backdrop-blur-sm duration-200 animate-in fade-in"
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -47,9 +47,9 @@ export function NewEventModal({ onClose, onCreated }: NewEventModalProps) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="new-event-title"
-        className="w-full max-w-md rounded-2xl border border-border bg-card p-5 shadow-card-hover duration-200 animate-in fade-in slide-in-from-bottom-2 sm:p-6"
+        className="flex max-h-[calc(100dvh-4rem)] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-card-hover duration-200 animate-in fade-in slide-in-from-bottom-2"
       >
-        <div className="mb-5 flex items-center justify-between gap-3">
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-5 py-4 sm:px-6">
           <h2 id="new-event-title" className="text-lg font-semibold tracking-tight text-foreground">
             {selectedType ? "Novo evento" : "Que tipo de evento?"}
           </h2>
@@ -63,11 +63,13 @@ export function NewEventModal({ onClose, onCreated }: NewEventModalProps) {
           </button>
         </div>
 
-        {selectedType === null ? (
-          <TypeSelector onSelect={setSelectedType} />
-        ) : (
-          <EventForm type={selectedType} onBack={() => setSelectedType(null)} onClose={onClose} onCreated={onCreated} />
-        )}
+        <div className="overflow-y-auto px-5 py-5 sm:px-6">
+          {selectedType === null ? (
+            <TypeSelector onSelect={setSelectedType} />
+          ) : (
+            <EventForm type={selectedType} onBack={() => setSelectedType(null)} onClose={onClose} onCreated={onCreated} />
+          )}
+        </div>
       </div>
     </div>,
     document.body,

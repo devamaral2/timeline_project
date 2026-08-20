@@ -58,7 +58,7 @@ export function DeleteEventDialog({ eventId, eventName, onClose, onDeleted }: De
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm duration-200 animate-in fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 p-4 py-8 backdrop-blur-sm duration-200 animate-in fade-in"
       onClick={(event) => {
         if (event.target === event.currentTarget && !deleting) onClose();
       }}
@@ -67,7 +67,7 @@ export function DeleteEventDialog({ eventId, eventName, onClose, onDeleted }: De
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="delete-event-title"
-        className="w-full max-w-sm rounded-2xl border border-border bg-card p-5 shadow-card-hover duration-200 animate-in fade-in slide-in-from-bottom-2 sm:p-6"
+        className="max-h-[calc(100dvh-4rem)] w-full max-w-sm overflow-y-auto rounded-2xl border border-border bg-card p-5 shadow-card-hover duration-200 animate-in fade-in slide-in-from-bottom-2 sm:p-6"
       >
         <div className="mb-4 flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">

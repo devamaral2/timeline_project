@@ -12,6 +12,11 @@ export class CreateEventController {
       const result = await this.useCase.execute((await request.json()) as CreateEventInput, actor);
       return Response.json(result, { status: 201 });
     } catch (error) {
+      console.error("[CreateEventController] request failed", {
+        name: error instanceof Error ? error.name : typeof error,
+        message: error instanceof Error ? error.message : error,
+        stack: error instanceof Error ? error.stack : undefined,
+      });
       return mutationErrorResponse(error);
     }
   }
@@ -20,5 +25,8 @@ export class CreateEventController {
 function mutationErrorResponse(error: unknown): Response {
   const message = error instanceof Error ? error.message : "Invalid request";
   const status = message === "Only the event owner can modify it" ? 403 : 401;
+  console.error(
+    `[CreateEventController] responding with status ${status} for message: "${message}"`,
+  );
   return Response.json({ error: message }, { status });
 }

@@ -65,7 +65,7 @@ export function EditEventModal({ eventId, onClose, onUpdated }: EditEventModalPr
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm duration-200 animate-in fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 p-4 py-8 backdrop-blur-sm duration-200 animate-in fade-in"
       onClick={(clickEvent) => {
         if (clickEvent.target === clickEvent.currentTarget) onClose();
       }}
@@ -74,9 +74,9 @@ export function EditEventModal({ eventId, onClose, onUpdated }: EditEventModalPr
         role="dialog"
         aria-modal="true"
         aria-labelledby="edit-event-title"
-        className="w-full max-w-md rounded-2xl border border-border bg-card p-5 shadow-card-hover duration-200 animate-in fade-in slide-in-from-bottom-2 sm:p-6"
+        className="flex max-h-[calc(100dvh-4rem)] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-card-hover duration-200 animate-in fade-in slide-in-from-bottom-2"
       >
-        <div className="mb-5 flex items-center justify-between gap-3">
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-5 py-4 sm:px-6">
           <h2 id="edit-event-title" className="text-lg font-semibold tracking-tight text-foreground">
             Editar evento
           </h2>
@@ -90,13 +90,15 @@ export function EditEventModal({ eventId, onClose, onUpdated }: EditEventModalPr
           </button>
         </div>
 
-        {error ? (
-          <p className="text-sm text-destructive">Não foi possível carregar o evento. Tente novamente.</p>
-        ) : event ? (
-          <EditForm event={event} onCancel={onClose} onClose={onClose} onUpdated={onUpdated} />
-        ) : (
-          <p className="py-6 text-center text-sm text-muted-foreground">Carregando evento...</p>
-        )}
+        <div className="overflow-y-auto px-5 py-5 sm:px-6">
+          {error ? (
+            <p className="text-sm text-destructive">Não foi possível carregar o evento. Tente novamente.</p>
+          ) : event ? (
+            <EditForm event={event} onCancel={onClose} onClose={onClose} onUpdated={onUpdated} />
+          ) : (
+            <p className="py-6 text-center text-sm text-muted-foreground">Carregando evento...</p>
+          )}
+        </div>
       </div>
     </div>,
     document.body,

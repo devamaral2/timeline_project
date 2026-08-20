@@ -191,7 +191,7 @@ export function TrainingForm({ onBack, onClose, onCreated }: EventFormProps) {
             {workout.type === "weightlifting" ? (
               <div className="flex flex-col gap-2">
                 {workout.sets.map((set) => (
-                  <div key={set.key} className="flex items-center gap-2">
+                  <div key={set.key} className="flex items-center gap-1.5 sm:gap-2">
                     <input
                       type="text"
                       placeholder="Exercício"
@@ -199,7 +199,7 @@ export function TrainingForm({ onBack, onClose, onCreated }: EventFormProps) {
                       onChange={(event) =>
                         updateSet(workout.key, set.key, { exercise: event.target.value })
                       }
-                      className={cn(smallInputClass, "flex-1")}
+                      className={cn(smallInputClass, "min-w-0 flex-1")}
                     />
                     <input
                       type="number"
@@ -209,7 +209,7 @@ export function TrainingForm({ onBack, onClose, onCreated }: EventFormProps) {
                       onChange={(event) =>
                         updateSet(workout.key, set.key, { repetitions: event.target.value })
                       }
-                      className={cn(smallInputClass, "w-16")}
+                      className={cn(smallInputClass, "w-12 min-w-0 shrink-0 sm:w-16")}
                     />
                     <input
                       type="number"
@@ -217,7 +217,7 @@ export function TrainingForm({ onBack, onClose, onCreated }: EventFormProps) {
                       placeholder="Kg"
                       value={set.weight}
                       onChange={(event) => updateSet(workout.key, set.key, { weight: event.target.value })}
-                      className={cn(smallInputClass, "w-16")}
+                      className={cn(smallInputClass, "w-12 min-w-0 shrink-0 sm:w-16")}
                     />
                     <button
                       type="button"
