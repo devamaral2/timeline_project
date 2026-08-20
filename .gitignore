@@ -1,5 +1,6 @@
 .worktrees/
 node_modules/
 .next/
-.env.local/
-.env/
+.env
+.env.local
+.env*.local
