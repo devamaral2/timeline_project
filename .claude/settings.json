@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(/usr/bin/grep -n 'StopCondition\\\\|StepResult' -A 22 /home/rafaelamaral/Documentos/projects/timeline_project/node_modules/@openrouter/agent/esm/lib/tool-types.d.ts)",
+      "Bash(/usr/bin/cat /home/rafaelamaral/Documentos/projects/timeline_project/node_modules/@openrouter/agent/esm/lib/async-params.d.ts)",
+      "Bash(/usr/bin/grep -n 'getResponse\\\\|getText\\\\|getSteps\\\\|class ModelResult\\\\|interface ModelResult\\\\|getUsage\\\\|getFinal' /home/rafaelamaral/Documentos/projects/timeline_project/node_modules/@openrouter/agent/esm/lib/model-result.d.ts)",
+      "Bash(/usr/bin/grep -n \"apiKey\\\\|security\\\\|serverURL\" /home/rafaelamaral/Documentos/projects/timeline_project/node_modules/@openrouter/sdk/lib/config.d.ts)",
+      "Bash(/usr/bin/grep -n \"OpenRouter\\\\|stepCountIs\\\\|maxCost\\\\|\\\\btool\\\\b\\\\|hasToolCall\" node_modules/@openrouter/agent/esm/index.d.ts)",
+      "Bash(/usr/bin/grep -n \"export.*OpenRouter\" node_modules/@openrouter/agent/esm/index.d.ts)",
+      "Bash(/usr/bin/grep -n '\"scripts\"' -A 12 package.json)",
+      "Bash(npx tsc *)",
+      "Bash(/usr/bin/ls src/models/events/application/usecases/test-doubles/)",
+      "Bash(/usr/bin/cat src/models/events/application/usecases/test-doubles/stub-food-parsing.gateway.ts)",
+      "Bash(npm run *)"
+    ]
+  }
+}

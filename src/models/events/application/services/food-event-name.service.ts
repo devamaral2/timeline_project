@@ -8,7 +8,7 @@ export function getFoodEventName(now: Date, timeZone = "America/Sao_Paulo"): str
   const value = (type: "hour" | "minute") =>
     Number(parts.find((part) => part.type === type)?.value ?? 0);
   const minutes = value("hour") * 60 + value("minute");
-
+  console.log(minutes);
   if (minutes <= 180 || minutes >= 1081) return "Jantar";
   if (minutes <= 390) return "Desjejum";
   if (minutes <= 600) return "Café da manhã";
