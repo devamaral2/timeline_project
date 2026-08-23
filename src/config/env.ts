@@ -12,6 +12,9 @@ const clientSchema = z.object({
 const serverSchema = z.object({
   OPENROUTER_API_KEY: z.string().min(1).optional(),
   OPENROUTER_MODEL: z.string().min(1).optional(),
+  // Modelo do agente de skills. Precisa suportar tool calling — nem todo modelo
+  // do OpenRouter suporta. Sem valor, cai no OPENROUTER_MODEL.
+  OPENROUTER_AGENT_MODEL: z.string().min(1).optional(),
 });
 
 export type ClientEnv = z.infer<typeof clientSchema>;
@@ -43,5 +46,7 @@ export function getServerEnv(
   return serverSchema.parse({
     OPENROUTER_API_KEY: source?.OPENROUTER_API_KEY ?? process.env.OPENROUTER_API_KEY,
     OPENROUTER_MODEL: source?.OPENROUTER_MODEL ?? process.env.OPENROUTER_MODEL,
+    OPENROUTER_AGENT_MODEL:
+      source?.OPENROUTER_AGENT_MODEL ?? process.env.OPENROUTER_AGENT_MODEL,
   });
 }
