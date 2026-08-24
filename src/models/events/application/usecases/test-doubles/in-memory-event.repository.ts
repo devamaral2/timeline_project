@@ -17,7 +17,7 @@ export class InMemoryEventRepository implements EventRepository {
 
   async saveClosingLatestOpen(event: DomainEvent, finishedAt: Date): Promise<void> {
     const previousOpenEvent = await this.findLatestOpenByUserId(event.userId);
-    if (previousOpenEvent) {
+    if (previousOpenEvent && finishedAt >= previousOpenEvent.startedAt) {
       const index = this.events.findIndex((storedEvent) => storedEvent.id === previousOpenEvent.id);
       this.events[index] = recreateWithFinishedAt(previousOpenEvent, finishedAt);
     }

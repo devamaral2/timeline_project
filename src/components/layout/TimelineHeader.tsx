@@ -3,6 +3,7 @@
 import { Sparkles } from "lucide-react";
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 import { NewEventButton } from "@/components/events/NewEventButton";
+import { VoiceEventButton } from "@/components/events/VoiceEventButton";
 import { useCurrentUser } from "@/lib/firebase/use-current-user";
 
 interface TimelineHeaderProps {
@@ -27,6 +28,7 @@ export function TimelineHeader({ userId }: TimelineHeaderProps) {
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
+          {user ? <VoiceEventButton /> : null}
           {user ? <NewEventButton /> : null}
           <GoogleSignInButton />
         </div>

@@ -36,10 +36,13 @@ test("limits the latest user-event lookup to one document", async () => {
   expect(result?.id).toBe(eventDocument.id);
 });
 
-test("closes the latest open event and creates the replacement in one transaction", async () => {
-  const previousReference = { path: "events/previous" };
-  const nextReference = { path: `events/${eventDocument.id}` };
-  const writes: Array<{ reference: unknown; data: unknown; options?: unknown }> = [];
+const previousReference = { path: "events/previous" };
+const nextReference = { path: `events/${eventDocument.id}` };
+
+function aDatabaseHoldingLatestEvent(
+  latestEvent: Partial<EventDocument>,
+  writes: Array<{ reference: unknown; data: unknown; options?: unknown }>,
+): Firestore {
   const query = {
     where: () => query,
     orderBy: () => query,
@@ -49,18 +52,23 @@ test("closes the latest open event and creates the replacement in one transactio
     ...query,
     doc: () => nextReference,
   };
-  const database = {
+  return {
     collection: () => collection,
     runTransaction: async (callback: (transaction: unknown) => Promise<void>) =>
       callback({
         get: async () => ({
-          docs: [{ ref: previousReference, data: () => ({ ...eventDocument, id: "previous" }) }],
+          docs: [{ ref: previousReference, data: () => latestEvent }],
         }),
         set: (reference: unknown, data: unknown, options?: unknown) => {
           writes.push({ reference, data, options });
         },
       }),
   } as unknown as Firestore;
+}
+
+test("closes the latest open event and creates the replacement in one transaction", async () => {
+  const writes: Array<{ reference: unknown; data: unknown; options?: unknown }> = [];
+  const database = aDatabaseHoldingLatestEvent({ ...eventDocument, id: "previous" }, writes);
 
   await new AdminFirestoreEventDao(database).createClosingLatestOpen(
     eventDocument,
@@ -76,6 +84,25 @@ test("closes the latest open event and creates the replacement in one transactio
       },
       options: { merge: true },
     },
+    { reference: nextReference, data: eventDocument, options: undefined },
+  ]);
+});
+
+test("skips closing an event that started after the incoming finishedAt", async () => {
+  const writes: Array<{ reference: unknown; data: unknown; options?: unknown }> = [];
+  const database = aDatabaseHoldingLatestEvent(
+    { ...eventDocument, id: "previous", startedAt: "2026-08-17T12:05:00.000Z" },
+    writes,
+  );
+
+  // Escritas fora de ordem gravariam finishedAt < startedAt, e a entidade rejeita isso em toda
+  // leitura -- a timeline inteira pararia de renderizar.
+  await new AdminFirestoreEventDao(database).createClosingLatestOpen(
+    eventDocument,
+    "2026-08-17T12:00:00.000Z",
+  );
+
+  expect(writes).toEqual([
     { reference: nextReference, data: eventDocument, options: undefined },
   ]);
 });

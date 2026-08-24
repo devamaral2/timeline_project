@@ -7,11 +7,12 @@ import type { TrainingEventData } from "../../domain/entities/training-event.ent
 import type { Interruption } from "../../domain/value-objects/interruption";
 import { ulid } from "ulid";
 import { getFoodEventName } from "./food-event-name.service";
+import type { ResolvedEventSchedule } from "./event-schedule.service";
 
-const EVENT_TIME_ZONE = "America/Sao_Paulo";
+export const EVENT_TIME_ZONE = "America/Sao_Paulo";
 
 type NormalizedEventProps<TData> = Omit<EventProps<TData>, "id" | "userId" | "finishedAt"> & {
-  finishedAt: undefined;
+  finishedAt: Date | undefined;
 };
 
 export type NormalizedCreateEvent =
@@ -20,11 +21,17 @@ export type NormalizedCreateEvent =
   | ({ type: "training" } & NormalizedEventProps<TrainingEventData>)
   | ({ type: "food"; inputText: string } & NormalizedEventProps<Omit<FoodEventData, "items" | "totals" | "modelProvider" | "modelName" | "parsedAt">>);
 
-export function normalizeCreateEventInput(input: CreateEventInput, now: Date): NormalizedCreateEvent {
+export function normalizeCreateEventInput(
+  input: CreateEventInput,
+  now: Date,
+  schedule?: ResolvedEventSchedule,
+): NormalizedCreateEvent {
+  // A janela so chega preenchida pelo fluxo de voz; os formularios continuam sem poder envia-la.
+  const startedAt = schedule?.startedAt ?? now;
   const common = {
     description: input.description ?? "",
-    startedAt: now,
-    finishedAt: undefined,
+    startedAt,
+    finishedAt: schedule?.finishedAt,
     tags: input.tags ?? [],
     interruptions: [] as Interruption[],
   };
@@ -54,7 +61,7 @@ export function normalizeCreateEventInput(input: CreateEventInput, now: Date): N
     case "food":
       return {
         type: "food",
-        name: getFoodEventName(now, EVENT_TIME_ZONE),
+        name: getFoodEventName(startedAt, EVENT_TIME_ZONE),
         inputText: input.inputText,
         data: { inputText: input.inputText },
         ...common,

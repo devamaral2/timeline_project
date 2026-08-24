@@ -7,6 +7,7 @@ import {
   normalizeCreateEventInput,
   type NormalizedCreateEvent,
 } from "../services/event-creation-normalizer.service";
+import type { ResolvedEventSchedule } from "../services/event-schedule.service";
 import { FoodTotalsService } from "../services/food-totals.service";
 import { FoodEvent } from "../../domain/entities/food-event.entity";
 import { RoutineEvent } from "../../domain/entities/routine-event.entity";
@@ -22,9 +23,13 @@ export class CreateEventUseCase {
     private readonly clock: () => Date = () => new Date(),
   ) {}
 
-  async execute(input: CreateEventInput, actor: AuthenticatedUser): Promise<{ eventId: string }> {
+  async execute(
+    input: CreateEventInput,
+    actor: AuthenticatedUser,
+    schedule?: ResolvedEventSchedule,
+  ): Promise<{ eventId: string }> {
     const now = this.clock();
-    const normalized = normalizeCreateEventInput(input, now);
+    const normalized = normalizeCreateEventInput(input, now, schedule);
     const event =
       normalized.type === "food"
         ? await createFoodEventFromNormalizedInput(
@@ -35,7 +40,9 @@ export class CreateEventUseCase {
           )
         : buildDomainEvent(normalized, actor.userId);
     await this.tagRepository.upsertMany(event.tags, actor.userId);
-    await this.eventRepository.saveClosingLatestOpen(event, now);
+    // O evento anterior termina quando este comeca -- que nem sempre e "agora", desde que o
+    // agente de voz pode registrar algo que comecou no passado.
+    await this.eventRepository.saveClosingLatestOpen(event, event.startedAt);
     return { eventId: event.id };
   }
 }

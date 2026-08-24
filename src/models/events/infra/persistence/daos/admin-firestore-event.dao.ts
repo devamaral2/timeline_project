@@ -39,7 +39,13 @@ export class AdminFirestoreEventDao implements EventDao {
     await this.database.runTransaction(async (transaction) => {
       const latestEventSnapshot = await transaction.get(latestEventQuery);
       const latestEvent = latestEventSnapshot.docs[0];
-      if (latestEvent && !latestEvent.data().finishedAt) {
+      // Escritas fora de ordem (o evento anterior demorou mais no agente) fechariam o evento mais
+      // recente com um finishedAt anterior ao seu startedAt, e a entidade rejeita isso em toda
+      // leitura -- o que derrubaria a timeline inteira sem conserto pelo app.
+      const closesInThePast = latestEvent
+        ? finishedAt < (latestEvent.data().startedAt as string)
+        : false;
+      if (latestEvent && !latestEvent.data().finishedAt && !closesInThePast) {
         transaction.set(
           latestEvent.ref,
           { finishedAt, updatedAt: finishedAt },
