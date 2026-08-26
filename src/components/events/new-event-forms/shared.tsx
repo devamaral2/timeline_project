@@ -6,7 +6,7 @@ import { getClientApp } from "@/lib/firebase/client-app";
 import { TagInput } from "./TagInput";
 import { fieldLabelClass, fieldTextareaClass } from "./field-styles";
 
-export { fieldInputClass, fieldLabelClass, fieldTextareaClass } from "./field-styles";
+export { anyDecimalStep, fieldInputClass, fieldLabelClass, fieldTextareaClass } from "./field-styles";
 
 interface UseSubmitEventOptions {
   onCreated: () => void;

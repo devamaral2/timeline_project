@@ -5,7 +5,7 @@ import { Plus, X } from "lucide-react";
 import type { EventDetailDto } from "@/models/events/application/dtos/event-detail.dto";
 import type { FoodItem } from "@/models/events/domain/entities/food-event.entity";
 import { cn } from "@/lib/utils";
-import { fieldLabelClass } from "../new-event-forms/field-styles";
+import { anyDecimalStep, fieldLabelClass } from "../new-event-forms/field-styles";
 import {
   CommonFields,
   type EditEventFormProps,
@@ -169,6 +169,7 @@ export function FoodEditForm({ eventId, event, onCancel, onClose, onUpdated }: E
                 <input
                   type="number"
                   min={0}
+                  step={anyDecimalStep}
                   value={item.approximateWeightGrams}
                   onChange={(event) => updateItem(item.key, { approximateWeightGrams: event.target.value })}
                   className={smallInputClass}
@@ -179,6 +180,7 @@ export function FoodEditForm({ eventId, event, onCancel, onClose, onUpdated }: E
                 <input
                   type="number"
                   min={0}
+                  step={anyDecimalStep}
                   value={item.caloriesKcal}
                   onChange={(event) => updateItem(item.key, { caloriesKcal: event.target.value })}
                   className={smallInputClass}
@@ -189,6 +191,7 @@ export function FoodEditForm({ eventId, event, onCancel, onClose, onUpdated }: E
                 <input
                   type="number"
                   min={0}
+                  step={anyDecimalStep}
                   value={item.carbohydratesGrams}
                   onChange={(event) => updateItem(item.key, { carbohydratesGrams: event.target.value })}
                   className={smallInputClass}
@@ -199,6 +202,7 @@ export function FoodEditForm({ eventId, event, onCancel, onClose, onUpdated }: E
                 <input
                   type="number"
                   min={0}
+                  step={anyDecimalStep}
                   value={item.proteinsGrams}
                   onChange={(event) => updateItem(item.key, { proteinsGrams: event.target.value })}
                   className={smallInputClass}
@@ -209,6 +213,7 @@ export function FoodEditForm({ eventId, event, onCancel, onClose, onUpdated }: E
                 <input
                   type="number"
                   min={0}
+                  step={anyDecimalStep}
                   value={item.totalFatGrams}
                   onChange={(event) => updateItem(item.key, { totalFatGrams: event.target.value })}
                   className={smallInputClass}
@@ -219,6 +224,7 @@ export function FoodEditForm({ eventId, event, onCancel, onClose, onUpdated }: E
                 <input
                   type="number"
                   min={0}
+                  step={anyDecimalStep}
                   value={item.fiberGrams}
                   onChange={(event) => updateItem(item.key, { fiberGrams: event.target.value })}
                   className={smallInputClass}

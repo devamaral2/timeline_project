@@ -5,7 +5,7 @@ import { getAuth } from "firebase/auth";
 import { getClientApp } from "@/lib/firebase/client-app";
 import { fieldInputClass, fieldLabelClass } from "../new-event-forms/field-styles";
 
-export { CommonFields, FormActions, fieldInputClass, fieldLabelClass, fieldTextareaClass } from "../new-event-forms/shared";
+export { CommonFields, FormActions, anyDecimalStep, fieldInputClass, fieldLabelClass, fieldTextareaClass } from "../new-event-forms/shared";
 export { TagInput } from "../new-event-forms/TagInput";
 
 interface UseSubmitEventUpdateOptions {

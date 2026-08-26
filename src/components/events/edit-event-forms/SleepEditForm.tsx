@@ -8,6 +8,7 @@ import {
   FinishedAtField,
   FormActions,
   StartedAtField,
+  anyDecimalStep,
   fieldInputClass,
   fieldLabelClass,
   fromDatetimeLocalValue,
@@ -54,7 +55,7 @@ export function SleepEditForm({ eventId, event, onCancel, onClose, onUpdated }: 
             autoFocus
             min={0}
             max={24}
-            step={0.5}
+            step={anyDecimalStep}
             value={trackedSleepTime}
             onChange={(event) => setTrackedSleepTime(event.target.value)}
             className={fieldInputClass}
@@ -70,6 +71,7 @@ export function SleepEditForm({ eventId, event, onCancel, onClose, onUpdated }: 
             type="number"
             min={0}
             max={100}
+            step={anyDecimalStep}
             value={score}
             onChange={(event) => setScore(event.target.value)}
             className={fieldInputClass}

@@ -5,7 +5,7 @@ import { Plus, X } from "lucide-react";
 import type { EventDetailDto } from "@/models/events/application/dtos/event-detail.dto";
 import type { Workout } from "@/models/events/domain/entities/training-event.entity";
 import { cn } from "@/lib/utils";
-import { fieldInputClass, fieldLabelClass } from "../new-event-forms/field-styles";
+import { anyDecimalStep, fieldInputClass, fieldLabelClass } from "../new-event-forms/field-styles";
 import {
   CommonFields,
   type EditEventFormProps,
@@ -184,6 +184,7 @@ export function TrainingEditForm({
                 <input
                   type="number"
                   min={0}
+                  step={anyDecimalStep}
                   value={workout.calories}
                   onChange={(event) => updateWorkout(workout.key, { calories: event.target.value })}
                   className={smallInputClass}
@@ -194,6 +195,7 @@ export function TrainingEditForm({
                 <input
                   type="number"
                   min={0}
+                  step={anyDecimalStep}
                   value={workout.duration}
                   onChange={(event) => updateWorkout(workout.key, { duration: event.target.value })}
                   className={smallInputClass}
@@ -207,7 +209,7 @@ export function TrainingEditForm({
                     <input
                       type="number"
                       min={0}
-                      step={0.1}
+                      step={anyDecimalStep}
                       value={workout.pace}
                       onChange={(event) => updateWorkout(workout.key, { pace: event.target.value })}
                       className={smallInputClass}
@@ -218,7 +220,7 @@ export function TrainingEditForm({
                     <input
                       type="number"
                       min={0}
-                      step={0.1}
+                      step={anyDecimalStep}
                       value={workout.distance}
                       onChange={(event) => updateWorkout(workout.key, { distance: event.target.value })}
                       className={smallInputClass}
@@ -244,6 +246,7 @@ export function TrainingEditForm({
                     <input
                       type="number"
                       min={0}
+                      step={anyDecimalStep}
                       placeholder="Reps"
                       value={set.repetitions}
                       onChange={(event) =>
@@ -254,6 +257,7 @@ export function TrainingEditForm({
                     <input
                       type="number"
                       min={0}
+                      step={anyDecimalStep}
                       placeholder="Kg"
                       value={set.weight}
                       onChange={(event) => updateSet(workout.key, set.key, { weight: event.target.value })}

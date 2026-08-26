@@ -5,6 +5,7 @@ import {
   CommonFields,
   type EventFormProps,
   FormActions,
+  anyDecimalStep,
   fieldInputClass,
   fieldLabelClass,
   useSubmitEvent,
@@ -44,7 +45,7 @@ export function SleepForm({ onBack, onClose, onCreated }: EventFormProps) {
             autoFocus
             min={0}
             max={24}
-            step={0.5}
+            step={anyDecimalStep}
             value={trackedSleepTime}
             onChange={(event) => setTrackedSleepTime(event.target.value)}
             placeholder="Ex.: 7.5"
@@ -61,6 +62,7 @@ export function SleepForm({ onBack, onClose, onCreated }: EventFormProps) {
             type="number"
             min={0}
             max={100}
+            step={anyDecimalStep}
             value={score}
             onChange={(event) => setScore(event.target.value)}
             placeholder="Ex.: 85"
