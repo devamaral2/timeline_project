@@ -1,5 +1,11 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+# Dependencias autorizadas a rodar scripts de instalacao. esbuild (via vitest) e
+# protobufjs (via firebase-admin) precisam disso para linkar/gerar seus binarios.
 allowBuilds:
-  '@firebase/util': set this to true or false
-  '@openrouter/sdk': set this to true or false
-  esbuild: set this to true or false
-  protobufjs: set this to true or false
+  "@firebase/util": true
+  "@openrouter/sdk": true
+  esbuild: true
+  protobufjs: true

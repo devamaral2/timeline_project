@@ -1,6 +1,6 @@
 import { mergeConfig } from "vitest/config";
 import baseConfig from "./vitest.config";
-import { QuietReporter } from "./src/test/quiet-reporter";
+import { QuietReporter } from "./test/quiet-reporter";
 
 /**
  * Config usado por `npm run test:ai`.

@@ -1,0 +1,38 @@
+{
+  "name": "@repo/entities",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "react-native": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./contracts": {
+      "react-native": "./src/contracts.ts",
+      "types": "./dist/contracts.d.ts",
+      "default": "./dist/contracts.js"
+    },
+    "./ports": {
+      "react-native": "./src/ports.ts",
+      "types": "./dist/ports.d.ts",
+      "default": "./dist/ports.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "ulid": "^3.0.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  }
+}
