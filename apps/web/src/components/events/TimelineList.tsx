@@ -1,136 +1,104 @@
-"use client";
+'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { TimelineEventCardDto } from "@repo/entities/contracts";
-import { EMPTY_WINDOWS_UNTIL_END, groupEventsByDay, timelineWindowUrl } from "@repo/timeline";
-import { DayColumn } from "./DayColumn";
-import { DaySkeleton } from "./DaySkeleton";
+import { useCallback, useRef, useState } from 'react';
+import type { TimelineEventCardDto } from '@repo/entities/contracts';
+import { dayEventsUrl, mediumDate } from '@repo/timeline';
+import { TimelineHeader } from '@/components/layout/TimelineHeader';
+import { outlineButtonClass } from '@/components/ui/button-styles';
+import { DayColumn } from './DayColumn';
 
 interface TimelineListProps {
   userId: string;
-  /** Eventos da janela 0, ja renderizados no servidor. */
+  /** Eventos de hoje, ja renderizados no servidor. */
   initialEvents: TimelineEventCardDto[];
   /** Dia de hoje (YYYY-MM-DD) resolvido no servidor, para evitar divergencia na hidratacao. */
   todayKey: string;
-  /** Instante de referencia do servidor, para que as janelas seguintes continuem a serie. */
-  nowIso: string;
 }
 
-export function TimelineList({ userId, initialEvents, todayKey, nowIso }: TimelineListProps) {
-  const now = useMemo(() => new Date(nowIso), [nowIso]);
+type LoadState = 'idle' | 'loading' | 'failed';
+
+export function TimelineList({
+  userId,
+  initialEvents,
+  todayKey,
+}: TimelineListProps) {
+  const [selectedDayKey, setSelectedDayKey] = useState(todayKey);
   const [events, setEvents] = useState<TimelineEventCardDto[]>(initialEvents);
-  const [loading, setLoading] = useState(false);
-  const [reachedEnd, setReachedEnd] = useState(false);
-  const [failed, setFailed] = useState(false);
-  // Um contador que muda a cada carga concluida e reinicia o observer, para o
-  // caso de o sentinel continuar visivel depois de uma janela vazia.
-  const [pass, setPass] = useState(0);
+  const [loadState, setLoadState] = useState<LoadState>('idle');
+  // Respostas antigas nao podem substituir o dia escolhido depois de dois
+  // toques rapidos na regua.
+  const requestVersion = useRef(0);
 
-  const isLoadingRef = useRef(false);
-  const nextWindowRef = useRef(1);
-  const emptyStreakRef = useRef(0);
-  const verticalSentinel = useRef<HTMLDivElement>(null);
-  const horizontalSentinel = useRef<HTMLDivElement>(null);
+  const loadDay = useCallback(
+    async (dayKey: string) => {
+      const version = requestVersion.current + 1;
+      requestVersion.current = version;
+      setSelectedDayKey(dayKey);
+      setLoadState('loading');
 
-  const days = useMemo(() => groupEventsByDay(events, todayKey), [events, todayKey]);
-
-  const loadMore = useCallback(async () => {
-    if (isLoadingRef.current) return;
-    isLoadingRef.current = true;
-    setLoading(true);
-    setFailed(false);
-
-    try {
-      const response = await fetch(timelineWindowUrl(userId, nextWindowRef.current, now));
-      if (!response.ok) throw new Error(`Timeline request failed with ${response.status}`);
-      const batch = (await response.json()) as TimelineEventCardDto[];
-      nextWindowRef.current += 1;
-
-      if (batch.length === 0) {
-        emptyStreakRef.current += 1;
-        if (emptyStreakRef.current >= EMPTY_WINDOWS_UNTIL_END) setReachedEnd(true);
-      } else {
-        emptyStreakRef.current = 0;
-        setEvents((current) => [...current, ...batch]);
+      try {
+        const response = await fetch(dayEventsUrl(userId, dayKey));
+        if (!response.ok)
+          throw new Error(`Day request failed with ${response.status}`);
+        const batch = (await response.json()) as TimelineEventCardDto[];
+        if (requestVersion.current !== version) return;
+        setEvents(batch);
+        setLoadState('idle');
+      } catch {
+        if (requestVersion.current === version) setLoadState('failed');
       }
-    } catch {
-      setFailed(true);
-    } finally {
-      isLoadingRef.current = false;
-      setLoading(false);
-      setPass((value) => value + 1);
-    }
-  }, [now, userId]);
+    },
+    [userId],
+  );
 
-  useEffect(() => {
-    if (reachedEnd || failed) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) void loadMore();
-      },
-      { rootMargin: "200px" },
-    );
-    if (verticalSentinel.current) observer.observe(verticalSentinel.current);
-    if (horizontalSentinel.current) observer.observe(horizontalSentinel.current);
-    return () => observer.disconnect();
-  }, [loadMore, reachedEnd, failed, pass]);
-
-  if (days.length === 0 && reachedEnd) {
-    return (
-      <p className="rounded-xl border border-dashed border-border bg-card/50 px-4 py-10 text-center text-sm text-muted-foreground">
-        Nenhum evento registrado nesta timeline ainda.
-      </p>
-    );
+  function selectDay(dayKey: string): void {
+    if (dayKey !== selectedDayKey) void loadDay(dayKey);
   }
 
   return (
-    <>
-      {/* Mobile e tablet: timeline vertical */}
-      <div className="flex flex-col gap-10 md:grid md:grid-cols-2 md:gap-8 lg:hidden">
-        {days.map((day) => (
-          <DayColumn key={day.dayKey} day={day} variant="vertical" />
-        ))}
-        {loading ? <DaySkeleton variant="vertical" /> : null}
-        <div ref={verticalSentinel} className="h-4" />
-      </div>
+    <div className="min-h-screen">
+      <TimelineHeader
+        userId={userId}
+        selectedDayKey={selectedDayKey}
+        todayKey={todayKey}
+        onSelectDay={selectDay}
+      />
 
-      {/* Desktop: colunas com scroll horizontal */}
-      <div
-        className="scrollbar-slim hidden snap-x snap-mandatory gap-6 overflow-x-auto pb-6 lg:flex"
-        tabIndex={0}
-        role="region"
-        aria-label="Timeline horizontal de dias — use as setas para navegar"
-      >
-        {days.map((day) => (
-          <DayColumn key={day.dayKey} day={day} variant="column" />
-        ))}
-        {loading ? <DaySkeleton variant="column" /> : null}
-        <div ref={horizontalSentinel} className="w-4 shrink-0" />
-      </div>
-
-      {failed ? (
-        <div className="mt-6 flex flex-col items-center gap-3">
-          <p className="text-sm text-muted-foreground">Não foi possível carregar mais eventos.</p>
-          <button
-            type="button"
-            onClick={() => void loadMore()}
-            className="inline-flex min-h-11 items-center rounded-lg border border-border bg-card px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+      <main className="mx-auto max-w-[900px] px-4 py-6 sm:px-6 sm:py-8">
+        {loadState === 'loading' ? (
+          <p
+            role="status"
+            className="py-14 text-center text-sm text-muted-foreground"
           >
-            Tentar novamente
-          </button>
-        </div>
-      ) : null}
-
-      {reachedEnd && days.length > 0 ? (
-        <p className="mt-6 text-center text-[13px] text-muted-foreground">
-          Você chegou ao fim da timeline.
-        </p>
-      ) : null}
-
-      <p aria-live="polite" className="sr-only">
-        {loading ? "Carregando mais dias da timeline" : `${days.length} dias carregados`}
-      </p>
-    </>
+            Carregando {mediumDate(selectedDayKey)}...
+          </p>
+        ) : loadState === 'failed' ? (
+          <div className="flex flex-col items-center gap-3 py-14">
+            <p className="text-sm text-muted-foreground">
+              Não foi possível carregar {mediumDate(selectedDayKey)}.
+            </p>
+            <button
+              type="button"
+              className={outlineButtonClass}
+              onClick={() => void loadDay(selectedDayKey)}
+            >
+              Tentar novamente
+            </button>
+          </div>
+        ) : events.length === 0 ? (
+          <p className="rounded-2xl border border-dashed border-border bg-card/40 px-4 py-14 text-center text-sm text-muted-foreground">
+            Nenhum evento registrado neste dia.
+          </p>
+        ) : (
+          <DayColumn
+            day={{
+              dayKey: selectedDayKey,
+              isToday: selectedDayKey === todayKey,
+              events,
+            }}
+          />
+        )}
+      </main>
+    </div>
   );
 }

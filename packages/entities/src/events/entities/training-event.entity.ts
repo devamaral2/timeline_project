@@ -72,6 +72,8 @@ export class TrainingEvent extends Event<TrainingEventData> {
       TagList.create(props.tags),
       props.interruptions,
       normalizeTrainingEventData(props.data),
+      props.missed,
+      props.priority,
     );
   }
 

@@ -1,11 +1,16 @@
-import { useColorScheme } from "react-native";
-import { themeFor, type Theme } from "@repo/theme";
+import { darkTheme, type Theme } from "@repo/theme";
 
 /**
- * O tema segue o modo claro/escuro do sistema, como no web (onde quem decide e
- * a classe `.dark` no html). As cores sao as mesmas: `@repo/theme` resolve os
- * tokens oklch do design system para o formato que o RN aceita.
+ * A identidade do produto e escura, e o app abre nela — como no web, onde o
+ * <html> ja vem com a classe `dark` fixa (`apps/web/src/app/layout.tsx`).
+ *
+ * Antes isto seguia o `useColorScheme` do sistema. Seguir significava metade
+ * dos aparelhos abrindo numa UI que nao e a desenhada, entao o tema claro
+ * continua em `@repo/theme` esperando uma opcao explicita de troca — e nao a
+ * preferencia do sistema.
+ *
+ * Continua sendo um hook: o dia em que houver essa opcao, muda so aqui.
  */
 export function useTheme(): Theme {
-  return themeFor(useColorScheme());
+  return darkTheme;
 }

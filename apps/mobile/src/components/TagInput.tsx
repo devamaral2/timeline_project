@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { X } from "lucide-react-native";
 import type { TagSuggestionDto } from "@repo/entities/contracts";
-import { tagColors } from "@repo/theme";
+import { tagColors, withAlpha } from "@repo/theme";
 import { apiFetch } from "@/lib/api/client";
+import { fieldSurface } from "@/lib/theme/surfaces";
 import { useTheme } from "@/lib/theme/use-theme";
 
 interface TagInputProps {
@@ -57,16 +58,7 @@ export function TagInput({ tags, onTagsChange }: TagInputProps) {
     <View style={styles.field}>
       <Text style={[styles.label, { color: theme.colors.foreground }]}>Tags</Text>
 
-      <View
-        style={[
-          styles.box,
-          {
-            borderColor: theme.colors.border,
-            backgroundColor: theme.colors.background,
-            borderRadius: theme.radii.lg,
-          },
-        ]}
-      >
+      <View style={[styles.box, fieldSurface(theme)]}>
         {tags.map((tag) => {
           const colors = tagColors(tag, theme);
           return (
@@ -90,7 +82,7 @@ export function TagInput({ tags, onTagsChange }: TagInputProps) {
           onSubmitEditing={() => commit(draft)}
           onBlur={() => commit(draft)}
           placeholder={tags.length ? "" : "Ex.: foco, manhã"}
-          placeholderTextColor={theme.colors.mutedForeground}
+          placeholderTextColor={withAlpha(theme.colors.mutedForeground, 0.7)}
           autoCapitalize="none"
           autoCorrect={false}
           returnKeyType="done"
@@ -105,7 +97,7 @@ export function TagInput({ tags, onTagsChange }: TagInputProps) {
             {
               borderColor: theme.colors.border,
               backgroundColor: theme.colors.card,
-              borderRadius: theme.radii.lg,
+              borderRadius: theme.radii.xl,
             },
           ]}
         >

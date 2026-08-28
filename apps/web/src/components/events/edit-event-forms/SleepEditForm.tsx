@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import type { EventDetailDto } from "@repo/entities/contracts";
+import type { EventDetailDto, EventPriority } from "@repo/entities/contracts";
 import {
   CommonFields,
   type EditEventFormProps,
   FinishedAtField,
   FormActions,
   StartedAtField,
+  EventMarks,
   anyDecimalStep,
   fieldInputClass,
   fieldLabelClass,
@@ -25,6 +26,8 @@ export function SleepEditForm({ eventId, event, onCancel, onClose, onUpdated }: 
   const [tags, setTags] = useState<string[]>(event.tags);
   const [startedAt, setStartedAt] = useState(toDatetimeLocalValue(event.startedAt));
   const [finishedAt, setFinishedAt] = useState(toDatetimeLocalValue(event.finishedAt));
+  const [missed, setMissed] = useState<boolean | undefined>(event.missed);
+  const [priority, setPriority] = useState<EventPriority | undefined>(event.priority);
   const { submit, submitting, error } = useSubmitEventUpdate({ eventId, onUpdated, onClose });
 
   function handleSubmit(formEvent: FormEvent) {
@@ -39,6 +42,8 @@ export function SleepEditForm({ eventId, event, onCancel, onClose, onUpdated }: 
       tags,
       startedAt: fromDatetimeLocalValue(startedAt),
       finishedAt: fromDatetimeLocalValue(finishedAt),
+      missed,
+      priority,
     });
   }
 
@@ -88,6 +93,13 @@ export function SleepEditForm({ eventId, event, onCancel, onClose, onUpdated }: 
 
       <StartedAtField value={startedAt} onChange={setStartedAt} />
       <FinishedAtField value={finishedAt} onChange={setFinishedAt} />
+
+      <EventMarks
+        missed={missed}
+        onMissedChange={setMissed}
+        priority={priority}
+        onPriorityChange={setPriority}
+      />
 
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
 

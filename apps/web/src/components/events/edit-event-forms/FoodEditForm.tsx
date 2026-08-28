@@ -2,16 +2,24 @@
 
 import { useState, type FormEvent } from "react";
 import { Plus, X } from "lucide-react";
-import type { EventDetailDto } from "@repo/entities/contracts";
+import type { EventDetailDto, EventPriority } from "@repo/entities/contracts";
 import type { FoodItem } from "@repo/entities/contracts";
 import { cn } from "@/lib/utils";
-import { anyDecimalStep, fieldLabelClass } from "../new-event-forms/field-styles";
+import { iconButtonClass } from "@/components/ui/button-styles";
+import {
+  addRowButtonClass,
+  anyDecimalStep,
+  emptyRowClass,
+  fieldLabelClass,
+  smallInputClass,
+} from "../new-event-forms/field-styles";
 import {
   CommonFields,
   type EditEventFormProps,
   FinishedAtField,
   FormActions,
   StartedAtField,
+  EventMarks,
   fromDatetimeLocalValue,
   toDatetimeLocalValue,
   useSubmitEventUpdate,
@@ -74,8 +82,7 @@ function newItem(): ItemDraft {
   };
 }
 
-const smallInputClass =
-  "h-9 rounded-lg border border-border bg-background px-2.5 text-[13px] text-foreground outline-none transition-colors focus:border-primary";
+
 
 export function FoodEditForm({ eventId, event, onCancel, onClose, onUpdated }: EditEventFormProps<FoodEventDetail>) {
   const [items, setItems] = useState<ItemDraft[]>(event.data.items.map(draftFromItem));
@@ -83,6 +90,8 @@ export function FoodEditForm({ eventId, event, onCancel, onClose, onUpdated }: E
   const [tags, setTags] = useState<string[]>(event.tags);
   const [startedAt, setStartedAt] = useState(toDatetimeLocalValue(event.startedAt));
   const [finishedAt, setFinishedAt] = useState(toDatetimeLocalValue(event.finishedAt));
+  const [missed, setMissed] = useState<boolean | undefined>(event.missed);
+  const [priority, setPriority] = useState<EventPriority | undefined>(event.priority);
   const { submit, submitting, error } = useSubmitEventUpdate({ eventId, onUpdated, onClose });
 
   function updateItem(key: string, patch: Partial<ItemDraft>) {
@@ -114,6 +123,8 @@ export function FoodEditForm({ eventId, event, onCancel, onClose, onUpdated }: E
       tags,
       startedAt: fromDatetimeLocalValue(startedAt),
       finishedAt: fromDatetimeLocalValue(finishedAt),
+      missed,
+      priority,
     });
   }
 
@@ -123,7 +134,7 @@ export function FoodEditForm({ eventId, event, onCancel, onClose, onUpdated }: E
         <span className={fieldLabelClass}>Itens da refeição</span>
 
         {items.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-border px-3 py-4 text-center text-[13px] text-muted-foreground">
+          <p className={emptyRowClass}>
             Nenhum item nesta refeição.
           </p>
         ) : null}
@@ -148,7 +159,7 @@ export function FoodEditForm({ eventId, event, onCancel, onClose, onUpdated }: E
                 type="button"
                 onClick={() => setItems((current) => current.filter((current2) => current2.key !== item.key))}
                 aria-label="Remover item"
-                className="grid size-8 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                className={iconButtonClass}
               >
                 <X aria-hidden className="size-4" />
               </button>
@@ -237,7 +248,7 @@ export function FoodEditForm({ eventId, event, onCancel, onClose, onUpdated }: E
         <button
           type="button"
           onClick={() => setItems((current) => [...current, newItem()])}
-          className="inline-flex items-center justify-center gap-1.5 self-start rounded-lg border border-dashed border-border px-3 py-2 text-[13px] font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
+          className={addRowButtonClass}
         >
           <Plus aria-hidden className="size-4" />
           Adicionar item
@@ -253,6 +264,13 @@ export function FoodEditForm({ eventId, event, onCancel, onClose, onUpdated }: E
 
       <StartedAtField value={startedAt} onChange={setStartedAt} />
       <FinishedAtField value={finishedAt} onChange={setFinishedAt} />
+
+      <EventMarks
+        missed={missed}
+        onMissedChange={setMissed}
+        priority={priority}
+        onPriorityChange={setPriority}
+      />
 
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
 

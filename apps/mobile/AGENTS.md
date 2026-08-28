@@ -10,7 +10,7 @@ Expo SDK 57 + expo-router. As rotas ficam em `src/app`; o resto do codigo em
 E a versao nativa de `apps/web` e segue as mesmas decisoes de produto. Antes de
 inventar comportamento novo, veja como o web resolve o mesmo caso — os nomes dos
 arquivos foram mantidos proximos de proposito (`EventCard`, `TagInput`,
-`event-visuals`, `use-timeline`).
+`event-visuals`, `TimelineHeader`).
 
 Sem regra de negocio aqui. Do backend, so tipos (`@repo/entities/contracts`).
 
@@ -18,7 +18,12 @@ Sem regra de negocio aqui. Do backend, so tipos (`@repo/entities/contracts`).
 
 - **Cores**: nao ha Tailwind nem oklch. Use `useTheme()` (`src/lib/theme/use-theme.ts`)
   e os tokens de `@repo/theme`; para opacidade, `withAlpha(cor, 0.1)` no lugar de
-  `bg-primary/10`.
+  `bg-primary/10`. O tema e sempre o escuro, nao o do sistema.
+- **Acabamentos**: sombra de cartao e superficie de campo estao em
+  `src/lib/theme/surfaces.ts` — o equivalente ao `shadow-card` e ao
+  `field-styles.ts` do web. A interface e de cor solida: o unico gradiente do
+  produto e o do simbolo do logo, desenhado em SVG dentro de
+  `src/components/Logo.tsx`.
 - **Rede**: nao ha caminho relativo nem rewrite. Use `apiFetch` / `authedFetch`
   de `src/lib/api/client.ts`, que ja poem o host e o `Authorization`.
 - **Login**: `signInWithPopup` nao existe no React Native. O fluxo esta em
@@ -26,6 +31,18 @@ Sem regra de negocio aqui. Do backend, so tipos (`@repo/entities/contracts`).
   Firebase troca por sessao.
 - **Datas**: as mesmas funcoes do web, vindas de `@repo/timeline`. Nao
   reimplemente fuso nem janela aqui.
+- **Timeline**: os dois apps tem a mesma navegacao por data — regua da semana e
+  calendario, de `@repo/timeline`, e mostram um unico dia por vez. Escolher uma
+  data substitui a lista atual; nao existe scroll infinito nem carrossel de dias.
+  Cada selecao carrega somente seu dia (`use-day-events.ts`) e o cache de modulo
+  evita repetir a chamada ao voltar a uma data ja visitada.
+- **Contador**: o `durationLabel` que a API manda vale para o que ja terminou —
+  no evento em andamento ele vem `"--"`. Quem preenche esse lugar e o
+  cronometro (`formatStopwatch`, em `@repo/timeline`), com o relogio de um
+  segundo compartilhado de `use-now.ts`: um `setInterval` para o app inteiro,
+  nascendo no primeiro cronometro e morrendo com o ultimo. O formato e `MM:SS` /
+  `H:MM:SS` de proposito diferente do `1h 25m` da API — um numero que ainda
+  sobe nao se le como um registro fechado.
 
 ## Rodando
 

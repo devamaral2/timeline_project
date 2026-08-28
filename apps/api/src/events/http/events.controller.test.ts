@@ -200,3 +200,52 @@ test("keeps the daily boundary in Sao Paulo", async () => {
 
   await expect(controller.daily("2026-08-16")).resolves.toMatchObject({ caloriesConsumed: 0 });
 });
+
+/** Um treino aberto, e sem anotacao nenhuma — que e como toda entidade nasce. */
+function anOpenTraining() {
+  return TrainingEvent.create({
+    id: "01K2R1J5M8S0Y2Z7ABCD123456",
+    userId: "firebase-user-1",
+    name: "Treino",
+    description: "Gym session",
+    startedAt: new Date("2026-08-16T18:00:00.000Z"),
+    tags: ["gym"],
+    interruptions: [],
+    data: { workouts: [] },
+  });
+}
+
+
+test("PATCH /api/events/:eventId refuses marks that are not ours", async () => {
+  const event = anOpenTraining();
+  const { controller, eventRepository } = makeController({
+    eventRepository: new InMemoryEventRepository([event]),
+  });
+
+  await expect(
+    controller.update(event.id, { eventId: event.id, missed: "sim" } as never, actor),
+  ).rejects.toBeInstanceOf(BadRequestException);
+
+  // O ciclo de vida da versao anterior ainda e lido dos documentos, mas nao se
+  // escreve mais: quem mandar um `status` esta em outra versao do produto, e o
+  // campo nem existe no corpo que este controller aceita.
+  await expect(
+    controller.update(event.id, { eventId: event.id, priority: "altissima" } as never, actor),
+  ).rejects.toBeInstanceOf(BadRequestException);
+
+  expect((await eventRepository.findById(event.id))?.missed).toBe(false);
+});
+
+test("PATCH /api/events/:eventId stores the mark and the priority the client sent", async () => {
+  const event = anOpenTraining();
+  const { controller, eventRepository } = makeController({
+    eventRepository: new InMemoryEventRepository([event]),
+  });
+
+  await controller.update(event.id, { eventId: event.id, missed: true, priority: "urgent" }, actor);
+
+  expect(await eventRepository.findById(event.id)).toMatchObject({
+    missed: true,
+    priority: "urgent",
+  });
+});

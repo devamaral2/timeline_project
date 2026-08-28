@@ -1,60 +1,40 @@
 import {
   longDate,
-  shortDate,
+  longestDurationOf,
   trackedMinutesOf,
-  weekday,
   type TimelineDay,
-} from "@repo/timeline";
-import { cn } from "@/lib/utils";
-import { EventCard } from "./EventCard";
+} from '@repo/timeline';
+import { EventCard } from './EventCard';
 
 interface DayColumnProps {
   day: TimelineDay;
-  variant: "vertical" | "column";
 }
 
-export function DayColumn({ day, variant }: DayColumnProps) {
+export function DayColumn({ day }: DayColumnProps) {
   const trackedHours = Math.round(trackedMinutesOf(day.events) / 60);
-  const eventLabel = day.events.length === 1 ? "evento" : "eventos";
+  // A escala da barra de duracao e o dia, nao a timeline inteira: os cartoes
+  // que o olho compara sao os que estao juntos nesta coluna.
+  const longestMinutes = longestDurationOf(day.events);
+  const eventLabel = day.events.length === 1 ? 'evento' : 'eventos';
 
   return (
     <section
       aria-label={longDate(day.dayKey)}
-      className={cn(
-        "duration-300 animate-in fade-in",
-        variant === "column"
-          ? "w-[300px] shrink-0 snap-start slide-in-from-right-4 lg:w-[320px]"
-          : "slide-in-from-bottom-2",
-      )}
+      className="duration-300 animate-in fade-in slide-in-from-bottom-2"
     >
-      <header
-        className={cn(
-          "mb-3 pb-2",
-          day.isToday ? "border-b-2 border-primary/60" : "border-b border-border",
-        )}
-      >
-        <div className="flex flex-wrap items-center gap-2">
-          <h2 className="text-[21px] font-bold leading-7 tracking-tight text-foreground">
-            {variant === "column" ? shortDate(day.dayKey) : longDate(day.dayKey)}
-          </h2>
-          {day.isToday ? (
-            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-primary">
-              Hoje
-            </span>
-          ) : null}
-        </div>
-        <p className="mt-0.5 text-[13px] font-medium text-muted-foreground">
-          {weekday(day.dayKey)}
-          <span aria-hidden> · </span>
-          {day.events.length} {eventLabel}
-          <span aria-hidden> · </span>
-          {trackedHours}h registradas
-        </p>
-      </header>
+      <p className="mb-3 text-[13px] font-semibold text-muted-foreground">
+        {day.events.length} {eventLabel}
+        <span aria-hidden> · </span>
+        <span className="tabular-nums">{trackedHours}h</span> registradas
+      </p>
 
       <div className="flex flex-col gap-3">
         {day.events.map((event) => (
-          <EventCard key={event.id} event={event} />
+          <EventCard
+            key={event.id}
+            event={event}
+            longestMinutes={longestMinutes}
+          />
         ))}
       </div>
     </section>

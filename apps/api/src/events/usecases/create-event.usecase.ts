@@ -60,6 +60,8 @@ export function buildDomainEvent(
         startedAt: input.startedAt,
         finishedAt: input.finishedAt,
         tags: input.tags,
+        missed: input.missed,
+        priority: input.priority,
         interruptions: input.interruptions,
         data: input.data,
       });
@@ -71,6 +73,8 @@ export function buildDomainEvent(
         startedAt: input.startedAt,
         finishedAt: input.finishedAt,
         tags: input.tags,
+        missed: input.missed,
+        priority: input.priority,
         interruptions: input.interruptions,
         data: input.data,
       });
@@ -82,6 +86,8 @@ export function buildDomainEvent(
         startedAt: input.startedAt,
         finishedAt: input.finishedAt,
         tags: input.tags,
+        missed: input.missed,
+        priority: input.priority,
         interruptions: input.interruptions,
         data: input.data,
       });

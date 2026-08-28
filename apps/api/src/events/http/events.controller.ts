@@ -21,7 +21,7 @@ import type {
   TimelineEventCardDto,
   UpdateEventInput,
 } from "@repo/entities/contracts";
-import type { EventType } from "@repo/entities";
+import { isEventPriority, type EventType } from "@repo/entities";
 import { CurrentUser } from "../../auth/current-user.decorator";
 import { FirebaseAuthGuard } from "../../auth/firebase-auth.guard";
 import type { AuthenticatedUser } from "../../auth/verify-firebase-token";
@@ -97,6 +97,7 @@ export class EventsController {
     @Body() body: CreateEventInput,
     @CurrentUser() actor: AuthenticatedUser,
   ): Promise<{ eventId: string }> {
+    assertValidMarks(body);
     return this.createEvent.execute(body, actor);
   }
 
@@ -161,6 +162,7 @@ export class EventsController {
     @Body() body: UpdateEventInput,
     @CurrentUser() actor: AuthenticatedUser,
   ): Promise<void> {
+    assertValidMarks(body);
     await this.updateEvent.execute({ ...body, eventId }, actor);
   }
 
@@ -172,5 +174,19 @@ export class EventsController {
     @CurrentUser() actor: AuthenticatedUser,
   ): Promise<void> {
     await this.deleteEvent.execute({ eventId }, actor);
+  }
+}
+
+/**
+ * O corpo chega tipado, mas tipo nao e validacao: nada impede um cliente de
+ * mandar `missed: "sim"`. A leitura devolveria o padrao e o usuario nunca
+ * entenderia por que a anotacao dele sumiu — melhor recusar aqui.
+ */
+function assertValidMarks(body: { missed?: unknown; priority?: unknown }): void {
+  if (body?.missed !== undefined && typeof body.missed !== "boolean") {
+    throw new BadRequestException("Invalid missed flag");
+  }
+  if (body?.priority !== undefined && !isEventPriority(body.priority)) {
+    throw new BadRequestException("Invalid event priority");
   }
 }

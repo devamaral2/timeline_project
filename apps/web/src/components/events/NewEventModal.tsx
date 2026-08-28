@@ -5,11 +5,18 @@ import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import type { EventType } from "@repo/entities/contracts";
 import { cn } from "@/lib/utils";
-import { legendTypes, typeIcons, typeLabels, typeStyles } from "./event-visuals";
+import { ICON_STROKE_WIDTH, legendTypes, typeIcons, typeLabels, typeStyles } from "./event-visuals";
 import { RoutineForm } from "./new-event-forms/RoutineForm";
 import { SleepForm } from "./new-event-forms/SleepForm";
 import { TrainingForm } from "./new-event-forms/TrainingForm";
 import { FoodForm } from "./new-event-forms/FoodForm";
+import { iconButtonClass } from "@/components/ui/button-styles";
+import {
+  dialogHeaderClass,
+  dialogOverlayClass,
+  dialogPanelClass,
+  dialogTitleClass,
+} from "@/components/ui/dialog-styles";
 
 interface NewEventModalProps {
   onClose: () => void;
@@ -37,7 +44,7 @@ export function NewEventModal({ onClose, onCreated }: NewEventModalProps) {
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 p-4 py-8 backdrop-blur-sm duration-200 animate-in fade-in"
+      className={dialogOverlayClass}
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -47,17 +54,17 @@ export function NewEventModal({ onClose, onCreated }: NewEventModalProps) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="new-event-title"
-        className="flex max-h-[calc(100dvh-4rem)] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-card-hover duration-200 animate-in fade-in slide-in-from-bottom-2"
+        className={cn(dialogPanelClass, "max-w-md")}
       >
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-5 py-4 sm:px-6">
-          <h2 id="new-event-title" className="text-lg font-semibold tracking-tight text-foreground">
+        <div className={dialogHeaderClass}>
+          <h2 id="new-event-title" className={dialogTitleClass}>
             {selectedType ? "Novo evento" : "Que tipo de evento?"}
           </h2>
           <button
             type="button"
             onClick={onClose}
             aria-label="Fechar"
-            className="grid size-8 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            className={iconButtonClass}
           >
             <X aria-hidden className="size-4" />
           </button>
@@ -88,11 +95,13 @@ function TypeSelector({ onSelect }: { onSelect: (type: EventType) => void }) {
             key={type}
             type="button"
             onClick={() => onSelect(type)}
-            className="flex flex-col items-start gap-2.5 rounded-xl border border-border bg-background p-4 text-left transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-card"
+            className="flex flex-col items-start gap-2.5 rounded-2xl border border-border bg-secondary/50 p-4 text-left transition-all hover:-translate-y-0.5 hover:border-brand/45 hover:bg-secondary hover:shadow-card-hover"
           >
-            <span className={cn("grid size-9 place-items-center rounded-lg", styles.iconBg)}>
-              <Icon aria-hidden className={cn("size-5", styles.icon)} />
-            </span>
+            <Icon
+              aria-hidden
+              strokeWidth={ICON_STROKE_WIDTH}
+              className={cn("size-6", styles.text)}
+            />
             <span className="text-sm font-semibold text-foreground">{typeLabels[type]}</span>
           </button>
         );

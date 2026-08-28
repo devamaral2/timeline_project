@@ -10,6 +10,14 @@ import { RoutineEditForm } from "./edit-event-forms/RoutineEditForm";
 import { SleepEditForm } from "./edit-event-forms/SleepEditForm";
 import { TrainingEditForm } from "./edit-event-forms/TrainingEditForm";
 import { FoodEditForm } from "./edit-event-forms/FoodEditForm";
+import { cn } from "@/lib/utils";
+import { iconButtonClass } from "@/components/ui/button-styles";
+import {
+  dialogHeaderClass,
+  dialogOverlayClass,
+  dialogPanelClass,
+  dialogTitleClass,
+} from "@/components/ui/dialog-styles";
 
 interface EditEventModalProps {
   eventId: string;
@@ -65,7 +73,7 @@ export function EditEventModal({ eventId, onClose, onUpdated }: EditEventModalPr
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 p-4 py-8 backdrop-blur-sm duration-200 animate-in fade-in"
+      className={dialogOverlayClass}
       onClick={(clickEvent) => {
         if (clickEvent.target === clickEvent.currentTarget) onClose();
       }}
@@ -74,17 +82,17 @@ export function EditEventModal({ eventId, onClose, onUpdated }: EditEventModalPr
         role="dialog"
         aria-modal="true"
         aria-labelledby="edit-event-title"
-        className="flex max-h-[calc(100dvh-4rem)] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-card-hover duration-200 animate-in fade-in slide-in-from-bottom-2"
+        className={cn(dialogPanelClass, "max-w-md")}
       >
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-5 py-4 sm:px-6">
-          <h2 id="edit-event-title" className="text-lg font-semibold tracking-tight text-foreground">
+        <div className={dialogHeaderClass}>
+          <h2 id="edit-event-title" className={dialogTitleClass}>
             Editar evento
           </h2>
           <button
             type="button"
             onClick={onClose}
             aria-label="Fechar"
-            className="grid size-8 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            className={iconButtonClass}
           >
             <X aria-hidden className="size-4" />
           </button>

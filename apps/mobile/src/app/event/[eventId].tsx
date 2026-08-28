@@ -4,8 +4,9 @@ import { Stack, useLocalSearchParams } from "expo-router";
 import type { EventDetailDto } from "@repo/entities/contracts";
 import { formatTime } from "@repo/timeline";
 import { Message } from "@/components/Message";
+import { MissedBadge } from "@/components/MissedBadge";
 import { TagChip } from "@/components/TagChip";
-import { typeLabels } from "@/components/event-visuals";
+import { priorityLabels, typeLabels } from "@/components/event-visuals";
 import { authedFetch } from "@/lib/api/client";
 import { useTheme } from "@/lib/theme/use-theme";
 
@@ -58,14 +59,23 @@ function EventDetailBody({ event }: { event: EventDetailDto }) {
   return (
     <View style={styles.body}>
       <View style={styles.summary}>
-        <Text style={[styles.type, { color: theme.colors.foreground }]}>
-          {typeLabels[event.type]}
-        </Text>
+        <View style={styles.typeRow}>
+          <Text style={[styles.type, { color: theme.colors.foreground }]}>
+            {typeLabels[event.type]}
+          </Text>
+          <MissedBadge missed={event.missed} />
+        </View>
         <Text style={[styles.meta, { color: theme.colors.mutedForeground }]}>
           {formatTime(event.startedAt)} →{" "}
           {event.finishedAt ? formatTime(event.finishedAt) : "em andamento"}
         </Text>
       </View>
+
+      {/* A anotacao de nao realizado ja esta no selo la em cima. A prioridade
+          nao tem selo, entao e esta linha que a mostra. */}
+      <Text style={[styles.meta, { color: theme.colors.mutedForeground }]}>
+        Prioridade: {priorityLabels[event.priority]}
+      </Text>
 
       {event.description ? (
         <Text style={[styles.description, { color: theme.colors.cardForeground }]}>
@@ -191,6 +201,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: 12,
+  },
+  typeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   type: {
     fontSize: 14,

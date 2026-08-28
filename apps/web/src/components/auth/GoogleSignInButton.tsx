@@ -1,11 +1,19 @@
 "use client";
 
 import { useState } from "react";
+import { LogOut } from "lucide-react";
 import { GoogleAuthProvider, getAuth, signInWithPopup, signOut } from "firebase/auth";
 import { getClientApp } from "@/lib/firebase/client-app";
 import { useCurrentUser } from "@/lib/firebase/use-current-user";
+import { outlineButtonClass } from "@/components/ui/button-styles";
+import { cn } from "@/lib/utils";
 
-export function GoogleSignInButton() {
+interface GoogleSignInButtonProps {
+  /** No cabecalho estreito, preserva o nome acessivel e mostra so o simbolo. */
+  compactOnMobile?: boolean;
+}
+
+export function GoogleSignInButton({ compactOnMobile = false }: GoogleSignInButtonProps) {
   const user = useCurrentUser();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,9 +43,13 @@ export function GoogleSignInButton() {
         <button
           type="button"
           onClick={() => void handleSignOut()}
-          className="inline-flex h-10 items-center rounded-full border border-border bg-card px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+          className={cn(
+            outlineButtonClass,
+            compactOnMobile ? "w-10 px-0 sm:w-auto sm:px-4" : null,
+          )}
         >
-          Sair
+          {compactOnMobile ? <LogOut aria-hidden className="size-4 sm:hidden" /> : null}
+          <span className={compactOnMobile ? "sr-only sm:not-sr-only" : undefined}>Sair</span>
         </button>
       </div>
     );
@@ -49,7 +61,10 @@ export function GoogleSignInButton() {
         type="button"
         onClick={() => void handleSignIn()}
         disabled={loading}
-        className="inline-flex h-10 items-center gap-2 rounded-full border border-border bg-card px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60"
+        className={cn(
+          outlineButtonClass,
+          compactOnMobile ? "w-10 px-0 sm:w-auto sm:px-4" : null,
+        )}
       >
         <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
           <path
@@ -69,7 +84,9 @@ export function GoogleSignInButton() {
             d="M12 4.77c1.76 0 3.35.6 4.6 1.79l3.44-3.44C17.94 1.19 15.23 0 12 0 7.31 0 3.26 2.7 1.29 6.6l4.02 3.1C6.25 6.87 8.89 4.77 12 4.77z"
           />
         </svg>
-        {loading ? "Entrando..." : "Entrar com Google"}
+        <span className={compactOnMobile ? "sr-only sm:not-sr-only" : undefined}>
+          {loading ? "Entrando..." : "Entrar com Google"}
+        </span>
       </button>
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
     </div>

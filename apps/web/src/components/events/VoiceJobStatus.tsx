@@ -25,14 +25,14 @@ export function VoiceJobStatus({ jobs, onRetry, onDismiss }: VoiceJobStatusProps
       {failedJobs.map((job) => (
         <div
           key={job.id}
-          className="pointer-events-auto flex w-full max-w-md items-center gap-2 rounded-full border border-destructive/40 bg-card py-2 pl-3 pr-2 text-sm shadow-card-hover duration-200 animate-in fade-in slide-in-from-bottom-2"
+          className="surface-glass pointer-events-auto flex w-full max-w-md items-center gap-2 rounded-full border border-destructive/40 py-2 pl-3 pr-2 text-sm shadow-card-hover duration-200 animate-in fade-in slide-in-from-bottom-2"
         >
           <AlertTriangle aria-hidden className="size-4 shrink-0 text-destructive" />
           <span className="min-w-0 flex-1 truncate text-foreground">{job.error}</span>
           <button
             type="button"
             onClick={() => onRetry(job.id)}
-            className="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold text-primary transition-colors hover:bg-accent"
+            className="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold text-brand-accent transition-colors hover:bg-accent"
           >
             Tentar de novo
           </button>
@@ -48,8 +48,8 @@ export function VoiceJobStatus({ jobs, onRetry, onDismiss }: VoiceJobStatusProps
       ))}
 
       {pendingCount > 0 ? (
-        <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm text-foreground shadow-card-hover duration-200 animate-in fade-in slide-in-from-bottom-2">
-          <Loader2 aria-hidden className="size-4 animate-spin text-primary" />
+        <div className="surface-glass pointer-events-auto flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm text-foreground shadow-card-hover duration-200 animate-in fade-in slide-in-from-bottom-2">
+          <Loader2 aria-hidden className="size-4 animate-spin text-brand-accent" />
           {pendingCount === 1 ? "Criando evento..." : `Criando ${pendingCount} eventos...`}
         </div>
       ) : null}

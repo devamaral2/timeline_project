@@ -13,6 +13,9 @@ export default function RootLayout() {
           headerStyle: { backgroundColor: theme.colors.card },
           headerTintColor: theme.colors.foreground,
           headerTitleStyle: { fontWeight: "600" },
+          // A sombra padrao do cabecalho vira um degrade cinza sobre o fundo
+          // escuro; a separacao aqui vem da propria cor do painel.
+          headerShadowVisible: false,
           contentStyle: { backgroundColor: theme.colors.background },
         }}
       >

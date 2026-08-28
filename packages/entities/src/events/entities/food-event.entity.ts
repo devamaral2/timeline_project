@@ -50,6 +50,8 @@ export class FoodEvent extends Event<FoodEventData> {
       TagList.create(props.tags),
       props.interruptions,
       normalizeFoodEventData(props.data),
+      props.missed,
+      props.priority,
     );
   }
 

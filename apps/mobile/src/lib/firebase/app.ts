@@ -1,6 +1,6 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getApp, getApps, initializeApp, type FirebaseApp } from "firebase/app";
-import { getReactNativePersistence, initializeAuth, type Auth } from "firebase/auth";
+import { initializeAuth, type Auth } from "firebase/auth";
+import { authPersistence } from "./persistence";
 import { env } from "@/config/env";
 
 export function getClientApp(): FirebaseApp {
@@ -18,7 +18,7 @@ let auth: Auth | undefined;
  */
 export function getClientAuth(): Auth {
   auth ??= initializeAuth(getClientApp(), {
-    persistence: getReactNativePersistence(AsyncStorage),
+    persistence: authPersistence,
   });
   return auth;
 }

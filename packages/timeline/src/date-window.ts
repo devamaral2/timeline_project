@@ -3,7 +3,7 @@ import { dayKeyOf, shiftDayKey, zonedDayEnd, zonedDayStart } from "./format-date
 /** Cada janela cobre o dia final e os 7 anteriores. */
 export const WINDOW_SIZE_IN_DAYS = 8;
 
-/** Quantas janelas vazias seguidas encerram o infinite scroll. */
+/** Quantas janelas vazias seguidas encerravam a timeline incremental legada. */
 export const EMPTY_WINDOWS_UNTIL_END = 3;
 
 export interface DateWindow {
@@ -31,5 +31,18 @@ export function buildDateWindow(index: number, now: Date = new Date()): DateWind
 export function timelineWindowUrl(userId: string, index: number, now?: Date): string {
   const { from, to } = buildDateWindow(index, now);
   const query = new URLSearchParams({ userId, from, to });
+  return `/api/events?${query.toString()}`;
+}
+
+/**
+ * URL da API para um unico dia civil. Web e mobile usam esta unidade quando a
+ * pessoa escolhe uma data no cabecalho.
+ */
+export function dayEventsUrl(userId: string, dayKey: string): string {
+  const query = new URLSearchParams({
+    userId,
+    from: zonedDayStart(dayKey).toISOString(),
+    to: zonedDayEnd(dayKey).toISOString(),
+  });
   return `/api/events?${query.toString()}`;
 }

@@ -4,15 +4,19 @@ import { darkTheme, lightTheme, tagColors, themeFor } from "./theme";
 test("resolves the palette to the hex the browser computes for the same oklch", () => {
   // Conferidos contra o valor que o Chrome computa para as mesmas cores no
   // globals.css: se a matriz de conversao regredir, estes quebram primeiro.
-  expect(lightTheme.colors.background).toBe("#f8fafc");
-  expect(lightTheme.colors.border).toBe("#e2e8f0");
-  expect(lightTheme.colors.food).toBe("#22c55e");
-  expect(darkTheme.colors.card).toBe("#0f172b");
+  expect(lightTheme.colors.background).toBe("#f6f7fb");
+  expect(lightTheme.colors.border).toBe("#e2e5ef");
+  expect(darkTheme.colors.background).toBe("#0f131c");
+  expect(darkTheme.colors.card).toBe("#1a1f2b");
+  expect(darkTheme.colors.brand).toBe("#7c4dff");
+  expect(darkTheme.colors.brandAccent).toBe("#4cc9ff");
+  expect(darkTheme.colors.training).toBe("#22d3a6");
+  expect(darkTheme.colors.food).toBe("#ffb14a");
 });
 
 test("keeps the translucent tokens of the dark theme translucent", () => {
-  expect(darkTheme.colors.border).toBe("rgba(255, 255, 255, 0.1)");
-  expect(darkTheme.colors.input).toBe("rgba(255, 255, 255, 0.15)");
+  expect(darkTheme.colors.border).toBe("rgba(255, 255, 255, 0.08)");
+  expect(darkTheme.colors.input).toBe("rgba(255, 255, 255, 0.12)");
 });
 
 test("falls back to the light theme for every scheme that is not dark", () => {

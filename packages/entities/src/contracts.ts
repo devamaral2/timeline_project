@@ -13,6 +13,7 @@ export type * from "./events/contracts/update-event.input";
 // Tipos de dados de dominio que os DTOs referenciam, reexportados para que o
 // front nunca precise importar o subpath raiz (onde vivem as classes).
 export type { EventType } from "./events/types/event-type";
+export type { EventPriority } from "./events/types/event-priority";
 export type { FoodItem, FoodTotals, FoodEventData } from "./events/entities/food-event.entity";
 export type { SleepEventData } from "./events/entities/sleep-event.entity";
 export type {

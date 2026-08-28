@@ -33,6 +33,8 @@ export function normalizeCreateEventInput(
     startedAt,
     finishedAt: schedule?.finishedAt,
     tags: input.tags ?? [],
+    missed: input.missed,
+    priority: input.priority,
     interruptions: [] as Interruption[],
   };
 

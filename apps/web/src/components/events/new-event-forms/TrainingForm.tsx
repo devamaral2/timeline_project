@@ -4,6 +4,13 @@ import { useState, type FormEvent } from "react";
 import { Plus, X } from "lucide-react";
 import type { Workout } from "@repo/entities/contracts";
 import { cn } from "@/lib/utils";
+import { iconButtonClass } from "@/components/ui/button-styles";
+import {
+  addRowButtonClass,
+  emptyRowClass,
+  inlineLinkClass,
+  smallInputClass,
+} from "./field-styles";
 import {
   CommonFields,
   type EventFormProps,
@@ -51,8 +58,7 @@ function newSet(): SetDraft {
 }
 
 const selectClass = fieldInputClass + " pr-8";
-const smallInputClass =
-  "h-9 rounded-lg border border-border bg-background px-2.5 text-[13px] text-foreground outline-none transition-colors focus:border-primary";
+
 
 export function TrainingForm({ onBack, onClose, onCreated }: EventFormProps) {
   const [workouts, setWorkouts] = useState<WorkoutDraft[]>([]);
@@ -108,7 +114,7 @@ export function TrainingForm({ onBack, onClose, onCreated }: EventFormProps) {
         <span className={fieldLabelClass}>Treinos</span>
 
         {workouts.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-border px-3 py-4 text-center text-[13px] text-muted-foreground">
+          <p className={emptyRowClass}>
             Nenhum treino adicionado ainda.
           </p>
         ) : null}
@@ -133,7 +139,7 @@ export function TrainingForm({ onBack, onClose, onCreated }: EventFormProps) {
                 type="button"
                 onClick={() => setWorkouts((current) => current.filter((w) => w.key !== workout.key))}
                 aria-label="Remover treino"
-                className="ml-auto grid size-8 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                className={cn("ml-auto", iconButtonClass)}
               >
                 <X aria-hidden className="size-4" />
               </button>
@@ -232,7 +238,7 @@ export function TrainingForm({ onBack, onClose, onCreated }: EventFormProps) {
                         })
                       }
                       aria-label="Remover série"
-                      className="grid size-8 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                      className={iconButtonClass}
                     >
                       <X aria-hidden className="size-3.5" />
                     </button>
@@ -242,7 +248,7 @@ export function TrainingForm({ onBack, onClose, onCreated }: EventFormProps) {
                 <button
                   type="button"
                   onClick={() => updateWorkout(workout.key, { sets: [...workout.sets, newSet()] })}
-                  className="inline-flex items-center gap-1 self-start text-[12.5px] font-medium text-primary hover:underline"
+                  className={inlineLinkClass}
                 >
                   <Plus aria-hidden className="size-3.5" />
                   Adicionar série
@@ -255,7 +261,7 @@ export function TrainingForm({ onBack, onClose, onCreated }: EventFormProps) {
         <button
           type="button"
           onClick={() => setWorkouts((current) => [...current, newWorkout()])}
-          className="inline-flex items-center justify-center gap-1.5 self-start rounded-lg border border-dashed border-border px-3 py-2 text-[13px] font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
+          className={addRowButtonClass}
         >
           <Plus aria-hidden className="size-4" />
           Adicionar treino

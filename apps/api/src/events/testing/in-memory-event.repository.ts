@@ -53,8 +53,16 @@ export class InMemoryEventRepository implements EventRepository {
   async listTimeline(params: Parameters<EventRepository["listTimeline"]>[0]): Promise<DomainEvent[]> {
     return this.events.filter((event) => {
       if (event.userId !== params.userId) return false;
-      if (params.from && event.startedAt < params.from) return false;
-      if (params.to && event.startedAt > params.to) return false;
+      if (params.from && params.to) {
+        // Um evento pertence ao recorte quando os dois intervalos se tocam.
+        // Nos abertos, o unico instante afirmado e o inicio: nao projetamos um
+        // termino com base no relogio.
+        const finishedAt = event.finishedAt ?? event.startedAt;
+        if (event.startedAt > params.to || finishedAt < params.from) return false;
+      } else {
+        if (params.from && event.startedAt < params.from) return false;
+        if (params.to && event.startedAt > params.to) return false;
+      }
       if (params.type && event.type !== params.type) return false;
       if (params.tag && !event.tags.includes(params.tag)) return false;
       return true;

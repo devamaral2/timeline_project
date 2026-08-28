@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
+import { withAlpha } from "@repo/theme";
 import { Button } from "@/components/Button";
 import { TagInput } from "@/components/TagInput";
 import { authedFetch } from "@/lib/api/client";
+import { fieldSurface } from "@/lib/theme/surfaces";
 import { useTheme } from "@/lib/theme/use-theme";
 
 /**
@@ -54,15 +56,7 @@ export default function NewEventScreen() {
     }
   }
 
-  const inputStyle = [
-    styles.input,
-    {
-      borderColor: theme.colors.border,
-      backgroundColor: theme.colors.background,
-      borderRadius: theme.radii.lg,
-      color: theme.colors.foreground,
-    },
-  ];
+  const inputStyle = [styles.input, fieldSurface(theme), { color: theme.colors.foreground }];
 
   return (
     <KeyboardAvoidingView
@@ -78,7 +72,7 @@ export default function NewEventScreen() {
             value={name}
             onChangeText={setName}
             placeholder="Ex.: Estudar inglês"
-            placeholderTextColor={theme.colors.mutedForeground}
+            placeholderTextColor={withAlpha(theme.colors.mutedForeground, 0.7)}
             autoFocus
             style={inputStyle}
           />
@@ -90,7 +84,7 @@ export default function NewEventScreen() {
             value={description}
             onChangeText={setDescription}
             placeholder="Detalhes opcionais sobre o evento"
-            placeholderTextColor={theme.colors.mutedForeground}
+            placeholderTextColor={withAlpha(theme.colors.mutedForeground, 0.7)}
             multiline
             numberOfLines={3}
             style={[inputStyle, styles.textarea]}

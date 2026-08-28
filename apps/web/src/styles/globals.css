@@ -4,15 +4,21 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Design system da timeline.
+ * Design system da timeline — identidade "Time Composure".
  *
  * O bloco @theme inline mapeia as custom properties para utilitarios do
  * Tailwind (ex.: --color-primary -> bg-primary, text-primary).
  *
+ * A paleta e escura por natureza: fundo quase preto azulado (#0f131c),
+ * superficies em #1a1f2b, roxo (#7c4dff) como cor primaria e ciano (#4cc9ff)
+ * como acento. `--brand` e `--brand-accent` sao as duas cores da marca. O
+ * gradiente entre elas vive so dentro do simbolo do logo (o SVG em
+ * `components/brand/Logo.tsx`); na interface, cor solida.
+ *
  * As cores por tipo de evento seguem o vocabulario do dominio:
  * routine | food | training | sleep.
  *
- * Todas as cores usam oklch.
+ * Todas as cores usam oklch. Os hexadecimais de referencia estao ao lado.
  */
 
 @theme inline {
@@ -37,9 +43,13 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-warning: var(--warning);
+  --color-success: var(--success);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-brand: var(--brand);
+  --color-brand-accent: var(--brand-accent);
   --color-routine: var(--routine);
   --color-food: var(--food);
   --color-training: var(--training);
@@ -49,63 +59,71 @@
 }
 
 :root {
-  --radius: 0.75rem;
-  --background: oklch(0.984 0.003 247.858);
-  --foreground: oklch(0.208 0.042 265.755);
+  --radius: 0.875rem;
+  --background: oklch(0.977 0.005 275);
+  --foreground: oklch(0.206 0.023 268.9);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.208 0.042 265.755);
-  --primary: oklch(0.585 0.203 277.117);
-  --primary-foreground: oklch(0.984 0.003 247.858);
-  --secondary: oklch(0.968 0.007 247.896);
-  --secondary-foreground: oklch(0.208 0.042 265.755);
-  --muted: oklch(0.968 0.007 247.896);
-  --muted-foreground: oklch(0.554 0.046 257.417);
-  --accent: oklch(0.97 0.014 254.604);
-  --accent-foreground: oklch(0.208 0.042 265.755);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(0.929 0.013 255.508);
-  --input: oklch(0.929 0.013 255.508);
-  --ring: oklch(0.585 0.203 277.117);
-  --sleep: oklch(0.585 0.203 277.117);
-  --training: oklch(0.705 0.187 47.604);
-  --food: oklch(0.723 0.192 149.579);
-  --routine: oklch(0.554 0.046 257.417);
-  --shadow-card: 0 1px 2px 0 oklch(0.208 0.042 265.755 / 0.05);
-  --shadow-card-hover: 0 6px 18px -8px oklch(0.208 0.042 265.755 / 0.18);
+  --card-foreground: oklch(0.206 0.023 268.9);
+  --primary: oklch(0.52 0.256 286.8);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.953 0.01 273.4);
+  --secondary-foreground: oklch(0.206 0.023 268.9);
+  --muted: oklch(0.953 0.01 273.4);
+  --muted-foreground: oklch(0.504 0.033 268);
+  --accent: oklch(0.934 0.015 270);
+  --accent-foreground: oklch(0.206 0.023 268.9);
+  --destructive: oklch(0.581 0.208 13.6);
+  --destructive-foreground: oklch(1 0 0);
+  --warning: oklch(0.61 0.133 65.7);
+  --success: oklch(0.62 0.15 145);
+  --border: oklch(0.923 0.014 272.7);
+  --input: oklch(0.923 0.014 272.7);
+  --ring: oklch(0.52 0.256 286.8);
+  --brand: oklch(0.52 0.256 286.8);
+  --brand-accent: oklch(0.593 0.1359 241.41);
+  --sleep: oklch(0.52 0.256 286.8);
+  --training: oklch(0.65 0.1313 167.6);
+  --food: oklch(0.61 0.133 65.7);
+  --routine: oklch(0.593 0.1359 241.41);
+  --shadow-card: 0 1px 2px 0 oklch(0.206 0.023 268.9 / 0.06);
+  --shadow-card-hover: 0 10px 30px -12px oklch(0.206 0.023 268.9 / 0.22);
   /* Paleta de cores para tags geradas por hash: mesma luminosidade/croma dos
      tokens de tipo de evento acima, variando apenas o matiz (hue), para que
      qualquer cor de tag permaneça harmonica com o resto da UI. */
-  --tag-lightness: 0.55;
+  --tag-lightness: 0.52;
   --tag-chroma: 0.15;
 }
 
 .dark {
-  --background: oklch(0.129 0.042 264.695);
-  --foreground: oklch(0.984 0.003 247.858);
-  --card: oklch(0.208 0.042 265.755);
-  --card-foreground: oklch(0.984 0.003 247.858);
-  --primary: oklch(0.65 0.19 277.117);
-  --primary-foreground: oklch(0.984 0.003 247.858);
-  --secondary: oklch(0.279 0.041 260.031);
-  --secondary-foreground: oklch(0.984 0.003 247.858);
-  --muted: oklch(0.279 0.041 260.031);
-  --muted-foreground: oklch(0.704 0.04 256.788);
-  --accent: oklch(0.279 0.041 260.031);
-  --accent-foreground: oklch(0.984 0.003 247.858);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.65 0.19 277.117);
-  --sleep: oklch(0.673 0.182 277.117);
-  --training: oklch(0.75 0.16 47.604);
-  --food: oklch(0.77 0.17 149.579);
-  --routine: oklch(0.704 0.04 256.788);
-  --shadow-card: 0 1px 2px 0 oklch(0 0 0 / 0.3);
-  --shadow-card-hover: 0 6px 18px -8px oklch(0 0 0 / 0.5);
-  --tag-lightness: 0.75;
-  --tag-chroma: 0.14;
+  --background: oklch(0.187 0.02 265.9);
+  --foreground: oklch(1 0 0);
+  --card: oklch(0.24 0.024 267);
+  --card-foreground: oklch(1 0 0);
+  --primary: oklch(0.579 0.247 288.2);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.285 0.028 264);
+  --secondary-foreground: oklch(1 0 0);
+  --muted: oklch(0.285 0.028 264);
+  --muted-foreground: oklch(0.704 0.038 264.3);
+  --accent: oklch(0.3 0.03 262.8);
+  --accent-foreground: oklch(1 0 0);
+  --destructive: oklch(0.697 0.198 12.9);
+  --destructive-foreground: oklch(0.2 0.019 266);
+  --warning: oklch(0.817 0.147 70.3);
+  --success: oklch(0.8 0.17 145);
+  --border: oklch(1 0 0 / 8%);
+  --input: oklch(1 0 0 / 12%);
+  --ring: oklch(0.579 0.247 288.2);
+  --brand: oklch(0.579 0.247 288.2);
+  --brand-accent: oklch(0.789 0.1326 230.59);
+  --sleep: oklch(0.579 0.247 288.2);
+  --training: oklch(0.773 0.148 169.6);
+  --food: oklch(0.817 0.147 70.3);
+  --routine: oklch(0.789 0.1326 230.59);
+  --shadow-card: 0 1px 2px 0 oklch(0 0 0 / 0.4);
+  --shadow-card-hover: 0 16px 40px -16px oklch(0 0 0 / 0.75);
+  --tag-lightness: 0.78;
+  --tag-chroma: 0.13;
 }
 
 @layer base {
@@ -126,6 +144,46 @@
   }
 }
 
+/*
+ * Superficie de vidro: o painel translucido que deixa a timeline passar por
+ * tras. E o acabamento do cabecalho e das barras flutuantes. A borda fica
+ * por conta de quem usa (`border-b border-border`, por exemplo), para nao
+ * competir com os utilitarios de borda do Tailwind.
+ */
+@utility surface-glass {
+  background-color: color-mix(in oklab, var(--card) 78%, transparent);
+  backdrop-filter: blur(14px);
+}
+
+/*
+ * Brilho que atravessa o esqueleto de carregamento. Mais discreto que um
+ * `animate-pulse` no escuro, onde piscar opacidade fica pesado.
+ * `prefers-reduced-motion` derruba a animacao junto com as outras, la embaixo.
+ */
+@keyframes shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@utility shimmer {
+  position: relative;
+  overflow: hidden;
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in oklab, var(--foreground) 9%, transparent),
+      transparent
+    );
+    animation: shimmer 1.6s ease-in-out infinite;
+  }
+}
+
 @utility scrollbar-none {
   scrollbar-width: none;
   &::-webkit-scrollbar {
@@ -135,6 +193,7 @@
 
 @utility scrollbar-slim {
   scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
   &::-webkit-scrollbar {
     height: 10px;
     width: 10px;

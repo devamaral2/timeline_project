@@ -27,6 +27,8 @@ function toDetailDto(event: DomainEvent): EventDetailDto {
     startedAt: event.startedAt.toISOString(),
     finishedAt: event.finishedAt?.toISOString(),
     tags: event.tags,
+    missed: event.missed,
+    priority: event.priority,
     interruptions: event.interruptions.map((interruption) => ({
       id: interruption.id,
       name: interruption.name,

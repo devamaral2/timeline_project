@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import type { EventDetailDto } from "@repo/entities/contracts";
+import type { EventDetailDto, EventPriority } from "@repo/entities/contracts";
 import {
   CommonFields,
   type EditEventFormProps,
   FinishedAtField,
   FormActions,
   StartedAtField,
+  EventMarks,
   fieldInputClass,
   fieldLabelClass,
   fromDatetimeLocalValue,
@@ -29,6 +30,8 @@ export function RoutineEditForm({
   const [tags, setTags] = useState<string[]>(event.tags);
   const [startedAt, setStartedAt] = useState(toDatetimeLocalValue(event.startedAt));
   const [finishedAt, setFinishedAt] = useState(toDatetimeLocalValue(event.finishedAt));
+  const [missed, setMissed] = useState<boolean | undefined>(event.missed);
+  const [priority, setPriority] = useState<EventPriority | undefined>(event.priority);
   const [validationError, setValidationError] = useState<string | null>(null);
   const { submit, submitting, error } = useSubmitEventUpdate({ eventId, onUpdated, onClose });
 
@@ -46,6 +49,8 @@ export function RoutineEditForm({
       tags,
       startedAt: fromDatetimeLocalValue(startedAt),
       finishedAt: fromDatetimeLocalValue(finishedAt),
+      missed,
+      priority,
     });
   }
 
@@ -75,6 +80,13 @@ export function RoutineEditForm({
 
       <StartedAtField value={startedAt} onChange={setStartedAt} />
       <FinishedAtField value={finishedAt} onChange={setFinishedAt} />
+
+      <EventMarks
+        missed={missed}
+        onMissedChange={setMissed}
+        priority={priority}
+        onPriorityChange={setPriority}
+      />
 
       {validationError || error ? (
         <p className="text-xs text-destructive">{validationError ?? error}</p>

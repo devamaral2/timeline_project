@@ -23,6 +23,8 @@ export function mergeEventUpdate(
     startedAt: input.startedAt ? new Date(input.startedAt) : existingEvent.startedAt,
     finishedAt: input.finishedAt ? new Date(input.finishedAt) : existingEvent.finishedAt,
     tags: input.tags ?? existingEvent.tags,
+    missed: input.missed ?? existingEvent.missed,
+    priority: input.priority ?? existingEvent.priority,
     interruptions: mergeInterruptions(existingEvent.interruptions, input.interruptions, now),
   };
 

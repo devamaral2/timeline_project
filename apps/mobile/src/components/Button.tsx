@@ -1,5 +1,6 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text, type ViewStyle } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View, type ViewStyle } from "react-native";
 import type { LucideIcon } from "lucide-react-native";
+import { withAlpha } from "@repo/theme";
 import { useTheme } from "@/lib/theme/use-theme";
 
 interface ButtonProps {
@@ -13,6 +14,11 @@ interface ButtonProps {
   style?: ViewStyle;
 }
 
+/**
+ * O botao do design system. A acao principal e a unica coisa da tela
+ * preenchida com a cor da marca — e por isso que ela e a principal. As demais
+ * ficam sobre o fundo, com a borda de sempre.
+ */
 export function Button({
   label,
   onPress,
@@ -24,12 +30,6 @@ export function Button({
 }: ButtonProps) {
   const theme = useTheme();
   const isOutline = variant === "outline";
-  const background =
-    variant === "primary"
-      ? theme.colors.primary
-      : variant === "destructive"
-        ? theme.colors.destructive
-        : theme.colors.card;
   const foreground = isOutline ? theme.colors.foreground : theme.colors.primaryForeground;
   const inactive = disabled || loading;
 
@@ -41,22 +41,27 @@ export function Button({
       accessibilityState={{ disabled: inactive, busy: loading }}
       style={({ pressed }) => [
         styles.button,
-        {
-          backgroundColor: background,
-          borderColor: isOutline ? theme.colors.border : background,
-          opacity: inactive ? 0.6 : pressed ? 0.85 : 1,
-        },
+        isOutline
+          ? { backgroundColor: withAlpha(theme.colors.card, 0.6), borderColor: theme.colors.border }
+          : {
+              backgroundColor:
+                variant === "destructive" ? theme.colors.destructive : theme.colors.primary,
+              borderColor: "transparent",
+            },
+        { opacity: inactive ? 0.6 : pressed ? 0.85 : 1 },
         style,
       ]}
     >
-      {loading ? (
-        <ActivityIndicator size="small" color={foreground} />
-      ) : Icon ? (
-        <Icon size={16} color={foreground} />
-      ) : null}
-      <Text style={[styles.label, { color: foreground, fontWeight: isOutline ? "500" : "600" }]}>
-        {label}
-      </Text>
+      <View style={styles.content}>
+        {loading ? (
+          <ActivityIndicator size="small" color={foreground} />
+        ) : Icon ? (
+          <Icon size={16} color={foreground} />
+        ) : null}
+        <Text style={[styles.label, { color: foreground, fontWeight: isOutline ? "500" : "600" }]}>
+          {label}
+        </Text>
+      </View>
     </Pressable>
   );
 }
@@ -67,9 +72,12 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
     paddingHorizontal: 16,
-    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+  },
+  content: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
   },
   label: {

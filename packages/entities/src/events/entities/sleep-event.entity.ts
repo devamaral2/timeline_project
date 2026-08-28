@@ -20,6 +20,8 @@ export class SleepEvent extends Event<SleepEventData> {
       TagList.create(props.tags),
       props.interruptions,
       props.data,
+      props.missed,
+      props.priority,
     );
   }
 

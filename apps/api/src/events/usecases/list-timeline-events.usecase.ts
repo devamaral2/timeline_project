@@ -29,6 +29,7 @@ export class ListTimelineEventsUseCase {
     return events.map((event) => ({
       id: event.id,
       type: event.type,
+      missed: event.missed,
       ...presentationByType[event.type],
       name: event.name,
       description: event.description,

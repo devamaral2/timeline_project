@@ -1,10 +1,13 @@
 import type { DomainEvent } from "@repo/entities/ports";
 import {
+  isEventPriority,
+  readMissedFlag,
   FoodEvent,
   Interruption,
   RoutineEvent,
   SleepEvent,
   TrainingEvent,
+  type EventPriority,
   type EventType,
   type FoodEventData,
   type InterruptionProps,
@@ -22,6 +25,15 @@ export interface EventDocument {
   startedAt: string;
   finishedAt?: string;
   tags: string[];
+  /**
+   * Opcionais: os documentos gravados antes destes campos nao os tem, e nao ha
+   * migracao — quem preenche a lacuna e a leitura. `status` e o campo da versao
+   * anterior, que ainda esta gravado por ai e que `readMissedFlag` traduz.
+   */
+  missed?: boolean;
+  priority?: EventPriority;
+  /**  So leitura: nada escreve mais este campo. */
+  status?: string;
   interruptions: Array<Omit<InterruptionProps, "startedAt" | "finishedAt"> & { startedAt: string; finishedAt: string }>;
   data: Record<string, unknown>;
   createdAt: string;
@@ -40,6 +52,8 @@ export class EventDocumentMapper {
       startedAt: event.startedAt.toISOString(),
       finishedAt: event.finishedAt?.toISOString(),
       tags: event.tags,
+      missed: event.missed,
+      priority: event.priority,
       interruptions: event.interruptions.map((interruption) => ({
         id: interruption.id,
         name: interruption.name,
@@ -62,6 +76,12 @@ export class EventDocumentMapper {
       startedAt: new Date(document.startedAt),
       finishedAt: document.finishedAt ? new Date(document.finishedAt) : undefined,
       tags: document.tags,
+      // O Firestore nao valida nada: um documento antigo vem sem os campos, e um
+      // da versao anterior vem com o `status` que existia antes da marca —
+      // `readMissedFlag` cobre os dois. Prioridade desconhecida cai no padrao
+      // da entidade, em vez de derrubar a leitura da timeline inteira.
+      missed: readMissedFlag(document),
+      priority: isEventPriority(document.priority) ? document.priority : undefined,
       interruptions: document.interruptions.map((interruption) =>
         Interruption.create({
           id: interruption.id,

@@ -8,7 +8,21 @@ import { getClientApp } from "@/lib/firebase/client-app";
 import { formatTime } from "@repo/timeline";
 import { tagColorStyle } from "@/lib/tags/tag-color";
 import type { EventDetailDto } from "@repo/entities/contracts";
-import { typeLabels } from "./event-visuals";
+import { priorityLabels, typeLabels } from "./event-visuals";
+import { MissedBadge } from "./MissedBadge";
+import { cn } from "@/lib/utils";
+import {
+  destructiveButtonClass,
+  iconButtonClass,
+  outlineButtonClass,
+} from "@/components/ui/button-styles";
+import {
+  dialogFooterClass,
+  dialogHeaderClass,
+  dialogOverlayClass,
+  dialogPanelClass,
+  dialogTitleClass,
+} from "@/components/ui/dialog-styles";
 
 interface EventDetailsModalProps {
   eventId: string;
@@ -66,7 +80,7 @@ export function EventDetailsModal({ eventId, eventName, onClose, onEdit, onDelet
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 p-4 py-8 backdrop-blur-sm duration-200 animate-in fade-in"
+      className={dialogOverlayClass}
       onClick={(clickEvent) => {
         if (clickEvent.target === clickEvent.currentTarget) onClose();
       }}
@@ -75,17 +89,17 @@ export function EventDetailsModal({ eventId, eventName, onClose, onEdit, onDelet
         role="dialog"
         aria-modal="true"
         aria-labelledby="event-details-title"
-        className="flex max-h-[calc(100dvh-4rem)] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-card-hover duration-200 animate-in fade-in slide-in-from-bottom-2"
+        className={cn(dialogPanelClass, "max-w-md")}
       >
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-5 py-4 sm:px-6">
-          <h2 id="event-details-title" className="text-lg font-semibold tracking-tight text-foreground">
+        <div className={dialogHeaderClass}>
+          <h2 id="event-details-title" className={dialogTitleClass}>
             {eventName}
           </h2>
           <button
             type="button"
             onClick={onClose}
             aria-label="Fechar"
-            className="grid size-8 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            className={iconButtonClass}
           >
             <X aria-hidden className="size-4" />
           </button>
@@ -101,11 +115,11 @@ export function EventDetailsModal({ eventId, eventName, onClose, onEdit, onDelet
           )}
         </div>
 
-        <div className="flex shrink-0 items-center justify-end gap-3 border-t border-border px-5 py-4 sm:px-6">
+        <div className={dialogFooterClass}>
           <button
             type="button"
             onClick={onEdit}
-            className="inline-flex h-10 items-center gap-2 rounded-full border border-border bg-card px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+            className={outlineButtonClass}
           >
             <Pencil aria-hidden className="size-4" />
             Editar
@@ -113,7 +127,7 @@ export function EventDetailsModal({ eventId, eventName, onClose, onEdit, onDelet
           <button
             type="button"
             onClick={onDelete}
-            className="inline-flex h-10 items-center gap-2 rounded-full bg-destructive px-4 text-sm font-semibold text-destructive-foreground shadow-card transition-colors hover:bg-destructive/90"
+            className={destructiveButtonClass}
           >
             <Trash2 aria-hidden className="size-4" />
             Excluir
@@ -129,12 +143,27 @@ function EventDetailsBody({ event }: { event: EventDetailDto }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
-        <span className="font-medium text-foreground">{typeLabels[event.type]}</span>
-        <span>
+        <span className="flex min-w-0 items-center gap-2">
+          <span className="truncate font-medium text-foreground">{typeLabels[event.type]}</span>
+          <MissedBadge missed={event.missed} />
+        </span>
+        <span className="shrink-0">
           {formatTime(event.startedAt)} <span aria-hidden>→</span>{" "}
           {event.finishedAt ? formatTime(event.finishedAt) : "em andamento"}
         </span>
       </div>
+
+      {/*
+        A anotacao de nao realizado ja esta no selo la em cima — repeti-la aqui
+        seria dizer duas vezes a mesma coisa. A prioridade nao tem selo, entao e
+        esta linha que a mostra.
+      */}
+      <dl className="flex flex-wrap gap-x-6 gap-y-1 text-[13px] text-muted-foreground">
+        <div className="flex gap-1.5">
+          <dt>Prioridade:</dt>
+          <dd className="text-card-foreground">{priorityLabels[event.priority]}</dd>
+        </div>
+      </dl>
 
       {event.description ? (
         <p className="text-[13.5px] leading-6 text-card-foreground">{event.description}</p>

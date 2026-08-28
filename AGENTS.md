@@ -49,6 +49,43 @@ as rotas estaticas (`daily`, `ai`, `voice`) precisam ser declaradas antes de
 `:eventId`, senao o parametro dinamico captura as tres. Ha um teste travando isso
 (`events.routing.test.ts`).
 
+# A marca de nao realizado
+
+Nao ha status. O evento nao tem ciclo de vida, nao tem situacao derivada do
+relogio e nao tem o par realizado/nao realizado: tem **uma anotacao**, em
+`packages/entities/src/events/types/missed-flag.ts`.
+
+- `missed` — booleano, padrao `false`. E o usuario registrando o que perdeu.
+- `priority` — `urgent`, `normal`, `flexible`, em `event-priority.ts`. Campo
+  separado, que nao conversa com a marca.
+
+**A marca nao tem oposto.** Um evento sem ela nao e "realizado" — e um evento
+que ninguem anotou, que e o normal. Por isso o selo do cartao so aparece quando
+`missed` e true (`MissedBadge`, nos dois apps): desenhar "Realizado" em tudo que
+sobrou seria afirmar uma coisa que ninguem afirmou. Marcar e desmarcar sao a
+mesma acao nos dois sentidos, e o formulario de edicao usa uma caixa, nao uma
+lista.
+
+**Nada liga a marca sozinho.** Nenhuma hora, nenhuma janela fechada, nenhum
+evento antigo. A timeline nao consulta relogio nenhum para monta-la — foi por
+isso que o `ListTimelineEventsUseCase` perdeu o clock que recebia.
+
+**Nao ha migracao dos documentos antigos**, e o Firestore nao valida nada. Quem
+cobre a lacuna e a leitura, em `readMissedFlag`: documento sem os campos fica
+sem marca, e o `status` da versao anterior — que continua gravado por ai — so
+vira marca quando era exatamente `missed`. Os outros valores daquele ciclo de
+vida (`draft`, `scheduled`, `in_progress`, `completed`, `archived`) falavam de
+planejamento, nao de o usuario ter faltado, e traduzi-los seria inventar
+anotacoes que ninguem fez. O `MissedBadge` tambem aceita `undefined` sem
+quebrar: um backend de outra versao nao pode derrubar a timeline. O caminho de
+escrita e o contrario, e mais estrito — o controller recusa com 400 qualquer
+`missed` que nao seja booleano e qualquer prioridade fora das tres.
+
+Os rotulos em portugues vivem nos `event-visuals` de cada app, junto dos rotulos
+de tipo. O selo usa `destructive`, que e token de situacao e vive separado de
+`training` e `food`, que sao tokens de tipo: os dois aparecem no mesmo cartao e
+precisam ser distinguiveis.
+
 # App mobile
 
 Expo SDK 57 com expo-router, roteamento por arquivo em `apps/mobile/src/app`.
@@ -66,6 +103,10 @@ num aparelho de verdade:
 2. `MOBILE_API_URL=http://<ip-da-sua-maquina>:3001` no `.env`.
 
 **Estilo**: `StyleSheet` do React Native, com as cores vindo de `@repo/theme`.
+O app abre sempre no tema escuro — a identidade visual foi desenhada assim, e
+`use-theme.ts` devolve `darkTheme` fixo em vez de seguir o `useColorScheme` do
+sistema (o web faz o equivalente com a classe `dark` fixa no `<html>`). O tema
+claro continua no pacote, esperando uma opcao explicita de troca.
 O RN nao entende oklch nem `var()`, entao o pacote converte os tokens do
 `globals.css` para hex/rgba. As duas paletas sao travadas juntas por
 `apps/web/src/styles/theme-tokens.test.ts` — mudar uma cor no CSS sem mudar em
@@ -112,6 +153,14 @@ pnpm --filter @repo/mobile run android   gera o projeto nativo e instala no apar
 O Metro fica fora do `turbo run dev` de proposito: ele toma o terminal com a
 propria interface, e o fluxo normal e ter os dois rodando em terminais
 separados.
+
+**`dev` depende de `^build`** (`turbo.json`). O Nest e o Next leem os packages
+de `dist/`, nao do fonte — so o Metro le TypeScript direto. Sem essa
+dependencia, um simbolo recem-criado em `@repo/entities` existiria apenas no
+`src`: o `nest start --watch` nao compilaria, a API nunca subiria na 3001, e a
+pagina do Next responderia 500 no `fetchFromBackend` — um erro que parece do
+backend, mas e de build. Se a API estiver fora do ar, `pnpm turbo run build`
+antes de subir o dev resolve.
 
 # Rodando os testes
 

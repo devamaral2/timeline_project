@@ -6,6 +6,7 @@ function anEvent(overrides: Partial<TimelineEventCardDto> = {}): TimelineEventCa
   return {
     id: "event-1",
     type: "routine",
+    missed: false,
     accentColor: "blue",
     iconName: "clock",
     name: "Bloco de trabalho",

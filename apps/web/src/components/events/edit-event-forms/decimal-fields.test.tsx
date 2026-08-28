@@ -19,8 +19,34 @@ const common = {
   startedAt: "2026-08-19T09:00:00.000Z",
   finishedAt: "2026-08-19T10:00:00.000Z",
   tags: [],
+  missed: false,
+  priority: "normal" as const,
   interruptions: [],
 };
+
+/**
+ * Regressao: com `value` indefinido o <select> vira nao-controlado e o submit
+ * manda a primeira opcao da lista — foi assim que um evento mudou de prioridade
+ * sozinho ao ser editado contra um backend que ainda nao mandava o campo.
+ */
+test("um evento sem prioridade nao assume a primeira opcao do select", () => {
+  const { container } = renderForm({
+    ...common,
+    missed: undefined as never,
+    priority: undefined as never,
+    type: "sleep",
+    data: { trackedSleepTime: 400, score: 80 },
+  });
+
+  const prioridade = container.querySelector<HTMLSelectElement>("#event-priority");
+  const naoRealizado = container.querySelector<HTMLInputElement>("#event-missed");
+
+  expect(prioridade?.value).toBe("");
+  expect(prioridade?.options[0].textContent).toBe("Não definida");
+  // A caixa nao tem esse problema: sem valor ela so fica desmarcada, que e
+  // exatamente o que um evento sem anotacao e.
+  expect(naoRealizado?.checked).toBe(false);
+});
 
 function numberInputs(container: HTMLElement): HTMLInputElement[] {
   return [...container.querySelectorAll<HTMLInputElement>('input[type="number"]')];

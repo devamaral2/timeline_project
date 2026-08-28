@@ -7,3 +7,5 @@ export * from "./events/value-objects/event-id";
 export * from "./events/value-objects/interruption";
 export * from "./events/value-objects/tag-list";
 export * from "./events/types/event-type";
+export * from "./events/types/event-priority";
+export * from "./events/types/missed-flag";

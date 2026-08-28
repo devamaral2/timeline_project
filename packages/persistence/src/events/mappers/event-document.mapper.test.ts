@@ -140,3 +140,97 @@ test("hydrates training documents from the legacy calories-only schema", () => {
   expect(restored).toBeInstanceOf(TrainingEvent);
   expect((restored as TrainingEvent).data).toEqual({ caloriesBurned: 420, workouts: [] });
 });
+
+
+/**
+ * O Firestore nao valida documento nenhum. Os que foram gravados antes da marca
+ * de nao realizado vem sem ela, e a leitura tem que continuar funcionando — nao
+ * ha migracao por tras disso.
+ */
+test("reads a document written before the missed flag existed", () => {
+  const legacy = {
+    id: "01K2R1J5M8S0Y2Z7ABCD123461",
+    type: "routine",
+    userId: "user-1",
+    name: "Bloco de trabalho",
+    description: "",
+    startedAt: "2026-08-16T12:00:00.000Z",
+    finishedAt: "2026-08-16T14:00:00.000Z",
+    tags: [],
+    interruptions: [],
+    data: {},
+    createdAt: "2026-08-16T12:00:00.000Z",
+    updatedAt: "2026-08-16T12:00:00.000Z",
+  } as unknown as Parameters<typeof EventDocumentMapper.toDomain>[0];
+
+  const restored = EventDocumentMapper.toDomain(legacy);
+
+  expect(restored.missed).toBe(false);
+  expect(restored.priority).toBe("normal");
+});
+
+test("reads the missed status of the previous version as the flag", () => {
+  // O ciclo de vida antigo continua gravado nos documentos, e so o `missed`
+  // dele dizia que o usuario nao compareceu.
+  const previous = {
+    id: "01K2R1J5M8S0Y2Z7ABCD123462",
+    type: "routine",
+    userId: "user-1",
+    name: "Consulta",
+    description: "",
+    startedAt: "2026-08-16T12:00:00.000Z",
+    tags: [],
+    interruptions: [],
+    data: {},
+    status: "missed",
+    priority: "urgent",
+    createdAt: "2026-08-16T12:00:00.000Z",
+    updatedAt: "2026-08-16T12:00:00.000Z",
+  } as unknown as Parameters<typeof EventDocumentMapper.toDomain>[0];
+
+  const restored = EventDocumentMapper.toDomain(previous);
+
+  expect(restored.missed).toBe(true);
+  expect(restored.priority).toBe("urgent");
+});
+
+test("falls back to the default when the stored values are not ones we know", () => {
+  const event = RoutineEvent.create({
+    userId: "user-1",
+    name: "Bloco de trabalho",
+    description: "",
+    startedAt: new Date("2026-08-16T09:00:00-03:00"),
+    tags: [],
+    interruptions: [],
+    data: {},
+  });
+  const corrupted = {
+    ...EventDocumentMapper.toPersistence(event),
+    missed: "sim",
+    priority: "altissima",
+  } as unknown as Parameters<typeof EventDocumentMapper.toDomain>[0];
+
+  const restored = EventDocumentMapper.toDomain(corrupted);
+
+  expect(restored.missed).toBe(false);
+  expect(restored.priority).toBe("normal");
+});
+
+test("round-trips the mark and the priority the user chose", () => {
+  const event = RoutineEvent.create({
+    userId: "user-1",
+    name: "Consulta",
+    description: "",
+    startedAt: new Date("2026-08-16T09:00:00-03:00"),
+    tags: [],
+    interruptions: [],
+    data: {},
+    missed: true,
+    priority: "urgent",
+  });
+
+  const restored = EventDocumentMapper.toDomain(EventDocumentMapper.toPersistence(event));
+
+  expect(restored.missed).toBe(true);
+  expect(restored.priority).toBe("urgent");
+});

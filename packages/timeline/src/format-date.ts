@@ -106,3 +106,31 @@ export function weekday(dayKey: string): string {
   const [year, month, day] = partsOf(dayKey);
   return WEEKDAYS[new Date(Date.UTC(year, month - 1, day)).getUTCDay()] ?? "";
 }
+
+/** Inicial do dia da semana — D S T Q Q S S, a régua do seletor de data. */
+export function weekdayInitial(dayKey: string): string {
+  return weekday(dayKey).charAt(0).toUpperCase();
+}
+
+/** Dia do mes, sem zero a esquerda: "22". */
+export function dayNumber(dayKey: string): string {
+  const [, , day] = partsOf(dayKey);
+  return String(day);
+}
+
+/** "22 de maio, quinta-feira" — a data por extenso do cabecalho. */
+export function mediumDate(dayKey: string): string {
+  const [, month, day] = partsOf(dayKey);
+  return `${day} de ${MONTHS_LONG[month - 1] ?? ""}, ${weekday(dayKey).toLowerCase()}`;
+}
+
+/**
+ * O titulo do cabecalho. Os tres dias em volta de hoje tem nome proprio; os
+ * outros ficam com o dia da semana, que e o que orienta quem esta navegando.
+ */
+export function relativeDayLabel(dayKey: string, todayKey: string): string {
+  if (dayKey === todayKey) return "Hoje";
+  if (dayKey === shiftDayKey(todayKey, -1)) return "Ontem";
+  if (dayKey === shiftDayKey(todayKey, 1)) return "Amanhã";
+  return weekday(dayKey);
+}

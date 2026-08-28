@@ -5,6 +5,7 @@ import { getAuth } from "firebase/auth";
 import { getClientApp } from "@/lib/firebase/client-app";
 import { TagInput } from "./TagInput";
 import { fieldLabelClass, fieldTextareaClass } from "./field-styles";
+import { outlineButtonClass, primaryButtonClass } from "@/components/ui/button-styles";
 
 export { anyDecimalStep, fieldInputClass, fieldLabelClass, fieldTextareaClass } from "./field-styles";
 
@@ -99,14 +100,14 @@ export function FormActions({
       <button
         type="button"
         onClick={onBack}
-        className="inline-flex h-10 items-center rounded-full border border-border bg-card px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+        className={outlineButtonClass}
       >
         {backLabel}
       </button>
       <button
         type="submit"
         disabled={submitting}
-        className="inline-flex h-10 items-center rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-card transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+        className={primaryButtonClass}
       >
         {submitting ? submittingLabel : submitLabel}
       </button>

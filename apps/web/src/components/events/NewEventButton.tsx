@@ -2,9 +2,16 @@
 
 import { useState } from "react";
 import { Plus } from "lucide-react";
+import { primaryButtonClass } from "@/components/ui/button-styles";
+import { cn } from "@/lib/utils";
 import { NewEventModal } from "./NewEventModal";
 
-export function NewEventButton() {
+interface NewEventButtonProps {
+  /** No cabecalho estreito, preserva o nome acessivel e mostra so o simbolo. */
+  compactOnMobile?: boolean;
+}
+
+export function NewEventButton({ compactOnMobile = false }: NewEventButtonProps) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -12,10 +19,15 @@ export function NewEventButton() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex h-10 items-center gap-1.5 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-card transition-colors hover:bg-primary/90"
+        className={cn(
+          primaryButtonClass,
+          compactOnMobile ? "w-10 px-0 sm:w-auto sm:px-4" : null,
+        )}
       >
         <Plus aria-hidden className="size-4" />
-        Novo evento
+        <span className={compactOnMobile ? "sr-only sm:not-sr-only" : undefined}>
+          Novo evento
+        </span>
       </button>
 
       {open ? (

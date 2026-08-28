@@ -17,6 +17,8 @@ export class RoutineEvent extends Event<RoutineEventData> {
       TagList.create(props.tags),
       props.interruptions,
       props.data,
+      props.missed,
+      props.priority,
     );
   }
 
