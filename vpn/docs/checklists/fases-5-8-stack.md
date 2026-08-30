@@ -1,110 +1,51 @@
-# Checklist — Fases 5 a 8 (stack no servidor)
+# Checklist — Fases 5 a 8 (stack)
 
-## Fase 5 — Traefik e TLS
+## Fase 5 — Traefik
 
-### Etapa A — sem domínio
+- [ ] Somente Traefik publica 80/443
+- [ ] `exposedByDefault=false`
+- [ ] Web tem router, middleware e `traefik.docker.network=edge`
+- [ ] API não tem router, labels de exposição ou `ports:`
+- [ ] Certificado staging validado antes de produção
+- [ ] HSTS habilitado somente após TLS válido
+- [ ] Scan externo não encontra 3000, 3001, 5432, 6379 ou 12345
 
-- [ ] `/opt/stack/traefik/` criado com `dynamic/` e `certs/`
-- [ ] 🔴 `acme.json` com `chmod 600` (o Traefik recusa iniciar sem isso)
-- [ ] `traefik.yml` com entrypoints 80 e 443, redirect configurado
-- [ ] 🔴 `exposedByDefault: false`
-- [ ] 🔴 `api.insecure: false`
-- [ ] `accessLog` filtrado por status 400–599
-- [ ] Middlewares criados: security-headers, rate-limit, rate-limit-strict, compress
-- [ ] `internal-auth` com hash gerado por `htpasswd -nbB` (cifrões duplicados no YAML)
-- [ ] ⚠️ Linhas de HSTS **comentadas** nesta etapa
-- [ ] Traefik sobe sem erro nos logs
-- [ ] Rota da `hello-api` declarada por labels
-- [ ] `/metrics` **não** roteado publicamente
-- [ ] Acesso validado por túnel SSH (`ssh -L 8443:localhost:443`)
-- [ ] 🔴 Dashboard inacessível na porta 8080 de fora
-- [ ] 🔴 Container sem `traefik.enable` não é exposto (teste do nginx)
-- [ ] Redirect HTTP → HTTPS retornando 301
-- [ ] Headers de segurança presentes; `Server`/`X-Powered-By` ausentes
-- [ ] Rate limit devolvendo 429 sob carga
+## Fase 6 — PostgreSQL e Redis
 
-### Etapa B — com domínio
-
-- [ ] Domínio registrado: ________
-- [ ] Registros A criados (@, hello, grafana, traefik) com TTL 300
-- [ ] 🔴 Propagação confirmada (`nslookup`) **antes** de pedir certificado
-- [ ] Cloudflare configurado (proxy ativo) — IP do VPS oculto
-- [ ] `forwardedHeaders.trustedIPs` com as faixas do Cloudflare
-- [ ] 🔴 Resolver **staging** testado primeiro
-- [ ] `Certificate obtained` visto nos logs
-- [ ] Trocado para resolver de produção (arquivos `acme.json` distintos)
-- [ ] HSTS descomentado e ativo
-- [ ] SSL Labs A ou A+ — nota: ________
-
-## Fase 6 — Postgres e Redis
-
-- [ ] `.env` gerado com senhas aleatórias, `chmod 600`
-- [ ] `.env.example` criado e versionado (sem valores reais)
-- [ ] `postgresql.conf` com tuning para 4GB
-- [ ] `shm_size: 128mb` definido
-- [ ] `--data-checksums` no `POSTGRES_INITDB_ARGS` (decidido agora, não depois)
-- [ ] Redis com `--requirepass`, `maxmemory`, `appendonly`
-- [ ] 🔴 `FLUSHALL`, `FLUSHDB`, `CONFIG` renomeados
-- [ ] Política de `maxmemory` adequada ao uso (cache → lru; fila → noeviction)
-- [ ] Ambos em rede `internal`, sem `ports:` público
-- [ ] Healthchecks passando
-- [ ] Usuário `hello_app` criado sem privilégios administrativos
-- [ ] `ALTER DEFAULT PRIVILEGES` aplicado
-- [ ] `SHOW shared_buffers` retorna o valor customizado (config foi aplicada)
-- [ ] 🔴 `redis-cli ping` retorna `NOAUTH`
-- [ ] 🔴 Teste externo: 5432 e 6379 recusam conexão
-- [ ] `/ready` retorna `{"postgres":true,"redis":true}`
-- [ ] `/ready` retorna 503 e `/health` retorna 200 com o Postgres parado
-- [ ] rclone configurado para o bucket
-- [ ] `backup.sh` criado com `set -euo pipefail` e verificação de tamanho
-- [ ] Cron agendado (03:00)
-- [ ] 🔴 **Restauração testada a partir do bucket** — data: ________
+- [ ] Rede `data` é interna
+- [ ] PostgreSQL 16 limitado a 384 MiB e `max_connections=30`
+- [ ] Redis 7 limitado a 192 MiB, `maxmemory=128mb`, AOF e `noeviction`
+- [ ] Nenhum dos dois publica porta
+- [ ] Database `timeline` criada
+- [ ] Roles admin, `timeline_migrator` e `timeline_app` separadas
+- [ ] Runtime não é superusuário nem dono do schema
+- [ ] API ainda não recebe `DATABASE_URL` ou `REDIS_URL`
+- [ ] Backup externo contém globals, database e Redis
+- [ ] Restore externo concluído em ambiente descartável
+- [ ] Data, caminho remoto e resultado do restore registrados
 
 ## Fase 7 — CI/CD
 
-- [ ] Usuário `ci` criado com `--disabled-password`, no grupo `docker`
-- [ ] Chave exclusiva do CI gerada (não reusar a pessoal)
-- [ ] 🔴 `command="/home/ci/deploy.sh"` + `no-pty` + `no-port-forwarding`
-- [ ] `ci` adicionado ao `AllowUsers` do sshd
-- [ ] Secrets criados no GitHub: `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`
-- [ ] Workflow com `concurrency` e `cancel-in-progress: false`
-- [ ] Job `validate` rodando lint, typecheck e testes
-- [ ] Detecção de apps alteradas funcionando
-- [ ] Mudança em `packages/` dispara rebuild de todas as apps
-- [ ] Trivy escaneando **antes** do push
-- [ ] Tags publicadas por SHA **e** `latest`
-- [ ] 🔴 Branch protection em `main`
-- [ ] 🔴 Secret scanning + push protection ativos
-- [ ] Dependabot configurado (npm, docker, github-actions)
-- [ ] 2FA ativo na conta
-- [ ] 🔴 Visibilidade do pacote no GHCR conferida
-- [ ] `docker image prune` no script de deploy
-- [ ] 🔴 Teste: `ssh -i chave_ci ci@IP "cat /etc/passwd"` é ignorado
-- [ ] Push no README **não** dispara build
-- [ ] Rollback ensaiado
+- [ ] Validação usa `npm run --silent test:ai`, typecheck e build
+- [ ] Matriz Docker contém somente `web` e `api`
+- [ ] Mudança exclusiva no mobile não builda imagens
+- [ ] Mudança de servidor publica as duas imagens com o mesmo SHA
+- [ ] Valores `NEXT_PUBLIC_FIREBASE_*` são Actions Variables
+- [ ] Segredos de runtime existem somente no VPS
+- [ ] Trivy roda antes do push
+- [ ] Deploy espera healthchecks e reverte os dois serviços em falha
+- [ ] Chave SSH do CI usa comando forçado e sem forwarding
+- [ ] Rollback por SHA testado
 
-## Fase 8 — Observabilidade
+## Fase 8 — Grafana Cloud
 
-- [ ] `.env` do Grafana com senha aleatória
-- [ ] Hash bcrypt do basic auth gerado (cifrões duplicados)
-- [ ] 🔴 `retention_period: 168h` no Loki
-- [ ] Compactor com `retention_enabled: true`
-- [ ] `config.alloy` com scrape de infra e apps + coleta de logs
-- [ ] `scrape_interval: 30s`
-- [ ] Datasources provisionados por arquivo
-- [ ] `--memory.allowedPercent=60` no VictoriaMetrics
-- [ ] Todos com `mem_limit` conforme o orçamento
-- [ ] Alloy nas redes `observability` **e** `edge`
-- [ ] 🔴 Grafana com dupla autenticação (Traefik + login)
-- [ ] Dashboards importados (1860, 19792, 13639, 193)
-- [ ] Painel de swap em uso criado
-- [ ] Alerta de disco >80% criado
-- [ ] Alerta de memória de container >90% criado
-- [ ] Alerta de app fora do ar criado
-- [ ] Contact point configurado (Telegram/Discord — não e-mail pelo VPS)
-- [ ] 🔴 **Alerta testado de verdade** (fallocate) — notificação recebida
-- [ ] Métricas da `hello-api` chegando ao VictoriaMetrics
-- [ ] Logs chegando ao Loki
-- [ ] 🔴 Teste externo: 8428, 3100, 8080, 9100 recusam conexão
-- [ ] `docker stats` total abaixo de 2.5GB — real: ________
-- [ ] `free -h` mostrando swap em 0 ou próximo
+- [ ] Alloy fixado em versão testada e limitado a 192 MiB
+- [ ] Tokens têm apenas permissão de escrita e arquivo modo `600`
+- [ ] Host, containers e `/metrics` da API chegam ao Grafana Cloud
+- [ ] Logs web/API chegam sem tokens ou dados pessoais
+- [ ] `/metrics` e UI do Alloy não são públicos
+- [ ] Sonda externa verifica `/health` do web
+- [ ] Alertas de disco, memória, API, web, swap e ingestão configurados
+- [ ] Falha e rotação de token testadas
+- [ ] Máximos de RAM registrados durante sete dias
+- [ ] Folga real permanece acima de 1 GiB e não há swap persistente

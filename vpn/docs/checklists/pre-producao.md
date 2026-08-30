@@ -1,64 +1,41 @@
-# Checklist — Pré-produção
+# Checklist — liberação do primeiro deploy
 
-O portão antes de expor a aplicação publicamente ou colocar qualquer dado real.
-**Todos os itens são bloqueantes.**
+## Aplicações
 
-## Rede e acesso
+- [ ] Web e API usam o mesmo SHA de release
+- [ ] Web responde `/health` externamente
+- [ ] Proxy `/api/*` alcança a API pela rede Docker
+- [ ] API responde `/health`, `/ready` e `/metrics` internamente
+- [ ] API continua usando Firebase/Firestore
+- [ ] PostgreSQL e Redis não aparecem no ambiente da API
+- [ ] Mobile não aponta para a API de produção ainda
 
-- [ ] `ss -tulpn` mostra apenas 22, 80, 443 em `0.0.0.0`/`[::]`
-- [ ] Teste externo: 5432, 6379, 8428, 3100, 8080, 9100 todos recusam conexão
-- [ ] Regra `DOCKER-USER` ativa e persistente após reboot
-- [ ] UFW cobrindo IPv4 **e** IPv6
-- [ ] SSH só por chave; root bloqueado
-- [ ] Chave do CI restrita por `command=` — testado com `ssh ... "cat /etc/passwd"`
+## Exposição e segredos
+
+- [ ] Somente 22, 80 e 443 estão abertos
+- [ ] Somente web possui router Traefik
+- [ ] API, PostgreSQL, Redis e Alloy não têm porta pública
+- [ ] TLS válido, headers e rate limit confirmados
+- [ ] `.env` e tokens no VPS têm modo `600`
+- [ ] Imagens e histórico Docker não contêm segredos privados
+- [ ] Firebase público foi fornecido como configuração de build, não como segredo privado
 
 ## Dados
 
-- [ ] Backup automático agendado no cron
-- [ ] Backup chegando ao bucket externo (verificado com `rclone ls`)
-- [ ] 🔴 **Restauração testada a partir do bucket** — data: ________
-- [ ] Usuário de aplicação sem privilégios administrativos no Postgres
-- [ ] Redis exige senha (`redis-cli ping` → `NOAUTH`)
-- [ ] `FLUSHALL`, `FLUSHDB` e `CONFIG` desabilitados no Redis
-- [ ] Política de `maxmemory` correta para o uso (cache ≠ fila)
-
-## Aplicação e proxy
-
-- [ ] HTTPS funcionando com certificado de produção (não staging)
-- [ ] Redirecionamento HTTP → HTTPS ativo
-- [ ] HSTS ativo (só depois do TLS estável)
-- [ ] Nota A ou A+ no SSL Labs — nota obtida: ________
-- [ ] Headers de segurança presentes; `Server` e `X-Powered-By` ausentes
-- [ ] Rate limit devolvendo 429 sob carga
-- [ ] Dashboard do Traefik inacessível sem autenticação
-- [ ] Grafana atrás de basic auth (401 sem credencial)
-- [ ] `/metrics` não acessível publicamente
-- [ ] Todos os containers com `mem_limit` — nenhum `0`
-- [ ] Todos os containers de aplicação rodando como não-root
+- [ ] PostgreSQL e Redis estão `healthy`
+- [ ] Roles seguem menor privilégio
+- [ ] Redis usa `noeviction`
+- [ ] Backup externo diário está agendado
+- [ ] Restore de globals, database e Redis foi executado a partir do destino externo
+- [ ] Nenhum dado real será migrado sem plano Firestore→PostgreSQL aprovado
 
 ## Operação
 
-- [ ] Rotação de log do Docker ativa
-- [ ] Retenção do Loki configurada (168h)
-- [ ] Alerta de disco >80% configurado **e testado**
-- [ ] Alerta de container perto do limite de memória
-- [ ] Alerta de aplicação fora do ar
-- [ ] Notificações chegando ao canal escolhido (Telegram/Discord)
-- [ ] Rollback ensaiado ao menos uma vez
-- [ ] `docker stats` somando abaixo de 2.5GB
-
-## GitHub
-
-- [ ] 2FA ativo na conta
-- [ ] Branch protection em `main`, sem bypass
-- [ ] Secret scanning + push protection ativos
-- [ ] Dependabot configurado (npm, docker, github-actions)
-- [ ] Actions de terceiros fixadas por tag ou SHA
-- [ ] Visibilidade dos pacotes no GHCR conferida manualmente
-- [ ] Nenhum segredo no histórico do git (`git log --all -- "*.env"`)
-
-## Documentação
-
-- [ ] Senhas guardadas no gerenciador de senhas
-- [ ] Data do último teste de restauração anotada
-- [ ] `docs/README.md` com as fases marcadas como concluídas
+- [ ] Todos os containers têm `mem_limit` e `memswap_limit`
+- [ ] Soma inicial dos limites é 1.504 MiB
+- [ ] Reserva de auth/jobs mantém envelope em 1.952 MiB
+- [ ] Alloy envia métricas e logs ao Grafana Cloud
+- [ ] Alertas e sonda externa foram exercitados
+- [ ] Deploy e rollback conjunto por SHA foram testados
+- [ ] `docker stats` será acompanhado por sete dias
+- [ ] Sem swap persistente e com pelo menos 1 GiB de folga medida

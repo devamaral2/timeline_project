@@ -1,92 +1,66 @@
-# ADR-006 — Postgres e Redis em container no próprio VPS
+# ADR-006 — PostgreSQL e Redis em containers no VPS
 
-**Status:** aceita, **com ressalva explícita** · **Data:** 2026-08-25
+## Status
+
+Aceita para o projeto pessoal e para o primeiro servidor de 4 GiB.
 
 ## Contexto
 
-As aplicações precisam de banco relacional e de um armazenamento em memória para cache,
-sessões e filas. As opções vão de serviços gerenciados na nuvem a instalação direta no
-host.
-
-Esta é a decisão de maior risco de toda a spec, e vale registrar isso de forma explícita.
+A API atual ainda usa Firestore, mas a persistência será migrada para PostgreSQL. Um
+serviço futuro processará filas em Redis. A infraestrutura precisa estar pronta e ter
+restore validado antes dessas migrações, sem transformar banco disponível em dependência
+prematura da API.
 
 ## Decisão
 
-**Postgres 16 e Redis 7 em containers no próprio VPS**, em rede `internal` sem acesso à
-internet, com backup diário para bucket externo e restore testado.
+- PostgreSQL 16 e Redis 7 rodam no mesmo VPS via Docker Compose.
+- Ambos participam somente da rede `data`, marcada `internal: true`, sem `ports:`.
+- PostgreSQL tem limite de 384 MiB; Redis, 192 MiB.
+- O banco inicial chama-se `timeline` e possui roles distintas de administração,
+  migrations e runtime.
+- Redis usa AOF `everysec`, `maxmemory=128mb` e `noeviction`, porque filas não podem
+  perder jobs por política de eviction.
+- Backups incluem globals/roles, database e snapshot Redis, são copiados para destino
+  externo e restaurados num ambiente descartável.
+- No primeiro deploy, a API não recebe credenciais desses serviços.
 
-⚠️ Esta decisão é **condicionada** ao backup testado. Sem ele, não é risco calculado — é
-apenas risco.
+## Por que subir antes de conectar
 
-## O risco, dito sem rodeios
+Separar instalação e migração permite validar volume, tuning, credenciais, backup,
+restore e monitoramento sem risco sobre dados da aplicação. A futura migração do
+Firestore terá plano próprio, incluindo schema, cópia, reconciliação e rollback.
 
-Banco em container, num VPS único, significa:
+## Alternativas
 
-- **Sem failover.** O servidor morre, o banco morre junto.
-- **Sem recuperação a ponto no tempo** com a configuração padrão. A perda máxima é o
-  tempo desde o último backup — até 24 horas.
-- **Sem réplica.** Corrupção do volume é perda total.
-- **O banco compete por recursos** com aplicação, proxy e observabilidade no mesmo
-  servidor.
+**PostgreSQL gerenciado.** Reduz trabalho operacional e melhora recuperação, mas aumenta
+custo e remove parte do objetivo de aprendizado. Continua sendo a migração recomendada
+se o projeto ganhar usuários pagantes ou exigir disponibilidade maior.
 
-Para uma aplicação com clientes pagantes, isso não seria aceitável.
+**Redis gerenciado.** Boa evolução para filas críticas. Não é necessário com baixo volume
+e jobs ainda inexistentes.
 
-## Alternativas consideradas
+**Instalação direta no host.** Economiza uma camada, mas cria dois modelos operacionais.
+Containers mantêm limites, logs e atualização consistentes com o restante da stack.
 
-**Postgres gerenciado (Neon, Supabase, Railway, RDS).** Backup automático, PITR,
-réplicas, atualizações sem esforço, alta disponibilidade. **Para uma aplicação séria, esta
-é a escolha responsável.** O free tier do Neon serve projetos pequenos; ele inclusive
-suspende o banco quando ocioso, reduzindo custo a zero.
+**Fila no PostgreSQL.** `SKIP LOCKED`, pgmq ou graphile-worker poderiam eliminar Redis.
+Redis foi mantido porque já faz parte do plano e será avaliado quando `jobs-api` existir.
 
-Descartado aqui por três motivos, nesta ordem de peso: (1) o aprendizado operacional é um
-objetivo declarado — configurar, tunar e fazer backup de um Postgres ensina coisas que
-usar um gerenciado não ensina; (2) latência — banco e aplicação na mesma máquina eliminam
-o salto de rede; (3) independência e custo previsível.
-
-**Redis gerenciado (Upstash).** Mesmo raciocínio. O free tier é generoso e o modelo de
-cobrança por requisição é adequado a projeto pequeno.
-
-**Instalação direta no host, sem container.** Menos camadas, desempenho marginalmente
-melhor, e o dado não depende do ciclo de vida do container. O contra é a inconsistência
-operacional: um serviço gerenciado por `systemd` e o resto por Docker significa dois
-modelos de atualização e dois lugares para investigar. Com volumes nomeados, a diferença
-de desempenho é pequena demais para decidir.
-
-**SQLite.** Para muitas aplicações pequenas seria suficiente e eliminaria dois containers
-(~576MB). Descartado porque não suporta bem escrita concorrente entre processos, e limita
-o que você aprende. Vale lembrar que existe: para uma app de leitura predominante, seria a
-escolha mais eficiente.
-
-**Dispensar o Redis, usando só o Postgres.** Tecnicamente viável e economiza 192MB. Para
-cache, `UNLOGGED TABLE` resolve; para fila, `SKIP LOCKED` e ferramentas como `pgmq` ou
-`graphile-worker` são excelentes. **Menos peças é uma vantagem real.** Mantido porque foi
-pedido explicitamente e porque é a ferramenta certa para sessões e rate limiting
-distribuído — mas é a peça mais dispensável da stack.
+**Segundo PostgreSQL.** Rejeitado. Serviços pequenos usam o mesmo processo com databases,
+schemas e roles isoladas; outro container desperdiçaria RAM.
 
 ## Consequências
 
-**Positivas.** Latência de rede próxima de zero. Controle total de versão, extensões e
-configuração. Custo zero além do VPS. Aprendizado operacional real: tuning, backup,
-restauração, diagnóstico de consulta lenta.
+- O proprietário do projeto é responsável por tuning, atualização e recuperação.
+- A perda total do VPS pode perder dados desde o último backup diário.
+- Banco e app compartilham domínio de falha.
+- Nenhum dado real entra antes do primeiro restore externo bem-sucedido.
+- Tornar PostgreSQL/Redis dependências da API exige mudança explícita de readiness e
+  entrega controlada de credenciais.
 
-**Negativas.** Você é o DBA. Backup, monitoramento, atualização e recuperação são sua
-responsabilidade. Sem alta disponibilidade. Competição por recursos no mesmo servidor.
+## Gatilhos de revisão
 
-**Mitigações obrigatórias** (não opcionais):
-
-1. Backup diário para bucket externo, com verificação de tamanho no script
-2. **Restauração testada a partir do bucket antes de existir dado real**
-3. Alerta de disco em 80%
-4. `mem_limit` explícito para conter o consumo
-5. Usuário de aplicação sem privilégios administrativos
-6. Rede `internal`, sem porta publicada
-
-## Quando revisitar
-
-- **Assim que houver dado de terceiros** cuja perda cause dano real a alguém: migre para
-  gerenciado. `pg_dump` + `pg_restore` torna a migração trivial.
-- Se o banco passar a competir por recursos de forma perceptível
-- Se você precisar de mais de 24h de garantia de recuperação: adote pgBackRest ou WAL-G
-  para PITR, ou migre
-- Se a operação do banco virar fardo em vez de aprendizado — o gerenciado existe para
-  isso
+- usuários pagantes ou RPO menor que 24 horas;
+- necessidade de PITR, réplica ou failover;
+- filas com garantia operacional superior à oferecida por um único VPS;
+- uso sustentado de RAM acima de 80%;
+- pools próximos de `max_connections=30`.

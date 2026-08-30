@@ -50,11 +50,12 @@ são poucos itens, na ordem que faz diferença.
 
 ---
 
-## Node, TypeScript e Fastify
+## Node, TypeScript, NestJS e Next.js
 
 | Recurso | Tipo | Nota |
 |---|---|---|
-| 🆓 **Fastify docs — "Getting Started"** e **"Plugins"** | Docs | O encapsulamento do Fastify difere do Express; entenda antes de crescer |
+| 🆓 **NestJS docs — lifecycle events** | Docs | Shutdown hooks e encerramento limpo em containers |
+| 🆓 **Next.js docs — self-hosting e standalone output** | Docs | Runtime Docker, tracing e variáveis de ambiente |
 | 🆓 **Zod docs** | Docs | `safeParse`, `coerce`, composição de schemas |
 | 🆓 **Node.js docs — "Diagnostics"** | Docs | Como investigar vazamento de memória e travamento |
 | 💰 **Effective TypeScript** (Dan Vanderkam) | Livro | 62 itens curtos. Os de configuração aplicam-se diretamente |
@@ -113,9 +114,9 @@ são poucos itens, na ordem que faz diferença.
 | 🆓 **Google SRE Book, cap. 6 "Monitoring Distributed Systems"** | Livro | Gratuito online. Os quatro sinais de ouro. O melhor capítulo sobre o tema |
 | 🆓 **"My Philosophy on Alerting"** (Rob Ewaschuk) | Artigo | Curto; muda como você pensa sobre alertas |
 | 🆓 **Grafana Loki docs — "Best practices"** | Docs | ⚠️ Cardinalidade de labels. Leia antes de criar labels |
-| 🆓 **Prometheus docs — "Querying basics"** | Docs | PromQL funciona igual no VictoriaMetrics |
-| 🆓 **VictoriaMetrics docs** | Docs | Parâmetros de memória e retenção |
-| 🆓 **Grafana Alloy docs** | Docs | Sintaxe HCL e migração do Promtail |
+| 🆓 **Prometheus docs — "Querying basics"** | Docs | PromQL usado pelo Grafana Cloud Metrics |
+| 🆓 **Grafana Cloud — usage limits** | Docs | Conferir limites atuais antes da instalação |
+| 🆓 **Grafana Alloy docs** | Docs | Exporters integrados, Docker logs e remote write |
 | 💰 **Observability Engineering** (Majors, Fong-Jones, Miranda) | Livro | A referência moderna |
 | 💰 **Systems Performance** (Brendan Gregg) | Livro | Método USE para diagnosticar saturação |
 

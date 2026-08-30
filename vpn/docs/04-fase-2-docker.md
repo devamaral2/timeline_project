@@ -226,7 +226,7 @@ sudo netfilter-persistent save
 ```bash
 # 🖥️ servidor
 docker network create edge
-docker network create --internal internal
+docker network create --internal data
 docker network create --internal observability
 ```
 
@@ -234,15 +234,15 @@ A flag `--internal` remove a rota padrão para fora: containers ali não alcanç
 internet. É a barreira que impede exfiltração de dados e download de ferramentas caso um
 container seja comprometido.
 
-⚠️ Uma consequência prática: um container em rede `internal` **não consegue fazer
-`apt install` nem baixar nada**. Se você precisar disso no Postgres, faça na construção
-da imagem, não em runtime. Isso é uma feature, não um obstáculo.
+⚠️ Uma consequência prática: um container ligado **somente** a `data` ou
+`observability` não consegue baixar nada. A API e o Alloy também participam de `edge`
+para o egresso HTTPS; PostgreSQL e Redis ficam apenas em `data`.
 
 ### 2.5 — Estrutura de diretórios no servidor
 
 ```bash
 # 🖥️ servidor
-sudo mkdir -p /opt/stack/{traefik,postgres,redis,observability}
+sudo mkdir -p /opt/stack/{traefik,apps,data,observability,backups}
 sudo chown -R deploy:deploy /opt/stack
 chmod 750 /opt/stack
 ```
@@ -351,18 +351,19 @@ docker info | grep -A3 'Log'
 ```bash
 # 🖥️ servidor
 docker network ls
-docker network inspect internal --format '{{.Internal}}'
+docker network inspect data --format '{{.Internal}}'
+docker network inspect observability --format '{{.Internal}}'
 docker network inspect edge --format '{{.Internal}}'
 ```
-→ Esperado: `true` para `internal`, `false` para `edge`.
+→ Esperado: `true` para `data` e `observability`, `false` para `edge`.
 
 **A rede interna realmente não alcança a internet:**
 
 ```bash
 # 🖥️ servidor
-docker run --rm --network internal alpine sh -c "wget -T3 -qO- https://example.com || echo BLOQUEADO"
+docker run --rm --network data alpine sh -c "wget -T3 -qO- https://example.com || echo BLOQUEADO"
 ```
-→ Esperado: `BLOQUEADO`. Se baixar a página, a rede não está `internal` — recrie.
+→ Esperado: `BLOQUEADO`. Se baixar a página, a rede `data` não está interna — recrie.
 
 **⚠️ O teste mais importante desta fase — o furo do firewall:**
 
@@ -447,8 +448,9 @@ nada — e o teste da porta 9999 vai revelar isso. Sempre confirme com
 imagens que dependem de `sudo` interno. A solução é corrigir a imagem, não remover a
 proteção global.
 
-**Container em rede `internal` não sobe porque tenta baixar algo.** É o comportamento
-esperado. Mova a instalação para o Dockerfile.
+**Container ligado somente a uma rede interna não sobe porque tenta baixar algo.** É o
+comportamento esperado. Mova a instalação para o Dockerfile ou, se o processo realmente
+precisa de egresso em runtime, ligue apenas esse processo também à `edge`.
 
 **Confundir `expose` com `ports`.** `expose` é praticamente documentação — a porta já é
 acessível entre containers da mesma rede mesmo sem declarar. `ports` é que publica no

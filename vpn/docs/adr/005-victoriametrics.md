@@ -1,66 +1,55 @@
-# ADR-005 — VictoriaMetrics em vez de Prometheus
+# ADR-005 — Grafana Cloud com Alloy local
 
-**Status:** aceita · **Data:** 2026-08-25
+## Status
+
+Aceita. Substitui a decisão anterior de manter Grafana, VictoriaMetrics e Loki no VPS.
 
 ## Contexto
 
-É preciso armazenar séries temporais de métricas do host, dos containers e das
-aplicações, com consulta e alertas. O orçamento total de observabilidade é de ~1.1GB
-dentro de um servidor de 4GB.
+O VPS tem 4 GiB e precisa hospedar web, API, PostgreSQL e Redis, reservando ainda 448 MiB
+para futuros serviços de autenticação e filas. A stack de observabilidade local reservava
+cerca de 1,1 GiB e desaparecia junto com o servidor durante uma falha total.
 
 ## Decisão
 
-**VictoriaMetrics** (single-node) como banco de séries temporais, com **Grafana Alloy**
-como coletor unificado de métricas e logs.
+Executar apenas Grafana Alloy no VPS, com limite de 192 MiB. Seus componentes internos
+coletam métricas do host/containers, raspam `/metrics` da API e enviam logs Docker para
+Grafana Cloud.
 
-## Alternativas consideradas
-
-**Prometheus.** O padrão de fato, ecossistema maior, o que aparece em vagas e
-documentação. Consome cerca do dobro da memória do VictoriaMetrics para a mesma carga e
-comprime pior em disco. Para retenção longa exige um componente adicional (Thanos,
-Cortex). Em 4GB, a diferença de 150–250MB é significativa.
-
-**Ponto decisivo:** o VictoriaMetrics implementa **a mesma API e a mesma linguagem de
-consulta (PromQL)**. Dashboards da comunidade funcionam sem adaptação, e o PromQL que você
-aprende transfere integralmente para qualquer ambiente com Prometheus. O custo de
-aprendizado da substituição é praticamente zero — você aprende a mesma coisa gastando
-metade da RAM.
-
-**Grafana Mimir.** Projetado para escala horizontal e multi-tenant. Complexidade e
-consumo desproporcionais para um servidor único.
-
-**InfluxDB.** Bom banco de séries temporais, mas usa Flux/InfluxQL em vez de PromQL — o
-aprendizado não transfere e os dashboards prontos da comunidade não servem.
-
-**Netdata.** Um container só, dashboards excelentes imediatamente, configuração quase
-zero. Duas ressalvas: retenção local curta (reter mais exige o serviço pago deles) e não
-agrega logs. Se o objetivo fosse apenas "ver se está tudo bem agora", seria a escolha mais
-eficiente.
-
-**Grafana Cloud (free tier).** Só o agente local (~130MB), dados na nuvem. Tem uma
-vantagem real e subestimada: **se o VPS morrer, os dados sobrevivem** — e você consegue
-investigar por que ele morreu, o que é impossível quando a observabilidade cai junto.
-Descartado como padrão por criar dependência de terceiro e reduzir o aprendizado
-operacional. Documentado como alternativa A na
-[Fase 8](../10-fase-8-observabilidade.md).
-
-**Não ter métricas.** Economiza ~1.1GB e significa descobrir problemas por reclamação de
-usuário. Descartado, mas a alternativa leve (Uptime Kuma + Dozzle, ~150MB) fica
-documentada como opção B.
+Não registrar cotas hospedadas no documento, pois elas mudam. A instalação sempre
+consulta os [limites oficiais](https://grafana.com/docs/grafana-cloud/platform/pricing-and-usage/usage-limits/).
 
 ## Consequências
 
-**Positivas.** Metade da memória do Prometheus para a mesma função. Melhor compressão em
-disco, permitindo 30 dias de retenção sem componente extra. PromQL preservado — aprendizado
-e dashboards transferem. Um binário, sem dependências.
+Positivas:
 
-**Negativas.** Comunidade menor: menos respostas prontas quando algo der errado. Alguns
-recursos avançados do Prometheus não têm paridade exata. É "o não-padrão" — em entrevista,
-você explica a escolha em vez de apenas citar a ferramenta (o que, dito isso, costuma
-impressionar mais).
+- libera RAM para aplicações e page cache do PostgreSQL;
+- mantém dados e alertas disponíveis quando o VPS cai;
+- elimina volumes e upgrades locais de Grafana, Loki e VictoriaMetrics;
+- preserva PromQL, LogQL e dashboards Grafana.
 
-## Quando revisitar
+Negativas:
 
-- Se algum recurso específico do Prometheus fizer falta, a migração é direta (mesma API)
-- Se o servidor crescer para 16GB, Prometheus volta a ser confortável
-- Se a stack local passar de ~800MB reais, migre para Grafana Cloud (alternativa A)
+- cria dependência de terceiro e de egresso HTTPS;
+- telemetria sai do VPS e precisa respeitar privacidade/LGPD;
+- tokens de escrita precisam de rotação e monitoramento;
+- socket Docker e mounts do host continuam sendo superfície privilegiada do Alloy.
+
+## Alternativas
+
+**Stack local Grafana + VictoriaMetrics + Loki.** Continua válida para estudo ou
+soberania, mas adiciona aproximadamente 768 MiB de limites ao novo desenho e reduz a
+folga total para menos de 1 GiB. Exige nova aprovação de orçamento, retenção e backup.
+
+**Somente uptime e logs locais.** Mais leve, porém perde histórico de recursos e dificulta
+diagnóstico de OOM, banco lento e falhas intermitentes.
+
+**Nenhuma observabilidade.** Rejeitada: economiza RAM ao custo de descobrir falhas por
+reclamação ou perda de dados.
+
+## Gatilhos de revisão
+
+- requisitos de soberania impedirem envio de telemetria;
+- custo ou limites do serviço hospedado deixarem de atender;
+- o VPS crescer e houver justificativa educacional para a stack local;
+- outro provedor hospedado oferecer melhor retenção ou controles.

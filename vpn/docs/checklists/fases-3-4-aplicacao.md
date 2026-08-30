@@ -1,48 +1,45 @@
-# Checklist — Fases 3 e 4 (aplicação)
+# Checklist — Fases 3 e 4 (aplicações)
 
-Executadas na máquina Windows. O servidor não é tocado.
+Executado na máquina Windows; o VPS não é alterado.
 
-## Fase 3 — Monorepo local
+## Fase 3 — preparar o monorepo existente
 
-- [ ] Node 20+ instalado
-- [ ] Corepack habilitado, pnpm ativado
-- [ ] Repositório criado e `git init` feito
-- [ ] `pnpm-workspace.yaml` com `apps/*` e `packages/*`
-- [ ] `package.json` da raiz com `"private": true` e `packageManager`
-- [ ] `turbo.json` com `dependsOn: ["^build"]` e `outputs: ["dist/**"]`
-- [ ] `@repo/tsconfig` criado e referenciado com `workspace:*`
-- [ ] `hello-api` com Fastify + TypeScript
-- [ ] Validação de ambiente com Zod (`env.ts`)
-- [ ] Rota `/` respondendo Hello World
-- [ ] Rota `/health` (liveness, sem checar dependências)
-- [ ] Rota `/ready` (readiness, checa dependências)
-- [ ] Rota `/metrics` em formato Prometheus
-- [ ] `host: "0.0.0.0"` — não `127.0.0.1`
-- [ ] Tratamento de `SIGTERM` para shutdown limpo
-- [ ] 🔴 `.gitignore` cobrindo `.env`, `.env.*`, `*.pem`, `*.key`
-- [ ] `pnpm-lock.yaml` commitado
-- [ ] `pnpm typecheck` sem erros
-- [ ] `pnpm build` duas vezes → segunda mostra `FULL TURBO`
-- [ ] `PORT=abc pnpm dev` falha com mensagem clara do Zod
+Já existente, apenas confirmar:
 
-## Fase 4 — Imagem Docker
+- [ ] Node 24+ e pnpm do `packageManager`
+- [ ] Workspaces `apps/*` e `packages/*`
+- [ ] `apps/web`, `apps/mobile`, `apps/api` e quatro packages compartilhados
+- [ ] Turborepo com build dependente de `^build`
+- [ ] Lockfile versionado e TypeScript estrito
 
-- [ ] 🔴 `.dockerignore` criado **antes** do Dockerfile
-- [ ] `.dockerignore` cobre `node_modules`, `.git`, `.env`, `dist`
-- [ ] Dockerfile multi-stage (builder → pruner → runner)
-- [ ] `COPY` dos manifestos antes do código (cache de camadas)
-- [ ] `--frozen-lockfile` no install
-- [ ] 🔴 `pnpm deploy --filter ... --prod /out` no estágio pruner
-- [ ] Estágio final copia de `/out`, não de `/repo`
-- [ ] 🔴 `USER node` presente
-- [ ] `NODE_OPTIONS=--max-old-space-size` alinhado ao `mem_limit` (~75%)
-- [ ] `HEALTHCHECK` definido
-- [ ] Imagem base fixada (`node:20-alpine`, nunca `latest`)
-- [ ] Tamanho da imagem entre 130MB e 200MB — real: ________
-- [ ] 🔴 `docker run --rm hello-api id` → `uid=1000(node)`
-- [ ] Sem `typescript` nem `src/` na imagem final
-- [ ] `docker history` sem nada parecido com segredo
-- [ ] Container sobe e `/health` responde
-- [ ] `docker inspect ... .State.Health.Status` → `healthy`
-- [ ] Rebuild após mudança de código mostra `CACHED` no install
-- [ ] Trivy rodado localmente — HIGH/CRITICAL: ________
+Adicionar:
+
+- [ ] API com `/health`, `/ready` e `/metrics`
+- [ ] `/ready` sem leitura faturável no Firestore e sem Postgres/Redis
+- [ ] Métricas sem IDs, URLs concretas ou dados pessoais como labels
+- [ ] Shutdown hooks no Nest
+- [ ] Web com `/health` independente da API
+- [ ] Next com `output: "standalone"` e tracing da raiz do monorepo
+- [ ] `BACKEND_URL=http://api:3001` previsto no build e runtime
+- [ ] API usa `0.0.0.0` somente no container; local permanece em loopback
+- [ ] `.gitignore` cobre `*.pem` e `*.key`
+- [ ] Nenhum driver PostgreSQL, migration, auth-api ou jobs-api adicionado
+- [ ] `npm run --silent test:ai` passa
+- [ ] typecheck e duas builds Turbo passam; a segunda usa cache
+
+## Fase 4 — imagens
+
+- [ ] `.dockerignore` exclui Git, envs, chaves, builds e dependências locais
+- [ ] Dockerfiles separados para `web` e `api`, ambos em Node 24
+- [ ] API usa deploy portátil dos workspaces
+- [ ] Web usa standalone e inclui `public` + `.next/static`
+- [ ] Firebase público entra apenas no build web
+- [ ] Firebase Admin/OpenRouter não aparecem em build args ou camadas
+- [ ] Web limitado a 384 MiB/heap 256 MiB
+- [ ] API limitada a 256 MiB/heap 160 MiB
+- [ ] Ambos rodam com UID não zero, filesystem read-only e capabilities removidas
+- [ ] Compose local publica somente `127.0.0.1:3000`
+- [ ] API não tem binding no host
+- [ ] Web→API funciona por `api:3001`
+- [ ] Os dois healthchecks ficam `healthy`
+- [ ] Trivy executado nas duas imagens

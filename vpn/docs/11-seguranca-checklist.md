@@ -97,8 +97,9 @@ for c in $(docker ps --format '{{.Names}}'); do
   echo "$c: $(docker exec "$c" id -u 2>/dev/null || echo '?')"
 done
 ```
-→ Esperado: `1000` ou outro não-zero nas aplicações. Postgres e Redis já trocam de usuário
-internamente. cAdvisor será `0` — é a exceção conhecida e documentada.
+→ Esperado: `1000` ou outro não-zero em `web` e `api`. Imagens de infraestrutura podem
+usar usuários próprios ou root quando o acesso ao host é requisito documentado; Alloy é
+a exceção sensível e deve migrar para socket proxy quando a stack estabilizar.
 
 ### 🔴 1.7 Todo container com `mem_limit`
 
@@ -129,7 +130,7 @@ docker exec redis redis-cli ping
 
 ```bash
 # 🖥️ servidor
-docker exec postgres psql -U appuser -d appdb -c "\du hello_app"
+docker exec postgres psql -U timeline_admin -d timeline -c "\du timeline_app"
 ```
 → Esperado: sem `Superuser`, sem `Create DB`.
 
@@ -140,13 +141,14 @@ docker exec postgres psql -U appuser -d appdb -c "\du hello_app"
 
 ```bash
 # 🖥️ servidor
-for i in $(seq 1 200); do curl -sk -o /dev/null -w "%{http_code}\n" https://localhost/ -H "Host: hello.SEUDOMINIO.com"; done | sort | uniq -c
+for i in $(seq 1 200); do curl -sk -o /dev/null -w "%{http_code}\n" https://localhost/ -H "Host: app.SEUDOMINIO.com"; done | sort | uniq -c
 ```
 → Esperado: alguns `429`.
 
 ### 1.11 Validação de entrada na aplicação
 
-**Onde:** [Fase 3](05-fase-3-monorepo-local.md) (Zod).
+**Onde:** DTOs e pipes do Nest em `apps/api`; a [Fase 3](05-fase-3-monorepo-local.md)
+mantém esse requisito nos novos endpoints operacionais.
 
 Toda fronteira — body, query, params, headers, variáveis de ambiente — validada. Nunca
 confie em `req.body` sem schema.
@@ -154,14 +156,15 @@ confie em `req.body` sem schema.
 ### 1.12 Dashboards internos nunca sem autenticação
 
 **Onde:** [Fase 5](07-fase-5-traefik-e-tls.md) (`api.insecure: false`) +
-[Fase 8](10-fase-8-observabilidade.md) (Grafana com dupla auth).
+[Fase 8](10-fase-8-observabilidade.md) (Grafana hospedado; Alloy sem porta pública).
 
 ```bash
 # 💻 local
 curl -sI http://SEU_IP:8080/dashboard/
-curl -sI https://grafana.SEUDOMINIO.com
+curl -sI http://SEU_IP:12345
 ```
-→ Esperado: conexão recusada na primeira; `401` na segunda.
+→ Esperado: conexão recusada nas duas. O Grafana Cloud usa autenticação do provedor e
+não cria um domínio Grafana no VPS.
 
 ---
 
@@ -172,7 +175,7 @@ anteriores.
 
 ### 🔴 2.1 Backup off-site com restore testado
 
-**Onde:** [Fase 6](08-fase-6-postgres-e-redis.md), seções 6.7 e 6.8.
+**Onde:** [Fase 6](08-fase-6-postgres-e-redis.md), seções 6.5 e 6.6.
 
 **Por quê:** é a lacuna número um. O snapshot da HostGator está na mesma conta e na mesma
 infraestrutura — se a conta for comprometida, suspensa por engano, ou se houver falha do
@@ -190,7 +193,7 @@ Repita a cada 3 meses. Credenciais expiram, scripts quebram silenciosamente.
 
 ### 2.2 Cloudflare na frente do domínio
 
-**Onde:** [Fase 5](07-fase-5-traefik-e-tls.md), seção 5.8.
+**Onde:** etapa opcional posterior à [Fase 5](07-fase-5-traefik-e-tls.md).
 
 **Por quê:** sem isso, seu IP real é público — está no DNS, nos headers, nos logs de
 qualquer serviço que você chamar. Com o IP, um atacante ignora qualquer proteção
@@ -226,7 +229,7 @@ arquivo.
 
 **Onde:** [Fase 7](09-fase-7-cicd-github-actions.md) (Trivy) + Dependabot.
 
-**Por quê:** `node:20-alpine` acumula CVEs entre releases. Uma imagem construída há três
+**Por quê:** `node:24-alpine` acumula CVEs entre releases. Uma imagem construída há três
 meses provavelmente tem vulnerabilidades conhecidas. Sem automação, ninguém lembra de
 atualizar.
 
@@ -240,7 +243,10 @@ updates:
     schedule: { interval: weekly }
     open-pull-requests-limit: 5
   - package-ecosystem: docker
-    directory: "/apps/hello-api"
+    directory: "/apps/web"
+    schedule: { interval: weekly }
+  - package-ecosystem: docker
+    directory: "/apps/api"
     schedule: { interval: weekly }
   - package-ecosystem: github-actions
     directory: "/"
@@ -255,7 +261,7 @@ desatualizadas são vetor conhecido de ataque de cadeia de suprimentos.
 **Onde:** [Fase 2](04-fase-2-docker.md), `daemon.json`.
 
 **Por quê:** por padrão o Docker guarda logs sem limite. Uma app em loop de erro escreve
-gigabytes em horas. Disco cheio derruba Postgres, Traefik e Loki ao mesmo tempo — e o
+gigabytes em horas. Disco cheio derruba Postgres, Redis e Traefik ao mesmo tempo — e o
 sistema fica difícil até de diagnosticar, porque nada consegue escrever. **É a causa nº 1
 de queda em VPS pequeno** e custa cinco linhas de configuração.
 
@@ -289,7 +295,9 @@ ponto não se aplica.
 
 **Onde:** [Fase 6](08-fase-6-postgres-e-redis.md).
 
-Hoje: `.env` com `chmod 600` fora do repositório, `.env.example` versionado.
+Hoje: `.env` com `chmod 600` fora do repositório, `.env.example` versionado. Separe
+`api.env`, credenciais de dados e tokens de escrita do Grafana Cloud para reduzir o raio
+de exposição e permitir rotação independente.
 
 Limitações honestas desse modelo: os segredos estão em texto claro no disco do servidor;
 não há rotação; não há auditoria de quem acessou; se o servidor for restaurado de um
@@ -404,8 +412,8 @@ legal para o tratamento; permitir exclusão a pedido; e comunicar incidentes de 
 relevantes à ANPD e aos titulares.
 
 ⚠️ Um detalhe técnico com consequência jurídica: **logs contêm dados pessoais**. IP,
-user-agent e e-mail em mensagens de erro são dados pessoais. A retenção de 7 dias
-configurada no Loki ajuda; evitar logar corpo de requisição ajuda mais.
+user-agent e e-mail em mensagens de erro são dados pessoais. Configure retenção no
+Grafana Cloud de acordo com a necessidade e evite logar corpo, token ou e-mail.
 
 Isto é sinalização, não aconselhamento jurídico. Se o projeto crescer, consulte alguém
 qualificado.
@@ -425,7 +433,7 @@ Confirme antes de investir tempo:
 
 ### 2.14 2FA e proteção de branch no GitHub
 
-**Onde:** [Fase 7](09-fase-7-cicd-github-actions.md), seção 7.5.
+**Onde:** [Fase 7](09-fase-7-cicd-github-actions.md).
 
 **Por quê:** o repositório contém a chave SSH do servidor nos secrets. Comprometer a conta
 do GitHub é comprometer o servidor. Sem proteção de branch, um push direto em `main`
@@ -438,7 +446,7 @@ executa código com aquela chave.
 
 ### 2.15 Visibilidade dos pacotes no GHCR
 
-**Onde:** [Fase 7](09-fase-7-cicd-github-actions.md), seção 7.6.
+**Onde:** [Fase 7](09-fase-7-cicd-github-actions.md).
 
 **Por quê:** a visibilidade do pacote **não segue** a do repositório. Repositório privado
 com imagem pública é uma combinação comum e ninguém avisa. A imagem contém seu código

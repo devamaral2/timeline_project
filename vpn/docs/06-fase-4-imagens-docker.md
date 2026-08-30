@@ -1,381 +1,265 @@
-# Fase 4 — Imagens Docker do monorepo
+# Fase 4 — Imagens Docker de web e API
 
 ## Objetivo
 
-Ao final desta fase você tem um `Dockerfile` multi-stage que constrói a imagem da
-`hello-api` a partir do monorepo, resultando em uma imagem de ~150MB rodando como usuário
-não-root, e você consegue subi-la localmente com `docker compose`.
+Gerar duas imagens reproduzíveis a partir do monorepo:
 
----
+- `timeline-web`, com o servidor standalone do Next.js;
+- `timeline-api`, com o build NestJS e apenas dependências de produção.
 
-## Por que isso existe
+As imagens rodam como usuário não-root, não contêm segredos e funcionam juntas num
+Compose local em que somente o web publica uma porta no loopback.
 
-Containerizar um monorepo pnpm é o passo que mais quebra na prática, e por um motivo
-específico: **o pnpm não copia dependências, ele cria symlinks.**
+## Pré-requisitos
 
-Num projeto normal, `node_modules` é um diretório com os pacotes dentro. Copie o
-diretório e funciona. No pnpm, `node_modules/fastify` é um link simbólico para
-`node_modules/.pnpm/fastify@5.0.0/node_modules/fastify`, e num monorepo há ainda links
-apontando para fora do diretório da app, para `packages/`.
+A fase 3 precisa estar concluída: os endpoints operacionais existem, o web gera
+`.next/standalone` e a comunicação em container usa `api:3001`.
 
-Quando você faz `COPY apps/hello-api /app` no Dockerfile, os symlinks ou não são copiados
-ou apontam para caminhos que não existem na imagem. O erro que aparece é
-`Cannot find module 'fastify'` — e a pessoa perde horas achando que é problema de
-instalação.
+O contexto de build é sempre a raiz do monorepo. Cada Dockerfile precisa enxergar o
+lockfile e os packages compartilhados.
 
-A solução oficial é **`pnpm deploy`**: um comando que resolve todos os workspaces e
-symlinks, produzindo um diretório autocontido e copiável.
+## 4.1 — `.dockerignore`
 
-O segundo motivo desta fase é tamanho e segurança. Uma imagem ingênua com todo o monorepo
-e `devDependencies` passa de 1GB. A multi-stage entrega ~150MB — o que importa porque
-cada deploy baixa essa imagem, e no seu VPS o disco é finito.
+Criar na raiz antes dos builds:
 
----
-
-## Passo a passo
-
-### 4.1 — `.dockerignore` na raiz
-
-Crie **antes** do Dockerfile:
-
-```
+```dockerignore
 node_modules
 **/node_modules
 **/dist
+**/.next
 **/.turbo
+**/coverage
 .git
 .github
-docs
-infra
+.idea
+.worktrees
+vpn
 *.md
 .env
 .env.*
-**/coverage
+*.pem
+*.key
 ```
 
-🔒 O `.dockerignore` tem valor de segurança, não só de performance. Sem ele, o `.git`
-inteiro vai para o contexto de build — incluindo qualquer segredo que já esteve no
-histórico. E o `.env` acabaria dentro da imagem, onde qualquer um com acesso ao registry
-pode lê-lo com `docker history`.
+O arquivo reduz o contexto e impede que histórico Git ou `.env` virem camadas da imagem.
 
-Sem o `.dockerignore`, o contexto de build também inclui todos os `node_modules` locais:
-centenas de MB enviados ao daemon a cada build, deixando tudo lento sem motivo.
+## 4.2 — Imagem da API
 
-### 4.2 — O Dockerfile
-
-`apps/hello-api/Dockerfile` — mas atenção: o **contexto de build é a raiz do monorepo**,
-não a pasta da app. Ele precisa enxergar `pnpm-workspace.yaml` e `packages/`.
+`apps/api/Dockerfile`:
 
 ```dockerfile
-# syntax=docker/dockerfile:1
-
-# ---------- Estagio 1: dependencias e build ----------
-FROM node:20-alpine AS builder
-
+# syntax=docker/dockerfile:1.7
+FROM node:24-alpine AS builder
 RUN corepack enable
 WORKDIR /repo
 
-# Copia so os manifestos primeiro: se o codigo mudar mas as dependencias
-# nao, o Docker reaproveita a camada de install do cache.
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
-COPY apps/hello-api/package.json ./apps/hello-api/
-COPY packages/tsconfig/package.json ./packages/tsconfig/
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json tsconfig.base.json ./
+COPY apps/api/package.json apps/api/package.json
+COPY packages/entities/package.json packages/entities/package.json
+COPY packages/persistence/package.json packages/persistence/package.json
 
-RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+RUN --mount=type=cache,id=pnpm-api,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile
 
-# Agora sim o codigo-fonte
 COPY . .
+RUN pnpm --filter @repo/api build
+RUN pnpm --filter @repo/api --prod deploy --legacy /out
 
-RUN pnpm --filter hello-api build
-
-# ---------- Estagio 2: extrair o deployable ----------
-FROM builder AS pruner
-
-# pnpm deploy resolve todos os symlinks de workspace e produz
-# um diretorio autocontido em /out
-RUN pnpm --filter hello-api --prod deploy /out
-
-# ---------- Estagio 3: imagem final ----------
-FROM node:20-alpine AS runner
-
+FROM node:24-alpine AS runner
 ENV NODE_ENV=production
-ENV NODE_OPTIONS=--max-old-space-size=144
-
+ENV NODE_OPTIONS=--max-old-space-size=160
 WORKDIR /app
 
-# node:alpine ja traz o usuario "node" (uid 1000)
-COPY --from=pruner --chown=node:node /out/node_modules ./node_modules
-COPY --from=pruner --chown=node:node /out/package.json ./package.json
-COPY --from=builder --chown=node:node /repo/apps/hello-api/dist ./dist
+COPY --from=builder --chown=node:node /out/node_modules ./node_modules
+COPY --from=builder --chown=node:node /out/package.json ./package.json
+COPY --from=builder --chown=node:node /repo/apps/api/dist ./dist
 
 USER node
-
-EXPOSE 3000
-
+EXPOSE 3001
 HEALTHCHECK --interval=30s --timeout=3s --start-period=20s --retries=3 \
-  CMD node -e "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
-
-CMD ["node", "dist/index.js"]
+  CMD node -e "fetch('http://127.0.0.1:3001/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+CMD ["node", "dist/main.js"]
 ```
 
-Vale destrinchar as decisões:
+`pnpm deploy --legacy` é intencional neste repositório: produz `node_modules` portátil
+sem ativar globalmente `injectWorkspacePackages`, que poderia mudar o comportamento do
+Metro com os packages TypeScript. Reavalie quando a configuração do workspace mudar.
 
-**Ordem de `COPY`.** Copiar os `package.json` antes do código-fonte não é capricho: as
-camadas do Docker são cacheadas em ordem, e qualquer mudança invalida tudo abaixo. Como
-o código muda a cada commit e as dependências raramente mudam, essa ordem faz o
-`pnpm install` — o passo lento — ser reaproveitado quase sempre. Inverter a ordem
-significa reinstalar dependências a cada build.
+## 4.3 — Imagem do web
 
-**`--mount=type=cache`** — BuildKit mantém o store do pnpm entre builds sem colocá-lo na
-imagem. Corta minutos em builds repetidos.
+O `next build` de um monorepo gera normalmente o servidor em
+`.next/standalone/apps/web/server.js`. Confirme o caminho no primeiro build; não presuma
+que será `.next/standalone/server.js`.
 
-**`--frozen-lockfile`** — falha se o lockfile não corresponder ao `package.json`, em vez
-de "consertar" silenciosamente. Em CI isso é obrigatório: você quer build reprodutível,
-não build criativo.
+`apps/web/Dockerfile`:
 
-**`pnpm deploy --prod`** — o comando central. Ele monta em `/out` um diretório com
-`node_modules` real (sem symlinks para fora), contendo apenas dependências de produção.
-É o que torna o `COPY` para o estágio final possível.
+```dockerfile
+# syntax=docker/dockerfile:1.7
+FROM node:24-alpine AS builder
+RUN corepack enable
+WORKDIR /repo
 
-**`NODE_OPTIONS=--max-old-space-size=144`** com `mem_limit: 192m` no compose. A conta:
-o V8 precisa de espaço além do heap (stack, buffers, código nativo), então o heap deve
-ficar em ~75% do limite do container. Sem isso, o container é morto pelo OOM killer sem
-que o Node tenha chance de rodar o garbage collector — e você recebe um `exit 137`
-misterioso, sem stack trace. Com o limite alinhado, o GC fica agressivo e a app sobrevive.
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json tsconfig.base.json ./
+COPY apps/web/package.json apps/web/package.json
+COPY packages/entities/package.json packages/entities/package.json
+COPY packages/timeline/package.json packages/timeline/package.json
+COPY packages/theme/package.json packages/theme/package.json
 
-**`USER node`** 🔒 — sem essa linha, o processo roda como root **dentro** do container.
-Combinado com um escape de container (raro, mas existente) ou com um volume montado,
-root no container vira root no host. A imagem `node:alpine` já traz o usuário `node`
-pronto, então o custo é uma linha.
+RUN --mount=type=cache,id=pnpm-web,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile
 
-**`HEALTHCHECK` usando `fetch`** — o Node 20 tem `fetch` nativo, então não é preciso
-instalar `curl` ou `wget` só para isso. Menos pacotes, menos superfície, imagem menor.
+COPY . .
 
-### 4.3 — Escolha da imagem base
+ARG NEXT_PUBLIC_FIREBASE_API_KEY
+ARG NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+ARG NEXT_PUBLIC_FIREBASE_PROJECT_ID
+ARG NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+ARG NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+ARG NEXT_PUBLIC_FIREBASE_APP_ID
+ARG BACKEND_URL=http://api:3001
 
-| Base | Tamanho | Prós | Contras |
-|---|---|---|---|
-| `node:20` | ~1.1 GB | Tudo incluso | Enorme, muitos CVEs |
-| `node:20-slim` | ~250 MB | Debian, boa compatibilidade | Médio |
-| **`node:20-alpine`** | **~180 MB** | Pequena, poucos CVEs | musl libc |
-| `gcr.io/distroless/nodejs20` | ~170 MB | Sem shell — superfície mínima | Difícil de debugar |
+ENV NEXT_PUBLIC_FIREBASE_API_KEY=$NEXT_PUBLIC_FIREBASE_API_KEY
+ENV NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=$NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+ENV NEXT_PUBLIC_FIREBASE_PROJECT_ID=$NEXT_PUBLIC_FIREBASE_PROJECT_ID
+ENV NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=$NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+ENV NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=$NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+ENV NEXT_PUBLIC_FIREBASE_APP_ID=$NEXT_PUBLIC_FIREBASE_APP_ID
+ENV BACKEND_URL=$BACKEND_URL
 
-Usamos **alpine** por equilibrar tamanho, superfície de ataque e possibilidade de debug.
+RUN pnpm --filter @repo/web build
 
-⚠️ **A ressalva do Alpine:** ele usa `musl` em vez de `glibc`. Pacotes npm com binários
-nativos compilados (`bcrypt`, `sharp`, `canvas`) podem falhar ou ter desempenho pior. Se
-você adicionar uma dependência assim e ela quebrar, `node:20-slim` é o plano B — 70MB a
-mais, compatibilidade total.
+FROM node:24-alpine AS runner
+ENV NODE_ENV=production
+ENV NODE_OPTIONS=--max-old-space-size=256
+ENV HOSTNAME=0.0.0.0
+ENV PORT=3000
+WORKDIR /app
 
-**Distroless** é o próximo degrau de segurança: sem shell, sem gerenciador de pacotes,
-sem nada além do runtime. Um atacante que consiga executar código não tem nem `sh` para
-usar. O custo é que você também não tem — `docker exec` para investigar deixa de existir.
-Boa escolha depois que a app estiver estável.
+COPY --from=builder --chown=node:node /repo/apps/web/public ./apps/web/public
+COPY --from=builder --chown=node:node /repo/apps/web/.next/standalone ./
+COPY --from=builder --chown=node:node /repo/apps/web/.next/static ./apps/web/.next/static
 
-⚠️ Fixe a versão maior (`node:20-alpine`), nunca use `node:latest`. `latest` significa
-que sua build pode mudar de versão de Node entre dois deploys sem você saber.
+USER node
+EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=3s --start-period=20s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+CMD ["node", "apps/web/server.js"]
+```
 
-### 4.4 — Compose local para testar
+Valores `NEXT_PUBLIC_*` entram no bundle e não são segredos. Credenciais Firebase Admin,
+OpenRouter, PostgreSQL e Redis nunca são `ARG` nem `ENV` no Dockerfile.
+
+## 4.4 — Compose local
 
 `infra/docker-compose.local.yml`:
 
 ```yaml
 services:
-  hello-api:
+  api:
     build:
-      context: ../
-      dockerfile: apps/hello-api/Dockerfile
-    ports:
-      - "127.0.0.1:3000:3000"
+      context: ..
+      dockerfile: apps/api/Dockerfile
     environment:
       NODE_ENV: production
-      PORT: 3000
-    mem_limit: 192m
-    memswap_limit: 192m
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - ALL
+      API_HOST: 0.0.0.0
+      PORT: 3001
+    env_file:
+      - ../.env
+    expose:
+      - "3001"
+    mem_limit: 256m
+    memswap_limit: 256m
     read_only: true
     tmpfs:
       - /tmp
-    restart: unless-stopped
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    networks: [edge, data]
+
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+      args:
+        BACKEND_URL: http://api:3001
+        NEXT_PUBLIC_FIREBASE_API_KEY: ${NEXT_PUBLIC_FIREBASE_API_KEY}
+        NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}
+        NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${NEXT_PUBLIC_FIREBASE_PROJECT_ID}
+        NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}
+        NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID}
+        NEXT_PUBLIC_FIREBASE_APP_ID: ${NEXT_PUBLIC_FIREBASE_APP_ID}
+    environment:
+      BACKEND_URL: http://api:3001
+      HOSTNAME: 0.0.0.0
+      PORT: 3000
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    mem_limit: 384m
+    memswap_limit: 384m
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    networks: [edge]
+
+networks:
+  edge: {}
+  data:
+    internal: true
 ```
 
-Note o `127.0.0.1:3000:3000` mesmo localmente — é bom hábito, e evita expor a porta na
-sua rede Wi-Fi.
+Executar da raiz para que a interpolação leia o `.env` correto:
 
-```bash
-# 💻 local
-docker compose -f infra/docker-compose.local.yml up --build
+```powershell
+docker compose --env-file .env -f infra/docker-compose.local.yml up --build -d
 ```
-
-### 4.5 — Verificar o tamanho e o conteúdo
-
-```bash
-# 💻 local
-docker images | grep hello-api
-docker history hello-api --no-trunc | head -20
-```
-
-`docker history` mostra cada camada e seu tamanho — útil para descobrir o que inchou a
-imagem.
-
----
-
-## Por que não fazer diferente
-
-**"Por que não `COPY . .` e `pnpm install` direto, sem multi-stage?"** — Funciona, e
-produz uma imagem de ~1.2GB contendo o monorepo inteiro, todas as `devDependencies`, o
-TypeScript, o cache do Turbo e o histórico do git (se faltar `.dockerignore`). Além do
-tamanho, isso é um problema de segurança: código-fonte e ferramentas de build dentro da
-imagem de produção dão a um invasor um ambiente completo para trabalhar.
-
-**"Por que não `pnpm install --prod` no estágio final em vez de `pnpm deploy`?"** — Porque
-isso exige que o `pnpm-workspace.yaml` e todos os `packages/` estejam presentes, e refaz
-uma instalação que você já fez. `pnpm deploy` é o comando desenhado exatamente para este
-caso — está na documentação oficial do pnpm sob "Docker".
-
-**"Por que não usar `turbo prune`?"** — É a alternativa oficial do Turborepo:
-`turbo prune --scope=hello-api --docker` gera um subconjunto do monorepo com só o
-necessário. Funciona bem, e é a recomendação da documentação do **Turborepo**. Usamos
-`pnpm deploy` porque resolve o problema de symlinks de forma mais direta e produz um
-resultado menor. **As duas abordagens são válidas** — se você tiver muitos pacotes
-internos compartilhados, `turbo prune` tende a lidar melhor com o grafo. Vale conhecer
-as duas.
-
-**"Por que não buildar direto no servidor com `docker compose build`?"** — Este é o erro
-que derruba VPS de 4GB. `tsc` num monorepo consome 2–4GB de heap; somado ao Postgres e ao
-resto, o OOM killer entra em ação e ele não escolhe a vítima com sabedoria. Ver
-[ADR-003](adr/003-build-no-ci.md). Regra: o servidor só faz `pull`.
-
-**"Por que não uma imagem única para todas as apps?"** — Tentador (uma imagem, várias
-apps, escolhe pelo `CMD`), mas acopla os ciclos de vida: atualizar uma app obriga a
-redeployar todas, e o tamanho é a soma de tudo. Uma imagem por app é o padrão certo.
-
----
 
 ## Como garantir que está certo
 
-**A imagem tem tamanho razoável:**
-
-```bash
-# 💻 local
-docker images hello-api --format "{{.Size}}"
-```
-→ Esperado: entre 130MB e 200MB. Se passar de 400MB, algo do estágio de build vazou para
-o final — investigue com `docker history`.
-
-**Roda como usuário não-root:** 🔒
-
-```bash
-# 💻 local
-docker run --rm hello-api id
-```
-→ Esperado: `uid=1000(node) gid=1000(node)`. Se aparecer `uid=0(root)`, o `USER node`
-não foi aplicado. Este teste é o mais importante da fase.
-
-**Não há código-fonte nem devDependencies na imagem:**
-
-```bash
-# 💻 local
-docker run --rm hello-api sh -c "ls node_modules | grep -c typescript || echo 'typescript ausente - OK'"
-docker run --rm hello-api sh -c "ls src 2>/dev/null || echo 'src ausente - OK'"
-```
-→ Esperado: ambas as mensagens "OK".
-
-**Nenhum segredo embutido:** 🔒
-
-```bash
-# 💻 local
-docker history hello-api --no-trunc | grep -iE 'password|secret|token|key' || echo "OK - nada suspeito"
+```powershell
+curl.exe http://127.0.0.1:3000/health
+docker compose -f infra/docker-compose.local.yml ps
+docker compose -f infra/docker-compose.local.yml exec web node -e "fetch('http://api:3001/health').then(async r => { console.log(r.status, await r.text()); process.exit(r.ok ? 0 : 1) })"
+docker compose -f infra/docker-compose.local.yml exec api id
+docker compose -f infra/docker-compose.local.yml exec web id
 ```
 
-**A app responde dentro do container:**
+Confirme também:
 
-```bash
-# 💻 local
-docker run -d --name teste -p 127.0.0.1:3000:3000 hello-api
-sleep 3
-curl -s http://localhost:3000/health
-docker rm -f teste
+```powershell
+# A porta interna existe, mas não pode ter binding no host
+$apiContainer = docker compose -f infra/docker-compose.local.yml ps -q api
+docker inspect $apiContainer --format '{{json .NetworkSettings.Ports}}'
+
+# Não pode haver fonte, TypeScript ou arquivos de ambiente
+docker run --rm --entrypoint sh timeline-api -c "test ! -e src && test ! -e .env"
+docker history timeline-web --no-trunc
+docker history timeline-api --no-trunc
 ```
-→ Esperado: `{"status":"ok",...}`
 
-**O healthcheck do Docker funciona:**
+Critérios de saída:
 
-```bash
-# 💻 local
-docker run -d --name teste hello-api
-sleep 30
-docker inspect --format='{{.State.Health.Status}}' teste
-docker rm -f teste
-```
-→ Esperado: `healthy`. Se ficar `starting` para sempre, o comando do healthcheck está
-errado; se ficar `unhealthy`, a app não está respondendo em `/health`.
-
-**O cache de camadas funciona** — mude só uma linha de código e rebuilde:
-
-```bash
-# 💻 local
-docker build -f apps/hello-api/Dockerfile -t hello-api ..
-```
-→ Esperado: linhas `CACHED` nos passos de `pnpm install`. Se ele reinstalar dependências
-a cada mudança de código, a ordem dos `COPY` está errada.
-
-**Escanear vulnerabilidades:** 🔒
-
-```bash
-# 💻 local
-docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
-  aquasec/trivy image --severity HIGH,CRITICAL hello-api
-```
-→ Esperado: poucas ou nenhuma vulnerabilidade HIGH/CRITICAL. Este comando vai para o CI
-na [Fase 7](09-fase-7-cicd-github-actions.md).
-
----
+- os dois containers ficam `healthy`;
+- somente `127.0.0.1:3000` aparece no host;
+- o proxy web→API funciona;
+- ambos executam com UID não zero;
+- segredos privados não aparecem em `docker history` ou `docker inspect`;
+- os limites são 384 MiB para web e 256 MiB para API.
 
 ## Armadilhas comuns
 
-**`Cannot find module 'fastify'`** — o problema clássico de symlinks. Você copiou
-`node_modules` do estágio errado, ou não usou `pnpm deploy`. Confira que o `COPY` do
-estágio final vem de `/out`, não de `/repo`.
+**Standalone sem assets.** Sem copiar `public` e `.next/static`, páginas abrem sem CSS ou
+imagens.
 
-**`exit code 137` sem nenhum log.** É OOM: o container foi morto pelo kernel. Confirme
-com `docker inspect --format='{{.State.OOMKilled}}' CONTAINER`. Solução: alinhar
-`NODE_OPTIONS` com `mem_limit`, ou aumentar o limite.
+**Comando do web no caminho errado.** Em monorepo, inspecione `.next/standalone` após o
+build e ajuste o `CMD` somente ao caminho observado.
 
-**`read_only: true` quebra a app.** Alguma biblioteca escreve em disco. Descubra onde com
-`docker logs` (vai aparecer `EROFS: read-only file system`) e adicione um `tmpfs` para
-aquele caminho específico. Não desative o `read_only` — é uma defesa relevante.
+**API inacessível mesmo saudável.** Dentro do container ela deve ouvir em `0.0.0.0`.
+Loopback continua sendo apenas o padrão fora de containers.
 
-**Contexto de build errado.** Se você rodar `docker build` de dentro de `apps/hello-api`,
-o Docker não enxerga `pnpm-workspace.yaml` e o build falha. O contexto é sempre a raiz do
-monorepo; só o `-f` aponta para o Dockerfile.
-
-**Alpine e pacotes nativos.** `bcrypt` falhando na compilação é o caso mais comum. Troque
-por `@node-rs/bcrypt` (binário pré-compilado) ou mude para `node:20-slim`.
-
-**`pnpm deploy` reclamando de `--legacy`.** Em algumas versões do pnpm 9+, `deploy` fora
-de um workspace exige a flag `--legacy`. Se der erro, confira a versão com
-`pnpm --version` e consulte a documentação daquela versão específica.
-
----
-
-## Para estudar
-
-- 🆓 **Docs do pnpm: seção "Docker"** — mostra `pnpm deploy` e explica o problema dos
-  symlinks. É a fonte primária desta fase.
-- 🆓 **Turborepo docs: "Deploying with Docker"** — a abordagem alternativa com
-  `turbo prune`. Vale ler para conhecer as duas.
-- 🆓 **Docker docs: "Multi-stage builds"** e **"Best practices for writing Dockerfiles"** —
-  as duas páginas cobrem ordenação de camadas e cache, que é 80% do que importa.
-- 🆓 **Snyk: "10 best practices to build Node.js Docker images"** — artigo focado
-  especificamente em Node, com ênfase em segurança e usuário não-root.
-- 🆓 **Trivy** (aquasecurity.github.io/trivy) — a documentação de uso é curta e você vai
-  precisar na fase 7.
-- 🆓 **`dive`** (github.com/wagoodman/dive) — ferramenta de terminal para explorar camadas
-  de imagem interativamente. Excelente para entender o que está ocupando espaço.
-- 💰 **"Docker Deep Dive"** (Nigel Poulton) — capítulos 6 e 8, sobre imagens e
-  containerização de apps.
+**Segredos em build args.** `ARG` fica observável no histórico/metadados. Somente valores
+Firebase `NEXT_PUBLIC_*` e a URL interna não secreta podem entrar ali.

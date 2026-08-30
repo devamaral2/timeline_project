@@ -1,240 +1,168 @@
- # 01 — Arquitetura e orçamento de recursos
+# 01 — Arquitetura e orçamento de recursos
 
-Documento de referência. Volte aqui sempre que precisar decidir "onde isso encaixa" ou
-"tenho RAM para mais um serviço?".
+Documento de referência para decidir onde cada serviço entra e se ainda há RAM para
+adicioná-lo. O alvo é um único VPS com 4 GiB, tráfego baixo e builds feitos no CI.
 
----
+## Topologia do primeiro deploy
 
-## A arquitetura em uma imagem
+```text
+                             INTERNET
+                                |
+                       +--------v--------+
+                       | Traefik :80/:443|
+                       +--------+--------+
+                                |
+                            rede edge
+                                |
+                         +------v------+
+                         | web (Next)  |
+                         |    :3000    |
+                         +------+------+
+                                |
+                         http://api:3001
+                                |
+                         +------v------+
+                         | api (Nest)  |------> Firebase Auth, Firestore e OpenRouter
+                         |    :3001    |
+                         +------+------+
+                                |
+                           rede data
+                         (internal: true)
+                         +------+------+
+                         |             |
+                    +----v----+   +----v----+
+                    |Postgres |   | Redis   |
+                    | :5432   |   | :6379   |
+                    +---------+   +---------+
 
-```
-                          INTERNET
-                             |
-                    (opcional: Cloudflare)
-                             |
-                    +--------v--------+
-                    |   VPS 4GB       |
-                    |  UFW: 22,80,443 |
-                    +--------+--------+
-                             |
-                   +---------v---------+
-                   |     TRAEFIK       |  <- unico container com "ports:"
-                   |   :80 -> :443     |
-                   +--+-------+------+-+
-                      |       |      |
-        +-------------+       |      +---------------+
-        |                     |                      |
-   rede "edge"          rede "edge"          rede "observability"
-        |                     |                      |
-  +-----v-----+        +------v----+          +------v----+
-  | hello-api |        | (futuras  |          |  Grafana  |  <- basic auth
-  |  :3000    |        |   apps)   |          |   :3000   |
-  +-----+-----+        +------+----+          +------+----+
-        |                     |                      |
-        +---------+-----------+                      |
-                  |                                  |
-           rede "internal"                    rede "observability"
-           (internal: true)                   (internal: true)
-                  |                                  |
-      +-----------+---------+         +--------------+--------------+
-      |                     |         |              |              |
-+-----v-----+        +------v----+  +-v-----------+ +v-----+ +------v---+
-| Postgres  |        |  Redis    |  | VictoriaM.  | | Loki | | cAdvisor |
-|  :5432    |        |  :6379    |  |   :8428     | | :3100| |  :8080   |
-+-----------+        +-----------+  +-------------+ +------+ +----------+
-      |                     |
-   volume               volume        + node-exporter (metricas do host)
-   pgdata               redisdata     + Alloy (coleta e envia)
+    host/container/app metrics + logs -> Alloy -> Grafana Cloud
 ```
 
-**Nada abaixo do Traefik tem `ports:` no compose.** Isso não é preferência estética — é
-a diferença entre ter um Postgres privado e ter um Postgres que qualquer scanner da
-internet encontra em minutos. Detalhes na [Fase 2](04-fase-2-docker.md).
+No primeiro deploy PostgreSQL e Redis estão saudáveis, protegidos e com backup, mas a
+API não recebe suas URLs. Essa separação evita confundir infraestrutura pronta com
+migração de aplicação concluída.
 
----
+## Serviços futuros, sem containers vazios
 
-## As três redes e por que não uma só
+| Serviço futuro | Função | Reserva |
+|---|---|---:|
+| `auth-api` | autenticação própria e futura saída do Firebase Auth | 192 MiB |
+| `jobs-api` | receber trabalhos e processar filas Redis | 256 MiB |
 
-| Rede            | `internal` | Quem participa                              | Propósito                                        |
-| --------------- | ---------- | ------------------------------------------- | ------------------------------------------------ |
-| `edge`          | não        | Traefik, apps                               | Traefik alcança as apps para rotear tráfego      |
-| `internal`      | **sim**    | apps, Postgres, Redis                       | Apps alcançam os dados; nada sai para a internet |
-| `observability` | **sim**    | Traefik, Grafana, VM, Loki, Alloy, cAdvisor | Stack de monitoria isolada                       |
+Os nomes representam o orçamento e a intenção. Workspaces, portas, contratos e bancos
+só serão definidos quando cada serviço for implementado.
 
-`internal: true` no Docker Compose significa que containers naquela rede **não têm rota
-para a internet**. Se seu Postgres for comprometido, o atacante não consegue baixar
-ferramentas nem exfiltrar dados por ali. É uma barreira barata e eficaz.
+## Redes
 
-A separação também limita movimentação lateral: o Grafana não alcança o Postgres da
-aplicação, e a `hello-api` não alcança o Grafana. Se uma app for invadida por uma
-dependência maliciosa do npm — cenário bem mais comum do que se imagina — o estrago
-fica contido no que aquela app já podia acessar.
+| Rede | Interna | Participantes | Propósito |
+|---|---|---|---|
+| `edge` | não | Traefik, web, API e Alloy | entrada, web→API e saída HTTPS |
+| `data` | sim | API, PostgreSQL e Redis | dados; o web não acessa bancos |
+| `observability` | sim | Alloy | isolamento da coleta local |
 
-**Por que não uma rede só?** Funciona, e é o que a maioria dos tutoriais faz. Mas aí
-qualquer container alcança qualquer outro, e um Redis sem senha vira porta dos fundos
-para tudo. A complexidade extra de três redes é declarar mais três linhas no compose.
+`api` participa de `edge` para acessar Firebase/OpenRouter e receber chamadas do web,
+mas não tem labels de router nem `ports:`. `traefik.exposedByDefault=false` é obrigatório.
+O label `traefik.docker.network=edge` elimina ambiguidade quando um serviço participa de
+mais de uma rede.
 
----
+Quando a API for publicada para o mobile, ela ganhará router HTTPS, CORS allowlist,
+rate limit e testes externos numa etapa própria. Não se antecipa essa superfície.
 
 ## Orçamento de RAM
 
-Este é o documento mais importante da spec para um servidor de 4GB. Toda decisão daqui
-para frente tem que caber nesta tabela.
+Valores em MiB. `mem_limit` é teto, não previsão de consumo médio.
 
-| Componente | `mem_limit` | Uso típico | Nota |
-|---|---:|---:|---|
-| SO (Debian/Ubuntu minimal) | — | ~250 MB | Sem GUI, sem painel |
-| Docker daemon | — | ~150 MB | Cresce com o nº de containers |
-| **Subtotal host** | | **~400 MB** | |
-| Traefik v3 | 96 MB | ~50 MB | Go, muito eficiente |
-| hello-api (Node) | 192 MB | ~80 MB | Com `--max-old-space-size=144` |
-| Postgres 16 | 384 MB | ~200 MB | Tunado para servidor pequeno |
-| Redis 7 | 192 MB | ~40 MB | Com `maxmemory 128mb` |
-| **Subtotal aplicação** | **864 MB** | | |
-| VictoriaMetrics | 256 MB | ~120 MB | Substitui o Prometheus |
-| Loki | 256 MB | ~150 MB | Agregação de logs |
-| Grafana | 256 MB | ~180 MB | O mais pesado da stack |
-| Alloy | 128 MB | ~70 MB | Coletor de logs e métricas |
-| cAdvisor | 160 MB | ~110 MB | Métricas por container |
-| node-exporter | 32 MB | ~15 MB | Métricas do host |
-| **Subtotal observabilidade** | **1088 MB** | | |
-| | | | |
-| **TOTAL COMPROMETIDO** | **~2.35 GB** | ~1.4 GB real | |
-| **Folga** | **~1.65 GB** | | Page cache, picos, novas apps |
+| Componente | Situação | `mem_limit` | Configuração associada |
+|---|---|---:|---|
+| SO minimal | atual | — | ~250 MiB típicos |
+| Docker daemon | atual | — | ~150 MiB típicos |
+| Traefik | primeiro deploy | 96 | sem dashboard público |
+| web Next.js | primeiro deploy | 384 | heap V8 256 MiB |
+| API NestJS | primeiro deploy | 256 | heap V8 160 MiB |
+| PostgreSQL 16 | primeiro deploy | 384 | `shared_buffers=96MB` |
+| Redis 7 | primeiro deploy | 192 | `maxmemory=128mb`, `noeviction` |
+| Alloy | primeiro deploy | 192 | exporters integrados e envio remoto |
+| **Containers iniciais** | | **1.504 MiB** | |
+| `auth-api` | reserva | 192 | heap futuro de 128 MiB |
+| `jobs-api`/worker | reserva | 256 | heap futuro de 160 MiB |
+| **Containers com reservas** | | **1.952 MiB** | |
+| **Host + containers reservados** | | **~2.352 MiB** | |
+| **Folga em 4 GiB** | | **~1.744 MiB** | page cache, picos e crescimento |
 
-Duas leituras importantes desta tabela:
+O orçamento fica saudável porque Grafana, Loki e VictoriaMetrics não rodam localmente.
+Alloy envia os sinais ao Grafana Cloud. Se a hospedagem externa deixar de ser aceitável,
+a stack local é uma alternativa consciente, não o padrão silencioso.
 
-**A coluna `mem_limit` é o pior caso, não o uso normal.** Se você somar os limites e der
-mais que a RAM física, isso não é automaticamente errado — chama-se *overcommit*, e
-funciona porque nem todos os containers atingem o teto ao mesmo tempo. Mas overcommit
-agressivo é como voar sem paraquedas: funciona até não funcionar. A regra prática aqui
-é somar no máximo ~70% da RAM em limites, deixando o resto para o page cache do Linux —
-que é justamente o que faz o Postgres ser rápido.
+### Como validar os números
 
-**A observabilidade custa quase metade do orçamento.** Isso é normal e é o preço de
-saber o que está acontecendo. Se precisar de espaço para apps reais, o primeiro corte é
-migrar métricas e logs para o free tier do Grafana Cloud, mantendo só o Alloy localmente
-(~130MB em vez de ~1.1GB). Está documentado como opção na
-[Fase 8](10-fase-8-observabilidade.md).
+Depois do deploy, registrar por sete dias:
 
-### Quanto sobra para novas apps?
+```bash
+docker stats --no-stream
+free -h
+docker inspect --format '{{.Name}} {{.HostConfig.Memory}}' $(docker ps -q)
+```
 
-Com ~1.65GB de folga, reservando 500MB para page cache e picos:
+Alertar quando um container sustentar 80% do limite. Swap em uso contínuo significa que
+o dimensionamento falhou; não é folga utilizável.
 
-- **App Node/Fastify simples:** ~150MB cada → cabem ~7
-- **App Next.js em produção:** ~300MB cada → cabem ~3
-- **Worker de fila (BullMQ):** ~120MB cada → cabem ~9
+## PostgreSQL e Redis
 
-Na prática, planeje para **2–3 aplicações reais** além do hello-world. Aí você estará
-usando o servidor de forma saudável, não no limite.
+Um único PostgreSQL atende os serviços pequenos. Cada aplicação futura recebe database
+ou schema e roles próprias, nunca outro container PostgreSQL por padrão.
 
-### O que NÃO cabe
+Parâmetros iniciais:
 
-Não tente, mesmo que algum tutorial diga que dá:
+```conf
+shared_buffers = 96MB
+effective_cache_size = 512MB
+work_mem = 4MB
+maintenance_work_mem = 32MB
+max_connections = 30
+```
 
-| Serviço                    | RAM mínima realista   | Alternativa em 4GB                          |
-| -------------------------- | --------------------- | ------------------------------------------- |
-| Elasticsearch / OpenSearch | 1–2 GB (JVM)          | `tsvector` + `pg_trgm` no Postgres          |
-| Kafka                      | 1 GB+ (JVM)           | Redis + BullMQ                              |
-| RabbitMQ                   | 300–500 MB            | Redis + BullMQ                              |
-| Supabase self-hosted       | ~2 GB (8+ containers) | Postgres direto + lib de auth               |
-| GitLab CE                  | 4 GB+ sozinho         | GitHub (é o que faremos)                    |
-| Jenkins                    | 1 GB+                 | GitHub Actions                              |
-| Segundo Postgres           | 300 MB                | Outro *database* no mesmo servidor Postgres |
-| SonarQube                  | 2 GB+                 | ESLint + `tsc --noEmit` no CI               |
+Quando os serviços começarem a usar o banco, cada pool deve começar com no máximo cinco
+conexões. Aumentar `max_connections` exige medição; PgBouncer é a evolução antes de
+centenas de conexões.
 
-O padrão é claro: **qualquer coisa com JVM está fora.** A JVM reserva heap
-agressivamente e não devolve memória ao sistema com facilidade.
+Redis usa `noeviction`. Uma fila não pode perder jobs silenciosamente como aconteceria
+com `allkeys-lru`. Caches futuros precisam de TTL e monitoramento; se o perfil de cache
+crescer, separar instâncias lógicas ou físicas será uma decisão posterior.
 
----
+## Swap
 
-## Swap: a rede de segurança
+Manter 4 GiB de swap em arquivo e `vm.swappiness=10`. Swap serve para absorver um pico
+curto antes do OOM killer, não para aumentar a capacidade normal do servidor.
 
-4GB de swap em arquivo, com `vm.swappiness=10`.
+## Portas
 
-**Por que 4GB e não 2 ou 8?** A regra antiga de "2× a RAM" vem da época em que swap
-servia para hibernação. Hoje, num servidor, swap serve para uma coisa: dar ao kernel uma
-alternativa a matar processos quando a memória aperta. 4GB (1× a RAM) é folgado o
-suficiente para absorver um pico e pequeno o suficiente para não esconder um problema
-real por dias.
-
-**Por que `swappiness=10` e não o padrão 60?** `swappiness` é a agressividade com que o
-kernel move páginas para o disco. O padrão 60 faz sentido em desktop. Num servidor, mover
-memória ativa do Postgres para disco degrada tudo brutalmente — disco é ordens de
-magnitude mais lento que RAM. Com 10, o kernel só recorre ao swap sob pressão real.
-
-⚠️ **Swap não é substituto de RAM.** Se você ver o servidor usando swap
-consistentemente, você tem um problema de dimensionamento, não uma solução. Swap é o
-airbag: bom que exista, péssimo sinal se você está usando.
-
----
-
-## Mapa de portas
-
-| Porta             | Exposta à internet?                | Serviço         | Observação                           |
-| ----------------- | ---------------------------------- | --------------- | ------------------------------------ |
-| 22                | ✅ sim (idealmente restrita por IP) | SSH             | Só chave, nunca senha                |
-| 80                | ✅ sim                              | Traefik         | Só redireciona → 443 e responde ACME |
-| 443               | ✅ sim                              | Traefik         | Todo o tráfego real                  |
-| 3000              | ❌ não                              | Apps Node       | Só na rede `edge`                    |
-| 5432              | ❌ **nunca**                        | Postgres        | Acesso externo só por túnel SSH      |
-| 6379              | ❌ **nunca**                        | Redis           | Idem                                 |
-| 8428              | ❌ não                              | VictoriaMetrics | Só rede `observability`              |
-| 3100              | ❌ não                              | Loki            | Idem                                 |
-| 8080              | ❌ não                              | cAdvisor        | Idem                                 |
-| 9100              | ❌ não                              | node-exporter   | Idem                                 |
-| dashboard Traefik | ❌ **nunca direto**                 | Traefik         | Só via rota autenticada              |
-
-Três portas abertas. Só três. Toda vez que você for abrir uma quarta, pare e pergunte se
-não dá para fazer via Traefik com autenticação ou via túnel SSH.
-
----
-
-## O caminho de uma requisição
-
-Vale traçar o percurso completo uma vez, porque quase todo problema de debug se reduz a
-"onde nessa cadeia parou?":
-
-1. **DNS** — o navegador resolve `app.seudominio.com` para o IP do VPS.
-2. **Firewall (UFW)** — o pacote chega na 443 e é permitido.
-3. **Docker (iptables)** — NAT redireciona para o container do Traefik.
-4. **Traefik: TLS** — termina a criptografia usando o certificado.
-5. **Traefik: roteamento** — casa o `Host()` da regra e escolhe o serviço.
-6. **Traefik: middlewares** — aplica security headers, rate limit, auth.
-7. **Rede `edge`** — encaminha para `hello-api:3000` (DNS interno do Docker).
-8. **App** — Fastify processa, talvez consulte Postgres/Redis pela rede `internal`.
-9. **Resposta** — volta pelo mesmo caminho.
-
-Quando algo quebra, debugue nesta ordem: `dig` para o passo 1, `ss -tulpn` e `ufw status`
-para o 2, `docker logs traefik` para 4–6, `docker exec` + `curl` para 7–8. O
-[runbook](12-runbook-operacao.md) detalha cada um.
-
----
-
-## Decisões arquiteturais
-
-Cada uma tem uma ADR própria com as alternativas descartadas:
-
-| # | Decisão | ADR |
+| Porta | Exposta | Serviço |
 |---|---|---|
-| 001 | Docker Compose em vez de Kubernetes | [adr/001](adr/001-docker-compose-vs-k3s.md) |
-| 002 | pnpm + Turborepo | [adr/002](adr/002-pnpm-turborepo.md) |
-| 003 | Build no CI, servidor só faz pull | [adr/003](adr/003-build-no-ci.md) |
-| 004 | Traefik como reverse proxy | [adr/004](adr/004-traefik.md) |
-| 005 | VictoriaMetrics em vez de Prometheus | [adr/005](adr/005-victoriametrics.md) |
-| 006 | Postgres e Redis em container | [adr/006](adr/006-banco-em-container.md) |
-| 007 | Deploy push via SSH | [adr/007](adr/007-deploy-ssh.md) |
+| 22 | sim, idealmente restrita | SSH |
+| 80 | sim | redirect HTTP→HTTPS e ACME |
+| 443 | sim | Traefik |
+| 3000 | não | web na rede `edge` |
+| 3001 | não | API na rede `edge` |
+| 5432 | nunca | PostgreSQL na rede `data` |
+| 6379 | nunca | Redis na rede `data` |
+| 12345 | não | UI interna do Alloy, se habilitada |
 
----
+Qualquer quarta porta pública exige revisão de arquitetura.
 
-## Para estudar
+## Caminho de uma requisição
 
-- 🆓 **Docker networking overview** — docs oficiais, seção "Network drivers". Entender
-  `bridge` vs `host` vs `none` resolve metade das dúvidas de rede.
-- 🆓 **linuxatemyram.com** — explica em dois minutos por que `free -h` "mostrando pouca
-  RAM livre" não é problema. Leitura obrigatória antes de entrar em pânico com memória.
-- 🆓 **The Twelve-Factor App** (12factor.net) — os princípios por trás de config em
-  variável de ambiente, logs como stream, processos stateless. Curto e formativo.
-- 💰 **"Designing Data-Intensive Applications"** (Martin Kleppmann) — não é sobre VPS,
-  mas o capítulo 1 (confiabilidade, escalabilidade, manutenibilidade) muda como você
-  pensa sobre todas as decisões desta spec.
+1. DNS resolve o domínio para o VPS.
+2. UFW permite 443.
+3. Traefik encerra TLS e aplica headers/rate limit.
+4. Traefik envia a requisição para `web:3000`.
+5. Chamadas `/api/*` chegam ao Next e são encaminhadas para `api:3001`.
+6. A API valida o token e usa Firebase/Firestore no primeiro deploy.
+7. PostgreSQL e Redis permanecem fora desse caminho até a migração futura.
+
+## Critérios de evolução
+
+- Migrar Firestore somente com schema, adapter, cópia validada e rollback documentados.
+- Implementar auth e filas somente quando houver contrato e consumidor reais.
+- Expor API ao mobile somente depois de threat model, CORS e rate limit.
+- Considerar VPS maior quando o uso sustentado superar 80%, houver swap recorrente ou a
+  margem real ficar abaixo de 1 GiB.

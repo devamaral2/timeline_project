@@ -92,9 +92,9 @@ ip -6 addr show scope global || echo "sem IPv6 global"
 de 4GB. Isso é normal — o kernel reserva parte. Se mostrar significativamente menos,
 questione o suporte.
 
-**Disco** (`df -h /`): você precisa de pelo menos 20GB livres. Imagens Docker,
-volumes de Postgres e dados de Loki crescem. Anote o número inicial: monitorar disco é
-um dos alertas da fase 8.
+**Disco** (`df -h /`): você precisa de pelo menos 20GB livres. Imagens Docker, volumes
+de PostgreSQL/Redis e backups temporários crescem. Anote o número inicial: monitorar
+disco é um dos alertas da fase 8.
 
 **Portas em uso** (`ss -tulpn`): é aqui que aparecem as surpresas. Anote **tudo** que
 está escutando em `0.0.0.0` ou `*`. Suspeitos comuns numa imagem HostGator:
@@ -181,10 +181,10 @@ inventário mostrar um sistema muito bagunçado** — vários serviços desconhe
 de SO fora de suporte — reinstale. O painel da HostGator tem essa opção, e é o caminho
 mais honesto.
 
-**"Por que não manter o k3s e usar os dois?"** — Porque não cabe. k3s consome 600–800MB
-de baseline (servidor de API, scheduler, controller-manager, etcd embutido, kubelet).
-Somado aos ~2.35GB do compose, você fica sem folga alguma e o OOM killer vira rotina.
-Com 8GB seria discutível; com 4GB, não é.
+**"Por que não manter o k3s e usar os dois?"** — Porque ele consome 600–800MB de
+baseline (servidor de API, scheduler, controller-manager, etcd embutido, kubelet). Isso
+absorveria quase metade da folga de 1.744 MiB reservada para page cache e picos, sem trazer
+benefício num único nó. Com 8GB seria discutível; com 4GB, não é.
 
 **"Por que não pular o diagnóstico e ir direto ao Docker?"** — Você pode, e vai funcionar
 em talvez 70% dos casos. Nos outros 30% você descobre o problema num ponto em que já
@@ -249,9 +249,9 @@ também.
 `netstat`: está deprecado e pode não refletir sockets modernos corretamente.
 
 **Descobrir que o disco é pequeno demais depois** — planos VPS de entrada às vezes trazem
-20GB totais, dos quais 8GB já estão em uso. Com 12GB livres dá para começar, mas o Loki
-vai encher isso. Se for o seu caso, marque para reduzir a retenção de logs na fase 8
-(7 dias em vez de 30).
+20GB totais, dos quais 8GB já estão em uso. Com 12GB livres dá para começar, mas imagens,
+volumes e cópias locais de backup consumirão a margem. Reduza retenção local e preserve
+somente as imagens necessárias para rollback.
 
 ---
 
