@@ -5,3 +5,5 @@
 export type * from "./events/ports/event-repository";
 export type * from "./events/ports/tag-repository";
 export type * from "./events/ports/event-aggregate-repository";
+export type * from "./catalog/ports/food-repository";
+export type * from "./catalog/ports/meal-repository";

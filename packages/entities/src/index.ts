@@ -41,3 +41,7 @@ export {
   type WorkoutInput,
   type TrainingInputData as EventItemTrainingInputData,
 } from "./events/items/training-data";
+export * from "./catalog/types/catalog-scope";
+export * from "./catalog/entities/food.entity";
+export * from "./catalog/entities/meal.entity";
+export * from "./catalog/errors/catalog.errors";
