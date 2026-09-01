@@ -4,3 +4,4 @@
  */
 export type * from "./events/ports/event-repository";
 export type * from "./events/ports/tag-repository";
+export type * from "./events/ports/event-aggregate-repository";

@@ -1,4 +1,4 @@
-import { Event, type EventProps } from "./event.entity";
+import { LegacyEvent, type LegacyEventProps } from "./legacy-event.entity";
 import { EventId } from "../value-objects/event-id";
 import { TagList } from "../value-objects/tag-list";
 import { ulid } from "ulid";
@@ -55,11 +55,11 @@ export interface TrainingEventInputData {
   caloriesBurned?: number;
 }
 
-type TrainingEventProps = Omit<EventProps<TrainingEventData>, "data"> & {
+type TrainingEventProps = Omit<LegacyEventProps<TrainingEventData>, "data"> & {
   data: TrainingEventInputData;
 };
 
-export class TrainingEvent extends Event<TrainingEventData> {
+export class TrainingEvent extends LegacyEvent<TrainingEventData> {
   private constructor(props: TrainingEventProps) {
     super(
       props.id ?? EventId.create(),

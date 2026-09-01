@@ -1,207 +1,259 @@
 import { describe, expect, test } from "vitest";
-import { FoodEvent } from "./food-event.entity";
-import { RoutineEvent } from "./routine-event.entity";
-import { SleepEvent } from "./sleep-event.entity";
-import { TrainingEvent } from "./training-event.entity";
-import { Interruption } from "../value-objects/interruption";
+import { Event } from "./event.entity";
+import { EventItem } from "./event-item.entity";
+import { EventItemRegistry, defaultEventItemRegistry } from "../items/event-item-registry";
+import type { EventItemDefinition } from "../items/event-item-definition";
 
-describe("Event entities", () => {
+function routineItem(overrides: Partial<Parameters<typeof EventItem.create>[0]> = {}) {
+  return EventItem.create({
+    position: 0,
+    type: "routine",
+    schemaVersion: 1,
+    isPrimary: true,
+    data: {},
+    ...overrides,
+  });
+}
+
+describe("Event aggregate", () => {
+  test("creates an aggregate with revision 1 and a derived primary item", () => {
+    const routine = routineItem();
+
+    const event = Event.create({
+      userId: "user-1",
+      name: "Planejamento",
+      description: "",
+      startedAt: new Date("2026-08-31T12:00:00.000Z"),
+      tags: [" Trabalho ", "trabalho"],
+      interruptions: [],
+      items: [routine],
+    });
+
+    expect(event.revision).toBe(1);
+    expect(event.primaryItemId).toBe(routine.id);
+    expect(event.tags).toEqual(["trabalho"]);
+  });
+
+  test("rejects incompatible event items", () => {
+    const meal = EventItem.create({
+      position: 0,
+      type: "meal",
+      schemaVersion: 1,
+      isPrimary: true,
+      data: {
+        name: "Almoço",
+        description: "",
+        foodItems: [],
+        totals: {
+          totalCaloriesKcal: 0,
+          totalProteinGrams: 0,
+          totalCarbohydrateGrams: 0,
+          totalFatGrams: 0,
+          totalFiberGrams: 0,
+        },
+      },
+    });
+    const sleep = EventItem.create({
+      position: 1,
+      type: "sleep",
+      schemaVersion: 1,
+      isPrimary: false,
+      data: { trackedSleepTime: 480, score: 80 },
+    });
+
+    expect(() =>
+      Event.create({
+        userId: "user-1",
+        name: "Invalido",
+        description: "",
+        startedAt: new Date("2026-08-31T12:00:00.000Z"),
+        tags: [],
+        interruptions: [],
+        items: [meal, sleep],
+      }),
+    ).toThrow("Incompatible event items");
+  });
+
+  test("requires exactly one primary item", () => {
+    const first = routineItem({ position: 0, isPrimary: false, id: undefined });
+
+    expect(() =>
+      Event.create({
+        userId: "user-1",
+        name: "Sem principal",
+        description: "",
+        startedAt: new Date("2026-08-31T12:00:00.000Z"),
+        tags: [],
+        interruptions: [],
+        items: [first],
+      }),
+    ).toThrow("Event requires exactly one primary item");
+  });
+
+  test("rejects a duplicate item id", () => {
+    const shared = routineItem();
+    const second = EventItem.create({
+      id: shared.id,
+      position: 1,
+      type: "routine",
+      schemaVersion: 1,
+      isPrimary: false,
+      data: {},
+    });
+
+    expect(() =>
+      Event.create({
+        userId: "user-1",
+        name: "Ids duplicados",
+        description: "",
+        startedAt: new Date("2026-08-31T12:00:00.000Z"),
+        tags: [],
+        interruptions: [],
+        items: [shared, second],
+      }),
+    ).toThrow(/Duplicate event item id/);
+  });
+
+  test("rejects a duplicate item position", () => {
+    const first = routineItem({ position: 0, isPrimary: true });
+    const second = EventItem.create({
+      position: 0,
+      type: "routine",
+      schemaVersion: 1,
+      isPrimary: false,
+      data: {},
+    });
+
+    expect(() =>
+      Event.create({
+        userId: "user-1",
+        name: "Posicoes duplicadas",
+        description: "",
+        startedAt: new Date("2026-08-31T12:00:00.000Z"),
+        tags: [],
+        interruptions: [],
+        items: [first, second],
+      }),
+    ).toThrow(/Duplicate event item position/);
+  });
+
+  test("rejects a primary item that was removed without a substitute", () => {
+    const nonPrimary = routineItem({ isPrimary: false });
+
+    expect(() =>
+      Event.create({
+        userId: "user-1",
+        name: "Sem substituto",
+        description: "",
+        startedAt: new Date("2026-08-31T12:00:00.000Z"),
+        tags: [],
+        interruptions: [],
+        items: [nonPrimary],
+      }),
+    ).toThrow("Event requires exactly one primary item");
+  });
+
   test("rejects a finishedAt earlier than startedAt", () => {
     expect(() =>
-      TrainingEvent.create({
+      Event.create({
         userId: "user-1",
-        name: "Run",
-        description: "Morning run",
-        startedAt: new Date("2026-08-16T09:00:00-03:00"),
-        finishedAt: new Date("2026-08-16T08:00:00-03:00"),
-        tags: ["cardio"],
+        name: "Invalido",
+        description: "",
+        startedAt: new Date("2026-08-31T12:00:00.000Z"),
+        finishedAt: new Date("2026-08-31T11:00:00.000Z"),
+        tags: [],
         interruptions: [],
-        data: { workouts: [{ type: "free", calories: 250, duration: 30 }] },
+        items: [routineItem()],
       }),
     ).toThrow("finishedAt must be equal to or after startedAt");
   });
 
-  test("keeps trackedSleepTime independent from the event duration", () => {
-    const sleepEvent = SleepEvent.create({
-      userId: "user-1",
-      name: "Night sleep",
-      description: "Imported manually",
-      startedAt: new Date("2026-08-15T23:00:00-03:00"),
-      finishedAt: new Date("2026-08-16T07:00:00-03:00"),
-      tags: ["sleep"],
-      interruptions: [],
-      data: { trackedSleepTime: 6.5, score: 88 },
-    });
-
-    expect(sleepEvent.data.trackedSleepTime).toBe(6.5);
-    expect(sleepEvent.getDurationMinutes()).toBe(480);
-  });
-
-  test("rejects an interruption ending before it starts", () => {
+  test("rejects a revision below 1 on rehydrate", () => {
     expect(() =>
-      Interruption.create({
-        name: "Coffee break",
-        description: "Short pause",
-        startedAt: new Date("2026-08-16T09:00:00-03:00"),
-        finishedAt: new Date("2026-08-16T08:00:00-03:00"),
+      Event.rehydrate({
+        userId: "user-1",
+        name: "Invalido",
+        description: "",
+        startedAt: new Date("2026-08-31T12:00:00.000Z"),
+        tags: [],
+        interruptions: [],
+        items: [routineItem()],
+        revision: 0,
       }),
-    ).toThrow("finishedAt must be equal to or after startedAt");
+    ).toThrow("Event revision must be an integer >= 1");
   });
 
-  test("assigns ids to interruptions", () => {
-    const interruption = Interruption.create({
-      name: "Coffee break",
-      description: "Short pause",
-      startedAt: new Date("2026-08-16T09:00:00-03:00"),
-      finishedAt: new Date("2026-08-16T09:15:00-03:00"),
+  test("rehydrate keeps the persisted revision instead of incrementing it", () => {
+    const event = Event.rehydrate({
+      userId: "user-1",
+      name: "Existente",
+      description: "",
+      startedAt: new Date("2026-08-31T12:00:00.000Z"),
+      tags: [],
+      interruptions: [],
+      items: [routineItem()],
+      revision: 5,
     });
 
-    expect(interruption.id).toMatch(/[0-9A-HJKMNP-TV-Z]{26}/);
+    expect(event.revision).toBe(5);
   });
 
-  test("assigns ids to nested food items", () => {
-    const foodEvent = FoodEvent.create({
+  test("revise increments the revision and rebuilds the aggregate", () => {
+    const event = Event.create({
       userId: "user-1",
-      name: "Breakfast",
-      description: "Fruit and yogurt",
-      startedAt: new Date("2026-08-16T08:00:00-03:00"),
-      tags: ["food"],
+      name: "Planejamento",
+      description: "",
+      startedAt: new Date("2026-08-31T12:00:00.000Z"),
+      tags: [],
       interruptions: [],
-      data: {
-        inputText: "Banana and yogurt",
-        items: [
-          {
-            food: "Banana",
-            portion: "1 unit",
-            approximateWeightGrams: 100,
-            caloriesKcal: 89,
-            macronutrients: {
-              carbohydratesGrams: 22.8,
-              proteinsGrams: 1.1,
-              totalFatGrams: 0.3,
-              fiberGrams: 2.6,
-            },
-            mainMicronutrients: {},
-            otherData: {},
-          },
-        ],
-        totals: {
-          totalCaloriesKcal: 89,
-          totalProteinGrams: 1.1,
-          totalCarbohydrateGrams: 22.8,
-          totalFatGrams: 0.3,
-          totalFiberGrams: 2.6,
-          totalMicronutrients: {},
-        },
-        modelProvider: "stub",
-        modelName: "stub-model",
-        parsedAt: new Date("2026-08-16T08:00:00-03:00"),
+      items: [routineItem()],
+    });
+
+    const revised = event.revise({ name: "Planejamento revisado" });
+
+    expect(revised.revision).toBe(2);
+    expect(revised.name).toBe("Planejamento revisado");
+    expect(event.revision).toBe(1);
+  });
+
+  test("lets an extension type without incompatibilities coexist with routine", () => {
+    const noteDefinition: EventItemDefinition<{ text: string }> = {
+      type: "note",
+      currentSchemaVersion: 1,
+      incompatibleWith: [],
+      parse(data) {
+        return data as { text: string };
       },
-    });
+    };
+    const registry = new EventItemRegistry([
+      ...(["routine", "meal", "sleep", "training"] as const).map(
+        (type) => defaultEventItemRegistry.getDefinition(type)!,
+      ),
+      noteDefinition,
+    ]);
 
-    expect(foodEvent.data.items[0].id).toMatch(/[0-9A-HJKMNP-TV-Z]{26}/);
-  });
+    const routine = EventItem.create(
+      { position: 0, type: "routine", schemaVersion: 1, isPrimary: true, data: {} },
+      registry,
+    );
+    const note = EventItem.create(
+      { position: 1, type: "note", schemaVersion: 1, isPrimary: false, data: { text: "oi" } },
+      registry,
+    );
 
-  test("assigns ids to workouts and workout sets", () => {
-    const trainingEvent = TrainingEvent.create({
-      userId: "user-1",
-      name: "Leg day",
-      description: "Gym session",
-      startedAt: new Date("2026-08-16T18:00:00-03:00"),
-      tags: ["gym"],
-      interruptions: [],
-      data: {
-        workouts: [
-          {
-            type: "weightlifting",
-            calories: 420,
-            duration: 60,
-            sets: [{ exercise: "Squat", repetitions: 8, weight: 100 }],
-          },
-          {
-            type: "running",
-            calories: 300,
-            duration: 30,
-            pace: 5.2,
-            distance: 5.8,
-          },
-        ],
+    const event = Event.create(
+      {
+        userId: "user-1",
+        name: "Com extensao",
+        description: "",
+        startedAt: new Date("2026-08-31T12:00:00.000Z"),
+        tags: [],
+        interruptions: [],
+        items: [routine, note],
       },
-    });
+      registry,
+    );
 
-    expect(trainingEvent.data.workouts[0].id).toMatch(/[0-9A-HJKMNP-TV-Z]{26}/);
-    expect(trainingEvent.data.workouts[1].id).toMatch(/[0-9A-HJKMNP-TV-Z]{26}/);
-    expect(trainingEvent.data.workouts[0].type).toBe("weightlifting");
-    if (trainingEvent.data.workouts[0].type !== "weightlifting") {
-      throw new Error("expected weightlifting workout");
-    }
-    expect(trainingEvent.data.workouts[0].sets[0].id).toMatch(/[0-9A-HJKMNP-TV-Z]{26}/);
-  });
-
-  test("hydrates legacy training data while preserving calories burned", () => {
-    const trainingEvent = TrainingEvent.create({
-      userId: "user-1",
-      name: "Legacy training",
-      description: "Imported before workouts existed",
-      startedAt: new Date("2026-08-16T18:00:00-03:00"),
-      tags: [],
-      interruptions: [],
-      data: { caloriesBurned: 420 },
-    });
-
-    expect(trainingEvent.data.caloriesBurned).toBe(420);
-    expect(trainingEvent.data.workouts).toEqual([]);
-  });
-});
-
-/**
- * Nenhum evento gravado antes da marca de nao realizado a tem no documento, e
- * nao ha migracao: a entidade e que precisa continuar de pe sem ela.
- */
-describe("Event marks", () => {
-  test("never marks an event as missed on its own", () => {
-    // A marca e uma anotacao do usuario. Nenhuma combinacao de horario a liga
-    // sozinha — nem um evento que ja terminou, nem um que ficou aberto.
-    const ended = RoutineEvent.create({
-      userId: "user-1",
-      name: "Bloco de trabalho",
-      description: "",
-      startedAt: new Date("2026-08-16T09:00:00-03:00"),
-      finishedAt: new Date("2026-08-16T11:00:00-03:00"),
-      tags: [],
-      interruptions: [],
-      data: {},
-    });
-    const open = RoutineEvent.create({
-      userId: "user-1",
-      name: "Bloco de trabalho",
-      description: "",
-      startedAt: new Date("2026-08-16T09:00:00-03:00"),
-      tags: [],
-      interruptions: [],
-      data: {},
-    });
-
-    expect(ended.missed).toBe(false);
-    expect(open.missed).toBe(false);
-    expect(ended.priority).toBe("normal");
-  });
-
-  test("keeps what the caller chose", () => {
-    const event = RoutineEvent.create({
-      userId: "user-1",
-      name: "Consulta",
-      description: "",
-      startedAt: new Date("2026-08-16T09:00:00-03:00"),
-      finishedAt: new Date("2026-08-16T10:00:00-03:00"),
-      tags: [],
-      interruptions: [],
-      data: {},
-      missed: true,
-      priority: "urgent",
-    });
-
-    expect(event.missed).toBe(true);
-    expect(event.priority).toBe("urgent");
+    expect(event.items).toHaveLength(2);
   });
 });

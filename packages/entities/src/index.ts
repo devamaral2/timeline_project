@@ -1,4 +1,7 @@
 export * from "./events/entities/event.entity";
+export * from "./events/entities/legacy-event.entity";
+// Alias temporario: apps/api ainda consome EventProps ate a Task 9 (o corte)
+export type { LegacyEventProps as EventProps } from "./events/entities/legacy-event.entity";
 export * from "./events/entities/food-event.entity";
 export * from "./events/entities/routine-event.entity";
 export * from "./events/entities/sleep-event.entity";
