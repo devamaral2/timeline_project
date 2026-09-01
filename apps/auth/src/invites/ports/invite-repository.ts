@@ -1,9 +1,2 @@
-import type { Invite } from "../invite";
-
-export interface InviteRepository {
-  findByTokenHash(tokenHash: string): Promise<Invite | null>;
-  findById(inviteId: string): Promise<Invite | null>;
-  findPendingByEmail(email: string): Promise<Invite | null>;
-  save(invite: Invite): Promise<void>;
-  listPending(): Promise<Invite[]>;
-}
+import type { BootstrapAdminCommand, BootstrapAdminCommitOutcome, InviteInspection } from "../invite";
+export interface InviteRepository { inspectByTokenHash(hash:string,now:Date):Promise<InviteInspection|null>; bootstrapAdmin(command:BootstrapAdminCommand):Promise<BootstrapAdminCommitOutcome>; }

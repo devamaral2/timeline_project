@@ -22,7 +22,13 @@ export async function migrateAuthDatabase(input: {
       await client.query(`CREATE SCHEMA IF NOT EXISTS ${quoteIdentifier(schema)}`);
       await client.query(`CREATE SCHEMA IF NOT EXISTS ${quoteIdentifier(migrationsSchema)}`);
       await client.query(`SET search_path TO ${quoteIdentifier(schema)}`);
-      await client.query(await readFile(join(input.migrationsFolder, "0000_infrastructure.sql"), "utf8"));
+      for (const migration of ["0000_infrastructure.sql", "0001_users_invites.sql"]) {
+        try { await client.query(await readFile(join(input.migrationsFolder, migration), "utf8")); }
+        catch (error: unknown) {
+          if ((error as NodeJS.ErrnoException).code === "ENOENT" && migration !== "0000_infrastructure.sql") continue;
+          throw error;
+        }
+      }
     } finally { client.release(); }
   } finally { await pool.end(); }
 }

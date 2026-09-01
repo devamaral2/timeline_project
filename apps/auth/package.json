@@ -9,7 +9,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "db:generate": "drizzle-kit generate --config drizzle.config.ts",
     "db:migrate": "tsx src/db/migrate.cli.ts",
-    "rotate-signing-key": "tsx src/crypto/rotate-signing-key.cli.ts"
+    "rotate-signing-key": "tsx src/crypto/rotate-signing-key.cli.ts",
+    "bootstrap-admin": "tsx src/cli/bootstrap-admin.cli.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",

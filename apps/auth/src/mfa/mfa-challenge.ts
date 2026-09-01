@@ -1,4 +1,4 @@
-import type { MfaChannel } from "../users/user";
+export type MfaChannel = "sms" | "whatsapp";
 
 /**
  * Um desafio de 2FA em aberto. O codigo nunca e guardado em claro: o banco tem

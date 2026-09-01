@@ -1,0 +1,5 @@
+import type { AuthDatabase } from "../db/client";
+import type { UserRepository } from "./ports/user-repository";
+import type { User } from "./user";
+function user(row: Record<string, unknown>): User { return { id: String(row.id), email: String(row.email), name: String(row.name), passwordHash: row.password_hash as string | null, phoneE164: row.phone_e164 as string | null, phoneVerifiedAt: row.phone_verified_at as Date | null, mfaChannel: row.mfa_channel as User["mfaChannel"], status: row.status as User["status"], createdAt: row.created_at as Date, updatedAt: row.updated_at as Date }; }
+export class PostgresUserRepository implements UserRepository { constructor(private readonly db: AuthDatabase) {} async findById(id: string) { const r=await this.db.query("SELECT * FROM users WHERE id=$1",[id]); return r.rows[0] ? user(r.rows[0]) : null; } async findByEmail(email: string) { const r=await this.db.query("SELECT * FROM users WHERE email=$1",[email]); return r.rows[0] ? user(r.rows[0]) : null; } }
