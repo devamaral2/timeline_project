@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 import { createPublicKey } from "node:crypto";
 import { encodeBase64Url } from "./base64url";
 import { InvalidTokenError, signJwt, verifyJwt, type AccessTokenClaims } from "./jwt";
-import { generateSigningKey, privateKeyFromPem, publicKeyFromJwk } from "./signing-key";
+import {
+  generateSigningKey,
+  privateKeyFromPem,
+  publicKeyFromJwk,
+  toPublicJwk,
+} from "./signing-key";
 
 const key = generateSigningKey();
 const privateKey = privateKeyFromPem(key.privateKeyPem);
@@ -116,5 +121,13 @@ describe("jwt", () => {
   it("exporta a chave publica em JWK que o node reimporta", () => {
     expect(key.publicJwk).toMatchObject({ kty: "OKP", crv: "Ed25519", alg: "EdDSA", use: "sig" });
     expect(createPublicKey({ key: key.publicJwk as never, format: "jwk" }).type).toBe("public");
+  });
+
+  it("recusa export JWK que nao e uma chave publica Ed25519", () => {
+    const malformedKey = {
+      export: () => ({ kty: "EC", crv: "P-256", x: "not-an-ed25519-key" }),
+    };
+
+    expect(() => toPublicJwk(malformedKey as never, "kid-test")).toThrow(/Ed25519/i);
   });
 });

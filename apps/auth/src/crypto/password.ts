@@ -37,6 +37,7 @@ export async function verifyPassword(plainPassword: string, storedHash: string):
   if (cost !== String(COST) || blockSize !== String(BLOCK_SIZE) || parallelism !== String(PARALLELISM)) {
     return false;
   }
+  if (!isBase64UrlOfLength(salt, 22) || !isBase64UrlOfLength(expected, 86)) return false;
 
   const saltBuffer = Buffer.from(salt, "base64url");
   const expectedBuffer = Buffer.from(expected, "base64url");
@@ -50,6 +51,10 @@ export async function verifyPassword(plainPassword: string, storedHash: string):
   } catch {
     return false;
   }
+}
+
+function isBase64UrlOfLength(value: string, length: number): boolean {
+  return value.length === length && /^[A-Za-z0-9_-]+$/.test(value);
 }
 
 async function derive(

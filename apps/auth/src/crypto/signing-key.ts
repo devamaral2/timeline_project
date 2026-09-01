@@ -29,15 +29,22 @@ export function generateSigningKey(): SigningKeyMaterial {
 }
 
 export function toPublicJwk(publicKey: KeyObject, kid: string): PublicSigningJwk {
-  const exported = publicKey.export({ format: "jwk" });
+  const { kty, crv, x } = publicKey.export({ format: "jwk" });
+  if (kty !== "OKP" || crv !== "Ed25519" || typeof x !== "string" || !isEd25519PublicX(x)) {
+    throw new TypeError("Expected an Ed25519 public JWK");
+  }
   return {
-    kty: "OKP",
-    crv: "Ed25519",
-    x: exported.x!,
+    kty,
+    crv,
+    x,
     kid,
     alg: "EdDSA",
     use: "sig",
   };
+}
+
+function isEd25519PublicX(value: string): boolean {
+  return value.length === 43 && /^[A-Za-z0-9_-]+$/.test(value);
 }
 
 export function privateKeyFromPem(pem: string): KeyObject {
