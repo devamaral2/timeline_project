@@ -10,8 +10,13 @@ import {
   EventItem,
   EventOwnershipError,
   EventRevisionConflictError,
+  Food,
+  Meal,
+  CatalogRevisionConflictError,
 } from "@repo/entities";
 import { PostgresEventRepository } from "../events/repositories/postgres-event.repository";
+import { PostgresFoodRepository } from "../catalog/repositories/postgres-food.repository";
+import { PostgresMealRepository } from "../catalog/repositories/postgres-meal.repository";
 
 const RUN_INTEGRATION = process.env.RUN_POSTGRES_INTEGRATION === "1";
 
@@ -371,5 +376,141 @@ describe.runIf(RUN_INTEGRATION)("PostgresEventRepository", () => {
     await repository.save(recentClosed);
 
     expect(await repository.findLatestOpenByUserId("user-1")).toBeNull();
+  });
+});
+
+describe.runIf(RUN_INTEGRATION)("PostgresFoodRepository and PostgresMealRepository", () => {
+  let ctx: PostgresTestContext;
+  let foods: PostgresFoodRepository;
+  let meals: PostgresMealRepository;
+
+  beforeEach(async () => {
+    if (!ctx) {
+      ctx = await createPostgresTestContext();
+      foods = new PostgresFoodRepository(ctx.db);
+      meals = new PostgresMealRepository(ctx.db);
+    } else {
+      await ctx.reset();
+    }
+  });
+
+  afterAll(async () => {
+    if (ctx) await ctx.stop();
+  });
+
+  function newFood(overrides: Partial<Parameters<typeof Food.create>[0]> = {}) {
+    return Food.create({
+      scope: "user",
+      ownerUserId: "user-a",
+      name: "Arroz",
+      referencePortion: "100 g",
+      referenceWeightGrams: 100,
+      caloriesKcal: 130,
+      macronutrients: {
+        carbohydratesGrams: 28,
+        proteinsGrams: 2.7,
+        totalFatGrams: 0.3,
+        fiberGrams: 0.4,
+      },
+      micronutrients: { ironMilligrams: 1.5 },
+      ...overrides,
+    });
+  }
+
+  async function insertGlobalFood(): Promise<string> {
+    const id = "01GFOOD0000000000000000A1";
+    await ctx.pool.query(
+      `INSERT INTO food (id, scope, owner_user_id, name, reference_portion, reference_weight_grams, calories_kcal, carbohydrates_grams, proteins_grams, total_fat_grams, fiber_grams)
+       VALUES ($1, 'global', NULL, 'Banana', '1 unidade', 100, 89, 22.8, 1.1, 0.3, 2.6)`,
+      [id],
+    );
+    return id;
+  }
+
+  test("food visibility: global is visible to everyone, private only to its owner", async () => {
+    const globalFoodId = await insertGlobalFood();
+    const privateFood = newFood({ ownerUserId: "user-a" });
+    await foods.save(privateFood, "user-a");
+
+    expect(await foods.findVisibleById(globalFoodId, "user-a")).not.toBeNull();
+    expect(await foods.findVisibleById(globalFoodId, "user-b")).not.toBeNull();
+    expect(await foods.findVisibleById(privateFood.id, "user-a")).not.toBeNull();
+    expect(await foods.findVisibleById(privateFood.id, "user-b")).toBeNull();
+  });
+
+  test("meal visibility follows the same global/private matrix", async () => {
+    const privateMeal = Meal.create({
+      scope: "user",
+      ownerUserId: "user-a",
+      name: "Almoço",
+      description: "",
+      foodItems: [],
+    });
+    await meals.save(privateMeal, "user-a");
+
+    expect(await meals.findVisibleById(privateMeal.id, "user-a")).not.toBeNull();
+    expect(await meals.findVisibleById(privateMeal.id, "user-b")).toBeNull();
+  });
+
+  test("preserves snapshot isolation across Food, Meal and Event updates", async () => {
+    const food = newFood({ ownerUserId: "user-a" });
+    await foods.save(food, "user-a");
+
+    const snapshot = food.toFoodItem({ portion: "150 g", approximateWeightGrams: 150 });
+    const meal = Meal.create({
+      scope: "user",
+      ownerUserId: "user-a",
+      name: "Almoço",
+      description: "",
+      foodItems: [snapshot],
+    });
+    await meals.save(meal, "user-a");
+
+    const mealSnapshot = meal.toMealItem();
+    const eventRepository = new PostgresEventRepository(ctx.db);
+    const item = EventItem.create({
+      position: 0,
+      type: "meal",
+      schemaVersion: 1,
+      isPrimary: true,
+      data: mealSnapshot,
+    });
+    const event = Event.create({
+      userId: "user-a",
+      name: "Almoço",
+      description: "",
+      startedAt: new Date("2026-08-31T12:00:00.000Z"),
+      tags: [],
+      interruptions: [],
+      items: [item],
+    });
+    await eventRepository.save(event);
+
+    const changedFood = food.revise({ caloriesKcal: 999 });
+    await foods.update(changedFood, "user-a", food.revision);
+
+    const mealAfterFoodChange = await meals.findVisibleById(meal.id, "user-a");
+    expect(mealAfterFoodChange?.foodItems[0].caloriesKcal).toBe(snapshot.caloriesKcal);
+
+    const changedMeal = meal.revise({ name: "Nova receita" });
+    await meals.update(changedMeal, "user-a", meal.revision);
+
+    const eventAfterMealChange = await eventRepository.findById(event.id);
+    const persistedItemData = eventAfterMealChange?.items[0].data as { name: string };
+    expect(persistedItemData.name).toBe(mealSnapshot.name);
+  });
+
+  test("update succeeds with the matching revision and conflicts otherwise", async () => {
+    const food = newFood({ ownerUserId: "user-a" });
+    await foods.save(food, "user-a");
+
+    const changed = food.revise({ caloriesKcal: 140 });
+    await foods.update(changed, "user-a", food.revision);
+    expect((await foods.findVisibleById(food.id, "user-a"))?.caloriesKcal).toBe(140);
+
+    const staleChange = food.revise({ caloriesKcal: 200 });
+    await expect(foods.update(staleChange, "user-a", food.revision)).rejects.toBeInstanceOf(
+      CatalogRevisionConflictError,
+    );
   });
 });
