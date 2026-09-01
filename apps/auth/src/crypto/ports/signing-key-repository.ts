@@ -8,22 +8,36 @@
  *                assinado por ela (isto e, por um TTL de access token).
  * - `retired`  — sai do JWKS.
  */
-export type SigningKeyStatus = "active" | "retiring" | "retired";
+export type SigningKeyStatus = 'active' | 'retiring' | 'retired';
 
 export interface StoredSigningKey {
   kid: string;
   status: SigningKeyStatus;
   publicJwk: PublicSigningJwk;
-  encryptedPrivateKey: string;
+  encryptedPrivateKey: string | null;
   createdAt: Date;
+  lastUsedAt: Date | null;
+  retireAfter: Date | null;
   retiredAt: Date | null;
 }
 
-export interface SigningKeyRepository {
-  findActive(): Promise<StoredSigningKey | null>;
-  /** Tudo que ainda pode aparecer no JWKS: `active` + `retiring`. */
-  listPublishable(): Promise<StoredSigningKey[]>;
-  save(key: StoredSigningKey): Promise<void>;
-  markStatus(kid: string, status: SigningKeyStatus, at: Date): Promise<void>;
+export interface NewStoredSigningKey {
+  kid: string;
+  publicJwk: PublicSigningJwk;
+  encryptedPrivateKey: string;
 }
-import type { PublicSigningJwk } from "../jwk";
+export interface SigningKeyRepository {
+  ensureActive(
+    candidate: NewStoredSigningKey,
+    now: Date,
+    audit: AuditEventInput,
+  ): Promise<StoredSigningKey>;
+  rotate(
+    candidate: NewStoredSigningKey,
+    now: Date,
+    audit: AuditEventInput,
+  ): Promise<StoredSigningKey>;
+  listPublishable(): Promise<StoredSigningKey[]>;
+}
+import type { PublicSigningJwk } from '../jwk';
+import type { AuditEventInput } from '../../audit/audit-event';

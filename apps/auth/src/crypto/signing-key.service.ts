@@ -1,81 +1,106 @@
-import { randomUUID, type KeyObject } from "node:crypto";
-import { decryptSecret, encryptSecret } from "./key-encryption";
-import { signJwt, type AccessTokenClaims } from "./jwt";
-import type { PublicSigningJwk } from "./jwk";
-import type { SigningKeyRepository, StoredSigningKey } from "./ports/signing-key-repository";
-import { generateSigningKey, privateKeyFromPem, publicKeyFromJwk } from "./signing-key";
+import { type KeyObject } from 'node:crypto';
+import { decryptSecret, encryptSecret } from './key-encryption';
+import {
+  signJwt,
+  type SignAccessToken,
+  type UnsignedAccessTokenClaims,
+} from './jwt';
+import type { PublicSigningJwk } from './jwk';
+import type { AuditEventInput } from '../audit/audit-event';
+import {
+  generateSigningKey,
+  privateKeyFromPem,
+  publicKeyFromJwk,
+} from './signing-key';
+import type {
+  NewStoredSigningKey,
+  SigningKeyRepository,
+  StoredSigningKey,
+} from './ports/signing-key-repository';
+import { SecretGenerator } from '../common/secret-generator';
 
-/**
- * Dona das chaves. Assina os access tokens e publica o JWKS que os outros
- * servicos usam para verificar sozinhos.
- *
- * As chaves ficam em memoria depois da primeira leitura: assinar e verificar
- * acontecem em todo request e nao podem custar uma ida ao banco. `reload()`
- * existe para a rotacao — depois de girar a chave, o processo precisa reler.
- */
 export class SigningKeyService {
-  private activeKey: { kid: string; privateKey: KeyObject } | null = null;
-  private publicKeys = new Map<string, KeyObject>();
-  private jwks: { keys: PublicSigningJwk[] } = { keys: [] };
-
+  private privateKeys = new Map<string, KeyObject>();
+  private snapshot = new Map<string, PublicSigningJwk>();
+  private reloadPromise: Promise<void> | null = null;
+  private negativeKids = new Map<string, number>();
   constructor(
     private readonly repository: SigningKeyRepository,
-    private readonly keyEncryptionKey: Buffer,
+    private readonly kek: Buffer,
+    private readonly secretGenerator: SecretGenerator,
   ) {}
 
-  /**
-   * Le as chaves e, se nao houver nenhuma ativa, cria a primeira. O bootstrap
-   * automatico evita o passo manual de "gerar a chave" no primeiro deploy, que
-   * e onde normalmente alguem acaba commitando uma chave de teste.
-   */
-  async reload(): Promise<void> {
-    let active = await this.repository.findActive();
-    if (!active) active = await this.rotate();
-
-    const publishable = await this.repository.listPublishable();
-
-    this.activeKey = {
-      kid: active.kid,
-      privateKey: privateKeyFromPem(decryptSecret(active.encryptedPrivateKey, this.keyEncryptionKey)),
-    };
-    this.publicKeys = new Map(
-      publishable.map((key) => [key.kid, publicKeyFromJwk(key.publicJwk)] as const),
-    );
-    this.jwks = { keys: publishable.map((key) => key.publicJwk) };
-  }
-
-  /**
-   * Gera a chave nova, marca a anterior como `retiring` e volta a ler. A antiga
-   * continua no JWKS: os tokens que ela assinou ainda sao validos ate expirar, e
-   * derruba-los na hora significaria deslogar todo mundo a cada rotacao.
-   */
-  async rotate(now: Date = new Date()): Promise<StoredSigningKey> {
-    const previous = await this.repository.findActive();
+  candidate(): NewStoredSigningKey {
     const material = generateSigningKey();
-
-    const stored: StoredSigningKey = {
+    return {
       kid: material.kid,
-      status: "active",
       publicJwk: material.publicJwk,
-      encryptedPrivateKey: encryptSecret(material.privateKeyPem, this.keyEncryptionKey),
-      createdAt: now,
-      retiredAt: null,
+      encryptedPrivateKey: encryptSecret(material.privateKeyPem, this.kek),
     };
-    await this.repository.save(stored);
-    if (previous) await this.repository.markStatus(previous.kid, "retiring", now);
-
-    return stored;
   }
-
-  sign(claims: Omit<AccessTokenClaims, "jti">): string {
-    if (!this.activeKey) throw new Error("SigningKeyService used before reload()");
-    return signJwt({ ...claims, jti: randomUUID() }, this.activeKey);
+  async ensureActive(
+    now: Date,
+    audit: AuditEventInput,
+  ): Promise<StoredSigningKey> {
+    const key = await this.repository.ensureActive(
+      this.candidate(),
+      now,
+      audit,
+    );
+    await this.reload();
+    return key;
   }
-
-  /** Passado direto para `verifyJwt`. Devolve null para kid que nao e nosso. */
-  resolvePublicKey = (kid: string): KeyObject | null => this.publicKeys.get(kid) ?? null;
-
+  async rotate(now: Date, audit: AuditEventInput): Promise<StoredSigningKey> {
+    const key = await this.repository.rotate(this.candidate(), now, audit);
+    await this.reload();
+    return key;
+  }
+  signAccessToken: SignAccessToken = (key, claims) =>
+    signJwt(
+      { ...claims, jti: this.secretGenerator.randomId() },
+      { kid: key.kid, privateKey: this.privateKeyFor(key) },
+    );
+  async publicKeyFor(kid: string): Promise<PublicSigningJwk | null> {
+    const found = this.snapshot.get(kid);
+    if (found) return found;
+    const until = this.negativeKids.get(kid);
+    if (until && until > Date.now()) return null;
+    await this.reload();
+    const reloaded = this.snapshot.get(kid) ?? null;
+    if (!reloaded) this.negativeKids.set(kid, Date.now() + 5000);
+    return reloaded;
+  }
   publicJwks(): { keys: PublicSigningJwk[] } {
-    return this.jwks;
+    return {
+      keys: [...this.snapshot.values()].sort((a, b) =>
+        a.kid.localeCompare(b.kid),
+      ),
+    };
+  }
+  private privateKeyFor(key: {
+    kid: string;
+    encryptedPrivateKey: string;
+  }): KeyObject {
+    let cached = this.privateKeys.get(key.kid);
+    if (!cached) {
+      cached = privateKeyFromPem(
+        decryptSecret(key.encryptedPrivateKey, this.kek),
+      );
+      this.privateKeys.set(key.kid, cached);
+    }
+    return cached;
+  }
+  private async reload(): Promise<void> {
+    if (!this.reloadPromise)
+      this.reloadPromise = this.repository
+        .listPublishable()
+        .then((keys) => {
+          this.snapshot = new Map(keys.map((key) => [key.kid, key.publicJwk]));
+          for (const key of keys) this.negativeKids.delete(key.kid);
+        })
+        .finally(() => {
+          this.reloadPromise = null;
+        });
+    return this.reloadPromise;
   }
 }
