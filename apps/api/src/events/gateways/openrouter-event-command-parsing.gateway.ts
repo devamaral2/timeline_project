@@ -6,7 +6,7 @@ import type {
 import type { CreateEventInput } from "@repo/entities/contracts";
 import { EventCommandPromptBuilderService } from "../services/event-command-prompt-builder.service";
 import type { ParsedEventSchedule } from "../services/event-schedule.service";
-import type { Workout } from "@repo/entities";
+import type { WorkoutInput } from "@repo/entities";
 
 const REQUEST_TIMEOUT_MS = 45_000;
 const MAX_ROUTINE_NAME_LENGTH = 60;
@@ -153,7 +153,7 @@ export class OpenRouterEventCommandParsingGateway implements EventCommandParsing
     const parsedInput = toCreateEventInput(raw, input.text);
     const schedule = toEventSchedule(raw);
     console.log("[OpenRouterEventCommandParsingGateway] parseCommand succeeded", {
-      type: parsedInput.type,
+      itemType: parsedInput.items[0]?.type,
       schedule,
     });
 
@@ -179,29 +179,31 @@ export function toCreateEventInput(
   switch (raw.type) {
     case "food":
       return {
-        type: "food",
-        inputText: raw.foodInputText?.trim() || transcript.trim(),
+        items: [{ type: "meal", data: { inputText: raw.foodInputText?.trim() || transcript.trim() } }],
         tags: [],
       };
     case "sleep":
       return {
-        type: "sleep",
-        data: {
-          trackedSleepTime: normalizeSleepHours(raw.sleepHours),
-          score: clamp(raw.sleepScore, 0, MAX_SLEEP_SCORE),
-        },
+        items: [
+          {
+            type: "sleep",
+            data: {
+              trackedSleepTime: normalizeSleepMinutes(raw.sleepHours),
+              score: clamp(raw.sleepScore, 0, MAX_SLEEP_SCORE),
+            },
+          },
+        ],
         tags: [],
       };
     case "training":
       return {
-        type: "training",
-        data: { workouts: toWorkouts(raw) },
+        items: [{ type: "training", data: { workouts: toWorkouts(raw) } }],
         tags: [],
       };
     default:
       return {
-        type: "routine",
         name: raw.routineName?.trim() || fallbackName,
+        items: [{ type: "routine" }],
         tags: [],
       };
   }
@@ -221,13 +223,15 @@ export function toEventSchedule(raw: Partial<RawEventCommand>): ParsedEventSched
 }
 
 /**
- * A UI trabalha com horas decimais (ver SleepForm). Modelos as vezes respondem em minutos,
- * entao qualquer valor acima de 24 e tratado como minutos.
+ * O item de sono guarda trackedSleepTime em MINUTOS. Modelos as vezes respondem
+ * ja em minutos apesar da instrucao pedir horas decimais, entao qualquer valor
+ * acima de 24 e tratado como minutos antes da conversao final.
  */
-function normalizeSleepHours(value: number | null | undefined): number | undefined {
+function normalizeSleepMinutes(value: number | null | undefined): number | undefined {
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return undefined;
   const hours = value > MAX_SLEEP_HOURS ? value / 60 : value;
-  return clamp(hours, 0, MAX_SLEEP_HOURS);
+  const clampedHours = clamp(hours, 0, MAX_SLEEP_HOURS) ?? 0;
+  return Math.round(clampedHours * 60);
 }
 
 function clamp(value: number | null | undefined, min: number, max: number): number | undefined {
@@ -235,7 +239,7 @@ function clamp(value: number | null | undefined, min: number, max: number): numb
   return Math.min(Math.max(value, min), max);
 }
 
-function toWorkouts(raw: Partial<RawEventCommand>): Workout[] {
+function toWorkouts(raw: Partial<RawEventCommand>): WorkoutInput[] {
   const duration = clamp(raw.workoutDurationMinutes, 0, Number.MAX_SAFE_INTEGER);
   const calories = clamp(raw.workoutCalories, 0, Number.MAX_SAFE_INTEGER);
   const distance = clamp(raw.workoutDistanceKm, 0, Number.MAX_SAFE_INTEGER);
@@ -245,11 +249,11 @@ function toWorkouts(raw: Partial<RawEventCommand>): Workout[] {
   const base = { calories: calories ?? 0, duration: duration ?? 0 };
   switch (raw.workoutKind) {
     case "weightlifting":
-      return [{ type: "weightlifting", ...base, sets: [] }];
+      return [{ workoutCode: "weightlifting", ...base, sets: [] }];
     case "running":
     case "treadmill":
-      return [{ type: raw.workoutKind, ...base, distance: distance ?? 0, pace: 0 }];
+      return [{ workoutCode: raw.workoutKind, ...base, distance: distance ?? 0, pace: 0 }];
     default:
-      return [{ type: "free", ...base }];
+      return [{ workoutCode: "free", ...base }];
   }
 }

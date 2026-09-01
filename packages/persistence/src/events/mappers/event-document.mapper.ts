@@ -1,4 +1,4 @@
-import type { DomainEvent } from "@repo/entities/ports";
+import type { LegacyDomainEvent as DomainEvent } from "@repo/entities/ports";
 import {
   isEventPriority,
   readMissedFlag,

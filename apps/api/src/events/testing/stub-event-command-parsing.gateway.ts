@@ -8,7 +8,7 @@ export class StubEventCommandParsingGateway implements EventCommandParsingGatewa
 
   constructor(
     private readonly response: ParsedEventCommand = {
-      input: { type: "routine", name: "Rotina", tags: [] },
+      input: { name: "Rotina", items: [{ type: "routine" }], tags: [] },
       schedule: {},
       modelProvider: "stub",
       modelName: "stub-model",

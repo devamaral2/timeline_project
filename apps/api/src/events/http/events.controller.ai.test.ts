@@ -1,18 +1,18 @@
 import { expect, test, vi } from "vitest";
-import { TrainingEvent } from "@repo/entities";
 import type { AuthenticatedUser } from "../../auth/verify-firebase-token";
 import { EventAgentUndecidedError, LlmUnavailableError } from "../errors/event-agent.errors";
 import type { EventAgentGateway } from "../gateways/event-agent.gateway";
 import type { EventCommandParsingGateway } from "../gateways/event-command-parsing.gateway";
+import { InMemoryEventDatabase } from "../testing/in-memory-event-database";
 import { InMemoryEventRepository } from "../testing/in-memory-event.repository";
-import { InMemoryTagRepository } from "../testing/in-memory-tag.repository";
+import { InMemoryWorkoutCatalog } from "../testing/in-memory-workout.catalog";
 import {
   ScriptedEventAgentGateway,
   type ScriptedAgentCall,
 } from "../testing/scripted-event-agent.gateway";
 import { statusOfThrown } from "../testing/status-of";
 import { StubEventCommandParsingGateway } from "../testing/stub-event-command-parsing.gateway";
-import { StubFoodParsingGateway } from "../testing/stub-food-parsing.gateway";
+import { StubMealParsingGateway } from "../testing/stub-meal-parsing.gateway";
 import { CreateEventFromTextUseCase } from "../usecases/create-event-from-text.usecase";
 import { CreateEventFromTranscriptUseCase } from "../usecases/create-event-from-transcript.usecase";
 import { CreateEventUseCase } from "../usecases/create-event.usecase";
@@ -25,11 +25,11 @@ function buildController(options: {
   agentGateway?: EventAgentGateway;
   parsingGateway?: EventCommandParsingGateway;
 }) {
-  const eventRepository = new InMemoryEventRepository();
+  const eventRepository = new InMemoryEventRepository(new InMemoryEventDatabase());
   const createEvent = new CreateEventUseCase(
     eventRepository,
-    new InMemoryTagRepository(),
-    new StubFoodParsingGateway(),
+    new StubMealParsingGateway(),
+    new InMemoryWorkoutCatalog(),
   );
 
   const controller = new EventsController(
@@ -75,7 +75,7 @@ test("POST /api/events/ai creates the event and returns the ids and skills used"
   expect(body.eventIds).toHaveLength(1);
 
   const savedEvent = await eventRepository.findById(body.eventIds[0]);
-  expect(savedEvent).toBeInstanceOf(TrainingEvent);
+  expect(savedEvent?.items[0].type).toBe("training");
   expect(savedEvent?.userId).toBe("firebase-user-1");
 });
 
@@ -113,7 +113,7 @@ test("POST /api/events/voice creates the event and returns its id and type", asy
 
   const body = await controller.fromTranscript({ transcript: "comecei a estudar" }, actor);
 
-  expect(body.type).toBe("routine");
+  expect(body.primaryItemType).toBe("routine");
   expect((await eventRepository.findById(body.eventId))?.userId).toBe("firebase-user-1");
 });
 

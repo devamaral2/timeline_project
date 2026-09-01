@@ -21,8 +21,7 @@ export const createSleepEventSkill = defineEventSkill({
   ].join("\n"),
   parameters,
   toCreateEventInput: (args) => ({
-    type: "sleep",
-    data: { trackedSleepTime: args.trackedSleepTime, score: args.score },
+    items: [{ type: "sleep", data: { trackedSleepTime: args.trackedSleepTime, score: args.score } }],
     ...toBaseEventInput(args),
   }),
 });

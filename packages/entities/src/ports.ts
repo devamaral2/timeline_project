@@ -3,6 +3,7 @@
  * @repo/persistence possa implementa-las sem depender de apps/api.
  */
 export type * from "./events/ports/event-repository";
+export type * from "./events/ports/legacy-event-repository";
 export type * from "./events/ports/tag-repository";
 export type * from "./events/ports/event-aggregate-repository";
 export type * from "./catalog/ports/food-repository";

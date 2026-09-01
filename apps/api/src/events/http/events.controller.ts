@@ -18,10 +18,10 @@ import type {
   CreateEventInput,
   DailyOverviewDto,
   EventDetailDto,
-  TimelineEventCardDto,
+  TimelineEventPageDto,
   UpdateEventInput,
 } from "@repo/entities/contracts";
-import { isEventPriority, type EventType } from "@repo/entities";
+import { isEventPriority } from "@repo/entities";
 import { CurrentUser } from "../../auth/current-user.decorator";
 import { FirebaseAuthGuard } from "../../auth/firebase-auth.guard";
 import type { AuthenticatedUser } from "../../auth/verify-firebase-token";
@@ -38,8 +38,6 @@ import { GetDailyOverviewUseCase } from "../usecases/get-daily-overview.usecase"
 import { GetEventUseCase } from "../usecases/get-event.usecase";
 import { ListTimelineEventsUseCase } from "../usecases/list-timeline-events.usecase";
 import { UpdateEventUseCase } from "../usecases/update-event.usecase";
-
-const EVENT_TYPES: readonly EventType[] = ["routine", "food", "training", "sleep"];
 
 /** Mensagens que representam entrada invalida do cliente, e nao falha do modelo. */
 const TRANSCRIPT_BAD_REQUEST = new Set<string>([EMPTY_TRANSCRIPT_ERROR, LONG_TRANSCRIPT_ERROR]);
@@ -69,11 +67,10 @@ export class EventsController {
     @Query("to") to?: string,
     @Query("type") type?: string,
     @Query("tag") tag?: string,
-  ): Promise<TimelineEventCardDto[]> {
+    @Query("cursor") cursor?: string,
+    @Query("limit") limit?: string,
+  ): Promise<TimelineEventPageDto> {
     if (!userId) throw new BadRequestException("Missing userId");
-    if (type && !EVENT_TYPES.includes(type as EventType)) {
-      throw new BadRequestException("Invalid event type");
-    }
     if (from && Number.isNaN(new Date(from).getTime())) {
       throw new BadRequestException("Invalid from date");
     }
@@ -81,13 +78,11 @@ export class EventsController {
       throw new BadRequestException("Invalid to date");
     }
 
-    return this.listTimelineEvents.execute({
-      userId,
-      from,
-      to,
-      type: (type as EventType | undefined) ?? undefined,
-      tag,
-    });
+    // TODO(Task 10): substituir por FirebaseAuthGuard + CurrentUser.
+    return this.listTimelineEvents.execute(
+      { from, to, type, tag, cursor, limit: limit ? Number(limit) : undefined },
+      { userId },
+    );
   }
 
   @Post()
@@ -102,9 +97,14 @@ export class EventsController {
   }
 
   @Get("daily")
-  async daily(@Query("date") date?: string): Promise<DailyOverviewDto> {
+  async daily(
+    @Query("date") date?: string,
+    @Query("userId") userId?: string,
+  ): Promise<DailyOverviewDto> {
     if (!date) throw new BadRequestException("date is required");
-    return this.getDailyOverview.execute({ date });
+    if (!userId) throw new BadRequestException("Missing userId");
+    // TODO(Task 10): substituir por FirebaseAuthGuard + CurrentUser.
+    return this.getDailyOverview.execute({ date }, { userId });
   }
 
   @Post("ai")
@@ -126,7 +126,7 @@ export class EventsController {
   async fromTranscript(
     @Body() body: { transcript?: string },
     @CurrentUser() actor: AuthenticatedUser,
-  ): Promise<{ eventId: string; type: EventType }> {
+  ): Promise<{ eventId: string; primaryItemType: string }> {
     try {
       return await this.createEventFromTranscript.execute(
         { transcript: body?.transcript ?? "" },

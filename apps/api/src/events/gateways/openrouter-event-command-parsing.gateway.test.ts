@@ -50,7 +50,7 @@ test("requests the strict event_command schema and returns the parsed input", as
   const result = await gateway.parseCommand({ text: "comecei a estudar ingles" });
 
   expect(result).toEqual({
-    input: { type: "routine", name: "Estudar ingles", tags: [] },
+    input: { name: "Estudar ingles", items: [{ type: "routine" }], tags: [] },
     schedule: {
       startTimeOfDay: undefined,
       startOffsetMinutes: undefined,
@@ -104,13 +104,13 @@ test("never logs the api key", async () => {
 test("falls back to the transcript when the model leaves the routine name empty", () => {
   const input = toCreateEventInput(aRawCommand({ type: "routine", routineName: "  " }), "  fui correr no parque  ");
 
-  expect(input).toEqual({ type: "routine", name: "fui correr no parque", tags: [] });
+  expect(input).toEqual({ name: "fui correr no parque", items: [{ type: "routine" }], tags: [] });
 });
 
 test("falls back to routine when the model returns an unknown type", () => {
   const input = toCreateEventInput(aRawCommand({ type: "meditation" }), "meditei 10 minutos");
 
-  expect(input).toEqual({ type: "routine", name: "meditei 10 minutos", tags: [] });
+  expect(input).toEqual({ name: "meditei 10 minutos", items: [{ type: "routine" }], tags: [] });
 });
 
 test("reads sleep values above 24 as minutes", () => {
@@ -120,8 +120,7 @@ test("reads sleep values above 24 as minutes", () => {
   );
 
   expect(input).toEqual({
-    type: "sleep",
-    data: { trackedSleepTime: 7.5, score: 80 },
+    items: [{ type: "sleep", data: { trackedSleepTime: 450, score: 80 } }],
     tags: [],
   });
 });
@@ -133,8 +132,7 @@ test("clamps the sleep score and drops a missing duration", () => {
   );
 
   expect(input).toEqual({
-    type: "sleep",
-    data: { trackedSleepTime: undefined, score: 100 },
+    items: [{ type: "sleep", data: { trackedSleepTime: undefined, score: 100 } }],
     tags: [],
   });
 });
@@ -151,8 +149,7 @@ test("builds a weightlifting workout with empty sets", () => {
   );
 
   expect(input).toEqual({
-    type: "training",
-    data: { workouts: [{ type: "weightlifting", calories: 300, duration: 50, sets: [] }] },
+    items: [{ type: "training", data: { workouts: [{ workoutCode: "weightlifting", calories: 300, duration: 50, sets: [] }] } }],
     tags: [],
   });
 });
@@ -169,10 +166,12 @@ test("builds a running workout with the reported distance", () => {
   );
 
   expect(input).toEqual({
-    type: "training",
-    data: {
-      workouts: [{ type: "running", calories: 0, duration: 30, distance: 5, pace: 0 }],
-    },
+    items: [
+      {
+        type: "training",
+        data: { workouts: [{ workoutCode: "running", calories: 0, duration: 30, distance: 5, pace: 0 }] },
+      },
+    ],
     tags: [],
   });
 });
@@ -180,7 +179,7 @@ test("builds a running workout with the reported distance", () => {
 test("keeps the workout list empty when the phrase carried no numbers", () => {
   const input = toCreateEventInput(aRawCommand({ type: "training" }), "fui pra academia");
 
-  expect(input).toEqual({ type: "training", data: { workouts: [] }, tags: [] });
+  expect(input).toEqual({ items: [{ type: "training", data: { workouts: [] } }], tags: [] });
 });
 
 test("carries the spoken window through to the schedule", () => {
@@ -207,11 +206,11 @@ test("treats empty clock strings as no window at all", () => {
   });
 });
 
-test("uses the transcript when the model returns no food text", () => {
+test("uses the transcript when the model returns no meal text", () => {
   const input = toCreateEventInput(
     aRawCommand({ type: "food", foodInputText: "" }),
     "comi uma banana",
   );
 
-  expect(input).toEqual({ type: "food", inputText: "comi uma banana", tags: [] });
+  expect(input).toEqual({ items: [{ type: "meal", data: { inputText: "comi uma banana" } }], tags: [] });
 });

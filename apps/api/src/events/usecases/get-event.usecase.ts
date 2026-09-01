@@ -1,9 +1,7 @@
 import type { AuthenticatedUser } from "../../auth/verify-firebase-token";
-import type { DomainEvent, EventRepository } from "@repo/entities/ports";
-import type { EventDetailDto } from "@repo/entities/contracts";
-import { RoutineEvent } from "@repo/entities";
-import { SleepEvent } from "@repo/entities";
-import { TrainingEvent } from "@repo/entities";
+import { EventOwnershipError, type Event } from "@repo/entities";
+import type { EventRepository } from "@repo/entities/ports";
+import type { EventDetailDto, EventItemDto, KnownEventItemType } from "@repo/entities/contracts";
 
 export class GetEventUseCase {
   constructor(private readonly eventRepository: EventRepository) {}
@@ -12,15 +10,15 @@ export class GetEventUseCase {
     const event = await this.eventRepository.findById(input.eventId);
     if (!event) return null;
     if (event.userId !== actor.userId) {
-      throw new Error("Only the event owner can modify it");
+      throw new EventOwnershipError();
     }
 
     return toDetailDto(event);
   }
 }
 
-function toDetailDto(event: DomainEvent): EventDetailDto {
-  const common = {
+function toDetailDto(event: Event): EventDetailDto {
+  return {
     id: event.id,
     name: event.name,
     description: event.description,
@@ -36,10 +34,18 @@ function toDetailDto(event: DomainEvent): EventDetailDto {
       startedAt: interruption.startedAt.toISOString(),
       finishedAt: interruption.finishedAt.toISOString(),
     })),
+    revision: event.revision,
+    primaryItemId: event.primaryItemId,
+    items: event.items.map(
+      (item) =>
+        ({
+          id: item.id,
+          position: item.position,
+          type: item.type as KnownEventItemType,
+          schemaVersion: item.schemaVersion,
+          isPrimary: item.isPrimary,
+          data: item.data,
+        }) as EventItemDto,
+    ),
   };
-
-  if (event instanceof RoutineEvent) return { type: "routine", ...common };
-  if (event instanceof SleepEvent) return { type: "sleep", ...common, data: event.data };
-  if (event instanceof TrainingEvent) return { type: "training", ...common, data: { workouts: event.data.workouts } };
-  return { type: "food", ...common, data: { items: event.data.items } };
 }

@@ -1,101 +1,54 @@
-import type { DomainEvent, EventRepository } from "@repo/entities/ports";
-import { FoodEvent } from "@repo/entities";
-import { RoutineEvent } from "@repo/entities";
-import { SleepEvent } from "@repo/entities";
-import { TrainingEvent } from "@repo/entities";
+import { EventNotFoundError, EventOwnershipError, EventRevisionConflictError, type Event } from "@repo/entities";
+import type { EventRepository } from "@repo/entities/ports";
+import type { InMemoryEventDatabase } from "./in-memory-event-database";
 
 export class InMemoryEventRepository implements EventRepository {
-  private events: DomainEvent[];
+  constructor(private readonly database: InMemoryEventDatabase) {}
 
-  constructor(events: DomainEvent[] = []) {
-    this.events = [...events];
+  async save(event: Event): Promise<void> {
+    this.database.events.push(event);
   }
 
-  async save(event: DomainEvent): Promise<void> {
-    this.events.push(event);
-  }
-
-  async saveClosingLatestOpen(event: DomainEvent, finishedAt: Date): Promise<void> {
+  async saveClosingLatestOpen(event: Event, finishedAt: Date): Promise<void> {
     const previousOpenEvent = await this.findLatestOpenByUserId(event.userId);
     if (previousOpenEvent && finishedAt >= previousOpenEvent.startedAt) {
-      const index = this.events.findIndex((storedEvent) => storedEvent.id === previousOpenEvent.id);
-      this.events[index] = recreateWithFinishedAt(previousOpenEvent, finishedAt);
+      const index = this.database.events.findIndex((storedEvent) => storedEvent.id === previousOpenEvent.id);
+      this.database.events[index] = previousOpenEvent.revise({ finishedAt });
     }
-    this.events.push(event);
+    this.database.events.push(event);
   }
 
-  async update(event: DomainEvent, actorUserId: string): Promise<void> {
-    const index = this.events.findIndex((storedEvent) => storedEvent.id === event.id);
-    if (index === -1) return;
-    this.assertOwner(this.events[index].userId, actorUserId);
-    this.events[index] = event;
+  async update(event: Event, actorUserId: string, expectedRevision: number): Promise<void> {
+    const index = this.database.events.findIndex((storedEvent) => storedEvent.id === event.id);
+    if (index === -1) throw new EventNotFoundError(`Event not found: ${event.id}`);
+
+    const existing = this.database.events[index];
+    if (existing.userId !== actorUserId) throw new EventOwnershipError();
+    if (existing.revision !== expectedRevision) {
+      throw new EventRevisionConflictError(
+        `Expected revision ${expectedRevision} but found ${existing.revision}`,
+      );
+    }
+
+    this.database.events[index] = event;
   }
 
   async delete(eventId: string, actorUserId: string): Promise<void> {
-    const event = this.events.find((storedEvent) => storedEvent.id === eventId);
-    if (!event) return;
-    this.assertOwner(event.userId, actorUserId);
-    this.events = this.events.filter((storedEvent) => storedEvent.id !== eventId);
+    const event = this.database.events.find((storedEvent) => storedEvent.id === eventId);
+    if (!event) throw new EventNotFoundError(`Event not found: ${eventId}`);
+    if (event.userId !== actorUserId) throw new EventOwnershipError();
+    this.database.events = this.database.events.filter((storedEvent) => storedEvent.id !== eventId);
   }
 
-  async findById(eventId: string): Promise<DomainEvent | null> {
-    return this.events.find((event) => event.id === eventId) ?? null;
+  async findById(eventId: string): Promise<Event | null> {
+    return this.database.events.find((event) => event.id === eventId) ?? null;
   }
 
-  async findLatestOpenByUserId(userId: string): Promise<DomainEvent | null> {
-    return (
-      this.events
-        .filter((event) => event.userId === userId && !event.finishedAt)
-        .sort((left, right) => right.startedAt.getTime() - left.startedAt.getTime())[0] ?? null
-    );
+  async findLatestOpenByUserId(userId: string): Promise<Event | null> {
+    const latest = [...this.database.events]
+      .filter((event) => event.userId === userId)
+      .sort((left, right) => right.startedAt.getTime() - left.startedAt.getTime())[0];
+    if (!latest || latest.finishedAt) return null;
+    return latest;
   }
-
-  async listTimeline(params: Parameters<EventRepository["listTimeline"]>[0]): Promise<DomainEvent[]> {
-    return this.events.filter((event) => {
-      if (event.userId !== params.userId) return false;
-      if (params.from && params.to) {
-        // Um evento pertence ao recorte quando os dois intervalos se tocam.
-        // Nos abertos, o unico instante afirmado e o inicio: nao projetamos um
-        // termino com base no relogio.
-        const finishedAt = event.finishedAt ?? event.startedAt;
-        if (event.startedAt > params.to || finishedAt < params.from) return false;
-      } else {
-        if (params.from && event.startedAt < params.from) return false;
-        if (params.to && event.startedAt > params.to) return false;
-      }
-      if (params.type && event.type !== params.type) return false;
-      if (params.tag && !event.tags.includes(params.tag)) return false;
-      return true;
-    });
-  }
-
-  async listByDay(params: Parameters<EventRepository["listByDay"]>[0]): Promise<DomainEvent[]> {
-    return this.events.filter((event) => {
-      const startedDate = dateInTimeZone(event.startedAt, params.timeZone);
-      const finishedDate = dateInTimeZone(event.finishedAt ?? event.startedAt, params.timeZone);
-      return startedDate <= params.date && finishedDate >= params.date;
-    });
-  }
-
-  private assertOwner(ownerUserId: string, actorUserId: string): void {
-    if (ownerUserId !== actorUserId) throw new Error("Only the event owner can modify it");
-  }
-}
-
-function recreateWithFinishedAt(event: DomainEvent, finishedAt: Date): DomainEvent {
-  if (event instanceof RoutineEvent) return RoutineEvent.create({ ...event, finishedAt });
-  if (event instanceof TrainingEvent) return TrainingEvent.create({ ...event, finishedAt });
-  if (event instanceof SleepEvent) return SleepEvent.create({ ...event, finishedAt });
-  return FoodEvent.create({ ...event, finishedAt });
-}
-
-function dateInTimeZone(value: Date, timeZone: string): string {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(value);
-  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((item) => item.type === type)?.value;
-  return `${part("year")}-${part("month")}-${part("day")}`;
 }

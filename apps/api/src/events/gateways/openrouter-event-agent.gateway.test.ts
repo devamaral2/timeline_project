@@ -62,7 +62,7 @@ test("exposes every skill as a tool and forwards model and prompt", async () => 
   });
   expect((client.calls[0].tools as CapturedTool[]).map((tool) => tool.function.name)).toEqual([
     "create_training_event",
-    "create_food_event",
+    "create_meal_event",
     "create_sleep_event",
     "create_routine_event",
   ]);

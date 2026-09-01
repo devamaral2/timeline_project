@@ -56,8 +56,37 @@ export const createTrainingEventSkill = defineEventSkill({
   ].join("\n"),
   parameters,
   toCreateEventInput: (args) => ({
-    type: "training",
-    data: { workouts: args.workouts },
+    items: [
+      {
+        type: "training",
+        data: {
+          workouts: args.workouts.map((workout) => {
+            if (workout.type === "weightlifting") {
+              return {
+                workoutCode: "weightlifting" as const,
+                calories: workout.calories,
+                duration: workout.duration,
+                sets: workout.sets,
+              };
+            }
+            if (workout.type === "free") {
+              return {
+                workoutCode: "free" as const,
+                calories: workout.calories,
+                duration: workout.duration,
+              };
+            }
+            return {
+              workoutCode: workout.type,
+              calories: workout.calories,
+              duration: workout.duration,
+              pace: workout.pace,
+              distance: workout.distance,
+            };
+          }),
+        },
+      },
+    ],
     ...toBaseEventInput(args),
   }),
 });

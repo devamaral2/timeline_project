@@ -1,7 +1,5 @@
 import type { EventPriority } from "../types/event-priority";
-import type { FoodItem } from "../entities/food-event.entity";
-import type { SleepEventData } from "../entities/sleep-event.entity";
-import type { Workout } from "../entities/training-event.entity";
+import type { EventItemDto } from "./event-item.dto";
 
 export interface EventDetailInterruptionDto {
   id: string;
@@ -11,7 +9,7 @@ export interface EventDetailInterruptionDto {
   finishedAt: string;
 }
 
-interface EventDetailCommonDto {
+export interface EventDetailDto {
   id: string;
   name: string;
   description: string;
@@ -22,10 +20,7 @@ interface EventDetailCommonDto {
   missed: boolean;
   priority: EventPriority;
   interruptions: EventDetailInterruptionDto[];
+  revision: number;
+  primaryItemId: string;
+  items: EventItemDto[];
 }
-
-export type EventDetailDto =
-  | ({ type: "routine" } & EventDetailCommonDto)
-  | ({ type: "sleep"; data: SleepEventData } & EventDetailCommonDto)
-  | ({ type: "training"; data: { workouts: Workout[] } } & EventDetailCommonDto)
-  | ({ type: "food"; data: { items: FoodItem[] } } & EventDetailCommonDto);

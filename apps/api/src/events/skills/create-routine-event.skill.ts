@@ -20,8 +20,8 @@ export const createRoutineEventSkill = defineEventSkill({
   ].join("\n"),
   parameters,
   toCreateEventInput: (args) => ({
-    type: "routine",
     name: args.name,
+    items: [{ type: "routine" }],
     ...toBaseEventInput(args),
   }),
 });

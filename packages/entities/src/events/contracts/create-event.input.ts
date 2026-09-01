@@ -1,19 +1,12 @@
 import type { EventPriority } from "../types/event-priority";
-import type { SleepEventData } from "../entities/sleep-event.entity";
-import type { Workout } from "../entities/training-event.entity";
+import type { CreateEventItemInput } from "./event-item.dto";
 
-export interface CreateBaseEventInput {
+export interface CreateEventInput {
+  name?: string;
   description?: string;
   tags?: string[];
   /** Anotacao do usuario: um evento so nasce marcado se alguem disser isso. */
   missed?: boolean;
   priority?: EventPriority;
+  items: CreateEventItemInput[];
 }
-
-export type CreateEventInput =
-  | ({ type: "routine"; name: string } & CreateBaseEventInput)
-  | ({ type: "sleep"; data?: Partial<SleepEventData> } & CreateBaseEventInput)
-  | ({ type: "training"; data?: { workouts?: Workout[] } } & CreateBaseEventInput)
-  | ({ type: "food"; inputText: string } & CreateBaseEventInput);
-
-export type NonFoodCreateEventInput = Exclude<CreateEventInput, { type: "food" }>;

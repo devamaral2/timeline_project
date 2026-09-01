@@ -6,6 +6,7 @@
 export type * from "./events/contracts/create-event.input";
 export type * from "./events/contracts/daily-overview.dto";
 export type * from "./events/contracts/event-detail.dto";
+export type * from "./events/contracts/event-item.dto";
 export type * from "./events/contracts/tag-suggestion.dto";
 export type * from "./events/contracts/timeline-event-card.dto";
 export type * from "./events/contracts/timeline-event-page.dto";
