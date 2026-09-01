@@ -22,7 +22,8 @@
   "dependencies": {
     "@repo/entities": "workspace:*",
     "drizzle-orm": "^0.45.2",
-    "pg": "^8.23.0"
+    "pg": "^8.23.0",
+    "ulid": "^3.0.2"
   },
   "peerDependencies": {
     "@nestjs/common": "^11.0.0",

@@ -267,6 +267,9 @@ importers:
       pg:
         specifier: ^8.23.0
         version: 8.23.0
+      ulid:
+        specifier: ^3.0.2
+        version: 3.0.2
     devDependencies:
       '@nestjs/common':
         specifier: ^11.0.0

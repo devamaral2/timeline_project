@@ -5,6 +5,13 @@ import {
 } from "../testing/postgres-test-context";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { resolve } from "node:path";
+import {
+  Event,
+  EventItem,
+  EventOwnershipError,
+  EventRevisionConflictError,
+} from "@repo/entities";
+import { PostgresEventRepository } from "../events/repositories/postgres-event.repository";
 
 const RUN_INTEGRATION = process.env.RUN_POSTGRES_INTEGRATION === "1";
 
@@ -192,5 +199,177 @@ describe.runIf(RUN_INTEGRATION)("PostgreSQL schema", () => {
         row.indexdef.includes("gin") && row.indexdef.includes("data"),
     );
     expect(ginOnData).toHaveLength(0);
+  });
+});
+
+describe.runIf(RUN_INTEGRATION)("PostgresEventRepository", () => {
+  let ctx: PostgresTestContext;
+  let repository: PostgresEventRepository;
+
+  beforeEach(async () => {
+    if (!ctx) {
+      ctx = await createPostgresTestContext();
+      repository = new PostgresEventRepository(ctx.db);
+    } else {
+      await ctx.reset();
+    }
+  });
+
+  afterAll(async () => {
+    if (ctx) await ctx.stop();
+  });
+
+  function routine(overrides: Partial<Parameters<typeof EventItem.create>[0]> = {}) {
+    return EventItem.create({
+      position: 0,
+      type: "routine",
+      schemaVersion: 1,
+      isPrimary: true,
+      data: {},
+      ...overrides,
+    });
+  }
+
+  function newEvent(overrides: Partial<Parameters<typeof Event.create>[0]> = {}) {
+    return Event.create({
+      userId: "user-1",
+      name: "Planejamento",
+      description: "",
+      startedAt: new Date("2026-08-31T12:00:00.000Z"),
+      tags: ["trabalho"],
+      interruptions: [],
+      items: [routine()],
+      ...overrides,
+    });
+  }
+
+  test("saves and reads back an aggregate", async () => {
+    const event = newEvent();
+    await repository.save(event);
+
+    const found = await repository.findById(event.id);
+    expect(found?.id).toBe(event.id);
+    expect(found?.tags).toEqual(["trabalho"]);
+    expect(found?.items[0].id).toBe(event.items[0].id);
+  });
+
+  test("rejects an update with a stale expected revision", async () => {
+    const event = newEvent();
+    await repository.save(event);
+    const changed = event.revise({ name: "Novo nome" });
+
+    await expect(
+      repository.update(changed, "user-1", event.revision + 1),
+    ).rejects.toBeInstanceOf(EventRevisionConflictError);
+  });
+
+  test("rejects an update from a different owner", async () => {
+    const event = newEvent();
+    await repository.save(event);
+    const changed = event.revise({ name: "Novo nome" });
+
+    await expect(
+      repository.update(changed, "user-2", event.revision),
+    ).rejects.toBeInstanceOf(EventOwnershipError);
+  });
+
+  test("rolls back the parent insert when a child insert fails", async () => {
+    const shared = routine();
+    const first = newEvent({ items: [shared] });
+    await repository.save(first);
+
+    const collidingItem = routine({ id: shared.id, position: 0 });
+    const second = newEvent({ items: [collidingItem] });
+
+    await expect(repository.save(second)).rejects.toThrow();
+    expect(await repository.findById(second.id)).toBeNull();
+  });
+
+  test("cascades deletes to items, interruptions and tag links", async () => {
+    const event = newEvent();
+    await repository.save(event);
+
+    await repository.delete(event.id, "user-1");
+
+    expect(await repository.findById(event.id)).toBeNull();
+    const { rows } = await ctx.pool.query("SELECT 1 FROM event_items WHERE event_id = $1", [
+      event.id,
+    ]);
+    expect(rows).toHaveLength(0);
+  });
+
+  test("replaces items on update while incrementing the revision exactly once", async () => {
+    const original = routine();
+    const event = newEvent({ items: [original] });
+    await repository.save(event);
+
+    const replacement = routine({ position: 0, id: undefined });
+    const changed = event.revise({ items: [replacement] });
+    await repository.update(changed, "user-1", event.revision);
+
+    const found = await repository.findById(event.id);
+    expect(found?.revision).toBe(event.revision + 1);
+    expect(found?.items.map((item) => item.id)).toEqual([replacement.id]);
+  });
+
+  test("does not duplicate a tag saved twice and keeps its original created_at", async () => {
+    const first = newEvent({ tags: ["treino"] });
+    await repository.save(first);
+    const [{ id: firstTagId, created_at: createdAt }] = (
+      await ctx.pool.query("SELECT id, created_at FROM tags WHERE user_id = 'user-1'")
+    ).rows;
+
+    const second = newEvent({ id: undefined, tags: ["treino"] });
+    await repository.save(second);
+
+    const tagRows = (await ctx.pool.query("SELECT id, created_at FROM tags WHERE user_id = 'user-1'"))
+      .rows;
+    expect(tagRows).toHaveLength(1);
+    expect(tagRows[0].id).toBe(firstTagId);
+    expect(new Date(tagRows[0].created_at)).toEqual(new Date(createdAt));
+  });
+
+  test("lets two different users share the same tag name", async () => {
+    await repository.save(newEvent({ tags: ["treino"] }));
+    await repository.save(newEvent({ userId: "user-2", tags: ["treino"] }));
+
+    const { rows } = await ctx.pool.query("SELECT DISTINCT user_id FROM tags WHERE name = 'treino'");
+    expect(rows).toHaveLength(2);
+  });
+
+  test("closes the previous open event when saving a new one", async () => {
+    const opened = newEvent({ startedAt: new Date("2026-08-31T09:00:00.000Z") });
+    await repository.save(opened);
+
+    const next = newEvent({ startedAt: new Date("2026-08-31T10:00:00.000Z") });
+    await repository.saveClosingLatestOpen(next, new Date("2026-08-31T09:30:00.000Z"));
+
+    const closed = await repository.findById(opened.id);
+    expect(closed?.finishedAt).toEqual(new Date("2026-08-31T09:30:00.000Z"));
+    expect(closed?.revision).toBe(opened.revision + 1);
+  });
+
+  test("leaves the previous event open when closing it would finish before it started", async () => {
+    const opened = newEvent({ startedAt: new Date("2026-08-31T09:00:00.000Z") });
+    await repository.save(opened);
+
+    const next = newEvent({ startedAt: new Date("2026-08-31T10:00:00.000Z") });
+    await repository.saveClosingLatestOpen(next, new Date("2026-08-31T08:00:00.000Z"));
+
+    const stillOpen = await repository.findById(opened.id);
+    expect(stillOpen?.finishedAt).toBeUndefined();
+  });
+
+  test("findLatestOpenByUserId ignores an older open event behind a more recent closed one", async () => {
+    const olderOpen = newEvent({ startedAt: new Date("2026-08-31T08:00:00.000Z") });
+    await repository.save(olderOpen);
+
+    const recentClosed = newEvent({
+      startedAt: new Date("2026-08-31T09:00:00.000Z"),
+      finishedAt: new Date("2026-08-31T09:30:00.000Z"),
+    });
+    await repository.save(recentClosed);
+
+    expect(await repository.findLatestOpenByUserId("user-1")).toBeNull();
   });
 });
