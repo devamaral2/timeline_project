@@ -20,6 +20,8 @@ import { PreparePassword } from './credentials/prepare-password';
 import { TwilioVerifyGateway } from './mfa/twilio-verify.gateway';
 import { FakeOtpVerificationGateway } from './mfa/fake-otp-verification.gateway';
 import { OTP_VERIFICATION_GATEWAY } from './mfa/otp-verification.gateway';
+import { PostgresAuthenticationRepository } from './mfa/postgres-authentication.repository';
+import { StartInviteAcceptanceUseCase } from './authentication/usecases/start-invite-acceptance.usecase';
 
 export const RUNTIME_ENV = Symbol('RUNTIME_ENV');
 
@@ -40,7 +42,9 @@ export class AppModule {
         { provide: PreparePassword, inject: [HttpPwnedPasswordsGateway, ScryptPasswordHasher], useFactory: (pwned: HttpPwnedPasswordsGateway, hasher: ScryptPasswordHasher) => new PreparePassword(pwned, hasher) },
         { provide: OTP_VERIFICATION_GATEWAY, inject: [RUNTIME_ENV], useFactory: (env: RuntimeEnv) => env.otpProvider === 'fake' ? new FakeOtpVerificationGateway() : new TwilioVerifyGateway({ accountSid: env.twilioAccountSid!, authToken: env.twilioAuthToken!, verifyServiceSid: env.twilioVerifyServiceSid!, timeoutMs: env.twilioTimeoutMs, whatsappEnabled: env.twilioWhatsappEnabled }) },
         { provide: PostgresInviteRepository, inject: [AUTH_DATABASE], useFactory: (db: import('./db/client').AuthDatabase) => new PostgresInviteRepository(db) },
+        { provide: PostgresAuthenticationRepository, inject: [AUTH_DATABASE], useFactory: (db: import('./db/client').AuthDatabase) => new PostgresAuthenticationRepository(db) },
         { provide: InspectInviteUseCase, inject: [PostgresInviteRepository, Clock], useFactory: (invites: PostgresInviteRepository, clock: Clock) => new InspectInviteUseCase(invites, clock) },
+        { provide: StartInviteAcceptanceUseCase, inject: [PostgresInviteRepository, PreparePassword, OTP_VERIFICATION_GATEWAY, PostgresAuthenticationRepository, Clock, SecretGenerator], useFactory: (invites:PostgresInviteRepository,prepare:PreparePassword,otp:import('./mfa/otp-verification.gateway').OtpVerificationGateway,repo:PostgresAuthenticationRepository,clock:Clock,secrets:SecretGenerator) => new StartInviteAcceptanceUseCase(invites,prepare,otp,repo,clock,secrets) },
         {
           provide: PostgresSigningKeyRepository,
           inject: [AUTH_DATABASE],
