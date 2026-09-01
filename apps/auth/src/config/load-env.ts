@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import type { EnvSource } from "./env";
 
 function parseEnvFile(file: string): Record<string, string> {
@@ -18,6 +18,17 @@ function parseEnvFile(file: string): Record<string, string> {
     entries[key] = value;
   }
   return entries;
+}
+
+/** Resolves the workspace root even when pnpm starts auth from apps/auth. */
+export function findMonorepoRoot(fromDirectory: string): string {
+  let directory = resolve(fromDirectory);
+  while (!existsSync(resolve(directory, "pnpm-workspace.yaml"))) {
+    const parent = dirname(directory);
+    if (parent === directory) throw new Error("Unable to find pnpm workspace root");
+    directory = parent;
+  }
+  return directory;
 }
 
 /** Shell values win over .env.local, which wins over .env. */

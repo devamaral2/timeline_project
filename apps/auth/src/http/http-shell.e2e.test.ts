@@ -37,6 +37,16 @@ describe("HTTP shell", () => {
     expect(await unknownMethod.json()).toEqual({ code: "not_found" });
   });
 
+  it("adds a valid Retry-After header to a generic 429", async () => {
+    testApp = await createTestApp();
+
+    const response = await fetch(`${testApp.url}/testing/generic-rate-limit`);
+
+    expect(response.status).toBe(429);
+    expect(await response.text()).toBe("");
+    expect(response.headers.get("retry-after")).toMatch(/^[1-9]\d*$/);
+  });
+
   it("takes the peer IP from the socket instead of X-Forwarded-For", async () => {
     testApp = await createTestApp();
 

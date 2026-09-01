@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { randomBytes } from "node:crypto";
@@ -10,6 +10,7 @@ import {
   loadRootEnv,
   type EnvSource,
 } from "./env";
+import { findMonorepoRoot } from "./load-env";
 
 const kek = randomBytes(32).toString("base64url");
 const base = (overrides: EnvSource = {}): EnvSource => ({
@@ -41,6 +42,25 @@ describe("auth environment", () => {
 
     expect(loaded.AUTH_PORT).toBe("4002");
     expect(loaded.AUTH_DATABASE_URL).toBe("postgres://local");
+  });
+
+  it("finds root .env files when the auth process starts from apps/auth", () => {
+    const root = mkdtempSync(join(tmpdir(), "auth-monorepo-"));
+    temporaryDirectories.push(root);
+    const authDirectory = join(root, "apps", "auth");
+    mkdirSync(authDirectory, { recursive: true });
+    writeFileSync(join(root, "pnpm-workspace.yaml"), "packages: []\n");
+    writeFileSync(join(root, ".env"), "AUTH_DATABASE_URL=postgres://root\n");
+    const originalCwd = process.cwd();
+
+    try {
+      process.chdir(authDirectory);
+      const loaded = loadRootEnv(findMonorepoRoot(process.cwd()), {});
+
+      expect(loaded.AUTH_DATABASE_URL).toBe("postgres://root");
+    } finally {
+      process.chdir(originalCwd);
+    }
   });
 
   it("uses the documented runtime defaults and fixed attempt window", () => {

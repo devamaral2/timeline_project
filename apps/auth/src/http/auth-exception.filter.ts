@@ -46,7 +46,11 @@ export class AuthExceptionFilter implements ExceptionFilter {
     const status = this.statusOf(exception);
     if (status === HttpStatus.BAD_REQUEST) return void response.status(status).json({ code: "invalid_request" });
     if (status === HttpStatus.PAYLOAD_TOO_LARGE) return void response.status(status).json({ code: "payload_too_large" });
-    if (status === HttpStatus.UNAUTHORIZED || status === HttpStatus.FORBIDDEN || status === HttpStatus.TOO_MANY_REQUESTS) {
+    if (status === HttpStatus.TOO_MANY_REQUESTS) {
+      response.setHeader("Retry-After", "1");
+      return void response.status(status).end();
+    }
+    if (status === HttpStatus.UNAUTHORIZED || status === HttpStatus.FORBIDDEN) {
       return void response.status(status).end();
     }
     if (status === HttpStatus.NOT_FOUND) return void response.status(status).json({ code: "not_found" });

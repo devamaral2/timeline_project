@@ -1,4 +1,4 @@
-import { Controller, Get, Req, type INestApplication } from "@nestjs/common";
+import { Controller, Get, HttpException, HttpStatus, Req, type INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import type { Request } from "express";
 import { randomBytes } from "node:crypto";
@@ -11,6 +11,11 @@ class TestContextController {
   @Get("request-context")
   requestContext(@Req() request: Request) {
     return request.context;
+  }
+
+  @Get("generic-rate-limit")
+  genericRateLimit(): never {
+    throw new HttpException("rate limited", HttpStatus.TOO_MANY_REQUESTS);
   }
 }
 
