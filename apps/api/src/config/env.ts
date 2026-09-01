@@ -44,3 +44,17 @@ export function getServerEnv(source?: Record<string, string | undefined>): Serve
 export function isLoopbackHost(host: string): boolean {
   return host === "127.0.0.1" || host === "localhost" || host === "::1";
 }
+
+const databaseSchema = z.object({
+  DATABASE_URL: z.string().min(1),
+});
+
+export type DatabaseEnv = z.infer<typeof databaseSchema>;
+
+export function getDatabaseEnv(source?: Record<string, string | undefined>): DatabaseEnv {
+  const read = (key: keyof DatabaseEnv) => orUndefined(source?.[key] ?? process.env[key]);
+
+  return databaseSchema.parse({
+    DATABASE_URL: read("DATABASE_URL"),
+  });
+}
