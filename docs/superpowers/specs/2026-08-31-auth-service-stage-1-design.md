@@ -1,6 +1,6 @@
 # Serviço de autenticação — Etapa 1
 
-**Status:** desenho consolidado para revisão em 31 de agosto de 2026
+**Status:** aprovado em 31 de agosto de 2026
 
 **Documento de origem:** `apps/auth/PLANO.md`
 
