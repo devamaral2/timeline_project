@@ -1,0 +1,3 @@
+import type { OtpVerificationGateway } from "./otp-verification.gateway";
+import type { MfaChannel } from "./mfa-challenge";
+export class FakeOtpVerificationGateway implements OtpVerificationGateway { private readonly challenges=new Map<string,MfaChannel>(); private next=0; async start(input:{phoneE164:string;channel:MfaChannel}){const providerChallengeId=`fake-${++this.next}`;this.challenges.set(providerChallengeId,input.channel);return{providerChallengeId,reportedChannel:input.channel};} async check(input:{providerChallengeId:string;code:string}){return{approved:this.challenges.has(input.providerChallengeId)&&input.code==="000000",reportedChannel:this.challenges.get(input.providerChallengeId)??"sms"};} }

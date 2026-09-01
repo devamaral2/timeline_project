@@ -17,6 +17,9 @@ import { InspectInviteUseCase } from './invites/usecases/inspect-invite.usecase'
 import { ScryptPasswordHasher } from './credentials/scrypt-password-hasher';
 import { HttpPwnedPasswordsGateway } from './credentials/http-pwned-passwords.gateway';
 import { PreparePassword } from './credentials/prepare-password';
+import { TwilioVerifyGateway } from './mfa/twilio-verify.gateway';
+import { FakeOtpVerificationGateway } from './mfa/fake-otp-verification.gateway';
+import { OTP_VERIFICATION_GATEWAY } from './mfa/otp-verification.gateway';
 
 export const RUNTIME_ENV = Symbol('RUNTIME_ENV');
 
@@ -35,6 +38,7 @@ export class AppModule {
         { provide: ScryptPasswordHasher, useClass: ScryptPasswordHasher },
         { provide: HttpPwnedPasswordsGateway, inject: [RUNTIME_ENV], useFactory: (env: RuntimeEnv) => new HttpPwnedPasswordsGateway(env.passwordBlocklistTimeoutMs) },
         { provide: PreparePassword, inject: [HttpPwnedPasswordsGateway, ScryptPasswordHasher], useFactory: (pwned: HttpPwnedPasswordsGateway, hasher: ScryptPasswordHasher) => new PreparePassword(pwned, hasher) },
+        { provide: OTP_VERIFICATION_GATEWAY, inject: [RUNTIME_ENV], useFactory: (env: RuntimeEnv) => env.otpProvider === 'fake' ? new FakeOtpVerificationGateway() : new TwilioVerifyGateway({ accountSid: env.twilioAccountSid!, authToken: env.twilioAuthToken!, verifyServiceSid: env.twilioVerifyServiceSid!, timeoutMs: env.twilioTimeoutMs, whatsappEnabled: env.twilioWhatsappEnabled }) },
         { provide: PostgresInviteRepository, inject: [AUTH_DATABASE], useFactory: (db: import('./db/client').AuthDatabase) => new PostgresInviteRepository(db) },
         { provide: InspectInviteUseCase, inject: [PostgresInviteRepository, Clock], useFactory: (invites: PostgresInviteRepository, clock: Clock) => new InspectInviteUseCase(invites, clock) },
         {
