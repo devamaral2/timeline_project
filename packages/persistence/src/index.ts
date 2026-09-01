@@ -14,3 +14,8 @@ export * from "./catalog/mappers/food-row.mapper";
 export * from "./catalog/mappers/meal-row.mapper";
 export * from "./catalog/repositories/postgres-food.repository";
 export * from "./catalog/repositories/postgres-meal.repository";
+export * from "./events/queries/timeline-cursor";
+export * from "./events/queries/postgres-timeline-event.query";
+export * from "./events/queries/postgres-daily-overview.query";
+export * from "./events/repositories/postgres-tag.repository";
+export * from "./catalog/postgres-workout.catalog";

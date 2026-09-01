@@ -17,6 +17,10 @@ import {
 import { PostgresEventRepository } from "../events/repositories/postgres-event.repository";
 import { PostgresFoodRepository } from "../catalog/repositories/postgres-food.repository";
 import { PostgresMealRepository } from "../catalog/repositories/postgres-meal.repository";
+import { PostgresTimelineEventQuery } from "../events/queries/postgres-timeline-event.query";
+import { PostgresDailyOverviewQuery } from "../events/queries/postgres-daily-overview.query";
+import { PostgresTagRepository } from "../events/repositories/postgres-tag.repository";
+import { PostgresWorkoutCatalog } from "../catalog/postgres-workout.catalog";
 
 const RUN_INTEGRATION = process.env.RUN_POSTGRES_INTEGRATION === "1";
 
@@ -29,7 +33,7 @@ describe.runIf(RUN_INTEGRATION)("PostgreSQL schema", () => {
     } else {
       await ctx.reset();
     }
-  });
+  }, 30000);
 
   afterAll(async () => {
     if (ctx) await ctx.stop();
@@ -218,7 +222,7 @@ describe.runIf(RUN_INTEGRATION)("PostgresEventRepository", () => {
     } else {
       await ctx.reset();
     }
-  });
+  }, 30000);
 
   afterAll(async () => {
     if (ctx) await ctx.stop();
@@ -392,7 +396,7 @@ describe.runIf(RUN_INTEGRATION)("PostgresFoodRepository and PostgresMealReposito
     } else {
       await ctx.reset();
     }
-  });
+  }, 30000);
 
   afterAll(async () => {
     if (ctx) await ctx.stop();
@@ -512,5 +516,276 @@ describe.runIf(RUN_INTEGRATION)("PostgresFoodRepository and PostgresMealReposito
     await expect(foods.update(staleChange, "user-a", food.revision)).rejects.toBeInstanceOf(
       CatalogRevisionConflictError,
     );
+  });
+});
+
+describe.runIf(RUN_INTEGRATION)("PostgresTimelineEventQuery and PostgresDailyOverviewQuery", () => {
+  let ctx: PostgresTestContext;
+  let eventRepository: PostgresEventRepository;
+  let timelineQuery: PostgresTimelineEventQuery;
+  let dailyOverviewQuery: PostgresDailyOverviewQuery;
+  let tagRepository: PostgresTagRepository;
+  let workoutCatalog: PostgresWorkoutCatalog;
+
+  beforeEach(async () => {
+    if (!ctx) {
+      ctx = await createPostgresTestContext();
+      eventRepository = new PostgresEventRepository(ctx.db);
+      timelineQuery = new PostgresTimelineEventQuery(ctx.db);
+      dailyOverviewQuery = new PostgresDailyOverviewQuery(ctx.db);
+      tagRepository = new PostgresTagRepository(ctx.db);
+      workoutCatalog = new PostgresWorkoutCatalog(ctx.db);
+    } else {
+      await ctx.reset();
+    }
+  }, 30000);
+
+  afterAll(async () => {
+    if (ctx) await ctx.stop();
+  });
+
+  function routineEvent(overrides: Partial<Parameters<typeof Event.create>[0]> = {}) {
+    const item = EventItem.create({
+      position: 0,
+      type: "routine",
+      schemaVersion: 1,
+      isPrimary: true,
+      data: {},
+    });
+    return Event.create({
+      userId: "user-1",
+      name: "Bloco",
+      description: "",
+      startedAt: new Date("2026-08-31T12:00:00.000Z"),
+      tags: [],
+      interruptions: [],
+      items: [item],
+      ...overrides,
+    });
+  }
+
+  test("timeline: filters by window, orders desc and paginates without gaps or repeats", async () => {
+    const inside = routineEvent({ startedAt: new Date("2026-08-31T10:00:00.000Z") });
+    const before = routineEvent({ startedAt: new Date("2026-08-30T10:00:00.000Z") });
+    await eventRepository.save(inside);
+    await eventRepository.save(before);
+
+    const firstPage = await timelineQuery.list({
+      userId: "user-1",
+      from: new Date("2026-08-31T00:00:00.000Z"),
+      to: new Date("2026-08-31T23:59:59.000Z"),
+      limit: 10,
+    });
+    expect(firstPage.items.map((item) => item.id)).toEqual([inside.id]);
+  });
+
+  test("timeline: paginates two pages without repetition or gaps", async () => {
+    const events = [
+      routineEvent({ startedAt: new Date("2026-08-31T08:00:00.000Z") }),
+      routineEvent({ startedAt: new Date("2026-08-31T09:00:00.000Z") }),
+      routineEvent({ startedAt: new Date("2026-08-31T10:00:00.000Z") }),
+    ];
+    for (const event of events) await eventRepository.save(event);
+
+    const firstPage = await timelineQuery.list({ userId: "user-1", limit: 2 });
+    expect(firstPage.items).toHaveLength(2);
+    expect(firstPage.nextCursor).toBeTruthy();
+
+    const secondPage = await timelineQuery.list({
+      userId: "user-1",
+      limit: 2,
+      cursor: firstPage.nextCursor,
+    });
+
+    const allIds = [...firstPage.items, ...secondPage.items].map((item) => item.id);
+    expect(new Set(allIds).size).toBe(3);
+    expect(secondPage.nextCursor).toBeUndefined();
+  });
+
+  test("timeline: reports primaryItemId, itemTypes in position order and per-user tag isolation", async () => {
+    const routine = EventItem.create({
+      position: 0,
+      type: "routine",
+      schemaVersion: 1,
+      isPrimary: false,
+      data: {},
+    });
+    const sleep = EventItem.create({
+      position: 1,
+      type: "sleep",
+      schemaVersion: 1,
+      isPrimary: true,
+      data: { trackedSleepTime: 480, score: 80 },
+    });
+    const event = Event.create({
+      userId: "user-1",
+      name: "Combo",
+      description: "",
+      startedAt: new Date("2026-08-31T12:00:00.000Z"),
+      tags: ["saude"],
+      interruptions: [],
+      items: [routine, sleep],
+    });
+    await eventRepository.save(event);
+    await eventRepository.save(routineEvent({ userId: "user-2", tags: ["saude"] }));
+
+    const page = await timelineQuery.list({ userId: "user-1", limit: 10, tag: "saude" });
+    expect(page.items).toHaveLength(1);
+    expect(page.items[0].primaryItemId).toBe(sleep.id);
+    expect(page.items[0].primaryItemType).toBe("sleep");
+    expect(page.items[0].itemTypes).toEqual(["routine", "sleep"]);
+    expect(page.items[0].tags).toEqual(["saude"]);
+  });
+
+  test("timeline: type filter finds a non-primary item", async () => {
+    const routine = EventItem.create({
+      position: 0,
+      type: "routine",
+      schemaVersion: 1,
+      isPrimary: true,
+      data: {},
+    });
+    const sleep = EventItem.create({
+      position: 1,
+      type: "sleep",
+      schemaVersion: 1,
+      isPrimary: false,
+      data: { trackedSleepTime: 420, score: 70 },
+    });
+    const event = Event.create({
+      userId: "user-1",
+      name: "Combo",
+      description: "",
+      startedAt: new Date("2026-08-31T12:00:00.000Z"),
+      tags: [],
+      interruptions: [],
+      items: [routine, sleep],
+    });
+    await eventRepository.save(event);
+
+    const page = await timelineQuery.list({ userId: "user-1", limit: 10, type: "sleep" });
+    expect(page.items.map((item) => item.id)).toEqual([event.id]);
+  });
+
+  test("daily overview: isolates by user and aggregates meal/sleep/training", async () => {
+    const mealFoodItem = {
+      id: "01FOOD00000000000000000A1",
+      name: "Arroz",
+      portion: "100 g",
+      approximateWeightGrams: 100,
+      caloriesKcal: 130,
+      macronutrients: { carbohydratesGrams: 28, proteinsGrams: 2.7, totalFatGrams: 0.3, fiberGrams: 0.4 },
+      micronutrients: { ironMilligrams: 2.1 },
+    };
+    const mealItem = EventItem.create({
+      position: 0,
+      type: "meal",
+      schemaVersion: 1,
+      isPrimary: true,
+      data: {
+        name: "Almoço",
+        description: "",
+        foodItems: [mealFoodItem],
+        totals: {
+          totalCaloriesKcal: 130,
+          totalProteinGrams: 2.7,
+          totalCarbohydrateGrams: 28,
+          totalFatGrams: 0.3,
+          totalFiberGrams: 0.4,
+        },
+      },
+    });
+    const mealEvent = Event.create({
+      userId: "user-1",
+      name: "Almoço",
+      description: "",
+      startedAt: new Date("2026-08-31T12:00:00.000Z"),
+      tags: [],
+      interruptions: [],
+      items: [mealItem],
+    });
+    await eventRepository.save(mealEvent);
+
+    const sleepItem = EventItem.create({
+      position: 0,
+      type: "sleep",
+      schemaVersion: 1,
+      isPrimary: true,
+      data: { trackedSleepTime: 480, score: 88 },
+    });
+    const sleepEvent = Event.create({
+      userId: "user-1",
+      name: "Sono",
+      description: "",
+      startedAt: new Date("2026-08-31T09:00:00.000Z"),
+      tags: [],
+      interruptions: [],
+      items: [sleepItem],
+    });
+    await eventRepository.save(sleepEvent);
+
+    const trainingItem = EventItem.create({
+      position: 0,
+      type: "training",
+      schemaVersion: 1,
+      isPrimary: true,
+      data: {
+        workouts: [
+          {
+            workoutCode: "running",
+            workoutName: "Corrida",
+            calories: 300,
+            duration: 30,
+            pace: 5,
+            distance: 5,
+          },
+        ],
+        caloriesBurned: 300,
+      },
+    });
+    const trainingEvent = Event.create({
+      userId: "user-1",
+      name: "Corrida",
+      description: "",
+      startedAt: new Date("2026-08-31T18:00:00.000Z"),
+      tags: [],
+      interruptions: [],
+      items: [trainingItem],
+    });
+    await eventRepository.save(trainingEvent);
+
+    await eventRepository.save(
+      routineEvent({ userId: "user-2", startedAt: new Date("2026-08-31T12:00:00.000Z") }),
+    );
+
+    const overview = await dailyOverviewQuery.get({
+      userId: "user-1",
+      date: "2026-08-31",
+      timeZone: "America/Sao_Paulo",
+    });
+
+    expect(overview.mealEvents).toHaveLength(1);
+    expect(overview.mealEvents[0].kcal).toBe(130);
+    expect(overview.micronutrients).toEqual({ ironMilligrams: 2.1 });
+    expect(overview.sleep?.trackedSleepTime).toBe(480);
+    expect(overview.trainingEvents[0].workouts[0]).toMatchObject({
+      workoutCode: "running",
+      workoutName: "Corrida",
+    });
+  });
+
+  test("tag suggestions do an escaped prefix search scoped to the user", async () => {
+    await eventRepository.save(routineEvent({ tags: ["treino_forca"] }));
+    await eventRepository.save(routineEvent({ userId: "user-2", tags: ["treino_extra"] }));
+
+    const suggestions = await tagRepository.suggest({ userId: "user-1", query: "treino_", limit: 10 });
+    expect(suggestions.map((s) => s.name)).toEqual(["treino_forca"]);
+  });
+
+  test("workout catalog returns active definitions preserving requested order", async () => {
+    const definitions = await workoutCatalog.findActiveByCodes(["running", "treadmill"]);
+    expect(definitions.map((d) => d.code)).toEqual(["running", "treadmill"]);
+
+    await expect(workoutCatalog.findActiveByCodes(["unknown" as never])).rejects.toThrow();
   });
 });

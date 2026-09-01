@@ -4,7 +4,7 @@ export interface DailyOverviewDto {
   caloriesConsumed: number;
   macros: { protein: number; carbohydrate: number; fat: number };
   micronutrients: Record<string, number>;
-  foodEvents: Array<{
+  mealEvents: Array<{
     id: string;
     name: string;
     description: string;
@@ -24,20 +24,23 @@ export interface DailyOverviewDto {
     finishedAt?: string;
     workouts: Array<
       | {
-          type: "treadmill" | "running";
+          workoutCode: "treadmill" | "running";
+          workoutName: string;
           calories: number;
           duration: number;
           pace: number;
           distance: number;
         }
       | {
-          type: "weightlifting";
+          workoutCode: "weightlifting";
+          workoutName: string;
           calories: number;
           duration: number;
           sets: Array<{ exercise: string; repetitions: number; weight: number }>;
         }
       | {
-          type: "free";
+          workoutCode: "free";
+          workoutName: string;
           calories: number;
           duration: number;
         }

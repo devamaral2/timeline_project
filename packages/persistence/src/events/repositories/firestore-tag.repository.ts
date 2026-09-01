@@ -1,8 +1,8 @@
-import type { TagRepository, TagSuggestionDto } from "@repo/entities/ports";
+import type { LegacyTagRepository, TagSuggestionDto } from "@repo/entities/ports";
 import type { TagDao } from "../daos/admin-firestore-tag.dao";
 import { TagDocumentMapper } from "../mappers/tag-document.mapper";
 
-export class FirestoreTagRepository implements TagRepository {
+export class FirestoreTagRepository implements LegacyTagRepository {
   constructor(private readonly tagDao: TagDao) {}
 
   async upsertMany(tags: string[], createdBy: string): Promise<void> {
@@ -13,7 +13,7 @@ export class FirestoreTagRepository implements TagRepository {
     );
   }
 
-  async suggest(params: Parameters<TagRepository["suggest"]>[0]): Promise<TagSuggestionDto[]> {
+  async suggest(params: Parameters<LegacyTagRepository["suggest"]>[0]): Promise<TagSuggestionDto[]> {
     const documents = await this.tagDao.suggest(params.query, params.limit);
     return documents.map(TagDocumentMapper.toSuggestion);
   }

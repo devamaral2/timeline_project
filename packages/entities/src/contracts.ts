@@ -8,6 +8,7 @@ export type * from "./events/contracts/daily-overview.dto";
 export type * from "./events/contracts/event-detail.dto";
 export type * from "./events/contracts/tag-suggestion.dto";
 export type * from "./events/contracts/timeline-event-card.dto";
+export type * from "./events/contracts/timeline-event-page.dto";
 export type * from "./events/contracts/update-event.input";
 
 // Tipos de dados de dominio que os DTOs referenciam, reexportados para que o
