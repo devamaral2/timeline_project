@@ -9,12 +9,16 @@ import {
 } from "@nestjs/common";
 import type { Response } from "express";
 import {
+  EventNotFoundError,
+  EventOwnershipError,
+  EventRevisionConflictError,
+  EventValidationError,
+} from "@repo/entities";
+import {
   EventAgentUndecidedError,
   InvalidInputError,
   LlmUnavailableError,
 } from "../events/errors/event-agent.errors";
-
-const OWNERSHIP_ERROR = "Only the event owner can modify it";
 
 /**
  * Traduz os erros de dominio para status HTTP. Substitui o `mutationErrorResponse`
@@ -33,7 +37,7 @@ export class DomainExceptionFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost): void {
     const response = host.switchToHttp().getResponse<Response>();
     const message = exception instanceof Error ? exception.message : "Invalid request";
-    const status = this.statusFor(exception, message);
+    const status = this.statusFor(exception);
 
     if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
       this.logger.error(message, exception instanceof Error ? exception.stack : undefined);
@@ -44,12 +48,15 @@ export class DomainExceptionFilter implements ExceptionFilter {
     response.status(status).json({ error: message });
   }
 
-  private statusFor(exception: unknown, message: string): number {
+  private statusFor(exception: unknown): number {
     if (exception instanceof HttpException) return exception.getStatus();
     if (exception instanceof InvalidInputError) return HttpStatus.BAD_REQUEST;
     if (exception instanceof EventAgentUndecidedError) return HttpStatus.UNPROCESSABLE_ENTITY;
     if (exception instanceof LlmUnavailableError) return HttpStatus.BAD_GATEWAY;
-    if (message === OWNERSHIP_ERROR) return HttpStatus.FORBIDDEN;
+    if (exception instanceof EventValidationError) return HttpStatus.BAD_REQUEST;
+    if (exception instanceof EventOwnershipError) return HttpStatus.FORBIDDEN;
+    if (exception instanceof EventNotFoundError) return HttpStatus.NOT_FOUND;
+    if (exception instanceof EventRevisionConflictError) return HttpStatus.CONFLICT;
     return HttpStatus.INTERNAL_SERVER_ERROR;
   }
 }

@@ -3,7 +3,7 @@ import { Logger } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
 import { DomainExceptionFilter } from "./common/domain-exception.filter";
-import { getServerEnv, isLoopbackHost } from "./config/env";
+import { getDatabaseEnv, getServerEnv, isLoopbackHost } from "./config/env";
 import { loadRootEnv } from "./config/load-env";
 
 /**
@@ -19,9 +19,14 @@ async function bootstrap(): Promise<void> {
   // chaves do OpenRouter no construtor, durante a criacao dos providers.
   loadRootEnv();
 
+  // DATABASE_URL passa a ser obrigatorio a partir daqui: falhar cedo, antes de
+  // criar o Nest, evita subir o processo so para falhar no primeiro request.
+  getDatabaseEnv();
+
   const { PORT, API_HOST } = getServerEnv();
   const app = await NestFactory.create(AppModule);
   app.useGlobalFilters(new DomainExceptionFilter());
+  app.enableShutdownHooks();
 
   // O React Native nao aplica a politica de origem, entao o app no celular nao
   // precisa disso. Quem precisa e o alvo web do Expo, util para depurar telas

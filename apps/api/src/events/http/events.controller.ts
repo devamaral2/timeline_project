@@ -22,6 +22,7 @@ import type {
   UpdateEventInput,
 } from "@repo/entities/contracts";
 import { isEventPriority } from "@repo/entities";
+import { decodeTimelineCursor } from "@repo/persistence";
 import { CurrentUser } from "../../auth/current-user.decorator";
 import { FirebaseAuthGuard } from "../../auth/firebase-auth.guard";
 import type { AuthenticatedUser } from "../../auth/verify-firebase-token";
@@ -42,6 +43,8 @@ import { UpdateEventUseCase } from "../usecases/update-event.usecase";
 /** Mensagens que representam entrada invalida do cliente, e nao falha do modelo. */
 const TRANSCRIPT_BAD_REQUEST = new Set<string>([EMPTY_TRANSCRIPT_ERROR, LONG_TRANSCRIPT_ERROR]);
 
+const MAX_LIMIT = 100;
+
 /**
  * IMPORTANTE: o Nest casa rotas na ordem de declaracao. `daily`, `ai` e `voice`
  * precisam vir antes de `:eventId`, senao o parametro dinamico captura os tres.
@@ -61,8 +64,9 @@ export class EventsController {
   ) {}
 
   @Get()
+  @UseGuards(FirebaseAuthGuard)
   async list(
-    @Query("userId") userId?: string,
+    @CurrentUser() actor: AuthenticatedUser,
     @Query("from") from?: string,
     @Query("to") to?: string,
     @Query("type") type?: string,
@@ -70,18 +74,17 @@ export class EventsController {
     @Query("cursor") cursor?: string,
     @Query("limit") limit?: string,
   ): Promise<TimelineEventPageDto> {
-    if (!userId) throw new BadRequestException("Missing userId");
     if (from && Number.isNaN(new Date(from).getTime())) {
       throw new BadRequestException("Invalid from date");
     }
     if (to && Number.isNaN(new Date(to).getTime())) {
       throw new BadRequestException("Invalid to date");
     }
+    if (cursor !== undefined) assertValidCursor(cursor);
 
-    // TODO(Task 10): substituir por FirebaseAuthGuard + CurrentUser.
     return this.listTimelineEvents.execute(
-      { from, to, type, tag, cursor, limit: limit ? Number(limit) : undefined },
-      { userId },
+      { from, to, type, tag, cursor, limit: parseLimit(limit) },
+      actor,
     );
   }
 
@@ -97,14 +100,13 @@ export class EventsController {
   }
 
   @Get("daily")
+  @UseGuards(FirebaseAuthGuard)
   async daily(
+    @CurrentUser() actor: AuthenticatedUser,
     @Query("date") date?: string,
-    @Query("userId") userId?: string,
   ): Promise<DailyOverviewDto> {
     if (!date) throw new BadRequestException("date is required");
-    if (!userId) throw new BadRequestException("Missing userId");
-    // TODO(Task 10): substituir por FirebaseAuthGuard + CurrentUser.
-    return this.getDailyOverview.execute({ date }, { userId });
+    return this.getDailyOverview.execute({ date }, actor);
   }
 
   @Post("ai")
@@ -163,6 +165,7 @@ export class EventsController {
     @CurrentUser() actor: AuthenticatedUser,
   ): Promise<void> {
     assertValidMarks(body);
+    assertValidExpectedRevision(body);
     await this.updateEvent.execute({ ...body, eventId }, actor);
   }
 
@@ -189,4 +192,27 @@ function assertValidMarks(body: { missed?: unknown; priority?: unknown }): void 
   if (body?.priority !== undefined && !isEventPriority(body.priority)) {
     throw new BadRequestException("Invalid event priority");
   }
+}
+
+function assertValidExpectedRevision(body: { expectedRevision?: unknown }): void {
+  if (!Number.isInteger(body?.expectedRevision) || (body.expectedRevision as number) < 1) {
+    throw new BadRequestException("Invalid expectedRevision");
+  }
+}
+
+function assertValidCursor(cursor: string): void {
+  try {
+    decodeTimelineCursor(cursor);
+  } catch {
+    throw new BadRequestException("Invalid cursor");
+  }
+}
+
+function parseLimit(raw?: string): number | undefined {
+  if (raw === undefined) return undefined;
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value < 1 || value > MAX_LIMIT) {
+    throw new BadRequestException("Invalid limit");
+  }
+  return value;
 }

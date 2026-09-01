@@ -1,5 +1,5 @@
 import { getAuth } from "firebase-admin/auth";
-import { getAdminApp } from "@repo/persistence";
+import { getAdminApp } from "./firebase-admin-app";
 
 export interface AuthenticatedUser {
   userId: string;

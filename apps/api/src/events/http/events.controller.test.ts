@@ -1,6 +1,13 @@
 import { BadRequestException } from "@nestjs/common";
 import { expect, test, vi } from "vitest";
-import { Event, EventItem, calculateMealTotals } from "@repo/entities";
+import { encodeTimelineCursor } from "@repo/persistence";
+import {
+  Event,
+  EventItem,
+  EventOwnershipError,
+  EventRevisionConflictError,
+  calculateMealTotals,
+} from "@repo/entities";
 import type { AuthenticatedUser } from "../../auth/verify-firebase-token";
 import { InMemoryEventDatabase } from "../testing/in-memory-event-database";
 import { InMemoryEventRepository } from "../testing/in-memory-event.repository";
@@ -9,18 +16,20 @@ import { InMemoryTimelineEventQuery } from "../testing/in-memory-timeline-event.
 import { InMemoryWorkoutCatalog } from "../testing/in-memory-workout.catalog";
 import { StubMealParsingGateway } from "../testing/stub-meal-parsing.gateway";
 import { CreateEventUseCase } from "../usecases/create-event.usecase";
+import { DeleteEventUseCase } from "../usecases/delete-event.usecase";
 import { GetDailyOverviewUseCase } from "../usecases/get-daily-overview.usecase";
+import { GetEventUseCase } from "../usecases/get-event.usecase";
 import { ListTimelineEventsUseCase } from "../usecases/list-timeline-events.usecase";
 import { UpdateEventUseCase } from "../usecases/update-event.usecase";
 import { EventsController } from "./events.controller";
 
 const actor: AuthenticatedUser = { userId: "firebase-user-1" };
+const attacker: AuthenticatedUser = { userId: "attacker-1" };
 
 /**
  * O controller e instanciado direto: a autenticacao agora e responsabilidade do
  * `FirebaseAuthGuard`, entao aqui o ator ja chega resolvido, como o decorator
- * `@CurrentUser()` faria em producao — as rotas ainda sem guard (Task 10) usam
- * o `userId` da query.
+ * `@CurrentUser()` faria em producao.
  */
 function makeController(overrides: { database?: InMemoryEventDatabase } = {}) {
   const database = overrides.database ?? new InMemoryEventDatabase();
@@ -34,9 +43,9 @@ function makeController(overrides: { database?: InMemoryEventDatabase } = {}) {
     new GetDailyOverviewUseCase(new InMemoryDailyOverviewQuery(database)),
     vi.fn() as never,
     vi.fn() as never,
-    vi.fn() as never,
+    new GetEventUseCase(eventRepository),
     new UpdateEventUseCase(eventRepository, workoutCatalog),
-    vi.fn() as never,
+    new DeleteEventUseCase(eventRepository),
   );
 
   return { controller, database, eventRepository };
@@ -159,37 +168,54 @@ test("PATCH /api/events/:eventId updates startedAt when the client sends it", as
 test("rejects an invalid timeline date before touching the repository", async () => {
   const { controller } = makeController();
 
-  await expect(controller.list("user-1", "not-a-date")).rejects.toThrow(
+  await expect(controller.list(actor, "not-a-date")).rejects.toThrow(
     new BadRequestException("Invalid from date"),
   );
 });
 
-test("rejects a timeline request without userId", async () => {
-  const { controller } = makeController();
-
-  await expect(controller.list(undefined)).rejects.toThrow(
-    new BadRequestException("Missing userId"),
-  );
-});
-
-test("returns only timeline events for the requested userId", async () => {
+test("returns only timeline events for the requesting actor, ignoring any userId in the query", async () => {
   const { controller } = makeController({
     database: new InMemoryEventDatabase([
-      makeMealEvent("user-1", "Breakfast", "2026-08-16T08:00:00-03:00", 320),
-      makeMealEvent("user-2", "Lunch", "2026-08-16T12:00:00-03:00", 540),
+      makeMealEvent("firebase-user-1", "Breakfast", "2026-08-16T08:00:00-03:00", 320),
+      makeMealEvent("attacker-1", "Lunch", "2026-08-16T12:00:00-03:00", 540),
     ]),
   });
 
-  const page = await controller.list("user-1");
+  const page = await controller.list(actor);
 
   expect(page.items).toHaveLength(1);
   expect(page.items).toMatchObject([{ name: "Breakfast" }]);
 });
 
+test("rejects an invalid cursor", async () => {
+  const { controller } = makeController();
+
+  await expect(
+    controller.list(actor, undefined, undefined, undefined, undefined, "not-a-cursor"),
+  ).rejects.toThrow(new BadRequestException("Invalid cursor"));
+});
+
+test("accepts a well-formed cursor", async () => {
+  const { controller } = makeController();
+  const cursor = encodeTimelineCursor({ startedAt: new Date("2026-08-16T08:00:00.000Z"), id: "01K2R1J5M8S0Y2Z7ABCD123456" });
+
+  await expect(
+    controller.list(actor, undefined, undefined, undefined, undefined, cursor),
+  ).resolves.toMatchObject({ items: [] });
+});
+
+test.each(["0", "-1", "abc", "101"])("rejects an invalid limit %s", async (limit) => {
+  const { controller } = makeController();
+
+  await expect(
+    controller.list(actor, undefined, undefined, undefined, undefined, undefined, limit),
+  ).rejects.toThrow(new BadRequestException("Invalid limit"));
+});
+
 test("rejects a daily overview request without a date", async () => {
   const { controller } = makeController();
 
-  await expect(controller.daily(undefined, "user-1")).rejects.toThrow(
+  await expect(controller.daily(actor, undefined)).rejects.toThrow(
     new BadRequestException("date is required"),
   );
 });
@@ -197,11 +223,11 @@ test("rejects a daily overview request without a date", async () => {
 test("keeps the daily boundary in Sao Paulo", async () => {
   const { controller } = makeController({
     database: new InMemoryEventDatabase([
-      makeMealEvent("user-1", "Late meal", "2026-08-15T23:30:00-03:00", 250),
+      makeMealEvent("firebase-user-1", "Late meal", "2026-08-15T23:30:00-03:00", 250),
     ]),
   });
 
-  await expect(controller.daily("2026-08-16", "user-1")).resolves.toMatchObject({ caloriesConsumed: 0 });
+  await expect(controller.daily(actor, "2026-08-16")).resolves.toMatchObject({ caloriesConsumed: 0 });
 });
 
 test("PATCH /api/events/:eventId refuses marks that are not ours", async () => {
@@ -233,4 +259,35 @@ test("PATCH /api/events/:eventId stores the mark and the priority the client sen
     missed: true,
     priority: "urgent",
   });
+});
+
+test("PATCH /api/events/:eventId rejects a request without expectedRevision", async () => {
+  const event = anOpenTraining();
+  const { controller } = makeController({ database: new InMemoryEventDatabase([event]) });
+
+  await expect(
+    controller.update(event.id, { eventId: event.id, name: "Updated" } as never, actor),
+  ).rejects.toBeInstanceOf(BadRequestException);
+});
+
+test("PATCH /api/events/:eventId reports a revision conflict when the client sends a stale expectedRevision", async () => {
+  const event = anOpenTraining();
+  const { controller } = makeController({ database: new InMemoryEventDatabase([event]) });
+
+  await expect(
+    controller.update(event.id, { eventId: event.id, expectedRevision: 99, name: "Updated" }, actor),
+  ).rejects.toBeInstanceOf(EventRevisionConflictError);
+});
+
+test("GET /api/events/:eventId refuses to return another user's event", async () => {
+  const event = anOpenTraining();
+  const { controller } = makeController({ database: new InMemoryEventDatabase([event]) });
+
+  await expect(controller.detail(event.id, attacker)).rejects.toBeInstanceOf(EventOwnershipError);
+});
+
+test("GET /api/events/:eventId answers 404 for an event that does not exist", async () => {
+  const { controller } = makeController();
+
+  await expect(controller.detail("does-not-exist", actor)).rejects.toThrow("Event not found");
 });
