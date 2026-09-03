@@ -5,10 +5,10 @@ import { groupEventsByDay } from "./group-events-by-day";
 function anEvent(overrides: Partial<TimelineEventCardDto> = {}): TimelineEventCardDto {
   return {
     id: "event-1",
-    type: "routine",
+    primaryItemId: "item-1",
+    primaryItemType: "routine",
+    itemTypes: ["routine"],
     missed: false,
-    accentColor: "blue",
-    iconName: "clock",
     name: "Bloco de trabalho",
     description: "",
     startedAt: "2026-08-19T12:00:00.000Z",
