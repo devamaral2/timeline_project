@@ -1,5 +1,12 @@
-import { Apple, Clock, Dumbbell, Moon, type LucideIcon } from "lucide-react-native";
-import type { EventPriority, EventType } from "@repo/entities/contracts";
+import {
+  Apple,
+  CircleDashed,
+  Clock,
+  Dumbbell,
+  Moon,
+  type LucideIcon,
+} from "lucide-react-native";
+import type { EventPriority, KnownEventItemType } from "@repo/entities/contracts";
 import type { Theme } from "@repo/theme";
 
 /**
@@ -7,12 +14,6 @@ import type { Theme } from "@repo/theme";
  * A diferenca e so o pacote: `lucide-react-native` desenha com react-native-svg
  * em vez de <svg>.
  */
-export const typeIcons: Record<EventType, LucideIcon> = {
-  routine: Clock,
-  food: Apple,
-  training: Dumbbell,
-  sleep: Moon,
-};
 
 /**
  * O traco fino do desenho. O padrao do lucide (2) engorda o icone e, sobre o
@@ -20,26 +21,51 @@ export const typeIcons: Record<EventType, LucideIcon> = {
  */
 export const ICON_STROKE_WIDTH = 1.75;
 
-export const typeLabels: Record<EventType, string> = {
-  routine: "Rotina",
-  food: "Alimentação",
-  training: "Treino",
-  sleep: "Sono",
+/**
+ * Como um tipo de item se apresenta no cartao: o glifo do board da identidade,
+ * o rotulo em portugues e a cor — que aparece no icone, no rotulo do tipo e na
+ * barra de duracao do rodape.
+ *
+ * A cor vem como nome de token, e nao resolvida: quem tem o tema na mao e o
+ * componente. E o nome e uma chave de `ColorTokens`, escrita aqui — o tipo que
+ * chegou pela rede nunca indexa o tema.
+ */
+export interface ItemTypeVisual {
+  Icon: LucideIcon;
+  label: string;
+  colorToken: keyof Theme["colors"];
+}
+
+const knownVisuals: Record<KnownEventItemType, ItemTypeVisual> = {
+  routine: { Icon: Clock, label: "Rotina", colorToken: "routine" },
+  meal: { Icon: Apple, label: "Refeição", colorToken: "meal" },
+  training: { Icon: Dumbbell, label: "Treino", colorToken: "training" },
+  sleep: { Icon: Moon, label: "Sono", colorToken: "sleep" },
 };
 
 /**
- * Cada tipo tem a sua cor, e ela aparece em dois lugares do cartao: o icone e o
- * rotulo do tipo. E o mesmo mapa do web (`typeStyles`), aqui resolvido em cor
- * e nao em classe.
+ * O tipo que este frontend ainda nao conhece.
  *
- * O icone continua entrando direto sobre a superficie — sem quadradinho de
- * fundo e sem aro —, como no board da identidade.
+ * O registro de itens do backend cresce sem pedir licenca ao app: um tipo novo
+ * chega pela rede antes de existir codigo aqui — e o app de uma loja demora a
+ * ser atualizado, entao isso vai acontecer. Ele entra em cinza, com o rotulo
+ * generico: o cartao continua legivel, e a timeline nao cai por causa de um
+ * `undefined` num mapa.
  */
-export function eventAccent(theme: Theme, type: EventType): string {
-  return theme.colors[type];
-}
+const unknownVisual: ItemTypeVisual = {
+  Icon: CircleDashed,
+  label: "Evento",
+  colorToken: "mutedForeground",
+};
 
-export const eventTypes: EventType[] = ["routine", "food", "training", "sleep"];
+/**
+ * O visual do item que da a cara ao evento — o principal, e so ele. Os itens
+ * secundarios de um evento composto aparecem no detalhe; mudar o icone ou a cor
+ * do cartao por causa deles trocaria a resposta a pergunta "o que e isto?".
+ */
+export function visualForItemType(type: string): ItemTypeVisual {
+  return knownVisuals[type as KnownEventItemType] ?? unknownVisual;
+}
 
 /**
  * O unico rotulo de situacao que sobrou, igual ao do web
@@ -51,7 +77,7 @@ export const eventTypes: EventType[] = ["routine", "food", "training", "sleep"];
  */
 export const missedLabel = "Não realizado";
 
-/** Vermelho, o token de falha — separado de `training` e `food`, que sao tipo. */
+/** Vermelho, o token de falha — separado de `training` e `meal`, que sao tipo. */
 export function missedColor(theme: Theme): string {
   return theme.colors.destructive;
 }

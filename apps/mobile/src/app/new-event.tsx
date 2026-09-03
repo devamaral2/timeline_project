@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
+import type { CreateEventInput } from "@repo/entities/contracts";
 import { withAlpha } from "@repo/theme";
 import { Button } from "@/components/Button";
 import { TagInput } from "@/components/TagInput";
@@ -32,15 +33,21 @@ export default function NewEventScreen() {
     setError(null);
 
     try {
+      // Tipado contra o contrato: o campo que o backend deixou de aceitar tem
+      // de falhar aqui, no typecheck, e nao em um 400 no aparelho.
+      const input: CreateEventInput = {
+        // O evento nasce com um item, e ele e o principal por ser o unico. A
+        // rotina nao tem payload: o que existe e o nome do evento.
+        items: [{ type: "routine" }],
+        name: name.trim(),
+        description: description.trim() || undefined,
+        tags,
+      };
+
       await authedFetch<{ eventId: string }>("/api/events", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "routine",
-          name: name.trim(),
-          description: description.trim() || undefined,
-          tags,
-        }),
+        body: JSON.stringify(input),
       });
 
       // `dismissTo` volta para a timeline que ja estava na pilha em vez de

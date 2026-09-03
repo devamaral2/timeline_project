@@ -8,6 +8,7 @@ import { useDayEvents } from '@/lib/events/use-day-events';
 import { useTheme } from '@/lib/theme/use-theme';
 
 interface DayTimelineProps {
+  /** So a chave do cache por conta — quem autoriza a leitura e o token. */
   userId: string;
   dayKey: string;
   /** Muda a cada refresh da tela e faz esta pagina recarregar. */
@@ -15,7 +16,15 @@ interface DayTimelineProps {
   onOpenEvent: (eventId: string) => void;
 }
 
-/** Todos os eventos do dia selecionado, em ordem crescente de hora. */
+/**
+ * Todos os eventos do dia selecionado, em ordem crescente de hora.
+ *
+ * A carga incremental sobe, e nao desce: a API pagina do mais novo para o mais
+ * antigo, entao o que falta buscar esta antes do que ja apareceu. Por isso quem
+ * pede a proxima pagina e o `onStartReached`, e o indicador de carga vive no
+ * cabecalho — chegar ao fim da lista aqui e chegar ao fim do dia, e nao ha nada
+ * depois disso.
+ */
 export function DayTimeline({
   userId,
   dayKey,
@@ -23,11 +32,8 @@ export function DayTimeline({
   onOpenEvent,
 }: DayTimelineProps) {
   const theme = useTheme();
-  const { events, loading, failed, reload } = useDayEvents(
-    userId,
-    dayKey,
-    generation,
-  );
+  const { events, loading, loadingMore, failed, hasMore, reload, loadMore } =
+    useDayEvents(userId, dayKey, generation);
   const longestMinutes = longestDurationOf(events);
 
   return (
@@ -47,6 +53,14 @@ export function DayTimeline({
               />
             ) : null}
             <DaySummary events={events} />
+            {loadingMore ? (
+              <View style={styles.loadingMore}>
+                <ActivityIndicator
+                  size="small"
+                  color={theme.colors.mutedForeground}
+                />
+              </View>
+            ) : null}
           </>
         ) : null
       }
@@ -58,6 +72,13 @@ export function DayTimeline({
         />
       )}
       ItemSeparatorComponent={() => <View style={styles.separator} />}
+      // Sem cursor nao ha o que buscar, e o gatilho sai do caminho em vez de
+      // ficar disparando contra o comeco do dia.
+      onStartReached={hasMore ? loadMore : undefined}
+      onStartReachedThreshold={0.3}
+      // Os eventos mais antigos entram acima do que esta na tela. Sem isto a
+      // lista pularia para outro trecho do dia a cada pagina que chega.
+      maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
       onRefresh={reload}
       refreshing={loading && events.length > 0}
       ListEmptyComponent={
@@ -93,6 +114,10 @@ const styles = StyleSheet.create({
   },
   centered: {
     paddingVertical: 48,
+    alignItems: 'center',
+  },
+  loadingMore: {
+    paddingBottom: 12,
     alignItems: 'center',
   },
 });
