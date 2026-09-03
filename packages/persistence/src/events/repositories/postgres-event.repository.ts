@@ -7,7 +7,7 @@ import {
   EventOwnershipError,
   EventRevisionConflictError,
 } from "@repo/entities";
-import type { EventAggregateRepository } from "@repo/entities/ports";
+import type { EventRepository } from "@repo/entities/ports";
 import * as schema from "../../database/schema";
 import { mapEventRow } from "../mappers/event-row.mapper";
 
@@ -98,7 +98,7 @@ async function classifyUpdateFailure(
   );
 }
 
-export class PostgresEventRepository implements EventAggregateRepository {
+export class PostgresEventRepository implements EventRepository {
   constructor(private readonly db: NodePgDatabase<typeof schema>) {}
 
   async save(event: Event): Promise<void> {

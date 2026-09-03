@@ -1,6 +1,6 @@
 import type { DailyOverviewQuery, DailyOverviewQueryParams } from "@repo/entities/ports";
 import type { DailyOverviewDto } from "@repo/entities/contracts";
-import type { Event, EventItemFoodItem, MealItem, EventItemTrainingData } from "@repo/entities";
+import type { Event, FoodItem, MealItem, TrainingData } from "@repo/entities";
 import type { InMemoryEventDatabase } from "./in-memory-event-database";
 
 export class InMemoryDailyOverviewQuery implements DailyOverviewQuery {
@@ -32,7 +32,7 @@ export class InMemoryDailyOverviewQuery implements DailyOverviewQuery {
         if (item.type === "meal" && dateInTimeZone(event.startedAt, params.timeZone) === params.date) {
           const data = item.data as MealItem;
           const mealMicronutrients: Record<string, number> = {};
-          for (const foodItem of data.foodItems as EventItemFoodItem[]) {
+          for (const foodItem of data.foodItems as FoodItem[]) {
             for (const [name, amount] of Object.entries(foodItem.micronutrients)) {
               micronutrients[name] = (micronutrients[name] ?? 0) + amount;
               mealMicronutrients[name] = (mealMicronutrients[name] ?? 0) + amount;
@@ -54,7 +54,7 @@ export class InMemoryDailyOverviewQuery implements DailyOverviewQuery {
         }
 
         if (item.type === "training" && dateInTimeZone(event.startedAt, params.timeZone) === params.date) {
-          const data = item.data as EventItemTrainingData;
+          const data = item.data as TrainingData;
           trainingEvents.push({
             id: event.id,
             name: event.name,

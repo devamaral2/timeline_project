@@ -7,7 +7,7 @@ apps/web          Next.js 16 — frontend web, sem regra de negocio
 apps/mobile       Expo 57 + expo-router — app nativo, sem regra de negocio
 apps/api          NestJS — usecases, services, gateways, controllers HTTP
 packages/entities @repo/entities — dominio, portas e DTOs
-packages/persistence @repo/persistence — DAOs, repositories e Firestore admin
+packages/persistence @repo/persistence — schema, repositories e acesso Postgres
 packages/timeline @repo/timeline — datas, janelas e agrupamento da timeline
 packages/theme    @repo/theme — os tokens de cor do design system
 ```
@@ -35,8 +35,13 @@ vai para um desses dois — nao para os dois apps.
 
 O backend escuta so em `127.0.0.1` por padrao — nao e exposto para fora do
 servidor. O browser fala com o Next, que repassa `/api/*` ao Nest pelo
-`rewrites` do `apps/web/next.config.ts`. Chamadas server-side (Server
-Components) usam `fetchFromBackend` em `apps/web/src/lib/api/backend.ts`.
+`rewrites` do `apps/web/next.config.ts`.
+
+**Leituras autenticadas acontecem no cliente.** Um Server Component nao tem o
+ID token do Firebase do usuario, entao nao ha fetch anonimo no servidor: quem
+chama a API e `authedFetch` (`apps/web/src/lib/api/authed-fetch.ts`), que roda
+no browser, pega o `currentUser` do Firebase e manda o token no header
+`Authorization`. Sem usuario logado a funcao devolve 401 sem tocar na rede.
 
 O app mobile nao tem esse rewrite: ele fala direto com o Nest, pelo host em
 `MOBILE_API_URL`. Veja "App mobile" abaixo.
@@ -122,6 +127,30 @@ sem `build`. Web e API continuam consumindo `dist/`.
 `@firebase/auth` mas nao nos tipos que o TypeScript resolve. Sem essa
 persistencia o usuario e deslogado toda vez que o app fecha.
 
+# Persistencia
+
+Os eventos vivem no PostgreSQL, em `packages/persistence` (schema Drizzle em
+`src/database/schema`, repositories e queries ao lado). `DATABASE_URL` aponta
+para o banco; em desenvolvimento ele sobe com `docker compose -f
+infra/docker-compose.local.yml up -d`, que bind-a o Postgres em
+`127.0.0.1:5432`, igual ao resto do backend.
+
+**Migrations sao a fonte da verdade do schema**, geradas com `db:generate` e
+aplicadas com `db:migrate` (`pnpm db:generate` / `pnpm db:migrate` na raiz, que
+delegam para `@repo/persistence`). Nao edite uma migration ja aplicada em
+qualquer ambiente compartilhado — gere uma nova em cima dela.
+
+`test:postgres` sobe um Postgres via Testcontainers e por isso exige Docker
+rodando; sem Docker o teste de integracao falha ao inves de pular.
+
+**Firebase Admin existe so para autenticacao.** `apps/api/src/auth/` tem sua
+propria copia de `getAdminApp`, independente de qualquer persistencia — o
+projeto Firebase continua sendo o identity provider (`firebase-admin` fica em
+`apps/api`, nao em `@repo/persistence`). Nao ha Firestore: a base de eventos
+que veio de la nunca passou por uma migracao documento a documento, foi cortada
+para o Postgres de uma vez (ve "A marca de nao realizado" acima para o que
+esse corte deixou de marca no schema).
+
 # Variaveis de ambiente
 
 Um unico `.env` na raiz serve os tres apps. O Nest carrega via
@@ -148,6 +177,10 @@ pnpm turbo run dev        sobe Nest (3001) e Next (3000)
 
 pnpm --filter @repo/mobile run start     sobe o Metro
 pnpm --filter @repo/mobile run android   gera o projeto nativo e instala no aparelho
+
+pnpm db:generate          gera uma migration a partir do schema Drizzle
+pnpm db:migrate           aplica as migrations pendentes no DATABASE_URL atual
+pnpm test:postgres        roda a suite de integracao contra Postgres (exige Docker)
 ```
 
 O Metro fica fora do `turbo run dev` de proposito: ele toma o terminal com a

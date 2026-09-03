@@ -1,9 +1,9 @@
 import { ulid } from "ulid";
-import { calculateMealTotals, type EventItemFoodItem, type MealTotals } from "@repo/entities";
+import { calculateMealTotals, type FoodItem, type MealTotals } from "@repo/entities";
 import type { ParsedMealFoodItem } from "../gateways/meal-parsing.gateway";
 
 export class MealTotalsService {
-  toFoodItems(items: readonly ParsedMealFoodItem[]): EventItemFoodItem[] {
+  toFoodItems(items: readonly ParsedMealFoodItem[]): FoodItem[] {
     return items.map((item) => ({
       id: ulid(),
       name: item.food,
@@ -15,7 +15,7 @@ export class MealTotalsService {
     }));
   }
 
-  calculate(foodItems: readonly EventItemFoodItem[]): MealTotals {
+  calculate(foodItems: readonly FoodItem[]): MealTotals {
     return calculateMealTotals(foodItems);
   }
 }

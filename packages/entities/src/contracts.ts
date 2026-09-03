@@ -13,15 +13,9 @@ export type * from "./events/contracts/timeline-event-page.dto";
 export type * from "./events/contracts/update-event.input";
 
 // Tipos de dados de dominio que os DTOs referenciam, reexportados para que o
-// front nunca precise importar o subpath raiz (onde vivem as classes).
-//
-// Sao os payloads dos itens, e nao mais os das subclasses de evento: `FoodItem`
-// e `WorkoutSet` aqui sao os do modelo por itens. Na raiz do pacote os dois
-// nomes ainda estao ocupados pelos legados e por isso convivem sob apelidos
-// (`EventItemFoodItem`, `EventItemWorkoutSet`) — mas o frontend nunca viu o
-// modelo legado, e nao ha razao para ele aprender os apelidos de uma transicao
-// que so acontece do lado do servidor.
-export type { EventType } from "./events/types/event-type";
+// front nunca precise importar o subpath raiz (onde vivem as classes). Sao os
+// payloads dos itens: `FoodItem` e `WorkoutSet` aqui sao os do modelo por
+// itens — nao ha mais subclasse de evento nem tipo legado com o mesmo nome.
 export type { EventPriority } from "./events/types/event-priority";
 export type { RoutineData } from "./events/items/routine-data";
 export type { FoodItem, FoodItemMacronutrients } from "./events/items/food-item";

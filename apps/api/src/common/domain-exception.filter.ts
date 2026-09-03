@@ -24,7 +24,7 @@ import {
  * Traduz os erros de dominio para status HTTP. Substitui o `mutationErrorResponse`
  * que cada controller repetia.
  *
- * Diferenca em relacao ao codigo anterior: erro inesperado (Firestore fora do ar,
+ * Diferenca em relacao ao codigo anterior: erro inesperado (banco fora do ar,
  * bug) responde 500, e nao mais 401. O 401 antigo fazia o front tratar falha de
  * infraestrutura como sessao expirada.
  */
