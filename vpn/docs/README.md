@@ -1,5 +1,13 @@
 # Spec: Time Composure em produção num VPS de 4 GiB
 
+> **Este é o plano v1, mantido como histórico.** Ele foi dimensionado para um VPS de
+> 4 GiB, e três das suas decisões — Compose em vez de Kubernetes, Grafana Cloud em vez de
+> stack local, e deploy push por SSH — mudam de resposta com 16 GiB. O plano corrente é o
+> [v2](../v2/README.md), que assume o monorepo configurado e a aplicação já rodando com
+> PostgreSQL e Redis. As ADRs substituídas são [001](adr/001-docker-compose-vs-k3s.md),
+> [005](adr/005-victoriametrics.md) e [007](adr/007-deploy-ssh.md); o restante deste
+> documento continua sendo a referência do raciocínio original.
+
 Guia de estudo e execução para colocar o monorepo existente no ar usando Docker
 Compose, Traefik, PostgreSQL, Redis e Grafana Cloud. O servidor recebe duas aplicações:
 

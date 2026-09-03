@@ -1,6 +1,6 @@
 # ADR-007 — Deploy push via SSH com chave restrita
 
-**Status:** aceita · **Data:** 2026-08-25
+**Status:** substituída pela [ADR-104](../../v2/adr/104-flux-gitops.md) · **Data:** 2026-08-25
 
 ## Contexto
 
