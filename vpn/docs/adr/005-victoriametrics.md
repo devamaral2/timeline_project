@@ -2,7 +2,9 @@
 
 ## Status
 
-Aceita. Substitui a decisão anterior de manter Grafana, VictoriaMetrics e Loki no VPS.
+Substituída pela [ADR-105](../../v2/adr/105-observabilidade-local.md), que traz a stack de
+volta para o servidor agora que ele tem 16 GiB. Substituiu, por sua vez, a decisão anterior
+de manter Grafana, VictoriaMetrics e Loki no VPS.
 
 ## Contexto
 

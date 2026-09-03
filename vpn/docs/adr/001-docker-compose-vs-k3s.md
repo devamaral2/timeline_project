@@ -1,6 +1,6 @@
 # ADR-001 — Docker Compose em vez de Kubernetes
 
-**Status:** aceita · **Data:** 2026-08-25
+**Status:** substituída pela [ADR-101](../../v2/adr/101-k3s-plataforma.md) · **Data:** 2026-08-25
 
 ## Contexto
 
