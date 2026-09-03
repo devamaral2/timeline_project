@@ -94,3 +94,12 @@ Tests pass
   or lockfile/workspace-file edit was added.
 - `pnpm-lock.yaml` and `vitest.workspace.ts` were already modified and are left
   unstaged/uncommitted as required.
+
+## Fix round 1
+
+- RED: the workspace-root test initially failed because it imported the new
+  resolver from `env.ts` instead of its owning `load-env.ts`; after correcting
+  that test seam, it proves a process started in `apps/auth` loads root `.env`.
+- GREEN: `env.test.ts`, `http-shell.e2e.test.ts`, auth typecheck, and the full
+  official suite passed. `main.ts` resolves the monorepo root from `__dirname`;
+  generic HTTP 429 responses now include `Retry-After: 1`.
