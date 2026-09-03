@@ -2,11 +2,7 @@ import { sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { DailyOverviewQuery, DailyOverviewQueryParams } from "@repo/entities/ports";
 import type { DailyOverviewDto } from "@repo/entities/contracts";
-import type {
-  EventItemFoodItem as FoodItem,
-  EventItemTrainingData as TrainingData,
-} from "@repo/entities";
-import type { MealItem } from "@repo/entities";
+import type { FoodItem, TrainingData, MealItem } from "@repo/entities";
 import * as schema from "../../database/schema";
 
 interface DayEventRow extends Record<string, unknown> {

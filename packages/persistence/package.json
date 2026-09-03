@@ -26,15 +26,13 @@
     "ulid": "^3.0.2"
   },
   "peerDependencies": {
-    "@nestjs/common": "^11.0.0",
-    "firebase-admin": "^13.0.0"
+    "@nestjs/common": "^11.0.0"
   },
   "devDependencies": {
     "@nestjs/common": "^11.0.0",
     "@testcontainers/postgresql": "^12.1.0",
     "@types/pg": "^8.23.1",
     "drizzle-kit": "^0.31.10",
-    "firebase-admin": "^13.0.0",
     "typescript": "^5.7.0"
   }
 }

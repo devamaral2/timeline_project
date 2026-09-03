@@ -3,7 +3,7 @@ import {
   EventValidationError,
   calculateMealTotals,
   type CatalogScope,
-  type EventItemFoodItem as FoodItem,
+  type FoodItem,
 } from "@repo/entities";
 
 export interface MealRow {

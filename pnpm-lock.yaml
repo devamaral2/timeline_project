@@ -341,9 +341,6 @@ importers:
       drizzle-kit:
         specifier: ^0.31.10
         version: 0.31.10
-      firebase-admin:
-        specifier: ^13.0.0
-        version: 13.10.0(@firebase/app-compat@0.5.17)(@firebase/app@0.16.1)(supports-color@8.1.1)
       typescript:
         specifier: ^5.7.0
         version: 5.9.3

@@ -1,9 +1,5 @@
 import type { Event } from "../entities/event.entity";
 
-/**
- * Porta final do agregado, estruturalmente igual a EventAggregateRepository.
- * A Task 13 remove a porta temporaria e deixa uma unica definicao.
- */
 export type DomainEvent = Event;
 
 export interface EventRepository {

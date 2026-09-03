@@ -10,7 +10,7 @@ import { LlmUnavailableError } from "../errors/event-agent.errors";
 const MAX_STEPS = 3;
 /** Teto de gasto por requisição, em dólares. Guard-rail para uma rota exposta. */
 const MAX_COST_USD = 0.05;
-/** Deadline para a execução de uma skill (grava no Firestore + parsing de comida). */
+/** Deadline para a execução de uma skill (grava no Postgres + parsing de comida). */
 const TOOL_TIMEOUT_MS = 30_000;
 
 type AgentModule = typeof import("@openrouter/agent", { with: { "resolution-mode": "import" } });
