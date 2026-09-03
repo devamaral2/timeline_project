@@ -1,11 +1,11 @@
-import { Event, type EventProps } from "./event.entity";
+import { LegacyEvent, type LegacyEventProps } from "./legacy-event.entity";
 import { EventId } from "../value-objects/event-id";
 import { TagList } from "../value-objects/tag-list";
 
 export interface RoutineEventData {}
 
-export class RoutineEvent extends Event<RoutineEventData> {
-  private constructor(props: EventProps<RoutineEventData>) {
+export class RoutineEvent extends LegacyEvent<RoutineEventData> {
+  private constructor(props: LegacyEventProps<RoutineEventData>) {
     super(
       props.id ?? EventId.create(),
       "routine",
@@ -22,7 +22,7 @@ export class RoutineEvent extends Event<RoutineEventData> {
     );
   }
 
-  static create(props: EventProps<RoutineEventData>): RoutineEvent {
+  static create(props: LegacyEventProps<RoutineEventData>): RoutineEvent {
     return new RoutineEvent(props);
   }
 }

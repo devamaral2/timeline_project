@@ -1,13 +1,22 @@
 import { Module } from "@nestjs/common";
 import {
+  DAILY_OVERVIEW_QUERY,
   EVENT_REPOSITORY,
   PersistenceModule,
   TAG_REPOSITORY,
+  TIMELINE_EVENT_QUERY,
+  WORKOUT_CATALOG,
 } from "@repo/persistence";
-import type { EventRepository, TagRepository } from "@repo/entities/ports";
+import type {
+  DailyOverviewQuery,
+  EventRepository,
+  TagRepository,
+  TimelineEventQuery,
+  WorkoutCatalog,
+} from "@repo/entities/ports";
 import { OpenRouterEventAgentGateway } from "./gateways/openrouter-event-agent.gateway";
 import { OpenRouterEventCommandParsingGateway } from "./gateways/openrouter-event-command-parsing.gateway";
-import { OpenRouterFoodParsingGateway } from "./gateways/openrouter-food-parsing.gateway";
+import { OpenRouterMealParsingGateway } from "./gateways/openrouter-meal-parsing.gateway";
 import { EventsController } from "./http/events.controller";
 import { TagsController } from "./http/tags.controller";
 import { CreateEventFromTextUseCase } from "./usecases/create-event-from-text.usecase";
@@ -31,8 +40,8 @@ import { UpdateEventUseCase } from "./usecases/update-event.usecase";
   controllers: [EventsController, TagsController],
   providers: [
     {
-      provide: OpenRouterFoodParsingGateway,
-      useFactory: () => new OpenRouterFoodParsingGateway(),
+      provide: OpenRouterMealParsingGateway,
+      useFactory: () => new OpenRouterMealParsingGateway(),
     },
     {
       provide: OpenRouterEventAgentGateway,
@@ -44,26 +53,24 @@ import { UpdateEventUseCase } from "./usecases/update-event.usecase";
     },
     {
       provide: CreateEventUseCase,
-      inject: [EVENT_REPOSITORY, TAG_REPOSITORY, OpenRouterFoodParsingGateway],
+      inject: [EVENT_REPOSITORY, OpenRouterMealParsingGateway, WORKOUT_CATALOG],
       useFactory: (
         events: EventRepository,
-        tags: TagRepository,
-        foodParsing: OpenRouterFoodParsingGateway,
-      ) => new CreateEventUseCase(events, tags, foodParsing),
+        mealParsing: OpenRouterMealParsingGateway,
+        workoutCatalog: WorkoutCatalog,
+      ) => new CreateEventUseCase(events, mealParsing, workoutCatalog),
     },
     {
       provide: UpdateEventUseCase,
-      inject: [EVENT_REPOSITORY, TAG_REPOSITORY, OpenRouterFoodParsingGateway],
-      useFactory: (
-        events: EventRepository,
-        tags: TagRepository,
-        foodParsing: OpenRouterFoodParsingGateway,
-      ) => new UpdateEventUseCase(events, tags, foodParsing),
+      inject: [EVENT_REPOSITORY, WORKOUT_CATALOG],
+      useFactory: (events: EventRepository, workoutCatalog: WorkoutCatalog) =>
+        new UpdateEventUseCase(events, workoutCatalog),
     },
     {
       provide: ListTimelineEventsUseCase,
-      inject: [EVENT_REPOSITORY],
-      useFactory: (events: EventRepository) => new ListTimelineEventsUseCase(events),
+      inject: [TIMELINE_EVENT_QUERY],
+      useFactory: (timelineEventQuery: TimelineEventQuery) =>
+        new ListTimelineEventsUseCase(timelineEventQuery),
     },
     {
       provide: GetEventUseCase,
@@ -77,8 +84,9 @@ import { UpdateEventUseCase } from "./usecases/update-event.usecase";
     },
     {
       provide: GetDailyOverviewUseCase,
-      inject: [EVENT_REPOSITORY],
-      useFactory: (events: EventRepository) => new GetDailyOverviewUseCase(events),
+      inject: [DAILY_OVERVIEW_QUERY],
+      useFactory: (dailyOverviewQuery: DailyOverviewQuery) =>
+        new GetDailyOverviewUseCase(dailyOverviewQuery),
     },
     {
       provide: SuggestTagsUseCase,

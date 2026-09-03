@@ -1,4 +1,4 @@
-import { Event, type EventProps } from "./event.entity";
+import { LegacyEvent, type LegacyEventProps } from "./legacy-event.entity";
 import { EventId } from "../value-objects/event-id";
 import { TagList } from "../value-objects/tag-list";
 import { ulid } from "ulid";
@@ -37,8 +37,8 @@ export interface FoodEventData {
   parsedAt: Date;
 }
 
-export class FoodEvent extends Event<FoodEventData> {
-  private constructor(props: EventProps<FoodEventData>) {
+export class FoodEvent extends LegacyEvent<FoodEventData> {
+  private constructor(props: LegacyEventProps<FoodEventData>) {
     super(
       props.id ?? EventId.create(),
       "food",
@@ -55,7 +55,7 @@ export class FoodEvent extends Event<FoodEventData> {
     );
   }
 
-  static create(props: EventProps<FoodEventData>): FoodEvent {
+  static create(props: LegacyEventProps<FoodEventData>): FoodEvent {
     return new FoodEvent(props);
   }
 }

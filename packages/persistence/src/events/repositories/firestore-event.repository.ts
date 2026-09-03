@@ -1,8 +1,10 @@
-import type { EventRepository, DomainEvent } from "@repo/entities/ports";
+import type { LegacyEventRepository, LegacyDomainEvent } from "@repo/entities/ports";
 import type { EventDao } from "../daos/admin-firestore-event.dao";
 import { EventDocumentMapper } from "../mappers/event-document.mapper";
 
-export class FirestoreEventRepository implements EventRepository {
+type DomainEvent = LegacyDomainEvent;
+
+export class FirestoreEventRepository implements LegacyEventRepository {
   constructor(private readonly eventDao: EventDao) {}
 
   async save(event: DomainEvent): Promise<void> {
@@ -40,7 +42,7 @@ export class FirestoreEventRepository implements EventRepository {
     return document ? EventDocumentMapper.toDomain(document) : null;
   }
 
-  async listTimeline(params: Parameters<EventRepository["listTimeline"]>[0]): Promise<DomainEvent[]> {
+  async listTimeline(params: Parameters<LegacyEventRepository["listTimeline"]>[0]): Promise<DomainEvent[]> {
     const documents = await this.eventDao.list({
       userId: params.userId,
       from: params.from?.toISOString(),
@@ -51,7 +53,7 @@ export class FirestoreEventRepository implements EventRepository {
     return documents.map(EventDocumentMapper.toDomain);
   }
 
-  async listByDay(params: Parameters<EventRepository["listByDay"]>[0]): Promise<DomainEvent[]> {
+  async listByDay(params: Parameters<LegacyEventRepository["listByDay"]>[0]): Promise<DomainEvent[]> {
     const documents = await this.eventDao.list();
     return documents
       .filter((document) => {

@@ -9,12 +9,19 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "vitest run",
-    "test:ai": "cross-env VITE_CJS_IGNORE_WARNING=true vitest run --config vitest.quiet.config.ts"
+    "test:ai": "cross-env VITE_CJS_IGNORE_WARNING=true vitest run --config vitest.quiet.config.ts",
+    "db:generate": "pnpm --filter @repo/persistence run db:generate",
+    "db:migrate": "pnpm --filter @repo/persistence run db:migrate",
+    "test:postgres": "cross-env RUN_POSTGRES_INTEGRATION=1 VITE_CJS_IGNORE_WARNING=true vitest run --config vitest.quiet.config.ts --project persistence packages/persistence/src/integration/postgres.integration.test.ts",
+    "bench:postgres": "cross-env RUN_POSTGRES_INTEGRATION=1 tsx packages/persistence/src/benchmarks/timeline.benchmark.ts",
+    "firebase:indexes": "npx -y firebase-tools@15 deploy --only firestore:indexes",
+    "firebase:rules": "npx -y firebase-tools@15 deploy --only firestore:rules"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
     "cross-env": "^10.1.0",
     "prettier": "^3.9.5",
+    "tsx": "^4.23.13",
     "turbo": "^2.5.0",
     "typescript": "^5.7.0",
     "vitest": "^2.1.0"

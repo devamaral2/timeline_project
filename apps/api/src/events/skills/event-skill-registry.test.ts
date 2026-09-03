@@ -34,7 +34,7 @@ test("every skill is uniquely addressable by name", () => {
   expect(findEventSkill("create_unknown_event")).toBeUndefined();
 });
 
-test("training skill maps a run to a running workout", () => {
+test("training skill maps a run to a running workout item", () => {
   const skill = findEventSkill("create_training_event");
 
   // "Corri 5 km, por uma hora e meia e queimei 300 calorias"
@@ -44,11 +44,15 @@ test("training skill maps a run to a running workout", () => {
       tags: ["corrida"],
     }),
   ).toEqual({
-    type: "training",
+    items: [
+      {
+        type: "training",
+        data: {
+          workouts: [{ workoutCode: "running", distance: 5, duration: 90, pace: 18, calories: 300 }],
+        },
+      },
+    ],
     tags: ["corrida"],
-    data: {
-      workouts: [{ type: "running", distance: 5, duration: 90, pace: 18, calories: 300 }],
-    },
   });
 });
 
@@ -67,28 +71,31 @@ test("training skill keeps weightlifting sets", () => {
       ],
     }),
   ).toEqual({
-    type: "training",
-    data: {
-      workouts: [
-        {
-          type: "weightlifting",
-          duration: 45,
-          calories: 200,
-          sets: [{ exercise: "supino reto", repetitions: 10, weight: 60 }],
+    items: [
+      {
+        type: "training",
+        data: {
+          workouts: [
+            {
+              workoutCode: "weightlifting",
+              duration: 45,
+              calories: 200,
+              sets: [{ exercise: "supino reto", repetitions: 10, weight: 60 }],
+            },
+          ],
         },
-      ],
-    },
+      },
+    ],
   });
 });
 
-test("food skill only relays the meal text, leaving nutrition to the food pipeline", () => {
-  const skill = findEventSkill("create_food_event");
+test("meal skill only relays the meal text, leaving nutrition to the meal pipeline", () => {
+  const skill = findEventSkill("create_meal_event");
 
   expect(
     skill?.toCreateEventInput({ inputText: "dois ovos mexidos e uma fatia de pão integral" }),
   ).toEqual({
-    type: "food",
-    inputText: "dois ovos mexidos e uma fatia de pão integral",
+    items: [{ type: "meal", data: { inputText: "dois ovos mexidos e uma fatia de pão integral" } }],
   });
 });
 
@@ -96,8 +103,7 @@ test("sleep skill maps minutes and score", () => {
   const skill = findEventSkill("create_sleep_event");
 
   expect(skill?.toCreateEventInput({ trackedSleepTime: 450, score: 82 })).toEqual({
-    type: "sleep",
-    data: { trackedSleepTime: 450, score: 82 },
+    items: [{ type: "sleep", data: { trackedSleepTime: 450, score: 82 } }],
   });
 });
 
@@ -107,8 +113,8 @@ test("routine skill carries the name through", () => {
   expect(
     skill?.toCreateEventInput({ name: "Reunião de planejamento", description: "com o time" }),
   ).toEqual({
-    type: "routine",
     name: "Reunião de planejamento",
+    items: [{ type: "routine" }],
     description: "com o time",
   });
 });
@@ -133,7 +139,7 @@ test("empty optional fields are omitted rather than sent as empty values", () =>
   const skill = findEventSkill("create_routine_event");
 
   expect(skill?.toCreateEventInput({ name: "Estudar", tags: [], description: "" })).toEqual({
-    type: "routine",
     name: "Estudar",
+    items: [{ type: "routine" }],
   });
 });

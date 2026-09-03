@@ -1,4 +1,4 @@
-import { Event, type EventProps } from "./event.entity";
+import { LegacyEvent, type LegacyEventProps } from "./legacy-event.entity";
 import { EventId } from "../value-objects/event-id";
 import { TagList } from "../value-objects/tag-list";
 
@@ -7,8 +7,8 @@ export interface SleepEventData {
   score: number;
 }
 
-export class SleepEvent extends Event<SleepEventData> {
-  private constructor(props: EventProps<SleepEventData>) {
+export class SleepEvent extends LegacyEvent<SleepEventData> {
+  private constructor(props: LegacyEventProps<SleepEventData>) {
     super(
       props.id ?? EventId.create(),
       "sleep",
@@ -25,7 +25,7 @@ export class SleepEvent extends Event<SleepEventData> {
     );
   }
 
-  static create(props: EventProps<SleepEventData>): SleepEvent {
+  static create(props: LegacyEventProps<SleepEventData>): SleepEvent {
     return new SleepEvent(props);
   }
 }

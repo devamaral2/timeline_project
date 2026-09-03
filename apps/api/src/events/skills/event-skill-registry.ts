@@ -1,4 +1,4 @@
-import { createFoodEventSkill } from "./create-food-event.skill";
+import { createMealEventSkill } from "./create-meal-event.skill";
 import { createRoutineEventSkill } from "./create-routine-event.skill";
 import { createSleepEventSkill } from "./create-sleep-event.skill";
 import { createTrainingEventSkill } from "./create-training-event.skill";
@@ -10,7 +10,7 @@ import type { EventSkill } from "./event-skill";
  */
 export const EVENT_SKILLS: readonly EventSkill[] = [
   createTrainingEventSkill,
-  createFoodEventSkill,
+  createMealEventSkill,
   createSleepEventSkill,
   createRoutineEventSkill,
 ];

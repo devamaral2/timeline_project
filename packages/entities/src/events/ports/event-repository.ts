@@ -1,24 +1,16 @@
-import type { FoodEvent } from "../entities/food-event.entity";
-import type { RoutineEvent } from "../entities/routine-event.entity";
-import type { SleepEvent } from "../entities/sleep-event.entity";
-import type { TrainingEvent } from "../entities/training-event.entity";
-import type { EventType } from "../types/event-type";
+import type { Event } from "../entities/event.entity";
 
-export type DomainEvent = RoutineEvent | FoodEvent | TrainingEvent | SleepEvent;
+/**
+ * Porta final do agregado, estruturalmente igual a EventAggregateRepository.
+ * A Task 13 remove a porta temporaria e deixa uma unica definicao.
+ */
+export type DomainEvent = Event;
 
 export interface EventRepository {
-  save(event: DomainEvent): Promise<void>;
-  saveClosingLatestOpen(event: DomainEvent, finishedAt: Date): Promise<void>;
-  update(event: DomainEvent, actorUserId: string): Promise<void>;
+  save(event: Event): Promise<void>;
+  saveClosingLatestOpen(event: Event, finishedAt: Date): Promise<void>;
+  update(event: Event, actorUserId: string, expectedRevision: number): Promise<void>;
   delete(eventId: string, actorUserId: string): Promise<void>;
-  findById(eventId: string): Promise<DomainEvent | null>;
-  findLatestOpenByUserId(userId: string): Promise<DomainEvent | null>;
-  listTimeline(params: {
-    userId: string;
-    from?: Date;
-    to?: Date;
-    type?: EventType;
-    tag?: string;
-  }): Promise<DomainEvent[]>;
-  listByDay(params: { date: string; timeZone: string }): Promise<DomainEvent[]>;
+  findById(eventId: string): Promise<Event | null>;
+  findLatestOpenByUserId(userId: string): Promise<Event | null>;
 }

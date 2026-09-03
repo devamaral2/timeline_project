@@ -1,7 +1,5 @@
 import type { EventPriority } from "../types/event-priority";
-import type { FoodItem } from "../entities/food-event.entity";
-import type { SleepEventData } from "../entities/sleep-event.entity";
-import type { Workout } from "../entities/training-event.entity";
+import type { UpdateEventItemInput } from "./event-item.dto";
 
 export interface InterruptionPatchInput {
   id?: string;
@@ -11,13 +9,9 @@ export interface InterruptionPatchInput {
   finishedAt?: string;
 }
 
-export type UpdateEventDataInput =
-  | Partial<SleepEventData>
-  | { workouts?: Workout[] }
-  | { items?: FoodItem[] };
-
 export interface UpdateEventInput {
   eventId: string;
+  expectedRevision: number;
   name?: string;
   description?: string;
   startedAt?: string;
@@ -26,5 +20,5 @@ export interface UpdateEventInput {
   missed?: boolean;
   priority?: EventPriority;
   interruptions?: InterruptionPatchInput[];
-  data?: UpdateEventDataInput;
+  items?: UpdateEventItemInput[];
 }

@@ -1,42 +1,44 @@
 import { expect, test } from "vitest";
+import { Event, EventItem } from "@repo/entities";
 import { CreateEventUseCase } from "./create-event.usecase";
 import { DeleteEventUseCase } from "./delete-event.usecase";
 import { UpdateEventUseCase } from "./update-event.usecase";
+import { InMemoryEventDatabase } from "../testing/in-memory-event-database";
 import { InMemoryEventRepository } from "../testing/in-memory-event.repository";
-import { InMemoryTagRepository } from "../testing/in-memory-tag.repository";
-import { StubFoodParsingGateway } from "../testing/stub-food-parsing.gateway";
-import { FoodEvent } from "@repo/entities";
-import { SleepEvent } from "@repo/entities";
-import { TrainingEvent } from "@repo/entities";
-import type { FoodParsingGateway } from "../gateways/food-parsing.gateway";
+import { InMemoryWorkoutCatalog } from "../testing/in-memory-workout.catalog";
+import { StubMealParsingGateway } from "../testing/stub-meal-parsing.gateway";
+import type { MealParsingGateway } from "../gateways/meal-parsing.gateway";
 
-const workout = {
-  type: "free" as const,
-  calories: 420,
-  duration: 60,
-};
+function openTrainingEvent(id: string, startedAt: Date) {
+  return Event.create({
+    id,
+    userId: "firebase-user-1",
+    name: "Treino",
+    description: "",
+    startedAt,
+    tags: [],
+    interruptions: [],
+    items: [
+      EventItem.create({ position: 0, type: "training", schemaVersion: 1, isPrimary: true, data: { workouts: [], caloriesBurned: 0 } }),
+    ],
+  });
+}
 
 test("creates a training event with server-defined timestamps and name", async () => {
   const now = new Date("2026-08-17T12:00:00.000Z");
-  const eventRepository = new InMemoryEventRepository();
-  const tagRepository = new InMemoryTagRepository();
-  const foodGateway = new StubFoodParsingGateway();
+  const database = new InMemoryEventDatabase();
+  const eventRepository = new InMemoryEventRepository(database);
   const result = await new CreateEventUseCase(
     eventRepository,
-    tagRepository,
-    foodGateway,
+    new StubMealParsingGateway(),
+    new InMemoryWorkoutCatalog(),
     undefined,
     () => now,
   ).execute(
     {
-      type: "training",
       description: "Gym session",
       tags: ["Gym"],
-      data: {
-        workouts: [
-          { type: "running", pace: 320, distance: 5, duration: 25, calories: 320 },
-        ],
-      },
+      items: [{ type: "training", data: { workouts: [{ workoutCode: "running", pace: 320, distance: 5, duration: 25, calories: 320 }] } }],
     },
     { userId: "firebase-user-1" },
   );
@@ -45,64 +47,63 @@ test("creates a training event with server-defined timestamps and name", async (
   const savedEvent = await eventRepository.findById(result.eventId);
 
   expect(savedEvent?.userId).toBe("firebase-user-1");
-  expect(savedEvent?.type).toBe("training");
+  expect(savedEvent?.items[0].type).toBe("training");
   expect(savedEvent?.name).toBe("Treino");
   expect(savedEvent?.startedAt).toEqual(now);
   expect(savedEvent?.finishedAt).toBeUndefined();
   expect(savedEvent?.interruptions).toEqual([]);
-  expect(tagRepository.upsertedTags).toEqual(["gym"]);
+  expect(savedEvent?.tags).toEqual(["gym"]);
 });
 
 test("creates a sleep event with the fixed name and default optional data", async () => {
-  const eventRepository = new InMemoryEventRepository();
-  const tagRepository = new InMemoryTagRepository();
+  const database = new InMemoryEventDatabase();
+  const eventRepository = new InMemoryEventRepository(database);
   const result = await new CreateEventUseCase(
     eventRepository,
-    tagRepository,
-    new StubFoodParsingGateway(),
-  ).execute({ type: "sleep" }, { userId: "firebase-user-1" });
+    new StubMealParsingGateway(),
+    new InMemoryWorkoutCatalog(),
+  ).execute({ items: [{ type: "sleep" }] }, { userId: "firebase-user-1" });
 
   const savedEvent = await eventRepository.findById(result.eventId);
 
-  expect(savedEvent).toBeInstanceOf(SleepEvent);
-  expect(savedEvent).toMatchObject({
+  expect(savedEvent?.name).toBe("Sono");
+  expect(savedEvent?.items[0]).toMatchObject({
     type: "sleep",
-    name: "Sono",
     data: { trackedSleepTime: 0, score: 0 },
   });
 });
 
 test("keeps routine names supplied by the user", async () => {
-  const eventRepository = new InMemoryEventRepository();
-  const tagRepository = new InMemoryTagRepository();
+  const database = new InMemoryEventDatabase();
+  const eventRepository = new InMemoryEventRepository(database);
   const result = await new CreateEventUseCase(
     eventRepository,
-    tagRepository,
-    new StubFoodParsingGateway(),
-  ).execute({ type: "routine", name: "Planejamento" }, { userId: "firebase-user-1" });
+    new StubMealParsingGateway(),
+    new InMemoryWorkoutCatalog(),
+  ).execute({ name: "Planejamento", items: [{ type: "routine" }] }, { userId: "firebase-user-1" });
 
   expect((await eventRepository.findById(result.eventId))?.name).toBe("Planejamento");
 });
 
+test("requires a name when the primary item is routine", async () => {
+  const database = new InMemoryEventDatabase();
+  const eventRepository = new InMemoryEventRepository(database);
+  const useCase = new CreateEventUseCase(eventRepository, new StubMealParsingGateway(), new InMemoryWorkoutCatalog());
+
+  await expect(
+    useCase.execute({ items: [{ type: "routine" }] }, { userId: "firebase-user-1" }),
+  ).rejects.toThrow("Event requires a name");
+});
+
 test("finishes the latest open event before creating a new one", async () => {
-  const openEvent = TrainingEvent.create({
-    id: "01K2TESTOPENEVENT1234567890",
-    userId: "firebase-user-1",
-    name: "Treino",
-    description: "",
-    startedAt: new Date("2026-08-17T08:00:00-03:00"),
-    tags: [],
-    interruptions: [],
-    data: { workouts: [] },
-  });
-  const eventRepository = new InMemoryEventRepository([openEvent]);
-  const tagRepository = new InMemoryTagRepository();
-  const foodGateway = new StubFoodParsingGateway();
-  const useCase = new CreateEventUseCase(eventRepository, tagRepository, foodGateway);
+  const openEvent = openTrainingEvent("01K2TESTOPENEVENT1234567890", new Date("2026-08-17T08:00:00-03:00"));
+  const database = new InMemoryEventDatabase([openEvent]);
+  const eventRepository = new InMemoryEventRepository(database);
+  const useCase = new CreateEventUseCase(eventRepository, new StubMealParsingGateway(), new InMemoryWorkoutCatalog());
   const beforeCreate = new Date();
 
   const result = await useCase.execute(
-    { type: "routine", name: "Planejamento" },
+    { name: "Planejamento", items: [{ type: "routine" }] },
     { userId: "firebase-user-1" },
   );
   const updatedOpenEvent = await eventRepository.findById(openEvent.id);
@@ -112,35 +113,20 @@ test("finishes the latest open event before creating a new one", async () => {
   expect(result.eventId).toBeDefined();
 });
 
-test("keeps the previous event open when food parsing fails", async () => {
-  const openEvent = TrainingEvent.create({
-    id: "01K2TESTOPENFAILURE12345678",
-    userId: "firebase-user-1",
-    name: "Treino",
-    description: "",
-    startedAt: new Date("2026-08-17T08:00:00-03:00"),
-    tags: [],
-    interruptions: [],
-    data: { workouts: [] },
-  });
-  const eventRepository = new InMemoryEventRepository([openEvent]);
-  const failingGateway: FoodParsingGateway = {
+test("keeps the previous event open when meal parsing fails", async () => {
+  const openEvent = openTrainingEvent("01K2TESTOPENFAILURE12345678", new Date("2026-08-17T08:00:00-03:00"));
+  const database = new InMemoryEventDatabase([openEvent]);
+  const eventRepository = new InMemoryEventRepository(database);
+  const failingGateway: MealParsingGateway = {
     parseMeal: async () => {
-      throw new Error("food parsing failed");
+      throw new Error("meal parsing failed");
     },
   };
-  const useCase = new CreateEventUseCase(
-    eventRepository,
-    new InMemoryTagRepository(),
-    failingGateway,
-  );
+  const useCase = new CreateEventUseCase(eventRepository, failingGateway, new InMemoryWorkoutCatalog());
 
   await expect(
-    useCase.execute(
-      { type: "food", inputText: "banana" },
-      { userId: "firebase-user-1" },
-    ),
-  ).rejects.toThrow("food parsing failed");
+    useCase.execute({ items: [{ type: "meal", data: { inputText: "banana" } }] }, { userId: "firebase-user-1" }),
+  ).rejects.toThrow("meal parsing failed");
 
   await expect(eventRepository.findById(openEvent.id)).resolves.toMatchObject({
     finishedAt: undefined,
@@ -148,46 +134,22 @@ test("keeps the previous event open when food parsing fails", async () => {
 });
 
 test("prevents a different user from updating an existing event", async () => {
-  const existingEvent = TrainingEvent.create({
-    id: "01K2R1J5M8S0Y2Z7ABCD123456",
-    userId: "firebase-user-1",
-    name: "Leg day",
-    description: "Gym session",
-    startedAt: new Date("2026-08-16T18:00:00-03:00"),
-    finishedAt: new Date("2026-08-16T19:00:00-03:00"),
-    tags: ["gym"],
-    interruptions: [],
-    data: { workouts: [workout] },
-  });
-
-  const eventRepository = new InMemoryEventRepository([existingEvent]);
-  const tagRepository = new InMemoryTagRepository();
-  const foodGateway = new StubFoodParsingGateway();
+  const existingEvent = openTrainingEvent("01K2R1J5M8S0Y2Z7ABCD123456", new Date("2026-08-16T18:00:00-03:00"));
+  const database = new InMemoryEventDatabase([existingEvent]);
+  const eventRepository = new InMemoryEventRepository(database);
 
   await expect(
-    new UpdateEventUseCase(eventRepository, tagRepository, foodGateway).execute(
-      {
-        eventId: existingEvent.id,
-      },
+    new UpdateEventUseCase(eventRepository, new InMemoryWorkoutCatalog()).execute(
+      { eventId: existingEvent.id, expectedRevision: 1 },
       { userId: "firebase-user-2" },
     ),
   ).rejects.toThrow("Only the event owner can modify it");
 });
 
 test("deletes an event when the authenticated user is the owner", async () => {
-  const existingEvent = TrainingEvent.create({
-    id: "01K2R1J5M8S0Y2Z7ABCD123457",
-    userId: "firebase-user-1",
-    name: "Run",
-    description: "Track session",
-    startedAt: new Date("2026-08-16T06:00:00-03:00"),
-    finishedAt: new Date("2026-08-16T06:45:00-03:00"),
-    tags: ["cardio"],
-    interruptions: [],
-    data: { workouts: [{ ...workout, calories: 380 }] },
-  });
-
-  const eventRepository = new InMemoryEventRepository([existingEvent]);
+  const existingEvent = openTrainingEvent("01K2R1J5M8S0Y2Z7ABCD123457", new Date("2026-08-16T06:00:00-03:00"));
+  const database = new InMemoryEventDatabase([existingEvent]);
+  const eventRepository = new InMemoryEventRepository(database);
 
   await new DeleteEventUseCase(eventRepository).execute(
     { eventId: existingEvent.id },
@@ -197,14 +159,13 @@ test("deletes an event when the authenticated user is the owner", async () => {
   await expect(eventRepository.findById(existingEvent.id)).resolves.toBeNull();
 });
 
-test("creates a food event from parsed AI items and calculated totals", async () => {
+test("creates a meal event from parsed AI items and calculated totals", async () => {
   const now = new Date("2026-08-17T12:00:00.000Z");
-  const eventRepository = new InMemoryEventRepository();
-  const tagRepository = new InMemoryTagRepository();
+  const database = new InMemoryEventDatabase();
+  const eventRepository = new InMemoryEventRepository(database);
   const useCase = new CreateEventUseCase(
     eventRepository,
-    tagRepository,
-    new StubFoodParsingGateway({
+    new StubMealParsingGateway({
       items: [
         {
           food: "Banana prata",
@@ -247,46 +208,40 @@ test("creates a food event from parsed AI items and calculated totals", async ()
       modelProvider: "openrouter",
       modelName: "test-model",
     }),
+    new InMemoryWorkoutCatalog(),
     undefined,
     () => now,
   );
 
   const result = await useCase.execute(
     {
-      type: "food",
       description: "Banana, iogurte e morango",
       tags: ["Breakfast"],
-      inputText: "1 banana. 2 colheres de iogurte natural e 5 morangos",
+      items: [{ type: "meal", data: { inputText: "1 banana. 2 colheres de iogurte natural e 5 morangos" } }],
     },
     { userId: "firebase-user-1" },
   );
 
   expect(result.eventId).toBeDefined();
-  expect((await eventRepository.findById(result.eventId))?.type).toBe("food");
-  expect((await eventRepository.findById(result.eventId))?.data).toMatchObject({
+  const savedEvent = await eventRepository.findById(result.eventId);
+  const mealItem = savedEvent?.items[0];
+
+  expect(mealItem?.type).toBe("meal");
+  expect(mealItem?.data).toMatchObject({
+    description: "1 banana. 2 colheres de iogurte natural e 5 morangos",
     totals: {
       totalCaloriesKcal: 134,
       totalProteinGrams: 4.1,
       totalCarbohydrateGrams: 26.8,
       totalFatGrams: 1.8,
       totalFiberGrams: 2.6,
-      totalMicronutrients: {
-        potassiumMg: 358,
-        magnesiumMg: 27,
-        calciumMg: 48,
-      },
     },
-    modelProvider: "openrouter",
-    modelName: "test-model",
-    inputText: "1 banana. 2 colheres de iogurte natural e 5 morangos",
   });
-  const savedEvent = await eventRepository.findById(result.eventId);
 
-  expect(savedEvent?.type).toBe("food");
-  if (!(savedEvent instanceof FoodEvent)) throw new Error("Expected a food event");
-  expect(savedEvent.startedAt).toEqual(now);
-  expect(savedEvent.data.parsedAt).toEqual(now);
-  expect(savedEvent.data.items[0].id).toMatch(/[0-9A-HJKMNP-TV-Z]{26}/);
-  expect(savedEvent.data.items[1].id).toMatch(/[0-9A-HJKMNP-TV-Z]{26}/);
-  expect(tagRepository.upsertedTags).toEqual(["breakfast"]);
+  expect(savedEvent?.startedAt).toEqual(now);
+  const foodItems = (mealItem?.data as { foodItems: Array<{ id: string; micronutrients: Record<string, number> }> }).foodItems;
+  expect(foodItems[0].id).toMatch(/[0-9A-HJKMNP-TV-Z]{26}/);
+  expect(foodItems[1].id).toMatch(/[0-9A-HJKMNP-TV-Z]{26}/);
+  expect(foodItems[0].micronutrients).toMatchObject({ potassiumMg: 358, magnesiumMg: 27, sodiumMg: 1 });
+  expect(savedEvent?.tags).toEqual(["breakfast"]);
 });

@@ -23,8 +23,7 @@ export const createFoodEventSkill = defineEventSkill({
   ].join("\n"),
   parameters,
   toCreateEventInput: (args) => ({
-    type: "food",
-    inputText: args.inputText,
+    items: [{ type: "meal", data: { inputText: args.inputText } }],
     ...toBaseEventInput(args),
   }),
 });

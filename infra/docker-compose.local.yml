@@ -1,0 +1,28 @@
+# Compose local para desenvolvimento. Sobe o PostgreSQL usado por apps/api.
+# O bind em 127.0.0.1 mantem o banco fora da rede, igual ao comportamento
+# padrao da API (veja AGENTS.md).
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: timeline
+      POSTGRES_PASSWORD: timeline
+      POSTGRES_DB: timeline
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U timeline -d timeline"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres-data:
+
+networks:
+  data:
