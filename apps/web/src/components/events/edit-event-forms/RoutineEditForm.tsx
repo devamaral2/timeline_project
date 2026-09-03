@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import type { EventDetailDto, EventPriority } from "@repo/entities/contracts";
+import type { EventPriority } from "@repo/entities/contracts";
 import {
   CommonFields,
   type EditEventFormProps,
   FinishedAtField,
   FormActions,
+  type ItemOfType,
   StartedAtField,
   EventMarks,
   fieldInputClass,
@@ -16,15 +17,18 @@ import {
   useSubmitEventUpdate,
 } from "./shared";
 
-type RoutineEventDetail = Extract<EventDetailDto, { type: "routine" }>;
-
+/**
+ * O item de rotina nao tem payload — `data` e um objeto vazio, e o registro de
+ * itens recusa qualquer campo dentro dele. Por isso este e o unico formulario
+ * que nao manda `items`: nao ha nada de item para trocar, e reenviar a lista
+ * inteira so reescreveria linhas identicas no banco.
+ */
 export function RoutineEditForm({
-  eventId,
   event,
   onCancel,
   onClose,
   onUpdated,
-}: EditEventFormProps<RoutineEventDetail>) {
+}: EditEventFormProps<ItemOfType<"routine">>) {
   const [name, setName] = useState(event.name);
   const [description, setDescription] = useState(event.description);
   const [tags, setTags] = useState<string[]>(event.tags);
@@ -33,7 +37,11 @@ export function RoutineEditForm({
   const [missed, setMissed] = useState<boolean | undefined>(event.missed);
   const [priority, setPriority] = useState<EventPriority | undefined>(event.priority);
   const [validationError, setValidationError] = useState<string | null>(null);
-  const { submit, submitting, error } = useSubmitEventUpdate({ eventId, onUpdated, onClose });
+  const { submit, submitting, error } = useSubmitEventUpdate({
+    eventId: event.id,
+    onUpdated,
+    onClose,
+  });
 
   function handleSubmit(formEvent: FormEvent) {
     formEvent.preventDefault();
@@ -44,6 +52,7 @@ export function RoutineEditForm({
     setValidationError(null);
 
     void submit({
+      expectedRevision: event.revision,
       name: name.trim(),
       description: description.trim(),
       tags,

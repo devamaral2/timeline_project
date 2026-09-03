@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { getAuth } from "firebase/auth";
-import { getClientApp } from "@/lib/firebase/client-app";
+import type { CreateEventInput } from "@repo/entities/contracts";
+import { authedFetch } from "@/lib/api/authed-fetch";
 import { TagInput } from "./TagInput";
 import { fieldLabelClass, fieldTextareaClass } from "./field-styles";
 import { outlineButtonClass, primaryButtonClass } from "@/components/ui/button-styles";
@@ -18,26 +18,16 @@ export function useSubmitEvent({ onCreated, onClose }: UseSubmitEventOptions) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function submit(payload: Record<string, unknown>) {
+  async function submit(payload: CreateEventInput) {
     setSubmitting(true);
     setError(null);
 
     try {
-      const auth = getAuth(getClientApp());
-      const currentUser = auth.currentUser;
-      if (!currentUser) throw new Error("not-authenticated");
-      const token = await currentUser.getIdToken();
-
-      const response = await fetch("/api/events", {
+      await authedFetch("/api/events", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-
-      if (!response.ok) throw new Error(`Request failed with ${response.status}`);
 
       onCreated();
       onClose();

@@ -14,10 +14,10 @@ vi.mock("@/lib/firebase/client-app", () => ({
 function anEvent(overrides: Partial<TimelineEventCardDto> = {}): TimelineEventCardDto {
   return {
     id: "event-1",
-    type: "training",
+    primaryItemId: "item-1",
+    primaryItemType: "training",
+    itemTypes: ["training"],
     missed: false,
-    accentColor: "red",
-    iconName: "dumbbell",
     name: "Academia",
     description: "",
     startedAt: "2026-08-19T18:00:00-03:00",
@@ -36,6 +36,45 @@ test("shows the name, the local time range and the duration from the api", () =>
   expect(screen.getByText(/18:00/)).toBeInTheDocument();
   expect(screen.getByText(/19:25/)).toBeInTheDocument();
   expect(screen.getByText("1h 25m")).toBeInTheDocument();
+});
+
+test("names the card after the primary item, not after the event", () => {
+  render(<EventCard longestMinutes={85} event={anEvent()} />);
+
+  expect(screen.getByText("Treino")).toBeInTheDocument();
+});
+
+test("the secondary items do not change the color or the icon of the card", () => {
+  // O treino que tambem registrou a refeicao de depois continua sendo um
+  // treino: quem responde "o que e isto?" e o item principal, e so ele.
+  const { container: onlyTraining } = render(
+    <EventCard longestMinutes={85} event={anEvent()} />,
+  );
+  const { container: alsoAMeal } = render(
+    <EventCard
+      longestMinutes={85}
+      event={anEvent({ itemTypes: ["training", "meal"] })}
+    />,
+  );
+
+  expect(alsoAMeal.querySelector("svg")?.outerHTML).toBe(
+    onlyTraining.querySelector("svg")?.outerHTML,
+  );
+  expect(screen.getAllByText("Treino")).toHaveLength(2);
+  expect(screen.queryByText("Refeição")).not.toBeInTheDocument();
+});
+
+test("a type this frontend does not know yet falls back instead of breaking", () => {
+  // O registro de itens do backend cresce sem pedir licenca ao web.
+  render(
+    <EventCard
+      longestMinutes={85}
+      event={anEvent({ primaryItemType: "meditation", itemTypes: ["meditation"] })}
+    />,
+  );
+
+  expect(screen.getByText("Evento")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Academia" })).toBeInTheDocument();
 });
 
 test("marks an event without finishedAt as still running", () => {

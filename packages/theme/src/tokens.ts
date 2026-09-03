@@ -37,7 +37,7 @@ export interface ColorTokens {
    * que puxa para o azul — os dois aparecem no mesmo cartao, um no icone e o
    * outro na linha da borda, e precisam ser distinguiveis.
    *
-   * `warning` carrega o matiz de `food` pelo mesmo motivo que `brand` carrega o
+   * `warning` carrega o matiz de `meal` pelo mesmo motivo que `brand` carrega o
    * de `primary`: a paleta so tem uma nota de ambar, e o papel aqui e outro.
    */
   warning: string;
@@ -53,10 +53,17 @@ export interface ColorTokens {
    */
   brand: string;
   brandAccent: string;
-  /** Cores por tipo de evento — o mesmo vocabulario do dominio. */
+  /**
+   * Cores por tipo de item do evento — o mesmo vocabulario do dominio.
+   *
+   * `meal` chamava-se `food` enquanto o evento tinha um tipo so. O valor e o
+   * mesmo ambar de sempre; o nome mudou porque o conceito pintado aqui e a
+   * refeicao (`MealItem`), e `food` continua existindo como entidade de
+   * catalogo — o alimento dentro dela.
+   */
   sleep: string;
   training: string;
-  food: string;
+  meal: string;
   routine: string;
 }
 
@@ -103,7 +110,7 @@ export const lightTokens: ThemeTokens = {
     brandAccent: "oklch(0.593 0.1359 241.41)", // #0e86c7
     sleep: "oklch(0.52 0.256 286.8)", // #6a33f0
     training: "oklch(0.65 0.1313 167.6)", // #06a87f
-    food: "oklch(0.61 0.133 65.7)", // #b8700c
+    meal: "oklch(0.61 0.133 65.7)", // #b8700c
     routine: "oklch(0.593 0.1359 241.41)", // #0e86c7
   },
   tag: { lightness: 0.52, chroma: 0.15 },
@@ -137,7 +144,7 @@ export const darkTokens: ThemeTokens = {
     brandAccent: "oklch(0.789 0.1326 230.59)", // #4cc9ff
     sleep: "oklch(0.579 0.247 288.2)", // #7c4dff
     training: "oklch(0.773 0.148 169.6)", // #22d3a6
-    food: "oklch(0.817 0.147 70.3)", // #ffb14a
+    meal: "oklch(0.817 0.147 70.3)", // #ffb14a
     routine: "oklch(0.789 0.1326 230.59)", // #4cc9ff
   },
   tag: { lightness: 0.78, chroma: 0.13 },

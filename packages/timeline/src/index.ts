@@ -5,4 +5,5 @@ export * from "./format-date";
 export * from "./group-events-by-day";
 export * from "./month";
 export * from "./timeline-day";
+export * from "./timeline-page";
 export * from "./week";

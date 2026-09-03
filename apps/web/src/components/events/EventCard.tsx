@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import type { LucideIcon } from "lucide-react";
 import type { TimelineEventCardDto } from "@repo/entities/contracts";
 import {
   durationRatioOf,
@@ -17,7 +16,7 @@ import { DeleteEventDialog } from "./DeleteEventDialog";
 import { EditEventModal } from "./EditEventModal";
 import { EventDetailsModal } from "./EventDetailsModal";
 import { MissedBadge } from "./MissedBadge";
-import { ICON_STROKE_WIDTH, typeIcons, typeLabels, typeStyles } from "./event-visuals";
+import { ICON_STROKE_WIDTH, visualForItemType, type ItemTypeVisual } from "./event-visuals";
 
 interface EventCardProps {
   event: TimelineEventCardDto;
@@ -33,8 +32,7 @@ export function EventCard({ event, longestMinutes }: EventCardProps) {
   const [viewingDetails, setViewingDetails] = useState(false);
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const Icon = typeIcons[event.type];
-  const styles = typeStyles[event.type];
+  const visual = visualForItemType(event.primaryItemType);
   const isRunning = !event.finishedAt;
 
   // Sem `overflow-hidden` no wrapper: o halo e o levantar do cartao no hover
@@ -43,8 +41,7 @@ export function EventCard({ event, longestMinutes }: EventCardProps) {
     <div className="relative">
       <CardContent
         event={event}
-        styles={styles}
-        Icon={Icon}
+        visual={visual}
         isRunning={isRunning}
         longestMinutes={longestMinutes}
         onOpenDetails={() => setViewingDetails(true)}
@@ -88,8 +85,7 @@ export function EventCard({ event, longestMinutes }: EventCardProps) {
 
 interface CardContentProps {
   event: TimelineEventCardDto;
-  styles: { text: string; bar: string };
-  Icon: LucideIcon;
+  visual: ItemTypeVisual;
   isRunning: boolean;
   longestMinutes: number;
   onOpenDetails: () => void;
@@ -97,8 +93,7 @@ interface CardContentProps {
 
 function CardContent({
   event,
-  styles,
-  Icon,
+  visual: { Icon, label, text, bar },
   isRunning,
   longestMinutes,
   onOpenDetails,
@@ -134,16 +129,14 @@ function CardContent({
         <Icon
           aria-hidden
           strokeWidth={ICON_STROKE_WIDTH}
-          className={cn("size-6 shrink-0", styles.text)}
+          className={cn("size-6 shrink-0", text)}
         />
 
         <div className="min-w-0">
           {/* Tipo e status dividem a linha de cima: um diz o que o evento e, o
               outro em que pe ele esta. */}
           <div className="flex min-w-0 items-center gap-1.5">
-            <p className={cn("truncate text-[11px] font-medium leading-4", styles.text)}>
-              {typeLabels[event.type]}
-            </p>
+            <p className={cn("truncate text-[11px] font-medium leading-4", text)}>{label}</p>
             <MissedBadge missed={event.missed} />
           </div>
           <h3 className="text-[14.5px] font-semibold leading-5 text-card-foreground">
@@ -215,7 +208,7 @@ function CardContent({
         <span
           className={cn(
             "h-[3px] rounded-full transition-[width] duration-500",
-            elapsedSeconds === null ? styles.bar : "bg-brand",
+            elapsedSeconds === null ? bar : "bg-brand",
           )}
           style={{ width: `${ratio * 100}%` }}
         />

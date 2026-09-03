@@ -10,7 +10,7 @@ import {
   useSubmitEvent,
 } from "./shared";
 
-export function FoodForm({ onBack, onClose, onCreated }: EventFormProps) {
+export function MealForm({ onBack, onClose, onCreated }: EventFormProps) {
   const [inputText, setInputText] = useState("");
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState<string[]>([]);
@@ -25,9 +25,11 @@ export function FoodForm({ onBack, onClose, onCreated }: EventFormProps) {
     }
     setValidationError(null);
 
+    // Um item de refeicao, e nada de `type` no evento: o evento nao tem tipo —
+    // tem itens, e e o item que diz o que ele e. Com um item so, ele e o
+    // principal sem precisar dizer.
     void submit({
-      type: "food",
-      inputText: inputText.trim(),
+      items: [{ type: "meal", data: { inputText: inputText.trim() } }],
       description: description.trim() || undefined,
       tags,
     });
@@ -36,11 +38,11 @@ export function FoodForm({ onBack, onClose, onCreated }: EventFormProps) {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="food-input-text" className={fieldLabelClass}>
+        <label htmlFor="meal-input-text" className={fieldLabelClass}>
           O que você comeu? <span aria-hidden className="text-destructive">*</span>
         </label>
         <textarea
-          id="food-input-text"
+          id="meal-input-text"
           autoFocus
           required
           value={inputText}
@@ -50,7 +52,7 @@ export function FoodForm({ onBack, onClose, onCreated }: EventFormProps) {
           className={fieldTextareaClass}
         />
         <p className="text-[11.5px] text-muted-foreground">
-          Descreva livremente a refeição — os itens e valores nutricionais são calculados
+          Descreva livremente a refeição — os alimentos e valores nutricionais são calculados
           automaticamente.
         </p>
       </div>

@@ -52,6 +52,15 @@ test("the dark palette in globals.css matches @repo/theme", () => {
   expectMatchingTokens(".dark", darkTokens);
 });
 
+test("the color of a meal is declared as meal, and food no longer names a color", () => {
+  // `food` era o nome enquanto o evento tinha um tipo so. O ambar continua o
+  // mesmo; quem ele pinta agora e a refeicao. Um `--food` esquecido no CSS
+  // seria um utilitario `text-food` que o Tailwind ainda geraria e ninguem
+  // mais alimentaria.
+  expect(customPropertiesOf(".dark").get("--meal")).toBe(darkTokens.colors.meal);
+  expect(css).not.toContain("--food");
+});
+
 test("the radius in globals.css matches the one the mobile app uses", () => {
   const radius = customPropertiesOf(":root").get("--radius");
   expect(radius).toBe(`${RADIUS / 16}rem`);

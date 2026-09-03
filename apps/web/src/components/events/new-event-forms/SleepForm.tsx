@@ -22,11 +22,15 @@ export function SleepForm({ onBack, onClose, onCreated }: EventFormProps) {
     event.preventDefault();
 
     void submit({
-      type: "sleep",
-      data: {
-        trackedSleepTime: trackedSleepTime ? Number(trackedSleepTime) : undefined,
-        score: score ? Number(score) : undefined,
-      },
+      items: [
+        {
+          type: "sleep",
+          data: {
+            trackedSleepTime: Number(trackedSleepTime) || 0,
+            score: Number(score) || 0,
+          },
+        },
+      ],
       description: description.trim() || undefined,
       tags,
     });

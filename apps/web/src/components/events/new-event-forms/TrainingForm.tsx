@@ -2,15 +2,11 @@
 
 import { useState, type FormEvent } from "react";
 import { Plus, X } from "lucide-react";
-import type { Workout } from "@repo/entities/contracts";
+import type { WorkoutCode, WorkoutInput } from "@repo/entities/contracts";
 import { cn } from "@/lib/utils";
 import { iconButtonClass } from "@/components/ui/button-styles";
-import {
-  addRowButtonClass,
-  emptyRowClass,
-  inlineLinkClass,
-  smallInputClass,
-} from "./field-styles";
+import { addRowButtonClass, emptyRowClass, inlineLinkClass, smallInputClass } from "./field-styles";
+import { workoutCodeLabels } from "./workout-codes";
 import {
   CommonFields,
   type EventFormProps,
@@ -21,13 +17,6 @@ import {
   useSubmitEvent,
 } from "./shared";
 
-const workoutTypeLabels: Record<Workout["type"], string> = {
-  treadmill: "Esteira",
-  running: "Corrida",
-  weightlifting: "Musculação",
-  free: "Livre",
-};
-
 interface SetDraft {
   key: string;
   exercise: string;
@@ -37,7 +26,7 @@ interface SetDraft {
 
 interface WorkoutDraft {
   key: string;
-  type: Workout["type"];
+  workoutCode: WorkoutCode;
   calories: string;
   duration: string;
   pace: string;
@@ -50,7 +39,15 @@ function newKey(): string {
 }
 
 function newWorkout(): WorkoutDraft {
-  return { key: newKey(), type: "free", calories: "", duration: "", pace: "", distance: "", sets: [] };
+  return {
+    key: newKey(),
+    workoutCode: "free",
+    calories: "",
+    duration: "",
+    pace: "",
+    distance: "",
+    sets: [],
+  };
 }
 
 function newSet(): SetDraft {
@@ -58,7 +55,6 @@ function newSet(): SetDraft {
 }
 
 const selectClass = fieldInputClass + " pr-8";
-
 
 export function TrainingForm({ onBack, onClose, onCreated }: EventFormProps) {
   const [workouts, setWorkouts] = useState<WorkoutDraft[]>([]);
@@ -83,12 +79,15 @@ export function TrainingForm({ onBack, onClose, onCreated }: EventFormProps) {
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
 
-    const builtWorkouts: Workout[] = workouts.map((w) => {
+    // A entrada de criacao nao carrega `workoutName` nem `caloriesBurned`: o
+    // nome vem do catalogo do backend e a soma e feita la. O cliente diz o que
+    // fez, nao como o registro fica.
+    const builtWorkouts: WorkoutInput[] = workouts.map((w) => {
       const base = { calories: Number(w.calories) || 0, duration: Number(w.duration) || 0 };
-      if (w.type === "weightlifting") {
+      if (w.workoutCode === "weightlifting") {
         return {
-          type: "weightlifting",
           ...base,
+          workoutCode: "weightlifting",
           sets: w.sets.map((s) => ({
             exercise: s.exercise.trim(),
             repetitions: Number(s.repetitions) || 0,
@@ -96,13 +95,17 @@ export function TrainingForm({ onBack, onClose, onCreated }: EventFormProps) {
           })),
         };
       }
-      if (w.type === "free") return { type: "free", ...base };
-      return { type: w.type, ...base, pace: Number(w.pace) || 0, distance: Number(w.distance) || 0 };
+      if (w.workoutCode === "free") return { ...base, workoutCode: "free" };
+      return {
+        ...base,
+        workoutCode: w.workoutCode,
+        pace: Number(w.pace) || 0,
+        distance: Number(w.distance) || 0,
+      };
     });
 
     void submit({
-      type: "training",
-      data: { workouts: builtWorkouts },
+      items: [{ type: "training", data: { workouts: builtWorkouts } }],
       description: description.trim() || undefined,
       tags,
     });
@@ -114,22 +117,23 @@ export function TrainingForm({ onBack, onClose, onCreated }: EventFormProps) {
         <span className={fieldLabelClass}>Treinos</span>
 
         {workouts.length === 0 ? (
-          <p className={emptyRowClass}>
-            Nenhum treino adicionado ainda.
-          </p>
+          <p className={emptyRowClass}>Nenhum treino adicionado ainda.</p>
         ) : null}
 
         {workouts.map((workout) => (
-          <div key={workout.key} className="flex flex-col gap-2.5 rounded-lg border border-border p-3">
+          <div
+            key={workout.key}
+            className="flex flex-col gap-2.5 rounded-lg border border-border p-3"
+          >
             <div className="flex items-center gap-2">
               <select
-                value={workout.type}
+                value={workout.workoutCode}
                 onChange={(event) =>
-                  updateWorkout(workout.key, { type: event.target.value as Workout["type"] })
+                  updateWorkout(workout.key, { workoutCode: event.target.value as WorkoutCode })
                 }
                 className={selectClass}
               >
-                {Object.entries(workoutTypeLabels).map(([value, label]) => (
+                {Object.entries(workoutCodeLabels).map(([value, label]) => (
                   <option key={value} value={value}>
                     {label}
                   </option>
@@ -137,7 +141,9 @@ export function TrainingForm({ onBack, onClose, onCreated }: EventFormProps) {
               </select>
               <button
                 type="button"
-                onClick={() => setWorkouts((current) => current.filter((w) => w.key !== workout.key))}
+                onClick={() =>
+                  setWorkouts((current) => current.filter((w) => w.key !== workout.key))
+                }
                 aria-label="Remover treino"
                 className={cn("ml-auto", iconButtonClass)}
               >
@@ -169,7 +175,7 @@ export function TrainingForm({ onBack, onClose, onCreated }: EventFormProps) {
                 />
               </div>
 
-              {workout.type === "treadmill" || workout.type === "running" ? (
+              {workout.workoutCode === "treadmill" || workout.workoutCode === "running" ? (
                 <>
                   <div className="flex flex-col gap-1">
                     <label className="text-[12px] text-muted-foreground">Ritmo (min/km)</label>
@@ -189,7 +195,9 @@ export function TrainingForm({ onBack, onClose, onCreated }: EventFormProps) {
                       min={0}
                       step={anyDecimalStep}
                       value={workout.distance}
-                      onChange={(event) => updateWorkout(workout.key, { distance: event.target.value })}
+                      onChange={(event) =>
+                        updateWorkout(workout.key, { distance: event.target.value })
+                      }
                       className={smallInputClass}
                     />
                   </div>
@@ -197,7 +205,7 @@ export function TrainingForm({ onBack, onClose, onCreated }: EventFormProps) {
               ) : null}
             </div>
 
-            {workout.type === "weightlifting" ? (
+            {workout.workoutCode === "weightlifting" ? (
               <div className="flex flex-col gap-2">
                 {workout.sets.map((set) => (
                   <div key={set.key} className="flex items-center gap-1.5 sm:gap-2">
@@ -227,7 +235,9 @@ export function TrainingForm({ onBack, onClose, onCreated }: EventFormProps) {
                       step={anyDecimalStep}
                       placeholder="Kg"
                       value={set.weight}
-                      onChange={(event) => updateSet(workout.key, set.key, { weight: event.target.value })}
+                      onChange={(event) =>
+                        updateSet(workout.key, set.key, { weight: event.target.value })
+                      }
                       className={cn(smallInputClass, "w-12 min-w-0 shrink-0 sm:w-16")}
                     />
                     <button

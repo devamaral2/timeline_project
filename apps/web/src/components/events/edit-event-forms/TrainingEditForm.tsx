@@ -2,8 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { Plus, X } from "lucide-react";
-import type { EventDetailDto, EventPriority } from "@repo/entities/contracts";
-import type { Workout } from "@repo/entities/contracts";
+import type { EventPriority, WorkoutCode, WorkoutSnapshot } from "@repo/entities/contracts";
 import { cn } from "@/lib/utils";
 import { iconButtonClass } from "@/components/ui/button-styles";
 import {
@@ -15,26 +14,20 @@ import {
   inlineLinkClass,
   smallInputClass,
 } from "../new-event-forms/field-styles";
+import { workoutCodeLabels } from "../new-event-forms/workout-codes";
 import {
   CommonFields,
   type EditEventFormProps,
   FinishedAtField,
   FormActions,
+  type ItemOfType,
   StartedAtField,
   EventMarks,
   fromDatetimeLocalValue,
+  itemsPatchedWith,
   toDatetimeLocalValue,
   useSubmitEventUpdate,
 } from "./shared";
-
-type TrainingEventDetail = Extract<EventDetailDto, { type: "training" }>;
-
-const workoutTypeLabels: Record<Workout["type"], string> = {
-  treadmill: "Esteira",
-  running: "Corrida",
-  weightlifting: "Musculação",
-  free: "Livre",
-};
 
 interface SetDraft {
   key: string;
@@ -47,7 +40,13 @@ interface SetDraft {
 interface WorkoutDraft {
   key: string;
   id?: string;
-  type: Workout["type"];
+  workoutCode: WorkoutCode;
+  /**
+   * O nome que veio do catalogo, guardado so para devolve-lo igual. A API o
+   * reescreve a partir do `workoutCode` — mas o payload de treino o exige, e
+   * inventar um aqui seria dizer ao servidor uma coisa que ele nao perguntou.
+   */
+  workoutName: string;
   calories: string;
   duration: string;
   pace: string;
@@ -60,24 +59,34 @@ function newKey(): string {
 }
 
 function newWorkout(): WorkoutDraft {
-  return { key: newKey(), type: "free", calories: "", duration: "", pace: "", distance: "", sets: [] };
+  return {
+    key: newKey(),
+    workoutCode: "free",
+    workoutName: "",
+    calories: "",
+    duration: "",
+    pace: "",
+    distance: "",
+    sets: [],
+  };
 }
 
 function newSet(): SetDraft {
   return { key: newKey(), exercise: "", repetitions: "", weight: "" };
 }
 
-function draftFromWorkout(workout: Workout): WorkoutDraft {
+function draftFromWorkout(workout: WorkoutSnapshot): WorkoutDraft {
   return {
     key: newKey(),
     id: workout.id,
-    type: workout.type,
+    workoutCode: workout.workoutCode,
+    workoutName: workout.workoutName,
     calories: String(workout.calories),
     duration: String(workout.duration),
     pace: "pace" in workout ? String(workout.pace) : "",
     distance: "distance" in workout ? String(workout.distance) : "",
     sets:
-      workout.type === "weightlifting"
+      workout.workoutCode === "weightlifting"
         ? workout.sets.map((set) => ({
             key: newKey(),
             id: set.id,
@@ -91,22 +100,25 @@ function draftFromWorkout(workout: Workout): WorkoutDraft {
 
 const selectClass = fieldInputClass + " pr-8";
 
-
 export function TrainingEditForm({
-  eventId,
   event,
+  item,
   onCancel,
   onClose,
   onUpdated,
-}: EditEventFormProps<TrainingEventDetail>) {
-  const [workouts, setWorkouts] = useState<WorkoutDraft[]>(event.data.workouts.map(draftFromWorkout));
+}: EditEventFormProps<ItemOfType<"training">>) {
+  const [workouts, setWorkouts] = useState<WorkoutDraft[]>(item.data.workouts.map(draftFromWorkout));
   const [description, setDescription] = useState(event.description);
   const [tags, setTags] = useState<string[]>(event.tags);
   const [startedAt, setStartedAt] = useState(toDatetimeLocalValue(event.startedAt));
   const [finishedAt, setFinishedAt] = useState(toDatetimeLocalValue(event.finishedAt));
   const [missed, setMissed] = useState<boolean | undefined>(event.missed);
   const [priority, setPriority] = useState<EventPriority | undefined>(event.priority);
-  const { submit, submitting, error } = useSubmitEventUpdate({ eventId, onUpdated, onClose });
+  const { submit, submitting, error } = useSubmitEventUpdate({
+    eventId: event.id,
+    onUpdated,
+    onClose,
+  });
 
   function updateWorkout(key: string, patch: Partial<WorkoutDraft>) {
     setWorkouts((current) => current.map((w) => (w.key === key ? { ...w, ...patch } : w)));
@@ -125,26 +137,43 @@ export function TrainingEditForm({
   function handleSubmit(formEvent: FormEvent) {
     formEvent.preventDefault();
 
-    const builtWorkouts: Workout[] = workouts.map((w) => {
-      const base = { id: w.id, calories: Number(w.calories) || 0, duration: Number(w.duration) || 0 };
-      if (w.type === "weightlifting") {
+    const builtWorkouts: WorkoutSnapshot[] = workouts.map((w) => {
+      const base = {
+        id: w.id ?? newKey(),
+        workoutName: w.workoutName,
+        calories: Number(w.calories) || 0,
+        duration: Number(w.duration) || 0,
+      };
+      if (w.workoutCode === "weightlifting") {
         return {
-          type: "weightlifting",
           ...base,
+          workoutCode: "weightlifting",
           sets: w.sets.map((s) => ({
-            id: s.id,
+            id: s.id ?? newKey(),
             exercise: s.exercise.trim(),
             repetitions: Number(s.repetitions) || 0,
             weight: Number(s.weight) || 0,
           })),
         };
       }
-      if (w.type === "free") return { type: "free", ...base };
-      return { type: w.type, ...base, pace: Number(w.pace) || 0, distance: Number(w.distance) || 0 };
+      if (w.workoutCode === "free") return { ...base, workoutCode: "free" };
+      return {
+        ...base,
+        workoutCode: w.workoutCode,
+        pace: Number(w.pace) || 0,
+        distance: Number(w.distance) || 0,
+      };
     });
 
     void submit({
-      data: { workouts: builtWorkouts },
+      expectedRevision: event.revision,
+      // `caloriesBurned` e a soma dos treinos, e a API a recalcula do mesmo
+      // jeito — mandar outra coisa daqui so criaria uma divergencia que o
+      // servidor descartaria.
+      items: itemsPatchedWith(event, item.id, {
+        workouts: builtWorkouts,
+        caloriesBurned: builtWorkouts.reduce((total, workout) => total + workout.calories, 0),
+      }),
       description: description.trim(),
       tags,
       startedAt: fromDatetimeLocalValue(startedAt),
@@ -159,23 +188,21 @@ export function TrainingEditForm({
       <div className="flex flex-col gap-2.5">
         <span className={fieldLabelClass}>Treinos</span>
 
-        {workouts.length === 0 ? (
-          <p className={emptyRowClass}>
-            Nenhum treino adicionado ainda.
-          </p>
-        ) : null}
+        {workouts.length === 0 ? <p className={emptyRowClass}>Nenhum treino adicionado ainda.</p> : null}
 
         {workouts.map((workout) => (
           <div key={workout.key} className="flex flex-col gap-2.5 rounded-lg border border-border p-3">
             <div className="flex items-center gap-2">
               <select
-                value={workout.type}
-                onChange={(event) =>
-                  updateWorkout(workout.key, { type: event.target.value as Workout["type"] })
+                value={workout.workoutCode}
+                onChange={(selectEvent) =>
+                  updateWorkout(workout.key, {
+                    workoutCode: selectEvent.target.value as WorkoutCode,
+                  })
                 }
                 className={selectClass}
               >
-                {Object.entries(workoutTypeLabels).map(([value, label]) => (
+                {Object.entries(workoutCodeLabels).map(([value, label]) => (
                   <option key={value} value={value}>
                     {label}
                   </option>
@@ -199,7 +226,9 @@ export function TrainingEditForm({
                   min={0}
                   step={anyDecimalStep}
                   value={workout.calories}
-                  onChange={(event) => updateWorkout(workout.key, { calories: event.target.value })}
+                  onChange={(inputEvent) =>
+                    updateWorkout(workout.key, { calories: inputEvent.target.value })
+                  }
                   className={smallInputClass}
                 />
               </div>
@@ -210,12 +239,14 @@ export function TrainingEditForm({
                   min={0}
                   step={anyDecimalStep}
                   value={workout.duration}
-                  onChange={(event) => updateWorkout(workout.key, { duration: event.target.value })}
+                  onChange={(inputEvent) =>
+                    updateWorkout(workout.key, { duration: inputEvent.target.value })
+                  }
                   className={smallInputClass}
                 />
               </div>
 
-              {workout.type === "treadmill" || workout.type === "running" ? (
+              {workout.workoutCode === "treadmill" || workout.workoutCode === "running" ? (
                 <>
                   <div className="flex flex-col gap-1">
                     <label className="text-[12px] text-muted-foreground">Ritmo (min/km)</label>
@@ -224,7 +255,9 @@ export function TrainingEditForm({
                       min={0}
                       step={anyDecimalStep}
                       value={workout.pace}
-                      onChange={(event) => updateWorkout(workout.key, { pace: event.target.value })}
+                      onChange={(inputEvent) =>
+                        updateWorkout(workout.key, { pace: inputEvent.target.value })
+                      }
                       className={smallInputClass}
                     />
                   </div>
@@ -235,7 +268,9 @@ export function TrainingEditForm({
                       min={0}
                       step={anyDecimalStep}
                       value={workout.distance}
-                      onChange={(event) => updateWorkout(workout.key, { distance: event.target.value })}
+                      onChange={(inputEvent) =>
+                        updateWorkout(workout.key, { distance: inputEvent.target.value })
+                      }
                       className={smallInputClass}
                     />
                   </div>
@@ -243,7 +278,7 @@ export function TrainingEditForm({
               ) : null}
             </div>
 
-            {workout.type === "weightlifting" ? (
+            {workout.workoutCode === "weightlifting" ? (
               <div className="flex flex-col gap-2">
                 {workout.sets.map((set) => (
                   <div key={set.key} className="flex items-center gap-1.5 sm:gap-2">
@@ -251,8 +286,8 @@ export function TrainingEditForm({
                       type="text"
                       placeholder="Exercício"
                       value={set.exercise}
-                      onChange={(event) =>
-                        updateSet(workout.key, set.key, { exercise: event.target.value })
+                      onChange={(inputEvent) =>
+                        updateSet(workout.key, set.key, { exercise: inputEvent.target.value })
                       }
                       className={cn(smallInputClass, "min-w-0 flex-1")}
                     />
@@ -262,8 +297,8 @@ export function TrainingEditForm({
                       step={anyDecimalStep}
                       placeholder="Reps"
                       value={set.repetitions}
-                      onChange={(event) =>
-                        updateSet(workout.key, set.key, { repetitions: event.target.value })
+                      onChange={(inputEvent) =>
+                        updateSet(workout.key, set.key, { repetitions: inputEvent.target.value })
                       }
                       className={cn(smallInputClass, "w-12 min-w-0 shrink-0 sm:w-16")}
                     />
@@ -273,7 +308,9 @@ export function TrainingEditForm({
                       step={anyDecimalStep}
                       placeholder="Kg"
                       value={set.weight}
-                      onChange={(event) => updateSet(workout.key, set.key, { weight: event.target.value })}
+                      onChange={(inputEvent) =>
+                        updateSet(workout.key, set.key, { weight: inputEvent.target.value })
+                      }
                       className={cn(smallInputClass, "w-12 min-w-0 shrink-0 sm:w-16")}
                     />
                     <button

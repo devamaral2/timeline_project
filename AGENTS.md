@@ -83,7 +83,7 @@ escrita e o contrario, e mais estrito — o controller recusa com 400 qualquer
 
 Os rotulos em portugues vivem nos `event-visuals` de cada app, junto dos rotulos
 de tipo. O selo usa `destructive`, que e token de situacao e vive separado de
-`training` e `food`, que sao tokens de tipo: os dois aparecem no mesmo cartao e
+`training` e `meal`, que sao tokens de tipo: os dois aparecem no mesmo cartao e
 precisam ser distinguiveis.
 
 # App mobile

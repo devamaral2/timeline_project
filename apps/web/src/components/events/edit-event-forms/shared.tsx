@@ -1,9 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { getAuth } from "firebase/auth";
-import type { EventPriority } from "@repo/entities/contracts";
-import { getClientApp } from "@/lib/firebase/client-app";
+import type {
+  EventDetailDto,
+  EventItemDto,
+  EventPriority,
+  UpdateEventItemInput,
+} from "@repo/entities/contracts";
+import { authedFetch } from "@/lib/api/authed-fetch";
 import { fieldInputClass, fieldLabelClass } from "../new-event-forms/field-styles";
 import { priorities, priorityLabels } from "../event-visuals";
 
@@ -17,35 +21,28 @@ interface UseSubmitEventUpdateOptions {
 }
 
 /**
- * PATCH so envia os campos que o usuario de fato alterou nesta tela. Campos
- * como type, userId e eventId nunca sao enviados: a rota os ignora (sao
- * imutaveis / vem do proprio recurso) e o merge no backend preserva qualquer
- * coisa que nao seja enviada.
+ * PATCH so envia os campos que o usuario de fato alterou nesta tela. O eventId
+ * nao vai no corpo — ele ja esta na URL — e o merge no backend preserva
+ * qualquer coisa que nao seja enviada.
+ *
+ * O que nunca falta e `expectedRevision`: a rota recusa com 400 um PATCH sem
+ * ele, e e assim que duas telas abertas no mesmo evento param de se sobrescrever
+ * em silencio. Quem chega com a revisao velha perde, e sabe que perdeu.
  */
 export function useSubmitEventUpdate({ eventId, onUpdated, onClose }: UseSubmitEventUpdateOptions) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function submit(payload: Record<string, unknown>) {
+  async function submit(payload: EventUpdatePayload) {
     setSubmitting(true);
     setError(null);
 
     try {
-      const auth = getAuth(getClientApp());
-      const currentUser = auth.currentUser;
-      if (!currentUser) throw new Error("not-authenticated");
-      const token = await currentUser.getIdToken();
-
-      const response = await fetch(`/api/events/${eventId}`, {
+      await authedFetch(`/api/events/${eventId}`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-
-      if (!response.ok) throw new Error(`Request failed with ${response.status}`);
 
       onUpdated();
       onClose();
@@ -58,6 +55,40 @@ export function useSubmitEventUpdate({ eventId, onUpdated, onClose }: UseSubmitE
 
   return { submit, submitting, error };
 }
+
+/** O corpo do PATCH, sem o eventId — que vai na URL. */
+export type EventUpdatePayload = Record<string, unknown> & {
+  expectedRevision: number;
+  items?: UpdateEventItemInput[];
+};
+
+/**
+ * O array completo de itens do evento, com o `data` de um deles trocado.
+ *
+ * O PATCH substitui a lista inteira: mandar so o item editado apagaria os
+ * outros. Cada formulario cuida de um item — os demais atravessam daqui para o
+ * backend sem que ninguem os toque, com o mesmo id, para que o merge os
+ * reconheca em vez de recria-los.
+ */
+export function itemsPatchedWith(
+  event: EventDetailDto,
+  itemId: string,
+  data: unknown,
+): UpdateEventItemInput[] {
+  return event.items.map((item) => ({
+    id: item.id,
+    type: item.type,
+    schemaVersion: item.schemaVersion,
+    isPrimary: item.isPrimary,
+    data: item.id === itemId ? data : item.data,
+    // O TypeScript nao consegue casar `type` com o `data` correspondente
+    // depois do map — a uniao discriminada se desfaz. Quem valida o par de
+    // verdade e o registro de itens, no backend.
+  })) as UpdateEventItemInput[];
+}
+
+/** O item que este formulario edita, ja no tipo que ele espera. */
+export type ItemOfType<TType extends EventItemDto["type"]> = Extract<EventItemDto, { type: TType }>;
 
 /** Converte um instante ISO para o valor local esperado por <input type="datetime-local">. */
 export function toDatetimeLocalValue(iso: string | undefined): string {
@@ -189,9 +220,16 @@ function asOption(value: string): string | undefined {
   return value === "" ? undefined : value;
 }
 
-export interface EditEventFormProps<TData> {
-  eventId: string;
-  event: TData;
+/**
+ * Todo formulario de edicao recebe o evento inteiro e o item que ele edita.
+ *
+ * O evento inteiro, porque o PATCH precisa da revisao e dos outros itens; o
+ * item, porque quem o encontrou foi o roteador — pelo `primaryItemId`, e nao
+ * pela posicao no array.
+ */
+export interface EditEventFormProps<TItem> {
+  event: EventDetailDto;
+  item: TItem;
   onCancel: () => void;
   onClose: () => void;
   onUpdated: () => void;

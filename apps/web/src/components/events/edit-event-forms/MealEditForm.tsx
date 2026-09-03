@@ -2,8 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { Plus, X } from "lucide-react";
-import type { EventDetailDto, EventPriority } from "@repo/entities/contracts";
-import type { FoodItem } from "@repo/entities/contracts";
+import type { EventPriority, FoodItem } from "@repo/entities/contracts";
 import { cn } from "@/lib/utils";
 import { iconButtonClass } from "@/components/ui/button-styles";
 import {
@@ -18,19 +17,19 @@ import {
   type EditEventFormProps,
   FinishedAtField,
   FormActions,
+  type ItemOfType,
   StartedAtField,
   EventMarks,
   fromDatetimeLocalValue,
+  itemsPatchedWith,
   toDatetimeLocalValue,
   useSubmitEventUpdate,
 } from "./shared";
 
-type FoodEventDetail = Extract<EventDetailDto, { type: "food" }>;
-
-interface ItemDraft {
+interface FoodItemDraft {
   key: string;
-  id?: string;
-  food: string;
+  id: string;
+  name: string;
   isNew: boolean;
   portion: string;
   approximateWeightGrams: string;
@@ -39,36 +38,40 @@ interface ItemDraft {
   proteinsGrams: string;
   totalFatGrams: string;
   fiberGrams: string;
-  mainMicronutrients: Record<string, number>;
-  otherData: Record<string, number>;
+  /** O que a IA extraiu e o formulario nao edita — atravessa intacto. */
+  micronutrients: Record<string, number>;
+  sourceFoodId?: string;
+  sourceFoodRevision?: number;
 }
 
 function newKey(): string {
   return crypto.randomUUID();
 }
 
-function draftFromItem(item: FoodItem): ItemDraft {
+function draftFromFoodItem(foodItem: FoodItem): FoodItemDraft {
   return {
     key: newKey(),
-    id: item.id,
-    food: item.food,
+    id: foodItem.id,
+    name: foodItem.name,
     isNew: false,
-    portion: item.portion,
-    approximateWeightGrams: String(item.approximateWeightGrams),
-    caloriesKcal: String(item.caloriesKcal),
-    carbohydratesGrams: String(item.macronutrients.carbohydratesGrams),
-    proteinsGrams: String(item.macronutrients.proteinsGrams),
-    totalFatGrams: String(item.macronutrients.totalFatGrams),
-    fiberGrams: String(item.macronutrients.fiberGrams),
-    mainMicronutrients: item.mainMicronutrients,
-    otherData: item.otherData,
+    portion: foodItem.portion,
+    approximateWeightGrams: String(foodItem.approximateWeightGrams),
+    caloriesKcal: String(foodItem.caloriesKcal),
+    carbohydratesGrams: String(foodItem.macronutrients.carbohydratesGrams),
+    proteinsGrams: String(foodItem.macronutrients.proteinsGrams),
+    totalFatGrams: String(foodItem.macronutrients.totalFatGrams),
+    fiberGrams: String(foodItem.macronutrients.fiberGrams),
+    micronutrients: foodItem.micronutrients,
+    sourceFoodId: foodItem.sourceFoodId,
+    sourceFoodRevision: foodItem.sourceFoodRevision,
   };
 }
 
-function newItem(): ItemDraft {
+function newFoodItem(): FoodItemDraft {
   return {
     key: newKey(),
-    food: "",
+    id: newKey(),
+    name: "",
     isNew: true,
     portion: "",
     approximateWeightGrams: "",
@@ -77,48 +80,70 @@ function newItem(): ItemDraft {
     proteinsGrams: "",
     totalFatGrams: "",
     fiberGrams: "",
-    mainMicronutrients: {},
-    otherData: {},
+    micronutrients: {},
   };
 }
 
-
-
-export function FoodEditForm({ eventId, event, onCancel, onClose, onUpdated }: EditEventFormProps<FoodEventDetail>) {
-  const [items, setItems] = useState<ItemDraft[]>(event.data.items.map(draftFromItem));
+export function MealEditForm({
+  event,
+  item,
+  onCancel,
+  onClose,
+  onUpdated,
+}: EditEventFormProps<ItemOfType<"meal">>) {
+  const [foodItems, setFoodItems] = useState<FoodItemDraft[]>(
+    item.data.foodItems.map(draftFromFoodItem),
+  );
   const [description, setDescription] = useState(event.description);
   const [tags, setTags] = useState<string[]>(event.tags);
   const [startedAt, setStartedAt] = useState(toDatetimeLocalValue(event.startedAt));
   const [finishedAt, setFinishedAt] = useState(toDatetimeLocalValue(event.finishedAt));
   const [missed, setMissed] = useState<boolean | undefined>(event.missed);
   const [priority, setPriority] = useState<EventPriority | undefined>(event.priority);
-  const { submit, submitting, error } = useSubmitEventUpdate({ eventId, onUpdated, onClose });
+  const { submit, submitting, error } = useSubmitEventUpdate({
+    eventId: event.id,
+    onUpdated,
+    onClose,
+  });
 
-  function updateItem(key: string, patch: Partial<ItemDraft>) {
-    setItems((current) => current.map((item) => (item.key === key ? { ...item, ...patch } : item)));
+  function updateFoodItem(key: string, patch: Partial<FoodItemDraft>) {
+    setFoodItems((current) =>
+      current.map((foodItem) => (foodItem.key === key ? { ...foodItem, ...patch } : foodItem)),
+    );
   }
 
   function handleSubmit(formEvent: FormEvent) {
     formEvent.preventDefault();
 
-    const builtItems: FoodItem[] = items.map((item) => ({
-      id: item.id,
-      food: item.food.trim(),
-      portion: item.portion.trim(),
-      approximateWeightGrams: Number(item.approximateWeightGrams) || 0,
-      caloriesKcal: Number(item.caloriesKcal) || 0,
+    const builtFoodItems: FoodItem[] = foodItems.map((foodItem) => ({
+      id: foodItem.id,
+      name: foodItem.name.trim(),
+      portion: foodItem.portion.trim(),
+      approximateWeightGrams: Number(foodItem.approximateWeightGrams) || 0,
+      caloriesKcal: Number(foodItem.caloriesKcal) || 0,
       macronutrients: {
-        carbohydratesGrams: Number(item.carbohydratesGrams) || 0,
-        proteinsGrams: Number(item.proteinsGrams) || 0,
-        totalFatGrams: Number(item.totalFatGrams) || 0,
-        fiberGrams: Number(item.fiberGrams) || 0,
+        carbohydratesGrams: Number(foodItem.carbohydratesGrams) || 0,
+        proteinsGrams: Number(foodItem.proteinsGrams) || 0,
+        totalFatGrams: Number(foodItem.totalFatGrams) || 0,
+        fiberGrams: Number(foodItem.fiberGrams) || 0,
       },
-      mainMicronutrients: item.mainMicronutrients,
-      otherData: item.otherData,
+      micronutrients: foodItem.micronutrients,
+      ...(foodItem.sourceFoodId ? { sourceFoodId: foodItem.sourceFoodId } : {}),
+      ...(foodItem.sourceFoodRevision !== undefined
+        ? { sourceFoodRevision: foodItem.sourceFoodRevision }
+        : {}),
     }));
 
     void submit({
-      data: { items: builtItems },
+      expectedRevision: event.revision,
+      // O nome e a descricao da refeicao vem do agente e nao se editam aqui —
+      // atravessam iguais. Os totais tambem: a API os recalcula a partir dos
+      // alimentos, e somar de novo no browser so criaria um segundo lugar onde
+      // o arredondamento pode divergir.
+      items: itemsPatchedWith(event, item.id, {
+        ...item.data,
+        foodItems: builtFoodItems,
+      }),
       description: description.trim(),
       tags,
       startedAt: fromDatetimeLocalValue(startedAt),
@@ -133,31 +158,39 @@ export function FoodEditForm({ eventId, event, onCancel, onClose, onUpdated }: E
       <div className="flex flex-col gap-2.5">
         <span className={fieldLabelClass}>Itens da refeição</span>
 
-        {items.length === 0 ? (
-          <p className={emptyRowClass}>
-            Nenhum item nesta refeição.
-          </p>
+        {foodItems.length === 0 ? (
+          <p className={emptyRowClass}>Nenhum item nesta refeição.</p>
         ) : null}
 
-        {items.map((item) => (
-          <div key={item.key} className="flex flex-col gap-2.5 rounded-lg border border-border p-3">
+        {foodItems.map((foodItem) => (
+          <div
+            key={foodItem.key}
+            className="flex flex-col gap-2.5 rounded-lg border border-border p-3"
+          >
             <div className="flex items-center gap-2">
-              {item.isNew ? (
+              {foodItem.isNew ? (
                 <input
                   type="text"
                   placeholder="Ex.: Arroz branco"
-                  value={item.food}
-                  onChange={(event) => updateItem(item.key, { food: event.target.value })}
+                  value={foodItem.name}
+                  onChange={(inputEvent) =>
+                    updateFoodItem(foodItem.key, { name: inputEvent.target.value })
+                  }
                   className={cn(smallInputClass, "flex-1")}
                 />
               ) : (
-                <p className="flex-1 truncate text-[13.5px] font-medium text-foreground" title={item.food}>
-                  {item.food}
+                <p
+                  className="flex-1 truncate text-[13.5px] font-medium text-foreground"
+                  title={foodItem.name}
+                >
+                  {foodItem.name}
                 </p>
               )}
               <button
                 type="button"
-                onClick={() => setItems((current) => current.filter((current2) => current2.key !== item.key))}
+                onClick={() =>
+                  setFoodItems((current) => current.filter((other) => other.key !== foodItem.key))
+                }
                 aria-label="Remover item"
                 className={iconButtonClass}
               >
@@ -170,8 +203,10 @@ export function FoodEditForm({ eventId, event, onCancel, onClose, onUpdated }: E
                 <label className="text-[12px] text-muted-foreground">Porção</label>
                 <input
                   type="text"
-                  value={item.portion}
-                  onChange={(event) => updateItem(item.key, { portion: event.target.value })}
+                  value={foodItem.portion}
+                  onChange={(inputEvent) =>
+                    updateFoodItem(foodItem.key, { portion: inputEvent.target.value })
+                  }
                   className={smallInputClass}
                 />
               </div>
@@ -181,8 +216,12 @@ export function FoodEditForm({ eventId, event, onCancel, onClose, onUpdated }: E
                   type="number"
                   min={0}
                   step={anyDecimalStep}
-                  value={item.approximateWeightGrams}
-                  onChange={(event) => updateItem(item.key, { approximateWeightGrams: event.target.value })}
+                  value={foodItem.approximateWeightGrams}
+                  onChange={(inputEvent) =>
+                    updateFoodItem(foodItem.key, {
+                      approximateWeightGrams: inputEvent.target.value,
+                    })
+                  }
                   className={smallInputClass}
                 />
               </div>
@@ -192,8 +231,10 @@ export function FoodEditForm({ eventId, event, onCancel, onClose, onUpdated }: E
                   type="number"
                   min={0}
                   step={anyDecimalStep}
-                  value={item.caloriesKcal}
-                  onChange={(event) => updateItem(item.key, { caloriesKcal: event.target.value })}
+                  value={foodItem.caloriesKcal}
+                  onChange={(inputEvent) =>
+                    updateFoodItem(foodItem.key, { caloriesKcal: inputEvent.target.value })
+                  }
                   className={smallInputClass}
                 />
               </div>
@@ -203,8 +244,10 @@ export function FoodEditForm({ eventId, event, onCancel, onClose, onUpdated }: E
                   type="number"
                   min={0}
                   step={anyDecimalStep}
-                  value={item.carbohydratesGrams}
-                  onChange={(event) => updateItem(item.key, { carbohydratesGrams: event.target.value })}
+                  value={foodItem.carbohydratesGrams}
+                  onChange={(inputEvent) =>
+                    updateFoodItem(foodItem.key, { carbohydratesGrams: inputEvent.target.value })
+                  }
                   className={smallInputClass}
                 />
               </div>
@@ -214,8 +257,10 @@ export function FoodEditForm({ eventId, event, onCancel, onClose, onUpdated }: E
                   type="number"
                   min={0}
                   step={anyDecimalStep}
-                  value={item.proteinsGrams}
-                  onChange={(event) => updateItem(item.key, { proteinsGrams: event.target.value })}
+                  value={foodItem.proteinsGrams}
+                  onChange={(inputEvent) =>
+                    updateFoodItem(foodItem.key, { proteinsGrams: inputEvent.target.value })
+                  }
                   className={smallInputClass}
                 />
               </div>
@@ -225,8 +270,10 @@ export function FoodEditForm({ eventId, event, onCancel, onClose, onUpdated }: E
                   type="number"
                   min={0}
                   step={anyDecimalStep}
-                  value={item.totalFatGrams}
-                  onChange={(event) => updateItem(item.key, { totalFatGrams: event.target.value })}
+                  value={foodItem.totalFatGrams}
+                  onChange={(inputEvent) =>
+                    updateFoodItem(foodItem.key, { totalFatGrams: inputEvent.target.value })
+                  }
                   className={smallInputClass}
                 />
               </div>
@@ -236,8 +283,10 @@ export function FoodEditForm({ eventId, event, onCancel, onClose, onUpdated }: E
                   type="number"
                   min={0}
                   step={anyDecimalStep}
-                  value={item.fiberGrams}
-                  onChange={(event) => updateItem(item.key, { fiberGrams: event.target.value })}
+                  value={foodItem.fiberGrams}
+                  onChange={(inputEvent) =>
+                    updateFoodItem(foodItem.key, { fiberGrams: inputEvent.target.value })
+                  }
                   className={smallInputClass}
                 />
               </div>
@@ -247,7 +296,7 @@ export function FoodEditForm({ eventId, event, onCancel, onClose, onUpdated }: E
 
         <button
           type="button"
-          onClick={() => setItems((current) => [...current, newItem()])}
+          onClick={() => setFoodItems((current) => [...current, newFoodItem()])}
           className={addRowButtonClass}
         >
           <Plus aria-hidden className="size-4" />

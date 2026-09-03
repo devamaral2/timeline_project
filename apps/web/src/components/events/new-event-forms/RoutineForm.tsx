@@ -25,8 +25,9 @@ export function RoutineForm({ onBack, onClose, onCreated }: EventFormProps) {
     }
     setValidationError(null);
 
+    // O item de rotina nao tem payload — o que existe e o nome do evento.
     void submit({
-      type: "routine",
+      items: [{ type: "routine" }],
       name: name.trim(),
       description: description.trim() || undefined,
       tags,

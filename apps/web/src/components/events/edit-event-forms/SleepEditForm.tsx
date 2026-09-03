@@ -1,43 +1,56 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import type { EventDetailDto, EventPriority } from "@repo/entities/contracts";
+import type { EventPriority } from "@repo/entities/contracts";
 import {
   CommonFields,
   type EditEventFormProps,
   FinishedAtField,
   FormActions,
+  type ItemOfType,
   StartedAtField,
   EventMarks,
   anyDecimalStep,
   fieldInputClass,
   fieldLabelClass,
   fromDatetimeLocalValue,
+  itemsPatchedWith,
   toDatetimeLocalValue,
   useSubmitEventUpdate,
 } from "./shared";
 
-type SleepEventDetail = Extract<EventDetailDto, { type: "sleep" }>;
-
-export function SleepEditForm({ eventId, event, onCancel, onClose, onUpdated }: EditEventFormProps<SleepEventDetail>) {
-  const [trackedSleepTime, setTrackedSleepTime] = useState(String(event.data.trackedSleepTime));
-  const [score, setScore] = useState(String(event.data.score));
+export function SleepEditForm({
+  event,
+  item,
+  onCancel,
+  onClose,
+  onUpdated,
+}: EditEventFormProps<ItemOfType<"sleep">>) {
+  const [trackedSleepTime, setTrackedSleepTime] = useState(String(item.data.trackedSleepTime));
+  const [score, setScore] = useState(String(item.data.score));
   const [description, setDescription] = useState(event.description);
   const [tags, setTags] = useState<string[]>(event.tags);
   const [startedAt, setStartedAt] = useState(toDatetimeLocalValue(event.startedAt));
   const [finishedAt, setFinishedAt] = useState(toDatetimeLocalValue(event.finishedAt));
   const [missed, setMissed] = useState<boolean | undefined>(event.missed);
   const [priority, setPriority] = useState<EventPriority | undefined>(event.priority);
-  const { submit, submitting, error } = useSubmitEventUpdate({ eventId, onUpdated, onClose });
+  const { submit, submitting, error } = useSubmitEventUpdate({
+    eventId: event.id,
+    onUpdated,
+    onClose,
+  });
 
   function handleSubmit(formEvent: FormEvent) {
     formEvent.preventDefault();
 
     void submit({
-      data: {
-        trackedSleepTime: trackedSleepTime ? Number(trackedSleepTime) : undefined,
-        score: score ? Number(score) : undefined,
-      },
+      expectedRevision: event.revision,
+      // O campo vazio vira zero, e nao `undefined`: o item de sono guarda dois
+      // numeros, e o registro recusa qualquer outra coisa no lugar deles.
+      items: itemsPatchedWith(event, item.id, {
+        trackedSleepTime: Number(trackedSleepTime) || 0,
+        score: Number(score) || 0,
+      }),
       description: description.trim(),
       tags,
       startedAt: fromDatetimeLocalValue(startedAt),
@@ -62,7 +75,7 @@ export function SleepEditForm({ eventId, event, onCancel, onClose, onUpdated }: 
             max={24}
             step={anyDecimalStep}
             value={trackedSleepTime}
-            onChange={(event) => setTrackedSleepTime(event.target.value)}
+            onChange={(inputEvent) => setTrackedSleepTime(inputEvent.target.value)}
             className={fieldInputClass}
           />
         </div>
@@ -78,7 +91,7 @@ export function SleepEditForm({ eventId, event, onCancel, onClose, onUpdated }: 
             max={100}
             step={anyDecimalStep}
             value={score}
-            onChange={(event) => setScore(event.target.value)}
+            onChange={(inputEvent) => setScore(inputEvent.target.value)}
             className={fieldInputClass}
           />
         </div>

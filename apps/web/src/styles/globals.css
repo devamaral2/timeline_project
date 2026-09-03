@@ -16,7 +16,7 @@
  * `components/brand/Logo.tsx`); na interface, cor solida.
  *
  * As cores por tipo de evento seguem o vocabulario do dominio:
- * routine | food | training | sleep.
+ * routine | meal | training | sleep.
  *
  * Todas as cores usam oklch. Os hexadecimais de referencia estao ao lado.
  */
@@ -51,7 +51,7 @@
   --color-brand: var(--brand);
   --color-brand-accent: var(--brand-accent);
   --color-routine: var(--routine);
-  --color-food: var(--food);
+  --color-meal: var(--meal);
   --color-training: var(--training);
   --color-sleep: var(--sleep);
   --shadow-card: var(--shadow-card);
@@ -83,7 +83,7 @@
   --brand-accent: oklch(0.593 0.1359 241.41);
   --sleep: oklch(0.52 0.256 286.8);
   --training: oklch(0.65 0.1313 167.6);
-  --food: oklch(0.61 0.133 65.7);
+  --meal: oklch(0.61 0.133 65.7);
   --routine: oklch(0.593 0.1359 241.41);
   --shadow-card: 0 1px 2px 0 oklch(0.206 0.023 268.9 / 0.06);
   --shadow-card-hover: 0 10px 30px -12px oklch(0.206 0.023 268.9 / 0.22);
@@ -118,7 +118,7 @@
   --brand-accent: oklch(0.789 0.1326 230.59);
   --sleep: oklch(0.579 0.247 288.2);
   --training: oklch(0.773 0.148 169.6);
-  --food: oklch(0.817 0.147 70.3);
+  --meal: oklch(0.817 0.147 70.3);
   --routine: oklch(0.789 0.1326 230.59);
   --shadow-card: 0 1px 2px 0 oklch(0 0 0 / 0.4);
   --shadow-card-hover: 0 16px 40px -16px oklch(0 0 0 / 0.75);

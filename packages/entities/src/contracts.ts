@@ -14,17 +14,28 @@ export type * from "./events/contracts/update-event.input";
 
 // Tipos de dados de dominio que os DTOs referenciam, reexportados para que o
 // front nunca precise importar o subpath raiz (onde vivem as classes).
+//
+// Sao os payloads dos itens, e nao mais os das subclasses de evento: `FoodItem`
+// e `WorkoutSet` aqui sao os do modelo por itens. Na raiz do pacote os dois
+// nomes ainda estao ocupados pelos legados e por isso convivem sob apelidos
+// (`EventItemFoodItem`, `EventItemWorkoutSet`) — mas o frontend nunca viu o
+// modelo legado, e nao ha razao para ele aprender os apelidos de uma transicao
+// que so acontece do lado do servidor.
 export type { EventType } from "./events/types/event-type";
 export type { EventPriority } from "./events/types/event-priority";
-export type { FoodItem, FoodTotals, FoodEventData } from "./events/entities/food-event.entity";
-export type { SleepEventData } from "./events/entities/sleep-event.entity";
+export type { RoutineData } from "./events/items/routine-data";
+export type { FoodItem, FoodItemMacronutrients } from "./events/items/food-item";
+export type { MealItem, MealTotals } from "./events/items/meal-item";
+export type { SleepItem } from "./events/items/sleep-item";
 export type {
-  Workout,
+  WorkoutCode,
   WorkoutSet,
-  TreadmillWorkout,
-  RunningWorkout,
-  WeightliftingWorkout,
-  FreeWorkout,
-  TrainingEventData,
-  TrainingEventInputData,
-} from "./events/entities/training-event.entity";
+  WorkoutSnapshotBase,
+  CardioWorkoutSnapshot,
+  WeightliftingWorkoutSnapshot,
+  FreeWorkoutSnapshot,
+  WorkoutSnapshot,
+  TrainingData,
+  WorkoutInput,
+  TrainingInputData,
+} from "./events/items/training-data";

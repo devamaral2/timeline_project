@@ -11,7 +11,7 @@ test("resolves the palette to the hex the browser computes for the same oklch", 
   expect(darkTheme.colors.brand).toBe("#7c4dff");
   expect(darkTheme.colors.brandAccent).toBe("#4cc9ff");
   expect(darkTheme.colors.training).toBe("#22d3a6");
-  expect(darkTheme.colors.food).toBe("#ffb14a");
+  expect(darkTheme.colors.meal).toBe("#ffb14a");
 });
 
 test("keeps the translucent tokens of the dark theme translucent", () => {

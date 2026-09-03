@@ -3,13 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
-import type { EventType } from "@repo/entities/contracts";
+import type { KnownEventItemType } from "@repo/entities/contracts";
 import { cn } from "@/lib/utils";
-import { ICON_STROKE_WIDTH, legendTypes, typeIcons, typeLabels, typeStyles } from "./event-visuals";
+import { ICON_STROKE_WIDTH, creatableItemTypes, visualForItemType } from "./event-visuals";
 import { RoutineForm } from "./new-event-forms/RoutineForm";
 import { SleepForm } from "./new-event-forms/SleepForm";
 import { TrainingForm } from "./new-event-forms/TrainingForm";
-import { FoodForm } from "./new-event-forms/FoodForm";
+import { MealForm } from "./new-event-forms/MealForm";
 import { iconButtonClass } from "@/components/ui/button-styles";
 import {
   dialogHeaderClass,
@@ -24,7 +24,7 @@ interface NewEventModalProps {
 }
 
 export function NewEventModal({ onClose, onCreated }: NewEventModalProps) {
-  const [selectedType, setSelectedType] = useState<EventType | null>(null);
+  const [selectedType, setSelectedType] = useState<KnownEventItemType | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -83,12 +83,11 @@ export function NewEventModal({ onClose, onCreated }: NewEventModalProps) {
   );
 }
 
-function TypeSelector({ onSelect }: { onSelect: (type: EventType) => void }) {
+function TypeSelector({ onSelect }: { onSelect: (type: KnownEventItemType) => void }) {
   return (
     <div className="grid grid-cols-2 gap-3">
-      {legendTypes.map((type) => {
-        const Icon = typeIcons[type];
-        const styles = typeStyles[type];
+      {creatableItemTypes.map((type) => {
+        const { Icon, label, text } = visualForItemType(type);
 
         return (
           <button
@@ -100,9 +99,9 @@ function TypeSelector({ onSelect }: { onSelect: (type: EventType) => void }) {
             <Icon
               aria-hidden
               strokeWidth={ICON_STROKE_WIDTH}
-              className={cn("size-6", styles.text)}
+              className={cn("size-6", text)}
             />
-            <span className="text-sm font-semibold text-foreground">{typeLabels[type]}</span>
+            <span className="text-sm font-semibold text-foreground">{label}</span>
           </button>
         );
       })}
@@ -111,7 +110,7 @@ function TypeSelector({ onSelect }: { onSelect: (type: EventType) => void }) {
 }
 
 interface EventFormRouterProps {
-  type: EventType;
+  type: KnownEventItemType;
   onBack: () => void;
   onClose: () => void;
   onCreated: () => void;
@@ -125,7 +124,7 @@ function EventForm({ type, onBack, onClose, onCreated }: EventFormRouterProps) {
       return <SleepForm onBack={onBack} onClose={onClose} onCreated={onCreated} />;
     case "training":
       return <TrainingForm onBack={onBack} onClose={onClose} onCreated={onCreated} />;
-    case "food":
-      return <FoodForm onBack={onBack} onClose={onClose} onCreated={onCreated} />;
+    case "meal":
+      return <MealForm onBack={onBack} onClose={onClose} onCreated={onCreated} />;
   }
 }

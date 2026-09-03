@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { buildDateWindow, timelineWindowUrl } from "./date-window";
+import { buildDateWindow, dayEventsUrl, timelineWindowUrl } from "./date-window";
 
 const now = new Date("2026-08-19T15:00:00-03:00");
 
@@ -25,9 +25,45 @@ test("consecutive windows touch without gaps or overlaps", () => {
 });
 
 test("builds the api url for a window", () => {
-  const url = timelineWindowUrl("user-1", 0, now);
-
-  expect(url).toBe(
-    "/api/events?userId=user-1&from=2026-08-12T03%3A00%3A00.000Z&to=2026-08-20T02%3A59%3A59.999Z",
+  expect(timelineWindowUrl(0, now)).toBe(
+    "/api/events?from=2026-08-12T03%3A00%3A00.000Z&to=2026-08-20T02%3A59%3A59.999Z",
   );
+});
+
+test("asks for a single civil day", () => {
+  expect(dayEventsUrl("2026-08-31")).toBe(
+    "/api/events?from=2026-08-31T03%3A00%3A00.000Z&to=2026-09-01T02%3A59%3A59.999Z",
+  );
+});
+
+test("never carries the user in the query", () => {
+  // Quem responde por autorizacao e o token no cabecalho. Um id aqui reabriria
+  // a leitura anonima que a migracao fechou.
+  expect(dayEventsUrl("2026-08-31")).not.toContain("userId");
+  expect(timelineWindowUrl(0, now)).not.toContain("userId");
+});
+
+test("carries the opaque cursor of the next page as it came", () => {
+  const cursor = "eyJzdGFydGVkQXQiOiIyMDI2LTA4LTMxVDEyOjAwOjAwLjAwMFoifQ==";
+
+  expect(dayEventsUrl("2026-08-31", { cursor })).toBe(
+    "/api/events?from=2026-08-31T03%3A00%3A00.000Z&to=2026-09-01T02%3A59%3A59.999Z" +
+      `&cursor=${encodeURIComponent(cursor)}`,
+  );
+});
+
+test("filters by item type and page size when asked", () => {
+  const url = dayEventsUrl("2026-08-31", { itemType: "meal", limit: 20 });
+
+  // O parametro do backend chama-se `type` — o que ele filtra e o item.
+  expect(url).toContain("&type=meal");
+  expect(url).toContain("&limit=20");
+});
+
+test("leaves out the filters nobody asked for", () => {
+  const url = dayEventsUrl("2026-08-31");
+
+  expect(url).not.toContain("type=");
+  expect(url).not.toContain("cursor=");
+  expect(url).not.toContain("limit=");
 });

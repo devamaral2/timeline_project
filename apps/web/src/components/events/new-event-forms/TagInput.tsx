@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { authedFetch } from "@/lib/api/authed-fetch";
 import { tagAccentStyle, tagColorStyle } from "@/lib/tags/tag-color";
 import type { TagSuggestionDto } from "@repo/entities/contracts";
 import { fieldLabelClass } from "./field-styles";
@@ -32,8 +33,13 @@ export function TagInput({ tags, onTagsChange }: TagInputProps) {
 
     const controller = new AbortController();
     const timeout = setTimeout(() => {
-      fetch(`/api/tags?query=${encodeURIComponent(query)}&limit=6`, { signal: controller.signal })
-        .then((response) => (response.ok ? (response.json() as Promise<TagSuggestionDto[]>) : []))
+      // As tags sao do usuario, e a rota so devolve as dele: sem token nao ha a
+      // quem perguntar. Uma falha aqui nao vira erro na tela — a sugestao e um
+      // atalho, e quem esta digitando pode terminar a tag na mao.
+      authedFetch<TagSuggestionDto[]>(
+        `/api/tags?query=${encodeURIComponent(query)}&limit=6`,
+        { signal: controller.signal },
+      )
         .then((data) => {
           setSuggestions(data.filter((suggestion) => !tags.includes(suggestion.name)));
           setHighlighted(0);

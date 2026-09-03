@@ -14,6 +14,22 @@ export interface DateWindow {
 }
 
 /**
+ * Filtros opcionais da listagem de um dia.
+ *
+ * Nao ha `userId` aqui, e nao pode haver: quem responde por autorizacao e o
+ * token no cabecalho. Um id na query so voltaria a abrir a porta que a Task 10
+ * fechou — o backend le o dono do evento do proprio token e ignora qualquer
+ * outra coisa.
+ */
+export interface DayEventsQuery {
+  /** Tipo de item (`meal`, `sleep`, ...) que o evento precisa conter. */
+  itemType?: string;
+  /** Cursor opaco devolvido pela pagina anterior. */
+  cursor?: string;
+  limit?: number;
+}
+
+/**
  * Janela 0 vai de hoje ate 7 dias atras; a janela 1 do oitavo ao decimo quinto
  * dia anterior, e assim por diante.
  */
@@ -28,21 +44,24 @@ export function buildDateWindow(index: number, now: Date = new Date()): DateWind
 }
 
 /** URL da API de timeline para a janela informada. */
-export function timelineWindowUrl(userId: string, index: number, now?: Date): string {
+export function timelineWindowUrl(index: number, now?: Date): string {
   const { from, to } = buildDateWindow(index, now);
-  const query = new URLSearchParams({ userId, from, to });
-  return `/api/events?${query.toString()}`;
+  return `/api/events?${new URLSearchParams({ from, to }).toString()}`;
 }
 
 /**
  * URL da API para um unico dia civil. Web e mobile usam esta unidade quando a
  * pessoa escolhe uma data no cabecalho.
  */
-export function dayEventsUrl(userId: string, dayKey: string): string {
-  const query = new URLSearchParams({
-    userId,
+export function dayEventsUrl(dayKey: string, query: DayEventsQuery = {}): string {
+  const parameters = new URLSearchParams({
     from: zonedDayStart(dayKey).toISOString(),
     to: zonedDayEnd(dayKey).toISOString(),
   });
-  return `/api/events?${query.toString()}`;
+  // O nome do parametro no backend e `type`; aqui ele se chama `itemType`
+  // porque o que se filtra e o item, e nao mais o evento inteiro.
+  if (query.itemType) parameters.set("type", query.itemType);
+  if (query.cursor) parameters.set("cursor", query.cursor);
+  if (query.limit !== undefined) parameters.set("limit", String(query.limit));
+  return `/api/events?${parameters.toString()}`;
 }

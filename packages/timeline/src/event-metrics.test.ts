@@ -13,13 +13,18 @@ import {
 function event(startedAt: string, finishedAt: string | null): TimelineEventCardDto {
   return {
     id: `${startedAt}-${finishedAt}`,
+    primaryItemId: `${startedAt}-item`,
+    primaryItemType: "routine",
+    itemTypes: ["routine"],
+    missed: false,
     name: "evento",
-    type: "routine",
+    description: "",
     startedAt,
-    finishedAt,
+    finishedAt: finishedAt ?? undefined,
     durationLabel: "",
     tags: [],
-  } as unknown as TimelineEventCardDto;
+    interruptions: [],
+  };
 }
 
 const short = event("2026-05-22T12:00:00.000Z", "2026-05-22T12:15:00.000Z");

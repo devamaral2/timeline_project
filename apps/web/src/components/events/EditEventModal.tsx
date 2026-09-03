@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { getAuth } from "firebase/auth";
 import { X } from "lucide-react";
-import { getClientApp } from "@/lib/firebase/client-app";
 import type { EventDetailDto } from "@repo/entities/contracts";
+import { authedFetch } from "@/lib/api/authed-fetch";
+import { primaryItemOf } from "./EventDetailsModal";
 import { RoutineEditForm } from "./edit-event-forms/RoutineEditForm";
 import { SleepEditForm } from "./edit-event-forms/SleepEditForm";
 import { TrainingEditForm } from "./edit-event-forms/TrainingEditForm";
-import { FoodEditForm } from "./edit-event-forms/FoodEditForm";
+import { MealEditForm } from "./edit-event-forms/MealEditForm";
 import { cn } from "@/lib/utils";
 import { iconButtonClass } from "@/components/ui/button-styles";
 import {
@@ -49,16 +49,7 @@ export function EditEventModal({ eventId, onClose, onUpdated }: EditEventModalPr
 
     async function load() {
       try {
-        const auth = getAuth(getClientApp());
-        const currentUser = auth.currentUser;
-        if (!currentUser) throw new Error("not-authenticated");
-        const token = await currentUser.getIdToken();
-
-        const response = await fetch(`/api/events/${eventId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!response.ok) throw new Error(`Request failed with ${response.status}`);
-        const data = (await response.json()) as EventDetailDto;
+        const data = await authedFetch<EventDetailDto>(`/api/events/${eventId}`);
         if (!cancelled) setEvent(data);
       } catch {
         if (!cancelled) setError(true);
@@ -88,19 +79,16 @@ export function EditEventModal({ eventId, onClose, onUpdated }: EditEventModalPr
           <h2 id="edit-event-title" className={dialogTitleClass}>
             Editar evento
           </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Fechar"
-            className={iconButtonClass}
-          >
+          <button type="button" onClick={onClose} aria-label="Fechar" className={iconButtonClass}>
             <X aria-hidden className="size-4" />
           </button>
         </div>
 
         <div className="overflow-y-auto px-5 py-5 sm:px-6">
           {error ? (
-            <p className="text-sm text-destructive">Não foi possível carregar o evento. Tente novamente.</p>
+            <p className="text-sm text-destructive">
+              Não foi possível carregar o evento. Tente novamente.
+            </p>
           ) : event ? (
             <EditForm event={event} onCancel={onClose} onClose={onClose} onUpdated={onUpdated} />
           ) : (
@@ -120,47 +108,32 @@ interface EditFormRouterProps {
   onUpdated: () => void;
 }
 
+/**
+ * O formulario e escolhido pelo item principal — achado pelo `primaryItemId`,
+ * nao pelo primeiro do array. Os itens secundarios seguem intactos no PATCH:
+ * cada tela edita um item por vez.
+ */
 function EditForm({ event, onCancel, onClose, onUpdated }: EditFormRouterProps) {
-  switch (event.type) {
+  const item = primaryItemOf(event);
+  const props = { event, onCancel, onClose, onUpdated };
+
+  switch (item?.type) {
     case "routine":
-      return (
-        <RoutineEditForm
-          eventId={event.id}
-          event={event}
-          onCancel={onCancel}
-          onClose={onClose}
-          onUpdated={onUpdated}
-        />
-      );
+      return <RoutineEditForm {...props} item={item} />;
     case "sleep":
-      return (
-        <SleepEditForm
-          eventId={event.id}
-          event={event}
-          onCancel={onCancel}
-          onClose={onClose}
-          onUpdated={onUpdated}
-        />
-      );
+      return <SleepEditForm {...props} item={item} />;
     case "training":
+      return <TrainingEditForm {...props} item={item} />;
+    case "meal":
+      return <MealEditForm {...props} item={item} />;
+    default:
+      // Um tipo que este frontend ainda nao conhece — ou um evento cujo item
+      // principal sumiu. Editar as tripas dele as cegas estragaria o payload;
+      // melhor dizer que nao da e deixar o dado como esta.
       return (
-        <TrainingEditForm
-          eventId={event.id}
-          event={event}
-          onCancel={onCancel}
-          onClose={onClose}
-          onUpdated={onUpdated}
-        />
-      );
-    case "food":
-      return (
-        <FoodEditForm
-          eventId={event.id}
-          event={event}
-          onCancel={onCancel}
-          onClose={onClose}
-          onUpdated={onUpdated}
-        />
+        <p className="py-6 text-center text-sm text-muted-foreground">
+          Este tipo de evento ainda não pode ser editado por aqui.
+        </p>
       );
   }
 }
