@@ -7,7 +7,7 @@ import {
   formatTime,
   MIN_DURATION_RATIO,
 } from "@repo/timeline";
-import { ICON_STROKE_WIDTH, eventAccent, typeIcons, typeLabels } from "@/components/event-visuals";
+import { ICON_STROKE_WIDTH, visualForItemType } from "@/components/event-visuals";
 import { withAlpha } from "@repo/theme";
 import { MissedBadge } from "@/components/MissedBadge";
 import { TagChip } from "@/components/TagChip";
@@ -53,8 +53,11 @@ interface CardProps extends EventCardProps {
 
 function Card({ event, longestMinutes, elapsedSeconds, onPress }: CardProps) {
   const theme = useTheme();
-  const Icon = typeIcons[event.type];
-  const accent = eventAccent(theme, event.type);
+  // O cartao mostra o item principal, e nao o evento inteiro: um evento
+  // composto guarda mais de um item, e quem responde "o que e isto?" e o que
+  // foi marcado como principal.
+  const { Icon, label, colorToken } = visualForItemType(event.primaryItemType);
+  const accent = theme.colors[colorToken];
   const isRunning = elapsedSeconds !== null;
 
   // A barra do evento em andamento cresce com o cronometro, na mesma escala do
@@ -102,7 +105,7 @@ function Card({ event, longestMinutes, elapsedSeconds, onPress }: CardProps) {
                 o outro em que pe ele esta. */}
             <View style={styles.typeRow}>
               <Text numberOfLines={1} style={[styles.type, { color: accent }]}>
-                {typeLabels[event.type]}
+                {label}
               </Text>
               <MissedBadge missed={event.missed} />
             </View>

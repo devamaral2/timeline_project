@@ -1,12 +1,18 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Stack, useLocalSearchParams } from "expo-router";
-import type { EventDetailDto } from "@repo/entities/contracts";
+import type {
+  EventDetailDto,
+  EventItemDto,
+  MealItem,
+  SleepItem,
+  TrainingData,
+} from "@repo/entities/contracts";
 import { formatTime } from "@repo/timeline";
 import { Message } from "@/components/Message";
 import { MissedBadge } from "@/components/MissedBadge";
 import { TagChip } from "@/components/TagChip";
-import { priorityLabels, typeLabels } from "@/components/event-visuals";
+import { ICON_STROKE_WIDTH, priorityLabels, visualForItemType } from "@/components/event-visuals";
 import { authedFetch } from "@/lib/api/client";
 import { useTheme } from "@/lib/theme/use-theme";
 
@@ -53,16 +59,32 @@ export default function EventDetailScreen() {
   );
 }
 
+/**
+ * O item que da a cara ao evento.
+ *
+ * Ele e encontrado pelo `primaryItemId`, e nao pela primeira posicao do array:
+ * a ordem dos itens e a que o usuario montou, e ser o principal e uma escolha a
+ * parte. Num evento composto as duas divergem, e ler pela ordem mostraria o
+ * item errado.
+ */
+function primaryItemOf(event: EventDetailDto): EventItemDto | undefined {
+  return event.items.find((item) => item.id === event.primaryItemId);
+}
+
 function EventDetailBody({ event }: { event: EventDetailDto }) {
   const theme = useTheme();
+  // Sem item principal reconhecido — um tipo que este app ainda nao conhece, ou
+  // uma resposta de backend mais novo — o cabecalho cai no visual generico em
+  // vez de quebrar: o nome, a hora e as tags continuam valendo.
+  const { Icon, label, colorToken } = visualForItemType(primaryItemOf(event)?.type ?? "");
+  const accent = theme.colors[colorToken];
 
   return (
     <View style={styles.body}>
       <View style={styles.summary}>
         <View style={styles.typeRow}>
-          <Text style={[styles.type, { color: theme.colors.foreground }]}>
-            {typeLabels[event.type]}
-          </Text>
+          <Icon size={18} color={accent} strokeWidth={ICON_STROKE_WIDTH} />
+          <Text style={[styles.type, { color: accent }]}>{label}</Text>
           <MissedBadge missed={event.missed} />
         </View>
         <Text style={[styles.meta, { color: theme.colors.mutedForeground }]}>
@@ -91,7 +113,14 @@ function EventDetailBody({ event }: { event: EventDetailDto }) {
         </View>
       ) : null}
 
-      <TypeDetails event={event} />
+      {/*
+        Todos os itens, na ordem em que o usuario os montou. Um evento composto
+        — o treino que tambem registrou a refeicao de depois — guarda mais de um,
+        e mostrar so o principal deixaria o resto sem lugar nenhum onde aparecer.
+      */}
+      {event.items.map((item) => (
+        <ItemDetails key={item.id} item={item} />
+      ))}
 
       {event.interruptions.length > 0 ? (
         <Section title="Interrupções">
@@ -121,54 +150,86 @@ function EventDetailBody({ event }: { event: EventDetailDto }) {
   );
 }
 
-/** Os campos que so existem em um tipo de evento — o mesmo recorte do web. */
-function TypeDetails({ event }: { event: EventDetailDto }) {
-  const theme = useTheme();
-  const valueStyle = [styles.entryValue, { color: theme.colors.mutedForeground }];
-
-  switch (event.type) {
+/** O payload que so existe em um tipo de item — o mesmo recorte do web. */
+function ItemDetails({ item }: { item: EventItemDto }) {
+  switch (item.type) {
     case "sleep":
-      return (
-        <Section title="Sono">
-          <Text style={valueStyle}>
-            Tempo monitorado: {event.data.trackedSleepTime} min · Pontuação: {event.data.score}
-          </Text>
-        </Section>
-      );
+      return <SleepDetails data={item.data} />;
     case "training":
-      return event.data.workouts.length > 0 ? (
-        <Section title="Treinos">
-          {event.data.workouts.map((workout, index) => (
-            <View key={workout.id ?? index} style={styles.entryRow}>
-              <Text style={[styles.entryName, { color: theme.colors.cardForeground }]}>
-                {workout.type}
-              </Text>
-              <Text style={valueStyle}>
-                {workout.duration} min · {workout.calories} kcal
-              </Text>
-            </View>
-          ))}
-        </Section>
-      ) : null;
-    case "food":
-      return event.data.items.length > 0 ? (
-        <Section title="Alimentos">
-          {event.data.items.map((item, index) => (
-            <View key={item.id ?? index} style={styles.entryRow}>
-              <Text
-                numberOfLines={1}
-                style={[styles.entryName, { color: theme.colors.cardForeground }]}
-              >
-                {item.food} ({item.portion})
-              </Text>
-              <Text style={valueStyle}>{item.caloriesKcal} kcal</Text>
-            </View>
-          ))}
-        </Section>
-      ) : null;
+      return <TrainingDetails data={item.data} />;
+    case "meal":
+      return <MealDetails data={item.data} />;
     case "routine":
+      // Rotina nao tem payload: o nome e o horario, la em cima, sao tudo.
+      return null;
+    default:
+      // Um tipo que este app ainda nao conhece. O que e comum a todo evento ja
+      // esta desenhado; desenhar o payload seria adivinhar o formato dele.
       return null;
   }
+}
+
+function SleepDetails({ data }: { data: SleepItem }) {
+  const theme = useTheme();
+
+  return (
+    <Section title="Sono">
+      <Text style={[styles.entryValue, { color: theme.colors.mutedForeground }]}>
+        Tempo monitorado: {data.trackedSleepTime} min · Pontuação: {data.score}
+      </Text>
+    </Section>
+  );
+}
+
+function TrainingDetails({ data }: { data: TrainingData }) {
+  const theme = useTheme();
+  if (data.workouts.length === 0) return null;
+
+  return (
+    <Section title="Treinos">
+      {data.workouts.map((workout) => (
+        <View key={workout.id} style={styles.entryRow}>
+          <Text
+            numberOfLines={1}
+            style={[styles.entryName, { color: theme.colors.cardForeground }]}
+          >
+            {workout.workoutName}
+          </Text>
+          <Text style={[styles.entryValue, { color: theme.colors.mutedForeground }]}>
+            {workout.duration} min · {workout.calories} kcal
+          </Text>
+        </View>
+      ))}
+    </Section>
+  );
+}
+
+function MealDetails({ data }: { data: MealItem }) {
+  const theme = useTheme();
+  if (data.foodItems.length === 0) return null;
+
+  return (
+    <Section title="Alimentos">
+      {data.foodItems.map((foodItem) => (
+        <View key={foodItem.id} style={styles.entryRow}>
+          <Text
+            numberOfLines={1}
+            style={[styles.entryName, { color: theme.colors.cardForeground }]}
+          >
+            {foodItem.name} ({foodItem.portion})
+          </Text>
+          <Text style={[styles.entryValue, { color: theme.colors.mutedForeground }]}>
+            {foodItem.caloriesKcal} kcal
+          </Text>
+        </View>
+      ))}
+      <Text style={[styles.entryNote, { color: theme.colors.mutedForeground }]}>
+        {data.totals.totalCaloriesKcal} kcal · {data.totals.totalProteinGrams} g de proteína ·{" "}
+        {data.totals.totalCarbohydrateGrams} g de carboidrato · {data.totals.totalFatGrams} g de
+        gordura
+      </Text>
+    </Section>
+  );
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {

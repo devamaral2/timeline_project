@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { X } from "lucide-react-native";
 import type { TagSuggestionDto } from "@repo/entities/contracts";
 import { tagColors, withAlpha } from "@repo/theme";
-import { apiFetch } from "@/lib/api/client";
+import { authedFetch } from "@/lib/api/client";
 import { fieldSurface } from "@/lib/theme/surfaces";
 import { useTheme } from "@/lib/theme/use-theme";
 
@@ -31,7 +31,7 @@ export function TagInput({ tags, onTagsChange }: TagInputProps) {
 
     let cancelled = false;
     const timeout = setTimeout(() => {
-      apiFetch<TagSuggestionDto[]>(`/api/tags?query=${encodeURIComponent(query)}&limit=6`)
+      authedFetch<TagSuggestionDto[]>(`/api/tags?query=${encodeURIComponent(query)}&limit=6`)
         .then((data) => {
           if (!cancelled) setSuggestions(data.filter((item) => !tags.includes(item.name)));
         })

@@ -37,7 +37,14 @@ async function request<T>(path: string, init: RequestInit): Promise<T> {
   return (await response.json()) as T;
 }
 
-/** Chamada sem token — as leituras de timeline e de tags sao publicas. */
+/**
+ * Chamada sem token, para os endpoints que sao mesmo publicos.
+ *
+ * Nao ha nenhum na timeline: ler um dia e pedir sugestao de tag passaram as
+ * duas a exigir `Authorization`, porque quem responde por autorizacao agora e o
+ * token — o `userId` da rota so diz que tela abrir. Isto fica de pe para o
+ * proximo endpoint que nao pedir sessao, e nao para reaproveitar nos que pedem.
+ */
 export function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
   return request<T>(path, init);
 }

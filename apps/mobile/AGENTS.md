@@ -25,7 +25,11 @@ Sem regra de negocio aqui. Do backend, so tipos (`@repo/entities/contracts`).
   produto e o do simbolo do logo, desenhado em SVG dentro de
   `src/components/Logo.tsx`.
 - **Rede**: nao ha caminho relativo nem rewrite. Use `apiFetch` / `authedFetch`
-  de `src/lib/api/client.ts`, que ja poem o host e o `Authorization`.
+  de `src/lib/api/client.ts`, que ja poem o host e o `Authorization`. Na pratica
+  e sempre `authedFetch`: ler um dia e pedir sugestao de tag exigem token, e
+  quem responde por autorizacao e ele — o `userId` da rota so diz que tela
+  abrir, e nao vai mais na query. `apiFetch` fica para o proximo endpoint que
+  seja mesmo publico.
 - **Login**: `signInWithPopup` nao existe no React Native. O fluxo esta em
   `src/lib/firebase/google-sign-in.ts` — Google nativo emite o ID token, o
   Firebase troca por sessao.
@@ -33,9 +37,15 @@ Sem regra de negocio aqui. Do backend, so tipos (`@repo/entities/contracts`).
   reimplemente fuso nem janela aqui.
 - **Timeline**: os dois apps tem a mesma navegacao por data — regua da semana e
   calendario, de `@repo/timeline`, e mostram um unico dia por vez. Escolher uma
-  data substitui a lista atual; nao existe scroll infinito nem carrossel de dias.
-  Cada selecao carrega somente seu dia (`use-day-events.ts`) e o cache de modulo
-  evita repetir a chamada ao voltar a uma data ja visitada.
+  data substitui a lista atual; nao existe carrossel de dias.
+  Cada selecao carrega somente seu dia (`use-day-events.ts`), e o cache por
+  conta e dia (`timeline-page-cache.ts`) evita repetir a chamada ao voltar a uma
+  data ja visitada.
+  **Dentro do dia a carga sobe.** A API pagina do mais novo para o mais antigo e
+  a lista e lida da primeira hora para a ultima, entao a proxima pagina entra no
+  topo: quem a pede e o `onStartReached` da `DayTimeline`, e o indicador de carga
+  vive no cabecalho. Quem inverte, ordena e deduplica e o `mergeDayPage`, sobre o
+  `mergeTimelinePage` que web e mobile dividem.
 - **Contador**: o `durationLabel` que a API manda vale para o que ja terminou —
   no evento em andamento ele vem `"--"`. Quem preenche esse lugar e o
   cronometro (`formatStopwatch`, em `@repo/timeline`), com o relogio de um

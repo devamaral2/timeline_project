@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { dayKeyOf } from '@repo/timeline';
 import { DayTimeline } from '@/components/DayTimeline';
 import { TimelineHeader } from '@/components/TimelineHeader';
-import { clearDayEventsCache } from '@/lib/events/use-day-events';
+import { clearDayPages } from '@/lib/events/timeline-page-cache';
 import { signOutFromGoogle } from '@/lib/firebase/google-sign-in';
 import { useCurrentUser } from '@/lib/firebase/use-current-user';
 import { useTheme } from '@/lib/theme/use-theme';
@@ -24,7 +24,7 @@ export default function TimelineScreen() {
 
   useEffect(() => {
     if (!refreshedAt) return;
-    clearDayEventsCache();
+    clearDayPages();
     setGeneration((current) => current + 1);
   }, [refreshedAt]);
 
@@ -43,14 +43,25 @@ export default function TimelineScreen() {
         onSignOut={() => void signOutFromGoogle()}
       />
 
-      <DayTimeline
-        userId={userId}
-        dayKey={selectedDayKey}
-        generation={generation}
-        onOpenEvent={(eventId) =>
-          router.push({ pathname: '/event/[eventId]', params: { eventId } })
-        }
-      />
+      {/*
+        A lista so monta depois que o Firebase termina de reler a sessao. Quem
+        autoriza a leitura agora e o token, e pedir antes de ele existir voltaria
+        um 401 — a tela acusaria uma falha que e so pressa.
+      */}
+      {ready ? (
+        <DayTimeline
+          userId={userId}
+          dayKey={selectedDayKey}
+          generation={generation}
+          onOpenEvent={(eventId) =>
+            router.push({ pathname: '/event/[eventId]', params: { eventId } })
+          }
+        />
+      ) : (
+        <View style={styles.waiting}>
+          <ActivityIndicator color={theme.colors.primary} />
+        </View>
+      )}
     </View>
   );
 }
@@ -58,5 +69,9 @@ export default function TimelineScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
+  },
+  waiting: {
+    flex: 1,
+    justifyContent: 'center',
   },
 });
