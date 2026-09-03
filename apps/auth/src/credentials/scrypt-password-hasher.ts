@@ -1,0 +1,6 @@
+import { randomBytes, scrypt, timingSafeEqual, type ScryptOptions } from "node:crypto";
+import type { PasswordHasher } from "./password-hasher";
+const N=32768,R=8,P=1,LENGTH=64, options:ScryptOptions={N,r:R,p:P,maxmem:128*N*R*2};
+function derive(password:string,salt:Buffer):Promise<Buffer>{return new Promise((resolve,reject)=>scrypt(password,salt,LENGTH,options,(e,k)=>e?reject(e):resolve(k)));}
+function canonical(value:string,length:number){return value.length===length&&/^[A-Za-z0-9_-]+$/.test(value);}
+export class ScryptPasswordHasher implements PasswordHasher { async hash(passwordNfc:string){const salt=randomBytes(16), digest=await derive(passwordNfc,salt);return `scrypt$${N}$${R}$${P}$${salt.toString("base64url")}$${digest.toString("base64url")}`;} async verify(passwordNfc:string,encoded:string){const parts=encoded.split("$");if(parts.length!==6||parts[0]!=="scrypt"||parts[1]!=="32768"||parts[2]!=="8"||parts[3]!=="1"||!canonical(parts[4],22)||!canonical(parts[5],86))return false;const salt=Buffer.from(parts[4],"base64url"),expected=Buffer.from(parts[5],"base64url");if(salt.length!==16||expected.length!==64)return false;try{const actual=await derive(passwordNfc,salt);return timingSafeEqual(actual,expected);}catch{return false;}} }

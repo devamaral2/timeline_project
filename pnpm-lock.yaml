@@ -68,7 +68,7 @@ importers:
     devDependencies:
       '@nestjs/cli':
         specifier: ^11.0.0
-        version: 11.0.24(@types/node@24.13.3)(esbuild@0.21.5)(lightningcss@1.32.0)(postcss@8.5.26)(prettier@3.9.6)
+        version: 11.0.24(@types/node@24.13.3)(esbuild@0.28.2)(lightningcss@1.32.0)(postcss@8.5.26)(prettier@3.9.6)
       '@nestjs/schematics':
         specifier: ^11.0.0
         version: 11.1.0(chokidar@4.0.3)(prettier@3.9.6)(typescript@5.9.3)
@@ -81,6 +81,64 @@ importers:
       '@types/node':
         specifier: ^24.0.0
         version: 24.13.3
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+
+  apps/auth:
+    dependencies:
+      '@nestjs/common':
+        specifier: ^11.0.0
+        version: 11.2.1(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1)
+      '@nestjs/core':
+        specifier: ^11.0.0
+        version: 11.2.1(@nestjs/common@11.2.1(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1))(@nestjs/platform-express@11.2.1)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/platform-express':
+        specifier: ^11.0.0
+        version: 11.2.1(@nestjs/common@11.2.1(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1))(@nestjs/core@11.2.1)(supports-color@8.1.1)
+      drizzle-orm:
+        specifier: ^0.44.0
+        version: 0.44.7(@opentelemetry/api@1.9.1)(@types/pg@8.23.1)(pg@8.23.0)
+      pg:
+        specifier: ^8.13.0
+        version: 8.23.0
+      reflect-metadata:
+        specifier: ^0.2.2
+        version: 0.2.2
+      rxjs:
+        specifier: ^7.8.1
+        version: 7.8.2
+      ulid:
+        specifier: ^3.0.1
+        version: 3.0.2
+      zod:
+        specifier: ^4.0.0
+        version: 4.4.3
+    devDependencies:
+      '@nestjs/cli':
+        specifier: ^11.0.0
+        version: 11.0.24(@types/node@24.13.3)(esbuild@0.28.2)(lightningcss@1.32.0)(postcss@8.5.26)(prettier@3.9.6)
+      '@nestjs/schematics':
+        specifier: ^11.0.0
+        version: 11.1.0(chokidar@4.0.3)(prettier@3.9.6)(typescript@5.9.3)
+      '@nestjs/testing':
+        specifier: ^11.0.0
+        version: 11.2.1(@nestjs/common@11.2.1(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1))(@nestjs/core@11.2.1)(@nestjs/platform-express@11.2.1)
+      '@types/express':
+        specifier: ^5.0.0
+        version: 5.0.6
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.13.3
+      '@types/pg':
+        specifier: ^8.11.0
+        version: 8.23.1
+      drizzle-kit:
+        specifier: ^0.31.0
+        version: 0.31.10
+      tsx:
+        specifier: ^4.20.5
+        version: 4.23.13
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -3933,6 +3991,98 @@ packages:
   drizzle-kit@0.31.10:
     resolution: {integrity: sha512-7OZcmQUrdGI+DUNNsKBn1aW8qSoKuTH7d0mYgSP8bAzdFzKoovxEFnoGQp2dVs82EOJeYycqRtciopszwUf8bw==}
     hasBin: true
+
+  drizzle-orm@0.44.7:
+    resolution: {integrity: sha512-quIpnYznjU9lHshEOAYLoZ9s3jweleHlZIAWR/jX9gAWNg/JhQ1wj0KGRf7/Zm+obRrYd9GjPVJg790QY9N5AQ==}
+    peerDependencies:
+      '@aws-sdk/client-rds-data': '>=3'
+      '@cloudflare/workers-types': '>=4'
+      '@electric-sql/pglite': '>=0.2.0'
+      '@libsql/client': '>=0.10.0'
+      '@libsql/client-wasm': '>=0.10.0'
+      '@neondatabase/serverless': '>=0.10.0'
+      '@op-engineering/op-sqlite': '>=2'
+      '@opentelemetry/api': ^1.4.1
+      '@planetscale/database': '>=1.13'
+      '@prisma/client': '*'
+      '@tidbcloud/serverless': '*'
+      '@types/better-sqlite3': '*'
+      '@types/pg': '*'
+      '@types/sql.js': '*'
+      '@upstash/redis': '>=1.34.7'
+      '@vercel/postgres': '>=0.8.0'
+      '@xata.io/client': '*'
+      better-sqlite3: '>=7'
+      bun-types: '*'
+      expo-sqlite: '>=14.0.0'
+      gel: '>=2'
+      knex: '*'
+      kysely: '*'
+      mysql2: '>=2'
+      pg: '>=8'
+      postgres: '>=3'
+      prisma: '*'
+      sql.js: '>=1'
+      sqlite3: '>=5'
+    peerDependenciesMeta:
+      '@aws-sdk/client-rds-data':
+        optional: true
+      '@cloudflare/workers-types':
+        optional: true
+      '@electric-sql/pglite':
+        optional: true
+      '@libsql/client':
+        optional: true
+      '@libsql/client-wasm':
+        optional: true
+      '@neondatabase/serverless':
+        optional: true
+      '@op-engineering/op-sqlite':
+        optional: true
+      '@opentelemetry/api':
+        optional: true
+      '@planetscale/database':
+        optional: true
+      '@prisma/client':
+        optional: true
+      '@tidbcloud/serverless':
+        optional: true
+      '@types/better-sqlite3':
+        optional: true
+      '@types/pg':
+        optional: true
+      '@types/sql.js':
+        optional: true
+      '@upstash/redis':
+        optional: true
+      '@vercel/postgres':
+        optional: true
+      '@xata.io/client':
+        optional: true
+      better-sqlite3:
+        optional: true
+      bun-types:
+        optional: true
+      expo-sqlite:
+        optional: true
+      gel:
+        optional: true
+      knex:
+        optional: true
+      kysely:
+        optional: true
+      mysql2:
+        optional: true
+      pg:
+        optional: true
+      postgres:
+        optional: true
+      prisma:
+        optional: true
+      sql.js:
+        optional: true
+      sqlite3:
+        optional: true
 
   drizzle-orm@0.45.2:
     resolution: {integrity: sha512-kY0BSaTNYWnoDMVoyY8uxmyHjpJW1geOmBMdSSicKo9CIIWkSxMIj2rkeSR51b8KAPB7m+qysjuHme5nKP+E5Q==}
@@ -8816,7 +8966,7 @@ snapshots:
   '@napi-rs/lzma-linux-x64-gnu@1.5.1':
     optional: true
 
-  '@nestjs/cli@11.0.24(@types/node@24.13.3)(esbuild@0.21.5)(lightningcss@1.32.0)(postcss@8.5.26)(prettier@3.9.6)':
+  '@nestjs/cli@11.0.24(@types/node@24.13.3)(esbuild@0.28.2)(lightningcss@1.32.0)(postcss@8.5.26)(prettier@3.9.6)':
     dependencies:
       '@angular-devkit/core': 19.2.27(chokidar@4.0.3)
       '@angular-devkit/schematics': 19.2.27(chokidar@4.0.3)
@@ -8827,14 +8977,14 @@ snapshots:
       chokidar: 4.0.3
       cli-table3: 0.6.5
       commander: 4.1.1
-      fork-ts-checker-webpack-plugin: 9.1.0(typescript@5.9.3)(webpack@5.106.2(esbuild@0.21.5)(lightningcss@1.32.0)(postcss@8.5.26))
+      fork-ts-checker-webpack-plugin: 9.1.0(typescript@5.9.3)(webpack@5.106.2(esbuild@0.28.2)(lightningcss@1.32.0)(postcss@8.5.26))
       glob: 13.0.6
       node-emoji: 1.11.0
       ora: 5.4.1
       tsconfig-paths: 4.2.0
       tsconfig-paths-webpack-plugin: 4.2.0
       typescript: 5.9.3
-      webpack: 5.106.2(esbuild@0.21.5)(lightningcss@1.32.0)(postcss@8.5.26)
+      webpack: 5.106.2(esbuild@0.28.2)(lightningcss@1.32.0)(postcss@8.5.26)
       webpack-node-externals: 3.0.0
     transitivePeerDependencies:
       - '@minify-html/node'
@@ -10612,6 +10762,12 @@ snapshots:
       esbuild: 0.25.12
       tsx: 4.23.13
 
+  drizzle-orm@0.44.7(@opentelemetry/api@1.9.1)(@types/pg@8.23.1)(pg@8.23.0):
+    optionalDependencies:
+      '@opentelemetry/api': 1.9.1
+      '@types/pg': 8.23.1
+      pg: 8.23.0
+
   drizzle-orm@0.45.2(@opentelemetry/api@1.9.1)(@types/pg@8.23.1)(pg@8.23.0):
     optionalDependencies:
       '@opentelemetry/api': 1.9.1
@@ -11317,7 +11473,7 @@ snapshots:
       cross-spawn: 7.0.6
       signal-exit: 4.1.0
 
-  fork-ts-checker-webpack-plugin@9.1.0(typescript@5.9.3)(webpack@5.106.2(esbuild@0.21.5)(lightningcss@1.32.0)(postcss@8.5.26)):
+  fork-ts-checker-webpack-plugin@9.1.0(typescript@5.9.3)(webpack@5.106.2(esbuild@0.28.2)(lightningcss@1.32.0)(postcss@8.5.26)):
     dependencies:
       '@babel/code-frame': 7.29.7
       chalk: 4.1.2
@@ -11332,7 +11488,7 @@ snapshots:
       semver: 7.8.5
       tapable: 2.3.3
       typescript: 5.9.3
-      webpack: 5.106.2(esbuild@0.21.5)(lightningcss@1.32.0)(postcss@8.5.26)
+      webpack: 5.106.2(esbuild@0.28.2)(lightningcss@1.32.0)(postcss@8.5.26)
 
   form-data@2.5.6:
     dependencies:
@@ -13428,15 +13584,15 @@ snapshots:
       ansi-escapes: 4.3.2
       supports-hyperlinks: 2.3.0
 
-  terser-webpack-plugin@5.6.1(esbuild@0.21.5)(lightningcss@1.32.0)(postcss@8.5.26)(webpack@5.106.2(esbuild@0.21.5)(lightningcss@1.32.0)(postcss@8.5.26)):
+  terser-webpack-plugin@5.6.1(esbuild@0.28.2)(lightningcss@1.32.0)(postcss@8.5.26)(webpack@5.106.2(esbuild@0.28.2)(lightningcss@1.32.0)(postcss@8.5.26)):
     dependencies:
       '@jridgewell/trace-mapping': 0.3.31
       jest-worker: 27.5.1
       schema-utils: 4.3.3
       terser: 5.50.0
-      webpack: 5.106.2(esbuild@0.21.5)(lightningcss@1.32.0)(postcss@8.5.26)
+      webpack: 5.106.2(esbuild@0.28.2)(lightningcss@1.32.0)(postcss@8.5.26)
     optionalDependencies:
-      esbuild: 0.21.5
+      esbuild: 0.28.2
       lightningcss: 1.32.0
       postcss: 8.5.26
 
@@ -13761,7 +13917,7 @@ snapshots:
 
   webpack-sources@3.5.1: {}
 
-  webpack@5.106.2(esbuild@0.21.5)(lightningcss@1.32.0)(postcss@8.5.26):
+  webpack@5.106.2(esbuild@0.28.2)(lightningcss@1.32.0)(postcss@8.5.26):
     dependencies:
       '@types/eslint-scope': 3.7.7
       '@types/estree': 1.0.9
@@ -13784,7 +13940,7 @@ snapshots:
       neo-async: 2.6.2
       schema-utils: 4.3.3
       tapable: 2.3.3
-      terser-webpack-plugin: 5.6.1(esbuild@0.21.5)(lightningcss@1.32.0)(postcss@8.5.26)(webpack@5.106.2(esbuild@0.21.5)(lightningcss@1.32.0)(postcss@8.5.26))
+      terser-webpack-plugin: 5.6.1(esbuild@0.28.2)(lightningcss@1.32.0)(postcss@8.5.26)(webpack@5.106.2(esbuild@0.28.2)(lightningcss@1.32.0)(postcss@8.5.26))
       watchpack: 2.5.2
       webpack-sources: 3.5.1
     transitivePeerDependencies:

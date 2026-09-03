@@ -42,6 +42,15 @@ export default defineWorkspace([
   {
     resolve: { alias: packageAliases },
     test: {
+      name: "auth",
+      root: "./apps/auth",
+      environment: "node",
+      include: ["src/**/*.{test,spec}.ts"],
+    },
+  },
+  {
+    resolve: { alias: packageAliases },
+    test: {
       name: "entities",
       root: "./packages/entities",
       environment: "node",
