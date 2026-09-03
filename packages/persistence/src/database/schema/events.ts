@@ -40,8 +40,8 @@ export const events = pgTable(
   (table) => [
     index("events_timeline_cursor_idx").on(
       table.userId,
-      table.startedAt.desc(),
-      table.id.desc(),
+      table.startedAt.desc().nullsFirst(),
+      table.id.desc().nullsFirst(),
     ),
     index("events_user_finished_idx")
       .on(table.userId, table.finishedAt)

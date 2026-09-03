@@ -4,13 +4,17 @@ import {
   type PostgresTestContext,
 } from "../testing/postgres-test-context";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
+import { drizzle } from "drizzle-orm/node-postgres";
+import type { Logger } from "drizzle-orm/logger";
 import { resolve } from "node:path";
+import { ulid } from "ulid";
 import {
   Event,
   EventItem,
   EventOwnershipError,
   EventRevisionConflictError,
   Food,
+  Interruption,
   Meal,
   CatalogRevisionConflictError,
 } from "@repo/entities";
@@ -21,8 +25,28 @@ import { PostgresTimelineEventQuery } from "../events/queries/postgres-timeline-
 import { PostgresDailyOverviewQuery } from "../events/queries/postgres-daily-overview.query";
 import { PostgresTagRepository } from "../events/repositories/postgres-tag.repository";
 import { PostgresWorkoutCatalog } from "../catalog/postgres-workout.catalog";
+import * as schema from "../database/schema";
 
 const RUN_INTEGRATION = process.env.RUN_POSTGRES_INTEGRATION === "1";
+
+interface CapturedQuery {
+  sql: string;
+  params: unknown[];
+}
+
+function captureQueries(ctx: PostgresTestContext): {
+  queries: CapturedQuery[];
+  db: ReturnType<typeof drizzle<typeof schema>>;
+} {
+  const queries: CapturedQuery[] = [];
+  const logger: Logger = {
+    logQuery(sql, params) {
+      queries.push({ sql, params });
+    },
+  };
+  const db = drizzle(ctx.pool, { schema, logger });
+  return { queries, db };
+}
 
 describe.runIf(RUN_INTEGRATION)("PostgreSQL schema", () => {
   let ctx: PostgresTestContext;
@@ -40,12 +64,17 @@ describe.runIf(RUN_INTEGRATION)("PostgreSQL schema", () => {
   });
 
   test("applying the migration twice does not duplicate anything", async () => {
-    await migrate(ctx.db, { migrationsFolder: resolve(__dirname, "../../drizzle") });
-
-    const { rows } = await ctx.pool.query(
+    const before = await ctx.pool.query(
       "SELECT count(*)::int AS count FROM drizzle.__drizzle_migrations",
     );
-    expect(rows[0].count).toBe(1);
+    expect(before.rows[0].count).toBeGreaterThan(0);
+
+    await migrate(ctx.db, { migrationsFolder: resolve(__dirname, "../../drizzle") });
+
+    const after = await ctx.pool.query(
+      "SELECT count(*)::int AS count FROM drizzle.__drizzle_migrations",
+    );
+    expect(after.rows[0].count).toBe(before.rows[0].count);
   });
 
   test("seeds the fixed workout catalog", async () => {
@@ -208,6 +237,31 @@ describe.runIf(RUN_INTEGRATION)("PostgreSQL schema", () => {
         row.indexdef.includes("gin") && row.indexdef.includes("data"),
     );
     expect(ginOnData).toHaveLength(0);
+  });
+
+  test("proves the indexes required by the design exist and none of them is GIN", async () => {
+    const { rows } = await ctx.pool.query<{ name: string; method: string }>(`
+      SELECT i.relname AS name, am.amname AS method
+      FROM pg_class i
+      JOIN pg_index ix ON ix.indexrelid = i.oid
+      JOIN pg_am am ON am.oid = i.relam
+      JOIN pg_namespace n ON n.oid = i.relnamespace
+      WHERE i.relkind = 'i' AND n.nspname = 'public'
+    `);
+    const indexNames = rows.map((row) => row.name);
+    const indexMethods = rows.map((row) => ({ name: row.name, method: row.method }));
+
+    expect(indexNames).toEqual(
+      expect.arrayContaining([
+        "events_timeline_cursor_idx",
+        "events_user_finished_idx",
+        "events_user_day_idx",
+        "event_items_one_primary_idx",
+        "event_items_type_event_idx",
+        "tags_user_name_prefix_idx",
+      ]),
+    );
+    expect(indexMethods.filter((index) => index.method === "gin")).toEqual([]);
   });
 });
 
@@ -788,4 +842,117 @@ describe.runIf(RUN_INTEGRATION)("PostgresTimelineEventQuery and PostgresDailyOve
 
     await expect(workoutCatalog.findActiveByCodes(["unknown" as never])).rejects.toThrow();
   });
+
+  test("timeline query performs a constant number of round trips, independent of the page's event count", async () => {
+    for (let i = 0; i < 50; i++) {
+      const startedAt = new Date(Date.UTC(2026, 0, 1, 0, i));
+      await eventRepository.save(
+        routineEvent({
+          id: undefined,
+          name: `Evento ${i}`,
+          startedAt,
+          tags: ["treino"],
+          interruptions: [
+            Interruption.create({
+              name: "Pausa",
+              description: "",
+              startedAt,
+              finishedAt: new Date(startedAt.getTime() + 60_000),
+            }),
+          ],
+        }),
+      );
+    }
+
+    const { queries: smallPageQueries, db: smallPageDb } = captureQueries(ctx);
+    const smallPage = await new PostgresTimelineEventQuery(smallPageDb).list({
+      userId: "user-1",
+      limit: 5,
+    });
+    expect(smallPage.items).toHaveLength(5);
+
+    const { queries: fullPageQueries, db: fullPageDb } = captureQueries(ctx);
+    const fullPage = await new PostgresTimelineEventQuery(fullPageDb).list({
+      userId: "user-1",
+      limit: 50,
+    });
+    expect(fullPage.items).toHaveLength(50);
+
+    expect(fullPageQueries).toHaveLength(smallPageQueries.length);
+    expect(fullPageQueries).toHaveLength(4);
+    expect(fullPageQueries[0].sql).not.toMatch(/event_items/i);
+  }, 30000);
+
+  test("EXPLAIN over a representative dataset uses the timeline and daily-overview indexes", async () => {
+    const users = ["user-a", "user-b"];
+    const totalEvents = 5000;
+    const baseTime = Date.UTC(2026, 0, 1, 0, 0, 0);
+    const ids: string[] = [];
+    const userIds: string[] = [];
+    const names: string[] = [];
+    const startedAts: string[] = [];
+    const itemIds: string[] = [];
+
+    for (let i = 0; i < totalEvents; i++) {
+      ids.push(ulid());
+      userIds.push(users[i % users.length]);
+      names.push(`Evento ${i}`);
+      startedAts.push(new Date(baseTime + i * 60_000).toISOString());
+      itemIds.push(ulid());
+    }
+
+    const CHUNK = 1000;
+    for (let offset = 0; offset < totalEvents; offset += CHUNK) {
+      const end = Math.min(offset + CHUNK, totalEvents);
+      await ctx.pool.query(
+        `INSERT INTO events (id, user_id, name, started_at)
+         SELECT * FROM UNNEST($1::char(26)[], $2::text[], $3::text[], $4::timestamptz[])`,
+        [
+          ids.slice(offset, end),
+          userIds.slice(offset, end),
+          names.slice(offset, end),
+          startedAts.slice(offset, end),
+        ],
+      );
+      await ctx.pool.query(
+        `INSERT INTO event_items (id, event_id, position, type, schema_version, is_primary, data)
+         SELECT id, event_id, 0, 'routine', 1, true, '{}'::jsonb
+         FROM UNNEST($1::char(26)[], $2::char(26)[]) AS t(id, event_id)`,
+        [itemIds.slice(offset, end), ids.slice(offset, end)],
+      );
+    }
+
+    await ctx.pool.query("ANALYZE events, event_items");
+
+    const { queries: timelineQueries, db: timelineDb } = captureQueries(ctx);
+    await new PostgresTimelineEventQuery(timelineDb).list({ userId: "user-a", limit: 50 });
+    const timelinePageQuery = timelineQueries[0];
+    const timelineExplain = await ctx.pool.query(
+      `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ${timelinePageQuery.sql}`,
+      timelinePageQuery.params,
+    );
+    const timelinePlan = JSON.stringify(timelineExplain.rows[0]["QUERY PLAN"]);
+    expect(timelinePlan).toContain("events_timeline_cursor_idx");
+
+    const {
+      rows: [{ started_on: representativeDate }],
+    } = await ctx.pool.query<{ started_on: string }>(
+      `SELECT started_on::text AS started_on FROM events WHERE user_id = $1 ORDER BY started_on LIMIT 1`,
+      ["user-a"],
+    );
+
+    const { queries: overviewQueries, db: overviewDb } = captureQueries(ctx);
+    await new PostgresDailyOverviewQuery(overviewDb).get({
+      userId: "user-a",
+      date: representativeDate,
+      timeZone: "America/Sao_Paulo",
+    });
+    const overviewIdsQuery = overviewQueries[0];
+    const overviewExplain = await ctx.pool.query(
+      `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ${overviewIdsQuery.sql}`,
+      overviewIdsQuery.params,
+    );
+    const overviewPlan = JSON.stringify(overviewExplain.rows[0]["QUERY PLAN"]);
+    expect(overviewPlan).toContain("events_user_day_idx");
+  }, 60000);
 });
