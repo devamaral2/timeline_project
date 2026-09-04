@@ -22,6 +22,15 @@ import { FakeOtpVerificationGateway } from './mfa/fake-otp-verification.gateway'
 import { OTP_VERIFICATION_GATEWAY } from './mfa/otp-verification.gateway';
 import { PostgresAuthenticationRepository } from './mfa/postgres-authentication.repository';
 import { StartInviteAcceptanceUseCase } from './authentication/usecases/start-invite-acceptance.usecase';
+import { PostgresUserRepository } from './users/postgres-user.repository';
+import { PostgresRbacRepository } from './rbac/postgres-rbac.repository';
+import { PostgresSessionRepository } from './sessions/postgres-session.repository';
+import { BearerAuthGuard } from './http/bearer-auth.guard';
+import { AuthenticatedAuthController } from './http/authenticated-auth.controller';
+import { RefreshSessionUseCase } from './sessions/usecases/refresh-session.usecase';
+import { RevokeSessionUseCase } from './sessions/usecases/revoke-session.usecase';
+import { LogoutAllUseCase } from './sessions/usecases/logout-all.usecase';
+import { GetMeUseCase } from './sessions/usecases/get-me.usecase';
 
 export const RUNTIME_ENV = Symbol('RUNTIME_ENV');
 
@@ -31,7 +40,7 @@ export class AppModule {
     return {
       module: AppModule,
       imports: [DbModule],
-      controllers: [HealthController, JwksController, PublicAuthController],
+      controllers: [HealthController, JwksController, PublicAuthController, AuthenticatedAuthController],
       providers: [
         { provide: RUNTIME_ENV, useValue: env },
         ...DbModule.providers(RUNTIME_ENV),
@@ -64,6 +73,50 @@ export class AppModule {
               runtime.keyEncryptionKey,
               secrets,
             ),
+        },
+        { provide: PostgresUserRepository, inject: [AUTH_DATABASE], useFactory: (db: import('./db/client').AuthDatabase) => new PostgresUserRepository(db) },
+        { provide: PostgresRbacRepository, inject: [AUTH_DATABASE], useFactory: (db: import('./db/client').AuthDatabase) => new PostgresRbacRepository(db) },
+        {
+          provide: PostgresSessionRepository,
+          inject: [AUTH_DATABASE, RUNTIME_ENV],
+          useFactory: (db: import('./db/client').AuthDatabase, runtime: RuntimeEnv) =>
+            new PostgresSessionRepository(db, runtime.issuer, runtime.audience),
+        },
+        // BearerAuthGuard.constructor recebe `env: RuntimeEnv` sem @Inject —
+        // RuntimeEnv e um `type`, some em tempo de execucao, entao o reflector
+        // do Nest so enxerga `Object` nesse parametro e nao teria como
+        // resolve-lo sozinho. @UseGuards(BearerAuthGuard) so funciona porque
+        // registro a classe aqui com o mesmo truque que RUNTIME_ENV ja usa em
+        // outro lugar deste arquivo: um provider com `useFactory` que injeta
+        // o token certo (RUNTIME_ENV) e constroi a instancia na mao. Sem isso
+        // o guard derruba a rota com "Nest can't resolve dependencies" assim
+        // que alguem bate em /auth/me ou /auth/logout-all.
+        {
+          provide: BearerAuthGuard,
+          inject: [SigningKeyService, RUNTIME_ENV],
+          useFactory: (keys: SigningKeyService, runtime: RuntimeEnv) => new BearerAuthGuard(keys, runtime),
+        },
+        {
+          provide: RefreshSessionUseCase,
+          inject: [PostgresSessionRepository, SigningKeyService, Clock, SecretGenerator],
+          useFactory: (sessions: PostgresSessionRepository, keys: SigningKeyService, clock: Clock, secrets: SecretGenerator) =>
+            new RefreshSessionUseCase(sessions, keys.signAccessToken, clock, secrets),
+        },
+        {
+          provide: RevokeSessionUseCase,
+          inject: [PostgresSessionRepository, Clock],
+          useFactory: (sessions: PostgresSessionRepository, clock: Clock) => new RevokeSessionUseCase(sessions, clock),
+        },
+        {
+          provide: LogoutAllUseCase,
+          inject: [PostgresSessionRepository, Clock],
+          useFactory: (sessions: PostgresSessionRepository, clock: Clock) => new LogoutAllUseCase(sessions, clock),
+        },
+        {
+          provide: GetMeUseCase,
+          inject: [PostgresSessionRepository, PostgresUserRepository, PostgresRbacRepository],
+          useFactory: (sessions: PostgresSessionRepository, users: PostgresUserRepository, rbac: PostgresRbacRepository) =>
+            new GetMeUseCase(sessions, users, rbac),
         },
       ],
       exports: [RUNTIME_ENV, Clock, SecretGenerator],
