@@ -14,7 +14,7 @@ const prepared = { attemptId: "attempt", userId: "user", purpose: "invite_accept
 
 function repository(overrides: Partial<AuthenticationRepository> = {}): AuthenticationRepository {
   return {
-    startInviteAttempt: vi.fn(), prepareOtpCheck: vi.fn().mockResolvedValue(prepared), invalidateOtpChallenge: vi.fn().mockResolvedValue("invalidated"), recordAuditEvent: vi.fn().mockResolvedValue(undefined),
+    startInviteAttempt: vi.fn(), startLoginAttempt: vi.fn(), attemptPurpose: vi.fn().mockResolvedValue("invite_acceptance"), prepareMfaResend: vi.fn(), replaceMfaChallenge: vi.fn(), completeLogin: vi.fn(), prepareOtpCheck: vi.fn().mockResolvedValue(prepared), invalidateOtpChallenge: vi.fn().mockResolvedValue("invalidated"), recordAuditEvent: vi.fn().mockResolvedValue(undefined),
     completeInviteEnrollment: vi.fn().mockImplementation(async (command: CompleteInviteEnrollmentCommand) => ({ userId: "user", sessionId: command.newSession.id, accessToken: "access", refreshTokenExpiresAt: command.newSession.refreshToken.expiresAt, access: { roleKeys: [], permissions: [], denies: [] } })),
     ...overrides,
   };
