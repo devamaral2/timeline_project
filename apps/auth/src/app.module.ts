@@ -31,6 +31,7 @@ import { RefreshSessionUseCase } from './sessions/usecases/refresh-session.useca
 import { RevokeSessionUseCase } from './sessions/usecases/revoke-session.usecase';
 import { LogoutAllUseCase } from './sessions/usecases/logout-all.usecase';
 import { GetMeUseCase } from './sessions/usecases/get-me.usecase';
+import { CompleteInviteAcceptanceUseCase } from './authentication/usecases/complete-invite-acceptance.usecase';
 
 export const RUNTIME_ENV = Symbol('RUNTIME_ENV');
 
@@ -118,6 +119,7 @@ export class AppModule {
           useFactory: (sessions: PostgresSessionRepository, users: PostgresUserRepository, rbac: PostgresRbacRepository) =>
             new GetMeUseCase(sessions, users, rbac),
         },
+        { provide: CompleteInviteAcceptanceUseCase, inject: [OTP_VERIFICATION_GATEWAY, PostgresAuthenticationRepository, Clock, SecretGenerator, SigningKeyService], useFactory: (otp: import('./mfa/otp-verification.gateway').OtpVerificationGateway, repo: PostgresAuthenticationRepository, clock: Clock, secrets: SecretGenerator, signingKeys: SigningKeyService) => new CompleteInviteAcceptanceUseCase(otp, repo, clock, secrets, signingKeys.signAccessToken) },
       ],
       exports: [RUNTIME_ENV, Clock, SecretGenerator],
     };
