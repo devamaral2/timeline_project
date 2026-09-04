@@ -9,14 +9,14 @@ import type { OtpVerificationGateway } from "../../mfa/otp-verification.gateway"
 import type { AuthenticationRepository } from "../../mfa/ports/authentication-repository";
 import type { RateLimiter } from "../../rate-limit/rate-limiter";
 import { normalizeEmail, type User } from "../../users/user";
-import type { UserRepository } from "../../users/ports/user-repository";
+import type { UserReader } from "../../users/ports/user-repository";
 import { LoginCredentialChecker } from "../login-credential-checker";
 import type { SecondFactor } from "../../mfa/authentication-attempt";
 
 export interface StartLoginInput { email:string; password:string; secondFactor:SecondFactor; context:RequestContext; }
 export interface StartLoginOutput { mfaToken:string; secondFactor:SecondFactor; channel?:MfaChannel; maskedDestination?:string; expiresAt:Date; }
 export class StartLoginUseCase {
-  constructor(private readonly users:UserRepository,private readonly credentials:LoginCredentialChecker,private readonly limiter:RateLimiter,private readonly otp:OtpVerificationGateway,private readonly repo:AuthenticationRepository,private readonly clock:Clock,private readonly secrets:SecretGenerator,private readonly limits:{passwordEmail:{attempts:number;windowSeconds:number};passwordIp:{attempts:number;windowSeconds:number};mfaSendUser:{attempts:number;windowSeconds:number}}){}
+  constructor(private readonly users:UserReader,private readonly credentials:LoginCredentialChecker,private readonly limiter:RateLimiter,private readonly otp:OtpVerificationGateway,private readonly repo:AuthenticationRepository,private readonly clock:Clock,private readonly secrets:SecretGenerator,private readonly limits:{passwordEmail:{attempts:number;windowSeconds:number};passwordIp:{attempts:number;windowSeconds:number};mfaSendUser:{attempts:number;windowSeconds:number}}){}
   async execute(input:StartLoginInput):Promise<StartLoginOutput>{
     const now=this.clock.now(),email=normalizeEmail(input.email),password=input.password.normalize("NFC");
     const byEmail=await this.limiter.hit({scope:"password_email",subject:email,limit:this.limits.passwordEmail.attempts,windowSeconds:this.limits.passwordEmail.windowSeconds,now});

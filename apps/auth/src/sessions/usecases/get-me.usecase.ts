@@ -1,6 +1,6 @@
 import { AuthenticationFailedError } from "../../common/errors";
 import { canSignIn, type AuthenticatedActor } from "../../users/user";
-import type { UserRepository } from "../../users/ports/user-repository";
+import type { UserReader } from "../../users/ports/user-repository";
 import type { RbacRepository } from "../../rbac/ports/rbac-repository";
 import type { Permission } from "../../rbac/permissions";
 import type { SessionRepository } from "../ports/session-repository";
@@ -23,7 +23,7 @@ export interface Me {
 export class GetMeUseCase {
   constructor(
     private readonly sessions: SessionRepository,
-    private readonly users: UserRepository,
+    private readonly users: UserReader,
     private readonly rbac: RbacRepository,
   ) {}
 

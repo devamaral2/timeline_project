@@ -10,7 +10,10 @@ const testUrl = process.env.AUTH_TEST_DATABASE_URL;
 if (process.env.AUTH_REQUIRE_POSTGRES_TESTS === "true" && !testUrl) throw new Error("AUTH_TEST_DATABASE_URL is required when AUTH_REQUIRE_POSTGRES_TESTS=true");
 export const describeWithPostgres = testUrl ? describe : describe.skip;
 function safe(value: string): string { if (!/^[a-z0-9_]+$/.test(value)) throw new Error("Unsafe test identifier"); return value; }
-export interface PostgresTestDatabase { migrationUrl: string; runtimeUrl: string; schema: string; close(): Promise<void>; }
+/** `adminUrl` aponta para o mesmo schema sem as restricoes do papel de
+ *  runtime -- e o unico jeito de um teste LER `audit_log`, que para a
+ *  aplicacao e append-only. */
+export interface PostgresTestDatabase { migrationUrl: string; adminUrl: string; runtimeUrl: string; schema: string; close(): Promise<void>; }
 export async function createPostgresTestDatabase(): Promise<PostgresTestDatabase> {
   if (!testUrl) throw new Error("AUTH_TEST_DATABASE_URL is not configured");
   const suffix = ulid().toLowerCase(); const schema = safe(`auth_test_${suffix}`); const migrationsSchema = safe(`drizzle_auth_test_${suffix}`);
@@ -19,5 +22,6 @@ export async function createPostgresTestDatabase(): Promise<PostgresTestDatabase
   const role = safe(`auth_runtime_${randomBytes(10).toString("hex")}`); const password = randomBytes(24).toString("base64url");
   await client.query(`CREATE ROLE "${role}" LOGIN PASSWORD '${password}'`); await grantRuntimePrivileges(client, schema, role);
   const url = new URL(testUrl); url.username = role; url.password = password; url.searchParams.set("options", `-c search_path=${schema}`);
-  return { migrationUrl: testUrl, runtimeUrl: url.toString(), schema, async close() { await client.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`); await client.query(`DROP SCHEMA IF EXISTS "${migrationsSchema}" CASCADE`); await client.query(`DROP ROLE IF EXISTS "${role}"`); await client.end(); } };
+  const admin = new URL(testUrl); admin.searchParams.set("options", `-c search_path=${schema}`);
+  return { migrationUrl: testUrl, adminUrl: admin.toString(), runtimeUrl: url.toString(), schema, async close() { await client.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`); await client.query(`DROP SCHEMA IF EXISTS "${migrationsSchema}" CASCADE`); await client.query(`DROP ROLE IF EXISTS "${role}"`); await client.end(); } };
 }

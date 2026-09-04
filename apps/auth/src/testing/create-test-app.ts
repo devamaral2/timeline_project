@@ -4,6 +4,8 @@ import type { Request } from "express";
 import { randomBytes } from "node:crypto";
 import { AppModule } from "../app.module";
 import { getRuntimeEnv, type EnvSource } from "../config/env";
+import { HttpPwnedPasswordsGateway } from "../credentials/http-pwned-passwords.gateway";
+import type { PwnedPasswordsGateway } from "../credentials/pwned-passwords.gateway";
 import { configureHttpShell } from "../http/request-context.middleware";
 
 @Controller("testing")
@@ -25,6 +27,16 @@ export interface TestApp {
   close(): Promise<void>;
 }
 
+export interface TestAppOptions {
+  /**
+   * O gateway do HIBP e o unico provider que sai para a internet num teste.
+   * Por isso ele e trocado por padrao: sem isso todo teste que aceita convite
+   * ou troca senha bateria em api.pwnedpasswords.com. Quem precisa do caminho
+   * de falha (503) passa um dublê que rejeita.
+   */
+  pwnedPasswords?: PwnedPasswordsGateway;
+}
+
 function testEnv(overrides: EnvSource = {}) {
   return getRuntimeEnv({
     NODE_ENV: "test",
@@ -39,11 +51,14 @@ function testEnv(overrides: EnvSource = {}) {
   });
 }
 
-export async function createTestApp(overrides: EnvSource = {}): Promise<TestApp> {
+export async function createTestApp(overrides: EnvSource = {}, options: TestAppOptions = {}): Promise<TestApp> {
   const module = await Test.createTestingModule({
     imports: [AppModule.forRoot(testEnv(overrides))],
     controllers: [TestContextController],
-  }).compile();
+  })
+    .overrideProvider(HttpPwnedPasswordsGateway)
+    .useValue(options.pwnedPasswords ?? { isCompromised: async () => false })
+    .compile();
   const app = module.createNestApplication({ bodyParser: false });
   configureHttpShell(app);
   await app.listen(0, "127.0.0.1");
