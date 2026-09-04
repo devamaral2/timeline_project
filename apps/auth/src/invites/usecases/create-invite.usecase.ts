@@ -55,7 +55,7 @@ export class CreateInviteUseCase {
       }],
     });
     // Conflito seguro: quem pergunta ja e admin, entao dizer que o e-mail
-    // existe nao vaza nada que ele nao possa ver na propria listagem.
+    // existe nao vaza nada que ele nao possa consultar na propria listagem.
     if (outcome.kind === "email_already_exists") throw new ConflictError("email_already_exists");
     return { userId: outcome.userId, inviteLink: inviteLink(this.webAppUrl, token), expiresAt: expiresAt.toISOString() };
   }

@@ -9,12 +9,13 @@ sem segredo estao em `docs/runbooks/`. O cleanup e uma transacao protegida por
 advisory lock: nao o substitua por tarefas paralelas nem remova refresh tokens
 consumidos de sessoes ainda vivas, pois eles sustentam a deteccao de reuso.
 
-Turborepo + pnpm workspace. Sete workspaces:
+Turborepo + pnpm workspace. Oito workspaces:
 
 ```
 apps/web          Next.js 16 — frontend web, sem regra de negocio
 apps/mobile       Expo 57 + expo-router — app nativo, sem regra de negocio
 apps/api          NestJS — usecases, services, gateways, controllers HTTP
+apps/auth         NestJS — identidade: convite, login, MFA, sessao e RBAC
 packages/entities @repo/entities — dominio, portas e DTOs
 packages/persistence @repo/persistence — schema, repositories e acesso Postgres
 packages/timeline @repo/timeline — datas, janelas e agrupamento da timeline
@@ -209,7 +210,7 @@ antes de subir o dev resolve.
 Use **sempre** `npm run --silent test:ai`, nunca `npm test` nem `npx vitest`.
 (`--silent` corta o cabecalho que o proprio npm imprime.)
 
-Ele roda a suite inteira — os sete workspaces — em uma unica execucao do
+Ele roda a suite inteira — os oito workspaces — em uma unica execucao do
 Vitest, com `vitest.quiet.config.ts`, que herda tudo de `vitest.config.ts` e so
 troca a saida (reporter em `test/quiet-reporter.ts`):
 
@@ -240,4 +241,16 @@ Para investigar uma falha alem do primeiro erro, rode `npm test` (saida completa
 do Vitest) ou filtre um arquivo:
 `npm run --silent test:ai apps/api/src/caminho/do.test.ts`.
 Para rodar so um workspace: `npx vitest run --project api`
-(`web`, `mobile`, `api`, `entities`, `persistence`, `timeline`, `theme`).
+(`web`, `mobile`, `api`, `auth`, `entities`, `persistence`, `timeline`, `theme`).
+
+**Os testes do `auth` que exigem Postgres pulam sozinhos** quando
+`AUTH_TEST_DATABASE_URL` nao esta definida — e sao a maior parte da suite dele:
+integracao de repositorio e os e2e de HTTP. Para roda-los de verdade:
+
+```
+docker compose -f apps/auth/compose.test.yaml up -d --wait
+AUTH_TEST_DATABASE_URL=postgresql://auth_test:auth_test@127.0.0.1:55432/timeline_auth_test AUTH_REQUIRE_POSTGRES_TESTS=true npm run --silent test:ai
+```
+
+`AUTH_REQUIRE_POSTGRES_TESTS=true` e o que transforma teste *skipped* em falha.
+Sem ele, `Tests pass` pode significar que os arquivos de integracao nem rodaram.

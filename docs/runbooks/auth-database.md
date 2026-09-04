@@ -1,14 +1,70 @@
 # Banco do Auth
 
-O serviço usa duas credenciais distintas: `AUTH_DATABASE_MIGRATION_URL` para
-aplicar DDL e `AUTH_DATABASE_URL` para a aplicação. A credencial runtime não
-deve ser dona do schema.
+## Credenciais
 
-1. Faça backup e confirme a URL de migração no ambiente alvo.
-2. Execute `pnpm --filter @repo/auth run db:migrate`.
-3. Aplique `apps/auth/ops/grant-runtime.sql`, ajustando schema e role quando o
-   banco não usa `public` e `auth_runtime`.
-4. Suba o serviço e confirme `GET /health` e `GET /.well-known/jwks.json`.
+O serviço usa duas credenciais distintas no mesmo banco:
 
-Não execute migrations com a credencial runtime. Ela só precisa ler e escrever
-as tabelas de produto e inserir em `audit_log`; esse log é append-only.
+| Variável | Papel | Para quê |
+| --- | --- | --- |
+| `AUTH_DATABASE_MIGRATION_URL` | dono do schema | aplicar DDL |
+| `AUTH_DATABASE_URL` | `auth_runtime` | ler e escrever as tabelas em produção |
+
+A credencial de runtime não é dona do schema e não pode alterar nem apagar
+`audit_log` — o log é append-only, e essa garantia é do banco, não do código.
+
+## Aplicar migrations
+
+1. Faça backup e confirme para qual banco `AUTH_DATABASE_MIGRATION_URL` aponta.
+2. Rode:
+
+   ```bash
+   pnpm --filter @repo/auth run db:migrate
+   ```
+
+3. Se o banco é novo, aplique as permissões de runtime:
+
+   ```bash
+   psql "$AUTH_DATABASE_MIGRATION_URL" -f apps/auth/ops/grant-runtime.sql
+   ```
+
+   Ajuste `public` e `auth_runtime` no arquivo quando o schema ou o papel forem
+   outros.
+4. Suba o serviço e confirme:
+
+   ```bash
+   curl -fsS http://127.0.0.1:3002/health/ready
+   curl -fsS http://127.0.0.1:3002/.well-known/jwks.json
+   ```
+
+O comando aplica os arquivos de `apps/auth/drizzle/` em ordem, pulando o que já
+consta em `applied_migrations` (dentro do schema `drizzle`). **Rodar de novo é
+seguro**: sem nada pendente, ele não faz nada. Cada arquivo roda na própria
+transação, junto com o registro de que foi aplicado.
+
+## Sinais de que algo está errado
+
+- `GET /health/ready` responde **503**: ou o banco está fora, ou o schema está
+  atrás do código. `auth_schema_meta.version` precisa bater com
+  `AUTH_SCHEMA_VERSION` (`apps/auth/src/db/readiness.ts`). Rode `db:migrate`.
+- `GET /health/ready` responde 503 com o schema correto: não há chave de
+  assinatura ativa. Veja o runbook de rotação de chave.
+- Erro de permissão em runtime: as permissões do passo 3 não foram aplicadas
+  depois de uma migração que criou tabela nova.
+
+## O que não fazer
+
+- Não rode migrations com a credencial de runtime.
+- Não edite uma migration já aplicada em qualquer ambiente compartilhado. Gere
+  outra em cima dela — `applied_migrations` registra o nome do arquivo, e
+  reescrever o conteúdo dele não reaplica nada.
+
+## Rollback
+
+Cada migração tem o par em `apps/auth/drizzle/rollback/`. Aplique o `.down.sql`
+correspondente com a credencial de migração e apague a linha de
+`applied_migrations`:
+
+```bash
+psql "$AUTH_DATABASE_MIGRATION_URL" -f apps/auth/drizzle/rollback/0002_authentication_sessions.down.sql
+psql "$AUTH_DATABASE_MIGRATION_URL" -c "DELETE FROM drizzle.applied_migrations WHERE filename = '0002_authentication_sessions.sql'"
+```
