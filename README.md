@@ -89,6 +89,14 @@ pnpm turbo run build
 pnpm turbo run typecheck
 ```
 
+## Operação do Auth
+
+O serviço de autenticação tem comandos separados para migrations, bootstrap do
+administrador, rotação de chaves, retenção e smoke do Twilio. Os procedimentos
+completos, incluindo limites de acesso e dados que não podem ir para logs,
+estão em [docs/runbooks](docs/runbooks/): banco, bootstrap, rotação, retenção e
+smoke. Execute os comandos sempre pelo workspace `@repo/auth`.
+
 Os packages compilam antes dos apps (`dependsOn: ["^build"]`). O mobile fica de
 fora do `build`: o bundle dele sai do Metro (`expo export`) ou do EAS Build, nao
 do `tsc`.

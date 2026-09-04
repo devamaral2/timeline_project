@@ -9,7 +9,7 @@ import type { Session } from "../session";
  * antecedencia, porque nao sabe ainda qual vai ser o desfecho da rotacao
  * (`rotated`/`reused`/expirado) nem a que sessao o hash pertence. Quem monta
  * o `AuditEventInput` e a implementacao, depois de descobrir isso dentro da
- * propria transacao — ver `sessionAuditEvent` em `PostgresSessionRepository`.
+ * propria transacao — consulte `sessionAuditEvent` em `PostgresSessionRepository`.
  */
 export interface RotateRefreshTokenCommand {
   presentedTokenHash: string;

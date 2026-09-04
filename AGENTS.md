@@ -1,5 +1,14 @@
 # Estrutura do monorepo
 
+## Servico de autenticacao
+
+`apps/auth` e um NestJS independente para identidade. Operadores usam os
+scripts do proprio workspace (`db:migrate`, `bootstrap-admin`,
+`rotate-signing-key`, `cleanup-auth-data` e `smoke-twilio`); os procedimentos
+sem segredo estao em `docs/runbooks/`. O cleanup e uma transacao protegida por
+advisory lock: nao o substitua por tarefas paralelas nem remova refresh tokens
+consumidos de sessoes ainda vivas, pois eles sustentam a deteccao de reuso.
+
 Turborepo + pnpm workspace. Sete workspaces:
 
 ```
