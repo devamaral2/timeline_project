@@ -13,6 +13,7 @@ import type { Session } from "./session";
 import type {
   FindActiveSessionQuery,
   RevokeAllOfUserCommand,
+  RevokeAllOfTargetUserCommand,
   RevokeByRefreshTokenCommand,
   RotateRefreshTokenCommand,
   RotateRefreshTokenResult,
@@ -286,6 +287,21 @@ export class PostgresSessionRepository implements SessionRepository {
           sessionAuditEvent(c.context, c.now, c.actor.userId, c.actor.sessionId, "session.revoked_all", null, { count }),
         ]);
       }
+      return count;
+    });
+  }
+
+  async revokeAllOfTargetUser(c: RevokeAllOfTargetUserCommand): Promise<number | "not_found"> {
+    return this.db.transaction(async (tx) => {
+      // Mesma ordem de lock do rotate e do logout-all: usuario -> sessao.
+      const target = (await tx.query<{ id: string }>("SELECT id FROM users WHERE id = $1 FOR UPDATE", [c.targetUserId])).rows[0];
+      if (!target) return "not_found" as const;
+      const result = await tx.query("UPDATE sessions SET revoked_at = $1, ended_at = $1 WHERE user_id = $2 AND revoked_at IS NULL", [c.now, c.targetUserId]);
+      const count = result.rowCount ?? 0;
+      await insertAuditEvents(tx, [{
+        correlationId: c.context.correlationId, actorUserId: c.actorUserId, action: "session.revoked_all", targetType: "user", targetId: c.targetUserId,
+        result: "succeeded", reason: "admin_revoked", metadata: { count }, context: c.context, occurredAt: c.now,
+      }]);
       return count;
     });
   }

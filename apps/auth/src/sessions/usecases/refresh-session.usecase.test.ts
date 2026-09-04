@@ -22,6 +22,9 @@ function repositoryReturning(
       lastCommand = command;
       return result;
     },
+    revokeAllOfTargetUser: () => {
+      throw new Error("not used");
+    },
     revokeByRefreshToken: () => {
       throw new Error("not used in this test");
     },

@@ -33,6 +33,15 @@ import { LogoutAllUseCase } from './sessions/usecases/logout-all.usecase';
 import { GetMeUseCase } from './sessions/usecases/get-me.usecase';
 import { CompleteInviteAcceptanceUseCase } from './authentication/usecases/complete-invite-acceptance.usecase';
 import { VerifyMfaUseCase } from './authentication/usecases/verify-mfa.usecase';
+import { AdminAuthController } from './http/admin-auth.controller';
+import { RequireSuperAdminGuard } from './http/require-permission.guard';
+import { CreateInviteUseCase } from './invites/usecases/create-invite.usecase';
+import { ReissueInviteUseCase } from './invites/usecases/reissue-invite.usecase';
+import { RevokeInviteUseCase } from './invites/usecases/revoke-invite.usecase';
+import { ListUsersUseCase } from './users/usecases/list-users.usecase';
+import { ChangeUserStatusUseCase } from './users/usecases/change-user-status.usecase';
+import { ReplaceUserAccessUseCase } from './users/usecases/replace-user-access.usecase';
+import { RevokeUserSessionsUseCase } from './sessions/usecases/revoke-user-sessions.usecase';
 import { StartStepUpUseCase } from './authentication/usecases/start-step-up.usecase';
 import { CompleteStepUpUseCase } from './authentication/usecases/complete-step-up.usecase';
 import { ChangePasswordUseCase } from './authentication/usecases/change-password.usecase';
@@ -51,7 +60,7 @@ export class AppModule {
     return {
       module: AppModule,
       imports: [DbModule],
-      controllers: [HealthController, JwksController, PublicAuthController, AuthenticatedAuthController],
+      controllers: [HealthController, JwksController, PublicAuthController, AuthenticatedAuthController, AdminAuthController],
       providers: [
         { provide: RUNTIME_ENV, useValue: env },
         ...DbModule.providers(RUNTIME_ENV),
@@ -141,6 +150,14 @@ export class AppModule {
         { provide: CompleteStepUpUseCase, inject: [PostgresAuthenticationRepository, OTP_VERIFICATION_GATEWAY, PostgresRateLimiter, Clock, RUNTIME_ENV], useFactory: (repo: PostgresAuthenticationRepository, otp: import('./mfa/otp-verification.gateway').OtpVerificationGateway, limiter: PostgresRateLimiter, clock: Clock, env: RuntimeEnv) => new CompleteStepUpUseCase(repo, otp, limiter, clock, { factorCheckAttempt: env.limits.factorCheckAttempt }) },
         { provide: ChangePasswordUseCase, inject: [PostgresUserRepository, PostgresAuthenticationRepository, PreparePassword, Clock, SecretGenerator, SigningKeyService], useFactory: (users: PostgresUserRepository, repo: PostgresAuthenticationRepository, prepare: PreparePassword, clock: Clock, secrets: SecretGenerator, signingKeys: SigningKeyService) => new ChangePasswordUseCase(users, repo, prepare, clock, secrets, signingKeys.signAccessToken) },
         { provide: RegenerateRecoveryCodesUseCase, inject: [PostgresAuthenticationRepository, Clock, SecretGenerator], useFactory: (repo: PostgresAuthenticationRepository, clock: Clock, secrets: SecretGenerator) => new RegenerateRecoveryCodesUseCase(repo, clock, secrets) },
+        { provide: RequireSuperAdminGuard, useClass: RequireSuperAdminGuard },
+        { provide: CreateInviteUseCase, inject: [PostgresInviteRepository, Clock, SecretGenerator, RUNTIME_ENV], useFactory: (invites: PostgresInviteRepository, clock: Clock, secrets: SecretGenerator, env: RuntimeEnv) => new CreateInviteUseCase(invites, clock, secrets, env.webAppUrl) },
+        { provide: ReissueInviteUseCase, inject: [PostgresInviteRepository, Clock, SecretGenerator, RUNTIME_ENV], useFactory: (invites: PostgresInviteRepository, clock: Clock, secrets: SecretGenerator, env: RuntimeEnv) => new ReissueInviteUseCase(invites, clock, secrets, env.webAppUrl) },
+        { provide: RevokeInviteUseCase, inject: [PostgresInviteRepository, Clock], useFactory: (invites: PostgresInviteRepository, clock: Clock) => new RevokeInviteUseCase(invites, clock) },
+        { provide: ListUsersUseCase, inject: [PostgresUserRepository], useFactory: (users: PostgresUserRepository) => new ListUsersUseCase(users) },
+        { provide: ChangeUserStatusUseCase, inject: [PostgresUserRepository, Clock], useFactory: (users: PostgresUserRepository, clock: Clock) => new ChangeUserStatusUseCase(users, clock) },
+        { provide: ReplaceUserAccessUseCase, inject: [PostgresUserRepository, Clock], useFactory: (users: PostgresUserRepository, clock: Clock) => new ReplaceUserAccessUseCase(users, clock) },
+        { provide: RevokeUserSessionsUseCase, inject: [PostgresSessionRepository, Clock], useFactory: (sessions: PostgresSessionRepository, clock: Clock) => new RevokeUserSessionsUseCase(sessions, clock) },
       ],
       exports: [RUNTIME_ENV, Clock, SecretGenerator],
     };

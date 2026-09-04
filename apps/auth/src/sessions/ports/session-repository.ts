@@ -30,6 +30,13 @@ export interface RevokeAllOfUserCommand {
   context: RequestContext;
 }
 
+export interface RevokeAllOfTargetUserCommand {
+  targetUserId: string;
+  actorUserId: string;
+  now: Date;
+  context: RequestContext;
+}
+
 export interface FindActiveSessionQuery {
   sessionId: string;
   userId: string;
@@ -50,5 +57,7 @@ export interface SessionRepository {
   rotateRefreshToken(command: RotateRefreshTokenCommand, sign: SignAccessToken): Promise<RotateRefreshTokenResult>;
   revokeByRefreshToken(command: RevokeByRefreshTokenCommand): Promise<boolean>;
   revokeAllOfUser(command: RevokeAllOfUserCommand): Promise<number>;
+  /** Revogacao administrativa: quem age e o admin, quem perde a sessao e outro. */
+  revokeAllOfTargetUser(command: RevokeAllOfTargetUserCommand): Promise<number | "not_found">;
   findActiveSession(query: FindActiveSessionQuery): Promise<Session | null>;
 }
