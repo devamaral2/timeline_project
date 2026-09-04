@@ -1,6 +1,7 @@
-import { BadRequestException, Body, Controller, Get, HttpCode, HttpStatus, Inject, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, HttpCode, HttpStatus, Inject, Post, Req, UseGuards } from "@nestjs/common";
 import type { Request } from "express";
 import { z } from "zod";
+import { parseRequest } from "./validation";
 import { ANONYMOUS_CONTEXT } from "../common/request-context";
 import { ChangePasswordUseCase } from "../authentication/usecases/change-password.usecase";
 import { CompleteStepUpUseCase } from "../authentication/usecases/complete-step-up.usecase";
@@ -22,7 +23,6 @@ const recoverStepUpBody = z.object({ stepUpToken, recoveryCode: z.string().min(1
 const changePasswordBody = z.object({ stepUpToken, newPassword: z.string().min(1).max(1024) }).strict();
 const regenerateRecoveryCodesBody = z.object({ stepUpToken }).strict();
 
-function parse<T>(schema: z.ZodType<T>, body: unknown): T { const result = schema.safeParse(body); if (!result.success) throw new BadRequestException("invalid request"); return result.data; }
 
 @Controller("auth")
 export class AuthenticatedAuthController {
@@ -46,7 +46,7 @@ export class AuthenticatedAuthController {
   @Post("token/refresh")
   @HttpCode(HttpStatus.OK)
   async refresh(@Body() body: unknown, @Req() request: Request) {
-    const value = parse(refreshTokenBody, body);
+    const value = parseRequest(refreshTokenBody, body);
     const result = await this.refreshSession.execute({ refreshToken: value.refreshToken, context: this.context(request) });
     return { accessToken: result.accessToken, refreshToken: result.refreshToken };
   }
@@ -54,7 +54,7 @@ export class AuthenticatedAuthController {
   @Post("logout")
   @HttpCode(HttpStatus.NO_CONTENT)
   async logout(@Body() body: unknown, @Req() request: Request): Promise<void> {
-    const value = parse(refreshTokenBody, body);
+    const value = parseRequest(refreshTokenBody, body);
     await this.revokeSession.execute({ refreshToken: value.refreshToken, context: this.context(request) });
   }
 
@@ -69,7 +69,7 @@ export class AuthenticatedAuthController {
   @UseGuards(BearerAuthGuard)
   @HttpCode(HttpStatus.ACCEPTED)
   async beginStepUp(@Body() body: unknown, @CurrentActor() actor: AuthenticatedActor, @Req() request: Request) {
-    const value = parse(startStepUpBody, body);
+    const value = parseRequest(startStepUpBody, body);
     return this.startStepUp.execute({ actor, purpose: value.purpose, secondFactor: value.secondFactor, context: this.context(request) });
   }
 
@@ -77,7 +77,7 @@ export class AuthenticatedAuthController {
   @UseGuards(BearerAuthGuard)
   @HttpCode(HttpStatus.OK)
   async verifyStepUp(@Body() body: unknown, @CurrentActor() actor: AuthenticatedActor, @Req() request: Request) {
-    const value = parse(verifyStepUpBody, body);
+    const value = parseRequest(verifyStepUpBody, body);
     return this.completeStepUp.verify({ actor, stepUpToken: value.stepUpToken, code: value.code, context: this.context(request) });
   }
 
@@ -85,7 +85,7 @@ export class AuthenticatedAuthController {
   @UseGuards(BearerAuthGuard)
   @HttpCode(HttpStatus.OK)
   async recoverStepUp(@Body() body: unknown, @CurrentActor() actor: AuthenticatedActor, @Req() request: Request) {
-    const value = parse(recoverStepUpBody, body);
+    const value = parseRequest(recoverStepUpBody, body);
     return this.completeStepUp.recover({ actor, stepUpToken: value.stepUpToken, recoveryCode: value.recoveryCode, context: this.context(request) });
   }
 
@@ -93,7 +93,7 @@ export class AuthenticatedAuthController {
   @UseGuards(BearerAuthGuard)
   @HttpCode(HttpStatus.OK)
   async changeOwnPassword(@Body() body: unknown, @CurrentActor() actor: AuthenticatedActor, @Req() request: Request) {
-    const value = parse(changePasswordBody, body);
+    const value = parseRequest(changePasswordBody, body);
     return this.changePassword.execute({ actor, stepUpToken: value.stepUpToken, newPassword: value.newPassword, context: this.context(request) });
   }
 
@@ -101,7 +101,7 @@ export class AuthenticatedAuthController {
   @UseGuards(BearerAuthGuard)
   @HttpCode(HttpStatus.OK)
   async regenerateOwnRecoveryCodes(@Body() body: unknown, @CurrentActor() actor: AuthenticatedActor, @Req() request: Request) {
-    const value = parse(regenerateRecoveryCodesBody, body);
+    const value = parseRequest(regenerateRecoveryCodesBody, body);
     return this.regenerateRecoveryCodes.execute({ actor, stepUpToken: value.stepUpToken, context: this.context(request) });
   }
 

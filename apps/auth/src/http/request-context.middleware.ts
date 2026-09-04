@@ -4,6 +4,7 @@ import { ulid } from "ulid";
 import type { RequestContext } from "../common/request-context";
 import { SECURITY_POLICY } from "../config/security-policy";
 import { AuthExceptionFilter } from "./auth-exception.filter";
+import { ConsoleAuthLogger, type AuthLogger } from "../common/logger";
 
 declare global {
   namespace Express {
@@ -36,7 +37,7 @@ export class RequestContextMiddleware implements NestMiddleware {
 }
 
 /** Applies the identical process shell in production and real Nest E2E tests. */
-export function configureHttpShell(app: INestApplication): void {
+export function configureHttpShell(app: INestApplication, logger: AuthLogger = new ConsoleAuthLogger()): void {
   const adapter = app.getHttpAdapter() as unknown as {
     getInstance(): { disable(setting: string): void };
     useBodyParser(type: "json", rawBody: boolean, options: { limit: number }): void;
@@ -47,5 +48,5 @@ export function configureHttpShell(app: INestApplication): void {
   const context = new RequestContextMiddleware();
   app.use(context.use.bind(context));
   adapter.useBodyParser("json", false, { limit: SECURITY_POLICY.maxRequestBodyBytes });
-  app.useGlobalFilters(new AuthExceptionFilter());
+  app.useGlobalFilters(new AuthExceptionFilter(logger));
 }

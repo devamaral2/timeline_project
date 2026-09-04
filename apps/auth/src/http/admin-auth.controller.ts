@@ -1,6 +1,7 @@
-import { BadRequestException, Body, Controller, Delete, Get, HttpCode, HttpStatus, Inject, Param, Patch, Post, Put, Query, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Inject, Param, Patch, Post, Put, Query, Req, UseGuards } from "@nestjs/common";
 import type { Request } from "express";
 import { z } from "zod";
+import { parseRequest } from "./validation";
 import { ANONYMOUS_CONTEXT } from "../common/request-context";
 import { CreateInviteUseCase } from "../invites/usecases/create-invite.usecase";
 import { ReissueInviteUseCase } from "../invites/usecases/reissue-invite.usecase";
@@ -37,7 +38,6 @@ const statusBody = z.object({ status: z.enum(["active", "suspended", "disabled"]
 const listQuery = z.object({ cursor: z.string().min(1).max(64).optional(), limit: z.coerce.number().int().min(1).max(100).optional() }).strict();
 const userIdParam = z.string().min(1).max(64);
 
-function parse<T>(schema: z.ZodType<T>, value: unknown): T { const result = schema.safeParse(value); if (!result.success) throw new BadRequestException("invalid request"); return result.data; }
 
 @Controller("auth/admin")
 @UseGuards(BearerAuthGuard, RequireSuperAdminGuard)
@@ -57,7 +57,7 @@ export class AdminAuthController {
   @Post("invites")
   @HttpCode(HttpStatus.CREATED)
   async invite(@Body() body: unknown, @CurrentActor() actor: AuthenticatedActor, @Req() request: Request) {
-    const value = parse(createInviteBody, body);
+    const value = parseRequest(createInviteBody, body);
     return this.createInvite.execute({ actor, email: value.email, name: value.name, roleKeys: value.roleKeys, directPermissions: value.directPermissions, context: this.context(request) });
   }
 
@@ -66,37 +66,37 @@ export class AdminAuthController {
   // parametro dinamico capturava as tres. `admin.e2e.test.ts` trava a ordem.
   @Get("users")
   async users(@Query() query: unknown) {
-    const value = parse(listQuery, query);
+    const value = parseRequest(listQuery, query);
     return this.listUsers.execute({ cursor: value.cursor ?? null, limit: value.limit ?? null });
   }
 
   @Patch("users/:userId/status")
   async status(@Param("userId") userId: string, @Body() body: unknown, @CurrentActor() actor: AuthenticatedActor, @Req() request: Request) {
-    const value = parse(statusBody, body);
-    return this.changeUserStatus.execute({ actor, targetUserId: parse(userIdParam, userId), status: value.status, context: this.context(request) });
+    const value = parseRequest(statusBody, body);
+    return this.changeUserStatus.execute({ actor, targetUserId: parseRequest(userIdParam, userId), status: value.status, context: this.context(request) });
   }
 
   @Put("users/:userId/access")
   async access(@Param("userId") userId: string, @Body() body: unknown, @CurrentActor() actor: AuthenticatedActor, @Req() request: Request) {
-    const value = parse(accessBody, body);
-    return this.replaceUserAccess.execute({ actor, targetUserId: parse(userIdParam, userId), roleKeys: value.roleKeys, directPermissions: value.directPermissions, context: this.context(request) });
+    const value = parseRequest(accessBody, body);
+    return this.replaceUserAccess.execute({ actor, targetUserId: parseRequest(userIdParam, userId), roleKeys: value.roleKeys, directPermissions: value.directPermissions, context: this.context(request) });
   }
 
   @Post("users/:userId/invite/reissue")
   @HttpCode(HttpStatus.OK)
   async reissue(@Param("userId") userId: string, @CurrentActor() actor: AuthenticatedActor, @Req() request: Request) {
-    return this.reissueInvite.execute({ actor, targetUserId: parse(userIdParam, userId), context: this.context(request) });
+    return this.reissueInvite.execute({ actor, targetUserId: parseRequest(userIdParam, userId), context: this.context(request) });
   }
 
   @Delete("users/:userId/invite")
   @HttpCode(HttpStatus.NO_CONTENT)
   async revoke(@Param("userId") userId: string, @CurrentActor() actor: AuthenticatedActor, @Req() request: Request): Promise<void> {
-    await this.revokeInvite.execute({ actor, targetUserId: parse(userIdParam, userId), context: this.context(request) });
+    await this.revokeInvite.execute({ actor, targetUserId: parseRequest(userIdParam, userId), context: this.context(request) });
   }
 
   @Post("users/:userId/revoke-sessions")
   @HttpCode(HttpStatus.NO_CONTENT)
   async revokeSessions(@Param("userId") userId: string, @CurrentActor() actor: AuthenticatedActor, @Req() request: Request): Promise<void> {
-    await this.revokeUserSessions.execute({ actor, targetUserId: parse(userIdParam, userId), context: this.context(request) });
+    await this.revokeUserSessions.execute({ actor, targetUserId: parseRequest(userIdParam, userId), context: this.context(request) });
   }
 }

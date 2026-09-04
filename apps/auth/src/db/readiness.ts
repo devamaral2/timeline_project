@@ -22,3 +22,11 @@ export async function checkReadiness(
     });
   }
 }
+
+/**
+ * A versao que as migracoes deixam gravada em `auth_schema_meta`. Vive aqui
+ * porque e ela que o `/health/ready` compara: um deploy que sobe o codigo novo
+ * antes de rodar `db:migrate` precisa falhar no readiness em vez de atender
+ * pela metade. Cada migracao nova sobe este numero junto com o seu `UPDATE`.
+ */
+export const AUTH_SCHEMA_VERSION = 3;
