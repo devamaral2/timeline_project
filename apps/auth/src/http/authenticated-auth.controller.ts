@@ -21,6 +21,10 @@ export class AuthenticatedAuthController {
     @Inject(GetMeUseCase) private readonly getMe: GetMeUseCase,
   ) {}
 
+  // @HttpCode(OK): sem isso o Nest devolveria 201 para um POST, que e o que
+  // PublicAuthController.accept faz hoje (nenhum dos dois metodos de lá tem
+  // @HttpCode). Achei 201 errado para um refresh — RFC 6749 espera 200 do
+  // endpoint de token — e preferi acertar aqui a copiar a inconsistencia.
   @Post("token/refresh")
   @HttpCode(HttpStatus.OK)
   async refresh(@Body() body: unknown, @Req() request: Request) {

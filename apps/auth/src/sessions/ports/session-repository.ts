@@ -3,6 +3,14 @@ import type { SignAccessToken } from "../../crypto/jwt";
 import type { AuthenticatedActor, ResolvedAccess } from "../../users/user";
 import type { Session } from "../session";
 
+/**
+ * Sem `auditEvents` de proposito, ao contrario de `CompleteInviteEnrollmentCommand`
+ * e companhia: aqui o chamador nao tem como montar o evento certo com
+ * antecedencia, porque nao sabe ainda qual vai ser o desfecho da rotacao
+ * (`rotated`/`reused`/expirado) nem a que sessao o hash pertence. Quem monta
+ * o `AuditEventInput` e a implementacao, depois de descobrir isso dentro da
+ * propria transacao — ver `sessionAuditEvent` em `PostgresSessionRepository`.
+ */
 export interface RotateRefreshTokenCommand {
   presentedTokenHash: string;
   successor: { id: string; hash: string; issuedAt: Date; expiresAt: Date };

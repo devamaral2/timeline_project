@@ -53,6 +53,20 @@ function sessionFromRow(row: SessionRow, lastUsedAt: Date): Session {
   };
 }
 
+/**
+ * Minha decisao ao herdar este arquivo: o evento de auditoria e montado
+ * inteiramente aqui dentro, nunca pelo chamador. O port ja trazia
+ * `RotateRefreshTokenCommand` com um `auditEvents` de entrada, mas quem chama
+ * `rotateRefreshToken` so sabe qual token foi apresentado — nao sabe ainda se
+ * o desfecho vai ser `rotated`, `reused` ou uma revogacao por expiracao, nem
+ * qual sessao/usuario esta por tras do hash. Pedir para o usecase pre-montar
+ * o evento certo seria pedir para ele adivinhar o proprio resultado da
+ * transacao. Por isso tirei `auditEvents` do port (rotate/revoke/revokeAll) e
+ * deixei o repositorio decidir a acao e preencher actorUserId/targetId com o
+ * que so ele descobre depois do lock. O preco e um `AuditAction` fixo por
+ * ramo (nao da para o chamador anexar metadata extra), o que ate agora nunca
+ * foi necessario.
+ */
 function sessionAuditEvent(
   context: RequestContext,
   now: Date,
@@ -85,24 +99,31 @@ export class PostgresSessionRepository implements SessionRepository {
 
   async rotateRefreshToken(c: RotateRefreshTokenCommand, sign: SignAccessToken): Promise<RotateRefreshTokenResult> {
     return this.db.transaction(async (tx) => {
-      // Lookup inicial sem lock: so para descobrir qual sessao o hash aponta.
-      const lookup = await tx.query<{ session_id: string }>(
-        "SELECT session_id FROM refresh_tokens WHERE token_hash = $1",
+      // Lookup inicial sem lock: so para descobrir qual sessao (e, por ela,
+      // qual usuario) o hash aponta — precisamos do userId ANTES de comecar a
+      // travar linha, senao nao da para respeitar a ordem abaixo.
+      const lookup = await tx.query<{ session_id: string; user_id: string }>(
+        "SELECT r.session_id, s.user_id FROM refresh_tokens r JOIN sessions s ON s.id = r.session_id WHERE r.token_hash = $1",
         [c.presentedTokenHash],
       );
-      const sessionId = lookup.rows[0]?.session_id;
-      if (!sessionId) return { kind: "invalid" };
+      const found = lookup.rows[0];
+      if (!found) return { kind: "invalid" };
+      const { session_id: sessionId, user_id: userId } = found;
 
-      // Ordem estavel de lock, para nao colidir com revokeAllOfUser nem com
-      // outra rotacao concorrente: usuario -> sessao -> refresh token.
+      // Ordem estavel de lock — a MESMA usada por revokeAllOfUser — usuario
+      // -> sessao -> refresh token. Nao e cosmetico: um refresh e um
+      // logout-all no mesmo usuario podem rodar em paralelo, e se cada
+      // operacao travasse essas linhas em ordem diferente o Postgres
+      // resolveria a corrida abortando uma delas com deadlock detected em vez
+      // de so uma esperar a outra.
+      const userRow = (
+        await tx.query<{ status: string }>("SELECT status FROM users WHERE id = $1 FOR UPDATE", [userId])
+      ).rows[0];
+
       const sessionRow = (
         await tx.query<SessionRow>("SELECT * FROM sessions WHERE id = $1 FOR UPDATE", [sessionId])
       ).rows[0];
       if (!sessionRow) return { kind: "invalid" };
-
-      const userRow = (
-        await tx.query<{ status: string }>("SELECT status FROM users WHERE id = $1 FOR UPDATE", [sessionRow.user_id])
-      ).rows[0];
 
       const refreshRow = (
         await tx.query<RefreshTokenRow>("SELECT * FROM refresh_tokens WHERE token_hash = $1 FOR UPDATE", [
@@ -151,6 +172,16 @@ export class PostgresSessionRepository implements SessionRepository {
       );
       await tx.query("UPDATE sessions SET last_used_at = $1 WHERE id = $2", [c.now, sessionId]);
 
+      // A versao anterior deste metodo so lia user_roles e cravava
+      // `permissions:[]`/`denies:[]` no token — o mesmo atalho que
+      // completeInviteEnrollment ainda usa hoje. Prefiro nao repetir esse
+      // atalho aqui: e exatamente o ponto que a issue chamava de "releia
+      // RBAC", e um access token de 15 minutos com permissoes desatualizadas
+      // e o tipo de bug que so aparece semanas depois, quando alguem revoga
+      // uma permissao e o usuario continua agindo com ela. Repito a mesma
+      // consulta que PostgresRbacRepository.resolvedAccessOf faz, so que
+      // dentro desta transacao (o repositorio de RBAC so aceita AuthDatabase,
+      // nao AuthTransaction, entao nao dava para reusa-lo direto aqui).
       const roleKeys = (
         await tx.query<{ role_key: string }>("SELECT role_key FROM user_roles WHERE user_id = $1 ORDER BY role_key", [
           sessionRow.user_id,
@@ -171,6 +202,15 @@ export class PostgresSessionRepository implements SessionRepository {
       ).rows;
       const access = resolveUserPermissions(roleKeys, { rolePermissions, directPermissions });
 
+      // A versao anterior fazia `SELECT kid, encrypted_private_key FROM
+      // signing_keys WHERE status='active' FOR UPDATE` na mao — o mesmo texto
+      // que completeInviteEnrollment ainda tem. Troquei pelo helper que o
+      // proprio modulo de crypto ja expoe: `lockActiveSigningKey` usa
+      // `FOR KEY SHARE` (varias rotacoes simultaneas nao brigam por essa
+      // linha, so brigam com uma rotacao de chave em andamento) atras de um
+      // advisory lock, e atualiza `last_used_at` — informacao que
+      // `rotate-signing-key.cli.ts` usa para saber quando pode aposentar a
+      // chave antiga. A query manual nunca tocava esse campo.
       const key = await lockActiveSigningKey(tx, c.now);
       const accessToken = sign(
         key,
