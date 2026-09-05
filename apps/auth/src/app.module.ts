@@ -5,6 +5,7 @@ import {
   SecretGenerator,
 } from './common/secret-generator';
 import type { RuntimeEnv } from './config/env';
+import { RUNTIME_ENV } from './config/tokens';
 import { HealthController } from './http/health.controller';
 import { DbModule } from './db/db.module';
 import { SigningKeyService } from './crypto/signing-key.service';
@@ -25,7 +26,6 @@ import { StartInviteAcceptanceUseCase } from './authentication/usecases/start-in
 import { PostgresUserRepository } from './users/postgres-user.repository';
 import { PostgresRbacRepository } from './rbac/postgres-rbac.repository';
 import { PostgresSessionRepository } from './sessions/postgres-session.repository';
-import { BearerAuthGuard } from './http/bearer-auth.guard';
 import { AuthenticatedAuthController } from './http/authenticated-auth.controller';
 import { RefreshSessionUseCase } from './sessions/usecases/refresh-session.usecase';
 import { RevokeSessionUseCase } from './sessions/usecases/revoke-session.usecase';
@@ -51,8 +51,6 @@ import { LoginCredentialChecker } from './authentication/login-credential-checke
 import { StartLoginUseCase } from './authentication/usecases/start-login.usecase';
 import { CompleteLoginUseCase } from './authentication/usecases/complete-login.usecase';
 import { ResendMfaUseCase } from './authentication/usecases/resend-mfa.usecase';
-
-export const RUNTIME_ENV = Symbol('RUNTIME_ENV');
 
 @Module({})
 export class AppModule {
@@ -107,20 +105,6 @@ export class AppModule {
           inject: [AUTH_DATABASE, RUNTIME_ENV],
           useFactory: (db: import('./db/client').AuthDatabase, runtime: RuntimeEnv) =>
             new PostgresSessionRepository(db, runtime.issuer, runtime.audience),
-        },
-        // BearerAuthGuard.constructor recebe `env: RuntimeEnv` sem @Inject —
-        // RuntimeEnv e um `type`, some em tempo de execucao, entao o reflector
-        // do Nest so enxerga `Object` nesse parametro e nao teria como
-        // resolve-lo sozinho. @UseGuards(BearerAuthGuard) so funciona porque
-        // registro a classe aqui com o mesmo truque que RUNTIME_ENV ja usa em
-        // outro lugar deste arquivo: um provider com `useFactory` que injeta
-        // o token certo (RUNTIME_ENV) e constroi a instancia na mao. Sem isso
-        // o guard derruba a rota com "Nest can't resolve dependencies" assim
-        // que alguem bate em /auth/me ou /auth/logout-all.
-        {
-          provide: BearerAuthGuard,
-          inject: [SigningKeyService, RUNTIME_ENV],
-          useFactory: (keys: SigningKeyService, runtime: RuntimeEnv) => new BearerAuthGuard(keys, runtime),
         },
         {
           provide: RefreshSessionUseCase,

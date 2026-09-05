@@ -5,6 +5,11 @@
   "packageManager": "pnpm@11.24.0",
   "scripts": {
     "dev": "turbo run dev",
+    "dev:auth": "turbo run dev --filter=@repo/auth",
+    "dev:api": "turbo run dev --filter=@repo/api",
+    "dev:web": "turbo run dev --filter=@repo/web",
+    "dev:mobile": "pnpm --filter @repo/mobile run start",
+    "env:pull": "op read \"op://lifecomposure/env.local/notesPlain\" -o .env.local",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
@@ -12,6 +17,8 @@
     "test:ai": "cross-env VITE_CJS_IGNORE_WARNING=true vitest run --config vitest.quiet.config.ts",
     "db:generate": "pnpm --filter @repo/persistence run db:generate",
     "db:migrate": "pnpm --filter @repo/persistence run db:migrate",
+    "compose:up": "docker compose -f infra/docker-compose.local.yml up -d",
+    "compose:down": "docker compose -f infra/docker-compose.local.yml down",
     "test:postgres": "cross-env RUN_POSTGRES_INTEGRATION=1 VITE_CJS_IGNORE_WARNING=true vitest run --config vitest.quiet.config.ts --project persistence packages/persistence/src/integration/postgres.integration.test.ts",
     "bench:postgres": "cross-env RUN_POSTGRES_INTEGRATION=1 tsx packages/persistence/src/benchmarks/timeline.benchmark.ts"
   },

@@ -1,0 +1,44 @@
+# O contexto de build e a raiz do monorepo, nunca a pasta do app: os tres
+# Dockerfiles dependem dos workspaces irmaos e do lockfile.
+#
+# Os .env ficam de fora de proposito. Segredo entra por --secret do BuildKit
+# (web, em build time) ou pelo environment do container (api e auth, em
+# runtime) — nunca pelo contexto, que o daemon copia inteiro e pode acabar
+# numa camada.
+.env
+.env.*
+
+.git
+.gitignore
+.worktrees
+
+node_modules
+**/node_modules
+
+# Build local nao entra: o que vale e o que compilar dentro da imagem.
+**/dist
+**/.next
+**/.turbo
+.turbo
+**/*.tsbuildinfo
+
+# O mobile nao tem imagem, mas o package.json dele precisa continuar no
+# contexto: o pnpm-workspace.yaml casa apps/*, e sem ele o lockfile podado
+# nao bate com --frozen-lockfile.
+**/.expo
+apps/mobile/android
+apps/mobile/ios
+
+.idea
+.claude
+.agents
+.superpowers
+skills
+my-tests
+vpn
+docs
+test
+**/AGENTS.md
+**/CLAUDE.md
+**/PLANO.md
+README.md

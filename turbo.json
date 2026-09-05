@@ -11,9 +11,7 @@
     "API_HOST",
     "DATABASE_URL",
     "FIREBASE_*",
-    "OPENROUTER_*",
-    "AUTH_*",
-    "TWILIO_*"
+    "OPENROUTER_*"
   ],
   "tasks": {
     "build": {

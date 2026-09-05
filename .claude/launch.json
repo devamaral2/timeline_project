@@ -7,6 +7,13 @@
       "runtimeArgs": ["next", "dev"],
       "cwd": "apps/web",
       "port": 3000
+    },
+    {
+      "name": "auth",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["nest", "start", "--watch"],
+      "cwd": "apps/auth",
+      "port": 3002
     }
   ]
 }

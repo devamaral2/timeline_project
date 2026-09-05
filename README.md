@@ -89,13 +89,12 @@ pnpm turbo run build
 pnpm turbo run typecheck
 ```
 
-## Operação do Auth
+## Autenticação
 
-O serviço de autenticação tem comandos separados para migrations, bootstrap do
-administrador, rotação de chaves, retenção e smoke do Twilio. Os procedimentos
-completos, incluindo limites de acesso e dados que não podem ir para logs,
-estão em [docs/runbooks](docs/runbooks/): banco, bootstrap, rotação, retenção e
-smoke. Execute os comandos sempre pelo workspace `@repo/auth`.
+O Firebase Auth é o único provedor de autenticação em uso. Web e mobile obtêm
+os ID tokens no cliente, e a API os valida com Firebase Admin. O antigo serviço
+`apps/auth`, incluindo MFA/Twilio, permanece no repositório apenas como trabalho
+suspenso e não é iniciado por `pnpm dev`.
 
 Os packages compilam antes dos apps (`dependsOn: ["^build"]`). O mobile fica de
 fora do `build`: o bundle dele sai do Metro (`expo export`) ou do EAS Build, nao

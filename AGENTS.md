@@ -183,15 +183,26 @@ coloque la nada que ja nao seja publico.
 pnpm install              instala tudo
 pnpm turbo run build      builda na ordem de dependencia
 pnpm turbo run typecheck  checa tipos nos 7 workspaces
-pnpm turbo run dev        sobe Nest (3001) e Next (3000)
+pnpm dev                  sobe todos os servidores ao mesmo tempo (Nest, Next, auth)
+pnpm dev:auth             sobe so o servico de auth (3002), sem web/mobile/api
+pnpm dev:api              sobe so a API (3001), sem web/mobile/auth
+pnpm dev:web              sobe so o Next (3000), sem api/mobile/auth
+pnpm dev:mobile           sobe o Metro
 
-pnpm --filter @repo/mobile run start     sobe o Metro
 pnpm --filter @repo/mobile run android   gera o projeto nativo e instala no aparelho
 
 pnpm db:generate          gera uma migration a partir do schema Drizzle
 pnpm db:migrate           aplica as migrations pendentes no DATABASE_URL atual
 pnpm test:postgres        roda a suite de integracao contra Postgres (exige Docker)
+pnpm env:pull             baixa o .env.local do 1Password (op read) para a raiz
 ```
+
+**Sempre rode os comandos de dev pela raiz do monorepo** (`pnpm dev`,
+`pnpm dev:auth`, `pnpm dev:api`, `pnpm dev:web`, `pnpm dev:mobile`), nunca de
+dentro de `apps/*` com `npm run dev` ou similar. O `.env`/`.env.local` unico fica na raiz e so e carregado
+quando o processo sobe a partir dela (ve "Variaveis de ambiente" acima);
+rodar direto num workspace pula esse carregamento e a aplicacao sobe sem os
+envs corretos.
 
 O Metro fica fora do `turbo run dev` de proposito: ele toma o terminal com a
 propria interface, e o fluxo normal e ter os dois rodando em terminais
@@ -245,12 +256,6 @@ Para rodar so um workspace: `npx vitest run --project api`
 
 **Os testes do `auth` que exigem Postgres pulam sozinhos** quando
 `AUTH_TEST_DATABASE_URL` nao esta definida — e sao a maior parte da suite dele:
-integracao de repositorio e os e2e de HTTP. Para roda-los de verdade:
-
-```
-docker compose -f apps/auth/compose.test.yaml up -d --wait
-AUTH_TEST_DATABASE_URL=postgresql://auth_test:auth_test@127.0.0.1:55432/timeline_auth_test AUTH_REQUIRE_POSTGRES_TESTS=true npm run --silent test:ai
-```
-
-`AUTH_REQUIRE_POSTGRES_TESTS=true` e o que transforma teste *skipped* em falha.
-Sem ele, `Tests pass` pode significar que os arquivos de integracao nem rodaram.
+integracao de repositorio e os e2e de HTTP. Nesse caso `Tests pass` pode
+significar que os arquivos de integracao nem rodaram. Para roda-los de
+verdade, use a skill `auth-postgres-tests`.

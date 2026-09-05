@@ -23,6 +23,16 @@ for (const fileName of [".env.local", ".env"]) {
 const backendUrl = process.env.BACKEND_URL ?? "http://127.0.0.1:3001";
 
 const nextConfig: NextConfig = {
+  /**
+   * `standalone` faz o next build emitir .next/standalone: um server.js mais
+   * apenas o node_modules que o tracing provou necessario. E o que deixa o
+   * estagio final da imagem do web sem nenhum pnpm install.
+   *
+   * Num monorepo o tracing precisa saber onde a raiz fica. Sem isso ele para
+   * em apps/web e deixa @repo/timeline e @repo/theme de fora do bundle.
+   */
+  output: "standalone",
+  outputFileTracingRoot: resolve(__dirname, "../.."),
   rewrites: () => [{ source: "/api/:path*", destination: `${backendUrl}/api/:path*` }],
 };
 
