@@ -9,6 +9,7 @@ import { getRuntimeEnv, type EnvSource } from "../config/env";
 import { HttpPwnedPasswordsGateway } from "../credentials/http-pwned-passwords.gateway";
 import type { PwnedPasswordsGateway } from "../credentials/pwned-passwords.gateway";
 import { configureHttpShell } from "../http/request-context.middleware";
+import { configureApiDocumentation } from "../http/openapi";
 
 /** O segredo que os testes de redacao procuram na resposta. */
 export const LEAK_PROBE = "leak-probe-9d3f";
@@ -88,6 +89,7 @@ export async function createTestApp(overrides: EnvSource = {}, options: TestAppO
   // do Nest escapa do `silent` do Vitest e sujaria a saida do `test:ai`.
   const logger = new RecordingAuthLogger();
   configureHttpShell(app, logger);
+  configureApiDocumentation(app);
   await app.listen(0, "127.0.0.1");
   const address = app.getHttpServer().address();
   if (!address || typeof address === "string") throw new Error("Test server did not expose a TCP address");

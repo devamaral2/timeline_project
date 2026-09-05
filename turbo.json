@@ -1,6 +1,20 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalDependencies": ["tsconfig.base.json"],
+  "globalDependencies": ["tsconfig.base.json", ".env", ".env.local"],
+  "globalEnv": [
+    "NODE_ENV",
+    "BACKEND_URL",
+    "NEXT_PUBLIC_FIREBASE_*",
+    "MOBILE_API_URL",
+    "MOBILE_GOOGLE_WEB_CLIENT_ID",
+    "PORT",
+    "API_HOST",
+    "DATABASE_URL",
+    "FIREBASE_*",
+    "OPENROUTER_*",
+    "AUTH_*",
+    "TWILIO_*"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

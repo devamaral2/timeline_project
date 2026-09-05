@@ -5,6 +5,7 @@ import { AppModule } from './app.module';
 import { getRuntimeEnv } from './config/env';
 import { findMonorepoRoot, loadRootEnv } from './config/load-env';
 import { configureHttpShell } from './http/request-context.middleware';
+import { configureApiDocumentation } from './http/openapi';
 import { SigningKeyService } from './crypto/signing-key.service';
 import { ANONYMOUS_CONTEXT } from './common/request-context';
 
@@ -16,6 +17,7 @@ async function bootstrap(): Promise<void> {
     bodyParser: false,
   });
   configureHttpShell(app);
+  configureApiDocumentation(app);
   await app.get(SigningKeyService).ensureActive(new Date(), {
     correlationId: 'startup',
     actorUserId: null,
