@@ -21,6 +21,8 @@ const MUTABLE_TABLES = [
   "events",
   "plan_tags",
   "task_tags",
+  "plan_dependencies",
+  "task_dependencies",
   "plans",
   "tasks",
   "tags",
