@@ -21,4 +21,5 @@ export interface UpdateEventInput {
   priority?: EventPriority;
   interruptions?: InterruptionPatchInput[];
   items?: UpdateEventItemInput[];
+  taskIds?: string[];
 }

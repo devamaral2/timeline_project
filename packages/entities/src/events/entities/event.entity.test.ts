@@ -32,6 +32,28 @@ describe("Event aggregate", () => {
     expect(event.revision).toBe(1);
     expect(event.primaryItemId).toBe(routine.id);
     expect(event.tags).toEqual(["trabalho"]);
+    expect(event.taskIds).toEqual([]);
+  });
+
+  test("dedupes taskIds and revise replaces the whole list", () => {
+    const event = Event.create({
+      userId: "user-1",
+      name: "Planejamento",
+      description: "",
+      startedAt: new Date("2026-08-31T12:00:00.000Z"),
+      tags: [],
+      interruptions: [],
+      items: [routineItem()],
+      taskIds: ["task-1", "task-1", "task-2"],
+    });
+
+    expect(event.taskIds).toEqual(["task-1", "task-2"]);
+
+    const revised = event.revise({ taskIds: ["task-3"] });
+    expect(revised.taskIds).toEqual(["task-3"]);
+
+    const unchanged = event.revise({ name: "Outro" });
+    expect(unchanged.taskIds).toEqual(["task-1", "task-2"]);
   });
 
   test("rejects incompatible event items", () => {

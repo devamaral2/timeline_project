@@ -19,6 +19,7 @@ export interface EventCreateProps {
   items: EventItem[];
   missed?: boolean;
   priority?: EventPriority;
+  taskIds?: string[];
 }
 
 export interface EventRehydrateProps extends EventCreateProps {
@@ -35,6 +36,7 @@ export interface EventReviseChanges {
   items?: EventItem[];
   missed?: boolean;
   priority?: EventPriority;
+  taskIds?: string[];
 }
 
 interface EventBuildProps {
@@ -49,6 +51,7 @@ interface EventBuildProps {
   items: EventItem[];
   missed: boolean;
   priority: EventPriority;
+  taskIds: string[];
   revision: number;
 }
 
@@ -116,6 +119,7 @@ export class Event {
   readonly items: EventItem[];
   readonly missed: boolean;
   readonly priority: EventPriority;
+  readonly taskIds: readonly string[];
   readonly revision: number;
   readonly primaryItemId: string;
 
@@ -133,6 +137,7 @@ export class Event {
     this.items = props.items;
     this.missed = props.missed;
     this.priority = props.priority;
+    this.taskIds = props.taskIds;
     this.revision = props.revision;
     this.registry = registry;
 
@@ -158,6 +163,7 @@ export class Event {
         ...props,
         tags: TagList.create(props.tags),
         items: [...props.items].sort((a, b) => a.position - b.position),
+        taskIds: Array.from(new Set(props.taskIds)),
       },
       registry,
     );
@@ -177,6 +183,7 @@ export class Event {
         items: props.items,
         missed: props.missed ?? DEFAULT_EVENT_MISSED,
         priority: props.priority ?? DEFAULT_EVENT_PRIORITY,
+        taskIds: props.taskIds ?? [],
         revision: 1,
       },
       registry,
@@ -200,6 +207,7 @@ export class Event {
         items: props.items,
         missed: props.missed ?? DEFAULT_EVENT_MISSED,
         priority: props.priority ?? DEFAULT_EVENT_PRIORITY,
+        taskIds: props.taskIds ?? [],
         revision: props.revision,
       },
       registry,
@@ -220,6 +228,7 @@ export class Event {
         items: changes.items ?? this.items,
         missed: changes.missed ?? this.missed,
         priority: changes.priority ?? this.priority,
+        taskIds: changes.taskIds ?? [...this.taskIds],
         revision: this.revision + 1,
       },
       this.registry,

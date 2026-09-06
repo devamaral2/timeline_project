@@ -11,6 +11,14 @@ export type * from "./events/contracts/tag-suggestion.dto";
 export type * from "./events/contracts/timeline-event-card.dto";
 export type * from "./events/contracts/timeline-event-page.dto";
 export type * from "./events/contracts/update-event.input";
+export type * from "./plans/contracts/create-plan.input";
+export type * from "./plans/contracts/update-plan.input";
+export type * from "./plans/contracts/plan-detail.dto";
+export type * from "./plans/contracts/plan-summary.dto";
+export type * from "./tasks/contracts/create-task.input";
+export type * from "./tasks/contracts/update-task.input";
+export type * from "./tasks/contracts/task-detail.dto";
+export type * from "./tasks/contracts/task-summary.dto";
 
 // Tipos de dados de dominio que os DTOs referenciam, reexportados para que o
 // front nunca precise importar o subpath raiz (onde vivem as classes). Sao os

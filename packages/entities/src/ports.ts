@@ -9,3 +9,5 @@ export type * from "./catalog/ports/meal-repository";
 export type * from "./events/ports/timeline-event-query";
 export type * from "./events/ports/daily-overview-query";
 export type * from "./events/ports/workout-catalog";
+export type * from "./plans/ports/plan-repository";
+export type * from "./tasks/ports/task-repository";

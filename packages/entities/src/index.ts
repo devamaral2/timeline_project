@@ -18,3 +18,12 @@ export * from "./catalog/types/catalog-scope";
 export * from "./catalog/entities/food.entity";
 export * from "./catalog/entities/meal.entity";
 export * from "./catalog/errors/catalog.errors";
+
+export * from "./work-items/types/work-item-status";
+export * from "./work-items/types/work-item-priority";
+export * from "./plans/entities/plan.entity";
+export * from "./plans/value-objects/plan-id";
+export * from "./plans/errors/plan.errors";
+export * from "./tasks/entities/task.entity";
+export * from "./tasks/value-objects/task-id";
+export * from "./tasks/errors/task.errors";

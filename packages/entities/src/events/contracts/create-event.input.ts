@@ -9,4 +9,5 @@ export interface CreateEventInput {
   missed?: boolean;
   priority?: EventPriority;
   items: CreateEventItemInput[];
+  taskIds?: string[];
 }

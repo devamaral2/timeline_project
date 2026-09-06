@@ -23,4 +23,5 @@ export interface EventDetailDto {
   revision: number;
   primaryItemId: string;
   items: EventItemDto[];
+  taskIds?: string[];
 }
