@@ -14,6 +14,38 @@ describe("Plan aggregate", () => {
     expect(plan.status).toBe("todo");
     expect(plan.priority).toBe("medium");
     expect(plan.tags).toEqual(["casa"]);
+    expect(plan.dependsOnPlanIds).toEqual([]);
+  });
+
+  test("dedupes dependsOnPlanIds and revise replaces the whole list", () => {
+    const plan = Plan.create({
+      userId: "user-1",
+      name: "Reforma",
+      description: "",
+      tags: [],
+      dependsOnPlanIds: ["plan-1", "plan-1", "plan-2"],
+    });
+
+    expect(plan.dependsOnPlanIds).toEqual(["plan-1", "plan-2"]);
+
+    const revised = plan.revise({ dependsOnPlanIds: ["plan-3"] });
+    expect(revised.dependsOnPlanIds).toEqual(["plan-3"]);
+
+    const unchanged = plan.revise({ name: "Outro" });
+    expect(unchanged.dependsOnPlanIds).toEqual(["plan-1", "plan-2"]);
+  });
+
+  test("rejects a plan depending on itself", () => {
+    expect(() =>
+      Plan.create({
+        id: "plan-self",
+        userId: "user-1",
+        name: "Reforma",
+        description: "",
+        tags: [],
+        dependsOnPlanIds: ["plan-self"],
+      }),
+    ).toThrow("Plan cannot depend on itself");
   });
 
   test("rejects a finishedAt earlier than startedAt", () => {

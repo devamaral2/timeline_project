@@ -13,4 +13,5 @@ export interface UpdateTaskInput {
   startedAt?: string;
   estimatedFinishAt?: string;
   finishedAt?: string;
+  dependsOnTaskIds?: string[];
 }

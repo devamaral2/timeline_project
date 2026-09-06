@@ -29,6 +29,7 @@ export function toDetailDto(task: Task): TaskDetailDto {
     startedAt: task.startedAt?.toISOString(),
     estimatedFinishAt: task.estimatedFinishAt?.toISOString(),
     finishedAt: task.finishedAt?.toISOString(),
+    dependsOnTaskIds: [...task.dependsOnTaskIds],
     revision: task.revision,
   };
 }

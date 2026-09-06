@@ -28,6 +28,7 @@ export function toDetailDto(plan: Plan): PlanDetailDto {
     startedAt: plan.startedAt?.toISOString(),
     estimatedFinishAt: plan.estimatedFinishAt?.toISOString(),
     finishedAt: plan.finishedAt?.toISOString(),
+    dependsOnPlanIds: [...plan.dependsOnPlanIds],
     revision: plan.revision,
   };
 }

@@ -12,5 +12,6 @@ export interface TaskDetailDto {
   startedAt?: string;
   estimatedFinishAt?: string;
   finishedAt?: string;
+  dependsOnTaskIds: string[];
   revision: number;
 }

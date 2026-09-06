@@ -11,5 +11,6 @@ export interface PlanDetailDto {
   startedAt?: string;
   estimatedFinishAt?: string;
   finishedAt?: string;
+  dependsOnPlanIds: string[];
   revision: number;
 }

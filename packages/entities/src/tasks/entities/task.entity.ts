@@ -22,6 +22,7 @@ export interface TaskCreateProps {
   startedAt?: Date;
   estimatedFinishAt?: Date;
   finishedAt?: Date;
+  dependsOnTaskIds?: string[];
 }
 
 export interface TaskRehydrateProps extends TaskCreateProps {
@@ -38,6 +39,7 @@ export interface TaskReviseChanges {
   startedAt?: Date;
   estimatedFinishAt?: Date;
   finishedAt?: Date;
+  dependsOnTaskIds?: string[];
 }
 
 interface TaskBuildProps {
@@ -52,6 +54,7 @@ interface TaskBuildProps {
   startedAt: Date | undefined;
   estimatedFinishAt: Date | undefined;
   finishedAt: Date | undefined;
+  dependsOnTaskIds: string[];
   revision: number;
 }
 
@@ -67,6 +70,7 @@ export class Task {
   readonly startedAt: Date | undefined;
   readonly estimatedFinishAt: Date | undefined;
   readonly finishedAt: Date | undefined;
+  readonly dependsOnTaskIds: readonly string[];
   readonly revision: number;
 
   private constructor(props: TaskBuildProps) {
@@ -81,6 +85,7 @@ export class Task {
     this.startedAt = props.startedAt;
     this.estimatedFinishAt = props.estimatedFinishAt;
     this.finishedAt = props.finishedAt;
+    this.dependsOnTaskIds = props.dependsOnTaskIds;
     this.revision = props.revision;
   }
 
@@ -91,10 +96,14 @@ export class Task {
     if (!Number.isInteger(props.revision) || props.revision < 1) {
       throw new TaskValidationError("Task revision must be an integer >= 1");
     }
+    if (props.dependsOnTaskIds.includes(props.id)) {
+      throw new TaskValidationError("Task cannot depend on itself");
+    }
 
     return new Task({
       ...props,
       tags: TagList.create(props.tags),
+      dependsOnTaskIds: Array.from(new Set(props.dependsOnTaskIds)),
     });
   }
 
@@ -111,6 +120,7 @@ export class Task {
       startedAt: props.startedAt,
       estimatedFinishAt: props.estimatedFinishAt,
       finishedAt: props.finishedAt,
+      dependsOnTaskIds: props.dependsOnTaskIds ?? [],
       revision: 1,
     });
   }
@@ -128,6 +138,7 @@ export class Task {
       startedAt: props.startedAt,
       estimatedFinishAt: props.estimatedFinishAt,
       finishedAt: props.finishedAt,
+      dependsOnTaskIds: props.dependsOnTaskIds ?? [],
       revision: props.revision,
     });
   }
@@ -146,6 +157,7 @@ export class Task {
       estimatedFinishAt:
         changes.estimatedFinishAt !== undefined ? changes.estimatedFinishAt : this.estimatedFinishAt,
       finishedAt: changes.finishedAt !== undefined ? changes.finishedAt : this.finishedAt,
+      dependsOnTaskIds: changes.dependsOnTaskIds ?? [...this.dependsOnTaskIds],
       revision: this.revision + 1,
     });
   }

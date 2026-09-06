@@ -21,6 +21,7 @@ export interface PlanCreateProps {
   startedAt?: Date;
   estimatedFinishAt?: Date;
   finishedAt?: Date;
+  dependsOnPlanIds?: string[];
 }
 
 export interface PlanRehydrateProps extends PlanCreateProps {
@@ -36,6 +37,7 @@ export interface PlanReviseChanges {
   startedAt?: Date;
   estimatedFinishAt?: Date;
   finishedAt?: Date;
+  dependsOnPlanIds?: string[];
 }
 
 interface PlanBuildProps {
@@ -49,6 +51,7 @@ interface PlanBuildProps {
   startedAt: Date | undefined;
   estimatedFinishAt: Date | undefined;
   finishedAt: Date | undefined;
+  dependsOnPlanIds: string[];
   revision: number;
 }
 
@@ -63,6 +66,7 @@ export class Plan {
   readonly startedAt: Date | undefined;
   readonly estimatedFinishAt: Date | undefined;
   readonly finishedAt: Date | undefined;
+  readonly dependsOnPlanIds: readonly string[];
   readonly revision: number;
 
   private constructor(props: PlanBuildProps) {
@@ -76,6 +80,7 @@ export class Plan {
     this.startedAt = props.startedAt;
     this.estimatedFinishAt = props.estimatedFinishAt;
     this.finishedAt = props.finishedAt;
+    this.dependsOnPlanIds = props.dependsOnPlanIds;
     this.revision = props.revision;
   }
 
@@ -86,10 +91,14 @@ export class Plan {
     if (!Number.isInteger(props.revision) || props.revision < 1) {
       throw new PlanValidationError("Plan revision must be an integer >= 1");
     }
+    if (props.dependsOnPlanIds.includes(props.id)) {
+      throw new PlanValidationError("Plan cannot depend on itself");
+    }
 
     return new Plan({
       ...props,
       tags: TagList.create(props.tags),
+      dependsOnPlanIds: Array.from(new Set(props.dependsOnPlanIds)),
     });
   }
 
@@ -105,6 +114,7 @@ export class Plan {
       startedAt: props.startedAt,
       estimatedFinishAt: props.estimatedFinishAt,
       finishedAt: props.finishedAt,
+      dependsOnPlanIds: props.dependsOnPlanIds ?? [],
       revision: 1,
     });
   }
@@ -121,6 +131,7 @@ export class Plan {
       startedAt: props.startedAt,
       estimatedFinishAt: props.estimatedFinishAt,
       finishedAt: props.finishedAt,
+      dependsOnPlanIds: props.dependsOnPlanIds ?? [],
       revision: props.revision,
     });
   }
@@ -138,6 +149,7 @@ export class Plan {
       estimatedFinishAt:
         changes.estimatedFinishAt !== undefined ? changes.estimatedFinishAt : this.estimatedFinishAt,
       finishedAt: changes.finishedAt !== undefined ? changes.finishedAt : this.finishedAt,
+      dependsOnPlanIds: changes.dependsOnPlanIds ?? [...this.dependsOnPlanIds],
       revision: this.revision + 1,
     });
   }

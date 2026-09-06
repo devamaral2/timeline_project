@@ -10,4 +10,5 @@ export interface CreatePlanInput {
   startedAt?: string;
   estimatedFinishAt?: string;
   finishedAt?: string;
+  dependsOnPlanIds?: string[];
 }

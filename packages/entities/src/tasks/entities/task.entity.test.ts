@@ -15,6 +15,38 @@ describe("Task aggregate", () => {
     expect(task.priority).toBe("medium");
     expect(task.tags).toEqual(["casa"]);
     expect(task.planId).toBeUndefined();
+    expect(task.dependsOnTaskIds).toEqual([]);
+  });
+
+  test("dedupes dependsOnTaskIds and revise replaces the whole list", () => {
+    const task = Task.create({
+      userId: "user-1",
+      name: "Comprar tinta",
+      description: "",
+      tags: [],
+      dependsOnTaskIds: ["task-1", "task-1", "task-2"],
+    });
+
+    expect(task.dependsOnTaskIds).toEqual(["task-1", "task-2"]);
+
+    const revised = task.revise({ dependsOnTaskIds: ["task-3"] });
+    expect(revised.dependsOnTaskIds).toEqual(["task-3"]);
+
+    const unchanged = task.revise({ name: "Outro" });
+    expect(unchanged.dependsOnTaskIds).toEqual(["task-1", "task-2"]);
+  });
+
+  test("rejects a task depending on itself", () => {
+    expect(() =>
+      Task.create({
+        id: "task-self",
+        userId: "user-1",
+        name: "Comprar tinta",
+        description: "",
+        tags: [],
+        dependsOnTaskIds: ["task-self"],
+      }),
+    ).toThrow("Task cannot depend on itself");
   });
 
   test("creates an aggregate linked to a plan", () => {

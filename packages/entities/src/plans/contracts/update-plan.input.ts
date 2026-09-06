@@ -12,4 +12,5 @@ export interface UpdatePlanInput {
   startedAt?: string;
   estimatedFinishAt?: string;
   finishedAt?: string;
+  dependsOnPlanIds?: string[];
 }
