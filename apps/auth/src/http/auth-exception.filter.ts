@@ -11,6 +11,7 @@ import {
   AccessDeniedError,
   AuthenticationFailedError,
   ConflictError,
+  FeatureSuspendedError,
   NotFoundError,
   RateLimitedError,
   RequiredDependencyUnavailableError,
@@ -31,6 +32,7 @@ import { ConsoleAuthLogger, type AuthLogger } from "../common/logger";
  * | ConflictError                     | 409    | { code } da allowlist                   |
  * | NotFoundError                     | 404    | { code: "not_found" }                   |
  * | RequiredDependencyUnavailableError| 503    | { code: "service_unavailable" }         |
+ * | FeatureSuspendedError             | 410    | { code } da allowlist                   |
  *
  * `internalReason` **nunca** sai na resposta: ele vai para o log estruturado e
  * para a auditoria. `Error.message` tambem nunca e serializado -- so o 500
@@ -45,6 +47,7 @@ export const DOMAIN_ERROR_STATUS = {
   ConflictError: HttpStatus.CONFLICT,
   NotFoundError: HttpStatus.NOT_FOUND,
   RequiredDependencyUnavailableError: HttpStatus.SERVICE_UNAVAILABLE,
+  FeatureSuspendedError: HttpStatus.GONE,
 } as const satisfies Readonly<Record<string, number>>;
 
 @Catch()
@@ -78,6 +81,7 @@ export class AuthExceptionFilter implements ExceptionFilter {
       this.logger.error({ correlationId, status: HttpStatus.SERVICE_UNAVAILABLE, error: "RequiredDependencyUnavailableError", reason: exception.internalReason });
       return void response.status(HttpStatus.SERVICE_UNAVAILABLE).json({ code: "service_unavailable" });
     }
+    if (exception instanceof FeatureSuspendedError) return void response.status(HttpStatus.GONE).json({ code: exception.safeCode });
 
     const status = this.statusOf(exception);
     if (status === HttpStatus.BAD_REQUEST) return void response.status(status).json({ code: "invalid_request" });

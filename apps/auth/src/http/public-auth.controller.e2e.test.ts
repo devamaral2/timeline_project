@@ -9,6 +9,8 @@ import { VerifyMfaUseCase } from "../authentication/usecases/verify-mfa.usecase"
 import { CompleteLoginUseCase } from "../authentication/usecases/complete-login.usecase";
 import { ResendMfaUseCase } from "../authentication/usecases/resend-mfa.usecase";
 import { configureHttpShell } from "./request-context.middleware";
+import { RUNTIME_ENV } from "../config/tokens";
+import type { RuntimeEnv } from "../config/env";
 
 let app: INestApplication | undefined;
 afterEach(async () => { await app?.close(); app = undefined; });
@@ -21,6 +23,7 @@ async function startApp(verify: { execute: ReturnType<typeof vi.fn> }) {
     { provide: VerifyMfaUseCase, useValue: verify },
     { provide: CompleteLoginUseCase, useValue: { recover: vi.fn(), verifyOtp: vi.fn() } },
     { provide: ResendMfaUseCase, useValue: { execute: vi.fn() } },
+    { provide: RUNTIME_ENV, useValue: { mfaSuspended: false } as Partial<RuntimeEnv> },
   ] }).compile();
   app = module.createNestApplication({ bodyParser: false }); configureHttpShell(app); await app.listen(0, "127.0.0.1");
   const address = app.getHttpServer().address() as { port: number };

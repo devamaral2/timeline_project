@@ -17,6 +17,10 @@ export interface StartLoginAttemptCommand {id:string;tokenHash:string;userId:str
 export interface PreparedMfaResend {attemptId:string;userId:string;phoneE164:string;channel:MfaChannel}
 export interface ReplaceMfaChallengeCommand {attemptId:string;challenge:NewMfaChallengeWrite;now:Date;auditEvents:readonly AuditEventInput[]}
 export interface CompleteLoginCommand {attemptTokenHash:string;challengeId:string|null;recoveryCodeHash:string|null;newSession:NewSessionWrite;verifiedAt:Date;auditEvents:readonly AuditEventInput[]}
+/** Emite sessao para um login sem segundo fator, enquanto a MFA estiver suspensa por env.
+ *  Deliberadamente nao toca `authentication_attempts`/`mfa_challenges`: e um caminho
+ *  paralelo ao fluxo de MFA, nao uma variacao dele. */
+export interface CompleteLoginWithoutMfaCommand {userId:string;newSession:NewSessionWrite;recoveryCodes:readonly NewRecoveryCode[];now:Date;auditEvents:readonly AuditEventInput[]}
 export interface StartStepUpAttemptCommand {id:string;tokenHash:string;userId:string;originSessionId:string;purpose:StepUpPurpose;secondFactor:SecondFactor;challenge:NewMfaChallengeWrite|null;expiresAt:Date;invalidatedAt:Date|null;now:Date;auditEvents:readonly AuditEventInput[]}
 export interface MarkStepUpVerifiedCommand {attemptTokenHash:string;challengeId:string;verifiedAt:Date;auditEvents:readonly AuditEventInput[]}
 export interface VerifyStepUpWithRecoveryCommand {attemptTokenHash:string;recoveryCodeHash:string;verifiedAt:Date;auditEvents:readonly AuditEventInput[]}
@@ -36,6 +40,7 @@ export interface AuthenticationRepository {
   markStepUpVerifiedWithRecovery(c:VerifyStepUpWithRecoveryCommand):Promise<"verified"|"invalid">;
   completeInviteEnrollment(c:CompleteInviteEnrollmentCommand,sign:SignAccessToken):Promise<EnrollmentCommit|"invalid">;
   completeLogin(c:CompleteLoginCommand,sign:SignAccessToken):Promise<EnrollmentCommit|"invalid">;
+  completeLoginWithoutMfa(c:CompleteLoginWithoutMfaCommand,sign:SignAccessToken):Promise<SessionCommit|"invalid">;
   changePasswordWithStepUp(c:ChangePasswordWithStepUpCommand,sign:SignAccessToken):Promise<SessionCommit|"invalid">;
   regenerateRecoveryCodesWithStepUp(c:RegenerateRecoveryCodesWithStepUpCommand):Promise<"regenerated"|"invalid">;
 }

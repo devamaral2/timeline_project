@@ -57,3 +57,9 @@ export class RequiredDependencyUnavailableError extends Error {
     super("required dependency unavailable", options);
   }
 }
+
+export class FeatureSuspendedError extends Error {
+  constructor(readonly safeCode: "mfa_suspended") {
+    super(safeCode);
+  }
+}

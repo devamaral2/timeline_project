@@ -25,6 +25,7 @@ export function fakeAuthenticationRepository(overrides: Partial<AuthenticationRe
     markStepUpVerifiedWithRecovery: unexpected("markStepUpVerifiedWithRecovery"),
     completeInviteEnrollment: unexpected("completeInviteEnrollment"),
     completeLogin: unexpected("completeLogin"),
+    completeLoginWithoutMfa: unexpected("completeLoginWithoutMfa"),
     changePasswordWithStepUp: unexpected("changePasswordWithStepUp"),
     regenerateRecoveryCodesWithStepUp: unexpected("regenerateRecoveryCodesWithStepUp"),
     ...overrides,
