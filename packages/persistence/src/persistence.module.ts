@@ -2,7 +2,9 @@ import { Module } from "@nestjs/common";
 import type {
   DailyOverviewQuery,
   EventRepository,
+  PlanRepository,
   TagRepository,
+  TaskRepository,
   TimelineEventQuery,
   WorkoutCatalog,
 } from "@repo/entities/ports";
@@ -11,6 +13,8 @@ import { PostgresDailyOverviewQuery } from "./events/queries/postgres-daily-over
 import { PostgresTimelineEventQuery } from "./events/queries/postgres-timeline-event.query";
 import { PostgresEventRepository } from "./events/repositories/postgres-event.repository";
 import { PostgresTagRepository } from "./events/repositories/postgres-tag.repository";
+import { PostgresPlanRepository } from "./plans/repositories/postgres-plan.repository";
+import { PostgresTaskRepository } from "./tasks/repositories/postgres-task.repository";
 import { PostgresWorkoutCatalog } from "./catalog/postgres-workout.catalog";
 
 /**
@@ -27,6 +31,8 @@ export const TAG_REPOSITORY = "TAG_REPOSITORY";
 export const TIMELINE_EVENT_QUERY = "TIMELINE_EVENT_QUERY";
 export const DAILY_OVERVIEW_QUERY = "DAILY_OVERVIEW_QUERY";
 export const WORKOUT_CATALOG = "WORKOUT_CATALOG";
+export const PLAN_REPOSITORY = "PLAN_REPOSITORY";
+export const TASK_REPOSITORY = "TASK_REPOSITORY";
 
 function requireDatabaseUrl(): string {
   const value = process.env.DATABASE_URL;
@@ -70,6 +76,18 @@ function requireDatabaseUrl(): string {
       useFactory: (database: PostgresDatabase): WorkoutCatalog =>
         new PostgresWorkoutCatalog(database.db),
     },
+    {
+      provide: PLAN_REPOSITORY,
+      inject: [DATABASE],
+      useFactory: (database: PostgresDatabase): PlanRepository =>
+        new PostgresPlanRepository(database.db),
+    },
+    {
+      provide: TASK_REPOSITORY,
+      inject: [DATABASE],
+      useFactory: (database: PostgresDatabase): TaskRepository =>
+        new PostgresTaskRepository(database.db),
+    },
   ],
   exports: [
     DATABASE,
@@ -78,6 +96,8 @@ function requireDatabaseUrl(): string {
     TIMELINE_EVENT_QUERY,
     DAILY_OVERVIEW_QUERY,
     WORKOUT_CATALOG,
+    PLAN_REPOSITORY,
+    TASK_REPOSITORY,
   ],
 })
 export class PersistenceModule {}

@@ -17,6 +17,12 @@ import {
   Interruption,
   Meal,
   CatalogRevisionConflictError,
+  Plan,
+  PlanOwnershipError,
+  PlanRevisionConflictError,
+  Task,
+  TaskOwnershipError,
+  TaskRevisionConflictError,
 } from "@repo/entities";
 import { PostgresEventRepository } from "../events/repositories/postgres-event.repository";
 import { PostgresFoodRepository } from "../catalog/repositories/postgres-food.repository";
@@ -24,6 +30,8 @@ import { PostgresMealRepository } from "../catalog/repositories/postgres-meal.re
 import { PostgresTimelineEventQuery } from "../events/queries/postgres-timeline-event.query";
 import { PostgresDailyOverviewQuery } from "../events/queries/postgres-daily-overview.query";
 import { PostgresTagRepository } from "../events/repositories/postgres-tag.repository";
+import { PostgresPlanRepository } from "../plans/repositories/postgres-plan.repository";
+import { PostgresTaskRepository } from "../tasks/repositories/postgres-task.repository";
 import { PostgresWorkoutCatalog } from "../catalog/postgres-workout.catalog";
 import * as schema from "../database/schema";
 
@@ -423,6 +431,80 @@ describe.runIf(RUN_INTEGRATION)("PostgresEventRepository", () => {
     expect(stillOpen?.finishedAt).toBeUndefined();
   });
 
+  async function insertTask() {
+    const id = ulid();
+    await ctx.pool.query(`INSERT INTO tasks (id, user_id, name) VALUES ($1, 'user-1', 'Tarefa')`, [id]);
+    return id;
+  }
+
+  test("saves and reads back an event's taskIds, including an empty list", async () => {
+    const withoutTasks = newEvent();
+    await repository.save(withoutTasks);
+    expect((await repository.findById(withoutTasks.id))?.taskIds).toEqual([]);
+
+    const taskA = await insertTask();
+    const taskB = await insertTask();
+    const withTasks = newEvent({ id: undefined, taskIds: [taskA, taskB] });
+    await repository.save(withTasks);
+    const found = await repository.findById(withTasks.id);
+    expect(new Set(found?.taskIds)).toEqual(new Set([taskA, taskB]));
+  });
+
+  test("replaces taskIds on update", async () => {
+    const taskA = await insertTask();
+    const taskB = await insertTask();
+    const event = newEvent({ taskIds: [taskA] });
+    await repository.save(event);
+
+    const changed = event.revise({ taskIds: [taskB] });
+    await repository.update(changed, "user-1", event.revision);
+
+    const found = await repository.findById(event.id);
+    expect(found?.taskIds).toEqual([taskB]);
+  });
+
+  test("rejects inserting the same (event_id, task_id) pair twice", async () => {
+    const event = newEvent();
+    await repository.save(event);
+    const taskId = await insertTask();
+
+    await expect(
+      ctx.pool.query(
+        `INSERT INTO event_tasks (event_id, task_id) VALUES ($1, $2), ($1, $2)`,
+        [event.id, taskId],
+      ),
+    ).rejects.toThrow();
+  });
+
+  test("deleting an event removes only its event_tasks rows, keeping the task", async () => {
+    const taskId = await insertTask();
+    const event = newEvent({ taskIds: [taskId] });
+    await repository.save(event);
+
+    await repository.delete(event.id, "user-1");
+
+    const { rows: linkRows } = await ctx.pool.query("SELECT 1 FROM event_tasks WHERE event_id = $1", [
+      event.id,
+    ]);
+    expect(linkRows).toHaveLength(0);
+    const { rows: taskRows } = await ctx.pool.query("SELECT 1 FROM tasks WHERE id = $1", [taskId]);
+    expect(taskRows).toHaveLength(1);
+  });
+
+  test("deleting a task removes only its event_tasks rows, keeping the event", async () => {
+    const taskId = await insertTask();
+    const event = newEvent({ taskIds: [taskId] });
+    await repository.save(event);
+
+    await ctx.pool.query("DELETE FROM tasks WHERE id = $1", [taskId]);
+
+    expect(await repository.findById(event.id)).not.toBeNull();
+    const { rows: linkRows } = await ctx.pool.query("SELECT 1 FROM event_tasks WHERE event_id = $1", [
+      event.id,
+    ]);
+    expect(linkRows).toHaveLength(0);
+  });
+
   test("findLatestOpenByUserId ignores an older open event behind a more recent closed one", async () => {
     const olderOpen = newEvent({ startedAt: new Date("2026-08-31T08:00:00.000Z") });
     await repository.save(olderOpen);
@@ -434,6 +516,139 @@ describe.runIf(RUN_INTEGRATION)("PostgresEventRepository", () => {
     await repository.save(recentClosed);
 
     expect(await repository.findLatestOpenByUserId("user-1")).toBeNull();
+  });
+});
+
+describe.runIf(RUN_INTEGRATION)("PostgresPlanRepository and PostgresTaskRepository", () => {
+  let ctx: PostgresTestContext;
+  let plans: PostgresPlanRepository;
+  let tasks: PostgresTaskRepository;
+
+  beforeEach(async () => {
+    if (!ctx) {
+      ctx = await createPostgresTestContext();
+      plans = new PostgresPlanRepository(ctx.db);
+      tasks = new PostgresTaskRepository(ctx.db);
+    } else {
+      await ctx.reset();
+    }
+  }, 30000);
+
+  afterAll(async () => {
+    if (ctx) await ctx.stop();
+  });
+
+  function newPlan(overrides: Partial<Parameters<typeof Plan.create>[0]> = {}) {
+    return Plan.create({
+      userId: "user-1",
+      name: "Reforma da casa",
+      description: "",
+      tags: ["casa"],
+      ...overrides,
+    });
+  }
+
+  function newTask(overrides: Partial<Parameters<typeof Task.create>[0]> = {}) {
+    return Task.create({
+      userId: "user-1",
+      name: "Comprar tinta",
+      description: "",
+      tags: [],
+      ...overrides,
+    });
+  }
+
+  test("plan: saves and reads back an aggregate with tags", async () => {
+    const plan = newPlan();
+    await plans.save(plan);
+
+    const found = await plans.findById(plan.id);
+    expect(found?.id).toBe(plan.id);
+    expect(found?.tags).toEqual(["casa"]);
+    expect(found?.status).toBe("todo");
+  });
+
+  test("plan: rejects an update with a stale expected revision", async () => {
+    const plan = newPlan();
+    await plans.save(plan);
+    const changed = plan.revise({ name: "Novo nome" });
+
+    await expect(plans.update(changed, "user-1", plan.revision + 1)).rejects.toBeInstanceOf(
+      PlanRevisionConflictError,
+    );
+  });
+
+  test("plan: rejects an update from a different owner", async () => {
+    const plan = newPlan();
+    await plans.save(plan);
+    const changed = plan.revise({ name: "Novo nome" });
+
+    await expect(plans.update(changed, "user-2", plan.revision)).rejects.toBeInstanceOf(
+      PlanOwnershipError,
+    );
+  });
+
+  test("plan: listByUserId scopes to the given user", async () => {
+    await plans.save(newPlan());
+    await plans.save(newPlan({ id: undefined, userId: "user-2" }));
+
+    const found = await plans.listByUserId("user-1");
+    expect(found).toHaveLength(1);
+  });
+
+  test("task: saves and reads back an aggregate linked to a plan", async () => {
+    const plan = newPlan();
+    await plans.save(plan);
+    const task = newTask({ planId: plan.id, tags: ["pintura"] });
+    await tasks.save(task);
+
+    const found = await tasks.findById(task.id);
+    expect(found?.planId).toBe(plan.id);
+    expect(found?.tags).toEqual(["pintura"]);
+  });
+
+  test("task: rejects an update with a stale expected revision", async () => {
+    const task = newTask();
+    await tasks.save(task);
+    const changed = task.revise({ name: "Novo nome" });
+
+    await expect(tasks.update(changed, "user-1", task.revision + 1)).rejects.toBeInstanceOf(
+      TaskRevisionConflictError,
+    );
+  });
+
+  test("task: rejects an update from a different owner", async () => {
+    const task = newTask();
+    await tasks.save(task);
+    const changed = task.revise({ name: "Novo nome" });
+
+    await expect(tasks.update(changed, "user-2", task.revision)).rejects.toBeInstanceOf(
+      TaskOwnershipError,
+    );
+  });
+
+  test("task: listByPlanId returns only tasks linked to that plan", async () => {
+    const plan = newPlan();
+    await plans.save(plan);
+    await tasks.save(newTask({ planId: plan.id }));
+    await tasks.save(newTask({ id: undefined }));
+
+    const found = await tasks.listByPlanId(plan.id);
+    expect(found).toHaveLength(1);
+    expect(found[0].planId).toBe(plan.id);
+  });
+
+  test("task: deleting its plan unlinks it instead of deleting it (ON DELETE SET NULL)", async () => {
+    const plan = newPlan();
+    await plans.save(plan);
+    const task = newTask({ planId: plan.id });
+    await tasks.save(task);
+
+    await plans.delete(plan.id, "user-1");
+
+    const found = await tasks.findById(task.id);
+    expect(found).not.toBeNull();
+    expect(found?.planId).toBeUndefined();
   });
 });
 

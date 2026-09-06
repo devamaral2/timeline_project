@@ -10,6 +10,7 @@ import {
 import type { EventRepository } from "@repo/entities/ports";
 import * as schema from "../../database/schema";
 import { mapEventRow } from "../mappers/event-row.mapper";
+import { classifyUpdateFailure } from "../../shared/classify-update-failure";
 
 type Tx = Parameters<Parameters<NodePgDatabase<typeof schema>["transaction"]>[0]>[0];
 
@@ -58,6 +59,12 @@ async function insertChildren(tx: Tx, event: Event): Promise<void> {
 
     await tx.insert(schema.eventTags).values(tagIds.map((tagId) => ({ eventId: event.id, tagId })));
   }
+
+  if (event.taskIds.length > 0) {
+    await tx
+      .insert(schema.eventTasks)
+      .values(event.taskIds.map((taskId) => ({ eventId: event.id, taskId })));
+  }
 }
 
 async function insertEventAggregate(tx: Tx, event: Event): Promise<void> {
@@ -74,28 +81,6 @@ async function insertEventAggregate(tx: Tx, event: Event): Promise<void> {
   });
 
   await insertChildren(tx, event);
-}
-
-async function classifyUpdateFailure(
-  tx: Tx,
-  eventId: string,
-  actorUserId: string,
-  expectedRevision: number,
-): Promise<never> {
-  const [existing] = await tx
-    .select({ userId: schema.events.userId, revision: schema.events.revision })
-    .from(schema.events)
-    .where(eq(schema.events.id, eventId));
-
-  if (!existing) {
-    throw new EventNotFoundError(`Event not found: ${eventId}`);
-  }
-  if (existing.userId !== actorUserId) {
-    throw new EventOwnershipError();
-  }
-  throw new EventRevisionConflictError(
-    `Expected revision ${expectedRevision} but found ${existing.revision}`,
-  );
 }
 
 export class PostgresEventRepository implements EventRepository {
@@ -153,12 +138,22 @@ export class PostgresEventRepository implements EventRepository {
       `);
 
       if (result.rows.length === 0) {
-        await classifyUpdateFailure(tx, event.id, actorUserId, expectedRevision);
+        const [existing] = await tx
+          .select({ userId: schema.events.userId, revision: schema.events.revision })
+          .from(schema.events)
+          .where(eq(schema.events.id, event.id));
+
+        classifyUpdateFailure(existing, actorUserId, expectedRevision, {
+          notFound: () => new EventNotFoundError(`Event not found: ${event.id}`),
+          ownership: () => new EventOwnershipError(),
+          conflict: (message) => new EventRevisionConflictError(message),
+        });
       }
 
       await tx.delete(schema.eventItems).where(eq(schema.eventItems.eventId, event.id));
       await tx.delete(schema.eventInterruptions).where(eq(schema.eventInterruptions.eventId, event.id));
       await tx.delete(schema.eventTags).where(eq(schema.eventTags.eventId, event.id));
+      await tx.delete(schema.eventTasks).where(eq(schema.eventTasks.eventId, event.id));
 
       await insertChildren(tx, event);
     });
@@ -214,12 +209,17 @@ export class PostgresEventRepository implements EventRepository {
       .from(schema.eventTags)
       .innerJoin(schema.tags, eq(schema.eventTags.tagId, schema.tags.id))
       .where(eq(schema.eventTags.eventId, eventRow.id));
+    const taskRows = await this.db
+      .select({ taskId: schema.eventTasks.taskId })
+      .from(schema.eventTasks)
+      .where(eq(schema.eventTasks.eventId, eventRow.id));
 
     return mapEventRow(
       eventRow,
       itemRows,
       interruptionRows,
       tagRows.map((row) => row.name),
+      taskRows.map((row) => row.taskId),
     );
   }
 }

@@ -54,3 +54,11 @@ test("fails with the event and item id when the stored payload is invalid", () =
     /01ITEM00000000000000000BAD.*01EVENT00000000000000000A/,
   );
 });
+
+test("defaults to an empty taskIds list and otherwise passes it through", () => {
+  const withoutTasks = mapEventRow(eventRow, [itemRow({})], [], []);
+  expect(withoutTasks.taskIds).toEqual([]);
+
+  const withTasks = mapEventRow(eventRow, [itemRow({})], [], [], ["task-1", "task-2"]);
+  expect(withTasks.taskIds).toEqual(["task-1", "task-2"]);
+});

@@ -15,9 +15,14 @@ export interface PostgresTestContext {
 
 const MUTABLE_TABLES = [
   "event_tags",
+  "event_tasks",
   "event_interruptions",
   "event_items",
   "events",
+  "plan_tags",
+  "task_tags",
+  "plans",
+  "tasks",
   "tags",
   "meal",
   "food",

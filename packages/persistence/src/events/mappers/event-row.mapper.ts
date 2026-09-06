@@ -71,6 +71,7 @@ export function mapEventRow(
   itemRows: readonly EventItemRow[],
   interruptionRows: readonly EventInterruptionRow[],
   tagNames: readonly string[],
+  taskIds: readonly string[] = [],
 ): Event {
   const items = [...itemRows]
     .sort((a, b) => a.position - b.position)
@@ -92,6 +93,7 @@ export function mapEventRow(
     items,
     missed: eventRow.missed,
     priority: eventRow.priority,
+    taskIds: [...taskIds],
     revision: eventRow.revision,
   });
 }
