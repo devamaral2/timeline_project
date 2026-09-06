@@ -69,6 +69,23 @@ test("PATCH /api/plans/:planId rejects a request without expectedRevision", asyn
   ).rejects.toBeInstanceOf(BadRequestException);
 });
 
+test("POST /api/plans rejects a non-array dependsOnPlanIds", async () => {
+  const { controller } = makeController();
+
+  await expect(
+    controller.create({ name: "Reforma", dependsOnPlanIds: "not-an-array" } as never, actor),
+  ).rejects.toBeInstanceOf(BadRequestException);
+});
+
+test("PATCH /api/plans/:planId surfaces the domain rejection of self-dependency", async () => {
+  const plan = Plan.create({ userId: "user-1", name: "Reforma", description: "", tags: [] });
+  const { controller } = makeController([plan]);
+
+  await expect(
+    controller.update(plan.id, { expectedRevision: 1, dependsOnPlanIds: [plan.id] } as never, actor),
+  ).rejects.toThrow("Plan cannot depend on itself");
+});
+
 test("DELETE /api/plans/:planId removes the plan", async () => {
   const plan = Plan.create({ userId: "user-1", name: "Reforma", description: "", tags: [] });
   const { controller, planRepository } = makeController([plan]);

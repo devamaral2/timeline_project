@@ -102,12 +102,23 @@ export class PlansController {
   }
 }
 
-function assertValidWorkItemFields(body: { status?: unknown; priority?: unknown }): void {
+function assertValidWorkItemFields(body: {
+  status?: unknown;
+  priority?: unknown;
+  dependsOnPlanIds?: unknown;
+}): void {
   if (body?.status !== undefined && !isWorkItemStatus(body.status)) {
     throw new BadRequestException("Invalid status");
   }
   if (body?.priority !== undefined && !isWorkItemPriority(body.priority)) {
     throw new BadRequestException("Invalid priority");
+  }
+  if (
+    body?.dependsOnPlanIds !== undefined &&
+    (!Array.isArray(body.dependsOnPlanIds) ||
+      body.dependsOnPlanIds.some((id) => typeof id !== "string"))
+  ) {
+    throw new BadRequestException("Invalid dependsOnPlanIds");
   }
 }
 

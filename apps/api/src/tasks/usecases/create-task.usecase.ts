@@ -2,6 +2,7 @@ import type { AuthenticatedUser } from "../../auth/verify-firebase-token";
 import { PlanNotFoundError, PlanOwnershipError, Task } from "@repo/entities";
 import type { PlanRepository, TaskRepository } from "@repo/entities/ports";
 import type { CreateTaskInput } from "@repo/entities/contracts";
+import { assertTasksOwned } from "./assert-tasks-owned";
 
 export class CreateTaskUseCase {
   constructor(
@@ -15,6 +16,9 @@ export class CreateTaskUseCase {
       if (!plan) throw new PlanNotFoundError(`Plan not found: ${input.planId}`);
       if (plan.userId !== actor.userId) throw new PlanOwnershipError();
     }
+    if (input.dependsOnTaskIds?.length) {
+      await assertTasksOwned(this.taskRepository, input.dependsOnTaskIds, actor.userId);
+    }
 
     const task = Task.create({
       userId: actor.userId,
@@ -27,6 +31,7 @@ export class CreateTaskUseCase {
       startedAt: input.startedAt ? new Date(input.startedAt) : undefined,
       estimatedFinishAt: input.estimatedFinishAt ? new Date(input.estimatedFinishAt) : undefined,
       finishedAt: input.finishedAt ? new Date(input.finishedAt) : undefined,
+      dependsOnTaskIds: input.dependsOnTaskIds,
     });
 
     await this.taskRepository.save(task);

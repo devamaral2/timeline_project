@@ -67,6 +67,23 @@ test("PATCH /api/tasks/:taskId rejects a request without expectedRevision", asyn
   ).rejects.toBeInstanceOf(BadRequestException);
 });
 
+test("POST /api/tasks rejects a non-array dependsOnTaskIds", async () => {
+  const { controller } = makeController();
+
+  await expect(
+    controller.create({ name: "Comprar tinta", dependsOnTaskIds: "not-an-array" } as never, actor),
+  ).rejects.toBeInstanceOf(BadRequestException);
+});
+
+test("PATCH /api/tasks/:taskId surfaces the domain rejection of self-dependency", async () => {
+  const task = Task.create({ userId: "user-1", name: "Comprar tinta", description: "", tags: [] });
+  const { controller } = makeController([task]);
+
+  await expect(
+    controller.update(task.id, { expectedRevision: 1, dependsOnTaskIds: [task.id] } as never, actor),
+  ).rejects.toThrow("Task cannot depend on itself");
+});
+
 test("DELETE /api/tasks/:taskId removes the task", async () => {
   const task = Task.create({ userId: "user-1", name: "Comprar tinta", description: "", tags: [] });
   const { controller, taskRepository } = makeController([task]);

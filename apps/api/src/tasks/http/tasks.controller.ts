@@ -85,12 +85,23 @@ export class TasksController {
   }
 }
 
-function assertValidWorkItemFields(body: { status?: unknown; priority?: unknown }): void {
+function assertValidWorkItemFields(body: {
+  status?: unknown;
+  priority?: unknown;
+  dependsOnTaskIds?: unknown;
+}): void {
   if (body?.status !== undefined && !isWorkItemStatus(body.status)) {
     throw new BadRequestException("Invalid status");
   }
   if (body?.priority !== undefined && !isWorkItemPriority(body.priority)) {
     throw new BadRequestException("Invalid priority");
+  }
+  if (
+    body?.dependsOnTaskIds !== undefined &&
+    (!Array.isArray(body.dependsOnTaskIds) ||
+      body.dependsOnTaskIds.some((id) => typeof id !== "string"))
+  ) {
+    throw new BadRequestException("Invalid dependsOnTaskIds");
   }
 }
 

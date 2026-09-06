@@ -2,6 +2,7 @@ import type { AuthenticatedUser } from "../../auth/verify-firebase-token";
 import { PlanNotFoundError, PlanOwnershipError, TaskNotFoundError, TaskOwnershipError } from "@repo/entities";
 import type { PlanRepository, TaskRepository } from "@repo/entities/ports";
 import type { UpdateTaskInput } from "@repo/entities/contracts";
+import { assertTasksOwned } from "./assert-tasks-owned";
 
 export class UpdateTaskUseCase {
   constructor(
@@ -19,6 +20,9 @@ export class UpdateTaskUseCase {
       if (!plan) throw new PlanNotFoundError(`Plan not found: ${input.planId}`);
       if (plan.userId !== actor.userId) throw new PlanOwnershipError();
     }
+    if (input.dependsOnTaskIds?.length) {
+      await assertTasksOwned(this.taskRepository, input.dependsOnTaskIds, actor.userId);
+    }
 
     const revisedTask = existingTask.revise({
       planId: input.planId,
@@ -31,6 +35,7 @@ export class UpdateTaskUseCase {
       estimatedFinishAt:
         input.estimatedFinishAt !== undefined ? new Date(input.estimatedFinishAt) : undefined,
       finishedAt: input.finishedAt !== undefined ? new Date(input.finishedAt) : undefined,
+      dependsOnTaskIds: input.dependsOnTaskIds,
     });
 
     await this.taskRepository.update(revisedTask, actor.userId, input.expectedRevision);
