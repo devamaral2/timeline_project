@@ -13,7 +13,11 @@ export interface PlanRow {
   finishedAt: Date | null;
 }
 
-export function mapPlanRow(row: PlanRow, tagNames: readonly string[]): Plan {
+export function mapPlanRow(
+  row: PlanRow,
+  tagNames: readonly string[],
+  dependsOnPlanIds: readonly string[] = [],
+): Plan {
   return Plan.rehydrate({
     id: row.id,
     userId: row.userId,
@@ -25,6 +29,7 @@ export function mapPlanRow(row: PlanRow, tagNames: readonly string[]): Plan {
     startedAt: row.startedAt ?? undefined,
     estimatedFinishAt: row.estimatedFinishAt ?? undefined,
     finishedAt: row.finishedAt ?? undefined,
+    dependsOnPlanIds: [...dependsOnPlanIds],
     revision: row.revision,
   });
 }

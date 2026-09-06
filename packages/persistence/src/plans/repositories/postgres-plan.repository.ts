@@ -28,6 +28,14 @@ async function insertTags(tx: Tx, plan: Plan): Promise<void> {
   await tx.insert(schema.planTags).values(tagIds.map((tagId) => ({ planId: plan.id, tagId })));
 }
 
+async function insertDependencies(tx: Tx, plan: Plan): Promise<void> {
+  if (plan.dependsOnPlanIds.length === 0) return;
+
+  await tx
+    .insert(schema.planDependencies)
+    .values(plan.dependsOnPlanIds.map((dependsOnPlanId) => ({ planId: plan.id, dependsOnPlanId })));
+}
+
 export class PostgresPlanRepository implements PlanRepository {
   constructor(private readonly db: NodePgDatabase<typeof schema>) {}
 
@@ -47,6 +55,7 @@ export class PostgresPlanRepository implements PlanRepository {
       });
 
       await insertTags(tx, plan);
+      await insertDependencies(tx, plan);
     });
   }
 
@@ -84,6 +93,8 @@ export class PostgresPlanRepository implements PlanRepository {
 
       await tx.delete(schema.planTags).where(eq(schema.planTags.planId, plan.id));
       await insertTags(tx, plan);
+      await tx.delete(schema.planDependencies).where(eq(schema.planDependencies.planId, plan.id));
+      await insertDependencies(tx, plan);
     });
   }
 
@@ -122,7 +133,15 @@ export class PostgresPlanRepository implements PlanRepository {
       .from(schema.planTags)
       .innerJoin(schema.tags, eq(schema.planTags.tagId, schema.tags.id))
       .where(eq(schema.planTags.planId, row.id));
+    const dependencyRows = await this.db
+      .select({ dependsOnPlanId: schema.planDependencies.dependsOnPlanId })
+      .from(schema.planDependencies)
+      .where(eq(schema.planDependencies.planId, row.id));
 
-    return mapPlanRow(row, tagRows.map((tagRow) => tagRow.name));
+    return mapPlanRow(
+      row,
+      tagRows.map((tagRow) => tagRow.name),
+      dependencyRows.map((dependencyRow) => dependencyRow.dependsOnPlanId),
+    );
   }
 }

@@ -14,7 +14,11 @@ export interface TaskRow {
   finishedAt: Date | null;
 }
 
-export function mapTaskRow(row: TaskRow, tagNames: readonly string[]): Task {
+export function mapTaskRow(
+  row: TaskRow,
+  tagNames: readonly string[],
+  dependsOnTaskIds: readonly string[] = [],
+): Task {
   return Task.rehydrate({
     id: row.id,
     userId: row.userId,
@@ -27,6 +31,7 @@ export function mapTaskRow(row: TaskRow, tagNames: readonly string[]): Task {
     startedAt: row.startedAt ?? undefined,
     estimatedFinishAt: row.estimatedFinishAt ?? undefined,
     finishedAt: row.finishedAt ?? undefined,
+    dependsOnTaskIds: [...dependsOnTaskIds],
     revision: row.revision,
   });
 }

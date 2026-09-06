@@ -23,4 +23,10 @@ test("rehydrates a plan preserving revision and tags", () => {
   expect(plan.tags).toEqual(["casa", "reforma"]);
   expect(plan.startedAt).toEqual(planRow.startedAt);
   expect(plan.finishedAt).toBeUndefined();
+  expect(plan.dependsOnPlanIds).toEqual([]);
+});
+
+test("rehydrates dependsOnPlanIds when given", () => {
+  const plan = mapPlanRow(planRow, [], ["plan-1", "plan-2"]);
+  expect(plan.dependsOnPlanIds).toEqual(["plan-1", "plan-2"]);
 });

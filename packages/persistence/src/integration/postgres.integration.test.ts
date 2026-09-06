@@ -650,6 +650,108 @@ describe.runIf(RUN_INTEGRATION)("PostgresPlanRepository and PostgresTaskReposito
     expect(found).not.toBeNull();
     expect(found?.planId).toBeUndefined();
   });
+
+  test("plan: saves and reads back dependsOnPlanIds, including an empty list", async () => {
+    const prerequisite = newPlan({ id: undefined });
+    await plans.save(prerequisite);
+    const withoutDeps = newPlan({ id: undefined });
+    await plans.save(withoutDeps);
+    expect((await plans.findById(withoutDeps.id))?.dependsOnPlanIds).toEqual([]);
+
+    const dependent = newPlan({ id: undefined, dependsOnPlanIds: [prerequisite.id] });
+    await plans.save(dependent);
+
+    expect((await plans.findById(dependent.id))?.dependsOnPlanIds).toEqual([prerequisite.id]);
+  });
+
+  test("plan: replaces dependsOnPlanIds on update", async () => {
+    const first = newPlan({ id: undefined });
+    const second = newPlan({ id: undefined });
+    await plans.save(first);
+    await plans.save(second);
+    const dependent = newPlan({ id: undefined, dependsOnPlanIds: [first.id] });
+    await plans.save(dependent);
+
+    const changed = dependent.revise({ dependsOnPlanIds: [second.id] });
+    await plans.update(changed, "user-1", dependent.revision);
+
+    expect((await plans.findById(dependent.id))?.dependsOnPlanIds).toEqual([second.id]);
+  });
+
+  test("plan: deleting a plan removes dependency rows in both roles without deleting the other plan", async () => {
+    const prerequisite = newPlan({ id: undefined });
+    await plans.save(prerequisite);
+    const dependent = newPlan({ id: undefined, dependsOnPlanIds: [prerequisite.id] });
+    await plans.save(dependent);
+
+    await plans.delete(prerequisite.id, "user-1");
+
+    expect(await plans.findById(dependent.id)).not.toBeNull();
+    expect((await plans.findById(dependent.id))?.dependsOnPlanIds).toEqual([]);
+  });
+
+  test("plan_dependencies: the database rejects a self-referencing row", async () => {
+    const plan = newPlan();
+    await plans.save(plan);
+
+    await expect(
+      ctx.pool.query(
+        `INSERT INTO plan_dependencies (plan_id, depends_on_plan_id) VALUES ($1, $1)`,
+        [plan.id],
+      ),
+    ).rejects.toThrow();
+  });
+
+  test("task: saves and reads back dependsOnTaskIds, including an empty list", async () => {
+    const prerequisite = newTask({ id: undefined });
+    await tasks.save(prerequisite);
+    const withoutDeps = newTask({ id: undefined });
+    await tasks.save(withoutDeps);
+    expect((await tasks.findById(withoutDeps.id))?.dependsOnTaskIds).toEqual([]);
+
+    const dependent = newTask({ id: undefined, dependsOnTaskIds: [prerequisite.id] });
+    await tasks.save(dependent);
+
+    expect((await tasks.findById(dependent.id))?.dependsOnTaskIds).toEqual([prerequisite.id]);
+  });
+
+  test("task: replaces dependsOnTaskIds on update", async () => {
+    const first = newTask({ id: undefined });
+    const second = newTask({ id: undefined });
+    await tasks.save(first);
+    await tasks.save(second);
+    const dependent = newTask({ id: undefined, dependsOnTaskIds: [first.id] });
+    await tasks.save(dependent);
+
+    const changed = dependent.revise({ dependsOnTaskIds: [second.id] });
+    await tasks.update(changed, "user-1", dependent.revision);
+
+    expect((await tasks.findById(dependent.id))?.dependsOnTaskIds).toEqual([second.id]);
+  });
+
+  test("task: deleting a task removes dependency rows in both roles without deleting the other task", async () => {
+    const prerequisite = newTask({ id: undefined });
+    await tasks.save(prerequisite);
+    const dependent = newTask({ id: undefined, dependsOnTaskIds: [prerequisite.id] });
+    await tasks.save(dependent);
+
+    await tasks.delete(prerequisite.id, "user-1");
+
+    expect(await tasks.findById(dependent.id)).not.toBeNull();
+    expect((await tasks.findById(dependent.id))?.dependsOnTaskIds).toEqual([]);
+  });
+
+  test("task_dependencies: the database rejects a self-referencing row", async () => {
+    const task = newTask();
+    await tasks.save(task);
+
+    await expect(
+      ctx.pool.query(
+        `INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ($1, $1)`,
+        [task.id],
+      ),
+    ).rejects.toThrow();
+  });
 });
 
 describe.runIf(RUN_INTEGRATION)("PostgresFoodRepository and PostgresMealRepository", () => {

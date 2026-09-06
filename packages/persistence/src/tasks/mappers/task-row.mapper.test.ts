@@ -28,3 +28,8 @@ test("rehydrates a task without a plan", () => {
 
   expect(task.planId).toBeUndefined();
 });
+
+test("rehydrates dependsOnTaskIds when given", () => {
+  const task = mapTaskRow(taskRow, [], ["task-1", "task-2"]);
+  expect(task.dependsOnTaskIds).toEqual(["task-1", "task-2"]);
+});

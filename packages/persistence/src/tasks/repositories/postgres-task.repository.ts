@@ -28,6 +28,14 @@ async function insertTags(tx: Tx, task: Task): Promise<void> {
   await tx.insert(schema.taskTags).values(tagIds.map((tagId) => ({ taskId: task.id, tagId })));
 }
 
+async function insertDependencies(tx: Tx, task: Task): Promise<void> {
+  if (task.dependsOnTaskIds.length === 0) return;
+
+  await tx
+    .insert(schema.taskDependencies)
+    .values(task.dependsOnTaskIds.map((dependsOnTaskId) => ({ taskId: task.id, dependsOnTaskId })));
+}
+
 export class PostgresTaskRepository implements TaskRepository {
   constructor(private readonly db: NodePgDatabase<typeof schema>) {}
 
@@ -48,6 +56,7 @@ export class PostgresTaskRepository implements TaskRepository {
       });
 
       await insertTags(tx, task);
+      await insertDependencies(tx, task);
     });
   }
 
@@ -86,6 +95,8 @@ export class PostgresTaskRepository implements TaskRepository {
 
       await tx.delete(schema.taskTags).where(eq(schema.taskTags.taskId, task.id));
       await insertTags(tx, task);
+      await tx.delete(schema.taskDependencies).where(eq(schema.taskDependencies.taskId, task.id));
+      await insertDependencies(tx, task);
     });
   }
 
@@ -129,7 +140,15 @@ export class PostgresTaskRepository implements TaskRepository {
       .from(schema.taskTags)
       .innerJoin(schema.tags, eq(schema.taskTags.tagId, schema.tags.id))
       .where(eq(schema.taskTags.taskId, row.id));
+    const dependencyRows = await this.db
+      .select({ dependsOnTaskId: schema.taskDependencies.dependsOnTaskId })
+      .from(schema.taskDependencies)
+      .where(eq(schema.taskDependencies.taskId, row.id));
 
-    return mapTaskRow(row, tagRows.map((tagRow) => tagRow.name));
+    return mapTaskRow(
+      row,
+      tagRows.map((tagRow) => tagRow.name),
+      dependencyRows.map((dependencyRow) => dependencyRow.dependsOnTaskId),
+    );
   }
 }
