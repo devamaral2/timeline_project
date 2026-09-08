@@ -45,7 +45,10 @@ class TestContextController {
   }
 }
 
+import { OTP_DELIVERY_GATEWAY, type OtpDeliveryGateway } from "../mfa/otp-delivery.gateway";
+
 export interface TestApp {
+  otpMessages: Array<{email:string;code:string}>;
   url: string;
   app: INestApplication;
   logger: RecordingAuthLogger;
@@ -53,6 +56,7 @@ export interface TestApp {
 }
 
 export interface TestAppOptions {
+  otpDelivery?: OtpDeliveryGateway;
   /**
    * O gateway do HIBP e o unico provider que sai para a internet num teste.
    * Por isso ele e trocado por padrao: sem isso todo teste que aceita convite
@@ -77,10 +81,13 @@ function testEnv(overrides: EnvSource = {}) {
 }
 
 export async function createTestApp(overrides: EnvSource = {}, options: TestAppOptions = {}): Promise<TestApp> {
+  const otpMessages: Array<{email:string;code:string}> = [];
   const module = await Test.createTestingModule({
     imports: [AppModule.forRoot(testEnv(overrides))],
     controllers: [TestContextController],
   })
+    .overrideProvider(OTP_DELIVERY_GATEWAY)
+    .useValue(options.otpDelivery ?? { send: async (input:{email:string;code:string}) => { otpMessages.push(input); } })
     .overrideProvider(HttpPwnedPasswordsGateway)
     .useValue(options.pwnedPasswords ?? { isCompromised: async () => false })
     .compile();
@@ -95,6 +102,7 @@ export async function createTestApp(overrides: EnvSource = {}, options: TestAppO
   if (!address || typeof address === "string") throw new Error("Test server did not expose a TCP address");
 
   return {
+    otpMessages,
     url: `http://127.0.0.1:${address.port}`,
     app,
     logger,

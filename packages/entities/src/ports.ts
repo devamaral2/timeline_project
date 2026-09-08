@@ -11,3 +11,4 @@ export type * from "./events/ports/daily-overview-query";
 export type * from "./events/ports/workout-catalog";
 export type * from "./plans/ports/plan-repository";
 export type * from "./tasks/ports/task-repository";
+export type * from "./notes/ports/note-repository";

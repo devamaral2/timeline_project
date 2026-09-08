@@ -15,14 +15,18 @@ export interface RuntimeEnv {
   publicUrl: URL;
   webAppUrl: URL;
   keyEncryptionKey: Buffer;
-  otpProvider: "fake" | "twilio";
+  otpProvider: "fake" | "smtp";
   allowFakeOtp: boolean;
-  twilioTimeoutMs: number;
-  twilioWhatsappEnabled: boolean;
   mfaSuspended: boolean;
-  twilioAccountSid?: string;
-  twilioAuthToken?: string;
-  twilioVerifyServiceSid?: string;
+  smtp?: {
+    host: string;
+    port: number;
+    secure: boolean;
+    user?: string;
+    pass?: string;
+    from: string;
+    timeoutMs: number;
+  };
   passwordBlocklistTimeoutMs: number;
   limits: {
     passwordEmail: { attempts: number; windowSeconds: number };
@@ -30,14 +34,13 @@ export interface RuntimeEnv {
     mfaSendUser: { attempts: number; windowSeconds: number };
     factorCheckAttempt: { attempts: number; windowSeconds: number };
   };
-  assertOtpChannelEnabled(channel: "sms" | "whatsapp"): void;
 }
 
 const runtimeKeys = [
   "NODE_ENV", "AUTH_PORT", "AUTH_HOST", "AUTH_DATABASE_URL", "AUTH_ISSUER", "AUTH_AUDIENCE",
   "AUTH_PUBLIC_URL", "AUTH_WEB_APP_URL", "AUTH_KEY_ENCRYPTION_KEY", "AUTH_OTP_PROVIDER",
-  "AUTH_ALLOW_FAKE_OTP", "AUTH_TWILIO_TIMEOUT_MS", "AUTH_TWILIO_WHATSAPP_ENABLED", "AUTH_MFA_SUSPENDED",
-  "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_VERIFY_SERVICE_SID",
+  "AUTH_ALLOW_FAKE_OTP", "AUTH_MFA_SUSPENDED",
+  "SMTP_HOST", "SMTP_PORT", "SMTP_SECURE", "SMTP_USER", "SMTP_PASS", "SMTP_FROM", "SMTP_TIMEOUT_MS",
   "AUTH_PASSWORD_BLOCKLIST_TIMEOUT_MS", "AUTH_PASSWORD_EMAIL_LIMIT", "AUTH_PASSWORD_IP_LIMIT",
   "AUTH_PASSWORD_WINDOW_SECONDS", "AUTH_MFA_SEND_LIMIT", "AUTH_MFA_SEND_WINDOW_SECONDS",
   "AUTH_MFA_CHECK_LIMIT",
@@ -57,14 +60,16 @@ const runtimeSchema = z.object({
   AUTH_PUBLIC_URL: nonEmpty,
   AUTH_WEB_APP_URL: nonEmpty,
   AUTH_KEY_ENCRYPTION_KEY: nonEmpty,
-  AUTH_OTP_PROVIDER: z.enum(["fake", "twilio"]),
+  AUTH_OTP_PROVIDER: z.enum(["fake", "smtp"]),
   AUTH_ALLOW_FAKE_OTP: boolean.default(false),
-  AUTH_TWILIO_TIMEOUT_MS: positiveInteger.default(5000),
-  AUTH_TWILIO_WHATSAPP_ENABLED: boolean.default(false),
   AUTH_MFA_SUSPENDED: boolean.default(false),
-  TWILIO_ACCOUNT_SID: nonEmpty.optional(),
-  TWILIO_AUTH_TOKEN: nonEmpty.optional(),
-  TWILIO_VERIFY_SERVICE_SID: nonEmpty.optional(),
+  SMTP_HOST: nonEmpty.optional(),
+  SMTP_PORT: positiveInteger.default(587),
+  SMTP_SECURE: boolean.default(false),
+  SMTP_USER: nonEmpty.optional(),
+  SMTP_PASS: z.string().min(1).optional(),
+  SMTP_FROM: nonEmpty.optional(),
+  SMTP_TIMEOUT_MS: positiveInteger.default(5000),
   AUTH_PASSWORD_BLOCKLIST_TIMEOUT_MS: positiveInteger.default(2000),
   AUTH_PASSWORD_EMAIL_LIMIT: positiveInteger.default(5),
   AUTH_PASSWORD_IP_LIMIT: positiveInteger.default(30),
@@ -112,8 +117,23 @@ export function getRuntimeEnv(source: EnvSource): RuntimeEnv {
   if (raw.AUTH_OTP_PROVIDER === "fake" && !fakeOtpIsAllowed) {
     throw new Error("AUTH_OTP_PROVIDER=fake is allowed only for an opted-in local development or test process");
   }
-  if (raw.AUTH_OTP_PROVIDER === "twilio" && (!raw.TWILIO_ACCOUNT_SID || !raw.TWILIO_AUTH_TOKEN || !raw.TWILIO_VERIFY_SERVICE_SID)) {
-    throw new Error("Twilio configuration requires account, token, and Verify service credentials");
+  let smtp: RuntimeEnv["smtp"];
+  if (raw.AUTH_OTP_PROVIDER === "smtp") {
+    if (!raw.SMTP_HOST || !raw.SMTP_FROM) {
+      throw new Error("SMTP configuration requires SMTP_HOST and SMTP_FROM");
+    }
+    if ((raw.SMTP_USER === undefined) !== (raw.SMTP_PASS === undefined)) {
+      throw new Error("SMTP_USER and SMTP_PASS must be configured together");
+    }
+    smtp = Object.freeze({
+      host: raw.SMTP_HOST,
+      port: raw.SMTP_PORT,
+      secure: raw.SMTP_SECURE,
+      user: raw.SMTP_USER,
+      pass: raw.SMTP_PASS,
+      from: raw.SMTP_FROM,
+      timeoutMs: raw.SMTP_TIMEOUT_MS,
+    });
   }
 
   const limits = Object.freeze({
@@ -135,17 +155,10 @@ export function getRuntimeEnv(source: EnvSource): RuntimeEnv {
     keyEncryptionKey,
     otpProvider: raw.AUTH_OTP_PROVIDER,
     allowFakeOtp: raw.AUTH_ALLOW_FAKE_OTP,
-    twilioTimeoutMs: raw.AUTH_TWILIO_TIMEOUT_MS,
-    twilioWhatsappEnabled: raw.AUTH_TWILIO_WHATSAPP_ENABLED,
     mfaSuspended: raw.AUTH_MFA_SUSPENDED,
-    twilioAccountSid: raw.TWILIO_ACCOUNT_SID,
-    twilioAuthToken: raw.TWILIO_AUTH_TOKEN,
-    twilioVerifyServiceSid: raw.TWILIO_VERIFY_SERVICE_SID,
+    smtp,
     passwordBlocklistTimeoutMs: raw.AUTH_PASSWORD_BLOCKLIST_TIMEOUT_MS,
     limits,
-    assertOtpChannelEnabled(channel: "sms" | "whatsapp"): void {
-      if (channel === "whatsapp" && !raw.AUTH_TWILIO_WHATSAPP_ENABLED) throw new Error("WhatsApp OTP is disabled");
-    },
   });
 }
 

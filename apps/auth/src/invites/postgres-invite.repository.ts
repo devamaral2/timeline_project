@@ -9,11 +9,23 @@ import { insertAuditEvents } from "../audit/postgres-audit-log";
  *  anterior: o convite em si e qualquer aceite em andamento. */
 async function invalidateOpenInvites(tx: AuthTransaction, userId: string, now: Date): Promise<void> {
   await tx.query("UPDATE invites SET revoked_at=$1 WHERE user_id=$2 AND accepted_at IS NULL AND revoked_at IS NULL", [now, userId]);
-  await tx.query("UPDATE mfa_challenges SET invalidated_at=$1 WHERE consumed_at IS NULL AND invalidated_at IS NULL AND attempt_id IN (SELECT id FROM authentication_attempts WHERE user_id=$2 AND purpose='invite_acceptance' AND consumed_at IS NULL AND invalidated_at IS NULL)", [now, userId]);
-  await tx.query("UPDATE authentication_attempts SET invalidated_at=$1 WHERE user_id=$2 AND purpose='invite_acceptance' AND consumed_at IS NULL AND invalidated_at IS NULL", [now, userId]);
 }
 export class PostgresInviteRepository implements InviteRepository {
   constructor(private readonly db: AuthDatabase) {}
+  async acceptInvite(c: import("./ports/invite-repository").AcceptInviteCommand): Promise<"accepted"|"invalid"> {
+    return this.db.transaction(async tx => {
+      const user = await tx.query("SELECT id FROM users WHERE id=$1 AND status='pending_invite' FOR UPDATE", [c.userId]);
+      if (!user.rowCount) return "invalid" as const;
+      const invite = await tx.query("SELECT id FROM invites WHERE id=$1 AND user_id=$2 AND accepted_at IS NULL AND revoked_at IS NULL AND expires_at>$3 FOR UPDATE", [c.inviteId,c.userId,c.now]);
+      if (!invite.rowCount) return "invalid" as const;
+      await tx.query("UPDATE users SET password_hash=$1,status='active',updated_at=$2 WHERE id=$3", [c.passwordHash,c.now,c.userId]);
+      await tx.query("UPDATE invites SET accepted_at=$1 WHERE id=$2", [c.now,c.inviteId]);
+      await tx.query("UPDATE invites SET revoked_at=$1 WHERE user_id=$2 AND id<>$3 AND accepted_at IS NULL AND revoked_at IS NULL", [c.now,c.userId,c.inviteId]);
+      await insertAuditEvents(tx,c.auditEvents);
+      return "accepted" as const;
+    });
+  }
+
   async inspectByTokenHash(hash:string, now:Date):Promise<InviteInspection|null> { const r=await this.db.query("SELECT i.id invite_id,i.user_id,u.name,u.email,i.expires_at FROM invites i JOIN users u ON u.id=i.user_id WHERE i.token_hash=$1 AND i.expires_at>$2 AND i.accepted_at IS NULL AND i.revoked_at IS NULL",[hash,now]); const x=r.rows[0]; return x ? {inviteId:x.invite_id,userId:x.user_id,name:x.name,email:x.email,expiresAt:x.expires_at}:null; }
   async bootstrapAdmin(command:BootstrapAdminCommand):Promise<BootstrapAdminCommitOutcome> { return this.db.transaction(async tx => this.commit(tx,command)); }
   private async commit(tx:AuthTransaction,c:BootstrapAdminCommand):Promise<BootstrapAdminCommitOutcome> { await acquireAdvisoryLock(tx,ADVISORY_LOCK.bootstrapAdmin); const admins=await tx.query("SELECT u.id,u.email,u.status FROM users u JOIN user_roles ur ON ur.user_id=u.id WHERE ur.role_key='admin' FOR UPDATE"); if (admins.rowCount===0) { await tx.query("INSERT INTO users(id,email,name,status,created_at,updated_at) VALUES($1,$2,$3,'pending_invite',$4,$4)",[c.userId,c.email,c.name,c.now]); await tx.query("INSERT INTO user_roles(user_id,role_key) VALUES($1,'admin')",[c.userId]); await this.insertInvite(tx,c); await this.audit(tx,c); return {kind:"created",userId:c.userId}; }

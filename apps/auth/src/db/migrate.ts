@@ -46,6 +46,20 @@ export async function migrateAuthDatabase(input: {
       );
       const pending = (await readdir(input.migrationsFolder)).filter((name) => MIGRATION_FILE.test(name) && !applied.has(name)).sort();
 
+      // The already-versioned 0004 removes phone/provider data and cannot upgrade
+      // populated legacy challenges (it adds a nonempty hash constraint).
+      // Refuse BEFORE any pending DDL rather than silently erase enrollment data.
+      if (pending.includes("0004_email_otp_mfa.sql")) {
+        const legacy = await client.query(
+          "SELECT 1 FROM information_schema.columns WHERE table_schema=$1 AND table_name='users' AND column_name='phone_e164'",
+          [input.schema ?? "public"],
+        );
+        if (legacy.rowCount) {
+          const populated = await client.query("SELECT 1 FROM users LIMIT 1");
+          if (populated.rowCount) throw new Error("Email MFA migration requires an empty legacy auth database. Existing users require a reviewed data migration and backup; no pending migrations were applied.");
+        }
+      }
+
       for (const migration of pending) {
         const sql = await readFile(join(input.migrationsFolder, migration), "utf8");
         await client.query("BEGIN");

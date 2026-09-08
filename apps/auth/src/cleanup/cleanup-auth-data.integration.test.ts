@@ -42,7 +42,7 @@ async function seedBoundaries(db: AuthDatabase, userId: string): Promise<void> {
   for (const [suffix, when] of [["old", at(24 * HOUR)], ["new", justAfter(24 * HOUR)]] as const) {
     const attemptId = `attempt-${suffix}`;
     await db.query("INSERT INTO authentication_attempts(id,token_hash,user_id,purpose,second_factor,first_methods,expires_at,consumed_at,created_at) VALUES($1,$2,$3,'login','otp',ARRAY['pwd'],$4,$4,$5)", [attemptId, `hash-${suffix}`, userId, when, at(2 * DAY)]);
-    await db.query("INSERT INTO mfa_challenges(id,attempt_id,requested_channel,reported_channel,provider_challenge_id,expires_at,consumed_at,created_at) VALUES($1,$2,'sms','sms',$3,$4,$4,$5)", [`challenge-${suffix}`, attemptId, `provider-${suffix}`, when, at(2 * DAY)]);
+    await db.query("INSERT INTO mfa_challenges(id,attempt_id,code_hash,expires_at,consumed_at,created_at) VALUES($1,$2,$3,$4,$4,$5)", [`challenge-${suffix}`, attemptId, `provider-${suffix}`, when, at(2 * DAY)]);
     await db.query("INSERT INTO rate_limit_buckets(scope,subject_hash,window_started_at,window_expires_at,hit_count,updated_at) VALUES('password_ip',$1,$2,$2,1,$2)", [`bucket-${suffix}`, when]);
     await db.query("INSERT INTO invites(id,token_hash,user_id,expires_at,revoked_at,created_at) VALUES($1,$2,$3,$4,$4,$5)", [`invite-${suffix}`, `invite-hash-${suffix}`, userId, whenFor(suffix, 30 * DAY), at(60 * DAY)]);
     await db.query("INSERT INTO recovery_codes(id,user_id,code_hash,generation,used_at,created_at) VALUES($1,$2,$3,1,$4,$5)", [`code-${suffix}`, userId, `code-hash-${suffix}`, whenFor(suffix, 90 * DAY), at(120 * DAY)]);

@@ -17,12 +17,12 @@ import type {
 } from "./ports/user-repository";
 import type { User, UserStatus } from "./user";
 
-function user(row: Record<string, unknown>): User { return { id: String(row.id), email: String(row.email), name: String(row.name), passwordHash: row.password_hash as string | null, phoneE164: row.phone_e164 as string | null, phoneVerifiedAt: row.phone_verified_at as Date | null, mfaChannel: row.mfa_channel as User["mfaChannel"], status: row.status as User["status"], createdAt: row.created_at as Date, updatedAt: row.updated_at as Date }; }
+function user(row: Record<string, unknown>): User { return { id: String(row.id), email: String(row.email), name: String(row.name), passwordHash: row.password_hash as string | null, status: row.status as User["status"], createdAt: row.created_at as Date, updatedAt: row.updated_at as Date }; }
 
 /**
  * Transicoes aceitas. `disabled` e terminal, e `pending_invite -> active` nao
  * mora aqui: quem ativa um convidado e o aceite do convite, que preenche senha
- * e telefone no mesmo commit. Deixar o admin ativar alguem por fora criaria um
+ * no mesmo commit. Deixar o admin ativar alguem por fora criaria um
  * usuario `active` sem credencial.
  */
 const ALLOWED_TRANSITIONS: Readonly<Record<UserStatus, readonly UserStatus[]>> = {

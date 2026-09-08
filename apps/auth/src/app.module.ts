@@ -1,3 +1,8 @@
+import { OTP_DELIVERY_GATEWAY, type OtpDeliveryGateway } from './mfa/otp-delivery.gateway';
+import { ConsoleOtpDeliveryGateway } from './mfa/console-otp-delivery.gateway';
+import { SmtpOtpDeliveryGateway } from './mfa/smtp-otp-delivery.gateway';
+import { EmailOtpService } from './mfa/email-otp.service';
+import { AcceptInviteUseCase } from './authentication/usecases/accept-invite.usecase';
 import { Module, type DynamicModule } from '@nestjs/common';
 import { Clock, SystemClock } from './common/clock';
 import {
@@ -18,11 +23,7 @@ import { InspectInviteUseCase } from './invites/usecases/inspect-invite.usecase'
 import { ScryptPasswordHasher } from './credentials/scrypt-password-hasher';
 import { HttpPwnedPasswordsGateway } from './credentials/http-pwned-passwords.gateway';
 import { PreparePassword } from './credentials/prepare-password';
-import { TwilioVerifyGateway } from './mfa/twilio-verify.gateway';
-import { FakeOtpVerificationGateway } from './mfa/fake-otp-verification.gateway';
-import { OTP_VERIFICATION_GATEWAY } from './mfa/otp-verification.gateway';
 import { PostgresAuthenticationRepository } from './mfa/postgres-authentication.repository';
-import { StartInviteAcceptanceUseCase } from './authentication/usecases/start-invite-acceptance.usecase';
 import { PostgresUserRepository } from './users/postgres-user.repository';
 import { PostgresRbacRepository } from './rbac/postgres-rbac.repository';
 import { PostgresSessionRepository } from './sessions/postgres-session.repository';
@@ -31,7 +32,6 @@ import { RefreshSessionUseCase } from './sessions/usecases/refresh-session.useca
 import { RevokeSessionUseCase } from './sessions/usecases/revoke-session.usecase';
 import { LogoutAllUseCase } from './sessions/usecases/logout-all.usecase';
 import { GetMeUseCase } from './sessions/usecases/get-me.usecase';
-import { CompleteInviteAcceptanceUseCase } from './authentication/usecases/complete-invite-acceptance.usecase';
 import { VerifyMfaUseCase } from './authentication/usecases/verify-mfa.usecase';
 import { AdminAuthController } from './http/admin-auth.controller';
 import { RequireSuperAdminGuard } from './http/require-permission.guard';
@@ -60,6 +60,16 @@ export class AppModule {
       imports: [DbModule],
       controllers: [HealthController, JwksController, PublicAuthController, AuthenticatedAuthController, AdminAuthController],
       providers: [
+        { provide: OTP_DELIVERY_GATEWAY, inject: [RUNTIME_ENV], useFactory: (env: RuntimeEnv) => env.otpProvider === 'fake' ? new ConsoleOtpDeliveryGateway() : new SmtpOtpDeliveryGateway(env.smtp!) },
+        { provide: EmailOtpService, inject: [OTP_DELIVERY_GATEWAY,RUNTIME_ENV], useFactory: (delivery:OtpDeliveryGateway,env:RuntimeEnv) => new EmailOtpService(delivery,env.keyEncryptionKey) },
+        { provide: AcceptInviteUseCase, inject: [PostgresInviteRepository,PreparePassword,Clock], useFactory: (repo:PostgresInviteRepository,password:PreparePassword,clock:Clock) => new AcceptInviteUseCase(repo,password,clock) },
+        { provide: StartLoginUseCase, inject: [PostgresUserRepository,LoginCredentialChecker,PostgresRateLimiter,EmailOtpService,PostgresAuthenticationRepository,Clock,SecretGenerator,RUNTIME_ENV,SigningKeyService], useFactory: (users:PostgresUserRepository,credentials:LoginCredentialChecker,limiter:PostgresRateLimiter,otp:EmailOtpService,repo:PostgresAuthenticationRepository,clock:Clock,secrets:SecretGenerator,env:RuntimeEnv,keys:SigningKeyService) => new StartLoginUseCase(users,credentials,limiter,otp,repo,clock,secrets,env.limits,keys.signAccessToken,env.mfaSuspended) },
+        { provide: CompleteLoginUseCase, inject: [PostgresAuthenticationRepository,EmailOtpService,PostgresRateLimiter,SigningKeyService,Clock,SecretGenerator,RUNTIME_ENV], useFactory: (repo:PostgresAuthenticationRepository,otp:EmailOtpService,limiter:PostgresRateLimiter,keys:SigningKeyService,clock:Clock,secrets:SecretGenerator,env:RuntimeEnv) => new CompleteLoginUseCase(repo,otp,limiter,keys.signAccessToken,clock,secrets,env.limits.factorCheckAttempt) },
+        { provide: VerifyMfaUseCase, inject: [PostgresAuthenticationRepository,CompleteLoginUseCase,Clock], useFactory: (repo:PostgresAuthenticationRepository,login:CompleteLoginUseCase,clock:Clock) => new VerifyMfaUseCase(repo,login,clock) },
+        { provide: StartStepUpUseCase, inject: [PostgresUserRepository,PostgresAuthenticationRepository,EmailOtpService,PostgresRateLimiter,Clock,SecretGenerator,RUNTIME_ENV], useFactory: (users:PostgresUserRepository,repo:PostgresAuthenticationRepository,otp:EmailOtpService,limiter:PostgresRateLimiter,clock:Clock,secrets:SecretGenerator,env:RuntimeEnv) => new StartStepUpUseCase(users,repo,otp,limiter,clock,secrets,env.limits) },
+        { provide: CompleteStepUpUseCase, inject: [PostgresAuthenticationRepository,EmailOtpService,PostgresRateLimiter,Clock,RUNTIME_ENV], useFactory: (repo:PostgresAuthenticationRepository,otp:EmailOtpService,limiter:PostgresRateLimiter,clock:Clock,env:RuntimeEnv) => new CompleteStepUpUseCase(repo,otp,limiter,clock,env.limits) },
+        { provide: ResendMfaUseCase, inject: [PostgresAuthenticationRepository,PostgresRateLimiter,EmailOtpService,Clock,SecretGenerator,RUNTIME_ENV], useFactory: (repo:PostgresAuthenticationRepository,limiter:PostgresRateLimiter,otp:EmailOtpService,clock:Clock,secrets:SecretGenerator,env:RuntimeEnv) => new ResendMfaUseCase(repo,limiter,otp,clock,secrets,env.limits.mfaSendUser) },
+
         { provide: RUNTIME_ENV, useValue: env },
         ...DbModule.providers(RUNTIME_ENV),
         { provide: Clock, useClass: SystemClock },
@@ -67,17 +77,12 @@ export class AppModule {
         { provide: ScryptPasswordHasher, useClass: ScryptPasswordHasher },
         { provide: HttpPwnedPasswordsGateway, inject: [RUNTIME_ENV], useFactory: (env: RuntimeEnv) => new HttpPwnedPasswordsGateway(env.passwordBlocklistTimeoutMs) },
         { provide: PreparePassword, inject: [HttpPwnedPasswordsGateway, ScryptPasswordHasher], useFactory: (pwned: HttpPwnedPasswordsGateway, hasher: ScryptPasswordHasher) => new PreparePassword(pwned, hasher) },
-        { provide: OTP_VERIFICATION_GATEWAY, inject: [RUNTIME_ENV], useFactory: (env: RuntimeEnv) => env.otpProvider === 'fake' ? new FakeOtpVerificationGateway() : new TwilioVerifyGateway({ accountSid: env.twilioAccountSid!, authToken: env.twilioAuthToken!, verifyServiceSid: env.twilioVerifyServiceSid!, timeoutMs: env.twilioTimeoutMs, whatsappEnabled: env.twilioWhatsappEnabled }) },
         { provide: PostgresInviteRepository, inject: [AUTH_DATABASE], useFactory: (db: import('./db/client').AuthDatabase) => new PostgresInviteRepository(db) },
         { provide: PostgresAuthenticationRepository, inject: [AUTH_DATABASE, RUNTIME_ENV], useFactory: (db: import('./db/client').AuthDatabase, env: RuntimeEnv) => new PostgresAuthenticationRepository(db, env.issuer, env.audience) },
         { provide: PostgresUserRepository, inject: [AUTH_DATABASE], useFactory: (db: import('./db/client').AuthDatabase) => new PostgresUserRepository(db) },
         { provide: PostgresRateLimiter, inject: [AUTH_DATABASE, RUNTIME_ENV], useFactory: (db: import('./db/client').AuthDatabase, env:RuntimeEnv) => new PostgresRateLimiter(db, env.keyEncryptionKey) },
         { provide: LoginCredentialChecker, inject: [ScryptPasswordHasher], useFactory: async (hasher:ScryptPasswordHasher) => new LoginCredentialChecker(hasher,await hasher.hash('timeline-auth-login-dummy')) },
         { provide: InspectInviteUseCase, inject: [PostgresInviteRepository, Clock], useFactory: (invites: PostgresInviteRepository, clock: Clock) => new InspectInviteUseCase(invites, clock) },
-        { provide: StartInviteAcceptanceUseCase, inject: [PostgresInviteRepository, PreparePassword, OTP_VERIFICATION_GATEWAY, PostgresAuthenticationRepository, Clock, SecretGenerator], useFactory: (invites:PostgresInviteRepository,prepare:PreparePassword,otp:import('./mfa/otp-verification.gateway').OtpVerificationGateway,repo:PostgresAuthenticationRepository,clock:Clock,secrets:SecretGenerator) => new StartInviteAcceptanceUseCase(invites,prepare,otp,repo,clock,secrets) },
-        { provide: StartLoginUseCase, inject: [PostgresUserRepository, LoginCredentialChecker, PostgresRateLimiter, OTP_VERIFICATION_GATEWAY, PostgresAuthenticationRepository, Clock, SecretGenerator, RUNTIME_ENV, SigningKeyService], useFactory: (users:PostgresUserRepository,checker:LoginCredentialChecker,limiter:PostgresRateLimiter,otp:import('./mfa/otp-verification.gateway').OtpVerificationGateway,repo:PostgresAuthenticationRepository,clock:Clock,secrets:SecretGenerator,env:RuntimeEnv,signing:SigningKeyService) => new StartLoginUseCase(users,checker,limiter,otp,repo,clock,secrets,env.limits,signing.signAccessToken,env.mfaSuspended) },
-        { provide: CompleteLoginUseCase, inject: [PostgresAuthenticationRepository, OTP_VERIFICATION_GATEWAY, PostgresRateLimiter, SigningKeyService, Clock, SecretGenerator, RUNTIME_ENV], useFactory: (repo:PostgresAuthenticationRepository,otp:import('./mfa/otp-verification.gateway').OtpVerificationGateway,limiter:PostgresRateLimiter,signing:SigningKeyService,clock:Clock,secrets:SecretGenerator,env:RuntimeEnv) => new CompleteLoginUseCase(repo,otp,limiter,signing.signAccessToken,clock,secrets,env.limits.factorCheckAttempt) },
-        { provide: ResendMfaUseCase, inject: [PostgresAuthenticationRepository, PostgresRateLimiter, OTP_VERIFICATION_GATEWAY, Clock, SecretGenerator, RUNTIME_ENV], useFactory: (repo:PostgresAuthenticationRepository,limiter:PostgresRateLimiter,otp:import('./mfa/otp-verification.gateway').OtpVerificationGateway,clock:Clock,secrets:SecretGenerator,env:RuntimeEnv) => new ResendMfaUseCase(repo,limiter,otp,clock,secrets,env.limits.mfaSendUser) },
         {
           provide: PostgresSigningKeyRepository,
           inject: [AUTH_DATABASE],
@@ -128,10 +133,6 @@ export class AppModule {
           useFactory: (sessions: PostgresSessionRepository, users: PostgresUserRepository, rbac: PostgresRbacRepository) =>
             new GetMeUseCase(sessions, users, rbac),
         },
-        { provide: CompleteInviteAcceptanceUseCase, inject: [OTP_VERIFICATION_GATEWAY, PostgresAuthenticationRepository, Clock, SecretGenerator, SigningKeyService], useFactory: (otp: import('./mfa/otp-verification.gateway').OtpVerificationGateway, repo: PostgresAuthenticationRepository, clock: Clock, secrets: SecretGenerator, signingKeys: SigningKeyService) => new CompleteInviteAcceptanceUseCase(otp, repo, clock, secrets, signingKeys.signAccessToken) },
-        { provide: VerifyMfaUseCase, inject: [PostgresAuthenticationRepository, CompleteInviteAcceptanceUseCase, CompleteLoginUseCase, Clock], useFactory: (repo: PostgresAuthenticationRepository, invite: CompleteInviteAcceptanceUseCase, login: CompleteLoginUseCase, clock: Clock) => new VerifyMfaUseCase(repo, invite, login, clock) },
-        { provide: StartStepUpUseCase, inject: [PostgresUserRepository, PostgresAuthenticationRepository, OTP_VERIFICATION_GATEWAY, PostgresRateLimiter, Clock, SecretGenerator, RUNTIME_ENV], useFactory: (users: PostgresUserRepository, repo: PostgresAuthenticationRepository, otp: import('./mfa/otp-verification.gateway').OtpVerificationGateway, limiter: PostgresRateLimiter, clock: Clock, secrets: SecretGenerator, env: RuntimeEnv) => new StartStepUpUseCase(users, repo, otp, limiter, clock, secrets, { mfaSendUser: env.limits.mfaSendUser }) },
-        { provide: CompleteStepUpUseCase, inject: [PostgresAuthenticationRepository, OTP_VERIFICATION_GATEWAY, PostgresRateLimiter, Clock, RUNTIME_ENV], useFactory: (repo: PostgresAuthenticationRepository, otp: import('./mfa/otp-verification.gateway').OtpVerificationGateway, limiter: PostgresRateLimiter, clock: Clock, env: RuntimeEnv) => new CompleteStepUpUseCase(repo, otp, limiter, clock, { factorCheckAttempt: env.limits.factorCheckAttempt }) },
         { provide: ChangePasswordUseCase, inject: [PostgresUserRepository, PostgresAuthenticationRepository, PreparePassword, Clock, SecretGenerator, SigningKeyService], useFactory: (users: PostgresUserRepository, repo: PostgresAuthenticationRepository, prepare: PreparePassword, clock: Clock, secrets: SecretGenerator, signingKeys: SigningKeyService) => new ChangePasswordUseCase(users, repo, prepare, clock, secrets, signingKeys.signAccessToken) },
         { provide: RegenerateRecoveryCodesUseCase, inject: [PostgresAuthenticationRepository, Clock, SecretGenerator], useFactory: (repo: PostgresAuthenticationRepository, clock: Clock, secrets: SecretGenerator) => new RegenerateRecoveryCodesUseCase(repo, clock, secrets) },
         { provide: RequireSuperAdminGuard, useClass: RequireSuperAdminGuard },

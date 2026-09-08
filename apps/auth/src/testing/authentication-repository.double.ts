@@ -12,7 +12,6 @@ import type { AuthenticationRepository } from "../mfa/ports/authentication-repos
 export function fakeAuthenticationRepository(overrides: Partial<AuthenticationRepository> = {}): AuthenticationRepository {
   const unexpected = (name: string) => async (): Promise<never> => { throw new Error(`unexpected call to ${name}`); };
   return {
-    startInviteAttempt: unexpected("startInviteAttempt"),
     startLoginAttempt: unexpected("startLoginAttempt"),
     startStepUpAttempt: unexpected("startStepUpAttempt"),
     prepareOtpCheck: unexpected("prepareOtpCheck"),
@@ -23,7 +22,6 @@ export function fakeAuthenticationRepository(overrides: Partial<AuthenticationRe
     recordAuditEvent: unexpected("recordAuditEvent"),
     markStepUpVerified: unexpected("markStepUpVerified"),
     markStepUpVerifiedWithRecovery: unexpected("markStepUpVerifiedWithRecovery"),
-    completeInviteEnrollment: unexpected("completeInviteEnrollment"),
     completeLogin: unexpected("completeLogin"),
     completeLoginWithoutMfa: unexpected("completeLoginWithoutMfa"),
     changePasswordWithStepUp: unexpected("changePasswordWithStepUp"),

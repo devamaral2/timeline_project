@@ -14,7 +14,7 @@ const context = { correlationId: "test", ipAddress: "127.0.0.1", userAgent: "vit
 class FixedClock extends Clock { now(): Date { return now; } }
 class FixedSecrets extends SecretGenerator { private id = 0; randomId(): string { return `id-${++this.id}`; } randomBytes(length: number): Buffer { return Buffer.alloc(length, 7); } }
 
-const activeUser: User = { id: "user", email: "user@example.test", name: "User", passwordHash: "hash", phoneE164: "+5511987654321", phoneVerifiedAt: now, mfaChannel: "sms", status: "active", createdAt: now, updatedAt: now };
+const activeUser: User = { id: "user", email: "user@example.test", name: "User", passwordHash: "hash", status: "active", createdAt: now, updatedAt: now };
 function users(user: User | null = activeUser): UserReader { return { findById: vi.fn(), findByEmail: vi.fn().mockResolvedValue(user) }; }
 const allowingLimiter = { hit: vi.fn().mockResolvedValue({ allowed: true, retryAfterSeconds: 0 }) };
 const acceptingCredentials = { check: vi.fn().mockResolvedValue(true) } as unknown as LoginCredentialChecker;

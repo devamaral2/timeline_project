@@ -5,6 +5,7 @@ import { SecretGenerator } from "../common/secret-generator";
 import { ANONYMOUS_CONTEXT } from "../common/request-context";
 import { HttpPwnedPasswordsGateway } from "../credentials/http-pwned-passwords.gateway";
 import { SigningKeyService } from "../crypto/signing-key.service";
+import { hashSecretToken } from "../crypto/secret-token";
 import { verifyJwt } from "../crypto/jwt";
 import type { PublicSigningJwk } from "../crypto/jwk";
 import { BootstrapAdminUseCase } from "../invites/usecases/bootstrap-admin.usecase";
@@ -28,7 +29,6 @@ afterEach(async () => {
 
 const json = { "content-type": "application/json" };
 const PASSWORD = "uma frase de acesso comprida";
-const PHONE = "+5511987654321";
 
 function authed(accessToken: string) { return { ...json, authorization: `Bearer ${accessToken}` }; }
 async function post(url: string, body: unknown, headers: Record<string, string> = json) {
@@ -45,10 +45,14 @@ function tokenFromLink(link: string): string {
 async function acceptInvite(target: TestApp, inviteToken: string): Promise<{ accessToken: string; refreshToken: string; recoveryCodes: string[] }> {
   const inspected = await post(`${target.url}/auth/invites/inspect`, { token: inviteToken });
   expect(inspected.status).toBe(201);
-  const started = await post(`${target.url}/auth/invites/accept`, { token: inviteToken, password: PASSWORD, phone: PHONE, channel: "sms" });
+  const started = await post(`${target.url}/auth/invites/accept`, { token: inviteToken, password: PASSWORD });
   expect(started.status).toBe(201);
-  const { mfaToken } = (await started.json()) as { mfaToken: string };
-  const verified = await post(`${target.url}/auth/mfa/verify`, { mfaToken, code: "000000" });
+  expect(await started.json()).toEqual({accepted:true});
+  const lookup = await target.app.get<AuthDatabase>(AUTH_DATABASE).query<{email:string}>("SELECT u.email FROM users u JOIN invites i ON i.user_id=u.id WHERE i.token_hash=$1",[hashSecretToken(inviteToken)]);
+  const login=await post(`${target.url}/auth/login`,{email:lookup.rows[0]!.email,password:PASSWORD,secondFactor:"otp"});
+  expect(login.status).toBe(202);
+  const { mfaToken } = (await login.json()) as { mfaToken: string };
+  const verified = await post(`${target.url}/auth/mfa/verify`, { mfaToken, code: target.otpMessages.at(-1)!.code });
   expect(verified.status).toBe(200);
   return (await verified.json()) as { accessToken: string; refreshToken: string; recoveryCodes: string[] };
 }
@@ -85,7 +89,7 @@ describeWithPostgres("Stage 1 journey", () => {
     // 3. Login com senha e OTP, refresh e logout.
     const login = await post(`${app.url}/auth/login`, { email: "admin@example.test", password: PASSWORD, secondFactor: "otp" });
     expect(login.status).toBe(202);
-    const loginVerified = await post(`${app.url}/auth/mfa/verify`, { mfaToken: ((await login.json()) as { mfaToken: string }).mfaToken, code: "000000" });
+    const loginVerified = await post(`${app.url}/auth/mfa/verify`, { mfaToken: ((await login.json()) as { mfaToken: string }).mfaToken, code: app.otpMessages.at(-1)!.code });
     expect(loginVerified.status).toBe(200);
     const loggedIn = (await loginVerified.json()) as { accessToken: string; refreshToken: string };
     const refreshed = await post(`${app.url}/auth/token/refresh`, { refreshToken: loggedIn.refreshToken });
@@ -107,7 +111,7 @@ describeWithPostgres("Stage 1 journey", () => {
     const stepUp = await post(`${app.url}/auth/step-up/start`, { purpose: "recovery_regeneration", secondFactor: "otp" }, authed(recoveredTokens.accessToken));
     expect(stepUp.status).toBe(202);
     const { stepUpToken } = (await stepUp.json()) as { stepUpToken: string };
-    expect((await post(`${app.url}/auth/step-up/verify`, { stepUpToken, code: "000000" }, authed(recoveredTokens.accessToken))).status).toBe(200);
+    expect((await post(`${app.url}/auth/step-up/verify`, { stepUpToken, code: app.otpMessages.at(-1)!.code }, authed(recoveredTokens.accessToken))).status).toBe(200);
     const regenerated = await post(`${app.url}/auth/recovery-codes/regenerate`, { stepUpToken }, authed(recoveredTokens.accessToken));
     expect(regenerated.status).toBe(200);
     const fresh = (await regenerated.json()) as { recoveryCodes: string[] };

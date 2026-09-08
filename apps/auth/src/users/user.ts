@@ -1,8 +1,7 @@
-import type { MfaChannel } from "../mfa/mfa-challenge";
 import type { Permission } from "../rbac/permissions";
 import type { RequestContext } from "../common/request-context";
 export type UserStatus = "pending_invite" | "active" | "suspended" | "disabled";
-export interface User { id: string; email: string; name: string; passwordHash: string | null; phoneE164: string | null; phoneVerifiedAt: Date | null; mfaChannel: MfaChannel | null; status: UserStatus; createdAt: Date; updatedAt: Date; }
+export interface User { id: string; email: string; name: string; passwordHash: string | null; status: UserStatus; createdAt: Date; updatedAt: Date; }
 export type AuthenticationMethod = "pwd" | "otp" | "recovery";
 export interface SigningKeyForSigning { kid: string; encryptedPrivateKey: string; }
 export interface ResolvedAccess { roleKeys: string[]; permissions: Permission[]; denies: Permission[]; }

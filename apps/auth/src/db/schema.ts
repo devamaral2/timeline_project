@@ -20,7 +20,6 @@ export const rateLimitBuckets = pgTable("rate_limit_buckets", {
 }, (table) => [primaryKey({ columns: [table.scope, table.subjectHash] })]);
 export const users = pgTable("users", {
   id: text("id").primaryKey(), email: text("email").notNull(), name: text("name").notNull(), passwordHash: text("password_hash"),
-  phoneE164: text("phone_e164"), phoneVerifiedAt: timestamp("phone_verified_at", { withTimezone: true }), mfaChannel: text("mfa_channel"),
   status: text("status").notNull(), createdAt: timestamp("created_at", { withTimezone: true }).notNull(), updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
 }, (t) => [uniqueIndex("users_email_unique").on(t.email)]);
 export const roles = pgTable("roles", { key: text("key").primaryKey(), name: text("name").notNull(), description: text("description").notNull(), isSystem: boolean("is_system").notNull(), createdAt: timestamp("created_at", { withTimezone: true }).notNull() });

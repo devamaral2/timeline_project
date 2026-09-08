@@ -6,15 +6,15 @@ import { SECURITY_POLICY } from "../../config/security-policy";
 import { hashSecretToken } from "../../crypto/secret-token";
 import type { AuditEventInput } from "../../audit/audit-event";
 import type { SecondFactor, StepUpPurpose } from "../../mfa/authentication-attempt";
-import { maskPhone, type MfaChannel } from "../../mfa/mfa-challenge";
-import type { OtpVerificationGateway } from "../../mfa/otp-verification.gateway";
+import { maskEmail } from "../../mfa/mfa-challenge";
+import type { EmailOtpService } from "../../mfa/email-otp.service";
 import type { AuthenticationRepository } from "../../mfa/ports/authentication-repository";
 import type { RateLimiter } from "../../rate-limit/rate-limiter";
 import type { UserReader } from "../../users/ports/user-repository";
 import type { AuthenticatedActor } from "../../users/user";
 
 export interface StartStepUpInput { actor: AuthenticatedActor; purpose: StepUpPurpose; secondFactor: SecondFactor; context: RequestContext }
-export interface StartStepUpOutput { stepUpToken: string; purpose: StepUpPurpose; secondFactor: SecondFactor; channel?: MfaChannel; maskedDestination?: string; expiresAt: Date }
+export interface StartStepUpOutput { stepUpToken: string; purpose: StepUpPurpose; secondFactor: SecondFactor; channel?: "email"; maskedDestination?: string; expiresAt: Date }
 
 function audit(actor: AuthenticatedActor, context: RequestContext, occurredAt: Date, purpose: StepUpPurpose): AuditEventInput {
   return { correlationId: context.correlationId, actorUserId: actor.userId, action: "step_up.started", targetType: "user", targetId: actor.userId, result: "succeeded", reason: null, metadata: { purpose }, context, occurredAt };
@@ -30,7 +30,7 @@ export class StartStepUpUseCase {
   constructor(
     private readonly users: UserReader,
     private readonly repo: AuthenticationRepository,
-    private readonly otp: OtpVerificationGateway,
+    private readonly otp: Pick<EmailOtpService, "start">,
     private readonly limiter: RateLimiter,
     private readonly clock: Clock,
     private readonly secrets: SecretGenerator,
@@ -51,33 +51,26 @@ export class StartStepUpUseCase {
     };
 
     // Recovery nao fala com provider nenhum -- e o caminho que continua de pe
-    // com o Twilio fora do ar.
+    // com o SMTP fora do ar.
     if (input.secondFactor === "recovery") {
       const created = await this.repo.startStepUpAttempt({ ...base, challenge: null, invalidatedAt: null });
       if (created !== "created") throw new AuthenticationFailedError("step up attempt invalid");
       return { stepUpToken, purpose: input.purpose, secondFactor: input.secondFactor, expiresAt };
     }
 
-    if (!user.phoneE164 || !user.mfaChannel) throw new AuthenticationFailedError("missing mfa enrollment");
     const limited = await this.limiter.hit({ scope: "mfa_send_user", subject: user.id, limit: this.limits.mfaSendUser.attempts, windowSeconds: this.limits.mfaSendUser.windowSeconds, now });
     if (!limited.allowed) throw new RateLimitedError(limited.retryAfterSeconds, "step up otp send");
 
-    let started: Awaited<ReturnType<OtpVerificationGateway["start"]>>;
-    try {
-      started = await this.otp.start({ phoneE164: user.phoneE164, channel: user.mfaChannel });
-    } catch (error) {
-      throw new RequiredDependencyUnavailableError("otp start", { cause: error });
-    }
-
-    // Canal divergente grava o desafio ja invalidado: o attempt fica registrado
-    // para a auditoria e ninguem consegue reaproveita-lo.
-    const mismatch = started.reportedChannel !== user.mfaChannel;
+    const challengeId = this.secrets.randomId();
+    let started;
+    try { started = await this.otp.start({ email: user.email, challengeId }); }
+    catch (error) { throw new RequiredDependencyUnavailableError("otp start", { cause: error }); }
+    const challengeExpiresAt = new Date(now.getTime() + SECURITY_POLICY.mfaChallengeTtlSeconds * 1000);
     const created = await this.repo.startStepUpAttempt({
-      ...base, invalidatedAt: mismatch ? now : null,
-      challenge: { id: this.secrets.randomId(), providerChallengeId: started.providerChallengeId, requestedChannel: user.mfaChannel, reportedChannel: started.reportedChannel, expiresAt: new Date(now.getTime() + SECURITY_POLICY.mfaChallengeTtlSeconds * 1000), invalidatedAt: mismatch ? now : null },
+      ...base, invalidatedAt: null,
+      challenge: { id: challengeId, codeHash: started.codeHash, expiresAt: challengeExpiresAt, invalidatedAt: null },
     });
     if (created !== "created") throw new AuthenticationFailedError("step up attempt invalid");
-    if (mismatch) throw new RequiredDependencyUnavailableError("otp channel mismatch");
-    return { stepUpToken, purpose: input.purpose, secondFactor: input.secondFactor, channel: user.mfaChannel, maskedDestination: maskPhone(user.phoneE164), expiresAt };
+    return { stepUpToken, purpose: input.purpose, secondFactor: input.secondFactor, channel: "email", maskedDestination: maskEmail(user.email), expiresAt: challengeExpiresAt };
   }
 }

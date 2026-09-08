@@ -30,8 +30,8 @@ async function ensureSigningKey(target: TestApp, now: Date): Promise<void> {
 async function seedUserWithRole(db: AuthDatabase, roleKey: string, now: Date): Promise<{ userId: string; refreshToken: string }> {
   const userId = ulid();
   await db.query(
-    `INSERT INTO users (id, email, name, password_hash, phone_e164, phone_verified_at, mfa_channel, status, created_at, updated_at)
-     VALUES ($1, $2, 'Seeded', 'hash', '+5511999999999', $3, 'sms', 'active', $3, $3)`,
+    `INSERT INTO users (id, email, name, password_hash, status, created_at, updated_at)
+     VALUES ($1, $2, 'Seeded', 'hash', 'active', $3, $3)`,
     [userId, `${userId}@example.test`, now],
   );
   await db.query("INSERT INTO user_roles (user_id, role_key) VALUES ($1, $2)", [userId, roleKey]);

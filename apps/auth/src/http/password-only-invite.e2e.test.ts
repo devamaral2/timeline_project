@@ -30,7 +30,7 @@ describeWithPostgres("password-only invite HTTP journey", () => {
     const response = await fetch(`${app.url}/auth/invites/accept`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ token, password: "Senha123!" }),
+      body: JSON.stringify({ token, password: "uma senha longa o suficiente aqui" }),
     });
 
     expect(response.status).toBe(201);

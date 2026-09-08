@@ -18,7 +18,6 @@ afterEach(async () => {
 
 const json = { "content-type": "application/json" };
 const PASSWORD = "uma frase de acesso comprida";
-const PHONE = "+5511987654321";
 
 async function post(url: string, body: unknown) {
   return fetch(url, { method: "POST", headers: json, body: JSON.stringify(body) });
@@ -28,9 +27,7 @@ async function post(url: string, body: unknown) {
 async function boot(): Promise<{ app: TestApp; email: string }> {
   fixture = await createPostgresTestDatabase();
   const AUTH_KEY_ENCRYPTION_KEY = randomBytes(32).toString("base64url");
-  // Sobe primeiro com MFA normal para aceitar o convite do admin -- o aceite de
-  // convite continua exigindo o segundo fator mesmo com o login suspenso, por
-  // isso o bootstrap roda antes da suspensao entrar em vigor.
+  // Ativa o convite com senha; suspensao de MFA so altera o login.
   const setup = await createTestApp({ AUTH_DATABASE_URL: fixture.runtimeUrl, AUTH_KEY_ENCRYPTION_KEY });
   const now = new Date();
   await setup.app.get(SigningKeyService).ensureActive(now, {
@@ -40,9 +37,9 @@ async function boot(): Promise<{ app: TestApp; email: string }> {
   const bootstrap = new BootstrapAdminUseCase(setup.app.get(PostgresInviteRepository), setup.app.get(Clock), setup.app.get(SecretGenerator));
   const bootstrapped = await bootstrap.execute({ email: "admin@example.test", name: "Admin", context: ANONYMOUS_CONTEXT });
   const inviteToken = (bootstrapped as { inviteToken: string }).inviteToken;
-  const started = await post(`${setup.url}/auth/invites/accept`, { token: inviteToken, password: PASSWORD, phone: PHONE, channel: "sms" });
-  const { mfaToken } = (await started.json()) as { mfaToken: string };
-  expect((await post(`${setup.url}/auth/mfa/verify`, { mfaToken, code: "000000" })).status).toBe(200);
+  const started = await post(`${setup.url}/auth/invites/accept`, { token: inviteToken, password: PASSWORD });
+  expect(started.status).toBe(201);
+  expect(await started.json()).toEqual({accepted:true});
   await setup.close();
 
   app = await createTestApp({ AUTH_DATABASE_URL: fixture.runtimeUrl, AUTH_KEY_ENCRYPTION_KEY, AUTH_MFA_SUSPENDED: "true" });

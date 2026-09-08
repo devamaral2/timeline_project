@@ -24,15 +24,15 @@ describe("AcceptInviteUseCase", () => {
   it("hashes a valid password before atomically accepting the invite", async () => {
     const { usecase, invites, hasher } = fixture();
 
-    await expect(usecase.execute({ inviteToken: "opaque", password: "Senha123!", context })).resolves.toEqual({ accepted: true });
-    expect(hasher.hash).toHaveBeenCalledWith("Senha123!");
+    await expect(usecase.execute({ inviteToken: "opaque", password: "SenhaSegura123!", context })).resolves.toEqual({ accepted: true });
+    expect(hasher.hash).toHaveBeenCalledWith("SenhaSegura123!");
     expect(invites.acceptInvite).toHaveBeenCalledWith(expect.objectContaining({
       inviteId: "invite",
       userId: "user",
       passwordHash: "scrypt$hash",
       auditEvents: [expect.objectContaining({ action: "invite.accepted" })],
     }));
-    expect(JSON.stringify(vi.mocked(invites.acceptInvite).mock.calls[0]![0])).not.toContain("Senha123!");
+    expect(JSON.stringify(vi.mocked(invites.acceptInvite).mock.calls[0]![0])).not.toContain("SenhaSegura123!");
   });
 
   it("rejects weak passwords before writing", async () => {
@@ -43,6 +43,6 @@ describe("AcceptInviteUseCase", () => {
 
   it("fails opaquely when the invite is consumed during password preparation", async () => {
     const { usecase } = fixture({ acceptInvite: vi.fn().mockResolvedValue("invalid") });
-    await expect(usecase.execute({ inviteToken: "opaque", password: "Senha123!", context })).rejects.toBeInstanceOf(AuthenticationFailedError);
+    await expect(usecase.execute({ inviteToken: "opaque", password: "SenhaSegura123!", context })).rejects.toBeInstanceOf(AuthenticationFailedError);
   });
 });

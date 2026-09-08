@@ -1,11 +1,11 @@
-import { AuthenticationFailedError, RateLimitedError, RequiredDependencyUnavailableError } from "../../common/errors";
+import { AuthenticationFailedError, RateLimitedError } from "../../common/errors";
 import type { AuditAction, AuditEventInput, AuditResult } from "../../audit/audit-event";
 import type { Clock } from "../../common/clock";
 import type { RequestContext } from "../../common/request-context";
 import { hashSecretToken } from "../../crypto/secret-token";
 import { isStepUpPurpose, type StepUpPurpose } from "../../mfa/authentication-attempt";
 import { hashRecoveryCode, normalizeRecoveryCode } from "../../mfa/recovery-code";
-import type { OtpVerificationGateway } from "../../mfa/otp-verification.gateway";
+import type { EmailOtpService } from "../../mfa/email-otp.service";
 import type { AuthenticationRepository } from "../../mfa/ports/authentication-repository";
 import type { RateLimiter } from "../../rate-limit/rate-limiter";
 import type { AuthenticatedActor } from "../../users/user";
@@ -26,7 +26,7 @@ function audit(actor: AuthenticatedActor, context: RequestContext, occurredAt: D
 export class CompleteStepUpUseCase {
   constructor(
     private readonly repo: AuthenticationRepository,
-    private readonly otp: OtpVerificationGateway,
+    private readonly otp: Pick<EmailOtpService,"verify">,
     private readonly limiter: RateLimiter,
     private readonly clock: Clock,
     private readonly limits: { factorCheckAttempt: { attempts: number; windowSeconds: number } },
@@ -40,17 +40,7 @@ export class CompleteStepUpUseCase {
       throw new AuthenticationFailedError("invalid step up challenge");
     }
 
-    let checked: Awaited<ReturnType<OtpVerificationGateway["check"]>>;
-    try {
-      checked = await this.otp.check({ providerChallengeId: prepared.providerChallengeId, code: input.code });
-    } catch (error) {
-      throw new RequiredDependencyUnavailableError("otp check", { cause: error });
-    }
-    if (checked.reportedChannel !== prepared.reportedChannel) {
-      await this.repo.invalidateOtpChallenge({ attemptId: prepared.attemptId, challengeId: prepared.challengeId, now, auditEvent: audit(input.actor, input.context, now, "step_up.failed", "failed", "otp_channel_mismatch") });
-      throw new RequiredDependencyUnavailableError("otp channel mismatch");
-    }
-    if (!checked.approved) {
+    if (!this.otp.verify({ challengeId: prepared.challengeId, codeHash: prepared.codeHash, code: input.code })) {
       await this.repo.recordAuditEvent(audit(input.actor, input.context, now, "step_up.failed", "failed", "otp_rejected"));
       throw new AuthenticationFailedError("otp rejected");
     }

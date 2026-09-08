@@ -33,8 +33,8 @@ async function ensureSigningKey(target: TestApp, now: Date): Promise<void> {
 async function seedEnrolledUser(db: AuthDatabase, now: Date): Promise<string> {
   const userId = ulid();
   await db.query(
-    `INSERT INTO users (id, email, name, password_hash, phone_e164, phone_verified_at, mfa_channel, status, created_at, updated_at)
-     VALUES ($1, $2, 'Step Up User', 'scrypt$32768$8$1$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', '+5511987654321', $3, 'sms', 'active', $3, $3)`,
+    `INSERT INTO users (id, email, name, password_hash, status, created_at, updated_at)
+     VALUES ($1, $2, 'Step Up User', 'scrypt$32768$8$1$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', 'active', $3, $3)`,
     [userId, `${userId}@example.test`, now],
   );
   return userId;
@@ -73,9 +73,9 @@ describeWithPostgres("Step-up HTTP endpoints", () => {
     const started = await startStepUp(app, tokens.accessToken, { purpose: "password_change", secondFactor: "otp" });
     expect(started.status).toBe(202);
     const startBody = (await started.json()) as { stepUpToken: string; channel: string; maskedDestination: string };
-    expect(startBody).toMatchObject({ channel: "sms", maskedDestination: "+***********21" });
+    expect(startBody).toMatchObject({ channel: "email", maskedDestination: expect.stringMatching(/\*\*\*@example\.test$/) });
 
-    const verified = await fetch(`${app.url}/auth/step-up/verify`, { method: "POST", headers: { ...json, authorization: `Bearer ${tokens.accessToken}` }, body: JSON.stringify({ stepUpToken: startBody.stepUpToken, code: "000000" }) });
+    const verified = await fetch(`${app.url}/auth/step-up/verify`, { method: "POST", headers: { ...json, authorization: `Bearer ${tokens.accessToken}` }, body: JSON.stringify({ stepUpToken: startBody.stepUpToken, code: app.otpMessages.at(-1)!.code }) });
     expect(verified.status).toBe(200);
     expect(await verified.json()).toEqual({ stepUpToken: startBody.stepUpToken, purpose: "password_change" });
 
@@ -109,7 +109,7 @@ describeWithPostgres("Step-up HTTP endpoints", () => {
     const tokens = await bearerFor(app, await seedSession(db, userId, now));
 
     const startBody = (await (await startStepUp(app, tokens.accessToken, { purpose: "password_change", secondFactor: "otp" })).json()) as { stepUpToken: string };
-    await fetch(`${app.url}/auth/step-up/verify`, { method: "POST", headers: { ...json, authorization: `Bearer ${tokens.accessToken}` }, body: JSON.stringify({ stepUpToken: startBody.stepUpToken, code: "000000" }) });
+    await fetch(`${app.url}/auth/step-up/verify`, { method: "POST", headers: { ...json, authorization: `Bearer ${tokens.accessToken}` }, body: JSON.stringify({ stepUpToken: startBody.stepUpToken, code: app.otpMessages.at(-1)!.code }) });
 
     const failed = await fetch(`${app.url}/auth/password/change`, { method: "POST", headers: { ...json, authorization: `Bearer ${tokens.accessToken}` }, body: JSON.stringify({ stepUpToken: startBody.stepUpToken, newPassword: "uma senha longa o suficiente aqui" }) });
     expect(failed.status).toBe(503);

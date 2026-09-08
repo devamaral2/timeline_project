@@ -14,7 +14,7 @@ const now = new Date("2026-09-04T12:00:00.000Z");
 const context = { correlationId: "admin-test", ipAddress: null, userAgent: null };
 
 async function seedAdmin(database: AuthDatabase, id: string): Promise<void> {
-  await database.query("INSERT INTO users(id,email,name,password_hash,phone_e164,phone_verified_at,mfa_channel,status,created_at,updated_at) VALUES($1,$2,'Admin','hash','+5511999999999',$3,'sms','active',$3,$3)", [id, `${id}@example.test`, now]);
+  await database.query("INSERT INTO users(id,email,name,password_hash,status,created_at,updated_at) VALUES($1,$2,'Admin','hash','active',$3,$3)", [id, `${id}@example.test`, now]);
   await database.query("INSERT INTO user_roles(user_id,role_key) VALUES($1,'admin')", [id]);
 }
 

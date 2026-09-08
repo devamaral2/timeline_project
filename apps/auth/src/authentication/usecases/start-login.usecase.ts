@@ -5,8 +5,8 @@ import type { RequestContext } from "../../common/request-context";
 import { SECURITY_POLICY } from "../../config/security-policy";
 import { hashSecretToken } from "../../crypto/secret-token";
 import type { SignAccessToken } from "../../crypto/jwt";
-import { maskPhone, type MfaChannel } from "../../mfa/mfa-challenge";
-import type { OtpVerificationGateway } from "../../mfa/otp-verification.gateway";
+import { maskEmail } from "../../mfa/mfa-challenge";
+import type { EmailOtpService } from "../../mfa/email-otp.service";
 import type { AuthenticationRepository } from "../../mfa/ports/authentication-repository";
 import { generateRecoveryCodes } from "../../mfa/recovery-code";
 import type { RateLimiter } from "../../rate-limit/rate-limiter";
@@ -15,12 +15,12 @@ import type { UserReader } from "../../users/ports/user-repository";
 import { LoginCredentialChecker } from "../login-credential-checker";
 import type { SecondFactor } from "../../mfa/authentication-attempt";
 
-export interface MfaChallengeOutput { mfaToken:string; secondFactor:SecondFactor; channel?:MfaChannel; maskedDestination?:string; expiresAt:Date; }
+export interface MfaChallengeOutput { mfaToken:string; secondFactor:SecondFactor; channel?:"email"; maskedDestination?:string; expiresAt:Date; }
 export interface SessionTokensOutput { accessToken:string; refreshToken:string; accessTokenExpiresInSeconds:number; refreshTokenExpiresAt:string; recoveryCodes:string[]; }
 export interface StartLoginInput { email:string; password:string; secondFactor:SecondFactor; context:RequestContext; }
 export type StartLoginOutput = MfaChallengeOutput | SessionTokensOutput;
 export class StartLoginUseCase {
-  constructor(private readonly users:UserReader,private readonly credentials:LoginCredentialChecker,private readonly limiter:RateLimiter,private readonly otp:OtpVerificationGateway,private readonly repo:AuthenticationRepository,private readonly clock:Clock,private readonly secrets:SecretGenerator,private readonly limits:{passwordEmail:{attempts:number;windowSeconds:number};passwordIp:{attempts:number;windowSeconds:number};mfaSendUser:{attempts:number;windowSeconds:number}},private readonly sign:SignAccessToken,private readonly mfaSuspended:boolean){}
+  constructor(private readonly users:UserReader,private readonly credentials:LoginCredentialChecker,private readonly limiter:RateLimiter,private readonly otp:Pick<EmailOtpService,"start">,private readonly repo:AuthenticationRepository,private readonly clock:Clock,private readonly secrets:SecretGenerator,private readonly limits:{passwordEmail:{attempts:number;windowSeconds:number};passwordIp:{attempts:number;windowSeconds:number};mfaSendUser:{attempts:number;windowSeconds:number}},private readonly sign:SignAccessToken,private readonly mfaSuspended:boolean){}
   async execute(input:StartLoginInput):Promise<StartLoginOutput>{
     const now=this.clock.now(),email=normalizeEmail(input.email),password=input.password.normalize("NFC");
     const byEmail=await this.limiter.hit({scope:"password_email",subject:email,limit:this.limits.passwordEmail.attempts,windowSeconds:this.limits.passwordEmail.windowSeconds,now});
@@ -37,14 +37,14 @@ export class StartLoginUseCase {
       const result=await this.repo.startLoginAttempt({id:this.secrets.randomId(),tokenHash:hashSecretToken(token),userId:user.id,secondFactor,firstMethods:["pwd"],challenge:null,expiresAt,invalidatedAt:null,now,auditEvents:[]});
       if(result!=="created")throw new AuthenticationFailedError("login attempt invalid"); return {mfaToken:token,secondFactor,expiresAt};
     }
-    if(!user.phoneE164||!user.mfaChannel)throw new AuthenticationFailedError("missing mfa enrollment");
     const limited=await this.limiter.hit({scope:"mfa_send_user",subject:user.id,limit:this.limits.mfaSendUser.attempts,windowSeconds:this.limits.mfaSendUser.windowSeconds,now});
     if(!limited.allowed)throw new RateLimitedError(limited.retryAfterSeconds,"mfa send");
-    let started;try{started=await this.otp.start({phoneE164:user.phoneE164,channel:user.mfaChannel});}catch(error){throw new RequiredDependencyUnavailableError("otp start",{cause:error});}
-    const mismatch=started.reportedChannel!==user.mfaChannel,challengeExpiresAt=new Date(now.getTime()+SECURITY_POLICY.mfaChallengeTtlSeconds*1000);
-    const result=await this.repo.startLoginAttempt({id:this.secrets.randomId(),tokenHash:hashSecretToken(token),userId:user.id,secondFactor,firstMethods:["pwd"],challenge:{id:this.secrets.randomId(),providerChallengeId:started.providerChallengeId,requestedChannel:user.mfaChannel,reportedChannel:started.reportedChannel,expiresAt:challengeExpiresAt,invalidatedAt:mismatch?now:null},expiresAt,invalidatedAt:mismatch?now:null,now,auditEvents:[]});
-    if(result!=="created"||mismatch)throw new RequiredDependencyUnavailableError("otp channel mismatch");
-    return {mfaToken:token,secondFactor,channel:user.mfaChannel,maskedDestination:maskPhone(user.phoneE164),expiresAt};
+    const challengeId=this.secrets.randomId();
+    let started;try{started=await this.otp.start({email:user.email,challengeId});}catch(error){throw new RequiredDependencyUnavailableError("otp start",{cause:error});}
+    const challengeExpiresAt=new Date(now.getTime()+SECURITY_POLICY.mfaChallengeTtlSeconds*1000);
+    const result=await this.repo.startLoginAttempt({id:this.secrets.randomId(),tokenHash:hashSecretToken(token),userId:user.id,secondFactor,firstMethods:["pwd"],challenge:{id:challengeId,codeHash:started.codeHash,expiresAt:challengeExpiresAt,invalidatedAt:null},expiresAt,invalidatedAt:null,now,auditEvents:[]});
+    if(result!=="created")throw new AuthenticationFailedError("login attempt invalid");
+    return {mfaToken:token,secondFactor,channel:"email",maskedDestination:maskEmail(user.email),expiresAt:challengeExpiresAt};
   }
   private async completeWithoutMfa(user:User,context:RequestContext,now:Date):Promise<SessionTokensOutput>{
     const refreshToken=this.secrets.randomBytes(32).toString("base64url"),refreshTokenExpiresAt=new Date(now.getTime()+SECURITY_POLICY.refreshTokenTtlSeconds*1000);

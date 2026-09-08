@@ -15,7 +15,7 @@ const context = { correlationId: "test", ipAddress: "127.0.0.1", userAgent: "vit
 const actor: AuthenticatedActor = { userId: "user", sessionId: "session", roles: ["member"], permissions: [], denies: [], amr: ["pwd", "otp"], authTime: 0 };
 class FixedClock extends Clock { now(): Date { return now; } }
 class FixedSecrets extends SecretGenerator { private id = 0; randomId(): string { return `id-${++this.id}`; } randomBytes(length: number): Buffer { return Buffer.alloc(length, 3); } }
-const user: User = { id: "user", email: "user@example.test", name: "User", passwordHash: "old", phoneE164: "+5511987654321", phoneVerifiedAt: now, mfaChannel: "sms", status: "active", createdAt: now, updatedAt: now };
+const user: User = { id: "user", email: "user@example.test", name: "User", passwordHash: "old", status: "active", createdAt: now, updatedAt: now };
 function users(value: User | null = user): UserReader { return { findById: vi.fn().mockResolvedValue(value), findByEmail: vi.fn() }; }
 
 function preparePassword(overrides: { compromised?: boolean; unavailable?: boolean } = {}) {
