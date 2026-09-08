@@ -9,6 +9,7 @@ packages:
 allowBuilds:
   "@firebase/util": true
   "@openrouter/sdk": true
+  '@scarf/scarf': false
   cpu-features: false
   esbuild: true
   protobufjs: true
