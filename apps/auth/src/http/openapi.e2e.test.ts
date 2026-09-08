@@ -22,6 +22,6 @@ describe("API documentation", () => {
     const reference = await fetch(`${app.url}/docs`);
     expect(reference.status).toBe(200);
     expect(reference.headers.get("content-type")).toContain("text/html");
-    expect(await reference.text()).toContain("Timeline Auth API");
+    expect(await reference.text()).toContain("Braid Auth API");
   });
 });

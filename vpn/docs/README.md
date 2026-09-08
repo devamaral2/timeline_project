@@ -1,4 +1,4 @@
-# Spec: Time Composure em produção num VPS de 4 GiB
+# Spec: Braid em produção num VPS de 4 GiB
 
 > **Este é o plano v1, mantido como histórico.** Ele foi dimensionado para um VPS de
 > 4 GiB, e três das suas decisões — Compose em vez de Kubernetes, Grafana Cloud em vez de

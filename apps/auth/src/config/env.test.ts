@@ -98,7 +98,7 @@ describe("auth environment", () => {
     AUTH_OTP_PROVIDER: "smtp",
     AUTH_ALLOW_FAKE_OTP: "false",
     SMTP_HOST: "smtp.example.test",
-    SMTP_FROM: "Timeline <auth@example.test>",
+      SMTP_FROM: "Braid <auth@example.test>",
     ...overrides,
   });
 
@@ -109,7 +109,7 @@ describe("auth environment", () => {
       secure: false,
       user: undefined,
       pass: undefined,
-      from: "Timeline <auth@example.test>",
+      from: "Braid <auth@example.test>",
       timeoutMs: 5000,
     });
   });
@@ -131,7 +131,7 @@ describe("auth environment", () => {
       secure: true,
       user: "mailer",
       pass: " secret ",
-      from: "Timeline <auth@example.test>",
+      from: "Braid <auth@example.test>",
       timeoutMs: 8000,
     });
   });

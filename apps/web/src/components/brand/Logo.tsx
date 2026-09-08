@@ -7,7 +7,7 @@ import { useId } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * A marca do Time Composure: um anel com o gradiente roxo -> ciano, a forma de
+ * A marca do Braid: um anel com o gradiente roxo -> ciano, a forma de
  * onda do tempo registrado no meio e o brilho de IA no canto.
  *
  * O mesmo desenho existe em `apps/mobile/src/components/Logo.tsx`, la com
@@ -32,7 +32,7 @@ export function Logo({ size = 40, className }: LogoProps) {
       viewBox="0 0 32 32"
       fill="none"
       role="img"
-      aria-label="Time Composure"
+      aria-label="Braid"
       className={cn("shrink-0", className)}
     >
       <defs>
@@ -72,7 +72,7 @@ export function Logo({ size = 40, className }: LogoProps) {
 export function Wordmark({ className }: { className?: string }) {
   return (
     <span className={cn("truncate font-semibold tracking-tight text-foreground", className)}>
-      Time Composure
+      Braid
     </span>
   );
 }

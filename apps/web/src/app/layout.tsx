@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "../styles/globals.css";
 
 export const metadata: Metadata = {
-  title: "Time Composure",
+  title: "Braid",
   description: "Sua vida organizada. Sua mente em equilíbrio.",
 };
 

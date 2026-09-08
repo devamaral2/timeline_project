@@ -1,5 +1,5 @@
 {
-  "name": "timeline-monorepo",
+  "name": "braid-monorepo",
   "version": "0.1.0",
   "private": true,
   "packageManager": "pnpm@11.24.0",

@@ -1,4 +1,4 @@
-# Spec v2 — Time Composure sobre k3s num VPS de 16 GiB
+# Spec v2 — Braid sobre k3s num VPS de 16 GiB
 
 Guia de estudo e execução para migrar a aplicação de Docker Compose para **k3s**,
 colocar um **gateway de modelos** na frente das rotas de IA, trocar a observabilidade

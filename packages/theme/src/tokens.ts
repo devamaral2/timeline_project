@@ -8,7 +8,7 @@
  * `apps/web/src/styles/theme-tokens.test.ts` que le o globals.css e compara com
  * o que esta aqui.
  *
- * A paleta e a do design system "Time Composure": fundo quase preto
+ * A paleta e a do design system "Braid": fundo quase preto
  * azulado, roxo como cor primaria e ciano como acento. Os hexadecimais de
  * referencia estao ao lado de cada token — o oklch e a conversao exata deles,
  * conferida pelo `oklchToCss` daqui.

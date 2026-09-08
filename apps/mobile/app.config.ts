@@ -27,8 +27,8 @@ for (const fileName of [".env.local", ".env"]) {
  */
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: config.name ?? "Time Composure",
-  slug: config.slug ?? "time-lapse",
+  name: config.name ?? "Braid",
+  slug: config.slug ?? "braid",
   extra: {
     ...config.extra,
     apiBaseUrl: process.env.MOBILE_API_URL,

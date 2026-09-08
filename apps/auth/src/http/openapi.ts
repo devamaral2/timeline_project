@@ -129,9 +129,9 @@ function adminUserOperation(summary: string, description: string, requestSchema?
 export const authOpenApiDocument = {
   openapi: "3.1.1",
   info: {
-    title: "Timeline Auth API",
+    title: "Braid Auth API",
     version: "1.0.0",
-    description: "API de identidade do Timeline: convites, login com MFA, sessões, autenticação reforçada e administração de acessos.\n\nRotas protegidas usam `Authorization: Bearer <accessToken>`. Todas as respostas carregam `X-Correlation-Id`; use-o para rastrear falhas. Campos de segredo são apenas de escrita e nunca voltam nas respostas.",
+    description: "API de identidade do Braid: convites, login com MFA, sessões, autenticação reforçada e administração de acessos.\n\nRotas protegidas usam `Authorization: Bearer <accessToken>`. Todas as respostas carregam `X-Correlation-Id`; use-o para rastrear falhas. Campos de segredo são apenas de escrita e nunca voltam nas respostas.",
   },
   tags: [
     { name: "Infraestrutura", description: "Sondas de saúde e descoberta de chaves públicas." },
@@ -194,7 +194,7 @@ export function configureApiDocumentation(app: INestApplication): void {
   };
   express.get("/openapi.json", (_request, response) => response.json(authOpenApiDocument));
   express.use("/docs", apiReference({
-    pageTitle: "Timeline Auth API",
+    pageTitle: "Braid Auth API",
     theme: "purple",
     darkMode: false,
     spec: { content: authOpenApiDocument },

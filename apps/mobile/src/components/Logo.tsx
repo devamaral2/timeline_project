@@ -4,7 +4,7 @@ import Svg, { Circle, Defs, LinearGradient, Path, Rect, Stop } from "react-nativ
 import { useTheme } from "@/lib/theme/use-theme";
 
 /**
- * A marca do Time Composure: um anel com o gradiente roxo -> ciano, a forma de
+ * A marca do Braid: um anel com o gradiente roxo -> ciano, a forma de
  * onda do tempo registrado no meio e o brilho de IA no canto.
  *
  * E o mesmo desenho de `apps/web/src/components/brand/Logo.tsx`, aqui com
@@ -70,7 +70,7 @@ export function Wordmark({ fontSize = 18, style }: { fontSize?: number; style?: 
         style,
       ]}
     >
-      Time Composure
+      Braid
     </Text>
   );
 }
