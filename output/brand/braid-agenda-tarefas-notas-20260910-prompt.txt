@@ -1,0 +1,41 @@
+Tool: built-in image_gen.imagegen. One generation, three promotional banners in one concept sheet.
+Reference: original user-provided Braid logo.
+
+Use case: ads-marketing.
+Create ONE polished advertising concept sheet containing THREE distinct wide promotional banners stacked vertically, separated by narrow clean white gutters. High-resolution portrait composition. These are promotional visuals for the personal organization app Braid, whose CENTRAL IDEA is bringing AGENDA, TAREFAS and NOTAS together in ONE place. All three functions must be visually obvious and readable. The brand is about organizing one's own life, not teams, business or hustle.
+
+Reference image 1 is the user's approved ORIGINAL Braid logo. Preserve its distinctive tall vertical 3D helix of broad white, cyan and charcoal ribbons, original silhouette, crossing pattern and rounded tips. Preserve the original elegant geometric Braid wordmark, changing the white letters to graphite for visibility on white. Do not redesign the logo. No B monogram, no flat knot, no infinity substitute.
+
+Art direction: predominantly warm WHITE background, graphite typography, original cyan accents, tactile sunlight, soft shadows, refined consumer editorial advertising. Light, clear, friendly and composed. Original logo in each banner, consistent sizes, restrained typography, generous whitespace. The content shown is an illustrative visual metaphor for organization, not an actual screenshot of the app: graphic paper-like planning cards on ONE coherent surface, no fabricated navigation, integrations, metrics or automation. Avoid floating disconnected product windows and the appearance of three different apps.
+
+TOP BANNER — THE CORE PROMISE.
+Left 45%: original Braid logo at top. Large graphite headline verbatim, with elegant line breaks:
+"Agenda, tarefas e notas.
+Sua rotina em um só lugar."
+Right 55%: a single elegant rounded ivory planning surface, slight perspective, under ONE small header "Meu dia". Inside it, three aligned adjacent sections on the SAME board, with generous spacing and clear typography:
+"Agenda" with "09:00 · Caminhada" and "18:00 · Mercado"
+"Tarefas" with empty square checkbox beside "Comprar frutas" and another beside "Separar tênis"
+"Notas" with "Ideias para o jantar"
+Use small understated calendar, checkbox and note symbols, all same graphic family and cyan accent, not three app logos. A very delicate cyan curve subtly relates the areas within the shared board. Small original helix as a brand accent beside the board, not duplicated excessively. Make the three category labels large and perfectly legible. Clean visual hierarchy; this is the primary site hero.
+
+MIDDLE BANNER — ONE PERSONAL PLAN, THREE USEFUL FACETS.
+Left area on warm white: small original Braid logo, headline verbatim:
+"Um plano.
+Tudo organizado."
+Small supporting line verbatim: "Agenda + tarefas + notas"
+Right area: warm editorial overhead lifestyle photograph of a light wood table near a sunlit window, a folded natural-fabric weekender bag at the far edge and keys; minimal objects. Superimposed over the table is ONE unified ivory planning board headed "Fim de semana". Within this single board three spacious sections, each with a clear category label and ONE short line:
+"Agenda" / "Sábado · Viagem"
+"Tarefas" / "Preparar a mala"
+"Notas" / "Lugares para conhecer"
+Keep the content related to the same personal plan; soft paper material and shadows. Photography supports the planning board instead of dominating it. No phone showing a fake app, no laptop, no corporate desk, no excessive decorative widgets.
+
+BOTTOM BANNER — MAKE THE CONNECTION MEMORABLE.
+Mostly white, bold simple graphic composition. Original Braid logo top left and a large headline at left verbatim:
+"Seu tempo.
+Seus planos.
+Suas ideias."
+Small supporting line verbatim: "Juntos no Braid."
+At right, a beautiful sculptural rendering of the EXACT original ribbon helix, preserving white/cyan/charcoal structure and shape, softly lit on a white ground. Around this original symbol, three calm editorial annotations with thin subtle cyan connector lines point toward the whole symbol (not anatomically redesigning it): "Agenda" beside a minimal calendar outline, "Tarefas" beside a minimal checkbox outline, "Notas" beside a minimal note outline. Each label appears exactly once and is clearly legible. The concept is three aspects of a personal life converging in one brand. Elegant simplicity, no tangled wires or technological diagram.
+
+Text must be accurate Brazilian Portuguese with all accents. Keep headlines clean and readable. Spell brand B-r-a-i-d. Do not add any text not specified. Exact reference identity is important. No stock wellness-only imagery, no coffee-only narrative, no dark background, no team/project dashboards, no business charts, no promises of automatic synchronization or AI, no calls to action or web navigation. Do not invent actual product screenshots. No panel numbering or presentation headings. Deliver the three finished-looking advertising banner concepts together in ONE image.
+

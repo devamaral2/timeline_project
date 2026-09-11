@@ -47,24 +47,24 @@ servidor a subir no k3s; este roteiro publica a API que ele poderá consumir.
 ## Como executar este documento
 
 - **Servidor / Bash:** terminal aberto por SSH na VPS, com o usuário autorizado.
-  Os comandos abaixo são Bash, não PowerShell.
+Os comandos abaixo são Bash, não PowerShell.
 - **Computador / PowerShell:** somente os blocos explicitamente marcados assim.
 - **Navegador:** ações nos painéis indicados, no seu computador.
 - Copie cada bloco completo, inclusive `EOF` quando existir. `EOF` encerra a
-  escrita de um arquivo; não é um comando para adaptar.
+escrita de um arquivo; não é um comando para adaptar.
 - Ao retomar a sessão, `set -eo pipefail` faz Bash parar quando um comando
-  falha, inclusive em pipelines. A sessão pode encerrar: reconecte e retome
-  a etapa que falhou depois de entender o erro.
+falha, inclusive em pipelines. A sessão pode encerrar: reconecte e retome
+a etapa que falhou depois de entender o erro.
 - Execute em ordem. Confira o resultado esperado antes de avançar. Se um comando
-  falhar, pare nesse passo e use o diagnóstico do final.
+falhar, pare nesse passo e use o diagnóstico do final.
 - Valores pedidos por `read` são digitados quando o terminal perguntar. Não cole
-  exemplos de domínio ou credenciais como se fossem valores reais.
+exemplos de domínio ou credenciais como se fossem valores reais.
 - `sudo` executa uma operação administrativa. `export` disponibiliza uma variável
-  aos comandos seguintes. Ela some ao encerrar o terminal; vamos salvar as que
-  precisam ser recuperadas.
+aos comandos seguintes. Ela some ao encerrar o terminal; vamos salvar as que
+precisam ser recuperadas.
 - `kubectl apply` entrega ao Kubernetes a configuração desejada. O retorno
-  `created/configured` não significa que o app já iniciou; os comandos de
-  `rollout status` e `wait` verificam isso depois.
+`created/configured` não significa que o app já iniciou; os comandos de
+`rollout status` e `wait` verificam isso depois.
 
 ## 1. Confirmar o ponto de partida
 
@@ -123,16 +123,16 @@ Criar um registro DNS não compra esse nome. Você pagará o registro/renovaçã
 veja os valores apresentados antes de confirmar a compra.
 
 1. Acesse [Cloudflare](https://dash.cloudflare.com/), crie a conta e confirme o
-   e-mail. Ative autenticação de dois fatores e guarde os códigos de recuperação.
+-mail. Ative autenticação de dois fatores e guarde os códigos de recuperação.
 2. Abra **Domain Registration / Register Domains**. Pesquise o nome desejado.
-   Para seguir um caminho único, escolha um domínio disponível para compra
-   **nesse próprio painel**; nem toda extensão é oferecida.
+ara seguir um caminho único, escolha um domínio disponível para compra
+*nesse próprio painel**; nem toda extensão é oferecida.
 3. Confira a grafia, preço de renovação, dados do titular e forma de pagamento.
-   Conclua a compra e eventuais confirmações de e-mail solicitadas.
+onclua a compra e eventuais confirmações de e-mail solicitadas.
 4. Abra o domínio na conta. Aguarde a zona aparecer como **Active**.
-   Como o registro foi na Cloudflare, ela administra os nameservers.
+omo o registro foi na Cloudflare, ela administra os nameservers.
 5. Em **SSL/TLS → Edge Certificates**, aguarde o certificado Universal SSL ficar
-   ativo. Ative **Always Use HTTPS**, que redireciona visitas HTTP para HTTPS.
+tivo. Ative **Always Use HTTPS**, que redireciona visitas HTTP para HTTPS.
 
 Não crie registros A/AAAA apontando os subdomínios deste roteiro para o IP da VPS.
 Os registros serão criados pelas rotas do Tunnel. Não é necessário comprar um
@@ -140,13 +140,15 @@ certificado, gerar Origin Certificate ou instalar cert-manager neste desenho.
 
 O domínio raiz não receberá site neste roteiro; usaremos subdomínios:
 
-| Nome | Destino | Acesso |
-| --- | --- | --- |
-| `web.SEUDOMINIO` | Frontend web | Público, login Firebase dentro do app |
-| `api.SEUDOMINIO` | API | Público, endpoints exigem token Firebase |
-| `auth.SEUDOMINIO` | Serviço de identidade separado | Protegido por Access nesta fase |
-| `grafana.SEUDOMINIO` | Painel de métricas | Access + senha Grafana |
-| `rabbit.SEUDOMINIO` | Painel da fila | Access + senha RabbitMQ |
+
+| Nome                 | Destino                        | Acesso                                   |
+| -------------------- | ------------------------------ | ---------------------------------------- |
+| `web.SEUDOMINIO`     | Frontend web                   | Público, login Firebase dentro do app    |
+| `api.SEUDOMINIO`     | API                            | Público, endpoints exigem token Firebase |
+| `auth.SEUDOMINIO`    | Serviço de identidade separado | Protegido por Access nesta fase          |
+| `grafana.SEUDOMINIO` | Painel de métricas             | Access + senha Grafana                   |
+| `rabbit.SEUDOMINIO`  | Painel da fila                 | Access + senha RabbitMQ                  |
+
 
 `SEUDOMINIO` significa o nome comprado, sem `https://` nem barras.
 O auth fica protegido nesta fase porque o web ainda usa Firebase. Transformá-lo
@@ -162,9 +164,9 @@ Referência: [registro de domínio na Cloudflare](https://developers.cloudflare.
 sudo apt update
 sudo apt install -y ca-certificates curl git jq openssl nano dnsutils
 umask 077
-sudo install -d -m 0750 -o "$(id -un)" -g "$(id -gn)" /opt/braid-app
-mkdir -p /opt/braid-app/k8s /opt/braid-app/private /opt/braid-app/bin /opt/braid-app/backups
-chmod 700 /opt/braid-app/private /opt/braid-app/backups
+sudo install -d -m 0750 -o "$(id -un)" -g "$(id -gn)" /opt/braid
+mkdir -p /opt/braid/k8s /opt/braid/private /opt/braid/bin /opt/braid/backups
+chmod 700 /opt/braid/private /opt/braid/backups
 
 read -rp "Domínio comprado, sem https://: " DOMAIN
 read -rp "Interface pública [eth0]: " PUB_IFACE
@@ -178,8 +180,8 @@ ip -4 addr show "$PUB_IFACE" | grep -F "$PUBLIC_IP"
 
 printf 'export DOMAIN=%q\nexport PUB_IFACE=%q\nexport PUBLIC_IP=%q\nexport KUBECONFIG=%q\n' \
   "$DOMAIN" "$PUB_IFACE" "$PUBLIC_IP" /etc/rancher/k3s/k3s.yaml \
-  > /opt/braid-app/env.sh
-source /opt/braid-app/env.sh
+  > /opt/braid/env.sh
+source /opt/braid/env.sh
 printf 'Web: https://timeline.%s\n' "$DOMAIN"
 ```
 
@@ -195,7 +197,7 @@ A afirmação anterior de que Drizzle dependeria de `psql` não se aplica aqui.
 Sempre que abrir outra sessão SSH para continuar:
 
 ```bash
-source /opt/braid-app/env.sh
+source /opt/braid/env.sh
 set -eo pipefail
 umask 077
 ```
@@ -208,7 +210,7 @@ permissões. **Mantenha a sessão SSH aberta** e teste outra sessão depois.
 **Servidor / Bash:**
 
 ```bash
-source /opt/braid-app/env.sh
+source /opt/braid/env.sh
 sudo ufw status numbered
 sudo ufw default deny incoming
 sudo ufw default allow outgoing
@@ -284,13 +286,13 @@ executando containers importantes, pare antes deste restart e avalie-os.
 ```bash
 sudo install -d -m 0755 /etc/docker
 if sudo test -f /etc/docker/daemon.json; then
-  sudo cp /etc/docker/daemon.json /opt/braid-app/private/docker-daemon.before.json
-  sudo cat /etc/docker/daemon.json | jq '. + {"ip-forward-no-drop":true}' > /opt/braid-app/private/docker-daemon.new.json
+  sudo cp /etc/docker/daemon.json /opt/braid/private/docker-daemon.before.json
+  sudo cat /etc/docker/daemon.json | jq '. + {"ip-forward-no-drop":true}' > /opt/braid/private/docker-daemon.new.json
 else
-  printf '%s\n' '{"ip-forward-no-drop":true}' > /opt/braid-app/private/docker-daemon.new.json
+  printf '%s\n' '{"ip-forward-no-drop":true}' > /opt/braid/private/docker-daemon.new.json
 fi
-sudo dockerd --validate --config-file=/opt/braid-app/private/docker-daemon.new.json
-sudo install -m 0600 /opt/braid-app/private/docker-daemon.new.json /etc/docker/daemon.json
+sudo dockerd --validate --config-file=/opt/braid/private/docker-daemon.new.json
+sudo install -m 0600 /opt/braid/private/docker-daemon.new.json /etc/docker/daemon.json
 sudo systemctl restart docker
 sudo ufw reload
 ```
@@ -309,7 +311,7 @@ Saia dessa sessão com `exit` e conecte novamente por SSH. Isso atualiza os grup
 do usuário. Na nova sessão:
 
 ```bash
-source /opt/braid-app/env.sh
+source /opt/braid/env.sh
 umask 077
 docker version
 docker buildx version
@@ -360,8 +362,8 @@ spec:
       type: ClusterIP
 EOF
 
-curl -fsSL https://get.k3s.io -o /opt/braid-app/install-k3s.sh
-sudo env INSTALL_K3S_CHANNEL=stable sh /opt/braid-app/install-k3s.sh
+curl -fsSL https://get.k3s.io -o /opt/braid/install-k3s.sh
+sudo env INSTALL_K3S_CHANNEL=stable sh /opt/braid/install-k3s.sh
 sudo k3s kubectl wait --for=condition=Ready nodes --all --timeout=300s
 for attempt in $(seq 1 60); do
   if sudo k3s kubectl -n kube-system get deployment traefik >/dev/null 2>&1; then
@@ -385,13 +387,13 @@ armazenamento do cluster, mas um administrador ainda consegue lê-los.
 Saia e reconecte mais uma vez para receber o grupo `k3s-admin`. Depois:
 
 ```bash
-source /opt/braid-app/env.sh
+source /opt/braid/env.sh
 umask 077
 kubectl get nodes -o wide
 kubectl -n kube-system get svc traefik
 kubectl get svc -A
 kubectl -n kube-system get pods
-k3s --version | tee /opt/braid-app/k3s-version.txt
+k3s --version | tee /opt/braid/k3s-version.txt
 swapon --show
 ```
 
@@ -412,8 +414,8 @@ Vamos gerar uma chave **nova e somente de leitura** para o repositório.
 **Servidor / Bash:**
 
 ```bash
-ssh-keygen -t ed25519 -f /opt/braid-app/private/github-deploy -N "" -C "timeline-vps-readonly"
-cat /opt/braid-app/private/github-deploy.pub
+ssh-keygen -t ed25519 -f /opt/braid/private/github-deploy -N "" -C "timeline-vps-readonly"
+cat /opt/braid/private/github-deploy.pub
 ```
 
 **Navegador:** abra `devamaral2/timeline_project` no GitHub, vá em
@@ -423,9 +425,9 @@ cole a saída pública e **deixe Allow write access desmarcado**. Salve.
 **Servidor / Bash:**
 
 ```bash
-export GIT_SSH_COMMAND="ssh -i /opt/braid-app/private/github-deploy -o IdentitiesOnly=yes"
-git clone git@github.com:devamaral2/timeline_project.git /opt/braid-app/src
-cd /opt/braid-app/src
+export GIT_SSH_COMMAND="ssh -i /opt/braid/private/github-deploy -o IdentitiesOnly=yes"
+git clone git@github.com:devamaral2/timeline_project.git /opt/braid/src
+cd /opt/braid/src
 git status --short
 git rev-parse HEAD
 ```
@@ -439,16 +441,15 @@ Esperado: clone concluído, `git status --short` sem alterações. É esse commi
 publicado no GitHub que será construído; alterações só no seu computador
 precisam ser commitadas/enviadas para fazerem parte do deploy.
 
-
 ### Verificação obrigatória do auth antes de continuar
 
 **Servidor / Bash:**
 
 ```bash
-cat > /opt/braid-app/bin/check-auth-schema.sh <<'EOF'
+cat > /opt/braid/bin/check-auth-schema.sh <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-cd /opt/braid-app/src
+cd /opt/braid/src
 CODE_VERSION=$(sed -nE 's/^export const AUTH_SCHEMA_VERSION = ([0-9]+);/\1/p' apps/auth/src/db/readiness.ts)
 SQL_VERSION=$(sed -nE 's/.*SET version *= *([0-9]+).*/\1/p' apps/auth/drizzle/[0-9]*.sql | sort -n | tail -1)
 printf 'Auth: código espera %s; migrations deixam %s\n' "$CODE_VERSION" "$SQL_VERSION"
@@ -457,8 +458,8 @@ if [ -z "$CODE_VERSION" ] || [ -z "$SQL_VERSION" ] || [ "$CODE_VERSION" != "$SQL
   exit 1
 fi
 EOF
-chmod 700 /opt/braid-app/bin/check-auth-schema.sh
-/opt/braid-app/bin/check-auth-schema.sh
+chmod 700 /opt/braid/bin/check-auth-schema.sh
+/opt/braid/bin/check-auth-schema.sh
 ```
 
 Na revisão inspecionada, este bloco **falha intencionalmente com 3 versus 5**.
@@ -475,26 +476,25 @@ rodando. Para funcionar, frontend e API precisam apontar para o mesmo projeto.
 **Navegador:**
 
 1. Abra [Firebase Console](https://console.firebase.google.com/). Entre no
-   projeto usado pela aplicação; se não existir, crie um projeto.
+rojeto usado pela aplicação; se não existir, crie um projeto.
 2. Em **Project settings → General**, registre um app web pelo ícone `</>` se
-   ainda não houver. Não é necessário configurar Firebase Hosting.
+inda não houver. Não é necessário configurar Firebase Hosting.
 3. Copie os seis valores de `firebaseConfig`: `apiKey`, `authDomain`,
-   `projectId`, `storageBucket`, `messagingSenderId` e `appId`.
+projectId`,` storageBucket`,` messagingSenderId`e`appId`.
 4. Em **Authentication**, inicie a configuração se necessário. Em
-   **Sign-in method**, habilite **Google**, escolha o e-mail de suporte e salve.
+*Sign-in method**, habilite **Google**, escolha o e-mail de suporte e salve.
 5. Em **Authentication → Settings → Authorized domains**, adicione exatamente
-   `timeline.SEUDOMINIO`, sem protocolo. Mantenha o `authDomain` fornecido pelo
-   Firebase, normalmente terminado em `firebaseapp.com`.
+timeline.SEUDOMINIO`, sem protocolo. Mantenha o` authDomain`fornecido pelo irebase, normalmente terminado em`firebaseapp.com`.
 6. Em **Project settings → Service accounts → Firebase Admin SDK**, gere uma
-   chave privada e baixe o JSON. Esse arquivo é segredo, ao contrário da
-   configuração pública do app web.
+have privada e baixe o JSON. Esse arquivo é segredo, ao contrário da
+onfiguração pública do app web.
 
 Fonte: [login Google no Firebase](https://firebase.google.com/docs/auth/web/google-signin).
 
 **Servidor / Bash:** crie o arquivo de build:
 
 ```bash
-nano /opt/braid-app/private/web-build.env
+nano /opt/braid/private/web-build.env
 ```
 
 Cole e substitua os seis valores à direita pelos valores copiados:
@@ -506,7 +506,7 @@ NEXT_PUBLIC_FIREBASE_PROJECT_ID=COLE_PROJECT_ID
 NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=COLE_STORAGE_BUCKET
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=COLE_MESSAGING_SENDER_ID
 NEXT_PUBLIC_FIREBASE_APP_ID=COLE_APP_ID
-BACKEND_URL=http://api.timeline.svc.cluster.local:3001
+BACKEND_URL=http://api.braid.svc.cluster.local:3001
 ```
 
 Não altere `BACKEND_URL`: é o nome interno do Service da API. O Next incorpora
@@ -516,17 +516,17 @@ não muda o bundle; será preciso reconstruir a imagem web.
 Crie o arquivo privado do Admin SDK:
 
 ```bash
-nano /opt/braid-app/private/firebase-admin.json
+nano /opt/braid/private/firebase-admin.json
 ```
 
 Abra o JSON baixado no seu computador e cole **seu conteúdo inteiro** no nano.
 Salve. Valide sem exibir a chave:
 
 ```bash
-chmod 600 /opt/braid-app/private/web-build.env /opt/braid-app/private/firebase-admin.json
+chmod 600 /opt/braid/private/web-build.env /opt/braid/private/firebase-admin.json
 jq -e '.project_id and .client_email and .private_key' \
-  /opt/braid-app/private/firebase-admin.json >/dev/null
-if grep -q 'COLE_' /opt/braid-app/private/web-build.env; then
+  /opt/braid/private/firebase-admin.json >/dev/null
+if grep -q 'COLE_' /opt/braid/private/web-build.env; then
   echo "Faltam valores Firebase; volte ao nano"
 else
   echo "Arquivo web preenchido"
@@ -557,11 +557,11 @@ ficar dentro de imagens ou manifests de aplicação.
 **Servidor / Bash — esta geração é só para o primeiro deploy:**
 
 ```bash
-kubectl create namespace timeline
+kubectl create namespace braid
 kubectl create namespace observability
 kubectl create namespace edge
 
-test ! -e /opt/braid-app/private/generated.env || { echo "Senhas já existem; não regenere"; exit 1; }
+test ! -e /opt/braid/private/generated.env || { echo "Senhas já existem; não regenere"; exit 1; }
 umask 077
 PG_ADMIN_PASSWORD=$(openssl rand -hex 24)
 PG_APP_PASSWORD=$(openssl rand -hex 24)
@@ -579,19 +579,19 @@ printf '%s\n' \
   "RABBIT_PASSWORD=$RABBIT_PASSWORD" \
   "GRAFANA_PASSWORD=$GRAFANA_PASSWORD" \
   "AUTH_KEY_ENCRYPTION_KEY=$AUTH_KEY_ENCRYPTION_KEY" \
-  > /opt/braid-app/private/generated.env
-chmod 600 /opt/braid-app/private/generated.env
+  > /opt/braid/private/generated.env
+chmod 600 /opt/braid/private/generated.env
 ```
 
-Abra `nano /opt/braid-app/private/generated.env`, copie os valores para seu
+Abra `nano /opt/braid/private/generated.env`, copie os valores para seu
 gerenciador de senhas e saia sem alterar. **Não gere outras senhas se a conexão
 cair.** Para retomar, carregue o arquivo:
 
 ```bash
-source /opt/braid-app/env.sh
-source /opt/braid-app/private/generated.env
+source /opt/braid/env.sh
+source /opt/braid/private/generated.env
 
-kubectl -n timeline create secret generic postgres-env \
+kubectl -n braid create secret generic postgres-env \
   --from-literal=POSTGRES_USER=postgres \
   --from-literal=POSTGRES_PASSWORD="$PG_ADMIN_PASSWORD" \
   --from-literal=POSTGRES_DB=postgres \
@@ -599,40 +599,40 @@ kubectl -n timeline create secret generic postgres-env \
   --from-literal=AUTH_OWNER_PASSWORD="$AUTH_OWNER_PASSWORD" \
   --from-literal=AUTH_RUNTIME_PASSWORD="$AUTH_RUNTIME_PASSWORD"
 
-jq -jr '.private_key' /opt/braid-app/private/firebase-admin.json > /opt/braid-app/private/firebase-key.pem
+jq -jr '.private_key' /opt/braid/private/firebase-admin.json > /opt/braid/private/firebase-key.pem
 
-kubectl -n timeline create secret generic api-env \
-  --from-literal=DATABASE_URL="postgres://lifecomposure:${PG_APP_PASSWORD}@postgres.timeline.svc.cluster.local:5432/lifecomposure" \
-  --from-literal=FIREBASE_PROJECT_ID="$(jq -r .project_id /opt/braid-app/private/firebase-admin.json)" \
-  --from-literal=FIREBASE_CLIENT_EMAIL="$(jq -r .client_email /opt/braid-app/private/firebase-admin.json)" \
-  --from-file=FIREBASE_PRIVATE_KEY=/opt/braid-app/private/firebase-key.pem \
-  --from-literal=RABBITMQ_URL="amqp://timeline:${RABBIT_PASSWORD}@rabbitmq.timeline.svc.cluster.local:5672"
+kubectl -n braid create secret generic api-env \
+  --from-literal=DATABASE_URL="postgres://braid:${PG_APP_PASSWORD}@postgres.braid.svc.cluster.local:5432/braid" \
+  --from-literal=FIREBASE_PROJECT_ID="$(jq -r .project_id /opt/braid/private/firebase-admin.json)" \
+  --from-literal=FIREBASE_CLIENT_EMAIL="$(jq -r .client_email /opt/braid/private/firebase-admin.json)" \
+  --from-file=FIREBASE_PRIVATE_KEY=/opt/braid/private/firebase-key.pem \
+  --from-literal=RABBITMQ_URL="amqp://braid:${RABBIT_PASSWORD}@rabbitmq.braid.svc.cluster.local:5672"
 
 read -rsp "Twilio Account SID (Enter se ainda não configurou): " TWILIO_ACCOUNT_SID; echo
 read -rsp "Twilio Auth Token (Enter se ainda não configurou): " TWILIO_AUTH_TOKEN; echo
 read -rsp "Twilio Verify Service SID (Enter se ainda não configurou): " TWILIO_VERIFY_SERVICE_SID; echo
 
-kubectl -n timeline create secret generic auth-env \
+kubectl -n braid create secret generic auth-env \
   --from-literal=NODE_ENV=production \
-  --from-literal=AUTH_DATABASE_URL="postgres://auth_runtime:${AUTH_RUNTIME_PASSWORD}@postgres.timeline.svc.cluster.local:5432/timeline_auth" \
+  --from-literal=AUTH_DATABASE_URL="postgres://auth_runtime:${AUTH_RUNTIME_PASSWORD}@postgres.braid.svc.cluster.local:5432/braid_auth" \
   --from-literal=AUTH_ISSUER="https://auth.$DOMAIN" \
-  --from-literal=AUTH_AUDIENCE=timeline-api \
+  --from-literal=AUTH_AUDIENCE=braid-api \
   --from-literal=AUTH_PUBLIC_URL="https://auth.$DOMAIN" \
-  --from-literal=AUTH_WEB_APP_URL="https://timeline.$DOMAIN" \
+  --from-literal=AUTH_WEB_APP_URL="https://web.$DOMAIN" \
   --from-literal=AUTH_KEY_ENCRYPTION_KEY="$AUTH_KEY_ENCRYPTION_KEY" \
   --from-literal=AUTH_OTP_PROVIDER=twilio \
   --from-literal=TWILIO_ACCOUNT_SID="${TWILIO_ACCOUNT_SID:-PENDENTE}" \
   --from-literal=TWILIO_AUTH_TOKEN="${TWILIO_AUTH_TOKEN:-PENDENTE}" \
   --from-literal=TWILIO_VERIFY_SERVICE_SID="${TWILIO_VERIFY_SERVICE_SID:-PENDENTE}"
 
-kubectl -n timeline create secret generic rabbitmq-env \
-  --from-literal=RABBITMQ_DEFAULT_USER=timeline \
+kubectl -n braid create secret generic rabbitmq-env \
+  --from-literal=RABBITMQ_DEFAULT_USER=braid \
   --from-literal=RABBITMQ_DEFAULT_PASS="$RABBIT_PASSWORD"
 kubectl -n observability create secret generic grafana-admin \
   --from-literal=admin-user=admin \
   --from-literal=admin-password="$GRAFANA_PASSWORD"
 unset TWILIO_ACCOUNT_SID TWILIO_AUTH_TOKEN TWILIO_VERIFY_SERVICE_SID
-kubectl -n timeline get secrets
+kubectl -n braid get secrets
 kubectl -n observability get secrets
 ```
 
@@ -650,8 +650,8 @@ jq -n '{stringData:{
   OPENROUTER_API_KEY:env.OPENROUTER_API_KEY,
   OPENROUTER_MODEL:env.OPENROUTER_MODEL,
   OPENROUTER_AGENT_MODEL:env.OPENROUTER_AGENT_MODEL
-}}' > /opt/braid-app/private/api-ai-patch.json
-kubectl -n timeline patch secret api-env --type merge --patch-file /opt/braid-app/private/api-ai-patch.json
+}}' > /opt/braid/private/api-ai-patch.json
+kubectl -n braid patch secret api-env --type merge --patch-file /opt/braid/private/api-ai-patch.json
 unset OPENROUTER_API_KEY OPENROUTER_MODEL OPENROUTER_AGENT_MODEL
 ```
 
@@ -664,36 +664,36 @@ indicada no passo de backup.
 Um **StatefulSet** mantém identidade estável para o banco. Um **PVC** reserva
 disco que sobrevive à troca do pod. Esse disco continua na VPS: não é backup.
 
-Teremos um administrador `postgres`, um usuário `lifecomposure` para a API,
+Teremos um administrador `postgres`, um usuário `braid` para a API,
 um `auth_owner` para migrations e `auth_runtime` para uso diário do auth.
 A API não receberá a senha do superusuário.
 
 **Servidor / Bash:**
 
 ```bash
-cat > /opt/braid-app/k8s/postgres.yaml <<'EOF'
+cat > /opt/braid/k8s/postgres.yaml <<'EOF'
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: postgres-init
-  namespace: timeline
+  namespace: braid
 data:
   10-databases.sh: |
     #!/bin/sh
     set -eu
     psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<SQL
-      CREATE ROLE lifecomposure LOGIN PASSWORD '$PG_APP_PASSWORD';
-      CREATE DATABASE lifecomposure OWNER lifecomposure;
+      CREATE ROLE braid LOGIN PASSWORD '$PG_APP_PASSWORD';
+      CREATE DATABASE braid OWNER braid;
       CREATE ROLE auth_owner LOGIN PASSWORD '$AUTH_OWNER_PASSWORD';
       CREATE ROLE auth_runtime LOGIN PASSWORD '$AUTH_RUNTIME_PASSWORD';
-      CREATE DATABASE timeline_auth OWNER auth_owner;
+      CREATE DATABASE braid_auth OWNER auth_owner;
     SQL
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: postgres
-  namespace: timeline
+  namespace: braid
 spec:
   type: ClusterIP
   selector: {app: postgres}
@@ -704,7 +704,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: postgres
-  namespace: timeline
+  namespace: braid
 spec:
   serviceName: postgres
   replicas: 1
@@ -747,18 +747,18 @@ spec:
         resources:
           requests: {storage: 20Gi}
 EOF
-kubectl apply -f /opt/braid-app/k8s/postgres.yaml
-kubectl -n timeline rollout status statefulset/postgres --timeout=300s
-kubectl -n timeline get pvc
-kubectl -n timeline exec postgres-0 -- psql -U postgres -c '\l'
+kubectl apply -f /opt/braid/k8s/postgres.yaml
+kubectl -n braid rollout status statefulset/postgres --timeout=300s
+kubectl -n braid get pvc
+kubectl -n braid exec postgres-0 -- psql -U postgres -c '\l'
 ```
 
-Esperado: PVC `Bound`, pod pronto e bancos `lifecomposure` e `timeline_auth`
+Esperado: PVC `Bound`, pod pronto e bancos `braid` e `braid_auth`
 na listagem. O `psql` acima executa **dentro do pod**, pelo `kubectl exec`.
 
 O script inicial só executa com disco vazio. Alterar o Secret depois não troca
 a senha de usuários existentes. Se a inicialização falhar, leia
-`kubectl -n timeline logs postgres-0`. Não apague o PVC para tentar corrigir:
+`kubectl -n braid logs postgres-0`. Não apague o PVC para tentar corrigir:
 isso pode apagar o banco.
 
 ## 11. Subir RabbitMQ
@@ -770,12 +770,12 @@ Criar `RABBITMQ_URL` não implementa essa integração.
 **Servidor / Bash:**
 
 ```bash
-cat > /opt/braid-app/k8s/rabbitmq.yaml <<'EOF'
+cat > /opt/braid/k8s/rabbitmq.yaml <<'EOF'
 apiVersion: v1
 kind: Service
 metadata:
   name: rabbitmq
-  namespace: timeline
+  namespace: braid
 spec:
   type: ClusterIP
   selector: {app: rabbitmq}
@@ -787,7 +787,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: rabbitmq
-  namespace: timeline
+  namespace: braid
 spec:
   serviceName: rabbitmq
   replicas: 1
@@ -824,9 +824,9 @@ spec:
         resources:
           requests: {storage: 5Gi}
 EOF
-kubectl apply -f /opt/braid-app/k8s/rabbitmq.yaml
-kubectl -n timeline rollout status statefulset/rabbitmq --timeout=300s
-kubectl -n timeline exec rabbitmq-0 -- rabbitmq-diagnostics -q ping
+kubectl apply -f /opt/braid/k8s/rabbitmq.yaml
+kubectl -n braid rollout status statefulset/rabbitmq --timeout=300s
+kubectl -n braid exec rabbitmq-0 -- rabbitmq-diagnostics -q ping
 ```
 
 Esperado: diagnóstico bem-sucedido. O painel só ficará acessível externamente
@@ -844,17 +844,17 @@ Vamos reutilizar esses estágios existentes, sem criar outro sistema de migratio
 **Servidor / Bash:**
 
 ```bash
-cd /opt/braid-app/src
+cd /opt/braid/src
 export SHA=$(git rev-parse HEAD)
-printf 'export SHA=%q\n' "$SHA" > /opt/braid-app/release.env
+printf 'export SHA=%q\n' "$SHA" > /opt/braid/release.env
 
-docker build --target builder -f apps/api/Dockerfile -t "timeline-api-migrate:$SHA" .
-docker build --target builder -f apps/auth/Dockerfile -t "timeline-auth-migrate:$SHA" .
-docker build -f apps/api/Dockerfile -t "timeline-api:$SHA" .
-docker build -f apps/auth/Dockerfile -t "timeline-auth:$SHA" .
+docker build --target builder -f apps/api/Dockerfile -t "braid-api-migrate:$SHA" .
+docker build --target builder -f apps/auth/Dockerfile -t "braid-auth-migrate:$SHA" .
+docker build -f apps/api/Dockerfile -t "braid-api:$SHA" .
+docker build -f apps/auth/Dockerfile -t "braid-auth:$SHA" .
 docker build --no-cache \
-  --secret id=web-env,src=/opt/braid-app/private/web-build.env \
-  -f apps/web/Dockerfile -t "timeline-web:$SHA" .
+  --secret id=web-env,src=/opt/braid/private/web-build.env \
+  -f apps/web/Dockerfile -t "braid-web:$SHA" .
 ```
 
 Cada comando precisa terminar com código de sucesso. O ponto final indica
@@ -865,34 +865,34 @@ reutilizem um build com configuração antiga. Isso aumenta o tempo de build.
 Agora crie um único comando repetível para migrations:
 
 ```bash
-cat > /opt/braid-app/bin/migrate.sh <<'EOF'
+cat > /opt/braid/bin/migrate.sh <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-source /opt/braid-app/env.sh
-source /opt/braid-app/release.env
-cd /opt/braid-app/src
-/opt/braid-app/bin/check-auth-schema.sh
-PGHOST=$(kubectl -n timeline get svc postgres -o jsonpath='{.spec.clusterIP}')
+source /opt/braid/env.sh
+source /opt/braid/release.env
+cd /opt/braid/src
+/opt/braid/bin/check-auth-schema.sh
+PGHOST=$(kubectl -n braid get svc postgres -o jsonpath='{.spec.clusterIP}')
 get_secret() {
-  kubectl -n timeline get secret postgres-env -o "jsonpath={.data.$1}" | base64 -d
+  kubectl -n braid get secret postgres-env -o "jsonpath={.data.$1}" | base64 -d
 }
 APP_PW=$(get_secret PG_APP_PASSWORD)
 OWNER_PW=$(get_secret AUTH_OWNER_PASSWORD)
 
-export DATABASE_URL="postgres://lifecomposure:${APP_PW}@${PGHOST}:5432/lifecomposure"
+export DATABASE_URL="postgres://braid:${APP_PW}@${PGHOST}:5432/braid"
 docker run --rm --network host -e DATABASE_URL \
-  "timeline-api-migrate:$SHA" pnpm db:migrate
+  "braid-api-migrate:$SHA" pnpm db:migrate
 
-export AUTH_DATABASE_MIGRATION_URL="postgres://auth_owner:${OWNER_PW}@${PGHOST}:5432/timeline_auth"
+export AUTH_DATABASE_MIGRATION_URL="postgres://auth_owner:${OWNER_PW}@${PGHOST}:5432/braid_auth"
 docker run --rm --network host -e AUTH_DATABASE_MIGRATION_URL \
-  "timeline-auth-migrate:$SHA" pnpm --filter @repo/auth run db:migrate
+  "braid-auth-migrate:$SHA" pnpm --filter @repo/auth run db:migrate
 
-kubectl -n timeline exec -i postgres-0 -- \
-  psql -v ON_ERROR_STOP=1 --single-transaction -U auth_owner -d timeline_auth \
+kubectl -n braid exec -i postgres-0 -- \
+  psql -v ON_ERROR_STOP=1 --single-transaction -U auth_owner -d braid_auth \
   < apps/auth/ops/grant-runtime.sql
 EOF
-chmod 700 /opt/braid-app/bin/migrate.sh
-/opt/braid-app/bin/migrate.sh
+chmod 700 /opt/braid/bin/migrate.sh
+/opt/braid/bin/migrate.sh
 ```
 
 Por quê: os containers temporários usam a rede do host Linux para alcançar o
@@ -909,9 +909,9 @@ executor Node em outra mudança; este roteiro preserva o mecanismo existente.
 Confira a estrutura:
 
 ```bash
-kubectl -n timeline exec postgres-0 -- psql -U lifecomposure -d lifecomposure -c '\dt'
-kubectl -n timeline exec postgres-0 -- psql -U auth_owner -d timeline_auth -c '\dt'
-kubectl -n timeline exec postgres-0 -- psql -U auth_owner -d timeline_auth \
+kubectl -n braid exec postgres-0 -- psql -U braid -d braid -c '\dt'
+kubectl -n braid exec postgres-0 -- psql -U auth_owner -d braid_auth -c '\dt'
+kubectl -n braid exec postgres-0 -- psql -U auth_owner -d braid_auth \
   -c "SELECT has_table_privilege('auth_runtime','audit_log','INSERT') AS pode_inserir, has_table_privilege('auth_runtime','audit_log','UPDATE') AS pode_alterar;"
 ```
 
@@ -921,10 +921,10 @@ O sucesso do deploy não depende de rodar migrations no computador pessoal.
 Importe as imagens finais no runtime do k3s:
 
 ```bash
-source /opt/braid-app/release.env
-docker save "timeline-api:$SHA" "timeline-auth:$SHA" "timeline-web:$SHA" \
-  -o /opt/braid-app/images.tar
-sudo k3s ctr images import /opt/braid-app/images.tar
+source /opt/braid/release.env
+docker save "braid-api:$SHA" "braid-auth:$SHA" "braid-web:$SHA" \
+  -o /opt/braid/images.tar
+sudo k3s ctr images import /opt/braid/images.tar
 sudo k3s ctr images list | grep -F "$SHA"
 ```
 
@@ -940,10 +940,10 @@ verificam se está pronto e se precisa reiniciar.
 **Servidor / Bash:**
 
 ```bash
-cat > /opt/braid-app/k8s/apps.template.yaml <<'EOF'
+cat > /opt/braid/k8s/apps.template.yaml <<'EOF'
 apiVersion: apps/v1
 kind: Deployment
-metadata: {name: api, namespace: timeline}
+metadata: {name: api, namespace: braid}
 spec:
   replicas: 1
   selector:
@@ -976,7 +976,7 @@ spec:
 ---
 apiVersion: v1
 kind: Service
-metadata: {name: api, namespace: timeline}
+metadata: {name: api, namespace: braid}
 spec:
   type: ClusterIP
   selector: {app: api}
@@ -985,7 +985,7 @@ spec:
 ---
 apiVersion: apps/v1
 kind: Deployment
-metadata: {name: web, namespace: timeline}
+metadata: {name: web, namespace: braid}
 spec:
   replicas: 1
   selector:
@@ -1016,7 +1016,7 @@ spec:
 ---
 apiVersion: v1
 kind: Service
-metadata: {name: web, namespace: timeline}
+metadata: {name: web, namespace: braid}
 spec:
   type: ClusterIP
   selector: {app: web}
@@ -1025,7 +1025,7 @@ spec:
 ---
 apiVersion: apps/v1
 kind: Deployment
-metadata: {name: auth, namespace: timeline}
+metadata: {name: auth, namespace: braid}
 spec:
   replicas: 1
   selector:
@@ -1058,7 +1058,7 @@ spec:
 ---
 apiVersion: v1
 kind: Service
-metadata: {name: auth, namespace: timeline}
+metadata: {name: auth, namespace: braid}
 spec:
   type: ClusterIP
   selector: {app: auth}
@@ -1066,13 +1066,13 @@ spec:
     - {port: 3002, targetPort: 3002}
 EOF
 
-source /opt/braid-app/release.env
-sed "s/REPLACE_SHA/$SHA/g" /opt/braid-app/k8s/apps.template.yaml > /opt/braid-app/k8s/apps.yaml
-kubectl apply -f /opt/braid-app/k8s/apps.yaml
+source /opt/braid/release.env
+sed "s/REPLACE_SHA/$SHA/g" /opt/braid/k8s/apps.template.yaml > /opt/braid/k8s/apps.yaml
+kubectl apply -f /opt/braid/k8s/apps.yaml
 for app in api auth web; do
-  kubectl -n timeline rollout status "deployment/$app" --timeout=300s || exit 1
+  kubectl -n braid rollout status "deployment/$app" --timeout=300s || exit 1
 done
-kubectl -n timeline get pods
+kubectl -n braid get pods
 ```
 
 Esperado: os três Deployments prontos. A API ainda não tem health HTTP próprio;
@@ -1090,22 +1090,22 @@ Kubernetes. Helm instala recursos Kubernetes; não é outro runtime.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 \
-  -o /opt/braid-app/install-helm.sh
-bash /opt/braid-app/install-helm.sh
+  -o /opt/braid/install-helm.sh
+bash /opt/braid/install-helm.sh
 helm version
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 helm repo update
-helm show chart prometheus-community/kube-prometheus-stack > /opt/braid-app/monitoring-chart.yaml
-CHART_VERSION=$(awk '$1 == "version:" {print $2}' /opt/braid-app/monitoring-chart.yaml)
+helm show chart prometheus-community/kube-prometheus-stack > /opt/braid/monitoring-chart.yaml
+CHART_VERSION=$(awk '$1 == "version:" {print $2}' /opt/braid/monitoring-chart.yaml)
 test -n "$CHART_VERSION"
-printf '%s\n' "$CHART_VERSION" > /opt/braid-app/monitoring-version.txt
+printf '%s\n' "$CHART_VERSION" > /opt/braid/monitoring-version.txt
 ```
 
 Isso registra a versão escolhida para não atualizar o chart acidentalmente
 numa reaplicação. Agora configure armazenamento e consumo:
 
 ```bash
-cat > /opt/braid-app/k8s/monitoring-values.yaml <<EOF
+cat > /opt/braid/k8s/monitoring-values.yaml <<EOF
 alertmanager:
   enabled: false
 kubeEtcd:
@@ -1160,8 +1160,8 @@ EOF
 
 helm upgrade --install monitoring prometheus-community/kube-prometheus-stack \
   --namespace observability \
-  --version "$(cat /opt/braid-app/monitoring-version.txt)" \
-  -f /opt/braid-app/k8s/monitoring-values.yaml \
+  --version "$(cat /opt/braid/monitoring-version.txt)" \
+  -f /opt/braid/k8s/monitoring-values.yaml \
   --wait --timeout 15m
 kubectl -n observability get pods,pvc,svc
 ```
@@ -1186,15 +1186,15 @@ não configure redirecionamento HTTP→HTTPS no Traefik neste fluxo.
 **Servidor / Bash:**
 
 ```bash
-source /opt/braid-app/env.sh
+source /opt/braid/env.sh
 for mapping in "timeline web 3000" "api api 3001" "auth auth 3002" "rabbit rabbitmq 15672"; do
   read -r sub service port <<< "$mapping"
-  cat > "/opt/braid-app/k8s/ingress-$sub.yaml" <<EOF
+  cat > "/opt/braid/k8s/ingress-$sub.yaml" <<EOF
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: $sub
-  namespace: timeline
+  namespace: braid
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: web
 spec:
@@ -1211,7 +1211,7 @@ spec:
                 port:
                   number: $port
 EOF
-  kubectl apply -f "/opt/braid-app/k8s/ingress-$sub.yaml"
+  kubectl apply -f "/opt/braid/k8s/ingress-$sub.yaml"
 done
 kubectl get ingress -A
 ```
@@ -1243,19 +1243,19 @@ acessível só com sua senha interna.
 
 1. Abra **Zero Trust / Cloudflare One** na conta Cloudflare.
 2. Se for o primeiro acesso, crie o nome da equipe e conclua o onboarding.
-   Escolha o plano adequado ao número de administradores; confira os termos
-   apresentados. Isso não instala VPN nem WARP no computador.
+scolha o plano adequado ao número de administradores; confira os termos
+presentados. Isso não instala VPN nem WARP no computador.
 3. Em **Settings → Authentication → Login methods** (ou **Integrations →
-   Identity providers**, conforme a interface), habilite **One-time PIN**.
-   Ele envia um código ao seu e-mail.
+dentity providers**, conforme a interface), habilite **One-time PIN**.
+le envia um código ao seu e-mail.
 4. Em **Access → Applications → Add an application**, escolha **Self-hosted**.
 5. Crie a aplicação `Grafana` com hostname público `grafana.SEUDOMINIO`,
-   sem caminho restrito. Defina duração de sessão de uma hora.
+em caminho restrito. Defina duração de sessão de uma hora.
 6. Adicione uma policy `Allow`. Em **Include**, escolha **Emails** e coloque
-   somente seu e-mail completo. Não escolha `Everyone` nem `Bypass`.
-   Selecione One-time PIN como método de login e salve.
+omente seu e-mail completo. Não escolha `Everyone` nem `Bypass`.
+elecione One-time PIN como método de login e salve.
 7. Repita para `rabbit.SEUDOMINIO` e `auth.SEUDOMINIO`, sempre cobrindo todo
-   o hostname e permitindo só os administradores escolhidos.
+ hostname e permitindo só os administradores escolhidos.
 8. Confira na lista que existem as três aplicações e suas policies.
 
 Não coloque Access em `timeline` ou `api` neste roteiro: os clientes usam
@@ -1283,7 +1283,7 @@ read -rsp "Token do Tunnel: " TUNNEL_TOKEN; echo
 kubectl -n edge create secret generic cloudflared-token --from-literal=token="$TUNNEL_TOKEN"
 unset TUNNEL_TOKEN
 
-cat > /opt/braid-app/k8s/cloudflared.yaml <<'EOF'
+cat > /opt/braid/k8s/cloudflared.yaml <<'EOF'
 apiVersion: apps/v1
 kind: Deployment
 metadata: {name: cloudflared, namespace: edge}
@@ -1322,7 +1322,7 @@ spec:
             requests: {cpu: 50m, memory: 64Mi}
             limits: {cpu: 500m, memory: 256Mi}
 EOF
-kubectl apply -f /opt/braid-app/k8s/cloudflared.yaml
+kubectl apply -f /opt/braid/k8s/cloudflared.yaml
 kubectl -n edge rollout status deployment/cloudflared --timeout=300s
 kubectl -n edge logs deployment/cloudflared --tail=30
 ```
@@ -1336,8 +1336,8 @@ fixe agora o digest da imagem que acabou de iniciar:
 CLOUDFLARED_IMAGE=$(kubectl -n edge get pods -l app=cloudflared -o jsonpath='{.items[0].status.containerStatuses[0].imageID}')
 CLOUDFLARED_IMAGE=${CLOUDFLARED_IMAGE#docker-pullable://}
 [[ "$CLOUDFLARED_IMAGE" == *@sha256:* ]] || { echo "Digest não encontrado"; exit 1; }
-sed -i "s|cloudflare/cloudflared:latest|$CLOUDFLARED_IMAGE|" /opt/braid-app/k8s/cloudflared.yaml
-kubectl apply -f /opt/braid-app/k8s/cloudflared.yaml
+sed -i "s|cloudflare/cloudflared:latest|$CLOUDFLARED_IMAGE|" /opt/braid/k8s/cloudflared.yaml
+kubectl apply -f /opt/braid/k8s/cloudflared.yaml
 kubectl -n edge rollout status deployment/cloudflared --timeout=300s
 ```
 
@@ -1350,13 +1350,15 @@ Referência: [cloudflared no Kubernetes](https://developers.cloudflare.com/tunne
 
 Crie **uma rota por linha** desta tabela:
 
-| Subdomain | Domain | Type | URL | HTTP Host Header |
-| --- | --- | --- | --- | --- |
+
+| Subdomain  | Domain      | Type | URL                                        | HTTP Host Header      |
+| ---------- | ----------- | ---- | ------------------------------------------ | --------------------- |
 | `timeline` | seu domínio | HTTP | `traefik.kube-system.svc.cluster.local:80` | `timeline.SEUDOMINIO` |
-| `api` | seu domínio | HTTP | `traefik.kube-system.svc.cluster.local:80` | `api.SEUDOMINIO` |
-| `auth` | seu domínio | HTTP | `traefik.kube-system.svc.cluster.local:80` | `auth.SEUDOMINIO` |
-| `grafana` | seu domínio | HTTP | `traefik.kube-system.svc.cluster.local:80` | `grafana.SEUDOMINIO` |
-| `rabbit` | seu domínio | HTTP | `traefik.kube-system.svc.cluster.local:80` | `rabbit.SEUDOMINIO` |
+| `api`      | seu domínio | HTTP | `traefik.kube-system.svc.cluster.local:80` | `api.SEUDOMINIO`      |
+| `auth`     | seu domínio | HTTP | `traefik.kube-system.svc.cluster.local:80` | `auth.SEUDOMINIO`     |
+| `grafana`  | seu domínio | HTTP | `traefik.kube-system.svc.cluster.local:80` | `grafana.SEUDOMINIO`  |
+| `rabbit`   | seu domínio | HTTP | `traefik.kube-system.svc.cluster.local:80` | `rabbit.SEUDOMINIO`   |
+
 
 Deixe **Path vazio**. Em cada rota, abra **Additional application settings →
 HTTP settings → HTTP Host Header** e preencha o hostname completo indicado.
@@ -1383,7 +1385,7 @@ Referências: [rotas do Tunnel](https://developers.cloudflare.com/tunnel/routing
 **Servidor / Bash:**
 
 ```bash
-source /opt/braid-app/env.sh
+source /opt/braid/env.sh
 kubectl get pods -A
 kubectl get pvc -A
 kubectl get svc -A
@@ -1402,17 +1404,17 @@ O DNS público deve apontar para a borda Cloudflare, não diretamente para a VPS
 **Navegador:**
 
 1. Abra `https://timeline.SEUDOMINIO`, faça login Google e crie um evento de
-   teste. Recarregue a página: ele precisa continuar lá. Isso verifica
-   navegador → Cloudflare → Traefik → web → API → banco.
+este. Recarregue a página: ele precisa continuar lá. Isso verifica
+avegador → Cloudflare → Traefik → web → API → banco.
 2. Em janela anônima, abra `https://grafana.SEUDOMINIO`. Deve pedir o código
-   do Access **antes** do login Grafana. Use `admin` e a `GRAFANA_PASSWORD`
-   guardada. Abra **Dashboards → Browse** e um painel Kubernetes.
+o Access **antes** do login Grafana. Use `admin` e a `GRAFANA_PASSWORD`
+uardada. Abra **Dashboards → Browse** e um painel Kubernetes.
 3. Faça o mesmo com `https://rabbit.SEUDOMINIO`. Depois do Access, entre com
-   usuário `timeline` e `RABBIT_PASSWORD`.
+suário `timeline` e `RABBIT_PASSWORD`.
 4. Em `https://auth.SEUDOMINIO/health/ready`, autentique no Access e confirme
-   a resposta saudável. O auth é uma API; não espere uma página de login em `/`.
+ resposta saudável. O auth é uma API; não espere uma página de login em `/`.
 5. Sem sessão Access, um pedido a esses três hosts deve receber o desafio,
-   redirecionamento para login ou recusa. Nunca o conteúdo administrativo.
+edirecionamento para login ou recusa. Nunca o conteúdo administrativo.
 
 **Computador / PowerShell**, fora da VPS: verifique as portas do IPv4 informado.
 
@@ -1475,27 +1477,27 @@ conjunta entre bases.
 **Servidor / Bash:**
 
 ```bash
-cat > /opt/braid-app/bin/backup.sh <<'EOF'
+cat > /opt/braid/bin/backup.sh <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-source /opt/braid-app/env.sh
+source /opt/braid/env.sh
 umask 077
 STAMP=$(date -u +%Y%m%dT%H%M%SZ)
-DEST="/opt/braid-app/backups/$STAMP"
+DEST="/opt/braid/backups/$STAMP"
 mkdir -p "$DEST"
 
-kubectl -n timeline exec postgres-0 -- pg_dump -U postgres -d lifecomposure -Fc > "$DEST/lifecomposure.dump"
-kubectl -n timeline exec postgres-0 -- pg_dump -U postgres -d timeline_auth -Fc > "$DEST/timeline_auth.dump"
-kubectl -n timeline exec postgres-0 -- pg_dumpall -U postgres --globals-only > "$DEST/globals.sql"
-kubectl -n timeline get secrets -o yaml > "$DEST/timeline-secrets.yaml"
+kubectl -n braid exec postgres-0 -- pg_dump -U postgres -d braid -Fc > "$DEST/braid.dump"
+kubectl -n braid exec postgres-0 -- pg_dump -U postgres -d braid_auth -Fc > "$DEST/braid_auth.dump"
+kubectl -n braid exec postgres-0 -- pg_dumpall -U postgres --globals-only > "$DEST/globals.sql"
+kubectl -n braid get secrets -o yaml > "$DEST/timeline-secrets.yaml"
 kubectl -n observability get secrets grafana-admin -o yaml > "$DEST/grafana-secret.yaml"
 kubectl -n edge get secrets cloudflared-token -o yaml > "$DEST/tunnel-secret.yaml"
 
-kubectl -n timeline exec -i postgres-0 -- pg_restore --list < "$DEST/lifecomposure.dump" > "$DEST/lifecomposure-list.txt"
-kubectl -n timeline exec -i postgres-0 -- pg_restore --list < "$DEST/timeline_auth.dump" > "$DEST/auth-list.txt"
+kubectl -n braid exec -i postgres-0 -- pg_restore --list < "$DEST/braid.dump" > "$DEST/braid-list.txt"
+kubectl -n braid exec -i postgres-0 -- pg_restore --list < "$DEST/braid_auth.dump" > "$DEST/auth-list.txt"
 
-tar -C /opt/braid-app -czf "$DEST/bundle.tar.gz" \
-  "backups/$STAMP/lifecomposure.dump" "backups/$STAMP/timeline_auth.dump" \
+tar -C /opt/braid -czf "$DEST/bundle.tar.gz" \
+  "backups/$STAMP/braid.dump" "backups/$STAMP/braid_auth.dump" \
   "backups/$STAMP/globals.sql" "backups/$STAMP/timeline-secrets.yaml" \
   "backups/$STAMP/grafana-secret.yaml" "backups/$STAMP/tunnel-secret.yaml" \
   private k8s bin env.sh release.env k3s-version.txt monitoring-version.txt
@@ -1505,8 +1507,8 @@ openssl enc -aes-256-cbc -salt -pbkdf2 -iter 200000 \
 sha256sum "$DEST/bundle.tar.gz.enc" > "$DEST/bundle.tar.gz.enc.sha256"
 printf 'Backup para copiar: %s\n' "$DEST"
 EOF
-chmod 700 /opt/braid-app/bin/backup.sh
-/opt/braid-app/bin/backup.sh
+chmod 700 /opt/braid/bin/backup.sh
+/opt/braid/bin/backup.sh
 ```
 
 O OpenSSL pede uma senha e sua confirmação. Guarde-a no gerenciador de senhas:
@@ -1523,7 +1525,7 @@ você já usa no SSH. No último campo, cole o caminho que o script acabou de im
 ```powershell
 $SshUser = Read-Host "Usuário SSH autorizado na VPS"
 $SshKey = Read-Host "Caminho completo da sua chave SSH privada neste computador"
-$RemoteBackup = Read-Host "Caminho completo impresso pelo backup, começando por /opt/braid-app/backups/"
+$RemoteBackup = Read-Host "Caminho completo impresso pelo backup, começando por /opt/braid/backups/"
 $LocalBackup = Join-Path $env:USERPROFILE ("timeline-backup-" + (Get-Date -Format "yyyyMMdd-HHmmss"))
 New-Item -ItemType Directory -Path $LocalBackup
 scp -i $SshKey "${SshUser}@179.199.138.185:${RemoteBackup}/bundle.tar.gz.enc" $LocalBackup
@@ -1534,7 +1536,7 @@ Get-Content (Join-Path $LocalBackup "bundle.tar.gz.enc.sha256")
 
 Os hashes devem coincidir, desconsiderando maiúsculas/minúsculas. Guarde essa
 pasta também em seu armazenamento externo habitual. Não apague a última cópia
-verificada. Confira `df -h /` e `du -sh /opt/braid-app/backups` diariamente:
+verificada. Confira `df -h /` e `du -sh /opt/braid/backups` diariamente:
 este roteiro não remove backups automaticamente.
 
 ### Ensaio de restauração sem substituir os bancos em uso
@@ -1544,22 +1546,22 @@ este roteiro não remove backups automaticamente.
 ```bash
 read -rp "Timestamp do backup, ex. 20260907T150000Z: " BACKUP_STAMP
 [[ "$BACKUP_STAMP" =~ ^[0-9]{8}T[0-9]{6}Z$ ]] || { echo "Timestamp inválido"; exit 1; }
-RESTORE_DIR=$(mktemp -d /opt/braid-app/backups/restore-check.XXXXXX)
+RESTORE_DIR=$(mktemp -d /opt/braid/backups/restore-check.XXXXXX)
 openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 \
-  -in "/opt/braid-app/backups/$BACKUP_STAMP/bundle.tar.gz.enc" \
+  -in "/opt/braid/backups/$BACKUP_STAMP/bundle.tar.gz.enc" \
   -out "$RESTORE_DIR/bundle.tar.gz"
 tar -xzf "$RESTORE_DIR/bundle.tar.gz" -C "$RESTORE_DIR"
 
-kubectl -n timeline exec postgres-0 -- createdb -U postgres restore_check_api
-kubectl -n timeline exec -i postgres-0 -- pg_restore -U postgres \
+kubectl -n braid exec postgres-0 -- createdb -U postgres restore_check_api
+kubectl -n braid exec -i postgres-0 -- pg_restore -U postgres \
   --exit-on-error --no-owner --no-privileges -d restore_check_api \
-  < "$RESTORE_DIR/backups/$BACKUP_STAMP/lifecomposure.dump"
-kubectl -n timeline exec postgres-0 -- createdb -U postgres restore_check_auth
-kubectl -n timeline exec -i postgres-0 -- pg_restore -U postgres \
+  < "$RESTORE_DIR/backups/$BACKUP_STAMP/braid.dump"
+kubectl -n braid exec postgres-0 -- createdb -U postgres restore_check_auth
+kubectl -n braid exec -i postgres-0 -- pg_restore -U postgres \
   --exit-on-error --no-owner --no-privileges -d restore_check_auth \
-  < "$RESTORE_DIR/backups/$BACKUP_STAMP/timeline_auth.dump"
-kubectl -n timeline exec postgres-0 -- psql -U postgres -d restore_check_api -c '\dt'
-kubectl -n timeline exec postgres-0 -- psql -U postgres -d restore_check_auth -c '\dt'
+  < "$RESTORE_DIR/backups/$BACKUP_STAMP/braid_auth.dump"
+kubectl -n braid exec postgres-0 -- psql -U postgres -d restore_check_api -c '\dt'
+kubectl -n braid exec postgres-0 -- psql -U postgres -d restore_check_auth -c '\dt'
 ```
 
 Esperado: restore sem erros e tabelas presentes. Os bancos reais não foram
@@ -1567,8 +1569,8 @@ substituídos. Se os nomes `restore_check_*` já existirem, inspecione o ensaio
 anterior; não sobreponha. Depois do sucesso, remova **somente os bancos de ensaio**:
 
 ```bash
-kubectl -n timeline exec postgres-0 -- dropdb -U postgres restore_check_api
-kubectl -n timeline exec postgres-0 -- dropdb -U postgres restore_check_auth
+kubectl -n braid exec postgres-0 -- dropdb -U postgres restore_check_api
+kubectl -n braid exec postgres-0 -- dropdb -U postgres restore_check_auth
 ```
 
 Os dumps permanecem e permitem repetir o teste. Em recuperação de desastre,
@@ -1598,43 +1600,43 @@ não é correto afirmar que todas as migrations atuais são aditivas.
 **Servidor / Bash — depois de o commit estar compatível e publicado:**
 
 ```bash
-source /opt/braid-app/env.sh
-cd /opt/braid-app/src
+source /opt/braid/env.sh
+cd /opt/braid/src
 test -z "$(git status --porcelain)" || { echo "Há alterações locais; pare para preservá-las"; exit 1; }
-export GIT_SSH_COMMAND="ssh -i /opt/braid-app/private/github-deploy -o IdentitiesOnly=yes"
+export GIT_SSH_COMMAND="ssh -i /opt/braid/private/github-deploy -o IdentitiesOnly=yes"
 git pull --ff-only
-cp /opt/braid-app/release.env /opt/braid-app/previous-release.env
+cp /opt/braid/release.env /opt/braid/previous-release.env
 export SHA=$(git rev-parse HEAD)
-printf 'export SHA=%q\n' "$SHA" > /opt/braid-app/release.env
+printf 'export SHA=%q\n' "$SHA" > /opt/braid/release.env
 ```
 
 Repita os comandos de build, migrations e importação do **passo 12**, incluindo
 a checagem de compatibilidade do auth. Só se todos terminarem com sucesso:
 
 ```bash
-source /opt/braid-app/release.env
-sed "s/REPLACE_SHA/$SHA/g" /opt/braid-app/k8s/apps.template.yaml > /opt/braid-app/k8s/apps.yaml
-kubectl apply -f /opt/braid-app/k8s/apps.yaml
+source /opt/braid/release.env
+sed "s/REPLACE_SHA/$SHA/g" /opt/braid/k8s/apps.template.yaml > /opt/braid/k8s/apps.yaml
+kubectl apply -f /opt/braid/k8s/apps.yaml
 for app in api auth web; do
-  kubectl -n timeline rollout status "deployment/$app" --timeout=300s || exit 1
+  kubectl -n braid rollout status "deployment/$app" --timeout=300s || exit 1
 done
 ```
 
 Repita o teste de login/criação/recarregamento do passo 19. Não execute
-`kubectl apply -f /opt/braid-app/k8s/` indiscriminadamente: a pasta também contém
+`kubectl apply -f /opt/braid/k8s/` indiscriminadamente: a pasta também contém
 um template ainda sem SHA e valores Helm, que não são recursos prontos.
 
 Se uma nova imagem falhar **e o banco continuar compatível com a imagem antiga**:
 
 ```bash
-source /opt/braid-app/previous-release.env
+source /opt/braid/previous-release.env
 sudo k3s ctr images list | grep -F "$SHA"
-sed "s/REPLACE_SHA/$SHA/g" /opt/braid-app/k8s/apps.template.yaml > /opt/braid-app/k8s/apps.yaml
-kubectl apply -f /opt/braid-app/k8s/apps.yaml
+sed "s/REPLACE_SHA/$SHA/g" /opt/braid/k8s/apps.template.yaml > /opt/braid/k8s/apps.yaml
+kubectl apply -f /opt/braid/k8s/apps.yaml
 for app in api auth web; do
-  kubectl -n timeline rollout status "deployment/$app" --timeout=300s || exit 1
+  kubectl -n braid rollout status "deployment/$app" --timeout=300s || exit 1
 done
-cp /opt/braid-app/previous-release.env /opt/braid-app/release.env
+cp /opt/braid/previous-release.env /opt/braid/release.env
 ```
 
 Rollback de imagem não desfaz migrations. Não aplique arquivos `down.sql`
@@ -1644,7 +1646,7 @@ forem sua possibilidade de retorno. Para vários nós, será necessário distrib
 as imagens, normalmente usando registry.
 
 Troca só de credencial: atualize o Secret e execute
-`kubectl -n timeline rollout restart deployment/NOME` no app afetado.
+`kubectl -n braid rollout restart deployment/NOME` no app afetado.
 Senha PostgreSQL/RabbitMQ já inicializada exige também alterar a credencial
 no próprio serviço; editar apenas Secret não basta.
 Se alterar Firebase público ou `BACKEND_URL`, refaça o build web do passo 12.
@@ -1654,12 +1656,12 @@ Se alterar Firebase público ou `BACKEND_URL`, refaça o build web do passo 12.
 **Servidor / Bash:**
 
 ```bash
-source /opt/braid-app/env.sh
+source /opt/braid/env.sh
 kubectl get pods -A
-kubectl -n timeline get events --sort-by=.lastTimestamp
-kubectl -n timeline logs deployment/api --tail=80
-kubectl -n timeline logs deployment/auth --tail=80
-kubectl -n timeline logs deployment/web --tail=80
+kubectl -n braid get events --sort-by=.lastTimestamp
+kubectl -n braid logs deployment/api --tail=80
+kubectl -n braid logs deployment/auth --tail=80
+kubectl -n braid logs deployment/web --tail=80
 kubectl -n edge logs deployment/cloudflared --tail=80
 kubectl -n kube-system logs deployment/traefik --tail=80
 sudo journalctl -u k3s -n 80 --no-pager
@@ -1667,26 +1669,28 @@ df -h /
 free -h
 ```
 
-| Resultado | O que significa / próxima verificação |
-| --- | --- |
-| `Pending` | Pod sem recurso ou volume; `kubectl -n timeline describe pod NOME` mostra o motivo |
-| `ErrImageNeverPull` | A imagem/SHA não está no containerd; repita a importação do passo 12 |
-| `ImagePullBackOff` em infra | Falha ao baixar imagem pública; examine Events do pod e conectividade |
-| `CrashLoopBackOff` | Processo encerra; leia `kubectl -n timeline logs POD --previous` |
-| Auth ready 503 | Compare versão esperada no código com `auth_schema_meta`, confira grants e chave ativa |
-| API responde 401 | Sem token isso é esperado; valide pelo login real no web |
-| Web 502 em `/api/*` | Confira API pronta e `BACKEND_URL` incorporada no build |
-| Firebase `unauthorized-domain` | Adicione `timeline.SEUDOMINIO` nos domínios autorizados |
-| Cloudflare 1033 | Tunnel sem conector saudável; confira deployment/logs cloudflared |
-| Cloudflare 502 | Tunnel conectado, mas origem inacessível; confira Service Traefik e URL interna |
-| Traefik 404 | Não encontrou rota; confira hostname, HTTP Host Header e Ingress |
-| Painel acessível sem Access | Policy/hostname errado ou acesso direto à origem; feche a publicação até corrigir |
-| Redirect infinito | Confira Always Use HTTPS na borda e ausência de redirect no Traefik interno |
-| `OOMKilled` | Processo excedeu memória; veja consumo/limites, não conte swap como RAM disponível |
-| DNS/timeouts nos pods | Confira UFW, forwarding do Docker, CoreDNS e interface `cni0` |
-| PVC `Pending` | Confira local-path-provisioner e espaço em disco |
-| OTP falha com auth saudável | Twilio pendente/restrição de conta ou incompatibilidade do código MFA |
-| Grafana sem logs dos apps | Este roteiro instala métricas, não um coletor de logs |
+
+| Resultado                      | O que significa / próxima verificação                                                  |
+| ------------------------------ | -------------------------------------------------------------------------------------- |
+| `Pending`                      | Pod sem recurso ou volume; `kubectl -n braid describe pod NOME` mostra o motivo     |
+| `ErrImageNeverPull`            | A imagem/SHA não está no containerd; repita a importação do passo 12                   |
+| `ImagePullBackOff` em infra    | Falha ao baixar imagem pública; examine Events do pod e conectividade                  |
+| `CrashLoopBackOff`             | Processo encerra; leia `kubectl -n braid logs POD --previous`                       |
+| Auth ready 503                 | Compare versão esperada no código com `auth_schema_meta`, confira grants e chave ativa |
+| API responde 401               | Sem token isso é esperado; valide pelo login real no web                               |
+| Web 502 em `/api/*`            | Confira API pronta e `BACKEND_URL` incorporada no build                                |
+| Firebase `unauthorized-domain` | Adicione `timeline.SEUDOMINIO` nos domínios autorizados                                |
+| Cloudflare 1033                | Tunnel sem conector saudável; confira deployment/logs cloudflared                      |
+| Cloudflare 502                 | Tunnel conectado, mas origem inacessível; confira Service Traefik e URL interna        |
+| Traefik 404                    | Não encontrou rota; confira hostname, HTTP Host Header e Ingress                       |
+| Painel acessível sem Access    | Policy/hostname errado ou acesso direto à origem; feche a publicação até corrigir      |
+| Redirect infinito              | Confira Always Use HTTPS na borda e ausência de redirect no Traefik interno            |
+| `OOMKilled`                    | Processo excedeu memória; veja consumo/limites, não conte swap como RAM disponível     |
+| DNS/timeouts nos pods          | Confira UFW, forwarding do Docker, CoreDNS e interface `cni0`                          |
+| PVC `Pending`                  | Confira local-path-provisioner e espaço em disco                                       |
+| OTP falha com auth saudável    | Twilio pendente/restrição de conta ou incompatibilidade do código MFA                  |
+| Grafana sem logs dos apps      | Este roteiro instala métricas, não um coletor de logs                                  |
+
 
 Não resolva falha de readiness removendo a probe, nem erro do banco apagando PVC.
 A prova final é o fluxo do usuário funcionando, persistindo dados e respeitando
