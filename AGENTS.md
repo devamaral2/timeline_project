@@ -54,7 +54,7 @@ no browser, pega o `currentUser` do Firebase e manda o token no header
 `Authorization`. Sem usuario logado a funcao devolve 401 sem tocar na rede.
 
 O app mobile nao tem esse rewrite: ele fala direto com o Nest, pelo host em
-`MOBILE_API_URL`. Veja "App mobile" abaixo.
+`MOBILE_API_URL` (skill `env-setup`).
 
 Nao coloque regra de negocio em `apps/web` nem em `apps/mobile`. Do backend eles
 so importam tipos.
@@ -104,75 +104,29 @@ precisam ser distinguiveis.
 # App mobile
 
 Expo SDK 57 com expo-router, roteamento por arquivo em `apps/mobile/src/app`.
-
-**Precisa de development build, nao roda no Expo Go**: o login usa o Google
-Sign-In nativo (`@react-native-google-signin/google-signin`), que e um modulo
-nativo. `pnpm --filter @repo/mobile run android` gera o projeto nativo e instala.
-
-**O celular nao alcanca o loopback da sua maquina.** Para desenvolver com o app
-num aparelho de verdade:
-
-1. `API_HOST=0.0.0.0` no `.env` — o Nest passa a escutar na rede local e liga o
-   CORS (`apps/api/src/main.ts`). Sem isso o `.env` fica como esta e o bind
-   continua em `127.0.0.1`, que e o comportamento de producao.
-2. `MOBILE_API_URL=http://<ip-da-sua-maquina>:3001` no `.env`.
-
-**Estilo**: `StyleSheet` do React Native, com as cores vindo de `@repo/theme`.
-O app abre sempre no tema escuro — a identidade visual foi desenhada assim, e
-`use-theme.ts` devolve `darkTheme` fixo em vez de seguir o `useColorScheme` do
-sistema (o web faz o equivalente com a classe `dark` fixa no `<html>`). O tema
-claro continua no pacote, esperando uma opcao explicita de troca.
-O RN nao entende oklch nem `var()`, entao o pacote converte os tokens do
-`globals.css` para hex/rgba. As duas paletas sao travadas juntas por
-`apps/web/src/styles/theme-tokens.test.ts` — mudar uma cor no CSS sem mudar em
-`@repo/theme` quebra esse teste.
-
-**Resolucao dos packages**: `@repo/theme`, `@repo/timeline` e `@repo/entities`
-declaram uma condicao de exportacao `react-native` que aponta para `src/*.ts`.
-O Metro le o TypeScript direto do fonte, entao editar um package aparece no app
-sem `build`. Web e API continuam consumindo `dist/`.
-
-**Firebase**: `apps/mobile/src/types/firebase-auth.d.ts` declara
-`getReactNativePersistence`, que existe no build React Native do
-`@firebase/auth` mas nao nos tipos que o TypeScript resolve. Sem essa
-persistencia o usuario e deslogado toda vez que o app fecha.
+Build de desenvolvimento nativo, tema sempre escuro, resolucao dos packages
+`@repo/*` e a persistencia de sessao do Firebase estao na skill
+`mobile-app-conventions`. Para rodar num aparelho fisico, veja a skill
+`env-setup`.
 
 # Persistencia
 
 Os eventos vivem no PostgreSQL, em `packages/persistence` (schema Drizzle em
-`src/database/schema`, repositories e queries ao lado). `DATABASE_URL` aponta
-para o banco; em desenvolvimento ele sobe com `docker compose -f
-infra/docker-compose.local.yml up -d`, que bind-a o Postgres em
-`127.0.0.1:5432`, igual ao resto do backend.
+`src/database/schema`, repositories e queries ao lado). Nao ha Firestore: a
+base de eventos que veio de la nunca passou por uma migracao documento a
+documento, foi cortada para o Postgres de uma vez (ve "A marca de nao
+realizado" acima para o que esse corte deixou de marca no schema).
+`firebase-admin` fica em `apps/api` (so para autenticacao), nunca em
+`@repo/persistence`.
 
-**Migrations sao a fonte da verdade do schema**, geradas com `db:generate` e
-aplicadas com `db:migrate` (`pnpm db:generate` / `pnpm db:migrate` na raiz, que
-delegam para `@repo/persistence`). Nao edite uma migration ja aplicada em
-qualquer ambiente compartilhado — gere uma nova em cima dela.
-
-`test:postgres` sobe um Postgres via Testcontainers e por isso exige Docker
-rodando; sem Docker o teste de integracao falha ao inves de pular.
-
-**Firebase Admin existe so para autenticacao.** `apps/api/src/auth/` tem sua
-propria copia de `getAdminApp`, independente de qualquer persistencia — o
-projeto Firebase continua sendo o identity provider (`firebase-admin` fica em
-`apps/api`, nao em `@repo/persistence`). Nao ha Firestore: a base de eventos
-que veio de la nunca passou por uma migracao documento a documento, foi cortada
-para o Postgres de uma vez (ve "A marca de nao realizado" acima para o que
-esse corte deixou de marca no schema).
+Gerar/aplicar migrations, subir o Postgres local e rodar a suite de
+integracao: skill `db-migrations`.
 
 # Variaveis de ambiente
 
-Um unico `.env` na raiz serve os tres apps. O Nest carrega via
-`apps/api/src/config/load-env.ts`; o Next carrega no topo do `next.config.ts`; o
-Expo carrega no `apps/mobile/app.config.ts`, que repassa os valores ao app pelo
-campo `extra` (lido em `apps/mobile/src/config/env.ts`).
-
-`.env.local` tem precedencia sobre `.env`.
-
-O mobile reusa as chaves `NEXT_PUBLIC_FIREBASE_*` do web: e o mesmo projeto e o
-mesmo app client. Tudo que entra em `extra` vai embutido no bundle — nao
-coloque la nada que ja nao seja publico.
+Um unico `.env`/`.env.local` na raiz serve os tres apps; `.env.local` tem
+precedencia. Carregamento por app, teste em aparelho fisico, chaves do
+Firebase compartilhadas e `env:pull`: skill `env-setup`.
 
 # Comandos
 
@@ -180,82 +134,45 @@ coloque la nada que ja nao seja publico.
 `npm i -g pnpm`) — o Turborepo invoca o gerenciador de pacotes diretamente.
 
 ```
-pnpm install              instala tudo
+pnpm install              instala tudo (skill install-dependencies p/ troubleshooting)
 pnpm turbo run build      builda na ordem de dependencia
 pnpm turbo run typecheck  checa tipos nos 7 workspaces
 pnpm dev                  sobe todos os servidores ao mesmo tempo (Nest, Next, auth)
-pnpm dev:auth             sobe so o servico de auth (3002), sem web/mobile/api
-pnpm dev:api              sobe so a API (3001), sem web/mobile/auth
-pnpm dev:web              sobe so o Next (3000), sem api/mobile/auth
-pnpm dev:mobile           sobe o Metro
+pnpm dev:auth             sobe so o servico de auth, sem web/mobile/api
+pnpm dev:api              sobe so a API, sem web/mobile/auth
+pnpm dev:web              sobe so o Next, sem api/mobile/auth
+pnpm dev:mobile           sobe o Metro (terminal separado — toma a interface)
 
 pnpm --filter @repo/mobile run android   gera o projeto nativo e instala no aparelho
-
-pnpm db:generate          gera uma migration a partir do schema Drizzle
-pnpm db:migrate           aplica as migrations pendentes no DATABASE_URL atual
-pnpm test:postgres        roda a suite de integracao contra Postgres (exige Docker)
-pnpm env:pull             baixa o .env.local do 1Password (op read) para a raiz
 ```
 
-**Sempre rode os comandos de dev pela raiz do monorepo** (`pnpm dev`,
-`pnpm dev:auth`, `pnpm dev:api`, `pnpm dev:web`, `pnpm dev:mobile`), nunca de
-dentro de `apps/*` com `npm run dev` ou similar. O `.env`/`.env.local` unico fica na raiz e so e carregado
-quando o processo sobe a partir dela (ve "Variaveis de ambiente" acima);
-rodar direto num workspace pula esse carregamento e a aplicacao sobe sem os
-envs corretos.
-
-O Metro fica fora do `turbo run dev` de proposito: ele toma o terminal com a
-propria interface, e o fluxo normal e ter os dois rodando em terminais
-separados.
+**Sempre rode os comandos de dev pela raiz do monorepo**, nunca de dentro de
+`apps/*` — o `.env`/`.env.local` unico so e carregado a partir da raiz (skill
+`env-setup`).
 
 **`dev` depende de `^build`** (`turbo.json`). O Nest e o Next leem os packages
 de `dist/`, nao do fonte — so o Metro le TypeScript direto. Sem essa
-dependencia, um simbolo recem-criado em `@repo/entities` existiria apenas no
-`src`: o `nest start --watch` nao compilaria, a API nunca subiria na 3001, e a
-pagina do Next responderia 500 no `fetchFromBackend` — um erro que parece do
-backend, mas e de build. Se a API estiver fora do ar, `pnpm turbo run build`
+dependencia, um simbolo recem-criado em `@repo/entities` existiria so no `src`
+e a API nunca subiria. Se a API estiver fora do ar, `pnpm turbo run build`
 antes de subir o dev resolve.
 
 # Rodando os testes
 
-Use **sempre** `npm run --silent test:ai`, nunca `npm test` nem `npx vitest`.
-(`--silent` corta o cabecalho que o proprio npm imprime.)
+Use **sempre** `npm run --silent test:ai`, nunca `npm test` nem `npx vitest`
+— corta o consumo de tokens (skill `running-tests` para o que o reporter
+silencioso faz, como filtrar por workspace/arquivo e como investigar uma
+falha alem da primeira).
 
-Ele roda a suite inteira — os oito workspaces — em uma unica execucao do
-Vitest, com `vitest.quiet.config.ts`, que herda tudo de `vitest.config.ts` e so
-troca a saida (reporter em `test/quiet-reporter.ts`):
+Os testes do `auth` que exigem Postgres pulam sozinhos sem
+`AUTH_TEST_DATABASE_URL` — e sao a maior parte da suite dele — e `Tests pass`
+nao denuncia isso. Para roda-los de verdade, use a skill `auth-postgres-tests`.
 
-- **Passou** — imprime exatamente `Tests pass` e sai com codigo 0.
-- **Falhou** — imprime o primeiro teste quebrado (arquivo, cadeia
-  `describe > teste`, erro, `expected`/`actual` e a stack de chamadas) e o total
-  `N of M tests failed`. Sai com codigo 1. A stack mostra so os frames do
-  projeto: os frames de `@vitest/runner` e `node:internal` sao identicos em todo
-  erro e nao ajudam.
+# Worktrees paralelas
 
-Nada mais e impresso: sem cabecalho, sem lista de arquivos, sem os `console.log`
-dos testes. O objetivo e cortar o consumo de tokens ao rodar testes.
-
-Os projetos do Vitest ficam em `vitest.workspace.ts`. Ele resolve `@repo/*`
-direto do fonte TypeScript, e nao de `dist/` — por isso `test:ai` nao precisa de
-build antes, e a saida continua sendo so a do Vitest.
-
-O projeto `mobile` roda em ambiente node e inclui so `*.test.ts`, sem `.tsx`:
-renderizar componente de React Native exigiria o runtime nativo, que nao existe
-no Vitest. O que da para testar la e logica pura.
-
-Cuidado ao logar em codigo de producao rodado por teste: o `Logger` do Nest
-escreve direto no stdout e escapa do `silent` do Vitest. Por isso o
-`DomainExceptionFilter` recebe o logger pelo construtor, e os testes passam um
-mudo (`apps/api/src/events/testing/status-of.ts`).
-
-Para investigar uma falha alem do primeiro erro, rode `npm test` (saida completa
-do Vitest) ou filtre um arquivo:
-`npm run --silent test:ai apps/api/src/caminho/do.test.ts`.
-Para rodar so um workspace: `npx vitest run --project api`
-(`web`, `mobile`, `api`, `auth`, `entities`, `persistence`, `timeline`, `theme`).
-
-**Os testes do `auth` que exigem Postgres pulam sozinhos** quando
-`AUTH_TEST_DATABASE_URL` nao esta definida — e sao a maior parte da suite dele:
-integracao de repositorio e os e2e de HTTP. Nesse caso `Tests pass` pode
-significar que os arquivos de integracao nem rodaram. Para roda-los de
-verdade, use a skill `auth-postgres-tests`.
+Varias worktrees podem rodar a app ao mesmo tempo, cada uma com portas e
+Postgres proprios, via `scripts/worktree/` (`pnpm worktree:new`,
+`pnpm worktree:provision`, `pnpm worktree:teardown`) — a worktree principal
+nunca e tocada por eles. Procedimento e verificacao completos em
+`docs/runbooks/worktrees.md`. Para efetivamente subir a app e validar uma
+mudanca rodando de verdade (nao os testes unitarios), use a skill
+`worktree-app-testing`.

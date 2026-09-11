@@ -11,7 +11,19 @@
     "API_HOST",
     "DATABASE_URL",
     "FIREBASE_*",
-    "OPENROUTER_*"
+    "OPENROUTER_*",
+    "WEB_PORT",
+    "METRO_PORT",
+    "AUTH_PORT",
+    "AUTH_HOST",
+    "AUTH_DATABASE_URL",
+    "AUTH_DATABASE_MIGRATION_URL",
+    "AUTH_PUBLIC_URL",
+    "AUTH_ISSUER",
+    "AUTH_WEB_APP_URL",
+    "POSTGRES_HOST_PORT",
+    "AUTH_POSTGRES_DB",
+    "COMPOSE_PROJECT_NAME"
   ],
   "tasks": {
     "build": {
