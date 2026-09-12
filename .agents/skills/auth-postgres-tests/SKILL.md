@@ -16,20 +16,21 @@ vez da porta fixa `55432`. Sem isso, duas worktrees rodando esta skill ao
 mesmo tempo colidem — mesmo nome de projeto (o Compose deriva o nome do
 diretorio `apps/auth`, igual em toda worktree) e a mesma porta de host.
 
+`scripts/worktree/auth-test-postgres.sh` cuida disso. Ele nao depende de
+variavel de shell sobrevivendo entre comandos (cada bloco abaixo pode rodar
+como uma invocacao separada): o nome do projeto e deterministico (funcao pura
+do diretorio da worktree) e a porta e sempre relida do container via `docker
+compose port`, nunca guardada numa variavel. Tambem e idempotente — rodar
+`up` de novo com o container ja no ar so imprime a URL de novo, sem recriar
+nada — e tenta outra porta automaticamente se a escolhida colidir ao subir.
+
 Passos, sempre nesta ordem:
 
-1. Subir o Postgres de teste com projeto e porta isolados por worktree:
+1. Subir o Postgres de teste e rodar a suite numa unica invocacao (a
+   substituicao de comando captura a URL que `up` imprime, sem precisar
+   copia-la manualmente para outro passo):
    ```bash
-   source scripts/worktree/lib.sh
-   AUTH_TEST_POSTGRES_PROJECT="timeline-auth-test-$(worktree_slug)"
-   export AUTH_TEST_POSTGRES_HOST_PORT="$(find_free_port 55432)"
-   docker compose --project-name "$AUTH_TEST_POSTGRES_PROJECT" \
-     -f apps/auth/compose.test.yaml up -d --wait
-   ```
-2. Rodar a suite com as duas variaveis, na mesma invocacao, lendo a porta
-   escolhida acima em vez de assumir `55432`:
-   ```bash
-   AUTH_TEST_DATABASE_URL="postgresql://auth_test:auth_test@127.0.0.1:${AUTH_TEST_POSTGRES_HOST_PORT}/timeline_auth_test" \
+   AUTH_TEST_DATABASE_URL="$(scripts/worktree/auth-test-postgres.sh up)" \
      AUTH_REQUIRE_POSTGRES_TESTS=true npm run --silent test:ai
    ```
 
@@ -41,8 +42,11 @@ silencioso caso a URL esteja errada ou o container nao tenha subido a tempo.
 Se precisar investigar uma falha alem do primeiro erro, use `npm test` (saida
 completa) ou filtre por workspace: `npx vitest run --project auth`.
 
-Ao terminar, derrube o container com o mesmo `--project-name` usado para
-subi-lo (`docker compose --project-name "$AUTH_TEST_POSTGRES_PROJECT" -f
-apps/auth/compose.test.yaml down -v`) — sem isso ele fica rodando e ocupando
-a porta entre sessoes. Nao reaproveite o container do
-`infra/docker-compose.local.yml` para isto: sao bancos diferentes.
+Ao terminar, derrube o container (pode ser numa invocacao separada — o nome
+do projeto e recalculado, nao precisa ter sido guardado antes):
+```bash
+scripts/worktree/auth-test-postgres.sh down
+```
+Sem isso ele fica rodando e ocupando a porta entre sessoes. Nao reaproveite o
+container do `infra/docker-compose.local.yml` para isto: sao bancos
+diferentes.
