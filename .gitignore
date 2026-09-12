@@ -8,4 +8,6 @@ dist/
 .env.local
 .env*.local
 *.tsbuildinfo
+.harness-eval/
+__pycache__/
 
