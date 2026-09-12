@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "skills": {
+    "harness-eval": {
+      "name": "harness-eval",
+      "source": "local",
+      "contentHash": "675761f3fdb123f26103811ffe52e384adff5ffdf7c603578dfaa4eb2e54b2a2",
+      "installedAt": "2026-09-12T16:25:58.912Z",
+      "updatedAt": "2026-09-12T16:25:58.924Z",
+      "agents": [
+        "claude-code"
+      ],
+      "method": "copy",
+      "global": false
+    }
+  }
+}
