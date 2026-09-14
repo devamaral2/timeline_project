@@ -38,7 +38,13 @@ export interface SigningKeyRepository {
     now: Date,
   ): Promise<StoredSigningKey>;
   listPublishable(): Promise<StoredSigningKey[]>;
+  /**
+   * A chave ativa pronta para assinar, com `last_used_at` atualizado — e esse
+   * campo que a rotacao usa para saber ate quando manter a chave publicada.
+   */
+  acquireActiveForSigning(now: Date): Promise<SigningKeyForSigning>;
   /** Devolve os `kid` aposentados agora. */
   retireExpired(now: Date): Promise<string[]>;
 }
 import type { PublicSigningJwk } from '../jwk';
+import type { SigningKeyForSigning } from '../../users/user';

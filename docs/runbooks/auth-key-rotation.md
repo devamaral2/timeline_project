@@ -36,7 +36,8 @@ tokens emitidos a partir da rotação; consumidores que fazem cache do JWKS
 precisam de um refetch ao ver um `kid` desconhecido.
 
 A janela de convivência é `SECURITY_POLICY.signingKeyRetireDelaySeconds`
-(15 min e 30 s: os 15 minutos de vida do access token mais folga de relógio).
+(1 h e 30 s): a vida do token mais longo que a chave pode ter assinado — os
+links de signup e guest, de uma hora — mais folga de relógio.
 Depois de `retire_after` a chave `retiring` sai do JWKS sozinha. A aposentadoria
 física (apagar o material privado e marcar `retired`) acontece em toda escrita de
 chave — no boot do serviço e em cada rotação — ou sob demanda:
@@ -53,7 +54,7 @@ não consegue assinar, e `GET /health/ready` passa a responder 503.
 
 ## Emergência: chave privada comprometida
 
-A rotação normal deixa a chave antiga válida por mais 15 minutos. Se ela vazou,
+A rotação normal deixa a chave antiga válida por mais uma hora. Se ela vazou,
 isso é tempo demais:
 
 1. Rode a rotação.

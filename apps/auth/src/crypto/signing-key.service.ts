@@ -70,6 +70,10 @@ export class SigningKeyService {
     });
     return { token, jti };
   }
+  /** Para quem assina fora de uma transacao propria: CLI de signup e emissao de guest. */
+  async mintWithActiveKey(claims: UnsignedTokenClaims, now: Date): Promise<{ token: string; jti: string }> {
+    return this.mintToken(await this.repository.acquireActiveForSigning(now), claims);
+  }
   signAccessToken: SignAccessToken = (key, claims) =>
     this.mintToken(key, claims).token;
   async publicKeyFor(kid: string): Promise<PublicSigningJwk | null> {

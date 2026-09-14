@@ -83,6 +83,9 @@ export class PostgresSigningKeyRepository implements SigningKeyRepository {
     );
     return result.rows.map((row) => rowToKey(row as Record<string, unknown>));
   }
+  acquireActiveForSigning(now: Date): Promise<SigningKeyForSigning> {
+    return this.db.transaction((tx) => lockActiveSigningKey(tx, now));
+  }
   retireExpired(now: Date): Promise<string[]> {
     return this.db.transaction(async (tx) => {
       await tx.query(

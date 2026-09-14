@@ -10,6 +10,8 @@ import {
   lockActiveSigningKey,
 } from './postgres-signing-key.repository';
 import { generateSigningKey } from './signing-key';
+import { SECURITY_POLICY } from '../config/security-policy';
+import { tokenTtlSeconds, TOKEN_USES } from './jwt';
 
 let fixture: PostgresTestDatabase | undefined;
 let db: AuthDatabase | undefined;
@@ -50,12 +52,17 @@ describeWithPostgres('PostgresSigningKeyRepository', () => {
     );
     expect(
       publishable.find((key) => key.kid === first.kid)?.retireAfter,
-    ).toEqual(new Date(now.getTime() + 932000));
+    ).toEqual(new Date(now.getTime() + 2000 + SECURITY_POLICY.signingKeyRetireDelaySeconds * 1000));
     const count = await db.query(
       "SELECT count(*)::int AS count FROM signing_keys WHERE status='active'",
     );
     expect(count.rows[0]?.count).toBe(1);
   });
+});
+
+it('keeps a retiring key published long enough for the longest-lived token kind', () => {
+  const longest = Math.max(...TOKEN_USES.map(tokenTtlSeconds));
+  expect(SECURITY_POLICY.signingKeyRetireDelaySeconds).toBeGreaterThanOrEqual(longest + SECURITY_POLICY.clockToleranceSeconds);
 });
 
 describeWithPostgres('PostgresSigningKeyRepository retirement', () => {
