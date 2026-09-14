@@ -9,6 +9,7 @@ import { createTestApp, type TestApp } from "../testing/create-test-app";
 import { SigningKeyService } from "../crypto/signing-key.service";
 import { ANONYMOUS_CONTEXT } from "../common/request-context";
 import { hashSecretToken } from "../crypto/secret-token";
+import { buildUnsignedGuestTokenClaims, buildUnsignedSignupTokenClaims } from "../crypto/jwt";
 import { SECURITY_POLICY } from "../config/security-policy";
 import type { AuthDatabase } from "../db/client";
 import { AUTH_DATABASE } from "../db/tokens";
@@ -27,7 +28,7 @@ async function seedActiveUser(db: AuthDatabase, overrides: { status?: string } =
   await db.query(
     `INSERT INTO users (id, email, name, password_hash, status, created_at, updated_at)
      VALUES ($1, $2, 'Test User', 'hash', $3, now(), now())`,
-    [userId, `${userId}@example.test`, overrides.status ?? "active"],
+    [userId, `${userId.toLowerCase()}@example.test`, overrides.status ?? "active"],
   );
   return userId;
 }
@@ -156,6 +157,44 @@ describeWithPostgres("Session HTTP endpoints", () => {
       body: JSON.stringify({ refreshToken }),
     });
     expect(refreshAfterLogout.status).toBe(401);
+  });
+
+  it("issues user tokens on refresh and refuses signup and guest tokens on the user-token routes", async () => {
+    fixture = await createPostgresTestDatabase();
+    app = await createTestApp({ AUTH_DATABASE_URL: fixture.runtimeUrl });
+    const db = app.app.get<AuthDatabase>(AUTH_DATABASE);
+    const now = new Date();
+    await ensureSigningKey(app, now);
+    const userId = await seedActiveUser(db);
+    const { refreshToken, sessionId } = await seedSession(db, userId, now);
+
+    const refreshed = await fetch(`${app.url}/auth/token/refresh`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ refreshToken }),
+    });
+    const { accessToken } = (await refreshed.json()) as { accessToken: string };
+    const payload = JSON.parse(Buffer.from(accessToken.split(".")[1]!, "base64url").toString("utf8"));
+    expect(payload).toMatchObject({ token_use: "user", sub: userId, sid: sessionId });
+    expect(payload).not.toHaveProperty("amr");
+    expect(payload).not.toHaveProperty("auth_time");
+
+    const keys = app.app.get(SigningKeyService);
+    const active = (await db.query<{ kid: string; encrypted_private_key: string }>(
+      "SELECT kid, encrypted_private_key FROM signing_keys WHERE status = 'active'",
+    )).rows[0]!;
+    const signingKey = { kid: active.kid, encryptedPrivateKey: active.encrypted_private_key };
+    const issuer = { iss: "https://auth.example.test", aud: "timeline-api", now };
+    const signup = keys.mintToken(signingKey, buildUnsignedSignupTokenClaims({ ...issuer, sub: userId }));
+    const guest = keys.mintToken(signingKey, buildUnsignedGuestTokenClaims({ ...issuer, sub: ulid(), subj: userId, perms: ["event:read"] }));
+    expect(signup.jti).not.toBe(guest.jti);
+
+    for (const token of [signup.token, guest.token]) {
+      const me = await fetch(`${app.url}/auth/me`, { headers: { authorization: `Bearer ${token}` } });
+      expect(me.status).toBe(401);
+      const logoutAll = await fetch(`${app.url}/auth/logout-all`, { method: "POST", headers: { authorization: `Bearer ${token}` } });
+      expect(logoutAll.status).toBe(401);
+    }
   });
 
   it("exposes the current actor on GET /auth/me and revokes every session on logout-all", async () => {

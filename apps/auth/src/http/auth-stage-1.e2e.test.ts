@@ -160,7 +160,7 @@ describeWithPostgres("Stage 1 journey", () => {
     // 10. O JWT se sustenta apenas com o snapshot publico do JWKS.
     const jwks = await fetch(`${app.url}/.well-known/jwks.json`);
     const snapshot = (await jwks.json()) as { keys: PublicSigningJwk[] };
-    const verifiedClaims = verifyJwt(memberTokens.accessToken, snapshot.keys, "https://auth.example.test", "timeline-api", new Date());
+    const verifiedClaims = verifyJwt(memberTokens.accessToken, snapshot.keys, "https://auth.example.test", "timeline-api", new Date(), ["user"]);
     expect(verifiedClaims.sub).toBe(memberInvite.userId);
     expect(JSON.stringify(snapshot)).not.toContain("encrypted_private_key");
 

@@ -1,6 +1,8 @@
 /** Security durations and limits are deliberately not deployment knobs. */
 export const SECURITY_POLICY = {
   accessTokenTtlSeconds: 900,
+  signupTokenTtlSeconds: 60 * 60,
+  guestTokenTtlSeconds: 60 * 60,
   refreshTokenTtlSeconds: 30 * 24 * 60 * 60,
   inviteTtlSeconds: 7 * 24 * 60 * 60,
   authenticationAttemptTtlSeconds: 10 * 60,

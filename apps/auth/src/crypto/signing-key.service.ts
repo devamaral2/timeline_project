@@ -3,8 +3,10 @@ import { decryptSecret, encryptSecret } from './key-encryption';
 import {
   signJwt,
   type SignAccessToken,
-  type UnsignedAccessTokenClaims,
+  type TokenClaims,
+  type UnsignedTokenClaims,
 } from './jwt';
+import type { SigningKeyForSigning } from '../users/user';
 import type { PublicSigningJwk } from './jwk';
 import type { AuditEventInput } from '../audit/audit-event';
 import {
@@ -55,11 +57,23 @@ export class SigningKeyService {
     await this.reload();
     return key;
   }
+  /**
+   * Assina qualquer um dos tres tipos e devolve o `jti` junto: signup e guest
+   * precisam persistir o `jti` que acabaram de emitir para poder revoga-lo.
+   */
+  mintToken(
+    key: SigningKeyForSigning,
+    claims: UnsignedTokenClaims,
+  ): { token: string; jti: string } {
+    const jti = this.secretGenerator.randomId();
+    const token = signJwt({ ...claims, jti } as TokenClaims, {
+      kid: key.kid,
+      privateKey: this.privateKeyFor(key),
+    });
+    return { token, jti };
+  }
   signAccessToken: SignAccessToken = (key, claims) =>
-    signJwt(
-      { ...claims, jti: this.secretGenerator.randomId() },
-      { kid: key.kid, privateKey: this.privateKeyFor(key) },
-    );
+    this.mintToken(key, claims).token;
   async publicKeyFor(kid: string): Promise<PublicSigningJwk | null> {
     const found = this.snapshot.get(kid);
     if (found) return found;

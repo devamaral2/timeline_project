@@ -53,7 +53,7 @@ async function seedUser(database: AuthDatabase, status: "active" | "suspended" |
   await database.query(
     `INSERT INTO users (id, email, name, password_hash, status, created_at, updated_at)
      VALUES ($1, $2, 'Test User', 'hash', $3, now(), now())`,
-    [id, `${id}@example.test`, status],
+    [id, `${id.toLowerCase()}@example.test`, status],
   );
   return id;
 }
@@ -221,8 +221,6 @@ describeWithPostgres("PostgresSessionRepository", () => {
       roles: [],
       permissions: [],
       denies: [],
-      amr: ["pwd"],
-      authTime: Math.floor(now.getTime() / 1000),
     };
 
     const count = await repository.revokeAllOfUser({ actor, now, context: ANONYMOUS_CONTEXT });
@@ -246,8 +244,6 @@ describeWithPostgres("PostgresSessionRepository", () => {
       roles: [],
       permissions: [],
       denies: [],
-      amr: ["pwd"],
-      authTime: Math.floor(now.getTime() / 1000),
     };
 
     await expect(repository.revokeAllOfUser({ actor, now, context: ANONYMOUS_CONTEXT })).rejects.toBeInstanceOf(
@@ -268,8 +264,6 @@ describeWithPostgres("PostgresSessionRepository", () => {
       roles: [],
       permissions: [],
       denies: [],
-      amr: ["pwd"],
-      authTime: Math.floor(now.getTime() / 1000),
     };
 
     await expect(repository.revokeAllOfUser({ actor, now, context: ANONYMOUS_CONTEXT })).rejects.toBeInstanceOf(

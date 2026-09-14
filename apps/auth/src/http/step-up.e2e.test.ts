@@ -35,7 +35,7 @@ async function seedEnrolledUser(db: AuthDatabase, now: Date): Promise<string> {
   await db.query(
     `INSERT INTO users (id, email, name, password_hash, status, created_at, updated_at)
      VALUES ($1, $2, 'Step Up User', 'scrypt$32768$8$1$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', 'active', $3, $3)`,
-    [userId, `${userId}@example.test`, now],
+    [userId, `${userId.toLowerCase()}@example.test`, now],
   );
   return userId;
 }

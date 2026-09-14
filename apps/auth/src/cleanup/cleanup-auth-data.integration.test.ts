@@ -33,7 +33,7 @@ async function open(): Promise<AuthDatabase> {
 }
 
 async function seedUser(db: AuthDatabase, id: string): Promise<void> {
-  await db.query("INSERT INTO users(id,email,name,status,created_at,updated_at) VALUES($1,$2,'Cleanup','pending_invite',$3,$3)", [id, `${id}@example.test`, at(DAY)]);
+  await db.query("INSERT INTO users(id,email,name,status,created_at,updated_at) VALUES($1,$2,'Cleanup','pending_invite',$3,$3)", [id, `${id.toLowerCase()}@example.test`, at(DAY)]);
 }
 
 /** Uma linha exatamente no corte e outra um milissegundo depois, para cada

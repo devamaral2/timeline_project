@@ -32,7 +32,7 @@ async function seedUserWithRole(db: AuthDatabase, roleKey: string, now: Date): P
   await db.query(
     `INSERT INTO users (id, email, name, password_hash, status, created_at, updated_at)
      VALUES ($1, $2, 'Seeded', 'hash', 'active', $3, $3)`,
-    [userId, `${userId}@example.test`, now],
+    [userId, `${userId.toLowerCase()}@example.test`, now],
   );
   await db.query("INSERT INTO user_roles (user_id, role_key) VALUES ($1, $2)", [userId, roleKey]);
   const sessionId = ulid(); const refreshToken = ulid();

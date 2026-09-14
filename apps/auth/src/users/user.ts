@@ -5,7 +5,7 @@ export interface User { id: string; email: string; name: string; passwordHash: s
 export type AuthenticationMethod = "pwd" | "otp" | "recovery";
 export interface SigningKeyForSigning { kid: string; encryptedPrivateKey: string; }
 export interface ResolvedAccess { roleKeys: string[]; permissions: Permission[]; denies: Permission[]; }
-export interface AuthenticatedActor { userId:string; sessionId:string; roles:string[]; permissions:Permission[]; denies:Permission[]; amr:AuthenticationMethod[]; authTime:number; }
+export interface AuthenticatedActor { userId:string; sessionId:string; roles:string[]; permissions:Permission[]; denies:Permission[]; }
 export interface NewSessionWrite { id:string; amr:readonly AuthenticationMethod[]; authTime:Date; issuedAt:Date; context:RequestContext; refreshToken:{id:string;hash:string;expiresAt:Date}; }
 export function normalizeEmail(email: string): string { return email.trim().toLowerCase(); }
 export function canSignIn(user: Pick<User, "status">): boolean { return user.status === "active"; }

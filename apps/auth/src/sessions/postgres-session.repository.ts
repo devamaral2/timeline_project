@@ -162,15 +162,18 @@ export class PostgresSessionRepository implements SessionRepository {
         return { kind: "invalid" };
       }
 
+      // O sucessor entra antes do UPDATE: `successor_id` e FK para
+      // refresh_tokens(id) e nao e deferrable, entao apontar para uma linha
+      // que ainda nao existe aborta a transacao inteira.
+      await tx.query(
+        "INSERT INTO refresh_tokens (id, token_hash, session_id, expires_at, created_at) VALUES ($1, $2, $3, $4, $5)",
+        [c.successor.id, c.successor.hash, sessionId, c.successor.expiresAt, c.successor.issuedAt],
+      );
       await tx.query("UPDATE refresh_tokens SET consumed_at = $1, successor_id = $2 WHERE id = $3", [
         c.now,
         c.successor.id,
         refreshRow.id,
       ]);
-      await tx.query(
-        "INSERT INTO refresh_tokens (id, token_hash, session_id, expires_at, created_at) VALUES ($1, $2, $3, $4, $5)",
-        [c.successor.id, c.successor.hash, sessionId, c.successor.expiresAt, c.successor.issuedAt],
-      );
       await tx.query("UPDATE sessions SET last_used_at = $1 WHERE id = $2", [c.now, sessionId]);
 
       // A versao anterior deste metodo so lia user_roles e cravava
@@ -223,8 +226,6 @@ export class PostgresSessionRepository implements SessionRepository {
           perms: access.permissions,
           denies: access.denies,
           roles: access.roleKeys,
-          amr: sessionRow.amr,
-          auth_time: Math.floor(new Date(sessionRow.auth_time).getTime() / 1000),
           now: c.now,
         }),
       );

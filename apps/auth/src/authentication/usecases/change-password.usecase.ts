@@ -49,7 +49,7 @@ export class ChangePasswordUseCase {
       attemptTokenHash: hashSecretToken(input.stepUpToken), userId: user.id, originSessionId: input.actor.sessionId,
       passwordHash: prepared.passwordHash,
       newSession: {
-        id: this.secrets.randomId(), amr: input.actor.amr, authTime: now, issuedAt: now, context: input.context,
+        id: this.secrets.randomId(), amr: ["pwd"], authTime: now, issuedAt: now, context: input.context,
         refreshToken: { id: this.secrets.randomId(), hash: hashSecretToken(refreshToken), expiresAt: refreshTokenExpiresAt },
       },
       now,
