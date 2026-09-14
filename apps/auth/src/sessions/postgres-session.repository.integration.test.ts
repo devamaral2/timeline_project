@@ -33,18 +33,6 @@ async function activateSigningKey(database: AuthDatabase, now: Date): Promise<vo
   await repository.ensureActive(
     { kid: key.kid, publicJwk: key.publicJwk, encryptedPrivateKey: "ciphertext" },
     now,
-    {
-      correlationId: "session-repo-test",
-      actorUserId: null,
-      action: "key.created",
-      targetType: "signing_key",
-      targetId: null,
-      result: "succeeded",
-      reason: null,
-      metadata: {},
-      context: ANONYMOUS_CONTEXT,
-      occurredAt: now,
-    },
   );
 }
 
@@ -82,14 +70,6 @@ async function seedSession(
   return { sessionId, tokenHash };
 }
 
-async function auditActionsFor(database: AuthDatabase, targetId: string): Promise<string[]> {
-  const result = await database.query<{ action: string }>(
-    "SELECT action FROM audit_log WHERE target_id = $1 ORDER BY created_at",
-    [targetId],
-  );
-  return result.rows.map((row) => row.action);
-}
-
 function successorFor(now: Date) {
   return {
     id: ulid(),
@@ -100,7 +80,7 @@ function successorFor(now: Date) {
 }
 
 describeWithPostgres("PostgresSessionRepository", () => {
-  it("rotates a live refresh token, signs an access token, and audits session.refreshed", async () => {
+  it("rotates a live refresh token, signs an access token", async () => {
     fixture = await createPostgresTestDatabase();
     db = createAuthDatabase({ connectionString: fixture.runtimeUrl });
     const now = new Date("2026-09-04T00:00:00Z");
@@ -118,13 +98,12 @@ describeWithPostgres("PostgresSessionRepository", () => {
     if (result.kind !== "rotated") throw new Error("unreachable");
     expect(result.session.id).toBe(sessionId);
     expect(result.accessToken).toContain(`:${userId}:${sessionId}`);
-    expect(await auditActionsFor(db, sessionId)).toEqual(["session.refreshed"]);
 
     const sessionRow = await db.query<{ last_used_at: Date }>("SELECT last_used_at FROM sessions WHERE id = $1", [sessionId]);
     expect(sessionRow.rows[0]?.last_used_at).toEqual(now);
   });
 
-  it("detects reuse of an already-consumed token, revokes the whole session, and audits it", async () => {
+  it("detects reuse of an already-consumed token, revokes the whole session", async () => {
     fixture = await createPostgresTestDatabase();
     db = createAuthDatabase({ connectionString: fixture.runtimeUrl });
     const now = new Date("2026-09-04T00:00:00Z");
@@ -141,14 +120,12 @@ describeWithPostgres("PostgresSessionRepository", () => {
     expect(result.kind).toBe("reused");
     const sessionRow = await db.query<{ revoked_at: Date | null }>("SELECT revoked_at FROM sessions WHERE id = $1", [sessionId]);
     expect(sessionRow.rows[0]?.revoked_at).not.toBeNull();
-    expect(await auditActionsFor(db, sessionId)).toEqual(["token.reuse_detected"]);
 
     const second = await repository.rotateRefreshToken(
       { presentedTokenHash: tokenHash, successor: successorFor(now), now, context: ANONYMOUS_CONTEXT },
       sign,
     );
     expect(second.kind).toBe("reused");
-    expect(await auditActionsFor(db, sessionId)).toEqual(["token.reuse_detected"]);
   });
 
   it("revokes an otherwise-live session when the presented refresh token has expired", async () => {
@@ -169,7 +146,6 @@ describeWithPostgres("PostgresSessionRepository", () => {
     expect(result.kind).toBe("invalid");
     const sessionRow = await db.query<{ revoked_at: Date | null }>("SELECT revoked_at FROM sessions WHERE id = $1", [sessionId]);
     expect(sessionRow.rows[0]?.revoked_at).not.toBeNull();
-    expect(await auditActionsFor(db, sessionId)).toEqual(["session.revoked"]);
   });
 
   it("returns invalid for an unknown token hash without touching any session", async () => {
@@ -187,7 +163,7 @@ describeWithPostgres("PostgresSessionRepository", () => {
     expect(result.kind).toBe("invalid");
   });
 
-  it("revokeByRefreshToken revokes the matching session, audits it, and is a silent no-op otherwise", async () => {
+  it("revokeByRefreshToken revokes the matching session, and is a silent no-op otherwise", async () => {
     fixture = await createPostgresTestDatabase();
     db = createAuthDatabase({ connectionString: fixture.runtimeUrl });
     const now = new Date();
@@ -200,14 +176,12 @@ describeWithPostgres("PostgresSessionRepository", () => {
 
     const first = await repository.revokeByRefreshToken({ presentedTokenHash: tokenHash, now, context: ANONYMOUS_CONTEXT });
     expect(first).toBe(true);
-    expect(await auditActionsFor(db, sessionId)).toEqual(["session.revoked"]);
 
     const second = await repository.revokeByRefreshToken({ presentedTokenHash: tokenHash, now, context: ANONYMOUS_CONTEXT });
     expect(second).toBe(false);
-    expect(await auditActionsFor(db, sessionId)).toEqual(["session.revoked"]);
   });
 
-  it("revokeAllOfUser revokes every live session of the user and audits once with the count", async () => {
+  it("revokeAllOfUser revokes every live session of the user", async () => {
     fixture = await createPostgresTestDatabase();
     db = createAuthDatabase({ connectionString: fixture.runtimeUrl });
     const now = new Date();
@@ -228,7 +202,6 @@ describeWithPostgres("PostgresSessionRepository", () => {
     expect(count).toBe(2);
     const revoked = await db.query<{ id: string }>("SELECT id FROM sessions WHERE user_id = $1 AND revoked_at IS NOT NULL", [userId]);
     expect(revoked.rows.map((row) => row.id).sort()).toEqual([firstSessionId, secondSessionId].sort());
-    expect(await auditActionsFor(db, firstSessionId)).toEqual(["session.revoked_all"]);
   });
 
   it("revokeAllOfUser rejects when the actor's own session is no longer active", async () => {

@@ -1,4 +1,3 @@
-import type { AuditEventInput } from "../../audit/audit-event";
 import type { RequestContext } from "../../common/request-context";
 import type { DirectPermission } from "../../rbac/effective-permissions";
 import type { User, UserStatus } from "../user";
@@ -29,7 +28,6 @@ export interface ChangeUserStatusCommand {
   actorUserId: string;
   now: Date;
   context: RequestContext;
-  auditEvents: readonly AuditEventInput[];
 }
 export type ChangeUserStatusOutcome = "updated" | "would_remove_last_admin" | "invalid_status_transition" | "not_found";
 
@@ -40,7 +38,6 @@ export interface ReplaceUserAccessCommand {
   actorUserId: string;
   now: Date;
   context: RequestContext;
-  auditEvents: readonly AuditEventInput[];
 }
 export type ReplaceUserAccessOutcome = "updated" | "would_remove_last_admin" | "not_found";
 

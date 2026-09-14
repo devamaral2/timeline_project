@@ -30,10 +30,7 @@ async function boot(): Promise<{ app: TestApp; email: string }> {
   // Ativa o convite com senha; suspensao de MFA so altera o login.
   const setup = await createTestApp({ AUTH_DATABASE_URL: fixture.runtimeUrl, AUTH_KEY_ENCRYPTION_KEY });
   const now = new Date();
-  await setup.app.get(SigningKeyService).ensureActive(now, {
-    correlationId: "mfa-suspended-setup", actorUserId: null, action: "key.created", targetType: "signing_key", targetId: null,
-    result: "succeeded", reason: null, metadata: {}, context: ANONYMOUS_CONTEXT, occurredAt: now,
-  });
+  await setup.app.get(SigningKeyService).ensureActive(now);
   const bootstrap = new BootstrapAdminUseCase(setup.app.get(PostgresInviteRepository), setup.app.get(Clock), setup.app.get(SecretGenerator));
   const bootstrapped = await bootstrap.execute({ email: "admin@example.test", name: "Admin", context: ANONYMOUS_CONTEXT });
   const inviteToken = (bootstrapped as { inviteToken: string }).inviteToken;

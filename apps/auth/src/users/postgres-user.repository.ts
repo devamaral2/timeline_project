@@ -1,6 +1,3 @@
-import { insertAuditEvents } from "../audit/postgres-audit-log";
-import type { AuditEventInput } from "../audit/audit-event";
-import type { RequestContext } from "../common/request-context";
 import type { AuthDatabase, AuthTransaction } from "../db/client";
 import { acquireAdvisoryLock, ADVISORY_LOCK } from "../db/transaction-locks";
 import { coversSuperAdmin } from "../rbac/resolve-user-permissions";
@@ -66,10 +63,6 @@ async function rollbackAware<T>(work: () => Promise<T>): Promise<T> {
   try { return await work(); } catch (error) { if (error instanceof RolledBackWith) return error.outcome as T; throw error; }
 }
 
-function revokedAllEvent(command: { actorUserId: string; targetUserId: string; now: Date; context: RequestContext }, count: number): AuditEventInput {
-  return { correlationId: command.context.correlationId, actorUserId: command.actorUserId, action: "session.revoked_all", targetType: "user", targetId: command.targetUserId, result: "succeeded", reason: "status_left_active", metadata: { count }, context: command.context, occurredAt: command.now };
-}
-
 export class PostgresUserRepository implements UserRepository {
   constructor(private readonly db: AuthDatabase) {}
 
@@ -111,13 +104,10 @@ export class PostgresUserRepository implements UserRepository {
       if (!ALLOWED_TRANSITIONS[current.status].includes(c.status)) return "invalid_status_transition" as const;
 
       await tx.query("UPDATE users SET status=$1, updated_at=$2 WHERE id=$3", [c.status, c.now, c.targetUserId]);
-      const events = [...c.auditEvents];
       if (current.status === "active") {
-        const revoked = await tx.query("UPDATE sessions SET revoked_at=$1, ended_at=$1 WHERE user_id=$2 AND revoked_at IS NULL", [c.now, c.targetUserId]);
-        events.push(revokedAllEvent(c, revoked.rowCount ?? 0));
+        await tx.query("UPDATE sessions SET revoked_at=$1, ended_at=$1 WHERE user_id=$2 AND revoked_at IS NULL", [c.now, c.targetUserId]);
       }
       if (await capableAdminCount(tx) === 0) throw new RolledBackWith<ChangeUserStatusOutcome>("would_remove_last_admin");
-      await insertAuditEvents(tx, events);
       return "updated" as const;
     }));
   }
@@ -135,7 +125,6 @@ export class PostgresUserRepository implements UserRepository {
       for (const direct of c.directPermissions) await tx.query("INSERT INTO user_permissions(user_id, permission, effect) VALUES($1,$2,$3)", [c.targetUserId, direct.permission, direct.effect]);
 
       if (await capableAdminCount(tx) === 0) throw new RolledBackWith<ReplaceUserAccessOutcome>("would_remove_last_admin");
-      await insertAuditEvents(tx, c.auditEvents);
       return "updated" as const;
     }));
   }

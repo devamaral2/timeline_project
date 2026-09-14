@@ -7,7 +7,6 @@ import {
 } from "../testing/postgres-test-database";
 import { createTestApp, type TestApp } from "../testing/create-test-app";
 import { SigningKeyService } from "../crypto/signing-key.service";
-import { ANONYMOUS_CONTEXT } from "../common/request-context";
 import { hashSecretToken } from "../crypto/secret-token";
 import { buildUnsignedGuestTokenClaims, buildUnsignedSignupTokenClaims } from "../crypto/jwt";
 import { SECURITY_POLICY } from "../config/security-policy";
@@ -55,18 +54,7 @@ async function seedSession(
 }
 
 async function ensureSigningKey(app: TestApp, now: Date): Promise<void> {
-  await app.app.get(SigningKeyService).ensureActive(now, {
-    correlationId: "session-e2e",
-    actorUserId: null,
-    action: "key.created",
-    targetType: "signing_key",
-    targetId: null,
-    result: "succeeded",
-    reason: null,
-    metadata: {},
-    context: ANONYMOUS_CONTEXT,
-    occurredAt: now,
-  });
+  await app.app.get(SigningKeyService).ensureActive(now);
 }
 
 describeWithPostgres("Session HTTP endpoints", () => {

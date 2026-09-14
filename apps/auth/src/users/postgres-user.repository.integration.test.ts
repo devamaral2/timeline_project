@@ -19,11 +19,11 @@ async function seedAdmin(database: AuthDatabase, id: string): Promise<void> {
 }
 
 function statusCommand(targetUserId: string, status: "active" | "suspended" | "disabled"): ChangeUserStatusCommand {
-  return { targetUserId, status, actorUserId: "operator", now, context, auditEvents: [{ correlationId: "admin-test", actorUserId: null, action: "user.status_changed", targetType: "user", targetId: targetUserId, result: "succeeded", reason: null, metadata: {}, context, occurredAt: now }] };
+  return { targetUserId, status, actorUserId: "operator", now, context };
 }
 
 function accessCommand(targetUserId: string, roleKeys: string[], directPermissions: ReplaceUserAccessCommand["directPermissions"] = []): ReplaceUserAccessCommand {
-  return { targetUserId, roleKeys, directPermissions, actorUserId: "operator", now, context, auditEvents: [{ correlationId: "admin-test", actorUserId: null, action: "access.changed", targetType: "user", targetId: targetUserId, result: "succeeded", reason: null, metadata: {}, context, occurredAt: now }] };
+  return { targetUserId, roleKeys, directPermissions, actorUserId: "operator", now, context };
 }
 
 describeWithPostgres("PostgresUserRepository keeps one capable admin", () => {
@@ -81,7 +81,6 @@ describeWithPostgres("PostgresUserRepository keeps one capable admin", () => {
 
     expect(await repository.changeStatusPreservingCapableAdmin(statusCommand(target, "suspended"))).toBe("updated");
     expect((await db.query("SELECT count(*)::int AS count FROM sessions WHERE revoked_at IS NULL")).rows[0]).toEqual({ count: 0 });
-    expect((await admin.query("SELECT count(*)::int AS count FROM audit_log WHERE action='session.revoked_all'")).rows[0]).toEqual({ count: 1 });
 
     expect(await repository.changeStatusPreservingCapableAdmin(statusCommand(target, "disabled"))).toBe("updated");
     // `disabled` e terminal: nem voltar para active, nem repetir disabled.

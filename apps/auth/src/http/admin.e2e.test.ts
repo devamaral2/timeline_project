@@ -21,10 +21,7 @@ afterEach(async () => {
 const json = { "content-type": "application/json" };
 
 async function ensureSigningKey(target: TestApp, now: Date): Promise<void> {
-  await target.app.get(SigningKeyService).ensureActive(now, {
-    correlationId: "admin-e2e", actorUserId: null, action: "key.created", targetType: "signing_key", targetId: null,
-    result: "succeeded", reason: null, metadata: {}, context: ANONYMOUS_CONTEXT, occurredAt: now,
-  });
+  await target.app.get(SigningKeyService).ensureActive(now);
 }
 
 async function seedUserWithRole(db: AuthDatabase, roleKey: string, now: Date): Promise<{ userId: string; refreshToken: string }> {
@@ -136,7 +133,7 @@ describeWithPostgres("Admin HTTP endpoints", () => {
     expect(await response.text()).toBe("");
   });
 
-  it("refuses to remove the last capable admin and rolls back when the audit insert fails", async () => {
+  it("refuses to remove the last capable admin", async () => {
     const { db, now } = await boot();
     const admin = await seedUserWithRole(db, "admin", now);
     const tokens = await bearer(app!, admin.refreshToken);
@@ -145,16 +142,6 @@ describeWithPostgres("Admin HTTP endpoints", () => {
     expect(lastAdmin.status).toBe(409);
     expect(await lastAdmin.json()).toEqual({ code: "would_remove_last_admin" });
     expect((await db.query("SELECT status FROM users WHERE id=$1", [admin.userId])).rows[0].status).toBe("active");
-
-    // Com um segundo admin a mudanca passaria; com a auditoria quebrada, nao.
-    const second = await seedUserWithRole(db, "admin", now);
-    adminDb = createAuthDatabase({ connectionString: fixture!.adminUrl });
-    await adminDb.query("ALTER TABLE audit_log ADD CONSTRAINT audit_log_reject CHECK (false) NOT VALID");
-
-    const broken = await fetch(`${app!.url}/auth/admin/users/${second.userId}/status`, { method: "PATCH", headers: authed(tokens.accessToken), body: JSON.stringify({ status: "suspended" }) });
-    expect(broken.status).toBe(500);
-    expect(await broken.json()).toMatchObject({ code: "internal_error", correlationId: expect.any(String) });
-    expect((await db.query("SELECT status FROM users WHERE id=$1", [second.userId])).rows[0].status).toBe("active");
   });
 
   it("shows a replaced access only on the next refresh, never in the token already issued", async () => {

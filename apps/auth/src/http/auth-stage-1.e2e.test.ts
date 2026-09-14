@@ -70,10 +70,7 @@ describeWithPostgres("Stage 1 journey", () => {
     );
     const db = app.app.get<AuthDatabase>(AUTH_DATABASE);
     const now = new Date();
-    await app.app.get(SigningKeyService).ensureActive(now, {
-      correlationId: "journey", actorUserId: null, action: "key.created", targetType: "signing_key", targetId: null,
-      result: "succeeded", reason: null, metadata: {}, context: ANONYMOUS_CONTEXT, occurredAt: now,
-    });
+    await app.app.get(SigningKeyService).ensureActive(now);
     const bootstrap = new BootstrapAdminUseCase(app.app.get(PostgresInviteRepository), app.app.get(Clock), app.app.get(SecretGenerator));
     const bootstrapped = await bootstrap.execute({ email: "admin@example.test", name: "Primeira Admin", context: ANONYMOUS_CONTEXT });
     expect(bootstrapped.kind).toBe("created");

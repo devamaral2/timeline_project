@@ -8,7 +8,6 @@ import {
 } from './jwt';
 import type { SigningKeyForSigning } from '../users/user';
 import type { PublicSigningJwk } from './jwk';
-import type { AuditEventInput } from '../audit/audit-event';
 import {
   generateSigningKey,
   privateKeyFromPem,
@@ -40,20 +39,13 @@ export class SigningKeyService {
       encryptedPrivateKey: encryptSecret(material.privateKeyPem, this.kek),
     };
   }
-  async ensureActive(
-    now: Date,
-    audit: AuditEventInput,
-  ): Promise<StoredSigningKey> {
-    const key = await this.repository.ensureActive(
-      this.candidate(),
-      now,
-      audit,
-    );
+  async ensureActive(now: Date): Promise<StoredSigningKey> {
+    const key = await this.repository.ensureActive(this.candidate(), now);
     await this.reload();
     return key;
   }
-  async rotate(now: Date, audit: AuditEventInput): Promise<StoredSigningKey> {
-    const key = await this.repository.rotate(this.candidate(), now, audit);
+  async rotate(now: Date): Promise<StoredSigningKey> {
+    const key = await this.repository.rotate(this.candidate(), now);
     await this.reload();
     return key;
   }

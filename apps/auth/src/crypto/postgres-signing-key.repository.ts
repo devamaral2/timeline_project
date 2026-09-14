@@ -1,5 +1,3 @@
-import { insertAuditEvents } from '../audit/postgres-audit-log';
-import type { AuditEventInput } from '../audit/audit-event';
 import type { AuthDatabase, AuthTransaction } from '../db/client';
 import { SECURITY_POLICY } from '../config/security-policy';
 import { isPublicSigningJwk, type PublicSigningJwk } from './jwk';
@@ -52,16 +50,14 @@ export class PostgresSigningKeyRepository implements SigningKeyRepository {
   ensureActive(
     candidate: NewStoredSigningKey,
     now: Date,
-    audit: AuditEventInput,
   ): Promise<StoredSigningKey> {
-    return this.write(candidate, now, audit, false);
+    return this.write(candidate, now, false);
   }
   rotate(
     candidate: NewStoredSigningKey,
     now: Date,
-    audit: AuditEventInput,
   ): Promise<StoredSigningKey> {
-    return this.write(candidate, now, audit, true);
+    return this.write(candidate, now, true);
   }
   async listPublishable(): Promise<StoredSigningKey[]> {
     const result = await this.db.query(
@@ -72,7 +68,6 @@ export class PostgresSigningKeyRepository implements SigningKeyRepository {
   private async write(
     candidate: NewStoredSigningKey,
     now: Date,
-    audit: AuditEventInput,
     rotate: boolean,
   ): Promise<StoredSigningKey> {
     return this.db.transaction(async (tx) => {
@@ -106,7 +101,6 @@ export class PostgresSigningKeyRepository implements SigningKeyRepository {
           now,
         ],
       );
-      await insertAuditEvents(tx, [audit]);
       return rowToKey(inserted.rows[0] as Record<string, unknown>);
     });
   }

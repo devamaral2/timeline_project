@@ -41,10 +41,7 @@ async function activate(otpDelivery?: OtpDeliveryGateway): Promise<string> {
   const key = randomBytes(32).toString("base64url");
   app = await createTestApp({ AUTH_DATABASE_URL: fixture.runtimeUrl, AUTH_KEY_ENCRYPTION_KEY: key, AUTH_MFA_SUSPENDED: "false" }, { otpDelivery });
   const now = new Date();
-  await app.app.get(SigningKeyService).ensureActive(now, {
-    correlationId: "email-mfa-e2e", actorUserId: null, action: "key.created", targetType: "signing_key",
-    targetId: null, result: "succeeded", reason: null, metadata: {}, context: ANONYMOUS_CONTEXT, occurredAt: now,
-  });
+  await app.app.get(SigningKeyService).ensureActive(now);
   const bootstrap = new BootstrapAdminUseCase(app.app.get(PostgresInviteRepository), app.app.get(Clock), app.app.get(SecretGenerator));
   const invite = await bootstrap.execute({ email, name: "Admin", context: ANONYMOUS_CONTEXT });
   if (invite.kind !== "created") throw new Error("Expected a new invite");

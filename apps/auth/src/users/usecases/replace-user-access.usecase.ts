@@ -22,12 +22,6 @@ export class ReplaceUserAccessUseCase {
     const outcome = await this.users.replaceAccessPreservingCapableAdmin({
       targetUserId: input.targetUserId, roleKeys: input.roleKeys, directPermissions: input.directPermissions,
       actorUserId: input.actor.userId, now, context: input.context,
-      auditEvents: [{
-        correlationId: input.context.correlationId, actorUserId: input.actor.userId, action: "access.changed",
-        targetType: "user", targetId: input.targetUserId, result: "succeeded", reason: null,
-        metadata: { roleKeys: [...input.roleKeys], directPermissions: input.directPermissions.length },
-        context: input.context, occurredAt: now,
-      }],
     });
     if (outcome === "not_found") throw new NotFoundError("unknown user");
     if (outcome === "would_remove_last_admin") throw new ConflictError("would_remove_last_admin");

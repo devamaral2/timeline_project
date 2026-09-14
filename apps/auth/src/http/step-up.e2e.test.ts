@@ -24,10 +24,7 @@ afterEach(async () => {
 const json = { "content-type": "application/json" };
 
 async function ensureSigningKey(target: TestApp, now: Date): Promise<void> {
-  await target.app.get(SigningKeyService).ensureActive(now, {
-    correlationId: "step-up-e2e", actorUserId: null, action: "key.created", targetType: "signing_key", targetId: null,
-    result: "succeeded", reason: null, metadata: {}, context: ANONYMOUS_CONTEXT, occurredAt: now,
-  });
+  await target.app.get(SigningKeyService).ensureActive(now);
 }
 
 async function seedEnrolledUser(db: AuthDatabase, now: Date): Promise<string> {

@@ -1,6 +1,3 @@
-import type { AuditAction, AuditEventInput, AuditMetadataValue } from "../audit/audit-event";
-import { insertAuditEvents } from "../audit/postgres-audit-log";
-import type { RequestContext } from "../common/request-context";
 import type { AuthDatabase } from "../db/client";
 import { lockActiveSigningKey } from "../crypto/postgres-signing-key.repository";
 import { buildUnsignedAccessTokenClaims, type SignAccessToken } from "../crypto/jwt";
@@ -54,43 +51,6 @@ function sessionFromRow(row: SessionRow, lastUsedAt: Date): Session {
   };
 }
 
-/**
- * Minha decisao ao herdar este arquivo: o evento de auditoria e montado
- * inteiramente aqui dentro, nunca pelo chamador. O port ja trazia
- * `RotateRefreshTokenCommand` com um `auditEvents` de entrada, mas quem chama
- * `rotateRefreshToken` so sabe qual token foi apresentado — nao sabe ainda se
- * o desfecho vai ser `rotated`, `reused` ou uma revogacao por expiracao, nem
- * qual sessao/usuario esta por tras do hash. Pedir para o usecase pre-montar
- * o evento certo seria pedir para ele adivinhar o proprio resultado da
- * transacao. Por isso tirei `auditEvents` do port (rotate/revoke/revokeAll) e
- * deixei o repositorio decidir a acao e preencher actorUserId/targetId com o
- * que so ele descobre depois do lock. O preco e um `AuditAction` fixo por
- * ramo (nao da para o chamador anexar metadata extra), o que ate agora nunca
- * foi necessario.
- */
-function sessionAuditEvent(
-  context: RequestContext,
-  now: Date,
-  userId: string,
-  sessionId: string,
-  action: AuditAction,
-  reason: string | null,
-  metadata: Readonly<Record<string, AuditMetadataValue>> = {},
-): AuditEventInput {
-  return {
-    correlationId: context.correlationId,
-    actorUserId: userId,
-    action,
-    targetType: "session",
-    targetId: sessionId,
-    result: "succeeded",
-    reason,
-    metadata,
-    context,
-    occurredAt: now,
-  };
-}
-
 export class PostgresSessionRepository implements SessionRepository {
   constructor(
     private readonly db: AuthDatabase,
@@ -136,9 +96,6 @@ export class PostgresSessionRepository implements SessionRepository {
       if (refreshRow.consumed_at) {
         if (!sessionRow.revoked_at) {
           await tx.query("UPDATE sessions SET revoked_at = $1, ended_at = $1 WHERE id = $2", [c.now, sessionId]);
-          await insertAuditEvents(tx, [
-            sessionAuditEvent(c.context, c.now, sessionRow.user_id, sessionId, "token.reuse_detected", "refresh_token_reused"),
-          ]);
         }
         return { kind: "reused" };
       }
@@ -148,16 +105,6 @@ export class PostgresSessionRepository implements SessionRepository {
       if (expired || sessionRow.revoked_at || userInactive) {
         if (!sessionRow.revoked_at) {
           await tx.query("UPDATE sessions SET revoked_at = $1, ended_at = $1 WHERE id = $2", [c.now, sessionId]);
-          await insertAuditEvents(tx, [
-            sessionAuditEvent(
-              c.context,
-              c.now,
-              sessionRow.user_id,
-              sessionId,
-              "session.revoked",
-              userInactive ? "user_inactive" : "refresh_token_expired",
-            ),
-          ]);
         }
         return { kind: "invalid" };
       }
@@ -230,8 +177,6 @@ export class PostgresSessionRepository implements SessionRepository {
         }),
       );
 
-      await insertAuditEvents(tx, [sessionAuditEvent(c.context, c.now, sessionRow.user_id, sessionId, "session.refreshed", null)]);
-
       return {
         kind: "rotated",
         accessToken,
@@ -244,19 +189,13 @@ export class PostgresSessionRepository implements SessionRepository {
 
   async revokeByRefreshToken(c: RevokeByRefreshTokenCommand): Promise<boolean> {
     return this.db.transaction(async (tx) => {
-      const result = await tx.query<{ id: string; user_id: string }>(
+      const result = await tx.query(
         `UPDATE sessions s SET revoked_at = $1, ended_at = $1
          FROM refresh_tokens r
-         WHERE r.session_id = s.id AND r.token_hash = $2 AND s.revoked_at IS NULL
-         RETURNING s.id, s.user_id`,
+         WHERE r.session_id = s.id AND r.token_hash = $2 AND s.revoked_at IS NULL`,
         [c.now, c.presentedTokenHash],
       );
-      const revoked = result.rows[0];
-      if (!revoked) return false;
-      await insertAuditEvents(tx, [
-        sessionAuditEvent(c.context, c.now, revoked.user_id, revoked.id, "session.revoked", "logout"),
-      ]);
-      return true;
+      return (result.rowCount ?? 0) > 0;
     });
   }
 
@@ -282,13 +221,7 @@ export class PostgresSessionRepository implements SessionRepository {
         "UPDATE sessions SET revoked_at = $1, ended_at = $1 WHERE user_id = $2 AND revoked_at IS NULL",
         [c.now, c.actor.userId],
       );
-      const count = result.rowCount ?? 0;
-      if (count > 0) {
-        await insertAuditEvents(tx, [
-          sessionAuditEvent(c.context, c.now, c.actor.userId, c.actor.sessionId, "session.revoked_all", null, { count }),
-        ]);
-      }
-      return count;
+      return result.rowCount ?? 0;
     });
   }
 
@@ -298,12 +231,7 @@ export class PostgresSessionRepository implements SessionRepository {
       const target = (await tx.query<{ id: string }>("SELECT id FROM users WHERE id = $1 FOR UPDATE", [c.targetUserId])).rows[0];
       if (!target) return "not_found" as const;
       const result = await tx.query("UPDATE sessions SET revoked_at = $1, ended_at = $1 WHERE user_id = $2 AND revoked_at IS NULL", [c.now, c.targetUserId]);
-      const count = result.rowCount ?? 0;
-      await insertAuditEvents(tx, [{
-        correlationId: c.context.correlationId, actorUserId: c.actorUserId, action: "session.revoked_all", targetType: "user", targetId: c.targetUserId,
-        result: "succeeded", reason: "admin_revoked", metadata: { count }, context: c.context, occurredAt: c.now,
-      }]);
-      return count;
+      return result.rowCount ?? 0;
     });
   }
 

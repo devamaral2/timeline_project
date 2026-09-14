@@ -30,14 +30,11 @@ export interface SigningKeyRepository {
   ensureActive(
     candidate: NewStoredSigningKey,
     now: Date,
-    audit: AuditEventInput,
   ): Promise<StoredSigningKey>;
   rotate(
     candidate: NewStoredSigningKey,
     now: Date,
-    audit: AuditEventInput,
   ): Promise<StoredSigningKey>;
   listPublishable(): Promise<StoredSigningKey[]>;
 }
 import type { PublicSigningJwk } from '../jwk';
-import type { AuditEventInput } from '../../audit/audit-event';

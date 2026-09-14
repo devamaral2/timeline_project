@@ -20,11 +20,6 @@ export class ChangeUserStatusUseCase {
     const now = this.clock.now();
     const outcome = await this.users.changeStatusPreservingCapableAdmin({
       targetUserId: input.targetUserId, status: input.status, actorUserId: input.actor.userId, now, context: input.context,
-      auditEvents: [{
-        correlationId: input.context.correlationId, actorUserId: input.actor.userId, action: "user.status_changed",
-        targetType: "user", targetId: input.targetUserId, result: "succeeded", reason: null,
-        metadata: { status: input.status }, context: input.context, occurredAt: now,
-      }],
     });
     if (outcome === "not_found") throw new NotFoundError("unknown user");
     if (outcome === "invalid_status_transition") throw new ConflictError("invalid_status_transition");
