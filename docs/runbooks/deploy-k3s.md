@@ -145,14 +145,17 @@ O domínio raiz não receberá site neste roteiro; usaremos subdomínios:
 | -------------------- | ------------------------------ | ---------------------------------------- |
 | `web.SEUDOMINIO`     | Frontend web                   | Público, login Firebase dentro do app    |
 | `api.SEUDOMINIO`     | API                            | Público, endpoints exigem token Firebase |
-| `auth.SEUDOMINIO`    | Serviço de identidade separado | Protegido por Access nesta fase          |
+| `auth.SEUDOMINIO`    | Serviço de identidade separado | Público; possui autenticação própria     |
 | `grafana.SEUDOMINIO` | Painel de métricas             | Access + senha Grafana                   |
 | `rabbit.SEUDOMINIO`  | Painel da fila                 | Access + senha RabbitMQ                  |
 
 
-`SEUDOMINIO` significa o nome comprado, sem `https://` nem barras.
-O auth fica protegido nesta fase porque o web ainda usa Firebase. Transformá-lo
-no provedor de login do produto é uma mudança de integração, não de DNS.
+`SEUDOMINIO` significa o nome comprado, sem `https://` nem barras. O `auth`
+precisa permanecer alcançável sem Cloudflare Access: convite, login, MFA,
+refresh, logout e JWKS fazem parte de sua superfície pública. Enquanto web e API
+ainda usam Firebase, publicar esse hostname não os integra automaticamente ao
+novo serviço. A transição exige que os clientes usem os tokens emitidos pelo
+`auth` e que a API passe a validá-los pelo JWKS.
 
 Referência: [registro de domínio na Cloudflare](https://developers.cloudflare.com/registrar/get-started/register-domain/).
 
@@ -182,7 +185,7 @@ printf 'export DOMAIN=%q\nexport PUB_IFACE=%q\nexport PUBLIC_IP=%q\nexport KUBEC
   "$DOMAIN" "$PUB_IFACE" "$PUBLIC_IP" /etc/rancher/k3s/k3s.yaml \
   > /opt/braid/env.sh
 source /opt/braid/env.sh
-printf 'Web: https://timeline.%s\n' "$DOMAIN"
+printf 'Web: https://web.%s\n' "$DOMAIN"
 ```
 
 Confira se o IP foi encontrado na interface e se o endereço web está correto.
@@ -484,7 +487,8 @@ projectId`,` storageBucket`,` messagingSenderId`e`appId`.
 4. Em **Authentication**, inicie a configuração se necessário. Em
 *Sign-in method**, habilite **Google**, escolha o e-mail de suporte e salve.
 5. Em **Authentication → Settings → Authorized domains**, adicione exatamente
-timeline.SEUDOMINIO`, sem protocolo. Mantenha o` authDomain`fornecido pelo irebase, normalmente terminado em`firebaseapp.com`.
+`web.SEUDOMINIO`, sem protocolo. Mantenha o `authDomain` fornecido pelo Firebase,
+normalmente terminado em `firebaseapp.com`.
 6. Em **Project settings → Service accounts → Firebase Admin SDK**, gere uma
 have privada e baixe o JSON. Esse arquivo é segredo, ao contrário da
 onfiguração pública do app web.
@@ -1187,7 +1191,7 @@ não configure redirecionamento HTTP→HTTPS no Traefik neste fluxo.
 
 ```bash
 source /opt/braid/env.sh
-for mapping in "timeline web 3000" "api api 3001" "auth auth 3002" "rabbit rabbitmq 15672"; do
+for mapping in "web web 3000" "api api 3001" "auth auth 3002" "rabbit rabbitmq 15672"; do
   read -r sub service port <<< "$mapping"
   cat > "/opt/braid/k8s/ingress-$sub.yaml" <<EOF
 apiVersion: networking.k8s.io/v1
@@ -1223,7 +1227,7 @@ Teste o roteamento **antes** de envolver a Cloudflare:
 
 ```bash
 TRAEFIK_IP=$(kubectl -n kube-system get svc traefik -o jsonpath='{.spec.clusterIP}')
-curl -fsS -o /dev/null -w 'web=%{http_code}\n' -H "Host: timeline.$DOMAIN" "http://$TRAEFIK_IP"
+curl -fsS -o /dev/null -w 'web=%{http_code}\n' -H "Host: web.$DOMAIN" "http://$TRAEFIK_IP"
 curl -fsS -H "Host: auth.$DOMAIN" "http://$TRAEFIK_IP/health/ready"
 curl -fsS -H "Host: auth.$DOMAIN" "http://$TRAEFIK_IP/.well-known/jwks.json" | jq -e '.keys | length > 0'
 curl -sS -o /dev/null -w 'api=%{http_code}\n' -H "Host: api.$DOMAIN" "http://$TRAEFIK_IP/api/events"
@@ -1239,38 +1243,90 @@ Faça isto **antes** de publicar as rotas do Tunnel. Access é a tela de
 autenticação da Cloudflare anterior ao app; evita deixar o painel administrativo
 acessível só com sua senha interna.
 
+> **Mudança da Cloudflare em 2026:** organizações Zero Trust novas recebem
+> automaticamente **Cloudflare** como provedor de identidade padrão, restrito
+> aos membros da própria conta. O **One-time PIN** deixou de ser o padrão. Para
+> este deploy administrativo, use o provedor Cloudflare: você entra com a mesma
+> conta protegida por 2FA que usa no dashboard. Não é necessário configurar OTP,
+> Google, Okta, WARP ou outro provedor.
+
+Há três autenticações diferentes neste roteiro:
+
+| Autenticação | Onde aparece | O que usar agora |
+| --- | --- | --- |
+| Conta Cloudflare | Login no dashboard | Conta Cloudflare + 2FA |
+| Cloudflare Access | Antes de Grafana e RabbitMQ | Provedor **Cloudflare** |
+| MFA do serviço `auth` | Fluxo de identidade do produto | Twilio; não participa desta etapa |
+
 **Navegador:**
 
 1. Abra **Zero Trust / Cloudflare One** na conta Cloudflare.
 2. Se for o primeiro acesso, crie o nome da equipe e conclua o onboarding.
-scolha o plano adequado ao número de administradores; confira os termos
-presentados. Isso não instala VPN nem WARP no computador.
-3. Em **Settings → Authentication → Login methods** (ou **Integrations →
-dentity providers**, conforme a interface), habilite **One-time PIN**.
-le envia um código ao seu e-mail.
-4. Em **Access → Applications → Add an application**, escolha **Self-hosted**.
-5. Crie a aplicação `Grafana` com hostname público `grafana.SEUDOMINIO`,
-em caminho restrito. Defina duração de sessão de uma hora.
-6. Adicione uma policy `Allow`. Em **Include**, escolha **Emails** e coloque
-omente seu e-mail completo. Não escolha `Everyone` nem `Bypass`.
-elecione One-time PIN como método de login e salve.
-7. Repita para `rabbit.SEUDOMINIO` e `auth.SEUDOMINIO`, sempre cobrindo todo
- hostname e permitindo só os administradores escolhidos.
-8. Confira na lista que existem as três aplicações e suas policies.
+Escolha o plano adequado ao número de administradores; confira os termos
+apresentados. Isso não instala VPN nem WARP no computador.
+3. Abra **Integrations → Identity providers**. Em **Your identity providers**,
+confirme que existe **Cloudflare**. Abra sua configuração e confirme **Restrict
+to account members**. Em uma organização criada recentemente isso já vem pronto;
+se estiver ausente, escolha **Add new identity provider → Cloudflare**, ligue essa
+restrição e salve.
+4. Feche qualquer busca global com `Esc`; não procure por `self-hosted and
+private` nela, pois esse texto é uma escolha interna do assistente, não uma
+página pesquisável. Na barra lateral esquerda, role até **Access controls**,
+expanda essa seção e abra **Applications**. Na página de aplicações, clique
+**Create new application**. Somente na tela seguinte escolha **Self-hosted and
+private** e depois **Add public hostname**. O atalho **Protect an application
+with Access**, quando exibido na página Discover, leva ao mesmo lugar, mas não
+aparece em todas as páginas do painel.
+5. Crie a aplicação `Grafana`. Informe `grafana.SEUDOMINIO` como hostname
+público e deixe **Path vazio**, para proteger o host inteiro.
+6. Crie uma policy com nome `Administradores`, ação **Allow** e, em **Include**,
+seletor **Emails**, informe somente o e-mail completo de cada administrador.
+Não escolha `Everyone`, `Emails ending in`, `Bypass` nem `Login Methods` como
+regra de inclusão.
+7. Nos métodos de login da aplicação, deixe somente **Cloudflare**. Como existe
+um único provedor, ative **Instant authentication** se a opção aparecer. Defina
+**Session Duration** como uma hora e crie a aplicação.
+8. Repita os passos 4 a 7 para `rabbit.SEUDOMINIO`, sempre sem Path e com a
+lista explícita de administradores. Se a interface permitir
+selecionar a policy `Administradores` já criada, reutilize-a em vez de duplicar.
+9. Em **Access controls → Applications**, confirme as duas aplicações, os dois
+hostnames completos e a presença de uma policy **Allow** em cada uma.
 
-Não coloque Access em `timeline` ou `api` neste roteiro: os clientes usam
-autenticação Firebase. Uma tela de login Access no caminho quebraria requisições
-de API e o cliente mobile.
+O navegador só mostrará a tela do Access depois que o Tunnel e as rotas forem
+criados nos passos 17 e 18. Criar a aplicação Access antes da rota é intencional:
+evita uma janela em que o hostname administrativo ficaria publicado sem essa
+proteção.
 
-Referências: [aplicação self-hosted no Access](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/self-hosted-public-app/),
-[configurar One-time PIN](https://developers.cloudflare.com/cloudflare-one/integrations/identity-providers/one-time-pin/).
+### Alternativa: login por código enviado ao e-mail
+
+Use esta alternativa apenas se uma pessoa que precisa acessar os painéis não for
+membro da conta Cloudflare. Abra **Integrations → Identity providers → Add new
+identity provider → One-time PIN** e salve. Depois habilite **One-time PIN** como
+método de login das duas aplicações, mantendo a regra **Include → Emails** com
+endereços completos.
+
+Não use **Include → Login Methods → One-time PIN**: essa regra, sozinha, aceita
+qualquer endereço de e-mail válido. A Cloudflare só envia o código depois que o
+e-mail corresponde a uma policy; o PIN é de uso único e expira em dez minutos.
+Se a mensagem não chegar, confira spam e bloqueios a
+`noreply@notify.cloudflare.com`.
+
+Não coloque Access em `web`, `api` ou `auth` neste roteiro. `web` e
+`api` ainda usam Firebase; `auth` possui seus próprios endpoints públicos e será
+o emissor de identidade do produto. Uma tela de login Access no caminho
+quebraria login, convite, MFA, refresh, requisições de API e o cliente mobile.
+
+Referências: [Cloudflare como provedor de identidade](https://developers.cloudflare.com/cloudflare-one/integrations/identity-providers/cloudflare/),
+[aplicação self-hosted no Access](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/self-hosted-public-app/),
+[policies do Access](https://developers.cloudflare.com/cloudflare-one/access-controls/policies/)
+e [One-time PIN opcional](https://developers.cloudflare.com/cloudflare-one/integrations/identity-providers/one-time-pin/).
 
 ## 17. Criar o Tunnel e seu conector no k3s
 
 **Navegador:** no painel Cloudflare, abra **Networking → Tunnels**.
 Em interfaces anteriores, fica em **Zero Trust → Networks → Connectors →
 Cloudflare Tunnels**. Clique **Create a tunnel**, escolha `cloudflared` se
-perguntado, e nomeie `timeline-vps`.
+perguntado, e nomeie `braid-vps`.
 
 Na etapa do conector, selecione Docker e copie **somente o token** mostrado
 depois de `--token`. Não execute o comando Docker sugerido pelo painel:
@@ -1345,7 +1401,7 @@ Referência: [cloudflared no Kubernetes](https://developers.cloudflare.com/tunne
 
 ## 18. Publicar os cinco endereços pelo Tunnel
 
-**Navegador:** abra `timeline-vps`, **Routes → Add route → Published application**
+**Navegador:** abra `braid-vps`, **Routes → Add route → Published application**
 (ou **Public Hostnames → Add a public hostname** na interface anterior).
 
 Crie **uma rota por linha** desta tabela:
@@ -1353,7 +1409,7 @@ Crie **uma rota por linha** desta tabela:
 
 | Subdomain  | Domain      | Type | URL                                        | HTTP Host Header      |
 | ---------- | ----------- | ---- | ------------------------------------------ | --------------------- |
-| `timeline` | seu domínio | HTTP | `traefik.kube-system.svc.cluster.local:80` | `timeline.SEUDOMINIO` |
+| `web`      | seu domínio | HTTP | `traefik.kube-system.svc.cluster.local:80` | `web.SEUDOMINIO`      |
 | `api`      | seu domínio | HTTP | `traefik.kube-system.svc.cluster.local:80` | `api.SEUDOMINIO`      |
 | `auth`     | seu domínio | HTTP | `traefik.kube-system.svc.cluster.local:80` | `auth.SEUDOMINIO`     |
 | `grafana`  | seu domínio | HTTP | `traefik.kube-system.svc.cluster.local:80` | `grafana.SEUDOMINIO`  |
@@ -1392,8 +1448,8 @@ kubectl get svc -A
 kubectl get ingress -A
 kubectl top nodes
 kubectl top pods -A
-dig +short "timeline.$DOMAIN"
-curl -fsS -o /dev/null -w '%{http_code}\n' "https://timeline.$DOMAIN"
+dig +short "web.$DOMAIN"
+curl -fsS -o /dev/null -w '%{http_code}\n' "https://web.$DOMAIN"
 curl -sS -o /dev/null -w '%{http_code}\n' "https://api.$DOMAIN/api/events"
 ```
 
@@ -1403,18 +1459,20 @@ O DNS público deve apontar para a borda Cloudflare, não diretamente para a VPS
 
 **Navegador:**
 
-1. Abra `https://timeline.SEUDOMINIO`, faça login Google e crie um evento de
-este. Recarregue a página: ele precisa continuar lá. Isso verifica
-avegador → Cloudflare → Traefik → web → API → banco.
-2. Em janela anônima, abra `https://grafana.SEUDOMINIO`. Deve pedir o código
-o Access **antes** do login Grafana. Use `admin` e a `GRAFANA_PASSWORD`
-uardada. Abra **Dashboards → Browse** e um painel Kubernetes.
+1. Abra `https://web.SEUDOMINIO`, faça login Google e crie um evento de
+teste. Recarregue a página: ele precisa continuar lá. Isso verifica
+navegador → Cloudflare → Traefik → web → API → banco.
+2. Em janela anônima, abra `https://grafana.SEUDOMINIO`. Deve pedir o login
+do Access **antes** do login Grafana. Use `admin` e a `GRAFANA_PASSWORD`
+guardada. Abra **Dashboards → Browse** e um painel Kubernetes.
 3. Faça o mesmo com `https://rabbit.SEUDOMINIO`. Depois do Access, entre com
-suário `timeline` e `RABBIT_PASSWORD`.
-4. Em `https://auth.SEUDOMINIO/health/ready`, autentique no Access e confirme
- resposta saudável. O auth é uma API; não espere uma página de login em `/`.
-5. Sem sessão Access, um pedido a esses três hosts deve receber o desafio,
-edirecionamento para login ou recusa. Nunca o conteúdo administrativo.
+usuário `timeline` e `RABBIT_PASSWORD`.
+4. Abra `https://auth.SEUDOMINIO/health/ready` sem sessão Access e confirme a
+resposta saudável. Confira também que
+`https://auth.SEUDOMINIO/.well-known/jwks.json` publica o conjunto de chaves. O
+`auth` é uma API; não espere uma página em `/`.
+5. Sem sessão Access, um pedido a Grafana ou RabbitMQ deve receber o desafio,
+redirecionamento para login ou recusa. Nunca o conteúdo administrativo.
 
 **Computador / PowerShell**, fora da VPS: verifique as portas do IPv4 informado.
 
@@ -1459,9 +1517,10 @@ a geração/instalação nativa não faz parte de subir servidores na VPS.
 
 Se deixou Twilio/OpenRouter pendentes, OTP/IA continuam pendentes. RabbitMQ ainda
 não tem consumidor no código. O auth usa o endereço do socket como IP do cliente:
-atrás do proxy isso pode agrupar clientes nos limites por IP. Por isso permanece
-atrás do Access para uso administrativo até a integração do produto e a política
-de proxies confiáveis serem tratadas no código.
+atrás do proxy isso pode agrupar clientes nos limites por IP. Antes de direcionar
+usuários reais ao novo `auth`, a integração do produto e a política de proxies
+confiáveis precisam ser tratadas no código; Cloudflare Access não deve ser usado
+como substituto dessa correção porque bloquearia os endpoints públicos de login.
 
 ## 20. Fazer backup e guardar fora da VPS
 
@@ -1679,7 +1738,7 @@ free -h
 | Auth ready 503                 | Compare versão esperada no código com `auth_schema_meta`, confira grants e chave ativa |
 | API responde 401               | Sem token isso é esperado; valide pelo login real no web                               |
 | Web 502 em `/api/*`            | Confira API pronta e `BACKEND_URL` incorporada no build                                |
-| Firebase `unauthorized-domain` | Adicione `timeline.SEUDOMINIO` nos domínios autorizados                                |
+| Firebase `unauthorized-domain` | Adicione `web.SEUDOMINIO` nos domínios autorizados                                     |
 | Cloudflare 1033                | Tunnel sem conector saudável; confira deployment/logs cloudflared                      |
 | Cloudflare 502                 | Tunnel conectado, mas origem inacessível; confira Service Traefik e URL interna        |
 | Traefik 404                    | Não encontrou rota; confira hostname, HTTP Host Header e Ingress                       |
