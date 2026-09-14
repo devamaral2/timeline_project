@@ -5,6 +5,7 @@ import { PublicAuthController } from "./public-auth.controller";
 import { LoginUseCase } from "../authentication/usecases/login.usecase";
 import { AuthenticationFailedError } from "../common/errors";
 import { configureHttpShell } from "./request-context.middleware";
+import { RecordingAuthLogger } from "../common/logger";
 
 let app: INestApplication | undefined;
 afterEach(async () => { await app?.close(); app = undefined; });
@@ -13,7 +14,7 @@ async function startApp(login: { execute: ReturnType<typeof vi.fn> }) {
   const module = await Test.createTestingModule({ controllers: [PublicAuthController], providers: [
     { provide: LoginUseCase, useValue: login },
   ] }).compile();
-  app = module.createNestApplication({ bodyParser: false }); configureHttpShell(app); await app.listen(0, "127.0.0.1");
+  app = module.createNestApplication({ bodyParser: false }); configureHttpShell(app, new RecordingAuthLogger()); await app.listen(0, "127.0.0.1");
   const address = app.getHttpServer().address() as { port: number };
   return `http://127.0.0.1:${address.port}`;
 }
