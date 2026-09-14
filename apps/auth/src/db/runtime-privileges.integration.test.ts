@@ -3,13 +3,17 @@ import { expect, it } from "vitest";
 import { createPostgresTestDatabase } from "../testing/postgres-test-database";
 
 const run = process.env.AUTH_TEST_DATABASE_URL ? it : it.skip;
-run("creates a runtime identity that can only append audit records", async () => {
+run("gives the runtime identity data access but no DDL", async () => {
   const fixture = await createPostgresTestDatabase();
+  const runtime = new Client({ connectionString: fixture.runtimeUrl });
+  await runtime.connect();
   try {
-    const runtime = new Client({ connectionString: fixture.runtimeUrl }); await runtime.connect();
-    await expect(runtime.query("SELECT * FROM audit_log")).rejects.toThrow();
-    await runtime.end();
-  } finally { await fixture.close(); }
+    await expect(runtime.query("SELECT count(*) FROM users")).resolves.toBeDefined();
+    await expect(runtime.query("DROP TABLE signup_tokens")).rejects.toThrow(/must be owner|permission denied/);
+    await expect(runtime.query("CREATE TABLE sneaky (id text)")).rejects.toThrow(/permission denied/);
+  } finally {
+    await runtime.end(); await fixture.close();
+  }
 });
 
 run("lets the runtime identity write signup_tokens, and any table created after the grant", async () => {

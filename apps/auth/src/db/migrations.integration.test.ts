@@ -54,7 +54,12 @@ describe("auth migrations", () => {
       "auth_schema_meta", "rate_limit_buckets", "refresh_tokens", "role_permissions", "roles",
       "sessions", "signing_keys", "signup_tokens", "user_permissions", "user_roles", "users",
     ]));
-    expect(await tables(db)).not.toContain("invites");
+    for (const dropped of ["invites", "audit_log", "authentication_attempts", "mfa_challenges", "recovery_codes"]) {
+      expect(await tables(db)).not.toContain(dropped);
+    }
+    // As quatro tabelas de RBAC continuam.
+    expect(await tables(db)).toEqual(expect.arrayContaining(["roles", "role_permissions", "user_roles", "user_permissions"]));
+    expect((await db.query("SELECT count(*)::int AS count FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE p.proname = 'reject_audit_mutation' AND n.nspname = $1", [schema])).rows[0]).toEqual({ count: 0 });
   });
 
   run("accepts exactly the four status values", async () => {
@@ -144,8 +149,28 @@ describe("auth migrations", () => {
     await expect(insertBucket("mfa_send_user")).rejects.toThrow(/rate_limit_buckets_scope_check/);
   });
 
+  run("rolls 0006 back to the audit/MFA tables and forward again", async () => {
+    const db = await migratedSchema();
+    await db.query("BEGIN");
+    await db.query(readFileSync(resolve(migrationsFolder, "rollback/0006_drop_audit_and_mfa.down.sql"), "utf8"));
+    await db.query("COMMIT");
+    expect((await db.query("SELECT version FROM auth_schema_meta")).rows).toEqual([{ version: 6 }]);
+    expect(await tables(db)).toEqual(expect.arrayContaining(["audit_log", "authentication_attempts", "mfa_challenges", "recovery_codes"]));
+    await db.query("INSERT INTO audit_log (id, correlation_id, action, result, created_at) VALUES ('a', 'c', 'x', 'succeeded', now())");
+    await expect(db.query("UPDATE audit_log SET action = 'y'")).rejects.toThrow(/append-only/);
+
+    await db.query("BEGIN");
+    await db.query(readFileSync(resolve(migrationsFolder, "0006_drop_audit_and_mfa.sql"), "utf8"));
+    await db.query("COMMIT");
+    expect((await db.query("SELECT version FROM auth_schema_meta")).rows).toEqual([{ version: 7 }]);
+    expect(await tables(db)).not.toContain("audit_log");
+  });
+
   run("rolls 0005 back to the invite schema and forward again", async () => {
     const db = await migratedSchema();
+    await db.query("BEGIN");
+    await db.query(readFileSync(resolve(migrationsFolder, "rollback/0006_drop_audit_and_mfa.down.sql"), "utf8"));
+    await db.query("COMMIT");
     await db.query("BEGIN");
     await db.query(readFileSync(resolve(migrationsFolder, "rollback/0005_identity_vocabulary.down.sql"), "utf8"));
     await db.query("COMMIT");

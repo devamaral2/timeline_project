@@ -36,6 +36,10 @@ export const FORBIDDEN_MARKERS: readonly string[] = [
   // Convites deram lugar ao link de signup (RAF-81).
   "pending_invite",
   "inviteLink",
+  // Tabelas apagadas pela 0006 (RAF-72).
+  "audit_log",
+  "authentication_attempts",
+  "mfa_challenges",
 ];
 
 /** Relativas a `apps/auth`. */

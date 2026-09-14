@@ -10,9 +10,8 @@ const testUrl = process.env.AUTH_TEST_DATABASE_URL;
 if (process.env.AUTH_REQUIRE_POSTGRES_TESTS === "true" && !testUrl) throw new Error("AUTH_TEST_DATABASE_URL is required when AUTH_REQUIRE_POSTGRES_TESTS=true");
 export const describeWithPostgres = testUrl ? describe : describe.skip;
 function safe(value: string): string { if (!/^[a-z0-9_]+$/.test(value)) throw new Error("Unsafe test identifier"); return value; }
-/** `adminUrl` aponta para o mesmo schema sem as restricoes do papel de
- *  runtime -- e o unico jeito de um teste LER `audit_log`, que para a
- *  aplicacao e append-only. */
+/** `adminUrl` aponta para o mesmo schema com o dono das tabelas, sem as
+ *  restricoes do papel de runtime -- e o que um teste usa para executar DDL. */
 export interface PostgresTestDatabase { migrationUrl: string; adminUrl: string; runtimeUrl: string; schema: string; close(): Promise<void>; }
 export async function createPostgresTestDatabase(): Promise<PostgresTestDatabase> {
   if (!testUrl) throw new Error("AUTH_TEST_DATABASE_URL is not configured");

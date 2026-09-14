@@ -34,15 +34,10 @@ PostgreSQL. As migrations também executarão em containers.
 interrompe todos os serviços. O mobile é um app instalado no celular, não um
 servidor a subir no k3s; este roteiro publica a API que ele poderá consumir.
 
-> **Impedimento encontrado no código em 07/09/2026:** antes de iniciar este
-> deploy completo, é preciso reconciliar as migrations e a implementação do
-> `auth`. `apps/auth/src/db/readiness.ts` declara `AUTH_SCHEMA_VERSION = 3`,
-> mas `0003`/`0004` elevam o schema a 4/5. A `0004_email_otp_mfa.sql` remove
-> campos de telefone/MFA que `schema.ts` e os repositórios ainda utilizam.
-> Com essa revisão, o auth não passa na readiness após aplicar todas as
-> migrations. Não basta trocar o número para 5. A correção é trabalho de código,
-> não uma configuração da VPS. O passo 7 detecta a divergência e impede
-> prosseguir. Este documento não contorna o problema pulando migrations.
+> **Impedimento de 07/09/2026 resolvido:** a divergência entre
+> `AUTH_SCHEMA_VERSION` e as migrations do `auth` foi eliminada na reconstrução
+> do serviço (projeto "Centralized Auth Service"). O código e as migrations
+> `0005`/`0006` sobem juntos e o passo 7 continua conferindo a readiness.
 
 ## Como executar este documento
 
@@ -883,8 +878,8 @@ os já aplicados. Ambos usam o driver `pg`, sem cliente `psql` no host.
 
 O último comando aplica permissões, como `auth_owner`, usando o `psql` do próprio
 Postgres via socket local. O arquivo vem pelo stdin (`-i`). É uma etapa separada
-das tabelas: libera leitura/escrita ao runtime, mas mantém `audit_log` restrita
-a inserção. Não retire essa etapa. Seria possível automatizar permissões no
+das tabelas: libera leitura/escrita ao runtime nas tabelas atuais e, por
+`ALTER DEFAULT PRIVILEGES`, nas que migrations futuras criarem. Não retire essa etapa. Seria possível automatizar permissões no
 executor Node em outra mudança; este roteiro preserva o mecanismo existente.
 
 Confira a estrutura:
@@ -893,10 +888,10 @@ Confira a estrutura:
 kubectl -n braid exec postgres-0 -- psql -U braid -d braid -c '\dt'
 kubectl -n braid exec postgres-0 -- psql -U auth_owner -d braid_auth -c '\dt'
 kubectl -n braid exec postgres-0 -- psql -U auth_owner -d braid_auth \
-  -c "SELECT has_table_privilege('auth_runtime','audit_log','INSERT') AS pode_inserir, has_table_privilege('auth_runtime','audit_log','UPDATE') AS pode_alterar;"
+  -c "SELECT has_table_privilege('auth_runtime','signup_tokens','INSERT') AS pode_inserir, has_table_privilege('auth_runtime','signup_tokens','UPDATE') AS pode_alterar;"
 ```
 
-Esperado: tabelas nas duas bases e `pode_inserir=t`, `pode_alterar=f`.
+Esperado: tabelas nas duas bases e `pode_inserir=t`, `pode_alterar=t`.
 O sucesso do deploy não depende de rodar migrations no computador pessoal.
 
 Importe as imagens finais no runtime do k3s:
