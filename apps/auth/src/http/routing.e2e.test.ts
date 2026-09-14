@@ -41,7 +41,7 @@ describe("Route registration and ordering", () => {
 
     // Sem bearer, mas com corpo invalido: 400 prova que a rota existe e que o
     // corpo chegou ao schema, nao a um guard.
-    for (const path of ["invites/inspect", "invites/accept", "login"]) {
+    for (const path of ["login"]) {
       const response = await fetch(`${app.url}/auth/${path}`, { method: "POST", headers: json, body: JSON.stringify({ nope: true }) });
       expect([path, response.status]).toEqual([path, 400]);
     }

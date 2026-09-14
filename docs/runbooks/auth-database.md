@@ -48,8 +48,11 @@ transação, junto com o registro de que foi aplicado.
   `AUTH_SCHEMA_VERSION` (`apps/auth/src/db/readiness.ts`). Rode `db:migrate`.
 - `GET /health/ready` responde 503 com o schema correto: não há chave de
   assinatura ativa. Veja o runbook de rotação de chave.
-- Erro de permissão em runtime: as permissões do passo 3 não foram aplicadas
-  depois de uma migração que criou tabela nova.
+- Erro de permissão em runtime (`permission denied for table ...`): o passo 3
+  nunca rodou neste banco. Desde a migração `0005` o `grant-runtime.sql` também
+  define `ALTER DEFAULT PRIVILEGES`, então tabelas criadas por migrações
+  posteriores já nascem acessíveis ao `auth_runtime` — rode o arquivo uma vez e
+  o problema não volta.
 
 ## O que não fazer
 

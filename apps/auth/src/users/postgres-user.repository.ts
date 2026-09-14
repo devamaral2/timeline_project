@@ -2,7 +2,7 @@ import type { AuthDatabase } from "../db/client";
 import type { UserReader } from "./ports/user-repository";
 import type { User } from "./user";
 
-function user(row: Record<string, unknown>): User { return { id: String(row.id), email: String(row.email), name: String(row.name), passwordHash: row.password_hash as string | null, status: row.status as User["status"], createdAt: row.created_at as Date, updatedAt: row.updated_at as Date }; }
+function user(row: Record<string, unknown>): User { return { id: String(row.id), email: row.email as string | null, phone: row.phone as string | null, name: String(row.name), passwordHash: row.password_hash as string | null, status: row.status as User["status"], observesUserId: row.observes_user_id as string | null, createdAt: row.created_at as Date, updatedAt: row.updated_at as Date }; }
 
 export class PostgresUserRepository implements UserReader {
   constructor(private readonly db: AuthDatabase) {}

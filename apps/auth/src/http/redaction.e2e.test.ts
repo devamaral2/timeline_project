@@ -29,7 +29,7 @@ describe("Secret redaction", () => {
     const password = "senha-secreta-que-nao-pode-voltar";
     const phone = "+5511987654321";
 
-    const badShape = await fetch(`${app.url}/auth/invites/accept`, { method: "POST", headers: json, body: JSON.stringify({ token: "t", password, phone, channel: "carrier-pigeon" }) });
+    const badShape = await fetch(`${app.url}/auth/login`, { method: "POST", headers: json, body: JSON.stringify({ email: "a@example.test", password, phone, channel: "carrier-pigeon" }) });
     expect(badShape.status).toBe(400);
     const body = await badShape.text();
     expect(body).toBe('{"code":"invalid_request"}');

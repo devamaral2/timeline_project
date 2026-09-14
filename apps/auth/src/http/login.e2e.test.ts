@@ -29,7 +29,7 @@ async function boot(): Promise<AuthDatabase> {
 async function seedUser(db: AuthDatabase, email: string, status: string, withAdminRole = true): Promise<string> {
   const id = ulid();
   const hash = await new ScryptPasswordHasher().hash(PASSWORD);
-  await db.query("INSERT INTO users (id, email, name, password_hash, status, created_at, updated_at) VALUES ($1, $2, 'Admin', $3, $4, now(), now())", [id, email, hash, status]);
+  await db.query("INSERT INTO users (id, email, name, password_hash, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, now(), now())", [id, email, status === "pending_sign_up" ? `admin_${id.slice(-6).toLowerCase()}` : "Admin", hash, status]);
   if (withAdminRole) await db.query("INSERT INTO user_roles (user_id, role_key) VALUES ($1, 'admin')", [id]);
   return id;
 }
@@ -59,13 +59,17 @@ describeWithPostgres("POST /auth/login against Postgres", () => {
     expect(refreshed.status).toBe(200);
   });
 
-  it("answers the same empty 401 for an unknown email, a wrong password and a non-active account", async () => {
+  it("answers the same empty 401 for an unknown email, a wrong password, and each of pending_sign_up, inactive and guest", async () => {
     const db = await boot();
     await seedUser(db, "admin@example.test", "active");
-    await seedUser(db, "pendente@example.test", "pending_invite");
-    await seedUser(db, "suspenso@example.test", "suspended");
+    const ownerId = await seedUser(db, "dono@example.test", "active", false);
+    await seedUser(db, "pendente@example.test", "pending_sign_up");
+    await seedUser(db, "inativo@example.test", "inactive");
+    // Um guest nao tem email nem senha: o unico jeito de "tentar entrar como
+    // ele" e com o nome, que nao e credencial nenhuma.
+    await db.query("INSERT INTO users (id, name, status, observes_user_id, created_at, updated_at) VALUES ($1, 'guest_ab12cd', 'guest', $2, now(), now())", [ulid(), ownerId]);
 
-    for (const [email, password] of [["ninguem@example.test", PASSWORD], ["admin@example.test", "Senha-Errada-123"], ["pendente@example.test", PASSWORD], ["suspenso@example.test", PASSWORD]]) {
+    for (const [email, password] of [["ninguem@example.test", PASSWORD], ["admin@example.test", "Senha-Errada-123"], ["pendente@example.test", PASSWORD], ["inativo@example.test", PASSWORD], ["guest_ab12cd", PASSWORD]]) {
       const response = await login(email!, password!);
       expect([email, response.status, await response.text()]).toEqual([email, 401, ""]);
     }

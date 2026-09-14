@@ -1,12 +1,10 @@
 import { Module, type DynamicModule } from '@nestjs/common';
-import { AcceptInviteUseCase } from './authentication/usecases/accept-invite.usecase';
 import { LoginCredentialChecker } from './authentication/login-credential-checker';
 import { LoginUseCase } from './authentication/usecases/login.usecase';
 import { Clock, SystemClock } from './common/clock';
 import { CryptoSecretGenerator, SecretGenerator } from './common/secret-generator';
 import type { RuntimeEnv } from './config/env';
 import { RUNTIME_ENV } from './config/tokens';
-import { PreparePassword } from './credentials/prepare-password';
 import { ScryptPasswordHasher } from './credentials/scrypt-password-hasher';
 import { PostgresSigningKeyRepository } from './crypto/postgres-signing-key.repository';
 import { SigningKeyService } from './crypto/signing-key.service';
@@ -17,8 +15,6 @@ import { AuthenticatedAuthController } from './http/authenticated-auth.controlle
 import { HealthController } from './http/health.controller';
 import { JwksController } from './http/jwks.controller';
 import { PublicAuthController } from './http/public-auth.controller';
-import { PostgresInviteRepository } from './invites/postgres-invite.repository';
-import { InspectInviteUseCase } from './invites/usecases/inspect-invite.usecase';
 import { PostgresRateLimiter } from './rate-limit/postgres-rate-limiter';
 import { PostgresRbacRepository } from './rbac/postgres-rbac.repository';
 import { PostgresSessionRepository } from './sessions/postgres-session.repository';
@@ -41,19 +37,15 @@ export class AppModule {
         { provide: Clock, useClass: SystemClock },
         { provide: SecretGenerator, useClass: CryptoSecretGenerator },
         { provide: ScryptPasswordHasher, useClass: ScryptPasswordHasher },
-        { provide: PreparePassword, inject: [ScryptPasswordHasher], useFactory: (hasher: ScryptPasswordHasher) => new PreparePassword(hasher) },
         { provide: LoginCredentialChecker, inject: [ScryptPasswordHasher], useFactory: async (hasher: ScryptPasswordHasher) => new LoginCredentialChecker(hasher, await hasher.hash('timeline-auth-login-dummy')) },
 
         { provide: PostgresSigningKeyRepository, inject: [AUTH_DATABASE], useFactory: (db: AuthDatabase) => new PostgresSigningKeyRepository(db) },
         { provide: SigningKeyService, inject: [PostgresSigningKeyRepository, RUNTIME_ENV, SecretGenerator], useFactory: (repository: PostgresSigningKeyRepository, runtime: RuntimeEnv, secrets: SecretGenerator) => new SigningKeyService(repository, runtime.keyEncryptionKey, secrets) },
         { provide: PostgresUserRepository, inject: [AUTH_DATABASE], useFactory: (db: AuthDatabase) => new PostgresUserRepository(db) },
         { provide: PostgresRbacRepository, inject: [AUTH_DATABASE], useFactory: (db: AuthDatabase) => new PostgresRbacRepository(db) },
-        { provide: PostgresInviteRepository, inject: [AUTH_DATABASE], useFactory: (db: AuthDatabase) => new PostgresInviteRepository(db) },
         { provide: PostgresRateLimiter, inject: [AUTH_DATABASE, RUNTIME_ENV], useFactory: (db: AuthDatabase, runtime: RuntimeEnv) => new PostgresRateLimiter(db, runtime.keyEncryptionKey) },
         { provide: PostgresSessionRepository, inject: [AUTH_DATABASE, RUNTIME_ENV], useFactory: (db: AuthDatabase, runtime: RuntimeEnv) => new PostgresSessionRepository(db, runtime.issuer, runtime.audience) },
 
-        { provide: InspectInviteUseCase, inject: [PostgresInviteRepository, Clock], useFactory: (invites: PostgresInviteRepository, clock: Clock) => new InspectInviteUseCase(invites, clock) },
-        { provide: AcceptInviteUseCase, inject: [PostgresInviteRepository, PreparePassword, Clock], useFactory: (invites: PostgresInviteRepository, password: PreparePassword, clock: Clock) => new AcceptInviteUseCase(invites, password, clock) },
         { provide: LoginUseCase, inject: [PostgresUserRepository, LoginCredentialChecker, PostgresRateLimiter, PostgresSessionRepository, SigningKeyService, Clock, SecretGenerator, RUNTIME_ENV], useFactory: (users: PostgresUserRepository, credentials: LoginCredentialChecker, limiter: PostgresRateLimiter, sessions: PostgresSessionRepository, keys: SigningKeyService, clock: Clock, secrets: SecretGenerator, runtime: RuntimeEnv) => new LoginUseCase(users, credentials, limiter, sessions, keys.signAccessToken, clock, secrets, runtime.limits) },
         { provide: RefreshSessionUseCase, inject: [PostgresSessionRepository, SigningKeyService, Clock, SecretGenerator], useFactory: (sessions: PostgresSessionRepository, keys: SigningKeyService, clock: Clock, secrets: SecretGenerator) => new RefreshSessionUseCase(sessions, keys.signAccessToken, clock, secrets) },
         { provide: RevokeSessionUseCase, inject: [PostgresSessionRepository, Clock], useFactory: (sessions: PostgresSessionRepository, clock: Clock) => new RevokeSessionUseCase(sessions, clock) },

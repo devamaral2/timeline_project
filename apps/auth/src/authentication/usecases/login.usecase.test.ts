@@ -24,8 +24,8 @@ class FixedSecrets extends SecretGenerator { private id = 0; randomId(): string 
 /** Um hash com a forma exata que o checker aceita como "utilizavel". */
 const USABLE_HASH = `scrypt$32768$8$1$${"A".repeat(22)}$${"B".repeat(86)}`;
 
-function userWith(status: UserStatus | "pending_sign_up" | "guest" | "inactive", passwordHash: string | null = USABLE_HASH): User {
-  return { id: "user-1", email: "admin@example.test", name: "Admin", passwordHash, status: status as UserStatus, createdAt: now, updatedAt: now };
+function userWith(status: UserStatus, passwordHash: string | null = USABLE_HASH): User {
+  return { id: "user-1", email: "admin@example.test", phone: "+5511999990000", name: "Admin", passwordHash, status, observesUserId: status === "guest" ? "someone" : null, createdAt: now, updatedAt: now };
 }
 function reader(user: User | null): UserReader { return { findById: vi.fn(), findByEmail: vi.fn().mockResolvedValue(user) }; }
 
@@ -116,9 +116,6 @@ describe("LoginUseCase", () => {
     ["pending_sign_up", null],
     ["guest", null],
     ["inactive", USABLE_HASH],
-    ["pending_invite", USABLE_HASH],
-    ["suspended", USABLE_HASH],
-    ["disabled", USABLE_HASH],
   ] as const)("refuses a %s account (password hash %s) with the generic failure and never opens a session", async (status, passwordHash) => {
     const hasher = countingHasher();
     const { repository, openSession } = sessions();
@@ -145,7 +142,7 @@ describe("LoginUseCase", () => {
     await expect(login.execute({ email: "alvo@example.test", password: "x", context })).rejects.toBeInstanceOf(RateLimitedError);
     expect(hasher.verify).toHaveBeenCalledTimes(limits.passwordEmail.attempts);
 
-    const byIp = usecase({ user: null, limiter: { hit: vi.fn(async (input: Parameters<RateLimiter["hit"]>[0]) => ({ allowed: input.scope !== "password_ip", retryAfterSeconds: 42 })) } });
+    const byIp = usecase({ user: null, limiter: { hit: vi.fn(async (input: Parameters<RateLimiter["hit"]>[0]) => ({ allowed: input.scope !== "login_ip", retryAfterSeconds: 42 })) } });
     await expect(byIp.execute({ email: "outro@example.test", password: "x", context })).rejects.toMatchObject({ retryAfterSeconds: 42 });
   });
 });

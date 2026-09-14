@@ -21,7 +21,7 @@ const noContent = (description: string) => ({ description });
 const bearer = [{ bearerAuth: [] }];
 const errorResponses = {
   "400": json({ $ref: "#/components/schemas/ErrorCode" }, "Requisição inválida: JSON malformado, campo desconhecido ou formato incompatível."),
-  "401": noContent("Credenciais, token de acesso ou token de convite inválido, expirado ou revogado."),
+  "401": noContent("Credenciais ou token inválido, expirado ou revogado."),
   "429": noContent("Limite de tentativas excedido. Consulte o cabeçalho `Retry-After` antes de tentar novamente."),
   "500": json({ $ref: "#/components/schemas/InternalError" }, "Falha inesperada. Informe o `correlationId` ao suporte."),
 } as const;
@@ -43,12 +43,6 @@ const operations: Record<string, Record<string, OpenApiOperation>> = {
   },
   "/.well-known/jwks.json": {
     get: { summary: "Publica as chaves públicas JWT", description: "JWKS usado por serviços consumidores para validar tokens de acesso emitidos pelo Auth. A resposta pode retornar `304` quando o `ETag` enviado em `If-None-Match` ainda for atual.", tags: ["Infraestrutura"], parameters: [{ name: "If-None-Match", in: "header", required: false, schema: { type: "string" }, description: "ETag da versão JWKS já armazenada." }], responses: { "200": json({ $ref: "#/components/schemas/Jwks" }, "Conjunto atual de chaves públicas."), "304": noContent("O conjunto não mudou desde o ETag informado.") } },
-  },
-  "/auth/invites/inspect": {
-    post: { summary: "Inspeciona um convite", description: "Valida um token de convite antes do cadastro e devolve apenas os dados seguros para exibição: nome, email mascarado e expiração.", tags: ["Convites públicos"], requestBody: request("InspectInviteRequest"), responses: { "201": json({ $ref: "#/components/schemas/InviteInspection" }), ...errorResponses } },
-  },
-  "/auth/invites/accept": {
-    post: { summary: "Aceita o convite com senha", description: "Define a senha e ativa o convidado em uma transação, sem emitir sessão. Depois é necessário fazer login.", tags: ["Convites públicos"], requestBody: request("AcceptInviteRequest"), responses: { "201": json({ $ref: "#/components/schemas/InviteAccepted" }), "422": json({ $ref: "#/components/schemas/ErrorCode" }, "Senha não atende à política de segurança."), ...errorResponses } },
   },
   "/auth/login": {
     post: { summary: "Faz login por senha", description: "Confere email e senha e devolve o par de tokens da nova sessão em uma única ida. Email inexistente, senha errada e conta que ainda não pode entrar respondem o mesmo `401`, no mesmo tempo.", tags: ["Autenticação pública"], requestBody: request("LoginRequest"), responses: { "200": json({ $ref: "#/components/schemas/SessionTokens" }, "Sessão emitida."), ...errorResponses } },
@@ -77,11 +71,10 @@ export const authOpenApiDocument = {
   info: {
     title: "Braid Auth API",
     version: "1.0.0",
-    description: "API de identidade do Braid: convites, login por senha e sessões.\n\nRotas protegidas usam `Authorization: Bearer <accessToken>`. Todas as respostas carregam `X-Correlation-Id`; use-o para rastrear falhas. Campos de segredo são apenas de escrita e nunca voltam nas respostas.",
+    description: "API de identidade do Braid: login por senha e sessões.\n\nRotas protegidas usam `Authorization: Bearer <accessToken>`. Todas as respostas carregam `X-Correlation-Id`; use-o para rastrear falhas. Campos de segredo são apenas de escrita e nunca voltam nas respostas.",
   },
   tags: [
     { name: "Infraestrutura", description: "Sondas de saúde e descoberta de chaves públicas." },
-    { name: "Convites públicos", description: "Fluxo de cadastro iniciado por um convite." },
     { name: "Autenticação pública", description: "Login por email e senha, sem sessão existente." },
     { name: "Sessões", description: "Ciclo de vida e consulta da sessão autenticada." },
   ],
@@ -93,15 +86,11 @@ export const authOpenApiDocument = {
       InternalError: { type: "object", required: ["code", "correlationId"], properties: { code: { type: "string", enum: ["internal_error"] }, correlationId: string("Identificador para rastrear a falha.") } },
       Health: { type: "object", required: ["status"], properties: { status: { type: "string", enum: ["ok"] } } },
       Jwks: { type: "object", required: ["keys"], properties: { keys: { type: "array", items: { type: "object", additionalProperties: true } } } },
-      InspectInviteRequest: object({ token: token("Token secreto presente no link de convite.") }),
-      AcceptInviteRequest: object({ token: token("Token secreto presente no link de convite."), password: token("Senha inicial, validada pela política de segurança.") }),
       LoginRequest: object({ email: { ...string("Email da conta.", 320), format: "email" }, password: token("Senha da conta.") }),
       RefreshTokenRequest: object({ refreshToken: token("Refresh token da sessão que será renovada ou revogada.") }),
-      InviteAccepted: object({accepted:{type:"boolean",enum:[true]}}),
-      InviteInspection: object({ name: string("Nome do convidado."), email: string("Email mascarado."), expiresAt: dateTime("Momento de expiração do convite.") }),
       SessionTokens: object({ accessToken: string("JWT para autenticar rotas protegidas."), refreshToken: string("Token opaco para renovar a sessão."), accessTokenExpiresInSeconds: { type: "integer", description: "Vida útil do access token em segundos." }, refreshTokenExpiresAt: dateTime("Expiração do refresh token.") }),
       RefreshTokens: object({ accessToken: string("Novo JWT de acesso."), refreshToken: string("Novo refresh token; substitui o anterior.") }),
-      CurrentUser: object({ userId: string("ID do usuário."), email: string("Email da conta."), name: string("Nome da conta."), sessionId: string("ID da sessão atual."), roles: { type: "array", items: { type: "string" } }, permissions: { type: "array", items: { type: "string" } }, denies: { type: "array", items: { type: "string" } } }),
+      CurrentUser: object({ userId: string("ID do usuário."), email: { type: ["string", "null"], description: "Email da conta." }, name: string("Nome da conta."), sessionId: string("ID da sessão atual."), roles: { type: "array", items: { type: "string" } }, permissions: { type: "array", items: { type: "string" } }, denies: { type: "array", items: { type: "string" } } }),
     },
   },
 } as const;

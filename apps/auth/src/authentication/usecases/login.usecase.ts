@@ -48,8 +48,8 @@ export class LoginUseCase {
     const now = this.clock.now();
     const email = normalizeEmail(input.email);
     const [byEmail, byIp] = await Promise.all([
-      this.limiter.hit({ scope: "password_email", subject: email, limit: this.limits.passwordEmail.attempts, windowSeconds: this.limits.passwordEmail.windowSeconds, now }),
-      this.limiter.hit({ scope: "password_ip", subject: input.context.ipAddress ?? "unknown", limit: this.limits.passwordIp.attempts, windowSeconds: this.limits.passwordIp.windowSeconds, now }),
+      this.limiter.hit({ scope: "login_email", subject: email, limit: this.limits.passwordEmail.attempts, windowSeconds: this.limits.passwordEmail.windowSeconds, now }),
+      this.limiter.hit({ scope: "login_ip", subject: input.context.ipAddress ?? "unknown", limit: this.limits.passwordIp.attempts, windowSeconds: this.limits.passwordIp.windowSeconds, now }),
     ]);
     if (!byEmail.allowed || !byIp.allowed) throw new RateLimitedError(Math.max(byEmail.retryAfterSeconds, byIp.retryAfterSeconds), "login");
 

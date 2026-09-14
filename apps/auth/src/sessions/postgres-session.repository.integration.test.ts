@@ -36,7 +36,7 @@ async function activateSigningKey(database: AuthDatabase, now: Date): Promise<vo
   );
 }
 
-async function seedUser(database: AuthDatabase, status: "active" | "suspended" | "disabled" = "active"): Promise<string> {
+async function seedUser(database: AuthDatabase, status: "active" | "inactive" = "active"): Promise<string> {
   const id = ulid();
   await database.query(
     `INSERT INTO users (id, email, name, password_hash, status, created_at, updated_at)
@@ -232,7 +232,7 @@ describeWithPostgres("PostgresSessionRepository", () => {
     fixture = await createPostgresTestDatabase();
     db = createAuthDatabase({ connectionString: fixture.runtimeUrl });
     const now = new Date();
-    const userId = await seedUser(db, "suspended");
+    const userId = await seedUser(db, "inactive");
     const { sessionId } = await seedSession(db, userId, now);
     const repository = new PostgresSessionRepository(db, "https://auth.timeline.local", "timeline-api");
     const actor: AuthenticatedActor = {

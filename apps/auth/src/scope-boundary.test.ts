@@ -33,6 +33,9 @@ export const FORBIDDEN_MARKERS: readonly string[] = [
   "pwnedpasswords",
   "nodemailer",
   "cleanup-auth-data",
+  // Convites deram lugar ao link de signup (RAF-81).
+  "pending_invite",
+  "inviteLink",
 ];
 
 /** Relativas a `apps/auth`. */
@@ -41,6 +44,7 @@ export const FORBIDDEN_SUBTREES: readonly string[] = [
   "src/mfa",
   "src/audit",
   "src/cleanup",
+  "src/invites",
 ];
 
 export interface ScopeViolation {

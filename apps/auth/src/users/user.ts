@@ -1,6 +1,12 @@
 import type { Permission } from "../rbac/permissions";
-export type UserStatus = "pending_invite" | "active" | "suspended" | "disabled";
-export interface User { id: string; email: string; name: string; passwordHash: string | null; status: UserStatus; createdAt: Date; updatedAt: Date; }
+/**
+ * - `active`          — pode entrar.
+ * - `inactive`        — existiu e foi desligado. Nada escreve este valor ainda (TDD §10.3).
+ * - `pending_sign_up` — placeholder `admin_<hash>` criado pelo link de signup.
+ * - `guest`           — principal sem credencial, preso a `observesUserId`.
+ */
+export type UserStatus = "active" | "inactive" | "pending_sign_up" | "guest";
+export interface User { id: string; email: string | null; phone: string | null; name: string; passwordHash: string | null; status: UserStatus; observesUserId: string | null; createdAt: Date; updatedAt: Date; }
 export interface SigningKeyForSigning { kid: string; encryptedPrivateKey: string; }
 export interface ResolvedAccess { roleKeys: string[]; permissions: Permission[]; denies: Permission[]; }
 /**
