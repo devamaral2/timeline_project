@@ -1,0 +1,29 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.5.13/schema.json",
+	"extends": "//",
+	"linter": {
+		"rules": {
+			"style": {
+				"noRestrictedImports": {
+					"level": "error",
+					"options": {
+						"paths": {
+							"@repo/persistence": "apps/mobile nao pode importar @repo/persistence — so apps/api fala com o Postgres (ver AGENTS.md)."
+						},
+						"patterns": [
+							{
+								"group": [
+									"@repo/entities",
+									"@repo/entities/*",
+									"!@repo/entities/contracts",
+									"!@repo/entities/contracts/*"
+								],
+								"message": "apps/mobile so pode importar @repo/entities/contracts, e so com `import type` (ver AGENTS.md)."
+							}
+						]
+					}
+				}
+			}
+		}
+	}
+}

@@ -11,7 +11,8 @@
     "dev:mobile": "pnpm --filter @repo/mobile run start",
     "env:pull": "op read \"op://lifecomposure/env.local/notesPlain\" -o .env.local",
     "build": "turbo run build",
-    "lint": "turbo run lint",
+    "lint": "biome lint .",
+    "lint:fix": "biome check --write .",
     "typecheck": "turbo run typecheck",
     "test": "vitest run",
     "test:ai": "cross-env VITE_CJS_IGNORE_WARNING=true vitest run --config vitest.quiet.config.ts",
@@ -26,6 +27,7 @@
     "worktree:teardown": "bash scripts/worktree/teardown.sh"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.5.13",
     "@types/node": "^24.0.0",
     "cross-env": "^10.1.0",
     "prettier": "^3.9.5",

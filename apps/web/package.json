@@ -6,7 +6,7 @@
     "dev": "next dev -p ${WEB_PORT:-3000}",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "biome lint .",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

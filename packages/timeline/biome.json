@@ -1,0 +1,26 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.5.13/schema.json",
+	"extends": "//",
+	"linter": {
+		"rules": {
+			"style": {
+				"noRestrictedImports": {
+					"level": "error",
+					"options": {
+						"patterns": [
+							{
+								"group": [
+									"@repo/entities",
+									"@repo/entities/*",
+									"!@repo/entities/contracts",
+									"!@repo/entities/contracts/*"
+								],
+								"message": "@repo/timeline so pode importar @repo/entities/contracts, e so com `import type` (ver AGENTS.md)."
+							}
+						]
+					}
+				}
+			}
+		}
+	}
+}
