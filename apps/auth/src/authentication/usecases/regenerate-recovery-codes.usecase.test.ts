@@ -11,7 +11,7 @@ import type { AuthenticatedActor } from "../../users/user";
 
 const now = new Date("2026-09-04T12:00:00.000Z");
 const context = { correlationId: "test", ipAddress: "127.0.0.1", userAgent: "vitest" };
-const actor: AuthenticatedActor = { userId: "user", sessionId: "session", roles: ["member"], permissions: [], denies: [] };
+const actor: AuthenticatedActor = { kind: "user", userId: "user", sessionId: "session", tokenId: "jti", roles: ["member"], permissions: [], denies: [] };
 class FixedClock extends Clock { now(): Date { return now; } }
 class CountingSecrets extends SecretGenerator { private id = 0; private byte = 0; randomId(): string { return `id-${++this.id}`; } randomBytes(length: number): Buffer { return Buffer.alloc(length, ++this.byte); } }
 

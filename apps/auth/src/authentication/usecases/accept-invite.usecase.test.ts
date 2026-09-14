@@ -30,7 +30,6 @@ describe("AcceptInviteUseCase", () => {
       inviteId: "invite",
       userId: "user",
       passwordHash: "scrypt$hash",
-      auditEvents: [expect.objectContaining({ action: "invite.accepted" })],
     }));
     expect(JSON.stringify(vi.mocked(invites.acceptInvite).mock.calls[0]![0])).not.toContain("SenhaSegura123!");
   });

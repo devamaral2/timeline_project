@@ -16,6 +16,7 @@ import {
   RateLimitedError,
   RequiredDependencyUnavailableError,
   SemanticInputError,
+  TokenKindNotAcceptedError,
 } from "../common/errors";
 import { ConsoleAuthLogger, type AuthLogger } from "../common/logger";
 
@@ -42,6 +43,7 @@ import { ConsoleAuthLogger, type AuthLogger } from "../common/logger";
 export const DOMAIN_ERROR_STATUS = {
   AuthenticationFailedError: HttpStatus.UNAUTHORIZED,
   AccessDeniedError: HttpStatus.FORBIDDEN,
+  TokenKindNotAcceptedError: HttpStatus.FORBIDDEN,
   RateLimitedError: HttpStatus.TOO_MANY_REQUESTS,
   SemanticInputError: HttpStatus.UNPROCESSABLE_ENTITY,
   ConflictError: HttpStatus.CONFLICT,
@@ -67,6 +69,10 @@ export class AuthExceptionFilter implements ExceptionFilter {
     if (exception instanceof AuthenticationFailedError) {
       this.logger.error({ correlationId, status: HttpStatus.UNAUTHORIZED, error: "AuthenticationFailedError", reason: exception.internalReason });
       return void response.status(HttpStatus.UNAUTHORIZED).end();
+    }
+    if (exception instanceof TokenKindNotAcceptedError) {
+      this.logger.error({ correlationId, status: HttpStatus.FORBIDDEN, error: "TokenKindNotAcceptedError", reason: `token kind not accepted: ${exception.tokenKind}` });
+      return void response.status(HttpStatus.FORBIDDEN).end();
     }
     if (exception instanceof AccessDeniedError) return void response.status(HttpStatus.FORBIDDEN).end();
     if (exception instanceof RateLimitedError) {

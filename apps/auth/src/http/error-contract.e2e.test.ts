@@ -25,6 +25,10 @@ describe("HTTP error contract", () => {
     expect(forbidden.status).toBe(403);
     expect(await bytes(forbidden)).toBe("");
 
+    const wrongKind = await raise("token-kind");
+    expect(wrongKind.status).toBe(403);
+    expect(await bytes(wrongKind)).toBe("");
+
     const limited = await raise("rate-limit");
     expect(limited.status).toBe(429);
     expect(await bytes(limited)).toBe("");

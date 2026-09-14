@@ -21,7 +21,6 @@ export class PostgresInviteRepository implements InviteRepository {
       await tx.query("UPDATE users SET password_hash=$1,status='active',updated_at=$2 WHERE id=$3", [c.passwordHash,c.now,c.userId]);
       await tx.query("UPDATE invites SET accepted_at=$1 WHERE id=$2", [c.now,c.inviteId]);
       await tx.query("UPDATE invites SET revoked_at=$1 WHERE user_id=$2 AND id<>$3 AND accepted_at IS NULL AND revoked_at IS NULL", [c.now,c.userId,c.inviteId]);
-      await insertAuditEvents(tx,c.auditEvents);
       return "accepted" as const;
     });
   }

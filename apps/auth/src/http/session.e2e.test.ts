@@ -147,7 +147,7 @@ describeWithPostgres("Session HTTP endpoints", () => {
     expect(refreshAfterLogout.status).toBe(401);
   });
 
-  it("issues user tokens on refresh and refuses signup and guest tokens on the user-token routes", async () => {
+  it("issues user tokens on refresh and gives signup and guest tokens a typed 403 on every bearer route", async () => {
     fixture = await createPostgresTestDatabase();
     app = await createTestApp({ AUTH_DATABASE_URL: fixture.runtimeUrl });
     const db = app.app.get<AuthDatabase>(AUTH_DATABASE);
@@ -177,12 +177,25 @@ describeWithPostgres("Session HTTP endpoints", () => {
     const guest = keys.mintToken(signingKey, buildUnsignedGuestTokenClaims({ ...issuer, sub: ulid(), subj: userId, perms: ["event:read"] }));
     expect(signup.jti).not.toBe(guest.jti);
 
+    // Toda rota com bearer hoje e de token de usuario: signup e guest levam
+    // a recusa tipada (403), nao o 401 de token invalido.
+    const bearerRoutes: Array<[string, string]> = [
+      ["GET", "/auth/me"], ["POST", "/auth/logout-all"],
+      ["POST", "/auth/step-up/start"], ["POST", "/auth/step-up/verify"], ["POST", "/auth/step-up/recover"],
+      ["POST", "/auth/password/change"], ["POST", "/auth/recovery-codes/regenerate"],
+      ["GET", "/auth/admin/users"], ["POST", "/auth/admin/invites"],
+      ["PATCH", `/auth/admin/users/${userId}/status`], ["PUT", `/auth/admin/users/${userId}/access`],
+      ["POST", `/auth/admin/users/${userId}/invite/reissue`], ["DELETE", `/auth/admin/users/${userId}/invite`],
+      ["POST", `/auth/admin/users/${userId}/revoke-sessions`],
+    ];
     for (const token of [signup.token, guest.token]) {
-      const me = await fetch(`${app.url}/auth/me`, { headers: { authorization: `Bearer ${token}` } });
-      expect(me.status).toBe(401);
-      const logoutAll = await fetch(`${app.url}/auth/logout-all`, { method: "POST", headers: { authorization: `Bearer ${token}` } });
-      expect(logoutAll.status).toBe(401);
+      for (const [method, path] of bearerRoutes) {
+        const response = await fetch(`${app.url}${path}`, { method, headers: { authorization: `Bearer ${token}`, "content-type": "application/json" }, body: method === "GET" ? undefined : "{}" });
+        expect([method, path, response.status]).toEqual([method, path, 403]);
+      }
     }
+    const asUser = await fetch(`${app.url}/auth/me`, { headers: { authorization: `Bearer ${accessToken}` } });
+    expect(asUser.status).toBe(200);
   });
 
   it("exposes the current actor on GET /auth/me and revokes every session on logout-all", async () => {

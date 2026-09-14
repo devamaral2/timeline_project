@@ -28,6 +28,13 @@ export class AuthenticationFailedError extends Error {
 
 export class AccessDeniedError extends Error {}
 
+/** Token valido, mas de um tipo que a rota nao aceita (ex.: guest em `/auth/me`). */
+export class TokenKindNotAcceptedError extends AccessDeniedError {
+  constructor(readonly tokenKind: string) {
+    super(`token kind not accepted: ${tokenKind}`);
+  }
+}
+
 export class SemanticInputError extends Error {
   constructor(readonly safeCode: SemanticInputCode) {
     super(safeCode);

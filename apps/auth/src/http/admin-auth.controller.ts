@@ -15,6 +15,7 @@ import { ReplaceUserAccessUseCase } from "../users/usecases/replace-user-access.
 import type { AuthenticatedActor } from "../users/user";
 import { BearerAuthGuard } from "./bearer-auth.guard";
 import { CurrentActor } from "./current-actor.decorator";
+import { AcceptTokenKinds } from "./accept-token-kinds.decorator";
 import { RequireSuperAdminGuard } from "./require-permission.guard";
 
 // Os papeis do estagio 1 sao os de sistema, criados pela migracao. Validar
@@ -41,6 +42,7 @@ const userIdParam = z.string().min(1).max(64);
 
 @Controller("auth/admin")
 @UseGuards(BearerAuthGuard, RequireSuperAdminGuard)
+@AcceptTokenKinds("user")
 export class AdminAuthController {
   constructor(
     @Inject(CreateInviteUseCase) private readonly createInvite: CreateInviteUseCase,

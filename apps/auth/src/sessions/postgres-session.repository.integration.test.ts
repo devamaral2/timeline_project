@@ -190,6 +190,8 @@ describeWithPostgres("PostgresSessionRepository", () => {
     const { sessionId: secondSessionId } = await seedSession(db, userId, now);
     const repository = new PostgresSessionRepository(db, "https://auth.timeline.local", "timeline-api");
     const actor: AuthenticatedActor = {
+      kind: "user",
+      tokenId: "jti",
       userId,
       sessionId: firstSessionId,
       roles: [],
@@ -212,6 +214,8 @@ describeWithPostgres("PostgresSessionRepository", () => {
     const { sessionId } = await seedSession(db, userId, now, { revokedAt: now });
     const repository = new PostgresSessionRepository(db, "https://auth.timeline.local", "timeline-api");
     const actor: AuthenticatedActor = {
+      kind: "user",
+      tokenId: "jti",
       userId,
       sessionId,
       roles: [],
@@ -232,6 +236,8 @@ describeWithPostgres("PostgresSessionRepository", () => {
     const { sessionId } = await seedSession(db, userId, now);
     const repository = new PostgresSessionRepository(db, "https://auth.timeline.local", "timeline-api");
     const actor: AuthenticatedActor = {
+      kind: "user",
+      tokenId: "jti",
       userId,
       sessionId,
       roles: [],

@@ -2,7 +2,7 @@ import { Injectable, type CanActivate, type ExecutionContext } from "@nestjs/com
 import type { Request } from "express";
 import { AccessDeniedError, AuthenticationFailedError } from "../common/errors";
 import { coversSuperAdmin } from "../rbac/resolve-user-permissions";
-import type { AuthenticatedActor } from "../users/user";
+import type { TokenActor } from "../users/user";
 
 /**
  * Todo `/auth/admin` exige o super-admin **inteiro**: o `*:manage` literal e a
@@ -16,8 +16,9 @@ import type { AuthenticatedActor } from "../users/user";
 @Injectable()
 export class RequireSuperAdminGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
-    const actor = (context.switchToHttp().getRequest<Request>() as Request & { actor?: AuthenticatedActor }).actor;
+    const actor = (context.switchToHttp().getRequest<Request>() as Request & { actor?: TokenActor }).actor;
     if (!actor) throw new AuthenticationFailedError("missing authenticated actor");
+    if (actor.kind !== "user") throw new AccessDeniedError(`super admin requires a user token, got ${actor.kind}`);
     if (!coversSuperAdmin({ roleKeys: actor.roles, permissions: actor.permissions, denies: actor.denies })) {
       throw new AccessDeniedError("actor does not cover super admin");
     }

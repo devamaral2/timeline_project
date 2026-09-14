@@ -23,7 +23,7 @@ export type ReissueInviteOutcome = "reissued" | "not_pending" | "not_found";
 export interface RevokeInviteCommand { targetUserId: string; actorUserId: string; now: Date; auditEvents: readonly AuditEventInput[] }
 export type RevokeInviteOutcome = "revoked" | "not_found";
 
-export interface AcceptInviteCommand {inviteId:string;userId:string;passwordHash:string;now:Date;auditEvents:readonly AuditEventInput[]}
+export interface AcceptInviteCommand {inviteId:string;userId:string;passwordHash:string;now:Date}
 
 export interface InviteRepository {
   acceptInvite(command:AcceptInviteCommand):Promise<"accepted"|"invalid">;

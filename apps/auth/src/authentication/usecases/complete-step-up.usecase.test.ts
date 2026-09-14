@@ -8,7 +8,7 @@ import type { AuthenticatedActor } from "../../users/user";
 
 const now = new Date("2026-09-04T12:00:00.000Z");
 const context = { correlationId: "test", ipAddress: "127.0.0.1", userAgent: "vitest" };
-const actor: AuthenticatedActor = { userId: "user", sessionId: "session", roles: ["member"], permissions: [], denies: [] };
+const actor: AuthenticatedActor = { kind: "user", userId: "user", sessionId: "session", tokenId: "jti", roles: ["member"], permissions: [], denies: [] };
 class FixedClock extends Clock { now(): Date { return now; } }
 const prepared = { attemptId: "attempt", userId: "user", purpose: "password_change" as const, challengeId: "challenge", codeHash: "code-hash" };
 const limits = { factorCheckAttempt: { attempts: 5, windowSeconds: 600 } };

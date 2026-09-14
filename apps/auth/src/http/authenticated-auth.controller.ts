@@ -14,6 +14,7 @@ import { RevokeSessionUseCase } from "../sessions/usecases/revoke-session.usecas
 import type { AuthenticatedActor } from "../users/user";
 import { BearerAuthGuard } from "./bearer-auth.guard";
 import { CurrentActor } from "./current-actor.decorator";
+import { AcceptTokenKinds } from "./accept-token-kinds.decorator";
 
 const refreshTokenBody = z.object({ refreshToken: z.string().min(1).max(1024) }).strict();
 const stepUpToken = z.string().min(1).max(1024);
@@ -60,6 +61,7 @@ export class AuthenticatedAuthController {
 
   @Post("logout-all")
   @UseGuards(BearerAuthGuard)
+  @AcceptTokenKinds("user")
   @HttpCode(HttpStatus.NO_CONTENT)
   async logoutEverywhere(@CurrentActor() actor: AuthenticatedActor, @Req() request: Request): Promise<void> {
     await this.logoutAll.execute({ actor, context: this.context(request) });
@@ -67,6 +69,7 @@ export class AuthenticatedAuthController {
 
   @Post("step-up/start")
   @UseGuards(BearerAuthGuard)
+  @AcceptTokenKinds("user")
   @HttpCode(HttpStatus.ACCEPTED)
   async beginStepUp(@Body() body: unknown, @CurrentActor() actor: AuthenticatedActor, @Req() request: Request) {
     const value = parseRequest(startStepUpBody, body);
@@ -75,6 +78,7 @@ export class AuthenticatedAuthController {
 
   @Post("step-up/verify")
   @UseGuards(BearerAuthGuard)
+  @AcceptTokenKinds("user")
   @HttpCode(HttpStatus.OK)
   async verifyStepUp(@Body() body: unknown, @CurrentActor() actor: AuthenticatedActor, @Req() request: Request) {
     const value = parseRequest(verifyStepUpBody, body);
@@ -83,6 +87,7 @@ export class AuthenticatedAuthController {
 
   @Post("step-up/recover")
   @UseGuards(BearerAuthGuard)
+  @AcceptTokenKinds("user")
   @HttpCode(HttpStatus.OK)
   async recoverStepUp(@Body() body: unknown, @CurrentActor() actor: AuthenticatedActor, @Req() request: Request) {
     const value = parseRequest(recoverStepUpBody, body);
@@ -91,6 +96,7 @@ export class AuthenticatedAuthController {
 
   @Post("password/change")
   @UseGuards(BearerAuthGuard)
+  @AcceptTokenKinds("user")
   @HttpCode(HttpStatus.OK)
   async changeOwnPassword(@Body() body: unknown, @CurrentActor() actor: AuthenticatedActor, @Req() request: Request) {
     const value = parseRequest(changePasswordBody, body);
@@ -99,6 +105,7 @@ export class AuthenticatedAuthController {
 
   @Post("recovery-codes/regenerate")
   @UseGuards(BearerAuthGuard)
+  @AcceptTokenKinds("user")
   @HttpCode(HttpStatus.OK)
   async regenerateOwnRecoveryCodes(@Body() body: unknown, @CurrentActor() actor: AuthenticatedActor, @Req() request: Request) {
     const value = parseRequest(regenerateRecoveryCodesBody, body);
@@ -107,6 +114,7 @@ export class AuthenticatedAuthController {
 
   @Get("me")
   @UseGuards(BearerAuthGuard)
+  @AcceptTokenKinds("user")
   async me(@CurrentActor() actor: AuthenticatedActor) {
     return this.getMe.execute(actor);
   }

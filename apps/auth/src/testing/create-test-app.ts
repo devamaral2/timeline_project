@@ -3,7 +3,7 @@ import { Test } from "@nestjs/testing";
 import type { Request } from "express";
 import { randomBytes } from "node:crypto";
 import { AppModule } from "../app.module";
-import { AccessDeniedError, AuthenticationFailedError, ConflictError, NotFoundError, RateLimitedError, RequiredDependencyUnavailableError, SemanticInputError } from "../common/errors";
+import { AccessDeniedError, AuthenticationFailedError, TokenKindNotAcceptedError, ConflictError, NotFoundError, RateLimitedError, RequiredDependencyUnavailableError, SemanticInputError } from "../common/errors";
 import { RecordingAuthLogger } from "../common/logger";
 import { getRuntimeEnv, type EnvSource } from "../config/env";
 import { configureHttpShell } from "../http/request-context.middleware";
@@ -33,6 +33,7 @@ class TestContextController {
     switch (kind) {
       case "authentication": throw new AuthenticationFailedError(`unknown email ${LEAK_PROBE}`);
       case "access": throw new AccessDeniedError(`missing permission ${LEAK_PROBE}`);
+      case "token-kind": throw new TokenKindNotAcceptedError("guest");
       case "rate-limit": throw new RateLimitedError(42.3, `too many tries ${LEAK_PROBE}`);
       case "semantic": throw new SemanticInputError("password_length");
       case "conflict": throw new ConflictError("would_remove_last_admin");

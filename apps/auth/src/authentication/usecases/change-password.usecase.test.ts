@@ -12,7 +12,7 @@ import type { UserReader } from "../../users/ports/user-repository";
 
 const now = new Date("2026-09-04T12:00:00.000Z");
 const context = { correlationId: "test", ipAddress: "127.0.0.1", userAgent: "vitest" };
-const actor: AuthenticatedActor = { userId: "user", sessionId: "session", roles: ["member"], permissions: [], denies: [] };
+const actor: AuthenticatedActor = { kind: "user", userId: "user", sessionId: "session", tokenId: "jti", roles: ["member"], permissions: [], denies: [] };
 class FixedClock extends Clock { now(): Date { return now; } }
 class FixedSecrets extends SecretGenerator { private id = 0; randomId(): string { return `id-${++this.id}`; } randomBytes(length: number): Buffer { return Buffer.alloc(length, 3); } }
 const user: User = { id: "user", email: "user@example.test", name: "User", passwordHash: "old", status: "active", createdAt: now, updatedAt: now };
