@@ -5,11 +5,7 @@ export const SECURITY_POLICY = {
   guestTokenTtlSeconds: 60 * 60,
   refreshTokenTtlSeconds: 30 * 24 * 60 * 60,
   inviteTtlSeconds: 7 * 24 * 60 * 60,
-  authenticationAttemptTtlSeconds: 10 * 60,
-  mfaChallengeTtlSeconds: 5 * 60,
   clockToleranceSeconds: 30,
-  recoveryCodeCount: 10,
-  recoveryCodeEntropyBits: 80,
   signingKeyRetireDelaySeconds: 930,
   maxRequestBodyBytes: 32 * 1024,
 } as const;

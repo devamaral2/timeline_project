@@ -41,7 +41,7 @@ describe("HTTP error contract", () => {
 
     const conflict = await raise("conflict");
     expect(conflict.status).toBe(409);
-    expect(await bytes(conflict)).toBe('{"code":"would_remove_last_admin"}');
+    expect(await bytes(conflict)).toBe('{"code":"email_already_exists"}');
 
     const missing = await raise("not-found");
     expect(missing.status).toBe(404);

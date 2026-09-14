@@ -11,8 +11,7 @@
     "db:migrate": "tsx src/db/migrate.cli.ts",
     "rotate-signing-key": "tsx src/crypto/rotate-signing-key.cli.ts",
     "bootstrap-admin": "tsx src/cli/bootstrap-admin.cli.ts",
-    "cleanup-auth-data": "tsx src/cli/cleanup-auth-data.cli.ts",
-    "smoke-twilio": "tsx src/cli/smoke-twilio.cli.ts"
+    "retire-signing-keys": "tsx src/crypto/retire-signing-keys.cli.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
@@ -20,7 +19,6 @@
     "@nestjs/platform-express": "^11.0.0",
     "@scalar/nestjs-api-reference": "^1.2.17",
     "drizzle-orm": "^0.44.0",
-    "nodemailer": "^10.0.0",
     "pg": "^8.13.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
@@ -33,7 +31,6 @@
     "@nestjs/testing": "^11.0.0",
     "@types/express": "^5.0.0",
     "@types/node": "^24.0.0",
-    "@types/nodemailer": "^8.0.1",
     "@types/pg": "^8.11.0",
     "drizzle-kit": "^0.31.0",
     "tsx": "^4.20.5",

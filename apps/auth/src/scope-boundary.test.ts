@@ -22,11 +22,25 @@ export const FORBIDDEN_MARKERS: readonly string[] = [
   "access_grants",
   "oauth_states",
   "cookie-parser",
+  // Corte do servico centralizado (RAF-71): MFA, step-up, recovery codes,
+  // pwned passwords, SMTP/Twilio e o job de retencao.
+  "twilio",
+  "recovery_code",
+  "recoveryCode",
+  "mfa_challenge",
+  "step_up",
+  "stepUp",
+  "pwnedpasswords",
+  "nodemailer",
+  "cleanup-auth-data",
 ];
 
 /** Relativas a `apps/auth`. */
 export const FORBIDDEN_SUBTREES: readonly string[] = [
   "src/oauth",
+  "src/mfa",
+  "src/audit",
+  "src/cleanup",
 ];
 
 export interface ScopeViolation {

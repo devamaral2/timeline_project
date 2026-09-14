@@ -27,13 +27,12 @@ const errorResponses = {
 } as const;
 const protectedErrors = {
   ...errorResponses,
-  "403": noContent("O token é válido, mas não autoriza esta operação."),
+  "403": noContent("O token é válido, mas não autoriza esta operação — inclusive quando é de um tipo que a rota não aceita."),
 } as const;
 
 const string = (description: string, maxLength?: number): OpenApiSchema => ({ type: "string", description, ...(maxLength === undefined ? {} : { maxLength }) });
 const token = (description: string): OpenApiSchema => ({ ...string(description, 1024), format: "password", writeOnly: true });
 const dateTime = (description: string): OpenApiSchema => ({ type: "string", format: "date-time", description });
-const directPermissionsSchema = { type: "array", maxItems: 64, description: "Concessões ou negações diretas, sem duplicar uma permissão.", items: { type: "object", required: ["permission", "effect"], additionalProperties: false, properties: { permission: { type: "string", pattern: "^(?:\\*:manage|(?:event|tag|user|invite|role|grant):(?:create|read|update|delete|manage))$", description: "Permissão concreta no formato `recurso:ação` ou o superadmin `*:manage`." }, effect: { type: "string", enum: ["allow", "deny"] } } } } as const;
 
 const operations: Record<string, Record<string, OpenApiOperation>> = {
   "/health/live": {
@@ -66,71 +65,25 @@ const operations: Record<string, Record<string, OpenApiOperation>> = {
   "/auth/me": {
     get: { summary: "Consulta a sessão atual", description: "Relê usuário, sessão e permissões efetivas no banco. Isso garante que uma sessão revogada ou uma conta desativada não seja considerada válida apenas pelo JWT.", tags: ["Sessões"], security: bearer, responses: { "200": json({ $ref: "#/components/schemas/CurrentUser" }), ...protectedErrors } },
   },
-  "/auth/step-up/start": {
-    post: { summary: "Inicia autenticação reforçada", description: "Inicia uma confirmação adicional para ações sensíveis: trocar senha ou regenerar códigos de recuperação.", tags: ["Segurança da conta"], security: bearer, requestBody: request("StartStepUpRequest"), responses: { "202": json({ $ref: "#/components/schemas/StepUpChallenge" }), ...protectedErrors } },
-  },
-  "/auth/step-up/verify": {
-    post: { summary: "Confirma step-up com OTP", description: "Valida o código do segundo fator e libera o token de step-up para a finalidade solicitada.", tags: ["Segurança da conta"], security: bearer, requestBody: request("VerifyStepUpRequest"), responses: { "200": json({ $ref: "#/components/schemas/VerifiedStepUp" }), ...protectedErrors } },
-  },
-  "/auth/step-up/recover": {
-    post: { summary: "Confirma step-up com código de recuperação", description: "Valida um código de recuperação de uso único e libera o token de step-up para a finalidade solicitada.", tags: ["Segurança da conta"], security: bearer, requestBody: request("RecoverStepUpRequest"), responses: { "200": json({ $ref: "#/components/schemas/VerifiedStepUp" }), ...protectedErrors } },
-  },
-  "/auth/password/change": {
-    post: { summary: "Troca a própria senha", description: "Troca a senha somente após um step-up válido para `password_change`. A operação também emite tokens novos para a sessão atual.", tags: ["Segurança da conta"], security: bearer, requestBody: request("ChangePasswordRequest"), responses: { "200": json({ $ref: "#/components/schemas/SessionTokens" }), "422": json({ $ref: "#/components/schemas/ErrorCode" }, "A nova senha não atende à política de segurança."), ...protectedErrors } },
-  },
-  "/auth/recovery-codes/regenerate": {
-    post: { summary: "Regenera códigos de recuperação", description: "Invalida os códigos anteriores e cria novos códigos de recuperação depois de um step-up válido para `recovery_regeneration`.", tags: ["Segurança da conta"], security: bearer, requestBody: request("StepUpTokenRequest", "Token de step-up já confirmado."), responses: { "200": json({ $ref: "#/components/schemas/RecoveryCodes" }), ...protectedErrors } },
-  },
-  "/auth/admin/invites": {
-    post: { summary: "Cria um convite", description: "Cria um usuário pendente, define seus papéis e permissões diretas e devolve o link de convite. Exige token de um superadministrador.", tags: ["Administração"], security: bearer, requestBody: request("CreateInviteRequest"), responses: { "201": json({ $ref: "#/components/schemas/CreatedInvite" }), "409": json({ $ref: "#/components/schemas/ErrorCode" }, "Já existe uma conta para o email informado."), ...protectedErrors } },
-  },
-  "/auth/admin/users": {
-    get: { summary: "Lista usuários", description: "Lista resumos seguros de usuários com paginação por cursor. Senhas, telefones, tokens, convites e códigos de recuperação nunca são retornados.", tags: ["Administração"], security: bearer, parameters: [{ name: "cursor", in: "query", required: false, schema: { type: "string", maxLength: 64 }, description: "Cursor retornado pela página anterior." }, { name: "limit", in: "query", required: false, schema: { type: "integer", minimum: 1, maximum: 100, default: 25 }, description: "Quantidade de resultados, de 1 a 100." }], responses: { "200": json({ $ref: "#/components/schemas/UserPage" }), ...protectedErrors } },
-  },
-  "/auth/admin/users/{userId}/status": {
-    patch: adminUserOperation("Atualiza status do usuário", "Altera o status para `active`, `suspended` ou `disabled`. Não existe transição para `pending_invite`: o aceite do convite é quem ativa a conta.", "ChangeUserStatusRequest", "UserStatus"),
-  },
-  "/auth/admin/users/{userId}/access": {
-    put: adminUserOperation("Substitui o acesso do usuário", "Substitui integralmente os papéis e as permissões diretas do usuário. Use `deny` para negar explicitamente uma permissão concedida por um papel.", "ReplaceUserAccessRequest", "UserAccess"),
-  },
-  "/auth/admin/users/{userId}/invite/reissue": {
-    post: adminUserOperation("Reemite um convite", "Invalida o convite pendente anterior e devolve um novo link de convite para o usuário indicado.", undefined, "CreatedInvite", "200"),
-  },
-  "/auth/admin/users/{userId}/invite": {
-    delete: adminUserOperation("Revoga convite", "Revoga o convite pendente do usuário indicado. A conta não poderá concluir o cadastro com o link revogado.", undefined, undefined, "204"),
-  },
-  "/auth/admin/users/{userId}/revoke-sessions": {
-    post: adminUserOperation("Revoga sessões de um usuário", "Encerra todas as sessões ativas do usuário indicado, sem alterar seus papéis ou status.", undefined, undefined, "204"),
-  },
 };
 
 function request(schema: string, description = "Dados da operação.") {
   return { required: true, description, content: { "application/json": { schema: { $ref: `#/components/schemas/${schema}` } } } };
 }
 
-function adminUserOperation(summary: string, description: string, requestSchema?: string, responseSchema?: string, status = "200"): OpenApiOperation {
-  return {
-    summary, description, tags: ["Administração"], security: bearer,
-    parameters: [{ name: "userId", in: "path", required: true, schema: { type: "string", minLength: 1, maxLength: 64 }, description: "Identificador do usuário alvo." }],
-    ...(requestSchema === undefined ? {} : { requestBody: request(requestSchema) }),
-    responses: { [status]: status === "204" ? noContent("Operação concluída.") : json({ $ref: `#/components/schemas/${responseSchema}` }), ...protectedErrors },
-  };
-}
 
 export const authOpenApiDocument = {
   openapi: "3.1.1",
   info: {
     title: "Braid Auth API",
     version: "1.0.0",
-    description: "API de identidade do Braid: convites, login por senha, sessões, autenticação reforçada e administração de acessos.\n\nRotas protegidas usam `Authorization: Bearer <accessToken>`. Todas as respostas carregam `X-Correlation-Id`; use-o para rastrear falhas. Campos de segredo são apenas de escrita e nunca voltam nas respostas.",
+    description: "API de identidade do Braid: convites, login por senha e sessões.\n\nRotas protegidas usam `Authorization: Bearer <accessToken>`. Todas as respostas carregam `X-Correlation-Id`; use-o para rastrear falhas. Campos de segredo são apenas de escrita e nunca voltam nas respostas.",
   },
   tags: [
     { name: "Infraestrutura", description: "Sondas de saúde e descoberta de chaves públicas." },
     { name: "Convites públicos", description: "Fluxo de cadastro iniciado por um convite." },
     { name: "Autenticação pública", description: "Login por email e senha, sem sessão existente." },
     { name: "Sessões", description: "Ciclo de vida e consulta da sessão autenticada." },
-    { name: "Segurança da conta", description: "Ações sensíveis protegidas por autenticação reforçada." },
-    { name: "Administração", description: "Gestão de usuários e acessos, exclusiva de superadministradores." },
   ],
   paths: operations,
   components: {
@@ -143,28 +96,12 @@ export const authOpenApiDocument = {
       InspectInviteRequest: object({ token: token("Token secreto presente no link de convite.") }),
       AcceptInviteRequest: object({ token: token("Token secreto presente no link de convite."), password: token("Senha inicial, validada pela política de segurança.") }),
       LoginRequest: object({ email: { ...string("Email da conta.", 320), format: "email" }, password: token("Senha da conta.") }),
-      StepUpTokenRequest: object({ stepUpToken: token("Token de step-up já confirmado para a ação sensível.") }),
       RefreshTokenRequest: object({ refreshToken: token("Refresh token da sessão que será renovada ou revogada.") }),
-      StartStepUpRequest: object({ purpose: { type: "string", enum: ["password_change", "recovery_regeneration"], description: "Ação sensível que o step-up autoriza." }, secondFactor: { type: "string", enum: ["otp", "recovery"] } }),
-      VerifyStepUpRequest: object({ stepUpToken: token("Token temporário retornado pelo início do step-up."), code: string("Código OTP recebido.", 64) }),
-      RecoverStepUpRequest: object({ stepUpToken: token("Token temporário retornado pelo início do step-up."), recoveryCode: token("Código de recuperação de uso único.") }),
-      ChangePasswordRequest: object({ stepUpToken: token("Token de step-up validado para troca de senha."), newPassword: token("Nova senha, validada pela política de segurança.") }),
-      CreateInviteRequest: object({ email: { ...string("Email do convidado.", 320), format: "email" }, name: string("Nome do convidado.", 120), roleKeys: { type: "array", maxItems: 16, uniqueItems: true, items: { type: "string", enum: ["admin", "member", "viewer"] }, description: "Papéis iniciais do usuário." }, directPermissions: directPermissionsSchema }),
-      ReplaceUserAccessRequest: object({ roleKeys: { type: "array", maxItems: 16, uniqueItems: true, items: { type: "string", enum: ["admin", "member", "viewer"] } }, directPermissions: directPermissionsSchema }),
-      ChangeUserStatusRequest: object({ status: { type: "string", enum: ["active", "suspended", "disabled"] } }),
       InviteAccepted: object({accepted:{type:"boolean",enum:[true]}}),
       InviteInspection: object({ name: string("Nome do convidado."), email: string("Email mascarado."), expiresAt: dateTime("Momento de expiração do convite.") }),
       SessionTokens: object({ accessToken: string("JWT para autenticar rotas protegidas."), refreshToken: string("Token opaco para renovar a sessão."), accessTokenExpiresInSeconds: { type: "integer", description: "Vida útil do access token em segundos." }, refreshTokenExpiresAt: dateTime("Expiração do refresh token.") }),
       RefreshTokens: object({ accessToken: string("Novo JWT de acesso."), refreshToken: string("Novo refresh token; substitui o anterior.") }),
-      StepUpChallenge: object({ stepUpToken: string("Token temporário a confirmar."), purpose: { type: "string", enum: ["password_change", "recovery_regeneration"] }, secondFactor: { type: "string", enum: ["otp", "recovery"] }, channel: { type: "string", enum: ["email"] }, maskedDestination: string("Destino mascarado do OTP."), expiresAt: dateTime("Expiração do desafio.") }, ["stepUpToken", "purpose", "secondFactor", "expiresAt"]),
-      VerifiedStepUp: object({ stepUpToken: string("Token confirmado para usar na ação sensível."), purpose: { type: "string", enum: ["password_change", "recovery_regeneration"] } }),
-      RecoveryCodes: object({ recoveryCodes: { type: "array", items: { type: "string" }, description: "Novos códigos de recuperação. Guarde-os; os antigos foram invalidados." } }),
       CurrentUser: object({ userId: string("ID do usuário."), email: string("Email da conta."), name: string("Nome da conta."), sessionId: string("ID da sessão atual."), roles: { type: "array", items: { type: "string" } }, permissions: { type: "array", items: { type: "string" } }, denies: { type: "array", items: { type: "string" } } }),
-      CreatedInvite: object({ userId: string("ID do usuário convidado."), inviteLink: { ...string("Link com token secreto de convite."), format: "uri" }, expiresAt: dateTime("Expiração do convite.") }),
-      UserStatus: object({ userId: string("ID do usuário."), status: { type: "string", enum: ["active", "suspended", "disabled"] } }),
-      UserAccess: object({ userId: string("ID do usuário."), roleKeys: { type: "array", items: { type: "string" } }, directPermissions: directPermissionsSchema }),
-      UserPage: object({ users: { type: "array", items: { $ref: "#/components/schemas/AdminUserSummary" }, description: "Resumos seguros de usuários." }, nextCursor: { type: ["string", "null"], description: "Cursor para a próxima página; `null` quando não há mais resultados." } }),
-      AdminUserSummary: object({ id: string("ID do usuário."), email: string("Email da conta."), name: string("Nome da conta."), status: { type: "string", enum: ["pending_invite", "active", "suspended", "disabled"] }, roleKeys: { type: "array", items: { type: "string" } }, directPermissions: directPermissionsSchema, createdAt: dateTime("Criação da conta."), updatedAt: dateTime("Última atualização da conta.") }),
     },
   },
 } as const;

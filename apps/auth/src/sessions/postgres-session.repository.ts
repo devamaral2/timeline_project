@@ -6,14 +6,12 @@ import { AuthenticationFailedError } from "../common/errors";
 import type { DirectPermission } from "../rbac/effective-permissions";
 import { resolveUserPermissions } from "../rbac/resolve-user-permissions";
 import type { Permission } from "../rbac/permissions";
-import type { AuthenticationMethod } from "../users/user";
 import type { Session } from "./session";
 import type {
   FindActiveSessionQuery,
   OpenSessionCommand,
   OpenedSession,
   RevokeAllOfUserCommand,
-  RevokeAllOfTargetUserCommand,
   RevokeByRefreshTokenCommand,
   RotateRefreshTokenCommand,
   RotateRefreshTokenResult,
@@ -23,7 +21,7 @@ import type {
 interface SessionRow {
   id: string;
   user_id: string;
-  amr: AuthenticationMethod[];
+  amr: string[];
   auth_time: Date;
   initial_ip_address: string | null;
   initial_user_agent: string | null;
@@ -269,16 +267,6 @@ export class PostgresSessionRepository implements SessionRepository {
         "UPDATE sessions SET revoked_at = $1, ended_at = $1 WHERE user_id = $2 AND revoked_at IS NULL",
         [c.now, c.actor.userId],
       );
-      return result.rowCount ?? 0;
-    });
-  }
-
-  async revokeAllOfTargetUser(c: RevokeAllOfTargetUserCommand): Promise<number | "not_found"> {
-    return this.db.transaction(async (tx) => {
-      // Mesma ordem de lock do rotate e do logout-all: usuario -> sessao.
-      const target = (await tx.query<{ id: string }>("SELECT id FROM users WHERE id = $1 FOR UPDATE", [c.targetUserId])).rows[0];
-      if (!target) return "not_found" as const;
-      const result = await tx.query("UPDATE sessions SET revoked_at = $1, ended_at = $1 WHERE user_id = $2 AND revoked_at IS NULL", [c.now, c.targetUserId]);
       return result.rowCount ?? 0;
     });
   }

@@ -16,7 +16,7 @@ describe("Secret redaction", () => {
       expect(body).not.toContain(LEAK_PROBE);
       // Nem o motivo, nem a mensagem do Error: o corpo so tem codigo e, no 500,
       // o correlation id que o cliente ja recebeu no cabecalho.
-      expect(body).not.toMatch(/unknown email|missing permission|too many tries|no such user|twilio down|unhandled failure/);
+      expect(body).not.toMatch(/unknown email|missing permission|too many tries|no such user|database down|unhandled failure/);
     }
 
     // O motivo real nao se perdeu: ele foi para o log estruturado.

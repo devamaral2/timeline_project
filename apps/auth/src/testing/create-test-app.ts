@@ -36,9 +36,9 @@ class TestContextController {
       case "token-kind": throw new TokenKindNotAcceptedError("guest");
       case "rate-limit": throw new RateLimitedError(42.3, `too many tries ${LEAK_PROBE}`);
       case "semantic": throw new SemanticInputError("password_length");
-      case "conflict": throw new ConflictError("would_remove_last_admin");
+      case "conflict": throw new ConflictError("email_already_exists");
       case "not-found": throw new NotFoundError(`no such user ${LEAK_PROBE}`);
-      case "dependency": throw new RequiredDependencyUnavailableError(`twilio down ${LEAK_PROBE}`);
+      case "dependency": throw new RequiredDependencyUnavailableError(`database down ${LEAK_PROBE}`);
       default: throw new Error(`unhandled failure ${LEAK_PROBE}`);
     }
   }

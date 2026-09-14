@@ -533,16 +533,6 @@ else
 fi
 ```
 
-**Twilio:** para OTP real, crie/acesse a conta no
-[console Twilio](https://console.twilio.com/), anote Account SID/Auth Token,
-abra Verify, crie um Service e anote seu Service SID. Habilite SMS e observe as
-restrições de destinatários da conta trial. Guarde os três valores.
-
-O próximo passo permite deixar Twilio em modo **ainda não configurado**, com
-valores explícitos `PENDENTE`. Nesse caso o processo auth sobe, mas envio de OTP
-não funciona. Isso não impede o login Firebase do web. Não confunda
-`/health/ready` saudável com teste de envio de SMS.
-
 **OpenRouter:** se usará geração por IA, obtenha uma chave em
 [OpenRouter Keys](https://openrouter.ai/keys), configure os créditos necessários
 e escolha os IDs de modelos disponíveis na sua conta; o modelo do agente deve
@@ -608,10 +598,6 @@ kubectl -n braid create secret generic api-env \
   --from-file=FIREBASE_PRIVATE_KEY=/opt/braid/private/firebase-key.pem \
   --from-literal=RABBITMQ_URL="amqp://braid:${RABBIT_PASSWORD}@rabbitmq.braid.svc.cluster.local:5672"
 
-read -rsp "Twilio Account SID (Enter se ainda não configurou): " TWILIO_ACCOUNT_SID; echo
-read -rsp "Twilio Auth Token (Enter se ainda não configurou): " TWILIO_AUTH_TOKEN; echo
-read -rsp "Twilio Verify Service SID (Enter se ainda não configurou): " TWILIO_VERIFY_SERVICE_SID; echo
-
 kubectl -n braid create secret generic auth-env \
   --from-literal=NODE_ENV=production \
   --from-literal=AUTH_DATABASE_URL="postgres://auth_runtime:${AUTH_RUNTIME_PASSWORD}@postgres.braid.svc.cluster.local:5432/braid_auth" \
@@ -619,11 +605,7 @@ kubectl -n braid create secret generic auth-env \
   --from-literal=AUTH_AUDIENCE=braid-api \
   --from-literal=AUTH_PUBLIC_URL="https://auth.$DOMAIN" \
   --from-literal=AUTH_WEB_APP_URL="https://web.$DOMAIN" \
-  --from-literal=AUTH_KEY_ENCRYPTION_KEY="$AUTH_KEY_ENCRYPTION_KEY" \
-  --from-literal=AUTH_OTP_PROVIDER=twilio \
-  --from-literal=TWILIO_ACCOUNT_SID="${TWILIO_ACCOUNT_SID:-PENDENTE}" \
-  --from-literal=TWILIO_AUTH_TOKEN="${TWILIO_AUTH_TOKEN:-PENDENTE}" \
-  --from-literal=TWILIO_VERIFY_SERVICE_SID="${TWILIO_VERIFY_SERVICE_SID:-PENDENTE}"
+  --from-literal=AUTH_KEY_ENCRYPTION_KEY="$AUTH_KEY_ENCRYPTION_KEY"
 
 kubectl -n braid create secret generic rabbitmq-env \
   --from-literal=RABBITMQ_DEFAULT_USER=braid \
@@ -631,7 +613,6 @@ kubectl -n braid create secret generic rabbitmq-env \
 kubectl -n observability create secret generic grafana-admin \
   --from-literal=admin-user=admin \
   --from-literal=admin-password="$GRAFANA_PASSWORD"
-unset TWILIO_ACCOUNT_SID TWILIO_AUTH_TOKEN TWILIO_VERIFY_SERVICE_SID
 kubectl -n braid get secrets
 kubectl -n observability get secrets
 ```
@@ -1457,7 +1438,7 @@ Web, API, auth, banco, RabbitMQ, Prometheus, Grafana e Tunnel devem estar pronto
 O mobile usa `https://api.SEUDOMINIO` como `MOBILE_API_URL` em seu próprio build;
 a geração/instalação nativa não faz parte de subir servidores na VPS.
 
-Se deixou Twilio/OpenRouter pendentes, OTP/IA continuam pendentes. RabbitMQ ainda
+Se deixou OpenRouter pendente, a IA continua pendente. RabbitMQ ainda
 não tem consumidor no código. O auth usa o endereço do socket como IP do cliente:
 atrás do proxy isso pode agrupar clientes nos limites por IP. Por isso permanece
 atrás do Access para uso administrativo até a integração do produto e a política
@@ -1688,7 +1669,6 @@ free -h
 | `OOMKilled`                    | Processo excedeu memória; veja consumo/limites, não conte swap como RAM disponível     |
 | DNS/timeouts nos pods          | Confira UFW, forwarding do Docker, CoreDNS e interface `cni0`                          |
 | PVC `Pending`                  | Confira local-path-provisioner e espaço em disco                                       |
-| OTP falha com auth saudável    | Twilio pendente/restrição de conta ou incompatibilidade do código MFA                  |
 | Grafana sem logs dos apps      | Este roteiro instala métricas, não um coletor de logs                                  |
 
 

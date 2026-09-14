@@ -6,7 +6,9 @@
  * - `active`   — assina os tokens novos. Existe exatamente uma.
  * - `retiring` — ja nao assina, mas continua no JWKS enquanto houver token vivo
  *                assinado por ela (isto e, por um TTL de access token).
- * - `retired`  — sai do JWKS.
+ * - `retired`  — sai do JWKS e perde o material privado. A passagem acontece em
+ *                toda escrita de chave (boot e rotacao) e pelo CLI
+ *                `retire-signing-keys`.
  */
 export type SigningKeyStatus = 'active' | 'retiring' | 'retired';
 
@@ -36,5 +38,7 @@ export interface SigningKeyRepository {
     now: Date,
   ): Promise<StoredSigningKey>;
   listPublishable(): Promise<StoredSigningKey[]>;
+  /** Devolve os `kid` aposentados agora. */
+  retireExpired(now: Date): Promise<string[]>;
 }
 import type { PublicSigningJwk } from '../jwk';

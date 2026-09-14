@@ -44,6 +44,12 @@ export class SigningKeyService {
     await this.reload();
     return key;
   }
+  async retireExpired(now: Date): Promise<string[]> {
+    const retired = await this.repository.retireExpired(now);
+    for (const kid of retired) this.privateKeys.delete(kid);
+    await this.reload();
+    return retired;
+  }
   async rotate(now: Date): Promise<StoredSigningKey> {
     const key = await this.repository.rotate(this.candidate(), now);
     await this.reload();

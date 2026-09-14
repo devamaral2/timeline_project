@@ -179,15 +179,7 @@ describeWithPostgres("Session HTTP endpoints", () => {
 
     // Toda rota com bearer hoje e de token de usuario: signup e guest levam
     // a recusa tipada (403), nao o 401 de token invalido.
-    const bearerRoutes: Array<[string, string]> = [
-      ["GET", "/auth/me"], ["POST", "/auth/logout-all"],
-      ["POST", "/auth/step-up/start"], ["POST", "/auth/step-up/verify"], ["POST", "/auth/step-up/recover"],
-      ["POST", "/auth/password/change"], ["POST", "/auth/recovery-codes/regenerate"],
-      ["GET", "/auth/admin/users"], ["POST", "/auth/admin/invites"],
-      ["PATCH", `/auth/admin/users/${userId}/status`], ["PUT", `/auth/admin/users/${userId}/access`],
-      ["POST", `/auth/admin/users/${userId}/invite/reissue`], ["DELETE", `/auth/admin/users/${userId}/invite`],
-      ["POST", `/auth/admin/users/${userId}/revoke-sessions`],
-    ];
+    const bearerRoutes: Array<[string, string]> = [["GET", "/auth/me"], ["POST", "/auth/logout-all"]];
     for (const token of [signup.token, guest.token]) {
       for (const [method, path] of bearerRoutes) {
         const response = await fetch(`${app.url}${path}`, { method, headers: { authorization: `Bearer ${token}`, "content-type": "application/json" }, body: method === "GET" ? undefined : "{}" });

@@ -9,8 +9,8 @@ O serviço usa duas credenciais distintas no mesmo banco:
 | `AUTH_DATABASE_MIGRATION_URL` | dono do schema | aplicar DDL |
 | `AUTH_DATABASE_URL` | `auth_runtime` | ler e escrever as tabelas em produção |
 
-A credencial de runtime não é dona do schema e não pode alterar nem apagar
-`audit_log` — o log é append-only, e essa garantia é do banco, não do código.
+A credencial de runtime não é dona do schema: ela lê e escreve as tabelas, mas
+não executa DDL.
 
 ## Aplicar migrations
 

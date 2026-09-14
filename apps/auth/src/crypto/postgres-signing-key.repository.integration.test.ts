@@ -33,7 +33,7 @@ describeWithPostgres('PostgresSigningKeyRepository', () => {
     fixture = await createPostgresTestDatabase();
     db = createAuthDatabase({ connectionString: fixture.runtimeUrl });
     const repository = new PostgresSigningKeyRepository(db);
-    const now = new Date('2026-08-31T00:00:00Z');
+    const now = new Date(Math.floor(Date.now() / 1000) * 1000);
     const first = await repository.ensureActive(candidate(), now);
     const same = await repository.ensureActive(candidate(), now);
     expect(same.kid).toBe(first.kid);
@@ -55,5 +55,37 @@ describeWithPostgres('PostgresSigningKeyRepository', () => {
       "SELECT count(*)::int AS count FROM signing_keys WHERE status='active'",
     );
     expect(count.rows[0]?.count).toBe(1);
+  });
+});
+
+describeWithPostgres('PostgresSigningKeyRepository retirement', () => {
+  it('stops publishing a retiring key at retire_after and wipes its private key on the next key write', async () => {
+    fixture = await createPostgresTestDatabase();
+    db = createAuthDatabase({ connectionString: fixture.runtimeUrl });
+    const repository = new PostgresSigningKeyRepository(db);
+    const longAgo = new Date(Date.now() - 24 * 3600_000);
+    const first = await repository.ensureActive(candidate(), longAgo);
+    const second = await repository.rotate(candidate(), longAgo);
+
+    // retire_after do primeiro ficou ~15 min depois de longAgo: ja venceu.
+    expect((await repository.listPublishable()).map((key) => key.kid)).toEqual([second.kid]);
+    expect((await db.query("SELECT status, encrypted_private_key IS NULL AS wiped FROM signing_keys WHERE kid = $1", [first.kid])).rows[0]).toEqual({ status: 'retiring', wiped: false });
+
+    const third = await repository.rotate(candidate(), new Date());
+    expect((await db.query("SELECT status, encrypted_private_key IS NULL AS wiped FROM signing_keys WHERE kid = $1", [first.kid])).rows[0]).toEqual({ status: 'retired', wiped: true });
+    expect((await repository.listPublishable()).map((key) => key.kid).sort()).toEqual([second.kid, third.kid].sort());
+    expect(await repository.retireExpired(new Date())).toEqual([]);
+  });
+
+  it('retireExpired retires immediately what an operator forced to expire', async () => {
+    fixture = await createPostgresTestDatabase();
+    db = createAuthDatabase({ connectionString: fixture.runtimeUrl });
+    const repository = new PostgresSigningKeyRepository(db);
+    const now = new Date();
+    const first = await repository.ensureActive(candidate(), now);
+    await repository.rotate(candidate(), now);
+    await db.query("UPDATE signing_keys SET retire_after = $1 WHERE kid = $2", [now, first.kid]);
+
+    expect(await repository.retireExpired(now)).toEqual([first.kid]);
   });
 });

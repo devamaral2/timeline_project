@@ -25,9 +25,6 @@ function repositoryReturning(
     openSession: () => {
       throw new Error("not used");
     },
-    revokeAllOfTargetUser: () => {
-      throw new Error("not used");
-    },
     revokeByRefreshToken: () => {
       throw new Error("not used in this test");
     },
