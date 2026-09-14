@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { ChangePasswordUseCase } from "./change-password.usecase";
 import { Clock } from "../../common/clock";
 import { SecretGenerator } from "../../common/secret-generator";
-import { AuthenticationFailedError, RequiredDependencyUnavailableError, SemanticInputError } from "../../common/errors";
+import { AuthenticationFailedError, SemanticInputError } from "../../common/errors";
 import { PreparePassword } from "../../credentials/prepare-password";
 import { hashSecretToken } from "../../crypto/secret-token";
 import type { ChangePasswordWithStepUpCommand } from "../../mfa/ports/authentication-repository";
@@ -18,10 +18,9 @@ class FixedSecrets extends SecretGenerator { private id = 0; randomId(): string 
 const user: User = { id: "user", email: "user@example.test", name: "User", passwordHash: "old", status: "active", createdAt: now, updatedAt: now };
 function users(value: User | null = user): UserReader { return { findById: vi.fn().mockResolvedValue(value), findByEmail: vi.fn() }; }
 
-function preparePassword(overrides: { compromised?: boolean; unavailable?: boolean } = {}) {
-  const pwned = { isCompromised: vi.fn().mockImplementation(async () => { if (overrides.unavailable) throw new RequiredDependencyUnavailableError("password blocklist unavailable"); return overrides.compromised ?? false; }) };
+function preparePassword() {
   const hasher = { hash: vi.fn().mockResolvedValue("scrypt$hash"), verify: vi.fn() };
-  return { prepare: new PreparePassword(pwned, hasher), pwned, hasher };
+  return { prepare: new PreparePassword(hasher), hasher };
 }
 
 const committed = { userId: "user", sessionId: "id-1", accessToken: "access", refreshTokenExpiresAt: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000), access: { roleKeys: ["member"], permissions: [], denies: [] } };
@@ -47,21 +46,12 @@ describe("ChangePasswordUseCase", () => {
     expect(command.auditEvents.map((event) => event.action)).toEqual(["step_up.consumed", "password.changed", "session.revoked_all", "session.issued"]);
   });
 
-  it("leaves the step-up untouched when the blocklist is unreachable", async () => {
+  it("leaves the step-up untouched when the password fails the policy", async () => {
     const changePasswordWithStepUp = vi.fn();
-    const { prepare } = preparePassword({ unavailable: true });
+    const { prepare } = preparePassword();
     const usecase = new ChangePasswordUseCase(users(), fakeAuthenticationRepository({ changePasswordWithStepUp }), prepare, new FixedClock(), new FixedSecrets(), () => "signed");
 
-    await expect(usecase.execute({ actor, stepUpToken: "opaque", newPassword: "correct horse battery staple", context })).rejects.toBeInstanceOf(RequiredDependencyUnavailableError);
-    expect(changePasswordWithStepUp).not.toHaveBeenCalled();
-  });
-
-  it("leaves the step-up untouched when the password is compromised", async () => {
-    const changePasswordWithStepUp = vi.fn();
-    const { prepare } = preparePassword({ compromised: true });
-    const usecase = new ChangePasswordUseCase(users(), fakeAuthenticationRepository({ changePasswordWithStepUp }), prepare, new FixedClock(), new FixedSecrets(), () => "signed");
-
-    await expect(usecase.execute({ actor, stepUpToken: "opaque", newPassword: "correct horse battery staple", context })).rejects.toBeInstanceOf(SemanticInputError);
+    await expect(usecase.execute({ actor, stepUpToken: "opaque", newPassword: "short", context })).rejects.toBeInstanceOf(SemanticInputError);
     expect(changePasswordWithStepUp).not.toHaveBeenCalled();
   });
 

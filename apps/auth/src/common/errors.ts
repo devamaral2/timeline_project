@@ -11,7 +11,6 @@ export type SemanticInputCode =
   | "password_length"
   | "password_control"
   | "password_context"
-  | "password_compromised"
   | "invalid_phone"
   | "channel_unavailable";
 

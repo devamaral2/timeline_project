@@ -3,9 +3,9 @@ import { randomBytes } from "node:crypto";
 import { ulid } from "ulid";
 import { createPostgresTestDatabase, describeWithPostgres, type PostgresTestDatabase } from "../testing/postgres-test-database";
 import { createTestApp, type TestApp } from "../testing/create-test-app";
+import { OTP_DELIVERY_GATEWAY } from "../mfa/otp-delivery.gateway";
 import { SigningKeyService } from "../crypto/signing-key.service";
 import { ANONYMOUS_CONTEXT } from "../common/request-context";
-import { RequiredDependencyUnavailableError } from "../common/errors";
 import { hashSecretToken } from "../crypto/secret-token";
 import { hashRecoveryCode } from "../mfa/recovery-code";
 import { SECURITY_POLICY } from "../config/security-policy";
@@ -15,7 +15,10 @@ import { AUTH_DATABASE } from "../db/tokens";
 let fixture: PostgresTestDatabase | undefined;
 let app: TestApp | undefined;
 let secondApp: TestApp | undefined;
+let otpMessages: Array<{ email: string; code: string }> = [];
+const withOtp = () => ({ overrides: [{ token: OTP_DELIVERY_GATEWAY, value: { send: async (message: { email: string; code: string }) => { otpMessages.push(message); } } }] });
 afterEach(async () => {
+  otpMessages = [];
   await secondApp?.close(); secondApp = undefined;
   await app?.close(); app = undefined;
   await fixture?.close(); fixture = undefined;
@@ -59,7 +62,7 @@ async function startStepUp(target: TestApp, accessToken: string, body: { purpose
 describeWithPostgres("Step-up HTTP endpoints", () => {
   it("changes the password behind a one-time step-up and revokes every earlier session", async () => {
     fixture = await createPostgresTestDatabase();
-    app = await createTestApp({ AUTH_DATABASE_URL: fixture.runtimeUrl });
+    app = await createTestApp({ AUTH_DATABASE_URL: fixture.runtimeUrl }, withOtp());
     const db = app.app.get<AuthDatabase>(AUTH_DATABASE);
     const now = new Date();
     await ensureSigningKey(app, now);
@@ -72,7 +75,7 @@ describeWithPostgres("Step-up HTTP endpoints", () => {
     const startBody = (await started.json()) as { stepUpToken: string; channel: string; maskedDestination: string };
     expect(startBody).toMatchObject({ channel: "email", maskedDestination: expect.stringMatching(/\*\*\*@example\.test$/) });
 
-    const verified = await fetch(`${app.url}/auth/step-up/verify`, { method: "POST", headers: { ...json, authorization: `Bearer ${tokens.accessToken}` }, body: JSON.stringify({ stepUpToken: startBody.stepUpToken, code: app.otpMessages.at(-1)!.code }) });
+    const verified = await fetch(`${app.url}/auth/step-up/verify`, { method: "POST", headers: { ...json, authorization: `Bearer ${tokens.accessToken}` }, body: JSON.stringify({ stepUpToken: startBody.stepUpToken, code: otpMessages.at(-1)!.code }) });
     expect(verified.status).toBe(200);
     expect(await verified.json()).toEqual({ stepUpToken: startBody.stepUpToken, purpose: "password_change" });
 
@@ -95,31 +98,9 @@ describeWithPostgres("Step-up HTTP endpoints", () => {
     expect(survivor.status).toBe(200);
   });
 
-  it("keeps the step-up available when the password blocklist is unreachable", async () => {
-    fixture = await createPostgresTestDatabase();
-    const unreachable = { isCompromised: async () => { throw new RequiredDependencyUnavailableError("password blocklist unavailable"); } };
-    app = await createTestApp({ AUTH_DATABASE_URL: fixture.runtimeUrl }, { pwnedPasswords: unreachable });
-    const db = app.app.get<AuthDatabase>(AUTH_DATABASE);
-    const now = new Date();
-    await ensureSigningKey(app, now);
-    const userId = await seedEnrolledUser(db, now);
-    const tokens = await bearerFor(app, await seedSession(db, userId, now));
-
-    const startBody = (await (await startStepUp(app, tokens.accessToken, { purpose: "password_change", secondFactor: "otp" })).json()) as { stepUpToken: string };
-    await fetch(`${app.url}/auth/step-up/verify`, { method: "POST", headers: { ...json, authorization: `Bearer ${tokens.accessToken}` }, body: JSON.stringify({ stepUpToken: startBody.stepUpToken, code: app.otpMessages.at(-1)!.code }) });
-
-    const failed = await fetch(`${app.url}/auth/password/change`, { method: "POST", headers: { ...json, authorization: `Bearer ${tokens.accessToken}` }, body: JSON.stringify({ stepUpToken: startBody.stepUpToken, newPassword: "uma senha longa o suficiente aqui" }) });
-    expect(failed.status).toBe(503);
-    expect(await failed.json()).toEqual({ code: "service_unavailable" });
-
-    const attempt = await db.query<{ consumed_at: Date | null; verified_at: Date | null }>("SELECT consumed_at, verified_at FROM authentication_attempts WHERE token_hash = $1", [hashSecretToken(startBody.stepUpToken)]);
-    expect(attempt.rows[0]?.consumed_at).toBeNull();
-    expect(attempt.rows[0]?.verified_at).not.toBeNull();
-  });
-
   it("regenerates recovery codes through a recovery step-up with the OTP provider unused", async () => {
     fixture = await createPostgresTestDatabase();
-    app = await createTestApp({ AUTH_DATABASE_URL: fixture.runtimeUrl });
+    app = await createTestApp({ AUTH_DATABASE_URL: fixture.runtimeUrl }, withOtp());
     const db = app.app.get<AuthDatabase>(AUTH_DATABASE);
     const now = new Date();
     await ensureSigningKey(app, now);
@@ -156,7 +137,7 @@ describeWithPostgres("Step-up HTTP endpoints", () => {
     // assinatura quanto o hash do balde de rate limit. Trocar a KEK seria
     // trocar de instalacao, nao reiniciar a mesma.
     const AUTH_KEY_ENCRYPTION_KEY = randomBytes(32).toString("base64url");
-    app = await createTestApp({ AUTH_DATABASE_URL: fixture.runtimeUrl, AUTH_KEY_ENCRYPTION_KEY });
+    app = await createTestApp({ AUTH_DATABASE_URL: fixture.runtimeUrl, AUTH_KEY_ENCRYPTION_KEY }, withOtp());
     const db = app.app.get<AuthDatabase>(AUTH_DATABASE);
     const now = new Date();
     await ensureSigningKey(app, now);
@@ -171,7 +152,7 @@ describeWithPostgres("Step-up HTTP endpoints", () => {
     expect(await fourth.text()).toBe("");
     expect(Number(fourth.headers.get("retry-after"))).toBeGreaterThan(0);
 
-    secondApp = await createTestApp({ AUTH_DATABASE_URL: fixture.runtimeUrl, AUTH_KEY_ENCRYPTION_KEY });
+    secondApp = await createTestApp({ AUTH_DATABASE_URL: fixture.runtimeUrl, AUTH_KEY_ENCRYPTION_KEY }, withOtp());
     const afterRestart = await startStepUp(secondApp, tokens.accessToken, { purpose: "password_change", secondFactor: "otp" });
     expect(afterRestart.status).toBe(429);
   });

@@ -4,6 +4,7 @@ import { SmtpOtpDeliveryGateway } from './mfa/smtp-otp-delivery.gateway';
 import { EmailOtpService } from './mfa/email-otp.service';
 import { AcceptInviteUseCase } from './authentication/usecases/accept-invite.usecase';
 import { Module, type DynamicModule } from '@nestjs/common';
+import { RequiredDependencyUnavailableError } from './common/errors';
 import { Clock, SystemClock } from './common/clock';
 import {
   CryptoSecretGenerator,
@@ -21,7 +22,6 @@ import { PublicAuthController } from './http/public-auth.controller';
 import { PostgresInviteRepository } from './invites/postgres-invite.repository';
 import { InspectInviteUseCase } from './invites/usecases/inspect-invite.usecase';
 import { ScryptPasswordHasher } from './credentials/scrypt-password-hasher';
-import { HttpPwnedPasswordsGateway } from './credentials/http-pwned-passwords.gateway';
 import { PreparePassword } from './credentials/prepare-password';
 import { PostgresAuthenticationRepository } from './mfa/postgres-authentication.repository';
 import { PostgresUserRepository } from './users/postgres-user.repository';
@@ -60,7 +60,7 @@ export class AppModule {
       imports: [DbModule],
       controllers: [HealthController, JwksController, PublicAuthController, AuthenticatedAuthController, AdminAuthController],
       providers: [
-        { provide: OTP_DELIVERY_GATEWAY, inject: [RUNTIME_ENV], useFactory: (env: RuntimeEnv) => env.otpProvider === 'fake' ? new ConsoleOtpDeliveryGateway() : new SmtpOtpDeliveryGateway(env.smtp!) },
+        { provide: OTP_DELIVERY_GATEWAY, inject: [RUNTIME_ENV], useFactory: (env: RuntimeEnv): OtpDeliveryGateway => env.otpProvider === 'fake' ? new ConsoleOtpDeliveryGateway() : env.otpProvider === 'smtp' ? new SmtpOtpDeliveryGateway(env.smtp!) : { send: async () => { throw new RequiredDependencyUnavailableError('otp provider not configured'); } } },
         { provide: EmailOtpService, inject: [OTP_DELIVERY_GATEWAY,RUNTIME_ENV], useFactory: (delivery:OtpDeliveryGateway,env:RuntimeEnv) => new EmailOtpService(delivery,env.keyEncryptionKey) },
         { provide: AcceptInviteUseCase, inject: [PostgresInviteRepository,PreparePassword,Clock], useFactory: (repo:PostgresInviteRepository,password:PreparePassword,clock:Clock) => new AcceptInviteUseCase(repo,password,clock) },
         { provide: StartLoginUseCase, inject: [PostgresUserRepository,LoginCredentialChecker,PostgresRateLimiter,EmailOtpService,PostgresAuthenticationRepository,Clock,SecretGenerator,RUNTIME_ENV,SigningKeyService], useFactory: (users:PostgresUserRepository,credentials:LoginCredentialChecker,limiter:PostgresRateLimiter,otp:EmailOtpService,repo:PostgresAuthenticationRepository,clock:Clock,secrets:SecretGenerator,env:RuntimeEnv,keys:SigningKeyService) => new StartLoginUseCase(users,credentials,limiter,otp,repo,clock,secrets,env.limits,keys.signAccessToken,env.mfaSuspended) },
@@ -75,8 +75,7 @@ export class AppModule {
         { provide: Clock, useClass: SystemClock },
         { provide: SecretGenerator, useClass: CryptoSecretGenerator },
         { provide: ScryptPasswordHasher, useClass: ScryptPasswordHasher },
-        { provide: HttpPwnedPasswordsGateway, inject: [RUNTIME_ENV], useFactory: (env: RuntimeEnv) => new HttpPwnedPasswordsGateway(env.passwordBlocklistTimeoutMs) },
-        { provide: PreparePassword, inject: [HttpPwnedPasswordsGateway, ScryptPasswordHasher], useFactory: (pwned: HttpPwnedPasswordsGateway, hasher: ScryptPasswordHasher) => new PreparePassword(pwned, hasher) },
+        { provide: PreparePassword, inject: [ScryptPasswordHasher], useFactory: (hasher: ScryptPasswordHasher) => new PreparePassword(hasher) },
         { provide: PostgresInviteRepository, inject: [AUTH_DATABASE], useFactory: (db: import('./db/client').AuthDatabase) => new PostgresInviteRepository(db) },
         { provide: PostgresAuthenticationRepository, inject: [AUTH_DATABASE, RUNTIME_ENV], useFactory: (db: import('./db/client').AuthDatabase, env: RuntimeEnv) => new PostgresAuthenticationRepository(db, env.issuer, env.audience) },
         { provide: PostgresUserRepository, inject: [AUTH_DATABASE], useFactory: (db: import('./db/client').AuthDatabase) => new PostgresUserRepository(db) },

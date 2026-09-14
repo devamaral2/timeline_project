@@ -16,7 +16,7 @@ function fixture(overrides: Partial<InviteRepository> = {}) {
     ...overrides,
   } as unknown as InviteRepository;
   const hasher = { hash: vi.fn().mockResolvedValue("scrypt$hash"), verify: vi.fn() };
-  const prepare = new PreparePassword({ isCompromised: vi.fn().mockResolvedValue(false) }, hasher);
+  const prepare = new PreparePassword(hasher);
   return { usecase: new AcceptInviteUseCase(invites, prepare, new FixedClock()), invites, hasher };
 }
 

@@ -15,7 +15,8 @@ export interface RuntimeEnv {
   publicUrl: URL;
   webAppUrl: URL;
   keyEncryptionKey: Buffer;
-  otpProvider: "fake" | "smtp";
+  /** Ausente = nenhum provedor: a entrega de OTP falha fechada. */
+  otpProvider: "fake" | "smtp" | null;
   allowFakeOtp: boolean;
   mfaSuspended: boolean;
   smtp?: {
@@ -27,7 +28,6 @@ export interface RuntimeEnv {
     from: string;
     timeoutMs: number;
   };
-  passwordBlocklistTimeoutMs: number;
   limits: {
     passwordEmail: { attempts: number; windowSeconds: number };
     passwordIp: { attempts: number; windowSeconds: number };
@@ -41,7 +41,7 @@ const runtimeKeys = [
   "AUTH_PUBLIC_URL", "AUTH_WEB_APP_URL", "AUTH_KEY_ENCRYPTION_KEY", "AUTH_OTP_PROVIDER",
   "AUTH_ALLOW_FAKE_OTP", "AUTH_MFA_SUSPENDED",
   "SMTP_HOST", "SMTP_PORT", "SMTP_SECURE", "SMTP_USER", "SMTP_PASS", "SMTP_FROM", "SMTP_TIMEOUT_MS",
-  "AUTH_PASSWORD_BLOCKLIST_TIMEOUT_MS", "AUTH_PASSWORD_EMAIL_LIMIT", "AUTH_PASSWORD_IP_LIMIT",
+  "AUTH_PASSWORD_EMAIL_LIMIT", "AUTH_PASSWORD_IP_LIMIT",
   "AUTH_PASSWORD_WINDOW_SECONDS", "AUTH_MFA_SEND_LIMIT", "AUTH_MFA_SEND_WINDOW_SECONDS",
   "AUTH_MFA_CHECK_LIMIT",
 ] as const;
@@ -60,7 +60,7 @@ const runtimeSchema = z.object({
   AUTH_PUBLIC_URL: nonEmpty,
   AUTH_WEB_APP_URL: nonEmpty,
   AUTH_KEY_ENCRYPTION_KEY: nonEmpty,
-  AUTH_OTP_PROVIDER: z.enum(["fake", "smtp"]),
+  AUTH_OTP_PROVIDER: z.enum(["fake", "smtp"]).optional(),
   AUTH_ALLOW_FAKE_OTP: boolean.default(false),
   AUTH_MFA_SUSPENDED: boolean.default(false),
   SMTP_HOST: nonEmpty.optional(),
@@ -70,7 +70,6 @@ const runtimeSchema = z.object({
   SMTP_PASS: z.string().min(1).optional(),
   SMTP_FROM: nonEmpty.optional(),
   SMTP_TIMEOUT_MS: positiveInteger.default(5000),
-  AUTH_PASSWORD_BLOCKLIST_TIMEOUT_MS: positiveInteger.default(2000),
   AUTH_PASSWORD_EMAIL_LIMIT: positiveInteger.default(5),
   AUTH_PASSWORD_IP_LIMIT: positiveInteger.default(30),
   AUTH_PASSWORD_WINDOW_SECONDS: positiveInteger.default(900),
@@ -153,11 +152,10 @@ export function getRuntimeEnv(source: EnvSource): RuntimeEnv {
     publicUrl: parseUrl(raw.AUTH_PUBLIC_URL, "AUTH_PUBLIC_URL"),
     webAppUrl: parseUrl(raw.AUTH_WEB_APP_URL, "AUTH_WEB_APP_URL"),
     keyEncryptionKey,
-    otpProvider: raw.AUTH_OTP_PROVIDER,
+    otpProvider: raw.AUTH_OTP_PROVIDER ?? null,
     allowFakeOtp: raw.AUTH_ALLOW_FAKE_OTP,
     mfaSuspended: raw.AUTH_MFA_SUSPENDED,
     smtp,
-    passwordBlocklistTimeoutMs: raw.AUTH_PASSWORD_BLOCKLIST_TIMEOUT_MS,
     limits,
   });
 }

@@ -8,7 +8,7 @@ import type { AuthDatabase } from "../db/client";
 import { AUTH_DATABASE } from "../db/tokens";
 import { PostgresInviteRepository } from "../invites/postgres-invite.repository";
 import { BootstrapAdminUseCase } from "../invites/usecases/bootstrap-admin.usecase";
-import type { OtpDeliveryGateway } from "../mfa/otp-delivery.gateway";
+import { OTP_DELIVERY_GATEWAY, type OtpDeliveryGateway } from "../mfa/otp-delivery.gateway";
 import { createTestApp, type TestApp } from "../testing/create-test-app";
 import { createPostgresTestDatabase, describeWithPostgres, type PostgresTestDatabase } from "../testing/postgres-test-database";
 
@@ -16,6 +16,13 @@ const email = "admin@example.test";
 const password = "uma senha longa o suficiente aqui";
 let fixture: PostgresTestDatabase | undefined;
 let app: TestApp | undefined;
+let otpMessages: Array<{ email: string; code: string }> = [];
+
+/** Este e o unico lugar que ainda conhece o gateway de OTP: o harness nao. */
+function withOtp(delivery?: OtpDeliveryGateway) {
+  otpMessages = [];
+  return { overrides: [{ token: OTP_DELIVERY_GATEWAY, value: delivery ?? { send: async (message: { email: string; code: string }) => { otpMessages.push(message); } } }] };
+}
 
 afterEach(async () => {
   await app?.close(); app = undefined;
@@ -39,7 +46,7 @@ async function expectSessionCount(count: number): Promise<void> {
 async function activate(otpDelivery?: OtpDeliveryGateway): Promise<string> {
   fixture = await createPostgresTestDatabase();
   const key = randomBytes(32).toString("base64url");
-  app = await createTestApp({ AUTH_DATABASE_URL: fixture.runtimeUrl, AUTH_KEY_ENCRYPTION_KEY: key, AUTH_MFA_SUSPENDED: "false" }, { otpDelivery });
+  app = await createTestApp({ AUTH_DATABASE_URL: fixture.runtimeUrl, AUTH_KEY_ENCRYPTION_KEY: key, AUTH_MFA_SUSPENDED: "false" }, withOtp(otpDelivery));
   const now = new Date();
   await app.app.get(SigningKeyService).ensureActive(now);
   const bootstrap = new BootstrapAdminUseCase(app.app.get(PostgresInviteRepository), app.app.get(Clock), app.app.get(SecretGenerator));
@@ -48,7 +55,7 @@ async function activate(otpDelivery?: OtpDeliveryGateway): Promise<string> {
   const accepted = await post("invites/accept", { token: invite.inviteToken, password });
   expect(accepted.status).toBe(201);
   expect(await accepted.json()).toEqual({ accepted: true });
-  expect(app.otpMessages).toHaveLength(0);
+  expect(otpMessages).toHaveLength(0);
   expect((await database().query("SELECT email,name,status,password_hash FROM users")).rows[0]).toEqual({
     email, name: "Admin", status: "active", password_hash: expect.any(String),
   });
@@ -63,7 +70,7 @@ async function login(): Promise<{ mfaToken: string; code: string }> {
   expect(body).toEqual(expect.objectContaining({ mfaToken: expect.any(String), channel: "email", secondFactor: "otp" }));
   expect(body).not.toHaveProperty("accessToken");
   expect(body).not.toHaveProperty("refreshToken");
-  const message = app!.otpMessages.at(-1)!;
+  const message = otpMessages.at(-1)!;
   expect(message.email).toBe(email);
   expect(message.code).toMatch(/^\d{6}$/);
   await expectSessionCount(0);
@@ -140,7 +147,7 @@ describeWithPostgres("email MFA HTTP journey", () => {
     // Independent random OTPs can collide; resend once more in that rare case.
     for (let tries = 0; tries < 2 && newCode === input.code; tries++) {
       expect((await post("mfa/resend", { mfaToken: input.mfaToken })).status).toBe(202);
-      newCode = app!.otpMessages.at(-1)!.code;
+      newCode = otpMessages.at(-1)!.code;
     }
     expect(newCode).not.toBe(input.code);
     expect((await database().query("SELECT invalidated_at FROM mfa_challenges WHERE id=$1", [oldId])).rows[0].invalidated_at).not.toBeNull();
@@ -178,7 +185,7 @@ describeWithPostgres("email MFA HTTP journey", () => {
     const input = await login();
     await app!.close(); app = undefined;
     const send = vi.fn(async () => { throw new Error("Delivery must not run during verification"); });
-    app = await createTestApp({ AUTH_DATABASE_URL: fixture!.runtimeUrl, AUTH_KEY_ENCRYPTION_KEY: key, AUTH_MFA_SUSPENDED: "false" }, { otpDelivery: { send } });
+    app = await createTestApp({ AUTH_DATABASE_URL: fixture!.runtimeUrl, AUTH_KEY_ENCRYPTION_KEY: key, AUTH_MFA_SUSPENDED: "false" }, withOtp({ send }));
     const response = await post("mfa/verify", input);
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual(expect.objectContaining({ accessToken: expect.any(String), refreshToken: expect.any(String) }));

@@ -20,8 +20,6 @@ const base = (overrides: EnvSource = {}): EnvSource => ({
   AUTH_PUBLIC_URL: "https://auth.example.test",
   AUTH_WEB_APP_URL: "https://web.example.test",
   AUTH_KEY_ENCRYPTION_KEY: kek,
-  AUTH_OTP_PROVIDER: "fake",
-  AUTH_ALLOW_FAKE_OTP: "true",
   ...overrides,
 });
 
@@ -71,7 +69,7 @@ describe("auth environment", () => {
     expect(env.audience).toBe("timeline-api");
     expect(env.smtp).toBeUndefined();
     expect(env.mfaSuspended).toBe(false);
-    expect(env.passwordBlocklistTimeoutMs).toBe(2000);
+    expect(env.otpProvider).toBeNull();
     expect(env.limits).toEqual({
       passwordEmail: { attempts: 5, windowSeconds: 900 },
       passwordIp: { attempts: 30, windowSeconds: 900 },
@@ -91,7 +89,12 @@ describe("auth environment", () => {
     { NODE_ENV: "test", AUTH_HOST: "0.0.0.0", AUTH_ALLOW_FAKE_OTP: "true" },
     { NODE_ENV: "test", AUTH_HOST: "127.0.0.1", AUTH_ALLOW_FAKE_OTP: "false" },
   ])("rejects fake OTP outside its explicitly local conditions: %#", (overrides) => {
-    expect(() => getRuntimeEnv(base(overrides))).toThrow();
+    expect(() => getRuntimeEnv(base({ AUTH_OTP_PROVIDER: "fake", ...overrides }))).toThrow();
+  });
+
+  it("boots without any OTP provider configured, in any environment", () => {
+    expect(getRuntimeEnv(base()).otpProvider).toBeNull();
+    expect(getRuntimeEnv(base({ NODE_ENV: "production", AUTH_HOST: "0.0.0.0" })).otpProvider).toBeNull();
   });
 
   const smtpBase = (overrides: EnvSource = {}): EnvSource => base({
@@ -175,6 +178,7 @@ describe("auth environment", () => {
     expect(getRuntimeEnv(smtpBase()).mfaSuspended).toBe(false);
     expect(() => getRuntimeEnv(base({
       NODE_ENV: "production",
+      AUTH_OTP_PROVIDER: "fake",
       AUTH_MFA_SUSPENDED: "true",
     }))).toThrow(/opted-in local/);
   });

@@ -33,7 +33,7 @@ describe("HTTP error contract", () => {
 
     const semantic = await raise("semantic");
     expect(semantic.status).toBe(422);
-    expect(await bytes(semantic)).toBe('{"code":"password_compromised"}');
+    expect(await bytes(semantic)).toBe('{"code":"password_length"}');
 
     const conflict = await raise("conflict");
     expect(conflict.status).toBe(409);
