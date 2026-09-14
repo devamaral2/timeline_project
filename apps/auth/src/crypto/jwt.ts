@@ -76,6 +76,11 @@ export type SignAccessToken = (
   key: SigningKeyForSigning,
   claims: UnsignedAccessTokenClaims,
 ) => string;
+/** Assina qualquer tipo e devolve o `jti` — o callback de quem precisa guardar ou revogar o token. */
+export type MintToken = (
+  key: SigningKeyForSigning,
+  claims: UnsignedTokenClaims,
+) => { token: string; jti: string };
 export class InvalidTokenError extends Error {}
 
 interface TokenKindRule {

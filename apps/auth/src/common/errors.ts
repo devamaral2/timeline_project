@@ -12,6 +12,7 @@ export type SemanticInputCode = import("../credentials/password-policy").Passwor
 export type ConflictCode =
   | "email_already_exists"
   | "phone_already_exists"
+  | "subject_not_eligible"
   | "already_initialized";
 
 export class AuthenticationFailedError extends Error {

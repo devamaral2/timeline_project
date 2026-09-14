@@ -25,6 +25,9 @@ import { RevokeSessionUseCase } from './sessions/usecases/revoke-session.usecase
 import { PostgresUserRepository } from './users/postgres-user.repository';
 import { PreparePassword } from './credentials/prepare-password';
 import { SignupController } from './http/signup.controller';
+import { GuestsController } from './http/guests.controller';
+import { PostgresGuestRepository } from './guests/postgres-guest.repository';
+import { IssueGuestLinkUseCase } from './guests/usecases/issue-guest-link.usecase';
 import { PostgresSignupRepository } from './signup/postgres-signup.repository';
 import { SignupUseCase } from './signup/usecases/signup.usecase';
 
@@ -34,7 +37,7 @@ export class AppModule {
     return {
       module: AppModule,
       imports: [DbModule],
-      controllers: [HealthController, JwksController, PublicAuthController, AuthenticatedAuthController, SignupController],
+      controllers: [HealthController, JwksController, PublicAuthController, AuthenticatedAuthController, SignupController, GuestsController],
       providers: [
         { provide: RUNTIME_ENV, useValue: env },
         ...DbModule.providers(RUNTIME_ENV),
@@ -54,6 +57,8 @@ export class AppModule {
         { provide: LoginUseCase, inject: [PostgresUserRepository, LoginCredentialChecker, PostgresRateLimiter, PostgresSessionRepository, SigningKeyService, Clock, SecretGenerator, RUNTIME_ENV], useFactory: (users: PostgresUserRepository, credentials: LoginCredentialChecker, limiter: PostgresRateLimiter, sessions: PostgresSessionRepository, keys: SigningKeyService, clock: Clock, secrets: SecretGenerator, runtime: RuntimeEnv) => new LoginUseCase(users, credentials, limiter, sessions, keys.signAccessToken, clock, secrets, runtime.limits) },
         { provide: PostgresSignupRepository, inject: [AUTH_DATABASE, RUNTIME_ENV], useFactory: (db: AuthDatabase, runtime: RuntimeEnv) => new PostgresSignupRepository(db, runtime.issuer, runtime.audience) },
         { provide: SignupUseCase, inject: [PostgresSignupRepository, PreparePassword, PostgresRateLimiter, SigningKeyService, Clock, SecretGenerator, RUNTIME_ENV], useFactory: (signups: PostgresSignupRepository, password: PreparePassword, limiter: PostgresRateLimiter, keys: SigningKeyService, clock: Clock, secrets: SecretGenerator, runtime: RuntimeEnv) => new SignupUseCase(signups, password, limiter, keys.signAccessToken, clock, secrets, runtime.limits.passwordIp) },
+        { provide: PostgresGuestRepository, inject: [AUTH_DATABASE], useFactory: (db: AuthDatabase) => new PostgresGuestRepository(db) },
+        { provide: IssueGuestLinkUseCase, inject: [PostgresGuestRepository, SigningKeyService, PostgresRateLimiter, Clock, SecretGenerator, RUNTIME_ENV], useFactory: (guests: PostgresGuestRepository, keys: SigningKeyService, limiter: PostgresRateLimiter, clock: Clock, secrets: SecretGenerator, runtime: RuntimeEnv) => new IssueGuestLinkUseCase(guests, keys.mintToken, limiter, clock, secrets, { issuer: runtime.issuer, audience: runtime.audience, webAppUrl: runtime.webAppUrl, limit: runtime.limits.passwordIp }) },
         { provide: RefreshSessionUseCase, inject: [PostgresSessionRepository, SigningKeyService, Clock, SecretGenerator], useFactory: (sessions: PostgresSessionRepository, keys: SigningKeyService, clock: Clock, secrets: SecretGenerator) => new RefreshSessionUseCase(sessions, keys.signAccessToken, clock, secrets) },
         { provide: RevokeSessionUseCase, inject: [PostgresSessionRepository, Clock], useFactory: (sessions: PostgresSessionRepository, clock: Clock) => new RevokeSessionUseCase(sessions, clock) },
         { provide: LogoutAllUseCase, inject: [PostgresSessionRepository, Clock], useFactory: (sessions: PostgresSessionRepository, clock: Clock) => new LogoutAllUseCase(sessions, clock) },

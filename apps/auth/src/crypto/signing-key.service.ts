@@ -2,6 +2,7 @@ import { type KeyObject } from 'node:crypto';
 import { decryptSecret, encryptSecret } from './key-encryption';
 import {
   signJwt,
+  type MintToken,
   type SignAccessToken,
   type TokenClaims,
   type UnsignedTokenClaims,
@@ -59,17 +60,14 @@ export class SigningKeyService {
    * Assina qualquer um dos tres tipos e devolve o `jti` junto: signup e guest
    * precisam persistir o `jti` que acabaram de emitir para poder revoga-lo.
    */
-  mintToken(
-    key: SigningKeyForSigning,
-    claims: UnsignedTokenClaims,
-  ): { token: string; jti: string } {
+  mintToken: MintToken = (key, claims) => {
     const jti = this.secretGenerator.randomId();
     const token = signJwt({ ...claims, jti } as TokenClaims, {
       kid: key.kid,
       privateKey: this.privateKeyFor(key),
     });
     return { token, jti };
-  }
+  };
   /** Para quem assina fora de uma transacao propria: CLI de signup e emissao de guest. */
   async mintWithActiveKey(claims: UnsignedTokenClaims, now: Date): Promise<{ token: string; jti: string }> {
     return this.mintToken(await this.repository.acquireActiveForSigning(now), claims);

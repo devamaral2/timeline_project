@@ -50,6 +50,12 @@ const operations: Record<string, Record<string, OpenApiOperation>> = {
   "/auth/signup": {
     post: { summary: "Conclui o signup de administrador", description: "Recebe o token do link de signup em `Authorization: Bearer` (só um token `token_use: signup` é aceito) e ativa a conta: grava email, telefone (normalizado para E.164, não verificado), nome e senha, concede o papel `admin` e abre a primeira sessão. O link é de uso único: consumido, revogado, vencido ou de uma conta que já não está pendente, responde `401`.", tags: ["Autenticação pública"], security: bearer, requestBody: request("SignupRequest"), responses: { "201": json({ $ref: "#/components/schemas/SignupResult" }, "Conta ativada e sessão emitida."), "409": json({ $ref: "#/components/schemas/ErrorCode" }, "`email_already_exists` ou `phone_already_exists`."), "422": json({ $ref: "#/components/schemas/ErrorCode" }, "Senha fora da política: `password_length`, `password_control`, `password_context`, `password_uppercase`, `password_digit` ou `password_symbol`."), ...protectedErrors } },
   },
+  "/auth/guests": {
+    post: { summary: "Emite um link de guest", description: "Só administrador. Cria um guest (linha própria em `users`, `status = guest`, sem credenciais) que pode **ler** os dados de um único usuário ativo por **uma hora**, e devolve o link com o token `token_use: guest`. Sem sessão e sem refresh token: passada a hora, emite-se outro link.\n\nContrato de verificação para consumidores: aceitar o token só em rotas de leitura; exigir que `subj` seja o dono dos dados lidos, conferido contra `users.observes_user_id`; recusá-lo em qualquer rota que espere token de usuário.", tags: ["Guests"], security: bearer, requestBody: request("IssueGuestRequest"), responses: { "201": json({ $ref: "#/components/schemas/GuestLink" }, "Link emitido."), "404": json({ $ref: "#/components/schemas/ErrorCode" }, "O usuário alvo não existe."), "409": json({ $ref: "#/components/schemas/ErrorCode" }, "`subject_not_eligible`: o alvo não está ativo (placeholder de signup, conta inativa ou outro guest)."), ...protectedErrors } },
+  },
+  "/auth/guests/{guestId}": {
+    delete: { summary: "Revoga um guest", description: "Só administrador. Apaga o guest. O token já emitido expira sozinho em até uma hora; consumidores que conferem `subj` contra `users.observes_user_id` passam a recusá-lo imediatamente.", tags: ["Guests"], security: bearer, parameters: [{ name: "guestId", in: "path", required: true, schema: { type: "string", minLength: 1, maxLength: 64 }, description: "ID do guest devolvido na emissão." }], responses: { "204": noContent("Guest apagado."), "404": json({ $ref: "#/components/schemas/ErrorCode" }, "Não há guest com esse id."), ...protectedErrors } },
+  },
   "/auth/token/refresh": {
     post: { summary: "Renova tokens de sessão", description: "Troca um refresh token válido por um novo par de tokens. O refresh token enviado é consumido; reutilizá-lo é tratado como tentativa inválida.", tags: ["Sessões"], requestBody: request("RefreshTokenRequest"), responses: { "200": json({ $ref: "#/components/schemas/RefreshTokens" }), ...errorResponses } },
   },
@@ -79,6 +85,7 @@ export const authOpenApiDocument = {
   tags: [
     { name: "Infraestrutura", description: "Sondas de saúde e descoberta de chaves públicas." },
     { name: "Autenticação pública", description: "Login por email e senha, sem sessão existente." },
+    { name: "Guests", description: "Acesso de leitura por uma hora sobre os dados de um usuário, sem conta." },
     { name: "Sessões", description: "Ciclo de vida e consulta da sessão autenticada." },
   ],
   paths: operations,
@@ -91,6 +98,8 @@ export const authOpenApiDocument = {
       Jwks: { type: "object", required: ["keys"], properties: { keys: { type: "array", items: { type: "object", additionalProperties: true } } } },
       SignupRequest: object({ email: { ...string("Email da conta.", 320), format: "email" }, phone: string("Celular com código do país; espaços, hífens e parênteses são aceitos e removidos.", 32), name: string("Nome da pessoa.", 120), password: token("Senha: 12 a 128 caracteres, com maiúscula, dígito e símbolo, diferente do email e do nome."), passwordConfirmation: token("Repetição exata da senha.") }),
       SignupResult: object({ userId: string("ID da conta ativada."), accessToken: string("JWT para autenticar rotas protegidas."), refreshToken: string("Token opaco para renovar a sessão."), accessTokenExpiresInSeconds: { type: "integer" }, refreshTokenExpiresAt: dateTime("Expiração do refresh token.") }),
+      IssueGuestRequest: object({ subjectUserId: string("ID do usuário cujos dados o guest poderá ler.", 64) }),
+      GuestLink: object({ guestId: string("ID do guest; use-o para revogar."), url: { ...string("Link com o token de guest no fragmento."), format: "uri" }, expiresAt: dateTime("Expiração do token: uma hora após a emissão.") }),
       LoginRequest: object({ email: { ...string("Email da conta.", 320), format: "email" }, password: token("Senha da conta.") }),
       RefreshTokenRequest: object({ refreshToken: token("Refresh token da sessão que será renovada ou revogada.") }),
       SessionTokens: object({ accessToken: string("JWT para autenticar rotas protegidas."), refreshToken: string("Token opaco para renovar a sessão."), accessTokenExpiresInSeconds: { type: "integer", description: "Vida útil do access token em segundos." }, refreshTokenExpiresAt: dateTime("Expiração do refresh token.") }),
