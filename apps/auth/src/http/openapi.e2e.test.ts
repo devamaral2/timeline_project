@@ -58,6 +58,8 @@ describe("API documentation", () => {
     expect(document.status).toBe(200);
     const openApi = (await document.json()) as { openapi: string; paths: Record<string, Record<string, unknown>> };
     expect(openApi.openapi).toBe("3.1.1");
+    const description = (openApi as unknown as { info: { description: string } }).info.description;
+    for (const fragment of ["token_use", "`user`", "`signup`", "`guest`", "observes_user_id", "subj"]) expect(description).toContain(fragment);
 
     const reference = await fetch(`${app.url}/docs`);
     expect(reference.status).toBe(200);

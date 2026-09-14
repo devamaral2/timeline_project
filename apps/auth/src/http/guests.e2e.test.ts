@@ -1,4 +1,9 @@
+import { RequestMethod } from "@nestjs/common";
+import { GUARDS_METADATA, METHOD_METADATA, PATH_METADATA } from "@nestjs/common/constants";
+import { ModulesContainer } from "@nestjs/core";
 import { afterEach, expect, it } from "vitest";
+import { ACCEPTED_TOKEN_KINDS } from "./accept-token-kinds.decorator";
+import { BearerAuthGuard } from "./bearer-auth.guard";
 import { ulid } from "ulid";
 import { ScryptPasswordHasher } from "../credentials/scrypt-password-hasher";
 import { verifyJwt } from "../crypto/jwt";
@@ -113,6 +118,38 @@ describeWithPostgres("guest links", () => {
     for (const [method, path] of [["GET", "/auth/me"], ["POST", "/auth/logout-all"], ["POST", "/auth/guests"]] as const) {
       const response = await fetch(`${app!.url}${path}`, { method, headers: { ...json, authorization: `Bearer ${token}` }, body: method === "GET" ? undefined : JSON.stringify({ subjectUserId: subject.id }) });
       expect([path, response.status]).toEqual([path, 403]);
+    }
+  });
+
+  it("gets a typed 403 on every bearer route the app registers, found from Nest metadata rather than a hand list", async () => {
+    const { subject, adminToken } = await boot();
+    const token = tokenOf(((await (await issue(adminToken, subject.id)).json()) as { url: string }).url);
+
+    const bearerRoutes: Array<{ method: string; path: string; kinds: string[] }> = [];
+    for (const module of app!.app.get(ModulesContainer).values()) {
+      for (const wrapper of module.controllers.values()) {
+        const controller = wrapper.metatype as (new (...args: never[]) => object) | undefined;
+        if (!controller?.prototype) continue;
+        for (const name of Object.getOwnPropertyNames(controller.prototype)) {
+          const handler = (controller.prototype as Record<string, unknown>)[name];
+          if (name === "constructor" || typeof handler !== "function") continue;
+          const method = Reflect.getMetadata(METHOD_METADATA, handler) as RequestMethod | undefined;
+          if (method === undefined) continue;
+          const guards = [...(Reflect.getMetadata(GUARDS_METADATA, controller) ?? []), ...(Reflect.getMetadata(GUARDS_METADATA, handler) ?? [])];
+          if (!guards.includes(BearerAuthGuard)) continue;
+          const kinds = (Reflect.getMetadata(ACCEPTED_TOKEN_KINDS, handler) ?? Reflect.getMetadata(ACCEPTED_TOKEN_KINDS, controller) ?? []) as string[];
+          const path = `/${[Reflect.getMetadata(PATH_METADATA, controller), Reflect.getMetadata(PATH_METADATA, handler)].join("/").split("/").filter(Boolean).join("/")}`.replace(/:[A-Za-z0-9_]+/g, "x");
+          bearerRoutes.push({ method: RequestMethod[method], path, kinds });
+        }
+      }
+    }
+
+    expect(bearerRoutes.length).toBeGreaterThanOrEqual(5);
+    // Nenhuma rota do auth le dados de produto: nenhuma aceita guest.
+    expect(bearerRoutes.filter((route) => route.kinds.includes("guest"))).toEqual([]);
+    for (const route of bearerRoutes) {
+      const response = await fetch(`${app!.url}${route.path}`, { method: route.method, headers: { ...json, authorization: `Bearer ${token}` }, body: route.method === "GET" || route.method === "DELETE" ? undefined : "{}" });
+      expect([route.method, route.path, response.status]).toEqual([route.method, route.path, 403]);
     }
   });
 
