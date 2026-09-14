@@ -21,7 +21,7 @@ const noContent = (description: string) => ({ description });
 const bearer = [{ bearerAuth: [] }];
 const errorResponses = {
   "400": json({ $ref: "#/components/schemas/ErrorCode" }, "Requisição inválida: JSON malformado, campo desconhecido ou formato incompatível."),
-  "401": noContent("Credenciais, token de acesso, token de MFA ou token de convite inválido, expirado ou revogado."),
+  "401": noContent("Credenciais, token de acesso ou token de convite inválido, expirado ou revogado."),
   "429": noContent("Limite de tentativas excedido. Consulte o cabeçalho `Retry-After` antes de tentar novamente."),
   "500": json({ $ref: "#/components/schemas/InternalError" }, "Falha inesperada. Informe o `correlationId` ao suporte."),
 } as const;
@@ -49,19 +49,10 @@ const operations: Record<string, Record<string, OpenApiOperation>> = {
     post: { summary: "Inspeciona um convite", description: "Valida um token de convite antes do cadastro e devolve apenas os dados seguros para exibição: nome, email mascarado e expiração.", tags: ["Convites públicos"], requestBody: request("InspectInviteRequest"), responses: { "201": json({ $ref: "#/components/schemas/InviteInspection" }), ...errorResponses } },
   },
   "/auth/invites/accept": {
-    post: { summary: "Aceita o convite com senha", description: "Define a senha e ativa o convidado em uma transação, sem emitir sessão. Depois é necessário fazer login e confirmar o código por e-mail.", tags: ["Convites públicos"], requestBody: request("AcceptInviteRequest"), responses: { "201": json({ $ref: "#/components/schemas/InviteAccepted" }), "422": json({ $ref: "#/components/schemas/ErrorCode" }, "Senha não atende à política de segurança."), "503": json({ $ref: "#/components/schemas/ErrorCode" }, "O provedor de MFA não está disponível."), ...errorResponses } },
+    post: { summary: "Aceita o convite com senha", description: "Define a senha e ativa o convidado em uma transação, sem emitir sessão. Depois é necessário fazer login.", tags: ["Convites públicos"], requestBody: request("AcceptInviteRequest"), responses: { "201": json({ $ref: "#/components/schemas/InviteAccepted" }), "422": json({ $ref: "#/components/schemas/ErrorCode" }, "Senha não atende à política de segurança."), ...errorResponses } },
   },
   "/auth/login": {
-    post: { summary: "Inicia login por senha", description: "Confere email e senha e inicia o segundo fator escolhido. Normalmente o resultado é um token temporário de MFA; enquanto a MFA estiver suspensa por configuração, a resposta já traz os tokens de sessão completos. Credenciais incorretas não revelam se o email existe.", tags: ["Autenticação pública"], requestBody: request("LoginRequest"), responses: { "200": json({ $ref: "#/components/schemas/SessionTokens" }, "Sessão emitida diretamente; só ocorre com a MFA suspensa."), "202": json({ $ref: "#/components/schemas/MfaChallenge" }), "503": json({ $ref: "#/components/schemas/ErrorCode" }, "O provedor de MFA não está disponível."), ...errorResponses } },
-  },
-  "/auth/mfa/verify": {
-    post: { summary: "Confirma o código MFA", description: "Finaliza um login usando o código recebido por e-mail e conferido localmente. No primeiro login OTP também entrega os códigos de recuperação uma única vez.", tags: ["Autenticação pública"], requestBody: request("VerifyMfaRequest"), responses: { "200": json({ $ref: "#/components/schemas/SessionTokens" }), "410": json({ $ref: "#/components/schemas/ErrorCode" }, "A MFA está temporariamente suspensa."), "503": json({ $ref: "#/components/schemas/ErrorCode" }, "O provedor de MFA não está disponível."), ...errorResponses } },
-  },
-  "/auth/mfa/recover": {
-    post: { summary: "Conclui MFA com código de recuperação", description: "Alternativa ao código por SMS/WhatsApp para finalizar um login ou aceite de convite. O código de recuperação é de uso único.", tags: ["Autenticação pública"], requestBody: request("RecoverMfaRequest"), responses: { "200": json({ $ref: "#/components/schemas/SessionTokens" }), "410": json({ $ref: "#/components/schemas/ErrorCode" }, "A MFA está temporariamente suspensa."), ...errorResponses } },
-  },
-  "/auth/mfa/resend": {
-    post: { summary: "Reenvia o desafio MFA", description: "Gera um novo desafio para uma tentativa MFA ainda válida, preservando o canal escolhido originalmente. Está sujeito a limite de tentativas.", tags: ["Autenticação pública"], requestBody: request("MfaTokenRequest"), responses: { "202": json({ $ref: "#/components/schemas/MfaChallenge" }), "410": json({ $ref: "#/components/schemas/ErrorCode" }, "A MFA está temporariamente suspensa."), "503": json({ $ref: "#/components/schemas/ErrorCode" }, "O provedor de MFA não está disponível."), ...errorResponses } },
+    post: { summary: "Faz login por senha", description: "Confere email e senha e devolve o par de tokens da nova sessão em uma única ida. Email inexistente, senha errada e conta que ainda não pode entrar respondem o mesmo `401`, no mesmo tempo.", tags: ["Autenticação pública"], requestBody: request("LoginRequest"), responses: { "200": json({ $ref: "#/components/schemas/SessionTokens" }, "Sessão emitida."), ...errorResponses } },
   },
   "/auth/token/refresh": {
     post: { summary: "Renova tokens de sessão", description: "Troca um refresh token válido por um novo par de tokens. O refresh token enviado é consumido; reutilizá-lo é tratado como tentativa inválida.", tags: ["Sessões"], requestBody: request("RefreshTokenRequest"), responses: { "200": json({ $ref: "#/components/schemas/RefreshTokens" }), ...errorResponses } },
@@ -131,12 +122,12 @@ export const authOpenApiDocument = {
   info: {
     title: "Braid Auth API",
     version: "1.0.0",
-    description: "API de identidade do Braid: convites, login com MFA, sessões, autenticação reforçada e administração de acessos.\n\nRotas protegidas usam `Authorization: Bearer <accessToken>`. Todas as respostas carregam `X-Correlation-Id`; use-o para rastrear falhas. Campos de segredo são apenas de escrita e nunca voltam nas respostas.",
+    description: "API de identidade do Braid: convites, login por senha, sessões, autenticação reforçada e administração de acessos.\n\nRotas protegidas usam `Authorization: Bearer <accessToken>`. Todas as respostas carregam `X-Correlation-Id`; use-o para rastrear falhas. Campos de segredo são apenas de escrita e nunca voltam nas respostas.",
   },
   tags: [
     { name: "Infraestrutura", description: "Sondas de saúde e descoberta de chaves públicas." },
     { name: "Convites públicos", description: "Fluxo de cadastro iniciado por um convite." },
-    { name: "Autenticação pública", description: "Login e confirmação do segundo fator sem sessão existente." },
+    { name: "Autenticação pública", description: "Login por email e senha, sem sessão existente." },
     { name: "Sessões", description: "Ciclo de vida e consulta da sessão autenticada." },
     { name: "Segurança da conta", description: "Ações sensíveis protegidas por autenticação reforçada." },
     { name: "Administração", description: "Gestão de usuários e acessos, exclusiva de superadministradores." },
@@ -151,10 +142,7 @@ export const authOpenApiDocument = {
       Jwks: { type: "object", required: ["keys"], properties: { keys: { type: "array", items: { type: "object", additionalProperties: true } } } },
       InspectInviteRequest: object({ token: token("Token secreto presente no link de convite.") }),
       AcceptInviteRequest: object({ token: token("Token secreto presente no link de convite."), password: token("Senha inicial, validada pela política de segurança.") }),
-      LoginRequest: object({ email: { ...string("Email da conta.", 320), format: "email" }, password: token("Senha da conta."), secondFactor: { type: "string", enum: ["otp", "recovery"], description: "`otp` envia um código; `recovery` permite usar um código de recuperação." } }),
-      VerifyMfaRequest: object({ mfaToken: token("Token temporário emitido ao iniciar login."), code: string("Código OTP recebido.", 64) }),
-      RecoverMfaRequest: object({ mfaToken: token("Token temporário emitido ao iniciar login."), recoveryCode: token("Código de recuperação de uso único.") }),
-      MfaTokenRequest: object({ mfaToken: token("Token temporário de MFA.") }),
+      LoginRequest: object({ email: { ...string("Email da conta.", 320), format: "email" }, password: token("Senha da conta.") }),
       StepUpTokenRequest: object({ stepUpToken: token("Token de step-up já confirmado para a ação sensível.") }),
       RefreshTokenRequest: object({ refreshToken: token("Refresh token da sessão que será renovada ou revogada.") }),
       StartStepUpRequest: object({ purpose: { type: "string", enum: ["password_change", "recovery_regeneration"], description: "Ação sensível que o step-up autoriza." }, secondFactor: { type: "string", enum: ["otp", "recovery"] } }),
@@ -166,8 +154,7 @@ export const authOpenApiDocument = {
       ChangeUserStatusRequest: object({ status: { type: "string", enum: ["active", "suspended", "disabled"] } }),
       InviteAccepted: object({accepted:{type:"boolean",enum:[true]}}),
       InviteInspection: object({ name: string("Nome do convidado."), email: string("Email mascarado."), expiresAt: dateTime("Momento de expiração do convite.") }),
-      MfaChallenge: object({ mfaToken: string("Token temporário a enviar na confirmação MFA."), channel: { type: "string", enum: ["email"] }, maskedDestination: string("Destino mascarado do desafio."), expiresAt: dateTime("Expiração do desafio.") }, ["mfaToken", "expiresAt"]),
-      SessionTokens: object({ accessToken: string("JWT para autenticar rotas protegidas."), refreshToken: string("Token opaco para renovar a sessão."), accessTokenExpiresInSeconds: { type: "integer", description: "Vida útil do access token em segundos." }, refreshTokenExpiresAt: dateTime("Expiração do refresh token."), recoveryCodes: { type: "array", description: "Códigos de recuperação, retornados no primeiro login OTP e no fluxo de login com MFA suspensa.", items: { type: "string" } } }, ["accessToken", "refreshToken"]),
+      SessionTokens: object({ accessToken: string("JWT para autenticar rotas protegidas."), refreshToken: string("Token opaco para renovar a sessão."), accessTokenExpiresInSeconds: { type: "integer", description: "Vida útil do access token em segundos." }, refreshTokenExpiresAt: dateTime("Expiração do refresh token.") }),
       RefreshTokens: object({ accessToken: string("Novo JWT de acesso."), refreshToken: string("Novo refresh token; substitui o anterior.") }),
       StepUpChallenge: object({ stepUpToken: string("Token temporário a confirmar."), purpose: { type: "string", enum: ["password_change", "recovery_regeneration"] }, secondFactor: { type: "string", enum: ["otp", "recovery"] }, channel: { type: "string", enum: ["email"] }, maskedDestination: string("Destino mascarado do OTP."), expiresAt: dateTime("Expiração do desafio.") }, ["stepUpToken", "purpose", "secondFactor", "expiresAt"]),
       VerifiedStepUp: object({ stepUpToken: string("Token confirmado para usar na ação sensível."), purpose: { type: "string", enum: ["password_change", "recovery_regeneration"] } }),

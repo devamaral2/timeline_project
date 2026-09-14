@@ -22,6 +22,9 @@ function repositoryReturning(
       lastCommand = command;
       return result;
     },
+    openSession: () => {
+      throw new Error("not used");
+    },
     revokeAllOfTargetUser: () => {
       throw new Error("not used");
     },

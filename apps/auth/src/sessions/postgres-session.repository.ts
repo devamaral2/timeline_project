@@ -1,4 +1,5 @@
-import type { AuthDatabase } from "../db/client";
+import type { AuthDatabase, AuthTransaction } from "../db/client";
+import { resolveAccessInTransaction } from "../rbac/postgres-access";
 import { lockActiveSigningKey } from "../crypto/postgres-signing-key.repository";
 import { buildUnsignedAccessTokenClaims, type SignAccessToken } from "../crypto/jwt";
 import { AuthenticationFailedError } from "../common/errors";
@@ -9,6 +10,8 @@ import type { AuthenticationMethod } from "../users/user";
 import type { Session } from "./session";
 import type {
   FindActiveSessionQuery,
+  OpenSessionCommand,
+  OpenedSession,
   RevokeAllOfUserCommand,
   RevokeAllOfTargetUserCommand,
   RevokeByRefreshTokenCommand,
@@ -51,12 +54,57 @@ function sessionFromRow(row: SessionRow, lastUsedAt: Date): Session {
   };
 }
 
+/**
+ * Abre a sessao, grava o primeiro refresh token e assina o access token, tudo
+ * dentro da transacao de quem chamou. Exportada porque o signup precisa abrir a
+ * sessao no mesmo commit em que ativa a conta.
+ *
+ * O status do usuario e relido com `FOR UPDATE`: um admin que desativa a conta
+ * entre a conferencia da senha e este commit ganha a corrida.
+ */
+export async function openSessionInTransaction(
+  tx: AuthTransaction,
+  c: OpenSessionCommand & { issuer: string; audience: string },
+  sign: SignAccessToken,
+): Promise<OpenedSession | "invalid"> {
+  const user = (await tx.query<{ status: string }>("SELECT status FROM users WHERE id = $1 FOR UPDATE", [c.userId])).rows[0];
+  if (!user || user.status !== "active") return "invalid";
+  await tx.query(
+    "INSERT INTO sessions (id, user_id, amr, auth_time, initial_ip_address, initial_user_agent, last_used_at, created_at) VALUES ($1, $2, ARRAY['pwd'], $3, $4, $5, $3, $3)",
+    [c.sessionId, c.userId, c.now, c.context.ipAddress, c.context.userAgent],
+  );
+  await tx.query(
+    "INSERT INTO refresh_tokens (id, token_hash, session_id, expires_at, created_at) VALUES ($1, $2, $3, $4, $5)",
+    [c.refreshToken.id, c.refreshToken.hash, c.sessionId, c.refreshToken.expiresAt, c.now],
+  );
+  const access = await resolveAccessInTransaction(tx, c.userId);
+  const key = await lockActiveSigningKey(tx, c.now);
+  const accessToken = sign(
+    key,
+    buildUnsignedAccessTokenClaims({
+      iss: c.issuer,
+      aud: c.audience,
+      sub: c.userId,
+      sid: c.sessionId,
+      perms: access.permissions,
+      denies: access.denies,
+      roles: access.roleKeys,
+      now: c.now,
+    }),
+  );
+  return { sessionId: c.sessionId, accessToken, access, refreshTokenExpiresAt: c.refreshToken.expiresAt };
+}
+
 export class PostgresSessionRepository implements SessionRepository {
   constructor(
     private readonly db: AuthDatabase,
     private readonly issuer: string,
     private readonly audience: string,
   ) {}
+
+  openSession(c: OpenSessionCommand, sign: SignAccessToken): Promise<OpenedSession | "invalid"> {
+    return this.db.transaction((tx) => openSessionInTransaction(tx, { ...c, issuer: this.issuer, audience: this.audience }, sign));
+  }
 
   async rotateRefreshToken(c: RotateRefreshTokenCommand, sign: SignAccessToken): Promise<RotateRefreshTokenResult> {
     return this.db.transaction(async (tx) => {

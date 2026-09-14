@@ -40,9 +40,18 @@ describe("Route registration and ordering", () => {
 
     // Sem bearer, mas com corpo invalido: 400 prova que a rota existe e que o
     // corpo chegou ao schema, nao a um guard.
-    for (const path of ["invites/inspect", "invites/accept", "login", "mfa/verify", "mfa/recover", "mfa/resend"]) {
+    for (const path of ["invites/inspect", "invites/accept", "login"]) {
       const response = await fetch(`${app.url}/auth/${path}`, { method: "POST", headers: json, body: JSON.stringify({ nope: true }) });
       expect([path, response.status]).toEqual([path, 400]);
+    }
+  });
+
+  it("no longer registers the MFA completion routes", async () => {
+    app = await createTestApp();
+
+    for (const path of ["mfa/verify", "mfa/recover", "mfa/resend"]) {
+      const response = await fetch(`${app.url}/auth/${path}`, { method: "POST", headers: json, body: JSON.stringify({ mfaToken: "x" }) });
+      expect([path, response.status]).toEqual([path, 404]);
     }
   });
 
