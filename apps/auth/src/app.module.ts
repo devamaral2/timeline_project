@@ -23,6 +23,10 @@ import { LogoutAllUseCase } from './sessions/usecases/logout-all.usecase';
 import { RefreshSessionUseCase } from './sessions/usecases/refresh-session.usecase';
 import { RevokeSessionUseCase } from './sessions/usecases/revoke-session.usecase';
 import { PostgresUserRepository } from './users/postgres-user.repository';
+import { PreparePassword } from './credentials/prepare-password';
+import { SignupController } from './http/signup.controller';
+import { PostgresSignupRepository } from './signup/postgres-signup.repository';
+import { SignupUseCase } from './signup/usecases/signup.usecase';
 
 @Module({})
 export class AppModule {
@@ -30,13 +34,14 @@ export class AppModule {
     return {
       module: AppModule,
       imports: [DbModule],
-      controllers: [HealthController, JwksController, PublicAuthController, AuthenticatedAuthController],
+      controllers: [HealthController, JwksController, PublicAuthController, AuthenticatedAuthController, SignupController],
       providers: [
         { provide: RUNTIME_ENV, useValue: env },
         ...DbModule.providers(RUNTIME_ENV),
         { provide: Clock, useClass: SystemClock },
         { provide: SecretGenerator, useClass: CryptoSecretGenerator },
         { provide: ScryptPasswordHasher, useClass: ScryptPasswordHasher },
+        { provide: PreparePassword, inject: [ScryptPasswordHasher], useFactory: (hasher: ScryptPasswordHasher) => new PreparePassword(hasher) },
         { provide: LoginCredentialChecker, inject: [ScryptPasswordHasher], useFactory: async (hasher: ScryptPasswordHasher) => new LoginCredentialChecker(hasher, await hasher.hash('timeline-auth-login-dummy')) },
 
         { provide: PostgresSigningKeyRepository, inject: [AUTH_DATABASE], useFactory: (db: AuthDatabase) => new PostgresSigningKeyRepository(db) },
@@ -47,6 +52,8 @@ export class AppModule {
         { provide: PostgresSessionRepository, inject: [AUTH_DATABASE, RUNTIME_ENV], useFactory: (db: AuthDatabase, runtime: RuntimeEnv) => new PostgresSessionRepository(db, runtime.issuer, runtime.audience) },
 
         { provide: LoginUseCase, inject: [PostgresUserRepository, LoginCredentialChecker, PostgresRateLimiter, PostgresSessionRepository, SigningKeyService, Clock, SecretGenerator, RUNTIME_ENV], useFactory: (users: PostgresUserRepository, credentials: LoginCredentialChecker, limiter: PostgresRateLimiter, sessions: PostgresSessionRepository, keys: SigningKeyService, clock: Clock, secrets: SecretGenerator, runtime: RuntimeEnv) => new LoginUseCase(users, credentials, limiter, sessions, keys.signAccessToken, clock, secrets, runtime.limits) },
+        { provide: PostgresSignupRepository, inject: [AUTH_DATABASE, RUNTIME_ENV], useFactory: (db: AuthDatabase, runtime: RuntimeEnv) => new PostgresSignupRepository(db, runtime.issuer, runtime.audience) },
+        { provide: SignupUseCase, inject: [PostgresSignupRepository, PreparePassword, PostgresRateLimiter, SigningKeyService, Clock, SecretGenerator, RUNTIME_ENV], useFactory: (signups: PostgresSignupRepository, password: PreparePassword, limiter: PostgresRateLimiter, keys: SigningKeyService, clock: Clock, secrets: SecretGenerator, runtime: RuntimeEnv) => new SignupUseCase(signups, password, limiter, keys.signAccessToken, clock, secrets, runtime.limits.passwordIp) },
         { provide: RefreshSessionUseCase, inject: [PostgresSessionRepository, SigningKeyService, Clock, SecretGenerator], useFactory: (sessions: PostgresSessionRepository, keys: SigningKeyService, clock: Clock, secrets: SecretGenerator) => new RefreshSessionUseCase(sessions, keys.signAccessToken, clock, secrets) },
         { provide: RevokeSessionUseCase, inject: [PostgresSessionRepository, Clock], useFactory: (sessions: PostgresSessionRepository, clock: Clock) => new RevokeSessionUseCase(sessions, clock) },
         { provide: LogoutAllUseCase, inject: [PostgresSessionRepository, Clock], useFactory: (sessions: PostgresSessionRepository, clock: Clock) => new LogoutAllUseCase(sessions, clock) },

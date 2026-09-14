@@ -47,6 +47,9 @@ const operations: Record<string, Record<string, OpenApiOperation>> = {
   "/auth/login": {
     post: { summary: "Faz login por senha", description: "Confere email e senha e devolve o par de tokens da nova sessão em uma única ida. Email inexistente, senha errada e conta que ainda não pode entrar respondem o mesmo `401`, no mesmo tempo.", tags: ["Autenticação pública"], requestBody: request("LoginRequest"), responses: { "200": json({ $ref: "#/components/schemas/SessionTokens" }, "Sessão emitida."), ...errorResponses } },
   },
+  "/auth/signup": {
+    post: { summary: "Conclui o signup de administrador", description: "Recebe o token do link de signup em `Authorization: Bearer` (só um token `token_use: signup` é aceito) e ativa a conta: grava email, telefone (normalizado para E.164, não verificado), nome e senha, concede o papel `admin` e abre a primeira sessão. O link é de uso único: consumido, revogado, vencido ou de uma conta que já não está pendente, responde `401`.", tags: ["Autenticação pública"], security: bearer, requestBody: request("SignupRequest"), responses: { "201": json({ $ref: "#/components/schemas/SignupResult" }, "Conta ativada e sessão emitida."), "409": json({ $ref: "#/components/schemas/ErrorCode" }, "`email_already_exists` ou `phone_already_exists`."), "422": json({ $ref: "#/components/schemas/ErrorCode" }, "Senha fora da política: `password_length`, `password_control`, `password_context`, `password_uppercase`, `password_digit` ou `password_symbol`."), ...protectedErrors } },
+  },
   "/auth/token/refresh": {
     post: { summary: "Renova tokens de sessão", description: "Troca um refresh token válido por um novo par de tokens. O refresh token enviado é consumido; reutilizá-lo é tratado como tentativa inválida.", tags: ["Sessões"], requestBody: request("RefreshTokenRequest"), responses: { "200": json({ $ref: "#/components/schemas/RefreshTokens" }), ...errorResponses } },
   },
@@ -86,6 +89,8 @@ export const authOpenApiDocument = {
       InternalError: { type: "object", required: ["code", "correlationId"], properties: { code: { type: "string", enum: ["internal_error"] }, correlationId: string("Identificador para rastrear a falha.") } },
       Health: { type: "object", required: ["status"], properties: { status: { type: "string", enum: ["ok"] } } },
       Jwks: { type: "object", required: ["keys"], properties: { keys: { type: "array", items: { type: "object", additionalProperties: true } } } },
+      SignupRequest: object({ email: { ...string("Email da conta.", 320), format: "email" }, phone: string("Celular com código do país; espaços, hífens e parênteses são aceitos e removidos.", 32), name: string("Nome da pessoa.", 120), password: token("Senha: 12 a 128 caracteres, com maiúscula, dígito e símbolo, diferente do email e do nome."), passwordConfirmation: token("Repetição exata da senha.") }),
+      SignupResult: object({ userId: string("ID da conta ativada."), accessToken: string("JWT para autenticar rotas protegidas."), refreshToken: string("Token opaco para renovar a sessão."), accessTokenExpiresInSeconds: { type: "integer" }, refreshTokenExpiresAt: dateTime("Expiração do refresh token.") }),
       LoginRequest: object({ email: { ...string("Email da conta.", 320), format: "email" }, password: token("Senha da conta.") }),
       RefreshTokenRequest: object({ refreshToken: token("Refresh token da sessão que será renovada ou revogada.") }),
       SessionTokens: object({ accessToken: string("JWT para autenticar rotas protegidas."), refreshToken: string("Token opaco para renovar a sessão."), accessTokenExpiresInSeconds: { type: "integer", description: "Vida útil do access token em segundos." }, refreshTokenExpiresAt: dateTime("Expiração do refresh token.") }),

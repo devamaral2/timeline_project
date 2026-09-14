@@ -7,13 +7,11 @@
  * do lado de fora, senao o formulario de login vira uma consulta de quem tem
  * conta aqui. O motivo real vai so para o log.
  */
-export type SemanticInputCode =
-  | "password_length"
-  | "password_control"
-  | "password_context";
+export type SemanticInputCode = import("../credentials/password-policy").PasswordPolicyCode;
 
 export type ConflictCode =
   | "email_already_exists"
+  | "phone_already_exists"
   | "already_initialized";
 
 export class AuthenticationFailedError extends Error {
