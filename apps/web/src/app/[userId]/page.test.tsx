@@ -13,8 +13,8 @@ vi.mock('@/components/events/TimelineList', () => ({
 const { default: UserTimelinePage } = await import('./page');
 
 test('renders the timeline of the requested user without reading the backend', async () => {
-  // A pagina nao busca nada: a leitura exige o ID token do Firebase, que so
-  // existe no cliente. Se ela voltar a buscar, este teste quebra no fetch
+  // A pagina nao busca nada: a leitura acontece no cliente, que sabe renovar a
+  // sessao quando o access token expira. Se ela voltar a buscar, este teste quebra no fetch
   // global que ninguem preparou.
   const fetchSpy = vi.spyOn(globalThis, 'fetch');
 

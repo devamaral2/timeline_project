@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Logo, Wordmark } from "@/components/brand/Logo";
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
-import { useCurrentUser } from "@/lib/firebase/use-current-user";
+import { useCurrentUser } from "@/lib/session/use-session";
 
 /** As promessas do produto, do material da marca. A primeira e a que se destaca. */
 const CLAIMS = ["IA", "Rápido", "Inteligente", "Completo", "Equilibrado"];
@@ -15,7 +15,7 @@ export default function TimelinePage() {
 
   useEffect(() => {
     if (user) {
-      router.replace(`/${user.uid}`);
+      router.replace(`/${user.userId}`);
     }
   }, [user, router]);
 

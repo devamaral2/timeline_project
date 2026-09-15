@@ -6,7 +6,7 @@ import { NewEventButton } from '@/components/events/NewEventButton';
 import { VoiceEventButton } from '@/components/events/VoiceEventButton';
 import { DateNavigator } from '@/components/events/DateNavigator';
 import { WeekStrip } from '@/components/events/WeekStrip';
-import { useCurrentUser } from '@/lib/firebase/use-current-user';
+import { useCurrentUser } from '@/lib/session/use-session';
 
 interface TimelineHeaderProps {
   userId: string;

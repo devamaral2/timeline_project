@@ -8,9 +8,13 @@ import type {
 import { TestIntersectionObserver } from '@/test/setup';
 import { TimelineList } from './TimelineList';
 
-const user = { uid: 'user-1', getIdToken: async () => 'test-token' };
+const user = { userId: 'user-1', name: 'Ana', email: null };
 let signedIn: typeof user | null = user;
 
+vi.mock('@/lib/session/use-session', () => ({
+  useSessionState: () => ({ user: signedIn, ready: true }),
+  useCurrentUser: () => signedIn,
+}));
 vi.mock('@/lib/firebase/use-current-user', () => ({
   useAuthState: () => ({ user: signedIn, ready: true }),
   useCurrentUser: () => signedIn,

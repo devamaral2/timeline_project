@@ -4,7 +4,7 @@ import { TimelineHeader } from "./TimelineHeader";
 
 const { useCurrentUser } = vi.hoisted(() => ({ useCurrentUser: vi.fn() }));
 
-vi.mock("@/lib/firebase/use-current-user", () => ({ useCurrentUser }));
+vi.mock("@/lib/session/use-session", () => ({ useCurrentUser }));
 vi.mock("@/components/brand/Logo", () => ({
   Logo: () => <span>Logo</span>,
   Wordmark: () => <span>Timeline</span>,
@@ -25,7 +25,7 @@ vi.mock("@/components/auth/GoogleSignInButton", () => ({
   GoogleSignInButton: () => <button type="button">Conta</button>,
 }));
 
-beforeEach(() => useCurrentUser.mockReturnValue({ uid: "user-1" }));
+beforeEach(() => useCurrentUser.mockReturnValue({ userId: "user-1", name: "Ana", email: null }));
 
 test("keeps the voice action available in the narrow header", () => {
   render(

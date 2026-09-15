@@ -21,8 +21,8 @@ export async function generateMetadata({
 /*
  * A pagina nao le mais eventos.
  *
- * A leitura passou a exigir o ID token do Firebase, e um Server Component nao
- * tem nenhum: o token vive no cliente. O que sobra para o servidor e o unico
+ * A leitura exige a sessao, e quem sabe renova-la quando o access token de 15
+ * minutos expira e o cliente (`authedFetch`). O que sobra para o servidor e o unico
  * dado que ele sabe melhor que o browser — que dia e hoje —, resolvido aqui
  * para que a hidratacao nao discorde do relogio da maquina.
  *

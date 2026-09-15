@@ -4,13 +4,13 @@ import { beforeEach, expect, test, vi } from "vitest";
 import TimelinePage from "./page";
 
 const replace = vi.fn();
-let currentUser: { uid: string } | null = null;
+let currentUser: { userId: string } | null = null;
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace }),
 }));
 
-vi.mock("@/lib/firebase/use-current-user", () => ({
+vi.mock("@/lib/session/use-session", () => ({
   useCurrentUser: () => currentUser,
 }));
 
@@ -31,7 +31,7 @@ test("shows the sign-in button when no user is authenticated", () => {
 });
 
 test("redirects to the user's timeline once authenticated", () => {
-  currentUser = { uid: "user-42" };
+  currentUser = { userId: "user-42" };
 
   render(<TimelinePage />);
 
