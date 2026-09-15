@@ -11,7 +11,7 @@ active  →  retiring  →  retired
 - **active**: assina os tokens novos. Existe uma só, garantida por índice único.
 - **retiring**: não assina mais, mas continua publicada no JWKS até
   `retire_after`, para os tokens que ela assinou terminarem de expirar.
-- **retired**: material privado apagado, JWK pública mantida.
+- **retired**: material privado apagado; a chave sai do JWKS.
 
 ## Antes
 
@@ -36,9 +36,15 @@ tokens emitidos a partir da rotação; consumidores que fazem cache do JWKS
 precisam de um refetch ao ver um `kid` desconhecido.
 
 A janela de convivência é `SECURITY_POLICY.signingKeyRetireDelaySeconds`
-(15 min e 30 s: os 15 minutos de vida do access token mais folga de relógio).
-Quem aposenta de fato é o cleanup, depois de `retire_after` — veja
-`docs/runbooks/auth-data-retention.md`.
+(1 h e 30 s): a vida do token mais longo que a chave pode ter assinado — os
+links de signup e guest, de uma hora — mais folga de relógio.
+Depois de `retire_after` a chave `retiring` sai do JWKS sozinha. A aposentadoria
+física (apagar o material privado e marcar `retired`) acontece em toda escrita de
+chave — no boot do serviço e em cada rotação — ou sob demanda:
+
+```bash
+pnpm --filter @repo/auth run retire-signing-keys
+```
 
 ## O que não fazer
 
@@ -48,7 +54,7 @@ não consegue assinar, e `GET /health/ready` passa a responder 503.
 
 ## Emergência: chave privada comprometida
 
-A rotação normal deixa a chave antiga válida por mais 15 minutos. Se ela vazou,
+A rotação normal deixa a chave antiga válida por mais uma hora. Se ela vazou,
 isso é tempo demais:
 
 1. Rode a rotação.
@@ -58,8 +64,8 @@ isso é tempo demais:
    UPDATE signing_keys SET retire_after = now() WHERE status = 'retiring';
    ```
 
-3. Rode o cleanup (`pnpm --filter @repo/auth run cleanup-auth-data`), que apaga
-   o material privado e registra `key.retired`.
+3. Rode `pnpm --filter @repo/auth run retire-signing-keys`, que apaga o material
+   privado e imprime os `kid` aposentados.
 4. Todo token assinado pela chave antiga passa a falhar na verificação. Os
    usuários continuam com o refresh token válido e recuperam a sessão no
    próximo refresh.

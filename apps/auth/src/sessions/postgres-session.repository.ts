@@ -1,19 +1,17 @@
-import type { AuditAction, AuditEventInput, AuditMetadataValue } from "../audit/audit-event";
-import { insertAuditEvents } from "../audit/postgres-audit-log";
-import type { RequestContext } from "../common/request-context";
-import type { AuthDatabase } from "../db/client";
+import type { AuthDatabase, AuthTransaction } from "../db/client";
+import { resolveAccessInTransaction } from "../rbac/postgres-access";
 import { lockActiveSigningKey } from "../crypto/postgres-signing-key.repository";
 import { buildUnsignedAccessTokenClaims, type SignAccessToken } from "../crypto/jwt";
 import { AuthenticationFailedError } from "../common/errors";
 import type { DirectPermission } from "../rbac/effective-permissions";
 import { resolveUserPermissions } from "../rbac/resolve-user-permissions";
 import type { Permission } from "../rbac/permissions";
-import type { AuthenticationMethod } from "../users/user";
 import type { Session } from "./session";
 import type {
   FindActiveSessionQuery,
+  OpenSessionCommand,
+  OpenedSession,
   RevokeAllOfUserCommand,
-  RevokeAllOfTargetUserCommand,
   RevokeByRefreshTokenCommand,
   RotateRefreshTokenCommand,
   RotateRefreshTokenResult,
@@ -23,7 +21,7 @@ import type {
 interface SessionRow {
   id: string;
   user_id: string;
-  amr: AuthenticationMethod[];
+  amr: string[];
   auth_time: Date;
   initial_ip_address: string | null;
   initial_user_agent: string | null;
@@ -55,40 +53,44 @@ function sessionFromRow(row: SessionRow, lastUsedAt: Date): Session {
 }
 
 /**
- * Minha decisao ao herdar este arquivo: o evento de auditoria e montado
- * inteiramente aqui dentro, nunca pelo chamador. O port ja trazia
- * `RotateRefreshTokenCommand` com um `auditEvents` de entrada, mas quem chama
- * `rotateRefreshToken` so sabe qual token foi apresentado — nao sabe ainda se
- * o desfecho vai ser `rotated`, `reused` ou uma revogacao por expiracao, nem
- * qual sessao/usuario esta por tras do hash. Pedir para o usecase pre-montar
- * o evento certo seria pedir para ele adivinhar o proprio resultado da
- * transacao. Por isso tirei `auditEvents` do port (rotate/revoke/revokeAll) e
- * deixei o repositorio decidir a acao e preencher actorUserId/targetId com o
- * que so ele descobre depois do lock. O preco e um `AuditAction` fixo por
- * ramo (nao da para o chamador anexar metadata extra), o que ate agora nunca
- * foi necessario.
+ * Abre a sessao, grava o primeiro refresh token e assina o access token, tudo
+ * dentro da transacao de quem chamou. Exportada porque o signup precisa abrir a
+ * sessao no mesmo commit em que ativa a conta.
+ *
+ * O status do usuario e relido com `FOR UPDATE`: um admin que desativa a conta
+ * entre a conferencia da senha e este commit ganha a corrida.
  */
-function sessionAuditEvent(
-  context: RequestContext,
-  now: Date,
-  userId: string,
-  sessionId: string,
-  action: AuditAction,
-  reason: string | null,
-  metadata: Readonly<Record<string, AuditMetadataValue>> = {},
-): AuditEventInput {
-  return {
-    correlationId: context.correlationId,
-    actorUserId: userId,
-    action,
-    targetType: "session",
-    targetId: sessionId,
-    result: "succeeded",
-    reason,
-    metadata,
-    context,
-    occurredAt: now,
-  };
+export async function openSessionInTransaction(
+  tx: AuthTransaction,
+  c: OpenSessionCommand & { issuer: string; audience: string },
+  sign: SignAccessToken,
+): Promise<OpenedSession | "invalid"> {
+  const user = (await tx.query<{ status: string }>("SELECT status FROM users WHERE id = $1 FOR UPDATE", [c.userId])).rows[0];
+  if (!user || user.status !== "active") return "invalid";
+  await tx.query(
+    "INSERT INTO sessions (id, user_id, amr, auth_time, initial_ip_address, initial_user_agent, last_used_at, created_at) VALUES ($1, $2, ARRAY['pwd'], $3, $4, $5, $3, $3)",
+    [c.sessionId, c.userId, c.now, c.context.ipAddress, c.context.userAgent],
+  );
+  await tx.query(
+    "INSERT INTO refresh_tokens (id, token_hash, session_id, expires_at, created_at) VALUES ($1, $2, $3, $4, $5)",
+    [c.refreshToken.id, c.refreshToken.hash, c.sessionId, c.refreshToken.expiresAt, c.now],
+  );
+  const access = await resolveAccessInTransaction(tx, c.userId);
+  const key = await lockActiveSigningKey(tx, c.now);
+  const accessToken = sign(
+    key,
+    buildUnsignedAccessTokenClaims({
+      iss: c.issuer,
+      aud: c.audience,
+      sub: c.userId,
+      sid: c.sessionId,
+      perms: access.permissions,
+      denies: access.denies,
+      roles: access.roleKeys,
+      now: c.now,
+    }),
+  );
+  return { sessionId: c.sessionId, accessToken, access, refreshTokenExpiresAt: c.refreshToken.expiresAt };
 }
 
 export class PostgresSessionRepository implements SessionRepository {
@@ -97,6 +99,10 @@ export class PostgresSessionRepository implements SessionRepository {
     private readonly issuer: string,
     private readonly audience: string,
   ) {}
+
+  openSession(c: OpenSessionCommand, sign: SignAccessToken): Promise<OpenedSession | "invalid"> {
+    return this.db.transaction((tx) => openSessionInTransaction(tx, { ...c, issuer: this.issuer, audience: this.audience }, sign));
+  }
 
   async rotateRefreshToken(c: RotateRefreshTokenCommand, sign: SignAccessToken): Promise<RotateRefreshTokenResult> {
     return this.db.transaction(async (tx) => {
@@ -136,9 +142,6 @@ export class PostgresSessionRepository implements SessionRepository {
       if (refreshRow.consumed_at) {
         if (!sessionRow.revoked_at) {
           await tx.query("UPDATE sessions SET revoked_at = $1, ended_at = $1 WHERE id = $2", [c.now, sessionId]);
-          await insertAuditEvents(tx, [
-            sessionAuditEvent(c.context, c.now, sessionRow.user_id, sessionId, "token.reuse_detected", "refresh_token_reused"),
-          ]);
         }
         return { kind: "reused" };
       }
@@ -148,29 +151,22 @@ export class PostgresSessionRepository implements SessionRepository {
       if (expired || sessionRow.revoked_at || userInactive) {
         if (!sessionRow.revoked_at) {
           await tx.query("UPDATE sessions SET revoked_at = $1, ended_at = $1 WHERE id = $2", [c.now, sessionId]);
-          await insertAuditEvents(tx, [
-            sessionAuditEvent(
-              c.context,
-              c.now,
-              sessionRow.user_id,
-              sessionId,
-              "session.revoked",
-              userInactive ? "user_inactive" : "refresh_token_expired",
-            ),
-          ]);
         }
         return { kind: "invalid" };
       }
 
+      // O sucessor entra antes do UPDATE: `successor_id` e FK para
+      // refresh_tokens(id) e nao e deferrable, entao apontar para uma linha
+      // que ainda nao existe aborta a transacao inteira.
+      await tx.query(
+        "INSERT INTO refresh_tokens (id, token_hash, session_id, expires_at, created_at) VALUES ($1, $2, $3, $4, $5)",
+        [c.successor.id, c.successor.hash, sessionId, c.successor.expiresAt, c.successor.issuedAt],
+      );
       await tx.query("UPDATE refresh_tokens SET consumed_at = $1, successor_id = $2 WHERE id = $3", [
         c.now,
         c.successor.id,
         refreshRow.id,
       ]);
-      await tx.query(
-        "INSERT INTO refresh_tokens (id, token_hash, session_id, expires_at, created_at) VALUES ($1, $2, $3, $4, $5)",
-        [c.successor.id, c.successor.hash, sessionId, c.successor.expiresAt, c.successor.issuedAt],
-      );
       await tx.query("UPDATE sessions SET last_used_at = $1 WHERE id = $2", [c.now, sessionId]);
 
       // A versao anterior deste metodo so lia user_roles e cravava
@@ -223,13 +219,9 @@ export class PostgresSessionRepository implements SessionRepository {
           perms: access.permissions,
           denies: access.denies,
           roles: access.roleKeys,
-          amr: sessionRow.amr,
-          auth_time: Math.floor(new Date(sessionRow.auth_time).getTime() / 1000),
           now: c.now,
         }),
       );
-
-      await insertAuditEvents(tx, [sessionAuditEvent(c.context, c.now, sessionRow.user_id, sessionId, "session.refreshed", null)]);
 
       return {
         kind: "rotated",
@@ -243,19 +235,13 @@ export class PostgresSessionRepository implements SessionRepository {
 
   async revokeByRefreshToken(c: RevokeByRefreshTokenCommand): Promise<boolean> {
     return this.db.transaction(async (tx) => {
-      const result = await tx.query<{ id: string; user_id: string }>(
+      const result = await tx.query(
         `UPDATE sessions s SET revoked_at = $1, ended_at = $1
          FROM refresh_tokens r
-         WHERE r.session_id = s.id AND r.token_hash = $2 AND s.revoked_at IS NULL
-         RETURNING s.id, s.user_id`,
+         WHERE r.session_id = s.id AND r.token_hash = $2 AND s.revoked_at IS NULL`,
         [c.now, c.presentedTokenHash],
       );
-      const revoked = result.rows[0];
-      if (!revoked) return false;
-      await insertAuditEvents(tx, [
-        sessionAuditEvent(c.context, c.now, revoked.user_id, revoked.id, "session.revoked", "logout"),
-      ]);
-      return true;
+      return (result.rowCount ?? 0) > 0;
     });
   }
 
@@ -281,28 +267,7 @@ export class PostgresSessionRepository implements SessionRepository {
         "UPDATE sessions SET revoked_at = $1, ended_at = $1 WHERE user_id = $2 AND revoked_at IS NULL",
         [c.now, c.actor.userId],
       );
-      const count = result.rowCount ?? 0;
-      if (count > 0) {
-        await insertAuditEvents(tx, [
-          sessionAuditEvent(c.context, c.now, c.actor.userId, c.actor.sessionId, "session.revoked_all", null, { count }),
-        ]);
-      }
-      return count;
-    });
-  }
-
-  async revokeAllOfTargetUser(c: RevokeAllOfTargetUserCommand): Promise<number | "not_found"> {
-    return this.db.transaction(async (tx) => {
-      // Mesma ordem de lock do rotate e do logout-all: usuario -> sessao.
-      const target = (await tx.query<{ id: string }>("SELECT id FROM users WHERE id = $1 FOR UPDATE", [c.targetUserId])).rows[0];
-      if (!target) return "not_found" as const;
-      const result = await tx.query("UPDATE sessions SET revoked_at = $1, ended_at = $1 WHERE user_id = $2 AND revoked_at IS NULL", [c.now, c.targetUserId]);
-      const count = result.rowCount ?? 0;
-      await insertAuditEvents(tx, [{
-        correlationId: c.context.correlationId, actorUserId: c.actorUserId, action: "session.revoked_all", targetType: "user", targetId: c.targetUserId,
-        result: "succeeded", reason: "admin_revoked", metadata: { count }, context: c.context, occurredAt: c.now,
-      }]);
-      return count;
+      return result.rowCount ?? 0;
     });
   }
 

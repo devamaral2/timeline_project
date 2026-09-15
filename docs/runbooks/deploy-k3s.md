@@ -34,15 +34,10 @@ PostgreSQL. As migrations também executarão em containers.
 interrompe todos os serviços. O mobile é um app instalado no celular, não um
 servidor a subir no k3s; este roteiro publica a API que ele poderá consumir.
 
-> **Impedimento encontrado no código em 07/09/2026:** antes de iniciar este
-> deploy completo, é preciso reconciliar as migrations e a implementação do
-> `auth`. `apps/auth/src/db/readiness.ts` declara `AUTH_SCHEMA_VERSION = 3`,
-> mas `0003`/`0004` elevam o schema a 4/5. A `0004_email_otp_mfa.sql` remove
-> campos de telefone/MFA que `schema.ts` e os repositórios ainda utilizam.
-> Com essa revisão, o auth não passa na readiness após aplicar todas as
-> migrations. Não basta trocar o número para 5. A correção é trabalho de código,
-> não uma configuração da VPS. O passo 7 detecta a divergência e impede
-> prosseguir. Este documento não contorna o problema pulando migrations.
+> **Impedimento de 07/09/2026 resolvido:** a divergência entre
+> `AUTH_SCHEMA_VERSION` e as migrations do `auth` foi eliminada na reconstrução
+> do serviço (projeto "Centralized Auth Service"). O código e as migrations
+> `0005`/`0006` sobem juntos e o passo 7 continua conferindo a readiness.
 
 ## Como executar este documento
 
@@ -537,16 +532,6 @@ else
 fi
 ```
 
-**Twilio:** para OTP real, crie/acesse a conta no
-[console Twilio](https://console.twilio.com/), anote Account SID/Auth Token,
-abra Verify, crie um Service e anote seu Service SID. Habilite SMS e observe as
-restrições de destinatários da conta trial. Guarde os três valores.
-
-O próximo passo permite deixar Twilio em modo **ainda não configurado**, com
-valores explícitos `PENDENTE`. Nesse caso o processo auth sobe, mas envio de OTP
-não funciona. Isso não impede o login Firebase do web. Não confunda
-`/health/ready` saudável com teste de envio de SMS.
-
 **OpenRouter:** se usará geração por IA, obtenha uma chave em
 [OpenRouter Keys](https://openrouter.ai/keys), configure os créditos necessários
 e escolha os IDs de modelos disponíveis na sua conta; o modelo do agente deve
@@ -612,10 +597,6 @@ kubectl -n braid create secret generic api-env \
   --from-file=FIREBASE_PRIVATE_KEY=/opt/braid/private/firebase-key.pem \
   --from-literal=RABBITMQ_URL="amqp://braid:${RABBIT_PASSWORD}@rabbitmq.braid.svc.cluster.local:5672"
 
-read -rsp "Twilio Account SID (Enter se ainda não configurou): " TWILIO_ACCOUNT_SID; echo
-read -rsp "Twilio Auth Token (Enter se ainda não configurou): " TWILIO_AUTH_TOKEN; echo
-read -rsp "Twilio Verify Service SID (Enter se ainda não configurou): " TWILIO_VERIFY_SERVICE_SID; echo
-
 kubectl -n braid create secret generic auth-env \
   --from-literal=NODE_ENV=production \
   --from-literal=AUTH_DATABASE_URL="postgres://auth_runtime:${AUTH_RUNTIME_PASSWORD}@postgres.braid.svc.cluster.local:5432/braid_auth" \
@@ -623,11 +604,7 @@ kubectl -n braid create secret generic auth-env \
   --from-literal=AUTH_AUDIENCE=braid-api \
   --from-literal=AUTH_PUBLIC_URL="https://auth.$DOMAIN" \
   --from-literal=AUTH_WEB_APP_URL="https://web.$DOMAIN" \
-  --from-literal=AUTH_KEY_ENCRYPTION_KEY="$AUTH_KEY_ENCRYPTION_KEY" \
-  --from-literal=AUTH_OTP_PROVIDER=twilio \
-  --from-literal=TWILIO_ACCOUNT_SID="${TWILIO_ACCOUNT_SID:-PENDENTE}" \
-  --from-literal=TWILIO_AUTH_TOKEN="${TWILIO_AUTH_TOKEN:-PENDENTE}" \
-  --from-literal=TWILIO_VERIFY_SERVICE_SID="${TWILIO_VERIFY_SERVICE_SID:-PENDENTE}"
+  --from-literal=AUTH_KEY_ENCRYPTION_KEY="$AUTH_KEY_ENCRYPTION_KEY"
 
 kubectl -n braid create secret generic rabbitmq-env \
   --from-literal=RABBITMQ_DEFAULT_USER=braid \
@@ -635,7 +612,6 @@ kubectl -n braid create secret generic rabbitmq-env \
 kubectl -n observability create secret generic grafana-admin \
   --from-literal=admin-user=admin \
   --from-literal=admin-password="$GRAFANA_PASSWORD"
-unset TWILIO_ACCOUNT_SID TWILIO_AUTH_TOKEN TWILIO_VERIFY_SERVICE_SID
 kubectl -n braid get secrets
 kubectl -n observability get secrets
 ```
@@ -906,8 +882,8 @@ os já aplicados. Ambos usam o driver `pg`, sem cliente `psql` no host.
 
 O último comando aplica permissões, como `auth_owner`, usando o `psql` do próprio
 Postgres via socket local. O arquivo vem pelo stdin (`-i`). É uma etapa separada
-das tabelas: libera leitura/escrita ao runtime, mas mantém `audit_log` restrita
-a inserção. Não retire essa etapa. Seria possível automatizar permissões no
+das tabelas: libera leitura/escrita ao runtime nas tabelas atuais e, por
+`ALTER DEFAULT PRIVILEGES`, nas que migrations futuras criarem. Não retire essa etapa. Seria possível automatizar permissões no
 executor Node em outra mudança; este roteiro preserva o mecanismo existente.
 
 Confira a estrutura:
@@ -916,10 +892,10 @@ Confira a estrutura:
 kubectl -n braid exec postgres-0 -- psql -U braid -d braid -c '\dt'
 kubectl -n braid exec postgres-0 -- psql -U auth_owner -d braid_auth -c '\dt'
 kubectl -n braid exec postgres-0 -- psql -U auth_owner -d braid_auth \
-  -c "SELECT has_table_privilege('auth_runtime','audit_log','INSERT') AS pode_inserir, has_table_privilege('auth_runtime','audit_log','UPDATE') AS pode_alterar;"
+  -c "SELECT has_table_privilege('auth_runtime','signup_tokens','INSERT') AS pode_inserir, has_table_privilege('auth_runtime','signup_tokens','UPDATE') AS pode_alterar;"
 ```
 
-Esperado: tabelas nas duas bases e `pode_inserir=t`, `pode_alterar=f`.
+Esperado: tabelas nas duas bases e `pode_inserir=t`, `pode_alterar=t`.
 O sucesso do deploy não depende de rodar migrations no computador pessoal.
 
 Importe as imagens finais no runtime do k3s:
@@ -1515,7 +1491,7 @@ Web, API, auth, banco, RabbitMQ, Prometheus, Grafana e Tunnel devem estar pronto
 O mobile usa `https://api.SEUDOMINIO` como `MOBILE_API_URL` em seu próprio build;
 a geração/instalação nativa não faz parte de subir servidores na VPS.
 
-Se deixou Twilio/OpenRouter pendentes, OTP/IA continuam pendentes. RabbitMQ ainda
+Se deixou OpenRouter pendente, a IA continua pendente. RabbitMQ ainda
 não tem consumidor no código. O auth usa o endereço do socket como IP do cliente:
 atrás do proxy isso pode agrupar clientes nos limites por IP. Antes de direcionar
 usuários reais ao novo `auth`, a integração do produto e a política de proxies
@@ -1747,7 +1723,6 @@ free -h
 | `OOMKilled`                    | Processo excedeu memória; veja consumo/limites, não conte swap como RAM disponível     |
 | DNS/timeouts nos pods          | Confira UFW, forwarding do Docker, CoreDNS e interface `cni0`                          |
 | PVC `Pending`                  | Confira local-path-provisioner e espaço em disco                                       |
-| OTP falha com auth saudável    | Twilio pendente/restrição de conta ou incompatibilidade do código MFA                  |
 | Grafana sem logs dos apps      | Este roteiro instala métricas, não um coletor de logs                                  |
 
 

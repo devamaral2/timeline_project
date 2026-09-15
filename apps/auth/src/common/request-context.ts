@@ -1,4 +1,4 @@
-/** De onde veio a requisicao. Vai para a sessao e para a auditoria. */
+/** De onde veio a requisicao. Vai para a sessao e para o log. */
 export interface RequestContext {
   readonly correlationId: string;
   readonly ipAddress: string | null;

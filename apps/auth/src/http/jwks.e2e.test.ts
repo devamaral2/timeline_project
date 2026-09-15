@@ -6,7 +6,6 @@ import {
 } from '../testing/postgres-test-database';
 import { createTestApp, type TestApp } from '../testing/create-test-app';
 import { SigningKeyService } from '../crypto/signing-key.service';
-import { ANONYMOUS_CONTEXT } from '../common/request-context';
 
 let fixture: PostgresTestDatabase | undefined;
 let app: TestApp | undefined;
@@ -23,18 +22,7 @@ describeWithPostgres('JWKS', () => {
     const now = new Date();
     await app.app
       .get(SigningKeyService)
-      .ensureActive(now, {
-        correlationId: 'jwks-test',
-        actorUserId: null,
-        action: 'key.created',
-        targetType: 'signing_key',
-        targetId: null,
-        result: 'succeeded',
-        reason: null,
-        metadata: {},
-        context: ANONYMOUS_CONTEXT,
-        occurredAt: now,
-      });
+      .ensureActive(now);
     const response = await fetch(`${app.url}/.well-known/jwks.json`);
     const text = await response.text();
     const etag = response.headers.get('etag');

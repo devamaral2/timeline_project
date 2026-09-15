@@ -2,49 +2,55 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { Test } from "@nestjs/testing";
 import type { INestApplication } from "@nestjs/common";
 import { PublicAuthController } from "./public-auth.controller";
-import { InspectInviteUseCase } from "../invites/usecases/inspect-invite.usecase";
-import { AcceptInviteUseCase } from "../authentication/usecases/accept-invite.usecase";
-import { StartLoginUseCase } from "../authentication/usecases/start-login.usecase";
-import { VerifyMfaUseCase } from "../authentication/usecases/verify-mfa.usecase";
-import { CompleteLoginUseCase } from "../authentication/usecases/complete-login.usecase";
-import { ResendMfaUseCase } from "../authentication/usecases/resend-mfa.usecase";
+import { LoginUseCase } from "../authentication/usecases/login.usecase";
+import { AuthenticationFailedError } from "../common/errors";
 import { configureHttpShell } from "./request-context.middleware";
-import { RUNTIME_ENV } from "../config/tokens";
-import type { RuntimeEnv } from "../config/env";
+import { RecordingAuthLogger } from "../common/logger";
 
 let app: INestApplication | undefined;
 afterEach(async () => { await app?.close(); app = undefined; });
 
-async function startApp(verify: { execute: ReturnType<typeof vi.fn> }) {
+async function startApp(login: { execute: ReturnType<typeof vi.fn> }) {
   const module = await Test.createTestingModule({ controllers: [PublicAuthController], providers: [
-    { provide: InspectInviteUseCase, useValue: { execute: vi.fn() } },
-    { provide: AcceptInviteUseCase, useValue: { execute: vi.fn() } },
-    { provide: StartLoginUseCase, useValue: { execute: vi.fn() } },
-    { provide: VerifyMfaUseCase, useValue: verify },
-    { provide: CompleteLoginUseCase, useValue: { recover: vi.fn(), verifyOtp: vi.fn() } },
-    { provide: ResendMfaUseCase, useValue: { execute: vi.fn() } },
-    { provide: RUNTIME_ENV, useValue: { mfaSuspended: false } as Partial<RuntimeEnv> },
+    { provide: LoginUseCase, useValue: login },
   ] }).compile();
-  app = module.createNestApplication({ bodyParser: false }); configureHttpShell(app); await app.listen(0, "127.0.0.1");
+  app = module.createNestApplication({ bodyParser: false }); configureHttpShell(app, new RecordingAuthLogger()); await app.listen(0, "127.0.0.1");
   const address = app.getHttpServer().address() as { port: number };
   return `http://127.0.0.1:${address.port}`;
 }
 
-describe("POST /auth/mfa/verify", () => {
-  it("accepts only the public MFA shape and returns the login response", async () => {
-    const verify = { execute: vi.fn().mockResolvedValue({ accessToken: "access", refreshToken: "refresh", accessTokenExpiresInSeconds: 900, refreshTokenExpiresAt: "2026-10-03T12:00:00.000Z", recoveryCodes: Array.from({ length: 10 }, () => "AAAA-BBBB-CCCC-DDDD") }) };
-    const url = await startApp(verify);
-    const response = await fetch(`${url}/auth/mfa/verify`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ mfaToken: "opaque", code: "000000" }) });
+const post = (url: string, body: unknown) => fetch(`${url}/auth/login`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+
+describe("POST /auth/login", () => {
+  it("answers 200 with the session tokens in a single round trip", async () => {
+    const tokens = { accessToken: "access", refreshToken: "refresh", accessTokenExpiresInSeconds: 900, refreshTokenExpiresAt: "2026-10-03T12:00:00.000Z" };
+    const login = { execute: vi.fn().mockResolvedValue(tokens) };
+    const url = await startApp(login);
+
+    const response = await post(url, { email: "admin@example.test", password: "Senha-Longa-123" });
+
     expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ accessToken: "access", recoveryCodes: expect.arrayContaining(["AAAA-BBBB-CCCC-DDDD"]) });
-    expect(verify.execute).toHaveBeenCalledWith(expect.objectContaining({ mfaToken: "opaque", code: "000000", context: expect.any(Object) }));
+    expect(await response.json()).toEqual(tokens);
+    expect(login.execute).toHaveBeenCalledWith({ email: "admin@example.test", password: "Senha-Longa-123", context: expect.any(Object) });
   });
 
-  it("rejects malformed payloads before the use case", async () => {
-    const verify = { execute: vi.fn() };
-    const url = await startApp(verify);
-    const response = await fetch(`${url}/auth/mfa/verify`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ mfaToken: "", code: "000000" }) });
-    expect(response.status).toBe(400);
-    expect(verify.execute).not.toHaveBeenCalled();
+  it("rejects the old secondFactor field and malformed payloads before the use case", async () => {
+    const login = { execute: vi.fn() };
+    const url = await startApp(login);
+
+    for (const body of [{ email: "a@example.test", password: "x", secondFactor: "otp" }, { email: "", password: "x" }, { email: "a@example.test" }]) {
+      expect((await post(url, body)).status).toBe(400);
+    }
+    expect(login.execute).not.toHaveBeenCalled();
+  });
+
+  it("answers an empty 401 for every refused login", async () => {
+    const login = { execute: vi.fn().mockRejectedValue(new AuthenticationFailedError("unknown email")) };
+    const url = await startApp(login);
+
+    const response = await post(url, { email: "ninguem@example.test", password: "qualquer-coisa" });
+
+    expect(response.status).toBe(401);
+    expect(await response.text()).toBe("");
   });
 });

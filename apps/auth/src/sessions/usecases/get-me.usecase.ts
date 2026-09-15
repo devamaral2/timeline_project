@@ -7,7 +7,7 @@ import type { SessionRepository } from "../ports/session-repository";
 
 export interface Me {
   userId: string;
-  email: string;
+  email: string | null;
   name: string;
   sessionId: string;
   roles: string[];

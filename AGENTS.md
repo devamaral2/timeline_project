@@ -2,12 +2,13 @@
 
 ## Servico de autenticacao
 
-`apps/auth` e um NestJS independente para identidade. Operadores usam os
+`apps/auth` e um NestJS independente para identidade: login por senha, sessao
+com refresh token rotativo, JWT verificavel offline pelo JWKS e RBAC. Nao ha MFA,
+step-up, recovery codes, audit log nem API de administracao. Operadores usam os
 scripts do proprio workspace (`db:migrate`, `bootstrap-admin`,
-`rotate-signing-key`, `cleanup-auth-data` e `smoke-twilio`); os procedimentos
-sem segredo estao em `docs/runbooks/`. O cleanup e uma transacao protegida por
-advisory lock: nao o substitua por tarefas paralelas nem remova refresh tokens
-consumidos de sessoes ainda vivas, pois eles sustentam a deteccao de reuso.
+`rotate-signing-key` e `retire-signing-keys`); os procedimentos sem segredo estao
+em `docs/runbooks/`. Nao remova refresh tokens consumidos de sessoes ainda vivas:
+eles sustentam a deteccao de reuso.
 
 Turborepo + pnpm workspace. Oito workspaces:
 
@@ -15,7 +16,7 @@ Turborepo + pnpm workspace. Oito workspaces:
 apps/web          Next.js 16 — frontend web, sem regra de negocio
 apps/mobile       Expo 57 + expo-router — app nativo, sem regra de negocio
 apps/api          NestJS — usecases, services, gateways, controllers HTTP
-apps/auth         NestJS — identidade: convite, login, MFA, sessao e RBAC
+apps/auth         NestJS — identidade: signup por link, login, sessao e RBAC
 packages/entities @repo/entities — dominio, portas e DTOs
 packages/persistence @repo/persistence — schema, repositories e acesso Postgres
 packages/timeline @repo/timeline — datas, janelas e agrupamento da timeline

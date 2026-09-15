@@ -20,8 +20,6 @@ const base = (overrides: EnvSource = {}): EnvSource => ({
   AUTH_PUBLIC_URL: "https://auth.example.test",
   AUTH_WEB_APP_URL: "https://web.example.test",
   AUTH_KEY_ENCRYPTION_KEY: kek,
-  AUTH_OTP_PROVIDER: "fake",
-  AUTH_ALLOW_FAKE_OTP: "true",
   ...overrides,
 });
 
@@ -69,14 +67,9 @@ describe("auth environment", () => {
     expect(env.host).toBe("127.0.0.1");
     expect(env.port).toBe(3002);
     expect(env.audience).toBe("timeline-api");
-    expect(env.smtp).toBeUndefined();
-    expect(env.mfaSuspended).toBe(false);
-    expect(env.passwordBlocklistTimeoutMs).toBe(2000);
     expect(env.limits).toEqual({
       passwordEmail: { attempts: 5, windowSeconds: 900 },
       passwordIp: { attempts: 30, windowSeconds: 900 },
-      mfaSendUser: { attempts: 3, windowSeconds: 600 },
-      factorCheckAttempt: { attempts: 5, windowSeconds: 600 },
     });
   });
 
@@ -87,96 +80,9 @@ describe("auth environment", () => {
   });
 
   it.each([
-    { NODE_ENV: "production", AUTH_HOST: "127.0.0.1", AUTH_ALLOW_FAKE_OTP: "true" },
-    { NODE_ENV: "test", AUTH_HOST: "0.0.0.0", AUTH_ALLOW_FAKE_OTP: "true" },
-    { NODE_ENV: "test", AUTH_HOST: "127.0.0.1", AUTH_ALLOW_FAKE_OTP: "false" },
-  ])("rejects fake OTP outside its explicitly local conditions: %#", (overrides) => {
-    expect(() => getRuntimeEnv(base(overrides))).toThrow();
-  });
-
-  const smtpBase = (overrides: EnvSource = {}): EnvSource => base({
-    AUTH_OTP_PROVIDER: "smtp",
-    AUTH_ALLOW_FAKE_OTP: "false",
-    SMTP_HOST: "smtp.example.test",
-      SMTP_FROM: "Braid <auth@example.test>",
-    ...overrides,
-  });
-
-  it("uses SMTP defaults without authentication credentials", () => {
-    expect(getRuntimeEnv(smtpBase()).smtp).toEqual({
-      host: "smtp.example.test",
-      port: 587,
-      secure: false,
-      user: undefined,
-      pass: undefined,
-      from: "Braid <auth@example.test>",
-      timeoutMs: 5000,
-    });
-  });
-
-  it("accepts explicit SMTP settings and paired credentials in production", () => {
-    const env = getRuntimeEnv(smtpBase({
-      NODE_ENV: "production",
-      SMTP_PORT: "465",
-      SMTP_SECURE: "true",
-      SMTP_USER: "mailer",
-      SMTP_PASS: " secret ",
-      SMTP_TIMEOUT_MS: "8000",
-    }));
-
-    expect(env.otpProvider).toBe("smtp");
-    expect(env.smtp).toEqual({
-      host: "smtp.example.test",
-      port: 465,
-      secure: true,
-      user: "mailer",
-      pass: " secret ",
-      from: "Braid <auth@example.test>",
-      timeoutMs: 8000,
-    });
-  });
-
-  it.each([
-    { SMTP_HOST: undefined },
-    { SMTP_FROM: undefined },
-    { SMTP_HOST: "" },
-    { SMTP_FROM: "" },
-    { SMTP_HOST: "   " },
-    { SMTP_FROM: "   " },
-  ])("requires nonempty SMTP host and sender: %#", (overrides) => {
-    expect(() => getRuntimeEnv(smtpBase(overrides))).toThrow();
-  });
-
-  it.each([
-    { SMTP_USER: "mailer" },
-    { SMTP_PASS: "secret" },
-    { SMTP_USER: "mailer", SMTP_PASS: "" },
-    { SMTP_USER: "", SMTP_PASS: "secret" },
-  ])("rejects unpaired SMTP credentials: %#", (overrides) => {
-    expect(() => getRuntimeEnv(smtpBase(overrides))).toThrow(/configured together/);
-  });
-
-  it.each([
-    { SMTP_PORT: "0" },
-    { SMTP_PORT: "1.5" },
-    { SMTP_SECURE: "yes" },
-    { SMTP_TIMEOUT_MS: "0" },
-  ])("rejects invalid SMTP settings: %#", (overrides) => {
-    expect(() => getRuntimeEnv(smtpBase(overrides))).toThrow();
-  });
-
-  it("rejects the removed Twilio provider", () => {
-    expect(() => getRuntimeEnv(base({ AUTH_OTP_PROVIDER: "twilio" }))).toThrow();
-  });
-
-  it("preserves explicit MFA suspension for both providers", () => {
-    expect(getRuntimeEnv(base({ AUTH_MFA_SUSPENDED: "true" })).mfaSuspended).toBe(true);
-    expect(getRuntimeEnv(smtpBase({ AUTH_MFA_SUSPENDED: "true" })).mfaSuspended).toBe(true);
-    expect(getRuntimeEnv(smtpBase()).mfaSuspended).toBe(false);
-    expect(() => getRuntimeEnv(base({
-      NODE_ENV: "production",
-      AUTH_MFA_SUSPENDED: "true",
-    }))).toThrow(/opted-in local/);
+    "AUTH_OTP_PROVIDER", "AUTH_ALLOW_FAKE_OTP", "AUTH_MFA_SUSPENDED", "SMTP_HOST", "TWILIO_ACCOUNT_SID", "AUTH_MFA_SEND_LIMIT",
+  ])("ignores the removed %s variable instead of configuring anything with it", (name) => {
+    expect(getRuntimeEnv(base({ [name]: "true" }))).toEqual(getRuntimeEnv(base()));
   });
 
   it("keeps migration and test credentials out of runtime configuration", () => {

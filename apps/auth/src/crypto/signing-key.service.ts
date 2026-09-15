@@ -2,11 +2,13 @@ import { type KeyObject } from 'node:crypto';
 import { decryptSecret, encryptSecret } from './key-encryption';
 import {
   signJwt,
+  type MintToken,
   type SignAccessToken,
-  type UnsignedAccessTokenClaims,
+  type TokenClaims,
+  type UnsignedTokenClaims,
 } from './jwt';
+import type { SigningKeyForSigning } from '../users/user';
 import type { PublicSigningJwk } from './jwk';
-import type { AuditEventInput } from '../audit/audit-event';
 import {
   generateSigningKey,
   privateKeyFromPem,
@@ -38,28 +40,40 @@ export class SigningKeyService {
       encryptedPrivateKey: encryptSecret(material.privateKeyPem, this.kek),
     };
   }
-  async ensureActive(
-    now: Date,
-    audit: AuditEventInput,
-  ): Promise<StoredSigningKey> {
-    const key = await this.repository.ensureActive(
-      this.candidate(),
-      now,
-      audit,
-    );
+  async ensureActive(now: Date): Promise<StoredSigningKey> {
+    const key = await this.repository.ensureActive(this.candidate(), now);
     await this.reload();
     return key;
   }
-  async rotate(now: Date, audit: AuditEventInput): Promise<StoredSigningKey> {
-    const key = await this.repository.rotate(this.candidate(), now, audit);
+  async retireExpired(now: Date): Promise<string[]> {
+    const retired = await this.repository.retireExpired(now);
+    for (const kid of retired) this.privateKeys.delete(kid);
+    await this.reload();
+    return retired;
+  }
+  async rotate(now: Date): Promise<StoredSigningKey> {
+    const key = await this.repository.rotate(this.candidate(), now);
     await this.reload();
     return key;
+  }
+  /**
+   * Assina qualquer um dos tres tipos e devolve o `jti` junto: signup e guest
+   * precisam persistir o `jti` que acabaram de emitir para poder revoga-lo.
+   */
+  mintToken: MintToken = (key, claims) => {
+    const jti = this.secretGenerator.randomId();
+    const token = signJwt({ ...claims, jti } as TokenClaims, {
+      kid: key.kid,
+      privateKey: this.privateKeyFor(key),
+    });
+    return { token, jti };
+  };
+  /** Para quem assina fora de uma transacao propria: CLI de signup e emissao de guest. */
+  async mintWithActiveKey(claims: UnsignedTokenClaims, now: Date): Promise<{ token: string; jti: string }> {
+    return this.mintToken(await this.repository.acquireActiveForSigning(now), claims);
   }
   signAccessToken: SignAccessToken = (key, claims) =>
-    signJwt(
-      { ...claims, jti: this.secretGenerator.randomId() },
-      { kid: key.kid, privateKey: this.privateKeyFor(key) },
-    );
+    this.mintToken(key, claims).token;
   async publicKeyFor(kid: string): Promise<PublicSigningJwk | null> {
     const found = this.snapshot.get(kid);
     if (found) return found;
