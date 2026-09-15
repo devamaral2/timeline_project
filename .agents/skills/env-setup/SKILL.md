@@ -22,6 +22,14 @@ envs corretos.
 `pnpm env:pull` baixa o `.env.local` do 1Password (`op read`) para a raiz —
 use quando faltar segredo local.
 
+## apps/api falando com apps/auth
+
+`AUTH_SERVICE_URL` e o host do `apps/auth` que o `apps/api` chama em
+`GET /auth/me` a cada requisicao autenticada (`apps/api/src/config/env.ts`).
+Tem default `http://127.0.0.1:3002` (o `AUTH_PORT` padrao do `apps/auth`), so
+precisa ser setada se o `apps/auth` estiver rodando em outra porta/host — numa
+worktree secundaria, por exemplo.
+
 ## Testar o app mobile num aparelho fisico
 
 O celular nao alcanca o loopback da sua maquina. Dois ajustes no `.env` (nao

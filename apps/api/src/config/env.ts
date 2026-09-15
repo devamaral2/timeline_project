@@ -7,6 +7,9 @@ const serverSchema = z.object({
   // desenvolvimento, `0.0.0.0` deixa o app mobile rodando no celular alcancar a
   // API pela rede local.
   API_HOST: z.string().min(1).default("127.0.0.1"),
+  // Host do apps/auth, chamado em GET /auth/me a cada requisicao autenticada.
+  // O default aponta para o AUTH_PORT padrao do apps/auth (127.0.0.1:3002).
+  AUTH_SERVICE_URL: z.string().url().default("http://127.0.0.1:3002"),
   OPENROUTER_API_KEY: z.string().min(1).optional(),
   OPENROUTER_MODEL: z.string().min(1).optional(),
   // Modelo do agente de skills. Precisa suportar tool calling — nem todo modelo
@@ -30,6 +33,7 @@ export function getServerEnv(source?: Record<string, string | undefined>): Serve
   return serverSchema.parse({
     PORT: read("PORT"),
     API_HOST: read("API_HOST"),
+    AUTH_SERVICE_URL: read("AUTH_SERVICE_URL"),
     OPENROUTER_API_KEY: read("OPENROUTER_API_KEY"),
     OPENROUTER_MODEL: read("OPENROUTER_MODEL"),
     OPENROUTER_AGENT_MODEL: read("OPENROUTER_AGENT_MODEL"),
