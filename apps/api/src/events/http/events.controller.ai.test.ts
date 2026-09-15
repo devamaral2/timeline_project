@@ -18,7 +18,7 @@ import { CreateEventFromTranscriptUseCase } from "../usecases/create-event-from-
 import { CreateEventUseCase } from "../usecases/create-event.usecase";
 import { EventsController } from "./events.controller";
 
-const actor: AuthenticatedUser = { userId: "firebase-user-1" };
+const actor: AuthenticatedUser = { userId: "auth-user-1" };
 
 function buildController(options: {
   rounds?: ScriptedAgentCall[][];
@@ -76,7 +76,7 @@ test("POST /api/events/ai creates the event and returns the ids and skills used"
 
   const savedEvent = await eventRepository.findById(body.eventIds[0]);
   expect(savedEvent?.items[0].type).toBe("training");
-  expect(savedEvent?.userId).toBe("firebase-user-1");
+  expect(savedEvent?.userId).toBe("auth-user-1");
 });
 
 test("POST /api/events/ai answers 400 when text is missing or is not a string", async () => {
@@ -114,7 +114,7 @@ test("POST /api/events/voice creates the event and returns its id and type", asy
   const body = await controller.fromTranscript({ transcript: "comecei a estudar" }, actor);
 
   expect(body.primaryItemType).toBe("routine");
-  expect((await eventRepository.findById(body.eventId))?.userId).toBe("firebase-user-1");
+  expect((await eventRepository.findById(body.eventId))?.userId).toBe("auth-user-1");
 });
 
 test("POST /api/events/voice answers 400 when the transcript is empty", async () => {

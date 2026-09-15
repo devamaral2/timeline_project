@@ -23,7 +23,7 @@ import { ListTimelineEventsUseCase } from "../usecases/list-timeline-events.usec
 import { UpdateEventUseCase } from "../usecases/update-event.usecase";
 import { EventsController } from "./events.controller";
 
-const actor: AuthenticatedUser = { userId: "firebase-user-1" };
+const actor: AuthenticatedUser = { userId: "auth-user-1" };
 const attacker: AuthenticatedUser = { userId: "attacker-1" };
 
 /**
@@ -103,7 +103,7 @@ test("POST /api/events ignores forbidden create fields from the client payload",
   const persistedEvent = await eventRepository.findById(eventId);
 
   expect(persistedEvent?.items[0].type).toBe("sleep");
-  expect(persistedEvent?.userId).toBe("firebase-user-1");
+  expect(persistedEvent?.userId).toBe("auth-user-1");
   expect(persistedEvent?.startedAt.toISOString()).not.toBe("2020-01-01T00:00:00.000Z");
   expect(persistedEvent?.finishedAt).toBeUndefined();
   expect(persistedEvent?.name).toBe("Sono");
@@ -113,7 +113,7 @@ test("POST /api/events ignores forbidden create fields from the client payload",
 function anOpenTraining() {
   return Event.create({
     id: "01K2R1J5M8S0Y2Z7ABCD123456",
-    userId: "firebase-user-1",
+    userId: "auth-user-1",
     name: "Treino",
     description: "Gym session",
     startedAt: new Date("2026-08-16T18:00:00.000Z"),
@@ -142,7 +142,7 @@ test("PATCH /api/events/:eventId keeps server-owned fields when they are sent by
 
   expect(await eventRepository.findById(event.id)).toMatchObject({
     id: event.id,
-    userId: "firebase-user-1",
+    userId: "auth-user-1",
     name: "Updated training",
   });
   expect((await eventRepository.findById(event.id))?.startedAt.toISOString()).toBe(
@@ -176,7 +176,7 @@ test("rejects an invalid timeline date before touching the repository", async ()
 test("returns only timeline events for the requesting actor, ignoring any userId in the query", async () => {
   const { controller } = makeController({
     database: new InMemoryEventDatabase([
-      makeMealEvent("firebase-user-1", "Breakfast", "2026-08-16T08:00:00-03:00", 320),
+      makeMealEvent("auth-user-1", "Breakfast", "2026-08-16T08:00:00-03:00", 320),
       makeMealEvent("attacker-1", "Lunch", "2026-08-16T12:00:00-03:00", 540),
     ]),
   });
@@ -223,7 +223,7 @@ test("rejects a daily overview request without a date", async () => {
 test("keeps the daily boundary in Sao Paulo", async () => {
   const { controller } = makeController({
     database: new InMemoryEventDatabase([
-      makeMealEvent("firebase-user-1", "Late meal", "2026-08-15T23:30:00-03:00", 250),
+      makeMealEvent("auth-user-1", "Late meal", "2026-08-15T23:30:00-03:00", 250),
     ]),
   });
 

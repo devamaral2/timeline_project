@@ -9,7 +9,7 @@ import { ScriptedEventAgentGateway } from "../testing/scripted-event-agent.gatew
 import { StubMealParsingGateway } from "../testing/stub-meal-parsing.gateway";
 import type { ScriptedAgentCall } from "../testing/scripted-event-agent.gateway";
 
-const actor = { userId: "firebase-user-1" };
+const actor = { userId: "auth-user-1" };
 
 function buildUseCase(rounds: ScriptedAgentCall[][], mealParsing?: StubMealParsingGateway) {
   const database = new InMemoryEventDatabase();

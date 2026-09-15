@@ -7,7 +7,7 @@ import type { TagSuggestionDto } from "@repo/entities/contracts";
 import { SuggestTagsUseCase } from "../usecases/suggest-tags.usecase";
 import { TagsController } from "./tags.controller";
 
-const actor: AuthenticatedUser = { userId: "firebase-user-1" };
+const actor: AuthenticatedUser = { userId: "auth-user-1" };
 
 class StubTagRepository {
   suggest(params: { userId: string; query: string; limit: number }): Promise<TagSuggestionDto[]> {
@@ -20,7 +20,7 @@ test("GET /api/tags scopes the suggestion to the authenticated actor, ignoring a
 
   const result = await controller.suggest(actor, "gym");
 
-  expect(result).toEqual([{ id: "firebase-user-1", name: "gym" }]);
+  expect(result).toEqual([{ id: "auth-user-1", name: "gym" }]);
 });
 
 test("defaults the query to an empty string", async () => {
@@ -28,7 +28,7 @@ test("defaults the query to an empty string", async () => {
 
   const result = await controller.suggest(actor, undefined);
 
-  expect(result).toEqual([{ id: "firebase-user-1", name: "" }]);
+  expect(result).toEqual([{ id: "auth-user-1", name: "" }]);
 });
 
 test("requires AuthServiceGuard on suggest", () => {

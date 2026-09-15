@@ -12,7 +12,7 @@ import type { MealParsingGateway } from "../gateways/meal-parsing.gateway";
 function openTrainingEvent(id: string, startedAt: Date) {
   return Event.create({
     id,
-    userId: "firebase-user-1",
+    userId: "auth-user-1",
     name: "Treino",
     description: "",
     startedAt,
@@ -40,13 +40,13 @@ test("creates a training event with server-defined timestamps and name", async (
       tags: ["Gym"],
       items: [{ type: "training", data: { workouts: [{ workoutCode: "running", pace: 320, distance: 5, duration: 25, calories: 320 }] } }],
     },
-    { userId: "firebase-user-1" },
+    { userId: "auth-user-1" },
   );
 
   expect(result.eventId).toMatch(/[0-9A-HJKMNP-TV-Z]{26}/);
   const savedEvent = await eventRepository.findById(result.eventId);
 
-  expect(savedEvent?.userId).toBe("firebase-user-1");
+  expect(savedEvent?.userId).toBe("auth-user-1");
   expect(savedEvent?.items[0].type).toBe("training");
   expect(savedEvent?.name).toBe("Treino");
   expect(savedEvent?.startedAt).toEqual(now);
@@ -62,7 +62,7 @@ test("creates a sleep event with the fixed name and default optional data", asyn
     eventRepository,
     new StubMealParsingGateway(),
     new InMemoryWorkoutCatalog(),
-  ).execute({ items: [{ type: "sleep" }] }, { userId: "firebase-user-1" });
+  ).execute({ items: [{ type: "sleep" }] }, { userId: "auth-user-1" });
 
   const savedEvent = await eventRepository.findById(result.eventId);
 
@@ -80,7 +80,7 @@ test("keeps routine names supplied by the user", async () => {
     eventRepository,
     new StubMealParsingGateway(),
     new InMemoryWorkoutCatalog(),
-  ).execute({ name: "Planejamento", items: [{ type: "routine" }] }, { userId: "firebase-user-1" });
+  ).execute({ name: "Planejamento", items: [{ type: "routine" }] }, { userId: "auth-user-1" });
 
   expect((await eventRepository.findById(result.eventId))?.name).toBe("Planejamento");
 });
@@ -91,7 +91,7 @@ test("requires a name when the primary item is routine", async () => {
   const useCase = new CreateEventUseCase(eventRepository, new StubMealParsingGateway(), new InMemoryWorkoutCatalog());
 
   await expect(
-    useCase.execute({ items: [{ type: "routine" }] }, { userId: "firebase-user-1" }),
+    useCase.execute({ items: [{ type: "routine" }] }, { userId: "auth-user-1" }),
   ).rejects.toThrow("Event requires a name");
 });
 
@@ -104,7 +104,7 @@ test("finishes the latest open event before creating a new one", async () => {
 
   const result = await useCase.execute(
     { name: "Planejamento", items: [{ type: "routine" }] },
-    { userId: "firebase-user-1" },
+    { userId: "auth-user-1" },
   );
   const updatedOpenEvent = await eventRepository.findById(openEvent.id);
 
@@ -125,7 +125,7 @@ test("keeps the previous event open when meal parsing fails", async () => {
   const useCase = new CreateEventUseCase(eventRepository, failingGateway, new InMemoryWorkoutCatalog());
 
   await expect(
-    useCase.execute({ items: [{ type: "meal", data: { inputText: "banana" } }] }, { userId: "firebase-user-1" }),
+    useCase.execute({ items: [{ type: "meal", data: { inputText: "banana" } }] }, { userId: "auth-user-1" }),
   ).rejects.toThrow("meal parsing failed");
 
   await expect(eventRepository.findById(openEvent.id)).resolves.toMatchObject({
@@ -141,7 +141,7 @@ test("prevents a different user from updating an existing event", async () => {
   await expect(
     new UpdateEventUseCase(eventRepository, new InMemoryWorkoutCatalog()).execute(
       { eventId: existingEvent.id, expectedRevision: 1 },
-      { userId: "firebase-user-2" },
+      { userId: "auth-user-2" },
     ),
   ).rejects.toThrow("Only the event owner can modify it");
 });
@@ -153,7 +153,7 @@ test("deletes an event when the authenticated user is the owner", async () => {
 
   await new DeleteEventUseCase(eventRepository).execute(
     { eventId: existingEvent.id },
-    { userId: "firebase-user-1" },
+    { userId: "auth-user-1" },
   );
 
   await expect(eventRepository.findById(existingEvent.id)).resolves.toBeNull();
@@ -219,7 +219,7 @@ test("creates a meal event from parsed AI items and calculated totals", async ()
       tags: ["Breakfast"],
       items: [{ type: "meal", data: { inputText: "1 banana. 2 colheres de iogurte natural e 5 morangos" } }],
     },
-    { userId: "firebase-user-1" },
+    { userId: "auth-user-1" },
   );
 
   expect(result.eventId).toBeDefined();
