@@ -28,5 +28,5 @@ find_free_port() {
 read_env_var() {
   local file="$1" key="$2"
   [ -f "$file" ] || return 0
-  grep -m1 -E "^${key}=" "$file" | sed -E "s/^${key}=//"
+  { grep -m1 -E "^${key}=" "$file" || true; } | sed -E "s/^${key}=//"
 }
