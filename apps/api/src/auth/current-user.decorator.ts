@@ -1,8 +1,8 @@
 import { UnauthorizedException, createParamDecorator, type ExecutionContext } from "@nestjs/common";
-import type { AuthenticatedRequest } from "./firebase-auth.guard";
-import type { AuthenticatedUser } from "./verify-firebase-token";
+import type { AuthenticatedRequest } from "./auth-service.guard";
+import type { AuthenticatedUser } from "./authenticated-user";
 
-/** So resolve em rotas protegidas pelo `FirebaseAuthGuard`, que popula `actor`. */
+/** So resolve em rotas protegidas pelo `AuthServiceGuard`, que popula `actor`. */
 export const CurrentUser = createParamDecorator(
   (_data: unknown, context: ExecutionContext): AuthenticatedUser => {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();

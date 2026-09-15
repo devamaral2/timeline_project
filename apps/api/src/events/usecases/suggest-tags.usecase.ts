@@ -1,4 +1,4 @@
-import type { AuthenticatedUser } from "../../auth/verify-firebase-token";
+import type { AuthenticatedUser } from "../../auth/authenticated-user";
 import type { TagRepository } from "@repo/entities/ports";
 import type { TagSuggestionDto } from "@repo/entities/contracts";
 

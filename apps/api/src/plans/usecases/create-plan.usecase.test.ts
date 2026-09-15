@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import { Plan, PlanNotFoundError, PlanOwnershipError } from "@repo/entities";
-import type { AuthenticatedUser } from "../../auth/verify-firebase-token";
+import type { AuthenticatedUser } from "../../auth/authenticated-user";
 import { InMemoryPlanRepository } from "../testing/in-memory-plan.repository";
 import { CreatePlanUseCase } from "./create-plan.usecase";
 

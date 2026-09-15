@@ -1,4 +1,4 @@
-import type { AuthenticatedUser } from "../../auth/verify-firebase-token";
+import type { AuthenticatedUser } from "../../auth/authenticated-user";
 import type { EventAgentGateway, SkillExecutionResult } from "../gateways/event-agent.gateway";
 import { EventAgentUndecidedError, InvalidInputError } from "../errors/event-agent.errors";
 import { EventAgentPromptBuilderService } from "../services/event-agent-prompt-builder.service";

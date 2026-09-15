@@ -1,5 +1,5 @@
 import { expect, test, vi } from "vitest";
-import type { AuthenticatedUser } from "../../auth/verify-firebase-token";
+import type { AuthenticatedUser } from "../../auth/authenticated-user";
 import { EventAgentUndecidedError, LlmUnavailableError } from "../errors/event-agent.errors";
 import type { EventAgentGateway } from "../gateways/event-agent.gateway";
 import type { EventCommandParsingGateway } from "../gateways/event-command-parsing.gateway";

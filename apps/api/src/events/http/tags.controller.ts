@@ -1,8 +1,8 @@
 import { Controller, Get, Query, UseGuards } from "@nestjs/common";
 import type { TagSuggestionDto } from "@repo/entities/contracts";
 import { CurrentUser } from "../../auth/current-user.decorator";
-import { FirebaseAuthGuard } from "../../auth/firebase-auth.guard";
-import type { AuthenticatedUser } from "../../auth/verify-firebase-token";
+import { AuthServiceGuard } from "../../auth/auth-service.guard";
+import type { AuthenticatedUser } from "../../auth/authenticated-user";
 import { SuggestTagsUseCase } from "../usecases/suggest-tags.usecase";
 
 @Controller("api/tags")
@@ -10,7 +10,7 @@ export class TagsController {
   constructor(private readonly suggestTags: SuggestTagsUseCase) {}
 
   @Get()
-  @UseGuards(FirebaseAuthGuard)
+  @UseGuards(AuthServiceGuard)
   async suggest(
     @CurrentUser() actor: AuthenticatedUser,
     @Query("query") query?: string,

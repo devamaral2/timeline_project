@@ -1,7 +1,7 @@
 import "reflect-metadata";
 import { GUARDS_METADATA, PATH_METADATA } from "@nestjs/common/constants";
 import { expect, test } from "vitest";
-import { FirebaseAuthGuard } from "../../auth/firebase-auth.guard";
+import { AuthServiceGuard } from "../../auth/auth-service.guard";
 import { EventsController } from "./events.controller";
 
 /** Caminho declarado em cada handler, na ordem em que os metodos aparecem na classe. */
@@ -32,13 +32,13 @@ test("declares the static event routes before the dynamic :eventId route", () =>
 
 /**
  * Leituras publicas ficaram para tras: timeline e daily overview agora exigem
- * o ator do Firebase, como o resto das rotas.
+ * o ator resolvido pelo apps/auth, como o resto das rotas.
  */
-test.each(["list", "daily"])("requires FirebaseAuthGuard on %s", (methodName) => {
+test.each(["list", "daily"])("requires AuthServiceGuard on %s", (methodName) => {
   const guards = Reflect.getMetadata(
     GUARDS_METADATA,
     (EventsController.prototype as unknown as Record<string, object>)[methodName],
   ) as unknown[] | undefined;
 
-  expect(guards).toContain(FirebaseAuthGuard);
+  expect(guards).toContain(AuthServiceGuard);
 });

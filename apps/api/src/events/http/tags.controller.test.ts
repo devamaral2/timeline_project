@@ -1,8 +1,8 @@
 import "reflect-metadata";
 import { GUARDS_METADATA } from "@nestjs/common/constants";
 import { expect, test } from "vitest";
-import type { AuthenticatedUser } from "../../auth/verify-firebase-token";
-import { FirebaseAuthGuard } from "../../auth/firebase-auth.guard";
+import type { AuthenticatedUser } from "../../auth/authenticated-user";
+import { AuthServiceGuard } from "../../auth/auth-service.guard";
 import type { TagSuggestionDto } from "@repo/entities/contracts";
 import { SuggestTagsUseCase } from "../usecases/suggest-tags.usecase";
 import { TagsController } from "./tags.controller";
@@ -31,11 +31,11 @@ test("defaults the query to an empty string", async () => {
   expect(result).toEqual([{ id: "firebase-user-1", name: "" }]);
 });
 
-test("requires FirebaseAuthGuard on suggest", () => {
+test("requires AuthServiceGuard on suggest", () => {
   const guards = Reflect.getMetadata(
     GUARDS_METADATA,
     TagsController.prototype.suggest,
   ) as unknown[] | undefined;
 
-  expect(guards).toContain(FirebaseAuthGuard);
+  expect(guards).toContain(AuthServiceGuard);
 });

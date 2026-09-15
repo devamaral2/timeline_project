@@ -15,8 +15,8 @@ import {
 import type { CreateTaskInput, TaskDetailDto, TaskSummaryDto, UpdateTaskInput } from "@repo/entities/contracts";
 import { isWorkItemPriority, isWorkItemStatus } from "@repo/entities";
 import { CurrentUser } from "../../auth/current-user.decorator";
-import { FirebaseAuthGuard } from "../../auth/firebase-auth.guard";
-import type { AuthenticatedUser } from "../../auth/verify-firebase-token";
+import { AuthServiceGuard } from "../../auth/auth-service.guard";
+import type { AuthenticatedUser } from "../../auth/authenticated-user";
 import { CreateTaskUseCase } from "../usecases/create-task.usecase";
 import { GetTaskUseCase } from "../usecases/get-task.usecase";
 import { UpdateTaskUseCase } from "../usecases/update-task.usecase";
@@ -34,13 +34,13 @@ export class TasksController {
   ) {}
 
   @Get()
-  @UseGuards(FirebaseAuthGuard)
+  @UseGuards(AuthServiceGuard)
   async list(@CurrentUser() actor: AuthenticatedUser): Promise<TaskSummaryDto[]> {
     return this.listTasks.execute(undefined, actor);
   }
 
   @Post()
-  @UseGuards(FirebaseAuthGuard)
+  @UseGuards(AuthServiceGuard)
   @HttpCode(HttpStatus.CREATED)
   async create(
     @Body() body: CreateTaskInput,
@@ -51,7 +51,7 @@ export class TasksController {
   }
 
   @Get(":taskId")
-  @UseGuards(FirebaseAuthGuard)
+  @UseGuards(AuthServiceGuard)
   async detail(
     @Param("taskId") taskId: string,
     @CurrentUser() actor: AuthenticatedUser,
@@ -62,7 +62,7 @@ export class TasksController {
   }
 
   @Patch(":taskId")
-  @UseGuards(FirebaseAuthGuard)
+  @UseGuards(AuthServiceGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   async update(
     @Param("taskId") taskId: string,
@@ -75,7 +75,7 @@ export class TasksController {
   }
 
   @Delete(":taskId")
-  @UseGuards(FirebaseAuthGuard)
+  @UseGuards(AuthServiceGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(
     @Param("taskId") taskId: string,

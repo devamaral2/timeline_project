@@ -1,4 +1,4 @@
-import type { AuthenticatedUser } from "../../auth/verify-firebase-token";
+import type { AuthenticatedUser } from "../../auth/authenticated-user";
 import { TaskOwnershipError, type Task } from "@repo/entities";
 import type { TaskRepository } from "@repo/entities/ports";
 import type { TaskDetailDto } from "@repo/entities/contracts";

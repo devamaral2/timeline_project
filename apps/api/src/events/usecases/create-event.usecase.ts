@@ -1,5 +1,5 @@
 import { ulid } from "ulid";
-import type { AuthenticatedUser } from "../../auth/verify-firebase-token";
+import type { AuthenticatedUser } from "../../auth/authenticated-user";
 import type { MealParsingGateway } from "../gateways/meal-parsing.gateway";
 import type { EventRepository, WorkoutCatalog } from "@repo/entities/ports";
 import type { CreateEventInput, CreateEventItemInput } from "@repo/entities/contracts";

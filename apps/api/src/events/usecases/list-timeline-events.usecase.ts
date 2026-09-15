@@ -1,4 +1,4 @@
-import type { AuthenticatedUser } from "../../auth/verify-firebase-token";
+import type { AuthenticatedUser } from "../../auth/authenticated-user";
 import type { TimelineEventQuery } from "@repo/entities/ports";
 import type { TimelineEventPageDto } from "@repo/entities/contracts";
 
