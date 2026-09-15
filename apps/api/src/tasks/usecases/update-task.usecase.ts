@@ -1,4 +1,4 @@
-import type { AuthenticatedUser } from "../../auth/verify-firebase-token";
+import type { AuthenticatedUser } from "../../auth/authenticated-user";
 import { PlanNotFoundError, PlanOwnershipError, TaskNotFoundError, TaskOwnershipError } from "@repo/entities";
 import type { PlanRepository, TaskRepository } from "@repo/entities/ports";
 import type { UpdateTaskInput } from "@repo/entities/contracts";

@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import { Plan, PlanOwnershipError, Task } from "@repo/entities";
-import type { AuthenticatedUser } from "../../auth/verify-firebase-token";
+import type { AuthenticatedUser } from "../../auth/authenticated-user";
 import { InMemoryPlanRepository } from "../../plans/testing/in-memory-plan.repository";
 import { InMemoryTaskRepository } from "../testing/in-memory-task.repository";
 import { ListTasksByPlanUseCase } from "./list-tasks-by-plan.usecase";

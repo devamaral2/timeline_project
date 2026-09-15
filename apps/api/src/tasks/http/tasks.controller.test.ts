@@ -1,7 +1,7 @@
 import { BadRequestException } from "@nestjs/common";
 import { expect, test } from "vitest";
 import { Task, TaskOwnershipError } from "@repo/entities";
-import type { AuthenticatedUser } from "../../auth/verify-firebase-token";
+import type { AuthenticatedUser } from "../../auth/authenticated-user";
 import { InMemoryPlanRepository } from "../../plans/testing/in-memory-plan.repository";
 import { InMemoryTaskRepository } from "../testing/in-memory-task.repository";
 import { CreateTaskUseCase } from "../usecases/create-task.usecase";

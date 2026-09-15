@@ -25,14 +25,17 @@ Sem regra de negocio aqui. Do backend, so tipos (`@repo/entities/contracts`).
   produto e o do simbolo do logo, desenhado em SVG dentro de
   `src/components/Logo.tsx`.
 - **Rede**: nao ha caminho relativo nem rewrite. Use `apiFetch` / `authedFetch`
-  de `src/lib/api/client.ts`, que ja poem o host e o `Authorization`. Na pratica
+  de `src/lib/api/client.ts`, que ja poem o host e o `Authorization` (o access
+  token do `apps/auth`, renovado pela sessao). Na pratica
   e sempre `authedFetch`: ler um dia e pedir sugestao de tag exigem token, e
   quem responde por autorizacao e ele — o `userId` da rota so diz que tela
   abrir, e nao vai mais na query. `apiFetch` fica para o proximo endpoint que
   seja mesmo publico.
-- **Login**: `signInWithPopup` nao existe no React Native. O fluxo esta em
-  `src/lib/firebase/google-sign-in.ts` — Google nativo emite o ID token, o
-  Firebase troca por sessao.
+- **Login**: e-mail e senha direto no `apps/auth` (`MOBILE_AUTH_URL`). A sessao
+  vive em `src/lib/auth/`: `session-store.ts` e a logica pura (testada no
+  Vitest), `session.ts` monta a instancia com o `expo-secure-store`. O web
+  guarda os tokens em cookie httpOnly; aqui nao ha servidor no meio, entao
+  quem os guarda e o Keychain/Keystore.
 - **Datas**: as mesmas funcoes do web, vindas de `@repo/timeline`. Nao
   reimplemente fuso nem janela aqui.
 - **Timeline**: os dois apps tem a mesma navegacao por data — regua da semana e
@@ -56,9 +59,10 @@ Sem regra de negocio aqui. Do backend, so tipos (`@repo/entities/contracts`).
 
 ## Rodando
 
-Precisa de development build (o Google Sign-In e modulo nativo) e das variaveis
-`MOBILE_API_URL`, `MOBILE_GOOGLE_WEB_CLIENT_ID` e `API_HOST=0.0.0.0` no `.env`
-da raiz do monorepo. O README da raiz tem o passo a passo.
+Precisa de development build (o `expo-secure-store` e modulo nativo) e das
+variaveis `MOBILE_API_URL`, `MOBILE_AUTH_URL`, `API_HOST=0.0.0.0` e
+`AUTH_HOST=0.0.0.0` no `.env` da raiz do monorepo. O README da raiz tem o
+passo a passo.
 
 ## Testes
 

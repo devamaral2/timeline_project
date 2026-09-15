@@ -4,10 +4,6 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import type { EventDetailDto, EventItemDto } from "@repo/entities/contracts";
 import { EventDetailsModal } from "./EventDetailsModal";
 
-vi.mock("firebase/auth", () => ({
-  getAuth: () => ({ currentUser: { getIdToken: async () => "test-token" } }),
-}));
-vi.mock("@/lib/firebase/client-app", () => ({ getClientApp: () => ({}) }));
 
 const routineItem: EventItemDto = {
   id: "routine-item",
@@ -160,14 +156,14 @@ test("a type this frontend does not know yet does not break the modal", async ()
   expect(screen.getByRole("dialog", { name: "Dia cheio" })).toBeInTheDocument();
 });
 
-test("asks the backend with the token of the signed in user", async () => {
+test("asks the backend with the session of the signed in user", async () => {
   open(anEvent());
 
   await screen.findByText("Refeição");
   expect(fetch).toHaveBeenCalledWith(
     "/api/events/event-1",
     expect.objectContaining({
-      headers: expect.objectContaining({ Authorization: "Bearer test-token" }),
+      credentials: "same-origin",
     }),
   );
 });

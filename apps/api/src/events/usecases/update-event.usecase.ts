@@ -1,4 +1,4 @@
-import type { AuthenticatedUser } from "../../auth/verify-firebase-token";
+import type { AuthenticatedUser } from "../../auth/authenticated-user";
 import { EventNotFoundError, EventOwnershipError } from "@repo/entities";
 import type { EventRepository, WorkoutCatalog } from "@repo/entities/ports";
 import type { UpdateEventInput } from "@repo/entities/contracts";

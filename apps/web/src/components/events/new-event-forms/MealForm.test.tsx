@@ -3,10 +3,6 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { MealForm } from "./MealForm";
 
-vi.mock("firebase/auth", () => ({
-  getAuth: () => ({ currentUser: { getIdToken: async () => "test-token" } }),
-}));
-vi.mock("@/lib/firebase/client-app", () => ({ getClientApp: () => ({}) }));
 
 beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ eventId: "e-1" }))));
@@ -38,12 +34,12 @@ test("sends one meal item, and no event type at all", async () => {
   expect(body.items).toEqual([{ type: "meal", data: { inputText: "2 ovos mexidos" } }]);
 });
 
-test("sends the token of the signed in user", async () => {
+test("sends the session of the signed in user", async () => {
   submitWith("café com leite");
 
   await waitFor(() => expect(fetch).toHaveBeenCalled());
   const [, init] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
-  expect(init.headers).toMatchObject({ Authorization: "Bearer test-token" });
+  expect(init.credentials).toBe("same-origin");
 });
 
 test("asks for the meal before sending anything", () => {

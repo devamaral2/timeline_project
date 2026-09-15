@@ -24,8 +24,8 @@ import type {
 import { isEventPriority } from "@repo/entities";
 import { decodeTimelineCursor } from "@repo/persistence";
 import { CurrentUser } from "../../auth/current-user.decorator";
-import { FirebaseAuthGuard } from "../../auth/firebase-auth.guard";
-import type { AuthenticatedUser } from "../../auth/verify-firebase-token";
+import { AuthServiceGuard } from "../../auth/auth-service.guard";
+import type { AuthenticatedUser } from "../../auth/authenticated-user";
 import { InvalidInputError } from "../errors/event-agent.errors";
 import { CreateEventFromTextUseCase } from "../usecases/create-event-from-text.usecase";
 import {
@@ -64,7 +64,7 @@ export class EventsController {
   ) {}
 
   @Get()
-  @UseGuards(FirebaseAuthGuard)
+  @UseGuards(AuthServiceGuard)
   async list(
     @CurrentUser() actor: AuthenticatedUser,
     @Query("from") from?: string,
@@ -89,7 +89,7 @@ export class EventsController {
   }
 
   @Post()
-  @UseGuards(FirebaseAuthGuard)
+  @UseGuards(AuthServiceGuard)
   @HttpCode(HttpStatus.CREATED)
   async create(
     @Body() body: CreateEventInput,
@@ -100,7 +100,7 @@ export class EventsController {
   }
 
   @Get("daily")
-  @UseGuards(FirebaseAuthGuard)
+  @UseGuards(AuthServiceGuard)
   async daily(
     @CurrentUser() actor: AuthenticatedUser,
     @Query("date") date?: string,
@@ -110,7 +110,7 @@ export class EventsController {
   }
 
   @Post("ai")
-  @UseGuards(FirebaseAuthGuard)
+  @UseGuards(AuthServiceGuard)
   @HttpCode(HttpStatus.CREATED)
   async fromText(
     @Body() body: { text?: unknown },
@@ -123,7 +123,7 @@ export class EventsController {
   }
 
   @Post("voice")
-  @UseGuards(FirebaseAuthGuard)
+  @UseGuards(AuthServiceGuard)
   @HttpCode(HttpStatus.CREATED)
   async fromTranscript(
     @Body() body: { transcript?: string },
@@ -146,7 +146,7 @@ export class EventsController {
   }
 
   @Get(":eventId")
-  @UseGuards(FirebaseAuthGuard)
+  @UseGuards(AuthServiceGuard)
   async detail(
     @Param("eventId") eventId: string,
     @CurrentUser() actor: AuthenticatedUser,
@@ -157,7 +157,7 @@ export class EventsController {
   }
 
   @Patch(":eventId")
-  @UseGuards(FirebaseAuthGuard)
+  @UseGuards(AuthServiceGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   async update(
     @Param("eventId") eventId: string,
@@ -170,7 +170,7 @@ export class EventsController {
   }
 
   @Delete(":eventId")
-  @UseGuards(FirebaseAuthGuard)
+  @UseGuards(AuthServiceGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(
     @Param("eventId") eventId: string,

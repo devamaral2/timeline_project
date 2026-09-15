@@ -1,4 +1,4 @@
-import type { AuthenticatedUser } from "../../auth/verify-firebase-token";
+import type { AuthenticatedUser } from "../../auth/authenticated-user";
 import type { EventCommandParsingGateway } from "../gateways/event-command-parsing.gateway";
 import type { CreateEventInput } from "@repo/entities/contracts";
 import { resolveEventSchedule } from "../services/event-schedule.service";

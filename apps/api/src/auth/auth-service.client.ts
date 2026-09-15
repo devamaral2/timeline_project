@@ -25,6 +25,14 @@ export class AuthServiceUnauthorizedError extends Error {
   }
 }
 
+/** apps/auth reconheceu o token mas nao e de usuario (ex.: link de convidado). */
+export class AuthServiceForbiddenError extends Error {
+  constructor(message = "Token kind not accepted") {
+    super(message);
+    this.name = "AuthServiceForbiddenError";
+  }
+}
+
 /**
  * Client HTTP para GET /auth/me do apps/auth. Repassa o header Authorization
  * recebido pela API e devolve o AuthenticatedUser que o resto do apps/api
@@ -50,6 +58,10 @@ export class AuthServiceClient {
 
     if (response.status === 401) {
       throw new AuthServiceUnauthorizedError();
+    }
+
+    if (response.status === 403) {
+      throw new AuthServiceForbiddenError();
     }
 
     if (!response.ok) {

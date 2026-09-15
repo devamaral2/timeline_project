@@ -1,4 +1,4 @@
-import type { AuthenticatedUser } from "../../auth/verify-firebase-token";
+import type { AuthenticatedUser } from "../../auth/authenticated-user";
 import { PlanNotFoundError, PlanOwnershipError } from "@repo/entities";
 import type { PlanRepository } from "@repo/entities/ports";
 import type { UpdatePlanInput } from "@repo/entities/contracts";

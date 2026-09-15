@@ -1,4 +1,4 @@
-import type { AuthenticatedUser } from "../../auth/verify-firebase-token";
+import type { AuthenticatedUser } from "../../auth/authenticated-user";
 import type { TaskRepository } from "@repo/entities/ports";
 
 export class DeleteTaskUseCase {

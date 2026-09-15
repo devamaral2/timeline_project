@@ -8,7 +8,7 @@ const workoutCatalog = new InMemoryWorkoutCatalog();
 function trainingEvent(workouts: unknown[], caloriesBurned: number) {
   return Event.create({
     id: "01K2R1J5M8S0Y2Z7ABCD123456",
-    userId: "firebase-user-1",
+    userId: "auth-user-1",
     name: "Treino",
     description: "",
     startedAt: new Date("2026-08-16T18:00:00.000Z"),

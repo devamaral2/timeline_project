@@ -8,7 +8,7 @@ import { InMemoryWorkoutCatalog } from "../testing/in-memory-workout.catalog";
 function trainingEvent(id: string, interruptions: Interruption[] = []) {
   return Event.create({
     id,
-    userId: "firebase-user-1",
+    userId: "auth-user-1",
     name: "Treino",
     description: "Gym session",
     startedAt: new Date("2026-08-16T18:00:00-03:00"),
@@ -43,7 +43,7 @@ test("updates an event without requiring startedAt in the payload", async () => 
         description: "Updated description",
         tags: ["focus"],
       },
-      { userId: "firebase-user-1" },
+      { userId: "auth-user-1" },
     ),
   ).resolves.toBeUndefined();
 
@@ -75,7 +75,7 @@ test("appends new interruptions and patches existing ones by id", async () => {
         { name: "Phone call" },
       ],
     },
-    { userId: "firebase-user-1" },
+    { userId: "auth-user-1" },
   );
 
   const savedEvent = await eventRepository.findById(existingEvent.id);
@@ -94,7 +94,7 @@ test("replaces meal items and recalculates totals", async () => {
   const mealItemId = "01K2R1J5M8S0Y2Z7ABCD123458";
   const existingEvent = Event.create({
     id: "01K2R1J5M8S0Y2Z7ABCD123457",
-    userId: "firebase-user-1",
+    userId: "auth-user-1",
     name: "Almoço",
     description: "",
     startedAt: new Date("2026-08-16T12:00:00.000Z"),
@@ -174,7 +174,7 @@ test("replaces meal items and recalculates totals", async () => {
         },
       ],
     },
-    { userId: "firebase-user-1" },
+    { userId: "auth-user-1" },
   );
 
   const savedEvent = await eventRepository.findById(existingEvent.id);
@@ -191,7 +191,7 @@ test("replaces meal items and recalculates totals", async () => {
 test("updates sleep metrics without retaining unrelated data", async () => {
   const sleepEvent = Event.create({
     id: "01K2R1J5M8S0Y2Z7ABCD123459",
-    userId: "firebase-user-1",
+    userId: "auth-user-1",
     name: "Sono",
     description: "",
     startedAt: new Date("2026-08-16T22:00:00.000Z"),
@@ -211,7 +211,7 @@ test("updates sleep metrics without retaining unrelated data", async () => {
       expectedRevision: 1,
       items: [{ type: "sleep", schemaVersion: 1, isPrimary: true, data: { score: 85, trackedSleepTime: 420 } }],
     },
-    { userId: "firebase-user-1" },
+    { userId: "auth-user-1" },
   );
 
   const savedEvent = await eventRepository.findById(sleepEvent.id);
@@ -227,7 +227,7 @@ test("rejects an expectedRevision that does not match the stored event", async (
   await expect(
     updateUseCase.execute(
       { eventId: existingEvent.id, expectedRevision: 5, description: "x" },
-      { userId: "firebase-user-1" },
+      { userId: "auth-user-1" },
     ),
   ).rejects.toThrow();
 });

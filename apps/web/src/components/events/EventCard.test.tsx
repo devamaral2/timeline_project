@@ -4,12 +4,6 @@ import { expect, test, vi } from "vitest";
 import type { TimelineEventCardDto } from "@repo/entities/contracts";
 import { EventCard } from "./EventCard";
 
-vi.mock("firebase/auth", () => ({
-  getAuth: () => ({ currentUser: null }),
-}));
-vi.mock("@/lib/firebase/client-app", () => ({
-  getClientApp: () => ({}),
-}));
 
 function anEvent(overrides: Partial<TimelineEventCardDto> = {}): TimelineEventCardDto {
   return {

@@ -1,6 +1,7 @@
 import { afterEach, expect, test, vi } from "vitest";
 import {
   AuthServiceClient,
+  AuthServiceForbiddenError,
   AuthServiceRequestFailedError,
   AuthServiceUnauthorizedError,
 } from "./auth-service.client";
@@ -35,6 +36,13 @@ test("throws AuthServiceUnauthorizedError on a 401 from apps/auth", async () => 
   const client = new AuthServiceClient("http://127.0.0.1:3002");
 
   await expect(client.me("Bearer expired-token")).rejects.toBeInstanceOf(AuthServiceUnauthorizedError);
+});
+
+test("throws AuthServiceForbiddenError on a 403 from apps/auth", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 403 }));
+  const client = new AuthServiceClient("http://127.0.0.1:3002");
+
+  await expect(client.me("Bearer guest-token")).rejects.toBeInstanceOf(AuthServiceForbiddenError);
 });
 
 test("throws AuthServiceRequestFailedError on a non-401 error response", async () => {

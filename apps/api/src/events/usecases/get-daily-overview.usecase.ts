@@ -1,4 +1,4 @@
-import type { AuthenticatedUser } from "../../auth/verify-firebase-token";
+import type { AuthenticatedUser } from "../../auth/authenticated-user";
 import type { DailyOverviewQuery } from "@repo/entities/ports";
 import type { DailyOverviewDto } from "@repo/entities/contracts";
 

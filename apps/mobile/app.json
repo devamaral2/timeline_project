@@ -29,7 +29,7 @@
           "imageWidth": 76
         }
       ],
-      "@react-native-google-signin/google-signin",
+      "expo-secure-store",
       [
         "expo-speech-recognition",
         {

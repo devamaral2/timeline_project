@@ -1,7 +1,7 @@
 import { BadRequestException } from "@nestjs/common";
 import { expect, test } from "vitest";
 import { Plan, PlanOwnershipError } from "@repo/entities";
-import type { AuthenticatedUser } from "../../auth/verify-firebase-token";
+import type { AuthenticatedUser } from "../../auth/authenticated-user";
 import { InMemoryPlanRepository } from "../testing/in-memory-plan.repository";
 import { InMemoryTaskRepository } from "../../tasks/testing/in-memory-task.repository";
 import { CreatePlanUseCase } from "../usecases/create-plan.usecase";

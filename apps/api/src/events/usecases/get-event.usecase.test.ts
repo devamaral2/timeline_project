@@ -7,7 +7,7 @@ import { InMemoryEventRepository } from "../testing/in-memory-event.repository";
 test("returns the aggregate detail with items and revision for the event owner", async () => {
   const event = Event.create({
     id: "01K2R1J5M8S0Y2Z7ABCD123456",
-    userId: "firebase-user-1",
+    userId: "auth-user-1",
     name: "Treino",
     description: "Gym session",
     startedAt: new Date("2026-08-16T18:00:00.000Z"),
@@ -25,7 +25,7 @@ test("returns the aggregate detail with items and revision for the event owner",
   });
   const useCase = new GetEventUseCase(new InMemoryEventRepository(new InMemoryEventDatabase([event])));
 
-  const result = await useCase.execute({ eventId: event.id }, { userId: "firebase-user-1" });
+  const result = await useCase.execute({ eventId: event.id }, { userId: "auth-user-1" });
 
   expect(result).toMatchObject({
     id: event.id,
@@ -45,7 +45,7 @@ test("returns the aggregate detail with items and revision for the event owner",
 test("returns null when the event does not exist", async () => {
   const useCase = new GetEventUseCase(new InMemoryEventRepository(new InMemoryEventDatabase([])));
 
-  const result = await useCase.execute({ eventId: "missing" }, { userId: "firebase-user-1" });
+  const result = await useCase.execute({ eventId: "missing" }, { userId: "auth-user-1" });
 
   expect(result).toBeNull();
 });
@@ -53,7 +53,7 @@ test("returns null when the event does not exist", async () => {
 test("rejects reading an event that belongs to another user", async () => {
   const event = Event.create({
     id: "01K2R1J5M8S0Y2Z7ABCD123459",
-    userId: "firebase-user-1",
+    userId: "auth-user-1",
     name: "Sono",
     description: "",
     startedAt: new Date("2026-08-16T22:00:00.000Z"),

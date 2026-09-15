@@ -16,14 +16,9 @@ for (const fileName of [".env.local", ".env"]) {
 }
 
 /**
- * As credenciais do Firebase sao as mesmas do web (`NEXT_PUBLIC_FIREBASE_*`):
- * e o mesmo projeto e o mesmo app client, entao duplicar as chaves no .env so
- * criaria duas coisas para manter em sincronia. O prefixo do Next fica estranho
- * aqui, mas o valor e o mesmo.
- *
  * Tudo que entra em `extra` e embutido no bundle e legivel por quem tiver o
- * app — nao coloque nada aqui que ja nao seja publico. A config do Firebase
- * client e publica por design; quem protege os dados e o guard da API.
+ * app — nao coloque nada aqui que ja nao seja publico. Os dois hosts sao; quem
+ * protege os dados e o apps/auth e o guard da API.
  */
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
@@ -32,14 +27,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   extra: {
     ...config.extra,
     apiBaseUrl: process.env.MOBILE_API_URL,
-    googleWebClientId: process.env.MOBILE_GOOGLE_WEB_CLIENT_ID,
-    firebase: {
-      apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-      authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-      storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-      messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-      appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-    },
+    authBaseUrl: process.env.MOBILE_AUTH_URL,
   },
 });

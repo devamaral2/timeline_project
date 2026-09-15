@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import { Task, TaskOwnershipError } from "@repo/entities";
-import type { AuthenticatedUser } from "../../auth/verify-firebase-token";
+import type { AuthenticatedUser } from "../../auth/authenticated-user";
 import { InMemoryTaskRepository } from "../testing/in-memory-task.repository";
 import { GetTaskUseCase } from "./get-task.usecase";
 

@@ -21,8 +21,8 @@ import type {
 } from "@repo/entities/contracts";
 import { isWorkItemPriority, isWorkItemStatus } from "@repo/entities";
 import { CurrentUser } from "../../auth/current-user.decorator";
-import { FirebaseAuthGuard } from "../../auth/firebase-auth.guard";
-import type { AuthenticatedUser } from "../../auth/verify-firebase-token";
+import { AuthServiceGuard } from "../../auth/auth-service.guard";
+import type { AuthenticatedUser } from "../../auth/authenticated-user";
 import { CreatePlanUseCase } from "../usecases/create-plan.usecase";
 import { GetPlanUseCase } from "../usecases/get-plan.usecase";
 import { UpdatePlanUseCase } from "../usecases/update-plan.usecase";
@@ -42,13 +42,13 @@ export class PlansController {
   ) {}
 
   @Get()
-  @UseGuards(FirebaseAuthGuard)
+  @UseGuards(AuthServiceGuard)
   async list(@CurrentUser() actor: AuthenticatedUser): Promise<PlanSummaryDto[]> {
     return this.listPlans.execute(undefined, actor);
   }
 
   @Post()
-  @UseGuards(FirebaseAuthGuard)
+  @UseGuards(AuthServiceGuard)
   @HttpCode(HttpStatus.CREATED)
   async create(
     @Body() body: CreatePlanInput,
@@ -59,7 +59,7 @@ export class PlansController {
   }
 
   @Get(":planId/tasks")
-  @UseGuards(FirebaseAuthGuard)
+  @UseGuards(AuthServiceGuard)
   async tasks(
     @Param("planId") planId: string,
     @CurrentUser() actor: AuthenticatedUser,
@@ -68,7 +68,7 @@ export class PlansController {
   }
 
   @Get(":planId")
-  @UseGuards(FirebaseAuthGuard)
+  @UseGuards(AuthServiceGuard)
   async detail(
     @Param("planId") planId: string,
     @CurrentUser() actor: AuthenticatedUser,
@@ -79,7 +79,7 @@ export class PlansController {
   }
 
   @Patch(":planId")
-  @UseGuards(FirebaseAuthGuard)
+  @UseGuards(AuthServiceGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   async update(
     @Param("planId") planId: string,
@@ -92,7 +92,7 @@ export class PlansController {
   }
 
   @Delete(":planId")
-  @UseGuards(FirebaseAuthGuard)
+  @UseGuards(AuthServiceGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(
     @Param("planId") planId: string,
