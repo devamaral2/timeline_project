@@ -3,10 +3,6 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { MealForm } from "./MealForm";
 
-vi.mock("firebase/auth", () => ({
-  getAuth: () => ({ currentUser: { getIdToken: async () => "test-token" } }),
-}));
-vi.mock("@/lib/firebase/client-app", () => ({ getClientApp: () => ({}) }));
 
 beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ eventId: "e-1" }))));

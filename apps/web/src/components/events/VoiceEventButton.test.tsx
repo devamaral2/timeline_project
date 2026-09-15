@@ -3,12 +3,6 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { VoiceEventButton } from "./VoiceEventButton";
 
-vi.mock("firebase/auth", () => ({
-  getAuth: () => ({ currentUser: { getIdToken: async () => "test-token" } }),
-}));
-vi.mock("@/lib/firebase/client-app", () => ({
-  getClientApp: () => ({}),
-}));
 
 class FakeSpeechRecognition {
   static instances: FakeSpeechRecognition[] = [];

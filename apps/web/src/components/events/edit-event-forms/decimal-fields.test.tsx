@@ -6,8 +6,6 @@ import { MealEditForm } from "./MealEditForm";
 import { SleepEditForm } from "./SleepEditForm";
 import { TrainingEditForm } from "./TrainingEditForm";
 
-vi.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: null }) }));
-vi.mock("@/lib/firebase/client-app", () => ({ getClientApp: () => ({}) }));
 
 /**
  * Regressao: com o `step` padrao (1) do <input type="number">, qualquer decimal

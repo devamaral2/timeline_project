@@ -4,10 +4,6 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import type { EventDetailDto, EventItemDto } from "@repo/entities/contracts";
 import { EventDetailsModal } from "./EventDetailsModal";
 
-vi.mock("firebase/auth", () => ({
-  getAuth: () => ({ currentUser: { getIdToken: async () => "test-token" } }),
-}));
-vi.mock("@/lib/firebase/client-app", () => ({ getClientApp: () => ({}) }));
 
 const routineItem: EventItemDto = {
   id: "routine-item",

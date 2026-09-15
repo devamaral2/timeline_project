@@ -4,22 +4,9 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import type { TagSuggestionDto } from "@repo/entities/contracts";
 import { TagInput } from "./TagInput";
 
-const user = { getIdToken: async () => "test-token" };
-let signedIn: typeof user | null = user;
-
-vi.mock("firebase/auth", () => ({
-  getAuth: () => ({
-    get currentUser() {
-      return signedIn;
-    },
-  }),
-}));
-vi.mock("@/lib/firebase/client-app", () => ({ getClientApp: () => ({}) }));
-
 const suggestions: TagSuggestionDto[] = [{ id: "tag-1", name: "treino" }];
 
 beforeEach(() => {
-  signedIn = user;
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(suggestions))));
 });
 
