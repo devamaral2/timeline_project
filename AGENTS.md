@@ -76,6 +76,13 @@ nunca 401. O guard nao tem parametro de construtor de proposito — com
 repete a chamada. O `useSession`/`useSessionState` de cada app diz se ja se
 sabe quem esta logado (`ready`) — pedir antes disso e um 401 garantido.
 
+Testes do fluxo: `auth-service.guard.e2e.test.ts` passa um request HTTP real
+por uma rota Nest com o guard ate um `apps/auth` falso (roda no `test:ai`). O
+fluxo nos tres apps de verdade e `pnpm e2e:auth`
+(`scripts/e2e/auth-login-flow.mjs`), com `E2E_EMAIL`/`E2E_PASSWORD` de uma
+conta ativa e os tres servidores de pe — faz dois logins por execucao, que
+contam no rate limit por e-mail do `apps/auth`.
+
 O `userId` das rotas e o id do usuario no `apps/auth`. Os eventos gravados com
 o uid do Firebase nao foram migrados e nao aparecem para a conta nova.
 

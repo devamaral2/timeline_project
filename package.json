@@ -9,6 +9,7 @@
     "dev:api": "turbo run dev --filter=@repo/api",
     "dev:web": "turbo run dev --filter=@repo/web",
     "dev:mobile": "pnpm --filter @repo/mobile run start",
+    "e2e:auth": "node scripts/e2e/auth-login-flow.mjs",
     "env:pull": "op read \"op://lifecomposure/env.local/notesPlain\" -o .env.local",
     "build": "turbo run build",
     "lint": "biome lint .",
