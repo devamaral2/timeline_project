@@ -2,11 +2,13 @@ import { expect, test, vi } from "vitest";
 import { describeVoiceEventError } from "./use-voice-event-queue";
 
 // use-voice-event-queue importa authedFetch de @/lib/api/client, que por sua
-// vez importa @/config/env (expo-constants) e @/lib/firebase/app (firebase) —
+// vez importa @/config/env (expo-constants) e @/lib/auth/session (expo-secure-store) —
 // os dois mocados aqui pela mesma razao de client.test.ts: sao modulos de
 // runtime nativo que o Vitest nao consegue resolver fora do aparelho.
 vi.mock("@/config/env", () => ({ env: { apiBaseUrl: "http://10.0.0.2:3001" } }));
-vi.mock("@/lib/firebase/app", () => ({ getClientAuth: () => ({ currentUser: null }) }));
+vi.mock("@/lib/auth/session", () => ({
+  session: { getAccessToken: async () => null, refresh: async () => null },
+}));
 
 test("translates an expired session", () => {
   expect(describeVoiceEventError({ status: 401 })).toBe("Sessão expirada. Entre novamente.");
