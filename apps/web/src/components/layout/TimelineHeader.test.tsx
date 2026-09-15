@@ -21,8 +21,8 @@ vi.mock("@/components/events/VoiceEventButton", () => ({
 vi.mock("@/components/events/NewEventButton", () => ({
   NewEventButton: () => <button type="button">Novo</button>,
 }));
-vi.mock("@/components/auth/GoogleSignInButton", () => ({
-  GoogleSignInButton: () => <button type="button">Conta</button>,
+vi.mock("@/components/auth/SessionButton", () => ({
+  SessionButton: () => <button type="button">Conta</button>,
 }));
 
 beforeEach(() => useCurrentUser.mockReturnValue({ userId: "user-1", name: "Ana", email: null }));

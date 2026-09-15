@@ -3,14 +3,14 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Logo, Wordmark } from "@/components/brand/Logo";
-import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
-import { useCurrentUser } from "@/lib/session/use-session";
+import { LoginForm } from "@/components/auth/LoginForm";
+import { useSessionState } from "@/lib/session/use-session";
 
 /** As promessas do produto, do material da marca. A primeira e a que se destaca. */
 const CLAIMS = ["IA", "Rápido", "Inteligente", "Completo", "Equilibrado"];
 
 export default function TimelinePage() {
-  const user = useCurrentUser();
+  const { user, ready } = useSessionState();
   const router = useRouter();
 
   useEffect(() => {
@@ -19,7 +19,9 @@ export default function TimelinePage() {
     }
   }, [user, router]);
 
-  if (user) {
+  // Antes de o servidor responder, nem o formulario: quem ja tem sessao veria
+  // a tela de login piscar antes do redirecionamento.
+  if (user || !ready) {
     return null;
   }
 
@@ -54,8 +56,8 @@ export default function TimelinePage() {
           ))}
         </ul>
 
-        <div className="mt-8">
-          <GoogleSignInButton />
+        <div className="mt-8 w-full">
+          <LoginForm />
         </div>
       </div>
     </main>

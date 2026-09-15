@@ -15,18 +15,7 @@ vi.mock('@/lib/session/use-session', () => ({
   useSessionState: () => ({ user: signedIn, ready: true }),
   useCurrentUser: () => signedIn,
 }));
-vi.mock('@/lib/firebase/use-current-user', () => ({
-  useAuthState: () => ({ user: signedIn, ready: true }),
-  useCurrentUser: () => signedIn,
-}));
-vi.mock('firebase/auth', () => ({
-  getAuth: () => ({
-    get currentUser() {
-      return signedIn;
-    },
-  }),
-}));
-vi.mock('@/lib/firebase/client-app', () => ({ getClientApp: () => ({}) }));
+vi.mock('next/navigation', () => ({ useRouter: () => ({ replace: vi.fn() }) }));
 
 function anEvent(
   overrides: Partial<TimelineEventCardDto> = {},
