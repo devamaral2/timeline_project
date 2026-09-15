@@ -2,8 +2,8 @@
 name: env-setup
 description: >
   Configura ou depura variaveis de ambiente deste monorepo — .env/.env.local
-  na raiz, acesso do app mobile a um dispositivo fisico, chaves do Firebase
-  compartilhadas entre web e mobile, e pnpm env:pull. Use quando for testar o
+  na raiz, os hosts do apps/auth vistos pela API, pelo web e pelo mobile,
+  acesso do app mobile a um dispositivo fisico, e pnpm env:pull. Use quando for testar o
   app mobile num aparelho de verdade, quando uma variavel nova precisar ser
   adicionada, ou quando um app subir sem os envs esperados.
 ---
@@ -22,13 +22,25 @@ envs corretos.
 `pnpm env:pull` baixa o `.env.local` do 1Password (`op read`) para a raiz —
 use quando faltar segredo local.
 
-## apps/api falando com apps/auth
+## Onde cada app encontra o apps/auth
 
-`AUTH_SERVICE_URL` e o host do `apps/auth` que o `apps/api` chama em
-`GET /auth/me` a cada requisicao autenticada (`apps/api/src/config/env.ts`).
-Tem default `http://127.0.0.1:3002` (o `AUTH_PORT` padrao do `apps/auth`), so
-precisa ser setada se o `apps/auth` estiver rodando em outra porta/host — numa
-worktree secundaria, por exemplo.
+Duas variaveis, porque ha dois pontos de vista:
+
+- `AUTH_SERVICE_URL` — o host do `apps/auth` visto **de dentro do servidor**.
+  O `apps/api` chama `GET /auth/me` nele a cada requisicao autenticada
+  (`apps/api/src/config/env.ts`), e o `apps/web` usa o mesmo host para o
+  rewrite de `/auth/*` (`apps/web/next.config.ts`) e para os route handlers de
+  `/api/session/*` (`apps/web/src/lib/session/auth-service.ts`). Default
+  `http://127.0.0.1:3002`, o `AUTH_PORT` padrao. O rewrite e congelado no
+  `next build`, mas os route handlers leem a variavel em runtime: no deploy do
+  web ela precisa existir nos dois momentos.
+- `MOBILE_AUTH_URL` — o host do `apps/auth` visto **pelo celular**, que fala
+  direto com ele para login, refresh e logout
+  (`apps/mobile/src/config/mobile-env.ts`). Obrigatoria, sem default: como o
+  `MOBILE_API_URL`, num aparelho fisico e o IP da maquina na rede local.
+
+Numa worktree secundaria as duas sao reescritas com a porta do `apps/auth`
+dela por `scripts/worktree/provision-env.sh`.
 
 ## Testar o app mobile num aparelho fisico
 
@@ -38,15 +50,14 @@ O celular nao alcanca o loopback da sua maquina. Dois ajustes no `.env` (nao
 1. `API_HOST=0.0.0.0` — o Nest passa a escutar na rede local e liga o CORS
    (`apps/api/src/main.ts`). Sem isso o bind continua em `127.0.0.1`, que e o
    comportamento de producao.
-2. `MOBILE_API_URL=http://<ip-da-sua-maquina>:3001` — o mobile nao tem o
-   rewrite do Next, fala direto com o Nest.
+2. `AUTH_HOST=0.0.0.0` — a mesma coisa para o `apps/auth`, que tambem nasce
+   preso ao loopback.
+3. `MOBILE_API_URL=http://<ip-da-sua-maquina>:3001` e
+   `MOBILE_AUTH_URL=http://<ip-da-sua-maquina>:3002` — o mobile nao tem o
+   rewrite do Next, fala direto com o Nest e com o `apps/auth`.
 
-## Firebase compartilhado
-
-O mobile reusa as chaves `NEXT_PUBLIC_FIREBASE_*` do web: e o mesmo projeto e
-o mesmo app client — nao crie variaveis `MOBILE_FIREBASE_*` separadas. Tudo
-que entra em `extra` (`apps/mobile/app.config.ts`) vai embutido no bundle —
-nao coloque la nada que ja nao seja publico.
+Tudo que entra em `extra` (`apps/mobile/app.config.ts`) vai embutido no bundle
+— nao coloque la nada que ja nao seja publico. Os dois hosts sao.
 
 ## Portas por worktree
 

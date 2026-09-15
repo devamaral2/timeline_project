@@ -38,10 +38,9 @@ pnpm install
 ```
 
 Copie `.env.example` para `.env` e preencha os valores. Um unico arquivo na raiz
-serve os tres apps; `.env.local` sobrescreve `.env`. As variaveis do Firebase
-Admin (`FIREBASE_*`) e do OpenRouter sao do backend; as `NEXT_PUBLIC_FIREBASE_*`
-sao dos frontends. Sem as credenciais admin explicitas, cai em
-`applicationDefault()`.
+serve os tres apps; `.env.local` sobrescreve `.env`. A autenticacao e do
+`apps/auth`: a API e o web o encontram por `AUTH_SERVICE_URL`, o mobile por
+`MOBILE_AUTH_URL` (skill `env-setup`). As variaveis do OpenRouter sao do backend.
 
 ```bash
 pnpm turbo run dev
@@ -51,18 +50,16 @@ Sobe o Nest em `http://127.0.0.1:3001` e o Next em `http://localhost:3000`.
 
 ## App mobile
 
-O app nao roda no Expo Go: o login usa o Google Sign-In nativo, que exige um
-development build.
+O app nao roda no Expo Go: a sessao fica no `expo-secure-store`, modulo nativo
+que exige um development build. O login e por e-mail e senha no `apps/auth`.
 
-1. No Firebase Console, pegue o **Web client ID** do provedor Google
-   (Authentication > Sign-in method > Google) e ponha em
-   `MOBILE_GOOGLE_WEB_CLIENT_ID`. No Android, cadastre tambem a impressao
-   digital SHA-1 da chave de debug em Project settings > Your apps.
-2. Descubra o IP da sua maquina na rede local (`ipconfig` no Windows) e ponha
-   `MOBILE_API_URL=http://<ip>:3001` no `.env`.
-3. `API_HOST=0.0.0.0` no `.env`, para o Nest atender na rede em vez de so no
-   loopback. Isso e para desenvolvimento: em producao a variavel fica de fora e
-   o bind volta a `127.0.0.1`.
+1. Descubra o IP da sua maquina na rede local (`ipconfig` no Windows) e ponha
+   `MOBILE_API_URL=http://<ip>:3001` e `MOBILE_AUTH_URL=http://<ip>:3002` no
+   `.env`.
+2. `API_HOST=0.0.0.0` e `AUTH_HOST=0.0.0.0` no `.env`, para o Nest e o
+   `apps/auth` atenderem na rede em vez de so no loopback. Isso e para
+   desenvolvimento: em producao as variaveis ficam de fora e o bind volta a
+   `127.0.0.1`.
 
 ```bash
 pnpm --filter @repo/mobile run android   # gera o projeto nativo e instala no aparelho
