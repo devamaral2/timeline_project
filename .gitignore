@@ -10,5 +10,6 @@ dist/
 *.tsbuildinfo
 .harness-eval/
 __pycache__/
+/output/
 
 next-env.d.ts
