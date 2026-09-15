@@ -40,6 +40,10 @@ export default function TimelineScreen() {
         onNewEvent={() =>
           router.push({ pathname: '/new-event', params: { userId } })
         }
+        onVoiceEventCreated={() => {
+          clearDayPages();
+          setGeneration((current) => current + 1);
+        }}
         onSignOut={() => void signOutFromGoogle()}
       />
 

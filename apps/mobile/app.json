@@ -29,7 +29,15 @@
           "imageWidth": 76
         }
       ],
-      "@react-native-google-signin/google-signin"
+      "@react-native-google-signin/google-signin",
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Permita o acesso ao microfone para gravar eventos por voz.",
+          "speechRecognitionPermission": "Permita o reconhecimento de voz para transcrever eventos.",
+          "androidSpeechServicePackages": ["com.google.android.googlequicksearchbox"]
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

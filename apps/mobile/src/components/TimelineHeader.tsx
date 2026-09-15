@@ -7,6 +7,7 @@ import { withAlpha } from '@repo/theme';
 import { DayPicker } from '@/components/DayPicker';
 import { ICON_STROKE_WIDTH } from '@/components/event-visuals';
 import { MenuSheet } from '@/components/MenuSheet';
+import { VoiceEventButton } from '@/components/VoiceEventButton';
 import { WeekStrip } from '@/components/WeekStrip';
 import { useTheme } from '@/lib/theme/use-theme';
 
@@ -18,6 +19,8 @@ interface TimelineHeaderProps {
   accountLabel?: string;
   onSelectDay: (dayKey: string) => void;
   onNewEvent: () => void;
+  /** Um evento por voz terminou de ser criado — quem chama recarrega o dia. */
+  onVoiceEventCreated: () => void;
   onSignOut: () => void;
 }
 
@@ -37,6 +40,7 @@ export function TimelineHeader({
   accountLabel,
   onSelectDay,
   onNewEvent,
+  onVoiceEventCreated,
   onSignOut,
 }: TimelineHeaderProps) {
   const theme = useTheme();
@@ -116,6 +120,8 @@ export function TimelineHeader({
           </Text>
         </Pressable>
 
+        <VoiceEventButton onCreated={onVoiceEventCreated} />
+
         <Pressable
           onPress={onNewEvent}
           accessibilityRole="button"
@@ -186,6 +192,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    // O painel flutuante do VoiceEventButton (interim, erro, fila) precisa
+    // pintar por cima da WeekStrip abaixo, que e uma irma mais tarde no JSX.
+    zIndex: 20,
   },
   iconButton: {
     width: 40,
