@@ -32,6 +32,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   extra: {
     ...config.extra,
     apiBaseUrl: process.env.MOBILE_API_URL,
+    authBaseUrl: process.env.MOBILE_AUTH_URL,
     googleWebClientId: process.env.MOBILE_GOOGLE_WEB_CLIENT_ID,
     firebase: {
       apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,

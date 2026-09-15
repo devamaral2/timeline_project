@@ -12,6 +12,7 @@ const firebase = {
 
 const extra = {
   apiBaseUrl: "http://192.168.0.10:3001",
+  authBaseUrl: "http://192.168.0.10:3002",
   googleWebClientId: "1-abc.apps.googleusercontent.com",
   firebase,
 };
@@ -32,11 +33,15 @@ test("rejects an api url without a scheme, which fetch would not resolve", () =>
   );
 });
 
+test("rejects an auth url without a scheme", () => {
+  expect(() => parseMobileEnv({ ...extra, authBaseUrl: "192.168.0.10:3002" })).toThrow(/MOBILE_AUTH_URL/);
+});
+
 // A falha aparece como tela vermelha no celular, longe do terminal: a mensagem
 // precisa dizer o que faltou no .env, e nao so qual campo do schema quebrou.
 test("names every missing .env key at once", () => {
   expect(() => parseMobileEnv({})).toThrow(
-    /MOBILE_API_URL.*MOBILE_GOOGLE_WEB_CLIENT_ID.*NEXT_PUBLIC_FIREBASE_\*/,
+    /MOBILE_API_URL.*MOBILE_AUTH_URL.*MOBILE_GOOGLE_WEB_CLIENT_ID.*NEXT_PUBLIC_FIREBASE_\*/,
   );
 });
 
