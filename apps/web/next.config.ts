@@ -22,6 +22,17 @@ for (const fileName of [".env.local", ".env"]) {
  */
 const backendUrl = process.env.BACKEND_URL ?? "http://127.0.0.1:3001";
 
+/**
+ * O apps/auth tambem so escuta em loopback. `/auth/*` e repassado a ele pelo
+ * mesmo caminho — e a mesma `AUTH_SERVICE_URL` que a API usa para chamar
+ * GET /auth/me: e um host so, visto de dentro do servidor.
+ *
+ * A sessao do navegador nao passa por aqui: login, refresh e logout vivem nos
+ * route handlers de `/api/session/*`, que guardam os tokens em cookies
+ * httpOnly em vez de devolve-los ao JavaScript da pagina.
+ */
+const authServiceUrl = process.env.AUTH_SERVICE_URL ?? "http://127.0.0.1:3002";
+
 const nextConfig: NextConfig = {
   /**
    * `standalone` faz o next build emitir .next/standalone: um server.js mais
@@ -33,7 +44,10 @@ const nextConfig: NextConfig = {
    */
   output: "standalone",
   outputFileTracingRoot: resolve(__dirname, "../.."),
-  rewrites: () => [{ source: "/api/:path*", destination: `${backendUrl}/api/:path*` }],
+  rewrites: () => [
+    { source: "/api/:path*", destination: `${backendUrl}/api/:path*` },
+    { source: "/auth/:path*", destination: `${authServiceUrl}/auth/:path*` },
+  ],
 };
 
 export default nextConfig;
