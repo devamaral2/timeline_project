@@ -1,20 +1,9 @@
 import { expect, test } from "vitest";
 import { parseMobileEnv } from "./mobile-env";
 
-const firebase = {
-  apiKey: "key",
-  authDomain: "project.firebaseapp.com",
-  projectId: "project",
-  storageBucket: "project.appspot.com",
-  messagingSenderId: "1",
-  appId: "1:1:web:1",
-};
-
 const extra = {
   apiBaseUrl: "http://192.168.0.10:3001",
   authBaseUrl: "http://192.168.0.10:3002",
-  googleWebClientId: "1-abc.apps.googleusercontent.com",
-  firebase,
 };
 
 test("accepts the extra that app.config.ts builds from the root .env", () => {
@@ -41,12 +30,6 @@ test("rejects an auth url without a scheme", () => {
 // precisa dizer o que faltou no .env, e nao so qual campo do schema quebrou.
 test("names every missing .env key at once", () => {
   expect(() => parseMobileEnv({})).toThrow(
-    /MOBILE_API_URL.*MOBILE_AUTH_URL.*MOBILE_GOOGLE_WEB_CLIENT_ID.*NEXT_PUBLIC_FIREBASE_\*/,
+    /MOBILE_API_URL.*MOBILE_AUTH_URL/,
   );
-});
-
-test("rejects a firebase config missing any field", () => {
-  expect(() =>
-    parseMobileEnv({ ...extra, firebase: { ...firebase, appId: "" } }),
-  ).toThrow(/NEXT_PUBLIC_FIREBASE_\*/);
 });

@@ -22,20 +22,6 @@ const extraSchema = z.object({
    * `apiBaseUrl` — num aparelho fisico, o IP da maquina na rede local.
    */
   authBaseUrl: httpUrl,
-  /**
-   * O OAuth client **web** do projeto Firebase — nao o Android nem o iOS. E ele
-   * que o Google Sign-In nativo usa para emitir o ID token que o Firebase
-   * aceita, nas duas plataformas.
-   */
-  googleWebClientId: z.string().min(1),
-  firebase: z.object({
-    apiKey: z.string().min(1),
-    authDomain: z.string().min(1),
-    projectId: z.string().min(1),
-    storageBucket: z.string().min(1),
-    messagingSenderId: z.string().min(1),
-    appId: z.string().min(1),
-  }),
 });
 
 export type MobileEnv = z.infer<typeof extraSchema>;
@@ -44,8 +30,6 @@ export type MobileEnv = z.infer<typeof extraSchema>;
 const ENV_KEYS: Record<string, string> = {
   apiBaseUrl: "MOBILE_API_URL",
   authBaseUrl: "MOBILE_AUTH_URL",
-  googleWebClientId: "MOBILE_GOOGLE_WEB_CLIENT_ID",
-  firebase: "NEXT_PUBLIC_FIREBASE_*",
 };
 
 /**
