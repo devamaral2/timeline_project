@@ -24,7 +24,7 @@ desenvolvedor ja mantem manualmente (`pnpm env:pull`).
 - Docker rodando (`docker info` sem erro).
 - A worktree principal precisa ter um `.env.local` (ou `.env`) valido, com
   pelo menos `POSTGRES_USER`, `POSTGRES_PASSWORD` e `POSTGRES_DB` preenchidos
-  — os scripts copiam esses e os demais segredos (Firebase, Twilio,
+  — os scripts copiam esses e os demais segredos (auth, Twilio,
   OpenRouter) de la para a worktree nova.
 
 ## Executar

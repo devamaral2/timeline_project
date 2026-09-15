@@ -3,15 +3,14 @@ name: mobile-app-conventions
 description: >
   Convencoes especificas do apps/mobile (Expo 57 + expo-router) — build de
   desenvolvimento nativo, tema sempre escuro, resolucao dos packages @repo/*
-  direto do fonte, e a persistencia de sessao do Firebase. Use ao mexer em
+  direto do fonte, e a sessao do apps/auth no expo-secure-store. Use ao mexer em
   qualquer coisa dentro de apps/mobile ou ao decidir se uma logica
   compartilhada vai para @repo/timeline ou @repo/theme.
 ---
 
 ## Nao roda no Expo Go
 
-O login usa Google Sign-In nativo
-(`@react-native-google-signin/google-signin`), um modulo nativo — precisa de
+A sessao fica no `expo-secure-store`, um modulo nativo — precisa de
 development build. `pnpm --filter @repo/mobile run android` gera o projeto
 nativo e instala no aparelho. Para testar num aparelho fisico (que nao
 alcanca o loopback da sua maquina), veja a skill `env-setup`.
@@ -37,12 +36,14 @@ direto — editar um package aparece no app sem `build`. Web e API continuam
 consumindo `dist/`, entao um typecheck so nesses dois nao pega uma quebra que
 so o Metro veria.
 
-## Firebase
+## Sessao do apps/auth
 
-`apps/mobile/src/types/firebase-auth.d.ts` declara
-`getReactNativePersistence`, que existe no build React Native do
-`@firebase/auth` mas nao nos tipos que o TypeScript resolve por padrao. Sem
-essa persistencia o usuario e deslogado toda vez que o app fecha.
+`src/lib/auth/session-store.ts` nao importa nada do React Native: e ali que
+mora a regra (restaurar do storage, renovar antes do `exp`, renovacao em voo
+unico, refresh recusado encerra a sessao, falta de rede nao). `session.ts` so
+liga a instancia ao `expo-secure-store` e ao `env`. `token-storage.web.ts`
+existe porque o SecureStore nao tem implementacao web — no navegador cai no
+`localStorage`, e so serve para depurar telas.
 
 ## Metro fica fora do `pnpm dev`
 

@@ -44,7 +44,7 @@ dela por `scripts/worktree/provision-env.sh`.
 
 ## Testar o app mobile num aparelho fisico
 
-O celular nao alcanca o loopback da sua maquina. Dois ajustes no `.env` (nao
+O celular nao alcanca o loopback da sua maquina. Tres ajustes no `.env` (nao
 `.env.local` — isso muda o bind do servidor, nao e um segredo):
 
 1. `API_HOST=0.0.0.0` — o Nest passa a escutar na rede local e liga o CORS

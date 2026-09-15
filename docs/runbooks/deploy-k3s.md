@@ -152,6 +152,19 @@ ainda usam Firebase, publicar esse hostname não os integra automaticamente ao
 novo serviço. A transição exige que os clientes usem os tokens emitidos pelo
 `auth` e que a API passe a validá-los pelo JWKS.
 
+> **Atualização (integração RAF-86..RAF-106):** o código já não usa Firebase.
+> Web, API e mobile autenticam pelo `auth`, e a API valida cada requisição em
+> `GET /auth/me` (não pelo JWKS). Enquanto este roteiro não for reescrito, ao
+> seguir o passo 8 ignore as chaves Firebase e garanta:
+>
+> - `AUTH_SERVICE_URL=http://auth.braid.svc.cluster.local:3002` (ajuste ao nome
+>   do Service do `auth`) no `web-build.env` **e** no ambiente de runtime do
+>   pod web — o rewrite de `/auth/*` é congelado no build, mas as rotas de
+>   sessão leem a variável em runtime;
+> - a mesma `AUTH_SERVICE_URL` no secret da API;
+> - `NEXT_PUBLIC_FIREBASE_*`, `FIREBASE_*` e `firebase-admin.json` deixam de ser
+>   necessários.
+
 Referência: [registro de domínio na Cloudflare](https://developers.cloudflare.com/registrar/get-started/register-domain/).
 
 ## 3. Instalar utilitários e salvar os dados desta instalação
@@ -467,6 +480,9 @@ precisa alinhar também os campos e fluxos e validar a integração com Postgres
 Não edite uma migration já aplicada nem suprima arquivos para passar na checagem.
 
 ## 8. Obter a configuração Firebase e as credenciais externas
+
+> Desatualizado: veja a atualização da seção de domínios. O login não passa mais
+> pelo Firebase.
 
 O site atual faz login Google pelo **Firebase**, mesmo com o serviço `auth`
 rodando. Para funcionar, frontend e API precisam apontar para o mesmo projeto.

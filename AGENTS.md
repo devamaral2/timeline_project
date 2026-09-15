@@ -48,13 +48,38 @@ O backend escuta so em `127.0.0.1` por padrao — nao e exposto para fora do
 servidor. O browser fala com o Next, que repassa `/api/*` ao Nest pelo
 `rewrites` do `apps/web/next.config.ts`.
 
-**Leituras autenticadas acontecem no cliente.** Um Server Component nao tem o
-ID token do Firebase do usuario, entao nao ha fetch anonimo no servidor: quem
-chama a API e `authedFetch` (`apps/web/src/lib/api/authed-fetch.ts`), que roda
-no browser, pega o `currentUser` do Firebase e manda o token no header
-`Authorization`. Sem usuario logado a funcao devolve 401 sem tocar na rede.
+## Autenticacao pelo apps/auth
 
-O app mobile nao tem esse rewrite: ele fala direto com o Nest, pelo host em
+Nao ha Firebase em nenhum dos apps. Quem autentica e o `apps/auth`, por e-mail e
+senha, e o `apps/api` nao verifica JWT sozinho: o `AuthServiceGuard`
+(`apps/api/src/auth/auth-service.guard.ts`) repassa o bearer a
+`GET /auth/me` do `apps/auth` (host em `AUTH_SERVICE_URL`) e anexa o ator ao
+request. Sem bearer, 401 sem tocar na rede; `apps/auth` fora do ar vira 503,
+nunca 401. O guard nao tem parametro de construtor de proposito — com
+`emitDecoratorMetadata` o Nest tentaria injetar o client.
+
+- **Web**: o navegador nunca ve token. `/api/session/{login,refresh,logout}` e
+  `GET /api/session` sao route handlers do Next (`apps/web/src/lib/session/`)
+  que falam com o `apps/auth` e guardam access e refresh em cookies httpOnly.
+  O `src/proxy.ts` do Next transforma o cookie em `Authorization` no caminho de
+  `/api/*` ao Nest. `/auth/*` e repassado ao `apps/auth` pelo rewrite.
+- **Mobile**: fala direto com o `apps/auth` em `MOBILE_AUTH_URL` e guarda os
+  tokens no `expo-secure-store` (`apps/mobile/src/lib/auth/`).
+- **Refresh rotativo**: o `apps/auth` trata um refresh token apresentado duas
+  vezes como roubo e derruba a sessao. Os dois clientes renovam em voo unico
+  (`refresh-session.ts` no web, com Web Locks entre abas; `session-store.ts` no
+  mobile). Nao crie um segundo caminho de renovacao que fuja deles.
+
+**Leituras autenticadas acontecem no cliente.** Quem chama a API e
+`authedFetch` (`apps/web/src/lib/api/authed-fetch.ts` e
+`apps/mobile/src/lib/api/client.ts`): num 401 ele renova a sessao uma vez e
+repete a chamada. O `useSession`/`useSessionState` de cada app diz se ja se
+sabe quem esta logado (`ready`) — pedir antes disso e um 401 garantido.
+
+O `userId` das rotas e o id do usuario no `apps/auth`. Os eventos gravados com
+o uid do Firebase nao foram migrados e nao aparecem para a conta nova.
+
+O app mobile nao tem o rewrite do Next: ele fala direto com o Nest, pelo host em
 `MOBILE_API_URL` (skill `env-setup`).
 
 Nao coloque regra de negocio em `apps/web` nem em `apps/mobile`. Do backend eles
@@ -117,8 +142,6 @@ Os eventos vivem no PostgreSQL, em `packages/persistence` (schema Drizzle em
 base de eventos que veio de la nunca passou por uma migracao documento a
 documento, foi cortada para o Postgres de uma vez (ve "A marca de nao
 realizado" acima para o que esse corte deixou de marca no schema).
-`firebase-admin` fica em `apps/api` (so para autenticacao), nunca em
-`@repo/persistence`.
 
 Gerar/aplicar migrations, subir o Postgres local e rodar a suite de
 integracao: skill `db-migrations`.
