@@ -5,8 +5,7 @@ import { dayKeyOf } from '@repo/timeline';
 import { DayTimeline } from '@/components/DayTimeline';
 import { TimelineHeader } from '@/components/TimelineHeader';
 import { clearDayPages } from '@/lib/events/timeline-page-cache';
-import { signOutFromGoogle } from '@/lib/firebase/google-sign-in';
-import { useCurrentUser } from '@/lib/firebase/use-current-user';
+import { session, useSession } from '@/lib/auth/session';
 import { useTheme } from '@/lib/theme/use-theme';
 
 export default function TimelineScreen() {
@@ -16,7 +15,7 @@ export default function TimelineScreen() {
     /** Carimbo que a tela de novo evento devolve — muda so quando algo foi criado. */
     refreshedAt?: string;
   }>();
-  const { user, ready } = useCurrentUser();
+  const { user, ready } = useSession();
   // Fixo na montagem para que cabecalho e lista usem a mesma referencia.
   const [todayKey] = useState(() => dayKeyOf(new Date()));
   const [selectedDayKey, setSelectedDayKey] = useState(todayKey);
@@ -40,11 +39,11 @@ export default function TimelineScreen() {
         onNewEvent={() =>
           router.push({ pathname: '/new-event', params: { userId } })
         }
-        onSignOut={() => void signOutFromGoogle()}
+        onSignOut={() => void signOutAndForget()}
       />
 
       {/*
-        A lista so monta depois que o Firebase termina de reler a sessao. Quem
+        A lista so monta depois que a sessao e relida do SecureStore. Quem
         autoriza a leitura agora e o token, e pedir antes de ele existir voltaria
         um 401 — a tela acusaria uma falha que e so pressa.
       */}
@@ -64,6 +63,12 @@ export default function TimelineScreen() {
       )}
     </View>
   );
+}
+
+/** A sessao some e o cache de dias vai junto: a proxima conta nao ve os eventos desta. */
+async function signOutAndForget(): Promise<void> {
+  clearDayPages();
+  await session.signOut();
 }
 
 const styles = StyleSheet.create({
