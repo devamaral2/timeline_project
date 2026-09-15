@@ -1,12 +1,10 @@
 "use client";
 
-import { getAuth } from "firebase/auth";
-import { getClientApp } from "@/lib/firebase/client-app";
+import { refreshSession } from "@/lib/session/refresh-session";
 
 /**
- * O status que a resposta trouxe — ou o 401 que este modulo inventa quando nem
- * chega a sair da maquina. Quem chama precisa distinguir "sua sessao acabou" de
- * "o servidor caiu", e a mensagem de erro nao serve para isso.
+ * O status que a resposta trouxe. Quem chama precisa distinguir "sua sessao
+ * acabou" de "o servidor caiu", e a mensagem de erro nao serve para isso.
  */
 export class ApiError extends Error {
   constructor(
@@ -19,26 +17,15 @@ export class ApiError extends Error {
 }
 
 /**
- * Uma chamada a API do Nest com o ID token do Firebase no cabecalho.
+ * Uma chamada a API do Nest com a sessao do navegador.
  *
- * E por aqui que a timeline le desde que a autorizacao passou a vir do token:
- * nao ha mais fetch anonimo do servidor, porque um Server Component nao tem
- * token nenhum do usuario.
- *
- * Sem `currentUser` a funcao devolve 401 sem tocar na rede. O Firebase resolve
- * o estado de autenticacao de forma assincrona, e sair pedindo sem token so
- * gastaria uma viagem para receber de volta o mesmo 401 — quem chama espera o
- * usuario aparecer antes de pedir.
+ * O token nao passa por aqui: ele vive num cookie httpOnly que o proxy do Next
+ * (`src/proxy.ts`) transforma em `Authorization`. Quando a API responde 401 —
+ * o access token de 15 minutos expirou — a sessao e renovada uma vez e a
+ * chamada repetida; so um segundo 401 chega a quem chamou.
  */
 export async function authedFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const currentUser = getAuth(getClientApp()).currentUser;
-  if (!currentUser) throw new ApiError(401, "Não autenticado");
-
-  const token = await currentUser.getIdToken();
-  const response = await fetch(path, {
-    ...init,
-    headers: { ...init.headers, Authorization: `Bearer ${token}` },
-  });
+  const response = await sendWithSession(path, init);
 
   if (!response.ok) {
     throw new ApiError(response.status, `${init.method ?? "GET"} ${path} -> ${response.status}`);
@@ -47,4 +34,14 @@ export async function authedFetch<T>(path: string, init: RequestInit = {}): Prom
   // PATCH e DELETE respondem 204: nao ha corpo para ler, e `json()` quebraria.
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
+}
+
+/** O `fetch` cru com a renovacao de sessao, para quem precisa ler a resposta de erro. */
+export async function sendWithSession(path: string, init: RequestInit = {}): Promise<Response> {
+  const send = () => fetch(path, { ...init, credentials: "same-origin" });
+
+  const response = await send();
+  if (response.status !== 401) return response;
+  if (!(await refreshSession())) return response;
+  return send();
 }

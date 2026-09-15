@@ -62,7 +62,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-test('asks for the current day of the signed in user, with the token and without a userId', async () => {
+test('asks for the current day of the signed in user, with the session and without a userId', async () => {
   vi.mocked(fetch).mockResolvedValue(aPage({ items: [anEvent()] }));
   renderTimeline();
 
@@ -73,7 +73,7 @@ test('asks for the current day of the signed in user, with the token and without
     '/api/events?from=2026-08-19T03%3A00%3A00.000Z&to=2026-08-20T02%3A59%3A59.999Z',
   );
   expect(url).not.toContain('userId');
-  expect(init.headers).toMatchObject({ Authorization: 'Bearer test-token' });
+  expect(init.credentials).toBe('same-origin');
   expect(
     await screen.findByRole('heading', { level: 3, name: 'Bloco de trabalho' }),
   ).toBeInTheDocument();

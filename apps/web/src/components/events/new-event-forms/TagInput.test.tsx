@@ -33,13 +33,13 @@ function type(value: string) {
   fireEvent.change(screen.getByLabelText("Tags"), { target: { value } });
 }
 
-test("asks for suggestions with the token — the tags belong to the user", async () => {
+test("asks for suggestions with the session — the tags belong to the user", async () => {
   type("tre");
 
   await waitFor(() => expect(fetch).toHaveBeenCalled());
   const [url, init] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
   expect(url).toBe("/api/tags?query=tre&limit=6");
-  expect(init.headers).toMatchObject({ Authorization: "Bearer test-token" });
+  expect(init.credentials).toBe("same-origin");
 });
 
 test("shows what the backend suggested", async () => {
@@ -50,10 +50,10 @@ test("shows what the backend suggested", async () => {
 
 test("a failed suggestion is not an error on the screen", async () => {
   // A sugestao e um atalho: quem esta digitando termina a tag na mao.
-  signedIn = null;
+  vi.mocked(fetch).mockResolvedValue(new Response(null, { status: 503 }));
   type("tre");
 
-  await waitFor(() => expect(screen.queryByRole("button", { name: "treino" })).toBeNull());
-  expect(fetch).not.toHaveBeenCalled();
+  await waitFor(() => expect(fetch).toHaveBeenCalled());
+  expect(screen.queryByRole("button", { name: "treino" })).toBeNull();
   expect(screen.getByLabelText("Tags")).toBeInTheDocument();
 });

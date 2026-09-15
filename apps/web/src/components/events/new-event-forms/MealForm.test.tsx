@@ -38,12 +38,12 @@ test("sends one meal item, and no event type at all", async () => {
   expect(body.items).toEqual([{ type: "meal", data: { inputText: "2 ovos mexidos" } }]);
 });
 
-test("sends the token of the signed in user", async () => {
+test("sends the session of the signed in user", async () => {
   submitWith("café com leite");
 
   await waitFor(() => expect(fetch).toHaveBeenCalled());
   const [, init] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
-  expect(init.headers).toMatchObject({ Authorization: "Bearer test-token" });
+  expect(init.credentials).toBe("same-origin");
 });
 
 test("asks for the meal before sending anything", () => {

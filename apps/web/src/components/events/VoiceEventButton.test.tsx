@@ -82,7 +82,7 @@ test("posts the transcript to the voice route and refreshes when it lands", asyn
     "/api/events/voice",
     expect.objectContaining({
       method: "POST",
-      headers: expect.objectContaining({ Authorization: "Bearer test-token" }),
+      credentials: "same-origin",
       body: JSON.stringify({ transcript: "comecei a estudar ingles" }),
     }),
   );

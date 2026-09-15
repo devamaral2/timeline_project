@@ -2,9 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { getAuth } from "firebase/auth";
 import { AlertTriangle, X } from "lucide-react";
-import { getClientApp } from "@/lib/firebase/client-app";
+import { authedFetch } from "@/lib/api/authed-fetch";
 import { cn } from "@/lib/utils";
 import {
   destructiveButtonClass,
@@ -44,16 +43,7 @@ export function DeleteEventDialog({ eventId, eventName, onClose, onDeleted }: De
     setError(null);
 
     try {
-      const auth = getAuth(getClientApp());
-      const currentUser = auth.currentUser;
-      if (!currentUser) throw new Error("not-authenticated");
-      const token = await currentUser.getIdToken();
-
-      const response = await fetch(`/api/events/${eventId}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!response.ok) throw new Error(`Request failed with ${response.status}`);
+      await authedFetch(`/api/events/${eventId}`, { method: "DELETE" });
 
       onDeleted();
       onClose();
