@@ -4,22 +4,19 @@ import { ApiError, apiFetch, authedFetch } from "./client";
 
 const API_HOST = "http://10.0.0.2:3001";
 
-const currentUser = { getIdToken: async () => "test-token" };
-let signedIn: typeof currentUser | null = currentUser;
+const session = vi.hoisted(() => ({
+  getAccessToken: vi.fn(async (): Promise<string | null> => "test-token"),
+  refresh: vi.fn(async (): Promise<string | null> => "renewed-token"),
+}));
 
 // O host e repetido literalmente porque a fabrica do `vi.mock` sobe para o topo
 // do arquivo e nao enxerga a constante.
 vi.mock("@/config/env", () => ({ env: { apiBaseUrl: "http://10.0.0.2:3001" } }));
-vi.mock("@/lib/firebase/app", () => ({
-  getClientAuth: () => ({
-    get currentUser() {
-      return signedIn;
-    },
-  }),
-}));
+vi.mock("@/lib/auth/session", () => ({ session }));
 
 beforeEach(() => {
-  signedIn = currentUser;
+  session.getAccessToken.mockReset().mockResolvedValue("test-token");
+  session.refresh.mockReset().mockResolvedValue("renewed-token");
   vi.stubGlobal("fetch", vi.fn());
 });
 
@@ -38,7 +35,7 @@ test("puts the host in front of the path — aqui nao ha rewrite do Next", async
   );
 });
 
-test("sends the firebase id token when reading a day of the timeline", async () => {
+test("sends the apps/auth access token when reading a day of the timeline", async () => {
   vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({ items: [] })));
 
   await authedFetch(dayEventsUrl("2026-08-31"));
@@ -85,8 +82,32 @@ test("keeps the headers the caller asked for", async () => {
   );
 });
 
-test("answers 401 without touching the network while firebase has no user yet", async () => {
-  signedIn = null;
+test("renews the session once when the API still answers 401", async () => {
+  vi.mocked(fetch)
+    .mockResolvedValueOnce(new Response(null, { status: 401 }))
+    .mockResolvedValueOnce(new Response(JSON.stringify({ items: [] })));
+
+  await authedFetch("/api/events");
+
+  expect(session.refresh).toHaveBeenCalledTimes(1);
+  expect(fetch).toHaveBeenLastCalledWith(
+    `${API_HOST}/api/events`,
+    expect.objectContaining({ headers: { Authorization: "Bearer renewed-token" } }),
+  );
+});
+
+test("answers 0 with a hint when the session cannot be renewed for lack of network", async () => {
+  session.getAccessToken.mockRejectedValue(new Error("offline"));
+
+  const error = await authedFetch("/api/events").catch((thrown) => thrown);
+
+  expect((error as ApiError).status).toBe(0);
+  expect((error as ApiError).message).toContain("MOBILE_AUTH_URL");
+  expect(fetch).not.toHaveBeenCalled();
+});
+
+test("answers 401 without touching the network when nobody is signed in", async () => {
+  session.getAccessToken.mockResolvedValue(null);
 
   await expect(authedFetch("/api/events")).rejects.toMatchObject({ status: 401 });
   expect(fetch).not.toHaveBeenCalled();
