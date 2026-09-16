@@ -1,11 +1,18 @@
 import type { AuthenticatedUser } from "../../auth/authenticated-user";
 import type { TimelineEventQuery } from "@repo/entities/ports";
 import type { TimelineEventPageDto } from "@repo/entities/contracts";
+import {
+  NO_RECURRENCES,
+  type RecurrenceMaterializer,
+} from "../../recurrences/usecases/materialize-recurrences.usecase";
 
 const DEFAULT_LIMIT = 50;
 
 export class ListTimelineEventsUseCase {
-  constructor(private readonly timelineEventQuery: TimelineEventQuery) {}
+  constructor(
+    private readonly timelineEventQuery: TimelineEventQuery,
+    private readonly recurrences: RecurrenceMaterializer = NO_RECURRENCES,
+  ) {}
 
   async execute(
     input: {
@@ -18,10 +25,13 @@ export class ListTimelineEventsUseCase {
     },
     actor: AuthenticatedUser,
   ): Promise<TimelineEventPageDto> {
+    const to = input.to ? new Date(input.to) : undefined;
+    // Antes de ler, as series do usuario ficam geradas ate o dia pedido.
+    await this.recurrences.materialize(actor.userId, to);
     return this.timelineEventQuery.list({
       userId: actor.userId,
       from: input.from ? new Date(input.from) : undefined,
-      to: input.to ? new Date(input.to) : undefined,
+      to,
       type: input.type,
       tag: input.tag,
       cursor: input.cursor,

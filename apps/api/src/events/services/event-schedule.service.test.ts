@@ -50,19 +50,26 @@ test("starts the event in the past when the phrase says so", () => {
   expect(schedule.startedAt.toISOString()).toBe("2026-08-24T01:40:00.000Z");
 });
 
-test("ignores a start in the future", () => {
+test("starts the event in the future when the phrase says so", () => {
   const schedule = resolveEventSchedule({ startOffsetMinutes: 45 }, lateNight, TIME_ZONE);
 
-  expect(schedule.startedAt).toEqual(lateNight);
+  expect(schedule.startedAt.toISOString()).toBe("2026-08-24T02:45:00.000Z");
 });
 
-test("resolves a spoken start time to the most recent occurrence", () => {
+test("resolves a spoken start time backwards when that is the nearest occurrence", () => {
   const afterMidnight = new Date("2026-08-24T05:00:00.000Z");
 
   const schedule = resolveEventSchedule({ startTimeOfDay: "23:00" }, afterMidnight, TIME_ZONE);
 
-  // 23:00 do dia anterior, nao as 23:00 que ainda vao chegar.
+  // As 02:00, "as 23:00" esta tres horas atras e vinte e uma a frente.
   expect(schedule.startedAt.toISOString()).toBe("2026-08-24T02:00:00.000Z");
+});
+
+test("resolves a spoken start time forwards when that is the nearest occurrence", () => {
+  // 23:00 local: "as 08:00" esta quinze horas atras e nove a frente.
+  const schedule = resolveEventSchedule({ startTimeOfDay: "08:00" }, lateNight, TIME_ZONE);
+
+  expect(schedule.startedAt.toISOString()).toBe("2026-08-24T11:00:00.000Z");
 });
 
 test("measures the duration from the spoken start, not from now", () => {
@@ -78,9 +85,9 @@ test("measures the duration from the spoken start, not from now", () => {
   expect(schedule.finishedAt?.toISOString()).toBe("2026-08-24T09:00:00.000Z");
 });
 
-test("ignores windows longer than a week", () => {
+test("ignores windows longer than a month, in either direction", () => {
   const schedule = resolveEventSchedule(
-    { durationMinutes: 20_000, startOffsetMinutes: -30_000 },
+    { durationMinutes: 90_000, startOffsetMinutes: 90_000 },
     lateNight,
     TIME_ZONE,
   );

@@ -5,8 +5,9 @@ import {
   Interruption,
   type EventPriority,
 } from "@repo/entities";
+import { occurrenceLinkOf, type OccurrenceColumns } from "../../recurrences/mappers/occurrence-columns";
 
-export interface EventRow {
+export interface EventRow extends Partial<OccurrenceColumns> {
   id: string;
   revision: number;
   userId: string;
@@ -94,6 +95,7 @@ export function mapEventRow(
     missed: eventRow.missed,
     priority: eventRow.priority,
     taskIds: [...taskIds],
+    occurrence: occurrenceLinkOf(eventRow),
     revision: eventRow.revision,
   });
 }

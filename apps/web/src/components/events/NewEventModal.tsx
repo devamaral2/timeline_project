@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
-import type { KnownEventItemType } from "@repo/entities/contracts";
+import type { KnownEventItemType } from "@/lib/api/contracts";
 import { cn } from "@/lib/utils";
 import { ICON_STROKE_WIDTH, creatableItemTypes, visualForItemType } from "./event-visuals";
 import { RoutineForm } from "./new-event-forms/RoutineForm";

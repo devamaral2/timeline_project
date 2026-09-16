@@ -1,5 +1,5 @@
 import { Apple, CircleDashed, Clock, Dumbbell, Moon, type LucideIcon } from "lucide-react";
-import type { EventPriority, KnownEventItemType } from "@repo/entities/contracts";
+import type { EventPriority, KnownEventItemType } from "@/lib/api/contracts";
 
 /**
  * O traco fino do desenho. O padrao do lucide (2) engorda o icone e, sobre o

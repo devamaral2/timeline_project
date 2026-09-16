@@ -24,7 +24,7 @@ function buildUseCase(rounds: ScriptedAgentCall[][], mealParsing?: StubMealParsi
     ),
   );
 
-  return { useCase, eventRepository, agentGateway };
+  return { useCase, database, eventRepository, agentGateway };
 }
 
 test("creates a training event from the skill the agent chose", async () => {
@@ -119,12 +119,12 @@ test("reports an unknown skill back to the agent instead of throwing", async () 
 });
 
 test("fails with 'undecided' when the agent calls no skill at all", async () => {
-  const { useCase, eventRepository } = buildUseCase([]);
+  const { useCase, database } = buildUseCase([]);
 
   await expect(useCase.execute({ text: "asdfghjkl" }, actor)).rejects.toThrow(
     EventAgentUndecidedError,
   );
-  await expect(eventRepository.findLatestOpenByUserId(actor.userId)).resolves.toBeNull();
+  expect(database.events).toHaveLength(0);
 });
 
 test("rejects blank text before reaching the agent", async () => {

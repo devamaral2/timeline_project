@@ -8,17 +8,13 @@
 					"level": "error",
 					"options": {
 						"paths": {
-							"@repo/persistence": "apps/web nao pode importar @repo/persistence — so apps/api fala com o Postgres (ver AGENTS.md)."
+							"@repo/persistence": "apps/web nao pode importar @repo/persistence — so apps/api fala com o Postgres (ver AGENTS.md).",
+							"@repo/entities": "apps/web nao compartilha entidades do backend; use os contratos HTTP locais."
 						},
 						"patterns": [
 							{
-								"group": [
-									"@repo/entities",
-									"@repo/entities/*",
-									"!@repo/entities/contracts",
-									"!@repo/entities/contracts/*"
-								],
-								"message": "apps/web so pode importar @repo/entities/contracts, e so com `import type` (ver AGENTS.md)."
+								"group": ["@repo/entities/*"],
+								"message": "apps/web nao compartilha entidades do backend; use os contratos HTTP locais."
 							}
 						]
 					}

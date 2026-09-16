@@ -63,6 +63,19 @@ export function zonedDayStart(dayKey: string, timeZone = TIMELINE_TIME_ZONE): Da
   return new Date(naiveUtc - timeZoneOffsetMs(firstGuess, timeZone));
 }
 
+/**
+ * Instante de uma hora de parede (`HH:MM`) naquele dia civil e fuso. As 07:00
+ * de um dia continuam sendo 07:00 locais dos dois lados de uma virada de
+ * horario de verao — e o instante UTC que muda, nao a hora que a pessoa marcou.
+ */
+export function zonedTimeAt(dayKey: string, timeOfDay: string, timeZone = TIMELINE_TIME_ZONE): Date {
+  const [year, month, day] = dayKey.split("-").map(Number) as [number, number, number];
+  const [hour, minute] = timeOfDay.split(":").map(Number) as [number, number];
+  const naiveUtc = Date.UTC(year, month - 1, day, hour, minute, 0, 0);
+  const firstGuess = new Date(naiveUtc - timeZoneOffsetMs(new Date(naiveUtc), timeZone));
+  return new Date(naiveUtc - timeZoneOffsetMs(firstGuess, timeZone));
+}
+
 /** Ultimo instante representavel daquele dia civil no fuso da timeline. */
 export function zonedDayEnd(dayKey: string, timeZone = TIMELINE_TIME_ZONE): Date {
   return new Date(zonedDayStart(shiftDayKey(dayKey, 1), timeZone).getTime() - 1);

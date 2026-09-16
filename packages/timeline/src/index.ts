@@ -7,3 +7,4 @@ export * from "./month";
 export * from "./timeline-day";
 export * from "./timeline-page";
 export * from "./week";
+export * from "./recurrence";

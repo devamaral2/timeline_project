@@ -1,4 +1,5 @@
 export * from "./enums";
+export * from "./recurrences";
 export * from "./events";
 export * from "./catalog";
 export * from "./tasks";

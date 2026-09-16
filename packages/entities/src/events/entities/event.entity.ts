@@ -6,6 +6,7 @@ import { EventId } from "../value-objects/event-id";
 import { EventValidationError } from "../errors/event.errors";
 import { EventItem } from "./event-item.entity";
 import { defaultEventItemRegistry, EventItemRegistry } from "../items/event-item-registry";
+import { detachOccurrence, type OccurrenceLink } from "../../recurrences/types/occurrence-link";
 
 export interface EventCreateProps {
   id?: string;
@@ -20,6 +21,7 @@ export interface EventCreateProps {
   missed?: boolean;
   priority?: EventPriority;
   taskIds?: string[];
+  occurrence?: OccurrenceLink;
 }
 
 export interface EventRehydrateProps extends EventCreateProps {
@@ -52,6 +54,7 @@ interface EventBuildProps {
   missed: boolean;
   priority: EventPriority;
   taskIds: string[];
+  occurrence: OccurrenceLink | undefined;
   revision: number;
 }
 
@@ -120,6 +123,8 @@ export class Event {
   readonly missed: boolean;
   readonly priority: EventPriority;
   readonly taskIds: readonly string[];
+  /** Presente quando o evento e uma ocorrencia de uma serie. */
+  readonly occurrence: OccurrenceLink | undefined;
   readonly revision: number;
   readonly primaryItemId: string;
 
@@ -138,6 +143,7 @@ export class Event {
     this.missed = props.missed;
     this.priority = props.priority;
     this.taskIds = props.taskIds;
+    this.occurrence = props.occurrence;
     this.revision = props.revision;
     this.registry = registry;
 
@@ -184,6 +190,7 @@ export class Event {
         missed: props.missed ?? DEFAULT_EVENT_MISSED,
         priority: props.priority ?? DEFAULT_EVENT_PRIORITY,
         taskIds: props.taskIds ?? [],
+        occurrence: props.occurrence,
         revision: 1,
       },
       registry,
@@ -208,12 +215,14 @@ export class Event {
         missed: props.missed ?? DEFAULT_EVENT_MISSED,
         priority: props.priority ?? DEFAULT_EVENT_PRIORITY,
         taskIds: props.taskIds ?? [],
+        occurrence: props.occurrence,
         revision: props.revision,
       },
       registry,
     );
   }
 
+  /** Toda revisao e uma edicao do usuario, e por isso destaca a ocorrencia da serie. */
   revise(changes: EventReviseChanges): Event {
     return Event.build(
       {
@@ -229,6 +238,7 @@ export class Event {
         missed: changes.missed ?? this.missed,
         priority: changes.priority ?? this.priority,
         taskIds: changes.taskIds ?? [...this.taskIds],
+        occurrence: detachOccurrence(this.occurrence),
         revision: this.revision + 1,
       },
       this.registry,

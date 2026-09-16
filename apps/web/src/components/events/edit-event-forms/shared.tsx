@@ -6,7 +6,7 @@ import type {
   EventItemDto,
   EventPriority,
   UpdateEventItemInput,
-} from "@repo/entities/contracts";
+} from "@/lib/api/contracts";
 import { authedFetch } from "@/lib/api/authed-fetch";
 import { fieldInputClass, fieldLabelClass } from "../new-event-forms/field-styles";
 import { priorities, priorityLabels } from "../event-visuals";

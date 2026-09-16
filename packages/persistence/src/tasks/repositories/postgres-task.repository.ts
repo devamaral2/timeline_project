@@ -6,8 +6,8 @@ import type { TaskRepository } from "@repo/entities/ports";
 import * as schema from "../../database/schema";
 import { mapTaskRow } from "../mappers/task-row.mapper";
 import { classifyUpdateFailure } from "../../shared/classify-update-failure";
-
-type Tx = Parameters<Parameters<NodePgDatabase<typeof schema>["transaction"]>[0]>[0];
+import { occurrenceColumnsOf } from "../../recurrences/mappers/occurrence-columns";
+import type { Tx } from "../../events/repositories/postgres-event.repository";
 
 async function insertTags(tx: Tx, task: Task): Promise<void> {
   if (task.tags.length === 0) return;
@@ -36,27 +36,45 @@ async function insertDependencies(tx: Tx, task: Task): Promise<void> {
     .values(task.dependsOnTaskIds.map((dependsOnTaskId) => ({ taskId: task.id, dependsOnTaskId })));
 }
 
+/**
+ * Insere a tarefa, as tags e as dependencias. Devolve `false` quando ela e uma
+ * ocorrencia de um dia que a serie ja gerou.
+ */
+export async function insertTaskAggregate(tx: Tx, task: Task): Promise<boolean> {
+  const inserted = await tx
+    .insert(schema.tasks)
+    .values({
+      id: task.id,
+      revision: task.revision,
+      userId: task.userId,
+      parentTaskId: task.parentTaskId ?? null,
+      name: task.name,
+      description: task.description,
+      status: task.status,
+      priority: task.priority,
+      startedAt: task.startedAt ?? null,
+      estimatedFinishAt: task.estimatedFinishAt ?? null,
+      finishedAt: task.finishedAt ?? null,
+      ...occurrenceColumnsOf(task.occurrence),
+    })
+    .onConflictDoNothing({
+      target: [schema.tasks.recurrenceId, schema.tasks.occurrenceOn],
+      where: sql`${schema.tasks.recurrenceId} IS NOT NULL`,
+    })
+    .returning({ id: schema.tasks.id });
+
+  if (inserted.length === 0) return false;
+  await insertTags(tx, task);
+  await insertDependencies(tx, task);
+  return true;
+}
+
 export class PostgresTaskRepository implements TaskRepository {
   constructor(private readonly db: NodePgDatabase<typeof schema>) {}
 
   async save(task: Task): Promise<void> {
     await this.db.transaction(async (tx) => {
-      await tx.insert(schema.tasks).values({
-        id: task.id,
-        revision: task.revision,
-        userId: task.userId,
-        parentTaskId: task.parentTaskId ?? null,
-        name: task.name,
-        description: task.description,
-        status: task.status,
-        priority: task.priority,
-        startedAt: task.startedAt ?? null,
-        estimatedFinishAt: task.estimatedFinishAt ?? null,
-        finishedAt: task.finishedAt ?? null,
-      });
-
-      await insertTags(tx, task);
-      await insertDependencies(tx, task);
+      await insertTaskAggregate(tx, task);
     });
   }
 
@@ -72,6 +90,7 @@ export class PostgresTaskRepository implements TaskRepository {
             started_at = ${task.startedAt ?? null},
             estimated_finish_at = ${task.estimatedFinishAt ?? null},
             finished_at = ${task.finishedAt ?? null},
+            recurrence_detached = ${task.occurrence?.detached ?? false},
             revision = ${task.revision},
             updated_at = now()
         WHERE id = ${task.id}
@@ -103,7 +122,11 @@ export class PostgresTaskRepository implements TaskRepository {
   async delete(taskId: string, actorUserId: string): Promise<void> {
     await this.db.transaction(async (tx) => {
       const [existing] = await tx
-        .select({ userId: schema.tasks.userId })
+        .select({
+          userId: schema.tasks.userId,
+          recurrenceId: schema.tasks.recurrenceId,
+          occurrenceOn: schema.tasks.occurrenceOn,
+        })
         .from(schema.tasks)
         .where(eq(schema.tasks.id, taskId));
 
@@ -112,6 +135,15 @@ export class PostgresTaskRepository implements TaskRepository {
       }
       if (existing.userId !== actorUserId) {
         throw new TaskOwnershipError();
+      }
+
+      // Apagar uma ocorrencia pula o dia na serie: sem isto, ela voltaria na
+      // proxima vez que a serie fosse editada e regerada.
+      if (existing.recurrenceId && existing.occurrenceOn) {
+        await tx
+          .insert(schema.recurrenceExceptions)
+          .values({ recurrenceId: existing.recurrenceId, occurrenceOn: existing.occurrenceOn })
+          .onConflictDoNothing();
       }
 
       await tx.delete(schema.tasks).where(eq(schema.tasks.id, taskId));

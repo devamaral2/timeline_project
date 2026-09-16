@@ -9,12 +9,15 @@ import {
   fieldTextareaClass,
   useSubmitEvent,
 } from "./shared";
+import { ScheduleFields } from "./ScheduleFields";
+import { initialSchedule } from "./schedule";
 
 export function MealForm({ onBack, onClose, onCreated }: EventFormProps) {
   const [inputText, setInputText] = useState("");
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [schedule, setSchedule] = useState(initialSchedule);
   const { submit, submitting, error } = useSubmitEvent({ onCreated, onClose });
 
   function handleSubmit(event: FormEvent) {
@@ -32,7 +35,7 @@ export function MealForm({ onBack, onClose, onCreated }: EventFormProps) {
       items: [{ type: "meal", data: { inputText: inputText.trim() } }],
       description: description.trim() || undefined,
       tags,
-    });
+    }, schedule);
   }
 
   return (
@@ -56,6 +59,8 @@ export function MealForm({ onBack, onClose, onCreated }: EventFormProps) {
           automaticamente.
         </p>
       </div>
+
+      <ScheduleFields value={schedule} onChange={setSchedule} />
 
       <CommonFields
         description={description}

@@ -14,6 +14,7 @@ import { MissedBadge } from "@/components/MissedBadge";
 import { TagChip } from "@/components/TagChip";
 import { ICON_STROKE_WIDTH, priorityLabels, visualForItemType } from "@/components/event-visuals";
 import { authedFetch } from "@/lib/api/client";
+import { endLabelOf } from "@/lib/events/event-window";
 import { useTheme } from "@/lib/theme/use-theme";
 
 export default function EventDetailScreen() {
@@ -89,7 +90,7 @@ function EventDetailBody({ event }: { event: EventDetailDto }) {
         </View>
         <Text style={[styles.meta, { color: theme.colors.mutedForeground }]}>
           {formatTime(event.startedAt)} →{" "}
-          {event.finishedAt ? formatTime(event.finishedAt) : "em andamento"}
+          {endLabelOf(event)}
         </Text>
       </View>
 

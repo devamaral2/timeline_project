@@ -87,7 +87,7 @@ function makeMealEvent(userId: string, name: string, startedAt: string, kcal: nu
   });
 }
 
-test("POST /api/events ignores forbidden create fields from the client payload", async () => {
+test("POST /api/events takes the window from the client but never the owner", async () => {
   const { controller, eventRepository } = makeController();
 
   const { eventId } = await controller.create(
@@ -103,11 +103,20 @@ test("POST /api/events ignores forbidden create fields from the client payload",
   const persistedEvent = await eventRepository.findById(eventId);
 
   expect(persistedEvent?.items[0].type).toBe("sleep");
+  // O dono vem do bearer, nunca do corpo; a janela, ao contrario, e do cliente.
   expect(persistedEvent?.userId).toBe("auth-user-1");
-  expect(persistedEvent?.startedAt.toISOString()).not.toBe("2020-01-01T00:00:00.000Z");
-  expect(persistedEvent?.finishedAt).toBeUndefined();
+  expect(persistedEvent?.startedAt.toISOString()).toBe("2020-01-01T00:00:00.000Z");
+  expect(persistedEvent?.finishedAt?.toISOString()).toBe("2020-01-01T01:00:00.000Z");
   expect(persistedEvent?.name).toBe("Sono");
   expect(persistedEvent?.interruptions).toEqual([]);
+});
+
+test("POST /api/events rejects a startedAt that is not a date", async () => {
+  const { controller } = makeController();
+
+  await expect(
+    controller.create({ items: [{ type: "sleep" }], startedAt: "amanha" } as never, actor),
+  ).rejects.toThrow("Invalid startedAt");
 });
 
 function anOpenTraining() {

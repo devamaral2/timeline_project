@@ -14,6 +14,8 @@ export interface PostgresTestContext {
 }
 
 const MUTABLE_TABLES = [
+  "recurrence_exceptions",
+  "recurrences",
   "event_tags",
   "event_tasks",
   "event_interruptions",

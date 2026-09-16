@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { TimelineList } from '@/components/events/TimelineList';
+import { AgendaPreview } from '../mockups/eventos/agenda-preview';
 import { dayKeyOf } from '@repo/timeline';
 
 export const dynamic = 'force-dynamic';
@@ -13,13 +13,13 @@ export async function generateMetadata({
 }: UserTimelinePageProps): Promise<Metadata> {
   const { userId } = await params;
   return {
-    title: `Timeline de ${userId} — Braid`,
+    title: `Agenda de ${userId} — Braid`,
     description: 'Sono, treinos, refeições e rotina organizados por dia.',
   };
 }
 
 /*
- * A pagina nao le mais eventos.
+ * A agenda carrega os eventos no cliente.
  *
  * A leitura exige a sessao, e quem sabe renova-la quando o access token de 15
  * minutos expira e o cliente (`authedFetch`). O que sobra para o servidor e o unico
@@ -35,11 +35,5 @@ export default async function UserTimelinePage({
   const { userId } = await params;
   const todayKey = dayKeyOf(new Date());
 
-  return (
-    // Sem fundo proprio: o brilho ambiente do globals.css fica atras do
-    // body, e um bloco opaco aqui o apagaria.
-    <div className="min-h-screen">
-      <TimelineList userId={userId} todayKey={todayKey} />
-    </div>
-  );
+  return <AgendaPreview userId={userId} todayKey={todayKey} />;
 }

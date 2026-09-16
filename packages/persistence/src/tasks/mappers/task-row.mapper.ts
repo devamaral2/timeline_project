@@ -1,6 +1,7 @@
 import { Task, type WorkItemPriority, type WorkItemStatus } from "@repo/entities";
+import { occurrenceLinkOf, type OccurrenceColumns } from "../../recurrences/mappers/occurrence-columns";
 
-export interface TaskRow {
+export interface TaskRow extends Partial<OccurrenceColumns> {
   id: string;
   revision: number;
   userId: string;
@@ -32,6 +33,7 @@ export function mapTaskRow(
     estimatedFinishAt: row.estimatedFinishAt ?? undefined,
     finishedAt: row.finishedAt ?? undefined,
     dependsOnTaskIds: [...dependsOnTaskIds],
+    occurrence: occurrenceLinkOf(row),
     revision: row.revision,
   });
 }

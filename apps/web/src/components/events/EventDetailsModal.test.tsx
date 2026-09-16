@@ -1,7 +1,7 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import type { EventDetailDto, EventItemDto } from "@repo/entities/contracts";
+import type { EventDetailDto, EventItemDto } from "@/lib/api/contracts";
 import { EventDetailsModal } from "./EventDetailsModal";
 
 

@@ -9,9 +9,11 @@ import { NewEventModal } from "./NewEventModal";
 interface NewEventButtonProps {
   /** No cabecalho estreito, preserva o nome acessivel e mostra so o simbolo. */
   compactOnMobile?: boolean;
+  className?: string;
+  onCreated?: () => void;
 }
 
-export function NewEventButton({ compactOnMobile = false }: NewEventButtonProps) {
+export function NewEventButton({ compactOnMobile = false, className, onCreated = () => window.location.reload() }: NewEventButtonProps) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -21,6 +23,7 @@ export function NewEventButton({ compactOnMobile = false }: NewEventButtonProps)
         onClick={() => setOpen(true)}
         className={cn(
           primaryButtonClass,
+          className,
           compactOnMobile ? "w-10 px-0 sm:w-auto sm:px-4" : null,
         )}
       >
@@ -31,7 +34,7 @@ export function NewEventButton({ compactOnMobile = false }: NewEventButtonProps)
       </button>
 
       {open ? (
-        <NewEventModal onClose={() => setOpen(false)} onCreated={() => window.location.reload()} />
+        <NewEventModal onClose={() => setOpen(false)} onCreated={onCreated} />
       ) : null}
     </>
   );

@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
-import { PersistenceModule, TASK_REPOSITORY } from "@repo/persistence";
-import type { TaskRepository } from "@repo/entities/ports";
+import { PersistenceModule, RECURRENCE_REPOSITORY, TASK_REPOSITORY } from "@repo/persistence";
+import type { RecurrenceRepository, TaskRepository } from "@repo/entities/ports";
+import { MaterializeRecurrencesUseCase } from "../recurrences/usecases/materialize-recurrences.usecase";
 import { TasksController } from "./http/tasks.controller";
 import { CreateTaskUseCase } from "./usecases/create-task.usecase";
 import { GetTaskUseCase } from "./usecases/get-task.usecase";
@@ -13,6 +14,11 @@ import { ListSubtasksUseCase } from "./usecases/list-subtasks.usecase";
   imports: [PersistenceModule],
   controllers: [TasksController],
   providers: [
+    {
+      provide: MaterializeRecurrencesUseCase,
+      inject: [RECURRENCE_REPOSITORY],
+      useFactory: (recurrences: RecurrenceRepository) => new MaterializeRecurrencesUseCase(recurrences),
+    },
     {
       provide: CreateTaskUseCase,
       inject: [TASK_REPOSITORY],
@@ -35,8 +41,9 @@ import { ListSubtasksUseCase } from "./usecases/list-subtasks.usecase";
     },
     {
       provide: ListTasksUseCase,
-      inject: [TASK_REPOSITORY],
-      useFactory: (tasks: TaskRepository) => new ListTasksUseCase(tasks),
+      inject: [TASK_REPOSITORY, MaterializeRecurrencesUseCase],
+      useFactory: (tasks: TaskRepository, materializer: MaterializeRecurrencesUseCase) =>
+        new ListTasksUseCase(tasks, materializer),
     },
     {
       provide: ListSubtasksUseCase,

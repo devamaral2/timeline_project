@@ -127,10 +127,8 @@ test("starts the event in the past when the phrase says so", async () => {
   expect(persistedEvent?.startedAt.toISOString()).toBe("2026-08-24T01:40:00.000Z");
 });
 
-test("closes the previous open event when the new one started, not when the agent answered", async () => {
-  const { useCase, database, eventRepository } = makeUseCase({
-    schedule: { startOffsetMinutes: -20 },
-  });
+test("leaves an event already in progress untouched", async () => {
+  const { useCase, database } = makeUseCase({ schedule: { startOffsetMinutes: -20 } });
   database.events.push(
     Event.create({
       userId: actor.userId,
@@ -146,8 +144,17 @@ test("closes the previous open event when the new one started, not when the agen
   await useCase.execute({ transcript: "acordei faz vinte minutos" }, actor);
   const previousEvent = database.events.find((event) => event.name === "Trabalhar");
 
-  expect(previousEvent?.finishedAt?.toISOString()).toBe("2026-08-24T01:40:00.000Z");
-  void eventRepository;
+  // Registrar uma coisa nao termina outra: dois eventos podem se sobrepor.
+  expect(previousEvent?.finishedAt).toBeUndefined();
+});
+
+test("starts the event in the future when the phrase says so", async () => {
+  const { useCase, eventRepository } = makeUseCase({ schedule: { startOffsetMinutes: 120 } });
+
+  const result = await useCase.execute({ transcript: "reuniao daqui a duas horas" }, actor);
+  const persistedEvent = await eventRepository.findById(result.eventId);
+
+  expect(persistedEvent?.startedAt.toISOString()).toBe("2026-08-24T04:00:00.000Z");
 });
 
 test("names a meal event after the hour it was eaten, not the hour it was dictated", async () => {

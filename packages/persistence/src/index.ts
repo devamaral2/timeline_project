@@ -13,3 +13,5 @@ export * from "./events/repositories/postgres-tag.repository";
 export * from "./catalog/postgres-workout.catalog";
 export * from "./tasks/mappers/task-row.mapper";
 export * from "./tasks/repositories/postgres-task.repository";
+export * from "./recurrences/mappers/recurrence-row.mapper";
+export * from "./recurrences/repositories/postgres-recurrence.repository";

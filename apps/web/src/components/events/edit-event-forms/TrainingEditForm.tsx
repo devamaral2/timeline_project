@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { Plus, X } from "lucide-react";
-import type { EventPriority, WorkoutCode, WorkoutSnapshot } from "@repo/entities/contracts";
+import type { EventPriority, WorkoutCode, WorkoutSnapshot } from "@/lib/api/contracts";
 import { cn } from "@/lib/utils";
 import { iconButtonClass } from "@/components/ui/button-styles";
 import {

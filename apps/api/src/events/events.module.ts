@@ -3,6 +3,7 @@ import {
   DAILY_OVERVIEW_QUERY,
   EVENT_REPOSITORY,
   PersistenceModule,
+  RECURRENCE_REPOSITORY,
   TAG_REPOSITORY,
   TIMELINE_EVENT_QUERY,
   WORKOUT_CATALOG,
@@ -10,6 +11,7 @@ import {
 import type {
   DailyOverviewQuery,
   EventRepository,
+  RecurrenceRepository,
   TagRepository,
   TimelineEventQuery,
   WorkoutCatalog,
@@ -28,6 +30,7 @@ import { GetEventUseCase } from "./usecases/get-event.usecase";
 import { ListTimelineEventsUseCase } from "./usecases/list-timeline-events.usecase";
 import { SuggestTagsUseCase } from "./usecases/suggest-tags.usecase";
 import { UpdateEventUseCase } from "./usecases/update-event.usecase";
+import { MaterializeRecurrencesUseCase } from "../recurrences/usecases/materialize-recurrences.usecase";
 
 /**
  * Substitui as antigas `make-*-controller` factories. Os usecases sao providos
@@ -38,7 +41,13 @@ import { UpdateEventUseCase } from "./usecases/update-event.usecase";
 @Module({
   imports: [PersistenceModule],
   controllers: [EventsController, TagsController],
+  exports: [CreateEventUseCase],
   providers: [
+    {
+      provide: MaterializeRecurrencesUseCase,
+      inject: [RECURRENCE_REPOSITORY],
+      useFactory: (recurrences: RecurrenceRepository) => new MaterializeRecurrencesUseCase(recurrences),
+    },
     {
       provide: OpenRouterMealParsingGateway,
       useFactory: () => new OpenRouterMealParsingGateway(),
@@ -68,9 +77,9 @@ import { UpdateEventUseCase } from "./usecases/update-event.usecase";
     },
     {
       provide: ListTimelineEventsUseCase,
-      inject: [TIMELINE_EVENT_QUERY],
-      useFactory: (timelineEventQuery: TimelineEventQuery) =>
-        new ListTimelineEventsUseCase(timelineEventQuery),
+      inject: [TIMELINE_EVENT_QUERY, MaterializeRecurrencesUseCase],
+      useFactory: (timelineEventQuery: TimelineEventQuery, materializer: MaterializeRecurrencesUseCase) =>
+        new ListTimelineEventsUseCase(timelineEventQuery, materializer),
     },
     {
       provide: GetEventUseCase,
@@ -84,9 +93,9 @@ import { UpdateEventUseCase } from "./usecases/update-event.usecase";
     },
     {
       provide: GetDailyOverviewUseCase,
-      inject: [DAILY_OVERVIEW_QUERY],
-      useFactory: (dailyOverviewQuery: DailyOverviewQuery) =>
-        new GetDailyOverviewUseCase(dailyOverviewQuery),
+      inject: [DAILY_OVERVIEW_QUERY, MaterializeRecurrencesUseCase],
+      useFactory: (dailyOverviewQuery: DailyOverviewQuery, materializer: MaterializeRecurrencesUseCase) =>
+        new GetDailyOverviewUseCase(dailyOverviewQuery, materializer),
     },
     {
       provide: SuggestTagsUseCase,

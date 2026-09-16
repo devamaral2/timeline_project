@@ -11,8 +11,9 @@ import type { EventRepository } from "@repo/entities/ports";
 import * as schema from "../../database/schema";
 import { mapEventRow } from "../mappers/event-row.mapper";
 import { classifyUpdateFailure } from "../../shared/classify-update-failure";
+import { occurrenceColumnsOf } from "../../recurrences/mappers/occurrence-columns";
 
-type Tx = Parameters<Parameters<NodePgDatabase<typeof schema>["transaction"]>[0]>[0];
+export type Tx = Parameters<Parameters<NodePgDatabase<typeof schema>["transaction"]>[0]>[0];
 
 async function insertChildren(tx: Tx, event: Event): Promise<void> {
   if (event.items.length > 0) {
@@ -67,20 +68,35 @@ async function insertChildren(tx: Tx, event: Event): Promise<void> {
   }
 }
 
-async function insertEventAggregate(tx: Tx, event: Event): Promise<void> {
-  await tx.insert(schema.events).values({
-    id: event.id,
-    revision: event.revision,
-    userId: event.userId,
-    name: event.name,
-    description: event.description,
-    startedAt: event.startedAt,
-    finishedAt: event.finishedAt ?? null,
-    missed: event.missed,
-    priority: event.priority,
-  });
+/**
+ * Insere o evento e os filhos. Devolve `false` quando o evento e uma ocorrencia
+ * de um dia que a serie ja gerou — o indice unico recusa a linha e os filhos
+ * nem sao tentados, porque apontariam para um evento que nao entrou.
+ */
+export async function insertEventAggregate(tx: Tx, event: Event): Promise<boolean> {
+  const inserted = await tx
+    .insert(schema.events)
+    .values({
+      id: event.id,
+      revision: event.revision,
+      userId: event.userId,
+      name: event.name,
+      description: event.description,
+      startedAt: event.startedAt,
+      finishedAt: event.finishedAt ?? null,
+      missed: event.missed,
+      priority: event.priority,
+      ...occurrenceColumnsOf(event.occurrence),
+    })
+    .onConflictDoNothing({
+      target: [schema.events.recurrenceId, schema.events.occurrenceOn],
+      where: sql`${schema.events.recurrenceId} IS NOT NULL`,
+    })
+    .returning({ id: schema.events.id });
 
+  if (inserted.length === 0) return false;
   await insertChildren(tx, event);
+  return true;
 }
 
 export class PostgresEventRepository implements EventRepository {
@@ -88,33 +104,6 @@ export class PostgresEventRepository implements EventRepository {
 
   async save(event: Event): Promise<void> {
     await this.db.transaction(async (tx) => {
-      await insertEventAggregate(tx, event);
-    });
-  }
-
-  async saveClosingLatestOpen(event: Event, finishedAt: Date): Promise<void> {
-    await this.db.transaction(async (tx) => {
-      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${event.userId}))`);
-
-      const [openEvent] = await tx
-        .select({
-          id: schema.events.id,
-          startedAt: schema.events.startedAt,
-          finishedAt: schema.events.finishedAt,
-          revision: schema.events.revision,
-        })
-        .from(schema.events)
-        .where(eq(schema.events.userId, event.userId))
-        .orderBy(desc(schema.events.startedAt), desc(schema.events.id))
-        .limit(1);
-
-      if (openEvent && !openEvent.finishedAt && finishedAt >= openEvent.startedAt) {
-        await tx
-          .update(schema.events)
-          .set({ revision: openEvent.revision + 1, finishedAt, updatedAt: finishedAt })
-          .where(eq(schema.events.id, openEvent.id));
-      }
-
       await insertEventAggregate(tx, event);
     });
   }
@@ -129,6 +118,7 @@ export class PostgresEventRepository implements EventRepository {
             finished_at = ${event.finishedAt ?? null},
             missed = ${event.missed},
             priority = ${event.priority},
+            recurrence_detached = ${event.occurrence?.detached ?? false},
             revision = ${event.revision},
             updated_at = now()
         WHERE id = ${event.id}
@@ -162,7 +152,11 @@ export class PostgresEventRepository implements EventRepository {
   async delete(eventId: string, actorUserId: string): Promise<void> {
     await this.db.transaction(async (tx) => {
       const [existing] = await tx
-        .select({ userId: schema.events.userId })
+        .select({
+          userId: schema.events.userId,
+          recurrenceId: schema.events.recurrenceId,
+          occurrenceOn: schema.events.occurrenceOn,
+        })
         .from(schema.events)
         .where(eq(schema.events.id, eventId));
 
@@ -173,6 +167,15 @@ export class PostgresEventRepository implements EventRepository {
         throw new EventOwnershipError();
       }
 
+      // Apagar uma ocorrencia pula o dia na serie: sem isto, ela voltaria na
+      // proxima vez que a serie fosse editada e regerada.
+      if (existing.recurrenceId && existing.occurrenceOn) {
+        await tx
+          .insert(schema.recurrenceExceptions)
+          .values({ recurrenceId: existing.recurrenceId, occurrenceOn: existing.occurrenceOn })
+          .onConflictDoNothing();
+      }
+
       await tx.delete(schema.events).where(eq(schema.events.id, eventId));
     });
   }
@@ -181,18 +184,6 @@ export class PostgresEventRepository implements EventRepository {
     const [eventRow] = await this.db.select().from(schema.events).where(eq(schema.events.id, eventId));
     if (!eventRow) return null;
     return this.hydrate(eventRow);
-  }
-
-  async findLatestOpenByUserId(userId: string): Promise<Event | null> {
-    const [row] = await this.db
-      .select()
-      .from(schema.events)
-      .where(eq(schema.events.userId, userId))
-      .orderBy(desc(schema.events.startedAt), desc(schema.events.id))
-      .limit(1);
-
-    if (!row || row.finishedAt) return null;
-    return this.hydrate(row);
   }
 
   private async hydrate(eventRow: typeof schema.events.$inferSelect): Promise<Event> {

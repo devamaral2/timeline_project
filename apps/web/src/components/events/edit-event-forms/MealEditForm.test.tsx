@@ -1,7 +1,7 @@
 import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import type { EventDetailDto, EventItemDto, UpdateEventItemInput } from "@repo/entities/contracts";
+import type { EventDetailDto, EventItemDto, UpdateEventItemInput } from "@/lib/api/contracts";
 import { MealEditForm } from "./MealEditForm";
 
 

@@ -1,6 +1,15 @@
-export const MAX_SCHEDULE_MINUTES = 7 * 24 * 60;
+/**
+ * Ate onde uma frase falada consegue alcancar, para frente ou para tras. Nao e
+ * mais a regra de "so passado" -- e um limite de sanidade: o modelo alucinando
+ * um `durationMinutes` de sete digitos nao pode gerar um evento que termina no
+ * ano 3000. Para marcar algo mais longe, o cliente manda `startedAt` direto.
+ */
+export const MAX_SCHEDULE_MINUTES = 31 * 24 * 60;
 
-/** Como o agente descreve a janela do evento, sempre relativa -- nunca com datas absolutas. */
+/**
+ * Como o agente descreve a janela do evento, sempre relativa -- nunca com datas
+ * absolutas. `startOffsetMinutes` negativo e passado, positivo e futuro.
+ */
 export interface ParsedEventSchedule {
   startTimeOfDay?: string;
   startOffsetMinutes?: number;
@@ -40,11 +49,10 @@ export function resolveEventSchedule(
 
 function resolveStart(schedule: ParsedEventSchedule, now: Date, timeZone: string): Date {
   const startTimeOfDay = parseTimeOfDay(schedule.startTimeOfDay);
-  if (startTimeOfDay) return occurrenceAtOrBefore(now, startTimeOfDay, timeZone);
+  if (startTimeOfDay) return nearestOccurrence(now, startTimeOfDay, timeZone);
 
   const offset = boundedMinutes(schedule.startOffsetMinutes);
-  // Agendar para o futuro e outra feature: a timeline registra o que ja aconteceu.
-  if (offset === undefined || offset >= 0) return now;
+  if (offset === undefined) return now;
   return new Date(now.getTime() + offset * 60_000);
 }
 
@@ -76,14 +84,25 @@ function boundedMinutes(value: number | null | undefined): number | undefined {
   return Math.round(value);
 }
 
-function occurrenceAtOrBefore(
+/**
+ * "as 8 horas" nao diz mais se e ontem, hoje ou amanha: escolhemos a ocorrencia
+ * mais perto de agora. Falar "as 08:00" as 23h quer dizer amanha; falar "as
+ * 23:00" as 01h quer dizer ontem.
+ */
+function nearestOccurrence(
   reference: Date,
   timeOfDay: { hour: number; minute: number },
   timeZone: string,
 ): Date {
-  const sameDay = withTimeOfDay(reference, timeOfDay, timeZone, 0);
-  if (sameDay <= reference) return sameDay;
-  return withTimeOfDay(reference, timeOfDay, timeZone, -1);
+  const candidates = [-1, 0, 1].map((dayOffset) =>
+    withTimeOfDay(reference, timeOfDay, timeZone, dayOffset),
+  );
+  return candidates.reduce((closest, candidate) =>
+    Math.abs(candidate.getTime() - reference.getTime()) <
+    Math.abs(closest.getTime() - reference.getTime())
+      ? candidate
+      : closest,
+  );
 }
 
 function occurrenceAfter(

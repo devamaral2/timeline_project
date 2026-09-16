@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
-import type { EventDetailDto } from "@repo/entities/contracts";
+import type { EventDetailDto } from "@/lib/api/contracts";
 import { authedFetch } from "@/lib/api/authed-fetch";
 import { primaryItemOf } from "./EventDetailsModal";
 import { RoutineEditForm } from "./edit-event-forms/RoutineEditForm";

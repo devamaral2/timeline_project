@@ -17,9 +17,13 @@ import {
   Interruption,
   Meal,
   CatalogRevisionConflictError,
+  Recurrence,
+  RecurrenceOwnershipError,
+  RecurrenceRevisionConflictError,
   Task,
   TaskOwnershipError,
   TaskRevisionConflictError,
+  type RecurrenceRule,
 } from "@repo/entities";
 import { PostgresEventRepository } from "../events/repositories/postgres-event.repository";
 import { PostgresFoodRepository } from "../catalog/repositories/postgres-food.repository";
@@ -29,6 +33,7 @@ import { PostgresDailyOverviewQuery } from "../events/queries/postgres-daily-ove
 import { PostgresTagRepository } from "../events/repositories/postgres-tag.repository";
 import { PostgresTaskRepository } from "../tasks/repositories/postgres-task.repository";
 import { PostgresWorkoutCatalog } from "../catalog/postgres-workout.catalog";
+import { PostgresRecurrenceRepository } from "../recurrences/repositories/postgres-recurrence.repository";
 import * as schema from "../database/schema";
 
 const RUN_INTEGRATION = process.env.RUN_POSTGRES_INTEGRATION === "1";
@@ -404,27 +409,27 @@ describe.runIf(RUN_INTEGRATION)("PostgresEventRepository", () => {
     expect(rows).toHaveLength(2);
   });
 
-  test("closes the previous open event when saving a new one", async () => {
+  test("keeps an earlier event open when a later one is saved", async () => {
     const opened = newEvent({ startedAt: new Date("2026-08-31T09:00:00.000Z") });
     await repository.save(opened);
 
-    const next = newEvent({ startedAt: new Date("2026-08-31T10:00:00.000Z") });
-    await repository.saveClosingLatestOpen(next, new Date("2026-08-31T09:30:00.000Z"));
+    await repository.save(newEvent({ startedAt: new Date("2026-08-31T10:00:00.000Z") }));
 
-    const closed = await repository.findById(opened.id);
-    expect(closed?.finishedAt).toEqual(new Date("2026-08-31T09:30:00.000Z"));
-    expect(closed?.revision).toBe(opened.revision + 1);
+    // Nao ha mais "o proximo evento fecha o anterior": quem termina um evento e o usuario.
+    const untouched = await repository.findById(opened.id);
+    expect(untouched?.finishedAt).toBeUndefined();
+    expect(untouched?.revision).toBe(opened.revision);
   });
 
-  test("leaves the previous event open when closing it would finish before it started", async () => {
-    const opened = newEvent({ startedAt: new Date("2026-08-31T09:00:00.000Z") });
-    await repository.save(opened);
+  test("saves an event that starts in the future", async () => {
+    const future = newEvent({
+      startedAt: new Date("2099-01-01T09:00:00.000Z"),
+      finishedAt: new Date("2099-01-01T10:00:00.000Z"),
+    });
+    await repository.save(future);
 
-    const next = newEvent({ startedAt: new Date("2026-08-31T10:00:00.000Z") });
-    await repository.saveClosingLatestOpen(next, new Date("2026-08-31T08:00:00.000Z"));
-
-    const stillOpen = await repository.findById(opened.id);
-    expect(stillOpen?.finishedAt).toBeUndefined();
+    const stored = await repository.findById(future.id);
+    expect(stored?.startedAt).toEqual(new Date("2099-01-01T09:00:00.000Z"));
   });
 
   async function insertTask() {
@@ -501,18 +506,6 @@ describe.runIf(RUN_INTEGRATION)("PostgresEventRepository", () => {
     expect(linkRows).toHaveLength(0);
   });
 
-  test("findLatestOpenByUserId ignores an older open event behind a more recent closed one", async () => {
-    const olderOpen = newEvent({ startedAt: new Date("2026-08-31T08:00:00.000Z") });
-    await repository.save(olderOpen);
-
-    const recentClosed = newEvent({
-      startedAt: new Date("2026-08-31T09:00:00.000Z"),
-      finishedAt: new Date("2026-08-31T09:30:00.000Z"),
-    });
-    await repository.save(recentClosed);
-
-    expect(await repository.findLatestOpenByUserId("user-1")).toBeNull();
-  });
 });
 
 describe.runIf(RUN_INTEGRATION)("PostgresTaskRepository", () => {
@@ -1194,4 +1187,194 @@ describe.runIf(RUN_INTEGRATION)("PostgresTimelineEventQuery and PostgresDailyOve
     const overviewPlan = JSON.stringify(overviewExplain.rows[0]["QUERY PLAN"]);
     expect(overviewPlan).toContain("events_user_day_idx");
   }, 60000);
+});
+
+describe.runIf(RUN_INTEGRATION)("PostgresRecurrenceRepository", () => {
+  let ctx: PostgresTestContext;
+  let recurrences: PostgresRecurrenceRepository;
+  let events: PostgresEventRepository;
+  let tasks: PostgresTaskRepository;
+
+  beforeEach(async () => {
+    if (!ctx) {
+      ctx = await createPostgresTestContext();
+      recurrences = new PostgresRecurrenceRepository(ctx.db);
+      events = new PostgresEventRepository(ctx.db);
+      tasks = new PostgresTaskRepository(ctx.db);
+    } else {
+      await ctx.reset();
+    }
+  }, 30000);
+
+  afterAll(async () => {
+    if (ctx) await ctx.stop();
+  });
+
+  const daily: RecurrenceRule = {
+    frequency: "daily",
+    interval: 1,
+    timeOfDay: "07:00",
+    durationMinutes: 30,
+    timeZone: "America/Sao_Paulo",
+    startsOn: "2026-09-01",
+  };
+
+  function newRecurrence(target: "event" | "task" = "event", rule: Partial<RecurrenceRule> = {}) {
+    return Recurrence.create({ userId: "user-1", target, rule: { ...daily, ...rule }, template: { name: "Correr" } });
+  }
+
+  function occurrenceOf(recurrence: Recurrence, day: string, startedAt: string) {
+    return Event.create({
+      userId: "user-1",
+      name: "Correr",
+      description: "",
+      startedAt: new Date(startedAt),
+      tags: ["saude"],
+      interruptions: [],
+      items: [EventItem.create({ position: 0, type: "routine", schemaVersion: 1, isPrimary: true, data: {} })],
+      occurrence: { recurrenceId: recurrence.id, occurrenceOn: day, detached: false },
+    });
+  }
+
+  function taskOccurrenceOf(recurrence: Recurrence, day: string) {
+    return Task.create({
+      userId: "user-1",
+      name: "Pagar aluguel",
+      description: "",
+      tags: [],
+      startedAt: new Date(`${day}T12:00:00.000Z`),
+      occurrence: { recurrenceId: recurrence.id, occurrenceOn: day, detached: false },
+    });
+  }
+
+  test("round-trips the rule, the template and the watermark", async () => {
+    const recurrence = newRecurrence("event", { frequency: "weekly", byWeekday: 0b0100010, endsOn: "2026-12-31" });
+    await recurrences.save(recurrence);
+    await recurrences.materialize(recurrence.materializedUntil("2026-09-20"), []);
+
+    const found = await recurrences.findById(recurrence.id);
+    expect(found?.rule).toEqual(recurrence.rule);
+    expect(found?.template).toEqual({ name: "Correr" });
+    expect(found?.materializedThrough).toBe("2026-09-20");
+    expect(await recurrences.listByUserId("user-1")).toHaveLength(1);
+  });
+
+  test("materializes occurrences with their link, and a day never twice", async () => {
+    const recurrence = newRecurrence();
+    await recurrences.save(recurrence);
+    const first = occurrenceOf(recurrence, "2026-09-15", "2026-09-15T10:00:00.000Z");
+
+    await recurrences.materialize(recurrence.materializedUntil("2026-09-15"), [first]);
+    // Outra leitura concorrente monta o mesmo dia com outro id.
+    await recurrences.materialize(recurrence.materializedUntil("2026-09-15"), [
+      occurrenceOf(recurrence, "2026-09-15", "2026-09-15T10:00:00.000Z"),
+    ]);
+
+    const { rows } = await ctx.pool.query("SELECT id FROM events WHERE recurrence_id = $1", [recurrence.id]);
+    expect(rows).toEqual([{ id: first.id }]);
+    const stored = await events.findById(first.id);
+    expect(stored?.occurrence).toEqual({ recurrenceId: recurrence.id, occurrenceOn: "2026-09-15", detached: false });
+    expect(stored?.tags).toEqual(["saude"]);
+  });
+
+  test("does not advance the watermark of a series edited in the meantime", async () => {
+    const recurrence = newRecurrence();
+    await recurrences.save(recurrence);
+    await recurrences.update(recurrence.revise({ rule: { timeOfDay: "08:00" } }), "user-1", 1, "2026-09-15");
+
+    await expect(
+      recurrences.materialize(recurrence.materializedUntil("2026-09-15"), [
+        occurrenceOf(recurrence, "2026-09-15", "2026-09-15T10:00:00.000Z"),
+      ]),
+    ).rejects.toThrow(RecurrenceRevisionConflictError);
+    const { rows } = await ctx.pool.query("SELECT 1 FROM events WHERE recurrence_id = $1", [recurrence.id]);
+    expect(rows).toHaveLength(0);
+  });
+
+  test("lists only the series that still have days to generate", async () => {
+    const behind = newRecurrence();
+    const done = newRecurrence("event", { endsOn: "2026-09-10" });
+    const ahead = newRecurrence();
+    for (const recurrence of [behind, done, ahead]) await recurrences.save(recurrence);
+    await recurrences.materialize(done.materializedUntil("2026-09-10"), []);
+    await recurrences.materialize(ahead.materializedUntil("2026-12-31"), []);
+
+    const pending = await recurrences.listPendingMaterialization("user-1", "2026-11-14");
+
+    expect(pending.map((recurrence) => recurrence.id)).toEqual([behind.id]);
+  });
+
+  test("updating the series deletes upcoming untouched occurrences, keeping the past and the detached", async () => {
+    const recurrence = newRecurrence();
+    await recurrences.save(recurrence);
+    const past = occurrenceOf(recurrence, "2026-09-14", "2026-09-14T10:00:00.000Z");
+    const upcoming = occurrenceOf(recurrence, "2026-09-16", "2026-09-16T10:00:00.000Z");
+    const edited = occurrenceOf(recurrence, "2026-09-17", "2026-09-17T10:00:00.000Z");
+    await recurrences.materialize(recurrence.materializedUntil("2026-09-17"), [past, upcoming, edited]);
+    await events.update(edited.revise({ missed: true }), "user-1", 1);
+
+    await recurrences.update(recurrence.revise({ rule: { timeOfDay: "08:00" } }), "user-1", 1, "2026-09-15");
+
+    const { rows } = await ctx.pool.query(
+      "SELECT occurrence_on::text AS day, recurrence_detached AS detached FROM events ORDER BY occurrence_on",
+    );
+    expect(rows).toEqual([
+      { day: "2026-09-14", detached: false },
+      { day: "2026-09-17", detached: true },
+    ]);
+    expect((await recurrences.findById(recurrence.id))?.rule.timeOfDay).toBe("08:00");
+  });
+
+  test("rejects an update from another owner or with a stale revision", async () => {
+    const recurrence = newRecurrence();
+    await recurrences.save(recurrence);
+    const revised = recurrence.revise({ rule: { interval: 2 } });
+
+    await expect(recurrences.update(revised, "user-2", 1, "2026-09-15")).rejects.toThrow(RecurrenceOwnershipError);
+    await expect(recurrences.update(revised, "user-1", 7, "2026-09-15")).rejects.toThrow(
+      RecurrenceRevisionConflictError,
+    );
+  });
+
+  test("deleting the series keeps past occurrences, unlinked, and takes the exceptions along", async () => {
+    const recurrence = newRecurrence("task");
+    await recurrences.save(recurrence);
+    const past = taskOccurrenceOf(recurrence, "2026-09-14");
+    const upcoming = taskOccurrenceOf(recurrence, "2026-09-16");
+    await recurrences.materialize(recurrence.materializedUntil("2026-09-16"), [past, upcoming]);
+    await recurrences.addException(recurrence.id, "2026-09-18");
+
+    await recurrences.delete(recurrence.id, "user-1", "2026-09-15");
+
+    expect(await tasks.findById(upcoming.id)).toBeNull();
+    const kept = await tasks.findById(past.id);
+    expect(kept).not.toBeNull();
+    expect(kept?.occurrence).toBeUndefined();
+    const { rows } = await ctx.pool.query("SELECT 1 FROM recurrence_exceptions");
+    expect(rows).toHaveLength(0);
+  });
+
+  test("deleting one occurrence skips its day in the series", async () => {
+    const recurrence = newRecurrence();
+    await recurrences.save(recurrence);
+    const occurrence = occurrenceOf(recurrence, "2026-09-16", "2026-09-16T10:00:00.000Z");
+    await recurrences.materialize(recurrence.materializedUntil("2026-09-16"), [occurrence]);
+
+    await events.delete(occurrence.id, "user-1");
+
+    expect(await recurrences.listExceptions(recurrence.id)).toEqual(["2026-09-16"]);
+  });
+
+  test("the database rejects a rule whose shape does not match its frequency", async () => {
+    const insert = (freq: string, byweekday: number | null, bymonthday: number | null) =>
+      ctx.pool.query(
+        `INSERT INTO recurrences (id, user_id, target_kind, freq, byweekday, bymonthday, time_of_day, starts_on, template)
+         VALUES ($1, 'user-1', 'event', $2, $3, $4, '07:00', '2026-09-01', '{}')`,
+        [ulid(), freq, byweekday, bymonthday],
+      );
+
+    await expect(insert("weekly", null, null)).rejects.toThrow(/recurrences_byweekday_shape/);
+    await expect(insert("daily", null, 15)).rejects.toThrow(/recurrences_bymonthday_shape/);
+    await expect(insert("daily", null, null)).resolves.toBeDefined();
+  });
 });

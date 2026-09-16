@@ -13,11 +13,15 @@ export interface ExampleTask {
 }
 
 export interface ExampleEvent {
+  id?: string;
   name: string;
   type: string;
   time: string;
   minutes: number;
   duration: string;
+  startedAt?: string;
+  finishedAt?: string;
+  tags?: string[];
   tag?: string;
   href?: string;
   task?: ExampleTask;

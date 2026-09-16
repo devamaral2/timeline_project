@@ -1,9 +1,23 @@
 // Ícones vetoriais deste estudo, desenhados na mesma grade de 24 px.
+import styles from "./mockup.module.css";
+
 export function SearchCreateIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <circle cx="13.5" cy="10" r="7" />
       <path d="m8.5 15-6 6M13.5 6.8v6.4M10.3 10h6.4" />
+    </svg>
+  );
+}
+
+export function IntelligenceIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden style={{ overflow: "visible" }}>
+      <circle cx="12" cy="12" r="2.4" fill="currentColor" />
+      {[0, 0.8, 1.6].map(delay => (
+        <circle key={delay} className={styles.wave} cx="12" cy="12" r="5" fill="none" stroke="currentColor"
+          strokeWidth="1.5" strokeDasharray="1.1 1.7" strokeLinecap="round" style={{ animationDelay: `${delay}s` }} />
+      ))}
     </svg>
   );
 }

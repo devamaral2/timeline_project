@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { TimelineEventPageDto } from '@repo/entities/contracts';
+import type { TimelineEventPageDto } from '@/lib/api/contracts';
 import { dayEventsUrl, mediumDate, mergeTimelinePage } from '@repo/timeline';
 import type { TimelinePageState } from '@repo/timeline';
 import { TimelineHeader } from '@/components/layout/TimelineHeader';

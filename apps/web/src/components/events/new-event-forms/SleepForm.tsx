@@ -10,12 +10,15 @@ import {
   fieldLabelClass,
   useSubmitEvent,
 } from "./shared";
+import { ScheduleFields } from "./ScheduleFields";
+import { initialSchedule } from "./schedule";
 
 export function SleepForm({ onBack, onClose, onCreated }: EventFormProps) {
   const [trackedSleepTime, setTrackedSleepTime] = useState("");
   const [score, setScore] = useState("");
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState<string[]>([]);
+  const [schedule, setSchedule] = useState(initialSchedule);
   const { submit, submitting, error } = useSubmitEvent({ onCreated, onClose });
 
   function handleSubmit(event: FormEvent) {
@@ -33,7 +36,7 @@ export function SleepForm({ onBack, onClose, onCreated }: EventFormProps) {
       ],
       description: description.trim() || undefined,
       tags,
-    });
+    }, schedule);
   }
 
   return (
@@ -74,6 +77,8 @@ export function SleepForm({ onBack, onClose, onCreated }: EventFormProps) {
           />
         </div>
       </div>
+
+      <ScheduleFields value={schedule} onChange={setSchedule} />
 
       <CommonFields
         description={description}

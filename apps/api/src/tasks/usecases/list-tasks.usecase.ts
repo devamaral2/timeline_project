@@ -1,11 +1,19 @@
 import type { AuthenticatedUser } from "../../auth/authenticated-user";
 import type { TaskRepository } from "@repo/entities/ports";
 import type { TaskSummaryDto } from "@repo/entities/contracts";
+import {
+  NO_RECURRENCES,
+  type RecurrenceMaterializer,
+} from "../../recurrences/usecases/materialize-recurrences.usecase";
 
 export class ListTasksUseCase {
-  constructor(private readonly taskRepository: TaskRepository) {}
+  constructor(
+    private readonly taskRepository: TaskRepository,
+    private readonly recurrences: RecurrenceMaterializer = NO_RECURRENCES,
+  ) {}
 
   async execute(_input: unknown, actor: AuthenticatedUser): Promise<TaskSummaryDto[]> {
+    await this.recurrences.materialize(actor.userId);
     const tasks = await this.taskRepository.listByUserId(actor.userId);
     return tasks.map(toSummaryDto);
   }

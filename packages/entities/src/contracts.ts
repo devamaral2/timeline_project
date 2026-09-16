@@ -37,3 +37,5 @@ export type {
   WorkoutInput,
   TrainingInputData,
 } from "./events/items/training-data";
+export type * from "./recurrences/contracts/recurrence-rule";
+export type * from "./recurrences/contracts/recurrence.dto";

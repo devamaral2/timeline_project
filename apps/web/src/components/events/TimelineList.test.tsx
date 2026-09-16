@@ -4,7 +4,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import type {
   TimelineEventCardDto,
   TimelineEventPageDto,
-} from '@repo/entities/contracts';
+} from '@/lib/api/contracts';
 import { TestIntersectionObserver } from '@/test/setup';
 import { TimelineList } from './TimelineList';
 

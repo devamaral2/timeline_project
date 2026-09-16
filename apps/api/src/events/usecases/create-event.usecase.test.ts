@@ -95,22 +95,55 @@ test("requires a name when the primary item is routine", async () => {
   ).rejects.toThrow("Event requires a name");
 });
 
-test("finishes the latest open event before creating a new one", async () => {
+test("leaves an earlier open event alone when creating a new one", async () => {
   const openEvent = openTrainingEvent("01K2TESTOPENEVENT1234567890", new Date("2026-08-17T08:00:00-03:00"));
   const database = new InMemoryEventDatabase([openEvent]);
   const eventRepository = new InMemoryEventRepository(database);
   const useCase = new CreateEventUseCase(eventRepository, new StubMealParsingGateway(), new InMemoryWorkoutCatalog());
-  const beforeCreate = new Date();
 
   const result = await useCase.execute(
     { name: "Planejamento", items: [{ type: "routine" }] },
     { userId: "auth-user-1" },
   );
-  const updatedOpenEvent = await eventRepository.findById(openEvent.id);
+  const untouched = await eventRepository.findById(openEvent.id);
 
-  expect(updatedOpenEvent?.finishedAt).toBeInstanceOf(Date);
-  expect(updatedOpenEvent?.finishedAt?.getTime()).toBeGreaterThanOrEqual(beforeCreate.getTime());
+  // Um evento sem fim declarado continua sem fim: nenhum outro evento o encerra.
+  expect(untouched?.finishedAt).toBeUndefined();
+  expect(untouched?.revision).toBe(openEvent.revision);
   expect(result.eventId).toBeDefined();
+});
+
+test("starts the event when the input says, in the past or in the future", async () => {
+  const database = new InMemoryEventDatabase();
+  const eventRepository = new InMemoryEventRepository(database);
+  const useCase = new CreateEventUseCase(eventRepository, new StubMealParsingGateway(), new InMemoryWorkoutCatalog());
+
+  const { eventId } = await useCase.execute(
+    {
+      name: "Dentista",
+      startedAt: "2099-03-04T13:00:00.000Z",
+      finishedAt: "2099-03-04T14:00:00.000Z",
+      items: [{ type: "routine" }],
+    },
+    { userId: "auth-user-1" },
+  );
+
+  const stored = await eventRepository.findById(eventId);
+  expect(stored?.startedAt.toISOString()).toBe("2099-03-04T13:00:00.000Z");
+  expect(stored?.finishedAt?.toISOString()).toBe("2099-03-04T14:00:00.000Z");
+});
+
+test("refuses an unparseable startedAt", async () => {
+  const database = new InMemoryEventDatabase();
+  const eventRepository = new InMemoryEventRepository(database);
+  const useCase = new CreateEventUseCase(eventRepository, new StubMealParsingGateway(), new InMemoryWorkoutCatalog());
+
+  await expect(
+    useCase.execute(
+      { name: "Dentista", startedAt: "amanha", items: [{ type: "routine" }] },
+      { userId: "auth-user-1" },
+    ),
+  ).rejects.toThrow("Invalid date");
 });
 
 test("keeps the previous event open when meal parsing fails", async () => {

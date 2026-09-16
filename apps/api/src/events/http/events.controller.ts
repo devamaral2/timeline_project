@@ -96,6 +96,7 @@ export class EventsController {
     @CurrentUser() actor: AuthenticatedUser,
   ): Promise<{ eventId: string }> {
     assertValidMarks(body);
+    assertValidWindow(body);
     return this.createEvent.execute(body, actor);
   }
 
@@ -165,6 +166,7 @@ export class EventsController {
     @CurrentUser() actor: AuthenticatedUser,
   ): Promise<void> {
     assertValidMarks(body);
+    assertValidWindow(body);
     assertValidExpectedRevision(body);
     await this.updateEvent.execute({ ...body, eventId }, actor);
   }
@@ -191,6 +193,23 @@ function assertValidMarks(body: { missed?: unknown; priority?: unknown }): void 
   }
   if (body?.priority !== undefined && !isEventPriority(body.priority)) {
     throw new BadRequestException("Invalid event priority");
+  }
+}
+
+/**
+ * As datas nao sao mais opcionais de proposito: o evento pode comecar no
+ * passado, agora ou no futuro, e quem escolhe e o cliente. Sem esta checagem
+ * `new Date("amanha")` viraria `Invalid Date` e desceria inteiro ate a entidade.
+ */
+function assertValidWindow(body: { startedAt?: unknown; finishedAt?: unknown }): void {
+  assertValidInstant(body?.startedAt, "startedAt");
+  assertValidInstant(body?.finishedAt, "finishedAt");
+}
+
+function assertValidInstant(value: unknown, field: string): void {
+  if (value === undefined) return;
+  if (typeof value !== "string" || Number.isNaN(new Date(value).getTime())) {
+    throw new BadRequestException(`Invalid ${field}`);
   }
 }
 

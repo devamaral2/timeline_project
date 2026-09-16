@@ -27,6 +27,7 @@ test("task status and the event annotation do not stop the event timer", () => {
   if (!card) throw new Error("Card da tarefa não encontrado");
   expect(within(card).getByRole("timer")).toHaveTextContent("35:00");
   expect(within(card).getByText("Não realizado")).toBeInTheDocument();
+  expect(card).toHaveAttribute("data-missed", "true");
   expect(within(card).getByRole("img", { name: "Prioridade da tarefa: Flexível" })).toBeInTheDocument();
 });
 

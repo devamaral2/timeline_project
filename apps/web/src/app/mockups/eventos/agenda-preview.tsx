@@ -2,44 +2,104 @@
 
 import {
   dayKeyRange, dayNumber, isSameMonth, longDate, monthGridOf,
-  monthLabel, shiftDayKey, shiftMonthKey, weekOf, weekday,
+  monthLabel, shiftDayKey, shiftMonthKey, weekOf, weekday, zonedDayEnd, zonedDayStart,
 } from "@repo/timeline";
-import { ChevronDown, ChevronLeft, ChevronRight, Columns2, List, Plus, SlidersHorizontal } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Columns2, List, SlidersHorizontal } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ICON_STROKE_WIDTH, visualForItemType } from "@/components/events/event-visuals";
+import { authedFetch } from "@/lib/api/authed-fetch";
+import type { TimelineEventCardDto, TimelineEventPageDto } from "@/lib/api/contracts";
 import { useNow } from "@/lib/events/use-now";
+import { useSessionState } from "@/lib/session/use-session";
 import { AgendaDay } from "./agenda-day";
-import { EXAMPLE_NOW, EXAMPLE_TODAY, type ExampleTask } from "./agenda-examples";
+import { agendaEventsByDay } from "./agenda-data";
+import { EXAMPLE_NOW, EXAMPLE_TODAY, type ExampleEvent, type ExampleTask } from "./agenda-examples";
+import { agendaRefreshEvent } from "./agenda-refresh";
 import { EventTaskDialog, type SelectedEvent } from "./task-controls";
 import styles from "./mockup.module.css";
 
 type ViewMode = "list" | "day";
 
-export function AgendaPreview() {
+export function AgendaPreview({ userId, todayKey = EXAMPLE_TODAY }: { userId?: string; todayKey?: string }) {
+  const { user, ready } = useSessionState();
   const realNow = useNow();
   const [clockStartedAt] = useState(Date.now);
   // A prévia usa a data ilustrativa; os segundos avançam com o relógio compartilhado.
-  const now = EXAMPLE_NOW + (realNow ? Math.max(0, realNow.getTime() - clockStartedAt) : 0);
+  const now = userId
+    ? (realNow?.getTime() ?? Date.now())
+    : EXAMPLE_NOW + (realNow ? Math.max(0, realNow.getTime() - clockStartedAt) : 0);
   const [tasks, setTasks] = useState<Record<string, ExampleTask>>({});
   const [missedEvents, setMissedEvents] = useState<Record<string, boolean>>({});
+  const [eventsByDay, setEventsByDay] = useState<Record<string, ExampleEvent[]>>({});
+  const [loadState, setLoadState] = useState<"idle" | "loading" | "failed">("idle");
+  const [refreshVersion, setRefreshVersion] = useState(0);
   const [selectedEvent, setSelectedEvent] = useState<SelectedEvent | null>(null);
   const viewOptionsRef = useRef<HTMLDetailsElement>(null);
   const [mode, setMode] = useState<ViewMode>("list");
-  const [selectedDay, setSelectedDay] = useState(EXAMPLE_TODAY);
-  const [navigation, setNavigation] = useState({ dayKey: EXAMPLE_TODAY });
-  const [dayCount, setDayCount] = useState(14);
+  const [selectedDay, setSelectedDay] = useState(todayKey);
+  const [navigation, setNavigation] = useState({ dayKey: todayKey });
+  const [dayRange, setDayRange] = useState({ before: 0, after: 0 });
   const [monthOpen, setMonthOpen] = useState(false);
   const [browsingMonth, setBrowsingMonth] = useState(EXAMPLE_TODAY);
   const controlsRef = useRef<HTMLDivElement>(null);
   const daysRef = useRef<HTMLElement>(null);
-  const loadMoreRef = useRef<HTMLDivElement>(null);
+  const previousDaysRef = useRef<HTMLDivElement>(null);
+  const nextDaysRef = useRef<HTMLDivElement>(null);
   const scrollFrame = useRef(0);
-  const pageDays = mode === "day" ? weekOf(navigation.dayKey) : dayKeyRange(navigation.dayKey, dayCount);
+  const previousDaysUnlocked = dayRange.before > 0;
+  const nextDaysUnlocked = dayRange.after > 0;
+  const pageDays = mode === "day"
+    ? weekOf(navigation.dayKey)
+    : dayKeyRange(shiftDayKey(navigation.dayKey, -dayRange.before), dayRange.before + dayRange.after + 1);
+  const rangeStart = pageDays[0] ?? todayKey;
+  const rangeEnd = pageDays[pageDays.length - 1] ?? todayKey;
+
+  useEffect(() => {
+    function refresh() {
+      setRefreshVersion((version) => version + 1);
+    }
+    window.addEventListener(agendaRefreshEvent, refresh);
+    return () => window.removeEventListener(agendaRefreshEvent, refresh);
+  }, []);
+
+  useEffect(() => {
+    void refreshVersion;
+    if (!userId || !user || !ready) return;
+    let cancelled = false;
+    setLoadState("loading");
+
+    async function loadEvents() {
+      try {
+        const from = zonedDayStart(rangeStart).toISOString();
+        const to = zonedDayEnd(rangeEnd).toISOString();
+        const loaded: TimelineEventCardDto[] = [];
+        let cursor: string | undefined;
+
+        do {
+          const params = new URLSearchParams({ from, to, limit: "100" });
+          if (cursor) params.set("cursor", cursor);
+          const response = await authedFetch<TimelineEventPageDto>(`/api/events?${params.toString()}`);
+          loaded.push(...response.items);
+          cursor = response.nextCursor;
+        } while (cursor);
+
+        if (cancelled) return;
+        const next = agendaEventsByDay(loaded);
+        setEventsByDay(current => ({ ...current, ...next }));
+        setLoadState("idle");
+      } catch {
+        if (!cancelled) setLoadState("failed");
+      }
+    }
+
+    void loadEvents();
+    return () => { cancelled = true; };
+  }, [rangeEnd, rangeStart, ready, refreshVersion, user, userId]);
 
   function selectDay(dayKey: string) {
     setSelectedDay(dayKey);
     setNavigation({ dayKey });
-    setDayCount(14);
+    setDayRange({ before: 0, after: 0 });
     setMonthOpen(false);
     window.scrollTo({ top: 0, behavior: "instant" });
   }
@@ -58,14 +118,24 @@ export function AgendaPreview() {
   }, [mode, navigation]);
 
   useEffect(() => {
-    const sentinel = loadMoreRef.current;
-    if (mode !== "list" || !sentinel) return;
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry?.isIntersecting) setDayCount((count) => count + 7);
-    }, { rootMargin: "0px 0px 400px 0px" });
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [mode]);
+    if (mode !== "list") return;
+    const observers: IntersectionObserver[] = [];
+    if (previousDaysUnlocked && previousDaysRef.current) {
+      const observer = new IntersectionObserver(([entry]) => {
+        if (entry?.isIntersecting) setDayRange(current => ({ ...current, before: current.before + 7 }));
+      }, { rootMargin: "350px 0px 0px" });
+      observer.observe(previousDaysRef.current);
+      observers.push(observer);
+    }
+    if (nextDaysUnlocked && nextDaysRef.current) {
+      const observer = new IntersectionObserver(([entry]) => {
+        if (entry?.isIntersecting) setDayRange(current => ({ ...current, after: current.after + 7 }));
+      }, { rootMargin: "0px 0px 350px" });
+      observer.observe(nextDaysRef.current);
+      observers.push(observer);
+    }
+    return () => observers.forEach(observer => { observer.disconnect(); });
+  }, [mode, previousDaysUnlocked, nextDaysUnlocked]);
 
   // O mês acompanha o dia que está sendo lido na lista contínua.
   useEffect(() => {
@@ -86,6 +156,13 @@ export function AgendaPreview() {
     };
   }, [mode]);
 
+  if (userId && !ready) {
+    return <main id="conteudo" className={styles.main}><p role="status" className={styles.emptyDay}>Carregando sua sessão…</p></main>;
+  }
+  if (userId && ready && !user) {
+    return <main id="conteudo" className={styles.main}><p className={styles.emptyDay}>Entre na sua conta para ver sua agenda.</p></main>;
+  }
+
   return (
     <main id="conteudo" className={styles.main}>
       <div className={styles.pageHeading}>
@@ -101,7 +178,6 @@ export function AgendaPreview() {
               <button type="button" aria-pressed={mode === "day"} onClick={() => changeMode("day")}><Columns2 aria-hidden /><span>Dia<small>Um dia de cada vez</small></span></button>
             </fieldset>
           </details>
-          <button type="button" disabled className={styles.headerCreate} aria-label="Novo evento" title="Novo evento"><Plus aria-hidden /></button>
         </div>
       </div>
 
@@ -114,7 +190,7 @@ export function AgendaPreview() {
                 onClick={() => { setBrowsingMonth(selectedDay); setMonthOpen((open) => !open); }}
               >{monthLabel(monthOpen ? browsingMonth : selectedDay)}<ChevronDown aria-hidden /></button>
               <div className={styles.dateActions}>
-                <button type="button" className={styles.todayButton} onClick={() => selectDay(EXAMPLE_TODAY)}>Hoje</button>
+                <button type="button" className={styles.todayButton} onClick={() => selectDay(todayKey)}>Hoje</button>
                 <button type="button" aria-label={monthOpen ? "Mês anterior" : "Dia anterior"} onClick={() => monthOpen ? setBrowsingMonth((month) => shiftMonthKey(month, -1)) : selectDay(shiftDayKey(selectedDay, -1))}><ChevronLeft aria-hidden /></button>
                 <button type="button" aria-label={monthOpen ? "Próximo mês" : "Próximo dia"} onClick={() => monthOpen ? setBrowsingMonth((month) => shiftMonthKey(month, 1)) : selectDay(shiftDayKey(selectedDay, 1))}><ChevronRight aria-hidden /></button>
               </div>
@@ -130,7 +206,7 @@ export function AgendaPreview() {
                 <div className={styles.monthDays}>
                   {weekOf(browsingMonth).map((dayKey) => <span className={styles.weekday} key={dayKey}>{weekday(dayKey).slice(0, 3)}</span>)}
                   {monthGridOf(browsingMonth).map((dayKey) => (
-                    <button type="button" key={dayKey} aria-label={longDate(dayKey)} aria-pressed={dayKey === selectedDay} aria-current={dayKey === EXAMPLE_TODAY ? "date" : undefined} data-outside={!isSameMonth(dayKey, browsingMonth)} onClick={() => selectDay(dayKey)}>{dayNumber(dayKey)}</button>
+                    <button type="button" key={dayKey} aria-label={longDate(dayKey)} aria-pressed={dayKey === selectedDay} aria-current={dayKey === todayKey ? "date" : undefined} data-outside={!isSameMonth(dayKey, browsingMonth)} onClick={() => selectDay(dayKey)}>{dayNumber(dayKey)}</button>
                   ))}
                 </div>
               </section>
@@ -142,6 +218,10 @@ export function AgendaPreview() {
               <p>Deslize para mudar de dia</p>
             </div>
           ) : null}
+
+          {mode === "list" ? <div ref={previousDaysRef} className={`${styles.loadBoundary} ${styles.loadPrevious}`}>
+            <button type="button" onClick={() => setDayRange(current => ({ ...current, before: current.before + 7 }))}>Ver eventos anteriores</button>
+          </div> : null}
 
           <section
             ref={daysRef} className={mode === "list" ? styles.verticalDays : styles.horizontalDays}
@@ -161,14 +241,14 @@ export function AgendaPreview() {
               if (dayKey) setSelectedDay(dayKey);
             }}
           >
-            {pageDays.map((dayKey) => <AgendaDay key={dayKey} dayKey={dayKey} now={now} tasks={tasks} missedEvents={missedEvents} onSelectEvent={setSelectedEvent} />)}
+            {pageDays.map((dayKey) => <AgendaDay key={dayKey} dayKey={dayKey} now={now} tasks={tasks} missedEvents={missedEvents} onSelectEvent={setSelectedEvent} events={userId ? eventsByDay[dayKey] ?? [] : undefined} userId={userId} todayKey={todayKey} />)}
           </section>
-          {mode === "list" ? (
-            <div ref={loadMoreRef} className={styles.loadMoreDays}>
-              <button type="button" onClick={() => setDayCount((count) => count + 7)}>Ver mais dias</button>
-            </div>
-          ) : null}
-          <p className={styles.listNote}>Dados de exemplo · relógio ilustrativo iniciado às 09:35</p>
+          {mode === "list" ? <div ref={nextDaysRef} className={`${styles.loadBoundary} ${styles.loadNext}`}>
+            <button type="button" onClick={() => setDayRange(current => ({ ...current, after: current.after + 7 }))}>Ver eventos dos próximos dias</button>
+          </div> : null}
+          {userId && loadState === "loading" ? <p role="status" className={styles.listNote}>Carregando sua agenda…</p> : null}
+          {userId && loadState === "failed" ? <p role="alert" className={styles.listNote}>Não foi possível carregar a agenda. Tente novamente.</p> : null}
+          {!userId ? <p className={styles.listNote}>Dados de exemplo · relógio ilustrativo iniciado às 09:35</p> : null}
         </div>
 
         <aside className={styles.sidebar} aria-label="Legenda da agenda">
@@ -192,9 +272,9 @@ export function AgendaPreview() {
       <EventTaskDialog
         selected={selectedEvent}
         task={selectedEvent?.event.task ? tasks[selectedEvent.event.task.id] ?? selectedEvent.event.task : undefined}
-        missed={selectedEvent ? missedEvents[`${selectedEvent.dayKey}:${selectedEvent.event.name}`] ?? selectedEvent.event.missed ?? false : false}
+        missed={selectedEvent ? missedEvents[`${selectedEvent.dayKey}:${selectedEvent.event.id ?? selectedEvent.event.name}`] ?? selectedEvent.event.missed ?? false : false}
         onTaskChange={(task) => setTasks((current) => ({ ...current, [task.id]: task }))}
-        onMissedChange={(missed) => { if (selectedEvent) setMissedEvents((current) => ({ ...current, [`${selectedEvent.dayKey}:${selectedEvent.event.name}`]: missed })); }}
+        onMissedChange={(missed) => { if (selectedEvent) setMissedEvents((current) => ({ ...current, [`${selectedEvent.dayKey}:${selectedEvent.event.id ?? selectedEvent.event.name}`]: missed })); }}
         onClose={() => setSelectedEvent(null)}
       />
     </main>

@@ -9,6 +9,7 @@ import {
 import { TagList } from "../../events/value-objects/tag-list";
 import { TaskId } from "../value-objects/task-id";
 import { TaskValidationError } from "../errors/task.errors";
+import { detachOccurrence, type OccurrenceLink } from "../../recurrences/types/occurrence-link";
 
 export interface TaskCreateProps {
   id?: string;
@@ -23,6 +24,7 @@ export interface TaskCreateProps {
   estimatedFinishAt?: Date;
   finishedAt?: Date;
   dependsOnTaskIds?: string[];
+  occurrence?: OccurrenceLink;
 }
 
 export interface TaskRehydrateProps extends TaskCreateProps {
@@ -55,6 +57,7 @@ interface TaskBuildProps {
   estimatedFinishAt: Date | undefined;
   finishedAt: Date | undefined;
   dependsOnTaskIds: string[];
+  occurrence: OccurrenceLink | undefined;
   revision: number;
 }
 
@@ -78,6 +81,8 @@ export class Task {
   readonly estimatedFinishAt: Date | undefined;
   readonly finishedAt: Date | undefined;
   readonly dependsOnTaskIds: readonly string[];
+  /** Presente quando a tarefa e uma ocorrencia de uma serie. */
+  readonly occurrence: OccurrenceLink | undefined;
   readonly revision: number;
 
   private constructor(props: TaskBuildProps) {
@@ -93,6 +98,7 @@ export class Task {
     this.estimatedFinishAt = props.estimatedFinishAt;
     this.finishedAt = props.finishedAt;
     this.dependsOnTaskIds = props.dependsOnTaskIds;
+    this.occurrence = props.occurrence;
     this.revision = props.revision;
   }
 
@@ -131,6 +137,7 @@ export class Task {
       estimatedFinishAt: props.estimatedFinishAt,
       finishedAt: props.finishedAt,
       dependsOnTaskIds: props.dependsOnTaskIds ?? [],
+      occurrence: props.occurrence,
       revision: 1,
     });
   }
@@ -149,10 +156,12 @@ export class Task {
       estimatedFinishAt: props.estimatedFinishAt,
       finishedAt: props.finishedAt,
       dependsOnTaskIds: props.dependsOnTaskIds ?? [],
+      occurrence: props.occurrence,
       revision: props.revision,
     });
   }
 
+  /** Toda revisao e uma edicao do usuario, e por isso destaca a ocorrencia da serie. */
   revise(changes: TaskReviseChanges): Task {
     return Task.build({
       id: this.id,
@@ -168,6 +177,7 @@ export class Task {
         changes.estimatedFinishAt !== undefined ? changes.estimatedFinishAt : this.estimatedFinishAt,
       finishedAt: changes.finishedAt !== undefined ? changes.finishedAt : this.finishedAt,
       dependsOnTaskIds: changes.dependsOnTaskIds ?? [...this.dependsOnTaskIds],
+      occurrence: detachOccurrence(this.occurrence),
       revision: this.revision + 1,
     });
   }

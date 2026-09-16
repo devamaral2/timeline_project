@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import type { EventPriority } from "@repo/entities/contracts";
+import type { EventPriority } from "@/lib/api/contracts";
 import {
   CommonFields,
   type EditEventFormProps,

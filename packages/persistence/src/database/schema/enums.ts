@@ -15,3 +15,10 @@ export const workItemPriorityEnum = pgEnum("work_item_priority", [
   "medium",
   "low",
 ]);
+export const recurrenceFrequencyEnum = pgEnum("recurrence_freq", [
+  "daily",
+  "weekly",
+  "monthly",
+  "yearly",
+]);
+export const recurrenceTargetEnum = pgEnum("recurrence_target", ["event", "task"]);

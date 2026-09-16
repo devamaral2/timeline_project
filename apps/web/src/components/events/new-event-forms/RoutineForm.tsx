@@ -9,12 +9,15 @@ import {
   fieldLabelClass,
   useSubmitEvent,
 } from "./shared";
+import { ScheduleFields } from "./ScheduleFields";
+import { initialSchedule } from "./schedule";
 
 export function RoutineForm({ onBack, onClose, onCreated }: EventFormProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [schedule, setSchedule] = useState(initialSchedule);
   const { submit, submitting, error } = useSubmitEvent({ onCreated, onClose });
 
   function handleSubmit(event: FormEvent) {
@@ -31,7 +34,7 @@ export function RoutineForm({ onBack, onClose, onCreated }: EventFormProps) {
       name: name.trim(),
       description: description.trim() || undefined,
       tags,
-    });
+    }, schedule);
   }
 
   return (
@@ -51,6 +54,8 @@ export function RoutineForm({ onBack, onClose, onCreated }: EventFormProps) {
           className={fieldInputClass}
         />
       </div>
+
+      <ScheduleFields value={schedule} onChange={setSchedule} />
 
       <CommonFields
         description={description}

@@ -28,7 +28,7 @@ Direcao das dependencias (nunca o contrario):
 ```
 apps/web    ──> @repo/entities/contracts (apenas `import type`), @repo/timeline, @repo/theme
 apps/mobile ──> @repo/entities/contracts (apenas `import type`), @repo/timeline, @repo/theme
-apps/api    ──> @repo/entities, @repo/entities/ports, @repo/persistence
+apps/api    ──> @repo/entities, @repo/entities/ports, @repo/persistence, @repo/timeline
 @repo/persistence ──> @repo/entities
 @repo/timeline    ──> @repo/entities/contracts (apenas `import type`)
 ```
@@ -133,6 +133,28 @@ Os rotulos em portugues vivem nos `event-visuals` de cada app, junto dos rotulos
 de tipo. O selo usa `destructive`, que e token de situacao e vive separado de
 `training` e `meal`, que sao tokens de tipo: os dois aparecem no mesmo cartao e
 precisam ser distinguiveis.
+
+# Eventos no tempo e series
+
+Evento nao e mais so registro do passado: ele comeca no passado, agora ou no
+futuro, e **criar um evento nao fecha o anterior** — dois eventos podem se
+sobrepor. Por isso "sem `finishedAt`" nao quer dizer "acontecendo agora": quem
+responde isso e `eventPositionOf` (`upcoming`/`running`/`past`) em
+`@repo/timeline`. Nao volte a testar `!finishedAt` para desenhar cronometro.
+
+Eventos e tarefas que se repetem sao **series** (`recurrences`), com a regra em
+colunas estruturadas e o template em `jsonb`. As ocorrencias sao linhas de
+verdade em `events`/`tasks` (`recurrence_id`, `occurrence_on`,
+`recurrence_detached`), geradas preguicosamente no comeco das leituras da
+timeline, do daily e da lista de tarefas (`MaterializeRecurrencesUseCase`,
+horizonte de 60 dias, teto de 365). A expansao da regra vive em
+`@repo/timeline` (`expandOccurrences`) — por isso `apps/api` depende dele.
+
+- Editar uma ocorrencia a destaca da serie (`Event.revise`/`Task.revise`);
+  editar a serie regera de hoje em diante so as nao destacadas.
+- Apagar uma ocorrencia grava uma `recurrence_exceptions` para o dia nao voltar.
+- Apagar a serie preserva o passado, sem vinculo (`ON DELETE SET NULL`).
+- Serie nova nao inventa passado: a geracao comeca hoje.
 
 # App mobile
 

@@ -34,6 +34,9 @@ const backendUrl = process.env.BACKEND_URL ?? "http://127.0.0.1:3001";
 const authServiceUrl = process.env.AUTH_SERVICE_URL ?? "http://127.0.0.1:3002";
 
 const nextConfig: NextConfig = {
+  // O navegador embutido acessa o dev server por 127.0.0.1; sem esta origem,
+  // o Next bloqueia os chunks HMR/client e a hidratação nunca acontece.
+  allowedDevOrigins: ["127.0.0.1"],
   /**
    * `standalone` faz o next build emitir .next/standalone: um server.js mais
    * apenas o node_modules que o tracing provou necessario. E o que deixa o

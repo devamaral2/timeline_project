@@ -11,6 +11,17 @@ import type { ResolvedEventSchedule } from "../services/event-schedule.service";
 
 export const EVENT_TIME_ZONE = "America/Sao_Paulo";
 
+/**
+ * O controller ja recusa uma data invalida; aqui so traduzimos o que veio. Nao
+ * ha limite de quao longe no passado ou no futuro o evento pode cair.
+ */
+function parseInstant(value: string | undefined): Date | undefined {
+  if (value === undefined) return undefined;
+  const instant = new Date(value);
+  if (Number.isNaN(instant.getTime())) throw new EventValidationError("Invalid date");
+  return instant;
+}
+
 export class CreateEventUseCase {
   constructor(
     private readonly eventRepository: EventRepository,
@@ -25,28 +36,39 @@ export class CreateEventUseCase {
     actor: AuthenticatedUser,
     schedule?: ResolvedEventSchedule,
   ): Promise<{ eventId: string }> {
-    const startedAt = schedule?.startedAt ?? this.clock();
+    const event = await this.prepare(input, actor, schedule);
+    await this.eventRepository.save(event);
+    return { eventId: event.id };
+  }
+
+  /**
+   * Monta o evento sem gravar. A serie usa isto para validar o template e
+   * resolver uma vez so o que custa caro — a refeicao passa pelo modelo aqui,
+   * e nao a cada ocorrencia gerada.
+   */
+  async prepare(
+    input: CreateEventInput,
+    actor: AuthenticatedUser,
+    schedule?: ResolvedEventSchedule,
+  ): Promise<Event> {
+    const startedAt = schedule?.startedAt ?? parseInstant(input.startedAt) ?? this.clock();
+    const finishedAt = schedule?.finishedAt ?? parseInstant(input.finishedAt);
     const items = await this.buildItems(input.items, startedAt);
     const primary = items.find((item) => item.isPrimary);
     const name = input.name ?? this.deriveName(primary);
 
-    const event = Event.create({
+    return Event.create({
       userId: actor.userId,
       name,
       description: input.description ?? "",
       startedAt,
-      finishedAt: schedule?.finishedAt,
+      finishedAt,
       tags: input.tags ?? [],
       interruptions: [],
       items,
       missed: input.missed,
       priority: input.priority,
     });
-
-    // O evento anterior termina quando este comeca -- que nem sempre e "agora", desde que o
-    // agente de voz pode registrar algo que comecou no passado.
-    await this.eventRepository.saveClosingLatestOpen(event, event.startedAt);
-    return { eventId: event.id };
   }
 
   private async buildItems(itemsInput: CreateEventItemInput[], startedAt: Date): Promise<EventItem[]> {

@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import type {
   DailyOverviewQuery,
   EventRepository,
+  RecurrenceRepository,
   TagRepository,
   TaskRepository,
   TimelineEventQuery,
@@ -13,6 +14,7 @@ import { PostgresTimelineEventQuery } from "./events/queries/postgres-timeline-e
 import { PostgresEventRepository } from "./events/repositories/postgres-event.repository";
 import { PostgresTagRepository } from "./events/repositories/postgres-tag.repository";
 import { PostgresTaskRepository } from "./tasks/repositories/postgres-task.repository";
+import { PostgresRecurrenceRepository } from "./recurrences/repositories/postgres-recurrence.repository";
 import { PostgresWorkoutCatalog } from "./catalog/postgres-workout.catalog";
 
 /**
@@ -30,6 +32,7 @@ export const TIMELINE_EVENT_QUERY = "TIMELINE_EVENT_QUERY";
 export const DAILY_OVERVIEW_QUERY = "DAILY_OVERVIEW_QUERY";
 export const WORKOUT_CATALOG = "WORKOUT_CATALOG";
 export const TASK_REPOSITORY = "TASK_REPOSITORY";
+export const RECURRENCE_REPOSITORY = "RECURRENCE_REPOSITORY";
 
 function requireDatabaseUrl(): string {
   const value = process.env.DATABASE_URL;
@@ -79,6 +82,12 @@ function requireDatabaseUrl(): string {
       useFactory: (database: PostgresDatabase): TaskRepository =>
         new PostgresTaskRepository(database.db),
     },
+    {
+      provide: RECURRENCE_REPOSITORY,
+      inject: [DATABASE],
+      useFactory: (database: PostgresDatabase): RecurrenceRepository =>
+        new PostgresRecurrenceRepository(database.db),
+    },
   ],
   exports: [
     DATABASE,
@@ -88,6 +97,7 @@ function requireDatabaseUrl(): string {
     DAILY_OVERVIEW_QUERY,
     WORKOUT_CATALOG,
     TASK_REPOSITORY,
+    RECURRENCE_REPOSITORY,
   ],
 })
 export class PersistenceModule {}

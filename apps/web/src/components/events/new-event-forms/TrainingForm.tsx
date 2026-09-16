@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { Plus, X } from "lucide-react";
-import type { WorkoutCode, WorkoutInput } from "@repo/entities/contracts";
+import type { WorkoutCode, WorkoutInput } from "@/lib/api/contracts";
 import { cn } from "@/lib/utils";
 import { iconButtonClass } from "@/components/ui/button-styles";
 import { addRowButtonClass, emptyRowClass, inlineLinkClass, smallInputClass } from "./field-styles";
@@ -16,6 +16,8 @@ import {
   fieldLabelClass,
   useSubmitEvent,
 } from "./shared";
+import { ScheduleFields } from "./ScheduleFields";
+import { initialSchedule } from "./schedule";
 
 interface SetDraft {
   key: string;
@@ -60,6 +62,7 @@ export function TrainingForm({ onBack, onClose, onCreated }: EventFormProps) {
   const [workouts, setWorkouts] = useState<WorkoutDraft[]>([]);
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState<string[]>([]);
+  const [schedule, setSchedule] = useState(initialSchedule);
   const { submit, submitting, error } = useSubmitEvent({ onCreated, onClose });
 
   function updateWorkout(key: string, patch: Partial<WorkoutDraft>) {
@@ -108,7 +111,7 @@ export function TrainingForm({ onBack, onClose, onCreated }: EventFormProps) {
       items: [{ type: "training", data: { workouts: builtWorkouts } }],
       description: description.trim() || undefined,
       tags,
-    });
+    }, schedule);
   }
 
   return (
@@ -277,6 +280,8 @@ export function TrainingForm({ onBack, onClose, onCreated }: EventFormProps) {
           Adicionar treino
         </button>
       </div>
+
+      <ScheduleFields value={schedule} onChange={setSchedule} />
 
       <CommonFields
         description={description}

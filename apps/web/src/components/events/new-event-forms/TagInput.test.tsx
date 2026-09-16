@@ -1,7 +1,7 @@
 import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import type { TagSuggestionDto } from "@repo/entities/contracts";
+import type { TagSuggestionDto } from "@/lib/api/contracts";
 import { TagInput } from "./TagInput";
 
 const suggestions: TagSuggestionDto[] = [{ id: "tag-1", name: "treino" }];
