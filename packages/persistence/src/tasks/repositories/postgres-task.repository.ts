@@ -45,7 +45,7 @@ export class PostgresTaskRepository implements TaskRepository {
         id: task.id,
         revision: task.revision,
         userId: task.userId,
-        planId: task.planId ?? null,
+        parentTaskId: task.parentTaskId ?? null,
         name: task.name,
         description: task.description,
         status: task.status,
@@ -64,7 +64,7 @@ export class PostgresTaskRepository implements TaskRepository {
     await this.db.transaction(async (tx) => {
       const result = await tx.execute(sql`
         UPDATE tasks
-        SET plan_id = ${task.planId ?? null},
+        SET parent_task_id = ${task.parentTaskId ?? null},
             name = ${task.name},
             description = ${task.description},
             status = ${task.status},
@@ -129,8 +129,8 @@ export class PostgresTaskRepository implements TaskRepository {
     return Promise.all(rows.map((row) => this.hydrate(row)));
   }
 
-  async listByPlanId(planId: string): Promise<Task[]> {
-    const rows = await this.db.select().from(schema.tasks).where(eq(schema.tasks.planId, planId));
+  async listByParentTaskId(parentTaskId: string): Promise<Task[]> {
+    const rows = await this.db.select().from(schema.tasks).where(eq(schema.tasks.parentTaskId, parentTaskId));
     return Promise.all(rows.map((row) => this.hydrate(row)));
   }
 

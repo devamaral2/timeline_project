@@ -20,7 +20,7 @@ export class GetTaskUseCase {
 export function toDetailDto(task: Task): TaskDetailDto {
   return {
     id: task.id,
-    planId: task.planId,
+    parentTaskId: task.parentTaskId,
     name: task.name,
     description: task.description,
     status: task.status,

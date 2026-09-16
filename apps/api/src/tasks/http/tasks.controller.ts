@@ -22,6 +22,7 @@ import { GetTaskUseCase } from "../usecases/get-task.usecase";
 import { UpdateTaskUseCase } from "../usecases/update-task.usecase";
 import { DeleteTaskUseCase } from "../usecases/delete-task.usecase";
 import { ListTasksUseCase } from "../usecases/list-tasks.usecase";
+import { ListSubtasksUseCase } from "../usecases/list-subtasks.usecase";
 
 @Controller("api/tasks")
 export class TasksController {
@@ -31,6 +32,7 @@ export class TasksController {
     private readonly getTask: GetTaskUseCase,
     private readonly updateTask: UpdateTaskUseCase,
     private readonly deleteTask: DeleteTaskUseCase,
+    private readonly listSubtasks: ListSubtasksUseCase,
   ) {}
 
   @Get()
@@ -47,6 +49,7 @@ export class TasksController {
     @CurrentUser() actor: AuthenticatedUser,
   ): Promise<{ taskId: string }> {
     assertValidWorkItemFields(body);
+    assertValidParentTaskId(body);
     return this.createTask.execute(body, actor);
   }
 
@@ -61,6 +64,16 @@ export class TasksController {
     return task;
   }
 
+  /** Filhas diretas, nao a arvore inteira: quem quiser os netos pede de novo. */
+  @Get(":taskId/subtasks")
+  @UseGuards(AuthServiceGuard)
+  async subtasks(
+    @Param("taskId") taskId: string,
+    @CurrentUser() actor: AuthenticatedUser,
+  ): Promise<TaskSummaryDto[]> {
+    return this.listSubtasks.execute({ taskId }, actor);
+  }
+
   @Patch(":taskId")
   @UseGuards(AuthServiceGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -70,6 +83,7 @@ export class TasksController {
     @CurrentUser() actor: AuthenticatedUser,
   ): Promise<void> {
     assertValidWorkItemFields(body);
+    assertValidParentTaskId(body);
     assertValidExpectedRevision(body);
     await this.updateTask.execute({ ...body, taskId }, actor);
   }
@@ -102,6 +116,14 @@ function assertValidWorkItemFields(body: {
       body.dependsOnTaskIds.some((id) => typeof id !== "string"))
   ) {
     throw new BadRequestException("Invalid dependsOnTaskIds");
+  }
+}
+
+/** `null` e desligar a subtarefa do pai; string vazia nao e id de coisa nenhuma. */
+function assertValidParentTaskId(body: { parentTaskId?: unknown }): void {
+  if (body?.parentTaskId === undefined || body.parentTaskId === null) return;
+  if (typeof body.parentTaskId !== "string" || body.parentTaskId.length === 0) {
+    throw new BadRequestException("Invalid parentTaskId");
   }
 }
 

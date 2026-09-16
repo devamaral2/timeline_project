@@ -3,7 +3,7 @@ import type { WorkItemPriority } from "../../work-items/types/work-item-priority
 
 export interface TaskDetailDto {
   id: string;
-  planId?: string;
+  parentTaskId?: string;
   name: string;
   description: string;
   status: WorkItemStatus;

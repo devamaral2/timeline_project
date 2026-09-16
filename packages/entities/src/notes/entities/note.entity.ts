@@ -7,7 +7,6 @@ export interface NoteCreateProps {
   content: string;
   taskId?: string | null;
   eventId?: string | null;
-  planId?: string | null;
 }
 
 export interface NoteRehydrateProps extends NoteCreateProps {
@@ -20,7 +19,6 @@ export interface NoteReviseChanges {
   content?: string;
   taskId?: string | null;
   eventId?: string | null;
-  planId?: string | null;
 }
 
 interface NoteBuildProps {
@@ -29,7 +27,6 @@ interface NoteBuildProps {
   content: string;
   taskId: string | undefined;
   eventId: string | undefined;
-  planId: string | undefined;
   revision: number;
   createdAt: Date;
   updatedAt: Date;
@@ -41,7 +38,6 @@ export class Note {
   readonly content: string;
   readonly taskId: string | undefined;
   readonly eventId: string | undefined;
-  readonly planId: string | undefined;
   readonly revision: number;
   readonly createdAt: Date;
   readonly updatedAt: Date;
@@ -52,7 +48,6 @@ export class Note {
     this.content = props.content;
     this.taskId = props.taskId;
     this.eventId = props.eventId;
-    this.planId = props.planId;
     this.revision = props.revision;
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
@@ -77,7 +72,6 @@ export class Note {
       content: props.content,
       taskId: props.taskId ?? undefined,
       eventId: props.eventId ?? undefined,
-      planId: props.planId ?? undefined,
       revision: 1,
       createdAt: now,
       updatedAt: now,
@@ -91,7 +85,6 @@ export class Note {
       content: props.content,
       taskId: props.taskId ?? undefined,
       eventId: props.eventId ?? undefined,
-      planId: props.planId ?? undefined,
       revision: props.revision,
       createdAt: props.createdAt,
       updatedAt: props.updatedAt,
@@ -106,7 +99,6 @@ export class Note {
       content: changes.content ?? this.content,
       taskId: changes.taskId !== undefined ? (changes.taskId ?? undefined) : this.taskId,
       eventId: changes.eventId !== undefined ? (changes.eventId ?? undefined) : this.eventId,
-      planId: changes.planId !== undefined ? (changes.planId ?? undefined) : this.planId,
       revision: this.revision + 1,
       createdAt: this.createdAt,
       updatedAt: now,

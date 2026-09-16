@@ -1,13 +1,13 @@
 import { Module } from "@nestjs/common";
-import { PersistenceModule, PLAN_REPOSITORY, TASK_REPOSITORY } from "@repo/persistence";
-import type { PlanRepository, TaskRepository } from "@repo/entities/ports";
+import { PersistenceModule, TASK_REPOSITORY } from "@repo/persistence";
+import type { TaskRepository } from "@repo/entities/ports";
 import { TasksController } from "./http/tasks.controller";
 import { CreateTaskUseCase } from "./usecases/create-task.usecase";
 import { GetTaskUseCase } from "./usecases/get-task.usecase";
 import { UpdateTaskUseCase } from "./usecases/update-task.usecase";
 import { DeleteTaskUseCase } from "./usecases/delete-task.usecase";
 import { ListTasksUseCase } from "./usecases/list-tasks.usecase";
-import { ListTasksByPlanUseCase } from "./usecases/list-tasks-by-plan.usecase";
+import { ListSubtasksUseCase } from "./usecases/list-subtasks.usecase";
 
 @Module({
   imports: [PersistenceModule],
@@ -15,8 +15,8 @@ import { ListTasksByPlanUseCase } from "./usecases/list-tasks-by-plan.usecase";
   providers: [
     {
       provide: CreateTaskUseCase,
-      inject: [TASK_REPOSITORY, PLAN_REPOSITORY],
-      useFactory: (tasks: TaskRepository, plans: PlanRepository) => new CreateTaskUseCase(tasks, plans),
+      inject: [TASK_REPOSITORY],
+      useFactory: (tasks: TaskRepository) => new CreateTaskUseCase(tasks),
     },
     {
       provide: GetTaskUseCase,
@@ -25,8 +25,8 @@ import { ListTasksByPlanUseCase } from "./usecases/list-tasks-by-plan.usecase";
     },
     {
       provide: UpdateTaskUseCase,
-      inject: [TASK_REPOSITORY, PLAN_REPOSITORY],
-      useFactory: (tasks: TaskRepository, plans: PlanRepository) => new UpdateTaskUseCase(tasks, plans),
+      inject: [TASK_REPOSITORY],
+      useFactory: (tasks: TaskRepository) => new UpdateTaskUseCase(tasks),
     },
     {
       provide: DeleteTaskUseCase,
@@ -39,12 +39,10 @@ import { ListTasksByPlanUseCase } from "./usecases/list-tasks-by-plan.usecase";
       useFactory: (tasks: TaskRepository) => new ListTasksUseCase(tasks),
     },
     {
-      provide: ListTasksByPlanUseCase,
-      inject: [TASK_REPOSITORY, PLAN_REPOSITORY],
-      useFactory: (tasks: TaskRepository, plans: PlanRepository) =>
-        new ListTasksByPlanUseCase(tasks, plans),
+      provide: ListSubtasksUseCase,
+      inject: [TASK_REPOSITORY],
+      useFactory: (tasks: TaskRepository) => new ListSubtasksUseCase(tasks),
     },
   ],
-  exports: [ListTasksByPlanUseCase],
 })
 export class TasksModule {}

@@ -2,13 +2,13 @@ import { BadRequestException } from "@nestjs/common";
 import { expect, test } from "vitest";
 import { Task, TaskOwnershipError } from "@repo/entities";
 import type { AuthenticatedUser } from "../../auth/authenticated-user";
-import { InMemoryPlanRepository } from "../../plans/testing/in-memory-plan.repository";
 import { InMemoryTaskRepository } from "../testing/in-memory-task.repository";
 import { CreateTaskUseCase } from "../usecases/create-task.usecase";
 import { GetTaskUseCase } from "../usecases/get-task.usecase";
 import { UpdateTaskUseCase } from "../usecases/update-task.usecase";
 import { DeleteTaskUseCase } from "../usecases/delete-task.usecase";
 import { ListTasksUseCase } from "../usecases/list-tasks.usecase";
+import { ListSubtasksUseCase } from "../usecases/list-subtasks.usecase";
 import { TasksController } from "./tasks.controller";
 
 const actor: AuthenticatedUser = { userId: "user-1" };
@@ -16,14 +16,14 @@ const attacker: AuthenticatedUser = { userId: "attacker-1" };
 
 function makeController(tasks: Task[] = []) {
   const taskRepository = new InMemoryTaskRepository(tasks);
-  const planRepository = new InMemoryPlanRepository();
 
   const controller = new TasksController(
     new ListTasksUseCase(taskRepository),
-    new CreateTaskUseCase(taskRepository, planRepository),
+    new CreateTaskUseCase(taskRepository),
     new GetTaskUseCase(taskRepository),
-    new UpdateTaskUseCase(taskRepository, planRepository),
+    new UpdateTaskUseCase(taskRepository),
     new DeleteTaskUseCase(taskRepository),
+    new ListSubtasksUseCase(taskRepository),
   );
 
   return { controller, taskRepository };
@@ -82,6 +82,37 @@ test("PATCH /api/tasks/:taskId surfaces the domain rejection of self-dependency"
   await expect(
     controller.update(task.id, { expectedRevision: 1, dependsOnTaskIds: [task.id] } as never, actor),
   ).rejects.toThrow("Task cannot depend on itself");
+});
+
+test("POST /api/tasks rejects a parentTaskId that is not a string", async () => {
+  const { controller } = makeController();
+
+  await expect(
+    controller.create({ name: "Comprar tinta", parentTaskId: 7 } as never, actor),
+  ).rejects.toBeInstanceOf(BadRequestException);
+});
+
+test("GET /api/tasks/:taskId/subtasks returns only the direct children", async () => {
+  const parent = Task.create({ userId: "user-1", name: "Reforma", description: "", tags: [] });
+  const child = Task.create({
+    userId: "user-1",
+    parentTaskId: parent.id,
+    name: "Comprar tinta",
+    description: "",
+    tags: [],
+  });
+  const { controller } = makeController([parent, child]);
+
+  const subtasks = await controller.subtasks(parent.id, actor);
+
+  expect(subtasks.map((subtask) => subtask.id)).toEqual([child.id]);
+});
+
+test("GET /api/tasks/:taskId/subtasks refuses another user's task", async () => {
+  const task = Task.create({ userId: "user-1", name: "Comprar tinta", description: "", tags: [] });
+  const { controller } = makeController([task]);
+
+  await expect(controller.subtasks(task.id, attacker)).rejects.toBeInstanceOf(TaskOwnershipError);
 });
 
 test("DELETE /api/tasks/:taskId removes the task", async () => {

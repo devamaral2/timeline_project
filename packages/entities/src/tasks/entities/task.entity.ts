@@ -13,7 +13,7 @@ import { TaskValidationError } from "../errors/task.errors";
 export interface TaskCreateProps {
   id?: string;
   userId: string;
-  planId?: string;
+  parentTaskId?: string;
   name: string;
   description: string;
   status?: WorkItemStatus;
@@ -30,7 +30,7 @@ export interface TaskRehydrateProps extends TaskCreateProps {
 }
 
 export interface TaskReviseChanges {
-  planId?: string | null;
+  parentTaskId?: string | null;
   name?: string;
   description?: string;
   status?: WorkItemStatus;
@@ -45,7 +45,7 @@ export interface TaskReviseChanges {
 interface TaskBuildProps {
   id: string;
   userId: string;
-  planId: string | undefined;
+  parentTaskId: string | undefined;
   name: string;
   description: string;
   status: WorkItemStatus;
@@ -58,10 +58,17 @@ interface TaskBuildProps {
   revision: number;
 }
 
+/**
+ * Tarefa. `parentTaskId` e a subtarefa: uma tarefa aponta para a tarefa de que
+ * e filha, e quem nao aponta para ninguem e uma tarefa de topo. Nao ha limite
+ * de profundidade — o que a entidade barra e a auto-referencia direta; ciclos
+ * mais longos sao barrados na hora de escolher o pai (`assert-parent-task.ts`
+ * em apps/api), que e o unico caminho capaz de cria-los.
+ */
 export class Task {
   readonly id: string;
   readonly userId: string;
-  readonly planId: string | undefined;
+  readonly parentTaskId: string | undefined;
   readonly name: string;
   readonly description: string;
   readonly status: WorkItemStatus;
@@ -76,7 +83,7 @@ export class Task {
   private constructor(props: TaskBuildProps) {
     this.id = props.id;
     this.userId = props.userId;
-    this.planId = props.planId;
+    this.parentTaskId = props.parentTaskId;
     this.name = props.name;
     this.description = props.description;
     this.status = props.status;
@@ -99,6 +106,9 @@ export class Task {
     if (props.dependsOnTaskIds.includes(props.id)) {
       throw new TaskValidationError("Task cannot depend on itself");
     }
+    if (props.parentTaskId === props.id) {
+      throw new TaskValidationError("Task cannot be its own parent");
+    }
 
     return new Task({
       ...props,
@@ -111,7 +121,7 @@ export class Task {
     return Task.build({
       id: props.id ?? TaskId.create(),
       userId: props.userId,
-      planId: props.planId,
+      parentTaskId: props.parentTaskId,
       name: props.name,
       description: props.description,
       status: props.status ?? DEFAULT_WORK_ITEM_STATUS,
@@ -129,7 +139,7 @@ export class Task {
     return Task.build({
       id: props.id ?? TaskId.create(),
       userId: props.userId,
-      planId: props.planId,
+      parentTaskId: props.parentTaskId,
       name: props.name,
       description: props.description,
       status: props.status ?? DEFAULT_WORK_ITEM_STATUS,
@@ -147,7 +157,7 @@ export class Task {
     return Task.build({
       id: this.id,
       userId: this.userId,
-      planId: changes.planId !== undefined ? (changes.planId ?? undefined) : this.planId,
+      parentTaskId: changes.parentTaskId !== undefined ? (changes.parentTaskId ?? undefined) : this.parentTaskId,
       name: changes.name ?? this.name,
       description: changes.description ?? this.description,
       status: changes.status ?? this.status,

@@ -5,7 +5,7 @@ const taskRow: TaskRow = {
   id: "01TASK0000000000000000000",
   revision: 2,
   userId: "user-1",
-  planId: "01PLAN0000000000000000000",
+  parentTaskId: "01PARENTTASK00000000000000",
   name: "Comprar tinta",
   description: "",
   status: "todo",
@@ -15,18 +15,18 @@ const taskRow: TaskRow = {
   finishedAt: null,
 };
 
-test("rehydrates a task preserving planId and tags", () => {
+test("rehydrates a task preserving parentTaskId and tags", () => {
   const task = mapTaskRow(taskRow, ["casa"]);
 
   expect(task.revision).toBe(2);
-  expect(task.planId).toBe("01PLAN0000000000000000000");
+  expect(task.parentTaskId).toBe("01PARENTTASK00000000000000");
   expect(task.tags).toEqual(["casa"]);
 });
 
-test("rehydrates a task without a plan", () => {
-  const task = mapTaskRow({ ...taskRow, planId: null }, []);
+test("rehydrates a task without a parent", () => {
+  const task = mapTaskRow({ ...taskRow, parentTaskId: null }, []);
 
-  expect(task.planId).toBeUndefined();
+  expect(task.parentTaskId).toBeUndefined();
 });
 
 test("rehydrates dependsOnTaskIds when given", () => {

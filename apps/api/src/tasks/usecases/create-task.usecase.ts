@@ -1,20 +1,16 @@
 import type { AuthenticatedUser } from "../../auth/authenticated-user";
-import { PlanNotFoundError, PlanOwnershipError, Task } from "@repo/entities";
-import type { PlanRepository, TaskRepository } from "@repo/entities/ports";
+import { Task } from "@repo/entities";
+import type { TaskRepository } from "@repo/entities/ports";
 import type { CreateTaskInput } from "@repo/entities/contracts";
 import { assertTasksOwned } from "./assert-tasks-owned";
+import { assertParentTaskAssignable } from "./assert-parent-task";
 
 export class CreateTaskUseCase {
-  constructor(
-    private readonly taskRepository: TaskRepository,
-    private readonly planRepository: PlanRepository,
-  ) {}
+  constructor(private readonly taskRepository: TaskRepository) {}
 
   async execute(input: CreateTaskInput, actor: AuthenticatedUser): Promise<{ taskId: string }> {
-    if (input.planId) {
-      const plan = await this.planRepository.findById(input.planId);
-      if (!plan) throw new PlanNotFoundError(`Plan not found: ${input.planId}`);
-      if (plan.userId !== actor.userId) throw new PlanOwnershipError();
+    if (input.parentTaskId) {
+      await assertParentTaskAssignable(this.taskRepository, input.parentTaskId, actor.userId);
     }
     if (input.dependsOnTaskIds?.length) {
       await assertTasksOwned(this.taskRepository, input.dependsOnTaskIds, actor.userId);
@@ -22,7 +18,7 @@ export class CreateTaskUseCase {
 
     const task = Task.create({
       userId: actor.userId,
-      planId: input.planId,
+      parentTaskId: input.parentTaskId,
       name: input.name ?? "",
       description: input.description ?? "",
       status: input.status,

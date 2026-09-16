@@ -1,54 +1,56 @@
 import { expect, test } from "vitest";
-import { Plan, PlanNotFoundError, PlanOwnershipError, Task, TaskNotFoundError, TaskOwnershipError } from "@repo/entities";
+import { Task, TaskNotFoundError, TaskOwnershipError } from "@repo/entities";
 import type { AuthenticatedUser } from "../../auth/authenticated-user";
-import { InMemoryPlanRepository } from "../../plans/testing/in-memory-plan.repository";
 import { InMemoryTaskRepository } from "../testing/in-memory-task.repository";
 import { CreateTaskUseCase } from "./create-task.usecase";
 
 const actor: AuthenticatedUser = { userId: "user-1" };
 
-test("creates a task without a plan", async () => {
+test("creates a top-level task", async () => {
   const tasks = new InMemoryTaskRepository();
-  const useCase = new CreateTaskUseCase(tasks, new InMemoryPlanRepository());
+  const useCase = new CreateTaskUseCase(tasks);
 
   const { taskId } = await useCase.execute({ name: "Comprar tinta" }, actor);
 
   const task = await tasks.findById(taskId);
-  expect(task?.planId).toBeUndefined();
+  expect(task?.parentTaskId).toBeUndefined();
 });
 
-test("links a task to a plan owned by the actor", async () => {
-  const plan = Plan.create({ userId: "user-1", name: "Reforma", description: "", tags: [] });
-  const tasks = new InMemoryTaskRepository();
-  const useCase = new CreateTaskUseCase(tasks, new InMemoryPlanRepository([plan]));
+test("creates a subtask of a task owned by the actor", async () => {
+  const parent = Task.create({ userId: "user-1", name: "Reforma", description: "", tags: [] });
+  const tasks = new InMemoryTaskRepository([parent]);
+  const useCase = new CreateTaskUseCase(tasks);
 
-  const { taskId } = await useCase.execute({ name: "Comprar tinta", planId: plan.id }, actor);
+  const { taskId } = await useCase.execute(
+    { name: "Comprar tinta", parentTaskId: parent.id },
+    actor,
+  );
 
   const task = await tasks.findById(taskId);
-  expect(task?.planId).toBe(plan.id);
+  expect(task?.parentTaskId).toBe(parent.id);
 });
 
-test("rejects a planId that does not exist", async () => {
-  const useCase = new CreateTaskUseCase(new InMemoryTaskRepository(), new InMemoryPlanRepository());
+test("rejects a parentTaskId that does not exist", async () => {
+  const useCase = new CreateTaskUseCase(new InMemoryTaskRepository());
 
   await expect(
-    useCase.execute({ name: "Comprar tinta", planId: "missing" }, actor),
-  ).rejects.toBeInstanceOf(PlanNotFoundError);
+    useCase.execute({ name: "Comprar tinta", parentTaskId: "missing" }, actor),
+  ).rejects.toBeInstanceOf(TaskNotFoundError);
 });
 
-test("rejects a planId owned by another user", async () => {
-  const plan = Plan.create({ userId: "user-2", name: "Reforma", description: "", tags: [] });
-  const useCase = new CreateTaskUseCase(new InMemoryTaskRepository(), new InMemoryPlanRepository([plan]));
+test("rejects a parentTaskId owned by another user", async () => {
+  const theirs = Task.create({ userId: "user-2", name: "Reforma", description: "", tags: [] });
+  const useCase = new CreateTaskUseCase(new InMemoryTaskRepository([theirs]));
 
   await expect(
-    useCase.execute({ name: "Comprar tinta", planId: plan.id }, actor),
-  ).rejects.toBeInstanceOf(PlanOwnershipError);
+    useCase.execute({ name: "Comprar tinta", parentTaskId: theirs.id }, actor),
+  ).rejects.toBeInstanceOf(TaskOwnershipError);
 });
 
 test("links dependsOnTaskIds when every id exists and is owned by the actor", async () => {
   const prerequisite = Task.create({ userId: "user-1", name: "Preparar parede", description: "", tags: [] });
   const tasks = new InMemoryTaskRepository([prerequisite]);
-  const useCase = new CreateTaskUseCase(tasks, new InMemoryPlanRepository());
+  const useCase = new CreateTaskUseCase(tasks);
 
   const { taskId } = await useCase.execute(
     { name: "Pintar", dependsOnTaskIds: [prerequisite.id] },
@@ -59,7 +61,7 @@ test("links dependsOnTaskIds when every id exists and is owned by the actor", as
 });
 
 test("rejects a dependsOnTaskIds entry that does not exist", async () => {
-  const useCase = new CreateTaskUseCase(new InMemoryTaskRepository(), new InMemoryPlanRepository());
+  const useCase = new CreateTaskUseCase(new InMemoryTaskRepository());
 
   await expect(
     useCase.execute({ name: "Pintar", dependsOnTaskIds: ["missing"] }, actor),
@@ -68,7 +70,7 @@ test("rejects a dependsOnTaskIds entry that does not exist", async () => {
 
 test("rejects a dependsOnTaskIds entry owned by another user", async () => {
   const theirs = Task.create({ userId: "user-2", name: "Deles", description: "", tags: [] });
-  const useCase = new CreateTaskUseCase(new InMemoryTaskRepository([theirs]), new InMemoryPlanRepository());
+  const useCase = new CreateTaskUseCase(new InMemoryTaskRepository([theirs]));
 
   await expect(
     useCase.execute({ name: "Pintar", dependsOnTaskIds: [theirs.id] }, actor),

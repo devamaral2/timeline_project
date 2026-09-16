@@ -14,7 +14,7 @@ describe("Task aggregate", () => {
     expect(task.status).toBe("todo");
     expect(task.priority).toBe("medium");
     expect(task.tags).toEqual(["casa"]);
-    expect(task.planId).toBeUndefined();
+    expect(task.parentTaskId).toBeUndefined();
     expect(task.dependsOnTaskIds).toEqual([]);
   });
 
@@ -49,16 +49,29 @@ describe("Task aggregate", () => {
     ).toThrow("Task cannot depend on itself");
   });
 
-  test("creates an aggregate linked to a plan", () => {
+  test("rejects a task whose parent is itself", () => {
+    expect(() =>
+      Task.create({
+        id: "task-self",
+        userId: "user-1",
+        parentTaskId: "task-self",
+        name: "Comprar tinta",
+        description: "",
+        tags: [],
+      }),
+    ).toThrow("Task cannot be its own parent");
+  });
+
+  test("creates an aggregate linked to a parent task", () => {
     const task = Task.create({
       userId: "user-1",
-      planId: "plan-1",
+      parentTaskId: "task-parent",
       name: "Comprar tinta",
       description: "",
       tags: [],
     });
 
-    expect(task.planId).toBe("plan-1");
+    expect(task.parentTaskId).toBe("task-parent");
   });
 
   test("rejects a finishedAt earlier than startedAt", () => {
@@ -101,7 +114,7 @@ describe("Task aggregate", () => {
   test("revise increments the revision and preserves unrelated fields", () => {
     const task = Task.create({
       userId: "user-1",
-      planId: "plan-1",
+      parentTaskId: "task-parent",
       name: "Comprar tinta",
       description: "",
       tags: ["casa"],
@@ -111,22 +124,22 @@ describe("Task aggregate", () => {
 
     expect(revised.revision).toBe(2);
     expect(revised.status).toBe("inProgress");
-    expect(revised.planId).toBe("plan-1");
+    expect(revised.parentTaskId).toBe("task-parent");
     expect(revised.tags).toEqual(["casa"]);
     expect(task.revision).toBe(1);
   });
 
-  test("revise can unlink the plan by passing planId: null", () => {
+  test("revise can unlink the parent by passing parentTaskId: null", () => {
     const task = Task.create({
       userId: "user-1",
-      planId: "plan-1",
+      parentTaskId: "task-parent",
       name: "Comprar tinta",
       description: "",
       tags: [],
     });
 
-    const revised = task.revise({ planId: null });
+    const revised = task.revise({ parentTaskId: null });
 
-    expect(revised.planId).toBeUndefined();
+    expect(revised.parentTaskId).toBeUndefined();
   });
 });

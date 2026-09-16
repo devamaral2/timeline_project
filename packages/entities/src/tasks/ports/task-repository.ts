@@ -6,5 +6,5 @@ export interface TaskRepository {
   delete(taskId: string, actorUserId: string): Promise<void>;
   findById(taskId: string): Promise<Task | null>;
   listByUserId(userId: string): Promise<Task[]>;
-  listByPlanId(planId: string): Promise<Task[]>;
+  listByParentTaskId(parentTaskId: string): Promise<Task[]>;
 }

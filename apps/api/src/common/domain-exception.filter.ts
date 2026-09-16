@@ -13,6 +13,11 @@ import {
   EventOwnershipError,
   EventRevisionConflictError,
   EventValidationError,
+  TaskHierarchyError,
+  TaskNotFoundError,
+  TaskOwnershipError,
+  TaskRevisionConflictError,
+  TaskValidationError,
 } from "@repo/entities";
 import {
   EventAgentUndecidedError,
@@ -57,6 +62,11 @@ export class DomainExceptionFilter implements ExceptionFilter {
     if (exception instanceof EventOwnershipError) return HttpStatus.FORBIDDEN;
     if (exception instanceof EventNotFoundError) return HttpStatus.NOT_FOUND;
     if (exception instanceof EventRevisionConflictError) return HttpStatus.CONFLICT;
+    if (exception instanceof TaskValidationError) return HttpStatus.BAD_REQUEST;
+    if (exception instanceof TaskHierarchyError) return HttpStatus.BAD_REQUEST;
+    if (exception instanceof TaskOwnershipError) return HttpStatus.FORBIDDEN;
+    if (exception instanceof TaskNotFoundError) return HttpStatus.NOT_FOUND;
+    if (exception instanceof TaskRevisionConflictError) return HttpStatus.CONFLICT;
     return HttpStatus.INTERNAL_SERVER_ERROR;
   }
 }

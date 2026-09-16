@@ -4,7 +4,7 @@ import type { WorkItemPriority } from "../../work-items/types/work-item-priority
 export interface UpdateTaskInput {
   taskId: string;
   expectedRevision: number;
-  planId?: string | null;
+  parentTaskId?: string | null;
   name?: string;
   description?: string;
   status?: WorkItemStatus;

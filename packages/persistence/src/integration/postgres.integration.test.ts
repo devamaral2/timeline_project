@@ -17,9 +17,6 @@ import {
   Interruption,
   Meal,
   CatalogRevisionConflictError,
-  Plan,
-  PlanOwnershipError,
-  PlanRevisionConflictError,
   Task,
   TaskOwnershipError,
   TaskRevisionConflictError,
@@ -30,7 +27,6 @@ import { PostgresMealRepository } from "../catalog/repositories/postgres-meal.re
 import { PostgresTimelineEventQuery } from "../events/queries/postgres-timeline-event.query";
 import { PostgresDailyOverviewQuery } from "../events/queries/postgres-daily-overview.query";
 import { PostgresTagRepository } from "../events/repositories/postgres-tag.repository";
-import { PostgresPlanRepository } from "../plans/repositories/postgres-plan.repository";
 import { PostgresTaskRepository } from "../tasks/repositories/postgres-task.repository";
 import { PostgresWorkoutCatalog } from "../catalog/postgres-workout.catalog";
 import * as schema from "../database/schema";
@@ -519,15 +515,13 @@ describe.runIf(RUN_INTEGRATION)("PostgresEventRepository", () => {
   });
 });
 
-describe.runIf(RUN_INTEGRATION)("PostgresPlanRepository and PostgresTaskRepository", () => {
+describe.runIf(RUN_INTEGRATION)("PostgresTaskRepository", () => {
   let ctx: PostgresTestContext;
-  let plans: PostgresPlanRepository;
   let tasks: PostgresTaskRepository;
 
   beforeEach(async () => {
     if (!ctx) {
       ctx = await createPostgresTestContext();
-      plans = new PostgresPlanRepository(ctx.db);
       tasks = new PostgresTaskRepository(ctx.db);
     } else {
       await ctx.reset();
@@ -537,16 +531,6 @@ describe.runIf(RUN_INTEGRATION)("PostgresPlanRepository and PostgresTaskReposito
   afterAll(async () => {
     if (ctx) await ctx.stop();
   });
-
-  function newPlan(overrides: Partial<Parameters<typeof Plan.create>[0]> = {}) {
-    return Plan.create({
-      userId: "user-1",
-      name: "Reforma da casa",
-      description: "",
-      tags: ["casa"],
-      ...overrides,
-    });
-  }
 
   function newTask(overrides: Partial<Parameters<typeof Task.create>[0]> = {}) {
     return Task.create({
@@ -558,53 +542,14 @@ describe.runIf(RUN_INTEGRATION)("PostgresPlanRepository and PostgresTaskReposito
     });
   }
 
-  test("plan: saves and reads back an aggregate with tags", async () => {
-    const plan = newPlan();
-    await plans.save(plan);
-
-    const found = await plans.findById(plan.id);
-    expect(found?.id).toBe(plan.id);
-    expect(found?.tags).toEqual(["casa"]);
-    expect(found?.status).toBe("todo");
-  });
-
-  test("plan: rejects an update with a stale expected revision", async () => {
-    const plan = newPlan();
-    await plans.save(plan);
-    const changed = plan.revise({ name: "Novo nome" });
-
-    await expect(plans.update(changed, "user-1", plan.revision + 1)).rejects.toBeInstanceOf(
-      PlanRevisionConflictError,
-    );
-  });
-
-  test("plan: rejects an update from a different owner", async () => {
-    const plan = newPlan();
-    await plans.save(plan);
-    const changed = plan.revise({ name: "Novo nome" });
-
-    await expect(plans.update(changed, "user-2", plan.revision)).rejects.toBeInstanceOf(
-      PlanOwnershipError,
-    );
-  });
-
-  test("plan: listByUserId scopes to the given user", async () => {
-    await plans.save(newPlan());
-    await plans.save(newPlan({ id: undefined, userId: "user-2" }));
-
-    const found = await plans.listByUserId("user-1");
-    expect(found).toHaveLength(1);
-  });
-
-  test("task: saves and reads back an aggregate linked to a plan", async () => {
-    const plan = newPlan();
-    await plans.save(plan);
-    const task = newTask({ planId: plan.id, tags: ["pintura"] });
+  test("task: saves and reads back an aggregate with tags", async () => {
+    const task = newTask({ tags: ["pintura"] });
     await tasks.save(task);
 
     const found = await tasks.findById(task.id);
-    expect(found?.planId).toBe(plan.id);
+    expect(found?.id).toBe(task.id);
     expect(found?.tags).toEqual(["pintura"]);
+    expect(found?.status).toBe("todo");
   });
 
   test("task: rejects an update with a stale expected revision", async () => {
@@ -627,78 +572,55 @@ describe.runIf(RUN_INTEGRATION)("PostgresPlanRepository and PostgresTaskReposito
     );
   });
 
-  test("task: listByPlanId returns only tasks linked to that plan", async () => {
-    const plan = newPlan();
-    await plans.save(plan);
-    await tasks.save(newTask({ planId: plan.id }));
+  test("task: listByUserId scopes to the given user", async () => {
+    await tasks.save(newTask());
+    await tasks.save(newTask({ id: undefined, userId: "user-2" }));
+
+    const found = await tasks.listByUserId("user-1");
+    expect(found).toHaveLength(1);
+  });
+
+  test("task: saves and reads back a subtask linked to its parent", async () => {
+    const parent = newTask();
+    await tasks.save(parent);
+    const subtask = newTask({ id: undefined, parentTaskId: parent.id, name: "Escolher a cor" });
+    await tasks.save(subtask);
+
+    const found = await tasks.findById(subtask.id);
+    expect(found?.parentTaskId).toBe(parent.id);
+  });
+
+  test("task: listByParentTaskId returns only the subtasks of that parent", async () => {
+    const parent = newTask();
+    await tasks.save(parent);
+    await tasks.save(newTask({ id: undefined, parentTaskId: parent.id }));
     await tasks.save(newTask({ id: undefined }));
 
-    const found = await tasks.listByPlanId(plan.id);
+    const found = await tasks.listByParentTaskId(parent.id);
     expect(found).toHaveLength(1);
-    expect(found[0].planId).toBe(plan.id);
+    expect(found[0].parentTaskId).toBe(parent.id);
   });
 
-  test("task: deleting its plan unlinks it instead of deleting it (ON DELETE SET NULL)", async () => {
-    const plan = newPlan();
-    await plans.save(plan);
-    const task = newTask({ planId: plan.id });
+  test("task: deleting a parent deletes the whole subtree (ON DELETE CASCADE)", async () => {
+    const parent = newTask();
+    await tasks.save(parent);
+    const subtask = newTask({ id: undefined, parentTaskId: parent.id });
+    await tasks.save(subtask);
+    const grandchild = newTask({ id: undefined, parentTaskId: subtask.id });
+    await tasks.save(grandchild);
+
+    await tasks.delete(parent.id, "user-1");
+
+    expect(await tasks.findById(subtask.id)).toBeNull();
+    expect(await tasks.findById(grandchild.id)).toBeNull();
+  });
+
+  test("tasks: the database rejects a row that is its own parent", async () => {
+    const task = newTask();
     await tasks.save(task);
 
-    await plans.delete(plan.id, "user-1");
-
-    const found = await tasks.findById(task.id);
-    expect(found).not.toBeNull();
-    expect(found?.planId).toBeUndefined();
-  });
-
-  test("plan: saves and reads back dependsOnPlanIds, including an empty list", async () => {
-    const prerequisite = newPlan({ id: undefined });
-    await plans.save(prerequisite);
-    const withoutDeps = newPlan({ id: undefined });
-    await plans.save(withoutDeps);
-    expect((await plans.findById(withoutDeps.id))?.dependsOnPlanIds).toEqual([]);
-
-    const dependent = newPlan({ id: undefined, dependsOnPlanIds: [prerequisite.id] });
-    await plans.save(dependent);
-
-    expect((await plans.findById(dependent.id))?.dependsOnPlanIds).toEqual([prerequisite.id]);
-  });
-
-  test("plan: replaces dependsOnPlanIds on update", async () => {
-    const first = newPlan({ id: undefined });
-    const second = newPlan({ id: undefined });
-    await plans.save(first);
-    await plans.save(second);
-    const dependent = newPlan({ id: undefined, dependsOnPlanIds: [first.id] });
-    await plans.save(dependent);
-
-    const changed = dependent.revise({ dependsOnPlanIds: [second.id] });
-    await plans.update(changed, "user-1", dependent.revision);
-
-    expect((await plans.findById(dependent.id))?.dependsOnPlanIds).toEqual([second.id]);
-  });
-
-  test("plan: deleting a plan removes dependency rows in both roles without deleting the other plan", async () => {
-    const prerequisite = newPlan({ id: undefined });
-    await plans.save(prerequisite);
-    const dependent = newPlan({ id: undefined, dependsOnPlanIds: [prerequisite.id] });
-    await plans.save(dependent);
-
-    await plans.delete(prerequisite.id, "user-1");
-
-    expect(await plans.findById(dependent.id)).not.toBeNull();
-    expect((await plans.findById(dependent.id))?.dependsOnPlanIds).toEqual([]);
-  });
-
-  test("plan_dependencies: the database rejects a self-referencing row", async () => {
-    const plan = newPlan();
-    await plans.save(plan);
-
     await expect(
-      ctx.pool.query(
-        `INSERT INTO plan_dependencies (plan_id, depends_on_plan_id) VALUES ($1, $1)`,
-        [plan.id],
-      ),
+      ctx.pool.query(`UPDATE tasks SET parent_task_id = id WHERE id = $1`, [task.id]),
     ).rejects.toThrow();
   });
 

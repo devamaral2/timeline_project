@@ -9,3 +9,6 @@ export class TaskOwnershipError extends Error {
 }
 
 export class TaskRevisionConflictError extends Error {}
+
+/** Pai escolhido criaria um ciclo na arvore de subtarefas. */
+export class TaskHierarchyError extends Error {}

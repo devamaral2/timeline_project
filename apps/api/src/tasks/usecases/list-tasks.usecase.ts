@@ -13,7 +13,7 @@ export class ListTasksUseCase {
 
 export function toSummaryDto(task: {
   id: string;
-  planId?: string;
+  parentTaskId?: string;
   name: string;
   status: TaskSummaryDto["status"];
   priority: TaskSummaryDto["priority"];
@@ -24,7 +24,7 @@ export function toSummaryDto(task: {
 }): TaskSummaryDto {
   return {
     id: task.id,
-    planId: task.planId,
+    parentTaskId: task.parentTaskId,
     name: task.name,
     status: task.status,
     priority: task.priority,

@@ -4,7 +4,7 @@ export interface TaskRow {
   id: string;
   revision: number;
   userId: string;
-  planId: string | null;
+  parentTaskId: string | null;
   name: string;
   description: string;
   status: WorkItemStatus;
@@ -22,7 +22,7 @@ export function mapTaskRow(
   return Task.rehydrate({
     id: row.id,
     userId: row.userId,
-    planId: row.planId ?? undefined,
+    parentTaskId: row.parentTaskId ?? undefined,
     name: row.name,
     description: row.description,
     status: row.status,

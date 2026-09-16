@@ -11,7 +11,5 @@ export * from "./events/queries/postgres-timeline-event.query";
 export * from "./events/queries/postgres-daily-overview.query";
 export * from "./events/repositories/postgres-tag.repository";
 export * from "./catalog/postgres-workout.catalog";
-export * from "./plans/mappers/plan-row.mapper";
-export * from "./plans/repositories/postgres-plan.repository";
 export * from "./tasks/mappers/task-row.mapper";
 export * from "./tasks/repositories/postgres-task.repository";
