@@ -1,4 +1,5 @@
 import type { EventPriority } from "../types/event-priority";
+import type { NotificationOffsetMinutes } from "../../notifications/types/notification-offset-minutes";
 import type { CreateEventItemInput } from "./event-item.dto";
 
 export interface CreateEventInput {
@@ -8,6 +9,8 @@ export interface CreateEventInput {
   /** Anotacao do usuario: um evento so nasce marcado se alguem disser isso. */
   missed?: boolean;
   priority?: EventPriority;
+  /** Ausente nasce com aviso de 5 minutos antes — so uma lista vazia explicita desliga. */
+  notifyOffsetsMinutes?: NotificationOffsetMinutes[];
   /**
    * Quando o evento comeca, em ISO-8601. Ausente significa agora -- e nao "so
    * pode ser agora": a timeline registra passado, presente e futuro.

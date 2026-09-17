@@ -9,6 +9,7 @@ function anEvent(id: string): TimelineEventCardDto {
     primaryItemType: "routine",
     itemTypes: ["routine"],
     missed: false,
+    notifyOffsetsMinutes: [],
     name: id,
     description: "",
     startedAt: "2026-08-31T12:00:00.000Z",

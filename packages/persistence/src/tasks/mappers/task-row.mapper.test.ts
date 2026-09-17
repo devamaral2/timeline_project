@@ -10,6 +10,7 @@ const taskRow: TaskRow = {
   description: "",
   status: "todo",
   priority: "medium",
+  notifyOffsetsMinutes: [],
   startedAt: null,
   estimatedFinishAt: null,
   finishedAt: null,

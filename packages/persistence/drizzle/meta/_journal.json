@@ -43,6 +43,20 @@
       "when": 1789557264081,
       "tag": "0005_slimy_dreadnoughts",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1789600105061,
+      "tag": "0006_dapper_cable",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1789602068994,
+      "tag": "0007_married_bishop",
+      "breakpoints": true
     }
   ]
 }

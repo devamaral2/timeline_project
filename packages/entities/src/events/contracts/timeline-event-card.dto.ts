@@ -1,3 +1,5 @@
+import type { NotificationOffsetMinutes } from "../../notifications/types/notification-offset-minutes";
+
 export interface TimelineEventCardDto {
   id: string;
   primaryItemId: string;
@@ -9,6 +11,7 @@ export interface TimelineEventCardDto {
   description: string;
   startedAt: string;
   finishedAt?: string;
+  notifyOffsetsMinutes: NotificationOffsetMinutes[];
   durationLabel: string;
   tags: string[];
   interruptions: Array<{

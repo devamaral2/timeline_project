@@ -7,7 +7,7 @@ import { timingForExample } from "./agenda-timing";
 import styles from "./mockup.module.css";
 import { type SelectedEvent, TaskPriorityIcon, TaskStatusIcon, taskStatuses } from "./task-controls";
 
-export function AgendaDay({ dayKey, now, tasks, missedEvents, onSelectEvent, events: suppliedEvents, userId, todayKey = EXAMPLE_TODAY }: {
+export function AgendaDay({ dayKey, now, tasks, missedEvents, onSelectEvent, events: suppliedEvents, userId, todayKey = EXAMPLE_TODAY, hideWhenEmpty = false }: {
   dayKey: string;
   now: number;
   tasks: Record<string, ExampleTask>;
@@ -16,8 +16,11 @@ export function AgendaDay({ dayKey, now, tasks, missedEvents, onSelectEvent, eve
   events?: ExampleEvent[];
   userId?: string;
   todayKey?: string;
+  hideWhenEmpty?: boolean;
 }) {
   const events = suppliedEvents ?? exampleEventsOn(dayKey);
+  if (hideWhenEmpty && events.length === 0) return null;
+
   return (
     <section className={styles.dayGroup} data-agenda-day={dayKey} aria-label={mediumDate(dayKey)}>
       <div className={styles.dayHeading}>
@@ -66,9 +69,6 @@ export function AgendaDay({ dayKey, now, tasks, missedEvents, onSelectEvent, eve
                       <button type="button" className={styles.taskStatusButton} aria-label={`Tarefa de ${event.name}: ${taskStatuses[task.status].label}`} aria-haspopup="dialog" title={`Tarefa ${task.id} · ${taskStatuses[task.status].label}`} onClick={() => onSelectEvent({ event, dayKey })}><TaskStatusIcon status={task.status} /></button>
                       <TaskPriorityIcon priority={task.priority} />
                     </fieldset> : null}
-                  </div>
-                  <div aria-hidden className={styles.eventDurationBar}>
-                    <span style={{ width: `${Math.min(100, Math.max(6, (timing.position === "running" ? elapsedSecondsOf(timing.startedAt, new Date(now)) / 60 : event.minutes) / 90 * 100))}%` }} />
                   </div>
                 </article>
               </li>

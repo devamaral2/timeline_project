@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { Plus, X } from "lucide-react";
-import type { EventPriority, WorkoutCode, WorkoutSnapshot } from "@/lib/api/contracts";
+import type { EventPriority, NotificationOffsetMinutes, WorkoutCode, WorkoutSnapshot } from "@/lib/api/contracts";
 import { cn } from "@/lib/utils";
 import { iconButtonClass } from "@/components/ui/button-styles";
 import {
@@ -23,6 +23,7 @@ import {
   type ItemOfType,
   StartedAtField,
   EventMarks,
+  NotificationOffsetsField,
   fromDatetimeLocalValue,
   itemsPatchedWith,
   toDatetimeLocalValue,
@@ -114,6 +115,9 @@ export function TrainingEditForm({
   const [finishedAt, setFinishedAt] = useState(toDatetimeLocalValue(event.finishedAt));
   const [missed, setMissed] = useState<boolean | undefined>(event.missed);
   const [priority, setPriority] = useState<EventPriority | undefined>(event.priority);
+  const [notifyOffsetsMinutes, setNotifyOffsetsMinutes] = useState<NotificationOffsetMinutes[] | undefined>(
+    event.notifyOffsetsMinutes,
+  );
   const { submit, submitting, error } = useSubmitEventUpdate({
     eventId: event.id,
     onUpdated,
@@ -180,6 +184,7 @@ export function TrainingEditForm({
       finishedAt: fromDatetimeLocalValue(finishedAt),
       missed,
       priority,
+      notifyOffsetsMinutes,
     });
   }
 
@@ -367,6 +372,7 @@ export function TrainingEditForm({
         priority={priority}
         onPriorityChange={setPriority}
       />
+      <NotificationOffsetsField value={notifyOffsetsMinutes} onChange={setNotifyOffsetsMinutes} />
 
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
 

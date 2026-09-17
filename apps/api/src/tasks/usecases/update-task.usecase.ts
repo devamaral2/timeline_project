@@ -31,6 +31,7 @@ export class UpdateTaskUseCase {
       description: input.description,
       status: input.status,
       priority: input.priority,
+      notifyOffsetsMinutes: input.notifyOffsetsMinutes,
       tags: input.tags,
       startedAt: input.startedAt !== undefined ? new Date(input.startedAt) : undefined,
       estimatedFinishAt:

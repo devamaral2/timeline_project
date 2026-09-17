@@ -34,6 +34,10 @@ export const tasks = pgTable(
     description: text("description").notNull().default(""),
     status: workItemStatusEnum("status").notNull().default("todo"),
     priority: workItemPriorityEnum("priority").notNull().default("medium"),
+    notifyOffsetsMinutes: integer("notify_offsets_minutes")
+      .array()
+      .notNull()
+      .default(sql`'{}'::integer[]`),
     startedAt: timestamp("started_at", { withTimezone: true }),
     estimatedFinishAt: timestamp("estimated_finish_at", { withTimezone: true }),
     finishedAt: timestamp("finished_at", { withTimezone: true }),
@@ -67,6 +71,12 @@ export const tasks = pgTable(
     ),
     // Ciclos mais longos o banco nao consegue barrar; quem barra e
     // `assertParentTaskAssignable` em apps/api, subindo a cadeia de pais.
+    // Numero livre (minutos ou dias, ja convertido para minutos) — o teto so
+    // barra valor absurdo, nao restringe a um conjunto fixo.
+    check(
+      "tasks_notify_offsets_valid",
+      sql`1 <= ALL(${table.notifyOffsetsMinutes}) AND 43200 >= ALL(${table.notifyOffsetsMinutes})`,
+    ),
     check(
       "tasks_parent_not_self",
       sql`${table.parentTaskId} IS NULL OR ${table.parentTaskId} <> ${table.id}`,

@@ -9,6 +9,7 @@ function anEvent(overrides: Partial<TimelineEventCardDto> = {}): TimelineEventCa
     primaryItemType: "routine",
     itemTypes: ["routine"],
     missed: false,
+    notifyOffsetsMinutes: [],
     name: "Bloco de trabalho",
     description: "",
     startedAt: "2026-08-19T12:00:00.000Z",

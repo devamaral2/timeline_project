@@ -13,7 +13,7 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import type { CreateTaskInput, TaskDetailDto, TaskSummaryDto, UpdateTaskInput } from "@repo/entities/contracts";
-import { isWorkItemPriority, isWorkItemStatus } from "@repo/entities";
+import { isWorkItemPriority, isWorkItemStatus, isNotificationOffsetMinutes } from "@repo/entities";
 import { CurrentUser } from "../../auth/current-user.decorator";
 import { AuthServiceGuard } from "../../auth/auth-service.guard";
 import type { AuthenticatedUser } from "../../auth/authenticated-user";
@@ -102,6 +102,7 @@ export class TasksController {
 function assertValidWorkItemFields(body: {
   status?: unknown;
   priority?: unknown;
+  notifyOffsetsMinutes?: unknown;
   dependsOnTaskIds?: unknown;
 }): void {
   if (body?.status !== undefined && !isWorkItemStatus(body.status)) {
@@ -109,6 +110,13 @@ function assertValidWorkItemFields(body: {
   }
   if (body?.priority !== undefined && !isWorkItemPriority(body.priority)) {
     throw new BadRequestException("Invalid priority");
+  }
+  if (
+    body?.notifyOffsetsMinutes !== undefined &&
+    (!Array.isArray(body.notifyOffsetsMinutes) ||
+      body.notifyOffsetsMinutes.some((offset) => !isNotificationOffsetMinutes(offset)))
+  ) {
+    throw new BadRequestException("Invalid notifyOffsetsMinutes");
   }
   if (
     body?.dependsOnTaskIds !== undefined &&

@@ -29,3 +29,5 @@ export * from "./recurrences/contracts/recurrence-rule";
 export * from "./recurrences/entities/recurrence.entity";
 export * from "./recurrences/errors/recurrence.errors";
 export * from "./recurrences/types/occurrence-link";
+
+export * from "./notifications/types/notification-offset-minutes";

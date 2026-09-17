@@ -1,5 +1,5 @@
 import { Apple, CircleDashed, Clock, Dumbbell, Moon, type LucideIcon } from "lucide-react";
-import type { EventPriority, KnownEventItemType } from "@/lib/api/contracts";
+import type { EventPriority, KnownEventItemType, NotificationOffsetMinutes } from "@/lib/api/contracts";
 
 /**
  * O traco fino do desenho. O padrao do lucide (2) engorda o icone e, sobre o
@@ -72,3 +72,19 @@ export const priorityLabels: Record<EventPriority, string> = {
 };
 
 export const priorities: EventPriority[] = ["urgent", "normal", "flexible"];
+
+const MINUTES_PER_DAY = 1440;
+
+/**
+ * Numero livre, nao lista fixa: o usuario digita a quantidade e escolhe a
+ * unidade (minutos ou dias) na interface, e os dois convertem para minutos
+ * antes de chegar aqui. Um valor exatamente divisivel por um dia mostra a
+ * unidade maior — 1440 vira "1 dia antes", nao "1440 minutos antes".
+ */
+export function notificationOffsetLabel(minutes: NotificationOffsetMinutes): string {
+  if (minutes % MINUTES_PER_DAY === 0) {
+    const days = minutes / MINUTES_PER_DAY;
+    return `${days} ${days === 1 ? "dia" : "dias"} antes`;
+  }
+  return `${minutes} ${minutes === 1 ? "minuto" : "minutos"} antes`;
+}

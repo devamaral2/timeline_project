@@ -11,6 +11,7 @@ import type { EventRepository } from "@repo/entities/ports";
 import * as schema from "../../database/schema";
 import { mapEventRow } from "../mappers/event-row.mapper";
 import { classifyUpdateFailure } from "../../shared/classify-update-failure";
+import { pgIntegerArrayLiteral } from "../../shared/pg-integer-array";
 import { occurrenceColumnsOf } from "../../recurrences/mappers/occurrence-columns";
 
 export type Tx = Parameters<Parameters<NodePgDatabase<typeof schema>["transaction"]>[0]>[0];
@@ -86,6 +87,7 @@ export async function insertEventAggregate(tx: Tx, event: Event): Promise<boolea
       finishedAt: event.finishedAt ?? null,
       missed: event.missed,
       priority: event.priority,
+      notifyOffsetsMinutes: [...event.notifyOffsetsMinutes],
       ...occurrenceColumnsOf(event.occurrence),
     })
     .onConflictDoNothing({
@@ -118,6 +120,7 @@ export class PostgresEventRepository implements EventRepository {
             finished_at = ${event.finishedAt ?? null},
             missed = ${event.missed},
             priority = ${event.priority},
+            notify_offsets_minutes = ${pgIntegerArrayLiteral(event.notifyOffsetsMinutes)}::integer[],
             recurrence_detached = ${event.occurrence?.detached ?? false},
             revision = ${event.revision},
             updated_at = now()

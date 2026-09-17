@@ -68,6 +68,7 @@ export class CreateEventUseCase {
       items,
       missed: input.missed,
       priority: input.priority,
+      notifyOffsetsMinutes: input.notifyOffsetsMinutes,
     });
   }
 

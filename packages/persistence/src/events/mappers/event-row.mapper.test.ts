@@ -11,6 +11,7 @@ const eventRow: EventRow = {
   finishedAt: null,
   missed: false,
   priority: "normal",
+  notifyOffsetsMinutes: [5],
 };
 
 function itemRow(overrides: Partial<EventItemRow>): EventItemRow {

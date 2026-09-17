@@ -1,4 +1,5 @@
 import { weekdayIndexOf } from "@repo/timeline";
+import type { NotificationOffsetMinutes } from "@/lib/api/contracts";
 
 export const EXAMPLE_TODAY = "2026-09-14";
 export const EXAMPLE_NOW = Date.parse(`${EXAMPLE_TODAY}T09:35:00-03:00`);
@@ -28,6 +29,7 @@ export interface ExampleEvent {
   missed?: boolean;
   /** Sem horário de término registrado, como o contador do app principal. */
   running?: boolean;
+  notifyOffsetsMinutes?: NotificationOffsetMinutes[];
 }
 
 const todayEvents: ExampleEvent[] = [

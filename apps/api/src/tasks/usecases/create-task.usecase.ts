@@ -23,6 +23,7 @@ export class CreateTaskUseCase {
       description: input.description ?? "",
       status: input.status,
       priority: input.priority,
+      notifyOffsetsMinutes: input.notifyOffsetsMinutes,
       tags: input.tags ?? [],
       startedAt: input.startedAt ? new Date(input.startedAt) : undefined,
       estimatedFinishAt: input.estimatedFinishAt ? new Date(input.estimatedFinishAt) : undefined,

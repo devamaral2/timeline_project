@@ -21,7 +21,7 @@ import type {
   TimelineEventPageDto,
   UpdateEventInput,
 } from "@repo/entities/contracts";
-import { isEventPriority } from "@repo/entities";
+import { isEventPriority, isNotificationOffsetMinutes } from "@repo/entities";
 import { decodeTimelineCursor } from "@repo/persistence";
 import { CurrentUser } from "../../auth/current-user.decorator";
 import { AuthServiceGuard } from "../../auth/auth-service.guard";
@@ -187,13 +187,24 @@ export class EventsController {
  * mandar `missed: "sim"`. A leitura devolveria o padrao e o usuario nunca
  * entenderia por que a anotacao dele sumiu — melhor recusar aqui.
  */
-function assertValidMarks(body: { missed?: unknown; priority?: unknown }): void {
+function assertValidMarks(body: {
+  missed?: unknown;
+  priority?: unknown;
+  notifyOffsetsMinutes?: unknown;
+}): void {
   if (body?.missed !== undefined && typeof body.missed !== "boolean") {
     throw new BadRequestException("Invalid missed flag");
   }
   if (body?.priority !== undefined && !isEventPriority(body.priority)) {
     throw new BadRequestException("Invalid event priority");
   }
+  if (body?.notifyOffsetsMinutes !== undefined && !isValidNotifyOffsets(body.notifyOffsetsMinutes)) {
+    throw new BadRequestException("Invalid notifyOffsetsMinutes");
+  }
+}
+
+function isValidNotifyOffsets(value: unknown): boolean {
+  return Array.isArray(value) && value.every((entry) => isNotificationOffsetMinutes(entry));
 }
 
 /**

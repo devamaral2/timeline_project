@@ -31,6 +31,7 @@ export async function mergeEventUpdate(
     tags: input.tags,
     missed: input.missed,
     priority: input.priority,
+    notifyOffsetsMinutes: input.notifyOffsetsMinutes,
     interruptions: mergeInterruptions(existingEvent.interruptions, input.interruptions, now),
     items,
   });

@@ -9,6 +9,7 @@ function card(overrides: Partial<TimelineEventCardDto> = {}): TimelineEventCardD
     primaryItemType: "routine",
     itemTypes: ["routine"],
     missed: false,
+    notifyOffsetsMinutes: [],
     name: "Planejar o dia",
     description: "",
     startedAt: "2026-09-14T12:00:00.000Z",

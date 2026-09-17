@@ -22,6 +22,7 @@ const common = {
   tags: [],
   missed: false,
   priority: "normal" as const,
+  notifyOffsetsMinutes: [],
   interruptions: [],
   revision: 3,
 };

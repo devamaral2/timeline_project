@@ -9,6 +9,9 @@
 export const eventPriorities = ["urgent", "normal", "flexible"] as const;
 export type EventPriority = (typeof eventPriorities)[number];
 
+/** Numero livre de minutos antes do inicio — o usuario escolhe minutos ou dias na interface. */
+export type NotificationOffsetMinutes = number;
+
 export type KnownEventItemType = "routine" | "meal" | "sleep" | "training";
 export type RoutineData = Record<string, never>;
 
@@ -136,6 +139,7 @@ export interface CreateEventInput {
   tags?: string[];
   missed?: boolean;
   priority?: EventPriority;
+  notifyOffsetsMinutes?: NotificationOffsetMinutes[];
   /** ISO-8601. Ausente e agora; pode ser passado ou futuro. */
   startedAt?: string;
   /** ISO-8601. Ausente e um evento sem fim declarado. */
@@ -189,6 +193,7 @@ export interface UpdateEventInput {
   tags?: string[];
   missed?: boolean;
   priority?: EventPriority;
+  notifyOffsetsMinutes?: NotificationOffsetMinutes[];
   interruptions?: InterruptionPatchInput[];
   items?: UpdateEventItemInput[];
   taskIds?: string[];
@@ -200,6 +205,7 @@ export interface TimelineEventCardDto {
   primaryItemType: string;
   itemTypes: string[];
   missed: boolean;
+  notifyOffsetsMinutes: NotificationOffsetMinutes[];
   name: string;
   description: string;
   startedAt: string;
@@ -235,6 +241,7 @@ export interface EventDetailDto {
   tags: string[];
   missed: boolean;
   priority: EventPriority;
+  notifyOffsetsMinutes: NotificationOffsetMinutes[];
   interruptions: EventDetailInterruptionDto[];
   revision: number;
   primaryItemId: string;

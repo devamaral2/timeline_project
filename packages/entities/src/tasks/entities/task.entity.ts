@@ -10,6 +10,7 @@ import { TagList } from "../../events/value-objects/tag-list";
 import { TaskId } from "../value-objects/task-id";
 import { TaskValidationError } from "../errors/task.errors";
 import { detachOccurrence, type OccurrenceLink } from "../../recurrences/types/occurrence-link";
+import type { NotificationOffsetMinutes } from "../../notifications/types/notification-offset-minutes";
 
 export interface TaskCreateProps {
   id?: string;
@@ -19,6 +20,7 @@ export interface TaskCreateProps {
   description: string;
   status?: WorkItemStatus;
   priority?: WorkItemPriority;
+  notifyOffsetsMinutes?: NotificationOffsetMinutes[];
   tags: string[];
   startedAt?: Date;
   estimatedFinishAt?: Date;
@@ -37,6 +39,7 @@ export interface TaskReviseChanges {
   description?: string;
   status?: WorkItemStatus;
   priority?: WorkItemPriority;
+  notifyOffsetsMinutes?: NotificationOffsetMinutes[];
   tags?: string[];
   startedAt?: Date;
   estimatedFinishAt?: Date;
@@ -52,6 +55,7 @@ interface TaskBuildProps {
   description: string;
   status: WorkItemStatus;
   priority: WorkItemPriority;
+  notifyOffsetsMinutes: NotificationOffsetMinutes[];
   tags: string[];
   startedAt: Date | undefined;
   estimatedFinishAt: Date | undefined;
@@ -76,6 +80,7 @@ export class Task {
   readonly description: string;
   readonly status: WorkItemStatus;
   readonly priority: WorkItemPriority;
+  readonly notifyOffsetsMinutes: readonly NotificationOffsetMinutes[];
   readonly tags: string[];
   readonly startedAt: Date | undefined;
   readonly estimatedFinishAt: Date | undefined;
@@ -93,6 +98,7 @@ export class Task {
     this.description = props.description;
     this.status = props.status;
     this.priority = props.priority;
+    this.notifyOffsetsMinutes = props.notifyOffsetsMinutes;
     this.tags = props.tags;
     this.startedAt = props.startedAt;
     this.estimatedFinishAt = props.estimatedFinishAt;
@@ -132,6 +138,7 @@ export class Task {
       description: props.description,
       status: props.status ?? DEFAULT_WORK_ITEM_STATUS,
       priority: props.priority ?? DEFAULT_WORK_ITEM_PRIORITY,
+      notifyOffsetsMinutes: props.notifyOffsetsMinutes ?? [],
       tags: props.tags,
       startedAt: props.startedAt,
       estimatedFinishAt: props.estimatedFinishAt,
@@ -151,6 +158,7 @@ export class Task {
       description: props.description,
       status: props.status ?? DEFAULT_WORK_ITEM_STATUS,
       priority: props.priority ?? DEFAULT_WORK_ITEM_PRIORITY,
+      notifyOffsetsMinutes: props.notifyOffsetsMinutes ?? [],
       tags: props.tags,
       startedAt: props.startedAt,
       estimatedFinishAt: props.estimatedFinishAt,
@@ -171,6 +179,7 @@ export class Task {
       description: changes.description ?? this.description,
       status: changes.status ?? this.status,
       priority: changes.priority ?? this.priority,
+      notifyOffsetsMinutes: changes.notifyOffsetsMinutes ?? [...this.notifyOffsetsMinutes],
       tags: changes.tags ?? this.tags,
       startedAt: changes.startedAt !== undefined ? changes.startedAt : this.startedAt,
       estimatedFinishAt:

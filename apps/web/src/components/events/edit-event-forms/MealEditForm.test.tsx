@@ -72,6 +72,7 @@ const event: EventDetailDto = {
   tags: [],
   missed: false,
   priority: "normal",
+  notifyOffsetsMinutes: [],
   interruptions: [],
   revision: 7,
   primaryItemId: "meal-item",

@@ -42,3 +42,12 @@ test("future and past days neither start timers nor add missed annotations", () 
   expect(screen.queryByText("Não realizado")).not.toBeInTheDocument();
   expect(screen.getByTitle("Duração: 1 h")).toBeInTheDocument();
 });
+
+test("empty days can be omitted from the continuous list", () => {
+  const { rerender } = render(<AgendaDay {...props} events={[]} />);
+  expect(screen.getByText("Um dia livre na sua agenda.")).toBeInTheDocument();
+
+  rerender(<AgendaDay {...props} events={[]} hideWhenEmpty />);
+  expect(screen.queryByRole("region")).not.toBeInTheDocument();
+  expect(screen.queryByText("Um dia livre na sua agenda.")).not.toBeInTheDocument();
+});

@@ -1,4 +1,5 @@
 import type { EventPriority } from "../types/event-priority";
+import type { NotificationOffsetMinutes } from "../../notifications/types/notification-offset-minutes";
 import type { UpdateEventItemInput } from "./event-item.dto";
 
 export interface InterruptionPatchInput {
@@ -19,6 +20,7 @@ export interface UpdateEventInput {
   tags?: string[];
   missed?: boolean;
   priority?: EventPriority;
+  notifyOffsetsMinutes?: NotificationOffsetMinutes[];
   interruptions?: InterruptionPatchInput[];
   items?: UpdateEventItemInput[];
   taskIds?: string[];

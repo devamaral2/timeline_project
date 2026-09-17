@@ -1,7 +1,11 @@
 import { sql, type SQL } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { TimelineEventQuery, TimelineQueryParams } from "@repo/entities/ports";
-import type { TimelineEventCardDto, TimelineEventPageDto } from "@repo/entities/contracts";
+import type {
+  NotificationOffsetMinutes,
+  TimelineEventCardDto,
+  TimelineEventPageDto,
+} from "@repo/entities/contracts";
 import * as schema from "../../database/schema";
 import { decodeTimelineCursor, encodeTimelineCursor } from "./timeline-cursor";
 
@@ -10,6 +14,7 @@ interface EventRow extends Record<string, unknown> {
   started_at: Date;
   finished_at: Date | null;
   missed: boolean;
+  notify_offsets_minutes: number[];
   name: string;
   description: string;
 }
@@ -77,7 +82,7 @@ export class PostgresTimelineEventQuery implements TimelineEventQuery {
     const whereClause = sql.join(conditions, sql` AND `);
 
     const pageResult = await this.db.execute<EventRow>(sql`
-      SELECT e.id, e.started_at, e.finished_at, e.missed, e.name, e.description
+      SELECT e.id, e.started_at, e.finished_at, e.missed, e.notify_offsets_minutes, e.name, e.description
       FROM events e
       WHERE ${whereClause}
       ORDER BY e.started_at DESC, e.id DESC
@@ -128,6 +133,7 @@ export class PostgresTimelineEventQuery implements TimelineEventQuery {
         primaryItemType: primaryItem?.type ?? "",
         itemTypes: itemRows.map((row) => row.type),
         missed: event.missed,
+        notifyOffsetsMinutes: event.notify_offsets_minutes as NotificationOffsetMinutes[],
         name: event.name,
         description: event.description,
         startedAt: new Date(event.started_at).toISOString(),

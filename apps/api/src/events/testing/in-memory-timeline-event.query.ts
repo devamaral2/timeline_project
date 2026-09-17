@@ -63,6 +63,7 @@ function toCardDto(event: Event): TimelineEventCardDto {
     primaryItemType: primaryItem?.type ?? "",
     itemTypes: event.items.map((item) => item.type),
     missed: event.missed,
+    notifyOffsetsMinutes: [...event.notifyOffsetsMinutes],
     name: event.name,
     description: event.description,
     startedAt: event.startedAt.toISOString(),

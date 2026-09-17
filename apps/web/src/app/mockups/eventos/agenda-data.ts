@@ -22,6 +22,7 @@ export function agendaEventFromCard(event: TimelineEventCardDto): ExampleEvent {
     tags: event.tags,
     missed: event.missed,
     running: !event.finishedAt,
+    notifyOffsetsMinutes: event.notifyOffsetsMinutes,
   };
 }
 

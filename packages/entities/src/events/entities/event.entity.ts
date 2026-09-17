@@ -1,5 +1,9 @@
 import { DEFAULT_EVENT_PRIORITY, type EventPriority } from "../types/event-priority";
 import { DEFAULT_EVENT_MISSED } from "../types/missed-flag";
+import {
+  DEFAULT_EVENT_NOTIFICATION_OFFSETS_MINUTES,
+  type NotificationOffsetMinutes,
+} from "../../notifications/types/notification-offset-minutes";
 import type { Interruption } from "../value-objects/interruption";
 import { TagList } from "../value-objects/tag-list";
 import { EventId } from "../value-objects/event-id";
@@ -20,6 +24,7 @@ export interface EventCreateProps {
   items: EventItem[];
   missed?: boolean;
   priority?: EventPriority;
+  notifyOffsetsMinutes?: NotificationOffsetMinutes[];
   taskIds?: string[];
   occurrence?: OccurrenceLink;
 }
@@ -38,6 +43,7 @@ export interface EventReviseChanges {
   items?: EventItem[];
   missed?: boolean;
   priority?: EventPriority;
+  notifyOffsetsMinutes?: NotificationOffsetMinutes[];
   taskIds?: string[];
 }
 
@@ -53,6 +59,7 @@ interface EventBuildProps {
   items: EventItem[];
   missed: boolean;
   priority: EventPriority;
+  notifyOffsetsMinutes: NotificationOffsetMinutes[];
   taskIds: string[];
   occurrence: OccurrenceLink | undefined;
   revision: number;
@@ -122,6 +129,7 @@ export class Event {
   readonly items: EventItem[];
   readonly missed: boolean;
   readonly priority: EventPriority;
+  readonly notifyOffsetsMinutes: readonly NotificationOffsetMinutes[];
   readonly taskIds: readonly string[];
   /** Presente quando o evento e uma ocorrencia de uma serie. */
   readonly occurrence: OccurrenceLink | undefined;
@@ -142,6 +150,7 @@ export class Event {
     this.items = props.items;
     this.missed = props.missed;
     this.priority = props.priority;
+    this.notifyOffsetsMinutes = props.notifyOffsetsMinutes;
     this.taskIds = props.taskIds;
     this.occurrence = props.occurrence;
     this.revision = props.revision;
@@ -189,6 +198,7 @@ export class Event {
         items: props.items,
         missed: props.missed ?? DEFAULT_EVENT_MISSED,
         priority: props.priority ?? DEFAULT_EVENT_PRIORITY,
+        notifyOffsetsMinutes: props.notifyOffsetsMinutes ?? DEFAULT_EVENT_NOTIFICATION_OFFSETS_MINUTES,
         taskIds: props.taskIds ?? [],
         occurrence: props.occurrence,
         revision: 1,
@@ -214,6 +224,10 @@ export class Event {
         items: props.items,
         missed: props.missed ?? DEFAULT_EVENT_MISSED,
         priority: props.priority ?? DEFAULT_EVENT_PRIORITY,
+        // Nao reaplica o default de evento novo: uma linha existente sem o
+        // campo nunca teve esse aviso, e inventar um seria o mesmo erro que
+        // a marca de nao realizado evita para documentos antigos.
+        notifyOffsetsMinutes: props.notifyOffsetsMinutes ?? [],
         taskIds: props.taskIds ?? [],
         occurrence: props.occurrence,
         revision: props.revision,
@@ -237,6 +251,7 @@ export class Event {
         items: changes.items ?? this.items,
         missed: changes.missed ?? this.missed,
         priority: changes.priority ?? this.priority,
+        notifyOffsetsMinutes: changes.notifyOffsetsMinutes ?? [...this.notifyOffsetsMinutes],
         taskIds: changes.taskIds ?? [...this.taskIds],
         occurrence: detachOccurrence(this.occurrence),
         revision: this.revision + 1,

@@ -27,6 +27,7 @@ function toDetailDto(event: Event): EventDetailDto {
     tags: event.tags,
     missed: event.missed,
     priority: event.priority,
+    notifyOffsetsMinutes: [...event.notifyOffsetsMinutes],
     interruptions: event.interruptions.map((interruption) => ({
       id: interruption.id,
       name: interruption.name,

@@ -31,6 +31,10 @@ export const events = pgTable(
     finishedAt: timestamp("finished_at", { withTimezone: true }),
     missed: boolean("missed").notNull().default(false),
     priority: eventPriorityEnum("priority").notNull().default("normal"),
+    notifyOffsetsMinutes: integer("notify_offsets_minutes")
+      .array()
+      .notNull()
+      .default(sql`'{}'::integer[]`),
     // Ocorrencia de uma serie. `set null`: apagar a regra nao apaga o que ja
     // aconteceu — a ocorrencia passada e historia e so perde o vinculo.
     recurrenceId: char("recurrence_id", { length: 26 }).references(
@@ -70,6 +74,12 @@ export const events = pgTable(
     check(
       "events_occurrence_requires_day",
       sql`${table.recurrenceId} IS NULL OR ${table.occurrenceOn} IS NOT NULL`,
+    ),
+    // Numero livre (minutos ou dias, ja convertido para minutos) — o teto so
+    // barra valor absurdo, nao restringe a um conjunto fixo.
+    check(
+      "events_notify_offsets_valid",
+      sql`1 <= ALL(${table.notifyOffsetsMinutes}) AND 43200 >= ALL(${table.notifyOffsetsMinutes})`,
     ),
     check(
       "events_finished_after_started",

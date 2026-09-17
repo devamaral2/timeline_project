@@ -21,6 +21,7 @@ export type * from "./tasks/contracts/task-summary.dto";
 // payloads dos itens: `FoodItem` e `WorkoutSet` aqui sao os do modelo por
 // itens — nao ha mais subclasse de evento nem tipo legado com o mesmo nome.
 export type { EventPriority } from "./events/types/event-priority";
+export type { NotificationOffsetMinutes } from "./notifications/types/notification-offset-minutes";
 export type { RoutineData } from "./events/items/routine-data";
 export type { FoodItem, FoodItemMacronutrients } from "./events/items/food-item";
 export type { MealItem, MealTotals } from "./events/items/meal-item";

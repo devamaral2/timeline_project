@@ -12,7 +12,7 @@ export const taskStatuses = {
   canceled: { label: "Cancelada", Icon: CircleSlash },
 } satisfies Record<TaskStatus, { label: string; Icon: typeof Circle }>;
 
-const priorities: Record<TaskPriority, string> = { urgent: "Urgente", normal: "Normal", flexible: "Flexível" };
+export const taskPriorities: Record<TaskPriority, string> = { urgent: "Urgente", normal: "Normal", flexible: "Flexível" };
 
 export function TaskStatusIcon({ status }: { status: TaskStatus }) {
   if (status === "inProgress") return (
@@ -24,9 +24,9 @@ export function TaskStatusIcon({ status }: { status: TaskStatus }) {
   return <Icon aria-hidden className={styles.taskStatusIcon} data-status={status} />;
 }
 
-export function TaskPriorityIcon({ priority }: { priority: TaskPriority }) {
+export function TaskPriorityIcon({ priority, decorative = false }: { priority: TaskPriority; decorative?: boolean }) {
   return (
-    <span className={styles.taskPriority} data-priority={priority} role="img" aria-label={`Prioridade da tarefa: ${priorities[priority]}`} title={`Prioridade da tarefa: ${priorities[priority]}`}>
+    <span className={styles.taskPriority} data-priority={priority} role={decorative ? undefined : "img"} aria-hidden={decorative || undefined} aria-label={decorative ? undefined : `Prioridade da tarefa: ${taskPriorities[priority]}`} title={decorative ? undefined : `Prioridade da tarefa: ${taskPriorities[priority]}`}>
       <svg viewBox="0 0 16 16" fill="none" aria-hidden>
         <path d="M3 12V9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
         <path d="M8 12V6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" opacity={priority === "flexible" ? .25 : 1} />
@@ -75,10 +75,10 @@ export function EventTaskDialog({ selected, task, missed, onTaskChange, onMissed
           </fieldset>
           <fieldset className={styles.priorityOptions}>
             <legend>Prioridade da tarefa</legend>
-            {(Object.keys(priorities) as TaskPriority[]).map((priority) => (
+            {(Object.keys(taskPriorities) as TaskPriority[]).map((priority) => (
               <label key={priority} data-selected={priority === task.priority}>
-                <input type="radio" name="task-priority" aria-label={priorities[priority]} value={priority} checked={priority === task.priority} onChange={() => onTaskChange({ ...task, priority })} />
-                <TaskPriorityIcon priority={priority} />{priorities[priority]}
+                <input type="radio" name="task-priority" aria-label={taskPriorities[priority]} value={priority} checked={priority === task.priority} onChange={() => onTaskChange({ ...task, priority })} />
+                <TaskPriorityIcon priority={priority} />{taskPriorities[priority]}
               </label>
             ))}
           </fieldset>

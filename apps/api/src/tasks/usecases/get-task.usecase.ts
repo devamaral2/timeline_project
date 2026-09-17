@@ -25,6 +25,7 @@ export function toDetailDto(task: Task): TaskDetailDto {
     description: task.description,
     status: task.status,
     priority: task.priority,
+    notifyOffsetsMinutes: [...task.notifyOffsetsMinutes],
     tags: task.tags,
     startedAt: task.startedAt?.toISOString(),
     estimatedFinishAt: task.estimatedFinishAt?.toISOString(),

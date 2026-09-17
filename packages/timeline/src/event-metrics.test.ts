@@ -18,6 +18,7 @@ function event(startedAt: string, finishedAt: string | null): TimelineEventCardD
     primaryItemType: "routine",
     itemTypes: ["routine"],
     missed: false,
+    notifyOffsetsMinutes: [],
     name: "evento",
     description: "",
     startedAt,

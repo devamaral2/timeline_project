@@ -1,5 +1,6 @@
 import type { WorkItemStatus } from "../../work-items/types/work-item-status";
 import type { WorkItemPriority } from "../../work-items/types/work-item-priority";
+import type { NotificationOffsetMinutes } from "../../notifications/types/notification-offset-minutes";
 
 export interface TaskDetailDto {
   id: string;
@@ -8,6 +9,7 @@ export interface TaskDetailDto {
   description: string;
   status: WorkItemStatus;
   priority: WorkItemPriority;
+  notifyOffsetsMinutes: NotificationOffsetMinutes[];
   tags: string[];
   startedAt?: string;
   estimatedFinishAt?: string;

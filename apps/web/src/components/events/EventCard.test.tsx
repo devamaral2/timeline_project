@@ -12,6 +12,7 @@ function anEvent(overrides: Partial<TimelineEventCardDto> = {}): TimelineEventCa
     primaryItemType: "training",
     itemTypes: ["training"],
     missed: false,
+    notifyOffsetsMinutes: [],
     name: "Academia",
     description: "",
     startedAt: "2026-08-19T18:00:00-03:00",

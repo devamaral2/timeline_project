@@ -90,6 +90,7 @@ function anEvent(overrides: Partial<EventDetailDto> = {}): EventDetailDto {
     tags: [],
     missed: false,
     priority: "normal",
+    notifyOffsetsMinutes: [],
     interruptions: [],
     revision: 1,
     primaryItemId: "meal-item",

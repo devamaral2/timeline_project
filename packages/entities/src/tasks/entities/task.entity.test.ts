@@ -16,6 +16,25 @@ describe("Task aggregate", () => {
     expect(task.tags).toEqual(["casa"]);
     expect(task.parentTaskId).toBeUndefined();
     expect(task.dependsOnTaskIds).toEqual([]);
+    expect(task.notifyOffsetsMinutes).toEqual([]);
+  });
+
+  test("notifyOffsetsMinutes has no default and revise replaces the whole list", () => {
+    const task = Task.create({
+      userId: "user-1",
+      name: "Comprar tinta",
+      description: "",
+      tags: [],
+      notifyOffsetsMinutes: [30],
+    });
+
+    expect(task.notifyOffsetsMinutes).toEqual([30]);
+
+    const revised = task.revise({ notifyOffsetsMinutes: [5, 1440] });
+    expect(revised.notifyOffsetsMinutes).toEqual([5, 1440]);
+
+    const unchanged = task.revise({ name: "Outro" });
+    expect(unchanged.notifyOffsetsMinutes).toEqual([30]);
   });
 
   test("dedupes dependsOnTaskIds and revise replaces the whole list", () => {

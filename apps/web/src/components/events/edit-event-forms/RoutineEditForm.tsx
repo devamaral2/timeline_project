@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import type { EventPriority } from "@/lib/api/contracts";
+import type { EventPriority, NotificationOffsetMinutes } from "@/lib/api/contracts";
 import {
   CommonFields,
   type EditEventFormProps,
@@ -10,6 +10,7 @@ import {
   type ItemOfType,
   StartedAtField,
   EventMarks,
+  NotificationOffsetsField,
   fieldInputClass,
   fieldLabelClass,
   fromDatetimeLocalValue,
@@ -36,6 +37,9 @@ export function RoutineEditForm({
   const [finishedAt, setFinishedAt] = useState(toDatetimeLocalValue(event.finishedAt));
   const [missed, setMissed] = useState<boolean | undefined>(event.missed);
   const [priority, setPriority] = useState<EventPriority | undefined>(event.priority);
+  const [notifyOffsetsMinutes, setNotifyOffsetsMinutes] = useState<NotificationOffsetMinutes[] | undefined>(
+    event.notifyOffsetsMinutes,
+  );
   const [validationError, setValidationError] = useState<string | null>(null);
   const { submit, submitting, error } = useSubmitEventUpdate({
     eventId: event.id,
@@ -60,6 +64,7 @@ export function RoutineEditForm({
       finishedAt: fromDatetimeLocalValue(finishedAt),
       missed,
       priority,
+      notifyOffsetsMinutes,
     });
   }
 
@@ -96,6 +101,7 @@ export function RoutineEditForm({
         priority={priority}
         onPriorityChange={setPriority}
       />
+      <NotificationOffsetsField value={notifyOffsetsMinutes} onChange={setNotifyOffsetsMinutes} />
 
       {validationError || error ? (
         <p className="text-xs text-destructive">{validationError ?? error}</p>

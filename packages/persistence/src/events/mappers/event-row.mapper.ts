@@ -4,6 +4,7 @@ import {
   EventValidationError,
   Interruption,
   type EventPriority,
+  type NotificationOffsetMinutes,
 } from "@repo/entities";
 import { occurrenceLinkOf, type OccurrenceColumns } from "../../recurrences/mappers/occurrence-columns";
 
@@ -17,6 +18,8 @@ export interface EventRow extends Partial<OccurrenceColumns> {
   finishedAt: Date | null;
   missed: boolean;
   priority: EventPriority;
+  /** `number[]` e nao a uniao: quem restringe os valores e o CHECK da coluna, nao o tipo Drizzle de um array de integer. */
+  notifyOffsetsMinutes: number[];
 }
 
 export interface EventItemRow {
@@ -94,6 +97,7 @@ export function mapEventRow(
     items,
     missed: eventRow.missed,
     priority: eventRow.priority,
+    notifyOffsetsMinutes: eventRow.notifyOffsetsMinutes as NotificationOffsetMinutes[],
     taskIds: [...taskIds],
     occurrence: occurrenceLinkOf(eventRow),
     revision: eventRow.revision,

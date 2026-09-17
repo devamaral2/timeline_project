@@ -26,6 +26,7 @@ function anEvent(
     primaryItemType: 'routine',
     itemTypes: ['routine'],
     missed: false,
+    notifyOffsetsMinutes: [],
     name: 'Bloco de trabalho',
     description: '',
     startedAt: '2026-08-19T09:00:00-03:00',

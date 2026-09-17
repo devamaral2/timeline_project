@@ -25,6 +25,7 @@ export function toSummaryDto(task: {
   name: string;
   status: TaskSummaryDto["status"];
   priority: TaskSummaryDto["priority"];
+  notifyOffsetsMinutes: readonly TaskSummaryDto["notifyOffsetsMinutes"][number][];
   tags: string[];
   startedAt?: Date;
   estimatedFinishAt?: Date;
@@ -36,6 +37,7 @@ export function toSummaryDto(task: {
     name: task.name,
     status: task.status,
     priority: task.priority,
+    notifyOffsetsMinutes: [...task.notifyOffsetsMinutes],
     tags: task.tags,
     startedAt: task.startedAt?.toISOString(),
     estimatedFinishAt: task.estimatedFinishAt?.toISOString(),

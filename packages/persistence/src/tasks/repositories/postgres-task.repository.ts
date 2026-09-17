@@ -6,6 +6,7 @@ import type { TaskRepository } from "@repo/entities/ports";
 import * as schema from "../../database/schema";
 import { mapTaskRow } from "../mappers/task-row.mapper";
 import { classifyUpdateFailure } from "../../shared/classify-update-failure";
+import { pgIntegerArrayLiteral } from "../../shared/pg-integer-array";
 import { occurrenceColumnsOf } from "../../recurrences/mappers/occurrence-columns";
 import type { Tx } from "../../events/repositories/postgres-event.repository";
 
@@ -52,6 +53,7 @@ export async function insertTaskAggregate(tx: Tx, task: Task): Promise<boolean> 
       description: task.description,
       status: task.status,
       priority: task.priority,
+      notifyOffsetsMinutes: [...task.notifyOffsetsMinutes],
       startedAt: task.startedAt ?? null,
       estimatedFinishAt: task.estimatedFinishAt ?? null,
       finishedAt: task.finishedAt ?? null,
@@ -87,6 +89,7 @@ export class PostgresTaskRepository implements TaskRepository {
             description = ${task.description},
             status = ${task.status},
             priority = ${task.priority},
+            notify_offsets_minutes = ${pgIntegerArrayLiteral(task.notifyOffsetsMinutes)}::integer[],
             started_at = ${task.startedAt ?? null},
             estimated_finish_at = ${task.estimatedFinishAt ?? null},
             finished_at = ${task.finishedAt ?? null},

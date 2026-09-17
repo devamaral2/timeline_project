@@ -56,6 +56,47 @@ describe("Event aggregate", () => {
     expect(unchanged.taskIds).toEqual(["task-1", "task-2"]);
   });
 
+  test("a new event defaults to a 5-minute-before notification, but rehydrate never invents one", () => {
+    const created = Event.create({
+      userId: "user-1",
+      name: "Planejamento",
+      description: "",
+      startedAt: new Date("2026-08-31T12:00:00.000Z"),
+      tags: [],
+      interruptions: [],
+      items: [routineItem()],
+    });
+    expect(created.notifyOffsetsMinutes).toEqual([5]);
+
+    const createdWithoutNotifications = Event.create({
+      userId: "user-1",
+      name: "Planejamento",
+      description: "",
+      startedAt: new Date("2026-08-31T12:00:00.000Z"),
+      tags: [],
+      interruptions: [],
+      items: [routineItem()],
+      notifyOffsetsMinutes: [],
+    });
+    expect(createdWithoutNotifications.notifyOffsetsMinutes).toEqual([]);
+
+    const rehydrated = Event.rehydrate({
+      userId: "user-1",
+      name: "Existente",
+      description: "",
+      startedAt: new Date("2026-08-31T12:00:00.000Z"),
+      tags: [],
+      interruptions: [],
+      items: [routineItem()],
+      revision: 5,
+    });
+    expect(rehydrated.notifyOffsetsMinutes).toEqual([]);
+
+    const revised = created.revise({ notifyOffsetsMinutes: [15, 60] });
+    expect(revised.notifyOffsetsMinutes).toEqual([15, 60]);
+    expect(created.notifyOffsetsMinutes).toEqual([5]);
+  });
+
   test("rejects incompatible event items", () => {
     const meal = EventItem.create({
       position: 0,

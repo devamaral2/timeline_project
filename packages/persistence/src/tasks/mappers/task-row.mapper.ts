@@ -1,4 +1,9 @@
-import { Task, type WorkItemPriority, type WorkItemStatus } from "@repo/entities";
+import {
+  Task,
+  type WorkItemPriority,
+  type WorkItemStatus,
+  type NotificationOffsetMinutes,
+} from "@repo/entities";
 import { occurrenceLinkOf, type OccurrenceColumns } from "../../recurrences/mappers/occurrence-columns";
 
 export interface TaskRow extends Partial<OccurrenceColumns> {
@@ -10,6 +15,8 @@ export interface TaskRow extends Partial<OccurrenceColumns> {
   description: string;
   status: WorkItemStatus;
   priority: WorkItemPriority;
+  /** `number[]` e nao a uniao: quem restringe os valores e o CHECK da coluna, nao o tipo Drizzle de um array de integer. */
+  notifyOffsetsMinutes: number[];
   startedAt: Date | null;
   estimatedFinishAt: Date | null;
   finishedAt: Date | null;
@@ -28,6 +35,7 @@ export function mapTaskRow(
     description: row.description,
     status: row.status,
     priority: row.priority,
+    notifyOffsetsMinutes: row.notifyOffsetsMinutes as NotificationOffsetMinutes[],
     tags: [...tagNames],
     startedAt: row.startedAt ?? undefined,
     estimatedFinishAt: row.estimatedFinishAt ?? undefined,
