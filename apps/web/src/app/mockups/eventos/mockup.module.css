@@ -37,7 +37,8 @@
 :global(body):has(.dark) { background: #212121; color-scheme: dark; }
 .dark .header, .dark .bottomNav { background: #212121; }
 .dark .event[data-time-position="upcoming"], .dark .sectionMenu { background: #2f2f2f; }
-.dark .monthPicker, .dark .accountPopover { background: #3a3a3a; border-color: var(--line); }
+.dark .monthPicker { background: transparent; }
+.dark .accountPopover { background: #3a3a3a; border-color: var(--line); }
 .dark .agendaControls, .dark .viewModes, .dark .hubComposer, .dark .hubSearch { background: #212121; }
 .dark .hubDock { background: transparent; }
 .dark .hubModes button, .dark .creationToggle button { background: transparent; }
@@ -400,8 +401,11 @@
   .entityForm { display: grid; gap: 16px; padding: 8px 0 2px; }
   .entityHeading { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
   .entityHeading > span { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 14px; background: var(--cyan-soft); color: var(--cyan); }
+  .entityHeading > div { flex: 1; min-width: 0; }
   .entityHeading h3 { margin: 0; font-size: 20px; font-weight: 500; }
   .entityHeading p { margin: 3px 0 0; font-size: 12px; color: var(--muted); }
+  .entityNameInput { width: 100%; min-width: 0; height: 42px; padding: 7px 2px !important; border: 0 !important; border-bottom: 1px solid var(--line) !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important; color: var(--ink); font-size: 18px !important; }
+  .entityNameInput:focus-visible { outline: 0 !important; border-bottom-color: var(--cyan) !important; box-shadow: none !important; }
   .entityEventHeading { display: grid; gap: 7px; margin-bottom: 4px; }
   .entityEventTypeName { color: var(--muted); font-size: 11px; }
   .entityEventTitleRow { display: flex; align-items: center; gap: 10px; min-width: 0; }
@@ -490,6 +494,9 @@
   .hubComposer input:focus-visible, .hubSearch input:focus-visible { outline: 0; }
   .hubComposer button { display: grid; place-items: center; width: 38px; height: 38px; flex-shrink: 0; background: var(--cyan-soft); color: var(--cyan); border-radius: 11px; cursor: pointer; }
   .hubComposer button:disabled { opacity: .4; cursor: default; }
+  .hubComposer button[data-listening="true"] { background: #fdf6f3; color: #d92a55; animation: chatPulse 1.4s ease-in-out infinite; }
+  .dark .hubComposer button[data-listening="true"] { background: #3a2a2e; color: #ff5c7a; }
+  .hubComposerHint { margin: -4px 0 0; font-size: 11px; color: var(--muted); }
   .hubSearch svg { color: var(--cyan); }
   .manualHeading { display: flex; align-items: center; justify-content: space-between; margin: 20px 0 12px; }
   .manualHeading h3 { color: var(--muted); font-size: 12px; font-weight: 400; }

@@ -34,7 +34,7 @@ function Harness({ live = true }: { live?: boolean }) {
 
 function ask(text: string) {
   fireEvent.change(screen.getByRole("textbox", { name: "Mensagem para a IA" }), { target: { value: text } });
-  fireEvent.click(screen.getByRole("button", { name: "Enviar mensagem" }));
+  fireEvent.submit(screen.getByRole("textbox", { name: "Mensagem para a IA" }).closest("form")!);
 }
 
 const reply = (
@@ -126,7 +126,7 @@ test("the stop button cancels the running message", () => {
   emit({ type: "error", id: sent[0].id, code: "cancelled" });
 
   expect(screen.getByText("Cancelado. Nada foi gravado.")).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Enviar mensagem" })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Enviar mensagem" })).not.toBeInTheDocument();
 });
 
 test("a failed message can be retried, and it stays out of the history", () => {

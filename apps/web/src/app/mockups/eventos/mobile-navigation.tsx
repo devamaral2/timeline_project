@@ -169,7 +169,7 @@ export function MobileNavigation({ userId }: { userId?: string }) {
                 </fieldset>
                 <input className={styles.entityEventNameInput} aria-label="Nome do evento" value={draft.title ?? ""} onChange={event => updateDraft("title", event.target.value)} placeholder="Nome do evento" />
               </div>
-            </div> : <div className={styles.entityHeading}><span>{(() => { const Icon = icons[kind]; return <Icon aria-hidden />; })()}</span><div><h3>{kind === "Nota" ? "Nova nota" : "Nova tarefa"}</h3><p>{category}</p></div></div>}
+            </div> : <div className={styles.entityHeading}><span>{(() => { const Icon = icons[kind]; return <Icon aria-hidden />; })()}</span><div><input className={styles.entityNameInput} aria-label={`Nome da ${kind.toLocaleLowerCase("pt-BR")}`} value={draft.title ?? ""} onChange={event => updateDraft("title", event.target.value)} placeholder={`Nome da ${kind.toLocaleLowerCase("pt-BR")}`} /><p>{category}</p></div></div>}
             {kind === "Tarefa" && <div className={styles.entitySelectors}>
               <fieldset className={styles.entitySelect}>
                 <span className={styles.entitySelectLabel}>Status</span>

@@ -1,11 +1,12 @@
 "use client";
 
-import { ArrowUp, RotateCcw, Square } from "lucide-react";
+import { Mic, RotateCcw, Square } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import type { AgentChatClientOptions, AgentChatClient } from "@/lib/agent-chat/agent-chat-client";
-import { useAgentChat, type AgentChatMessage } from "@/lib/agent-chat/use-agent-chat";
+import type { AgentChatClient, AgentChatClientOptions } from "@/lib/agent-chat/agent-chat-client";
+import { type AgentChatMessage, useAgentChat } from "@/lib/agent-chat/use-agent-chat";
 import type { AgentChatEntityRef, AgentScreenContext } from "@/lib/api/contracts";
 import { useSessionState } from "@/lib/session/use-session";
+import { useSpeechRecognition } from "@/lib/speech/use-speech-recognition";
 import { requestAgendaRefresh } from "./agenda-refresh";
 import styles from "./mockup.module.css";
 import { BraidAssistantIcon } from "./navigation-icons";
@@ -51,6 +52,11 @@ export function useAgendaChat({ live, createClient }: { live: boolean; createCli
 export function AgentChatPanel({ chat, signedOut }: ReturnType<typeof useAgendaChat>) {
   const [prompt, setPrompt] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
+  const { supported: voiceSupported, listening, interim, error: voiceError, start, stop } = useSpeechRecognition({
+    onFinalTranscript: (transcript) => {
+      if (!chat.send(transcript)) setPrompt(transcript);
+    },
+  });
 
   const lastMessageId = chat.messages.at(-1)?.id;
   const progressLabel = chat.pending?.label;
@@ -97,6 +103,7 @@ export function AgentChatPanel({ chat, signedOut }: ReturnType<typeof useAgendaC
         </p>
       )}
       <div ref={endRef} />
+      {voiceError && <p className={styles.hubComposerHint}>{voiceError}</p>}
       <form
         className={styles.hubComposer}
         onSubmit={(event) => {
@@ -106,21 +113,29 @@ export function AgentChatPanel({ chat, signedOut }: ReturnType<typeof useAgendaC
       >
         <input
           aria-label="Mensagem para a IA"
-          value={prompt}
+          value={listening ? interim : prompt}
           onChange={(event) => setPrompt(event.target.value)}
-          placeholder="Pergunte ou peça para criar…"
+          placeholder={listening ? "Ouvindo…" : "Pergunte ou peça para criar…"}
           maxLength={4000}
-          disabled={!chat.ready}
+          disabled={!chat.ready || listening}
         />
+        {voiceSupported && !chat.pending && (
+          <button
+            type="button"
+            onClick={listening ? stop : start}
+            disabled={!chat.ready}
+            aria-pressed={listening}
+            aria-label={listening ? "Parar gravação" : "Falar com a IA"}
+            data-listening={listening}
+          >
+            {listening ? <Square aria-hidden /> : <Mic aria-hidden />}
+          </button>
+        )}
         {chat.pending ? (
           <button type="button" onClick={chat.cancel} disabled={chat.pending.cancelling} aria-label="Parar resposta">
             <Square aria-hidden />
           </button>
-        ) : (
-          <button type="submit" disabled={!chat.ready || !prompt.trim()} aria-label="Enviar mensagem">
-            <ArrowUp aria-hidden />
-          </button>
-        )}
+        ) : null}
       </form>
     </div>
   );
