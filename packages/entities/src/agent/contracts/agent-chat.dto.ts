@@ -20,8 +20,9 @@ export interface AgentChatEntityRef {
 }
 
 /**
- * Turno anterior da conversa. Quem guarda o historico e o cliente: ele nao da
- * autoridade nenhuma — dono, revisao e usuario sao conferidos no servidor.
+ * Turno anterior da conversa, como o servidor o le do banco para montar o
+ * prompt. **Nao trafega**: o historico deixou de ser do cliente, e o que vai
+ * no frame e so o id da conversa.
  */
 export interface AgentChatTurn {
   role: "user" | "assistant";
@@ -35,7 +36,11 @@ export interface AgentChatMessageFrame {
   id: string;
   text: string;
   context?: AgentScreenContext;
-  history?: AgentChatTurn[];
+  /**
+   * A conversa em que a mensagem entra. Ausente e conversa nova — ela nasce
+   * na transacao de commit, entao um turno que falha nao deixa conversa vazia.
+   */
+  conversationId?: string;
 }
 
 export interface AgentChatCancelFrame {
@@ -52,6 +57,8 @@ export type AgentChatErrorCode =
   | "forbidden"
   | "limit_reached"
   | "conflict"
+  /** A conversa nao existe, foi apagada ou nao e do usuario: comece outra. */
+  | "conversation_gone"
   | "unavailable"
   | "cancelled"
   | "internal";
@@ -62,7 +69,14 @@ export type AgentChatServerFrame =
   | ({
       type: "reply";
       id: string;
-      /** O resumo que o cliente devolve no `history` deste turno. */
+      /** A conversa do turno — o cliente adota o id quando ela acabou de nascer. */
+      conversationId: string;
+      /**
+       * Onde a resposta caiu na conversa. Um salto em relacao ao que o cliente
+       * tem e sinal de que outra aba escreveu no meio: recarregue a thread.
+       */
+      assistantSeq: number;
+      /** O resumo dos registros que esta resposta tocou. */
       entities: AgentChatEntityRef[];
     } & RunAgentResponse)
   | { type: "error"; id?: string; code: AgentChatErrorCode };

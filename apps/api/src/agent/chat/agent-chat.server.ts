@@ -9,7 +9,7 @@ import {
 import type { AgentChatGrant, AgentChatTicketStore } from "@repo/entities/ports";
 import { WebSocket, WebSocketServer, type RawData } from "ws";
 import { hashAgentChatTicket } from "../usecases/issue-agent-chat-ticket.usecase";
-import type { RunAgentUseCase } from "../usecases/run-agent.usecase";
+import type { RunChatTurnUseCase } from "../usecases/run-chat-turn.usecase";
 import { AgentChatConnection, type AgentChatTransport } from "./agent-chat-connection";
 import {
   AGENT_CHAT_PATH,
@@ -43,7 +43,7 @@ export class AgentChatServer implements OnApplicationBootstrap, BeforeApplicatio
   constructor(
     private readonly httpServer: () => Server,
     private readonly tickets: AgentChatTicketStore,
-    private readonly runAgent: Pick<RunAgentUseCase, "execute">,
+    private readonly runChatTurn: Pick<RunChatTurnUseCase, "execute">,
     private readonly logger: Pick<LoggerService, "error" | "warn"> = new Logger(AgentChatServer.name),
   ) {}
 
@@ -110,7 +110,7 @@ export class AgentChatServer implements OnApplicationBootstrap, BeforeApplicatio
       return;
     }
 
-    state.connection = new AgentChatConnection(transportOf(ws), grant, this.runAgent, this.logger);
+    state.connection = new AgentChatConnection(transportOf(ws), grant, this.runChatTurn, this.logger);
     state.connection.start();
   }
 

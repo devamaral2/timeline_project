@@ -1,7 +1,11 @@
 import { afterAll, beforeEach, describe, expect, test } from "vitest";
 import { Pool } from "pg";
 import { createPostgresTestContext, type PostgresTestContext } from "../testing/postgres-test-context";
+import type { ScopedSqlScope } from "@repo/entities/ports";
 import { PostgresScopedSqlQuery } from "../agent-sql/postgres-scoped-sql.query";
+
+/** O escopo normal: o ator e o dono dos dados. */
+const OWNER: ScopedSqlScope = { includeChat: true };
 
 const RUN_INTEGRATION = process.env.RUN_POSTGRES_INTEGRATION === "1";
 
@@ -44,11 +48,21 @@ describe.runIf(RUN_INTEGRATION)("PostgresScopedSqlQuery", () => {
         ('AN000000000000000000000001', 'user-a', 'nota do A', 'AT000000000000000000000001');
       INSERT INTO event_tasks (event_id, task_id) VALUES
         ('B0000000000000000000000001', 'AT000000000000000000000001');
+      INSERT INTO agent_conversations (id, user_id, title) VALUES
+        ('C0000000000000000000000001', 'user-b', 'Conversa do B'),
+        ('C0000000000000000000000002', 'user-a', 'Conversa do A'),
+        ('C0000000000000000000000003', 'user-a', 'Conversa apagada');
+      UPDATE agent_conversations SET deleted_at = now() WHERE id = 'C0000000000000000000000003';
+      INSERT INTO agent_chat_messages (id, conversation_id, seq, role, content) VALUES
+        ('M0000000000000000000000001', 'C0000000000000000000000001', 1, 'user', 'segredo do B'),
+        ('M0000000000000000000000002', 'C0000000000000000000000002', 1, 'user', 'corro 10 km por semana'),
+        ('M0000000000000000000000003', 'C0000000000000000000000002', 2, 'assistant', 'Anotado.'),
+        ('M0000000000000000000000004', 'C0000000000000000000000003', 1, 'user', 'conversa que eu apaguei');
     `);
   }
 
   async function rows(sql: string, userId = "user-a") {
-    const outcome = await query.run({ userId, sql });
+    const outcome = await query.run({ userId, sql, scope: OWNER });
     if (!outcome.ok) throw new Error(outcome.error);
     return outcome;
   }
@@ -61,6 +75,30 @@ describe.runIf(RUN_INTEGRATION)("PostgresScopedSqlQuery", () => {
     // A ligacao cruza usuarios (evento de B, tarefa de A): nao aparece para nenhum dos dois.
     expect((await rows("SELECT * FROM event_tasks")).rows).toEqual([]);
     expect((await rows("SELECT * FROM event_tasks", "user-b")).rows).toEqual([]);
+  });
+
+  test("chat_messages so mostra as conversas vivas do proprio usuario", async () => {
+    const outcome = await rows("SELECT seq, role, content FROM chat_messages ORDER BY seq");
+
+    expect(outcome.rows).toEqual([
+      [1, "user", "corro 10 km por semana"],
+      [2, "assistant", "Anotado."],
+    ]);
+    // A mensagem nao tem deleted_at: some porque o CTE junta com a conversa, e a
+    // conversa apagada nao passa pelo filtro do pai.
+    expect(outcome.rows.flat()).not.toContain("conversa que eu apaguei");
+    expect(outcome.rows.flat()).not.toContain("segredo do B");
+  });
+
+  test("o historico do chat sai do escopo quando o ator nao e o dono", async () => {
+    const outcome = await query.run({
+      userId: "user-a",
+      sql: "SELECT content FROM chat_messages",
+      scope: { includeChat: false },
+    });
+
+    // Recusado na validacao, antes de tocar o banco: a tabela nao existe nesse escopo.
+    expect(outcome).toEqual({ ok: false, error: "Tabela desconhecida: chat_messages." });
   });
 
   test("a user CTE named like a table still reads the scoped table", async () => {
@@ -82,7 +120,7 @@ describe.runIf(RUN_INTEGRATION)("PostgresScopedSqlQuery", () => {
   });
 
   test("a failing cast only ever sees the target user's values", async () => {
-    const outcome = await query.run({ userId: "user-a", sql: "SELECT id FROM events WHERE name::int = 1" });
+    const outcome = await query.run({ userId: "user-a", sql: "SELECT id FROM events WHERE name::int = 1", scope: OWNER });
 
     expect(outcome.ok).toBe(false);
     if (outcome.ok) return;
@@ -98,7 +136,7 @@ describe.runIf(RUN_INTEGRATION)("PostgresScopedSqlQuery", () => {
       "SELECT set_config('x', 'y', true)",
     ];
     for (const sql of attempts) {
-      const outcome = await query.run({ userId: "user-a", sql });
+      const outcome = await query.run({ userId: "user-a", sql, scope: OWNER });
       expect(outcome.ok, sql).toBe(false);
     }
   });
@@ -113,7 +151,7 @@ describe.runIf(RUN_INTEGRATION)("PostgresScopedSqlQuery", () => {
     });
     await ctx.pool.query(`INSERT INTO tasks (id, user_id, name) VALUES ('AT000000000000000000000002', 'user-a', 'Outra tarefa longa')`);
 
-    const outcome = await small.run({ userId: "user-a", sql: "SELECT name FROM tasks ORDER BY name" });
+    const outcome = await small.run({ userId: "user-a", sql: "SELECT name FROM tasks ORDER BY name", scope: OWNER });
 
     expect(outcome).toEqual({ ok: true, columns: ["name"], rows: [["Outra…"]], truncated: true });
   });
@@ -136,6 +174,7 @@ describe.runIf(RUN_INTEGRATION)("PostgresScopedSqlQuery", () => {
       const outcome = await slow.run({
         userId: "user-a",
         sql: "SELECT count(*) FROM events a, events b, events c",
+        scope: OWNER,
       });
 
       expect(outcome).toEqual({ ok: false, error: "canceling statement due to statement timeout" });

@@ -16,6 +16,8 @@ export interface PostgresTestContext {
 
 const MUTABLE_TABLES = [
   "agent_chat_tickets",
+  "agent_chat_messages",
+  "agent_conversations",
   "notes",
   "recurrence_exceptions",
   "recurrences",

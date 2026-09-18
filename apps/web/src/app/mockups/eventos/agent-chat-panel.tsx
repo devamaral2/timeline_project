@@ -1,10 +1,16 @@
 "use client";
 
-import { Mic, RotateCcw, Square } from "lucide-react";
+import { MessagesSquare, Mic, Plus, RotateCcw, Square, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { AgentChatClient, AgentChatClientOptions } from "@/lib/agent-chat/agent-chat-client";
 import { type AgentChatMessage, useAgentChat } from "@/lib/agent-chat/use-agent-chat";
-import type { AgentChatEntityRef, AgentScreenContext } from "@/lib/api/contracts";
+import { useAgentConversations } from "@/lib/agent-chat/use-agent-conversations";
+import type {
+  deleteConversation,
+  fetchConversationMessages,
+  fetchConversations,
+} from "@/lib/agent-chat/agent-conversations-api";
+import type { AgentChatEntityRef, AgentConversationDto, AgentScreenContext } from "@/lib/api/contracts";
 import { useSessionState } from "@/lib/session/use-session";
 import { useSpeechRecognition } from "@/lib/speech/use-speech-recognition";
 import { requestAgendaRefresh } from "./agenda-refresh";
@@ -34,23 +40,60 @@ type ChatClientFactory = (options: AgentChatClientOptions) => Pick<AgentChatClie
  * o painel ou trocar de modo nao pode apagar a conversa nem derrubar a
  * resposta em andamento. Fora do modo live (o mockup) nao conecta.
  */
-export function useAgendaChat({ live, createClient }: { live: boolean; createClient?: ChatClientFactory }) {
+interface AgendaChatOptions {
+  live: boolean;
+  createClient?: ChatClientFactory;
+  /** Injetaveis pelos testes, como `createClient`: nenhum deles toca a rede la. */
+  loadConversations?: typeof fetchConversations;
+  removeConversation?: typeof deleteConversation;
+  loadMessages?: typeof fetchConversationMessages;
+}
+
+export function useAgendaChat({
+  live,
+  createClient,
+  loadConversations,
+  removeConversation,
+  loadMessages,
+}: AgendaChatOptions) {
   const { user, ready } = useSessionState();
+  const userId = live ? user?.userId : undefined;
   const chat = useAgentChat({
-    userId: live ? user?.userId : undefined,
+    userId,
     context: AGENDA_CONTEXT,
     onEntitiesChanged: requestAgendaRefresh,
     createClient,
+    loadMessages,
   });
-  return { chat, signedOut: ready && !user };
+  const conversations = useAgentConversations({
+    userId,
+    load: loadConversations,
+    remove: removeConversation,
+  });
+
+  // A conversa so ganha id quando o primeiro turno e gravado: e o momento em
+  // que ela passa a existir para a lista.
+  const { refresh } = conversations;
+  const openedId = chat.conversationId;
+  useEffect(() => {
+    if (openedId) void refresh();
+  }, [openedId, refresh]);
+
+  return { chat, conversations, signedOut: ready && !user };
+}
+
+/** O nome de uma conversa: o titulo, se alguem deu um; senao o primeiro pedido. */
+export function conversationLabel(conversation: AgentConversationDto): string {
+  return conversation.title ?? conversation.preview ?? "Conversa";
 }
 
 /**
  * O modo "Chat com IA" do painel "Buscar e criar", ligado ao agente de verdade.
  * O texto das respostas e texto puro: nada do que o modelo escreve vira HTML.
  */
-export function AgentChatPanel({ chat, signedOut }: ReturnType<typeof useAgendaChat>) {
+export function AgentChatPanel({ chat, conversations, signedOut }: ReturnType<typeof useAgendaChat>) {
   const [prompt, setPrompt] = useState("");
+  const [listOpen, setListOpen] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const { supported: voiceSupported, listening, interim, error: voiceError, start, stop } = useSpeechRecognition({
     onFinalTranscript: (transcript) => {
@@ -67,9 +110,73 @@ export function AgentChatPanel({ chat, signedOut }: ReturnType<typeof useAgendaC
     endRef.current?.scrollIntoView?.({ block: "end" });
   }, [lastMessageId, progressLabel]);
 
+  const current = conversations.conversations.find((item) => item.id === chat.conversationId);
+
   return (
     <div className={styles.assistantPanel}>
-      {chat.messages.length === 0 ? (
+      {!signedOut && (
+        <>
+          <div className={styles.chatHeader}>
+            <button
+              type="button"
+              onClick={() => setListOpen((open) => !open)}
+              aria-expanded={listOpen}
+              aria-label="Suas conversas"
+            >
+              <MessagesSquare aria-hidden />
+              <span>{current ? conversationLabel(current) : "Nova conversa"}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                chat.startNewConversation();
+                setListOpen(false);
+              }}
+              disabled={Boolean(chat.pending)}
+              aria-label="Nova conversa"
+            >
+              <Plus aria-hidden />
+            </button>
+          </div>
+          {listOpen && (
+            <ul className={styles.conversationList} aria-label="Conversas">
+              {conversations.conversations.length === 0 ? (
+                <li data-empty="true">Nenhuma conversa ainda.</li>
+              ) : (
+                conversations.conversations.map((conversation) => (
+                  <li key={conversation.id} data-current={conversation.id === chat.conversationId}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void chat.openConversation(conversation.id);
+                        setListOpen(false);
+                      }}
+                      disabled={Boolean(chat.pending)}
+                    >
+                      {conversationLabel(conversation)}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void conversations.forget(conversation.id);
+                        if (conversation.id === chat.conversationId) chat.startNewConversation();
+                      }}
+                      aria-label={`Apagar conversa: ${conversationLabel(conversation)}`}
+                    >
+                      <Trash2 aria-hidden />
+                    </button>
+                  </li>
+                ))
+              )}
+            </ul>
+          )}
+        </>
+      )}
+      {chat.loading ? (
+        <p className={styles.chatStatus} role="status">
+          Carregando a conversa…
+        </p>
+      ) : chat.messages.length === 0 ? (
         <>
           <div className={styles.assistantWelcome}>
             <BraidAssistantIcon />

@@ -1,5 +1,13 @@
 import { describe, expect, test } from "vitest";
-import { EntityBatchConflictError, Note, Task, type MealItem, type SleepItem, type TrainingData } from "@repo/entities";
+import {
+  AgentConversation,
+  EntityBatchConflictError,
+  Note,
+  Task,
+  type MealItem,
+  type SleepItem,
+  type TrainingData,
+} from "@repo/entities";
 import type { AgentEntityItem, CreateEventInput } from "@repo/entities/contracts";
 import type { AuthenticatedUser } from "../../auth/authenticated-user";
 import type { ParsedMealFoodItem } from "../../events/gateways/meal-parsing.gateway";
@@ -278,7 +286,9 @@ describe("RunAgentUseCase — queries and limits", () => {
 
     const response = await run(useCase);
 
-    expect(query.calls).toEqual([{ userId: "user-1", sql: "SELECT count(*) FROM events" }]);
+    expect(query.calls).toEqual([
+      { userId: "user-1", sql: "SELECT count(*) FROM events", scope: { includeChat: true } },
+    ]);
     expect(writer.commits).toEqual([]);
     expect(response).toEqual({
       agentResponse: "Você tem 3 eventos.",
@@ -288,6 +298,23 @@ describe("RunAgentUseCase — queries and limits", () => {
     });
   });
 
+  test("o historico de chat sai do escopo quando o ator nao e o dono", async () => {
+    const { useCase, query, scripted } = setup({
+      calls: [{ name: "query_data", args: { sql: "SELECT 1" } }],
+      text: "ok",
+    });
+    const admin = { userId: "admin", permissions: ["*:manage"], denies: [] };
+
+    await useCase.execute({ userId: "user-1", text: "pedido" }, admin);
+
+    // O texto que o usuario escreveu para um modelo ler nao entra no run de
+    // outra pessoa — nem pela ferramenta, nem pela descricao no prompt.
+    expect(query.calls).toEqual([{ userId: "user-1", sql: "SELECT 1", scope: { includeChat: false } }]);
+    expect(query.describedScopes).toEqual([{ includeChat: false }]);
+    // Nem a tabela na lista, nem a regra que mandaria consulta-la.
+    expect(scripted.lastInput?.systemPrompt).not.toContain("chat_messages");
+  });
+
   test("gives the model the schema, the São Paulo time and every tool", async () => {
     const { useCase, scripted } = setup();
 
@@ -295,6 +322,9 @@ describe("RunAgentUseCase — queries and limits", () => {
 
     expect(scripted.lastInput?.systemPrompt).toContain("events: Eventos da timeline.");
     expect(scripted.lastInput?.systemPrompt).toContain("16 de setembro de 2026 às 12:00");
+    // A tabela na lista nao basta: sem a regra o modelo nao pensa em consultar
+    // a propria conversa quando o usuario cita algo dito antes.
+    expect(scripted.lastInput?.systemPrompt).toContain("chat_messages: consulte quando ele se");
     expect(scripted.lastInput?.tools.map((tool) => tool.name)).toEqual([
       "query_data",
       "save_training_event",
@@ -524,3 +554,123 @@ function setupWith(ctx: ReturnType<typeof setup>, calls: ScriptedToolCall[]) {
   ctx.scripted.respondWith(calls);
   return ctx;
 }
+
+describe("conversation turns", () => {
+  const conversation = () => {
+    const created = AgentConversation.create({ userId: "user-1" });
+    return { conversationId: created.id, create: created };
+  };
+
+  test("the REST path commits nothing when there is no entity to write", async () => {
+    const { useCase, writer } = setup({ text: "Hoje você não tem nada." });
+
+    await run(useCase);
+
+    expect(writer.commits).toEqual([]);
+  });
+
+  test("a pure query turn in a conversation still commits, without announcing a save", async () => {
+    const { useCase, writer } = setup({ text: "Hoje você não tem nada." });
+    const labels: string[] = [];
+
+    await useCase.execute({ userId: "user-1", text: "o que tenho hoje?" }, owner, {
+      conversation: conversation(),
+      onProgress: (label) => labels.push(label),
+    });
+
+    expect(writer.commits).toHaveLength(1);
+    expect(writer.commits[0].conversation?.messages.map((message) => message.role)).toEqual([
+      "user",
+      "assistant",
+    ]);
+    // "Salvando" anunciaria uma gravacao de entidade que nao houve.
+    expect(labels).not.toContain("Salvando");
+  });
+
+  test("a turn that writes an entity still announces the save", async () => {
+    const { useCase } = setup({
+      calls: [{ name: "save_task", args: { op: "create", name: "Limpar" } }],
+      text: "Tarefa criada.",
+    });
+    const labels: string[] = [];
+
+    await useCase.execute({ userId: "user-1", text: "crie a tarefa" }, owner, {
+      conversation: conversation(),
+      onProgress: (label) => labels.push(label),
+    });
+
+    expect(labels).toContain("Salvando");
+  });
+
+  test("the stored user message is what the user typed, not the rendered conversation", async () => {
+    const { useCase, writer } = setup({ text: "Pronto." });
+
+    await useCase.execute({ userId: "user-1", text: "e agora?" }, owner, {
+      conversation: conversation(),
+      history: [
+        { role: "user", text: "registre o sono" },
+        { role: "assistant", text: "Feito." },
+      ],
+    });
+
+    const [userMessage, assistantMessage] = writer.commits[0].conversation?.messages ?? [];
+    expect(userMessage?.content).toBe("e agora?");
+    expect(userMessage?.content).not.toContain("Conversa até aqui");
+    expect(userMessage?.content).not.toContain("registre o sono");
+    expect(assistantMessage?.content).toBe("Pronto.");
+  });
+
+  test("the assistant message carries the records the answer touched", async () => {
+    const { useCase, writer } = setup({
+      calls: [{ name: "save_task", args: { op: "create", name: "Limpar" } }],
+      text: "Tarefa criada.",
+    });
+
+    await useCase.execute({ userId: "user-1", text: "crie a tarefa" }, owner, {
+      conversation: conversation(),
+    });
+
+    const assistant = writer.commits[0].conversation?.messages.at(-1);
+    expect(assistant?.entities).toEqual([
+      expect.objectContaining({ kind: "task", change: "created", label: "Limpar" }),
+    ]);
+  });
+
+  test("a cancelled turn writes neither the entity nor the conversation", async () => {
+    const controller = new AbortController();
+    const { useCase, writer } = setup({
+      calls: [{ name: "save_task", args: { op: "create", name: "Limpar" } }],
+      text: "Tarefa criada.",
+    });
+    controller.abort();
+
+    await expect(
+      useCase.execute({ userId: "user-1", text: "crie a tarefa" }, owner, {
+        conversation: conversation(),
+        signal: controller.signal,
+      }),
+    ).rejects.toBeInstanceOf(AgentRunCancelledError);
+    expect(writer.commits).toEqual([]);
+  });
+
+  test("where the turn landed comes back from the commit", async () => {
+    const { useCase } = setup({ text: "Pronto." });
+    const target = conversation();
+    const seqs: Array<{ firstSeq: number; lastSeq: number }> = [];
+    const onConversationWritten = (value: { firstSeq: number; lastSeq: number }) => void seqs.push(value);
+
+    await useCase.execute({ userId: "user-1", text: "oi" }, owner, {
+      conversation: target,
+      onConversationWritten,
+    });
+    await useCase.execute({ userId: "user-1", text: "e agora?" }, owner, {
+      conversation: { conversationId: target.conversationId },
+      onConversationWritten,
+    });
+
+    expect(seqs).toEqual([
+      { firstSeq: 1, lastSeq: 2 },
+      { firstSeq: 3, lastSeq: 4 },
+    ]);
+  });
+});

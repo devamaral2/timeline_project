@@ -517,6 +517,21 @@
   .chatPreview p { background: var(--cyan-soft); border-radius: 12px 12px 0 12px; padding: 10px 14px; margin: 0 0 12px 25px; }
   .chatPreview span { color: var(--muted); }
   .chatPreview button { display: block; }
+  .chatHeader { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .chatHeader > button:first-child { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; padding: 7px 10px; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); font-size: 12px; cursor: pointer; }
+  .chatHeader > button:first-child span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .chatHeader > button:last-child { display: grid; place-items: center; width: 32px; height: 32px; flex-shrink: 0; background: var(--cyan-soft); color: var(--cyan); border-radius: 10px; cursor: pointer; }
+  .chatHeader button:disabled { opacity: .4; cursor: default; }
+  .chatHeader svg { width: 15px; height: 15px; flex-shrink: 0; }
+  .conversationList { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 2px; max-height: 210px; overflow-y: auto; }
+  .conversationList li { display: flex; align-items: center; gap: 4px; border-radius: 9px; }
+  .conversationList li[data-current="true"] { background: var(--cyan-soft); }
+  .conversationList li[data-empty="true"] { padding: 10px 10px; color: var(--muted); font-size: 12px; }
+  .conversationList li > button:first-child { flex: 1; min-width: 0; padding: 9px 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; color: var(--ink); font-size: 12px; cursor: pointer; }
+  .conversationList li > button:last-child { display: grid; place-items: center; width: 30px; height: 30px; flex-shrink: 0; color: var(--muted); border-radius: 8px; cursor: pointer; }
+  .conversationList li > button:last-child:hover { color: #9a4b32; }
+  .conversationList li > button:first-child:disabled { opacity: .4; cursor: default; }
+  .conversationList svg { width: 14px; height: 14px; }
   .chatLog { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 12px; font-size: 13px; line-height: 1.65; }
   .chatBubble p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
   .chatBubble[data-role="user"] { justify-self: end; max-width: 85%; padding: 10px 14px; border-radius: 14px 14px 4px 14px; background: var(--cyan-soft); }

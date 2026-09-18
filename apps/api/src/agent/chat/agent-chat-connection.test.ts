@@ -1,13 +1,26 @@
 import { expect, test } from "vitest";
 import { EntityBatchConflictError } from "@repo/entities";
-import type { AgentChatServerFrame, RunAgentRequest, RunAgentResponse } from "@repo/entities/contracts";
+import type { AgentChatServerFrame, RunAgentResponse } from "@repo/entities/contracts";
 import { AgentRunCancelledError, LlmUnavailableError } from "../errors/agent.errors";
-import type { RunAgentOptions } from "../usecases/run-agent.usecase";
+import type {
+  RunChatTurnOptions,
+  RunChatTurnRequest,
+  RunChatTurnResponse,
+} from "../usecases/run-chat-turn.usecase";
 import { AgentChatConnection, type AgentChatClock } from "./agent-chat-connection";
 
 const grant = { actor: { userId: "admin", permissions: ["*:manage"], denies: [] }, targetUserId: "user-1" };
 
-const EMPTY: RunAgentResponse = { agentResponse: "Feito.", createdEntities: [], updatedEntities: [], deletedEntities: [] };
+const CONVERSATION_ID = "01ARZ3NDEKTSV4RRFFQ69G5FAV";
+
+const EMPTY: RunChatTurnResponse = {
+  agentResponse: "Feito.",
+  createdEntities: [],
+  updatedEntities: [],
+  deletedEntities: [],
+  conversationId: CONVERSATION_ID,
+  assistantSeq: 2,
+};
 
 /** Relogio manual: `advance` dispara os timers vencidos. */
 function manualClock() {
@@ -37,13 +50,17 @@ function manualClock() {
   return { clock, advance };
 }
 
-type Execute = (input: RunAgentRequest, actor: unknown, options: RunAgentOptions) => Promise<RunAgentResponse>;
+type Execute = (
+  input: RunChatTurnRequest,
+  actor: unknown,
+  options: RunChatTurnOptions,
+) => Promise<RunChatTurnResponse>;
 
 function setup(execute: Execute = async () => EMPTY, limits = { lifetimeMs: 60_000, idleMs: 10_000 }) {
   const frames: AgentChatServerFrame[] = [];
   const closes: Array<{ code: number; reason: string }> = [];
   const errors: unknown[] = [];
-  const calls: Array<{ input: RunAgentRequest; actor: unknown; options: RunAgentOptions }> = [];
+  const calls: Array<{ input: RunChatTurnRequest; actor: unknown; options: RunChatTurnOptions }> = [];
   const { clock, advance } = manualClock();
   const connection = new AgentChatConnection(
     { send: (frame) => frames.push(frame), close: (code, reason) => closes.push({ code, reason }) },
@@ -67,7 +84,7 @@ const message = (id: string, extra: Record<string, unknown> = {}) =>
 
 /** Uma execucao que so termina quando o teste manda — ou quando e abortada. */
 function heldRun() {
-  let finish: (response: RunAgentResponse) => void = () => {};
+  let finish: (response: RunChatTurnResponse) => void = () => {};
   const execute: Execute = (_input, _actor, options) =>
     new Promise((resolve, reject) => {
       finish = resolve;
@@ -82,17 +99,46 @@ test("announces the target user and when the connection must re-authenticate", (
   expect(frames).toEqual([{ type: "ready", userId: "user-1", expiresAt: "2026-09-17T12:01:00.000Z" }]);
 });
 
-test("runs a message as the ticket's actor on the ticket's target, with the client's history", async () => {
+test("runs a message as the ticket's actor on the ticket's target, in the frame's conversation", async () => {
   const { connection, calls } = setup();
-  const history = [{ role: "user", text: "oi" }];
 
   await connection.handleMessage(
-    message("m1", { text: "  mude a prioridade  ", context: { screen: "agenda" }, history }),
+    message("m1", {
+      text: "  mude a prioridade  ",
+      context: { screen: "agenda" },
+      conversationId: CONVERSATION_ID,
+    }),
   );
 
-  expect(calls[0].input).toEqual({ userId: "user-1", text: "mude a prioridade", context: { screen: "agenda" } });
+  expect(calls[0].input).toEqual({
+    userId: "user-1",
+    text: "mude a prioridade",
+    context: { screen: "agenda" },
+    conversationId: CONVERSATION_ID,
+  });
   expect(calls[0].actor).toEqual(grant.actor);
-  expect(calls[0].options).toMatchObject({ conversational: true, history });
+});
+
+test("a message without a conversation starts one: the server decides the id", async () => {
+  const { connection, calls, frames } = setup();
+
+  await connection.handleMessage(message("m1"));
+
+  expect(calls[0].input.conversationId).toBeUndefined();
+  expect(frames.at(-1)).toMatchObject({ type: "reply", conversationId: CONVERSATION_ID, assistantSeq: 2 });
+});
+
+// O histórico deixou de trafegar, mas uma aba aberta durante o deploy continua
+// mandando o campo: ele é ignorado, e não vira `invalid_frame`.
+test("a legacy frame carrying history is accepted, and the history is ignored", async () => {
+  const { connection, calls, frames } = setup();
+
+  await connection.handleMessage(
+    message("m1", { history: Array.from({ length: 21 }, () => ({ role: "user", text: "a" })) }),
+  );
+
+  expect(frames.at(-1)).toMatchObject({ type: "reply", id: "m1" });
+  expect(calls[0].input).not.toHaveProperty("history");
 });
 
 test("streams the progress and sends the reply with the entity refs", async () => {
@@ -189,7 +235,7 @@ test.each([
   ["not JSON", "{", undefined],
   ["unknown type", JSON.stringify({ type: "hello", id: "m1" }), "m1"],
   ["blank text", JSON.stringify({ type: "message", id: "m1", text: "  " }), "m1"],
-  ["too much history", message("m1", { history: Array.from({ length: 21 }, () => ({ role: "user", text: "a" })) }), "m1"],
+  ["a malformed conversation id", message("m1", { conversationId: "nope" }), "m1"],
   ["an id with spaces", JSON.stringify({ type: "message", id: "a b", text: "oi" }), undefined],
 ])("refuses a frame with %s", async (_label, raw, id) => {
   const { connection, frames, calls } = setup();

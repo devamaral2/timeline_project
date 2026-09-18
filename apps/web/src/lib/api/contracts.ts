@@ -256,8 +256,11 @@ export interface TagSuggestionDto {
 
 /**
  * Chat com o agente (`/api/ai/chat`). O socket so abre com um ticket de uso
- * unico emitido por `POST /api/ai/chat/tickets`; o historico da conversa e do
- * cliente e vai em cada mensagem.
+ * unico emitido por `POST /api/ai/chat/tickets`.
+ *
+ * O historico **nao** trafega mais: quem o guarda e o servidor, e o frame leva
+ * so o id da conversa. Ler a conversa e REST (`/api/ai/conversations`), porque
+ * o frame e limitado a 64 KiB e o socket morre a cada 15 min.
  */
 export interface AgentChatTicketDto {
   ticket: string;
@@ -266,18 +269,12 @@ export interface AgentChatTicketDto {
 
 export type AgentEntityKind = "event" | "task" | "note";
 
-/** Um registro que a resposta tocou, no formato que volta no proximo `history`. */
+/** Um registro que a resposta tocou. */
 export interface AgentChatEntityRef {
   kind: AgentEntityKind;
   id: string;
   change: "created" | "updated" | "deleted";
   label?: string;
-}
-
-export interface AgentChatTurn {
-  role: "user" | "assistant";
-  text: string;
-  entities?: AgentChatEntityRef[];
 }
 
 export interface AgentScreenContext {
@@ -290,7 +287,8 @@ export interface AgentChatMessageFrame {
   id: string;
   text: string;
   context?: AgentScreenContext;
-  history?: AgentChatTurn[];
+  /** Ausente e conversa nova: o servidor devolve o id dela no `reply`. */
+  conversationId?: string;
 }
 
 export interface AgentChatCancelFrame {
@@ -305,6 +303,7 @@ export type AgentChatErrorCode =
   | "forbidden"
   | "limit_reached"
   | "conflict"
+  | "conversation_gone"
   | "unavailable"
   | "cancelled"
   | "internal";
@@ -321,6 +320,10 @@ export type AgentChatServerFrame =
   | {
       type: "reply";
       id: string;
+      /** A conversa do turno — adotado pelo cliente quando ela acabou de nascer. */
+      conversationId: string;
+      /** Onde a resposta caiu; um salto significa que outra aba escreveu no meio. */
+      assistantSeq: number;
       agentResponse: string;
       entities: AgentChatEntityRef[];
       createdEntities: AgentEntityItemDto[];
@@ -328,3 +331,35 @@ export type AgentChatServerFrame =
       deletedEntities: AgentEntityItemDto[];
     }
   | { type: "error"; id?: string; code: AgentChatErrorCode };
+
+/** Uma conversa na lista de `GET /api/ai/conversations`. */
+export interface AgentConversationDto {
+  id: string;
+  title?: string;
+  /** O comeco do primeiro pedido: nomeia a conversa enquanto nao ha titulo. */
+  preview: string;
+  lastMessageAt: string;
+  revision: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AgentConversationPageDto {
+  items: AgentConversationDto[];
+  nextCursor?: string;
+}
+
+export interface AgentChatMessageDto {
+  id: string;
+  seq: number;
+  role: "user" | "assistant";
+  content: string;
+  entities: AgentChatEntityRef[];
+  createdAt: string;
+}
+
+/** Uma pagina de mensagens, da mais nova para a mais velha. */
+export interface AgentChatMessagePageDto {
+  items: AgentChatMessageDto[];
+  nextCursor?: string;
+}

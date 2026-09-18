@@ -5,7 +5,7 @@ export const queryDataSkill = defineAgentSkill({
   name: "query_data",
   progressLabel: "Consultando seus dados",
   description:
-    "Executa um SELECT em PostgreSQL sobre os eventos, tarefas e notas do usuário. Pode ser chamada várias vezes.",
+    "Executa um SELECT em PostgreSQL sobre os dados do usuário. Pode ser chamada várias vezes.",
   instructions: [
     "query_data — um único SELECT, só com as tabelas listadas abaixo e sem schema (nada de",
     "public.x), sem ';' no meio e sem parâmetros ($1). Ela já enxerga apenas os dados deste",
@@ -17,5 +17,5 @@ export const queryDataSkill = defineAgentSkill({
   parameters: z.object({
     sql: z.string().min(1).describe("Um único SELECT."),
   }),
-  run: async (args, { session, query }) => query.run({ userId: session.userId, sql: args.sql }),
+  run: async (args, { session, query, scope }) => query.run({ userId: session.userId, sql: args.sql, scope }),
 });

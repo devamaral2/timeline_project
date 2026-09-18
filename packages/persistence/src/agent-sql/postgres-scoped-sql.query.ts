@@ -1,5 +1,5 @@
 import { types, type Pool, type QueryArrayResult } from "pg";
-import type { ScopedSqlOutcome, ScopedSqlQuery } from "@repo/entities/ports";
+import type { ScopedSqlOutcome, ScopedSqlQuery, ScopedSqlScope } from "@repo/entities/ports";
 import { describeLogicalSchema } from "./logical-schema";
 import { AgentSqlRewriteError, buildScopedSql } from "./rewrite-agent-sql";
 import { validateAgentSql } from "./validate-agent-sql";
@@ -37,17 +37,17 @@ export class PostgresScopedSqlQuery implements ScopedSqlQuery {
     private readonly limits: ScopedSqlLimits = DEFAULT_LIMITS,
   ) {}
 
-  describeSchema(): string {
-    return describeLogicalSchema();
+  describeSchema(scope: ScopedSqlScope): string {
+    return describeLogicalSchema(scope);
   }
 
-  async run(input: { userId: string; sql: string }): Promise<ScopedSqlOutcome> {
-    const validation = await validateAgentSql(input.sql);
+  async run(input: { userId: string; sql: string; scope: ScopedSqlScope }): Promise<ScopedSqlOutcome> {
+    const validation = await validateAgentSql(input.sql, input.scope);
     if (!validation.ok) return validation;
 
     let scopedSql: string;
     try {
-      scopedSql = await buildScopedSql(input.sql, validation.statement, this.limits.rowCap + 1);
+      scopedSql = await buildScopedSql(input.sql, validation.statement, this.limits.rowCap + 1, input.scope);
     } catch (error) {
       if (error instanceof AgentSqlRewriteError) return { ok: false, error: error.message };
       throw error;

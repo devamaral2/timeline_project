@@ -3,8 +3,10 @@ import type {
   EventRepository,
   NoteRepository,
   ScopedSqlQuery,
+  ScopedSqlScope,
   TaskRepository,
 } from "@repo/entities/ports";
+import type { AgentConversation } from "@repo/entities";
 import type { AgentChatTurn, RunAgentRequest, RunAgentResponse } from "@repo/entities/contracts";
 import type { AuthenticatedUser } from "../../auth/authenticated-user";
 import type { CreateEventUseCase } from "../../events/usecases/create-event.usecase";
@@ -12,20 +14,31 @@ import { AgentLimitReachedError, AgentRunCancelledError } from "../errors/agent.
 import type { AgentGateway } from "../gateways/agent.gateway";
 import { assertCanActFor } from "../services/agent-access-policy";
 import { AgentChangeSession } from "../services/agent-change-session";
-import { toConversationInput } from "../services/agent-chat-history";
+import { toChatEntityRefs, toConversationInput } from "../services/agent-chat-history";
 import { AgentPromptBuilderService } from "../services/agent-prompt-builder.service";
 import type { AgentSkill } from "../skills/agent-skill";
 import { AGENT_SKILLS, bindAgentTools } from "../skills/agent-skill-registry";
 
+/** A conversa em que este turno entra. Ausente no caminho REST. */
+export interface RunAgentConversation {
+  conversationId: string;
+  /** Preenchido so quando a conversa nasce neste turno. */
+  create?: AgentConversation;
+}
+
 /** O que o chat acrescenta a um pedido; o REST nao passa nada disso. */
 export interface RunAgentOptions {
-  /** Turnos anteriores, guardados pelo cliente. */
+  /** Turnos anteriores, carregados pelo servidor a partir da conversa. */
   history?: readonly AgentChatTurn[];
   /** Ha proxima rodada: o agente pode perguntar em vez de desistir. */
   conversational?: boolean;
   /** Abortado antes do commit, nada e gravado. */
   signal?: AbortSignal;
   onProgress?(label: string): void;
+  /** Grava o turno junto das entidades, no mesmo lote. */
+  conversation?: RunAgentConversation;
+  /** Onde o turno caiu na conversa, depois de gravado. */
+  onConversationWritten?(seqs: { firstSeq: number; lastSeq: number }): void;
 }
 
 export const SAVING_PROGRESS_LABEL = "Salvando";
@@ -53,6 +66,12 @@ export class RunAgentUseCase {
   ): Promise<RunAgentResponse> {
     assertCanActFor(actor, input.userId);
 
+    // O historico de chat so entra no escopo quando o ator e o dono dos dados.
+    // Um super admin agindo sobre outro usuario le eventos e tarefas, que sao
+    // dados; as mensagens sao texto escrito para um modelo ler, e um usuario
+    // pode planta-las esperando justamente essa leitura.
+    const scope: ScopedSqlScope = { includeChat: actor.userId === input.userId };
+
     const session = new AgentChangeSession(input.userId, this.repositories, this.createEvent);
     const labels = new Map(this.skills.map((skill) => [skill.name, skill.progressLabel]));
     const text = options.history?.length ? toConversationInput(options.history, input.text) : input.text;
@@ -61,12 +80,13 @@ export class RunAgentUseCase {
         systemPrompt: this.promptBuilder.build({
           now: this.clock(),
           context: input.context,
-          schema: this.query.describeSchema(),
+          schema: this.query.describeSchema(scope),
           skills: this.skills,
           conversational: options.conversational,
+          chatMemory: scope.includeChat,
         }),
         text: requestText,
-        tools: bindAgentTools(this.skills, { session, query: this.query }),
+        tools: bindAgentTools(this.skills, { session, query: this.query, scope }),
         signal: options.signal,
         onToolCall: options.onProgress
           ? (name) => {
@@ -93,18 +113,34 @@ export class RunAgentUseCase {
     // Parar no teto com mudancas preparadas e gravar metade do pedido.
     if (run.stoppedByLimit && session.hasChanges()) throw new AgentLimitReachedError();
 
-    if (session.hasChanges()) {
-      options.onProgress?.(SAVING_PROGRESS_LABEL);
-      await this.batchWriter.commit(session.toBatch());
-    }
-
     const { created, updated, deleted } = session.result();
-    return {
+    const response: RunAgentResponse = {
       agentResponse: run.text.trim() || fallbackResponse(created.length, updated.length, deleted.length),
       createdEntities: created,
       updatedEntities: updated,
       deletedEntities: deleted,
     };
+
+    if (options.conversation) {
+      // `input.text`, e nao `text`: `text` e a conversa inteira ja renderizada,
+      // e grava-la faria cada mensagem carregar todas as anteriores.
+      session.stageConversationTurn(
+        options.conversation,
+        input.text,
+        response.agentResponse,
+        toChatEntityRefs(response),
+      );
+    }
+
+    if (session.hasChanges() || session.hasMessages()) {
+      // "Salvando" so quando ha o que salvar alem da propria conversa: um turno
+      // de pura consulta nao deve anunciar gravacao que nao houve.
+      if (session.hasChanges()) options.onProgress?.(SAVING_PROGRESS_LABEL);
+      const result = await this.batchWriter.commit(session.toBatch());
+      if (result.conversation) options.onConversationWritten?.(result.conversation);
+    }
+
+    return response;
   }
 }
 

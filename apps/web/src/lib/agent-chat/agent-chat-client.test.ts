@@ -75,7 +75,7 @@ afterEach(() => {
 test("asks for a ticket, waits for ready and only then sends the message", async () => {
   const chat = client();
 
-  const sending = chat.send({ id: "m1", text: "oi", history: [{ role: "user", text: "antes" }] });
+  const sending = chat.send({ id: "m1", text: "oi", conversationId: "01ARZ3NDEKTSV4RRFFQ69G5FAV" });
   await flush();
 
   expect(sockets[0].url).toBe(`ws://${window.location.host}/api/ai/chat?ticket=ticket-1`);
@@ -84,7 +84,9 @@ test("asks for a ticket, waits for ready and only then sends the message", async
   sockets[0].serverSends({ type: "ready", userId: "user-1", expiresAt: "2026-09-17T12:15:00.000Z" });
   await sending;
 
-  expect(sockets[0].sent).toEqual([{ type: "message", id: "m1", text: "oi", history: [{ role: "user", text: "antes" }] }]);
+  expect(sockets[0].sent).toEqual([
+    { type: "message", id: "m1", text: "oi", conversationId: "01ARZ3NDEKTSV4RRFFQ69G5FAV" },
+  ]);
 });
 
 test("reuses the open connection for the next message", async () => {

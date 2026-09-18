@@ -17,6 +17,8 @@ import { InMemoryTaskRepository } from "../../tasks/testing/in-memory-task.repos
 import { AgentChatController } from "../http/agent-chat.controller";
 import { InMemoryAgentChatTicketStore } from "../testing/in-memory-agent-chat-ticket-store";
 import { InMemoryEntityBatchWriter } from "../testing/in-memory-entity-batch-writer";
+import { InMemoryAgentConversationQuery } from "../testing/in-memory-agent-conversation.query";
+import { RunChatTurnUseCase } from "../usecases/run-chat-turn.usecase";
 import { ScriptedAgentGateway } from "../testing/scripted-agent.gateway";
 import { StubScopedSqlQuery } from "../testing/stub-scoped-sql-query";
 import { IssueAgentChatTicketUseCase } from "../usecases/issue-agent-chat-ticket.usecase";
@@ -33,6 +35,10 @@ const silent = { log() {}, error() {}, warn() {} };
 const tickets = new InMemoryAgentChatTicketStore();
 const gateway = new ScriptedAgentGateway([{ name: "save_note", args: { content: "Comprar pão" } }], "Anotei.");
 const notes = new InMemoryNoteRepository();
+
+function buildRunChatTurn(): RunChatTurnUseCase {
+  return new RunChatTurnUseCase(buildRunAgent(), new InMemoryAgentConversationQuery());
+}
 
 function buildRunAgent(): RunAgentUseCase {
   const events = new InMemoryEventRepository(new InMemoryEventDatabase());
@@ -59,7 +65,7 @@ function buildRunAgent(): RunAgentUseCase {
       provide: AgentChatServer,
       inject: [HttpAdapterHost],
       useFactory: (host: HttpAdapterHost) =>
-        new AgentChatServer(() => host.httpAdapter.getHttpServer(), tickets, buildRunAgent(), silent),
+        new AgentChatServer(() => host.httpAdapter.getHttpServer(), tickets, buildRunChatTurn(), silent),
     },
   ],
 })

@@ -1,12 +1,26 @@
-import { Note, Task, type Event, type EventItem, type TaskReviseChanges } from "@repo/entities";
+import {
+  AgentChatMessage,
+  Note,
+  Task,
+  type AgentConversation,
+  type Event,
+  type EventItem,
+  type TaskReviseChanges,
+} from "@repo/entities";
 import type {
+  ConversationAppend,
   EntityBatch,
   EventRepository,
   NoteRepository,
   StagedChange,
   TaskRepository,
 } from "@repo/entities/ports";
-import type { AgentEntityItem, CreateEventInput, CreateEventItemInput } from "@repo/entities/contracts";
+import type {
+  AgentChatEntityRef,
+  AgentEntityItem,
+  CreateEventInput,
+  CreateEventItemInput,
+} from "@repo/entities/contracts";
 import type { CreateEventUseCase } from "../../events/usecases/create-event.usecase";
 import { assertParentTaskAssignable } from "../../tasks/usecases/assert-parent-task";
 import { eventItem, noteItem, taskItem } from "./agent-entity-dto";
@@ -61,6 +75,7 @@ export class AgentChangeSession {
   private readonly events = new Map<string, Staged<Event>>();
   private readonly tasks = new Map<string, Staged<Task>>();
   private readonly notes = new Map<string, Staged<Note>>();
+  private conversationTurn: ConversationAppend | undefined;
 
   constructor(
     readonly userId: string,
@@ -188,6 +203,33 @@ export class AgentChangeSession {
     return this.events.size + this.tasks.size + this.notes.size > 0;
   }
 
+  /**
+   * O turno de conversa entra no mesmo lote das entidades, e nao numa gravacao
+   * propria: assim a conversa nunca registra uma escrita que o banco recusou.
+   * Chamado uma unica vez, no fim do run, quando a resposta ja existe.
+   */
+  stageConversationTurn(
+    conversation: { conversationId: string; create?: AgentConversation },
+    userText: string,
+    assistantText: string,
+    entities: readonly AgentChatEntityRef[],
+  ): void {
+    const conversationId = conversation.conversationId;
+    this.conversationTurn = {
+      conversationId,
+      create: conversation.create,
+      messages: [
+        AgentChatMessage.create({ conversationId, role: "user", content: userText }),
+        AgentChatMessage.create({ conversationId, role: "assistant", content: assistantText, entities }),
+      ],
+    };
+  }
+
+  /** Ha o que gravar mesmo sem entidade nenhuma: um turno de pura consulta. */
+  hasMessages(): boolean {
+    return this.conversationTurn !== undefined;
+  }
+
   toBatch(): EntityBatch {
     const changes = <T>(staged: Map<string, Staged<T>>) => [...staged.values()].map((entry) => entry.change);
     return {
@@ -195,6 +237,7 @@ export class AgentChangeSession {
       events: changes(this.events),
       tasks: changes(this.tasks),
       notes: changes(this.notes),
+      conversation: this.conversationTurn,
     };
   }
 

@@ -1,6 +1,8 @@
 import { Module } from "@nestjs/common";
 import type {
   AgentChatTicketStore,
+  AgentConversationQuery,
+  AgentConversationRepository,
   DailyOverviewQuery,
   EntityBatchWriter,
   EventRepository,
@@ -22,6 +24,8 @@ import { PostgresNoteRepository } from "./notes/repositories/postgres-note.repos
 import { PostgresScopedSqlQuery } from "./agent-sql/postgres-scoped-sql.query";
 import { PostgresEntityBatchWriter } from "./agent-batch/postgres-entity-batch-writer";
 import { PostgresAgentChatTicketStore } from "./agent-chat/postgres-agent-chat-ticket.store";
+import { PostgresAgentConversationRepository } from "./agent-chat/repositories/postgres-agent-conversation.repository";
+import { PostgresAgentConversationQuery } from "./agent-chat/queries/postgres-agent-conversation.query";
 import { PostgresRecurrenceRepository } from "./recurrences/repositories/postgres-recurrence.repository";
 import { PostgresWorkoutCatalog } from "./catalog/postgres-workout.catalog";
 
@@ -45,6 +49,8 @@ export const NOTE_REPOSITORY = "NOTE_REPOSITORY";
 export const SCOPED_SQL_QUERY = "SCOPED_SQL_QUERY";
 export const ENTITY_BATCH_WRITER = "ENTITY_BATCH_WRITER";
 export const AGENT_CHAT_TICKET_STORE = "AGENT_CHAT_TICKET_STORE";
+export const AGENT_CONVERSATION_REPOSITORY = "AGENT_CONVERSATION_REPOSITORY";
+export const AGENT_CONVERSATION_QUERY = "AGENT_CONVERSATION_QUERY";
 
 function requireDatabaseUrl(): string {
   const value = process.env.DATABASE_URL;
@@ -124,6 +130,18 @@ function requireDatabaseUrl(): string {
       useFactory: (database: PostgresDatabase): AgentChatTicketStore =>
         new PostgresAgentChatTicketStore(database.db),
     },
+    {
+      provide: AGENT_CONVERSATION_REPOSITORY,
+      inject: [DATABASE],
+      useFactory: (database: PostgresDatabase): AgentConversationRepository =>
+        new PostgresAgentConversationRepository(database.db),
+    },
+    {
+      provide: AGENT_CONVERSATION_QUERY,
+      inject: [DATABASE],
+      useFactory: (database: PostgresDatabase): AgentConversationQuery =>
+        new PostgresAgentConversationQuery(database.db),
+    },
   ],
   exports: [
     DATABASE,
@@ -138,6 +156,8 @@ function requireDatabaseUrl(): string {
     SCOPED_SQL_QUERY,
     ENTITY_BATCH_WRITER,
     AGENT_CHAT_TICKET_STORE,
+    AGENT_CONVERSATION_REPOSITORY,
+    AGENT_CONVERSATION_QUERY,
   ],
 })
 export class PersistenceModule {}

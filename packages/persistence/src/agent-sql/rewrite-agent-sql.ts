@@ -1,5 +1,6 @@
 import { parse } from "libpg-query";
-import { buildShadowCtes, LOGICAL_TABLES } from "./logical-schema";
+import type { ScopedSqlScope } from "@repo/entities/ports";
+import { buildShadowCtes, logicalTables } from "./logical-schema";
 
 type Node = Record<string, unknown>;
 
@@ -12,9 +13,14 @@ export class AgentSqlRewriteError extends Error {}
  * Nao confia na concatenacao: faz o parse do resultado e exige que a subquery
  * seja exatamente a query validada e que os CTEs sejam os de escopo.
  */
-export async function buildScopedSql(userSql: string, validatedStatement: Node, rowLimit: number): Promise<string> {
+export async function buildScopedSql(
+  userSql: string,
+  validatedStatement: Node,
+  rowLimit: number,
+  scope: ScopedSqlScope,
+): Promise<string> {
   const body = userSql.trim().replace(/[;\s]+$/, "");
-  const scopedSql = `WITH ${buildShadowCtes()}\nSELECT * FROM (\n${body}\n) AS agent_q\nLIMIT ${Math.trunc(rowLimit)}`;
+  const scopedSql = `WITH ${buildShadowCtes(scope)}\nSELECT * FROM (\n${body}\n) AS agent_q\nLIMIT ${Math.trunc(rowLimit)}`;
 
   let tree: { stmts?: Array<{ stmt?: Node }> };
   try {
@@ -23,20 +29,24 @@ export async function buildScopedSql(userSql: string, validatedStatement: Node, 
     throw new AgentSqlRewriteError("Não foi possível preparar a consulta. Envie um único SELECT, sem ';' no meio.");
   }
 
-  if (!hasExpectedShape(tree, validatedStatement)) {
+  if (!hasExpectedShape(tree, validatedStatement, scope)) {
     throw new AgentSqlRewriteError("Não foi possível preparar a consulta com segurança.");
   }
   return scopedSql;
 }
 
-function hasExpectedShape(tree: { stmts?: Array<{ stmt?: Node }> }, validatedStatement: Node): boolean {
+function hasExpectedShape(
+  tree: { stmts?: Array<{ stmt?: Node }> },
+  validatedStatement: Node,
+  scope: ScopedSqlScope,
+): boolean {
   if (tree.stmts?.length !== 1) return false;
   const select = tree.stmts[0].stmt?.SelectStmt as Node | undefined;
   if (!select) return false;
 
   const ctes = ((select.withClause as Node | undefined)?.ctes as Node[] | undefined) ?? [];
   const cteNames = ctes.map((entry) => (entry.CommonTableExpr as Node | undefined)?.ctename);
-  if (JSON.stringify(cteNames) !== JSON.stringify(LOGICAL_TABLES.map((table) => table.name))) return false;
+  if (JSON.stringify(cteNames) !== JSON.stringify(logicalTables(scope).map((table) => table.name))) return false;
 
   const from = select.fromClause as Node[] | undefined;
   if (from?.length !== 1) return false;

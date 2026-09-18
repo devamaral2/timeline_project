@@ -15,3 +15,5 @@ export type * from "./recurrences/ports/recurrence-repository";
 export type * from "./agent/ports/scoped-sql-query";
 export type * from "./agent/ports/entity-batch-writer";
 export type * from "./agent/ports/agent-chat-ticket-store";
+export type * from "./agent-chat/ports/agent-conversation-repository";
+export type * from "./agent-chat/ports/agent-conversation-query";

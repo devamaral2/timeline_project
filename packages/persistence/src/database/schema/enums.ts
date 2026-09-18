@@ -22,3 +22,4 @@ export const recurrenceFrequencyEnum = pgEnum("recurrence_freq", [
   "yearly",
 ]);
 export const recurrenceTargetEnum = pgEnum("recurrence_target", ["event", "task"]);
+export const agentChatRoleEnum = pgEnum("agent_chat_role", ["user", "assistant"]);

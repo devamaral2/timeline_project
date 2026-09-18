@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { EntityBatchConflictError } from "@repo/entities";
+import { AgentConversationNotFoundError, EntityBatchConflictError } from "@repo/entities";
 import type { AgentChatClientFrame, AgentChatErrorCode } from "@repo/entities/contracts";
 import {
   AgentLimitReachedError,
@@ -9,7 +9,6 @@ import {
   LlmUnavailableError,
 } from "../errors/agent.errors";
 import { agentScreenContextSchema, agentTextSchema } from "../http/agent-input.schemas";
-import { MAX_HISTORY_TURNS } from "../services/agent-chat-history";
 
 export const AGENT_CHAT_PATH = "/api/ai/chat";
 
@@ -39,26 +38,22 @@ export const CHAT_TICKET_FORMAT = /^[A-Za-z0-9_-]{43}$/;
 
 const frameIdSchema = z.string().regex(/^[A-Za-z0-9_-]{1,64}$/);
 
-const entityRefSchema = z.object({
-  kind: z.enum(["event", "task", "note"]),
-  id: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),
-  change: z.enum(["created", "updated", "deleted"]),
-  label: z.string().max(120).optional(),
-});
+/** ULID em Crockford base32, como o dominio o gera. */
+export const CONVERSATION_ID_FORMAT = /^[0-9A-HJKMNP-TV-Z]{26}$/;
 
-const turnSchema = z.object({
-  role: z.enum(["user", "assistant"]),
-  text: z.string().max(4000),
-  entities: z.array(entityRefSchema).max(20).optional(),
-});
-
+/**
+ * Nenhum dos objetos e `strict`: o Zod descarta chave desconhecida em vez de
+ * recusar o frame. E de proposito — uma aba aberta durante o deploy continua
+ * mandando o antigo `history`, que aqui e simplesmente ignorado em vez de
+ * virar `invalid_frame`.
+ */
 const clientFrameSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("message"),
     id: frameIdSchema,
     text: agentTextSchema,
     context: agentScreenContextSchema.optional(),
-    history: z.array(turnSchema).max(MAX_HISTORY_TURNS).optional(),
+    conversationId: z.string().regex(CONVERSATION_ID_FORMAT).optional(),
   }),
   z.object({ type: z.literal("cancel"), id: frameIdSchema }),
 ]);
@@ -89,6 +84,7 @@ export function chatErrorCodeOf(error: unknown): AgentChatErrorCode {
   if (error instanceof InvalidInputError) return "invalid_input";
   if (error instanceof AgentTargetForbiddenError) return "forbidden";
   if (error instanceof AgentLimitReachedError) return "limit_reached";
+  if (error instanceof AgentConversationNotFoundError) return "conversation_gone";
   if (error instanceof EntityBatchConflictError) return "conflict";
   if (error instanceof LlmUnavailableError) return "unavailable";
   return "internal";

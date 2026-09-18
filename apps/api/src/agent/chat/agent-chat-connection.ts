@@ -2,7 +2,7 @@ import type { LoggerService } from "@nestjs/common";
 import type { AgentChatMessageFrame, AgentChatServerFrame } from "@repo/entities/contracts";
 import type { AgentChatGrant } from "@repo/entities/ports";
 import { toChatEntityRefs } from "../services/agent-chat-history";
-import type { RunAgentUseCase } from "../usecases/run-agent.usecase";
+import type { RunChatTurnUseCase } from "../usecases/run-chat-turn.usecase";
 import {
   CHAT_CLOSE,
   CHAT_CONNECTION_LIFETIME_MS,
@@ -51,7 +51,7 @@ export class AgentChatConnection {
   constructor(
     private readonly transport: AgentChatTransport,
     private readonly grant: AgentChatGrant,
-    private readonly runAgent: Pick<RunAgentUseCase, "execute">,
+    private readonly runChatTurn: Pick<RunChatTurnUseCase, "execute">,
     private readonly logger: Pick<LoggerService, "error">,
     private readonly clock: AgentChatClock = systemClock,
     private readonly limits = { lifetimeMs: CHAT_CONNECTION_LIFETIME_MS, idleMs: CHAT_IDLE_TIMEOUT_MS },
@@ -100,12 +100,15 @@ export class AgentChatConnection {
     this.clock.clearTimeout(this.idleTimer);
 
     try {
-      const response = await this.runAgent.execute(
-        { userId: this.grant.targetUserId, text: frame.text, context: frame.context },
+      const { conversationId, assistantSeq, ...response } = await this.runChatTurn.execute(
+        {
+          userId: this.grant.targetUserId,
+          text: frame.text,
+          context: frame.context,
+          conversationId: frame.conversationId,
+        },
         this.grant.actor,
         {
-          history: frame.history,
-          conversational: true,
           signal: controller.signal,
           onProgress: (label) => {
             if (!this.closed) this.transport.send({ type: "status", id: frame.id, label });
@@ -113,7 +116,14 @@ export class AgentChatConnection {
         },
       );
       if (!this.closed) {
-        this.transport.send({ type: "reply", id: frame.id, entities: toChatEntityRefs(response), ...response });
+        this.transport.send({
+          type: "reply",
+          id: frame.id,
+          conversationId,
+          assistantSeq,
+          entities: toChatEntityRefs(response),
+          ...response,
+        });
       }
     } catch (error) {
       const code = chatErrorCodeOf(error);

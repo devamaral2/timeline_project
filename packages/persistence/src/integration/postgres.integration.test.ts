@@ -434,16 +434,18 @@ describe.runIf(RUN_INTEGRATION)("PostgresEventRepository", () => {
     expect(rows).toHaveLength(2);
   });
 
-  test("keeps an earlier event open when a later one is saved", async () => {
-    const opened = newEvent({ startedAt: new Date("2026-08-31T09:00:00.000Z") });
-    await repository.save(opened);
+  test("does not touch an earlier event when a later one is saved", async () => {
+    const earlier = newEvent({ startedAt: new Date("2026-08-31T09:00:00.000Z") });
+    await repository.save(earlier);
 
     await repository.save(newEvent({ startedAt: new Date("2026-08-31T10:00:00.000Z") }));
 
-    // Nao ha mais "o proximo evento fecha o anterior": quem termina um evento e o usuario.
-    const untouched = await repository.findById(opened.id);
-    expect(untouched?.finishedAt).toBeUndefined();
-    expect(untouched?.revision).toBe(opened.revision);
+    // Nao ha mais "o proximo evento fecha o anterior": o fim do primeiro continua
+    // sendo o que ele nasceu com — estimado por `Event.create`, nunca reescrito
+    // por um evento que veio depois. Dois eventos podem se sobrepor.
+    const untouched = await repository.findById(earlier.id);
+    expect(untouched?.finishedAt).toEqual(earlier.finishedAt);
+    expect(untouched?.revision).toBe(earlier.revision);
   });
 
   test("saves an event that starts in the future", async () => {

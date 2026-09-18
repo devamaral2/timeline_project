@@ -9,6 +9,10 @@ import {
 } from "@nestjs/common";
 import type { Response } from "express";
 import {
+  AgentConversationNotFoundError,
+  AgentConversationOwnershipError,
+  AgentConversationRevisionConflictError,
+  AgentConversationValidationError,
   EntityBatchConflictError,
   EventNotFoundError,
   EventOwnershipError,
@@ -70,6 +74,10 @@ export class DomainExceptionFilter implements ExceptionFilter {
     if (exception instanceof AgentTargetForbiddenError) return HttpStatus.FORBIDDEN;
     if (exception instanceof AgentLimitReachedError) return HttpStatus.UNPROCESSABLE_ENTITY;
     if (exception instanceof EntityBatchConflictError) return HttpStatus.CONFLICT;
+    if (exception instanceof AgentConversationValidationError) return HttpStatus.BAD_REQUEST;
+    if (exception instanceof AgentConversationOwnershipError) return HttpStatus.FORBIDDEN;
+    if (exception instanceof AgentConversationNotFoundError) return HttpStatus.NOT_FOUND;
+    if (exception instanceof AgentConversationRevisionConflictError) return HttpStatus.CONFLICT;
     if (exception instanceof NoteValidationError) return HttpStatus.BAD_REQUEST;
     if (exception instanceof NoteOwnershipError) return HttpStatus.FORBIDDEN;
     if (exception instanceof NoteNotFoundError) return HttpStatus.NOT_FOUND;

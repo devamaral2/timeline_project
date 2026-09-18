@@ -1,6 +1,7 @@
 import { EntityBatchConflictError } from "@repo/entities";
 import type {
   EntityBatch,
+  EntityBatchResult,
   EntityBatchWriter,
   EventRepository,
   NoteRepository,
@@ -22,12 +23,14 @@ interface Store<T> {
  */
 export class InMemoryEntityBatchWriter implements EntityBatchWriter {
   readonly commits: EntityBatch[] = [];
+  /** Ultimo `seq` por conversa — o que a trava da linha faz no Postgres. */
+  private readonly lastSeq = new Map<string, number>();
 
   constructor(
     private readonly repositories: { events: EventRepository; tasks: TaskRepository; notes: NoteRepository },
   ) {}
 
-  async commit(batch: EntityBatch): Promise<void> {
+  async commit(batch: EntityBatch): Promise<EntityBatchResult> {
     await this.check(this.repositories.events, batch.userId, batch.events);
     await this.check(this.repositories.tasks, batch.userId, batch.tasks);
     await this.check(this.repositories.notes, batch.userId, batch.notes);
@@ -36,6 +39,13 @@ export class InMemoryEntityBatchWriter implements EntityBatchWriter {
     await this.apply(this.repositories.events, batch.userId, batch.events);
     await this.apply(this.repositories.notes, batch.userId, batch.notes);
     this.commits.push(batch);
+
+    if (!batch.conversation) return {};
+    const { conversationId, messages } = batch.conversation;
+    const firstSeq = (this.lastSeq.get(conversationId) ?? 0) + 1;
+    const lastSeq = firstSeq + messages.length - 1;
+    this.lastSeq.set(conversationId, lastSeq);
+    return { conversation: { firstSeq, lastSeq } };
   }
 
   private async check<T extends { id: string }>(

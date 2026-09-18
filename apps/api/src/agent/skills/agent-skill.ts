@@ -1,10 +1,12 @@
 import { z } from "zod";
-import type { ScopedSqlQuery } from "@repo/entities/ports";
+import type { ScopedSqlQuery, ScopedSqlScope } from "@repo/entities/ports";
 import type { AgentChangeSession } from "../services/agent-change-session";
 
 export interface AgentSkillContext {
   session: AgentChangeSession;
   query: ScopedSqlQuery;
+  /** O mesmo escopo com que o prompt foi descrito: a ferramenta nao pode ver mais do que ele. */
+  scope: ScopedSqlScope;
 }
 
 /**

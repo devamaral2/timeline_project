@@ -1,5 +1,6 @@
 import { parse } from "libpg-query";
-import { LOGICAL_TABLE_NAMES } from "./logical-schema";
+import type { ScopedSqlScope } from "@repo/entities/ports";
+import { logicalTableNames } from "./logical-schema";
 import {
   ALLOWED_FUNCTIONS,
   ALLOWED_NODE_TYPES,
@@ -23,7 +24,7 @@ function reject(message: string): never {
  * Valida a query pelo AST do parser real do Postgres. Recusa tudo que nao for
  * um unico SELECT feito so de nos, funcoes, tipos e tabelas das listas.
  */
-export async function validateAgentSql(sql: string): Promise<AgentSqlValidation> {
+export async function validateAgentSql(sql: string, scope: ScopedSqlScope): Promise<AgentSqlValidation> {
   if (sql.length > MAX_AGENT_SQL_LENGTH) {
     return { ok: false, error: `A consulta passa de ${MAX_AGENT_SQL_LENGTH} caracteres.` };
   }
@@ -46,7 +47,7 @@ export async function validateAgentSql(sql: string): Promise<AgentSqlValidation>
   }
 
   try {
-    walkSelect(select, [LOGICAL_TABLE_NAMES]);
+    walkSelect(select, [logicalTableNames(scope)]);
   } catch (error) {
     if (error instanceof Rejected) return { ok: false, error: error.message };
     throw error;

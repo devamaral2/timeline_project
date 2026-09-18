@@ -1,6 +1,9 @@
 import { describe, expect, test } from "vitest";
 import { validateAgentSql } from "./validate-agent-sql";
 
+/** O escopo normal: o ator e o dono dos dados. */
+const OWNER = { includeChat: true };
+
 const REJECTED: Array<[string, string]> = [
   ["delete", "DELETE FROM events"],
   ["update", "UPDATE events SET name = 'x'"],
@@ -79,23 +82,36 @@ const ACCEPTED: Array<[string, string]> = [
 
 describe("validateAgentSql", () => {
   test.each(REJECTED)("rejects %s", async (_label, sql) => {
-    const result = await validateAgentSql(sql);
+    const result = await validateAgentSql(sql, OWNER);
     expect(result.ok).toBe(false);
   });
 
   test.each(ACCEPTED)("accepts %s", async (_label, sql) => {
-    const result = await validateAgentSql(sql);
+    const result = await validateAgentSql(sql, OWNER);
     expect(result).toMatchObject({ ok: true });
   });
 
   test("explains what was refused", async () => {
-    expect(await validateAgentSql("SELECT pg_sleep(1)")).toEqual({
+    expect(await validateAgentSql("SELECT pg_sleep(1)", OWNER)).toEqual({
       ok: false,
       error: "Função não permitida: pg_sleep.",
     });
-    expect(await validateAgentSql("SELECT * FROM tags")).toEqual({
+    expect(await validateAgentSql("SELECT * FROM tags", OWNER)).toEqual({
       ok: false,
       error: "Tabela desconhecida: tags.",
     });
+  });
+});
+
+test("chat_messages existe ou nao conforme o escopo", async () => {
+  const sql = "SELECT content FROM chat_messages";
+
+  expect(await validateAgentSql(sql, OWNER)).toMatchObject({ ok: true });
+  // Sem o chat no escopo a tabela nao e "proibida": ela nao existe, e o erro e o
+  // mesmo de qualquer nome desconhecido. Nada no texto conta ao modelo do admin
+  // que ha um historico de conversa que ele nao esta vendo.
+  expect(await validateAgentSql(sql, { includeChat: false })).toEqual({
+    ok: false,
+    error: "Tabela desconhecida: chat_messages.",
   });
 });
