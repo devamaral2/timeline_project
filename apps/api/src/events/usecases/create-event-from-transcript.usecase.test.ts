@@ -74,14 +74,14 @@ test("sends the trimmed transcript to the parsing agent", async () => {
   expect(parsingGateway.calls).toEqual([{ text: "fui na padaria" }]);
 });
 
-test("leaves the event open when the phrase carried no window", async () => {
+test("estimates the routine default duration when the phrase carried no window", async () => {
   const { useCase, eventRepository } = makeUseCase();
 
   const result = await useCase.execute({ transcript: "comecei a trabalhar" }, actor);
   const persistedEvent = await eventRepository.findById(result.eventId);
 
   expect(persistedEvent?.startedAt).toEqual(lateNight);
-  expect(persistedEvent?.finishedAt).toBeUndefined();
+  expect(persistedEvent?.finishedAt).toEqual(new Date(lateNight.getTime() + 60 * 60_000));
 });
 
 test("closes a sleep event spoken with a duration, crossing into the next day", async () => {
@@ -129,12 +129,13 @@ test("starts the event in the past when the phrase says so", async () => {
 
 test("leaves an event already in progress untouched", async () => {
   const { useCase, database } = makeUseCase({ schedule: { startOffsetMinutes: -20 } });
+  const previouslyStartedAt = new Date("2026-08-24T00:00:00.000Z");
   database.events.push(
     Event.create({
       userId: actor.userId,
       name: "Trabalhar",
       description: "",
-      startedAt: new Date("2026-08-24T00:00:00.000Z"),
+      startedAt: previouslyStartedAt,
       tags: [],
       interruptions: [],
       items: [EventItem.create({ position: 0, type: "routine", schemaVersion: 1, isPrimary: true, data: {} })],
@@ -145,7 +146,7 @@ test("leaves an event already in progress untouched", async () => {
   const previousEvent = database.events.find((event) => event.name === "Trabalhar");
 
   // Registrar uma coisa nao termina outra: dois eventos podem se sobrepor.
-  expect(previousEvent?.finishedAt).toBeUndefined();
+  expect(previousEvent?.finishedAt).toEqual(new Date(previouslyStartedAt.getTime() + 60 * 60_000));
 });
 
 test("starts the event in the future when the phrase says so", async () => {

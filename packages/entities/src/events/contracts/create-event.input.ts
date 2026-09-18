@@ -16,7 +16,7 @@ export interface CreateEventInput {
    * pode ser agora": a timeline registra passado, presente e futuro.
    */
   startedAt?: string;
-  /** Quando o evento termina, em ISO-8601. Ausente e um evento sem fim declarado. */
+  /** Quando o evento termina, em ISO-8601. Ausente estima pela duracao tipica do item principal. */
   finishedAt?: string;
   items: CreateEventItemInput[];
   taskIds?: string[];

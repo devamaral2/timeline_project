@@ -1,5 +1,6 @@
 import { DEFAULT_EVENT_PRIORITY, type EventPriority } from "../types/event-priority";
 import { DEFAULT_EVENT_MISSED } from "../types/missed-flag";
+import { defaultEventDurationMinutesFor } from "../types/default-event-duration";
 import {
   DEFAULT_EVENT_NOTIFICATION_OFFSETS_MINUTES,
   type NotificationOffsetMinutes,
@@ -163,6 +164,17 @@ export class Event {
     this.primaryItemId = primaryItem.id;
   }
 
+  /**
+   * Evento novo nunca fica sem fim: sem `finishedAt` declarado, estimamos pela
+   * duracao tipica do item principal. `items` invalido (sem primario, por
+   * exemplo) cai no padrao generico — `build` recusa a lista logo em seguida.
+   */
+  private static estimateFinishedAt(startedAt: Date, items: EventItem[]): Date {
+    const primaryItemType = items.find((item) => item.isPrimary)?.type;
+    const durationMinutes = defaultEventDurationMinutesFor(primaryItemType);
+    return new Date(startedAt.getTime() + durationMinutes * 60_000);
+  }
+
   private static build(props: EventBuildProps, registry: EventItemRegistry): Event {
     if (props.finishedAt && props.finishedAt < props.startedAt) {
       throw new EventValidationError("finishedAt must be equal to or after startedAt");
@@ -185,6 +197,7 @@ export class Event {
   }
 
   static create(props: EventCreateProps, registry: EventItemRegistry = defaultEventItemRegistry): Event {
+    const finishedAt = props.finishedAt ?? Event.estimateFinishedAt(props.startedAt, props.items);
     return Event.build(
       {
         id: props.id ?? EventId.create(),
@@ -192,7 +205,7 @@ export class Event {
         name: props.name,
         description: props.description,
         startedAt: props.startedAt,
-        finishedAt: props.finishedAt,
+        finishedAt,
         tags: props.tags,
         interruptions: props.interruptions,
         items: props.items,

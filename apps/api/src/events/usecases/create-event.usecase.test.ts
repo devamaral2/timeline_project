@@ -50,7 +50,8 @@ test("creates a training event with server-defined timestamps and name", async (
   expect(savedEvent?.items[0].type).toBe("training");
   expect(savedEvent?.name).toBe("Treino");
   expect(savedEvent?.startedAt).toEqual(now);
-  expect(savedEvent?.finishedAt).toBeUndefined();
+  // Sem duracao informada, treino estima 1h30.
+  expect(savedEvent?.finishedAt).toEqual(new Date(now.getTime() + 90 * 60_000));
   expect(savedEvent?.interruptions).toEqual([]);
   expect(savedEvent?.tags).toEqual(["gym"]);
 });
@@ -85,6 +86,27 @@ test("keeps routine names supplied by the user", async () => {
   expect((await eventRepository.findById(result.eventId))?.name).toBe("Planejamento");
 });
 
+test("estimates finishedAt from the primary item type when none is informed", async () => {
+  const now = new Date("2026-08-17T12:00:00.000Z");
+  const database = new InMemoryEventDatabase();
+  const eventRepository = new InMemoryEventRepository(database);
+  const useCase = new CreateEventUseCase(
+    eventRepository,
+    new StubMealParsingGateway(),
+    new InMemoryWorkoutCatalog(),
+    undefined,
+    () => now,
+  );
+
+  const meal = await useCase.execute({ items: [{ type: "meal", data: { inputText: "banana" } }] }, { userId: "auth-user-1" });
+  const sleep = await useCase.execute({ items: [{ type: "sleep" }] }, { userId: "auth-user-1" });
+  const routine = await useCase.execute({ name: "Planejamento", items: [{ type: "routine" }] }, { userId: "auth-user-1" });
+
+  expect((await eventRepository.findById(meal.eventId))?.finishedAt).toEqual(new Date(now.getTime() + 20 * 60_000));
+  expect((await eventRepository.findById(sleep.eventId))?.finishedAt).toEqual(new Date(now.getTime() + 7 * 60 * 60_000));
+  expect((await eventRepository.findById(routine.eventId))?.finishedAt).toEqual(new Date(now.getTime() + 60 * 60_000));
+});
+
 test("requires a name when the primary item is routine", async () => {
   const database = new InMemoryEventDatabase();
   const eventRepository = new InMemoryEventRepository(database);
@@ -95,9 +117,9 @@ test("requires a name when the primary item is routine", async () => {
   ).rejects.toThrow("Event requires a name");
 });
 
-test("leaves an earlier open event alone when creating a new one", async () => {
-  const openEvent = openTrainingEvent("01K2TESTOPENEVENT1234567890", new Date("2026-08-17T08:00:00-03:00"));
-  const database = new InMemoryEventDatabase([openEvent]);
+test("leaves an earlier event alone when creating a new one", async () => {
+  const earlierEvent = openTrainingEvent("01K2TESTOPENEVENT1234567890", new Date("2026-08-17T08:00:00-03:00"));
+  const database = new InMemoryEventDatabase([earlierEvent]);
   const eventRepository = new InMemoryEventRepository(database);
   const useCase = new CreateEventUseCase(eventRepository, new StubMealParsingGateway(), new InMemoryWorkoutCatalog());
 
@@ -105,11 +127,11 @@ test("leaves an earlier open event alone when creating a new one", async () => {
     { name: "Planejamento", items: [{ type: "routine" }] },
     { userId: "auth-user-1" },
   );
-  const untouched = await eventRepository.findById(openEvent.id);
+  const untouched = await eventRepository.findById(earlierEvent.id);
 
-  // Um evento sem fim declarado continua sem fim: nenhum outro evento o encerra.
-  expect(untouched?.finishedAt).toBeUndefined();
-  expect(untouched?.revision).toBe(openEvent.revision);
+  // Criar um evento nao mexe em outro: dois eventos podem se sobrepor.
+  expect(untouched?.finishedAt).toEqual(earlierEvent.finishedAt);
+  expect(untouched?.revision).toBe(earlierEvent.revision);
   expect(result.eventId).toBeDefined();
 });
 
@@ -146,9 +168,9 @@ test("refuses an unparseable startedAt", async () => {
   ).rejects.toThrow("Invalid date");
 });
 
-test("keeps the previous event open when meal parsing fails", async () => {
-  const openEvent = openTrainingEvent("01K2TESTOPENFAILURE12345678", new Date("2026-08-17T08:00:00-03:00"));
-  const database = new InMemoryEventDatabase([openEvent]);
+test("keeps the previous event untouched when meal parsing fails", async () => {
+  const existingEvent = openTrainingEvent("01K2TESTOPENFAILURE12345678", new Date("2026-08-17T08:00:00-03:00"));
+  const database = new InMemoryEventDatabase([existingEvent]);
   const eventRepository = new InMemoryEventRepository(database);
   const failingGateway: MealParsingGateway = {
     parseMeal: async () => {
@@ -161,8 +183,8 @@ test("keeps the previous event open when meal parsing fails", async () => {
     useCase.execute({ items: [{ type: "meal", data: { inputText: "banana" } }] }, { userId: "auth-user-1" }),
   ).rejects.toThrow("meal parsing failed");
 
-  await expect(eventRepository.findById(openEvent.id)).resolves.toMatchObject({
-    finishedAt: undefined,
+  await expect(eventRepository.findById(existingEvent.id)).resolves.toMatchObject({
+    finishedAt: existingEvent.finishedAt,
   });
 });
 
