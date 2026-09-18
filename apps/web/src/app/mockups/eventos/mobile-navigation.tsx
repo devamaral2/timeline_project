@@ -6,14 +6,14 @@ import { useEffect, useId, useRef, useState } from "react";
 import { creatableItemTypes, ICON_STROKE_WIDTH, visualForItemType } from "@/components/events/event-visuals";
 import { AgentChatPanel, useAgendaChat } from "./agent-chat-panel";
 import { EXAMPLE_TODAY, exampleEventsOn, type TaskStatus } from "./agenda-examples";
-import { EventScheduleFields } from "./event-schedule-fields";
+import { CalendarPicker, type DateField, EventScheduleFields } from "./event-schedule-fields";
 import styles from "./mockup.module.css";
 import { BraidAssistantIcon, IntelligenceIcon } from "./navigation-icons";
 import { TaskStatusIcon, taskStatuses } from "./task-controls";
 
 type Kind = "Evento" | "Tarefa" | "Nota";
-type Picker = "eventType" | "status" | "priority";
-const pickerTitles: Record<Picker, string> = { eventType: "Tipo de evento", status: "Status", priority: "Prioridade" };
+type Picker = "eventType" | "status" | "priority" | DateField;
+const pickerTitles: Record<Picker, string> = { eventType: "Tipo de evento", status: "Status", priority: "Prioridade", startDate: "Início", endDate: "Término" };
 type Category = "Rotina" | "Alimentação" | "Exercício";
 type DraftPriority = "low" | "medium" | "high" | "urgent";
 type EventType = (typeof creatableItemTypes)[number];
@@ -125,7 +125,9 @@ export function MobileNavigation({ userId }: { userId?: string }) {
             <button type="button" className={styles.pickerBack} onClick={() => setActivePicker(null)} aria-label="Voltar"><ArrowLeft aria-hidden /></button>
             <h3>{pickerTitles[activePicker]}</h3>
           </div>
-          <div className={styles.pickerOptions} role="listbox" aria-label={pickerTitles[activePicker]}>
+          {activePicker === "startDate" || activePicker === "endDate" ? <div className={styles.pickerOptions}>
+            <CalendarPicker value={draft[activePicker] ?? EXAMPLE_TODAY} onChange={value => updateDraft(activePicker, value)} onClose={() => setActivePicker(null)} />
+          </div> : <div className={styles.pickerOptions} role="listbox" aria-label={pickerTitles[activePicker]}>
             {activePicker === "eventType" && creatableItemTypes.map(type => {
               const visual = visualForItemType(type);
               return <button type="button" role="option" aria-selected={type === eventType} key={type} className={styles.pickerOption} onClick={() => { setEventType(type); setActivePicker(null); }}>
@@ -144,7 +146,7 @@ export function MobileNavigation({ userId }: { userId?: string }) {
               <span>{draftPriorities[priority]}</span>
               {priority === selectedPriority ? <Check aria-hidden /> : null}
             </button>)}
-          </div>
+          </div>}
         </div> : panel === "hub" && mode === "ai" && userId ? <AgentChatPanel {...agendaChat} /> : panel === "hub" && mode === "ai" ? <div className={styles.assistantPanel}>
           <div className={styles.assistantWelcome}><BraidAssistantIcon /><h3>O que vamos fazer?</h3><p>Encontre o que precisa ou transforme uma ideia em algo para o seu dia.</p></div>
           <div className={styles.promptSuggestions}>
@@ -193,7 +195,9 @@ export function MobileNavigation({ userId }: { userId?: string }) {
                 startTime={draft.startTime ?? "09:00"}
                 endDate={draft.endDate ?? EXAMPLE_TODAY}
                 endTime={draft.endTime ?? "10:00"}
+                activeField={activePicker === "startDate" || activePicker === "endDate" ? activePicker : null}
                 onChange={updateDraft}
+                onOpenCalendar={field => setActivePicker(field)}
               />
               {eventType === "meal" ? <div className={styles.entityFields}>
                 <label>Refeição<input value={draft.mealName ?? ""} onChange={event => updateDraft("mealName", event.target.value)} placeholder="Ex.: Café da manhã" /></label>

@@ -4,7 +4,7 @@ import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import styles from "./mockup.module.css";
 
-type DateField = "startDate" | "endDate";
+export type DateField = "startDate" | "endDate";
 
 const weekDays = ["D", "S", "T", "Q", "Q", "S", "S"];
 const longDateFormatter = new Intl.DateTimeFormat("pt-BR", {
@@ -57,7 +57,7 @@ export function maskTime(value: string) {
   return digits.length <= 2 ? digits : `${digits.slice(0, 2)}:${digits.slice(2)}`;
 }
 
-function CalendarPicker({ value, label, onChange, onClose }: { value: string; label: string; onChange: (value: string) => void; onClose: () => void }) {
+export function CalendarPicker({ value, onChange, onClose }: { value: string; onChange: (value: string) => void; onClose: () => void }) {
   const selected = dateFromIso(value);
   const [visibleMonth, setVisibleMonth] = useState(() => new Date(selected.getFullYear(), selected.getMonth(), 1));
   const firstWeekDay = visibleMonth.getDay();
@@ -68,7 +68,7 @@ function CalendarPicker({ value, label, onChange, onClose }: { value: string; la
     setVisibleMonth(current => new Date(current.getFullYear(), current.getMonth() + offset, 1));
   }
 
-  return <div className={styles.eventDatePicker} role="dialog" aria-label={`Selecionar ${label.toLocaleLowerCase("pt-BR")}`}>
+  return <div className={styles.pickerCalendar}>
     <div className={styles.eventDatePickerHeading}>
       <strong>{monthFormatter.format(visibleMonth)}</strong>
       <span>
@@ -90,17 +90,18 @@ function CalendarPicker({ value, label, onChange, onClose }: { value: string; la
   </div>;
 }
 
-function DateTimeRow({ label, field, date, time, onDateChange, onTimeChange }: {
+function DateTimeRow({ label, field, date, time, calendarOpen, onDateChange, onTimeChange, onOpenCalendar }: {
   label: string;
   field: DateField;
   date: string;
   time: string;
+  calendarOpen: boolean;
   onDateChange: (field: DateField, value: string) => void;
   onTimeChange: (value: string) => void;
+  onOpenCalendar: (field: DateField) => void;
 }) {
   const [editingDate, setEditingDate] = useState(false);
   const [dateText, setDateText] = useState(() => shortDate(date));
-  const [calendarOpen, setCalendarOpen] = useState(false);
   const [timeText, setTimeText] = useState(time);
 
   function finishDateEditing() {
@@ -110,9 +111,7 @@ function DateTimeRow({ label, field, date, time, onDateChange, onTimeChange }: {
     setEditingDate(false);
   }
 
-  return <div className={styles.eventDateTimeRow} onBlur={event => {
-    if (!event.currentTarget.contains(event.relatedTarget)) setCalendarOpen(false);
-  }}>
+  return <div className={styles.eventDateTimeRow}>
     <span className={styles.eventDateTimeLabel}>{label}</span>
     <div className={styles.eventDateControl}>
       <input
@@ -124,11 +123,7 @@ function DateTimeRow({ label, field, date, time, onDateChange, onTimeChange }: {
         onChange={event => setDateText(maskDate(event.target.value))}
         onBlur={finishDateEditing}
       />
-      <button type="button" aria-label={`Abrir calendário de ${label.toLocaleLowerCase("pt-BR")}`} aria-expanded={calendarOpen} onClick={() => setCalendarOpen(open => !open)}><CalendarDays aria-hidden /></button>
-      {calendarOpen ? <CalendarPicker value={date} label={label} onChange={value => {
-        onDateChange(field, value);
-        setDateText(shortDate(value));
-      }} onClose={() => setCalendarOpen(false)} /> : null}
+      <button type="button" aria-label={`Abrir calendário de ${label.toLocaleLowerCase("pt-BR")}`} aria-haspopup="dialog" aria-expanded={calendarOpen} onClick={() => onOpenCalendar(field)}><CalendarDays aria-hidden /></button>
     </div>
     <input
       className={styles.eventTimeInput}
@@ -149,15 +144,17 @@ function DateTimeRow({ label, field, date, time, onDateChange, onTimeChange }: {
   </div>;
 }
 
-export function EventScheduleFields({ startDate, startTime, endDate, endTime, onChange }: {
+export function EventScheduleFields({ startDate, startTime, endDate, endTime, activeField, onChange, onOpenCalendar }: {
   startDate: string;
   startTime: string;
   endDate: string;
   endTime: string;
+  activeField: DateField | null;
   onChange: (field: DateField | "startTime" | "endTime", value: string) => void;
+  onOpenCalendar: (field: DateField) => void;
 }) {
   return <div className={styles.eventSchedule}>
-    <DateTimeRow label="Início" field="startDate" date={startDate} time={startTime} onDateChange={onChange} onTimeChange={value => onChange("startTime", value)} />
-    <DateTimeRow label="Término" field="endDate" date={endDate} time={endTime} onDateChange={onChange} onTimeChange={value => onChange("endTime", value)} />
+    <DateTimeRow label="Início" field="startDate" date={startDate} time={startTime} calendarOpen={activeField === "startDate"} onDateChange={onChange} onTimeChange={value => onChange("startTime", value)} onOpenCalendar={onOpenCalendar} />
+    <DateTimeRow label="Término" field="endDate" date={endDate} time={endTime} calendarOpen={activeField === "endDate"} onDateChange={onChange} onTimeChange={value => onChange("endTime", value)} onOpenCalendar={onOpenCalendar} />
   </div>;
 }

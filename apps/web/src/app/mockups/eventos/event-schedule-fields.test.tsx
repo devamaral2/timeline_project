@@ -18,7 +18,7 @@ describe("event schedule fields", () => {
 
   it("switches from the readable date to DD/MM/YYYY while editing", () => {
     const onChange = vi.fn();
-    render(<EventScheduleFields startDate="2026-09-14" startTime="09:00" endDate="2026-09-14" endTime="10:00" onChange={onChange} />);
+    render(<EventScheduleFields startDate="2026-09-14" startTime="09:00" endDate="2026-09-14" endTime="10:00" activeField={null} onChange={onChange} onOpenCalendar={vi.fn()} />);
 
     const startDate = screen.getByLabelText("Início: data");
     expect((startDate as HTMLInputElement).value).toContain("14 de set.");
