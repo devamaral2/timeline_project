@@ -53,7 +53,7 @@ export class PostgresDailyOverviewQuery implements DailyOverviewQuery {
       this.db.execute<DayEventRow>(sql`
         SELECT id, name, description, started_at, finished_at
         FROM events
-        WHERE id IN ${eventIds}
+        WHERE id IN ${eventIds} AND deleted_at IS NULL
       `),
       this.db.execute<DayItemRow>(sql`
         SELECT event_id, type, data
