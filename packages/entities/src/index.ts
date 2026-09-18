@@ -25,6 +25,12 @@ export * from "./tasks/entities/task.entity";
 export * from "./tasks/value-objects/task-id";
 export * from "./tasks/errors/task.errors";
 
+export * from "./notes/entities/note.entity";
+export * from "./notes/value-objects/note-id";
+export * from "./notes/errors/note.errors";
+
+export * from "./agent/errors/entity-batch.errors";
+
 export * from "./recurrences/contracts/recurrence-rule";
 export * from "./recurrences/entities/recurrence.entity";
 export * from "./recurrences/errors/recurrence.errors";

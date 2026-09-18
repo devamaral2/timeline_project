@@ -4,6 +4,7 @@ import { ArrowUp, CalendarDays, Check, ChevronDown, CirclePlus, NotepadText, Plu
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 import { creatableItemTypes, ICON_STROKE_WIDTH, visualForItemType } from "@/components/events/event-visuals";
+import { AgentChatPanel, useAgendaChat } from "./agent-chat-panel";
 import { EXAMPLE_TODAY, exampleEventsOn, type TaskStatus } from "./agenda-examples";
 import { EventScheduleFields } from "./event-schedule-fields";
 import styles from "./mockup.module.css";
@@ -32,11 +33,11 @@ const icons = { Evento: CalendarDays, Tarefa: SquareCheck, Nota: NotepadText };
 
 function DraftPriorityIcon({ priority }: { priority: DraftPriority }) {
   if (priority === "urgent") return <span className={styles.entityPriorityIcon} data-priority={priority} aria-hidden>
-    <svg viewBox="0 0 16 16" fill="none"><rect x="3" y="2" width="10" height="12" rx="2" fill="currentColor" opacity=".18" /><path d="M8 5v4M8 11.5h.01" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
+    <svg aria-hidden viewBox="0 0 16 16" fill="none"><rect x="3" y="2" width="10" height="12" rx="2" fill="currentColor" opacity=".18" /><path d="M8 5v4M8 11.5h.01" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
   </span>;
   const activeBars = priority === "high" ? 3 : priority === "medium" ? 2 : 1;
   return <span className={styles.entityPriorityIcon} data-priority={priority} aria-hidden>
-    <svg viewBox="0 0 16 16" fill="none">
+    <svg aria-hidden viewBox="0 0 16 16" fill="none">
       <path d="M3 12V9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
       <path d="M8 12V6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" opacity={activeBars >= 2 ? 1 : .2} />
       <path d="M13 12V3" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" opacity={activeBars === 3 ? 1 : .2} />
@@ -46,6 +47,7 @@ function DraftPriorityIcon({ priority }: { priority: DraftPriority }) {
 
 export function MobileNavigation({ userId }: { userId?: string }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const agendaChat = useAgendaChat({ live: Boolean(userId) });
   const [panel, setPanel] = useState<"hub" | "Tarefa" | "Nota" | null>(null);
   const [mode, setMode] = useState<"ai" | "create" | "search">("ai");
   const [query, setQuery] = useState("");
@@ -122,7 +124,7 @@ export function MobileNavigation({ userId }: { userId?: string }) {
           <button type="button" onClick={() => dialogRef.current?.close()} aria-label="Fechar painel"><X aria-hidden /></button>
         </div>
         <div className={styles.hubContent}>
-        {panel === "hub" && mode === "ai" ? <div className={styles.assistantPanel}>
+        {panel === "hub" && mode === "ai" && userId ? <AgentChatPanel {...agendaChat} /> : panel === "hub" && mode === "ai" ? <div className={styles.assistantPanel}>
           <div className={styles.assistantWelcome}><BraidAssistantIcon /><h3>O que vamos fazer?</h3><p>Encontre o que precisa ou transforme uma ideia em algo para o seu dia.</p></div>
           <div className={styles.promptSuggestions}>
             {["O que tenho na agenda hoje?", "Criar uma tarefa", "Anotar uma ideia"].map(suggestion => <button type="button" key={suggestion} onClick={() => setPrompt(suggestion)}>{suggestion}</button>)}
@@ -132,12 +134,11 @@ export function MobileNavigation({ userId }: { userId?: string }) {
             <input aria-label="Mensagem para a IA" value={prompt} onChange={event => setPrompt(event.target.value)} placeholder="Pergunte ou peça para criar…" />
             <button type="submit" disabled={!prompt.trim()} aria-label="Enviar mensagem"><ArrowUp aria-hidden /></button>
           </form>
-        </div> : panel === "hub" && mode === "create" ? <>
-          <div className={styles.entityForm}>
+        </div> : panel === "hub" && mode === "create" ? <div className={styles.entityForm}>
             {kind === "Evento" ? <div className={styles.entityEventHeading}>
               <span className={styles.entityEventTypeName}>{eventVisual.label}</span>
               <div className={styles.entityEventTitleRow}>
-                <div className={styles.entityTypeSelect} onBlur={event => {
+                <fieldset className={styles.entityTypeSelect} onBlur={event => {
                   if (!event.currentTarget.contains(event.relatedTarget)) setEventTypeOpen(false);
                 }}>
                   <button type="button" className={styles.entityTypeButton} aria-label={`Tipo do evento: ${eventVisual.label}`} aria-haspopup="listbox" aria-expanded={eventTypeOpen} onClick={() => setEventTypeOpen(open => !open)}>
@@ -157,12 +158,12 @@ export function MobileNavigation({ userId }: { userId?: string }) {
                       </button>;
                     })}
                   </div> : null}
-                </div>
+                </fieldset>
                 <input className={styles.entityEventNameInput} aria-label="Nome do evento" value={draft.title ?? ""} onChange={event => updateDraft("title", event.target.value)} placeholder="Nome do evento" />
               </div>
             </div> : <div className={styles.entityHeading}><span>{(() => { const Icon = icons[kind]; return <Icon aria-hidden />; })()}</span><div><h3>{kind === "Nota" ? "Nova nota" : "Nova tarefa"}</h3><p>{category}</p></div></div>}
             {kind === "Tarefa" && <div className={styles.entitySelectors}>
-              <div className={styles.entitySelect} onBlur={event => {
+              <fieldset className={styles.entitySelect} onBlur={event => {
                 if (!event.currentTarget.contains(event.relatedTarget)) setStatusOpen(false);
               }}>
                 <span className={styles.entitySelectLabel}>Status</span>
@@ -184,8 +185,8 @@ export function MobileNavigation({ userId }: { userId?: string }) {
                     {status === selectedStatus ? <Check aria-hidden /> : null}
                   </button>)}
                 </div> : null}
-              </div>
-              <div className={styles.entitySelect} onBlur={event => {
+              </fieldset>
+              <fieldset className={styles.entitySelect} onBlur={event => {
                 if (!event.currentTarget.contains(event.relatedTarget)) setPriorityOpen(false);
               }}>
                 <span className={styles.entitySelectLabel}>Prioridade</span>
@@ -207,7 +208,7 @@ export function MobileNavigation({ userId }: { userId?: string }) {
                     {priority === selectedPriority ? <Check aria-hidden /> : null}
                   </button>)}
                 </div> : null}
-              </div>
+              </fieldset>
             </div>}
             {kind === "Evento" && <>
               <EventScheduleFields
@@ -232,8 +233,7 @@ export function MobileNavigation({ userId }: { userId?: string }) {
               </div> : null}
             </>}
             <label>{kind === "Evento" ? eventDetailCopy[eventType].label : kind === "Nota" ? "Conteúdo da nota" : category === "Alimentação" ? "Refeição e preparo" : category === "Exercício" ? "Treino e objetivo" : "Detalhes"}<textarea className={styles.entityControl} rows={2} value={draft.details ?? ""} onChange={event => updateDraft("details", event.target.value)} placeholder={kind === "Evento" ? eventDetailCopy[eventType].placeholder : kind === "Nota" ? `Suas anotações sobre ${category.toLocaleLowerCase("pt-BR")}…` : category === "Alimentação" ? "Ingredientes, porções ou modo de preparo…" : category === "Exercício" ? "Exercícios, séries ou duração…" : "Acrescente o que for importante…"} /></label>
-          </div>
-        </> : <div className={styles.manualPanel}>
+          </div> : <div className={styles.manualPanel}>
           {panel !== "hub" && <>
           <label className={styles.hubSearch}><Search aria-hidden /><input aria-label="Buscar eventos, tarefas e notas" value={query} onChange={event => setQuery(event.target.value)} placeholder={`Buscar ${panel === "Tarefa" ? "tarefas" : "notas"}`} /></label>
           <div className={styles.manualHeading}><h3>{query ? "Resultados" : "No seu espaço"}</h3><button type="button" onClick={() => { setCreating(!creating); setNotice(""); }}><Plus aria-hidden />Criar novo</button></div>

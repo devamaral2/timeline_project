@@ -93,9 +93,70 @@ Nao coloque regra de negocio em `apps/web` nem em `apps/mobile`. Do backend eles
 so importam tipos.
 
 **Ordem das rotas no Nest importa**: em `apps/api/src/events/http/events.controller.ts`
-as rotas estaticas (`daily`, `ai`, `voice`) precisam ser declaradas antes de
-`:eventId`, senao o parametro dinamico captura as tres. Ha um teste travando isso
+as rotas estaticas (`daily`, `voice`) precisam ser declaradas antes de
+`:eventId`, senao o parametro dinamico captura as duas. Ha um teste travando isso
 (`events.routing.test.ts`).
+
+# Agente de IA (`POST /api/ai`)
+
+`apps/api/src/agent/` e um agente unico que consulta, cria, altera e apaga
+eventos, tarefas e notas de **um** usuario e escreve relatorios. Recebe
+`{ userId, text, context? }` e devolve `{ agentResponse, createdEntities,
+updatedEntities, deletedEntities }` (itens com `kind`). A antiga
+`/api/events/ai` saiu; `/api/events/voice` continua com o parser proprio.
+
+- **Quem pode agir sobre quem**: `userId` diferente do ator so para super admin
+  (`*:manage` e nenhum deny — `assertCanActFor`). Por isso a API recebe os
+  `denies` do `/auth/me`. O `userId` nunca entra em schema de ferramenta: o
+  servidor o injeta.
+- **Consulta**: o modelo escreve SQL, mas quem isola e
+  `packages/persistence/src/agent-sql/`, nunca o texto da query. O AST do
+  `libpg-query` precisa ser um unico SELECT feito so de nos, funcoes, tipos e
+  tabelas das listas de `sql-policy.ts`; nomes de CTE sao resolvidos por
+  escopo lexico. A query roda embrulhada em CTEs `MATERIALIZED` com o nome das
+  tabelas logicas, ja filtradas por `user_id` e `deleted_at`, numa transacao
+  READ ONLY com timeout e teto de linhas. `logical-schema.ts` e a fonte unica
+  dos CTEs e da descricao que vai para o prompt. Nao troque a validacao por
+  checagem de texto nem tire o `MATERIALIZED`.
+- **Escrita**: cada ferramenta so *prepara* a mudanca (`AgentChangeSession`),
+  ja conferindo dono e passando pelas regras de dominio (refeicao e treino
+  acrescentam itens; sono substitui). No fim, `EntityBatchWriter` grava tudo
+  numa transacao, travando os alvos e conferindo revisao; conflito e 409 e
+  nada entra. Nenhuma chamada ao modelo acontece com a transacao aberta.
+- As tools rodam uma por vez (`toolConcurrency: 1`) e nenhum schema pode virar
+  `oneOf` — use `z.union`, nao `z.discriminatedUnion`.
+- **Resposta que afirma gravar sem ter gravado**: com conversa, o modelo as
+  vezes responde "Tarefa alterada." sem chamar ferramenta. Se o texto afirma
+  uma gravacao (`claimsAWrite`) e nada foi preparado, o use case roda mais uma
+  vez avisando que nada foi gravado. Nao tire isso achando que o prompt basta.
+
+## Chat por WebSocket (`/api/ai/chat`)
+
+O mesmo `RunAgentUseCase`, numa conversa. Fica em `apps/api/src/agent/chat/`;
+no web, `apps/web/src/lib/agent-chat/` e o painel "Chat com IA" do
+`MobileNavigation`.
+
+- **Autenticacao por ticket, nao por bearer no upgrade.** O navegador nao manda
+  `Authorization` num `new WebSocket()` e o token e cookie httpOnly. O cliente
+  pede `POST /api/ai/chat/tickets` (caminho normal: cookie -> `proxy.ts` ->
+  `AuthServiceGuard`) e abre `/api/ai/chat?ticket=`. O ticket vale 30 s, serve
+  uma vez e so o hash fica em `agent_chat_tickets` — no Postgres, e nao na
+  memoria, porque a API roda com mais de uma replica. O mesmo vale para o
+  mobile, que pede o ticket com o bearer e conecta direto no Nest.
+- **Fechamentos**: 4401 ticket invalido/usado/expirado; 4001 fim da vida da
+  conexao (15 min, o TTL do access token — o ator fica congelado no ticket);
+  4002 ociosa; 1001 servidor encerrando. O cliente reconecta sozinho, com ticket
+  novo, na proxima mensagem.
+- **O historico e do cliente** e vai em cada mensagem. Nao da autoridade
+  nenhuma — dono, revisao e usuario sao do servidor. Ele chega ao modelo como
+  conversa citada dentro da mensagem do usuario, e nao como mensagens de
+  assistente: nesse formato o modelo imitava as respostas antigas sem chamar
+  ferramenta.
+- **A resposta so sai depois do commit**; antes vao so rotulos de progresso
+  (`progressLabel` de cada skill). Cancelar ou cair antes do commit nao grava
+  nada. Uma ferramenta que ja esta rodando (o parser de refeicao) termina antes
+  de o cancelamento valer.
+- Heartbeat de 25 s: fica abaixo dos 30 s de `proxyTimeout` do rewrite do Next.
 
 # A marca de nao realizado
 
@@ -152,7 +213,9 @@ horizonte de 60 dias, teto de 365). A expansao da regra vive em
 
 - Editar uma ocorrencia a destaca da serie (`Event.revise`/`Task.revise`);
   editar a serie regera de hoje em diante so as nao destacadas.
-- Apagar uma ocorrencia grava uma `recurrence_exceptions` para o dia nao voltar.
+- Apagar uma ocorrencia grava uma `recurrence_exceptions` para o dia nao voltar
+  (o apagar e soft delete, mas a edicao da serie ainda faz hard delete das
+  ocorrencias futuras nao destacadas e regera).
 - Apagar a serie preserva o passado, sem vinculo (`ON DELETE SET NULL`).
 - Serie nova nao inventa passado: a geracao comeca hoje.
 
@@ -171,6 +234,12 @@ Os eventos vivem no PostgreSQL, em `packages/persistence` (schema Drizzle em
 base de eventos que veio de la nunca passou por uma migracao documento a
 documento, foi cortada para o Postgres de uma vez (ve "A marca de nao
 realizado" acima para o que esse corte deixou de marca no schema).
+
+**Soft delete**: eventos, tarefas e notas tem `deleted_at`, e todo `DELETE`
+so preenche a coluna. Toda leitura filtra `deleted_at IS NULL` — query nova
+tambem. Apagar uma tarefa apaga as subtarefas em todos os niveis (o `cascade`
+do FK nao dispara num UPDATE) e as notas presas a ela; apagar um evento apaga
+as notas dele. Notas so tem persistencia e o agente: nao ha rota REST.
 
 Gerar/aplicar migrations, subir o Postgres local e rodar a suite de
 integracao: skill `db-migrations`.

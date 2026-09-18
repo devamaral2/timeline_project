@@ -7,6 +7,7 @@ interface AuthMeResponse {
   userId: string;
   roles: string[];
   permissions: string[];
+  denies: string[];
 }
 
 /** Rede indisponivel ou apps/auth respondendo erro — nao e uma credencial invalida. */
@@ -75,6 +76,11 @@ export class AuthServiceClient {
     }
 
     const payload = (await response.json()) as AuthMeResponse;
-    return { userId: payload.userId, roles: payload.roles, permissions: payload.permissions };
+    return {
+      userId: payload.userId,
+      roles: payload.roles,
+      permissions: payload.permissions,
+      denies: payload.denies,
+    };
   }
 }

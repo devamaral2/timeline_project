@@ -57,6 +57,27 @@
       "when": 1789602068994,
       "tag": "0007_married_bishop",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1789612275556,
+      "tag": "0008_supreme_shotgun",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1789612375494,
+      "tag": "0009_reflective_william_stryker",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1789615145638,
+      "tag": "0010_bent_veda",
+      "breakpoints": true
     }
   ]
 }

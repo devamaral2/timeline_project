@@ -11,16 +11,19 @@ import { ulid } from "ulid";
 import {
   Event,
   EventItem,
+  EventNotFoundError,
   EventOwnershipError,
   EventRevisionConflictError,
   Food,
   Interruption,
   Meal,
   CatalogRevisionConflictError,
+  Note,
   Recurrence,
   RecurrenceOwnershipError,
   RecurrenceRevisionConflictError,
   Task,
+  TaskNotFoundError,
   TaskOwnershipError,
   TaskRevisionConflictError,
   type RecurrenceRule,
@@ -32,6 +35,7 @@ import { PostgresTimelineEventQuery } from "../events/queries/postgres-timeline-
 import { PostgresDailyOverviewQuery } from "../events/queries/postgres-daily-overview.query";
 import { PostgresTagRepository } from "../events/repositories/postgres-tag.repository";
 import { PostgresTaskRepository } from "../tasks/repositories/postgres-task.repository";
+import { PostgresNoteRepository } from "../notes/repositories/postgres-note.repository";
 import { PostgresWorkoutCatalog } from "../catalog/postgres-workout.catalog";
 import { PostgresRecurrenceRepository } from "../recurrences/repositories/postgres-recurrence.repository";
 import * as schema from "../database/schema";
@@ -357,17 +361,38 @@ describe.runIf(RUN_INTEGRATION)("PostgresEventRepository", () => {
     expect(await repository.findById(second.id)).toBeNull();
   });
 
-  test("cascades deletes to items, interruptions and tag links", async () => {
+  test("soft deletes an event: the row stays, but it is invisible and immutable", async () => {
     const event = newEvent();
     await repository.save(event);
 
     await repository.delete(event.id, "user-1");
 
     expect(await repository.findById(event.id)).toBeNull();
-    const { rows } = await ctx.pool.query("SELECT 1 FROM event_items WHERE event_id = $1", [
-      event.id,
-    ]);
-    expect(rows).toHaveLength(0);
+    const { rows } = await ctx.pool.query("SELECT deleted_at FROM events WHERE id = $1", [event.id]);
+    expect(rows[0].deleted_at).not.toBeNull();
+    await expect(
+      repository.update(event.revise({ name: "Outro" }), "user-1", event.revision),
+    ).rejects.toBeInstanceOf(EventNotFoundError);
+    await expect(repository.delete(event.id, "user-1")).rejects.toBeInstanceOf(EventNotFoundError);
+  });
+
+  test("deleting an event soft deletes the notes attached to it", async () => {
+    const event = newEvent();
+    await repository.save(event);
+    const note = Note.create({ userId: "user-1", content: "Levar garrafa", eventId: event.id });
+    await new PostgresNoteRepository(ctx.db).save(note);
+
+    await repository.delete(event.id, "user-1");
+
+    expect(await new PostgresNoteRepository(ctx.db).findById(note.id)).toBeNull();
+  });
+
+  test("rejects deleting another user's event", async () => {
+    const event = newEvent();
+    await repository.save(event);
+
+    await expect(repository.delete(event.id, "user-2")).rejects.toBeInstanceOf(EventOwnershipError);
+    expect(await repository.findById(event.id)).not.toBeNull();
   });
 
   test("replaces items on update while incrementing the revision exactly once", async () => {
@@ -477,19 +502,26 @@ describe.runIf(RUN_INTEGRATION)("PostgresEventRepository", () => {
     ).rejects.toThrow();
   });
 
-  test("deleting an event removes only its event_tasks rows, keeping the task", async () => {
+  test("deleting an event keeps the linked task visible", async () => {
     const taskId = await insertTask();
     const event = newEvent({ taskIds: [taskId] });
     await repository.save(event);
 
     await repository.delete(event.id, "user-1");
 
-    const { rows: linkRows } = await ctx.pool.query("SELECT 1 FROM event_tasks WHERE event_id = $1", [
-      event.id,
-    ]);
-    expect(linkRows).toHaveLength(0);
-    const { rows: taskRows } = await ctx.pool.query("SELECT 1 FROM tasks WHERE id = $1", [taskId]);
-    expect(taskRows).toHaveLength(1);
+    const task = await new PostgresTaskRepository(ctx.db).findById(taskId);
+    expect(task).not.toBeNull();
+  });
+
+  test("a soft deleted task disappears from the event's taskIds", async () => {
+    const kept = await insertTask();
+    const deleted = await insertTask();
+    const event = newEvent({ taskIds: [kept, deleted] });
+    await repository.save(event);
+
+    await new PostgresTaskRepository(ctx.db).delete(deleted, "user-1");
+
+    expect((await repository.findById(event.id))?.taskIds).toEqual([kept]);
   });
 
   test("deleting a task removes only its event_tasks rows, keeping the event", async () => {
@@ -594,18 +626,45 @@ describe.runIf(RUN_INTEGRATION)("PostgresTaskRepository", () => {
     expect(found[0].parentTaskId).toBe(parent.id);
   });
 
-  test("task: deleting a parent deletes the whole subtree (ON DELETE CASCADE)", async () => {
+  test("task: deleting a parent soft deletes every level of the subtree and their notes", async () => {
     const parent = newTask();
     await tasks.save(parent);
     const subtask = newTask({ id: undefined, parentTaskId: parent.id });
     await tasks.save(subtask);
     const grandchild = newTask({ id: undefined, parentTaskId: subtask.id });
     await tasks.save(grandchild);
+    const sibling = newTask({ id: undefined });
+    await tasks.save(sibling);
+    const notes = new PostgresNoteRepository(ctx.db);
+    const note = Note.create({ userId: "user-1", content: "detalhe", taskId: grandchild.id });
+    await notes.save(note);
 
     await tasks.delete(parent.id, "user-1");
 
+    expect(await tasks.findById(parent.id)).toBeNull();
     expect(await tasks.findById(subtask.id)).toBeNull();
     expect(await tasks.findById(grandchild.id)).toBeNull();
+    expect(await tasks.findById(sibling.id)).not.toBeNull();
+    expect(await notes.findById(note.id)).toBeNull();
+    expect(await tasks.listByUserId("user-1")).toHaveLength(1);
+    const { rows } = await ctx.pool.query("SELECT count(*)::int AS count FROM tasks WHERE deleted_at IS NOT NULL");
+    expect(rows[0].count).toBe(3);
+  });
+
+  test("task: a deleted task is not found for update, delete or listByParentTaskId", async () => {
+    const parent = newTask();
+    await tasks.save(parent);
+    const subtask = newTask({ id: undefined, parentTaskId: parent.id });
+    await tasks.save(subtask);
+
+    await tasks.delete(subtask.id, "user-1");
+
+    expect(await tasks.listByParentTaskId(parent.id)).toEqual([]);
+    await expect(tasks.update(subtask.revise({ name: "x" }), "user-1", subtask.revision)).rejects.toBeInstanceOf(
+      TaskNotFoundError,
+    );
+    await expect(tasks.delete(subtask.id, "user-1")).rejects.toBeInstanceOf(TaskNotFoundError);
+    await expect(tasks.delete(parent.id, "user-2")).rejects.toBeInstanceOf(TaskOwnershipError);
   });
 
   test("tasks: the database rejects a row that is its own parent", async () => {
@@ -644,7 +703,7 @@ describe.runIf(RUN_INTEGRATION)("PostgresTaskRepository", () => {
     expect((await tasks.findById(dependent.id))?.dependsOnTaskIds).toEqual([second.id]);
   });
 
-  test("task: deleting a task removes dependency rows in both roles without deleting the other task", async () => {
+  test("task: deleting a prerequisite keeps the dependent and hides the dependency", async () => {
     const prerequisite = newTask({ id: undefined });
     await tasks.save(prerequisite);
     const dependent = newTask({ id: undefined, dependsOnTaskIds: [prerequisite.id] });
@@ -863,6 +922,35 @@ describe.runIf(RUN_INTEGRATION)("PostgresTimelineEventQuery and PostgresDailyOve
       limit: 10,
     });
     expect(firstPage.items.map((item) => item.id)).toEqual([inside.id]);
+  });
+
+  test("timeline and daily overview ignore deleted events", async () => {
+    const kept = routineEvent({ startedAt: new Date("2026-08-31T10:00:00.000Z") });
+    const deleted = routineEvent({
+      startedAt: new Date("2026-08-31T11:00:00.000Z"),
+      items: [
+        EventItem.create({
+          position: 0,
+          type: "sleep",
+          schemaVersion: 1,
+          isPrimary: true,
+          data: { trackedSleepTime: 480, score: 80 },
+        }),
+      ],
+    });
+    await eventRepository.save(kept);
+    await eventRepository.save(deleted);
+
+    await eventRepository.delete(deleted.id, "user-1");
+
+    const page = await timelineQuery.list({ userId: "user-1", limit: 10 });
+    expect(page.items.map((item) => item.id)).toEqual([kept.id]);
+    const overview = await dailyOverviewQuery.get({
+      userId: "user-1",
+      date: "2026-08-31",
+      timeZone: "America/Sao_Paulo",
+    });
+    expect(overview.sleep).toBeNull();
   });
 
   test("timeline: paginates two pages without repetition or gaps", async () => {
@@ -1363,6 +1451,41 @@ describe.runIf(RUN_INTEGRATION)("PostgresRecurrenceRepository", () => {
     await events.delete(occurrence.id, "user-1");
 
     expect(await recurrences.listExceptions(recurrence.id)).toEqual(["2026-09-16"]);
+  });
+
+  test("a deleted occurrence keeps its exception after the series is edited", async () => {
+    const recurrence = newRecurrence("task");
+    await recurrences.save(recurrence);
+    const occurrence = taskOccurrenceOf(recurrence, "2026-09-16");
+    await recurrences.materialize(recurrence.materializedUntil("2026-09-16"), [occurrence]);
+
+    await tasks.delete(occurrence.id, "user-1");
+    await recurrences.update(recurrence.revise({ rule: { timeOfDay: "08:00" } }), "user-1", 1, "2026-09-15");
+
+    expect(await recurrences.listExceptions(recurrence.id)).toEqual(["2026-09-16"]);
+    expect(await tasks.findById(occurrence.id)).toBeNull();
+  });
+
+  test("does not materialize subtasks under a deleted parent", async () => {
+    const parent = Task.create({ userId: "user-1", name: "Casa", description: "", tags: [] });
+    await tasks.save(parent);
+    const recurrence = newRecurrence("task");
+    await recurrences.save(recurrence);
+    await tasks.delete(parent.id, "user-1");
+
+    const subtask = Task.create({
+      userId: "user-1",
+      name: "Varrer",
+      description: "",
+      tags: [],
+      parentTaskId: parent.id,
+      occurrence: { recurrenceId: recurrence.id, occurrenceOn: "2026-09-16", detached: false },
+    });
+    await recurrences.materialize(recurrence.materializedUntil("2026-09-16"), [subtask]);
+
+    const { rows } = await ctx.pool.query("SELECT 1 FROM tasks WHERE recurrence_id = $1", [recurrence.id]);
+    expect(rows).toHaveLength(0);
+    expect((await recurrences.findById(recurrence.id))?.materializedThrough).toBe("2026-09-16");
   });
 
   test("the database rejects a rule whose shape does not match its frequency", async () => {

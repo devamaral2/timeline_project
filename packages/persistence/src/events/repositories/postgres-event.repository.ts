@@ -1,4 +1,4 @@
-import { desc, eq, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { ulid } from "ulid";
 import {
@@ -13,6 +13,7 @@ import { mapEventRow } from "../mappers/event-row.mapper";
 import { classifyUpdateFailure } from "../../shared/classify-update-failure";
 import { pgIntegerArrayLiteral } from "../../shared/pg-integer-array";
 import { occurrenceColumnsOf } from "../../recurrences/mappers/occurrence-columns";
+import { softDeleteNotesOfTargets } from "../../notes/repositories/postgres-note.repository";
 
 export type Tx = Parameters<Parameters<NodePgDatabase<typeof schema>["transaction"]>[0]>[0];
 
@@ -101,6 +102,89 @@ export async function insertEventAggregate(tx: Tx, event: Event): Promise<boolea
   return true;
 }
 
+/**
+ * Atualiza a linha e regrava os filhos. Linha apagada conta como inexistente:
+ * quem edita algo que outra aba ja apagou recebe "nao encontrado".
+ */
+export async function updateEventAggregate(
+  tx: Tx,
+  event: Event,
+  actorUserId: string,
+  expectedRevision: number,
+): Promise<void> {
+  const result = await tx.execute(sql`
+    UPDATE events
+    SET name = ${event.name},
+        description = ${event.description},
+        started_at = ${event.startedAt},
+        finished_at = ${event.finishedAt ?? null},
+        missed = ${event.missed},
+        priority = ${event.priority},
+        notify_offsets_minutes = ${pgIntegerArrayLiteral(event.notifyOffsetsMinutes)}::integer[],
+        recurrence_detached = ${event.occurrence?.detached ?? false},
+        revision = ${event.revision},
+        updated_at = now()
+    WHERE id = ${event.id}
+      AND user_id = ${actorUserId}
+      AND revision = ${expectedRevision}
+      AND deleted_at IS NULL
+    RETURNING revision
+  `);
+
+  if (result.rows.length === 0) {
+    const [existing] = await tx
+      .select({ userId: schema.events.userId, revision: schema.events.revision })
+      .from(schema.events)
+      .where(and(eq(schema.events.id, event.id), isNull(schema.events.deletedAt)));
+
+    classifyUpdateFailure(existing, actorUserId, expectedRevision, {
+      notFound: () => new EventNotFoundError(`Event not found: ${event.id}`),
+      ownership: () => new EventOwnershipError(),
+      conflict: (message) => new EventRevisionConflictError(message),
+    });
+  }
+
+  await tx.delete(schema.eventItems).where(eq(schema.eventItems.eventId, event.id));
+  await tx.delete(schema.eventInterruptions).where(eq(schema.eventInterruptions.eventId, event.id));
+  await tx.delete(schema.eventTags).where(eq(schema.eventTags.eventId, event.id));
+  await tx.delete(schema.eventTasks).where(eq(schema.eventTasks.eventId, event.id));
+
+  await insertChildren(tx, event);
+}
+
+export async function softDeleteEvent(tx: Tx, eventId: string, actorUserId: string): Promise<void> {
+  const [existing] = await tx
+    .select({
+      userId: schema.events.userId,
+      recurrenceId: schema.events.recurrenceId,
+      occurrenceOn: schema.events.occurrenceOn,
+    })
+    .from(schema.events)
+    .where(and(eq(schema.events.id, eventId), isNull(schema.events.deletedAt)));
+
+  if (!existing) {
+    throw new EventNotFoundError(`Event not found: ${eventId}`);
+  }
+  if (existing.userId !== actorUserId) {
+    throw new EventOwnershipError();
+  }
+
+  // A linha apagada ja ocupa o dia no indice unico, mas a edicao da serie faz
+  // hard delete das ocorrencias futuras e regera: sem a excecao, o dia voltaria.
+  if (existing.recurrenceId && existing.occurrenceOn) {
+    await tx
+      .insert(schema.recurrenceExceptions)
+      .values({ recurrenceId: existing.recurrenceId, occurrenceOn: existing.occurrenceOn })
+      .onConflictDoNothing();
+  }
+
+  await tx
+    .update(schema.events)
+    .set({ deletedAt: sql`now()`, updatedAt: sql`now()` })
+    .where(eq(schema.events.id, eventId));
+  await softDeleteNotesOfTargets(tx, { eventIds: [eventId] });
+}
+
 export class PostgresEventRepository implements EventRepository {
   constructor(private readonly db: NodePgDatabase<typeof schema>) {}
 
@@ -112,79 +196,21 @@ export class PostgresEventRepository implements EventRepository {
 
   async update(event: Event, actorUserId: string, expectedRevision: number): Promise<void> {
     await this.db.transaction(async (tx) => {
-      const result = await tx.execute(sql`
-        UPDATE events
-        SET name = ${event.name},
-            description = ${event.description},
-            started_at = ${event.startedAt},
-            finished_at = ${event.finishedAt ?? null},
-            missed = ${event.missed},
-            priority = ${event.priority},
-            notify_offsets_minutes = ${pgIntegerArrayLiteral(event.notifyOffsetsMinutes)}::integer[],
-            recurrence_detached = ${event.occurrence?.detached ?? false},
-            revision = ${event.revision},
-            updated_at = now()
-        WHERE id = ${event.id}
-          AND user_id = ${actorUserId}
-          AND revision = ${expectedRevision}
-        RETURNING revision
-      `);
-
-      if (result.rows.length === 0) {
-        const [existing] = await tx
-          .select({ userId: schema.events.userId, revision: schema.events.revision })
-          .from(schema.events)
-          .where(eq(schema.events.id, event.id));
-
-        classifyUpdateFailure(existing, actorUserId, expectedRevision, {
-          notFound: () => new EventNotFoundError(`Event not found: ${event.id}`),
-          ownership: () => new EventOwnershipError(),
-          conflict: (message) => new EventRevisionConflictError(message),
-        });
-      }
-
-      await tx.delete(schema.eventItems).where(eq(schema.eventItems.eventId, event.id));
-      await tx.delete(schema.eventInterruptions).where(eq(schema.eventInterruptions.eventId, event.id));
-      await tx.delete(schema.eventTags).where(eq(schema.eventTags.eventId, event.id));
-      await tx.delete(schema.eventTasks).where(eq(schema.eventTasks.eventId, event.id));
-
-      await insertChildren(tx, event);
+      await updateEventAggregate(tx, event, actorUserId, expectedRevision);
     });
   }
 
   async delete(eventId: string, actorUserId: string): Promise<void> {
     await this.db.transaction(async (tx) => {
-      const [existing] = await tx
-        .select({
-          userId: schema.events.userId,
-          recurrenceId: schema.events.recurrenceId,
-          occurrenceOn: schema.events.occurrenceOn,
-        })
-        .from(schema.events)
-        .where(eq(schema.events.id, eventId));
-
-      if (!existing) {
-        throw new EventNotFoundError(`Event not found: ${eventId}`);
-      }
-      if (existing.userId !== actorUserId) {
-        throw new EventOwnershipError();
-      }
-
-      // Apagar uma ocorrencia pula o dia na serie: sem isto, ela voltaria na
-      // proxima vez que a serie fosse editada e regerada.
-      if (existing.recurrenceId && existing.occurrenceOn) {
-        await tx
-          .insert(schema.recurrenceExceptions)
-          .values({ recurrenceId: existing.recurrenceId, occurrenceOn: existing.occurrenceOn })
-          .onConflictDoNothing();
-      }
-
-      await tx.delete(schema.events).where(eq(schema.events.id, eventId));
+      await softDeleteEvent(tx, eventId, actorUserId);
     });
   }
 
   async findById(eventId: string): Promise<Event | null> {
-    const [eventRow] = await this.db.select().from(schema.events).where(eq(schema.events.id, eventId));
+    const [eventRow] = await this.db
+      .select()
+      .from(schema.events)
+      .where(and(eq(schema.events.id, eventId), isNull(schema.events.deletedAt)));
     if (!eventRow) return null;
     return this.hydrate(eventRow);
   }
@@ -206,7 +232,8 @@ export class PostgresEventRepository implements EventRepository {
     const taskRows = await this.db
       .select({ taskId: schema.eventTasks.taskId })
       .from(schema.eventTasks)
-      .where(eq(schema.eventTasks.eventId, eventRow.id));
+      .innerJoin(schema.tasks, eq(schema.eventTasks.taskId, schema.tasks.id))
+      .where(and(eq(schema.eventTasks.eventId, eventRow.id), isNull(schema.tasks.deletedAt)));
 
     return mapEventRow(
       eventRow,

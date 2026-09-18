@@ -27,10 +27,11 @@ export class PostgresDailyOverviewQuery implements DailyOverviewQuery {
 
     const idsResult = await this.db.execute<{ id: string }>(sql`
       SELECT id FROM events
-      WHERE user_id = ${params.userId} AND started_on = ${params.date}::date
+      WHERE user_id = ${params.userId} AND started_on = ${params.date}::date AND deleted_at IS NULL
       UNION ALL
       SELECT id FROM events
       WHERE user_id = ${params.userId}
+        AND deleted_at IS NULL
         AND started_at < ${dayStart}
         AND finished_at >= ${dayStart}
     `);

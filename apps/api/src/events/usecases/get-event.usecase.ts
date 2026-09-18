@@ -17,7 +17,7 @@ export class GetEventUseCase {
   }
 }
 
-function toDetailDto(event: Event): EventDetailDto {
+export function toDetailDto(event: Event): EventDetailDto {
   return {
     id: event.id,
     name: event.name,

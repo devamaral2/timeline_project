@@ -9,11 +9,14 @@ import * as schema from "../database/schema";
 export interface PostgresTestContext {
   db: NodePgDatabase<typeof schema>;
   pool: Pool;
+  connectionString: string;
   reset(): Promise<void>;
   stop(): Promise<void>;
 }
 
 const MUTABLE_TABLES = [
+  "agent_chat_tickets",
+  "notes",
   "recurrence_exceptions",
   "recurrences",
   "event_tags",
@@ -33,7 +36,8 @@ export async function createPostgresTestContext(): Promise<PostgresTestContext> 
   const container: StartedPostgreSqlContainer = await new PostgreSqlContainer(
     "postgres:17-alpine",
   ).start();
-  const pool = new Pool({ connectionString: container.getConnectionUri() });
+  const connectionString = container.getConnectionUri();
+  const pool = new Pool({ connectionString });
   const db = drizzle(pool, { schema });
 
   await migrate(db, {
@@ -51,7 +55,7 @@ export async function createPostgresTestContext(): Promise<PostgresTestContext> 
     await container.stop();
   }
 
-  return { db, pool, reset, stop };
+  return { db, pool, connectionString, reset, stop };
 }
 
 export { sql };

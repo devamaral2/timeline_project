@@ -138,6 +138,10 @@ export class PostgresRecurrenceRepository implements RecurrenceRepository {
       // indice unico por dia continua sendo a garantia, isto so poupa trabalho.
       await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${recurrence.userId}))`);
 
+      if (recurrence.target === "task" && (await templateParentIsDeleted(tx, occurrences as Task[]))) {
+        occurrences = [];
+      }
+
       for (const occurrence of occurrences) {
         if (recurrence.target === "event") await insertEventAggregate(tx, occurrence as Event);
         else await insertTaskAggregate(tx, occurrence as Task);
@@ -171,6 +175,22 @@ async function assertOwned(tx: Tx, recurrenceId: string, actorUserId: string): P
     .where(eq(schema.recurrences.id, recurrenceId));
   if (!existing) throw errors.notFound(recurrenceId)();
   if (existing.userId !== actorUserId) throw errors.ownership();
+}
+
+/**
+ * Com o soft delete o pai continua na tabela e o FK aceita a subtarefa — que
+ * ficaria visivel sob um pai escondido. Todas as ocorrencias vem do mesmo
+ * template, entao o pai da primeira vale para a leva inteira.
+ */
+async function templateParentIsDeleted(tx: Tx, occurrences: readonly Task[]): Promise<boolean> {
+  const parentTaskId = occurrences[0]?.parentTaskId;
+  if (!parentTaskId) return false;
+
+  const [parent] = await tx
+    .select({ deletedAt: schema.tasks.deletedAt })
+    .from(schema.tasks)
+    .where(eq(schema.tasks.id, parentTaskId));
+  return parent?.deletedAt != null;
 }
 
 /** As ocorrencias de `fromDay` em diante que ninguem mexeu a mao. */

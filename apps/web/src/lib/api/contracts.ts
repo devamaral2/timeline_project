@@ -253,3 +253,78 @@ export interface TagSuggestionDto {
   id: string;
   name: string;
 }
+
+/**
+ * Chat com o agente (`/api/ai/chat`). O socket so abre com um ticket de uso
+ * unico emitido por `POST /api/ai/chat/tickets`; o historico da conversa e do
+ * cliente e vai em cada mensagem.
+ */
+export interface AgentChatTicketDto {
+  ticket: string;
+  expiresAt: string;
+}
+
+export type AgentEntityKind = "event" | "task" | "note";
+
+/** Um registro que a resposta tocou, no formato que volta no proximo `history`. */
+export interface AgentChatEntityRef {
+  kind: AgentEntityKind;
+  id: string;
+  change: "created" | "updated" | "deleted";
+  label?: string;
+}
+
+export interface AgentChatTurn {
+  role: "user" | "assistant";
+  text: string;
+  entities?: AgentChatEntityRef[];
+}
+
+export interface AgentScreenContext {
+  screen: string;
+  entityId?: string;
+}
+
+export interface AgentChatMessageFrame {
+  type: "message";
+  id: string;
+  text: string;
+  context?: AgentScreenContext;
+  history?: AgentChatTurn[];
+}
+
+export interface AgentChatCancelFrame {
+  type: "cancel";
+  id: string;
+}
+
+export type AgentChatErrorCode =
+  | "invalid_frame"
+  | "busy"
+  | "invalid_input"
+  | "forbidden"
+  | "limit_reached"
+  | "conflict"
+  | "unavailable"
+  | "cancelled"
+  | "internal";
+
+/** O web so le `kind` e `id` dos registros; o detalhe completo vem junto, mas nao e usado. */
+export interface AgentEntityItemDto {
+  kind: AgentEntityKind;
+  id: string;
+}
+
+export type AgentChatServerFrame =
+  | { type: "ready"; userId: string; expiresAt: string }
+  | { type: "status"; id: string; label: string }
+  | {
+      type: "reply";
+      id: string;
+      agentResponse: string;
+      entities: AgentChatEntityRef[];
+      createdEntities: AgentEntityItemDto[];
+      updatedEntities: AgentEntityItemDto[];
+      deletedEntities: AgentEntityItemDto[];
+    }
+  | { type: "error"; id?: string; code: AgentChatErrorCode };

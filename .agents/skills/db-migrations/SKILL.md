@@ -22,8 +22,9 @@ pnpm db:generate   # gera uma migration a partir do schema Drizzle em packages/p
 pnpm db:migrate    # aplica as pendentes em DATABASE_URL
 ```
 
-`pnpm test:postgres` roda a suite de integracao via Testcontainers — exige
-Docker rodando; sem Docker o teste falha em vez de pular.
+`pnpm test:postgres` roda todo `packages/persistence/src/integration/` via
+Testcontainers (inclui o isolamento da consulta SQL do agente e a gravacao em
+lote) — exige Docker rodando; sem Docker o teste falha em vez de pular.
 
 ## Schema do Auth (apps/auth)
 

@@ -52,7 +52,7 @@ export class PostgresTimelineEventQuery implements TimelineEventQuery {
 
   async list(params: TimelineQueryParams): Promise<TimelineEventPageDto> {
     const limitPlusOne = params.limit + 1;
-    const conditions: SQL[] = [sql`e.user_id = ${params.userId}`];
+    const conditions: SQL[] = [sql`e.user_id = ${params.userId}`, sql`e.deleted_at IS NULL`];
 
     if (params.to) {
       conditions.push(sql`e.started_at <= ${params.to}`);

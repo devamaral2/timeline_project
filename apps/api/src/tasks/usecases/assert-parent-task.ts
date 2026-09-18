@@ -12,7 +12,7 @@ import type { TaskRepository } from "@repo/entities/ports";
  * (escrita fora daqui) faria o laco rodar para sempre.
  */
 export async function assertParentTaskAssignable(
-  taskRepository: TaskRepository,
+  taskRepository: Pick<TaskRepository, "findById">,
   parentTaskId: string,
   actorUserId: string,
   taskId?: string,

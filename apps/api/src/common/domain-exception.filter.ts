@@ -9,10 +9,15 @@ import {
 } from "@nestjs/common";
 import type { Response } from "express";
 import {
+  EntityBatchConflictError,
   EventNotFoundError,
   EventOwnershipError,
   EventRevisionConflictError,
   EventValidationError,
+  NoteNotFoundError,
+  NoteOwnershipError,
+  NoteRevisionConflictError,
+  NoteValidationError,
   RecurrenceNotFoundError,
   RecurrenceOwnershipError,
   RecurrenceRevisionConflictError,
@@ -24,10 +29,11 @@ import {
   TaskValidationError,
 } from "@repo/entities";
 import {
-  EventAgentUndecidedError,
+  AgentLimitReachedError,
+  AgentTargetForbiddenError,
   InvalidInputError,
   LlmUnavailableError,
-} from "../events/errors/event-agent.errors";
+} from "../agent/errors/agent.errors";
 
 /**
  * Traduz os erros de dominio para status HTTP. Substitui o `mutationErrorResponse`
@@ -60,8 +66,14 @@ export class DomainExceptionFilter implements ExceptionFilter {
   private statusFor(exception: unknown): number {
     if (exception instanceof HttpException) return exception.getStatus();
     if (exception instanceof InvalidInputError) return HttpStatus.BAD_REQUEST;
-    if (exception instanceof EventAgentUndecidedError) return HttpStatus.UNPROCESSABLE_ENTITY;
     if (exception instanceof LlmUnavailableError) return HttpStatus.BAD_GATEWAY;
+    if (exception instanceof AgentTargetForbiddenError) return HttpStatus.FORBIDDEN;
+    if (exception instanceof AgentLimitReachedError) return HttpStatus.UNPROCESSABLE_ENTITY;
+    if (exception instanceof EntityBatchConflictError) return HttpStatus.CONFLICT;
+    if (exception instanceof NoteValidationError) return HttpStatus.BAD_REQUEST;
+    if (exception instanceof NoteOwnershipError) return HttpStatus.FORBIDDEN;
+    if (exception instanceof NoteNotFoundError) return HttpStatus.NOT_FOUND;
+    if (exception instanceof NoteRevisionConflictError) return HttpStatus.CONFLICT;
     if (exception instanceof EventValidationError) return HttpStatus.BAD_REQUEST;
     if (exception instanceof EventOwnershipError) return HttpStatus.FORBIDDEN;
     if (exception instanceof EventNotFoundError) return HttpStatus.NOT_FOUND;

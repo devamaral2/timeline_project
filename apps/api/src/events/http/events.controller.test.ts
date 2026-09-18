@@ -42,7 +42,6 @@ function makeController(overrides: { database?: InMemoryEventDatabase } = {}) {
     new CreateEventUseCase(eventRepository, mealParsing, workoutCatalog),
     new GetDailyOverviewUseCase(new InMemoryDailyOverviewQuery(database)),
     vi.fn() as never,
-    vi.fn() as never,
     new GetEventUseCase(eventRepository),
     new UpdateEventUseCase(eventRepository, workoutCatalog),
     new DeleteEventUseCase(eventRepository),

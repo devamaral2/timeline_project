@@ -71,7 +71,7 @@ existe, e ao fim registre para cada container:
 E para a aplicação, no Grafana Cloud atual:
 
 - p50 e p95 de latência da rota de timeline;
-- p50 e p95 das rotas de IA (`/events/ai`, `/events/voice`) — elas são dominadas pelo
+- p50 e p95 das rotas de IA (`/ai`, `/events/voice`) — elas são dominadas pelo
   tempo do provider e vão parecer diferentes depois do LiteLLM;
 - taxa de erro por status;
 - conexões simultâneas no PostgreSQL.

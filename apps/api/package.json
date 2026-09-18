@@ -21,6 +21,7 @@
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "ulid": "^3.0.1",
+    "ws": "^8.21.3",
     "zod": "^4.0.0"
   },
   "devDependencies": {
@@ -29,6 +30,7 @@
     "@nestjs/testing": "^11.0.0",
     "@types/express": "^5.0.0",
     "@types/node": "^24.0.0",
+    "@types/ws": "^8.18.1",
     "typescript": "^5.7.0"
   }
 }

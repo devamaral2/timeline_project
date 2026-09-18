@@ -16,12 +16,10 @@ import type {
   TimelineEventQuery,
   WorkoutCatalog,
 } from "@repo/entities/ports";
-import { OpenRouterEventAgentGateway } from "./gateways/openrouter-event-agent.gateway";
 import { OpenRouterEventCommandParsingGateway } from "./gateways/openrouter-event-command-parsing.gateway";
 import { OpenRouterMealParsingGateway } from "./gateways/openrouter-meal-parsing.gateway";
 import { EventsController } from "./http/events.controller";
 import { TagsController } from "./http/tags.controller";
-import { CreateEventFromTextUseCase } from "./usecases/create-event-from-text.usecase";
 import { CreateEventFromTranscriptUseCase } from "./usecases/create-event-from-transcript.usecase";
 import { CreateEventUseCase } from "./usecases/create-event.usecase";
 import { DeleteEventUseCase } from "./usecases/delete-event.usecase";
@@ -51,10 +49,6 @@ import { MaterializeRecurrencesUseCase } from "../recurrences/usecases/materiali
     {
       provide: OpenRouterMealParsingGateway,
       useFactory: () => new OpenRouterMealParsingGateway(),
-    },
-    {
-      provide: OpenRouterEventAgentGateway,
-      useFactory: () => new OpenRouterEventAgentGateway(),
     },
     {
       provide: OpenRouterEventCommandParsingGateway,
@@ -101,12 +95,6 @@ import { MaterializeRecurrencesUseCase } from "../recurrences/usecases/materiali
       provide: SuggestTagsUseCase,
       inject: [TAG_REPOSITORY],
       useFactory: (tags: TagRepository) => new SuggestTagsUseCase(tags),
-    },
-    {
-      provide: CreateEventFromTextUseCase,
-      inject: [OpenRouterEventAgentGateway, CreateEventUseCase],
-      useFactory: (agent: OpenRouterEventAgentGateway, createEvent: CreateEventUseCase) =>
-        new CreateEventFromTextUseCase(agent, createEvent),
     },
     {
       provide: CreateEventFromTranscriptUseCase,

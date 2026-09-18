@@ -2,7 +2,7 @@ import { TaskNotFoundError, TaskOwnershipError } from "@repo/entities";
 import type { TaskRepository } from "@repo/entities/ports";
 
 export async function assertTasksOwned(
-  taskRepository: TaskRepository,
+  taskRepository: Pick<TaskRepository, "findById">,
   taskIds: readonly string[],
   actorUserId: string,
 ): Promise<void> {

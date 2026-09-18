@@ -26,8 +26,6 @@ import { decodeTimelineCursor } from "@repo/persistence";
 import { CurrentUser } from "../../auth/current-user.decorator";
 import { AuthServiceGuard } from "../../auth/auth-service.guard";
 import type { AuthenticatedUser } from "../../auth/authenticated-user";
-import { InvalidInputError } from "../errors/event-agent.errors";
-import { CreateEventFromTextUseCase } from "../usecases/create-event-from-text.usecase";
 import {
   CreateEventFromTranscriptUseCase,
   EMPTY_TRANSCRIPT_ERROR,
@@ -46,8 +44,8 @@ const TRANSCRIPT_BAD_REQUEST = new Set<string>([EMPTY_TRANSCRIPT_ERROR, LONG_TRA
 const MAX_LIMIT = 100;
 
 /**
- * IMPORTANTE: o Nest casa rotas na ordem de declaracao. `daily`, `ai` e `voice`
- * precisam vir antes de `:eventId`, senao o parametro dinamico captura os tres.
+ * IMPORTANTE: o Nest casa rotas na ordem de declaracao. `daily` e `voice`
+ * precisam vir antes de `:eventId`, senao o parametro dinamico captura as duas.
  * O roteamento por arquivo do Next escondia esse detalhe.
  */
 @Controller("api/events")
@@ -56,7 +54,6 @@ export class EventsController {
     private readonly listTimelineEvents: ListTimelineEventsUseCase,
     private readonly createEvent: CreateEventUseCase,
     private readonly getDailyOverview: GetDailyOverviewUseCase,
-    private readonly createEventFromText: CreateEventFromTextUseCase,
     private readonly createEventFromTranscript: CreateEventFromTranscriptUseCase,
     private readonly getEvent: GetEventUseCase,
     private readonly updateEvent: UpdateEventUseCase,
@@ -108,19 +105,6 @@ export class EventsController {
   ): Promise<DailyOverviewDto> {
     if (!date) throw new BadRequestException("date is required");
     return this.getDailyOverview.execute({ date }, actor);
-  }
-
-  @Post("ai")
-  @UseGuards(AuthServiceGuard)
-  @HttpCode(HttpStatus.CREATED)
-  async fromText(
-    @Body() body: { text?: unknown },
-    @CurrentUser() actor: AuthenticatedUser,
-  ): Promise<unknown> {
-    if (typeof body?.text !== "string") {
-      throw new InvalidInputError("O campo 'text' é obrigatório e deve ser uma string");
-    }
-    return this.createEventFromText.execute({ text: body.text }, actor);
   }
 
   @Post("voice")

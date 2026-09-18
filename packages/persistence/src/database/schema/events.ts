@@ -45,6 +45,9 @@ export const events = pgTable(
     recurrenceDetached: boolean("recurrence_detached").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    // Soft delete: a linha fica para a deteccao de ocorrencia ja gerada (indice
+    // unico abaixo) e toda leitura filtra `deleted_at IS NULL`.
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
     startedOn: date("started_on")
       .notNull()
       .generatedAlwaysAs(

@@ -51,6 +51,10 @@ export const tasks = pgTable(
     recurrenceDetached: boolean("recurrence_detached").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    // Soft delete, como em `events`. O `cascade` de `parent_task_id` so vale para
+    // o hard delete que a edicao de serie ainda faz; o soft delete propaga a
+    // arvore em codigo (`softDeleteTaskTree`).
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [
     index("tasks_user_idx").on(table.userId),

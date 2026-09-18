@@ -1,8 +1,12 @@
 import { Module } from "@nestjs/common";
 import type {
+  AgentChatTicketStore,
   DailyOverviewQuery,
+  EntityBatchWriter,
   EventRepository,
+  NoteRepository,
   RecurrenceRepository,
+  ScopedSqlQuery,
   TagRepository,
   TaskRepository,
   TimelineEventQuery,
@@ -14,6 +18,10 @@ import { PostgresTimelineEventQuery } from "./events/queries/postgres-timeline-e
 import { PostgresEventRepository } from "./events/repositories/postgres-event.repository";
 import { PostgresTagRepository } from "./events/repositories/postgres-tag.repository";
 import { PostgresTaskRepository } from "./tasks/repositories/postgres-task.repository";
+import { PostgresNoteRepository } from "./notes/repositories/postgres-note.repository";
+import { PostgresScopedSqlQuery } from "./agent-sql/postgres-scoped-sql.query";
+import { PostgresEntityBatchWriter } from "./agent-batch/postgres-entity-batch-writer";
+import { PostgresAgentChatTicketStore } from "./agent-chat/postgres-agent-chat-ticket.store";
 import { PostgresRecurrenceRepository } from "./recurrences/repositories/postgres-recurrence.repository";
 import { PostgresWorkoutCatalog } from "./catalog/postgres-workout.catalog";
 
@@ -33,6 +41,10 @@ export const DAILY_OVERVIEW_QUERY = "DAILY_OVERVIEW_QUERY";
 export const WORKOUT_CATALOG = "WORKOUT_CATALOG";
 export const TASK_REPOSITORY = "TASK_REPOSITORY";
 export const RECURRENCE_REPOSITORY = "RECURRENCE_REPOSITORY";
+export const NOTE_REPOSITORY = "NOTE_REPOSITORY";
+export const SCOPED_SQL_QUERY = "SCOPED_SQL_QUERY";
+export const ENTITY_BATCH_WRITER = "ENTITY_BATCH_WRITER";
+export const AGENT_CHAT_TICKET_STORE = "AGENT_CHAT_TICKET_STORE";
 
 function requireDatabaseUrl(): string {
   const value = process.env.DATABASE_URL;
@@ -88,6 +100,30 @@ function requireDatabaseUrl(): string {
       useFactory: (database: PostgresDatabase): RecurrenceRepository =>
         new PostgresRecurrenceRepository(database.db),
     },
+    {
+      provide: NOTE_REPOSITORY,
+      inject: [DATABASE],
+      useFactory: (database: PostgresDatabase): NoteRepository =>
+        new PostgresNoteRepository(database.db),
+    },
+    {
+      provide: SCOPED_SQL_QUERY,
+      inject: [DATABASE],
+      useFactory: (database: PostgresDatabase): ScopedSqlQuery =>
+        new PostgresScopedSqlQuery(database.pool),
+    },
+    {
+      provide: ENTITY_BATCH_WRITER,
+      inject: [DATABASE],
+      useFactory: (database: PostgresDatabase): EntityBatchWriter =>
+        new PostgresEntityBatchWriter(database.db),
+    },
+    {
+      provide: AGENT_CHAT_TICKET_STORE,
+      inject: [DATABASE],
+      useFactory: (database: PostgresDatabase): AgentChatTicketStore =>
+        new PostgresAgentChatTicketStore(database.db),
+    },
   ],
   exports: [
     DATABASE,
@@ -98,6 +134,10 @@ function requireDatabaseUrl(): string {
     WORKOUT_CATALOG,
     TASK_REPOSITORY,
     RECURRENCE_REPOSITORY,
+    NOTE_REPOSITORY,
+    SCOPED_SQL_QUERY,
+    ENTITY_BATCH_WRITER,
+    AGENT_CHAT_TICKET_STORE,
   ],
 })
 export class PersistenceModule {}

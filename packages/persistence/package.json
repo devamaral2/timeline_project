@@ -22,6 +22,7 @@
   "dependencies": {
     "@repo/entities": "workspace:*",
     "drizzle-orm": "^0.45.2",
+    "libpg-query": "17.7.4",
     "pg": "^8.23.0",
     "ulid": "^3.0.2"
   },

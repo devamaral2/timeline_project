@@ -27,7 +27,19 @@ export class InMemoryTaskRepository implements TaskRepository {
     const task = this.tasks.find((storedTask) => storedTask.id === taskId);
     if (!task) throw new TaskNotFoundError(`Task not found: ${taskId}`);
     if (task.userId !== actorUserId) throw new TaskOwnershipError();
-    this.tasks = this.tasks.filter((storedTask) => storedTask.id !== taskId);
+
+    const removed = new Set([taskId]);
+    let grew = true;
+    while (grew) {
+      grew = false;
+      for (const stored of this.tasks) {
+        if (stored.parentTaskId && removed.has(stored.parentTaskId) && !removed.has(stored.id)) {
+          removed.add(stored.id);
+          grew = true;
+        }
+      }
+    }
+    this.tasks = this.tasks.filter((storedTask) => !removed.has(storedTask.id));
   }
 
   async findById(taskId: string): Promise<Task | null> {

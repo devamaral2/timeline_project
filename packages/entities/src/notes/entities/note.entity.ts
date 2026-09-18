@@ -67,7 +67,7 @@ export class Note {
   static create(props: NoteCreateProps): Note {
     const now = new Date();
     return Note.build({
-      id: props.id ?? NoteId.create().toString(),
+      id: props.id ?? NoteId.create(),
       userId: props.userId,
       content: props.content,
       taskId: props.taskId ?? undefined,
@@ -80,7 +80,7 @@ export class Note {
 
   static rehydrate(props: NoteRehydrateProps): Note {
     return Note.build({
-      id: props.id ?? NoteId.create().toString(),
+      id: props.id ?? NoteId.create(),
       userId: props.userId,
       content: props.content,
       taskId: props.taskId ?? undefined,

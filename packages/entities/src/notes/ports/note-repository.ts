@@ -1,9 +1,8 @@
-import { Note } from "../entities/note.entity";
+import type { Note } from "../entities/note.entity";
 
 export interface NoteRepository {
   save(note: Note): Promise<void>;
-  findById(id: string): Promise<Note | null>;
-  findByUserId(userId: string): Promise<Note[]>;
-  findByTarget(taskId?: string, eventId?: string): Promise<Note[]>;
-  delete(id: string): Promise<void>;
+  update(note: Note, actorUserId: string, expectedRevision: number): Promise<void>;
+  delete(noteId: string, actorUserId: string): Promise<void>;
+  findById(noteId: string): Promise<Note | null>;
 }

@@ -14,14 +14,24 @@ test("forwards the Authorization header to GET /auth/me and returns the actor", 
   const fetchMock = vi.fn().mockResolvedValue({
     ok: true,
     status: 200,
-    json: async () => ({ userId: "user-1", roles: ["member"], permissions: ["events:read"] }),
+    json: async () => ({
+      userId: "user-1",
+      roles: ["member"],
+      permissions: ["events:read"],
+      denies: ["tag:delete"],
+    }),
   });
   vi.stubGlobal("fetch", fetchMock);
   const client = new AuthServiceClient("http://127.0.0.1:3002");
 
   const actor = await client.me("Bearer test-token");
 
-  expect(actor).toEqual({ userId: "user-1", roles: ["member"], permissions: ["events:read"] });
+  expect(actor).toEqual({
+    userId: "user-1",
+    roles: ["member"],
+    permissions: ["events:read"],
+    denies: ["tag:delete"],
+  });
   expect(fetchMock).toHaveBeenCalledWith(
     "http://127.0.0.1:3002/auth/me",
     expect.objectContaining({

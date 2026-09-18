@@ -15,7 +15,7 @@ function declaredPaths(): string[] {
 
 /**
  * O Nest casa rotas na ordem de declaracao. Se `:eventId` for declarado antes de
- * `daily`, `ai` ou `voice`, o parametro dinamico captura as tres e elas passam a
+ * `daily` ou `voice`, o parametro dinamico captura as duas e elas passam a
  * responder um GetEvent com eventId="daily". O roteamento por arquivo do Next
  * escondia esse risco; aqui ele fica travado.
  */
@@ -24,7 +24,7 @@ test("declares the static event routes before the dynamic :eventId route", () =>
   const dynamicIndex = paths.indexOf(":eventId");
 
   expect(dynamicIndex).toBeGreaterThan(-1);
-  for (const staticPath of ["daily", "ai", "voice"]) {
+  for (const staticPath of ["daily", "voice"]) {
     expect(paths.indexOf(staticPath)).toBeGreaterThan(-1);
     expect(paths.indexOf(staticPath)).toBeLessThan(dynamicIndex);
   }

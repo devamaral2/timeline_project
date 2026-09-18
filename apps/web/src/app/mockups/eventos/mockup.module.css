@@ -49,6 +49,8 @@
 .dark .hubComposer, .dark .hubSearch, .dark .quickCreate input, .dark .quickCreate select { border-color: var(--line); }
 .dark .monthPicker button, .dark .accountPopover button, .dark .sectionMenuHeading button { color: var(--ink); }
 .dark .event:not([data-time-position="past"]):has(.eventLink):hover { background: var(--soft); }
+.dark .chatBubble[data-role="error"] { background: #3a2a25; border-color: #5a3a30; color: #f0b9a5; }
+.dark .chatEntities li[data-change="created"] { border-color: #2f5057; }
 
 :global(body):has(.shell:not(.dark)) { background: #fff; color-scheme: light; }
 .shell * { box-sizing: border-box; }
@@ -403,7 +405,7 @@
   .entityEventHeading { display: grid; gap: 7px; margin-bottom: 4px; }
   .entityEventTypeName { color: var(--muted); font-size: 11px; }
   .entityEventTitleRow { display: flex; align-items: center; gap: 10px; min-width: 0; }
-  .entityTypeSelect { position: relative; width: 44px; flex: 0 0 44px; }
+  .entityTypeSelect { position: relative; width: 44px; margin: 0; padding: 0; border: 0; flex: 0 0 44px; }
   .entityTypeButton { position: relative; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; color: var(--ink); cursor: pointer !important; }
   .entityTypeButton > svg:last-child { position: absolute; right: -3px; bottom: -3px; width: 15px; height: 15px; padding: 2px; border: 1px solid var(--control-border); border-radius: 50%; background: var(--control-bg); color: var(--muted); transition: transform 140ms; }
   .entityTypeButton[aria-expanded="true"] > svg:last-child { transform: rotate(180deg); }
@@ -452,7 +454,7 @@
   .entityForm textarea.entityControl { min-height: 76px; padding: 14px; resize: vertical; }
   .entityForm textarea { resize: vertical; min-height: 76px; }
   .entitySelectors { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-  .entitySelect { position: relative; min-width: 0; }
+  .entitySelect { position: relative; min-width: 0; margin: 0; padding: 0; border: 0; }
   .entitySelectLabel { display: block; margin-bottom: 7px; color: var(--muted); font-size: 11px; }
   .entitySelectButton { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 54px; padding: 10px 12px; border: 1px solid var(--control-border); border-radius: 14px; background: var(--control-bg); box-shadow: var(--control-shadow); color: var(--ink); cursor: pointer !important; transition: border-color 140ms, box-shadow 140ms; }
   .entitySelectButton:hover, .entitySelectButton[aria-expanded="true"] { border-color: #c7dadd; }
@@ -505,6 +507,18 @@
   .chatPreview p { background: var(--cyan-soft); border-radius: 12px 12px 0 12px; padding: 10px 14px; margin: 0 0 12px 25px; }
   .chatPreview span { color: var(--muted); }
   .chatPreview button { display: block; }
+  .chatLog { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 12px; font-size: 13px; line-height: 1.65; }
+  .chatBubble p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .chatBubble[data-role="user"] { justify-self: end; max-width: 85%; padding: 10px 14px; border-radius: 14px 14px 4px 14px; background: var(--cyan-soft); }
+  .chatBubble[data-role="assistant"] { justify-self: start; max-width: 92%; padding: 2px 2px 2px 0; }
+  .chatBubble[data-role="error"] { justify-self: start; max-width: 92%; padding: 10px 14px; border: 1px solid #efd9d2; border-radius: 14px; background: #fdf6f3; color: #9a4b32; font-size: 12px; }
+  .chatBubble[data-role="error"] button { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; padding: 6px 0; color: var(--cyan); font-size: 12px; cursor: pointer; }
+  .chatBubble[data-role="error"] svg { width: 14px; height: 14px; }
+  .chatEntities { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 0; padding: 0; }
+  .chatEntities li { padding: 4px 9px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font-size: 11px; line-height: 1.4; }
+  .chatEntities li[data-change="created"] { color: var(--cyan); border-color: #cfe7ea; }
+  .chatEntities li[data-change="deleted"] { text-decoration: line-through; }
+  .chatStatus { margin: 0 0 12px; color: var(--muted); font-size: 12px; animation: chatPulse 1.4s ease-in-out infinite; }
 
   .shell:has(.detailMain) .header, .shell:has(.detailMain) .bottomNav { display: none; }
   .detailMain { padding: 20px 25px 36px; }
@@ -549,6 +563,7 @@
   .sectionMenu, .sectionMenu::backdrop { animation: none; }
   .wave { animation: none; opacity: .45; }
   .wave:last-of-type { transform: scale(1.6); }
+  .chatStatus { animation: none; }
 }
 
 @keyframes waveOut {
@@ -562,6 +577,10 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+
+@keyframes chatPulse {
+  50% { opacity: .45; }
+}
 
 @keyframes backdropEnter {
   from { opacity: 0; }

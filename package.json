@@ -21,7 +21,7 @@
     "db:migrate": "pnpm --filter @repo/persistence run db:migrate",
     "compose:up": "docker compose -f infra/docker-compose.local.yml up -d",
     "compose:down": "docker compose -f infra/docker-compose.local.yml down",
-    "test:postgres": "cross-env RUN_POSTGRES_INTEGRATION=1 VITE_CJS_IGNORE_WARNING=true vitest run --config vitest.quiet.config.ts --project persistence packages/persistence/src/integration/postgres.integration.test.ts",
+    "test:postgres": "cross-env RUN_POSTGRES_INTEGRATION=1 VITE_CJS_IGNORE_WARNING=true vitest run --config vitest.quiet.config.ts --project persistence packages/persistence/src/integration",
     "bench:postgres": "cross-env RUN_POSTGRES_INTEGRATION=1 tsx packages/persistence/src/benchmarks/timeline.benchmark.ts",
     "worktree:new": "bash scripts/worktree/setup.sh",
     "worktree:provision": "bash scripts/worktree/provision-env.sh",
