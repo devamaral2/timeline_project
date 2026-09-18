@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUp, CalendarDays, Check, ChevronDown, CirclePlus, NotepadText, Plus, Search, SquareCheck, X } from "lucide-react";
+import { ArrowLeft, ArrowUp, CalendarDays, Check, ChevronDown, CirclePlus, NotepadText, Plus, Search, SquareCheck, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 import { creatableItemTypes, ICON_STROKE_WIDTH, visualForItemType } from "@/components/events/event-visuals";
@@ -12,6 +12,8 @@ import { BraidAssistantIcon, IntelligenceIcon } from "./navigation-icons";
 import { TaskStatusIcon, taskStatuses } from "./task-controls";
 
 type Kind = "Evento" | "Tarefa" | "Nota";
+type Picker = "eventType" | "status" | "priority";
+const pickerTitles: Record<Picker, string> = { eventType: "Tipo de evento", status: "Status", priority: "Prioridade" };
 type Category = "Rotina" | "Alimentação" | "Exercício";
 type DraftPriority = "low" | "medium" | "high" | "urgent";
 type EventType = (typeof creatableItemTypes)[number];
@@ -61,9 +63,7 @@ export function MobileNavigation({ userId }: { userId?: string }) {
   const [sentPrompt, setSentPrompt] = useState("");
   const [notice, setNotice] = useState("");
   const [drafts, setDrafts] = useState<Record<string, Record<string, string>>>({});
-  const [priorityOpen, setPriorityOpen] = useState(false);
-  const [statusOpen, setStatusOpen] = useState(false);
-  const [eventTypeOpen, setEventTypeOpen] = useState(false);
+  const [activePicker, setActivePicker] = useState<Picker | null>(null);
   const dialogId = useId();
   const titleId = useId();
   const draftKey = kind === "Evento" ? `${kind}:${eventType}` : `${kind}:${category}`;
@@ -76,9 +76,7 @@ export function MobileNavigation({ userId }: { userId?: string }) {
   }
   function selectMode(next: "ai" | "create" | "search") {
     if (next === "create" && mode !== "create") { setKind("Tarefa"); setCategory("Rotina"); }
-    setPriorityOpen(false);
-    setStatusOpen(false);
-    setEventTypeOpen(false);
+    setActivePicker(null);
     setNotice("");
     setMode(next);
   }
@@ -94,9 +92,7 @@ export function MobileNavigation({ userId }: { userId?: string }) {
     setPanel(next);
     setQuery("");
     setCreating(false);
-    setPriorityOpen(false);
-    setStatusOpen(false);
-    setEventTypeOpen(false);
+    setActivePicker(null);
     setNotice("");
     if (next === "hub") setMode("ai");
     if (next !== "hub") setKind(next);
@@ -124,7 +120,32 @@ export function MobileNavigation({ userId }: { userId?: string }) {
           <button type="button" onClick={() => dialogRef.current?.close()} aria-label="Fechar painel"><X aria-hidden /></button>
         </div>
         <div className={styles.hubContent}>
-        {panel === "hub" && mode === "ai" && userId ? <AgentChatPanel {...agendaChat} /> : panel === "hub" && mode === "ai" ? <div className={styles.assistantPanel}>
+        {panel === "hub" && mode === "create" && activePicker ? <div className={styles.pickerView}>
+          <div className={styles.pickerHeader}>
+            <button type="button" className={styles.pickerBack} onClick={() => setActivePicker(null)} aria-label="Voltar"><ArrowLeft aria-hidden /></button>
+            <h3>{pickerTitles[activePicker]}</h3>
+          </div>
+          <div className={styles.pickerOptions} role="listbox" aria-label={pickerTitles[activePicker]}>
+            {activePicker === "eventType" && creatableItemTypes.map(type => {
+              const visual = visualForItemType(type);
+              return <button type="button" role="option" aria-selected={type === eventType} key={type} className={styles.pickerOption} onClick={() => { setEventType(type); setActivePicker(null); }}>
+                <span className={styles.entityTypeIcon} data-event-type={type}><visual.Icon aria-hidden strokeWidth={ICON_STROKE_WIDTH} /></span>
+                <span>{visual.label}</span>
+                {type === eventType ? <Check aria-hidden /> : null}
+              </button>;
+            })}
+            {activePicker === "status" && (Object.keys(taskStatuses) as TaskStatus[]).map(status => <button type="button" role="option" aria-selected={status === selectedStatus} key={status} className={styles.pickerOption} onClick={() => { updateDraft("status", status); setActivePicker(null); }}>
+              <TaskStatusIcon status={status} />
+              <span>{taskStatuses[status].label}</span>
+              {status === selectedStatus ? <Check aria-hidden /> : null}
+            </button>)}
+            {activePicker === "priority" && draftPriorityOrder.map(priority => <button type="button" role="option" aria-selected={priority === selectedPriority} key={priority} className={styles.pickerOption} onClick={() => { updateDraft("priority", priority); setActivePicker(null); }}>
+              <DraftPriorityIcon priority={priority} />
+              <span>{draftPriorities[priority]}</span>
+              {priority === selectedPriority ? <Check aria-hidden /> : null}
+            </button>)}
+          </div>
+        </div> : panel === "hub" && mode === "ai" && userId ? <AgentChatPanel {...agendaChat} /> : panel === "hub" && mode === "ai" ? <div className={styles.assistantPanel}>
           <div className={styles.assistantWelcome}><BraidAssistantIcon /><h3>O que vamos fazer?</h3><p>Encontre o que precisa ou transforme uma ideia em algo para o seu dia.</p></div>
           <div className={styles.promptSuggestions}>
             {["O que tenho na agenda hoje?", "Criar uma tarefa", "Anotar uma ideia"].map(suggestion => <button type="button" key={suggestion} onClick={() => setPrompt(suggestion)}>{suggestion}</button>)}
@@ -138,76 +159,31 @@ export function MobileNavigation({ userId }: { userId?: string }) {
             {kind === "Evento" ? <div className={styles.entityEventHeading}>
               <span className={styles.entityEventTypeName}>{eventVisual.label}</span>
               <div className={styles.entityEventTitleRow}>
-                <fieldset className={styles.entityTypeSelect} onBlur={event => {
-                  if (!event.currentTarget.contains(event.relatedTarget)) setEventTypeOpen(false);
-                }}>
-                  <button type="button" className={styles.entityTypeButton} aria-label={`Tipo do evento: ${eventVisual.label}`} aria-haspopup="listbox" aria-expanded={eventTypeOpen} onClick={() => setEventTypeOpen(open => !open)}>
+                <fieldset className={styles.entityTypeSelect}>
+                  <button type="button" className={styles.entityTypeButton} aria-label={`Tipo do evento: ${eventVisual.label}`} aria-haspopup="dialog" aria-expanded={activePicker === "eventType"} onClick={() => setActivePicker("eventType")}>
                     <span className={styles.entityTypeIcon} data-event-type={eventType}><eventVisual.Icon aria-hidden strokeWidth={ICON_STROKE_WIDTH} /></span>
                     <ChevronDown aria-hidden />
                   </button>
-                  {eventTypeOpen ? <div className={styles.entityTypeMenu} role="listbox" aria-label="Selecionar tipo de evento">
-                    {creatableItemTypes.map(type => {
-                      const visual = visualForItemType(type);
-                      return <button type="button" role="option" aria-selected={type === eventType} key={type} onClick={() => {
-                        setEventType(type);
-                        setEventTypeOpen(false);
-                      }}>
-                        <span className={styles.entityTypeIcon} data-event-type={type}><visual.Icon aria-hidden strokeWidth={ICON_STROKE_WIDTH} /></span>
-                        <span>{visual.label}</span>
-                        {type === eventType ? <Check aria-hidden /> : null}
-                      </button>;
-                    })}
-                  </div> : null}
                 </fieldset>
                 <input className={styles.entityEventNameInput} aria-label="Nome do evento" value={draft.title ?? ""} onChange={event => updateDraft("title", event.target.value)} placeholder="Nome do evento" />
               </div>
             </div> : <div className={styles.entityHeading}><span>{(() => { const Icon = icons[kind]; return <Icon aria-hidden />; })()}</span><div><h3>{kind === "Nota" ? "Nova nota" : "Nova tarefa"}</h3><p>{category}</p></div></div>}
             {kind === "Tarefa" && <div className={styles.entitySelectors}>
-              <fieldset className={styles.entitySelect} onBlur={event => {
-                if (!event.currentTarget.contains(event.relatedTarget)) setStatusOpen(false);
-              }}>
+              <fieldset className={styles.entitySelect}>
                 <span className={styles.entitySelectLabel}>Status</span>
-                <button type="button" className={styles.entitySelectButton} aria-label={`Status: ${taskStatuses[selectedStatus].label}`} aria-haspopup="listbox" aria-expanded={statusOpen} onClick={() => {
-                  setPriorityOpen(false);
-                  setStatusOpen(open => !open);
-                }}>
+                <button type="button" className={styles.entitySelectButton} aria-label={`Status: ${taskStatuses[selectedStatus].label}`} aria-haspopup="dialog" aria-expanded={activePicker === "status"} onClick={() => setActivePicker("status")}>
                   <TaskStatusIcon status={selectedStatus} />
                   <span>{taskStatuses[selectedStatus].label}</span>
                   <ChevronDown aria-hidden />
                 </button>
-                {statusOpen ? <div className={styles.entitySelectMenu} role="listbox" aria-label="Selecionar status">
-                  {(Object.keys(taskStatuses) as TaskStatus[]).map(status => <button type="button" role="option" aria-selected={status === selectedStatus} key={status} onClick={() => {
-                    updateDraft("status", status);
-                    setStatusOpen(false);
-                  }}>
-                    <TaskStatusIcon status={status} />
-                    <span>{taskStatuses[status].label}</span>
-                    {status === selectedStatus ? <Check aria-hidden /> : null}
-                  </button>)}
-                </div> : null}
               </fieldset>
-              <fieldset className={styles.entitySelect} onBlur={event => {
-                if (!event.currentTarget.contains(event.relatedTarget)) setPriorityOpen(false);
-              }}>
+              <fieldset className={styles.entitySelect}>
                 <span className={styles.entitySelectLabel}>Prioridade</span>
-                <button type="button" className={styles.entitySelectButton} aria-label={`Prioridade: ${draftPriorities[selectedPriority]}`} aria-haspopup="listbox" aria-expanded={priorityOpen} onClick={() => {
-                  setStatusOpen(false);
-                  setPriorityOpen(open => !open);
-                }}>
+                <button type="button" className={styles.entitySelectButton} aria-label={`Prioridade: ${draftPriorities[selectedPriority]}`} aria-haspopup="dialog" aria-expanded={activePicker === "priority"} onClick={() => setActivePicker("priority")}>
                   <DraftPriorityIcon priority={selectedPriority} />
                   <span>{draftPriorities[selectedPriority]}</span>
                   <ChevronDown aria-hidden />
                 </button>
-                {priorityOpen ? <div className={styles.entitySelectMenu} role="listbox" aria-label="Selecionar prioridade">
-                  {draftPriorityOrder.map(priority => <button type="button" role="option" aria-selected={priority === selectedPriority} key={priority} onClick={() => {
-                    updateDraft("priority", priority);
-                    setPriorityOpen(false);
-                  }}>
-                    <DraftPriorityIcon priority={priority} />
-                    <span>{draftPriorities[priority]}</span>
-                    {priority === selectedPriority ? <Check aria-hidden /> : null}
-                  </button>)}
-                </div> : null}
               </fieldset>
             </div>}
             {kind === "Evento" && <>
@@ -255,9 +231,9 @@ export function MobileNavigation({ userId }: { userId?: string }) {
           {panel === "hub" && <label className={styles.hubSearch}><Search aria-hidden /><input aria-label="Pesquisar manualmente" value={query} onChange={event => setQuery(event.target.value)} placeholder="Buscar eventos, tarefas e notas" /></label>}
         </div>}
         </div>
-        {panel === "hub" && <div className={styles.hubDock}>
+        {panel === "hub" && !activePicker && <div className={styles.hubDock}>
           {mode === "create" && <>
-            <fieldset className={styles.creationToggle} aria-label="Tipo de criação">{(["Tarefa", "Evento", "Nota"] as Kind[]).map(value => { const Icon = icons[value]; return <button type="button" key={value} aria-pressed={kind === value} onClick={() => { setKind(value); setStatusOpen(false); setPriorityOpen(false); setEventTypeOpen(false); setNotice(""); }}><Icon aria-hidden /><span>{value}</span></button>; })}</fieldset>
+            <fieldset className={styles.creationToggle} aria-label="Tipo de criação">{(["Tarefa", "Evento", "Nota"] as Kind[]).map(value => { const Icon = icons[value]; return <button type="button" key={value} aria-pressed={kind === value} onClick={() => { setKind(value); setActivePicker(null); setNotice(""); }}><Icon aria-hidden /><span>{value}</span></button>; })}</fieldset>
           </>}
           <fieldset className={styles.hubModes} aria-label="Modo de busca e criação">
             <button type="button" aria-pressed={mode === "ai"} onClick={() => selectMode("ai")}><BraidAssistantIcon /><span>Chat com IA</span></button>
