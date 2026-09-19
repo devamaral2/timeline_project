@@ -1,6 +1,6 @@
-import { char, check, index, integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { char, check, index, integer, pgTable, primaryKey, text, timestamp } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
-import { events } from "./events";
+import { events, tags } from "./events";
 import { tasks } from "./tasks";
 
 export const notes = pgTable(
@@ -25,5 +25,21 @@ export const notes = pgTable(
     index("notes_task_idx").on(table.taskId),
     check("notes_revision_min", sql`${table.revision} >= 1`),
     check("notes_content_not_blank", sql`btrim(${table.content}) <> ''`),
+  ],
+);
+
+export const noteTags = pgTable(
+  "note_tags",
+  {
+    noteId: char("note_id", { length: 26 })
+      .notNull()
+      .references(() => notes.id, { onDelete: "cascade" }),
+    tagId: char("tag_id", { length: 26 })
+      .notNull()
+      .references(() => tags.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.noteId, table.tagId] }),
+    index("note_tags_tag_idx").on(table.tagId, table.noteId),
   ],
 );

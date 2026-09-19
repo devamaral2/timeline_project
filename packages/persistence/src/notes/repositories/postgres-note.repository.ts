@@ -3,6 +3,7 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { Note, NoteNotFoundError, NoteOwnershipError, NoteRevisionConflictError } from "@repo/entities";
 import type { NoteRepository } from "@repo/entities/ports";
 import * as schema from "../../database/schema";
+import { upsertTagIds } from "../../shared/upsert-tag-ids";
 import { mapNoteRow } from "../mappers/note-row.mapper";
 import { classifyUpdateFailure } from "../../shared/classify-update-failure";
 import type { Tx } from "../../events/repositories/postgres-event.repository";
@@ -18,6 +19,14 @@ export async function insertNote(tx: Tx, note: Note): Promise<void> {
     createdAt: note.createdAt,
     updatedAt: note.updatedAt,
   });
+  await insertNoteTags(tx, note);
+}
+
+async function insertNoteTags(tx: Tx, note: Note): Promise<void> {
+  if (note.tags.length === 0) return;
+
+  const tagIds = await upsertTagIds(tx, note.userId, note.tags);
+  await tx.insert(schema.noteTags).values(tagIds.map((tagId) => ({ noteId: note.id, tagId })));
 }
 
 export async function updateNoteAggregate(
@@ -40,7 +49,11 @@ export async function updateNoteAggregate(
     RETURNING revision
   `);
 
-  if (result.rows.length > 0) return;
+  if (result.rows.length > 0) {
+    await tx.delete(schema.noteTags).where(eq(schema.noteTags.noteId, note.id));
+    await insertNoteTags(tx, note);
+    return;
+  }
 
   const [existing] = await tx
     .select({ userId: schema.notes.userId, revision: schema.notes.revision })
@@ -116,6 +129,16 @@ export class PostgresNoteRepository implements NoteRepository {
       .select()
       .from(schema.notes)
       .where(and(eq(schema.notes.id, noteId), isNull(schema.notes.deletedAt)));
-    return row ? mapNoteRow(row) : null;
+    if (!row) return null;
+
+    const tagRows = await this.db
+      .select({ name: schema.tags.name })
+      .from(schema.noteTags)
+      .innerJoin(schema.tags, eq(schema.noteTags.tagId, schema.tags.id))
+      .where(eq(schema.noteTags.noteId, row.id));
+    return mapNoteRow(
+      row,
+      tagRows.map((tagRow) => tagRow.name),
+    );
   }
 }

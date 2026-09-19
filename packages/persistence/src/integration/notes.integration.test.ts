@@ -49,6 +49,20 @@ describe.runIf(RUN_INTEGRATION)("PostgresNoteRepository", () => {
     expect(found?.revision).toBe(1);
   });
 
+  test("shares one tag row across a note and a task, and replaces note tags on update", async () => {
+    const task = Task.create({ userId: "user-1", name: "Limpar", description: "", tags: ["casa"] });
+    await tasks.save(task);
+    const note = Note.create({ userId: "user-1", content: "a", tags: ["Casa", "urgente"] });
+    await notes.save(note);
+
+    expect((await notes.findById(note.id))?.tags.sort()).toEqual(["casa", "urgente"]);
+    const shared = await ctx.pool.query("SELECT count(*)::int AS n FROM tags WHERE name = 'casa'");
+    expect(shared.rows[0].n).toBe(1);
+
+    await notes.update(note.revise({ tags: ["compras"] }), "user-1", note.revision);
+    expect((await notes.findById(note.id))?.tags).toEqual(["compras"]);
+  });
+
   test("updates with the matching revision and bumps it", async () => {
     const note = Note.create({ userId: "user-1", content: "a" });
     await notes.save(note);

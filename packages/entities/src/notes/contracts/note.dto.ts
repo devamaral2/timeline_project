@@ -3,6 +3,7 @@ export interface NoteDto {
   content: string;
   taskId?: string;
   eventId?: string;
+  tags: string[];
   revision: number;
   createdAt: string;
   updatedAt: string;

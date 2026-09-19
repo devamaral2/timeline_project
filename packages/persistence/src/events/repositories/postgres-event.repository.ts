@@ -13,6 +13,7 @@ import { mapEventRow } from "../mappers/event-row.mapper";
 import { classifyUpdateFailure } from "../../shared/classify-update-failure";
 import { pgIntegerArrayLiteral } from "../../shared/pg-integer-array";
 import { occurrenceColumnsOf } from "../../recurrences/mappers/occurrence-columns";
+import { upsertTagIds } from "../../shared/upsert-tag-ids";
 import { softDeleteNotesOfTargets } from "../../notes/repositories/postgres-note.repository";
 
 export type Tx = Parameters<Parameters<NodePgDatabase<typeof schema>["transaction"]>[0]>[0];
@@ -47,18 +48,7 @@ async function insertChildren(tx: Tx, event: Event): Promise<void> {
   }
 
   if (event.tags.length > 0) {
-    const tagIds: string[] = [];
-    for (const name of event.tags) {
-      const [row] = await tx
-        .insert(schema.tags)
-        .values({ id: ulid(), userId: event.userId, name })
-        .onConflictDoUpdate({
-          target: [schema.tags.userId, schema.tags.name],
-          set: { name: sql`excluded.name` },
-        })
-        .returning({ id: schema.tags.id });
-      tagIds.push(row.id);
-    }
+    const tagIds = await upsertTagIds(tx, event.userId, event.tags);
 
     await tx.insert(schema.eventTags).values(tagIds.map((tagId) => ({ eventId: event.id, tagId })));
   }

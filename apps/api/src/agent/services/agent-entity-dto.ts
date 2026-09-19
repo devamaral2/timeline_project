@@ -9,6 +9,7 @@ export function toNoteDto(note: Note): NoteDto {
     content: note.content,
     taskId: note.taskId,
     eventId: note.eventId,
+    tags: note.tags,
     revision: note.revision,
     createdAt: note.createdAt.toISOString(),
     updatedAt: note.updatedAt.toISOString(),

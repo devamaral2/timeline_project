@@ -11,13 +11,14 @@ export interface NoteRow {
   updatedAt: Date;
 }
 
-export function mapNoteRow(row: NoteRow): Note {
+export function mapNoteRow(row: NoteRow, tags: string[] = []): Note {
   return Note.rehydrate({
     id: row.id,
     userId: row.userId,
     content: row.content,
     eventId: row.eventId,
     taskId: row.taskId,
+    tags,
     revision: row.revision,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,

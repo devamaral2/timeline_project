@@ -18,9 +18,10 @@ export const noteSkill = defineAgentSkill({
     content: z.string().min(1).optional().describe("Texto da nota. Obrigatório na criação."),
     taskId: z.string().min(1).optional().describe("Tarefa a que a nota pertence."),
     eventId: z.string().min(1).optional().describe("Evento a que a nota pertence."),
+    tags: z.array(z.string()).optional().describe("Etiquetas curtas em minúsculas."),
   }),
   run: async (args, { session }) => {
-    const fields = { content: args.content, taskId: args.taskId, eventId: args.eventId };
+    const fields = { content: args.content, taskId: args.taskId, eventId: args.eventId, tags: args.tags };
     return args.id ? session.updateNote(args.id, fields) : session.createNote(fields);
   },
 });

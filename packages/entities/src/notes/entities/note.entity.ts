@@ -1,5 +1,6 @@
 import { NoteId } from "../value-objects/note-id";
 import { NoteValidationError } from "../errors/note.errors";
+import { TagList } from "../../events/value-objects/tag-list";
 
 export interface NoteCreateProps {
   id?: string;
@@ -7,6 +8,7 @@ export interface NoteCreateProps {
   content: string;
   taskId?: string | null;
   eventId?: string | null;
+  tags?: string[];
 }
 
 export interface NoteRehydrateProps extends NoteCreateProps {
@@ -19,6 +21,7 @@ export interface NoteReviseChanges {
   content?: string;
   taskId?: string | null;
   eventId?: string | null;
+  tags?: string[];
 }
 
 interface NoteBuildProps {
@@ -27,6 +30,7 @@ interface NoteBuildProps {
   content: string;
   taskId: string | undefined;
   eventId: string | undefined;
+  tags: string[];
   revision: number;
   createdAt: Date;
   updatedAt: Date;
@@ -38,6 +42,7 @@ export class Note {
   readonly content: string;
   readonly taskId: string | undefined;
   readonly eventId: string | undefined;
+  readonly tags: string[];
   readonly revision: number;
   readonly createdAt: Date;
   readonly updatedAt: Date;
@@ -48,6 +53,7 @@ export class Note {
     this.content = props.content;
     this.taskId = props.taskId;
     this.eventId = props.eventId;
+    this.tags = props.tags;
     this.revision = props.revision;
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
@@ -61,7 +67,7 @@ export class Note {
       throw new NoteValidationError("Note revision must be an integer >= 1");
     }
 
-    return new Note(props);
+    return new Note({ ...props, tags: TagList.create(props.tags) });
   }
 
   static create(props: NoteCreateProps): Note {
@@ -72,6 +78,7 @@ export class Note {
       content: props.content,
       taskId: props.taskId ?? undefined,
       eventId: props.eventId ?? undefined,
+      tags: props.tags ?? [],
       revision: 1,
       createdAt: now,
       updatedAt: now,
@@ -85,6 +92,7 @@ export class Note {
       content: props.content,
       taskId: props.taskId ?? undefined,
       eventId: props.eventId ?? undefined,
+      tags: props.tags ?? [],
       revision: props.revision,
       createdAt: props.createdAt,
       updatedAt: props.updatedAt,
@@ -99,6 +107,7 @@ export class Note {
       content: changes.content ?? this.content,
       taskId: changes.taskId !== undefined ? (changes.taskId ?? undefined) : this.taskId,
       eventId: changes.eventId !== undefined ? (changes.eventId ?? undefined) : this.eventId,
+      tags: changes.tags ?? this.tags,
       revision: this.revision + 1,
       createdAt: this.createdAt,
       updatedAt: now,

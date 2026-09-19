@@ -158,6 +158,16 @@ const BASE_TABLES: readonly LogicalTable[] = [
       { name: "updated_at", expr: "n.updated_at", type: "timestamptz" },
     ],
   },
+  {
+    name: "note_tags",
+    description: "Tags de cada nota.",
+    from: "public.note_tags nt JOIN public.tags g ON g.id = nt.tag_id JOIN public.notes n ON n.id = nt.note_id",
+    where: "n.user_id = $1 AND n.deleted_at IS NULL",
+    columns: [
+      { name: "note_id", expr: "nt.note_id", type: "text" },
+      { name: "tag", expr: "g.name", type: "text" },
+    ],
+  },
 ];
 
 /**

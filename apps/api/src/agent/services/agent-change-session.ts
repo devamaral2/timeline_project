@@ -47,6 +47,7 @@ export interface NoteFields {
   content?: string;
   taskId?: string;
   eventId?: string;
+  tags?: string[];
 }
 
 interface Owned {

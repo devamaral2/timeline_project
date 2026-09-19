@@ -151,6 +151,7 @@ export const tags = pgTable(
   },
   (table) => [
     unique("tags_user_name_unique").on(table.userId, table.name),
+    index("tags_name_idx").on(table.name),
     index("tags_user_name_prefix_idx").on(table.userId, table.name.op("text_pattern_ops")),
     check(
       "tag_name_normalized",

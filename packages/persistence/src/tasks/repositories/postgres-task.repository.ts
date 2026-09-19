@@ -9,23 +9,13 @@ import { classifyUpdateFailure } from "../../shared/classify-update-failure";
 import { pgIntegerArrayLiteral } from "../../shared/pg-integer-array";
 import { occurrenceColumnsOf } from "../../recurrences/mappers/occurrence-columns";
 import type { Tx } from "../../events/repositories/postgres-event.repository";
+import { upsertTagIds } from "../../shared/upsert-tag-ids";
 import { softDeleteNotesOfTargets } from "../../notes/repositories/postgres-note.repository";
 
 async function insertTags(tx: Tx, task: Task): Promise<void> {
   if (task.tags.length === 0) return;
 
-  const tagIds: string[] = [];
-  for (const name of task.tags) {
-    const [row] = await tx
-      .insert(schema.tags)
-      .values({ id: ulid(), userId: task.userId, name })
-      .onConflictDoUpdate({
-        target: [schema.tags.userId, schema.tags.name],
-        set: { name: sql`excluded.name` },
-      })
-      .returning({ id: schema.tags.id });
-    tagIds.push(row.id);
-  }
+  const tagIds = await upsertTagIds(tx, task.userId, task.tags);
 
   await tx.insert(schema.taskTags).values(tagIds.map((tagId) => ({ taskId: task.id, tagId })));
 }

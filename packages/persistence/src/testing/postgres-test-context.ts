@@ -18,6 +18,7 @@ const MUTABLE_TABLES = [
   "agent_chat_tickets",
   "agent_chat_messages",
   "agent_conversations",
+  "note_tags",
   "notes",
   "recurrence_exceptions",
   "recurrences",
