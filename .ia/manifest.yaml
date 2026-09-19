@@ -1,0 +1,38 @@
+schemaVersion: 1
+name: timeline-project-ai-infrastructure
+description: Contrato compartilhado de infraestrutura de IA deste repositório.
+sourceOfTruth: .ia
+
+# Componentes declarativos. Adaptadores são responsáveis por instalá-los no
+# formato esperado por cada agente; este manifesto não executa nada sozinho.
+components:
+  skills:
+    path: skills
+    loading: explicit
+  hooks:
+    path: hooks
+    loading: explicit
+  mcp:
+    path: mcp
+    loading: explicit
+  plugins:
+    path: plugins
+    loading: explicit
+  worktrees:
+    path: worktrees
+    loading: explicit
+  scripts:
+    path: scripts
+    loading: explicit
+  docs:
+    path: docs
+    loading: documentation-only
+
+security:
+  secrets: external-only
+  localStateDirectories:
+    - .ia/local
+    - .ia/state
+    - .ia/runtime
+    - .ia/secrets
+  requireSanitizedExamples: true

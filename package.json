@@ -25,7 +25,10 @@
     "bench:postgres": "cross-env RUN_POSTGRES_INTEGRATION=1 tsx packages/persistence/src/benchmarks/timeline.benchmark.ts",
     "worktree:new": "bash scripts/worktree/setup.sh",
     "worktree:provision": "bash scripts/worktree/provision-env.sh",
-    "worktree:teardown": "bash scripts/worktree/teardown.sh"
+    "worktree:teardown": "bash scripts/worktree/teardown.sh",
+    "ia:validate": "bash scripts/ia/validate.sh",
+    "ia:adapter": "bash scripts/ia/adapter.sh",
+    "ia:memory-hook": "bash scripts/ia/ai-memory-hook.sh"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.13",

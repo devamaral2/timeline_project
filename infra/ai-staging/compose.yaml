@@ -1,0 +1,57 @@
+name: ${COMPOSE_PROJECT_NAME:-timeline-ia-staging}
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    profiles: [ia-staging]
+    environment:
+      POSTGRES_USER: timeline_staging
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD outside Git}
+      POSTGRES_DB: timeline_staging
+    ports:
+      - "127.0.0.1:${IA_STAGING_POSTGRES_PORT:-18000}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    profiles: [ia-staging]
+    environment:
+      RABBITMQ_DEFAULT_USER: timeline_staging
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?set RABBITMQ_PASSWORD outside Git}
+    ports:
+      - "127.0.0.1:${IA_STAGING_RABBITMQ_PORT:-18001}:5672"
+      - "127.0.0.1:${IA_STAGING_RABBITMQ_MANAGEMENT_PORT:-18002}:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    profiles: [ia-staging]
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?set GRAFANA_ADMIN_PASSWORD outside Git}
+      GF_SERVER_HTTP_PORT: 3000
+    ports:
+      - "127.0.0.1:${IA_STAGING_GRAFANA_PORT:-18003}:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+
+  auth:
+    image: ${AUTH_IMAGE:?set AUTH_IMAGE outside Git}
+    profiles: [ia-staging-app]
+    depends_on: [postgres, rabbitmq]
+
+  api:
+    image: ${API_IMAGE:?set API_IMAGE outside Git}
+    profiles: [ia-staging-app]
+    depends_on: [postgres, rabbitmq]
+
+  web:
+    image: ${WEB_IMAGE:?set WEB_IMAGE outside Git}
+    profiles: [ia-staging-app]
+    depends_on: [api, auth]
+
+volumes:
+  postgres-data:
+  rabbitmq-data:
+  grafana-data:

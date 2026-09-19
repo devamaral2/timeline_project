@@ -13,3 +13,17 @@ __pycache__/
 /output/
 
 next-env.d.ts
+
+# Infraestrutura compartilhada de IA: somente contrato e exemplos entram no Git.
+.ia/local/
+.ia/state/
+.ia/runtime/
+.ia/secrets/
+.ia/mcp/local/
+.ia/plugins/local/
+.ia/worktrees/instances/
+.ia/**/.env
+.ia/**/.env.local
+.ia/**/*.secret
+.ia/**/*.secrets
+.ia/**/.browser-profile/

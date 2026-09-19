@@ -1,0 +1,9 @@
+name: gmail
+purpose: integração de mensagens somente quando explicitamente solicitada
+auth:
+  source: external-connector
+  credentials: never-committed
+permissions:
+  - profile:read
+  - mail:read
+  - mail:send-explicit-only

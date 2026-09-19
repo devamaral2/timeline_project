@@ -1,0 +1,9 @@
+name: linear
+purpose: gerenciamento do plano e issues do projeto
+auth:
+  source: external-connector
+  token: never-committed
+permissions:
+  - issues:read-write
+  - projects:read-write
+  - comments:read-write
