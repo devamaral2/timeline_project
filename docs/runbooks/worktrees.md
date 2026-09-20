@@ -40,7 +40,7 @@ pnpm worktree:new .worktrees/minha-feature -b minha-feature
 ```
 
 Isso roda `pnpm install`, calcula portas livres, sobe o Postgres da worktree,
-cria a base do auth, aplica as migrations de `@repo/persistence` e de
+cria a base do auth, aplica as migrations de `@repo/api` e de
 `@repo/auth`, e builda os pacotes (`pnpm turbo run build`) para o primeiro
 `pnpm dev` ser rapido.
 

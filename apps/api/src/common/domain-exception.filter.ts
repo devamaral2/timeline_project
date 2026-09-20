@@ -31,13 +31,13 @@ import {
   TaskOwnershipError,
   TaskRevisionConflictError,
   TaskValidationError,
-} from "@repo/entities";
+} from "../domain";
 import {
   AgentLimitReachedError,
   AgentTargetForbiddenError,
   InvalidInputError,
   LlmUnavailableError,
-} from "../agent/errors/agent.errors";
+} from "../features/agent/errors/agent.errors";
 
 /**
  * Traduz os erros de dominio para status HTTP. Substitui o `mutationErrorResponse`

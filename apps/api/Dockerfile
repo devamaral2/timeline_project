@@ -3,7 +3,7 @@
 # Imagem da API (NestJS).
 #
 # O contexto de build e a raiz do monorepo, nao apps/api: o Nest importa
-# @repo/entities e @repo/persistence, que sao workspaces irmaos.
+# @repo/contracts e @repo/timeline, que sao workspaces irmaos.
 #
 #   docker build -f apps/api/Dockerfile -t timeline-api .
 #
@@ -34,8 +34,8 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm install --frozen-lockfile
 
 # --- builder ---------------------------------------------------------------
-# turbo respeita o dependsOn ["^build"] do turbo.json, entao entities e
-# persistence compilam antes da API — o mesmo motivo pelo qual `dev` depende
+# turbo respeita o dependsOn ["^build"] do turbo.json, entao contracts e
+# timeline compilam antes da API — o mesmo motivo pelo qual `dev` depende
 # de `^build` fora do container.
 FROM base AS builder
 COPY --from=deps /app/ ./
@@ -54,31 +54,14 @@ FROM base AS runner
 ENV NODE_ENV=production
 COPY --from=pruner /app/out/json/ ./
 
-# --node-linker=hoisted e o ponto delicado desta imagem.
-#
-# @repo/persistence importa Module de @nestjs/common em runtime, mas declara a
-# dependencia como peer: o dono do Nest e o app, nao o package. Em
-# desenvolvimento quem satisfaz esse peer e a devDependency do proprio
-# persistence, e o --prod aqui justamente a remove. No layout isolado padrao
-# do pnpm o resultado e um MODULE_NOT_FOUND no primeiro request que tocar o
-# banco — verificado: sem esta flag o build falha na checagem logo abaixo.
-#
-# Com o node_modules achatado, o @nestjs/common que apps/api declara como
-# dependencia normal sobe para /app/node_modules e passa a ser encontrado por
-# quem estiver abaixo, persistence incluido.
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile --prod --node-linker=hoisted
-
-# Falhar aqui custa dois segundos; descobrir isso em producao custa um
-# incidente. A checagem fica mesmo com a flag acima porque o que a torna
-# necessaria e a resolucao do peer, que muda com qualquer bump do pnpm.
-RUN node -e "require.resolve('@nestjs/common', { paths: ['/app/packages/persistence'] })"
+    pnpm install --frozen-lockfile --prod
 
 # Os dist entram depois do install: mudar codigo nao refaz a instalacao.
 # A arvore apps/api/dist/... precisa ficar nesse lugar - load-env.ts resolve a
 # raiz do monorepo por caminho relativo a __dirname.
-COPY --from=builder /app/packages/entities/dist ./packages/entities/dist
-COPY --from=builder /app/packages/persistence/dist ./packages/persistence/dist
+COPY --from=builder /app/packages/contracts/dist ./packages/contracts/dist
+COPY --from=builder /app/packages/timeline/dist ./packages/timeline/dist
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 COPY --from=pruner /app/scripts/onepassword ./scripts/onepassword
 COPY --from=pruner /app/.env.example ./.env.example

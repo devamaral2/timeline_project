@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type {
   TimelineEventCardDto,
   TimelineEventPageDto,
-} from '@repo/entities/contracts';
+} from '@repo/contracts';
 import { dayEventsUrl } from '@repo/timeline';
 import type { TimelinePageState } from '@repo/timeline';
 import { authedFetch } from '@/lib/api/client';

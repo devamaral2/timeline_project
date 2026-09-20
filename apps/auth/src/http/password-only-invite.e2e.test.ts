@@ -5,8 +5,8 @@ import { SecretGenerator } from "../common/secret-generator";
 import { ANONYMOUS_CONTEXT } from "../common/request-context";
 import type { AuthDatabase } from "../db/client";
 import { AUTH_DATABASE } from "../db/tokens";
-import { BootstrapAdminUseCase } from "../invites/usecases/bootstrap-admin.usecase";
-import { PostgresInviteRepository } from "../invites/postgres-invite.repository";
+import { BootstrapAdminUseCase } from "../features/invite-user/usecases/bootstrap-admin.usecase";
+import { PostgresInviteRepository } from "../features/invite-user/postgres-invite.repository";
 import { createPostgresTestDatabase, describeWithPostgres, type PostgresTestDatabase } from "../testing/postgres-test-database";
 import { createTestApp, type TestApp } from "../testing/create-test-app";
 

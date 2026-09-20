@@ -12,7 +12,7 @@ inventar comportamento novo, veja como o web resolve o mesmo caso — os nomes d
 arquivos foram mantidos proximos de proposito (`EventCard`, `TagInput`,
 `event-visuals`, `TimelineHeader`).
 
-Sem regra de negocio aqui. Do backend, so tipos (`@repo/entities/contracts`).
+Sem regra de negocio aqui. Do backend, so tipos (`@repo/contracts`).
 
 ## O que muda em relacao ao web
 

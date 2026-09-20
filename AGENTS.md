@@ -8,16 +8,17 @@ scripts do proprio workspace (`db:migrate`, `bootstrap-admin`,
 sem segredo estao em `docs/runbooks/`. O cleanup e uma transacao protegida por
 advisory lock: nao o substitua por tarefas paralelas nem remova refresh tokens
 consumidos de sessoes ainda vivas, pois eles sustentam a deteccao de reuso.
+Modelos de usuario, convite, sessao e RBAC vivem em `apps/auth/src/domain`;
+controllers, use cases e repositorios ficam em `apps/auth/src/features`.
 
-Turborepo + pnpm workspace. Oito workspaces:
+Turborepo + pnpm workspace. Sete workspaces:
 
 ```
 apps/web          Next.js 16 — frontend web, sem regra de negocio
 apps/mobile       Expo 57 + expo-router — app nativo, sem regra de negocio
 apps/api          NestJS — usecases, services, gateways, controllers HTTP
 apps/auth         NestJS — identidade: convite, login por senha, sessao e RBAC
-packages/entities @repo/entities — dominio, portas e DTOs
-packages/persistence @repo/persistence — schema, repositories e acesso Postgres
+packages/contracts @repo/contracts — contratos de dados compartilhados
 packages/timeline @repo/timeline — datas, janelas e agrupamento da timeline
 packages/theme    @repo/theme — os tokens de cor do design system
 ```
@@ -25,16 +26,17 @@ packages/theme    @repo/theme — os tokens de cor do design system
 Direcao das dependencias (nunca o contrario):
 
 ```
-apps/web    ──> @repo/entities/contracts (apenas `import type`), @repo/timeline, @repo/theme
-apps/mobile ──> @repo/entities/contracts (apenas `import type`), @repo/timeline, @repo/theme
-apps/api    ──> @repo/entities, @repo/entities/ports, @repo/persistence
-@repo/persistence ──> @repo/entities
-@repo/timeline    ──> @repo/entities/contracts (apenas `import type`)
+apps/web    ──> @repo/contracts (apenas `import type`), @repo/timeline, @repo/theme
+apps/mobile ──> @repo/contracts (apenas `import type`), @repo/timeline, @repo/theme
+apps/api    ──> @repo/contracts, @repo/timeline
+@repo/timeline ──> @repo/contracts (apenas `import type`)
 ```
 
-Os packages nao conhecem os apps. As portas de repositorio (`EventRepository`,
-`TagRepository`) vivem em `@repo/entities/ports` justamente para que
-`@repo/persistence` possa implementa-las sem depender de `apps/api`.
+Os packages nao conhecem os apps. Entidades e portas de repositorio vivem em
+`apps/api/src/domain`; a implementacao Postgres em
+`apps/api/src/infrastructure/persistence`. Controllers, services e use cases
+vivem em `apps/api/src/features`, agrupados por capacidade. A API delega a
+decisao de acesso a `apps/auth`; nao interpreta papeis ou grants.
 
 `@repo/timeline` e `@repo/theme` existem para que web e mobile calculem as
 mesmas janelas de data e pintem as mesmas cores. Regra pratica: se web e mobile
@@ -58,7 +60,7 @@ O app mobile nao tem esse rewrite: ele fala direto com o Nest, pelo host em
 Nao coloque regra de negocio em `apps/web` nem em `apps/mobile`. Do backend eles
 so importam tipos.
 
-**Ordem das rotas no Nest importa**: em `apps/api/src/events/http/events.controller.ts`
+**Ordem das rotas no Nest importa**: em `apps/api/src/features/events/http/events.controller.ts`
 as rotas estaticas (`daily`, `ai`, `voice`) precisam ser declaradas antes de
 `:eventId`, senao o parametro dinamico captura as tres. Ha um teste travando isso
 (`events.routing.test.ts`).
@@ -67,7 +69,7 @@ as rotas estaticas (`daily`, `ai`, `voice`) precisam ser declaradas antes de
 
 Nao ha status. O evento nao tem ciclo de vida, nao tem situacao derivada do
 relogio e nao tem o par realizado/nao realizado: tem **uma anotacao**, em
-`packages/entities/src/events/types/missed-flag.ts`.
+`apps/api/src/domain/events/types/missed-flag.ts`.
 
 - `missed` — booleano, padrao `false`. E o usuario registrando o que perdeu.
 - `priority` — `urgent`, `normal`, `flexible`, em `event-priority.ts`. Campo
@@ -110,8 +112,8 @@ Build de desenvolvimento nativo, tema sempre escuro, resolucao dos packages
 
 # Persistencia
 
-Os eventos vivem no PostgreSQL, em `packages/persistence` (schema Drizzle em
-`src/database/schema`, repositories e queries ao lado). Nao ha Firestore: a
+Os eventos vivem no PostgreSQL, em `apps/api/src/infrastructure/persistence`
+(schema Drizzle em `database/schema`, repositories e queries ao lado). Nao ha Firestore: a
 base de eventos que veio de la nunca passou por uma migracao documento a
 documento, foi cortada para o Postgres de uma vez (ve "A marca de nao
 realizado" acima para o que esse corte deixou de marca no schema).
@@ -152,7 +154,7 @@ pnpm --filter @repo/mobile run android   gera o projeto nativo e instala no apar
 
 **`dev` depende de `^build`** (`turbo.json`). O Nest e o Next leem os packages
 de `dist/`, nao do fonte — so o Metro le TypeScript direto. Sem essa
-dependencia, um simbolo recem-criado em `@repo/entities` existiria so no `src`
+dependencia, um simbolo recem-criado em `@repo/contracts` existiria so no `src`
 e a API nunca subiria. Se a API estiver fora do ar, `pnpm turbo run build`
 antes de subir o dev resolve.
 

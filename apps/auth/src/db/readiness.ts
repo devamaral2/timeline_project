@@ -29,4 +29,4 @@ export async function checkReadiness(
  * antes de rodar `db:migrate` precisa falhar no readiness em vez de atender
  * pela metade. Cada migracao nova sobe este numero junto com o seu `UPDATE`.
  */
-export const AUTH_SCHEMA_VERSION = 5;
+export const AUTH_SCHEMA_VERSION = 6;

@@ -5,7 +5,7 @@ import {
   type PostgresTestDatabase,
 } from '../testing/postgres-test-database';
 import { createTestApp, type TestApp } from '../testing/create-test-app';
-import { SigningKeyService } from '../crypto/signing-key.service';
+import { SigningKeyService } from '../features/authenticate-user/signing-key.service';
 import { ANONYMOUS_CONTEXT } from '../common/request-context';
 
 let fixture: PostgresTestDatabase | undefined;

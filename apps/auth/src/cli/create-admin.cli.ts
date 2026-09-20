@@ -3,9 +3,9 @@ import { ANONYMOUS_CONTEXT } from "../common/request-context";
 import { CryptoSecretGenerator } from "../common/secret-generator";
 import { getRuntimeEnv } from "../config/env";
 import { findMonorepoRoot, loadRootEnv } from "../config/load-env";
-import { HttpPwnedPasswordsGateway } from "../credentials/http-pwned-passwords.gateway";
-import { PreparePassword } from "../credentials/prepare-password";
-import { ScryptPasswordHasher } from "../credentials/scrypt-password-hasher";
+import { HttpPwnedPasswordsGateway } from "../features/basic-login/credentials/http-pwned-passwords.gateway";
+import { PreparePassword } from "../features/basic-login/credentials/prepare-password";
+import { ScryptPasswordHasher } from "../features/basic-login/credentials/scrypt-password-hasher";
 import { createAuthDatabase } from "../db/client";
 import { acquireAdvisoryLock, ADVISORY_LOCK } from "../db/transaction-locks";
 

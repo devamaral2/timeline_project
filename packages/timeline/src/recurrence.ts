@@ -1,4 +1,4 @@
-import type { RecurrenceRule } from "@repo/entities/contracts";
+import type { RecurrenceRule } from "@repo/contracts";
 import { shiftDayKey, zonedTimeAt } from "./format-date";
 import { weekdayIndexOf } from "./week";
 

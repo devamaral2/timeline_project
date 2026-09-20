@@ -11,10 +11,7 @@ const resolve = (relativePath: string) =>
  * `Tests pass`) depende de a saida ser so a do Vitest.
  */
 const packageAliases = {
-  "@repo/entities/contracts": resolve("./packages/entities/src/contracts.ts"),
-  "@repo/entities/ports": resolve("./packages/entities/src/ports.ts"),
-  "@repo/entities": resolve("./packages/entities/src/index.ts"),
-  "@repo/persistence": resolve("./packages/persistence/src/index.ts"),
+  "@repo/contracts": resolve("./packages/contracts/src/index.ts"),
   "@repo/theme": resolve("./packages/theme/src/index.ts"),
   "@repo/timeline": resolve("./packages/timeline/src/index.ts"),
 };
@@ -51,17 +48,8 @@ export default defineWorkspace([
   {
     resolve: { alias: packageAliases },
     test: {
-      name: "entities",
-      root: "./packages/entities",
-      environment: "node",
-      include: ["src/**/*.{test,spec}.ts"],
-    },
-  },
-  {
-    resolve: { alias: packageAliases },
-    test: {
-      name: "persistence",
-      root: "./packages/persistence",
+      name: "contracts",
+      root: "./packages/contracts",
       environment: "node",
       include: ["src/**/*.{test,spec}.ts"],
     },

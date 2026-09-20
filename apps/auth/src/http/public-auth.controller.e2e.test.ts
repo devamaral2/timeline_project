@@ -1,19 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Test } from "@nestjs/testing";
 import type { INestApplication } from "@nestjs/common";
-import { PublicAuthController } from "./public-auth.controller";
-import { InspectInviteUseCase } from "../invites/usecases/inspect-invite.usecase";
-import { AcceptInviteUseCase } from "../authentication/usecases/accept-invite.usecase";
-import { StartLoginUseCase } from "../authentication/usecases/start-login.usecase";
+import { BasicLoginController } from "../features/basic-login/http/basic-login.controller";
+import { StartLoginUseCase } from "../features/basic-login/usecases/start-login.usecase";
 import { configureHttpShell } from "./request-context.middleware";
 
 let app: INestApplication | undefined;
 afterEach(async () => { await app?.close(); app = undefined; });
 
 async function startApp(login: { execute: ReturnType<typeof vi.fn> }) {
-  const module = await Test.createTestingModule({ controllers: [PublicAuthController], providers: [
-    { provide: InspectInviteUseCase, useValue: { execute: vi.fn() } },
-    { provide: AcceptInviteUseCase, useValue: { execute: vi.fn() } },
+  const module = await Test.createTestingModule({ controllers: [BasicLoginController], providers: [
     { provide: StartLoginUseCase, useValue: login },
   ] }).compile();
   app = module.createNestApplication({ bodyParser: false }); configureHttpShell(app); await app.listen(0, "127.0.0.1");

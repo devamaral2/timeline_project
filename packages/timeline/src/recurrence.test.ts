@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import type { RecurrenceRule } from "@repo/entities/contracts";
+import type { RecurrenceRule } from "@repo/contracts";
 import { expandOccurrences, occurrenceWindow } from "./recurrence";
 
 function rule(overrides: Partial<RecurrenceRule>): RecurrenceRule {

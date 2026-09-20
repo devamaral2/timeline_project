@@ -6,23 +6,12 @@ afterEach(async () => { await app?.close(); app = undefined; });
 
 const json = { "content-type": "application/json" };
 
-/**
- * 401 aqui significa "a rota existe e o guard rodou". E o sinal que separa uma
- * rota registrada de uma capturada por um parametro vizinho, sem precisar de
- * banco: se `users/:userId` engolisse `users`, a listagem responderia outra
- * coisa que nao 401.
- */
 describe("Route registration and ordering", () => {
-  it("keeps every static admin route ahead of the parameterised ones", async () => {
+  it("keeps only invite creation under administration", async () => {
     app = await createTestApp();
 
-    expect((await fetch(`${app.url}/auth/admin/users`)).status).toBe(401);
     expect((await fetch(`${app.url}/auth/admin/invites`, { method: "POST", headers: json, body: "{}" })).status).toBe(401);
-    expect((await fetch(`${app.url}/auth/admin/users/some-id/status`, { method: "PATCH", headers: json, body: "{}" })).status).toBe(401);
-    expect((await fetch(`${app.url}/auth/admin/users/some-id/access`, { method: "PUT", headers: json, body: "{}" })).status).toBe(401);
-    expect((await fetch(`${app.url}/auth/admin/users/some-id/invite/reissue`, { method: "POST" })).status).toBe(401);
-    expect((await fetch(`${app.url}/auth/admin/users/some-id/invite`, { method: "DELETE" })).status).toBe(401);
-    expect((await fetch(`${app.url}/auth/admin/users/some-id/revoke-sessions`, { method: "POST" })).status).toBe(401);
+    expect((await fetch(`${app.url}/auth/admin/users`)).status).toBe(404);
   });
 
   it("registers authenticated session routes behind the bearer guard", async () => {

@@ -6,8 +6,8 @@ import { AppModule } from "../app.module";
 import { AccessDeniedError, AuthenticationFailedError, ConflictError, NotFoundError, RateLimitedError, RequiredDependencyUnavailableError, SemanticInputError } from "../common/errors";
 import { RecordingAuthLogger } from "../common/logger";
 import { getRuntimeEnv, type EnvSource } from "../config/env";
-import { HttpPwnedPasswordsGateway } from "../credentials/http-pwned-passwords.gateway";
-import type { PwnedPasswordsGateway } from "../credentials/pwned-passwords.gateway";
+import { HttpPwnedPasswordsGateway } from "../features/basic-login/credentials/http-pwned-passwords.gateway";
+import type { PwnedPasswordsGateway } from "../features/basic-login/credentials/pwned-passwords.gateway";
 import { configureHttpShell } from "../http/request-context.middleware";
 import { configureApiDocumentation } from "../http/openapi";
 
@@ -70,6 +70,7 @@ function testEnv(overrides: EnvSource = {}) {
     AUTH_PUBLIC_URL: "https://auth.example.test",
     AUTH_WEB_APP_URL: "https://web.example.test",
     AUTH_KEY_ENCRYPTION_KEY: randomBytes(32).toString("base64url"),
+    AUTH_INTERNAL_SERVICE_KEY: "test-internal-service-key-32-bytes",
     ...overrides,
   });
 }

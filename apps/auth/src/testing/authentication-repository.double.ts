@@ -1,4 +1,4 @@
-import type { AuthenticationRepository } from "../authentication/ports/authentication-repository";
+import type { AuthenticationRepository } from "../features/basic-login/ports/authentication-repository";
 
 /**
  * Dublê da porta de autenticação para testes de usecase. Todo método que o

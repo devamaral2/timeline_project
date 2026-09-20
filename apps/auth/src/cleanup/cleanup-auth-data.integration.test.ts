@@ -33,19 +33,15 @@ async function open(): Promise<AuthDatabase> {
 }
 
 async function seedUser(db: AuthDatabase, id: string): Promise<void> {
-  await db.query("INSERT INTO users(id,email,name,status,created_at,updated_at) VALUES($1,$2,'Cleanup','pending_invite',$3,$3)", [id, `${id}@example.test`, at(DAY)]);
+  await db.query("INSERT INTO users(id,email,name,status,created_at,updated_at) VALUES($1,$2,'Cleanup','pending_invite',$3,$3)", [id, `${id.toLowerCase()}@example.test`, at(DAY)]);
 }
 
 /** Uma linha exatamente no corte e outra um milissegundo depois, para cada
  *  familia de dado que a retencao apaga. */
 async function seedBoundaries(db: AuthDatabase, userId: string): Promise<void> {
   for (const [suffix, when] of [["old", at(24 * HOUR)], ["new", justAfter(24 * HOUR)]] as const) {
-    const attemptId = `attempt-${suffix}`;
-    await db.query("INSERT INTO authentication_attempts(id,token_hash,user_id,purpose,second_factor,first_methods,expires_at,consumed_at,created_at) VALUES($1,$2,$3,'login','otp',ARRAY['pwd'],$4,$4,$5)", [attemptId, `hash-${suffix}`, userId, when, at(2 * DAY)]);
-    await db.query("INSERT INTO mfa_challenges(id,attempt_id,code_hash,expires_at,consumed_at,created_at) VALUES($1,$2,$3,$4,$4,$5)", [`challenge-${suffix}`, attemptId, `provider-${suffix}`, when, at(2 * DAY)]);
     await db.query("INSERT INTO rate_limit_buckets(scope,subject_hash,window_started_at,window_expires_at,hit_count,updated_at) VALUES('password_ip',$1,$2,$2,1,$2)", [`bucket-${suffix}`, when]);
     await db.query("INSERT INTO invites(id,token_hash,user_id,expires_at,revoked_at,created_at) VALUES($1,$2,$3,$4,$4,$5)", [`invite-${suffix}`, `invite-hash-${suffix}`, userId, whenFor(suffix, 30 * DAY), at(60 * DAY)]);
-    await db.query("INSERT INTO recovery_codes(id,user_id,code_hash,generation,used_at,created_at) VALUES($1,$2,$3,1,$4,$5)", [`code-${suffix}`, userId, `code-hash-${suffix}`, whenFor(suffix, 90 * DAY), at(120 * DAY)]);
     await db.query("INSERT INTO sessions(id,user_id,amr,auth_time,last_used_at,revoked_at,ended_at,created_at) VALUES($1,$2,ARRAY['pwd'],$3,$3,$4,$4,$3)", [`session-${suffix}`, userId, at(120 * DAY), whenFor(suffix, 90 * DAY)]);
     await db.query("INSERT INTO refresh_tokens(id,token_hash,session_id,expires_at,created_at) VALUES($1,$2,$3,$4,$5)", [`refresh-${suffix}`, `refresh-hash-${suffix}`, `session-${suffix}`, new Date(at(120 * DAY).getTime() + 30 * DAY), at(120 * DAY)]);
   }
@@ -65,10 +61,10 @@ describeWithPostgres("cleanupAuthData", () => {
     const result = await cleanupAuthData({ database: db, now, context });
 
     expect(result).toMatchObject({
-      lockAcquired: true, authenticationAttemptsDeleted: 1, mfaChallengesDeleted: 1, rateLimitBucketsDeleted: 1,
-      invitesDeleted: 1, recoveryCodesDeleted: 1, sessionsDeleted: 1, signingKeysRetired: 1,
+      lockAcquired: true, rateLimitBucketsDeleted: 1,
+      invitesDeleted: 1, sessionsDeleted: 1, signingKeysRetired: 1,
     });
-    for (const [table, survivor] of [["authentication_attempts", "attempt-new"], ["mfa_challenges", "challenge-new"], ["invites", "invite-new"], ["recovery_codes", "code-new"], ["sessions", "session-new"]] as const) {
+    for (const [table, survivor] of [["invites", "invite-new"], ["sessions", "session-new"]] as const) {
       expect((await db.query<{ id: string }>(`SELECT id FROM ${table}`)).rows.map((row) => row.id)).toEqual([survivor]);
     }
     expect((await db.query<{ subject_hash: string }>("SELECT subject_hash FROM rate_limit_buckets")).rows.map((row) => row.subject_hash)).toEqual(["bucket-new"]);
@@ -89,8 +85,8 @@ describeWithPostgres("cleanupAuthData", () => {
 
     // Segunda execucao nao encontra mais nada.
     expect(await cleanupAuthData({ database: db, now, context })).toMatchObject({
-      lockAcquired: true, authenticationAttemptsDeleted: 0, mfaChallengesDeleted: 0, rateLimitBucketsDeleted: 0,
-      invitesDeleted: 0, recoveryCodesDeleted: 0, sessionsDeleted: 0, signingKeysRetired: 0, sessionsEnded: 0,
+      lockAcquired: true, rateLimitBucketsDeleted: 0,
+      invitesDeleted: 0, sessionsDeleted: 0, signingKeysRetired: 0, sessionsEnded: 0,
     });
   });
 
@@ -124,7 +120,7 @@ describeWithPostgres("cleanupAuthData", () => {
 
     await expect(cleanupAuthData({ database: db, now, context })).rejects.toThrow();
 
-    expect((await db.query<{ count: number }>("SELECT count(*)::int AS count FROM authentication_attempts")).rows[0]).toEqual({ count: 2 });
+    expect((await db.query<{ count: number }>("SELECT count(*)::int AS count FROM invites")).rows[0]).toEqual({ count: 2 });
     expect((await db.query<{ count: number }>("SELECT count(*)::int AS count FROM sessions")).rows[0]).toEqual({ count: 2 });
     expect((await db.query<{ status: string; encrypted_private_key: string | null }>("SELECT status, encrypted_private_key FROM signing_keys")).rows[0]).toEqual({ status: "retiring", encrypted_private_key: "ciphertext" });
   });
@@ -143,10 +139,10 @@ describeWithPostgres("cleanupAuthData", () => {
     });
 
     expect(contended).toEqual({
-      lockAcquired: false, sessionsEnded: 0, authenticationAttemptsDeleted: 0, mfaChallengesDeleted: 0,
-      rateLimitBucketsDeleted: 0, invitesDeleted: 0, recoveryCodesDeleted: 0, sessionsDeleted: 0, signingKeysRetired: 0,
+      lockAcquired: false, sessionsEnded: 0,
+      rateLimitBucketsDeleted: 0, invitesDeleted: 0, sessionsDeleted: 0, signingKeysRetired: 0,
     });
-    expect((await db.query<{ count: number }>("SELECT count(*)::int AS count FROM authentication_attempts")).rows[0]).toEqual({ count: 2 });
+    expect((await db.query<{ count: number }>("SELECT count(*)::int AS count FROM invites")).rows[0]).toEqual({ count: 2 });
     expect((await admin!.query<{ count: number }>("SELECT count(*)::int AS count FROM audit_log WHERE action='cleanup.completed'")).rows[0]).toEqual({ count: 0 });
   });
 });

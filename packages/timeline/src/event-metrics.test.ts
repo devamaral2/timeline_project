@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import type { TimelineEventCardDto } from "@repo/entities/contracts";
+import type { TimelineEventCardDto } from "@repo/contracts";
 import {
   MIN_DURATION_RATIO,
   durationRatioOf,

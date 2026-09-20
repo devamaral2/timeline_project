@@ -12,10 +12,10 @@
 								"group": [
 									"@repo/entities",
 									"@repo/entities/*",
-									"!@repo/entities/contracts",
-									"!@repo/entities/contracts/*"
+									"@repo/persistence",
+									"@repo/persistence/*"
 								],
-								"message": "@repo/timeline so pode importar @repo/entities/contracts, e so com `import type` (ver AGENTS.md)."
+								"message": "@repo/timeline so importa tipos de @repo/contracts (ver AGENTS.md)."
 							}
 						]
 					}

@@ -17,7 +17,9 @@ describe("API documentation", () => {
     const openApi = (await document.json()) as { openapi: string; paths: Record<string, unknown> };
     expect(openApi.openapi).toBe("3.1.1");
     expect(openApi.paths).toHaveProperty("/auth/login");
-    expect(openApi.paths).toHaveProperty("/auth/admin/users/{userId}/access");
+    expect(openApi.paths).toHaveProperty("/auth/admin/invites");
+    expect(openApi.paths).toHaveProperty("/auth/internal/authorize");
+    expect(openApi.paths).not.toHaveProperty("/auth/admin/users/{userId}/access");
 
     const reference = await fetch(`${app.url}/docs`);
     expect(reference.status).toBe(200);

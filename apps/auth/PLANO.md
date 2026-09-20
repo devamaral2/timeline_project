@@ -422,3 +422,6 @@ comentários do repositório — vale manter.
    como banco separado; instância separada é mais isolamento e mais custo.
 5. Se o `apps/api` continua sendo o único consumidor, ou se já vale desenhar o
    contrato pensando em um terceiro serviço.
+> Documento histórico de planejamento, não descreve o código nem as rotas
+> atuais. Para a arquitetura vigente, veja `docs/architecture/domain-features-auth.md`;
+> para o contrato HTTP, consulte `/docs` ou `/openapi.json` no serviço auth.

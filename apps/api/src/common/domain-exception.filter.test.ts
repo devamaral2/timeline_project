@@ -12,8 +12,8 @@ import {
   TaskNotFoundError,
   TaskOwnershipError,
   TaskRevisionConflictError,
-} from "@repo/entities";
-import { statusOf } from "../events/testing/status-of";
+} from "../domain";
+import { statusOf } from "../features/events/testing/status-of";
 
 test("maps EventValidationError to 400", () => {
   expect(statusOf(new EventValidationError("bad input"))).toBe(400);

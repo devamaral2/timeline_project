@@ -1,5 +1,5 @@
 import * as Notifications from "expo-notifications";
-import type { NotificationOffsetMinutes } from "@repo/entities/contracts";
+import type { NotificationOffsetMinutes } from "@repo/contracts";
 import { computeTriggerTimes } from "./trigger-times";
 
 export interface NotifiableEvent {

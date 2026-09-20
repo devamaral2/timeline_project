@@ -6,8 +6,8 @@ Monorepo Turborepo + pnpm workspace.
 apps/web              Next.js 16 — frontend web (porta 3000)
 apps/mobile           Expo 57 + expo-router — app nativo
 apps/api              NestJS — backend (porta 3001, so loopback por padrao)
-packages/entities     @repo/entities — dominio, portas e DTOs
-packages/persistence  @repo/persistence — schema, repositories e acesso Postgres
+apps/auth             NestJS — identidade, convite, login, sessao e RBAC
+packages/contracts    @repo/contracts — contratos de dados compartilhados
 packages/timeline     @repo/timeline — datas, janelas e agrupamento da timeline
 packages/theme        @repo/theme — os tokens de cor do design system
 ```
@@ -15,10 +15,14 @@ packages/theme        @repo/theme — os tokens de cor do design system
 O backend nao e exposto para fora do servidor: web e back rodam na mesma
 maquina, e o Next repassa `/api/*` para o Nest via `rewrites`. Nenhum dos dois
 frontends tem regra de negocio — do backend eles importam apenas tipos
-(`@repo/entities/contracts`).
+(`@repo/contracts`). O dominio e a persistencia da API ficam em
+`apps/api/src/domain` e `apps/api/src/infrastructure/persistence`; controllers,
+use cases e services ficam em `apps/api/src/features`.
 
 O `apps/auth` é o provedor de identidade do web e da API. O Firebase permanece
 somente no app mobile por enquanto.
+A documentação interativa do auth fica em `http://127.0.0.1:3002/docs`
+(OpenAPI JSON em `/openapi.json`) depois de subir `pnpm dev:auth`.
 
 Web e mobile compartilham a logica de datas (`@repo/timeline`) e a paleta
 (`@repo/theme`), para que as duas telas mostrem os mesmos dias nas mesmas cores.
@@ -80,9 +84,8 @@ Os icones e a splash ainda sao os do template do Expo
 npm run --silent test:ai
 ```
 
-Roda a suite inteira dos sete workspaces numa unica execucao do Vitest, com
-saida minima: `Tests pass` quando verde. Use `npm test` para a saida completa, ou
-`npx vitest run --project api` para um workspace so.
+Roda a suite inteira numa unica execucao do Vitest, com saida minima:
+`Tests pass` quando verde. Para filtrar: `npm run --silent test:ai -- --project api`.
 
 ## Build e tipos
 

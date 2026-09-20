@@ -6,7 +6,7 @@ import { getRuntimeEnv } from './config/env';
 import { findMonorepoRoot, loadRootEnv } from './config/load-env';
 import { configureHttpShell } from './http/request-context.middleware';
 import { configureApiDocumentation } from './http/openapi';
-import { SigningKeyService } from './crypto/signing-key.service';
+import { SigningKeyService } from './features/authenticate-user/signing-key.service';
 import { ANONYMOUS_CONTEXT } from './common/request-context';
 
 async function bootstrap(): Promise<void> {

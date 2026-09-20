@@ -20,7 +20,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@repo/entities": "workspace:*"
+    "@repo/contracts": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

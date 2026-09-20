@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { X } from "lucide-react-native";
-import type { TagSuggestionDto } from "@repo/entities/contracts";
+import type { TagSuggestionDto } from "@repo/contracts";
 import { tagColors, withAlpha } from "@repo/theme";
 import { authedFetch } from "@/lib/api/client";
 import { fieldSurface } from "@/lib/theme/surfaces";

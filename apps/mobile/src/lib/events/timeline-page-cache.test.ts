@@ -1,5 +1,5 @@
 import { beforeEach, expect, test } from "vitest";
-import type { TimelineEventCardDto } from "@repo/entities/contracts";
+import type { TimelineEventCardDto } from "@repo/contracts";
 import {
   clearDayPages,
   dayPageOf,

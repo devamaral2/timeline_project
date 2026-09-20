@@ -35,9 +35,12 @@ run("applies every migration, is safe to repeat, and keeps audit_log append-only
       [schema],
     );
     expect(tables.rows.map((row) => row.tablename)).toEqual(expect.arrayContaining([
-      "audit_log", "auth_schema_meta", "authentication_attempts", "invites", "mfa_challenges",
-      "rate_limit_buckets", "recovery_codes", "refresh_tokens", "role_permissions", "roles",
+      "audit_log", "auth_schema_meta", "invites",
+      "rate_limit_buckets", "refresh_tokens", "role_permissions", "roles",
       "sessions", "signing_keys", "user_permissions", "user_roles", "users",
+    ]));
+    expect(tables.rows.map((row) => row.tablename)).not.toEqual(expect.arrayContaining([
+      "authentication_attempts", "mfa_challenges", "recovery_codes",
     ]));
     await client.query(`INSERT INTO "${schema}".audit_log (id, correlation_id, action, result, created_at) VALUES ('audit-1', 'correlation', 'login.failed', 'failed', now())`);
     await expect(client.query(`UPDATE "${schema}".audit_log SET action = 'login.failed'`)).rejects.toThrow();

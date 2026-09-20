@@ -10,6 +10,7 @@
     "API_HOST",
     "DATABASE_URL",
     "AUTH_SERVICE_URL",
+    "AUTH_INTERNAL_SERVICE_KEY",
     "OPENROUTER_*",
     "WEB_PORT",
     "METRO_PORT",

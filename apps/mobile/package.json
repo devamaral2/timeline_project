@@ -11,7 +11,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@repo/entities": "workspace:*",
+    "@repo/contracts": "workspace:*",
     "@repo/theme": "workspace:*",
     "@repo/timeline": "workspace:*",
     "expo": "~57.0.16",

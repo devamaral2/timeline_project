@@ -14,7 +14,7 @@
 						"patterns": [
 							{
 								"group": ["@repo/entities/*"],
-								"message": "apps/web nao compartilha entidades do backend; use os contratos HTTP locais."
+								"message": "apps/web importa tipos de @repo/contracts; dominio e persistencia pertencem a apps/api."
 							}
 						]
 					}

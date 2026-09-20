@@ -69,37 +69,16 @@ const operations: Record<string, Record<string, OpenApiOperation>> = {
   "/auth/admin/invites": {
     post: { summary: "Cria um convite", description: "Cria um usuário pendente, define seus papéis e permissões diretas e devolve o link de convite. Exige token de um superadministrador.", tags: ["Administração"], security: bearer, requestBody: request("CreateInviteRequest"), responses: { "201": json({ $ref: "#/components/schemas/CreatedInvite" }), "409": json({ $ref: "#/components/schemas/ErrorCode" }, "Já existe uma conta para o email informado."), ...protectedErrors } },
   },
-  "/auth/admin/users": {
-    get: { summary: "Lista usuários", description: "Lista resumos seguros de usuários com paginação por cursor. Senhas, telefones, tokens, convites e códigos de recuperação nunca são retornados.", tags: ["Administração"], security: bearer, parameters: [{ name: "cursor", in: "query", required: false, schema: { type: "string", maxLength: 64 }, description: "Cursor retornado pela página anterior." }, { name: "limit", in: "query", required: false, schema: { type: "integer", minimum: 1, maximum: 100, default: 25 }, description: "Quantidade de resultados, de 1 a 100." }], responses: { "200": json({ $ref: "#/components/schemas/UserPage" }), ...protectedErrors } },
+  "/auth/internal/authorize": {
+    post: { summary: "Autoriza uma operação da API", description: "Uso exclusivo entre serviços. Exige X-Auth-Service-Key e o bearer do usuário; relê a sessão e o acesso atual.", tags: ["Integração interna"], security: bearer, requestBody: request("AuthorizeRequest"), responses: { "200": json({ $ref: "#/components/schemas/AuthorizedIdentity" }), ...protectedErrors } },
   },
-  "/auth/admin/users/{userId}/status": {
-    patch: adminUserOperation("Atualiza status do usuário", "Altera o status para `active`, `suspended` ou `disabled`. Não existe transição para `pending_invite`: o aceite do convite é quem ativa a conta.", "ChangeUserStatusRequest", "UserStatus"),
-  },
-  "/auth/admin/users/{userId}/access": {
-    put: adminUserOperation("Substitui o acesso do usuário", "Substitui integralmente os papéis e as permissões diretas do usuário. Use `deny` para negar explicitamente uma permissão concedida por um papel.", "ReplaceUserAccessRequest", "UserAccess"),
-  },
-  "/auth/admin/users/{userId}/invite/reissue": {
-    post: adminUserOperation("Reemite um convite", "Invalida o convite pendente anterior e devolve um novo link de convite para o usuário indicado.", undefined, "CreatedInvite", "200"),
-  },
-  "/auth/admin/users/{userId}/invite": {
-    delete: adminUserOperation("Revoga convite", "Revoga o convite pendente do usuário indicado. A conta não poderá concluir o cadastro com o link revogado.", undefined, undefined, "204"),
-  },
-  "/auth/admin/users/{userId}/revoke-sessions": {
-    post: adminUserOperation("Revoga sessões de um usuário", "Encerra todas as sessões ativas do usuário indicado, sem alterar seus papéis ou status.", undefined, undefined, "204"),
+  "/auth/internal/authorize-session": {
+    post: { summary: "Revalida uma operação do chat", description: "Uso exclusivo entre serviços. Exige X-Auth-Service-Key e uma sessão já identificada por um ticket de uso único.", tags: ["Integração interna"], requestBody: request("AuthorizeSessionRequest"), responses: { "200": json({ $ref: "#/components/schemas/AuthorizedIdentity" }), ...protectedErrors } },
   },
 };
 
 function request(schema: string, description = "Dados da operação.") {
   return { required: true, description, content: { "application/json": { schema: { $ref: `#/components/schemas/${schema}` } } } };
-}
-
-function adminUserOperation(summary: string, description: string, requestSchema?: string, responseSchema?: string, status = "200"): OpenApiOperation {
-  return {
-    summary, description, tags: ["Administração"], security: bearer,
-    parameters: [{ name: "userId", in: "path", required: true, schema: { type: "string", minLength: 1, maxLength: 64 }, description: "Identificador do usuário alvo." }],
-    ...(requestSchema === undefined ? {} : { requestBody: request(requestSchema) }),
-    responses: { [status]: status === "204" ? noContent("Operação concluída.") : json({ $ref: `#/components/schemas/${responseSchema}` }), ...protectedErrors },
-  };
 }
 
 export const authOpenApiDocument = {
@@ -114,7 +93,8 @@ export const authOpenApiDocument = {
     { name: "Convites públicos", description: "Fluxo de cadastro iniciado por um convite." },
     { name: "Autenticação pública", description: "Login por email e senha sem sessão existente." },
     { name: "Sessões", description: "Ciclo de vida e consulta da sessão autenticada." },
-    { name: "Administração", description: "Gestão de usuários e acessos, exclusiva de superadministradores." },
+    { name: "Administração", description: "Emissão de convites, exclusiva de superadministradores." },
+    { name: "Integração interna", description: "Decisões de acesso solicitadas pela API." },
   ],
   paths: operations,
   components: {
@@ -129,18 +109,15 @@ export const authOpenApiDocument = {
       LoginRequest: object({ email: { ...string("Email da conta.", 320), format: "email" }, password: token("Senha da conta.") }),
       RefreshTokenRequest: object({ refreshToken: token("Refresh token da sessão que será renovada ou revogada.") }),
       CreateInviteRequest: object({ email: { ...string("Email do convidado.", 320), format: "email" }, name: string("Nome do convidado.", 120), roleKeys: { type: "array", maxItems: 16, uniqueItems: true, items: { type: "string", enum: ["admin", "member", "viewer"] }, description: "Papéis iniciais do usuário." }, directPermissions: directPermissionsSchema }),
-      ReplaceUserAccessRequest: object({ roleKeys: { type: "array", maxItems: 16, uniqueItems: true, items: { type: "string", enum: ["admin", "member", "viewer"] } }, directPermissions: directPermissionsSchema }),
-      ChangeUserStatusRequest: object({ status: { type: "string", enum: ["active", "suspended", "disabled"] } }),
+      AuthorizeRequest: object({ resource: { type: "string", enum: ["event", "tag", "task", "note", "recurrence", "agent"] }, action: { type: "string", enum: ["read", "create", "update", "delete", "execute"] }, targetUserId: string("Dono do dado, quando diferente do ator.") }, ["resource", "action"]),
+      AuthorizeSessionRequest: object({ resource: { type: "string", enum: ["event", "tag", "task", "note", "recurrence", "agent"] }, action: { type: "string", enum: ["read", "create", "update", "delete", "execute"] }, userId: string("Ator do ticket."), sessionId: string("Sessão do ticket."), targetUserId: string("Dono do dado, quando diferente do ator.") }, ["resource", "action", "userId", "sessionId"]),
+      AuthorizedIdentity: object({ userId: string("Ator autorizado."), sessionId: string("Sessão ativa."), email: string("Email atual."), name: string("Nome atual.") }),
       InviteAccepted: object({accepted:{type:"boolean",enum:[true]}}),
       InviteInspection: object({ name: string("Nome do convidado."), email: string("Email mascarado."), expiresAt: dateTime("Momento de expiração do convite.") }),
       SessionTokens: object({ accessToken: string("JWT para autenticar rotas protegidas."), refreshToken: string("Token opaco para renovar a sessão."), accessTokenExpiresInSeconds: { type: "integer", description: "Vida útil do access token em segundos." }, refreshTokenExpiresAt: dateTime("Expiração do refresh token.") }, ["accessToken", "refreshToken"]),
       RefreshTokens: object({ accessToken: string("Novo JWT de acesso."), refreshToken: string("Novo refresh token; substitui o anterior.") }),
       CurrentUser: object({ userId: string("ID do usuário."), email: string("Email da conta."), name: string("Nome da conta."), sessionId: string("ID da sessão atual."), roles: { type: "array", items: { type: "string" } }, permissions: { type: "array", items: { type: "string" } }, denies: { type: "array", items: { type: "string" } } }),
       CreatedInvite: object({ userId: string("ID do usuário convidado."), inviteLink: { ...string("Link com token secreto de convite."), format: "uri" }, expiresAt: dateTime("Expiração do convite.") }),
-      UserStatus: object({ userId: string("ID do usuário."), status: { type: "string", enum: ["active", "suspended", "disabled"] } }),
-      UserAccess: object({ userId: string("ID do usuário."), roleKeys: { type: "array", items: { type: "string" } }, directPermissions: directPermissionsSchema }),
-      UserPage: object({ users: { type: "array", items: { $ref: "#/components/schemas/AdminUserSummary" }, description: "Resumos seguros de usuários." }, nextCursor: { type: ["string", "null"], description: "Cursor para a próxima página; `null` quando não há mais resultados." } }),
-      AdminUserSummary: object({ id: string("ID do usuário."), email: string("Email da conta."), name: string("Nome da conta."), status: { type: "string", enum: ["pending_invite", "active", "suspended", "disabled"] }, roleKeys: { type: "array", items: { type: "string" } }, directPermissions: directPermissionsSchema, createdAt: dateTime("Criação da conta."), updatedAt: dateTime("Última atualização da conta.") }),
     },
   },
 } as const;

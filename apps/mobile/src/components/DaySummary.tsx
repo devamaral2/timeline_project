@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
 import { trackedMinutesOf } from "@repo/timeline";
-import type { TimelineEventCardDto } from "@repo/entities/contracts";
+import type { TimelineEventCardDto } from "@repo/contracts";
 import { useTheme } from "@/lib/theme/use-theme";
 
 /**

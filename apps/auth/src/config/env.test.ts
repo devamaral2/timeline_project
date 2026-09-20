@@ -14,6 +14,7 @@ const base = (overrides: EnvSource = {}): EnvSource => ({
   AUTH_PUBLIC_URL: "https://auth.example.test",
   AUTH_WEB_APP_URL: "https://web.example.test",
   AUTH_KEY_ENCRYPTION_KEY: kek,
+  AUTH_INTERNAL_SERVICE_KEY: "test-internal-service-key-32-bytes",
   ...overrides,
 });
 

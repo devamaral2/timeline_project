@@ -7,11 +7,8 @@ import type { AuthDatabase, AuthTransaction } from '../db/client';
 export interface CleanupResult {
   lockAcquired: boolean;
   sessionsEnded: number;
-  authenticationAttemptsDeleted: number;
-  mfaChallengesDeleted: number;
   rateLimitBucketsDeleted: number;
   invitesDeleted: number;
-  recoveryCodesDeleted: number;
   sessionsDeleted: number;
   signingKeysRetired: number;
 }
@@ -19,11 +16,8 @@ export interface CleanupResult {
 const emptyResult = (): CleanupResult => ({
   lockAcquired: false,
   sessionsEnded: 0,
-  authenticationAttemptsDeleted: 0,
-  mfaChallengesDeleted: 0,
   rateLimitBucketsDeleted: 0,
   invitesDeleted: 0,
-  recoveryCodesDeleted: 0,
   sessionsDeleted: 0,
   signingKeysRetired: 0,
 });
@@ -64,16 +58,9 @@ export async function cleanupAuthData(input: { database: AuthDatabase; now: Date
     result.sessionsEnded = await count(tx, `UPDATE sessions s SET ended_at=$1
       WHERE s.revoked_at IS NULL AND s.ended_at IS NULL
         AND NOT EXISTS (SELECT 1 FROM refresh_tokens r WHERE r.session_id=s.id AND r.consumed_at IS NULL AND r.expires_at>$1)`, [now]);
-    result.mfaChallengesDeleted = await count(tx, `DELETE FROM mfa_challenges c
-      WHERE COALESCE(c.consumed_at, c.invalidated_at, c.expires_at) <= $1
-        OR EXISTS (SELECT 1 FROM authentication_attempts a WHERE a.id=c.attempt_id AND COALESCE(a.consumed_at, a.invalidated_at, a.expires_at) <= $1)`, [attemptCutoff]);
-    result.authenticationAttemptsDeleted = await count(tx, `DELETE FROM authentication_attempts
-      WHERE COALESCE(consumed_at, invalidated_at, expires_at) <= $1`, [attemptCutoff]);
     result.rateLimitBucketsDeleted = await count(tx, 'DELETE FROM rate_limit_buckets WHERE window_expires_at <= $1', [attemptCutoff]);
     result.invitesDeleted = await count(tx, `DELETE FROM invites
       WHERE COALESCE(accepted_at, revoked_at, expires_at) <= $1`, [inviteCutoff]);
-    result.recoveryCodesDeleted = await count(tx, `DELETE FROM recovery_codes
-      WHERE COALESCE(used_at, revoked_at) <= $1`, [longCutoff]);
     result.sessionsDeleted = await count(tx, `DELETE FROM sessions
       WHERE COALESCE(revoked_at, ended_at) <= $1`, [longCutoff]);
 
@@ -86,11 +73,8 @@ export async function cleanupAuthData(input: { database: AuthDatabase; now: Date
     const events: AuditEventInput[] = retired.rows.map((key) => audit('key.retired', key.kid, now, input.context, {}));
     events.push(audit('cleanup.completed', null, now, input.context, {
       sessionsEnded: result.sessionsEnded,
-      authenticationAttemptsDeleted: result.authenticationAttemptsDeleted,
-      mfaChallengesDeleted: result.mfaChallengesDeleted,
       rateLimitBucketsDeleted: result.rateLimitBucketsDeleted,
       invitesDeleted: result.invitesDeleted,
-      recoveryCodesDeleted: result.recoveryCodesDeleted,
       sessionsDeleted: result.sessionsDeleted,
       signingKeysRetired: result.signingKeysRetired,
     }));

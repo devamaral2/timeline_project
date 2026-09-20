@@ -6,9 +6,9 @@ import {
   type PostgresTestDatabase,
 } from "../testing/postgres-test-database";
 import { createTestApp, type TestApp } from "../testing/create-test-app";
-import { SigningKeyService } from "../crypto/signing-key.service";
+import { SigningKeyService } from "../features/authenticate-user/signing-key.service";
 import { ANONYMOUS_CONTEXT } from "../common/request-context";
-import { hashSecretToken } from "../crypto/secret-token";
+import { hashSecretToken } from "../features/authenticate-user/secret-token";
 import { SECURITY_POLICY } from "../config/security-policy";
 import type { AuthDatabase } from "../db/client";
 import { AUTH_DATABASE } from "../db/tokens";
@@ -27,7 +27,7 @@ async function seedActiveUser(db: AuthDatabase, overrides: { status?: string } =
   await db.query(
     `INSERT INTO users (id, email, name, password_hash, status, created_at, updated_at)
      VALUES ($1, $2, 'Test User', 'hash', $3, now(), now())`,
-    [userId, `${userId}@example.test`, overrides.status ?? "active"],
+    [userId, `${userId.toLowerCase()}@example.test`, overrides.status ?? "active"],
   );
   return userId;
 }

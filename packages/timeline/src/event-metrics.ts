@@ -1,4 +1,4 @@
-import type { TimelineEventCardDto } from "@repo/entities/contracts";
+import type { TimelineEventCardDto } from "@repo/contracts";
 
 /**
  * Onde o evento esta em relacao a agora. Sao tres estados, e nao dois: desde

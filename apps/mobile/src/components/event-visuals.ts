@@ -10,7 +10,7 @@ import type {
   EventPriority,
   KnownEventItemType,
   NotificationOffsetMinutes,
-} from "@repo/entities/contracts";
+} from "@repo/contracts";
 import type { Theme } from "@repo/theme";
 
 /**

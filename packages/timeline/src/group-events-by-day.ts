@@ -1,4 +1,4 @@
-import type { TimelineEventCardDto } from "@repo/entities/contracts";
+import type { TimelineEventCardDto } from "@repo/contracts";
 import { dayKeyOf } from "./format-date";
 import type { TimelineDay } from "./timeline-day";
 

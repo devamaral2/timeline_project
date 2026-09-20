@@ -7,7 +7,7 @@ import type {
   MealItem,
   SleepItem,
   TrainingData,
-} from "@repo/entities/contracts";
+} from "@repo/contracts";
 import { formatTime } from "@repo/timeline";
 import { Message } from "@/components/Message";
 import { MissedBadge } from "@/components/MissedBadge";

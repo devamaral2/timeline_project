@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import type { TimelineEventCardDto } from "@repo/entities/contracts";
+import type { TimelineEventCardDto } from "@repo/contracts";
 import { mergeTimelinePage } from "./timeline-page";
 
 function anEvent(id: string): TimelineEventCardDto {

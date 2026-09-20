@@ -7,18 +7,16 @@
 				"noRestrictedImports": {
 					"level": "error",
 					"options": {
-						"paths": {
-							"@repo/persistence": "apps/mobile nao pode importar @repo/persistence — so apps/api fala com o Postgres (ver AGENTS.md)."
-						},
+						"paths": {},
 						"patterns": [
 							{
 								"group": [
 									"@repo/entities",
 									"@repo/entities/*",
-									"!@repo/entities/contracts",
-									"!@repo/entities/contracts/*"
+									"@repo/persistence",
+									"@repo/persistence/*"
 								],
-								"message": "apps/mobile so pode importar @repo/entities/contracts, e so com `import type` (ver AGENTS.md)."
+								"message": "apps/mobile importa tipos de @repo/contracts; dominio e persistencia pertencem a apps/api."
 							}
 						]
 					}

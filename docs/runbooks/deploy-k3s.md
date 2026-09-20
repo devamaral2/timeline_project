@@ -34,15 +34,11 @@ PostgreSQL. As migrations também executarão em containers.
 interrompe todos os serviços. O mobile é um app instalado no celular, não um
 servidor a subir no k3s; este roteiro publica a API que ele poderá consumir.
 
-> **Impedimento encontrado no código em 07/09/2026:** antes de iniciar este
-> deploy completo, é preciso reconciliar as migrations e a implementação do
-> `auth`. `apps/auth/src/db/readiness.ts` declara `AUTH_SCHEMA_VERSION = 3`,
-> mas `0003`/`0004` elevam o schema a 4/5. A `0004_email_otp_mfa.sql` é uma
-> migration histórica mantida apenas para bancos que já passaram pelo corte.
-> Com essa revisão, o auth não passa na readiness após aplicar todas as
-> migrations. Não basta trocar o número para 5. A correção é trabalho de código,
-> não uma configuração da VPS. O passo 7 detecta a divergência e impede
-> prosseguir. Este documento não contorna o problema pulando migrations.
+> **Revisão necessária antes do deploy:** as migrations do auth agora chegam à
+> versão 6. A `0004_email_otp_mfa.sql` é histórica; a `0009` remove as tabelas
+> MFA inativas. Faça backup e valide as migrations e a readiness no ambiente
+> de destino antes de seguir. A chave `AUTH_INTERNAL_SERVICE_KEY` deve ser a
+> mesma em API e auth e permanecer privada à rede interna.
 
 ## Como executar este documento
 

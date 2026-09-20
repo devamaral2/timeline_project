@@ -51,18 +51,24 @@ importers:
       '@openrouter/agent':
         specifier: ^0.11.0
         version: 0.11.0
-      '@repo/entities':
+      '@repo/contracts':
         specifier: workspace:*
-        version: link:../../packages/entities
-      '@repo/persistence':
-        specifier: workspace:*
-        version: link:../../packages/persistence
+        version: link:../../packages/contracts
       '@repo/timeline':
         specifier: workspace:*
         version: link:../../packages/timeline
       '@scalar/nestjs-api-reference':
         specifier: ^1.2.17
         version: 1.2.17
+      drizzle-orm:
+        specifier: ^0.45.2
+        version: 0.45.2(@opentelemetry/api@1.9.1)(@types/pg@8.23.1)(pg@8.23.0)
+      libpg-query:
+        specifier: 17.7.4
+        version: 17.7.4
+      pg:
+        specifier: ^8.23.0
+        version: 8.23.0
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -88,15 +94,24 @@ importers:
       '@nestjs/testing':
         specifier: ^11.0.0
         version: 11.2.1(@nestjs/common@11.2.1(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1))(@nestjs/core@11.2.1)(@nestjs/platform-express@11.2.1)
+      '@testcontainers/postgresql':
+        specifier: ^12.1.0
+        version: 12.1.0(supports-color@8.1.1)
       '@types/express':
         specifier: ^5.0.0
         version: 5.0.6
       '@types/node':
         specifier: ^24.0.0
         version: 24.13.3
+      '@types/pg':
+        specifier: ^8.23.1
+        version: 8.23.1
       '@types/ws':
         specifier: ^8.18.1
         version: 8.18.1
+      drizzle-kit:
+        specifier: ^0.31.10
+        version: 0.31.10
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -164,9 +179,9 @@ importers:
 
   apps/mobile:
     dependencies:
-      '@repo/entities':
+      '@repo/contracts':
         specifier: workspace:*
-        version: link:../../packages/entities
+        version: link:../../packages/contracts
       '@repo/theme':
         specifier: workspace:*
         version: link:../../packages/theme
@@ -286,6 +301,9 @@ importers:
         specifier: ^4.0.0
         version: 4.4.3
     devDependencies:
+      '@biomejs/biome':
+        specifier: ^2.5.13
+        version: 2.5.13
       '@tailwindcss/postcss':
         specifier: ^4.2.1
         version: 4.3.3
@@ -317,46 +335,8 @@ importers:
         specifier: ^5.7.0
         version: 5.9.3
 
-  packages/entities:
-    dependencies:
-      ulid:
-        specifier: ^3.0.1
-        version: 3.0.2
+  packages/contracts:
     devDependencies:
-      typescript:
-        specifier: ^5.7.0
-        version: 5.9.3
-
-  packages/persistence:
-    dependencies:
-      '@repo/entities':
-        specifier: workspace:*
-        version: link:../entities
-      drizzle-orm:
-        specifier: ^0.45.2
-        version: 0.45.2(@opentelemetry/api@1.9.1)(@types/pg@8.23.1)(pg@8.23.0)
-      libpg-query:
-        specifier: 17.7.4
-        version: 17.7.4
-      pg:
-        specifier: ^8.23.0
-        version: 8.23.0
-      ulid:
-        specifier: ^3.0.2
-        version: 3.0.2
-    devDependencies:
-      '@nestjs/common':
-        specifier: ^11.0.0
-        version: 11.2.1(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1)
-      '@testcontainers/postgresql':
-        specifier: ^12.1.0
-        version: 12.1.0(supports-color@8.1.1)
-      '@types/pg':
-        specifier: ^8.23.1
-        version: 8.23.1
-      drizzle-kit:
-        specifier: ^0.31.10
-        version: 0.31.10
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -369,9 +349,9 @@ importers:
 
   packages/timeline:
     dependencies:
-      '@repo/entities':
+      '@repo/contracts':
         specifier: workspace:*
-        version: link:../entities
+        version: link:../contracts
     devDependencies:
       '@types/node':
         specifier: ^24.0.0
@@ -816,6 +796,63 @@ packages:
 
   '@balena/dockerignore@1.0.2':
     resolution: {integrity: sha512-wMue2Sy4GAVTk6Ic4tJVcnfdau+gx2EnG7S+uAEe+TWJFqE4YoWN4/H8MSLj4eYJKxGg26lZwboEniNiNwZQ6Q==}
+
+  '@biomejs/biome@2.5.13':
+    resolution: {integrity: sha512-+SEC/mFk1a+5mvUANZgbZTaiZXs1nj4iMhL/PHiqDT5TPUEPFIlliEtkKKZB4N862yylHC3UI+/Sj2I0HJEqhA==}
+    engines: {node: '>=14.21.3'}
+    hasBin: true
+
+  '@biomejs/cli-darwin-arm64@2.5.13':
+    resolution: {integrity: sha512-nYSuDJ6zgVqZUkAkJkvhXxsF2PYIrUk/g638K4voCXz7foI9f7b6C2/7+oAihsHQlivZNMUrm/y8ywlcHQtZOw==}
+    engines: {node: '>=14.21.3'}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@biomejs/cli-darwin-x64@2.5.13':
+    resolution: {integrity: sha512-KVy1ceEDuJ3AzFxjT9kkxbVy+UANw1pjEMUS6lvKfxjJ+fmkRvc7sQn1Xo6ETgseEI7wUQoV03KSga3XfE8YRQ==}
+    engines: {node: '>=14.21.3'}
+    cpu: [x64]
+    os: [darwin]
+
+  '@biomejs/cli-linux-arm64-musl@2.5.13':
+    resolution: {integrity: sha512-CH32xpep3dNS5EVJpAHlYchkBYznxyVZQrx0b6YYYlPL9u9ZeD2NtqiK/6s64+HFS2a7hGnryLlqqZAOh8ax5g==}
+    engines: {node: '>=14.21.3'}
+    cpu: [arm64]
+    os: [linux]
+    libc: [musl]
+
+  '@biomejs/cli-linux-arm64@2.5.13':
+    resolution: {integrity: sha512-VlNMtoxOqs0dUR6drxxHr18SNUvI7xxAuHZlH4s/dstYSf3g6RaqVgo8JRnhcOhKz9afWrvtJTboNG1JuYlIDQ==}
+    engines: {node: '>=14.21.3'}
+    cpu: [arm64]
+    os: [linux]
+    libc: [glibc]
+
+  '@biomejs/cli-linux-x64-musl@2.5.13':
+    resolution: {integrity: sha512-F3pmwl+VHoUuVJN/tbNLKeLt0SVK3EIyN1jXlMcNyQGYRQQTVqXF+GgkP0/CjGXFN87e/mv0sBfUnWqWza5PKQ==}
+    engines: {node: '>=14.21.3'}
+    cpu: [x64]
+    os: [linux]
+    libc: [musl]
+
+  '@biomejs/cli-linux-x64@2.5.13':
+    resolution: {integrity: sha512-Fi6gIxbUaJ3ZCIXeG3ggIBPF76O2DjDN67WrPX/ODRv54GeXPm2gbEPC96Yb0yrJoiH0Eax1JLx1Pi0XbsNFZQ==}
+    engines: {node: '>=14.21.3'}
+    cpu: [x64]
+    os: [linux]
+    libc: [glibc]
+
+  '@biomejs/cli-win32-arm64@2.5.13':
+    resolution: {integrity: sha512-+WD13qshXrr0Icv4BfsAdzm8Fs3TL+nZ59zEQxsYNd8lcgZJ0A5+OrlwsL1PipVCmWeRpxgIPD6DAcEd7smkCQ==}
+    engines: {node: '>=14.21.3'}
+    cpu: [arm64]
+    os: [win32]
+
+  '@biomejs/cli-win32-x64@2.5.13':
+    resolution: {integrity: sha512-VOofU/nW761XWzUeUNE8zzYNyPrxuMuNFMizL0qz7J75yeV8N7WFheUlk1/K6dOkaFpH9wJ+lDKlwjAbw0346w==}
+    engines: {node: '>=14.21.3'}
+    cpu: [x64]
+    os: [win32]
 
   '@borewit/text-codec@0.2.2':
     resolution: {integrity: sha512-DDaRehssg1aNrH4+2hnj1B7vnUGEjU6OIlyRdkMd0aUdIUvKXrJfXsy8LVtXAy7DRvYVluWbMspsRhz2lcW0mQ==}
@@ -7078,6 +7115,41 @@ snapshots:
       '@babel/helper-validator-identifier': 7.29.7
 
   '@balena/dockerignore@1.0.2': {}
+
+  '@biomejs/biome@2.5.13':
+    optionalDependencies:
+      '@biomejs/cli-darwin-arm64': 2.5.13
+      '@biomejs/cli-darwin-x64': 2.5.13
+      '@biomejs/cli-linux-arm64': 2.5.13
+      '@biomejs/cli-linux-arm64-musl': 2.5.13
+      '@biomejs/cli-linux-x64': 2.5.13
+      '@biomejs/cli-linux-x64-musl': 2.5.13
+      '@biomejs/cli-win32-arm64': 2.5.13
+      '@biomejs/cli-win32-x64': 2.5.13
+
+  '@biomejs/cli-darwin-arm64@2.5.13':
+    optional: true
+
+  '@biomejs/cli-darwin-x64@2.5.13':
+    optional: true
+
+  '@biomejs/cli-linux-arm64-musl@2.5.13':
+    optional: true
+
+  '@biomejs/cli-linux-arm64@2.5.13':
+    optional: true
+
+  '@biomejs/cli-linux-x64-musl@2.5.13':
+    optional: true
+
+  '@biomejs/cli-linux-x64@2.5.13':
+    optional: true
+
+  '@biomejs/cli-win32-arm64@2.5.13':
+    optional: true
+
+  '@biomejs/cli-win32-x64@2.5.13':
+    optional: true
 
   '@borewit/text-codec@0.2.2': {}
 
