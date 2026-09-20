@@ -1,0 +1,37 @@
+import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
+import { Task } from "../../domain";
+import type { TaskRepository } from "../../domain/ports";
+import type { CreateTaskInput } from "@repo/contracts";
+import { assertTasksOwned } from "../../api-core/tasks/assert-tasks-owned";
+import { assertParentTaskAssignable } from "../../api-core/tasks/assert-parent-task";
+
+export class CreateTaskUseCase {
+  constructor(private readonly taskRepository: TaskRepository) {}
+
+  async execute(input: CreateTaskInput, actor: AuthenticatedUser): Promise<{ taskId: string }> {
+    if (input.parentTaskId) {
+      await assertParentTaskAssignable(this.taskRepository, input.parentTaskId, actor.userId);
+    }
+    if (input.dependsOnTaskIds?.length) {
+      await assertTasksOwned(this.taskRepository, input.dependsOnTaskIds, actor.userId);
+    }
+
+    const task = Task.create({
+      userId: actor.userId,
+      parentTaskId: input.parentTaskId,
+      name: input.name ?? "",
+      description: input.description ?? "",
+      status: input.status,
+      priority: input.priority,
+      notifyOffsetsMinutes: input.notifyOffsetsMinutes,
+      tags: input.tags ?? [],
+      startedAt: input.startedAt ? new Date(input.startedAt) : undefined,
+      estimatedFinishAt: input.estimatedFinishAt ? new Date(input.estimatedFinishAt) : undefined,
+      finishedAt: input.finishedAt ? new Date(input.finishedAt) : undefined,
+      dependsOnTaskIds: input.dependsOnTaskIds,
+    });
+
+    await this.taskRepository.save(task);
+    return { taskId: task.id };
+  }
+}
