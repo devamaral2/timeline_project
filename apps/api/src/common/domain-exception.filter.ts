@@ -37,7 +37,7 @@ import {
   AgentTargetForbiddenError,
   InvalidInputError,
   LlmUnavailableError,
-} from "../features/agent/errors/agent.errors";
+} from "../api-core/agent/errors/agent.errors";
 
 /**
  * Traduz os erros de dominio para status HTTP. Substitui o `mutationErrorResponse`
