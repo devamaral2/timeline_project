@@ -22,7 +22,7 @@ function repositoryReturning(
       lastCommand = command;
       return result;
     },
-    openSession: () => {
+    revokeAllOfTargetUser: () => {
       throw new Error("not used");
     },
     revokeByRefreshToken: () => {

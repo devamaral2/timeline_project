@@ -10,5 +10,6 @@ export async function grantRuntimePrivileges(client: SqlClient, schema: string, 
   await client.query(`REVOKE ALL ON SCHEMA ${quotedSchema} FROM ${quotedRole}`);
   await client.query(`GRANT USAGE ON SCHEMA ${quotedSchema} TO ${quotedRole}`);
   await client.query(`GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA ${quotedSchema} TO ${quotedRole}`);
-  await client.query(`ALTER DEFAULT PRIVILEGES IN SCHEMA ${quotedSchema} GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ${quotedRole}`);
+  await client.query(`REVOKE ALL ON ${quotedSchema}.audit_log FROM ${quotedRole}`);
+  await client.query(`GRANT INSERT ON ${quotedSchema}.audit_log TO ${quotedRole}`);
 }

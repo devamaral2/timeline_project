@@ -1,7 +1,9 @@
 import { spawn } from "node:child_process";
 import { loadOnePasswordEnvironment } from "./loader.mjs";
 
-const [command, ...args] = process.argv.slice(2);
+const argv = process.argv.slice(2);
+if (argv[0] === "--") argv.shift();
+const [command, ...args] = argv;
 if (!command) {
   console.error("Uso: pnpm secrets:exec -- <comando> [args...]");
   process.exit(2);

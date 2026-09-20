@@ -7,6 +7,7 @@ packages:
 # cpu-features e ssh2 sao do tunel SSH opcional do @testcontainers/postgresql,
 # que nao usamos (falamos direto com o daemon Docker local).
 allowBuilds:
+  '@firebase/util': true
   "@openrouter/sdk": true
   '@scarf/scarf': false
   cpu-features: false

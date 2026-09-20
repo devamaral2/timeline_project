@@ -5,6 +5,7 @@ import { findMonorepoRoot, loadRootEnv } from '../config/load-env';
 import { PostgresSigningKeyRepository } from './postgres-signing-key.repository';
 import { SigningKeyService } from './signing-key.service';
 import { CryptoSecretGenerator } from '../common/secret-generator';
+import { ANONYMOUS_CONTEXT } from '../common/request-context';
 
 async function main(): Promise<void> {
   const env = getRuntimeEnv(
@@ -17,7 +18,18 @@ async function main(): Promise<void> {
       new PostgresSigningKeyRepository(db),
       env.keyEncryptionKey,
       new CryptoSecretGenerator(),
-    ).rotate(now);
+    ).rotate(now, {
+      correlationId: 'key-rotation',
+      actorUserId: null,
+      action: 'key.rotated',
+      targetType: 'signing_key',
+      targetId: null,
+      result: 'succeeded',
+      reason: null,
+      metadata: {},
+      context: ANONYMOUS_CONTEXT,
+      occurredAt: now,
+    });
     console.log(
       JSON.stringify({
         kid: key.kid,

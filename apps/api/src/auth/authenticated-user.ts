@@ -5,4 +5,5 @@ export interface AuthenticatedUser {
   displayName?: string;
   roles?: string[];
   permissions?: string[];
+  denies?: string[];
 }

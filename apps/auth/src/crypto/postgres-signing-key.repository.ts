@@ -1,3 +1,5 @@
+import { insertAuditEvents } from '../audit/postgres-audit-log';
+import type { AuditEventInput } from '../audit/audit-event';
 import type { AuthDatabase, AuthTransaction } from '../db/client';
 import { SECURITY_POLICY } from '../config/security-policy';
 import { isPublicSigningJwk, type PublicSigningJwk } from './jwk';
@@ -45,65 +47,38 @@ export async function lockActiveSigningKey(
   };
 }
 export class NoActiveSigningKeyError extends Error {}
-
-/**
- * Aposenta de fato as chaves `retiring` cujo `retire_after` ja passou: apaga o
- * material privado e marca `retired`. Roda dentro de toda escrita de chave (boot
- * e rotacao) — foi o que sobrou do job de retencao, que saiu do servico.
- */
-async function retireExpiredKeys(tx: AuthTransaction, now: Date): Promise<string[]> {
-  const retired = await tx.query<{ kid: string }>(
-    "UPDATE signing_keys SET status = 'retired', encrypted_private_key = NULL, retired_at = $1 WHERE status = 'retiring' AND retire_after <= $1 RETURNING kid",
-    [now],
-  );
-  return retired.rows.map((row) => row.kid);
-}
 export class PostgresSigningKeyRepository implements SigningKeyRepository {
   constructor(private readonly db: AuthDatabase) {}
   ensureActive(
     candidate: NewStoredSigningKey,
     now: Date,
+    audit: AuditEventInput,
   ): Promise<StoredSigningKey> {
-    return this.write(candidate, now, false);
+    return this.write(candidate, now, audit, false);
   }
   rotate(
     candidate: NewStoredSigningKey,
     now: Date,
+    audit: AuditEventInput,
   ): Promise<StoredSigningKey> {
-    return this.write(candidate, now, true);
+    return this.write(candidate, now, audit, true);
   }
-  /**
-   * Uma chave `retiring` so e publicada ate `retire_after`. Depois disso ela ja
-   * nao pode ter assinado nenhum token vivo, entao sai do JWKS mesmo que
-   * ninguem tenha rodado a aposentadoria fisica ainda.
-   */
   async listPublishable(): Promise<StoredSigningKey[]> {
     const result = await this.db.query(
-      "SELECT * FROM signing_keys WHERE status = 'active' OR (status = 'retiring' AND retire_after > now()) ORDER BY kid",
+      "SELECT * FROM signing_keys WHERE status IN ('active', 'retiring') ORDER BY kid",
     );
     return result.rows.map((row) => rowToKey(row as Record<string, unknown>));
-  }
-  acquireActiveForSigning(now: Date): Promise<SigningKeyForSigning> {
-    return this.db.transaction((tx) => lockActiveSigningKey(tx, now));
-  }
-  retireExpired(now: Date): Promise<string[]> {
-    return this.db.transaction(async (tx) => {
-      await tx.query(
-        "SELECT pg_advisory_xact_lock(hashtextextended('timeline-auth:signing-key', 0))",
-      );
-      return retireExpiredKeys(tx, now);
-    });
   }
   private async write(
     candidate: NewStoredSigningKey,
     now: Date,
+    audit: AuditEventInput,
     rotate: boolean,
   ): Promise<StoredSigningKey> {
     return this.db.transaction(async (tx) => {
       await tx.query(
         "SELECT pg_advisory_xact_lock(hashtextextended('timeline-auth:signing-key', 0))",
       );
-      await retireExpiredKeys(tx, now);
       const active = await tx.query(
         "SELECT * FROM signing_keys WHERE status = 'active' FOR UPDATE",
       );
@@ -131,6 +106,7 @@ export class PostgresSigningKeyRepository implements SigningKeyRepository {
           now,
         ],
       );
+      await insertAuditEvents(tx, [audit]);
       return rowToKey(inserted.rows[0] as Record<string, unknown>);
     });
   }

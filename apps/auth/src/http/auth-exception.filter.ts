@@ -15,7 +15,6 @@ import {
   RateLimitedError,
   RequiredDependencyUnavailableError,
   SemanticInputError,
-  TokenKindNotAcceptedError,
 } from "../common/errors";
 import { ConsoleAuthLogger, type AuthLogger } from "../common/logger";
 
@@ -33,15 +32,14 @@ import { ConsoleAuthLogger, type AuthLogger } from "../common/logger";
  * | NotFoundError                     | 404    | { code: "not_found" }                   |
  * | RequiredDependencyUnavailableError| 503    | { code: "service_unavailable" }         |
  *
- * `internalReason` **nunca** sai na resposta: ele vai so para o log estruturado.
- * `Error.message` tambem nunca e serializado -- so o 500
+ * `internalReason` **nunca** sai na resposta: ele vai para o log estruturado e
+ * para a auditoria. `Error.message` tambem nunca e serializado -- so o 500
  * carrega algo variavel no corpo, e mesmo assim apenas o correlation id, que o
  * usuario ja recebeu no cabecalho.
  */
 export const DOMAIN_ERROR_STATUS = {
   AuthenticationFailedError: HttpStatus.UNAUTHORIZED,
   AccessDeniedError: HttpStatus.FORBIDDEN,
-  TokenKindNotAcceptedError: HttpStatus.FORBIDDEN,
   RateLimitedError: HttpStatus.TOO_MANY_REQUESTS,
   SemanticInputError: HttpStatus.UNPROCESSABLE_ENTITY,
   ConflictError: HttpStatus.CONFLICT,
@@ -66,10 +64,6 @@ export class AuthExceptionFilter implements ExceptionFilter {
     if (exception instanceof AuthenticationFailedError) {
       this.logger.error({ correlationId, status: HttpStatus.UNAUTHORIZED, error: "AuthenticationFailedError", reason: exception.internalReason });
       return void response.status(HttpStatus.UNAUTHORIZED).end();
-    }
-    if (exception instanceof TokenKindNotAcceptedError) {
-      this.logger.error({ correlationId, status: HttpStatus.FORBIDDEN, error: "TokenKindNotAcceptedError", reason: `token kind not accepted: ${exception.tokenKind}` });
-      return void response.status(HttpStatus.FORBIDDEN).end();
     }
     if (exception instanceof AccessDeniedError) return void response.status(HttpStatus.FORBIDDEN).end();
     if (exception instanceof RateLimitedError) {

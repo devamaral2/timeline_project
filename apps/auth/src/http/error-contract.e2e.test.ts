@@ -25,10 +25,6 @@ describe("HTTP error contract", () => {
     expect(forbidden.status).toBe(403);
     expect(await bytes(forbidden)).toBe("");
 
-    const wrongKind = await raise("token-kind");
-    expect(wrongKind.status).toBe(403);
-    expect(await bytes(wrongKind)).toBe("");
-
     const limited = await raise("rate-limit");
     expect(limited.status).toBe(429);
     expect(await bytes(limited)).toBe("");
@@ -37,11 +33,11 @@ describe("HTTP error contract", () => {
 
     const semantic = await raise("semantic");
     expect(semantic.status).toBe(422);
-    expect(await bytes(semantic)).toBe('{"code":"password_length"}');
+    expect(await bytes(semantic)).toBe('{"code":"password_compromised"}');
 
     const conflict = await raise("conflict");
     expect(conflict.status).toBe(409);
-    expect(await bytes(conflict)).toBe('{"code":"email_already_exists"}');
+    expect(await bytes(conflict)).toBe('{"code":"would_remove_last_admin"}');
 
     const missing = await raise("not-found");
     expect(missing.status).toBe(404);
@@ -71,18 +67,18 @@ describe("HTTP error contract", () => {
   it("rejects malformed JSON, an invalid shape and an oversized body", async () => {
     app = await createTestApp();
 
-    const malformed = await fetch(`${app.url}/auth/login`, { method: "POST", headers: json, body: "{" });
+    const malformed = await fetch(`${app.url}/auth/invites/inspect`, { method: "POST", headers: json, body: "{" });
     expect(malformed.status).toBe(400);
     expect(await bytes(malformed)).toBe('{"code":"invalid_request"}');
 
-    const wrongShape = await fetch(`${app.url}/auth/login`, { method: "POST", headers: json, body: JSON.stringify({ email: 42, password: "x" }) });
+    const wrongShape = await fetch(`${app.url}/auth/invites/inspect`, { method: "POST", headers: json, body: JSON.stringify({ token: 42 }) });
     expect(wrongShape.status).toBe(400);
     expect(await bytes(wrongShape)).toBe('{"code":"invalid_request"}');
 
-    const unknownField = await fetch(`${app.url}/auth/login`, { method: "POST", headers: json, body: JSON.stringify({ email: "a@example.test", password: "x", extra: true }) });
+    const unknownField = await fetch(`${app.url}/auth/invites/inspect`, { method: "POST", headers: json, body: JSON.stringify({ token: "ok", extra: true }) });
     expect(unknownField.status).toBe(400);
 
-    const oversized = await fetch(`${app.url}/auth/login`, { method: "POST", headers: json, body: JSON.stringify({ email: "a@example.test", password: "a".repeat(40 * 1024) }) });
+    const oversized = await fetch(`${app.url}/auth/invites/inspect`, { method: "POST", headers: json, body: JSON.stringify({ token: "a".repeat(40 * 1024) }) });
     expect(oversized.status).toBe(413);
     expect(await bytes(oversized)).toBe('{"code":"payload_too_large"}');
   });
