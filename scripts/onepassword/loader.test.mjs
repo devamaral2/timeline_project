@@ -73,6 +73,32 @@ test("uses safe initial values for non-secret local defaults", async () => {
   ]);
 });
 
+test("uses a safe API service URL when it is absent from 1Password", async () => {
+  const client = {
+    environments: {
+      getVariables: async () => ({ variables: [] }),
+    },
+  };
+
+  const entries = await resolveEnvironmentWithClient(
+    client,
+    "timeline-local",
+    ["API_SERVICE_URL"],
+    { API_SERVICE_URL: "http://127.0.0.1:3101" },
+  );
+
+  assert.deepEqual(entries, [["API_SERVICE_URL", "http://127.0.0.1:3101"]]);
+});
+
+test("derives API_SERVICE_URL from a local API_PORT override", () => {
+  const environment = applyLocalOverrides(
+    { API_PORT: "3001", API_SERVICE_URL: "http://127.0.0.1:3001" },
+    { API_PORT: "3101" },
+  );
+
+  assert.equal(environment.API_SERVICE_URL, "http://127.0.0.1:3101");
+});
+
 test("allows a local override for the shared API/Auth service key", async () => {
   const client = {
     environments: {

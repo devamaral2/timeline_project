@@ -6,8 +6,8 @@ import { AppModule } from "../app.module";
 import { AccessDeniedError, AuthenticationFailedError, ConflictError, NotFoundError, RateLimitedError, RequiredDependencyUnavailableError, SemanticInputError } from "../common/errors";
 import { RecordingAuthLogger } from "../common/logger";
 import { getRuntimeEnv, type EnvSource } from "../config/env";
-import { HttpPwnedPasswordsGateway } from "../features/basic-login/credentials/http-pwned-passwords.gateway";
-import type { PwnedPasswordsGateway } from "../features/basic-login/credentials/pwned-passwords.gateway";
+import { HttpPwnedPasswordsGateway } from "../auth-core/password/http-pwned-passwords.gateway";
+import type { PwnedPasswordsGateway } from "../auth-core/password/pwned-passwords.gateway";
 import { configureHttpShell } from "../http/request-context.middleware";
 import { configureApiDocumentation } from "../http/openapi";
 

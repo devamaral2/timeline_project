@@ -7,6 +7,7 @@ const TOKEN_ENV = "OP_SERVICE_ACCOUNT_TOKEN";
 const ENVIRONMENT_ID_ENV = "OP_ENVIRONMENT_ID";
 const INITIAL_VALUES = {
   API_PORT: "3001",
+  API_SERVICE_URL: "http://127.0.0.1:3001",
   AUTH_SERVICE_URL: "http://127.0.0.1:3002",
   WEB_PORT: "3000",
 };
@@ -57,6 +58,9 @@ function readLocalOverrides(file = resolve(ROOT, ".env.local")) {
 
 export function applyLocalOverrides(environment, overrides) {
   const env = { ...environment, ...overrides };
+  if (overrides.API_PORT) {
+    env.API_SERVICE_URL = `http://127.0.0.1:${overrides.API_PORT}`;
+  }
   if (!overrides.POSTGRES_HOST_PORT) return env;
 
   const user = encodeURIComponent(env.POSTGRES_USER);
@@ -152,8 +156,10 @@ export async function loadOnePasswordEnvironment(source = process.env) {
   const keys = [...new Set(readEnvKeys())];
   const client = await createClient(token);
   const localOverrides = readLocalOverrides();
+  const apiPort = localOverrides.API_PORT ?? source.API_PORT ?? INITIAL_VALUES.API_PORT;
   const entries = await resolveEnvironmentWithClient(client, environmentId, keys, {
     ...INITIAL_VALUES,
+    API_SERVICE_URL: `http://127.0.0.1:${apiPort}`,
     ...localOverrides,
   });
 

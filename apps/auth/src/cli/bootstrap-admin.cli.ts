@@ -1,8 +1,8 @@
 import { findMonorepoRoot, loadRootEnv } from "../config/load-env";
 import { getRuntimeEnv } from "../config/env";
 import { createAuthDatabase } from "../db/client";
-import { PostgresInviteRepository } from "../features/invite-user/postgres-invite.repository";
-import { BootstrapAdminUseCase } from "../features/invite-user/usecases/bootstrap-admin.usecase";
+import { PostgresInviteRepository } from "../auth-core/persistence/postgres-invite.repository";
+import { BootstrapAdminUseCase } from "../features/bootstrap-admin/bootstrap-admin.usecase";
 import { SystemClock } from "../common/clock";
 import { CryptoSecretGenerator } from "../common/secret-generator";
 import { inviteLink } from "../domain/invites/invite";
