@@ -13,6 +13,7 @@ export interface RuntimeEnv {
   audience: string;
   publicUrl: URL;
   webAppUrl: URL;
+  apiServiceUrl: string;
   keyEncryptionKey: Buffer;
   internalServiceKey?: string;
   passwordBlocklistTimeoutMs: number;
@@ -26,6 +27,7 @@ const runtimeKeys = [
   "NODE_ENV", "AUTH_PORT", "AUTH_HOST", "AUTH_DATABASE_URL", "AUTH_ISSUER", "AUTH_AUDIENCE",
   "AUTH_PUBLIC_URL", "AUTH_WEB_APP_URL", "AUTH_KEY_ENCRYPTION_KEY",
   "AUTH_INTERNAL_SERVICE_KEY",
+  "API_SERVICE_URL",
   "AUTH_PASSWORD_BLOCKLIST_TIMEOUT_MS", "AUTH_PASSWORD_EMAIL_LIMIT", "AUTH_PASSWORD_IP_LIMIT",
   "AUTH_PASSWORD_WINDOW_SECONDS",
 ] as const;
@@ -45,6 +47,7 @@ const runtimeSchema = z.object({
   AUTH_WEB_APP_URL: nonEmpty,
   AUTH_KEY_ENCRYPTION_KEY: nonEmpty,
   AUTH_INTERNAL_SERVICE_KEY: nonEmpty.min(32).optional(),
+  API_SERVICE_URL: nonEmpty.default("http://127.0.0.1:3001"),
   AUTH_PASSWORD_BLOCKLIST_TIMEOUT_MS: positiveInteger.default(2000),
   AUTH_PASSWORD_EMAIL_LIMIT: positiveInteger.default(5),
   AUTH_PASSWORD_IP_LIMIT: positiveInteger.default(30),
@@ -75,7 +78,10 @@ function parseCanonicalKey(value: string): Buffer {
 }
 
 export function getRuntimeEnv(source: EnvSource): RuntimeEnv {
-  const raw = runtimeSchema.parse(selected(source, runtimeKeys));
+  const raw = runtimeSchema.parse({
+    ...selected(source, runtimeKeys),
+    API_SERVICE_URL: source.API_SERVICE_URL,
+  });
   const keyEncryptionKey = parseCanonicalKey(raw.AUTH_KEY_ENCRYPTION_KEY);
   const limits = Object.freeze({
     passwordEmail: Object.freeze({ attempts: raw.AUTH_PASSWORD_EMAIL_LIMIT, windowSeconds: raw.AUTH_PASSWORD_WINDOW_SECONDS }),
@@ -91,6 +97,7 @@ export function getRuntimeEnv(source: EnvSource): RuntimeEnv {
     audience: raw.AUTH_AUDIENCE,
     publicUrl: parseUrl(raw.AUTH_PUBLIC_URL, "AUTH_PUBLIC_URL"),
     webAppUrl: parseUrl(raw.AUTH_WEB_APP_URL, "AUTH_WEB_APP_URL"),
+    apiServiceUrl: raw.API_SERVICE_URL,
     keyEncryptionKey,
     internalServiceKey: raw.AUTH_INTERNAL_SERVICE_KEY,
     passwordBlocklistTimeoutMs: raw.AUTH_PASSWORD_BLOCKLIST_TIMEOUT_MS,

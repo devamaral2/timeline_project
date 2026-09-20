@@ -11,7 +11,6 @@ import { WebSocket, WebSocketServer, type RawData } from "ws";
 import { hashAgentChatTicket } from "../usecases/issue-agent-chat-ticket.usecase";
 import type { RunChatTurnUseCase } from "../usecases/run-chat-turn.usecase";
 import { AgentChatConnection, type AgentChatTransport } from "./agent-chat-connection";
-import { AuthServiceClient, AuthServiceForbiddenError, AuthServiceUnauthorizedError } from "../../authenticate-user/auth-service.client";
 import {
   AGENT_CHAT_PATH,
   CHAT_CLOSE,
@@ -31,7 +30,7 @@ interface SocketState {
  * mobile, direto.
  *
  * Quem autentica e o ticket de `?ticket=`, emitido por
- * `POST /api/ai/chat/tickets` (que passa pelo `AuthServiceGuard`) e consumido
+ * `POST /api/ai/chat/tickets` (que passa pelo `GatewayIdentityGuard`) e consumido
  * aqui uma unica vez. O socket e aceito antes da conferencia de proposito:
  * recusar o upgrade com 401 chegaria ao navegador como um 1006 mudo, e o
  * 4401 diz ao cliente que o problema e o ticket.
@@ -46,7 +45,6 @@ export class AgentChatServer implements OnApplicationBootstrap, BeforeApplicatio
     private readonly tickets: AgentChatTicketStore,
     private readonly runChatTurn: Pick<RunChatTurnUseCase, "execute">,
     private readonly logger: Pick<LoggerService, "error" | "warn"> = new Logger(AgentChatServer.name),
-    private readonly auth: Pick<AuthServiceClient, "authorizeSession"> = new AuthServiceClient(),
   ) {}
 
   onApplicationBootstrap(): void {
@@ -94,7 +92,7 @@ export class AgentChatServer implements OnApplicationBootstrap, BeforeApplicatio
         send(ws, { type: "error", code: "invalid_frame" });
         return;
       }
-      void this.authorizedMessage(ws, state.connection, grant!, rawText(data));
+      void state.connection.handleMessage(rawText(data));
     });
 
     let grant: AgentChatGrant | null;
@@ -112,30 +110,8 @@ export class AgentChatServer implements OnApplicationBootstrap, BeforeApplicatio
       return;
     }
 
-    if (!await this.isAuthorized(ws, grant)) return;
-
     state.connection = new AgentChatConnection(transportOf(ws), grant, this.runChatTurn, this.logger);
     state.connection.start();
-  }
-
-  private async authorizedMessage(ws: WebSocket, connection: AgentChatConnection, grant: AgentChatGrant, raw: string): Promise<void> {
-    if (!await this.isAuthorized(ws, grant)) return;
-    await connection.handleMessage(raw);
-  }
-
-  private async isAuthorized(ws: WebSocket, grant: AgentChatGrant): Promise<boolean> {
-    try {
-      await this.auth.authorizeSession(grant.actor.userId, grant.actor.sessionId, "agent", "execute", grant.targetUserId);
-      return ws.readyState === WebSocket.OPEN;
-    } catch (error) {
-      if (error instanceof AuthServiceUnauthorizedError || error instanceof AuthServiceForbiddenError) {
-        ws.close(CHAT_CLOSE.unauthorized, "unauthorized");
-      } else {
-        this.logger.error(`agent chat authorization failed: ${error instanceof Error ? error.message : String(error)}`);
-        ws.close(CHAT_CLOSE.internalError, "unavailable");
-      }
-      return false;
-    }
   }
 
   private ping(): void {

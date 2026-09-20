@@ -18,10 +18,9 @@ import type {
   UpdateRecurrenceInput,
 } from "@repo/contracts";
 import { isRecurrenceTarget } from "../../../domain";
-import { CurrentUser } from "../../authenticate-user/current-user.decorator";
-import { AuthServiceGuard } from "../../authorize-user/auth-service.guard";
-import type { AuthenticatedUser } from "../../authenticate-user/authenticated-user";
-import { AccessResource } from "../../authorize-user/access-resource.decorator";
+import { CurrentUser } from "../../request-identity/current-user.decorator";
+import { GatewayIdentityGuard } from "../../request-identity/gateway-identity.guard";
+import type { AuthenticatedUser } from "../../request-identity/authenticated-user";
 import { CreateRecurrenceUseCase } from "../usecases/create-recurrence.usecase";
 import { DeleteRecurrenceUseCase } from "../usecases/delete-recurrence.usecase";
 import { GetRecurrenceUseCase, ListRecurrencesUseCase } from "../usecases/get-recurrence.usecase";
@@ -32,7 +31,6 @@ import { UpdateRecurrenceUseCase } from "../usecases/update-recurrence.usecase";
  * gera os dois, e assim nenhuma rota estatica disputa lugar com `:eventId`.
  */
 @Controller("api/recurrences")
-@AccessResource("recurrence")
 export class RecurrencesController {
   constructor(
     private readonly listRecurrences: ListRecurrencesUseCase,
@@ -43,13 +41,13 @@ export class RecurrencesController {
   ) {}
 
   @Get()
-  @UseGuards(AuthServiceGuard)
+  @UseGuards(GatewayIdentityGuard)
   async list(@CurrentUser() actor: AuthenticatedUser): Promise<RecurrenceDto[]> {
     return this.listRecurrences.execute(undefined, actor);
   }
 
   @Post()
-  @UseGuards(AuthServiceGuard)
+  @UseGuards(GatewayIdentityGuard)
   @HttpCode(HttpStatus.CREATED)
   async create(
     @Body() body: CreateRecurrenceInput,
@@ -61,7 +59,7 @@ export class RecurrencesController {
   }
 
   @Get(":recurrenceId")
-  @UseGuards(AuthServiceGuard)
+  @UseGuards(GatewayIdentityGuard)
   async detail(
     @Param("recurrenceId") recurrenceId: string,
     @CurrentUser() actor: AuthenticatedUser,
@@ -72,7 +70,7 @@ export class RecurrencesController {
   }
 
   @Patch(":recurrenceId")
-  @UseGuards(AuthServiceGuard)
+  @UseGuards(GatewayIdentityGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   async update(
     @Param("recurrenceId") recurrenceId: string,
@@ -90,7 +88,7 @@ export class RecurrencesController {
   }
 
   @Delete(":recurrenceId")
-  @UseGuards(AuthServiceGuard)
+  @UseGuards(GatewayIdentityGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(
     @Param("recurrenceId") recurrenceId: string,

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readEnvKeys, resolveEnvironmentWithClient } from "./loader.mjs";
+import { readEnvKeys, resolveEnvironmentWithClient, applyLocalOverrides } from "./loader.mjs";
 
 test("uses the env example as the complete allowlist", () => {
   const keys = readEnvKeys();
@@ -71,6 +71,42 @@ test("uses safe initial values for non-secret local defaults", async () => {
     ["AUTH_SERVICE_URL", "http://127.0.0.1:3002"],
     ["WEB_PORT", "3000"],
   ]);
+});
+
+test("allows a local override for the shared API/Auth service key", async () => {
+  const client = {
+    environments: {
+      getVariables: async () => ({ variables: [] }),
+    },
+  };
+
+  const entries = await resolveEnvironmentWithClient(
+    client,
+    "timeline-local",
+    ["AUTH_INTERNAL_SERVICE_KEY"],
+    { AUTH_INTERNAL_SERVICE_KEY: "timeline-local-internal-service-key-20260920" },
+  );
+
+  assert.deepEqual(entries, [
+    ["AUTH_INTERNAL_SERVICE_KEY", "timeline-local-internal-service-key-20260920"],
+  ]);
+});
+
+test("keeps the browser backend on Auth and the API service internal", () => {
+  const environment = applyLocalOverrides(
+    {
+      API_PORT: "3101",
+      AUTH_PORT: "3102",
+      POSTGRES_USER: "timeline",
+      POSTGRES_PASSWORD: "password",
+      POSTGRES_DB: "timeline",
+      WEB_PORT: "3100",
+    },
+    { POSTGRES_HOST_PORT: "55432", API_PORT: "3101", AUTH_PORT: "3102" },
+  );
+
+  assert.equal(environment.BACKEND_URL, "http://127.0.0.1:3102");
+  assert.equal(environment.API_SERVICE_URL, "http://127.0.0.1:3101");
 });
 
 test("reports Environment API failures without starting the application", async () => {

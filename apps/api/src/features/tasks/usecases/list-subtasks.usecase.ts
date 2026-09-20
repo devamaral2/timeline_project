@@ -1,4 +1,4 @@
-import type { AuthenticatedUser } from "../../authenticate-user/authenticated-user";
+import type { AuthenticatedUser } from "../../request-identity/authenticated-user";
 import { TaskNotFoundError, TaskOwnershipError } from "../../../domain";
 import type { TaskRepository } from "../../../domain/ports";
 import type { TaskSummaryDto } from "@repo/contracts";

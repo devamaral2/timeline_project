@@ -1,7 +1,7 @@
 import { RecurrenceOwnershipError } from "../../../domain";
 import type { RecurrenceDto } from "@repo/contracts";
 import type { RecurrenceRepository } from "../../../domain/ports";
-import type { AuthenticatedUser } from "../../authenticate-user/authenticated-user";
+import type { AuthenticatedUser } from "../../request-identity/authenticated-user";
 import { toRecurrenceDto } from "./recurrence.dto";
 
 export class GetRecurrenceUseCase {

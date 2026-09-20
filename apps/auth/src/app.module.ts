@@ -35,7 +35,9 @@ import { CreateInviteUseCase } from './features/invite-user/usecases/create-invi
 import { PostgresRateLimiter } from './features/basic-login/rate-limit/postgres-rate-limiter';
 import { LoginCredentialChecker } from './features/basic-login/login-credential-checker';
 import { StartLoginUseCase } from './features/basic-login/usecases/start-login.usecase';
-import { InternalAuthorizeController } from './features/authorize-access/internal-authorize.controller';
+import { ApiGatewayController } from './features/gateway/api-gateway.controller';
+import { ApiGatewayProxy } from './features/gateway/api-gateway.proxy';
+import { HttpAdapterHost } from '@nestjs/core';
 import { AuthorizeAccessUseCase } from './features/authorize-access/authorize-access.usecase';
 
 @Module({})
@@ -44,7 +46,7 @@ export class AppModule {
     return {
       module: AppModule,
       imports: [DbModule],
-      controllers: [HealthController, JwksController, BasicLoginController, PublicInviteController, AuthenticatedAuthController, AdminAuthController, InternalAuthorizeController],
+      controllers: [HealthController, JwksController, BasicLoginController, PublicInviteController, AuthenticatedAuthController, AdminAuthController, ApiGatewayController],
       providers: [
         { provide: AcceptInviteUseCase, inject: [PostgresInviteRepository,PreparePassword,Clock], useFactory: (repo:PostgresInviteRepository,password:PreparePassword,clock:Clock) => new AcceptInviteUseCase(repo,password,clock) },
         { provide: StartLoginUseCase, inject: [PostgresUserRepository,LoginCredentialChecker,PostgresRateLimiter,PostgresAuthenticationRepository,Clock,SecretGenerator,RUNTIME_ENV,SigningKeyService], useFactory: (users:PostgresUserRepository,credentials:LoginCredentialChecker,limiter:PostgresRateLimiter,repo:PostgresAuthenticationRepository,clock:Clock,secrets:SecretGenerator,env:RuntimeEnv,keys:SigningKeyService) => new StartLoginUseCase(users,credentials,limiter,repo,clock,secrets,env.limits,keys.signAccessToken) },
@@ -114,6 +116,12 @@ export class AppModule {
         { provide: AuthorizeAccessUseCase, inject: [PostgresSessionRepository, PostgresUserRepository, PostgresRbacRepository], useFactory: (sessions: PostgresSessionRepository, users: PostgresUserRepository, rbac: PostgresRbacRepository) => new AuthorizeAccessUseCase(sessions, users, rbac) },
         { provide: RequireSuperAdminGuard, useClass: RequireSuperAdminGuard },
         { provide: CreateInviteUseCase, inject: [PostgresInviteRepository, Clock, SecretGenerator, RUNTIME_ENV], useFactory: (invites: PostgresInviteRepository, clock: Clock, secrets: SecretGenerator, env: RuntimeEnv) => new CreateInviteUseCase(invites, clock, secrets, env.webAppUrl) },
+        {
+          provide: ApiGatewayProxy,
+          inject: [HttpAdapterHost, RUNTIME_ENV],
+          useFactory: (adapterHost: HttpAdapterHost, runtime: RuntimeEnv) =>
+            new ApiGatewayProxy(() => adapterHost.httpAdapter.getHttpServer(), runtime.apiServiceUrl),
+        },
       ],
       exports: [RUNTIME_ENV, Clock, SecretGenerator],
     };

@@ -24,6 +24,8 @@ const LOCAL_OVERRIDE_KEYS = new Set([
   "AUTH_PUBLIC_URL",
   "AUTH_WEB_APP_URL",
   "AUTH_SERVICE_URL",
+  "API_SERVICE_URL",
+  "AUTH_INTERNAL_SERVICE_KEY",
   "MOBILE_API_URL",
   "COMPOSE_PROJECT_NAME",
 ]);
@@ -53,7 +55,7 @@ function readLocalOverrides(file = resolve(ROOT, ".env.local")) {
   return overrides;
 }
 
-function applyLocalOverrides(environment, overrides) {
+export function applyLocalOverrides(environment, overrides) {
   const env = { ...environment, ...overrides };
   if (!overrides.POSTGRES_HOST_PORT) return env;
 
@@ -66,7 +68,10 @@ function applyLocalOverrides(environment, overrides) {
   env.AUTH_DATABASE_URL = `postgresql://${user}:${password}@${host}/${authDatabase}`;
   env.AUTH_DATABASE_MIGRATION_URL = env.AUTH_DATABASE_URL;
   env.AUTH_TEST_DATABASE_URL = env.AUTH_DATABASE_URL;
-  env.BACKEND_URL = `http://127.0.0.1:${overrides.API_PORT ?? env.API_PORT}`;
+  // O browser fala com o gateway do Auth. A API continua sendo um destino
+  // interno, usado somente pelo Auth através de API_SERVICE_URL.
+  env.BACKEND_URL = `http://127.0.0.1:${overrides.AUTH_PORT ?? env.AUTH_PORT}`;
+  env.API_SERVICE_URL = `http://127.0.0.1:${overrides.API_PORT ?? env.API_PORT}`;
   env.AUTH_ISSUER = `http://127.0.0.1:${overrides.AUTH_PORT ?? env.AUTH_PORT}`;
   env.AUTH_PUBLIC_URL = env.AUTH_ISSUER;
   env.AUTH_SERVICE_URL = env.AUTH_ISSUER;
@@ -147,11 +152,15 @@ export async function loadOnePasswordEnvironment(source = process.env) {
 
   const keys = [...new Set(readEnvKeys())];
   const client = await createClient(token);
-  const entries = await resolveEnvironmentWithClient(client, environmentId, keys, INITIAL_VALUES);
+  const localOverrides = readLocalOverrides();
+  const entries = await resolveEnvironmentWithClient(client, environmentId, keys, {
+    ...INITIAL_VALUES,
+    ...localOverrides,
+  });
 
   const resolved = { ...source, ...Object.fromEntries(entries) };
   return {
-    env: applyLocalOverrides(resolved, readLocalOverrides()),
+    env: applyLocalOverrides(resolved, localOverrides),
     keys,
     environmentId,
   };

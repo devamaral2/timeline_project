@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import { Task, TaskOwnershipError } from "../../../domain";
-import type { AuthenticatedUser } from "../../authenticate-user/authenticated-user";
+import type { AuthenticatedUser } from "../../request-identity/authenticated-user";
 import { InMemoryTaskRepository } from "../testing/in-memory-task.repository";
 import { GetTaskUseCase } from "./get-task.usecase";
 

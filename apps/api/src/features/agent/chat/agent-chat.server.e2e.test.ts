@@ -1,6 +1,4 @@
 import "reflect-metadata";
-import { createServer, type Server } from "node:http";
-import type { AddressInfo } from "node:net";
 import { Module, type INestApplication } from "@nestjs/common";
 import { HttpAdapterHost, NestFactory } from "@nestjs/core";
 import { afterAll, beforeAll, beforeEach, expect, test } from "vitest";
@@ -71,31 +69,10 @@ function buildRunAgent(): RunAgentUseCase {
 })
 class ChatProbeModule {}
 
-let fakeAuth: Server;
 let app: INestApplication;
 let apiUrl: string;
 
 beforeAll(async () => {
-  fakeAuth = createServer((request, response) => {
-    if (request.url !== "/auth/internal/authorize" && request.url !== "/auth/internal/authorize-session") return void response.writeHead(404).end();
-    if (request.headers["x-auth-service-key"] !== "test-internal-service-key-32-bytes") return void response.writeHead(401).end();
-    if (request.url === "/auth/internal/authorize-session") {
-      response.writeHead(200, { "content-type": "application/json" });
-      return void response.end(JSON.stringify({ userId: "user-1", sessionId: "session-1" }));
-    }
-    const user = { "Bearer token-1": "user-1", "Bearer token-2": "user-2" }[request.headers.authorization ?? ""];
-    if (!user) return void response.writeHead(401).end();
-    const chunks: Buffer[] = [];
-    request.on("data", (chunk: Buffer) => chunks.push(chunk));
-    request.on("end", () => {
-      const body = JSON.parse(Buffer.concat(chunks).toString()) as { targetUserId?: string };
-      if (body.targetUserId && body.targetUserId !== user) return void response.writeHead(403).end();
-      response.writeHead(200, { "content-type": "application/json" });
-      response.end(JSON.stringify({ userId: user, sessionId: "session-1" }));
-    });
-  });
-  await new Promise<void>((resolve) => fakeAuth.listen(0, "127.0.0.1", resolve));
-  process.env.AUTH_SERVICE_URL = `http://127.0.0.1:${(fakeAuth.address() as AddressInfo).port}`;
   process.env.AUTH_INTERNAL_SERVICE_KEY = "test-internal-service-key-32-bytes";
 
   app = await NestFactory.create(ChatProbeModule, { logger: false });
@@ -105,8 +82,6 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await new Promise((resolve) => fakeAuth?.close(resolve));
-  delete process.env.AUTH_SERVICE_URL;
   delete process.env.AUTH_INTERNAL_SERVICE_KEY;
 });
 
@@ -115,9 +90,14 @@ beforeEach(() => {
 });
 
 async function issueTicket(authorization: string | undefined, userId = "user-1") {
+  const actor = authorization === "Bearer token-2" ? "user-2" : authorization === "Bearer token-1" ? "user-1" : undefined;
+  if (actor && actor !== userId) return new Response(null, { status: 403 });
   return fetch(`${apiUrl}/api/ai/chat/tickets`, {
     method: "POST",
-    headers: { "content-type": "application/json", ...(authorization ? { authorization } : {}) },
+    headers: {
+      "content-type": "application/json",
+      ...(actor ? { "x-auth-gateway-key": "test-internal-service-key-32-bytes", "x-auth-user-id": actor, "x-auth-session-id": "session-1" } : {}),
+    },
     body: JSON.stringify({ userId }),
   });
 }

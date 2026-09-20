@@ -2,7 +2,7 @@ import "reflect-metadata";
 import { GUARDS_METADATA, PATH_METADATA } from "@nestjs/common/constants";
 import { expect, test } from "vitest";
 import type { RunAgentRequest } from "@repo/contracts";
-import { AuthServiceGuard } from "../../authorize-user/auth-service.guard";
+import { GatewayIdentityGuard } from "../../request-identity/gateway-identity.guard";
 import { statusOfThrown } from "../../events/testing/status-of";
 import type { RunAgentUseCase } from "../usecases/run-agent.usecase";
 import { AgentController } from "./agent.controller";
@@ -22,7 +22,7 @@ const actor = { userId: "user-1" };
 
 test("POST /api/ai is guarded", () => {
   expect(Reflect.getMetadata(PATH_METADATA, AgentController)).toBe("api/ai");
-  expect(Reflect.getMetadata(GUARDS_METADATA, AgentController.prototype.run)).toContain(AuthServiceGuard);
+  expect(Reflect.getMetadata(GUARDS_METADATA, AgentController.prototype.run)).toContain(GatewayIdentityGuard);
 });
 
 test("passes a valid body through, with the text trimmed", async () => {

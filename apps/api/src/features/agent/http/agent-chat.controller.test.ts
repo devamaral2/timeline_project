@@ -1,7 +1,7 @@
 import "reflect-metadata";
 import { GUARDS_METADATA, PATH_METADATA } from "@nestjs/common/constants";
 import { expect, test } from "vitest";
-import { AuthServiceGuard } from "../../authorize-user/auth-service.guard";
+import { GatewayIdentityGuard } from "../../request-identity/gateway-identity.guard";
 import { statusOfThrown } from "../../events/testing/status-of";
 import { InMemoryAgentChatTicketStore } from "../testing/in-memory-agent-chat-ticket-store";
 import { IssueAgentChatTicketUseCase } from "../usecases/issue-agent-chat-ticket.usecase";
@@ -17,7 +17,7 @@ function controller() {
 test("POST /api/ai/chat/tickets is guarded", () => {
   expect(Reflect.getMetadata(PATH_METADATA, AgentChatController)).toBe("api/ai/chat");
   expect(Reflect.getMetadata(PATH_METADATA, AgentChatController.prototype.createTicket)).toBe("tickets");
-  expect(Reflect.getMetadata(GUARDS_METADATA, AgentChatController.prototype.createTicket)).toContain(AuthServiceGuard);
+  expect(Reflect.getMetadata(GUARDS_METADATA, AgentChatController.prototype.createTicket)).toContain(GatewayIdentityGuard);
 });
 
 test("issues a ticket for a valid body", async () => {

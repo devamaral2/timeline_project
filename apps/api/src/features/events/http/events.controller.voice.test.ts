@@ -1,5 +1,5 @@
 import { expect, test, vi } from "vitest";
-import type { AuthenticatedUser } from "../../authenticate-user/authenticated-user";
+import type { AuthenticatedUser } from "../../request-identity/authenticated-user";
 import type { EventCommandParsingGateway } from "../gateways/event-command-parsing.gateway";
 import { InMemoryEventDatabase } from "../testing/in-memory-event-database";
 import { InMemoryEventRepository } from "../testing/in-memory-event.repository";

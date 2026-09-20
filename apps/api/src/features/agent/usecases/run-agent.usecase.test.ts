@@ -9,7 +9,7 @@ import {
   type TrainingData,
 } from "../../../domain";
 import type { AgentEntityItem, CreateEventInput } from "@repo/contracts";
-import type { AuthenticatedUser } from "../../authenticate-user/authenticated-user";
+import type { AuthenticatedUser } from "../../request-identity/authenticated-user";
 import type { ParsedMealFoodItem } from "../../events/gateways/meal-parsing.gateway";
 import { InMemoryEventDatabase } from "../../events/testing/in-memory-event-database";
 import { InMemoryEventRepository } from "../../events/testing/in-memory-event.repository";

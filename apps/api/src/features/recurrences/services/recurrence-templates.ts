@@ -15,7 +15,7 @@ import type {
 } from "@repo/contracts";
 import type { TaskRepository } from "../../../domain/ports";
 import { dayKeyOf, expandOccurrences, occurrenceWindow, shiftDayKey } from "@repo/timeline";
-import type { AuthenticatedUser } from "../../authenticate-user/authenticated-user";
+import type { AuthenticatedUser } from "../../request-identity/authenticated-user";
 import type { CreateEventUseCase } from "../../events/usecases/create-event.usecase";
 import { assertParentTaskAssignable } from "../../tasks/usecases/assert-parent-task";
 

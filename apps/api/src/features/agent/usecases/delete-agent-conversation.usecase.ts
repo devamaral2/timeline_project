@@ -1,5 +1,5 @@
 import type { AgentConversationRepository } from "../../../domain/ports";
-import type { AuthenticatedUser } from "../../authenticate-user/authenticated-user";
+import type { AuthenticatedUser } from "../../request-identity/authenticated-user";
 
 /**
  * Soft delete. As mensagens continuam gravadas — e ficam inalcancaveis, porque

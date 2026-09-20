@@ -1,4 +1,4 @@
-import type { AuthenticatedUser } from "../../authenticate-user/authenticated-user";
+import type { AuthenticatedUser } from "../../request-identity/authenticated-user";
 import type { EventCommandParsingGateway } from "../gateways/event-command-parsing.gateway";
 import type { CreateEventInput } from "@repo/contracts";
 import { resolveEventSchedule } from "../services/event-schedule.service";

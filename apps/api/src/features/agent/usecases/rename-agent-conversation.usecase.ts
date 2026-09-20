@@ -1,6 +1,6 @@
 import { AgentConversationNotFoundError } from "../../../domain";
 import type { AgentConversationRepository } from "../../../domain/ports";
-import type { AuthenticatedUser } from "../../authenticate-user/authenticated-user";
+import type { AuthenticatedUser } from "../../request-identity/authenticated-user";
 
 export class RenameAgentConversationUseCase {
   constructor(private readonly conversations: AgentConversationRepository) {}

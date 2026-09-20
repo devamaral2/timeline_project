@@ -1,18 +1,16 @@
 import { Controller, Get, Query, UseGuards } from "@nestjs/common";
 import type { TagSuggestionDto } from "@repo/contracts";
-import { CurrentUser } from "../../authenticate-user/current-user.decorator";
-import { AuthServiceGuard } from "../../authorize-user/auth-service.guard";
-import type { AuthenticatedUser } from "../../authenticate-user/authenticated-user";
-import { AccessResource } from "../../authorize-user/access-resource.decorator";
+import { CurrentUser } from "../../request-identity/current-user.decorator";
+import { GatewayIdentityGuard } from "../../request-identity/gateway-identity.guard";
+import type { AuthenticatedUser } from "../../request-identity/authenticated-user";
 import { SuggestTagsUseCase } from "../usecases/suggest-tags.usecase";
 
 @Controller("api/tags")
-@AccessResource("tag")
 export class TagsController {
   constructor(private readonly suggestTags: SuggestTagsUseCase) {}
 
   @Get()
-  @UseGuards(AuthServiceGuard)
+  @UseGuards(GatewayIdentityGuard)
   async suggest(
     @CurrentUser() actor: AuthenticatedUser,
     @Query("query") query?: string,

@@ -13,10 +13,9 @@ import {
 } from "@nestjs/common";
 import { z } from "zod";
 import type { AgentChatMessagePageDto, AgentConversationPageDto } from "@repo/contracts";
-import { AuthServiceGuard } from "../../authorize-user/auth-service.guard";
-import type { AuthenticatedUser } from "../../authenticate-user/authenticated-user";
-import { CurrentUser } from "../../authenticate-user/current-user.decorator";
-import { AccessResource } from "../../authorize-user/access-resource.decorator";
+import { GatewayIdentityGuard } from "../../request-identity/gateway-identity.guard";
+import type { AuthenticatedUser } from "../../request-identity/authenticated-user";
+import { CurrentUser } from "../../request-identity/current-user.decorator";
 import { CONVERSATION_ID_FORMAT } from "../chat/chat-protocol";
 import { InvalidInputError } from "../errors/agent.errors";
 import { DeleteAgentConversationUseCase } from "../usecases/delete-agent-conversation.usecase";
@@ -51,7 +50,6 @@ function parse<T>(schema: z.ZodType<T>, value: unknown): T {
  * primeiro turno que grava.
  */
 @Controller("api/ai/conversations")
-@AccessResource("agent")
 export class AgentConversationsController {
   // `@Inject` explicito, como nos outros controllers do agente: o e2e roda sob
   // esbuild, que nao emite o metadata que a injecao implicita le.
@@ -67,7 +65,7 @@ export class AgentConversationsController {
   ) {}
 
   @Get()
-  @UseGuards(AuthServiceGuard)
+  @UseGuards(GatewayIdentityGuard)
   async list(
     @Query() query: unknown,
     @CurrentUser() actor: AuthenticatedUser,
@@ -77,7 +75,7 @@ export class AgentConversationsController {
 
   // Estatica antes da dinamica: `:conversationId` capturaria o segmento.
   @Get(":conversationId/messages")
-  @UseGuards(AuthServiceGuard)
+  @UseGuards(GatewayIdentityGuard)
   async messages(
     @Param("conversationId") conversationId: string,
     @Query() query: unknown,
@@ -90,7 +88,7 @@ export class AgentConversationsController {
   }
 
   @Patch(":conversationId")
-  @UseGuards(AuthServiceGuard)
+  @UseGuards(GatewayIdentityGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   async patch(
     @Param("conversationId") conversationId: string,
@@ -104,7 +102,7 @@ export class AgentConversationsController {
   }
 
   @Delete(":conversationId")
-  @UseGuards(AuthServiceGuard)
+  @UseGuards(GatewayIdentityGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   async delete(
     @Param("conversationId") conversationId: string,

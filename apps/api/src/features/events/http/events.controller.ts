@@ -23,10 +23,9 @@ import type {
 } from "@repo/contracts";
 import { isEventPriority, isNotificationOffsetMinutes } from "../../../domain";
 import { decodeTimelineCursor } from "../../../infrastructure/persistence";
-import { CurrentUser } from "../../authenticate-user/current-user.decorator";
-import { AuthServiceGuard } from "../../authorize-user/auth-service.guard";
-import type { AuthenticatedUser } from "../../authenticate-user/authenticated-user";
-import { AccessResource } from "../../authorize-user/access-resource.decorator";
+import { CurrentUser } from "../../request-identity/current-user.decorator";
+import { GatewayIdentityGuard } from "../../request-identity/gateway-identity.guard";
+import type { AuthenticatedUser } from "../../request-identity/authenticated-user";
 import {
   CreateEventFromTranscriptUseCase,
   EMPTY_TRANSCRIPT_ERROR,
@@ -50,7 +49,6 @@ const MAX_LIMIT = 100;
  * O roteamento por arquivo do Next escondia esse detalhe.
  */
 @Controller("api/events")
-@AccessResource("event")
 export class EventsController {
   constructor(
     private readonly listTimelineEvents: ListTimelineEventsUseCase,
@@ -63,7 +61,7 @@ export class EventsController {
   ) {}
 
   @Get()
-  @UseGuards(AuthServiceGuard)
+  @UseGuards(GatewayIdentityGuard)
   async list(
     @CurrentUser() actor: AuthenticatedUser,
     @Query("from") from?: string,
@@ -88,7 +86,7 @@ export class EventsController {
   }
 
   @Post()
-  @UseGuards(AuthServiceGuard)
+  @UseGuards(GatewayIdentityGuard)
   @HttpCode(HttpStatus.CREATED)
   async create(
     @Body() body: CreateEventInput,
@@ -100,7 +98,7 @@ export class EventsController {
   }
 
   @Get("daily")
-  @UseGuards(AuthServiceGuard)
+  @UseGuards(GatewayIdentityGuard)
   async daily(
     @CurrentUser() actor: AuthenticatedUser,
     @Query("date") date?: string,
@@ -110,7 +108,7 @@ export class EventsController {
   }
 
   @Post("voice")
-  @UseGuards(AuthServiceGuard)
+  @UseGuards(GatewayIdentityGuard)
   @HttpCode(HttpStatus.CREATED)
   async fromTranscript(
     @Body() body: { transcript?: string },
@@ -133,7 +131,7 @@ export class EventsController {
   }
 
   @Get(":eventId")
-  @UseGuards(AuthServiceGuard)
+  @UseGuards(GatewayIdentityGuard)
   async detail(
     @Param("eventId") eventId: string,
     @CurrentUser() actor: AuthenticatedUser,
@@ -144,7 +142,7 @@ export class EventsController {
   }
 
   @Patch(":eventId")
-  @UseGuards(AuthServiceGuard)
+  @UseGuards(GatewayIdentityGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   async update(
     @Param("eventId") eventId: string,
@@ -158,7 +156,7 @@ export class EventsController {
   }
 
   @Delete(":eventId")
-  @UseGuards(AuthServiceGuard)
+  @UseGuards(GatewayIdentityGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(
     @Param("eventId") eventId: string,

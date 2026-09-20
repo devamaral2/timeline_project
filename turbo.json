@@ -4,6 +4,7 @@
   "globalEnv": [
     "NODE_ENV",
     "BACKEND_URL",
+    "API_SERVICE_URL",
     "MOBILE_API_URL",
     "MOBILE_GOOGLE_WEB_CLIENT_ID",
     "API_PORT",

@@ -8,7 +8,7 @@ import {
   EventRevisionConflictError,
   calculateMealTotals,
 } from "../../../domain";
-import type { AuthenticatedUser } from "../../authenticate-user/authenticated-user";
+import type { AuthenticatedUser } from "../../request-identity/authenticated-user";
 import { InMemoryEventDatabase } from "../testing/in-memory-event-database";
 import { InMemoryEventRepository } from "../testing/in-memory-event.repository";
 import { InMemoryDailyOverviewQuery } from "../testing/in-memory-daily-overview.query";
@@ -28,7 +28,7 @@ const attacker: AuthenticatedUser = { userId: "attacker-1" };
 
 /**
  * O controller e instanciado direto: a autenticacao agora e responsabilidade do
- * `AuthServiceGuard`, entao aqui o ator ja chega resolvido, como o decorator
+ * `GatewayIdentityGuard`, entao aqui o ator ja chega resolvido, como o decorator
  * `@CurrentUser()` faria em producao.
  */
 function makeController(overrides: { database?: InMemoryEventDatabase } = {}) {

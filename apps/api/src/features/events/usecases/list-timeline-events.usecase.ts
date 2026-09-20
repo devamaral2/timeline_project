@@ -1,4 +1,4 @@
-import type { AuthenticatedUser } from "../../authenticate-user/authenticated-user";
+import type { AuthenticatedUser } from "../../request-identity/authenticated-user";
 import type { TimelineEventQuery } from "../../../domain/ports";
 import type { TimelineEventPageDto } from "@repo/contracts";
 import {

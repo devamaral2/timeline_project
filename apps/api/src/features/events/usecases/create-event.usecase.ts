@@ -1,5 +1,5 @@
 import { ulid } from "ulid";
-import type { AuthenticatedUser } from "../../authenticate-user/authenticated-user";
+import type { AuthenticatedUser } from "../../request-identity/authenticated-user";
 import type { MealParsingGateway } from "../gateways/meal-parsing.gateway";
 import type { EventRepository, WorkoutCatalog } from "../../../domain/ports";
 import type { CreateEventInput, CreateEventItemInput } from "@repo/contracts";

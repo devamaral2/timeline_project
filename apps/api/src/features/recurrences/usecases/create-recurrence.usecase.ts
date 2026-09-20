@@ -1,7 +1,7 @@
 import { Recurrence } from "../../../domain";
 import type { CreateRecurrenceInput } from "@repo/contracts";
 import type { RecurrenceRepository, TaskRepository } from "../../../domain/ports";
-import type { AuthenticatedUser } from "../../authenticate-user/authenticated-user";
+import type { AuthenticatedUser } from "../../request-identity/authenticated-user";
 import type { CreateEventUseCase } from "../../events/usecases/create-event.usecase";
 import { prepareEventTemplate, prepareTaskTemplate } from "../services/recurrence-templates";
 

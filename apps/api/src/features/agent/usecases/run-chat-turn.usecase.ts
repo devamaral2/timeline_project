@@ -1,7 +1,7 @@
 import { AgentConversation, AgentConversationNotFoundError } from "../../../domain";
 import type { AgentConversationQuery } from "../../../domain/ports";
 import type { AgentChatTurn, AgentScreenContext, RunAgentResponse } from "@repo/contracts";
-import type { AuthenticatedUser } from "../../authenticate-user/authenticated-user";
+import type { AuthenticatedUser } from "../../request-identity/authenticated-user";
 import { MAX_HISTORY_TURNS } from "../services/agent-chat-history";
 import type { RunAgentUseCase } from "./run-agent.usecase";
 

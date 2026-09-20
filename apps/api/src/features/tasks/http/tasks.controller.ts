@@ -14,10 +14,9 @@ import {
 } from "@nestjs/common";
 import type { CreateTaskInput, TaskDetailDto, TaskSummaryDto, UpdateTaskInput } from "@repo/contracts";
 import { isWorkItemPriority, isWorkItemStatus, isNotificationOffsetMinutes } from "../../../domain";
-import { CurrentUser } from "../../authenticate-user/current-user.decorator";
-import { AuthServiceGuard } from "../../authorize-user/auth-service.guard";
-import type { AuthenticatedUser } from "../../authenticate-user/authenticated-user";
-import { AccessResource } from "../../authorize-user/access-resource.decorator";
+import { CurrentUser } from "../../request-identity/current-user.decorator";
+import { GatewayIdentityGuard } from "../../request-identity/gateway-identity.guard";
+import type { AuthenticatedUser } from "../../request-identity/authenticated-user";
 import { CreateTaskUseCase } from "../usecases/create-task.usecase";
 import { GetTaskUseCase } from "../usecases/get-task.usecase";
 import { UpdateTaskUseCase } from "../usecases/update-task.usecase";
@@ -26,7 +25,6 @@ import { ListTasksUseCase } from "../usecases/list-tasks.usecase";
 import { ListSubtasksUseCase } from "../usecases/list-subtasks.usecase";
 
 @Controller("api/tasks")
-@AccessResource("task")
 export class TasksController {
   constructor(
     private readonly listTasks: ListTasksUseCase,
@@ -38,13 +36,13 @@ export class TasksController {
   ) {}
 
   @Get()
-  @UseGuards(AuthServiceGuard)
+  @UseGuards(GatewayIdentityGuard)
   async list(@CurrentUser() actor: AuthenticatedUser): Promise<TaskSummaryDto[]> {
     return this.listTasks.execute(undefined, actor);
   }
 
   @Post()
-  @UseGuards(AuthServiceGuard)
+  @UseGuards(GatewayIdentityGuard)
   @HttpCode(HttpStatus.CREATED)
   async create(
     @Body() body: CreateTaskInput,
@@ -56,7 +54,7 @@ export class TasksController {
   }
 
   @Get(":taskId")
-  @UseGuards(AuthServiceGuard)
+  @UseGuards(GatewayIdentityGuard)
   async detail(
     @Param("taskId") taskId: string,
     @CurrentUser() actor: AuthenticatedUser,
@@ -68,7 +66,7 @@ export class TasksController {
 
   /** Filhas diretas, nao a arvore inteira: quem quiser os netos pede de novo. */
   @Get(":taskId/subtasks")
-  @UseGuards(AuthServiceGuard)
+  @UseGuards(GatewayIdentityGuard)
   async subtasks(
     @Param("taskId") taskId: string,
     @CurrentUser() actor: AuthenticatedUser,
@@ -77,7 +75,7 @@ export class TasksController {
   }
 
   @Patch(":taskId")
-  @UseGuards(AuthServiceGuard)
+  @UseGuards(GatewayIdentityGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   async update(
     @Param("taskId") taskId: string,
@@ -91,7 +89,7 @@ export class TasksController {
   }
 
   @Delete(":taskId")
-  @UseGuards(AuthServiceGuard)
+  @UseGuards(GatewayIdentityGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(
     @Param("taskId") taskId: string,

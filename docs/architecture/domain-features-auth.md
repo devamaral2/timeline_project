@@ -19,31 +19,26 @@ afetada, incluindo controller, use case, serviço e testes. Os grupos atuais
 (`events`, `tasks`, `recurrences`, `agent`) mantêm seus módulos Nest juntos;
 quando uma capacidade ganhar autonomia real, ela pode virar um subdiretório
 sem mover entidades para fora do domínio.
-Na API, `authenticate-user` contém a identidade e o cliente do auth;
-`authorize-user` contém o guard HTTP e a declaração do recurso. Eles não
-implementam RBAC localmente: a decisão sempre vem do `apps/auth`.
+Na API, `request-identity` contém apenas a identidade já autorizada pelo
+gateway. Não existe cliente HTTP para o auth nem decisão de RBAC na API.
 
 ## Identidade e acesso
 
-`apps/auth` é o único dono de login por senha, sessão, JWT e RBAC. A API não
-descriptografa nem interpreta JWT: entrega o bearer ao serviço de auth. Cada
-controller da API declara seu recurso com `@AccessResource`; o guard traduz o
-verbo HTTP em ação e pede uma decisão a `/auth/internal/authorize`. O auth
-reconsulta usuário, sessão e grants no banco, aplica o papel e devolve só a
-identidade autorizada. Falha do auth ou ausência da chave interna fecha o
-acesso (503), não libera a requisição. Uma rota protegida sem `@AccessResource`
-também falha fechada, para que um controller novo não esqueça a política.
+`apps/auth` é o único dono de login por senha, sessão, JWT e RBAC. O gateway
+recebe `/api/*`, valida o bearer, reconsulta usuário, sessão e grants no banco,
+e só então encaminha a requisição para a API com uma identidade interna e a
+chave de gateway. A API apenas verifica essa fronteira e usa o `userId` para
+isolar os dados; nunca chama o auth.
 
 O WebSocket do agente recebe um ticket único emitido após a autorização HTTP.
-O ticket contém apenas `userId`, `sessionId` e o dono-alvo; o auth revalida a
-permissão no upgrade e antes de cada mensagem. Nenhuma permissão JWT fica
-congelada no ticket.
+O ticket contém apenas `userId`, `sessionId` e o dono-alvo; como a emissão já
+passou pelo gateway, a API consome o ticket sem callback para o auth.
 
 No auth, `basic-login` possui o controller de senha e a verificação de
 credenciais; `invite-user` contém as rotas públicas de convite e a única rota
 administrativa; `manage-session` trata refresh e encerramento; `authenticate-user`
-verifica/assina JWT; `authorize-access` contém a política RBAC e os endpoints
-internos de decisão. Modelos de usuário, convite e sessão ficam em `domain`.
+verifica/assina JWT; `authorize-access` contém a política RBAC usada pelo
+gateway. Modelos de usuário, convite e sessão ficam em `domain`.
 
 O catálogo granular atual cobre `event` e `tag`; `task`, `note`, `recurrence`
 e `agent` usam leitura para viewer e escrita para member/admin. Um viewer não

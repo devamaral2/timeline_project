@@ -24,15 +24,6 @@ test("binds to loopback unless API_HOST says otherwise", () => {
   expect(getServerEnv({ API_HOST: "0.0.0.0" }).API_HOST).toBe("0.0.0.0");
 });
 
-test("defaults AUTH_SERVICE_URL to the apps/auth local port", () => {
-  vi.stubEnv("AUTH_SERVICE_URL", "");
-
-  expect(getServerEnv({ AUTH_SERVICE_URL: undefined }).AUTH_SERVICE_URL).toBe("http://127.0.0.1:3002");
-  expect(getServerEnv({ AUTH_SERVICE_URL: "http://127.0.0.1:4002" }).AUTH_SERVICE_URL).toBe(
-    "http://127.0.0.1:4002",
-  );
-});
-
 test("recognizes the hosts that keep the API off the network", () => {
   expect(isLoopbackHost("127.0.0.1")).toBe(true);
   expect(isLoopbackHost("localhost")).toBe(true);

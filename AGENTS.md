@@ -35,8 +35,10 @@ apps/api    ──> @repo/contracts, @repo/timeline
 Os packages nao conhecem os apps. Entidades e portas de repositorio vivem em
 `apps/api/src/domain`; a implementacao Postgres em
 `apps/api/src/infrastructure/persistence`. Controllers, services e use cases
-vivem em `apps/api/src/features`, agrupados por capacidade. A API delega a
-decisao de acesso a `apps/auth`; nao interpreta papeis ou grants.
+vivem em `apps/api/src/features`, agrupados por capacidade. O `apps/auth` e o
+gateway publico: valida sessao e RBAC e encaminha `/api/*` para a API com a
+identidade interna. A API aceita apenas essa identidade encaminhada; nao chama
+o Auth nem interpreta papeis ou grants.
 
 `@repo/timeline` e `@repo/theme` existem para que web e mobile calculem as
 mesmas janelas de data e pintem as mesmas cores. Regra pratica: se web e mobile
@@ -46,16 +48,18 @@ vai para um desses dois — nao para os dois apps.
 ## Front e back
 
 O backend escuta so em `127.0.0.1` por padrao — nao e exposto para fora do
-servidor. O browser fala com o Next, que repassa `/api/*` ao Nest pelo
-`rewrites` do `apps/web/next.config.ts`.
+servidor. O browser fala com o Next, que repassa `/api/*` ao gateway do Auth
+(`BACKEND_URL`); o Auth valida a sessao/RBAC e encaminha internamente para a
+API (`API_SERVICE_URL`).
 
 **Leituras autenticadas acontecem no cliente.** O web mantém a sessão em
 cookies httpOnly e `authedFetch` (`apps/web/src/lib/api/authed-fetch.ts`) chama
-o Next; o proxy transforma o cookie em `Authorization` e a API delega a
-validação ao `apps/auth`. O Firebase continua restrito ao mobile por enquanto.
+o Next; o proxy transforma o cookie em `Authorization`, o gateway do Auth
+valida e repassa a identidade para a API. O Firebase continua restrito ao
+mobile por enquanto.
 
-O app mobile nao tem esse rewrite: ele fala direto com o Nest, pelo host em
-`MOBILE_API_URL` (skill `env-setup`).
+O app mobile nao tem esse rewrite: ele fala direto com o gateway do Auth, pelo
+host em `MOBILE_API_URL` (skill `env-setup`).
 
 Nao coloque regra de negocio em `apps/web` nem em `apps/mobile`. Do backend eles
 so importam tipos.
@@ -164,10 +168,6 @@ Use **sempre** `npm run --silent test:ai`, nunca `npm test` nem `npx vitest`
 — corta o consumo de tokens (skill `running-tests` para o que o reporter
 silencioso faz, como filtrar por workspace/arquivo e como investigar uma
 falha alem da primeira).
-
-Os testes do `auth` que exigem Postgres pulam sozinhos sem
-`AUTH_TEST_DATABASE_URL` — e sao a maior parte da suite dele — e `Tests pass`
-nao denuncia isso. Para roda-los de verdade, use a skill `auth-postgres-tests`.
 
 # Worktrees paralelas
 

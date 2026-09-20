@@ -1,6 +1,6 @@
 import { RecurrenceNotFoundError, RecurrenceOwnershipError } from "../../../domain";
 import type { RecurrenceRepository } from "../../../domain/ports";
-import type { AuthenticatedUser } from "../../authenticate-user/authenticated-user";
+import type { AuthenticatedUser } from "../../request-identity/authenticated-user";
 import { todayOf } from "../services/recurrence-templates";
 
 /** Apaga a serie e as ocorrencias de hoje em diante; as passadas ficam, sem vinculo. */

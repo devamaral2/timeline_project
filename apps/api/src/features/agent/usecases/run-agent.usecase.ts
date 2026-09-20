@@ -8,7 +8,7 @@ import type {
 } from "../../../domain/ports";
 import type { AgentConversation } from "../../../domain";
 import type { AgentChatTurn, RunAgentRequest, RunAgentResponse } from "@repo/contracts";
-import type { AuthenticatedUser } from "../../authenticate-user/authenticated-user";
+import type { AuthenticatedUser } from "../../request-identity/authenticated-user";
 import type { CreateEventUseCase } from "../../events/usecases/create-event.usecase";
 import { AgentLimitReachedError, AgentRunCancelledError } from "../errors/agent.errors";
 import type { AgentGateway } from "../gateways/agent.gateway";

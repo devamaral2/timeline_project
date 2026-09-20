@@ -1,6 +1,6 @@
 import type { AgentConversationPageDto } from "@repo/contracts";
 import type { AgentConversationQuery } from "../../../domain/ports";
-import type { AuthenticatedUser } from "../../authenticate-user/authenticated-user";
+import type { AuthenticatedUser } from "../../request-identity/authenticated-user";
 
 const DEFAULT_LIMIT = 30;
 

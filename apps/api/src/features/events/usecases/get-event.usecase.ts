@@ -1,4 +1,4 @@
-import type { AuthenticatedUser } from "../../authenticate-user/authenticated-user";
+import type { AuthenticatedUser } from "../../request-identity/authenticated-user";
 import { EventOwnershipError, type Event } from "../../../domain";
 import type { EventRepository } from "../../../domain/ports";
 import type { EventDetailDto, EventItemDto, KnownEventItemType } from "@repo/contracts";

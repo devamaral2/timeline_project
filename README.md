@@ -65,7 +65,7 @@ development build.
    `MOBILE_GOOGLE_WEB_CLIENT_ID`. No Android, cadastre tambem a impressao
    digital SHA-1 da chave de debug em Project settings > Your apps.
 2. Descubra o IP da sua maquina na rede local (`ipconfig` no Windows) e ponha
-   `MOBILE_API_URL=http://<ip>:3001` no `.env`.
+   `MOBILE_API_URL=http://<ip>:3002` no `.env` (o gateway do Auth).
 3. `API_HOST=0.0.0.0` no `.env`, para o Nest atender na rede em vez de so no
    loopback. Isso e para desenvolvimento: em producao a variavel fica de fora e
    o bind volta a `127.0.0.1`.

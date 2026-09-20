@@ -69,12 +69,6 @@ const operations: Record<string, Record<string, OpenApiOperation>> = {
   "/auth/admin/invites": {
     post: { summary: "Cria um convite", description: "Cria um usuário pendente, define seus papéis e permissões diretas e devolve o link de convite. Exige token de um superadministrador.", tags: ["Administração"], security: bearer, requestBody: request("CreateInviteRequest"), responses: { "201": json({ $ref: "#/components/schemas/CreatedInvite" }), "409": json({ $ref: "#/components/schemas/ErrorCode" }, "Já existe uma conta para o email informado."), ...protectedErrors } },
   },
-  "/auth/internal/authorize": {
-    post: { summary: "Autoriza uma operação da API", description: "Uso exclusivo entre serviços. Exige X-Auth-Service-Key e o bearer do usuário; relê a sessão e o acesso atual.", tags: ["Integração interna"], security: bearer, requestBody: request("AuthorizeRequest"), responses: { "200": json({ $ref: "#/components/schemas/AuthorizedIdentity" }), ...protectedErrors } },
-  },
-  "/auth/internal/authorize-session": {
-    post: { summary: "Revalida uma operação do chat", description: "Uso exclusivo entre serviços. Exige X-Auth-Service-Key e uma sessão já identificada por um ticket de uso único.", tags: ["Integração interna"], requestBody: request("AuthorizeSessionRequest"), responses: { "200": json({ $ref: "#/components/schemas/AuthorizedIdentity" }), ...protectedErrors } },
-  },
 };
 
 function request(schema: string, description = "Dados da operação.") {
@@ -94,7 +88,6 @@ export const authOpenApiDocument = {
     { name: "Autenticação pública", description: "Login por email e senha sem sessão existente." },
     { name: "Sessões", description: "Ciclo de vida e consulta da sessão autenticada." },
     { name: "Administração", description: "Emissão de convites, exclusiva de superadministradores." },
-    { name: "Integração interna", description: "Decisões de acesso solicitadas pela API." },
   ],
   paths: operations,
   components: {
@@ -109,9 +102,6 @@ export const authOpenApiDocument = {
       LoginRequest: object({ email: { ...string("Email da conta.", 320), format: "email" }, password: token("Senha da conta.") }),
       RefreshTokenRequest: object({ refreshToken: token("Refresh token da sessão que será renovada ou revogada.") }),
       CreateInviteRequest: object({ email: { ...string("Email do convidado.", 320), format: "email" }, name: string("Nome do convidado.", 120), roleKeys: { type: "array", maxItems: 16, uniqueItems: true, items: { type: "string", enum: ["admin", "member", "viewer"] }, description: "Papéis iniciais do usuário." }, directPermissions: directPermissionsSchema }),
-      AuthorizeRequest: object({ resource: { type: "string", enum: ["event", "tag", "task", "note", "recurrence", "agent"] }, action: { type: "string", enum: ["read", "create", "update", "delete", "execute"] }, targetUserId: string("Dono do dado, quando diferente do ator.") }, ["resource", "action"]),
-      AuthorizeSessionRequest: object({ resource: { type: "string", enum: ["event", "tag", "task", "note", "recurrence", "agent"] }, action: { type: "string", enum: ["read", "create", "update", "delete", "execute"] }, userId: string("Ator do ticket."), sessionId: string("Sessão do ticket."), targetUserId: string("Dono do dado, quando diferente do ator.") }, ["resource", "action", "userId", "sessionId"]),
-      AuthorizedIdentity: object({ userId: string("Ator autorizado."), sessionId: string("Sessão ativa."), email: string("Email atual."), name: string("Nome atual.") }),
       InviteAccepted: object({accepted:{type:"boolean",enum:[true]}}),
       InviteInspection: object({ name: string("Nome do convidado."), email: string("Email mascarado."), expiresAt: dateTime("Momento de expiração do convite.") }),
       SessionTokens: object({ accessToken: string("JWT para autenticar rotas protegidas."), refreshToken: string("Token opaco para renovar a sessão."), accessTokenExpiresInSeconds: { type: "integer", description: "Vida útil do access token em segundos." }, refreshTokenExpiresAt: dateTime("Expiração do refresh token.") }, ["accessToken", "refreshToken"]),

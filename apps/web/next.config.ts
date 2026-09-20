@@ -20,7 +20,7 @@ for (const fileName of [".env.local", ".env"]) {
  * entao o `Authorization: Bearer <idToken>` chega ao guard sem codigo de proxy
  * nosso no meio.
  */
-const backendUrl = process.env.BACKEND_URL ?? "http://127.0.0.1:3001";
+const backendUrl = process.env.BACKEND_URL ?? "http://127.0.0.1:3002";
 
 /**
  * O apps/auth tambem so escuta em loopback. `/auth/*` e repassado a ele pelo

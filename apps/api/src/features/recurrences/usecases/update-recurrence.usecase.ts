@@ -6,7 +6,7 @@ import type {
 } from "@repo/contracts";
 import type { RecurrenceRepository, TaskRepository } from "../../../domain/ports";
 import { shiftDayKey } from "@repo/timeline";
-import type { AuthenticatedUser } from "../../authenticate-user/authenticated-user";
+import type { AuthenticatedUser } from "../../request-identity/authenticated-user";
 import type { CreateEventUseCase } from "../../events/usecases/create-event.usecase";
 import {
   prepareEventTemplate,

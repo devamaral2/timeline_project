@@ -1,8 +1,8 @@
 import "reflect-metadata";
 import { GUARDS_METADATA } from "@nestjs/common/constants";
 import { expect, test } from "vitest";
-import type { AuthenticatedUser } from "../../authenticate-user/authenticated-user";
-import { AuthServiceGuard } from "../../authorize-user/auth-service.guard";
+import type { AuthenticatedUser } from "../../request-identity/authenticated-user";
+import { GatewayIdentityGuard } from "../../request-identity/gateway-identity.guard";
 import type { TagSuggestionDto } from "@repo/contracts";
 import { SuggestTagsUseCase } from "../usecases/suggest-tags.usecase";
 import { TagsController } from "./tags.controller";
@@ -31,11 +31,11 @@ test("defaults the query to an empty string", async () => {
   expect(result).toEqual([{ id: "auth-user-1", name: "" }]);
 });
 
-test("requires AuthServiceGuard on suggest", () => {
+test("requires GatewayIdentityGuard on suggest", () => {
   const guards = Reflect.getMetadata(
     GUARDS_METADATA,
     TagsController.prototype.suggest,
   ) as unknown[] | undefined;
 
-  expect(guards).toContain(AuthServiceGuard);
+  expect(guards).toContain(GatewayIdentityGuard);
 });
