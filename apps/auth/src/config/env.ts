@@ -14,6 +14,7 @@ export interface RuntimeEnv {
   publicUrl: URL;
   webAppUrl: URL;
   keyEncryptionKey: Buffer;
+  passwordBlocklistTimeoutMs: number;
   limits: {
     passwordEmail: { attempts: number; windowSeconds: number };
     passwordIp: { attempts: number; windowSeconds: number };
@@ -23,9 +24,11 @@ export interface RuntimeEnv {
 const runtimeKeys = [
   "NODE_ENV", "AUTH_PORT", "AUTH_HOST", "AUTH_DATABASE_URL", "AUTH_ISSUER", "AUTH_AUDIENCE",
   "AUTH_PUBLIC_URL", "AUTH_WEB_APP_URL", "AUTH_KEY_ENCRYPTION_KEY",
-  "AUTH_PASSWORD_EMAIL_LIMIT", "AUTH_PASSWORD_IP_LIMIT", "AUTH_PASSWORD_WINDOW_SECONDS",
+  "AUTH_PASSWORD_BLOCKLIST_TIMEOUT_MS", "AUTH_PASSWORD_EMAIL_LIMIT", "AUTH_PASSWORD_IP_LIMIT",
+  "AUTH_PASSWORD_WINDOW_SECONDS",
 ] as const;
 
+const boolean = z.enum(["true", "false"]).transform((value) => value === "true");
 const positiveInteger = z.coerce.number().int().positive();
 const nonEmpty = z.string().trim().min(1);
 
@@ -39,6 +42,7 @@ const runtimeSchema = z.object({
   AUTH_PUBLIC_URL: nonEmpty,
   AUTH_WEB_APP_URL: nonEmpty,
   AUTH_KEY_ENCRYPTION_KEY: nonEmpty,
+  AUTH_PASSWORD_BLOCKLIST_TIMEOUT_MS: positiveInteger.default(2000),
   AUTH_PASSWORD_EMAIL_LIMIT: positiveInteger.default(5),
   AUTH_PASSWORD_IP_LIMIT: positiveInteger.default(30),
   AUTH_PASSWORD_WINDOW_SECONDS: positiveInteger.default(900),
@@ -85,6 +89,7 @@ export function getRuntimeEnv(source: EnvSource): RuntimeEnv {
     publicUrl: parseUrl(raw.AUTH_PUBLIC_URL, "AUTH_PUBLIC_URL"),
     webAppUrl: parseUrl(raw.AUTH_WEB_APP_URL, "AUTH_WEB_APP_URL"),
     keyEncryptionKey,
+    passwordBlocklistTimeoutMs: raw.AUTH_PASSWORD_BLOCKLIST_TIMEOUT_MS,
     limits,
   });
 }

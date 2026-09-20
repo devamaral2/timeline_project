@@ -11,7 +11,8 @@
     "db:migrate": "tsx src/db/migrate.cli.ts",
     "rotate-signing-key": "tsx src/crypto/rotate-signing-key.cli.ts",
     "bootstrap-admin": "tsx src/cli/bootstrap-admin.cli.ts",
-    "retire-signing-keys": "tsx src/crypto/retire-signing-keys.cli.ts"
+    "create-admin": "tsx src/cli/create-admin.cli.ts",
+    "cleanup-auth-data": "tsx src/cli/cleanup-auth-data.cli.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",

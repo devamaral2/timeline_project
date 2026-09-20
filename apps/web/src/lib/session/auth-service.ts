@@ -2,43 +2,90 @@ import type { SessionTokens } from "./session-cookies";
 
 const AUTH_REQUEST_TIMEOUT_MS = 5_000;
 
-/** O usuario da sessao, do jeito que as telas do web o conhecem. */
 export interface SessionUser {
   userId: string;
   name: string;
   email: string | null;
 }
 
-/** O que o apps/auth respondeu. Sem conseguir nem perguntar, o status e 503. */
 export type AuthResult<T> = { ok: true; data: T } | { ok: false; status: number; retryAfter?: string | null };
+
+function logAuthFailure(event: {
+  path: string;
+  url: string;
+  status?: number;
+  authCorrelationId?: string;
+  code?: string;
+  error?: { name: string; message: string } | string;
+}): void {
+  // Nunca registre init.body ou headers: login/refresh carregam credenciais.
+  console.error("[AuthServiceClient] request failed", event);
+}
+
+async function safeFailureCode(response: Response): Promise<string | undefined> {
+  if (!response.headers.get("content-type")?.includes("application/json")) return undefined;
+  try {
+    const body = (await response.json()) as unknown;
+    if (typeof body === "object" && body !== null && "code" in body && typeof body.code === "string") {
+      return body.code;
+    }
+  } catch {
+    // O status, o correlation id e a falha de transporte continuam no log.
+  }
+  return undefined;
+}
 
 function authServiceUrl(): string {
   return process.env.AUTH_SERVICE_URL ?? "http://127.0.0.1:3002";
 }
 
 async function callAuth<T>(path: string, init: RequestInit, parse: (response: Response) => Promise<T>): Promise<AuthResult<T>> {
+  const baseUrl = authServiceUrl();
+  const url = `${baseUrl}${path}`;
   let response: Response;
   try {
-    response = await fetch(`${authServiceUrl()}${path}`, {
+    response = await fetch(url, {
       ...init,
       cache: "no-store",
       signal: AbortSignal.timeout(AUTH_REQUEST_TIMEOUT_MS),
     });
-  } catch {
+  } catch (error) {
+    logAuthFailure({
+      path,
+      url,
+      error: error instanceof Error ? { name: error.name, message: error.message } : String(error),
+    });
     return { ok: false, status: 503 };
   }
-
   if (!response.ok) {
+    logAuthFailure({
+      path,
+      url,
+      status: response.status,
+      authCorrelationId: response.headers.get("x-correlation-id") ?? undefined,
+      code: await safeFailureCode(response),
+    });
     return { ok: false, status: response.status, retryAfter: response.headers.get("retry-after") };
   }
-  return { ok: true, data: await parse(response) };
+  try {
+    return { ok: true, data: await parse(response) };
+  } catch (error) {
+    logAuthFailure({
+      path,
+      url,
+      status: response.status,
+      authCorrelationId: response.headers.get("x-correlation-id") ?? undefined,
+      error: error instanceof Error ? { name: error.name, message: error.message } : String(error),
+    });
+    return { ok: false, status: 502 };
+  }
 }
 
 function jsonBody(body: unknown): RequestInit {
   return { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) };
 }
 
-export function login(email: string, password: string): Promise<AuthResult<Required<SessionTokens>>> {
+export function login(email: string, password: string): Promise<AuthResult<SessionTokens>> {
   return callAuth("/auth/login", jsonBody({ email, password }), (response) => response.json());
 }
 

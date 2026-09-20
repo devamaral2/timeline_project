@@ -10,7 +10,6 @@ import { RevokeSessionUseCase } from "../sessions/usecases/revoke-session.usecas
 import type { AuthenticatedActor } from "../users/user";
 import { BearerAuthGuard } from "./bearer-auth.guard";
 import { CurrentActor } from "./current-actor.decorator";
-import { AcceptTokenKinds } from "./accept-token-kinds.decorator";
 
 const refreshTokenBody = z.object({ refreshToken: z.string().min(1).max(1024) }).strict();
 
@@ -25,8 +24,6 @@ export class AuthenticatedAuthController {
 
   private context(request: Request) { return request.context ?? ANONYMOUS_CONTEXT; }
 
-  // @HttpCode(OK): sem isso o Nest devolveria 201 para um POST. RFC 6749
-  // espera 200 do endpoint de token.
   @Post("token/refresh")
   @HttpCode(HttpStatus.OK)
   async refresh(@Body() body: unknown, @Req() request: Request) {
@@ -44,7 +41,6 @@ export class AuthenticatedAuthController {
 
   @Post("logout-all")
   @UseGuards(BearerAuthGuard)
-  @AcceptTokenKinds("user")
   @HttpCode(HttpStatus.NO_CONTENT)
   async logoutEverywhere(@CurrentActor() actor: AuthenticatedActor, @Req() request: Request): Promise<void> {
     await this.logoutAll.execute({ actor, context: this.context(request) });
@@ -52,7 +48,6 @@ export class AuthenticatedAuthController {
 
   @Get("me")
   @UseGuards(BearerAuthGuard)
-  @AcceptTokenKinds("user")
   async me(@CurrentActor() actor: AuthenticatedActor) {
     return this.getMe.execute(actor);
   }

@@ -16,16 +16,18 @@ replicamos a separacao de papeis de producao (`auth_runtime`, ver
 locais.
 
 A worktree principal (a original, nao uma criada com `git worktree add`)
-nunca e tocada por estes scripts — ela continua com o `.env.local` que o
-desenvolvedor ja mantem manualmente (`pnpm env:pull`).
+nunca e tocada por estes scripts. Todas as worktrees resolvem os segredos no
+inicio dos comandos usando `OP_SERVICE_ACCOUNT_TOKEN` e `OP_ENVIRONMENT_ID`; veja o
+runbook de 1Password.
 
 ## Antes
 
 - Docker rodando (`docker info` sem erro).
-- A worktree principal precisa ter um `.env.local` (ou `.env`) valido, com
-  pelo menos `POSTGRES_USER`, `POSTGRES_PASSWORD` e `POSTGRES_DB` preenchidos
-  — os scripts copiam esses e os demais segredos (auth, Twilio,
-  OpenRouter) de la para a worktree nova.
+- O shell precisa ter `OP_SERVICE_ACCOUNT_TOKEN` e `OP_ENVIRONMENT_ID` configurados.
+- O Environment precisa conter `POSTGRES_USER`, `POSTGRES_PASSWORD` e `POSTGRES_DB`,
+  além das demais variáveis do `.env.example`.
+- `WEB_PORT`, `METRO_PORT` e `AUTH_POSTGRES_DB` são gerados localmente pelo
+  provisionamento e não precisam existir no Environment.
 
 ## Executar
 
@@ -55,14 +57,14 @@ rodando, so garante que as migrations e o build estao em dia, sem trocar as
 portas por baixo de processos que ja estejam de pe.
 
 Para subir os servidores dentro da worktree, use os scripts de sempre
-(`pnpm dev:web`, `pnpm dev:api`, `pnpm dev:auth`, `pnpm dev`) — eles ja leem o
-`.env.local` da propria worktree. Veja a skill `worktree-app-testing` para o
-fluxo completo de testar a app rodando.
+(`pnpm dev:web`, `pnpm dev:api`, `pnpm dev:auth`, `pnpm dev`) — eles resolvem o
+Environment e aplicam os overrides de portas da própria worktree. Veja a skill
+`worktree-app-testing` para o fluxo completo de testar a app rodando.
 
 ## Verificar
 
 ```bash
-grep -E '^(WEB_PORT|PORT|AUTH_PORT|METRO_PORT|POSTGRES_HOST_PORT|COMPOSE_PROJECT_NAME)=' .env.local
+grep -E '^(WEB_PORT|API_PORT|AUTH_PORT|METRO_PORT|POSTGRES_HOST_PORT|COMPOSE_PROJECT_NAME)=' .env.local
 docker compose --project-name "$(grep COMPOSE_PROJECT_NAME .env.local | cut -d= -f2)" \
   -f infra/docker-compose.local.yml ps
 ```

@@ -37,19 +37,8 @@ if [ -n "$EXISTING_PROJECT" ] && \
   echo "Ambiente '$EXISTING_PROJECT' ja esta provisionado e rodando — reaproveitando."
   PROJECT_NAME="$EXISTING_PROJECT"
 else
-  if [ ! -f "$MAIN_ROOT/$ENV_FILE" ] && [ ! -f "$MAIN_ROOT/.env" ]; then
-    echo "Nao encontrei .env.local nem .env na worktree principal ($MAIN_ROOT)." >&2
-    echo "Rode 'pnpm env:pull' la (ou configure um .env.local manual) antes de provisionar worktrees." >&2
-    exit 1
-  fi
-  MAIN_ENV="$MAIN_ROOT/$ENV_FILE"
-  [ -f "$MAIN_ENV" ] || MAIN_ENV="$MAIN_ROOT/.env"
-
-  POSTGRES_USER="$(read_env_var "$MAIN_ENV" POSTGRES_USER)"
-  POSTGRES_PASSWORD="$(read_env_var "$MAIN_ENV" POSTGRES_PASSWORD)"
-  POSTGRES_DB="$(read_env_var "$MAIN_ENV" POSTGRES_DB)"
   if [ -z "$POSTGRES_USER" ] || [ -z "$POSTGRES_PASSWORD" ] || [ -z "$POSTGRES_DB" ]; then
-    echo "POSTGRES_USER/POSTGRES_PASSWORD/POSTGRES_DB precisam estar preenchidos em $MAIN_ENV." >&2
+    echo "POSTGRES_USER/POSTGRES_PASSWORD/POSTGRES_DB precisam estar disponíveis pelo 1Password." >&2
     exit 1
   fi
 
@@ -68,10 +57,9 @@ else
   BACKEND_URL="http://127.0.0.1:${API_PORT}"
   AUTH_ISSUER="http://127.0.0.1:${AUTH_PORT}"
   AUTH_PUBLIC_URL="http://127.0.0.1:${AUTH_PORT}"
-  AUTH_SERVICE_URL="http://127.0.0.1:${AUTH_PORT}"
   AUTH_WEB_APP_URL="http://localhost:${WEB_PORT}"
 
-  OLD_MOBILE_URL="$(read_env_var "$MAIN_ENV" MOBILE_API_URL)"
+  OLD_MOBILE_URL="${MOBILE_API_URL:-}"
   if [ -n "$OLD_MOBILE_URL" ]; then
     MOBILE_API_URL="$(echo "$OLD_MOBILE_URL" | sed -E "s#:[0-9]+\$#:${API_PORT}#")"
     if [ "$MOBILE_API_URL" = "$OLD_MOBILE_URL" ]; then
@@ -81,64 +69,20 @@ else
     MOBILE_API_URL=""
   fi
 
-  OLD_MOBILE_AUTH_URL="$(read_env_var "$MAIN_ENV" MOBILE_AUTH_URL)"
-  if [ -n "$OLD_MOBILE_AUTH_URL" ]; then
-    MOBILE_AUTH_URL="$(echo "$OLD_MOBILE_AUTH_URL" | sed -E "s#:[0-9]+\$#:${AUTH_PORT}#")"
-    if [ "$MOBILE_AUTH_URL" = "$OLD_MOBILE_AUTH_URL" ]; then
-      MOBILE_AUTH_URL="${OLD_MOBILE_AUTH_URL}:${AUTH_PORT}"
-    fi
-  else
-    MOBILE_AUTH_URL=""
-  fi
-
-  # Chaves cujo valor e recalculado acima em vez de copiado do .env.local
-  # principal.
-  COMPUTED_KEYS="WEB_PORT PORT API_HOST AUTH_PORT AUTH_HOST METRO_PORT POSTGRES_HOST_PORT AUTH_POSTGRES_DB DATABASE_URL AUTH_DATABASE_URL AUTH_DATABASE_MIGRATION_URL AUTH_TEST_DATABASE_URL BACKEND_URL AUTH_ISSUER AUTH_PUBLIC_URL AUTH_SERVICE_URL AUTH_WEB_APP_URL MOBILE_API_URL MOBILE_AUTH_URL COMPOSE_PROJECT_NAME"
-
-  {
-    while IFS= read -r line; do
-      case "$line" in
-        [A-Z_]*=*)
-          key="${line%%=*}"
-          case " $COMPUTED_KEYS " in
-            *" $key "*) continue ;;
-          esac
-          value="$(read_env_var "$MAIN_ENV" "$key")"
-          if [ -n "$value" ]; then
-            printf '%s=%s\n' "$key" "$value"
-          else
-            printf '%s\n' "$line"
-          fi
-          ;;
-        *)
-          printf '%s\n' "$line"
-          ;;
-      esac
-    done < "$ENV_EXAMPLE"
-
-    cat <<EOF
+  # Este arquivo contém somente configuração local derivada. Segredos e URLs
+  # com senha permanecem no ambiente do processo, vindos do carregador.
+  cat > "$ENV_FILE" <<EOF
 WEB_PORT=${WEB_PORT}
-PORT=${API_PORT}
+API_PORT=${API_PORT}
 API_HOST=127.0.0.1
 AUTH_PORT=${AUTH_PORT}
 AUTH_HOST=127.0.0.1
 METRO_PORT=${METRO_PORT}
 POSTGRES_HOST_PORT=${POSTGRES_HOST_PORT}
 AUTH_POSTGRES_DB=${AUTH_POSTGRES_DB}
-DATABASE_URL=${DATABASE_URL}
-AUTH_DATABASE_URL=${AUTH_DATABASE_URL}
-AUTH_DATABASE_MIGRATION_URL=${AUTH_DATABASE_MIGRATION_URL}
-AUTH_TEST_DATABASE_URL=${AUTH_TEST_DATABASE_URL}
-BACKEND_URL=${BACKEND_URL}
-AUTH_ISSUER=${AUTH_ISSUER}
-AUTH_PUBLIC_URL=${AUTH_PUBLIC_URL}
-AUTH_SERVICE_URL=${AUTH_SERVICE_URL}
-AUTH_WEB_APP_URL=${AUTH_WEB_APP_URL}
 MOBILE_API_URL=${MOBILE_API_URL}
-MOBILE_AUTH_URL=${MOBILE_AUTH_URL}
 COMPOSE_PROJECT_NAME=${PROJECT_NAME}
 EOF
-  } > "$ENV_FILE"
 
   echo "Escrevi $ENV_FILE (web=$WEB_PORT api=$API_PORT auth=$AUTH_PORT metro=$METRO_PORT postgres=$POSTGRES_HOST_PORT)."
 fi
@@ -157,7 +101,7 @@ if [ "$status" != "healthy" ]; then
   exit 1
 fi
 
-PG_USER="$(read_env_var "$ENV_FILE" POSTGRES_USER)"
+PG_USER="$POSTGRES_USER"
 AUTH_DB="$(read_env_var "$ENV_FILE" AUTH_POSTGRES_DB)"
 echo "Garantindo que a base '$AUTH_DB' existe..."
 EXISTS="$(docker compose --env-file "$ENV_FILE" --project-name "$PROJECT_NAME" -f "$COMPOSE_FILE" exec -T postgres \
@@ -175,7 +119,7 @@ echo "Buildando pacotes (acelera o primeiro 'pnpm dev')..."
 pnpm turbo run build
 
 WEB_PORT="$(read_env_var "$ENV_FILE" WEB_PORT)"
-API_PORT="$(read_env_var "$ENV_FILE" PORT)"
+API_PORT="$(read_env_var "$ENV_FILE" API_PORT)"
 AUTH_PORT="$(read_env_var "$ENV_FILE" AUTH_PORT)"
 METRO_PORT="$(read_env_var "$ENV_FILE" METRO_PORT)"
 PG_PORT="$(read_env_var "$ENV_FILE" POSTGRES_HOST_PORT)"

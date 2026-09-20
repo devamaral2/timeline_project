@@ -5,12 +5,12 @@ const AUTH_ME_TIMEOUT_MS = 5_000;
 
 interface AuthMeResponse {
   userId: string;
-  roles: string[];
-  permissions: string[];
-  denies: string[];
+  email?: string;
+  name?: string;
+  roles?: string[];
+  permissions?: string[];
 }
 
-/** Rede indisponivel ou apps/auth respondendo erro — nao e uma credencial invalida. */
 export class AuthServiceRequestFailedError extends Error {
   constructor(message: string) {
     super(message);
@@ -18,7 +18,6 @@ export class AuthServiceRequestFailedError extends Error {
   }
 }
 
-/** apps/auth recusou o token — 401 legitimo, distinto de falha de rede. */
 export class AuthServiceUnauthorizedError extends Error {
   constructor(message = "Invalid or expired token") {
     super(message);
@@ -26,20 +25,14 @@ export class AuthServiceUnauthorizedError extends Error {
   }
 }
 
-/** apps/auth reconheceu o token mas nao e de usuario (ex.: link de convidado). */
 export class AuthServiceForbiddenError extends Error {
-  constructor(message = "Token kind not accepted") {
+  constructor(message = "Authenticated user is not allowed") {
     super(message);
     this.name = "AuthServiceForbiddenError";
   }
 }
 
-/**
- * Client HTTP para GET /auth/me do apps/auth. Repassa o header Authorization
- * recebido pela API e devolve o AuthenticatedUser que o resto do apps/api
- * conhece. Padrao de fetch+timeout+erro segue os gateways do OpenRouter em
- * apps/api/src/events/gateways/.
- */
+/** Consulta apps/auth sem expor os detalhes do JWT ao restante da API. */
 export class AuthServiceClient {
   constructor(private readonly baseUrl = getServerEnv().AUTH_SERVICE_URL) {}
 
@@ -57,30 +50,20 @@ export class AuthServiceClient {
       );
     }
 
-    if (response.status === 401) {
-      throw new AuthServiceUnauthorizedError();
-    }
-
-    if (response.status === 403) {
-      throw new AuthServiceForbiddenError();
-    }
-
+    if (response.status === 401) throw new AuthServiceUnauthorizedError();
+    if (response.status === 403) throw new AuthServiceForbiddenError();
     if (!response.ok) {
-      const errorBody = await response.text().catch(() => "<failed to read body>");
-      console.error("[AuthServiceClient] GET /auth/me failed", {
-        status: response.status,
-        statusText: response.statusText,
-        body: errorBody,
-      });
       throw new AuthServiceRequestFailedError(`apps/auth request failed with status ${response.status}`);
     }
 
     const payload = (await response.json()) as AuthMeResponse;
+    if (!payload.userId) throw new AuthServiceRequestFailedError("apps/auth returned no userId");
     return {
       userId: payload.userId,
+      email: payload.email,
+      displayName: payload.name,
       roles: payload.roles,
       permissions: payload.permissions,
-      denies: payload.denies,
     };
   }
 }

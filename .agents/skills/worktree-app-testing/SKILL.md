@@ -37,7 +37,7 @@ Postgres (com uma base para a API e outra para o Auth).
 
 2. **Leia as portas desta worktree** direto do `.env.local`:
    ```bash
-   grep -E '^(WEB_PORT|PORT|AUTH_PORT|METRO_PORT|POSTGRES_HOST_PORT)=' .env.local
+   grep -E '^(WEB_PORT|API_PORT|AUTH_PORT|METRO_PORT|POSTGRES_HOST_PORT)=' .env.local
    ```
 
 3. **Suba so o que o teste precisa**, nunca a stack inteira por reflexo.
@@ -49,7 +49,7 @@ Postgres (com uma base para a API e outra para o Auth).
    - So use `pnpm dev` (os tres) quando o teste realmente cruza os tres.
 
    Rode cada comando via Bash com `run_in_background: true` — sao processos
-   longos. Depois de rodar, `Bash` com `curl -fsS http://127.0.0.1:$PORT/...`
+   longos. Depois de rodar, `Bash` com `curl -fsS http://127.0.0.1:$API_PORT/...`
    (ou o health check do servico) e um jeito rapido de confirmar que subiu
    antes de ir para o browser.
 

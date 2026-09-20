@@ -43,15 +43,13 @@ test("answers 401 when apps/auth rejects the token", async () => {
   const { guard } = guardWith(async () => {
     throw new AuthServiceUnauthorizedError();
   });
-
   expect(await statusOfThrownGuard(guard, contextWith("Bearer expired-token").context)).toBe(401);
 });
 
-test("answers 403 when apps/auth recognizes the token but it is not a user token", async () => {
+test("answers 403 when apps/auth forbids the token", async () => {
   const { guard } = guardWith(async () => {
     throw new AuthServiceForbiddenError();
   });
-
   expect(await statusOfThrownGuard(guard, contextWith("Bearer guest-token").context)).toBe(403);
 });
 
@@ -59,7 +57,6 @@ test("answers 503 when apps/auth is unreachable", async () => {
   const { guard } = guardWith(async () => {
     throw new AuthServiceRequestFailedError("timeout");
   });
-
   expect(await statusOfThrownGuard(guard, contextWith("Bearer test-token").context)).toBe(503);
 });
 

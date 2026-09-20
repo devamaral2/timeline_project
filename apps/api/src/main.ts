@@ -23,7 +23,7 @@ async function bootstrap(): Promise<void> {
   // criar o Nest, evita subir o processo so para falhar no primeiro request.
   getDatabaseEnv();
 
-  const { PORT, API_HOST } = getServerEnv();
+  const { API_PORT, API_HOST } = getServerEnv();
   const app = await NestFactory.create(AppModule);
   app.useGlobalFilters(new DomainExceptionFilter());
   app.enableShutdownHooks();
@@ -33,8 +33,8 @@ async function bootstrap(): Promise<void> {
   // no navegador — e ele so existe quando a API ja esta aberta na rede.
   if (!isLoopbackHost(API_HOST)) app.enableCors();
 
-  await app.listen(PORT, API_HOST);
-  Logger.log(`API ouvindo em http://${API_HOST}:${PORT}`, "Bootstrap");
+  await app.listen(API_PORT, API_HOST);
+  Logger.log(`API ouvindo em http://${API_HOST}:${API_PORT}`, "Bootstrap");
 }
 
 void bootstrap();

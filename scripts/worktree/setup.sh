@@ -27,6 +27,6 @@ cd "$WORKTREE_PATH"
 echo "Instalando dependencias (pnpm i)..."
 pnpm install
 
-# Usa o script da propria worktree nova (nao o do checkout original), para
-# funcionar mesmo se o branch dela tiver alterado estes scripts.
-bash scripts/worktree/provision-env.sh
+# Usa o comando da propria worktree nova, que injeta o ambiente do 1Password e
+# mantém apenas os overrides locais não secretos no .env.local.
+pnpm worktree:provision

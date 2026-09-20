@@ -17,12 +17,8 @@ export class ApiError extends Error {
 }
 
 /**
- * Uma chamada a API do Nest com a sessao do navegador.
- *
- * O token nao passa por aqui: ele vive num cookie httpOnly que o proxy do Next
- * (`src/proxy.ts`) transforma em `Authorization`. Quando a API responde 401 —
- * o access token de 15 minutos expirou — a sessao e renovada uma vez e a
- * chamada repetida; so um segundo 401 chega a quem chamou.
+ * Uma chamada a API do Nest. O cookie httpOnly é convertido em bearer pelo
+ * proxy do Next; em caso de expiração, a sessão é renovada uma vez.
  */
 export async function authedFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
   const response = await sendWithSession(path, init);
@@ -36,10 +32,8 @@ export async function authedFetch<T>(path: string, init: RequestInit = {}): Prom
   return (await response.json()) as T;
 }
 
-/** O `fetch` cru com a renovacao de sessao, para quem precisa ler a resposta de erro. */
 export async function sendWithSession(path: string, init: RequestInit = {}): Promise<Response> {
   const send = () => fetch(path, { ...init, credentials: "same-origin" });
-
   const response = await send();
   if (response.status !== 401) return response;
   if (!(await refreshSession())) return response;

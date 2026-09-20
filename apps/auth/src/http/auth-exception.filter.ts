@@ -104,6 +104,7 @@ export class AuthExceptionFilter implements ExceptionFilter {
       correlationId, status: HttpStatus.INTERNAL_SERVER_ERROR,
       error: exception instanceof Error ? exception.constructor.name : typeof exception,
       message: exception instanceof Error ? exception.message : undefined,
+      stack: exception instanceof Error ? exception.stack : undefined,
     });
     return void response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ code: "internal_error", correlationId });
   }

@@ -5,14 +5,20 @@
  * A regra que atravessa todos eles: **a mensagem que o usuario ve nao diz o que
  * deu errado**. "Email nao existe" e "senha errada" precisam ser indistinguiveis
  * do lado de fora, senao o formulario de login vira uma consulta de quem tem
- * conta aqui. O motivo real vai so para o log.
+ * conta aqui. O motivo real vai para o log e para a auditoria.
  */
-export type SemanticInputCode = import("../credentials/password-policy").PasswordPolicyCode;
+export type SemanticInputCode =
+  | "password_length"
+  | "password_control"
+  | "password_context"
+  | "password_compromised"
+  | "invalid_phone"
+  | "channel_unavailable";
 
 export type ConflictCode =
   | "email_already_exists"
-  | "phone_already_exists"
-  | "subject_not_eligible"
+  | "invalid_status_transition"
+  | "would_remove_last_admin"
   | "already_initialized";
 
 export class AuthenticationFailedError extends Error {
@@ -22,13 +28,6 @@ export class AuthenticationFailedError extends Error {
 }
 
 export class AccessDeniedError extends Error {}
-
-/** Token valido, mas de um tipo que a rota nao aceita (ex.: guest em `/auth/me`). */
-export class TokenKindNotAcceptedError extends AccessDeniedError {
-  constructor(readonly tokenKind: string) {
-    super(`token kind not accepted: ${tokenKind}`);
-  }
-}
 
 export class SemanticInputError extends Error {
   constructor(readonly safeCode: SemanticInputCode) {
@@ -58,4 +57,3 @@ export class RequiredDependencyUnavailableError extends Error {
     super("required dependency unavailable", options);
   }
 }
-

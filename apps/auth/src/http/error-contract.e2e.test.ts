@@ -58,6 +58,11 @@ describe("HTTP error contract", () => {
     const response = await fetch(`${app.url}/testing/raise/boom`);
 
     expect(response.status).toBe(500);
+    expect(app.logger.events.at(-1)).toMatchObject({
+      error: "Error",
+      message: expect.stringContaining("leak-probe-9d3f"),
+      stack: expect.stringContaining("Error: unhandled failure leak-probe-9d3f"),
+    });
     const correlationId = response.headers.get("x-correlation-id")!;
     expect(correlationId).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/);
     expect(await bytes(response)).toBe(`{"code":"internal_error","correlationId":"${correlationId}"}`);

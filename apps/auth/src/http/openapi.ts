@@ -21,18 +21,19 @@ const noContent = (description: string) => ({ description });
 const bearer = [{ bearerAuth: [] }];
 const errorResponses = {
   "400": json({ $ref: "#/components/schemas/ErrorCode" }, "Requisição inválida: JSON malformado, campo desconhecido ou formato incompatível."),
-  "401": noContent("Credenciais ou token inválido, expirado ou revogado."),
+  "401": noContent("Credenciais, token de acesso ou token de convite inválido, expirado ou revogado."),
   "429": noContent("Limite de tentativas excedido. Consulte o cabeçalho `Retry-After` antes de tentar novamente."),
   "500": json({ $ref: "#/components/schemas/InternalError" }, "Falha inesperada. Informe o `correlationId` ao suporte."),
 } as const;
 const protectedErrors = {
   ...errorResponses,
-  "403": noContent("O token é válido, mas não autoriza esta operação — inclusive quando é de um tipo que a rota não aceita."),
+  "403": noContent("O token é válido, mas não autoriza esta operação."),
 } as const;
 
 const string = (description: string, maxLength?: number): OpenApiSchema => ({ type: "string", description, ...(maxLength === undefined ? {} : { maxLength }) });
 const token = (description: string): OpenApiSchema => ({ ...string(description, 1024), format: "password", writeOnly: true });
 const dateTime = (description: string): OpenApiSchema => ({ type: "string", format: "date-time", description });
+const directPermissionsSchema = { type: "array", maxItems: 64, description: "Concessões ou negações diretas, sem duplicar uma permissão.", items: { type: "object", required: ["permission", "effect"], additionalProperties: false, properties: { permission: { type: "string", pattern: "^(?:\\*:manage|(?:event|tag|user|invite|role|grant):(?:create|read|update|delete|manage))$", description: "Permissão concreta no formato `recurso:ação` ou o superadmin `*:manage`." }, effect: { type: "string", enum: ["allow", "deny"] } } } } as const;
 
 const operations: Record<string, Record<string, OpenApiOperation>> = {
   "/health/live": {
@@ -44,17 +45,14 @@ const operations: Record<string, Record<string, OpenApiOperation>> = {
   "/.well-known/jwks.json": {
     get: { summary: "Publica as chaves públicas JWT", description: "JWKS usado por serviços consumidores para validar tokens de acesso emitidos pelo Auth. A resposta pode retornar `304` quando o `ETag` enviado em `If-None-Match` ainda for atual.", tags: ["Infraestrutura"], parameters: [{ name: "If-None-Match", in: "header", required: false, schema: { type: "string" }, description: "ETag da versão JWKS já armazenada." }], responses: { "200": json({ $ref: "#/components/schemas/Jwks" }, "Conjunto atual de chaves públicas."), "304": noContent("O conjunto não mudou desde o ETag informado.") } },
   },
+  "/auth/invites/inspect": {
+    post: { summary: "Inspeciona um convite", description: "Valida um token de convite antes do cadastro e devolve apenas os dados seguros para exibição: nome, email mascarado e expiração.", tags: ["Convites públicos"], requestBody: request("InspectInviteRequest"), responses: { "201": json({ $ref: "#/components/schemas/InviteInspection" }), ...errorResponses } },
+  },
+  "/auth/invites/accept": {
+    post: { summary: "Aceita o convite com senha", description: "Define a senha e ativa o convidado em uma transação, sem emitir sessão. Depois é necessário fazer login.", tags: ["Convites públicos"], requestBody: request("AcceptInviteRequest"), responses: { "201": json({ $ref: "#/components/schemas/InviteAccepted" }), "422": json({ $ref: "#/components/schemas/ErrorCode" }, "Senha não atende à política de segurança."), ...errorResponses } },
+  },
   "/auth/login": {
-    post: { summary: "Faz login por senha", description: "Confere email e senha e devolve o par de tokens da nova sessão em uma única ida. Email inexistente, senha errada e conta que ainda não pode entrar respondem o mesmo `401`, no mesmo tempo.", tags: ["Autenticação pública"], requestBody: request("LoginRequest"), responses: { "200": json({ $ref: "#/components/schemas/SessionTokens" }, "Sessão emitida."), ...errorResponses } },
-  },
-  "/auth/signup": {
-    post: { summary: "Conclui o signup de administrador", description: "Recebe o token do link de signup em `Authorization: Bearer` (só um token `token_use: signup` é aceito) e ativa a conta: grava email, telefone (normalizado para E.164, não verificado), nome e senha, concede o papel `admin` e abre a primeira sessão. O link é de uso único: consumido, revogado, vencido ou de uma conta que já não está pendente, responde `401`.", tags: ["Autenticação pública"], security: bearer, requestBody: request("SignupRequest"), responses: { "201": json({ $ref: "#/components/schemas/SignupResult" }, "Conta ativada e sessão emitida."), "409": json({ $ref: "#/components/schemas/ErrorCode" }, "`email_already_exists` ou `phone_already_exists`."), "422": json({ $ref: "#/components/schemas/ErrorCode" }, "Senha fora da política: `password_length`, `password_control`, `password_context`, `password_uppercase`, `password_digit` ou `password_symbol`."), ...protectedErrors } },
-  },
-  "/auth/guests": {
-    post: { summary: "Emite um link de guest", description: "Só administrador. Cria um guest (linha própria em `users`, `status = guest`, sem credenciais) que pode **ler** os dados de um único usuário ativo por **uma hora**, e devolve o link com o token `token_use: guest`. Sem sessão e sem refresh token: passada a hora, emite-se outro link.\n\nContrato de verificação para consumidores: aceitar o token só em rotas de leitura; exigir que `subj` seja o dono dos dados lidos, conferido contra `users.observes_user_id`; recusá-lo em qualquer rota que espere token de usuário.", tags: ["Guests"], security: bearer, requestBody: request("IssueGuestRequest"), responses: { "201": json({ $ref: "#/components/schemas/GuestLink" }, "Link emitido."), "404": json({ $ref: "#/components/schemas/ErrorCode" }, "O usuário alvo não existe."), "409": json({ $ref: "#/components/schemas/ErrorCode" }, "`subject_not_eligible`: o alvo não está ativo (placeholder de signup, conta inativa ou outro guest)."), ...protectedErrors } },
-  },
-  "/auth/guests/{guestId}": {
-    delete: { summary: "Revoga um guest", description: "Só administrador. Apaga o guest. O token já emitido expira sozinho em até uma hora; consumidores que conferem `subj` contra `users.observes_user_id` passam a recusá-lo imediatamente.", tags: ["Guests"], security: bearer, parameters: [{ name: "guestId", in: "path", required: true, schema: { type: "string", minLength: 1, maxLength: 64 }, description: "ID do guest devolvido na emissão." }], responses: { "204": noContent("Guest apagado."), "404": json({ $ref: "#/components/schemas/ErrorCode" }, "Não há guest com esse id."), ...protectedErrors } },
+    post: { summary: "Faz login com email e senha", description: "Confere email e senha e emite diretamente uma sessão. Credenciais incorretas não revelam se o email existe.", tags: ["Autenticação pública"], requestBody: request("LoginRequest"), responses: { "201": json({ $ref: "#/components/schemas/SessionTokens" }), ...errorResponses } },
   },
   "/auth/token/refresh": {
     post: { summary: "Renova tokens de sessão", description: "Troca um refresh token válido por um novo par de tokens. O refresh token enviado é consumido; reutilizá-lo é tratado como tentativa inválida.", tags: ["Sessões"], requestBody: request("RefreshTokenRequest"), responses: { "200": json({ $ref: "#/components/schemas/RefreshTokens" }), ...errorResponses } },
@@ -68,25 +66,55 @@ const operations: Record<string, Record<string, OpenApiOperation>> = {
   "/auth/me": {
     get: { summary: "Consulta a sessão atual", description: "Relê usuário, sessão e permissões efetivas no banco. Isso garante que uma sessão revogada ou uma conta desativada não seja considerada válida apenas pelo JWT.", tags: ["Sessões"], security: bearer, responses: { "200": json({ $ref: "#/components/schemas/CurrentUser" }), ...protectedErrors } },
   },
+  "/auth/admin/invites": {
+    post: { summary: "Cria um convite", description: "Cria um usuário pendente, define seus papéis e permissões diretas e devolve o link de convite. Exige token de um superadministrador.", tags: ["Administração"], security: bearer, requestBody: request("CreateInviteRequest"), responses: { "201": json({ $ref: "#/components/schemas/CreatedInvite" }), "409": json({ $ref: "#/components/schemas/ErrorCode" }, "Já existe uma conta para o email informado."), ...protectedErrors } },
+  },
+  "/auth/admin/users": {
+    get: { summary: "Lista usuários", description: "Lista resumos seguros de usuários com paginação por cursor. Senhas, telefones, tokens, convites e códigos de recuperação nunca são retornados.", tags: ["Administração"], security: bearer, parameters: [{ name: "cursor", in: "query", required: false, schema: { type: "string", maxLength: 64 }, description: "Cursor retornado pela página anterior." }, { name: "limit", in: "query", required: false, schema: { type: "integer", minimum: 1, maximum: 100, default: 25 }, description: "Quantidade de resultados, de 1 a 100." }], responses: { "200": json({ $ref: "#/components/schemas/UserPage" }), ...protectedErrors } },
+  },
+  "/auth/admin/users/{userId}/status": {
+    patch: adminUserOperation("Atualiza status do usuário", "Altera o status para `active`, `suspended` ou `disabled`. Não existe transição para `pending_invite`: o aceite do convite é quem ativa a conta.", "ChangeUserStatusRequest", "UserStatus"),
+  },
+  "/auth/admin/users/{userId}/access": {
+    put: adminUserOperation("Substitui o acesso do usuário", "Substitui integralmente os papéis e as permissões diretas do usuário. Use `deny` para negar explicitamente uma permissão concedida por um papel.", "ReplaceUserAccessRequest", "UserAccess"),
+  },
+  "/auth/admin/users/{userId}/invite/reissue": {
+    post: adminUserOperation("Reemite um convite", "Invalida o convite pendente anterior e devolve um novo link de convite para o usuário indicado.", undefined, "CreatedInvite", "200"),
+  },
+  "/auth/admin/users/{userId}/invite": {
+    delete: adminUserOperation("Revoga convite", "Revoga o convite pendente do usuário indicado. A conta não poderá concluir o cadastro com o link revogado.", undefined, undefined, "204"),
+  },
+  "/auth/admin/users/{userId}/revoke-sessions": {
+    post: adminUserOperation("Revoga sessões de um usuário", "Encerra todas as sessões ativas do usuário indicado, sem alterar seus papéis ou status.", undefined, undefined, "204"),
+  },
 };
 
 function request(schema: string, description = "Dados da operação.") {
   return { required: true, description, content: { "application/json": { schema: { $ref: `#/components/schemas/${schema}` } } } };
 }
 
+function adminUserOperation(summary: string, description: string, requestSchema?: string, responseSchema?: string, status = "200"): OpenApiOperation {
+  return {
+    summary, description, tags: ["Administração"], security: bearer,
+    parameters: [{ name: "userId", in: "path", required: true, schema: { type: "string", minLength: 1, maxLength: 64 }, description: "Identificador do usuário alvo." }],
+    ...(requestSchema === undefined ? {} : { requestBody: request(requestSchema) }),
+    responses: { [status]: status === "204" ? noContent("Operação concluída.") : json({ $ref: `#/components/schemas/${responseSchema}` }), ...protectedErrors },
+  };
+}
 
 export const authOpenApiDocument = {
   openapi: "3.1.1",
   info: {
     title: "Braid Auth API",
     version: "1.0.0",
-    description: "API de identidade do Braid: login por senha e sessões.\n\nRotas protegidas usam `Authorization: Bearer <token>`.\n\n## Verificação de tokens por consumidores\n\nTodo token é um JWT EdDSA verificável offline pelo `/.well-known/jwks.json` (cache por `kid`). O campo `token_use` decide o que o token pode fazer — nunca o `typ` do cabeçalho:\n\n| `token_use` | Vida | Claims | Aceito em |\n| --- | --- | --- | --- |\n| `user` | 900 s | `iss aud sub sid jti iat exp token_use perms denies roles` | rotas de usuário |\n| `signup` | 3600 s | `iss aud sub jti iat exp token_use` | só `POST /auth/signup` |\n| `guest` | 3600 s | `iss aud sub subj jti iat exp token_use perms` | só leituras sobre os dados de `subj` |\n\nRegras para guest: (1) recusar em qualquer rota que espere token de usuário, refresh incluído; (2) aceitar apenas métodos de leitura, decidido no guard; (3) exigir que o dono dos dados seja `subj` e que `subj` bata com `users.observes_user_id` relido no momento — um guest revogado não tem mais linha; (4) opcionalmente, recusar `jti` revogado. Token sem `token_use` conhecido é inválido. As claims são exatas por tipo: claim a mais ou a menos invalida o token. Todas as respostas carregam `X-Correlation-Id`; use-o para rastrear falhas. Campos de segredo são apenas de escrita e nunca voltam nas respostas.",
+    description: "API de identidade do Braid: convites, login por senha, sessões e administração de acessos.\n\nRotas protegidas usam `Authorization: Bearer <accessToken>`. Todas as respostas carregam `X-Correlation-Id`; use-o para rastrear falhas. Campos de segredo são apenas de escrita e nunca voltam nas respostas.",
   },
   tags: [
     { name: "Infraestrutura", description: "Sondas de saúde e descoberta de chaves públicas." },
-    { name: "Autenticação pública", description: "Login por email e senha, sem sessão existente." },
-    { name: "Guests", description: "Acesso de leitura por uma hora sobre os dados de um usuário, sem conta." },
+    { name: "Convites públicos", description: "Fluxo de cadastro iniciado por um convite." },
+    { name: "Autenticação pública", description: "Login por email e senha sem sessão existente." },
     { name: "Sessões", description: "Ciclo de vida e consulta da sessão autenticada." },
+    { name: "Administração", description: "Gestão de usuários e acessos, exclusiva de superadministradores." },
   ],
   paths: operations,
   components: {
@@ -96,15 +124,23 @@ export const authOpenApiDocument = {
       InternalError: { type: "object", required: ["code", "correlationId"], properties: { code: { type: "string", enum: ["internal_error"] }, correlationId: string("Identificador para rastrear a falha.") } },
       Health: { type: "object", required: ["status"], properties: { status: { type: "string", enum: ["ok"] } } },
       Jwks: { type: "object", required: ["keys"], properties: { keys: { type: "array", items: { type: "object", additionalProperties: true } } } },
-      SignupRequest: object({ email: { ...string("Email da conta.", 320), format: "email" }, phone: string("Celular com código do país; espaços, hífens e parênteses são aceitos e removidos.", 32), name: string("Nome da pessoa.", 120), password: token("Senha: 12 a 128 caracteres, com maiúscula, dígito e símbolo, diferente do email e do nome."), passwordConfirmation: token("Repetição exata da senha.") }),
-      SignupResult: object({ userId: string("ID da conta ativada."), accessToken: string("JWT para autenticar rotas protegidas."), refreshToken: string("Token opaco para renovar a sessão."), accessTokenExpiresInSeconds: { type: "integer" }, refreshTokenExpiresAt: dateTime("Expiração do refresh token.") }),
-      IssueGuestRequest: object({ subjectUserId: string("ID do usuário cujos dados o guest poderá ler.", 64) }),
-      GuestLink: object({ guestId: string("ID do guest; use-o para revogar."), url: { ...string("Link com o token de guest no fragmento."), format: "uri" }, expiresAt: dateTime("Expiração do token: uma hora após a emissão.") }),
+      InspectInviteRequest: object({ token: token("Token secreto presente no link de convite.") }),
+      AcceptInviteRequest: object({ token: token("Token secreto presente no link de convite."), password: token("Senha inicial, validada pela política de segurança.") }),
       LoginRequest: object({ email: { ...string("Email da conta.", 320), format: "email" }, password: token("Senha da conta.") }),
       RefreshTokenRequest: object({ refreshToken: token("Refresh token da sessão que será renovada ou revogada.") }),
-      SessionTokens: object({ accessToken: string("JWT para autenticar rotas protegidas."), refreshToken: string("Token opaco para renovar a sessão."), accessTokenExpiresInSeconds: { type: "integer", description: "Vida útil do access token em segundos." }, refreshTokenExpiresAt: dateTime("Expiração do refresh token.") }),
+      CreateInviteRequest: object({ email: { ...string("Email do convidado.", 320), format: "email" }, name: string("Nome do convidado.", 120), roleKeys: { type: "array", maxItems: 16, uniqueItems: true, items: { type: "string", enum: ["admin", "member", "viewer"] }, description: "Papéis iniciais do usuário." }, directPermissions: directPermissionsSchema }),
+      ReplaceUserAccessRequest: object({ roleKeys: { type: "array", maxItems: 16, uniqueItems: true, items: { type: "string", enum: ["admin", "member", "viewer"] } }, directPermissions: directPermissionsSchema }),
+      ChangeUserStatusRequest: object({ status: { type: "string", enum: ["active", "suspended", "disabled"] } }),
+      InviteAccepted: object({accepted:{type:"boolean",enum:[true]}}),
+      InviteInspection: object({ name: string("Nome do convidado."), email: string("Email mascarado."), expiresAt: dateTime("Momento de expiração do convite.") }),
+      SessionTokens: object({ accessToken: string("JWT para autenticar rotas protegidas."), refreshToken: string("Token opaco para renovar a sessão."), accessTokenExpiresInSeconds: { type: "integer", description: "Vida útil do access token em segundos." }, refreshTokenExpiresAt: dateTime("Expiração do refresh token.") }, ["accessToken", "refreshToken"]),
       RefreshTokens: object({ accessToken: string("Novo JWT de acesso."), refreshToken: string("Novo refresh token; substitui o anterior.") }),
-      CurrentUser: object({ userId: string("ID do usuário."), email: { type: ["string", "null"], description: "Email da conta." }, name: string("Nome da conta."), sessionId: string("ID da sessão atual."), roles: { type: "array", items: { type: "string" } }, permissions: { type: "array", items: { type: "string" } }, denies: { type: "array", items: { type: "string" } } }),
+      CurrentUser: object({ userId: string("ID do usuário."), email: string("Email da conta."), name: string("Nome da conta."), sessionId: string("ID da sessão atual."), roles: { type: "array", items: { type: "string" } }, permissions: { type: "array", items: { type: "string" } }, denies: { type: "array", items: { type: "string" } } }),
+      CreatedInvite: object({ userId: string("ID do usuário convidado."), inviteLink: { ...string("Link com token secreto de convite."), format: "uri" }, expiresAt: dateTime("Expiração do convite.") }),
+      UserStatus: object({ userId: string("ID do usuário."), status: { type: "string", enum: ["active", "suspended", "disabled"] } }),
+      UserAccess: object({ userId: string("ID do usuário."), roleKeys: { type: "array", items: { type: "string" } }, directPermissions: directPermissionsSchema }),
+      UserPage: object({ users: { type: "array", items: { $ref: "#/components/schemas/AdminUserSummary" }, description: "Resumos seguros de usuários." }, nextCursor: { type: ["string", "null"], description: "Cursor para a próxima página; `null` quando não há mais resultados." } }),
+      AdminUserSummary: object({ id: string("ID do usuário."), email: string("Email da conta."), name: string("Nome da conta."), status: { type: "string", enum: ["pending_invite", "active", "suspended", "disabled"] }, roleKeys: { type: "array", items: { type: "string" } }, directPermissions: directPermissionsSchema, createdAt: dateTime("Criação da conta."), updatedAt: dateTime("Última atualização da conta.") }),
     },
   },
 } as const;

@@ -8,8 +8,8 @@
 #   docker build -f apps/api/Dockerfile -t timeline-api .
 #
 # Nenhum segredo entra na imagem. loadRootEnv() procura .env na raiz, nao
-# encontra dentro do container e segue em frente — DATABASE_URL e as chaves do
-# Firebase chegam pelo environment do container.
+# encontra dentro do container e segue em frente — DATABASE_URL e o endereço
+# do serviço de autenticação chegam pelo environment do container.
 
 FROM node:24-bookworm-slim AS base
 ENV PNPM_HOME="/pnpm"
@@ -80,12 +80,14 @@ RUN node -e "require.resolve('@nestjs/common', { paths: ['/app/packages/persiste
 COPY --from=builder /app/packages/entities/dist ./packages/entities/dist
 COPY --from=builder /app/packages/persistence/dist ./packages/persistence/dist
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
+COPY --from=pruner /app/scripts/onepassword ./scripts/onepassword
+COPY --from=pruner /app/.env.example ./.env.example
 
 # 127.0.0.1 dentro do container nao e alcancavel de fora dele, entao o bind
 # padrao da API nao serve aqui. Trocar para 0.0.0.0 liga o enableCors() do
 # main.ts: quem passa a limitar a exposicao e a rede do compose, nao o bind.
 ENV API_HOST=0.0.0.0
-ENV PORT=3001
+ENV API_PORT=3001
 EXPOSE 3001
 USER node
-CMD ["node", "apps/api/dist/main.js"]
+CMD ["node", "scripts/onepassword/exec.mjs", "node", "apps/api/dist/main.js"]

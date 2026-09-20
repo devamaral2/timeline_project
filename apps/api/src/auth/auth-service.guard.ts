@@ -20,19 +20,10 @@ export interface AuthenticatedRequest extends Request {
   actor?: AuthenticatedUser;
 }
 
-/**
- * Autentica delegando a GET /auth/me do apps/auth e anexa o ator ao request,
- * de onde o decorator `@CurrentUser()` o le. Header sem bearer nem chega a
- * rede. Falha de rede, timeout ou 5xx do apps/auth viram 503 — nao se
- * confundem com o 401 de uma credencial recusada.
- */
 @Injectable()
 export class AuthServiceGuard implements CanActivate {
-  // Sem parametro de construtor: com emitDecoratorMetadata o Nest tentaria
-  // injetar o client pelo DI, e nenhum modulo o registra.
   private client?: Pick<AuthServiceClient, "me">;
 
-  /** Para testes: um guard que fala com o client dado em vez do apps/auth real. */
   static using(client: Pick<AuthServiceClient, "me">): AuthServiceGuard {
     const guard = new AuthServiceGuard();
     guard.client = client;
@@ -66,9 +57,6 @@ export class AuthServiceGuard implements CanActivate {
 }
 
 let shared: AuthServiceClient | undefined;
-
-// Cada controller ganha sua instancia do guard; o client (e a leitura do env)
-// e um so.
 function sharedClient(): AuthServiceClient {
   shared ??= new AuthServiceClient();
   return shared;

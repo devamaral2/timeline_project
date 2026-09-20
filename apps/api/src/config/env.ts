@@ -1,14 +1,12 @@
 import { z } from "zod";
 
 const serverSchema = z.object({
-  PORT: z.coerce.number().int().positive().default(3001),
+  API_PORT: z.coerce.number().int().positive().default(3001),
   // Interface em que o Nest escuta. O padrao — e o unico valor de producao — e
   // o loopback: quem fala com o backend e o Next, na mesma maquina. Em
   // desenvolvimento, `0.0.0.0` deixa o app mobile rodando no celular alcancar a
   // API pela rede local.
   API_HOST: z.string().min(1).default("127.0.0.1"),
-  // Host do apps/auth, chamado em GET /auth/me a cada requisicao autenticada.
-  // O default aponta para o AUTH_PORT padrao do apps/auth (127.0.0.1:3002).
   AUTH_SERVICE_URL: z.string().url().default("http://127.0.0.1:3002"),
   OPENROUTER_API_KEY: z.string().min(1).optional(),
   OPENROUTER_MODEL: z.string().min(1).optional(),
@@ -20,8 +18,9 @@ const serverSchema = z.object({
 export type ServerEnv = z.infer<typeof serverSchema>;
 
 /**
- * Em arquivos .env uma chave sem valor (`PORT=`) chega como string vazia, e nao
- * como ausente. Tratar as duas do mesmo jeito evita que `PORT=` vire a porta 0.
+ * Em arquivos .env uma chave sem valor (`API_PORT=`) chega como string vazia, e
+ * nao como ausente. Tratar as duas do mesmo jeito evita que `API_PORT=` vire a
+ * porta 0.
  */
 function orUndefined(value: string | undefined): string | undefined {
   return value === "" ? undefined : value;
@@ -31,7 +30,7 @@ export function getServerEnv(source?: Record<string, string | undefined>): Serve
   const read = (key: keyof ServerEnv) => orUndefined(source?.[key] ?? process.env[key]);
 
   return serverSchema.parse({
-    PORT: read("PORT"),
+    API_PORT: read("API_PORT"),
     API_HOST: read("API_HOST"),
     AUTH_SERVICE_URL: read("AUTH_SERVICE_URL"),
     OPENROUTER_API_KEY: read("OPENROUTER_API_KEY"),
