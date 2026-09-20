@@ -67,7 +67,6 @@ export function applyLocalOverrides(environment, overrides) {
   env.DATABASE_URL = `postgresql://${user}:${password}@${host}/${database}`;
   env.AUTH_DATABASE_URL = `postgresql://${user}:${password}@${host}/${authDatabase}`;
   env.AUTH_DATABASE_MIGRATION_URL = env.AUTH_DATABASE_URL;
-  env.AUTH_TEST_DATABASE_URL = env.AUTH_DATABASE_URL;
   // O browser fala com o gateway do Auth. A API continua sendo um destino
   // interno, usado somente pelo Auth através de API_SERVICE_URL.
   env.BACKEND_URL = `http://127.0.0.1:${overrides.AUTH_PORT ?? env.AUTH_PORT}`;

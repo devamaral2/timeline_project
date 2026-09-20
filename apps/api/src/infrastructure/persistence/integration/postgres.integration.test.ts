@@ -40,7 +40,6 @@ import { PostgresWorkoutCatalog } from "../catalog/postgres-workout.catalog";
 import { PostgresRecurrenceRepository } from "../recurrences/repositories/postgres-recurrence.repository";
 import * as schema from "../database/schema";
 
-const RUN_INTEGRATION = process.env.RUN_POSTGRES_INTEGRATION === "1";
 
 interface CapturedQuery {
   sql: string;
@@ -61,7 +60,7 @@ function captureQueries(ctx: PostgresTestContext): {
   return { queries, db };
 }
 
-describe.runIf(RUN_INTEGRATION)("PostgreSQL schema", () => {
+describe("PostgreSQL schema", () => {
   let ctx: PostgresTestContext;
 
   beforeEach(async () => {
@@ -278,7 +277,7 @@ describe.runIf(RUN_INTEGRATION)("PostgreSQL schema", () => {
   });
 });
 
-describe.runIf(RUN_INTEGRATION)("PostgresEventRepository", () => {
+describe("PostgresEventRepository", () => {
   let ctx: PostgresTestContext;
   let repository: PostgresEventRepository;
 
@@ -542,7 +541,7 @@ describe.runIf(RUN_INTEGRATION)("PostgresEventRepository", () => {
 
 });
 
-describe.runIf(RUN_INTEGRATION)("PostgresTaskRepository", () => {
+describe("PostgresTaskRepository", () => {
   let ctx: PostgresTestContext;
   let tasks: PostgresTaskRepository;
 
@@ -730,7 +729,7 @@ describe.runIf(RUN_INTEGRATION)("PostgresTaskRepository", () => {
   });
 });
 
-describe.runIf(RUN_INTEGRATION)("PostgresFoodRepository and PostgresMealRepository", () => {
+describe("PostgresFoodRepository and PostgresMealRepository", () => {
   let ctx: PostgresTestContext;
   let foods: PostgresFoodRepository;
   let meals: PostgresMealRepository;
@@ -866,7 +865,7 @@ describe.runIf(RUN_INTEGRATION)("PostgresFoodRepository and PostgresMealReposito
   });
 });
 
-describe.runIf(RUN_INTEGRATION)("PostgresTimelineEventQuery and PostgresDailyOverviewQuery", () => {
+describe("PostgresTimelineEventQuery and PostgresDailyOverviewQuery", () => {
   let ctx: PostgresTestContext;
   let eventRepository: PostgresEventRepository;
   let timelineQuery: PostgresTimelineEventQuery;
@@ -1279,7 +1278,7 @@ describe.runIf(RUN_INTEGRATION)("PostgresTimelineEventQuery and PostgresDailyOve
   }, 60000);
 });
 
-describe.runIf(RUN_INTEGRATION)("PostgresRecurrenceRepository", () => {
+describe("PostgresRecurrenceRepository", () => {
   let ctx: PostgresTestContext;
   let recurrences: PostgresRecurrenceRepository;
   let events: PostgresEventRepository;

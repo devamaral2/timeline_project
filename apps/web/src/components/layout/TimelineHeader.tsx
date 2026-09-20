@@ -2,7 +2,6 @@
 
 import { Logo, Wordmark } from '@/components/brand/Logo';
 import { SessionButton } from '@/components/auth/SessionButton';
-import { NewEventButton } from '@/components/events/NewEventButton';
 import { VoiceEventButton } from '@/components/events/VoiceEventButton';
 import { DateNavigator } from '@/components/events/DateNavigator';
 import { WeekStrip } from '@/components/events/WeekStrip';
@@ -40,7 +39,6 @@ export function TimelineHeader({
 
           <div className="flex min-w-0 items-center justify-end gap-1 sm:gap-2">
             {user ? <VoiceEventButton /> : null}
-            {user ? <NewEventButton compactOnMobile /> : null}
             <SessionButton compactOnMobile />
           </div>
         </div>

@@ -1,12 +1,11 @@
 import { Client } from "pg";
-import { expect, it } from "vitest";
+import { expect, it, inject } from "vitest";
 import { PostgresAuditLog } from "./postgres-audit-log";
 import { ANONYMOUS_CONTEXT } from "../common/request-context";
 
-const databaseUrl = process.env.AUTH_TEST_DATABASE_URL;
-const run = databaseUrl ? it : it.skip;
+const databaseUrl = inject("authPostgresUrl");
 
-run("rejects secret-shaped audit metadata before persistence", async () => {
+it("rejects secret-shaped audit metadata before persistence", async () => {
   const client = new Client({ connectionString: databaseUrl });
   await client.connect();
   const audit = new PostgresAuditLog(client);

@@ -110,10 +110,3 @@ export function getMigrationEnv(source: EnvSource): { databaseMigrationUrl: stri
   if (!databaseMigrationUrl) throw new Error("AUTH_DATABASE_MIGRATION_URL is required for migrations");
   return Object.freeze({ databaseMigrationUrl });
 }
-
-export function getTestDatabaseUrl(source: EnvSource): string | undefined {
-  const value = source.AUTH_TEST_DATABASE_URL;
-  if (!value) return undefined;
-  if (source.NODE_ENV !== "test") throw new Error("AUTH_TEST_DATABASE_URL is allowed only in test");
-  return value;
-}

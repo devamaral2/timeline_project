@@ -7,9 +7,8 @@ import { PostgresScopedSqlQuery } from "../agent-sql/postgres-scoped-sql.query";
 /** O escopo normal: o ator e o dono dos dados. */
 const OWNER: ScopedSqlScope = { includeChat: true };
 
-const RUN_INTEGRATION = process.env.RUN_POSTGRES_INTEGRATION === "1";
 
-describe.runIf(RUN_INTEGRATION)("PostgresScopedSqlQuery", () => {
+describe("PostgresScopedSqlQuery", () => {
   let ctx: PostgresTestContext;
   let query: PostgresScopedSqlQuery;
 

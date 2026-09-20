@@ -2,9 +2,7 @@
 
 import { Bell, CircleUserRound } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { NewEventButton } from "@/components/events/NewEventButton";
 import { signOut, useCurrentUser } from "@/lib/session/use-session";
-import { requestAgendaRefresh } from "./agenda-refresh";
 import styles from "./mockup.module.css";
 
 export function AgendaHeaderActions({ live, darkMode, onThemeToggle }: { live: boolean; darkMode: boolean; onThemeToggle: () => void }) {
@@ -31,7 +29,6 @@ export function AgendaHeaderActions({ live, darkMode, onThemeToggle }: { live: b
 
   return (
     <>
-      <NewEventButton onCreated={requestAgendaRefresh} compactOnMobile className={`${styles.headerActionButton} ${styles.headerCreateButton}`} />
       <button type="button" className={styles.iconButton} aria-label="Notificações" title="Notificações" disabled>
         <Bell aria-hidden />
       </button>

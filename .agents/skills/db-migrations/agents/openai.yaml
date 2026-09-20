@@ -1,0 +1,4 @@
+interface:
+  display_name: "Database Migrations"
+  short_description: "Manage schema changes and local Postgres"
+  default_prompt: "Use $db-migrations to plan or apply a safe database migration."

@@ -25,6 +25,7 @@ export default defineWorkspace([
       environment: "jsdom",
       setupFiles: ["./src/test/setup.ts"],
       include: ["src/**/*.{test,spec}.{ts,tsx}"],
+      exclude: ["src/**/*.integration.{test,spec}.{ts,tsx}"],
     },
   },
   {
@@ -34,6 +35,7 @@ export default defineWorkspace([
       root: "./apps/api",
       environment: "node",
       include: ["src/**/*.{test,spec}.ts"],
+      exclude: ["src/**/*.integration.{test,spec}.ts"],
     },
   },
   {
@@ -43,6 +45,7 @@ export default defineWorkspace([
       root: "./apps/auth",
       environment: "node",
       include: ["src/**/*.{test,spec}.ts"],
+      exclude: ["src/**/*.integration.{test,spec}.ts"],
     },
   },
   {

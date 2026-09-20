@@ -53,9 +53,9 @@ Postgres (com uma base para a API e outra para o Auth).
    (ou o health check do servico) e um jeito rapido de confirmar que subiu
    antes de ir para o browser.
 
-4. **Abra o preview na porta certa desta worktree**, nao nos nomes fixos de
-   `.claude/launch.json` (esses tem portas estaticas — 3000/3002 — do
-   checkout principal e nao sabem da porta calculada aqui). Use:
+4. **Abra o preview na porta certa desta worktree**, lendo a porta calculada do
+   `.env.local`. Não use configurações fixas de outro agente, porque elas não
+   conhecem a porta desta worktree. Use:
    ```
    preview_start({ url: "http://localhost:<WEB_PORT-desta-worktree>" })
    ```

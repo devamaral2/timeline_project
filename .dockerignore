@@ -30,9 +30,18 @@ node_modules
 apps/mobile/android
 apps/mobile/ios
 
+# A fonte canônica é versionável, mas o estado local nunca entra no build.
+.agents/local
+.agents/state
+.agents/runtime
+.agents/secrets
+.agents/**/.env
+.agents/**/.env.local
+.agents/**/*.secret
+.agents/**/*.secrets
+
 .idea
 .claude
-.agents
 .superpowers
 skills
 my-tests

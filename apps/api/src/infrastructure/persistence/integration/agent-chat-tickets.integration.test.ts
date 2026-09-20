@@ -2,7 +2,6 @@ import { afterAll, beforeEach, describe, expect, test } from "vitest";
 import { PostgresAgentChatTicketStore } from "../agent-chat/postgres-agent-chat-ticket.store";
 import { createPostgresTestContext, type PostgresTestContext } from "../testing/postgres-test-context";
 
-const RUN_INTEGRATION = process.env.RUN_POSTGRES_INTEGRATION === "1";
 
 const grant = {
   actor: { userId: "admin-1", sessionId: "session-1" },
@@ -10,7 +9,7 @@ const grant = {
 };
 const hash = (seed: string) => seed.repeat(64).slice(0, 64);
 
-describe.runIf(RUN_INTEGRATION)("PostgresAgentChatTicketStore", () => {
+describe("PostgresAgentChatTicketStore", () => {
   let ctx: PostgresTestContext;
   let store: PostgresAgentChatTicketStore;
 

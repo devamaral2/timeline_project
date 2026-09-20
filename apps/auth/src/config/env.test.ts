@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { randomBytes } from "node:crypto";
 import { afterEach, describe, expect, it } from "vitest";
-import { getMigrationEnv, getRuntimeEnv, getTestDatabaseUrl, loadRootEnv, type EnvSource } from "./env";
+import { getMigrationEnv, getRuntimeEnv, loadRootEnv, type EnvSource } from "./env";
 import { findMonorepoRoot } from "./load-env";
 
 const kek = randomBytes(32).toString("base64url");
@@ -72,8 +72,5 @@ describe("auth environment", () => {
     expect(runtime).not.toHaveProperty("databaseMigrationUrl");
     expect(getMigrationEnv(source)).toEqual({ databaseMigrationUrl: "postgres://migration" });
     expect(() => getMigrationEnv(base())).toThrow();
-    expect(getTestDatabaseUrl(base())).toBeUndefined();
-    expect(getTestDatabaseUrl(base({ AUTH_TEST_DATABASE_URL: "postgres://test" }))).toBe("postgres://test");
-    expect(() => getTestDatabaseUrl(base({ NODE_ENV: "development", AUTH_TEST_DATABASE_URL: "postgres://test" }))).toThrow();
   });
 });

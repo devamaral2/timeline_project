@@ -1,21 +1,19 @@
-import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { Client } from "pg";
-import { afterEach, expect, it } from "vitest";
+import { expect, it, inject } from "vitest";
 import { migrateAuthDatabase } from "./migrate";
 import { AUTH_SCHEMA_VERSION } from "./readiness";
 
-const databaseUrl = process.env.AUTH_TEST_DATABASE_URL;
-const run = databaseUrl ? it : it.skip;
+const databaseUrl = inject("authPostgresUrl");
 
-run("applies every migration, is safe to repeat, and keeps audit_log append-only", async () => {
+it("applies every migration, is safe to repeat, and keeps audit_log append-only", async () => {
   const schema = `auth_test_migrations_${Date.now()}`;
   const client = new Client({ connectionString: databaseUrl });
   await client.connect();
   await client.query(`CREATE SCHEMA "${schema}"`);
   try {
     await migrateAuthDatabase({
-      migrationDatabaseUrl: databaseUrl!,
+      migrationDatabaseUrl: databaseUrl,
       migrationsFolder: resolve(process.cwd(), "apps/auth/drizzle"),
       migrationsSchema: `drizzle_${schema}`,
       schema,
@@ -23,7 +21,7 @@ run("applies every migration, is safe to repeat, and keeps audit_log append-only
     // Repetir a migracao e parte do runbook: o operador nao sabe de cor o que
     // ja foi aplicado, e a segunda execucao precisa ser um no-op.
     await migrateAuthDatabase({
-      migrationDatabaseUrl: databaseUrl!,
+      migrationDatabaseUrl: databaseUrl,
       migrationsFolder: resolve(process.cwd(), "apps/auth/drizzle"),
       migrationsSchema: `drizzle_${schema}`,
       schema,
@@ -48,8 +46,4 @@ run("applies every migration, is safe to repeat, and keeps audit_log append-only
     await client.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
     await client.end();
   }
-});
-
-it("ships a disposable Postgres compose definition", () => {
-  expect(existsSync(resolve(__dirname, "../../compose.test.yaml"))).toBe(true);
 });

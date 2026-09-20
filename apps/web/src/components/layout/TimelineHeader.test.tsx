@@ -18,9 +18,6 @@ vi.mock("@/components/events/WeekStrip", () => ({
 vi.mock("@/components/events/VoiceEventButton", () => ({
   VoiceEventButton: () => <button type="button">Voz</button>,
 }));
-vi.mock("@/components/events/NewEventButton", () => ({
-  NewEventButton: () => <button type="button">Novo</button>,
-}));
 vi.mock("@/components/auth/SessionButton", () => ({
   SessionButton: () => <button type="button">Conta</button>,
 }));

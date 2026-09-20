@@ -1,0 +1,47 @@
+schemaVersion: 2
+name: timeline-project-ai-infrastructure
+description: Contrato compartilhado de infraestrutura de IA deste repositório.
+sourceOfTruth: .agents
+
+# Componentes declarativos. O Codex descobre as skills diretamente em
+# `.agents/skills/`; este manifesto descreve o contrato, mas não executa nada.
+components:
+  skills:
+    path: skills
+    loading: explicit
+  hooks:
+    path: hooks
+    loading: explicit
+  mcp:
+    path: mcp
+    loading: explicit
+  plugins:
+    path: plugins
+    loading: explicit
+  browser:
+    path: browser
+    loading: explicit
+  environments:
+    path: environments
+    loading: explicit
+  adapters:
+    path: adapters
+    loading: documentation-only
+  worktrees:
+    path: worktrees
+    loading: explicit
+  scripts:
+    path: scripts
+    loading: explicit
+  docs:
+    path: docs
+    loading: documentation-only
+
+security:
+  secrets: external-only
+  localStateDirectories:
+    - .agents/local
+    - .agents/state
+    - .agents/runtime
+    - .agents/secrets
+  requireSanitizedExamples: true

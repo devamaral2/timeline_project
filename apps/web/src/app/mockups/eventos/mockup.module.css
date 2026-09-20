@@ -81,8 +81,6 @@
 .accountPopover { position: absolute; top: calc(100% + 8px); right: 0; z-index: 30; display: grid; min-width: 150px; gap: 4px; padding: 7px; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 28px #252b2d18; }
 .accountPopover button { padding: 9px 10px; color: var(--ink); text-align: left; border-radius: 8px; cursor: pointer !important; white-space: nowrap; }
 .accountPopover button:hover { background: var(--soft); }
-.headerActionButton { min-width: 40px !important; min-height: 40px !important; padding: 0 !important; border-radius: 50% !important; background: transparent !important; color: var(--ink) !important; box-shadow: none !important; }
-.headerActionButton:hover { background: var(--soft) !important; }
 .iconButton { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; color: #5f676a; border-radius: 50%; cursor: pointer !important; }
 .iconButton:hover { background: var(--soft); color: var(--ink); }
 .iconButton svg { width: 21px; height: 21px; }
@@ -175,12 +173,11 @@
 /* Ações compactas da agenda. */
 .headingActions { display: flex; align-items: center; gap: 7px; }
 .viewOptions { position: relative; }
-.viewOptions > summary, .headerCreate { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 12px; color: var(--ink); list-style: none; }
+.viewOptions > summary { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 12px; color: var(--ink); list-style: none; }
 .viewOptions > summary { cursor: pointer; }
 .viewOptions > summary::-webkit-details-marker { display: none; }
 .viewOptions > summary:hover, .viewOptions[open] > summary { background: var(--soft); }
 .viewOptions > summary svg { width: 21px; height: 21px; }
-.headerCreate svg { width: 25px; height: 25px; stroke-width: 1.6; }
 .viewModes { position: absolute; z-index: 10; top: 49px; right: 0; width: 224px; padding: 10px; border: 1px solid var(--line); border-radius: 16px; background: white; box-shadow: 0 10px 40px #252b2d12; }
 .viewModes legend { float: left; width: 100%; padding: 7px 10px 10px; font-size: 10px; color: var(--muted); }
 .viewModes button { display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px; border-radius: 9px; color: var(--muted); font-size: 12px; cursor: pointer; text-align: left; }
@@ -326,7 +323,6 @@
   .brandIcon img { width: 54px; height: 54px; }
   .wordmark { font-size: 26px; letter-spacing: -1.25px; }
   .headerActions { margin-left: auto; }
-  .headerCreateButton { display: none !important; }
   .avatar, .desktopSearch { display: none; }
   .primaryNav { display: none; }
   .main { padding: 26px 26px 110px; }

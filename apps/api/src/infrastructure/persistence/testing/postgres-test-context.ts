@@ -2,9 +2,15 @@ import { resolve } from "node:path";
 import { Pool } from "pg";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
-import { PostgreSqlContainer, type StartedPostgreSqlContainer } from "@testcontainers/postgresql";
+import { randomUUID } from "node:crypto";
+import { Client } from "pg";
+import { inject } from "vitest";
 import { sql } from "drizzle-orm";
 import * as schema from "../database/schema";
+
+declare module "vitest" {
+  interface ProvidedContext { apiPostgresUrl: string }
+}
 
 export interface PostgresTestContext {
   db: NodePgDatabase<typeof schema>;
@@ -36,16 +42,33 @@ const MUTABLE_TABLES = [
 ] as const;
 
 export async function createPostgresTestContext(): Promise<PostgresTestContext> {
-  const container: StartedPostgreSqlContainer = await new PostgreSqlContainer(
-    "postgres:17-alpine",
-  ).start();
-  const connectionString = container.getConnectionUri();
+  const adminUrl = inject("apiPostgresUrl");
+  const databaseName = `api_test_${randomUUID().replaceAll("-", "")}`;
+  const admin = new Client({ connectionString: adminUrl });
+  await admin.connect();
+  try {
+    await admin.query(`CREATE DATABASE "${databaseName}"`);
+  } finally {
+    await admin.end();
+  }
+  const databaseUrl = new URL(adminUrl);
+  databaseUrl.pathname = `/${databaseName}`;
+  const connectionString = databaseUrl.toString();
   const pool = new Pool({ connectionString });
   const db = drizzle(pool, { schema });
 
-  await migrate(db, {
-    migrationsFolder: resolve(__dirname, "../../../../drizzle"),
-  });
+  try {
+    await migrate(db, {
+      migrationsFolder: resolve(__dirname, "../../../../drizzle"),
+    });
+  } catch (error) {
+    await pool.end();
+    const cleanup = new Client({ connectionString: adminUrl });
+    await cleanup.connect();
+    try { await cleanup.query(`DROP DATABASE "${databaseName}" WITH (FORCE)`); }
+    finally { await cleanup.end(); }
+    throw error;
+  }
 
   async function reset(): Promise<void> {
     await pool.query(
@@ -55,7 +78,10 @@ export async function createPostgresTestContext(): Promise<PostgresTestContext> 
 
   async function stop(): Promise<void> {
     await pool.end();
-    await container.stop();
+    const cleanup = new Client({ connectionString: adminUrl });
+    await cleanup.connect();
+    try { await cleanup.query(`DROP DATABASE "${databaseName}" WITH (FORCE)`); }
+    finally { await cleanup.end(); }
   }
 
   return { db, pool, connectionString, reset, stop };

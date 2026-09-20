@@ -10,9 +10,8 @@ import { createPostgresTestContext, type PostgresTestContext } from "../testing/
 import { PostgresNoteRepository } from "../notes/repositories/postgres-note.repository";
 import { PostgresTaskRepository } from "../tasks/repositories/postgres-task.repository";
 
-const RUN_INTEGRATION = process.env.RUN_POSTGRES_INTEGRATION === "1";
 
-describe.runIf(RUN_INTEGRATION)("PostgresNoteRepository", () => {
+describe("PostgresNoteRepository", () => {
   let ctx: PostgresTestContext;
   let notes: PostgresNoteRepository;
   let tasks: PostgresTaskRepository;

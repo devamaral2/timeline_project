@@ -15,9 +15,8 @@ import { PostgresAgentConversationQuery } from "../agent-chat/queries/postgres-a
 import { PostgresAgentConversationRepository } from "../agent-chat/repositories/postgres-agent-conversation.repository";
 import { PostgresTaskRepository } from "../tasks/repositories/postgres-task.repository";
 
-const RUN_INTEGRATION = process.env.RUN_POSTGRES_INTEGRATION === "1";
 
-describe.runIf(RUN_INTEGRATION)("agent conversations", () => {
+describe("agent conversations", () => {
   let ctx: PostgresTestContext;
   let writer: PostgresEntityBatchWriter;
   let conversations: PostgresAgentConversationRepository;
