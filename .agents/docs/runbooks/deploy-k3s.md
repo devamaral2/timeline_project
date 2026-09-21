@@ -139,7 +139,7 @@ O domínio raiz não receberá site neste roteiro; usaremos subdomínios:
 
 | Nome                 | Destino                        | Acesso                                   |
 | -------------------- | ------------------------------ | ---------------------------------------- |
-| `web.SEUDOMINIO`     | Frontend web                   | Público, login pelo apps/auth             |
+| `timeline.SEUDOMINIO` | Frontend web                 | Público, login pelo apps/auth             |
 | `api.SEUDOMINIO`     | API                            | Público, endpoints exigem sessão do auth |
 | `auth.SEUDOMINIO`    | Serviço de identidade separado | Protegido por Access nesta fase          |
 | `grafana.SEUDOMINIO` | Painel de métricas             | Access + senha Grafana                   |
@@ -160,11 +160,13 @@ Referência: [registro de domínio na Cloudflare](https://developers.cloudflare.
 sudo apt update
 sudo apt install -y ca-certificates curl git jq openssl nano dnsutils
 umask 077
-sudo install -d -m 0750 -o "$(id -un)" -g "$(id -gn)" /opt/braid
+sudo install -d -m 0755 -o "$(id -un)" -g "$(id -gn)" /opt/braid
 mkdir -p /opt/braid/k8s /opt/braid/private /opt/braid/bin /opt/braid/backups
 chmod 700 /opt/braid/private /opt/braid/backups
+chmod 755 /opt/braid/bin
 
 read -rp "Domínio comprado, sem https://: " DOMAIN
+read -rp "ID do Environment de produção no 1Password: " OP_ENVIRONMENT_ID
 read -rp "Interface pública [eth0]: " PUB_IFACE
 PUB_IFACE=${PUB_IFACE:-eth0}
 read -rp "IP público IPv4 [179.199.138.185]: " PUBLIC_IP
@@ -174,8 +176,9 @@ PUBLIC_IP=${PUBLIC_IP:-179.199.138.185}
 ip link show "$PUB_IFACE"
 ip -4 addr show "$PUB_IFACE" | grep -F "$PUBLIC_IP"
 
-printf 'export DOMAIN=%q\nexport PUB_IFACE=%q\nexport PUBLIC_IP=%q\nexport KUBECONFIG=%q\n' \
-  "$DOMAIN" "$PUB_IFACE" "$PUBLIC_IP" /etc/rancher/k3s/k3s.yaml \
+[[ -n "$OP_ENVIRONMENT_ID" ]] || { echo "Environment do 1Password obrigatório"; exit 1; }
+printf 'export DOMAIN=%q\nexport OP_ENVIRONMENT_ID=%q\nexport PUB_IFACE=%q\nexport PUBLIC_IP=%q\nexport KUBECONFIG=%q\n' \
+  "$DOMAIN" "$OP_ENVIRONMENT_ID" "$PUB_IFACE" "$PUBLIC_IP" /etc/rancher/k3s/k3s.yaml \
   > /opt/braid/env.sh
 source /opt/braid/env.sh
 printf 'Web: https://timeline.%s\n' "$DOMAIN"
@@ -437,31 +440,47 @@ Esperado: clone concluído, `git status --short` sem alterações. É esse commi
 publicado no GitHub que será construído; alterações só no seu computador
 precisam ser commitadas/enviadas para fazerem parte do deploy.
 
+Instale os scripts versionados que serão usados pelo primeiro deploy e pelo
+GitHub Actions:
+
+```bash
+sudo install -m 0750 -o root -g root ops/production/check-auth-schema.sh /opt/braid/bin/check-auth-schema.sh
+sudo install -m 0750 -o root -g root ops/production/backup.sh /opt/braid/bin/backup.sh
+sudo install -m 0750 -o root -g root ops/production/braid-deploy-wrapper.sh /opt/braid/bin/braid-deploy
+sudo install -m 0755 -o root -g root ops/production/ssh-deploy-entry.sh /opt/braid/bin/ssh-deploy-entry
+sudo install -m 0644 -o root -g root ops/production/apps.template.yaml /opt/braid/k8s/apps.template.yaml
+```
+
+Crie a identidade exclusiva do GitHub Actions. Gere o par de chaves no seu
+computador, nunca na VPS, e coloque a chave privada em
+`production.PROD_SSH_PRIVATE_KEY` no GitHub:
+
+```bash
+sudo useradd --system --home-dir /var/lib/gha-deploy --create-home --shell /bin/bash gha-deploy || true
+sudo usermod --shell /bin/bash gha-deploy
+sudo install -d -m 0700 -o gha-deploy -g gha-deploy /var/lib/gha-deploy/.ssh
+read -rp "Chave pública do GitHub Actions: " GHA_PUBLIC_KEY
+[[ "$GHA_PUBLIC_KEY" =~ ^ssh-ed25519[[:space:]]+[A-Za-z0-9+/=]+([[:space:]].*)?$ ]] || { echo "Chave SSH inválida"; exit 1; }
+printf 'restrict,command="/opt/braid/bin/ssh-deploy-entry" %s\n' "$GHA_PUBLIC_KEY" | sudo tee /var/lib/gha-deploy/.ssh/authorized_keys >/dev/null
+sudo chown gha-deploy:gha-deploy /var/lib/gha-deploy/.ssh/authorized_keys
+sudo chmod 600 /var/lib/gha-deploy/.ssh/authorized_keys
+printf '%s\n' 'gha-deploy ALL=(root) NOPASSWD: /opt/braid/bin/braid-deploy *' | sudo tee /etc/sudoers.d/braid-github-deploy >/dev/null
+sudo chmod 440 /etc/sudoers.d/braid-github-deploy
+sudo visudo -cf /etc/sudoers.d/braid-github-deploy
+```
+
 ### Verificação obrigatória do auth antes de continuar
 
 **Servidor / Bash:**
 
 ```bash
-cat > /opt/braid/bin/check-auth-schema.sh <<'EOF'
-#!/usr/bin/env bash
-set -euo pipefail
-cd /opt/braid/src
-CODE_VERSION=$(sed -nE 's/^export const AUTH_SCHEMA_VERSION = ([0-9]+);/\1/p' apps/auth/src/db/readiness.ts)
-SQL_VERSION=$(sed -nE 's/.*SET version *= *([0-9]+).*/\1/p' apps/auth/drizzle/[0-9]*.sql | sort -n | tail -1)
-printf 'Auth: código espera %s; migrations deixam %s\n' "$CODE_VERSION" "$SQL_VERSION"
-if [ -z "$CODE_VERSION" ] || [ -z "$SQL_VERSION" ] || [ "$CODE_VERSION" != "$SQL_VERSION" ]; then
-  echo "PARE: schema e código do auth incompatíveis. Corrija no repositório antes de migrar."
-  exit 1
-fi
-EOF
-chmod 700 /opt/braid/bin/check-auth-schema.sh
 /opt/braid/bin/check-auth-schema.sh
 ```
 
-Na revisão inspecionada, este bloco **falha intencionalmente com 3 versus 5**.
-Não avance ao passo 8 até a correção do auth estar publicada e baixada.
-Números iguais são uma condição necessária, não prova suficiente: a correção
-precisa alinhar também os campos e fluxos e validar a integração com Postgres.
+O código e as migrations desta versão devem informar **6 versus 6**.
+Não avance ao passo 8 se os números divergirem. Números iguais são uma
+condição necessária, não prova suficiente: a correção precisa alinhar também os
+campos e fluxos e validar a integração com Postgres.
 Não edite uma migration já aplicada nem suprima arquivos para passar na checagem.
 
 ## 8. Configurar autenticação e credenciais externas
@@ -470,10 +489,10 @@ O web e a API usam o serviço `apps/auth`. O login do web usa sessão em
 cookies httpOnly; a API consulta `GET /auth/me` no serviço de autenticação.
 O Firebase do mobile não participa deste deploy web/API.
 
-Configure o Environment do 1Password conforme [o runbook de
-1Password](./onepassword.md) e forneça apenas `OP_SERVICE_ACCOUNT_TOKEN` e
-`OP_ENVIRONMENT_ID` ao processo. O carregador injeta as variáveis no início de cada
-serviço e não grava segredos em imagens ou manifests.
+Configure o Environment de produção conforme [o runbook de
+1Password](./onepassword.md). API e Auth recebem somente as credenciais do
+loader no Secret `onepassword-loader`; os valores da aplicação são resolvidos
+por scope dentro do Environment e não são gravados em imagens.
 
 No ambiente de produção, os valores essenciais do auth são:
 
@@ -482,8 +501,11 @@ AUTH_DATABASE_URL=postgres://...
 AUTH_ISSUER=https://auth.SEUDOMINIO
 AUTH_AUDIENCE=braid-api
 AUTH_PUBLIC_URL=https://auth.SEUDOMINIO
-AUTH_WEB_APP_URL=https://web.SEUDOMINIO
+AUTH_WEB_APP_URL=https://timeline.SEUDOMINIO
 AUTH_KEY_ENCRYPTION_KEY=...
+AUTH_INTERNAL_SERVICE_KEY=...
+API_SERVICE_URL=http://api.braid.svc.cluster.local:3001
+BACKEND_URL=http://api.braid.svc.cluster.local:3001
 ```
 
 Se a aplicação usar IA, configure também `OPENROUTER_API_KEY`,
@@ -491,7 +513,6 @@ Se a aplicação usar IA, configure também `OPENROUTER_API_KEY`,
 recursos de IA ficam indisponíveis, mas o serviço de autenticação não depende
 delas.
 
-## 9. Criar namespaces e Secrets
 ## 9. Criar namespaces e Secrets
 
 Namespace agrupa recursos. Secret guarda credenciais para que não precisem
@@ -513,6 +534,7 @@ AUTH_RUNTIME_PASSWORD=$(openssl rand -hex 24)
 RABBIT_PASSWORD=$(openssl rand -hex 24)
 GRAFANA_PASSWORD=$(openssl rand -hex 24)
 AUTH_KEY_ENCRYPTION_KEY=$(openssl rand -base64 32 | tr '+/' '-_' | tr -d '=')
+AUTH_INTERNAL_SERVICE_KEY=$(openssl rand -hex 32)
 
 printf '%s\n' \
   "PG_ADMIN_PASSWORD=$PG_ADMIN_PASSWORD" \
@@ -522,13 +544,40 @@ printf '%s\n' \
   "RABBIT_PASSWORD=$RABBIT_PASSWORD" \
   "GRAFANA_PASSWORD=$GRAFANA_PASSWORD" \
   "AUTH_KEY_ENCRYPTION_KEY=$AUTH_KEY_ENCRYPTION_KEY" \
+  "AUTH_INTERNAL_SERVICE_KEY=$AUTH_INTERNAL_SERVICE_KEY" \
   > /opt/braid/private/generated.env
 chmod 600 /opt/braid/private/generated.env
+
+read -rsp "Token da Service Account de produção no 1Password: " OP_TOKEN; echo
+printf '%s' "$OP_TOKEN" > /opt/braid/private/onepassword-token
+unset OP_TOKEN
+chmod 600 /opt/braid/private/onepassword-token
+kubectl -n braid create secret generic onepassword-loader \
+  --from-file=OP_SERVICE_ACCOUNT_TOKEN=/opt/braid/private/onepassword-token \
+  --from-literal=OP_ENVIRONMENT_ID="$OP_ENVIRONMENT_ID"
+
+read -rsp "Passphrase do backup cifrado: " BACKUP_PASSPHRASE; echo
+printf '%s' "$BACKUP_PASSPHRASE" > /opt/braid/private/backup-passphrase
+unset BACKUP_PASSPHRASE
+chmod 600 /opt/braid/private/backup-passphrase
 ```
 
 Abra `nano /opt/braid/private/generated.env`, copie os valores para seu
 gerenciador de senhas e saia sem alterar. **Não gere outras senhas se a conexão
 cair.** Para retomar, carregue o arquivo:
+
+No Environment `timeline-production`, monte as URLs usando as credenciais
+geradas e o Service interno do PostgreSQL:
+
+```dotenv
+DATABASE_URL=postgres://braid:<PG_APP_PASSWORD>@postgres.braid.svc.cluster.local:5432/braid
+AUTH_DATABASE_URL=postgres://auth_runtime:<AUTH_RUNTIME_PASSWORD>@postgres.braid.svc.cluster.local:5432/braid_auth
+```
+
+Inclua também `AUTH_KEY_ENCRYPTION_KEY`, `AUTH_INTERNAL_SERVICE_KEY`, os URLs
+internos/externos do passo 8 e `NODE_ENV=production`. O `PG_ADMIN_PASSWORD`,
+`AUTH_OWNER_PASSWORD` e as senhas de RabbitMQ/Grafana continuam nos Secrets
+locais correspondentes; não os reutilize como senha de login.
 
 ```bash
 source /opt/braid/env.sh
@@ -541,20 +590,6 @@ kubectl -n braid create secret generic postgres-env \
   --from-literal=PG_APP_PASSWORD="$PG_APP_PASSWORD" \
   --from-literal=AUTH_OWNER_PASSWORD="$AUTH_OWNER_PASSWORD" \
   --from-literal=AUTH_RUNTIME_PASSWORD="$AUTH_RUNTIME_PASSWORD"
-
-kubectl -n braid create secret generic api-env \
-  --from-literal=DATABASE_URL="postgres://braid:${PG_APP_PASSWORD}@postgres.braid.svc.cluster.local:5432/braid" \
-  --from-literal=AUTH_SERVICE_URL="http://auth.braid.svc.cluster.local:3002" \
-  --from-literal=RABBITMQ_URL="amqp://braid:${RABBIT_PASSWORD}@rabbitmq.braid.svc.cluster.local:5672"
-
-kubectl -n braid create secret generic auth-env \
-  --from-literal=NODE_ENV=production \
-  --from-literal=AUTH_DATABASE_URL="postgres://auth_runtime:${AUTH_RUNTIME_PASSWORD}@postgres.braid.svc.cluster.local:5432/braid_auth" \
-  --from-literal=AUTH_ISSUER="https://auth.$DOMAIN" \
-  --from-literal=AUTH_AUDIENCE=braid-api \
-  --from-literal=AUTH_PUBLIC_URL="https://auth.$DOMAIN" \
-  --from-literal=AUTH_WEB_APP_URL="https://web.$DOMAIN" \
-  --from-literal=AUTH_KEY_ENCRYPTION_KEY="$AUTH_KEY_ENCRYPTION_KEY"
 
 kubectl -n braid create secret generic rabbitmq-env \
   --from-literal=RABBITMQ_DEFAULT_USER=braid \
@@ -569,21 +604,10 @@ kubectl -n observability get secrets
 A chave PEM é extraída pelo `jq` com quebras de linha reais. Isso evita copiar
 aspas de um `.env` para dentro da chave. A API aceita esse formato.
 
-Se optou por IA, execute este bloco; caso contrário, avance ao passo 10:
-
-```bash
-read -rsp "OpenRouter API key: " OPENROUTER_API_KEY; echo
-read -rp "ID do modelo principal: " OPENROUTER_MODEL
-read -rp "ID do modelo do agente, com ferramentas: " OPENROUTER_AGENT_MODEL
-export OPENROUTER_API_KEY OPENROUTER_MODEL OPENROUTER_AGENT_MODEL
-jq -n '{stringData:{
-  OPENROUTER_API_KEY:env.OPENROUTER_API_KEY,
-  OPENROUTER_MODEL:env.OPENROUTER_MODEL,
-  OPENROUTER_AGENT_MODEL:env.OPENROUTER_AGENT_MODEL
-}}' > /opt/braid/private/api-ai-patch.json
-kubectl -n braid patch secret api-env --type merge --patch-file /opt/braid/private/api-ai-patch.json
-unset OPENROUTER_API_KEY OPENROUTER_MODEL OPENROUTER_AGENT_MODEL
-```
+Se optou por IA, adicione `OPENROUTER_API_KEY`, `OPENROUTER_MODEL` e
+`OPENROUTER_AGENT_MODEL` ao scope `api-runtime` do Environment de produção no
+1Password. Não use mais um patch de Secret Kubernetes: o loader da API resolve
+essas variáveis no boot.
 
 Não copie `private/` para o Git. Base64 em um Secret não é proteção por si só.
 O arquivo de senhas é necessário para recuperação: faça a cópia externa
@@ -783,7 +807,8 @@ docker build --target builder -f apps/auth/Dockerfile -t "braid-auth-migrate:$SH
 docker build -f apps/api/Dockerfile -t "braid-api:$SHA" .
 docker build -f apps/auth/Dockerfile -t "braid-auth:$SHA" .
 docker build --no-cache \
-  --secret id=web-env,src=/opt/braid/private/web-build.env \
+  --build-arg "OP_ENVIRONMENT_ID=$OP_ENVIRONMENT_ID" \
+  --secret id=onepassword-token,src=/opt/braid/private/onepassword-token \
   -f apps/web/Dockerfile -t "braid-web:$SHA" .
 ```
 
@@ -870,132 +895,7 @@ verificam se está pronto e se precisa reiniciar.
 **Servidor / Bash:**
 
 ```bash
-cat > /opt/braid/k8s/apps.template.yaml <<'EOF'
-apiVersion: apps/v1
-kind: Deployment
-metadata: {name: api, namespace: braid}
-spec:
-  replicas: 1
-  selector:
-    matchLabels: {app: api}
-  template:
-    metadata:
-      labels: {app: api}
-    spec:
-      containers:
-        - name: api
-          image: docker.io/library/timeline-api:REPLACE_SHA
-          imagePullPolicy: Never
-          envFrom:
-            - secretRef: {name: api-env}
-          ports:
-            - {containerPort: 3001}
-          startupProbe:
-            tcpSocket: {port: 3001}
-            periodSeconds: 5
-            failureThreshold: 60
-          readinessProbe:
-            tcpSocket: {port: 3001}
-            periodSeconds: 10
-          livenessProbe:
-            tcpSocket: {port: 3001}
-            periodSeconds: 20
-          resources:
-            requests: {cpu: 100m, memory: 256Mi}
-            limits: {cpu: "1", memory: 768Mi}
----
-apiVersion: v1
-kind: Service
-metadata: {name: api, namespace: braid}
-spec:
-  type: ClusterIP
-  selector: {app: api}
-  ports:
-    - {port: 3001, targetPort: 3001}
----
-apiVersion: apps/v1
-kind: Deployment
-metadata: {name: web, namespace: braid}
-spec:
-  replicas: 1
-  selector:
-    matchLabels: {app: web}
-  template:
-    metadata:
-      labels: {app: web}
-    spec:
-      containers:
-        - name: web
-          image: docker.io/library/timeline-web:REPLACE_SHA
-          imagePullPolicy: Never
-          ports:
-            - {containerPort: 3000}
-          startupProbe:
-            httpGet: {path: /, port: 3000}
-            periodSeconds: 5
-            failureThreshold: 60
-          readinessProbe:
-            httpGet: {path: /, port: 3000}
-            periodSeconds: 10
-          livenessProbe:
-            httpGet: {path: /, port: 3000}
-            periodSeconds: 20
-          resources:
-            requests: {cpu: 100m, memory: 256Mi}
-            limits: {cpu: "1", memory: 768Mi}
----
-apiVersion: v1
-kind: Service
-metadata: {name: web, namespace: braid}
-spec:
-  type: ClusterIP
-  selector: {app: web}
-  ports:
-    - {port: 3000, targetPort: 3000}
----
-apiVersion: apps/v1
-kind: Deployment
-metadata: {name: auth, namespace: braid}
-spec:
-  replicas: 1
-  selector:
-    matchLabels: {app: auth}
-  template:
-    metadata:
-      labels: {app: auth}
-    spec:
-      containers:
-        - name: auth
-          image: docker.io/library/timeline-auth:REPLACE_SHA
-          imagePullPolicy: Never
-          envFrom:
-            - secretRef: {name: auth-env}
-          ports:
-            - {containerPort: 3002}
-          startupProbe:
-            httpGet: {path: /health/live, port: 3002}
-            periodSeconds: 5
-            failureThreshold: 60
-          readinessProbe:
-            httpGet: {path: /health/ready, port: 3002}
-            periodSeconds: 15
-          livenessProbe:
-            httpGet: {path: /health/live, port: 3002}
-            periodSeconds: 20
-          resources:
-            requests: {cpu: 50m, memory: 192Mi}
-            limits: {cpu: 500m, memory: 512Mi}
----
-apiVersion: v1
-kind: Service
-metadata: {name: auth, namespace: braid}
-spec:
-  type: ClusterIP
-  selector: {app: auth}
-  ports:
-    - {port: 3002, targetPort: 3002}
-EOF
-
+cp /opt/braid/src/ops/production/apps.template.yaml /opt/braid/k8s/apps.template.yaml
 source /opt/braid/release.env
 sed "s/REPLACE_SHA/$SHA/g" /opt/braid/k8s/apps.template.yaml > /opt/braid/k8s/apps.yaml
 kubectl apply -f /opt/braid/k8s/apps.yaml
@@ -1393,11 +1293,47 @@ atrás do proxy isso pode agrupar clientes nos limites por IP. Por isso permanec
 atrás do Access para uso administrativo até a integração do produto e a política
 de proxies confiáveis serem tratadas no código.
 
+### Bootstrap e atualização única da senha do administrador do Auth
+
+Depois de publicar os três Deployments, crie o primeiro convite administrativo
+uma única vez. O comando só funciona enquanto ainda não existe administrador.
+
+```bash
+read -rp "Nome do administrador: " ADMIN_NAME
+read -rp "E-mail do administrador: " ADMIN_EMAIL
+kubectl -n braid exec deployment/auth -- \
+  node scripts/onepassword/exec.mjs node apps/auth/dist/cli/bootstrap-admin.cli.js \
+  --email "$ADMIN_EMAIL" --name "$ADMIN_NAME"
+unset ADMIN_NAME ADMIN_EMAIL
+```
+
+Abra o `invite=...` retornado no host `https://timeline.SEUDOMINIO` e aceite o
+convite com uma senha inicial. Depois de criar e ativar o administrador, faça
+uma única atualização explícita da senha. O comando aplica a política de senha, consulta
+o bloqueio de senhas comprometidas, grava auditoria e revoga as sessões atuais.
+Não passe a senha como argumento nem a coloque em um Secret do GitHub.
+
+**Servidor / Bash, com o pod do Auth pronto:**
+
+```bash
+read -rp "E-mail do administrador ativo: " ADMIN_EMAIL
+read -rsp "Nova senha: " ADMIN_PASSWORD; echo
+printf '%s\n' "$ADMIN_PASSWORD" | kubectl -n braid exec -i deployment/auth -- \
+  node scripts/onepassword/exec.mjs node apps/auth/dist/cli/update-password.cli.js \
+  --email "$ADMIN_EMAIL"
+unset ADMIN_EMAIL ADMIN_PASSWORD
+```
+
+Esperado: `password updated` e o número de sessões revogadas. Confirme login
+com a nova senha e confirme que a senha anterior não funciona.
+
 ## 20. Fazer backup e guardar fora da VPS
 
 Execute agora, **antes de armazenar dados importantes**, e repita diariamente
 enquanto estiver usando este deploy, além de antes de cada atualização.
-Este procedimento é manual; não há backup automático nem alerta configurado.
+O deploy do GitHub Actions executa este mesmo backup antes de cada release. A
+cópia para fora da VPS e a rotina diária continuam manuais; não há alerta
+configurado.
 
 Vamos guardar os dois bancos, papéis PostgreSQL, Secrets, manifests e configurações.
 A cópia cifrada precisa sair da VPS para sobreviver à perda do servidor.
@@ -1407,42 +1343,13 @@ conjunta entre bases.
 **Servidor / Bash:**
 
 ```bash
-cat > /opt/braid/bin/backup.sh <<'EOF'
-#!/usr/bin/env bash
-set -euo pipefail
-source /opt/braid/env.sh
-umask 077
-STAMP=$(date -u +%Y%m%dT%H%M%SZ)
-DEST="/opt/braid/backups/$STAMP"
-mkdir -p "$DEST"
-
-kubectl -n braid exec postgres-0 -- pg_dump -U postgres -d braid -Fc > "$DEST/braid.dump"
-kubectl -n braid exec postgres-0 -- pg_dump -U postgres -d braid_auth -Fc > "$DEST/braid_auth.dump"
-kubectl -n braid exec postgres-0 -- pg_dumpall -U postgres --globals-only > "$DEST/globals.sql"
-kubectl -n braid get secrets -o yaml > "$DEST/timeline-secrets.yaml"
-kubectl -n observability get secrets grafana-admin -o yaml > "$DEST/grafana-secret.yaml"
-kubectl -n edge get secrets cloudflared-token -o yaml > "$DEST/tunnel-secret.yaml"
-
-kubectl -n braid exec -i postgres-0 -- pg_restore --list < "$DEST/braid.dump" > "$DEST/braid-list.txt"
-kubectl -n braid exec -i postgres-0 -- pg_restore --list < "$DEST/braid_auth.dump" > "$DEST/auth-list.txt"
-
-tar -C /opt/braid -czf "$DEST/bundle.tar.gz" \
-  "backups/$STAMP/braid.dump" "backups/$STAMP/braid_auth.dump" \
-  "backups/$STAMP/globals.sql" "backups/$STAMP/timeline-secrets.yaml" \
-  "backups/$STAMP/grafana-secret.yaml" "backups/$STAMP/tunnel-secret.yaml" \
-  private k8s bin env.sh release.env k3s-version.txt monitoring-version.txt
-
-openssl enc -aes-256-cbc -salt -pbkdf2 -iter 200000 \
-  -in "$DEST/bundle.tar.gz" -out "$DEST/bundle.tar.gz.enc"
-sha256sum "$DEST/bundle.tar.gz.enc" > "$DEST/bundle.tar.gz.enc.sha256"
-printf 'Backup para copiar: %s\n' "$DEST"
-EOF
+cp /opt/braid/src/ops/production/backup.sh /opt/braid/bin/backup.sh
 chmod 700 /opt/braid/bin/backup.sh
 /opt/braid/bin/backup.sh
 ```
 
-O OpenSSL pede uma senha e sua confirmação. Guarde-a no gerenciador de senhas:
-sem ela não há recuperação. A listagem `pg_restore --list` detecta arquivos
+O script usa a passphrase root-only criada no passo 9. Guarde uma cópia dela no
+gerenciador de senhas: sem ela não há recuperação. A listagem `pg_restore --list` detecta arquivos
 inválidos, mas ainda não prova que uma restauração completa funciona.
 
 O diretório também contém dumps **sem cifra**, protegidos pelas permissões do
@@ -1478,6 +1385,7 @@ read -rp "Timestamp do backup, ex. 20260907T150000Z: " BACKUP_STAMP
 [[ "$BACKUP_STAMP" =~ ^[0-9]{8}T[0-9]{6}Z$ ]] || { echo "Timestamp inválido"; exit 1; }
 RESTORE_DIR=$(mktemp -d /opt/braid/backups/restore-check.XXXXXX)
 openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 \
+  -pass "file:/opt/braid/private/backup-passphrase" \
   -in "/opt/braid/backups/$BACKUP_STAMP/bundle.tar.gz.enc" \
   -out "$RESTORE_DIR/bundle.tar.gz"
 tar -xzf "$RESTORE_DIR/bundle.tar.gz" -C "$RESTORE_DIR"
@@ -1516,16 +1424,32 @@ de recuperação. Exporte dashboards personalizados do Grafana se criar algum.
 
 ## 21. Atualizar o código e voltar à imagem anterior
 
-O deploy deste roteiro é **manual**: um `git push` sozinho não altera a VPS.
-Isso evita exigir um runner GitHub Actions antes de você validar o primeiro
-deploy. CI pode automatizar a mesma sequência depois, mas não está instalado
-por estes passos e não requer abrir outro usuário no SSH.
+Depois do bootstrap, o caminho normal é o workflow
+`.github/workflows/deploy-production.yml`: um merge em `main` executa CI,
+aguarda a aprovação do Environment `production` e chama a VPS com o SHA exato
+do commit. O workflow não recebe as senhas da aplicação; o wrapper root-owned
+usa o Environment do 1Password já configurado na VPS.
+
+Configure no GitHub, em **Settings → Environments → production**:
+
+- Required reviewer para aprovar o deploy;
+- deployment branch restriction somente para `main`;
+- variables `PROD_HOST`, `PROD_PORT` e `PROD_USER=gha-deploy`;
+- secrets `PROD_SSH_PRIVATE_KEY` e `PROD_KNOWN_HOSTS`.
+
+`PROD_KNOWN_HOSTS` deve conter a chave pública verificada do host, não a saída
+de um `ssh-keyscan` executado automaticamente pelo workflow.
+
+O workflow serializa os deploys. Se a migration ou o rollout falhar, ele para
+sem tentar desfazer o banco. Só faça rollback da imagem se o schema continuar
+compatível com a release anterior.
 
 Antes de atualizar, execute o backup do passo 20, copie-o para fora e confira
 as migrations do commit novo. **Não aplique migrations que removem/renomeiam
 campos enquanto o código em uso ainda depende deles.** A versão inspecionada
-deste repositório contém essa incompatibilidade no auth, descrita no início;
-não é correto afirmar que todas as migrations atuais são aditivas.
+deste repositório está alinhada em 6 versus 6, mas contém migrations históricas
+e uma remoção de estruturas MFA inativas. A checagem de versão é necessária,
+mas não substitui a revisão de compatibilidade entre o schema e o código.
 
 **Servidor / Bash — depois de o commit estar compatível e publicado:**
 

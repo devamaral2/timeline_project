@@ -57,6 +57,7 @@ ARG OP_ENVIRONMENT_ID
 RUN --mount=type=secret,id=onepassword-token,target=/run/secrets/onepassword-token \
     OP_SERVICE_ACCOUNT_TOKEN="$(cat /run/secrets/onepassword-token)" \
     OP_ENVIRONMENT_ID="${OP_ENVIRONMENT_ID:?OP_ENVIRONMENT_ID must be supplied as a build argument}" \
+    ONEPASSWORD_SCOPE=web-build \
     node scripts/onepassword/exec.mjs turbo run build --filter=@repo/web
 
 # --- runner ----------------------------------------------------------------

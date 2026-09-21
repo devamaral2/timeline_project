@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readEnvKeys, resolveEnvironmentWithClient, applyLocalOverrides } from "./loader.mjs";
+import { readEnvKeys, resolveEnvironmentWithClient, applyLocalOverrides, scopeKeys } from "./loader.mjs";
 
 test("uses the env example as the complete allowlist", () => {
   const keys = readEnvKeys();
@@ -122,4 +122,10 @@ test("reports Environment API failures without starting the application", async 
     resolveEnvironmentWithClient(client, "timeline-local", ["DATABASE_URL"]),
     /não foi possível ler o Environment 'timeline-local': permission denied/,
   );
+});
+
+test("defines minimal production scopes without requiring mobile or test variables", () => {
+  assert.deepEqual(scopeKeys("api-runtime").required, ["DATABASE_URL", "AUTH_SERVICE_URL", "AUTH_INTERNAL_SERVICE_KEY"]);
+  assert.ok(scopeKeys("auth-runtime").required.includes("AUTH_KEY_ENCRYPTION_KEY"));
+  assert.deepEqual(scopeKeys("web-build").required, ["BACKEND_URL", "AUTH_SERVICE_URL"]);
 });
