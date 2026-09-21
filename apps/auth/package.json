@@ -12,6 +12,7 @@
     "rotate-signing-key": "tsx src/cli/rotate-signing-key.cli.ts",
     "bootstrap-admin": "tsx src/cli/bootstrap-admin.cli.ts",
     "create-admin": "tsx src/cli/create-admin.cli.ts",
+    "password:update": "tsx src/cli/update-password.cli.ts",
     "cleanup-auth-data": "tsx src/cli/cleanup-auth-data.cli.ts"
   },
   "dependencies": {

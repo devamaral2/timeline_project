@@ -55,6 +55,7 @@ RUN pnpm turbo run build --filter=@repo/auth
 # --- runner ----------------------------------------------------------------
 FROM base AS runner
 ENV NODE_ENV=production
+ENV ONEPASSWORD_SCOPE=auth-runtime
 COPY --from=pruner /app/out/json/ ./
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm install --frozen-lockfile --prod

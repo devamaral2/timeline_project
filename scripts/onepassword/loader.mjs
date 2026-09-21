@@ -11,6 +11,35 @@ const INITIAL_VALUES = {
   AUTH_SERVICE_URL: "http://127.0.0.1:3002",
   WEB_PORT: "3000",
 };
+const SCOPES = Object.freeze({
+  "api-runtime": {
+    required: ["DATABASE_URL", "AUTH_SERVICE_URL", "AUTH_INTERNAL_SERVICE_KEY"],
+    optional: ["OPENROUTER_API_KEY", "OPENROUTER_MODEL", "OPENROUTER_AGENT_MODEL"],
+  },
+  "auth-runtime": {
+    required: [
+      "NODE_ENV",
+      "AUTH_DATABASE_URL",
+      "AUTH_ISSUER",
+      "AUTH_AUDIENCE",
+      "AUTH_PUBLIC_URL",
+      "AUTH_WEB_APP_URL",
+      "AUTH_KEY_ENCRYPTION_KEY",
+      "AUTH_INTERNAL_SERVICE_KEY",
+      "API_SERVICE_URL",
+    ],
+    optional: [
+      "AUTH_PASSWORD_BLOCKLIST_TIMEOUT_MS",
+      "AUTH_PASSWORD_EMAIL_LIMIT",
+      "AUTH_PASSWORD_IP_LIMIT",
+      "AUTH_PASSWORD_WINDOW_SECONDS",
+    ],
+  },
+  "web-build": {
+    required: ["BACKEND_URL", "AUTH_SERVICE_URL"],
+    optional: ["NODE_ENV"],
+  },
+});
 const LOCAL_OVERRIDE_KEYS = new Set([
   "WEB_PORT",
   "API_PORT",
@@ -101,7 +130,7 @@ function readEnvironmentVariables(response, environmentId) {
 }
 
 /**
- * Resolve o contrato inteiro a partir de um 1Password Environment.
+ * Resolve o contrato solicitado a partir de um 1Password Environment.
  * O SDK retorna todas as variáveis do Environment em uma única consulta.
  */
 export async function resolveEnvironmentWithClient(client, environmentId, keys, fallbacks = {}) {
@@ -130,6 +159,12 @@ export async function resolveEnvironmentWithClient(client, environmentId, keys, 
   return keys.map((key) => [key, variables.get(key) || fallbacks[key]]);
 }
 
+export function scopeKeys(scope) {
+  const definition = SCOPES[scope];
+  if (!definition) throw error(`scope desconhecido: '${scope}'`);
+  return definition;
+}
+
 export async function resolveOnePasswordSecret(key, source = process.env) {
   if (!/^[A-Z][A-Z0-9_]*$/.test(key)) {
     throw error(`nome de variável inválido: '${key}'`);
@@ -153,19 +188,46 @@ export async function loadOnePasswordEnvironment(source = process.env) {
   if (!token) throw error(`${TOKEN_ENV} não está definido`);
   if (!environmentId) throw error(`${ENVIRONMENT_ID_ENV} não está definido`);
 
-  const keys = [...new Set(readEnvKeys())];
+  const scope = source.ONEPASSWORD_SCOPE;
+  const definition = scope ? scopeKeys(scope) : { required: [...new Set(readEnvKeys())], optional: [] };
+  const keys = [...new Set([...definition.required, ...definition.optional])];
   const client = await createClient(token);
   const localOverrides = readLocalOverrides();
-  const apiPort = localOverrides.API_PORT ?? source.API_PORT ?? INITIAL_VALUES.API_PORT;
-  const entries = await resolveEnvironmentWithClient(client, environmentId, keys, {
-    ...INITIAL_VALUES,
-    API_SERVICE_URL: `http://127.0.0.1:${apiPort}`,
-    ...localOverrides,
+  let variables;
+  try {
+    variables = readEnvironmentVariables(
+      await client.environments.getVariables(environmentId),
+      environmentId,
+    );
+  } catch (cause) {
+    if (cause instanceof Error && cause.message.startsWith("[1Password]")) throw cause;
+    throw error(`não foi possível ler o Environment '${environmentId}': ${cause?.message ?? cause}`);
+  }
+  const missing = definition.required.filter((key) => {
+    const value = variables.get(key) || localOverrides[key] || INITIAL_VALUES[key];
+    return typeof value !== "string" || value.length === 0;
   });
+  if (missing.length > 0) {
+    throw error(
+      `configuração incompleta no Environment '${environmentId}' para o scope '${scope ?? "default"}'; variável(is) ausente(s):\n- ${missing.join("\n- ")}`,
+    );
+  }
+  const entries = keys.flatMap((key) => {
+    const value = variables.get(key) || localOverrides[key] || INITIAL_VALUES[key];
+    return typeof value === "string" && value.length > 0 ? [[key, value]] : [];
+  });
+  const resolved = Object.fromEntries(entries);
+  const withFallbacks = {
+    ...INITIAL_VALUES,
+    API_SERVICE_URL: `http://127.0.0.1:${localOverrides.API_PORT ?? source.API_PORT ?? INITIAL_VALUES.API_PORT}`,
+    ...localOverrides,
+    ...resolved,
+  };
 
-  const resolved = { ...source, ...Object.fromEntries(entries) };
+  const environment = { ...source, ...withFallbacks };
+  delete environment.ONEPASSWORD_SCOPE;
   return {
-    env: applyLocalOverrides(resolved, localOverrides),
+    env: applyLocalOverrides(environment, localOverrides),
     keys,
     environmentId,
   };
