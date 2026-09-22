@@ -1,4 +1,4 @@
-import type { TimelineEventCardDto, TimelineEventPageDto } from "@repo/entities/contracts";
+import type { TimelineEventCardDto, TimelineEventPageDto } from "@repo/contracts";
 import { mergeTimelinePage, type TimelinePageState } from "@repo/timeline";
 
 /** Um dia ainda sem nenhuma pagina carregada. */

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import type { EventPriority } from "@repo/entities/contracts";
+import type { EventPriority, NotificationOffsetMinutes } from "@/lib/api/contracts";
 import {
   CommonFields,
   type EditEventFormProps,
@@ -10,6 +10,7 @@ import {
   type ItemOfType,
   StartedAtField,
   EventMarks,
+  NotificationOffsetsField,
   anyDecimalStep,
   fieldInputClass,
   fieldLabelClass,
@@ -34,6 +35,9 @@ export function SleepEditForm({
   const [finishedAt, setFinishedAt] = useState(toDatetimeLocalValue(event.finishedAt));
   const [missed, setMissed] = useState<boolean | undefined>(event.missed);
   const [priority, setPriority] = useState<EventPriority | undefined>(event.priority);
+  const [notifyOffsetsMinutes, setNotifyOffsetsMinutes] = useState<NotificationOffsetMinutes[] | undefined>(
+    event.notifyOffsetsMinutes,
+  );
   const { submit, submitting, error } = useSubmitEventUpdate({
     eventId: event.id,
     onUpdated,
@@ -57,6 +61,7 @@ export function SleepEditForm({
       finishedAt: fromDatetimeLocalValue(finishedAt),
       missed,
       priority,
+      notifyOffsetsMinutes,
     });
   }
 
@@ -113,6 +118,7 @@ export function SleepEditForm({
         priority={priority}
         onPriorityChange={setPriority}
       />
+      <NotificationOffsetsField value={notifyOffsetsMinutes} onChange={setNotifyOffsetsMinutes} />
 
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
 

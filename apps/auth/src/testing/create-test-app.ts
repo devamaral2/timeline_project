@@ -6,8 +6,8 @@ import { AppModule } from "../app.module";
 import { AccessDeniedError, AuthenticationFailedError, ConflictError, NotFoundError, RateLimitedError, RequiredDependencyUnavailableError, SemanticInputError } from "../common/errors";
 import { RecordingAuthLogger } from "../common/logger";
 import { getRuntimeEnv, type EnvSource } from "../config/env";
-import { HttpPwnedPasswordsGateway } from "../credentials/http-pwned-passwords.gateway";
-import type { PwnedPasswordsGateway } from "../credentials/pwned-passwords.gateway";
+import { HttpPwnedPasswordsGateway } from "../auth-core/password/http-pwned-passwords.gateway";
+import type { PwnedPasswordsGateway } from "../auth-core/password/pwned-passwords.gateway";
 import { configureHttpShell } from "../http/request-context.middleware";
 import { configureApiDocumentation } from "../http/openapi";
 
@@ -39,16 +39,13 @@ class TestContextController {
       case "semantic": throw new SemanticInputError("password_compromised");
       case "conflict": throw new ConflictError("would_remove_last_admin");
       case "not-found": throw new NotFoundError(`no such user ${LEAK_PROBE}`);
-      case "dependency": throw new RequiredDependencyUnavailableError(`twilio down ${LEAK_PROBE}`);
+      case "dependency": throw new RequiredDependencyUnavailableError(`provider down ${LEAK_PROBE}`);
       default: throw new Error(`unhandled failure ${LEAK_PROBE}`);
     }
   }
 }
 
-import { OTP_DELIVERY_GATEWAY, type OtpDeliveryGateway } from "../mfa/otp-delivery.gateway";
-
 export interface TestApp {
-  otpMessages: Array<{email:string;code:string}>;
   url: string;
   app: INestApplication;
   logger: RecordingAuthLogger;
@@ -56,7 +53,6 @@ export interface TestApp {
 }
 
 export interface TestAppOptions {
-  otpDelivery?: OtpDeliveryGateway;
   /**
    * O gateway do HIBP e o unico provider que sai para a internet num teste.
    * Por isso ele e trocado por padrao: sem isso todo teste que aceita convite
@@ -74,20 +70,16 @@ function testEnv(overrides: EnvSource = {}) {
     AUTH_PUBLIC_URL: "https://auth.example.test",
     AUTH_WEB_APP_URL: "https://web.example.test",
     AUTH_KEY_ENCRYPTION_KEY: randomBytes(32).toString("base64url"),
-    AUTH_OTP_PROVIDER: "fake",
-    AUTH_ALLOW_FAKE_OTP: "true",
+    AUTH_INTERNAL_SERVICE_KEY: "test-internal-service-key-32-bytes",
     ...overrides,
   });
 }
 
 export async function createTestApp(overrides: EnvSource = {}, options: TestAppOptions = {}): Promise<TestApp> {
-  const otpMessages: Array<{email:string;code:string}> = [];
   const module = await Test.createTestingModule({
     imports: [AppModule.forRoot(testEnv(overrides))],
     controllers: [TestContextController],
   })
-    .overrideProvider(OTP_DELIVERY_GATEWAY)
-    .useValue(options.otpDelivery ?? { send: async (input:{email:string;code:string}) => { otpMessages.push(input); } })
     .overrideProvider(HttpPwnedPasswordsGateway)
     .useValue(options.pwnedPasswords ?? { isCompromised: async () => false })
     .compile();
@@ -102,7 +94,6 @@ export async function createTestApp(overrides: EnvSource = {}, options: TestAppO
   if (!address || typeof address === "string") throw new Error("Test server did not expose a TCP address");
 
   return {
-    otpMessages,
     url: `http://127.0.0.1:${address.port}`,
     app,
     logger,

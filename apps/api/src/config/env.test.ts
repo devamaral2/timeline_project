@@ -11,10 +11,10 @@ test("reads server env from process env by key", () => {
   });
 });
 
-test("falls back to port 3001 when PORT is unset", () => {
-  vi.stubEnv("PORT", "");
+test("falls back to port 3001 when API_PORT is unset", () => {
+  vi.stubEnv("API_PORT", "");
 
-  expect(getServerEnv({ PORT: undefined }).PORT).toBe(3001);
+  expect(getServerEnv({ API_PORT: undefined }).API_PORT).toBe(3001);
 });
 
 test("binds to loopback unless API_HOST says otherwise", () => {

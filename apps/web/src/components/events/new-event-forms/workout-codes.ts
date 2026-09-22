@@ -1,4 +1,4 @@
-import type { WorkoutCode } from "@repo/entities/contracts";
+import type { WorkoutCode } from "@/lib/api/contracts";
 
 /**
  * Os rotulos dos codigos de treino, em portugues.

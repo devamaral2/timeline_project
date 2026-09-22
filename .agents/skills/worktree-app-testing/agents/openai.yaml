@@ -1,0 +1,4 @@
+interface:
+  display_name: "Worktree App Testing"
+  short_description: "Validate the app in an isolated worktree"
+  default_prompt: "Use $worktree-app-testing to validate the running app in an isolated worktree."

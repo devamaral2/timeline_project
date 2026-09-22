@@ -20,9 +20,24 @@ for (const fileName of [".env.local", ".env"]) {
  * entao o `Authorization: Bearer <idToken>` chega ao guard sem codigo de proxy
  * nosso no meio.
  */
-const backendUrl = process.env.BACKEND_URL ?? "http://127.0.0.1:3001";
+const backendUrl = process.env.BACKEND_URL ?? "http://127.0.0.1:3002";
+
+/**
+ * O apps/auth tambem so escuta em loopback. `/auth/*` e repassado a ele pelo
+ * mesmo caminho — e a mesma `AUTH_SERVICE_URL` que a API usa para chamar
+ * GET /auth/me: e um host so, visto de dentro do servidor.
+ *
+ * A sessao do navegador nao passa por aqui: login, refresh e logout vivem nos
+ * route handlers de `/api/session/*`, que guardam os tokens em cookies
+ * httpOnly em vez de devolve-los ao JavaScript da pagina.
+ */
+const authServiceUrl = process.env.AUTH_SERVICE_URL ?? "http://127.0.0.1:3002";
 
 const nextConfig: NextConfig = {
+  ...(process.env.E2E_NEXT_BUILD_ID ? { distDir: `.next-e2e-${process.env.E2E_NEXT_BUILD_ID}` } : {}),
+  // O navegador embutido acessa o dev server por 127.0.0.1; sem esta origem,
+  // o Next bloqueia os chunks HMR/client e a hidratação nunca acontece.
+  allowedDevOrigins: ["127.0.0.1"],
   /**
    * `standalone` faz o next build emitir .next/standalone: um server.js mais
    * apenas o node_modules que o tracing provou necessario. E o que deixa o
@@ -33,7 +48,10 @@ const nextConfig: NextConfig = {
    */
   output: "standalone",
   outputFileTracingRoot: resolve(__dirname, "../.."),
-  rewrites: () => [{ source: "/api/:path*", destination: `${backendUrl}/api/:path*` }],
+  rewrites: () => [
+    { source: "/api/:path*", destination: `${backendUrl}/api/:path*` },
+    { source: "/auth/:path*", destination: `${authServiceUrl}/auth/:path*` },
+  ],
 };
 
 export default nextConfig;

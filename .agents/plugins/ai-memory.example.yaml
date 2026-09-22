@@ -1,0 +1,11 @@
+name: ai-memory
+purpose: memória persistente e roteamento de observações por projeto
+auth:
+  source: local-service-or-external-connector
+  token: never-committed
+permissions:
+  - project-memory:read-write
+  - lifecycle-events:write
+privacy:
+  sanitize-secrets: required
+  fail-open-hooks: true

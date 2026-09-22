@@ -6,7 +6,11 @@ import {
   Moon,
   type LucideIcon,
 } from "lucide-react-native";
-import type { EventPriority, KnownEventItemType } from "@repo/entities/contracts";
+import type {
+  EventPriority,
+  KnownEventItemType,
+  NotificationOffsetMinutes,
+} from "@repo/contracts";
 import type { Theme } from "@repo/theme";
 
 /**
@@ -87,3 +91,17 @@ export const priorityLabels: Record<EventPriority, string> = {
   normal: "Normal",
   flexible: "Flexível",
 };
+
+const MINUTES_PER_DAY = 1440;
+
+/**
+ * Numero livre, nao lista fixa — mesma logica do web
+ * (`apps/web/src/components/events/event-visuals.ts`).
+ */
+export function notificationOffsetLabel(minutes: NotificationOffsetMinutes): string {
+  if (minutes % MINUTES_PER_DAY === 0) {
+    const days = minutes / MINUTES_PER_DAY;
+    return `${days} ${days === 1 ? "dia" : "dias"} antes`;
+  }
+  return `${minutes} ${minutes === 1 ? "minuto" : "minutos"} antes`;
+}

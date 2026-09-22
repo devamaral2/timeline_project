@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Enable pnpm
+        run: corepack enable
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Lint (existing baseline is non-blocking)
+        # The current web baseline has unrelated Biome violations. Keep the
+        # signal visible without preventing the first production pipeline from
+        # deploying until that baseline is cleaned up separately.
+        continue-on-error: true
+        run: pnpm lint
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Unit tests
+        run: pnpm run --silent test:unit:ai
+      - name: Build
+        run: pnpm exec turbo run build
+      - name: Install Playwright browser
+        run: pnpm exec playwright install --with-deps chromium
+      - name: E2E (isolated PostgreSQL and mocked external services)
+        run: pnpm run --silent test:e2e:ai

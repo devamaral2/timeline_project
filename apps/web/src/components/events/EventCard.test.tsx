@@ -1,15 +1,9 @@
 import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
-import type { TimelineEventCardDto } from "@repo/entities/contracts";
+import type { TimelineEventCardDto } from "@/lib/api/contracts";
 import { EventCard } from "./EventCard";
 
-vi.mock("firebase/auth", () => ({
-  getAuth: () => ({ currentUser: null }),
-}));
-vi.mock("@/lib/firebase/client-app", () => ({
-  getClientApp: () => ({}),
-}));
 
 function anEvent(overrides: Partial<TimelineEventCardDto> = {}): TimelineEventCardDto {
   return {
@@ -18,6 +12,7 @@ function anEvent(overrides: Partial<TimelineEventCardDto> = {}): TimelineEventCa
     primaryItemType: "training",
     itemTypes: ["training"],
     missed: false,
+    notifyOffsetsMinutes: [],
     name: "Academia",
     description: "",
     startedAt: "2026-08-19T18:00:00-03:00",

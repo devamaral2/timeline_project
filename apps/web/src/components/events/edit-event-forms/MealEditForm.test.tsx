@@ -1,13 +1,9 @@
 import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import type { EventDetailDto, EventItemDto, UpdateEventItemInput } from "@repo/entities/contracts";
+import type { EventDetailDto, EventItemDto, UpdateEventItemInput } from "@/lib/api/contracts";
 import { MealEditForm } from "./MealEditForm";
 
-vi.mock("firebase/auth", () => ({
-  getAuth: () => ({ currentUser: { getIdToken: async () => "test-token" } }),
-}));
-vi.mock("@/lib/firebase/client-app", () => ({ getClientApp: () => ({}) }));
 
 const mealItem: Extract<EventItemDto, { type: "meal" }> = {
   id: "meal-item",
@@ -76,6 +72,7 @@ const event: EventDetailDto = {
   tags: [],
   missed: false,
   priority: "normal",
+  notifyOffsetsMinutes: [],
   interruptions: [],
   revision: 7,
   primaryItemId: "meal-item",

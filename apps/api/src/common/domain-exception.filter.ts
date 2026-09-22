@@ -9,16 +9,35 @@ import {
 } from "@nestjs/common";
 import type { Response } from "express";
 import {
+  AgentConversationNotFoundError,
+  AgentConversationOwnershipError,
+  AgentConversationRevisionConflictError,
+  AgentConversationValidationError,
+  EntityBatchConflictError,
   EventNotFoundError,
   EventOwnershipError,
   EventRevisionConflictError,
   EventValidationError,
-} from "@repo/entities";
+  NoteNotFoundError,
+  NoteOwnershipError,
+  NoteRevisionConflictError,
+  NoteValidationError,
+  RecurrenceNotFoundError,
+  RecurrenceOwnershipError,
+  RecurrenceRevisionConflictError,
+  RecurrenceValidationError,
+  TaskHierarchyError,
+  TaskNotFoundError,
+  TaskOwnershipError,
+  TaskRevisionConflictError,
+  TaskValidationError,
+} from "../domain";
 import {
-  EventAgentUndecidedError,
+  AgentLimitReachedError,
+  AgentTargetForbiddenError,
   InvalidInputError,
   LlmUnavailableError,
-} from "../events/errors/event-agent.errors";
+} from "../api-core/agent/errors/agent.errors";
 
 /**
  * Traduz os erros de dominio para status HTTP. Substitui o `mutationErrorResponse`
@@ -51,12 +70,31 @@ export class DomainExceptionFilter implements ExceptionFilter {
   private statusFor(exception: unknown): number {
     if (exception instanceof HttpException) return exception.getStatus();
     if (exception instanceof InvalidInputError) return HttpStatus.BAD_REQUEST;
-    if (exception instanceof EventAgentUndecidedError) return HttpStatus.UNPROCESSABLE_ENTITY;
     if (exception instanceof LlmUnavailableError) return HttpStatus.BAD_GATEWAY;
+    if (exception instanceof AgentTargetForbiddenError) return HttpStatus.FORBIDDEN;
+    if (exception instanceof AgentLimitReachedError) return HttpStatus.UNPROCESSABLE_ENTITY;
+    if (exception instanceof EntityBatchConflictError) return HttpStatus.CONFLICT;
+    if (exception instanceof AgentConversationValidationError) return HttpStatus.BAD_REQUEST;
+    if (exception instanceof AgentConversationOwnershipError) return HttpStatus.FORBIDDEN;
+    if (exception instanceof AgentConversationNotFoundError) return HttpStatus.NOT_FOUND;
+    if (exception instanceof AgentConversationRevisionConflictError) return HttpStatus.CONFLICT;
+    if (exception instanceof NoteValidationError) return HttpStatus.BAD_REQUEST;
+    if (exception instanceof NoteOwnershipError) return HttpStatus.FORBIDDEN;
+    if (exception instanceof NoteNotFoundError) return HttpStatus.NOT_FOUND;
+    if (exception instanceof NoteRevisionConflictError) return HttpStatus.CONFLICT;
     if (exception instanceof EventValidationError) return HttpStatus.BAD_REQUEST;
     if (exception instanceof EventOwnershipError) return HttpStatus.FORBIDDEN;
     if (exception instanceof EventNotFoundError) return HttpStatus.NOT_FOUND;
     if (exception instanceof EventRevisionConflictError) return HttpStatus.CONFLICT;
+    if (exception instanceof TaskValidationError) return HttpStatus.BAD_REQUEST;
+    if (exception instanceof TaskHierarchyError) return HttpStatus.BAD_REQUEST;
+    if (exception instanceof TaskOwnershipError) return HttpStatus.FORBIDDEN;
+    if (exception instanceof TaskNotFoundError) return HttpStatus.NOT_FOUND;
+    if (exception instanceof TaskRevisionConflictError) return HttpStatus.CONFLICT;
+    if (exception instanceof RecurrenceValidationError) return HttpStatus.BAD_REQUEST;
+    if (exception instanceof RecurrenceOwnershipError) return HttpStatus.FORBIDDEN;
+    if (exception instanceof RecurrenceNotFoundError) return HttpStatus.NOT_FOUND;
+    if (exception instanceof RecurrenceRevisionConflictError) return HttpStatus.CONFLICT;
     return HttpStatus.INTERNAL_SERVER_ERROR;
   }
 }

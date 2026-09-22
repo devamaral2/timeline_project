@@ -1,0 +1,4 @@
+interface:
+  display_name: "Running Tests"
+  short_description: "Run and diagnose project test suites"
+  default_prompt: "Use $running-tests to run or diagnose the narrowest relevant test suite."

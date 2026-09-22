@@ -1,8 +1,9 @@
 import { expect, test } from "vitest";
-import type { TimelineEventCardDto } from "@repo/entities/contracts";
+import type { TimelineEventCardDto } from "@repo/contracts";
 import {
   MIN_DURATION_RATIO,
   durationRatioOf,
+  eventPositionOf,
   longestDurationOf,
   elapsedSecondsOf,
   formatStopwatch,
@@ -17,6 +18,7 @@ function event(startedAt: string, finishedAt: string | null): TimelineEventCardD
     primaryItemType: "routine",
     itemTypes: ["routine"],
     missed: false,
+    notifyOffsetsMinutes: [],
     name: "evento",
     description: "",
     startedAt,
@@ -30,6 +32,8 @@ function event(startedAt: string, finishedAt: string | null): TimelineEventCardD
 const short = event("2026-05-22T12:00:00.000Z", "2026-05-22T12:15:00.000Z");
 const long = event("2026-05-22T14:00:00.000Z", "2026-05-22T17:00:00.000Z");
 const running = event("2026-05-22T18:00:00.000Z", null);
+const upcoming = event("2026-05-23T09:00:00.000Z", "2026-05-23T10:00:00.000Z");
+const openFuture = event("2026-05-23T09:00:00.000Z", null);
 
 test("takes the longest finished event as the reference of the day", () => {
   expect(longestDurationOf([short, long, running])).toBe(180);
@@ -73,4 +77,26 @@ test("only a running event has a stopwatch", () => {
   const now = new Date("2026-05-22T18:30:00.000Z");
   expect(stopwatchOf(running, now)).toBe("30:00");
   expect(stopwatchOf(long, now)).toBeNull();
+});
+
+test("places an event against now in three states, not two", () => {
+  const now = new Date("2026-05-22T18:30:00.000Z");
+
+  expect(eventPositionOf(long, now)).toBe("past");
+  expect(eventPositionOf(running, now)).toBe("running");
+  expect(eventPositionOf(upcoming, now)).toBe("upcoming");
+  // Sem fim declarado, mas ainda nem comecou: e futuro, nao cronometro.
+  expect(eventPositionOf(openFuture, now)).toBe("upcoming");
+});
+
+test("an event already started with an end still ahead is running", () => {
+  const now = new Date("2026-05-22T15:00:00.000Z");
+
+  expect(eventPositionOf(long, now)).toBe("running");
+});
+
+test("an event that has not started has no stopwatch", () => {
+  const now = new Date("2026-05-22T18:30:00.000Z");
+
+  expect(stopwatchOf(openFuture, now)).toBeNull();
 });

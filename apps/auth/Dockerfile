@@ -55,11 +55,14 @@ RUN pnpm turbo run build --filter=@repo/auth
 # --- runner ----------------------------------------------------------------
 FROM base AS runner
 ENV NODE_ENV=production
+ENV ONEPASSWORD_SCOPE=auth-runtime
 COPY --from=pruner /app/out/json/ ./
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm install --frozen-lockfile --prod
 
 COPY --from=builder /app/apps/auth/dist ./apps/auth/dist
+COPY --from=pruner /app/scripts/onepassword ./scripts/onepassword
+COPY --from=pruner /app/.env.example ./.env.example
 
 # Mesmo motivo do bind da API: loopback dentro do container nao e alcancavel.
 ENV AUTH_HOST=0.0.0.0
@@ -73,4 +76,4 @@ HEALTHCHECK --interval=10s --timeout=3s --start-period=30s --retries=5 \
   CMD node -e "fetch('http://127.0.0.1:'+(process.env.AUTH_PORT||3002)+'/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
 USER node
-CMD ["node", "apps/auth/dist/main.js"]
+CMD ["node", "scripts/onepassword/exec.mjs", "node", "apps/auth/dist/main.js"]

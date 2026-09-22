@@ -1,16 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import type { TimelineEventCardDto } from "@repo/entities/contracts";
+import type { TimelineEventCardDto } from "@/lib/api/contracts";
 import {
   durationRatioOf,
   elapsedSecondsOf,
+  eventPositionOf,
+  type EventPosition,
   formatStopwatch,
   formatTime,
   MIN_DURATION_RATIO,
 } from "@repo/timeline";
 import { cn } from "@/lib/utils";
 import { useNow } from "@/lib/events/use-now";
+import { endLabelOf } from "@/lib/events/event-window";
 import { tagColorStyle } from "@/lib/tags/tag-color";
 import { DeleteEventDialog } from "./DeleteEventDialog";
 import { EditEventModal } from "./EditEventModal";
@@ -33,7 +36,6 @@ export function EventCard({ event, longestMinutes }: EventCardProps) {
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const visual = visualForItemType(event.primaryItemType);
-  const isRunning = !event.finishedAt;
 
   // Sem `overflow-hidden` no wrapper: o halo e o levantar do cartao no hover
   // precisam escapar da caixa. Quem corta e o proprio <article>.
@@ -42,7 +44,6 @@ export function EventCard({ event, longestMinutes }: EventCardProps) {
       <CardContent
         event={event}
         visual={visual}
-        isRunning={isRunning}
         longestMinutes={longestMinutes}
         onOpenDetails={() => setViewingDetails(true)}
       />
@@ -86,7 +87,6 @@ export function EventCard({ event, longestMinutes }: EventCardProps) {
 interface CardContentProps {
   event: TimelineEventCardDto;
   visual: ItemTypeVisual;
-  isRunning: boolean;
   longestMinutes: number;
   onOpenDetails: () => void;
 }
@@ -94,13 +94,15 @@ interface CardContentProps {
 function CardContent({
   event,
   visual: { Icon, label, text, bar },
-  isRunning,
   longestMinutes,
   onOpenDetails,
 }: CardContentProps) {
   const now = useNow();
-  // Null ate a hidratacao, e null tambem em tudo que ja terminou.
-  const elapsedSeconds = isRunning && now ? elapsedSecondsOf(event.startedAt, now) : null;
+  // Null ate a hidratacao: sem relogio nao da para saber se um evento sem fim
+  // declarado esta correndo agora ou e um compromisso de amanha.
+  const position: EventPosition | null = now ? eventPositionOf(event, now) : null;
+  const elapsedSeconds =
+    position === "running" && now ? elapsedSecondsOf(event.startedAt, now) : null;
 
   // A barra do evento em andamento cresce com o cronometro, na mesma escala do
   // dia — quando ele passa do mais longo do dia, ela para de crescer na borda.
@@ -117,7 +119,7 @@ function CardContent({
         "group relative w-full overflow-hidden rounded-xl border bg-card px-4 pb-3.5 pt-4 shadow-card transition-all duration-200",
         "hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-card-hover",
         // Um evento em andamento se destaca pela borda na cor da marca.
-        isRunning ? "border-brand/45" : "border-border",
+        position === "running" ? "border-brand/45" : "border-border",
       )}
     >
       {/*
@@ -152,7 +154,7 @@ function CardContent({
 
         <div className="flex flex-col items-end gap-1">
           <p className="flex items-center justify-end gap-2 text-[11.5px] font-medium leading-4 text-muted-foreground">
-            {isRunning ? (
+            {position === "running" ? (
               <span aria-hidden className="relative flex size-2">
                 <span className="absolute inline-flex size-full animate-ping rounded-full bg-brand/70" />
                 <span className="relative inline-flex size-2 rounded-full bg-brand" />
@@ -161,7 +163,7 @@ function CardContent({
             <span className="tabular-nums">
               {formatTime(event.startedAt)} <span aria-hidden>→</span>
               <span className="sr-only">até</span>{" "}
-              {event.finishedAt ? formatTime(event.finishedAt) : "em andamento"}
+              {endLabelOf(event, now)}
             </span>
           </p>
           {/*

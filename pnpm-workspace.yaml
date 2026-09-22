@@ -3,14 +3,15 @@ packages:
   - "packages/*"
 
 # Dependencias autorizadas a rodar scripts de instalacao. esbuild (via vitest) e
-# protobufjs (via firebase-admin) precisam disso para linkar/gerar seus binarios.
+# protobufjs (via testcontainers) precisam disso para linkar/gerar seus binarios.
 # cpu-features e ssh2 sao do tunel SSH opcional do @testcontainers/postgresql,
 # que nao usamos (falamos direto com o daemon Docker local).
 allowBuilds:
-  "@firebase/util": true
+  '@firebase/util': true
   "@openrouter/sdk": true
   '@scarf/scarf': false
   cpu-features: false
   esbuild: true
+  msw: false
   protobufjs: true
   ssh2: false

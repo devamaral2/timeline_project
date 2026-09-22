@@ -1,5 +1,5 @@
 import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
-import type { TimelineEventCardDto } from '@repo/entities/contracts';
+import type { TimelineEventCardDto } from '@repo/contracts';
 import { longestDurationOf } from '@repo/timeline';
 import { DaySummary } from '@/components/DaySummary';
 import { EventCard } from '@/components/EventCard';

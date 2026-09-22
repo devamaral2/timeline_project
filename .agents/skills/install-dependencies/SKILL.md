@@ -1,56 +1,65 @@
 ---
 name: install-dependencies
-description: Install or repair dependencies for this pnpm monorepo, including workspace additions, lockfile validation, and pnpm build-script policy errors.
+description: Install, add, or repair dependencies in this pnpm monorepo.
 ---
 
 # Install dependencies
 
-Use this skill when installing, repairing, or adding dependencies in this
-repository.
+Use `pnpm` from the repository root. The declared version is in the root
+`package.json` (`pnpm@11.24.0`). Prefer `corepack pnpm` so the repository's
+package-manager version is used.
 
-## Required workflow
+## Install or repair
 
-- Run commands from the repository root.
-- Read the root `package.json` and confirm its `packageManager` field before
-  installing.
-- This repository uses pnpm workspaces. Use `corepack pnpm` (or the declared
-  pnpm version), never `npm install` or `npm i`.
-- For a normal reproducible install, run:
+```bash
+corepack pnpm install --frozen-lockfile
+```
 
-  `corepack pnpm install --frozen-lockfile`
+Use `--frozen-lockfile` for reproducible installs. If the manifest changed,
+update the lockfile deliberately with `corepack pnpm install`, then run the
+frozen install again.
 
-- For a new dependency, add it to the owning workspace, not the root. For
-  example:
+## Add a dependency
 
-  `corepack pnpm --filter @repo/api add <package>`
+Add it to the workspace that owns the code, not the repository root:
 
-  Re-run the frozen install after the manifest and lockfile change.
+```bash
+corepack pnpm --filter @repo/api add <package>
+```
 
-## Known failure modes
+Use the appropriate workspace filter (`@repo/web`, `@repo/mobile`,
+`@repo/auth`, or a package under `packages/`). Commit the corresponding
+manifest and `pnpm-lock.yaml` changes.
 
-- If npm reports `Cannot read properties of null (reading 'matches')` from
-  `@npmcli/arborist`, treat it as npm trying to consume pnpm's
-  `node_modules/.pnpm` layout. Do not migrate the repository to npm or create
-  a competing `package-lock.json`; use pnpm from the root instead.
-- If pnpm reports `ERR_PNPM_IGNORED_BUILDS`, inspect the `allowBuilds` policy in
-  `pnpm-workspace.yaml`. Optional packages that must not run install scripts
-  should be listed there with `false`; packages that need native generation
-  should be explicitly allowed with `true`. Do not approve every package.
-- Never delete source files, lockfiles, or the whole workspace to repair an
-  install. `node_modules` is generated and may be recreated only after the
-  exact cause and target are confirmed.
+## Common failures
 
-## Verification
+- `ERR_PNPM_IGNORED_BUILDS`: inspect `allowBuilds` in `pnpm-workspace.yaml`.
+  Allow only packages that genuinely need install scripts; do not enable every
+  package.
+- Lockfile or resolution errors: run the install from the root and check that
+  `package.json` and `pnpm-lock.yaml` describe the intended change.
+- Missing or broken generated dependencies: confirm the exact workspace and
+  package-manager version before repairing anything.
 
-After installation or dependency changes:
+Do not delete source files, manifests, or `pnpm-lock.yaml` to fix an install.
+`node_modules` is generated and may be recreated only after the cause is
+understood.
 
-- Confirm the lockfile is clean and the target package resolves the new
-  module.
-- Run the affected workspace's `typecheck` and `build` scripts.
-- For repository-wide confidence, use the documented root test command:
-  `npm run --silent test:ai`.
-- Report any deprecation or peer-dependency warnings separately from actual
-  installation failures.
+## Verify
 
-Stop once installation succeeds and the affected workspace passes its focused
-checks; do not upgrade unrelated dependencies.
+After dependency changes, run the affected workspace's checks:
+
+```bash
+corepack pnpm --filter <workspace> typecheck
+corepack pnpm --filter <workspace> build
+```
+
+Run the focused test command when behavior changed:
+
+```bash
+corepack pnpm run --silent test:unit:ai
+```
+
+Stop when installation succeeds and the affected checks pass. Report warnings
+separately from actual installation failures, and do not upgrade unrelated
+dependencies.

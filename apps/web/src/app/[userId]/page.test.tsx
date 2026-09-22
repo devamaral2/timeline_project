@@ -1,20 +1,19 @@
-import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { expect, test, vi } from 'vitest';
 
-vi.mock('@/components/events/TimelineList', () => ({
-  TimelineList: ({ userId, todayKey }: { userId: string; todayKey: string }) => (
+vi.mock('../mockups/eventos/agenda-preview', () => ({
+  AgendaPreview: ({ userId, todayKey }: { userId: string; todayKey: string }) => (
     <p>
-      Timeline de {userId} em {todayKey}
+      Agenda de {userId} em {todayKey}
     </p>
   ),
 }));
 
 const { default: UserTimelinePage } = await import('./page');
 
-test('renders the timeline of the requested user without reading the backend', async () => {
-  // A pagina nao busca nada: a leitura exige o ID token do Firebase, que so
-  // existe no cliente. Se ela voltar a buscar, este teste quebra no fetch
+test('renders the agenda of the requested user without reading the backend', async () => {
+  // A pagina nao busca nada: a leitura acontece no cliente, que sabe renovar a
+  // sessao quando o access token expira. Se ela voltar a buscar, este teste quebra no fetch
   // global que ninguem preparou.
   const fetchSpy = vi.spyOn(globalThis, 'fetch');
 
@@ -22,7 +21,7 @@ test('renders the timeline of the requested user without reading the backend', a
     await UserTimelinePage({ params: Promise.resolve({ userId: 'user-1' }) }),
   );
 
-  expect(screen.getByText(/Timeline de user-1/)).toBeInTheDocument();
+  expect(screen.getByText(/Agenda de user-1/)).toBeInTheDocument();
   expect(fetchSpy).not.toHaveBeenCalled();
   fetchSpy.mockRestore();
 });

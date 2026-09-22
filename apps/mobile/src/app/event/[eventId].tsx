@@ -7,13 +7,19 @@ import type {
   MealItem,
   SleepItem,
   TrainingData,
-} from "@repo/entities/contracts";
+} from "@repo/contracts";
 import { formatTime } from "@repo/timeline";
 import { Message } from "@/components/Message";
 import { MissedBadge } from "@/components/MissedBadge";
 import { TagChip } from "@/components/TagChip";
-import { ICON_STROKE_WIDTH, priorityLabels, visualForItemType } from "@/components/event-visuals";
+import {
+  ICON_STROKE_WIDTH,
+  notificationOffsetLabel,
+  priorityLabels,
+  visualForItemType,
+} from "@/components/event-visuals";
 import { authedFetch } from "@/lib/api/client";
+import { endLabelOf } from "@/lib/events/event-window";
 import { useTheme } from "@/lib/theme/use-theme";
 
 export default function EventDetailScreen() {
@@ -89,7 +95,7 @@ function EventDetailBody({ event }: { event: EventDetailDto }) {
         </View>
         <Text style={[styles.meta, { color: theme.colors.mutedForeground }]}>
           {formatTime(event.startedAt)} →{" "}
-          {event.finishedAt ? formatTime(event.finishedAt) : "em andamento"}
+          {endLabelOf(event)}
         </Text>
       </View>
 
@@ -98,6 +104,12 @@ function EventDetailBody({ event }: { event: EventDetailDto }) {
       <Text style={[styles.meta, { color: theme.colors.mutedForeground }]}>
         Prioridade: {priorityLabels[event.priority]}
       </Text>
+
+      {event.notifyOffsetsMinutes.length > 0 ? (
+        <Text style={[styles.meta, { color: theme.colors.mutedForeground }]}>
+          Notificar: {event.notifyOffsetsMinutes.map((offset) => notificationOffsetLabel(offset)).join(", ")}
+        </Text>
+      ) : null}
 
       {event.description ? (
         <Text style={[styles.description, { color: theme.colors.cardForeground }]}>

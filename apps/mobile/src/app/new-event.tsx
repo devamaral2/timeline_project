@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import type { CreateEventInput } from "@repo/entities/contracts";
+import type { CreateEventInput } from "@repo/contracts";
 import { withAlpha } from "@repo/theme";
 import { Button } from "@/components/Button";
 import { TagInput } from "@/components/TagInput";

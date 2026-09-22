@@ -1,6 +1,8 @@
 .worktrees/
 node_modules/
 .next/
+.next-e2e-*/
+test-results/
 dist/
 .turbo/
 .idea/
@@ -8,4 +10,22 @@ dist/
 .env.local
 .env*.local
 *.tsbuildinfo
+.harness-eval/
+__pycache__/
+/output/
 
+next-env.d.ts
+
+# Infraestrutura compartilhada de IA: somente contrato e exemplos entram no Git.
+.agents/local/
+.agents/state/
+.agents/runtime/
+.agents/secrets/
+.agents/mcp/local/
+.agents/plugins/local/
+.agents/worktrees/instances/
+.agents/**/.env
+.agents/**/.env.local
+.agents/**/*.secret
+.agents/**/*.secrets
+.agents/**/.browser-profile/

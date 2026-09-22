@@ -1,0 +1,1 @@
+CREATE INDEX "tags_name_idx" ON "tags" USING btree ("name");

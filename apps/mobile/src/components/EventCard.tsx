@@ -1,8 +1,9 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import type { TimelineEventCardDto } from "@repo/entities/contracts";
+import type { TimelineEventCardDto } from "@repo/contracts";
 import {
   durationRatioOf,
   elapsedSecondsOf,
+  eventPositionOf,
   formatStopwatch,
   formatTime,
   MIN_DURATION_RATIO,
@@ -11,6 +12,7 @@ import { ICON_STROKE_WIDTH, visualForItemType } from "@/components/event-visuals
 import { withAlpha } from "@repo/theme";
 import { MissedBadge } from "@/components/MissedBadge";
 import { TagChip } from "@/components/TagChip";
+import { endLabelOf } from "@/lib/events/event-window";
 import { useNow } from "@/lib/events/use-now";
 import { cardShadow } from "@/lib/theme/surfaces";
 import { useTheme } from "@/lib/theme/use-theme";
@@ -31,13 +33,19 @@ interface EventCardProps {
  *
  * Ele se divide em dois de proposito: so o evento em andamento assina o relogio
  * de um segundo, e ele e o unico que precisa redesenhar a cada tique. Um dia
- * inteiro de eventos ja encerrados nao repinta nada.
+ * inteiro de eventos ja encerrados — ou de compromissos que ainda nao chegaram
+ * — nao repinta nada.
+ *
+ * A escolha le o relogio uma vez, sem assinar: um dia cheio de eventos futuros
+ * assinando o tique para mostrar `0:00` custaria um redesenho por segundo. O
+ * preco e que um evento que comeca com a tela aberta so ganha o cronometro no
+ * proximo redesenho, e ate la os dois cartoes sao iguais.
  */
 export function EventCard(props: EventCardProps) {
-  return props.event.finishedAt ? (
-    <Card {...props} elapsedSeconds={null} />
-  ) : (
+  return eventPositionOf(props.event, new Date()) === "running" ? (
     <RunningCard {...props} />
+  ) : (
+    <Card {...props} elapsedSeconds={null} />
   );
 }
 
@@ -121,7 +129,7 @@ function Card({ event, longestMinutes, elapsedSeconds, onPress }: CardProps) {
               ) : null}
               <Text style={[styles.time, { color: theme.colors.mutedForeground }]}>
                 {formatTime(event.startedAt)} →{" "}
-                {event.finishedAt ? formatTime(event.finishedAt) : "em andamento"}
+                {endLabelOf(event, new Date())}
               </Text>
             </View>
 

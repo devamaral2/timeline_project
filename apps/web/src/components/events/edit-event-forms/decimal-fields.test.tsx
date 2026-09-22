@@ -1,13 +1,11 @@
 import React from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
-import type { EventDetailDto, EventItemDto } from "@repo/entities/contracts";
+import type { EventDetailDto, EventItemDto } from "@/lib/api/contracts";
 import { MealEditForm } from "./MealEditForm";
 import { SleepEditForm } from "./SleepEditForm";
 import { TrainingEditForm } from "./TrainingEditForm";
 
-vi.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: null }) }));
-vi.mock("@/lib/firebase/client-app", () => ({ getClientApp: () => ({}) }));
 
 /**
  * Regressao: com o `step` padrao (1) do <input type="number">, qualquer decimal
@@ -24,6 +22,7 @@ const common = {
   tags: [],
   missed: false,
   priority: "normal" as const,
+  notifyOffsetsMinutes: [],
   interruptions: [],
   revision: 3,
 };

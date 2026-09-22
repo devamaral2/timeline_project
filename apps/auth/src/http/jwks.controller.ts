@@ -1,7 +1,7 @@
 import { Controller, Get, Headers, Inject, Res } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import type { Response } from 'express';
-import { SigningKeyService } from '../crypto/signing-key.service';
+import { SigningKeyService } from '../auth-core/security/signing-key.service';
 
 @Controller('.well-known')
 export class JwksController {

@@ -1,0 +1,13 @@
+# Exemplo ilustrativo. Não é carregado automaticamente e não contém credenciais.
+schemaVersion: 1
+servers:
+  ai-memory:
+    transport: http
+    urlFromEnv: AI_MEMORY_MCP_URL
+    authFromEnv: AI_MEMORY_MCP_TOKEN
+    requiredScopes:
+      - project-memory
+  custom-command:
+    transport: stdio
+    commandFromEnv: EXAMPLE_MCP_COMMAND
+    args: []

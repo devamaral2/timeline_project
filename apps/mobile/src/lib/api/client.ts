@@ -1,5 +1,5 @@
 import { env } from "@/config/env";
-import { getClientAuth } from "@/lib/firebase/app";
+import { session } from "@/lib/auth/session";
 
 /** Uma resposta de erro da API, com o status preservado para quem chama decidir. */
 export class ApiError extends Error {
@@ -21,16 +21,17 @@ export function apiUrl(path: string): string {
   return `${env.apiBaseUrl}${path}`;
 }
 
-async function request<T>(path: string, init: RequestInit): Promise<T> {
-  let response: Response;
+async function send(path: string, init: RequestInit): Promise<Response> {
   try {
-    response = await fetch(apiUrl(path), init);
+    return await fetch(apiUrl(path), init);
   } catch {
     // Fetch so rejeita quando nem chegou a falar com o servidor. Num celular
     // isso quase sempre e a API presa no loopback ou o aparelho em outra rede.
     throw new ApiError(0, "Nao foi possivel falar com a API. Verifique a rede e o MOBILE_API_URL.");
   }
+}
 
+async function read<T>(path: string, init: RequestInit, response: Response): Promise<T> {
   if (!response.ok) {
     throw new ApiError(response.status, `${init.method ?? "GET"} ${path} -> ${response.status}`);
   }
@@ -45,22 +46,36 @@ async function request<T>(path: string, init: RequestInit): Promise<T> {
  * token — o `userId` da rota so diz que tela abrir. Isto fica de pe para o
  * proximo endpoint que nao pedir sessao, e nao para reaproveitar nos que pedem.
  */
-export function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
-  return request<T>(path, init);
+export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
+  return read<T>(path, init, await send(path, init));
+}
+
+async function accessToken(renew: boolean): Promise<string> {
+  let token: string | null;
+  try {
+    token = renew ? await session.refresh() : await session.getAccessToken();
+  } catch {
+    throw new ApiError(0, "Nao foi possivel renovar a sessao. Verifique a rede e o MOBILE_AUTH_URL.");
+  }
+  if (!token) throw new ApiError(401, "Entre na sua conta para continuar.");
+  return token;
 }
 
 /**
- * Chamada autenticada. O ID token e pedido a cada chamada de proposito: o SDK
- * devolve o token em cache enquanto ele vale e renova sozinho quando expira, e
- * guardar uma copia nossa so criaria um jeito de mandar token vencido.
+ * Chamada autenticada com o access token do apps/auth. A sessao entrega o token
+ * ja renovado quando o `exp` passou; se a API ainda assim responder 401 (o
+ * relogio do aparelho adiantado, a sessao revogada em outro lugar), renova uma
+ * vez e repete. So um segundo 401 chega a quem chamou.
  */
 export async function authedFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const currentUser = getClientAuth().currentUser;
-  if (!currentUser) throw new ApiError(401, "Entre na sua conta para continuar.");
-
-  const token = await currentUser.getIdToken();
-  return request<T>(path, {
+  const withToken = (token: string): RequestInit => ({
     ...init,
     headers: { ...init.headers, Authorization: `Bearer ${token}` },
   });
+
+  let response = await send(path, withToken(await accessToken(false)));
+  if (response.status === 401) {
+    response = await send(path, withToken(await accessToken(true)));
+  }
+  return read<T>(path, init, response);
 }

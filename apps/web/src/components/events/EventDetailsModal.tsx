@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Pencil, Trash2, X } from "lucide-react";
 import { formatTime } from "@repo/timeline";
+import { endLabelOf } from "@/lib/events/event-window";
 import { tagColorStyle } from "@/lib/tags/tag-color";
 import { authedFetch } from "@/lib/api/authed-fetch";
 import type {
@@ -12,7 +13,7 @@ import type {
   MealItem,
   SleepItem,
   TrainingData,
-} from "@repo/entities/contracts";
+} from "@/lib/api/contracts";
 import { priorityLabels, visualForItemType } from "./event-visuals";
 import { MissedBadge } from "./MissedBadge";
 import { cn } from "@/lib/utils";
@@ -156,7 +157,7 @@ function EventDetailsBody({ event }: { event: EventDetailDto }) {
         </span>
         <span className="shrink-0">
           {formatTime(event.startedAt)} <span aria-hidden>→</span>{" "}
-          {event.finishedAt ? formatTime(event.finishedAt) : "em andamento"}
+          {endLabelOf(event, new Date())}
         </span>
       </div>
 

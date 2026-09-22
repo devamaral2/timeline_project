@@ -5,7 +5,7 @@ import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { authedFetch } from "@/lib/api/authed-fetch";
 import { tagAccentStyle, tagColorStyle } from "@/lib/tags/tag-color";
-import type { TagSuggestionDto } from "@repo/entities/contracts";
+import type { TagSuggestionDto } from "@/lib/api/contracts";
 import { fieldLabelClass } from "./field-styles";
 
 interface TagInputProps {

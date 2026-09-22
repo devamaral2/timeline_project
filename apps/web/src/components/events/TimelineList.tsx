@@ -1,13 +1,13 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { TimelineEventPageDto } from '@repo/entities/contracts';
+import type { TimelineEventPageDto } from '@/lib/api/contracts';
 import { dayEventsUrl, mediumDate, mergeTimelinePage } from '@repo/timeline';
 import type { TimelinePageState } from '@repo/timeline';
 import { TimelineHeader } from '@/components/layout/TimelineHeader';
 import { outlineButtonClass } from '@/components/ui/button-styles';
 import { authedFetch } from '@/lib/api/authed-fetch';
-import { useAuthState } from '@/lib/firebase/use-current-user';
+import { useSessionState } from '@/lib/session/use-session';
 import { DayColumn } from './DayColumn';
 
 interface TimelineListProps {
@@ -22,7 +22,7 @@ type LoadState = 'idle' | 'loading' | 'failed';
 const EMPTY_PAGE: TimelinePageState = { items: [] };
 
 export function TimelineList({ userId, todayKey }: TimelineListProps) {
-  const { user, ready } = useAuthState();
+  const { user, ready } = useSessionState();
   const [selectedDayKey, setSelectedDayKey] = useState(todayKey);
   const [page, setPage] = useState<TimelinePageState>(EMPTY_PAGE);
   const [loadState, setLoadState] = useState<LoadState>('loading');
@@ -50,8 +50,8 @@ export function TimelineList({ userId, todayKey }: TimelineListProps) {
 
   // Quem busca e o efeito, e nao o clique na regua: escolher um dia so troca o
   // dia escolhido. Assim o primeiro carregamento e a troca de dia sao o mesmo
-  // caminho, e nenhum dos dois acontece antes de o Firebase dizer quem esta
-  // logado — sem token a chamada voltaria 401 e a tela acusaria uma falha que e
+  // caminho, e nenhum dos dois acontece antes de o servidor dizer quem esta
+  // logado — sem sessao a chamada voltaria 401 e a tela acusaria uma falha que e
   // so pressa.
   useEffect(() => {
     if (!user) return;

@@ -1,45 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import type { CreateEventInput } from "@repo/entities/contracts";
-import { authedFetch } from "@/lib/api/authed-fetch";
 import { TagInput } from "./TagInput";
 import { fieldLabelClass, fieldTextareaClass } from "./field-styles";
 import { outlineButtonClass, primaryButtonClass } from "@/components/ui/button-styles";
 
 export { anyDecimalStep, fieldInputClass, fieldLabelClass, fieldTextareaClass } from "./field-styles";
-
-interface UseSubmitEventOptions {
-  onCreated: () => void;
-  onClose: () => void;
-}
-
-export function useSubmitEvent({ onCreated, onClose }: UseSubmitEventOptions) {
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function submit(payload: CreateEventInput) {
-    setSubmitting(true);
-    setError(null);
-
-    try {
-      await authedFetch("/api/events", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      onCreated();
-      onClose();
-    } catch {
-      setError("Não foi possível criar o evento. Tente novamente.");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  return { submit, submitting, error };
-}
 
 interface CommonFieldsProps {
   description: string;
@@ -103,10 +68,4 @@ export function FormActions({
       </button>
     </div>
   );
-}
-
-export interface EventFormProps {
-  onBack: () => void;
-  onClose: () => void;
-  onCreated: () => void;
 }

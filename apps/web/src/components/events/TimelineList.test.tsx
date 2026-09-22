@@ -4,25 +4,18 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import type {
   TimelineEventCardDto,
   TimelineEventPageDto,
-} from '@repo/entities/contracts';
+} from '@/lib/api/contracts';
 import { TestIntersectionObserver } from '@/test/setup';
 import { TimelineList } from './TimelineList';
 
-const user = { uid: 'user-1', getIdToken: async () => 'test-token' };
+const user = { userId: 'user-1', name: 'Ana', email: null };
 let signedIn: typeof user | null = user;
 
-vi.mock('@/lib/firebase/use-current-user', () => ({
-  useAuthState: () => ({ user: signedIn, ready: true }),
+vi.mock('@/lib/session/use-session', () => ({
+  useSessionState: () => ({ user: signedIn, ready: true }),
   useCurrentUser: () => signedIn,
 }));
-vi.mock('firebase/auth', () => ({
-  getAuth: () => ({
-    get currentUser() {
-      return signedIn;
-    },
-  }),
-}));
-vi.mock('@/lib/firebase/client-app', () => ({ getClientApp: () => ({}) }));
+vi.mock('next/navigation', () => ({ useRouter: () => ({ replace: vi.fn() }) }));
 
 function anEvent(
   overrides: Partial<TimelineEventCardDto> = {},
@@ -33,6 +26,7 @@ function anEvent(
     primaryItemType: 'routine',
     itemTypes: ['routine'],
     missed: false,
+    notifyOffsetsMinutes: [],
     name: 'Bloco de trabalho',
     description: '',
     startedAt: '2026-08-19T09:00:00-03:00',
@@ -62,7 +56,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-test('asks for the current day of the signed in user, with the token and without a userId', async () => {
+test('asks for the current day of the signed in user, with the session and without a userId', async () => {
   vi.mocked(fetch).mockResolvedValue(aPage({ items: [anEvent()] }));
   renderTimeline();
 
@@ -73,7 +67,7 @@ test('asks for the current day of the signed in user, with the token and without
     '/api/events?from=2026-08-19T03%3A00%3A00.000Z&to=2026-08-20T02%3A59%3A59.999Z',
   );
   expect(url).not.toContain('userId');
-  expect(init.headers).toMatchObject({ Authorization: 'Bearer test-token' });
+  expect(init.credentials).toBe('same-origin');
   expect(
     await screen.findByRole('heading', { level: 3, name: 'Bloco de trabalho' }),
   ).toBeInTheDocument();

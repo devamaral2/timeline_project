@@ -1,5 +1,5 @@
 import { beforeEach, expect, test } from "vitest";
-import type { TimelineEventCardDto } from "@repo/entities/contracts";
+import type { TimelineEventCardDto } from "@repo/contracts";
 import {
   clearDayPages,
   dayPageOf,
@@ -15,6 +15,7 @@ function anEvent(id: string, startedAt: string): TimelineEventCardDto {
     primaryItemType: "routine",
     itemTypes: ["routine"],
     missed: false,
+    notifyOffsetsMinutes: [],
     name: id,
     description: "",
     startedAt,

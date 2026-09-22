@@ -1,0 +1,9 @@
+name: github
+purpose: consulta e colaboração no repositório
+auth:
+  source: external-connector
+  token: never-committed
+permissions:
+  - repository:read
+  - issues:read-write
+  - pull-requests:read-write

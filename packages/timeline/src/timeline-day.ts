@@ -1,4 +1,4 @@
-import type { TimelineEventCardDto } from "@repo/entities/contracts";
+import type { TimelineEventCardDto } from "@repo/contracts";
 
 /** Um dia da timeline com os eventos exibidos para ele. */
 export interface TimelineDay {

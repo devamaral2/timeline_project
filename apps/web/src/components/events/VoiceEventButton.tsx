@@ -9,10 +9,12 @@ import { VoiceJobStatus } from "./VoiceJobStatus";
 
 interface VoiceEventButtonProps {
   onCreated?: () => void;
+  className?: string;
 }
 
 export function VoiceEventButton({
   onCreated = () => window.location.reload(),
+  className,
 }: VoiceEventButtonProps) {
   const { jobs, enqueue, retry, dismiss } = useVoiceEventQueue({ onAllDone: onCreated });
   const { supported, listening, interim, error, start, stop } = useSpeechRecognition({
@@ -34,6 +36,7 @@ export function VoiceEventButton({
           aria-pressed={listening}
           className={cn(
             listening ? destructiveButtonClass : primaryButtonClass,
+            className,
             // Parado, o botao e so o microfone, redondo; gravando, ele abre
             // para caber o rotulo e pulsa.
             listening ? "animate-pulse" : "w-10 px-0",

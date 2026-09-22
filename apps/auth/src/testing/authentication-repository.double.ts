@@ -1,7 +1,7 @@
-import type { AuthenticationRepository } from "../mfa/ports/authentication-repository";
+import type { AuthenticationRepository } from "../features/login-with-password/postgres-login.repository";
 
 /**
- * Dublê da porta de autenticacao para testes de usecase. Todo metodo que o
+ * Dublê da porta de autenticação para testes de usecase. Todo método que o
  * teste nao declarar explode ao ser chamado: um usecase que fale com o banco
  * fora do caminho previsto falha o teste em vez de passar em silencio.
  *
@@ -12,20 +12,7 @@ import type { AuthenticationRepository } from "../mfa/ports/authentication-repos
 export function fakeAuthenticationRepository(overrides: Partial<AuthenticationRepository> = {}): AuthenticationRepository {
   const unexpected = (name: string) => async (): Promise<never> => { throw new Error(`unexpected call to ${name}`); };
   return {
-    startLoginAttempt: unexpected("startLoginAttempt"),
-    startStepUpAttempt: unexpected("startStepUpAttempt"),
-    prepareOtpCheck: unexpected("prepareOtpCheck"),
-    attemptPurpose: unexpected("attemptPurpose"),
-    prepareMfaResend: unexpected("prepareMfaResend"),
-    replaceMfaChallenge: unexpected("replaceMfaChallenge"),
-    invalidateOtpChallenge: unexpected("invalidateOtpChallenge"),
-    recordAuditEvent: unexpected("recordAuditEvent"),
-    markStepUpVerified: unexpected("markStepUpVerified"),
-    markStepUpVerifiedWithRecovery: unexpected("markStepUpVerifiedWithRecovery"),
     completeLogin: unexpected("completeLogin"),
-    completeLoginWithoutMfa: unexpected("completeLoginWithoutMfa"),
-    changePasswordWithStepUp: unexpected("changePasswordWithStepUp"),
-    regenerateRecoveryCodesWithStepUp: unexpected("regenerateRecoveryCodesWithStepUp"),
     ...overrides,
   } as AuthenticationRepository;
 }

@@ -1,0 +1,4 @@
+interface:
+  display_name: "E2E Tests"
+  short_description: "Build and diagnose full browser flows"
+  default_prompt: "Use $e2e-tests to add or diagnose a full-stack browser scenario."

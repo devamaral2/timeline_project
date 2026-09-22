@@ -1,4 +1,4 @@
-import type { TimelineEventCardDto, TimelineEventPageDto } from "@repo/entities/contracts";
+import type { TimelineEventCardDto, TimelineEventPageDto } from "@repo/contracts";
 
 /** Os eventos ja carregados de um dia e o cursor da proxima pagina, se houver. */
 export interface TimelinePageState {

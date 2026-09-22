@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getAuth } from "firebase/auth";
-import { getClientApp } from "@/lib/firebase/client-app";
+import { sendWithSession } from "@/lib/api/authed-fetch";
 
 export interface VoiceJob {
   id: string;
@@ -107,16 +106,9 @@ export function useVoiceEventQueue({
 }
 
 async function createEventFromTranscript(transcript: string): Promise<void> {
-  const currentUser = getAuth(getClientApp()).currentUser;
-  if (!currentUser) throw new Error("Entre na sua conta para criar eventos por voz.");
-
-  const token = await currentUser.getIdToken();
-  const response = await fetch("/api/events/voice", {
+  const response = await sendWithSession("/api/events/voice", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ transcript }),
   });
 

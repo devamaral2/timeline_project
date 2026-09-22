@@ -1,15 +1,25 @@
 "use client";
 
 import { useState } from "react";
+import { Plus, X } from "lucide-react";
 import type {
   EventDetailDto,
   EventItemDto,
   EventPriority,
+  NotificationOffsetMinutes,
   UpdateEventItemInput,
-} from "@repo/entities/contracts";
+} from "@/lib/api/contracts";
 import { authedFetch } from "@/lib/api/authed-fetch";
-import { fieldInputClass, fieldLabelClass } from "../new-event-forms/field-styles";
-import { priorities, priorityLabels } from "../event-visuals";
+import { iconButtonClass } from "@/components/ui/button-styles";
+import { addRowButtonClass, fieldInputClass, fieldLabelClass, smallInputClass } from "../new-event-forms/field-styles";
+import { notificationOffsetLabel, priorities, priorityLabels } from "../event-visuals";
+
+type NotificationOffsetUnit = "minutes" | "days";
+
+const MINUTES_PER_NOTIFICATION_OFFSET_UNIT: Record<NotificationOffsetUnit, number> = {
+  minutes: 1,
+  days: 1440,
+};
 
 export { CommonFields, FormActions, anyDecimalStep, fieldInputClass, fieldLabelClass, fieldTextareaClass } from "../new-event-forms/shared";
 export { TagInput } from "../new-event-forms/TagInput";
@@ -212,6 +222,97 @@ export function EventMarks({
         </select>
       </div>
     </div>
+  );
+}
+
+interface NotificationOffsetsFieldProps {
+  value: NotificationOffsetMinutes[] | undefined;
+  onChange: (value: NotificationOffsetMinutes[]) => void;
+}
+
+/**
+ * Numero livre, nao lista fixa: o usuario digita a quantidade, escolhe minutos
+ * ou dias, e cada aviso adicionado vira uma linha removivel. `value` aceita
+ * `undefined` pelo mesmo motivo da prioridade em `EventMarks`: um backend de
+ * outra versao pode nao mandar o campo, e nesse caso a lista comeca vazia em
+ * vez de assumir um default.
+ */
+export function NotificationOffsetsField({ value, onChange }: NotificationOffsetsFieldProps) {
+  const offsets = value ?? [];
+  const [amount, setAmount] = useState("5");
+  const [unit, setUnit] = useState<NotificationOffsetUnit>("minutes");
+  const [error, setError] = useState<string | null>(null);
+
+  function addOffset() {
+    const parsed = Number(amount);
+    if (!Number.isInteger(parsed) || parsed <= 0) {
+      setError("Digite um número inteiro maior que zero.");
+      return;
+    }
+    const minutes = parsed * MINUTES_PER_NOTIFICATION_OFFSET_UNIT[unit];
+    setError(null);
+    if (offsets.includes(minutes)) return;
+    onChange([...offsets, minutes].sort((a, b) => a - b));
+  }
+
+  function removeOffset(minutes: NotificationOffsetMinutes) {
+    onChange(offsets.filter((offset) => offset !== minutes));
+  }
+
+  return (
+    <fieldset className="flex flex-col gap-2">
+      <legend className={fieldLabelClass}>Notificar</legend>
+
+      {offsets.length > 0 ? (
+        <ul className="flex flex-col gap-1">
+          {offsets.map((offset) => (
+            <li key={offset} className="flex items-center justify-between gap-2 text-sm">
+              <span>{notificationOffsetLabel(offset)}</span>
+              <button
+                type="button"
+                onClick={() => removeOffset(offset)}
+                aria-label={`Remover aviso: ${notificationOffsetLabel(offset)}`}
+                className={iconButtonClass}
+              >
+                <X aria-hidden className="size-4" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      <div className="flex items-center gap-2">
+        {/*
+          `type="text"` de proposito: a quantidade e sempre inteira, validada
+          a mao em `addOffset`, e um `input[type="number"]` entraria na
+          varredura generica que os testes de treino fazem sobre "todo campo
+          numerico do formulario aceita decimal" — o que aqui seria errado.
+        */}
+        <input
+          type="text"
+          inputMode="numeric"
+          value={amount}
+          onChange={(event) => setAmount(event.target.value)}
+          aria-label="Quantidade"
+          className={`${smallInputClass} w-20`}
+        />
+        <select
+          value={unit}
+          onChange={(event) => setUnit(event.target.value as NotificationOffsetUnit)}
+          aria-label="Unidade"
+          className={smallInputClass}
+        >
+          <option value="minutes">Minutos antes</option>
+          <option value="days">Dias antes</option>
+        </select>
+        <button type="button" onClick={addOffset} className={addRowButtonClass}>
+          <Plus aria-hidden className="size-3.5" />
+          Adicionar
+        </button>
+      </div>
+
+      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+    </fieldset>
   );
 }
 

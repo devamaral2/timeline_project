@@ -1,4 +1,22 @@
-import type { TimelineEventCardDto } from "@repo/entities/contracts";
+import type { TimelineEventCardDto } from "@repo/contracts";
+
+/**
+ * Onde o evento esta em relacao a agora. Sao tres estados, e nao dois: desde
+ * que a timeline registra tambem o que ainda vai acontecer, "sem finishedAt"
+ * deixou de significar "acontecendo agora" -- pode ser um compromisso de
+ * amanha, que nao tem cronometro nenhum para mostrar.
+ */
+export type EventPosition = "upcoming" | "running" | "past";
+
+export function eventPositionOf(
+  event: Pick<TimelineEventCardDto, "startedAt" | "finishedAt">,
+  now: Date = new Date(),
+): EventPosition {
+  const started = new Date(event.startedAt).getTime();
+  if (now.getTime() < started) return "upcoming";
+  if (!event.finishedAt) return "running";
+  return new Date(event.finishedAt).getTime() <= now.getTime() ? "past" : "running";
+}
 
 /** Duracao do evento em minutos, ou null enquanto ele nao terminou. */
 export function durationMinutesOf(event: TimelineEventCardDto): number | null {
@@ -66,8 +84,12 @@ export function formatStopwatch(totalSeconds: number): string {
     : `${minutes}:${padded(seconds)}`;
 }
 
-/** O cronometro de um evento em andamento, ou `null` quando ele ja terminou. */
+/**
+ * O cronometro de um evento em andamento, ou `null` quando ele ja terminou ou
+ * ainda nem comecou -- um evento futuro ficaria travado em `0:00`, o que le
+ * como quebrado e nao como "ainda nao".
+ */
 export function stopwatchOf(event: TimelineEventCardDto, now: Date = new Date()): string | null {
-  if (event.finishedAt) return null;
+  if (eventPositionOf(event, now) !== "running") return null;
   return formatStopwatch(elapsedSecondsOf(event.startedAt, now));
 }

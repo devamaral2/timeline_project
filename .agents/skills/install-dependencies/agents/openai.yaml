@@ -1,0 +1,4 @@
+interface:
+  display_name: "Install Dependencies"
+  short_description: "Install and repair monorepo dependencies"
+  default_prompt: "Use $install-dependencies to repair or change dependencies safely."

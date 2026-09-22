@@ -1,59 +1,46 @@
 ---
 name: running-tests
-description: >
-  Detalhes de como a suite Vitest deste monorepo roda por baixo — reporter
-  silencioso, resolucao dos workspaces @repo/*, o que o projeto mobile
-  consegue testar, e como investigar uma falha alem da primeira. Use quando
-  test:ai se comportar de um jeito inesperado, precisar filtrar por
-  workspace/arquivo, ou precisar do erro completo de uma falha.
+description: Run and diagnose this monorepo's Vitest and Playwright tests, including workspace and file filters.
 ---
 
-O comando do dia a dia (`npm run --silent test:ai`) e regra fixa, nao
-conteudo desta skill — veja `AGENTS.md`.
+# Running tests
 
-## O que o reporter silencioso faz
-
-`test:ai` usa `vitest.quiet.config.ts` (herda de `vitest.config.ts`, so troca
-o reporter em `test/quiet-reporter.ts`):
-
-- **Passou** — imprime exatamente `Tests pass`, sai com codigo 0.
-- **Falhou** — imprime o primeiro teste quebrado (arquivo, cadeia
-  `describe > teste`, erro, `expected`/`actual`, stack) e o total
-  `N of M tests failed`, sai com codigo 1. A stack mostra so frames do
-  projeto — os de `@vitest/runner`/`node:internal` sao iguais em todo erro e
-  nao ajudam.
-
-Nada mais e impresso: sem cabecalho, sem lista de arquivos, sem
-`console.log` dos testes. O objetivo e cortar consumo de tokens.
-
-## Resolucao e escopo
-
-`vitest.workspace.ts` resolve `@repo/*` direto do fonte TypeScript, nao de
-`dist/` — por isso `test:ai` nao precisa de build antes.
-
-O projeto `mobile` roda em ambiente node e inclui so `*.test.ts`, sem
-`.tsx`: renderizar componente de React Native exigiria o runtime nativo, que
-nao existe no Vitest. So da para testar logica pura la.
-
-Cuidado ao logar em codigo de producao rodado por teste: o `Logger` do Nest
-escreve direto no stdout e escapa do `silent` do Vitest. Por isso o
-`DomainExceptionFilter` recebe o logger pelo construtor, e os testes passam
-um mudo (`apps/api/src/events/testing/status-of.ts`).
-
-## Investigar uma falha alem da primeira
+Run commands from the repository root. During normal feature development, use
+the quiet unit-test command:
 
 ```bash
-npm test                                                  # saida completa do Vitest
-npm run --silent test:ai apps/api/src/caminho/do.test.ts  # so um arquivo
-npx vitest run --project api                              # so um workspace
+pnpm run --silent test:unit:ai
 ```
 
-Workspaces: `web`, `mobile`, `api`, `auth`, `entities`, `persistence`,
-`timeline`, `theme`.
+`test:ai` is an alias for the same unit-test suite. Integration tests and E2E
+tests should run only after the corresponding flow is integrated.
 
-## Auth contra Postgres real
+## Test commands
 
-Os testes do `auth` que exigem Postgres pulam sozinhos sem
-`AUTH_TEST_DATABASE_URL` — e sao a maior parte da suite dele. Nesse caso
-`Tests pass` pode significar que os arquivos de integracao nem rodaram. Para
-roda-los de verdade, use a skill `auth-postgres-tests`.
+```bash
+pnpm test:unit                                  # full unit-test output
+pnpm run --silent test:unit:ai -- path/to/test  # one unit-test file
+pnpm run --silent test:integration:ai -- --project api-integration
+pnpm test:e2e                                   # full Playwright output
+```
+
+Use `test:integration` for API/Auth integration tests and `test:e2e` for the
+full Web → Auth → API flow.
+
+The quiet reporter prints `Tests pass` on success. On failure, it prints the
+first failing test and the total number of failures; use the full-output
+commands above when more context is needed.
+
+## Workspace behavior
+
+`vitest.workspace.ts` resolves `@repo/*` packages directly from TypeScript
+source, so unit tests do not require a build first. Unit-test workspaces are:
+`web`, `mobile`, `api`, `auth`, `contracts`, `timeline`, and `theme`.
+
+The `mobile` workspace runs in Node and includes only `*.test.ts`; React Native
+component rendering requires a native runtime and is not supported by this
+Vitest setup.
+
+When a test fails, first rerun the narrowest relevant file or workspace with
+full output. Fix the underlying failure instead of weakening or skipping the
+test.

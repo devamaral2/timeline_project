@@ -1,43 +1,57 @@
 ---
 name: db-migrations
-description: >
-  Gera e aplica migrations Drizzle neste monorepo — schema da API
-  (@repo/persistence) e schema do Auth (apps/auth), cada um com seu proprio
-  banco/URL. Use quando o schema Drizzle mudar, quando pedirem para
-  rodar/aplicar migrations, ou para subir o Postgres local de dev.
+description: Use when changing a Drizzle schema, generating or applying database migrations, or setting up the local PostgreSQL database for development.
 ---
 
-## Postgres local
+# Database migrations
 
-`docker compose -f infra/docker-compose.local.yml up -d` (ou
-`pnpm compose:up`) sobe o Postgres de dev em
-`127.0.0.1:${POSTGRES_HOST_PORT:-54391}`. Numa worktree secundaria isso ja e
-feito por `scripts/worktree/provision-env.sh` — veja a skill
-`worktree-app-testing`.
+This monorepo has two independent PostgreSQL schemas and migration workflows:
 
-## Schema da API (@repo/persistence)
+- API database: `apps/api`, using `DATABASE_URL`.
+- Auth database: `apps/auth`, using the separate migration credential
+  `AUTH_DATABASE_MIGRATION_URL`.
+
+Run commands from the repository root.
+
+## API database
+
+The Drizzle schema is under
+`apps/api/src/infrastructure/persistence/database/schema` and migrations are
+written to `apps/api/drizzle/`.
 
 ```bash
-pnpm db:generate   # gera uma migration a partir do schema Drizzle em packages/persistence/src/database/schema
-pnpm db:migrate    # aplica as pendentes em DATABASE_URL
+pnpm db:generate
+pnpm db:migrate
 ```
 
-`pnpm test:postgres` roda a suite de integracao via Testcontainers — exige
-Docker rodando; sem Docker o teste falha em vez de pular.
+`db:generate` creates a migration from the current schema. `db:migrate`
+applies pending migrations to `DATABASE_URL`.
 
-## Schema do Auth (apps/auth)
-
-Usa credenciais e fluxo proprios, com role de migracao separada da de
-runtime — procedimento completo, incluindo rollback e sinais de schema
-desatualizado, em `docs/runbooks/auth-database.md`. Resumo do comando:
+For a local database, start PostgreSQL first:
 
 ```bash
+pnpm compose:up
+```
+
+Worktree-specific databases and ports are provisioned by the worktree scripts;
+do not replace their generated `.env.local` values manually.
+
+## Auth database
+
+The Auth schema is under `apps/auth/src/db/schema.ts` and migrations are stored
+in `apps/auth/drizzle/`.
+
+```bash
+pnpm --filter @repo/auth run db:generate
 pnpm --filter @repo/auth run db:migrate
 ```
 
-## Regra que nao muda
+Apply Auth migrations with `AUTH_DATABASE_MIGRATION_URL`, never with the
+runtime credential `AUTH_DATABASE_URL`. For permissions, readiness checks, and
+rollback, read `docs/runbooks/auth-database.md`.
 
-**Nao edite uma migration ja aplicada em qualquer ambiente compartilhado** —
-gere uma nova em cima dela. `applied_migrations` (API) e o schema `drizzle`
-(auth) registram o nome do arquivo; reescrever o conteudo dele nao reaplica
-nada, so gera divergencia entre bancos.
+## Non-negotiable rule
+
+Never edit a migration that has already been applied in a shared environment.
+Create a new migration instead. The migration tables track filenames, so
+rewriting an existing file creates drift rather than applying the change again.

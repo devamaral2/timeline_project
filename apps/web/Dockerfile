@@ -48,15 +48,17 @@ COPY --from=pruner /app/out/full/ ./
 # os .d.ts das dependencias — o build morre dentro do ulid, num erro que nao
 # tem nada a ver com o codigo daqui.
 COPY --from=pruner /app/tsconfig.base.json ./
+COPY --from=pruner /app/scripts/onepassword ./scripts/onepassword
+COPY --from=pruner /app/.env.example ./.env.example
+ARG OP_ENVIRONMENT_ID
 
-# O secret e montado exatamente onde next.config.ts ja procura o arquivo
-# (process.loadEnvFile de ../../.env), entao o build dentro da imagem enxerga
-# as mesmas variaveis que enxerga na sua maquina, sem caminho especial.
-#
-# Repare que isso passa por fora do envMode strict do Turborepo: quem le o
-# arquivo e o proprio next.config.ts, ja dentro do processo do next build.
-RUN --mount=type=secret,id=web-env,target=/app/.env \
-    pnpm turbo run build --filter=@repo/web
+# O token e montado como secret temporario do BuildKit. O carregador resolve as
+# variaveis antes do next build, sem gravar um .env na imagem.
+RUN --mount=type=secret,id=onepassword-token,target=/run/secrets/onepassword-token \
+    OP_SERVICE_ACCOUNT_TOKEN="$(cat /run/secrets/onepassword-token)" \
+    OP_ENVIRONMENT_ID="${OP_ENVIRONMENT_ID:?OP_ENVIRONMENT_ID must be supplied as a build argument}" \
+    ONEPASSWORD_SCOPE=web-build \
+    node scripts/onepassword/exec.mjs turbo run build --filter=@repo/web
 
 # --- runner ----------------------------------------------------------------
 FROM base AS runner

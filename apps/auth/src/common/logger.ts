@@ -16,6 +16,7 @@ export interface AuthLogEvent {
   error: string;
   reason?: string;
   message?: string;
+  stack?: string;
 }
 
 export abstract class AuthLogger {
