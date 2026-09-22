@@ -61,14 +61,14 @@ O app nao roda no Expo Go: o login usa o Google Sign-In nativo, que exige um
 development build.
 
 1. No Firebase Console, pegue o **Web client ID** do provedor Google
-   (Authentication > Sign-in method > Google) e ponha em
-   `MOBILE_GOOGLE_WEB_CLIENT_ID`. No Android, cadastre tambem a impressao
-   digital SHA-1 da chave de debug em Project settings > Your apps.
+ (Authentication &gt; Sign-in method &gt; Google) e ponha em
+ `MOBILE_GOOGLE_WEB_CLIENT_ID`. No Android, cadastre tambem a impressao
+ digital SHA-1 da chave de debug em Project settings &gt; Your apps.
 2. Descubra o IP da sua maquina na rede local (`ipconfig` no Windows) e ponha
-   `MOBILE_API_URL=http://<ip>:3002` no `.env` (o gateway do Auth).
+ `MOBILE_API_URL=http://<ip>:3002` no `.env` (o gateway do Auth).
 3. `API_HOST=0.0.0.0` no `.env`, para o Nest atender na rede em vez de so no
-   loopback. Isso e para desenvolvimento: em producao a variavel fica de fora e
-   o bind volta a `127.0.0.1`.
+ loopback. Isso e para desenvolvimento: em producao a variavel fica de fora e
+ o bind volta a `127.0.0.1`.
 
 ```bash
 pnpm --filter @repo/mobile run android   # gera o projeto nativo e instala no aparelho
@@ -102,4 +102,5 @@ com Firebase por enquanto, fora deste escopo.
 
 Os packages compilam antes dos apps (`dependsOn: ["^build"]`). O mobile fica de
 fora do `build`: o bundle dele sai do Metro (`expo export`) ou do EAS Build, nao
-do `tsc`.
+do `tsc`.  
+  
