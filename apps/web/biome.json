@@ -20,6 +20,11 @@
 					}
 				}
 			}
+		},
+		"domains": {
+			"react": "recommended",
+			"next": "recommended",
+			"test": "all"
 		}
 	}
 }

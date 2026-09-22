@@ -63,8 +63,8 @@ export class LoginWithPasswordUseCase {
 
     const user = await this.users.findByEmail(email);
     const valid = await this.credentials.check(user, password);
-    if (!valid) throw new AuthenticationFailedError(user ? `login ${user.status}` : "unknown email");
-    return this.completeLogin(user!, input.context, now);
+    if (!user || !valid) throw new AuthenticationFailedError(user ? `login ${user.status}` : "unknown email");
+    return this.completeLogin(user, input.context, now);
   }
 
   private async completeLogin(user: User, context: RequestContext, now: Date): Promise<SessionTokensOutput> {

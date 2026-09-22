@@ -153,7 +153,7 @@ export class PostgresSessionRepository {
       }
 
       const expired = new Date(refreshRow.expires_at) <= c.now;
-      const userInactive = !userRow || userRow.status !== "active";
+      const userInactive = userRow?.status !== "active";
       if (expired || sessionRow.revoked_at || userInactive) {
         if (!sessionRow.revoked_at) {
           await tx.query("UPDATE sessions SET revoked_at = $1, ended_at = $1 WHERE id = $2", [c.now, sessionId]);
@@ -276,7 +276,7 @@ export class PostgresSessionRepository {
       const userRow = (
         await tx.query<{ status: string }>("SELECT status FROM users WHERE id = $1 FOR UPDATE", [c.actor.userId])
       ).rows[0];
-      if (!userRow || userRow.status !== "active") throw new AuthenticationFailedError("user not active");
+      if (userRow?.status !== "active") throw new AuthenticationFailedError("user not active");
 
       const sessionRow = (
         await tx.query<{ revoked_at: Date | null }>(

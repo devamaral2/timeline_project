@@ -20,7 +20,7 @@ export async function updatePassword(
         [email],
       )
     ).rows[0];
-    if (!user || user.status !== "active") throw new Error("active user not found");
+    if (user?.status !== "active") throw new Error("active user not found");
 
     await tx.query("UPDATE users SET password_hash = $1, updated_at = $2 WHERE id = $3", [
       input.passwordHash,

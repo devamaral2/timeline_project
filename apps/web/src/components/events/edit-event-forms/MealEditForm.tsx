@@ -205,8 +205,9 @@ export function MealEditForm({
 
             <div className="grid grid-cols-3 gap-2.5">
               <div className="flex flex-col gap-1">
-                <label className="text-[12px] text-muted-foreground">Porção</label>
+                <label htmlFor={`meal-${foodItem.key}-portion`} className="text-[12px] text-muted-foreground">Porção</label>
                 <input
+                  id={`meal-${foodItem.key}-portion`}
                   type="text"
                   value={foodItem.portion}
                   onChange={(inputEvent) =>
@@ -216,8 +217,9 @@ export function MealEditForm({
                 />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-[12px] text-muted-foreground">Peso (g)</label>
+                <label htmlFor={`meal-${foodItem.key}-weight`} className="text-[12px] text-muted-foreground">Peso (g)</label>
                 <input
+                  id={`meal-${foodItem.key}-weight`}
                   type="number"
                   min={0}
                   step={anyDecimalStep}
@@ -231,8 +233,9 @@ export function MealEditForm({
                 />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-[12px] text-muted-foreground">Calorias</label>
+                <label htmlFor={`meal-${foodItem.key}-calories`} className="text-[12px] text-muted-foreground">Calorias</label>
                 <input
+                  id={`meal-${foodItem.key}-calories`}
                   type="number"
                   min={0}
                   step={anyDecimalStep}
@@ -244,8 +247,9 @@ export function MealEditForm({
                 />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-[12px] text-muted-foreground">Carboidratos (g)</label>
+                <label htmlFor={`meal-${foodItem.key}-carbohydrates`} className="text-[12px] text-muted-foreground">Carboidratos (g)</label>
                 <input
+                  id={`meal-${foodItem.key}-carbohydrates`}
                   type="number"
                   min={0}
                   step={anyDecimalStep}
@@ -257,8 +261,9 @@ export function MealEditForm({
                 />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-[12px] text-muted-foreground">Proteínas (g)</label>
+                <label htmlFor={`meal-${foodItem.key}-proteins`} className="text-[12px] text-muted-foreground">Proteínas (g)</label>
                 <input
+                  id={`meal-${foodItem.key}-proteins`}
                   type="number"
                   min={0}
                   step={anyDecimalStep}
@@ -270,8 +275,9 @@ export function MealEditForm({
                 />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-[12px] text-muted-foreground">Gorduras (g)</label>
+                <label htmlFor={`meal-${foodItem.key}-fat`} className="text-[12px] text-muted-foreground">Gorduras (g)</label>
                 <input
+                  id={`meal-${foodItem.key}-fat`}
                   type="number"
                   min={0}
                   step={anyDecimalStep}
@@ -283,8 +289,9 @@ export function MealEditForm({
                 />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-[12px] text-muted-foreground">Fibras (g)</label>
+                <label htmlFor={`meal-${foodItem.key}-fiber`} className="text-[12px] text-muted-foreground">Fibras (g)</label>
                 <input
+                  id={`meal-${foodItem.key}-fiber`}
                   type="number"
                   min={0}
                   step={anyDecimalStep}

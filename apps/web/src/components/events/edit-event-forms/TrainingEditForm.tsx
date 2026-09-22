@@ -99,7 +99,7 @@ function draftFromWorkout(workout: WorkoutSnapshot): WorkoutDraft {
   };
 }
 
-const selectClass = fieldInputClass + " pr-8";
+const selectClass = `${fieldInputClass} pr-8`;
 
 export function TrainingEditForm({
   event,
@@ -225,8 +225,9 @@ export function TrainingEditForm({
 
             <div className="grid grid-cols-2 gap-2.5">
               <div className="flex flex-col gap-1">
-                <label className="text-[12px] text-muted-foreground">Calorias</label>
+                <label htmlFor={`training-${workout.key}-calories`} className="text-[12px] text-muted-foreground">Calorias</label>
                 <input
+                  id={`training-${workout.key}-calories`}
                   type="number"
                   min={0}
                   step={anyDecimalStep}
@@ -238,8 +239,9 @@ export function TrainingEditForm({
                 />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-[12px] text-muted-foreground">Duração (min)</label>
+                <label htmlFor={`training-${workout.key}-duration`} className="text-[12px] text-muted-foreground">Duração (min)</label>
                 <input
+                  id={`training-${workout.key}-duration`}
                   type="number"
                   min={0}
                   step={anyDecimalStep}
@@ -254,8 +256,9 @@ export function TrainingEditForm({
               {workout.workoutCode === "treadmill" || workout.workoutCode === "running" ? (
                 <>
                   <div className="flex flex-col gap-1">
-                    <label className="text-[12px] text-muted-foreground">Ritmo (min/km)</label>
+                    <label htmlFor={`training-${workout.key}-pace`} className="text-[12px] text-muted-foreground">Ritmo (min/km)</label>
                     <input
+                      id={`training-${workout.key}-pace`}
                       type="number"
                       min={0}
                       step={anyDecimalStep}
@@ -267,8 +270,9 @@ export function TrainingEditForm({
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-[12px] text-muted-foreground">Distância (km)</label>
+                    <label htmlFor={`training-${workout.key}-distance`} className="text-[12px] text-muted-foreground">Distância (km)</label>
                     <input
+                      id={`training-${workout.key}-distance`}
                       type="number"
                       min={0}
                       step={anyDecimalStep}

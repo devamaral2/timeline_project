@@ -1,6 +1,5 @@
 import { and, eq, isNull, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import { ulid } from "ulid";
 import {
   Event,
   EventNotFoundError,

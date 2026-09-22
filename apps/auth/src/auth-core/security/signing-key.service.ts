@@ -3,14 +3,12 @@ import { decryptSecret, encryptSecret } from './key-encryption';
 import {
   signJwt,
   type SignAccessToken,
-  type UnsignedAccessTokenClaims,
 } from './jwt';
 import type { PublicSigningJwk } from '../../domain/crypto/jwk';
 import type { AuditEventInput } from '../../audit/audit-event';
 import {
   generateSigningKey,
   privateKeyFromPem,
-  publicKeyFromJwk,
 } from '../../domain/crypto/signing-key';
 import { PostgresSigningKeyRepository, type NewStoredSigningKey, type StoredSigningKey } from './postgres-signing-key.repository';
 import { SecretGenerator } from '../../common/secret-generator';

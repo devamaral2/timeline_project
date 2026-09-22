@@ -178,6 +178,7 @@ function CardContent({
             </p>
           ) : (
             <p
+              role="timer"
               aria-label={`Em andamento ha ${formatStopwatch(elapsedSeconds)}`}
               className="text-[12.5px] font-bold tracking-[0.01em] tabular-nums text-brand"
             >

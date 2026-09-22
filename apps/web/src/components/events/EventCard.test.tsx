@@ -1,4 +1,3 @@
-import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
 import type { TimelineEventCardDto } from "@/lib/api/contracts";

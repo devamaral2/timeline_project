@@ -1,4 +1,3 @@
-import React from "react";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { VoiceEventButton } from "./VoiceEventButton";

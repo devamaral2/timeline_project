@@ -25,13 +25,19 @@ export function TaskStatusIcon({ status }: { status: TaskStatus }) {
 }
 
 export function TaskPriorityIcon({ priority, decorative = false }: { priority: TaskPriority; decorative?: boolean }) {
+  const icon = (
+    <svg viewBox="0 0 16 16" fill="none" aria-hidden>
+      <path d="M3 12V9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+      <path d="M8 12V6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" opacity={priority === "flexible" ? .25 : 1} />
+      <path d="M13 12V3" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" opacity={priority === "urgent" ? 1 : .25} />
+    </svg>
+  );
+
+  if (decorative) return <span className={styles.taskPriority} data-priority={priority} aria-hidden>{icon}</span>;
+
   return (
-    <span className={styles.taskPriority} data-priority={priority} role={decorative ? undefined : "img"} aria-hidden={decorative || undefined} aria-label={decorative ? undefined : `Prioridade da tarefa: ${taskPriorities[priority]}`} title={decorative ? undefined : `Prioridade da tarefa: ${taskPriorities[priority]}`}>
-      <svg viewBox="0 0 16 16" fill="none" aria-hidden>
-        <path d="M3 12V9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-        <path d="M8 12V6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" opacity={priority === "flexible" ? .25 : 1} />
-        <path d="M13 12V3" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" opacity={priority === "urgent" ? 1 : .25} />
-      </svg>
+    <span className={styles.taskPriority} data-priority={priority} role="img" aria-label={`Prioridade da tarefa: ${taskPriorities[priority]}`} title={`Prioridade da tarefa: ${taskPriorities[priority]}`}>
+      {icon}
     </span>
   );
 }

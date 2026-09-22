@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, expect, it } from 'vitest';
 import { createAuthDatabase, type AuthDatabase } from '../../db/client';
 import {
   createPostgresTestDatabase,

@@ -30,15 +30,15 @@ function timeZoneOffsetMs(instant: Date, timeZone: string): number {
     minute: "2-digit",
     second: "2-digit",
   }).formatToParts(instant);
-  const valueOf = (type: Intl.DateTimeFormatPartTypes): number =>
+  const partValue = (type: Intl.DateTimeFormatPartTypes): number =>
     Number(parts.find((part) => part.type === type)?.value ?? 0);
   const asUtc = Date.UTC(
-    valueOf("year"),
-    valueOf("month") - 1,
-    valueOf("day"),
-    valueOf("hour") % 24,
-    valueOf("minute"),
-    valueOf("second"),
+    partValue("year"),
+    partValue("month") - 1,
+    partValue("day"),
+    partValue("hour") % 24,
+    partValue("minute"),
+    partValue("second"),
   );
   return asUtc - instant.getTime();
 }

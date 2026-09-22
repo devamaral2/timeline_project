@@ -11,13 +11,11 @@ import {
 import {
   generateSigningKey,
   privateKeyFromPem,
-  publicKeyFromJwk,
   toPublicJwk,
 } from '../../domain/crypto/signing-key';
 
 const key = generateSigningKey();
 const privateKey = privateKeyFromPem(key.privateKeyPem);
-const publicKey = publicKeyFromJwk(key.publicJwk);
 const keys = [key.publicJwk];
 
 const NOW = new Date('2026-08-30T12:00:00Z');
@@ -61,15 +59,16 @@ describe('jwt', () => {
   it('emite access token com typ at+jwt e as claims de autorizacao aprovadas', () => {
     const token = signJwt(claimsAt(), { kid: key.kid, privateKey });
     const [encodedHeader, encodedPayload] = token.split('.');
+    if (!encodedHeader || !encodedPayload) throw new Error('signed token is malformed');
 
     expect(
-      JSON.parse(Buffer.from(encodedHeader!, 'base64url').toString('utf8')),
+      JSON.parse(Buffer.from(encodedHeader, 'base64url').toString('utf8')),
     ).toMatchObject({
       alg: 'EdDSA',
       typ: 'at+jwt',
     });
     expect(
-      JSON.parse(Buffer.from(encodedPayload!, 'base64url').toString('utf8')),
+      JSON.parse(Buffer.from(encodedPayload, 'base64url').toString('utf8')),
     ).toMatchObject({
       denies: [],
       auth_time: Math.floor(NOW.getTime() / 1000),
