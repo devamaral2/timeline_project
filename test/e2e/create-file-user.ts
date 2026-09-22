@@ -1,5 +1,5 @@
 import { Client } from "pg";
-import { ScryptPasswordHasher } from "../../apps/auth/src/features/basic-login/credentials/scrypt-password-hasher";
+import { ScryptPasswordHasher } from "../../apps/auth/src/auth-core/password/scrypt-password-hasher";
 import { createTestUserForFile } from "../../apps/auth/src/testing/test-user";
 
 export async function createE2eUserForFile(file: string) {

@@ -1,9 +1,9 @@
 import { getRuntimeEnv } from "../config/env";
 import { findMonorepoRoot, loadRootEnv } from "../config/load-env";
 import { createAuthDatabase } from "../db/client";
-import { HttpPwnedPasswordsGateway } from "../features/basic-login/credentials/http-pwned-passwords.gateway";
-import { PreparePassword } from "../features/basic-login/credentials/prepare-password";
-import { ScryptPasswordHasher } from "../features/basic-login/credentials/scrypt-password-hasher";
+import { HttpPwnedPasswordsGateway } from "../auth-core/password/http-pwned-passwords.gateway";
+import { PreparePassword } from "../auth-core/password/prepare-password";
+import { ScryptPasswordHasher } from "../auth-core/password/scrypt-password-hasher";
 import { normalizeEmail } from "../domain/users/user";
 import { updatePassword } from "./update-password";
 
