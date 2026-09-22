@@ -49,8 +49,11 @@ function Harness({ live = true }: { live?: boolean }) {
 }
 
 function ask(text: string) {
-  fireEvent.change(screen.getByRole("textbox", { name: "Mensagem para a IA" }), { target: { value: text } });
-  fireEvent.submit(screen.getByRole("textbox", { name: "Mensagem para a IA" }).closest("form")!);
+  const textbox = screen.getByRole("textbox", { name: "Mensagem para a IA" });
+  const form = textbox.closest("form");
+  if (!form) throw new Error("O campo de mensagem precisa estar dentro de um formulário.");
+  fireEvent.change(textbox, { target: { value: text } });
+  fireEvent.submit(form);
 }
 
 const CONVERSATION_ID = "01ARZ3NDEKTSV4RRFFQ69G5FAV";

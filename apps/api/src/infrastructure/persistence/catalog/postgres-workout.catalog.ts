@@ -19,7 +19,7 @@ export class PostgresWorkoutCatalog implements WorkoutCatalog {
 
     return codes.map((code) => {
       const row = byCode.get(code);
-      if (!row || !row.active) {
+      if (!row?.active) {
         throw new EventValidationError(`Unknown or inactive workout code: ${code}`);
       }
       return {

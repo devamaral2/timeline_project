@@ -1,6 +1,9 @@
 {
 	"$schema": "https://biomejs.dev/schemas/2.5.13/schema.json",
 	"extends": "//",
+	"files": {
+		"includes": ["**", "!**/*.svg"]
+	},
 	"linter": {
 		"rules": {
 			"style": {

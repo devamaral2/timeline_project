@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, expect, it } from "vitest";
 import { ulid } from "ulid";
 import { createAuthDatabase, type AuthDatabase } from "../../db/client";
 import {
@@ -83,7 +83,8 @@ async function seedSession(
 }
 
 async function auditActionsFor(_database: AuthDatabase, targetId: string): Promise<string[]> {
-  const admin = createAuthDatabase({ connectionString: fixture!.adminUrl });
+  if (!fixture) throw new Error("Postgres fixture is not initialized");
+  const admin = createAuthDatabase({ connectionString: fixture.adminUrl });
   try {
     const result = await admin.query<{ action: string }>(
       "SELECT action FROM audit_log WHERE target_id = $1 ORDER BY created_at",

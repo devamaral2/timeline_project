@@ -32,7 +32,9 @@ describe("AcceptInviteUseCase", () => {
       passwordHash: "scrypt$hash",
       auditEvents: [expect.objectContaining({ action: "invite.accepted" })],
     }));
-    expect(JSON.stringify(vi.mocked(invites.acceptInvite).mock.calls[0]![0])).not.toContain("SenhaSegura123!");
+    const [firstCall] = vi.mocked(invites.acceptInvite).mock.calls;
+    if (!firstCall) throw new Error("acceptInvite was not called");
+    expect(JSON.stringify(firstCall[0])).not.toContain("SenhaSegura123!");
   });
 
   it("rejects weak passwords before writing", async () => {

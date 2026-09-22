@@ -289,9 +289,11 @@ describe("Event aggregate", () => {
       },
     };
     const registry = new EventItemRegistry([
-      ...(["routine", "meal", "sleep", "training"] as const).map(
-        (type) => defaultEventItemRegistry.getDefinition(type)!,
-      ),
+      ...(["routine", "meal", "sleep", "training"] as const).map((type) => {
+        const definition = defaultEventItemRegistry.getDefinition(type);
+        if (!definition) throw new Error(`Missing event item definition: ${type}`);
+        return definition;
+      }),
       noteDefinition,
     ]);
 

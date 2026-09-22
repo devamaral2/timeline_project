@@ -15,7 +15,7 @@ interface TimelineHeaderProps {
 }
 
 export function TimelineHeader({
-  userId,
+  userId: _userId,
   selectedDayKey,
   todayKey,
   onSelectDay,

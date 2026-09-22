@@ -6,7 +6,15 @@ import styles from "./mockup.module.css";
 
 export type DateField = "startDate" | "endDate";
 
-const weekDays = ["D", "S", "T", "Q", "Q", "S", "S"];
+const weekDays = [
+  { key: "sun", label: "D" },
+  { key: "mon", label: "S" },
+  { key: "tue", label: "T" },
+  { key: "wed", label: "Q" },
+  { key: "thu", label: "Q" },
+  { key: "fri", label: "S" },
+  { key: "sat", label: "S" },
+];
 const longDateFormatter = new Intl.DateTimeFormat("pt-BR", {
   weekday: "short",
   day: "numeric",
@@ -62,7 +70,16 @@ export function CalendarPicker({ value, onChange, onClose }: { value: string; on
   const [visibleMonth, setVisibleMonth] = useState(() => new Date(selected.getFullYear(), selected.getMonth(), 1));
   const firstWeekDay = visibleMonth.getDay();
   const daysInMonth = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + 1, 0).getDate();
-  const cells = Array.from({ length: firstWeekDay + daysInMonth }, (_, index) => index < firstWeekDay ? null : index - firstWeekDay + 1);
+  const emptyCells = Array.from({ length: firstWeekDay }, (_, emptySlot) => ({
+    key: `empty-${visibleMonth.getFullYear()}-${visibleMonth.getMonth()}-${emptySlot}`,
+    day: null,
+  }));
+  const monthCells = Array.from({ length: daysInMonth }, (_, dayIndex) => {
+    const day = dayIndex + 1;
+    const candidate = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth(), day);
+    return { key: isoFromDate(candidate), day };
+  });
+  const cells = [...emptyCells, ...monthCells];
 
   function changeMonth(offset: number) {
     setVisibleMonth(current => new Date(current.getFullYear(), current.getMonth() + offset, 1));
@@ -76,11 +93,10 @@ export function CalendarPicker({ value, onChange, onClose }: { value: string; on
         <button type="button" aria-label="Próximo mês" onClick={() => changeMonth(1)}><ChevronRight aria-hidden /></button>
       </span>
     </div>
-    <div className={styles.eventDateWeek} aria-hidden>{weekDays.map((day, index) => <span key={`${day}-${index}`}>{day}</span>)}</div>
+    <div className={styles.eventDateWeek} aria-hidden>{weekDays.map(({ key, label }) => <span key={key}>{label}</span>)}</div>
     <div className={styles.eventDateGrid}>
-      {cells.map((day, index) => day === null ? <span key={`empty-${index}`} /> : (() => {
-        const candidate = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth(), day);
-        const candidateIso = isoFromDate(candidate);
+      {cells.map(({ key, day }) => day === null ? <span key={key} /> : (() => {
+        const candidateIso = key;
         return <button type="button" key={candidateIso} aria-label={longDate(candidateIso)} aria-pressed={candidateIso === value} onClick={() => {
           onChange(candidateIso);
           onClose();

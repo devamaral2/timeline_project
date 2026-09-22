@@ -6,7 +6,7 @@ function assertValue(value: unknown, depth: number): asserts value is AuditMetad
   if (depth > maxDepth) throw new Error("audit metadata exceeds maximum depth");
   if (value === null || typeof value === "boolean" || typeof value === "number") return;
   if (typeof value === "string") { if (value.length > maxString) throw new Error("audit metadata string too large"); return; }
-  if (Array.isArray(value)) { if (value.length > maxEntries) throw new Error("audit metadata has too many entries"); value.forEach((item) => assertValue(item, depth + 1)); return; }
+  if (Array.isArray(value)) { if (value.length > maxEntries) throw new Error("audit metadata has too many entries"); value.forEach((item) => { assertValue(item, depth + 1); }); return; }
   if (!value || typeof value !== "object" || Object.getPrototypeOf(value) !== Object.prototype) throw new Error("audit metadata must be JSON data");
   const entries = Object.entries(value);
   if (entries.length > maxEntries) throw new Error("audit metadata has too many entries");

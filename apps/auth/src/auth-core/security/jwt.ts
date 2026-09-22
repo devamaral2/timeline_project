@@ -98,7 +98,7 @@ export function verifyJwt(
   } catch {
     invalid('Invalid signature');
   }
-  if (!verified!) invalid('Invalid signature');
+  if (!verified) invalid('Invalid signature');
   const claims = parseObject(payloadText, 'payload');
   exactKeys(claims, CLAIM_KEYS, 'payload');
   assertClaims(claims, expectedIssuer, expectedAudience, now);

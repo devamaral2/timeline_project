@@ -75,7 +75,6 @@ export function SleepEditForm({
           <input
             id="sleep-edit-hours"
             type="number"
-            autoFocus
             min={0}
             max={24}
             step={anyDecimalStep}

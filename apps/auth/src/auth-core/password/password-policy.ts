@@ -1,2 +1,9 @@
 export type PasswordPolicyResult={accepted:true;passwordNfc:string}|{accepted:false;code:"password_length"|"password_control"|"password_context"};
-export function evaluatePassword(input:{password:string;normalizedEmail:string;name:string}):PasswordPolicyResult { const passwordNfc=input.password.normalize("NFC"), length=[...passwordNfc].length; if(length<12||length>128)return{accepted:false,code:"password_length"}; if(/[\u0000-\u001f\u007f-\u009f\ud800-\udfff]/.test(passwordNfc))return{accepted:false,code:"password_control"}; const folded=passwordNfc.normalize("NFKC").toLowerCase(), email=input.normalizedEmail.normalize("NFKC").toLowerCase(), local=email.split("@")[0], name=input.name.normalize("NFKC").toLowerCase(); const values=["timeline","timeline_project",email,local,name,...name.split(/[^\p{L}\p{N}]+/u).filter(x=>[...x].length>=3)]; return values.includes(folded)?{accepted:false,code:"password_context"}:{accepted:true,passwordNfc}; }
+function containsForbiddenPasswordCharacters(value: string): boolean {
+  for (let index = 0; index < value.length; index += 1) {
+    const codeUnit = value.charCodeAt(index);
+    if (codeUnit <= 0x1f || (codeUnit >= 0x7f && codeUnit <= 0x9f) || (codeUnit >= 0xd800 && codeUnit <= 0xdfff)) return true;
+  }
+  return false;
+}
+export function evaluatePassword(input:{password:string;normalizedEmail:string;name:string}):PasswordPolicyResult { const passwordNfc=input.password.normalize("NFC"), length=[...passwordNfc].length; if(length<12||length>128)return{accepted:false,code:"password_length"}; if(containsForbiddenPasswordCharacters(passwordNfc))return{accepted:false,code:"password_control"}; const folded=passwordNfc.normalize("NFKC").toLowerCase(), email=input.normalizedEmail.normalize("NFKC").toLowerCase(), local=email.split("@")[0], name=input.name.normalize("NFKC").toLowerCase(); const values=["timeline","timeline_project",email,local,name,...name.split(/[^\p{L}\p{N}]+/u).filter(x=>[...x].length>=3)]; return values.includes(folded)?{accepted:false,code:"password_context"}:{accepted:true,passwordNfc}; }

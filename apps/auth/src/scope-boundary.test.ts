@@ -63,7 +63,9 @@ describe("stage 1 scope boundary", () => {
       const directory = resolve(authRoot, "src/features", feature, "http");
       const controllers = sourceFiles(directory).filter((file) => file.endsWith(".controller.ts"));
       expect(controllers, `controller for ${feature}`).toHaveLength(1);
-      const source = readFileSync(controllers[0]!, "utf8");
+      const controller = controllers[0];
+      if (!controller) throw new Error(`controller for ${feature} is missing`);
+      const source = readFileSync(controller, "utf8");
       expect(source, `route for ${feature}`).toContain(route);
       expect((source.match(/@Controller\(/g) ?? []).length, `single controller for ${feature}`).toBe(1);
     }

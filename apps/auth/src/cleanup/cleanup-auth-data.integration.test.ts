@@ -32,6 +32,11 @@ async function open(): Promise<AuthDatabase> {
   return database;
 }
 
+function requireAdmin(): AuthDatabase {
+  if (!admin) throw new Error("admin database is not initialized");
+  return admin;
+}
+
 async function seedUser(db: AuthDatabase, id: string): Promise<void> {
   await db.query("INSERT INTO users(id,email,name,status,created_at,updated_at) VALUES($1,$2,'Cleanup','pending_invite',$3,$3)", [id, `${id.toLowerCase()}@example.test`, at(DAY)]);
 }
@@ -56,7 +61,7 @@ describeWithPostgres("cleanupAuthData", () => {
     await seedUser(db, userId);
     await seedBoundaries(db, userId);
     await db.query("INSERT INTO signing_keys(kid,status,public_jwk,encrypted_private_key,created_at,retire_after) VALUES('retiring-old','retiring',$1,'ciphertext',$2,$3),('retiring-new','retiring',$1,'ciphertext',$2,$4)", [jwk, at(120 * DAY), at(0), justAfter(0)]);
-    const auditBefore = (await admin!.query<{ id: string }>("SELECT id FROM audit_log ORDER BY id")).rows.map((row) => row.id);
+    const auditBefore = (await requireAdmin().query<{ id: string }>("SELECT id FROM audit_log ORDER BY id")).rows.map((row) => row.id);
 
     const result = await cleanupAuthData({ database: db, now, context });
 
@@ -79,7 +84,7 @@ describeWithPostgres("cleanupAuthData", () => {
 
     // A auditoria e append-only: as linhas anteriores continuam identicas, e a
     // execucao so acrescenta um `key.retired` por chave e um `cleanup.completed`.
-    const auditAfter = (await admin!.query<{ id: string; action: string }>("SELECT id, action FROM audit_log ORDER BY id")).rows;
+    const auditAfter = (await requireAdmin().query<{ id: string; action: string }>("SELECT id, action FROM audit_log ORDER BY id")).rows;
     expect(auditAfter.slice(0, auditBefore.length).map((row) => row.id)).toEqual(auditBefore);
     expect(auditAfter.slice(auditBefore.length).map((row) => row.action).sort()).toEqual(["cleanup.completed", "key.retired"]);
 
@@ -106,8 +111,8 @@ describeWithPostgres("cleanupAuthData", () => {
     expect(result.sessionsEnded).toBe(1);
     expect((await db.query<{ id: string }>("SELECT id FROM refresh_tokens ORDER BY id")).rows.map((row) => row.id)).toEqual(["done", "spent", "usable"]);
     const sessions = (await db.query<{ id: string; ended_at: Date | null }>("SELECT id, ended_at FROM sessions ORDER BY id")).rows;
-    expect(sessions.find((row) => row.id === "live")!.ended_at).toBeNull();
-    expect(sessions.find((row) => row.id === "stale")!.ended_at).toEqual(now);
+    expect(sessions.find((row) => row.id === "live")?.ended_at).toBeNull();
+    expect(sessions.find((row) => row.id === "stale")?.ended_at).toEqual(now);
   });
 
   it("reverts the retirement, the deletes and the ended_at when an audit insert fails", async () => {
@@ -116,7 +121,7 @@ describeWithPostgres("cleanupAuthData", () => {
     await seedUser(db, userId);
     await seedBoundaries(db, userId);
     await db.query("INSERT INTO signing_keys(kid,status,public_jwk,encrypted_private_key,created_at,retire_after) VALUES('retiring-old','retiring',$1,'ciphertext',$2,$3)", [jwk, at(120 * DAY), at(0)]);
-    await admin!.query("ALTER TABLE audit_log ADD CONSTRAINT audit_log_reject CHECK (false) NOT VALID");
+    await requireAdmin().query("ALTER TABLE audit_log ADD CONSTRAINT audit_log_reject CHECK (false) NOT VALID");
 
     await expect(cleanupAuthData({ database: db, now, context })).rejects.toThrow();
 
@@ -143,6 +148,6 @@ describeWithPostgres("cleanupAuthData", () => {
       rateLimitBucketsDeleted: 0, invitesDeleted: 0, sessionsDeleted: 0, signingKeysRetired: 0,
     });
     expect((await db.query<{ count: number }>("SELECT count(*)::int AS count FROM invites")).rows[0]).toEqual({ count: 2 });
-    expect((await admin!.query<{ count: number }>("SELECT count(*)::int AS count FROM audit_log WHERE action='cleanup.completed'")).rows[0]).toEqual({ count: 0 });
+    expect((await requireAdmin().query<{ count: number }>("SELECT count(*)::int AS count FROM audit_log WHERE action='cleanup.completed'")).rows[0]).toEqual({ count: 0 });
   });
 });

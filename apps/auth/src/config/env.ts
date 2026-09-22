@@ -32,7 +32,6 @@ const runtimeKeys = [
   "AUTH_PASSWORD_WINDOW_SECONDS",
 ] as const;
 
-const boolean = z.enum(["true", "false"]).transform((value) => value === "true");
 const positiveInteger = z.coerce.number().int().positive();
 const nonEmpty = z.string().trim().min(1);
 

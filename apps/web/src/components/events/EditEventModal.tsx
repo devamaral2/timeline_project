@@ -65,14 +65,20 @@ export function EditEventModal({ eventId, onClose, onUpdated }: EditEventModalPr
   return createPortal(
     <div
       className={dialogOverlayClass}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="edit-event-title"
       onClick={(clickEvent) => {
         if (clickEvent.target === clickEvent.currentTarget) onClose();
       }}
+      onKeyDown={(keyboardEvent) => {
+        if (keyboardEvent.target === keyboardEvent.currentTarget && (keyboardEvent.key === "Enter" || keyboardEvent.key === " ")) {
+          keyboardEvent.preventDefault();
+          onClose();
+        }
+      }}
     >
       <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="edit-event-title"
         className={cn(dialogPanelClass, "max-w-md")}
       >
         <div className={dialogHeaderClass}>

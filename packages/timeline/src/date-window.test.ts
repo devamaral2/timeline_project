@@ -1,8 +1,6 @@
 import { expect, test } from "vitest";
 import { dayEventsUrl } from "./date-window";
 
-const now = new Date("2026-08-19T15:00:00-03:00");
-
 test("asks for a single civil day", () => {
   expect(dayEventsUrl("2026-08-31")).toBe(
     "/api/events?from=2026-08-31T03%3A00%3A00.000Z&to=2026-09-01T02%3A59%3A59.999Z",

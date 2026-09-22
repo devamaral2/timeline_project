@@ -82,6 +82,9 @@ export function useDayEvents(
     [dayKey, userId],
   );
 
+  // `generation` is an explicit cache invalidation signal, even though it is
+  // not otherwise read in the effect body.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: generation intentionally invalidates the cached day
   useEffect(() => {
     setLoadingMore(false);
     setFailed(false);

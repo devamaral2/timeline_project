@@ -56,14 +56,20 @@ export function DeleteEventDialog({ eventId, eventName, onClose, onDeleted }: De
   return createPortal(
     <div
       className={dialogOverlayClass}
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="delete-event-title"
       onClick={(event) => {
         if (event.target === event.currentTarget && !deleting) onClose();
       }}
+      onKeyDown={(event) => {
+        if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ") && !deleting) {
+          event.preventDefault();
+          onClose();
+        }
+      }}
     >
       <div
-        role="alertdialog"
-        aria-modal="true"
-        aria-labelledby="delete-event-title"
         className={cn(dialogPanelClass, "max-w-sm overflow-y-auto p-5 sm:p-6")}
       >
         <div className="mb-4 flex items-start justify-between gap-3">

@@ -31,7 +31,7 @@ async function main(): Promise<void> {
       "SELECT name, status FROM users WHERE email = $1",
       [email],
     )).rows[0];
-    if (!user || user.status !== "active") throw new Error("active user not found");
+    if (user?.status !== "active") throw new Error("active user not found");
 
     const password = await readPassword();
     if (!password) throw new Error("password input is empty");

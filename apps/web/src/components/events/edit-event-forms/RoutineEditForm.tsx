@@ -77,7 +77,6 @@ export function RoutineEditForm({
         <input
           id="routine-edit-name"
           type="text"
-          autoFocus
           required
           value={name}
           onChange={(nameEvent) => setName(nameEvent.target.value)}
