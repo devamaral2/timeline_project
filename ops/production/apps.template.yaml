@@ -62,8 +62,12 @@ spec:
           image: braid-web:REPLACE_SHA
           imagePullPolicy: Never
           env:
+            - {name: AUTH_PORT, value: "3002"}
+            - {name: AUTH_HOST, value: "0.0.0.0"}
             - {name: NODE_ENV, value: production}
             - {name: AUTH_SERVICE_URL, value: http://auth.braid.svc.cluster.local:3002}
+          envFrom:
+            - secretRef: {name: onepassword-loader}
           ports:
             - {containerPort: 3000}
           startupProbe:

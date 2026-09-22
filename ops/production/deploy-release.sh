@@ -56,7 +56,7 @@ for app in api auth web; do
 done
 
 TRAEFIK_IP=$(kubectl -n kube-system get svc traefik -o jsonpath='{.spec.clusterIP}')
-curl -fsS -o /dev/null -w 'web=%{http_code}\n' -H "Host: timeline.$DOMAIN" "http://$TRAEFIK_IP"
+curl -fsS -o /dev/null -w 'web=%{http_code}\n' -H "Host: web.$DOMAIN" "http://$TRAEFIK_IP"
 curl -fsS -H "Host: auth.$DOMAIN" "http://$TRAEFIK_IP/health/ready" >/dev/null
 API_STATUS=$(curl -sS -o /dev/null -w '%{http_code}' -H "Host: api.$DOMAIN" "http://$TRAEFIK_IP/api/events")
 test "$API_STATUS" = 401
