@@ -279,6 +279,7 @@ regras no [plano GitHub](https://docs.github.com/en/actions/how-tos/deploy/confi
 | Variable                         | `PROD_USER`            | `gha-deploy`                                           |
 | Secret                           | `PROD_SSH_PRIVATE_KEY` | Conteúdo completo de `timeline-actions`                |
 | Secret                           | `PROD_KNOWN_HOSTS`     | Conteúdo completo de `timeline-production-known-hosts` |
+|                                  |                        |                                                        |
 
 
 Em **Settings → Rules → Rulesets**, proteja `main`: PR obrigatório,
