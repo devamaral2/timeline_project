@@ -13,7 +13,7 @@ contrato local sem copiar credenciais, estado ou regras.
 
 | Camada | Fonte de verdade | Pode entrar no Git? | Exemplos |
 | --- | --- | --- | --- |
-| Contrato compartilhado | `.agents/` no repositório | Sim | skills, hooks, manifestos MCP, plugins, scripts e runbooks |
+| Contrato compartilhado | `.agents/` no repositório | Sim | skills, hooks, manifestos MCP, plugins e scripts |
 | Descoberta do Codex | `.agents/skills/` | Sim | `SKILL.md` e `agents/openai.yaml` por skill |
 | Runtime local | diretórios ignorados do checkout | Não | caches, sessões, worktrees ativas, logs, perfis e artefatos |
 | Segredo | ambiente/gerenciador externo | Não | tokens, cookies, chaves, senhas e URLs privadas |
@@ -34,13 +34,13 @@ paralelo para skills.
 ├── browser/                   # runner local descartável do Playwright
 ├── environments/local/        # dependências efêmeras locais
 ├── adapters/                  # limites dos loaders, sem estado privado
-├── worktrees/                 # convenções, não instâncias
-├── scripts/                   # validação e hooks executáveis
-└── docs/                      # notas específicas da camada de IA
+└── scripts/                   # validação e hooks executáveis
 ```
 
-A implementação operacional, os contratos e a documentação específica vivem
-em `.agents/`.
+A implementação operacional e os contratos vivem em `.agents/`. A documentação,
+inclusive a desta camada, vive em `docs/` na raiz, com os runbooks em
+`docs/runbook/`. As worktrees são criadas por `scripts/worktree/`
+(`pnpm worktree:new`).
 
 ## Contratos e precedência
 

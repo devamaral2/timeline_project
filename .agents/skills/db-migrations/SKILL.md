@@ -48,7 +48,7 @@ pnpm --filter @repo/auth run db:migrate
 
 Apply Auth migrations with `AUTH_DATABASE_MIGRATION_URL`, never with the
 runtime credential `AUTH_DATABASE_URL`. For permissions, readiness checks, and
-rollback, read `docs/runbooks/auth-database.md`.
+rollback, read `docs/runbook/auth-database.md`.
 
 ## Non-negotiable rule
 

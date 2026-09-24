@@ -285,10 +285,10 @@ regras no [plano GitHub](https://docs.github.com/en/actions/how-tos/deploy/confi
 Em **Settings → Rules → Rulesets**, proteja `main`: PR obrigatório,
 force push bloqueado e check `CI / validate` exigido depois de confirmar
 o nome exato no primeiro PR. O workflow
-[ci.yml](../../../.github/workflows/ci.yml) executa lint
+[ci.yml](../../.github/workflows/ci.yml) executa lint
 (atualmente informativo), typecheck, testes unitários, build e Playwright
 E2E; usa PostgreSQL temporário do Testcontainers e não precisa do 1Password.
-O [deploy-production.yml](../../../.github/workflows/deploy-production.yml)
+O [deploy-production.yml](../../.github/workflows/deploy-production.yml)
 repete a validação, espera o Environment `production` e só então acessa
 a VPS. O job de deploy não recebe token do 1Password.
 

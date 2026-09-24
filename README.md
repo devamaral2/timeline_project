@@ -46,7 +46,7 @@ pnpm install
 
 Configure `OP_SERVICE_ACCOUNT_TOKEN` e `OP_ENVIRONMENT_ID` no shell; as
 variáveis do `.env.example` são resolvidas automaticamente no 1Password.
-Consulte `docs/runbooks/onepassword.md` para criar a Service Account e o
+Consulte `docs/runbook/onepassword.md` para criar a Service Account e o
 Environment.
 
 ```bash
