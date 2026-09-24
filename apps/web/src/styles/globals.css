@@ -32,6 +32,7 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
+  --color-card-border: var(--card-border);
   --color-card-foreground: var(--card-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
@@ -54,8 +55,8 @@
   --color-meal: var(--meal);
   --color-training: var(--training);
   --color-sleep: var(--sleep);
-  --shadow-card: var(--shadow-card);
-  --shadow-card-hover: var(--shadow-card-hover);
+  --shadow-card: var(--card-shadow);
+  --shadow-card-hover: var(--card-shadow-hover);
 }
 
 :root {
@@ -63,6 +64,7 @@
   --background: oklch(0.977 0.005 275);
   --foreground: oklch(0.206 0.023 268.9);
   --card: oklch(1 0 0);
+  --card-border: oklch(0.87 0.008 272.7);
   --card-foreground: oklch(0.206 0.023 268.9);
   --primary: oklch(0.52 0.256 286.8);
   --primary-foreground: oklch(1 0 0);
@@ -85,8 +87,9 @@
   --training: oklch(0.65 0.1313 167.6);
   --meal: oklch(0.61 0.133 65.7);
   --routine: oklch(0.593 0.1359 241.41);
-  --shadow-card: 0 1px 2px 0 oklch(0.206 0.023 268.9 / 0.06);
-  --shadow-card-hover: 0 10px 30px -12px oklch(0.206 0.023 268.9 / 0.22);
+  --card-shadow: 0 10px 15px -3px oklch(0 0 0 / 0.1),
+    0 4px 6px -4px oklch(0 0 0 / 0.1);
+  --card-shadow-hover: 0 10px 30px -12px oklch(0.206 0.023 268.9 / 0.22);
   /* Paleta de cores para tags geradas por hash: mesma luminosidade/croma dos
      tokens de tipo de evento acima, variando apenas o matiz (hue), para que
      qualquer cor de tag permaneça harmonica com o resto da UI. */
@@ -98,6 +101,7 @@
   --background: oklch(0.187 0.02 265.9);
   --foreground: oklch(1 0 0);
   --card: oklch(0.24 0.024 267);
+  --card-border: oklch(1 0 0 / 24%);
   --card-foreground: oklch(1 0 0);
   --primary: oklch(0.579 0.247 288.2);
   --primary-foreground: oklch(1 0 0);
@@ -120,8 +124,9 @@
   --training: oklch(0.773 0.148 169.6);
   --meal: oklch(0.817 0.147 70.3);
   --routine: oklch(0.789 0.1326 230.59);
-  --shadow-card: 0 1px 2px 0 oklch(0 0 0 / 0.4);
-  --shadow-card-hover: 0 16px 40px -16px oklch(0 0 0 / 0.75);
+  --card-shadow: 0 10px 15px -3px oklch(0 0 0 / 0.3),
+    0 4px 6px -4px oklch(0 0 0 / 0.25);
+  --card-shadow-hover: 0 16px 40px -16px oklch(0 0 0 / 0.75);
   --tag-lightness: 0.78;
   --tag-chroma: 0.13;
 }

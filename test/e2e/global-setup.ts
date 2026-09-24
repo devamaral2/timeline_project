@@ -82,7 +82,7 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     apiDatabase.pathname = `/${databaseName}`;
     const apiDatabaseUrl = apiDatabase.toString();
 
-    const [apiPort, authPort, webPort] = await Promise.all([freePort(), freePort(), freePort()]);
+    const [apiPort, authPort, webPort, transcriptionPort] = await Promise.all([freePort(), freePort(), freePort(), freePort()]);
     const apiUrl = `http://127.0.0.1:${apiPort}`;
     const authUrl = `http://127.0.0.1:${authPort}`;
     const webUrl = `http://127.0.0.1:${webPort}`;
@@ -106,6 +106,12 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
       AUTH_HOST: "127.0.0.1",
       AUTH_PORT: String(authPort),
       OPENROUTER_API_KEY: "e2e-mocked-key",
+      OPENROUTER_AGENT_MODEL: "e2e-mocked-model",
+      AUDIO_TRANSCRIPTION_ENABLED: "true",
+      AUDIO_TRANSCRIPTION_URL: `http://127.0.0.1:${transcriptionPort}`,
+      AUDIO_TRANSCRIPTION_KEY: randomBytes(32).toString("base64url"),
+      TRANSCRIPTION_PORT: String(transcriptionPort),
+      PYTHONPATH: resolve(root, "services/transcription"),
       WEB_PORT: String(webPort),
       E2E_NEXT_BUILD_ID: nextBuildId,
     };
@@ -117,6 +123,9 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     ]);
 
     const preload = resolve(__dirname, "external-mocks.mjs");
+    const transcription = start([process.env.E2E_TRANSCRIPTION_PYTHON ?? "python3", resolve(__dirname, "transcription-service.py")], env);
+    processes.push(transcription.child);
+    await ready(`${env.AUDIO_TRANSCRIPTION_URL}/health`, transcription);
     const api = start([process.execPath, "--import", preload, resolve(root, "apps/api/dist/main.js")], env);
     processes.push(api.child);
     await ready(`${apiUrl}/api/events`, api);

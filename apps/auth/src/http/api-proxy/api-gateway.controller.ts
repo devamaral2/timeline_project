@@ -15,6 +15,7 @@ import type { AuthenticatedActor } from "../../domain/users/user";
 import type { RuntimeEnv } from "../../config/env";
 import { RUNTIME_ENV } from "../../config/tokens";
 import { Inject } from "@nestjs/common";
+import { audioUpload, isAudioPath } from "./audio-upload";
 
 const bodyWithUser = z.object({ userId: z.string().min(1).max(128).optional() }).passthrough();
 
@@ -46,7 +47,7 @@ export class ApiGatewayController {
 
     const headers = new Headers();
     for (const [name, value] of Object.entries(request.headers)) {
-      if (name === "host" || name === "content-length" || name === "authorization") continue;
+      if (["host", "content-length", "authorization", "transfer-encoding", "connection"].includes(name)) continue;
       if (typeof value === "string") headers.set(name, value);
       else if (Array.isArray(value)) headers.set(name, value.join(", "));
     }
@@ -57,10 +58,14 @@ export class ApiGatewayController {
     headers.set("x-auth-session-id", actor.sessionId);
 
     const upstreamUrl = new URL(request.originalUrl, this.env.apiServiceUrl);
+    const audio = request.method === "POST" && isAudioPath(request.path)
+      ? await audioUpload(request) : undefined;
     const upstream = await fetch(upstreamUrl, {
       method: request.method,
       headers,
-      body: request.method === "GET" || request.method === "HEAD" ? undefined : JSON.stringify(body ?? {}),
+      body: request.method === "GET" || request.method === "HEAD" ? undefined
+        : audio ? new Blob([audio as Uint8Array<ArrayBuffer>]) : JSON.stringify(body ?? {}),
+      signal: isAudioPath(request.path) ? AbortSignal.timeout(25_000) : undefined,
     });
     response.status(upstream.status);
     upstream.headers.forEach((value, name) => {
@@ -79,7 +84,7 @@ function policyFor(method: string, path: string): {
     : path.startsWith("/api/tags") ? "tag"
     : path.startsWith("/api/tasks") ? "task"
     : path.startsWith("/api/recurrences") ? "recurrence"
-    : path.startsWith("/api/ai") ? "agent"
+    : path.startsWith("/api/ai") || isAudioPath(path) ? "agent"
     : null;
   if (!resource) throw new Error(`No gateway policy for ${path}`);
   const action = method === "GET" ? "read"

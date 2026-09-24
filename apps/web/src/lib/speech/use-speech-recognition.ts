@@ -70,14 +70,19 @@ export function useSpeechRecognition({
     setInterim("");
     setError(null);
 
+    // `event.results` e cumulativo e o Chrome reentrega finais que ja apareceram antes: no
+    // Android o `resultIndex` volta a zero em quase todo evento. Reconstruir a lista inteira
+    // deixa o handler idempotente. Acumular com `+=` repetia a frase uma vez por reentrega.
     recognition.onresult = (event) => {
+      let final = "";
       let pending = "";
-      for (let index = event.resultIndex; index < event.results.length; index += 1) {
+      for (let index = 0; index < event.results.length; index += 1) {
         const result = event.results[index];
         const text = result[0]?.transcript ?? "";
-        if (result.isFinal) finalTranscriptRef.current += `${text} `;
+        if (result.isFinal) final += `${text} `;
         else pending += text;
       }
+      finalTranscriptRef.current = final;
       setInterim(pending);
     };
 

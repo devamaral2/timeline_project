@@ -1,0 +1,7 @@
+interface:
+  display_name: "TypeSafe AI"
+  short_description: "Build typed AI judgments into application workflows"
+  default_prompt: "Use $typesafe-ai to design a TypeSafe-powered workflow for this feature."
+
+policy:
+  allow_implicit_invocation: true

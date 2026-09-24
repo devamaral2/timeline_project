@@ -1,0 +1,20 @@
+.status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.status meter {
+  width: 4rem;
+}
+.status button {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.status [role='alert'] {
+  flex-basis: 100%;
+}

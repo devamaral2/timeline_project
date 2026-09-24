@@ -15,7 +15,7 @@ export function DaySkeleton({ variant }: { variant: "vertical" | "column" }) {
           <div
             key={index}
             className={cn(
-              "shimmer rounded-xl border border-border bg-card px-4 pb-3.5 pt-4 shadow-card",
+              "shimmer rounded-xl border border-card-border bg-card px-4 pb-3.5 pt-4 shadow-card",
               // O terceiro cartao ja entra apagando, para a lista nao terminar
               // num corte seco enquanto a proxima janela nao chega.
               index === 2 && "opacity-50",

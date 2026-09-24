@@ -1,0 +1,25 @@
+services:
+  transcription:
+    build:
+      context: ..
+      dockerfile: services/transcription/Dockerfile
+      target: runtime
+    restart: unless-stopped
+    environment:
+      AUDIO_TRANSCRIPTION_KEY: ${AUDIO_TRANSCRIPTION_KEY:?Set the shared transcription secret}
+    ports:
+      - "127.0.0.1:${TRANSCRIPTION_PORT:-8001}:8001"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    mem_limit: 8g
+    cpus: 4
+    read_only: true
+    tmpfs:
+      - /tmp:size=128m,mode=1777
+    security_opt:
+      - no-new-privileges:true
