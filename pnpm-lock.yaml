@@ -291,6 +291,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@repo/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       '@repo/theme':
         specifier: workspace:*
         version: link:../../packages/theme

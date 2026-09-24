@@ -119,7 +119,7 @@ function CardContent({
         "group relative w-full overflow-hidden rounded-xl border bg-card px-4 pb-3.5 pt-4 shadow-card transition-all duration-200",
         "hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-card-hover",
         // Um evento em andamento se destaca pela borda na cor da marca.
-        position === "running" ? "border-brand/45" : "border-border",
+        position === "running" ? "border-brand/45" : "border-card-border",
       )}
     >
       {/*

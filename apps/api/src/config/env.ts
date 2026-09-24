@@ -13,6 +13,9 @@ const serverSchema = z.object({
   // Modelo do agente de skills. Precisa suportar tool calling — nem todo modelo
   // do OpenRouter suporta. Sem valor, cai no OPENROUTER_MODEL.
   OPENROUTER_AGENT_MODEL: z.string().min(1).optional(),
+  AUDIO_TRANSCRIPTION_ENABLED: z.enum(["true", "false"]).default("false"),
+  AUDIO_TRANSCRIPTION_URL: z.url().optional(),
+  AUDIO_TRANSCRIPTION_KEY: z.string().min(32).optional(),
 });
 
 export type ServerEnv = z.infer<typeof serverSchema>;
@@ -36,6 +39,9 @@ export function getServerEnv(source?: Record<string, string | undefined>): Serve
     OPENROUTER_API_KEY: read("OPENROUTER_API_KEY"),
     OPENROUTER_MODEL: read("OPENROUTER_MODEL"),
     OPENROUTER_AGENT_MODEL: read("OPENROUTER_AGENT_MODEL"),
+    AUDIO_TRANSCRIPTION_ENABLED: read("AUDIO_TRANSCRIPTION_ENABLED"),
+    AUDIO_TRANSCRIPTION_URL: read("AUDIO_TRANSCRIPTION_URL"),
+    AUDIO_TRANSCRIPTION_KEY: read("AUDIO_TRANSCRIPTION_KEY"),
   });
 }
 

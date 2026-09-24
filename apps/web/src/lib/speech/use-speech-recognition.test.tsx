@@ -109,6 +109,47 @@ test("delivers the joined final transcript exactly once", () => {
   expect(result.current.listening).toBe(false);
 });
 
+test("does not repeat a final result the browser delivers more than once", () => {
+  const onFinalTranscript = vi.fn();
+  const { result } = renderHook(() => useSpeechRecognition({ onFinalTranscript }));
+
+  act(() => result.current.start());
+  // `results` e cumulativo: o Chrome reentrega o mesmo final a cada evento seguinte, e no
+  // Android o `resultIndex` fica em zero. Doze reentregas repetiam a frase doze vezes.
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    act(() =>
+      FakeSpeechRecognition.instances[0].emit([
+        { transcript: "vou lavar o carro amanha", isFinal: true },
+      ]),
+    );
+  }
+  act(() => result.current.stop());
+
+  expect(onFinalTranscript).toHaveBeenCalledTimes(1);
+  expect(onFinalTranscript).toHaveBeenCalledWith("vou lavar o carro amanha");
+});
+
+test("keeps an earlier final when the browser appends a new one", () => {
+  const onFinalTranscript = vi.fn();
+  const { result } = renderHook(() => useSpeechRecognition({ onFinalTranscript }));
+
+  act(() => result.current.start());
+  act(() =>
+    FakeSpeechRecognition.instances[0].emit([
+      { transcript: "vou lavar o carro", isFinal: true },
+    ]),
+  );
+  act(() =>
+    FakeSpeechRecognition.instances[0].emit([
+      { transcript: "vou lavar o carro", isFinal: true },
+      { transcript: " amanha", isFinal: true },
+    ]),
+  );
+  act(() => result.current.stop());
+
+  expect(onFinalTranscript).toHaveBeenCalledWith("vou lavar o carro  amanha");
+});
+
 test("does not create an event when nothing was heard", () => {
   const onFinalTranscript = vi.fn();
   const { result } = renderHook(() => useSpeechRecognition({ onFinalTranscript }));
