@@ -34,8 +34,6 @@ const backendUrl = process.env.BACKEND_URL ?? "http://127.0.0.1:3002";
 const authServiceUrl = process.env.AUTH_SERVICE_URL ?? "http://127.0.0.1:3002";
 
 const nextConfig: NextConfig = {
-  // Audio passes through proxy.ts before the Auth/API upload limits are enforced.
-  experimental: { proxyClientMaxBodySize: 20 * 1024 * 1024 },
   ...(process.env.E2E_NEXT_BUILD_ID ? { distDir: `.next-e2e-${process.env.E2E_NEXT_BUILD_ID}` } : {}),
   // O navegador embutido acessa o dev server por 127.0.0.1; sem esta origem,
   // o Next bloqueia os chunks HMR/client e a hidratação nunca acontece.

@@ -19,7 +19,6 @@ export type * from "./notes/contracts/note.dto";
 export type * from "./agent/contracts/agent-run.dto";
 export type * from "./agent/contracts/agent-chat.dto";
 export type * from "./agent-chat/contracts/agent-conversation.dto";
-export type * from "./audio/transcription.dto";
 
 // Tipos de dados de dominio que os DTOs referenciam, reexportados para que o
 // front nunca precise importar o subpath raiz (onde vivem as classes). Sao os

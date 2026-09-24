@@ -1,5 +1,4 @@
 import { Module } from "@nestjs/common";
-import { TranscribeAudioModule } from "./features/transcribe-audio/transcribe-audio.controller";
 import { ApiCoreModule } from "./api-core/api-core.module";
 import { AgentChatModule } from "./http/websocket/agent-chat/agent-chat.module";
 import { CreateEventModule } from "./features/create-event/create-event.module";
@@ -31,7 +30,6 @@ import { DeleteAgentConversationModule } from "./features/delete-agent-conversat
 @Module({
   imports: [
     ApiCoreModule.forRoot(),
-    TranscribeAudioModule,
     // Rotas estaticas devem ser registradas antes das rotas parametrizadas.
     GetDailyOverviewModule,
     CreateEventFromTranscriptModule,
