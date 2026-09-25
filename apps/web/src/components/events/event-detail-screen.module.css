@@ -1,0 +1,306 @@
+/*
+ * A tela de detalhe do evento.
+ *
+ * A composicao e a mesma para todo tipo de evento: barra de navegacao, tipo,
+ * titulo com a data, o cartao de resumo (horario, metadados, tags, situacao) e
+ * as secoes de texto. O que muda de um tipo para outro e o conteudo que entra
+ * entre a descricao e as tarefas — nao o esqueleto.
+ *
+ * Tudo aqui pinta com os tokens do shell (--ink, --muted, --line, --soft,
+ * --cyan). Como o modo escuro apenas redefine essas custom properties no
+ * ancestral, nenhuma regra precisa ser escrita duas vezes.
+ */
+
+.screen {
+  max-width: 540px;
+  margin-inline: auto;
+  overflow-wrap: anywhere;
+}
+
+/* Navegação: a seta de volta e o menu do evento, nas duas pontas. */
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 30px;
+}
+
+.iconAction {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  margin-inline: -9px;
+  border-radius: 50%;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.iconAction:hover { background: var(--soft); }
+.iconAction svg { width: 19px; height: 19px; }
+
+.menu { position: relative; }
+.menu > summary { list-style: none; }
+.menu > summary::-webkit-details-marker { display: none; }
+.menu[open] > summary { background: var(--soft); }
+
+.menuPanel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  display: grid;
+  gap: 2px;
+  min-width: 208px;
+  padding: 6px;
+  border: 1px solid var(--control-border);
+  border-radius: 14px;
+  background: var(--control-bg);
+  box-shadow: 0 14px 34px #252b2d1f;
+}
+
+.menuPanel button {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 11px;
+  border-radius: 9px;
+  color: var(--ink);
+  font-size: 13px;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.menuPanel button:hover { background: var(--soft); }
+.menuPanel button:disabled { opacity: .55; cursor: wait; }
+.menuPanel svg { width: 16px; height: 16px; color: var(--muted); }
+.menuPanel .danger { color: #b75058; }
+.menuPanel .danger svg { color: currentColor; }
+
+/* Cabeçalho: o tipo em cima, o nome e a data na mesma linha de base. */
+.type {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: .2px;
+}
+
+.type svg { width: 15px; height: 15px; color: var(--event-color, var(--cyan)); }
+
+.titleRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 20px;
+  margin-top: 10px;
+}
+
+.titleRow h1 {
+  min-width: 0;
+  font-family: var(--mockup-brand-font), sans-serif;
+  font-size: clamp(27px, 4.6vw, 33px);
+  font-weight: 450;
+  line-height: 1.2;
+  letter-spacing: -1px;
+  text-wrap: balance;
+}
+
+.headingDate {
+  flex-shrink: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/*
+ * O cartão de resumo: o que a pessoa precisa saber antes de ler qualquer
+ * texto. Três faixas — horário, metadados, tags e situação —, separadas por
+ * espaço e não por linhas, para o cartão continuar leve.
+ */
+.summary {
+  display: grid;
+  gap: 14px;
+  margin-top: 22px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+}
+
+.schedule {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.range {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.2px;
+}
+
+.range .separator { color: var(--muted); }
+.range .openEnd { color: var(--muted); font-size: 13px; letter-spacing: 0; }
+
+.duration {
+  flex-shrink: 0;
+  color: var(--muted);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.duration.live { color: var(--cyan); }
+.endsOnAnotherDay { display: block; margin-top: 5px; color: var(--muted); font-size: 10px; letter-spacing: 0; }
+
+/* Metadados: pares de ícone e texto, um por linha. */
+.metadata {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.metadata li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.metadata svg { flex-shrink: 0; width: 15px; height: 15px; }
+
+/* Rodapé do cartão: as tags à esquerda, a situação no tempo à direita. */
+.summaryFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 24px;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tags li {
+  padding: 3px 9px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.tags .missed { border-color: color-mix(in srgb, #b75058 32%, transparent); color: #b75058; }
+
+/*
+ * A situação do evento no tempo: já aconteceu, está acontecendo ou ainda vai
+ * acontecer. Um só quadro redondo com três estados — o mesmo lugar responde a
+ * mesma pergunta, mude o que mudar dentro dele.
+ */
+.position {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--muted);
+}
+
+.position svg { width: 13px; height: 13px; }
+.position i { width: 6px; height: 6px; border-radius: 50%; }
+.position[data-position="upcoming"] i { box-shadow: inset 0 0 0 1.5px currentColor; }
+.position[data-position="running"] {
+  border-color: color-mix(in srgb, var(--cyan) 36%, var(--line));
+  color: var(--cyan);
+}
+.position[data-position="running"] i { background: currentColor; animation: pulse 2.4s ease-in-out infinite; }
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--cyan) 30%, transparent); }
+  50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--cyan) 0%, transparent); }
+}
+
+/* Seções de conteúdo: um rótulo discreto e o texto embaixo. */
+.section { margin-top: 30px; }
+
+.section h2 {
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: .3px;
+}
+
+.prose { font-size: 14px; line-height: 1.75; white-space: pre-wrap; }
+.secondary { color: var(--muted); font-size: 12px; line-height: 1.6; white-space: pre-wrap; }
+.empty { color: var(--muted); font-size: 12px; line-height: 1.6; }
+
+.list { display: grid; gap: 11px; margin: 0; padding: 0; list-style: none; }
+
+.list li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.list li > span { flex-shrink: 0; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+
+/* Tarefas: o status vem antes do nome, como na agenda. */
+.tasks { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+
+.tasks li {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-height: 34px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.tasks svg { flex-shrink: 0; width: 16px; height: 16px; color: var(--muted); }
+.tasks li[data-done="true"] { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--line); }
+
+.nutrition { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.nutrition dt { color: var(--muted); font-size: 10px; }
+.nutrition dd { margin: 4px 0 0; font-size: 19px; font-variant-numeric: tabular-nums; letter-spacing: -.4px; }
+.nutrition dd span { margin-left: 3px; color: var(--muted); font-size: 10px; letter-spacing: 0; }
+
+.message { margin-top: 20px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.error { color: #b75058; }
+
+@media (max-width: 420px) {
+  .topBar { margin-bottom: 22px; }
+  .titleRow { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .summary { padding: 15px 16px; }
+  .nutrition { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .list li { flex-wrap: wrap; gap: 2px 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .position[data-position="running"] i { animation: none; }
+}

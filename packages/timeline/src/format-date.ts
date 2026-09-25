@@ -108,6 +108,12 @@ export function shortDate(dayKey: string): string {
   return `${day} ${MONTHS_SHORT[month - 1]?.toUpperCase() ?? ""}`;
 }
 
+/** "19 ago 2026" — a data curta do cabecalho do detalhe, ao lado do titulo. */
+export function compactDate(dayKey: string): string {
+  const [year, month, day] = partsOf(dayKey);
+  return `${day} ${MONTHS_SHORT[month - 1] ?? ""} ${year}`;
+}
+
 /** "19 de agosto de 2026" */
 export function longDate(dayKey: string): string {
   const [year, month, day] = partsOf(dayKey);

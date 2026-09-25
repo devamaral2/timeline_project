@@ -249,6 +249,26 @@ export interface EventDetailDto {
   taskIds?: string[];
 }
 
+export type WorkItemStatus = "inHold" | "todo" | "inProgress" | "done" | "cancel";
+export type WorkItemPriority = "urgent" | "high" | "medium" | "low";
+
+/** O que `GET /api/tasks/:taskId` devolve — so o que o detalhe do evento le. */
+export interface TaskDetailDto {
+  id: string;
+  parentTaskId?: string;
+  name: string;
+  description: string;
+  status: WorkItemStatus;
+  priority: WorkItemPriority;
+  notifyOffsetsMinutes: NotificationOffsetMinutes[];
+  tags: string[];
+  startedAt?: string;
+  estimatedFinishAt?: string;
+  finishedAt?: string;
+  dependsOnTaskIds: string[];
+  revision: number;
+}
+
 export interface TagSuggestionDto {
   id: string;
   name: string;

@@ -1,25 +1,34 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, CalendarDays } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ICON_STROKE_WIDTH, visualForItemType } from "@/components/events/event-visuals";
+import { DeleteEventDialog } from "@/components/events/DeleteEventDialog";
+import { EditEventModal } from "@/components/events/EditEventModal";
+import { EventDetailScreen } from "@/components/events/EventDetailScreen";
 import { authedFetch } from "@/lib/api/authed-fetch";
-import type { EventDetailDto, EventItemDto, MealItem } from "@/lib/api/contracts";
-import { dayKeyOf, eventPositionOf, formatTime, longDate } from "@repo/timeline";
+import type { EventDetailDto, TaskDetailDto } from "@/lib/api/contracts";
 import { agendaRefreshEvent } from "../../../mockups/eventos/agenda-refresh";
 import shellStyles from "../../../mockups/eventos/mockup.module.css";
-import styles from "./event-details.module.css";
+import styles from "@/components/events/event-detail-screen.module.css";
 
+/**
+ * O detalhe do evento na agenda de verdade. A pagina carrega o evento e as
+ * tarefas vinculadas e conduz as acoes do menu; quem desenha a tela e
+ * `EventDetailScreen`, a mesma que o estudo visual dos mockups usa.
+ */
 export default function EventPage({ params }: { params: Promise<{ userId: string; eventId: string }> }) {
   const router = useRouter();
   const [eventId, setEventId] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [event, setEvent] = useState<EventDetailDto | null>(null);
+  const [tasks, setTasks] = useState<TaskDetailDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [savingMissed, setSavingMissed] = useState(false);
   const [mutationError, setMutationError] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -44,9 +53,27 @@ export default function EventPage({ params }: { params: Promise<{ userId: string
     return () => { cancelled = true; };
   }, [eventId]);
 
-  async function updateMissed(missed: boolean) {
+  /*
+   * As tarefas vinculadas vem uma a uma, porque e o que a API oferece. Uma que
+   * falhe some da lista em vez de derrubar a secao: o evento continua legivel
+   * sem ela.
+   */
+  const taskIds = event?.taskIds;
+  useEffect(() => {
+    if (!taskIds?.length) { setTasks([]); return; }
+    let cancelled = false;
+    void Promise.all(
+      taskIds.map((taskId) => authedFetch<TaskDetailDto>(`/api/tasks/${taskId}`).catch(() => null)),
+    ).then((loaded) => {
+      if (!cancelled) setTasks(loaded.filter((task): task is TaskDetailDto => task !== null));
+    });
+    return () => { cancelled = true; };
+  }, [taskIds]);
+
+  async function toggleMissed() {
     if (!event || savingMissed) return;
     const previous = event;
+    const missed = !event.missed;
     setMutationError(null);
     setSavingMissed(true);
     setEvent({ ...event, missed, revision: event.revision + 1 });
@@ -65,115 +92,58 @@ export default function EventPage({ params }: { params: Promise<{ userId: string
     }
   }
 
-  if (loading) return <main id="conteudo" className={shellStyles.detailMain}><p role="status" className={styles.message}>Carregando evento…</p></main>;
-  if (error || !event || !userId) return (
+  if (loading) return (
     <main id="conteudo" className={shellStyles.detailMain}>
-      <button type="button" className={styles.backLink} onClick={() => router.back()}><ArrowLeft aria-hidden />Voltar</button>
-      <p role="alert" className={styles.message}>Não foi possível carregar o evento. Tente novamente.</p>
+      <p role="status" className={styles.message}>Carregando evento…</p>
     </main>
   );
 
-  const primary = event.items.find((item) => item.id === event.primaryItemId);
-  const visual = visualForItemType(primary?.type ?? "");
-  const TypeIcon = visual.Icon;
-  const dayKey = dayKeyOf(event.startedAt);
-  const upcoming = eventPositionOf(event, new Date()) === "upcoming";
-  const endDayKey = event.finishedAt ? dayKeyOf(event.finishedAt) : null;
-
-  return (
+  if (error || !event || !userId) return (
     <main id="conteudo" className={shellStyles.detailMain}>
-      <div className={styles.content}>
-        <nav className={styles.navigation} aria-label="Navegação do evento">
-          <a href={`/${userId}`} className={styles.backLink}><ArrowLeft aria-hidden />Agenda</a>
-          <span>Detalhes do evento</span>
-        </nav>
-
-        <header className={styles.heading} data-type={primary?.type ?? "routine"}>
-          <span className={styles.type}><TypeIcon aria-hidden strokeWidth={ICON_STROKE_WIDTH} />{visual.label}</span>
-          <h1>{event.name}</h1>
-          <p className={styles.date}><CalendarDays aria-hidden /><time dateTime={dayKey}>{longDate(dayKey)}</time></p>
-        </header>
-
-        <section className={styles.schedule} aria-label="Horário do evento">
-          <dl className={styles.times}>
-            <div>
-              <dt>Início</dt>
-              <dd><time dateTime={event.startedAt}>{formatTime(event.startedAt)}</time></dd>
-              <ArrowRight className={styles.timeArrow} aria-hidden />
-            </div>
-            <div>
-              <dt>Fim</dt>
-              <dd>{event.finishedAt ? <time dateTime={event.finishedAt}>{formatTime(event.finishedAt)}</time> : <span className={styles.openEnd}>{upcoming ? "A definir" : "Em andamento"}</span>}</dd>
-              {endDayKey && endDayKey !== dayKey ? <span className={styles.endDate}>{longDate(endDayKey)}</span> : null}
-            </div>
-          </dl>
-          {event.finishedAt ? <p className={styles.duration}>{durationOf(event.startedAt, event.finishedAt)}</p> : null}
-        </section>
-
-        {event.description ? <DetailSection title="Descrição"><p className={styles.prose}>{event.description}</p></DetailSection> : null}
-        {event.items.map((item) => <ItemDetails key={item.id} item={item} />)}
-        {event.tags.length ? (
-          <ul className={styles.tags} aria-label="Tags do evento">
-            {event.tags.map((tag) => <li key={tag}>#{tag}</li>)}
-          </ul>
-        ) : null}
-        {event.interruptions.length ? (
-          <DetailSection title="Interrupções">
-            <ul className={styles.list}>
-              {event.interruptions.map((item) => <li key={item.id}><div><p>{item.name}</p>{item.description ? <p className={styles.secondary}>{item.description}</p> : null}</div><span>{durationOf(item.startedAt, item.finishedAt)}</span></li>)}
-            </ul>
-          </DetailSection>
-        ) : null}
-
-        <footer className={styles.footer}>
-          <label className={styles.missed}>
-            <input type="checkbox" checked={event.missed} disabled={savingMissed} onChange={(inputEvent) => void updateMissed(inputEvent.target.checked)} />
-            Não realizado
-          </label>
-          {savingMissed ? <span role="status">Salvando…</span> : null}
-        </footer>
-        {mutationError ? <p role="alert" className={styles.message}>{mutationError}</p> : null}
+      <div className={styles.screen}>
+        <div className={styles.topBar}>
+          <button type="button" className={styles.iconAction} aria-label="Voltar" onClick={() => router.back()}>
+            <ArrowLeft aria-hidden />
+          </button>
+        </div>
+        <p role="alert" className={`${styles.message} ${styles.error}`}>
+          Não foi possível carregar o evento. Tente novamente.
+        </p>
       </div>
     </main>
   );
-}
 
-function DetailSection({ title, children }: { title: string; children: React.ReactNode }) {
-  return <section className={styles.section}><h2>{title}</h2>{children}</section>;
-}
+  return (
+    <main id="conteudo" className={shellStyles.detailMain}>
+      <EventDetailScreen
+        event={event}
+        tasks={tasks}
+        backHref={`/${userId}`}
+        actionError={mutationError}
+        actions={{
+          savingMissed,
+          onEdit: () => setEditing(true),
+          onToggleMissed: () => void toggleMissed(),
+          onDelete: () => setDeleting(true),
+        }}
+      />
 
-function ItemDetails({ item }: { item: EventItemDto }) {
-  if (item.type === "meal") return (
-    <DetailSection title="Refeição">
-      <p>{item.data.name}</p>
-      {item.data.description ? <p className={styles.secondary}>{item.data.description}</p> : null}
-      <Nutrition data={item.data} />
-    </DetailSection>
+      {editing ? (
+        <EditEventModal
+          eventId={event.id}
+          onClose={() => setEditing(false)}
+          onUpdated={() => window.location.reload()}
+        />
+      ) : null}
+
+      {deleting ? (
+        <DeleteEventDialog
+          eventId={event.id}
+          eventName={event.name}
+          onClose={() => setDeleting(false)}
+          onDeleted={() => router.push(`/${userId}`)}
+        />
+      ) : null}
+    </main>
   );
-  if (item.type === "training" && item.data.workouts.length) return (
-    <DetailSection title="Treinos">
-      <ul className={styles.list}>
-        {item.data.workouts.map((workout) => <li key={workout.id}><p>{workout.workoutName}</p><span>{workout.duration} min · {workout.calories} kcal</span></li>)}
-      </ul>
-    </DetailSection>
-  );
-  if (item.type === "sleep") return <DetailSection title="Sono"><p>{item.data.trackedSleepTime} min monitorados <span className={styles.secondary}>· pontuação {item.data.score}</span></p></DetailSection>;
-  return null;
-}
-
-function Nutrition({ data }: { data: MealItem }) {
-  const values = [
-    ["Calorias", data.totals.totalCaloriesKcal, "kcal"],
-    ["Proteína", data.totals.totalProteinGrams, "g"],
-    ["Carboidratos", data.totals.totalCarbohydrateGrams, "g"],
-    ["Gorduras", data.totals.totalFatGrams, "g"],
-  ] as const;
-  return <dl className={styles.nutrition} aria-label="Resumo nutricional">{values.map(([label, value, unit]) => <div key={label}><dt>{label}</dt><dd>{value}<span>{unit}</span></dd></div>)}</dl>;
-}
-
-function durationOf(startedAt: string, finishedAt: string): string {
-  const minutes = Math.max(0, Math.round((new Date(finishedAt).getTime() - new Date(startedAt).getTime()) / 60_000));
-  if (minutes < 60) return `${minutes} min`;
-  const remaining = minutes % 60;
-  return `${Math.floor(minutes / 60)} h${remaining ? ` ${remaining} min` : ""}`;
 }
