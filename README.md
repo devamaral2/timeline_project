@@ -4,7 +4,7 @@ Monorepo Turborepo + pnpm workspace.
 
 ```
 apps/web              Next.js 16 — frontend web (porta 3000)
-apps/mobile           Expo 57 + expo-router — app nativo
+apps/mobile           Android nativo em Kotlin + Jetpack Compose
 apps/api              NestJS — backend (porta 3001, so loopback por padrao)
 apps/auth             NestJS — identidade, convite, login, sessao e RBAC
 packages/contracts    @repo/contracts — contratos de dados compartilhados
@@ -19,13 +19,14 @@ frontends tem regra de negocio — do backend eles importam apenas tipos
 `apps/api/src/domain` e `apps/api/src/infrastructure/persistence`; controllers,
 use cases e services ficam em `apps/api/src/features`.
 
-O `apps/auth` é o provedor de identidade do web e da API. O Firebase permanece
-somente no app mobile por enquanto.
+O `apps/auth` é o provedor de identidade do web e da API.
 A documentação interativa do auth fica em `http://127.0.0.1:3002/docs`
 (OpenAPI JSON em `/openapi.json`) depois de subir `pnpm dev:auth`.
 
-Web e mobile compartilham a logica de datas (`@repo/timeline`) e a paleta
-(`@repo/theme`), para que as duas telas mostrem os mesmos dias nas mesmas cores.
+O app Android repercute a experiência mobile do web; a implementação nativa
+fica em reescrita. A fonte de verdade da paridade está em
+`docs/runbook/mobile-rewrite.md`. Para preparar a máquina e rodar o app local,
+consulte `docs/runbook/mobile-local-development.md`.
 
 ## Desenvolvimento
 
@@ -57,26 +58,10 @@ Sobe o Nest em `http://127.0.0.1:3001` e o Next em `http://localhost:3000`.
 
 ## App mobile
 
-O app nao roda no Expo Go: o login usa o Google Sign-In nativo, que exige um
-development build.
-
-1. No Firebase Console, pegue o **Web client ID** do provedor Google
- (Authentication &gt; Sign-in method &gt; Google) e ponha em
- `MOBILE_GOOGLE_WEB_CLIENT_ID`. No Android, cadastre tambem a impressao
- digital SHA-1 da chave de debug em Project settings &gt; Your apps.
-2. Descubra o IP da sua maquina na rede local (`ipconfig` no Windows) e ponha
- `MOBILE_API_URL=http://<ip>:3002` no `.env` (o gateway do Auth).
-3. `API_HOST=0.0.0.0` no `.env`, para o Nest atender na rede em vez de so no
- loopback. Isso e para desenvolvimento: em producao a variavel fica de fora e
- o bind volta a `127.0.0.1`.
-
-```bash
-pnpm --filter @repo/mobile run android   # gera o projeto nativo e instala no aparelho
-pnpm --filter @repo/mobile run start     # Metro, nas vezes seguintes
-```
-
-Os icones e a splash ainda sao os do template do Expo
-(`apps/mobile/assets/`) — troque quando tiver a arte do app.
+O app Android está em reescrita nativa com Kotlin e Jetpack Compose. Consulte o
+runbook em `docs/runbook/mobile-rewrite.md` para o plano e a arquitetura e
+`docs/runbook/mobile-local-development.md` para o procedimento completo de
+desenvolvimento local.
 
 ## Testes
 
@@ -97,10 +82,8 @@ pnpm turbo run typecheck
 ## Autenticação
 
 O `apps/auth` é o provedor de autenticação do web e da API, com sessão em
-cookies httpOnly e login por email e senha. O mobile continua usando seu fluxo próprio
-com Firebase por enquanto, fora deste escopo.
+cookies httpOnly e login por email e senha. O app Android usará os mesmos
+endpoints de autenticação durante a reescrita.
 
-Os packages compilam antes dos apps (`dependsOn: ["^build"]`). O mobile fica de
-fora do `build`: o bundle dele sai do Metro (`expo export`) ou do EAS Build, nao
-do `tsc`.  
-  
+Os packages compilam antes dos apps (`dependsOn: ["^build"]`). O app Android
+será compilado pelo Gradle, fora do build TypeScript do monorepo.

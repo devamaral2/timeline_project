@@ -1284,8 +1284,9 @@ do host antes de considerar a publicação protegida por Access.
 ### O que “tudo funcionando” significa aqui
 
 Web, API, auth, banco, RabbitMQ, Prometheus, Grafana e Tunnel devem estar prontos.
-O mobile usa `https://api.SEUDOMINIO` como `MOBILE_API_URL` em seu próprio build;
-a geração/instalação nativa não faz parte de subir servidores na VPS.
+O app Android usa `https://api.SEUDOMINIO` como `BuildConfig.API_BASE_URL` em seu
+próprio build; a geração/instalação nativa não faz parte de subir servidores na
+VPS.
 
 Se deixou OpenRouter pendente, os recursos de IA continuam pendentes. RabbitMQ
 ainda não tem consumidor no código. O auth usa o endereço do socket como IP do cliente:

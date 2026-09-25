@@ -13,6 +13,9 @@ dist/
 .harness-eval/
 __pycache__/
 /output/
+apps/mobile/.secrets/
+*.jks
+*.keystore
 
 next-env.d.ts
 

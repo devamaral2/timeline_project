@@ -28,9 +28,9 @@ async function bootstrap(): Promise<void> {
   app.useGlobalFilters(new DomainExceptionFilter());
   app.enableShutdownHooks();
 
-  // O React Native nao aplica a politica de origem, entao o app no celular nao
-  // precisa disso. Quem precisa e o alvo web do Expo, util para depurar telas
-  // no navegador — e ele so existe quando a API ja esta aberta na rede.
+  // Clientes nativos nao aplicam a politica de origem. Quem precisa e o alvo
+  // web, util para depurar telas no navegador — e ele so existe quando a API
+  // ja esta aberta na rede.
   if (!isLoopbackHost(API_HOST)) app.enableCors();
 
   await app.listen(API_PORT, API_HOST);

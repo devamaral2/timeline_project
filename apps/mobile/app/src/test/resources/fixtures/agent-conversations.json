@@ -1,0 +1,21 @@
+{
+  "items": [
+    {
+      "id": "conversation-1",
+      "preview": "O que tenho hoje?",
+      "lastMessageAt": "2026-09-22T11:00:00.000Z",
+      "revision": 2,
+      "createdAt": "2026-09-22T10:00:00.000Z",
+      "updatedAt": "2026-09-22T11:00:00.000Z"
+    },
+    {
+      "id": "conversation-2",
+      "title": "Planejamento",
+      "preview": "Planejar a semana",
+      "lastMessageAt": "2026-09-21T18:00:00.000Z",
+      "revision": 1,
+      "createdAt": "2026-09-21T17:00:00.000Z",
+      "updatedAt": "2026-09-21T18:00:00.000Z"
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+[
+  {
+    "name": "foco",
+    "hue": 333,
+    "light": {
+      "color": "#99428d",
+      "backgroundColor": "rgba(153, 66, 141, 0.14)"
+    },
+    "dark": {
+      "color": "#e997db",
+      "backgroundColor": "rgba(233, 151, 219, 0.14)"
+    }
+  },
+  {
+    "name": "saúde",
+    "hue": 333,
+    "light": {
+      "color": "#99428d",
+      "backgroundColor": "rgba(153, 66, 141, 0.14)"
+    },
+    "dark": {
+      "color": "#e997db",
+      "backgroundColor": "rgba(233, 151, 219, 0.14)"
+    }
+  },
+  {
+    "name": "planejamento",
+    "hue": 230,
+    "light": {
+      "color": "#0075ad",
+      "backgroundColor": "rgba(0, 117, 173, 0.14)"
+    },
+    "dark": {
+      "color": "#4bc6fa",
+      "backgroundColor": "rgba(75, 198, 250, 0.14)"
+    }
+  }
+]

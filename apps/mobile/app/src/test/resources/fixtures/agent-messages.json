@@ -1,0 +1,20 @@
+{
+  "items": [
+    {
+      "id": "message-2",
+      "seq": 2,
+      "role": "assistant",
+      "content": "Você tem um treino às oito.",
+      "entities": [],
+      "createdAt": "2026-09-22T11:00:00.000Z"
+    },
+    {
+      "id": "message-1",
+      "seq": 1,
+      "role": "user",
+      "content": "O que tenho hoje?",
+      "entities": [],
+      "createdAt": "2026-09-22T10:59:00.000Z"
+    }
+  ]
+}

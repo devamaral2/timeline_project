@@ -82,8 +82,8 @@ export interface ThemeTokens {
  * O tema claro e a traducao da mesma identidade para superficies claras: os
  * mesmos matizes, escurecidos o suficiente para manter contraste sobre branco.
  * O produto abre no escuro (veja `apps/web/src/app/layout.tsx` e
- * `apps/mobile/src/lib/theme/use-theme.ts`) — esta paleta existe para que a
- * volta do modo claro seja so trocar o tema, e nao redesenhar tudo.
+ * `apps/web/src/app/layout.tsx`) — esta paleta existe para que a volta do modo
+ * claro seja so trocar o tema, e nao redesenhar tudo.
  */
 export const lightTokens: ThemeTokens = {
   colors: {

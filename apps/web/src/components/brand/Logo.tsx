@@ -9,9 +9,6 @@ import { cn } from "@/lib/utils";
 /**
  * A marca do Braid: um anel com o gradiente roxo -> ciano, a forma de
  * onda do tempo registrado no meio e o brilho de IA no canto.
- *
- * O mesmo desenho existe em `apps/mobile/src/components/Logo.tsx`, la com
- * react-native-svg. Mudou aqui, muda la — sao a mesma marca.
  */
 
 /** As alturas das barras da onda, em unidades do viewBox de 32. */

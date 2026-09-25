@@ -1,0 +1,136 @@
+{
+  "id": "event-training",
+  "name": "Treino da manhã",
+  "description": "Cardio e força",
+  "startedAt": "2026-09-22T08:00:00-03:00",
+  "finishedAt": "2026-09-22T09:05:00-03:00",
+  "tags": [
+    "saúde",
+    "foco"
+  ],
+  "missed": false,
+  "priority": "normal",
+  "notifyOffsetsMinutes": [
+    10
+  ],
+  "interruptions": [
+    {
+      "id": "interrupt-1",
+      "name": "Água",
+      "description": "Pausa rápida",
+      "startedAt": "2026-09-22T08:20:00-03:00",
+      "finishedAt": "2026-09-22T08:25:00-03:00"
+    }
+  ],
+  "revision": 3,
+  "primaryItemId": "item-training",
+  "items": [
+    {
+      "id": "item-routine",
+      "position": 0,
+      "type": "routine",
+      "schemaVersion": 1,
+      "isPrimary": false,
+      "data": {}
+    },
+    {
+      "id": "item-meal",
+      "position": 1,
+      "type": "meal",
+      "schemaVersion": 1,
+      "isPrimary": false,
+      "data": {
+        "name": "Café da manhã",
+        "description": "Aveia e fruta",
+        "foodItems": [
+          {
+            "id": "food-oats",
+            "name": "Aveia",
+            "portion": "40 g",
+            "approximateWeightGrams": 40,
+            "caloriesKcal": 152,
+            "macronutrients": {
+              "carbohydratesGrams": 27,
+              "proteinsGrams": 5,
+              "totalFatGrams": 3,
+              "fiberGrams": 4
+            },
+            "micronutrients": {
+              "ironMg": 1.6
+            }
+          }
+        ],
+        "totals": {
+          "totalCaloriesKcal": 152,
+          "totalProteinGrams": 5,
+          "totalCarbohydrateGrams": 27,
+          "totalFatGrams": 3,
+          "totalFiberGrams": 4
+        }
+      }
+    },
+    {
+      "id": "item-sleep",
+      "position": 2,
+      "type": "sleep",
+      "schemaVersion": 1,
+      "isPrimary": false,
+      "data": {
+        "trackedSleepTime": 7.5,
+        "score": 86
+      }
+    },
+    {
+      "id": "item-training",
+      "position": 3,
+      "type": "training",
+      "schemaVersion": 1,
+      "isPrimary": true,
+      "data": {
+        "workouts": [
+          {
+            "id": "workout-treadmill",
+            "workoutCode": "treadmill",
+            "workoutName": "Esteira",
+            "calories": 120,
+            "duration": 20,
+            "pace": 6.5,
+            "distance": 3.1
+          },
+          {
+            "id": "workout-running",
+            "workoutCode": "running",
+            "workoutName": "Corrida",
+            "calories": 170,
+            "duration": 25,
+            "pace": 5.8,
+            "distance": 4.3
+          },
+          {
+            "id": "workout-weights",
+            "workoutCode": "weightlifting",
+            "workoutName": "Força",
+            "calories": 130,
+            "duration": 30,
+            "sets": [
+              {
+                "id": "set-1",
+                "exercise": "Agachamento",
+                "repetitions": 10,
+                "weight": 40
+              }
+            ]
+          },
+          {
+            "id": "workout-free",
+            "workoutCode": "free",
+            "workoutName": "Mobilidade",
+            "calories": 30,
+            "duration": 10
+          }
+        ],
+        "caloriesBurned": 450
+      }
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "name": "Novo bloco",
+  "tags": [
+    "planejamento"
+  ],
+  "priority": "flexible",
+  "items": [
+    {
+      "type": "routine"
+    },
+    {
+      "type": "meal",
+      "data": {
+        "inputText": "banana com iogurte"
+      }
+    },
+    {
+      "type": "sleep",
+      "data": {
+        "score": 80
+      }
+    },
+    {
+      "type": "training",
+      "data": {
+        "workouts": [
+          {
+            "workoutCode": "free"
+          }
+        ]
+      }
+    }
+  ]
+}

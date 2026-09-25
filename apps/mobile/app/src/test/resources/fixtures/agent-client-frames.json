@@ -1,0 +1,15 @@
+[
+  {
+    "type": "message",
+    "id": "frame-1",
+    "text": "O que tenho hoje?",
+    "context": {
+      "screen": "agenda",
+      "entityId": "2026-09-22"
+    }
+  },
+  {
+    "type": "cancel",
+    "id": "frame-2"
+  }
+]
