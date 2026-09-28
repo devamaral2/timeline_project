@@ -33,6 +33,6 @@ Status: `—` (não existe), `🚧` (em progresso), `✅` (paridade), `≠`
 | Lembretes | Aviso no horário | `lib/events/use-due-notifications.ts` | 🚧 | Scheduler nativo com cálculo futuro, alarme exato/fallback inexato, canal, permissão e deep link ✅; sincronização no boot/logout entra na RAF-173 |
 | Chat | Painel do agente | `mockups/eventos/agent-chat-panel.tsx` | ✅ | Painel Compose com nova conversa, sugestões, status, resposta, erros, retry, cancelamento, entidades e refresh da agenda |
 | Chat | Histórico de conversas | `lib/agent-chat/use-agent-conversations.ts` | ✅ | Lista paginada, abertura de mensagens, exclusão otimista e atualização após novas respostas |
-| Marca | Logo, fontes, cores | `brand/Logo.tsx`, `packages/theme` | ✅ | Logo Canvas nativo, fontes Outfit/Manrope e tokens compartilhados (paleta Névoa e Noite, Color.kt regenerado) |
+| Marca | Logo, fontes, cores | `brand/Logo.tsx`, `packages/theme`, `app/layout.tsx` | 🚧 | Tokens Névoa e Noite (Color.kt regenerado, fios `strand*`), Figtree/Newsreader/JetBrains Mono em `res/font`, escala de tipos e raios da Síntese, tema pelo sistema e assinatura “braid” na serifa ✅; símbolo Descendo e ícone adaptativo pendentes (logo Canvas ainda é o anel) |
 | Fora da v1 | Aceite de convite | `convites/aceitar` | ≠ | Só web (link de e-mail) |
 | Fora da v1 | Ver como convidado | `layout/ViewAsGuestButton.tsx` | ≠ | Depois da v1 |
