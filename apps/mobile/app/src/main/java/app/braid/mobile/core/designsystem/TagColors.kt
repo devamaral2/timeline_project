@@ -23,7 +23,7 @@ fun hueForTag(name: String): Int {
  */
 fun tagColors(
     name: String,
-    darkTheme: Boolean = true,
+    darkTheme: Boolean,
 ): BraidTagColors {
     val lightness = if (darkTheme) DarkTokens.tagLightness else LightTokens.tagLightness
     val chroma = if (darkTheme) DarkTokens.tagChroma else LightTokens.tagChroma

@@ -28,6 +28,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.braid.mobile.core.designsystem.LocalBraidDarkTheme
 import app.braid.mobile.core.designsystem.tagColors
 
 @Composable
@@ -59,16 +60,18 @@ fun TagInput(
         Text(text = "Tags", style = MaterialTheme.typography.labelLarge)
         if (tags.isNotEmpty()) {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                val darkTheme = LocalBraidDarkTheme.current
                 tags.forEach { tag ->
+                    val colors = tagColors(tag, darkTheme)
                     Surface(
                         shape = RoundedCornerShape(50),
-                        color = tagColors(tag).backgroundColor,
+                        color = colors.backgroundColor,
                     ) {
                         Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                             Text(
                                 modifier = Modifier.padding(start = 8.dp),
                                 text = "#$tag",
-                                color = tagColors(tag).color,
+                                color = colors.color,
                                 style = MaterialTheme.typography.labelSmall,
                             )
                             IconButton(

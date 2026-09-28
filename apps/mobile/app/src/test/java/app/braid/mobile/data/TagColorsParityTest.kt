@@ -36,9 +36,9 @@ class TagColorsParityTest {
                     .jsonObject
                     .getValue("color")
                     .jsonPrimitive.content,
-                tagColors(name).color,
+                tagColors(name, darkTheme = true).color,
             )
-            assertTrue(tagColors(name).backgroundColor.alpha in 0.13f..0.15f)
+            assertTrue(tagColors(name, darkTheme = true).backgroundColor.alpha in 0.13f..0.15f)
         }
     }
 
