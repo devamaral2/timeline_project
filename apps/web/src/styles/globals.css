@@ -16,19 +16,30 @@
  * tinta (`--primary`, #203d46 no claro, #eaf2f3 no escuro).
  *
  * As cores por tipo de evento seguem o vocabulario do dominio:
- * routine | meal | training | sleep.
+ * routine | meal | training | sleep — mesma luminosidade e croma, so o matiz
+ * muda. Os `--strand-*` sao os quatro fios solidos do simbolo.
+ *
+ * Tres vozes: Figtree na interface (`font-sans`), Newsreader nos titulos e na
+ * assinatura (`font-display`) e JetBrains Mono so onde o numero e dado tecnico
+ * (`font-mono`). As fontes sao locais, carregadas pelo `app/layout.tsx`.
+ *
+ * O plano e sem sombra: o cartao e uma linha de 1 px (`--card-shadow: none`).
+ * Sombra so no que flutua. Raios: 5 nas tags, 8 nos botoes e campos, 14 nos
+ * cartoes, 18 nos paineis e dialogos; a pilula fica para escolhas.
  *
  * Todas as cores usam oklch. Os hexadecimais de referencia estao ao lado.
  */
 
 @theme inline {
-  --font-sans:
-    "Inter", "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
+  --font-sans: var(--font-figtree), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: var(--font-newsreader), Georgia, "Times New Roman", serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, Menlo, monospace;
+  --radius-xs: 5px;
+  --radius-sm: 8px;
+  --radius-md: 10px;
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-xl: 18px;
+  --radius-2xl: 22px;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -52,6 +63,10 @@
   --color-brand: var(--brand);
   --color-brand-accent: var(--brand-accent);
   --color-brand-soft: var(--brand-soft);
+  --color-strand-tile: var(--strand-tile);
+  --color-strand-nevoa: var(--strand-nevoa);
+  --color-strand-destaque: var(--strand-destaque);
+  --color-strand-tinta: var(--strand-tinta);
   --color-routine: var(--routine);
   --color-meal: var(--meal);
   --color-training: var(--training);
@@ -77,26 +92,29 @@
   --accent-foreground: oklch(0.249 0.022 220.8);
   --destructive: oklch(0.53 0.13 17.8);
   --destructive-foreground: oklch(1 0 0);
-  --warning: oklch(0.61 0.133 65.7);
-  --success: oklch(0.62 0.15 145);
+  --warning: oklch(0.53 0.1 72);
+  --success: oklch(0.575 0.089 179.2);
   --border: oklch(0.909 0.012 217.5);
   --input: oklch(0.826 0.019 222.2);
   --ring: oklch(0.575 0.089 179.2);
   --brand: oklch(0.575 0.089 179.2);
   --brand-accent: oklch(0.5208 0.0853 180.1);
   --brand-soft: oklch(0.955 0.02 185.5);
-  --sleep: oklch(0.52 0.256 286.8);
-  --training: oklch(0.65 0.1313 167.6);
-  --meal: oklch(0.61 0.133 65.7);
-  --routine: oklch(0.593 0.1359 241.41);
-  --card-shadow: 0 10px 15px -3px oklch(0 0 0 / 0.1),
-    0 4px 6px -4px oklch(0 0 0 / 0.1);
-  --card-shadow-hover: 0 10px 30px -12px oklch(0.249 0.022 220.8 / 0.22);
+  --strand-tile: oklch(0.941 0.009 222.1);
+  --strand-nevoa: oklch(0.805 0.028 219.8);
+  --strand-destaque: oklch(0.641 0.094 182.3);
+  --strand-tinta: oklch(0.341 0.038 220);
+  --sleep: oklch(0.531 0.099 287.5);
+  --training: oklch(0.529 0.099 134.8);
+  --meal: oklch(0.53 0.1 72);
+  --routine: oklch(0.529 0.0995 231.7);
+  --card-shadow: none;
+  --card-shadow-hover: 0 12px 28px oklch(0.249 0.022 220.8 / 0.12);
   /* Paleta de cores para tags geradas por hash: mesma luminosidade/croma dos
      tokens de tipo de evento acima, variando apenas o matiz (hue), para que
      qualquer cor de tag permaneça harmonica com o resto da UI. */
-  --tag-lightness: 0.52;
-  --tag-chroma: 0.15;
+  --tag-lightness: 0.53;
+  --tag-chroma: 0.09;
 }
 
 .dark {
@@ -106,7 +124,7 @@
   --card-border: oklch(0.369 0.023 245.9);
   --card-foreground: oklch(0.955 0.009 205.9);
   --primary: oklch(0.955 0.009 205.9);
-  --primary-foreground: oklch(0.234 0.025 246.5);
+  --primary-foreground: oklch(0.283 0.025 244);
   --secondary: oklch(0.33 0.024 243.7);
   --secondary-foreground: oklch(0.955 0.009 205.9);
   --muted: oklch(0.33 0.024 243.7);
@@ -114,24 +132,27 @@
   --accent: oklch(0.361 0.023 243.6);
   --accent-foreground: oklch(0.955 0.009 205.9);
   --destructive: oklch(0.8 0.111 17.7);
-  --destructive-foreground: oklch(0.234 0.025 246.5);
-  --warning: oklch(0.817 0.147 70.3);
-  --success: oklch(0.8 0.17 145);
+  --destructive-foreground: oklch(0.283 0.025 244);
+  --warning: oklch(0.801 0.09 72.5);
+  --success: oklch(0.7421 0.1095 177.7);
   --border: oklch(0.369 0.023 245.9);
   --input: oklch(0.435 0.021 240.4);
   --ring: oklch(0.7421 0.1095 177.7);
   --brand: oklch(0.7421 0.1095 177.7);
   --brand-accent: oklch(0.8 0.099 179);
   --brand-soft: oklch(0.369 0.045 188.8);
-  --sleep: oklch(0.579 0.247 288.2);
-  --training: oklch(0.773 0.148 169.6);
-  --meal: oklch(0.817 0.147 70.3);
-  --routine: oklch(0.789 0.1326 230.59);
-  --card-shadow: 0 10px 15px -3px oklch(0 0 0 / 0.3),
-    0 4px 6px -4px oklch(0 0 0 / 0.25);
-  --card-shadow-hover: 0 16px 40px -16px oklch(0 0 0 / 0.75);
-  --tag-lightness: 0.78;
-  --tag-chroma: 0.13;
+  --strand-tile: oklch(0.283 0.025 244);
+  --strand-nevoa: oklch(0.638 0.042 219.1);
+  --strand-destaque: oklch(0.7421 0.1095 177.7);
+  --strand-tinta: oklch(0.955 0.009 205.9);
+  --sleep: oklch(0.8 0.09 287.8);
+  --training: oklch(0.8 0.09 134.7);
+  --meal: oklch(0.801 0.09 72.5);
+  --routine: oklch(0.799 0.09 232.5);
+  --card-shadow: none;
+  --card-shadow-hover: 0 16px 40px oklch(0 0 0 / 0.45);
+  --tag-lightness: 0.8;
+  --tag-chroma: 0.08;
 }
 
 @layer base {

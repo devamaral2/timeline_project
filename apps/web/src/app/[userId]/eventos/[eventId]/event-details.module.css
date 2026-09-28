@@ -38,11 +38,11 @@
 
 .heading h1 {
   margin: 12px 0 14px;
-  font-family: var(--mockup-brand-font), sans-serif;
-  font-size: clamp(28px, 5vw, 36px);
-  font-weight: 450;
-  line-height: 1.2;
-  letter-spacing: -.9px;
+  font-family: var(--font-display);
+  font-size: clamp(40px, 6vw, 52px);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -.01em;
   text-wrap: balance;
 }
 

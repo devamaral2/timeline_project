@@ -3,15 +3,16 @@
  *
  * Antes cada componente repetia a mesma sequencia de classes, e o hover de um
  * saia diferente do outro. Aqui a acao principal e a unica coisa da tela
- * preenchida com a cor da marca — e por isso que ela e a principal.
+ * preenchida com o fio tinta — e por isso que ela e a principal. Botoes tem
+ * raio 8; a pilula fica para escolhas.
  *
  * Extras (largura, so icone, um `size` diferente) entram por `cn(...)` em cima.
  */
 
 const base =
-  "inline-flex h-10 items-center justify-center gap-2 rounded-full px-4 text-sm transition-all disabled:cursor-not-allowed disabled:opacity-60";
+  "inline-flex h-10 items-center justify-center gap-2 rounded-sm px-4 text-sm transition-all disabled:cursor-not-allowed disabled:opacity-60";
 
-/** Acao principal: roxo solido, clareando de leve no hover. */
+/** Acao principal: o fio tinta, clareando de leve no hover. */
 export const primaryButtonClass = `${base} bg-primary font-semibold text-primary-foreground hover:brightness-110`;
 
 /** Acao secundaria: a borda de sempre, com o fundo acendendo no hover. */

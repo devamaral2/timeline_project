@@ -63,13 +63,12 @@ export function Logo({ size = 40, className }: LogoProps) {
 }
 
 /**
- * O logotipo, em uma cor so. O gradiente da marca fica restrito ao simbolo
- * acima — no texto ele pesava, e a leitura em uma cor e mais limpa.
+ * A assinatura: "braid" na serifa, em minusculas e em uma cor so.
  */
 export function Wordmark({ className }: { className?: string }) {
   return (
-    <span className={cn("truncate font-semibold tracking-tight text-foreground", className)}>
-      Braid
+    <span className={cn("truncate font-display font-normal tracking-[-0.01em] text-foreground", className)}>
+      braid
     </span>
   );
 }
