@@ -32,6 +32,7 @@ const tokenNames = [
   "ring",
   "brand",
   "brandAccent",
+  "brandSoft",
   "sleep",
   "training",
   "meal",

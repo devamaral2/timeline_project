@@ -7,7 +7,7 @@ import { useId } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * A marca do Braid: um anel com o gradiente roxo -> ciano, a forma de
+ * A marca do Braid: um anel com o gradiente da marca (`--brand` -> `--brand-accent`), a forma de
  * onda do tempo registrado no meio e o brilho de IA no canto.
  */
 
