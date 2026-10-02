@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import type {
   TimelineEventCardDto,
@@ -82,19 +82,16 @@ test('does not ask for anything while nobody is signed in', async () => {
   expect(fetch).not.toHaveBeenCalled();
 });
 
-test('renders one list for the selected day without repeating its date as a content title', async () => {
+test('renders one section for the selected day, headed by its name and event count', async () => {
   vi.mocked(fetch).mockResolvedValue(aPage({ items: [anEvent()] }));
   renderTimeline();
 
   expect(
     await screen.findByRole('heading', { level: 3, name: 'Bloco de trabalho' }),
   ).toBeInTheDocument();
-  expect(
-    screen.queryByRole('heading', { name: '19 de agosto de 2026' }),
-  ).not.toBeInTheDocument();
-  expect(
-    screen.getByRole('region', { name: '19 de agosto de 2026' }),
-  ).toHaveTextContent('1 evento · 3h registradas');
+  const section = screen.getByRole('region', { name: '19 de agosto, quarta-feira' });
+  expect(section).toHaveTextContent('1 evento');
+  expect(within(section).getByRole('heading', { level: 2 })).toBeInTheDocument();
 });
 
 test('loads only the day selected in the week header', async () => {

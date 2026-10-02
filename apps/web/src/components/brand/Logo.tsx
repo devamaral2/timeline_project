@@ -7,11 +7,8 @@ import { useId } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * A marca do Braid: um anel com o gradiente roxo -> ciano, a forma de
+ * A marca do Braid: um anel com o gradiente da marca (`--brand` -> `--brand-accent`), a forma de
  * onda do tempo registrado no meio e o brilho de IA no canto.
- *
- * O mesmo desenho existe em `apps/mobile/src/components/Logo.tsx`, la com
- * react-native-svg. Mudou aqui, muda la — sao a mesma marca.
  */
 
 /** As alturas das barras da onda, em unidades do viewBox de 32. */
@@ -66,13 +63,12 @@ export function Logo({ size = 40, className }: LogoProps) {
 }
 
 /**
- * O logotipo, em uma cor so. O gradiente da marca fica restrito ao simbolo
- * acima — no texto ele pesava, e a leitura em uma cor e mais limpa.
+ * A assinatura: "braid" na serifa, em minusculas e em uma cor so.
  */
 export function Wordmark({ className }: { className?: string }) {
   return (
-    <span className={cn("truncate font-semibold tracking-tight text-foreground", className)}>
-      Braid
+    <span className={cn("truncate font-display font-normal tracking-[-0.01em] text-foreground", className)}>
+      braid
     </span>
   );
 }

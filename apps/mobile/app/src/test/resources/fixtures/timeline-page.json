@@ -1,0 +1,50 @@
+{
+  "items": [
+    {
+      "id": "event-training",
+      "primaryItemId": "item-training",
+      "primaryItemType": "training",
+      "itemTypes": [
+        "training",
+        "routine"
+      ],
+      "missed": false,
+      "name": "Treino da manhã",
+      "description": "Cardio e força",
+      "startedAt": "2026-09-22T08:00:00-03:00",
+      "finishedAt": "2026-09-22T09:05:00-03:00",
+      "notifyOffsetsMinutes": [
+        10
+      ],
+      "durationLabel": "1h 05m",
+      "tags": [
+        "saúde",
+        "foco"
+      ],
+      "interruptions": [
+        {
+          "name": "Água",
+          "description": "Pausa rápida",
+          "durationLabel": "5m"
+        }
+      ]
+    },
+    {
+      "id": "event-note",
+      "primaryItemId": "item-routine",
+      "primaryItemType": "routine",
+      "itemTypes": [
+        "routine"
+      ],
+      "missed": true,
+      "name": "Leitura",
+      "description": "",
+      "startedAt": "2026-09-21T21:00:00-03:00",
+      "notifyOffsetsMinutes": [],
+      "durationLabel": "30m",
+      "tags": [],
+      "interruptions": []
+    }
+  ],
+  "nextCursor": "cursor-2"
+}

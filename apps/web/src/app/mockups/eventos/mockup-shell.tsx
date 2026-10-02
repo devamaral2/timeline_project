@@ -14,37 +14,43 @@ export function BrandIcon() {
   );
 }
 
+/** A assinatura: "braid" na serifa, em minusculas. */
 function BrandLogo() {
-  return <span className={styles.wordmark}>Braid</span>;
+  return <span className={styles.wordmark}>braid</span>;
 }
 
 export function MockupShell({
   children,
-  fontClasses,
   live,
   userId,
 }: {
   children: ReactNode;
-  fontClasses: string;
   live?: boolean;
   userId?: string;
 }) {
   const [darkMode, setDarkMode] = useState(false);
 
+  // O tema ja chega resolvido no <html> pelo script do layout raiz (sistema ou
+  // escolha salva); aqui so se le e, ao trocar, se fixa a escolha.
   useEffect(() => {
-    setDarkMode(window.localStorage.getItem("braid-theme") === "dark");
+    const root = document.documentElement;
+    const sync = () => setDarkMode(root.classList.contains("dark"));
+    sync();
+    const observer = new MutationObserver(sync);
+    observer.observe(root, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
   }, []);
 
   function toggleTheme() {
-    setDarkMode((current) => {
-      const next = !current;
+    const next = !document.documentElement.classList.contains("dark");
+    document.documentElement.classList.toggle("dark", next);
+    try {
       window.localStorage.setItem("braid-theme", next ? "dark" : "light");
-      return next;
-    });
+    } catch {}
   }
 
   return (
-    <div className={`${styles.shell} ${fontClasses} ${darkMode ? styles.dark : ""}`}>
+    <div className={`${styles.shell} ${darkMode ? styles.dark : ""}`}>
       <a href="#conteudo" className={styles.skipLink}>Pular para o conteúdo</a>
       <header className={styles.header}>
         <div className={styles.headerInner}>

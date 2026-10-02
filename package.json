@@ -8,7 +8,7 @@
     "dev:auth": "node scripts/onepassword/exec.mjs turbo run dev --filter=@repo/auth",
     "dev:api": "node scripts/onepassword/exec.mjs turbo run dev --filter=@repo/api",
     "dev:web": "node scripts/onepassword/exec.mjs turbo run dev --filter=@repo/web",
-    "dev:mobile": "node scripts/onepassword/exec.mjs pnpm --filter @repo/mobile run start",
+    "dev:mobile": "bash scripts/mobile/dev.sh",
     "secrets:check": "node scripts/onepassword/check.mjs",
     "secrets:check-one": "node scripts/onepassword/check-one.mjs",
     "secrets:exec": "node scripts/onepassword/exec.mjs",

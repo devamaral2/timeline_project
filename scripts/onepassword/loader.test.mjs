@@ -6,7 +6,6 @@ test("uses the env example as the complete allowlist", () => {
   const keys = readEnvKeys();
   assert.ok(keys.includes("DATABASE_URL"));
   assert.ok(keys.includes("AUTH_KEY_ENCRYPTION_KEY"));
-  assert.equal(keys.includes("METRO_PORT"), false);
   assert.equal(keys.includes("AUTH_POSTGRES_DB"), false);
   assert.equal(new Set(keys).size, keys.length);
   assert.ok(keys.every((key) => /^[A-Z][A-Z0-9_]*$/.test(key)));

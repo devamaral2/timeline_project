@@ -46,8 +46,7 @@ else
   WEB_PORT="$(find_free_port 3000)"
   API_PORT="$(find_free_port $((WEB_PORT + 1)))"
   AUTH_PORT="$(find_free_port $((API_PORT + 1)))"
-  METRO_PORT="$(find_free_port $((AUTH_PORT + 1)))"
-  POSTGRES_HOST_PORT="$(find_free_port $((METRO_PORT + 1)))"
+  POSTGRES_HOST_PORT="$(find_free_port $((AUTH_PORT + 1)))"
 
   AUTH_POSTGRES_DB="${POSTGRES_DB}_auth"
   DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:${POSTGRES_HOST_PORT}/${POSTGRES_DB}"
@@ -59,16 +58,6 @@ else
   AUTH_PUBLIC_URL="http://127.0.0.1:${AUTH_PORT}"
   AUTH_WEB_APP_URL="http://localhost:${WEB_PORT}"
 
-  OLD_MOBILE_URL="${MOBILE_API_URL:-}"
-  if [ -n "$OLD_MOBILE_URL" ]; then
-    MOBILE_API_URL="$(echo "$OLD_MOBILE_URL" | sed -E "s#:[0-9]+\$#:${AUTH_PORT}#")"
-    if [ "$MOBILE_API_URL" = "$OLD_MOBILE_URL" ]; then
-      MOBILE_API_URL="${OLD_MOBILE_URL}:${AUTH_PORT}"
-    fi
-  else
-    MOBILE_API_URL=""
-  fi
-
   # Este arquivo contém somente configuração local derivada. Segredos e URLs
   # com senha permanecem no ambiente do processo, vindos do carregador.
   cat > "$ENV_FILE" <<EOF
@@ -77,14 +66,12 @@ API_PORT=${API_PORT}
 API_HOST=127.0.0.1
 AUTH_PORT=${AUTH_PORT}
 AUTH_HOST=127.0.0.1
-METRO_PORT=${METRO_PORT}
 POSTGRES_HOST_PORT=${POSTGRES_HOST_PORT}
 AUTH_POSTGRES_DB=${AUTH_POSTGRES_DB}
-MOBILE_API_URL=${MOBILE_API_URL}
 COMPOSE_PROJECT_NAME=${PROJECT_NAME}
 EOF
 
-  echo "Escrevi $ENV_FILE (web=$WEB_PORT api=$API_PORT auth=$AUTH_PORT metro=$METRO_PORT postgres=$POSTGRES_HOST_PORT)."
+  echo "Escrevi $ENV_FILE (web=$WEB_PORT api=$API_PORT auth=$AUTH_PORT postgres=$POSTGRES_HOST_PORT)."
 fi
 
 echo "Subindo Postgres (projeto '$PROJECT_NAME')..."
@@ -121,7 +108,6 @@ pnpm turbo run build
 WEB_PORT="$(read_env_var "$ENV_FILE" WEB_PORT)"
 API_PORT="$(read_env_var "$ENV_FILE" API_PORT)"
 AUTH_PORT="$(read_env_var "$ENV_FILE" AUTH_PORT)"
-METRO_PORT="$(read_env_var "$ENV_FILE" METRO_PORT)"
 PG_PORT="$(read_env_var "$ENV_FILE" POSTGRES_HOST_PORT)"
 
 cat <<SUMMARY
@@ -130,7 +116,6 @@ Worktree '$SLUG' pronta.
   web:      http://localhost:${WEB_PORT}
   api:      http://127.0.0.1:${API_PORT}
   auth:     http://127.0.0.1:${AUTH_PORT}
-  metro:    ${METRO_PORT}
   postgres: 127.0.0.1:${PG_PORT} (projeto docker '${PROJECT_NAME}')
 
 Suba os servidores com 'pnpm dev:web', 'pnpm dev:api', 'pnpm dev:auth' (ou

@@ -27,14 +27,16 @@ components:
   adapters:
     path: adapters
     loading: documentation-only
+  # As worktrees são criadas pelos scripts da raiz (`pnpm worktree:new`).
   worktrees:
-    path: worktrees
+    path: ../scripts/worktree
     loading: explicit
   scripts:
     path: scripts
     loading: explicit
+  # A documentação vive em `docs/` na raiz do repositório (runbooks em `docs/runbook/`).
   docs:
-    path: docs
+    path: ../docs
     loading: documentation-only
 
 security:

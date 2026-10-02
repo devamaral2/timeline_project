@@ -1,59 +1,38 @@
-.shell { 
-  --ink: #252b2d;
-  --muted: #737b7e;
-  --line: #edf0f0;
-  --soft: #f7f9f9;
-  --cyan: #078599;
-  --cyan-soft: #eaf6f7;
-  --routine: #1195aa;
-  --training: #369a7c;
-  --meal: #be8646;
-  --sleep: #8a7bb5;
-  --control-bg: #fff;
-  --control-border: #e2e8e9;
-  --control-shadow: 0 3px 12px #252b2d0a, inset 0 1px 1px #ffffff;
+.shell {
+  /* Os nomes do mockup leem os tokens globais do globals.css, que ja trocam
+     entre Névoa e Noite pela classe `dark` do <html>. */
+  --ink: var(--foreground);
+  --muted: var(--muted-foreground);
+  --line: var(--border);
+  --soft: var(--secondary);
+  --cyan: var(--brand);
+  --cyan-soft: var(--brand-soft);
+  --control-bg: var(--card);
+  --control-border: var(--border);
+  --control-shadow: none;
   min-height: 100svh;
-  background: #fff;
+  background: var(--background);
   color: var(--ink);
-  color-scheme: light;
-  font-family: var(--mockup-body-font), sans-serif;
+  font-family: var(--font-sans);
   font-size: 14px;
   -webkit-font-smoothing: antialiased;
 }
 
-.dark {
-  --ink: #edf2f2;
-  --muted: #a7b1b3;
-  --line: #424242;
-  --soft: #2a2a2a;
-  --cyan-soft: #26343a;
-  --control-bg: #292929;
-  --control-border: #424242;
-  --control-shadow: 0 3px 12px #00000024;
-  background: #212121;
-  color-scheme: dark;
-}
-
-:global(body):has(.dark) { background: #212121; color-scheme: dark; }
-.dark .header, .dark .bottomNav { background: #212121; }
-.dark .event[data-time-position="upcoming"], .dark .sectionMenu { background: #2f2f2f; }
+.dark .event[data-time-position="upcoming"] { background: var(--card); }
 .dark .monthPicker { background: transparent; }
-.dark .accountPopover { background: #3a3a3a; border-color: var(--line); }
-.dark .agendaControls, .dark .viewModes, .dark .hubComposer, .dark .hubSearch { background: #212121; }
+.dark .accountPopover { border-color: var(--line); }
 .dark .hubDock { background: transparent; }
 .dark .hubModes button, .dark .creationToggle button { background: transparent; }
 .dark .viewModes, .dark .taskDialog { border-color: var(--line); }
-.dark .taskDialog { background: #2f2f2f; }
-.dark .quickCreate input, .dark .quickCreate select, .dark .creationToggle [aria-pressed="true"] { background: #3a3a3a; color: var(--ink); }
-.dark .hubModes [aria-pressed="true"] { background: #3a3a3a; color: var(--ink); }
-.dark .entityForm .entityControl { background: #212121; border-color: var(--line); }
+.dark .quickCreate input, .dark .quickCreate select, .dark .creationToggle [aria-pressed="true"] { background: var(--accent); color: var(--ink); }
+.dark .hubModes [aria-pressed="true"] { background: var(--accent); color: var(--ink); }
+.dark .entityForm .entityControl { background: var(--background); border-color: var(--line); }
 .dark .hubComposer, .dark .hubSearch, .dark .quickCreate input, .dark .quickCreate select { border-color: var(--line); }
 .dark .monthPicker button, .dark .accountPopover button, .dark .sectionMenuHeading button { color: var(--ink); }
 .dark .event:not([data-time-position="past"]):has(.eventLink):hover { background: var(--soft); }
-.dark .chatBubble[data-role="error"] { background: #3a2a25; border-color: #5a3a30; color: #f0b9a5; }
-.dark .chatEntities li[data-change="created"] { border-color: #2f5057; }
+.dark .chatBubble[data-role="error"] { background: color-mix(in oklab, var(--destructive) 14%, transparent); border-color: color-mix(in oklab, var(--destructive) 40%, transparent); color: var(--destructive); }
+.dark .chatEntities li[data-change="created"] { border-color: color-mix(in oklab, var(--brand) 40%, transparent); }
 
-:global(body):has(.shell:not(.dark)) { background: #fff; color-scheme: light; }
 .shell * { box-sizing: border-box; }
 .shell button, .shell a { -webkit-tap-highlight-color: transparent; }
 .shell button { font: inherit; cursor: default; }
@@ -61,7 +40,7 @@
 .shell a { text-decoration: none; }
 .shell svg { flex-shrink: 0; width: 20px; height: 20px; stroke-width: 1.65; }
 .shell :focus-visible { outline: 2px solid var(--cyan); outline-offset: 5px; border-radius: 5px; }
-.skipLink { position: fixed; top: -80px; left: 20px; padding: 12px 20px; background: white; z-index: 50; }
+.skipLink { position: fixed; top: -80px; left: 20px; padding: 12px 20px; background: var(--card); z-index: 50; }
 .skipLink:focus { top: 12px; }
 
 .header { border-bottom: 1px solid var(--line); }
@@ -69,7 +48,7 @@
 .brand { display: flex; align-items: center; gap: 10px; color: var(--ink); }
 .brandIcon { width: 34px; height: 39px; display: inline-flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 9px; flex-shrink: 0; }
 .brandIcon img { width: 64px; height: 64px; max-width: none; flex-shrink: 0; }
-.wordmark { font-family: var(--mockup-brand-font), sans-serif; font-size: 29px; font-weight: 600; letter-spacing: -1.8px; line-height: 1; }
+.wordmark { font-family: var(--font-display); font-size: 30px; font-weight: 400; letter-spacing: -.01em; line-height: 1; }
 .primaryNav { display: flex; align-items: center; gap: 10px; margin-left: 18px; }
 .primaryNav a, .primaryNav button { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 12px 20px; color: var(--muted); border-radius: 12px; font-weight: 500; }
 .primaryNav .navActive { background: var(--cyan-soft); color: var(--cyan); }
@@ -78,7 +57,7 @@
 .accountMenu { position: relative; }
 .accountMenu > summary { list-style: none; }
 .accountMenu > summary::-webkit-details-marker { display: none; }
-.accountPopover { position: absolute; top: calc(100% + 8px); right: 0; z-index: 30; display: grid; min-width: 150px; gap: 4px; padding: 7px; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 28px #252b2d18; }
+.accountPopover { position: absolute; top: calc(100% + 8px); right: 0; z-index: 30; display: grid; min-width: 150px; gap: 4px; padding: 7px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 28px #252b2d18; }
 .accountPopover button { padding: 9px 10px; color: var(--ink); text-align: left; border-radius: 8px; cursor: pointer !important; white-space: nowrap; }
 .accountPopover button:hover { background: var(--soft); }
 .iconButton { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; color: #5f676a; border-radius: 50%; cursor: pointer !important; }
@@ -87,16 +66,16 @@
 .avatar { margin-left: 7px; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: #f0f3f2; color: #63756f; font-size: 12px; font-weight: 600; }
 
 .notificationToasts { position: fixed; top: 20px; right: 20px; z-index: 40; display: grid; gap: 8px; width: min(320px, calc(100% - 40px)); }
-.notificationToast { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 28px #252b2d18; font-size: 14px; }
+.notificationToast { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 28px #252b2d18; font-size: 14px; }
 .notificationToast button { margin-left: auto; color: var(--muted); cursor: pointer !important; }
-.dark .notificationToast { background: #2f2f2f; border-color: var(--line); color: var(--ink); }
+.dark .notificationToast { border-color: var(--line); color: var(--ink); }
 
 .main { max-width: 1120px; margin: auto; padding: 56px 32px 48px; }
 .pageHeading { display: flex; justify-content: space-between; align-items: center; margin-bottom: 36px; }
 .eyebrow { color: var(--muted); font-size: 10px; font-weight: 600; letter-spacing: 1.55px; margin-bottom: 10px; }
 .pageHeading h1 { font-size: 39px; font-weight: 500; letter-spacing: -1.65px; line-height: 1.25; }
 .pageHeading h1 > span { color: var(--cyan); }
-.createButton { display: flex; align-items: center; gap: 9px; border-radius: 12px; background: var(--ink); color: #fff; padding: 13px 20px; font-weight: 500 !important; font-size: 13px !important; }
+.createButton { display: flex; align-items: center; gap: 9px; border-radius: 8px; background: var(--primary); color: var(--primary-foreground); padding: 13px 20px; font-weight: 500 !important; font-size: 13px !important; }
 .createButton svg { width: 18px; height: 18px; }
 .contentGrid { display: grid; grid-template-columns: minmax(0, 1fr) 245px; column-gap: 80px; }
 .agenda { min-width: 0; }
@@ -110,11 +89,11 @@
 .dayHeading h2 span { font-size: 11px; font-weight: 400; color: var(--muted); }
 .dayHeading > span { font-size: 10px; color: var(--muted); }
 .eventList { display: grid; gap: 10px; list-style: none; padding: 0; margin: 0; }
-.event { --event-border: #dfe5e5; position: relative; min-height: 88px; padding: 12px 16px; margin-inline: 0; border: 0; border-radius: 8px; background: #fafbfb; box-shadow: inset 0 0 0 .5px var(--event-border), 0 4px 16px #252b2d1a, 0 1px 3px #252b2d0a; transition: background 150ms, box-shadow 150ms, opacity 180ms, filter 180ms; }
+.event { --event-border: #dfe5e5; position: relative; min-height: 88px; padding: 12px 16px; margin-inline: 0; border: 0; border-radius: 8px; background: var(--card); box-shadow: inset 0 0 0 .5px var(--event-border), 0 4px 16px #252b2d1a, 0 1px 3px #252b2d0a; transition: background 150ms, box-shadow 150ms, opacity 180ms, filter 180ms; }
 .event[data-time-position="past"] { background: transparent; }
-.event[data-time-position="past"]:focus-within { background: #fafcfc; }
+.event[data-time-position="past"]:focus-within { background: var(--card); }
 .event[data-time-position="running"] { --event-border: color-mix(in srgb, var(--event-color) 34%, var(--line)); background: transparent; box-shadow: inset 0 0 0 .5px var(--event-border), 0 4px 16px #252b2d1a, 0 0 0 3px color-mix(in srgb, var(--event-color) 7%, transparent); }
-.event[data-time-position="upcoming"] { background: #fafbfb; }
+.event[data-time-position="upcoming"] { background: var(--card); }
 .event[data-missed="true"] { opacity: .46; filter: saturate(.55); }
 .event[data-missed="true"]:focus-within { opacity: .78; }
 .event:not([data-time-position="past"]):has(.eventLink):hover { --event-border: #d3dbdc; background: var(--soft); box-shadow: inset 0 0 0 .5px var(--event-border), 0 7px 20px #252b2d21, 0 2px 5px #252b2d0d; }
@@ -157,7 +136,7 @@
 .calendarGrid > span { position: relative; width: 30px; height: 30px; display: grid; place-items: center; justify-self: center; }
 .weekday { color: var(--muted); font-size: 9px; margin-bottom: 4px; }
 .outsideMonth { color: #b9bfc0; }
-.selectedDate { background: var(--cyan); color: #fff; border-radius: 50%; font-weight: 600; }
+.selectedDate { background: var(--primary); color: var(--primary-foreground); border-radius: 50%; font-weight: 600; }
 .calendarDot { position: absolute; bottom: 1px; width: 3px; height: 3px; border-radius: 50%; background: var(--cyan); }
 .typeLegend { border-top: 1px solid var(--line); margin-top: 30px; padding-top: 26px; display: grid; grid-template-columns: 1fr 1fr; gap: 18px 8px; }
 .typeLegend h2, .timeLegend h2 { grid-column: 1 / -1; font-size: 11px; font-weight: 600; }
@@ -182,13 +161,13 @@
 .viewOptions > summary::-webkit-details-marker { display: none; }
 .viewOptions > summary:hover, .viewOptions[open] > summary { background: var(--soft); }
 .viewOptions > summary svg { width: 21px; height: 21px; }
-.viewModes { position: absolute; z-index: 10; top: 49px; right: 0; width: 224px; padding: 10px; border: 1px solid var(--line); border-radius: 16px; background: white; box-shadow: 0 10px 40px #252b2d12; }
+.viewModes { position: absolute; z-index: 10; top: 49px; right: 0; width: 224px; padding: 10px; border: 1px solid var(--line); border-radius: 16px; background: var(--card); box-shadow: 0 10px 40px #252b2d12; }
 .viewModes legend { float: left; width: 100%; padding: 7px 10px 10px; font-size: 10px; color: var(--muted); }
 .viewModes button { display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px; border-radius: 9px; color: var(--muted); font-size: 12px; cursor: pointer; text-align: left; }
 .viewModes button[aria-pressed="true"] { background: var(--cyan-soft); color: var(--cyan); }
 .viewModes small { display: block; font-size: 10px; margin-top: 3px; color: var(--muted); }
 .viewModes svg { width: 18px; height: 18px; }
-.agendaControls { position: sticky; top: 0; z-index: 5; padding: 4px 0 14px; margin-bottom: 18px; background: #fff; }
+.agendaControls { position: sticky; top: 0; z-index: 5; padding: 4px 0 14px; margin-bottom: 18px; background: var(--background); }
 .dateToolbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .monthToggle { display: flex; align-items: center; gap: 7px; color: var(--ink); font-size: 13px !important; cursor: pointer !important; min-height: 40px; }
 .monthToggle svg { width: 14px; height: 14px; color: var(--muted); transition: transform 160ms; }
@@ -283,7 +262,7 @@
 .taskStatusIcon[data-status="inProgress"] { color: #c58a28; fill: #fbf3e4; }
 .taskStatusIcon[data-status="completed"] { color: #8272b3; fill: #f0edf8; }
 .taskStatusIcon[data-status="canceled"] { color: #929a9c; }
-.taskDialog { position: fixed; inset: 0; margin: auto; padding: 0; width: min(440px, calc(100% - 32px)); max-height: calc(100dvh - 40px); overflow-y: auto; border: 1px solid var(--line); border-radius: 22px; background: white; color: var(--ink); box-shadow: 0 24px 100px #252b2d24; }
+.taskDialog { position: fixed; inset: 0; margin: auto; padding: 0; width: min(440px, calc(100% - 32px)); max-height: calc(100dvh - 40px); overflow-y: auto; border: 1px solid var(--line); border-radius: 22px; background: var(--card); color: var(--ink); box-shadow: 0 24px 100px #252b2d24; }
 .taskDialog::backdrop { background: #252b2d38; backdrop-filter: blur(3px); }
 :global(body):has(.taskDialog[open]) { overflow: hidden; }
 .taskDialogContent { padding: 26px; }
@@ -352,7 +331,7 @@
   .eventTime { font-size: 11.5px; }
   .dayGroup + .dayGroup { margin-top: 30px; }
   .listNote { font-size: 9px; max-width: 245px; line-height: 1.6; }
-  .bottomNav { border-top: 1px solid var(--line); position: fixed; z-index: 20; bottom: 0; left: 0; right: 0; height: calc(76px + env(safe-area-inset-bottom)); padding: 8px 25px calc(8px + env(safe-area-inset-bottom)); display: flex; align-items: center; justify-content: space-between; background: #fff; }
+  .bottomNav { border-top: 1px solid var(--line); position: fixed; z-index: 20; bottom: 0; left: 0; right: 0; height: calc(76px + env(safe-area-inset-bottom)); padding: 8px 25px calc(8px + env(safe-area-inset-bottom)); display: flex; align-items: center; justify-content: space-between; background: var(--background); }
   .bottomNav > button, .bottomNav > a { position: relative; width: 25%; height: 60px; display: flex; flex-direction: column; gap: 5px; align-items: center; justify-content: center; color: var(--cyan); border-radius: 12px; font-size: 10px; cursor: pointer; white-space: nowrap; }
   .bottomNav > [aria-current="page"]::after, .bottomNav > [aria-expanded="true"]::after { content: ""; position: absolute; bottom: 0; width: 4px; height: 4px; border-radius: 50%; background: var(--cyan); }
   .bottomNav > [aria-current="page"] { font-weight: 600; }
@@ -372,7 +351,7 @@
   :global(body):has(.sectionMenu[open]) { overflow: hidden; }
   .shell:has(.sectionMenu[open]) .header, .shell:has(.sectionMenu[open]) .main { filter: blur(2px); }
   .sectionMenu[open] { display: flex; flex-direction: column; }
-  .sectionMenu { position: fixed; inset: auto 0 calc(76px + env(safe-area-inset-bottom)); margin: 0; width: 100%; max-width: none; max-height: calc(100dvh - 100px - env(safe-area-inset-bottom)); overflow-y: auto; overscroll-behavior: contain; padding: 10px 26px 15px; background: #fff; color: var(--ink); border: 0; border-radius: 24px 24px 0 0; animation: menuEnter 200ms cubic-bezier(.2,.7,.2,1); }
+  .sectionMenu { position: fixed; inset: auto 0 calc(76px + env(safe-area-inset-bottom)); margin: 0; width: 100%; max-width: none; max-height: calc(100dvh - 100px - env(safe-area-inset-bottom)); overflow-y: auto; overscroll-behavior: contain; padding: 10px 26px 15px; background: var(--card); color: var(--ink); border: 0; border-radius: 24px 24px 0 0; animation: menuEnter 200ms cubic-bezier(.2,.7,.2,1); }
   .sectionMenu::backdrop { background: linear-gradient(to bottom, #252b2d24 calc(100% - 76px - env(safe-area-inset-bottom)), transparent 0); animation: backdropEnter 160ms ease-out; }
   .sheetHandle { width: 30px; height: 3px; margin: 0 auto 7px; border-radius: 4px; background: #d9dfdf; }
   .sectionMenuHeading { display: flex; justify-content: space-between; align-items: center; padding-left: 12px; margin-bottom: 3px; }

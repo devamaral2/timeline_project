@@ -27,8 +27,8 @@ Add it to the workspace that owns the code, not the repository root:
 corepack pnpm --filter @repo/api add <package>
 ```
 
-Use the appropriate workspace filter (`@repo/web`, `@repo/mobile`,
-`@repo/auth`, or a package under `packages/`). Commit the corresponding
+Use the appropriate workspace filter (`@repo/web`, `@repo/auth`, or a package
+under `packages/`). Commit the corresponding
 manifest and `pnpm-lock.yaml` changes.
 
 ## Common failures

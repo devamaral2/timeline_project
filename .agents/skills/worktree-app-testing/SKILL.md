@@ -37,7 +37,7 @@ Postgres (com uma base para a API e outra para o Auth).
 
 2. **Leia as portas desta worktree** direto do `.env.local`:
    ```bash
-   grep -E '^(WEB_PORT|API_PORT|AUTH_PORT|METRO_PORT|POSTGRES_HOST_PORT)=' .env.local
+   grep -E '^(WEB_PORT|API_PORT|AUTH_PORT|POSTGRES_HOST_PORT)=' .env.local
    ```
 
 3. **Suba so o que o teste precisa**, nunca a stack inteira por reflexo.
