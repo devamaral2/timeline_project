@@ -11,6 +11,7 @@
     "AUTH_SERVICE_URL",
     "AUTH_INTERNAL_SERVICE_KEY",
     "OPENROUTER_*",
+    "JEV_API_KEY",
     "WEB_PORT",
     "AUTH_PORT",
     "AUTH_HOST",

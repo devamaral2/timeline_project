@@ -1,6 +1,7 @@
 export interface NoteDto {
   id: string;
   content: string;
+  name: string;
   taskId?: string;
   eventId?: string;
   tags: string[];

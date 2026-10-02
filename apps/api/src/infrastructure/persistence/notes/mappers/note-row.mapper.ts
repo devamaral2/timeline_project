@@ -5,6 +5,7 @@ export interface NoteRow {
   revision: number;
   userId: string;
   content: string;
+  name: string;
   eventId: string | null;
   taskId: string | null;
   createdAt: Date;
@@ -16,6 +17,7 @@ export function mapNoteRow(row: NoteRow, tags: string[] = []): Note {
     id: row.id,
     userId: row.userId,
     content: row.content,
+    name: row.name,
     eventId: row.eventId,
     taskId: row.taskId,
     tags,

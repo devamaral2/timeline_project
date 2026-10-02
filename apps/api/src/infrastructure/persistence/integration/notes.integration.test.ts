@@ -43,6 +43,7 @@ describe("PostgresNoteRepository", () => {
 
     const found = await notes.findById(note.id);
     expect(found?.content).toBe("Comprar desinfetante");
+    expect(found?.name).toBe("Comprar desinfetante");
     expect(found?.taskId).toBe(task.id);
     expect(found?.eventId).toBeUndefined();
     expect(found?.revision).toBe(1);
@@ -66,10 +67,11 @@ describe("PostgresNoteRepository", () => {
     const note = Note.create({ userId: "user-1", content: "a" });
     await notes.save(note);
 
-    await notes.update(note.revise({ content: "b" }), "user-1", note.revision);
+    await notes.update(note.revise({ content: "b", name: "Novo título" }), "user-1", note.revision);
 
     const found = await notes.findById(note.id);
     expect(found?.content).toBe("b");
+    expect(found?.name).toBe("Novo título");
     expect(found?.revision).toBe(2);
   });
 

@@ -7,6 +7,7 @@ export function toNoteDto(note: Note): NoteDto {
   return {
     id: note.id,
     content: note.content,
+    name: note.name,
     taskId: note.taskId,
     eventId: note.eventId,
     tags: note.tags,

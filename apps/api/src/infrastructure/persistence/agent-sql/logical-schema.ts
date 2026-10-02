@@ -152,6 +152,7 @@ const BASE_TABLES: readonly LogicalTable[] = [
     columns: [
       { name: "id", expr: "n.id", type: "text" },
       { name: "content", expr: "n.content", type: "text" },
+      { name: "name", expr: "n.name", type: "text" },
       { name: "event_id", expr: "n.event_id", type: "text" },
       { name: "task_id", expr: "n.task_id", type: "text" },
       { name: "created_at", expr: "n.created_at", type: "timestamptz" },

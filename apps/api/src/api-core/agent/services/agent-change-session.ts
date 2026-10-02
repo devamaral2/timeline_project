@@ -44,6 +44,7 @@ export interface TaskCreateFields {
 }
 
 export interface NoteFields {
+  name?: string;
   content?: string;
   taskId?: string;
   eventId?: string;
@@ -106,6 +107,14 @@ export class AgentChangeSession {
     revise: (current: Event) => Promise<Event>,
   ): Promise<StageResult> {
     return this.attempt(async () => {
+      const created = this.events.get(id);
+      if (created?.change.op === "create") {
+        const current = created.change.entity;
+        const currentType = current.items.find((item) => item.isPrimary)?.type;
+        if (currentType !== primaryType) throw new StagingError(`O evento ${id} é do tipo ${currentType}, não ${primaryType}.`);
+        this.events.set(id, { change: { op: "create", entity: await revise(current) } });
+        return { ok: true, kind: "event", op: "create", id };
+      }
       const loaded = await this.loadForChange(this.events, id, (key) => this.repositories.events.findById(key));
       const currentType = loaded.current.items.find((item) => item.isPrimary)?.type;
       if (currentType !== primaryType) {
@@ -202,6 +211,11 @@ export class AgentChangeSession {
 
   hasChanges(): boolean {
     return this.events.size + this.tasks.size + this.notes.size > 0;
+  }
+
+  stagedEvent(id: string): Event | undefined {
+    const entry = this.events.get(id);
+    return entry?.change.op === "delete" ? undefined : entry?.change.entity;
   }
 
   /**

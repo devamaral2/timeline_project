@@ -1,12 +1,18 @@
 import { z } from "zod";
 import type { ScopedSqlQuery, ScopedSqlScope } from "../../../domain/ports";
 import type { AgentChangeSession } from "../services/agent-change-session";
+import type { DayContext, DayContextQuery } from "../day-context.query";
+import type { RecurrenceMaterializer } from "../../recurrences/materialize-recurrences.usecase";
 
 export interface AgentSkillContext {
   session: AgentChangeSession;
   query: ScopedSqlQuery;
   /** O mesmo escopo com que o prompt foi descrito: a ferramenta nao pode ver mais do que ele. */
   scope: ScopedSqlScope;
+  dayContext?: DayContextQuery;
+  recurrences?: RecurrenceMaterializer;
+  loadedDays?: Map<string, DayContext>;
+  dayPages?: Map<string, { pages: DayContext[]; next: number }>;
 }
 
 /**

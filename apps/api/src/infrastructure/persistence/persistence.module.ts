@@ -22,6 +22,8 @@ import { PostgresTagRepository } from "./events/repositories/postgres-tag.reposi
 import { PostgresTaskRepository } from "./tasks/repositories/postgres-task.repository";
 import { PostgresNoteRepository } from "./notes/repositories/postgres-note.repository";
 import { PostgresScopedSqlQuery } from "./agent-sql/postgres-scoped-sql.query";
+import { PostgresDayContextQuery } from "./agent-sql/postgres-day-context.query";
+import type { DayContextQuery } from "../../api-core/agent/day-context.query";
 import { PostgresEntityBatchWriter } from "./agent-batch/postgres-entity-batch-writer";
 import { PostgresAgentChatTicketStore } from "./agent-chat/postgres-agent-chat-ticket.store";
 import { PostgresAgentConversationRepository } from "./agent-chat/repositories/postgres-agent-conversation.repository";
@@ -47,6 +49,7 @@ export const TASK_REPOSITORY = "TASK_REPOSITORY";
 export const RECURRENCE_REPOSITORY = "RECURRENCE_REPOSITORY";
 export const NOTE_REPOSITORY = "NOTE_REPOSITORY";
 export const SCOPED_SQL_QUERY = "SCOPED_SQL_QUERY";
+export const DAY_CONTEXT_QUERY = "DAY_CONTEXT_QUERY";
 export const ENTITY_BATCH_WRITER = "ENTITY_BATCH_WRITER";
 export const AGENT_CHAT_TICKET_STORE = "AGENT_CHAT_TICKET_STORE";
 export const AGENT_CONVERSATION_REPOSITORY = "AGENT_CONVERSATION_REPOSITORY";
@@ -119,6 +122,11 @@ function requireDatabaseUrl(): string {
         new PostgresScopedSqlQuery(database.pool),
     },
     {
+      provide: DAY_CONTEXT_QUERY,
+      inject: [DATABASE],
+      useFactory: (database: PostgresDatabase): DayContextQuery => new PostgresDayContextQuery(database.pool),
+    },
+    {
       provide: ENTITY_BATCH_WRITER,
       inject: [DATABASE],
       useFactory: (database: PostgresDatabase): EntityBatchWriter =>
@@ -154,6 +162,7 @@ function requireDatabaseUrl(): string {
     RECURRENCE_REPOSITORY,
     NOTE_REPOSITORY,
     SCOPED_SQL_QUERY,
+    DAY_CONTEXT_QUERY,
     ENTITY_BATCH_WRITER,
     AGENT_CHAT_TICKET_STORE,
     AGENT_CONVERSATION_REPOSITORY,

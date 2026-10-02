@@ -14,6 +14,7 @@ export async function insertNote(tx: Tx, note: Note): Promise<void> {
     revision: note.revision,
     userId: note.userId,
     content: note.content,
+    name: note.name,
     eventId: note.eventId ?? null,
     taskId: note.taskId ?? null,
     createdAt: note.createdAt,
@@ -38,6 +39,7 @@ export async function updateNoteAggregate(
   const result = await tx.execute(sql`
     UPDATE notes
     SET content = ${note.content},
+        name = ${note.name},
         event_id = ${note.eventId ?? null},
         task_id = ${note.taskId ?? null},
         revision = ${note.revision},

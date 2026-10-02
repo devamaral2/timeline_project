@@ -11,6 +11,9 @@ importers:
       '@1password/sdk':
         specifier: ^0.5.0
         version: 0.5.0
+      '@typesafe-ai/sdk':
+        specifier: ^0.6.0
+        version: 0.6.0
     devDependencies:
       '@biomejs/biome':
         specifier: 2.5.13
@@ -2136,6 +2139,10 @@ packages:
 
   '@types/ws@8.18.1':
     resolution: {integrity: sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==}
+
+  '@typesafe-ai/sdk@0.6.0':
+    resolution: {integrity: sha512-IddX+Q0XM+VagOUZFeP7wZjaO4SHMdvnh2zEBdrZZnXedWI3BNK1lKhMx3ayrkFWvVLbVcUHJy6AVZlY+e6Jaw==}
+    engines: {node: '>=20'}
 
   '@vitest/expect@2.1.9':
     resolution: {integrity: sha512-UJCIkTBenHeKT1TTlKMJWy1laZewsRIzYighyYiJKZreqtdxSos/S1t+ktRMQWu2CKqaarrkeszJx1cgC5tGZw==}
@@ -5931,6 +5938,8 @@ snapshots:
   '@types/ws@8.18.1':
     dependencies:
       '@types/node': 24.13.3
+
+  '@typesafe-ai/sdk@0.6.0': {}
 
   '@vitest/expect@2.1.9':
     dependencies:

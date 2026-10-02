@@ -6,18 +6,21 @@ export interface NoteCreateProps {
   id?: string;
   userId: string;
   content: string;
+  name?: string;
   taskId?: string | null;
   eventId?: string | null;
   tags?: string[];
 }
 
 export interface NoteRehydrateProps extends NoteCreateProps {
+  name: string;
   revision: number;
   createdAt: Date;
   updatedAt: Date;
 }
 
 export interface NoteReviseChanges {
+  name?: string;
   content?: string;
   taskId?: string | null;
   eventId?: string | null;
@@ -28,6 +31,7 @@ interface NoteBuildProps {
   id: string;
   userId: string;
   content: string;
+  name: string;
   taskId: string | undefined;
   eventId: string | undefined;
   tags: string[];
@@ -40,6 +44,7 @@ export class Note {
   readonly id: string;
   readonly userId: string;
   readonly content: string;
+  readonly name: string;
   readonly taskId: string | undefined;
   readonly eventId: string | undefined;
   readonly tags: string[];
@@ -51,6 +56,7 @@ export class Note {
     this.id = props.id;
     this.userId = props.userId;
     this.content = props.content;
+    this.name = props.name;
     this.taskId = props.taskId;
     this.eventId = props.eventId;
     this.tags = props.tags;
@@ -63,6 +69,7 @@ export class Note {
     if (!props.content || props.content.trim().length === 0) {
       throw new NoteValidationError("Note content cannot be empty");
     }
+    if (!props.name.trim()) throw new NoteValidationError("Note name cannot be empty");
     if (!Number.isInteger(props.revision) || props.revision < 1) {
       throw new NoteValidationError("Note revision must be an integer >= 1");
     }
@@ -76,6 +83,7 @@ export class Note {
       id: props.id ?? NoteId.create(),
       userId: props.userId,
       content: props.content,
+      name: props.name ?? deriveNoteName(props.content),
       taskId: props.taskId ?? undefined,
       eventId: props.eventId ?? undefined,
       tags: props.tags ?? [],
@@ -90,6 +98,7 @@ export class Note {
       id: props.id ?? NoteId.create(),
       userId: props.userId,
       content: props.content,
+      name: props.name,
       taskId: props.taskId ?? undefined,
       eventId: props.eventId ?? undefined,
       tags: props.tags ?? [],
@@ -105,6 +114,7 @@ export class Note {
       id: this.id,
       userId: this.userId,
       content: changes.content ?? this.content,
+      name: changes.name ?? this.name,
       taskId: changes.taskId !== undefined ? (changes.taskId ?? undefined) : this.taskId,
       eventId: changes.eventId !== undefined ? (changes.eventId ?? undefined) : this.eventId,
       tags: changes.tags ?? this.tags,
@@ -113,4 +123,8 @@ export class Note {
       updatedAt: now,
     });
   }
+}
+
+export function deriveNoteName(content: string): string {
+  return content.split(/\r?\n/).map((line) => line.trim()).find(Boolean)?.slice(0, 100) || "Nota";
 }
