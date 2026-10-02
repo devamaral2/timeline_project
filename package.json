@@ -32,6 +32,7 @@
     "agents:validate": ".agents/scripts/validate.sh",
     "worktree:new": "node scripts/onepassword/exec.mjs bash scripts/worktree/setup.sh",
     "worktree:provision": "node scripts/onepassword/exec.mjs bash scripts/worktree/provision-env.sh",
+    "worktree:stop-dev": "bash scripts/worktree/stop-dev.sh",
     "worktree:teardown": "node scripts/onepassword/exec.mjs bash scripts/worktree/teardown.sh"
   },
   "dependencies": {

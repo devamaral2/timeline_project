@@ -13,6 +13,7 @@
     "AUTH_SERVICE_URL",
     "AUTH_INTERNAL_SERVICE_KEY",
     "OPENROUTER_*",
+    "JEV_API_KEY",
     "WEB_PORT",
     "METRO_PORT",
     "AUTH_PORT",

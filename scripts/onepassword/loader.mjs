@@ -14,7 +14,7 @@ const INITIAL_VALUES = {
 const SCOPES = Object.freeze({
   "api-runtime": {
     required: ["DATABASE_URL", "AUTH_SERVICE_URL", "AUTH_INTERNAL_SERVICE_KEY"],
-    optional: ["OPENROUTER_API_KEY", "OPENROUTER_MODEL", "OPENROUTER_AGENT_MODEL"],
+    optional: ["OPENROUTER_API_KEY", "OPENROUTER_MODEL", "OPENROUTER_AGENT_MODEL", "JEV_API_KEY"],
   },
   "auth-runtime": {
     required: [

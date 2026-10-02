@@ -140,7 +140,14 @@ export function AgentChatPanel({ chat, conversations, signedOut }: ReturnType<ty
           </div>
           {listOpen && (
             <ul className={styles.conversationList} aria-label="Conversas">
-              {conversations.conversations.length === 0 ? (
+              {conversations.error ? (
+                <li data-error="true" role="alert">
+                  <span>{conversations.error}</span>
+                  <button type="button" onClick={() => void conversations.refresh()}>
+                    Tentar novamente
+                  </button>
+                </li>
+              ) : conversations.conversations.length === 0 ? (
                 <li data-empty="true">Nenhuma conversa ainda.</li>
               ) : (
                 conversations.conversations.map((conversation) => (

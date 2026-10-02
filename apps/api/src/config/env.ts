@@ -9,6 +9,7 @@ const serverSchema = z.object({
   API_HOST: z.string().min(1).default("127.0.0.1"),
   AUTH_INTERNAL_SERVICE_KEY: z.string().min(32).optional(),
   OPENROUTER_API_KEY: z.string().min(1).optional(),
+  JEV_API_KEY: z.string().min(1).optional(),
   OPENROUTER_MODEL: z.string().min(1).optional(),
   // Modelo do agente de skills. Precisa suportar tool calling — nem todo modelo
   // do OpenRouter suporta. Sem valor, cai no OPENROUTER_MODEL.
@@ -34,6 +35,7 @@ export function getServerEnv(source?: Record<string, string | undefined>): Serve
     API_HOST: read("API_HOST"),
     AUTH_INTERNAL_SERVICE_KEY: read("AUTH_INTERNAL_SERVICE_KEY"),
     OPENROUTER_API_KEY: read("OPENROUTER_API_KEY"),
+    JEV_API_KEY: read("JEV_API_KEY"),
     OPENROUTER_MODEL: read("OPENROUTER_MODEL"),
     OPENROUTER_AGENT_MODEL: read("OPENROUTER_AGENT_MODEL"),
   });

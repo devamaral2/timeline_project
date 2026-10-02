@@ -528,6 +528,9 @@
   .conversationList li { display: flex; align-items: center; gap: 4px; border-radius: 9px; }
   .conversationList li[data-current="true"] { background: var(--cyan-soft); }
   .conversationList li[data-empty="true"] { padding: 10px 10px; color: var(--muted); font-size: 12px; }
+  .conversationList li[data-error="true"] { align-items: flex-start; justify-content: space-between; padding: 9px 10px; background: #fdf6f3; color: #9a4b32; font-size: 12px; line-height: 1.5; }
+  .conversationList li[data-error="true"] span { flex: 1; }
+  .conversationList li[data-error="true"] button { display: block; width: auto; height: auto; padding: 4px 0 4px 8px; flex-shrink: 0; color: var(--cyan); font-size: 11px; cursor: pointer; }
   .conversationList li > button:first-child { flex: 1; min-width: 0; padding: 9px 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; color: var(--ink); font-size: 12px; cursor: pointer; }
   .conversationList li > button:last-child { display: grid; place-items: center; width: 30px; height: 30px; flex-shrink: 0; color: var(--muted); border-radius: 8px; cursor: pointer; }
   .conversationList li > button:last-child:hover { color: #9a4b32; }

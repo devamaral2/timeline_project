@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AgentConversationDto } from "@/lib/api/contracts";
+import { ApiError } from "@/lib/api/authed-fetch";
 import { deleteConversation, fetchConversations } from "./agent-conversations-api";
 
 interface UseAgentConversationsOptions {
@@ -22,6 +23,7 @@ export function useAgentConversations({
 }: UseAgentConversationsOptions) {
   const [conversations, setConversations] = useState<AgentConversationDto[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const loadRef = useRef(load);
   const removeRef = useRef(remove);
 
@@ -33,12 +35,20 @@ export function useAgentConversations({
   const refresh = useCallback(async () => {
     if (!userId) {
       setConversations([]);
+      setError(null);
       return;
     }
     setLoading(true);
+    setError(null);
     try {
       const page = await loadRef.current();
       setConversations(page.items);
+    } catch (cause) {
+      setError(
+        cause instanceof ApiError && cause.status === 401
+          ? "Sua sessão não está válida. Entre novamente para carregar suas conversas."
+          : "Não foi possível carregar suas conversas.",
+      );
     } finally {
       setLoading(false);
     }
@@ -55,5 +65,5 @@ export function useAgentConversations({
     await removeRef.current(conversationId);
   }, []);
 
-  return { conversations, loading, refresh, forget };
+  return { conversations, loading, error, refresh, forget };
 }

@@ -10,6 +10,7 @@ export const notes = pgTable(
     revision: integer("revision").notNull().default(1),
     userId: text("user_id").notNull(),
     content: text("content").notNull(),
+    name: text("name").notNull().default("Nota"),
     // `set null`: a nota e conteudo do usuario e sobrevive ao hard delete que a
     // edicao de uma serie ainda faz nas ocorrencias futuras. O soft delete do
     // alvo apaga a nota em codigo, junto com ele.
@@ -25,6 +26,7 @@ export const notes = pgTable(
     index("notes_task_idx").on(table.taskId),
     check("notes_revision_min", sql`${table.revision} >= 1`),
     check("notes_content_not_blank", sql`btrim(${table.content}) <> ''`),
+    check("notes_name_not_blank", sql`btrim(${table.name}) <> ''`),
   ],
 );
 

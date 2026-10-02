@@ -6,6 +6,7 @@ import {
   NOTE_REPOSITORY,
   RECURRENCE_REPOSITORY,
   SCOPED_SQL_QUERY,
+  DAY_CONTEXT_QUERY,
   TASK_REPOSITORY,
   WORKOUT_CATALOG,
   PersistenceModule,
@@ -26,6 +27,8 @@ import { CreateEventUseCase } from "./events/create-event.usecase";
 import { MaterializeRecurrencesUseCase } from "./recurrences/materialize-recurrences.usecase";
 import { OpenRouterAgentGateway } from "./agent/gateways/openrouter-agent.gateway";
 import { RunAgentUseCase } from "./agent/run-agent.usecase";
+import { JevAgentRouter } from "./agent/routing/jev-agent.router";
+import type { DayContextQuery } from "./agent/day-context.query";
 import { RunChatTurnUseCase } from "./agent/run-chat-turn.usecase";
 
 @Module({ imports: [PersistenceModule] })
@@ -52,6 +55,7 @@ export class ApiCoreModule {
           ) => new CreateEventUseCase(events, mealParsing, workoutCatalog),
         },
         { provide: OpenRouterAgentGateway, useFactory: () => new OpenRouterAgentGateway() },
+        { provide: JevAgentRouter, useFactory: () => new JevAgentRouter() },
         {
           provide: RunAgentUseCase,
           inject: [
@@ -62,6 +66,9 @@ export class ApiCoreModule {
             TASK_REPOSITORY,
             NOTE_REPOSITORY,
             CreateEventUseCase,
+            JevAgentRouter,
+            DAY_CONTEXT_QUERY,
+            MaterializeRecurrencesUseCase,
           ],
           useFactory: (
             gateway: OpenRouterAgentGateway,
@@ -71,7 +78,13 @@ export class ApiCoreModule {
             tasks: TaskRepository,
             notes: NoteRepository,
             createEvent: CreateEventUseCase,
-          ) => new RunAgentUseCase(gateway, query, batchWriter, { events, tasks, notes }, createEvent),
+            router: JevAgentRouter,
+            dayContext: DayContextQuery,
+            recurrences: MaterializeRecurrencesUseCase,
+          ) => new RunAgentUseCase(
+            gateway, query, batchWriter, { events, tasks, notes }, createEvent,
+            undefined, undefined, undefined, router, dayContext, recurrences,
+          ),
         },
         {
           provide: RunChatTurnUseCase,
@@ -87,6 +100,7 @@ export class ApiCoreModule {
         OpenRouterEventCommandParsingGateway,
         CreateEventUseCase,
         OpenRouterAgentGateway,
+        JevAgentRouter,
         RunAgentUseCase,
         RunChatTurnUseCase,
       ],
