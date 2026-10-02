@@ -127,6 +127,7 @@ export function TimelineList({ userId, todayKey }: TimelineListProps) {
                 isToday: selectedDayKey === todayKey,
                 events: page.items,
               }}
+              todayKey={todayKey}
             />
 
             {/* Sem cursor nao ha proxima pagina — e o botao some em vez de

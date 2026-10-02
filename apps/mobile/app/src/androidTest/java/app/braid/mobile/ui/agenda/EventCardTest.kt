@@ -13,7 +13,7 @@ class EventCardTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun runningMealShowsNowStopwatchTagsAndMissedBadge() {
+    fun runningMealShowsStopwatchTagsAndMissedBadge() {
         composeRule.setContent {
             BraidTheme {
                 EventCard(
@@ -33,17 +33,15 @@ class EventCardTest {
                             tags = listOf("foco"),
                             interruptions = emptyList(),
                         ),
-                    longestMinutes = 60,
                     now = java.time.Instant.parse("2026-09-22T08:04:05Z"),
                 )
             }
         }
 
-        composeRule.onNodeWithText("Refeição").assertIsDisplayed()
         composeRule.onNodeWithText("Café da manhã").assertIsDisplayed()
-        composeRule.onNodeWithText("Agora").assertIsDisplayed()
+        composeRule.onNodeWithText("EM ANDAMENTO").assertIsDisplayed()
         composeRule.onNodeWithText("04:05").assertIsDisplayed()
         composeRule.onNodeWithText("#foco").assertIsDisplayed()
-        composeRule.onNodeWithText("Não realizado").assertIsDisplayed()
+        composeRule.onNodeWithText("NÃO REALIZADO").assertIsDisplayed()
     }
 }

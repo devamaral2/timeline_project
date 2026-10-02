@@ -3,6 +3,7 @@ package app.braid.mobile.ui.event
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.braid.mobile.data.dto.EventDetailDto
+import app.braid.mobile.data.dto.UpdateEventInputDto
 import app.braid.mobile.data.events.EventGateway
 import app.braid.mobile.data.events.EventResult
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -21,6 +22,8 @@ sealed interface EventDetailUiState {
         val event: EventDetailDto,
         val isDeleting: Boolean = false,
         val deleteError: String? = null,
+        val isSavingMissed: Boolean = false,
+        val missedError: String? = null,
     ) : EventDetailUiState
 
     data object Deleted : EventDetailUiState
@@ -59,6 +62,36 @@ class EventDetailViewModel
                                 deleteError = "Não foi possível excluir o evento. Tente novamente.",
                             )
                         is EventResult.Success -> EventDetailUiState.Deleted
+                    }
+            }
+        }
+
+        /** Alterna entre "aconteceu" e "não realizado"; o estado só muda depois da resposta. */
+        fun setMissed(missed: Boolean) {
+            val current = mutableState.value as? EventDetailUiState.Content ?: return
+            if (current.isSavingMissed) return
+            mutableState.value = current.copy(isSavingMissed = true, missedError = null)
+            viewModelScope.launch {
+                val result =
+                    gateway.update(
+                        UpdateEventInputDto(
+                            eventId = current.event.id,
+                            expectedRevision = current.event.revision,
+                            missed = missed,
+                        ),
+                    )
+                mutableState.value =
+                    when (result) {
+                        is EventResult.Failure ->
+                            current.copy(
+                                isSavingMissed = false,
+                                missedError = "Não foi possível atualizar a situação. Tente novamente.",
+                            )
+                        is EventResult.Success ->
+                            current.copy(
+                                event = current.event.copy(missed = missed, revision = current.event.revision + 1),
+                                isSavingMissed = false,
+                            )
                     }
             }
         }

@@ -10,7 +10,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -30,13 +32,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.braid.mobile.core.designsystem.BraidDisplayFont
 import app.braid.mobile.data.reminders.ReminderEventSource
 import app.braid.mobile.data.reminders.ReminderScheduler
+import app.braid.mobile.domain.timeline.TIMELINE_TIME_ZONE
 import app.braid.mobile.domain.timeline.mediumDate
+import app.braid.mobile.domain.timeline.relativeDayLabel
+import java.time.LocalDate
+import java.time.ZoneId
 
 @Composable
 @Suppress("ktlint:standard:function-naming")
@@ -119,8 +128,8 @@ fun AgendaDayScreen(
                 ) {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(20.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = PaddingValues(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         if (current.refreshFailed) {
                             item {
@@ -131,19 +140,10 @@ fun AgendaDayScreen(
                                 )
                             }
                         }
-                        item {
-                            Text(
-                                text =
-                                    "${current.events.size} ${if (current.events.size == 1) "evento" else "eventos"} " +
-                                        "· ${current.trackedMinutes / 60}h registradas",
-                                style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
+                        item { DayHeading(dayKey = current.dayKey, eventCount = current.events.size) }
                         items(current.events, key = { it.id }) { event ->
                             EventCard(
                                 event = event,
-                                longestMinutes = current.longestMinutes,
                                 now = now,
                                 onClick = { onOpenEvent(event.id) },
                             )
@@ -165,6 +165,39 @@ fun AgendaDayScreen(
                 )
             }
         }
+    }
+}
+
+@Composable
+@Suppress("ktlint:standard:function-naming")
+private fun DayHeading(
+    dayKey: String,
+    eventCount: Int,
+) {
+    val todayKey = remember { LocalDate.now(ZoneId.of(TIMELINE_TIME_ZONE)).toString() }
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(bottom = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Bottom,
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Bottom) {
+            Text(
+                text = relativeDayLabel(dayKey, todayKey),
+                style = MaterialTheme.typography.headlineSmall.copy(fontFamily = BraidDisplayFont, fontWeight = FontWeight.Normal),
+            )
+            Text(
+                modifier = Modifier.padding(bottom = 2.dp),
+                text = mediumDate(dayKey),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Text(
+            modifier = Modifier.padding(bottom = 3.dp),
+            text = "$eventCount ${if (eventCount == 1) "evento" else "eventos"}".uppercase(),
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, letterSpacing = 1.2.sp, fontWeight = FontWeight.Medium),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 

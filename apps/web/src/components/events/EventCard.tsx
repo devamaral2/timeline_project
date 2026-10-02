@@ -3,35 +3,26 @@
 import { useState } from "react";
 import type { TimelineEventCardDto } from "@/lib/api/contracts";
 import {
-  durationRatioOf,
   elapsedSecondsOf,
   eventPositionOf,
   type EventPosition,
   formatStopwatch,
   formatTime,
-  MIN_DURATION_RATIO,
 } from "@repo/timeline";
 import { cn } from "@/lib/utils";
 import { useNow } from "@/lib/events/use-now";
-import { endLabelOf } from "@/lib/events/event-window";
 import { tagColorStyle } from "@/lib/tags/tag-color";
 import { DeleteEventDialog } from "./DeleteEventDialog";
 import { EditEventModal } from "./EditEventModal";
 import { EventDetailsModal } from "./EventDetailsModal";
-import { MissedBadge } from "./MissedBadge";
-import { ICON_STROKE_WIDTH, visualForItemType, type ItemTypeVisual } from "./event-visuals";
+import { durationPartsOf } from "./duration-parts";
+import { ICON_STROKE_WIDTH, missedLabel, visualForItemType, type ItemTypeVisual } from "./event-visuals";
 
 interface EventCardProps {
   event: TimelineEventCardDto;
-  /**
-   * Duracao do evento mais longo do mesmo dia, em minutos: a escala da barra
-   * do rodape. Comparar contra o dia e o que faz a barra dizer alguma coisa —
-   * os cartoes que estao juntos na coluna sao os do mesmo dia.
-   */
-  longestMinutes: number;
 }
 
-export function EventCard({ event, longestMinutes }: EventCardProps) {
+export function EventCard({ event }: EventCardProps) {
   const [viewingDetails, setViewingDetails] = useState(false);
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -44,7 +35,6 @@ export function EventCard({ event, longestMinutes }: EventCardProps) {
       <CardContent
         event={event}
         visual={visual}
-        longestMinutes={longestMinutes}
         onOpenDetails={() => setViewingDetails(true)}
       />
 
@@ -87,134 +77,114 @@ export function EventCard({ event, longestMinutes }: EventCardProps) {
 interface CardContentProps {
   event: TimelineEventCardDto;
   visual: ItemTypeVisual;
-  longestMinutes: number;
   onOpenDetails: () => void;
 }
 
-function CardContent({
-  event,
-  visual: { Icon, label, text, bar },
-  longestMinutes,
-  onOpenDetails,
-}: CardContentProps) {
+function CardContent({ event, visual: { Icon, label, text }, onOpenDetails }: CardContentProps) {
   const now = useNow();
   // Null ate a hidratacao: sem relogio nao da para saber se um evento sem fim
   // declarado esta correndo agora ou e um compromisso de amanha.
   const position: EventPosition | null = now ? eventPositionOf(event, now) : null;
-  const elapsedSeconds =
-    position === "running" && now ? elapsedSecondsOf(event.startedAt, now) : null;
+  const running = position === "running";
+  const elapsedSeconds = running && now ? elapsedSecondsOf(event.startedAt, now) : null;
+  const durationParts = event.finishedAt ? durationPartsOf(event.startedAt, event.finishedAt) : [];
+  const hasTags = event.tags.length > 0 || Boolean(event.missed);
 
-  // A barra do evento em andamento cresce com o cronometro, na mesma escala do
-  // dia — quando ele passa do mais longo do dia, ela para de crescer na borda.
-  const ratio =
-    elapsedSeconds !== null
-      ? longestMinutes > 0
-        ? Math.min(1, Math.max(MIN_DURATION_RATIO, elapsedSeconds / 60 / longestMinutes))
-        : MIN_DURATION_RATIO
-      : (durationRatioOf(event, longestMinutes) ?? MIN_DURATION_RATIO);
-
+  // Quem ja passou some para o fundo: sem superficie. O nao realizado esmaece
+  // mais um pouco. O que esta rolando ganha a borda da marca com um aro.
   return (
     <article
       className={cn(
-        "group relative w-full overflow-hidden rounded-xl border bg-card px-4 pb-3.5 pt-4 shadow-card transition-all duration-200",
-        "hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-card-hover",
-        // Um evento em andamento se destaca pela borda na cor da marca.
-        position === "running" ? "border-brand/45" : "border-card-border",
+        "w-full overflow-hidden rounded-[14px] border transition-colors duration-200",
+        running
+          ? "border-brand bg-card shadow-[0_0_0_1px_var(--brand)]"
+          : position === "past"
+            ? "border-card-border bg-transparent"
+            : "border-card-border bg-card hover:border-brand/40",
+        event.missed && "opacity-[0.58]",
       )}
     >
-      {/*
-        O icone entra direto sobre a superficie do cartao — sem quadradinho de
-        fundo e sem aro —, como no board da identidade. Quem diz o tipo sao a
-        cor e o rotulo em cima do nome.
-      */}
-      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
+      <div className="grid grid-cols-[22px_minmax(0,1fr)_auto] items-center gap-x-4 px-4 py-4 sm:gap-x-5 sm:px-[22px] sm:py-[18px]">
         <Icon
           aria-hidden
           strokeWidth={ICON_STROKE_WIDTH}
-          className={cn("size-6 shrink-0", text)}
+          className={cn("col-start-1 row-span-2 mt-0.5 size-[22px] shrink-0 self-start", text)}
         />
 
-        <div className="min-w-0">
-          {/* Tipo e status dividem a linha de cima: um diz o que o evento e, o
-              outro em que pe ele esta. */}
-          <div className="flex min-w-0 items-center gap-1.5">
-            <p className={cn("truncate text-[11px] font-medium leading-4", text)}>{label}</p>
-            <MissedBadge missed={event.missed} />
-          </div>
-          <h3 className="text-[14.5px] font-semibold leading-5 text-card-foreground">
-            <button
-              type="button"
-              onClick={onOpenDetails}
-              className="block w-full truncate rounded text-left transition-colors hover:text-brand-accent focus-visible:text-brand-accent focus-visible:outline-none"
-            >
-              {event.name}
-            </button>
-          </h3>
-        </div>
+        <span className="sr-only">{label}</span>
 
-        <div className="flex flex-col items-end gap-1">
-          <p className="flex items-center justify-end gap-2 text-[11.5px] font-medium leading-4 text-muted-foreground">
-            {position === "running" ? (
-              <span aria-hidden className="relative flex size-2">
-                <span className="absolute inline-flex size-full animate-ping rounded-full bg-brand/70" />
-                <span className="relative inline-flex size-2 rounded-full bg-brand" />
-              </span>
-            ) : null}
-            <span className="tabular-nums">
-              {formatTime(event.startedAt)} <span aria-hidden>→</span>
-              <span className="sr-only">até</span>{" "}
-              {endLabelOf(event, now)}
-            </span>
-          </p>
-          {/*
-            O contador. Enquanto a tarefa corre, o lugar do `durationLabel` — que
-            a API manda como "--" justamente porque ainda nao ha duracao — recebe
-            o tempo subindo, na cor da marca. Quando ela termina, o mesmo lugar
-            volta a mostrar o registro que veio do backend.
-          */}
-          {elapsedSeconds === null ? (
-            <p className="text-[10.5px] font-semibold tabular-nums text-muted-foreground/80">
-              {event.durationLabel}
-            </p>
-          ) : (
-            <p
+        <h3 className="col-start-2 truncate text-[15px] font-semibold leading-[1.4] text-card-foreground">
+          <button
+            type="button"
+            onClick={onOpenDetails}
+            className="block w-full truncate rounded text-left transition-colors hover:text-brand-accent focus-visible:text-brand-accent focus-visible:outline-none"
+          >
+            {event.name}
+          </button>
+        </h3>
+
+        <div className="col-start-3 row-span-2 justify-self-end">
+          {elapsedSeconds !== null ? (
+            <span
               role="timer"
               aria-label={`Em andamento ha ${formatStopwatch(elapsedSeconds)}`}
-              className="text-[12.5px] font-bold tracking-[0.01em] tabular-nums text-brand"
+              className="font-mono text-[20px] font-medium tracking-[-0.02em] tabular-nums text-brand sm:text-[22px]"
             >
               {formatStopwatch(elapsedSeconds)}
-            </p>
-          )}
+            </span>
+          ) : durationParts.length ? (
+            <span className="inline-flex items-baseline gap-[3px] font-display text-[26px] leading-none tabular-nums text-card-foreground sm:text-[30px]">
+              {durationParts.map((part, index) => (
+                <span key={part.unit} className={cn("inline-flex items-baseline gap-[3px]", index > 0 && "ml-1.5")}>
+                  <span>{part.value}</span>
+                  <small className="font-sans text-[11px] text-muted-foreground">{part.unit}</small>
+                </span>
+              ))}
+            </span>
+          ) : null}
         </div>
-      </div>
 
-      {event.tags.length ? (
-        <ul className="mt-3 flex flex-wrap gap-1.5">
-          {event.tags.map((tag) => (
-            <li
-              key={tag}
-              style={tagColorStyle(tag)}
-              className="rounded-full px-2 py-0.5 text-[11.5px] font-medium"
-            >
-              #{tag}
-            </li>
-          ))}
-        </ul>
-      ) : null}
-
-      {/*
-        A barra de duracao. Ela mede o tempo gasto sem mexer na altura do
-        cartao: dois eventos de tamanhos muito diferentes continuam ocupando a
-        mesma area da coluna, e a comparacao acontece na largura da linha.
-      */}
-      <div aria-hidden className="mt-3.5 flex">
-        <span
-          className={cn(
-            "h-[3px] rounded-full transition-[width] duration-500",
-            elapsedSeconds === null ? bar : "bg-brand",
+        <p className="col-start-2 mt-1.5 flex items-center gap-2.5 text-[13px] tabular-nums text-muted-foreground">
+          {position === "past" ? (
+            <span aria-hidden className="size-[5px] rounded-full bg-muted-foreground/80" />
+          ) : null}
+          {running || !event.finishedAt ? (
+            <span>{formatTime(event.startedAt)}</span>
+          ) : (
+            <span>
+              {formatTime(event.startedAt)} <span aria-hidden>—</span>
+              <span className="sr-only">até</span> {formatTime(event.finishedAt)}
+            </span>
           )}
-          style={{ width: `${ratio * 100}%` }}
-        />
+          {running ? (
+            <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-brand">
+              <span aria-hidden className="size-1.5 rounded-full bg-brand shadow-[0_0_0_3px_color-mix(in_oklab,var(--brand)_22%,transparent)]" />
+              Em andamento
+            </span>
+          ) : null}
+          {!running && !event.finishedAt && position !== null ? (
+            <span className="text-[12px]">sem hora de fim</span>
+          ) : null}
+        </p>
+
+        {hasTags ? (
+          <ul className="col-span-2 col-start-2 mt-3 flex flex-wrap items-center gap-2">
+            {event.tags.map((tag) => (
+              <li
+                key={tag}
+                style={tagColorStyle(tag)}
+                className="rounded-[5px] px-2 py-[3px] text-[11.5px] font-medium leading-[1.3]"
+              >
+                #{tag}
+              </li>
+            ))}
+            {event.missed ? (
+              <li className="rounded-[5px] bg-destructive/12 px-[7px] dark:bg-destructive/15 py-1 text-[10px] font-semibold uppercase leading-[1.2] tracking-[0.08em] text-destructive">
+                {missedLabel}
+              </li>
+            ) : null}
+          </ul>
+        ) : null}
       </div>
     </article>
   );

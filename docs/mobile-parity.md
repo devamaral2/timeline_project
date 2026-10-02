@@ -15,12 +15,12 @@ Status: `—` (não existe), `🚧` (em progresso), `✅` (paridade), `≠`
 | Agenda | Shell, header e navegação mobile | `mockups/eventos/mockup-shell.tsx`, `mobile-navigation.tsx`, `agenda-header-actions.tsx` | ✅ | Drawer e bottom bar nativos; conteúdo entra nas próximas issues |
 | Agenda | Tira da semana | `components/events/WeekStrip.tsx` | ✅ | Seleção de dia integrada à timeline nativa |
 | Agenda | Seletor de dia / navegação | `DayPicker.tsx`, `DateNavigator.tsx` | ✅ | Calendário mensal, swipe e carregamento por dia integrados |
-| Agenda | Timeline do dia | `mockups/eventos/agenda-day.tsx` | ✅ | Loading, erro, vazio, resumo e refresh implementados |
-| Agenda | Card de evento + visuais por tipo | `EventCard.tsx`, `event-visuals.ts` | ✅ | Tipos, tags, duração, cronômetro e barra proporcional |
-| Agenda | Badge "atrasado" | `MissedBadge.tsx` | ✅ | Texto nativo “Não realizado” para `missed` |
+| Agenda | Timeline do dia | `DayColumn.tsx`, `mockups/eventos/agenda-day.tsx` | ✅ | Loading, erro, vazio e refresh; cabeçalho do dia em Newsreader ("Hoje" + data) com contagem de eventos, sem o total de horas registradas |
+| Agenda | Card de evento + visuais por tipo | `EventCard.tsx`, `event-visuals.ts` | ✅ | Ícone por tipo, duração em número grande (h/min), cronômetro em mono no evento em andamento, tags em chips; passado sem fundo e não realizado esmaecido; sem a barra proporcional |
+| Agenda | Badge "atrasado" | `MissedBadge.tsx` | ✅ | Chip “NÃO REALIZADO” junto às tags para `missed` |
 | Agenda | Skeleton de carregamento | `DaySkeleton.tsx` | ✅ | Skeleton nativo durante a primeira carga |
 | Agenda | Tarefas/subtarefas no card | `mockups/eventos/task-controls.tsx` | ≠ | O endpoint de timeline não envia `taskIds`; vínculo será exibido no detalhe |
-| Detalhe | Tela de detalhe | `[userId]/eventos/[eventId]/page.tsx` | ✅ | Rota nativa, quatro tipos de item, agenda, metadados, tags, interrupções e tarefas vinculadas |
+| Detalhe | Tela de detalhe | `[userId]/eventos/[eventId]/page.tsx` | ✅ | Coluna única do design system: barra (voltar, editar, mais ações → excluir), cabeçalho com ícone de situação (toque alterna aconteceu/não realizado), informações, descrição com “Ler mais”, cartão de nota para treino/refeição/sono e seções recolhíveis (séries, interrupções, tarefas vinculadas). Local e “Abrir em Notas” ficam de fora: não há campo nem tela no produto |
 | Edição | Criar evento | `new-event-forms/*`, `event-schedule-fields.tsx` | ✅ | Tipo, descrição, agendamento, lembretes e POST nativo |
 | Edição | Tags com sugestão | `new-event-forms/TagInput.tsx` | ✅ | Componente nativo compartilhado com debounce de 200 ms, limite 6 e chips em criação e edição |
 | Edição | Editar refeição | `edit-event-forms/MealEditForm.tsx` | ✅ | PATCH tipado, campos comuns, tags, agenda, status e itens nutricionais |

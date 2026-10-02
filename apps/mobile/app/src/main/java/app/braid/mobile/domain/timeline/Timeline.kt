@@ -10,7 +10,7 @@ const val TIMELINE_TIME_ZONE: String = "America/Sao_Paulo"
 
 private val timelineZone: ZoneId = ZoneId.of(TIMELINE_TIME_ZONE)
 private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm").withZone(timelineZone)
-private val months =
+internal val months =
     listOf(
         "janeiro",
         "fevereiro",
@@ -26,7 +26,7 @@ private val months =
         "dezembro",
     )
 private val monthTitles = months.map { month -> month.replaceFirstChar { it.uppercase() } }
-private val weekdays =
+internal val weekdays =
     listOf(
         "Domingo",
         "Segunda-feira",
@@ -170,10 +170,15 @@ fun endLabelOf(
 fun eventPositionOf(
     event: TimelineEventCardDto,
     now: Instant = Instant.now(),
+): EventPosition = eventPositionOf(event.startedAt, event.finishedAt, now)
+
+fun eventPositionOf(
+    startedAt: String,
+    finishedAt: String?,
+    now: Instant = Instant.now(),
 ): EventPosition {
-    val started = Instant.parse(event.startedAt)
-    if (now.isBefore(started)) return EventPosition.Upcoming
-    val finished = event.finishedAt?.let(Instant::parse) ?: return EventPosition.Running
+    if (now.isBefore(Instant.parse(startedAt))) return EventPosition.Upcoming
+    val finished = finishedAt?.let(Instant::parse) ?: return EventPosition.Running
     return if (finished <= now) EventPosition.Past else EventPosition.Running
 }
 

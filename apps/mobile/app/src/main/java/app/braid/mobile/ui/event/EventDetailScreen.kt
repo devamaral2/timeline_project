@@ -2,34 +2,46 @@
 
 package app.braid.mobile.ui.event
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccessTime
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Bedtime
+import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.EventAvailable
+import androidx.compose.material.icons.outlined.EventBusy
 import androidx.compose.material.icons.outlined.FitnessCenter
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
+import androidx.compose.material.icons.outlined.KeyboardArrowUp
+import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.NotificationsNone
 import androidx.compose.material.icons.outlined.Restaurant
-import androidx.compose.material3.Button
-import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material.icons.outlined.Sell
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -44,18 +56,27 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import app.braid.mobile.data.dto.EventDetailDto
+import app.braid.mobile.core.designsystem.LocalBraidDarkTheme
+import app.braid.mobile.core.designsystem.tagColors
 import app.braid.mobile.data.dto.EventItemDto
 import app.braid.mobile.data.dto.MealEventItemDto
 import app.braid.mobile.data.dto.SleepEventItemDto
 import app.braid.mobile.data.dto.TrainingEventItemDto
-import app.braid.mobile.domain.timeline.dayKeyOf
+import app.braid.mobile.domain.timeline.EventPosition
+import app.braid.mobile.domain.timeline.dateLineOf
 import app.braid.mobile.domain.timeline.endLabelOf
+import app.braid.mobile.domain.timeline.eventPositionOf
+import app.braid.mobile.domain.timeline.formatMinutes
 import app.braid.mobile.domain.timeline.formatTime
-import app.braid.mobile.domain.timeline.mediumDate
+import app.braid.mobile.domain.timeline.minutesBetween
+import app.braid.mobile.domain.timeline.pluralize
 
 private data class DetailVisual(
     val icon: ImageVector,
@@ -64,8 +85,6 @@ private data class DetailVisual(
 )
 
 @Composable
-@Suppress("ktlint:standard:function-naming")
-@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 fun EventDetailScreen(
     eventId: String,
     onBack: () -> Unit,
@@ -87,27 +106,8 @@ fun EventDetailScreen(
             else -> Unit
         }
     }
-    val title = (state as? EventDetailUiState.Content)?.event?.name ?: "Evento"
 
-    Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text(title, maxLines = 1) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Outlined.ArrowBack, contentDescription = "Voltar para a agenda")
-                    }
-                },
-                actions = {
-                    if (state is EventDetailUiState.Content) {
-                        IconButton(onClick = onEdit) {
-                            Icon(Icons.Outlined.Edit, contentDescription = "Editar evento")
-                        }
-                    }
-                },
-            )
-        },
-    ) { paddingValues ->
+    Scaffold(containerColor = MaterialTheme.colorScheme.background) { paddingValues ->
         when (val current = state) {
             EventDetailUiState.Loading ->
                 Column(
@@ -118,18 +118,24 @@ fun EventDetailScreen(
                     CircularProgressIndicator()
                 }
             EventDetailUiState.Error ->
-                DetailMessage(
-                    modifier = Modifier.fillMaxSize().padding(paddingValues),
-                    text = "Não foi possível carregar o evento.",
-                    action = { viewModel.load(eventId) },
-                )
+                Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Outlined.ArrowBack, contentDescription = "Voltar para a agenda")
+                    }
+                    DetailMessage(
+                        modifier = Modifier.fillMaxSize(),
+                        text = "Não foi possível carregar o evento.",
+                        action = { viewModel.load(eventId) },
+                    )
+                }
             is EventDetailUiState.Content ->
                 EventDetailBody(
-                    event = current.event,
+                    state = current,
                     modifier = Modifier.padding(paddingValues),
+                    onBack = onBack,
                     onEdit = onEdit,
                     onDelete = { showDeleteConfirmation = true },
-                    deleting = current.isDeleting,
+                    onToggleMissed = { viewModel.setMissed(!current.event.missed) },
                 )
             EventDetailUiState.Deleted -> Unit
         }
@@ -174,176 +180,294 @@ fun EventDetailScreen(
 
 @Composable
 private fun EventDetailBody(
-    event: EventDetailDto,
+    state: EventDetailUiState.Content,
     modifier: Modifier,
+    onBack: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
-    deleting: Boolean,
+    onToggleMissed: () -> Unit,
 ) {
+    val event = state.event
     val primary = event.items.firstOrNull { it.id == event.primaryItemId }
     val visual = detailVisual(primary?.let(::typeOf))
-    val dayKey = dayKeyOf(event.startedAt)
+    val position = eventPositionOf(event.startedAt, event.finishedAt)
+    val agendaMinutes = event.finishedAt?.let { minutesBetween(event.startedAt, it) }
+    val dateLine = dateLineOf(event.startedAt, event.finishedAt)
+    var menuOpen by rememberSaveable(event.id) { mutableStateOf(false) }
 
     Column(
-        modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp),
+        modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(start = 20.dp, end = 20.dp, bottom = 40.dp),
+        verticalArrangement = Arrangement.spacedBy(28.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(imageVector = visual.icon, contentDescription = visual.label, tint = visual.color)
-            Spacer(modifier = Modifier.width(10.dp))
-            Text(text = visual.label, style = MaterialTheme.typography.labelLarge, color = visual.color)
-        }
-        Text(text = event.name, style = MaterialTheme.typography.headlineSmall)
-        Text(
-            text = mediumDate(dayKey),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Schedule(event = event)
-
-        if (event.description.isNotBlank()) {
-            DetailSection(title = "Descrição") {
-                Text(text = event.description, style = MaterialTheme.typography.bodyMedium)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            TextButton(onClick = onBack, modifier = Modifier.heightIn(min = 44.dp)) {
+                Icon(Icons.Outlined.ArrowBack, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Agenda", color = MaterialTheme.colorScheme.onBackground)
             }
-        }
-
-        DetailSection(title = "Informações") {
-            Text(text = "Prioridade: ${priorityLabel(event.priority)}")
-            if (event.notifyOffsetsMinutes.isNotEmpty()) {
-                Text(
-                    text = "Notificar: ${event.notifyOffsetsMinutes.joinToString(", ") { "${it.toInt()} min antes" }}",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-
-        event.items.forEach { item -> ItemDetails(item) }
-
-        if (event.tags.isNotEmpty()) {
-            DetailSection(title = "Tags") {
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    event.tags.forEach { tag -> TagChip(tag, visual.color) }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onEdit) {
+                    Icon(Icons.Outlined.Edit, contentDescription = "Editar evento", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-            }
-        }
-
-        if (event.interruptions.isNotEmpty()) {
-            DetailSection(title = "Interrupções") {
-                event.interruptions.forEach { interruption ->
-                    Text(text = "${interruption.name} · ${formatTime(interruption.startedAt)}–${formatTime(interruption.finishedAt)}")
-                    if (interruption.description.isNotBlank()) {
-                        Text(
-                            text = interruption.description,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = MaterialTheme.typography.bodySmall,
+                Box {
+                    IconButton(onClick = { menuOpen = true }) {
+                        Icon(Icons.Outlined.MoreVert, contentDescription = "Mais ações", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        DropdownMenuItem(
+                            text = { Text("Excluir", color = MaterialTheme.colorScheme.error) },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Outlined.DeleteOutline,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.error,
+                                )
+                            },
+                            enabled = !state.isDeleting,
+                            onClick = {
+                                menuOpen = false
+                                onDelete()
+                            },
                         )
                     }
                 }
             }
         }
 
-        if (!event.taskIds.isNullOrEmpty()) {
-            DetailSection(title = "Tarefas vinculadas") {
-                Text(text = "${event.taskIds.size} tarefa(s) vinculada(s)")
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(visual.icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = visual.color)
+                    SectionLabelColored(visual.label, visual.color)
+                }
+                StatusIcon(position = position, missed = event.missed, saving = state.isSavingMissed, onToggle = onToggleMissed)
             }
+            Text(
+                text = event.name,
+                modifier = Modifier.padding(top = 18.dp, bottom = 12.dp),
+                style = MaterialTheme.typography.displaySmall,
+            )
+            Text(dateLine, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                text =
+                    "${formatTime(event.startedAt)} → ${endLabelOf(event.startedAt, event.finishedAt)}" +
+                        (agendaMinutes?.let { " · ${formatMinutes(it.toDouble())}" } ?: ""),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
         }
+        state.missedError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
 
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            OutlinedButton(modifier = Modifier.weight(1f), onClick = onEdit) {
-                Icon(Icons.Outlined.Edit, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Editar")
-            }
-            Button(modifier = Modifier.weight(1f), onClick = onDelete, enabled = !deleting) {
-                Icon(Icons.Outlined.DeleteOutline, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Excluir")
-            }
-        }
-    }
-}
-
-@Composable
-private fun Schedule(event: EventDetailDto) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            ScheduleValue("Início", formatTime(event.startedAt))
-            ScheduleValue("Fim", endLabelOf(event.startedAt, event.finishedAt))
-            event.finishedAt?.let {
-                ScheduleValue("Duração", durationLabel(durationMinutesBetween(event.startedAt, it)))
-            }
-        }
-    }
-}
-
-@Composable
-private fun ScheduleValue(
-    label: String,
-    value: String,
-) {
-    Column {
-        Text(text = label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(text = value, style = MaterialTheme.typography.titleMedium)
-    }
-}
-
-@Composable
-private fun ItemDetails(item: EventItemDto) {
-    when (item) {
-        is MealEventItemDto ->
-            DetailSection(title = "Refeição") {
-                Text(text = item.data.name, style = MaterialTheme.typography.titleSmall)
-                if (item.data.description.isNotBlank()) Text(text = item.data.description)
-                Text(text = "${item.data.foodItems.size} alimento(s) · ${item.data.totals.totalCaloriesKcal} kcal")
-            }
-        is TrainingEventItemDto ->
-            if (item.data.workouts.isNotEmpty()) {
-                DetailSection(title = "Treinos") {
-                    item.data.workouts.forEach { workout ->
-                        Text(text = "${workout.workoutName} · ${workout.duration} min · ${workout.calories} kcal")
+        if (event.notifyOffsetsMinutes.isNotEmpty() || event.tags.isNotEmpty()) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (event.notifyOffsetsMinutes.isNotEmpty()) {
+                    InfoRow(Icons.Outlined.NotificationsNone) {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            event.notifyOffsetsMinutes.forEach { Text(notificationLabel(it), style = MaterialTheme.typography.bodyMedium) }
+                        }
+                    }
+                }
+                if (event.tags.isNotEmpty()) {
+                    InfoRow(Icons.Outlined.Sell) {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            event.tags.forEach { tag -> TagChip(tag) }
+                        }
                     }
                 }
             }
-        is SleepEventItemDto ->
-            DetailSection(title = "Sono") {
-                Text(text = "${item.data.trackedSleepTime} min monitorados · pontuação ${item.data.score}")
+        }
+
+        if (event.description.isNotBlank()) {
+            Description(event.description)
+        }
+
+        event.items.filter(::hasNoteCard).forEach { item ->
+            EventNoteCard(item = item, eventName = event.name, dateTitle = dateLine, agendaMinutes = agendaMinutes)
+        }
+
+        val linkedTasks = event.taskIds?.size ?: 0
+        if (event.interruptions.isNotEmpty() || linkedTasks > 0) {
+            Column {
+                if (event.interruptions.isNotEmpty()) {
+                    CollapsibleRow(
+                        title = "Interrupções",
+                        summary = pluralize(event.interruptions.size, "interrupção", "interrupções"),
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            event.interruptions.forEach { interruption ->
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(interruption.name, style = MaterialTheme.typography.bodyMedium)
+                                        if (interruption.description.isNotBlank()) {
+                                            Text(
+                                                interruption.description,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
+                                    }
+                                    Text(
+                                        formatMinutes(minutesBetween(interruption.startedAt, interruption.finishedAt).toDouble()),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                if (linkedTasks > 0) {
+                    CollapsibleRow(title = "Tarefas vinculadas", summary = pluralize(linkedTasks, "tarefa", "tarefas"), content = null)
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline)
             }
-        else -> Unit
+        }
+    }
+}
+
+/** Só o ícone, sem texto; depois do horário vira botão que alterna aconteceu / não realizado. */
+@Composable
+private fun StatusIcon(
+    position: EventPosition,
+    missed: Boolean,
+    saving: Boolean,
+    onToggle: () -> Unit,
+) {
+    val (icon, label, tint) =
+        when {
+            missed -> Triple(Icons.Outlined.EventBusy, "Não realizado", MaterialTheme.colorScheme.error)
+            position == EventPosition.Past -> Triple(Icons.Outlined.EventAvailable, "Aconteceu", MaterialTheme.colorScheme.onBackground)
+            position == EventPosition.Running -> Triple(Icons.Outlined.CalendarMonth, "Em andamento", MaterialTheme.colorScheme.tertiary)
+            else -> Triple(Icons.Outlined.CalendarToday, "Vai acontecer", MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    if (position == EventPosition.Past) {
+        val action = if (missed) "aconteceu" else "não realizado"
+        IconButton(
+            onClick = onToggle,
+            enabled = !saving,
+            modifier = Modifier.semantics { contentDescription = "Situação: $label. Toque para marcar como $action" },
+        ) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(28.dp), tint = tint)
+        }
+    } else {
+        Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+            Icon(icon, contentDescription = "Situação: $label", modifier = Modifier.size(28.dp), tint = tint)
+        }
     }
 }
 
 @Composable
-private fun DetailSection(
-    title: String,
+private fun SectionLabelColored(
+    text: String,
+    color: Color,
+) {
+    Text(
+        text = text.uppercase(),
+        style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.3.sp),
+        color = color,
+    )
+}
+
+@Composable
+private fun InfoRow(
+    icon: ImageVector,
     content: @Composable () -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(text = title, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        HorizontalDivider()
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
         content()
     }
 }
 
+/** Até 3 linhas; passando disso, "Ler mais". */
 @Composable
-private fun TagChip(
-    tag: String,
-    color: Color,
-) {
-    Surface(shape = RoundedCornerShape(50), color = color.copy(alpha = 0.16f)) {
+private fun Description(text: String) {
+    var expanded by rememberSaveable(text) { mutableStateOf(false) }
+    var overflows by rememberSaveable(text) { mutableStateOf(false) }
+    Column {
         Text(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            text = text,
+            style = MaterialTheme.typography.bodyLarge,
+            maxLines = if (expanded) Int.MAX_VALUE else 3,
+            overflow = TextOverflow.Ellipsis,
+            onTextLayout = { if (!expanded) overflows = it.hasVisualOverflow },
+        )
+        if (overflows || expanded) {
+            TextButton(onClick = { expanded = !expanded }, modifier = Modifier.heightIn(min = 44.dp)) {
+                Text(if (expanded) "Ler menos" else "Ler mais", color = MaterialTheme.colorScheme.tertiary)
+            }
+        }
+    }
+}
+
+/** Sanfona dentro da própria tela; fechada, a linha já diz quanto tem dentro. */
+@Composable
+private fun CollapsibleRow(
+    title: String,
+    summary: String,
+    content: (@Composable () -> Unit)?,
+) {
+    var open by rememberSaveable(title) { mutableStateOf(false) }
+    HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .let {
+                    if (content !=
+                        null
+                    ) {
+                        it.clickable { open = !open }
+                    } else {
+                        it
+                    }
+                }.heightIn(min = 56.dp)
+                .padding(top = 14.dp, bottom = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(title, style = MaterialTheme.typography.titleSmall)
+            Text(summary, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        if (content != null) {
+            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = if (open) Icons.Outlined.KeyboardArrowUp else Icons.Outlined.KeyboardArrowDown,
+                    contentDescription = if (open) "Recolher $title" else "Expandir $title",
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (open) Column(modifier = Modifier.padding(top = 4.dp, bottom = 10.dp)) { content() }
+        }
+    }
+}
+
+@Composable
+private fun TagChip(tag: String) {
+    val colors = tagColors(tag, LocalBraidDarkTheme.current)
+    Surface(shape = MaterialTheme.shapes.extraSmall, color = colors.backgroundColor) {
+        Text(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
             text = "#$tag",
-            style = MaterialTheme.typography.labelSmall,
-            color = color,
+            style = MaterialTheme.typography.labelMedium,
+            color = colors.color,
         )
     }
+}
+
+private fun notificationLabel(minutes: Double): String {
+    val value = minutes.toInt()
+    if (value % 1440 == 0) return pluralize(value / 1440, "dia", "dias") + " antes"
+    return pluralize(value, "minuto", "minutos") + " antes"
 }
 
 @Composable
@@ -364,13 +488,14 @@ private fun DetailMessage(
 
 @Composable
 private fun detailVisual(type: String?): DetailVisual {
-    val colors = MaterialTheme.colorScheme
+    val palette = eventDetailPalette()
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
     return when (type) {
-        "meal" -> DetailVisual(Icons.Outlined.Restaurant, "Refeição", colors.tertiary)
-        "training" -> DetailVisual(Icons.Outlined.FitnessCenter, "Treino", colors.primary)
-        "sleep" -> DetailVisual(Icons.Outlined.Bedtime, "Sono", colors.secondary)
-        "routine" -> DetailVisual(Icons.Outlined.AccessTime, "Rotina", colors.secondary)
-        else -> DetailVisual(Icons.Outlined.Circle, "Evento", colors.onSurfaceVariant)
+        "meal" -> DetailVisual(Icons.Outlined.Restaurant, "Refeição", palette.meal)
+        "training" -> DetailVisual(Icons.Outlined.FitnessCenter, "Treino", palette.training)
+        "sleep" -> DetailVisual(Icons.Outlined.Bedtime, "Sono", palette.sleep)
+        "routine" -> DetailVisual(Icons.Outlined.AccessTime, "Rotina", palette.routine)
+        else -> DetailVisual(Icons.Outlined.Circle, "Evento", muted)
     }
 }
 
@@ -381,33 +506,3 @@ private fun typeOf(item: EventItemDto): String =
         is SleepEventItemDto -> "sleep"
         else -> "routine"
     }
-
-private fun priorityLabel(priority: String): String =
-    when (priority) {
-        "urgent" -> "Urgente"
-        "flexible" -> "Flexível"
-        else -> "Normal"
-    }
-
-private fun durationLabel(minutes: Int): String {
-    if (minutes < 60) return "$minutes min"
-    val hours = minutes / 60
-    val remainder = minutes % 60
-    return if (remainder == 0) "$hours h" else "$hours h $remainder min"
-}
-
-private fun durationMinutesBetween(
-    startedAt: String,
-    finishedAt: String,
-): Int =
-    (
-        (
-            java.time.Instant
-                .parse(finishedAt)
-                .toEpochMilli() -
-                java.time.Instant
-                    .parse(startedAt)
-                    .toEpochMilli()
-        ) / 60_000
-    ).toInt()
-        .coerceAtLeast(0)

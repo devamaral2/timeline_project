@@ -1,15 +1,24 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, CalendarDays } from "lucide-react";
-import { useEffect, useState } from "react";
+import { ArrowLeft, Bell, Ellipsis, Pencil, Tag, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ICON_STROKE_WIDTH, visualForItemType } from "@/components/events/event-visuals";
+import { DeleteEventDialog } from "@/components/events/DeleteEventDialog";
+import { EditEventModal } from "@/components/events/EditEventModal";
+import { primaryItemOf } from "@/components/events/EventDetailsModal";
+import { ICON_STROKE_WIDTH, notificationOffsetLabel, visualForItemType } from "@/components/events/event-visuals";
 import { authedFetch } from "@/lib/api/authed-fetch";
-import type { EventDetailDto, EventItemDto, MealItem } from "@/lib/api/contracts";
-import { dayKeyOf, eventPositionOf, formatTime, longDate } from "@repo/timeline";
+import type { EventDetailDto } from "@/lib/api/contracts";
+import { tagColorStyle } from "@/lib/tags/tag-color";
+import { eventPositionOf, formatTime } from "@repo/timeline";
 import { agendaRefreshEvent } from "../../../mockups/eventos/agenda-refresh";
 import shellStyles from "../../../mockups/eventos/mockup.module.css";
+import { dateLineOf, formatMinutes, minutesBetween, pluralize } from "./event-detail-format";
+import { Collapsible, NoteCard, StatusIcon, statusLabelOf } from "./event-detail-parts";
 import styles from "./event-details.module.css";
+
+const icon = { "aria-hidden": true, strokeWidth: ICON_STROKE_WIDTH } as const;
+const DESCRIPTION_CLAMP = 180;
 
 export default function EventPage({ params }: { params: Promise<{ userId: string; eventId: string }> }) {
   const router = useRouter();
@@ -18,8 +27,14 @@ export default function EventPage({ params }: { params: Promise<{ userId: string
   const [event, setEvent] = useState<EventDetailDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [savingMissed, setSavingMissed] = useState(false);
   const [mutationError, setMutationError] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [descriptionOpen, setDescriptionOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -32,17 +47,30 @@ export default function EventPage({ params }: { params: Promise<{ userId: string
     return () => { cancelled = true; };
   }, [params]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reloadKey força o refetch após editar.
   useEffect(() => {
     if (!eventId) return;
     let cancelled = false;
-    setLoading(true);
     setError(false);
     void authedFetch<EventDetailDto>(`/api/events/${eventId}`)
       .then((data) => { if (!cancelled) setEvent(data); })
       .catch(() => { if (!cancelled) setError(true); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [eventId]);
+  }, [eventId, reloadKey]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    function close(pointer: Event) {
+      if (pointer instanceof KeyboardEvent ? pointer.key === "Escape" : !menuRef.current?.contains(pointer.target as Node)) setMenuOpen(false);
+    }
+    document.addEventListener("pointerdown", close);
+    document.addEventListener("keydown", close);
+    return () => {
+      document.removeEventListener("pointerdown", close);
+      document.removeEventListener("keydown", close);
+    };
+  }, [menuOpen]);
 
   async function updateMissed(missed: boolean) {
     if (!event || savingMissed) return;
@@ -59,7 +87,7 @@ export default function EventPage({ params }: { params: Promise<{ userId: string
       window.dispatchEvent(new Event(agendaRefreshEvent));
     } catch {
       setEvent(previous);
-      setMutationError("Não foi possível atualizar a anotação. Tente novamente.");
+      setMutationError("Não foi possível atualizar a situação. Tente novamente.");
     } finally {
       setSavingMissed(false);
     }
@@ -68,112 +96,104 @@ export default function EventPage({ params }: { params: Promise<{ userId: string
   if (loading) return <main id="conteudo" className={shellStyles.detailMain}><p role="status" className={styles.message}>Carregando evento…</p></main>;
   if (error || !event || !userId) return (
     <main id="conteudo" className={shellStyles.detailMain}>
-      <button type="button" className={styles.backLink} onClick={() => router.back()}><ArrowLeft aria-hidden />Voltar</button>
+      <button type="button" className={styles.backLink} onClick={() => router.back()}><ArrowLeft {...icon} />Voltar</button>
       <p role="alert" className={styles.message}>Não foi possível carregar o evento. Tente novamente.</p>
     </main>
   );
 
-  const primary = event.items.find((item) => item.id === event.primaryItemId);
-  const visual = visualForItemType(primary?.type ?? "");
+  const primary = primaryItemOf(event);
+  const type = primary?.type ?? "routine";
+  const visual = visualForItemType(type);
   const TypeIcon = visual.Icon;
-  const dayKey = dayKeyOf(event.startedAt);
-  const upcoming = eventPositionOf(event, new Date()) === "upcoming";
-  const endDayKey = event.finishedAt ? dayKeyOf(event.finishedAt) : null;
+  const position = eventPositionOf(event, new Date());
+  const statusLabel = statusLabelOf(position, event.missed);
+  const agendaMinutes = event.finishedAt ? minutesBetween(event.startedAt, event.finishedAt) : null;
+  const dateLine = dateLineOf(event.startedAt, event.finishedAt);
+  const endLabel = event.finishedAt ? formatTime(event.finishedAt) : position === "upcoming" ? "sem hora de fim" : "em andamento";
+  const noteItems = event.items.filter((item) => item.type === "meal" || item.type === "training" || item.type === "sleep");
+  const longDescription = event.description.length > DESCRIPTION_CLAMP || event.description.split("\n").length > 3;
+  const linkedTasks = event.taskIds?.length ?? 0;
 
   return (
     <main id="conteudo" className={shellStyles.detailMain}>
-      <div className={styles.content}>
-        <nav className={styles.navigation} aria-label="Navegação do evento">
-          <a href={`/${userId}`} className={styles.backLink}><ArrowLeft aria-hidden />Agenda</a>
-          <span>Detalhes do evento</span>
+      <div className={styles.content} data-type={type}>
+        <nav className={styles.navigation} aria-label="Evento">
+          <a href={`/${userId}`} className={styles.backLink}><ArrowLeft {...icon} />Agenda</a>
+          <div className={styles.actions}>
+            <button type="button" className={styles.editButton} aria-label="Editar evento" onClick={() => setEditing(true)}><Pencil {...icon} /><span>Editar</span></button>
+            <div className={styles.menuAnchor} ref={menuRef}>
+              <button type="button" className={styles.iconButton} aria-label="Mais ações" aria-haspopup="menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}><Ellipsis {...icon} /></button>
+              {menuOpen ? (
+                <div role="menu" className={styles.menu}>
+                  <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); setDeleting(true); }}><Trash2 {...icon} />Excluir</button>
+                </div>
+              ) : null}
+            </div>
+          </div>
         </nav>
 
-        <header className={styles.heading} data-type={primary?.type ?? "routine"}>
-          <span className={styles.type}><TypeIcon aria-hidden strokeWidth={ICON_STROKE_WIDTH} />{visual.label}</span>
+        <header className={styles.heading}>
+          <div className={styles.kindRow}>
+            <span className={styles.type}><TypeIcon {...icon} />{visual.label}</span>
+            {position === "past" ? (
+              <button type="button" className={styles.status} aria-pressed={event.missed} disabled={savingMissed}
+                aria-label={`Situação: ${statusLabel}. Toque para marcar como ${event.missed ? "aconteceu" : "não realizado"}`} title={statusLabel}
+                onClick={() => void updateMissed(!event.missed)}><StatusIcon position={position} missed={event.missed} /></button>
+            ) : (
+              <span className={styles.status} role="img" aria-label={`Situação: ${statusLabel}`} title={statusLabel}><StatusIcon position={position} missed={event.missed} /></span>
+            )}
+          </div>
           <h1>{event.name}</h1>
-          <p className={styles.date}><CalendarDays aria-hidden /><time dateTime={dayKey}>{longDate(dayKey)}</time></p>
+          <p className={styles.date}>{dateLine}</p>
+          <p className={styles.date}>
+            <span className={styles.window}><time dateTime={event.startedAt}>{formatTime(event.startedAt)}</time> → {event.finishedAt ? <time dateTime={event.finishedAt}>{endLabel}</time> : endLabel}</span>
+            {agendaMinutes !== null ? <> · {formatMinutes(agendaMinutes)}</> : null}
+          </p>
         </header>
 
-        <section className={styles.schedule} aria-label="Horário do evento">
-          <dl className={styles.times}>
-            <div>
-              <dt>Início</dt>
-              <dd><time dateTime={event.startedAt}>{formatTime(event.startedAt)}</time></dd>
-              <ArrowRight className={styles.timeArrow} aria-hidden />
-            </div>
-            <div>
-              <dt>Fim</dt>
-              <dd>{event.finishedAt ? <time dateTime={event.finishedAt}>{formatTime(event.finishedAt)}</time> : <span className={styles.openEnd}>{upcoming ? "A definir" : "Em andamento"}</span>}</dd>
-              {endDayKey && endDayKey !== dayKey ? <span className={styles.endDate}>{longDate(endDayKey)}</span> : null}
-            </div>
-          </dl>
-          {event.finishedAt ? <p className={styles.duration}>{durationOf(event.startedAt, event.finishedAt)}</p> : null}
-        </section>
-
-        {event.description ? <DetailSection title="Descrição"><p className={styles.prose}>{event.description}</p></DetailSection> : null}
-        {event.items.map((item) => <ItemDetails key={item.id} item={item} />)}
-        {event.tags.length ? (
-          <ul className={styles.tags} aria-label="Tags do evento">
-            {event.tags.map((tag) => <li key={tag}>#{tag}</li>)}
-          </ul>
-        ) : null}
-        {event.interruptions.length ? (
-          <DetailSection title="Interrupções">
-            <ul className={styles.list}>
-              {event.interruptions.map((item) => <li key={item.id}><div><p>{item.name}</p>{item.description ? <p className={styles.secondary}>{item.description}</p> : null}</div><span>{durationOf(item.startedAt, item.finishedAt)}</span></li>)}
-            </ul>
-          </DetailSection>
+        {event.notifyOffsetsMinutes.length || event.tags.length ? (
+          <section className={styles.info} aria-label="Informações">
+            {event.notifyOffsetsMinutes.length ? (
+              <div><Bell {...icon} /><div>{event.notifyOffsetsMinutes.map((minutes) => <span key={minutes}>{notificationOffsetLabel(minutes)}</span>)}</div></div>
+            ) : null}
+            {event.tags.length ? (
+              <div><Tag {...icon} /><ul aria-label="Tags do evento">{event.tags.map((tag) => <li key={tag} style={tagColorStyle(tag)}>#{tag}</li>)}</ul></div>
+            ) : null}
+          </section>
         ) : null}
 
-        <footer className={styles.footer}>
-          <label className={styles.missed}>
-            <input type="checkbox" checked={event.missed} disabled={savingMissed} onChange={(inputEvent) => void updateMissed(inputEvent.target.checked)} />
-            Não realizado
-          </label>
-          {savingMissed ? <span role="status">Salvando…</span> : null}
-        </footer>
+        {event.description ? (
+          <div className={styles.descriptionBlock}>
+            <p className={styles.description} data-clamped={longDescription && !descriptionOpen}>{event.description}</p>
+            {longDescription ? <button type="button" className={styles.readMore} aria-expanded={descriptionOpen} onClick={() => setDescriptionOpen((open) => !open)}>{descriptionOpen ? "Ler menos" : "Ler mais"}</button> : null}
+          </div>
+        ) : null}
+
+        {noteItems.map((item) => <NoteCard key={item.id} item={item} eventName={event.name} dateTitle={dateLine} agendaMinutes={agendaMinutes} />)}
+
+        {event.interruptions.length || linkedTasks ? (
+          <section className={styles.collapsibles} aria-label="Mais detalhes">
+            {event.interruptions.length ? (
+              <Collapsible title="Interrupções" summary={pluralize(event.interruptions.length, "interrupção", "interrupções")}>
+                <ul className={styles.list}>
+                  {event.interruptions.map((interruption) => (
+                    <li key={interruption.id}>
+                      <div><p>{interruption.name}</p>{interruption.description ? <p className={styles.secondary}>{interruption.description}</p> : null}</div>
+                      <span>{formatMinutes(minutesBetween(interruption.startedAt, interruption.finishedAt))}</span>
+                    </li>
+                  ))}
+                </ul>
+              </Collapsible>
+            ) : null}
+            {linkedTasks ? <Collapsible title="Tarefas vinculadas" summary={pluralize(linkedTasks, "tarefa", "tarefas")} /> : null}
+          </section>
+        ) : null}
+
         {mutationError ? <p role="alert" className={styles.message}>{mutationError}</p> : null}
       </div>
+
+      {editing ? <EditEventModal eventId={event.id} onClose={() => setEditing(false)} onUpdated={() => { setEditing(false); setReloadKey((key) => key + 1); window.dispatchEvent(new Event(agendaRefreshEvent)); }} /> : null}
+      {deleting ? <DeleteEventDialog eventId={event.id} eventName={event.name} onClose={() => setDeleting(false)} onDeleted={() => { window.dispatchEvent(new Event(agendaRefreshEvent)); router.push(`/${userId}`); }} /> : null}
     </main>
   );
-}
-
-function DetailSection({ title, children }: { title: string; children: React.ReactNode }) {
-  return <section className={styles.section}><h2>{title}</h2>{children}</section>;
-}
-
-function ItemDetails({ item }: { item: EventItemDto }) {
-  if (item.type === "meal") return (
-    <DetailSection title="Refeição">
-      <p>{item.data.name}</p>
-      {item.data.description ? <p className={styles.secondary}>{item.data.description}</p> : null}
-      <Nutrition data={item.data} />
-    </DetailSection>
-  );
-  if (item.type === "training" && item.data.workouts.length) return (
-    <DetailSection title="Treinos">
-      <ul className={styles.list}>
-        {item.data.workouts.map((workout) => <li key={workout.id}><p>{workout.workoutName}</p><span>{workout.duration} min · {workout.calories} kcal</span></li>)}
-      </ul>
-    </DetailSection>
-  );
-  if (item.type === "sleep") return <DetailSection title="Sono"><p>{item.data.trackedSleepTime} min monitorados <span className={styles.secondary}>· pontuação {item.data.score}</span></p></DetailSection>;
-  return null;
-}
-
-function Nutrition({ data }: { data: MealItem }) {
-  const values = [
-    ["Calorias", data.totals.totalCaloriesKcal, "kcal"],
-    ["Proteína", data.totals.totalProteinGrams, "g"],
-    ["Carboidratos", data.totals.totalCarbohydrateGrams, "g"],
-    ["Gorduras", data.totals.totalFatGrams, "g"],
-  ] as const;
-  return <dl className={styles.nutrition} aria-label="Resumo nutricional">{values.map(([label, value, unit]) => <div key={label}><dt>{label}</dt><dd>{value}<span>{unit}</span></dd></div>)}</dl>;
-}
-
-function durationOf(startedAt: string, finishedAt: string): string {
-  const minutes = Math.max(0, Math.round((new Date(finishedAt).getTime() - new Date(startedAt).getTime()) / 60_000));
-  if (minutes < 60) return `${minutes} min`;
-  const remaining = minutes % 60;
-  return `${Math.floor(minutes / 60)} h${remaining ? ` ${remaining} min` : ""}`;
 }
