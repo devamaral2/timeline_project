@@ -110,10 +110,13 @@ API_PORT="$(read_env_var "$ENV_FILE" API_PORT)"
 AUTH_PORT="$(read_env_var "$ENV_FILE" AUTH_PORT)"
 PG_PORT="$(read_env_var "$ENV_FILE" POSTGRES_HOST_PORT)"
 
+echo "Atualizando o Caddyfile da worktree principal..."
+bash "$SCRIPT_DIR/caddy.sh" sync || echo "Aviso: nao consegui atualizar o Caddyfile." >&2
+
 cat <<SUMMARY
 
 Worktree '$SLUG' pronta.
-  web:      http://localhost:${WEB_PORT}
+  web:      http://localhost:${WEB_PORT}  (ou http://web.${SLUG}.localhost:8080 via Caddy)
   api:      http://127.0.0.1:${API_PORT}
   auth:     http://127.0.0.1:${AUTH_PORT}
   postgres: 127.0.0.1:${PG_PORT} (projeto docker '${PROJECT_NAME}')

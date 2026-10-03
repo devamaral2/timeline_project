@@ -37,7 +37,8 @@ const nextConfig: NextConfig = {
   ...(process.env.E2E_NEXT_BUILD_ID ? { distDir: `.next-e2e-${process.env.E2E_NEXT_BUILD_ID}` } : {}),
   // O navegador embutido acessa o dev server por 127.0.0.1; sem esta origem,
   // o Next bloqueia os chunks HMR/client e a hidratação nunca acontece.
-  allowedDevOrigins: ["127.0.0.1"],
+  // `*.localhost` cobre os domínios do Caddy (web.<worktree>.localhost).
+  allowedDevOrigins: ["127.0.0.1", "*.localhost"],
   /**
    * `standalone` faz o next build emitir .next/standalone: um server.js mais
    * apenas o node_modules que o tracing provou necessario. E o que deixa o
