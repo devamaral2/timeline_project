@@ -35,16 +35,24 @@ describe("PostgresScopedSqlQuery", () => {
         ('A0000000000000000000000001', 'user-a', 'Treino', '2026-09-15T12:00:00Z'),
         ('A0000000000000000000000002', 'user-a', 'Apagado', '2026-09-15T13:00:00Z');
       UPDATE events SET deleted_at = now() WHERE id = 'A0000000000000000000000002';
-      INSERT INTO event_items (id, event_id, position, type, schema_version, is_primary, data) VALUES
-        ('BI000000000000000000000001', 'B0000000000000000000000001', 0, 'sleep', 1, true, '{"trackedSleepTime": 999, "score": 1}'),
-        ('AI000000000000000000000001', 'A0000000000000000000000001', 0, 'sleep', 1, true, '{"trackedSleepTime": 420, "score": 80}'),
-        ('AI000000000000000000000002', 'A0000000000000000000000002', 0, 'sleep', 1, true, '{"trackedSleepTime": 60, "score": 10}');
       INSERT INTO tasks (id, user_id, name) VALUES
         ('BT000000000000000000000001', 'user-b', 'Tarefa do B'),
         ('AT000000000000000000000001', 'user-a', 'Tarefa do A');
-      INSERT INTO notes (id, user_id, content, task_id) VALUES
-        ('BN000000000000000000000001', 'user-b', 'nota do B', 'BT000000000000000000000001'),
-        ('AN000000000000000000000001', 'user-a', 'nota do A', 'AT000000000000000000000001');
+      INSERT INTO notes (id, user_id, name, type, schema_version, data) VALUES
+        ('BN000000000000000000000001', 'user-b', 'Sono do B', 'sleep', 1, '{"trackedSleepTime": 999, "score": 1}'),
+        ('BN000000000000000000000002', 'user-b', 'nota do B', 'text', 1, '{"body": "nota do B"}'),
+        ('AN000000000000000000000001', 'user-a', 'Sono', 'sleep', 1, '{"trackedSleepTime": 420, "score": 80}'),
+        ('AN000000000000000000000002', 'user-a', 'Sono apagado', 'sleep', 1, '{"trackedSleepTime": 60, "score": 10}'),
+        ('AN000000000000000000000003', 'user-a', 'nota do A', 'text', 1, '{"body": "nota do A"}');
+      INSERT INTO event_notes (event_id, note_id, position) VALUES
+        ('B0000000000000000000000001', 'BN000000000000000000000001', 0),
+        ('A0000000000000000000000001', 'AN000000000000000000000001', 0),
+        ('A0000000000000000000000002', 'AN000000000000000000000002', 0),
+        -- A ligacao cruza usuarios (evento de B, nota de A): nao aparece para nenhum dos dois.
+        ('B0000000000000000000000001', 'AN000000000000000000000003', 1);
+      INSERT INTO task_notes (task_id, note_id, position) VALUES
+        ('AT000000000000000000000001', 'AN000000000000000000000003', 0),
+        ('BT000000000000000000000001', 'BN000000000000000000000002', 0);
       INSERT INTO event_tasks (event_id, task_id) VALUES
         ('B0000000000000000000000001', 'AT000000000000000000000001');
       INSERT INTO agent_conversations (id, user_id, title) VALUES
@@ -68,9 +76,16 @@ describe("PostgresScopedSqlQuery", () => {
 
   test("sees only the target user's live rows", async () => {
     expect((await rows("SELECT name FROM events ORDER BY name")).rows).toEqual([["Treino"]]);
-    expect((await rows("SELECT data->>'trackedSleepTime' FROM event_items")).rows).toEqual([["420"]]);
+    // Pelo vinculo, so a note do evento vivo: o evento apagado esconde o vinculo, nao a note.
+    expect(
+      (await rows("SELECT n.data->>'trackedSleepTime' FROM event_notes en JOIN notes n ON n.id = en.note_id")).rows,
+    ).toEqual([["420"]]);
+    expect((await rows("SELECT name FROM notes WHERE type = 'text'")).rows).toEqual([["nota do A"]]);
+    expect((await rows("SELECT count(*)::int FROM notes")).rows).toEqual([[3]]);
     expect((await rows("SELECT name FROM tasks")).rows).toEqual([["Tarefa do A"]]);
-    expect((await rows("SELECT content FROM notes")).rows).toEqual([["nota do A"]]);
+    expect((await rows("SELECT n.name FROM task_notes tn JOIN notes n ON n.id = tn.note_id")).rows).toEqual([["nota do A"]]);
+    expect((await rows("SELECT note_id FROM event_notes ORDER BY position")).rows).toEqual([["AN000000000000000000000001"]]);
+    expect((await rows("SELECT note_id FROM event_notes", "user-b")).rows).toEqual([["BN000000000000000000000001"]]);
     // A ligacao cruza usuarios (evento de B, tarefa de A): nao aparece para nenhum dos dois.
     expect((await rows("SELECT * FROM event_tasks")).rows).toEqual([]);
     expect((await rows("SELECT * FROM event_tasks", "user-b")).rows).toEqual([]);
@@ -109,7 +124,7 @@ describe("PostgresScopedSqlQuery", () => {
     const outcome = await rows(`
       SELECT e.started_on, e.started_at, sum((i.data->>'trackedSleepTime')::int) AS minutes,
              EXTRACT(hour FROM e.started_at) AS local_hour
-      FROM events e JOIN event_items i ON i.event_id = e.id
+      FROM events e JOIN event_notes en ON en.event_id = e.id JOIN notes i ON i.id = en.note_id
       WHERE i.type = 'sleep' AND e.started_at > timestamptz '2026-09-01' - interval '1 day'
       GROUP BY e.started_on, e.started_at
     `);

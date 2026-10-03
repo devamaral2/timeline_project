@@ -7,7 +7,6 @@ import {
   type EditEventFormProps,
   FinishedAtField,
   FormActions,
-  type ItemOfType,
   StartedAtField,
   EventMarks,
   NotificationOffsetsField,
@@ -19,17 +18,17 @@ import {
 } from "./shared";
 
 /**
- * O item de rotina nao tem payload — `data` e um objeto vazio, e o registro de
- * itens recusa qualquer campo dentro dele. Por isso este e o unico formulario
- * que nao manda `items`: nao ha nada de item para trocar, e reenviar a lista
- * inteira so reescreveria linhas identicas no banco.
+ * A rotina nao tem note propria: so os campos do evento. Por isso este e o unico
+ * formulario que nao manda `notes` — as notes do evento (texto livre, por
+ * exemplo) continuam como estao, e reenviar a lista so reescreveria vinculos
+ * identicos no banco.
  */
 export function RoutineEditForm({
   event,
   onCancel,
   onClose,
   onUpdated,
-}: EditEventFormProps<ItemOfType<"routine">>) {
+}: EditEventFormProps) {
   const [name, setName] = useState(event.name);
   const [description, setDescription] = useState(event.description);
   const [tags, setTags] = useState<string[]>(event.tags);

@@ -24,6 +24,7 @@ import type {
 import { OpenRouterEventCommandParsingGateway } from "./events/gateways/openrouter-event-command-parsing.gateway";
 import { OpenRouterMealParsingGateway } from "./events/gateways/openrouter-meal-parsing.gateway";
 import { CreateEventUseCase } from "./events/create-event.usecase";
+import { NoteBuilder } from "./notes/services/note-builder.service";
 import { MaterializeRecurrencesUseCase } from "./recurrences/materialize-recurrences.usecase";
 import { OpenRouterAgentGateway } from "./agent/gateways/openrouter-agent.gateway";
 import { RunAgentUseCase } from "./agent/run-agent.usecase";
@@ -46,13 +47,16 @@ export class ApiCoreModule {
         { provide: OpenRouterMealParsingGateway, useFactory: () => new OpenRouterMealParsingGateway() },
         { provide: OpenRouterEventCommandParsingGateway, useFactory: () => new OpenRouterEventCommandParsingGateway() },
         {
+          provide: NoteBuilder,
+          inject: [OpenRouterMealParsingGateway, WORKOUT_CATALOG],
+          useFactory: (mealParsing: OpenRouterMealParsingGateway, workoutCatalog: WorkoutCatalog) =>
+            new NoteBuilder(mealParsing, workoutCatalog),
+        },
+        {
           provide: CreateEventUseCase,
-          inject: [EVENT_REPOSITORY, OpenRouterMealParsingGateway, WORKOUT_CATALOG],
-          useFactory: (
-            events: EventRepository,
-            mealParsing: OpenRouterMealParsingGateway,
-            workoutCatalog: WorkoutCatalog,
-          ) => new CreateEventUseCase(events, mealParsing, workoutCatalog),
+          inject: [EVENT_REPOSITORY, NOTE_REPOSITORY, NoteBuilder],
+          useFactory: (events: EventRepository, notes: NoteRepository, builder: NoteBuilder) =>
+            new CreateEventUseCase(events, notes, builder),
         },
         { provide: OpenRouterAgentGateway, useFactory: () => new OpenRouterAgentGateway() },
         { provide: JevAgentRouter, useFactory: () => new JevAgentRouter() },
@@ -98,6 +102,7 @@ export class ApiCoreModule {
         MaterializeRecurrencesUseCase,
         OpenRouterMealParsingGateway,
         OpenRouterEventCommandParsingGateway,
+        NoteBuilder,
         CreateEventUseCase,
         OpenRouterAgentGateway,
         JevAgentRouter,

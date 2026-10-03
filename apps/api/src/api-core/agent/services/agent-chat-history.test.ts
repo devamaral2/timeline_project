@@ -67,7 +67,7 @@ test("drops the oldest turns once the character budget is spent", () => {
 
 test("summarizes a response into the refs the client sends back", () => {
   const task = { kind: "task", id: "01TASK", name: "  Limpar a casa " } as AgentEntityItem;
-  const note = { kind: "note", id: "01NOTE", content: "x".repeat(300) } as AgentEntityItem;
+  const note = { kind: "note", id: "01NOTE", name: "x".repeat(300) } as AgentEntityItem;
   const response: RunAgentResponse = {
     agentResponse: "ok",
     createdEntities: [task],

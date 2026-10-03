@@ -6,6 +6,7 @@ import { CreateEventUseCase } from "../../api-core/events/create-event.usecase";
 import { CurrentUser } from "../../http/request-identity/current-user.decorator";
 import { GatewayIdentityGuard } from "../../http/request-identity/gateway-identity.guard";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
+import type { EventKind } from "../../domain";
 
 const transcriptBadRequest = new Set([EMPTY_TRANSCRIPT_ERROR, LONG_TRANSCRIPT_ERROR]);
 
@@ -19,7 +20,7 @@ export class CreateEventFromTranscriptController {
   async execute(
     @Body() body: { transcript?: string },
     @CurrentUser() actor: AuthenticatedUser,
-  ): Promise<{ eventId: string; primaryItemType: string }> {
+  ): Promise<{ eventId: string; kind: EventKind }> {
     try {
       return await this.createFromTranscript.execute({ transcript: body?.transcript ?? "" }, actor);
     } catch (error) {

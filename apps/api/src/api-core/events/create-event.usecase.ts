@@ -1,15 +1,28 @@
-import { ulid } from "ulid";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
-import type { MealParsingGateway } from "./gateways/meal-parsing.gateway";
-import type { EventRepository, WorkoutCatalog } from "../../domain/ports";
-import type { CreateEventInput, CreateEventItemInput } from "@repo/contracts";
-import { Event, EventItem, EventValidationError } from "../../domain";
-import type { WorkoutCode, WorkoutInput, WorkoutSnapshot } from "../../domain";
-import { MealTotalsService } from "./services/meal-totals.service";
+import type { EventRepository, NoteRepository } from "../../domain/ports";
+import type { CreateEventInput, CreateNoteInput } from "@repo/contracts";
+import {
+  DEFAULT_EVENT_KIND,
+  Event,
+  EventValidationError,
+  NoteNotFoundError,
+  NoteOwnershipError,
+  isEventKind,
+  type EventKind,
+  type Note,
+  type NoteLink,
+} from "../../domain";
 import { getMealEventName } from "./services/meal-event-name.service";
 import type { ResolvedEventSchedule } from "./services/event-schedule.service";
+import type { NoteBuilder } from "../notes/services/note-builder.service";
 
 export const EVENT_TIME_ZONE = "America/Sao_Paulo";
+
+/** O evento montado e as notes novas que nascem com ele — nada gravado ainda. */
+export interface PreparedEvent {
+  event: Event;
+  notes: Note[];
+}
 
 /**
  * O controller ja recusa uma data invalida; aqui so traduzimos o que veio. Nao
@@ -25,9 +38,8 @@ function parseInstant(value: string | undefined): Date | undefined {
 export class CreateEventUseCase {
   constructor(
     private readonly eventRepository: EventRepository,
-    private readonly mealParsingGateway: MealParsingGateway,
-    private readonly workoutCatalog: WorkoutCatalog,
-    private readonly mealTotalsService: MealTotalsService = new MealTotalsService(),
+    private readonly noteRepository: Pick<NoteRepository, "findByIds">,
+    private readonly noteBuilder: NoteBuilder,
     private readonly clock: () => Date = () => new Date(),
   ) {}
 
@@ -36,9 +48,19 @@ export class CreateEventUseCase {
     actor: AuthenticatedUser,
     schedule?: ResolvedEventSchedule,
   ): Promise<{ eventId: string }> {
-    const event = await this.prepare(input, actor, schedule);
-    await this.eventRepository.save(event);
-    return { eventId: event.id };
+    const prepared = await this.prepare(input, actor, schedule);
+    await this.save(prepared);
+    return { eventId: prepared.event.id };
+  }
+
+  /** Monta uma note como a criacao de evento montaria: a refeicao passa pelo modelo, o treino pelo catalogo. */
+  buildNote(input: CreateNoteInput, actor: AuthenticatedUser, startedAt: Date): Promise<Note> {
+    return this.noteBuilder.fromCreateInput(input, actor.userId, startedAt);
+  }
+
+  /** Grava o que `prepare` montou: as notes novas e o evento, numa transacao so. */
+  async save({ event, notes }: PreparedEvent): Promise<void> {
+    await this.eventRepository.save(event, { created: notes });
   }
 
   /**
@@ -50,142 +72,73 @@ export class CreateEventUseCase {
     input: CreateEventInput,
     actor: AuthenticatedUser,
     schedule?: ResolvedEventSchedule,
-  ): Promise<Event> {
+  ): Promise<PreparedEvent> {
     const startedAt = schedule?.startedAt ?? parseInstant(input.startedAt) ?? this.clock();
     const finishedAt = schedule?.finishedAt ?? parseInstant(input.finishedAt);
-    const items = await this.buildItems(input.items, startedAt);
-    const primary = items.find((item) => item.isPrimary);
-    const name = input.name ?? this.deriveName(primary);
+    if (input.kind !== undefined && !isEventKind(input.kind)) {
+      throw new EventValidationError(`Unknown event kind: ${String(input.kind)}`);
+    }
 
-    return Event.create({
+    const created = await Promise.all(
+      (input.notes ?? []).map((noteInput) => this.noteBuilder.fromCreateInput(noteInput, actor.userId, startedAt)),
+    );
+    await this.assertOwnedNotes(input.noteIds ?? [], actor);
+
+    const kind = input.kind ?? inferKind(created);
+    const noteLinks: NoteLink[] = [
+      ...created.map((note) => ({ noteId: note.id, fromRecurrence: false })),
+      ...(input.noteIds ?? []).map((noteId) => ({ noteId, fromRecurrence: false })),
+    ];
+
+    const event = Event.create({
       userId: actor.userId,
-      name,
+      name: input.name ?? this.deriveName(kind, startedAt, created),
       description: input.description ?? "",
       startedAt,
       finishedAt,
       tags: input.tags ?? [],
       interruptions: [],
-      items,
+      kind,
+      noteLinks,
       missed: input.missed,
       priority: input.priority,
       notifyOffsetsMinutes: input.notifyOffsetsMinutes,
     });
+    return { event, notes: created };
   }
 
-  private async buildItems(itemsInput: CreateEventItemInput[], startedAt: Date): Promise<EventItem[]> {
-    const singleItem = itemsInput.length === 1;
-    return Promise.all(
-      itemsInput.map((itemInput, position) => this.buildItem(itemInput, position, singleItem, startedAt)),
-    );
-  }
-
-  private async buildItem(
-    itemInput: CreateEventItemInput,
-    position: number,
-    singleItem: boolean,
-    startedAt: Date,
-  ): Promise<EventItem> {
-    const isPrimary = singleItem ? true : Boolean(itemInput.isPrimary);
-
-    switch (itemInput.type) {
-      case "routine":
-        return EventItem.create({ position, type: "routine", schemaVersion: 1, isPrimary, data: {} });
-
-      case "meal": {
-        const parsed = await this.mealParsingGateway.parseMeal({ text: itemInput.data.inputText });
-        const foodItems = this.mealTotalsService.toFoodItems(parsed.items);
-        const totals = this.mealTotalsService.calculate(foodItems);
-        return EventItem.create({
-          position,
-          type: "meal",
-          schemaVersion: 1,
-          isPrimary,
-          data: {
-            name: getMealEventName(startedAt, EVENT_TIME_ZONE),
-            description: itemInput.data.inputText,
-            foodItems,
-            totals,
-          },
-        });
-      }
-
-      case "sleep":
-        return EventItem.create({
-          position,
-          type: "sleep",
-          schemaVersion: 1,
-          isPrimary,
-          data: {
-            trackedSleepTime: itemInput.data?.trackedSleepTime ?? 0,
-            score: itemInput.data?.score ?? 0,
-          },
-        });
-
-      case "training": {
-        const workouts = await this.buildWorkouts(itemInput.data?.workouts ?? []);
-        return EventItem.create({
-          position,
-          type: "training",
-          schemaVersion: 1,
-          isPrimary,
-          data: {
-            workouts,
-            caloriesBurned: workouts.reduce((total, workout) => total + workout.calories, 0),
-          },
-        });
-      }
+  /** Notes existentes so entram no evento se forem do mesmo usuario. */
+  private async assertOwnedNotes(noteIds: readonly string[], actor: AuthenticatedUser): Promise<void> {
+    if (noteIds.length === 0) return;
+    const found = await this.noteRepository.findByIds(noteIds);
+    const byId = new Map(found.map((note) => [note.id, note]));
+    for (const noteId of noteIds) {
+      const note = byId.get(noteId);
+      if (!note) throw new NoteNotFoundError(`Note not found: ${noteId}`);
+      if (note.userId !== actor.userId) throw new NoteOwnershipError();
     }
   }
 
-  private async buildWorkouts(inputs: readonly WorkoutInput[]): Promise<WorkoutSnapshot[]> {
-    if (inputs.length === 0) return [];
-
-    const codes = [...new Set(inputs.map((workout) => workout.workoutCode))] as WorkoutCode[];
-    const definitions = await this.workoutCatalog.findActiveByCodes(codes);
-    const nameByCode = new Map(definitions.map((definition) => [definition.code, definition.name]));
-
-    return inputs.map((workout) => {
-      const workoutName = nameByCode.get(workout.workoutCode);
-      if (!workoutName) throw new EventValidationError(`Unknown workout code: ${workout.workoutCode}`);
-
-      const base = {
-        id: workout.id ?? ulid(),
-        workoutName,
-        calories: workout.calories ?? 0,
-        duration: workout.duration,
-      };
-
-      if (workout.workoutCode === "weightlifting") {
-        return {
-          ...base,
-          workoutCode: "weightlifting",
-          sets: workout.sets.map((set) => ({
-            id: set.id ?? ulid(),
-            exercise: set.exercise,
-            repetitions: set.repetitions,
-            weight: set.weight,
-          })),
-        } as WorkoutSnapshot;
-      }
-
-      if (workout.workoutCode === "free") {
-        return { ...base, workoutCode: "free" } as WorkoutSnapshot;
-      }
-
-      return { ...base, workoutCode: workout.workoutCode, pace: workout.pace, distance: workout.distance } as WorkoutSnapshot;
-    });
-  }
-
-  private deriveName(primary: EventItem | undefined): string {
-    switch (primary?.type) {
+  private deriveName(kind: EventKind, startedAt: Date, notes: readonly Note[]): string {
+    switch (kind) {
       case "sleep":
         return "Sono";
       case "training":
         return "Treino";
-      case "meal":
-        return (primary.data as { name: string }).name;
+      case "meal": {
+        const meal = notes.find((note) => note.type === "meal");
+        return meal ? (meal.data as { name: string }).name : getMealEventName(startedAt, EVENT_TIME_ZONE);
+      }
       default:
         throw new EventValidationError("Event requires a name");
     }
   }
+}
+
+/** Sem `kind` dito, a primeira note de meal, sleep ou training da a natureza; senao e rotina. */
+function inferKind(notes: readonly Note[]): EventKind {
+  for (const note of notes) {
+    if (isEventKind(note.type) && note.type !== DEFAULT_EVENT_KIND) return note.type;
+  }
+  return DEFAULT_EVENT_KIND;
 }

@@ -26,7 +26,7 @@ export function EventCard({ event }: EventCardProps) {
   const [viewingDetails, setViewingDetails] = useState(false);
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const visual = visualForItemType(event.primaryItemType);
+  const visual = visualForItemType(event.kind);
 
   // Sem `overflow-hidden` no wrapper: o halo e o levantar do cartao no hover
   // precisam escapar da caixa. Quem corta e o proprio <article>.

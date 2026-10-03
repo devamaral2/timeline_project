@@ -6,7 +6,6 @@
 export type * from "./events/contracts/create-event.input";
 export type * from "./events/contracts/daily-overview.dto";
 export type * from "./events/contracts/event-detail.dto";
-export type * from "./events/contracts/event-item.dto";
 export type * from "./events/contracts/tag-suggestion.dto";
 export type * from "./events/contracts/timeline-event-card.dto";
 export type * from "./events/contracts/timeline-event-page.dto";
@@ -25,11 +24,12 @@ export type * from "./agent-chat/contracts/agent-conversation.dto";
 // payloads dos itens: `FoodItem` e `WorkoutSet` aqui sao os do modelo por
 // itens — nao ha mais subclasse de evento nem tipo legado com o mesmo nome.
 export type { EventPriority } from "./events/types/event-priority";
+export type { EventKind } from "./events/types/event-kind";
 export type { NotificationOffsetMinutes } from "./notifications/types/notification-offset-minutes";
-export type { RoutineData } from "./events/items/routine-data";
-export type { FoodItem, FoodItemMacronutrients } from "./events/items/food-item";
-export type { MealItem, MealTotals } from "./events/items/meal-item";
-export type { SleepItem } from "./events/items/sleep-item";
+export type { TextNote } from "./notes/types/text-note";
+export type { FoodItem, FoodItemMacronutrients } from "./notes/types/food-item";
+export type { MealItem, MealTotals } from "./notes/types/meal-item";
+export type { SleepItem } from "./notes/types/sleep-item";
 export type {
   WorkoutCode,
   WorkoutSet,
@@ -41,6 +41,6 @@ export type {
   TrainingData,
   WorkoutInput,
   TrainingInputData,
-} from "./events/items/training-data";
+} from "./notes/types/training-data";
 export type * from "./recurrences/contracts/recurrence-rule";
 export type * from "./recurrences/contracts/recurrence.dto";

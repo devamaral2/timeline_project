@@ -5,9 +5,8 @@ import { mergeTimelinePage } from "./timeline-page";
 function anEvent(id: string): TimelineEventCardDto {
   return {
     id,
-    primaryItemId: `${id}-item`,
-    primaryItemType: "routine",
-    itemTypes: ["routine"],
+    kind: "routine",
+    noteTypes: [],
     missed: false,
     notifyOffsetsMinutes: [],
     name: id,

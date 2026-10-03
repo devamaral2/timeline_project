@@ -5,7 +5,6 @@ import {
   date,
   index,
   integer,
-  jsonb,
   primaryKey,
   pgTable,
   smallint,
@@ -16,7 +15,7 @@ import {
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
-import { eventPriorityEnum } from "./enums";
+import { eventKindEnum, eventPriorityEnum } from "./enums";
 import { recurrences } from "./recurrences";
 
 export const events = pgTable(
@@ -31,6 +30,9 @@ export const events = pgTable(
     finishedAt: timestamp("finished_at", { withTimezone: true }),
     missed: boolean("missed").notNull().default(false),
     priority: eventPriorityEnum("priority").notNull().default("normal"),
+    // A natureza do evento. Antes vinha do `event_items` primario; agora e
+    // uma coluna propria e as notes sao so anexos ordenados (`event_notes`).
+    kind: eventKindEnum("kind").notNull().default("routine"),
     notifyOffsetsMinutes: integer("notify_offsets_minutes")
       .array()
       .notNull()
@@ -88,31 +90,6 @@ export const events = pgTable(
       "events_finished_after_started",
       sql`${table.finishedAt} IS NULL OR ${table.finishedAt} >= ${table.startedAt}`,
     ),
-  ],
-);
-
-export const eventItems = pgTable(
-  "event_items",
-  {
-    id: char("id", { length: 26 }).primaryKey(),
-    eventId: char("event_id", { length: 26 })
-      .notNull()
-      .references(() => events.id, { onDelete: "cascade" }),
-    position: smallint("position").notNull(),
-    type: text("type").notNull(),
-    schemaVersion: integer("schema_version").notNull(),
-    isPrimary: boolean("is_primary").notNull().default(false),
-    data: jsonb("data").notNull(),
-  },
-  (table) => [
-    unique("event_items_event_position_unique").on(table.eventId, table.position),
-    uniqueIndex("event_items_one_primary_idx")
-      .on(table.eventId)
-      .where(sql`${table.isPrimary}`),
-    index("event_items_type_event_idx").on(table.type, table.eventId),
-    check("event_item_position_nonneg", sql`${table.position} >= 0`),
-    check("event_item_schema_version_min", sql`${table.schemaVersion} >= 1`),
-    check("event_item_data_is_object", sql`jsonb_typeof(${table.data}) = 'object'`),
   ],
 );
 

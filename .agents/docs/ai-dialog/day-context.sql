@@ -39,8 +39,14 @@ day_notes AS MATERIALIZED (
   WHERE n.user_id = $1
     AND n.deleted_at IS NULL
     AND (
-      EXISTS (SELECT 1 FROM day_events e WHERE e.id = n.event_id)
-      OR EXISTS (SELECT 1 FROM day_tasks t WHERE t.id = n.task_id)
+      EXISTS (
+        SELECT 1 FROM event_notes en JOIN day_events e ON e.id = en.event_id
+        WHERE en.note_id = n.id
+      )
+      OR EXISTS (
+        SELECT 1 FROM task_notes tn JOIN day_tasks t ON t.id = tn.task_id
+        WHERE tn.note_id = n.id
+      )
     )
 )
 SELECT jsonb_build_object(
@@ -49,9 +55,10 @@ SELECT jsonb_build_object(
   'events', (
     SELECT COALESCE(jsonb_agg(
       (to_jsonb(e) - 'user_id' - 'deleted_at') || jsonb_build_object(
-        'items', (
-          SELECT COALESCE(jsonb_agg(to_jsonb(i) ORDER BY i.position), '[]'::jsonb)
-          FROM event_items i WHERE i.event_id = e.id
+        'noteIds', (
+          SELECT COALESCE(jsonb_agg(en.note_id ORDER BY en.position), '[]'::jsonb)
+          FROM event_notes en JOIN notes nn ON nn.id = en.note_id
+          WHERE en.event_id = e.id AND nn.deleted_at IS NULL
         ),
         'interruptions', (
           SELECT COALESCE(jsonb_agg(to_jsonb(x) ORDER BY x.position), '[]'::jsonb)
@@ -81,6 +88,11 @@ SELECT jsonb_build_object(
         'dependsOnTaskIds', (
           SELECT COALESCE(jsonb_agg(d.depends_on_task_id ORDER BY d.depends_on_task_id), '[]'::jsonb)
           FROM task_dependencies d WHERE d.task_id = t.id
+        ),
+        'noteIds', (
+          SELECT COALESCE(jsonb_agg(tn.note_id ORDER BY tn.position), '[]'::jsonb)
+          FROM task_notes tn JOIN notes nn ON nn.id = tn.note_id
+          WHERE tn.task_id = t.id AND nn.deleted_at IS NULL
         )
       ) ORDER BY t.started_at NULLS LAST, t.id
     ), '[]'::jsonb)

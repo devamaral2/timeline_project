@@ -1,3 +1,5 @@
+import type { EventKind } from "../../domain";
+
 export interface DayContextEvent {
   id: string;
   name: string;
@@ -5,7 +7,7 @@ export interface DayContextEvent {
   finished_at: string | null;
   recurrence_id: string | null;
   taskIds: string[];
-  items?: Array<{ type: string; is_primary: boolean }>;
+  kind?: EventKind;
   [key: string]: unknown;
 }
 
@@ -14,7 +16,7 @@ export interface DayContext {
   timeZone: string;
   events: DayContextEvent[];
   tasks: Array<{ id: string; [key: string]: unknown }>;
-  notes: Array<{ id: string; event_id?: string | null; task_id?: string | null; [key: string]: unknown }>;
+  notes: Array<{ id: string; [key: string]: unknown }>;
 }
 
 export interface DayContextQuery {

@@ -7,7 +7,7 @@ import {
   type EditEventFormProps,
   FinishedAtField,
   FormActions,
-  type ItemOfType,
+  type NoteOfType,
   StartedAtField,
   EventMarks,
   NotificationOffsetsField,
@@ -15,20 +15,20 @@ import {
   fieldInputClass,
   fieldLabelClass,
   fromDatetimeLocalValue,
-  itemsPatchedWith,
+  notesPatchedWith,
   toDatetimeLocalValue,
   useSubmitEventUpdate,
 } from "./shared";
 
 export function SleepEditForm({
   event,
-  item,
+  note,
   onCancel,
   onClose,
   onUpdated,
-}: EditEventFormProps<ItemOfType<"sleep">>) {
-  const [trackedSleepTime, setTrackedSleepTime] = useState(String(item.data.trackedSleepTime));
-  const [score, setScore] = useState(String(item.data.score));
+}: EditEventFormProps<NoteOfType<"sleep">>) {
+  const [trackedSleepTime, setTrackedSleepTime] = useState(String(note?.data.trackedSleepTime ?? 0));
+  const [score, setScore] = useState(String(note?.data.score ?? 0));
   const [description, setDescription] = useState(event.description);
   const [tags, setTags] = useState<string[]>(event.tags);
   const [startedAt, setStartedAt] = useState(toDatetimeLocalValue(event.startedAt));
@@ -49,11 +49,14 @@ export function SleepEditForm({
 
     void submit({
       expectedRevision: event.revision,
-      // O campo vazio vira zero, e nao `undefined`: o item de sono guarda dois
+      // O campo vazio vira zero, e nao `undefined`: a note de sono guarda dois
       // numeros, e o registro recusa qualquer outra coisa no lugar deles.
-      items: itemsPatchedWith(event, item.id, {
-        trackedSleepTime: Number(trackedSleepTime) || 0,
-        score: Number(score) || 0,
+      notes: notesPatchedWith(event, note?.id, {
+        type: "sleep",
+        data: {
+          trackedSleepTime: Number(trackedSleepTime) || 0,
+          score: Number(score) || 0,
+        },
       }),
       description: description.trim(),
       tags,

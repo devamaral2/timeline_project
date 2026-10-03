@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { SleepItem } from "../../../domain";
 import { defineAgentSkill, fail } from "./agent-skill";
-import { eventBaseFields, primaryItemOf, toBaseChanges, toCreateEventInput, withPrimaryData } from "./event-skill-fields";
+import { eventBaseFields, toBaseChanges, toCreateEventInput } from "./event-skill-fields";
 
 export const sleepEventSkill = defineAgentSkill({
   name: "save_sleep_event",
@@ -26,7 +26,7 @@ export const sleepEventSkill = defineAgentSkill({
     if (!args.id) {
       if (args.trackedSleepTime === undefined) return fail("trackedSleepTime é obrigatório para criar um sono.");
       return session.createEvent(
-        toCreateEventInput(args, {
+        toCreateEventInput(args, "sleep", {
           type: "sleep",
           data: { trackedSleepTime: args.trackedSleepTime, score: args.score ?? 0 },
         }),
@@ -34,12 +34,27 @@ export const sleepEventSkill = defineAgentSkill({
     }
 
     return session.updateEvent(args.id, "sleep", async (current) => {
-      const existing = primaryItemOf(current).data as SleepItem;
+      const existing = await session.noteOfType(current, "sleep");
+      const previous = existing?.data as SleepItem | undefined;
+      const hasChange = args.trackedSleepTime !== undefined || args.score !== undefined;
+      if (!hasChange) return current.revise(toBaseChanges(args));
+
       const data: SleepItem = {
-        trackedSleepTime: args.trackedSleepTime ?? existing.trackedSleepTime,
-        score: args.score ?? existing.score,
+        trackedSleepTime: args.trackedSleepTime ?? previous?.trackedSleepTime ?? 0,
+        score: args.score ?? previous?.score ?? 0,
       };
-      return current.revise({ ...toBaseChanges(args), items: withPrimaryData(current, data) });
+      if (existing) {
+        await session.reviseNoteById(existing.id, (note) => note.revise({ data }));
+        return current.revise(toBaseChanges(args));
+      }
+
+      // Um sono sem note ainda: a note de sono nasce agora e passa a fazer parte do evento.
+      const created = await session.buildNote({ type: "sleep", data }, current.startedAt);
+      session.stageNewNote(created);
+      return current.revise({
+        ...toBaseChanges(args),
+        noteLinks: [...current.noteLinks, { noteId: created.id, fromRecurrence: false }],
+      });
     });
   },
 });

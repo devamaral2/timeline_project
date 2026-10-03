@@ -2,6 +2,7 @@ import { sql, type SQL } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { TimelineEventQuery, TimelineQueryParams } from "../../../../domain/ports";
 import type {
+  EventKind,
   NotificationOffsetMinutes,
   TimelineEventCardDto,
   TimelineEventPageDto,
@@ -17,13 +18,12 @@ interface EventRow extends Record<string, unknown> {
   notify_offsets_minutes: number[];
   name: string;
   description: string;
+  kind: EventKind;
 }
 
-interface ItemRow extends Record<string, unknown> {
-  id: string;
+interface NoteTypeRow extends Record<string, unknown> {
   event_id: string;
   type: string;
-  is_primary: boolean;
 }
 
 interface TagRow extends Record<string, unknown> {
@@ -61,9 +61,7 @@ export class PostgresTimelineEventQuery implements TimelineEventQuery {
       conditions.push(sql`(e.started_at >= ${params.from} OR e.finished_at >= ${params.from})`);
     }
     if (params.type) {
-      conditions.push(
-        sql`EXISTS (SELECT 1 FROM event_items ei WHERE ei.event_id = e.id AND ei.type = ${params.type})`,
-      );
+      conditions.push(sql`e.kind::text = ${params.type}`);
     }
     if (params.tag) {
       conditions.push(
@@ -82,7 +80,7 @@ export class PostgresTimelineEventQuery implements TimelineEventQuery {
     const whereClause = sql.join(conditions, sql` AND `);
 
     const pageResult = await this.db.execute<EventRow>(sql`
-      SELECT e.id, e.started_at, e.finished_at, e.missed, e.notify_offsets_minutes, e.name, e.description
+      SELECT e.id, e.started_at, e.finished_at, e.missed, e.notify_offsets_minutes, e.name, e.description, e.kind
       FROM events e
       WHERE ${whereClause}
       ORDER BY e.started_at DESC, e.id DESC
@@ -97,12 +95,13 @@ export class PostgresTimelineEventQuery implements TimelineEventQuery {
       return { items: [] };
     }
 
-    const [itemsResult, tagsResult, interruptionsResult] = await Promise.all([
-      this.db.execute<ItemRow>(sql`
-        SELECT id, event_id, type, is_primary
-        FROM event_items
-        WHERE event_id IN ${eventIds}
-        ORDER BY event_id, position
+    const [noteTypesResult, tagsResult, interruptionsResult] = await Promise.all([
+      this.db.execute<NoteTypeRow>(sql`
+        SELECT en.event_id, n.type
+        FROM event_notes en
+        JOIN notes n ON n.id = en.note_id
+        WHERE en.event_id IN ${eventIds} AND n.deleted_at IS NULL
+        ORDER BY en.event_id, en.position
       `),
       this.db.execute<TagRow>(sql`
         SELECT et.event_id, t.name
@@ -119,19 +118,15 @@ export class PostgresTimelineEventQuery implements TimelineEventQuery {
       `),
     ]);
 
-    const itemsByEvent = groupBy(itemsResult.rows, (row) => row.event_id);
+    const noteTypesByEvent = groupBy(noteTypesResult.rows, (row) => row.event_id);
     const tagsByEvent = groupBy(tagsResult.rows, (row) => row.event_id);
     const interruptionsByEvent = groupBy(interruptionsResult.rows, (row) => row.event_id);
 
     const items: TimelineEventCardDto[] = pageRows.map((event) => {
-      const itemRows = itemsByEvent.get(event.id) ?? [];
-      const primaryItem = itemRows.find((row) => row.is_primary);
-
       return {
         id: event.id,
-        primaryItemId: primaryItem?.id ?? "",
-        primaryItemType: primaryItem?.type ?? "",
-        itemTypes: itemRows.map((row) => row.type),
+        kind: event.kind,
+        noteTypes: (noteTypesByEvent.get(event.id) ?? []).map((row) => row.type),
         missed: event.missed,
         notifyOffsetsMinutes: event.notify_offsets_minutes as NotificationOffsetMinutes[],
         name: event.name,

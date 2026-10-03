@@ -1,7 +1,7 @@
 import { ulid } from "ulid";
 import { EventValidationError } from "../../events/errors/event.errors";
-import { calculateMealTotals, type MealItem, type MealTotals } from "../../events/items/meal-item";
-import type { FoodItem } from "../../events/items/food-item";
+import { calculateMealTotals, type MealItem, type MealTotals } from "../../notes/types/meal-item";
+import type { FoodItem } from "../../notes/types/food-item";
 import type { CatalogScope } from "../types/catalog-scope";
 
 export interface MealProps {

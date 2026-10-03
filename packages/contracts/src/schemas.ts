@@ -2,7 +2,9 @@ import { z } from "zod";
 
 const eventPrioritySchema = z.enum(["urgent", "normal", "flexible"]);
 const notificationOffsetsSchema = z.array(z.number());
-const routineDataSchema = z.object({}).strict();
+const eventKindSchema = z.enum(["routine", "meal", "sleep", "training"]);
+const textNoteSchema = z.object({ body: z.string() }).strict();
+const sleepDataSchema = z.object({ trackedSleepTime: z.number(), score: z.number() }).strict();
 
 const foodItemSchema = z.object({
   id: z.string(),
@@ -84,45 +86,40 @@ const trainingDataSchema = z.object({
   caloriesBurned: z.number(),
 }).strict();
 
-const eventItemSchema = z.discriminatedUnion("type", [
-  z.object({
-    id: z.string(), position: z.number().int(), type: z.literal("routine"),
-    schemaVersion: z.number().int(), isPrimary: z.boolean(), data: routineDataSchema,
-  }).strict(),
-  z.object({
-    id: z.string(), position: z.number().int(), type: z.literal("meal"),
-    schemaVersion: z.number().int(), isPrimary: z.boolean(), data: mealItemSchema,
-  }).strict(),
-  z.object({
-    id: z.string(), position: z.number().int(), type: z.literal("sleep"),
-    schemaVersion: z.number().int(), isPrimary: z.boolean(),
-    data: z.object({ trackedSleepTime: z.number(), score: z.number() }).strict(),
-  }).strict(),
-  z.object({
-    id: z.string(), position: z.number().int(), type: z.literal("training"),
-    schemaVersion: z.number().int(), isPrimary: z.boolean(), data: trainingDataSchema,
-  }).strict(),
+const noteBase = {
+  id: z.string(), name: z.string(), schemaVersion: z.number().int(), tags: z.array(z.string()),
+  revision: z.number().int(), createdAt: z.string(), updatedAt: z.string(),
+};
+
+const noteSchema = z.discriminatedUnion("type", [
+  z.object({ ...noteBase, type: z.literal("text"), data: textNoteSchema }).strict(),
+  z.object({ ...noteBase, type: z.literal("meal"), data: mealItemSchema }).strict(),
+  z.object({ ...noteBase, type: z.literal("sleep"), data: sleepDataSchema }).strict(),
+  z.object({ ...noteBase, type: z.literal("training"), data: trainingDataSchema }).strict(),
 ]);
 
-const createEventItemSchema = z.discriminatedUnion("type", [
-  z.object({ type: z.literal("routine"), isPrimary: z.boolean().optional(), data: routineDataSchema.optional() }).strict(),
-  z.object({ type: z.literal("meal"), isPrimary: z.boolean().optional(), data: z.object({ inputText: z.string() }).strict() }).strict(),
+const noteInputBase = { name: z.string().optional(), tags: z.array(z.string()).optional() };
+
+const createNoteSchema = z.discriminatedUnion("type", [
+  z.object({ ...noteInputBase, type: z.literal("text").optional(), data: textNoteSchema }).strict(),
+  z.object({ ...noteInputBase, type: z.literal("meal"), data: z.object({ inputText: z.string() }).strict() }).strict(),
   z.object({
-    type: z.literal("sleep"), isPrimary: z.boolean().optional(),
+    ...noteInputBase, type: z.literal("sleep"),
     data: z.object({ trackedSleepTime: z.number().optional(), score: z.number().optional() }).strict().optional(),
   }).strict(),
-  z.object({ type: z.literal("training"), isPrimary: z.boolean().optional(), data: z.object({ workouts: z.array(z.unknown()) }).strict().optional() }).strict(),
+  z.object({ ...noteInputBase, type: z.literal("training"), data: z.object({ workouts: z.array(z.unknown()) }).strict().optional() }).strict(),
 ]);
 
-const updateEventItemSchema = z.discriminatedUnion("type", [
-  z.object({ id: z.string().optional(), type: z.literal("routine"), schemaVersion: z.number().int(), isPrimary: z.boolean(), data: routineDataSchema }).strict(),
-  z.object({ id: z.string().optional(), type: z.literal("meal"), schemaVersion: z.number().int(), isPrimary: z.boolean(), data: mealItemSchema }).strict(),
-  z.object({ id: z.string().optional(), type: z.literal("sleep"), schemaVersion: z.number().int(), isPrimary: z.boolean(), data: z.object({ trackedSleepTime: z.number(), score: z.number() }).strict() }).strict(),
-  z.object({ id: z.string().optional(), type: z.literal("training"), schemaVersion: z.number().int(), isPrimary: z.boolean(), data: trainingDataSchema }).strict(),
+const updateEventNoteSchema = z.union([
+  z.object({ ...noteInputBase, id: z.string() }).strict(),
+  z.object({ ...noteInputBase, id: z.string().optional(), schemaVersion: z.number().int().optional(), type: z.literal("text"), data: textNoteSchema }).strict(),
+  z.object({ ...noteInputBase, id: z.string().optional(), schemaVersion: z.number().int().optional(), type: z.literal("meal"), data: mealItemSchema }).strict(),
+  z.object({ ...noteInputBase, id: z.string().optional(), schemaVersion: z.number().int().optional(), type: z.literal("sleep"), data: sleepDataSchema }).strict(),
+  z.object({ ...noteInputBase, id: z.string().optional(), schemaVersion: z.number().int().optional(), type: z.literal("training"), data: trainingDataSchema }).strict(),
 ]);
 
 export const timelineEventCardSchema = z.object({
-  id: z.string(), primaryItemId: z.string(), primaryItemType: z.string(), itemTypes: z.array(z.string()),
+  id: z.string(), kind: eventKindSchema, noteTypes: z.array(z.string()),
   missed: z.boolean(), name: z.string(), description: z.string(), startedAt: z.string(), finishedAt: z.string().optional(),
   notifyOffsetsMinutes: notificationOffsetsSchema, durationLabel: z.string(), tags: z.array(z.string()),
   interruptions: z.array(z.object({ name: z.string(), description: z.string(), durationLabel: z.string() }).strict()),
@@ -136,13 +133,14 @@ export const eventDetailSchema = z.object({
   id: z.string(), name: z.string(), description: z.string(), startedAt: z.string(), finishedAt: z.string().optional(),
   tags: z.array(z.string()), missed: z.boolean(), priority: eventPrioritySchema, notifyOffsetsMinutes: notificationOffsetsSchema,
   interruptions: z.array(z.object({ id: z.string(), name: z.string(), description: z.string(), startedAt: z.string(), finishedAt: z.string() }).strict()),
-  revision: z.number().int(), primaryItemId: z.string(), items: z.array(eventItemSchema), taskIds: z.array(z.string()).optional(),
+  revision: z.number().int(), kind: eventKindSchema, notes: z.array(noteSchema), taskIds: z.array(z.string()).optional(),
 }).strict();
 
 export const createEventInputSchema = z.object({
   name: z.string().optional(), description: z.string().optional(), tags: z.array(z.string()).optional(), missed: z.boolean().optional(),
   priority: eventPrioritySchema.optional(), notifyOffsetsMinutes: notificationOffsetsSchema.optional(), startedAt: z.string().optional(),
-  finishedAt: z.string().optional(), items: z.array(createEventItemSchema), taskIds: z.array(z.string()).optional(),
+  finishedAt: z.string().optional(), kind: eventKindSchema.optional(), notes: z.array(createNoteSchema).optional(),
+  noteIds: z.array(z.string()).optional(), taskIds: z.array(z.string()).optional(),
 }).strict();
 
 export const updateEventInputSchema = z.object({
@@ -150,7 +148,7 @@ export const updateEventInputSchema = z.object({
   startedAt: z.string().optional(), finishedAt: z.string().optional(), tags: z.array(z.string()).optional(), missed: z.boolean().optional(),
   priority: eventPrioritySchema.optional(), notifyOffsetsMinutes: notificationOffsetsSchema.optional(),
   interruptions: z.array(z.object({ id: z.string().optional(), name: z.string().optional(), description: z.string().optional(), startedAt: z.string().optional(), finishedAt: z.string().optional() }).strict()).optional(),
-  items: z.array(updateEventItemSchema).optional(), taskIds: z.array(z.string()).optional(),
+  kind: eventKindSchema.optional(), notes: z.array(updateEventNoteSchema).optional(), taskIds: z.array(z.string()).optional(),
 }).strict();
 
 export const tagSuggestionSchema = z.object({ id: z.string(), name: z.string() }).strict();

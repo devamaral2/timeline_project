@@ -15,7 +15,7 @@ export const routineEventSkill = defineAgentSkill({
   run: async (args, { session }) => {
     if (!args.id) {
       if (!args.name) return fail("name é obrigatório para criar um evento de rotina.");
-      return session.createEvent(toCreateEventInput(args, { type: "routine" }));
+      return session.createEvent(toCreateEventInput(args, "routine"));
     }
     return session.updateEvent(args.id, "routine", async (current) => current.revise(toBaseChanges(args)));
   },

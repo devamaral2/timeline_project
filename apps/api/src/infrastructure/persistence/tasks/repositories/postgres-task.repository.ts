@@ -1,6 +1,12 @@
 import { and, eq, isNull, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import { Task, TaskNotFoundError, TaskOwnershipError, TaskRevisionConflictError } from "../../../../domain";
+import {
+  Task,
+  TaskNotFoundError,
+  TaskOwnershipError,
+  TaskRevisionConflictError,
+  type NoteWrites,
+} from "../../../../domain";
 import type { TaskRepository } from "../../../../domain/ports";
 import * as schema from "../../database/schema";
 import { mapTaskRow } from "../mappers/task-row.mapper";
@@ -9,7 +15,8 @@ import { pgIntegerArrayLiteral } from "../../shared/pg-integer-array";
 import { occurrenceColumnsOf } from "../../recurrences/mappers/occurrence-columns";
 import type { Tx } from "../../events/repositories/postgres-event.repository";
 import { upsertTagIds } from "../../shared/upsert-tag-ids";
-import { softDeleteNotesOfTargets } from "../../notes/repositories/postgres-note.repository";
+import { writeNotes } from "../../notes/repositories/postgres-note.repository";
+import { insertTaskNoteLinks, selectTaskNoteLinks } from "../../notes/repositories/note-links";
 
 async function insertTags(tx: Tx, task: Task): Promise<void> {
   if (task.tags.length === 0) return;
@@ -31,7 +38,7 @@ async function insertDependencies(tx: Tx, task: Task): Promise<void> {
  * Insere a tarefa, as tags e as dependencias. Devolve `false` quando ela e uma
  * ocorrencia de um dia que a serie ja gerou.
  */
-export async function insertTaskAggregate(tx: Tx, task: Task): Promise<boolean> {
+export async function insertTaskAggregate(tx: Tx, task: Task, notes?: NoteWrites): Promise<boolean> {
   const inserted = await tx
     .insert(schema.tasks)
     .values({
@@ -56,8 +63,10 @@ export async function insertTaskAggregate(tx: Tx, task: Task): Promise<boolean> 
     .returning({ id: schema.tasks.id });
 
   if (inserted.length === 0) return false;
+  await writeNotes(tx, notes);
   await insertTags(tx, task);
   await insertDependencies(tx, task);
+  await insertTaskNoteLinks(tx, task.id, task.noteLinks);
   return true;
 }
 
@@ -67,6 +76,7 @@ export async function updateTaskAggregate(
   task: Task,
   actorUserId: string,
   expectedRevision: number,
+  notes?: NoteWrites,
 ): Promise<void> {
   const result = await tx.execute(sql`
     UPDATE tasks
@@ -102,10 +112,13 @@ export async function updateTaskAggregate(
     });
   }
 
+  await writeNotes(tx, notes);
   await tx.delete(schema.taskTags).where(eq(schema.taskTags.taskId, task.id));
   await insertTags(tx, task);
   await tx.delete(schema.taskDependencies).where(eq(schema.taskDependencies.taskId, task.id));
   await insertDependencies(tx, task);
+  await tx.delete(schema.taskNotes).where(eq(schema.taskNotes.taskId, task.id));
+  await insertTaskNoteLinks(tx, task.id, task.noteLinks);
 }
 
 interface DeletedTaskRow extends Record<string, unknown> {
@@ -155,23 +168,21 @@ export async function softDeleteTaskTree(tx: Tx, taskId: string, actorUserId: st
     await tx.insert(schema.recurrenceExceptions).values(exceptions).onConflictDoNothing();
   }
 
-  const ids = deleted.rows.map((row) => row.id);
-  await softDeleteNotesOfTargets(tx, { taskIds: ids });
-  return ids;
+  return deleted.rows.map((row) => row.id);
 }
 
 export class PostgresTaskRepository implements TaskRepository {
   constructor(private readonly db: NodePgDatabase<typeof schema>) {}
 
-  async save(task: Task): Promise<void> {
+  async save(task: Task, notes?: NoteWrites): Promise<void> {
     await this.db.transaction(async (tx) => {
-      await insertTaskAggregate(tx, task);
+      await insertTaskAggregate(tx, task, notes);
     });
   }
 
-  async update(task: Task, actorUserId: string, expectedRevision: number): Promise<void> {
+  async update(task: Task, actorUserId: string, expectedRevision: number, notes?: NoteWrites): Promise<void> {
     await this.db.transaction(async (tx) => {
-      await updateTaskAggregate(tx, task, actorUserId, expectedRevision);
+      await updateTaskAggregate(tx, task, actorUserId, expectedRevision, notes);
     });
   }
 
@@ -218,10 +229,13 @@ export class PostgresTaskRepository implements TaskRepository {
       .innerJoin(schema.tasks, eq(schema.taskDependencies.dependsOnTaskId, schema.tasks.id))
       .where(and(eq(schema.taskDependencies.taskId, row.id), isNull(schema.tasks.deletedAt)));
 
+    const noteLinks = await selectTaskNoteLinks(this.db, row.id);
+
     return mapTaskRow(
       row,
       tagRows.map((tagRow) => tagRow.name),
       dependencyRows.map((dependencyRow) => dependencyRow.dependsOnTaskId),
+      noteLinks,
     );
   }
 }

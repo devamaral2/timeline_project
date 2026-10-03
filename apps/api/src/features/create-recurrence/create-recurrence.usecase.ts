@@ -18,19 +18,24 @@ export class CreateRecurrenceUseCase {
     // resolver uma refeicao de uma serie que nunca vai acontecer.
     const draft = Recurrence.create({ userId: actor.userId, target, rule, template: {} });
 
-    const stored =
+    const prepared =
       input.target === "event"
         ? await prepareEventTemplate(this.createEvent, input.template, draft.rule, actor)
-        : await prepareTaskTemplate(this.tasks, input.template, draft.rule, actor);
+        : {
+            template: await prepareTaskTemplate(this.tasks, input.template, draft.rule, actor),
+            notes: [],
+            noteIds: [],
+          };
 
     const recurrence = Recurrence.create({
       id: draft.id,
       userId: actor.userId,
       target,
       rule: draft.rule,
-      template: { ...stored },
+      template: { ...prepared.template },
+      noteIds: prepared.noteIds,
     });
-    await this.recurrences.save(recurrence);
+    await this.recurrences.save(recurrence, { created: prepared.notes });
     return { recurrenceId: recurrence.id };
   }
 }

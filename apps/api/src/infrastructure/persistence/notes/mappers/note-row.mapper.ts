@@ -1,28 +1,33 @@
-import { Note } from "../../../../domain";
+import { Note, NoteValidationError } from "../../../../domain";
 
 export interface NoteRow {
   id: string;
   revision: number;
   userId: string;
-  content: string;
   name: string;
-  eventId: string | null;
-  taskId: string | null;
+  type: string;
+  schemaVersion: number;
+  data: unknown;
   createdAt: Date;
   updatedAt: Date;
 }
 
 export function mapNoteRow(row: NoteRow, tags: string[] = []): Note {
-  return Note.rehydrate({
-    id: row.id,
-    userId: row.userId,
-    content: row.content,
-    name: row.name,
-    eventId: row.eventId,
-    taskId: row.taskId,
-    tags,
-    revision: row.revision,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
-  });
+  try {
+    return Note.rehydrate({
+      id: row.id,
+      userId: row.userId,
+      name: row.name,
+      type: row.type,
+      schemaVersion: row.schemaVersion,
+      data: row.data,
+      tags,
+      revision: row.revision,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    });
+  } catch (cause) {
+    const message = cause instanceof Error ? cause.message : String(cause);
+    throw new NoteValidationError(`Invalid note ${row.id}: ${message}`);
+  }
 }

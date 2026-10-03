@@ -1,11 +1,17 @@
-import { expect, test } from "vitest";
-import { RecurrenceOwnershipError, RecurrenceValidationError, TaskNotFoundError } from "../../domain";
+import { describe, expect, test } from "vitest";
+import {
+  Note,
+  RecurrenceOwnershipError,
+  RecurrenceValidationError,
+  TaskNotFoundError,
+  type Event,
+} from "../../domain";
 import type { CreateRecurrenceInput } from "@repo/contracts";
-import { CreateEventUseCase } from "../../api-core/events/create-event.usecase";
-import { InMemoryEventDatabase } from "../../api-core/events/testing/in-memory-event-database";
-import { InMemoryEventRepository } from "../../api-core/events/testing/in-memory-event.repository";
-import { InMemoryWorkoutCatalog } from "../../api-core/events/testing/in-memory-workout.catalog";
+import type { InMemoryEventDatabase } from "../../api-core/events/testing/in-memory-event-database";
+import { createEventsKit } from "../../api-core/events/testing/in-memory-events-kit";
 import { StubMealParsingGateway } from "../../api-core/events/testing/stub-meal-parsing.gateway";
+import { InMemoryNoteRepository } from "../../api-core/notes/testing/in-memory-note.repository";
+import { AttachNotesToRecurrenceUseCase } from "../attach-notes-to-recurrence/attach-notes-to-recurrence.usecase";
 import { InMemoryTaskRepository } from "../../api-core/tasks/testing/in-memory-task.repository";
 import { InMemoryRecurrenceRepository } from "../../api-core/recurrences/testing/in-memory-recurrence.repository";
 import { CreateRecurrenceUseCase } from "./create-recurrence.usecase";
@@ -18,14 +24,9 @@ const actor = { userId: "auth-user-1" };
 const now = new Date("2026-09-15T15:00:00.000Z");
 
 function setup(clock: { now: Date } = { now }) {
-  const database = new InMemoryEventDatabase();
+  const { database, createEvent } = createEventsKit();
   const recurrences = new InMemoryRecurrenceRepository(database);
   const tasks = new InMemoryTaskRepository();
-  const createEvent = new CreateEventUseCase(
-    new InMemoryEventRepository(database),
-    new StubMealParsingGateway(),
-    new InMemoryWorkoutCatalog(),
-  );
   const tick = () => clock.now;
   return {
     database,
@@ -46,7 +47,7 @@ const dailyRun: CreateRecurrenceInput = {
   durationMinutes: 30,
   timeZone: "America/Sao_Paulo",
   startsOn: "2026-09-01",
-  template: { name: "Correr", tags: ["saude"], items: [{ type: "routine" }] },
+  template: { name: "Correr", tags: ["saude"], kind: "routine" },
 };
 
 function daysOf(database: InMemoryEventDatabase) {
@@ -101,11 +102,10 @@ test("skips the days that were deleted from the series", async () => {
   expect(daysOf(database)).toEqual(["2026-09-15", "2026-09-17"]);
 });
 
-test("resolves a meal template once, instead of once per occurrence", async () => {
+test("resolves a meal template once and shares its note with every occurrence", async () => {
   const meals = new StubMealParsingGateway();
-  const database = new InMemoryEventDatabase();
+  const { database, createEvent } = createEventsKit({ mealParsingGateway: meals });
   const recurrences = new InMemoryRecurrenceRepository(database);
-  const createEvent = new CreateEventUseCase(new InMemoryEventRepository(database), meals, new InMemoryWorkoutCatalog());
   const create = new CreateRecurrenceUseCase(recurrences, createEvent, new InMemoryTaskRepository());
   const materializer = new MaterializeRecurrencesUseCase(recurrences, () => now);
   let calls = 0;
@@ -115,17 +115,43 @@ test("resolves a meal template once, instead of once per occurrence", async () =
     return parseMeal();
   };
 
-  await create.execute(
-    { ...dailyRun, timeOfDay: "12:30", template: { items: [{ type: "meal", data: { inputText: "arroz e feijao" } }] } },
+  const { recurrenceId } = await create.execute(
+    {
+      ...dailyRun,
+      timeOfDay: "12:30",
+      template: { kind: "meal", notes: [{ type: "meal", data: { inputText: "arroz e feijao" } }] },
+    },
     actor,
   );
   await materializer.materialize(actor.userId);
 
   expect(calls).toBe(1);
   expect(database.events.length).toBeGreaterThan(1);
-  expect(database.events.every((event) => event.items[0]?.type === "meal")).toBe(true);
-  // Cada ocorrencia e dona dos proprios itens.
-  expect(new Set(database.events.map((event) => event.items[0]?.id)).size).toBe(database.events.length);
+  expect(database.events.every((event) => event.kind === "meal")).toBe(true);
+  // A mesma note em todas as ocorrencias — uma so, ligada a serie —, cada uma com o proprio vinculo da serie.
+  const [mealNote] = database.notes;
+  expect(database.notes).toHaveLength(1);
+  expect((await recurrences.findById(recurrenceId))?.noteIds).toEqual([mealNote.id]);
+  expect(
+    database.events.every(
+      (event) => event.noteLinks.length === 1 && event.noteLinks[0].noteId === mealNote.id && event.noteLinks[0].fromRecurrence,
+    ),
+  ).toBe(true);
+});
+
+test("the stored template carries the kind and no notes", async () => {
+  const { create, recurrences } = setup();
+
+  const { recurrenceId } = await create.execute(
+    { ...dailyRun, template: { kind: "sleep", notes: [{ type: "sleep", data: { trackedSleepTime: 420 } }] } },
+    actor,
+  );
+
+  const stored = await recurrences.findById(recurrenceId);
+  expect(stored?.template).toMatchObject({ name: "Sono", kind: "sleep" });
+  expect(stored?.template).not.toHaveProperty("items");
+  expect(stored?.template).not.toHaveProperty("notes");
+  expect(stored?.noteIds).toHaveLength(1);
 });
 
 test("refuses a series that never happens", async () => {
@@ -201,6 +227,40 @@ test("editing the series regenerates from today on, but keeps the past and the h
   expect((await recurrences.findById(recurrenceId))?.revision).toBe(2);
 });
 
+test("editing the series leaves the notes of a single occurrence alone, and editing one occurrence leaves the series notes alone", async () => {
+  const clock = { now: new Date("2026-09-10T15:00:00.000Z") };
+  const { create, update, materializer, database, recurrences } = setup(clock);
+  const { recurrenceId } = await create.execute(
+    { ...dailyRun, endsOn: "2026-09-20", template: { name: "Correr", notes: [{ data: { body: "alongar" } }] } },
+    actor,
+  );
+  await materializer.materialize(actor.userId);
+  const [seriesNote] = database.notes;
+
+  // So a ocorrencia do dia 18 ganha uma note propria: ela deixa de ser "da serie" e segue sozinha.
+  const own = Note.create({ userId: actor.userId, data: { body: "so hoje: 10 km" } });
+  database.notes.push(own);
+  const eighteenth = database.events.findIndex((event) => event.occurrence?.occurrenceOn === "2026-09-18");
+  const before = database.events[eighteenth] as Event;
+  database.events[eighteenth] = before.revise({ noteLinks: [...before.noteLinks, { noteId: own.id, fromRecurrence: false }] });
+
+  clock.now = now; // dia 15
+  await update.execute({ recurrenceId, expectedRevision: 1, timeOfDay: "08:00" }, actor);
+  await materializer.materialize(actor.userId);
+
+  const on = (day: string) => database.events.find((event) => event.occurrence?.occurrenceOn === day) as Event;
+  // A serie editada: o dia 16 foi regerado e continua com a note da serie...
+  expect(on("2026-09-16").noteLinks).toEqual([{ noteId: seriesNote.id, fromRecurrence: true }]);
+  // ... e o dia 18, que tinha uma note so dele, nao foi tocado: continua com as duas.
+  expect(on("2026-09-18").noteLinks).toEqual([
+    { noteId: seriesNote.id, fromRecurrence: true },
+    { noteId: own.id, fromRecurrence: false },
+  ]);
+  expect(on("2026-09-18").startedAt.toISOString()).toBe("2026-09-18T10:00:00.000Z");
+  // E a note propria do dia 18 nao vazou para a serie.
+  expect((await recurrences.findById(recurrenceId))?.noteIds).toEqual([seriesNote.id]);
+});
+
 test("deleting the series keeps what already happened", async () => {
   const clock = { now: new Date("2026-09-13T15:00:00.000Z") };
   const { create, remove, materializer, database, recurrences } = setup(clock);
@@ -232,4 +292,96 @@ test("another user's series is never materialized into this user's timeline", as
   await materializer.materialize(actor.userId);
 
   expect(database.events).toHaveLength(0);
+});
+
+describe("attaching notes to every occurrence of a series", () => {
+  function setupAttach(clock: { now: Date }) {
+    const kit = setup(clock);
+    const noteRepository = new InMemoryNoteRepository(kit.database.notes);
+    const attach = new AttachNotesToRecurrenceUseCase(kit.recurrences, noteRepository, () => clock.now);
+    return { ...kit, attach };
+  }
+
+  test("links the same note to the future occurrences, not to the past, and the ones generated later inherit it", async () => {
+    const clock = { now: new Date("2026-09-10T15:00:00.000Z") };
+    const { create, attach, materializer, database, recurrences } = setupAttach(clock);
+    const { recurrenceId } = await create.execute({ ...dailyRun, endsOn: "2026-09-20" }, actor);
+    await materializer.materialize(actor.userId);
+    const note = Note.create({ userId: actor.userId, data: { body: "levar tênis" } });
+    database.notes.push(note);
+
+    clock.now = now; // dia 15
+    await attach.execute({ recurrenceId, noteIds: [note.id] }, actor);
+
+    const on = (day: string) => database.events.find((event) => event.occurrence?.occurrenceOn === day) as Event;
+    // Passado: ate o dia 14, nada muda.
+    expect(on("2026-09-10").noteLinks).toEqual([]);
+    expect(on("2026-09-14").noteLinks).toEqual([]);
+    // De hoje em diante: a mesma note, vinda da serie, sem editar a ocorrencia.
+    expect(on("2026-09-15").noteLinks).toEqual([{ noteId: note.id, fromRecurrence: true }]);
+    expect(on("2026-09-20").noteLinks).toEqual([{ noteId: note.id, fromRecurrence: true }]);
+    expect(on("2026-09-15").revision).toBe(1);
+    expect(on("2026-09-15").occurrence?.detached).toBe(false);
+    expect((await recurrences.findById(recurrenceId))?.noteIds).toEqual([note.id]);
+  });
+
+  test("an occurrence the user already edited keeps its own notes and does not receive the series note", async () => {
+    const clock = { now: new Date("2026-09-10T15:00:00.000Z") };
+    const { create, attach, materializer, database } = setupAttach(clock);
+    const { recurrenceId } = await create.execute({ ...dailyRun, endsOn: "2026-09-20" }, actor);
+    await materializer.materialize(actor.userId);
+    const note = Note.create({ userId: actor.userId, data: { body: "da serie" } });
+    database.notes.push(note);
+    const eighteenth = database.events.findIndex((event) => event.occurrence?.occurrenceOn === "2026-09-18");
+    database.events[eighteenth] = (database.events[eighteenth] as Event).revise({ description: "editada a mão" });
+
+    clock.now = now;
+    await attach.execute({ recurrenceId, noteIds: [note.id] }, actor);
+
+    const on = (day: string) => database.events.find((event) => event.occurrence?.occurrenceOn === day) as Event;
+    expect(on("2026-09-18").noteLinks).toEqual([]);
+    expect(on("2026-09-17").noteLinks).toEqual([{ noteId: note.id, fromRecurrence: true }]);
+  });
+
+  test("occurrences generated after the link are born with the note", async () => {
+    const { create, attach, materializer, database } = setupAttach({ now });
+    const { recurrenceId } = await create.execute({ ...dailyRun, endsOn: "2026-09-16" }, actor);
+    const note = Note.create({ userId: actor.userId, data: { body: "da serie" } });
+    database.notes.push(note);
+
+    // Antes de qualquer ocorrencia existir.
+    await attach.execute({ recurrenceId, noteIds: [note.id] }, actor);
+    await materializer.materialize(actor.userId);
+
+    expect(database.events).toHaveLength(2);
+    expect(database.events.every((event) => event.noteLinks[0]?.noteId === note.id && event.noteLinks[0].fromRecurrence)).toBe(true);
+  });
+
+  test("attaching a note the series already has changes nothing", async () => {
+    const { create, attach, materializer, database, recurrences } = setupAttach({ now });
+    const { recurrenceId } = await create.execute({ ...dailyRun, endsOn: "2026-09-16" }, actor);
+    await materializer.materialize(actor.userId);
+    const note = Note.create({ userId: actor.userId, data: { body: "x" } });
+    database.notes.push(note);
+
+    await attach.execute({ recurrenceId, noteIds: [note.id] }, actor);
+    await attach.execute({ recurrenceId, noteIds: [note.id] }, actor);
+
+    expect((await recurrences.findById(recurrenceId))?.noteIds).toEqual([note.id]);
+    expect(database.events.every((event) => event.noteLinks.length === 1)).toBe(true);
+  });
+
+  test("refuses a note that does not exist, someone else's note, and someone else's series", async () => {
+    const { create, attach, database } = setupAttach({ now });
+    const { recurrenceId } = await create.execute(dailyRun, actor);
+    const foreign = Note.create({ userId: "someone-else", data: { body: "dele" } });
+    database.notes.push(foreign);
+
+    await expect(attach.execute({ recurrenceId, noteIds: ["01HZZZZZZZZZZZZZZZZZZZZZZZ"] }, actor)).rejects.toThrow("Note not found");
+    await expect(attach.execute({ recurrenceId, noteIds: [foreign.id] }, actor)).rejects.toThrow("Only the note owner can modify it");
+    await expect(attach.execute({ recurrenceId, noteIds: [foreign.id] }, { userId: "someone-else" })).rejects.toThrow(
+      RecurrenceOwnershipError,
+    );
+    await expect(attach.execute({ recurrenceId, noteIds: [] }, actor)).rejects.toThrow("non-empty list");
+  });
 });

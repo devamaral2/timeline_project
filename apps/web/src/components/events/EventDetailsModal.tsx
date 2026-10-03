@@ -9,7 +9,7 @@ import { tagColorStyle } from "@/lib/tags/tag-color";
 import { authedFetch } from "@/lib/api/authed-fetch";
 import type {
   EventDetailDto,
-  EventItemDto,
+  NoteDto,
   MealItem,
   SleepItem,
   TrainingData,
@@ -39,15 +39,13 @@ interface EventDetailsModalProps {
 }
 
 /**
- * O item que da a cara ao evento.
- *
- * Ele e encontrado pelo `primaryItemId`, e nao pela primeira posicao do array:
- * a ordem dos itens e a que o usuario montou, e ser o principal e uma escolha a
- * parte. Num evento composto as duas divergem, e ler pela ordem mostraria o
- * item errado.
+ * A note que carrega os dados da natureza do evento: a primeira cujo tipo e o
+ * `kind` dele. E achada pelo tipo, e nao pela primeira posicao do array: a ordem
+ * das notes e a que o usuario montou, e um evento composto pode ter uma nota de
+ * texto antes da refeicao. Pode nao existir — um evento nao exige note.
  */
-export function primaryItemOf(event: EventDetailDto): EventItemDto | undefined {
-  return event.items.find((item) => item.id === event.primaryItemId);
+export function primaryNoteOf(event: EventDetailDto): NoteDto | undefined {
+  return event.notes.find((note) => note.type === event.kind);
 }
 
 export function EventDetailsModal({
@@ -150,14 +148,12 @@ export function EventDetailsModal({
 }
 
 function EventDetailsBody({ event }: { event: EventDetailDto }) {
-  const primaryItem = primaryItemOf(event);
-
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
         <span className="flex min-w-0 items-center gap-2">
           <span className="truncate font-medium text-foreground">
-            {visualForItemType(primaryItem?.type ?? "").label}
+            {visualForItemType(event.kind).label}
           </span>
           <MissedBadge missed={event.missed} />
         </span>
@@ -198,12 +194,13 @@ function EventDetailsBody({ event }: { event: EventDetailDto }) {
       ) : null}
 
       {/*
-        Todos os itens, na ordem em que o usuario os montou. Um evento composto
-        — o treino que tambem registrou a refeicao de depois — guarda mais de um,
-        e mostrar so o principal deixaria o resto sem lugar nenhum onde aparecer.
+        Todas as notes, na ordem em que o usuario as montou. Um evento composto
+        — o treino que tambem registrou a refeicao de depois — guarda mais de
+        uma, e mostrar so a do tipo dele deixaria o resto sem lugar nenhum onde
+        aparecer.
       */}
-      {event.items.map((item) => (
-        <ItemDetails key={item.id} item={item} />
+      {event.notes.map((note) => (
+        <NoteDetails key={note.id} note={note} />
       ))}
 
       {event.interruptions.length ? (
@@ -232,22 +229,30 @@ function EventDetailsBody({ event }: { event: EventDetailDto }) {
   );
 }
 
-function ItemDetails({ item }: { item: EventItemDto }) {
-  switch (item.type) {
+function NoteDetails({ note }: { note: NoteDto }) {
+  switch (note.type) {
     case "sleep":
-      return <SleepDetails data={item.data} />;
+      return <SleepDetails data={note.data} />;
     case "training":
-      return <TrainingDetails data={item.data} />;
+      return <TrainingDetails data={note.data} />;
     case "meal":
-      return <MealDetails data={item.data} />;
-    case "routine":
-      // Rotina nao tem payload: o nome e o horario, la em cima, sao tudo.
-      return null;
+      return <MealDetails data={note.data} />;
+    case "text":
+      return <TextDetails title={note.name} body={note.data.body} />;
     default:
       // Um tipo que este frontend ainda nao conhece. O que e comum a todo evento
       // ja esta desenhado; desenhar o payload seria adivinhar o formato dele.
       return null;
   }
+}
+
+function TextDetails({ title, body }: { title: string; body: string }) {
+  return (
+    <div>
+      <SectionTitle>{title}</SectionTitle>
+      <p className="mt-1.5 whitespace-pre-line text-[13px] text-muted-foreground">{body}</p>
+    </div>
+  );
 }
 
 function SectionTitle({ children }: { children: React.ReactNode }) {

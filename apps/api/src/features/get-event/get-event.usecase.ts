@@ -1,11 +1,14 @@
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
 import { EventOwnershipError } from "../../domain";
-import type { EventRepository } from "../../domain/ports";
+import type { EventRepository, NoteRepository } from "../../domain/ports";
 import type { EventDetailDto } from "@repo/contracts";
 import { toEventDetailDto } from "../../api-core/dto/event-detail.dto";
 
 export class GetEventUseCase {
-  constructor(private readonly eventRepository: EventRepository) {}
+  constructor(
+    private readonly eventRepository: EventRepository,
+    private readonly noteRepository: Pick<NoteRepository, "findByIds">,
+  ) {}
 
   async execute(input: { eventId: string }, actor: AuthenticatedUser): Promise<EventDetailDto | null> {
     const event = await this.eventRepository.findById(input.eventId);
@@ -14,7 +17,8 @@ export class GetEventUseCase {
       throw new EventOwnershipError();
     }
 
-    return toEventDetailDto(event);
+    const notes = await this.noteRepository.findByIds(event.noteLinks.map((link) => link.noteId));
+    return toEventDetailDto(event, notes);
   }
 }
 

@@ -15,5 +15,7 @@ export interface TaskDetailDto {
   estimatedFinishAt?: string;
   finishedAt?: string;
   dependsOnTaskIds: string[];
+  /** As notes da tarefa, na ordem em que aparecem. */
+  noteIds: string[];
   revision: number;
 }

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { calculateMealTotals, type MealItem } from "../../../domain";
 import { defineAgentSkill, fail } from "./agent-skill";
-import { eventBaseFields, primaryItemOf, toBaseChanges, toCreateEventInput, withPrimaryData } from "./event-skill-fields";
+import { eventBaseFields, toBaseChanges, toCreateEventInput } from "./event-skill-fields";
 
 export const mealEventSkill = defineAgentSkill({
   name: "save_meal_event",
@@ -26,23 +26,37 @@ export const mealEventSkill = defineAgentSkill({
   run: async (args, { session }) => {
     if (!args.id) {
       if (!args.inputText) return fail("inputText é obrigatório para criar uma refeição.");
-      return session.createEvent(toCreateEventInput(args, { type: "meal", data: { inputText: args.inputText } }));
+      return session.createEvent(
+        toCreateEventInput(args, "meal", { type: "meal", data: { inputText: args.inputText } }),
+      );
     }
 
     const inputText = args.inputText;
     return session.updateEvent(args.id, "meal", async (current) => {
       if (!inputText) return current.revise(toBaseChanges(args));
 
-      const added = await session.buildItem({ type: "meal", data: { inputText } }, current.startedAt);
-      const existing = primaryItemOf(current).data as MealItem;
-      const foodItems = [...existing.foodItems, ...(added.data as MealItem).foodItems];
+      const added = await session.buildNote({ type: "meal", data: { inputText } }, current.startedAt);
+      const existing = await session.noteOfType(current, "meal");
+
+      // Sem refeicao anterior, a nova passa a fazer parte do evento.
+      if (!existing) {
+        session.stageNewNote(added);
+        return current.revise({
+          ...toBaseChanges(args),
+          noteLinks: [...current.noteLinks, { noteId: added.id, fromRecurrence: false }],
+        });
+      }
+
+      const previous = existing.data as MealItem;
+      const foodItems = [...previous.foodItems, ...(added.data as MealItem).foodItems];
       const data: MealItem = {
-        ...existing,
-        description: [existing.description, inputText].filter(Boolean).join("; "),
+        ...previous,
+        description: [previous.description, inputText].filter(Boolean).join("; "),
         foodItems,
         totals: calculateMealTotals(foodItems),
       };
-      return current.revise({ ...toBaseChanges(args), items: withPrimaryData(current, data) });
+      await session.reviseNoteById(existing.id, (note) => note.revise({ data }));
+      return current.revise(toBaseChanges(args));
     });
   },
 });

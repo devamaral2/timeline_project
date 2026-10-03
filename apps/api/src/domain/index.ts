@@ -1,19 +1,11 @@
 export * from "./events/entities/event.entity";
-export * from "./events/entities/event-item.entity";
 export * from "./events/value-objects/event-id";
 export * from "./events/value-objects/interruption";
 export * from "./events/value-objects/tag-list";
 export * from "./events/types/event-priority";
+export * from "./events/types/event-kind";
 export * from "./events/types/missed-flag";
 export * from "./events/errors/event.errors";
-export * from "./events/items/event-item-definition";
-export * from "./events/items/event-item-registry";
-export * from "./events/items/routine-data";
-export * from "./events/items/meal-item";
-export * from "./events/items/sleep-item";
-
-export * from "./events/items/food-item";
-export * from "./events/items/training-data";
 export * from "./catalog/types/catalog-scope";
 export * from "./catalog/entities/food.entity";
 export * from "./catalog/entities/meal.entity";
@@ -27,6 +19,15 @@ export * from "./tasks/errors/task.errors";
 
 export * from "./notes/entities/note.entity";
 export * from "./notes/value-objects/note-id";
+export * from "./notes/types/note-type-definition";
+export * from "./notes/types/note-type-registry";
+export * from "./notes/types/text-note";
+export * from "./notes/types/meal-item";
+export * from "./notes/types/sleep-item";
+export * from "./notes/types/food-item";
+export * from "./notes/types/training-data";
+export * from "./notes/types/note-link";
+export type * from "./notes/types/note-writes";
 export * from "./notes/errors/note.errors";
 
 export * from "./agent/errors/entity-batch.errors";

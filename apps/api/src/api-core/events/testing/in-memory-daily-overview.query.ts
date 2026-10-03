@@ -20,7 +20,7 @@ export class InMemoryDailyOverviewQuery implements DailyOverviewQuery {
     let latestSleep: { event: Event; data: { trackedSleepTime: number; score: number } } | undefined;
 
     for (const event of events) {
-      for (const item of event.items) {
+      for (const item of this.database.notesOf(event)) {
         if (item.type === "sleep") {
           const data = item.data as { trackedSleepTime: number; score: number };
           if (!latestSleep || event.startedAt > latestSleep.event.startedAt) {

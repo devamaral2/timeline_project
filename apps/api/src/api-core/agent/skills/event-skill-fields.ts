@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { EVENT_PRIORITIES, EventItem, type Event, type EventReviseChanges } from "../../../domain";
-import type { CreateEventInput, CreateEventItemInput } from "@repo/contracts";
+import { EVENT_PRIORITIES, type EventKind, type EventReviseChanges } from "../../../domain";
+import type { CreateEventInput, CreateNoteInput } from "@repo/contracts";
 import { isoInstant, parseInstant } from "./agent-skill";
 
 /** Campos de todo evento. Com `id` a chamada altera um evento existente; sem, cria. */
@@ -28,8 +28,10 @@ export const eventBaseFields = {
 const baseSchema = z.object(eventBaseFields);
 type EventBaseArgs = z.infer<typeof baseSchema>;
 
-export function toCreateEventInput(args: EventBaseArgs, item: CreateEventItemInput): CreateEventInput {
-  const input: CreateEventInput = { items: [item] };
+/** `note`: a note que o evento nasce com, quando o tipo tem uma (refeicao, sono, treino). */
+export function toCreateEventInput(args: EventBaseArgs, kind: EventKind, note?: CreateNoteInput): CreateEventInput {
+  const input: CreateEventInput = { kind };
+  if (note) input.notes = [note];
   if (args.name) input.name = args.name;
   if (args.description) input.description = args.description;
   if (args.tags?.length) input.tags = args.tags;
@@ -50,27 +52,4 @@ export function toBaseChanges(args: EventBaseArgs): EventReviseChanges {
     missed: args.missed,
     priority: args.priority,
   };
-}
-
-export function primaryItemOf(event: Event): EventItem {
-  const primary = event.items.find((item) => item.isPrimary);
-  if (!primary) throw new Error(`O evento ${event.id} não tem item principal.`);
-  return primary;
-}
-
-/** Os itens do evento com o dado do item principal trocado. */
-export function withPrimaryData(event: Event, data: unknown): EventItem[] {
-  const primary = primaryItemOf(event);
-  return event.items.map((item) =>
-    item.id === primary.id
-      ? EventItem.create({
-          id: item.id,
-          position: item.position,
-          type: item.type,
-          schemaVersion: item.schemaVersion,
-          isPrimary: item.isPrimary,
-          data,
-        })
-      : item,
-  );
 }

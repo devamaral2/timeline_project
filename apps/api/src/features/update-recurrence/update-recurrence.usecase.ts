@@ -35,15 +35,21 @@ export class UpdateRecurrenceUseCase {
     const { recurrenceId: _id, expectedRevision, template, ...ruleChanges } = input;
     // A regra revisada vem primeiro: o template novo e resolvido com a janela dela.
     const withRule = existing.revise({ rule: ruleChanges });
-    const stored =
+    // Trocar o template troca as notes da serie; as que saem continuam existindo, soltas.
+    const prepared =
       template === undefined
         ? undefined
         : withRule.target === "event"
           ? await prepareEventTemplate(this.createEvent, template as EventRecurrenceTemplate, withRule.rule, actor)
-          : await prepareTaskTemplate(this.tasks, template as TaskRecurrenceTemplate, withRule.rule, actor);
+          : {
+              template: await prepareTaskTemplate(this.tasks, template as TaskRecurrenceTemplate, withRule.rule, actor),
+              notes: [],
+              noteIds: existing.noteIds as string[],
+            };
     let revised: Recurrence = existing.revise({
       rule: ruleChanges,
-      template: stored ? { ...stored } : undefined,
+      template: prepared ? { ...prepared.template } : undefined,
+      noteIds: prepared?.noteIds,
     });
 
     const today = todayOf(revised.rule, this.clock());
@@ -53,6 +59,8 @@ export class UpdateRecurrenceUseCase {
       revised = revised.materializedUntil(yesterday);
     }
 
-    await this.recurrences.update(revised, actor.userId, expectedRevision, today);
+    await this.recurrences.update(revised, actor.userId, expectedRevision, today, {
+      created: prepared?.notes ?? [],
+    });
   }
 }

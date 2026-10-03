@@ -1,9 +1,9 @@
-import type { Event } from "../../../domain";
+import type { Event, EventKind } from "../../../domain";
 import type { DayContextEvent } from "../day-context.query";
 
 export interface EventShift {
   id: string;
-  type: string;
+  kind: EventKind;
   startedAt: Date;
   finishedAt: Date;
 }
@@ -39,10 +39,9 @@ export function planDayRearrangement(target: Event, dayEvents: readonly DayConte
     if (current.end === null || current.end < current.start) {
       return { kind: "clarification", message: `Não encontrei a duração de ${current.name}. Qual deve ser o horário final?` };
     }
-    const item = current.items?.find((part) => part.is_primary);
-    if (!item?.type) return { kind: "clarification", message: `Não identifiquei o tipo de ${current.name}.` };
+    if (!current.kind) return { kind: "clarification", message: `Não identifiquei o tipo de ${current.name}.` };
     const duration = current.end - current.start;
-    shifts.push({ id: current.id, type: item.type, startedAt: new Date(cursor), finishedAt: new Date(cursor + duration) });
+    shifts.push({ id: current.id, kind: current.kind, startedAt: new Date(cursor), finishedAt: new Date(cursor + duration) });
     cursor += duration;
   }
   return { kind: "ready", shifts };

@@ -17,12 +17,12 @@ import {
   type EditEventFormProps,
   FinishedAtField,
   FormActions,
-  type ItemOfType,
+  type NoteOfType,
   StartedAtField,
   EventMarks,
   NotificationOffsetsField,
   fromDatetimeLocalValue,
-  itemsPatchedWith,
+  notesPatchedWith,
   toDatetimeLocalValue,
   useSubmitEventUpdate,
 } from "./shared";
@@ -85,15 +85,23 @@ function newFoodItem(): FoodItemDraft {
   };
 }
 
+const EMPTY_MEAL_TOTALS = {
+  totalCaloriesKcal: 0,
+  totalProteinGrams: 0,
+  totalCarbohydrateGrams: 0,
+  totalFatGrams: 0,
+  totalFiberGrams: 0,
+};
+
 export function MealEditForm({
   event,
-  item,
+  note,
   onCancel,
   onClose,
   onUpdated,
-}: EditEventFormProps<ItemOfType<"meal">>) {
+}: EditEventFormProps<NoteOfType<"meal">>) {
   const [foodItems, setFoodItems] = useState<FoodItemDraft[]>(
-    item.data.foodItems.map(draftFromFoodItem),
+    (note?.data.foodItems ?? []).map(draftFromFoodItem),
   );
   const [description, setDescription] = useState(event.description);
   const [tags, setTags] = useState<string[]>(event.tags);
@@ -144,9 +152,16 @@ export function MealEditForm({
       // atravessam iguais. Os totais tambem: a API os recalcula a partir dos
       // alimentos, e somar de novo no browser so criaria um segundo lugar onde
       // o arredondamento pode divergir.
-      items: itemsPatchedWith(event, item.id, {
-        ...item.data,
-        foodItems: builtFoodItems,
+      notes: notesPatchedWith(event, note?.id, {
+        type: "meal",
+        data: {
+          // Sem refeicao anterior, a nota nasce com o nome do evento.
+          name: event.name,
+          description: "",
+          totals: EMPTY_MEAL_TOTALS,
+          ...note?.data,
+          foodItems: builtFoodItems,
+        },
       }),
       description: description.trim(),
       tags,

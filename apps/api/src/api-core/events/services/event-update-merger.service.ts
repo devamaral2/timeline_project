@@ -1,105 +1,110 @@
-import { ulid } from "ulid";
 import {
-  EventItem,
   EventValidationError,
   Interruption,
-  calculateMealTotals,
+  isEventKind,
+  NoteNotFoundError,
+  NoteOwnershipError,
   type Event,
+  type Note,
+  type NoteLink,
+  type NoteWrites,
 } from "../../../domain";
-import type { WorkoutCatalog } from "../../../domain/ports";
+import type { NoteRepository } from "../../../domain/ports";
 import type {
   InterruptionPatchInput,
   UpdateEventInput,
-  UpdateEventItemInput,
+  UpdateEventNoteInput,
 } from "@repo/contracts";
+import type { NoteBuilder } from "../../notes/services/note-builder.service";
+
+/** O evento revisado e as notes que precisam ser gravadas junto com ele. */
+export interface MergedEventUpdate {
+  event: Event;
+  notes: NoteWrites;
+}
 
 export async function mergeEventUpdate(
   existingEvent: Event,
   input: UpdateEventInput,
-  workoutCatalog: WorkoutCatalog,
+  deps: { noteBuilder: NoteBuilder; noteRepository: Pick<NoteRepository, "findByIds"> },
   now: Date,
-): Promise<Event> {
-  const items = input.items
-    ? await buildUpdatedItems(existingEvent, input.items, workoutCatalog)
-    : undefined;
+): Promise<MergedEventUpdate> {
+  if (input.kind !== undefined && !isEventKind(input.kind)) {
+    throw new EventValidationError(`Unknown event kind: ${String(input.kind)}`);
+  }
+  const merged = input.notes
+    ? await mergeNotes(existingEvent, input.notes, deps)
+    : { noteLinks: undefined, writes: {} as NoteWrites };
 
-  return existingEvent.revise({
+  const event = existingEvent.revise({
     name: input.name,
     description: input.description,
     startedAt: input.startedAt ? new Date(input.startedAt) : undefined,
     finishedAt: input.finishedAt !== undefined ? new Date(input.finishedAt) : undefined,
     tags: input.tags,
+    kind: input.kind,
     missed: input.missed,
     priority: input.priority,
     notifyOffsetsMinutes: input.notifyOffsetsMinutes,
     interruptions: mergeInterruptions(existingEvent.interruptions, input.interruptions, now),
-    items,
+    noteLinks: merged.noteLinks,
   });
+  return { event, notes: merged.writes };
 }
 
-async function buildUpdatedItems(
+/**
+ * A lista de notes de um evento ao editar. Cada entrada com `id` e uma note que
+ * ja existe — ja estava no evento, ou e outra do mesmo usuario que passa a
+ * estar —; sem `id`, nasce uma note nova. Quem nao esta na lista deixa de
+ * aparecer no evento, mas a note continua existindo.
+ */
+async function mergeNotes(
   existingEvent: Event,
-  itemsInput: UpdateEventItemInput[],
-  workoutCatalog: WorkoutCatalog,
-): Promise<EventItem[]> {
-  const existingIds = new Set(existingEvent.items.map((item) => item.id));
+  entries: UpdateEventNoteInput[],
+  deps: { noteBuilder: NoteBuilder; noteRepository: Pick<NoteRepository, "findByIds"> },
+): Promise<{ noteLinks: NoteLink[]; writes: NoteWrites }> {
+  const ids = entries.flatMap((entry) => (entry.id ? [entry.id] : []));
+  const found = ids.length > 0 ? await deps.noteRepository.findByIds(ids) : [];
+  const byId = new Map(found.map((note) => [note.id, note]));
+  const currentLinks = new Map(existingEvent.noteLinks.map((link) => [link.noteId, link]));
 
-  const workoutCodes = [
-    ...new Set(
-      itemsInput
-        .filter((item): item is Extract<UpdateEventItemInput, { type: "training" }> => item.type === "training")
-        .flatMap((item) => item.data.workouts.map((workout) => workout.workoutCode)),
-    ),
-  ];
-  const workoutDefinitions = workoutCodes.length
-    ? await workoutCatalog.findActiveByCodes(workoutCodes)
-    : [];
-  const workoutNameByCode = new Map(workoutDefinitions.map((definition) => [definition.code, definition.name]));
+  const created: Note[] = [];
+  const updated: { note: Note; expectedRevision: number }[] = [];
+  const noteLinks: NoteLink[] = [];
 
-  return itemsInput.map((itemInput, position) => {
-    if (itemInput.id && !existingIds.has(itemInput.id)) {
-      throw new EventValidationError(`Event item does not belong to this event: ${itemInput.id}`);
-    }
-    const id = itemInput.id ?? ulid();
-
-    if (itemInput.type === "meal") {
-      return EventItem.create({
-        id,
-        position,
-        type: "meal",
-        schemaVersion: itemInput.schemaVersion,
-        isPrimary: itemInput.isPrimary,
-        data: { ...itemInput.data, totals: calculateMealTotals(itemInput.data.foodItems) },
-      });
+  for (const entry of entries) {
+    if (!entry.id) {
+      if (entry.data === undefined) throw new EventValidationError("A new note requires data");
+      const note = await deps.noteBuilder.fromUpdateInput(entry, existingEvent.userId);
+      created.push(note);
+      noteLinks.push({ noteId: note.id, fromRecurrence: false });
+      continue;
     }
 
-    if (itemInput.type === "training") {
-      const workouts = itemInput.data.workouts.map((workout) => {
-        const workoutName = workoutNameByCode.get(workout.workoutCode);
-        if (!workoutName) throw new EventValidationError(`Unknown workout code: ${workout.workoutCode}`);
-        return { ...workout, workoutName };
-      });
-      return EventItem.create({
-        id,
-        position,
-        type: "training",
-        schemaVersion: itemInput.schemaVersion,
-        isPrimary: itemInput.isPrimary,
-        data: {
-          workouts,
-          caloriesBurned: workouts.reduce((total, workout) => total + workout.calories, 0),
-        },
-      });
-    }
+    const note = byId.get(entry.id);
+    if (!note) throw new NoteNotFoundError(`Note not found: ${entry.id}`);
+    if (note.userId !== existingEvent.userId) throw new NoteOwnershipError();
 
-    return EventItem.create({
-      id,
-      position,
-      type: itemInput.type,
-      schemaVersion: itemInput.schemaVersion,
-      isPrimary: itemInput.isPrimary,
-      data: itemInput.data,
-    });
+    const revised = await reviseNote(note, entry, deps.noteBuilder);
+    if (revised) updated.push({ note: revised, expectedRevision: note.revision });
+    // O vinculo herdado da serie continua sendo da serie, mesmo se a note foi editada aqui.
+    noteLinks.push({ noteId: note.id, fromRecurrence: currentLinks.get(note.id)?.fromRecurrence ?? false });
+  }
+
+  return { noteLinks, writes: { created, updated } };
+}
+
+/** `undefined` quando a entrada so mantem a note, sem mudar nada nela. */
+async function reviseNote(note: Note, entry: UpdateEventNoteInput, noteBuilder: NoteBuilder): Promise<Note | undefined> {
+  if (entry.name === undefined && entry.tags === undefined && entry.data === undefined) return undefined;
+
+  const resolved = entry.data !== undefined ? await noteBuilder.resolveUpdateData(entry) : undefined;
+  return note.revise({
+    name: entry.name,
+    tags: entry.tags,
+    type: resolved?.type,
+    schemaVersion: "schemaVersion" in entry ? entry.schemaVersion : undefined,
+    data: resolved?.data,
   });
 }
 

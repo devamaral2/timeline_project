@@ -1,6 +1,6 @@
 import { Module } from "@nestjs/common";
-import { EVENT_REPOSITORY } from "../../infrastructure/persistence";
-import type { EventRepository } from "../../domain/ports";
+import { EVENT_REPOSITORY, NOTE_REPOSITORY } from "../../infrastructure/persistence";
+import type { EventRepository, NoteRepository } from "../../domain/ports";
 import { ApiCoreModule } from "../../api-core/api-core.module";
 import { GetEventController } from "./get-event.controller";
 import { GetEventUseCase } from "./get-event.usecase";
@@ -10,8 +10,8 @@ import { GetEventUseCase } from "./get-event.usecase";
   controllers: [GetEventController],
   providers: [{
     provide: GetEventUseCase,
-    inject: [EVENT_REPOSITORY],
-    useFactory: (events: EventRepository) => new GetEventUseCase(events),
+    inject: [EVENT_REPOSITORY, NOTE_REPOSITORY],
+    useFactory: (events: EventRepository, notes: NoteRepository) => new GetEventUseCase(events, notes),
   }],
 })
 export class GetEventModule {}

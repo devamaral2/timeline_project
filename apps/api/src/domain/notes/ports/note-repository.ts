@@ -5,4 +5,6 @@ export interface NoteRepository {
   update(note: Note, actorUserId: string, expectedRevision: number): Promise<void>;
   delete(noteId: string, actorUserId: string): Promise<void>;
   findById(noteId: string): Promise<Note | null>;
+  /** As notes que existem e nao foram apagadas; ids ausentes ficam de fora, e a ordem nao e a dos ids. */
+  findByIds(noteIds: readonly string[]): Promise<Note[]>;
 }

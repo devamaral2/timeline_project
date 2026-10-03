@@ -1,4 +1,4 @@
-import { EventValidationError } from "../errors/event.errors";
+import { NoteValidationError } from "../errors/note.errors";
 import { type FoodItem, parseFoodItem } from "./food-item";
 
 export interface MealTotals {
@@ -49,22 +49,22 @@ function isNonEmptyString(value: unknown): value is string {
 
 export function parseMealItem(data: unknown, schemaVersion: number): MealItem {
   if (schemaVersion !== 1) {
-    throw new EventValidationError("Unsupported schema version");
+    throw new NoteValidationError("Unsupported schema version");
   }
   if (typeof data !== "object" || data === null) {
-    throw new EventValidationError("Meal item must be an object");
+    throw new NoteValidationError("Meal item must be an object");
   }
 
   const source = data as Record<string, unknown>;
 
   if (!isNonEmptyString(source.name)) {
-    throw new EventValidationError("Meal item requires a name");
+    throw new NoteValidationError("Meal item requires a name");
   }
   if (typeof source.description !== "string") {
-    throw new EventValidationError("Meal item requires a description");
+    throw new NoteValidationError("Meal item requires a description");
   }
   if (!Array.isArray(source.foodItems)) {
-    throw new EventValidationError("Meal item requires an array of foodItems");
+    throw new NoteValidationError("Meal item requires an array of foodItems");
   }
 
   const foodItems = source.foodItems.map(parseFoodItem);
@@ -72,11 +72,11 @@ export function parseMealItem(data: unknown, schemaVersion: number): MealItem {
 
   const providedTotals = source.totals as Record<string, unknown> | undefined;
   if (typeof providedTotals !== "object" || providedTotals === null) {
-    throw new EventValidationError("Meal item requires totals");
+    throw new NoteValidationError("Meal item requires totals");
   }
   for (const key of Object.keys(computedTotals) as (keyof MealTotals)[]) {
     if (round2(providedTotals[key] as number) !== computedTotals[key]) {
-      throw new EventValidationError("Meal totals do not match food items");
+      throw new NoteValidationError("Meal totals do not match food items");
     }
   }
 

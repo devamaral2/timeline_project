@@ -3,6 +3,7 @@ import {
   RecurrenceOwnershipError,
   RecurrenceRevisionConflictError,
   type Event,
+  type NoteWrites,
   type Recurrence,
   type Task,
 } from "../../../domain";
@@ -21,11 +22,18 @@ export class InMemoryRecurrenceRepository implements RecurrenceRepository {
 
   constructor(readonly events: InMemoryEventDatabase) {}
 
-  async save(recurrence: Recurrence): Promise<void> {
+  async save(recurrence: Recurrence, notes?: NoteWrites): Promise<void> {
+    this.events.writeNotes(notes);
     this.recurrences.push(recurrence);
   }
 
-  async update(recurrence: Recurrence, actorUserId: string, expectedRevision: number, fromDay: string) {
+  async update(
+    recurrence: Recurrence,
+    actorUserId: string,
+    expectedRevision: number,
+    fromDay: string,
+    notes?: NoteWrites,
+  ) {
     const index = this.recurrences.findIndex((stored) => stored.id === recurrence.id);
     if (index === -1) throw new RecurrenceNotFoundError(`Recurrence not found: ${recurrence.id}`);
     const existing = this.recurrences[index] as Recurrence;
@@ -35,6 +43,7 @@ export class InMemoryRecurrenceRepository implements RecurrenceRepository {
         `Expected revision ${expectedRevision} but found ${existing.revision}`,
       );
     }
+    this.events.writeNotes(notes);
     this.recurrences[index] = recurrence;
     this.dropUpcoming(recurrence.id, fromDay);
   }
@@ -46,6 +55,21 @@ export class InMemoryRecurrenceRepository implements RecurrenceRepository {
     this.dropUpcoming(recurrenceId, fromDay);
     this.recurrences = this.recurrences.filter((stored) => stored.id !== recurrenceId);
     this.exceptions.delete(recurrenceId);
+  }
+
+  async attachNotes(recurrenceId: string, actorUserId: string, noteIds: readonly string[], fromDay: string) {
+    const existing = await this.findById(recurrenceId);
+    if (!existing) throw new RecurrenceNotFoundError(`Recurrence not found: ${recurrenceId}`);
+    if (existing.userId !== actorUserId) throw new RecurrenceOwnershipError();
+
+    const added = noteIds.filter((noteId) => !existing.noteIds.includes(noteId));
+    this.recurrences = this.recurrences.map((stored) => (stored.id === recurrenceId ? existing.withNotes(added) : stored));
+
+    const inScope = (item: Event | Task) =>
+      item.occurrence?.recurrenceId === recurrenceId && !item.occurrence.detached && item.occurrence.occurrenceOn >= fromDay;
+    // `withSeriesNotes`, e nao `revise`: ligar a serie nao e uma edicao da ocorrencia, que seguiria "da serie".
+    this.events.events = this.events.events.map((event) => (inScope(event) ? event.withSeriesNotes(added) : event));
+    this.tasks = this.tasks.map((task) => (inScope(task) ? task.withSeriesNotes(added) : task));
   }
 
   async findById(recurrenceId: string) {

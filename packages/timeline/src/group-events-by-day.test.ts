@@ -5,9 +5,8 @@ import { groupEventsByDay } from "./group-events-by-day";
 function anEvent(overrides: Partial<TimelineEventCardDto> = {}): TimelineEventCardDto {
   return {
     id: "event-1",
-    primaryItemId: "item-1",
-    primaryItemType: "routine",
-    itemTypes: ["routine"],
+    kind: "routine",
+    noteTypes: [],
     missed: false,
     notifyOffsetsMinutes: [],
     name: "Bloco de trabalho",

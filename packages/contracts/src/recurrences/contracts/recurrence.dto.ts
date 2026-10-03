@@ -37,5 +37,7 @@ export type RecurrenceDto = RecurrenceRule & {
   id: string;
   target: RecurrenceTarget;
   template: Record<string, unknown>;
+  /** As notes de "todas as ocorrencias", na ordem. */
+  noteIds: string[];
   revision: number;
 };

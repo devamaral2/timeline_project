@@ -7,7 +7,7 @@ const MAX_CONTEXT_CHARS = 20_000;
 export const getDayContextSkill = defineAgentSkill({
   name: "get_day_context",
   progressLabel: "Consultando o dia",
-  description: "Busca todos os eventos de um dia e seus itens, pausas, tarefas e notas vinculadas, sem escrever SQL.",
+  description: "Busca todos os eventos de um dia, com pausas, tarefas e notas vinculadas (noteIds), sem escrever SQL.",
   instructions: [
     "get_day_context — informe o dia civil YYYY-MM-DD em America/Sao_Paulo.",
     "Se hasMore for true, chame novamente com page = nextPage até ler todas as páginas.",

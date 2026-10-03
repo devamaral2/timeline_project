@@ -5,12 +5,8 @@ import { afterAll, beforeAll, beforeEach, expect, test } from "vitest";
 import WebSocket from "ws";
 import type { AgentChatServerFrame } from "@repo/contracts";
 import { DomainExceptionFilter } from "../../../common/domain-exception.filter";
-import { InMemoryEventDatabase } from "../../../api-core/events/testing/in-memory-event-database";
-import { InMemoryEventRepository } from "../../../api-core/events/testing/in-memory-event.repository";
-import { InMemoryWorkoutCatalog } from "../../../api-core/events/testing/in-memory-workout.catalog";
+import { createEventsKit } from "../../../api-core/events/testing/in-memory-events-kit";
 import { StubMealParsingGateway } from "../../../api-core/events/testing/stub-meal-parsing.gateway";
-import { CreateEventUseCase } from "../../../api-core/events/create-event.usecase";
-import { InMemoryNoteRepository } from "../../../api-core/notes/testing/in-memory-note.repository";
 import { InMemoryTaskRepository } from "../../../api-core/tasks/testing/in-memory-task.repository";
 import { IssueAgentChatTicketController } from "../../../features/issue-agent-chat-ticket/issue-agent-chat-ticket.controller";
 import { InMemoryAgentChatTicketStore } from "../../../api-core/agent/testing/in-memory-agent-chat-ticket-store";
@@ -32,20 +28,16 @@ import { AgentChatServer } from "./agent-chat.server";
 const silent = { log() {}, error() {}, warn() {} };
 const tickets = new InMemoryAgentChatTicketStore();
 const gateway = new ScriptedAgentGateway([{ name: "save_note", args: { content: "Comprar pão" } }], "Anotei.");
-const notes = new InMemoryNoteRepository();
+const { noteRepository: notes, eventRepository: events, createEvent } = createEventsKit({
+  mealParsingGateway: new StubMealParsingGateway({ items: [], modelProvider: "stub", modelName: "stub" }),
+});
 
 function buildRunChatTurn(): RunChatTurnUseCase {
   return new RunChatTurnUseCase(buildRunAgent(), new InMemoryAgentConversationQuery());
 }
 
 function buildRunAgent(): RunAgentUseCase {
-  const events = new InMemoryEventRepository(new InMemoryEventDatabase());
   const tasks = new InMemoryTaskRepository();
-  const createEvent = new CreateEventUseCase(
-    events,
-    new StubMealParsingGateway({ items: [], modelProvider: "stub", modelName: "stub" }),
-    new InMemoryWorkoutCatalog(),
-  );
   return new RunAgentUseCase(
     gateway,
     new StubScopedSqlQuery(),

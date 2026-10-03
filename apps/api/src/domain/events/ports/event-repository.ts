@@ -1,3 +1,4 @@
+import type { NoteWrites } from "../../notes/types/note-writes";
 import type { Event } from "../entities/event.entity";
 
 export type DomainEvent = Event;
@@ -9,8 +10,9 @@ export type DomainEvent = Event;
  * "o que esta acontecendo agora".
  */
 export interface EventRepository {
-  save(event: Event): Promise<void>;
-  update(event: Event, actorUserId: string, expectedRevision: number): Promise<void>;
+  /** `notes`: as notes que nascem com o evento, gravadas antes e na mesma transacao dele. */
+  save(event: Event, notes?: NoteWrites): Promise<void>;
+  update(event: Event, actorUserId: string, expectedRevision: number, notes?: NoteWrites): Promise<void>;
   delete(eventId: string, actorUserId: string): Promise<void>;
   findById(eventId: string): Promise<Event | null>;
 }

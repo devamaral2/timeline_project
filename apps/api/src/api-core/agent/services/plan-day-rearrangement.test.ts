@@ -7,7 +7,7 @@ const at = (hour: number, minute = 0) => new Date(Date.UTC(2026, 8, 16, 3) + hou
 const target = { id: "work", startedAt: at(13), finishedAt: at(17) } as Event;
 const event = (id: string, name: string, start: number, end: number): DayContextEvent => ({
   id, name, started_at: at(start).toISOString(), finished_at: at(end).toISOString(),
-  recurrence_id: null, taskIds: [], items: [{ type: "routine", is_primary: true }],
+  recurrence_id: null, taskIds: [], kind: "routine",
 });
 
 test("shifts only the overlapping chain and preserves each duration", () => {
@@ -17,7 +17,7 @@ test("shifts only the overlapping chain and preserves each duration", () => {
     event("reading", "Ler", 20, 21),
   ]);
   expect(plan).toEqual({ kind: "ready", shifts: [{
-    id: "leisure", type: "routine", startedAt: at(17), finishedAt: at(18),
+    id: "leisure", kind: "routine", startedAt: at(17), finishedAt: at(18),
   }] });
 });
 

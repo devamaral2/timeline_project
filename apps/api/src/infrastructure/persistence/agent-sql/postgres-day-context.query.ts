@@ -11,7 +11,7 @@ const dayContextSchema = z.object({
     recurrence_id: z.string().nullable(), taskIds: z.array(z.string()),
   }).passthrough()),
   tasks: z.array(z.object({ id: z.string() }).passthrough()),
-  notes: z.array(z.object({ id: z.string(), event_id: z.string().nullable().optional(), task_id: z.string().nullable().optional() }).passthrough()),
+  notes: z.array(z.object({ id: z.string() }).passthrough()),
 });
 
 export class PostgresDayContextQuery implements DayContextQuery {

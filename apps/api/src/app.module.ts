@@ -20,6 +20,7 @@ import { CreateRecurrenceModule } from "./features/create-recurrence/create-recu
 import { GetRecurrenceModule } from "./features/get-recurrence/get-recurrence.module";
 import { UpdateRecurrenceModule } from "./features/update-recurrence/update-recurrence.controller";
 import { DeleteRecurrenceModule } from "./features/delete-recurrence/delete-recurrence.controller";
+import { AttachNotesToRecurrenceModule } from "./features/attach-notes-to-recurrence/attach-notes-to-recurrence.controller";
 import { RunAgentModule } from "./features/run-agent/run-agent.controller";
 import { IssueAgentChatTicketModule } from "./features/issue-agent-chat-ticket/issue-agent-chat-ticket.controller";
 import { ListAgentConversationsModule } from "./features/list-agent-conversations/list-agent-conversations.controller";
@@ -50,6 +51,7 @@ import { DeleteAgentConversationModule } from "./features/delete-agent-conversat
     GetRecurrenceModule,
     UpdateRecurrenceModule,
     DeleteRecurrenceModule,
+    AttachNotesToRecurrenceModule,
     RunAgentModule,
     IssueAgentChatTicketModule,
     ListAgentConversationsModule,

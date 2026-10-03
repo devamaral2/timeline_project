@@ -8,16 +8,12 @@ import {
   type SleepItem,
   type TrainingData,
 } from "../../domain";
-import type { AgentEntityItem, CreateEventInput } from "@repo/contracts";
+import type { AgentEntityItem, CreateEventInput, NoteDto } from "@repo/contracts";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
 import type { ParsedMealFoodItem } from "../events/gateways/meal-parsing.gateway";
-import { InMemoryEventDatabase } from "../events/testing/in-memory-event-database";
-import { InMemoryEventRepository } from "../events/testing/in-memory-event.repository";
-import { InMemoryWorkoutCatalog } from "../events/testing/in-memory-workout.catalog";
+import { createEventsKit } from "../events/testing/in-memory-events-kit";
 import { statusOfThrown } from "../events/testing/status-of";
 import { StubMealParsingGateway } from "../events/testing/stub-meal-parsing.gateway";
-import { CreateEventUseCase } from "../events/create-event.usecase";
-import { InMemoryNoteRepository } from "../notes/testing/in-memory-note.repository";
 import { InMemoryTaskRepository } from "../tasks/testing/in-memory-task.repository";
 import { AgentRunCancelledError, LlmUnavailableError } from "./errors/agent.errors";
 import type { AgentGateway } from "./gateways/agent.gateway";
@@ -42,16 +38,16 @@ const RICE: ParsedMealFoodItem = {
 function setup(
   options: { calls?: ScriptedToolCall[]; text?: string; stoppedByLimit?: boolean; gateway?: AgentGateway } = {},
 ) {
-  const events = new InMemoryEventRepository(new InMemoryEventDatabase());
+  const {
+    database,
+    eventRepository: events,
+    noteRepository: notes,
+    createEvent,
+  } = createEventsKit({
+    mealParsingGateway: new StubMealParsingGateway({ items: [RICE], modelProvider: "stub", modelName: "stub" }),
+    clock: () => NOW,
+  });
   const tasks = new InMemoryTaskRepository();
-  const notes = new InMemoryNoteRepository();
-  const createEvent = new CreateEventUseCase(
-    events,
-    new StubMealParsingGateway({ items: [RICE], modelProvider: "stub", modelName: "stub" }),
-    new InMemoryWorkoutCatalog(),
-    undefined,
-    () => NOW,
-  );
   const scripted = new ScriptedAgentGateway(options.calls, options.text, options.stoppedByLimit);
   const query = new StubScopedSqlQuery();
   const writer = new InMemoryEntityBatchWriter({ events, tasks, notes });
@@ -66,6 +62,12 @@ function setup(
     () => NOW,
   );
 
+  /** O `data` da note de um tipo, na ordem dos vinculos do evento. */
+  const noteDataOf = async (eventId: string, type: string): Promise<unknown> => {
+    const event = await events.findById(eventId);
+    return database.notesOf(event as never).find((note) => note.type === type)?.data;
+  };
+
   const seedEvent = async (input: CreateEventInput, userId = "user-1") => {
     const { eventId } = await createEvent.execute(input, { userId });
     return eventId;
@@ -76,16 +78,16 @@ function setup(
     return task;
   };
 
-  return { useCase, scripted, query, writer, events, tasks, notes, seedEvent, seedTask };
+  return { useCase, scripted, query, writer, events, tasks, notes, database, noteDataOf, seedEvent, seedTask };
 }
 
 function run(useCase: RunAgentUseCase, overrides: Partial<Parameters<RunAgentUseCase["execute"]>[0]> = {}, actor = owner) {
   return useCase.execute({ userId: "user-1", text: "pedido", ...overrides }, actor);
 }
 
-function dataOf(item: AgentEntityItem | undefined): unknown {
+function notesOf(item: AgentEntityItem | undefined): NoteDto[] {
   if (item?.kind !== "event") throw new Error("expected an event");
-  return item.items.find((eventItem) => eventItem.isPrimary)?.data;
+  return item.notes;
 }
 
 function idOf(result: unknown): string {
@@ -94,7 +96,7 @@ function idOf(result: unknown): string {
 
 describe("RunAgentUseCase — writes", () => {
   test("creates a training event for the target user and reports it", async () => {
-    const { useCase, events } = setup({
+    const { useCase, events, database } = setup({
       calls: [
         {
           name: "save_training_event",
@@ -107,34 +109,38 @@ describe("RunAgentUseCase — writes", () => {
     const response = await run(useCase);
 
     expect(response.agentResponse).toBe("Registrei a corrida.");
+    // A note de treino nasce com o evento e vem dentro dele: a resposta lista um registro so.
     expect(response.createdEntities).toHaveLength(1);
     const created = response.createdEntities[0];
     expect(created.kind).toBe("event");
     expect((await events.findById(created.id))?.userId).toBe("user-1");
-    expect((dataOf(created) as TrainingData).workouts[0].workoutName).toBe("Corrida");
+    expect(created).toMatchObject({ eventKind: "training" });
+    expect(created).not.toHaveProperty("items");
+    // O evento da resposta mostra a note de treino que nasceu com ele.
+    expect((notesOf(created)[0].data as TrainingData).workouts[0].workoutName).toBe("Corrida");
   });
 
   test("a sleep correction replaces the values of the existing sleep", async () => {
-    const { useCase, scripted, seedEvent, events } = setup();
-    const sleepId = await seedEvent({ items: [{ type: "sleep", data: { trackedSleepTime: 420, score: 70 } }] });
+    const { useCase, scripted, seedEvent, events, noteDataOf } = setup();
+    const sleepId = await seedEvent({ kind: "sleep", notes: [{ type: "sleep", data: { trackedSleepTime: 420, score: 70 } }] });
     scripted.respondWith([{ name: "save_sleep_event", args: { id: sleepId, trackedSleepTime: 240 } }]);
 
     const response = await run(useCase);
 
     expect(response.updatedEntities.map((item) => item.id)).toEqual([sleepId]);
     const stored = await events.findById(sleepId);
-    expect(stored?.items[0].data as SleepItem).toEqual({ trackedSleepTime: 240, score: 70 });
+    expect((await noteDataOf(sleepId, "sleep")) as SleepItem).toEqual({ trackedSleepTime: 240, score: 70 });
     expect(stored?.revision).toBe(2);
   });
 
   test("a meal update appends the parsed foods and recomputes the totals", async () => {
     const ctx = setup();
-    const mealId = await ctx.seedEvent({ items: [{ type: "meal", data: { inputText: "100g de arroz" } }] });
-    const { useCase, events } = setupWith(ctx, [{ name: "save_meal_event", args: { id: mealId, inputText: "mais 100g de arroz" } }]);
+    const mealId = await ctx.seedEvent({ kind: "meal", notes: [{ type: "meal", data: { inputText: "100g de arroz" } }] });
+    const { useCase, noteDataOf } = setupWith(ctx, [{ name: "save_meal_event", args: { id: mealId, inputText: "mais 100g de arroz" } }]);
 
     await run(useCase);
 
-    const meal = (await events.findById(mealId))?.items[0].data as MealItem;
+    const meal = (await noteDataOf(mealId, "meal")) as MealItem;
     expect(meal.foodItems).toHaveLength(2);
     expect(meal.totals.totalCaloriesKcal).toBe(260);
     expect(meal.description).toBe("100g de arroz; mais 100g de arroz");
@@ -143,9 +149,10 @@ describe("RunAgentUseCase — writes", () => {
   test("a training update keeps the previous workouts", async () => {
     const ctx = setup();
     const trainingId = await ctx.seedEvent({
-      items: [{ type: "training", data: { workouts: [{ workoutCode: "free", duration: 20, calories: 50 }] } }],
+      kind: "training",
+      notes: [{ type: "training", data: { workouts: [{ workoutCode: "free", duration: 20, calories: 50 }] } }],
     });
-    const { useCase, events } = setupWith(ctx, [
+    const { useCase, noteDataOf } = setupWith(ctx, [
       {
         name: "save_training_event",
         args: { id: trainingId, workouts: [{ type: "treadmill", duration: 30, calories: 200, pace: 6, distance: 5 }] },
@@ -154,7 +161,7 @@ describe("RunAgentUseCase — writes", () => {
 
     await run(useCase);
 
-    const training = (await events.findById(trainingId))?.items[0].data as TrainingData;
+    const training = (await noteDataOf(trainingId, "training")) as TrainingData;
     expect(training.workouts.map((workout) => workout.workoutCode)).toEqual(["free", "treadmill"]);
     expect(training.caloriesBurned).toBe(250);
   });
@@ -190,7 +197,7 @@ describe("RunAgentUseCase — writes", () => {
   test("never touches another user's records and reports them as not found", async () => {
     const ctx = setup();
     const foreignId = await ctx.seedEvent(
-      { items: [{ type: "sleep", data: { trackedSleepTime: 420, score: 0 } }] },
+      { kind: "sleep", notes: [{ type: "sleep", data: { trackedSleepTime: 420, score: 0 } }] },
       "user-2",
     );
     const foreignTask = await ctx.seedTask("user-2");
@@ -213,7 +220,7 @@ describe("RunAgentUseCase — writes", () => {
 
   test("reports the wrong tool for the event type back to the model", async () => {
     const ctx = setup();
-    const sleepId = await ctx.seedEvent({ items: [{ type: "sleep", data: { trackedSleepTime: 420, score: 0 } }] });
+    const sleepId = await ctx.seedEvent({ kind: "sleep", notes: [{ type: "sleep", data: { trackedSleepTime: 420, score: 0 } }] });
     const { useCase, scripted } = setupWith(ctx, [{ name: "save_meal_event", args: { id: sleepId, inputText: "arroz" } }]);
 
     await run(useCase);
@@ -239,33 +246,92 @@ describe("RunAgentUseCase — writes", () => {
     expect(await tasks.findById(task.id)).toBeNull();
   });
 
-  test("refuses to update something created in the same request", async () => {
-    const { useCase, scripted } = setup({
+  test("refuses to update an event or task created in the same request, but a note can still be refined", async () => {
+    const { useCase, scripted, notes } = setup({
       calls: [
         { name: "save_note", args: { content: "a" } },
         { name: "save_note", args: (results: unknown[]) => ({ id: idOf(results[0]), content: "b" }) },
+        { name: "save_task", args: { name: "Casa" } },
+        { name: "save_task", args: (results: unknown[]) => ({ id: idOf(results[2]), name: "Casa 2" }) },
       ],
     });
 
     const response = await run(useCase);
 
-    expect(scripted.results[1]).toMatchObject({ ok: false });
-    expect(response.createdEntities).toHaveLength(1);
+    // A nota criada neste pedido ainda esta so preparada: a segunda chamada a refina, e uma nota so e gravada.
+    expect(scripted.results[1]).toMatchObject({ ok: true });
+    expect(scripted.results[3]).toMatchObject({ ok: false });
+    expect(response.createdEntities.map((item) => item.kind)).toEqual(["task", "note"]);
+    const note = response.createdEntities.find((item) => item.kind === "note");
+    expect(note).toMatchObject({ type: "text", data: { body: "b" } });
+    expect(await notes.findById(note?.id as string)).not.toBeNull();
   });
 
-  test("attaches a note to an existing task and refuses an unknown one", async () => {
+  test("links a note to an existing task, in order, and refuses an unknown one", async () => {
     const ctx = setup();
     const task = await ctx.seedTask();
-    const { useCase, scripted, notes } = setupWith(ctx, [
+    const { useCase, scripted, notes, tasks } = setupWith(ctx, [
       { name: "save_note", args: { content: "Comprar vassoura", taskId: task.id } },
+      { name: "save_note", args: { content: "Comprar pá", taskId: task.id } },
       { name: "save_note", args: { content: "x", taskId: "01UNKNOWN" } },
     ]);
 
     const response = await run(useCase);
 
-    expect(scripted.results[1]).toEqual({ ok: false, error: "Não encontrei a tarefa 01UNKNOWN." });
-    const [created] = response.createdEntities;
-    expect(((await notes.findById(created.id)) as Note).taskId).toBe(task.id);
+    expect(scripted.results[2]).toEqual({ ok: false, error: "Não encontrei a tarefa 01UNKNOWN." });
+    const [first, second] = response.createdEntities.filter((item) => item.kind === "note");
+    expect(((await notes.findById(first.id)) as Note).data).toEqual({ body: "Comprar vassoura" });
+    // A nota nasceu solta e a tarefa e quem aponta para ela, na ordem pedida.
+    expect((await tasks.findById(task.id))?.noteLinks).toEqual([
+      { noteId: first.id, fromRecurrence: false },
+      { noteId: second.id, fromRecurrence: false },
+    ]);
+    expect(response.updatedEntities).toEqual([expect.objectContaining({ kind: "task", id: task.id, noteIds: [first.id, second.id] })]);
+  });
+
+  test("links an existing note to an event without editing the note", async () => {
+    const ctx = setup();
+    const eventId = await ctx.seedEvent({ name: "Reunião" });
+    const note = Note.create({ userId: "user-1", data: { body: "pauta" } });
+    await ctx.notes.save(note);
+    const { useCase, events, notes } = setupWith(ctx, [{ name: "save_note", args: { id: note.id, eventId } }]);
+
+    const response = await run(useCase);
+
+    expect((await events.findById(eventId))?.noteLinks).toEqual([{ noteId: note.id, fromRecurrence: false }]);
+    // Ligar nao e editar: a nota continua na revisao 1, e a resposta mostra o evento com ela dentro.
+    expect((await notes.findById(note.id))?.revision).toBe(1);
+    expect(response.updatedEntities.map((item) => item.kind)).toEqual(["event"]);
+    const updatedEvent = response.updatedEntities.find((item) => item.kind === "event");
+    expect(notesOf(updatedEvent).map((entry) => entry.id)).toEqual([note.id]);
+  });
+
+  test("links a new note to an event created in the same request", async () => {
+    const { useCase, events, database } = setup({
+      calls: [
+        { name: "save_routine_event", args: { name: "Reunião" } },
+        { name: "save_note", args: (results: unknown[]) => ({ content: "pauta", eventId: idOf(results[0]) }) },
+      ],
+    });
+
+    const response = await run(useCase);
+
+    const created = response.createdEntities.find((item) => item.kind === "event");
+    const stored = await events.findById(created?.id as string);
+    expect(stored?.noteLinks).toHaveLength(1);
+    expect(database.notes.map((note) => note.id)).toEqual(stored?.noteLinks.map((link) => link.noteId));
+  });
+
+  test("only text notes accept new content", async () => {
+    const ctx = setup();
+    const sleepId = await ctx.seedEvent({ kind: "sleep", notes: [{ type: "sleep", data: { trackedSleepTime: 1, score: 1 } }] });
+    const sleepNote = ctx.database.notes[0];
+    const { useCase, scripted } = setupWith(ctx, [{ name: "save_note", args: { id: sleepNote.id, content: "texto" } }]);
+
+    await run(useCase);
+
+    expect(scripted.results[0]).toEqual({ ok: false, error: `A nota ${sleepNote.id} é do tipo sleep: só notas de texto têm content.` });
+    expect(sleepId).toBeDefined();
   });
 
   test("returns a summary when the model ends without text", async () => {

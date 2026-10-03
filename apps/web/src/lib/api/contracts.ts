@@ -12,8 +12,16 @@ export type EventPriority = (typeof eventPriorities)[number];
 /** Numero livre de minutos antes do inicio — o usuario escolhe minutos ou dias na interface. */
 export type NotificationOffsetMinutes = number;
 
-export type KnownEventItemType = "routine" | "meal" | "sleep" | "training";
-export type RoutineData = Record<string, never>;
+/** A natureza do evento. Nao depende de ele ter uma note. */
+export type EventKind = "routine" | "meal" | "sleep" | "training";
+
+export const eventKinds: readonly EventKind[] = ["routine", "meal", "sleep", "training"];
+
+export type KnownNoteType = "text" | "meal" | "sleep" | "training";
+
+export interface TextNote {
+  body: string;
+}
 
 export interface FoodItemMacronutrients {
   carbohydratesGrams: number;
@@ -102,36 +110,55 @@ export interface TrainingInputData {
   workouts: WorkoutInput[];
 }
 
-export interface EventItemDtoOf<TType extends KnownEventItemType, TData> {
+export interface NoteDtoOf<TType extends KnownNoteType, TData> {
   id: string;
-  position: number;
+  name: string;
   type: TType;
   schemaVersion: number;
-  isPrimary: boolean;
   data: TData;
+  tags: string[];
+  revision: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export type EventItemDto =
-  | EventItemDtoOf<"routine", RoutineData>
-  | EventItemDtoOf<"meal", MealItem>
-  | EventItemDtoOf<"sleep", SleepItem>
-  | EventItemDtoOf<"training", TrainingData>;
+/** Uma note: `type` + `schemaVersion` dizem que forma o `data` tem. */
+export type NoteDto =
+  | NoteDtoOf<"text", TextNote>
+  | NoteDtoOf<"meal", MealItem>
+  | NoteDtoOf<"sleep", SleepItem>
+  | NoteDtoOf<"training", TrainingData>;
 
 export interface MealCreateInput {
   inputText: string;
 }
 
-export type CreateEventItemInput =
-  | { type: "routine"; isPrimary?: boolean; data?: Record<string, never> }
-  | { type: "meal"; isPrimary?: boolean; data: MealCreateInput }
-  | { type: "sleep"; isPrimary?: boolean; data?: Partial<SleepItem> }
-  | { type: "training"; isPrimary?: boolean; data?: TrainingInputData };
+interface NoteInputBase {
+  name?: string;
+  tags?: string[];
+}
 
-export type UpdateEventItemInput =
-  | { id?: string; type: "routine"; schemaVersion: number; isPrimary: boolean; data: RoutineData }
-  | { id?: string; type: "meal"; schemaVersion: number; isPrimary: boolean; data: MealItem }
-  | { id?: string; type: "sleep"; schemaVersion: number; isPrimary: boolean; data: SleepItem }
-  | { id?: string; type: "training"; schemaVersion: number; isPrimary: boolean; data: TrainingData };
+/** Uma note nova. `type` ausente e texto livre. */
+export type CreateNoteInput =
+  | (NoteInputBase & { type?: "text"; data: TextNote })
+  | (NoteInputBase & { type: "meal"; data: MealCreateInput })
+  | (NoteInputBase & { type: "sleep"; data?: Partial<SleepItem> })
+  | (NoteInputBase & { type: "training"; data?: TrainingInputData });
+
+export type NoteDataInput =
+  | { type: "text"; data: TextNote }
+  | { type: "meal"; data: MealItem }
+  | { type: "sleep"; data: SleepItem }
+  | { type: "training"; data: TrainingData };
+
+/**
+ * Uma entrada da lista de notes do evento ao editar: com `id` e sem `data`, a
+ * note so entra (ou continua) na lista; com `id` e `data`, tambem e editada; sem
+ * `id`, nasce uma note nova.
+ */
+export type UpdateEventNoteInput =
+  | (NoteInputBase & { id: string; type?: undefined; data?: undefined })
+  | (NoteInputBase & { id?: string; schemaVersion?: number } & NoteDataInput);
 
 export interface CreateEventInput {
   name?: string;
@@ -144,7 +171,11 @@ export interface CreateEventInput {
   startedAt?: string;
   /** ISO-8601. Ausente e um evento sem fim declarado. */
   finishedAt?: string;
-  items: CreateEventItemInput[];
+  /** A natureza do evento. Ausente e rotina. */
+  kind?: EventKind;
+  /** Notes novas, criadas junto com o evento. */
+  notes?: CreateNoteInput[];
+  noteIds?: string[];
   taskIds?: string[];
 }
 
@@ -195,15 +226,16 @@ export interface UpdateEventInput {
   priority?: EventPriority;
   notifyOffsetsMinutes?: NotificationOffsetMinutes[];
   interruptions?: InterruptionPatchInput[];
-  items?: UpdateEventItemInput[];
+  kind?: EventKind;
+  /** A lista completa de notes do evento, na ordem. */
+  notes?: UpdateEventNoteInput[];
   taskIds?: string[];
 }
 
 export interface TimelineEventCardDto {
   id: string;
-  primaryItemId: string;
-  primaryItemType: string;
-  itemTypes: string[];
+  kind: EventKind;
+  noteTypes: string[];
   missed: boolean;
   notifyOffsetsMinutes: NotificationOffsetMinutes[];
   name: string;
@@ -244,8 +276,8 @@ export interface EventDetailDto {
   notifyOffsetsMinutes: NotificationOffsetMinutes[];
   interruptions: EventDetailInterruptionDto[];
   revision: number;
-  primaryItemId: string;
-  items: EventItemDto[];
+  kind: EventKind;
+  notes: NoteDto[];
   taskIds?: string[];
 }
 

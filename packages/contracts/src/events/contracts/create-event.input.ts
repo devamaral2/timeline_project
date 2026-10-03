@@ -1,6 +1,7 @@
 import type { EventPriority } from "../types/event-priority";
 import type { NotificationOffsetMinutes } from "../../notifications/types/notification-offset-minutes";
-import type { CreateEventItemInput } from "./event-item.dto";
+import type { CreateNoteInput } from "../../notes/contracts/note.dto";
+import type { EventKind } from "../types/event-kind";
 
 export interface CreateEventInput {
   name?: string;
@@ -16,8 +17,13 @@ export interface CreateEventInput {
    * pode ser agora": a timeline registra passado, presente e futuro.
    */
   startedAt?: string;
-  /** Quando o evento termina, em ISO-8601. Ausente estima pela duracao tipica do item principal. */
+  /** Quando o evento termina, em ISO-8601. Ausente estima pela duracao tipica do `kind`. */
   finishedAt?: string;
-  items: CreateEventItemInput[];
+  /** A natureza do evento. Ausente e rotina. Nao exige nenhuma note. */
+  kind?: EventKind;
+  /** Notes novas, criadas junto com o evento, na ordem em que aparecem. */
+  notes?: CreateNoteInput[];
+  /** Notes que ja existem e passam a aparecer no evento, depois das novas. */
+  noteIds?: string[];
   taskIds?: string[];
 }

@@ -1,5 +1,5 @@
 import { ulid } from "ulid";
-import { EventValidationError } from "../errors/event.errors";
+import { NoteValidationError } from "../errors/note.errors";
 
 export type WorkoutCode = "treadmill" | "running" | "weightlifting" | "free";
 
@@ -83,23 +83,23 @@ function isNonEmptyString(value: unknown): value is string {
 
 function parseWorkoutSnapshot(data: unknown): WorkoutSnapshot {
   if (typeof data !== "object" || data === null) {
-    throw new EventValidationError("Workout must be an object");
+    throw new NoteValidationError("Workout must be an object");
   }
   const source = data as Record<string, unknown>;
 
   if (!KNOWN_WORKOUT_CODES.includes(source.workoutCode as WorkoutCode)) {
-    throw new EventValidationError("Workout requires a known workoutCode");
+    throw new NoteValidationError("Workout requires a known workoutCode");
   }
   const workoutCode = source.workoutCode as WorkoutCode;
 
   if (!isNonEmptyString(source.workoutName)) {
-    throw new EventValidationError("Workout requires a workoutName");
+    throw new NoteValidationError("Workout requires a workoutName");
   }
   if (!isFiniteNonNegative(source.calories)) {
-    throw new EventValidationError("Workout requires non-negative calories");
+    throw new NoteValidationError("Workout requires non-negative calories");
   }
   if (!isFiniteNonNegative(source.duration)) {
-    throw new EventValidationError("Workout requires non-negative duration");
+    throw new NoteValidationError("Workout requires non-negative duration");
   }
 
   const base = {
@@ -112,10 +112,10 @@ function parseWorkoutSnapshot(data: unknown): WorkoutSnapshot {
 
   if (CARDIO_WORKOUT_CODES.includes(workoutCode)) {
     if (!isFiniteNonNegative(source.pace)) {
-      throw new EventValidationError("Cardio workout requires non-negative pace");
+      throw new NoteValidationError("Cardio workout requires non-negative pace");
     }
     if (!isFiniteNonNegative(source.distance)) {
-      throw new EventValidationError("Cardio workout requires non-negative distance");
+      throw new NoteValidationError("Cardio workout requires non-negative distance");
     }
     return {
       ...base,
@@ -127,21 +127,21 @@ function parseWorkoutSnapshot(data: unknown): WorkoutSnapshot {
 
   if (workoutCode === "weightlifting") {
     if (!Array.isArray(source.sets)) {
-      throw new EventValidationError("Weightlifting workout requires an array of sets");
+      throw new NoteValidationError("Weightlifting workout requires an array of sets");
     }
     const sets = source.sets.map((set) => {
       if (typeof set !== "object" || set === null) {
-        throw new EventValidationError("Workout set must be an object");
+        throw new NoteValidationError("Workout set must be an object");
       }
       const setSource = set as Record<string, unknown>;
       if (!isNonEmptyString(setSource.exercise)) {
-        throw new EventValidationError("Workout set requires an exercise");
+        throw new NoteValidationError("Workout set requires an exercise");
       }
       if (!isFiniteNonNegative(setSource.repetitions)) {
-        throw new EventValidationError("Workout set requires non-negative repetitions");
+        throw new NoteValidationError("Workout set requires non-negative repetitions");
       }
       if (!isFiniteNonNegative(setSource.weight)) {
-        throw new EventValidationError("Workout set requires non-negative weight");
+        throw new NoteValidationError("Workout set requires non-negative weight");
       }
       return {
         id: isNonEmptyString(setSource.id) ? setSource.id : ulid(),
@@ -158,24 +158,24 @@ function parseWorkoutSnapshot(data: unknown): WorkoutSnapshot {
 
 export function parseTrainingData(data: unknown, schemaVersion: number): TrainingData {
   if (schemaVersion !== 1) {
-    throw new EventValidationError("Unsupported schema version");
+    throw new NoteValidationError("Unsupported schema version");
   }
   if (typeof data !== "object" || data === null) {
-    throw new EventValidationError("Training data must be an object");
+    throw new NoteValidationError("Training data must be an object");
   }
   const source = data as Record<string, unknown>;
 
   if (!Array.isArray(source.workouts)) {
-    throw new EventValidationError("Training data requires an array of workouts");
+    throw new NoteValidationError("Training data requires an array of workouts");
   }
   const workouts = source.workouts.map(parseWorkoutSnapshot);
 
   if (!isFiniteNonNegative(source.caloriesBurned)) {
-    throw new EventValidationError("Training data requires non-negative caloriesBurned");
+    throw new NoteValidationError("Training data requires non-negative caloriesBurned");
   }
   const expectedCaloriesBurned = workouts.reduce((total, workout) => total + workout.calories, 0);
   if (source.caloriesBurned !== expectedCaloriesBurned) {
-    throw new EventValidationError("caloriesBurned does not match the sum of workouts");
+    throw new NoteValidationError("caloriesBurned does not match the sum of workouts");
   }
 
   return { workouts, caloriesBurned: source.caloriesBurned };

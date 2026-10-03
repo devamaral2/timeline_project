@@ -7,9 +7,8 @@ import { EventCard } from "./EventCard";
 function anEvent(overrides: Partial<TimelineEventCardDto> = {}): TimelineEventCardDto {
   return {
     id: "event-1",
-    primaryItemId: "item-1",
-    primaryItemType: "training",
-    itemTypes: ["training"],
+    kind: "training",
+    noteTypes: [],
     missed: false,
     notifyOffsetsMinutes: [],
     name: "Academia",
@@ -38,16 +37,16 @@ test("names the card after the primary item, not after the event", () => {
   expect(screen.getByText("Treino")).toBeInTheDocument();
 });
 
-test("the secondary items do not change the color or the icon of the card", () => {
+test("the notes do not change the color or the icon of the card", () => {
   // O treino que tambem registrou a refeicao de depois continua sendo um
-  // treino: quem responde "o que e isto?" e o item principal, e so ele.
+  // treino: quem responde "o que e isto?" e o `kind` do evento, e so ele.
   const { container: onlyTraining } = render(
     <EventCard event={anEvent()} />,
   );
   const { container: alsoAMeal } = render(
     <EventCard
      
-      event={anEvent({ itemTypes: ["training", "meal"] })}
+      event={anEvent({ noteTypes: ["training", "meal"] })}
     />,
   );
 
@@ -59,11 +58,11 @@ test("the secondary items do not change the color or the icon of the card", () =
 });
 
 test("a type this frontend does not know yet falls back instead of breaking", () => {
-  // O registro de itens do backend cresce sem pedir licenca ao web.
+  // As naturezas de evento do backend crescem sem pedir licenca ao web.
   render(
     <EventCard
      
-      event={anEvent({ primaryItemType: "meditation", itemTypes: ["meditation"] })}
+      event={anEvent({ kind: "meditation" as never, noteTypes: ["meditation"] })}
     />,
   );
 

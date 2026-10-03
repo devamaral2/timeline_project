@@ -1,6 +1,6 @@
 import { ulid } from "ulid";
 import { EventValidationError } from "../../events/errors/event.errors";
-import type { FoodItem } from "../../events/items/food-item";
+import type { FoodItem } from "../../notes/types/food-item";
 import type { CatalogScope } from "../types/catalog-scope";
 
 export interface FoodMacronutrients {

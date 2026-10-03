@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import type { EventDetailDto } from "@/lib/api/contracts";
 import { authedFetch } from "@/lib/api/authed-fetch";
-import { primaryItemOf } from "./EventDetailsModal";
+import { primaryNoteOf } from "./EventDetailsModal";
 import { RoutineEditForm } from "./edit-event-forms/RoutineEditForm";
 import { SleepEditForm } from "./edit-event-forms/SleepEditForm";
 import { TrainingEditForm } from "./edit-event-forms/TrainingEditForm";
@@ -115,27 +115,28 @@ interface EditFormRouterProps {
 }
 
 /**
- * O formulario e escolhido pelo item principal — achado pelo `primaryItemId`,
- * nao pelo primeiro do array. Os itens secundarios seguem intactos no PATCH:
- * cada tela edita um item por vez.
+ * O formulario e escolhido pelo `kind` do evento, e a note que ele edita e a
+ * primeira daquele tipo. As outras notes seguem intactas no PATCH: cada tela
+ * edita uma por vez. Um evento sem a note do seu tipo ainda abre o formulario
+ * dele — salvar cria a note.
  */
 function EditForm({ event, onCancel, onClose, onUpdated }: EditFormRouterProps) {
-  const item = primaryItemOf(event);
+  const note = primaryNoteOf(event);
   const props = { event, onCancel, onClose, onUpdated };
 
-  switch (item?.type) {
+  switch (event.kind) {
     case "routine":
-      return <RoutineEditForm {...props} item={item} />;
+      return <RoutineEditForm {...props} />;
     case "sleep":
-      return <SleepEditForm {...props} item={item} />;
+      return <SleepEditForm {...props} note={note?.type === "sleep" ? note : undefined} />;
     case "training":
-      return <TrainingEditForm {...props} item={item} />;
+      return <TrainingEditForm {...props} note={note?.type === "training" ? note : undefined} />;
     case "meal":
-      return <MealEditForm {...props} item={item} />;
+      return <MealEditForm {...props} note={note?.type === "meal" ? note : undefined} />;
     default:
-      // Um tipo que este frontend ainda nao conhece — ou um evento cujo item
-      // principal sumiu. Editar as tripas dele as cegas estragaria o payload;
-      // melhor dizer que nao da e deixar o dado como esta.
+      // Uma natureza que este frontend ainda nao conhece. Editar as tripas dela
+      // as cegas estragaria o payload; melhor dizer que nao da e deixar o dado
+      // como esta.
       return (
         <p className="py-6 text-center text-sm text-muted-foreground">
           Este tipo de evento ainda não pode ser editado por aqui.

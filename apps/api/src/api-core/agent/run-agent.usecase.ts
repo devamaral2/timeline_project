@@ -63,9 +63,9 @@ export class RunAgentUseCase {
     private readonly repositories: {
       events: Pick<EventRepository, "findById">;
       tasks: Pick<TaskRepository, "findById">;
-      notes: Pick<NoteRepository, "findById">;
+      notes: Pick<NoteRepository, "findById" | "findByIds">;
     },
-    private readonly createEvent: Pick<CreateEventUseCase, "prepare">,
+    private readonly createEvent: Pick<CreateEventUseCase, "prepare" | "buildNote">,
     private readonly skills: readonly AgentSkill[] = AGENT_SKILLS,
     private readonly promptBuilder = new AgentPromptBuilderService(),
     private readonly clock: () => Date = () => new Date(),
@@ -128,7 +128,7 @@ export class RunAgentUseCase {
     // Parar no teto com mudancas preparadas e gravar metade do pedido.
     if (run.stoppedByLimit && session.hasChanges()) throw new AgentLimitReachedError();
 
-    const { created, updated, deleted } = session.result();
+    const { created, updated, deleted } = await session.result();
     const response: RunAgentResponse = {
       agentResponse: run.text.trim() || fallbackResponse(created.length, updated.length, deleted.length),
       createdEntities: created,
@@ -260,7 +260,7 @@ export class RunAgentUseCase {
             if (!loadedDays.has(shiftedStartDay) || !loadedDays.has(shiftedEndDay)) {
               throw new InvalidInputError(`Consulte ${shiftedStartDay}${shiftedEndDay === shiftedStartDay ? "" : ` e ${shiftedEndDay}`} antes de deslocar eventos.`);
             }
-            const shifted = await session.updateEvent(shift.id, shift.type, async (current) =>
+            const shifted = await session.updateEvent(shift.id, shift.kind, async (current) =>
               current.revise({ startedAt: shift.startedAt, finishedAt: shift.finishedAt }));
             if (!shifted.ok) throw new InvalidInputError(shifted.error);
           }
@@ -268,7 +268,7 @@ export class RunAgentUseCase {
       }
     }
 
-    const { created, updated, deleted } = session.result();
+    const { created, updated, deleted } = await session.result();
     const summary = describeChanges(created, updated, deleted);
     const response: RunAgentResponse = {
       agentResponse: [report, summary || reply].filter(Boolean).join("\n") || "Não encontrei nada para fazer com esse pedido.",
@@ -314,7 +314,7 @@ function stagedDayEvent(event: Event): DayContextEvent {
     finished_at: event.finishedAt?.toISOString() ?? null,
     recurrence_id: event.occurrence?.recurrenceId ?? null,
     taskIds: [...event.taskIds],
-    items: event.items.map((item) => ({ type: item.type, is_primary: item.isPrimary })),
+    kind: event.kind,
   };
 }
 

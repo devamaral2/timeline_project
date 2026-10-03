@@ -1,7 +1,13 @@
-import type { Event } from "../../domain";
-import type { EventDetailDto, EventItemDto, KnownEventItemType } from "@repo/contracts";
+import type { Event, Note } from "../../domain";
+import type { EventDetailDto } from "@repo/contracts";
+import { toNoteDto } from "./note.dto";
 
-export function toEventDetailDto(event: Event): EventDetailDto {
+/**
+ * `notes` sao as notes do evento em qualquer ordem: a ordem e a dos vinculos
+ * (`event.noteLinks`), e uma note apagada (soft delete) simplesmente nao aparece.
+ */
+export function toEventDetailDto(event: Event, notes: readonly Note[] = []): EventDetailDto {
+  const byId = new Map(notes.map((note) => [note.id, note]));
   return {
     id: event.id,
     name: event.name,
@@ -20,17 +26,10 @@ export function toEventDetailDto(event: Event): EventDetailDto {
       finishedAt: interruption.finishedAt.toISOString(),
     })),
     revision: event.revision,
-    primaryItemId: event.primaryItemId,
-    items: event.items.map(
-      (item) =>
-        ({
-          id: item.id,
-          position: item.position,
-          type: item.type as KnownEventItemType,
-          schemaVersion: item.schemaVersion,
-          isPrimary: item.isPrimary,
-          data: item.data,
-        }) as EventItemDto,
-    ),
+    kind: event.kind,
+    notes: event.noteLinks.flatMap((link) => {
+      const note = byId.get(link.noteId);
+      return note ? [toNoteDto(note)] : [];
+    }),
   };
 }

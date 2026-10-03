@@ -13,7 +13,7 @@ export function agendaEventFromCard(event: TimelineEventCardDto): ExampleEvent {
   return {
     id: event.id,
     name: event.name,
-    type: event.primaryItemType,
+    type: event.kind,
     time: `${formatTime(event.startedAt)} — ${event.finishedAt ? formatTime(event.finishedAt) : "em andamento"}`,
     minutes,
     duration: event.durationLabel,

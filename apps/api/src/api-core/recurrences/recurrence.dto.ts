@@ -7,6 +7,7 @@ export function toRecurrenceDto(recurrence: Recurrence): RecurrenceDto {
     id: recurrence.id,
     target: recurrence.target,
     template: structuredClone(recurrence.template) as Record<string, unknown>,
+    noteIds: [...recurrence.noteIds],
     revision: recurrence.revision,
   };
 }

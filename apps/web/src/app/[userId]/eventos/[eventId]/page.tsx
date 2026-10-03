@@ -5,7 +5,6 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DeleteEventDialog } from "@/components/events/DeleteEventDialog";
 import { EditEventModal } from "@/components/events/EditEventModal";
-import { primaryItemOf } from "@/components/events/EventDetailsModal";
 import { ICON_STROKE_WIDTH, notificationOffsetLabel, visualForItemType } from "@/components/events/event-visuals";
 import { authedFetch } from "@/lib/api/authed-fetch";
 import { useNow } from "@/lib/events/use-now";
@@ -132,8 +131,7 @@ export default function EventPage({ params }: { params: Promise<{ userId: string
     </main>
   );
 
-  const primary = primaryItemOf(event);
-  const type = primary?.type ?? "routine";
+  const type = event.kind;
   const visual = visualForItemType(type);
   const TypeIcon = visual.Icon;
   const position = now ? eventPositionOf(event, now) : null;
@@ -147,8 +145,7 @@ export default function EventPage({ params }: { params: Promise<{ userId: string
     position === "running" && now
       ? formatStopwatch(elapsedSecondsOf(event.startedAt, now))
       : agendaMinutes !== null ? formatMinutes(agendaMinutes) : null;
-  const noteItems = event.items.filter((item) => item.type === "meal" || item.type === "training" || item.type === "sleep");
-  const longDescription = event.description.length > DESCRIPTION_CLAMP || event.description.split("\n").length > 3;
+    const longDescription = event.description.length > DESCRIPTION_CLAMP || event.description.split("\n").length > 3;
   const linkedTasks = event.taskIds?.length ?? 0;
 
   return (
@@ -208,7 +205,7 @@ export default function EventPage({ params }: { params: Promise<{ userId: string
           </div>
         ) : null}
 
-        {noteItems.map((item) => <NoteCard key={item.id} item={item} eventName={event.name} dateTitle={dateLine} agendaMinutes={agendaMinutes} />)}
+        {event.notes.map((note) => <NoteCard key={note.id} note={note} eventName={event.name} dateTitle={dateLine} agendaMinutes={agendaMinutes} />)}
 
         {event.interruptions.length || linkedTasks ? (
           <section className={styles.collapsibles} aria-label="Mais detalhes">

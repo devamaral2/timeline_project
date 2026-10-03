@@ -1,11 +1,8 @@
 import { expect, test } from "vitest";
-import { Event, EventItem } from "../../domain";
-import { CreateEventUseCase } from "./create-event.usecase";
+import { Event, Note } from "../../domain";
 import { DeleteEventUseCase } from "../../features/delete-event/delete-event.usecase";
 import { UpdateEventUseCase } from "../../features/update-event/update-event.usecase";
-import { InMemoryEventDatabase } from "./testing/in-memory-event-database";
-import { InMemoryEventRepository } from "./testing/in-memory-event.repository";
-import { InMemoryWorkoutCatalog } from "./testing/in-memory-workout.catalog";
+import { createEventsKit } from "./testing/in-memory-events-kit";
 import { StubMealParsingGateway } from "./testing/stub-meal-parsing.gateway";
 import type { MealParsingGateway } from "./gateways/meal-parsing.gateway";
 
@@ -18,36 +15,34 @@ function openTrainingEvent(id: string, startedAt: Date) {
     startedAt,
     tags: [],
     interruptions: [],
-    items: [
-      EventItem.create({ position: 0, type: "training", schemaVersion: 1, isPrimary: true, data: { workouts: [], caloriesBurned: 0 } }),
-    ],
+    kind: "training",
   });
+}
+
+/** As notes do evento, na ordem dos vinculos. */
+function notesOf(kit: ReturnType<typeof createEventsKit>, event: Event | null | undefined): Note[] {
+  return event ? kit.database.notesOf(event) : [];
 }
 
 test("creates a training event with server-defined timestamps and name", async () => {
   const now = new Date("2026-08-17T12:00:00.000Z");
-  const database = new InMemoryEventDatabase();
-  const eventRepository = new InMemoryEventRepository(database);
-  const result = await new CreateEventUseCase(
-    eventRepository,
-    new StubMealParsingGateway(),
-    new InMemoryWorkoutCatalog(),
-    undefined,
-    () => now,
-  ).execute(
+  const kit = createEventsKit({ clock: () => now });
+  const result = await kit.createEvent.execute(
     {
       description: "Gym session",
       tags: ["Gym"],
-      items: [{ type: "training", data: { workouts: [{ workoutCode: "running", pace: 320, distance: 5, duration: 25, calories: 320 }] } }],
+      kind: "training",
+      notes: [{ type: "training", data: { workouts: [{ workoutCode: "running", pace: 320, distance: 5, duration: 25, calories: 320 }] } }],
     },
     { userId: "auth-user-1" },
   );
 
   expect(result.eventId).toMatch(/[0-9A-HJKMNP-TV-Z]{26}/);
-  const savedEvent = await eventRepository.findById(result.eventId);
+  const savedEvent = await kit.eventRepository.findById(result.eventId);
 
   expect(savedEvent?.userId).toBe("auth-user-1");
-  expect(savedEvent?.items[0].type).toBe("training");
+  expect(savedEvent?.kind).toBe("training");
+  expect(notesOf(kit, savedEvent).map((note) => note.type)).toEqual(["training"]);
   expect(savedEvent?.name).toBe("Treino");
   expect(savedEvent?.startedAt).toEqual(now);
   // Sem duracao informada, treino estima 1h30.
@@ -57,77 +52,126 @@ test("creates a training event with server-defined timestamps and name", async (
 });
 
 test("creates a sleep event with the fixed name and default optional data", async () => {
-  const database = new InMemoryEventDatabase();
-  const eventRepository = new InMemoryEventRepository(database);
-  const result = await new CreateEventUseCase(
-    eventRepository,
-    new StubMealParsingGateway(),
-    new InMemoryWorkoutCatalog(),
-  ).execute({ items: [{ type: "sleep" }] }, { userId: "auth-user-1" });
+  const kit = createEventsKit();
+  const result = await kit.createEvent.execute({ kind: "sleep", notes: [{ type: "sleep" }] }, { userId: "auth-user-1" });
 
-  const savedEvent = await eventRepository.findById(result.eventId);
+  const savedEvent = await kit.eventRepository.findById(result.eventId);
 
   expect(savedEvent?.name).toBe("Sono");
-  expect(savedEvent?.items[0]).toMatchObject({
+  expect(notesOf(kit, savedEvent)[0]).toMatchObject({
     type: "sleep",
     data: { trackedSleepTime: 0, score: 0 },
   });
 });
 
-test("keeps routine names supplied by the user", async () => {
-  const database = new InMemoryEventDatabase();
-  const eventRepository = new InMemoryEventRepository(database);
-  const result = await new CreateEventUseCase(
-    eventRepository,
-    new StubMealParsingGateway(),
-    new InMemoryWorkoutCatalog(),
-  ).execute({ name: "Planejamento", items: [{ type: "routine" }] }, { userId: "auth-user-1" });
+test("an event needs no note: the kind alone is enough", async () => {
+  const kit = createEventsKit();
+  const result = await kit.createEvent.execute({ kind: "sleep" }, { userId: "auth-user-1" });
 
-  expect((await eventRepository.findById(result.eventId))?.name).toBe("Planejamento");
+  const savedEvent = await kit.eventRepository.findById(result.eventId);
+
+  expect(savedEvent?.kind).toBe("sleep");
+  expect(savedEvent?.name).toBe("Sono");
+  expect(savedEvent?.noteLinks).toEqual([]);
+  expect(kit.database.notes).toEqual([]);
 });
 
-test("estimates finishedAt from the primary item type when none is informed", async () => {
-  const now = new Date("2026-08-17T12:00:00.000Z");
-  const database = new InMemoryEventDatabase();
-  const eventRepository = new InMemoryEventRepository(database);
-  const useCase = new CreateEventUseCase(
-    eventRepository,
-    new StubMealParsingGateway(),
-    new InMemoryWorkoutCatalog(),
-    undefined,
-    () => now,
+test("infers the kind from the first typed note when none is given", async () => {
+  const kit = createEventsKit();
+  const result = await kit.createEvent.execute({ notes: [{ type: "sleep" }] }, { userId: "auth-user-1" });
+
+  expect((await kit.eventRepository.findById(result.eventId))?.kind).toBe("sleep");
+});
+
+test("a note without a type is free text and a text note does not change the kind", async () => {
+  const kit = createEventsKit();
+  const result = await kit.createEvent.execute(
+    { name: "Planejamento", notes: [{ data: { body: "Pontos para a reunião" } }] },
+    { userId: "auth-user-1" },
   );
 
-  const meal = await useCase.execute({ items: [{ type: "meal", data: { inputText: "banana" } }] }, { userId: "auth-user-1" });
-  const sleep = await useCase.execute({ items: [{ type: "sleep" }] }, { userId: "auth-user-1" });
-  const routine = await useCase.execute({ name: "Planejamento", items: [{ type: "routine" }] }, { userId: "auth-user-1" });
+  const savedEvent = await kit.eventRepository.findById(result.eventId);
+  const [note] = notesOf(kit, savedEvent);
 
-  expect((await eventRepository.findById(meal.eventId))?.finishedAt).toEqual(new Date(now.getTime() + 20 * 60_000));
-  expect((await eventRepository.findById(sleep.eventId))?.finishedAt).toEqual(new Date(now.getTime() + 7 * 60 * 60_000));
-  expect((await eventRepository.findById(routine.eventId))?.finishedAt).toEqual(new Date(now.getTime() + 60 * 60_000));
+  expect(savedEvent?.kind).toBe("routine");
+  expect(note).toMatchObject({ type: "text", name: "Pontos para a reunião", data: { body: "Pontos para a reunião" } });
 });
 
-test("requires a name when the primary item is routine", async () => {
-  const database = new InMemoryEventDatabase();
-  const eventRepository = new InMemoryEventRepository(database);
-  const useCase = new CreateEventUseCase(eventRepository, new StubMealParsingGateway(), new InMemoryWorkoutCatalog());
+test("keeps the order of the given notes and links existing notes after the new ones", async () => {
+  const existing = Note.create({ userId: "auth-user-1", data: { body: "já existia" } });
+  const kit = createEventsKit({ notes: [existing] });
+  const result = await kit.createEvent.execute(
+    {
+      name: "Reunião",
+      notes: [{ data: { body: "primeira" } }, { data: { body: "segunda" } }],
+      noteIds: [existing.id],
+    },
+    { userId: "auth-user-1" },
+  );
+
+  const savedEvent = await kit.eventRepository.findById(result.eventId);
+
+  expect(notesOf(kit, savedEvent).map((note) => (note.data as { body: string }).body)).toEqual([
+    "primeira",
+    "segunda",
+    "já existia",
+  ]);
+  expect(savedEvent?.noteLinks.every((link) => link.fromRecurrence === false)).toBe(true);
+});
+
+test("refuses to link a note that does not exist or belongs to someone else", async () => {
+  const foreign = Note.create({ userId: "auth-user-2", data: { body: "de outro" } });
+  const kit = createEventsKit({ notes: [foreign] });
 
   await expect(
-    useCase.execute({ items: [{ type: "routine" }] }, { userId: "auth-user-1" }),
-  ).rejects.toThrow("Event requires a name");
+    kit.createEvent.execute({ name: "Reunião", noteIds: ["01HZZZZZZZZZZZZZZZZZZZZZZZ"] }, { userId: "auth-user-1" }),
+  ).rejects.toThrow("Note not found");
+  await expect(
+    kit.createEvent.execute({ name: "Reunião", noteIds: [foreign.id] }, { userId: "auth-user-1" }),
+  ).rejects.toThrow("Only the note owner can modify it");
+  expect(kit.database.events).toEqual([]);
+});
+
+test("keeps routine names supplied by the user", async () => {
+  const kit = createEventsKit();
+  const result = await kit.createEvent.execute({ name: "Planejamento" }, { userId: "auth-user-1" });
+
+  expect((await kit.eventRepository.findById(result.eventId))?.name).toBe("Planejamento");
+});
+
+test("estimates finishedAt from the kind when none is informed", async () => {
+  const now = new Date("2026-08-17T12:00:00.000Z");
+  const kit = createEventsKit({ clock: () => now });
+
+  const meal = await kit.createEvent.execute({ notes: [{ type: "meal", data: { inputText: "banana" } }] }, { userId: "auth-user-1" });
+  const sleep = await kit.createEvent.execute({ kind: "sleep", notes: [{ type: "sleep" }] }, { userId: "auth-user-1" });
+  const routine = await kit.createEvent.execute({ name: "Planejamento" }, { userId: "auth-user-1" });
+
+  expect((await kit.eventRepository.findById(meal.eventId))?.finishedAt).toEqual(new Date(now.getTime() + 20 * 60_000));
+  expect((await kit.eventRepository.findById(sleep.eventId))?.finishedAt).toEqual(new Date(now.getTime() + 7 * 60 * 60_000));
+  expect((await kit.eventRepository.findById(routine.eventId))?.finishedAt).toEqual(new Date(now.getTime() + 60 * 60_000));
+});
+
+test("requires a name when the event is a routine", async () => {
+  const kit = createEventsKit();
+
+  await expect(kit.createEvent.execute({}, { userId: "auth-user-1" })).rejects.toThrow("Event requires a name");
+});
+
+test("rejects an unknown kind", async () => {
+  const kit = createEventsKit();
+
+  await expect(
+    kit.createEvent.execute({ name: "x", kind: "party" as never }, { userId: "auth-user-1" }),
+  ).rejects.toThrow("Unknown event kind");
 });
 
 test("leaves an earlier event alone when creating a new one", async () => {
   const earlierEvent = openTrainingEvent("01K2TESTOPENEVENT1234567890", new Date("2026-08-17T08:00:00-03:00"));
-  const database = new InMemoryEventDatabase([earlierEvent]);
-  const eventRepository = new InMemoryEventRepository(database);
-  const useCase = new CreateEventUseCase(eventRepository, new StubMealParsingGateway(), new InMemoryWorkoutCatalog());
+  const kit = createEventsKit({ events: [earlierEvent] });
 
-  const result = await useCase.execute(
-    { name: "Planejamento", items: [{ type: "routine" }] },
-    { userId: "auth-user-1" },
-  );
-  const untouched = await eventRepository.findById(earlierEvent.id);
+  const result = await kit.createEvent.execute({ name: "Planejamento" }, { userId: "auth-user-1" });
+  const untouched = await kit.eventRepository.findById(earlierEvent.id);
 
   // Criar um evento nao mexe em outro: dois eventos podem se sobrepor.
   expect(untouched?.finishedAt).toEqual(earlierEvent.finishedAt);
@@ -136,65 +180,55 @@ test("leaves an earlier event alone when creating a new one", async () => {
 });
 
 test("starts the event when the input says, in the past or in the future", async () => {
-  const database = new InMemoryEventDatabase();
-  const eventRepository = new InMemoryEventRepository(database);
-  const useCase = new CreateEventUseCase(eventRepository, new StubMealParsingGateway(), new InMemoryWorkoutCatalog());
+  const kit = createEventsKit();
 
-  const { eventId } = await useCase.execute(
+  const { eventId } = await kit.createEvent.execute(
     {
       name: "Dentista",
       startedAt: "2099-03-04T13:00:00.000Z",
       finishedAt: "2099-03-04T14:00:00.000Z",
-      items: [{ type: "routine" }],
     },
     { userId: "auth-user-1" },
   );
 
-  const stored = await eventRepository.findById(eventId);
+  const stored = await kit.eventRepository.findById(eventId);
   expect(stored?.startedAt.toISOString()).toBe("2099-03-04T13:00:00.000Z");
   expect(stored?.finishedAt?.toISOString()).toBe("2099-03-04T14:00:00.000Z");
 });
 
 test("refuses an unparseable startedAt", async () => {
-  const database = new InMemoryEventDatabase();
-  const eventRepository = new InMemoryEventRepository(database);
-  const useCase = new CreateEventUseCase(eventRepository, new StubMealParsingGateway(), new InMemoryWorkoutCatalog());
+  const kit = createEventsKit();
 
   await expect(
-    useCase.execute(
-      { name: "Dentista", startedAt: "amanha", items: [{ type: "routine" }] },
-      { userId: "auth-user-1" },
-    ),
+    kit.createEvent.execute({ name: "Dentista", startedAt: "amanha" }, { userId: "auth-user-1" }),
   ).rejects.toThrow("Invalid date");
 });
 
-test("keeps the previous event untouched when meal parsing fails", async () => {
+test("keeps the previous event untouched and saves no note when meal parsing fails", async () => {
   const existingEvent = openTrainingEvent("01K2TESTOPENFAILURE12345678", new Date("2026-08-17T08:00:00-03:00"));
-  const database = new InMemoryEventDatabase([existingEvent]);
-  const eventRepository = new InMemoryEventRepository(database);
   const failingGateway: MealParsingGateway = {
     parseMeal: async () => {
       throw new Error("meal parsing failed");
     },
   };
-  const useCase = new CreateEventUseCase(eventRepository, failingGateway, new InMemoryWorkoutCatalog());
+  const kit = createEventsKit({ events: [existingEvent], mealParsingGateway: failingGateway });
 
   await expect(
-    useCase.execute({ items: [{ type: "meal", data: { inputText: "banana" } }] }, { userId: "auth-user-1" }),
+    kit.createEvent.execute({ notes: [{ type: "meal", data: { inputText: "banana" } }] }, { userId: "auth-user-1" }),
   ).rejects.toThrow("meal parsing failed");
 
-  await expect(eventRepository.findById(existingEvent.id)).resolves.toMatchObject({
+  await expect(kit.eventRepository.findById(existingEvent.id)).resolves.toMatchObject({
     finishedAt: existingEvent.finishedAt,
   });
+  expect(kit.database.notes).toEqual([]);
 });
 
 test("prevents a different user from updating an existing event", async () => {
   const existingEvent = openTrainingEvent("01K2R1J5M8S0Y2Z7ABCD123456", new Date("2026-08-16T18:00:00-03:00"));
-  const database = new InMemoryEventDatabase([existingEvent]);
-  const eventRepository = new InMemoryEventRepository(database);
+  const kit = createEventsKit({ events: [existingEvent] });
 
   await expect(
-    new UpdateEventUseCase(eventRepository, new InMemoryWorkoutCatalog()).execute(
+    new UpdateEventUseCase(kit.eventRepository, kit.noteRepository, kit.noteBuilder).execute(
       { eventId: existingEvent.id, expectedRevision: 1 },
       { userId: "auth-user-2" },
     ),
@@ -203,24 +237,21 @@ test("prevents a different user from updating an existing event", async () => {
 
 test("deletes an event when the authenticated user is the owner", async () => {
   const existingEvent = openTrainingEvent("01K2R1J5M8S0Y2Z7ABCD123457", new Date("2026-08-16T06:00:00-03:00"));
-  const database = new InMemoryEventDatabase([existingEvent]);
-  const eventRepository = new InMemoryEventRepository(database);
+  const kit = createEventsKit({ events: [existingEvent] });
 
-  await new DeleteEventUseCase(eventRepository).execute(
+  await new DeleteEventUseCase(kit.eventRepository).execute(
     { eventId: existingEvent.id },
     { userId: "auth-user-1" },
   );
 
-  await expect(eventRepository.findById(existingEvent.id)).resolves.toBeNull();
+  await expect(kit.eventRepository.findById(existingEvent.id)).resolves.toBeNull();
 });
 
 test("creates a meal event from parsed AI items and calculated totals", async () => {
   const now = new Date("2026-08-17T12:00:00.000Z");
-  const database = new InMemoryEventDatabase();
-  const eventRepository = new InMemoryEventRepository(database);
-  const useCase = new CreateEventUseCase(
-    eventRepository,
-    new StubMealParsingGateway({
+  const kit = createEventsKit({
+    clock: () => now,
+    mealParsingGateway: new StubMealParsingGateway({
       items: [
         {
           food: "Banana prata",
@@ -263,26 +294,24 @@ test("creates a meal event from parsed AI items and calculated totals", async ()
       modelProvider: "openrouter",
       modelName: "test-model",
     }),
-    new InMemoryWorkoutCatalog(),
-    undefined,
-    () => now,
-  );
+  });
 
-  const result = await useCase.execute(
+  const result = await kit.createEvent.execute(
     {
       description: "Banana, iogurte e morango",
       tags: ["Breakfast"],
-      items: [{ type: "meal", data: { inputText: "1 banana. 2 colheres de iogurte natural e 5 morangos" } }],
+      notes: [{ type: "meal", data: { inputText: "1 banana. 2 colheres de iogurte natural e 5 morangos" } }],
     },
     { userId: "auth-user-1" },
   );
 
   expect(result.eventId).toBeDefined();
-  const savedEvent = await eventRepository.findById(result.eventId);
-  const mealItem = savedEvent?.items[0];
+  const savedEvent = await kit.eventRepository.findById(result.eventId);
+  const [mealNote] = notesOf(kit, savedEvent);
 
-  expect(mealItem?.type).toBe("meal");
-  expect(mealItem?.data).toMatchObject({
+  expect(savedEvent?.kind).toBe("meal");
+  expect(mealNote?.type).toBe("meal");
+  expect(mealNote?.data).toMatchObject({
     description: "1 banana. 2 colheres de iogurte natural e 5 morangos",
     totals: {
       totalCaloriesKcal: 134,
@@ -294,9 +323,9 @@ test("creates a meal event from parsed AI items and calculated totals", async ()
   });
 
   expect(savedEvent?.startedAt).toEqual(now);
-  expect(mealItem).toBeDefined();
-  if (!mealItem) return;
-  const foodItems = (mealItem.data as { foodItems: Array<{ id: string; micronutrients: Record<string, number> }> }).foodItems;
+  expect(mealNote).toBeDefined();
+  if (!mealNote) return;
+  const foodItems = (mealNote.data as { foodItems: Array<{ id: string; micronutrients: Record<string, number> }> }).foodItems;
   expect(foodItems[0].id).toMatch(/[0-9A-HJKMNP-TV-Z]{26}/);
   expect(foodItems[1].id).toMatch(/[0-9A-HJKMNP-TV-Z]{26}/);
   expect(foodItems[0].micronutrients).toMatchObject({ potassiumMg: 358, magnesiumMg: 27, sodiumMg: 1 });

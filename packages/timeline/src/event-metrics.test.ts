@@ -14,9 +14,8 @@ import {
 function event(startedAt: string, finishedAt: string | null): TimelineEventCardDto {
   return {
     id: `${startedAt}-${finishedAt}`,
-    primaryItemId: `${startedAt}-item`,
-    primaryItemType: "routine",
-    itemTypes: ["routine"],
+    kind: "routine",
+    noteTypes: [],
     missed: false,
     notifyOffsetsMinutes: [],
     name: "evento",

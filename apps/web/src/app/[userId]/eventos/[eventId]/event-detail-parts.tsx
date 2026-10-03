@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { ICON_STROKE_WIDTH } from "@/components/events/event-visuals";
-import type { EventItemDto, MealItem, SleepItem, TrainingData, WorkoutSnapshot } from "@/lib/api/contracts";
+import type { NoteDto, MealItem, SleepItem, TrainingData, WorkoutSnapshot } from "@/lib/api/contracts";
 import type { EventPosition } from "@repo/timeline";
 import { formatDecimal, formatMinutes, formatPace, groupSetsByExercise, pluralize } from "./event-detail-format";
 import styles from "./event-details.module.css";
@@ -105,16 +105,17 @@ function BigNumber({ label, children, icon: iconNode, tone }: { label: string; c
   );
 }
 
-/** O cartão de nota anexado: número principal, uma linha, detalhes. Rotina não tem. */
-export function NoteCard({ item, eventName, dateTitle, agendaMinutes }: {
-  item: EventItemDto; eventName: string; dateTitle: string; agendaMinutes: number | null;
+/** O cartão de nota anexada: número principal, uma linha, detalhes. */
+export function NoteCard({ note, eventName, dateTitle, agendaMinutes }: {
+  note: NoteDto; eventName: string; dateTitle: string; agendaMinutes: number | null;
 }) {
   const [open, setOpen] = useState(true);
   let title: string;
   let body: ReactNode;
-  if (item.type === "meal") { title = item.data.name || eventName; body = <MealNote data={item.data} />; }
-  else if (item.type === "training") { title = eventName; body = <TrainingNote data={item.data} />; }
-  else if (item.type === "sleep") { title = dateTitle; body = <SleepNote data={item.data} agendaMinutes={agendaMinutes} />; }
+  if (note.type === "meal") { title = note.data.name || eventName; body = <MealNote data={note.data} />; }
+  else if (note.type === "training") { title = eventName; body = <TrainingNote data={note.data} />; }
+  else if (note.type === "sleep") { title = dateTitle; body = <SleepNote data={note.data} agendaMinutes={agendaMinutes} />; }
+  else if (note.type === "text") { title = note.name; body = <TextNote body={note.data.body} />; }
   else return null;
   const Chevron = open ? ChevronUp : ChevronDown;
   return (
@@ -131,6 +132,14 @@ export function NoteCard({ item, eventName, dateTitle, agendaMinutes }: {
         {open ? body : null}
       </article>
     </section>
+  );
+}
+
+function TextNote({ body }: { body: string }) {
+  return (
+    <div className={styles.noteBody}>
+      <p className={styles.noteText}>{body}</p>
+    </div>
   );
 }
 

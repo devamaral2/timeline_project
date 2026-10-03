@@ -1,7 +1,8 @@
 import { Body, Controller, HttpCode, HttpStatus, Inject, Module, Param, Patch, UseGuards } from "@nestjs/common";
 import type { UpdateEventInput } from "@repo/contracts";
-import { EVENT_REPOSITORY, WORKOUT_CATALOG } from "../../infrastructure/persistence";
-import type { EventRepository, WorkoutCatalog } from "../../domain/ports";
+import { EVENT_REPOSITORY, NOTE_REPOSITORY } from "../../infrastructure/persistence";
+import type { EventRepository, NoteRepository } from "../../domain/ports";
+import { NoteBuilder } from "../../api-core/notes/services/note-builder.service";
 import { ApiCoreModule } from "../../api-core/api-core.module";
 import { assertEventMarks, assertEventWindow, assertExpectedRevision } from "../../api-core/http-input-validation";
 import { CurrentUser } from "../../http/request-identity/current-user.decorator";
@@ -33,8 +34,9 @@ export class UpdateEventController {
   controllers: [UpdateEventController],
   providers: [{
     provide: UpdateEventUseCase,
-    inject: [EVENT_REPOSITORY, WORKOUT_CATALOG],
-    useFactory: (events: EventRepository, catalog: WorkoutCatalog) => new UpdateEventUseCase(events, catalog),
+    inject: [EVENT_REPOSITORY, NOTE_REPOSITORY, NoteBuilder],
+    useFactory: (events: EventRepository, notes: NoteRepository, builder: NoteBuilder) =>
+      new UpdateEventUseCase(events, notes, builder),
   }],
 })
 export class UpdateEventModule {}

@@ -1,10 +1,10 @@
 import { expect, test } from "vitest";
-import { parseRoutineData } from "./routine-data";
+import { parseTextNote } from "./text-note";
 import { parseMealItem } from "./meal-item";
 import { parseSleepItem } from "./sleep-item";
 import { parseTrainingData } from "./training-data";
-import { EventItemRegistry, defaultEventItemRegistry } from "./event-item-registry";
-import { EventValidationError } from "../errors/event.errors";
+import { NoteTypeRegistry, defaultNoteTypeRegistry } from "./note-type-registry";
+import { NoteValidationError } from "../errors/note.errors";
 
 const validMeal = {
   name: "Almoço",
@@ -47,9 +47,10 @@ const validTraining = {
   caloriesBurned: 300,
 };
 
-test("parses the four known item payloads", () => {
-  expect(parseRoutineData({}, 1)).toEqual({});
-  expect(() => parseRoutineData({ extra: true }, 1)).toThrow();
+test("parses the four known note payloads", () => {
+  expect(parseTextNote({ body: "oi" }, 1)).toEqual({ body: "oi" });
+  expect(() => parseTextNote({ body: " " }, 1)).toThrow();
+  expect(() => parseTextNote({}, 1)).toThrow();
 
   expect(parseMealItem(validMeal, 1).foodItems[0].micronutrients).toEqual({
     ironMilligrams: 2.1,
@@ -68,20 +69,19 @@ test("parses the four known item payloads", () => {
 });
 
 test("rejects an unsupported schema version", () => {
-  expect(() => defaultEventItemRegistry.parse("meal", validMeal, 2)).toThrow(
+  expect(() => defaultNoteTypeRegistry.parse("meal", validMeal, 2)).toThrow(
     "Unsupported schema version",
   );
 });
 
 test("upgrades a payload to the current schema version through a custom definition", () => {
-  const versionedTestRegistry = new EventItemRegistry([
+  const versionedTestRegistry = new NoteTypeRegistry([
     {
       type: "test-note",
       currentSchemaVersion: 2,
-      incompatibleWith: [],
       parse(data, schemaVersion) {
         if (schemaVersion !== 1 && schemaVersion !== 2) {
-          throw new EventValidationError("Unsupported schema version");
+          throw new NoteValidationError("Unsupported schema version");
         }
         const source = data as { text: string; importance?: string };
         return {

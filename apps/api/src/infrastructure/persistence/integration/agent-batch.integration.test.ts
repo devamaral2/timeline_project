@@ -2,7 +2,6 @@ import { afterAll, beforeEach, describe, expect, test } from "vitest";
 import {
   EntityBatchConflictError,
   Event,
-  EventItem,
   Note,
   Task,
 } from "../../../domain";
@@ -37,7 +36,7 @@ describe("PostgresEntityBatchWriter", () => {
     if (ctx) await ctx.stop();
   });
 
-  function newEvent(userId = "user-1") {
+  function newEvent(userId = "user-1", noteLinks: Event["noteLinks"] = []) {
     return Event.create({
       userId,
       name: "Dormir",
@@ -45,17 +44,12 @@ describe("PostgresEntityBatchWriter", () => {
       startedAt: new Date("2026-09-15T02:00:00.000Z"),
       tags: [],
       interruptions: [],
-      items: [
-        EventItem.create({
-          position: 0,
-          type: "sleep",
-          schemaVersion: 1,
-          isPrimary: true,
-          data: { trackedSleepTime: 420, score: 0 },
-        }),
-      ],
+      kind: "sleep",
+      noteLinks: [...noteLinks],
     });
   }
+
+  const text = (body: string) => ({ body });
 
   function newTask(overrides: Partial<Parameters<typeof Task.create>[0]> = {}) {
     return Task.create({ userId: "user-1", name: "Casa", description: "", tags: [], ...overrides });
@@ -77,8 +71,12 @@ describe("PostgresEntityBatchWriter", () => {
     await tasks.save(oldTask);
 
     const parent = newTask();
-    const subtask = newTask({ name: "Varrer a casa", parentTaskId: parent.id });
-    const note = Note.create({ userId: "user-1", content: "Usar vassoura nova", taskId: subtask.id });
+    const note = Note.create({ userId: "user-1", data: text("Usar vassoura nova") });
+    const subtask = newTask({
+      name: "Varrer a casa",
+      parentTaskId: parent.id,
+      noteLinks: [{ noteId: note.id, fromRecurrence: false }],
+    });
 
     await writer.commit(
       batch({
@@ -96,15 +94,69 @@ describe("PostgresEntityBatchWriter", () => {
     expect((await tasks.findById(subtask.id))?.parentTaskId).toBe(parent.id);
     expect(await tasks.findById(oldTask.id)).toBeNull();
     expect((await events.findById(sleep.id))?.name).toBe("Dormi pouco");
-    expect((await notes.findById(note.id))?.taskId).toBe(subtask.id);
+    // A nota entrou no mesmo commit que a tarefa que aponta para ela.
+    expect((await notes.findById(note.id))?.data).toEqual(text("Usar vassoura nova"));
+    expect((await tasks.findById(subtask.id))?.noteLinks).toEqual([{ noteId: note.id, fromRecurrence: false }]);
+  });
+
+  test("a note created in the batch can be linked to an event created in the same batch", async () => {
+    const note = Note.create({ userId: "user-1", type: "sleep", data: { trackedSleepTime: 400, score: 70 } });
+    const event = newEvent("user-1", [{ noteId: note.id, fromRecurrence: false }]);
+
+    await writer.commit(batch({ events: [{ op: "create", entity: event }], notes: [{ op: "create", entity: note }] }));
+
+    expect((await events.findById(event.id))?.noteLinks).toEqual([{ noteId: note.id, fromRecurrence: false }]);
+  });
+
+  test("an existing note can be linked to an event, and it is not changed", async () => {
+    const note = Note.create({ userId: "user-1", data: text("solta") });
+    await notes.save(note);
+    const event = newEvent();
+    await events.save(event);
+
+    await writer.commit(
+      batch({
+        events: [
+          {
+            op: "update",
+            entity: event.revise({ noteLinks: [{ noteId: note.id, fromRecurrence: false }] }),
+            expectedRevision: event.revision,
+          },
+        ],
+      }),
+    );
+
+    expect((await events.findById(event.id))?.noteLinks).toEqual([{ noteId: note.id, fromRecurrence: false }]);
+    expect((await notes.findById(note.id))?.revision).toBe(1);
+  });
+
+  test("refuses to link a note of another user, and nothing is written", async () => {
+    const foreign = Note.create({ userId: "user-2", data: text("de outro") });
+    await notes.save(foreign);
+    const created = newTask({ noteLinks: [{ noteId: foreign.id, fromRecurrence: false }] });
+
+    await expect(writer.commit(batch({ tasks: [{ op: "create", entity: created }] }))).rejects.toThrow(/notes referenciados/);
+    expect(await tasks.findById(created.id)).toBeNull();
+  });
+
+  test("deleting an event in a batch leaves its notes alone", async () => {
+    const note = Note.create({ userId: "user-1", data: text("fica") });
+    await notes.save(note);
+    const event = newEvent("user-1", [{ noteId: note.id, fromRecurrence: false }]);
+    await events.save(event);
+
+    await writer.commit(batch({ events: [{ op: "delete", id: event.id, expectedRevision: event.revision }] }));
+
+    expect(await events.findById(event.id)).toBeNull();
+    expect((await notes.findById(note.id))?.data).toEqual(text("fica"));
   });
 
   test("a failure after earlier writes rolls back everything", async () => {
-    const existing = Note.create({ userId: "user-1", content: "já existe" });
+    const existing = Note.create({ userId: "user-1", data: text("já existe") });
     await notes.save(existing);
     const created = newTask();
     // Mesmo id: a insercao da nota falha na PK depois que a tarefa ja entrou.
-    const duplicate = Note.create({ id: existing.id, userId: "user-1", content: "de novo" });
+    const duplicate = Note.create({ id: existing.id, userId: "user-1", data: text("de novo") });
 
     await expect(
       writer.commit(
@@ -116,7 +168,7 @@ describe("PostgresEntityBatchWriter", () => {
     ).rejects.toThrow();
 
     expect(await tasks.findById(created.id)).toBeNull();
-    expect((await notes.findById(existing.id))?.content).toBe("já existe");
+    expect((await notes.findById(existing.id))?.data).toEqual(text("já existe"));
   });
 
   test("a target owned by another user is a conflict and nothing is written", async () => {
@@ -170,7 +222,7 @@ describe("PostgresEntityBatchWriter", () => {
     await tasks.save(parent);
     const child = newTask({ parentTaskId: parent.id });
     await tasks.save(child);
-    const note = Note.create({ userId: "user-1", content: "x", taskId: child.id });
+    const note = Note.create({ userId: "user-1", data: text("x") });
     await notes.save(note);
 
     await writer.commit(

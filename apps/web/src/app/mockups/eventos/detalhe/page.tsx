@@ -30,8 +30,8 @@ const exampleEvent: EventDetailDto = {
   notifyOffsetsMinutes: [15],
   interruptions: [],
   revision: 1,
-  primaryItemId: "mockup-item",
-  items: [{ id: "mockup-item", position: 0, type: "routine", schemaVersion: 1, isPrimary: true, data: {} }],
+  kind: "routine",
+  notes: [],
   taskIds: ["mockup-tarefa-1", "mockup-tarefa-2"],
 };
 

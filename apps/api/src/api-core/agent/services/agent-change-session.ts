@@ -4,7 +4,7 @@ import {
   Task,
   type AgentConversation,
   type Event,
-  type EventItem,
+  type EventKind,
   type TaskReviseChanges,
 } from "../../../domain";
 import type {
@@ -19,7 +19,7 @@ import type {
   AgentChatEntityRef,
   AgentEntityItem,
   CreateEventInput,
-  CreateEventItemInput,
+  CreateNoteInput,
 } from "@repo/contracts";
 import type { CreateEventUseCase } from "../../events/create-event.usecase";
 import { assertParentTaskAssignable } from "../../tasks/assert-parent-task";
@@ -45,8 +45,11 @@ export interface TaskCreateFields {
 
 export interface NoteFields {
   name?: string;
+  /** O texto da nota (`type` text). */
   content?: string;
+  /** A nota passa a aparecer nesta tarefa, depois das que ja estavam. */
   taskId?: string;
+  /** A nota passa a aparecer neste evento, depois das que ja estavam. */
   eventId?: string;
   tags?: string[];
 }
@@ -84,14 +87,16 @@ export class AgentChangeSession {
     private readonly repositories: {
       events: Pick<EventRepository, "findById">;
       tasks: Pick<TaskRepository, "findById">;
-      notes: Pick<NoteRepository, "findById">;
+      notes: Pick<NoteRepository, "findById" | "findByIds">;
     },
-    private readonly createEventUseCase: Pick<CreateEventUseCase, "prepare">,
+    private readonly createEventUseCase: Pick<CreateEventUseCase, "prepare" | "buildNote">,
   ) {}
 
+  /** As notes novas do evento entram no mesmo lote, antes dele (o vinculo aponta para elas). */
   createEvent(input: CreateEventInput): Promise<StageResult> {
     return this.attempt(async () => {
-      const event = await this.createEventUseCase.prepare(input, { userId: this.userId });
+      const { event, notes } = await this.createEventUseCase.prepare(input, { userId: this.userId });
+      for (const note of notes) this.stageNewNote(note);
       this.events.set(event.id, { change: { op: "create", entity: event } });
       return { ok: true, kind: "event", op: "create", id: event.id };
     });
@@ -103,23 +108,21 @@ export class AgentChangeSession {
    */
   updateEvent(
     id: string,
-    primaryType: string,
+    kind: EventKind,
     revise: (current: Event) => Promise<Event>,
   ): Promise<StageResult> {
     return this.attempt(async () => {
       const created = this.events.get(id);
       if (created?.change.op === "create") {
         const current = created.change.entity;
-        const currentType = current.items.find((item) => item.isPrimary)?.type;
-        if (currentType !== primaryType) throw new StagingError(`O evento ${id} é do tipo ${currentType}, não ${primaryType}.`);
+        if (current.kind !== kind) throw new StagingError(`O evento ${id} é do tipo ${current.kind}, não ${kind}.`);
         this.events.set(id, { change: { op: "create", entity: await revise(current) } });
         return { ok: true, kind: "event", op: "create", id };
       }
       const loaded = await this.loadForChange(this.events, id, (key) => this.repositories.events.findById(key));
-      const currentType = loaded.current.items.find((item) => item.isPrimary)?.type;
-      if (currentType !== primaryType) {
+      if (loaded.current.kind !== kind) {
         throw new StagingError(
-          `O evento ${id} é do tipo ${currentType}, não ${primaryType}. Use a ferramenta desse tipo.`,
+          `O evento ${id} é do tipo ${loaded.current.kind}, não ${kind}. Use a ferramenta desse tipo.`,
         );
       }
 
@@ -132,13 +135,35 @@ export class AgentChangeSession {
     });
   }
 
-  /** Monta um item como a criacao montaria: a refeicao passa pelo modelo, o treino pelo catalogo. */
-  async buildItem(item: CreateEventItemInput, startedAt: Date): Promise<EventItem> {
-    const draft = await this.createEventUseCase.prepare(
-      { name: "rascunho", startedAt: startedAt.toISOString(), items: [item] },
-      { userId: this.userId },
-    );
-    return draft.items[0];
+  /** Monta uma note como a criacao montaria: a refeicao passa pelo modelo, o treino pelo catalogo. */
+  buildNote(input: CreateNoteInput, startedAt: Date): Promise<Note> {
+    return this.createEventUseCase.buildNote(input, { userId: this.userId }, startedAt);
+  }
+
+  /** A primeira note do evento com este `type`, ja considerando o que foi preparado nesta requisicao. */
+  async noteOfType(event: Event, type: string): Promise<Note | undefined> {
+    const ids = event.noteLinks.map((link) => link.noteId);
+    const notes = await this.loadNotes(ids);
+    return ids.map((id) => notes.get(id)).find((note) => note?.type === type);
+  }
+
+  /** Uma note nova, ainda sem vinculo — quem a monta decide onde ela aparece. */
+  stageNewNote(note: Note): void {
+    this.notes.set(note.id, { change: { op: "create", entity: note } });
+  }
+
+  /** Revisa uma note ja existente (ou criada nesta requisicao), sem mexer em quem aponta para ela. */
+  async reviseNoteById(id: string, revise: (current: Note) => Note): Promise<void> {
+    const staged = this.notes.get(id);
+    if (staged?.change.op === "create") {
+      this.notes.set(id, { change: { op: "create", entity: revise(staged.change.entity) } });
+      return;
+    }
+    const loaded = await this.loadForChange(this.notes, id, (key) => this.repositories.notes.findById(key));
+    this.notes.set(id, {
+      change: { op: "update", entity: revise(loaded.current), expectedRevision: loaded.expectedRevision },
+      before: loaded.before,
+    });
   }
 
   createTask(fields: TaskCreateFields): Promise<StageResult> {
@@ -172,22 +197,39 @@ export class AgentChangeSession {
     return this.attempt(async () => {
       if (!fields.content) throw new StagingError("content é obrigatório para criar uma nota.");
       await this.assertNoteTargets(fields);
-      const note = Note.create({ ...fields, content: fields.content, userId: this.userId });
-      this.notes.set(note.id, { change: { op: "create", entity: note } });
+      const note = Note.create({
+        userId: this.userId,
+        name: fields.name,
+        type: "text",
+        data: { body: fields.content },
+        tags: fields.tags,
+      });
+      this.stageNewNote(note);
+      await this.attachNote(note.id, fields);
       return { ok: true, kind: "note", op: "create", id: note.id };
     });
   }
 
   updateNote(id: string, fields: NoteFields): Promise<StageResult> {
     return this.attempt(async () => {
-      const loaded = await this.loadForChange(this.notes, id, (key) => this.repositories.notes.findById(key));
       await this.assertNoteTargets(fields);
-
-      const revised = loaded.current.revise(fields);
-      this.notes.set(id, {
-        change: { op: "update", entity: revised, expectedRevision: loaded.expectedRevision },
-        before: loaded.before,
-      });
+      // So ligar a nota a um evento ou tarefa nao e editar a nota: ela fica como esta.
+      const edits = fields.name !== undefined || fields.tags !== undefined || fields.content !== undefined;
+      if (edits) {
+        await this.reviseNoteById(id, (current) => {
+          if (fields.content !== undefined && current.type !== "text") {
+            throw new StagingError(`A nota ${id} é do tipo ${current.type}: só notas de texto têm content.`);
+          }
+          return current.revise({
+            name: fields.name,
+            tags: fields.tags,
+            data: fields.content !== undefined ? { body: fields.content } : undefined,
+          });
+        });
+      } else {
+        await this.assertNoteExists(id);
+      }
+      await this.attachNote(id, fields);
       return { ok: true, kind: "note", op: "update", id };
     });
   }
@@ -256,18 +298,43 @@ export class AgentChangeSession {
     };
   }
 
-  result(): { created: AgentEntityItem[]; updated: AgentEntityItem[]; deleted: AgentEntityItem[] } {
+  /** Async porque o evento mostra as notes dele, e as que nao foram preparadas aqui vem do banco. */
+  async result(): Promise<{ created: AgentEntityItem[]; updated: AgentEntityItem[]; deleted: AgentEntityItem[] }> {
     const result = { created: [] as AgentEntityItem[], updated: [] as AgentEntityItem[], deleted: [] as AgentEntityItem[] };
-    const collect = <T>(staged: Map<string, Staged<T>>, toItem: (entity: T) => AgentEntityItem) => {
+    const eventNoteIds = [...this.events.values()].flatMap(({ change, before }) => [
+      ...(change.op === "delete" ? [] : change.entity.noteLinks),
+      ...(before?.noteLinks ?? []),
+    ]);
+    const notes = await this.loadNotes(eventNoteIds.map((link) => link.noteId));
+    const notesOf = (event: Event) =>
+      event.noteLinks.flatMap((link) => {
+        const note = notes.get(link.noteId);
+        return note ? [note] : [];
+      });
+
+    // A note que o DTO de um evento ja mostra nao e listada de novo: a resposta contaria a mesma coisa duas vezes.
+    const embedded = new Set(
+      [...this.events.values()].flatMap(({ change }) =>
+        change.op === "delete" ? [] : change.entity.noteLinks.map((link) => link.noteId),
+      ),
+    );
+
+    const collect = <T>(
+      staged: Map<string, Staged<T>>,
+      toItem: (entity: T) => AgentEntityItem,
+      skip: (entity: T) => boolean = () => false,
+    ) => {
       for (const { change, before } of staged.values()) {
-        if (change.op === "create") result.created.push(toItem(change.entity));
-        else if (change.op === "update") result.updated.push(toItem(change.entity));
-        else if (before) result.deleted.push(toItem(before));
+        if (change.op === "create") {
+          if (!skip(change.entity)) result.created.push(toItem(change.entity));
+        } else if (change.op === "update") {
+          if (!skip(change.entity)) result.updated.push(toItem(change.entity));
+        } else if (before) result.deleted.push(toItem(before));
       }
     };
-    collect(this.events, eventItem);
+    collect(this.events, (event) => eventItem(event, notesOf(event)));
     collect(this.tasks, taskItem);
-    collect(this.notes, noteItem);
+    collect(this.notes, noteItem, (note) => embedded.has(note.id));
     return result;
   }
 
@@ -279,6 +346,71 @@ export class AgentChangeSession {
       return this.repositories.tasks.findById(id);
     },
   };
+
+  /**
+   * As notes por id: a versao preparada nesta requisicao quando ha, senao a do
+   * banco. Nota marcada para apagar nao aparece.
+   */
+  private async loadNotes(ids: readonly string[]): Promise<Map<string, Note>> {
+    const found = new Map<string, Note>();
+    const missing: string[] = [];
+    for (const id of new Set(ids)) {
+      const staged = this.notes.get(id);
+      if (!staged) missing.push(id);
+      else if (staged.change.op !== "delete") found.set(id, staged.change.entity);
+    }
+    if (missing.length > 0) {
+      for (const note of await this.repositories.notes.findByIds(missing)) {
+        if (note.userId === this.userId) found.set(note.id, note);
+      }
+    }
+    return found;
+  }
+
+  private async assertNoteExists(id: string): Promise<void> {
+    if (this.notes.get(id)?.change.op === "create") return;
+    const found = await this.repositories.notes.findById(id);
+    if (!found || found.userId !== this.userId) throw new StagingError(`Não encontrei o registro ${id}.`);
+  }
+
+  /** Liga a note ao evento e/ou tarefa pedidos. Ligar de novo a quem ja a tem nao faz nada. */
+  private async attachNote(noteId: string, targets: Pick<NoteFields, "eventId" | "taskId">): Promise<void> {
+    if (targets.eventId) {
+      await this.reviseTarget(this.events, targets.eventId, (key) => this.repositories.events.findById(key), (event) =>
+        event.noteLinks.some((link) => link.noteId === noteId)
+          ? event
+          : event.revise({ noteLinks: [...event.noteLinks, { noteId, fromRecurrence: false }] }),
+      );
+    }
+    if (targets.taskId) {
+      await this.reviseTarget(this.tasks, targets.taskId, (key) => this.repositories.tasks.findById(key), (task) =>
+        task.noteLinks.some((link) => link.noteId === noteId)
+          ? task
+          : task.revise({ noteLinks: [...task.noteLinks, { noteId, fromRecurrence: false }] }),
+      );
+    }
+  }
+
+  /** Revisa um alvo: o criado nesta requisicao continua sendo uma criacao; o do banco vira uma atualizacao. */
+  private async reviseTarget<T extends Owned>(
+    staged: Map<string, Staged<T>>,
+    id: string,
+    find: (id: string) => Promise<T | null>,
+    revise: (current: T) => T,
+  ): Promise<void> {
+    const existing = staged.get(id);
+    if (existing?.change.op === "create") {
+      staged.set(id, { change: { op: "create", entity: revise(existing.change.entity) } });
+      return;
+    }
+    const loaded = await this.loadForChange(staged, id, find);
+    const revised = revise(loaded.current);
+    if (revised === loaded.current) return;
+    staged.set(id, {
+      change: { op: "update", entity: revised, expectedRevision: loaded.expectedRevision },
+      before: loaded.before,
+    });
+  }
 
   private async assertNoteTargets(fields: NoteFields): Promise<void> {
     if (fields.taskId) {

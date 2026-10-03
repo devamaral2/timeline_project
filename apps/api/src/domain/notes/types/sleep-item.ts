@@ -1,4 +1,4 @@
-import { EventValidationError } from "../errors/event.errors";
+import { NoteValidationError } from "../errors/note.errors";
 
 export interface SleepItem {
   trackedSleepTime: number;
@@ -7,19 +7,19 @@ export interface SleepItem {
 
 export function parseSleepItem(data: unknown, schemaVersion: number): SleepItem {
   if (schemaVersion !== 1) {
-    throw new EventValidationError("Unsupported schema version");
+    throw new NoteValidationError("Unsupported schema version");
   }
   if (typeof data !== "object" || data === null) {
-    throw new EventValidationError("Sleep item must be an object");
+    throw new NoteValidationError("Sleep item must be an object");
   }
 
   const source = data as Record<string, unknown>;
 
   if (typeof source.trackedSleepTime !== "number" || !Number.isFinite(source.trackedSleepTime)) {
-    throw new EventValidationError("Sleep item requires a numeric trackedSleepTime");
+    throw new NoteValidationError("Sleep item requires a numeric trackedSleepTime");
   }
   if (typeof source.score !== "number" || !Number.isFinite(source.score)) {
-    throw new EventValidationError("Sleep item requires a numeric score");
+    throw new NoteValidationError("Sleep item requires a numeric score");
   }
 
   return {

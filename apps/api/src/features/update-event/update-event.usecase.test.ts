@@ -1,9 +1,7 @@
 import { expect, test } from "vitest";
-import { Event, EventItem, Interruption } from "../../domain";
+import { Event, Interruption, Note } from "../../domain";
 import { UpdateEventUseCase } from "./update-event.usecase";
-import { InMemoryEventDatabase } from "../../api-core/events/testing/in-memory-event-database";
-import { InMemoryEventRepository } from "../../api-core/events/testing/in-memory-event.repository";
-import { InMemoryWorkoutCatalog } from "../../api-core/events/testing/in-memory-workout.catalog";
+import { createEventsKit } from "../../api-core/events/testing/in-memory-events-kit";
 
 function trainingEvent(id: string, interruptions: Interruption[] = []) {
   return Event.create({
@@ -14,26 +12,19 @@ function trainingEvent(id: string, interruptions: Interruption[] = []) {
     startedAt: new Date("2026-08-16T18:00:00-03:00"),
     tags: ["gym"],
     interruptions,
-    items: [
-      EventItem.create({
-        position: 0,
-        type: "training",
-        schemaVersion: 1,
-        isPrimary: true,
-        data: {
-          workouts: [{ id: "01K2R1J5M8S0Y2Z7ABCDFREEWK", workoutCode: "free", workoutName: "Livre", calories: 420, duration: 60 }],
-          caloriesBurned: 420,
-        },
-      }),
-    ],
+    kind: "training",
   });
+}
+
+function updateUseCaseOf(kit: ReturnType<typeof createEventsKit>) {
+  return new UpdateEventUseCase(kit.eventRepository, kit.noteRepository, kit.noteBuilder);
 }
 
 test("updates an event without requiring startedAt in the payload", async () => {
   const existingEvent = trainingEvent("01K2R1J5M8S0Y2Z7ABCD123456");
-  const database = new InMemoryEventDatabase([existingEvent]);
-  const eventRepository = new InMemoryEventRepository(database);
-  const updateUseCase = new UpdateEventUseCase(eventRepository, new InMemoryWorkoutCatalog());
+  const kit = createEventsKit({ events: [existingEvent] });
+  const eventRepository = kit.eventRepository;
+  const updateUseCase = updateUseCaseOf(kit);
 
   await expect(
     updateUseCase.execute(
@@ -62,9 +53,9 @@ test("appends new interruptions and patches existing ones by id", async () => {
     finishedAt: new Date("2026-08-16T18:32:00.000Z"),
   });
   const existingEvent = trainingEvent("01K2R1J5M8S0Y2Z7ABCD123456", [existingInterruption]);
-  const database = new InMemoryEventDatabase([existingEvent]);
-  const eventRepository = new InMemoryEventRepository(database);
-  const updateUseCase = new UpdateEventUseCase(eventRepository, new InMemoryWorkoutCatalog());
+  const kit = createEventsKit({ events: [existingEvent] });
+  const eventRepository = kit.eventRepository;
+  const updateUseCase = updateUseCaseOf(kit);
 
   await updateUseCase.execute(
     {
@@ -91,8 +82,34 @@ test("appends new interruptions and patches existing ones by id", async () => {
   expect(appendedInterruption.finishedAt.getTime() - appendedInterruption.startedAt.getTime()).toBe(120000);
 });
 
-test("replaces meal items and recalculates totals", async () => {
-  const mealItemId = "01K2R1J5M8S0Y2Z7ABCD123458";
+test("replaces a meal note and recalculates totals", async () => {
+  const mealNote = Note.create({
+    id: "01K2R1J5M8S0Y2Z7ABCD123458",
+    userId: "auth-user-1",
+    type: "meal",
+    data: {
+      name: "Almoço",
+      description: "rice",
+      foodItems: [
+        {
+          id: "01K2R1J5M8S0Y2Z7ABCDFOOD001",
+          name: "Rice",
+          portion: "100 g",
+          approximateWeightGrams: 100,
+          caloriesKcal: 130,
+          macronutrients: { carbohydratesGrams: 28, proteinsGrams: 2, totalFatGrams: 0, fiberGrams: 1 },
+          micronutrients: {},
+        },
+      ],
+      totals: {
+        totalCaloriesKcal: 130,
+        totalProteinGrams: 2,
+        totalCarbohydrateGrams: 28,
+        totalFatGrams: 0,
+        totalFiberGrams: 1,
+      },
+    },
+  });
   const existingEvent = Event.create({
     id: "01K2R1J5M8S0Y2Z7ABCD123457",
     userId: "auth-user-1",
@@ -101,52 +118,19 @@ test("replaces meal items and recalculates totals", async () => {
     startedAt: new Date("2026-08-16T12:00:00.000Z"),
     tags: [],
     interruptions: [],
-    items: [
-      EventItem.create({
-        id: mealItemId,
-        position: 0,
-        type: "meal",
-        schemaVersion: 1,
-        isPrimary: true,
-        data: {
-          name: "Almoço",
-          description: "rice",
-          foodItems: [
-            {
-              id: "01K2R1J5M8S0Y2Z7ABCDFOOD001",
-              name: "Rice",
-              portion: "100 g",
-              approximateWeightGrams: 100,
-              caloriesKcal: 130,
-              macronutrients: { carbohydratesGrams: 28, proteinsGrams: 2, totalFatGrams: 0, fiberGrams: 1 },
-              micronutrients: {},
-            },
-          ],
-          totals: {
-            totalCaloriesKcal: 130,
-            totalProteinGrams: 2,
-            totalCarbohydrateGrams: 28,
-            totalFatGrams: 0,
-            totalFiberGrams: 1,
-          },
-        },
-      }),
-    ],
+    kind: "meal",
+    noteLinks: [{ noteId: mealNote.id, fromRecurrence: false }],
   });
-  const database = new InMemoryEventDatabase([existingEvent]);
-  const eventRepository = new InMemoryEventRepository(database);
-  const updateUseCase = new UpdateEventUseCase(eventRepository, new InMemoryWorkoutCatalog());
+  const kit = createEventsKit({ events: [existingEvent], notes: [mealNote] });
 
-  await updateUseCase.execute(
+  await updateUseCaseOf(kit).execute(
     {
       eventId: existingEvent.id,
       expectedRevision: 1,
-      items: [
+      notes: [
         {
-          id: mealItemId,
+          id: mealNote.id,
           type: "meal",
-          schemaVersion: 1,
-          isPrimary: true,
           data: {
             name: "Almoço",
             description: "rice and beans",
@@ -178,18 +162,21 @@ test("replaces meal items and recalculates totals", async () => {
     { userId: "auth-user-1" },
   );
 
-  const savedEvent = await eventRepository.findById(existingEvent.id);
-  const mealData = savedEvent?.items[0].data as {
+  const savedEvent = await kit.eventRepository.findById(existingEvent.id);
+  const [savedNote] = kit.database.notesOf(savedEvent as Event);
+  const mealData = savedNote.data as {
     foodItems: Array<{ id: string; portion: string; caloriesKcal: number }>;
     totals: { totalCaloriesKcal: number };
   };
-  expect(savedEvent?.items[0].id).toBe(mealItemId);
+  expect(savedNote.id).toBe(mealNote.id);
+  expect(savedNote.revision).toBe(2);
   expect(mealData.foodItems[0]).toMatchObject({ id: "01K2R1J5M8S0Y2Z7ABCDFOOD001", portion: "200 g", caloriesKcal: 180 });
   expect(mealData.foodItems[1].id).toBe("01K2R1J5M8S0Y2Z7ABCDFOOD002");
   expect(mealData.totals.totalCaloriesKcal).toBe(260);
 });
 
 test("updates sleep metrics without retaining unrelated data", async () => {
+  const sleepNote = Note.create({ userId: "auth-user-1", type: "sleep", data: { score: 70, trackedSleepTime: 420 } });
   const sleepEvent = Event.create({
     id: "01K2R1J5M8S0Y2Z7ABCD123459",
     userId: "auth-user-1",
@@ -198,32 +185,48 @@ test("updates sleep metrics without retaining unrelated data", async () => {
     startedAt: new Date("2026-08-16T22:00:00.000Z"),
     tags: [],
     interruptions: [],
-    items: [
-      EventItem.create({ position: 0, type: "sleep", schemaVersion: 1, isPrimary: true, data: { score: 70, trackedSleepTime: 420 } }),
-    ],
+    kind: "sleep",
+    noteLinks: [{ noteId: sleepNote.id, fromRecurrence: false }],
   });
-  const database = new InMemoryEventDatabase([sleepEvent]);
-  const eventRepository = new InMemoryEventRepository(database);
-  const updateUseCase = new UpdateEventUseCase(eventRepository, new InMemoryWorkoutCatalog());
+  const kit = createEventsKit({ events: [sleepEvent], notes: [sleepNote] });
 
-  await updateUseCase.execute(
+  await updateUseCaseOf(kit).execute(
     {
       eventId: sleepEvent.id,
       expectedRevision: 1,
-      items: [{ type: "sleep", schemaVersion: 1, isPrimary: true, data: { score: 85, trackedSleepTime: 420 } }],
+      notes: [{ id: sleepNote.id, type: "sleep", data: { score: 85, trackedSleepTime: 420 } }],
     },
     { userId: "auth-user-1" },
   );
 
-  const savedEvent = await eventRepository.findById(sleepEvent.id);
-  expect(savedEvent?.items[0].data).toEqual({ score: 85, trackedSleepTime: 420 });
+  const savedEvent = await kit.eventRepository.findById(sleepEvent.id);
+  expect(kit.database.notesOf(savedEvent as Event)[0].data).toEqual({ score: 85, trackedSleepTime: 420 });
+});
+
+test("creates and links a new note, saving it together with the event", async () => {
+  const existingEvent = trainingEvent("01K2R1J5M8S0Y2Z7ABCD123461");
+  const kit = createEventsKit({ events: [existingEvent] });
+
+  await updateUseCaseOf(kit).execute(
+    {
+      eventId: existingEvent.id,
+      expectedRevision: 1,
+      notes: [{ type: "text", data: { body: "Treino de perna" } }],
+    },
+    { userId: "auth-user-1" },
+  );
+
+  const savedEvent = await kit.eventRepository.findById(existingEvent.id);
+  expect(kit.database.notes).toHaveLength(1);
+  expect(savedEvent?.noteLinks).toEqual([{ noteId: kit.database.notes[0].id, fromRecurrence: false }]);
+  expect(savedEvent?.revision).toBe(2);
 });
 
 test("rejects an expectedRevision that does not match the stored event", async () => {
   const existingEvent = trainingEvent("01K2R1J5M8S0Y2Z7ABCD123460");
-  const database = new InMemoryEventDatabase([existingEvent]);
-  const eventRepository = new InMemoryEventRepository(database);
-  const updateUseCase = new UpdateEventUseCase(eventRepository, new InMemoryWorkoutCatalog());
+  const kit = createEventsKit({ events: [existingEvent] });
+  const eventRepository = kit.eventRepository;
+  const updateUseCase = updateUseCaseOf(kit);
 
   await expect(
     updateUseCase.execute(

@@ -5,9 +5,8 @@ import { agendaEventFromCard, agendaEventsByDay } from "./agenda-data";
 function card(overrides: Partial<TimelineEventCardDto> = {}): TimelineEventCardDto {
   return {
     id: "event-1",
-    primaryItemId: "item-1",
-    primaryItemType: "routine",
-    itemTypes: ["routine"],
+    kind: "routine",
+    noteTypes: [],
     missed: false,
     notifyOffsetsMinutes: [],
     name: "Planejar o dia",

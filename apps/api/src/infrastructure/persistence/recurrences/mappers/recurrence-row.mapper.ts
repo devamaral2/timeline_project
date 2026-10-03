@@ -4,7 +4,7 @@ import type * as schema from "../../database/schema";
 export type RecurrenceRow = typeof schema.recurrences.$inferSelect;
 export type RecurrenceInsert = typeof schema.recurrences.$inferInsert;
 
-export function mapRecurrenceRow(row: RecurrenceRow): Recurrence {
+export function mapRecurrenceRow(row: RecurrenceRow, noteIds: readonly string[] = []): Recurrence {
   const rule: RecurrenceRule = {
     frequency: row.freq,
     interval: row.intervalCount,
@@ -25,6 +25,7 @@ export function mapRecurrenceRow(row: RecurrenceRow): Recurrence {
     target: row.targetKind,
     rule,
     template: row.template as Record<string, unknown>,
+    noteIds: [...noteIds],
     materializedThrough: row.materializedThrough ?? undefined,
     revision: row.revision,
   });

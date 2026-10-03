@@ -153,7 +153,7 @@ export class OpenRouterEventCommandParsingGateway implements EventCommandParsing
     const parsedInput = toCreateEventInput(raw, input.text);
     const schedule = toEventSchedule(raw);
     console.log("[OpenRouterEventCommandParsingGateway] parseCommand succeeded", {
-      itemType: parsedInput.items[0]?.type,
+      kind: parsedInput.kind,
       schedule,
     });
 
@@ -179,12 +179,14 @@ export function toCreateEventInput(
   switch (raw.type) {
     case "food":
       return {
-        items: [{ type: "meal", data: { inputText: raw.foodInputText?.trim() || transcript.trim() } }],
+        kind: "meal",
+        notes: [{ type: "meal", data: { inputText: raw.foodInputText?.trim() || transcript.trim() } }],
         tags: [],
       };
     case "sleep":
       return {
-        items: [
+        kind: "sleep",
+        notes: [
           {
             type: "sleep",
             data: {
@@ -197,13 +199,14 @@ export function toCreateEventInput(
       };
     case "training":
       return {
-        items: [{ type: "training", data: { workouts: toWorkouts(raw) } }],
+        kind: "training",
+        notes: [{ type: "training", data: { workouts: toWorkouts(raw) } }],
         tags: [],
       };
     default:
       return {
         name: raw.routineName?.trim() || fallbackName,
-        items: [{ type: "routine" }],
+        kind: "routine",
         tags: [],
       };
   }

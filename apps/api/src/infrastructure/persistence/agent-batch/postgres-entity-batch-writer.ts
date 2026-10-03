@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import { EntityBatchConflictError, type Event, type Note, type Task } from "../../../domain";
+import { EntityBatchConflictError, type Event, type Task } from "../../../domain";
 import type {
   EntityBatch,
   EntityBatchResult,
@@ -52,6 +52,14 @@ export class PostgresEntityBatchWriter implements EntityBatchWriter {
       await lockTargets(tx, "notes", batch.userId, batch.notes);
       await lockReferences(tx, batch);
 
+      // Notas primeiro: eventos e tarefas apontam para elas pelos vinculos (FK).
+      for (const note of created(batch.notes)) {
+        await insertNote(tx, note);
+      }
+      for (const change of batch.notes) {
+        if (change.op === "update") await updateNoteAggregate(tx, change.entity, batch.userId, change.expectedRevision);
+      }
+
       for (const task of creationOrder(created(batch.tasks))) {
         await insertTaskAggregate(tx, task);
       }
@@ -60,9 +68,6 @@ export class PostgresEntityBatchWriter implements EntityBatchWriter {
           throw new EntityBatchConflictError(`Evento ${event.id} já existe`);
         }
       }
-      for (const note of created(batch.notes)) {
-        await insertNote(tx, note);
-      }
 
       for (const change of batch.tasks) {
         if (change.op === "update") await updateTaskAggregate(tx, change.entity, batch.userId, change.expectedRevision);
@@ -70,12 +75,8 @@ export class PostgresEntityBatchWriter implements EntityBatchWriter {
       for (const change of batch.events) {
         if (change.op === "update") await updateEventAggregate(tx, change.entity, batch.userId, change.expectedRevision);
       }
-      for (const change of batch.notes) {
-        if (change.op === "update") await updateNoteAggregate(tx, change.entity, batch.userId, change.expectedRevision);
-      }
 
-      // Notas antes dos alvos: apagar um evento ou tarefa ja apaga as notas
-      // dele, e apagar de novo daria "nao encontrado".
+      // A note apagada continua ligada ao alvo (soft delete); a leitura a esconde.
       for (const change of batch.notes) {
         if (change.op === "delete") await softDeleteNote(tx, change.id, batch.userId);
       }
@@ -170,35 +171,34 @@ async function lockTargets<T extends { id: string }>(
 }
 
 /**
- * O banco nao confere que pai, dependencia ou alvo da nota sao do mesmo
- * usuario. Aqui confere, e `FOR SHARE` impede que sumam antes do commit.
+ * O banco nao confere que pai, dependencia ou note ligada a um evento ou tarefa
+ * sao do mesmo usuario. Aqui confere, e `FOR SHARE` impede que sumam antes do commit.
  */
 async function lockReferences(tx: Tx, batch: EntityBatch): Promise<void> {
   const createdTaskIds = new Set(created(batch.tasks).map((task) => task.id));
-  const createdEventIds = new Set(created(batch.events).map((event) => event.id));
+
+  const createdNoteIds = new Set(created(batch.notes).map((note) => note.id));
 
   const taskRefs = new Set<string>();
-  const eventRefs = new Set<string>();
+  const noteRefs = new Set<string>();
   const written = <T>(changes: readonly StagedChange<T>[]): T[] =>
     changes.flatMap((change) => (change.op === "delete" ? [] : [change.entity]));
 
   for (const task of written<Task>(batch.tasks)) {
     if (task.parentTaskId) taskRefs.add(task.parentTaskId);
     for (const id of task.dependsOnTaskIds) taskRefs.add(id);
+    for (const link of task.noteLinks) noteRefs.add(link.noteId);
   }
   for (const event of written<Event>(batch.events)) {
     for (const id of event.taskIds) taskRefs.add(id);
-  }
-  for (const note of written<Note>(batch.notes)) {
-    if (note.taskId) taskRefs.add(note.taskId);
-    if (note.eventId) eventRefs.add(note.eventId);
+    for (const link of event.noteLinks) noteRefs.add(link.noteId);
   }
 
   await lockExisting(tx, "tasks", batch.userId, [...taskRefs].filter((id) => !createdTaskIds.has(id)));
-  await lockExisting(tx, "events", batch.userId, [...eventRefs].filter((id) => !createdEventIds.has(id)));
+  await lockExisting(tx, "notes", batch.userId, [...noteRefs].filter((id) => !createdNoteIds.has(id)));
 }
 
-async function lockExisting(tx: Tx, table: "events" | "tasks", userId: string, ids: string[]): Promise<void> {
+async function lockExisting(tx: Tx, table: "notes" | "tasks", userId: string, ids: string[]): Promise<void> {
   if (ids.length === 0) return;
 
   const locked = await tx.execute<{ id: string }>(sql`

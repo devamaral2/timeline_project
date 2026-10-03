@@ -2,6 +2,7 @@ import {
   Task,
   type WorkItemPriority,
   type WorkItemStatus,
+  type NoteLink,
   type NotificationOffsetMinutes,
 } from "../../../../domain";
 import { occurrenceLinkOf, type OccurrenceColumns } from "../../recurrences/mappers/occurrence-columns";
@@ -26,6 +27,7 @@ export function mapTaskRow(
   row: TaskRow,
   tagNames: readonly string[],
   dependsOnTaskIds: readonly string[] = [],
+  noteLinks: readonly NoteLink[] = [],
 ): Task {
   return Task.rehydrate({
     id: row.id,
@@ -41,6 +43,7 @@ export function mapTaskRow(
     estimatedFinishAt: row.estimatedFinishAt ?? undefined,
     finishedAt: row.finishedAt ?? undefined,
     dependsOnTaskIds: [...dependsOnTaskIds],
+    noteLinks: [...noteLinks],
     occurrence: occurrenceLinkOf(row),
     revision: row.revision,
   });

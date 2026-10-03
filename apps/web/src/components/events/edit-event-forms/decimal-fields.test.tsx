@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { expect, test } from "vitest";
-import type { EventDetailDto, EventItemDto } from "@/lib/api/contracts";
+import type { EventDetailDto, EventKind, NoteDto } from "@/lib/api/contracts";
+import { noteOf } from "../note-fixtures";
 import { MealEditForm } from "./MealEditForm";
 import { SleepEditForm } from "./SleepEditForm";
 import { TrainingEditForm } from "./TrainingEditForm";
@@ -26,23 +27,16 @@ const common = {
   revision: 3,
 };
 
-/** Um evento de um item so — o item e o principal, e e ele que o form edita. */
-function anEventWith(item: EventItemDto): EventDetailDto {
-  return { ...common, primaryItemId: item.id, items: [item] };
+/** Um evento de uma note so — e a do tipo do evento, e e ela que o form edita. */
+function anEventWith(note: NoteDto): EventDetailDto {
+  return { ...common, kind: note.type as EventKind, notes: [note] };
 }
 
-function anItem<TType extends EventItemDto["type"]>(
+function anItem<TType extends NoteDto["type"]>(
   type: TType,
-  data: Extract<EventItemDto, { type: TType }>["data"],
-): Extract<EventItemDto, { type: TType }> {
-  return {
-    id: `${type}-item`,
-    position: 0,
-    type,
-    schemaVersion: 1,
-    isPrimary: true,
-    data,
-  } as Extract<EventItemDto, { type: TType }>;
+  data: Extract<NoteDto, { type: TType }>["data"],
+): Extract<NoteDto, { type: TType }> {
+  return noteOf({ id: `${type}-note`, type, data }) as Extract<NoteDto, { type: TType }>;
 }
 
 const props = { onCancel: () => {}, onClose: () => {}, onUpdated: () => {} };
@@ -72,7 +66,7 @@ test("um evento sem prioridade nao assume a primeira opcao do select", () => {
         missed: undefined as never,
         priority: undefined as never,
       }}
-      item={item}
+      note={item}
     />,
   );
 
@@ -110,7 +104,7 @@ test("treino com decimais salvos abre com todos os campos numericos validos", ()
     ],
   });
   const { container } = render(
-    <TrainingEditForm {...props} event={anEventWith(item)} item={item} />,
+    <TrainingEditForm {...props} event={anEventWith(item)} note={item} />,
   );
 
   expect(invalidValues(container)).toEqual([]);
@@ -131,7 +125,7 @@ test("treino aceita decimal digitado em qualquer campo numerico", () => {
     ],
   });
   const { container } = render(
-    <TrainingEditForm {...props} event={anEventWith(item)} item={item} />,
+    <TrainingEditForm {...props} event={anEventWith(item)} note={item} />,
   );
 
   for (const input of numberInputs(container)) {
@@ -144,7 +138,7 @@ test("treino aceita decimal digitado em qualquer campo numerico", () => {
 test("sono com horas fracionadas fora do passo de 0,5 continua valido", () => {
   const item = anItem("sleep", { trackedSleepTime: 7.3, score: 82.5 });
   const { container } = render(
-    <SleepEditForm {...props} event={anEventWith(item)} item={item} />,
+    <SleepEditForm {...props} event={anEventWith(item)} note={item} />,
   );
 
   expect(invalidValues(container)).toEqual([]);
@@ -179,7 +173,7 @@ test("refeicao com gramas e calorias decimais continua valida", () => {
     },
   });
   const { container } = render(
-    <MealEditForm {...props} event={anEventWith(item)} item={item} />,
+    <MealEditForm {...props} event={anEventWith(item)} note={item} />,
   );
 
   expect(invalidValues(container)).toEqual([]);
@@ -201,7 +195,7 @@ test("o form de treino nao bloqueia o submit por causa dos decimais", () => {
     ],
   });
   const { container } = render(
-    <TrainingEditForm {...props} event={anEventWith(item)} item={item} />,
+    <TrainingEditForm {...props} event={anEventWith(item)} note={item} />,
   );
 
   const form = container.querySelector("form");

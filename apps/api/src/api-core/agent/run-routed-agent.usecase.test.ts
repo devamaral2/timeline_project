@@ -1,12 +1,8 @@
 import { expect, test } from "vitest";
 import type { CreateEventInput } from "@repo/contracts";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
-import { CreateEventUseCase } from "../events/create-event.usecase";
-import { InMemoryEventDatabase } from "../events/testing/in-memory-event-database";
-import { InMemoryEventRepository } from "../events/testing/in-memory-event.repository";
-import { InMemoryWorkoutCatalog } from "../events/testing/in-memory-workout.catalog";
+import { createEventsKit } from "../events/testing/in-memory-events-kit";
 import { StubMealParsingGateway } from "../events/testing/stub-meal-parsing.gateway";
-import { InMemoryNoteRepository } from "../notes/testing/in-memory-note.repository";
 import { InMemoryTaskRepository } from "../tasks/testing/in-memory-task.repository";
 import type { DayContext, DayContextQuery } from "./day-context.query";
 import { RunAgentUseCase } from "./run-agent.usecase";
@@ -20,13 +16,11 @@ const owner: AuthenticatedUser = { userId: "user-1" };
 const local = (hour: number) => `2026-09-16T${String(hour).padStart(2, "0")}:00:00-03:00`;
 
 function setup(route: AgentRoute, calls: ScriptedToolCall[], answer: object, day?: DayContext) {
-  const events = new InMemoryEventRepository(new InMemoryEventDatabase());
+  const { eventRepository: events, noteRepository: notes, createEvent } = createEventsKit({
+    mealParsingGateway: new StubMealParsingGateway({ items: [], modelProvider: "stub", modelName: "stub" }),
+    clock: () => NOW,
+  });
   const tasks = new InMemoryTaskRepository();
-  const notes = new InMemoryNoteRepository();
-  const createEvent = new CreateEventUseCase(
-    events, new StubMealParsingGateway({ items: [], modelProvider: "stub", modelName: "stub" }),
-    new InMemoryWorkoutCatalog(), undefined, () => NOW,
-  );
   const agent = new ScriptedAgentGateway(calls, JSON.stringify(answer));
   const writer = new InMemoryEntityBatchWriter({ events, tasks, notes });
   const dayContext: DayContextQuery = { get: async () => day ?? { date: "2026-09-16", timeZone: "America/Sao_Paulo", events: [], tasks: [], notes: [] } };
@@ -34,7 +28,7 @@ function setup(route: AgentRoute, calls: ScriptedToolCall[], answer: object, day
     agent, new StubScopedSqlQuery(), writer, { events, tasks, notes }, createEvent,
     undefined, undefined, () => NOW, { route: async () => route }, dayContext,
   );
-  return { useCase, agent, writer, events, tasks, createEvent };
+  return { useCase, agent, writer, events, tasks, notes, createEvent };
 }
 
 test("single task route exposes only read tools, validates JSON and creates the public reply", async () => {
@@ -58,7 +52,7 @@ test("a write without prior consultation commits nothing", async () => {
 test("updating work after the daily read shifts leisure and leaves a later event unchanged", async () => {
   const base = setup({ kind: "single", skill: "save_routine_event" }, [], { commands: [] });
   const seed = async (name: string, from: number, to: number) => {
-    const input: CreateEventInput = { name, startedAt: local(from), finishedAt: local(to), items: [{ type: "routine", data: {} }] };
+    const input: CreateEventInput = { name, startedAt: local(from), finishedAt: local(to), kind: "routine" };
     return (await base.createEvent.execute(input, { userId: "user-1" })).eventId;
   };
   const workId = await seed("Trabalho", 13, 16);
@@ -67,9 +61,9 @@ test("updating work after the daily read shifts leisure and leaves a later event
   const day: DayContext = {
     date: "2026-09-16", timeZone: "America/Sao_Paulo", tasks: [], notes: [],
     events: [
-      { id: workId, name: "Trabalho", started_at: local(13), finished_at: local(16), recurrence_id: null, taskIds: [], items: [{ type: "routine", is_primary: true }] },
-      { id: leisureId, name: "Lazer", started_at: local(16), finished_at: local(17), recurrence_id: null, taskIds: [], items: [{ type: "routine", is_primary: true }] },
-      { id: readingId, name: "Ler", started_at: local(20), finished_at: local(21), recurrence_id: null, taskIds: [], items: [{ type: "routine", is_primary: true }] },
+      { id: workId, name: "Trabalho", started_at: local(13), finished_at: local(16), recurrence_id: null, taskIds: [], kind: "routine" },
+      { id: leisureId, name: "Lazer", started_at: local(16), finished_at: local(17), recurrence_id: null, taskIds: [], kind: "routine" },
+      { id: readingId, name: "Ler", started_at: local(20), finished_at: local(21), recurrence_id: null, taskIds: [], kind: "routine" },
     ],
   };
   const routed = new RunAgentUseCase(
@@ -77,7 +71,7 @@ test("updating work after the daily read shifts leisure and leaves a later event
       [{ name: "get_day_context", args: { date: "2026-09-16" } }],
       JSON.stringify({ commands: [{ skill: "save_routine_event", args: { id: workId, finishedAt: local(17) } }] }),
     ),
-    new StubScopedSqlQuery(), base.writer, { events: base.events, tasks: base.tasks, notes: new InMemoryNoteRepository() },
+    new StubScopedSqlQuery(), base.writer, { events: base.events, tasks: base.tasks, notes: base.notes },
     base.createEvent, undefined, undefined, () => NOW,
     { route: async () => ({ kind: "single", skill: "save_routine_event" }) },
     { get: async () => day },
@@ -108,7 +102,7 @@ test("a long day requires every context page before an event can be written", as
     events: Array.from({ length: 30 }, (_, index) => ({
       id: `event-${index}`, name: `Evento ${index}`, started_at: local(20), finished_at: local(21),
       recurrence_id: null, taskIds: [], description: "x".repeat(1000),
-      items: [{ type: "routine", is_primary: true }],
+      kind: "routine",
     })),
   };
   const answer = { commands: [{ skill: "save_routine_event", args: {
@@ -133,7 +127,7 @@ test("a long day requires every context page before an event can be written", as
 test("simultaneous affected events ask for order and discard the entire batch", async () => {
   const base = setup({ kind: "complex" }, [], { commands: [] });
   const seed = async (name: string, from: number, to: number) => base.createEvent.execute({
-    name, startedAt: local(from), finishedAt: local(to), items: [{ type: "routine", data: {} }],
+    name, startedAt: local(from), finishedAt: local(to), kind: "routine",
   }, { userId: owner.userId });
   const workId = (await seed("Trabalho", 13, 16)).eventId;
   const leisureId = (await seed("Lazer", 16, 17)).eventId;
@@ -141,9 +135,9 @@ test("simultaneous affected events ask for order and discard the entire batch", 
   const day: DayContext = {
     date: "2026-09-16", timeZone: "America/Sao_Paulo", tasks: [], notes: [],
     events: [
-      { id: workId, name: "Trabalho", started_at: local(13), finished_at: local(16), recurrence_id: null, taskIds: [], items: [{ type: "routine", is_primary: true }] },
-      { id: leisureId, name: "Lazer", started_at: local(16), finished_at: local(17), recurrence_id: null, taskIds: [], items: [{ type: "routine", is_primary: true }] },
-      { id: readingId, name: "Leitura", started_at: local(16), finished_at: local(17), recurrence_id: null, taskIds: [], items: [{ type: "routine", is_primary: true }] },
+      { id: workId, name: "Trabalho", started_at: local(13), finished_at: local(16), recurrence_id: null, taskIds: [], kind: "routine" },
+      { id: leisureId, name: "Lazer", started_at: local(16), finished_at: local(17), recurrence_id: null, taskIds: [], kind: "routine" },
+      { id: readingId, name: "Leitura", started_at: local(16), finished_at: local(17), recurrence_id: null, taskIds: [], kind: "routine" },
     ],
   };
   // A consulta diária e o repositório precisam representar os mesmos registros.
@@ -152,7 +146,7 @@ test("simultaneous affected events ask for order and discard the entire batch", 
     JSON.stringify({ commands: [{ skill: "save_routine_event", args: { id: workId, finishedAt: local(17) } }] }),
   );
   const useCase = new RunAgentUseCase(agent, new StubScopedSqlQuery(), base.writer,
-    { events: base.events, tasks: base.tasks, notes: new InMemoryNoteRepository() }, base.createEvent,
+    { events: base.events, tasks: base.tasks, notes: base.notes }, base.createEvent,
     undefined, undefined, () => NOW, { route: async () => ({ kind: "single", skill: "save_routine_event" }) },
     { get: async () => day });
   const response = await useCase.execute({ userId: owner.userId, text: "Acabei o trabalho às 17h" }, owner);

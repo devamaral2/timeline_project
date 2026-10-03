@@ -23,9 +23,9 @@ interface LogicalTable {
   columns: LogicalColumn[];
 }
 
-const ITEM_DATA_DESCRIPTION = [
+const NOTE_DATA_DESCRIPTION = [
   "formato depende de type:",
-  "routine → {};",
+  "text → {body};",
   "sleep → {trackedSleepTime: minutos, score: 0-100};",
   "meal → {name, description, totals: {totalCaloriesKcal, totalProteinGrams, totalCarbohydrateGrams, totalFatGrams, totalFiberGrams},",
   "foodItems: [{name, portion, approximateWeightGrams, caloriesKcal, macronutrients: {carbohydratesGrams, proteinsGrams, totalFatGrams, fiberGrams}, micronutrients: {nome: valor}}]};",
@@ -48,6 +48,7 @@ const BASE_TABLES: readonly LogicalTable[] = [
       { name: "started_on", expr: "e.started_on", type: "date", description: "dia de started_at em America/Sao_Paulo" },
       { name: "missed", expr: "e.missed", type: "boolean", description: "o usuario marcou como nao realizado" },
       { name: "priority", expr: "e.priority::text", type: "text", description: "urgent | normal | flexible" },
+      { name: "kind", expr: "e.kind::text", type: "text", description: "routine | meal | sleep | training" },
       { name: "recurrence_id", expr: "e.recurrence_id", type: "text", description: "serie de origem, se for ocorrencia" },
       { name: "occurrence_on", expr: "e.occurrence_on", type: "date" },
       { name: "created_at", expr: "e.created_at", type: "timestamptz" },
@@ -55,17 +56,14 @@ const BASE_TABLES: readonly LogicalTable[] = [
     ],
   },
   {
-    name: "event_items",
-    description: "O que o evento registra. Um evento tem um item principal (is_primary).",
-    from: "public.event_items i JOIN public.events e ON e.id = i.event_id",
-    where: "e.user_id = $1 AND e.deleted_at IS NULL",
+    name: "event_notes",
+    description: "Notas de um evento, na ordem em que aparecem (position). Uma nota pode estar em varios eventos.",
+    from: "public.event_notes l JOIN public.events e ON e.id = l.event_id JOIN public.notes n ON n.id = l.note_id",
+    where: "e.user_id = $1 AND e.deleted_at IS NULL AND n.user_id = $1 AND n.deleted_at IS NULL",
     columns: [
-      { name: "id", expr: "i.id", type: "text" },
-      { name: "event_id", expr: "i.event_id", type: "text" },
-      { name: "position", expr: "i.position", type: "integer" },
-      { name: "type", expr: "i.type", type: "text", description: "routine | meal | sleep | training" },
-      { name: "is_primary", expr: "i.is_primary", type: "boolean" },
-      { name: "data", expr: "i.data", type: "jsonb", description: ITEM_DATA_DESCRIPTION },
+      { name: "event_id", expr: "l.event_id", type: "text" },
+      { name: "note_id", expr: "l.note_id", type: "text" },
+      { name: "position", expr: "l.position", type: "integer" },
     ],
   },
   {
@@ -145,16 +143,27 @@ const BASE_TABLES: readonly LogicalTable[] = [
     ],
   },
   {
+    name: "task_notes",
+    description: "Notas de uma tarefa, na ordem em que aparecem (position). Uma nota pode estar em varias tarefas.",
+    from: "public.task_notes l JOIN public.tasks t ON t.id = l.task_id JOIN public.notes n ON n.id = l.note_id",
+    where: "t.user_id = $1 AND t.deleted_at IS NULL AND n.user_id = $1 AND n.deleted_at IS NULL",
+    columns: [
+      { name: "task_id", expr: "l.task_id", type: "text" },
+      { name: "note_id", expr: "l.note_id", type: "text" },
+      { name: "position", expr: "l.position", type: "integer" },
+    ],
+  },
+  {
     name: "notes",
-    description: "Notas livres, soltas ou presas a um evento ou a uma tarefa.",
+    description:
+      "Notas. Podem estar soltas ou ligadas a eventos e tarefas (event_notes, task_notes); o conteudo fica em data, conforme type.",
     from: "public.notes n",
     where: "n.user_id = $1 AND n.deleted_at IS NULL",
     columns: [
       { name: "id", expr: "n.id", type: "text" },
-      { name: "content", expr: "n.content", type: "text" },
       { name: "name", expr: "n.name", type: "text" },
-      { name: "event_id", expr: "n.event_id", type: "text" },
-      { name: "task_id", expr: "n.task_id", type: "text" },
+      { name: "type", expr: "n.type", type: "text", description: "text | meal | sleep | training" },
+      { name: "data", expr: "n.data", type: "jsonb", description: NOTE_DATA_DESCRIPTION },
       { name: "created_at", expr: "n.created_at", type: "timestamptz" },
       { name: "updated_at", expr: "n.updated_at", type: "timestamptz" },
     ],

@@ -2,14 +2,15 @@ import { BadRequestException } from "@nestjs/common";
 import { expect, test, vi } from "vitest";
 import { encodeTimelineCursor } from "../../infrastructure/persistence";
 import {
-  Event,
-  EventItem,
   EventOwnershipError,
   EventRevisionConflictError,
   calculateMealTotals,
 } from "../../domain";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
 import { InMemoryEventDatabase } from "../../api-core/events/testing/in-memory-event-database";
+import { databaseOf, eventWith } from "../../api-core/events/testing/event-fixtures";
+import { InMemoryNoteRepository } from "../../api-core/notes/testing/in-memory-note.repository";
+import { NoteBuilder } from "../../api-core/notes/services/note-builder.service";
 import { InMemoryEventRepository } from "../../api-core/events/testing/in-memory-event.repository";
 import { InMemoryDailyOverviewQuery } from "../../api-core/events/testing/in-memory-daily-overview.query";
 import { InMemoryTimelineEventQuery } from "../../api-core/events/testing/in-memory-timeline-event.query";
@@ -34,16 +35,16 @@ const attacker: AuthenticatedUser = { userId: "attacker-1" };
 function makeController(overrides: { database?: InMemoryEventDatabase } = {}) {
   const database = overrides.database ?? new InMemoryEventDatabase();
   const eventRepository = new InMemoryEventRepository(database);
-  const workoutCatalog = new InMemoryWorkoutCatalog();
-  const mealParsing = new StubMealParsingGateway();
+  const noteRepository = new InMemoryNoteRepository(database.notes);
+  const noteBuilder = new NoteBuilder(new StubMealParsingGateway(), new InMemoryWorkoutCatalog());
 
   const controller = new EventsController(
     new ListTimelineEventsUseCase(new InMemoryTimelineEventQuery(database)),
-    new CreateEventUseCase(eventRepository, mealParsing, workoutCatalog),
+    new CreateEventUseCase(eventRepository, noteRepository, noteBuilder),
     new GetDailyOverviewUseCase(new InMemoryDailyOverviewQuery(database)),
     vi.fn() as never,
-    new GetEventUseCase(eventRepository),
-    new UpdateEventUseCase(eventRepository, workoutCatalog),
+    new GetEventUseCase(eventRepository, noteRepository),
+    new UpdateEventUseCase(eventRepository, noteRepository, noteBuilder),
     new DeleteEventUseCase(eventRepository),
   );
 
@@ -62,36 +63,30 @@ function makeMealEvent(userId: string, name: string, startedAt: string, kcal: nu
       micronutrients: {},
     },
   ];
-  return Event.create({
+  return eventWith({
     userId,
     name,
     description: "",
     startedAt: new Date(startedAt),
     tags: ["meal"],
     interruptions: [],
-    items: [
-      EventItem.create({
-        position: 0,
-        type: "meal",
-        schemaVersion: 1,
-        isPrimary: true,
-        data: {
+  }, [
+    { type: "meal", data: {
           name,
           description: name,
           foodItems,
           totals: calculateMealTotals(foodItems),
-        },
-      }),
-    ],
-  });
+        } },
+  ]);
 }
 
 test("POST /api/events takes the window from the client but never the owner", async () => {
-  const { controller, eventRepository } = makeController();
+  const { controller, eventRepository, database } = makeController();
 
   const { eventId } = await controller.create(
     {
-      items: [{ type: "sleep" }],
+      kind: "sleep",
+      notes: [{ type: "sleep" }],
       userId: "attacker-1",
       startedAt: "2020-01-01T00:00:00.000Z",
       finishedAt: "2020-01-01T01:00:00.000Z",
@@ -101,7 +96,8 @@ test("POST /api/events takes the window from the client but never the owner", as
   );
   const persistedEvent = await eventRepository.findById(eventId);
 
-  expect(persistedEvent?.items[0].type).toBe("sleep");
+  expect(persistedEvent?.kind).toBe("sleep");
+  expect(database.notesOf(persistedEvent as never).map((note) => note.type)).toEqual(["sleep"]);
   // O dono vem do bearer, nunca do corpo; a janela, ao contrario, e do cliente.
   expect(persistedEvent?.userId).toBe("auth-user-1");
   expect(persistedEvent?.startedAt.toISOString()).toBe("2020-01-01T00:00:00.000Z");
@@ -114,12 +110,12 @@ test("POST /api/events rejects a startedAt that is not a date", async () => {
   const { controller } = makeController();
 
   await expect(
-    controller.create({ items: [{ type: "sleep" }], startedAt: "amanha" } as never, actor),
+    controller.create({ kind: "sleep", startedAt: "amanha" } as never, actor),
   ).rejects.toThrow("Invalid startedAt");
 });
 
 function anOpenTraining() {
-  return Event.create({
+  const fixture = eventWith({
     id: "01K2R1J5M8S0Y2Z7ABCD123456",
     userId: "auth-user-1",
     name: "Treino",
@@ -127,18 +123,18 @@ function anOpenTraining() {
     startedAt: new Date("2026-08-16T18:00:00.000Z"),
     tags: ["gym"],
     interruptions: [],
-    items: [
-      EventItem.create({ position: 0, type: "training", schemaVersion: 1, isPrimary: true, data: { workouts: [], caloriesBurned: 0 } }),
-    ],
-  });
+  }, [
+    { type: "training", data: { workouts: [], caloriesBurned: 0 } },
+  ]);
+  return fixture;
 }
 
 test("PATCH /api/events/:eventId keeps server-owned fields when they are sent by the client", async () => {
   const event = anOpenTraining();
-  const { controller, eventRepository } = makeController({ database: new InMemoryEventDatabase([event]) });
+  const { controller, eventRepository } = makeController({ database: databaseOf([event]) });
 
   await controller.update(
-    event.id,
+    event.event.id,
     {
       eventId: "different-event-id",
       expectedRevision: 1,
@@ -148,27 +144,27 @@ test("PATCH /api/events/:eventId keeps server-owned fields when they are sent by
     actor,
   );
 
-  expect(await eventRepository.findById(event.id)).toMatchObject({
-    id: event.id,
+  expect(await eventRepository.findById(event.event.id)).toMatchObject({
+    id: event.event.id,
     userId: "auth-user-1",
     name: "Updated training",
   });
-  expect((await eventRepository.findById(event.id))?.startedAt.toISOString()).toBe(
+  expect((await eventRepository.findById(event.event.id))?.startedAt.toISOString()).toBe(
     "2026-08-16T18:00:00.000Z",
   );
 });
 
 test("PATCH /api/events/:eventId updates startedAt when the client sends it", async () => {
   const event = anOpenTraining();
-  const { controller, eventRepository } = makeController({ database: new InMemoryEventDatabase([event]) });
+  const { controller, eventRepository } = makeController({ database: databaseOf([event]) });
 
   await controller.update(
-    event.id,
+    event.event.id,
     { expectedRevision: 1, startedAt: "2026-08-16T17:00:00.000Z" } as never,
     actor,
   );
 
-  expect((await eventRepository.findById(event.id))?.startedAt.toISOString()).toBe(
+  expect((await eventRepository.findById(event.event.id))?.startedAt.toISOString()).toBe(
     "2026-08-16T17:00:00.000Z",
   );
 });
@@ -183,7 +179,7 @@ test("rejects an invalid timeline date before touching the repository", async ()
 
 test("returns only timeline events for the requesting actor, ignoring any userId in the query", async () => {
   const { controller } = makeController({
-    database: new InMemoryEventDatabase([
+    database: databaseOf([
       makeMealEvent("auth-user-1", "Breakfast", "2026-08-16T08:00:00-03:00", 320),
       makeMealEvent("attacker-1", "Lunch", "2026-08-16T12:00:00-03:00", 540),
     ]),
@@ -230,7 +226,7 @@ test("rejects a daily overview request without a date", async () => {
 
 test("keeps the daily boundary in Sao Paulo", async () => {
   const { controller } = makeController({
-    database: new InMemoryEventDatabase([
+    database: databaseOf([
       makeMealEvent("auth-user-1", "Late meal", "2026-08-15T23:30:00-03:00", 250),
     ]),
   });
@@ -240,30 +236,30 @@ test("keeps the daily boundary in Sao Paulo", async () => {
 
 test("PATCH /api/events/:eventId refuses marks that are not ours", async () => {
   const event = anOpenTraining();
-  const { controller, eventRepository } = makeController({ database: new InMemoryEventDatabase([event]) });
+  const { controller, eventRepository } = makeController({ database: databaseOf([event]) });
 
   await expect(
-    controller.update(event.id, { eventId: event.id, expectedRevision: 1, missed: "sim" } as never, actor),
+    controller.update(event.event.id, { eventId: event.event.id, expectedRevision: 1, missed: "sim" } as never, actor),
   ).rejects.toBeInstanceOf(BadRequestException);
 
   await expect(
-    controller.update(event.id, { eventId: event.id, expectedRevision: 1, priority: "altissima" } as never, actor),
+    controller.update(event.event.id, { eventId: event.event.id, expectedRevision: 1, priority: "altissima" } as never, actor),
   ).rejects.toBeInstanceOf(BadRequestException);
 
-  expect((await eventRepository.findById(event.id))?.missed).toBe(false);
+  expect((await eventRepository.findById(event.event.id))?.missed).toBe(false);
 });
 
 test("PATCH /api/events/:eventId stores the mark and the priority the client sent", async () => {
   const event = anOpenTraining();
-  const { controller, eventRepository } = makeController({ database: new InMemoryEventDatabase([event]) });
+  const { controller, eventRepository } = makeController({ database: databaseOf([event]) });
 
   await controller.update(
-    event.id,
-    { eventId: event.id, expectedRevision: 1, missed: true, priority: "urgent" },
+    event.event.id,
+    { eventId: event.event.id, expectedRevision: 1, missed: true, priority: "urgent" },
     actor,
   );
 
-  expect(await eventRepository.findById(event.id)).toMatchObject({
+  expect(await eventRepository.findById(event.event.id)).toMatchObject({
     missed: true,
     priority: "urgent",
   });
@@ -271,27 +267,27 @@ test("PATCH /api/events/:eventId stores the mark and the priority the client sen
 
 test("PATCH /api/events/:eventId rejects a request without expectedRevision", async () => {
   const event = anOpenTraining();
-  const { controller } = makeController({ database: new InMemoryEventDatabase([event]) });
+  const { controller } = makeController({ database: databaseOf([event]) });
 
   await expect(
-    controller.update(event.id, { eventId: event.id, name: "Updated" } as never, actor),
+    controller.update(event.event.id, { eventId: event.event.id, name: "Updated" } as never, actor),
   ).rejects.toBeInstanceOf(BadRequestException);
 });
 
 test("PATCH /api/events/:eventId reports a revision conflict when the client sends a stale expectedRevision", async () => {
   const event = anOpenTraining();
-  const { controller } = makeController({ database: new InMemoryEventDatabase([event]) });
+  const { controller } = makeController({ database: databaseOf([event]) });
 
   await expect(
-    controller.update(event.id, { eventId: event.id, expectedRevision: 99, name: "Updated" }, actor),
+    controller.update(event.event.id, { eventId: event.event.id, expectedRevision: 99, name: "Updated" }, actor),
   ).rejects.toBeInstanceOf(EventRevisionConflictError);
 });
 
 test("GET /api/events/:eventId refuses to return another user's event", async () => {
   const event = anOpenTraining();
-  const { controller } = makeController({ database: new InMemoryEventDatabase([event]) });
+  const { controller } = makeController({ database: databaseOf([event]) });
 
-  await expect(controller.detail(event.id, attacker)).rejects.toBeInstanceOf(EventOwnershipError);
+  await expect(controller.detail(event.event.id, attacker)).rejects.toBeInstanceOf(EventOwnershipError);
 });
 
 test("GET /api/events/:eventId answers 404 for an event that does not exist", async () => {

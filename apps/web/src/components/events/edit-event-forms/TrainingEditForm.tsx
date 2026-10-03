@@ -20,12 +20,12 @@ import {
   type EditEventFormProps,
   FinishedAtField,
   FormActions,
-  type ItemOfType,
+  type NoteOfType,
   StartedAtField,
   EventMarks,
   NotificationOffsetsField,
   fromDatetimeLocalValue,
-  itemsPatchedWith,
+  notesPatchedWith,
   toDatetimeLocalValue,
   useSubmitEventUpdate,
 } from "./shared";
@@ -103,12 +103,14 @@ const selectClass = `${fieldInputClass} pr-8`;
 
 export function TrainingEditForm({
   event,
-  item,
+  note,
   onCancel,
   onClose,
   onUpdated,
-}: EditEventFormProps<ItemOfType<"training">>) {
-  const [workouts, setWorkouts] = useState<WorkoutDraft[]>(item.data.workouts.map(draftFromWorkout));
+}: EditEventFormProps<NoteOfType<"training">>) {
+  const [workouts, setWorkouts] = useState<WorkoutDraft[]>(
+    (note?.data.workouts ?? []).map(draftFromWorkout),
+  );
   const [description, setDescription] = useState(event.description);
   const [tags, setTags] = useState<string[]>(event.tags);
   const [startedAt, setStartedAt] = useState(toDatetimeLocalValue(event.startedAt));
@@ -174,9 +176,12 @@ export function TrainingEditForm({
       // `caloriesBurned` e a soma dos treinos, e a API a recalcula do mesmo
       // jeito — mandar outra coisa daqui so criaria uma divergencia que o
       // servidor descartaria.
-      items: itemsPatchedWith(event, item.id, {
-        workouts: builtWorkouts,
-        caloriesBurned: builtWorkouts.reduce((total, workout) => total + workout.calories, 0),
+      notes: notesPatchedWith(event, note?.id, {
+        type: "training",
+        data: {
+          workouts: builtWorkouts,
+          caloriesBurned: builtWorkouts.reduce((total, workout) => total + workout.calories, 0),
+        },
       }),
       description: description.trim(),
       tags,

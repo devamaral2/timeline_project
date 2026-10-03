@@ -20,7 +20,7 @@ export class InMemoryTimelineEventQuery implements TimelineEventQuery {
     }
     if (params.type) {
       const type = params.type;
-      events = events.filter((event) => event.items.some((item) => item.type === type));
+      events = events.filter((event) => event.kind === type);
     }
     if (params.tag) {
       const tag = params.tag;
@@ -50,18 +50,15 @@ export class InMemoryTimelineEventQuery implements TimelineEventQuery {
         ? encodeTimelineCursor({ startedAt: lastEvent.startedAt, id: lastEvent.id })
         : undefined;
 
-    return { items: page.map(toCardDto), nextCursor };
+    return { items: page.map((event) => toCardDto(event, this.database)), nextCursor };
   }
 }
 
-function toCardDto(event: Event): TimelineEventCardDto {
-  const primaryItem = event.items.find((item) => item.isPrimary);
-
+function toCardDto(event: Event, database: InMemoryEventDatabase): TimelineEventCardDto {
   return {
     id: event.id,
-    primaryItemId: primaryItem?.id ?? "",
-    primaryItemType: primaryItem?.type ?? "",
-    itemTypes: event.items.map((item) => item.type),
+    kind: event.kind,
+    noteTypes: database.notesOf(event).map((note) => note.type),
     missed: event.missed,
     notifyOffsetsMinutes: [...event.notifyOffsetsMinutes],
     name: event.name,

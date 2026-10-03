@@ -13,7 +13,7 @@ interface DayEventRow extends Record<string, unknown> {
   finished_at: Date | null;
 }
 
-interface DayItemRow extends Record<string, unknown> {
+interface DayNoteRow extends Record<string, unknown> {
   event_id: string;
   type: string;
   data: unknown;
@@ -49,17 +49,20 @@ export class PostgresDailyOverviewQuery implements DailyOverviewQuery {
       };
     }
 
-    const [eventsResult, itemsResult] = await Promise.all([
+    const [eventsResult, notesResult] = await Promise.all([
       this.db.execute<DayEventRow>(sql`
         SELECT id, name, description, started_at, finished_at
         FROM events
         WHERE id IN ${eventIds} AND deleted_at IS NULL
       `),
-      this.db.execute<DayItemRow>(sql`
-        SELECT event_id, type, data
-        FROM event_items
-        WHERE event_id IN ${eventIds} AND type IN ('meal', 'sleep', 'training')
-        ORDER BY event_id, position
+      this.db.execute<DayNoteRow>(sql`
+        SELECT en.event_id, n.type, n.data
+        FROM event_notes en
+        JOIN notes n ON n.id = en.note_id
+        WHERE en.event_id IN ${eventIds}
+          AND n.deleted_at IS NULL
+          AND n.type IN ('meal', 'sleep', 'training')
+        ORDER BY en.event_id, en.position
       `),
     ]);
 
@@ -69,7 +72,7 @@ export class PostgresDailyOverviewQuery implements DailyOverviewQuery {
     const trainingEvents: DailyOverviewDto["trainingEvents"] = [];
     let latestSleep: { event: DayEventRow; data: { trackedSleepTime: number; score: number } } | undefined;
 
-    for (const item of itemsResult.rows) {
+    for (const item of notesResult.rows) {
       const event = eventsById.get(item.event_id);
       if (!event) continue;
 

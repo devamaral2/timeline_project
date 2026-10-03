@@ -1,5 +1,5 @@
 import { ulid } from "ulid";
-import { EventValidationError } from "../errors/event.errors";
+import { NoteValidationError } from "../errors/note.errors";
 
 export interface FoodItemMacronutrients {
   carbohydratesGrams: number;
@@ -30,41 +30,41 @@ function isNonEmptyString(value: unknown): value is string {
 
 export function parseFoodItem(data: unknown): FoodItem {
   if (typeof data !== "object" || data === null) {
-    throw new EventValidationError("Food item must be an object");
+    throw new NoteValidationError("Food item must be an object");
   }
 
   const source = data as Record<string, unknown>;
 
   if (!isNonEmptyString(source.name)) {
-    throw new EventValidationError("Food item requires a name");
+    throw new NoteValidationError("Food item requires a name");
   }
   if (!isNonEmptyString(source.portion)) {
-    throw new EventValidationError("Food item requires a portion");
+    throw new NoteValidationError("Food item requires a portion");
   }
   if (!isFiniteNonNegative(source.approximateWeightGrams)) {
-    throw new EventValidationError("Food item requires a non-negative approximateWeightGrams");
+    throw new NoteValidationError("Food item requires a non-negative approximateWeightGrams");
   }
   if (!isFiniteNonNegative(source.caloriesKcal)) {
-    throw new EventValidationError("Food item requires non-negative caloriesKcal");
+    throw new NoteValidationError("Food item requires non-negative caloriesKcal");
   }
 
   const macronutrients = source.macronutrients as Record<string, unknown> | undefined;
   if (typeof macronutrients !== "object" || macronutrients === null) {
-    throw new EventValidationError("Food item requires macronutrients");
+    throw new NoteValidationError("Food item requires macronutrients");
   }
   for (const key of ["carbohydratesGrams", "proteinsGrams", "totalFatGrams", "fiberGrams"] as const) {
     if (!isFiniteNonNegative(macronutrients[key])) {
-      throw new EventValidationError(`Food item macronutrients.${key} must be a non-negative number`);
+      throw new NoteValidationError(`Food item macronutrients.${key} must be a non-negative number`);
     }
   }
 
   const micronutrients = source.micronutrients as Record<string, unknown> | undefined;
   if (typeof micronutrients !== "object" || micronutrients === null) {
-    throw new EventValidationError("Food item requires micronutrients");
+    throw new NoteValidationError("Food item requires micronutrients");
   }
   for (const [key, value] of Object.entries(micronutrients)) {
     if (!isFiniteNonNegative(value)) {
-      throw new EventValidationError(`Food item micronutrients.${key} must be a non-negative number`);
+      throw new NoteValidationError(`Food item micronutrients.${key} must be a non-negative number`);
     }
   }
 

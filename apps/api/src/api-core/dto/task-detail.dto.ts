@@ -15,6 +15,7 @@ export function toTaskDetailDto(task: Task): TaskDetailDto {
     estimatedFinishAt: task.estimatedFinishAt?.toISOString(),
     finishedAt: task.finishedAt?.toISOString(),
     dependsOnTaskIds: [...task.dependsOnTaskIds],
+    noteIds: task.noteLinks.map((link) => link.noteId),
     revision: task.revision,
   };
 }
