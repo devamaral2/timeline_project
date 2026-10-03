@@ -16,7 +16,12 @@ main_worktree_root() {
 # Slug minúsculo/hífen a partir do nome do diretório da worktree atual.
 # Usado para nomear o projeto do Docker Compose e as bases do Postgres.
 worktree_slug() {
-  basename "$(worktree_root)" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9' '-' | sed 's/-\+/-/g; s/^-//; s/-$//'
+  slugify "$(basename "$(worktree_root)")"
+}
+
+# Slug minúsculo/hífen de um nome qualquer (ex.: nome de diretório).
+slugify() {
+  printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9' '-' | sed 's/-\+/-/g; s/^-//; s/-$//'
 }
 
 # Primeira porta livre em 127.0.0.1 a partir de $1.

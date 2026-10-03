@@ -75,6 +75,40 @@ export function assertParentTaskId(body: { parentTaskId?: unknown }): void {
   }
 }
 
+const NOTE_TYPES = ["text", "meal", "sleep", "training"];
+
+/**
+ * O que a rota de notas confere antes do dominio: a forma do corpo. Quem valida
+ * o `data` de cada tipo e o registro de tipos da note. Na criacao, `type` ausente
+ * e texto livre; na edicao, `data` so vem com `type`.
+ */
+export function assertNoteRequest(
+  body: { type?: unknown; data?: unknown; name?: unknown; tags?: unknown; eventIds?: unknown; taskIds?: unknown },
+  creating: boolean,
+): void {
+  if (body?.type !== undefined && !NOTE_TYPES.includes(body.type as string)) {
+    throw new BadRequestException("Invalid type");
+  }
+  if (creating ? body?.data === undefined && (body?.type === undefined || body?.type === "text") : (body?.type === undefined) !== (body?.data === undefined)) {
+    throw new BadRequestException("Invalid data");
+  }
+  if (body?.data !== undefined && (typeof body.data !== "object" || body.data === null || Array.isArray(body.data))) {
+    throw new BadRequestException("Invalid data");
+  }
+  if (body?.name !== undefined && typeof body.name !== "string") {
+    throw new BadRequestException("Invalid name");
+  }
+  for (const field of ["eventIds", "taskIds"] as const) {
+    const value = body?.[field];
+    if (value !== undefined && (!Array.isArray(value) || value.some((id) => typeof id !== "string"))) {
+      throw new BadRequestException(`Invalid ${field}`);
+    }
+  }
+  if (body?.tags !== undefined && (!Array.isArray(body.tags) || body.tags.some((tag) => typeof tag !== "string"))) {
+    throw new BadRequestException("Invalid tags");
+  }
+}
+
 export function assertRecurrenceTemplate(template: unknown, required: boolean): void {
   if (template === undefined && !required) return;
   if (typeof template !== "object" || template === null || Array.isArray(template)) {

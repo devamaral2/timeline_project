@@ -6,6 +6,7 @@ import type {
   DailyOverviewQuery,
   EntityBatchWriter,
   EventRepository,
+  NoteLinkQuery,
   NoteRepository,
   RecurrenceRepository,
   ScopedSqlQuery,
@@ -21,6 +22,7 @@ import { PostgresEventRepository } from "./events/repositories/postgres-event.re
 import { PostgresTagRepository } from "./events/repositories/postgres-tag.repository";
 import { PostgresTaskRepository } from "./tasks/repositories/postgres-task.repository";
 import { PostgresNoteRepository } from "./notes/repositories/postgres-note.repository";
+import { PostgresNoteLinkQuery } from "./notes/queries/postgres-note-link.query";
 import { PostgresScopedSqlQuery } from "./agent-sql/postgres-scoped-sql.query";
 import { PostgresDayContextQuery } from "./agent-sql/postgres-day-context.query";
 import type { DayContextQuery } from "../../api-core/agent/day-context.query";
@@ -48,6 +50,7 @@ export const WORKOUT_CATALOG = "WORKOUT_CATALOG";
 export const TASK_REPOSITORY = "TASK_REPOSITORY";
 export const RECURRENCE_REPOSITORY = "RECURRENCE_REPOSITORY";
 export const NOTE_REPOSITORY = "NOTE_REPOSITORY";
+export const NOTE_LINK_QUERY = "NOTE_LINK_QUERY";
 export const SCOPED_SQL_QUERY = "SCOPED_SQL_QUERY";
 export const DAY_CONTEXT_QUERY = "DAY_CONTEXT_QUERY";
 export const ENTITY_BATCH_WRITER = "ENTITY_BATCH_WRITER";
@@ -116,6 +119,11 @@ function requireDatabaseUrl(): string {
         new PostgresNoteRepository(database.db),
     },
     {
+      provide: NOTE_LINK_QUERY,
+      inject: [DATABASE],
+      useFactory: (database: PostgresDatabase): NoteLinkQuery => new PostgresNoteLinkQuery(database.db),
+    },
+    {
       provide: SCOPED_SQL_QUERY,
       inject: [DATABASE],
       useFactory: (database: PostgresDatabase): ScopedSqlQuery =>
@@ -161,6 +169,7 @@ function requireDatabaseUrl(): string {
     TASK_REPOSITORY,
     RECURRENCE_REPOSITORY,
     NOTE_REPOSITORY,
+    NOTE_LINK_QUERY,
     SCOPED_SQL_QUERY,
     DAY_CONTEXT_QUERY,
     ENTITY_BATCH_WRITER,

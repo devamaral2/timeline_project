@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useEffect, useState, type ReactNode } from "react";
 import { AgendaHeaderActions } from "./agenda-header-actions";
 import { MobileNavigation } from "./mobile-navigation";
+import { PrimaryNavigation } from "./primary-navigation";
 import styles from "./mockup.module.css";
 
 export function BrandIcon() {
@@ -57,6 +58,7 @@ export function MockupShell({
           <a href={userId ? `/${userId}` : "/mockups/eventos"} className={styles.brand} aria-label="Braid — agenda">
             <BrandLogo />
           </a>
+          <PrimaryNavigation userId={userId} />
           <div className={styles.headerActions}><AgendaHeaderActions live={live ?? false} darkMode={darkMode} onThemeToggle={toggleTheme} /></div>
         </div>
       </header>

@@ -15,6 +15,7 @@ export * from "./tasks/mappers/task-row.mapper";
 export * from "./tasks/repositories/postgres-task.repository";
 export * from "./notes/mappers/note-row.mapper";
 export * from "./notes/repositories/postgres-note.repository";
+export * from "./notes/queries/postgres-note-link.query";
 export * from "./agent-sql/postgres-scoped-sql.query";
 export * from "./agent-batch/postgres-entity-batch-writer";
 export * from "./agent-chat/postgres-agent-chat-ticket.store";

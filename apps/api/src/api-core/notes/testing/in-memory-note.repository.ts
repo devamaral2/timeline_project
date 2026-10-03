@@ -34,4 +34,10 @@ export class InMemoryNoteRepository implements NoteRepository {
   async findByIds(noteIds: readonly string[]): Promise<Note[]> {
     return this.notes.filter((note) => noteIds.includes(note.id));
   }
+
+  async listByUserId(userId: string): Promise<Note[]> {
+    return this.notes
+      .filter((note) => note.userId === userId)
+      .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+  }
 }

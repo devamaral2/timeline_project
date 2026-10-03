@@ -116,10 +116,23 @@ export interface NoteDtoOf<TType extends KnownNoteType, TData> {
   type: TType;
   schemaVersion: number;
   data: TData;
+  /** Onde a nota aparece (vazio na solta); a API de notas preenche, os eventos nao. */
+  links?: NoteLinkDto[];
   tags: string[];
   revision: number;
   createdAt: string;
   updatedAt: string;
+}
+
+/** Onde a nota aparece: um evento ou uma tarefa. */
+export interface NoteLinkDto {
+  kind: "event" | "task";
+  id: string;
+  name: string;
+  /** A natureza do evento (routine, meal, training, sleep...); so para `kind: "event"`. */
+  eventKind?: string;
+  /** Quando o alvo acontece — inicio do evento ou da tarefa. */
+  at?: string;
 }
 
 /** Uma note: `type` + `schemaVersion` dizem que forma o `data` tem. */
@@ -300,6 +313,25 @@ export interface TaskDetailDto {
   dependsOnTaskIds: string[];
   revision: number;
 }
+
+/** `POST /api/notes`: a note e os eventos e tarefas em que ela ja nasce aparecendo. */
+export type CreateNoteRequest = CreateNoteInput & {
+  eventIds?: string[];
+  taskIds?: string[];
+};
+
+/**
+ * `PATCH /api/notes/:noteId`. Com `type`, o `data` e o conteudo novo inteiro.
+ * `eventIds`/`taskIds` sao a lista completa de onde a nota aparece (vazia solta a
+ * nota); ausentes, os vinculos ficam como estao.
+ */
+export type UpdateNoteRequest = {
+  expectedRevision: number;
+  name?: string;
+  tags?: string[];
+  eventIds?: string[];
+  taskIds?: string[];
+} & ({ type?: undefined; data?: undefined } | (NoteDataInput & { schemaVersion?: number }));
 
 export interface TagSuggestionDto {
   id: string;

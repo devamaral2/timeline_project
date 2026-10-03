@@ -10,6 +10,7 @@ import {
 import { createPostgresTestContext, type PostgresTestContext } from "../testing/postgres-test-context";
 import { PostgresEventRepository } from "../events/repositories/postgres-event.repository";
 import { PostgresNoteRepository } from "../notes/repositories/postgres-note.repository";
+import { PostgresNoteLinkQuery } from "../notes/queries/postgres-note-link.query";
 import { PostgresTaskRepository } from "../tasks/repositories/postgres-task.repository";
 
 describe("PostgresNoteRepository", () => {
@@ -165,6 +166,70 @@ describe("PostgresNoteRepository", () => {
       NoteNotFoundError,
     );
     await expect(notes.delete(note.id, "user-1")).rejects.toBeInstanceOf(NoteNotFoundError);
+  });
+
+  test("lists only the user's live notes, most recently edited first, with their tags", async () => {
+    const older = Note.create({ userId: "user-1", data: text("antiga"), tags: ["casa"] });
+    const newer = Note.create({ userId: "user-1", data: text("nova") });
+    const deleted = Note.create({ userId: "user-1", data: text("apagada") });
+    const foreign = Note.create({ userId: "user-2", data: text("de outro") });
+    for (const note of [older, newer, deleted, foreign]) await notes.save(note);
+    await notes.update(older.revise({ data: text("antiga editada") }), "user-1", older.revision);
+    await notes.delete(deleted.id, "user-1");
+
+    const listed = await notes.listByUserId("user-1");
+
+    expect(listed.map((note) => (note.data as { body: string }).body)).toEqual(["antiga editada", "nova"]);
+    expect(listed[0].tags).toEqual(["casa"]);
+    expect(await notes.listByUserId("nobody")).toEqual([]);
+  });
+
+  test("the link query tells where each note appears: live events then tasks, never deleted ones", async () => {
+    const shared = Note.create({ userId: "user-1", data: text("compartilhada") });
+    const loose = Note.create({ userId: "user-1", data: text("solta") });
+    await notes.save(shared);
+    await notes.save(loose);
+    const early = Event.create({
+      userId: "user-1",
+      name: "Cedo",
+      description: "",
+      startedAt: new Date("2026-09-16T08:00:00.000Z"),
+      tags: [],
+      interruptions: [],
+      kind: "meal",
+      noteLinks: [{ noteId: shared.id, fromRecurrence: false }],
+    });
+    const late = Event.create({
+      userId: "user-1",
+      name: "Tarde",
+      description: "",
+      startedAt: new Date("2026-09-16T18:00:00.000Z"),
+      tags: [],
+      interruptions: [],
+      noteLinks: [{ noteId: shared.id, fromRecurrence: false }],
+    });
+    const gone = Event.create({
+      userId: "user-1",
+      name: "Apagado",
+      description: "",
+      startedAt: new Date("2026-09-16T10:00:00.000Z"),
+      tags: [],
+      interruptions: [],
+      noteLinks: [{ noteId: shared.id, fromRecurrence: false }],
+    });
+    for (const event of [late, early, gone]) await events.save(event);
+    await events.delete(gone.id, "user-1");
+    const task = await savedTask([shared.id]);
+
+    const links = await new PostgresNoteLinkQuery(ctx.db).linksOf([shared.id, loose.id]);
+
+    expect(links.get(shared.id)).toEqual([
+      { kind: "event", id: early.id, name: "Cedo", eventKind: "meal", at: early.startedAt },
+      { kind: "event", id: late.id, name: "Tarde", eventKind: "routine", at: late.startedAt },
+      { kind: "task", id: task.id, name: "Limpar" },
+    ]);
+    expect(links.has(loose.id)).toBe(false);
+    expect((await new PostgresNoteLinkQuery(ctx.db).linksOf([])).size).toBe(0);
   });
 
   test("findByIds returns only the notes that exist, with their tags", async () => {

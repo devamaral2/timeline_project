@@ -86,12 +86,16 @@ const trainingDataSchema = z.object({
   caloriesBurned: z.number(),
 }).strict();
 
+export const noteLinkSchema = z.object({
+  kind: z.enum(["event", "task"]), id: z.string(), name: z.string(), eventKind: z.string().optional(), at: z.string().optional(),
+}).strict();
+
 const noteBase = {
-  id: z.string(), name: z.string(), schemaVersion: z.number().int(), tags: z.array(z.string()),
+  id: z.string(), name: z.string(), schemaVersion: z.number().int(), links: z.array(noteLinkSchema).optional(), tags: z.array(z.string()),
   revision: z.number().int(), createdAt: z.string(), updatedAt: z.string(),
 };
 
-const noteSchema = z.discriminatedUnion("type", [
+export const noteSchema = z.discriminatedUnion("type", [
   z.object({ ...noteBase, type: z.literal("text"), data: textNoteSchema }).strict(),
   z.object({ ...noteBase, type: z.literal("meal"), data: mealItemSchema }).strict(),
   z.object({ ...noteBase, type: z.literal("sleep"), data: sleepDataSchema }).strict(),
@@ -100,15 +104,17 @@ const noteSchema = z.discriminatedUnion("type", [
 
 const noteInputBase = { name: z.string().optional(), tags: z.array(z.string()).optional() };
 
-const createNoteSchema = z.discriminatedUnion("type", [
-  z.object({ ...noteInputBase, type: z.literal("text").optional(), data: textNoteSchema }).strict(),
-  z.object({ ...noteInputBase, type: z.literal("meal"), data: z.object({ inputText: z.string() }).strict() }).strict(),
+const createNoteVariants = <TExtra extends z.ZodRawShape>(extra: TExtra) => [
+  z.object({ ...noteInputBase, ...extra, type: z.literal("text").optional(), data: textNoteSchema }).strict(),
+  z.object({ ...noteInputBase, ...extra, type: z.literal("meal"), data: z.object({ inputText: z.string() }).strict() }).strict(),
   z.object({
-    ...noteInputBase, type: z.literal("sleep"),
+    ...noteInputBase, ...extra, type: z.literal("sleep"),
     data: z.object({ trackedSleepTime: z.number().optional(), score: z.number().optional() }).strict().optional(),
   }).strict(),
-  z.object({ ...noteInputBase, type: z.literal("training"), data: z.object({ workouts: z.array(z.unknown()) }).strict().optional() }).strict(),
-]);
+  z.object({ ...noteInputBase, ...extra, type: z.literal("training"), data: z.object({ workouts: z.array(z.unknown()) }).strict().optional() }).strict(),
+] as const;
+
+const createNoteSchema = z.union(createNoteVariants({}));
 
 const updateEventNoteSchema = z.union([
   z.object({ ...noteInputBase, id: z.string() }).strict(),
@@ -151,6 +157,27 @@ export const updateEventInputSchema = z.object({
   kind: eventKindSchema.optional(), notes: z.array(updateEventNoteSchema).optional(), taskIds: z.array(z.string()).optional(),
 }).strict();
 
+/** `POST /api/notes`: a note e os eventos e tarefas em que ela ja nasce aparecendo. */
+export const createNoteInputSchema = z.union(
+  createNoteVariants({ eventIds: z.array(z.string()).optional(), taskIds: z.array(z.string()).optional() }),
+);
+
+export const createNoteResponseSchema = z.object({ noteId: z.string() }).strict();
+
+const updateNoteBase = {
+  expectedRevision: z.number().int(), ...noteInputBase,
+  eventIds: z.array(z.string()).optional(), taskIds: z.array(z.string()).optional(),
+};
+
+/** `PATCH /api/notes/:noteId`: com `type`, o `data` e o novo conteudo inteiro. */
+export const updateNoteInputSchema = z.union([
+  z.object(updateNoteBase).strict(),
+  z.object({ ...updateNoteBase, schemaVersion: z.number().int().optional(), type: z.literal("text"), data: textNoteSchema }).strict(),
+  z.object({ ...updateNoteBase, schemaVersion: z.number().int().optional(), type: z.literal("meal"), data: mealItemSchema }).strict(),
+  z.object({ ...updateNoteBase, schemaVersion: z.number().int().optional(), type: z.literal("sleep"), data: sleepDataSchema }).strict(),
+  z.object({ ...updateNoteBase, schemaVersion: z.number().int().optional(), type: z.literal("training"), data: trainingDataSchema }).strict(),
+]);
+
 export const tagSuggestionSchema = z.object({ id: z.string(), name: z.string() }).strict();
 
 const agentEntityRefSchema = z.object({
@@ -191,6 +218,10 @@ export const mobileContractSchemas = {
   eventDetail: eventDetailSchema,
   createEventInput: createEventInputSchema,
   updateEventInput: updateEventInputSchema,
+  note: noteSchema,
+  createNoteInput: createNoteInputSchema,
+  createNoteResponse: createNoteResponseSchema,
+  updateNoteInput: updateNoteInputSchema,
   tagSuggestion: tagSuggestionSchema,
   agentChatTicket: agentChatTicketSchema,
   agentChatClientFrame: agentChatClientFrameSchema,

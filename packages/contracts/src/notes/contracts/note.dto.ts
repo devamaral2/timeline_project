@@ -3,6 +3,17 @@ import type { SleepItem } from "../types/sleep-item";
 import type { TextNote } from "../types/text-note";
 import type { TrainingData, TrainingInputData } from "../types/training-data";
 
+/** Onde a note aparece: um evento ou uma tarefa, com o necessario para listar. */
+export interface NoteLinkDto {
+  kind: "event" | "task";
+  id: string;
+  name: string;
+  /** A natureza do evento (routine, meal, training, sleep...); so para `kind: "event"`. */
+  eventKind?: string;
+  /** Quando o alvo acontece: inicio do evento ou da tarefa, se houver. */
+  at?: string;
+}
+
 export type KnownNoteType = "text" | "meal" | "sleep" | "training";
 
 export interface NoteDtoOf<TType extends KnownNoteType, TData> {
@@ -11,6 +22,8 @@ export interface NoteDtoOf<TType extends KnownNoteType, TData> {
   type: TType;
   schemaVersion: number;
   data: TData;
+  /** Preenchido pela API de notas (vazio na nota solta); ausente nas notes que o agente e os eventos devolvem. */
+  links?: NoteLinkDto[];
   tags: string[];
   revision: number;
   createdAt: string;

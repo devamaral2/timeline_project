@@ -2,6 +2,7 @@
 
 import { ArrowLeft, ArrowUp, CalendarDays, Check, ChevronDown, CirclePlus, NotepadText, Plus, Search, SquareCheck, X } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 import { creatableItemTypes, ICON_STROKE_WIDTH, visualForItemType } from "@/components/events/event-visuals";
 import { AgentChatPanel, useAgendaChat } from "./agent-chat-panel";
@@ -49,6 +50,9 @@ function DraftPriorityIcon({ priority }: { priority: DraftPriority }) {
 
 export function MobileNavigation({ userId }: { userId?: string }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const pathname = usePathname();
+  const notesHref = userId ? `/${userId}/notas` : "/mockups/eventos/notas";
+  const onNotes = notesHref !== null && (pathname === notesHref || pathname.startsWith(`${notesHref}/`));
   const agendaChat = useAgendaChat({ live: Boolean(userId) });
   const [panel, setPanel] = useState<"hub" | "Tarefa" | "Nota" | null>(null);
   const [mode, setMode] = useState<"ai" | "create" | "search">("ai");
@@ -105,8 +109,12 @@ export function MobileNavigation({ userId }: { userId?: string }) {
     <>
       <nav className={styles.bottomNav} aria-label="Navegação inferior">
         <button type="button" aria-label="Tarefas" onClick={() => openPanel("Tarefa")} aria-haspopup="dialog" aria-expanded={panel === "Tarefa"} aria-controls={dialogId}><SquareCheck aria-hidden /><span>Tarefas</span></button>
-        <Link href={userId ? `/${userId}` : "/mockups/eventos"} aria-label="Agenda" aria-current={panel ? undefined : "page"}><CalendarDays aria-hidden /><span>Agenda</span></Link>
-        <button type="button" aria-label="Notas" onClick={() => openPanel("Nota")} aria-haspopup="dialog" aria-expanded={panel === "Nota"} aria-controls={dialogId}><NotepadText aria-hidden /><span>Notas</span></button>
+        <Link href={userId ? `/${userId}` : "/mockups/eventos"} aria-label="Agenda" aria-current={panel || onNotes ? undefined : "page"}><CalendarDays aria-hidden /><span>Agenda</span></Link>
+        {notesHref ? (
+          <Link href={notesHref} aria-label="Notas" aria-current={onNotes && !panel ? "page" : undefined}><NotepadText aria-hidden /><span>Notas</span></Link>
+        ) : (
+          <button type="button" aria-label="Notas" onClick={() => openPanel("Nota")} aria-haspopup="dialog" aria-expanded={panel === "Nota"} aria-controls={dialogId}><NotepadText aria-hidden /><span>Notas</span></button>
+        )}
         <button type="button" className={styles.commandButton} onClick={() => openPanel("hub")} aria-haspopup="dialog" aria-expanded={panel === "hub"} aria-controls={dialogId} aria-label="Buscar e criar"><span className={styles.commandGlyph}><IntelligenceIcon /></span><span>Buscar e criar</span></button>
       </nav>
       <dialog ref={dialogRef} id={dialogId} aria-labelledby={panel === "hub" ? undefined : titleId} aria-label={panel === "hub" ? "Buscar e criar" : undefined} className={styles.sectionMenu} onClose={() => setPanel(null)}

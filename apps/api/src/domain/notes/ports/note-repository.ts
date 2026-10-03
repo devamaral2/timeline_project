@@ -7,4 +7,6 @@ export interface NoteRepository {
   findById(noteId: string): Promise<Note | null>;
   /** As notes que existem e nao foram apagadas; ids ausentes ficam de fora, e a ordem nao e a dos ids. */
   findByIds(noteIds: readonly string[]): Promise<Note[]>;
+  /** As notes do usuario, da editada mais recentemente para a mais antiga. */
+  listByUserId(userId: string): Promise<Note[]>;
 }
