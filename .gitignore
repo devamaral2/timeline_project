@@ -32,3 +32,6 @@ next-env.d.ts
 .agents/**/*.secret
 .agents/**/*.secrets
 .agents/**/.browser-profile/
+
+# Gerado por scripts/worktree/caddy.sh a partir de Caddyfile.tmpl.
+/Caddyfile

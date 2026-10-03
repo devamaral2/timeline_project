@@ -269,6 +269,50 @@ export interface TaskDetailDto {
   revision: number;
 }
 
+/** O que a nota esta presa: um evento ou uma tarefa. Ausente, a nota e solta. */
+export interface NoteLinkDto {
+  kind: "event" | "task";
+  id: string;
+  name: string;
+  /** Tipo do item principal do evento (routine, meal, training, sleep…). */
+  eventType?: string;
+  /** Quando o alvo acontece — inicio do evento ou da tarefa. */
+  at?: string;
+}
+
+/** O que `GET /api/notes` e `GET /api/notes/:noteId` devolvem. */
+export interface NoteDto {
+  id: string;
+  name: string;
+  content: string;
+  eventId?: string;
+  taskId?: string;
+  link?: NoteLinkDto;
+  tags: string[];
+  revision: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** `POST /api/notes`. Sem `name`, a API deriva o titulo da primeira linha. */
+export interface CreateNoteInput {
+  content: string;
+  name?: string;
+  eventId?: string;
+  taskId?: string;
+  tags?: string[];
+}
+
+/** `PATCH /api/notes/:noteId`. `null` solta a nota do evento ou da tarefa. */
+export interface UpdateNoteInput {
+  expectedRevision: number;
+  name?: string;
+  content?: string;
+  eventId?: string | null;
+  taskId?: string | null;
+  tags?: string[];
+}
+
 export interface TagSuggestionDto {
   id: string;
   name: string;

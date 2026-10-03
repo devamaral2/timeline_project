@@ -1,0 +1,19 @@
+# Servico systemd de usuario do Caddy local, apontando para o Caddyfile gerado
+# na raiz da worktree principal (ajuste o caminho se o checkout mudar).
+#
+# Instalar:
+#   sudo pacman -S caddy
+#   mkdir -p ~/.config/systemd/user
+#   cp infra/caddy/timeline-caddy.service ~/.config/systemd/user/
+#   pnpm caddy:sync
+#   systemctl --user enable --now timeline-caddy
+[Unit]
+Description=Caddy local (dominios *.localhost das worktrees do timeline)
+
+[Service]
+ExecStart=/usr/bin/caddy run --config %h/Documents/projects/timeline_project/Caddyfile --adapter caddyfile
+ExecReload=/usr/bin/caddy reload --config %h/Documents/projects/timeline_project/Caddyfile --adapter caddyfile
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

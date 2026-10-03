@@ -104,6 +104,22 @@ describe("PostgresNoteRepository", () => {
     await expect(notes.delete(note.id, "user-1")).rejects.toBeInstanceOf(NoteNotFoundError);
   });
 
+  test("lists only the user's live notes, most recently edited first, with their tags", async () => {
+    const older = Note.create({ userId: "user-1", content: "antiga", tags: ["casa"] });
+    const newer = Note.create({ userId: "user-1", content: "nova" });
+    const deleted = Note.create({ userId: "user-1", content: "apagada" });
+    const foreign = Note.create({ userId: "user-2", content: "de outro" });
+    for (const note of [older, newer, deleted, foreign]) await notes.save(note);
+    await notes.update(older.revise({ content: "antiga editada" }), "user-1", older.revision);
+    await notes.delete(deleted.id, "user-1");
+
+    const listed = await notes.listByUserId("user-1");
+
+    expect(listed.map((note) => note.content)).toEqual(["antiga editada", "nova"]);
+    expect(listed[0].tags).toEqual(["casa"]);
+    expect(await notes.listByUserId("nobody")).toEqual([]);
+  });
+
   test("the database rejects blank content", async () => {
     await expect(
       ctx.pool.query(

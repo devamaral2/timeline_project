@@ -1,0 +1,21 @@
+# Template do Caddyfile local. NAO edite o `Caddyfile` gerado: ele e reescrito
+# por `pnpm caddy:sync` (e por worktree:new / worktree:teardown) a partir de
+# `git worktree list`. Sempre escrito na raiz da worktree PRINCIPAL.
+#
+# Cada worktree vira web.<nome>.localhost, api.<nome>.localhost e
+# auth.<nome>.localhost (*.localhost resolve para 127.0.0.1 sem DNS).
+#
+# Portas alocadas (configuradas; use `pnpm caddy:status` para ver o que roda):
+#
+@@TABLE@@
+{
+	auto_https off
+	admin localhost:2019
+}
+
+# Host sem worktree correspondente: 404 explicito em vez do 200 vazio padrao.
+http://:8080 {
+	respond "Nenhuma worktree neste host. Veja o Caddyfile ou rode 'pnpm caddy:status'." 404
+}
+
+@@SITES@@

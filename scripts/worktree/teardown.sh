@@ -31,3 +31,6 @@ fi
 
 echo "Removendo a worktree do git..."
 git worktree remove "$WORKTREE_PATH"
+
+echo "Atualizando o Caddyfile da worktree principal..."
+bash "$SCRIPT_DIR/caddy.sh" sync || echo "Aviso: nao consegui atualizar o Caddyfile." >&2

@@ -29,6 +29,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
@@ -36,6 +37,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -77,6 +79,7 @@ fun AgendaShell(
     onNewEvent: () -> Unit = {},
     onGoToToday: () -> Unit = {},
     onOpenEvent: (String) -> Unit = {},
+    onOpenNote: (String) -> Unit = {},
     onVoiceTranscript: (String) -> Unit = {},
     onVoiceQueueDrained: () -> Unit = {},
     onChatEntitiesChanged: () -> Unit = {},
@@ -89,7 +92,8 @@ fun AgendaShell(
     val scope = rememberCoroutineScope()
     val todayKey = remember { LocalDate.now(ZoneId.of(TIMELINE_TIME_ZONE)).toString() }
     var selectedDayKey by remember(todayKey) { mutableStateOf(todayKey) }
-    var destination by remember { mutableStateOf(AgendaDestination.Agenda) }
+    // Salvável: ao voltar do detalhe de uma nota, a pessoa continua na aba Notas.
+    var destination by rememberSaveable { mutableStateOf(AgendaDestination.Agenda) }
     val voiceJobs =
         if (voiceQueueViewModel == null) {
             emptyList()
@@ -161,8 +165,18 @@ fun AgendaShell(
         Box(modifier = Modifier.fillMaxSize()) {
             Scaffold(
                 topBar = {
-                    Column {
-                        if (destination == AgendaDestination.Agenda) {
+                    if (destination == AgendaDestination.Notes) {
+                        TopAppBar(
+                            title = { BraidWordmark(style = MaterialTheme.typography.headlineMedium) },
+                            actions = {
+                                IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                                    Icon(Icons.Outlined.Menu, contentDescription = "Abrir menu")
+                                }
+                            },
+                            colors = TopAppBarDefaults.topAppBarColors(),
+                        )
+                    } else {
+                        Column {
                             CenterAlignedTopAppBar(
                                 title = {
                                     DateNavigator(
@@ -191,15 +205,6 @@ fun AgendaShell(
                                 todayKey = todayKey,
                                 onSelect = { selectedDayKey = it },
                             )
-                        } else {
-                            CenterAlignedTopAppBar(
-                                title = { BraidWordmark(style = MaterialTheme.typography.headlineMedium) },
-                                navigationIcon = {
-                                    IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                                        Icon(Icons.Outlined.Menu, contentDescription = "Abrir menu")
-                                    }
-                                },
-                            )
                         }
                     }
                 },
@@ -225,7 +230,7 @@ fun AgendaShell(
                         refreshSignal = refreshSignal,
                     )
                 } else if (destination == AgendaDestination.Notes) {
-                    NotesScreen(modifier = Modifier.padding(paddingValues))
+                    NotesScreen(onOpenNote = onOpenNote, modifier = Modifier.padding(paddingValues))
                 } else {
                     if (destination == AgendaDestination.Search && agentChatViewModel != null) {
                         AgentChatScreen(

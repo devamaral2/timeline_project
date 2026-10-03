@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { Note, NoteNotFoundError, NoteOwnershipError, NoteRevisionConflictError } from "../../../../domain";
 import type { NoteRepository } from "../../../../domain/ports";
@@ -142,5 +142,25 @@ export class PostgresNoteRepository implements NoteRepository {
       row,
       tagRows.map((tagRow) => tagRow.name),
     );
+  }
+
+  async listByUserId(userId: string): Promise<Note[]> {
+    const rows = await this.db
+      .select()
+      .from(schema.notes)
+      .where(and(eq(schema.notes.userId, userId), isNull(schema.notes.deletedAt)))
+      .orderBy(desc(schema.notes.updatedAt), desc(schema.notes.id));
+    if (rows.length === 0) return [];
+
+    const tagRows = await this.db
+      .select({ noteId: schema.noteTags.noteId, name: schema.tags.name })
+      .from(schema.noteTags)
+      .innerJoin(schema.tags, eq(schema.noteTags.tagId, schema.tags.id))
+      .where(inArray(schema.noteTags.noteId, rows.map((row) => row.id)));
+    const tagsByNote = new Map<string, string[]>();
+    for (const { noteId, name } of tagRows) {
+      tagsByNote.set(noteId, [...(tagsByNote.get(noteId) ?? []), name]);
+    }
+    return rows.map((row) => mapNoteRow(row, tagsByNote.get(row.id) ?? []));
   }
 }

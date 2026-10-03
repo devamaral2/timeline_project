@@ -37,6 +37,32 @@ class ContractFixturesTest {
         assertFixture("agent-conversations", AgentConversationPageDto.serializer())
         assertFixture("agent-messages", AgentChatMessagePageDto.serializer())
         assertFixture("tag-suggestions", ListSerializer(TagSuggestionDto.serializer()))
+        assertFixture("note-list", ListSerializer(NoteDto.serializer()))
+        assertFixture("create-note-input", CreateNoteInputDto.serializer())
+        assertFixture("create-note-response", CreateNoteResponseDto.serializer())
+    }
+
+    @Test
+    fun updateNoteBodyMatchesTheContractIncludingExplicitNulls() {
+        val expected = json.parseToJsonElement(javaClass.classLoader!!.getResource("fixtures/update-note-input.json")!!.readText())
+
+        val body =
+            UpdateNoteInput(
+                expectedRevision = 2,
+                name = "Novo título",
+                content = "Texto novo",
+                tags = listOf("casa"),
+                detach = true,
+            ).toJsonObject()
+
+        assertJsonEquivalent(expected, body, "update-note-input")
+    }
+
+    @Test
+    fun updateNoteBodyOmitsWhatWasNotChanged() {
+        val body = UpdateNoteInput(expectedRevision = 4, content = "Só o texto").toJsonObject()
+
+        assertEquals(setOf("expectedRevision", "content"), body.keys)
     }
 
     @Test

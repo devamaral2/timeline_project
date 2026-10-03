@@ -1,0 +1,49 @@
+[
+  {
+    "id": "note-training",
+    "name": "Treino A · peito e tríceps",
+    "content": "415 kcal gastas em 1 h.\n\n## Séries\n- Supino\n- Crucifixo",
+    "eventId": "event-training",
+    "link": {
+      "kind": "event",
+      "id": "event-training",
+      "name": "Academia",
+      "eventType": "training",
+      "at": "2026-09-14T10:00:00.000Z"
+    },
+    "tags": [
+      "saúde",
+      "força"
+    ],
+    "revision": 1,
+    "createdAt": "2026-09-14T11:05:00.000Z",
+    "updatedAt": "2026-09-14T11:05:00.000Z"
+  },
+  {
+    "id": "note-task",
+    "name": "Ideias para a proposta",
+    "content": "Começar pelo problema do cliente.",
+    "taskId": "task-proposal",
+    "link": {
+      "kind": "task",
+      "id": "task-proposal",
+      "name": "Revisar proposta",
+      "at": "2026-09-14T12:00:00.000Z"
+    },
+    "tags": [
+      "trabalho"
+    ],
+    "revision": 3,
+    "createdAt": "2026-09-12T12:00:00.000Z",
+    "updatedAt": "2026-09-13T00:12:00.000Z"
+  },
+  {
+    "id": "note-loose",
+    "name": "Livros para ler",
+    "content": "Torto arado.",
+    "tags": [],
+    "revision": 1,
+    "createdAt": "2026-09-11T12:00:00.000Z",
+    "updatedAt": "2026-09-11T12:00:00.000Z"
+  }
+]

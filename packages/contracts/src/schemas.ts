@@ -153,6 +153,27 @@ export const updateEventInputSchema = z.object({
   items: z.array(updateEventItemSchema).optional(), taskIds: z.array(z.string()).optional(),
 }).strict();
 
+export const noteLinkSchema = z.object({
+  kind: z.enum(["event", "task"]), id: z.string(), name: z.string(), eventType: z.string().optional(), at: z.string().optional(),
+}).strict();
+
+export const noteSchema = z.object({
+  id: z.string(), name: z.string(), content: z.string(), eventId: z.string().optional(), taskId: z.string().optional(),
+  link: noteLinkSchema.optional(), tags: z.array(z.string()), revision: z.number().int(), createdAt: z.string(), updatedAt: z.string(),
+}).strict();
+
+export const createNoteInputSchema = z.object({
+  content: z.string(), name: z.string().optional(), eventId: z.string().optional(), taskId: z.string().optional(), tags: z.array(z.string()).optional(),
+}).strict();
+
+export const createNoteResponseSchema = z.object({ noteId: z.string() }).strict();
+
+/** `eventId` e `taskId` aceitam `null` explícito: soltam a nota do alvo. */
+export const updateNoteInputSchema = z.object({
+  expectedRevision: z.number().int(), name: z.string().optional(), content: z.string().optional(),
+  eventId: z.string().nullable().optional(), taskId: z.string().nullable().optional(), tags: z.array(z.string()).optional(),
+}).strict();
+
 export const tagSuggestionSchema = z.object({ id: z.string(), name: z.string() }).strict();
 
 const agentEntityRefSchema = z.object({
@@ -193,6 +214,10 @@ export const mobileContractSchemas = {
   eventDetail: eventDetailSchema,
   createEventInput: createEventInputSchema,
   updateEventInput: updateEventInputSchema,
+  note: noteSchema,
+  createNoteInput: createNoteInputSchema,
+  createNoteResponse: createNoteResponseSchema,
+  updateNoteInput: updateNoteInputSchema,
   tagSuggestion: tagSuggestionSchema,
   agentChatTicket: agentChatTicketSchema,
   agentChatClientFrame: agentChatClientFrameSchema,

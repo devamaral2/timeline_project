@@ -1,12 +1,10 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { CalendarDays, NotepadText } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { AgendaHeaderActions } from "./agenda-header-actions";
 import { MobileNavigation } from "./mobile-navigation";
+import { PrimaryNavigation } from "./primary-navigation";
 import styles from "./mockup.module.css";
 
 export function BrandIcon() {
@@ -31,9 +29,6 @@ export function MockupShell({
   live?: boolean;
   userId?: string;
 }) {
-  const pathname = usePathname();
-  const base = userId ? `/${userId}` : "/mockups/eventos";
-  const notesOpen = pathname.endsWith("/notas");
   const [darkMode, setDarkMode] = useState(false);
 
   // O tema ja chega resolvido no <html> pelo script do layout raiz (sistema ou
@@ -63,10 +58,7 @@ export function MockupShell({
           <a href={userId ? `/${userId}` : "/mockups/eventos"} className={styles.brand} aria-label="Braid — agenda">
             <BrandLogo />
           </a>
-          <nav className={styles.primaryNav} aria-label="Principal">
-            <Link href={base} aria-current={!notesOpen ? "page" : undefined} className={!notesOpen ? styles.navActive : undefined}><CalendarDays aria-hidden />Agenda</Link>
-            <Link href={`${base}/notas`} aria-current={notesOpen ? "page" : undefined} className={notesOpen ? styles.navActive : undefined}><NotepadText aria-hidden />Notas</Link>
-          </nav>
+          <PrimaryNavigation userId={userId} />
           <div className={styles.headerActions}><AgendaHeaderActions live={live ?? false} darkMode={darkMode} onThemeToggle={toggleTheme} /></div>
         </div>
       </header>

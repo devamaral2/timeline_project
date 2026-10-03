@@ -29,4 +29,10 @@ export class InMemoryNoteRepository implements NoteRepository {
   async findById(noteId: string): Promise<Note | null> {
     return this.notes.find((note) => note.id === noteId) ?? null;
   }
+
+  async listByUserId(userId: string): Promise<Note[]> {
+    return this.notes
+      .filter((note) => note.userId === userId)
+      .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+  }
 }

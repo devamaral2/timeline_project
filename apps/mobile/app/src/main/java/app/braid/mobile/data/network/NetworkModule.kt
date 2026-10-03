@@ -16,6 +16,9 @@ import app.braid.mobile.data.events.EventRepository
 import app.braid.mobile.data.events.EventsApi
 import app.braid.mobile.data.events.VoiceEventGateway
 import app.braid.mobile.data.events.VoiceEventRepository
+import app.braid.mobile.data.notes.NoteGateway
+import app.braid.mobile.data.notes.NoteRepository
+import app.braid.mobile.data.notes.NotesApi
 import app.braid.mobile.data.tags.TagGateway
 import app.braid.mobile.data.tags.TagRepository
 import app.braid.mobile.data.tags.TagsApi
@@ -37,6 +40,10 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideEventGateway(repository: EventRepository): EventGateway = repository
+
+    @Provides
+    @Singleton
+    fun provideNoteGateway(repository: NoteRepository): NoteGateway = repository
 
     @Provides
     @Singleton
@@ -90,6 +97,20 @@ object NetworkModule {
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
             .create(EventsApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideNotesApi(
+        json: Json,
+        @Named("apiClient") client: OkHttpClient,
+    ): NotesApi =
+        Retrofit
+            .Builder()
+            .baseUrl(BuildConfig.API_BASE_URL.withTrailingSlash())
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(NotesApi::class.java)
 
     @Provides
     @Singleton

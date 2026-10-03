@@ -25,6 +25,7 @@ import app.braid.mobile.ui.auth.LoginScreen
 import app.braid.mobile.ui.chat.AgentChatViewModel
 import app.braid.mobile.ui.event.CreateEventScreen
 import app.braid.mobile.ui.event.EventDetailScreen
+import app.braid.mobile.ui.notes.NoteDetailScreen
 import app.braid.mobile.ui.voice.VoiceEventQueueViewModel
 
 @Composable
@@ -65,6 +66,7 @@ fun AppNavHost(
                         onSignOut = viewModel::signOut,
                         onNewEvent = { navController.navigate("new-event") },
                         onOpenEvent = { eventId -> navController.navigate("event/$eventId") },
+                        onOpenNote = { noteId -> navController.navigate("note/$noteId") },
                         onVoiceQueueDrained = { agendaRefreshSignal += 1 },
                         onChatEntitiesChanged = { agendaRefreshSignal += 1 },
                         voiceQueueViewModel = hiltViewModel<VoiceEventQueueViewModel>(),
@@ -90,6 +92,22 @@ fun AppNavHost(
                                 agendaRefreshSignal += 1
                                 navController.popBackStack("agenda", inclusive = false)
                             },
+                        )
+                    }
+                }
+                composable(
+                    route = "note/{noteId}",
+                    arguments = listOf(navArgument("noteId") { type = NavType.StringType }),
+                ) { entry ->
+                    val noteId = entry.arguments?.getString("noteId")
+                    if (noteId == null) {
+                        navController.popBackStack()
+                    } else {
+                        NoteDetailScreen(
+                            noteId = noteId,
+                            onBack = { navController.popBackStack() },
+                            onOpenEvent = { eventId -> navController.navigate("event/$eventId") },
+                            onDeleted = { navController.popBackStack("agenda", inclusive = false) },
                         )
                     }
                 }

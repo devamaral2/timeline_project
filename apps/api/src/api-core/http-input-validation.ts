@@ -75,6 +75,30 @@ export function assertParentTaskId(body: { parentTaskId?: unknown }): void {
   }
 }
 
+export function assertNoteFields(body: {
+  content?: unknown;
+  name?: unknown;
+  taskId?: unknown;
+  eventId?: unknown;
+  tags?: unknown;
+}, contentRequired: boolean): void {
+  if (body?.content === undefined ? contentRequired : typeof body.content !== "string") {
+    throw new BadRequestException("Invalid content");
+  }
+  if (body?.name !== undefined && typeof body.name !== "string") {
+    throw new BadRequestException("Invalid name");
+  }
+  for (const field of ["taskId", "eventId"] as const) {
+    const value = body?.[field];
+    if (value !== undefined && value !== null && typeof value !== "string") {
+      throw new BadRequestException(`Invalid ${field}`);
+    }
+  }
+  if (body?.tags !== undefined && (!Array.isArray(body.tags) || body.tags.some((tag) => typeof tag !== "string"))) {
+    throw new BadRequestException("Invalid tags");
+  }
+}
+
 export function assertRecurrenceTemplate(template: unknown, required: boolean): void {
   if (template === undefined && !required) return;
   if (typeof template !== "object" || template === null || Array.isArray(template)) {
