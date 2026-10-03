@@ -48,10 +48,11 @@
 .brandIcon { width: 34px; height: 39px; display: inline-flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 9px; flex-shrink: 0; }
 .brandIcon img { width: 64px; height: 64px; max-width: none; flex-shrink: 0; }
 .wordmark { font-family: var(--font-display); font-size: 30px; font-weight: 400; letter-spacing: -.01em; line-height: 1; }
-.primaryNav { display: flex; align-items: center; gap: 10px; margin-left: 18px; }
-.primaryNav a, .primaryNav button { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 12px 20px; color: var(--muted); border-radius: 12px; font-weight: 500; }
-.primaryNav .navActive { background: var(--cyan-soft); color: var(--cyan); }
-.primaryNav svg { width: 21px; height: 21px; }
+.primaryNav { display: flex; align-items: center; gap: 6px; margin-right: auto; }
+.primaryNav a, .primaryNav button { display: flex; align-items: center; justify-content: center; gap: 9px; height: 40px; padding: 0 16px; color: var(--muted); border-radius: 8px; font-size: 14px; font-weight: 500; }
+.primaryNav a:hover { color: var(--ink); }
+.primaryNav .navActive { background: var(--soft); color: var(--ink); font-weight: 600; }
+.primaryNav svg { width: 19px; height: 19px; }
 .headerActions { display: flex; align-items: center; gap: 5px; }
 .accountMenu { position: relative; }
 .accountMenu > summary { list-style: none; }
@@ -285,7 +286,7 @@
 @media (max-width: 1000px) {
   .contentGrid { column-gap: 44px; grid-template-columns: minmax(0, 1fr) 220px; }
   .headerInner { padding: 0 24px; gap: 16px; }
-  .primaryNav { gap: 2px; margin-left: 0; }
+  .primaryNav { gap: 2px; }
   .primaryNav a, .primaryNav button { padding-inline: 14px; }
   .headerActions { gap: 5px; }
   .main { padding-inline: 36px; }

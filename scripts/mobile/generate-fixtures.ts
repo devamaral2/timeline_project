@@ -147,6 +147,22 @@ export function generateFixtures(): void {
   writeFixture("event-detail", mobileContractSchemas.eventDetail, eventDetail);
   writeFixture("create-event-input", mobileContractSchemas.createEventInput, createEventInput);
   writeFixture("update-event-input", mobileContractSchemas.updateEventInput, updateEventInput);
+  writeFixture("note-list", z.array(mobileContractSchemas.note), [
+    {
+      id: "note-training", name: "Treino A · peito e tríceps", content: "415 kcal gastas em 1 h.\n\n## Séries\n- Supino\n- Crucifixo",
+      eventId: "event-training", link: { kind: "event", id: "event-training", name: "Academia", eventType: "training", at: "2026-09-14T10:00:00.000Z" },
+      tags: ["saúde", "força"], revision: 1, createdAt: "2026-09-14T11:05:00.000Z", updatedAt: "2026-09-14T11:05:00.000Z",
+    },
+    {
+      id: "note-task", name: "Ideias para a proposta", content: "Começar pelo problema do cliente.",
+      taskId: "task-proposal", link: { kind: "task", id: "task-proposal", name: "Revisar proposta", at: "2026-09-14T12:00:00.000Z" },
+      tags: ["trabalho"], revision: 3, createdAt: "2026-09-12T12:00:00.000Z", updatedAt: "2026-09-13T00:12:00.000Z",
+    },
+    { id: "note-loose", name: "Livros para ler", content: "Torto arado.", tags: [], revision: 1, createdAt: "2026-09-11T12:00:00.000Z", updatedAt: "2026-09-11T12:00:00.000Z" },
+  ]);
+  writeFixture("create-note-input", mobileContractSchemas.createNoteInput, { content: "Lista do mercado\n- Arroz", name: "Mercado", tags: ["casa"] });
+  writeFixture("create-note-response", mobileContractSchemas.createNoteResponse, { noteId: "note-new" });
+  writeFixture("update-note-input", mobileContractSchemas.updateNoteInput, { expectedRevision: 2, name: "Novo título", content: "Texto novo", tags: ["casa"], eventId: null, taskId: null });
   writeFixture("tag-suggestions", z.array(mobileContractSchemas.tagSuggestion), [{ id: "tag-1", name: "foco" }, { id: "tag-2", name: "saúde" }]);
   writeFixture("agent-chat-ticket", mobileContractSchemas.agentChatTicket, { ticket: "ticket_abc123", expiresAt: "2026-09-22T12:00:00.000Z" });
   writeFixture("agent-client-frames", z.array(mobileContractSchemas.agentChatClientFrame), [

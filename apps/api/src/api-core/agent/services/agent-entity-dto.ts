@@ -1,21 +1,8 @@
 import type { Event, Note, Task } from "../../../domain";
-import type { AgentEntityItem, NoteDto } from "@repo/contracts";
+import type { AgentEntityItem } from "@repo/contracts";
+import { toNoteDto } from "../../dto/note.dto";
 import { toEventDetailDto as toEventDto } from "../../dto/event-detail.dto";
 import { toTaskDetailDto as toTaskDto } from "../../dto/task-detail.dto";
-
-export function toNoteDto(note: Note): NoteDto {
-  return {
-    id: note.id,
-    content: note.content,
-    name: note.name,
-    taskId: note.taskId,
-    eventId: note.eventId,
-    tags: note.tags,
-    revision: note.revision,
-    createdAt: note.createdAt.toISOString(),
-    updatedAt: note.updatedAt.toISOString(),
-  };
-}
 
 export function eventItem(event: Event): AgentEntityItem {
   return { kind: "event", ...toEventDto(event) };

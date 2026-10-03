@@ -16,6 +16,8 @@ export type * from "./tasks/contracts/update-task.input";
 export type * from "./tasks/contracts/task-detail.dto";
 export type * from "./tasks/contracts/task-summary.dto";
 export type * from "./notes/contracts/note.dto";
+export type * from "./notes/contracts/create-note.input";
+export type * from "./notes/contracts/update-note.input";
 export type * from "./agent/contracts/agent-run.dto";
 export type * from "./agent/contracts/agent-chat.dto";
 export type * from "./agent-chat/contracts/agent-conversation.dto";
