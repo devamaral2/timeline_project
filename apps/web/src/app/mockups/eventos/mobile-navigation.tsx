@@ -2,6 +2,7 @@
 
 import { ArrowLeft, ArrowUp, CalendarDays, Check, ChevronDown, CirclePlus, NotepadText, Plus, Search, SquareCheck, X } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 import { creatableItemTypes, ICON_STROKE_WIDTH, visualForItemType } from "@/components/events/event-visuals";
 import { AgentChatPanel, useAgendaChat } from "./agent-chat-panel";
@@ -48,6 +49,8 @@ function DraftPriorityIcon({ priority }: { priority: DraftPriority }) {
 }
 
 export function MobileNavigation({ userId }: { userId?: string }) {
+  const pathname = usePathname();
+  const notesOpen = pathname.endsWith("/notas");
   const dialogRef = useRef<HTMLDialogElement>(null);
   const agendaChat = useAgendaChat({ live: Boolean(userId) });
   const [panel, setPanel] = useState<"hub" | "Tarefa" | "Nota" | null>(null);
@@ -105,8 +108,8 @@ export function MobileNavigation({ userId }: { userId?: string }) {
     <>
       <nav className={styles.bottomNav} aria-label="Navegação inferior">
         <button type="button" aria-label="Tarefas" onClick={() => openPanel("Tarefa")} aria-haspopup="dialog" aria-expanded={panel === "Tarefa"} aria-controls={dialogId}><SquareCheck aria-hidden /><span>Tarefas</span></button>
-        <Link href={userId ? `/${userId}` : "/mockups/eventos"} aria-label="Agenda" aria-current={panel ? undefined : "page"}><CalendarDays aria-hidden /><span>Agenda</span></Link>
-        <button type="button" aria-label="Notas" onClick={() => openPanel("Nota")} aria-haspopup="dialog" aria-expanded={panel === "Nota"} aria-controls={dialogId}><NotepadText aria-hidden /><span>Notas</span></button>
+        <Link href={userId ? `/${userId}` : "/mockups/eventos"} aria-label="Agenda" aria-current={panel || notesOpen ? undefined : "page"}><CalendarDays aria-hidden /><span>Agenda</span></Link>
+        <Link href={userId ? `/${userId}/notas` : "/mockups/eventos/notas"} aria-label="Notas" aria-current={notesOpen ? "page" : undefined}><NotepadText aria-hidden /><span>Notas</span></Link>
         <button type="button" className={styles.commandButton} onClick={() => openPanel("hub")} aria-haspopup="dialog" aria-expanded={panel === "hub"} aria-controls={dialogId} aria-label="Buscar e criar"><span className={styles.commandGlyph}><IntelligenceIcon /></span><span>Buscar e criar</span></button>
       </nav>
       <dialog ref={dialogRef} id={dialogId} aria-labelledby={panel === "hub" ? undefined : titleId} aria-label={panel === "hub" ? "Buscar e criar" : undefined} className={styles.sectionMenu} onClose={() => setPanel(null)}
@@ -169,7 +172,7 @@ export function MobileNavigation({ userId }: { userId?: string }) {
                 </fieldset>
                 <input className={styles.entityEventNameInput} aria-label="Nome do evento" value={draft.title ?? ""} onChange={event => updateDraft("title", event.target.value)} placeholder="Nome do evento" />
               </div>
-            </div> : <div className={styles.entityHeading}><span>{(() => { const Icon = icons[kind]; return <Icon aria-hidden />; })()}</span><div><input className={styles.entityNameInput} aria-label={`Nome da ${kind.toLocaleLowerCase("pt-BR")}`} value={draft.title ?? ""} onChange={event => updateDraft("title", event.target.value)} placeholder={`Nome da ${kind.toLocaleLowerCase("pt-BR")}`} /><p>{category}</p></div></div>}
+            </div> : kind === "Nota" ? <h3 className={styles.noteDraftHeading}>Nota</h3> : <div className={styles.entityHeading}><span>{(() => { const Icon = icons[kind]; return <Icon aria-hidden />; })()}</span><div><input className={styles.entityNameInput} aria-label={`Nome da ${kind.toLocaleLowerCase("pt-BR")}`} value={draft.title ?? ""} onChange={event => updateDraft("title", event.target.value)} placeholder={`Nome da ${kind.toLocaleLowerCase("pt-BR")}`} /><p>{category}</p></div></div>}
             {kind === "Tarefa" && <div className={styles.entitySelectors}>
               <fieldset className={styles.entitySelect}>
                 <span className={styles.entitySelectLabel}>Status</span>
@@ -212,7 +215,14 @@ export function MobileNavigation({ userId }: { userId?: string }) {
                 <label>Qualidade (0–100)<input type="number" min="0" max="100" inputMode="numeric" value={draft.sleepScore ?? ""} onChange={event => updateDraft("sleepScore", event.target.value)} placeholder="80" /></label>
               </div> : null}
             </>}
-            <label>{kind === "Evento" ? eventDetailCopy[eventType].label : kind === "Nota" ? "Conteúdo da nota" : category === "Alimentação" ? "Refeição e preparo" : category === "Exercício" ? "Treino e objetivo" : "Detalhes"}<textarea className={styles.entityControl} rows={2} value={draft.details ?? ""} onChange={event => updateDraft("details", event.target.value)} placeholder={kind === "Evento" ? eventDetailCopy[eventType].placeholder : kind === "Nota" ? `Suas anotações sobre ${category.toLocaleLowerCase("pt-BR")}…` : category === "Alimentação" ? "Ingredientes, porções ou modo de preparo…" : category === "Exercício" ? "Exercícios, séries ou duração…" : "Acrescente o que for importante…"} /></label>
+            <label>{kind === "Evento" ? eventDetailCopy[eventType].label : kind === "Nota" ? "Conteúdo da nota" : category === "Alimentação" ? "Refeição e preparo" : category === "Exercício" ? "Treino e objetivo" : "Detalhes"}<textarea className={styles.entityControl} rows={2} value={draft.details ?? ""} onChange={event => updateDraft("details", event.target.value)} placeholder={kind === "Evento" ? eventDetailCopy[eventType].placeholder : kind === "Nota" ? "Fim de semana\n\nSuas anotações…" : category === "Alimentação" ? "Ingredientes, porções ou modo de preparo…" : category === "Exercício" ? "Exercícios, séries ou duração…" : "Acrescente o que for importante…"} /></label>
+            {kind === "Nota" && <>
+              <p className={styles.hubDescription}>A primeira linha vira o título.</p>
+              <label>Ligada a<select className={styles.entityControl} value={draft.source ?? ""} onChange={event => updateDraft("source", event.target.value)}><option value="">Evento ou tarefa · opcional</option>{initialEntries.filter(entry => entry.kind !== "Nota").map(entry => <option key={entry.id}>{entry.kind} · {entry.title}</option>)}</select></label>
+              <label>Tags<input className={styles.entityControl} placeholder="#pessoal" value={draft.tags ?? ""} onChange={event => updateDraft("tags", event.target.value)} /></label>
+              <button type="button" className={styles.createButton} disabled={!draft.details?.trim()} onClick={() => { setEntries(current => [{ id: `draft-${Date.now()}`, kind: "Nota", title: draft.details.trim().split("\n")[0], draft }, ...current]); setNotice("Nota: rascunho adicionado à prévia."); updateDraft("details", ""); }}>Criar nota</button>
+              <p className={styles.hubNotice} role="status">{notice}</p>
+            </>}
           </div> : <div className={styles.manualPanel}>
           {panel !== "hub" && <>
           <label className={styles.hubSearch}><Search aria-hidden /><input aria-label="Buscar eventos, tarefas e notas" value={query} onChange={event => setQuery(event.target.value)} placeholder={`Buscar ${panel === "Tarefa" ? "tarefas" : "notas"}`} /></label>

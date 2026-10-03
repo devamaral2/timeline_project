@@ -48,6 +48,7 @@ import app.braid.mobile.data.session.SessionUser
 import app.braid.mobile.domain.timeline.TIMELINE_TIME_ZONE
 import app.braid.mobile.ui.chat.AgentChatScreen
 import app.braid.mobile.ui.chat.AgentChatViewModel
+import app.braid.mobile.ui.notes.NotesScreen
 import app.braid.mobile.ui.voice.VoiceEventButton
 import app.braid.mobile.ui.voice.VoiceEventQueueViewModel
 import app.braid.mobile.ui.voice.VoiceJobStatus
@@ -161,34 +162,45 @@ fun AgendaShell(
             Scaffold(
                 topBar = {
                     Column {
-                        CenterAlignedTopAppBar(
-                            title = {
-                                DateNavigator(
-                                    selectedDayKey = selectedDayKey,
-                                    todayKey = todayKey,
-                                    onSelect = { selectedDayKey = it },
-                                )
-                            },
-                            navigationIcon = {
-                                IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                                    Icon(Icons.Outlined.Menu, contentDescription = "Abrir menu")
-                                }
-                            },
-                            actions = {
-                                VoiceEventButton(
-                                    onFinalTranscript = { transcript ->
-                                        voiceQueueViewModel?.enqueue(transcript)
-                                        onVoiceTranscript(transcript)
-                                    },
-                                )
-                            },
-                            colors = TopAppBarDefaults.topAppBarColors(),
-                        )
-                        WeekStrip(
-                            selectedDayKey = selectedDayKey,
-                            todayKey = todayKey,
-                            onSelect = { selectedDayKey = it },
-                        )
+                        if (destination == AgendaDestination.Agenda) {
+                            CenterAlignedTopAppBar(
+                                title = {
+                                    DateNavigator(
+                                        selectedDayKey = selectedDayKey,
+                                        todayKey = todayKey,
+                                        onSelect = { selectedDayKey = it },
+                                    )
+                                },
+                                navigationIcon = {
+                                    IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                                        Icon(Icons.Outlined.Menu, contentDescription = "Abrir menu")
+                                    }
+                                },
+                                actions = {
+                                    VoiceEventButton(
+                                        onFinalTranscript = { transcript ->
+                                            voiceQueueViewModel?.enqueue(transcript)
+                                            onVoiceTranscript(transcript)
+                                        },
+                                    )
+                                },
+                                colors = TopAppBarDefaults.topAppBarColors(),
+                            )
+                            WeekStrip(
+                                selectedDayKey = selectedDayKey,
+                                todayKey = todayKey,
+                                onSelect = { selectedDayKey = it },
+                            )
+                        } else {
+                            CenterAlignedTopAppBar(
+                                title = { BraidWordmark(style = MaterialTheme.typography.headlineMedium) },
+                                navigationIcon = {
+                                    IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                                        Icon(Icons.Outlined.Menu, contentDescription = "Abrir menu")
+                                    }
+                                },
+                            )
+                        }
                     }
                 },
                 bottomBar = {
@@ -212,6 +224,8 @@ fun AgendaShell(
                         reminderScheduler = reminderScheduler,
                         refreshSignal = refreshSignal,
                     )
+                } else if (destination == AgendaDestination.Notes) {
+                    NotesScreen(modifier = Modifier.padding(paddingValues))
                 } else {
                     if (destination == AgendaDestination.Search && agentChatViewModel != null) {
                         AgentChatScreen(
