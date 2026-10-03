@@ -11,7 +11,9 @@ export function timingForExample(event: ExampleEvent, dayKey: string, now: numbe
   const finished = event.finishedAt
     ? new Date(event.finishedAt).getTime()
     : event.running ? undefined : started + event.minutes * 60_000;
-  const position = started <= now && finished === undefined ? "running"
-    : finished !== undefined && finished <= now ? "past" : "upcoming";
+  // Em andamento é tudo o que já começou e ainda não acabou — com ou sem hora
+  // de fim; a mesma regra de `eventPositionOf`, usada pelo card da timeline.
+  const position = now < started ? "upcoming"
+    : finished === undefined || finished > now ? "running" : "past";
   return { position, startedAt: new Date(started).toISOString(), startLabel };
 }

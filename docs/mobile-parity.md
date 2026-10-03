@@ -16,6 +16,7 @@ Status: `—` (não existe), `🚧` (em progresso), `✅` (paridade), `≠`
 | Agenda | Tira da semana | `components/events/WeekStrip.tsx` | ✅ | Seleção de dia integrada à timeline nativa |
 | Agenda | Seletor de dia / navegação | `DayPicker.tsx`, `DateNavigator.tsx` | ✅ | Calendário mensal, swipe e carregamento por dia integrados |
 | Agenda | Timeline do dia | `DayColumn.tsx`, `mockups/eventos/agenda-day.tsx` | ✅ | Loading, erro, vazio e refresh; cabeçalho do dia em Newsreader ("Hoje" + data) com contagem de eventos, sem o total de horas registradas |
+| Agenda | Lista contínua com rolagem infinita | `mockups/eventos/agenda-preview.tsx` | ≠ | Chave ao lado de “Hoje” carrega dias ao chegar às bordas; o app navega um dia por vez (swipe e tira da semana), então não tem lista contínua |
 | Agenda | Card de evento + visuais por tipo | `EventCard.tsx`, `event-visuals.ts` | ✅ | Ícone por tipo, duração em número grande (h/min), cronômetro em mono no evento em andamento, tags em chips; passado sem fundo e não realizado esmaecido; sem a barra proporcional |
 | Agenda | Badge "atrasado" | `MissedBadge.tsx` | ✅ | Chip “NÃO REALIZADO” junto às tags para `missed` |
 | Agenda | Skeleton de carregamento | `DaySkeleton.tsx` | ✅ | Skeleton nativo durante a primeira carga |

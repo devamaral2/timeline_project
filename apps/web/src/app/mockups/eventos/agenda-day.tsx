@@ -2,6 +2,7 @@ import { elapsedSecondsOf, formatStopwatch, mediumDate, relativeDayLabel, shortD
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { ICON_STROKE_WIDTH, visualForItemType } from "@/components/events/event-visuals";
+import { tagColorStyle } from "@/lib/tags/tag-color";
 import { EXAMPLE_TODAY, type ExampleEvent, type ExampleTask, exampleEventsOn } from "./agenda-examples";
 import { timingForExample } from "./agenda-timing";
 import styles from "./mockup.module.css";
@@ -24,8 +25,8 @@ export function AgendaDay({ dayKey, now, tasks, missedEvents, onSelectEvent, eve
   return (
     <section className={styles.dayGroup} data-agenda-day={dayKey} aria-label={mediumDate(dayKey)}>
       <div className={styles.dayHeading}>
-        <h2>{relativeDayLabel(dayKey, todayKey)}<span>{shortDate(dayKey).toLowerCase()}</span></h2>
-        <span>{events.length} eventos</span>
+        <h2>{relativeDayLabel(dayKey, todayKey)}<span>{shortDate(dayKey).toLowerCase()}.</span></h2>
+        <span>{events.length} {events.length === 1 ? "evento" : "eventos"}</span>
       </div>
       {events.length === 0 ? <p className={styles.emptyDay}>Um dia livre na sua agenda.</p> : (
         <ul className={styles.eventList}>
@@ -50,8 +51,8 @@ export function AgendaDay({ dayKey, now, tasks, missedEvents, onSelectEvent, eve
                         {running ? <>{timing.startLabel}<span className={styles.runningLabel}><i aria-hidden />Em andamento</span></> : event.time}
                       </p>
                       {event.tag || event.tags?.length || missed ? <div className={styles.eventLabels}>
-                        {event.tag ? <span className={styles.tag}>{event.tag}</span> : null}
-                        {event.tags?.map((tag) => <span className={styles.tag} key={tag}>{tag}</span>)}
+                        {event.tag ? <span className={styles.tag} style={tagColorStyle(event.tag)}>#{event.tag}</span> : null}
+                        {event.tags?.map((tag) => <span className={styles.tag} style={tagColorStyle(tag)} key={tag}>#{tag}</span>)}
                         {missed ? <span className={styles.missedBadge}>Não realizado</span> : null}
                       </div> : null}
                     </div>

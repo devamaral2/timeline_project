@@ -51,3 +51,13 @@ test("empty days can be omitted from the continuous list", () => {
   expect(screen.queryByRole("region")).not.toBeInTheDocument();
   expect(screen.queryByText("Um dia livre na sua agenda.")).not.toBeInTheDocument();
 });
+
+test("an event that already started and has an end time still gets the running highlight", () => {
+  render(<AgendaDay {...props} events={[
+    { name: "Reunião longa", type: "routine", time: "09:00 — 11:00", minutes: 120, duration: "2 h", startedAt: "2026-09-14T09:00:00-03:00", finishedAt: "2026-09-14T11:00:00-03:00" },
+    { name: "Mais tarde", type: "meal", time: "12:00 — 12:30", minutes: 30, duration: "30 min", startedAt: "2026-09-14T12:00:00-03:00", finishedAt: "2026-09-14T12:30:00-03:00" },
+  ]} />);
+
+  expect(screen.getByRole("button", { name: "Reunião longa" }).closest("article")).toHaveAttribute("data-time-position", "running");
+  expect(screen.getByRole("button", { name: "Mais tarde" }).closest("article")).toHaveAttribute("data-time-position", "upcoming");
+});

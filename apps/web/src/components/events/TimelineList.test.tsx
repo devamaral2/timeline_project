@@ -112,7 +112,7 @@ test('loads only the day selected in the week header', async () => {
   renderTimeline();
   await screen.findByRole('heading', { level: 3, name: 'Bloco de trabalho' });
 
-  fireEvent.click(screen.getByRole('button', { name: '2026-08-18' }));
+  fireEvent.click(screen.getByRole('button', { name: '18 de agosto de 2026' }));
 
   expect(
     await screen.findByRole('heading', { level: 3, name: 'Evento de terça' }),

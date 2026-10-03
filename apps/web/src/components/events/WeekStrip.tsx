@@ -1,6 +1,6 @@
 'use client';
 
-import { dayNumber, weekOf, weekdayInitial } from '@repo/timeline';
+import { dayNumber, longDate, weekdayInitial, weekOf } from '@repo/timeline';
 import { cn } from '@/lib/utils';
 
 interface WeekStripProps {
@@ -32,7 +32,7 @@ export function WeekStrip({
               type="button"
               onClick={() => onSelect(dayKey)}
               aria-current={selected ? 'date' : undefined}
-              aria-label={dayKey}
+              aria-label={longDate(dayKey)}
               className="flex min-h-16 w-[46px] flex-col items-center gap-[5px] rounded-lg py-1 transition-colors hover:bg-foreground/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
             >
               <span className="text-[11px] font-semibold tracking-[0.06em] text-muted-foreground">
