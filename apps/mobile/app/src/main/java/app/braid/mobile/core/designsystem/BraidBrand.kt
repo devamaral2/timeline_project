@@ -89,13 +89,14 @@ fun BraidWordmark(
     style: TextStyle,
     modifier: Modifier = Modifier,
     logoSize: Dp = 32.dp,
+    showLogo: Boolean = true,
 ) {
     Row(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        BraidLogo(size = logoSize, contentDescription = null)
+        if (showLogo) BraidLogo(size = logoSize, contentDescription = null)
         // A assinatura: "braid" na serifa, em minúsculas.
         Text(
             text = "braid",

@@ -123,9 +123,8 @@ class AgendaViewModelTest {
         finishedAt: String,
     ) = TimelineEventCardDto(
         id = id,
-        primaryItemId = "$id-item",
-        primaryItemType = "routine",
-        itemTypes = listOf("routine"),
+        kind = "routine",
+        noteTypes = emptyList(),
         missed = false,
         name = id,
         description = "",

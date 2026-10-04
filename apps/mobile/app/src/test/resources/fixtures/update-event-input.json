@@ -2,64 +2,15 @@
   "eventId": "event-training",
   "expectedRevision": 3,
   "description": "Cardio, força e mobilidade",
-  "items": [
+  "kind": "training",
+  "notes": [
     {
-      "id": "item-routine",
-      "type": "routine",
-      "schemaVersion": 1,
-      "isPrimary": false,
-      "data": {}
+      "id": "note-text"
     },
     {
-      "id": "item-meal",
-      "type": "meal",
+      "id": "note-training",
       "schemaVersion": 1,
-      "isPrimary": false,
-      "data": {
-        "name": "Café da manhã",
-        "description": "Aveia e fruta",
-        "foodItems": [
-          {
-            "id": "food-oats",
-            "name": "Aveia",
-            "portion": "40 g",
-            "approximateWeightGrams": 40,
-            "caloriesKcal": 152,
-            "macronutrients": {
-              "carbohydratesGrams": 27,
-              "proteinsGrams": 5,
-              "totalFatGrams": 3,
-              "fiberGrams": 4
-            },
-            "micronutrients": {
-              "ironMg": 1.6
-            }
-          }
-        ],
-        "totals": {
-          "totalCaloriesKcal": 152,
-          "totalProteinGrams": 5,
-          "totalCarbohydrateGrams": 27,
-          "totalFatGrams": 3,
-          "totalFiberGrams": 4
-        }
-      }
-    },
-    {
-      "id": "item-sleep",
-      "type": "sleep",
-      "schemaVersion": 1,
-      "isPrimary": false,
-      "data": {
-        "trackedSleepTime": 7.5,
-        "score": 86
-      }
-    },
-    {
-      "id": "item-training",
       "type": "training",
-      "schemaVersion": 1,
-      "isPrimary": true,
       "data": {
         "workouts": [
           {
@@ -104,6 +55,55 @@
           }
         ],
         "caloriesBurned": 450
+      }
+    },
+    {
+      "id": "note-meal",
+      "schemaVersion": 1,
+      "type": "meal",
+      "data": {
+        "name": "Café da manhã",
+        "description": "Aveia e fruta",
+        "foodItems": [
+          {
+            "id": "food-oats",
+            "name": "Aveia",
+            "portion": "40 g",
+            "approximateWeightGrams": 40,
+            "caloriesKcal": 152,
+            "macronutrients": {
+              "carbohydratesGrams": 27,
+              "proteinsGrams": 5,
+              "totalFatGrams": 3,
+              "fiberGrams": 4
+            },
+            "micronutrients": {
+              "ironMg": 1.6
+            }
+          }
+        ],
+        "totals": {
+          "totalCaloriesKcal": 152,
+          "totalProteinGrams": 5,
+          "totalCarbohydrateGrams": 27,
+          "totalFatGrams": 3,
+          "totalFiberGrams": 4
+        }
+      }
+    },
+    {
+      "id": "note-sleep",
+      "schemaVersion": 1,
+      "type": "sleep",
+      "data": {
+        "trackedSleepTime": 7.5,
+        "score": 86
+      }
+    },
+    {
+      "type": "text",
+      "data": {
+        "body": "Alongamento no final."
       }
     }
   ]

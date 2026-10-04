@@ -1,6 +1,7 @@
 package app.braid.mobile.domain.notes
 
 import app.braid.mobile.data.dto.NoteDto
+import app.braid.mobile.data.dto.TEXT_NOTE_TYPE
 import app.braid.mobile.domain.timeline.TIMELINE_TIME_ZONE
 import app.braid.mobile.domain.timeline.dayKeyOf
 import app.braid.mobile.domain.timeline.formatTime
@@ -45,7 +46,7 @@ private fun NoteFilter.matches(kind: NoteKind): Boolean =
 private val ptBr = Locale("pt", "BR")
 private val diacritics = Regex("\\p{Mn}+")
 
-private fun normalize(text: String): String = Normalizer.normalize(text, Normalizer.Form.NFD).replace(diacritics, "").lowercase(ptBr)
+internal fun normalize(text: String): String = Normalizer.normalize(text, Normalizer.Form.NFD).replace(diacritics, "").lowercase(ptBr)
 
 fun filterNotes(
     notes: List<NoteDto>,
@@ -170,76 +171,52 @@ fun noteOriginLabel(note: NoteDto): String {
     return "${if (link.kind == "event") "Evento" else "Tarefa"} · ${link.name}"
 }
 
-private val listMarker = Regex("^\\s*[-*•]\\s+")
 private val headingMarker = Regex("^\\s*#{1,6}\\s+")
+private val blockMarker = Regex("^\\s*(?:>\\s?|[-*+•]\\s+(?:\\[[ xX]]\\s+)?|\\d+[.)]\\s+)")
+private val fenceLine = Regex("^\\s*(?:```|~~~)")
+private val ruleLine = Regex("^\\s*(?:[-*_]\\s*){3,}$")
 
-/** O trecho da lista: o texto sem o título repetido, sem marcadores e numa linha só. */
-fun noteSnippet(note: NoteDto): String {
-    val lines = note.content.lines().map { it.trim() }
-    val firstIndex = lines.indexOfFirst { it.isNotEmpty() }
-    val first = lines.getOrNull(firstIndex)?.replace(headingMarker, "")
-    val body = if (first == note.name) lines.drop(firstIndex + 1) else lines
-    return body
-        .map { it.replace(headingMarker, "").replace(listMarker, "") }
-        .filter { it.isNotEmpty() }
-        .joinToString(" ")
-}
+/** O texto de uma linha sem a marcação inline do markdown (negrito, itálico, código, links). */
+fun stripInlineMarkdown(line: String): String =
+    line
+        .replace(Regex("!\\[([^\\]]*)]\\([^)]*\\)"), "$1")
+        .replace(Regex("\\[([^\\]]+)]\\([^)]*\\)"), "$1")
+        .replace(Regex("`([^`]*)`"), "$1")
+        .replace(Regex("(\\*\\*|__)(.+?)\\1"), "$2")
+        .replace(Regex("~~(.+?)~~"), "$1")
+        .replace(Regex("(^|[^\\w*])\\*(?!\\s)(.+?)\\*(?=[^\\w*]|$)"), "$1$2")
+        .replace(Regex("(^|\\W)_(?!\\s)(.+?)_(?=\\W|$)"), "$1$2")
 
-sealed interface NoteBlock {
-    data class Paragraph(
-        val text: String,
-    ) : NoteBlock
-
-    data class Heading(
-        val text: String,
-    ) : NoteBlock
-
-    data class Bullets(
-        val items: List<String>,
-    ) : NoteBlock
-}
-
-/**
- * O texto da nota em blocos: `#` vira subtítulo, linhas com `-`, `*` ou `•`
- * viram lista e o resto vira parágrafo (linha em branco separa parágrafos).
- * O título repetido na primeira linha fica de fora, já que a tela o mostra.
- */
-fun parseNoteContent(note: NoteDto): List<NoteBlock> {
+/** O corpo em markdown da nota, sem o título repetido na primeira linha (a tela já o mostra). */
+fun noteMarkdownOf(note: NoteDto): String {
     var lines = note.content.lines()
     val firstIndex = lines.indexOfFirst { it.isNotBlank() }
     if (firstIndex >= 0 && lines[firstIndex].trim().replace(headingMarker, "") == note.name) {
         lines = lines.drop(firstIndex + 1)
     }
+    return lines.joinToString("\n").trim()
+}
 
-    val blocks = mutableListOf<NoteBlock>()
-    var paragraph = mutableListOf<String>()
-
-    fun flushParagraph() {
-        if (paragraph.isNotEmpty()) blocks += NoteBlock.Paragraph(paragraph.joinToString("\n"))
-        paragraph = mutableListOf()
+/** O nome do tipo de uma nota que não é texto livre. */
+fun noteTypeLabel(type: String): String =
+    when (type) {
+        "meal" -> "Refeição"
+        "sleep" -> "Sono"
+        "training" -> "Treino"
+        else -> "Nota"
     }
 
-    for (raw in lines) {
-        val line = raw.trim()
-        when {
-            line.isEmpty() -> flushParagraph()
-            headingMarker.containsMatchIn(line) -> {
-                flushParagraph()
-                blocks += NoteBlock.Heading(line.replace(headingMarker, ""))
-            }
-            listMarker.containsMatchIn(line) -> {
-                flushParagraph()
-                val item = line.replace(listMarker, "")
-                val last = blocks.lastOrNull()
-                if (last is NoteBlock.Bullets) {
-                    blocks[blocks.lastIndex] = NoteBlock.Bullets(last.items + item)
-                } else {
-                    blocks += NoteBlock.Bullets(listOf(item))
-                }
-            }
-            else -> paragraph += line
-        }
-    }
-    flushParagraph()
-    return blocks
+/** O trecho da lista: o texto sem o título repetido, sem marcação do markdown e numa linha só. */
+fun noteSnippet(note: NoteDto): String {
+    // Refeição, sono e treino ainda não têm texto para o trecho: o app mostra o tipo.
+    if (note.type != TEXT_NOTE_TYPE) return noteTypeLabel(note.type)
+    val lines = note.content.lines().map { it.trim() }
+    val firstIndex = lines.indexOfFirst { it.isNotEmpty() }
+    val first = lines.getOrNull(firstIndex)?.replace(headingMarker, "")
+    val body = if (first == note.name) lines.drop(firstIndex + 1) else lines
+    return body
+        .filterNot { fenceLine.containsMatchIn(it) || ruleLine.matches(it) }
+        .map { stripInlineMarkdown(it.replace(headingMarker, "").replace(blockMarker, "")) }
+        .filter { it.isNotEmpty() }
+        .joinToString(" ")
 }

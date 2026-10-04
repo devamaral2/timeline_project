@@ -18,14 +18,15 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import app.braid.mobile.core.designsystem.LocalBraidDarkTheme
 import app.braid.mobile.data.reminders.ReminderScheduler
 import app.braid.mobile.data.session.SessionState
 import app.braid.mobile.ui.agenda.AgendaShell
 import app.braid.mobile.ui.auth.LoginScreen
 import app.braid.mobile.ui.chat.AgentChatViewModel
-import app.braid.mobile.ui.event.CreateEventScreen
 import app.braid.mobile.ui.event.EventDetailScreen
 import app.braid.mobile.ui.notes.NoteDetailScreen
+import app.braid.mobile.ui.theme.ThemeViewModel
 import app.braid.mobile.ui.voice.VoiceEventQueueViewModel
 
 @Composable
@@ -37,6 +38,8 @@ fun AppNavHost(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val navController = rememberNavController()
+    val themeViewModel = hiltViewModel<ThemeViewModel>()
+    val darkTheme = LocalBraidDarkTheme.current
     var agendaRefreshSignal by remember { mutableIntStateOf(0) }
 
     when (val session = state) {
@@ -64,7 +67,7 @@ fun AppNavHost(
                     AgendaShell(
                         user = session.user,
                         onSignOut = viewModel::signOut,
-                        onNewEvent = { navController.navigate("new-event") },
+                        onToggleTheme = { themeViewModel.toggle(darkTheme) },
                         onOpenEvent = { eventId -> navController.navigate("event/$eventId") },
                         onOpenNote = { noteId -> navController.navigate("note/$noteId") },
                         onVoiceQueueDrained = { agendaRefreshSignal += 1 },
@@ -128,15 +131,6 @@ fun AppNavHost(
                             },
                         )
                     }
-                }
-                composable("new-event") {
-                    CreateEventScreen(
-                        onBack = { navController.popBackStack() },
-                        onCreated = {
-                            agendaRefreshSignal += 1
-                            navController.popBackStack()
-                        },
-                    )
                 }
             }
         }

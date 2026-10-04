@@ -12,21 +12,25 @@ function writeFixture<T>(name: string, schema: z.ZodType<T>, example: unknown): 
   writeFileSync(`${fixtureDirectory}${name}.json`, `${JSON.stringify(parsed, null, 2)}\n`, "utf8");
 }
 
-const eventItems = {
-  routine: {
-    id: "item-routine",
-    position: 0,
-    type: "routine" as const,
+const noteTimestamps = { createdAt: "2026-09-22T11:00:00.000Z", updatedAt: "2026-09-22T11:05:00.000Z" };
+
+/** As notes como o detalhe do evento as devolve: sem `links`, que so a API de notas preenche. */
+const eventNotes = {
+  text: {
+    id: "note-text",
+    name: "Aquecimento",
+    type: "text" as const,
     schemaVersion: 1,
-    isPrimary: false,
-    data: {},
+    data: { body: "Mobilidade de quadril antes das series." },
+    tags: ["foco"],
+    revision: 1,
+    ...noteTimestamps,
   },
   meal: {
-    id: "item-meal",
-    position: 1,
+    id: "note-meal",
+    name: "Café da manhã",
     type: "meal" as const,
     schemaVersion: 1,
-    isPrimary: false,
     data: {
       name: "Café da manhã",
       description: "Aveia e fruta",
@@ -47,21 +51,25 @@ const eventItems = {
         totalFiberGrams: 4,
       },
     },
+    tags: [],
+    revision: 1,
+    ...noteTimestamps,
   },
   sleep: {
-    id: "item-sleep",
-    position: 2,
+    id: "note-sleep",
+    name: "Noite anterior",
     type: "sleep" as const,
     schemaVersion: 1,
-    isPrimary: false,
     data: { trackedSleepTime: 7.5, score: 86 },
+    tags: [],
+    revision: 1,
+    ...noteTimestamps,
   },
   training: {
-    id: "item-training",
-    position: 3,
+    id: "note-training",
+    name: "Treino da manhã",
     type: "training" as const,
     schemaVersion: 1,
-    isPrimary: true,
     data: {
       caloriesBurned: 450,
       workouts: [
@@ -71,15 +79,17 @@ const eventItems = {
         { id: "workout-free", workoutCode: "free" as const, workoutName: "Mobilidade", calories: 30, duration: 10 },
       ],
     },
+    tags: ["saúde"],
+    revision: 2,
+    ...noteTimestamps,
   },
 };
 
 const timelineEvents = [
   {
     id: "event-training",
-    primaryItemId: "item-training",
-    primaryItemType: "training",
-    itemTypes: ["training", "routine"],
+    kind: "training" as const,
+    noteTypes: ["training", "text"],
     missed: false,
     name: "Treino da manhã",
     description: "Cardio e força",
@@ -92,9 +102,8 @@ const timelineEvents = [
   },
   {
     id: "event-note",
-    primaryItemId: "item-routine",
-    primaryItemType: "routine",
-    itemTypes: ["routine"],
+    kind: "routine" as const,
+    noteTypes: [],
     missed: true,
     name: "Leitura",
     description: "",
@@ -118,27 +127,37 @@ const eventDetail = {
   notifyOffsetsMinutes: [10],
   interruptions: [{ id: "interrupt-1", name: "Água", description: "Pausa rápida", startedAt: "2026-09-22T08:20:00-03:00", finishedAt: "2026-09-22T08:25:00-03:00" }],
   revision: 3,
-  primaryItemId: "item-training",
-  items: Object.values(eventItems),
+  kind: "training" as const,
+  notes: [eventNotes.training, eventNotes.text, eventNotes.meal, eventNotes.sleep],
 };
 
 const createEventInput = {
   name: "Novo bloco",
   tags: ["planejamento"],
   priority: "flexible" as const,
-  items: [
-    { type: "routine" as const },
+  kind: "meal" as const,
+  notes: [
+    { type: "text" as const, name: "Contexto", data: { body: "Almoço antes da reunião." } },
     { type: "meal" as const, data: { inputText: "banana com iogurte" } },
     { type: "sleep" as const, data: { score: 80 } },
     { type: "training" as const, data: { workouts: [{ workoutCode: "free" }] } },
   ],
+  noteIds: ["note-existing"],
 };
 
+/** O PATCH manda a lista inteira: a note so com `id` continua, com `data` e editada, sem `id` nasce. */
 const updateEventInput = {
   eventId: "event-training",
   expectedRevision: 3,
   description: "Cardio, força e mobilidade",
-  items: Object.values(eventItems).map(({ position: _position, ...item }) => item),
+  kind: "training" as const,
+  notes: [
+    { id: eventNotes.text.id },
+    { id: eventNotes.training.id, schemaVersion: 1, type: "training" as const, data: eventNotes.training.data },
+    { id: eventNotes.meal.id, schemaVersion: 1, type: "meal" as const, data: eventNotes.meal.data },
+    { id: eventNotes.sleep.id, schemaVersion: 1, type: "sleep" as const, data: eventNotes.sleep.data },
+    { type: "text" as const, data: { body: "Alongamento no final." } },
+  ],
 };
 
 export function generateFixtures(): void {
@@ -147,22 +166,36 @@ export function generateFixtures(): void {
   writeFixture("event-detail", mobileContractSchemas.eventDetail, eventDetail);
   writeFixture("create-event-input", mobileContractSchemas.createEventInput, createEventInput);
   writeFixture("update-event-input", mobileContractSchemas.updateEventInput, updateEventInput);
+  // A API de notas preenche `links`; o PATCH manda a lista completa de eventos e tarefas (vazia solta a nota).
   writeFixture("note-list", z.array(mobileContractSchemas.note), [
     {
-      id: "note-training", name: "Treino A · peito e tríceps", content: "415 kcal gastas em 1 h.\n\n## Séries\n- Supino\n- Crucifixo",
-      eventId: "event-training", link: { kind: "event", id: "event-training", name: "Academia", eventType: "training", at: "2026-09-14T10:00:00.000Z" },
+      id: "note-training", name: "Treino A · peito e tríceps", type: "text" as const, schemaVersion: 1,
+      data: { body: "415 kcal gastas em 1 h.\n\n## Séries\n- Supino\n- Crucifixo" },
+      links: [{ kind: "event" as const, id: "event-training", name: "Academia", eventKind: "training", at: "2026-09-14T10:00:00.000Z", endsAt: "2026-09-14T11:00:00.000Z" }],
       tags: ["saúde", "força"], revision: 1, createdAt: "2026-09-14T11:05:00.000Z", updatedAt: "2026-09-14T11:05:00.000Z",
     },
     {
-      id: "note-task", name: "Ideias para a proposta", content: "Começar pelo problema do cliente.",
-      taskId: "task-proposal", link: { kind: "task", id: "task-proposal", name: "Revisar proposta", at: "2026-09-14T12:00:00.000Z" },
+      id: "note-task", name: "Ideias para a proposta", type: "text" as const, schemaVersion: 1,
+      data: { body: "Começar pelo problema do cliente." },
+      links: [{ kind: "task" as const, id: "task-proposal", name: "Revisar proposta", at: "2026-09-14T12:00:00.000Z" }],
       tags: ["trabalho"], revision: 3, createdAt: "2026-09-12T12:00:00.000Z", updatedAt: "2026-09-13T00:12:00.000Z",
     },
-    { id: "note-loose", name: "Livros para ler", content: "Torto arado.", tags: [], revision: 1, createdAt: "2026-09-11T12:00:00.000Z", updatedAt: "2026-09-11T12:00:00.000Z" },
+    {
+      id: "note-loose", name: "Livros para ler", type: "text" as const, schemaVersion: 1,
+      data: { body: "Torto arado." }, links: [],
+      tags: [], revision: 1, createdAt: "2026-09-11T12:00:00.000Z", updatedAt: "2026-09-11T12:00:00.000Z",
+    },
+    {
+      id: "note-sleep", name: "Sono", type: "sleep" as const, schemaVersion: 1,
+      data: eventNotes.sleep.data, links: [{ kind: "event" as const, id: "event-sleep", name: "Dormir", eventKind: "sleep", at: "2026-09-13T23:00:00.000Z" }],
+      tags: [], revision: 1, createdAt: "2026-09-14T07:00:00.000Z", updatedAt: "2026-09-14T07:00:00.000Z",
+    },
   ]);
-  writeFixture("create-note-input", mobileContractSchemas.createNoteInput, { content: "Lista do mercado\n- Arroz", name: "Mercado", tags: ["casa"] });
+  writeFixture("create-note-input", mobileContractSchemas.createNoteInput, { type: "text" as const, data: { body: "Lista do mercado\n- Arroz" }, name: "Mercado", tags: ["casa"] });
   writeFixture("create-note-response", mobileContractSchemas.createNoteResponse, { noteId: "note-new" });
-  writeFixture("update-note-input", mobileContractSchemas.updateNoteInput, { expectedRevision: 2, name: "Novo título", content: "Texto novo", tags: ["casa"], eventId: null, taskId: null });
+  writeFixture("update-note-input", mobileContractSchemas.updateNoteInput, {
+    expectedRevision: 2, name: "Novo título", type: "text" as const, data: { body: "Texto novo" }, eventIds: [], taskIds: [], tags: ["casa"],
+  });
   writeFixture("tag-suggestions", z.array(mobileContractSchemas.tagSuggestion), [{ id: "tag-1", name: "foco" }, { id: "tag-2", name: "saúde" }]);
   writeFixture("agent-chat-ticket", mobileContractSchemas.agentChatTicket, { ticket: "ticket_abc123", expiresAt: "2026-09-22T12:00:00.000Z" });
   writeFixture("agent-client-frames", z.array(mobileContractSchemas.agentChatClientFrame), [

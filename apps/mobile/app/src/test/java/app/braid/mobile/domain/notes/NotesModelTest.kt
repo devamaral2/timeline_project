@@ -2,6 +2,8 @@ package app.braid.mobile.domain.notes
 
 import app.braid.mobile.data.dto.NoteDto
 import app.braid.mobile.data.dto.NoteLinkDto
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.time.Instant
@@ -20,7 +22,18 @@ class NotesModelTest {
         revision: Int = 1,
         tags: List<String> = emptyList(),
         link: NoteLinkDto? = null,
-    ) = NoteDto(id, name, content, link = link, tags = tags, revision = revision, createdAt = createdAt, updatedAt = updatedAt)
+    ) = NoteDto(
+        id,
+        name,
+        type = "text",
+        schemaVersion = 1,
+        data = JsonObject(mapOf("body" to JsonPrimitive(content))),
+        links = listOfNotNull(link),
+        tags = tags,
+        revision = revision,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
+    )
 
     @Test
     fun groupsByTheDayOfTheLastEdit() {
@@ -116,36 +129,23 @@ class NotesModelTest {
     }
 
     @Test
-    fun contentBecomesParagraphsHeadingsAndLists() {
-        val blocks =
-            parseNoteContent(
-                note(
-                    name = "Ideias para a proposta",
-                    content =
-                        listOf(
-                            "Ideias para a proposta",
-                            "Começar pelo problema.",
-                            "Eles reclamaram do prazo.",
-                            "",
-                            "## Pontos para a reunião",
-                            "- Mostrar o cronograma",
-                            "* Separar o preço",
-                            "",
-                            "## Dúvida",
-                            "O desconto vale para o ano todo?",
-                        ).joinToString("\n"),
-                ),
-            )
-
+    fun snippetDropsMarkdownMarkup() {
         assertEquals(
-            listOf(
-                NoteBlock.Paragraph("Começar pelo problema.\nEles reclamaram do prazo."),
-                NoteBlock.Heading("Pontos para a reunião"),
-                NoteBlock.Bullets(listOf("Mostrar o cronograma", "Separar o preço")),
-                NoteBlock.Heading("Dúvida"),
-                NoteBlock.Paragraph("O desconto vale para o ano todo?"),
+            "Importante: ver o plano e npm i citação tarefa passo código uma_variavel e velho novo",
+            noteSnippet(
+                note(
+                    name = "Ideias",
+                    content =
+                        "Ideias\n**Importante**: ver [o plano](https://x.dev) e `npm i`\n> citação\n- [ ] tarefa\n1. passo\n---\n" +
+                            "```\ncódigo\n```\numa_variavel e ~~velho~~ _novo_",
+                ),
             ),
-            blocks,
         )
+    }
+
+    @Test
+    fun markdownBodyDropsTheRepeatedTitle() {
+        assertEquals("Texto **forte**", noteMarkdownOf(note(name = "Ideias", content = "# Ideias\n\nTexto **forte**")))
+        assertEquals("Primeira\nSegunda", noteMarkdownOf(note(name = "Outro", content = "Primeira\nSegunda")))
     }
 }

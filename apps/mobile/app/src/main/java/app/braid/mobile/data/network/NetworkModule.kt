@@ -22,6 +22,9 @@ import app.braid.mobile.data.notes.NotesApi
 import app.braid.mobile.data.tags.TagGateway
 import app.braid.mobile.data.tags.TagRepository
 import app.braid.mobile.data.tags.TagsApi
+import app.braid.mobile.data.tasks.TaskGateway
+import app.braid.mobile.data.tasks.TaskRepository
+import app.braid.mobile.data.tasks.TasksApi
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -111,6 +114,24 @@ object NetworkModule {
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
             .create(NotesApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideTasksApi(
+        json: Json,
+        @Named("apiClient") client: OkHttpClient,
+    ): TasksApi =
+        Retrofit
+            .Builder()
+            .baseUrl(BuildConfig.API_BASE_URL.withTrailingSlash())
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(TasksApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideTaskGateway(repository: TaskRepository): TaskGateway = repository
 
     @Provides
     @Singleton

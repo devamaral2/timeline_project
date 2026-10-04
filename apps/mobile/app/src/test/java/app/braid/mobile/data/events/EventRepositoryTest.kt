@@ -87,7 +87,7 @@ class EventRepositoryTest {
         runBlocking {
             server.enqueue(
                 jsonResponse(
-                    """{"id":"event-1","name":"Rotina","description":"","startedAt":"2026-09-22T08:00:00Z","finishedAt":"2026-09-22T09:00:00Z","tags":[],"missed":false,"priority":"normal","notifyOffsetsMinutes":[],"interruptions":[],"revision":1,"primaryItemId":"item-1","items":[{"type":"routine","id":"item-1","position":0,"schemaVersion":1,"isPrimary":true,"data":{}}],"taskIds":["task-1"]}""",
+                    """{"id":"event-1","name":"Rotina","description":"","startedAt":"2026-09-22T08:00:00Z","finishedAt":"2026-09-22T09:00:00Z","tags":[],"missed":false,"priority":"normal","notifyOffsetsMinutes":[],"interruptions":[],"revision":1,"kind":"routine","notes":[{"type":"text","id":"note-1","name":"Pauta","schemaVersion":1,"data":{"body":"Revisar a semana"},"tags":[],"revision":1,"createdAt":"2026-09-22T07:00:00Z","updatedAt":"2026-09-22T07:00:00Z"}],"taskIds":["task-1"]}""",
                 ),
             )
             val result = EventRepository(api()).detail("event-1")

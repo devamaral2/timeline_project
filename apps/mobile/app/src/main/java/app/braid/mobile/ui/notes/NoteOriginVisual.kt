@@ -26,7 +26,7 @@ internal fun noteOriginVisual(note: NoteDto): NoteOriginVisual {
     val palette = eventDetailPalette()
     val link = note.link ?: return NoteOriginVisual(Icons.Outlined.Note, MaterialTheme.colorScheme.onSurfaceVariant)
     if (link.kind == "task") return NoteOriginVisual(Icons.Outlined.Schedule, MaterialTheme.colorScheme.onBackground)
-    return when (link.eventType) {
+    return when (link.eventKind) {
         "meal" -> NoteOriginVisual(Icons.Outlined.Restaurant, palette.meal)
         "training" -> NoteOriginVisual(Icons.Outlined.FitnessCenter, palette.training)
         "sleep" -> NoteOriginVisual(Icons.Outlined.Bedtime, palette.sleep)

@@ -2,34 +2,23 @@
 
 package app.braid.mobile.ui.notes
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import app.braid.mobile.core.designsystem.BraidNoteBodyStyle
 import app.braid.mobile.core.designsystem.LocalBraidDarkTheme
 import app.braid.mobile.core.designsystem.tagColors
 import app.braid.mobile.data.dto.NoteDto
-import app.braid.mobile.domain.notes.NoteBlock
-import app.braid.mobile.domain.notes.parseNoteContent
+import app.braid.mobile.domain.notes.noteMarkdownOf
 
 /** As tags da nota em chips coloridos, no mesmo desenho do cartão de evento. */
 @Composable
@@ -59,39 +48,11 @@ internal fun NoteTags(
     }
 }
 
-/** O texto da nota em parágrafos, subtítulos e listas. */
+/** O texto da nota, lido como markdown. */
 @Composable
 internal fun NoteContent(
     note: NoteDto,
     modifier: Modifier = Modifier,
 ) {
-    val body = BraidNoteBodyStyle
-    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        parseNoteContent(note).forEach { block ->
-            when (block) {
-                is NoteBlock.Paragraph -> Text(text = block.text, style = body)
-                is NoteBlock.Heading ->
-                    Text(
-                        modifier = Modifier.padding(top = 12.dp),
-                        text = block.text,
-                        style = MaterialTheme.typography.headlineMedium,
-                    )
-                is NoteBlock.Bullets ->
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        block.items.forEach { item ->
-                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
-                                Box(
-                                    Modifier
-                                        .padding(top = 12.dp)
-                                        .size(5.dp)
-                                        .clip(CircleShape)
-                                        .background(MaterialTheme.colorScheme.onSurfaceVariant),
-                                )
-                                Text(text = item, style = body)
-                            }
-                        }
-                    }
-            }
-        }
-    }
+    MarkdownText(source = noteMarkdownOf(note), modifier = modifier)
 }

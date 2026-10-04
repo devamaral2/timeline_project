@@ -23,69 +23,19 @@
     }
   ],
   "revision": 3,
-  "primaryItemId": "item-training",
-  "items": [
+  "kind": "training",
+  "notes": [
     {
-      "id": "item-routine",
-      "position": 0,
-      "type": "routine",
+      "id": "note-training",
+      "name": "Treino da manhã",
       "schemaVersion": 1,
-      "isPrimary": false,
-      "data": {}
-    },
-    {
-      "id": "item-meal",
-      "position": 1,
-      "type": "meal",
-      "schemaVersion": 1,
-      "isPrimary": false,
-      "data": {
-        "name": "Café da manhã",
-        "description": "Aveia e fruta",
-        "foodItems": [
-          {
-            "id": "food-oats",
-            "name": "Aveia",
-            "portion": "40 g",
-            "approximateWeightGrams": 40,
-            "caloriesKcal": 152,
-            "macronutrients": {
-              "carbohydratesGrams": 27,
-              "proteinsGrams": 5,
-              "totalFatGrams": 3,
-              "fiberGrams": 4
-            },
-            "micronutrients": {
-              "ironMg": 1.6
-            }
-          }
-        ],
-        "totals": {
-          "totalCaloriesKcal": 152,
-          "totalProteinGrams": 5,
-          "totalCarbohydrateGrams": 27,
-          "totalFatGrams": 3,
-          "totalFiberGrams": 4
-        }
-      }
-    },
-    {
-      "id": "item-sleep",
-      "position": 2,
-      "type": "sleep",
-      "schemaVersion": 1,
-      "isPrimary": false,
-      "data": {
-        "trackedSleepTime": 7.5,
-        "score": 86
-      }
-    },
-    {
-      "id": "item-training",
-      "position": 3,
+      "tags": [
+        "saúde"
+      ],
+      "revision": 2,
+      "createdAt": "2026-09-22T11:00:00.000Z",
+      "updatedAt": "2026-09-22T11:05:00.000Z",
       "type": "training",
-      "schemaVersion": 1,
-      "isPrimary": true,
       "data": {
         "workouts": [
           {
@@ -130,6 +80,74 @@
           }
         ],
         "caloriesBurned": 450
+      }
+    },
+    {
+      "id": "note-text",
+      "name": "Aquecimento",
+      "schemaVersion": 1,
+      "tags": [
+        "foco"
+      ],
+      "revision": 1,
+      "createdAt": "2026-09-22T11:00:00.000Z",
+      "updatedAt": "2026-09-22T11:05:00.000Z",
+      "type": "text",
+      "data": {
+        "body": "Mobilidade de quadril antes das series."
+      }
+    },
+    {
+      "id": "note-meal",
+      "name": "Café da manhã",
+      "schemaVersion": 1,
+      "tags": [],
+      "revision": 1,
+      "createdAt": "2026-09-22T11:00:00.000Z",
+      "updatedAt": "2026-09-22T11:05:00.000Z",
+      "type": "meal",
+      "data": {
+        "name": "Café da manhã",
+        "description": "Aveia e fruta",
+        "foodItems": [
+          {
+            "id": "food-oats",
+            "name": "Aveia",
+            "portion": "40 g",
+            "approximateWeightGrams": 40,
+            "caloriesKcal": 152,
+            "macronutrients": {
+              "carbohydratesGrams": 27,
+              "proteinsGrams": 5,
+              "totalFatGrams": 3,
+              "fiberGrams": 4
+            },
+            "micronutrients": {
+              "ironMg": 1.6
+            }
+          }
+        ],
+        "totals": {
+          "totalCaloriesKcal": 152,
+          "totalProteinGrams": 5,
+          "totalCarbohydrateGrams": 27,
+          "totalFatGrams": 3,
+          "totalFiberGrams": 4
+        }
+      }
+    },
+    {
+      "id": "note-sleep",
+      "name": "Noite anterior",
+      "schemaVersion": 1,
+      "tags": [],
+      "revision": 1,
+      "createdAt": "2026-09-22T11:00:00.000Z",
+      "updatedAt": "2026-09-22T11:05:00.000Z",
+      "type": "sleep",
+      "data": {
+        "trackedSleepTime": 7.5,
+        "score": 86
       }
     }
   ]

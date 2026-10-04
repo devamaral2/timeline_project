@@ -62,7 +62,7 @@ class ContractFixturesTest {
     fun updateNoteBodyOmitsWhatWasNotChanged() {
         val body = UpdateNoteInput(expectedRevision = 4, content = "Só o texto").toJsonObject()
 
-        assertEquals(setOf("expectedRevision", "content"), body.keys)
+        assertEquals(setOf("expectedRevision", "type", "data"), body.keys)
     }
 
     @Test

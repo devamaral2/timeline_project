@@ -38,7 +38,7 @@ class VoiceEventRepositoryTest {
                 MockResponse()
                     .setResponseCode(201)
                     .setHeader("Content-Type", "application/json")
-                    .setBody("{\"eventId\":\"event-1\",\"primaryItemType\":\"meal\"}"),
+                    .setBody("{\"eventId\":\"event-1\",\"kind\":\"meal\"}"),
             )
 
             val result = VoiceEventRepository(api()).create("café da manhã")

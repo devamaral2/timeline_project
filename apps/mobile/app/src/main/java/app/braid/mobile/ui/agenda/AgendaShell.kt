@@ -1,86 +1,79 @@
 package app.braid.mobile.ui.agenda
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.AutoAwesome
-import androidx.compose.material.icons.outlined.CalendarMonth
-import androidx.compose.material.icons.outlined.Logout
-import androidx.compose.material.icons.outlined.Menu
-import androidx.compose.material.icons.outlined.Note
-import androidx.compose.material.icons.outlined.TaskAlt
-import androidx.compose.material.icons.outlined.Today
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalDrawerSheet
-import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import app.braid.mobile.core.designsystem.BraidWordmark
 import app.braid.mobile.data.reminders.ReminderScheduler
 import app.braid.mobile.data.session.SessionUser
 import app.braid.mobile.domain.timeline.TIMELINE_TIME_ZONE
-import app.braid.mobile.ui.chat.AgentChatScreen
 import app.braid.mobile.ui.chat.AgentChatViewModel
+import app.braid.mobile.ui.hub.HubPanel
 import app.braid.mobile.ui.notes.NotesScreen
-import app.braid.mobile.ui.voice.VoiceEventButton
 import app.braid.mobile.ui.voice.VoiceEventQueueViewModel
 import app.braid.mobile.ui.voice.VoiceJobStatus
 import app.braid.mobile.ui.voice.VoiceQueueEvent
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.ZoneId
 
-private enum class AgendaDestination(
-    val label: String,
-    val icon: ImageVector,
-) {
-    Tasks("Tarefas", Icons.Outlined.TaskAlt),
-    Agenda("Agenda", Icons.Outlined.CalendarMonth),
-    Notes("Notas", Icons.Outlined.Note),
-    Search("Buscar e criar", Icons.Outlined.AutoAwesome),
-}
+/** A altura da barra inferior do web (`.bottomNav`), sem a margem do sistema: onde o painel do hub termina. */
+private val BOTTOM_BAR_HEIGHT = 76.dp
 
-@OptIn(ExperimentalMaterial3Api::class)
+/** O painel do hub não ocupa a tela toda: passa disso só quando o teclado ou a tela baixa pedem menos. */
+private val HUB_PANEL_MAX_HEIGHT = 520.dp
+
+/**
+ * A casca das telas principais, montada como o shell do web no celular: o
+ * cabeçalho (marca, sino, conta), a agenda com mês, ∞ e tira da semana, e a barra
+ * inferior. “Buscar e criar” abre o painel do hub sobre a tela, com a barra à vista.
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 @Suppress("ktlint:standard:function-naming")
 fun AgendaShell(
     user: SessionUser,
     onSignOut: () -> Unit,
-    onNewEvent: () -> Unit = {},
-    onGoToToday: () -> Unit = {},
+    onToggleTheme: () -> Unit = {},
     onOpenEvent: (String) -> Unit = {},
     onOpenNote: (String) -> Unit = {},
-    onVoiceTranscript: (String) -> Unit = {},
     onVoiceQueueDrained: () -> Unit = {},
     onChatEntitiesChanged: () -> Unit = {},
     voiceQueueViewModel: VoiceEventQueueViewModel? = null,
@@ -88,12 +81,15 @@ fun AgendaShell(
     reminderScheduler: ReminderScheduler? = null,
     refreshSignal: Int = 0,
 ) {
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-    val scope = rememberCoroutineScope()
     val todayKey = remember { LocalDate.now(ZoneId.of(TIMELINE_TIME_ZONE)).toString() }
     var selectedDayKey by remember(todayKey) { mutableStateOf(todayKey) }
+    // Só uma escolha explícita de dia reposiciona a lista contínua; a rolagem apenas atualiza `selectedDayKey`.
+    var anchorDayKey by remember(todayKey) { mutableStateOf(todayKey) }
+    var anchorVersion by remember { mutableIntStateOf(0) }
     // Salvável: ao voltar do detalhe de uma nota, a pessoa continua na aba Notas.
-    var destination by rememberSaveable { mutableStateOf(AgendaDestination.Agenda) }
+    var destination by rememberSaveable { mutableStateOf(BottomBarItem.Agenda) }
+    var infinite by rememberSaveable { mutableStateOf(false) }
+    var hubOpen by rememberSaveable { mutableStateOf(false) }
     val voiceJobs =
         if (voiceQueueViewModel == null) {
             emptyList()
@@ -109,153 +105,139 @@ fun AgendaShell(
         }
     }
 
-    fun closeDrawer(action: () -> Unit = {}) {
-        scope.launch {
-            drawerState.close()
-            action()
-        }
+    fun selectDay(dayKey: String) {
+        selectedDayKey = dayKey
+        anchorDayKey = dayKey
+        anchorVersion += 1
     }
 
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            ModalDrawerSheet {
-                Column(
-                    modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 24.dp),
-                ) {
-                    BraidWordmark(
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        style = MaterialTheme.typography.headlineMedium,
-                    )
-                    Text(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
-                        text = user.email,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
-                    NavigationDrawerItem(
-                        icon = { Icon(Icons.Outlined.Add, contentDescription = null) },
-                        label = { Text("Novo evento") },
-                        selected = false,
-                        onClick = { closeDrawer(onNewEvent) },
-                    )
-                    NavigationDrawerItem(
-                        icon = { Icon(Icons.Outlined.Today, contentDescription = null) },
-                        label = { Text("Ir para hoje") },
-                        selected = false,
-                        onClick = {
-                            closeDrawer {
-                                selectedDayKey = todayKey
-                                onGoToToday()
-                            }
-                        },
-                    )
-                    Spacer(modifier = Modifier.weight(1f))
-                    NavigationDrawerItem(
-                        icon = { Icon(Icons.Outlined.Logout, contentDescription = null) },
-                        label = { Text("Sair da conta") },
-                        selected = false,
-                        onClick = { closeDrawer(onSignOut) },
-                    )
-                }
-            }
-        },
-    ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            Scaffold(
-                topBar = {
-                    if (destination == AgendaDestination.Notes) {
-                        TopAppBar(
-                            title = { BraidWordmark(style = MaterialTheme.typography.headlineMedium) },
-                            actions = {
-                                IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                                    Icon(Icons.Outlined.Menu, contentDescription = "Abrir menu")
-                                }
-                            },
-                            colors = TopAppBarDefaults.topAppBarColors(),
-                        )
-                    } else {
-                        Column {
-                            CenterAlignedTopAppBar(
-                                title = {
-                                    DateNavigator(
-                                        selectedDayKey = selectedDayKey,
-                                        todayKey = todayKey,
-                                        onSelect = { selectedDayKey = it },
-                                    )
+    BackHandler(enabled = hubOpen) { hubOpen = false }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            topBar = {
+                AgendaHeader(
+                    onToggleTheme = onToggleTheme,
+                    onSignOut = onSignOut,
+                    below = {
+                        if (destination == BottomBarItem.Agenda) {
+                            AgendaToolbar(
+                                selectedDayKey = selectedDayKey,
+                                todayKey = todayKey,
+                                infinite = infinite,
+                                onToggleInfinite = {
+                                    infinite = !infinite
+                                    selectDay(selectedDayKey)
                                 },
-                                navigationIcon = {
-                                    IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                                        Icon(Icons.Outlined.Menu, contentDescription = "Abrir menu")
-                                    }
-                                },
-                                actions = {
-                                    VoiceEventButton(
-                                        onFinalTranscript = { transcript ->
-                                            voiceQueueViewModel?.enqueue(transcript)
-                                            onVoiceTranscript(transcript)
-                                        },
-                                    )
-                                },
-                                colors = TopAppBarDefaults.topAppBarColors(),
+                                onSelectDay = ::selectDay,
                             )
                             WeekStrip(
                                 selectedDayKey = selectedDayKey,
                                 todayKey = todayKey,
-                                onSelect = { selectedDayKey = it },
+                                onSelect = ::selectDay,
                             )
                         }
-                    }
-                },
-                bottomBar = {
-                    NavigationBar {
-                        AgendaDestination.entries.forEach { item ->
-                            NavigationBarItem(
-                                selected = destination == item,
-                                onClick = { destination = item },
-                                icon = { Icon(item.icon, contentDescription = null) },
-                                label = { Text(item.label) },
-                            )
+                    },
+                )
+            },
+            bottomBar = {
+                AgendaBottomBar(
+                    selected = if (hubOpen) BottomBarItem.Search else destination,
+                    onSelect = { item ->
+                        if (item == BottomBarItem.Search) {
+                            hubOpen = !hubOpen
+                        } else {
+                            hubOpen = false
+                            destination = item
                         }
-                    }
-                },
-            ) { paddingValues ->
-                if (destination == AgendaDestination.Agenda) {
-                    AgendaDayScreen(
-                        dayKey = selectedDayKey,
-                        modifier = Modifier.padding(paddingValues),
-                        onOpenEvent = onOpenEvent,
-                        reminderScheduler = reminderScheduler,
-                        refreshSignal = refreshSignal,
-                    )
-                } else if (destination == AgendaDestination.Notes) {
-                    NotesScreen(onOpenNote = onOpenNote, modifier = Modifier.padding(paddingValues))
-                } else {
-                    if (destination == AgendaDestination.Search && agentChatViewModel != null) {
-                        AgentChatScreen(
+                    },
+                )
+            },
+        ) { paddingValues ->
+            when (destination) {
+                BottomBarItem.Agenda ->
+                    if (infinite) {
+                        AgendaListScreen(
+                            anchorDay = anchorDayKey,
+                            anchorVersion = anchorVersion,
+                            refreshSignal = refreshSignal,
+                            onVisibleDayChange = { selectedDayKey = it },
                             modifier = Modifier.padding(paddingValues),
-                            onEntitiesChanged = onChatEntitiesChanged,
-                            viewModel = agentChatViewModel,
+                            onOpenEvent = onOpenEvent,
+                            reminderScheduler = reminderScheduler,
                         )
                     } else {
-                        AgendaSectionPlaceholder(
-                            modifier = Modifier.padding(paddingValues),
-                            destination = destination,
-                            user = user,
-                            selectedDayKey = selectedDayKey,
-                            onSelectDay = { selectedDayKey = it },
+                        AgendaDayScreen(
+                            dayKey = selectedDayKey,
+                            modifier = Modifier.padding(paddingValues).daySwipe(selectedDayKey, ::selectDay),
+                            onOpenEvent = onOpenEvent,
+                            reminderScheduler = reminderScheduler,
+                            refreshSignal = refreshSignal,
+                        )
+                    }
+                BottomBarItem.Notes -> NotesScreen(onOpenNote = onOpenNote, modifier = Modifier.padding(paddingValues))
+                // “Tarefas” ainda não tem tela, nem no web; e a busca vive no painel do hub.
+                BottomBarItem.Tasks, BottomBarItem.Search ->
+                    AgendaSectionPlaceholder(
+                        modifier = Modifier.padding(paddingValues),
+                        destination = destination,
+                        user = user,
+                        selectedDayKey = selectedDayKey,
+                    )
+            }
+        }
+
+        // O painel do hub: fundo escurecido até a barra inferior, que continua à vista e tocável.
+        val keyboardUp = WindowInsets.isImeVisible
+        val bottomBarHeight = BOTTOM_BAR_HEIGHT + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .imePadding()
+                    .padding(bottom = if (keyboardUp) 0.dp else bottomBarHeight),
+        ) {
+            AnimatedVisibility(visible = hubOpen, enter = fadeIn(), exit = fadeOut()) {
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .background(Color(0x24252B2D))
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                            ) { hubOpen = false },
+                )
+            }
+            AnimatedVisibility(
+                modifier = Modifier.align(Alignment.BottomCenter),
+                visible = hubOpen,
+                enter = slideInVertically { it },
+                exit = slideOutVertically { it },
+            ) {
+                BoxWithConstraints(modifier = Modifier.statusBarsPadding()) {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth().height(minOf(maxHeight - 24.dp, HUB_PANEL_MAX_HEIGHT)),
+                        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                    ) {
+                        HubPanel(
+                            chatViewModel = agentChatViewModel,
+                            onClose = { hubOpen = false },
+                            onEntitiesChanged = onChatEntitiesChanged,
+                            onOpenEvent = onOpenEvent,
+                            onOpenNote = onOpenNote,
                         )
                     }
                 }
             }
-            VoiceJobStatus(
-                modifier = Modifier.align(Alignment.BottomCenter),
-                jobs = voiceJobs,
-                onRetry = { jobId -> voiceQueueViewModel?.retry(jobId) },
-                onDismiss = { jobId -> voiceQueueViewModel?.dismiss(jobId) },
-            )
         }
+        VoiceJobStatus(
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = bottomBarHeight),
+            jobs = voiceJobs,
+            onRetry = { jobId -> voiceQueueViewModel?.retry(jobId) },
+            onDismiss = { jobId -> voiceQueueViewModel?.dismiss(jobId) },
+        )
     }
 }
 
@@ -263,17 +245,12 @@ fun AgendaShell(
 @Suppress("ktlint:standard:function-naming")
 private fun AgendaSectionPlaceholder(
     modifier: Modifier,
-    destination: AgendaDestination,
+    destination: BottomBarItem,
     user: SessionUser,
     selectedDayKey: String,
-    onSelectDay: (String) -> Unit,
 ) {
     Column(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .daySwipe(selectedDayKey, onSelectDay)
-                .padding(24.dp),
+        modifier = modifier.fillMaxSize().padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {

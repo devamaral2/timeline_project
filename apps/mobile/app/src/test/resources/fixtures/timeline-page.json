@@ -2,11 +2,10 @@
   "items": [
     {
       "id": "event-training",
-      "primaryItemId": "item-training",
-      "primaryItemType": "training",
-      "itemTypes": [
+      "kind": "training",
+      "noteTypes": [
         "training",
-        "routine"
+        "text"
       ],
       "missed": false,
       "name": "Treino da manhã",
@@ -31,11 +30,8 @@
     },
     {
       "id": "event-note",
-      "primaryItemId": "item-routine",
-      "primaryItemType": "routine",
-      "itemTypes": [
-        "routine"
-      ],
+      "kind": "routine",
+      "noteTypes": [],
       "missed": true,
       "name": "Leitura",
       "description": "",

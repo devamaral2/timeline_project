@@ -3,12 +3,11 @@ package app.braid.mobile.ui.event
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.braid.mobile.data.dto.CreateEventInputDto
-import app.braid.mobile.data.dto.CreateEventItemDto
+import app.braid.mobile.data.dto.CreateEventNoteDto
 import app.braid.mobile.data.dto.CreateEventResponseDto
-import app.braid.mobile.data.dto.CreateMealItemDto
-import app.braid.mobile.data.dto.CreateRoutineItemDto
-import app.braid.mobile.data.dto.CreateSleepItemDto
-import app.braid.mobile.data.dto.CreateTrainingItemDto
+import app.braid.mobile.data.dto.CreateMealNoteDto
+import app.braid.mobile.data.dto.CreateSleepNoteDto
+import app.braid.mobile.data.dto.CreateTrainingNoteDto
 import app.braid.mobile.data.dto.MealCreateInputDto
 import app.braid.mobile.data.dto.SleepInputDto
 import app.braid.mobile.data.dto.TrainingInputDto
@@ -27,11 +26,13 @@ import javax.inject.Inject
 
 enum class NewEventType(
     val label: String,
+    /** A natureza (`kind`) que o evento nasce com. */
+    val kind: String,
 ) {
-    Routine("Rotina"),
-    Meal("Refeição"),
-    Sleep("Sono"),
-    Training("Treino"),
+    Routine("Rotina", "routine"),
+    Meal("Refeição", "meal"),
+    Sleep("Sono", "sleep"),
+    Training("Treino", "training"),
 }
 
 data class NewEventDraft(
@@ -50,19 +51,22 @@ data class NewEventDraft(
         val startedAt = parseLocal(startedAtLocal) ?: return null
         val finishedAt =
             finishedAtLocal.takeIf(String::isNotBlank)?.let(::parseLocal) ?: if (finishedAtLocal.isBlank()) null else return null
-        val item: CreateEventItemDto =
+        // Uma rotina não exige note; as demais naturezas nascem com a note do próprio tipo.
+        val notes: List<CreateEventNoteDto>? =
             when (type) {
-                NewEventType.Routine -> CreateRoutineItemDto()
-                NewEventType.Meal -> CreateMealItemDto(data = MealCreateInputDto(mealText.trim()))
+                NewEventType.Routine -> null
+                NewEventType.Meal -> listOf(CreateMealNoteDto(data = MealCreateInputDto(mealText.trim())))
                 NewEventType.Sleep ->
-                    CreateSleepItemDto(
-                        data =
-                            SleepInputDto(
-                                trackedSleepTime = sleepTrackedMinutes.toDoubleOrNull(),
-                                score = sleepScore.toDoubleOrNull(),
-                            ),
+                    listOf(
+                        CreateSleepNoteDto(
+                            data =
+                                SleepInputDto(
+                                    trackedSleepTime = sleepTrackedMinutes.toDoubleOrNull(),
+                                    score = sleepScore.toDoubleOrNull(),
+                                ),
+                        ),
                     )
-                NewEventType.Training -> CreateTrainingItemDto(data = TrainingInputDto(workouts = emptyList()))
+                NewEventType.Training -> listOf(CreateTrainingNoteDto(data = TrainingInputDto(workouts = emptyList())))
             }
         return CreateEventInputDto(
             name = name.trim().takeIf(String::isNotBlank),
@@ -72,7 +76,8 @@ data class NewEventDraft(
             notifyOffsetsMinutes = notifyOffsetsMinutes,
             startedAt = startedAt,
             finishedAt = finishedAt,
-            items = listOf(item),
+            kind = type.kind,
+            notes = notes,
         )
     }
 

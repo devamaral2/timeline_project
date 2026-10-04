@@ -77,7 +77,7 @@ fun EventCard(
     now: Instant = Instant.now(),
     onClick: () -> Unit = {},
 ) {
-    val visual = visualFor(event.primaryItemType)
+    val visual = visualFor(event.kind)
     val dark = LocalBraidDarkTheme.current
     val brand = if (dark) DarkTokens.brand else LightTokens.brand
     val destructive = if (dark) DarkTokens.destructive else LightTokens.destructive

@@ -170,7 +170,7 @@ fun AgendaDayScreen(
 
 @Composable
 @Suppress("ktlint:standard:function-naming")
-private fun DayHeading(
+internal fun DayHeading(
     dayKey: String,
     eventCount: Int,
 ) {

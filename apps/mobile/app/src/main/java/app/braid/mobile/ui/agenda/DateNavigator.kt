@@ -11,7 +11,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ChevronLeft
 import androidx.compose.material.icons.outlined.ChevronRight
-import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -32,59 +31,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import app.braid.mobile.domain.timeline.dayNumber
 import app.braid.mobile.domain.timeline.isSameMonth
-import app.braid.mobile.domain.timeline.mediumDate
 import app.braid.mobile.domain.timeline.monthGridOf
 import app.braid.mobile.domain.timeline.monthLabel
-import app.braid.mobile.domain.timeline.relativeDayLabel
 import app.braid.mobile.domain.timeline.shiftMonthKey
 import app.braid.mobile.domain.timeline.weekOf
 import app.braid.mobile.domain.timeline.weekdayInitial
 
 @Composable
 @Suppress("ktlint:standard:function-naming")
-fun DateNavigator(
-    selectedDayKey: String,
-    todayKey: String,
-    onSelect: (String) -> Unit,
-) {
-    var pickerOpen by remember { mutableStateOf(false) }
-    val isToday = selectedDayKey == todayKey
-
-    Column(
-        modifier = Modifier.clickable { pickerOpen = true },
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = relativeDayLabel(selectedDayKey, todayKey),
-                style = MaterialTheme.typography.titleLarge,
-                color = if (isToday) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.primary,
-            )
-            Icon(Icons.Outlined.ExpandMore, contentDescription = "Escolher outra data")
-        }
-        Text(
-            text = mediumDate(selectedDayKey),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-
-    if (pickerOpen) {
-        DayPickerDialog(
-            selectedDayKey = selectedDayKey,
-            todayKey = todayKey,
-            onSelect = {
-                pickerOpen = false
-                onSelect(it)
-            },
-            onDismiss = { pickerOpen = false },
-        )
-    }
-}
-
-@Composable
-@Suppress("ktlint:standard:function-naming")
-private fun DayPickerDialog(
+internal fun DayPickerDialog(
     selectedDayKey: String,
     todayKey: String,
     onSelect: (String) -> Unit,

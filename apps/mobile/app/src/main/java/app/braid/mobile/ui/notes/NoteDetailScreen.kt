@@ -2,6 +2,7 @@
 
 package app.braid.mobile.ui.notes
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,15 +24,16 @@ import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.LinkOff
 import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.StickyNote2
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -44,13 +46,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import app.braid.mobile.core.designsystem.BraidNoteTitleStyle
 import app.braid.mobile.data.dto.NoteDto
+import app.braid.mobile.data.dto.TEXT_NOTE_TYPE
 import app.braid.mobile.domain.notes.noteDatesLine
 import app.braid.mobile.domain.notes.noteOriginLabel
 import app.braid.mobile.domain.notes.whenLabel
+import app.braid.mobile.ui.event.SectionLabel
 import java.time.Instant
 
 /** A nota aberta: origem, tags, datas e o texto — com editar, soltar e excluir no menu. */
@@ -168,14 +172,17 @@ private fun NoteDetailBody(
                     )
                 }
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                    DropdownMenuItem(
-                        text = { Text("Editar") },
-                        leadingIcon = { Icon(Icons.Outlined.Edit, contentDescription = null) },
-                        onClick = {
-                            menuOpen = false
-                            onEdit()
-                        },
-                    )
+                    // Só a nota de texto se edita aqui; refeição, sono e treino mudam no evento.
+                    if (note.type == TEXT_NOTE_TYPE) {
+                        DropdownMenuItem(
+                            text = { Text("Editar") },
+                            leadingIcon = { Icon(Icons.Outlined.Edit, contentDescription = null) },
+                            onClick = {
+                                menuOpen = false
+                                onEdit()
+                            },
+                        )
+                    }
                     if (note.link != null) {
                         DropdownMenuItem(
                             text = { Text("Soltar da origem") },
@@ -201,24 +208,39 @@ private fun NoteDetailBody(
             }
         }
 
-        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Text(
-                modifier = Modifier.padding(bottom = 2.dp),
-                text = note.name,
-                style = BraidNoteTitleStyle,
-            )
-            NoteOriginLink(note, now, onOpenEvent)
-            NoteTags(note.tags)
-            Text(
-                text = noteDatesLine(note, now),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+        // O mesmo cartão da nota dentro do detalhe do evento (EventNoteCard).
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        ) {
+            Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Icon(
+                            Icons.Outlined.StickyNote2,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        SectionLabel("Nota")
+                    }
+                    Text(note.name, style = MaterialTheme.typography.headlineSmall.copy(fontSize = 26.sp, lineHeight = 30.sp))
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    NoteOriginLink(note, now, onOpenEvent)
+                    NoteTags(note.tags)
+                    Text(
+                        text = noteDatesLine(note, now),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                NoteContent(note)
+            }
         }
         state.actionError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
-
-        HorizontalDivider(color = MaterialTheme.colorScheme.outline)
-        NoteContent(note)
     }
 }
 

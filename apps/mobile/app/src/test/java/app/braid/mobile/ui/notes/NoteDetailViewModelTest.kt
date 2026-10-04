@@ -96,7 +96,7 @@ class NoteDetailViewModelTest {
     fun detachSendsAnExplicitDetachAndReloads() =
         runTest {
             Dispatchers.setMain(StandardTestDispatcher(testScheduler))
-            val linked = sampleNote().copy(link = NoteLinkDto("task", "task-1", "Revisar proposta"), taskId = "task-1")
+            val linked = sampleNote().copy(links = listOf(NoteLinkDto("task", "task-1", "Revisar proposta")))
             val gateway = gatewayWith(linked, sampleNote(revision = 2))
             val viewModel = NoteDetailViewModel(gateway)
             viewModel.load("note-1")

@@ -16,7 +16,7 @@ class AgendaShellTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun menuExposesAccountActionsAndLogout() {
+    fun accountMenuExposesThemeToggleAndLogout() {
         var signedOut = false
         composeRule.setContent {
             BraidTheme {
@@ -27,10 +27,61 @@ class AgendaShellTest {
             }
         }
 
-        composeRule.onNodeWithContentDescription("Abrir menu").performClick()
-        composeRule.onNodeWithText("ana@example.com").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Minha conta").performClick()
+        composeRule.onNodeWithText("Tema escuro").assertIsDisplayed()
         composeRule.onNodeWithText("Sair da conta").performClick()
 
         assertTrue(signedOut)
+    }
+
+    @Test
+    fun accountMenuTogglesTheme() {
+        var toggled = false
+        composeRule.setContent {
+            BraidTheme(darkTheme = false) {
+                AgendaShell(
+                    user = SessionUser("user-1", "ana@example.com", "Ana", "session-1"),
+                    onSignOut = {},
+                    onToggleTheme = { toggled = true },
+                )
+            }
+        }
+
+        composeRule.onNodeWithContentDescription("Minha conta").performClick()
+        composeRule.onNodeWithText("Tema escuro").performClick()
+
+        assertTrue(toggled)
+    }
+
+    @Test
+    fun headerShowsNotificationsAndBottomBarHasFourTabs() {
+        composeRule.setContent {
+            BraidTheme {
+                AgendaShell(
+                    user = SessionUser("user-1", "ana@example.com", "Ana", "session-1"),
+                    onSignOut = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithContentDescription("Notificações").assertIsDisplayed()
+        listOf("Tarefas", "Agenda", "Notas", "Buscar e criar").forEach { label ->
+            composeRule.onNodeWithContentDescription(label).assertIsDisplayed()
+        }
+    }
+
+    @Test
+    fun infiniteScrollButtonIsInTheAgendaToolbar() {
+        composeRule.setContent {
+            BraidTheme {
+                AgendaShell(
+                    user = SessionUser("user-1", "ana@example.com", "Ana", "session-1"),
+                    onSignOut = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithContentDescription("Rolagem infinita").assertIsDisplayed()
+        composeRule.onNodeWithText("Hoje").assertIsDisplayed()
     }
 }

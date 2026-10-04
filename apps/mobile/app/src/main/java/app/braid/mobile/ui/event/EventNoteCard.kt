@@ -50,15 +50,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.braid.mobile.core.designsystem.BraidDisplayFont
 import app.braid.mobile.core.designsystem.BraidMonoFont
-import app.braid.mobile.data.dto.EventItemDto
+import app.braid.mobile.data.dto.EventNoteDto
 import app.braid.mobile.data.dto.FreeWorkoutDto
-import app.braid.mobile.data.dto.MealEventItemDto
+import app.braid.mobile.data.dto.MealEventNoteDto
 import app.braid.mobile.data.dto.MealItemDto
 import app.braid.mobile.data.dto.RunningWorkoutDto
-import app.braid.mobile.data.dto.SleepEventItemDto
+import app.braid.mobile.data.dto.SleepEventNoteDto
 import app.braid.mobile.data.dto.SleepItemDto
+import app.braid.mobile.data.dto.TextEventNoteDto
 import app.braid.mobile.data.dto.TrainingDataDto
-import app.braid.mobile.data.dto.TrainingEventItemDto
+import app.braid.mobile.data.dto.TrainingEventNoteDto
 import app.braid.mobile.data.dto.TreadmillWorkoutDto
 import app.braid.mobile.data.dto.WeightliftingWorkoutDto
 import app.braid.mobile.data.dto.WorkoutSnapshotDto
@@ -67,25 +68,17 @@ import app.braid.mobile.domain.timeline.formatMinutes
 import app.braid.mobile.domain.timeline.formatPace
 import app.braid.mobile.domain.timeline.groupSetsByExercise
 import app.braid.mobile.domain.timeline.pluralize
+import app.braid.mobile.ui.notes.MarkdownText
 
-/** Notas anexadas: treino, refeição e sono trazem os dados num cartão; rotina não tem. */
-internal fun hasNoteCard(item: EventItemDto): Boolean =
-    item is MealEventItemDto || item is TrainingEventItemDto || item is SleepEventItemDto
-
+/** As notes do evento: um cabeçalho com a contagem e um cartão por note, na ordem em que aparecem. */
 @Composable
-internal fun EventNoteCard(
-    item: EventItemDto,
+internal fun EventNotesSection(
+    notes: List<EventNoteDto>,
     eventName: String,
     dateTitle: String,
     agendaMinutes: Int?,
 ) {
-    var open by rememberSaveable(item.id) { mutableStateOf(true) }
-    val title =
-        when (item) {
-            is MealEventItemDto -> item.data.name.ifBlank { eventName }
-            is SleepEventItemDto -> dateTitle
-            else -> eventName
-        }
+    if (notes.isEmpty()) return
     Column {
         Row(
             modifier = Modifier.fillMaxWidth().padding(bottom = 14.dp),
@@ -93,8 +86,32 @@ internal fun EventNoteCard(
             verticalAlignment = Alignment.Bottom,
         ) {
             SectionLabel("Notas")
-            Text("1", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(notes.size.toString(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            notes.forEach { note ->
+                EventNoteCard(note = note, eventName = eventName, dateTitle = dateTitle, agendaMinutes = agendaMinutes)
+            }
+        }
+    }
+}
+
+@Composable
+private fun EventNoteCard(
+    note: EventNoteDto,
+    eventName: String,
+    dateTitle: String,
+    agendaMinutes: Int?,
+) {
+    var open by rememberSaveable(note.id) { mutableStateOf(true) }
+    val title =
+        when (note) {
+            is MealEventNoteDto -> note.data.name.ifBlank { eventName }
+            is SleepEventNoteDto -> dateTitle
+            is TrainingEventNoteDto -> eventName
+            is TextEventNoteDto -> note.name.ifBlank { eventName }
+        }
+    Column {
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.large,
@@ -126,11 +143,11 @@ internal fun EventNoteCard(
                     )
                 }
                 if (open) {
-                    when (item) {
-                        is MealEventItemDto -> MealNote(item.data)
-                        is TrainingEventItemDto -> TrainingNote(item.data)
-                        is SleepEventItemDto -> SleepNote(item.data, agendaMinutes)
-                        else -> Unit
+                    when (note) {
+                        is MealEventNoteDto -> MealNote(note.data)
+                        is TrainingEventNoteDto -> TrainingNote(note.data)
+                        is SleepEventNoteDto -> SleepNote(note.data, agendaMinutes)
+                        is TextEventNoteDto -> MarkdownText(source = note.data.body)
                     }
                 }
             }

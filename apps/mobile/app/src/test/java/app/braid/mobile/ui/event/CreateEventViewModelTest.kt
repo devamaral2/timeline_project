@@ -2,7 +2,7 @@ package app.braid.mobile.ui.event
 
 import app.braid.mobile.data.dto.CreateEventInputDto
 import app.braid.mobile.data.dto.CreateEventResponseDto
-import app.braid.mobile.data.dto.CreateMealItemDto
+import app.braid.mobile.data.dto.CreateMealNoteDto
 import app.braid.mobile.data.dto.EventDetailDto
 import app.braid.mobile.data.dto.TimelineEventPageDto
 import app.braid.mobile.data.events.EventGateway
@@ -48,7 +48,8 @@ class CreateEventViewModelTest {
             advanceUntilIdle()
 
             assertEquals(CreateEventUiState.Success("event-created"), viewModel.state.value)
-            assertTrue(gateway.input?.items?.single() is CreateMealItemDto)
+            assertEquals("meal", gateway.input?.kind)
+            assertTrue(gateway.input?.notes?.single() is CreateMealNoteDto)
             assertEquals(listOf(15.0), gateway.input?.notifyOffsetsMinutes)
             assertEquals("2026-09-24T11:00:00Z", gateway.input?.startedAt)
         }

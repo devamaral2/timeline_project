@@ -14,7 +14,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -34,26 +33,24 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.braid.mobile.data.dto.EventDetailDto
-import app.braid.mobile.data.dto.EventItemDto
 import app.braid.mobile.data.dto.FoodItemDto
 import app.braid.mobile.data.dto.FreeWorkoutDto
-import app.braid.mobile.data.dto.MealEventItemDto
-import app.braid.mobile.data.dto.RoutineEventItemDto
+import app.braid.mobile.data.dto.MealEventNoteDto
+import app.braid.mobile.data.dto.MealItemDto
+import app.braid.mobile.data.dto.MealTotalsDto
 import app.braid.mobile.data.dto.RunningWorkoutDto
-import app.braid.mobile.data.dto.SleepEventItemDto
+import app.braid.mobile.data.dto.SleepEventNoteDto
 import app.braid.mobile.data.dto.SleepItemDto
 import app.braid.mobile.data.dto.TrainingDataDto
-import app.braid.mobile.data.dto.TrainingEventItemDto
+import app.braid.mobile.data.dto.TrainingEventNoteDto
 import app.braid.mobile.data.dto.TreadmillWorkoutDto
 import app.braid.mobile.data.dto.UpdateEventInputDto
-import app.braid.mobile.data.dto.UpdateEventItemDto
-import app.braid.mobile.data.dto.UpdateMealItemDto
-import app.braid.mobile.data.dto.UpdateRoutineItemDto
-import app.braid.mobile.data.dto.UpdateSleepItemDto
-import app.braid.mobile.data.dto.UpdateTrainingItemDto
+import app.braid.mobile.data.dto.UpdateEventNoteDto
 import app.braid.mobile.data.dto.WeightliftingWorkoutDto
 import app.braid.mobile.data.dto.WorkoutSetDto
 import app.braid.mobile.data.dto.WorkoutSnapshotDto
+import app.braid.mobile.domain.events.notesPatchedWith
+import app.braid.mobile.domain.events.primaryNote
 import app.braid.mobile.domain.timeline.TIMELINE_TIME_ZONE
 import java.time.Instant
 import java.time.LocalDateTime
@@ -117,60 +114,47 @@ fun EditEventScreen(
             }
             EditEventUiState.Saved -> Unit
             is EditEventUiState.Content -> {
-                val mealItem =
-                    current.event.items
-                        .filterIsInstance<MealEventItemDto>()
-                        .firstOrNull()
-                val routineItem =
-                    current.event.items
-                        .filterIsInstance<RoutineEventItemDto>()
-                        .firstOrNull()
-                val sleepItem =
-                    current.event.items
-                        .filterIsInstance<SleepEventItemDto>()
-                        .firstOrNull()
-                val trainingItem =
-                    current.event.items
-                        .filterIsInstance<TrainingEventItemDto>()
-                        .firstOrNull()
-                when {
-                    mealItem != null ->
+                val event = current.event
+                val primary = event.primaryNote()
+                when (event.kind) {
+                    "meal" ->
                         MealEditContent(
-                            event = current.event,
-                            item = mealItem,
+                            event = event,
+                            note = primary as? MealEventNoteDto,
                             modifier = Modifier.padding(paddingValues),
                             tagViewModel = tagViewModel,
                             onCancel = onBack,
                             onSave = viewModel::save,
                         )
-                    routineItem != null ->
+                    "routine" ->
                         RoutineEditContent(
-                            event = current.event,
+                            event = event,
                             modifier = Modifier.padding(paddingValues),
                             tagViewModel = tagViewModel,
                             onCancel = onBack,
                             onSave = viewModel::save,
                         )
-                    sleepItem != null ->
+                    "sleep" ->
                         SleepEditContent(
-                            event = current.event,
-                            item = sleepItem,
+                            event = event,
+                            note = primary as? SleepEventNoteDto,
                             modifier = Modifier.padding(paddingValues),
                             tagViewModel = tagViewModel,
                             onCancel = onBack,
                             onSave = viewModel::save,
                         )
-                    trainingItem != null ->
+                    "training" ->
                         TrainingEditContent(
-                            event = current.event,
-                            item = trainingItem,
+                            event = event,
+                            note = primary as? TrainingEventNoteDto,
                             modifier = Modifier.padding(paddingValues),
                             tagViewModel = tagViewModel,
                             onCancel = onBack,
                             onSave = viewModel::save,
                         )
                     else ->
-                        EditMessage(Modifier.padding(paddingValues), "Este tipo de evento será editável em breve.") {
+                        // Uma natureza que este app ainda não conhece: editar as tripas dela às cegas estragaria o payload.
+                        EditMessage(Modifier.padding(paddingValues), "Este tipo de evento ainda não pode ser editado por aqui.") {
                             onBack()
                         }
                 }
@@ -182,7 +166,7 @@ fun EditEventScreen(
 @Composable
 private fun MealEditContent(
     event: EventDetailDto,
-    item: MealEventItemDto,
+    note: MealEventNoteDto?,
     modifier: Modifier,
     tagViewModel: TagSuggestionViewModel,
     onCancel: () -> Unit,
@@ -196,7 +180,7 @@ private fun MealEditContent(
     var missed by remember(event.id) { mutableStateOf(event.missed) }
     var priority by remember(event.id) { mutableStateOf(event.priority) }
     var notifyOffsetsMinutes by remember(event.id) { mutableStateOf(event.notifyOffsetsMinutes) }
-    var foods by remember(event.id) { mutableStateOf(item.data.foodItems) }
+    var foods by remember(event.id) { mutableStateOf(note?.data?.foodItems.orEmpty()) }
     val submitting = false
 
     Column(
@@ -257,7 +241,12 @@ private fun MealEditContent(
                             missed = missed,
                             priority = priority,
                             notifyOffsetsMinutes = notifyOffsetsMinutes,
-                            items = event.items.map { eventItem -> updateItem(eventItem, item.id, foods = foods) },
+                            notes =
+                                event.notesPatchedWith(
+                                    note?.id,
+                                    note?.let { UpdateEventNoteDto.edited(it, it.data.copy(foodItems = foods)) }
+                                        ?: UpdateEventNoteDto.created(newMealData(event.name, foods)),
+                                ),
                         ),
                     )
                 },
@@ -271,7 +260,7 @@ private fun MealEditContent(
 @Composable
 private fun SleepEditContent(
     event: EventDetailDto,
-    item: SleepEventItemDto,
+    note: SleepEventNoteDto?,
     modifier: Modifier,
     tagViewModel: TagSuggestionViewModel,
     onCancel: () -> Unit,
@@ -285,8 +274,8 @@ private fun SleepEditContent(
     var missed by remember(event.id) { mutableStateOf(event.missed) }
     var priority by remember(event.id) { mutableStateOf(event.priority) }
     var notifyOffsetsMinutes by remember(event.id) { mutableStateOf(event.notifyOffsetsMinutes) }
-    var trackedSleepTime by remember(event.id) { mutableStateOf(item.data.trackedSleepTime.toString()) }
-    var score by remember(event.id) { mutableStateOf(item.data.score.toString()) }
+    var trackedSleepTime by remember(event.id) { mutableStateOf(decimalText(note?.data?.trackedSleepTime)) }
+    var score by remember(event.id) { mutableStateOf(decimalText(note?.data?.score)) }
 
     Column(
         modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
@@ -332,6 +321,11 @@ private fun SleepEditContent(
             Button(
                 modifier = Modifier.weight(1f),
                 onClick = {
+                    val sleepData =
+                        SleepItemDto(
+                            trackedSleepTime = trackedSleepTime.toDoubleOrNull() ?: 0.0,
+                            score = score.toDoubleOrNull() ?: 0.0,
+                        )
                     onSave(
                         updateInput(
                             event = event,
@@ -343,16 +337,11 @@ private fun SleepEditContent(
                             missed = missed,
                             priority = priority,
                             notifyOffsetsMinutes = notifyOffsetsMinutes,
-                            items =
-                                event.items.map { eventItem ->
-                                    updateItem(
-                                        item = eventItem,
-                                        targetItemId = item.id,
-                                        sleepItem =
-                                            SleepItemDto(
-                                                trackedSleepTime = trackedSleepTime.toDoubleOrNull() ?: 0.0,
-                                                score = score.toDoubleOrNull() ?: 0.0,
-                                            ),
+                            notes =
+                                sleepData.let { data ->
+                                    event.notesPatchedWith(
+                                        note?.id,
+                                        note?.let { UpdateEventNoteDto.edited(it, data) } ?: UpdateEventNoteDto.created(data),
                                     )
                                 },
                         ),
@@ -436,7 +425,7 @@ private fun RoutineEditContent(
 @Composable
 private fun TrainingEditContent(
     event: EventDetailDto,
-    item: TrainingEventItemDto,
+    note: TrainingEventNoteDto?,
     modifier: Modifier,
     tagViewModel: TagSuggestionViewModel,
     onCancel: () -> Unit,
@@ -450,7 +439,8 @@ private fun TrainingEditContent(
     var missed by remember(event.id) { mutableStateOf(event.missed) }
     var priority by remember(event.id) { mutableStateOf(event.priority) }
     var notifyOffsetsMinutes by remember(event.id) { mutableStateOf(event.notifyOffsetsMinutes) }
-    var workouts by remember(event.id) { mutableStateOf(item.data.workouts.map(::workoutDraftOf)) }
+    val savedWorkouts = note?.data?.workouts.orEmpty()
+    var workouts by remember(event.id) { mutableStateOf(savedWorkouts.map(::workoutDraftOf)) }
 
     fun updateWorkout(
         index: Int,
@@ -487,15 +477,12 @@ private fun TrainingEditContent(
                         Text("Remover")
                     }
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    workoutCodeOptions.forEach { (code, label) ->
-                        FilterChip(
-                            selected = workout.code == code,
-                            onClick = { updateWorkout(index) { it.copy(code = code) } },
-                            label = { Text(label) },
-                        )
-                    }
-                }
+                SelectField(
+                    label = "Modalidade",
+                    options = workoutCodeOptions.map { (code, label) -> SelectOption(code, label) },
+                    selected = workout.code,
+                    onSelect = { code -> updateWorkout(index) { it.copy(code = code) } },
+                )
                 TextField(
                     modifier = Modifier.fillMaxWidth(),
                     value = workout.name,
@@ -616,6 +603,11 @@ private fun TrainingEditContent(
                 modifier = Modifier.weight(1f),
                 onClick = {
                     val builtWorkouts = workouts.map(WorkoutDraft::toDto)
+                    val trainingData =
+                        TrainingDataDto(
+                            workouts = builtWorkouts,
+                            caloriesBurned = builtWorkouts.sumOf { workout -> workout.calories },
+                        )
                     onSave(
                         updateInput(
                             event = event,
@@ -627,18 +619,12 @@ private fun TrainingEditContent(
                             missed = missed,
                             priority = priority,
                             notifyOffsetsMinutes = notifyOffsetsMinutes,
-                            items =
-                                event.items.map { eventItem ->
-                                    updateItem(
-                                        item = eventItem,
-                                        targetItemId = item.id,
-                                        trainingItem =
-                                            TrainingDataDto(
-                                                workouts = builtWorkouts,
-                                                caloriesBurned = builtWorkouts.sumOf { workout -> workout.calories },
-                                            ),
-                                    )
-                                },
+                            notes =
+                                event.notesPatchedWith(
+                                    note?.id,
+                                    note?.let { UpdateEventNoteDto.edited(it, trainingData) }
+                                        ?: UpdateEventNoteDto.created(trainingData),
+                                ),
                         ),
                     )
                 },
@@ -799,32 +785,26 @@ private fun EditCommonFields(
             Text(if (missed) "Não realizado" else "Marcar como não realizado")
         }
     }
-    Text(text = "Prioridade", style = MaterialTheme.typography.labelLarge)
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        listOf("urgent" to "Urgente", "normal" to "Normal", "flexible" to "Flexível").forEach { (value, label) ->
-            FilterChip(
-                selected = priority == value,
-                onClick = { onPriorityChange(value) },
-                label = { Text(label) },
-            )
-        }
-    }
-    Text(text = "Lembretes", style = MaterialTheme.typography.labelLarge)
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        listOf(0.0, 5.0, 15.0, 60.0).forEach { minutes ->
-            val label = if (minutes == 0.0) "Sem aviso" else "${minutes.toInt()} min"
-            FilterChip(
-                selected =
-                    (minutes == 0.0 && notifyOffsetsMinutes.isEmpty()) ||
-                        (minutes > 0 && minutes in notifyOffsetsMinutes),
-                onClick = {
-                    onNotifyOffsetsChange(if (minutes == 0.0) emptyList() else listOf(minutes))
-                },
-                label = { Text(label) },
-            )
-        }
-    }
+    SelectField(
+        label = "Prioridade",
+        options = priorityOptions,
+        selected = priority,
+        onSelect = onPriorityChange,
+    )
+    SelectField(
+        label = "Lembrete",
+        options = reminderOptions,
+        selected = notifyOffsetsMinutes.selectedReminder(),
+        onSelect = { minutes -> onNotifyOffsetsChange(if (minutes == 0.0) emptyList() else listOf(minutes)) },
+    )
 }
+
+private val priorityOptions =
+    listOf(
+        SelectOption("urgent", "Urgente"),
+        SelectOption("normal", "Normal"),
+        SelectOption("flexible", "Flexível"),
+    )
 
 private fun updateInput(
     event: EventDetailDto,
@@ -836,7 +816,7 @@ private fun updateInput(
     missed: Boolean,
     priority: String,
     notifyOffsetsMinutes: List<Double>,
-    items: List<UpdateEventItemDto>? = null,
+    notes: List<UpdateEventNoteDto>? = null,
 ): UpdateEventInputDto =
     UpdateEventInputDto(
         eventId = event.id,
@@ -849,41 +829,23 @@ private fun updateInput(
         missed = missed,
         priority = priority,
         notifyOffsetsMinutes = notifyOffsetsMinutes,
-        items = items,
+        notes = notes,
         taskIds = event.taskIds,
     )
 
-private fun updateItem(
-    item: EventItemDto,
-    targetItemId: String,
-    foods: List<FoodItemDto>? = null,
-    sleepItem: SleepItemDto? = null,
-    trainingItem: TrainingDataDto? = null,
-): UpdateEventItemDto =
-    when (item) {
-        is MealEventItemDto ->
-            UpdateMealItemDto(
-                id = item.id,
-                schemaVersion = item.schemaVersion,
-                isPrimary = item.isPrimary,
-                data = if (item.id == targetItemId && foods != null) item.data.copy(foodItems = foods) else item.data,
-            )
-        is RoutineEventItemDto -> UpdateRoutineItemDto(item.id, item.schemaVersion, item.isPrimary, item.data)
-        is SleepEventItemDto ->
-            UpdateSleepItemDto(
-                id = item.id,
-                schemaVersion = item.schemaVersion,
-                isPrimary = item.isPrimary,
-                data = if (item.id == targetItemId && sleepItem != null) sleepItem else item.data,
-            )
-        is TrainingEventItemDto ->
-            UpdateTrainingItemDto(
-                id = item.id,
-                schemaVersion = item.schemaVersion,
-                isPrimary = item.isPrimary,
-                data = if (item.id == targetItemId && trainingItem != null) trainingItem else item.data,
-            )
-    }
+private fun decimalText(value: Double?): String = value?.toString().orEmpty()
+
+/** Sem refeição anterior, a note nasce com o nome do evento; os totais a API recalcula a partir dos alimentos. */
+private fun newMealData(
+    eventName: String,
+    foods: List<FoodItemDto>,
+): MealItemDto =
+    MealItemDto(
+        name = eventName,
+        description = "",
+        foodItems = foods,
+        totals = MealTotalsDto(0.0, 0.0, 0.0, 0.0, 0.0),
+    )
 
 private fun List<FoodItemDto>.updated(
     index: Int,

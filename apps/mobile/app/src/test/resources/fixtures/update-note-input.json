@@ -1,10 +1,13 @@
 {
   "expectedRevision": 2,
   "name": "Novo título",
-  "content": "Texto novo",
-  "eventId": null,
-  "taskId": null,
   "tags": [
     "casa"
-  ]
+  ],
+  "eventIds": [],
+  "taskIds": [],
+  "type": "text",
+  "data": {
+    "body": "Texto novo"
+  }
 }

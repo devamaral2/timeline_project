@@ -20,9 +20,8 @@ class EventCardTest {
                     event =
                         TimelineEventCardDto(
                             id = "meal-1",
-                            primaryItemId = "meal-item-1",
-                            primaryItemType = "meal",
-                            itemTypes = listOf("meal"),
+                            kind = "meal",
+                            noteTypes = listOf("meal"),
                             missed = true,
                             name = "Café da manhã",
                             description = "Aveia e frutas",

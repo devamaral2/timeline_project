@@ -3,8 +3,10 @@ package app.braid.mobile.data.events
 import app.braid.mobile.data.dto.CreateEventInputDto
 import app.braid.mobile.data.dto.CreateEventResponseDto
 import app.braid.mobile.data.dto.EventDetailDto
+import app.braid.mobile.data.dto.TimelineEventCardDto
 import app.braid.mobile.data.dto.TimelineEventPageDto
 import app.braid.mobile.data.dto.UpdateEventInputDto
+import app.braid.mobile.domain.timeline.shiftDayKey
 import app.braid.mobile.domain.timeline.zonedDayEnd
 import app.braid.mobile.domain.timeline.zonedDayStart
 import java.io.IOException
@@ -58,6 +60,26 @@ interface EventGateway {
         query: EventQuery = EventQuery(),
         forceRefresh: Boolean = false,
     ): EventResult<TimelineEventPageDto>
+
+    /**
+     * Todos os eventos de `fromDayKey` a `toDayKey`, inclusive. O padrão lê dia a
+     * dia; o repositório sobrescreve com uma só janela, para a busca do hub.
+     */
+    suspend fun range(
+        fromDayKey: String,
+        toDayKey: String,
+    ): EventResult<List<TimelineEventCardDto>> {
+        val events = mutableListOf<TimelineEventCardDto>()
+        var dayKey = fromDayKey
+        while (dayKey <= toDayKey) {
+            when (val result = day(dayKey)) {
+                is EventResult.Failure -> return result
+                is EventResult.Success -> events += result.value.items
+            }
+            dayKey = shiftDayKey(dayKey, 1)
+        }
+        return EventResult.Success(events)
+    }
 }
 
 @Singleton
@@ -136,6 +158,30 @@ class EventRepository
                 cacheKey = dayKey,
                 forceRefresh = forceRefresh,
             )
+
+        override suspend fun range(
+            fromDayKey: String,
+            toDayKey: String,
+        ): EventResult<List<TimelineEventCardDto>> {
+            val events = mutableListOf<TimelineEventCardDto>()
+            var cursor: String? = null
+            do {
+                val result =
+                    window(
+                        from = zonedDayStart(fromDayKey),
+                        to = zonedDayEnd(toDayKey),
+                        query = EventQuery(cursor = cursor, limit = 100),
+                    )
+                when (result) {
+                    is EventResult.Failure -> return result
+                    is EventResult.Success -> {
+                        events += result.value.items
+                        cursor = result.value.nextCursor
+                    }
+                }
+            } while (cursor != null)
+            return EventResult.Success(events)
+        }
 
         suspend fun window(
             from: Instant,

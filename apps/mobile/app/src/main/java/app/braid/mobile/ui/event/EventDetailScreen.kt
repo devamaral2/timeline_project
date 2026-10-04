@@ -65,10 +65,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.braid.mobile.core.designsystem.LocalBraidDarkTheme
 import app.braid.mobile.core.designsystem.tagColors
-import app.braid.mobile.data.dto.EventItemDto
-import app.braid.mobile.data.dto.MealEventItemDto
-import app.braid.mobile.data.dto.SleepEventItemDto
-import app.braid.mobile.data.dto.TrainingEventItemDto
 import app.braid.mobile.domain.timeline.EventPosition
 import app.braid.mobile.domain.timeline.dateLineOf
 import app.braid.mobile.domain.timeline.endLabelOf
@@ -188,8 +184,7 @@ private fun EventDetailBody(
     onToggleMissed: () -> Unit,
 ) {
     val event = state.event
-    val primary = event.items.firstOrNull { it.id == event.primaryItemId }
-    val visual = detailVisual(primary?.let(::typeOf))
+    val visual = detailVisual(event.kind)
     val position = eventPositionOf(event.startedAt, event.finishedAt)
     val agendaMinutes = event.finishedAt?.let { minutesBetween(event.startedAt, it) }
     val dateLine = dateLineOf(event.startedAt, event.finishedAt)
@@ -289,9 +284,7 @@ private fun EventDetailBody(
             Description(event.description)
         }
 
-        event.items.filter(::hasNoteCard).forEach { item ->
-            EventNoteCard(item = item, eventName = event.name, dateTitle = dateLine, agendaMinutes = agendaMinutes)
-        }
+        EventNotesSection(notes = event.notes, eventName = event.name, dateTitle = dateLine, agendaMinutes = agendaMinutes)
 
         val linkedTasks = event.taskIds?.size ?: 0
         if (event.interruptions.isNotEmpty() || linkedTasks > 0) {
@@ -498,11 +491,3 @@ private fun detailVisual(type: String?): DetailVisual {
         else -> DetailVisual(Icons.Outlined.Circle, "Evento", muted)
     }
 }
-
-private fun typeOf(item: EventItemDto): String =
-    when (item) {
-        is MealEventItemDto -> "meal"
-        is TrainingEventItemDto -> "training"
-        is SleepEventItemDto -> "sleep"
-        else -> "routine"
-    }

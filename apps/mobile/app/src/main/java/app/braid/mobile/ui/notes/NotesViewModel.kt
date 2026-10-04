@@ -74,7 +74,7 @@ class NotesViewModel
             mutableState.update { it.copy(isSaving = true, saveError = null) }
             viewModelScope.launch {
                 val input =
-                    CreateNoteInputDto(
+                    CreateNoteInputDto.text(
                         content = draft.content,
                         name = draft.name.trim().ifEmpty { null },
                         tags = draft.tags,

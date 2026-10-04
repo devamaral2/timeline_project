@@ -2,7 +2,8 @@ package app.braid.mobile.ui.event
 
 import app.braid.mobile.data.dto.EventDetailDto
 import app.braid.mobile.data.dto.EventDetailInterruptionDto
-import app.braid.mobile.data.dto.RoutineEventItemDto
+import app.braid.mobile.data.dto.TextEventNoteDto
+import app.braid.mobile.data.dto.TextNoteDataDto
 import app.braid.mobile.data.dto.TimelineEventPageDto
 import app.braid.mobile.data.events.EventErrorKind
 import app.braid.mobile.data.events.EventGateway
@@ -113,13 +114,16 @@ class EventDetailViewModelTest {
                 startedAt = "2026-09-22T08:20:00Z",
                 finishedAt = "2026-09-22T08:25:00Z",
             )
-        val routineItem =
-            RoutineEventItemDto(
-                id = "item-1",
-                position = 0,
+        val textNote =
+            TextEventNoteDto(
+                id = "note-1",
+                name = "Pauta",
                 schemaVersion = 1,
-                isPrimary = true,
-                data = kotlinx.serialization.json.JsonObject(emptyMap()),
+                tags = emptyList(),
+                revision = 1,
+                createdAt = "2026-09-22T07:00:00Z",
+                updatedAt = "2026-09-22T07:00:00Z",
+                data = TextNoteDataDto(body = "Revisar a semana"),
             )
         return EventDetailDto(
             id = "event-1",
@@ -133,8 +137,8 @@ class EventDetailViewModelTest {
             notifyOffsetsMinutes = listOf(10.0),
             interruptions = listOf(interruption),
             revision = 1,
-            primaryItemId = "item-1",
-            items = listOf(routineItem),
+            kind = "routine",
+            notes = listOf(textNote),
             taskIds = listOf("task-1"),
         )
     }

@@ -4,9 +4,14 @@
     "planejamento"
   ],
   "priority": "flexible",
-  "items": [
+  "kind": "meal",
+  "notes": [
     {
-      "type": "routine"
+      "name": "Contexto",
+      "type": "text",
+      "data": {
+        "body": "Almoço antes da reunião."
+      }
     },
     {
       "type": "meal",
@@ -30,5 +35,8 @@
         ]
       }
     }
+  ],
+  "noteIds": [
+    "note-existing"
   ]
 }
