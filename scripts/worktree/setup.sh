@@ -7,6 +7,10 @@
 # Uso: bash scripts/worktree/setup.sh <caminho> [args do git worktree add...]
 # Ex.:  bash scripts/worktree/setup.sh .worktrees/minha-feature -b minha-feature
 # (de preferencia via `pnpm worktree:new`, que injeta o ambiente do 1Password)
+#
+# Ao terminar, mude para a pasta da worktree (`cd <caminho absoluto>`): o script
+# roda num subshell e nao consegue alterar o diretorio de quem o chamou, entao
+# o resumo final imprime o `cd` pronto. Dai em diante, rode tudo da worktree.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

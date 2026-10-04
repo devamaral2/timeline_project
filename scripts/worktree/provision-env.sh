@@ -188,6 +188,7 @@ echo "Login de ${ADMIN_EMAIL} em ${APP_URL}: HTTP 200."
 cat <<SUMMARY
 
 Worktree '$SLUG' pronta e rodando.
+  mudar de pasta: cd $(pwd)   (rode os proximos comandos de dentro da worktree)
   link:      ${APP_URL}
   login:     ${ADMIN_EMAIL} (senha: ADMIN_PASSWORD do 1Password)
   web/api/auth: ${WEB_PORT} / ${API_PORT} / ${AUTH_PORT}
