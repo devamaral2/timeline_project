@@ -13,8 +13,9 @@ import { tagColorStyle } from "@/lib/tags/tag-color";
 import { elapsedSecondsOf, eventPositionOf, formatStopwatch, formatTime } from "@repo/timeline";
 import { agendaRefreshEvent } from "../../../mockups/eventos/agenda-refresh";
 import shellStyles from "../../../mockups/eventos/mockup.module.css";
-import { dateLineOf, formatMinutes, minutesBetween, pluralize } from "./event-detail-format";
-import { Collapsible, NoteCard, StatusIcon, statusLabelOf } from "./event-detail-parts";
+import { dateLineOf, formatMinutes, minutesBetween, pluralize } from "@/lib/events/event-detail-format";
+import { Collapsible } from "@/components/notes/NoteBody";
+import { NoteCard, StatusIcon, statusLabelOf } from "./event-detail-parts";
 import styles from "./event-details.module.css";
 
 const icon = { "aria-hidden": true, strokeWidth: ICON_STROKE_WIDTH } as const;
@@ -205,7 +206,7 @@ export default function EventPage({ params }: { params: Promise<{ userId: string
           </div>
         ) : null}
 
-        {event.notes.map((note) => <NoteCard key={note.id} note={note} eventName={event.name} dateTitle={dateLine} agendaMinutes={agendaMinutes} />)}
+        {event.notes.map((note) => <NoteCard key={note.id} userId={userId} note={note} eventName={event.name} dateTitle={dateLine} agendaMinutes={agendaMinutes} />)}
 
         {event.interruptions.length || linkedTasks ? (
           <section className={styles.collapsibles} aria-label="Mais detalhes">

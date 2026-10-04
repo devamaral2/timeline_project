@@ -16,6 +16,7 @@ import type {
 } from "@/lib/api/contracts";
 import { priorityLabels, visualForItemType } from "./event-visuals";
 import { MissedBadge } from "./MissedBadge";
+import { MarkdownView } from "@/components/notes/MarkdownView";
 import { cn } from "@/lib/utils";
 import {
   destructiveButtonClass,
@@ -250,7 +251,7 @@ function TextDetails({ title, body }: { title: string; body: string }) {
   return (
     <div>
       <SectionTitle>{title}</SectionTitle>
-      <p className="mt-1.5 whitespace-pre-line text-[13px] text-muted-foreground">{body}</p>
+      <MarkdownView source={body} className="mt-1.5 text-[13px]" />
     </div>
   );
 }

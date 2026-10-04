@@ -87,7 +87,7 @@ const trainingDataSchema = z.object({
 }).strict();
 
 export const noteLinkSchema = z.object({
-  kind: z.enum(["event", "task"]), id: z.string(), name: z.string(), eventKind: z.string().optional(), at: z.string().optional(),
+  kind: z.enum(["event", "task"]), id: z.string(), name: z.string(), eventKind: z.string().optional(), at: z.string().optional(), endsAt: z.string().optional(),
 }).strict();
 
 const noteBase = {

@@ -16,6 +16,7 @@ import {
   ICON_STROKE_WIDTH, missedLabel, notificationOffsetLabel,
   priorityLabels, visualForItemType,
 } from "./event-visuals";
+import { MarkdownView } from "@/components/notes/MarkdownView";
 import styles from "./event-detail-screen.module.css";
 
 /**
@@ -321,7 +322,7 @@ function NoteSection({ note }: { note: NoteDto }) {
 
   if (note.type === "text") return (
     <Section title={note.name}>
-      <p className={styles.prose}>{note.data.body}</p>
+      <MarkdownView source={note.data.body} />
     </Section>
   );
 

@@ -2,6 +2,7 @@ import { NoteValidationError } from "../errors/note.errors";
 
 /** O texto livre: o tipo que uma note assume quando ninguem diz outro. */
 export interface TextNote {
+  /** Markdown (GFM), guardado como foi escrito; texto puro e markdown valido. */
   body: string;
 }
 

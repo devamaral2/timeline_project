@@ -133,6 +133,8 @@ export interface NoteLinkDto {
   eventKind?: string;
   /** Quando o alvo acontece — inicio do evento ou da tarefa. */
   at?: string;
+  /** Quando o evento terminou, se terminou; so para `kind: "event"`. */
+  endsAt?: string;
 }
 
 /** Uma note: `type` + `schemaVersion` dizem que forma o `data` tem. */

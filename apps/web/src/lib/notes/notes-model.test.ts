@@ -4,11 +4,11 @@ import { textNote } from "@/components/notes/note-fixtures";
 import {
   filterNotes,
   groupNotes,
-  noteDatesLine,
+  noteDates,
+  noteMarkdownOf,
   noteSnippet,
   noteStamp,
   noteOriginLabel,
-  parseNoteContent,
   whenLabel,
 } from "./notes-model";
 
@@ -87,16 +87,14 @@ test("rotula quando o alvo acontece", () => {
   expect(whenLabel("2026-09-02T09:00:00-03:00", now)).toBe("2 set., 09:00");
 });
 
-test("a linha de datas mostra a edição só quando houve uma", () => {
-  expect(noteDatesLine(note({ createdAt: "2026-09-14T08:05:00-03:00", updatedAt: "2026-09-14T08:05:00-03:00" }), now)).toBe(
-    "Criada hoje, 08:05",
-  );
+test("as datas mostram a edição só quando houve uma", () => {
+  expect(noteDates(note({ createdAt: "2026-09-14T08:05:00-03:00", updatedAt: "2026-09-14T08:05:00-03:00" }), now)).toEqual({
+    created: "hoje, 08:05",
+    edited: null,
+  });
   expect(
-    noteDatesLine(
-      note({ createdAt: "2026-09-12T09:00:00-03:00", updatedAt: "2026-09-13T21:12:00-03:00", revision: 3 }),
-      now,
-    ),
-  ).toBe("Criada em 12 set. · editada ontem, 21:12");
+    noteDates(note({ createdAt: "2026-09-12T09:00:00-03:00", updatedAt: "2026-09-13T21:12:00-03:00", revision: 3 }), now),
+  ).toEqual({ created: "em 12 set.", edited: "ontem, 21:12" });
 });
 
 test("o rótulo da origem", () => {
@@ -114,28 +112,16 @@ test("o trecho da lista tira o título repetido, os marcadores e as quebras", ()
   expect(noteSnippet(textNote({ name: "Outro nome", content: "Primeira linha\nSegunda" }))).toBe("Primeira linha Segunda");
 });
 
-test("o texto vira parágrafos, subtítulos e listas", () => {
-  const blocks = parseNoteContent(textNote({
-    name: "Ideias para a proposta",
-    content: [
-      "Ideias para a proposta",
-      "Começar pelo problema.",
-      "Eles reclamaram do prazo.",
-      "",
-      "## Pontos para a reunião",
-      "- Mostrar o cronograma",
-      "* Separar o preço",
-      "",
-      "## Dúvida",
-      "O desconto vale para o ano todo?",
-    ].join("\n"),
-  }));
+test("o trecho da lista tira a marcação do markdown", () => {
+  expect(
+    noteSnippet(textNote({
+      name: "Ideias",
+      content: "Ideias\n**Importante**: ver [o plano](https://x.dev) e `npm i`\n> citação\n- [ ] tarefa\n1. passo\n---\n```\ncódigo\n```\numa_variavel e ~~velho~~ _novo_",
+    })),
+  ).toBe("Importante: ver o plano e npm i citação tarefa passo código uma_variavel e velho novo");
+});
 
-  expect(blocks).toEqual([
-    { type: "paragraph", text: "Começar pelo problema.\nEles reclamaram do prazo." },
-    { type: "heading", text: "Pontos para a reunião" },
-    { type: "list", items: ["Mostrar o cronograma", "Separar o preço"] },
-    { type: "heading", text: "Dúvida" },
-    { type: "paragraph", text: "O desconto vale para o ano todo?" },
-  ]);
+test("o corpo em markdown fica sem o título repetido e só existe para nota de texto", () => {
+  expect(noteMarkdownOf(textNote({ name: "Ideias", content: "# Ideias\n\nTexto **forte**" }))).toBe("Texto **forte**");
+  expect(noteMarkdownOf(textNote({ name: "Outro", content: "Primeira\nSegunda" }))).toBe("Primeira\nSegunda");
 });

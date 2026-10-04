@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, ChevronRight, Ellipsis, Pencil, Trash2, Unlink } from "lucide-react";
+import { ArrowLeft, CalendarPlus, ChevronRight, Ellipsis, Pencil, Tag, Trash2, Unlink } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -8,18 +8,18 @@ import { ICON_STROKE_WIDTH } from "@/components/events/event-visuals";
 import { authedFetch } from "@/lib/api/authed-fetch";
 import type { NoteDto } from "@/lib/api/contracts";
 import { useNow } from "@/lib/events/use-now";
-import { noteDatesLine, noteOriginLabel, primaryLinkOf, whenLabel } from "@/lib/notes/notes-model";
+import { noteDates, sleepAgendaOf, whenLabel } from "@/lib/notes/notes-model";
 import { tagColorStyle } from "@/lib/tags/tag-color";
 import shellStyles from "@/app/mockups/eventos/mockup.module.css";
 import { DeleteNoteDialog } from "./DeleteNoteDialog";
 import { NoteContent } from "./NoteContent";
 import { NoteEditorDialog } from "./NoteEditorDialog";
-import { originOf } from "./NoteOrigin";
+import { originOfLink } from "./NoteOrigin";
 import styles from "./notes.module.css";
 
 const icon = { "aria-hidden": true, strokeWidth: ICON_STROKE_WIDTH } as const;
 
-/** A nota aberta: origem, tags, datas e o texto — com editar, soltar e excluir no menu. */
+/** A nota aberta: título, datas, tags, onde ela aparece e o conteúdo — com editar, soltar e excluir no menu. */
 export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: string }) {
   const router = useRouter();
   const now = useNow();
@@ -86,16 +86,9 @@ export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: s
     return <main id="conteudo" className={shellStyles.detailMain}><p role="status" className={styles.message}>Carregando nota…</p></main>;
   }
 
-  const link = primaryLinkOf(note);
-  const { Icon, origin } = originOf(note);
-  const linkHref = link?.kind === "event" ? `/${userId}/eventos/${link.id}` : null;
-  const originContent = link ? (
-    <>
-      <span className={styles.originName}><Icon {...icon} /><span>{noteOriginLabel(note)}</span></span>
-      {link.at && now ? <span>· {whenLabel(link.at, now)}</span> : null}
-      {linkHref ? <ChevronRight {...icon} /> : null}
-    </>
-  ) : null;
+  const links = note.links ?? [];
+  const dates = now ? noteDates(note, now) : null;
+  const sleep = sleepAgendaOf(note);
 
   return (
     <main id="conteudo" className={shellStyles.detailMain}>
@@ -107,32 +100,66 @@ export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: s
             {menuOpen ? (
               <div role="menu" className={styles.menu}>
                 <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); setEditing(true); }}><Pencil {...icon} />Editar</button>
-                {link ? <button type="button" role="menuitem" onClick={() => void detach()}><Unlink {...icon} />Soltar da origem</button> : null}
+                {links.length ? <button type="button" role="menuitem" onClick={() => void detach()}><Unlink {...icon} />Soltar da origem</button> : null}
                 <button type="button" role="menuitem" data-danger="true" onClick={() => { setMenuOpen(false); setDeleting(true); }}><Trash2 {...icon} />Excluir</button>
               </div>
             ) : null}
           </div>
         </nav>
 
-        <header className={styles.header}>
+        <header className={styles.heading}>
           <h1>{note.name}</h1>
-          {link ? (
-            linkHref ? (
-              <Link href={linkHref} className={styles.originLink} data-origin={origin}>{originContent}</Link>
-            ) : (
-              <span className={styles.originLink} data-origin={origin}>{originContent}</span>
-            )
-          ) : null}
-          {note.tags.length ? (
-            <ul className={styles.tags} aria-label="Tags da nota">
-              {note.tags.map((tag) => <li key={tag} style={tagColorStyle(tag)}>#{tag}</li>)}
-            </ul>
-          ) : null}
-          {now ? <p className={styles.dates}>{noteDatesLine(note, now)}</p> : null}
         </header>
 
-        <div className={styles.rule} />
-        <NoteContent note={note} />
+        {dates || note.tags.length ? (
+          <section className={styles.info} aria-label="Informações">
+            {dates ? (
+              <div><CalendarPlus {...icon} /><span>Criada {dates.created}</span></div>
+            ) : null}
+            {dates?.edited ? <div><Pencil {...icon} /><span>Editada {dates.edited}</span></div> : null}
+            {note.tags.length ? (
+              <div>
+                <Tag {...icon} />
+                <ul aria-label="Tags da nota">
+                  {note.tags.map((tag) => <li key={tag} style={tagColorStyle(tag)}>#{tag}</li>)}
+                </ul>
+              </div>
+            ) : null}
+          </section>
+        ) : null}
+
+        {links.length ? (
+          <section aria-label="Onde a nota aparece">
+            <div className={styles.sectionLabel}><h2>Aparece em</h2><span>{links.length}</span></div>
+            <ul className={styles.links}>
+              {links.map((link) => {
+                const { Icon, origin } = originOfLink(link);
+                const href = link.kind === "event" ? `/${userId}/eventos/${link.id}` : null;
+                const row = (
+                  <>
+                    <Icon {...icon} />
+                    <span className={styles.linkText}>
+                      <span className={styles.linkName}>{link.name}</span>
+                      <span className={styles.linkMeta}>{link.kind === "event" ? "Evento" : "Tarefa"}{link.at && now ? ` · ${whenLabel(link.at, now)}` : ""}</span>
+                    </span>
+                    {href ? <ChevronRight {...icon} /> : null}
+                  </>
+                );
+                return (
+                  <li key={`${link.kind}-${link.id}`}>
+                    {href ? (
+                      <Link href={href} className={styles.linkRow} data-origin={origin}>{row}</Link>
+                    ) : (
+                      <span className={styles.linkRow} data-origin={origin}>{row}</span>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        ) : null}
+
+        <NoteContent note={note} title={sleep?.title} agendaMinutes={sleep?.agendaMinutes} />
         {actionError ? <p role="alert" className={styles.message}>{actionError}</p> : null}
       </div>
 

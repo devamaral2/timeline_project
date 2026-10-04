@@ -9,6 +9,7 @@ export function toNoteLinkDto(link: NoteLinkSummary): NoteLinkDto {
     name: link.name,
     ...(link.eventKind ? { eventKind: link.eventKind } : {}),
     ...(link.at ? { at: link.at.toISOString() } : {}),
+    ...(link.endsAt ? { endsAt: link.endsAt.toISOString() } : {}),
   };
 }
 

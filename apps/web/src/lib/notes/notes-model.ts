@@ -1,4 +1,5 @@
 import { TIMELINE_TIME_ZONE, dayKeyOf, formatTime } from "@repo/timeline";
+import { dateLineOf, minutesBetween } from "@/lib/events/event-detail-format";
 import type { MealItem, NoteDto, NoteLinkDto, SleepItem, TextNote, TrainingData } from "@/lib/api/contracts";
 
 /**
@@ -147,15 +148,32 @@ export function whenLabel(instant: string, now: Date): string {
   return `${shortDay(instant, now)}, ${time}`;
 }
 
-/** "Criada hoje, 08:05" ou "Criada em 12 set. · editada ontem, 21:12". */
-export function noteDatesLine(note: Pick<NoteDto, "createdAt" | "updatedAt" | "revision">, now: Date): string {
+/** Quando a nota nasceu e, se houve edição, quando mudou: "hoje, 08:05", "ontem, 21:12" ou "em 12 set.". */
+export function noteDates(
+  note: Pick<NoteDto, "createdAt" | "updatedAt" | "revision">,
+  now: Date,
+): { created: string; edited: string | null } {
   const relative = (instant: string) => {
     const age = daysBetween(dayKeyOf(instant), dayKeyOf(now));
     return age === 0 || age === 1 ? whenLabel(instant, now) : `em ${shortDay(instant, now)}`;
   };
-  const created = `Criada ${relative(note.createdAt)}`;
   const edited = note.revision > 1 && note.updatedAt !== note.createdAt;
-  return edited ? `${created} · editada ${relative(note.updatedAt)}` : created;
+  return { created: relative(note.createdAt), edited: edited ? relative(note.updatedAt) : null };
+}
+
+/**
+ * Uma nota de sono vive na noite do evento a que pertence: o titulo e o dia (ou
+ * os dois dias) dele e, se o evento terminou, quanto durou na agenda. Sem
+ * evento, a nota e so a nota.
+ */
+export function sleepAgendaOf(note: Pick<NoteDto, "type" | "links">): { title: string; agendaMinutes: number | null } | null {
+  if (note.type !== "sleep") return null;
+  const event = note.links?.find((link) => link.kind === "event" && link.at);
+  if (!event?.at) return null;
+  return {
+    title: dateLineOf(event.at, event.endsAt),
+    agendaMinutes: event.endsAt ? minutesBetween(event.at, event.endsAt) : null,
+  };
 }
 
 /** O rotulo da origem: "Evento · Almoço", "Tarefa · Revisar proposta" (com "+N" se ha mais) ou "Nota solta". */
@@ -166,62 +184,46 @@ export function noteOriginLabel(note: Pick<NoteDto, "links">): string {
   return `${link.kind === "event" ? "Evento" : "Tarefa"} · ${link.name}${more > 0 ? ` +${more}` : ""}`;
 }
 
-const LIST_MARKER = /^\s*(?:[-*•])\s+/;
 const HEADING_MARKER = /^\s*#{1,6}\s+/;
+const BLOCK_MARKER = /^\s*(?:>\s?|[-*+•]\s+(?:\[[ xX]\]\s+)?|\d+[.)]\s+)/;
+const FENCE = /^\s*(?:```|~~~)/;
+const RULE = /^\s*(?:[-*_]\s*){3,}$/;
 
-/** O trecho da lista: o texto sem o titulo repetido, sem marcadores e em uma linha so. */
+/** O texto de uma linha sem a marcação inline do markdown (negrito, itálico, código, links). */
+export function stripInlineMarkdown(line: string): string {
+  return line
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/`([^`]*)`/g, "$1")
+    .replace(/(\*\*|__)(.+?)\1/g, "$2")
+    .replace(/~~(.+?)~~/g, "$1")
+    .replace(/(^|[^\w*])\*(?!\s)(.+?)\*(?=[^\w*]|$)/g, "$1$2")
+    .replace(/(^|[^\w])_(?!\s)(.+?)_(?=[^\w]|$)/g, "$1$2");
+}
+
+/**
+ * O corpo em markdown de uma nota de texto, sem o titulo repetido na primeira
+ * linha (a tela ja o mostra). Notas estruturadas nao tem markdown: vazio.
+ */
+export function noteMarkdownOf(note: Pick<NoteDto, "name" | "type" | "data">): string {
+  if (note.type !== "text") return "";
+  const lines = noteTextOf(note).split(/\r?\n/);
+  const firstIndex = lines.findIndex((line) => line.trim());
+  if (firstIndex >= 0 && lines[firstIndex]?.trim().replace(HEADING_MARKER, "") === note.name) {
+    lines.splice(0, firstIndex + 1);
+  }
+  return lines.join("\n").trim();
+}
+
+/** O trecho da lista: o texto sem o titulo repetido, sem marcacao do markdown e em uma linha so. */
 export function noteSnippet(note: Pick<NoteDto, "name" | "type" | "data">): string {
   const lines = noteTextOf(note).split(/\r?\n/).map((line) => line.trim());
   const firstIndex = lines.findIndex(Boolean);
   const first = lines[firstIndex]?.replace(HEADING_MARKER, "");
   const body = first === note.name ? lines.slice(firstIndex + 1) : lines;
   return body
-    .map((line) => line.replace(HEADING_MARKER, "").replace(LIST_MARKER, ""))
+    .filter((line) => !FENCE.test(line) && !RULE.test(line))
+    .map((line) => stripInlineMarkdown(line.replace(HEADING_MARKER, "").replace(BLOCK_MARKER, "")))
     .filter(Boolean)
     .join(" ");
-}
-
-export type NoteBlock =
-  | { type: "paragraph"; text: string }
-  | { type: "heading"; text: string }
-  | { type: "list"; items: string[] };
-
-/**
- * O texto da nota em blocos: `#` vira subtitulo, linhas com `-`, `*` ou `•`
- * viram lista e o resto vira paragrafo (linha em branco separa paragrafos).
- * O titulo repetido na primeira linha fica de fora, ja que a tela o mostra.
- */
-export function parseNoteContent(note: Pick<NoteDto, "name" | "type" | "data">): NoteBlock[] {
-  const lines = noteTextOf(note).split(/\r?\n/);
-  const firstIndex = lines.findIndex((line) => line.trim());
-  if (firstIndex >= 0 && lines[firstIndex]?.trim().replace(HEADING_MARKER, "") === note.name) {
-    lines.splice(0, firstIndex + 1);
-  }
-
-  const blocks: NoteBlock[] = [];
-  let paragraph: string[] = [];
-  const flushParagraph = () => {
-    if (paragraph.length) blocks.push({ type: "paragraph", text: paragraph.join("\n") });
-    paragraph = [];
-  };
-
-  for (const raw of lines) {
-    const line = raw.trim();
-    if (!line) {
-      flushParagraph();
-    } else if (HEADING_MARKER.test(line)) {
-      flushParagraph();
-      blocks.push({ type: "heading", text: line.replace(HEADING_MARKER, "") });
-    } else if (LIST_MARKER.test(line)) {
-      flushParagraph();
-      const item = line.replace(LIST_MARKER, "");
-      const last = blocks[blocks.length - 1];
-      if (last?.type === "list") last.items.push(item);
-      else blocks.push({ type: "list", items: [item] });
-    } else {
-      paragraph.push(line);
-    }
-  }
-  flushParagraph();
-  return blocks;
 }

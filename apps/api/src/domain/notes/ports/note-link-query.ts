@@ -7,6 +7,8 @@ export interface NoteLinkSummary {
   eventKind?: string;
   /** Inicio do evento ou da tarefa, se houver. */
   at?: Date;
+  /** Fim do evento, se ele já terminou; as tarefas não têm. */
+  endsAt?: Date;
 }
 
 export interface NoteLinkQuery {

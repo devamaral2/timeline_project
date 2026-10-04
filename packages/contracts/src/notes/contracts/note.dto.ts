@@ -12,6 +12,8 @@ export interface NoteLinkDto {
   eventKind?: string;
   /** Quando o alvo acontece: inicio do evento ou da tarefa, se houver. */
   at?: string;
+  /** Quando o evento terminou, se terminou; so para `kind: "event"`. */
+  endsAt?: string;
 }
 
 export type KnownNoteType = "text" | "meal" | "sleep" | "training";

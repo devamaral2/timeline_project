@@ -8,9 +8,10 @@ import type { CreateNoteRequest, NoteDto, UpdateNoteRequest } from "@/lib/api/co
 import { iconButtonClass } from "@/components/ui/button-styles";
 import { dialogHeaderClass, dialogOverlayClass, dialogPanelClass, dialogTitleClass } from "@/components/ui/dialog-styles";
 import { cn } from "@/lib/utils";
-import { fieldInputClass, fieldLabelClass, fieldTextareaClass } from "@/components/events/new-event-forms/field-styles";
+import { fieldInputClass, fieldLabelClass } from "@/components/events/new-event-forms/field-styles";
 import { FormActions } from "@/components/events/new-event-forms/shared";
 import { TagInput } from "@/components/events/new-event-forms/TagInput";
+import { MarkdownEditor, type MarkdownEditorMode } from "./MarkdownEditor";
 
 interface NoteEditorDialogProps {
   /** Ausente, o dialogo cria uma nota solta; presente, edita essa. */
@@ -27,6 +28,7 @@ export function NoteEditorDialog({ note, onClose, onSaved }: NoteEditorDialogPro
   const editsBody = !note || note.type === "text";
   const [content, setContent] = useState(note?.type === "text" ? note.data.body : "");
   const [tags, setTags] = useState(note?.tags ?? []);
+  const [mode, setMode] = useState<MarkdownEditorMode>("write");
   const [submitting, setSubmitting] = useState(false);
   const contentRef = useRef<HTMLTextAreaElement>(null);
   const [error, setError] = useState<string | null>(null);
@@ -95,7 +97,7 @@ export function NoteEditorDialog({ note, onClose, onSaved }: NoteEditorDialogPro
       }}
       onKeyDown={() => {}}
     >
-      <div className={cn(dialogPanelClass, "max-w-lg")}>
+      <div className={cn(dialogPanelClass, mode === "split" ? "max-w-4xl" : "max-w-2xl")}>
         <div className={dialogHeaderClass}>
           <h2 id={titleId} className={dialogTitleClass}>{note ? "Editar nota" : "Nova nota"}</h2>
           <button type="button" onClick={onClose} aria-label="Fechar" className={iconButtonClass}>
@@ -117,14 +119,14 @@ export function NoteEditorDialog({ note, onClose, onSaved }: NoteEditorDialogPro
           {editsBody ? (
           <div className="flex flex-col gap-1.5">
             <label htmlFor={`${titleId}-content`} className={fieldLabelClass}>Texto</label>
-            <textarea
+            <MarkdownEditor
               id={`${titleId}-content`}
               value={content}
-              onChange={(event) => setContent(event.target.value)}
-              placeholder={"Escreva livremente. Use ## para subtítulos e - para listas."}
-              rows={9}
-              ref={contentRef}
-              className={fieldTextareaClass}
+              onChange={setContent}
+              mode={mode}
+              onModeChange={setMode}
+              placeholder={"Escreva em markdown: ## subtítulo, **negrito**, - lista, - [ ] tarefa, > citação."}
+              textareaRef={contentRef}
             />
           </div>
           ) : null}

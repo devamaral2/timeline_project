@@ -1,0 +1,50 @@
+/*
+ * O markdown de uma nota, igual na leitura (detalhe da nota e do evento) e no
+ * preview do editor. Usa os tokens base (--foreground, --muted-foreground,
+ * --border) e não os apelidos do shell (--ink, --muted): o editor abre em um
+ * portal, fora do shell, onde --muted é uma cor de fundo.
+ */
+.markdown {
+  --md-text: var(--muted-foreground);
+  --md-strong: var(--foreground);
+  --md-line: var(--border);
+  --md-wash: color-mix(in oklab, var(--foreground) 7%, transparent);
+  display: flex; flex-direction: column; gap: 14px; min-width: 0;
+  color: var(--md-text); font-size: 14px; line-height: 1.6; overflow-wrap: anywhere;
+}
+.markdown > :first-child { margin-top: 0; }
+.markdown > :last-child { margin-bottom: 0; }
+.markdown :is(p, ul, ol, blockquote, pre, table, h2, h3, h4, h5, h6, hr) { margin: 0; }
+.markdown p { white-space: pre-wrap; }
+
+.markdown h2, .markdown h3, .markdown h4, .markdown h5, .markdown h6 { color: var(--md-strong); font-size: 13px; font-weight: 600; letter-spacing: .02em; line-height: 1.4; }
+.markdown h2 { font-size: 15px; }
+.markdown h2[data-level="1"] { font-family: var(--font-display); font-size: 19px; font-weight: 400; letter-spacing: 0; }
+.markdown :is(h2, h3, h4, h5, h6):not(:first-child) { margin-top: 6px; }
+
+.markdown strong { color: var(--md-strong); font-weight: 600; }
+.markdown a { color: var(--md-strong); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--md-line); }
+.markdown a:hover { text-decoration-color: currentColor; }
+.markdown del { opacity: .7; }
+.markdown hr { height: 1px; border: 0; background: var(--md-line); }
+
+.markdown :is(ul, ol) { padding-left: 1.4em; display: flex; flex-direction: column; gap: 6px; }
+.markdown ul { list-style: disc; }
+.markdown ol { list-style: decimal; }
+.markdown li::marker { color: var(--md-text); }
+.markdown li :is(ul, ol) { margin-top: 6px; }
+.markdown li > p { display: inline; }
+.markdown ul:has(> li > input[type="checkbox"]) { list-style: none; padding-left: 0; }
+.markdown li:has(> input[type="checkbox"]) { display: flex; align-items: baseline; gap: 10px; }
+.markdown li > input[type="checkbox"] { flex-shrink: 0; width: 15px; height: 15px; margin: 0; accent-color: var(--md-strong); transform: translateY(2px); }
+
+.markdown blockquote { padding: 2px 0 2px 14px; border-left: 2px solid var(--md-line); font-style: italic; }
+.markdown blockquote > * + * { margin-top: 8px; }
+
+.markdown code { padding: .1em .35em; border-radius: 5px; background: var(--md-wash); color: var(--md-strong); font-family: var(--font-mono); font-size: .88em; }
+.markdown pre { padding: 12px 14px; border-radius: 10px; background: var(--md-wash); overflow-x: auto; line-height: 1.5; }
+.markdown pre code { padding: 0; background: none; font-size: 12.5px; white-space: pre; }
+
+.markdown table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; font-size: 13px; }
+.markdown :is(th, td) { padding: 6px 12px; border: 1px solid var(--md-line); text-align: left; }
+.markdown th { color: var(--md-strong); font-weight: 600; background: var(--md-wash); }
