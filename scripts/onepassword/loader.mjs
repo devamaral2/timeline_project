@@ -47,6 +47,7 @@ const LOCAL_OVERRIDE_KEYS = new Set([
   "AUTH_PORT",
   "AUTH_HOST",
   "POSTGRES_HOST_PORT",
+  "POSTGRES_DB",
   "AUTH_POSTGRES_DB",
   "BACKEND_URL",
   "AUTH_ISSUER",
@@ -105,7 +106,8 @@ export function applyLocalOverrides(environment, overrides) {
   env.AUTH_ISSUER = `http://127.0.0.1:${overrides.AUTH_PORT ?? env.AUTH_PORT}`;
   env.AUTH_PUBLIC_URL = env.AUTH_ISSUER;
   env.AUTH_SERVICE_URL = env.AUTH_ISSUER;
-  env.AUTH_WEB_APP_URL = `http://localhost:${overrides.WEB_PORT ?? env.WEB_PORT}`;
+  // Worktrees expostas pelo Caddy (<slug>.braid.local) gravam a propria origem.
+  env.AUTH_WEB_APP_URL = overrides.AUTH_WEB_APP_URL ?? `http://localhost:${overrides.WEB_PORT ?? env.WEB_PORT}`;
   return env;
 }
 

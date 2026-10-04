@@ -2,8 +2,9 @@
 # por `pnpm caddy:sync` (e por worktree:new / worktree:teardown) a partir de
 # `git worktree list`. Sempre escrito na raiz da worktree PRINCIPAL.
 #
-# Cada worktree vira web.<nome>.localhost, api.<nome>.localhost e
-# auth.<nome>.localhost (*.localhost resolve para 127.0.0.1 sem DNS).
+# Cada worktree vira <nome>.braid.local (alias do app web; entra no /etc/hosts
+# via scripts/worktree/hosts.sh), alem de web.<nome>.localhost,
+# api.<nome>.localhost e auth.<nome>.localhost (*.localhost resolve sem DNS).
 #
 # Portas alocadas (configuradas; use `pnpm caddy:status` para ver o que roda):
 #

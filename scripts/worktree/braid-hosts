@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# Helper ROOT que mantem <slug>.braid.local no /etc/hosts. Instalado em
+# /usr/local/sbin/braid-hosts por scripts/worktree/hosts-install.sh e chamado
+# via `sudo -n` (regra em /etc/sudoers.d/braid-hosts). So aceita slugs
+# minusculos/hifen e so reescreve o bloco entre os marcadores abaixo.
+#
+# Uso: braid-hosts sync <slug>...
+set -euo pipefail
+
+BEGIN="# BEGIN braid-worktrees (gerenciado por scripts/worktree/hosts.sh)"
+END="# END braid-worktrees"
+HOSTS="${BRAID_HOSTS_FILE:-/etc/hosts}"
+
+[ "${1:-}" = "sync" ] || { echo "Uso: $0 sync <slug>..." >&2; exit 2; }
+shift
+
+block="$BEGIN"$'\n'
+for slug in "$@"; do
+  [[ "$slug" =~ ^[a-z0-9]([a-z0-9-]{0,40}[a-z0-9])?$ ]] || { echo "slug invalido: $slug" >&2; exit 2; }
+  block+="127.0.0.1 ${slug}.braid.local"$'\n'
+done
+block+="$END"
+
+tmp="$(mktemp)"
+trap 'rm -f "$tmp"' EXIT
+awk -v begin="$BEGIN" -v end="$END" '
+  $0 == begin { skip = 1; next }
+  $0 == end { skip = 0; next }
+  !skip { print }
+' "$HOSTS" > "$tmp"
+# remove linhas em branco finais antes de anexar o bloco
+sed -i -e :a -e '/^\n*$/{$d;N;ba' -e '}' "$tmp"
+printf '\n%s\n' "$block" >> "$tmp"
+install -m 644 "$tmp" "$HOSTS"

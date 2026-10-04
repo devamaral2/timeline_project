@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Mantem o Caddyfile da worktree PRINCIPAL com um dominio por servico de cada
-# worktree (web/api/auth.<nome>.localhost -> portas do .env.local de cada uma).
+# worktree (<nome>.braid.local e web/api/auth.<nome>.localhost -> portas do
+# .env.local de cada uma).
 # Sempre escreve na raiz da principal, mesmo quando chamado de uma secundaria.
 #
 # Uso: bash scripts/worktree/caddy.sh sync     # regenera e recarrega o Caddy
@@ -91,6 +92,8 @@ render_sites() {
       continue
     fi
     printf '# %s (%s)\n' "$slug" "$path"
+    # Alias curto do app: <slug>.braid.local (resolvido via /etc/hosts por hosts.sh).
+    printf 'http://%s.braid.local:%s {\n\treverse_proxy 127.0.0.1:%s\n}\n' "$slug" "$CADDY_PORT" "$web"
     for svc in web api auth; do
       case "$svc" in web) port="$web" ;; api) port="$api" ;; auth) port="$auth" ;; esac
       printf 'http://%s.%s.localhost:%s {\n\treverse_proxy 127.0.0.1:%s\n}\n' "$svc" "$slug" "$CADDY_PORT" "$port"
@@ -148,7 +151,7 @@ cmd_status() {
   while IFS='|' read -r slug path web api auth pg state; do
     printf '%-22s %-12s %-12s %-12s %s\n' "$slug" \
       "$(port_state "$web")" "$(port_state "$api")" "$(port_state "$auth")" \
-      "$([ "$state" = "nao-provisionada" ] && echo "(nao provisionada)" || echo "http://web.${slug}.localhost:${CADDY_PORT}")"
+      "$([ "$state" = "nao-provisionada" ] && echo "(nao provisionada)" || echo "http://${slug}.braid.local:${CADDY_PORT}")"
   done <<<"$(list_worktrees)"
 }
 

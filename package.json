@@ -34,6 +34,8 @@
     "worktree:provision": "node scripts/onepassword/exec.mjs bash scripts/worktree/provision-env.sh",
     "caddy:sync": "bash scripts/worktree/caddy.sh sync",
     "caddy:status": "bash scripts/worktree/caddy.sh status",
+    "worktree:hosts": "bash scripts/worktree/hosts.sh sync",
+    "rabbitmq:up": "bash scripts/worktree/rabbitmq.sh up",
     "worktree:stop-dev": "bash scripts/worktree/stop-dev.sh",
     "worktree:teardown": "node scripts/onepassword/exec.mjs bash scripts/worktree/teardown.sh"
   },
