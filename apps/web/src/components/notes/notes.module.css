@@ -1,5 +1,5 @@
 /*
- * Notas — a lista agrupada por dia e o detalhe de leitura. Os tokens (--ink,
+ * Notas — a lista agrupada por tag e o detalhe de leitura. Os tokens (--ink,
  * --muted, --line, --card, --soft) vêm do shell e trocam sozinhos entre Névoa
  * e Noite; aqui só entram as medidas do design system.
  */
@@ -122,3 +122,21 @@ a.linkRow:hover .linkName { color: var(--cyan); }
   .noteTitle { font-size: 24px; }
   .detail { gap: 28px; padding-block: 0 8px; }
 }
+
+.screen > .heading { flex-direction: row; align-items: center; }
+.viewOptions { position: relative; }
+.viewOptions > summary { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; color: var(--ink); list-style: none; cursor: pointer; }
+.viewOptions > summary::-webkit-details-marker { display: none; }
+.viewOptions > summary:hover, .viewOptions[open] > summary { background: var(--soft); }
+.viewOptions > summary svg { width: 21px; height: 21px; }
+.tagOptions { position: absolute; z-index: 10; top: 49px; right: 0; width: min(260px, calc(100vw - 36px)); max-height: 320px; overflow-y: auto; margin: 0; padding: 10px; border: 1px solid var(--line); border-radius: 16px; background: var(--card); box-shadow: 0 10px 40px #252b2d12; }
+.tagOptions legend { float: left; width: 100%; padding: 7px 10px 10px; font-size: 12px; color: var(--muted); }
+.tagOptions label { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 10px; border-radius: 9px; font-size: 14px; cursor: pointer; overflow-wrap: anywhere; }
+.tagOptions label:hover { background: var(--soft); }
+.tagOptions input { accent-color: var(--cyan); }
+.tagOptions p { padding: 10px; font-size: 13px; color: var(--muted); }
+.groupTitle { text-transform: none; letter-spacing: 0; font-size: 16px; }
+.groupTitle button { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; overflow-wrap: anywhere; }
+.groupTitle svg { width: 18px; height: 18px; flex-shrink: 0; transition: transform .15s; }
+.groupTitle [aria-expanded="false"] svg { transform: rotate(-90deg); }
+.grid[hidden] { display: none; }

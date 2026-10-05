@@ -220,3 +220,24 @@ fun noteSnippet(note: NoteDto): String {
         .filter { it.isNotEmpty() }
         .joinToString(" ")
 }
+
+/** Cada nota aparece em suas tags; notas sem tags ficam em “Sem tag”. */
+fun groupNotesByTag(notes: List<NoteDto>): List<NoteGroup> {
+    val groups = linkedMapOf<String, MutableList<NoteDto>>()
+    for (note in notes.sortedByDescending { Instant.parse(it.updatedAt) }) {
+        for (tag in note.tags.ifEmpty { listOf("") }.distinct()) {
+            groups.getOrPut(tag) { mutableListOf() }.add(note)
+        }
+    }
+    val collator = java.text.Collator.getInstance(ptBr)
+    val sortedTags =
+        groups.keys.sortedWith { a, b ->
+            when {
+                a == b -> 0
+                a.isEmpty() -> 1
+                b.isEmpty() -> -1
+                else -> collator.compare(a, b)
+            }
+        }
+    return sortedTags.map { tag -> NoteGroup(tag, if (tag.isEmpty()) "Sem tag" else "#$tag", groups.getValue(tag)) }
+}

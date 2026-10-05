@@ -33,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -118,7 +119,10 @@ fun AgendaDayScreen(
                     isRefreshing = false,
                     onRefresh = { viewModel.refreshDay(dayKey) },
                 ) {
-                    EmptyAgendaState(title = "Nenhum evento em ${mediumDate(current.dayKey)}")
+                    EmptyAgendaState(
+                        title = "Um dia livre, do seu jeito.",
+                        description = "Sua agenda está aberta para o que faz bem a você.",
+                    )
                 }
             is AgendaUiState.Content ->
                 RefreshableAgenda(
@@ -140,7 +144,6 @@ fun AgendaDayScreen(
                                 )
                             }
                         }
-                        item { DayHeading(dayKey = current.dayKey, eventCount = current.events.size) }
                         items(current.events, key = { it.id }) { event ->
                             EventCard(
                                 event = event,
@@ -223,6 +226,7 @@ private fun RefreshableAgenda(
 @Suppress("ktlint:standard:function-naming")
 private fun EmptyAgendaState(
     title: String,
+    description: String? = null,
     actionLabel: String? = null,
     onAction: (() -> Unit)? = null,
 ) {
@@ -231,7 +235,21 @@ private fun EmptyAgendaState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text(text = title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            text = title,
+            style = if (description != null) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+        )
+        if (description != null) {
+            Text(
+                text = description,
+                modifier = Modifier.padding(top = 10.dp),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+        }
         if (actionLabel != null && onAction != null) {
             Button(modifier = Modifier.padding(top = 16.dp), onClick = onAction) {
                 Text(actionLabel)

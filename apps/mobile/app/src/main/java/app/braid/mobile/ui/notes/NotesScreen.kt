@@ -3,42 +3,41 @@
 package app.braid.mobile.ui.notes
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -46,16 +45,15 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.braid.mobile.core.designsystem.BraidNoteExcerptStyle
+import app.braid.mobile.core.designsystem.LucideIcons
 import app.braid.mobile.data.dto.NoteDto
-import app.braid.mobile.domain.notes.NoteFilter
-import app.braid.mobile.domain.notes.filterNotes
-import app.braid.mobile.domain.notes.groupNotes
+import app.braid.mobile.domain.notes.groupNotesByTag
 import app.braid.mobile.domain.notes.noteOriginLabel
 import app.braid.mobile.domain.notes.noteSnippet
 import app.braid.mobile.domain.notes.noteStamp
 import java.time.Instant
 
-/** A lista de notas: filtros por origem, busca e grupos por dia. */
+/** Notas agrupadas por tag, com seleção e grupos recolhíveis. */
 @Composable
 fun NotesScreen(
     onOpenNote: (String) -> Unit,
@@ -77,10 +75,8 @@ fun NotesScreen(
         state = state,
         modifier = modifier,
         onOpenNote = onOpenNote,
-        onFilter = viewModel::setFilter,
-        onQuery = viewModel::setQuery,
-        onToggleSearch = viewModel::toggleSearch,
-        onCreate = viewModel::startCreating,
+        onToggleTag = viewModel::toggleTag,
+        onToggleGroup = viewModel::toggleGroup,
         onRetry = viewModel::load,
     )
 
@@ -97,21 +93,19 @@ fun NotesScreen(
 }
 
 @Composable
-@OptIn(ExperimentalLayoutApi::class)
 internal fun NotesContent(
     state: NotesUiState,
     onOpenNote: (String) -> Unit,
-    onFilter: (NoteFilter) -> Unit,
-    onQuery: (String) -> Unit,
-    onToggleSearch: () -> Unit,
-    onCreate: () -> Unit,
+    onToggleTag: (String) -> Unit,
+    onToggleGroup: (String) -> Unit,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
     now: Instant = Instant.now(),
 ) {
     val notes = state.notes
-    val visible = remember(notes, state.filter, state.query) { notes?.let { filterNotes(it, state.filter, state.query) }.orEmpty() }
-    val groups = remember(visible, now) { groupNotes(visible, now) }
+    val allGroups = remember(notes) { groupNotesByTag(notes.orEmpty()) }
+    val groups = allGroups.filter { it.key !in state.hiddenTags }
+    var optionsOpen by remember { mutableStateOf(false) }
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -128,16 +122,24 @@ internal fun NotesContent(
                         text = "Notas",
                         style = MaterialTheme.typography.displayMedium,
                     )
-                    IconButton(onClick = onToggleSearch) {
-                        val colors = MaterialTheme.colorScheme
-                        Icon(
-                            Icons.Outlined.Search,
-                            contentDescription = "Buscar notas",
-                            tint = if (state.isSearching) colors.onBackground else colors.onSurfaceVariant,
-                        )
-                    }
-                    FilledIconButton(onClick = onCreate) {
-                        Icon(Icons.Outlined.Add, contentDescription = "Nova nota")
+                    Box {
+                        IconButton(onClick = { optionsOpen = true }) {
+                            Icon(LucideIcons.slidersHorizontal(), contentDescription = "Opções de visualização")
+                        }
+                        DropdownMenu(expanded = optionsOpen, onDismissRequest = { optionsOpen = false }) {
+                            Text("Tags exibidas", modifier = Modifier.padding(12.dp), style = MaterialTheme.typography.labelMedium)
+                            if (allGroups.isEmpty()) {
+                                Text("Nenhuma tag disponível.", modifier = Modifier.padding(12.dp))
+                            }
+                            allGroups.forEach { group ->
+                                DropdownMenuItem(
+                                    text = { Text(group.label) },
+                                    leadingIcon = { Checkbox(checked = group.key !in state.hiddenTags, onCheckedChange = null) },
+                                    modifier = Modifier.semantics { selected = group.key !in state.hiddenTags },
+                                    onClick = { onToggleTag(group.key) },
+                                )
+                            }
+                        }
                     }
                 }
                 Text(
@@ -154,28 +156,6 @@ internal fun NotesContent(
                 )
             }
         }
-        if (state.isSearching) {
-            item {
-                OutlinedTextField(
-                    modifier = Modifier.fillMaxWidth(),
-                    value = state.query,
-                    onValueChange = onQuery,
-                    placeholder = { Text("Buscar em título, texto e tags") },
-                    singleLine = true,
-                    shape = CircleShape,
-                )
-            }
-        }
-        item {
-            FlowRow(
-                modifier = Modifier.padding(top = 4.dp, bottom = 10.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                NoteFilter.entries.forEach { filter -> FilterPill(filter.label, state.filter == filter) { onFilter(filter) } }
-            }
-        }
-
         when {
             state.loadFailed && notes == null ->
                 item {
@@ -197,15 +177,15 @@ internal fun NotesContent(
                 item {
                     Text(
                         modifier = Modifier.padding(vertical = 24.dp),
-                        text = "Você ainda não tem notas. Toque em + para escrever a primeira.",
+                        text = "Você ainda não tem notas.",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-            visible.isEmpty() ->
+            groups.isEmpty() ->
                 item {
                     Text(
                         modifier = Modifier.padding(vertical = 24.dp),
-                        text = "Nenhuma nota encontrada.",
+                        text = "Nenhuma tag selecionada. Escolha as tags no menu de opções.",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -213,12 +193,22 @@ internal fun NotesContent(
                 groups.forEach { group ->
                     item(key = "group-${group.key}") {
                         Row(
-                            modifier = Modifier.padding(top = 16.dp, bottom = 0.dp),
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onToggleGroup(group.key) }
+                                    .semantics { stateDescription = if (group.key in state.collapsedTags) "Recolhido" else "Expandido" }
+                                    .padding(top = 16.dp, bottom = 8.dp),
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
                             verticalAlignment = Alignment.Bottom,
                         ) {
+                            Icon(
+                                LucideIcons.chevronDown(),
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp).rotate(if (group.key in state.collapsedTags) -90f else 0f),
+                            )
                             Text(
-                                text = group.label.uppercase(),
+                                text = group.label,
                                 style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold, letterSpacing = 1.3.sp),
                             )
                             Text(
@@ -228,32 +218,12 @@ internal fun NotesContent(
                             )
                         }
                     }
-                    items(group.notes, key = { it.id }) { note -> NoteCard(note, now) { onOpenNote(note.id) } }
+                    if (group.key !in state.collapsedTags) {
+                        items(group.notes, key = { "${group.key.length}:${group.key}:${it.id}" }) { note ->
+                            NoteCard(note, now) { onOpenNote(note.id) }
+                        }
+                    }
                 }
-        }
-    }
-}
-
-@Composable
-private fun FilterPill(
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    val ink = MaterialTheme.colorScheme.onBackground
-    Surface(
-        onClick = onClick,
-        modifier = Modifier.heightIn(min = 36.dp).semantics { this.selected = selected },
-        shape = CircleShape,
-        color = if (selected) MaterialTheme.colorScheme.surface else androidx.compose.ui.graphics.Color.Transparent,
-        border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) ink else MaterialTheme.colorScheme.outline),
-    ) {
-        Box(modifier = Modifier.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelLarge.copy(fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium),
-                color = if (selected) ink else MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
     }
 }

@@ -2,6 +2,7 @@ package app.braid.mobile.ui.agenda
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,6 +27,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.braid.mobile.core.designsystem.BraidWordmark
 import app.braid.mobile.core.designsystem.LocalBraidDarkTheme
@@ -108,6 +111,39 @@ private fun AccountMenu(
                     onSignOut()
                 },
             )
+        }
+    }
+}
+
+@Composable
+@Suppress("ktlint:standard:function-naming")
+internal fun AgendaViewOptions(
+    infinite: Boolean,
+    onSelectMode: (Boolean) -> Unit,
+) {
+    var open by remember { mutableStateOf(false) }
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text("Agenda", style = MaterialTheme.typography.headlineLarge)
+        Box {
+            IconButton(onClick = { open = true }) {
+                Icon(LucideIcons.slidersHorizontal(), contentDescription = "Opções de visualização")
+            }
+            DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+                listOf(false to "Lista por dia", true to "Lista infinita").forEach { (mode, label) ->
+                    DropdownMenuItem(
+                        modifier = Modifier.semantics { selected = infinite == mode },
+                        text = { Text(label) },
+                        onClick = {
+                            open = false
+                            onSelectMode(mode)
+                        },
+                    )
+                }
+            }
         }
     }
 }

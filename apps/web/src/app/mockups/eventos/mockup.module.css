@@ -170,9 +170,8 @@
 .monthToggle svg { width: 14px; height: 14px; color: var(--muted); transition: transform 160ms; }
 .monthToggle[aria-expanded="true"] svg { transform: rotate(180deg); }
 .dateActions { display: flex; align-items: center; gap: 3px; }
-.dateActions button, .dayPaging button { display: grid; place-items: center; min-width: 32px; min-height: 40px; border-radius: 8px; cursor: pointer; color: var(--muted); }
-.dateActions svg, .dayPaging svg { width: 16px; height: 16px; }
-.dateActions .infiniteToggle[aria-pressed="true"] { color: var(--cyan); background: var(--cyan-soft); }
+.dateActions button { display: grid; place-items: center; min-width: 32px; min-height: 40px; border-radius: 8px; cursor: pointer; color: var(--muted); }
+.dateActions svg { width: 16px; height: 16px; }
 .dateActions .todayButton { display: inline-flex; align-items: center; height: 40px; padding: 0 10px; color: var(--cyan); font-size: 13px; font-weight: 600; }
 .monthJump { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 12px 0; color: var(--muted); font-size: 10px; }
 .monthJump input { max-width: 175px; min-height: 36px; padding: 5px 10px; border-radius: 8px; background: var(--soft); font: inherit; color: var(--ink); }
@@ -182,12 +181,13 @@
 .monthDays [data-outside="true"] { color: #aab2b4; }
 .monthDays [aria-pressed="true"] { color: var(--cyan); background: var(--cyan-soft); font-weight: 600; }
 .monthDays [aria-current="date"] { color: var(--cyan); }
-.dayPaging { display: flex; align-items: center; justify-content: center; margin: -2px 0 20px; color: var(--muted); }
-.dayPaging p { font-size: 10px; }
 .horizontalDays { display: flex; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none; margin-inline: -14px; }
 .verticalDays { overflow-anchor: auto; }
 .horizontalDays::-webkit-scrollbar { display: none; }
 .horizontalDays > .dayGroup { flex: 0 0 100%; min-width: 0; padding: 0 14px 15px; margin-top: 0; scroll-snap-align: start; scroll-snap-stop: always; }
+.freeDay { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-height: 240px; padding: 40px 24px; text-align: center; }
+.freeDay p { margin: 0; color: var(--ink); font-family: var(--font-display); font-size: 26px; line-height: 1.25; }
+.freeDay span { max-width: 280px; color: var(--muted); font-size: 13px; line-height: 1.6; }
 .emptyDay { padding: 31px 0 38px; color: var(--muted); font-size: 12px; }
 .sidebar > .typeLegend { margin-top: 10px; padding-top: 0; border-top: 0; }
 

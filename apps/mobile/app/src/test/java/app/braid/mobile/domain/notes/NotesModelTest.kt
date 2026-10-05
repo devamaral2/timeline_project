@@ -36,6 +36,19 @@ class NotesModelTest {
     )
 
     @Test
+    fun groupsByEveryTagWithoutDuplicatesAndKeepsUntaggedNotes() {
+        val groups =
+            groupNotesByTag(
+                listOf(
+                    note(id = "multi", tags = listOf("saúde", "pessoal", "saúde")),
+                    note(id = "loose"),
+                ),
+            )
+        assertEquals(listOf("#pessoal", "#saúde", "Sem tag"), groups.map { it.label })
+        assertEquals(listOf(listOf("multi"), listOf("multi"), listOf("loose")), groups.map { group -> group.notes.map { it.id } })
+    }
+
+    @Test
     fun groupsByTheDayOfTheLastEdit() {
         val groups =
             groupNotes(

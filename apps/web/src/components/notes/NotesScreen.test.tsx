@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import type { NoteDto } from "@/lib/api/contracts";
 import { textNote } from "./note-fixtures";
@@ -31,45 +31,44 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-test("mostra as notas agrupadas por dia, com origem, contagem e tags", async () => {
-  authedFetch.mockResolvedValue(notes);
-  render(<NotesScreen userId="user-1" />);
-
-  expect(await screen.findByText("3 notas")).toBeInTheDocument();
-  expect(screen.getByRole("heading", { level: 1, name: "Notas" })).toBeInTheDocument();
-  const today = screen.getByRole("region", { name: "Hoje" });
-  expect(within(today).getByRole("link", { name: /Treino A/ })).toHaveAttribute("href", "/user-1/notas/treino");
-  expect(within(today).getByText("Evento · Academia")).toBeInTheDocument();
-  expect(within(today).getByText("#saúde")).toBeInTheDocument();
-  expect(within(screen.getByRole("region", { name: "Ontem" })).getByText("Tarefa · Revisar proposta")).toBeInTheDocument();
-  expect(within(screen.getByRole("region", { name: "Esta semana" })).getByText("Nota solta")).toBeInTheDocument();
-  expect(authedFetch).toHaveBeenCalledWith("/api/notes");
-});
-
-test("filtra por origem", async () => {
+test("agrupa por tag e mantém notas sem tag acessíveis", async () => {
   authedFetch.mockResolvedValue(notes);
   render(<NotesScreen userId="user-1" />);
   await screen.findByText("3 notas");
-
-  fireEvent.click(screen.getByRole("button", { name: "Soltas" }));
-
-  expect(screen.getByRole("button", { name: "Soltas" })).toHaveAttribute("aria-pressed", "true");
-  expect(screen.getByText("Livros para ler")).toBeInTheDocument();
-  expect(screen.queryByText("Treino A")).not.toBeInTheDocument();
+  const health = screen.getByRole("region", { name: "#saúde" });
+  expect(within(health).getByRole("link", { name: /Treino A/ })).toHaveAttribute("href", "/user-1/notas/treino");
+  const untagged = screen.getByRole("region", { name: "Sem tag" });
+  expect(within(untagged).getByText("Livros para ler")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Nova nota" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Buscar notas" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("group", { name: "Filtrar notas" })).not.toBeInTheDocument();
 });
 
-test("busca pelo texto e avisa quando nada combina", async () => {
+test("seleciona tags pelo menu e informa quando todas estão ocultas", async () => {
   authedFetch.mockResolvedValue(notes);
   render(<NotesScreen userId="user-1" />);
   await screen.findByText("3 notas");
-
-  fireEvent.click(screen.getByRole("button", { name: "Buscar notas" }));
-  fireEvent.change(screen.getByRole("searchbox", { name: "Buscar notas" }), { target: { value: "torto" } });
-  expect(screen.getByText("Livros para ler")).toBeInTheDocument();
+  fireEvent.click(screen.getByLabelText("Opções de visualização"));
+  fireEvent.click(screen.getByRole("checkbox", { name: "#saúde" }));
   expect(screen.queryByText("Treino A")).not.toBeInTheDocument();
+  expect(screen.getByText("Livros para ler")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("checkbox", { name: "Sem tag" }));
+  expect(screen.getByText(/Nenhuma tag selecionada/)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("checkbox", { name: "#saúde" }));
+  expect(screen.getByText("Treino A")).toBeInTheDocument();
+});
 
-  fireEvent.change(screen.getByRole("searchbox", { name: "Buscar notas" }), { target: { value: "inexistente" } });
-  expect(screen.getByText("Nenhuma nota encontrada.")).toBeInTheDocument();
+test("expande e recolhe cada tag independentemente e repete notas com várias tags", async () => {
+  authedFetch.mockResolvedValue([note({ id: "multi", name: "Nota compartilhada", tags: ["saúde", "pessoal"] })]);
+  render(<NotesScreen userId="user-1" />);
+  await screen.findByText("1 nota");
+  expect(screen.getAllByRole("link", { name: /Nota compartilhada/ })).toHaveLength(2);
+  const toggle = screen.getByRole("button", { name: /#saúde/ });
+  fireEvent.click(toggle);
+  expect(toggle).toHaveAttribute("aria-expanded", "false");
+  expect(screen.getAllByRole("link", { name: /Nota compartilhada/ })).toHaveLength(1);
+  fireEvent.click(toggle);
+  expect(screen.getAllByRole("link", { name: /Nota compartilhada/ })).toHaveLength(2);
 });
 
 test("convida a escrever a primeira nota quando não há nenhuma", async () => {
@@ -87,34 +86,4 @@ test("oferece tentar de novo quando a leitura falha", async () => {
   fireEvent.click(screen.getByRole("button", { name: "Tentar de novo" }));
 
   expect(await screen.findByText("3 notas")).toBeInTheDocument();
-});
-
-test("cria uma nota e abre o detalhe dela", async () => {
-  authedFetch.mockResolvedValueOnce(notes).mockResolvedValueOnce({ noteId: "nova" });
-  render(<NotesScreen userId="user-1" />);
-  await screen.findByText("3 notas");
-
-  fireEvent.click(screen.getByRole("button", { name: "Nova nota" }));
-  const dialog = await screen.findByRole("dialog", { name: "Nova nota" });
-  fireEvent.change(within(dialog).getByLabelText("Texto"), { target: { value: "Pagar o condomínio" } });
-  fireEvent.click(within(dialog).getByRole("button", { name: "Criar nota" }));
-
-  await waitFor(() => expect(push).toHaveBeenCalledWith("/user-1/notas/nova"));
-  expect(authedFetch).toHaveBeenLastCalledWith("/api/notes", expect.objectContaining({ method: "POST" }));
-  const [, init] = authedFetch.mock.calls[authedFetch.mock.calls.length - 1] as [string, RequestInit];
-  const body = JSON.parse(init.body as string);
-  expect(body).toEqual({ type: "text", data: { body: "Pagar o condomínio" }, tags: [] });
-});
-
-test("não cria nota sem texto", async () => {
-  authedFetch.mockResolvedValue(notes);
-  render(<NotesScreen userId="user-1" />);
-  await screen.findByText("3 notas");
-
-  fireEvent.click(screen.getByRole("button", { name: "Nova nota" }));
-  const dialog = await screen.findByRole("dialog", { name: "Nova nota" });
-  fireEvent.click(within(dialog).getByRole("button", { name: "Criar nota" }));
-
-  expect(within(dialog).getByRole("alert")).toHaveTextContent("Escreva o texto da nota.");
-  expect(authedFetch).toHaveBeenCalledTimes(1);
 });

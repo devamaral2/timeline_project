@@ -4,7 +4,7 @@ import {
   dayKeyRange, dayNumber, isSameMonth, longDate, monthGridOf,
   monthLabel, shiftDayKey, weekOf, weekday, zonedDayEnd, zonedDayStart,
 } from "@repo/timeline";
-import { ChevronDown, Columns2, Infinity as InfinityIcon, List, SlidersHorizontal } from "lucide-react";
+import { ChevronDown, Columns2, Infinity as InfinityIcon, SlidersHorizontal } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { WeekStrip } from "@/components/events/WeekStrip";
 import { ICON_STROKE_WIDTH, notificationOffsetLabel, visualForItemType } from "@/components/events/event-visuals";
@@ -48,11 +48,10 @@ export function AgendaPreview({ userId, todayKey = EXAMPLE_TODAY }: { userId?: s
   const [refreshVersion, setRefreshVersion] = useState(0);
   const [selectedEvent, setSelectedEvent] = useState<SelectedEvent | null>(null);
   const viewOptionsRef = useRef<HTMLDetailsElement>(null);
-  const [mode, setMode] = useState<ViewMode>("list");
+  const [mode, setMode] = useState<ViewMode>("day");
   const [selectedDay, setSelectedDay] = useState(todayKey);
   const [navigation, setNavigation] = useState({ dayKey: todayKey });
   const [dayRange, setDayRange] = useState({ before: 0, after: 0 });
-  const [infinite, setInfinite] = useState(false);
   const [monthOpen, setMonthOpen] = useState(false);
   const [browsingMonth, setBrowsingMonth] = useState(EXAMPLE_TODAY);
   const controlsRef = useRef<HTMLDivElement>(null);
@@ -111,7 +110,7 @@ export function AgendaPreview({ userId, todayKey = EXAMPLE_TODAY }: { userId?: s
   function selectDay(dayKey: string) {
     setSelectedDay(dayKey);
     setNavigation({ dayKey });
-    setDayRange({ before: 0, after: 0 });
+    setDayRange({ before: 0, after: mode === "list" ? INFINITE_STEP_DAYS : 0 });
     setMonthOpen(false);
     window.scrollTo({ top: 0, behavior: "instant" });
   }
@@ -120,6 +119,7 @@ export function AgendaPreview({ userId, todayKey = EXAMPLE_TODAY }: { userId?: s
     setMode(nextMode);
     if (viewOptionsRef.current) viewOptionsRef.current.open = false;
     selectDay(selectedDay);
+    setDayRange({ before: 0, after: nextMode === "list" ? INFINITE_STEP_DAYS : 0 });
   }
 
   // Só escolhas explícitas reposicionam o carrossel; um swipe apenas atualiza a seleção.
@@ -129,10 +129,9 @@ export function AgendaPreview({ userId, todayKey = EXAMPLE_TODAY }: { userId?: s
     strip.scrollLeft = weekOf(navigation.dayKey).indexOf(navigation.dayKey) * strip.clientWidth;
   }, [mode, navigation]);
 
-  // Com a rolagem infinita ligada, chegar à borda da lista traz mais dias. Sem
-  // ela, a lista fica no dia escolhido e só o seletor troca de dia.
+  // No modo lista infinita, chegar à borda traz mais dias.
   useEffect(() => {
-    if (mode !== "list" || !infinite) return;
+    if (mode !== "list") return;
 
     function extend(boundary: AgendaScrollBoundary) {
       const now = Date.now();
@@ -193,17 +192,7 @@ export function AgendaPreview({ userId, todayKey = EXAMPLE_TODAY }: { userId?: s
       window.removeEventListener("touchmove", onTouchMove);
       window.removeEventListener("touchend", onTouchEnd);
     };
-  }, [infinite, loadState, mode]);
-
-  function toggleInfinite() {
-    if (infinite) {
-      setInfinite(false);
-      selectDay(selectedDay);
-    } else {
-      setInfinite(true);
-      setDayRange((range) => ({ ...range, after: Math.max(range.after, INFINITE_STEP_DAYS) }));
-    }
-  }
+  }, [loadState, mode]);
 
   // O mês acompanha o dia que está sendo lido na lista contínua.
   useEffect(() => {
@@ -267,8 +256,8 @@ export function AgendaPreview({ userId, todayKey = EXAMPLE_TODAY }: { userId?: s
             <summary aria-label="Opções de visualização" title="Opções de visualização"><SlidersHorizontal aria-hidden /></summary>
             <fieldset className={styles.viewModes} aria-label="Visualização da agenda">
               <legend>Visualização</legend>
-              <button type="button" aria-pressed={mode === "list"} onClick={() => changeMode("list")}><List aria-hidden /><span>Lista<small>Dias em sequência</small></span></button>
-              <button type="button" aria-pressed={mode === "day"} onClick={() => changeMode("day")}><Columns2 aria-hidden /><span>Dia<small>Um dia de cada vez</small></span></button>
+              <button type="button" aria-pressed={mode === "list"} onClick={() => changeMode("list")}><InfinityIcon aria-hidden /><span>Lista infinita<small>Dias em sequência</small></span></button>
+              <button type="button" aria-pressed={mode === "day"} onClick={() => changeMode("day")}><Columns2 aria-hidden /><span>Lista por dia<small>Um dia de cada vez</small></span></button>
             </fieldset>
           </details>
         </div>
@@ -283,14 +272,11 @@ export function AgendaPreview({ userId, todayKey = EXAMPLE_TODAY }: { userId?: s
                 onClick={() => { setBrowsingMonth(selectedDay); setMonthOpen((open) => !open); }}
               >{monthName(monthOpen ? browsingMonth : selectedDay, todayKey)}<ChevronDown aria-hidden /></button>
               <div className={styles.dateActions}>
-                {mode === "list" ? (
-                  <button type="button" className={styles.infiniteToggle} aria-pressed={infinite} aria-label="Rolagem infinita" title={infinite ? "Desligar a rolagem infinita" : "Ligar a rolagem infinita"} onClick={toggleInfinite}><InfinityIcon aria-hidden /></button>
-                ) : null}
                 <button type="button" className={styles.todayButton} onClick={() => selectDay(todayKey)}>Hoje</button>
               </div>
             </div>
 
-            {monthOpen ? null : <WeekStrip selectedDayKey={selectedDay} todayKey={todayKey} onSelect={selectDay} />}
+            {monthOpen || mode === "list" ? null : <WeekStrip selectedDayKey={selectedDay} todayKey={todayKey} onSelect={selectDay} />}
 
             {monthOpen ? (
               <section id="agenda-month-picker" className={styles.monthPicker} aria-label="Escolher dia do mês">
@@ -308,12 +294,6 @@ export function AgendaPreview({ userId, todayKey = EXAMPLE_TODAY }: { userId?: s
               </section>
             ) : null}
           </div>
-
-          {mode === "day" ? (
-            <div className={styles.dayPaging}>
-              <p>Deslize para mudar de dia</p>
-            </div>
-          ) : null}
 
           <section
             ref={daysRef} className={mode === "list" ? styles.verticalDays : styles.horizontalDays}
@@ -333,7 +313,7 @@ export function AgendaPreview({ userId, todayKey = EXAMPLE_TODAY }: { userId?: s
               if (dayKey) setSelectedDay(dayKey);
             }}
           >
-            {pageDays.map((dayKey) => <AgendaDay key={dayKey} dayKey={dayKey} now={now} tasks={tasks} missedEvents={missedEvents} onSelectEvent={setSelectedEvent} events={userId ? eventsByDay[dayKey] ?? [] : undefined} userId={userId} todayKey={todayKey} hideWhenEmpty={mode === "list"} />)}
+            {pageDays.map((dayKey) => <AgendaDay key={dayKey} dayKey={dayKey} now={now} tasks={tasks} missedEvents={missedEvents} onSelectEvent={setSelectedEvent} events={userId ? eventsByDay[dayKey] ?? [] : undefined} userId={userId} todayKey={todayKey} hideWhenEmpty={mode === "list"} showHeading={mode === "list"} />)}
           </section>
           {userId && loadState === "loading" ? <p role="status" className={styles.listNote}>Carregando sua agenda…</p> : null}
           {userId && loadState === "failed" ? <p role="alert" className={styles.listNote}>Não foi possível carregar a agenda. Tente novamente.</p> : null}

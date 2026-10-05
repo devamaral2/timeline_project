@@ -22,6 +22,8 @@ data class NotesUiState(
     val notes: List<NoteDto>? = null,
     val isLoading: Boolean = true,
     val loadFailed: Boolean = false,
+    val hiddenTags: Set<String> = emptySet(),
+    val collapsedTags: Set<String> = emptySet(),
     val filter: NoteFilter = NoteFilter.All,
     val query: String = "",
     val isSearching: Boolean = false,
@@ -58,6 +60,16 @@ class NotesViewModel
                 }
             }
         }
+
+        fun toggleTag(tag: String) =
+            mutableState.update {
+                it.copy(hiddenTags = if (tag in it.hiddenTags) it.hiddenTags - tag else it.hiddenTags + tag)
+            }
+
+        fun toggleGroup(tag: String) =
+            mutableState.update {
+                it.copy(collapsedTags = if (tag in it.collapsedTags) it.collapsedTags - tag else it.collapsedTags + tag)
+            }
 
         fun setFilter(filter: NoteFilter) = mutableState.update { it.copy(filter = filter) }
 

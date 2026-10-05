@@ -1,16 +1,13 @@
 package app.braid.mobile.ui.agenda
 
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -24,29 +21,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.selected
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.braid.mobile.core.designsystem.LucideIcons
 import app.braid.mobile.core.designsystem.braidBrand
-import app.braid.mobile.core.designsystem.braidBrandSoft
 import app.braid.mobile.domain.timeline.monthLabel
 
 /**
  * A linha de controles da agenda (`.dateToolbar`): o mês (abre o calendário), à
- * direita o botão ∞ da rolagem infinita e “Hoje”.
+ * direita “Hoje”.
  */
 @Composable
 @Suppress("ktlint:standard:function-naming")
 fun AgendaToolbar(
     selectedDayKey: String,
     todayKey: String,
-    infinite: Boolean,
-    onToggleInfinite: () -> Unit,
     onSelectDay: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -81,28 +71,6 @@ fun AgendaToolbar(
             )
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-            // `.infiniteToggle`: ligado, a marca em fundo suave.
-            Box(
-                modifier =
-                    Modifier
-                        .widthIn(min = 32.dp)
-                        .heightIn(min = 40.dp)
-                        .clip(MaterialTheme.shapes.small)
-                        .background(if (infinite) braidBrandSoft() else androidx.compose.ui.graphics.Color.Transparent)
-                        .clickable(role = Role.Switch, onClick = onToggleInfinite)
-                        .semantics {
-                            selected = infinite
-                            contentDescription = "Rolagem infinita"
-                        },
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = LucideIcons.infinity(),
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                    tint = if (infinite) braidBrand() else colors.onSurfaceVariant,
-                )
-            }
             Text(
                 modifier =
                     Modifier

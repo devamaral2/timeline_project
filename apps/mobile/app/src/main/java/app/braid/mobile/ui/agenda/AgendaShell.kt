@@ -62,7 +62,7 @@ private val HUB_PANEL_MAX_HEIGHT = 520.dp
 
 /**
  * A casca das telas principais, montada como o shell do web no celular: o
- * cabeçalho (marca, sino, conta), a agenda com mês, ∞ e tira da semana, e a barra
+ * cabeçalho (marca, sino, conta), a agenda com opções de visualização, mês e tira da semana, e a barra
  * inferior. “Buscar e criar” abre o painel do hub sobre a tela, com a barra à vista.
  */
 @OptIn(ExperimentalLayoutApi::class)
@@ -121,21 +121,25 @@ fun AgendaShell(
                     onSignOut = onSignOut,
                     below = {
                         if (destination == BottomBarItem.Agenda) {
+                            AgendaViewOptions(
+                                infinite = infinite,
+                                onSelectMode = {
+                                    infinite = it
+                                    selectDay(selectedDayKey)
+                                },
+                            )
                             AgendaToolbar(
                                 selectedDayKey = selectedDayKey,
                                 todayKey = todayKey,
-                                infinite = infinite,
-                                onToggleInfinite = {
-                                    infinite = !infinite
-                                    selectDay(selectedDayKey)
-                                },
                                 onSelectDay = ::selectDay,
                             )
-                            WeekStrip(
-                                selectedDayKey = selectedDayKey,
-                                todayKey = todayKey,
-                                onSelect = ::selectDay,
-                            )
+                            if (!infinite) {
+                                WeekStrip(
+                                    selectedDayKey = selectedDayKey,
+                                    todayKey = todayKey,
+                                    onSelect = ::selectDay,
+                                )
+                            }
                         }
                     },
                 )

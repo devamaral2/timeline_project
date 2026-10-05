@@ -8,7 +8,7 @@ import { timingForExample } from "./agenda-timing";
 import styles from "./mockup.module.css";
 import { type SelectedEvent, TaskPriorityIcon, TaskStatusIcon, taskStatuses } from "./task-controls";
 
-export function AgendaDay({ dayKey, now, tasks, missedEvents, onSelectEvent, events: suppliedEvents, userId, todayKey = EXAMPLE_TODAY, hideWhenEmpty = false }: {
+export function AgendaDay({ dayKey, now, tasks, missedEvents, onSelectEvent, events: suppliedEvents, userId, todayKey = EXAMPLE_TODAY, hideWhenEmpty = false, showHeading = true }: {
   dayKey: string;
   now: number;
   tasks: Record<string, ExampleTask>;
@@ -18,17 +18,18 @@ export function AgendaDay({ dayKey, now, tasks, missedEvents, onSelectEvent, eve
   userId?: string;
   todayKey?: string;
   hideWhenEmpty?: boolean;
+  showHeading?: boolean;
 }) {
   const events = suppliedEvents ?? exampleEventsOn(dayKey);
   if (hideWhenEmpty && events.length === 0) return null;
 
   return (
     <section className={styles.dayGroup} data-agenda-day={dayKey} aria-label={mediumDate(dayKey)}>
-      <div className={styles.dayHeading}>
+      {showHeading ? <div className={styles.dayHeading}>
         <h2>{relativeDayLabel(dayKey, todayKey)}<span>{shortDate(dayKey).toLowerCase()}.</span></h2>
         <span>{events.length} {events.length === 1 ? "evento" : "eventos"}</span>
-      </div>
-      {events.length === 0 ? <p className={styles.emptyDay}>Um dia livre na sua agenda.</p> : (
+      </div> : null}
+      {events.length === 0 ? <div className={styles.freeDay}><p>Um dia livre, do seu jeito.</p><span>Sua agenda está aberta para o que faz bem a você.</span></div> : (
         <ul className={styles.eventList}>
           {events.map((event, index) => {
             const { Icon, label } = visualForItemType(event.type);

@@ -71,7 +71,7 @@ class AgendaShellTest {
     }
 
     @Test
-    fun infiniteScrollButtonIsInTheAgendaToolbar() {
+    fun viewOptionsOfferDayAndInfiniteLists() {
         composeRule.setContent {
             BraidTheme {
                 AgendaShell(
@@ -81,7 +81,10 @@ class AgendaShellTest {
             }
         }
 
-        composeRule.onNodeWithContentDescription("Rolagem infinita").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Rolagem infinita").assertDoesNotExist()
+        composeRule.onNodeWithContentDescription("Opções de visualização").performClick()
+        composeRule.onNodeWithText("Lista por dia").assertIsDisplayed()
+        composeRule.onNodeWithText("Lista infinita").assertIsDisplayed()
         composeRule.onNodeWithText("Hoje").assertIsDisplayed()
     }
 }

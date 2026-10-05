@@ -227,3 +227,16 @@ export function noteSnippet(note: Pick<NoteDto, "name" | "type" | "data">): stri
     .filter(Boolean)
     .join(" ");
 }
+
+/** Uma nota aparece em cada uma de suas tags; notas sem tags têm um grupo próprio. */
+export function groupNotesByTag(notes: readonly NoteDto[]): NoteGroup[] {
+  const groups = new Map<string, NoteGroup>();
+  for (const note of [...notes].sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))) {
+    for (const tag of new Set(note.tags.length ? note.tags : [""])) {
+      const group = groups.get(tag) ?? { key: tag, label: tag ? `#${tag}` : "Sem tag", notes: [] };
+      group.notes.push(note);
+      groups.set(tag, group);
+    }
+  }
+  return [...groups.values()].sort((a, b) => !a.key ? 1 : !b.key ? -1 : a.key.localeCompare(b.key, "pt-BR"));
+}

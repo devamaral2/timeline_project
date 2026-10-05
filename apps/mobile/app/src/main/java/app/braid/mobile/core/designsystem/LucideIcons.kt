@@ -45,6 +45,14 @@ object LucideIcons {
                 }.build()
         }
 
+    fun slidersHorizontal(strokeWidth: Float = DEFAULT_STROKE) =
+        icon(
+            "SlidersHorizontal",
+            strokeWidth,
+            "M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3",
+            "M14 2v4M8 10v4M16 18v4",
+        )
+
     fun squareCheck(strokeWidth: Float = DEFAULT_STROKE) =
         icon(
             "SquareCheck",
