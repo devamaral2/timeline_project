@@ -1,18 +1,12 @@
 import { z } from "zod";
 import type { SleepItem } from "../../../domain";
+import { skillText } from "../config/agent-config";
 import { defineAgentSkill, fail } from "./agent-skill";
 import { eventBaseFields, toBaseChanges, toCreateEventInput } from "./event-skill-fields";
 
 export const sleepEventSkill = defineAgentSkill({
   name: "save_sleep_event",
-  progressLabel: "Preparando sono",
-  description: "Cria ou altera uma noite de sono ou um cochilo.",
-  instructions: [
-    "save_sleep_event — trackedSleepTime SEMPRE em minutos: 'dormi 7 horas e meia' = 450.",
-    "score é a nota de 0 a 100; na criação, 0 se o usuário não deu nota.",
-    "Com id, os valores enviados SUBSTITUEM os atuais. Se o usuário corrige quanto dormiu",
-    "('dormi só 4 horas esta noite'), consulte o sono da noite e altere-o em vez de criar outro.",
-  ].join("\n"),
+  ...skillText("save_sleep_event"),
   parameters: z.object({
     ...eventBaseFields,
     trackedSleepTime: z

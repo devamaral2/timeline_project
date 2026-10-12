@@ -1,0 +1,92 @@
+{
+  "query_data": {
+    "progressLabel": "Consultando seus dados",
+    "description": "Executa um SELECT em PostgreSQL sobre os dados do usuário. Pode ser chamada várias vezes.",
+    "instructions": [
+      "query_data — um único SELECT, só com as tabelas listadas abaixo e sem schema (nada de",
+      "public.x), sem ';' no meio e sem parâmetros ($1). Ela já enxerga apenas os dados deste",
+      "usuário, sem registros apagados — não filtre por usuário. Funções comuns de agregação, data,",
+      "texto, número e jsonb estão liberadas; o erro explica o que foi recusado. Datas e horas já",
+      "vêm em America/Sao_Paulo. O resultado tem no máximo 200 linhas: agregue no SQL em vez de",
+      "trazer tudo."
+    ]
+  },
+  "get_day_context": {
+    "progressLabel": "Consultando o dia",
+    "description": "Busca todos os eventos de um dia, com pausas, tarefas e notas vinculadas (noteIds), sem escrever SQL.",
+    "instructions": [
+      "get_day_context — informe o dia civil YYYY-MM-DD em America/Sao_Paulo.",
+      "Se hasMore for true, chame novamente com page = nextPage até ler todas as páginas.",
+      "Antes de criar ou alterar qualquer evento, consulte o dia afetado. Em eventos que atravessam",
+      "a meia-noite, consulte também o dia adjacente. A resposta contém todos os eventos do dia,",
+      "com ids e horários; não invente ids. Se retornar erro de volume, não grave o evento."
+    ]
+  },
+  "save_routine_event": {
+    "progressLabel": "Preparando rotina",
+    "description": "Cria ou altera qualquer atividade que não seja treino, refeição ou sono: trabalho, estudo, reunião, lazer, deslocamento.",
+    "instructions": [
+      "save_routine_event — o fallback para eventos. name é obrigatório na criação, curto e com",
+      "inicial maiúscula; detalhes vão em description."
+    ]
+  },
+  "save_meal_event": {
+    "progressLabel": "Preparando refeição",
+    "description": "Cria ou altera uma refeição, ou qualquer alimento ou bebida consumido.",
+    "instructions": [
+      "save_meal_event — copie para inputText os alimentos com as quantidades, como o usuário disse",
+      "('300g de macarrão à bolonhesa'). NÃO calcule calorias nem nutrientes: um passo posterior",
+      "faz a análise a partir desse texto.",
+      "Com id, os alimentos de inputText são ACRESCENTADOS à refeição existente; os anteriores ficam.",
+      "Antes de criar, consulte se já existe a mesma refeição no dia (ex.: almoço de hoje) — se",
+      "existir, acrescente a ela em vez de criar outra."
+    ]
+  },
+  "save_training_event": {
+    "progressLabel": "Preparando treino",
+    "description": "Cria ou altera um treino ou atividade física: corrida, esteira, musculação ou outro exercício.",
+    "instructions": [
+      "save_training_event — unidades obrigatórias e sem default:",
+      "- duration SEMPRE em minutos ('uma hora e meia' = 90); distance SEMPRE em km ('5000 metros' = 5).",
+      "- pace em min/km; se o usuário não informou, calcule duration / distance. calories em kcal (0 se não informou).",
+      "- type: 'running' corrida na rua, 'treadmill' esteira, 'weightlifting' séries com carga, 'free' o resto.",
+      "Com id, os workouts enviados são ACRESCENTADOS ao treino existente; os anteriores ficam."
+    ]
+  },
+  "save_sleep_event": {
+    "progressLabel": "Preparando sono",
+    "description": "Cria ou altera uma noite de sono ou um cochilo.",
+    "instructions": [
+      "save_sleep_event — trackedSleepTime SEMPRE em minutos: 'dormi 7 horas e meia' = 450.",
+      "score é a nota de 0 a 100; na criação, 0 se o usuário não deu nota.",
+      "Com id, os valores enviados SUBSTITUEM os atuais. Se o usuário corrige quanto dormiu",
+      "('dormi só 4 horas esta noite'), consulte o sono da noite e altere-o em vez de criar outro."
+    ]
+  },
+  "save_task": {
+    "progressLabel": "Preparando tarefa",
+    "description": "Cria ou altera uma tarefa ou subtarefa.",
+    "instructions": [
+      "save_task — subtarefa é uma tarefa com parentTaskId. 'Crie a subtarefa X' na tela de uma",
+      "tarefa: crie uma tarefa nova com parentTaskId = id da tarefa da tela.",
+      "Com id, só os campos enviados mudam. Marcar como feita é status 'done'."
+    ]
+  },
+  "save_note": {
+    "progressLabel": "Preparando nota",
+    "description": "Cria ou altera uma nota de texto, solta ou ligada a um evento ou a uma tarefa.",
+    "instructions": [
+      "save_note — para observações que não são evento nem tarefa. Ligue a nota ao evento ou à",
+      "tarefa quando o usuário se referir a um (ou à tela em que ele está); uma nota pode aparecer",
+      "em vários eventos e tarefas, e ligar de novo a quem já a tem não faz nada."
+    ]
+  },
+  "delete_entity": {
+    "progressLabel": "Preparando exclusão",
+    "description": "Apaga um evento, uma tarefa ou uma nota pelo id.",
+    "instructions": [
+      "delete_entity — só quando o usuário pedir para apagar. Apagar uma tarefa apaga as",
+      "subtarefas e as notas dela; apagar um evento apaga as notas dele."
+    ]
+  }
+}

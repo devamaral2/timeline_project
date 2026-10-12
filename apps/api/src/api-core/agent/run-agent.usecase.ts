@@ -14,6 +14,7 @@ import { z } from "zod";
 import type { CreateEventUseCase } from "../events/create-event.usecase";
 import type { RecurrenceMaterializer } from "../recurrences/materialize-recurrences.usecase";
 import { AgentLimitReachedError, AgentRunCancelledError, InvalidInputError, LlmUnavailableError } from "./errors/agent.errors";
+import { agentsConfig, fill, promptsConfig } from "./config/agent-config";
 import type { AgentGateway } from "./gateways/agent.gateway";
 import type { AgentRouter } from "./routing/agent-router";
 import type { DayContextEvent, DayContextQuery } from "./day-context.query";
@@ -47,10 +48,10 @@ export interface RunAgentOptions {
   onConversationWritten?(seqs: { firstSeq: number; lastSeq: number }): void;
 }
 
-export const SAVING_PROGRESS_LABEL = "Salvando";
+export const SAVING_PROGRESS_LABEL = promptsConfig.responses.savingProgressLabel;
 
 const commandEnvelope = z.object({
-  commands: z.array(z.object({ skill: z.string(), args: z.record(z.string(), z.unknown()) }).strict()).max(30),
+  commands: z.array(z.object({ skill: z.string(), args: z.record(z.string(), z.unknown()) }).strict()).max(agentsConfig.limits.maxCommands),
   clarification: z.string().optional(),
   report: z.string().optional(),
 }).strict();
@@ -180,12 +181,14 @@ export class RunAgentUseCase {
     const loadedDays = new Map<string, Awaited<ReturnType<DayContextQuery["get"]>>>();
     const dayPages = new Map<string, { pages: Awaited<ReturnType<DayContextQuery["get"]>>[]; next: number }>();
     const context = { session, query: this.query, scope, dayContext: this.dayContext, recurrences: this.recurrences, loadedDays, dayPages };
-    const readSkills = [...this.skills.filter((skill) => skill.name === "query_data"), getDayContextSkill];
-    const writeSkills = route.kind === "read"
-      ? []
-      : route.kind === "single"
-        ? this.skills.filter((skill) => skill.name === route.skill)
-        : this.skills.filter((skill) => skill.name !== "query_data");
+    const spec = agentsConfig.routes[route.kind];
+    const catalog = [...this.skills, getDayContextSkill];
+    const readSkills = spec.readSkills.flatMap((name) => catalog.filter((skill) => skill.name === name));
+    const writeSkills = spec.writeSkills === "routed"
+      ? this.skills.filter((skill) => route.kind === "single" && skill.name === route.skill)
+      : spec.writeSkills === "all"
+        ? this.skills.filter((skill) => !spec.readSkills.includes(skill.name))
+        : spec.writeSkills.flatMap((name) => catalog.filter((skill) => skill.name === name));
     if (route.kind === "single" && writeSkills.length !== 1) throw new Error(`Unknown routed skill: ${route.skill}`);
     let reads = 0;
     const tools = bindAgentTools(readSkills, context).map((tool) => ({
@@ -202,7 +205,7 @@ export class RunAgentUseCase {
       systemPrompt: this.promptBuilder.build({
         now, context: input.context, schema: this.query.describeSchema(scope),
         skills: [...readSkills, ...writeSkills], conversational: options.conversational,
-        chatMemory: scope.includeChat, routed: route.kind === "read" ? "read" : "write",
+        chatMemory: scope.includeChat, routed: spec.prompt,
       }),
       text,
       tools,
@@ -271,7 +274,7 @@ export class RunAgentUseCase {
     const { created, updated, deleted } = await session.result();
     const summary = describeChanges(created, updated, deleted);
     const response: RunAgentResponse = {
-      agentResponse: [report, summary || reply].filter(Boolean).join("\n") || "Não encontrei nada para fazer com esse pedido.",
+      agentResponse: [report, summary || reply].filter(Boolean).join("\n") || promptsConfig.responses.nothingToDo,
       createdEntities: created, updatedEntities: updated, deletedEntities: deleted,
     };
     return this.finishRouted(input, options, session, response);
@@ -325,7 +328,8 @@ function describeChanges(
 ): string {
   const line = (items: RunAgentResponse["createdEntities"], action: string) =>
     items.length ? `${action}: ${items.map((item) => item.name).join(", ")}.` : "";
-  return [line(created, "Criei"), line(updated, "Atualizei"), line(deleted, "Apaguei")].filter(Boolean).join("\n");
+  const { responses } = promptsConfig;
+  return [line(created, responses.created), line(updated, responses.updated), line(deleted, responses.deleted)].filter(Boolean).join("\n");
 }
 
 // `\b` do JS nao conhece letra acentuada ("excluí"): a fronteira e escrita a mao.
@@ -343,19 +347,12 @@ export function claimsAWrite(text: string): boolean {
 }
 
 function withWriteCheck(request: string, previousAnswer: string): string {
-  return [
-    request,
-    "",
-    "[Verificação do servidor: a resposta anterior a este pedido foi:",
-    `"${previousAnswer.trim()}"`,
-    "mas nenhuma ferramenta de gravação foi chamada, então nada foi criado, alterado ou apagado.",
-    "Se o pedido exige gravar, chame as ferramentas agora. Se não exige, responda de novo sem",
-    "afirmar que gravou.]",
-  ].join("\n");
+  return [request, ...promptsConfig.writeCheck.map((line) => fill(line, { previousAnswer: previousAnswer.trim() }))].join("\n");
 }
 
 /** O modelo pode encerrar sem texto; a resposta ainda precisa dizer o que aconteceu. */
 function fallbackResponse(created: number, updated: number, deleted: number): string {
-  if (created + updated + deleted === 0) return "Não encontrei nada para fazer com esse pedido.";
-  return `Pronto. Criados: ${created}. Alterados: ${updated}. Apagados: ${deleted}.`;
+  const { responses } = promptsConfig;
+  if (created + updated + deleted === 0) return responses.nothingToDo;
+  return fill(responses.summaryFallback, { created: String(created), updated: String(updated), deleted: String(deleted) });
 }

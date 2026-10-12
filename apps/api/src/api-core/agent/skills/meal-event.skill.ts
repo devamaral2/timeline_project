@@ -1,20 +1,12 @@
 import { z } from "zod";
 import { calculateMealTotals, type MealItem } from "../../../domain";
+import { skillText } from "../config/agent-config";
 import { defineAgentSkill, fail } from "./agent-skill";
 import { eventBaseFields, toBaseChanges, toCreateEventInput } from "./event-skill-fields";
 
 export const mealEventSkill = defineAgentSkill({
   name: "save_meal_event",
-  progressLabel: "Preparando refeição",
-  description: "Cria ou altera uma refeição, ou qualquer alimento ou bebida consumido.",
-  instructions: [
-    "save_meal_event — copie para inputText os alimentos com as quantidades, como o usuário disse",
-    "('300g de macarrão à bolonhesa'). NÃO calcule calorias nem nutrientes: um passo posterior",
-    "faz a análise a partir desse texto.",
-    "Com id, os alimentos de inputText são ACRESCENTADOS à refeição existente; os anteriores ficam.",
-    "Antes de criar, consulte se já existe a mesma refeição no dia (ex.: almoço de hoje) — se",
-    "existir, acrescente a ela em vez de criar outra.",
-  ].join("\n"),
+  ...skillText("save_meal_event"),
   parameters: z.object({
     ...eventBaseFields,
     inputText: z

@@ -1,20 +1,13 @@
 import { z } from "zod";
 import type { DayContext } from "../day-context.query";
+import { agentsConfig, skillText } from "../config/agent-config";
 import { defineAgentSkill, fail } from "./agent-skill";
 
-const MAX_CONTEXT_CHARS = 20_000;
+const MAX_CONTEXT_CHARS = agentsConfig.limits.maxDayContextChars;
 
 export const getDayContextSkill = defineAgentSkill({
   name: "get_day_context",
-  progressLabel: "Consultando o dia",
-  description: "Busca todos os eventos de um dia, com pausas, tarefas e notas vinculadas (noteIds), sem escrever SQL.",
-  instructions: [
-    "get_day_context — informe o dia civil YYYY-MM-DD em America/Sao_Paulo.",
-    "Se hasMore for true, chame novamente com page = nextPage até ler todas as páginas.",
-    "Antes de criar ou alterar qualquer evento, consulte o dia afetado. Em eventos que atravessam",
-    "a meia-noite, consulte também o dia adjacente. A resposta contém todos os eventos do dia,",
-    "com ids e horários; não invente ids. Se retornar erro de volume, não grave o evento.",
-  ].join("\n"),
+  ...skillText("get_day_context"),
   parameters: z.object({ date: z.iso.date(), page: z.number().int().positive().optional() }),
   run: async ({ date, page = 1 }, { session, dayContext, recurrences, loadedDays, dayPages }) => {
     if (!dayContext) return fail("Consulta diária indisponível.");

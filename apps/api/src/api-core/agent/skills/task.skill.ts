@@ -1,16 +1,11 @@
 import { z } from "zod";
 import { WORK_ITEM_PRIORITIES, WORK_ITEM_STATUSES } from "../../../domain";
+import { skillText } from "../config/agent-config";
 import { defineAgentSkill, fail, isoInstant, parseInstant } from "./agent-skill";
 
 export const taskSkill = defineAgentSkill({
   name: "save_task",
-  progressLabel: "Preparando tarefa",
-  description: "Cria ou altera uma tarefa ou subtarefa.",
-  instructions: [
-    "save_task — subtarefa é uma tarefa com parentTaskId. 'Crie a subtarefa X' na tela de uma",
-    "tarefa: crie uma tarefa nova com parentTaskId = id da tarefa da tela.",
-    "Com id, só os campos enviados mudam. Marcar como feita é status 'done'.",
-  ].join("\n"),
+  ...skillText("save_task"),
   parameters: z.object({
     id: z
       .string()

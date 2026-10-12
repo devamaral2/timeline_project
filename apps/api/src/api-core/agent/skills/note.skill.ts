@@ -1,15 +1,10 @@
 import { z } from "zod";
+import { skillText } from "../config/agent-config";
 import { defineAgentSkill } from "./agent-skill";
 
 export const noteSkill = defineAgentSkill({
   name: "save_note",
-  progressLabel: "Preparando nota",
-  description: "Cria ou altera uma nota de texto, solta ou ligada a um evento ou a uma tarefa.",
-  instructions: [
-    "save_note — para observações que não são evento nem tarefa. Ligue a nota ao evento ou à",
-    "tarefa quando o usuário se referir a um (ou à tela em que ele está); uma nota pode aparecer",
-    "em vários eventos e tarefas, e ligar de novo a quem já a tem não faz nada.",
-  ].join("\n"),
+  ...skillText("save_note"),
   parameters: z.object({
     id: z
       .string()

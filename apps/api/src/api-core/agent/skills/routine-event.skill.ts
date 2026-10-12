@@ -1,16 +1,11 @@
 import { z } from "zod";
+import { skillText } from "../config/agent-config";
 import { defineAgentSkill, fail } from "./agent-skill";
 import { eventBaseFields, toBaseChanges, toCreateEventInput } from "./event-skill-fields";
 
 export const routineEventSkill = defineAgentSkill({
   name: "save_routine_event",
-  progressLabel: "Preparando rotina",
-  description:
-    "Cria ou altera qualquer atividade que não seja treino, refeição ou sono: trabalho, estudo, reunião, lazer, deslocamento.",
-  instructions: [
-    "save_routine_event — o fallback para eventos. name é obrigatório na criação, curto e com",
-    "inicial maiúscula; detalhes vão em description.",
-  ].join("\n"),
+  ...skillText("save_routine_event"),
   parameters: z.object(eventBaseFields),
   run: async (args, { session }) => {
     if (!args.id) {

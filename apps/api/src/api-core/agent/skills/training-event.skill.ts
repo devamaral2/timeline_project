@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { TrainingData, WorkoutInput } from "../../../domain";
+import { skillText } from "../config/agent-config";
 import { defineAgentSkill, fail } from "./agent-skill";
 import { eventBaseFields, toBaseChanges, toCreateEventInput } from "./event-skill-fields";
 
@@ -55,16 +56,7 @@ function toWorkoutInput(workout: WorkoutArgs): WorkoutInput {
 
 export const trainingEventSkill = defineAgentSkill({
   name: "save_training_event",
-  progressLabel: "Preparando treino",
-  description:
-    "Cria ou altera um treino ou atividade física: corrida, esteira, musculação ou outro exercício.",
-  instructions: [
-    "save_training_event — unidades obrigatórias e sem default:",
-    "- duration SEMPRE em minutos ('uma hora e meia' = 90); distance SEMPRE em km ('5000 metros' = 5).",
-    "- pace em min/km; se o usuário não informou, calcule duration / distance. calories em kcal (0 se não informou).",
-    "- type: 'running' corrida na rua, 'treadmill' esteira, 'weightlifting' séries com carga, 'free' o resto.",
-    "Com id, os workouts enviados são ACRESCENTADOS ao treino existente; os anteriores ficam.",
-  ].join("\n"),
+  ...skillText("save_training_event"),
   parameters: z.object({
     ...eventBaseFields,
     workouts: z
