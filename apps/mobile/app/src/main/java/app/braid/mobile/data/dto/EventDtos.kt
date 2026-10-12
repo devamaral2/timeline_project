@@ -67,7 +67,8 @@ data class FoodItemDto(
     val approximateWeightGrams: Double,
     val caloriesKcal: Double,
     val macronutrients: FoodItemMacronutrientsDto,
-    val micronutrients: Map<String, Double>,
+    // Micronutrientes deixaram de existir; a API ainda devolve `{}` por causa dos apps antigos. Nao use.
+    val micronutrients: Map<String, Double> = emptyMap(),
 )
 
 @Serializable
@@ -80,6 +81,22 @@ data class MealTotalsDto(
 )
 
 @Serializable
+data class MealRecipeIngredientDto(
+    val name: String,
+    val quantity: String,
+)
+
+@Serializable
+data class MealRecipeDto(
+    /** `user`: o preparo foi dito pelo usuario; `model`: foi proposto pelo modelo (a UI mostra "Sugerida"). */
+    val source: String,
+    val servings: Double? = null,
+    val prepTimeMinutes: Double? = null,
+    val ingredients: List<MealRecipeIngredientDto>,
+    val steps: List<String>,
+)
+
+@Serializable
 data class MealItemDto(
     val sourceMealId: String? = null,
     val sourceMealRevision: Int? = null,
@@ -87,6 +104,7 @@ data class MealItemDto(
     val description: String,
     val foodItems: List<FoodItemDto>,
     val totals: MealTotalsDto,
+    val recipe: MealRecipeDto? = null,
 )
 
 @Serializable

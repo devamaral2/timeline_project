@@ -31,6 +31,12 @@ export interface RecurrenceRepository {
    */
   attachNotes(recurrenceId: string, actorUserId: string, noteIds: readonly string[], fromDay: string): Promise<void>;
   findById(recurrenceId: string): Promise<Recurrence | null>;
+  /**
+   * A proxima ocorrencia (de `fromDay` em diante) que editar ou apagar a serie
+   * levaria embora: nao destacada e nao apagada. Serve para a resposta do
+   * agente mostrar o que mudou, sem listar a serie inteira.
+   */
+  findNextOccurrenceId(recurrenceId: string, fromDay: string): Promise<string | null>;
   listByUserId(userId: string): Promise<Recurrence[]>;
   /** Regras do usuario cuja marca d'agua ainda nao chegou em `horizon`. */
   listPendingMaterialization(userId: string, horizon: string): Promise<Recurrence[]>;

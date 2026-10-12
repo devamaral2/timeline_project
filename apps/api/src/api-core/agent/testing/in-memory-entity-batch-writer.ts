@@ -5,6 +5,7 @@ import type {
   EntityBatchWriter,
   EventRepository,
   NoteRepository,
+  RecurrenceRepository,
   StagedChange,
   TaskRepository,
 } from "../../../domain/ports";
@@ -27,7 +28,12 @@ export class InMemoryEntityBatchWriter implements EntityBatchWriter {
   private readonly lastSeq = new Map<string, number>();
 
   constructor(
-    private readonly repositories: { events: EventRepository; tasks: TaskRepository; notes: NoteRepository },
+    private readonly repositories: {
+      events: EventRepository;
+      tasks: TaskRepository;
+      notes: NoteRepository;
+      recurrences?: RecurrenceRepository;
+    },
   ) {}
 
   async commit(batch: EntityBatch): Promise<EntityBatchResult> {
@@ -37,6 +43,19 @@ export class InMemoryEntityBatchWriter implements EntityBatchWriter {
 
     // Notas primeiro: eventos e tarefas apontam para elas.
     await this.apply(this.repositories.notes, batch.userId, batch.notes);
+    for (const recurrence of batch.recurrences ?? []) {
+      if (!this.repositories.recurrences) throw new Error("InMemoryEntityBatchWriter sem repositorio de recorrencias");
+      await this.repositories.recurrences.save(recurrence);
+    }
+    for (const change of batch.recurrenceChanges ?? []) {
+      const recurrences = this.repositories.recurrences;
+      if (!recurrences) throw new Error("InMemoryEntityBatchWriter sem repositorio de recorrencias");
+      if (change.op === "update") {
+        await recurrences.update(change.recurrence, batch.userId, change.expectedRevision, change.fromDay);
+      } else {
+        await recurrences.delete(change.id, batch.userId, change.fromDay);
+      }
+    }
     await this.apply(this.repositories.tasks, batch.userId, batch.tasks);
     await this.apply(this.repositories.events, batch.userId, batch.events);
     this.commits.push(batch);

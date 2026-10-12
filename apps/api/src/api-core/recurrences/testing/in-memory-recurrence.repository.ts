@@ -76,6 +76,15 @@ export class InMemoryRecurrenceRepository implements RecurrenceRepository {
     return this.recurrences.find((stored) => stored.id === recurrenceId) ?? null;
   }
 
+  async findNextOccurrenceId(recurrenceId: string, fromDay: string) {
+    const pool: (Event | Task)[] = [...this.events.events, ...this.tasks];
+    const upcoming = pool
+      .filter((item) =>
+        item.occurrence?.recurrenceId === recurrenceId && !item.occurrence.detached && item.occurrence.occurrenceOn >= fromDay)
+      .sort((a, b) => (a.occurrence?.occurrenceOn ?? "").localeCompare(b.occurrence?.occurrenceOn ?? ""));
+    return upcoming[0]?.id ?? null;
+  }
+
   async listByUserId(userId: string) {
     return this.recurrences.filter((stored) => stored.userId === userId);
   }

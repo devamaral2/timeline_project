@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowDownward
 import androidx.compose.material.icons.outlined.ArrowUpward
@@ -54,6 +55,7 @@ import app.braid.mobile.data.dto.EventNoteDto
 import app.braid.mobile.data.dto.FreeWorkoutDto
 import app.braid.mobile.data.dto.MealEventNoteDto
 import app.braid.mobile.data.dto.MealItemDto
+import app.braid.mobile.data.dto.MealRecipeDto
 import app.braid.mobile.data.dto.RunningWorkoutDto
 import app.braid.mobile.data.dto.SleepEventNoteDto
 import app.braid.mobile.data.dto.SleepItemDto
@@ -203,6 +205,76 @@ private fun MealNote(data: MealItemDto) {
                         )
                     }
                     Kcal(food.caloriesKcal, consumed = true, color = palette.kcalConsumed, fontSize = 18.sp)
+                }
+            }
+        }
+    }
+    data.recipe?.let { MealRecipe(it) }
+}
+
+/** Ingredientes e modo de preparo, como o `MealRecipeView` do web; "Sugerida" quando o modelo a propôs. */
+@Composable
+private fun MealRecipe(recipe: MealRecipeDto) {
+    val meta =
+        listOfNotNull(
+            recipe.servings?.takeIf { it > 0 }?.let { pluralize(it.toInt(), "porção", "porções") },
+            recipe.prepTimeMinutes?.takeIf { it > 0 }?.let { "Preparo em ${formatMinutes(it)}" },
+        ).joinToString(" · ")
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Receita", style = MaterialTheme.typography.titleSmall)
+            if (recipe.source == "model") {
+                Surface(
+                    shape = MaterialTheme.shapes.small,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                    color = Color.Transparent,
+                ) {
+                    Text(
+                        "Sugerida",
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 1.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+        if (meta.isNotEmpty()) {
+            Text(meta, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        if (recipe.ingredients.isNotEmpty()) {
+            Column {
+                ListHeading("Ingredientes")
+                recipe.ingredients.forEach { ingredient ->
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Text(ingredient.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            ingredient.quantity,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+        }
+        Column {
+            ListHeading("Modo de preparo")
+            recipe.steps.forEachIndexed { index, step ->
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Text(
+                        "${index + 1}.",
+                        modifier = Modifier.widthIn(min = 20.dp),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(step, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
                 }
             }
         }

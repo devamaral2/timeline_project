@@ -14,5 +14,9 @@ export interface FoodItem {
   approximateWeightGrams: number;
   caloriesKcal: number;
   macronutrients: FoodItemMacronutrients;
-  micronutrients: Record<string, number>;
+  /**
+   * @deprecated Micronutrientes deixaram de existir. A API ainda devolve `{}`
+   * (o app Android antigo o exige); quem escreve pode omitir. Sera removido.
+   */
+  micronutrients?: Record<string, number>;
 }

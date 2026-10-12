@@ -17,6 +17,7 @@ import type {
 import { priorityLabels, visualForItemType } from "./event-visuals";
 import { MissedBadge } from "./MissedBadge";
 import { MarkdownView } from "@/components/notes/MarkdownView";
+import { MealRecipeView } from "@/components/notes/MealRecipeView";
 import { cn } from "@/lib/utils";
 import {
   destructiveButtonClass,
@@ -299,8 +300,17 @@ function TrainingDetails({ data }: { data: TrainingData }) {
 }
 
 function MealDetails({ data }: { data: MealItem }) {
-  if (!data.foodItems.length) return null;
+  if (!data.foodItems.length && !data.recipe) return null;
 
+  return (
+    <div className="space-y-4">
+      {data.foodItems.length ? <MealFoods data={data} /> : null}
+      {data.recipe ? <MealRecipeView recipe={data.recipe} /> : null}
+    </div>
+  );
+}
+
+function MealFoods({ data }: { data: MealItem }) {
   return (
     <div>
       <SectionTitle>Alimentos</SectionTitle>

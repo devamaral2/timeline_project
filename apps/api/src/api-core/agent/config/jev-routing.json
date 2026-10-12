@@ -9,12 +9,14 @@
     "meal": "save_meal_event",
     "training": "save_training_event",
     "sleep": "save_sleep_event",
-    "task": "save_task"
+    "task": "save_task",
+    "recurrence": "save_recurrence",
+    "finish": "finish_event"
   },
   "questions": {
     "goal": {
       "type": "choice",
-      "instructions": "Qual é o resultado pedido para uma timeline pessoal? Relatos de atividades ('almocei', 'treinei', 'dormi', 'estou trabalhando') implicam registrar um evento. 'Parei de trabalhar' implica atualizar o evento em andamento. Consultas feitas apenas para preparar uma escrita não tornam o pedido misto.",
+      "instructions": "Qual é o resultado pedido para uma timeline pessoal? Relatos de atividades ('almocei', 'treinei', 'dormi', 'estou trabalhando') implicam registrar um evento. 'Parei de trabalhar', 'cheguei da academia' ou 'terminei a reunião' implicam atualizar o evento em andamento. Consultas feitas apenas para preparar uma escrita não tornam o pedido misto.",
       "criteria": {
         "read": "Responder uma pergunta usando dados, sem criar, alterar ou apagar registros.",
         "write": "Criar, registrar ou alterar registros, inclusive quando o usuário relata uma atividade realizada, iniciada ou terminada; consultas internas para identificar os dados não contam como resposta de consulta.",
@@ -33,14 +35,16 @@
     },
     "target": {
       "type": "choice",
-      "instructions": "Se há exatamente uma entidade principal para criar ou alterar, qual é seu tipo?",
+      "instructions": "Se há exatamente uma entidade principal para criar ou alterar, qual é seu tipo? Qualquer pedido que se repete ('toda segunda', 'todo dia') é recurrence, qualquer que seja o tipo da atividade. Relato de que uma atividade já registrada acabou ou de que o usuário voltou/chegou dela ('cheguei da academia', 'terminei', 'parei de trabalhar') é finish, qualquer que seja o tipo dela.",
       "criteria": {
-        "routine": "Evento de rotina, trabalho, estudo, reunião, deslocamento ou lazer.",
+        "routine": "Evento único de rotina, trabalho, estudo, reunião, deslocamento ou lazer, que acontece uma vez.",
         "meal": "Evento de alimento, bebida ou refeição.",
         "training": "Evento de exercício físico ou treino.",
         "sleep": "Evento de sono ou cochilo.",
         "task": "Tarefa ou subtarefa.",
-        "other": "Nota, exclusão, tipo desconhecido ou nenhuma entidade."
+        "recurrence": "Atividade ou tarefa que se repete (todo dia, toda semana, dias úteis, a cada N dias, todo mês, todo ano): criar a série ou alterar uma série existente ('mude a corrida de segunda para as 8h', 'agora é toda terça').",
+        "finish": "Encerrar uma atividade que já está na agenda: o usuário diz que terminou, chegou ou voltou dela, com ou sem horário, sem dizer mais nada sobre ela.",
+        "other": "Nota, exclusão (inclusive apagar uma série), tipo desconhecido ou nenhuma entidade."
       }
     }
   }

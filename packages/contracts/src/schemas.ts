@@ -20,7 +20,15 @@ const foodItemSchema = z.object({
     totalFatGrams: z.number(),
     fiberGrams: z.number(),
   }).strict(),
-  micronutrients: z.record(z.string(), z.number()),
+  micronutrients: z.record(z.string(), z.number()).optional(),
+}).strict();
+
+const mealRecipeSchema = z.object({
+  source: z.enum(["user", "model"]),
+  servings: z.number().optional(),
+  prepTimeMinutes: z.number().optional(),
+  ingredients: z.array(z.object({ name: z.string(), quantity: z.string() }).strict()),
+  steps: z.array(z.string()),
 }).strict();
 
 const mealItemSchema = z.object({
@@ -36,6 +44,7 @@ const mealItemSchema = z.object({
     totalFatGrams: z.number(),
     totalFiberGrams: z.number(),
   }).strict(),
+  recipe: mealRecipeSchema.optional(),
 }).strict();
 
 const workoutSetSchema = z.object({

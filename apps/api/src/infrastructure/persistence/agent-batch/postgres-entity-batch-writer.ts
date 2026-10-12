@@ -1,10 +1,17 @@
 import { sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import { EntityBatchConflictError, type Event, type Task } from "../../../domain";
+import {
+  EntityBatchConflictError,
+  RecurrenceNotFoundError,
+  RecurrenceRevisionConflictError,
+  type Event,
+  type Task,
+} from "../../../domain";
 import type {
   EntityBatch,
   EntityBatchResult,
   EntityBatchWriter,
+  RecurrenceChange,
   StagedChange,
 } from "../../../domain/ports";
 import * as schema from "../database/schema";
@@ -24,6 +31,11 @@ import {
   softDeleteNote,
   updateNoteAggregate,
 } from "../notes/repositories/postgres-note.repository";
+import {
+  deleteRecurrenceAggregate,
+  insertRecurrenceAggregate,
+  updateRecurrenceAggregate,
+} from "../recurrences/repositories/postgres-recurrence.repository";
 import {
   appendMessages,
   insertConversation,
@@ -58,6 +70,16 @@ export class PostgresEntityBatchWriter implements EntityBatchWriter {
       }
       for (const change of batch.notes) {
         if (change.op === "update") await updateNoteAggregate(tx, change.entity, batch.userId, change.expectedRevision);
+      }
+
+      // A serie antes das ocorrencias: elas apontam para ela por `recurrence_id`.
+      for (const recurrence of batch.recurrences ?? []) {
+        await insertRecurrenceAggregate(tx, recurrence);
+      }
+
+      // Antes das ocorrencias novas: a serie revisada libera o dia da primeira delas.
+      for (const change of batch.recurrenceChanges ?? []) {
+        await applyRecurrenceChange(tx, batch.userId, change);
       }
 
       for (const task of creationOrder(created(batch.tasks))) {
@@ -122,6 +144,22 @@ async function prepareConversation(tx: Tx, batch: EntityBatch): Promise<number |
     return 1;
   }
   return lockConversationForAppend(tx, append.conversationId, batch.userId);
+}
+
+async function applyRecurrenceChange(tx: Tx, userId: string, change: RecurrenceChange): Promise<void> {
+  try {
+    if (change.op === "update") {
+      await updateRecurrenceAggregate(tx, change.recurrence, userId, change.expectedRevision, change.fromDay);
+    } else {
+      await deleteRecurrenceAggregate(tx, change.id, userId, change.fromDay);
+    }
+  } catch (error) {
+    // O turno inteiro volta: quem leu a serie antes de outra requisicao mexer nela tenta de novo.
+    if (error instanceof RecurrenceRevisionConflictError || error instanceof RecurrenceNotFoundError) {
+      throw new EntityBatchConflictError(error.message);
+    }
+    throw error;
+  }
 }
 
 function created<T>(changes: readonly StagedChange<T>[]): T[] {

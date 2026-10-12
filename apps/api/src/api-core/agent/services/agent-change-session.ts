@@ -5,6 +5,8 @@ import {
   type AgentConversation,
   type Event,
   type EventKind,
+  type OccurrenceLink,
+  type Recurrence,
   type TaskReviseChanges,
 } from "../../../domain";
 import type {
@@ -12,6 +14,8 @@ import type {
   EntityBatch,
   EventRepository,
   NoteRepository,
+  RecurrenceChange,
+  RecurrenceRepository,
   StagedChange,
   TaskRepository,
 } from "../../../domain/ports";
@@ -20,16 +24,40 @@ import type {
   AgentEntityItem,
   CreateEventInput,
   CreateNoteInput,
+  CreateRecurrenceInput,
 } from "@repo/contracts";
+import { dayKeyOf, expandOccurrences } from "@repo/timeline";
 import type { CreateEventUseCase } from "../../events/create-event.usecase";
+import { prepareRecurrence } from "../../recurrences/prepare-recurrence";
+import { buildEventOccurrence, buildTaskOccurrenceOf, todayOf } from "../../recurrences/recurrence-templates";
+import { reviseRecurrence, type RecurrenceRevision } from "../../recurrences/revise-recurrence";
 import { assertParentTaskAssignable } from "../../tasks/assert-parent-task";
+import { firstSearchLimit } from "../skills/recurrence-rule";
 import { eventItem, noteItem, taskItem } from "./agent-entity-dto";
 
 export type EntityKind = "event" | "task" | "note";
+type DeletableKind = EntityKind | "recurrence";
 
 export type StageResult =
-  | { ok: true; kind: EntityKind; op: "create" | "update" | "delete"; id: string }
+  | { ok: true; kind: EntityKind | "recurrence"; op: "create" | "update" | "delete"; id: string }
   | { ok: false; error: string };
+
+/** Uma serie criada, alterada ou apagada neste pedido. */
+export interface StagedSeries {
+  op: "create" | "update" | "delete";
+  /** Criada: a nova. Alterada: a revisada. Apagada: a que existia. */
+  recurrence: Recurrence;
+  /**
+   * A ocorrencia que a resposta mostra no lugar da serie (que nao e uma
+   * entidade do chat): a primeira da serie nova ou revisada, ou a proxima que
+   * a mudanca levou embora. E o que faz o app atualizar a lista.
+   */
+  shownOccurrenceId?: string;
+  /** Alterada: a revisao lida quando a mudanca foi preparada. */
+  expectedRevision?: number;
+  /** Alterada ou apagada: o dia a partir do qual as ocorrencias saem. */
+  fromDay?: string;
+}
 
 export interface TaskCreateFields {
   name: string;
@@ -80,6 +108,9 @@ export class AgentChangeSession {
   private readonly events = new Map<string, Staged<Event>>();
   private readonly tasks = new Map<string, Staged<Task>>();
   private readonly notes = new Map<string, Staged<Note>>();
+  private readonly recurrences = new Map<string, StagedSeries>();
+  /** Ocorrencias que uma serie alterada ou apagada leva embora e a resposta mostra no lugar dela. */
+  private readonly removedPreviews: AgentEntityItem[] = [];
   private conversationTurn: ConversationAppend | undefined;
 
   constructor(
@@ -88,9 +119,135 @@ export class AgentChangeSession {
       events: Pick<EventRepository, "findById">;
       tasks: Pick<TaskRepository, "findById">;
       notes: Pick<NoteRepository, "findById" | "findByIds">;
+      recurrences?: Pick<RecurrenceRepository, "findById" | "findNextOccurrenceId">;
     },
     private readonly createEventUseCase: Pick<CreateEventUseCase, "prepare" | "buildNote">,
+    private readonly clock: () => Date = () => new Date(),
   ) {}
+
+  /** O dia civil de hoje no fuso dado — a data de partida de uma serie nova. */
+  todayIn(timeZone: string): string {
+    return dayKeyOf(this.clock(), timeZone);
+  }
+
+  /**
+   * Uma serie nova. A primeira ocorrencia entra no mesmo lote: e uma linha de
+   * verdade em `events`/`tasks`, entao a resposta a mostra e o app atualiza a
+   * lista. As demais saem da materializacao preguicosa, que ignora o dia que ja
+   * existe — por isso a marca d'agua nao anda aqui.
+   */
+  createRecurrence(input: CreateRecurrenceInput): Promise<StageResult> {
+    return this.attempt(async () => {
+      const { recurrence, notes } = await prepareRecurrence(
+        { createEvent: this.createEventUseCase, tasks: this.taskView },
+        input,
+        { userId: this.userId },
+      );
+
+      const day = this.firstOccurrenceDay(recurrence, dayKeyOf(this.clock(), recurrence.rule.timeZone));
+      if (!day) throw new StagingError("A recorrência não tem nenhuma ocorrência de hoje em diante.");
+
+      for (const note of notes) this.stageNewNote(note);
+      const shownOccurrenceId = this.stageOccurrence(recurrence, day);
+      this.recurrences.set(recurrence.id, { op: "create", recurrence, shownOccurrenceId });
+      return { ok: true, kind: "recurrence", op: "create", id: recurrence.id };
+    });
+  }
+
+  /**
+   * Altera a serie de hoje em diante, como `PATCH /api/recurrences`: as
+   * ocorrencias futuras que ninguem mexeu a mao saem e a primeira da regra nova
+   * entra neste lote. As demais saem da proxima leitura da lista.
+   */
+  updateRecurrence(id: string, plan: (current: Recurrence) => RecurrenceRevision): Promise<StageResult> {
+    return this.attempt(async () => {
+      const current = await this.loadRecurrence(id);
+      const { recurrence, notes, fromDay } = await reviseRecurrence(
+        { createEvent: this.createEventUseCase, tasks: this.taskView },
+        current,
+        plan(current),
+        { userId: this.userId },
+        this.clock(),
+      );
+
+      for (const note of notes) this.stageNewNote(note);
+      const day = this.firstOccurrenceDay(recurrence, fromDay);
+      const shownOccurrenceId = day
+        ? this.stageOccurrence(recurrence, day)
+        : await this.previewRemoval(current, fromDay);
+      this.recurrences.set(id, {
+        op: "update", recurrence, shownOccurrenceId, expectedRevision: current.revision, fromDay,
+      });
+      return { ok: true, kind: "recurrence", op: "update", id };
+    });
+  }
+
+  private deleteRecurrence(id: string): Promise<StageResult> {
+    return this.attempt(async () => {
+      const current = await this.loadRecurrence(id);
+      const fromDay = todayOf(current.rule, this.clock());
+      const shownOccurrenceId = await this.previewRemoval(current, fromDay);
+      this.recurrences.set(id, { op: "delete", recurrence: current, shownOccurrenceId, fromDay });
+      return { ok: true, kind: "recurrence", op: "delete", id };
+    });
+  }
+
+  /** O primeiro dia da regra de `from` em diante. */
+  private firstOccurrenceDay(recurrence: Recurrence, from: string): string | undefined {
+    return expandOccurrences(recurrence.rule, from, firstSearchLimit(from))[0];
+  }
+
+  private stageOccurrence(recurrence: Recurrence, day: string): string {
+    if (recurrence.target === "event") {
+      const occurrence = buildEventOccurrence(recurrence, day);
+      this.events.set(occurrence.id, { change: { op: "create", entity: occurrence } });
+      return occurrence.id;
+    }
+    const occurrence = buildTaskOccurrenceOf(recurrence, day);
+    this.tasks.set(occurrence.id, { change: { op: "create", entity: occurrence } });
+    return occurrence.id;
+  }
+
+  /** A proxima ocorrencia que a mudanca leva embora, para a resposta e o app a mostrarem. */
+  private async previewRemoval(recurrence: Recurrence, fromDay: string): Promise<string | undefined> {
+    const id = await this.repositories.recurrences?.findNextOccurrenceId(recurrence.id, fromDay);
+    if (!id) return undefined;
+    if (recurrence.target === "event") {
+      const event = await this.repositories.events.findById(id);
+      if (event) this.removedPreviews.push(eventItem(event));
+    } else {
+      const task = await this.repositories.tasks.findById(id);
+      if (task) this.removedPreviews.push(taskItem(task));
+    }
+    return id;
+  }
+
+  /** A serie do banco, que ainda nao foi tocada neste pedido nem tem ocorrencia dela alterada aqui. */
+  private async loadRecurrence(id: string): Promise<Recurrence> {
+    const staged = this.recurrences.get(id);
+    if (staged?.op === "create") {
+      throw new StagingError(`A recorrência ${id} foi criada nesta mesma requisição: inclua tudo na criação.`);
+    }
+    if (staged) throw new StagingError(`A recorrência ${id} já foi alterada nesta requisição.`);
+    if (!this.repositories.recurrences) throw new StagingError("Recorrências indisponíveis.");
+
+    const found = await this.repositories.recurrences.findById(id);
+    if (!found || found.userId !== this.userId) throw new StagingError(`Não encontrei a recorrência ${id}.`);
+
+    // As ocorrencias alteradas aqui sairiam junto com a serie e o lote falharia no meio.
+    const touched = [...this.events.values(), ...this.tasks.values()].some(
+      (entry) => (entry.before as { occurrence?: OccurrenceLink } | undefined)?.occurrence?.recurrenceId === id,
+    );
+    if (touched) {
+      throw new StagingError(`Uma ocorrência da recorrência ${id} já foi alterada neste pedido: faça a série em outro pedido.`);
+    }
+    return found;
+  }
+
+  /** As series criadas, alteradas ou apagadas neste pedido. */
+  series(): StagedSeries[] {
+    return [...this.recurrences.values()];
+  }
 
   /** As notes novas do evento entram no mesmo lote, antes dele (o vinculo aponta para elas). */
   createEvent(input: CreateEventInput): Promise<StageResult> {
@@ -111,16 +268,38 @@ export class AgentChangeSession {
     kind: EventKind,
     revise: (current: Event) => Promise<Event>,
   ): Promise<StageResult> {
+    return this.stageEventUpdate(id, kind, revise);
+  }
+
+  /**
+   * Encerra um evento de qualquer tipo; sem `finishedAt`, vale o instante do
+   * pedido. O tipo nao importa: so o fim muda.
+   */
+  finishEvent(id: string, finishedAt?: Date): Promise<StageResult> {
+    return this.stageEventUpdate(id, undefined, async (current) => {
+      const end = finishedAt ?? this.clock();
+      if (end < current.startedAt) {
+        throw new StagingError(`O evento ${current.name} ainda não começou: não dá para encerrá-lo antes do início.`);
+      }
+      return current.revise({ finishedAt: end });
+    });
+  }
+
+  private stageEventUpdate(
+    id: string,
+    kind: EventKind | undefined,
+    revise: (current: Event) => Promise<Event>,
+  ): Promise<StageResult> {
     return this.attempt(async () => {
       const created = this.events.get(id);
       if (created?.change.op === "create") {
         const current = created.change.entity;
-        if (current.kind !== kind) throw new StagingError(`O evento ${id} é do tipo ${current.kind}, não ${kind}.`);
+        if (kind && current.kind !== kind) throw new StagingError(`O evento ${id} é do tipo ${current.kind}, não ${kind}.`);
         this.events.set(id, { change: { op: "create", entity: await revise(current) } });
         return { ok: true, kind: "event", op: "create", id };
       }
       const loaded = await this.loadForChange(this.events, id, (key) => this.repositories.events.findById(key));
-      if (loaded.current.kind !== kind) {
+      if (kind && loaded.current.kind !== kind) {
         throw new StagingError(
           `O evento ${id} é do tipo ${loaded.current.kind}, não ${kind}. Use a ferramenta desse tipo.`,
         );
@@ -234,7 +413,8 @@ export class AgentChangeSession {
     });
   }
 
-  delete(kind: EntityKind, id: string): Promise<StageResult> {
+  delete(kind: DeletableKind, id: string): Promise<StageResult> {
+    if (kind === "recurrence") return this.deleteRecurrence(id);
     return this.attempt(async () => {
       switch (kind) {
         case "event":
@@ -252,12 +432,17 @@ export class AgentChangeSession {
   }
 
   hasChanges(): boolean {
-    return this.events.size + this.tasks.size + this.notes.size > 0;
+    return this.events.size + this.tasks.size + this.notes.size + this.recurrences.size > 0;
   }
 
   stagedEvent(id: string): Event | undefined {
     const entry = this.events.get(id);
     return entry?.change.op === "delete" ? undefined : entry?.change.entity;
+  }
+
+  /** O evento como estava no banco antes de ser alterado neste pedido; ausente se foi criado aqui. */
+  eventBeforeChange(id: string): Event | undefined {
+    return this.events.get(id)?.before;
   }
 
   /**
@@ -289,11 +474,24 @@ export class AgentChangeSession {
 
   toBatch(): EntityBatch {
     const changes = <T>(staged: Map<string, Staged<T>>) => [...staged.values()].map((entry) => entry.change);
+    const series = this.series();
     return {
       userId: this.userId,
       events: changes(this.events),
       tasks: changes(this.tasks),
       notes: changes(this.notes),
+      recurrences: series.filter((staged) => staged.op === "create").map((staged) => staged.recurrence),
+      recurrenceChanges: series.flatMap((staged): RecurrenceChange[] => {
+        if (staged.op === "update") {
+          return [{
+            op: "update", recurrence: staged.recurrence,
+            expectedRevision: staged.expectedRevision as number, fromDay: staged.fromDay as string,
+          }];
+        }
+        return staged.op === "delete"
+          ? [{ op: "delete", id: staged.recurrence.id, fromDay: staged.fromDay as string }]
+          : [];
+      }),
       conversation: this.conversationTurn,
     };
   }
@@ -335,6 +533,7 @@ export class AgentChangeSession {
     collect(this.events, (event) => eventItem(event, notesOf(event)));
     collect(this.tasks, taskItem);
     collect(this.notes, noteItem, (note) => embedded.has(note.id));
+    result.deleted.push(...this.removedPreviews);
     return result;
   }
 
@@ -467,6 +666,11 @@ export class AgentChangeSession {
 
     const found = await find(id);
     if (!found || found.userId !== this.userId) throw new StagingError(`Não encontrei o registro ${id}.`);
+    const seriesId = (found as { occurrence?: OccurrenceLink }).occurrence?.recurrenceId;
+    if (seriesId && this.recurrences.has(seriesId)) {
+      // A serie alterada ou apagada leva a ocorrencia embora no mesmo lote.
+      throw new StagingError(`O registro ${id} é de uma recorrência alterada neste pedido: faça em outro pedido.`);
+    }
     return { current: found, expectedRevision: found.revision, before: found };
   }
 

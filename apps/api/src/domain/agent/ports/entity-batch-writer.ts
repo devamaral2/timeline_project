@@ -2,6 +2,7 @@ import type { AgentChatMessage } from "../../agent-chat/entities/agent-chat-mess
 import type { AgentConversation } from "../../agent-chat/entities/agent-conversation.entity";
 import type { Event } from "../../events/entities/event.entity";
 import type { Note } from "../../notes/entities/note.entity";
+import type { Recurrence } from "../../recurrences/entities/recurrence.entity";
 import type { Task } from "../../tasks/entities/task.entity";
 
 /** `expectedRevision` e a revisao lida quando a mudanca foi preparada. */
@@ -22,11 +23,30 @@ export interface ConversationAppend {
   messages: AgentChatMessage[];
 }
 
+/**
+ * Mudanca numa serie que ja existe. Vale de `fromDay` em diante: as ocorrencias
+ * desse dia para frente que ninguem destacou saem, e o passado fica.
+ */
+export type RecurrenceChange =
+  | { op: "update"; recurrence: Recurrence; expectedRevision: number; fromDay: string }
+  | { op: "delete"; id: string; fromDay: string };
+
 export interface EntityBatch {
   userId: string;
   events: StagedChange<Event>[];
   tasks: StagedChange<Task>[];
   notes: StagedChange<Note>[];
+  /**
+   * Series novas. A serie e gravada antes das ocorrencias que o lote tambem
+   * traz (a primeira, que o agente ja mostra na resposta); as demais saem da
+   * materializacao preguicosa, na proxima leitura da timeline ou das tarefas.
+   */
+  recurrences?: readonly Recurrence[];
+  /**
+   * Series alteradas ou apagadas. Entram antes das ocorrencias novas do lote
+   * (a primeira da serie revisada nasce no dia que a mudanca acabou de liberar).
+   */
+  recurrenceChanges?: readonly RecurrenceChange[];
   conversation?: ConversationAppend;
 }
 

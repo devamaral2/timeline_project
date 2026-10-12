@@ -1,9 +1,11 @@
 import type { AgentTool } from "../gateways/agent.gateway";
 import type { AgentSkill, AgentSkillContext } from "./agent-skill";
 import { deleteEntitySkill } from "./delete-entity.skill";
+import { finishEventSkill } from "./finish-event.skill";
 import { mealEventSkill } from "./meal-event.skill";
 import { noteSkill } from "./note.skill";
 import { queryDataSkill } from "./query-data.skill";
+import { recurrenceSkill } from "./recurrence.skill";
 import { routineEventSkill } from "./routine-event.skill";
 import { sleepEventSkill } from "./sleep-event.skill";
 import { taskSkill } from "./task.skill";
@@ -16,7 +18,9 @@ export const AGENT_SKILLS: readonly AgentSkill[] = [
   mealEventSkill,
   sleepEventSkill,
   routineEventSkill,
+  finishEventSkill,
   taskSkill,
+  recurrenceSkill,
   noteSkill,
   deleteEntitySkill,
 ];

@@ -1,10 +1,10 @@
 export class MealPromptBuilderService {
   build(inputText: string): string {
     return [
-      "Consulte os dados de calorias, micronutrientes e macronutrientes para cada um dos alimentos e responda apenas com JSON valido.",
-      "As chaves do JSON devem estar em inglês, mas os valores podem permanecer em português quando necessário.",
-      "Retorne um objeto JSON com a chave 'items', contendo um array de alimentos.",
-      "Use exatamente esta estrutura por item:",
+      "Analise a refeicao descrita pelo usuario e responda apenas com JSON valido.",
+      "As chaves do JSON devem estar em ingles, mas os valores podem permanecer em portugues quando necessario.",
+      "Retorne um objeto com duas chaves: 'items' (alimentos com calorias e macronutrientes) e 'recipe' (a receita).",
+      "Em 'items', um objeto por alimento identificado, so com calorias e macronutrientes (sem micronutrientes), exatamente nesta estrutura:",
       JSON.stringify({
         food: "Banana prata",
         portion: "1 unidade media",
@@ -16,20 +16,23 @@ export class MealPromptBuilderService {
           totalFatGrams: 0.3,
           fiberGrams: 2.6,
         },
-        mainMicronutrients: {
-          potassiumMg: 358,
-          magnesiumMg: 27,
-          vitaminCMg: 8.7,
-          vitaminB6Mg: 0.4,
-        },
-        otherData: {
-          glycemicIndex: 51,
-          sodiumMg: 1,
-        },
       }),
+      "Em 'recipe', descreva o prato inteiro:",
+      "- 'ingredients': cada ingrediente com 'name' e 'quantity' (texto livre, ex.: '300 g', '1 colher de sopa', 'a gosto').",
+      "- 'steps': o modo de preparo em passos curtos, no imperativo, em portugues, pelo menos um passo.",
+      "- 'servings' e 'prepTimeMinutes': numeros, ou null quando nao for possivel estimar.",
+      "- 'source': use 'user' somente se o texto do usuario descrever o modo de preparo (use o que ele disse nos passos).",
+      "  Se ele citou apenas o que comeu, proponha uma receita simples e plausivel para o prato e use 'model'.",
       "Formato final esperado:",
       JSON.stringify({
-        items: ["<use exatamente a estrutura do item acima para cada alimento identificado>"],
+        items: ["<um item por alimento, na estrutura acima>"],
+        recipe: {
+          source: "model",
+          servings: 2,
+          prepTimeMinutes: 30,
+          ingredients: [{ name: "Macarrao", quantity: "300 g" }],
+          steps: ["Cozinhe o macarrao em agua com sal.", "Escorra e sirva com o molho."],
+        },
       }),
       `Texto do usuario: ${inputText}`,
     ].join("\n\n");

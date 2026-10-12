@@ -41,11 +41,14 @@ export const mealEventSkill = defineAgentSkill({
 
       const previous = existing.data as MealItem;
       const foodItems = [...previous.foodItems, ...(added.data as MealItem).foodItems];
+      // A receita continua a do prato original; so uma nota antiga, sem receita, ganha a da nova entrada.
+      const recipe = previous.recipe ?? (added.data as MealItem).recipe;
       const data: MealItem = {
         ...previous,
         description: [previous.description, inputText].filter(Boolean).join("; "),
         foodItems,
         totals: calculateMealTotals(foodItems),
+        ...(recipe ? { recipe } : {}),
       };
       await session.reviseNoteById(existing.id, (note) => note.revise({ data }));
       return current.revise(toBaseChanges(args));

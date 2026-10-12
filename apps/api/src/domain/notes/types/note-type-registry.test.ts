@@ -52,9 +52,12 @@ test("parses the four known note payloads", () => {
   expect(() => parseTextNote({ body: " " }, 1)).toThrow();
   expect(() => parseTextNote({}, 1)).toThrow();
 
-  expect(parseMealItem(validMeal, 1).foodItems[0].micronutrients).toEqual({
-    ironMilligrams: 2.1,
-  });
+  // Micronutrientes deixaram de existir: payload antigo e aceito, e o campo sai vazio.
+  expect(parseMealItem(validMeal, 1).foodItems[0].micronutrients).toEqual({});
+  const { micronutrients: _legacy, ...foodItemWithoutMicros } = validMeal.foodItems[0];
+  expect(
+    parseMealItem({ ...validMeal, foodItems: [foodItemWithoutMicros] }, 1).foodItems[0].micronutrients,
+  ).toEqual({});
   expect(() => parseMealItem({ ...validMeal, foodItems: "invalid" }, 1)).toThrow();
   expect(() =>
     parseMealItem({ ...validMeal, totals: { ...validMeal.totals, totalCaloriesKcal: 1 } }, 1),

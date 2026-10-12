@@ -23,7 +23,8 @@ const REJECTED: Array<[string, string]> = [
   ["catalog table", "SELECT * FROM pg_catalog.pg_class"],
   ["unqualified catalog table", "SELECT * FROM pg_class"],
   ["information_schema", "SELECT * FROM information_schema.tables"],
-  ["hidden table recurrences", "SELECT * FROM recurrences"],
+  // `recurrences` e visivel (so as colunas do logical-schema); a de excecoes nao.
+  ["hidden table recurrence_exceptions", "SELECT * FROM recurrence_exceptions"],
   ["hidden table tags", "SELECT * FROM tags"],
   ["hidden table food", "SELECT * FROM food"],
   ["quoted uppercase name", 'SELECT * FROM "Events"'],

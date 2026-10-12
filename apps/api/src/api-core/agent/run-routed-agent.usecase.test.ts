@@ -1,4 +1,4 @@
-import { expect, test } from "vitest";
+import { describe, expect, test } from "vitest";
 import type { CreateEventInput } from "@repo/contracts";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
 import { createEventsKit } from "../events/testing/in-memory-events-kit";
@@ -154,4 +154,60 @@ test("simultaneous affected events ask for order and discard the entire batch", 
   expect(response.updatedEntities).toEqual([]);
   expect(base.writer.commits).toHaveLength(0);
   expect((await base.events.findById(workId))?.finishedAt).toEqual(new Date(local(16)));
+});
+
+describe("finish_event", () => {
+  const at = (time: string) => `2026-09-16T${time}:00-03:00`;
+
+  async function gymDay(gymEnd: string) {
+    const base = setup({ kind: "single", skill: "finish_event" }, [], { commands: [] });
+    const seed = async (name: string, kind: CreateEventInput["kind"], from: string, to: string) =>
+      (await base.createEvent.execute({ name, kind, startedAt: at(from), finishedAt: at(to) }, { userId: "user-1" })).eventId;
+    const gymId = await seed("Academia", "training", "07:00", gymEnd);
+    const showerId = await seed("Banho", "routine", "07:50", "08:10");
+    const day: DayContext = {
+      date: "2026-09-16", timeZone: "America/Sao_Paulo", tasks: [], notes: [],
+      events: [
+        { id: gymId, name: "Academia", started_at: at("07:00"), finished_at: at(gymEnd), recurrence_id: null, taskIds: [], kind: "training" },
+        { id: showerId, name: "Banho", started_at: at("07:50"), finished_at: at("08:10"), recurrence_id: null, taskIds: [], kind: "routine" },
+      ],
+    };
+    const run = (command: object, clock = NOW) => new RunAgentUseCase(
+      new ScriptedAgentGateway([{ name: "get_day_context", args: { date: day.date } }], JSON.stringify({ commands: [command] })),
+      new StubScopedSqlQuery(), base.writer, { events: base.events, tasks: base.tasks, notes: base.notes },
+      base.createEvent, undefined, undefined, () => clock,
+      { route: async () => ({ kind: "single", skill: "finish_event" }) },
+      { get: async () => day },
+    ).execute({ userId: "user-1", text: "Cheguei da academia" }, owner);
+    return { ...base, gymId, showerId, run };
+  }
+
+  test("arriving later pushes the event planned right after, whatever the kind of the finished one", async () => {
+    const ctx = await gymDay("07:50");
+    const response = await ctx.run({ skill: "finish_event", args: { id: ctx.gymId, finishedAt: at("08:10") } });
+
+    expect((await ctx.events.findById(ctx.gymId))?.finishedAt).toEqual(new Date(at("08:10")));
+    expect((await ctx.events.findById(ctx.showerId))?.startedAt).toEqual(new Date(at("08:10")));
+    expect((await ctx.events.findById(ctx.showerId))?.finishedAt).toEqual(new Date(at("08:30")));
+    expect(response.agentResponse).toContain("Atualizei: Academia.");
+    expect(response.agentResponse).toContain("Reajustei os horários: Banho (08:10–08:30).");
+    expect(ctx.writer.commits).toHaveLength(1);
+  });
+
+  test("arriving earlier only moves the end, and 'now' comes from the server clock", async () => {
+    const ctx = await gymDay("12:30");
+    const response = await ctx.run({ skill: "finish_event", args: { id: ctx.gymId } });
+
+    expect((await ctx.events.findById(ctx.gymId))?.finishedAt).toEqual(NOW);
+    expect((await ctx.events.findById(ctx.showerId))?.startedAt).toEqual(new Date(at("07:50")));
+    expect(response.updatedEntities.map((item) => item.id)).toEqual([ctx.gymId]);
+    expect(response.agentResponse).not.toContain("Reajustei");
+  });
+
+  test("an event that has not started yet cannot be finished and nothing is committed", async () => {
+    const ctx = await gymDay("07:50");
+    await expect(ctx.run({ skill: "finish_event", args: { id: ctx.showerId } }, new Date(at("07:00"))))
+      .rejects.toThrow("ainda não começou");
+    expect(ctx.writer.commits).toEqual([]);
+  });
 });

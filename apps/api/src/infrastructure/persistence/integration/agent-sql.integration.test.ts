@@ -91,6 +91,22 @@ describe("PostgresScopedSqlQuery", () => {
     expect((await rows("SELECT * FROM event_tasks", "user-b")).rows).toEqual([]);
   });
 
+  test("recurrences mostra so as series do proprio usuario, sem o template cru", async () => {
+    await ctx.pool.query(`
+      INSERT INTO recurrences (id, user_id, target_kind, freq, interval_count, byweekday, time_of_day, duration_minutes, starts_on, template) VALUES
+        ('RB000000000000000000000001', 'user-b', 'event', 'daily', 1, NULL, '06:00', NULL, '2026-09-01', '{"name": "Segredo do B", "kind": "routine"}'),
+        ('RA000000000000000000000001', 'user-a', 'event', 'weekly', 1, 10, '07:00', 60, '2026-09-01', '{"name": "Corrida", "kind": "routine", "notes": [{"data": {"inputText": "so o servidor ve"}}]}');
+    `);
+
+    const own = await rows(
+      "SELECT name, kind, target_kind, freq, byweekday, time_of_day, duration_minutes FROM recurrences",
+    );
+    expect(own.rows).toEqual([["Corrida", "routine", "event", "weekly", 10, "07:00", 60]]);
+    expect((await rows("SELECT name FROM recurrences", "user-b")).rows).toEqual([["Segredo do B"]]);
+    // O jsonb do template nao e uma coluna: so o que o logical-schema escolheu expor.
+    expect((await query.run({ userId: "user-a", sql: "SELECT template FROM recurrences", scope: OWNER })).ok).toBe(false);
+  });
+
   test("chat_messages so mostra as conversas vivas do proprio usuario", async () => {
     const outcome = await rows("SELECT seq, role, content FROM chat_messages ORDER BY seq");
 

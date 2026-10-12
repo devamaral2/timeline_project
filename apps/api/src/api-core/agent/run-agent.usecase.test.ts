@@ -31,8 +31,6 @@ const RICE: ParsedMealFoodItem = {
   approximateWeightGrams: 100,
   caloriesKcal: 130,
   macronutrients: { carbohydratesGrams: 28, proteinsGrams: 2.5, totalFatGrams: 0.3, fiberGrams: 0.4 },
-  mainMicronutrients: {},
-  otherData: {},
 };
 
 function setup(
@@ -397,7 +395,9 @@ describe("RunAgentUseCase — queries and limits", () => {
       "save_meal_event",
       "save_sleep_event",
       "save_routine_event",
+      "finish_event",
       "save_task",
+      "save_recurrence",
       "save_note",
       "delete_entity",
     ]);

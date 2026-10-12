@@ -28,7 +28,8 @@ const NOTE_DATA_DESCRIPTION = [
   "text → {body};",
   "sleep → {trackedSleepTime: minutos, score: 0-100};",
   "meal → {name, description, totals: {totalCaloriesKcal, totalProteinGrams, totalCarbohydrateGrams, totalFatGrams, totalFiberGrams},",
-  "foodItems: [{name, portion, approximateWeightGrams, caloriesKcal, macronutrients: {carbohydratesGrams, proteinsGrams, totalFatGrams, fiberGrams}, micronutrients: {nome: valor}}]};",
+  "foodItems: [{name, portion, approximateWeightGrams, caloriesKcal, macronutrients: {carbohydratesGrams, proteinsGrams, totalFatGrams, fiberGrams}}],",
+  "recipe?: {source: user|model, servings?, prepTimeMinutes?, ingredients: [{name, quantity}], steps: [texto]}};",
   "training → {caloriesBurned, workouts: [{workoutCode: running|treadmill|weightlifting|free, workoutName, calories, duration: minutos,",
   "pace?: min/km, distance?: km, sets?: [{exercise, repetitions, weight: kg}]}]}",
 ].join(" ");
@@ -109,6 +110,28 @@ const BASE_TABLES: readonly LogicalTable[] = [
       { name: "occurrence_on", expr: "t.occurrence_on", type: "date" },
       { name: "created_at", expr: "t.created_at", type: "timestamptz" },
       { name: "updated_at", expr: "t.updated_at", type: "timestamptz" },
+    ],
+  },
+  {
+    name: "recurrences",
+    description:
+      "Series recorrentes. Cada ocorrencia e uma linha em events/tasks com recurrence_id apontando para ca; so as dos proximos dias ja foram geradas.",
+    from: "public.recurrences r",
+    where: "r.user_id = $1",
+    columns: [
+      { name: "id", expr: "r.id", type: "text" },
+      { name: "target_kind", expr: "r.target_kind::text", type: "text", description: "event | task" },
+      { name: "name", expr: "r.template->>'name'", type: "text", description: "nome que cada ocorrencia copia" },
+      { name: "kind", expr: "r.template->>'kind'", type: "text", description: "so em series de evento: routine | meal | sleep | training" },
+      { name: "freq", expr: "r.freq::text", type: "text", description: "daily | weekly | monthly | yearly" },
+      { name: "interval_count", expr: "r.interval_count", type: "integer", description: "a cada N periodos" },
+      { name: "byweekday", expr: "r.byweekday", type: "integer", description: "weekly: mascara de 7 bits, bit 0 = domingo" },
+      { name: "bymonthday", expr: "r.bymonthday", type: "integer" },
+      { name: "bymonth", expr: "r.bymonth", type: "integer" },
+      { name: "time_of_day", expr: "to_char(r.time_of_day, 'HH24:MI')", type: "text", description: "hora de inicio no fuso da regra" },
+      { name: "duration_minutes", expr: "r.duration_minutes", type: "integer" },
+      { name: "starts_on", expr: "r.starts_on", type: "date" },
+      { name: "ends_on", expr: "r.ends_on", type: "date", description: "nulo se nao termina" },
     ],
   },
   {

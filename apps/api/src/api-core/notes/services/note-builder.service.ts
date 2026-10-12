@@ -54,6 +54,7 @@ export class NoteBuilder {
             description: input.data.inputText,
             foodItems,
             totals: this.mealTotalsService.calculate(foodItems),
+            ...(parsed.recipe ? { recipe: parsed.recipe } : {}),
           },
         });
       }

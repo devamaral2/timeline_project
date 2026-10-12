@@ -71,7 +71,7 @@ export function sampleDayOf(rule: RecurrenceRule): string {
  * regra, e se o template nao gera um evento valido a serie nao e salva.
  */
 export async function prepareEventTemplate(
-  createEvent: CreateEventUseCase,
+  createEvent: Pick<CreateEventUseCase, "prepare">,
   template: EventRecurrenceTemplate,
   rule: RecurrenceRule,
   actor: AuthenticatedUser,
@@ -94,7 +94,7 @@ export async function prepareEventTemplate(
 }
 
 export async function prepareTaskTemplate(
-  tasks: TaskRepository,
+  tasks: Pick<TaskRepository, "findById">,
   template: TaskRecurrenceTemplate,
   rule: RecurrenceRule,
   actor: AuthenticatedUser,

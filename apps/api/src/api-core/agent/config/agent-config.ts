@@ -71,7 +71,12 @@ const promptsSchema = z.object({
   responses: z.object({
     savingProgressLabel: z.string(),
     created: z.string(),
+    createdSeries: z.string(),
+    updatedSeries: z.string(),
+    deletedSeries: z.string(),
+    deletedSeriesNote: z.string(),
     updated: z.string(),
+    rearranged: z.string(),
     deleted: z.string(),
     nothingToDo: z.string(),
     summaryFallback: z.string(),

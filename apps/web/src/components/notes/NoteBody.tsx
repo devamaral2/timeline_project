@@ -8,6 +8,7 @@ import { ICON_STROKE_WIDTH } from "@/components/events/event-visuals";
 import type { MealItem, NoteDto, SleepItem, TrainingData, WorkoutSnapshot } from "@/lib/api/contracts";
 import { formatDecimal, formatMinutes, formatPace, groupSetsByExercise, pluralize } from "@/lib/events/event-detail-format";
 import { MarkdownView } from "./MarkdownView";
+import { MealRecipeView } from "./MealRecipeView";
 import styles from "./note-body.module.css";
 
 const icon = { "aria-hidden": true, strokeWidth: ICON_STROKE_WIDTH } as const;
@@ -131,6 +132,7 @@ function MealNote({ data }: { data: MealItem }) {
           </ul>
         </div>
       ) : null}
+      {data.recipe ? <MealRecipeView recipe={data.recipe} /> : null}
     </div>
   );
 }

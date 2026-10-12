@@ -1123,7 +1123,7 @@ describe("PostgresTimelineEventQuery and PostgresDailyOverviewQuery", () => {
       approximateWeightGrams: 100,
       caloriesKcal: 130,
       macronutrients: { carbohydratesGrams: 28, proteinsGrams: 2.7, totalFatGrams: 0.3, fiberGrams: 0.4 },
-      micronutrients: { ironMilligrams: 2.1 },
+      micronutrients: {},
     };
     const meal = eventWith(
       {
@@ -1216,7 +1216,7 @@ describe("PostgresTimelineEventQuery and PostgresDailyOverviewQuery", () => {
 
     expect(overview.mealEvents).toHaveLength(1);
     expect(overview.mealEvents[0].kcal).toBe(130);
-    expect(overview.micronutrients).toEqual({ ironMilligrams: 2.1 });
+    expect(overview.micronutrients).toEqual({});
     expect(overview.sleep?.trackedSleepTime).toBe(480);
     expect(overview.trainingEvents[0].workouts[0]).toMatchObject({
       workoutCode: "running",

@@ -39,8 +39,6 @@ interface FoodItemDraft {
   proteinsGrams: string;
   totalFatGrams: string;
   fiberGrams: string;
-  /** O que a IA extraiu e o formulario nao edita — atravessa intacto. */
-  micronutrients: Record<string, number>;
   sourceFoodId?: string;
   sourceFoodRevision?: number;
 }
@@ -62,7 +60,6 @@ function draftFromFoodItem(foodItem: FoodItem): FoodItemDraft {
     proteinsGrams: String(foodItem.macronutrients.proteinsGrams),
     totalFatGrams: String(foodItem.macronutrients.totalFatGrams),
     fiberGrams: String(foodItem.macronutrients.fiberGrams),
-    micronutrients: foodItem.micronutrients,
     sourceFoodId: foodItem.sourceFoodId,
     sourceFoodRevision: foodItem.sourceFoodRevision,
   };
@@ -81,7 +78,6 @@ function newFoodItem(): FoodItemDraft {
     proteinsGrams: "",
     totalFatGrams: "",
     fiberGrams: "",
-    micronutrients: {},
   };
 }
 
@@ -139,7 +135,6 @@ export function MealEditForm({
         totalFatGrams: Number(foodItem.totalFatGrams) || 0,
         fiberGrams: Number(foodItem.fiberGrams) || 0,
       },
-      micronutrients: foodItem.micronutrients,
       ...(foodItem.sourceFoodId ? { sourceFoodId: foodItem.sourceFoodId } : {}),
       ...(foodItem.sourceFoodRevision !== undefined
         ? { sourceFoodRevision: foodItem.sourceFoodRevision }
@@ -148,8 +143,8 @@ export function MealEditForm({
 
     void submit({
       expectedRevision: event.revision,
-      // O nome e a descricao da refeicao vem do agente e nao se editam aqui —
-      // atravessam iguais. Os totais tambem: a API os recalcula a partir dos
+      // O nome, a descricao e a receita da refeicao vem do agente e nao se
+      // editam aqui — atravessam iguais (`...note?.data`). Os totais tambem: a API os recalcula a partir dos
       // alimentos, e somar de novo no browser so criaria um segundo lugar onde
       // o arredondamento pode divergir.
       notes: notesPatchedWith(event, note?.id, {

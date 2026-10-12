@@ -66,6 +66,35 @@ class ContractFixturesTest {
     }
 
     @Test
+    fun foodItemDecodesWithOrWithoutTheDeprecatedMicronutrients() {
+        val base =
+            "{\"id\":\"f1\",\"name\":\"Arroz\",\"portion\":\"100 g\",\"approximateWeightGrams\":100,\"caloriesKcal\":130," +
+                "\"macronutrients\":{\"carbohydratesGrams\":28,\"proteinsGrams\":2.7,\"totalFatGrams\":0.3,\"fiberGrams\":0.4}"
+
+        val withoutField = json.decodeFromString(FoodItemDto.serializer(), "$base}")
+        val legacy = json.decodeFromString(FoodItemDto.serializer(), "$base,\"micronutrients\":{\"ironMg\":2.1}}")
+
+        assertEquals(emptyMap<String, Double>(), withoutField.micronutrients)
+        assertEquals(mapOf("ironMg" to 2.1), legacy.micronutrients)
+    }
+
+    @Test
+    fun mealRecipeSurvivesTheEventDetailRoundTrip() {
+        val raw = javaClass.classLoader!!.getResource("fixtures/event-detail.json")!!.readText()
+        val detail = json.decodeFromString(EventDetailDto.serializer(), raw)
+
+        val meal =
+            detail.notes
+                .filterIsInstance<MealEventNoteDto>()
+                .single()
+        val recipe = meal.data.recipe
+
+        assertEquals("model", recipe?.source)
+        assertEquals(listOf("Aveia em flocos", "Banana"), recipe?.ingredients?.map { it.name })
+        assertEquals(2, recipe?.steps?.size)
+    }
+
+    @Test
     fun everyClientAndServerFrameVariantIsCovered() {
         assertFixture("agent-client-frames", ListSerializer(AgentChatClientFrameDto.serializer()))
         assertFixture("agent-server-frames", ListSerializer(AgentChatServerFrameDto.serializer()))

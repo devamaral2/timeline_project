@@ -33,3 +33,44 @@ test("asks for an order when two affected events start together", () => {
   expect(planDayRearrangement(target, [event("a", "A", 16, 17), event("b", "B", 16, 17)]).kind)
     .toBe("clarification");
 });
+
+const gym = { id: "gym", startedAt: at(7), finishedAt: at(7.5) } as Event;
+const gymBefore = { startedAt: at(7), finishedAt: at(7 + 50 / 60) };
+
+test("finishing earlier leaves the next event where it was", () => {
+  const plan = planDayRearrangement(gym, [event("gym", "Academia", 7, 7.5), event("shower", "Banho", 7 + 50 / 60, 8 + 10 / 60)], gymBefore);
+  expect(plan).toEqual({ kind: "ready", shifts: [] });
+});
+
+test("finishing later pushes the event that was planned right after", () => {
+  const late = { id: "gym", startedAt: at(7), finishedAt: at(8 + 10 / 60) } as Event;
+  const plan = planDayRearrangement(late, [
+    event("gym", "Academia", 7, 7 + 50 / 60),
+    event("shower", "Banho", 7 + 50 / 60, 8 + 10 / 60),
+  ], gymBefore);
+  expect(plan).toEqual({ kind: "ready", shifts: [{
+    id: "shower", kind: "routine", startedAt: at(8 + 10 / 60), finishedAt: at(8 + 30 / 60),
+  }] });
+});
+
+test("an event that already started inside the old interval is not pushed", () => {
+  const late = { id: "gym", startedAt: at(7), finishedAt: at(8 + 10 / 60) } as Event;
+  const plan = planDayRearrangement(late, [
+    event("gym", "Academia", 7, 7 + 50 / 60),
+    event("podcast", "Podcast", 7.25, 7.5),
+    event("shower", "Banho", 7 + 50 / 60, 8 + 10 / 60),
+  ], gymBefore);
+  expect(plan.kind === "ready" && plan.shifts.map((shift) => shift.id)).toEqual(["shower"]);
+});
+
+test("an overlap before the start that this change did not cause is not a question", () => {
+  const late = { id: "gym", startedAt: at(7), finishedAt: at(8) } as Event;
+  const plan = planDayRearrangement(late, [event("wake", "Acordar", 6.5, 7.25), event("gym", "Academia", 7, 7.5)], { startedAt: at(7), finishedAt: at(7.5) });
+  expect(plan).toEqual({ kind: "ready", shifts: [] });
+});
+
+test("moving the start still asks about the event that now occupies it", () => {
+  const moved = { id: "gym", startedAt: at(7), finishedAt: at(8) } as Event;
+  const plan = planDayRearrangement(moved, [event("wake", "Acordar", 6.5, 7.25)], { startedAt: at(7.5), finishedAt: at(8) });
+  expect(plan.kind).toBe("clarification");
+});

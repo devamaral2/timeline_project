@@ -3,6 +3,7 @@ export interface DailyOverviewDto {
   sleep: { id: string; trackedSleepTime: number; score: number; description: string } | null;
   caloriesConsumed: number;
   macros: { protein: number; carbohydrate: number; fat: number };
+  /** @deprecated Micronutrientes deixaram de existir; sempre `{}` ate o app Android antigo sair de circulacao. */
   micronutrients: Record<string, number>;
   mealEvents: Array<{
     id: string;
@@ -14,6 +15,7 @@ export interface DailyOverviewDto {
     protein: number;
     carbohydrate: number;
     fat: number;
+    /** @deprecated Sempre `{}`. */
     micronutrients: Record<string, number>;
   }>;
   trainingEvents: Array<{

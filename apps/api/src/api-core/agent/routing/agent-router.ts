@@ -2,7 +2,7 @@ import type { AgentChatTurn, AgentScreenContext } from "@repo/contracts";
 
 export type AgentRoute =
   | { kind: "read" }
-  | { kind: "single"; skill: "save_routine_event" | "save_meal_event" | "save_training_event" | "save_sleep_event" | "save_task" }
+  | { kind: "single"; skill: "save_routine_event" | "save_meal_event" | "save_training_event" | "save_sleep_event" | "save_task" | "save_recurrence" | "finish_event" }
   | { kind: "complex" };
 
 export interface AgentRouter {

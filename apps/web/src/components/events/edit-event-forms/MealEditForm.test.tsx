@@ -24,7 +24,6 @@ const mealNote = noteOf({
           totalFatGrams: 0.3,
           fiberGrams: 0.4,
         },
-        micronutrients: { ironMilligrams: 2.1 },
       },
     ],
     totals: {
@@ -33,6 +32,12 @@ const mealNote = noteOf({
       totalCarbohydrateGrams: 28,
       totalFatGrams: 0.3,
       totalFiberGrams: 0.4,
+    },
+    recipe: {
+      source: "model",
+      servings: 2,
+      ingredients: [{ name: "Arroz", quantity: "100 g" }],
+      steps: ["Lave o arroz.", "Cozinhe por 20 minutos."],
     },
   },
 }) as Extract<NoteDto, { type: "meal" }>;
@@ -139,14 +144,21 @@ test("a meal event without a meal note creates it on save, after the notes it al
   expect(notes[1]).toMatchObject({ type: "meal", data: { name: "Almoço", foodItems: [] } });
 });
 
-test("carries the food data the form does not show", async () => {
+test("carries the meal data the form does not show, including the recipe", async () => {
   save();
 
   await waitFor(() => expect(fetch).toHaveBeenCalled());
   const mealData = sentBody().notes[1]?.data as (typeof mealNote)["data"];
 
   expect(mealData.name).toBe("Almoço");
-  expect(mealData.foodItems[0]?.micronutrients).toEqual({ ironMilligrams: 2.1 });
+  expect(mealData.foodItems[0]).not.toHaveProperty("micronutrients");
+  // Salvar sem tocar na receita nao pode apaga-la: a API descarta o que nao recebe.
+  expect(mealData.recipe).toEqual({
+    source: "model",
+    servings: 2,
+    ingredients: [{ name: "Arroz", quantity: "100 g" }],
+    steps: ["Lave o arroz.", "Cozinhe por 20 minutos."],
+  });
 });
 
 test("rewrites the food item the user edited", async () => {

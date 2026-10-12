@@ -26,8 +26,14 @@
       "Converta 'hoje', 'ontem', 'hoje de manhã' etc. para ISO-8601 com fuso -03:00. Se o usuário não",
       "disse quando algo aconteceu, omita startedAt (vale 'agora')."
     ],
-    "beforeSchema": ["Tabelas para query_data (PostgreSQL):", ""],
-    "beforeSkills": ["Ferramentas:", ""]
+    "beforeSchema": [
+      "Tabelas para query_data (PostgreSQL):",
+      ""
+    ],
+    "beforeSkills": [
+      "Ferramentas:",
+      ""
+    ]
   },
   "rules": {
     "singleRequest": [
@@ -65,7 +71,9 @@
       "Se o pedido corrigir ou completar um evento, encontre seu id no dia e atualize-o.",
       "Eventos que atravessam a meia-noite exigem consultar ambos os dias.",
       "Use nomes curtos e substantivos: 'Estou trabalhando' vira 'Trabalho'.",
-      "Omita campos opcionais não informados. Use defaults do domínio; não pergunte por opcionais."
+      "Omita campos opcionais não informados. Use defaults do domínio; não pergunte por opcionais.",
+      "Pedido que se repete (todo dia, toda semana, dias úteis...): use save_recurrence uma vez, em vez de vários eventos ou tarefas soltos. Para mudar ou apagar uma série existente, ache o id na tabela recurrences (ou em recurrence_id da ocorrência) e use save_recurrence com id ou delete_entity kind recurrence; não altere as ocorrências uma a uma.",
+      "Relato de que algo acabou ou de que o usuário chegou/voltou ('cheguei da academia', 'terminei a reunião'): encerre o evento correspondente do dia com finish_event, em vez de criar outro. Os eventos seguintes são reorganizados pelo servidor."
     ],
     "readOnly": "Esta rota é somente de consulta. Responda em português usando apenas os resultados lidos.",
     "writeContract": [
@@ -104,8 +112,13 @@
     "savingProgressLabel": "Salvando",
     "created": "Criei",
     "updated": "Atualizei",
+    "rearranged": "Reajustei os horários",
     "deleted": "Apaguei",
     "nothingToDo": "Não encontrei nada para fazer com esse pedido.",
-    "summaryFallback": "Pronto. Criados: {{created}}. Alterados: {{updated}}. Apagados: {{deleted}}."
+    "summaryFallback": "Pronto. Criados: {{created}}. Alterados: {{updated}}. Apagados: {{deleted}}.",
+    "createdSeries": "Criei a recorrência",
+    "updatedSeries": "Atualizei a recorrência",
+    "deletedSeries": "Apaguei a recorrência",
+    "deletedSeriesNote": "As ocorrências de hoje em diante saíram; as anteriores ficam na agenda."
   }
 }

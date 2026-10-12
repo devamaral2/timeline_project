@@ -49,7 +49,6 @@ test("builds the daily overview for a Sao Paulo day", async () => {
                 approximateWeightGrams: 400,
                 caloriesKcal: 560,
                 macronutrients: { carbohydratesGrams: 58, proteinsGrams: 32, totalFatGrams: 12, fiberGrams: 8 },
-                micronutrients: { ironMg: 4.1 },
               },
             ],
             totals: {
@@ -93,7 +92,6 @@ test("does not attribute overnight meal or training totals to the following day"
                 approximateWeightGrams: 400,
                 caloriesKcal: 700,
                 macronutrients: { carbohydratesGrams: 60, proteinsGrams: 40, totalFatGrams: 20, fiberGrams: 10 },
-                micronutrients: { ironMg: 5 },
               },
             ],
             totals: {

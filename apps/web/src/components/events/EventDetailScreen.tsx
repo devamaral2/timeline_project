@@ -17,6 +17,7 @@ import {
   priorityLabels, visualForItemType,
 } from "./event-visuals";
 import { MarkdownView } from "@/components/notes/MarkdownView";
+import { MealRecipeView } from "@/components/notes/MealRecipeView";
 import styles from "./event-detail-screen.module.css";
 
 /**
@@ -296,6 +297,7 @@ function NoteSection({ note }: { note: NoteDto }) {
       <p className={styles.prose}>{note.data.name}</p>
       {note.data.description ? <p className={styles.secondary}>{note.data.description}</p> : null}
       <Nutrition data={note.data} />
+      {note.data.recipe ? <MealRecipeView recipe={note.data.recipe} /> : null}
     </Section>
   );
 

@@ -39,7 +39,8 @@ export interface FoodItem {
   approximateWeightGrams: number;
   caloriesKcal: number;
   macronutrients: FoodItemMacronutrients;
-  micronutrients: Record<string, number>;
+  /** @deprecated Micronutrientes deixaram de existir; a API ainda devolve `{}`. Nao use. */
+  micronutrients?: Record<string, number>;
 }
 
 export interface MealTotals {
@@ -50,6 +51,23 @@ export interface MealTotals {
   totalFiberGrams: number;
 }
 
+/** `model`: a receita foi proposta pelo modelo, nao dita pelo usuario. */
+export type MealRecipeSource = "user" | "model";
+
+export interface MealRecipeIngredient {
+  name: string;
+  quantity: string;
+}
+
+export interface MealRecipe {
+  source: MealRecipeSource;
+  servings?: number;
+  prepTimeMinutes?: number;
+  ingredients: MealRecipeIngredient[];
+  /** Modo de preparo, um passo por item. */
+  steps: string[];
+}
+
 export interface MealItem {
   sourceMealId?: string;
   sourceMealRevision?: number;
@@ -57,6 +75,7 @@ export interface MealItem {
   description: string;
   foodItems: FoodItem[];
   totals: MealTotals;
+  recipe?: MealRecipe;
 }
 
 export interface SleepItem {
@@ -299,25 +318,6 @@ export interface EventDetailDto {
 export type WorkItemStatus = "todo" | "scheduled" | "toDefine" | "inHold" | "done" | "cancel";
 export type WorkItemPriority = "urgent" | "high" | "medium" | "low";
 
-/** O que `GET /api/tasks/:taskId` devolve — so o que o detalhe do evento le. */
-export interface TaskDetailDto {
-  id: string;
-  parentTaskId?: string;
-  name: string;
-  description: string;
-  status: WorkItemStatus;
-  priority: WorkItemPriority;
-  notifyOffsetsMinutes: NotificationOffsetMinutes[];
-  tags: string[];
-  startedAt?: string;
-  estimatedFinishAt?: string;
-  finishedAt?: string;
-  dependsOnTaskIds: string[];
-  revision: number;
-}
-
-/** `POST /api/notes`: a note e os eventos e tarefas em que ela ja nasce aparecendo. */
-export type CreateNoteRequest = CreateNoteInput & {
 /** O que `GET /api/tasks` devolve — a lista de tarefas e a usada pelos avisos. */
 export interface TaskSummaryDto {
   id: string;
@@ -335,23 +335,23 @@ export interface TaskSummaryDto {
   revision: number;
 }
 
-  eventIds?: string[];
-  taskIds?: string[];
-};
-
-/**
- * `PATCH /api/notes/:noteId`. Com `type`, o `data` e o conteudo novo inteiro.
- * `eventIds`/`taskIds` sao a lista completa de onde a nota aparece (vazia solta a
- * nota); ausentes, os vinculos ficam como estao.
- */
-export type UpdateNoteRequest = {
-  expectedRevision: number;
-  name?: string;
-  tags?: string[];
-  eventIds?: string[];
+/** O que `GET /api/tasks/:taskId` devolve — so o que o detalhe do evento le. */
+export interface TaskDetailDto {
+  id: string;
+  parentTaskId?: string;
+  name: string;
+  description: string;
+  status: WorkItemStatus;
+  priority: WorkItemPriority;
+  notifyOffsetsMinutes: NotificationOffsetMinutes[];
+  tags: string[];
+  startedAt?: string;
+  estimatedFinishAt?: string;
+  finishedAt?: string;
+  dependsOnTaskIds: string[];
   noteIds?: string[];
-  taskIds?: string[];
-} & ({ type?: undefined; data?: undefined } | (NoteDataInput & { schemaVersion?: number }));
+  revision: number;
+}
 
 /** `POST /api/tasks`: o que o formulario de nova tarefa e a subtarefa mandam. */
 export interface CreateTaskRequest {
@@ -371,6 +371,25 @@ export interface CreateTaskRequest {
 export interface UpdateTaskRequest extends Partial<Omit<CreateTaskRequest, "parentTaskId">> {
   expectedRevision: number;
 }
+
+/** `POST /api/notes`: a note e os eventos e tarefas em que ela ja nasce aparecendo. */
+export type CreateNoteRequest = CreateNoteInput & {
+  eventIds?: string[];
+  taskIds?: string[];
+};
+
+/**
+ * `PATCH /api/notes/:noteId`. Com `type`, o `data` e o conteudo novo inteiro.
+ * `eventIds`/`taskIds` sao a lista completa de onde a nota aparece (vazia solta a
+ * nota); ausentes, os vinculos ficam como estao.
+ */
+export type UpdateNoteRequest = {
+  expectedRevision: number;
+  name?: string;
+  tags?: string[];
+  eventIds?: string[];
+  taskIds?: string[];
+} & ({ type?: undefined; data?: undefined } | (NoteDataInput & { schemaVersion?: number }));
 
 export interface TagSuggestionDto {
   id: string;

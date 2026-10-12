@@ -17,7 +17,11 @@ export interface FoodItem {
   approximateWeightGrams: number;
   caloriesKcal: number;
   macronutrients: FoodItemMacronutrients;
-  micronutrients: Record<string, number>;
+  /**
+   * @deprecated Micronutrientes deixaram de existir. Sempre `{}`: o campo so
+   * continua na saida porque o app Android instalado o exige na decodificacao.
+   */
+  micronutrients: Record<string, never>;
 }
 
 function isFiniteNonNegative(value: unknown): value is number {
@@ -58,16 +62,6 @@ export function parseFoodItem(data: unknown): FoodItem {
     }
   }
 
-  const micronutrients = source.micronutrients as Record<string, unknown> | undefined;
-  if (typeof micronutrients !== "object" || micronutrients === null) {
-    throw new NoteValidationError("Food item requires micronutrients");
-  }
-  for (const [key, value] of Object.entries(micronutrients)) {
-    if (!isFiniteNonNegative(value)) {
-      throw new NoteValidationError(`Food item micronutrients.${key} must be a non-negative number`);
-    }
-  }
-
   const foodItem: FoodItem = {
     id: isNonEmptyString(source.id) ? source.id : ulid(),
     name: source.name,
@@ -80,7 +74,8 @@ export function parseFoodItem(data: unknown): FoodItem {
       totalFatGrams: macronutrients.totalFatGrams as number,
       fiberGrams: macronutrients.fiberGrams as number,
     },
-    micronutrients: { ...micronutrients } as Record<string, number>,
+    // Payload antigo pode trazer `micronutrients`: e aceito e descartado.
+    micronutrients: {},
   };
 
   if (isNonEmptyString(source.sourceFoodId)) {

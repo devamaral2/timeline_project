@@ -41,7 +41,6 @@ const eventNotes = {
         approximateWeightGrams: 40,
         caloriesKcal: 152,
         macronutrients: { carbohydratesGrams: 27, proteinsGrams: 5, totalFatGrams: 3, fiberGrams: 4 },
-        micronutrients: { ironMg: 1.6 },
       }],
       totals: {
         totalCaloriesKcal: 152,
@@ -49,6 +48,16 @@ const eventNotes = {
         totalCarbohydrateGrams: 27,
         totalFatGrams: 3,
         totalFiberGrams: 4,
+      },
+      recipe: {
+        source: "model" as const,
+        servings: 1,
+        prepTimeMinutes: 10,
+        ingredients: [
+          { name: "Aveia em flocos", quantity: "40 g" },
+          { name: "Banana", quantity: "1 unidade" },
+        ],
+        steps: ["Misture a aveia com o leite.", "Aqueça por 2 minutos e acrescente a banana."],
       },
     },
     tags: [],

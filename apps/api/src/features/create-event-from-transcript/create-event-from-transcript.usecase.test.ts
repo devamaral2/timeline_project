@@ -185,8 +185,6 @@ test("routes a meal command through the meal parsing gateway", async () => {
           totalFatGrams: 0.3,
           fiberGrams: 2.6,
         },
-        mainMicronutrients: {},
-        otherData: {},
       },
     ],
     modelProvider: "stub",

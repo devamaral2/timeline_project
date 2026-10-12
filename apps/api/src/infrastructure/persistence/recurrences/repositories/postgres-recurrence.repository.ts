@@ -25,14 +25,93 @@ const errors = {
   conflict: (message: string) => new RecurrenceRevisionConflictError(message),
 };
 
+/** A regra e os vinculos de notes da serie. As notes que ela aponta ja precisam estar gravadas. */
+export async function insertRecurrenceAggregate(tx: Tx, recurrence: Recurrence): Promise<void> {
+  await tx.insert(schema.recurrences).values(recurrenceColumnsOf(recurrence));
+  await replaceRecurrenceNoteIds(tx, recurrence.id, recurrence.noteIds);
+}
+
+/**
+ * Grava a regra revisada e, na mesma transacao, apaga as ocorrencias de
+ * `fromDay` em diante que ninguem destacou. `notes`: as notes novas do template,
+ * gravadas antes do vinculo da serie.
+ */
+export async function updateRecurrenceAggregate(
+  tx: Tx,
+  recurrence: Recurrence,
+  actorUserId: string,
+  expectedRevision: number,
+  fromDay: string,
+  notes?: NoteWrites,
+): Promise<void> {
+  const { id: _id, userId: _userId, ...columns } = recurrenceColumnsOf(recurrence);
+  const updated = await tx
+    .update(schema.recurrences)
+    .set({ ...columns, updatedAt: sql`now()` })
+    .where(
+      and(
+        eq(schema.recurrences.id, recurrence.id),
+        eq(schema.recurrences.userId, actorUserId),
+        eq(schema.recurrences.revision, expectedRevision),
+      ),
+    )
+    .returning({ id: schema.recurrences.id });
+
+  if (updated.length === 0) {
+    const [existing] = await tx
+      .select({ userId: schema.recurrences.userId, revision: schema.recurrences.revision })
+      .from(schema.recurrences)
+      .where(eq(schema.recurrences.id, recurrence.id));
+    classifyUpdateFailure(existing, actorUserId, expectedRevision, {
+      notFound: errors.notFound(recurrence.id),
+      ownership: errors.ownership,
+      conflict: errors.conflict,
+    });
+  }
+
+  await writeNotes(tx, notes);
+  await replaceRecurrenceNoteIds(tx, recurrence.id, recurrence.noteIds);
+  await deleteUpcomingOccurrences(tx, recurrence.id, fromDay);
+}
+
+/** Apaga a regra e as ocorrencias de `fromDay` em diante; as anteriores ficam, sem o vinculo. */
+export async function deleteRecurrenceAggregate(
+  tx: Tx,
+  recurrenceId: string,
+  actorUserId: string,
+  fromDay: string,
+): Promise<void> {
+  await assertOwned(tx, recurrenceId, actorUserId);
+  await deleteUpcomingOccurrences(tx, recurrenceId, fromDay);
+
+  // O `set null` do FK so soltaria `recurrence_id`; o dia tambem deixa de
+  // querer dizer alguma coisa, entao os tres saem juntos, numa linha so —
+  // o check `*_occurrence_requires_day` nao aceita um sem o outro.
+  // O vinculo herdado da serie vira da propria ocorrencia: a serie some, a note fica.
+  await tx.execute(sql`
+    UPDATE event_notes SET from_recurrence = false
+    WHERE event_id IN (SELECT id FROM events WHERE recurrence_id = ${recurrenceId})
+  `);
+  await tx.execute(sql`
+    UPDATE task_notes SET from_recurrence = false
+    WHERE task_id IN (SELECT id FROM tasks WHERE recurrence_id = ${recurrenceId})
+  `);
+
+  const unlink = { recurrenceId: null, occurrenceOn: null, recurrenceDetached: false };
+  await tx.update(schema.events).set(unlink).where(eq(schema.events.recurrenceId, recurrenceId));
+  await tx.update(schema.tasks).set(unlink).where(eq(schema.tasks.recurrenceId, recurrenceId));
+
+  await tx.delete(schema.recurrences).where(eq(schema.recurrences.id, recurrenceId));
+}
+
 export class PostgresRecurrenceRepository implements RecurrenceRepository {
   constructor(private readonly db: NodePgDatabase<typeof schema>) {}
 
   async save(recurrence: Recurrence, notes?: NoteWrites): Promise<void> {
     await this.db.transaction(async (tx) => {
-      await tx.insert(schema.recurrences).values(recurrenceColumnsOf(recurrence));
+      // As notes antes: o vinculo da serie aponta para elas.
       await writeNotes(tx, notes);
-      await replaceRecurrenceNoteIds(tx, recurrence.id, recurrence.noteIds);
+      await insertRecurrenceAggregate(tx, recurrence);
     });
   }
 
@@ -44,60 +123,13 @@ export class PostgresRecurrenceRepository implements RecurrenceRepository {
     notes?: NoteWrites,
   ): Promise<void> {
     await this.db.transaction(async (tx) => {
-      const { id: _id, userId: _userId, ...columns } = recurrenceColumnsOf(recurrence);
-      const updated = await tx
-        .update(schema.recurrences)
-        .set({ ...columns, updatedAt: sql`now()` })
-        .where(
-          and(
-            eq(schema.recurrences.id, recurrence.id),
-            eq(schema.recurrences.userId, actorUserId),
-            eq(schema.recurrences.revision, expectedRevision),
-          ),
-        )
-        .returning({ id: schema.recurrences.id });
-
-      if (updated.length === 0) {
-        const [existing] = await tx
-          .select({ userId: schema.recurrences.userId, revision: schema.recurrences.revision })
-          .from(schema.recurrences)
-          .where(eq(schema.recurrences.id, recurrence.id));
-        classifyUpdateFailure(existing, actorUserId, expectedRevision, {
-          notFound: errors.notFound(recurrence.id),
-          ownership: errors.ownership,
-          conflict: errors.conflict,
-        });
-      }
-
-      await writeNotes(tx, notes);
-      await replaceRecurrenceNoteIds(tx, recurrence.id, recurrence.noteIds);
-      await deleteUpcomingOccurrences(tx, recurrence.id, fromDay);
+      await updateRecurrenceAggregate(tx, recurrence, actorUserId, expectedRevision, fromDay, notes);
     });
   }
 
   async delete(recurrenceId: string, actorUserId: string, fromDay: string): Promise<void> {
     await this.db.transaction(async (tx) => {
-      await assertOwned(tx, recurrenceId, actorUserId);
-      await deleteUpcomingOccurrences(tx, recurrenceId, fromDay);
-
-      // O `set null` do FK so soltaria `recurrence_id`; o dia tambem deixa de
-      // querer dizer alguma coisa, entao os tres saem juntos, numa linha so —
-      // o check `*_occurrence_requires_day` nao aceita um sem o outro.
-      // O vinculo herdado da serie vira da propria ocorrencia: a serie some, a note fica.
-      await tx.execute(sql`
-        UPDATE event_notes SET from_recurrence = false
-        WHERE event_id IN (SELECT id FROM events WHERE recurrence_id = ${recurrenceId})
-      `);
-      await tx.execute(sql`
-        UPDATE task_notes SET from_recurrence = false
-        WHERE task_id IN (SELECT id FROM tasks WHERE recurrence_id = ${recurrenceId})
-      `);
-
-      const unlink = { recurrenceId: null, occurrenceOn: null, recurrenceDetached: false };
-      await tx.update(schema.events).set(unlink).where(eq(schema.events.recurrenceId, recurrenceId));
-      await tx.update(schema.tasks).set(unlink).where(eq(schema.tasks.recurrenceId, recurrenceId));
-
-      await tx.delete(schema.recurrences).where(eq(schema.recurrences.id, recurrenceId));
+      await deleteRecurrenceAggregate(tx, recurrenceId, actorUserId, fromDay);
     });
   }
 
@@ -170,6 +202,30 @@ export class PostgresRecurrenceRepository implements RecurrenceRepository {
     if (!row) return null;
     const [recurrence] = await this.hydrate([row]);
     return recurrence ?? null;
+  }
+
+  async findNextOccurrenceId(recurrenceId: string, fromDay: string): Promise<string | null> {
+    const found = await this.db
+      .select({ target: schema.recurrences.targetKind })
+      .from(schema.recurrences)
+      .where(eq(schema.recurrences.id, recurrenceId));
+    const target = found[0]?.target;
+    if (!target) return null;
+    const table = target === "event" ? schema.events : schema.tasks;
+    const [row] = await this.db
+      .select({ id: table.id })
+      .from(table)
+      .where(
+        and(
+          eq(table.recurrenceId, recurrenceId),
+          gte(table.occurrenceOn, fromDay),
+          eq(table.recurrenceDetached, false),
+          isNull(table.deletedAt),
+        ),
+      )
+      .orderBy(asc(table.occurrenceOn))
+      .limit(1);
+    return row?.id ?? null;
   }
 
   async listByUserId(userId: string): Promise<Recurrence[]> {

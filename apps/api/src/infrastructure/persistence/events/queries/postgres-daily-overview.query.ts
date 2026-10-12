@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { DailyOverviewQuery, DailyOverviewQueryParams } from "../../../../domain/ports";
 import type { DailyOverviewDto } from "@repo/contracts";
-import type { FoodItem, TrainingData, MealItem } from "../../../../domain";
+import type { TrainingData, MealItem } from "../../../../domain";
 import * as schema from "../../database/schema";
 
 interface DayEventRow extends Record<string, unknown> {
@@ -67,7 +67,6 @@ export class PostgresDailyOverviewQuery implements DailyOverviewQuery {
     ]);
 
     const eventsById = new Map(eventsResult.rows.map((row) => [row.id, row]));
-    const micronutrients: Record<string, number> = {};
     const mealEvents: DailyOverviewDto["mealEvents"] = [];
     const trainingEvents: DailyOverviewDto["trainingEvents"] = [];
     let latestSleep: { event: DayEventRow; data: { trackedSleepTime: number; score: number } } | undefined;
@@ -78,13 +77,6 @@ export class PostgresDailyOverviewQuery implements DailyOverviewQuery {
 
       if (item.type === "meal") {
         const data = item.data as MealItem;
-        const mealMicronutrients: Record<string, number> = {};
-        for (const foodItem of data.foodItems as FoodItem[]) {
-          for (const [name, amount] of Object.entries(foodItem.micronutrients)) {
-            micronutrients[name] = (micronutrients[name] ?? 0) + amount;
-            mealMicronutrients[name] = (mealMicronutrients[name] ?? 0) + amount;
-          }
-        }
         mealEvents.push({
           id: event.id,
           name: event.name,
@@ -95,7 +87,7 @@ export class PostgresDailyOverviewQuery implements DailyOverviewQuery {
           protein: data.totals.totalProteinGrams,
           carbohydrate: data.totals.totalCarbohydrateGrams,
           fat: data.totals.totalFatGrams,
-          micronutrients: mealMicronutrients,
+          micronutrients: {},
         });
       } else if (item.type === "sleep") {
         const data = item.data as { trackedSleepTime: number; score: number };
@@ -159,7 +151,7 @@ export class PostgresDailyOverviewQuery implements DailyOverviewQuery {
         carbohydrate: mealEvents.reduce((total, event) => total + event.carbohydrate, 0),
         fat: mealEvents.reduce((total, event) => total + event.fat, 0),
       },
-      micronutrients,
+      micronutrients: {},
       mealEvents,
       trainingEvents,
     };

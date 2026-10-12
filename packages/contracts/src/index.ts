@@ -30,7 +30,13 @@ export type { EventKind } from "./events/types/event-kind";
 export type { NotificationOffsetMinutes } from "./notifications/types/notification-offset-minutes";
 export type { TextNote } from "./notes/types/text-note";
 export type { FoodItem, FoodItemMacronutrients } from "./notes/types/food-item";
-export type { MealItem, MealTotals } from "./notes/types/meal-item";
+export type {
+  MealItem,
+  MealRecipe,
+  MealRecipeIngredient,
+  MealRecipeSource,
+  MealTotals,
+} from "./notes/types/meal-item";
 export type { SleepItem } from "./notes/types/sleep-item";
 export type {
   WorkoutCode,

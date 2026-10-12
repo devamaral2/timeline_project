@@ -9,6 +9,26 @@ export interface MealTotals {
   totalFiberGrams: number;
 }
 
+export const MEAL_RECIPE_SOURCES = ["user", "model"] as const;
+
+/** `user`: o preparo foi dito pelo usuario; `model`: foi proposto pelo modelo. */
+export type MealRecipeSource = (typeof MEAL_RECIPE_SOURCES)[number];
+
+export interface MealRecipeIngredient {
+  name: string;
+  /** Texto livre: "300 g", "1 colher de sopa", "a gosto". */
+  quantity: string;
+}
+
+/** Receita do prato: o que o compoe e o modo de preparo. Os nutrientes ficam em `foodItems`. */
+export interface MealRecipe {
+  source: MealRecipeSource;
+  servings?: number;
+  prepTimeMinutes?: number;
+  ingredients: MealRecipeIngredient[];
+  steps: string[];
+}
+
 export interface MealItem {
   sourceMealId?: string;
   sourceMealRevision?: number;
@@ -16,13 +36,16 @@ export interface MealItem {
   description: string;
   foodItems: FoodItem[];
   totals: MealTotals;
+  recipe?: MealRecipe;
 }
 
 function round2(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
-export function calculateMealTotals(foodItems: readonly FoodItem[]): MealTotals {
+export function calculateMealTotals(
+  foodItems: readonly Pick<FoodItem, "caloriesKcal" | "macronutrients">[],
+): MealTotals {
   return foodItems.reduce<MealTotals>(
     (totals, item) => ({
       totalCaloriesKcal: round2(totals.totalCaloriesKcal + item.caloriesKcal),
@@ -45,6 +68,52 @@ export function calculateMealTotals(foodItems: readonly FoodItem[]): MealTotals 
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.length > 0;
+}
+
+function isFiniteNonNegative(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0;
+}
+
+export function parseMealRecipe(data: unknown): MealRecipe {
+  if (typeof data !== "object" || data === null) {
+    throw new NoteValidationError("Meal recipe must be an object");
+  }
+  const source = data as Record<string, unknown>;
+
+  if (!MEAL_RECIPE_SOURCES.includes(source.source as MealRecipeSource)) {
+    throw new NoteValidationError("Meal recipe source must be user or model");
+  }
+  if (!Array.isArray(source.ingredients)) {
+    throw new NoteValidationError("Meal recipe requires an array of ingredients");
+  }
+  const ingredients = source.ingredients.map((entry): MealRecipeIngredient => {
+    const ingredient = (entry ?? {}) as Record<string, unknown>;
+    if (!isNonEmptyString(ingredient.name)) {
+      throw new NoteValidationError("Meal recipe ingredient requires a name");
+    }
+    if (typeof ingredient.quantity !== "string") {
+      throw new NoteValidationError("Meal recipe ingredient requires a quantity");
+    }
+    return { name: ingredient.name, quantity: ingredient.quantity };
+  });
+  if (!Array.isArray(source.steps) || source.steps.length === 0 || !source.steps.every(isNonEmptyString)) {
+    throw new NoteValidationError("Meal recipe requires at least one preparation step");
+  }
+
+  const recipe: MealRecipe = { source: source.source as MealRecipeSource, ingredients, steps: [...source.steps] };
+  if (source.servings !== undefined) {
+    if (!isFiniteNonNegative(source.servings) || source.servings === 0) {
+      throw new NoteValidationError("Meal recipe servings must be a positive number");
+    }
+    recipe.servings = source.servings;
+  }
+  if (source.prepTimeMinutes !== undefined) {
+    if (!isFiniteNonNegative(source.prepTimeMinutes)) {
+      throw new NoteValidationError("Meal recipe prepTimeMinutes must be a non-negative number");
+    }
+    recipe.prepTimeMinutes = source.prepTimeMinutes;
+  }
+  return recipe;
 }
 
 export function parseMealItem(data: unknown, schemaVersion: number): MealItem {
@@ -92,6 +161,9 @@ export function parseMealItem(data: unknown, schemaVersion: number): MealItem {
   }
   if (typeof source.sourceMealRevision === "number") {
     mealItem.sourceMealRevision = source.sourceMealRevision;
+  }
+  if (source.recipe !== undefined && source.recipe !== null) {
+    mealItem.recipe = parseMealRecipe(source.recipe);
   }
 
   return mealItem;

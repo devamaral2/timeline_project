@@ -86,7 +86,48 @@
     "description": "Apaga um evento, uma tarefa ou uma nota pelo id.",
     "instructions": [
       "delete_entity — só quando o usuário pedir para apagar. Apagar uma tarefa apaga as",
-      "subtarefas e as notas dela; apagar um evento apaga as notas dele."
+      "subtarefas e as notas dela; apagar um evento apaga as notas dele.",
+      "kind recurrence apaga a série inteira (id da tabela recurrences): as ocorrências de hoje em diante",
+      "saem e as passadas ficam. Para tirar só um dia, apague a ocorrência com kind event ou task."
+    ]
+  },
+  "finish_event": {
+    "progressLabel": "Encerrando evento",
+    "description": "Marca como terminado um evento já registrado, de qualquer tipo, e deixa o servidor reorganizar quem vinha depois dele.",
+    "instructions": [
+      "finish_event — quando o usuário relata que acabou ou voltou de algo que já está na agenda:",
+      "'cheguei da academia', 'terminei a reunião', 'parei de trabalhar', 'saí do mercado'.",
+      "- Ache o evento no dia (get_day_context): o citado que já começou e ainda não terminou, ou que",
+      "  termina depois do horário dito. Nunca invente o id; se não houver evento correspondente, diga",
+      "  isso em vez de criar outro.",
+      "- Sem hora dita ('cheguei agora'), omita finishedAt: vale o instante do pedido. Com hora",
+      "  ('cheguei às 08:10'), informe finishedAt em ISO-8601 com fuso.",
+      "- Terminar antes do previsto só muda o fim. Terminar depois empurra os eventos que vinham logo em",
+      "  seguida: o servidor faz isso, não envie alterações para eles.",
+      "- Funciona com qualquer tipo de evento; não use save_*_event só para mudar o fim."
+    ]
+  },
+  "save_recurrence": {
+    "progressLabel": "Preparando recorrência",
+    "description": "Cria ou altera uma série recorrente de eventos ou de tarefas (todo dia, toda semana, todo mês, todo ano). Para algo que acontece uma vez só, use a skill do tipo.",
+    "instructions": [
+      "save_recurrence — para o que se repete: 'toda segunda às 7h', 'todo dia 5', 'a cada 2 semanas',",
+      "'dias úteis'. target event gera eventos na agenda; target task gera tarefas na lista.",
+      "- Antes de criar, consulte a tabela recurrences: se a série já existe, não crie outra, avise.",
+      "- frequency: daily, weekly, monthly ou yearly. 'A cada N' vai em interval.",
+      "- weekly: weekdays com os dias (sun,mon,tue,wed,thu,fri,sat). 'Dias úteis' = mon..fri. Omitido, vale o dia de startsOn.",
+      "- monthly: monthDay (1-31). yearly: month e monthDay. Omitidos, valem os de startsOn.",
+      "- timeOfDay é obrigatório (HH:MM). durationMinutes em MINUTOS; numa tarefa vira o prazo.",
+      "- Sem data de início dita, omita startsOn (vale hoje). Sem fim dito, omita endsOn.",
+      "- Não existe 'último dia do mês' nem 'primeira segunda do mês': peça outra regra em vez de aproximar.",
+      "- Eventos de refeição: kind meal e, se ele disse o que come, inputText. Treino e sono: kind training/sleep, sem detalhes.",
+      "- Alterar: informe id (coluna id da tabela recurrences; uma ocorrência traz recurrence_id) e SÓ o que muda.",
+      "  Vale de hoje em diante: o passado fica como aconteceu e as ocorrências futuras são regeradas.",
+      "  'Mude para as 8h' = timeOfDay. 'Só segunda e quarta' = weekdays. 'Pare em 30/12' = endsOn.",
+      "  Trocar a frequência descarta os dias antigos (weekdays, monthDay); informe os novos se foram ditos.",
+      "- Não dá para tirar endsOn nem mudar o tipo da série (evento/tarefa, treino/refeição): apague e crie outra.",
+      "- Para apagar a série, use delete_entity com kind recurrence. Uma ocorrência isolada apaga-se pelo",
+      "  id dela, com delete_entity kind event ou task, e a série segue."
     ]
   }
 }

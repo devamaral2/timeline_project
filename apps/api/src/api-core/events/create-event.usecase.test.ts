@@ -264,13 +264,6 @@ test("creates a meal event from parsed AI items and calculated totals", async ()
             totalFatGrams: 0.3,
             fiberGrams: 2.6,
           },
-          mainMicronutrients: {
-            potassiumMg: 358,
-            magnesiumMg: 27,
-          },
-          otherData: {
-            sodiumMg: 1,
-          },
         },
         {
           food: "Iogurte natural tradicional",
@@ -283,14 +276,19 @@ test("creates a meal event from parsed AI items and calculated totals", async ()
             totalFatGrams: 1.5,
             fiberGrams: 0,
           },
-          mainMicronutrients: {
-            calciumMg: 48,
-          },
-          otherData: {
-            sodiumMg: 18,
-          },
         },
       ],
+      recipe: {
+        source: "model",
+        servings: 1,
+        prepTimeMinutes: 5,
+        ingredients: [
+          { name: "Banana prata", quantity: "1 unidade" },
+          { name: "Iogurte natural", quantity: "2 colheres de sopa" },
+          { name: "Morango", quantity: "5 unidades" },
+        ],
+        steps: ["Corte a banana e os morangos.", "Misture com o iogurte e sirva."],
+      },
       modelProvider: "openrouter",
       modelName: "test-model",
     }),
@@ -328,6 +326,15 @@ test("creates a meal event from parsed AI items and calculated totals", async ()
   const foodItems = (mealNote.data as { foodItems: Array<{ id: string; micronutrients: Record<string, number> }> }).foodItems;
   expect(foodItems[0].id).toMatch(/[0-9A-HJKMNP-TV-Z]{26}/);
   expect(foodItems[1].id).toMatch(/[0-9A-HJKMNP-TV-Z]{26}/);
-  expect(foodItems[0].micronutrients).toMatchObject({ potassiumMg: 358, magnesiumMg: 27, sodiumMg: 1 });
+  // Micronutrientes deixaram de existir: o campo so segue na saida, vazio.
+  expect(foodItems[0].micronutrients).toEqual({});
+  expect(mealNote.data).toMatchObject({
+    recipe: {
+      source: "model",
+      servings: 1,
+      ingredients: [{ name: "Banana prata", quantity: "1 unidade" }, expect.anything(), expect.anything()],
+      steps: ["Corte a banana e os morangos.", "Misture com o iogurte e sirva."],
+    },
+  });
   expect(savedEvent?.tags).toEqual(["breakfast"]);
 });

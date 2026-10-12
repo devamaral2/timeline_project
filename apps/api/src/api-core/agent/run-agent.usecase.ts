@@ -2,6 +2,7 @@ import type {
   EntityBatchWriter,
   EventRepository,
   NoteRepository,
+  RecurrenceRepository,
   ScopedSqlQuery,
   ScopedSqlScope,
   TaskRepository,
@@ -9,7 +10,7 @@ import type {
 import type { AgentConversation, Event } from "../../domain";
 import type { AgentChatTurn, RunAgentRequest, RunAgentResponse } from "@repo/contracts";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
-import { dayKeyOf } from "@repo/timeline";
+import { dayKeyOf, formatTime } from "@repo/timeline";
 import { z } from "zod";
 import type { CreateEventUseCase } from "../events/create-event.usecase";
 import type { RecurrenceMaterializer } from "../recurrences/materialize-recurrences.usecase";
@@ -18,8 +19,10 @@ import { agentsConfig, fill, promptsConfig } from "./config/agent-config";
 import type { AgentGateway } from "./gateways/agent.gateway";
 import type { AgentRouter } from "./routing/agent-router";
 import type { DayContextEvent, DayContextQuery } from "./day-context.query";
-import { AgentChangeSession } from "./services/agent-change-session";
-import { planDayRearrangement } from "./services/plan-day-rearrangement";
+import { AgentChangeSession, type StagedSeries } from "./services/agent-change-session";
+import { describeRecurrenceRule } from "../recurrences/describe-recurrence-rule";
+import { planDayRearrangement, type EventShift } from "./services/plan-day-rearrangement";
+import { TurnTimings } from "./services/turn-timings";
 import { toChatEntityRefs, toConversationInput } from "./services/agent-chat-history";
 import { AgentPromptBuilderService } from "./services/agent-prompt-builder.service";
 import type { AgentSkill } from "./skills/agent-skill";
@@ -65,6 +68,7 @@ export class RunAgentUseCase {
       events: Pick<EventRepository, "findById">;
       tasks: Pick<TaskRepository, "findById">;
       notes: Pick<NoteRepository, "findById" | "findByIds">;
+      recurrences?: Pick<RecurrenceRepository, "findById" | "findNextOccurrenceId">;
     },
     private readonly createEvent: Pick<CreateEventUseCase, "prepare" | "buildNote">,
     private readonly skills: readonly AgentSkill[] = AGENT_SKILLS,
@@ -88,7 +92,7 @@ export class RunAgentUseCase {
     // pode planta-las esperando justamente essa leitura.
     const scope: ScopedSqlScope = { includeChat: actor.userId === input.userId };
 
-    const session = new AgentChangeSession(input.userId, this.repositories, this.createEvent);
+    const session = new AgentChangeSession(input.userId, this.repositories, this.createEvent, this.clock);
     const labels = new Map(this.skills.map((skill) => [skill.name, skill.progressLabel]));
     const text = options.history?.length ? toConversationInput(options.history, input.text) : input.text;
     const runWith = (requestText: string) =>
@@ -164,20 +168,22 @@ export class RunAgentUseCase {
     actor: AuthenticatedUser,
     options: RunAgentOptions,
     forcedRoute?: Awaited<ReturnType<AgentRouter["route"]>>,
+    timings = new TurnTimings(),
   ): Promise<RunAgentResponse> {
     const now = this.clock();
     const scope: ScopedSqlScope = { includeChat: actor.userId === input.userId };
-    if (!this.router) throw new Error("Agent router is not configured");
-    const route = forcedRoute ?? await this.router.route({
+    const router = this.router;
+    if (!router) throw new Error("Agent router is not configured");
+    const route = forcedRoute ?? await timings.time("route", () => router.route({
       text: input.text,
       context: input.context,
       history: scope.includeChat ? options.history : undefined,
       now,
       signal: options.signal,
-    });
+    }));
     if (options.signal?.aborted) throw new AgentRunCancelledError();
 
-    const session = new AgentChangeSession(input.userId, this.repositories, this.createEvent);
+    const session = new AgentChangeSession(input.userId, this.repositories, this.createEvent, this.clock);
     const loadedDays = new Map<string, Awaited<ReturnType<DayContextQuery["get"]>>>();
     const dayPages = new Map<string, { pages: Awaited<ReturnType<DayContextQuery["get"]>>[]; next: number }>();
     const context = { session, query: this.query, scope, dayContext: this.dayContext, recurrences: this.recurrences, loadedDays, dayPages };
@@ -194,14 +200,15 @@ export class RunAgentUseCase {
     const tools = bindAgentTools(readSkills, context).map((tool) => ({
       ...tool,
       execute: async (args: unknown) => {
-        const result = await tool.execute(args);
+        const result = await timings.time("reads", () => tool.execute(args));
         if ((result as { ok?: boolean })?.ok) reads += 1;
         return result;
       },
     }));
     const labels = new Map(readSkills.map((skill) => [skill.name, skill.progressLabel]));
     const text = options.history?.length ? toConversationInput(options.history, input.text) : input.text;
-    const run = await this.gateway.run({
+    // `agent` inclui as leituras (`reads`): o tempo so do modelo e agent - reads.
+    const run = await timings.time("agent", () => this.gateway.run({
       systemPrompt: this.promptBuilder.build({
         now, context: input.context, schema: this.query.describeSchema(scope),
         skills: [...readSkills, ...writeSkills], conversational: options.conversational,
@@ -214,15 +221,16 @@ export class RunAgentUseCase {
         const label = labels.get(name);
         if (label) options.onProgress?.(label);
       },
-    });
+    }));
     if (options.signal?.aborted) throw new AgentRunCancelledError();
     if (run.stoppedByLimit && route.kind !== "read") throw new AgentLimitReachedError();
 
     let reply = run.text.trim();
     if (route.kind === "read" && claimsAWrite(reply)) {
-      return this.executeRouted(input, actor, options, { kind: "complex" });
+      return this.executeRouted(input, actor, options, { kind: "complex" }, timings);
     }
     let report: string | undefined;
+    const shifted = new Map<string, EventShift>();
     if (route.kind !== "read") {
       let envelope: z.infer<typeof commandEnvelope>;
       try { envelope = commandEnvelope.parse(JSON.parse(run.text)); }
@@ -239,7 +247,8 @@ export class RunAgentUseCase {
         const parsed = skill.parameters.strict().safeParse(command.args);
         if (!parsed.success) throw new InvalidInputError(z.prettifyError(parsed.error));
         options.onProgress?.(skill.progressLabel);
-        const outcome = await skill.run(parsed.data, context) as { ok?: boolean; error?: string; id?: string; kind?: string };
+        // Inclui o parse de refeicao pelo modelo, que roda dentro de `prepare`.
+        const outcome = await timings.time("commands", () => skill.run(parsed.data, context)) as { ok?: boolean; error?: string; id?: string; kind?: string };
         if (!outcome?.ok) throw new InvalidInputError(outcome?.error ?? "Comando inválido.");
         if (outcome.kind === "event" && command.skill !== "delete_entity") {
           const target = outcome.id ? session.stagedEvent(outcome.id) : undefined;
@@ -250,12 +259,12 @@ export class RunAgentUseCase {
             throw new InvalidInputError(`Consulte todos os eventos de ${firstDay}${lastDay === firstDay ? "" : ` e ${lastDay}`} antes de gravar.`);
           }
           const dayEvents = dayEventsWithStagedChanges(loadedDays, session);
-          const plan = planDayRearrangement(target, dayEvents);
+          const plan = planDayRearrangement(target, dayEvents, session.eventBeforeChange(target.id));
           if (plan.kind === "clarification") {
             reply = plan.message;
             return this.finishRouted(input, options, new AgentChangeSession(input.userId, this.repositories, this.createEvent), {
               agentResponse: reply, createdEntities: [], updatedEntities: [], deletedEntities: [],
-            });
+            }, timings, route.kind);
           }
           for (const shift of plan.shifts) {
             const shiftedStartDay = dayKeyOf(shift.startedAt, "America/Sao_Paulo");
@@ -263,21 +272,22 @@ export class RunAgentUseCase {
             if (!loadedDays.has(shiftedStartDay) || !loadedDays.has(shiftedEndDay)) {
               throw new InvalidInputError(`Consulte ${shiftedStartDay}${shiftedEndDay === shiftedStartDay ? "" : ` e ${shiftedEndDay}`} antes de deslocar eventos.`);
             }
-            const shifted = await session.updateEvent(shift.id, shift.kind, async (current) =>
+            const outcomeOfShift = await session.updateEvent(shift.id, shift.kind, async (current) =>
               current.revise({ startedAt: shift.startedAt, finishedAt: shift.finishedAt }));
-            if (!shifted.ok) throw new InvalidInputError(shifted.error);
+            if (!outcomeOfShift.ok) throw new InvalidInputError(outcomeOfShift.error);
+            shifted.set(shift.id, shift);
           }
         }
       }
     }
 
     const { created, updated, deleted } = await session.result();
-    const summary = describeChanges(created, updated, deleted);
+    const summary = describeChanges(created, updated, deleted, session.series(), shifted);
     const response: RunAgentResponse = {
       agentResponse: [report, summary || reply].filter(Boolean).join("\n") || promptsConfig.responses.nothingToDo,
       createdEntities: created, updatedEntities: updated, deletedEntities: deleted,
     };
-    return this.finishRouted(input, options, session, response);
+    return this.finishRouted(input, options, session, response, timings, route.kind);
   }
 
   private async finishRouted(
@@ -285,6 +295,8 @@ export class RunAgentUseCase {
     options: RunAgentOptions,
     session: AgentChangeSession,
     response: RunAgentResponse,
+    timings: TurnTimings,
+    route: string,
   ): Promise<RunAgentResponse> {
     if (options.signal?.aborted) throw new AgentRunCancelledError();
     if (options.conversation) {
@@ -292,9 +304,14 @@ export class RunAgentUseCase {
     }
     if (session.hasChanges() || session.hasMessages()) {
       if (session.hasChanges()) options.onProgress?.(SAVING_PROGRESS_LABEL);
-      const result = await this.batchWriter.commit(session.toBatch());
+      const result = await timings.time("commit", () => this.batchWriter.commit(session.toBatch()));
       if (result.conversation) options.onConversationWritten?.(result.conversation);
     }
+    console.info("[AgentTurn] timings", {
+      route,
+      changes: response.createdEntities.length + response.updatedEntities.length + response.deletedEntities.length,
+      ...timings.summary(),
+    });
     return response;
   }
 }
@@ -325,11 +342,40 @@ function describeChanges(
   created: RunAgentResponse["createdEntities"],
   updated: RunAgentResponse["updatedEntities"],
   deleted: RunAgentResponse["deletedEntities"],
+  series: readonly StagedSeries[] = [],
+  shifted: ReadonlyMap<string, EventShift> = new Map(),
 ): string {
   const line = (items: RunAgentResponse["createdEntities"], action: string) =>
     items.length ? `${action}: ${items.map((item) => item.name).join(", ")}.` : "";
   const { responses } = promptsConfig;
-  return [line(created, responses.created), line(updated, responses.updated), line(deleted, responses.deleted)].filter(Boolean).join("\n");
+  // A ocorrencia que a resposta mostra no lugar da serie (para abrir e para a
+  // agenda atualizar) nao entra nas linhas de entidades: o texto fala da serie.
+  const shown = new Set(series.flatMap((staged) => (staged.shownOccurrenceId ? [staged.shownOccurrenceId] : [])));
+  const seriesLines = series.map(({ op, recurrence }) => {
+    const name = String(recurrence.template.name ?? "");
+    const title = (label: string) => `${label}${name ? ` ${name}` : ""}`;
+    if (op === "delete") return `${title(responses.deletedSeries)}. ${responses.deletedSeriesNote}`;
+    const label = op === "create" ? responses.createdSeries : responses.updatedSeries;
+    return `${title(label)}: ${describeRecurrenceRule(recurrence.rule)}.`;
+  });
+  return [
+    line(created.filter((item) => !shown.has(item.id)), responses.created),
+    ...seriesLines,
+    line(updated.filter((item) => !shifted.has(item.id)), responses.updated),
+    shiftedLine(updated.filter((item) => shifted.has(item.id)), shifted),
+    line(deleted.filter((item) => !shown.has(item.id)), responses.deleted),
+  ].filter(Boolean).join("\n");
+}
+
+/** O que o servidor empurrou para acomodar a mudanca pedida, com o novo horario. */
+function shiftedLine(items: RunAgentResponse["updatedEntities"], shifted: ReadonlyMap<string, EventShift>): string {
+  const moved = items.flatMap((item) => {
+    const shift = shifted.get(item.id);
+    if (!shift) return [];
+    const zone = promptsConfig.timeZone;
+    return [`${item.name} (${formatTime(shift.startedAt.toISOString(), zone)}–${formatTime(shift.finishedAt.toISOString(), zone)})`];
+  });
+  return moved.length ? `${promptsConfig.responses.rearranged}: ${moved.join(", ")}.` : "";
 }
 
 // `\b` do JS nao conhece letra acentuada ("excluí"): a fronteira e escrita a mao.
