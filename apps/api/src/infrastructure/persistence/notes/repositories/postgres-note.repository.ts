@@ -1,6 +1,12 @@
-import { and, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import { Note, NoteNotFoundError, NoteOwnershipError, NoteRevisionConflictError } from "../../../../domain";
+import {
+  Note,
+  NoteNotFoundError,
+  NoteOwnershipError,
+  NoteRevisionConflictError,
+  type NoteWrites,
+} from "../../../../domain";
 import type { NoteRepository } from "../../../../domain/ports";
 import * as schema from "../../database/schema";
 import { upsertTagIds } from "../../shared/upsert-tag-ids";
@@ -13,9 +19,10 @@ export async function insertNote(tx: Tx, note: Note): Promise<void> {
     id: note.id,
     revision: note.revision,
     userId: note.userId,
-    content: note.content,
-    eventId: note.eventId ?? null,
-    taskId: note.taskId ?? null,
+    name: note.name,
+    type: note.type,
+    schemaVersion: note.schemaVersion,
+    data: note.data,
     createdAt: note.createdAt,
     updatedAt: note.updatedAt,
   });
@@ -37,9 +44,10 @@ export async function updateNoteAggregate(
 ): Promise<void> {
   const result = await tx.execute(sql`
     UPDATE notes
-    SET content = ${note.content},
-        event_id = ${note.eventId ?? null},
-        task_id = ${note.taskId ?? null},
+    SET name = ${note.name},
+        type = ${note.type},
+        schema_version = ${note.schemaVersion},
+        data = ${JSON.stringify(note.data)}::jsonb,
         revision = ${note.revision},
         updated_at = now()
     WHERE id = ${note.id}
@@ -67,6 +75,23 @@ export async function updateNoteAggregate(
   });
 }
 
+/**
+ * Grava as notes que viajam com um evento, tarefa ou serie. Vem antes dos
+ * vinculos, na mesma transacao: um vinculo aponta para uma note que ja existe.
+ */
+export async function writeNotes(tx: Tx, writes: NoteWrites | undefined): Promise<void> {
+  for (const note of writes?.created ?? []) {
+    await insertNote(tx, note);
+  }
+  for (const { note, expectedRevision } of writes?.updated ?? []) {
+    await updateNoteAggregate(tx, note, note.userId, expectedRevision);
+  }
+}
+
+/**
+ * Soft delete: os vinculos ficam e a leitura filtra `deleted_at IS NULL`. Nao
+ * ha `cascade` de evento ou tarefa para a note — apagar o alvo so solta o vinculo.
+ */
 export async function softDeleteNote(tx: Tx, noteId: string, actorUserId: string): Promise<void> {
   const [existing] = await tx
     .select({ userId: schema.notes.userId })
@@ -80,27 +105,6 @@ export async function softDeleteNote(tx: Tx, noteId: string, actorUserId: string
     .update(schema.notes)
     .set({ deletedAt: sql`now()`, updatedAt: sql`now()` })
     .where(eq(schema.notes.id, noteId));
-}
-
-/** A nota so existe presa ao alvo: apagar o evento ou a tarefa apaga as notas dele. */
-export async function softDeleteNotesOfTargets(
-  tx: Tx,
-  target: { eventIds?: readonly string[]; taskIds?: readonly string[] },
-): Promise<void> {
-  const conditions = [];
-  if (target.eventIds && target.eventIds.length > 0) {
-    conditions.push(inArray(schema.notes.eventId, [...target.eventIds]));
-  }
-  if (target.taskIds && target.taskIds.length > 0) {
-    conditions.push(inArray(schema.notes.taskId, [...target.taskIds]));
-  }
-
-  for (const condition of conditions) {
-    await tx
-      .update(schema.notes)
-      .set({ deletedAt: sql`now()`, updatedAt: sql`now()` })
-      .where(and(condition, isNull(schema.notes.deletedAt)));
-  }
 }
 
 export class PostgresNoteRepository implements NoteRepository {
@@ -125,20 +129,53 @@ export class PostgresNoteRepository implements NoteRepository {
   }
 
   async findById(noteId: string): Promise<Note | null> {
-    const [row] = await this.db
+    const [note] = await this.findByIds([noteId]);
+    return note ?? null;
+  }
+
+  async findByIds(noteIds: readonly string[]): Promise<Note[]> {
+    if (noteIds.length === 0) return [];
+
+    const rows = await this.db
       .select()
       .from(schema.notes)
-      .where(and(eq(schema.notes.id, noteId), isNull(schema.notes.deletedAt)));
-    if (!row) return null;
+      .where(and(inArray(schema.notes.id, [...noteIds]), isNull(schema.notes.deletedAt)));
+    if (rows.length === 0) return [];
 
     const tagRows = await this.db
-      .select({ name: schema.tags.name })
+      .select({ noteId: schema.noteTags.noteId, name: schema.tags.name })
       .from(schema.noteTags)
       .innerJoin(schema.tags, eq(schema.noteTags.tagId, schema.tags.id))
-      .where(eq(schema.noteTags.noteId, row.id));
-    return mapNoteRow(
-      row,
-      tagRows.map((tagRow) => tagRow.name),
-    );
+      .where(
+        inArray(
+          schema.noteTags.noteId,
+          rows.map((row) => row.id),
+        ),
+      );
+    const tagsByNote = new Map<string, string[]>();
+    for (const { noteId, name } of tagRows) {
+      tagsByNote.set(noteId, [...(tagsByNote.get(noteId) ?? []), name]);
+    }
+    return rows.map((row) => mapNoteRow(row, tagsByNote.get(row.id) ?? []));
+  }
+
+  async listByUserId(userId: string): Promise<Note[]> {
+    const rows = await this.db
+      .select()
+      .from(schema.notes)
+      .where(and(eq(schema.notes.userId, userId), isNull(schema.notes.deletedAt)))
+      .orderBy(desc(schema.notes.updatedAt), desc(schema.notes.id));
+    if (rows.length === 0) return [];
+
+    const tagRows = await this.db
+      .select({ noteId: schema.noteTags.noteId, name: schema.tags.name })
+      .from(schema.noteTags)
+      .innerJoin(schema.tags, eq(schema.noteTags.tagId, schema.tags.id))
+      .where(inArray(schema.noteTags.noteId, rows.map((row) => row.id)));
+    const tagsByNote = new Map<string, string[]>();
+    for (const { noteId, name } of tagRows) {
+      tagsByNote.set(noteId, [...(tagsByNote.get(noteId) ?? []), name]);
+    }
+    return rows.map((row) => mapNoteRow(row, tagsByNote.get(row.id) ?? []));
   }
 }

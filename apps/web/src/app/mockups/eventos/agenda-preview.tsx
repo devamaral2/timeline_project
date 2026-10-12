@@ -4,23 +4,33 @@ import {
   dayKeyRange, dayNumber, isSameMonth, longDate, monthGridOf,
   monthLabel, shiftDayKey, weekOf, weekday, zonedDayEnd, zonedDayStart,
 } from "@repo/timeline";
-import { ChevronDown, Columns2, List, SlidersHorizontal } from "lucide-react";
+import { ChevronDown, Columns2, Infinity as InfinityIcon, SlidersHorizontal } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ICON_STROKE_WIDTH, notificationOffsetLabel, visualForItemType } from "@/components/events/event-visuals";
+import { WeekStrip } from "@/components/events/WeekStrip";
+import { ICON_STROKE_WIDTH, visualForItemType } from "@/components/events/event-visuals";
 import { authedFetch } from "@/lib/api/authed-fetch";
 import type { TimelineEventCardDto, TimelineEventPageDto } from "@/lib/api/contracts";
 import { useNow } from "@/lib/events/use-now";
-import { useDueNotifications } from "@/lib/events/use-due-notifications";
 import { useSessionState } from "@/lib/session/use-session";
 import { AgendaDay } from "./agenda-day";
 import { agendaEventsByDay } from "./agenda-data";
 import { EXAMPLE_NOW, EXAMPLE_TODAY, type ExampleEvent, type ExampleTask } from "./agenda-examples";
 import { agendaRefreshEvent } from "./agenda-refresh";
-import { agendaScrollBoundaryFromAttempt } from "./agenda-scroll-boundary";
+import { type AgendaScrollBoundary, agendaScrollBoundaryFromAttempt } from "./agenda-scroll-boundary";
 import { EventTaskDialog, type SelectedEvent } from "./task-controls";
 import styles from "./mockup.module.css";
 
 type ViewMode = "list" | "day";
+
+/** Dias carregados a cada vez que a rolagem infinita chega a uma borda. */
+const INFINITE_STEP_DAYS = 7;
+/** Teto de dias para cada lado, para a lista não crescer sem fim. */
+const INFINITE_MAX_DAYS = 364;
+
+/** "Setembro" no ano corrente; "Setembro de 2027" quando se navega para outro ano. */
+function monthName(dayKey: string, todayKey: string) {
+  return dayKey.slice(0, 4) === todayKey.slice(0, 4) ? monthLabel(dayKey).replace(/ de \d{4}$/, "") : monthLabel(dayKey);
+}
 
 export function AgendaPreview({ userId, todayKey = EXAMPLE_TODAY }: { userId?: string; todayKey?: string }) {
   const { user, ready } = useSessionState();
@@ -37,17 +47,17 @@ export function AgendaPreview({ userId, todayKey = EXAMPLE_TODAY }: { userId?: s
   const [refreshVersion, setRefreshVersion] = useState(0);
   const [selectedEvent, setSelectedEvent] = useState<SelectedEvent | null>(null);
   const viewOptionsRef = useRef<HTMLDetailsElement>(null);
-  const [mode, setMode] = useState<ViewMode>("list");
+  const [mode, setMode] = useState<ViewMode>("day");
   const [selectedDay, setSelectedDay] = useState(todayKey);
   const [navigation, setNavigation] = useState({ dayKey: todayKey });
   const [dayRange, setDayRange] = useState({ before: 0, after: 0 });
-  const [visibleBoundaries, setVisibleBoundaries] = useState({ previous: false, next: false });
   const [monthOpen, setMonthOpen] = useState(false);
   const [browsingMonth, setBrowsingMonth] = useState(EXAMPLE_TODAY);
   const controlsRef = useRef<HTMLDivElement>(null);
   const daysRef = useRef<HTMLElement>(null);
   const touchY = useRef<number | null>(null);
   const scrollFrame = useRef(0);
+  const lastExtendAt = useRef(0);
   const pageDays = mode === "day"
     ? weekOf(navigation.dayKey)
     : dayKeyRange(shiftDayKey(navigation.dayKey, -dayRange.before), dayRange.before + dayRange.after + 1);
@@ -99,8 +109,7 @@ export function AgendaPreview({ userId, todayKey = EXAMPLE_TODAY }: { userId?: s
   function selectDay(dayKey: string) {
     setSelectedDay(dayKey);
     setNavigation({ dayKey });
-    setDayRange({ before: 0, after: 0 });
-    setVisibleBoundaries({ previous: false, next: false });
+    setDayRange({ before: 0, after: mode === "list" ? INFINITE_STEP_DAYS : 0 });
     setMonthOpen(false);
     window.scrollTo({ top: 0, behavior: "instant" });
   }
@@ -109,17 +118,31 @@ export function AgendaPreview({ userId, todayKey = EXAMPLE_TODAY }: { userId?: s
     setMode(nextMode);
     if (viewOptionsRef.current) viewOptionsRef.current.open = false;
     selectDay(selectedDay);
+    setDayRange({ before: 0, after: nextMode === "list" ? INFINITE_STEP_DAYS : 0 });
   }
+
+  // Enquanto a sessão carrega o carrossel não existe; ao aparecer, ele precisa abrir no dia selecionado.
+  const stripMounted = !userId || (ready && Boolean(user));
 
   // Só escolhas explícitas reposicionam o carrossel; um swipe apenas atualiza a seleção.
   useLayoutEffect(() => {
     const strip = daysRef.current;
     if (mode !== "day" || !strip) return;
     strip.scrollLeft = weekOf(navigation.dayKey).indexOf(navigation.dayKey) * strip.clientWidth;
-  }, [mode, navigation]);
+  }, [mode, navigation, stripMounted]);
 
+  // No modo lista infinita, chegar à borda traz mais dias.
   useEffect(() => {
     if (mode !== "list") return;
+
+    function extend(boundary: AgendaScrollBoundary) {
+      const now = Date.now();
+      if (loadState === "loading" || now - lastExtendAt.current < 400) return;
+      lastExtendAt.current = now;
+      setDayRange(({ before, after }) => boundary === "previous"
+        ? { before: Math.min(before + INFINITE_STEP_DAYS, INFINITE_MAX_DAYS), after }
+        : { before, after: Math.min(after + INFINITE_STEP_DAYS, INFINITE_MAX_DAYS) });
+    }
 
     function revealBoundary(deltaY: number) {
       const boundary = agendaScrollBoundaryFromAttempt({
@@ -128,7 +151,16 @@ export function AgendaPreview({ userId, todayKey = EXAMPLE_TODAY }: { userId?: s
         viewportHeight: window.innerHeight,
         documentHeight: document.documentElement.scrollHeight,
       });
-      if (boundary) setVisibleBoundaries(current => ({ ...current, [boundary]: true }));
+      if (boundary) extend(boundary);
+    }
+
+    let lastScrollY = window.scrollY;
+    function onScroll() {
+      const { scrollY, innerHeight } = window;
+      const goingUp = scrollY < lastScrollY;
+      lastScrollY = scrollY;
+      if (goingUp && scrollY < 240) extend("previous");
+      else if (!goingUp && scrollY + innerHeight >= document.documentElement.scrollHeight - 600) extend("next");
     }
 
     function onWheel(event: WheelEvent) {
@@ -150,17 +182,19 @@ export function AgendaPreview({ userId, todayKey = EXAMPLE_TODAY }: { userId?: s
       touchY.current = null;
     }
 
+    window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("wheel", onWheel, { passive: true });
     window.addEventListener("touchstart", onTouchStart, { passive: true });
     window.addEventListener("touchmove", onTouchMove, { passive: true });
     window.addEventListener("touchend", onTouchEnd, { passive: true });
     return () => {
+      window.removeEventListener("scroll", onScroll);
       window.removeEventListener("wheel", onWheel);
       window.removeEventListener("touchstart", onTouchStart);
       window.removeEventListener("touchmove", onTouchMove);
       window.removeEventListener("touchend", onTouchEnd);
     };
-  }, [mode]);
+  }, [loadState, mode]);
 
   // O mês acompanha o dia que está sendo lido na lista contínua.
   useEffect(() => {
@@ -181,20 +215,6 @@ export function AgendaPreview({ userId, todayKey = EXAMPLE_TODAY }: { userId?: s
     };
   }, [mode]);
 
-  // So a agenda real tem id estavel e notifyOffsetsMinutes vindo do backend;
-  // os exemplos ilustrativos da previa sem sessao nunca cruzam um aviso.
-  const notifiableEvents = userId
-    ? Object.values(eventsByDay)
-        .flat()
-        .filter((event): event is typeof event & { id: string; startedAt: string } =>
-          Boolean(event.id && event.startedAt && event.notifyOffsetsMinutes?.length),
-        )
-    : [];
-  const { due: dueNotifications, dismiss: dismissNotification } = useDueNotifications(
-    notifiableEvents,
-    realNow,
-  );
-
   if (userId && !ready) {
     return <main id="conteudo" className={styles.main}><p role="status" className={styles.emptyDay}>Carregando sua sessão…</p></main>;
   }
@@ -204,17 +224,6 @@ export function AgendaPreview({ userId, todayKey = EXAMPLE_TODAY }: { userId?: s
 
   return (
     <main id="conteudo" className={styles.main}>
-      {dueNotifications.length > 0 ? (
-        <div className={styles.notificationToasts} role="status" aria-live="polite">
-          {dueNotifications.map((notification) => (
-            <div key={notification.key} className={styles.notificationToast}>
-              <span>{notification.name} — {notificationOffsetLabel(notification.offsetMinutes)}</span>
-              <button type="button" aria-label="Dispensar aviso" onClick={() => dismissNotification(notification.key)}>×</button>
-            </div>
-          ))}
-        </div>
-      ) : null}
-
       <div className={styles.pageHeading}>
         <h1>Agenda</h1>
         <div className={styles.headingActions}>
@@ -224,8 +233,8 @@ export function AgendaPreview({ userId, todayKey = EXAMPLE_TODAY }: { userId?: s
             <summary aria-label="Opções de visualização" title="Opções de visualização"><SlidersHorizontal aria-hidden /></summary>
             <fieldset className={styles.viewModes} aria-label="Visualização da agenda">
               <legend>Visualização</legend>
-              <button type="button" aria-pressed={mode === "list"} onClick={() => changeMode("list")}><List aria-hidden /><span>Lista<small>Dias em sequência</small></span></button>
-              <button type="button" aria-pressed={mode === "day"} onClick={() => changeMode("day")}><Columns2 aria-hidden /><span>Dia<small>Um dia de cada vez</small></span></button>
+              <button type="button" aria-pressed={mode === "list"} onClick={() => changeMode("list")}><InfinityIcon aria-hidden /><span>Lista infinita<small>Dias em sequência</small></span></button>
+              <button type="button" aria-pressed={mode === "day"} onClick={() => changeMode("day")}><Columns2 aria-hidden /><span>Lista por dia<small>Um dia de cada vez</small></span></button>
             </fieldset>
           </details>
         </div>
@@ -238,11 +247,13 @@ export function AgendaPreview({ userId, todayKey = EXAMPLE_TODAY }: { userId?: s
               <button
                 type="button" className={styles.monthToggle} aria-expanded={monthOpen} aria-controls="agenda-month-picker"
                 onClick={() => { setBrowsingMonth(selectedDay); setMonthOpen((open) => !open); }}
-              >{monthLabel(monthOpen ? browsingMonth : selectedDay)}<ChevronDown aria-hidden /></button>
+              >{monthName(monthOpen ? browsingMonth : selectedDay, todayKey)}<ChevronDown aria-hidden /></button>
               <div className={styles.dateActions}>
                 <button type="button" className={styles.todayButton} onClick={() => selectDay(todayKey)}>Hoje</button>
               </div>
             </div>
+
+            {monthOpen || mode === "list" ? null : <WeekStrip selectedDayKey={selectedDay} todayKey={todayKey} onSelect={selectDay} />}
 
             {monthOpen ? (
               <section id="agenda-month-picker" className={styles.monthPicker} aria-label="Escolher dia do mês">
@@ -260,19 +271,6 @@ export function AgendaPreview({ userId, todayKey = EXAMPLE_TODAY }: { userId?: s
               </section>
             ) : null}
           </div>
-
-          {mode === "day" ? (
-            <div className={styles.dayPaging}>
-              <p>Deslize para mudar de dia</p>
-            </div>
-          ) : null}
-
-          {mode === "list" && visibleBoundaries.previous ? <div className={`${styles.loadBoundary} ${styles.loadPrevious}`}>
-            <button type="button" onClick={() => {
-              setVisibleBoundaries(current => ({ ...current, previous: false }));
-              setDayRange(current => ({ ...current, before: current.before + 7 }));
-            }}>Ver eventos anteriores</button>
-          </div> : null}
 
           <section
             ref={daysRef} className={mode === "list" ? styles.verticalDays : styles.horizontalDays}
@@ -292,14 +290,8 @@ export function AgendaPreview({ userId, todayKey = EXAMPLE_TODAY }: { userId?: s
               if (dayKey) setSelectedDay(dayKey);
             }}
           >
-            {pageDays.map((dayKey) => <AgendaDay key={dayKey} dayKey={dayKey} now={now} tasks={tasks} missedEvents={missedEvents} onSelectEvent={setSelectedEvent} events={userId ? eventsByDay[dayKey] ?? [] : undefined} userId={userId} todayKey={todayKey} hideWhenEmpty={mode === "list"} />)}
+            {pageDays.map((dayKey) => <AgendaDay key={dayKey} dayKey={dayKey} now={now} tasks={tasks} missedEvents={missedEvents} onSelectEvent={setSelectedEvent} events={userId ? eventsByDay[dayKey] ?? [] : undefined} userId={userId} todayKey={todayKey} hideWhenEmpty={mode === "list"} showHeading={mode === "list"} />)}
           </section>
-          {mode === "list" && visibleBoundaries.next ? <div className={`${styles.loadBoundary} ${styles.loadNext}`}>
-            <button type="button" onClick={() => {
-              setVisibleBoundaries(current => ({ ...current, next: false }));
-              setDayRange(current => ({ ...current, after: current.after + 7 }));
-            }}>Ver eventos dos próximos dias</button>
-          </div> : null}
           {userId && loadState === "loading" ? <p role="status" className={styles.listNote}>Carregando sua agenda…</p> : null}
           {userId && loadState === "failed" ? <p role="alert" className={styles.listNote}>Não foi possível carregar a agenda. Tente novamente.</p> : null}
           {!userId ? <p className={styles.listNote}>Dados de exemplo · relógio ilustrativo iniciado às 09:35</p> : null}
@@ -318,6 +310,7 @@ export function AgendaPreview({ userId, todayKey = EXAMPLE_TODAY }: { userId?: s
             <div><i data-time-position="past" aria-hidden /><span>Horários passados</span></div>
             <div><i data-time-position="running" aria-hidden /><span>Em andamento</span></div>
             <div><i data-time-position="upcoming" aria-hidden /><span>A seguir</span></div>
+            <div><i data-time-position="free" aria-hidden /><span>Tempo livre</span></div>
             <p>O relógio situa o evento. O status continua sendo da tarefa.</p>
           </section>
           <p className={styles.prototypeNote}>Estudo visual · dados de exemplo</p>

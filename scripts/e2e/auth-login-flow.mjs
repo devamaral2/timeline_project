@@ -3,7 +3,7 @@
  * Smoke test de ponta a ponta do login pelo apps/auth, contra os tres
  * servidores rodando de verdade (`pnpm dev:auth`, `pnpm dev:api` e
  * `pnpm dev:web`). Nao sobe nada sozinho e nao cria usuario: precisa de uma
- * conta ativa (docs/runbooks/auth-bootstrap.md).
+ * conta ativa (docs/runbook/auth-bootstrap.md).
  *
  *   E2E_EMAIL=... E2E_PASSWORD=... pnpm e2e:auth
  *

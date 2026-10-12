@@ -5,16 +5,14 @@
     "NODE_ENV",
     "BACKEND_URL",
     "API_SERVICE_URL",
-    "MOBILE_API_URL",
-    "MOBILE_GOOGLE_WEB_CLIENT_ID",
     "API_PORT",
     "API_HOST",
     "DATABASE_URL",
     "AUTH_SERVICE_URL",
     "AUTH_INTERNAL_SERVICE_KEY",
     "OPENROUTER_*",
+    "JEV_API_KEY",
     "WEB_PORT",
-    "METRO_PORT",
     "AUTH_PORT",
     "AUTH_HOST",
     "AUTH_DATABASE_URL",
@@ -35,7 +33,7 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**", "app/build/outputs/**"]
     },
     "dev": {
       "dependsOn": ["^build"],

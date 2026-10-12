@@ -15,11 +15,17 @@ import { GetTaskModule } from "./features/get-task/get-task.module";
 import { ListSubtasksModule } from "./features/list-subtasks/list-subtasks.controller";
 import { UpdateTaskModule } from "./features/update-task/update-task.controller";
 import { DeleteTaskModule } from "./features/delete-task/delete-task.controller";
+import { ListNotesModule } from "./features/list-notes/list-notes.module";
+import { CreateNoteModule } from "./features/create-note/create-note.controller";
+import { GetNoteModule } from "./features/get-note/get-note.module";
+import { UpdateNoteModule } from "./features/update-note/update-note.controller";
+import { DeleteNoteModule } from "./features/delete-note/delete-note.controller";
 import { ListRecurrencesModule } from "./features/list-recurrences/list-recurrences.module";
 import { CreateRecurrenceModule } from "./features/create-recurrence/create-recurrence.controller";
 import { GetRecurrenceModule } from "./features/get-recurrence/get-recurrence.module";
 import { UpdateRecurrenceModule } from "./features/update-recurrence/update-recurrence.controller";
 import { DeleteRecurrenceModule } from "./features/delete-recurrence/delete-recurrence.controller";
+import { AttachNotesToRecurrenceModule } from "./features/attach-notes-to-recurrence/attach-notes-to-recurrence.controller";
 import { RunAgentModule } from "./features/run-agent/run-agent.controller";
 import { IssueAgentChatTicketModule } from "./features/issue-agent-chat-ticket/issue-agent-chat-ticket.controller";
 import { ListAgentConversationsModule } from "./features/list-agent-conversations/list-agent-conversations.controller";
@@ -45,11 +51,17 @@ import { DeleteAgentConversationModule } from "./features/delete-agent-conversat
     GetTaskModule,
     UpdateTaskModule,
     DeleteTaskModule,
+    ListNotesModule,
+    CreateNoteModule,
+    GetNoteModule,
+    UpdateNoteModule,
+    DeleteNoteModule,
     ListRecurrencesModule,
     CreateRecurrenceModule,
     GetRecurrenceModule,
     UpdateRecurrenceModule,
     DeleteRecurrenceModule,
+    AttachNotesToRecurrenceModule,
     RunAgentModule,
     IssueAgentChatTicketModule,
     ListAgentConversationsModule,

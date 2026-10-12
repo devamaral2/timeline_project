@@ -1,6 +1,6 @@
 'use client';
 
-import { dayNumber, weekOf, weekdayInitial } from '@repo/timeline';
+import { dayNumber, longDate, weekdayInitial, weekOf } from '@repo/timeline';
 import { cn } from '@/lib/utils';
 
 interface WeekStripProps {
@@ -21,7 +21,7 @@ export function WeekStrip({
   onSelect,
 }: WeekStripProps) {
   return (
-    <ul className="mx-auto flex w-full max-w-[360px] items-center justify-between gap-1">
+    <ul className="mx-auto flex w-full max-w-[400px] items-center justify-between gap-0.5">
       {weekOf(selectedDayKey).map((dayKey) => {
         const selected = dayKey === selectedDayKey;
         const isToday = dayKey === todayKey;
@@ -32,20 +32,18 @@ export function WeekStrip({
               type="button"
               onClick={() => onSelect(dayKey)}
               aria-current={selected ? 'date' : undefined}
-              aria-label={dayKey}
-              className="flex w-10 flex-col items-center gap-1 rounded-md py-1 transition-colors hover:bg-foreground/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
+              aria-label={longDate(dayKey)}
+              className="flex min-h-16 w-[46px] flex-col items-center gap-[5px] rounded-lg py-1 transition-colors hover:bg-foreground/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
             >
-              <span className="text-[11px] font-semibold tracking-wide text-muted-foreground">
+              <span className="text-[11px] font-semibold tracking-[0.06em] text-muted-foreground">
                 {weekdayInitial(dayKey)}
               </span>
               <span
                 className={cn(
                   'flex size-8 items-center justify-center rounded-full text-[15px] tabular-nums transition-colors',
                   selected
-                    ? 'bg-brand font-bold text-primary-foreground'
-                    : isToday
-                      ? 'font-bold text-brand'
-                      : 'font-medium text-foreground',
+                    ? 'bg-primary font-bold text-primary-foreground'
+                    : 'font-medium text-foreground',
                 )}
               >
                 {dayNumber(dayKey)}
@@ -55,7 +53,7 @@ export function WeekStrip({
               <span
                 aria-hidden
                 className={cn(
-                  'size-1 rounded-full',
+                  'size-[5px] rounded-full',
                   isToday ? 'bg-brand' : 'bg-transparent',
                 )}
               />

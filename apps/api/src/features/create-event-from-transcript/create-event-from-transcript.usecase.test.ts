@@ -1,21 +1,20 @@
 import { expect, test } from "vitest";
-import { Event, EventItem } from "../../domain";
+import { Event } from "../../domain";
 import {
   CreateEventFromTranscriptUseCase,
   EMPTY_TRANSCRIPT_ERROR,
   LONG_TRANSCRIPT_ERROR,
 } from "./create-event-from-transcript.usecase";
-import { CreateEventUseCase } from "../../api-core/events/create-event.usecase";
-import { InMemoryEventDatabase } from "../../api-core/events/testing/in-memory-event-database";
-import { InMemoryEventRepository } from "../../api-core/events/testing/in-memory-event.repository";
-import { InMemoryWorkoutCatalog } from "../../api-core/events/testing/in-memory-workout.catalog";
+import type { InMemoryEventDatabase } from "../../api-core/events/testing/in-memory-event-database";
+import type { InMemoryEventRepository } from "../../api-core/events/testing/in-memory-event.repository";
+import { createEventsKit } from "../../api-core/events/testing/in-memory-events-kit";
 import { StubEventCommandParsingGateway } from "../../api-core/events/testing/stub-event-command-parsing.gateway";
 import { StubMealParsingGateway } from "../../api-core/events/testing/stub-meal-parsing.gateway";
 import type { CreateEventInput } from "@repo/contracts";
 import type { ParsedEventSchedule } from "../../api-core/events/services/event-schedule.service";
 
 const actor = { userId: "user-1" };
-const aRoutine: CreateEventInput = { name: "Rotina", items: [{ type: "routine" }], tags: [] };
+const aRoutine: CreateEventInput = { name: "Rotina", kind: "routine", tags: [] };
 // 23:00 do dia 23/08 no horario de Sao Paulo (UTC-3).
 const lateNight = new Date("2026-08-24T02:00:00.000Z");
 
@@ -37,8 +36,7 @@ function makeUseCase({
   eventRepository: InMemoryEventRepository;
   parsingGateway: StubEventCommandParsingGateway;
 } {
-  const database = new InMemoryEventDatabase();
-  const eventRepository = new InMemoryEventRepository(database);
+  const { database, eventRepository, createEvent } = createEventsKit({ mealParsingGateway: mealGateway });
   const parsingGateway = new StubEventCommandParsingGateway({
     input,
     schedule,
@@ -47,7 +45,7 @@ function makeUseCase({
   });
   const useCase = new CreateEventFromTranscriptUseCase(
     parsingGateway,
-    new CreateEventUseCase(eventRepository, mealGateway, new InMemoryWorkoutCatalog()),
+    createEvent,
     () => now,
   );
   return { useCase, database, eventRepository, parsingGateway };
@@ -55,13 +53,13 @@ function makeUseCase({
 
 test("keeps the spoken phrase as the event description", async () => {
   const { useCase, eventRepository } = makeUseCase({
-    input: { name: "Estudar ingles", items: [{ type: "routine" }], tags: [] },
+    input: { name: "Estudar ingles", kind: "routine", tags: [] },
   });
 
   const result = await useCase.execute({ transcript: "  comecei a estudar ingles  " }, actor);
   const persistedEvent = await eventRepository.findById(result.eventId);
 
-  expect(result.primaryItemType).toBe("routine");
+  expect(result.kind).toBe("routine");
   expect(persistedEvent?.name).toBe("Estudar ingles");
   expect(persistedEvent?.description).toBe("comecei a estudar ingles");
 });
@@ -86,7 +84,7 @@ test("estimates the routine default duration when the phrase carried no window",
 
 test("closes a sleep event spoken with a duration, crossing into the next day", async () => {
   const { useCase, eventRepository } = makeUseCase({
-    input: { items: [{ type: "sleep", data: { trackedSleepTime: 360 } }], tags: [] },
+    input: { kind: "sleep", notes: [{ type: "sleep", data: { trackedSleepTime: 360 } }], tags: [] },
     schedule: { durationMinutes: 360 },
   });
 
@@ -104,7 +102,7 @@ test("closes a sleep event spoken with a duration, crossing into the next day", 
 
 test("closes a sleep event at the spoken clock time of the next morning", async () => {
   const { useCase, eventRepository } = makeUseCase({
-    input: { items: [{ type: "sleep" }], tags: [] },
+    input: { kind: "sleep", notes: [{ type: "sleep" }], tags: [] },
     schedule: { endTimeOfDay: "06:00" },
   });
 
@@ -138,7 +136,6 @@ test("leaves an event already in progress untouched", async () => {
       startedAt: previouslyStartedAt,
       tags: [],
       interruptions: [],
-      items: [EventItem.create({ position: 0, type: "routine", schemaVersion: 1, isPrimary: true, data: {} })],
     }),
   );
 
@@ -161,7 +158,7 @@ test("starts the event in the future when the phrase says so", async () => {
 test("names a meal event after the hour it was eaten, not the hour it was dictated", async () => {
   const mealGateway = new StubMealParsingGateway();
   const { useCase, eventRepository } = makeUseCase({
-    input: { items: [{ type: "meal", data: { inputText: "arroz e feijao" } }], tags: [] },
+    input: { kind: "meal", notes: [{ type: "meal", data: { inputText: "arroz e feijao" } }], tags: [] },
     // Falado as 23:00, mas o almoco foi as 12:00 do mesmo dia.
     schedule: { startTimeOfDay: "12:00" },
     mealGateway,
@@ -188,23 +185,21 @@ test("routes a meal command through the meal parsing gateway", async () => {
           totalFatGrams: 0.3,
           fiberGrams: 2.6,
         },
-        mainMicronutrients: {},
-        otherData: {},
       },
     ],
     modelProvider: "stub",
     modelName: "stub-model",
   });
-  const { useCase, eventRepository } = makeUseCase({
-    input: { items: [{ type: "meal", data: { inputText: "uma banana" } }], tags: [] },
+  const { useCase, eventRepository, database } = makeUseCase({
+    input: { kind: "meal", notes: [{ type: "meal", data: { inputText: "uma banana" } }], tags: [] },
     mealGateway,
   });
 
   const result = await useCase.execute({ transcript: "comi uma banana" }, actor);
   const persistedEvent = await eventRepository.findById(result.eventId);
 
-  expect(result.primaryItemType).toBe("meal");
-  const mealData = persistedEvent?.items[0].data as { totals: { totalCaloriesKcal: number }; description: string };
+  expect(result.kind).toBe("meal");
+  const mealData = database.notesOf(persistedEvent as Event)[0].data as { totals: { totalCaloriesKcal: number }; description: string };
   expect(mealData.totals.totalCaloriesKcal).toBe(89);
   expect(mealData.description).toBe("uma banana");
 });

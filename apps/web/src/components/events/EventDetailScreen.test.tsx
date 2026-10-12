@@ -2,6 +2,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import type { EventDetailDto, TaskDetailDto } from "@/lib/api/contracts";
 import { EventDetailScreen } from "./EventDetailScreen";
+import { noteOf } from "./note-fixtures";
 
 /** 15 de abril de 2026, 10:00 — 11:00 no fuso da timeline. */
 function eventAt(overrides: Partial<EventDetailDto> = {}): EventDetailDto {
@@ -17,8 +18,8 @@ function eventAt(overrides: Partial<EventDetailDto> = {}): EventDetailDto {
     notifyOffsetsMinutes: [],
     interruptions: [],
     revision: 3,
-    primaryItemId: "item-1",
-    items: [{ id: "item-1", position: 0, type: "routine", schemaVersion: 1, isPrimary: true, data: {} }],
+    kind: "routine",
+    notes: [],
     ...overrides,
   };
 }
@@ -144,14 +145,11 @@ test("enquanto a anotação salva, o menu não aceita um segundo clique", () => 
 
 test("o conteúdo do tipo entra como mais uma seção, sem mexer no esqueleto", () => {
   const event = eventAt({
-    primaryItemId: "meal-item",
-    items: [
-      {
-        id: "meal-item",
-        position: 0,
+    kind: "meal",
+    notes: [
+      noteOf({
+        id: "meal-note",
         type: "meal",
-        schemaVersion: 1,
-        isPrimary: true,
         data: {
           name: "Almoço",
           description: "",
@@ -164,7 +162,7 @@ test("o conteúdo do tipo entra como mais uma seção, sem mexer no esqueleto", 
             totalFiberGrams: 7,
           },
         },
-      },
+      }),
     ],
   });
   render(<EventDetailScreen event={event} backHref="/alguem" />);

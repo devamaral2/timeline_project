@@ -4,6 +4,11 @@ import type { TaskRepository } from "../../../domain/ports";
 export class InMemoryTaskRepository implements TaskRepository {
   constructor(private tasks: Task[] = []) {}
 
+  /** Todas as tarefas guardadas, de qualquer usuario — para as consultas em memoria. */
+  all(): readonly Task[] {
+    return this.tasks;
+  }
+
   async save(task: Task): Promise<void> {
     this.tasks.push(task);
   }

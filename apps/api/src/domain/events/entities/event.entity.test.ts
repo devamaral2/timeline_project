@@ -1,51 +1,87 @@
 import { describe, expect, test } from "vitest";
-import { Event } from "./event.entity";
-import { EventItem } from "./event-item.entity";
-import { EventItemRegistry, defaultEventItemRegistry } from "../items/event-item-registry";
-import type { EventItemDefinition } from "../items/event-item-definition";
+import { Event, type EventCreateProps } from "./event.entity";
 
-function routineItem(overrides: Partial<Parameters<typeof EventItem.create>[0]> = {}) {
-  return EventItem.create({
-    position: 0,
-    type: "routine",
-    schemaVersion: 1,
-    isPrimary: true,
-    data: {},
+const startedAt = new Date("2026-08-31T12:00:00.000Z");
+
+function props(overrides: Partial<EventCreateProps> = {}): EventCreateProps {
+  return {
+    userId: "user-1",
+    name: "Planejamento",
+    description: "",
+    startedAt,
+    tags: [],
+    interruptions: [],
     ...overrides,
-  });
+  };
 }
 
 describe("Event aggregate", () => {
-  test("creates an aggregate with revision 1 and a derived primary item", () => {
-    const routine = routineItem();
-
-    const event = Event.create({
-      userId: "user-1",
-      name: "Planejamento",
-      description: "",
-      startedAt: new Date("2026-08-31T12:00:00.000Z"),
-      tags: [" Trabalho ", "trabalho"],
-      interruptions: [],
-      items: [routine],
-    });
+  test("creates a routine aggregate with revision 1 and no notes", () => {
+    const event = Event.create(props({ tags: [" Trabalho ", "trabalho"] }));
 
     expect(event.revision).toBe(1);
-    expect(event.primaryItemId).toBe(routine.id);
+    expect(event.kind).toBe("routine");
+    expect(event.noteLinks).toEqual([]);
     expect(event.tags).toEqual(["trabalho"]);
     expect(event.taskIds).toEqual([]);
   });
 
-  test("dedupes taskIds and revise replaces the whole list", () => {
-    const event = Event.create({
-      userId: "user-1",
-      name: "Planejamento",
-      description: "",
-      startedAt: new Date("2026-08-31T12:00:00.000Z"),
-      tags: [],
-      interruptions: [],
-      items: [routineItem()],
-      taskIds: ["task-1", "task-1", "task-2"],
+  test("a kind needs no note to exist", () => {
+    const event = Event.create(props({ kind: "meal" }));
+
+    expect(event.kind).toBe("meal");
+    expect(event.noteLinks).toEqual([]);
+  });
+
+  test("a new event without a finish gets the typical duration of its kind", () => {
+    const minutes = (kind: "routine" | "meal" | "sleep" | "training") =>
+      Event.create(props({ kind })).getDurationMinutes();
+
+    expect(minutes("routine")).toBe(60);
+    expect(minutes("meal")).toBe(20);
+    expect(minutes("sleep")).toBe(7 * 60);
+    expect(minutes("training")).toBe(90);
+  });
+
+  test("keeps note links in order and revise replaces the whole list", () => {
+    const event = Event.create(
+      props({
+        noteLinks: [
+          { noteId: "n1", fromRecurrence: true },
+          { noteId: "n2", fromRecurrence: false },
+        ],
+      }),
+    );
+
+    expect(event.noteLinks.map((link) => link.noteId)).toEqual(["n1", "n2"]);
+
+    const reordered = event.revise({
+      noteLinks: [
+        { noteId: "n2", fromRecurrence: false },
+        { noteId: "n1", fromRecurrence: true },
+      ],
     });
+    expect(reordered.noteLinks.map((link) => link.noteId)).toEqual(["n2", "n1"]);
+
+    const unchanged = event.revise({ name: "Outro" });
+    expect(unchanged.noteLinks).toEqual(event.noteLinks);
+  });
+
+  test("rejects the same note linked twice", () => {
+    expect(() =>
+      Event.create(
+        props({
+          noteLinks: [
+            { noteId: "n1", fromRecurrence: false },
+            { noteId: "n1", fromRecurrence: false },
+          ],
+        }),
+      ),
+    ).toThrow(/Duplicate note link/);
+  });
+
+  test("dedupes taskIds and revise replaces the whole list", () => {
+    const event = Event.create(props({ taskIds: ["task-1", "task-1", "task-2"] }));
 
     expect(event.taskIds).toEqual(["task-1", "task-2"]);
 
@@ -57,39 +93,13 @@ describe("Event aggregate", () => {
   });
 
   test("a new event defaults to a 5-minute-before notification, but rehydrate never invents one", () => {
-    const created = Event.create({
-      userId: "user-1",
-      name: "Planejamento",
-      description: "",
-      startedAt: new Date("2026-08-31T12:00:00.000Z"),
-      tags: [],
-      interruptions: [],
-      items: [routineItem()],
-    });
+    const created = Event.create(props());
     expect(created.notifyOffsetsMinutes).toEqual([5]);
 
-    const createdWithoutNotifications = Event.create({
-      userId: "user-1",
-      name: "Planejamento",
-      description: "",
-      startedAt: new Date("2026-08-31T12:00:00.000Z"),
-      tags: [],
-      interruptions: [],
-      items: [routineItem()],
-      notifyOffsetsMinutes: [],
-    });
+    const createdWithoutNotifications = Event.create(props({ notifyOffsetsMinutes: [] }));
     expect(createdWithoutNotifications.notifyOffsetsMinutes).toEqual([]);
 
-    const rehydrated = Event.rehydrate({
-      userId: "user-1",
-      name: "Existente",
-      description: "",
-      startedAt: new Date("2026-08-31T12:00:00.000Z"),
-      tags: [],
-      interruptions: [],
-      items: [routineItem()],
-      revision: 5,
-    });
+    const rehydrated = Event.rehydrate({ ...props({ name: "Existente" }), revision: 5 });
     expect(rehydrated.notifyOffsetsMinutes).toEqual([]);
 
     const revised = created.revise({ notifyOffsetsMinutes: [15, 60] });
@@ -97,228 +107,34 @@ describe("Event aggregate", () => {
     expect(created.notifyOffsetsMinutes).toEqual([5]);
   });
 
-  test("rejects incompatible event items", () => {
-    const meal = EventItem.create({
-      position: 0,
-      type: "meal",
-      schemaVersion: 1,
-      isPrimary: true,
-      data: {
-        name: "Almoço",
-        description: "",
-        foodItems: [],
-        totals: {
-          totalCaloriesKcal: 0,
-          totalProteinGrams: 0,
-          totalCarbohydrateGrams: 0,
-          totalFatGrams: 0,
-          totalFiberGrams: 0,
-        },
-      },
-    });
-    const sleep = EventItem.create({
-      position: 1,
-      type: "sleep",
-      schemaVersion: 1,
-      isPrimary: false,
-      data: { trackedSleepTime: 480, score: 80 },
-    });
-
-    expect(() =>
-      Event.create({
-        userId: "user-1",
-        name: "Invalido",
-        description: "",
-        startedAt: new Date("2026-08-31T12:00:00.000Z"),
-        tags: [],
-        interruptions: [],
-        items: [meal, sleep],
-      }),
-    ).toThrow("Incompatible event items");
-  });
-
-  test("requires exactly one primary item", () => {
-    const first = routineItem({ position: 0, isPrimary: false, id: undefined });
-
-    expect(() =>
-      Event.create({
-        userId: "user-1",
-        name: "Sem principal",
-        description: "",
-        startedAt: new Date("2026-08-31T12:00:00.000Z"),
-        tags: [],
-        interruptions: [],
-        items: [first],
-      }),
-    ).toThrow("Event requires exactly one primary item");
-  });
-
-  test("rejects a duplicate item id", () => {
-    const shared = routineItem();
-    const second = EventItem.create({
-      id: shared.id,
-      position: 1,
-      type: "routine",
-      schemaVersion: 1,
-      isPrimary: false,
-      data: {},
-    });
-
-    expect(() =>
-      Event.create({
-        userId: "user-1",
-        name: "Ids duplicados",
-        description: "",
-        startedAt: new Date("2026-08-31T12:00:00.000Z"),
-        tags: [],
-        interruptions: [],
-        items: [shared, second],
-      }),
-    ).toThrow(/Duplicate event item id/);
-  });
-
-  test("rejects a duplicate item position", () => {
-    const first = routineItem({ position: 0, isPrimary: true });
-    const second = EventItem.create({
-      position: 0,
-      type: "routine",
-      schemaVersion: 1,
-      isPrimary: false,
-      data: {},
-    });
-
-    expect(() =>
-      Event.create({
-        userId: "user-1",
-        name: "Posicoes duplicadas",
-        description: "",
-        startedAt: new Date("2026-08-31T12:00:00.000Z"),
-        tags: [],
-        interruptions: [],
-        items: [first, second],
-      }),
-    ).toThrow(/Duplicate event item position/);
-  });
-
-  test("rejects a primary item that was removed without a substitute", () => {
-    const nonPrimary = routineItem({ isPrimary: false });
-
-    expect(() =>
-      Event.create({
-        userId: "user-1",
-        name: "Sem substituto",
-        description: "",
-        startedAt: new Date("2026-08-31T12:00:00.000Z"),
-        tags: [],
-        interruptions: [],
-        items: [nonPrimary],
-      }),
-    ).toThrow("Event requires exactly one primary item");
-  });
-
   test("rejects a finishedAt earlier than startedAt", () => {
     expect(() =>
-      Event.create({
-        userId: "user-1",
-        name: "Invalido",
-        description: "",
-        startedAt: new Date("2026-08-31T12:00:00.000Z"),
-        finishedAt: new Date("2026-08-31T11:00:00.000Z"),
-        tags: [],
-        interruptions: [],
-        items: [routineItem()],
-      }),
+      Event.create(props({ finishedAt: new Date("2026-08-31T11:00:00.000Z") })),
     ).toThrow("finishedAt must be equal to or after startedAt");
   });
 
   test("rejects a revision below 1 on rehydrate", () => {
-    expect(() =>
-      Event.rehydrate({
-        userId: "user-1",
-        name: "Invalido",
-        description: "",
-        startedAt: new Date("2026-08-31T12:00:00.000Z"),
-        tags: [],
-        interruptions: [],
-        items: [routineItem()],
-        revision: 0,
-      }),
-    ).toThrow("Event revision must be an integer >= 1");
+    expect(() => Event.rehydrate({ ...props(), revision: 0 })).toThrow(
+      "Event revision must be an integer >= 1",
+    );
   });
 
-  test("rehydrate keeps the persisted revision instead of incrementing it", () => {
-    const event = Event.rehydrate({
-      userId: "user-1",
-      name: "Existente",
-      description: "",
-      startedAt: new Date("2026-08-31T12:00:00.000Z"),
-      tags: [],
-      interruptions: [],
-      items: [routineItem()],
-      revision: 5,
-    });
+  test("rehydrate keeps the persisted revision and kind instead of incrementing", () => {
+    const event = Event.rehydrate({ ...props({ kind: "sleep" }), revision: 5 });
 
     expect(event.revision).toBe(5);
+    expect(event.kind).toBe("sleep");
   });
 
-  test("revise increments the revision and rebuilds the aggregate", () => {
-    const event = Event.create({
-      userId: "user-1",
-      name: "Planejamento",
-      description: "",
-      startedAt: new Date("2026-08-31T12:00:00.000Z"),
-      tags: [],
-      interruptions: [],
-      items: [routineItem()],
-    });
+  test("revise increments the revision, can change the kind and rebuilds the aggregate", () => {
+    const event = Event.create(props());
 
-    const revised = event.revise({ name: "Planejamento revisado" });
+    const revised = event.revise({ name: "Planejamento revisado", kind: "training" });
 
     expect(revised.revision).toBe(2);
     expect(revised.name).toBe("Planejamento revisado");
+    expect(revised.kind).toBe("training");
     expect(event.revision).toBe(1);
-  });
-
-  test("lets an extension type without incompatibilities coexist with routine", () => {
-    const noteDefinition: EventItemDefinition<{ text: string }> = {
-      type: "note",
-      currentSchemaVersion: 1,
-      incompatibleWith: [],
-      parse(data) {
-        return data as { text: string };
-      },
-    };
-    const registry = new EventItemRegistry([
-      ...(["routine", "meal", "sleep", "training"] as const).map((type) => {
-        const definition = defaultEventItemRegistry.getDefinition(type);
-        if (!definition) throw new Error(`Missing event item definition: ${type}`);
-        return definition;
-      }),
-      noteDefinition,
-    ]);
-
-    const routine = EventItem.create(
-      { position: 0, type: "routine", schemaVersion: 1, isPrimary: true, data: {} },
-      registry,
-    );
-    const note = EventItem.create(
-      { position: 1, type: "note", schemaVersion: 1, isPrimary: false, data: { text: "oi" } },
-      registry,
-    );
-
-    const event = Event.create(
-      {
-        userId: "user-1",
-        name: "Com extensao",
-        description: "",
-        startedAt: new Date("2026-08-31T12:00:00.000Z"),
-        tags: [],
-        interruptions: [],
-        items: [routine, note],
-      },
-      registry,
-    );
-
-    expect(event.items).toHaveLength(2);
+    expect(event.kind).toBe("routine");
   });
 });

@@ -1,6 +1,7 @@
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
 import type { EventCommandParsingGateway } from "../../api-core/events/gateways/event-command-parsing.gateway";
 import type { CreateEventInput } from "@repo/contracts";
+import type { EventKind } from "../../domain";
 import { resolveEventSchedule } from "../../api-core/events/services/event-schedule.service";
 import { EVENT_TIME_ZONE } from "../../api-core/events/create-event.usecase";
 import type { CreateEventUseCase } from "../../api-core/events/create-event.usecase";
@@ -19,7 +20,7 @@ export class CreateEventFromTranscriptUseCase {
   async execute(
     input: { transcript: string },
     actor: AuthenticatedUser,
-  ): Promise<{ eventId: string; primaryItemType: string }> {
+  ): Promise<{ eventId: string; kind: EventKind }> {
     const transcript = input.transcript?.trim() ?? "";
     if (!transcript) throw new Error(EMPTY_TRANSCRIPT_ERROR);
     if (transcript.length > MAX_TRANSCRIPT_LENGTH) throw new Error(LONG_TRANSCRIPT_ERROR);
@@ -28,9 +29,9 @@ export class CreateEventFromTranscriptUseCase {
     // A frase falada sempre vira a descricao, para o usuario saber o que foi entendido ao editar.
     const eventInput: CreateEventInput = { ...parsed.input, description: transcript };
     const schedule = resolveEventSchedule(parsed.schedule, this.clock(), EVENT_TIME_ZONE);
-    const { eventId } = await this.createEventUseCase.execute(eventInput, actor, schedule);
-    const primary = parsed.input.items.find((item) => item.isPrimary) ?? parsed.input.items[0];
+    const prepared = await this.createEventUseCase.prepare(eventInput, actor, schedule);
+    await this.createEventUseCase.save(prepared);
 
-    return { eventId, primaryItemType: primary.type };
+    return { eventId: prepared.event.id, kind: prepared.event.kind };
   }
 }

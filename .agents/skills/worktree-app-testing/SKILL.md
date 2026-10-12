@@ -17,8 +17,10 @@ Este monorepo tem um unico `.env`/`.env.local` na raiz e, por padrao, portas
 fixas (web 3000, api 3001, auth 3002, Postgres 54391). Se varias worktrees
 rodarem a app ao mesmo tempo sem isolamento, uma pisa na porta e no banco da
 outra. `scripts/worktree/` resolve isso: cada worktree ganha seu proprio
-`.env.local` com portas livres calculadas na hora e seu proprio container
-Postgres (com uma base para a API e outra para o Auth).
+`.env.local` com portas livres calculadas na hora, bases proprias para a API
+(`<worktree>`) e para o Auth (`<worktree>_auth`) dentro do Postgres
+compartilhado (porta 54391), fila `<worktree>.health` no RabbitMQ
+compartilhado e o dominio `<worktree>.braid.local` (Caddy, porta 8080).
 
 ## Passo a passo
 
@@ -28,8 +30,8 @@ Postgres (com uma base para a API e outra para o Auth).
    ```
    Se `nao-provisionada`, rode `bash scripts/worktree/provision-env.sh` (ou
    `pnpm worktree:provision`) de dentro da worktree. Isso gera o
-   `.env.local`, sobe o Postgres da worktree, cria a base do auth, roda as
-   migrations e builda os pacotes. Leva um tempo na primeira vez — normal.
+   `.env.local`, cria as bases e a fila da worktree, roda as migrations, cria o
+   admin `admin@admin.com`, builda os pacotes e sobe web/api/auth. Leva um tempo na primeira vez — normal.
    Se voce esta na worktree principal do checkout (a original, nao uma criada
    com `git worktree add`), o script se recusa a rodar de proposito: a
    principal e gerenciada manualmente pelo desenvolvedor, nao por este
@@ -37,7 +39,7 @@ Postgres (com uma base para a API e outra para o Auth).
 
 2. **Leia as portas desta worktree** direto do `.env.local`:
    ```bash
-   grep -E '^(WEB_PORT|API_PORT|AUTH_PORT|METRO_PORT|POSTGRES_HOST_PORT)=' .env.local
+   grep -E '^(WEB_PORT|API_PORT|AUTH_PORT|POSTGRES_HOST_PORT)=' .env.local
    ```
 
 3. **Suba so o que o teste precisa**, nunca a stack inteira por reflexo.
@@ -72,10 +74,9 @@ Postgres (com uma base para a API e outra para o Auth).
      que a mudanca afeta, nao so a tela inicial.
 
 6. **Ao terminar**, encerre os processos de dev que voce subiu em background
-   (nao precisa derrubar o Postgres da worktree — deixar rodando e normal
-   entre sessoes de trabalho na mesma worktree). Só rode
-   `bash scripts/worktree/teardown.sh <caminho>` quando for remover a
-   worktree de vez — isso apaga o container e o volume do Postgres dela.
+   (as bases e a fila da worktree ficam; isso e normal entre sessoes). Só rode
+   `pnpm worktree:teardown <caminho>` quando for remover a worktree de vez —
+   isso apaga as bases e as filas dela.
 
 ## O que nao fazer
 

@@ -1,33 +1,22 @@
 import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import type { EventDetailDto, EventItemDto } from "@/lib/api/contracts";
+import type { EventDetailDto, NoteDto } from "@/lib/api/contracts";
 import { EventDetailsModal } from "./EventDetailsModal";
+import { noteOf } from "./note-fixtures";
 
 
-const routineItem: EventItemDto = {
-  id: "routine-item",
-  position: 0,
-  type: "routine",
-  schemaVersion: 1,
-  isPrimary: false,
-  data: {},
-};
+const textNote: NoteDto = noteOf({
+  id: "text-note",
+  type: "text",
+  name: "Lembrete",
+  data: { body: "Levar a garrafa" },
+});
 
-const sleepItem: EventItemDto = {
-  id: "sleep-item",
-  position: 1,
-  type: "sleep",
-  schemaVersion: 1,
-  isPrimary: false,
-  data: { trackedSleepTime: 480, score: 83 },
-};
+const sleepNote: NoteDto = noteOf({ id: "sleep-note", type: "sleep", data: { trackedSleepTime: 480, score: 83 } });
 
-const trainingItem: EventItemDto = {
-  id: "training-item",
-  position: 2,
+const trainingNote: NoteDto = noteOf({
+  id: "training-note",
   type: "training",
-  schemaVersion: 1,
-  isPrimary: false,
   data: {
     caloriesBurned: 300,
     workouts: [
@@ -42,14 +31,11 @@ const trainingItem: EventItemDto = {
       },
     ],
   },
-};
+});
 
-const mealItem: EventItemDto = {
-  id: "meal-item",
-  position: 3,
+const mealNote: NoteDto = noteOf({
+  id: "meal-note",
   type: "meal",
-  schemaVersion: 1,
-  isPrimary: true,
   data: {
     name: "Almoço",
     description: "Arroz",
@@ -77,7 +63,7 @@ const mealItem: EventItemDto = {
       totalFiberGrams: 0.4,
     },
   },
-};
+});
 
 function anEvent(overrides: Partial<EventDetailDto> = {}): EventDetailDto {
   return {
@@ -92,8 +78,8 @@ function anEvent(overrides: Partial<EventDetailDto> = {}): EventDetailDto {
     notifyOffsetsMinutes: [],
     interruptions: [],
     revision: 1,
-    primaryItemId: "meal-item",
-    items: [routineItem, sleepItem, trainingItem, mealItem],
+    kind: "meal",
+    notes: [textNote, sleepNote, trainingNote, mealNote],
     ...overrides,
   };
 }
@@ -119,16 +105,22 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-test("names the event after the item pointed by primaryItemId, not the first of the list", async () => {
-  // A ordem dos itens e a que o usuario montou; ser o principal e outra coisa.
-  // Ler pela posicao mostraria "Rotina" num evento que e uma refeicao.
+test("names the event after its kind, not after the first note of the list", async () => {
+  // A ordem das notes e a que o usuario montou; a natureza do evento e o `kind`.
+  // Ler pela posicao mostraria o texto de uma nota num evento que e uma refeicao.
   open(anEvent());
 
   expect(await screen.findByText("Refeição")).toBeInTheDocument();
   expect(screen.queryByText("Rotina")).not.toBeInTheDocument();
 });
 
-test("renders the payload of the four known item types", async () => {
+test("an event needs no note: the kind alone names it", async () => {
+  open(anEvent({ kind: "sleep", notes: [] }));
+
+  expect(await screen.findByText("Sono", { selector: "span" })).toBeInTheDocument();
+});
+
+test("renders the payload of the four known note types", async () => {
   open(anEvent());
 
   expect(await screen.findByText(/Tempo monitorado: 480 min/)).toBeInTheDocument();
@@ -137,20 +129,14 @@ test("renders the payload of the four known item types", async () => {
   expect(screen.getByText(/30 min · 300 kcal/)).toBeInTheDocument();
   expect(screen.getByText(/Arroz/)).toBeInTheDocument();
   expect(screen.getByText("130 kcal")).toBeInTheDocument();
-  // Rotina nao tem payload: nao ha secao para ela.
-  expect(screen.queryByText("Rotina", { selector: "h4" })).not.toBeInTheDocument();
+  // A nota de texto aparece com o titulo dela e o corpo.
+  expect(screen.getByText("Lembrete")).toBeInTheDocument();
+  expect(screen.getByText("Levar a garrafa")).toBeInTheDocument();
 });
 
 test("a type this frontend does not know yet does not break the modal", async () => {
-  const unknownItem = {
-    id: "unknown-item",
-    position: 0,
-    type: "meditation",
-    schemaVersion: 1,
-    isPrimary: true,
-    data: { minutes: 20 },
-  } as unknown as EventItemDto;
-  open(anEvent({ primaryItemId: "unknown-item", items: [unknownItem] }));
+  const unknownNote = noteOf({ id: "unknown-note", type: "meditation", data: { minutes: 20 } });
+  open(anEvent({ kind: "meditation" as never, notes: [unknownNote] }));
 
   expect(await screen.findByText("Evento")).toBeInTheDocument();
   expect(screen.getByRole("dialog", { name: "Dia cheio" })).toBeInTheDocument();

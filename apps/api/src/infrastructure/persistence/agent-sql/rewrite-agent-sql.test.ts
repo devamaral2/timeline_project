@@ -53,9 +53,11 @@ describe("logical schema", () => {
   });
 
   test("every CTE filters by the user parameter", () => {
+    // `recurrences` e apagada de verdade (nao ha `deleted_at`): so ela escapa da segunda regra.
+    const HARD_DELETED = new Set(["recurrences"]);
     for (const table of logicalTables(OWNER)) {
       expect(table.where).toContain("user_id = $1");
-      expect(table.where).toContain("deleted_at IS NULL");
+      if (!HARD_DELETED.has(table.name)) expect(table.where).toContain("deleted_at IS NULL");
     }
   });
 

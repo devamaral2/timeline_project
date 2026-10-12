@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 import { Food } from "./food.entity";
 import { Meal } from "./meal.entity";
-import { calculateMealTotals } from "../../events/items/meal-item";
+import { calculateMealTotals } from "../../notes/types/meal-item";
 
 const foodProps = {
   name: "Arroz",

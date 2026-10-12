@@ -1,0 +1,31 @@
+{
+  "routes": {
+    "read": {
+      "description": "Consulta pura: só lê. Nenhuma skill de escrita.",
+      "readSkills": ["query_data", "get_day_context"],
+      "writeSkills": [],
+      "prompt": "read"
+    },
+    "single": {
+      "description": "Uma entidade reconhecida pelo JEV: recebe só a skill de escrita da rota (jev-routing.json › targetSkills).",
+      "readSkills": ["query_data", "get_day_context"],
+      "writeSkills": "routed",
+      "prompt": "write"
+    },
+    "complex": {
+      "description": "Fallback: várias entidades, nota, exclusão, tipo desconhecido, baixa certeza ou falha do JEV. Recebe todas as skills de escrita.",
+      "readSkills": ["query_data", "get_day_context"],
+      "writeSkills": "all",
+      "prompt": "write"
+    }
+  },
+  "limits": {
+    "maxSteps": 12,
+    "maxCostUsd": 0.25,
+    "toolTimeoutMs": 30000,
+    "runTimeoutMs": 120000,
+    "maxToolResultChars": 24000,
+    "maxCommands": 30,
+    "maxDayContextChars": 20000
+  }
+}

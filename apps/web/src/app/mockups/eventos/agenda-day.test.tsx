@@ -45,9 +45,61 @@ test("future and past days neither start timers nor add missed annotations", () 
 
 test("empty days can be omitted from the continuous list", () => {
   const { rerender } = render(<AgendaDay {...props} events={[]} />);
-  expect(screen.getByText("Um dia livre na sua agenda.")).toBeInTheDocument();
+  expect(screen.getByText("Um dia livre, do seu jeito.")).toBeInTheDocument();
 
   rerender(<AgendaDay {...props} events={[]} hideWhenEmpty />);
   expect(screen.queryByRole("region")).not.toBeInTheDocument();
-  expect(screen.queryByText("Um dia livre na sua agenda.")).not.toBeInTheDocument();
+  expect(screen.queryByText("Um dia livre, do seu jeito.")).not.toBeInTheDocument();
+});
+
+test("an event that already started and has an end time still gets the running highlight", () => {
+  render(<AgendaDay {...props} events={[
+    { name: "Reunião longa", type: "routine", time: "09:00 — 11:00", minutes: 120, duration: "2 h", startedAt: "2026-09-14T09:00:00-03:00", finishedAt: "2026-09-14T11:00:00-03:00" },
+    { name: "Mais tarde", type: "meal", time: "12:00 — 12:30", minutes: 30, duration: "30 min", startedAt: "2026-09-14T12:00:00-03:00", finishedAt: "2026-09-14T12:30:00-03:00" },
+  ]} />);
+
+  expect(screen.getByRole("button", { name: "Reunião longa" }).closest("article")).toHaveAttribute("data-time-position", "running");
+  expect(screen.getByRole("button", { name: "Mais tarde" }).closest("article")).toHaveAttribute("data-time-position", "upcoming");
+});
+
+const slotsOf = () => Array.from(document.querySelectorAll<HTMLElement>("[data-free-time]"));
+
+test("free time blocks fill the gaps between events and until midnight, with their duration highlighted", () => {
+  render(<AgendaDay {...props} dayKey="2026-09-15" events={[
+    { name: "Almoço", type: "meal", time: "13:00 — 14:00", minutes: 60, duration: "1 h", startedAt: "2026-09-15T13:00:00-03:00", finishedAt: "2026-09-15T14:00:00-03:00" },
+    { name: "Jantar", type: "meal", time: "20:00 — 21:00", minutes: 60, duration: "1 h", startedAt: "2026-09-15T20:00:00-03:00", finishedAt: "2026-09-15T21:00:00-03:00" },
+  ]} />);
+
+  const [between, afterLast] = slotsOf();
+  expect(slotsOf()).toHaveLength(2);
+  expect(between).toHaveTextContent("Tempo livre14:00 — 20:00");
+  expect(within(between).getByText("6")).toBeInTheDocument();
+  expect(within(between).getByText("h")).toBeInTheDocument();
+  expect(afterLast).toHaveTextContent("Tempo livre21:00 — 24:00");
+  expect(within(afterLast).getByText("3")).toBeInTheDocument();
+  // São leitura: não são cartões de evento nem têm ação.
+  expect(screen.getAllByRole("article")).toHaveLength(2);
+  expect(within(between).queryByRole("button")).not.toBeInTheDocument();
+  expect(within(between).queryByRole("link")).not.toBeInTheDocument();
+});
+
+test("free time keeps the chronological order and marks the block that is happening now", () => {
+  render(<AgendaDay {...props} now={new Date("2026-09-14T15:00:00-03:00").getTime()} events={[
+    { name: "Manhã", type: "routine", time: "08:00 — 09:00", minutes: 60, duration: "1 h", startedAt: "2026-09-14T08:00:00-03:00", finishedAt: "2026-09-14T09:00:00-03:00" },
+    { name: "Noite", type: "routine", time: "20:00 — 21:00", minutes: 60, duration: "1 h", startedAt: "2026-09-14T20:00:00-03:00", finishedAt: "2026-09-14T21:00:00-03:00" },
+  ]} />);
+
+  const items = screen.getAllByRole("listitem").map((item) => item.textContent ?? "");
+  expect(items[0]).toContain("Manhã");
+  expect(items[1]).toContain("Tempo livre");
+  expect(items[2]).toContain("Noite");
+  expect(items[3]).toContain("Tempo livre");
+  expect(slotsOf()[0]).toHaveAttribute("data-time-position", "now");
+  expect(within(slotsOf()[0]).getByText("Livre agora")).toBeInTheDocument();
+  expect(slotsOf()[1]).toHaveAttribute("data-time-position", "upcoming");
+});
+
+test("an empty day and the event count do not get free time blocks", () => {
+  render(<AgendaDay {...props} events={[]} />);
+  expect(slotsOf()).toHaveLength(0);
 });

@@ -1,6 +1,6 @@
 import { ulid } from "ulid";
 import { EventValidationError } from "../../events/errors/event.errors";
-import type { FoodItem } from "../../events/items/food-item";
+import type { FoodItem } from "../../notes/types/food-item";
 import type { CatalogScope } from "../types/catalog-scope";
 
 export interface FoodMacronutrients {
@@ -126,9 +126,8 @@ export class Food {
         totalFatGrams: round2(this.macronutrients.totalFatGrams * ratio),
         fiberGrams: round2(this.macronutrients.fiberGrams * ratio),
       },
-      micronutrients: Object.fromEntries(
-        Object.entries(this.micronutrients).map(([key, value]) => [key, round2(value * ratio)]),
-      ),
+      // Micronutrientes deixaram de existir nas notas; o catalogo ainda os guarda ate a migracao de `food`.
+      micronutrients: {},
     };
   }
 }

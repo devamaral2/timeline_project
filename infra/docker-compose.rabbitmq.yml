@@ -1,0 +1,26 @@
+# RabbitMQ local compartilhado por todas as worktrees. Um unico broker; cada
+# worktree ganha filas proprias nomeadas <worktree>.<fila> (ex.: main.health).
+# Subido por scripts/worktree/rabbitmq.sh com as credenciais de
+# ~/.config/braid/rabbitmq.env (fora do Git).
+name: braid-shared
+services:
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: braid-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:?set in ~/.config/braid/rabbitmq.env}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:?set in ~/.config/braid/rabbitmq.env}
+    ports:
+      - "127.0.0.1:${RABBITMQ_HOST_PORT:-5672}:5672"
+      - "127.0.0.1:${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 10s
+      retries: 20
+
+volumes:
+  rabbitmq-data:

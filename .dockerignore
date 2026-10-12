@@ -23,12 +23,7 @@ node_modules
 .turbo
 **/*.tsbuildinfo
 
-# O mobile nao tem imagem, mas o package.json dele precisa continuar no
-# contexto: o pnpm-workspace.yaml casa apps/*, e sem ele o lockfile podado
-# nao bate com --frozen-lockfile.
-**/.expo
-apps/mobile/android
-apps/mobile/ios
+apps/mobile
 
 # A fonte canônica é versionável, mas o estado local nunca entra no build.
 .agents/local

@@ -6,6 +6,7 @@ import {
   NOTE_REPOSITORY,
   RECURRENCE_REPOSITORY,
   SCOPED_SQL_QUERY,
+  DAY_CONTEXT_QUERY,
   TASK_REPOSITORY,
   WORKOUT_CATALOG,
   PersistenceModule,
@@ -23,9 +24,12 @@ import type {
 import { OpenRouterEventCommandParsingGateway } from "./events/gateways/openrouter-event-command-parsing.gateway";
 import { OpenRouterMealParsingGateway } from "./events/gateways/openrouter-meal-parsing.gateway";
 import { CreateEventUseCase } from "./events/create-event.usecase";
+import { NoteBuilder } from "./notes/services/note-builder.service";
 import { MaterializeRecurrencesUseCase } from "./recurrences/materialize-recurrences.usecase";
 import { OpenRouterAgentGateway } from "./agent/gateways/openrouter-agent.gateway";
 import { RunAgentUseCase } from "./agent/run-agent.usecase";
+import { JevAgentRouter } from "./agent/routing/jev-agent.router";
+import type { DayContextQuery } from "./agent/day-context.query";
 import { RunChatTurnUseCase } from "./agent/run-chat-turn.usecase";
 
 @Module({ imports: [PersistenceModule] })
@@ -43,15 +47,19 @@ export class ApiCoreModule {
         { provide: OpenRouterMealParsingGateway, useFactory: () => new OpenRouterMealParsingGateway() },
         { provide: OpenRouterEventCommandParsingGateway, useFactory: () => new OpenRouterEventCommandParsingGateway() },
         {
+          provide: NoteBuilder,
+          inject: [OpenRouterMealParsingGateway, WORKOUT_CATALOG],
+          useFactory: (mealParsing: OpenRouterMealParsingGateway, workoutCatalog: WorkoutCatalog) =>
+            new NoteBuilder(mealParsing, workoutCatalog),
+        },
+        {
           provide: CreateEventUseCase,
-          inject: [EVENT_REPOSITORY, OpenRouterMealParsingGateway, WORKOUT_CATALOG],
-          useFactory: (
-            events: EventRepository,
-            mealParsing: OpenRouterMealParsingGateway,
-            workoutCatalog: WorkoutCatalog,
-          ) => new CreateEventUseCase(events, mealParsing, workoutCatalog),
+          inject: [EVENT_REPOSITORY, NOTE_REPOSITORY, NoteBuilder],
+          useFactory: (events: EventRepository, notes: NoteRepository, builder: NoteBuilder) =>
+            new CreateEventUseCase(events, notes, builder),
         },
         { provide: OpenRouterAgentGateway, useFactory: () => new OpenRouterAgentGateway() },
+        { provide: JevAgentRouter, useFactory: () => new JevAgentRouter() },
         {
           provide: RunAgentUseCase,
           inject: [
@@ -61,7 +69,11 @@ export class ApiCoreModule {
             EVENT_REPOSITORY,
             TASK_REPOSITORY,
             NOTE_REPOSITORY,
+            RECURRENCE_REPOSITORY,
             CreateEventUseCase,
+            JevAgentRouter,
+            DAY_CONTEXT_QUERY,
+            MaterializeRecurrencesUseCase,
           ],
           useFactory: (
             gateway: OpenRouterAgentGateway,
@@ -70,8 +82,15 @@ export class ApiCoreModule {
             events: EventRepository,
             tasks: TaskRepository,
             notes: NoteRepository,
+            recurrenceRepository: RecurrenceRepository,
             createEvent: CreateEventUseCase,
-          ) => new RunAgentUseCase(gateway, query, batchWriter, { events, tasks, notes }, createEvent),
+            router: JevAgentRouter,
+            dayContext: DayContextQuery,
+            recurrences: MaterializeRecurrencesUseCase,
+          ) => new RunAgentUseCase(
+            gateway, query, batchWriter, { events, tasks, notes, recurrences: recurrenceRepository }, createEvent,
+            undefined, undefined, undefined, router, dayContext, recurrences,
+          ),
         },
         {
           provide: RunChatTurnUseCase,
@@ -85,8 +104,10 @@ export class ApiCoreModule {
         MaterializeRecurrencesUseCase,
         OpenRouterMealParsingGateway,
         OpenRouterEventCommandParsingGateway,
+        NoteBuilder,
         CreateEventUseCase,
         OpenRouterAgentGateway,
+        JevAgentRouter,
         RunAgentUseCase,
         RunChatTurnUseCase,
       ],

@@ -1,5 +1,5 @@
 import { Apple, CircleDashed, Clock, Dumbbell, Moon, type LucideIcon } from "lucide-react";
-import type { EventPriority, KnownEventItemType, NotificationOffsetMinutes } from "@/lib/api/contracts";
+import type { EventKind, EventPriority, NotificationOffsetMinutes } from "@/lib/api/contracts";
 
 /**
  * O traco fino do desenho. O padrao do lucide (2) engorda o icone e, sobre o
@@ -8,7 +8,7 @@ import type { EventPriority, KnownEventItemType, NotificationOffsetMinutes } fro
 export const ICON_STROKE_WIDTH = 1.75;
 
 /**
- * Como um tipo de item se apresenta no cartao: o glifo do board da identidade,
+ * Como um tipo de evento se apresenta no cartao: o glifo do board da identidade,
  * o rotulo em portugues e a cor — que aparece no icone, no rotulo e, como
  * fundo, na barra de duracao do rodape. Dai o par de classes.
  */
@@ -19,7 +19,7 @@ export interface ItemTypeVisual {
   bar: string;
 }
 
-const knownVisuals: Record<KnownEventItemType, ItemTypeVisual> = {
+const knownVisuals: Record<EventKind, ItemTypeVisual> = {
   routine: { Icon: Clock, label: "Rotina", text: "text-routine", bar: "bg-routine" },
   meal: { Icon: Apple, label: "Refeição", text: "text-meal", bar: "bg-meal" },
   training: { Icon: Dumbbell, label: "Treino", text: "text-training", bar: "bg-training" },
@@ -29,7 +29,7 @@ const knownVisuals: Record<KnownEventItemType, ItemTypeVisual> = {
 /**
  * O tipo que este frontend ainda nao conhece.
  *
- * O registro de itens do backend cresce sem pedir licenca ao web: um tipo novo
+ * As naturezas de evento do backend crescem sem pedir licenca ao web: uma nova
  * chega pela rede antes de existir codigo aqui. Ele entra em cinza, com o
  * rotulo generico — o cartao continua legivel, e a timeline nao cai por causa
  * de um `undefined` num mapa.
@@ -42,16 +42,16 @@ const unknownVisual: ItemTypeVisual = {
 };
 
 /**
- * O visual do item que da a cara ao evento — o principal, e so ele. Os itens
- * secundarios de um evento composto aparecem no detalhe; mudar o icone ou a cor
- * do cartao por causa deles trocaria a resposta a pergunta "o que e isto?".
+ * O visual da natureza do evento (`kind`) — e so ela. As notes de um evento
+ * aparecem no detalhe; mudar o icone ou a cor do cartao por causa delas trocaria
+ * a resposta a pergunta "o que e isto?".
  */
 export function visualForItemType(type: string): ItemTypeVisual {
-  return knownVisuals[type as KnownEventItemType] ?? unknownVisual;
+  return knownVisuals[type as EventKind] ?? unknownVisual;
 }
 
-/** Os tipos que o formulario de criacao oferece. */
-export const creatableItemTypes: KnownEventItemType[] = ["routine", "meal", "training", "sleep"];
+/** As naturezas que o formulario de criacao oferece. */
+export const creatableItemTypes: EventKind[] = ["routine", "meal", "training", "sleep"];
 
 /**
  * O unico rotulo de situacao que sobrou.

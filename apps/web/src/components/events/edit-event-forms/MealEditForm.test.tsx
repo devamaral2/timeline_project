@@ -1,15 +1,13 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import type { EventDetailDto, EventItemDto, UpdateEventItemInput } from "@/lib/api/contracts";
+import type { EventDetailDto, NoteDto, UpdateEventNoteInput } from "@/lib/api/contracts";
+import { noteOf } from "../note-fixtures";
 import { MealEditForm } from "./MealEditForm";
 
 
-const mealItem: Extract<EventItemDto, { type: "meal" }> = {
-  id: "meal-item",
-  position: 0,
+const mealNote = noteOf({
+  id: "meal-note",
   type: "meal",
-  schemaVersion: 1,
-  isPrimary: true,
   data: {
     name: "Almoço",
     description: "Arroz e feijão",
@@ -26,7 +24,6 @@ const mealItem: Extract<EventItemDto, { type: "meal" }> = {
           totalFatGrams: 0.3,
           fiberGrams: 0.4,
         },
-        micronutrients: { ironMilligrams: 2.1 },
       },
     ],
     totals: {
@@ -36,16 +33,19 @@ const mealItem: Extract<EventItemDto, { type: "meal" }> = {
       totalFatGrams: 0.3,
       totalFiberGrams: 0.4,
     },
+    recipe: {
+      source: "model",
+      servings: 2,
+      ingredients: [{ name: "Arroz", quantity: "100 g" }],
+      steps: ["Lave o arroz.", "Cozinhe por 20 minutos."],
+    },
   },
-};
+}) as Extract<NoteDto, { type: "meal" }>;
 
-/** Um treino que veio antes da refeicao no mesmo evento — e nao e o principal. */
-const trainingItem: Extract<EventItemDto, { type: "training" }> = {
-  id: "training-item",
-  position: 1,
+/** Um treino que veio antes da refeicao no mesmo evento — e nao e o do tipo do evento. */
+const trainingNote = noteOf({
+  id: "training-note",
   type: "training",
-  schemaVersion: 1,
-  isPrimary: false,
   data: {
     caloriesBurned: 300,
     workouts: [
@@ -60,7 +60,7 @@ const trainingItem: Extract<EventItemDto, { type: "training" }> = {
       },
     ],
   },
-};
+});
 
 const event: EventDetailDto = {
   id: "event-1",
@@ -74,8 +74,8 @@ const event: EventDetailDto = {
   notifyOffsetsMinutes: [],
   interruptions: [],
   revision: 7,
-  primaryItemId: "meal-item",
-  items: [trainingItem, mealItem],
+  kind: "meal",
+  notes: [trainingNote, mealNote],
 };
 
 beforeEach(() => {
@@ -90,7 +90,7 @@ function save(): void {
   render(
     <MealEditForm
       event={event}
-      item={mealItem}
+      note={mealNote}
       onCancel={() => {}}
       onClose={() => {}}
       onUpdated={() => {}}
@@ -99,11 +99,11 @@ function save(): void {
   fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
 }
 
-function sentBody(): { expectedRevision: number; items: UpdateEventItemInput[] } {
+function sentBody(): { expectedRevision: number; notes: UpdateEventNoteInput[] } {
   const [, init] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
   return JSON.parse(init.body as string) as {
     expectedRevision: number;
-    items: UpdateEventItemInput[];
+    notes: UpdateEventNoteInput[];
   };
 }
 
@@ -114,34 +114,58 @@ test("sends the revision it read, so a stale tab loses instead of overwriting", 
   expect(sentBody().expectedRevision).toBe(7);
 });
 
-test("sends every item, and only the edited one is rewritten", async () => {
+test("sends every note, and only the edited one is rewritten", async () => {
   save();
 
   await waitFor(() => expect(fetch).toHaveBeenCalled());
-  const { items } = sentBody();
+  const { notes } = sentBody();
 
   // O PATCH substitui a lista inteira: o treino que ninguem tocou precisa
-  // atravessar igual, com o mesmo id, ou o merge o apagaria.
-  expect(items.map((item) => item.id)).toEqual(["training-item", "meal-item"]);
-  expect(items[0]).toMatchObject({ type: "training", isPrimary: false, data: trainingItem.data });
-  expect(items[1]).toMatchObject({ type: "meal", isPrimary: true, schemaVersion: 1 });
+  // atravessar so com o id — fica na lista sem ser reescrito —, ou sairia do evento.
+  expect(notes.map((note) => note.id)).toEqual(["training-note", "meal-note"]);
+  expect(notes[0]).toEqual({ id: "training-note" });
+  expect(notes[1]).toMatchObject({ type: "meal", schemaVersion: 1 });
 });
 
-test("carries the food data the form does not show", async () => {
+test("a meal event without a meal note creates it on save, after the notes it already has", async () => {
+  const bare: EventDetailDto = { ...event, notes: [trainingNote] };
+  render(
+    <MealEditForm event={bare} onCancel={() => {}} onClose={() => {}} onUpdated={() => {}} />,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
+
+  await waitFor(() => expect(fetch).toHaveBeenCalled());
+  const { notes } = sentBody();
+
+  expect(notes).toHaveLength(2);
+  expect(notes[0]).toEqual({ id: "training-note" });
+  // Uma note nova nao leva id: nasce no backend.
+  expect(notes[1]).not.toHaveProperty("id");
+  expect(notes[1]).toMatchObject({ type: "meal", data: { name: "Almoço", foodItems: [] } });
+});
+
+test("carries the meal data the form does not show, including the recipe", async () => {
   save();
 
   await waitFor(() => expect(fetch).toHaveBeenCalled());
-  const mealData = sentBody().items[1]?.data as (typeof mealItem)["data"];
+  const mealData = sentBody().notes[1]?.data as (typeof mealNote)["data"];
 
   expect(mealData.name).toBe("Almoço");
-  expect(mealData.foodItems[0]?.micronutrients).toEqual({ ironMilligrams: 2.1 });
+  expect(mealData.foodItems[0]).not.toHaveProperty("micronutrients");
+  // Salvar sem tocar na receita nao pode apaga-la: a API descarta o que nao recebe.
+  expect(mealData.recipe).toEqual({
+    source: "model",
+    servings: 2,
+    ingredients: [{ name: "Arroz", quantity: "100 g" }],
+    steps: ["Lave o arroz.", "Cozinhe por 20 minutos."],
+  });
 });
 
 test("rewrites the food item the user edited", async () => {
   render(
     <MealEditForm
       event={event}
-      item={mealItem}
+      note={mealNote}
       onCancel={() => {}}
       onClose={() => {}}
       onUpdated={() => {}}
@@ -151,7 +175,7 @@ test("rewrites the food item the user edited", async () => {
   fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
 
   await waitFor(() => expect(fetch).toHaveBeenCalled());
-  const mealData = sentBody().items[1]?.data as (typeof mealItem)["data"];
+  const mealData = sentBody().notes[1]?.data as (typeof mealNote)["data"];
 
   expect(mealData.foodItems[0]?.caloriesKcal).toBe(145.5);
   expect(mealData.foodItems[0]?.id).toBe("food-1");

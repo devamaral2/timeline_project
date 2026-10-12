@@ -6,6 +6,7 @@ import {
   type RecurrenceTarget,
 } from "../contracts/recurrence-rule";
 import { RecurrenceValidationError } from "../errors/recurrence.errors";
+import { normalizeNoteLinks } from "../../notes/types/note-link";
 
 export interface RecurrenceCreateProps {
   id?: string;
@@ -18,6 +19,11 @@ export interface RecurrenceCreateProps {
    * ocorrencia de ensaio antes de salvar.
    */
   template: Record<string, unknown>;
+  /**
+   * As notes de "todas as ocorrencias", na ordem em que aparecem. Sao a mesma
+   * note em todas elas: cada ocorrencia gerada ganha um vinculo proprio.
+   */
+  noteIds?: string[];
 }
 
 export interface RecurrenceRehydrateProps extends RecurrenceCreateProps {
@@ -28,6 +34,7 @@ export interface RecurrenceRehydrateProps extends RecurrenceCreateProps {
 export interface RecurrenceReviseChanges {
   rule?: Partial<RecurrenceRule>;
   template?: Record<string, unknown>;
+  noteIds?: string[];
 }
 
 const DAY_KEY = /^\d{4}-\d{2}-\d{2}$/;
@@ -70,16 +77,28 @@ export class Recurrence {
     readonly target: RecurrenceTarget,
     readonly rule: Readonly<RecurrenceRule>,
     readonly template: Readonly<Record<string, unknown>>,
+    readonly noteIds: readonly string[],
     readonly materializedThrough: string | undefined,
     readonly revision: number,
   ) {}
 
   static create(props: RecurrenceCreateProps): Recurrence {
-    return Recurrence.build({ ...props, id: props.id ?? ulid(), revision: 1, materializedThrough: undefined });
+    return Recurrence.build({
+      ...props,
+      id: props.id ?? ulid(),
+      noteIds: props.noteIds ?? [],
+      revision: 1,
+      materializedThrough: undefined,
+    });
   }
 
   static rehydrate(props: RecurrenceRehydrateProps): Recurrence {
-    return Recurrence.build({ ...props, id: props.id ?? ulid(), materializedThrough: props.materializedThrough });
+    return Recurrence.build({
+      ...props,
+      id: props.id ?? ulid(),
+      noteIds: props.noteIds ?? [],
+      materializedThrough: props.materializedThrough,
+    });
   }
 
   /**
@@ -94,7 +113,27 @@ export class Recurrence {
       target: this.target,
       rule: { ...this.rule, ...changes.rule },
       template: changes.template ?? { ...this.template },
+      noteIds: changes.noteIds ?? [...this.noteIds],
       materializedThrough: undefined,
+      revision: this.revision + 1,
+    });
+  }
+
+  /**
+   * As notes de "todas as ocorrencias" ganham mais algumas, no fim. Nao e uma
+   * revisao da regra: a marca d'agua fica onde esta, porque quem liga as notes as
+   * ocorrencias ja geradas e o repositorio; so conta uma versao a mais, para uma
+   * geracao em andamento perceber a mudanca e recomecar.
+   */
+  withNotes(noteIds: readonly string[]): Recurrence {
+    return Recurrence.build({
+      id: this.id,
+      userId: this.userId,
+      target: this.target,
+      rule: { ...this.rule },
+      template: { ...this.template },
+      noteIds: [...this.noteIds, ...noteIds.filter((noteId) => !this.noteIds.includes(noteId))],
+      materializedThrough: this.materializedThrough,
       revision: this.revision + 1,
     });
   }
@@ -107,6 +146,7 @@ export class Recurrence {
       target: this.target,
       rule: { ...this.rule },
       template: { ...this.template },
+      noteIds: [...this.noteIds],
       materializedThrough: dayKey,
       revision: this.revision,
     });
@@ -129,6 +169,9 @@ export class Recurrence {
     if (props.materializedThrough !== undefined && !isDayKey(props.materializedThrough)) {
       throw new RecurrenceValidationError("Invalid materializedThrough");
     }
+    const noteIds = normalizeNoteLinks(props.noteIds.map((noteId) => ({ noteId, fromRecurrence: false }))).map(
+      (link) => link.noteId,
+    );
 
     return new Recurrence(
       props.id,
@@ -136,6 +179,7 @@ export class Recurrence {
       props.target,
       Object.freeze(rule),
       Object.freeze(structuredClone(props.template)),
+      Object.freeze(noteIds),
       props.materializedThrough,
       props.revision,
     );

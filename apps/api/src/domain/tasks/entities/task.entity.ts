@@ -10,6 +10,7 @@ import { TagList } from "../../events/value-objects/tag-list";
 import { TaskId } from "../value-objects/task-id";
 import { TaskValidationError } from "../errors/task.errors";
 import { detachOccurrence, type OccurrenceLink } from "../../recurrences/types/occurrence-link";
+import { normalizeNoteLinks, type NoteLink } from "../../notes/types/note-link";
 import type { NotificationOffsetMinutes } from "../../notifications/types/notification-offset-minutes";
 
 export interface TaskCreateProps {
@@ -26,6 +27,8 @@ export interface TaskCreateProps {
   estimatedFinishAt?: Date;
   finishedAt?: Date;
   dependsOnTaskIds?: string[];
+  /** As notes da tarefa, na ordem em que aparecem. */
+  noteLinks?: NoteLink[];
   occurrence?: OccurrenceLink;
 }
 
@@ -45,6 +48,7 @@ export interface TaskReviseChanges {
   estimatedFinishAt?: Date;
   finishedAt?: Date;
   dependsOnTaskIds?: string[];
+  noteLinks?: NoteLink[];
 }
 
 interface TaskBuildProps {
@@ -61,6 +65,7 @@ interface TaskBuildProps {
   estimatedFinishAt: Date | undefined;
   finishedAt: Date | undefined;
   dependsOnTaskIds: string[];
+  noteLinks: NoteLink[];
   occurrence: OccurrenceLink | undefined;
   revision: number;
 }
@@ -86,6 +91,7 @@ export class Task {
   readonly estimatedFinishAt: Date | undefined;
   readonly finishedAt: Date | undefined;
   readonly dependsOnTaskIds: readonly string[];
+  readonly noteLinks: readonly NoteLink[];
   /** Presente quando a tarefa e uma ocorrencia de uma serie. */
   readonly occurrence: OccurrenceLink | undefined;
   readonly revision: number;
@@ -104,6 +110,7 @@ export class Task {
     this.estimatedFinishAt = props.estimatedFinishAt;
     this.finishedAt = props.finishedAt;
     this.dependsOnTaskIds = props.dependsOnTaskIds;
+    this.noteLinks = props.noteLinks;
     this.occurrence = props.occurrence;
     this.revision = props.revision;
   }
@@ -126,6 +133,7 @@ export class Task {
       ...props,
       tags: TagList.create(props.tags),
       dependsOnTaskIds: Array.from(new Set(props.dependsOnTaskIds)),
+      noteLinks: normalizeNoteLinks(props.noteLinks),
     });
   }
 
@@ -144,6 +152,7 @@ export class Task {
       estimatedFinishAt: props.estimatedFinishAt,
       finishedAt: props.finishedAt,
       dependsOnTaskIds: props.dependsOnTaskIds ?? [],
+      noteLinks: props.noteLinks ?? [],
       occurrence: props.occurrence,
       revision: 1,
     });
@@ -164,6 +173,7 @@ export class Task {
       estimatedFinishAt: props.estimatedFinishAt,
       finishedAt: props.finishedAt,
       dependsOnTaskIds: props.dependsOnTaskIds ?? [],
+      noteLinks: props.noteLinks ?? [],
       occurrence: props.occurrence,
       revision: props.revision,
     });
@@ -186,8 +196,33 @@ export class Task {
         changes.estimatedFinishAt !== undefined ? changes.estimatedFinishAt : this.estimatedFinishAt,
       finishedAt: changes.finishedAt !== undefined ? changes.finishedAt : this.finishedAt,
       dependsOnTaskIds: changes.dependsOnTaskIds ?? [...this.dependsOnTaskIds],
+      noteLinks: changes.noteLinks ?? [...this.noteLinks],
       occurrence: detachOccurrence(this.occurrence),
       revision: this.revision + 1,
+    });
+  }
+
+  /** Como `Event.withSeriesNotes`: a serie liga as notes, e a ocorrencia continua sendo dela. */
+  withSeriesNotes(noteIds: readonly string[]): Task {
+    const known = new Set(this.noteLinks.map((link) => link.noteId));
+    const added = noteIds.filter((noteId) => !known.has(noteId)).map((noteId) => ({ noteId, fromRecurrence: true }));
+    return Task.build({
+      id: this.id,
+      userId: this.userId,
+      parentTaskId: this.parentTaskId,
+      name: this.name,
+      description: this.description,
+      status: this.status,
+      priority: this.priority,
+      notifyOffsetsMinutes: [...this.notifyOffsetsMinutes],
+      tags: this.tags,
+      startedAt: this.startedAt,
+      estimatedFinishAt: this.estimatedFinishAt,
+      finishedAt: this.finishedAt,
+      dependsOnTaskIds: [...this.dependsOnTaskIds],
+      noteLinks: [...this.noteLinks, ...added],
+      occurrence: this.occurrence,
+      revision: this.revision,
     });
   }
 }

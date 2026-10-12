@@ -12,8 +12,16 @@ export type EventPriority = (typeof eventPriorities)[number];
 /** Numero livre de minutos antes do inicio — o usuario escolhe minutos ou dias na interface. */
 export type NotificationOffsetMinutes = number;
 
-export type KnownEventItemType = "routine" | "meal" | "sleep" | "training";
-export type RoutineData = Record<string, never>;
+/** A natureza do evento. Nao depende de ele ter uma note. */
+export type EventKind = "routine" | "meal" | "sleep" | "training";
+
+export const eventKinds: readonly EventKind[] = ["routine", "meal", "sleep", "training"];
+
+export type KnownNoteType = "text" | "meal" | "sleep" | "training";
+
+export interface TextNote {
+  body: string;
+}
 
 export interface FoodItemMacronutrients {
   carbohydratesGrams: number;
@@ -31,7 +39,8 @@ export interface FoodItem {
   approximateWeightGrams: number;
   caloriesKcal: number;
   macronutrients: FoodItemMacronutrients;
-  micronutrients: Record<string, number>;
+  /** @deprecated Micronutrientes deixaram de existir; a API ainda devolve `{}`. Nao use. */
+  micronutrients?: Record<string, number>;
 }
 
 export interface MealTotals {
@@ -42,6 +51,23 @@ export interface MealTotals {
   totalFiberGrams: number;
 }
 
+/** `model`: a receita foi proposta pelo modelo, nao dita pelo usuario. */
+export type MealRecipeSource = "user" | "model";
+
+export interface MealRecipeIngredient {
+  name: string;
+  quantity: string;
+}
+
+export interface MealRecipe {
+  source: MealRecipeSource;
+  servings?: number;
+  prepTimeMinutes?: number;
+  ingredients: MealRecipeIngredient[];
+  /** Modo de preparo, um passo por item. */
+  steps: string[];
+}
+
 export interface MealItem {
   sourceMealId?: string;
   sourceMealRevision?: number;
@@ -49,6 +75,7 @@ export interface MealItem {
   description: string;
   foodItems: FoodItem[];
   totals: MealTotals;
+  recipe?: MealRecipe;
 }
 
 export interface SleepItem {
@@ -102,36 +129,70 @@ export interface TrainingInputData {
   workouts: WorkoutInput[];
 }
 
-export interface EventItemDtoOf<TType extends KnownEventItemType, TData> {
+export interface NoteDtoOf<TType extends KnownNoteType, TData> {
   id: string;
-  position: number;
+  name: string;
   type: TType;
   schemaVersion: number;
-  isPrimary: boolean;
   data: TData;
+  /** Onde a nota aparece (vazio na solta); a API de notas preenche, os eventos nao. */
+  links?: NoteLinkDto[];
+  tags: string[];
+  revision: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export type EventItemDto =
-  | EventItemDtoOf<"routine", RoutineData>
-  | EventItemDtoOf<"meal", MealItem>
-  | EventItemDtoOf<"sleep", SleepItem>
-  | EventItemDtoOf<"training", TrainingData>;
+/** Onde a nota aparece: um evento ou uma tarefa. */
+export interface NoteLinkDto {
+  kind: "event" | "task";
+  id: string;
+  name: string;
+  /** A natureza do evento (routine, meal, training, sleep...); so para `kind: "event"`. */
+  eventKind?: string;
+  /** Quando o alvo acontece — inicio do evento ou da tarefa. */
+  at?: string;
+  /** Quando o evento terminou, se terminou; so para `kind: "event"`. */
+  endsAt?: string;
+}
+
+/** Uma note: `type` + `schemaVersion` dizem que forma o `data` tem. */
+export type NoteDto =
+  | NoteDtoOf<"text", TextNote>
+  | NoteDtoOf<"meal", MealItem>
+  | NoteDtoOf<"sleep", SleepItem>
+  | NoteDtoOf<"training", TrainingData>;
 
 export interface MealCreateInput {
   inputText: string;
 }
 
-export type CreateEventItemInput =
-  | { type: "routine"; isPrimary?: boolean; data?: Record<string, never> }
-  | { type: "meal"; isPrimary?: boolean; data: MealCreateInput }
-  | { type: "sleep"; isPrimary?: boolean; data?: Partial<SleepItem> }
-  | { type: "training"; isPrimary?: boolean; data?: TrainingInputData };
+interface NoteInputBase {
+  name?: string;
+  tags?: string[];
+}
 
-export type UpdateEventItemInput =
-  | { id?: string; type: "routine"; schemaVersion: number; isPrimary: boolean; data: RoutineData }
-  | { id?: string; type: "meal"; schemaVersion: number; isPrimary: boolean; data: MealItem }
-  | { id?: string; type: "sleep"; schemaVersion: number; isPrimary: boolean; data: SleepItem }
-  | { id?: string; type: "training"; schemaVersion: number; isPrimary: boolean; data: TrainingData };
+/** Uma note nova. `type` ausente e texto livre. */
+export type CreateNoteInput =
+  | (NoteInputBase & { type?: "text"; data: TextNote })
+  | (NoteInputBase & { type: "meal"; data: MealCreateInput })
+  | (NoteInputBase & { type: "sleep"; data?: Partial<SleepItem> })
+  | (NoteInputBase & { type: "training"; data?: TrainingInputData });
+
+export type NoteDataInput =
+  | { type: "text"; data: TextNote }
+  | { type: "meal"; data: MealItem }
+  | { type: "sleep"; data: SleepItem }
+  | { type: "training"; data: TrainingData };
+
+/**
+ * Uma entrada da lista de notes do evento ao editar: com `id` e sem `data`, a
+ * note so entra (ou continua) na lista; com `id` e `data`, tambem e editada; sem
+ * `id`, nasce uma note nova.
+ */
+export type UpdateEventNoteInput =
+  | (NoteInputBase & { id: string; type?: undefined; data?: undefined })
+  | (NoteInputBase & { id?: string; schemaVersion?: number } & NoteDataInput);
 
 export interface CreateEventInput {
   name?: string;
@@ -144,7 +205,11 @@ export interface CreateEventInput {
   startedAt?: string;
   /** ISO-8601. Ausente e um evento sem fim declarado. */
   finishedAt?: string;
-  items: CreateEventItemInput[];
+  /** A natureza do evento. Ausente e rotina. */
+  kind?: EventKind;
+  /** Notes novas, criadas junto com o evento. */
+  notes?: CreateNoteInput[];
+  noteIds?: string[];
   taskIds?: string[];
 }
 
@@ -195,15 +260,16 @@ export interface UpdateEventInput {
   priority?: EventPriority;
   notifyOffsetsMinutes?: NotificationOffsetMinutes[];
   interruptions?: InterruptionPatchInput[];
-  items?: UpdateEventItemInput[];
+  kind?: EventKind;
+  /** A lista completa de notes do evento, na ordem. */
+  notes?: UpdateEventNoteInput[];
   taskIds?: string[];
 }
 
 export interface TimelineEventCardDto {
   id: string;
-  primaryItemId: string;
-  primaryItemType: string;
-  itemTypes: string[];
+  kind: EventKind;
+  noteTypes: string[];
   missed: boolean;
   notifyOffsetsMinutes: NotificationOffsetMinutes[];
   name: string;
@@ -244,13 +310,30 @@ export interface EventDetailDto {
   notifyOffsetsMinutes: NotificationOffsetMinutes[];
   interruptions: EventDetailInterruptionDto[];
   revision: number;
-  primaryItemId: string;
-  items: EventItemDto[];
+  kind: EventKind;
+  notes: NoteDto[];
   taskIds?: string[];
 }
 
-export type WorkItemStatus = "inHold" | "todo" | "inProgress" | "done" | "cancel";
+export type WorkItemStatus = "todo" | "scheduled" | "toDefine" | "inHold" | "done" | "cancel";
 export type WorkItemPriority = "urgent" | "high" | "medium" | "low";
+
+/** O que `GET /api/tasks` devolve — a lista de tarefas e a usada pelos avisos. */
+export interface TaskSummaryDto {
+  id: string;
+  parentTaskId?: string;
+  name: string;
+  status: WorkItemStatus;
+  priority: WorkItemPriority;
+  notifyOffsetsMinutes: NotificationOffsetMinutes[];
+  tags: string[];
+  startedAt?: string;
+  estimatedFinishAt?: string;
+  finishedAt?: string;
+  /** Ids das tarefas de que esta depende; o inverso e o que ela "libera". */
+  dependsOnTaskIds: string[];
+  revision: number;
+}
 
 /** O que `GET /api/tasks/:taskId` devolve — so o que o detalhe do evento le. */
 export interface TaskDetailDto {
@@ -266,8 +349,47 @@ export interface TaskDetailDto {
   estimatedFinishAt?: string;
   finishedAt?: string;
   dependsOnTaskIds: string[];
+  noteIds?: string[];
   revision: number;
 }
+
+/** `POST /api/tasks`: o que o formulario de nova tarefa e a subtarefa mandam. */
+export interface CreateTaskRequest {
+  parentTaskId?: string;
+  name: string;
+  description?: string;
+  status?: WorkItemStatus;
+  priority?: WorkItemPriority;
+  notifyOffsetsMinutes?: NotificationOffsetMinutes[];
+  tags?: string[];
+  startedAt?: string;
+  estimatedFinishAt?: string;
+  dependsOnTaskIds?: string[];
+}
+
+/** `PATCH /api/tasks/:taskId`: so o que muda; `expectedRevision` e obrigatorio. */
+export interface UpdateTaskRequest extends Partial<Omit<CreateTaskRequest, "parentTaskId">> {
+  expectedRevision: number;
+}
+
+/** `POST /api/notes`: a note e os eventos e tarefas em que ela ja nasce aparecendo. */
+export type CreateNoteRequest = CreateNoteInput & {
+  eventIds?: string[];
+  taskIds?: string[];
+};
+
+/**
+ * `PATCH /api/notes/:noteId`. Com `type`, o `data` e o conteudo novo inteiro.
+ * `eventIds`/`taskIds` sao a lista completa de onde a nota aparece (vazia solta a
+ * nota); ausentes, os vinculos ficam como estao.
+ */
+export type UpdateNoteRequest = {
+  expectedRevision: number;
+  name?: string;
+  tags?: string[];
+  eventIds?: string[];
+  taskIds?: string[];
+} & ({ type?: undefined; data?: undefined } | (NoteDataInput & { schemaVersion?: number }));
 
 export interface TagSuggestionDto {
   id: string;

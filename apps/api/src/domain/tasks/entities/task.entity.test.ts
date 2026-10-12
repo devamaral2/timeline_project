@@ -139,10 +139,10 @@ describe("Task aggregate", () => {
       tags: ["casa"],
     });
 
-    const revised = task.revise({ status: "inProgress" });
+    const revised = task.revise({ status: "scheduled" });
 
     expect(revised.revision).toBe(2);
-    expect(revised.status).toBe("inProgress");
+    expect(revised.status).toBe("scheduled");
     expect(revised.parentTaskId).toBe("task-parent");
     expect(revised.tags).toEqual(["casa"]);
     expect(task.revision).toBe(1);

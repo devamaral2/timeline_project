@@ -1,3 +1,5 @@
+import type { MealRecipe } from "../../../domain";
+
 export interface ParsedMealFoodItem {
   food: string;
   portion: string;
@@ -9,13 +11,13 @@ export interface ParsedMealFoodItem {
     totalFatGrams: number;
     fiberGrams: number;
   };
-  mainMicronutrients: Record<string, number>;
-  otherData: Record<string, number>;
 }
 
 export interface MealParsingGateway {
   parseMeal(input: { text: string }): Promise<{
     items: ParsedMealFoodItem[];
+    /** Ausente quando o modelo nao devolveu uma receita utilizavel. */
+    recipe?: MealRecipe;
     modelProvider: string;
     modelName: string;
   }>;

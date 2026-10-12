@@ -2,7 +2,8 @@ import { NoteNotFoundError, NoteOwnershipError, NoteRevisionConflictError, type 
 import type { NoteRepository } from "../../../domain/ports";
 
 export class InMemoryNoteRepository implements NoteRepository {
-  constructor(private notes: Note[] = []) {}
+  /** Mutado no lugar, para poder ser a mesma lista de um `InMemoryEventDatabase`. */
+  constructor(private readonly notes: Note[] = []) {}
 
   async save(note: Note): Promise<void> {
     this.notes.push(note);
@@ -23,10 +24,20 @@ export class InMemoryNoteRepository implements NoteRepository {
     const note = this.notes.find((stored) => stored.id === noteId);
     if (!note) throw new NoteNotFoundError(`Note not found: ${noteId}`);
     if (note.userId !== actorUserId) throw new NoteOwnershipError();
-    this.notes = this.notes.filter((stored) => stored.id !== noteId);
+    this.notes.splice(this.notes.indexOf(note), 1);
   }
 
   async findById(noteId: string): Promise<Note | null> {
     return this.notes.find((note) => note.id === noteId) ?? null;
+  }
+
+  async findByIds(noteIds: readonly string[]): Promise<Note[]> {
+    return this.notes.filter((note) => noteIds.includes(note.id));
+  }
+
+  async listByUserId(userId: string): Promise<Note[]> {
+    return this.notes
+      .filter((note) => note.userId === userId)
+      .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
   }
 }

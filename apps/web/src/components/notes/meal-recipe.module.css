@@ -1,0 +1,18 @@
+/*
+ * A receita de uma refeição — a mesma no cartão da nota, no detalhe do evento
+ * e no modal. Só tokens globais (--foreground, --muted-foreground, --border),
+ * porque o shell da agenda redefine --muted como cor de texto e os outros
+ * lugares não.
+ */
+.recipe { display: flex; flex-direction: column; gap: 12px; overflow-wrap: anywhere; }
+.header { display: flex; align-items: center; gap: 8px; }
+.title { margin: 0; font-size: 13px; font-weight: 600; letter-spacing: .02em; }
+.badge { padding: 1px 8px; border: 1px solid var(--border); border-radius: 999px; color: var(--muted-foreground); font-size: 11px; font-weight: 500; }
+.meta { margin: 0; color: var(--muted-foreground); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.heading { margin: 0 0 6px; color: var(--muted-foreground); font-size: 12px; font-weight: 600; }
+.ingredients, .steps { margin: 0; padding: 0; list-style: none; }
+.ingredients li { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-top: 1px solid var(--border); font-size: 14px; }
+.quantity { flex-shrink: 0; color: var(--muted-foreground); font-variant-numeric: tabular-nums; }
+.steps { counter-reset: step; }
+.steps li { position: relative; padding: 7px 0 7px 30px; border-top: 1px solid var(--border); font-size: 14px; line-height: 1.5; counter-increment: step; }
+.steps li::before { content: counter(step); position: absolute; left: 0; top: 7px; display: grid; place-items: center; width: 20px; height: 20px; border: 1px solid var(--border); border-radius: 50%; color: var(--muted-foreground); font-size: 11px; font-variant-numeric: tabular-nums; }

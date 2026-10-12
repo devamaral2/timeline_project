@@ -1,0 +1,4 @@
+interface:
+  display_name: "Kotlin Android"
+  short_description: "Help with Kotlin Android tasks"
+  default_prompt: "Use $kotlin-android for changes in the native mobile app."

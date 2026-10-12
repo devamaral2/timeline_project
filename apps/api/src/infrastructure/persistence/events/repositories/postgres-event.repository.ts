@@ -5,6 +5,7 @@ import {
   EventNotFoundError,
   EventOwnershipError,
   EventRevisionConflictError,
+  type NoteWrites,
 } from "../../../../domain";
 import type { EventRepository } from "../../../../domain/ports";
 import * as schema from "../../database/schema";
@@ -13,24 +14,13 @@ import { classifyUpdateFailure } from "../../shared/classify-update-failure";
 import { pgIntegerArrayLiteral } from "../../shared/pg-integer-array";
 import { occurrenceColumnsOf } from "../../recurrences/mappers/occurrence-columns";
 import { upsertTagIds } from "../../shared/upsert-tag-ids";
-import { softDeleteNotesOfTargets } from "../../notes/repositories/postgres-note.repository";
+import { writeNotes } from "../../notes/repositories/postgres-note.repository";
+import { insertEventNoteLinks, selectEventNoteLinks } from "../../notes/repositories/note-links";
 
 export type Tx = Parameters<Parameters<NodePgDatabase<typeof schema>["transaction"]>[0]>[0];
 
 async function insertChildren(tx: Tx, event: Event): Promise<void> {
-  if (event.items.length > 0) {
-    await tx.insert(schema.eventItems).values(
-      event.items.map((item) => ({
-        id: item.id,
-        eventId: event.id,
-        position: item.position,
-        type: item.type,
-        schemaVersion: item.schemaVersion,
-        isPrimary: item.isPrimary,
-        data: item.data,
-      })),
-    );
-  }
+  await insertEventNoteLinks(tx, event.id, event.noteLinks);
 
   if (event.interruptions.length > 0) {
     await tx.insert(schema.eventInterruptions).values(
@@ -64,7 +54,7 @@ async function insertChildren(tx: Tx, event: Event): Promise<void> {
  * de um dia que a serie ja gerou — o indice unico recusa a linha e os filhos
  * nem sao tentados, porque apontariam para um evento que nao entrou.
  */
-export async function insertEventAggregate(tx: Tx, event: Event): Promise<boolean> {
+export async function insertEventAggregate(tx: Tx, event: Event, notes?: NoteWrites): Promise<boolean> {
   const inserted = await tx
     .insert(schema.events)
     .values({
@@ -77,6 +67,7 @@ export async function insertEventAggregate(tx: Tx, event: Event): Promise<boolea
       finishedAt: event.finishedAt ?? null,
       missed: event.missed,
       priority: event.priority,
+      kind: event.kind,
       notifyOffsetsMinutes: [...event.notifyOffsetsMinutes],
       ...occurrenceColumnsOf(event.occurrence),
     })
@@ -87,6 +78,7 @@ export async function insertEventAggregate(tx: Tx, event: Event): Promise<boolea
     .returning({ id: schema.events.id });
 
   if (inserted.length === 0) return false;
+  await writeNotes(tx, notes);
   await insertChildren(tx, event);
   return true;
 }
@@ -100,6 +92,7 @@ export async function updateEventAggregate(
   event: Event,
   actorUserId: string,
   expectedRevision: number,
+  notes?: NoteWrites,
 ): Promise<void> {
   const result = await tx.execute(sql`
     UPDATE events
@@ -109,6 +102,7 @@ export async function updateEventAggregate(
         finished_at = ${event.finishedAt ?? null},
         missed = ${event.missed},
         priority = ${event.priority},
+        kind = ${event.kind},
         notify_offsets_minutes = ${pgIntegerArrayLiteral(event.notifyOffsetsMinutes)}::integer[],
         recurrence_detached = ${event.occurrence?.detached ?? false},
         revision = ${event.revision},
@@ -133,7 +127,8 @@ export async function updateEventAggregate(
     });
   }
 
-  await tx.delete(schema.eventItems).where(eq(schema.eventItems.eventId, event.id));
+  await writeNotes(tx, notes);
+  await tx.delete(schema.eventNotes).where(eq(schema.eventNotes.eventId, event.id));
   await tx.delete(schema.eventInterruptions).where(eq(schema.eventInterruptions.eventId, event.id));
   await tx.delete(schema.eventTags).where(eq(schema.eventTags.eventId, event.id));
   await tx.delete(schema.eventTasks).where(eq(schema.eventTasks.eventId, event.id));
@@ -171,21 +166,20 @@ export async function softDeleteEvent(tx: Tx, eventId: string, actorUserId: stri
     .update(schema.events)
     .set({ deletedAt: sql`now()`, updatedAt: sql`now()` })
     .where(eq(schema.events.id, eventId));
-  await softDeleteNotesOfTargets(tx, { eventIds: [eventId] });
 }
 
 export class PostgresEventRepository implements EventRepository {
   constructor(private readonly db: NodePgDatabase<typeof schema>) {}
 
-  async save(event: Event): Promise<void> {
+  async save(event: Event, notes?: NoteWrites): Promise<void> {
     await this.db.transaction(async (tx) => {
-      await insertEventAggregate(tx, event);
+      await insertEventAggregate(tx, event, notes);
     });
   }
 
-  async update(event: Event, actorUserId: string, expectedRevision: number): Promise<void> {
+  async update(event: Event, actorUserId: string, expectedRevision: number, notes?: NoteWrites): Promise<void> {
     await this.db.transaction(async (tx) => {
-      await updateEventAggregate(tx, event, actorUserId, expectedRevision);
+      await updateEventAggregate(tx, event, actorUserId, expectedRevision, notes);
     });
   }
 
@@ -205,10 +199,7 @@ export class PostgresEventRepository implements EventRepository {
   }
 
   private async hydrate(eventRow: typeof schema.events.$inferSelect): Promise<Event> {
-    const itemRows = await this.db
-      .select()
-      .from(schema.eventItems)
-      .where(eq(schema.eventItems.eventId, eventRow.id));
+    const noteLinks = await selectEventNoteLinks(this.db, eventRow.id);
     const interruptionRows = await this.db
       .select()
       .from(schema.eventInterruptions)
@@ -226,7 +217,7 @@ export class PostgresEventRepository implements EventRepository {
 
     return mapEventRow(
       eventRow,
-      itemRows,
+      noteLinks,
       interruptionRows,
       tagRows.map((row) => row.name),
       taskRows.map((row) => row.taskId),

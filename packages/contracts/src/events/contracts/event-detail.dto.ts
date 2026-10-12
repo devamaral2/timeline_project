@@ -1,6 +1,7 @@
 import type { EventPriority } from "../types/event-priority";
 import type { NotificationOffsetMinutes } from "../../notifications/types/notification-offset-minutes";
-import type { EventItemDto } from "./event-item.dto";
+import type { NoteDto } from "../../notes/contracts/note.dto";
+import type { EventKind } from "../types/event-kind";
 
 export interface EventDetailInterruptionDto {
   id: string;
@@ -23,7 +24,8 @@ export interface EventDetailDto {
   notifyOffsetsMinutes: NotificationOffsetMinutes[];
   interruptions: EventDetailInterruptionDto[];
   revision: number;
-  primaryItemId: string;
-  items: EventItemDto[];
+  kind: EventKind;
+  /** As notes do evento, na ordem em que aparecem. */
+  notes: NoteDto[];
   taskIds?: string[];
 }

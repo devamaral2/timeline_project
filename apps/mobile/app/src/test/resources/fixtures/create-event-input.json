@@ -1,0 +1,42 @@
+{
+  "name": "Novo bloco",
+  "tags": [
+    "planejamento"
+  ],
+  "priority": "flexible",
+  "kind": "meal",
+  "notes": [
+    {
+      "name": "Contexto",
+      "type": "text",
+      "data": {
+        "body": "Almoço antes da reunião."
+      }
+    },
+    {
+      "type": "meal",
+      "data": {
+        "inputText": "banana com iogurte"
+      }
+    },
+    {
+      "type": "sleep",
+      "data": {
+        "score": 80
+      }
+    },
+    {
+      "type": "training",
+      "data": {
+        "workouts": [
+          {
+            "workoutCode": "free"
+          }
+        ]
+      }
+    }
+  ],
+  "noteIds": [
+    "note-existing"
+  ]
+}

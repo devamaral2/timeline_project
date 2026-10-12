@@ -11,6 +11,7 @@ export type * from "./events/ports/daily-overview-query";
 export type * from "./events/ports/workout-catalog";
 export type * from "./tasks/ports/task-repository";
 export type * from "./notes/ports/note-repository";
+export type * from "./notes/ports/note-link-query";
 export type * from "./recurrences/ports/recurrence-repository";
 export type * from "./agent/ports/scoped-sql-query";
 export type * from "./agent/ports/entity-batch-writer";

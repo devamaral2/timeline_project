@@ -1,9 +1,9 @@
 import {
   Event,
-  EventItem,
-  EventValidationError,
   Interruption,
+  type EventKind,
   type EventPriority,
+  type NoteLink,
   type NotificationOffsetMinutes,
 } from "../../../../domain";
 import { occurrenceLinkOf, type OccurrenceColumns } from "../../recurrences/mappers/occurrence-columns";
@@ -18,18 +18,9 @@ export interface EventRow extends Partial<OccurrenceColumns> {
   finishedAt: Date | null;
   missed: boolean;
   priority: EventPriority;
+  kind: EventKind;
   /** `number[]` e nao a uniao: quem restringe os valores e o CHECK da coluna, nao o tipo Drizzle de um array de integer. */
   notifyOffsetsMinutes: number[];
-}
-
-export interface EventItemRow {
-  id: string;
-  eventId: string;
-  position: number;
-  type: string;
-  schemaVersion: number;
-  isPrimary: boolean;
-  data: unknown;
 }
 
 export interface EventInterruptionRow {
@@ -40,24 +31,6 @@ export interface EventInterruptionRow {
   description: string;
   startedAt: Date;
   finishedAt: Date;
-}
-
-export function mapEventItemRow(row: EventItemRow): EventItem {
-  try {
-    return EventItem.create({
-      id: row.id,
-      position: row.position,
-      type: row.type,
-      schemaVersion: row.schemaVersion,
-      isPrimary: row.isPrimary,
-      data: row.data,
-    });
-  } catch (cause) {
-    const message = cause instanceof Error ? cause.message : String(cause);
-    throw new EventValidationError(
-      `Invalid event item ${row.id} for event ${row.eventId}: ${message}`,
-    );
-  }
 }
 
 export function mapEventInterruptionRow(row: EventInterruptionRow): Interruption {
@@ -72,15 +45,11 @@ export function mapEventInterruptionRow(row: EventInterruptionRow): Interruption
 
 export function mapEventRow(
   eventRow: EventRow,
-  itemRows: readonly EventItemRow[],
+  noteLinks: readonly NoteLink[],
   interruptionRows: readonly EventInterruptionRow[],
   tagNames: readonly string[],
   taskIds: readonly string[] = [],
 ): Event {
-  const items = [...itemRows]
-    .sort((a, b) => a.position - b.position)
-    .map((row) => mapEventItemRow(row));
-
   const interruptions = [...interruptionRows]
     .sort((a, b) => a.position - b.position)
     .map((row) => mapEventInterruptionRow(row));
@@ -94,7 +63,8 @@ export function mapEventRow(
     finishedAt: eventRow.finishedAt ?? undefined,
     tags: [...tagNames],
     interruptions,
-    items,
+    kind: eventRow.kind,
+    noteLinks: [...noteLinks],
     missed: eventRow.missed,
     priority: eventRow.priority,
     notifyOffsetsMinutes: eventRow.notifyOffsetsMinutes as NotificationOffsetMinutes[],

@@ -71,13 +71,14 @@ export class ApiGatewayController {
   }
 }
 
-function policyFor(method: string, path: string): {
-  resource: "event" | "tag" | "task" | "recurrence" | "agent";
+export function policyFor(method: string, path: string): {
+  resource: "event" | "tag" | "task" | "note" | "recurrence" | "agent";
   action: "read" | "create" | "update" | "delete" | "execute";
 } {
   const resource = path.startsWith("/api/events") ? "event"
     : path.startsWith("/api/tags") ? "tag"
     : path.startsWith("/api/tasks") ? "task"
+    : path.startsWith("/api/notes") ? "note"
     : path.startsWith("/api/recurrences") ? "recurrence"
     : path.startsWith("/api/ai") ? "agent"
     : null;

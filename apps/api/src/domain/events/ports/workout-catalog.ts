@@ -1,4 +1,4 @@
-import type { WorkoutCode } from "../items/training-data";
+import type { WorkoutCode } from "../../notes/types/training-data";
 
 export interface WorkoutDefinition {
   code: WorkoutCode;

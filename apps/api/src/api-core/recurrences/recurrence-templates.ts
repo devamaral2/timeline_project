@@ -1,9 +1,10 @@
 import {
   Event,
-  EventItem,
   RecurrenceValidationError,
   Task,
+  type EventKind,
   type EventPriority,
+  type Note,
   type OccurrenceLink,
   type Recurrence,
   type RecurrenceRule,
@@ -25,7 +26,20 @@ export interface StoredEventTemplate {
   description: string;
   tags: string[];
   priority: EventPriority;
-  items: { type: string; position: number; isPrimary: boolean; schemaVersion: number; data: unknown }[];
+  kind: EventKind;
+}
+
+/**
+ * O template resolvido e as notes da serie. As notes nao viajam dentro do
+ * template: sao notes de verdade, ligadas a serie (`recurrence_notes`), e cada
+ * ocorrencia gerada ganha o proprio vinculo para a mesma note.
+ */
+export interface PreparedEventTemplate {
+  template: StoredEventTemplate;
+  /** As notes que o template cria — gravadas junto com a serie. */
+  notes: Note[];
+  /** Todas as notes da serie, na ordem: as novas e as que o template apontou. */
+  noteIds: string[];
 }
 
 export interface StoredTaskTemplate {
@@ -57,32 +71,30 @@ export function sampleDayOf(rule: RecurrenceRule): string {
  * regra, e se o template nao gera um evento valido a serie nao e salva.
  */
 export async function prepareEventTemplate(
-  createEvent: CreateEventUseCase,
+  createEvent: Pick<CreateEventUseCase, "prepare">,
   template: EventRecurrenceTemplate,
   rule: RecurrenceRule,
   actor: AuthenticatedUser,
-): Promise<StoredEventTemplate> {
-  if (!Array.isArray(template?.items)) {
-    throw new RecurrenceValidationError("An event template needs items");
+): Promise<PreparedEventTemplate> {
+  if (typeof template !== "object" || template === null) {
+    throw new RecurrenceValidationError("An event template must be an object");
   }
-  const sample = await createEvent.prepare(template, actor, occurrenceWindow(rule, sampleDayOf(rule)));
+  const { event, notes } = await createEvent.prepare(template, actor, occurrenceWindow(rule, sampleDayOf(rule)));
   return {
-    name: sample.name,
-    description: sample.description,
-    tags: [...sample.tags],
-    priority: sample.priority,
-    items: sample.items.map((item) => ({
-      type: item.type,
-      position: item.position,
-      isPrimary: item.isPrimary,
-      schemaVersion: item.schemaVersion,
-      data: item.data,
-    })),
+    template: {
+      name: event.name,
+      description: event.description,
+      tags: [...event.tags],
+      priority: event.priority,
+      kind: event.kind,
+    },
+    notes,
+    noteIds: event.noteLinks.map((link) => link.noteId),
   };
 }
 
 export async function prepareTaskTemplate(
-  tasks: TaskRepository,
+  tasks: Pick<TaskRepository, "findById">,
   template: TaskRecurrenceTemplate,
   rule: RecurrenceRule,
   actor: AuthenticatedUser,
@@ -117,8 +129,9 @@ export function buildEventOccurrence(recurrence: Recurrence, dayKey: string): Ev
     finishedAt: window.finishedAt,
     tags: template.tags,
     interruptions: [],
-    // Ids novos por ocorrencia: cada evento e dono dos proprios itens.
-    items: template.items.map((item) => EventItem.create({ ...item })),
+    kind: template.kind,
+    // A mesma note em todas as ocorrencias, cada uma com o proprio vinculo.
+    noteLinks: recurrence.noteIds.map((noteId) => ({ noteId, fromRecurrence: true })),
     priority: template.priority,
     occurrence: linkOf(recurrence, dayKey),
   });
@@ -129,6 +142,7 @@ function buildTaskOccurrence(
   rule: RecurrenceRule,
   userId: string,
   occurrence: OccurrenceLink,
+  noteIds: readonly string[] = [],
 ): Task {
   const window = occurrenceWindow(rule, occurrence.occurrenceOn);
   return Task.create({
@@ -142,6 +156,7 @@ function buildTaskOccurrence(
     // duracao, o prazo.
     startedAt: window.startedAt,
     estimatedFinishAt: window.finishedAt,
+    noteLinks: noteIds.map((noteId) => ({ noteId, fromRecurrence: true })),
     occurrence,
   });
 }
@@ -152,6 +167,7 @@ export function buildTaskOccurrenceOf(recurrence: Recurrence, dayKey: string): T
     recurrence.rule,
     recurrence.userId,
     linkOf(recurrence, dayKey),
+    recurrence.noteIds,
   );
 }
 

@@ -1,4 +1,5 @@
 import { getServerEnv } from "../../../config/env";
+import type { MealRecipe } from "../../../domain";
 import type { MealParsingGateway, ParsedMealFoodItem } from "./meal-parsing.gateway";
 import { MealPromptBuilderService } from "../services/meal-prompt-builder.service";
 
@@ -16,8 +17,31 @@ const mealItemsSchema = {
   schema: {
     type: "object",
     additionalProperties: false,
-    required: ["items"],
+    required: ["items", "recipe"],
     properties: {
+      recipe: {
+        type: "object",
+        additionalProperties: false,
+        required: ["source", "servings", "prepTimeMinutes", "ingredients", "steps"],
+        properties: {
+          source: { type: "string", enum: ["user", "model"] },
+          servings: { type: ["number", "null"] },
+          prepTimeMinutes: { type: ["number", "null"] },
+          ingredients: {
+            type: "array",
+            items: {
+              type: "object",
+              additionalProperties: false,
+              required: ["name", "quantity"],
+              properties: {
+                name: { type: "string" },
+                quantity: { type: "string" },
+              },
+            },
+          },
+          steps: { type: "array", items: { type: "string" } },
+        },
+      },
       items: {
         type: "array",
         items: {
@@ -29,8 +53,6 @@ const mealItemsSchema = {
             "approximateWeightGrams",
             "caloriesKcal",
             "macronutrients",
-            "mainMicronutrients",
-            "otherData",
           ],
           properties: {
             food: { type: "string" },
@@ -53,14 +75,6 @@ const mealItemsSchema = {
                 fiberGrams: { type: "number" },
               },
             },
-            mainMicronutrients: {
-              type: "object",
-              additionalProperties: { type: "number" },
-            },
-            otherData: {
-              type: "object",
-              additionalProperties: { type: "number" },
-            },
           },
         },
       },
@@ -77,6 +91,7 @@ export class OpenRouterMealParsingGateway implements MealParsingGateway {
 
   async parseMeal(input: { text: string }): Promise<{
     items: ParsedMealFoodItem[];
+    recipe?: MealRecipe;
     modelProvider: string;
     modelName: string;
   }> {
@@ -127,9 +142,9 @@ export class OpenRouterMealParsingGateway implements MealParsingGateway {
       throw new Error("OpenRouter response did not include meal JSON");
     }
 
-    let parsed: { items?: ParsedMealFoodItem[] };
+    let parsed: { items?: ParsedMealFoodItem[]; recipe?: unknown };
     try {
-      parsed = JSON.parse(content) as { items?: ParsedMealFoodItem[] };
+      parsed = JSON.parse(content) as { items?: ParsedMealFoodItem[]; recipe?: unknown };
     } catch (parseError) {
       console.error("[OpenRouterMealParsingGateway] failed to JSON.parse content", { content, parseError });
       throw parseError;
@@ -142,8 +157,51 @@ export class OpenRouterMealParsingGateway implements MealParsingGateway {
 
     return {
       items,
+      recipe: toMealRecipe(parsed.recipe),
       modelProvider: "openrouter",
       modelName: this.modelName,
     };
   }
+}
+
+const MAX_RECIPE_STEPS = 30;
+const MAX_RECIPE_INGREDIENTS = 40;
+
+/**
+ * Traduz a receita do modelo para o dominio. Nunca lanca: uma receita sem
+ * passos ou mal formada some, e a refeicao (que e o que o usuario pediu) segue
+ * sem ela. Texto vazio e itens duplicados saem aqui, nao no parser do dominio.
+ */
+export function toMealRecipe(raw: unknown): MealRecipe | undefined {
+  if (typeof raw !== "object" || raw === null) return undefined;
+  const source = raw as Record<string, unknown>;
+
+  const text = (value: unknown): string => (typeof value === "string" ? value.trim() : "");
+  const steps = (Array.isArray(source.steps) ? source.steps : [])
+    .map(text)
+    .filter(Boolean)
+    .slice(0, MAX_RECIPE_STEPS);
+  if (steps.length === 0) return undefined;
+
+  const ingredients = (Array.isArray(source.ingredients) ? source.ingredients : [])
+    .flatMap((entry) => {
+      const ingredient = (entry ?? {}) as Record<string, unknown>;
+      const name = text(ingredient.name);
+      return name ? [{ name, quantity: text(ingredient.quantity) || "a gosto" }] : [];
+    })
+    .slice(0, MAX_RECIPE_INGREDIENTS);
+
+  const positive = (value: unknown): number | undefined =>
+    typeof value === "number" && Number.isFinite(value) && value > 0 ? value : undefined;
+
+  const recipe: MealRecipe = {
+    source: source.source === "user" ? "user" : "model",
+    ingredients,
+    steps,
+  };
+  const servings = positive(source.servings);
+  if (servings !== undefined) recipe.servings = servings;
+  const prepTimeMinutes = positive(source.prepTimeMinutes);
+  if (prepTimeMinutes !== undefined) recipe.prepTimeMinutes = prepTimeMinutes;
+  return recipe;
 }

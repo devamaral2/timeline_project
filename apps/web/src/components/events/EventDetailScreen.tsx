@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  ArrowLeft, Bell, Check, Circle, CircleCheck, CircleDashed, CircleSlash,
+  ArrowLeft, Bell, Check, Circle, CircleCheck, CircleDashed, CirclePause, CircleSlash,
   Clock3, Flag, MoreVertical, Pencil, Trash2, type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -10,12 +10,14 @@ import {
   compactDate, dayKeyOf, elapsedSecondsOf, eventPositionOf, formatStopwatch,
   formatTime, longDate, type EventPosition,
 } from "@repo/timeline";
-import type { EventDetailDto, EventItemDto, MealItem, TaskDetailDto, WorkItemStatus } from "@/lib/api/contracts";
+import type { EventDetailDto, MealItem, NoteDto, TaskDetailDto, WorkItemStatus } from "@/lib/api/contracts";
 import { useNow } from "@/lib/events/use-now";
 import {
   ICON_STROKE_WIDTH, missedLabel, notificationOffsetLabel,
   priorityLabels, visualForItemType,
 } from "./event-visuals";
+import { MarkdownView } from "@/components/notes/MarkdownView";
+import { MealRecipeView } from "@/components/notes/MealRecipeView";
 import styles from "./event-detail-screen.module.css";
 
 /**
@@ -49,8 +51,7 @@ export interface EventDetailScreenProps {
  * tarefas; o esqueleto nao muda.
  */
 export function EventDetailScreen({ event, tasks = [], backHref, actions, actionError }: EventDetailScreenProps) {
-  const primary = event.items.find((item) => item.id === event.primaryItemId);
-  const visual = visualForItemType(primary?.type ?? "");
+  const visual = visualForItemType(event.kind);
   const TypeIcon = visual.Icon;
   const dayKey = dayKeyOf(event.startedAt);
 
@@ -63,7 +64,7 @@ export function EventDetailScreen({ event, tasks = [], backHref, actions, action
         <EventMenu missed={event.missed} actions={actions} />
       </nav>
 
-      <header data-type={primary?.type ?? "routine"}>
+      <header data-type={event.kind}>
         <p className={styles.type}>
           <TypeIcon aria-hidden strokeWidth={ICON_STROKE_WIDTH} />
           {visual.label}
@@ -84,7 +85,7 @@ export function EventDetailScreen({ event, tasks = [], backHref, actions, action
           : <p className={styles.empty}>Sem descrição.</p>}
       </Section>
 
-      {event.items.map((item) => <ItemSection key={item.id} item={item} />)}
+      {event.notes.map((note) => <NoteSection key={note.id} note={note} />)}
 
       {event.interruptions.length ? (
         <Section title="Interrupções">
@@ -269,9 +270,10 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 }
 
 const taskStatusVisuals: Record<WorkItemStatus, { Icon: LucideIcon; label: string }> = {
-  inHold: { Icon: CircleDashed, label: "Em espera" },
   todo: { Icon: Circle, label: "A fazer" },
-  inProgress: { Icon: Clock3, label: "Em andamento" },
+  scheduled: { Icon: Clock3, label: "Agendada" },
+  toDefine: { Icon: CircleDashed, label: "A definir" },
+  inHold: { Icon: CirclePause, label: "Em espera" },
   done: { Icon: CircleCheck, label: "Concluída" },
   cancel: { Icon: CircleSlash, label: "Cancelada" },
 };
@@ -289,19 +291,20 @@ function metadataOf(event: EventDetailDto): Array<{ Icon: LucideIcon; text: stri
   return rows;
 }
 
-function ItemSection({ item }: { item: EventItemDto }) {
-  if (item.type === "meal") return (
+function NoteSection({ note }: { note: NoteDto }) {
+  if (note.type === "meal") return (
     <Section title="Refeição">
-      <p className={styles.prose}>{item.data.name}</p>
-      {item.data.description ? <p className={styles.secondary}>{item.data.description}</p> : null}
-      <Nutrition data={item.data} />
+      <p className={styles.prose}>{note.data.name}</p>
+      {note.data.description ? <p className={styles.secondary}>{note.data.description}</p> : null}
+      <Nutrition data={note.data} />
+      {note.data.recipe ? <MealRecipeView recipe={note.data.recipe} /> : null}
     </Section>
   );
 
-  if (item.type === "training" && item.data.workouts.length) return (
+  if (note.type === "training" && note.data.workouts.length) return (
     <Section title="Treinos">
       <ul className={styles.list}>
-        {item.data.workouts.map((workout) => (
+        {note.data.workouts.map((workout) => (
           <li key={workout.id}>
             <p>{workout.workoutName}</p>
             <span>{workout.duration} min · {workout.calories} kcal</span>
@@ -311,12 +314,18 @@ function ItemSection({ item }: { item: EventItemDto }) {
     </Section>
   );
 
-  if (item.type === "sleep") return (
+  if (note.type === "sleep") return (
     <Section title="Sono">
       <p className={styles.prose}>
-        {item.data.trackedSleepTime} min monitorados
-        <span className={styles.secondary}> · pontuação {item.data.score}</span>
+        {note.data.trackedSleepTime} min monitorados
+        <span className={styles.secondary}> · pontuação {note.data.score}</span>
       </p>
+    </Section>
+  );
+
+  if (note.type === "text") return (
+    <Section title={note.name}>
+      <MarkdownView source={note.data.body} />
     </Section>
   );
 

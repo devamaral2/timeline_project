@@ -14,7 +14,7 @@ const INITIAL_VALUES = {
 const SCOPES = Object.freeze({
   "api-runtime": {
     required: ["DATABASE_URL", "AUTH_SERVICE_URL", "AUTH_INTERNAL_SERVICE_KEY"],
-    optional: ["OPENROUTER_API_KEY", "OPENROUTER_MODEL", "OPENROUTER_AGENT_MODEL"],
+    optional: ["OPENROUTER_API_KEY", "OPENROUTER_MODEL", "OPENROUTER_AGENT_MODEL", "JEV_API_KEY"],
   },
   "auth-runtime": {
     required: [
@@ -46,8 +46,8 @@ const LOCAL_OVERRIDE_KEYS = new Set([
   "API_HOST",
   "AUTH_PORT",
   "AUTH_HOST",
-  "METRO_PORT",
   "POSTGRES_HOST_PORT",
+  "POSTGRES_DB",
   "AUTH_POSTGRES_DB",
   "BACKEND_URL",
   "AUTH_ISSUER",
@@ -56,7 +56,6 @@ const LOCAL_OVERRIDE_KEYS = new Set([
   "AUTH_SERVICE_URL",
   "API_SERVICE_URL",
   "AUTH_INTERNAL_SERVICE_KEY",
-  "MOBILE_API_URL",
   "COMPOSE_PROJECT_NAME",
 ]);
 
@@ -107,7 +106,8 @@ export function applyLocalOverrides(environment, overrides) {
   env.AUTH_ISSUER = `http://127.0.0.1:${overrides.AUTH_PORT ?? env.AUTH_PORT}`;
   env.AUTH_PUBLIC_URL = env.AUTH_ISSUER;
   env.AUTH_SERVICE_URL = env.AUTH_ISSUER;
-  env.AUTH_WEB_APP_URL = `http://localhost:${overrides.WEB_PORT ?? env.WEB_PORT}`;
+  // Worktrees expostas pelo Caddy (<slug>.braid.local) gravam a propria origem.
+  env.AUTH_WEB_APP_URL = overrides.AUTH_WEB_APP_URL ?? `http://localhost:${overrides.WEB_PORT ?? env.WEB_PORT}`;
   return env;
 }
 

@@ -6,7 +6,6 @@ test("uses the env example as the complete allowlist", () => {
   const keys = readEnvKeys();
   assert.ok(keys.includes("DATABASE_URL"));
   assert.ok(keys.includes("AUTH_KEY_ENCRYPTION_KEY"));
-  assert.equal(keys.includes("METRO_PORT"), false);
   assert.equal(keys.includes("AUTH_POSTGRES_DB"), false);
   assert.equal(new Set(keys).size, keys.length);
   assert.ok(keys.every((key) => /^[A-Z][A-Z0-9_]*$/.test(key)));
@@ -133,6 +132,22 @@ test("keeps the browser backend on Auth and the API service internal", () => {
 
   assert.equal(environment.BACKEND_URL, "http://127.0.0.1:3102");
   assert.equal(environment.API_SERVICE_URL, "http://127.0.0.1:3101");
+});
+
+test("points API and Auth at per-worktree databases on the shared Postgres", () => {
+  const environment = applyLocalOverrides(
+    { POSTGRES_USER: "timeline", POSTGRES_PASSWORD: "password", POSTGRES_DB: "timeline", AUTH_PORT: "3102", WEB_PORT: "3100" },
+    {
+      POSTGRES_HOST_PORT: "54391",
+      POSTGRES_DB: "refactory_events",
+      AUTH_POSTGRES_DB: "refactory_events_auth",
+      AUTH_WEB_APP_URL: "http://refactory-events.braid.local:8080",
+    },
+  );
+
+  assert.equal(environment.DATABASE_URL, "postgresql://timeline:password@127.0.0.1:54391/refactory_events");
+  assert.equal(environment.AUTH_DATABASE_URL, "postgresql://timeline:password@127.0.0.1:54391/refactory_events_auth");
+  assert.equal(environment.AUTH_WEB_APP_URL, "http://refactory-events.braid.local:8080");
 });
 
 test("reports Environment API failures without starting the application", async () => {

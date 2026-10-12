@@ -1,18 +1,18 @@
 import { getServerEnv } from "../../../config/env";
+import { agentsConfig, promptsConfig } from "../config/agent-config";
 import { AgentRunCancelledError, LlmUnavailableError } from "../errors/agent.errors";
 import type { AgentGateway, AgentRunInput, AgentRunResult } from "./agent.gateway";
 
 /** Consultas encadeadas + preparacao das mudancas + resposta. */
-export const MAX_STEPS = 12;
+export const MAX_STEPS = agentsConfig.limits.maxSteps;
 /** Teto de gasto por requisicao, em dolares. `maxCost` conta custo nao reportado como 0 — o teto de passos e o limite real. */
-export const MAX_COST_USD = 0.25;
+export const MAX_COST_USD = agentsConfig.limits.maxCostUsd;
 /** Uma query com timeout proprio de 3s, ou o parse de refeicao pelo modelo. */
-const TOOL_TIMEOUT_MS = 30_000;
-const RUN_TIMEOUT_MS = 120_000;
-export const MAX_TOOL_RESULT_CHARS = 24_000;
+const TOOL_TIMEOUT_MS = agentsConfig.limits.toolTimeoutMs;
+const RUN_TIMEOUT_MS = agentsConfig.limits.runTimeoutMs;
+export const MAX_TOOL_RESULT_CHARS = agentsConfig.limits.maxToolResultChars;
 
-export const FINAL_RESPONSE_DIRECTIVE =
-  "Encerre agora sem chamar ferramentas: responda ao usuário em português, com base apenas no que já foi consultado e preparado.";
+export const FINAL_RESPONSE_DIRECTIVE = promptsConfig.finalResponseDirective;
 
 type AgentModule = typeof import("@openrouter/agent", { with: { "resolution-mode": "import" } });
 type AgentClient = Pick<InstanceType<AgentModule["OpenRouter"]>, "callModel">;

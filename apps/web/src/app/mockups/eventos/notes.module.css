@@ -1,0 +1,67 @@
+.main { max-width: 1120px; margin: auto; padding: 56px 32px 48px; }
+.heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 32px; }
+.heading p, .metadata, .footnote { color: var(--muted-foreground); font-size: 13px; }
+.heading p { margin: 0 0 14px; }
+.heading h1 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 84px; line-height: .92; letter-spacing: -.01em; }
+.actions { display: flex; align-items: center; gap: 12px; }
+.actions > button { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border: 1px solid var(--border); border-radius: 50%; background: var(--card); cursor: pointer; }
+.actions > .primary, .primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: auto; height: 40px; padding: 0 16px; border: 0; border-radius: 8px; background: var(--primary); color: var(--primary-foreground); font-weight: 600; cursor: pointer; }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 32px; }
+.filters button { height: 36px; padding: 0 16px; border: 1px solid var(--border); border-radius: 999px; color: var(--muted-foreground); background: transparent; font-size: 13px; cursor: pointer; }
+.filters button[aria-pressed="true"] { border-color: var(--foreground); box-shadow: 0 0 0 1px var(--foreground); color: var(--foreground); background: var(--card); font-weight: 600; }
+.groups { display: flex; flex-direction: column; gap: 32px; }
+.groups h2 { display: flex; align-items: baseline; gap: 10px; margin: 0 0 12px; font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; }
+.groups h2 span { color: var(--muted-foreground); font-size: 12px; font-weight: 500; letter-spacing: 0; }
+.grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: start; }
+.grid .card { display: flex; flex-direction: column; gap: 10px; min-width: 0; padding: 18px; background: var(--card); border: 1px solid var(--border); border-radius: 14px; color: var(--foreground); text-align: left; cursor: pointer; }
+.card:hover { border-color: var(--muted-foreground); }
+.cardMeta { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; }
+.source { display: inline-flex; align-items: center; gap: 7px; min-width: 0; font-size: 12.5px; color: var(--muted-foreground); }
+.source svg { flex-shrink: 0; }
+.source span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.cardMeta time { flex-shrink: 0; color: var(--muted-foreground); font-size: 12px; font-variant-numeric: tabular-nums; }
+.card h3 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 22px; line-height: 1.2; letter-spacing: -.005em; }
+.card p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--muted-foreground); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tags span { padding: 2px 8px; border-radius: 5px; font-size: 12.5px; font-weight: 500; }
+.detail { max-width: 680px; margin: auto; padding: 40px 0 64px; display: flex; flex-direction: column; gap: 36px; }
+.back { display: inline-flex; align-items: center; gap: 8px; align-self: flex-start; min-height: 44px; cursor: pointer; }
+.detail header { display: flex; flex-direction: column; gap: 14px; }
+.detail h1, .create h1 { margin: 0 0 2px; font-family: var(--font-display); font-weight: 400; font-size: 52px; line-height: 1.05; letter-spacing: -.01em; }
+.detail .source { font-size: 14px; }
+.metadata { margin: 0; }
+.body { border-top: 1px solid var(--border); padding-top: 36px; font-size: 17px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
+.body p { margin: 0 0 16px; }
+.body h2 { margin: 28px 0 16px; font-family: var(--font-display); font-size: 26px; font-weight: 400; line-height: 1.2; }
+.body ul { padding-left: 20px; }
+.body li + li { margin-top: 8px; }
+.search, .create input, .create select { width: 100%; padding: 12px 14px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 24px; }
+.create { display: flex; flex-direction: column; gap: 20px; }
+.create textarea { width: 100%; min-height: 220px; resize: vertical; background: transparent; border: 0; border-bottom: 1px solid var(--border); font: inherit; font-size: 17px; line-height: 1.7; }
+.create p { margin: 0; font-size: 13px; color: var(--muted-foreground); }
+.create label { display: flex; flex-direction: column; gap: 10px; font-size: 13px; }
+.create .primary { height: 48px; }
+.footnote { margin-top: 32px; }
+.metrics { display: flex; gap: 40px; margin-top: 12px; font-family: var(--font-display); font-size: 52px; line-height: 1; }
+.metrics small { font-family: var(--font-sans); font-size: 14px; color: var(--muted-foreground); }
+.workout, .workoutDetails summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--border); }
+.workout h3 { margin: 0; font-size: 17px; font-weight: 600; }
+.workout p, .workoutDetails small { display: block; margin: 4px 0 0; color: var(--muted-foreground); font-size: 13px; }
+.workoutDetails summary { cursor: pointer; }
+.workoutDetails p { margin-top: 16px; }
+@media (max-width: 1000px) and (min-width: 721px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .detail { padding-inline: 24px; } }
+@media (max-width: 720px) {
+  .main { padding: 22px 18px 110px; }
+  .heading { align-items: center; margin-bottom: 24px; }
+  .heading > div:first-child { display: flex; flex-direction: column-reverse; gap: 8px; }
+  .heading p { margin: 0; }
+  .heading h1 { font-size: 40px; line-height: 1; }
+  .actions { gap: 4px; }
+  .actions > button { width: 44px; height: 44px; border: 0; background: transparent; }
+  .actions > .primary { width: auto; padding: 0 10px; background: var(--primary); }
+  .grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .groups { gap: 28px; }
+  .detail { padding: 8px 20px 110px; gap: 28px; }
+  .detail h1 { font-size: 36px; }
+  .body { padding-top: 28px; }
+}

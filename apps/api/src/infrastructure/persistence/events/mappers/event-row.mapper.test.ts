@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { mapEventRow, type EventItemRow, type EventRow } from "./event-row.mapper";
+import { mapEventRow, type EventRow } from "./event-row.mapper";
 
 const eventRow: EventRow = {
   id: "01EVENT00000000000000000A",
@@ -11,55 +11,38 @@ const eventRow: EventRow = {
   finishedAt: null,
   missed: false,
   priority: "normal",
+  kind: "meal",
   notifyOffsetsMinutes: [5],
 };
 
-function itemRow(overrides: Partial<EventItemRow>): EventItemRow {
-  return {
-    id: "01ITEM0000000000000000000",
-    eventId: eventRow.id,
-    position: 0,
-    type: "routine",
-    schemaVersion: 1,
-    isPrimary: true,
-    data: {},
-    ...overrides,
-  };
-}
+test("carries the kind and the persisted revision", () => {
+  const event = mapEventRow(eventRow, [], [], []);
 
-test("orders items by position and keeps ids stable", () => {
-  const first = itemRow({ id: "01ITEM0000000000000000001", position: 1, isPrimary: false });
-  const second = itemRow({ id: "01ITEM0000000000000000000", position: 0, isPrimary: true });
-
-  const event = mapEventRow(eventRow, [first, second], [], []);
-
-  expect(event.items.map((item) => item.id)).toEqual([second.id, first.id]);
+  expect(event.kind).toBe("meal");
   expect(event.revision).toBe(3);
 });
 
-test("passes the payload through the codec for its schema version", () => {
+test("keeps the note links in the order they were given", () => {
   const event = mapEventRow(
     eventRow,
-    [itemRow({ type: "sleep", data: { trackedSleepTime: 480, score: 80 } })],
+    [
+      { noteId: "n2", fromRecurrence: false },
+      { noteId: "n1", fromRecurrence: true },
+    ],
     [],
     [],
   );
 
-  expect(event.items[0].data).toEqual({ trackedSleepTime: 480, score: 80 });
-});
-
-test("fails with the event and item id when the stored payload is invalid", () => {
-  const badItem = itemRow({ id: "01ITEM00000000000000000BAD", data: { extra: true } });
-
-  expect(() => mapEventRow(eventRow, [badItem], [], [])).toThrow(
-    /01ITEM00000000000000000BAD.*01EVENT00000000000000000A/,
-  );
+  expect(event.noteLinks).toEqual([
+    { noteId: "n2", fromRecurrence: false },
+    { noteId: "n1", fromRecurrence: true },
+  ]);
 });
 
 test("defaults to an empty taskIds list and otherwise passes it through", () => {
-  const withoutTasks = mapEventRow(eventRow, [itemRow({})], [], []);
+  const withoutTasks = mapEventRow(eventRow, [], [], []);
   expect(withoutTasks.taskIds).toEqual([]);
 
-  const withTasks = mapEventRow(eventRow, [itemRow({})], [], [], ["task-1", "task-2"]);
-  expect(withTasks.taskIds).toEqual(["task-1", "task-2"]);
+  const withTasks = mapEventRow(eventRow, [], [], [], ["task-1"]);
+  expect(withTasks.taskIds).toEqual(["task-1"]);
 });

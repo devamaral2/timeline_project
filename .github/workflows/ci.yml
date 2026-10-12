@@ -10,6 +10,109 @@ permissions:
   contents: read
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      mobile: ${{ steps.filter.outputs.mobile }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Detect mobile changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            mobile:
+              - 'apps/mobile/**'
+              - 'packages/contracts/**'
+              - 'packages/theme/**'
+              - 'packages/timeline/**'
+              - 'scripts/mobile/**'
+
+  mobile:
+    needs: changes
+    if: needs.changes.outputs.mobile == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Enable pnpm
+        run: corepack enable
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Generate mobile fixtures
+        run: pnpm --filter @repo/mobile run generate:fixtures
+      - name: Verify generated fixtures are committed
+        run: git diff --exit-code -- apps/mobile/app/src/test/resources/fixtures
+      - name: Validate mobile
+        working-directory: apps/mobile
+        run: ./gradlew ktlintCheck lintDebug testDebugUnitTest assembleDebug
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: braid-mobile-debug
+          path: apps/mobile/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+  mobile-release:
+    needs: [changes, mobile]
+    if: >-
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      needs.changes.outputs.mobile == 'true' &&
+      needs.mobile.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Materialize release keystore
+        env:
+          MOBILE_KEYSTORE_BASE64: ${{ secrets.MOBILE_KEYSTORE_BASE64 }}
+          MOBILE_KEYSTORE_PATH: ${{ runner.temp }}/braid-release.jks
+        run: |
+          test -n "$MOBILE_KEYSTORE_BASE64"
+          printf '%s' "$MOBILE_KEYSTORE_BASE64" | base64 --decode > "$MOBILE_KEYSTORE_PATH"
+          chmod 600 "$MOBILE_KEYSTORE_PATH"
+          test -s "$MOBILE_KEYSTORE_PATH"
+      - name: Assemble signed release APK
+        working-directory: apps/mobile
+        env:
+          MOBILE_KEYSTORE_PATH: ${{ runner.temp }}/braid-release.jks
+          MOBILE_KEYSTORE_PASSWORD: ${{ secrets.MOBILE_KEYSTORE_PASSWORD }}
+          MOBILE_KEY_ALIAS: ${{ secrets.MOBILE_KEY_ALIAS }}
+          MOBILE_KEY_PASSWORD: ${{ secrets.MOBILE_KEY_PASSWORD }}
+          MOBILE_API_BASE_URL: ${{ secrets.MOBILE_API_BASE_URL }}
+          MOBILE_AUTH_BASE_URL: ${{ secrets.MOBILE_AUTH_BASE_URL }}
+        run: ./gradlew assembleRelease
+      - name: Upload signed release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: braid-mobile-release
+          path: apps/mobile/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -29,13 +132,13 @@ jobs:
         # signal visible without preventing the first production pipeline from
         # deploying until that baseline is cleaned up separately.
         continue-on-error: true
-        run: pnpm lint
+        run: pnpm lint --filter=!@repo/mobile
       - name: Typecheck
-        run: pnpm typecheck
+        run: pnpm typecheck --filter=!@repo/mobile
       - name: Unit tests
         run: pnpm run --silent test:unit:ai
       - name: Build
-        run: pnpm exec turbo run build
+        run: pnpm exec turbo run build --filter=!@repo/mobile
       - name: Install Playwright browser
         run: pnpm exec playwright install --with-deps chromium
       - name: E2E (isolated PostgreSQL and mocked external services)

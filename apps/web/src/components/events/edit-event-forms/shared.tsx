@@ -4,10 +4,11 @@ import { useState } from "react";
 import { Plus, X } from "lucide-react";
 import type {
   EventDetailDto,
-  EventItemDto,
   EventPriority,
+  NoteDataInput,
+  NoteDto,
   NotificationOffsetMinutes,
-  UpdateEventItemInput,
+  UpdateEventNoteInput,
 } from "@/lib/api/contracts";
 import { authedFetch } from "@/lib/api/authed-fetch";
 import { iconButtonClass } from "@/components/ui/button-styles";
@@ -69,36 +70,30 @@ export function useSubmitEventUpdate({ eventId, onUpdated, onClose }: UseSubmitE
 /** O corpo do PATCH, sem o eventId — que vai na URL. */
 export type EventUpdatePayload = Record<string, unknown> & {
   expectedRevision: number;
-  items?: UpdateEventItemInput[];
+  notes?: UpdateEventNoteInput[];
 };
 
 /**
- * O array completo de itens do evento, com o `data` de um deles trocado.
+ * A lista completa de notes do evento, com a de `noteId` trocada.
  *
- * O PATCH substitui a lista inteira: mandar so o item editado apagaria os
- * outros. Cada formulario cuida de um item — os demais atravessam daqui para o
- * backend sem que ninguem os toque, com o mesmo id, para que o merge os
- * reconheca em vez de recria-los.
+ * O PATCH substitui a lista inteira: mandar so a note editada tiraria as outras
+ * do evento. Cada formulario cuida de uma note — as demais atravessam daqui so
+ * com o `id`, o que as mantem na lista sem reescreve-las. Sem `noteId` (o evento
+ * ainda nao tem a note deste tipo), uma note nova entra no fim.
  */
-export function itemsPatchedWith(
+export function notesPatchedWith(
   event: EventDetailDto,
-  itemId: string,
-  data: unknown,
-): UpdateEventItemInput[] {
-  return event.items.map((item) => ({
-    id: item.id,
-    type: item.type,
-    schemaVersion: item.schemaVersion,
-    isPrimary: item.isPrimary,
-    data: item.id === itemId ? data : item.data,
-    // O TypeScript nao consegue casar `type` com o `data` correspondente
-    // depois do map — a uniao discriminada se desfaz. Quem valida o par de
-    // verdade e o registro de itens, no backend.
-  })) as UpdateEventItemInput[];
+  noteId: string | undefined,
+  patch: NoteDataInput,
+): UpdateEventNoteInput[] {
+  const entries: UpdateEventNoteInput[] = event.notes.map((note) =>
+    note.id === noteId ? { id: note.id, schemaVersion: note.schemaVersion, ...patch } : { id: note.id },
+  );
+  return noteId ? entries : [...entries, patch];
 }
 
-/** O item que este formulario edita, ja no tipo que ele espera. */
-export type ItemOfType<TType extends EventItemDto["type"]> = Extract<EventItemDto, { type: TType }>;
+/** A note que este formulario edita, ja no tipo que ele espera. */
+export type NoteOfType<TType extends NoteDto["type"]> = Extract<NoteDto, { type: TType }>;
 
 /** Converte um instante ISO para o valor local esperado por <input type="datetime-local">. */
 export function toDatetimeLocalValue(iso: string | undefined): string {
@@ -322,15 +317,16 @@ function asOption(value: string): string | undefined {
 }
 
 /**
- * Todo formulario de edicao recebe o evento inteiro e o item que ele edita.
+ * Todo formulario de edicao recebe o evento inteiro e a note que ele edita.
  *
- * O evento inteiro, porque o PATCH precisa da revisao e dos outros itens; o
- * item, porque quem o encontrou foi o roteador — pelo `primaryItemId`, e nao
- * pela posicao no array.
+ * O evento inteiro, porque o PATCH precisa da revisao e das outras notes; a
+ * note, porque quem a encontrou foi o roteador — a primeira do tipo do evento.
+ * Ela pode nao existir: um evento de refeicao, sono ou treino nao exige note, e
+ * salvar o formulario cria a note que faltava.
  */
-export interface EditEventFormProps<TItem> {
+export interface EditEventFormProps<TNote = undefined> {
   event: EventDetailDto;
-  item: TItem;
+  note?: TNote;
   onCancel: () => void;
   onClose: () => void;
   onUpdated: () => void;

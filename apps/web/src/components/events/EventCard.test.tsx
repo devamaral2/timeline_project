@@ -7,9 +7,8 @@ import { EventCard } from "./EventCard";
 function anEvent(overrides: Partial<TimelineEventCardDto> = {}): TimelineEventCardDto {
   return {
     id: "event-1",
-    primaryItemId: "item-1",
-    primaryItemType: "training",
-    itemTypes: ["training"],
+    kind: "training",
+    noteTypes: [],
     missed: false,
     notifyOffsetsMinutes: [],
     name: "Academia",
@@ -24,30 +23,30 @@ function anEvent(overrides: Partial<TimelineEventCardDto> = {}): TimelineEventCa
 }
 
 test("shows the name, the local time range and the duration from the api", () => {
-  render(<EventCard longestMinutes={85} event={anEvent()} />);
+  render(<EventCard event={anEvent()} />);
 
   expect(screen.getByRole("button", { name: "Academia" })).toBeInTheDocument();
   expect(screen.getByText(/18:00/)).toBeInTheDocument();
   expect(screen.getByText(/19:25/)).toBeInTheDocument();
-  expect(screen.getByText("1h 25m")).toBeInTheDocument();
+  expect(screen.getByText("25")).toBeInTheDocument();
 });
 
 test("names the card after the primary item, not after the event", () => {
-  render(<EventCard longestMinutes={85} event={anEvent()} />);
+  render(<EventCard event={anEvent()} />);
 
   expect(screen.getByText("Treino")).toBeInTheDocument();
 });
 
-test("the secondary items do not change the color or the icon of the card", () => {
+test("the notes do not change the color or the icon of the card", () => {
   // O treino que tambem registrou a refeicao de depois continua sendo um
-  // treino: quem responde "o que e isto?" e o item principal, e so ele.
+  // treino: quem responde "o que e isto?" e o `kind` do evento, e so ele.
   const { container: onlyTraining } = render(
-    <EventCard longestMinutes={85} event={anEvent()} />,
+    <EventCard event={anEvent()} />,
   );
   const { container: alsoAMeal } = render(
     <EventCard
-      longestMinutes={85}
-      event={anEvent({ itemTypes: ["training", "meal"] })}
+     
+      event={anEvent({ noteTypes: ["training", "meal"] })}
     />,
   );
 
@@ -59,11 +58,11 @@ test("the secondary items do not change the color or the icon of the card", () =
 });
 
 test("a type this frontend does not know yet falls back instead of breaking", () => {
-  // O registro de itens do backend cresce sem pedir licenca ao web.
+  // As naturezas de evento do backend crescem sem pedir licenca ao web.
   render(
     <EventCard
-      longestMinutes={85}
-      event={anEvent({ primaryItemType: "meditation", itemTypes: ["meditation"] })}
+     
+      event={anEvent({ kind: "meditation" as never, noteTypes: ["meditation"] })}
     />,
   );
 
@@ -73,10 +72,10 @@ test("a type this frontend does not know yet falls back instead of breaking", ()
 
 test("marks an event without finishedAt as still running", () => {
   render(
-    <EventCard longestMinutes={85} event={anEvent({ finishedAt: undefined, durationLabel: "--" })} />,
+    <EventCard event={anEvent({ finishedAt: undefined, durationLabel: "--" })} />,
   );
 
-  expect(screen.getByText(/em andamento/)).toBeInTheDocument();
+  expect(screen.getByText(/Em andamento/)).toBeInTheDocument();
 });
 
 test("counts the time of a running event instead of showing the api placeholder", () => {
@@ -85,7 +84,7 @@ test("counts the time of a running event instead of showing the api placeholder"
   try {
     render(
       <EventCard
-        longestMinutes={85}
+       
         event={anEvent({ finishedAt: undefined, durationLabel: "--" })}
       />,
     );
@@ -98,24 +97,15 @@ test("counts the time of a running event instead of showing the api placeholder"
   }
 });
 
-test("draws the duration bar in proportion to the longest event of the day", () => {
-  // 85 minutos contra um dia cujo maior evento tem 170: metade da largura.
-  const { container } = render(<EventCard longestMinutes={170} event={anEvent()} />);
-  // A barra e o unico elemento do cartao com largura inline.
-  const bar = container.querySelector<HTMLElement>("span[style]");
-
-  expect(bar?.style.width).toBe("50%");
-});
-
 test("renders tags", () => {
-  render(<EventCard longestMinutes={85} event={anEvent({ tags: ["treino", "saúde"] })} />);
+  render(<EventCard event={anEvent({ tags: ["treino", "saúde"] })} />);
 
   expect(screen.getByText("#treino")).toBeInTheDocument();
   expect(screen.getByText("#saúde")).toBeInTheDocument();
 });
 
 test("opens the details modal from the title and surfaces load failures", async () => {
-  render(<EventCard longestMinutes={85} event={anEvent({ name: "Academia" })} />);
+  render(<EventCard event={anEvent({ name: "Academia" })} />);
 
   fireEvent.click(screen.getByRole("button", { name: "Academia" }));
 
@@ -126,7 +116,7 @@ test("opens the details modal from the title and surfaces load failures", async 
 });
 
 test("opens the edit modal from the details modal", async () => {
-  render(<EventCard longestMinutes={85} event={anEvent({ name: "Academia" })} />);
+  render(<EventCard event={anEvent({ name: "Academia" })} />);
 
   fireEvent.click(screen.getByRole("button", { name: "Academia" }));
   fireEvent.click(screen.getByRole("button", { name: "Editar" }));
@@ -138,7 +128,7 @@ test("opens the edit modal from the details modal", async () => {
 });
 
 test("opens the delete confirmation from the details modal and asks for confirmation", () => {
-  render(<EventCard longestMinutes={85} event={anEvent({ name: "Academia" })} />);
+  render(<EventCard event={anEvent({ name: "Academia" })} />);
 
   fireEvent.click(screen.getByRole("button", { name: "Academia" }));
   fireEvent.click(screen.getByRole("button", { name: "Excluir" }));
@@ -152,7 +142,7 @@ test("opens the delete confirmation from the details modal and asks for confirma
 });
 
 test("surfaces a failure when deleting without an authenticated user", async () => {
-  render(<EventCard longestMinutes={85} event={anEvent({ name: "Academia" })} />);
+  render(<EventCard event={anEvent({ name: "Academia" })} />);
 
   fireEvent.click(screen.getByRole("button", { name: "Academia" }));
   fireEvent.click(screen.getByRole("button", { name: "Excluir" }));
@@ -164,17 +154,17 @@ test("surfaces a failure when deleting without an authenticated user", async () 
 });
 
 test("shows the badge only on the events the user marked as missed", () => {
-  render(<EventCard longestMinutes={85} event={anEvent()} />);
+  render(<EventCard event={anEvent()} />);
   expect(screen.queryByText("Não realizado")).not.toBeInTheDocument();
 
-  render(<EventCard longestMinutes={85} event={anEvent({ missed: true })} />);
+  render(<EventCard event={anEvent({ missed: true })} />);
   expect(screen.getByText("Não realizado")).toBeInTheDocument();
 });
 
 test("renders the card even when the mark does not come at all", () => {
   // O DTO e tipado, mas a resposta vem pela rede: um backend de outra versao
   // nao pode derrubar a timeline por causa de um campo que nao mandou.
-  render(<EventCard longestMinutes={85} event={anEvent({ missed: undefined as never })} />);
+  render(<EventCard event={anEvent({ missed: undefined as never })} />);
 
   expect(screen.getByRole("button", { name: "Academia" })).toBeInTheDocument();
 });

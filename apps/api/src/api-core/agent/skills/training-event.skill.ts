@@ -1,7 +1,8 @@
 import { z } from "zod";
 import type { TrainingData, WorkoutInput } from "../../../domain";
+import { skillText } from "../config/agent-config";
 import { defineAgentSkill, fail } from "./agent-skill";
-import { eventBaseFields, primaryItemOf, toBaseChanges, toCreateEventInput, withPrimaryData } from "./event-skill-fields";
+import { eventBaseFields, toBaseChanges, toCreateEventInput } from "./event-skill-fields";
 
 const workoutSetSchema = z.object({
   exercise: z.string().describe("Nome do exercício, ex: 'supino reto'."),
@@ -55,16 +56,7 @@ function toWorkoutInput(workout: WorkoutArgs): WorkoutInput {
 
 export const trainingEventSkill = defineAgentSkill({
   name: "save_training_event",
-  progressLabel: "Preparando treino",
-  description:
-    "Cria ou altera um treino ou atividade física: corrida, esteira, musculação ou outro exercício.",
-  instructions: [
-    "save_training_event — unidades obrigatórias e sem default:",
-    "- duration SEMPRE em minutos ('uma hora e meia' = 90); distance SEMPRE em km ('5000 metros' = 5).",
-    "- pace em min/km; se o usuário não informou, calcule duration / distance. calories em kcal (0 se não informou).",
-    "- type: 'running' corrida na rua, 'treadmill' esteira, 'weightlifting' séries com carga, 'free' o resto.",
-    "Com id, os workouts enviados são ACRESCENTADOS ao treino existente; os anteriores ficam.",
-  ].join("\n"),
+  ...skillText("save_training_event"),
   parameters: z.object({
     ...eventBaseFields,
     workouts: z
@@ -77,22 +69,32 @@ export const trainingEventSkill = defineAgentSkill({
 
     if (!args.id) {
       if (workouts.length === 0) return fail("workouts é obrigatório para criar um treino.");
-      return session.createEvent(toCreateEventInput(args, { type: "training", data: { workouts } }));
+      return session.createEvent(toCreateEventInput(args, "training", { type: "training", data: { workouts } }));
     }
 
     return session.updateEvent(args.id, "training", async (current) => {
       if (workouts.length === 0) return current.revise(toBaseChanges(args));
 
-      const added = await session.buildItem({ type: "training", data: { workouts } }, current.startedAt);
-      const existing = primaryItemOf(current).data as TrainingData;
-      const merged = [...existing.workouts, ...(added.data as TrainingData).workouts];
-      return current.revise({
-        ...toBaseChanges(args),
-        items: withPrimaryData(current, {
-          workouts: merged,
-          caloriesBurned: merged.reduce((total, workout) => total + workout.calories, 0),
-        }),
-      });
+      const added = await session.buildNote({ type: "training", data: { workouts } }, current.startedAt);
+      const existing = await session.noteOfType(current, "training");
+
+      // Sem treino anterior, a nota nova passa a fazer parte do evento.
+      if (!existing) {
+        session.stageNewNote(added);
+        return current.revise({
+          ...toBaseChanges(args),
+          noteLinks: [...current.noteLinks, { noteId: added.id, fromRecurrence: false }],
+        });
+      }
+
+      const previous = existing.data as TrainingData;
+      const merged = [...previous.workouts, ...(added.data as TrainingData).workouts];
+      const data: TrainingData = {
+        workouts: merged,
+        caloriesBurned: merged.reduce((total, workout) => total + workout.calories, 0),
+      };
+      await session.reviseNoteById(existing.id, (note) => note.revise({ data }));
+      return current.revise(toBaseChanges(args));
     });
   },
 });

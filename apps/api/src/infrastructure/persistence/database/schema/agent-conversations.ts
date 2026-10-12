@@ -54,7 +54,7 @@ export const agentConversations = pgTable(
  * As mensagens de uma conversa, na ordem em que aconteceram.
  *
  * Sem `user_id`: e tabela filha e herda o filtro do dono pelo join com a
- * conversa, como `event_items` faz com `events`. Sem `deleted_at`: mensagem
+ * conversa, como `event_notes` faz com `events`. Sem `deleted_at`: mensagem
  * nao se apaga sozinha, some com a conversa — e como o soft delete da conversa
  * e um UPDATE, o `cascade` abaixo nao dispara e as linhas ficam. Quem as torna
  * inalcancaveis e a leitura, que sempre junta com a conversa filtrando

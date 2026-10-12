@@ -9,8 +9,8 @@ import type { Interruption } from "../value-objects/interruption";
 import { TagList } from "../value-objects/tag-list";
 import { EventId } from "../value-objects/event-id";
 import { EventValidationError } from "../errors/event.errors";
-import { EventItem } from "./event-item.entity";
-import { defaultEventItemRegistry, EventItemRegistry } from "../items/event-item-registry";
+import { DEFAULT_EVENT_KIND, type EventKind } from "../types/event-kind";
+import { normalizeNoteLinks, type NoteLink } from "../../notes/types/note-link";
 import { detachOccurrence, type OccurrenceLink } from "../../recurrences/types/occurrence-link";
 
 export interface EventCreateProps {
@@ -22,7 +22,9 @@ export interface EventCreateProps {
   finishedAt?: Date;
   tags: string[];
   interruptions: Interruption[];
-  items: EventItem[];
+  kind?: EventKind;
+  /** As notes do evento, na ordem em que aparecem. */
+  noteLinks?: NoteLink[];
   missed?: boolean;
   priority?: EventPriority;
   notifyOffsetsMinutes?: NotificationOffsetMinutes[];
@@ -41,7 +43,8 @@ export interface EventReviseChanges {
   finishedAt?: Date;
   tags?: string[];
   interruptions?: Interruption[];
-  items?: EventItem[];
+  kind?: EventKind;
+  noteLinks?: NoteLink[];
   missed?: boolean;
   priority?: EventPriority;
   notifyOffsetsMinutes?: NotificationOffsetMinutes[];
@@ -57,65 +60,14 @@ interface EventBuildProps {
   finishedAt: Date | undefined;
   tags: string[];
   interruptions: Interruption[];
-  items: EventItem[];
+  kind: EventKind;
+  noteLinks: NoteLink[];
   missed: boolean;
   priority: EventPriority;
   notifyOffsetsMinutes: NotificationOffsetMinutes[];
   taskIds: string[];
   occurrence: OccurrenceLink | undefined;
   revision: number;
-}
-
-function isIncompatible(
-  registry: EventItemRegistry,
-  typeA: string,
-  typeB: string,
-): boolean {
-  if (typeA === typeB) {
-    const definition = registry.getDefinition(typeA);
-    return definition ? definition.incompatibleWith.includes(typeA) : false;
-  }
-  const definitionA = registry.getDefinition(typeA);
-  const definitionB = registry.getDefinition(typeB);
-  return Boolean(
-    definitionA?.incompatibleWith.includes(typeB) || definitionB?.incompatibleWith.includes(typeA),
-  );
-}
-
-function validateItems(items: EventItem[], registry: EventItemRegistry): void {
-  if (items.length === 0) {
-    throw new EventValidationError("Event requires at least one item");
-  }
-
-  const ids = new Set<string>();
-  const positions = new Set<number>();
-  let primaryCount = 0;
-
-  for (const item of items) {
-    if (ids.has(item.id)) {
-      throw new EventValidationError(`Duplicate event item id: ${item.id}`);
-    }
-    ids.add(item.id);
-
-    if (positions.has(item.position)) {
-      throw new EventValidationError(`Duplicate event item position: ${item.position}`);
-    }
-    positions.add(item.position);
-
-    if (item.isPrimary) primaryCount += 1;
-  }
-
-  if (primaryCount !== 1) {
-    throw new EventValidationError("Event requires exactly one primary item");
-  }
-
-  for (let i = 0; i < items.length; i += 1) {
-    for (let j = i + 1; j < items.length; j += 1) {
-      if (isIncompatible(registry, items[i].type, items[j].type)) {
-        throw new EventValidationError("Incompatible event items");
-      }
-    }
-  }
 }
 
 export class Event {
@@ -127,7 +79,8 @@ export class Event {
   readonly finishedAt: Date | undefined;
   readonly tags: string[];
   readonly interruptions: Interruption[];
-  readonly items: EventItem[];
+  readonly kind: EventKind;
+  readonly noteLinks: readonly NoteLink[];
   readonly missed: boolean;
   readonly priority: EventPriority;
   readonly notifyOffsetsMinutes: readonly NotificationOffsetMinutes[];
@@ -135,11 +88,8 @@ export class Event {
   /** Presente quando o evento e uma ocorrencia de uma serie. */
   readonly occurrence: OccurrenceLink | undefined;
   readonly revision: number;
-  readonly primaryItemId: string;
 
-  private readonly registry: EventItemRegistry;
-
-  private constructor(props: EventBuildProps, registry: EventItemRegistry) {
+  private constructor(props: EventBuildProps) {
     this.id = props.id;
     this.userId = props.userId;
     this.name = props.name;
@@ -148,34 +98,25 @@ export class Event {
     this.finishedAt = props.finishedAt;
     this.tags = props.tags;
     this.interruptions = props.interruptions;
-    this.items = props.items;
+    this.kind = props.kind;
+    this.noteLinks = props.noteLinks;
     this.missed = props.missed;
     this.priority = props.priority;
     this.notifyOffsetsMinutes = props.notifyOffsetsMinutes;
     this.taskIds = props.taskIds;
     this.occurrence = props.occurrence;
     this.revision = props.revision;
-    this.registry = registry;
-
-    const primaryItem = props.items.find((item) => item.isPrimary);
-    if (!primaryItem) {
-      throw new EventValidationError("Event requires exactly one primary item");
-    }
-    this.primaryItemId = primaryItem.id;
   }
 
   /**
    * Evento novo nunca fica sem fim: sem `finishedAt` declarado, estimamos pela
-   * duracao tipica do item principal. `items` invalido (sem primario, por
-   * exemplo) cai no padrao generico — `build` recusa a lista logo em seguida.
+   * duracao tipica da natureza do evento.
    */
-  private static estimateFinishedAt(startedAt: Date, items: EventItem[]): Date {
-    const primaryItemType = items.find((item) => item.isPrimary)?.type;
-    const durationMinutes = defaultEventDurationMinutesFor(primaryItemType);
-    return new Date(startedAt.getTime() + durationMinutes * 60_000);
+  private static estimateFinishedAt(startedAt: Date, kind: EventKind): Date {
+    return new Date(startedAt.getTime() + defaultEventDurationMinutesFor(kind) * 60_000);
   }
 
-  private static build(props: EventBuildProps, registry: EventItemRegistry): Event {
+  private static build(props: EventBuildProps): Event {
     if (props.finishedAt && props.finishedAt < props.startedAt) {
       throw new EventValidationError("finishedAt must be equal to or after startedAt");
     }
@@ -183,94 +124,109 @@ export class Event {
       throw new EventValidationError("Event revision must be an integer >= 1");
     }
 
-    validateItems(props.items, registry);
-
-    return new Event(
-      {
-        ...props,
-        tags: TagList.create(props.tags),
-        items: [...props.items].sort((a, b) => a.position - b.position),
-        taskIds: Array.from(new Set(props.taskIds)),
-      },
-      registry,
-    );
+    return new Event({
+      ...props,
+      tags: TagList.create(props.tags),
+      noteLinks: normalizeNoteLinks(props.noteLinks),
+      taskIds: Array.from(new Set(props.taskIds)),
+    });
   }
 
-  static create(props: EventCreateProps, registry: EventItemRegistry = defaultEventItemRegistry): Event {
-    const finishedAt = props.finishedAt ?? Event.estimateFinishedAt(props.startedAt, props.items);
-    return Event.build(
-      {
-        id: props.id ?? EventId.create(),
-        userId: props.userId,
-        name: props.name,
-        description: props.description,
-        startedAt: props.startedAt,
-        finishedAt,
-        tags: props.tags,
-        interruptions: props.interruptions,
-        items: props.items,
-        missed: props.missed ?? DEFAULT_EVENT_MISSED,
-        priority: props.priority ?? DEFAULT_EVENT_PRIORITY,
-        notifyOffsetsMinutes: props.notifyOffsetsMinutes ?? DEFAULT_EVENT_NOTIFICATION_OFFSETS_MINUTES,
-        taskIds: props.taskIds ?? [],
-        occurrence: props.occurrence,
-        revision: 1,
-      },
-      registry,
-    );
+  static create(props: EventCreateProps): Event {
+    const kind = props.kind ?? DEFAULT_EVENT_KIND;
+    const finishedAt = props.finishedAt ?? Event.estimateFinishedAt(props.startedAt, kind);
+    return Event.build({
+      id: props.id ?? EventId.create(),
+      userId: props.userId,
+      name: props.name,
+      description: props.description,
+      startedAt: props.startedAt,
+      finishedAt,
+      tags: props.tags,
+      interruptions: props.interruptions,
+      kind,
+      noteLinks: props.noteLinks ?? [],
+      missed: props.missed ?? DEFAULT_EVENT_MISSED,
+      priority: props.priority ?? DEFAULT_EVENT_PRIORITY,
+      notifyOffsetsMinutes: props.notifyOffsetsMinutes ?? DEFAULT_EVENT_NOTIFICATION_OFFSETS_MINUTES,
+      taskIds: props.taskIds ?? [],
+      occurrence: props.occurrence,
+      revision: 1,
+    });
   }
 
-  static rehydrate(
-    props: EventRehydrateProps,
-    registry: EventItemRegistry = defaultEventItemRegistry,
-  ): Event {
-    return Event.build(
-      {
-        id: props.id ?? EventId.create(),
-        userId: props.userId,
-        name: props.name,
-        description: props.description,
-        startedAt: props.startedAt,
-        finishedAt: props.finishedAt,
-        tags: props.tags,
-        interruptions: props.interruptions,
-        items: props.items,
-        missed: props.missed ?? DEFAULT_EVENT_MISSED,
-        priority: props.priority ?? DEFAULT_EVENT_PRIORITY,
-        // Nao reaplica o default de evento novo: uma linha existente sem o
-        // campo nunca teve esse aviso, e inventar um seria o mesmo erro que
-        // a marca de nao realizado evita para documentos antigos.
-        notifyOffsetsMinutes: props.notifyOffsetsMinutes ?? [],
-        taskIds: props.taskIds ?? [],
-        occurrence: props.occurrence,
-        revision: props.revision,
-      },
-      registry,
-    );
+  static rehydrate(props: EventRehydrateProps): Event {
+    return Event.build({
+      id: props.id ?? EventId.create(),
+      userId: props.userId,
+      name: props.name,
+      description: props.description,
+      startedAt: props.startedAt,
+      finishedAt: props.finishedAt,
+      tags: props.tags,
+      interruptions: props.interruptions,
+      kind: props.kind ?? DEFAULT_EVENT_KIND,
+      noteLinks: props.noteLinks ?? [],
+      missed: props.missed ?? DEFAULT_EVENT_MISSED,
+      priority: props.priority ?? DEFAULT_EVENT_PRIORITY,
+      // Nao reaplica o default de evento novo: uma linha existente sem o
+      // campo nunca teve esse aviso, e inventar um seria o mesmo erro que
+      // a marca de nao realizado evita para documentos antigos.
+      notifyOffsetsMinutes: props.notifyOffsetsMinutes ?? [],
+      taskIds: props.taskIds ?? [],
+      occurrence: props.occurrence,
+      revision: props.revision,
+    });
   }
 
   /** Toda revisao e uma edicao do usuario, e por isso destaca a ocorrencia da serie. */
   revise(changes: EventReviseChanges): Event {
-    return Event.build(
-      {
-        id: this.id,
-        userId: this.userId,
-        name: changes.name ?? this.name,
-        description: changes.description ?? this.description,
-        startedAt: changes.startedAt ?? this.startedAt,
-        finishedAt: changes.finishedAt !== undefined ? changes.finishedAt : this.finishedAt,
-        tags: changes.tags ?? this.tags,
-        interruptions: changes.interruptions ?? this.interruptions,
-        items: changes.items ?? this.items,
-        missed: changes.missed ?? this.missed,
-        priority: changes.priority ?? this.priority,
-        notifyOffsetsMinutes: changes.notifyOffsetsMinutes ?? [...this.notifyOffsetsMinutes],
-        taskIds: changes.taskIds ?? [...this.taskIds],
-        occurrence: detachOccurrence(this.occurrence),
-        revision: this.revision + 1,
-      },
-      this.registry,
-    );
+    return Event.build({
+      id: this.id,
+      userId: this.userId,
+      name: changes.name ?? this.name,
+      description: changes.description ?? this.description,
+      startedAt: changes.startedAt ?? this.startedAt,
+      finishedAt: changes.finishedAt !== undefined ? changes.finishedAt : this.finishedAt,
+      tags: changes.tags ?? this.tags,
+      interruptions: changes.interruptions ?? this.interruptions,
+      kind: changes.kind ?? this.kind,
+      noteLinks: changes.noteLinks ?? [...this.noteLinks],
+      missed: changes.missed ?? this.missed,
+      priority: changes.priority ?? this.priority,
+      notifyOffsetsMinutes: changes.notifyOffsetsMinutes ?? [...this.notifyOffsetsMinutes],
+      taskIds: changes.taskIds ?? [...this.taskIds],
+      occurrence: detachOccurrence(this.occurrence),
+      revision: this.revision + 1,
+    });
+  }
+
+  /**
+   * Notes que a serie liga a ocorrencia. Nao e uma edicao do usuario: ao
+   * contrario de `revise`, a ocorrencia continua sendo "da serie" e a revisao
+   * nao muda.
+   */
+  withSeriesNotes(noteIds: readonly string[]): Event {
+    const known = new Set(this.noteLinks.map((link) => link.noteId));
+    const added = noteIds.filter((noteId) => !known.has(noteId)).map((noteId) => ({ noteId, fromRecurrence: true }));
+    return Event.build({
+      id: this.id,
+      userId: this.userId,
+      name: this.name,
+      description: this.description,
+      startedAt: this.startedAt,
+      finishedAt: this.finishedAt,
+      tags: this.tags,
+      interruptions: this.interruptions,
+      kind: this.kind,
+      noteLinks: [...this.noteLinks, ...added],
+      missed: this.missed,
+      priority: this.priority,
+      notifyOffsetsMinutes: [...this.notifyOffsetsMinutes],
+      taskIds: [...this.taskIds],
+      occurrence: this.occurrence,
+      revision: this.revision,
+    });
   }
 
   getDurationMinutes(): number | null {

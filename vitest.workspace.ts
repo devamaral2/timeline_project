@@ -58,17 +58,6 @@ export default defineWorkspace([
     },
   },
   {
-    resolve: { alias: { ...packageAliases, "@": resolve("./apps/mobile/src") } },
-    test: {
-      name: "mobile",
-      root: "./apps/mobile",
-      environment: "node",
-      // Só logica pura: renderizar componentes do React Native exigiria o
-      // runtime nativo, que nao existe aqui.
-      include: ["src/**/*.{test,spec}.ts"],
-    },
-  },
-  {
     resolve: { alias: packageAliases },
     test: {
       name: "theme",

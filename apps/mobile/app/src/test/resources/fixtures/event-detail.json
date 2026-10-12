@@ -1,0 +1,170 @@
+{
+  "id": "event-training",
+  "name": "Treino da manhã",
+  "description": "Cardio e força",
+  "startedAt": "2026-09-22T08:00:00-03:00",
+  "finishedAt": "2026-09-22T09:05:00-03:00",
+  "tags": [
+    "saúde",
+    "foco"
+  ],
+  "missed": false,
+  "priority": "normal",
+  "notifyOffsetsMinutes": [
+    10
+  ],
+  "interruptions": [
+    {
+      "id": "interrupt-1",
+      "name": "Água",
+      "description": "Pausa rápida",
+      "startedAt": "2026-09-22T08:20:00-03:00",
+      "finishedAt": "2026-09-22T08:25:00-03:00"
+    }
+  ],
+  "revision": 3,
+  "kind": "training",
+  "notes": [
+    {
+      "id": "note-training",
+      "name": "Treino da manhã",
+      "schemaVersion": 1,
+      "tags": [
+        "saúde"
+      ],
+      "revision": 2,
+      "createdAt": "2026-09-22T11:00:00.000Z",
+      "updatedAt": "2026-09-22T11:05:00.000Z",
+      "type": "training",
+      "data": {
+        "workouts": [
+          {
+            "id": "workout-treadmill",
+            "workoutCode": "treadmill",
+            "workoutName": "Esteira",
+            "calories": 120,
+            "duration": 20,
+            "pace": 6.5,
+            "distance": 3.1
+          },
+          {
+            "id": "workout-running",
+            "workoutCode": "running",
+            "workoutName": "Corrida",
+            "calories": 170,
+            "duration": 25,
+            "pace": 5.8,
+            "distance": 4.3
+          },
+          {
+            "id": "workout-weights",
+            "workoutCode": "weightlifting",
+            "workoutName": "Força",
+            "calories": 130,
+            "duration": 30,
+            "sets": [
+              {
+                "id": "set-1",
+                "exercise": "Agachamento",
+                "repetitions": 10,
+                "weight": 40
+              }
+            ]
+          },
+          {
+            "id": "workout-free",
+            "workoutCode": "free",
+            "workoutName": "Mobilidade",
+            "calories": 30,
+            "duration": 10
+          }
+        ],
+        "caloriesBurned": 450
+      }
+    },
+    {
+      "id": "note-text",
+      "name": "Aquecimento",
+      "schemaVersion": 1,
+      "tags": [
+        "foco"
+      ],
+      "revision": 1,
+      "createdAt": "2026-09-22T11:00:00.000Z",
+      "updatedAt": "2026-09-22T11:05:00.000Z",
+      "type": "text",
+      "data": {
+        "body": "Mobilidade de quadril antes das series."
+      }
+    },
+    {
+      "id": "note-meal",
+      "name": "Café da manhã",
+      "schemaVersion": 1,
+      "tags": [],
+      "revision": 1,
+      "createdAt": "2026-09-22T11:00:00.000Z",
+      "updatedAt": "2026-09-22T11:05:00.000Z",
+      "type": "meal",
+      "data": {
+        "name": "Café da manhã",
+        "description": "Aveia e fruta",
+        "foodItems": [
+          {
+            "id": "food-oats",
+            "name": "Aveia",
+            "portion": "40 g",
+            "approximateWeightGrams": 40,
+            "caloriesKcal": 152,
+            "macronutrients": {
+              "carbohydratesGrams": 27,
+              "proteinsGrams": 5,
+              "totalFatGrams": 3,
+              "fiberGrams": 4
+            }
+          }
+        ],
+        "totals": {
+          "totalCaloriesKcal": 152,
+          "totalProteinGrams": 5,
+          "totalCarbohydrateGrams": 27,
+          "totalFatGrams": 3,
+          "totalFiberGrams": 4
+        },
+        "recipe": {
+          "source": "model",
+          "servings": 1,
+          "prepTimeMinutes": 10,
+          "ingredients": [
+            {
+              "name": "Aveia em flocos",
+              "quantity": "40 g"
+            },
+            {
+              "name": "Banana",
+              "quantity": "1 unidade"
+            }
+          ],
+          "steps": [
+            "Misture a aveia com o leite.",
+            "Aqueça por 2 minutos e acrescente a banana."
+          ]
+        }
+      }
+    },
+    {
+      "id": "note-sleep",
+      "name": "Noite anterior",
+      "schemaVersion": 1,
+      "tags": [],
+      "revision": 1,
+      "createdAt": "2026-09-22T11:00:00.000Z",
+      "updatedAt": "2026-09-22T11:05:00.000Z",
+      "type": "sleep",
+      "data": {
+        "trackedSleepTime": 7.5,
+        "score": 86
+      }
+    }
+  ]
+}

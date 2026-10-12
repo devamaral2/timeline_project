@@ -1,10 +1,6 @@
 import { BadRequestException } from "@nestjs/common";
 import { expect, test } from "vitest";
-import { CreateEventUseCase } from "../../api-core/events/create-event.usecase";
-import { InMemoryEventDatabase } from "../../api-core/events/testing/in-memory-event-database";
-import { InMemoryEventRepository } from "../../api-core/events/testing/in-memory-event.repository";
-import { InMemoryWorkoutCatalog } from "../../api-core/events/testing/in-memory-workout.catalog";
-import { StubMealParsingGateway } from "../../api-core/events/testing/stub-meal-parsing.gateway";
+import { createEventsKit } from "../../api-core/events/testing/in-memory-events-kit";
 import { InMemoryTaskRepository } from "../../api-core/tasks/testing/in-memory-task.repository";
 import { InMemoryRecurrenceRepository } from "../../api-core/recurrences/testing/in-memory-recurrence.repository";
 import { CreateRecurrenceUseCase } from "../create-recurrence/create-recurrence.usecase";
@@ -17,14 +13,9 @@ import { RecurrencesController } from "./test-recurrences-controller";
 const actor = { userId: "auth-user-1" };
 
 function makeController() {
-  const database = new InMemoryEventDatabase();
+  const { database, createEvent } = createEventsKit();
   const recurrences = new InMemoryRecurrenceRepository(database);
   const tasks = new InMemoryTaskRepository();
-  const createEvent = new CreateEventUseCase(
-    new InMemoryEventRepository(database),
-    new StubMealParsingGateway(),
-    new InMemoryWorkoutCatalog(),
-  );
   return new RecurrencesController(
     new ListRecurrencesUseCase(recurrences),
     new CreateRecurrenceUseCase(recurrences, createEvent, tasks),
@@ -42,7 +33,7 @@ const body = {
   timeOfDay: "18:30",
   timeZone: "America/Sao_Paulo",
   startsOn: "2026-09-14",
-  template: { name: "Academia", items: [{ type: "routine" as const }] },
+  template: { name: "Academia", kind: "routine" as const },
 };
 
 test("creates a series and returns it with the stored template", async () => {

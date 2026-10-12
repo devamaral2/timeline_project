@@ -1,10 +1,11 @@
-import { and, asc, eq, gte, isNull, lt, or, sql } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import {
   RecurrenceNotFoundError,
   RecurrenceOwnershipError,
   RecurrenceRevisionConflictError,
   type Event,
+  type NoteWrites,
   type Recurrence,
   type Task,
 } from "../../../../domain";
@@ -13,7 +14,10 @@ import * as schema from "../../database/schema";
 import { classifyUpdateFailure } from "../../shared/classify-update-failure";
 import { insertEventAggregate, type Tx } from "../../events/repositories/postgres-event.repository";
 import { insertTaskAggregate } from "../../tasks/repositories/postgres-task.repository";
-import { mapRecurrenceRow, recurrenceColumnsOf } from "../mappers/recurrence-row.mapper";
+import { writeNotes } from "../../notes/repositories/postgres-note.repository";
+import { replaceRecurrenceNoteIds } from "../../notes/repositories/note-links";
+import { pgTextArrayLiteral } from "../../shared/pg-text-array";
+import { mapRecurrenceRow, recurrenceColumnsOf, type RecurrenceRow } from "../mappers/recurrence-row.mapper";
 
 const errors = {
   notFound: (id: string) => () => new RecurrenceNotFoundError(`Recurrence not found: ${id}`),
@@ -21,11 +25,94 @@ const errors = {
   conflict: (message: string) => new RecurrenceRevisionConflictError(message),
 };
 
+/** A regra e os vinculos de notes da serie. As notes que ela aponta ja precisam estar gravadas. */
+export async function insertRecurrenceAggregate(tx: Tx, recurrence: Recurrence): Promise<void> {
+  await tx.insert(schema.recurrences).values(recurrenceColumnsOf(recurrence));
+  await replaceRecurrenceNoteIds(tx, recurrence.id, recurrence.noteIds);
+}
+
+/**
+ * Grava a regra revisada e, na mesma transacao, apaga as ocorrencias de
+ * `fromDay` em diante que ninguem destacou. `notes`: as notes novas do template,
+ * gravadas antes do vinculo da serie.
+ */
+export async function updateRecurrenceAggregate(
+  tx: Tx,
+  recurrence: Recurrence,
+  actorUserId: string,
+  expectedRevision: number,
+  fromDay: string,
+  notes?: NoteWrites,
+): Promise<void> {
+  const { id: _id, userId: _userId, ...columns } = recurrenceColumnsOf(recurrence);
+  const updated = await tx
+    .update(schema.recurrences)
+    .set({ ...columns, updatedAt: sql`now()` })
+    .where(
+      and(
+        eq(schema.recurrences.id, recurrence.id),
+        eq(schema.recurrences.userId, actorUserId),
+        eq(schema.recurrences.revision, expectedRevision),
+      ),
+    )
+    .returning({ id: schema.recurrences.id });
+
+  if (updated.length === 0) {
+    const [existing] = await tx
+      .select({ userId: schema.recurrences.userId, revision: schema.recurrences.revision })
+      .from(schema.recurrences)
+      .where(eq(schema.recurrences.id, recurrence.id));
+    classifyUpdateFailure(existing, actorUserId, expectedRevision, {
+      notFound: errors.notFound(recurrence.id),
+      ownership: errors.ownership,
+      conflict: errors.conflict,
+    });
+  }
+
+  await writeNotes(tx, notes);
+  await replaceRecurrenceNoteIds(tx, recurrence.id, recurrence.noteIds);
+  await deleteUpcomingOccurrences(tx, recurrence.id, fromDay);
+}
+
+/** Apaga a regra e as ocorrencias de `fromDay` em diante; as anteriores ficam, sem o vinculo. */
+export async function deleteRecurrenceAggregate(
+  tx: Tx,
+  recurrenceId: string,
+  actorUserId: string,
+  fromDay: string,
+): Promise<void> {
+  await assertOwned(tx, recurrenceId, actorUserId);
+  await deleteUpcomingOccurrences(tx, recurrenceId, fromDay);
+
+  // O `set null` do FK so soltaria `recurrence_id`; o dia tambem deixa de
+  // querer dizer alguma coisa, entao os tres saem juntos, numa linha so —
+  // o check `*_occurrence_requires_day` nao aceita um sem o outro.
+  // O vinculo herdado da serie vira da propria ocorrencia: a serie some, a note fica.
+  await tx.execute(sql`
+    UPDATE event_notes SET from_recurrence = false
+    WHERE event_id IN (SELECT id FROM events WHERE recurrence_id = ${recurrenceId})
+  `);
+  await tx.execute(sql`
+    UPDATE task_notes SET from_recurrence = false
+    WHERE task_id IN (SELECT id FROM tasks WHERE recurrence_id = ${recurrenceId})
+  `);
+
+  const unlink = { recurrenceId: null, occurrenceOn: null, recurrenceDetached: false };
+  await tx.update(schema.events).set(unlink).where(eq(schema.events.recurrenceId, recurrenceId));
+  await tx.update(schema.tasks).set(unlink).where(eq(schema.tasks.recurrenceId, recurrenceId));
+
+  await tx.delete(schema.recurrences).where(eq(schema.recurrences.id, recurrenceId));
+}
+
 export class PostgresRecurrenceRepository implements RecurrenceRepository {
   constructor(private readonly db: NodePgDatabase<typeof schema>) {}
 
-  async save(recurrence: Recurrence): Promise<void> {
-    await this.db.insert(schema.recurrences).values(recurrenceColumnsOf(recurrence));
+  async save(recurrence: Recurrence, notes?: NoteWrites): Promise<void> {
+    await this.db.transaction(async (tx) => {
+      // As notes antes: o vinculo da serie aponta para elas.
+      await writeNotes(tx, notes);
+      await insertRecurrenceAggregate(tx, recurrence);
+    });
   }
 
   async update(
@@ -33,50 +120,77 @@ export class PostgresRecurrenceRepository implements RecurrenceRepository {
     actorUserId: string,
     expectedRevision: number,
     fromDay: string,
+    notes?: NoteWrites,
   ): Promise<void> {
     await this.db.transaction(async (tx) => {
-      const { id: _id, userId: _userId, ...columns } = recurrenceColumnsOf(recurrence);
-      const updated = await tx
-        .update(schema.recurrences)
-        .set({ ...columns, updatedAt: sql`now()` })
-        .where(
-          and(
-            eq(schema.recurrences.id, recurrence.id),
-            eq(schema.recurrences.userId, actorUserId),
-            eq(schema.recurrences.revision, expectedRevision),
-          ),
-        )
-        .returning({ id: schema.recurrences.id });
-
-      if (updated.length === 0) {
-        const [existing] = await tx
-          .select({ userId: schema.recurrences.userId, revision: schema.recurrences.revision })
-          .from(schema.recurrences)
-          .where(eq(schema.recurrences.id, recurrence.id));
-        classifyUpdateFailure(existing, actorUserId, expectedRevision, {
-          notFound: errors.notFound(recurrence.id),
-          ownership: errors.ownership,
-          conflict: errors.conflict,
-        });
-      }
-
-      await deleteUpcomingOccurrences(tx, recurrence.id, fromDay);
+      await updateRecurrenceAggregate(tx, recurrence, actorUserId, expectedRevision, fromDay, notes);
     });
   }
 
   async delete(recurrenceId: string, actorUserId: string, fromDay: string): Promise<void> {
     await this.db.transaction(async (tx) => {
-      await assertOwned(tx, recurrenceId, actorUserId);
-      await deleteUpcomingOccurrences(tx, recurrenceId, fromDay);
+      await deleteRecurrenceAggregate(tx, recurrenceId, actorUserId, fromDay);
+    });
+  }
 
-      // O `set null` do FK so soltaria `recurrence_id`; o dia tambem deixa de
-      // querer dizer alguma coisa, entao os tres saem juntos, numa linha so —
-      // o check `*_occurrence_requires_day` nao aceita um sem o outro.
-      const unlink = { recurrenceId: null, occurrenceOn: null, recurrenceDetached: false };
-      await tx.update(schema.events).set(unlink).where(eq(schema.events.recurrenceId, recurrenceId));
-      await tx.update(schema.tasks).set(unlink).where(eq(schema.tasks.recurrenceId, recurrenceId));
+  async attachNotes(
+    recurrenceId: string,
+    actorUserId: string,
+    noteIds: readonly string[],
+    fromDay: string,
+  ): Promise<void> {
+    await this.db.transaction(async (tx) => {
+      const [recurrence] = await tx
+        .select({ userId: schema.recurrences.userId, target: schema.recurrences.targetKind })
+        .from(schema.recurrences)
+        .where(eq(schema.recurrences.id, recurrenceId));
+      if (!recurrence) throw errors.notFound(recurrenceId)();
+      if (recurrence.userId !== actorUserId) throw errors.ownership();
 
-      await tx.delete(schema.recurrences).where(eq(schema.recurrences.id, recurrenceId));
+      // A mesma trava da materializacao: ou as ocorrencias novas ja nascem com
+      // a note, ou esta transacao as ve e liga.
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${recurrence.userId}))`);
+
+      const linked = await tx
+        .select({ noteId: schema.recurrenceNotes.noteId, position: schema.recurrenceNotes.position })
+        .from(schema.recurrenceNotes)
+        .where(eq(schema.recurrenceNotes.recurrenceId, recurrenceId));
+      const already = new Set(linked.map((row) => row.noteId));
+      const added = noteIds.filter((noteId) => !already.has(noteId));
+      if (added.length === 0) return;
+
+      const nextPosition = linked.reduce((max, row) => Math.max(max, row.position + 1), 0);
+      await tx
+        .insert(schema.recurrenceNotes)
+        .values(added.map((noteId, index) => ({ recurrenceId, noteId, position: nextPosition + index })));
+
+      // As ocorrencias de hoje em diante que ninguem destacou da serie ja existem
+      // como linhas: a note entra no fim da lista de cada uma, sem tocar na revisao
+      // delas — ligar a serie nao e uma edicao da ocorrencia.
+      const [table, idColumn, linkTable] =
+        recurrence.target === "event"
+          ? (["events", "event_id", "event_notes"] as const)
+          : (["tasks", "task_id", "task_notes"] as const);
+      await tx.execute(sql`
+        INSERT INTO ${sql.identifier(linkTable)} (${sql.identifier(idColumn)}, note_id, position, from_recurrence)
+        SELECT o.id, n.note_id,
+               COALESCE((SELECT max(l.position) + 1 FROM ${sql.identifier(linkTable)} l WHERE l.${sql.identifier(idColumn)} = o.id), 0)
+                 + n.ord - 1,
+               true
+        FROM ${sql.identifier(table)} o
+        CROSS JOIN unnest(${pgTextArrayLiteral(added)}::char(26)[]) WITH ORDINALITY AS n(note_id, ord)
+        WHERE o.recurrence_id = ${recurrenceId}
+          AND o.occurrence_on >= ${fromDay}
+          AND o.recurrence_detached = false
+          AND o.deleted_at IS NULL
+        ON CONFLICT (${sql.identifier(idColumn)}, note_id) DO NOTHING
+      `);
+
+      // Uma geracao em andamento le a serie sem a note: a versao nova a faz recomecar.
+      await tx
+        .update(schema.recurrences)
+        .set({ revision: sql`${schema.recurrences.revision} + 1`, updatedAt: sql`now()` })
+        .where(eq(schema.recurrences.id, recurrenceId));
     });
   }
 
@@ -85,7 +199,33 @@ export class PostgresRecurrenceRepository implements RecurrenceRepository {
       .select()
       .from(schema.recurrences)
       .where(eq(schema.recurrences.id, recurrenceId));
-    return row ? mapRecurrenceRow(row) : null;
+    if (!row) return null;
+    const [recurrence] = await this.hydrate([row]);
+    return recurrence ?? null;
+  }
+
+  async findNextOccurrenceId(recurrenceId: string, fromDay: string): Promise<string | null> {
+    const found = await this.db
+      .select({ target: schema.recurrences.targetKind })
+      .from(schema.recurrences)
+      .where(eq(schema.recurrences.id, recurrenceId));
+    const target = found[0]?.target;
+    if (!target) return null;
+    const table = target === "event" ? schema.events : schema.tasks;
+    const [row] = await this.db
+      .select({ id: table.id })
+      .from(table)
+      .where(
+        and(
+          eq(table.recurrenceId, recurrenceId),
+          gte(table.occurrenceOn, fromDay),
+          eq(table.recurrenceDetached, false),
+          isNull(table.deletedAt),
+        ),
+      )
+      .orderBy(asc(table.occurrenceOn))
+      .limit(1);
+    return row?.id ?? null;
   }
 
   async listByUserId(userId: string): Promise<Recurrence[]> {
@@ -94,7 +234,7 @@ export class PostgresRecurrenceRepository implements RecurrenceRepository {
       .from(schema.recurrences)
       .where(eq(schema.recurrences.userId, userId))
       .orderBy(asc(schema.recurrences.startsOn), asc(schema.recurrences.id));
-    return rows.map(mapRecurrenceRow);
+    return this.hydrate(rows);
   }
 
   async listPendingMaterialization(userId: string, horizon: string): Promise<Recurrence[]> {
@@ -114,7 +254,7 @@ export class PostgresRecurrenceRepository implements RecurrenceRepository {
           ),
         ),
       );
-    return rows.map(mapRecurrenceRow);
+    return this.hydrate(rows);
   }
 
   async listExceptions(recurrenceId: string): Promise<string[]> {
@@ -130,6 +270,31 @@ export class PostgresRecurrenceRepository implements RecurrenceRepository {
       .insert(schema.recurrenceExceptions)
       .values({ recurrenceId, occurrenceOn: dayKey })
       .onConflictDoNothing();
+  }
+
+  /** As notes de "todas as ocorrencias" de cada serie, na ordem, numa consulta so. */
+  private async hydrate(rows: readonly RecurrenceRow[]): Promise<Recurrence[]> {
+    if (rows.length === 0) return [];
+
+    const noteRows = await this.db
+      .select({ recurrenceId: schema.recurrenceNotes.recurrenceId, noteId: schema.recurrenceNotes.noteId })
+      .from(schema.recurrenceNotes)
+      .innerJoin(schema.notes, eq(schema.recurrenceNotes.noteId, schema.notes.id))
+      .where(
+        and(
+          inArray(
+            schema.recurrenceNotes.recurrenceId,
+            rows.map((row) => row.id),
+          ),
+          isNull(schema.notes.deletedAt),
+        ),
+      )
+      .orderBy(asc(schema.recurrenceNotes.recurrenceId), asc(schema.recurrenceNotes.position));
+    const noteIdsByRecurrence = new Map<string, string[]>();
+    for (const { recurrenceId, noteId } of noteRows) {
+      noteIdsByRecurrence.set(recurrenceId, [...(noteIdsByRecurrence.get(recurrenceId) ?? []), noteId]);
+    }
+    return rows.map((row) => mapRecurrenceRow(row, noteIdsByRecurrence.get(row.id) ?? []));
   }
 
   async materialize(recurrence: Recurrence, occurrences: Event[] | Task[]): Promise<void> {

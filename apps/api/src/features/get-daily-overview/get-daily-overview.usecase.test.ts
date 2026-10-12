@@ -1,14 +1,13 @@
 import { expect, test } from "vitest";
-import { Event, EventItem } from "../../domain";
 import { GetDailyOverviewUseCase } from "./get-daily-overview.usecase";
-import { InMemoryEventDatabase } from "../../api-core/events/testing/in-memory-event-database";
+import { databaseOf, eventWith } from "../../api-core/events/testing/event-fixtures";
 import { InMemoryDailyOverviewQuery } from "../../api-core/events/testing/in-memory-daily-overview.query";
 
 const workout = { workoutCode: "free" as const, workoutName: "Livre", calories: 420, duration: 60 };
 
 test("builds the daily overview for a Sao Paulo day", async () => {
-  const database = new InMemoryEventDatabase([
-    Event.create({
+  const database = databaseOf([
+    eventWith({
       userId: "user-1",
       name: "Night sleep",
       description: "Manual entry",
@@ -16,9 +15,10 @@ test("builds the daily overview for a Sao Paulo day", async () => {
       finishedAt: new Date("2026-08-16T07:00:00-03:00"),
       tags: ["sleep"],
       interruptions: [],
-      items: [EventItem.create({ position: 0, type: "sleep", schemaVersion: 1, isPrimary: true, data: { trackedSleepTime: 390, score: 88 } })],
-    }),
-    Event.create({
+    }, [
+      { type: "sleep", data: { trackedSleepTime: 390, score: 88 } },
+    ]),
+    eventWith({
       userId: "user-1",
       name: "Leg day",
       description: "Gym session",
@@ -26,9 +26,10 @@ test("builds the daily overview for a Sao Paulo day", async () => {
       finishedAt: new Date("2026-08-16T19:00:00-03:00"),
       tags: ["gym"],
       interruptions: [],
-      items: [EventItem.create({ position: 0, type: "training", schemaVersion: 1, isPrimary: true, data: { workouts: [workout], caloriesBurned: 420 } })],
-    }),
-    Event.create({
+    }, [
+      { type: "training", data: { workouts: [workout], caloriesBurned: 420 } },
+    ]),
+    eventWith({
       userId: "user-1",
       name: "Lunch",
       description: "Rice, chicken, and beans",
@@ -36,13 +37,8 @@ test("builds the daily overview for a Sao Paulo day", async () => {
       finishedAt: new Date("2026-08-16T12:30:00-03:00"),
       tags: ["lunch"],
       interruptions: [],
-      items: [
-        EventItem.create({
-          position: 0,
-          type: "meal",
-          schemaVersion: 1,
-          isPrimary: true,
-          data: {
+    }, [
+      { type: "meal", data: {
             name: "Lunch",
             description: "arroz, frango e feijao",
             foodItems: [
@@ -53,7 +49,6 @@ test("builds the daily overview for a Sao Paulo day", async () => {
                 approximateWeightGrams: 400,
                 caloriesKcal: 560,
                 macronutrients: { carbohydratesGrams: 58, proteinsGrams: 32, totalFatGrams: 12, fiberGrams: 8 },
-                micronutrients: { ironMg: 4.1 },
               },
             ],
             totals: {
@@ -63,10 +58,8 @@ test("builds the daily overview for a Sao Paulo day", async () => {
               totalFatGrams: 12,
               totalFiberGrams: 8,
             },
-          },
-        }),
-      ],
-    }),
+          } },
+    ]),
   ]);
   const useCase = new GetDailyOverviewUseCase(new InMemoryDailyOverviewQuery(database));
 
@@ -78,8 +71,8 @@ test("builds the daily overview for a Sao Paulo day", async () => {
 });
 
 test("does not attribute overnight meal or training totals to the following day", async () => {
-  const database = new InMemoryEventDatabase([
-    Event.create({
+  const database = databaseOf([
+    eventWith({
       userId: "user-1",
       name: "Late dinner",
       description: "Dinner before midnight",
@@ -87,13 +80,8 @@ test("does not attribute overnight meal or training totals to the following day"
       finishedAt: new Date("2026-08-17T00:30:00-03:00"),
       tags: [],
       interruptions: [],
-      items: [
-        EventItem.create({
-          position: 0,
-          type: "meal",
-          schemaVersion: 1,
-          isPrimary: true,
-          data: {
+    }, [
+      { type: "meal", data: {
             name: "Jantar",
             description: "jantar",
             foodItems: [
@@ -104,7 +92,6 @@ test("does not attribute overnight meal or training totals to the following day"
                 approximateWeightGrams: 400,
                 caloriesKcal: 700,
                 macronutrients: { carbohydratesGrams: 60, proteinsGrams: 40, totalFatGrams: 20, fiberGrams: 10 },
-                micronutrients: { ironMg: 5 },
               },
             ],
             totals: {
@@ -114,11 +101,9 @@ test("does not attribute overnight meal or training totals to the following day"
               totalFatGrams: 20,
               totalFiberGrams: 10,
             },
-          },
-        }),
-      ],
-    }),
-    Event.create({
+          } },
+    ]),
+    eventWith({
       userId: "user-1",
       name: "Late training",
       description: "Workout before midnight",
@@ -126,17 +111,10 @@ test("does not attribute overnight meal or training totals to the following day"
       finishedAt: new Date("2026-08-17T00:30:00-03:00"),
       tags: [],
       interruptions: [],
-      items: [
-        EventItem.create({
-          position: 0,
-          type: "training",
-          schemaVersion: 1,
-          isPrimary: true,
-          data: { workouts: [{ ...workout, calories: 300 }], caloriesBurned: 300 },
-        }),
-      ],
-    }),
-    Event.create({
+    }, [
+      { type: "training", data: { workouts: [{ ...workout, calories: 300 }], caloriesBurned: 300 } },
+    ]),
+    eventWith({
       userId: "user-1",
       name: "Night sleep",
       description: "Overnight sleep remains visible",
@@ -144,8 +122,9 @@ test("does not attribute overnight meal or training totals to the following day"
       finishedAt: new Date("2026-08-17T07:00:00-03:00"),
       tags: [],
       interruptions: [],
-      items: [EventItem.create({ position: 0, type: "sleep", schemaVersion: 1, isPrimary: true, data: { trackedSleepTime: 480, score: 90 } })],
-    }),
+    }, [
+      { type: "sleep", data: { trackedSleepTime: 480, score: 90 } },
+    ]),
   ]);
 
   const overview = await new GetDailyOverviewUseCase(new InMemoryDailyOverviewQuery(database)).execute(

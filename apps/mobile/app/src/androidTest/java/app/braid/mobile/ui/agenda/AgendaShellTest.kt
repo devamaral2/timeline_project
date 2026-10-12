@@ -1,0 +1,90 @@
+package app.braid.mobile.ui.agenda
+
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import app.braid.mobile.core.designsystem.BraidTheme
+import app.braid.mobile.data.session.SessionUser
+import org.junit.Assert.assertTrue
+import org.junit.Rule
+import org.junit.Test
+
+class AgendaShellTest {
+    @get:Rule
+    val composeRule = createComposeRule()
+
+    @Test
+    fun accountMenuExposesThemeToggleAndLogout() {
+        var signedOut = false
+        composeRule.setContent {
+            BraidTheme {
+                AgendaShell(
+                    user = SessionUser("user-1", "ana@example.com", "Ana", "session-1"),
+                    onSignOut = { signedOut = true },
+                )
+            }
+        }
+
+        composeRule.onNodeWithContentDescription("Minha conta").performClick()
+        composeRule.onNodeWithText("Tema escuro").assertIsDisplayed()
+        composeRule.onNodeWithText("Sair da conta").performClick()
+
+        assertTrue(signedOut)
+    }
+
+    @Test
+    fun accountMenuTogglesTheme() {
+        var toggled = false
+        composeRule.setContent {
+            BraidTheme(darkTheme = false) {
+                AgendaShell(
+                    user = SessionUser("user-1", "ana@example.com", "Ana", "session-1"),
+                    onSignOut = {},
+                    onToggleTheme = { toggled = true },
+                )
+            }
+        }
+
+        composeRule.onNodeWithContentDescription("Minha conta").performClick()
+        composeRule.onNodeWithText("Tema escuro").performClick()
+
+        assertTrue(toggled)
+    }
+
+    @Test
+    fun headerShowsNotificationsAndBottomBarHasFourTabs() {
+        composeRule.setContent {
+            BraidTheme {
+                AgendaShell(
+                    user = SessionUser("user-1", "ana@example.com", "Ana", "session-1"),
+                    onSignOut = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithContentDescription("Notificações").assertIsDisplayed()
+        listOf("Tarefas", "Agenda", "Notas", "Buscar e criar").forEach { label ->
+            composeRule.onNodeWithContentDescription(label).assertIsDisplayed()
+        }
+    }
+
+    @Test
+    fun viewOptionsOfferDayAndInfiniteLists() {
+        composeRule.setContent {
+            BraidTheme {
+                AgendaShell(
+                    user = SessionUser("user-1", "ana@example.com", "Ana", "session-1"),
+                    onSignOut = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithContentDescription("Rolagem infinita").assertDoesNotExist()
+        composeRule.onNodeWithContentDescription("Opções de visualização").performClick()
+        composeRule.onNodeWithText("Lista por dia").assertIsDisplayed()
+        composeRule.onNodeWithText("Lista infinita").assertIsDisplayed()
+        composeRule.onNodeWithText("Hoje").assertIsDisplayed()
+    }
+}

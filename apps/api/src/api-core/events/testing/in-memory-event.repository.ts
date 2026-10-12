@@ -1,15 +1,22 @@
-import { EventNotFoundError, EventOwnershipError, EventRevisionConflictError, type Event } from "../../../domain";
+import {
+  EventNotFoundError,
+  EventOwnershipError,
+  EventRevisionConflictError,
+  type Event,
+  type NoteWrites,
+} from "../../../domain";
 import type { EventRepository } from "../../../domain/ports";
 import type { InMemoryEventDatabase } from "./in-memory-event-database";
 
 export class InMemoryEventRepository implements EventRepository {
   constructor(private readonly database: InMemoryEventDatabase) {}
 
-  async save(event: Event): Promise<void> {
+  async save(event: Event, notes?: NoteWrites): Promise<void> {
+    this.database.writeNotes(notes);
     this.database.events.push(event);
   }
 
-  async update(event: Event, actorUserId: string, expectedRevision: number): Promise<void> {
+  async update(event: Event, actorUserId: string, expectedRevision: number, notes?: NoteWrites): Promise<void> {
     const index = this.database.events.findIndex((storedEvent) => storedEvent.id === event.id);
     if (index === -1) throw new EventNotFoundError(`Event not found: ${event.id}`);
 
@@ -21,6 +28,7 @@ export class InMemoryEventRepository implements EventRepository {
       );
     }
 
+    this.database.writeNotes(notes);
     this.database.events[index] = event;
   }
 

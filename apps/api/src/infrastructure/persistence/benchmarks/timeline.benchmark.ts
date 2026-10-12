@@ -66,10 +66,16 @@ async function seedEvents(ctx: PostgresTestContext, count: number): Promise<void
       ],
     );
     await ctx.pool.query(
-      `INSERT INTO event_items (id, event_id, position, type, schema_version, is_primary, data)
-       SELECT id, event_id, 0, 'routine', 1, true, '{}'::jsonb
-       FROM UNNEST($1::char(26)[], $2::char(26)[]) AS t(id, event_id)`,
-      [itemIds.slice(offset, end), ids.slice(offset, end)],
+      `INSERT INTO notes (id, user_id, type, schema_version, data)
+       SELECT id, user_id, 'text', 1, '{"body":"nota"}'::jsonb
+       FROM UNNEST($1::char(26)[], $2::text[]) AS t(id, user_id)`,
+      [itemIds.slice(offset, end), userIds.slice(offset, end)],
+    );
+    await ctx.pool.query(
+      `INSERT INTO event_notes (event_id, note_id, position)
+       SELECT event_id, note_id, 0
+       FROM UNNEST($1::char(26)[], $2::char(26)[]) AS t(event_id, note_id)`,
+      [ids.slice(offset, end), itemIds.slice(offset, end)],
     );
   }
 }
@@ -87,7 +93,7 @@ interface ScenarioResult {
 async function measure(ctx: PostgresTestContext, datasetSize: number): Promise<ScenarioResult> {
   await ctx.reset();
   await seedEvents(ctx, datasetSize);
-  await ctx.pool.query("ANALYZE events, event_items");
+  await ctx.pool.query("ANALYZE events, notes, event_notes");
 
   const { queries: timelineQueries, db: timelineDb } = captureQueries(ctx);
   const timelineStart = performance.now();

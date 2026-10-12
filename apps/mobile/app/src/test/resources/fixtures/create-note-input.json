@@ -1,0 +1,10 @@
+{
+  "name": "Mercado",
+  "tags": [
+    "casa"
+  ],
+  "type": "text",
+  "data": {
+    "body": "Lista do mercado\n- Arroz"
+  }
+}

@@ -10,7 +10,6 @@ import { resolve } from "node:path";
 import { ulid } from "ulid";
 import {
   Event,
-  EventItem,
   EventNotFoundError,
   EventOwnershipError,
   EventRevisionConflictError,
@@ -58,6 +57,16 @@ function captureQueries(ctx: PostgresTestContext): {
   };
   const db = drizzle(ctx.pool, { schema, logger });
   return { queries, db };
+}
+
+/** Um evento de teste com as notes novas dele, ja ligadas na ordem dada. */
+function eventWith(
+  props: Omit<Parameters<typeof Event.create>[0], "noteLinks">,
+  notes: Array<{ type: string; data: unknown }> = [],
+) {
+  const created = notes.map((note) => Note.create({ userId: props.userId, type: note.type, data: note.data }));
+  const event = Event.create({ ...props, noteLinks: created.map((note) => ({ noteId: note.id, fromRecurrence: false })) });
+  return { event, notes: created };
 }
 
 describe("PostgreSQL schema", () => {
@@ -120,55 +129,47 @@ describe("PostgreSQL schema", () => {
     ).rejects.toThrow();
   });
 
-  test("requires event_items.data to be a JSON object", async () => {
-    const eventId = await insertEvent();
-    await expect(
-      ctx.pool.query(
-        `INSERT INTO event_items (id, event_id, position, type, schema_version, is_primary, data)
-         VALUES ('01ITEM0000000000000000000', $1, 0, 'routine', 1, true, '[1,2,3]'::jsonb)`,
-        [eventId],
-      ),
-    ).rejects.toThrow();
+  async function insertNote(id: string, data = "{}", type = "text", userId = "user-1") {
+    await ctx.pool.query(
+      `INSERT INTO notes (id, user_id, type, schema_version, data) VALUES ($1, $2, $3, 1, $4::jsonb)`,
+      [id, userId, type, data],
+    );
+  }
+
+  test("requires notes.data to be a JSON object", async () => {
+    await expect(insertNote("01NOTE0000000000000000000", "[1,2,3]")).rejects.toThrow();
+    await insertNote("01NOTE0000000000000000001", '{"body":"ok"}');
   });
 
   test("rejects a negative position and requires uniqueness per event", async () => {
     const eventId = await insertEvent();
+    await insertNote("01NOTE0000000000000000001");
+    await insertNote("01NOTE0000000000000000002");
     await expect(
-      ctx.pool.query(
-        `INSERT INTO event_items (id, event_id, position, type, schema_version, is_primary, data)
-         VALUES ('01ITEM0000000000000000001', $1, -1, 'routine', 1, true, '{}'::jsonb)`,
-        [eventId],
-      ),
+      ctx.pool.query(`INSERT INTO event_notes (event_id, note_id, position) VALUES ($1, '01NOTE0000000000000000001', -1)`, [
+        eventId,
+      ]),
     ).rejects.toThrow();
 
-    await ctx.pool.query(
-      `INSERT INTO event_items (id, event_id, position, type, schema_version, is_primary, data)
-       VALUES ('01ITEM0000000000000000002', $1, 0, 'routine', 1, true, '{}'::jsonb)`,
-      [eventId],
-    );
+    await ctx.pool.query(`INSERT INTO event_notes (event_id, note_id, position) VALUES ($1, '01NOTE0000000000000000001', 0)`, [
+      eventId,
+    ]);
     await expect(
-      ctx.pool.query(
-        `INSERT INTO event_items (id, event_id, position, type, schema_version, is_primary, data)
-         VALUES ('01ITEM0000000000000000003', $1, 0, 'routine', 1, false, '{}'::jsonb)`,
-        [eventId],
-      ),
+      ctx.pool.query(`INSERT INTO event_notes (event_id, note_id, position) VALUES ($1, '01NOTE0000000000000000002', 0)`, [
+        eventId,
+      ]),
     ).rejects.toThrow();
   });
 
-  test("allows at most one primary item per event", async () => {
+  test("an event kind is one of the known kinds and defaults to routine, with no note needed", async () => {
     const eventId = await insertEvent();
-    await ctx.pool.query(
-      `INSERT INTO event_items (id, event_id, position, type, schema_version, is_primary, data)
-       VALUES ('01ITEM0000000000000000004', $1, 0, 'routine', 1, true, '{}'::jsonb)`,
-      [eventId],
-    );
-    await expect(
-      ctx.pool.query(
-        `INSERT INTO event_items (id, event_id, position, type, schema_version, is_primary, data)
-         VALUES ('01ITEM0000000000000000005', $1, 1, 'routine', 1, true, '{}'::jsonb)`,
-        [eventId],
-      ),
-    ).rejects.toThrow();
+    const { rows } = await ctx.pool.query("SELECT kind FROM events WHERE id = $1", [eventId]);
+    expect(rows[0].kind).toBe("routine");
+
+    await expect(ctx.pool.query("UPDATE events SET kind = 'party' WHERE id = $1", [eventId])).rejects.toThrow();
+    await ctx.pool.query("UPDATE events SET kind = 'meal' WHERE id = $1", [eventId]);
+    const noNotes = await ctx.pool.query("SELECT count(*)::int AS n FROM event_notes WHERE event_id = $1", [eventId]);
+    expect(noNotes.rows[0].n).toBe(0);
   });
 
   test("requires valid scope/owner combinations in food and meal", async () => {
@@ -217,38 +218,34 @@ describe("PostgreSQL schema", () => {
       `INSERT INTO food (id, scope, owner_user_id, name, reference_portion, reference_weight_grams, calories_kcal, carbohydrates_grams, proteins_grams, total_fat_grams, fiber_grams)
        VALUES ('01FOOD0000000000000000004', 'user', 'user-1', 'Arroz', '100 g', 100, 130, 28, 2.7, 0.3, 0.4)`,
     );
-    const eventId = await insertEvent();
-    await ctx.pool.query(
-      `INSERT INTO event_items (id, event_id, position, type, schema_version, is_primary, data)
-       VALUES ('01ITEM0000000000000000006', $1, 0, 'meal', 1, true, $2::jsonb)`,
-      [
-        eventId,
-        JSON.stringify({
-          name: "Almoço",
-          description: "",
-          foodItems: [{ sourceFoodId: "01FOOD0000000000000000004" }],
-          totals: {},
-        }),
-      ],
+    await insertNote(
+      "01NOTE0000000000000000006",
+      JSON.stringify({
+        name: "Almoço",
+        description: "",
+        foodItems: [{ sourceFoodId: "01FOOD0000000000000000004" }],
+        totals: {},
+      }),
+      "meal",
     );
 
     await ctx.pool.query("DELETE FROM food WHERE id = '01FOOD0000000000000000004'");
 
-    const { rows } = await ctx.pool.query(
-      "SELECT data FROM event_items WHERE id = '01ITEM0000000000000000006'",
-    );
+    const { rows } = await ctx.pool.query("SELECT data FROM notes WHERE id = '01NOTE0000000000000000006'");
     expect(rows[0].data.foodItems[0].sourceFoodId).toBe("01FOOD0000000000000000004");
   });
 
-  test("does not create a generic GIN index over event_items.data", async () => {
-    const { rows } = await ctx.pool.query(
-      `SELECT indexdef FROM pg_indexes WHERE tablename = 'event_items'`,
-    );
+  test("does not create a generic GIN index over notes.data", async () => {
+    const { rows } = await ctx.pool.query(`SELECT indexdef FROM pg_indexes WHERE tablename = 'notes'`);
     const ginOnData = rows.filter(
-      (row: { indexdef: string }) =>
-        row.indexdef.includes("gin") && row.indexdef.includes("data"),
+      (row: { indexdef: string }) => row.indexdef.includes("gin") && row.indexdef.includes("data"),
     );
     expect(ginOnData).toHaveLength(0);
+  });
+
+  test("the old event_items table is gone", async () => {
+    const { rows } = await ctx.pool.query("SELECT to_regclass('public.event_items') AS found");
+    expect(rows[0].found).toBeNull();
   });
 
   test("proves the indexes required by the design exist and none of them is GIN", async () => {
@@ -268,8 +265,10 @@ describe("PostgreSQL schema", () => {
         "events_timeline_cursor_idx",
         "events_user_finished_idx",
         "events_user_day_idx",
-        "event_items_one_primary_idx",
-        "event_items_type_event_idx",
+        "notes_user_type_idx",
+        "event_notes_note_idx",
+        "task_notes_note_idx",
+        "recurrence_notes_note_idx",
         "tags_user_name_prefix_idx",
       ]),
     );
@@ -294,17 +293,6 @@ describe("PostgresEventRepository", () => {
     if (ctx) await ctx.stop();
   });
 
-  function routine(overrides: Partial<Parameters<typeof EventItem.create>[0]> = {}) {
-    return EventItem.create({
-      position: 0,
-      type: "routine",
-      schemaVersion: 1,
-      isPrimary: true,
-      data: {},
-      ...overrides,
-    });
-  }
-
   function newEvent(overrides: Partial<Parameters<typeof Event.create>[0]> = {}) {
     return Event.create({
       userId: "user-1",
@@ -313,19 +301,59 @@ describe("PostgresEventRepository", () => {
       startedAt: new Date("2026-08-31T12:00:00.000Z"),
       tags: ["trabalho"],
       interruptions: [],
-      items: [routine()],
       ...overrides,
     });
   }
 
-  test("saves and reads back an aggregate", async () => {
-    const event = newEvent();
+  const aNote = (body: string, overrides: Partial<Parameters<typeof Note.create>[0]> = {}) =>
+    Note.create({ userId: "user-1", data: { body }, ...overrides });
+  const linksOf = (...notes: Note[]) => notes.map((note) => ({ noteId: note.id, fromRecurrence: false }));
+
+  test("saves and reads back an aggregate with its kind", async () => {
+    const event = newEvent({ kind: "training" });
     await repository.save(event);
 
     const found = await repository.findById(event.id);
     expect(found?.id).toBe(event.id);
     expect(found?.tags).toEqual(["trabalho"]);
-    expect(found?.items[0].id).toBe(event.items[0].id);
+    expect(found?.kind).toBe("training");
+    expect(found?.noteLinks).toEqual([]);
+  });
+
+  test("saves new notes together with the event, in the order of the links", async () => {
+    const first = aNote("primeira");
+    const second = aNote("segunda", { type: "sleep", data: { trackedSleepTime: 420, score: 80 } });
+    const event = newEvent({ kind: "sleep", noteLinks: linksOf(second, first) });
+
+    await repository.save(event, { created: [first, second] });
+
+    const found = await repository.findById(event.id);
+    expect(found?.noteLinks.map((link) => link.noteId)).toEqual([second.id, first.id]);
+    const { rows } = await ctx.pool.query("SELECT note_id, position FROM event_notes WHERE event_id = $1 ORDER BY position", [
+      event.id,
+    ]);
+    expect(rows.map((row) => [row.note_id.trim(), row.position])).toEqual([
+      [second.id, 0],
+      [first.id, 1],
+    ]);
+    expect(await new PostgresNoteRepository(ctx.db).findById(second.id)).toMatchObject({ type: "sleep" });
+  });
+
+  test("keeps which links came from the series", async () => {
+    const own = aNote("minha");
+    const inherited = aNote("da serie");
+    await new PostgresNoteRepository(ctx.db).save(own);
+    await new PostgresNoteRepository(ctx.db).save(inherited);
+    const event = newEvent({
+      noteLinks: [
+        { noteId: inherited.id, fromRecurrence: true },
+        { noteId: own.id, fromRecurrence: false },
+      ],
+    });
+
+    await repository.save(event);
+
+    expect((await repository.findById(event.id))?.noteLinks).toEqual(event.noteLinks);
   });
 
   test("rejects an update with a stale expected revision", async () => {
@@ -348,16 +376,28 @@ describe("PostgresEventRepository", () => {
     ).rejects.toBeInstanceOf(EventOwnershipError);
   });
 
-  test("rolls back the parent insert when a child insert fails", async () => {
-    const shared = routine();
-    const first = newEvent({ items: [shared] });
-    await repository.save(first);
+  test("rolls back the parent insert when a note insert fails", async () => {
+    const existing = aNote("ja existe");
+    await new PostgresNoteRepository(ctx.db).save(existing);
+    // Mesmo id: a insercao da note falha na PK e o evento nao pode ficar para tras.
+    const colliding = aNote("de novo", { id: existing.id });
+    const event = newEvent({ noteLinks: linksOf(colliding) });
 
-    const collidingItem = routine({ id: shared.id, position: 0 });
-    const second = newEvent({ items: [collidingItem] });
+    await expect(repository.save(event, { created: [colliding] })).rejects.toThrow();
 
-    await expect(repository.save(second)).rejects.toThrow();
-    expect(await repository.findById(second.id)).toBeNull();
+    expect(await repository.findById(event.id)).toBeNull();
+    expect((await new PostgresNoteRepository(ctx.db).findById(existing.id))?.data).toEqual({ body: "ja existe" });
+  });
+
+  test("rolls back the notes when the event insert is the one that fails", async () => {
+    const created = aNote("nova");
+    // O vinculo aponta para uma note que nao existe: a FK recusa e a note nova tambem nao fica.
+    const event = newEvent({ noteLinks: [...linksOf(created), { noteId: "01HZZZZZZZZZZZZZZZZZZZZZZZ", fromRecurrence: false }] });
+
+    await expect(repository.save(event, { created: [created] })).rejects.toThrow();
+
+    expect(await repository.findById(event.id)).toBeNull();
+    expect(await new PostgresNoteRepository(ctx.db).findById(created.id)).toBeNull();
   });
 
   test("soft deletes an event: the row stays, but it is invisible and immutable", async () => {
@@ -375,15 +415,14 @@ describe("PostgresEventRepository", () => {
     await expect(repository.delete(event.id, "user-1")).rejects.toBeInstanceOf(EventNotFoundError);
   });
 
-  test("deleting an event soft deletes the notes attached to it", async () => {
-    const event = newEvent();
-    await repository.save(event);
-    const note = Note.create({ userId: "user-1", content: "Levar garrafa", eventId: event.id });
-    await new PostgresNoteRepository(ctx.db).save(note);
+  test("deleting an event keeps its notes: they only lose the event", async () => {
+    const note = aNote("Levar garrafa");
+    const event = newEvent({ noteLinks: linksOf(note) });
+    await repository.save(event, { created: [note] });
 
     await repository.delete(event.id, "user-1");
 
-    expect(await new PostgresNoteRepository(ctx.db).findById(note.id)).toBeNull();
+    expect(await new PostgresNoteRepository(ctx.db).findById(note.id)).not.toBeNull();
   });
 
   test("rejects deleting another user's event", async () => {
@@ -394,18 +433,62 @@ describe("PostgresEventRepository", () => {
     expect(await repository.findById(event.id)).not.toBeNull();
   });
 
-  test("replaces items on update while incrementing the revision exactly once", async () => {
-    const original = routine();
-    const event = newEvent({ items: [original] });
-    await repository.save(event);
+  test("replaces the note links on update while incrementing the revision exactly once", async () => {
+    const original = aNote("original");
+    const replacement = aNote("substituta");
+    const event = newEvent({ noteLinks: linksOf(original) });
+    await repository.save(event, { created: [original, replacement] });
 
-    const replacement = routine({ position: 0, id: undefined });
-    const changed = event.revise({ items: [replacement] });
+    const changed = event.revise({ noteLinks: linksOf(replacement, original) });
     await repository.update(changed, "user-1", event.revision);
 
     const found = await repository.findById(event.id);
     expect(found?.revision).toBe(event.revision + 1);
-    expect(found?.items.map((item) => item.id)).toEqual([replacement.id]);
+    expect(found?.noteLinks.map((link) => link.noteId)).toEqual([replacement.id, original.id]);
+  });
+
+  test("writes the edited notes in the same transaction as the event update", async () => {
+    const note = aNote("antes");
+    const event = newEvent({ noteLinks: linksOf(note) });
+    await repository.save(event, { created: [note] });
+
+    await repository.update(event.revise({ name: "Novo" }), "user-1", event.revision, {
+      updated: [{ note: note.revise({ data: { body: "depois" } }), expectedRevision: note.revision }],
+    });
+
+    expect((await new PostgresNoteRepository(ctx.db).findById(note.id))?.data).toEqual({ body: "depois" });
+    expect((await repository.findById(event.id))?.name).toBe("Novo");
+  });
+
+  test("a stale note revision rolls back the whole event update", async () => {
+    const note = aNote("antes");
+    const event = newEvent({ noteLinks: linksOf(note) });
+    await repository.save(event, { created: [note] });
+
+    await expect(
+      repository.update(event.revise({ name: "Novo" }), "user-1", event.revision, {
+        updated: [{ note: note.revise({ data: { body: "depois" } }), expectedRevision: note.revision + 5 }],
+      }),
+    ).rejects.toThrow();
+
+    expect((await repository.findById(event.id))?.name).toBe("Planejamento");
+    expect((await new PostgresNoteRepository(ctx.db).findById(note.id))?.data).toEqual({ body: "antes" });
+  });
+
+  test("a note shared by two events is one row, edited once for both", async () => {
+    const shared = aNote("compartilhada");
+    const first = newEvent({ noteLinks: linksOf(shared) });
+    const second = newEvent({ noteLinks: linksOf(shared) });
+    await repository.save(first, { created: [shared] });
+    await repository.save(second);
+
+    await new PostgresNoteRepository(ctx.db).update(shared.revise({ data: { body: "editada" } }), "user-1", shared.revision);
+
+    const notes = new PostgresNoteRepository(ctx.db);
+    const [viaFirst] = await notes.findByIds((await repository.findById(first.id))?.noteLinks.map((l) => l.noteId) ?? []);
+    const [viaSecond] = await notes.findByIds((await repository.findById(second.id))?.noteLinks.map((l) => l.noteId) ?? []);
+    expect(viaFirst.data).toEqual({ body: "editada" });
+    expect(viaSecond.id).toBe(viaFirst.id);
   });
 
   test("does not duplicate a tag saved twice and keeps its original created_at", async () => {
@@ -627,18 +710,22 @@ describe("PostgresTaskRepository", () => {
     expect(found[0].parentTaskId).toBe(parent.id);
   });
 
-  test("task: deleting a parent soft deletes every level of the subtree and their notes", async () => {
+  test("task: deleting a parent soft deletes every level of the subtree, but never their notes", async () => {
     const parent = newTask();
     await tasks.save(parent);
     const subtask = newTask({ id: undefined, parentTaskId: parent.id });
     await tasks.save(subtask);
-    const grandchild = newTask({ id: undefined, parentTaskId: subtask.id });
+    const notes = new PostgresNoteRepository(ctx.db);
+    const note = Note.create({ userId: "user-1", data: { body: "detalhe" } });
+    await notes.save(note);
+    const grandchild = newTask({
+      id: undefined,
+      parentTaskId: subtask.id,
+      noteLinks: [{ noteId: note.id, fromRecurrence: false }],
+    });
     await tasks.save(grandchild);
     const sibling = newTask({ id: undefined });
     await tasks.save(sibling);
-    const notes = new PostgresNoteRepository(ctx.db);
-    const note = Note.create({ userId: "user-1", content: "detalhe", taskId: grandchild.id });
-    await notes.save(note);
 
     await tasks.delete(parent.id, "user-1");
 
@@ -646,7 +733,8 @@ describe("PostgresTaskRepository", () => {
     expect(await tasks.findById(subtask.id)).toBeNull();
     expect(await tasks.findById(grandchild.id)).toBeNull();
     expect(await tasks.findById(sibling.id)).not.toBeNull();
-    expect(await notes.findById(note.id)).toBeNull();
+    // A note e dela mesma: sobrevive a arvore de tarefas que apontava para ela.
+    expect((await notes.findById(note.id))?.data).toEqual({ body: "detalhe" });
     expect(await tasks.listByUserId("user-1")).toHaveLength(1);
     const { rows } = await ctx.pool.query("SELECT count(*)::int AS count FROM tasks WHERE deleted_at IS NOT NULL");
     expect(rows[0].count).toBe(3);
@@ -818,23 +906,19 @@ describe("PostgresFoodRepository and PostgresMealRepository", () => {
 
     const mealSnapshot = meal.toMealItem();
     const eventRepository = new PostgresEventRepository(ctx.db);
-    const item = EventItem.create({
-      position: 0,
-      type: "meal",
-      schemaVersion: 1,
-      isPrimary: true,
-      data: mealSnapshot,
-    });
-    const event = Event.create({
-      userId: "user-a",
-      name: "Almoço",
-      description: "",
-      startedAt: new Date("2026-08-31T12:00:00.000Z"),
-      tags: [],
-      interruptions: [],
-      items: [item],
-    });
-    await eventRepository.save(event);
+    const { event, notes: [mealNote] } = eventWith(
+      {
+        userId: "user-a",
+        name: "Almoço",
+        description: "",
+        startedAt: new Date("2026-08-31T12:00:00.000Z"),
+        tags: [],
+        interruptions: [],
+        kind: "meal",
+      },
+      [{ type: "meal", data: mealSnapshot }],
+    );
+    await eventRepository.save(event, { created: [mealNote] });
 
     const changedFood = food.revise({ caloriesKcal: 999 });
     await foods.update(changedFood, "user-a", food.revision);
@@ -845,9 +929,10 @@ describe("PostgresFoodRepository and PostgresMealRepository", () => {
     const changedMeal = meal.revise({ name: "Nova receita" });
     await meals.update(changedMeal, "user-a", meal.revision);
 
-    const eventAfterMealChange = await eventRepository.findById(event.id);
-    const persistedItemData = eventAfterMealChange?.items[0].data as { name: string };
-    expect(persistedItemData.name).toBe(mealSnapshot.name);
+    const [noteAfterMealChange] = await new PostgresNoteRepository(ctx.db).findByIds(
+      (await eventRepository.findById(event.id))?.noteLinks.map((link) => link.noteId) ?? [],
+    );
+    expect((noteAfterMealChange.data as { name: string }).name).toBe(mealSnapshot.name);
   });
 
   test("update succeeds with the matching revision and conflicts otherwise", async () => {
@@ -891,13 +976,6 @@ describe("PostgresTimelineEventQuery and PostgresDailyOverviewQuery", () => {
   });
 
   function routineEvent(overrides: Partial<Parameters<typeof Event.create>[0]> = {}) {
-    const item = EventItem.create({
-      position: 0,
-      type: "routine",
-      schemaVersion: 1,
-      isPrimary: true,
-      data: {},
-    });
     return Event.create({
       userId: "user-1",
       name: "Bloco",
@@ -905,7 +983,6 @@ describe("PostgresTimelineEventQuery and PostgresDailyOverviewQuery", () => {
       startedAt: new Date("2026-08-31T12:00:00.000Z"),
       tags: [],
       interruptions: [],
-      items: [item],
       ...overrides,
     });
   }
@@ -927,20 +1004,20 @@ describe("PostgresTimelineEventQuery and PostgresDailyOverviewQuery", () => {
 
   test("timeline and daily overview ignore deleted events", async () => {
     const kept = routineEvent({ startedAt: new Date("2026-08-31T10:00:00.000Z") });
-    const deleted = routineEvent({
-      startedAt: new Date("2026-08-31T11:00:00.000Z"),
-      items: [
-        EventItem.create({
-          position: 0,
-          type: "sleep",
-          schemaVersion: 1,
-          isPrimary: true,
-          data: { trackedSleepTime: 480, score: 80 },
-        }),
-      ],
-    });
+    const { event: deleted, notes: deletedNotes } = eventWith(
+      {
+        userId: "user-1",
+        name: "Sono",
+        description: "",
+        startedAt: new Date("2026-08-31T11:00:00.000Z"),
+        tags: [],
+        interruptions: [],
+        kind: "sleep",
+      },
+      [{ type: "sleep", data: { trackedSleepTime: 480, score: 80 } }],
+    );
     await eventRepository.save(kept);
-    await eventRepository.save(deleted);
+    await eventRepository.save(deleted, { created: deletedNotes });
 
     await eventRepository.delete(deleted.id, "user-1");
 
@@ -977,69 +1054,65 @@ describe("PostgresTimelineEventQuery and PostgresDailyOverviewQuery", () => {
     expect(secondPage.nextCursor).toBeUndefined();
   });
 
-  test("timeline: reports primaryItemId, itemTypes in position order and per-user tag isolation", async () => {
-    const routine = EventItem.create({
-      position: 0,
-      type: "routine",
-      schemaVersion: 1,
-      isPrimary: false,
-      data: {},
-    });
-    const sleep = EventItem.create({
-      position: 1,
-      type: "sleep",
-      schemaVersion: 1,
-      isPrimary: true,
-      data: { trackedSleepTime: 480, score: 80 },
-    });
-    const event = Event.create({
-      userId: "user-1",
-      name: "Combo",
-      description: "",
-      startedAt: new Date("2026-08-31T12:00:00.000Z"),
-      tags: ["saude"],
-      interruptions: [],
-      items: [routine, sleep],
-    });
-    await eventRepository.save(event);
+  test("timeline: reports kind, note types in link order and per-user tag isolation", async () => {
+    const { event, notes } = eventWith(
+      {
+        userId: "user-1",
+        name: "Combo",
+        description: "",
+        startedAt: new Date("2026-08-31T12:00:00.000Z"),
+        tags: ["saude"],
+        interruptions: [],
+        kind: "sleep",
+      },
+      [
+        { type: "text", data: { body: "dormi cedo" } },
+        { type: "sleep", data: { trackedSleepTime: 480, score: 80 } },
+      ],
+    );
+    await eventRepository.save(event, { created: notes });
     await eventRepository.save(routineEvent({ userId: "user-2", tags: ["saude"] }));
 
     const page = await timelineQuery.list({ userId: "user-1", limit: 10, tag: "saude" });
     expect(page.items).toHaveLength(1);
-    expect(page.items[0].primaryItemId).toBe(sleep.id);
-    expect(page.items[0].primaryItemType).toBe("sleep");
-    expect(page.items[0].itemTypes).toEqual(["routine", "sleep"]);
+    expect(page.items[0].kind).toBe("sleep");
+    expect(page.items[0].noteTypes).toEqual(["text", "sleep"]);
     expect(page.items[0].tags).toEqual(["saude"]);
+    expect(page.items[0]).not.toHaveProperty("primaryItemType");
   });
 
-  test("timeline: type filter finds a non-primary item", async () => {
-    const routine = EventItem.create({
-      position: 0,
-      type: "routine",
-      schemaVersion: 1,
-      isPrimary: true,
-      data: {},
-    });
-    const sleep = EventItem.create({
-      position: 1,
-      type: "sleep",
-      schemaVersion: 1,
-      isPrimary: false,
-      data: { trackedSleepTime: 420, score: 70 },
-    });
-    const event = Event.create({
-      userId: "user-1",
-      name: "Combo",
-      description: "",
-      startedAt: new Date("2026-08-31T12:00:00.000Z"),
-      tags: [],
-      interruptions: [],
-      items: [routine, sleep],
-    });
-    await eventRepository.save(event);
+  test("timeline: a soft deleted note is not in the card's note types", async () => {
+    const { event, notes } = eventWith(
+      { userId: "user-1", name: "Combo", description: "", startedAt: new Date("2026-08-31T12:00:00.000Z"), tags: [], interruptions: [] },
+      [
+        { type: "text", data: { body: "fica" } },
+        { type: "sleep", data: { trackedSleepTime: 1, score: 1 } },
+      ],
+    );
+    await eventRepository.save(event, { created: notes });
+    await new PostgresNoteRepository(ctx.db).delete(notes[1].id, "user-1");
+
+    const page = await timelineQuery.list({ userId: "user-1", limit: 10 });
+
+    expect(page.items[0].noteTypes).toEqual(["text"]);
+  });
+
+  test("timeline: the type filter is the event kind, with or without notes", async () => {
+    const withNote = eventWith(
+      { userId: "user-1", name: "Dormi", description: "", startedAt: new Date("2026-08-31T12:00:00.000Z"), tags: [], interruptions: [], kind: "sleep" },
+      [{ type: "sleep", data: { trackedSleepTime: 420, score: 70 } }],
+    );
+    const bare = routineEvent({ kind: "sleep", startedAt: new Date("2026-08-31T08:00:00.000Z") });
+    const other = routineEvent({ startedAt: new Date("2026-08-31T09:00:00.000Z") });
+    await eventRepository.save(withNote.event, { created: withNote.notes });
+    await eventRepository.save(bare);
+    await eventRepository.save(other);
 
     const page = await timelineQuery.list({ userId: "user-1", limit: 10, type: "sleep" });
-    expect(page.items.map((item) => item.id)).toEqual([event.id]);
+
+    expect(page.items.map((item) => item.id).sort()).toEqual([withNote.event.id, bare.id].sort());
+    // Um tipo desconhecido nao e erro de banco: so nao casa com nada.
+    expect((await timelineQuery.list({ userId: "user-1", limit: 10, type: "party" })).items).toEqual([]);
   });
 
   test("daily overview: isolates by user and aggregates meal/sleep/training", async () => {
@@ -1050,84 +1123,86 @@ describe("PostgresTimelineEventQuery and PostgresDailyOverviewQuery", () => {
       approximateWeightGrams: 100,
       caloriesKcal: 130,
       macronutrients: { carbohydratesGrams: 28, proteinsGrams: 2.7, totalFatGrams: 0.3, fiberGrams: 0.4 },
-      micronutrients: { ironMilligrams: 2.1 },
+      micronutrients: {},
     };
-    const mealItem = EventItem.create({
-      position: 0,
-      type: "meal",
-      schemaVersion: 1,
-      isPrimary: true,
-      data: {
+    const meal = eventWith(
+      {
+        userId: "user-1",
         name: "Almoço",
         description: "",
-        foodItems: [mealFoodItem],
-        totals: {
-          totalCaloriesKcal: 130,
-          totalProteinGrams: 2.7,
-          totalCarbohydrateGrams: 28,
-          totalFatGrams: 0.3,
-          totalFiberGrams: 0.4,
-        },
+        startedAt: new Date("2026-08-31T12:00:00.000Z"),
+        tags: [],
+        interruptions: [],
       },
-    });
-    const mealEvent = Event.create({
-      userId: "user-1",
-      name: "Almoço",
-      description: "",
-      startedAt: new Date("2026-08-31T12:00:00.000Z"),
-      tags: [],
-      interruptions: [],
-      items: [mealItem],
-    });
-    await eventRepository.save(mealEvent);
-
-    const sleepItem = EventItem.create({
-      position: 0,
-      type: "sleep",
-      schemaVersion: 1,
-      isPrimary: true,
-      data: { trackedSleepTime: 480, score: 88 },
-    });
-    const sleepEvent = Event.create({
-      userId: "user-1",
-      name: "Sono",
-      description: "",
-      startedAt: new Date("2026-08-31T09:00:00.000Z"),
-      tags: [],
-      interruptions: [],
-      items: [sleepItem],
-    });
-    await eventRepository.save(sleepEvent);
-
-    const trainingItem = EventItem.create({
-      position: 0,
-      type: "training",
-      schemaVersion: 1,
-      isPrimary: true,
-      data: {
-        workouts: [
-          {
-            workoutCode: "running",
-            workoutName: "Corrida",
-            calories: 300,
-            duration: 30,
-            pace: 5,
-            distance: 5,
+      [
+        {
+          type: "meal",
+          data: {
+            name: "Almoço",
+            description: "",
+            foodItems: [mealFoodItem],
+            totals: {
+              totalCaloriesKcal: 130,
+              totalProteinGrams: 2.7,
+              totalCarbohydrateGrams: 28,
+              totalFatGrams: 0.3,
+              totalFiberGrams: 0.4,
+            },
           },
-        ],
-        caloriesBurned: 300,
+        },
+      ],
+    );
+    await eventRepository.save(meal.event, { created: meal.notes });
+
+    const sleep = eventWith(
+      {
+        userId: "user-1",
+        name: "Sono",
+        description: "",
+        startedAt: new Date("2026-08-31T09:00:00.000Z"),
+        tags: [],
+        interruptions: [],
       },
-    });
-    const trainingEvent = Event.create({
-      userId: "user-1",
-      name: "Corrida",
-      description: "",
-      startedAt: new Date("2026-08-31T18:00:00.000Z"),
-      tags: [],
-      interruptions: [],
-      items: [trainingItem],
-    });
-    await eventRepository.save(trainingEvent);
+      [{ type: "sleep", data: { trackedSleepTime: 480, score: 88 } }],
+    );
+    await eventRepository.save(sleep.event, { created: sleep.notes });
+
+    const training = eventWith(
+      {
+        userId: "user-1",
+        name: "Corrida",
+        description: "",
+        startedAt: new Date("2026-08-31T18:00:00.000Z"),
+        tags: [],
+        interruptions: [],
+      },
+      [
+        {
+          type: "training",
+          data: {
+            workouts: [
+              {
+                workoutCode: "running",
+                workoutName: "Corrida",
+                calories: 300,
+                duration: 30,
+                pace: 5,
+                distance: 5,
+              },
+            ],
+            caloriesBurned: 300,
+          },
+        },
+      ],
+    );
+    await eventRepository.save(training.event, { created: training.notes });
+
+    // A nota de texto e a do outro usuario nao entram na visao do dia.
+    const chatter = eventWith(
+      { userId: "user-1", name: "Reuniao", description: "", startedAt: new Date("2026-08-31T14:00:00.000Z"), tags: [], interruptions: [] },
+      [{ type: "text", data: { body: "pauta" } }],
+    );
+    await eventRepository.save(chatter.event, { created: chatter.notes });
 
     await eventRepository.save(
       routineEvent({ userId: "user-2", startedAt: new Date("2026-08-31T12:00:00.000Z") }),
@@ -1141,12 +1216,46 @@ describe("PostgresTimelineEventQuery and PostgresDailyOverviewQuery", () => {
 
     expect(overview.mealEvents).toHaveLength(1);
     expect(overview.mealEvents[0].kcal).toBe(130);
-    expect(overview.micronutrients).toEqual({ ironMilligrams: 2.1 });
+    expect(overview.micronutrients).toEqual({});
     expect(overview.sleep?.trackedSleepTime).toBe(480);
     expect(overview.trainingEvents[0].workouts[0]).toMatchObject({
       workoutCode: "running",
       workoutName: "Corrida",
     });
+    expect(overview.trainingEvents).toHaveLength(1);
+  });
+
+  test("daily overview: a note shared by two days counts on each day it is linked to", async () => {
+    const shared = Note.create({
+      userId: "user-1",
+      type: "meal",
+      data: {
+        name: "Cafe",
+        description: "",
+        foodItems: [
+          {
+            id: "01FOOD00000000000000000B1",
+            name: "Pao",
+            portion: "2 fatias",
+            approximateWeightGrams: 60,
+            caloriesKcal: 200,
+            macronutrients: { carbohydratesGrams: 0, proteinsGrams: 0, totalFatGrams: 0, fiberGrams: 0 },
+            micronutrients: {},
+          },
+        ],
+        totals: { totalCaloriesKcal: 200, totalProteinGrams: 0, totalCarbohydrateGrams: 0, totalFatGrams: 0, totalFiberGrams: 0 },
+      },
+    });
+    const links = [{ noteId: shared.id, fromRecurrence: true }];
+    const monday = routineEvent({ kind: "meal", startedAt: new Date("2026-08-31T11:00:00.000Z"), noteLinks: links });
+    const tuesday = routineEvent({ kind: "meal", startedAt: new Date("2026-09-01T11:00:00.000Z"), noteLinks: links });
+    await eventRepository.save(monday, { created: [shared] });
+    await eventRepository.save(tuesday);
+
+    const day = (date: string) => dailyOverviewQuery.get({ userId: "user-1", date, timeZone: "America/Sao_Paulo" });
+
+    expect((await day("2026-08-31")).caloriesConsumed).toBe(200);
+    expect((await day("2026-09-01")).caloriesConsumed).toBe(200);
   });
 
   test("tag suggestions do an escaped prefix search scoped to the user", async () => {
@@ -1201,7 +1310,8 @@ describe("PostgresTimelineEventQuery and PostgresDailyOverviewQuery", () => {
 
     expect(fullPageQueries).toHaveLength(smallPageQueries.length);
     expect(fullPageQueries).toHaveLength(4);
-    expect(fullPageQueries[0].sql).not.toMatch(/event_items/i);
+    // A pagina em si nao junta notes: elas vem numa consulta so, para a pagina inteira.
+    expect(fullPageQueries[0].sql).not.toMatch(/event_notes/i);
   }, 30000);
 
   test("EXPLAIN over a representative dataset uses the timeline and daily-overview indexes", async () => {
@@ -1236,14 +1346,20 @@ describe("PostgresTimelineEventQuery and PostgresDailyOverviewQuery", () => {
         ],
       );
       await ctx.pool.query(
-        `INSERT INTO event_items (id, event_id, position, type, schema_version, is_primary, data)
-         SELECT id, event_id, 0, 'routine', 1, true, '{}'::jsonb
-         FROM UNNEST($1::char(26)[], $2::char(26)[]) AS t(id, event_id)`,
-        [itemIds.slice(offset, end), ids.slice(offset, end)],
+        `INSERT INTO notes (id, user_id, type, schema_version, data)
+         SELECT id, user_id, 'text', 1, '{"body":"nota"}'::jsonb
+         FROM UNNEST($1::char(26)[], $2::text[]) AS t(id, user_id)`,
+        [itemIds.slice(offset, end), userIds.slice(offset, end)],
+      );
+      await ctx.pool.query(
+        `INSERT INTO event_notes (event_id, note_id, position)
+         SELECT event_id, note_id, 0
+         FROM UNNEST($1::char(26)[], $2::char(26)[]) AS t(event_id, note_id)`,
+        [ids.slice(offset, end), itemIds.slice(offset, end)],
       );
     }
 
-    await ctx.pool.query("ANALYZE events, event_items");
+    await ctx.pool.query("ANALYZE events, notes, event_notes");
 
     const { queries: timelineQueries, db: timelineDb } = captureQueries(ctx);
     await new PostgresTimelineEventQuery(timelineDb).list({ userId: "user-a", limit: 50 });
@@ -1320,10 +1436,12 @@ describe("PostgresRecurrenceRepository", () => {
       startedAt: new Date(startedAt),
       tags: ["saude"],
       interruptions: [],
-      items: [EventItem.create({ position: 0, type: "routine", schemaVersion: 1, isPrimary: true, data: {} })],
+      noteLinks: recurrence.noteIds.map((noteId) => ({ noteId, fromRecurrence: true })),
       occurrence: { recurrenceId: recurrence.id, occurrenceOn: day, detached: false },
     });
   }
+
+  const aNote = (body: string) => Note.create({ userId: "user-1", data: { body } });
 
   function taskOccurrenceOf(recurrence: Recurrence, day: string) {
     return Task.create({
@@ -1412,6 +1530,207 @@ describe("PostgresRecurrenceRepository", () => {
       { day: "2026-09-17", detached: true },
     ]);
     expect((await recurrences.findById(recurrence.id))?.rule.timeOfDay).toBe("08:00");
+  });
+
+  test("saves the series notes with the series and materializes every occurrence linked to the same note", async () => {
+    const shared = aNote("alongar");
+    const recurrence = Recurrence.create({
+      userId: "user-1",
+      target: "event",
+      rule: daily,
+      template: { name: "Correr" },
+      noteIds: [shared.id],
+    });
+    await recurrences.save(recurrence, { created: [shared] });
+    expect((await recurrences.findById(recurrence.id))?.noteIds).toEqual([shared.id]);
+
+    const monday = occurrenceOf(recurrence, "2026-09-14", "2026-09-14T10:00:00.000Z");
+    const tuesday = occurrenceOf(recurrence, "2026-09-15", "2026-09-15T10:00:00.000Z");
+    await recurrences.materialize(recurrence.materializedUntil("2026-09-15"), [monday, tuesday]);
+
+    const { rows } = await ctx.pool.query(
+      "SELECT note_id, from_recurrence FROM event_notes WHERE event_id IN ($1, $2)",
+      [monday.id, tuesday.id],
+    );
+    expect(rows.map((row) => [row.note_id.trim(), row.from_recurrence])).toEqual([
+      [shared.id, true],
+      [shared.id, true],
+    ]);
+    const { rows: noteRows } = await ctx.pool.query("SELECT count(*)::int AS n FROM notes");
+    expect(noteRows[0].n).toBe(1);
+  });
+
+  test("updating the series replaces its notes and the new ones are saved together", async () => {
+    const old = aNote("velha");
+    const recurrence = Recurrence.create({ userId: "user-1", target: "event", rule: daily, template: { name: "Correr" }, noteIds: [old.id] });
+    await recurrences.save(recurrence, { created: [old] });
+    const fresh = aNote("nova");
+
+    await recurrences.update(recurrence.revise({ noteIds: [fresh.id] }), "user-1", 1, "2026-09-15", { created: [fresh] });
+
+    expect((await recurrences.findById(recurrence.id))?.noteIds).toEqual([fresh.id]);
+    // A note que saiu da serie continua existindo, solta.
+    expect(await new PostgresNoteRepository(ctx.db).findById(old.id)).not.toBeNull();
+  });
+
+  test("updating the series keeps an occurrence the user gave a note of its own, and its links", async () => {
+    const shared = aNote("da serie");
+    const recurrence = Recurrence.create({ userId: "user-1", target: "event", rule: daily, template: { name: "Correr" }, noteIds: [shared.id] });
+    await recurrences.save(recurrence, { created: [shared] });
+    const untouched = occurrenceOf(recurrence, "2026-09-16", "2026-09-16T10:00:00.000Z");
+    const edited = occurrenceOf(recurrence, "2026-09-17", "2026-09-17T10:00:00.000Z");
+    await recurrences.materialize(recurrence.materializedUntil("2026-09-17"), [untouched, edited]);
+    // So o dia 17 ganha uma note propria; ligar uma note e editar a ocorrencia, e ela deixa de ser "da serie".
+    const own = aNote("so neste dia");
+    await events.update(edited.revise({ noteLinks: [...edited.noteLinks, { noteId: own.id, fromRecurrence: false }] }), "user-1", 1, {
+      created: [own],
+    });
+
+    await recurrences.update(recurrence.revise({ rule: { timeOfDay: "08:00" } }), "user-1", 1, "2026-09-15");
+
+    expect(await events.findById(untouched.id)).toBeNull();
+    expect((await events.findById(edited.id))?.noteLinks).toEqual([
+      { noteId: shared.id, fromRecurrence: true },
+      { noteId: own.id, fromRecurrence: false },
+    ]);
+    expect((await recurrences.findById(recurrence.id))?.noteIds).toEqual([shared.id]);
+  });
+
+  describe("attachNotes: every occurrence from today on", () => {
+    async function seriesWithOccurrences() {
+      const recurrence = newRecurrence();
+      await recurrences.save(recurrence);
+      const past = occurrenceOf(recurrence, "2026-09-14", "2026-09-14T10:00:00.000Z");
+      const today = occurrenceOf(recurrence, "2026-09-15", "2026-09-15T10:00:00.000Z");
+      const future = occurrenceOf(recurrence, "2026-09-16", "2026-09-16T10:00:00.000Z");
+      const edited = occurrenceOf(recurrence, "2026-09-17", "2026-09-17T10:00:00.000Z");
+      await recurrences.materialize(recurrence.materializedUntil("2026-09-17"), [past, today, future, edited]);
+      await events.update(edited.revise({ description: "editada" }), "user-1", 1);
+      return { recurrence, past, today, future, edited };
+    }
+
+    const linksOf = async (eventId: string) =>
+      (await ctx.pool.query("SELECT note_id, position, from_recurrence FROM event_notes WHERE event_id = $1 ORDER BY position", [eventId])).rows.map(
+        (row) => [row.note_id.trim(), row.position, row.from_recurrence],
+      );
+
+    test("links the note to the series and to the existing occurrences from the given day, not the past and not the edited ones", async () => {
+      const { recurrence, past, today, future, edited } = await seriesWithOccurrences();
+      const note = aNote("levar tenis");
+      await new PostgresNoteRepository(ctx.db).save(note);
+
+      await recurrences.attachNotes(recurrence.id, "user-1", [note.id], "2026-09-15");
+
+      expect((await recurrences.findById(recurrence.id))?.noteIds).toEqual([note.id]);
+      expect(await linksOf(past.id)).toEqual([]);
+      expect(await linksOf(today.id)).toEqual([[note.id, 0, true]]);
+      expect(await linksOf(future.id)).toEqual([[note.id, 0, true]]);
+      expect(await linksOf(edited.id)).toEqual([]);
+      // Ligar a serie nao e editar a ocorrencia: a revisao e o vinculo com a serie continuam.
+      const stored = await events.findById(today.id);
+      expect(stored?.revision).toBe(1);
+      expect(stored?.occurrence?.detached).toBe(false);
+    });
+
+    test("goes to the end of each occurrence's own list, in the order given", async () => {
+      const { recurrence, today } = await seriesWithOccurrences();
+      const mine = aNote("ja estava");
+      const first = aNote("primeira");
+      const second = aNote("segunda");
+      const notes = new PostgresNoteRepository(ctx.db);
+      for (const note of [mine, first, second]) await notes.save(note);
+      await events.update(today.revise({ noteLinks: [{ noteId: mine.id, fromRecurrence: false }] }), "user-1", 1);
+      // `today` foi editado a mao e ficaria de fora: devolve-o a serie para o teste olhar a ordem.
+      await ctx.pool.query("UPDATE events SET recurrence_detached = false WHERE id = $1", [today.id]);
+
+      await recurrences.attachNotes(recurrence.id, "user-1", [first.id, second.id], "2026-09-15");
+
+      expect(await linksOf(today.id)).toEqual([
+        [mine.id, 0, false],
+        [first.id, 1, true],
+        [second.id, 2, true],
+      ]);
+      expect((await recurrences.findById(recurrence.id))?.noteIds).toEqual([first.id, second.id]);
+    });
+
+    test("attaching a note the series already has changes nothing", async () => {
+      const { recurrence, future } = await seriesWithOccurrences();
+      const note = aNote("x");
+      await new PostgresNoteRepository(ctx.db).save(note);
+
+      await recurrences.attachNotes(recurrence.id, "user-1", [note.id], "2026-09-15");
+      await recurrences.attachNotes(recurrence.id, "user-1", [note.id], "2026-09-15");
+
+      expect(await linksOf(future.id)).toEqual([[note.id, 0, true]]);
+      expect((await recurrences.findById(recurrence.id))?.noteIds).toEqual([note.id]);
+    });
+
+    test("a series generated later is born with the attached note, and an in-flight generation is made to restart", async () => {
+      const recurrence = newRecurrence();
+      await recurrences.save(recurrence);
+      const note = aNote("herdada");
+      await new PostgresNoteRepository(ctx.db).save(note);
+
+      // Uma geracao que leu a serie antes de a note ser ligada...
+      const stale = (await recurrences.findById(recurrence.id)) as Recurrence;
+      await recurrences.attachNotes(recurrence.id, "user-1", [note.id], "2026-09-15");
+
+      // ... perde a corrida: a revisao da serie mudou, e a transacao inteira volta.
+      await expect(
+        recurrences.materialize(stale.materializedUntil("2026-09-15"), [occurrenceOf(stale, "2026-09-15", "2026-09-15T10:00:00.000Z")]),
+      ).rejects.toThrow(RecurrenceRevisionConflictError);
+
+      // A proxima leitura ja enxerga a note e gera as ocorrencias com ela.
+      const fresh = (await recurrences.findById(recurrence.id)) as Recurrence;
+      const occurrence = occurrenceOf(fresh, "2026-09-15", "2026-09-15T10:00:00.000Z");
+      await recurrences.materialize(fresh.materializedUntil("2026-09-15"), [occurrence]);
+      expect(await linksOf(occurrence.id)).toEqual([[note.id, 0, true]]);
+    });
+
+    test("task series work the same way", async () => {
+      const recurrence = newRecurrence("task");
+      await recurrences.save(recurrence);
+      const today = taskOccurrenceOf(recurrence, "2026-09-15");
+      const past = taskOccurrenceOf(recurrence, "2026-09-14");
+      await recurrences.materialize(recurrence.materializedUntil("2026-09-15"), [past, today]);
+      const note = aNote("boleto");
+      await new PostgresNoteRepository(ctx.db).save(note);
+
+      await recurrences.attachNotes(recurrence.id, "user-1", [note.id], "2026-09-15");
+
+      expect((await tasks.findById(today.id))?.noteLinks).toEqual([{ noteId: note.id, fromRecurrence: true }]);
+      expect((await tasks.findById(past.id))?.noteLinks).toEqual([]);
+    });
+
+    test("refuses another owner's series and an unknown series", async () => {
+      const { recurrence } = await seriesWithOccurrences();
+      const note = aNote("x");
+      await new PostgresNoteRepository(ctx.db).save(note);
+
+      await expect(recurrences.attachNotes(recurrence.id, "user-2", [note.id], "2026-09-15")).rejects.toThrow(
+        RecurrenceOwnershipError,
+      );
+      await expect(recurrences.attachNotes("01HZZZZZZZZZZZZZZZZZZZZZZZ", "user-1", [note.id], "2026-09-15")).rejects.toThrow(
+        /not found/i,
+      );
+    });
+  });
+
+  test("deleting the series keeps the notes of the occurrences it keeps, now as their own", async () => {
+    const shared = aNote("da serie");
+    const recurrence = Recurrence.create({ userId: "user-1", target: "event", rule: daily, template: { name: "Correr" }, noteIds: [shared.id] });
+    await recurrences.save(recurrence, { created: [shared] });
+    const past = occurrenceOf(recurrence, "2026-09-14", "2026-09-14T10:00:00.000Z");
+    const upcoming = occurrenceOf(recurrence, "2026-09-16", "2026-09-16T10:00:00.000Z");
+    await recurrences.materialize(recurrence.materializedUntil("2026-09-16"), [past, upcoming]);
+
+    await recurrences.delete(recurrence.id, "user-1", "2026-09-15");
+
+    expect((await events.findById(past.id))?.noteLinks).toEqual([{ noteId: shared.id, fromRecurrence: false }]);
+    expect(await events.findById(upcoming.id)).toBeNull();
+    expect(await new PostgresNoteRepository(ctx.db).findById(shared.id)).not.toBeNull();
+    const { rows } = await ctx.pool.query("SELECT 1 FROM recurrence_notes");
+    expect(rows).toHaveLength(0);
   });
 
   test("rejects an update from another owner or with a stale revision", async () => {

@@ -1,25 +1,16 @@
 import { expect, test, vi } from "vitest";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
 import type { EventCommandParsingGateway } from "../../api-core/events/gateways/event-command-parsing.gateway";
-import { InMemoryEventDatabase } from "../../api-core/events/testing/in-memory-event-database";
-import { InMemoryEventRepository } from "../../api-core/events/testing/in-memory-event.repository";
-import { InMemoryWorkoutCatalog } from "../../api-core/events/testing/in-memory-workout.catalog";
+import { createEventsKit } from "../../api-core/events/testing/in-memory-events-kit";
 import { statusOfThrown } from "../../api-core/events/testing/status-of";
 import { StubEventCommandParsingGateway } from "../../api-core/events/testing/stub-event-command-parsing.gateway";
-import { StubMealParsingGateway } from "../../api-core/events/testing/stub-meal-parsing.gateway";
 import { CreateEventFromTranscriptUseCase } from "./create-event-from-transcript.usecase";
-import { CreateEventUseCase } from "../../api-core/events/create-event.usecase";
 import { EventsController } from "../list-timeline-events/test-events-controller";
 
 const actor: AuthenticatedUser = { userId: "auth-user-1" };
 
 function buildController(options: { parsingGateway?: EventCommandParsingGateway } = {}) {
-  const eventRepository = new InMemoryEventRepository(new InMemoryEventDatabase());
-  const createEvent = new CreateEventUseCase(
-    eventRepository,
-    new StubMealParsingGateway(),
-    new InMemoryWorkoutCatalog(),
-  );
+  const { eventRepository, createEvent } = createEventsKit();
 
   const controller = new EventsController(
     vi.fn() as never,
@@ -37,12 +28,12 @@ function buildController(options: { parsingGateway?: EventCommandParsingGateway 
   return { controller, eventRepository };
 }
 
-test("POST /api/events/voice creates the event and returns its id and type", async () => {
+test("POST /api/events/voice creates the event and returns its id and kind", async () => {
   const { controller, eventRepository } = buildController();
 
   const body = await controller.fromTranscript({ transcript: "comecei a estudar" }, actor);
 
-  expect(body.primaryItemType).toBe("routine");
+  expect(body.kind).toBe("routine");
   expect((await eventRepository.findById(body.eventId))?.userId).toBe("auth-user-1");
 });
 

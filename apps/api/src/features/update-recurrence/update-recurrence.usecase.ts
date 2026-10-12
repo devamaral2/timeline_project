@@ -1,18 +1,9 @@
-import { RecurrenceNotFoundError, RecurrenceOwnershipError, type Recurrence } from "../../domain";
-import type {
-  EventRecurrenceTemplate,
-  TaskRecurrenceTemplate,
-  UpdateRecurrenceInput,
-} from "@repo/contracts";
+import { RecurrenceNotFoundError, RecurrenceOwnershipError } from "../../domain";
+import type { UpdateRecurrenceInput } from "@repo/contracts";
 import type { RecurrenceRepository, TaskRepository } from "../../domain/ports";
-import { shiftDayKey } from "@repo/timeline";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
 import type { CreateEventUseCase } from "../../api-core/events/create-event.usecase";
-import {
-  prepareEventTemplate,
-  prepareTaskTemplate,
-  todayOf,
-} from "../../api-core/recurrences/recurrence-templates";
+import { reviseRecurrence } from "../../api-core/recurrences/revise-recurrence";
 
 /**
  * Editar a serie vale de hoje em diante: as ocorrencias de hoje para frente que
@@ -33,26 +24,14 @@ export class UpdateRecurrenceUseCase {
     if (existing.userId !== actor.userId) throw new RecurrenceOwnershipError();
 
     const { recurrenceId: _id, expectedRevision, template, ...ruleChanges } = input;
-    // A regra revisada vem primeiro: o template novo e resolvido com a janela dela.
-    const withRule = existing.revise({ rule: ruleChanges });
-    const stored =
-      template === undefined
-        ? undefined
-        : withRule.target === "event"
-          ? await prepareEventTemplate(this.createEvent, template as EventRecurrenceTemplate, withRule.rule, actor)
-          : await prepareTaskTemplate(this.tasks, template as TaskRecurrenceTemplate, withRule.rule, actor);
-    let revised: Recurrence = existing.revise({
-      rule: ruleChanges,
-      template: stored ? { ...stored } : undefined,
-    });
+    const { recurrence, notes, fromDay } = await reviseRecurrence(
+      { createEvent: this.createEvent, tasks: this.tasks },
+      existing,
+      { rule: ruleChanges, template },
+      actor,
+      this.clock(),
+    );
 
-    const today = todayOf(revised.rule, this.clock());
-    const yesterday = shiftDayKey(today, -1);
-    // A regeracao recomeca em hoje; ontem para tras ja esta gerado e fica.
-    if (existing.materializedThrough && yesterday >= revised.rule.startsOn) {
-      revised = revised.materializedUntil(yesterday);
-    }
-
-    await this.recurrences.update(revised, actor.userId, expectedRevision, today);
+    await this.recurrences.update(recurrence, actor.userId, expectedRevision, fromDay, { created: notes });
   }
 }

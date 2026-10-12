@@ -1,5 +1,5 @@
 import { afterEach, expect, test, vi } from "vitest";
-import { OpenRouterMealParsingGateway } from "./openrouter-meal-parsing.gateway";
+import { OpenRouterMealParsingGateway, toMealRecipe } from "./openrouter-meal-parsing.gateway";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -25,14 +25,15 @@ test("requests structured JSON schema and parses a wrapped items response", asyn
                     totalFatGrams: 0.3,
                     fiberGrams: 2.6,
                   },
-                  mainMicronutrients: {
-                    potassiumMg: 358,
-                  },
-                  otherData: {
-                    sodiumMg: 1,
-                  },
                 },
               ],
+              recipe: {
+                source: "model",
+                servings: null,
+                prepTimeMinutes: 2,
+                ingredients: [{ name: "Banana prata", quantity: "1 unidade" }],
+                steps: ["Descasque e coma."],
+              },
             }),
           },
         },
@@ -53,6 +54,12 @@ test("requests structured JSON schema and parses a wrapped items response", asyn
         caloriesKcal: 89,
       }),
     ],
+    recipe: {
+      source: "model",
+      prepTimeMinutes: 2,
+      ingredients: [{ name: "Banana prata", quantity: "1 unidade" }],
+      steps: ["Descasque e coma."],
+    },
     modelProvider: "openrouter",
     modelName: "openai/gpt-oss-20b:free",
   });
@@ -80,4 +87,41 @@ test("requests structured JSON schema and parses a wrapped items response", asyn
       }),
     }),
   );
+  // Sem micronutrientes no pedido ao modelo; a receita e obrigatoria no schema.
+  const schema = request.response_format.json_schema?.schema as {
+    required: string[];
+    properties: { items: { items: { properties: object } } };
+  };
+  expect(schema.required).toEqual(["items", "recipe"]);
+  expect(Object.keys(schema.properties.items.items.properties)).not.toContain("mainMicronutrients");
+});
+
+test("toMealRecipe descarta receita sem passos e normaliza o que sobra", () => {
+  expect(toMealRecipe(undefined)).toBeUndefined();
+  expect(toMealRecipe({ source: "user", ingredients: [], steps: ["  ", ""] })).toBeUndefined();
+
+  expect(
+    toMealRecipe({
+      source: "user",
+      servings: 0,
+      prepTimeMinutes: 15,
+      ingredients: [
+        { name: " Ovo ", quantity: "2" },
+        { name: "Sal", quantity: "  " },
+        { name: "  ", quantity: "1" },
+      ],
+      steps: [" Bata os ovos. ", "", "Frite."],
+    }),
+  ).toEqual({
+    source: "user",
+    prepTimeMinutes: 15,
+    ingredients: [
+      { name: "Ovo", quantity: "2" },
+      { name: "Sal", quantity: "a gosto" },
+    ],
+    steps: ["Bata os ovos.", "Frite."],
+  });
+
+  // Origem desconhecida nunca vira "user": so o que o modelo marcou explicitamente.
+  expect(toMealRecipe({ source: "alguma", ingredients: [], steps: ["Sirva."] })?.source).toBe("model");
 });
