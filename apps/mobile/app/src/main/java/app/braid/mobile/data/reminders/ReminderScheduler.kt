@@ -21,6 +21,7 @@ data class ReminderEventSource(
     val name: String,
     val startedAt: Instant,
     val notifyOffsetsMinutes: List<Double>,
+    val kind: NotificationKind = NotificationKind.Event,
 )
 
 data class ReminderTrigger(
@@ -29,6 +30,7 @@ data class ReminderTrigger(
     val eventName: String,
     val offsetMinutes: Double,
     val triggerAt: Instant,
+    val kind: NotificationKind = NotificationKind.Event,
 )
 
 data class ReminderScheduleResult(
@@ -51,6 +53,7 @@ fun reminderTriggersFor(
                     eventName = event.name,
                     offsetMinutes = offsetMinutes,
                     triggerAt = triggerAt,
+                    kind = event.kind,
                 )
             }
         }.sortedBy(ReminderTrigger::triggerAt)
@@ -137,6 +140,7 @@ class ReminderScheduler
                     putExtra(EXTRA_EVENT_ID, trigger.eventId)
                     putExtra(EXTRA_EVENT_NAME, trigger.eventName)
                     putExtra(EXTRA_OFFSET_MINUTES, trigger.offsetMinutes)
+                    putExtra(EXTRA_KIND, trigger.kind.name)
                 },
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
@@ -149,6 +153,7 @@ class ReminderScheduler
             const val EXTRA_EVENT_ID = "app.braid.mobile.reminders.EVENT_ID"
             const val EXTRA_EVENT_NAME = "app.braid.mobile.reminders.EVENT_NAME"
             const val EXTRA_OFFSET_MINUTES = "app.braid.mobile.reminders.OFFSET_MINUTES"
+            const val EXTRA_KIND = "app.braid.mobile.reminders.KIND"
             const val INEXACT_WINDOW_MILLIS = 5 * 60 * 1000L
             const val PREFERENCES_NAME = "reminders"
             const val SCHEDULED_KEYS = "scheduled_keys"
@@ -169,16 +174,26 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
         }
         val eventName = intent.getStringExtra("app.braid.mobile.reminders.EVENT_NAME") ?: "Evento"
         val eventId = intent.getStringExtra(ReminderNotification.EVENT_ID_EXTRA) ?: return
+        val kind = intent.getStringExtra("app.braid.mobile.reminders.KIND")
+        val offsetMinutes = intent.getDoubleExtra("app.braid.mobile.reminders.OFFSET_MINUTES", 0.0)
         ReminderNotification.ensureChannel(context)
         val notification =
             NotificationCompat
                 .Builder(context, ReminderNotification.CHANNEL_ID)
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
-                .setContentTitle("Lembrete")
-                .setContentText(eventName)
-                .setAutoCancel(true)
-                .setContentIntent(ReminderNotification.contentIntent(context, eventId))
-                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setContentTitle(eventName)
+                .setContentText(
+                    "${if (kind == NotificationKind.Task.name) "Tarefa" else "Evento"} · " +
+                        notificationOffsetLabel(offsetMinutes),
+                ).setAutoCancel(true)
+                // Tarefa ainda não tem tela de detalhe: o toque só abre o app.
+                .setContentIntent(
+                    ReminderNotification.contentIntent(
+                        context,
+                        eventId,
+                        openEvent = kind != NotificationKind.Task.name,
+                    ),
+                ).setPriority(NotificationCompat.PRIORITY_DEFAULT)
                 .build()
         NotificationManagerCompat.from(context).notify(eventId.hashCode(), notification)
     }

@@ -3,15 +3,11 @@ package app.braid.mobile.data.reminders
 import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import app.braid.mobile.data.events.EventQuery
-import app.braid.mobile.data.events.EventRepository
-import app.braid.mobile.data.events.EventResult
 import app.braid.mobile.data.session.SessionRepository
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
-import java.time.Duration
 import java.time.Instant
 
 /** Rehidrata os alarms depois que o Android reinicia o processo/app. */
@@ -32,49 +28,43 @@ class ReminderRescheduleWorker
             }
 
             val now = Instant.now()
-            return when (
-                val page =
-                    dependencies.eventRepository().window(
-                        from = now,
-                        to = now.plus(LOOK_AHEAD),
-                        query = EventQuery(limit = 500),
-                        forceRefresh = true,
-                    )
-            ) {
-                is EventResult.Success -> {
-                    dependencies.reminderScheduler().reschedule(page.value.items.toReminderSources(), now)
-                    Result.success()
-                }
+            val loaded = dependencies.notificationSourceLoader().load(now)
+            // Com a lista incompleta, apagar os alarmes atuais perderia avisos válidos.
+            if (!loaded.complete) return Result.retry()
 
-                is EventResult.Failure -> Result.retry()
-            }
-        }
-
-        private companion object {
-            val LOOK_AHEAD: Duration = Duration.ofDays(30)
+            dependencies.reminderScheduler().reschedule(loaded.sources.map(NotificationFeedSource::toReminderSource), now)
+            return Result.success()
         }
     }
 
 @EntryPoint
 @InstallIn(SingletonComponent::class)
 interface ReminderWorkerDependencies {
-    fun eventRepository(): EventRepository
+    fun notificationSourceLoader(): NotificationSourceLoader
 
     fun reminderScheduler(): ReminderScheduler
 
     fun sessionRepository(): SessionRepository
 }
 
-fun rescheduleRemindersOnBoot(context: Context) {
+fun rescheduleRemindersOnBoot(context: Context) = enqueueReminderSync(context)
+
+private val networkConstraints =
+    androidx.work.Constraints
+        .Builder()
+        .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
+        .build()
+
+/**
+ * Relê os próximos 30 dias e recria os alarmes. Sem isto só os dias que a
+ * pessoa abriu na agenda teriam aviso agendado.
+ */
+fun enqueueReminderSync(context: Context) {
     val request =
         androidx.work
             .OneTimeWorkRequestBuilder<ReminderRescheduleWorker>()
-            .setConstraints(
-                androidx.work.Constraints
-                    .Builder()
-                    .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
-                    .build(),
-            ).setBackoffCriteria(
+            .setConstraints(networkConstraints)
+            .setBackoffCriteria(
                 androidx.work.BackoffPolicy.EXPONENTIAL,
                 java.time.Duration.ofSeconds(10),
             ).build()
@@ -87,14 +77,27 @@ fun rescheduleRemindersOnBoot(context: Context) {
         )
 }
 
-private fun List<app.braid.mobile.data.dto.TimelineEventCardDto>.toReminderSources(): List<ReminderEventSource> =
-    mapNotNull { event ->
-        runCatching {
-            ReminderEventSource(
-                id = event.id,
-                name = event.name,
-                startedAt = Instant.parse(event.startedAt),
-                notifyOffsetsMinutes = event.notifyOffsetsMinutes,
-            )
-        }.getOrNull()
-    }
+/** Mantém os alarmes em dia mesmo que o app fique dias sem ser aberto. */
+fun enqueuePeriodicReminderSync(context: Context) {
+    val request =
+        androidx.work
+            .PeriodicWorkRequestBuilder<ReminderRescheduleWorker>(java.time.Duration.ofHours(6))
+            .setConstraints(networkConstraints)
+            .build()
+    androidx.work.WorkManager
+        .getInstance(context)
+        .enqueueUniquePeriodicWork(
+            "reminder-sync",
+            androidx.work.ExistingPeriodicWorkPolicy.KEEP,
+            request,
+        )
+}
+
+fun NotificationFeedSource.toReminderSource(): ReminderEventSource =
+    ReminderEventSource(
+        id = id,
+        name = name,
+        startedAt = startedAt,
+        notifyOffsetsMinutes = notifyOffsetsMinutes,
+        kind = kind,
+    )

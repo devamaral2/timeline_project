@@ -1,4 +1,4 @@
-export const WORK_ITEM_STATUSES = ["inHold", "todo", "inProgress", "done", "cancel"] as const;
+export const WORK_ITEM_STATUSES = ["todo", "scheduled", "toDefine", "inHold", "done", "cancel"] as const;
 
 export type WorkItemStatus = (typeof WORK_ITEM_STATUSES)[number];
 

@@ -13,4 +13,8 @@ export interface TaskSummaryDto {
   startedAt?: string;
   estimatedFinishAt?: string;
   finishedAt?: string;
+  /** Ids das tarefas de que esta depende; o inverso e o que ela "libera". */
+  dependsOnTaskIds: string[];
+  /** Para o `PATCH` direto da lista (`expectedRevision`), sem ler o detalhe antes. */
+  revision: number;
 }

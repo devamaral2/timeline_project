@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  ArrowLeft, Bell, Check, Circle, CircleCheck, CircleDashed, CircleSlash,
+  ArrowLeft, Bell, Check, Circle, CircleCheck, CircleDashed, CirclePause, CircleSlash,
   Clock3, Flag, MoreVertical, Pencil, Trash2, type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -269,9 +269,10 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 }
 
 const taskStatusVisuals: Record<WorkItemStatus, { Icon: LucideIcon; label: string }> = {
-  inHold: { Icon: CircleDashed, label: "Em espera" },
   todo: { Icon: Circle, label: "A fazer" },
-  inProgress: { Icon: Clock3, label: "Em andamento" },
+  scheduled: { Icon: Clock3, label: "Agendada" },
+  toDefine: { Icon: CircleDashed, label: "A definir" },
+  inHold: { Icon: CirclePause, label: "Em espera" },
   done: { Icon: CircleCheck, label: "Concluída" },
   cancel: { Icon: CircleSlash, label: "Cancelada" },
 };

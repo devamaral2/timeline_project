@@ -53,6 +53,8 @@ export function MobileNavigation({ userId }: { userId?: string }) {
   const pathname = usePathname();
   const notesHref = userId ? `/${userId}/notas` : "/mockups/eventos/notas";
   const onNotes = notesHref !== null && (pathname === notesHref || pathname.startsWith(`${notesHref}/`));
+  const tasksHref = userId ? `/${userId}/tarefas` : null;
+  const onTasks = tasksHref !== null && (pathname === tasksHref || pathname.startsWith(`${tasksHref}/`));
   const agendaChat = useAgendaChat({ live: Boolean(userId) });
   const [panel, setPanel] = useState<"hub" | "Tarefa" | "Nota" | null>(null);
   const [mode, setMode] = useState<"ai" | "create" | "search">("ai");
@@ -108,8 +110,12 @@ export function MobileNavigation({ userId }: { userId?: string }) {
   return (
     <>
       <nav className={styles.bottomNav} aria-label="Navegação inferior">
-        <button type="button" aria-label="Tarefas" onClick={() => openPanel("Tarefa")} aria-haspopup="dialog" aria-expanded={panel === "Tarefa"} aria-controls={dialogId}><SquareCheck aria-hidden /><span>Tarefas</span></button>
-        <Link href={userId ? `/${userId}` : "/mockups/eventos"} aria-label="Agenda" aria-current={panel || onNotes ? undefined : "page"}><CalendarDays aria-hidden /><span>Agenda</span></Link>
+        {tasksHref ? (
+          <Link href={tasksHref} aria-label="Tarefas" aria-current={onTasks && !panel ? "page" : undefined}><SquareCheck aria-hidden /><span>Tarefas</span></Link>
+        ) : (
+          <button type="button" aria-label="Tarefas" onClick={() => openPanel("Tarefa")} aria-haspopup="dialog" aria-expanded={panel === "Tarefa"} aria-controls={dialogId}><SquareCheck aria-hidden /><span>Tarefas</span></button>
+        )}
+        <Link href={userId ? `/${userId}` : "/mockups/eventos"} aria-label="Agenda" aria-current={panel || onNotes || onTasks ? undefined : "page"}><CalendarDays aria-hidden /><span>Agenda</span></Link>
         {notesHref ? (
           <Link href={notesHref} aria-label="Notas" aria-current={onNotes && !panel ? "page" : undefined}><NotepadText aria-hidden /><span>Notas</span></Link>
         ) : (

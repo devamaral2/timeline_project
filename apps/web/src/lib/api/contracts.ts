@@ -296,7 +296,7 @@ export interface EventDetailDto {
   taskIds?: string[];
 }
 
-export type WorkItemStatus = "inHold" | "todo" | "inProgress" | "done" | "cancel";
+export type WorkItemStatus = "todo" | "scheduled" | "toDefine" | "inHold" | "done" | "cancel";
 export type WorkItemPriority = "urgent" | "high" | "medium" | "low";
 
 /** O que `GET /api/tasks/:taskId` devolve — so o que o detalhe do evento le. */
@@ -318,6 +318,23 @@ export interface TaskDetailDto {
 
 /** `POST /api/notes`: a note e os eventos e tarefas em que ela ja nasce aparecendo. */
 export type CreateNoteRequest = CreateNoteInput & {
+/** O que `GET /api/tasks` devolve — a lista de tarefas e a usada pelos avisos. */
+export interface TaskSummaryDto {
+  id: string;
+  parentTaskId?: string;
+  name: string;
+  status: WorkItemStatus;
+  priority: WorkItemPriority;
+  notifyOffsetsMinutes: NotificationOffsetMinutes[];
+  tags: string[];
+  startedAt?: string;
+  estimatedFinishAt?: string;
+  finishedAt?: string;
+  /** Ids das tarefas de que esta depende; o inverso e o que ela "libera". */
+  dependsOnTaskIds: string[];
+  revision: number;
+}
+
   eventIds?: string[];
   taskIds?: string[];
 };
@@ -332,8 +349,28 @@ export type UpdateNoteRequest = {
   name?: string;
   tags?: string[];
   eventIds?: string[];
+  noteIds?: string[];
   taskIds?: string[];
 } & ({ type?: undefined; data?: undefined } | (NoteDataInput & { schemaVersion?: number }));
+
+/** `POST /api/tasks`: o que o formulario de nova tarefa e a subtarefa mandam. */
+export interface CreateTaskRequest {
+  parentTaskId?: string;
+  name: string;
+  description?: string;
+  status?: WorkItemStatus;
+  priority?: WorkItemPriority;
+  notifyOffsetsMinutes?: NotificationOffsetMinutes[];
+  tags?: string[];
+  startedAt?: string;
+  estimatedFinishAt?: string;
+  dependsOnTaskIds?: string[];
+}
+
+/** `PATCH /api/tasks/:taskId`: so o que muda; `expectedRevision` e obrigatorio. */
+export interface UpdateTaskRequest extends Partial<Omit<CreateTaskRequest, "parentTaskId">> {
+  expectedRevision: number;
+}
 
 export interface TagSuggestionDto {
   id: string;

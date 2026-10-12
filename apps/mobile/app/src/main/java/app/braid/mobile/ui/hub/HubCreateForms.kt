@@ -28,7 +28,8 @@ import app.braid.mobile.ui.notes.NoteDraft
 private val taskStatusOptions =
     listOf(
         SelectOption("todo", "A fazer"),
-        SelectOption("inProgress", "Em andamento"),
+        SelectOption("scheduled", "Agendada"),
+        SelectOption("toDefine", "A definir"),
         SelectOption("inHold", "Em espera"),
         SelectOption("done", "Concluída"),
         SelectOption("cancel", "Cancelada"),

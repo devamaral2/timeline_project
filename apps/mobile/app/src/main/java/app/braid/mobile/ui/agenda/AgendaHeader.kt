@@ -36,7 +36,7 @@ import app.braid.mobile.core.designsystem.LucideIcons
 
 /**
  * O cabeçalho do web no celular (`.header`/`.headerInner` de `mockup-shell.tsx`):
- * a assinatura “braid” (só o texto, sem o símbolo) à esquerda e, à direita, o sino de notificações e o menu da
+ * a assinatura “braid” (só o texto, sem o símbolo) à esquerda e, à direita, o sino de notificações (`notifications`) e o menu da
  * conta, com fio embaixo. O menu da conta traz “Tema escuro/claro” e “Sair da
  * conta”, no lugar do antigo menu lateral.
  */
@@ -46,6 +46,7 @@ fun AgendaHeader(
     onToggleTheme: () -> Unit,
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier,
+    notifications: @Composable () -> Unit = { DisabledNotificationsBell() },
     below: @Composable () -> Unit = {},
 ) {
     val colors = MaterialTheme.colorScheme
@@ -56,19 +57,24 @@ fun AgendaHeader(
         ) {
             BraidWordmark(style = MaterialTheme.typography.headlineMedium, showLogo = false)
             Spacer(modifier = Modifier.weight(1f))
-            // No web o sino ainda não faz nada (`disabled`); aqui também.
-            IconButton(onClick = {}, enabled = false, modifier = Modifier.size(44.dp)) {
-                Icon(
-                    imageVector = LucideIcons.bell(),
-                    contentDescription = "Notificações",
-                    modifier = Modifier.size(21.dp),
-                    tint = colors.onSurfaceVariant,
-                )
-            }
+            notifications()
             AccountMenu(onToggleTheme = onToggleTheme, onSignOut = onSignOut)
         }
         HorizontalDivider(color = colors.outline)
         below()
+    }
+}
+
+@Composable
+@Suppress("ktlint:standard:function-naming")
+private fun DisabledNotificationsBell() {
+    IconButton(onClick = {}, enabled = false, modifier = Modifier.size(44.dp)) {
+        Icon(
+            imageVector = LucideIcons.bell(),
+            contentDescription = "Notificações",
+            modifier = Modifier.size(21.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 

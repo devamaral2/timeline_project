@@ -100,7 +100,7 @@ const BASE_TABLES: readonly LogicalTable[] = [
       { name: "parent_task_id", expr: "t.parent_task_id", type: "text" },
       { name: "name", expr: "t.name", type: "text" },
       { name: "description", expr: "t.description", type: "text" },
-      { name: "status", expr: "t.status::text", type: "text", description: "inHold | todo | inProgress | done | cancel" },
+      { name: "status", expr: "t.status::text", type: "text", description: "todo | scheduled | toDefine | inHold | done | cancel" },
       { name: "priority", expr: "t.priority::text", type: "text", description: "urgent | high | medium | low" },
       { name: "started_at", expr: "t.started_at", type: "timestamptz" },
       { name: "estimated_finish_at", expr: "t.estimated_finish_at", type: "timestamptz" },

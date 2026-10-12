@@ -8,7 +8,7 @@ data class TaskSummaryDto(
     val id: String,
     val parentTaskId: String? = null,
     val name: String,
-    /** `inHold`, `todo`, `inProgress`, `done` ou `cancel`. */
+    /** `todo`, `scheduled`, `toDefine`, `inHold`, `done` ou `cancel`. */
     val status: String,
     /** `low`, `medium`, `high` ou `urgent`. */
     val priority: String,
@@ -17,6 +17,8 @@ data class TaskSummaryDto(
     val startedAt: String? = null,
     val estimatedFinishAt: String? = null,
     val finishedAt: String? = null,
+    val dependsOnTaskIds: List<String> = emptyList(),
+    val revision: Int = 1,
 )
 
 /** Espelha `CreateTaskInput`: só o que o hub “Criar” preenche. */

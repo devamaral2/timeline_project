@@ -42,7 +42,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.braid.mobile.core.designsystem.BraidDisplayFont
 import app.braid.mobile.data.reminders.ReminderEventSource
 import app.braid.mobile.data.reminders.ReminderScheduler
+import app.braid.mobile.domain.timeline.AgendaEntry
 import app.braid.mobile.domain.timeline.TIMELINE_TIME_ZONE
+import app.braid.mobile.domain.timeline.agendaEntriesOf
 import app.braid.mobile.domain.timeline.mediumDate
 import app.braid.mobile.domain.timeline.relativeDayLabel
 import java.time.LocalDate
@@ -124,7 +126,8 @@ fun AgendaDayScreen(
                         description = "Sua agenda está aberta para o que faz bem a você.",
                     )
                 }
-            is AgendaUiState.Content ->
+            is AgendaUiState.Content -> {
+                val entries = remember(current.events, current.dayKey) { agendaEntriesOf(current.events, current.dayKey) }
                 RefreshableAgenda(
                     modifier = Modifier.fillMaxSize(),
                     isRefreshing = current.isRefreshing,
@@ -144,15 +147,20 @@ fun AgendaDayScreen(
                                 )
                             }
                         }
-                        items(current.events, key = { it.id }) { event ->
-                            EventCard(
-                                event = event,
-                                now = now,
-                                onClick = { onOpenEvent(event.id) },
-                            )
+                        items(entries, key = { it.key }) { entry ->
+                            when (entry) {
+                                is AgendaEntry.Event ->
+                                    EventCard(
+                                        event = entry.event,
+                                        now = now,
+                                        onClick = { onOpenEvent(entry.event.id) },
+                                    )
+                                is AgendaEntry.FreeTime -> FreeTimeCard(slot = entry.slot, now = now)
+                            }
                         }
                     }
                 }
+            }
         }
         if (usesInexactReminders) {
             Surface(

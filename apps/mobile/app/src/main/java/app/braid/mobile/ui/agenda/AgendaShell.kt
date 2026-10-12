@@ -39,9 +39,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.braid.mobile.data.reminders.ReminderScheduler
+import app.braid.mobile.data.reminders.enqueueReminderSync
 import app.braid.mobile.data.session.SessionUser
 import app.braid.mobile.domain.timeline.TIMELINE_TIME_ZONE
 import app.braid.mobile.ui.chat.AgentChatViewModel
@@ -113,12 +115,17 @@ fun AgendaShell(
 
     BackHandler(enabled = hubOpen) { hubOpen = false }
 
+    // Alarmes dos próximos 30 dias, não só dos dias que a pessoa abrir na agenda.
+    val context = LocalContext.current
+    androidx.compose.runtime.LaunchedEffect(user.userId) { enqueueReminderSync(context) }
+
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
             topBar = {
                 AgendaHeader(
                     onToggleTheme = onToggleTheme,
                     onSignOut = onSignOut,
+                    notifications = { NotificationBell(onOpenEvent = onOpenEvent) },
                     below = {
                         if (destination == BottomBarItem.Agenda) {
                             AgendaViewOptions(

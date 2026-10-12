@@ -7,11 +7,10 @@ import {
 import { ChevronDown, Columns2, Infinity as InfinityIcon, SlidersHorizontal } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { WeekStrip } from "@/components/events/WeekStrip";
-import { ICON_STROKE_WIDTH, notificationOffsetLabel, visualForItemType } from "@/components/events/event-visuals";
+import { ICON_STROKE_WIDTH, visualForItemType } from "@/components/events/event-visuals";
 import { authedFetch } from "@/lib/api/authed-fetch";
 import type { TimelineEventCardDto, TimelineEventPageDto } from "@/lib/api/contracts";
 import { useNow } from "@/lib/events/use-now";
-import { useDueNotifications } from "@/lib/events/use-due-notifications";
 import { useSessionState } from "@/lib/session/use-session";
 import { AgendaDay } from "./agenda-day";
 import { agendaEventsByDay } from "./agenda-data";
@@ -122,12 +121,15 @@ export function AgendaPreview({ userId, todayKey = EXAMPLE_TODAY }: { userId?: s
     setDayRange({ before: 0, after: nextMode === "list" ? INFINITE_STEP_DAYS : 0 });
   }
 
+  // Enquanto a sessão carrega o carrossel não existe; ao aparecer, ele precisa abrir no dia selecionado.
+  const stripMounted = !userId || (ready && Boolean(user));
+
   // Só escolhas explícitas reposicionam o carrossel; um swipe apenas atualiza a seleção.
   useLayoutEffect(() => {
     const strip = daysRef.current;
     if (mode !== "day" || !strip) return;
     strip.scrollLeft = weekOf(navigation.dayKey).indexOf(navigation.dayKey) * strip.clientWidth;
-  }, [mode, navigation]);
+  }, [mode, navigation, stripMounted]);
 
   // No modo lista infinita, chegar à borda traz mais dias.
   useEffect(() => {
@@ -213,20 +215,6 @@ export function AgendaPreview({ userId, todayKey = EXAMPLE_TODAY }: { userId?: s
     };
   }, [mode]);
 
-  // So a agenda real tem id estavel e notifyOffsetsMinutes vindo do backend;
-  // os exemplos ilustrativos da previa sem sessao nunca cruzam um aviso.
-  const notifiableEvents = userId
-    ? Object.values(eventsByDay)
-        .flat()
-        .filter((event): event is typeof event & { id: string; startedAt: string } =>
-          Boolean(event.id && event.startedAt && event.notifyOffsetsMinutes?.length),
-        )
-    : [];
-  const { due: dueNotifications, dismiss: dismissNotification } = useDueNotifications(
-    notifiableEvents,
-    realNow,
-  );
-
   if (userId && !ready) {
     return <main id="conteudo" className={styles.main}><p role="status" className={styles.emptyDay}>Carregando sua sessão…</p></main>;
   }
@@ -236,17 +224,6 @@ export function AgendaPreview({ userId, todayKey = EXAMPLE_TODAY }: { userId?: s
 
   return (
     <main id="conteudo" className={styles.main}>
-      {dueNotifications.length > 0 ? (
-        <div className={styles.notificationToasts} role="status" aria-live="polite">
-          {dueNotifications.map((notification) => (
-            <div key={notification.key} className={styles.notificationToast}>
-              <span>{notification.name} — {notificationOffsetLabel(notification.offsetMinutes)}</span>
-              <button type="button" aria-label="Dispensar aviso" onClick={() => dismissNotification(notification.key)}>×</button>
-            </div>
-          ))}
-        </div>
-      ) : null}
-
       <div className={styles.pageHeading}>
         <h1>Agenda</h1>
         <div className={styles.headingActions}>
@@ -333,6 +310,7 @@ export function AgendaPreview({ userId, todayKey = EXAMPLE_TODAY }: { userId?: s
             <div><i data-time-position="past" aria-hidden /><span>Horários passados</span></div>
             <div><i data-time-position="running" aria-hidden /><span>Em andamento</span></div>
             <div><i data-time-position="upcoming" aria-hidden /><span>A seguir</span></div>
+            <div><i data-time-position="free" aria-hidden /><span>Tempo livre</span></div>
             <p>O relógio situa o evento. O status continua sendo da tarefa.</p>
           </section>
           <p className={styles.prototypeNote}>Estudo visual · dados de exemplo</p>

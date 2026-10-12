@@ -73,8 +73,14 @@ data class DurationPart(
 fun durationPartsOf(
     startedAt: String,
     finishedAt: String,
-): List<DurationPart> {
-    val total = ((Instant.parse(finishedAt).toEpochMilli() - Instant.parse(startedAt).toEpochMilli()) / 60_000).toInt().coerceAtLeast(0)
+): List<DurationPart> =
+    durationPartsOfMinutes(
+        ((Instant.parse(finishedAt).toEpochMilli() - Instant.parse(startedAt).toEpochMilli()) / 60_000).toInt(),
+    )
+
+/** As mesmas partes para uma duração já em minutos (o tempo livre da agenda). */
+fun durationPartsOfMinutes(minutes: Int): List<DurationPart> {
+    val total = minutes.coerceAtLeast(0)
     if (total < 60) return listOf(DurationPart(total, "min"))
     return buildList {
         add(DurationPart(total / 60, "h"))

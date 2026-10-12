@@ -28,12 +28,15 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.braid.mobile.data.reminders.ReminderEventSource
 import app.braid.mobile.data.reminders.ReminderScheduler
+import app.braid.mobile.domain.timeline.AgendaEntry
+import app.braid.mobile.domain.timeline.FreeTimeSlot
+import app.braid.mobile.domain.timeline.agendaEntriesOf
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import java.time.Instant
 
-/** Uma linha da lista contínua: o cabeçalho do dia, um evento ou um aviso de carregamento nas pontas. */
+/** Uma linha da lista contínua: o cabeçalho do dia, um evento, o tempo livre entre eventos ou um aviso de carregamento nas pontas. */
 private sealed interface ListRow {
     val key: String
     val dayKey: String?
@@ -50,6 +53,13 @@ private sealed interface ListRow {
         val event: app.braid.mobile.data.dto.TimelineEventCardDto,
     ) : ListRow {
         override val key get() = "e:$dayKey:${event.id}"
+    }
+
+    data class FreeTime(
+        override val dayKey: String,
+        val slot: FreeTimeSlot,
+    ) : ListRow {
+        override val key get() = "f:$dayKey:${slot.start.toEpochMilli()}"
     }
 
     data class Note(
@@ -117,7 +127,14 @@ fun AgendaListScreen(
                 }
                 state.days.filter { it.events.isNotEmpty() }.forEach { day ->
                     add(ListRow.Heading(day.dayKey, day.events.size))
-                    day.events.forEach { add(ListRow.Event(day.dayKey, it)) }
+                    agendaEntriesOf(day.events, day.dayKey).forEach { entry ->
+                        add(
+                            when (entry) {
+                                is AgendaEntry.Event -> ListRow.Event(day.dayKey, entry.event)
+                                is AgendaEntry.FreeTime -> ListRow.FreeTime(day.dayKey, entry.slot)
+                            },
+                        )
+                    }
                 }
                 when {
                     state.failedAtEnd ->
@@ -187,6 +204,7 @@ fun AgendaListScreen(
                                 is ListRow.Heading -> DayHeading(dayKey = row.dayKey, eventCount = row.eventCount)
                                 is ListRow.Event ->
                                     EventCard(event = row.event, now = now, onClick = { onOpenEvent(row.event.id) })
+                                is ListRow.FreeTime -> FreeTimeCard(slot = row.slot, now = now)
                                 is ListRow.Note ->
                                     Column(
                                         modifier = Modifier.fillMaxWidth(),

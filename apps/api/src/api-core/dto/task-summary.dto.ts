@@ -11,6 +11,8 @@ export function toTaskSummaryDto(task: {
   startedAt?: Date;
   estimatedFinishAt?: Date;
   finishedAt?: Date;
+  dependsOnTaskIds: readonly string[];
+  revision: number;
 }): TaskSummaryDto {
   return {
     id: task.id,
@@ -23,5 +25,7 @@ export function toTaskSummaryDto(task: {
     startedAt: task.startedAt?.toISOString(),
     estimatedFinishAt: task.estimatedFinishAt?.toISOString(),
     finishedAt: task.finishedAt?.toISOString(),
+    dependsOnTaskIds: [...task.dependsOnTaskIds],
+    revision: task.revision,
   };
 }

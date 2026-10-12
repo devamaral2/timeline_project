@@ -59,7 +59,7 @@ export function MockupShell({
             <BrandLogo />
           </a>
           <PrimaryNavigation userId={userId} />
-          <div className={styles.headerActions}><AgendaHeaderActions live={live ?? false} darkMode={darkMode} onThemeToggle={toggleTheme} /></div>
+          <div className={styles.headerActions}><AgendaHeaderActions live={live ?? false} userId={userId} darkMode={darkMode} onThemeToggle={toggleTheme} /></div>
         </div>
       </header>
       {children}

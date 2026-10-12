@@ -10,6 +10,7 @@ import { authedFetch } from "@/lib/api/authed-fetch";
 import { useNow } from "@/lib/events/use-now";
 import type { EventDetailDto, TaskDetailDto } from "@/lib/api/contracts";
 import { tagColorStyle } from "@/lib/tags/tag-color";
+import { taskStatusLabels } from "@/lib/tasks/tasks-model";
 import { elapsedSecondsOf, eventPositionOf, formatStopwatch, formatTime } from "@repo/timeline";
 import { agendaRefreshEvent } from "../../../mockups/eventos/agenda-refresh";
 import shellStyles from "../../../mockups/eventos/mockup.module.css";
@@ -20,13 +21,6 @@ import styles from "./event-details.module.css";
 
 const icon = { "aria-hidden": true, strokeWidth: ICON_STROKE_WIDTH } as const;
 const DESCRIPTION_CLAMP = 180;
-const taskStatusLabels: Record<TaskDetailDto["status"], string> = {
-  inHold: "Em espera",
-  todo: "A fazer",
-  inProgress: "Em andamento",
-  done: "Concluída",
-  cancel: "Cancelada",
-};
 
 export default function EventPage({ params }: { params: Promise<{ userId: string; eventId: string }> }) {
   const now = useNow();
