@@ -6,7 +6,7 @@
 .actions { display: flex; align-items: center; gap: 12px; }
 .actions > button { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border: 1px solid var(--border); border-radius: 50%; background: var(--card); cursor: pointer; }
 .actions > .primary, .primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: auto; height: 40px; padding: 0 16px; border: 0; border-radius: 8px; background: var(--primary); color: var(--primary-foreground); font-weight: 600; cursor: pointer; }
-.filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 32px; }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; margin: 0 0 32px; padding: 0; border: 0; }
 .filters button { height: 36px; padding: 0 16px; border: 1px solid var(--border); border-radius: 999px; color: var(--muted-foreground); background: transparent; font-size: 13px; cursor: pointer; }
 .filters button[aria-pressed="true"] { border-color: var(--foreground); box-shadow: 0 0 0 1px var(--foreground); color: var(--foreground); background: var(--card); font-weight: 600; }
 .groups { display: flex; flex-direction: column; gap: 32px; }

@@ -225,7 +225,6 @@ test("creates and links a new note, saving it together with the event", async ()
 test("rejects an expectedRevision that does not match the stored event", async () => {
   const existingEvent = trainingEvent("01K2R1J5M8S0Y2Z7ABCD123460");
   const kit = createEventsKit({ events: [existingEvent] });
-  const eventRepository = kit.eventRepository;
   const updateUseCase = updateUseCaseOf(kit);
 
   await expect(

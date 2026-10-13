@@ -126,6 +126,7 @@ export function AgendaPreview({ userId, todayKey = EXAMPLE_TODAY }: { userId?: s
 
   // Só escolhas explícitas reposicionam o carrossel; um swipe apenas atualiza a seleção.
   useLayoutEffect(() => {
+    void stripMounted;
     const strip = daysRef.current;
     if (mode !== "day" || !strip) return;
     strip.scrollLeft = weekOf(navigation.dayKey).indexOf(navigation.dayKey) * strip.clientWidth;
