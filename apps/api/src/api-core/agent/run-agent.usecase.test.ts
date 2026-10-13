@@ -94,7 +94,7 @@ function idOf(result: unknown): string {
 
 describe("RunAgentUseCase — writes", () => {
   test("creates a training event for the target user and reports it", async () => {
-    const { useCase, events } = setup({
+    const { useCase, events, database } = setup({
       calls: [
         {
           name: "save_training_event",
