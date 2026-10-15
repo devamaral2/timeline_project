@@ -63,7 +63,7 @@ Cadastre as variáveis abaixo usando os valores atuais de produção:
 
 | Escopo no código | Variáveis obrigatórias no Environment                                                                                                                                             |
 | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `api-runtime`    | `DATABASE_URL`, `AUTH_SERVICE_URL`, `AUTH_INTERNAL_SERVICE_KEY`                                                                                                                   |
+| `api-runtime`    | `DATABASE_URL`, `AUTH_SERVICE_URL`, `AUTH_INTERNAL_SERVICE_KEY`, `RABBITMQ_URL`, `AI_JOBS_QUEUE_PREFIX`                                                                           |
 | `auth-runtime`   | `NODE_ENV`, `AUTH_DATABASE_URL`, `AUTH_ISSUER`, `AUTH_AUDIENCE`, `AUTH_PUBLIC_URL`, `AUTH_WEB_APP_URL`, `AUTH_KEY_ENCRYPTION_KEY`, `AUTH_INTERNAL_SERVICE_KEY`, `API_SERVICE_URL` |
 | `web-build`      | `BACKEND_URL`, `AUTH_SERVICE_URL`                                                                                                                                                 |
 

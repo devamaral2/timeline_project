@@ -82,7 +82,7 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     apiDatabase.pathname = `/${databaseName}`;
     const apiDatabaseUrl = apiDatabase.toString();
 
-    const [apiPort, authPort, webPort] = await Promise.all([freePort(), freePort(), freePort()]);
+    const [apiPort, authPort, webPort, brokerPort] = await Promise.all([freePort(), freePort(), freePort(), freePort()]);
     const apiUrl = `http://127.0.0.1:${apiPort}`;
     const authUrl = `http://127.0.0.1:${authPort}`;
     const webUrl = `http://127.0.0.1:${webPort}`;
@@ -105,6 +105,10 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
       API_PORT: String(apiPort),
       AUTH_HOST: "127.0.0.1",
       AUTH_PORT: String(authPort),
+      // The API validates its AI job queue config at boot. No broker runs in E2E:
+      // jobs stay durable in PostgreSQL and the publisher retries a closed port.
+      RABBITMQ_URL: `amqp://127.0.0.1:${brokerPort}`,
+      AI_JOBS_QUEUE_PREFIX: `e2e-${nextBuildId.slice(0, 12)}`,
       OPENROUTER_API_KEY: "e2e-mocked-key",
       OPENROUTER_AGENT_MODEL: "e2e-mocked-model",
       WEB_PORT: String(webPort),

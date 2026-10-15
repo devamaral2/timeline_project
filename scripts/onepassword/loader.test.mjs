@@ -166,7 +166,13 @@ test("reports Environment API failures without starting the application", async 
 });
 
 test("defines minimal production scopes without requiring mobile or test variables", () => {
-  assert.deepEqual(scopeKeys("api-runtime").required, ["DATABASE_URL", "AUTH_SERVICE_URL", "AUTH_INTERNAL_SERVICE_KEY"]);
+  assert.deepEqual(scopeKeys("api-runtime").required, [
+    "DATABASE_URL",
+    "AUTH_SERVICE_URL",
+    "AUTH_INTERNAL_SERVICE_KEY",
+    "RABBITMQ_URL",
+    "AI_JOBS_QUEUE_PREFIX",
+  ]);
   assert.ok(scopeKeys("auth-runtime").required.includes("AUTH_KEY_ENCRYPTION_KEY"));
   assert.deepEqual(scopeKeys("web-build").required, ["BACKEND_URL", "AUTH_SERVICE_URL"]);
 });
