@@ -15,6 +15,11 @@ let service: AiJobsService;
 let connection: amqp.ChannelModel;
 let store: PostgresAiJobStore;
 const prefix = "ai-jobs-integration";
+async function claim(id: string) {
+  const job = await store.claim(id);
+  if (!job?.leaseToken) throw new Error(`AI job ${id} was not claimable`);
+  return { ...job, leaseToken: job.leaseToken };
+}
 beforeAll(async () => {
   postgres = await createPostgresTestContext();
   await postgres.pool.query("CREATE TABLE job_effects (job_id text PRIMARY KEY)");
@@ -65,11 +70,11 @@ test("durable outbox publishes pre-start submissions and completed broker redeli
 
 test("expired worker recovers; stale and cancelled transactions roll back domain effects", async () => {
   const id = await service.enqueue({ kind: "agent-turn", userId: "lease-user", actorId: "a", payload: {} });
-  const dead = (await store.claim(id))!;
+  const dead = await claim(id);
   await postgres.pool.query("UPDATE ai_jobs SET lease_until=now()-interval '1 second' WHERE id=$1", [id]);
   await store.recover();
   await postgres.pool.query("UPDATE ai_jobs SET available_at=now() WHERE id=$1", [id]);
-  const live = (await store.claim(id))!;
+  const live = await claim(id);
   expect(live.leaseToken).not.toBe(dead.leaseToken);
   async function commit(token: string) {
     return aiJobContext.run({ id, token }, async () => {
@@ -80,9 +85,9 @@ test("expired worker recovers; stale and cancelled transactions roll back domain
       });
     });
   }
-  await expect(commit(dead.leaseToken!)).rejects.toThrow("lease lost");
+  await expect(commit(dead.leaseToken)).rejects.toThrow("lease lost");
   await service.cancel(id, "lease-user");
-  await expect(commit(live.leaseToken!)).rejects.toThrow("lease lost");
+  await expect(commit(live.leaseToken)).rejects.toThrow("lease lost");
   expect((await postgres.pool.query("SELECT * FROM job_effects WHERE job_id=$1", [id])).rows).toHaveLength(0);
 });
 
@@ -120,7 +125,7 @@ test("retry and busy delivery deadlines replace the stale publication deadline",
   // Inspect store deadlines without the background publisher changing them.
   await service.onApplicationShutdown();
   const id = await store.enqueue({ kind: "agent-turn", userId: "retry-user", actorId: "a", payload: {} });
-  const claimed = (await store.claim(id))!;
+  const claimed = await claim(id);
   await postgres.pool.query("UPDATE ai_job_outbox SET available_at=now()+interval '30 seconds' WHERE job_id=$1", [id]);
   await store.fail(claimed, "unavailable", true);
   const retry = await postgres.pool.query<{ difference: number }>(`

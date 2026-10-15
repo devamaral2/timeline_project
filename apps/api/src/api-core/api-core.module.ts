@@ -51,7 +51,8 @@ export class ApiCoreModule {
   private static root?: DynamicModule;
 
   static forRoot(): DynamicModule {
-    return this.root ??= {
+    if (ApiCoreModule.root) return ApiCoreModule.root;
+    ApiCoreModule.root = {
       module: ApiCoreModule,
       imports: [PersistenceModule, AiJobsModule],
       providers: [
@@ -151,5 +152,6 @@ export class ApiCoreModule {
         AiJobsModule,
       ],
     };
+    return ApiCoreModule.root;
   }
 }
