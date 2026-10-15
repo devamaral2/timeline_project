@@ -4,13 +4,13 @@ import {
   CreateEventFromTranscriptUseCase,
   EMPTY_TRANSCRIPT_ERROR,
   LONG_TRANSCRIPT_ERROR,
-} from "./create-event-from-transcript.usecase";
+} from "../../api-core/events/create-event-from-transcript.usecase";
 import type { InMemoryEventDatabase } from "../../api-core/events/testing/in-memory-event-database";
 import type { InMemoryEventRepository } from "../../api-core/events/testing/in-memory-event.repository";
 import { createEventsKit } from "../../api-core/events/testing/in-memory-events-kit";
 import { StubEventCommandParsingGateway } from "../../api-core/events/testing/stub-event-command-parsing.gateway";
 import { StubMealParsingGateway } from "../../api-core/events/testing/stub-meal-parsing.gateway";
-import type { CreateEventInput } from "@repo/contracts";
+import type { CreateEventInput, MealItem } from "@repo/contracts";
 import type { ParsedEventSchedule } from "../../api-core/events/services/event-schedule.service";
 
 const actor = { userId: "user-1" };
@@ -199,8 +199,8 @@ test("routes a meal command through the meal parsing gateway", async () => {
   const persistedEvent = await eventRepository.findById(result.eventId);
 
   expect(result.kind).toBe("meal");
-  const mealData = database.notesOf(persistedEvent as Event)[0].data as { totals: { totalCaloriesKcal: number }; description: string };
-  expect(mealData.totals.totalCaloriesKcal).toBe(89);
+  const mealData = database.notesOf(persistedEvent as Event)[0].data as MealItem;
+  expect(mealData).toMatchObject({ generation: { status: "pending" }, foodItems: [] });
   expect(mealData.description).toBe("uma banana");
 });
 

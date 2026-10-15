@@ -28,6 +28,7 @@ import { AgentPromptBuilderService } from "./services/agent-prompt-builder.servi
 import type { AgentSkill } from "./skills/agent-skill";
 import { AGENT_SKILLS, bindAgentTools } from "./skills/agent-skill-registry";
 import { getDayContextSkill } from "./skills/get-day-context.skill";
+import { getCurrentAiJob, setAiJobResult } from "../../infrastructure/ai-jobs/ai-job-context";
 
 /** A conversa em que este turno entra. Ausente no caminho REST. */
 export interface RunAgentConversation {
@@ -156,6 +157,10 @@ export class RunAgentUseCase {
       // "Salvando" so quando ha o que salvar alem da propria conversa: um turno
       // de pura consulta nao deve anunciar gravacao que nao houve.
       if (session.hasChanges()) options.onProgress?.(SAVING_PROGRESS_LABEL);
+      if (getCurrentAiJob()) setAiJobResult({
+        ...response,
+        ...(options.conversation ? { conversationId: options.conversation.conversationId } : {}),
+      });
       const result = await this.batchWriter.commit(session.toBatch());
       if (result.conversation) options.onConversationWritten?.(result.conversation);
     }
@@ -304,6 +309,10 @@ export class RunAgentUseCase {
     }
     if (session.hasChanges() || session.hasMessages()) {
       if (session.hasChanges()) options.onProgress?.(SAVING_PROGRESS_LABEL);
+      if (getCurrentAiJob()) setAiJobResult({
+        ...response,
+        ...(options.conversation ? { conversationId: options.conversation.conversationId } : {}),
+      });
       const result = await timings.time("commit", () => this.batchWriter.commit(session.toBatch()));
       if (result.conversation) options.onConversationWritten?.(result.conversation);
     }

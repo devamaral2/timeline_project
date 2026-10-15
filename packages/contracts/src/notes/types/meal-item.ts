@@ -27,6 +27,9 @@ export interface MealRecipe {
 }
 
 export interface MealItem {
+  /** Absent on legacy meal snapshots. */
+  generation?: { status: "pending" | "completed" | "failed" };
+  nutritionSource?: "model-estimate";
   sourceMealId?: string;
   sourceMealRevision?: number;
   name: string;

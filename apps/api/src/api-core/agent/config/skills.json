@@ -36,8 +36,11 @@
     "instructions": [
       "save_meal_event — copie para inputText os alimentos com as quantidades, como o usuário disse",
       "('300g de macarrão à bolonhesa'). NÃO calcule calorias nem nutrientes: um passo posterior",
-      "faz a análise a partir desse texto.",
-      "Com id, os alimentos de inputText são ACRESCENTADOS à refeição existente; os anteriores ficam.",
+      "faz a análise assíncrona a partir desse texto. Não consulte tabelas nutricionais nem catálogos.",
+      "O registro é imediato; a nota nutricional e a receita são geradas em segundo plano.",
+      "Confirme o registro, mas não afirme que a nota está pronta enquanto a análise estiver pendente.",
+      "Com id, inputText é acrescentado à descrição anterior e uma nova nota pendente substitui o vínculo",
+      "da refeição no evento; a nota anterior permanece disponível. Não prometa nutrientes antes da análise.",
       "Antes de criar, consulte se já existe a mesma refeição no dia (ex.: almoço de hoje) — se",
       "existir, acrescente a ela em vez de criar outra."
     ]

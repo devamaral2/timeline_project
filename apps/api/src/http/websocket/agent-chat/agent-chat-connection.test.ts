@@ -190,7 +190,7 @@ test("cancel aborts the running message and reports it as cancelled", async () =
   expect(frames.at(-1)).toEqual({ type: "error", id: "m1", code: "cancelled" });
 });
 
-test("a closed socket aborts the run and nothing more is sent", async () => {
+test("a closed socket leaves the job running and nothing more is sent", async () => {
   const held = heldRun();
   let signal: AbortSignal | undefined;
   const { connection, frames } = setup((input, actor, options) => {
@@ -200,9 +200,11 @@ test("a closed socket aborts the run and nothing more is sent", async () => {
 
   const running = connection.handleMessage(message("m1"));
   connection.handleClose();
+  expect(signal?.aborted).toBe(false);
+  held.finish();
   await running;
 
-  expect(signal?.aborted).toBe(true);
+  expect(signal?.aborted).toBe(false);
   expect(frames).toHaveLength(1);
 });
 

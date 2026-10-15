@@ -93,6 +93,28 @@ function idOf(result: unknown): string {
 }
 
 describe("RunAgentUseCase — writes", () => {
+  test("repeated meal additions only persist the final pending note and use the final time", async () => {
+    const { useCase, database, writer } = setup({
+      calls: [
+        { name: "save_meal_event", args: { inputText: "arroz" } },
+        { name: "save_meal_event", args: (results: unknown[]) => ({
+          id: idOf(results[0]), inputText: "feijão",
+        }) },
+        { name: "save_meal_event", args: (results: unknown[]) => ({
+          id: idOf(results[0]), inputText: "frango", startedAt: "2026-09-16T23:00:00Z",
+          finishedAt: "2026-09-17T00:00:00Z",
+        }) },
+      ],
+    });
+    const response = await run(useCase);
+    expect(database.notes).toHaveLength(1);
+    expect(writer.commits[0].notes).toHaveLength(1);
+    expect(database.notes[0].data).toMatchObject({
+      name: "Jantar", description: "arroz; feijão; frango", generation: { status: "pending" },
+    });
+    expect(response.createdEntities).toHaveLength(1);
+  });
+
   test("creates a training event for the target user and reports it", async () => {
     const { useCase, events } = setup({
       calls: [
@@ -131,7 +153,7 @@ describe("RunAgentUseCase — writes", () => {
     expect(stored?.revision).toBe(2);
   });
 
-  test("a meal update appends the parsed foods and recomputes the totals", async () => {
+  test("a meal update queues a replacement note from the combined description", async () => {
     const ctx = setup();
     const mealId = await ctx.seedEvent({ kind: "meal", notes: [{ type: "meal", data: { inputText: "100g de arroz" } }] });
     const { useCase, noteDataOf } = setupWith(ctx, [{ name: "save_meal_event", args: { id: mealId, inputText: "mais 100g de arroz" } }]);
@@ -139,8 +161,8 @@ describe("RunAgentUseCase — writes", () => {
     await run(useCase);
 
     const meal = (await noteDataOf(mealId, "meal")) as MealItem;
-    expect(meal.foodItems).toHaveLength(2);
-    expect(meal.totals.totalCaloriesKcal).toBe(260);
+    expect(meal.foodItems).toEqual([]);
+    expect(meal.generation).toEqual({ status: "pending" });
     expect(meal.description).toBe("100g de arroz; mais 100g de arroz");
   });
 

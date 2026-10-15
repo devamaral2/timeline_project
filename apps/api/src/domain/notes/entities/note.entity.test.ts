@@ -55,4 +55,19 @@ describe("Note aggregate", () => {
     expect(() => note.revise({ type: "sleep" })).toThrow(NoteValidationError);
     expect(note.revise({ type: "sleep", data: { trackedSleepTime: 1, score: 1 } }).type).toBe("sleep");
   });
+
+  test("manual edits cannot forge meal job states and keep existing estimate provenance", () => {
+    const data = { name: "Almoço", description: "arroz", foodItems: [],
+      totals: { totalCaloriesKcal: 0, totalProteinGrams: 0, totalCarbohydrateGrams: 0, totalFatGrams: 0, totalFiberGrams: 0 } };
+    const manual = Note.create({ userId: "u", type: "meal", data });
+    expect(() => manual.revise({ data: { ...data, generation: { status: "pending" } } })).toThrow(NoteValidationError);
+    const generated = Note.create({ userId: "u", type: "meal", data: {
+      ...data, generation: { status: "completed" }, nutritionSource: "model-estimate",
+      recipe: { source: "model", ingredients: [], steps: ["Cozinhe o arroz."] },
+    } });
+    expect(generated.revise({ data: { ...generated.data as object, description: "arroz editado",
+      generation: undefined, nutritionSource: undefined } }).data).toMatchObject({
+      generation: { status: "completed" }, nutritionSource: "model-estimate",
+    });
+  });
 });

@@ -5,14 +5,21 @@ import {
   NoteNotFoundError,
   NoteOwnershipError,
   NoteRevisionConflictError,
+  type MealItem,
   type NoteWrites,
 } from "../../../../domain";
-import type { NoteRepository } from "../../../../domain/ports";
+import type {
+  MealNoteGenerationPayload,
+  MealNoteGenerationRepository,
+  MealNoteGenerationResult,
+  NoteRepository,
+} from "../../../../domain/ports";
 import * as schema from "../../database/schema";
 import { upsertTagIds } from "../../shared/upsert-tag-ids";
 import { mapNoteRow } from "../mappers/note-row.mapper";
 import { classifyUpdateFailure } from "../../shared/classify-update-failure";
 import type { Tx } from "../../events/repositories/postgres-event.repository";
+import { completeCurrentAiJob, enqueueMealNote, setAiJobFailure, setAiJobResult } from "../../../ai-jobs/ai-job-context";
 
 export async function insertNote(tx: Tx, note: Note): Promise<void> {
   await tx.insert(schema.notes).values({
@@ -27,6 +34,16 @@ export async function insertNote(tx: Tx, note: Note): Promise<void> {
     updatedAt: note.updatedAt,
   });
   await insertNoteTags(tx, note);
+  const meal = note.data as MealItem;
+  if (note.type === "meal" && meal.generation?.status === "pending") {
+    await enqueueMealNote(tx, note.id, note.userId, {
+      noteId: note.id,
+      userId: note.userId,
+      expectedRevision: note.revision,
+      description: meal.description,
+      name: meal.name,
+    });
+  }
 }
 
 async function insertNoteTags(tx: Tx, note: Note): Promise<void> {
@@ -107,8 +124,40 @@ export async function softDeleteNote(tx: Tx, noteId: string, actorUserId: string
     .where(eq(schema.notes.id, noteId));
 }
 
-export class PostgresNoteRepository implements NoteRepository {
+export class PostgresNoteRepository implements NoteRepository, MealNoteGenerationRepository {
   constructor(private readonly db: NodePgDatabase<typeof schema>) {}
+
+  async finishMealGeneration(
+    payload: MealNoteGenerationPayload,
+    data: MealItem | null,
+    result: MealNoteGenerationResult,
+  ): Promise<boolean> {
+    return this.db.transaction(async (tx) => {
+      let applied = false;
+      if (data) {
+        const updated = await tx.execute(sql`
+          UPDATE notes
+          SET data = ${JSON.stringify(data)}::jsonb,
+              revision = revision + 1,
+              updated_at = now()
+          WHERE id = ${payload.noteId}
+            AND user_id = ${payload.userId}
+            AND revision = ${payload.expectedRevision}
+            AND type = 'meal'
+            AND deleted_at IS NULL
+            AND data->'generation'->>'status' = 'pending'
+            AND data->>'description' = ${payload.description}
+            AND data->>'name' = ${payload.name}
+          RETURNING id
+        `);
+        applied = updated.rows.length > 0;
+      }
+      setAiJobResult(applied ? result : { status: "skipped", noteId: payload.noteId });
+      if (applied && result.status === "failed") setAiJobFailure("unavailable");
+      await completeCurrentAiJob(tx);
+      return applied;
+    });
+  }
 
   async save(note: Note): Promise<void> {
     await this.db.transaction(async (tx) => {

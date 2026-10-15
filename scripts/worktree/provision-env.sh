@@ -80,10 +80,14 @@ POSTGRES_DB=${DB_NAME}
 AUTH_POSTGRES_DB=${AUTH_DB_NAME}
 AUTH_WEB_APP_URL=${APP_URL}
 RABBITMQ_HEALTH_QUEUE=${QUEUE}
+AI_JOBS_QUEUE_PREFIX=${SLUG}
 EOT
   echo "Escrevi $ENV_FILE."
 else
   echo "Reaproveitando o $ENV_FILE existente."
+fi
+if [ -z "$(read_env_var "$ENV_FILE" AI_JOBS_QUEUE_PREFIX)" ]; then
+  printf '\nAI_JOBS_QUEUE_PREFIX=%s\n' "$SLUG" >> "$ENV_FILE"
 fi
 WEB_PORT="$(read_env_var "$ENV_FILE" WEB_PORT)"
 API_PORT="$(read_env_var "$ENV_FILE" API_PORT)"
@@ -142,6 +146,17 @@ done
 step 5 "Fila '${QUEUE}' no RabbitMQ compartilhado"
 bash "$SCRIPT_DIR/rabbitmq.sh" up
 bash "$SCRIPT_DIR/rabbitmq.sh" queue "$SLUG" health
+for kind in agent-turn transcript-event meal-note; do
+  bash "$SCRIPT_DIR/rabbitmq.sh" queue "$SLUG" "$kind"
+done
+# Credentials remain outside the checkout; start-dev inherits the AMQP URL.
+RABBIT_CRED_FILE="${BRAID_RABBITMQ_ENV:-$HOME/.config/braid/rabbitmq.env}"
+export RABBITMQ_URL
+RABBITMQ_URL="$(RABBIT_USER="$(read_env_var "$RABBIT_CRED_FILE" RABBITMQ_DEFAULT_USER)" \
+  RABBIT_PASS="$(read_env_var "$RABBIT_CRED_FILE" RABBITMQ_DEFAULT_PASS)" \
+  RABBIT_PORT="$(read_env_var "$RABBIT_CRED_FILE" RABBITMQ_HOST_PORT)" \
+  node -e 'process.stdout.write(`amqp://${encodeURIComponent(process.env.RABBIT_USER)}:${encodeURIComponent(process.env.RABBIT_PASS)}@127.0.0.1:${process.env.RABBIT_PORT}`)')"
+export AI_JOBS_QUEUE_PREFIX="$SLUG"
 
 # --- 6. migrations -------------------------------------------------------------
 step 6 "Migrations (API e Auth)"

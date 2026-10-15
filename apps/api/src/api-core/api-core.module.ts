@@ -31,13 +31,29 @@ import { RunAgentUseCase } from "./agent/run-agent.usecase";
 import { JevAgentRouter } from "./agent/routing/jev-agent.router";
 import type { DayContextQuery } from "./agent/day-context.query";
 import { RunChatTurnUseCase } from "./agent/run-chat-turn.usecase";
+import { AiJobsModule } from "../infrastructure/ai-jobs/ai-jobs.module";
+import { AiJobsService } from "../infrastructure/ai-jobs/ai-jobs.service";
+import { QueuedAiOperations } from "./agent/queued-ai-operations";
+import { GenerateMealNoteUseCase } from "./notes/generate-meal-note.usecase";
+import type { MealNoteGenerationRepository } from "../domain/ports";
+import { CreateEventFromTranscriptUseCase } from "./events/create-event-from-transcript.usecase";
+import { getCurrentAiJob } from "../infrastructure/ai-jobs/ai-job-context";
+
+/** Queue wait/retry must not change what "today" or "now" meant at submission. */
+function requestClock(): Date {
+  const submittedAt = getCurrentAiJob()?.createdAt;
+  return submittedAt ? new Date(submittedAt) : new Date();
+}
 
 @Module({ imports: [PersistenceModule] })
 export class ApiCoreModule {
+  // Feature modules share one runtime and one handler registry, not a worker per import.
+  private static root?: DynamicModule;
+
   static forRoot(): DynamicModule {
-    return {
+    return this.root ??= {
       module: ApiCoreModule,
-      imports: [PersistenceModule],
+      imports: [PersistenceModule, AiJobsModule],
       providers: [
         {
           provide: MaterializeRecurrencesUseCase,
@@ -56,7 +72,7 @@ export class ApiCoreModule {
           provide: CreateEventUseCase,
           inject: [EVENT_REPOSITORY, NOTE_REPOSITORY, NoteBuilder],
           useFactory: (events: EventRepository, notes: NoteRepository, builder: NoteBuilder) =>
-            new CreateEventUseCase(events, notes, builder),
+            new CreateEventUseCase(events, notes, builder, requestClock),
         },
         { provide: OpenRouterAgentGateway, useFactory: () => new OpenRouterAgentGateway() },
         { provide: JevAgentRouter, useFactory: () => new JevAgentRouter() },
@@ -89,7 +105,7 @@ export class ApiCoreModule {
             recurrences: MaterializeRecurrencesUseCase,
           ) => new RunAgentUseCase(
             gateway, query, batchWriter, { events, tasks, notes, recurrences: recurrenceRepository }, createEvent,
-            undefined, undefined, undefined, router, dayContext, recurrences,
+            undefined, undefined, requestClock, router, dayContext, recurrences,
           ),
         },
         {
@@ -97,6 +113,26 @@ export class ApiCoreModule {
           inject: [RunAgentUseCase, AGENT_CONVERSATION_QUERY],
           useFactory: (runAgent: RunAgentUseCase, conversations: AgentConversationQuery) =>
             new RunChatTurnUseCase(runAgent, conversations),
+        },
+        {
+          provide: CreateEventFromTranscriptUseCase,
+          inject: [OpenRouterEventCommandParsingGateway, CreateEventUseCase],
+          useFactory: (parsing: OpenRouterEventCommandParsingGateway, createEvent: CreateEventUseCase) =>
+            new CreateEventFromTranscriptUseCase(parsing, createEvent, requestClock),
+        },
+        {
+          provide: GenerateMealNoteUseCase,
+          inject: [NOTE_REPOSITORY, OpenRouterMealParsingGateway],
+          useFactory: (notes: MealNoteGenerationRepository, parsing: OpenRouterMealParsingGateway) =>
+            new GenerateMealNoteUseCase(notes, parsing),
+        },
+        {
+          provide: QueuedAiOperations,
+          inject: [AiJobsService, RunAgentUseCase, RunChatTurnUseCase, CreateEventFromTranscriptUseCase, GenerateMealNoteUseCase],
+          useFactory: (
+            jobs: AiJobsService, agent: RunAgentUseCase, chat: RunChatTurnUseCase,
+            transcript: CreateEventFromTranscriptUseCase, meal: GenerateMealNoteUseCase,
+          ) => new QueuedAiOperations(jobs, agent, chat, transcript, meal),
         },
       ],
       exports: [
@@ -110,6 +146,9 @@ export class ApiCoreModule {
         JevAgentRouter,
         RunAgentUseCase,
         RunChatTurnUseCase,
+        CreateEventFromTranscriptUseCase,
+        QueuedAiOperations,
+        AiJobsModule,
       ],
     };
   }

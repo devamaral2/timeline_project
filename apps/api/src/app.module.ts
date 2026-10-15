@@ -32,12 +32,18 @@ import { ListAgentConversationsModule } from "./features/list-agent-conversation
 import { ListAgentChatMessagesModule } from "./features/list-agent-chat-messages/list-agent-chat-messages.controller";
 import { RenameAgentConversationModule } from "./features/rename-agent-conversation/rename-agent-conversation.controller";
 import { DeleteAgentConversationModule } from "./features/delete-agent-conversation/delete-agent-conversation.controller";
+import { SubmitAiJobModule } from "./features/submit-ai-job/submit-ai-job.controller";
+import { ListAiJobsModule } from "./features/list-ai-jobs/list-ai-jobs.controller";
+import { GetAiJobModule } from "./features/get-ai-job/get-ai-job.controller";
+import { CancelAiJobModule } from "./features/cancel-ai-job/cancel-ai-job.controller";
+import { SubmitTranscriptJobModule } from "./features/submit-transcript-job/submit-transcript-job.controller";
 
 @Module({
   imports: [
     ApiCoreModule.forRoot(),
     // Rotas estaticas devem ser registradas antes das rotas parametrizadas.
     GetDailyOverviewModule,
+    SubmitTranscriptJobModule,
     CreateEventFromTranscriptModule,
     ListTimelineEventsModule,
     CreateEventModule,
@@ -63,6 +69,10 @@ import { DeleteAgentConversationModule } from "./features/delete-agent-conversat
     DeleteRecurrenceModule,
     AttachNotesToRecurrenceModule,
     RunAgentModule,
+    SubmitAiJobModule,
+    ListAiJobsModule,
+    GetAiJobModule,
+    CancelAiJobModule,
     IssueAgentChatTicketModule,
     ListAgentConversationsModule,
     ListAgentChatMessagesModule,

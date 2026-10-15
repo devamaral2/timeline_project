@@ -94,6 +94,24 @@ test("requests structured JSON schema and parses a wrapped items response", asyn
   };
   expect(schema.required).toEqual(["items", "recipe"]);
   expect(Object.keys(schema.properties.items.items.properties)).not.toContain("mainMicronutrients");
+  expect(request).not.toHaveProperty("tools");
+  expect(request).not.toHaveProperty("plugins");
+});
+
+test.each([
+  { items: [], recipe: undefined },
+  { items: [], recipe: { source: "model", ingredients: [], steps: [] } },
+  {
+    items: [{ food: "Banana", portion: "1", approximateWeightGrams: 100, caloriesKcal: -1, macronutrients: {} }],
+    recipe: { source: "model", ingredients: [], steps: ["Sirva."] },
+  },
+])("rejects invalid nutrition or absent/unusable recipe instead of persisting partial generation", async (generated) => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({ choices: [{ message: { content: JSON.stringify(generated) } }] }),
+  }));
+  const gateway = new OpenRouterMealParsingGateway("test-key", "test-model");
+  await expect(gateway.parseMeal({ text: "banana" })).rejects.toThrow();
 });
 
 test("toMealRecipe descarta receita sem passos e normaliza o que sobra", () => {

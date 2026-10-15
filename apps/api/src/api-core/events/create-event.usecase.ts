@@ -53,7 +53,7 @@ export class CreateEventUseCase {
     return { eventId: prepared.event.id };
   }
 
-  /** Monta uma note como a criacao de evento montaria: a refeicao passa pelo modelo, o treino pelo catalogo. */
+  /** Monta uma note como a criacao de evento montaria: refeicao pendente, treino pelo catalogo. */
   buildNote(input: CreateNoteInput, actor: AuthenticatedUser, startedAt: Date): Promise<Note> {
     return this.noteBuilder.fromCreateInput(input, actor.userId, startedAt);
   }
@@ -65,8 +65,7 @@ export class CreateEventUseCase {
 
   /**
    * Monta o evento sem gravar. A serie usa isto para validar o template e
-   * resolver uma vez so o que custa caro — a refeicao passa pelo modelo aqui,
-   * e nao a cada ocorrencia gerada.
+   * resolver o template. A refeicao so passa pelo modelo depois da gravacao.
    */
   async prepare(
     input: CreateEventInput,
@@ -80,11 +79,22 @@ export class CreateEventUseCase {
     }
 
     const created = await Promise.all(
-      (input.notes ?? []).map((noteInput) => this.noteBuilder.fromCreateInput(noteInput, actor.userId, startedAt)),
+      (input.notes ?? []).map((noteInput) => this.noteBuilder.fromCreateInput(
+        noteInput.type === "meal" && !noteInput.data?.inputText?.trim()
+          ? { ...noteInput, data: { inputText: input.description?.trim() || input.name?.trim() || getMealEventName(startedAt, EVENT_TIME_ZONE) } }
+          : noteInput,
+        actor.userId, startedAt,
+      )),
     );
-    await this.assertOwnedNotes(input.noteIds ?? [], actor);
+    const existing = await this.assertOwnedNotes(input.noteIds ?? [], actor);
 
     const kind = input.kind ?? inferKind(created);
+    if (kind === "meal" && ![...created, ...existing].some((note) => note.type === "meal")) {
+      created.push(await this.noteBuilder.fromCreateInput({
+        type: "meal",
+        data: { inputText: input.description?.trim() || input.name?.trim() || getMealEventName(startedAt, EVENT_TIME_ZONE) },
+      }, actor.userId, startedAt));
+    }
     const noteLinks: NoteLink[] = [
       ...created.map((note) => ({ noteId: note.id, fromRecurrence: false })),
       ...(input.noteIds ?? []).map((noteId) => ({ noteId, fromRecurrence: false })),
@@ -108,8 +118,8 @@ export class CreateEventUseCase {
   }
 
   /** Notes existentes so entram no evento se forem do mesmo usuario. */
-  private async assertOwnedNotes(noteIds: readonly string[], actor: AuthenticatedUser): Promise<void> {
-    if (noteIds.length === 0) return;
+  private async assertOwnedNotes(noteIds: readonly string[], actor: AuthenticatedUser): Promise<Note[]> {
+    if (noteIds.length === 0) return [];
     const found = await this.noteRepository.findByIds(noteIds);
     const byId = new Map(found.map((note) => [note.id, note]));
     for (const noteId of noteIds) {
@@ -117,6 +127,7 @@ export class CreateEventUseCase {
       if (!note) throw new NoteNotFoundError(`Note not found: ${noteId}`);
       if (note.userId !== actor.userId) throw new NoteOwnershipError();
     }
+    return found;
   }
 
   private deriveName(kind: EventKind, startedAt: Date, notes: readonly Note[]): string {

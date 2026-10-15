@@ -1,10 +1,11 @@
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
-import type { EventCommandParsingGateway } from "../../api-core/events/gateways/event-command-parsing.gateway";
+import type { EventCommandParsingGateway } from "./gateways/event-command-parsing.gateway";
 import type { CreateEventInput } from "@repo/contracts";
 import type { EventKind } from "../../domain";
-import { resolveEventSchedule } from "../../api-core/events/services/event-schedule.service";
-import { EVENT_TIME_ZONE } from "../../api-core/events/create-event.usecase";
-import type { CreateEventUseCase } from "../../api-core/events/create-event.usecase";
+import { resolveEventSchedule } from "./services/event-schedule.service";
+import { EVENT_TIME_ZONE } from "./create-event.usecase";
+import type { CreateEventUseCase } from "./create-event.usecase";
+import { getCurrentAiJob, setAiJobResult } from "../../infrastructure/ai-jobs/ai-job-context";
 
 export const MAX_TRANSCRIPT_LENGTH = 1000;
 export const EMPTY_TRANSCRIPT_ERROR = "Transcript is required";
@@ -30,8 +31,10 @@ export class CreateEventFromTranscriptUseCase {
     const eventInput: CreateEventInput = { ...parsed.input, description: transcript };
     const schedule = resolveEventSchedule(parsed.schedule, this.clock(), EVENT_TIME_ZONE);
     const prepared = await this.createEventUseCase.prepare(eventInput, actor, schedule);
+    const result = { eventId: prepared.event.id, kind: prepared.event.kind };
+    if (getCurrentAiJob()) setAiJobResult(result);
     await this.createEventUseCase.save(prepared);
 
-    return { eventId: prepared.event.id, kind: prepared.event.kind };
+    return result;
   }
 }

@@ -1,5 +1,6 @@
 import { getServerEnv } from "../../../config/env";
-import type { MealRecipe } from "../../../domain";
+import { LlmHttpError } from "../../agent/errors/agent.errors";
+import { parseFoodItem, type MealRecipe } from "../../../domain";
 import type { MealParsingGateway, ParsedMealFoodItem } from "./meal-parsing.gateway";
 import { MealPromptBuilderService } from "../services/meal-prompt-builder.service";
 
@@ -133,7 +134,7 @@ export class OpenRouterMealParsingGateway implements MealParsingGateway {
         statusText: response.statusText,
         body: errorBody,
       });
-      throw new Error(`OpenRouter request failed with status ${response.status}`);
+      throw new LlmHttpError(response.status);
     }
     const payload = (await response.json()) as OpenRouterResponse;
     const content = payload.choices?.[0]?.message?.content;
@@ -155,9 +156,15 @@ export class OpenRouterMealParsingGateway implements MealParsingGateway {
       throw new Error(`OpenRouter response shape is invalid: ${content}`);
     }
 
+    for (const item of items) {
+      parseFoodItem({ ...item, name: item.food });
+    }
+    const recipe = toMealRecipe(parsed.recipe);
+    if (!recipe) throw new Error("Meal generation requires a valid recipe");
+
     return {
       items,
-      recipe: toMealRecipe(parsed.recipe),
+      recipe,
       modelProvider: "openrouter",
       modelName: this.modelName,
     };

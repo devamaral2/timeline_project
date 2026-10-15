@@ -9,7 +9,7 @@ import {
 import type { AgentChatGrant, AgentChatTicketStore } from "../../../domain/ports";
 import { WebSocket, WebSocketServer, type RawData } from "ws";
 import { hashAgentChatTicket } from "../../../api-core/agent/chat-ticket";
-import type { RunChatTurnUseCase } from "../../../api-core/agent/run-chat-turn.usecase";
+import type { QueuedAiOperations } from "../../../api-core/agent/queued-ai-operations";
 import { AgentChatConnection, type AgentChatTransport } from "./agent-chat-connection";
 import {
   AGENT_CHAT_PATH,
@@ -43,7 +43,7 @@ export class AgentChatServer implements OnApplicationBootstrap, BeforeApplicatio
   constructor(
     private readonly httpServer: () => Server,
     private readonly tickets: AgentChatTicketStore,
-    private readonly runChatTurn: Pick<RunChatTurnUseCase, "execute">,
+    private readonly runChatTurn: Pick<QueuedAiOperations, "execute">,
     private readonly logger: Pick<LoggerService, "error" | "warn"> = new Logger(AgentChatServer.name),
   ) {}
 

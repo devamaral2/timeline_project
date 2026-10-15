@@ -2,7 +2,7 @@ import type { LoggerService } from "@nestjs/common";
 import type { AgentChatMessageFrame, AgentChatServerFrame } from "@repo/contracts";
 import type { AgentChatGrant } from "../../../domain/ports";
 import { toChatEntityRefs } from "../../../api-core/agent/services/agent-chat-history";
-import type { RunChatTurnUseCase } from "../../../api-core/agent/run-chat-turn.usecase";
+import type { QueuedAiOperations } from "../../../api-core/agent/queued-ai-operations";
 import {
   CHAT_CLOSE,
   CHAT_CONNECTION_LIFETIME_MS,
@@ -38,11 +38,11 @@ const systemClock: AgentChatClock = {
  * `ws` e o `AgentChatServer`.
  *
  * Uma resposta por vez. A resposta so e enviada depois do commit — o que vai
- * antes sao so os rotulos de progresso — e quem cancela ou fecha a conexao
- * antes do commit nao grava nada.
+ * antes sao so os rotulos de progresso. Fechar a conexao apenas desliga o
+ * observador: o job continua. Cancelar explicitamente pede cancelamento do job.
  */
 export class AgentChatConnection {
-  private running?: { id: string; controller: AbortController };
+  private running?: { id: string; controller: AbortController; observer: AbortController };
   private closed = false;
   private lifetimeOver = false;
   private idleTimer?: unknown;
@@ -51,7 +51,7 @@ export class AgentChatConnection {
   constructor(
     private readonly transport: AgentChatTransport,
     private readonly grant: AgentChatGrant,
-    private readonly runChatTurn: Pick<RunChatTurnUseCase, "execute">,
+    private readonly runChatTurn: Pick<QueuedAiOperations, "execute">,
     private readonly logger: Pick<LoggerService, "error">,
     private readonly clock: AgentChatClock = systemClock,
     private readonly limits = { lifetimeMs: CHAT_CONNECTION_LIFETIME_MS, idleMs: CHAT_IDLE_TIMEOUT_MS },
@@ -85,18 +85,19 @@ export class AgentChatConnection {
     await this.answer(frame);
   }
 
-  /** O socket fechou, por qualquer lado: o que estiver rodando para sem gravar. */
+  /** O socket fechou: desliga o observador, nao cancela o trabalho aceito. */
   handleClose(): void {
     if (this.closed) return;
     this.closed = true;
-    this.running?.controller.abort();
+    this.running?.observer.abort();
     this.clock.clearTimeout(this.idleTimer);
     this.clock.clearTimeout(this.lifetimeTimer);
   }
 
   private async answer(frame: AgentChatMessageFrame): Promise<void> {
     const controller = new AbortController();
-    this.running = { id: frame.id, controller };
+    const observer = new AbortController();
+    this.running = { id: frame.id, controller, observer };
     this.clock.clearTimeout(this.idleTimer);
 
     try {
@@ -109,7 +110,12 @@ export class AgentChatConnection {
         },
         this.grant.actor,
         {
+          requestId: frame.id,
           signal: controller.signal,
+          observerSignal: observer.signal,
+          onQueued: (jobId) => {
+            if (!this.closed) this.transport.send({ type: "queued", id: frame.id, jobId });
+          },
           onProgress: (label) => {
             if (!this.closed) this.transport.send({ type: "status", id: frame.id, label });
           },

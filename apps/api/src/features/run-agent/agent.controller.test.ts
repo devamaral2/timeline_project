@@ -4,17 +4,17 @@ import { expect, test } from "vitest";
 import type { RunAgentRequest } from "@repo/contracts";
 import { GatewayIdentityGuard } from "../../http/request-identity/gateway-identity.guard";
 import { statusOfThrown } from "../../api-core/events/testing/status-of";
-import type { RunAgentUseCase } from "../../api-core/agent/run-agent.usecase";
+import type { QueuedAiOperations } from "../../api-core/agent/queued-ai-operations";
 import { RunAgentController } from "./run-agent.controller";
 
 function controllerRecording() {
   const received: RunAgentRequest[] = [];
   const useCase = {
-    execute: async (input: RunAgentRequest) => {
+    executeAgent: async (input: RunAgentRequest) => {
       received.push(input);
       return { agentResponse: "ok", createdEntities: [], updatedEntities: [], deletedEntities: [] };
     },
-  } as unknown as RunAgentUseCase;
+  } as unknown as QueuedAiOperations;
   return { controller: new RunAgentController(useCase), received };
 }
 

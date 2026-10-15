@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { calculateMealTotals, type MealItem } from "../../../domain";
+import type { MealItem } from "../../../domain";
 import { skillText } from "../config/agent-config";
 import { defineAgentSkill, fail } from "./agent-skill";
 import { eventBaseFields, toBaseChanges, toCreateEventInput } from "./event-skill-fields";
@@ -25,33 +25,29 @@ export const mealEventSkill = defineAgentSkill({
 
     const inputText = args.inputText;
     return session.updateEvent(args.id, "meal", async (current) => {
-      if (!inputText) return current.revise(toBaseChanges(args));
-
-      const added = await session.buildNote({ type: "meal", data: { inputText } }, current.startedAt);
       const existing = await session.noteOfType(current, "meal");
-
-      // Sem refeicao anterior, a nova passa a fazer parte do evento.
-      if (!existing) {
-        session.stageNewNote(added);
-        return current.revise({
-          ...toBaseChanges(args),
-          noteLinks: [...current.noteLinks, { noteId: added.id, fromRecurrence: false }],
-        });
-      }
-
-      const previous = existing.data as MealItem;
-      const foodItems = [...previous.foodItems, ...(added.data as MealItem).foodItems];
-      // A receita continua a do prato original; so uma nota antiga, sem receita, ganha a da nova entrada.
-      const recipe = previous.recipe ?? (added.data as MealItem).recipe;
-      const data: MealItem = {
-        ...previous,
-        description: [previous.description, inputText].filter(Boolean).join("; "),
-        foodItems,
-        totals: calculateMealTotals(foodItems),
-        ...(recipe ? { recipe } : {}),
-      };
-      await session.reviseNoteById(existing.id, (note) => note.revise({ data }));
-      return current.revise(toBaseChanges(args));
+      if (!inputText && existing) return current.revise(toBaseChanges(args));
+      const baseChanges = toBaseChanges(args);
+      // Only user-owned prose is carried forward, never the previous nutrition snapshot.
+      // Replacing the link also permits quick additions while the old note is pending.
+      const description = [existing ? (existing.data as MealItem).description : "", inputText]
+        .filter(Boolean).join("; ") || (baseChanges.description ?? current.description).trim()
+          || baseChanges.name || current.name;
+      const replacement = await session.buildNote(
+        { type: "meal", data: { inputText: description } },
+        baseChanges.startedAt ?? current.startedAt,
+      );
+      const revised = current.revise({
+        ...baseChanges,
+        noteLinks: existing
+          ? current.noteLinks.map((link) => link.noteId === existing.id
+            ? { noteId: replacement.id, fromRecurrence: false }
+            : link)
+          : [...current.noteLinks, { noteId: replacement.id, fromRecurrence: false }],
+      });
+      // The old note (and its job) remains valid for any other owner links/reuse.
+      session.stageNewNote(replacement);
+      return revised;
     });
   },
 });

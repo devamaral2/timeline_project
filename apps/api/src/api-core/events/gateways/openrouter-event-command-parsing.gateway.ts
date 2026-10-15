@@ -1,4 +1,5 @@
 import { getServerEnv } from "../../../config/env";
+import { LlmHttpError } from "../../agent/errors/agent.errors";
 import type {
   EventCommandParsingGateway,
   ParsedEventCommand,
@@ -127,7 +128,7 @@ export class OpenRouterEventCommandParsingGateway implements EventCommandParsing
         statusText: response.statusText,
         body: errorBody,
       });
-      throw new Error(`OpenRouter request failed with status ${response.status}`);
+      throw new LlmHttpError(response.status);
     }
 
     const payload = (await response.json()) as OpenRouterResponse;

@@ -1,7 +1,7 @@
 import { BadRequestException, HttpException, HttpStatus, NotFoundException } from "@nestjs/common";
 import type { CreateEventInput, UpdateEventInput } from "@repo/contracts";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
-import type { CreateEventFromTranscriptUseCase } from "../create-event-from-transcript/create-event-from-transcript.usecase";
+import type { CreateEventFromTranscriptUseCase } from "../../api-core/events/create-event-from-transcript.usecase";
 import type { CreateEventUseCase } from "../../api-core/events/create-event.usecase";
 import type { DeleteEventUseCase } from "../delete-event/delete-event.usecase";
 import type { GetDailyOverviewUseCase } from "../get-daily-overview/get-daily-overview.usecase";
