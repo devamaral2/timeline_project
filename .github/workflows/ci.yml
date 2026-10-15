@@ -52,7 +52,7 @@ jobs:
           java-version: '21'
           cache: gradle
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
       - name: Generate mobile fixtures
         run: pnpm --filter @repo/mobile run generate:fixtures
       - name: Verify generated fixtures are committed
@@ -86,7 +86,7 @@ jobs:
           java-version: '21'
           cache: gradle
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
       - name: Materialize release keystore
         env:
           MOBILE_KEYSTORE_BASE64: ${{ secrets.MOBILE_KEYSTORE_BASE64 }}
