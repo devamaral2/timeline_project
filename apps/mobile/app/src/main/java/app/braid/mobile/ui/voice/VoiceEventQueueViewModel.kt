@@ -2,6 +2,7 @@ package app.braid.mobile.ui.voice
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.braid.mobile.data.dto.AiJobDto
 import app.braid.mobile.data.events.EventErrorKind
 import app.braid.mobile.data.events.EventResult
 import app.braid.mobile.data.events.VoiceEventGateway
@@ -12,6 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
+import java.util.UUID
 import javax.inject.Inject
 
 data class VoiceJob(
@@ -19,6 +21,8 @@ data class VoiceJob(
     val transcript: String,
     val status: VoiceJobStatus = VoiceJobStatus.Pending,
     val error: String? = null,
+    val progress: String? = null,
+    val serverJob: AiJobDto? = null,
 )
 
 enum class VoiceJobStatus {
@@ -38,40 +42,58 @@ class VoiceEventQueueViewModel
     ) : ViewModel() {
         private val mutableJobs = MutableStateFlow<List<VoiceJob>>(emptyList())
         private val mutableEvents = Channel<VoiceQueueEvent>(Channel.BUFFERED)
-        private var draining = false
-        private var nextId = 0
+        private val observing = mutableSetOf<String>()
 
         val jobs: StateFlow<List<VoiceJob>> = mutableJobs.asStateFlow()
         val events = mutableEvents.receiveAsFlow()
 
+        init {
+            viewModelScope.launch {
+                val recovered = runCatching { gateway.recover() }.getOrDefault(emptyList())
+                mutableJobs.value =
+                    (mutableJobs.value + recovered.map { VoiceJob(it.id, it.request?.text.orEmpty(), progress = it.progress, serverJob = it) })
+                        .distinctBy { it.serverJob?.request?.clientMessageId ?: it.id }
+                drain()
+            }
+        }
+
         fun enqueue(transcript: String) {
             val normalized = transcript.trim()
             if (normalized.isEmpty()) return
-            nextId += 1
-            mutableJobs.value = mutableJobs.value + VoiceJob("voice-job-$nextId", normalized)
+            mutableJobs.value = mutableJobs.value + VoiceJob(UUID.randomUUID().toString(), normalized)
             drain()
         }
 
         fun retry(jobId: String) {
             mutableJobs.value =
                 mutableJobs.value.map { job ->
-                    if (job.id == jobId) job.copy(status = VoiceJobStatus.Pending, error = null) else job
+                    if (job.id == jobId && job.status == VoiceJobStatus.Error) {
+                        job.copy(id = UUID.randomUUID().toString(), status = VoiceJobStatus.Pending, error = null, serverJob = null)
+                    } else {
+                        job
+                    }
                 }
             drain()
         }
 
         fun dismiss(jobId: String) {
-            mutableJobs.value = mutableJobs.value.filterNot { it.id == jobId }
+            // Dismiss hides only a terminal error; it never cancels accepted work.
+            mutableJobs.value = mutableJobs.value.filterNot { it.id == jobId && it.status == VoiceJobStatus.Error }
         }
 
         private fun drain() {
-            if (draining) return
-            draining = true
-            viewModelScope.launch {
-                try {
-                    while (true) {
-                        val job = mutableJobs.value.firstOrNull { it.status == VoiceJobStatus.Pending } ?: break
-                        when (val result = gateway.create(job.transcript)) {
+            // Submit every transcript promptly; execution ordering belongs to the durable server queue.
+            mutableJobs.value.filter { it.status == VoiceJobStatus.Pending && it.id !in observing }.forEach { job ->
+                observing.add(job.id)
+                viewModelScope.launch {
+                    try {
+                        val progress: (String?) -> Unit = { label ->
+                            mutableJobs.value = mutableJobs.value.map { if (it.id == job.id) it.copy(progress = label) else it }
+                        }
+                        val result =
+                            job.serverJob?.let { gateway.resume(it, progress) }
+                                ?: gateway.create(job.transcript, job.id, progress)
+                        when (result) {
                             is EventResult.Success -> {
                                 mutableJobs.value = mutableJobs.value.filterNot { it.id == job.id }
                             }
@@ -86,11 +108,11 @@ class VoiceEventQueueViewModel
                                     }
                             }
                         }
+                    } finally {
+                        observing.remove(job.id)
                     }
-                } finally {
-                    draining = false
+                    if (mutableJobs.value.isEmpty()) mutableEvents.trySend(VoiceQueueEvent.Drained)
                 }
-                if (mutableJobs.value.isEmpty()) mutableEvents.trySend(VoiceQueueEvent.Drained)
             }
         }
 

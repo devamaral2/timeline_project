@@ -17,6 +17,35 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class NoteDetailViewModelTest {
+    @Test
+    fun pendingMealRefreshesUntilTerminalAndCannotBeEditedOrDetached() =
+        runTest {
+            Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+            val json = kotlinx.serialization.json.Json
+            val pending =
+                sampleNote().copy(
+                    type = "meal",
+                    data = json.parseToJsonElement("""{"generation":{"status":"pending"}}""") as kotlinx.serialization.json.JsonObject,
+                    links = listOf(NoteLinkDto("event", "event-1", "Almoço")),
+                )
+            val completed =
+                pending.copy(
+                    revision = 2,
+                    data = json.parseToJsonElement("""{"generation":{"status":"completed"}}""") as kotlinx.serialization.json.JsonObject,
+                )
+            val gateway = gatewayWith(pending, completed)
+            val viewModel = NoteDetailViewModel(gateway)
+            viewModel.load("note-1")
+            kotlinx.coroutines.test.runCurrent()
+            viewModel.startEditing()
+            viewModel.save(NoteDraft(content = "Não deve salvar"))
+            viewModel.detach()
+            assertTrue(gateway.updated.isEmpty())
+            assertFalse((viewModel.state.value as NoteDetailUiState.Content).isEditing)
+            advanceUntilIdle()
+            assertEquals(completed, (viewModel.state.value as NoteDetailUiState.Content).note)
+        }
+
     @After
     fun tearDown() {
         Dispatchers.resetMain()

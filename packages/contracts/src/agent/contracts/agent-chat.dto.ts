@@ -65,6 +65,7 @@ export type AgentChatErrorCode =
 
 export type AgentChatServerFrame =
   | { type: "ready"; userId: string; expiresAt: string }
+  | { type: "queued"; id: string; jobId: string }
   | { type: "status"; id: string; label: string }
   | ({
       type: "reply";

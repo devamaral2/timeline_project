@@ -15,6 +15,7 @@ import type {
   StagedChange,
 } from "../../../domain/ports";
 import * as schema from "../database/schema";
+import { completeCurrentAiJob, getCurrentAiJob, setAiJobResult } from "../../ai-jobs/ai-job-context";
 import {
   insertEventAggregate,
   softDeleteEvent,
@@ -113,7 +114,10 @@ export class PostgresEntityBatchWriter implements EntityBatchWriter {
 
       // Por ultimo: um turno so vira conversa gravada depois que as entidades
       // que ele afirma ter mudado passaram.
-      if (!batch.conversation || nextSeq === undefined) return {};
+      if (!batch.conversation || nextSeq === undefined) {
+        await completeCurrentAiJob(tx);
+        return {};
+      }
 
       await appendMessages(
         tx,
@@ -121,6 +125,15 @@ export class PostgresEntityBatchWriter implements EntityBatchWriter {
         batch.conversation.messages,
         nextSeq,
       );
+      const job = getCurrentAiJob();
+      if (job?.prepared) {
+        setAiJobResult({
+          ...(job.result as Record<string, unknown>),
+          conversationId: batch.conversation.conversationId,
+          assistantSeq: nextSeq + batch.conversation.messages.length - 1,
+        });
+      }
+      await completeCurrentAiJob(tx);
       return {
         conversation: {
           firstSeq: nextSeq,

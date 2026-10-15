@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { ApiError } from "@/lib/api/authed-fetch";
+import { aiJobs } from "@/lib/ai-jobs/ai-jobs";
 import { AgentChatClient, type AgentChatEvent, type ChatSocket } from "./agent-chat-client";
 
 vi.mock("@/lib/session/refresh-session", () => ({ refreshSession: vi.fn(async () => false) }));
@@ -70,6 +71,27 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
+  vi.restoreAllMocks();
+});
+
+test("queued acknowledgement survives websocket disconnection and recovers by the same job", async () => {
+  const getJob = vi.spyOn(aiJobs, "get").mockResolvedValue({
+    id: "durable-job", kind: "agent-turn", status: "succeeded", userId: "user-1", createdAt: "", updatedAt: "",
+    result: { conversationId: "conversation", assistantSeq: 2, agentResponse: "feito",
+      entities: [], createdEntities: [], updatedEntities: [], deletedEntities: [] },
+  });
+  const chat = client();
+  const sending = chat.send({ id: "stable-message", text: "oi" });
+  await flush();
+  sockets[0].serverSends({ type: "ready" });
+  await sending;
+  sockets[0].serverSends({ type: "queued", id: "stable-message", jobId: "durable-job" });
+  sockets[0].serverCloses(1006);
+  await flush();
+  expect(getJob).toHaveBeenCalledWith("durable-job");
+  expect(events).toContainEqual(expect.objectContaining({ type: "reply", id: "stable-message" }));
+  expect(events.some((event) => event.type === "error")).toBe(false);
+  chat.close();
 });
 
 test("asks for a ticket, waits for ready and only then sends the message", async () => {

@@ -7,15 +7,15 @@ import app.braid.mobile.data.auth.AuthGateway
 import app.braid.mobile.data.chat.AgentChatGateway
 import app.braid.mobile.data.chat.AgentChatHistoryGateway
 import app.braid.mobile.data.chat.AgentChatHistoryRepository
-import app.braid.mobile.data.chat.AgentChatRepository
 import app.braid.mobile.data.chat.ChatApi
 import app.braid.mobile.data.chat.ChatSocketFactory
+import app.braid.mobile.data.chat.DurableChatRepository
 import app.braid.mobile.data.chat.OkHttpChatSocketFactory
+import app.braid.mobile.data.events.DurableVoiceRepository
 import app.braid.mobile.data.events.EventGateway
 import app.braid.mobile.data.events.EventRepository
 import app.braid.mobile.data.events.EventsApi
 import app.braid.mobile.data.events.VoiceEventGateway
-import app.braid.mobile.data.events.VoiceEventRepository
 import app.braid.mobile.data.notes.NoteGateway
 import app.braid.mobile.data.notes.NoteRepository
 import app.braid.mobile.data.notes.NotesApi
@@ -54,11 +54,11 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideVoiceEventGateway(repository: VoiceEventRepository): VoiceEventGateway = repository
+    fun provideVoiceEventGateway(repository: DurableVoiceRepository): VoiceEventGateway = repository
 
     @Provides
     @Singleton
-    fun provideAgentChatGateway(repository: AgentChatRepository): AgentChatGateway = repository
+    fun provideAgentChatGateway(repository: DurableChatRepository): AgentChatGateway = repository
 
     @Provides
     @Singleton

@@ -45,6 +45,8 @@ const mealItemSchema = z.object({
     totalFiberGrams: z.number(),
   }).strict(),
   recipe: mealRecipeSchema.optional(),
+  generation: z.object({ status: z.enum(["pending", "completed", "failed"]) }).strict().optional(),
+  nutritionSource: z.literal("model-estimate").optional(),
 }).strict();
 
 const workoutSetSchema = z.object({
@@ -207,6 +209,7 @@ const agentEntityItemSchema = z.object({ kind: z.enum(["event", "task", "note"])
 
 export const agentChatServerFrameSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("ready"), userId: z.string(), expiresAt: z.string() }).strict(),
+  z.object({ type: z.literal("queued"), id: z.string(), jobId: z.string() }).strict(),
   z.object({ type: z.literal("status"), id: z.string(), label: z.string() }).strict(),
   z.object({
     type: z.literal("reply"), id: z.string(), conversationId: z.string(), assistantSeq: z.number().int(), agentResponse: z.string(),

@@ -3,6 +3,7 @@ import type { NoteDto } from "@/lib/api/contracts";
 import { noteSnippet, noteStamp } from "@/lib/notes/notes-model";
 import { tagColorStyle } from "@/lib/tags/tag-color";
 import { NoteOrigin, originOf } from "./NoteOrigin";
+import { MealGenerationStatus } from "./MealGenerationStatus";
 import styles from "./notes.module.css";
 
 export function NoteCard({ note, href, now }: { note: NoteDto; href: string; now: Date | null }) {
@@ -15,6 +16,7 @@ export function NoteCard({ note, href, now }: { note: NoteDto; href: string; now
       </div>
       <h3 className={styles.cardTitle}>{note.name}</h3>
       {snippet ? <p className={styles.snippet}>{snippet}</p> : null}
+      {note.type === "meal" ? <MealGenerationStatus data={note.data} /> : null}
       {note.tags.length ? (
         <ul className={styles.tags} aria-label="Tags da nota">
           {note.tags.map((tag) => <li key={tag} style={tagColorStyle(tag)}>#{tag}</li>)}

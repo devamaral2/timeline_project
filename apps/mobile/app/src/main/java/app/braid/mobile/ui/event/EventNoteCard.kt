@@ -167,10 +167,26 @@ internal fun SectionLabel(text: String) {
 }
 
 @Composable
-private fun MealNote(data: MealItemDto) {
+internal fun MealNote(data: MealItemDto) {
     val palette = eventDetailPalette()
     if (data.description.isNotBlank()) {
         Text(data.description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+    val generationStatus = data.generation?.status
+    if (generationStatus == "pending" || generationStatus == "failed") {
+        Text(
+            if (generationStatus == "pending") {
+                "Preparando informações nutricionais e receita…"
+            } else {
+                "Não foi possível gerar as informações da refeição. Seu registro foi preservado."
+            },
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        return
+    }
+    if (data.nutritionSource == "model-estimate") {
+        Text("Estimativa nutricional gerada por IA.", style = MaterialTheme.typography.labelMedium)
     }
     Text("Informações nutricionais", style = MaterialTheme.typography.titleSmall)
     BigNumber(

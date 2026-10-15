@@ -116,7 +116,12 @@ fun EditEventScreen(
             is EditEventUiState.Content -> {
                 val event = current.event
                 val primary = event.primaryNote()
-                when (event.kind) {
+                if (event.notes.any { it is MealEventNoteDto && it.data.generation?.status == "pending" }) {
+                    Column(modifier = Modifier.padding(paddingValues).padding(20.dp)) {
+                        Text("Gerando informações da refeição. Aguarde para editar.")
+                        TextButton(onClick = onBack) { Text("Voltar") }
+                    }
+                } else when (event.kind) {
                     "meal" ->
                         MealEditContent(
                             event = event,

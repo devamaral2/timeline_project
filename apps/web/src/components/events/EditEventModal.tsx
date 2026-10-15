@@ -10,6 +10,7 @@ import { RoutineEditForm } from "./edit-event-forms/RoutineEditForm";
 import { SleepEditForm } from "./edit-event-forms/SleepEditForm";
 import { TrainingEditForm } from "./edit-event-forms/TrainingEditForm";
 import { MealEditForm } from "./edit-event-forms/MealEditForm";
+import { hasPendingMeal, pendingMealEditMessage } from "@/lib/notes/meal-generation";
 import { cn } from "@/lib/utils";
 import { iconButtonClass } from "@/components/ui/button-styles";
 import {
@@ -123,6 +124,7 @@ interface EditFormRouterProps {
 function EditForm({ event, onCancel, onClose, onUpdated }: EditFormRouterProps) {
   const note = primaryNoteOf(event);
   const props = { event, onCancel, onClose, onUpdated };
+  if (hasPendingMeal(event.notes)) return <p role="status">{pendingMealEditMessage}</p>;
 
   switch (event.kind) {
     case "routine":

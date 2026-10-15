@@ -9,6 +9,8 @@ import { authedFetch } from "@/lib/api/authed-fetch";
 import type { NoteDto } from "@/lib/api/contracts";
 import { useNow } from "@/lib/events/use-now";
 import { noteDates, sleepAgendaOf, whenLabel } from "@/lib/notes/notes-model";
+import { hasPendingMeal, pendingMealEditMessage } from "@/lib/notes/meal-generation";
+import { usePendingMealRefresh } from "@/lib/notes/use-pending-meal-refresh";
 import { tagColorStyle } from "@/lib/tags/tag-color";
 import shellStyles from "@/app/mockups/eventos/mockup.module.css";
 import { DeleteNoteDialog } from "./DeleteNoteDialog";
@@ -32,6 +34,10 @@ export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: s
   const [actionError, setActionError] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const listHref = `/${userId}/notas`;
+  const pendingMeal = hasPendingMeal(note ? [note] : []);
+  usePendingMealRefresh(pendingMeal, async () => {
+    setNote(await authedFetch<NoteDto>(`/api/notes/${noteId}`));
+  });
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: reloadKey força o refetch após editar.
   useEffect(() => {
@@ -99,8 +105,8 @@ export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: s
             <button type="button" className={styles.iconButton} aria-label="Mais ações: editar, soltar, excluir" aria-haspopup="menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}><Ellipsis {...icon} /></button>
             {menuOpen ? (
               <div role="menu" className={styles.menu}>
-                <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); setEditing(true); }}><Pencil {...icon} />Editar</button>
-                {links.length ? <button type="button" role="menuitem" onClick={() => void detach()}><Unlink {...icon} />Soltar da origem</button> : null}
+                <button type="button" role="menuitem" disabled={pendingMeal} title={pendingMeal ? pendingMealEditMessage : undefined} onClick={() => { setMenuOpen(false); setEditing(true); }}><Pencil {...icon} />Editar</button>
+                {links.length ? <button type="button" role="menuitem" disabled={pendingMeal} title={pendingMeal ? pendingMealEditMessage : undefined} onClick={() => void detach()}><Unlink {...icon} />Soltar da origem</button> : null}
                 <button type="button" role="menuitem" data-danger="true" onClick={() => { setMenuOpen(false); setDeleting(true); }}><Trash2 {...icon} />Excluir</button>
               </div>
             ) : null}
@@ -160,6 +166,7 @@ export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: s
         ) : null}
 
         <NoteContent note={note} title={sleep?.title} agendaMinutes={sleep?.agendaMinutes} />
+        {pendingMeal ? <p className={styles.message}>{pendingMealEditMessage}</p> : null}
         {actionError ? <p role="alert" className={styles.message}>{actionError}</p> : null}
       </div>
 

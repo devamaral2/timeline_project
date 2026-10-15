@@ -102,7 +102,7 @@ test("skips the days that were deleted from the series", async () => {
   expect(daysOf(database)).toEqual(["2026-09-15", "2026-09-17"]);
 });
 
-test("resolves a meal template once and shares its note with every occurrence", async () => {
+test("shares one pending meal note with every occurrence without calling the model", async () => {
   const meals = new StubMealParsingGateway();
   const { database, createEvent } = createEventsKit({ mealParsingGateway: meals });
   const recurrences = new InMemoryRecurrenceRepository(database);
@@ -125,12 +125,15 @@ test("resolves a meal template once and shares its note with every occurrence", 
   );
   await materializer.materialize(actor.userId);
 
-  expect(calls).toBe(1);
+  expect(calls).toBe(0);
   expect(database.events.length).toBeGreaterThan(1);
   expect(database.events.every((event) => event.kind === "meal")).toBe(true);
   // A mesma note em todas as ocorrencias — uma so, ligada a serie —, cada uma com o proprio vinculo da serie.
   const [mealNote] = database.notes;
   expect(database.notes).toHaveLength(1);
+  expect(mealNote.data).toMatchObject({
+    generation: { status: "pending" }, description: "arroz e feijao", foodItems: [],
+  });
   expect((await recurrences.findById(recurrenceId))?.noteIds).toEqual([mealNote.id]);
   expect(
     database.events.every(

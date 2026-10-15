@@ -23,15 +23,16 @@ export interface ResolvedNoteData {
 }
 
 /**
- * Monta notes a partir do que o cliente ou o agente manda: a refeicao passa
- * pelo modelo, o treino pelo catalogo, e os totais derivados sao recalculados
+ * Monta notes a partir do que o cliente ou o agente manda: a refeicao fica
+ * pendente para geracao assincrona, o treino passa pelo catalogo, e os totais derivados sao recalculados
  * aqui — o `data` guardado nunca confia no que veio de fora.
  */
 export class NoteBuilder {
   constructor(
-    private readonly mealParsingGateway: MealParsingGateway,
+    // Kept as a positional compatibility argument; creation never invokes a model.
+    _mealParsingGateway: MealParsingGateway,
     private readonly workoutCatalog: WorkoutCatalog,
-    private readonly mealTotalsService: MealTotalsService = new MealTotalsService(),
+    _mealTotalsService: MealTotalsService = new MealTotalsService(),
   ) {}
 
   /** Uma note nova a partir de `CreateNoteInput`. `startedAt` da o nome da refeicao ("Almoco"). */
@@ -44,17 +45,17 @@ export class NoteBuilder {
         return Note.create({ ...common, type: "text", data: input.data });
 
       case "meal": {
-        const parsed = await this.mealParsingGateway.parseMeal({ text: input.data.inputText });
-        const foodItems = this.mealTotalsService.toFoodItems(parsed.items);
+        const description = input.data.inputText.trim();
+        if (!description) throw new NoteValidationError("Meal description cannot be empty");
         return Note.create({
           ...common,
           type: "meal",
           data: {
             name: getMealEventName(startedAt, NOTE_TIME_ZONE),
-            description: input.data.inputText,
-            foodItems,
-            totals: this.mealTotalsService.calculate(foodItems),
-            ...(parsed.recipe ? { recipe: parsed.recipe } : {}),
+            description,
+            foodItems: [],
+            totals: calculateMealTotals([]),
+            generation: { status: "pending" },
           },
         });
       }
@@ -88,6 +89,9 @@ export class NoteBuilder {
     input: Extract<UpdateEventNoteInput, { data: unknown }>,
   ): Promise<ResolvedNoteData> {
     if (input.type === "meal") {
+      if (input.data.generation?.status === "pending") {
+        throw new NoteValidationError("Only meal creation can schedule generation");
+      }
       return {
         type: "meal",
         data: { ...input.data, totals: calculateMealTotals(input.data.foodItems) },
@@ -113,6 +117,9 @@ export class NoteBuilder {
     userId: string,
   ): Promise<Note> {
     const { type, data } = await this.resolveUpdateData(input);
+    if (input.type === "meal" && (input.data.generation || input.data.nutritionSource)) {
+      throw new NoteValidationError("Meal generation metadata is server-owned");
+    }
     return Note.create({
       userId,
       type,

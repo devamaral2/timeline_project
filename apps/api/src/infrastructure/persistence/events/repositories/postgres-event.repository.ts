@@ -16,6 +16,7 @@ import { occurrenceColumnsOf } from "../../recurrences/mappers/occurrence-column
 import { upsertTagIds } from "../../shared/upsert-tag-ids";
 import { writeNotes } from "../../notes/repositories/postgres-note.repository";
 import { insertEventNoteLinks, selectEventNoteLinks } from "../../notes/repositories/note-links";
+import { completeCurrentAiJob } from "../../../ai-jobs/ai-job-context";
 
 export type Tx = Parameters<Parameters<NodePgDatabase<typeof schema>["transaction"]>[0]>[0];
 
@@ -174,6 +175,7 @@ export class PostgresEventRepository implements EventRepository {
   async save(event: Event, notes?: NoteWrites): Promise<void> {
     await this.db.transaction(async (tx) => {
       await insertEventAggregate(tx, event, notes);
+      await completeCurrentAiJob(tx);
     });
   }
 

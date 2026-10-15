@@ -4,7 +4,7 @@ import type { EventCommandParsingGateway } from "../../api-core/events/gateways/
 import { createEventsKit } from "../../api-core/events/testing/in-memory-events-kit";
 import { statusOfThrown } from "../../api-core/events/testing/status-of";
 import { StubEventCommandParsingGateway } from "../../api-core/events/testing/stub-event-command-parsing.gateway";
-import { CreateEventFromTranscriptUseCase } from "./create-event-from-transcript.usecase";
+import { CreateEventFromTranscriptUseCase } from "../../api-core/events/create-event-from-transcript.usecase";
 import { EventsController } from "../list-timeline-events/test-events-controller";
 
 const actor: AuthenticatedUser = { userId: "auth-user-1" };

@@ -75,7 +75,10 @@ fun VoiceJobStatus(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                    Text(if (pendingCount == 1) "Criando evento…" else "Criando $pendingCount eventos…")
+                    Text(
+                        jobs.firstOrNull { it.status == VoiceJobStatus.Pending }?.progress
+                            ?: if (pendingCount == 1) "Criando evento…" else "Criando $pendingCount eventos…",
+                    )
                 }
             }
         }

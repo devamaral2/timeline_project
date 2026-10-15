@@ -32,9 +32,36 @@ export async function mergeEventUpdate(
   if (input.kind !== undefined && !isEventKind(input.kind)) {
     throw new EventValidationError(`Unknown event kind: ${String(input.kind)}`);
   }
-  const merged = input.notes
+  const merged: { noteLinks: NoteLink[] | undefined; writes: NoteWrites } = input.notes
     ? await mergeNotes(existingEvent, input.notes, deps)
     : { noteLinks: undefined, writes: {} as NoteWrites };
+
+  if ((input.kind ?? existingEvent.kind) === "meal") {
+    const links = merged.noteLinks ?? existingEvent.noteLinks;
+    const staged = [
+      ...(merged.writes.created ?? []),
+      ...(merged.writes.updated ?? []).map(({ note }) => note),
+    ];
+    const byId = new Map(staged.map((note) => [note.id, note]));
+    const unresolved = links.map(({ noteId }) => noteId).filter((id) => !byId.has(id));
+    const persisted = unresolved.length ? await deps.noteRepository.findByIds(unresolved) : [];
+    for (const note of persisted) byId.set(note.id, note);
+    const hasMeal = links.some(({ noteId }) => {
+      const note = byId.get(noteId);
+      return note?.type === "meal" && note.userId === existingEvent.userId;
+    });
+    if (!hasMeal) {
+      const note = await deps.noteBuilder.fromCreateInput({
+        type: "meal",
+        data: {
+          inputText: (input.description ?? existingEvent.description).trim() ||
+            (input.name ?? existingEvent.name),
+        },
+      }, existingEvent.userId, input.startedAt ? new Date(input.startedAt) : existingEvent.startedAt);
+      merged.writes = { ...merged.writes, created: [...(merged.writes.created ?? []), note] };
+      merged.noteLinks = [...links, { noteId: note.id, fromRecurrence: false }];
+    }
+  }
 
   const event = existingEvent.revise({
     name: input.name,

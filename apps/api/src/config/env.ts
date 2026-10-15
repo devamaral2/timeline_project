@@ -63,3 +63,17 @@ export function getDatabaseEnv(source?: Record<string, string | undefined>): Dat
     DATABASE_URL: read("DATABASE_URL"),
   });
 }
+
+const aiJobsSchema = z.object({
+  RABBITMQ_URL: z.string().url().refine((value) => /^amqps?:\/\//.test(value), "Must be an AMQP URL"),
+  AI_JOBS_QUEUE_PREFIX: z.string().regex(/^[a-zA-Z0-9._-]+$/),
+  AI_JOBS_CONCURRENCY: z.coerce.number().int().min(1).max(64).default(4),
+  AI_JOBS_LEASE_MS: z.coerce.number().int().min(3000).max(3600000).default(60000),
+  AI_JOBS_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(20).default(4),
+});
+export type AiJobsEnv = z.infer<typeof aiJobsSchema>;
+export function getAiJobsEnv(source: Record<string, string | undefined> = process.env): AiJobsEnv {
+  return aiJobsSchema.parse(Object.fromEntries(
+    Object.keys(aiJobsSchema.shape).map((key) => [key, orUndefined(source[key])]),
+  ));
+}

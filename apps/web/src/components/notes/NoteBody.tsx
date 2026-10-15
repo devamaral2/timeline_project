@@ -9,6 +9,7 @@ import type { MealItem, NoteDto, SleepItem, TrainingData, WorkoutSnapshot } from
 import { formatDecimal, formatMinutes, formatPace, groupSetsByExercise, pluralize } from "@/lib/events/event-detail-format";
 import { MarkdownView } from "./MarkdownView";
 import { MealRecipeView } from "./MealRecipeView";
+import { MealGenerationStatus } from "./MealGenerationStatus";
 import styles from "./note-body.module.css";
 
 const icon = { "aria-hidden": true, strokeWidth: ICON_STROKE_WIDTH } as const;
@@ -108,9 +109,16 @@ function BigNumber({ label, children, icon: iconNode, tone }: { label: string; c
 
 function MealNote({ data }: { data: MealItem }) {
   const { totals } = data;
+  if (data.generation?.status === "pending" || data.generation?.status === "failed") {
+    return <div className={styles.noteBody}>
+      {data.description ? <p className={styles.noteText}>{data.description}</p> : null}
+      <MealGenerationStatus data={data} />
+    </div>;
+  }
   return (
     <div className={styles.noteBody}>
       {data.description ? <p className={styles.noteText}>{data.description}</p> : null}
+      <MealGenerationStatus data={data} />
       <h3 className={styles.noteHeading}>Informações nutricionais</h3>
       <BigNumber label="Calorias consumidas" tone="consumed" icon={<KcalIcon kind="consumed" />}>{formatDecimal(totals.totalCaloriesKcal)}<small>kcal</small></BigNumber>
       <hr />

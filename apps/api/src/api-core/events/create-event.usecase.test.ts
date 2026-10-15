@@ -1,4 +1,4 @@
-import { expect, test } from "vitest";
+import { expect, test, vi } from "vitest";
 import { Event, Note } from "../../domain";
 import { DeleteEventUseCase } from "../../features/delete-event/delete-event.usecase";
 import { UpdateEventUseCase } from "../../features/update-event/update-event.usecase";
@@ -204,23 +204,25 @@ test("refuses an unparseable startedAt", async () => {
   ).rejects.toThrow("Invalid date");
 });
 
-test("keeps the previous event untouched and saves no note when meal parsing fails", async () => {
+test("creates a pending note without calling the meal provider even when it is unavailable", async () => {
   const existingEvent = openTrainingEvent("01K2TESTOPENFAILURE12345678", new Date("2026-08-17T08:00:00-03:00"));
   const failingGateway: MealParsingGateway = {
-    parseMeal: async () => {
+    parseMeal: vi.fn(async () => {
       throw new Error("meal parsing failed");
-    },
+    }),
   };
   const kit = createEventsKit({ events: [existingEvent], mealParsingGateway: failingGateway });
 
   await expect(
     kit.createEvent.execute({ notes: [{ type: "meal", data: { inputText: "banana" } }] }, { userId: "auth-user-1" }),
-  ).rejects.toThrow("meal parsing failed");
+  ).resolves.toHaveProperty("eventId");
 
   await expect(kit.eventRepository.findById(existingEvent.id)).resolves.toMatchObject({
     finishedAt: existingEvent.finishedAt,
   });
-  expect(kit.database.notes).toEqual([]);
+  expect(failingGateway.parseMeal).not.toHaveBeenCalled();
+  expect(kit.database.notes).toHaveLength(1);
+  expect(kit.database.notes[0].data).toMatchObject({ generation: { status: "pending" }, foodItems: [] });
 });
 
 test("prevents a different user from updating an existing event", async () => {
@@ -247,7 +249,7 @@ test("deletes an event when the authenticated user is the owner", async () => {
   await expect(kit.eventRepository.findById(existingEvent.id)).resolves.toBeNull();
 });
 
-test("creates a meal event from parsed AI items and calculated totals", async () => {
+test("creates a meal event with pending enrichment and no speculative nutrition or recipe", async () => {
   const now = new Date("2026-08-17T12:00:00.000Z");
   const kit = createEventsKit({
     clock: () => now,
@@ -311,30 +313,47 @@ test("creates a meal event from parsed AI items and calculated totals", async ()
   expect(mealNote?.type).toBe("meal");
   expect(mealNote?.data).toMatchObject({
     description: "1 banana. 2 colheres de iogurte natural e 5 morangos",
+    generation: { status: "pending" },
+    foodItems: [],
     totals: {
-      totalCaloriesKcal: 134,
-      totalProteinGrams: 4.1,
-      totalCarbohydrateGrams: 26.8,
-      totalFatGrams: 1.8,
-      totalFiberGrams: 2.6,
+      totalCaloriesKcal: 0,
+      totalProteinGrams: 0,
+      totalCarbohydrateGrams: 0,
+      totalFatGrams: 0,
+      totalFiberGrams: 0,
     },
   });
 
   expect(savedEvent?.startedAt).toEqual(now);
   expect(mealNote).toBeDefined();
   if (!mealNote) return;
-  const foodItems = (mealNote.data as { foodItems: Array<{ id: string; micronutrients: Record<string, number> }> }).foodItems;
-  expect(foodItems[0].id).toMatch(/[0-9A-HJKMNP-TV-Z]{26}/);
-  expect(foodItems[1].id).toMatch(/[0-9A-HJKMNP-TV-Z]{26}/);
-  // Micronutrientes deixaram de existir: o campo so segue na saida, vazio.
-  expect(foodItems[0].micronutrients).toEqual({});
-  expect(mealNote.data).toMatchObject({
-    recipe: {
-      source: "model",
-      servings: 1,
-      ingredients: [{ name: "Banana prata", quantity: "1 unidade" }, expect.anything(), expect.anything()],
-      steps: ["Corte a banana e os morangos.", "Misture com o iogurte e sirva."],
-    },
-  });
+  expect(mealNote.data).not.toHaveProperty("recipe");
   expect(savedEvent?.tags).toEqual(["breakfast"]);
+});
+
+test.each([
+  { description: "arroz e feijao", name: "Almoco", expected: "arroz e feijao" },
+  { name: "Salada", expected: "Salada" },
+  { expected: "Almoço" },
+])("every meal event gets a linked pending meal note using available input", async ({ expected, ...input }) => {
+  const kit = createEventsKit({ clock: () => new Date("2026-08-17T15:00:00Z") });
+  const { eventId } = await kit.createEvent.execute({ ...input, kind: "meal" }, { userId: "auth-user-1" });
+  const event = await kit.eventRepository.findById(eventId);
+  expect(notesOf(kit, event)).toHaveLength(1);
+  expect(notesOf(kit, event)[0].data).toMatchObject({ description: expected, generation: { status: "pending" } });
+});
+
+test("an explicitly reused owned meal note satisfies the meal event without a new note", async () => {
+  const existing = Note.create({
+    userId: "auth-user-1",
+    type: "meal",
+    data: { name: "Salada", description: "salada", foodItems: [], totals: {
+      totalCaloriesKcal: 0, totalProteinGrams: 0, totalCarbohydrateGrams: 0, totalFatGrams: 0, totalFiberGrams: 0,
+    } },
+  });
+  const kit = createEventsKit({ notes: [existing] });
+  const { eventId } = await kit.createEvent.execute({ kind: "meal", noteIds: [existing.id] }, { userId: "auth-user-1" });
+  const event = await kit.eventRepository.findById(eventId);
+  expect(notesOf(kit, event).map((note) => note.id)).toEqual([existing.id]);
+  expect(kit.database.notes).toHaveLength(1);
 });

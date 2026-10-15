@@ -142,6 +142,19 @@ done
 step 5 "Fila '${QUEUE}' no RabbitMQ compartilhado"
 bash "$SCRIPT_DIR/rabbitmq.sh" up
 bash "$SCRIPT_DIR/rabbitmq.sh" queue "$SLUG" health
+# O carregador do 1Password define o prefixo a partir da branch; o slug so
+# entra se a worktree estiver com HEAD destacado.
+export AI_JOBS_QUEUE_PREFIX="${AI_JOBS_QUEUE_PREFIX:-$SLUG}"
+for kind in agent-turn transcript-event meal-note; do
+  bash "$SCRIPT_DIR/rabbitmq.sh" queue "$AI_JOBS_QUEUE_PREFIX" "$kind"
+done
+# Credentials remain outside the checkout; start-dev inherits the AMQP URL.
+RABBIT_CRED_FILE="${BRAID_RABBITMQ_ENV:-$HOME/.config/braid/rabbitmq.env}"
+export RABBITMQ_URL
+RABBITMQ_URL="$(RABBIT_USER="$(read_env_var "$RABBIT_CRED_FILE" RABBITMQ_DEFAULT_USER)" \
+  RABBIT_PASS="$(read_env_var "$RABBIT_CRED_FILE" RABBITMQ_DEFAULT_PASS)" \
+  RABBIT_PORT="$(read_env_var "$RABBIT_CRED_FILE" RABBITMQ_HOST_PORT)" \
+  node -e 'process.stdout.write(`amqp://${encodeURIComponent(process.env.RABBIT_USER)}:${encodeURIComponent(process.env.RABBIT_PASS)}@127.0.0.1:${process.env.RABBIT_PORT}`)')"
 
 # --- 6. migrations -------------------------------------------------------------
 step 6 "Migrations (API e Auth)"

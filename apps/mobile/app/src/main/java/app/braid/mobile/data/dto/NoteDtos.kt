@@ -42,6 +42,9 @@ data class NoteDto(
 
     /** A origem principal: a primeira em que a nota aparece. */
     val link: NoteLinkDto? get() = links.firstOrNull()
+
+    val generationPending: Boolean
+        get() = (data["generation"] as? JsonObject)?.get("status") == JsonPrimitive("pending")
 }
 
 const val TEXT_NOTE_TYPE = "text"

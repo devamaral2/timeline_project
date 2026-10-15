@@ -12,6 +12,7 @@ import { authedFetch } from "@/lib/api/authed-fetch";
 import type { TimelineEventCardDto, TimelineEventPageDto } from "@/lib/api/contracts";
 import { useNow } from "@/lib/events/use-now";
 import { useSessionState } from "@/lib/session/use-session";
+import { useAiJobRefresh } from "@/lib/ai-jobs/use-ai-job-refresh";
 import { AgendaDay } from "./agenda-day";
 import { agendaEventsByDay } from "./agenda-data";
 import { EXAMPLE_NOW, EXAMPLE_TODAY, type ExampleEvent, type ExampleTask } from "./agenda-examples";
@@ -45,6 +46,9 @@ export function AgendaPreview({ userId, todayKey = EXAMPLE_TODAY }: { userId?: s
   const [eventsByDay, setEventsByDay] = useState<Record<string, ExampleEvent[]>>({});
   const [loadState, setLoadState] = useState<"idle" | "loading" | "failed">("idle");
   const [refreshVersion, setRefreshVersion] = useState(0);
+  useAiJobRefresh(Boolean(userId && user && ready), agendaRefreshEvent, () => {
+    setRefreshVersion((version) => version + 1);
+  });
   const [selectedEvent, setSelectedEvent] = useState<SelectedEvent | null>(null);
   const viewOptionsRef = useRef<HTMLDetailsElement>(null);
   const [mode, setMode] = useState<ViewMode>("day");

@@ -314,7 +314,7 @@ export class AgentChangeSession {
     });
   }
 
-  /** Monta uma note como a criacao montaria: a refeicao passa pelo modelo, o treino pelo catalogo. */
+  /** Monta como a criacao: refeicao pendente, treino pelo catalogo. */
   buildNote(input: CreateNoteInput, startedAt: Date): Promise<Note> {
     return this.createEventUseCase.buildNote(input, { userId: this.userId }, startedAt);
   }
@@ -472,7 +472,30 @@ export class AgentChangeSession {
     return this.conversationTurn !== undefined;
   }
 
+  /** Superseded pending notes never reached storage and need no orphan AI jobs. */
+  private discardUnlinkedPendingMeals(): void {
+    const linked = new Set<string>();
+    for (const { change } of [...this.events.values(), ...this.tasks.values()]) {
+      if (change.op !== "delete") {
+        for (const link of change.entity.noteLinks) linked.add(link.noteId);
+      }
+    }
+    for (const series of this.recurrences.values()) {
+      const links = series.recurrence.template.noteLinks;
+      if (series.op !== "delete" && Array.isArray(links)) {
+        for (const link of links) if (typeof link?.noteId === "string") linked.add(link.noteId);
+      }
+    }
+    for (const [id, { change }] of this.notes) {
+      if (change.op === "create" && change.entity.type === "meal" && !linked.has(id)
+        && (change.entity.data as { generation?: { status: string } }).generation?.status === "pending") {
+        this.notes.delete(id);
+      }
+    }
+  }
+
   toBatch(): EntityBatch {
+    this.discardUnlinkedPendingMeals();
     const changes = <T>(staged: Map<string, Staged<T>>) => [...staged.values()].map((entry) => entry.change);
     const series = this.series();
     return {
@@ -498,6 +521,7 @@ export class AgentChangeSession {
 
   /** Async porque o evento mostra as notes dele, e as que nao foram preparadas aqui vem do banco. */
   async result(): Promise<{ created: AgentEntityItem[]; updated: AgentEntityItem[]; deleted: AgentEntityItem[] }> {
+    this.discardUnlinkedPendingMeals();
     const result = { created: [] as AgentEntityItem[], updated: [] as AgentEntityItem[], deleted: [] as AgentEntityItem[] };
     const eventNoteIds = [...this.events.values()].flatMap(({ change, before }) => [
       ...(change.op === "delete" ? [] : change.entity.noteLinks),

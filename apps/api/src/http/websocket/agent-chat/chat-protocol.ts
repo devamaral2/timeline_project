@@ -9,6 +9,7 @@ import {
   LlmUnavailableError,
 } from "../../../api-core/agent/errors/agent.errors";
 import { agentScreenContextSchema, agentTextSchema } from "../../../api-core/agent/agent-input.schemas";
+import { AiJobCancelledError, AiJobFailedError } from "../../../infrastructure/ai-jobs/ai-jobs.service";
 
 export const AGENT_CHAT_PATH = "/api/ai/chat";
 
@@ -80,6 +81,8 @@ export function parseClientFrame(raw: string): ParsedClientFrame {
 
 /** As mesmas classes que o `DomainExceptionFilter` traduz para HTTP, em codigos do chat. */
 export function chatErrorCodeOf(error: unknown): AgentChatErrorCode {
+  if (error instanceof AiJobCancelledError) return "cancelled";
+  if (error instanceof AiJobFailedError) return error.code as AgentChatErrorCode;
   if (error instanceof AgentRunCancelledError) return "cancelled";
   if (error instanceof InvalidInputError) return "invalid_input";
   if (error instanceof AgentTargetForbiddenError) return "forbidden";

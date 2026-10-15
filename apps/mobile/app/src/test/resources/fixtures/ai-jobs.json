@@ -1,0 +1,9 @@
+[
+  {"id":"queued","kind":"agent-turn","status":"queued","userId":"user-1","createdAt":"2026-09-22T11:00:00Z","updatedAt":"2026-09-22T11:00:00Z","request":{"text":"Criar almoço","clientMessageId":"request-1"}},
+  {"id":"running","kind":"agent-turn","status":"running","userId":"user-1","createdAt":"2026-09-22T11:00:00Z","updatedAt":"2026-09-22T11:01:00Z","progress":"Preparando resposta","request":{"text":"Criar almoço","conversationId":"conversation-1","clientMessageId":"request-1"}},
+  {"id":"chat","kind":"agent-turn","status":"succeeded","userId":"user-1","createdAt":"2026-09-22T11:00:00Z","updatedAt":"2026-09-22T11:02:00Z","result":{"agentResponse":"Pronto.","conversationId":"conversation-1","assistantSeq":2,"createdEntities":[],"updatedEntities":[],"deletedEntities":[]}},
+  {"id":"voice","kind":"transcript-event","status":"succeeded","userId":"user-1","createdAt":"2026-09-22T11:00:00Z","updatedAt":"2026-09-22T11:02:00Z","result":{"eventId":"event-1","kind":"meal"}},
+  {"id":"meal","kind":"meal-note","status":"succeeded","userId":"user-1","createdAt":"2026-09-22T11:00:00Z","updatedAt":"2026-09-22T11:02:00Z","result":{"noteId":"note-1","skipped":true}},
+  {"id":"failed","kind":"meal-note","status":"failed","userId":"user-1","createdAt":"2026-09-22T11:00:00Z","updatedAt":"2026-09-22T11:02:00Z","errorCode":"unavailable"},
+  {"id":"cancelled","kind":"agent-turn","status":"cancelled","userId":"user-1","createdAt":"2026-09-22T11:00:00Z","updatedAt":"2026-09-22T11:02:00Z","errorCode":"cancelled"}
+]

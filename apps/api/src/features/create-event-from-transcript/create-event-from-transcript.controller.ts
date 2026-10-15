@@ -1,8 +1,7 @@
 import { Body, Controller, HttpCode, HttpException, HttpStatus, Inject, Module, Post, UseGuards } from "@nestjs/common";
-import { EMPTY_TRANSCRIPT_ERROR, LONG_TRANSCRIPT_ERROR, CreateEventFromTranscriptUseCase } from "./create-event-from-transcript.usecase";
+import { EMPTY_TRANSCRIPT_ERROR, LONG_TRANSCRIPT_ERROR, MAX_TRANSCRIPT_LENGTH } from "../../api-core/events/create-event-from-transcript.usecase";
 import { ApiCoreModule } from "../../api-core/api-core.module";
-import { OpenRouterEventCommandParsingGateway } from "../../api-core/events/gateways/openrouter-event-command-parsing.gateway";
-import { CreateEventUseCase } from "../../api-core/events/create-event.usecase";
+import { QueuedAiOperations } from "../../api-core/agent/queued-ai-operations";
 import { CurrentUser } from "../../http/request-identity/current-user.decorator";
 import { GatewayIdentityGuard } from "../../http/request-identity/gateway-identity.guard";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
@@ -12,7 +11,9 @@ const transcriptBadRequest = new Set([EMPTY_TRANSCRIPT_ERROR, LONG_TRANSCRIPT_ER
 
 @Controller("api/events")
 export class CreateEventFromTranscriptController {
-  constructor(@Inject(CreateEventFromTranscriptUseCase) private readonly createFromTranscript: CreateEventFromTranscriptUseCase) {}
+  constructor(
+    @Inject(QueuedAiOperations) private readonly operations: QueuedAiOperations,
+  ) {}
 
   @Post("voice")
   @UseGuards(GatewayIdentityGuard)
@@ -22,7 +23,10 @@ export class CreateEventFromTranscriptController {
     @CurrentUser() actor: AuthenticatedUser,
   ): Promise<{ eventId: string; kind: EventKind }> {
     try {
-      return await this.createFromTranscript.execute({ transcript: body?.transcript ?? "" }, actor);
+      const transcript = body?.transcript?.trim() ?? "";
+      if (!transcript) throw new Error(EMPTY_TRANSCRIPT_ERROR);
+      if (transcript.length > MAX_TRANSCRIPT_LENGTH) throw new Error(LONG_TRANSCRIPT_ERROR);
+      return await this.operations.executeTranscript(transcript, actor);
     } catch (error) {
       if (error instanceof HttpException) throw error;
       const message = error instanceof Error ? error.message : "Invalid request";
@@ -37,13 +41,5 @@ export class CreateEventFromTranscriptController {
 @Module({
   imports: [ApiCoreModule.forRoot()],
   controllers: [CreateEventFromTranscriptController],
-  providers: [
-    {
-      provide: CreateEventFromTranscriptUseCase,
-      inject: [OpenRouterEventCommandParsingGateway, CreateEventUseCase],
-      useFactory: (parsing: OpenRouterEventCommandParsingGateway, createEvent: CreateEventUseCase) =>
-        new CreateEventFromTranscriptUseCase(parsing, createEvent),
-    },
-  ],
 })
 export class CreateEventFromTranscriptModule {}

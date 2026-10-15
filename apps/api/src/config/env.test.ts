@@ -1,5 +1,5 @@
 import { expect, test, vi } from "vitest";
-import { getDatabaseEnv, getServerEnv, isLoopbackHost } from "./env";
+import { getAiJobsEnv, getDatabaseEnv, getServerEnv, isLoopbackHost } from "./env";
 
 test("reads server env from process env by key", () => {
   vi.stubEnv("OPENROUTER_API_KEY", "test-openrouter-key");
@@ -39,4 +39,12 @@ test("requires a PostgreSQL connection string", () => {
     }).DATABASE_URL,
   ).toBe("postgresql://timeline:timeline@127.0.0.1:5432/timeline");
   expect(() => getDatabaseEnv({ DATABASE_URL: "" })).toThrow();
+});
+
+test("queue config requires explicit environment isolation and bounds concurrency", () => {
+  expect(() => getAiJobsEnv({})).toThrow();
+  const env = { RABBITMQ_URL: "amqp://localhost", AI_JOBS_QUEUE_PREFIX: "test.api" };
+  expect(getAiJobsEnv(env).AI_JOBS_CONCURRENCY).toBe(4);
+  expect(() => getAiJobsEnv({ ...env, AI_JOBS_CONCURRENCY: "0" })).toThrow();
+  expect(() => getAiJobsEnv({ ...env, AI_JOBS_QUEUE_PREFIX: "*" })).toThrow();
 });

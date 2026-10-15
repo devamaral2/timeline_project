@@ -183,7 +183,7 @@ private fun NoteDetailBody(
                             },
                         )
                     }
-                    if (note.link != null) {
+                    if (note.link != null && !note.generationPending) {
                         DropdownMenuItem(
                             text = { Text("Soltar da origem") },
                             leadingIcon = { Icon(Icons.Outlined.LinkOff, contentDescription = null) },

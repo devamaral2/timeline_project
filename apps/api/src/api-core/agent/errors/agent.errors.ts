@@ -16,7 +16,7 @@ export class AgentLimitReachedError extends Error {
   }
 }
 
-/** Quem pediu cancelou (ou a conexão caiu) antes do commit; nada foi gravado. */
+/** Cancelamento explícito antes do commit; desconectar não cancela um job. */
 export class AgentRunCancelledError extends Error {
   constructor(message = "Pedido cancelado antes de gravar") {
     super(message);
@@ -29,6 +29,14 @@ export class LlmUnavailableError extends Error {
   constructor(message: string, readonly cause?: unknown) {
     super(message);
     this.name = "LlmUnavailableError";
+  }
+}
+
+/** Preserves the HTTP status for bounded queue retries, without storing provider bodies. */
+export class LlmHttpError extends Error {
+  constructor(readonly status: number) {
+    super(`OpenRouter request failed with status ${status}`);
+    this.name = "LlmHttpError";
   }
 }
 

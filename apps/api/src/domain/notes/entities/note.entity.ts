@@ -157,9 +157,24 @@ export class Note {
    * validado contra uma forma que nao e a dele.
    */
   revise(changes: NoteReviseChanges): Note {
+    if (this.type === "meal" &&
+        (this.data as { generation?: { status: string } }).generation?.status === "pending") {
+      throw new NoteValidationError("Pending meal generation cannot be manually edited");
+    }
     const typeChanged = changes.type !== undefined && changes.type !== this.type;
     if (typeChanged && changes.data === undefined) {
       throw new NoteValidationError("Changing the note type requires new data");
+    }
+    let data = changes.data !== undefined ? changes.data : this.data;
+    if ((changes.type ?? this.type) === "meal" && changes.data !== undefined) {
+      const previous = this.type === "meal" ? this.data as Record<string, unknown> : {};
+      const incoming = changes.data as Record<string, unknown>;
+      for (const key of ["generation", "nutritionSource"]) {
+        if (incoming?.[key] !== undefined && JSON.stringify(incoming[key]) !== JSON.stringify(previous[key])) {
+          throw new NoteValidationError("Meal generation metadata is server-owned");
+        }
+      }
+      data = { ...incoming, generation: previous.generation, nutritionSource: previous.nutritionSource };
     }
     return Note.build(
       {
@@ -168,7 +183,7 @@ export class Note {
         name: changes.name ?? this.name,
         type: changes.type ?? this.type,
         schemaVersion: changes.schemaVersion ?? (typeChanged ? 1 : this.schemaVersion),
-        data: changes.data !== undefined ? changes.data : this.data,
+        data,
         tags: changes.tags ?? this.tags,
         revision: this.revision + 1,
         createdAt: this.createdAt,

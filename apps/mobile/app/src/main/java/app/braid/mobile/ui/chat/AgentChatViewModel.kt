@@ -21,7 +21,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.util.concurrent.atomic.AtomicLong
+import java.util.UUID
 import javax.inject.Inject
 
 enum class AgentChatMessageRole {
@@ -54,6 +54,7 @@ data class AgentChatUiState(
     val conversationsNextCursor: String? = null,
     val isLoadingConversations: Boolean = false,
     val isLoadingMessages: Boolean = false,
+    val isRecoveringJobs: Boolean = true,
 )
 
 sealed interface AgentChatUiEffect {
@@ -69,7 +70,8 @@ class AgentChatViewModel
     ) : ViewModel() {
         private val mutableState = MutableStateFlow(AgentChatUiState())
         private val mutableEffects = MutableSharedFlow<AgentChatUiEffect>(extraBufferCapacity = 8)
-        private val messageCounter = AtomicLong()
+        private var recoveredTurn = false
+        private var recoveredRequestText = ""
 
         val state: StateFlow<AgentChatUiState> = mutableState.asStateFlow()
         val effects: SharedFlow<AgentChatUiEffect> = mutableEffects.asSharedFlow()
@@ -79,13 +81,50 @@ class AgentChatViewModel
                 gateway.events.collect(::handleEvent)
             }
             loadConversations()
+            recoverJobs()
+        }
+
+        private fun recoverJobs() {
+            mutableState.update { it.copy(isRecoveringJobs = true) }
+            viewModelScope.launch {
+                val jobs = runCatching { gateway.recover() }.getOrDefault(emptyList())
+                // Repository returns pending work and only unobserved terminal receipts.
+                val job = jobs.minByOrNull { it.createdAt }
+                if (job != null && mutableState.value.pending == null) {
+                    recoveredTurn = true
+                    recoveredRequestText = job.request?.text.orEmpty()
+                    val id = job.request?.clientMessageId ?: job.id
+                    val conversationId = job.request?.conversationId
+                    val messages =
+                        conversationId?.let { history.messages(it) }?.let { result ->
+                            (result as? AgentChatHistoryResult.Success)?.value?.items?.asReversed()?.map(::toUiMessage)
+                        }.orEmpty()
+                    mutableState.update {
+                        it.copy(
+                            conversationId = conversationId,
+                            messages = if (job.status == "succeeded") messages else
+                                messages + AgentChatUiMessage(id, AgentChatMessageRole.User, job.request?.text.orEmpty()),
+                            pending = AgentChatPendingUi(id, job.progress),
+                            isRecoveringJobs = false,
+                        )
+                    }
+                    // A pending turn is not committed to canonical history yet.
+                    gateway.resume(job)
+                } else {
+                    mutableState.update { it.copy(isRecoveringJobs = false) }
+                }
+            }
         }
 
         fun send(text: String) {
             val trimmed = text.trim()
-            if (trimmed.isEmpty() || trimmed.length > MAX_MESSAGE_LENGTH || mutableState.value.pending != null) return
+            if (
+                trimmed.isEmpty() || trimmed.length > MAX_MESSAGE_LENGTH || mutableState.value.pending != null ||
+                mutableState.value.isRecoveringJobs || mutableState.value.isLoadingMessages
+            ) return
 
-            val id = "m${System.currentTimeMillis().toString(36)}${messageCounter.incrementAndGet().toString(36)}"
+            val id = UUID.randomUUID().toString()
+            recoveredRequestText = ""
             val conversationId = mutableState.value.conversationId
             mutableState.update { current ->
                 current.copy(
@@ -116,7 +155,10 @@ class AgentChatViewModel
 
         fun retry(messageId: String) {
             val error = mutableState.value.messages.firstOrNull { it.id == messageId } ?: return
-            if (error.role != AgentChatMessageRole.Error || mutableState.value.pending != null) return
+            if (
+                error.role != AgentChatMessageRole.Error || mutableState.value.pending != null ||
+                mutableState.value.isRecoveringJobs || mutableState.value.isLoadingMessages
+            ) return
             mutableState.update { current ->
                 current.copy(
                     messages = current.messages.filterNot { it.id == messageId || it.id == error.requestId },
@@ -126,7 +168,7 @@ class AgentChatViewModel
         }
 
         fun startNewConversation() {
-            if (mutableState.value.pending != null) return
+            if (mutableState.value.pending != null || mutableState.value.isRecoveringJobs) return
             mutableState.update { current ->
                 current.copy(
                     messages = emptyList(),
@@ -138,7 +180,7 @@ class AgentChatViewModel
         }
 
         fun openConversation(conversationId: String) {
-            if (mutableState.value.pending != null || mutableState.value.isLoadingMessages) return
+            if (mutableState.value.pending != null || mutableState.value.isLoadingMessages || mutableState.value.isRecoveringJobs) return
             mutableState.update { it.copy(isLoadingMessages = true) }
             viewModelScope.launch {
                 when (val result = history.messages(conversationId)) {
@@ -161,7 +203,7 @@ class AgentChatViewModel
         }
 
         fun deleteConversation(conversationId: String) {
-            if (mutableState.value.pending != null) return
+            if (mutableState.value.pending != null || mutableState.value.isRecoveringJobs) return
             mutableState.update { current ->
                 current.copy(
                     conversations = current.conversations.filterNot { it.id == conversationId },
@@ -229,6 +271,34 @@ class AgentChatViewModel
                 }
 
                 is AgentChatEvent.Reply -> {
+                    if (recoveredTurn) {
+                        recoveredTurn = false
+                        viewModelScope.launch {
+                            val result = history.messages(event.frame.conversationId)
+                            val messages = (result as? AgentChatHistoryResult.Success)?.value?.items
+                            mutableState.update { current ->
+                                current.copy(
+                                    conversationId = event.frame.conversationId,
+                                    pending = null,
+                                    messages =
+                                        if (!messages.isNullOrEmpty()) {
+                                            messages.asReversed().map(::toUiMessage)
+                                        } else {
+                                            current.messages + AgentChatUiMessage(
+                                                "${event.frame.id}-reply",
+                                                AgentChatMessageRole.Assistant,
+                                                event.frame.agentResponse,
+                                                event.frame.entities,
+                                            )
+                                        },
+                                )
+                            }
+                            if (event.frame.entities.isNotEmpty()) mutableEffects.tryEmit(AgentChatUiEffect.EntitiesChanged)
+                            loadConversations()
+                            recoverJobs()
+                        }
+                        return
+                    }
                     mutableState.update { current ->
                         current.copy(
                             conversationId = event.frame.conversationId,
@@ -262,6 +332,8 @@ class AgentChatViewModel
             id: String,
             code: String,
         ) {
+            val wasRecovered = recoveredTurn
+            recoveredTurn = false
             val current = mutableState.value
             val request = current.messages.firstOrNull { it.id == id && it.role == AgentChatMessageRole.User }
             mutableState.value =
@@ -276,11 +348,12 @@ class AgentChatViewModel
                                 id = "$id-error",
                                 role = AgentChatMessageRole.Error,
                                 text = errorText(code),
-                                retryText = request?.text.orEmpty(),
+                                retryText = request?.text ?: recoveredRequestText,
                                 requestId = id,
                             ),
                 )
             if (code == "connection_lost") mutableEffects.tryEmit(AgentChatUiEffect.EntitiesChanged)
+            if (wasRecovered) recoverJobs()
         }
 
         private companion object {
@@ -308,7 +381,7 @@ class AgentChatViewModel
                     "conflict" -> "Os dados mudaram enquanto eu preparava a resposta. Nada foi gravado; tente de novo."
                     "conversation_gone" -> "Esta conversa não existe mais. Sua mensagem não foi enviada — comece outra."
                     "unavailable" -> "A IA está indisponível agora. Tente de novo em instantes."
-                    "cancelled" -> "Cancelado. Nada foi gravado."
+                    "cancelled" -> "Pedido cancelado."
                     "connection_lost" -> "A conexão caiu antes da resposta. Se o pedido gravava algo, confira a agenda antes de reenviar."
                     "connection_failed" -> "Não consegui conectar ao assistente. Tente de novo."
                     "session_expired" -> "Sua sessão acabou. Entre de novo para continuar."

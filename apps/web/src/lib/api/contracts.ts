@@ -76,6 +76,8 @@ export interface MealItem {
   foodItems: FoodItem[];
   totals: MealTotals;
   recipe?: MealRecipe;
+  generation?: { status: "pending" | "completed" | "failed" };
+  nutritionSource?: "model-estimate";
 }
 
 export interface SleepItem {
@@ -458,6 +460,7 @@ export interface AgentEntityItemDto {
 
 export type AgentChatServerFrame =
   | { type: "ready"; userId: string; expiresAt: string }
+  | { type: "queued"; id: string; jobId: string }
   | { type: "status"; id: string; label: string }
   | {
       type: "reply";

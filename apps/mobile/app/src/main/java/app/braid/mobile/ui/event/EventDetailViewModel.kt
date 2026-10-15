@@ -3,10 +3,13 @@ package app.braid.mobile.ui.event
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.braid.mobile.data.dto.EventDetailDto
+import app.braid.mobile.data.dto.MealEventNoteDto
 import app.braid.mobile.data.dto.UpdateEventInputDto
 import app.braid.mobile.data.events.EventGateway
 import app.braid.mobile.data.events.EventResult
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -38,15 +41,28 @@ class EventDetailViewModel
         private val mutableState = MutableStateFlow<EventDetailUiState>(EventDetailUiState.Loading)
 
         val state: StateFlow<EventDetailUiState> = mutableState.asStateFlow()
+        private var observation: Job? = null
 
         fun load(eventId: String) {
+            observation?.cancel()
             mutableState.value = EventDetailUiState.Loading
-            viewModelScope.launch {
+            observation = viewModelScope.launch {
                 mutableState.value =
                     when (val result = gateway.detail(eventId)) {
                         is EventResult.Failure -> EventDetailUiState.Error
                         is EventResult.Success -> EventDetailUiState.Content(result.value)
                     }
+                while ((mutableState.value as? EventDetailUiState.Content)?.event?.notes?.any {
+                        it is MealEventNoteDto && it.data.generation?.status == "pending"
+                    } == true
+                ) {
+                    delay(2_000)
+                    val result = gateway.detail(eventId)
+                    if (result is EventResult.Success) {
+                        val current = mutableState.value as? EventDetailUiState.Content ?: break
+                        mutableState.value = current.copy(event = result.value)
+                    }
+                }
             }
         }
 

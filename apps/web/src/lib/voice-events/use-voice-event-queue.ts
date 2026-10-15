@@ -1,119 +1,138 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { sendWithSession } from "@/lib/api/authed-fetch";
+import { ApiError } from "@/lib/api/authed-fetch";
+import { aiJobs, isJobPending, operationId } from "@/lib/ai-jobs/ai-jobs";
+import { useSessionState } from "@/lib/session/use-session";
 
 export interface VoiceJob {
+  /** Stable requestId, retained if the submission response is lost. */
   id: string;
+  jobId?: string;
   transcript: string;
   status: "pending" | "error";
   error?: string;
+  progress?: string;
+  cancelling?: boolean;
 }
 
-interface UseVoiceEventQueueOptions {
-  onAllDone: () => void;
-}
-
-interface UseVoiceEventQueueResult {
-  jobs: VoiceJob[];
-  enqueue: (transcript: string) => void;
-  retry: (jobId: string) => void;
-  dismiss: (jobId: string) => void;
-}
-
-let jobCounter = 0;
-
-export function useVoiceEventQueue({
-  onAllDone,
-}: UseVoiceEventQueueOptions): UseVoiceEventQueueResult {
+export function useVoiceEventQueue({ onAllDone }: { onAllDone: () => void }) {
+  const { user } = useSessionState();
+  const userId = user?.userId;
   const [jobs, setJobs] = useState<VoiceJob[]>([]);
   const jobsRef = useRef<VoiceJob[]>([]);
   const runningRef = useRef(false);
+  const activeRef = useRef(false);
+  const generationRef = useRef(0);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const onAllDoneRef = useRef(onAllDone);
-
-  useEffect(() => {
-    onAllDoneRef.current = onAllDone;
-  }, [onAllDone]);
+  const key = userId ? `voice-jobs:${userId}` : null;
+  onAllDoneRef.current = onAllDone;
 
   const commit = useCallback((next: VoiceJob[]) => {
     jobsRef.current = next;
     setJobs(next);
-  }, []);
-
-  // Um job de cada vez, em ordem. Em paralelo, um evento lento (comida faz duas chamadas ao
-  // modelo) gravaria depois de um rapido e o fecharia com um finishedAt anterior ao startedAt.
-  const drain = useCallback(async () => {
-    if (runningRef.current) return;
-    runningRef.current = true;
-
     try {
-      for (;;) {
-        const job = jobsRef.current.find((item) => item.status === "pending");
-        if (!job) break;
+      if (key) localStorage.setItem(key, JSON.stringify(next));
+    } catch { /* Accepted jobs remain recoverable by server-side list. */ }
+  }, [key]);
 
-        try {
-          await createEventFromTranscript(job.transcript);
-          commit(jobsRef.current.filter((item) => item.id !== job.id));
-        } catch (error) {
-          const message =
-            error instanceof Error ? error.message : "Não foi possível criar o evento.";
-          commit(
-            jobsRef.current.map((item) =>
-              item.id === job.id ? { ...item, status: "error" as const, error: message } : item,
-            ),
-          );
-        }
+  // Preserve capture order. Accepted work is only queried; ambiguous
+  // submission responses are retried with the same id, not a new operation.
+  const drain = useCallback(async function drainQueue() {
+    if (!activeRef.current || runningRef.current) return;
+    const generation = generationRef.current;
+    const job = jobsRef.current.find((item) => item.status === "pending");
+    if (!job) return;
+    runningRef.current = true;
+    let terminal = false;
+    try {
+      const result = job.jobId
+        ? await (job.cancelling ? aiJobs.cancel(job.jobId) : aiJobs.get(job.jobId))
+        : await aiJobs.voice(job.transcript, job.id);
+      if (!activeRef.current || generationRef.current !== generation) return;
+      terminal = !isJobPending(result);
+      if (result.status === "succeeded") {
+        commit(jobsRef.current.filter((item) => item.id !== job.id));
+        onAllDoneRef.current();
+      } else {
+        commit(jobsRef.current.map((item) => item.id !== job.id ? item : {
+          ...item, jobId: result.id, progress: result.progress,
+          status: terminal ? "error" : "pending",
+          error: terminal ? (result.status === "cancelled" ? "Pedido cancelado." : "Não foi possível criar o evento.") : undefined,
+        }));
       }
+    } catch (error) {
+      if (!activeRef.current || generationRef.current !== generation) return;
+      terminal = !job.jobId && error instanceof ApiError && [400, 403, 404, 422].includes(error.status);
+      commit(jobsRef.current.map((item) => item.id !== job.id ? item : {
+        ...item, status: terminal ? "error" : "pending",
+        error: terminal ? "Não entendi o que você falou." : undefined,
+        progress: "Reconectando — seu pedido continua salvo.",
+      }));
     } finally {
-      runningRef.current = false;
+      if (generationRef.current === generation) runningRef.current = false;
     }
-
-    if (jobsRef.current.length === 0) onAllDoneRef.current();
+    if (activeRef.current && jobsRef.current.some((item) => item.status === "pending")) {
+      timerRef.current = setTimeout(() => void drainQueue(), terminal ? 0 : 1500);
+    }
   }, [commit]);
 
-  const enqueue = useCallback(
-    (transcript: string) => {
-      jobCounter += 1;
-      commit([
-        ...jobsRef.current,
-        { id: `voice-job-${jobCounter}`, transcript, status: "pending" },
-      ]);
-      void drain();
-    },
-    [commit, drain],
-  );
+  useEffect(() => {
+    if (!key) { commit([]); return; }
+    let cancelled = false;
+    generationRef.current++;
+    activeRef.current = true;
+    try {
+      commit(JSON.parse(localStorage.getItem(key) ?? "[]"));
+    } catch { commit([]); }
+    void drain();
+    void aiJobs.list().then((list) => {
+      if (cancelled) return;
+      const recovered = list.filter((job) => job.kind === "transcript-event" && isJobPending(job))
+        .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+        .filter((job) => !jobsRef.current.some((item) => item.jobId === job.id || item.id === job.request?.clientMessageId))
+        .map((job): VoiceJob => ({
+          id: job.request?.clientMessageId ?? job.id, jobId: job.id,
+          transcript: job.request?.text ?? "", status: "pending", progress: job.progress,
+        }));
+      if (recovered.length) {
+        commit([...jobsRef.current, ...recovered]);
+        void drain();
+      }
+    }).catch(() => {});
+    return () => {
+      cancelled = true;
+      activeRef.current = false;
+      generationRef.current++;
+      runningRef.current = false;
+      clearTimeout(timerRef.current);
+    };
+  }, [key, commit, drain]);
 
-  const retry = useCallback(
-    (jobId: string) => {
-      commit(
-        jobsRef.current.map((item) =>
-          item.id === jobId ? { ...item, status: "pending" as const, error: undefined } : item,
-        ),
-      );
-      void drain();
-    },
-    [commit, drain],
-  );
+  const enqueue = useCallback((transcript: string) => {
+    if (!userId) return;
+    commit([...jobsRef.current, { id: operationId(), transcript, status: "pending" }]);
+    void drain();
+  }, [commit, drain, userId]);
 
-  const dismiss = useCallback(
-    (jobId: string) => {
-      commit(jobsRef.current.filter((item) => item.id !== jobId));
-    },
-    [commit],
-  );
+  const retry = useCallback((id: string) => {
+    // A new operation is safe only after an explicitly terminal failure.
+    commit(jobsRef.current.map((item) => item.id === id && item.status === "error"
+      ? { id: operationId(), transcript: item.transcript, status: "pending" } : item));
+    void drain();
+  }, [commit, drain]);
 
-  return { jobs, enqueue, retry, dismiss };
-}
+  const dismiss = useCallback((id: string) => {
+    commit(jobsRef.current.filter((item) => item.id !== id || item.status === "pending"));
+  }, [commit]);
 
-async function createEventFromTranscript(transcript: string): Promise<void> {
-  const response = await sendWithSession("/api/events/voice", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ transcript }),
-  });
+  const cancel = useCallback((id: string) => {
+    commit(jobsRef.current.map((item) => item.id === id && item.status === "pending"
+      ? { ...item, cancelling: true, progress: "Cancelando" } : item));
+    clearTimeout(timerRef.current);
+    void drain();
+  }, [commit, drain]);
 
-  if (response.ok) return;
-  if (response.status === 401) throw new Error("Sessão expirada. Entre novamente.");
-  if (response.status === 400) throw new Error("Não entendi o que você falou.");
-  throw new Error("O agente não respondeu. Tente de novo.");
+  return { jobs, enqueue, retry, dismiss, cancel };
 }

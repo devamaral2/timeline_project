@@ -16,7 +16,7 @@ export interface ParsedMealFoodItem {
 export interface MealParsingGateway {
   parseMeal(input: { text: string }): Promise<{
     items: ParsedMealFoodItem[];
-    /** Ausente quando o modelo nao devolveu uma receita utilizavel. */
+    /** Providers must return a recipe; worker rejects legacy/stub responses without one. */
     recipe?: MealRecipe;
     modelProvider: string;
     modelName: string;

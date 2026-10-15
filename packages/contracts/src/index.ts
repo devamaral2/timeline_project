@@ -19,6 +19,7 @@ export type * from "./notes/contracts/create-note.input";
 export type * from "./notes/contracts/update-note.input";
 export type * from "./agent/contracts/agent-run.dto";
 export type * from "./agent/contracts/agent-chat.dto";
+export type * from "./agent/contracts/ai-job.dto";
 export type * from "./agent-chat/contracts/agent-conversation.dto";
 
 // Tipos de dados de dominio que os DTOs referenciam, reexportados para que o

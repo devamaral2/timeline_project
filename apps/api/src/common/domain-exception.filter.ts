@@ -38,6 +38,7 @@ import {
   InvalidInputError,
   LlmUnavailableError,
 } from "../api-core/agent/errors/agent.errors";
+import { AiJobCancelledError, AiJobFailedError } from "../infrastructure/ai-jobs/ai-jobs.service";
 
 /**
  * Traduz os erros de dominio para status HTTP. Substitui o `mutationErrorResponse`
@@ -69,6 +70,15 @@ export class DomainExceptionFilter implements ExceptionFilter {
 
   private statusFor(exception: unknown): number {
     if (exception instanceof HttpException) return exception.getStatus();
+    if (exception instanceof AiJobCancelledError) return HttpStatus.CONFLICT;
+    if (exception instanceof AiJobFailedError) {
+      const statuses: Record<string, number> = {
+        invalid_input: HttpStatus.BAD_REQUEST, forbidden: HttpStatus.FORBIDDEN,
+        conflict: HttpStatus.CONFLICT, conversation_gone: HttpStatus.NOT_FOUND,
+        limit_reached: HttpStatus.UNPROCESSABLE_ENTITY, unavailable: HttpStatus.BAD_GATEWAY,
+      };
+      return statuses[exception.code] ?? HttpStatus.INTERNAL_SERVER_ERROR;
+    }
     if (exception instanceof InvalidInputError) return HttpStatus.BAD_REQUEST;
     if (exception instanceof LlmUnavailableError) return HttpStatus.BAD_GATEWAY;
     if (exception instanceof AgentTargetForbiddenError) return HttpStatus.FORBIDDEN;

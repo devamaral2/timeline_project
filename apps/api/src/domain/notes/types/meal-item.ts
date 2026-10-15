@@ -30,6 +30,9 @@ export interface MealRecipe {
 }
 
 export interface MealItem {
+  /** Absent on legacy snapshots. Nutrition is estimated, never catalog-backed. */
+  generation?: { status: "pending" | "completed" | "failed" };
+  nutritionSource?: "model-estimate";
   sourceMealId?: string;
   sourceMealRevision?: number;
   name: string;
@@ -155,6 +158,23 @@ export function parseMealItem(data: unknown, schemaVersion: number): MealItem {
     foodItems,
     totals: computedTotals,
   };
+
+  if (source.generation !== undefined) {
+    const status = (source.generation as { status?: unknown } | null)?.status;
+    if (status !== "pending" && status !== "completed" && status !== "failed") {
+      throw new NoteValidationError("Invalid meal generation status");
+    }
+    if (status === "completed" && !source.recipe) {
+      throw new NoteValidationError("Completed meal generation requires a recipe");
+    }
+    mealItem.generation = { status };
+  }
+  if (source.nutritionSource !== undefined) {
+    if (source.nutritionSource !== "model-estimate") {
+      throw new NoteValidationError("Invalid meal nutrition source");
+    }
+    mealItem.nutritionSource = "model-estimate";
+  }
 
   if (isNonEmptyString(source.sourceMealId)) {
     mealItem.sourceMealId = source.sourceMealId;

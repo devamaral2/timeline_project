@@ -15,6 +15,9 @@ vi.mock('@/lib/session/use-session', () => ({
   useCurrentUser: () => signedIn,
 }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ replace: vi.fn() }) }));
+// Voice recovery has its own API lifecycle and dedicated tests; this suite
+// asserts only timeline pagination/session requests.
+vi.mock('@/components/events/VoiceEventButton', () => ({ VoiceEventButton: () => null }));
 
 function anEvent(
   overrides: Partial<TimelineEventCardDto> = {},

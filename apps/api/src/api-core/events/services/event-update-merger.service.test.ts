@@ -29,6 +29,48 @@ function depsOf(kit: ReturnType<typeof createEventsKit>) {
   return { noteBuilder: kit.noteBuilder, noteRepository: kit.noteRepository };
 }
 
+test.each(["change-kind", "remove-notes", "deleted-note"] as const)(
+  "ensures a pending meal note after update: %s",
+  async (scenario) => {
+    const kit = createEventsKit({ mealParsingGateway: {
+      parseMeal: async () => { throw new Error("Must not call provider synchronously"); },
+    } });
+    const existing = trainingEvent().revise({
+      kind: scenario === "change-kind" ? "training" : "meal",
+      noteLinks: scenario === "deleted-note" ? [{ noteId: "deleted-note-id", fromRecurrence: true }] : [],
+    });
+    const merged = await mergeEventUpdate(existing, {
+      eventId: existing.id, expectedRevision: existing.revision, kind: "meal",
+      description: "arroz e feijao", ...(scenario === "remove-notes" ? { notes: [] } : {}),
+    }, depsOf(kit), new Date());
+    expect(merged.event.kind).toBe("meal");
+    expect(merged.event.revision).toBe(existing.revision + 1);
+    expect(merged.notes.created).toHaveLength(1);
+    const note = merged.notes.created?.[0];
+    expect(note?.data).toMatchObject({
+      description: "arroz e feijao", generation: { status: "pending" }, foodItems: [],
+    });
+    expect(merged.event.noteLinks).toContainEqual({ noteId: note?.id, fromRecurrence: false });
+  },
+);
+
+test("meal updates preserve an existing owned meal note or explicitly reused note", async () => {
+  const kit = createEventsKit();
+  const note = await kit.noteBuilder.fromCreateInput(
+    { type: "meal", data: { inputText: "salada" } }, "auth-user-1", new Date(),
+  );
+  await kit.noteRepository.save(note);
+  const event = trainingEvent().revise({ kind: "meal", noteLinks: [{ noteId: note.id, fromRecurrence: true }] });
+  for (const notes of [undefined, [{ id: note.id }]]) {
+    const merged = await mergeEventUpdate(event, {
+      eventId: event.id, expectedRevision: event.revision, notes,
+    }, depsOf(kit), new Date());
+    expect(merged.event.noteLinks).toEqual(event.noteLinks);
+    expect(merged.notes.created ?? []).toEqual([]);
+    expect(merged.notes.updated ?? []).toEqual([]);
+  }
+});
+
 test("replaces training workouts of a linked note and recomputes what is derived", async () => {
   const note = trainingNote();
   const kit = createEventsKit({ notes: [note] });

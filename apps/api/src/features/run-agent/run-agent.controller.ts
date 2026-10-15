@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { RunAgentResponse } from "@repo/contracts";
 import { ApiCoreModule } from "../../api-core/api-core.module";
 import { InvalidInputError } from "../../api-core/agent/errors/agent.errors";
-import { RunAgentUseCase } from "../../api-core/agent/run-agent.usecase";
+import { QueuedAiOperations } from "../../api-core/agent/queued-ai-operations";
 import { GatewayIdentityGuard } from "../../http/request-identity/gateway-identity.guard";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
 import { CurrentUser } from "../../http/request-identity/current-user.decorator";
@@ -17,7 +17,7 @@ const runAgentBody = z.object({
 
 @Controller("api/ai")
 export class RunAgentController {
-  constructor(@Inject(RunAgentUseCase) private readonly runAgent: RunAgentUseCase) {}
+  constructor(@Inject(QueuedAiOperations) private readonly runAgent: QueuedAiOperations) {}
 
   @Post()
   @UseGuards(GatewayIdentityGuard)
@@ -25,7 +25,7 @@ export class RunAgentController {
   async execute(@Body() body: unknown, @CurrentUser() actor: AuthenticatedUser): Promise<RunAgentResponse> {
     const parsed = runAgentBody.safeParse(body);
     if (!parsed.success) throw new InvalidInputError(z.prettifyError(parsed.error));
-    return this.runAgent.execute(parsed.data, actor);
+    return this.runAgent.executeAgent(parsed.data, actor);
   }
 }
 
