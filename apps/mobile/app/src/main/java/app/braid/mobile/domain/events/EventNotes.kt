@@ -3,6 +3,7 @@ package app.braid.mobile.domain.events
 import app.braid.mobile.data.dto.EventDetailDto
 import app.braid.mobile.data.dto.EventNoteDto
 import app.braid.mobile.data.dto.MealEventNoteDto
+import app.braid.mobile.data.dto.NoteDto
 import app.braid.mobile.data.dto.SleepEventNoteDto
 import app.braid.mobile.data.dto.TextEventNoteDto
 import app.braid.mobile.data.dto.TrainingEventNoteDto
@@ -39,4 +40,23 @@ fun EventDetailDto.notesPatchedWith(
 ): List<UpdateEventNoteDto> {
     val entries = notes.map { note -> if (note.id == noteId) patch else UpdateEventNoteDto.keep(note) }
     return if (noteId != null) entries else entries + patch
+}
+
+/**
+ * O tipo de nota que cabe à natureza do evento: refeição, sono e treino levam a
+ * nota do próprio tipo; a rotina não tem nota própria e leva texto livre.
+ */
+fun noteTypeForEventKind(kind: String): String = if (kind == "routine") "text" else kind
+
+/**
+ * As notas que se podem associar ao evento: as do tipo adequado que ainda não
+ * estão nele. Notas de outros tipos nunca entram.
+ */
+fun linkableNotesOf(
+    notes: List<NoteDto>,
+    event: EventDetailDto,
+): List<NoteDto> {
+    val type = noteTypeForEventKind(event.kind)
+    val linked = event.notes.mapTo(mutableSetOf()) { it.id }
+    return notes.filter { it.type == type && it.id !in linked }
 }

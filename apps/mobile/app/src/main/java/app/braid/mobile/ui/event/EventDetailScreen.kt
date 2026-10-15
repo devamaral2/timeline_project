@@ -206,17 +206,26 @@ private fun EventDetailBody(
                 Text("Agenda", color = MaterialTheme.colorScheme.onBackground)
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(
-                    onClick = onEdit,
-                    enabled = event.notes.none { it is MealEventNoteDto && it.data.generation?.status == "pending" },
-                ) {
-                    Icon(Icons.Outlined.Edit, contentDescription = "Editar evento", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
                 Box {
                     IconButton(onClick = { menuOpen = true }) {
                         Icon(Icons.Outlined.MoreVert, contentDescription = "Mais ações", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        DropdownMenuItem(
+                            text = { Text("Editar") },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Outlined.Edit,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            },
+                            enabled = event.notes.none { it is MealEventNoteDto && it.data.generation?.status == "pending" },
+                            onClick = {
+                                menuOpen = false
+                                onEdit()
+                            },
+                        )
                         DropdownMenuItem(
                             text = { Text("Excluir", color = MaterialTheme.colorScheme.error) },
                             leadingIcon = {

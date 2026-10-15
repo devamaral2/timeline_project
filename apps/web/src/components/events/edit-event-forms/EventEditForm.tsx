@@ -16,14 +16,15 @@ import {
   toDatetimeLocalValue,
   useSubmitEventUpdate,
 } from "./shared";
+import { LinkNotesField } from "./LinkNotesField";
 
 /**
- * A rotina nao tem note propria: so os campos do evento. Por isso este e o unico
- * formulario que nao manda `notes` — as notes do evento (texto livre, por
- * exemplo) continuam como estao, e reenviar a lista so reescreveria vinculos
- * identicos no banco.
+ * A edicao manual de qualquer evento: os campos dele e a associacao de notes
+ * que ja existem. Nao edita o conteudo de nenhuma note. So manda `notes` quando
+ * o usuario escolheu alguma; a lista inteira vai com as atuais so pelo `id`,
+ * o que as mantem no evento sem reescreve-las.
  */
-export function RoutineEditForm({
+export function EventEditForm({
   event,
   onCancel,
   onClose,
@@ -39,6 +40,7 @@ export function RoutineEditForm({
   const [notifyOffsetsMinutes, setNotifyOffsetsMinutes] = useState<NotificationOffsetMinutes[] | undefined>(
     event.notifyOffsetsMinutes,
   );
+  const [linkedNoteIds, setLinkedNoteIds] = useState<string[]>([]);
   const [validationError, setValidationError] = useState<string | null>(null);
   const { submit, submitting, error } = useSubmitEventUpdate({
     eventId: event.id,
@@ -64,17 +66,20 @@ export function RoutineEditForm({
       missed,
       priority,
       notifyOffsetsMinutes,
+      ...(linkedNoteIds.length
+        ? { notes: [...event.notes.map((note) => ({ id: note.id })), ...linkedNoteIds.map((id) => ({ id }))] }
+        : {}),
     });
   }
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="routine-edit-name" className={fieldLabelClass}>
+        <label htmlFor="event-edit-name" className={fieldLabelClass}>
           Nome <span aria-hidden className="text-destructive">*</span>
         </label>
         <input
-          id="routine-edit-name"
+          id="event-edit-name"
           type="text"
           required
           value={name}
@@ -100,6 +105,8 @@ export function RoutineEditForm({
         onPriorityChange={setPriority}
       />
       <NotificationOffsetsField value={notifyOffsetsMinutes} onChange={setNotifyOffsetsMinutes} />
+
+      <LinkNotesField event={event} selectedIds={linkedNoteIds} onChange={setLinkedNoteIds} />
 
       {validationError || error ? (
         <p className="text-xs text-destructive">{validationError ?? error}</p>

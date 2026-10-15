@@ -5,8 +5,6 @@ import { Plus, X } from "lucide-react";
 import type {
   EventDetailDto,
   EventPriority,
-  NoteDataInput,
-  NoteDto,
   NotificationOffsetMinutes,
   UpdateEventNoteInput,
 } from "@/lib/api/contracts";
@@ -72,28 +70,6 @@ export type EventUpdatePayload = Record<string, unknown> & {
   expectedRevision: number;
   notes?: UpdateEventNoteInput[];
 };
-
-/**
- * A lista completa de notes do evento, com a de `noteId` trocada.
- *
- * O PATCH substitui a lista inteira: mandar so a note editada tiraria as outras
- * do evento. Cada formulario cuida de uma note — as demais atravessam daqui so
- * com o `id`, o que as mantem na lista sem reescreve-las. Sem `noteId` (o evento
- * ainda nao tem a note deste tipo), uma note nova entra no fim.
- */
-export function notesPatchedWith(
-  event: EventDetailDto,
-  noteId: string | undefined,
-  patch: NoteDataInput,
-): UpdateEventNoteInput[] {
-  const entries: UpdateEventNoteInput[] = event.notes.map((note) =>
-    note.id === noteId ? { id: note.id, schemaVersion: note.schemaVersion, ...patch } : { id: note.id },
-  );
-  return noteId ? entries : [...entries, patch];
-}
-
-/** A note que este formulario edita, ja no tipo que ele espera. */
-export type NoteOfType<TType extends NoteDto["type"]> = Extract<NoteDto, { type: TType }>;
 
 /** Converte um instante ISO para o valor local esperado por <input type="datetime-local">. */
 export function toDatetimeLocalValue(iso: string | undefined): string {
