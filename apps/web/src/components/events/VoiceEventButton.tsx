@@ -16,7 +16,7 @@ export function VoiceEventButton({
   onCreated = () => window.location.reload(),
   className,
 }: VoiceEventButtonProps) {
-  const { jobs, enqueue, retry, dismiss } = useVoiceEventQueue({ onAllDone: onCreated });
+  const { jobs, enqueue, retry, dismiss, cancel } = useVoiceEventQueue({ onAllDone: onCreated });
   const { supported, listening, interim, error, start, stop } = useSpeechRecognition({
     onFinalTranscript: enqueue,
   });
@@ -67,7 +67,7 @@ export function VoiceEventButton({
         ) : null}
       </div>
 
-      <VoiceJobStatus jobs={jobs} onRetry={retry} onDismiss={dismiss} />
+      <VoiceJobStatus jobs={jobs} onRetry={retry} onDismiss={dismiss} onCancel={cancel} />
     </>
   );
 }

@@ -18,6 +18,9 @@ import { priorityLabels, visualForItemType } from "./event-visuals";
 import { MissedBadge } from "./MissedBadge";
 import { MarkdownView } from "@/components/notes/MarkdownView";
 import { MealRecipeView } from "@/components/notes/MealRecipeView";
+import { MealGenerationStatus } from "@/components/notes/MealGenerationStatus";
+import { hasPendingMeal, pendingMealEditMessage } from "@/lib/notes/meal-generation";
+import { usePendingMealRefresh } from "@/lib/notes/use-pending-meal-refresh";
 import { cn } from "@/lib/utils";
 import {
   destructiveButtonClass,
@@ -59,6 +62,10 @@ export function EventDetailsModal({
 }: EventDetailsModalProps) {
   const [event, setEvent] = useState<EventDetailDto | null>(null);
   const [error, setError] = useState(false);
+  const pendingMeal = hasPendingMeal(event?.notes ?? []);
+  usePendingMealRefresh(pendingMeal, async () => {
+    setEvent(await authedFetch<EventDetailDto>(`/api/events/${eventId}`));
+  });
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -134,7 +141,7 @@ export function EventDetailsModal({
         </div>
 
         <div className={dialogFooterClass}>
-          <button type="button" onClick={onEdit} className={outlineButtonClass}>
+          <button type="button" onClick={onEdit} disabled={pendingMeal} title={pendingMeal ? pendingMealEditMessage : undefined} className={outlineButtonClass}>
             <Pencil aria-hidden className="size-4" />
             Editar
           </button>
@@ -300,10 +307,14 @@ function TrainingDetails({ data }: { data: TrainingData }) {
 }
 
 function MealDetails({ data }: { data: MealItem }) {
+  if (data.generation?.status === "pending" || data.generation?.status === "failed") {
+    return <MealGenerationStatus data={data} />;
+  }
   if (!data.foodItems.length && !data.recipe) return null;
 
   return (
     <div className="space-y-4">
+      <MealGenerationStatus data={data} />
       {data.foodItems.length ? <MealFoods data={data} /> : null}
       {data.recipe ? <MealRecipeView recipe={data.recipe} /> : null}
     </div>

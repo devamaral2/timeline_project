@@ -65,6 +65,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.braid.mobile.core.designsystem.LocalBraidDarkTheme
 import app.braid.mobile.core.designsystem.tagColors
+import app.braid.mobile.data.dto.MealEventNoteDto
 import app.braid.mobile.domain.timeline.EventPosition
 import app.braid.mobile.domain.timeline.dateLineOf
 import app.braid.mobile.domain.timeline.endLabelOf
@@ -205,7 +206,10 @@ private fun EventDetailBody(
                 Text("Agenda", color = MaterialTheme.colorScheme.onBackground)
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onEdit) {
+                IconButton(
+                    onClick = onEdit,
+                    enabled = event.notes.none { it is MealEventNoteDto && it.data.generation?.status == "pending" },
+                ) {
                     Icon(Icons.Outlined.Edit, contentDescription = "Editar evento", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Box {

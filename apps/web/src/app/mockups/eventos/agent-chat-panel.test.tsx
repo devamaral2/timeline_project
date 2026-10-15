@@ -165,7 +165,7 @@ test("the stop button cancels the running message", () => {
 
   emit({ type: "error", id: sent[0].id, code: "cancelled" });
 
-  expect(screen.getByText("Cancelado. Nada foi gravado.")).toBeInTheDocument();
+  expect(screen.getByText("Pedido cancelado.")).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Enviar mensagem" })).not.toBeInTheDocument();
 });
 

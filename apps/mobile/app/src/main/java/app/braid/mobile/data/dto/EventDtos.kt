@@ -97,6 +97,11 @@ data class MealRecipeDto(
 )
 
 @Serializable
+data class MealGenerationDto(
+    val status: String,
+)
+
+@Serializable
 data class MealItemDto(
     val sourceMealId: String? = null,
     val sourceMealRevision: Int? = null,
@@ -105,6 +110,8 @@ data class MealItemDto(
     val foodItems: List<FoodItemDto>,
     val totals: MealTotalsDto,
     val recipe: MealRecipeDto? = null,
+    val generation: MealGenerationDto? = null,
+    val nutritionSource: String? = null,
 )
 
 @Serializable

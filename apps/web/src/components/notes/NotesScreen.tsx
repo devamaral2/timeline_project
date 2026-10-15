@@ -6,6 +6,9 @@ import { authedFetch } from "@/lib/api/authed-fetch";
 import type { NoteDto } from "@/lib/api/contracts";
 import { useNow } from "@/lib/events/use-now";
 import { groupNotesByTag } from "@/lib/notes/notes-model";
+import { hasPendingMeal } from "@/lib/notes/meal-generation";
+import { usePendingMealRefresh } from "@/lib/notes/use-pending-meal-refresh";
+import { agendaRefreshEvent } from "@/app/mockups/eventos/agenda-refresh";
 import { NoteCard } from "./NoteCard";
 import styles from "./notes.module.css";
 
@@ -21,6 +24,14 @@ export function NotesScreen({ userId }: { userId: string }) {
   const [reloadKey, setReloadKey] = useState(0);
   const [hiddenTags, setHiddenTags] = useState<string[]>([]);
   const [collapsedTags, setCollapsedTags] = useState<string[]>([]);
+  usePendingMealRefresh(hasPendingMeal(notes ?? []), async () => {
+    setNotes(await authedFetch<NoteDto[]>("/api/notes"));
+  });
+  useEffect(() => {
+    const refresh = () => setReloadKey((key) => key + 1);
+    window.addEventListener(agendaRefreshEvent, refresh);
+    return () => window.removeEventListener(agendaRefreshEvent, refresh);
+  }, []);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: reloadKey força o refetch.
   useEffect(() => {

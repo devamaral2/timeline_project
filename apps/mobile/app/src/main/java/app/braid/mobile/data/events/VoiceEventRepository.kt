@@ -8,6 +8,19 @@ import javax.inject.Singleton
 
 interface VoiceEventGateway {
     suspend fun create(transcript: String): EventResult<VoiceEventResponseDto>
+
+    suspend fun create(
+        transcript: String,
+        requestId: String,
+        onProgress: (String?) -> Unit,
+    ): EventResult<VoiceEventResponseDto> = create(transcript)
+
+    suspend fun recover(): List<app.braid.mobile.data.dto.AiJobDto> = emptyList()
+
+    suspend fun resume(
+        job: app.braid.mobile.data.dto.AiJobDto,
+        onProgress: (String?) -> Unit,
+    ): EventResult<VoiceEventResponseDto> = create(job.request?.text.orEmpty())
 }
 
 @Singleton

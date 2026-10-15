@@ -16,6 +16,8 @@ import { agendaRefreshEvent } from "../../../mockups/eventos/agenda-refresh";
 import shellStyles from "../../../mockups/eventos/mockup.module.css";
 import { dateLineOf, formatMinutes, minutesBetween, pluralize } from "@/lib/events/event-detail-format";
 import { Collapsible } from "@/components/notes/NoteBody";
+import { hasPendingMeal, pendingMealEditMessage } from "@/lib/notes/meal-generation";
+import { usePendingMealRefresh } from "@/lib/notes/use-pending-meal-refresh";
 import { NoteCard, StatusIcon, statusLabelOf } from "./event-detail-parts";
 import styles from "./event-details.module.css";
 
@@ -40,6 +42,10 @@ export default function EventPage({ params }: { params: Promise<{ userId: string
   const [deleting, setDeleting] = useState(false);
   const [descriptionOpen, setDescriptionOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const pendingMeal = hasPendingMeal(event?.notes ?? []);
+  usePendingMealRefresh(pendingMeal, async () => {
+    if (eventId) setEvent(await authedFetch<EventDetailDto>(`/api/events/${eventId}`));
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -149,7 +155,7 @@ export default function EventPage({ params }: { params: Promise<{ userId: string
         <nav className={styles.navigation} aria-label="Evento">
           <a href={`/${userId}`} className={styles.backLink}><ArrowLeft {...icon} />Agenda</a>
           <div className={styles.actions}>
-            <button type="button" className={styles.editButton} aria-label="Editar evento" onClick={() => setEditing(true)}><Pencil {...icon} /><span>Editar</span></button>
+            <button type="button" className={styles.editButton} aria-label="Editar evento" disabled={pendingMeal} title={pendingMeal ? pendingMealEditMessage : undefined} onClick={() => setEditing(true)}><Pencil {...icon} /><span>Editar</span></button>
             <div className={styles.menuAnchor} ref={menuRef}>
               <button type="button" className={styles.iconButton} aria-label="Mais ações" aria-haspopup="menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}><Ellipsis {...icon} /></button>
               {menuOpen ? (

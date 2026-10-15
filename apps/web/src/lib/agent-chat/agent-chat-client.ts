@@ -1,4 +1,5 @@
 import { ApiError, authedFetch } from "@/lib/api/authed-fetch";
+import { aiJobs, isJobPending } from "@/lib/ai-jobs/ai-jobs";
 import type {
   AgentChatErrorCode,
   AgentChatMessageFrame,
@@ -53,6 +54,8 @@ export class AgentChatClient {
   private socket?: ChatSocket;
   private connecting?: Promise<ChatSocket>;
   private pendingId?: string;
+  private acceptedJobId?: string;
+  private pollTimer?: ReturnType<typeof setTimeout>;
   private disposed = false;
 
   constructor(private readonly options: AgentChatClientOptions) {}
@@ -70,11 +73,16 @@ export class AgentChatClient {
   }
 
   cancel(id: string): void {
+    if (this.acceptedJobId) {
+      void aiJobs.cancel(this.acceptedJobId).catch(() => {});
+      return;
+    }
     if (this.socket?.readyState === SOCKET_OPEN) this.socket.send(JSON.stringify({ type: "cancel", id }));
   }
 
   close(): void {
     this.disposed = true;
+    clearTimeout(this.pollTimer);
     this.pendingId = undefined;
     this.socket?.close(1000, "closed");
     this.socket = undefined;
@@ -118,16 +126,28 @@ export class AgentChatClient {
       return;
     }
 
+    if (frame.type === "queued" && frame.id === this.pendingId) {
+      this.acceptedJobId = frame.jobId;
+      this.options.onEvent({ type: "status", id: frame.id, label: "Na fila" });
+      void this.pollAcceptedJob();
+      return;
+    }
     if (frame.type === "status") {
       this.options.onEvent(frame);
       return;
     }
     if (frame.type === "reply") {
+      if (frame.id !== this.pendingId) return;
+      this.acceptedJobId = undefined;
+      clearTimeout(this.pollTimer);
       if (frame.id === this.pendingId) this.pendingId = undefined;
       this.options.onEvent(frame);
       return;
     }
     if (frame.type === "error" && frame.id) {
+      if (frame.id !== this.pendingId) return;
+      this.acceptedJobId = undefined;
+      clearTimeout(this.pollTimer);
       if (frame.id === this.pendingId) this.pendingId = undefined;
       this.options.onEvent({ type: "error", id: frame.id, code: frame.code });
     }
@@ -136,7 +156,33 @@ export class AgentChatClient {
   private handleClose(socket: ChatSocket): void {
     if (this.socket === socket) this.socket = undefined;
     // Fechar ociosa (fim da vida, inatividade) nao e erro: a proxima mensagem reconecta.
-    if (this.pendingId && !this.disposed) this.fail(this.pendingId, "connection_lost");
+    if (this.pendingId && !this.disposed && !this.acceptedJobId) this.fail(this.pendingId, "connection_lost");
+  }
+
+  private async pollAcceptedJob(): Promise<void> {
+    const jobId = this.acceptedJobId;
+    const id = this.pendingId;
+    if (!jobId || !id || this.disposed) return;
+    try {
+      const job = await aiJobs.get(jobId);
+      if (this.acceptedJobId !== jobId || this.disposed) return;
+      if (!isJobPending(job)) {
+        this.acceptedJobId = undefined;
+        this.pendingId = undefined;
+        if (job.status === "succeeded" && job.result && "agentResponse" in job.result
+          && job.result.conversationId && job.result.assistantSeq !== undefined) {
+          this.options.onEvent({ type: "reply", id, ...job.result,
+            conversationId: job.result.conversationId, assistantSeq: job.result.assistantSeq });
+        } else {
+          this.options.onEvent({ type: "error", id, code: job.status === "cancelled" ? "cancelled" : job.errorCode ?? "internal" });
+        }
+        return;
+      }
+      this.options.onEvent({ type: "status", id, label: job.progress ?? "Preparando resposta" });
+    } catch { /* Accepted work survives loss of either transport. */ }
+    if (!this.disposed && this.acceptedJobId === jobId) {
+      this.pollTimer = setTimeout(() => void this.pollAcceptedJob(), 1500);
+    }
   }
 
   private fail(id: string, code: AgentChatClientFailure): void {

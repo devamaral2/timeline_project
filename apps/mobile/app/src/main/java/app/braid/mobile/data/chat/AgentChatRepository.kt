@@ -59,6 +59,10 @@ interface AgentChatGateway {
 
     suspend fun send(message: AgentChatMessageFrameDto)
 
+    suspend fun recover(): List<app.braid.mobile.data.dto.AiJobDto> = emptyList()
+
+    suspend fun resume(job: app.braid.mobile.data.dto.AiJobDto) = Unit
+
     fun cancel(id: String)
 
     fun close()

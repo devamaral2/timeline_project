@@ -18,6 +18,7 @@ import {
 } from "./event-visuals";
 import { MarkdownView } from "@/components/notes/MarkdownView";
 import { MealRecipeView } from "@/components/notes/MealRecipeView";
+import { MealGenerationStatus } from "@/components/notes/MealGenerationStatus";
 import styles from "./event-detail-screen.module.css";
 
 /**
@@ -333,6 +334,9 @@ function NoteSection({ note }: { note: NoteDto }) {
 }
 
 function Nutrition({ data }: { data: MealItem }) {
+  if (data.generation?.status === "pending" || data.generation?.status === "failed") {
+    return <MealGenerationStatus data={data} />;
+  }
   const values = [
     ["Calorias", data.totals.totalCaloriesKcal, "kcal"],
     ["Proteína", data.totals.totalProteinGrams, "g"],
@@ -341,11 +345,11 @@ function Nutrition({ data }: { data: MealItem }) {
   ] as const;
 
   return (
-    <dl className={styles.nutrition} aria-label="Resumo nutricional">
+    <><MealGenerationStatus data={data} /><dl className={styles.nutrition} aria-label="Resumo nutricional">
       {values.map(([label, value, unit]) => (
         <div key={label}><dt>{label}</dt><dd>{value}<span>{unit}</span></dd></div>
       ))}
-    </dl>
+    </dl></>
   );
 }
 

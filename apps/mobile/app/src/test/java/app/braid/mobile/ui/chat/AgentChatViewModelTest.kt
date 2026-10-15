@@ -26,6 +26,76 @@ import org.junit.Test
 
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class AgentChatViewModelTest {
+    @Test
+    fun reopenRecoversPendingWithoutSubmittingAgainAndUsesAuthoritativeHistory() =
+        runTest {
+            Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+            val job =
+                app.braid.mobile.data.dto.AiJobDto(
+                    "job-1", "agent-turn", "running", "user-1", "2026-09-22T11:00:00Z", "2026-09-22T11:01:00Z",
+                    progress = "Consultando",
+                    request = app.braid.mobile.data.dto.AiJobRequestDto("Oi", clientMessageId = "request-1"),
+                )
+            val gateway = FakeAgentChatGateway().apply { recoveredJobs = listOf(job) }
+            val history =
+                object : AgentChatHistoryGateway by FakeAgentChatHistoryGateway() {
+                    override suspend fun messages(
+                        conversationId: String,
+                        cursor: String?,
+                    ): AgentChatHistoryResult<AgentChatMessagePageDto> =
+                        AgentChatHistoryResult.Success(
+                            AgentChatMessagePageDto(
+                                listOf(
+                                    app.braid.mobile.data.dto.AgentChatMessageDto("assistant-1", 2, "assistant", "Pronto.", emptyList(), "2026-09-22T11:02:00Z"),
+                                    app.braid.mobile.data.dto.AgentChatMessageDto("user-message-1", 1, "user", "Oi", emptyList(), "2026-09-22T11:00:00Z"),
+                                ),
+                            ),
+                        )
+                }
+            val viewModel = AgentChatViewModel(gateway, history)
+            runCurrent()
+            assertEquals("Consultando", viewModel.state.value.pending?.label)
+            assertEquals(listOf(job), gateway.resumed)
+            assertEquals(emptyList<AgentChatMessageFrameDto>(), gateway.sent)
+            gateway.recoveredJobs = emptyList()
+            gateway.emit(
+                AgentChatEvent.Reply(
+                    AgentChatReplyFrameDto("request-1", "conversation-1", 2, "Pronto.", emptyList(), emptyList(), emptyList(), emptyList()),
+                ),
+            )
+            runCurrent()
+            assertEquals("conversation-1", viewModel.state.value.conversationId)
+            assertEquals(listOf("user-message-1", "assistant-1"), viewModel.state.value.messages.map { it.id })
+            assertNull(viewModel.state.value.pending)
+        }
+
+    @Test
+    fun reopenFindsConversationCreatedWhileProcessWasGone() =
+        runTest {
+            Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+            val gateway =
+                FakeAgentChatGateway().apply {
+                    recoveredJobs =
+                        listOf(
+                            app.braid.mobile.data.dto.AiJobDto(
+                                "job-1", "agent-turn", "succeeded", "user-1", "2026-09-22T11:00:00Z", "2026-09-22T11:01:00Z",
+                                result = app.braid.mobile.data.dto.AiJobResultDto("Pronto.", "new-conversation", 2),
+                            ),
+                        )
+                }
+            val viewModel = viewModel(gateway)
+            runCurrent()
+            val job = gateway.resumed.single()
+            gateway.emit(
+                AgentChatEvent.Reply(
+                    AgentChatReplyFrameDto(job.id, "new-conversation", 2, "Pronto.", emptyList(), emptyList(), emptyList(), emptyList()),
+                ),
+            )
+            runCurrent()
+            assertEquals("new-conversation", viewModel.state.value.conversationId)
+            assertEquals(emptyList<AgentChatMessageFrameDto>(), gateway.sent)
+        }
+
     @org.junit.After
     fun tearDown() {
         Dispatchers.resetMain()
@@ -110,8 +180,16 @@ private class FakeAgentChatGateway : AgentChatGateway {
     private val mutableEvents = MutableSharedFlow<AgentChatEvent>(extraBufferCapacity = 8)
     val sent = mutableListOf<AgentChatMessageFrameDto>()
     var cancelledId: String? = null
+    var recoveredJobs = emptyList<app.braid.mobile.data.dto.AiJobDto>()
+    val resumed = mutableListOf<app.braid.mobile.data.dto.AiJobDto>()
 
     override val events: SharedFlow<AgentChatEvent> = mutableEvents
+
+    override suspend fun recover(): List<app.braid.mobile.data.dto.AiJobDto> = recoveredJobs
+
+    override suspend fun resume(job: app.braid.mobile.data.dto.AiJobDto) {
+        resumed += job
+    }
 
     override suspend fun send(message: AgentChatMessageFrameDto) {
         sent += message

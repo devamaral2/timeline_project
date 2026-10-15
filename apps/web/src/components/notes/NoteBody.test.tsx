@@ -55,3 +55,24 @@ test("a meal note without a recipe shows no recipe section", () => {
   expect(screen.getByText("Informações nutricionais")).toBeInTheDocument();
   expect(screen.queryByRole("heading", { name: "Modo de preparo" })).not.toBeInTheDocument();
 });
+
+test("pending meal generation shows status, never placeholder nutrition", () => {
+  render(<NoteBody note={noteOf({ ...meal, generation: { status: "pending" } })} />);
+  expect(screen.getByRole("status")).toHaveTextContent("Preparando informações nutricionais e receita");
+  expect(screen.queryByText("Informações nutricionais")).not.toBeInTheDocument();
+  expect(screen.queryByText("kcal")).not.toBeInTheDocument();
+});
+
+test("failed meal generation preserves description without asserting zero nutrition", () => {
+  render(<NoteBody note={noteOf({ ...meal, generation: { status: "failed" } })} />);
+  expect(screen.getByRole("alert")).toHaveTextContent("Seu registro foi preservado");
+  expect(screen.getByText(meal.description)).toBeInTheDocument();
+  expect(screen.queryByText("kcal")).not.toBeInTheDocument();
+});
+
+test("generated nutrition is explicitly an estimate and model recipe is suggested", () => {
+  render(<NoteBody note={noteOf({ ...meal, generation: { status: "completed" }, nutritionSource: "model-estimate",
+    recipe: { source: "model", ingredients: [], steps: ["Misture."] } })} />);
+  expect(screen.getByText("Estimativa nutricional gerada por IA.")).toBeInTheDocument();
+  expect(screen.getByText("Sugerida")).toBeInTheDocument();
+});

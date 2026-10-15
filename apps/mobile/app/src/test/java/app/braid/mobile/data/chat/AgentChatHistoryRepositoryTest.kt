@@ -31,6 +31,14 @@ class AgentChatHistoryRepositoryTest {
 }
 
 private class FakeChatHistoryApi : ChatApi {
+    override suspend fun submitJob(request: app.braid.mobile.data.dto.SubmitAiJobDto): Response<app.braid.mobile.data.dto.AiJobDto> = error("not used")
+
+    override suspend fun listJobs(): Response<List<app.braid.mobile.data.dto.AiJobDto>> = error("not used")
+
+    override suspend fun job(id: String): Response<app.braid.mobile.data.dto.AiJobDto> = error("not used")
+
+    override suspend fun cancelJob(id: String): Response<app.braid.mobile.data.dto.AiJobDto> = error("not used")
+
     var conversationCursor: String? = null
     var messageCursor: String? = null
     var messageConversationId: String? = null

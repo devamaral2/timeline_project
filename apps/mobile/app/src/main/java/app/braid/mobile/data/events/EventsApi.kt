@@ -17,6 +17,11 @@ import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface EventsApi {
+    @POST("api/events/voice/jobs")
+    suspend fun submitVoiceJob(
+        @Body input: app.braid.mobile.data.dto.SubmitVoiceJobDto,
+    ): Response<app.braid.mobile.data.dto.AiJobDto>
+
     @POST("api/events")
     suspend fun create(
         @Body input: CreateEventInputDto,

@@ -12,6 +12,7 @@ import { fieldInputClass, fieldLabelClass } from "@/components/events/new-event-
 import { FormActions } from "@/components/events/new-event-forms/shared";
 import { TagInput } from "@/components/events/new-event-forms/TagInput";
 import { MarkdownEditor, type MarkdownEditorMode } from "./MarkdownEditor";
+import { hasPendingMeal, pendingMealEditMessage } from "@/lib/notes/meal-generation";
 
 interface NoteEditorDialogProps {
   /** Ausente, o dialogo cria uma nota solta; presente, edita essa. */
@@ -32,6 +33,7 @@ export function NoteEditorDialog({ note, onClose, onSaved }: NoteEditorDialogPro
   const [submitting, setSubmitting] = useState(false);
   const contentRef = useRef<HTMLTextAreaElement>(null);
   const [error, setError] = useState<string | null>(null);
+  const pendingMeal = hasPendingMeal(note ? [note] : []);
 
   useEffect(() => {
     contentRef.current?.focus();
@@ -54,6 +56,7 @@ export function NoteEditorDialog({ note, onClose, onSaved }: NoteEditorDialogPro
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
+    if (pendingMeal) return;
     if (editsBody && !content.trim()) {
       setError("Escreva o texto da nota.");
       return;
@@ -105,6 +108,7 @@ export function NoteEditorDialog({ note, onClose, onSaved }: NoteEditorDialogPro
           </button>
         </div>
 
+        {pendingMeal ? <p role="status" className="px-5 py-5">{pendingMealEditMessage}</p> :
         <form onSubmit={handleSubmit} className="flex flex-col gap-4 overflow-y-auto px-5 py-5 sm:px-6">
           <div className="flex flex-col gap-1.5">
             <label htmlFor={`${titleId}-name`} className={fieldLabelClass}>Título</label>
@@ -139,7 +143,7 @@ export function NoteEditorDialog({ note, onClose, onSaved }: NoteEditorDialogPro
             submitLabel={note ? "Salvar" : "Criar nota"}
             submittingLabel="Salvando..."
           />
-        </form>
+        </form>}
       </div>
     </div>,
     document.body,

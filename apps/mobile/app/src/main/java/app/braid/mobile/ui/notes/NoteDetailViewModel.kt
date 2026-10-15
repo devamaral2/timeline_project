@@ -7,6 +7,8 @@ import app.braid.mobile.data.dto.UpdateNoteInput
 import app.braid.mobile.data.notes.NoteGateway
 import app.braid.mobile.data.notes.NoteResult
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -39,25 +41,34 @@ class NoteDetailViewModel
         private val mutableState = MutableStateFlow<NoteDetailUiState>(NoteDetailUiState.Loading)
 
         val state: StateFlow<NoteDetailUiState> = mutableState.asStateFlow()
+        private var observation: Job? = null
 
         fun load(noteId: String) {
+            observation?.cancel()
             mutableState.value = NoteDetailUiState.Loading
-            viewModelScope.launch {
+            observation = viewModelScope.launch {
                 mutableState.value =
                     when (val result = gateway.detail(noteId)) {
                         is NoteResult.Failure -> NoteDetailUiState.Error
                         is NoteResult.Success -> NoteDetailUiState.Content(result.value)
                     }
+                while ((mutableState.value as? NoteDetailUiState.Content)?.note?.generationPending == true) {
+                    delay(2_000)
+                    val result = gateway.detail(noteId)
+                    if (result is NoteResult.Success) {
+                        updateContent { it.copy(note = result.value) }
+                    }
+                }
             }
         }
 
-        fun startEditing() = updateContent { it.copy(isEditing = true, actionError = null) }
+        fun startEditing() = updateContent { if (it.note.generationPending) it else it.copy(isEditing = true, actionError = null) }
 
         fun dismissEditing() = updateContent { if (it.isSaving) it else it.copy(isEditing = false, actionError = null) }
 
         fun save(draft: NoteDraft) {
             val current = mutableState.value as? NoteDetailUiState.Content ?: return
-            if (draft.isBlank || current.isSaving) return
+            if (draft.isBlank || current.isSaving || current.note.generationPending) return
             mutableState.value = current.copy(isSaving = true, actionError = null)
             viewModelScope.launch {
                 val input =
@@ -79,7 +90,7 @@ class NoteDetailViewModel
         /** Solta a nota do evento ou da tarefa a que ela está presa. */
         fun detach() {
             val current = mutableState.value as? NoteDetailUiState.Content ?: return
-            if (current.isSaving || current.note.link == null) return
+            if (current.isSaving || current.note.link == null || current.note.generationPending) return
             mutableState.value = current.copy(isSaving = true, actionError = null)
             viewModelScope.launch {
                 when (gateway.update(current.note.id, UpdateNoteInput(expectedRevision = current.note.revision, detach = true))) {

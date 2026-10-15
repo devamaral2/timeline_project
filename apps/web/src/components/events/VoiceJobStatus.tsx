@@ -8,9 +8,10 @@ interface VoiceJobStatusProps {
   jobs: VoiceJob[];
   onRetry: (jobId: string) => void;
   onDismiss: (jobId: string) => void;
+  onCancel?: (jobId: string) => void;
 }
 
-export function VoiceJobStatus({ jobs, onRetry, onDismiss }: VoiceJobStatusProps) {
+export function VoiceJobStatus({ jobs, onRetry, onDismiss, onCancel }: VoiceJobStatusProps) {
   if (jobs.length === 0) return null;
 
   const pendingCount = jobs.filter((job) => job.status === "pending").length;
@@ -50,7 +51,15 @@ export function VoiceJobStatus({ jobs, onRetry, onDismiss }: VoiceJobStatusProps
       {pendingCount > 0 ? (
         <div className="surface-glass pointer-events-auto flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm text-foreground shadow-card-hover duration-200 animate-in fade-in slide-in-from-bottom-2">
           <Loader2 aria-hidden className="size-4 animate-spin text-brand-accent" />
-          {pendingCount === 1 ? "Criando evento..." : `Criando ${pendingCount} eventos...`}
+          {pendingCount === 1 ? jobs.find((job) => job.status === "pending")?.progress ?? "Criando evento..." : `Criando ${pendingCount} eventos...`}
+          {onCancel ? jobs.filter((job) => job.status === "pending").map((job, index) => (
+            <button key={job.id} type="button" disabled={job.cancelling}
+              aria-label={pendingCount === 1 ? "Cancelar evento por voz" : `Cancelar evento por voz ${index + 1}`}
+              onClick={() => onCancel(job.id)}
+              className="rounded-full px-2 py-1 text-xs font-semibold text-muted-foreground hover:bg-accent disabled:opacity-60">
+              {job.cancelling ? "Cancelando" : pendingCount === 1 ? "Cancelar" : `Cancelar ${index + 1}`}
+            </button>
+          )) : null}
         </div>
       ) : null}
     </div>,

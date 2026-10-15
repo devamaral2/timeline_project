@@ -13,6 +13,24 @@ import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface ChatApi {
+    @POST("api/ai/jobs")
+    suspend fun submitJob(
+        @Body request: app.braid.mobile.data.dto.SubmitAiJobDto,
+    ): Response<app.braid.mobile.data.dto.AiJobDto>
+
+    @GET("api/ai/jobs")
+    suspend fun listJobs(): Response<List<app.braid.mobile.data.dto.AiJobDto>>
+
+    @GET("api/ai/jobs/{id}")
+    suspend fun job(
+        @Path("id") id: String,
+    ): Response<app.braid.mobile.data.dto.AiJobDto>
+
+    @POST("api/ai/jobs/{id}/cancel")
+    suspend fun cancelJob(
+        @Path("id") id: String,
+    ): Response<app.braid.mobile.data.dto.AiJobDto>
+
     @POST("api/ai/chat/tickets")
     suspend fun issueTicket(
         @Body request: AgentChatTicketRequestDto,

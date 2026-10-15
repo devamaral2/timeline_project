@@ -24,7 +24,7 @@ class VoiceEventQueueViewModelTest {
     }
 
     @Test
-    fun jobsAreSentSeriallyAndRemovedAfterSuccess() {
+    fun transcriptsAreSubmittedInOrderAndRemovedAfterSuccess() {
         runTest {
             Dispatchers.setMain(StandardTestDispatcher(testScheduler))
             val gateway = FakeVoiceEventGateway()

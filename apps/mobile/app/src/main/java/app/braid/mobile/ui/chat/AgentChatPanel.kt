@@ -86,7 +86,7 @@ fun AgentChatPanel(
         ChatHeader(
             title = currentConversation?.title ?: currentConversation?.preview ?: "Nova conversa",
             historyOpen = historyOpen,
-            canStartNew = state.pending == null,
+            canStartNew = state.pending == null && !state.isRecoveringJobs,
             onToggleHistory = { historyOpen = !historyOpen },
             onNew = {
                 historyOpen = false
@@ -134,11 +134,11 @@ fun AgentChatPanel(
         }
         ChatComposer(
             value = prompt,
-            enabled = state.pending == null,
+            enabled = state.pending == null && !state.isRecoveringJobs && !state.isLoadingMessages,
             pending = state.pending,
             onValueChange = { prompt = it.take(4000) },
             onSend = {
-                if (prompt.isNotBlank()) {
+                if (prompt.isNotBlank() && !state.isRecoveringJobs && !state.isLoadingMessages) {
                     viewModel.send(prompt)
                     prompt = ""
                 }

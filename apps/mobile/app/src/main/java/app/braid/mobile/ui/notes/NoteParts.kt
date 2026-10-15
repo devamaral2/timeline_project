@@ -17,8 +17,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.braid.mobile.core.designsystem.LocalBraidDarkTheme
 import app.braid.mobile.core.designsystem.tagColors
+import app.braid.mobile.data.dto.MealItemDto
 import app.braid.mobile.data.dto.NoteDto
 import app.braid.mobile.domain.notes.noteMarkdownOf
+import app.braid.mobile.ui.event.MealNote
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.decodeFromJsonElement
 
 /** As tags da nota em chips coloridos, no mesmo desenho do cartão de evento. */
 @Composable
@@ -54,5 +58,12 @@ internal fun NoteContent(
     note: NoteDto,
     modifier: Modifier = Modifier,
 ) {
+    if (note.type == "meal") {
+        val meal = runCatching { Json { ignoreUnknownKeys = true }.decodeFromJsonElement<MealItemDto>(note.data) }.getOrNull()
+        if (meal != null) {
+            MealNote(meal)
+            return
+        }
+    }
     MarkdownText(source = noteMarkdownOf(note), modifier = modifier)
 }

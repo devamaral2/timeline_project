@@ -3,6 +3,7 @@ package app.braid.mobile.ui.event
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.braid.mobile.data.dto.EventDetailDto
+import app.braid.mobile.data.dto.MealEventNoteDto
 import app.braid.mobile.data.dto.UpdateEventInputDto
 import app.braid.mobile.data.events.EventGateway
 import app.braid.mobile.data.events.EventResult
@@ -53,6 +54,8 @@ class EditEventViewModel
         }
 
         fun save(input: UpdateEventInputDto) {
+            val event = (mutableState.value as? EditEventUiState.Content)?.event
+            if (event?.notes?.any { it is MealEventNoteDto && it.data.generation?.status == "pending" } == true) return
             mutableState.value = EditEventUiState.Saving
             viewModelScope.launch {
                 mutableState.value =
