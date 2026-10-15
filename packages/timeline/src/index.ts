@@ -1,5 +1,6 @@
 export * from "./clock";
 export * from "./date-window";
+export * from "./event-days";
 export * from "./event-metrics";
 export * from "./format-date";
 export * from "./group-events-by-day";

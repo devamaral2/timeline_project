@@ -22,7 +22,7 @@ function anEvent(overrides: Partial<TimelineEventCardDto> = {}): TimelineEventCa
 
 test("keeps a late night event on its Sao Paulo day, not the UTC one", () => {
   const days = groupEventsByDay(
-    [anEvent({ id: "late", startedAt: "2026-08-15T23:30:00-03:00" })],
+    [anEvent({ id: "late", startedAt: "2026-08-15T23:30:00-03:00", finishedAt: undefined })],
     "2026-08-19",
   );
 
@@ -33,9 +33,9 @@ test("keeps a late night event on its Sao Paulo day, not the UTC one", () => {
 test("groups events by day in descending order and flags today", () => {
   const days = groupEventsByDay(
     [
-      anEvent({ id: "a", startedAt: "2026-08-17T12:00:00-03:00" }),
-      anEvent({ id: "b", startedAt: "2026-08-19T09:00:00-03:00" }),
-      anEvent({ id: "c", startedAt: "2026-08-19T18:00:00-03:00" }),
+      anEvent({ id: "a", startedAt: "2026-08-17T12:00:00-03:00", finishedAt: undefined }),
+      anEvent({ id: "b", startedAt: "2026-08-19T09:00:00-03:00", finishedAt: undefined }),
+      anEvent({ id: "c", startedAt: "2026-08-19T18:00:00-03:00", finishedAt: undefined }),
     ],
     "2026-08-19",
   );
@@ -49,11 +49,42 @@ test("groups events by day in descending order and flags today", () => {
 test("drops duplicated ids coming from overlapping windows", () => {
   const days = groupEventsByDay(
     [
-      anEvent({ id: "same", startedAt: "2026-08-19T09:00:00-03:00" }),
-      anEvent({ id: "same", startedAt: "2026-08-19T09:00:00-03:00" }),
+      anEvent({ id: "same", startedAt: "2026-08-19T09:00:00-03:00", finishedAt: undefined }),
+      anEvent({ id: "same", startedAt: "2026-08-19T09:00:00-03:00", finishedAt: undefined }),
     ],
     "2026-08-19",
   );
 
   expect(days[0]?.events).toHaveLength(1);
+});
+
+test("lists an event that crosses midnight on the day it started and the day it ended", () => {
+  const days = groupEventsByDay(
+    [
+      anEvent({
+        id: "night",
+        startedAt: "2026-08-18T22:00:00-03:00",
+        finishedAt: "2026-08-19T02:00:00-03:00",
+      }),
+    ],
+    "2026-08-19",
+  );
+
+  expect(days.map((day) => day.dayKey)).toEqual(["2026-08-19", "2026-08-18"]);
+  expect(days.flatMap((day) => day.events.map((event) => event.id))).toEqual(["night", "night"]);
+});
+
+test("does not carry an event ending exactly at midnight into the next day", () => {
+  const days = groupEventsByDay(
+    [
+      anEvent({
+        id: "until-midnight",
+        startedAt: "2026-08-18T22:00:00-03:00",
+        finishedAt: "2026-08-19T00:00:00-03:00",
+      }),
+    ],
+    "2026-08-19",
+  );
+
+  expect(days.map((day) => day.dayKey)).toEqual(["2026-08-18"]);
 });

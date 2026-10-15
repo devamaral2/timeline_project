@@ -98,7 +98,11 @@ export function AgendaPreview({ userId, todayKey = EXAMPLE_TODAY }: { userId?: s
         } while (cursor);
 
         if (cancelled) return;
-        const next = agendaEventsByDay(loaded);
+        // Um evento que veio da noite anterior tambem tem chave fora da janela; esse dia
+        // so e completo quando a propria janela dele carrega.
+        const next = Object.fromEntries(
+          Object.entries(agendaEventsByDay(loaded)).filter(([dayKey]) => dayKey >= rangeStart && dayKey <= rangeEnd),
+        );
         setEventsByDay(current => ({ ...current, ...next }));
         setLoadState("idle");
       } catch {
