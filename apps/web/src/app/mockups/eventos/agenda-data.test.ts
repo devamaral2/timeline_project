@@ -44,3 +44,16 @@ test("deduplicates cards returned by adjacent pages", () => {
   const event = card({ id: "same" });
   expect(agendaEventsByDay([event, event])["2026-09-14"]).toHaveLength(1);
 });
+
+test("lists an event that crosses midnight on both its start and end days", () => {
+  const grouped = agendaEventsByDay([
+    card({
+      id: "night-shift",
+      startedAt: "2026-09-14T22:00:00.000Z",
+      finishedAt: "2026-09-15T08:00:00.000Z",
+    }),
+  ]);
+
+  expect(grouped["2026-09-14"]?.map((event) => event.id)).toEqual(["night-shift"]);
+  expect(grouped["2026-09-15"]?.map((event) => event.id)).toEqual(["night-shift"]);
+});

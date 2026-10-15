@@ -212,13 +212,43 @@ fun mergeTimelinePage(
     return TimelinePageState(merged, page.nextCursor)
 }
 
+/**
+ * Os dias civis em que o evento aparece: do dia em que começou ao dia em que
+ * terminou. Sem hora de fim, ou terminando no mesmo dia, só o dia de início.
+ * Um fim exatamente à meia-noite ainda pertence ao dia anterior.
+ */
+fun eventDayKeysOf(
+    startedAt: String,
+    finishedAt: String?,
+): List<String> {
+    val startKey = dayKeyOf(startedAt)
+    val started = Instant.parse(startedAt)
+    val finished = finishedAt?.let(Instant::parse)
+    if (finished == null || !finished.isAfter(started)) return listOf(startKey)
+
+    val endKey = finished.minusMillis(1).atZone(timelineZone).toLocalDate().toString()
+    return dayKeyRange(startKey, (daysBetweenKeys(startKey, endKey) + 1).toInt())
+}
+
+private fun daysBetweenKeys(
+    from: String,
+    to: String,
+): Long = java.time.temporal.ChronoUnit.DAYS.between(LocalDate.parse(from), LocalDate.parse(to))
+
+/** Os eventos de uma janela que ocorrem em `dayKey`, como `eventDayKeysOf` decide. */
+fun eventsOnDay(
+    dayKey: String,
+    events: List<TimelineEventCardDto>,
+): List<TimelineEventCardDto> = events.filter { dayKey in eventDayKeysOf(it.startedAt, it.finishedAt) }
+
 fun groupEventsByDay(
     events: List<TimelineEventCardDto>,
     todayKey: String,
 ): List<TimelineDay> {
     val uniqueEvents = events.distinctBy { it.id }
     return uniqueEvents
-        .groupBy { event -> dayKeyOf(event.startedAt) }
+        .flatMap { event -> eventDayKeysOf(event.startedAt, event.finishedAt).map { it to event } }
+        .groupBy({ it.first }, { it.second })
         .toList()
         .sortedByDescending { it.first }
         .map { (dayKey, dayEvents) ->

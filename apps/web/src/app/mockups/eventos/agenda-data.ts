@@ -1,4 +1,4 @@
-import { dayKeyOf, formatTime } from "@repo/timeline";
+import { eventDayKeysOf, formatTime } from "@repo/timeline";
 import type { TimelineEventCardDto } from "@/lib/api/contracts";
 import type { ExampleEvent } from "./agenda-examples";
 
@@ -26,17 +26,19 @@ export function agendaEventFromCard(event: TimelineEventCardDto): ExampleEvent {
   };
 }
 
-/** Agrupa e ordena os cartões como a leitura da agenda espera. */
+/** Agrupa e ordena os cartões como a leitura da agenda espera; o evento que atravessa a meia-noite aparece no dia em que começou e no dia em que terminou. */
 export function agendaEventsByDay(events: readonly TimelineEventCardDto[]): Record<string, ExampleEvent[]> {
   const byDay: Record<string, ExampleEvent[]> = {};
   const seen = new Set<string>();
   for (const event of events) {
     if (seen.has(event.id)) continue;
     seen.add(event.id);
-    const dayKey = dayKeyOf(event.startedAt);
-    const dayEvents = byDay[dayKey] ?? [];
-    dayEvents.push(agendaEventFromCard(event));
-    byDay[dayKey] = dayEvents;
+    const agendaEvent = agendaEventFromCard(event);
+    for (const dayKey of eventDayKeysOf(event.startedAt, event.finishedAt)) {
+      const dayEvents = byDay[dayKey] ?? [];
+      dayEvents.push(agendaEvent);
+      byDay[dayKey] = dayEvents;
+    }
   }
   for (const dayEvents of Object.values(byDay)) {
     dayEvents.sort((left, right) => (left.startedAt ?? "").localeCompare(right.startedAt ?? "") || (left.id ?? "").localeCompare(right.id ?? ""));

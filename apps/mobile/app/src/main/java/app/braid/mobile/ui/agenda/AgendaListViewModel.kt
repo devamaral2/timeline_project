@@ -6,6 +6,7 @@ import app.braid.mobile.data.dto.TimelineEventCardDto
 import app.braid.mobile.data.events.EventGateway
 import app.braid.mobile.data.events.EventResult
 import app.braid.mobile.domain.timeline.dayKeyRange
+import app.braid.mobile.domain.timeline.eventsOnDay
 import app.braid.mobile.domain.timeline.shiftDayKey
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -153,7 +154,7 @@ class AgendaListViewModel
                     null
                 } else {
                     results.map { (dayKey, result) ->
-                        AgendaDayEntry(dayKey, (result as EventResult.Success).value.items)
+                        AgendaDayEntry(dayKey, eventsOnDay(dayKey, (result as EventResult.Success).value.items))
                     }
                 }
             }

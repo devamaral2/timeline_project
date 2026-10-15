@@ -50,6 +50,26 @@ class AgendaViewModelTest {
     }
 
     @Test
+    fun eventCrossingMidnightAppearsOnItsEndDay() {
+        runTest {
+            Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+            repository = FakeEventGateway()
+            // 22:00 de 21/09 às 02:00 de 22/09 em São Paulo; o outro termina à meia-noite.
+            val overnight = event("overnight", "2026-09-22T01:00:00Z", "2026-09-22T05:00:00Z")
+            val untilMidnight = event("until-midnight", "2026-09-22T01:00:00Z", "2026-09-22T03:00:00Z")
+            repository.results["2026-09-22"] =
+                EventResult.Success(TimelineEventPageDto(listOf(overnight, untilMidnight)))
+            val viewModel = AgendaViewModel(repository)
+
+            viewModel.loadDay("2026-09-22")
+            advanceUntilIdle()
+
+            val state = viewModel.state.value as AgendaUiState.Content
+            assertEquals(listOf("overnight"), state.events.map { it.id })
+        }
+    }
+
+    @Test
     fun emptyAndFailedLoadsKeepTheirDayForTheUi() {
         runTest {
             Dispatchers.setMain(StandardTestDispatcher(testScheduler))

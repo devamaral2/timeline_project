@@ -6,6 +6,7 @@ import app.braid.mobile.data.dto.TimelineEventCardDto
 import app.braid.mobile.data.dto.TimelineEventPageDto
 import app.braid.mobile.data.events.EventGateway
 import app.braid.mobile.data.events.EventResult
+import app.braid.mobile.domain.timeline.eventsOnDay
 import app.braid.mobile.domain.timeline.longestDurationOf
 import app.braid.mobile.domain.timeline.trackedMinutesOf
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -83,14 +84,16 @@ class AgendaViewModel
                 is EventResult.Failure -> AgendaUiState.Error(dayKey)
                 is EventResult.Success -> {
                     val page = result.value
-                    if (page.items.isEmpty()) {
+                    // A janela da API traz tudo o que cruza o dia; o que termina à meia-noite fica de fora.
+                    val events = eventsOnDay(dayKey, page.items)
+                    if (events.isEmpty()) {
                         AgendaUiState.Empty(dayKey)
                     } else {
                         AgendaUiState.Content(
                             dayKey = dayKey,
-                            events = page.items,
-                            trackedMinutes = trackedMinutesOf(page.items),
-                            longestMinutes = longestDurationOf(page.items),
+                            events = events,
+                            trackedMinutes = trackedMinutesOf(events),
+                            longestMinutes = longestDurationOf(events),
                             nextCursor = page.nextCursor,
                         )
                     }
