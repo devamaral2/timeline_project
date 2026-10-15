@@ -6,7 +6,7 @@
 #      rabbitmq.sh queue <slug> [sufixo]   # declara a fila <slug>.<sufixo> (padrao: health)
 #      rabbitmq.sh publish <slug> <json>   # zera <slug>.health e publica o json nela
 #      rabbitmq.sh peek <slug>             # imprime a mensagem de <slug>.health (sem consumir)
-#      rabbitmq.sh delete <slug>           # remove todas as filas <slug>.*
+#      rabbitmq.sh delete <prefixo>        # remove as filas <prefixo>.{health,agent-turn,transcript-event,meal-note}
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -82,7 +82,7 @@ cmd_delete() {
   while read -r name; do
     [ -n "$name" ] || continue
     api DELETE "queues/%2F/${name}" >/dev/null && echo "Fila '${name}' removida."
-  done < <(api GET queues | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{for(const q of JSON.parse(s))if(q.name.startsWith(process.argv[1]+"."))console.log(q.name)})' "$slug")
+  done < <(api GET queues | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{for(const q of JSON.parse(s))if(["health","agent-turn","transcript-event","meal-note"].some(k=>q.name===process.argv[1]+"."+k))console.log(q.name)})' "$slug")
 }
 
 case "${1:-}" in

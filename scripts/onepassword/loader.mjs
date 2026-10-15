@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -10,6 +11,10 @@ const INITIAL_VALUES = {
   API_SERVICE_URL: "http://127.0.0.1:3001",
   AUTH_SERVICE_URL: "http://127.0.0.1:3002",
   WEB_PORT: "3000",
+  // Valores padrão dos jobs de IA; sobrescrevíveis pelo Environment ou .env.local.
+  AI_JOBS_CONCURRENCY: "4",
+  AI_JOBS_LEASE_MS: "60000",
+  AI_JOBS_MAX_ATTEMPTS: "4",
 };
 const SCOPES = Object.freeze({
   "api-runtime": {
@@ -57,7 +62,30 @@ const LOCAL_OVERRIDE_KEYS = new Set([
   "API_SERVICE_URL",
   "AUTH_INTERNAL_SERVICE_KEY",
   "COMPOSE_PROJECT_NAME",
+  "RABBITMQ_URL",
+  "AI_JOBS_CONCURRENCY",
+  "AI_JOBS_LEASE_MS",
+  "AI_JOBS_MAX_ATTEMPTS",
 ]);
+
+/** Remove os caracteres que o schema do prefixo (`[a-zA-Z0-9._-]`) rejeita. */
+export function queuePrefixFromBranch(branch) {
+  return (branch ?? "").replace(/[^a-zA-Z0-9._-]/g, "");
+}
+
+function currentBranchPrefix() {
+  try {
+    const branch = execFileSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
+      cwd: ROOT,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+    // HEAD destacado devolve "HEAD", que não identifica nenhuma worktree.
+    return branch === "HEAD" ? "" : queuePrefixFromBranch(branch);
+  } catch {
+    return "";
+  }
+}
 
 function error(message) {
   return new Error(`[1Password] ${message}`);
@@ -192,7 +220,13 @@ export async function loadOnePasswordEnvironment(source = process.env) {
   const definition = scope ? scopeKeys(scope) : { required: [...new Set(readEnvKeys())], optional: [] };
   const keys = [...new Set([...definition.required, ...definition.optional])];
   const client = await createClient(token);
-  const localOverrides = readLocalOverrides();
+  // O prefixo das filas é sempre o nome da branch (uma fila por worktree) e
+  // vem antes da checagem de obrigatórias: nunca depende do Environment.
+  const queuePrefix = currentBranchPrefix();
+  const localOverrides = {
+    ...readLocalOverrides(),
+    ...(queuePrefix ? { AI_JOBS_QUEUE_PREFIX: queuePrefix } : {}),
+  };
   let variables;
   try {
     variables = readEnvironmentVariables(
@@ -226,8 +260,11 @@ export async function loadOnePasswordEnvironment(source = process.env) {
 
   const environment = { ...source, ...withFallbacks };
   delete environment.ONEPASSWORD_SCOPE;
+  const env = applyLocalOverrides(environment, localOverrides);
+  // Vence qualquer valor que o Environment do 1Password tenha para a chave.
+  if (queuePrefix) env.AI_JOBS_QUEUE_PREFIX = queuePrefix;
   return {
-    env: applyLocalOverrides(environment, localOverrides),
+    env,
     keys,
     environmentId,
   };

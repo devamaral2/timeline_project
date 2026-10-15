@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readEnvKeys, resolveEnvironmentWithClient, applyLocalOverrides, scopeKeys } from "./loader.mjs";
+import { readEnvKeys, resolveEnvironmentWithClient, applyLocalOverrides, scopeKeys, queuePrefixFromBranch } from "./loader.mjs";
 
 test("uses the env example as the complete allowlist", () => {
   const keys = readEnvKeys();
@@ -169,4 +169,10 @@ test("defines minimal production scopes without requiring mobile or test variabl
   assert.deepEqual(scopeKeys("api-runtime").required, ["DATABASE_URL", "AUTH_SERVICE_URL", "AUTH_INTERNAL_SERVICE_KEY"]);
   assert.ok(scopeKeys("auth-runtime").required.includes("AUTH_KEY_ENCRYPTION_KEY"));
   assert.deepEqual(scopeKeys("web-build").required, ["BACKEND_URL", "AUTH_SERVICE_URL"]);
+});
+
+test("derives the AI jobs queue prefix from the branch, dropping invalid characters", () => {
+  assert.equal(queuePrefixFromBranch("feat/durable-ai-job-queues"), "featdurable-ai-job-queues");
+  assert.equal(queuePrefixFromBranch("fix/ação#12 v1.0"), "fixao12v1.0");
+  assert.equal(queuePrefixFromBranch("///"), "");
 });

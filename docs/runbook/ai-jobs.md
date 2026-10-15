@@ -1,8 +1,10 @@
 # Durable AI jobs
 
 Deploy the API schema migration before enabling `AiJobsModule`. Set
-`RABBITMQ_URL` through the secret environment and `AI_JOBS_QUEUE_PREFIX` to a
-unique environment/worktree name. All API instances sharing a database must
+`RABBITMQ_URL` through the secret environment. In local development the
+loader sets `AI_JOBS_QUEUE_PREFIX` to the current branch name with characters
+outside `[a-zA-Z0-9._-]` removed (`feat/x` becomes `featx`); elsewhere set it to a
+unique environment name. All API instances sharing a database must
 share that prefix. Never share queues between different databases. Worktree
 provisioning declares `<slug>.agent-turn`, `.transcript-event`, and `.meal-note`
 and supplies the broker credential in memory, not in the checkout.
