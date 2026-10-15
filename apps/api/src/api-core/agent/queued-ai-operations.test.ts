@@ -13,10 +13,12 @@ const response = {
 const actor = { userId: "u1", sessionId: "s1" };
 const input = { userId: "u1", text: "Almocei arroz" };
 
+type Handler = (payload: unknown, context: unknown) => Promise<unknown>;
+
 function setup() {
-  const handlers = new Map<string, Function>();
+  const handlers = new Map<string, Handler>();
   const jobs = {
-    register: vi.fn((kind: string, handler: Function) => { handlers.set(kind, handler); }),
+    register: vi.fn((kind: string, handler: Handler) => { handlers.set(kind, handler); }),
     enqueue: vi.fn(async (_input: { kind: string }) => "job-1"),
     wait: vi.fn(async () => response),
     cancel: vi.fn(async () => {}),
@@ -53,7 +55,9 @@ test("workers, not transports, execute chat with their own cancellation signal",
   const { handlers, chat } = setup();
   const signal = new AbortController().signal;
   const progress = vi.fn(async () => {});
-  await handlers.get("agent-turn")!({ mode: "chat", input, actor }, { signal, progress });
+  const handler = handlers.get("agent-turn");
+  if (!handler) throw new Error("agent-turn handler was not registered");
+  await handler({ mode: "chat", input, actor }, { signal, progress });
   expect(chat.execute).toHaveBeenCalledWith(input, actor, { signal, onProgress: expect.any(Function) });
   chat.execute.mock.calls[0][2].onProgress?.("Preparando");
   expect(progress).toHaveBeenCalledWith("Preparando");

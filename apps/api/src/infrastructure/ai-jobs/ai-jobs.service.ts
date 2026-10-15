@@ -5,7 +5,7 @@ import { getAiJobsEnv, type AiJobsEnv } from "../../config/env";
 import { PostgresAiJobStore, type AiJob, retryDelay } from "../persistence/ai-jobs/postgres-ai-job.store";
 import { aiJobContext, completeCurrentAiJob, setAiJobResult, type AiJobKind, type EnqueueAiJobInput } from "./ai-job-context";
 
-export { type AiJob } from "../persistence/ai-jobs/postgres-ai-job.store";
+export type { AiJob } from "../persistence/ai-jobs/postgres-ai-job.store";
 export class RetryableAiJobError extends Error {}
 export class AiJobCancelledError extends Error { readonly code = "cancelled"; }
 export class AiJobFailedError extends Error {
@@ -107,8 +107,7 @@ export class AiJobsService implements OnModuleInit, OnApplicationShutdown {
       try {
         // Recovery runs even with the broker offline. Enqueue never needs AMQP.
         await this.store.recover();
-        if (!this.channel) await this.connect();
-        const channel = this.channel!;
+        const channel = this.channel ?? await this.connect();
         for (const job of await this.store.publications()) {
           await new Promise<void>((resolve, reject) => {
             const timeout = setTimeout(() => reject(new Error("AMQP confirm timed out")), 10_000);
@@ -127,7 +126,7 @@ export class AiJobsService implements OnModuleInit, OnApplicationShutdown {
       }
     }
   }
-  private async connect(): Promise<void> {
+  private async connect(): Promise<amqp.ConfirmChannel> {
     await this.disconnect();
     const url = new URL(this.env.RABBITMQ_URL);
     if (!url.searchParams.has("heartbeat")) url.searchParams.set("heartbeat", "15");
@@ -157,6 +156,7 @@ export class AiJobsService implements OnModuleInit, OnApplicationShutdown {
       });
     }
     this.channel = channel;
+    return channel;
   }
   async consume(id: string, kind: AiJobKind): Promise<void> {
     if (this.slots >= this.env.AI_JOBS_CONCURRENCY) {
@@ -182,9 +182,13 @@ export class AiJobsService implements OnModuleInit, OnApplicationShutdown {
       await this.store.fail(job, "invalid_input", false);
       return;
     }
+    const token = job.leaseToken;
+    if (!token) {
+      await this.store.defer(id);
+      return;
+    }
     const abort = new AbortController();
     this.active.set(id, abort);
-    const token = job.leaseToken!;
     let heartbeatRunning = false;
     const timer = setInterval(() => {
       if (heartbeatRunning || abort.signal.aborted || this.stop.signal.aborted) return;

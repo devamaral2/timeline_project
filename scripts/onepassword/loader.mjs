@@ -18,8 +18,24 @@ const INITIAL_VALUES = {
 };
 const SCOPES = Object.freeze({
   "api-runtime": {
-    required: ["DATABASE_URL", "AUTH_SERVICE_URL", "AUTH_INTERNAL_SERVICE_KEY"],
-    optional: ["OPENROUTER_API_KEY", "OPENROUTER_MODEL", "OPENROUTER_AGENT_MODEL", "JEV_API_KEY"],
+    // A API valida a fila de jobs de IA no boot; sem estas duas ela nao sobe.
+    // Em producao nao ha .git no container, entao o prefixo vem do Environment.
+    required: [
+      "DATABASE_URL",
+      "AUTH_SERVICE_URL",
+      "AUTH_INTERNAL_SERVICE_KEY",
+      "RABBITMQ_URL",
+      "AI_JOBS_QUEUE_PREFIX",
+    ],
+    optional: [
+      "OPENROUTER_API_KEY",
+      "OPENROUTER_MODEL",
+      "OPENROUTER_AGENT_MODEL",
+      "JEV_API_KEY",
+      "AI_JOBS_CONCURRENCY",
+      "AI_JOBS_LEASE_MS",
+      "AI_JOBS_MAX_ATTEMPTS",
+    ],
   },
   "auth-runtime": {
     required: [

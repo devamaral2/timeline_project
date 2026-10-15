@@ -25,8 +25,9 @@ no [runbook de deploy k3s](./deploy-k3s.md), sem reutilizar senhas locais.
 
 Os scopes de produção são:
 
-- `api-runtime`: `DATABASE_URL`, `AUTH_SERVICE_URL` e, se usados, a chave e os
-  modelos do OpenRouter.
+- `api-runtime`: `DATABASE_URL`, `AUTH_SERVICE_URL`, `AUTH_INTERNAL_SERVICE_KEY`,
+  `RABBITMQ_URL`, `AI_JOBS_QUEUE_PREFIX` e, se usados, a chave e os modelos do
+  OpenRouter. Sem as duas últimas a API não sobe.
 - `auth-runtime`: `NODE_ENV`, `AUTH_DATABASE_URL`, `AUTH_ISSUER`,
   `AUTH_PUBLIC_URL`, `AUTH_WEB_APP_URL`, `AUTH_KEY_ENCRYPTION_KEY`,
   `AUTH_AUDIENCE`, `API_SERVICE_URL`, a chave interna e os limites de senha.

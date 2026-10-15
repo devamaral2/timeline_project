@@ -717,9 +717,17 @@ isso pode apagar o banco.
 
 ## 11. Subir RabbitMQ
 
-RabbitMQ armazena mensagens para processamento assíncrono. O código atual da
-API ainda não contém produtor/consumidor AMQP; o serviço ficará preparado.
-Criar `RABBITMQ_URL` não implementa essa integração.
+RabbitMQ entrega os jobs de IA da API (filas duráveis; o estado fica no
+PostgreSQL). A API valida `RABBITMQ_URL` e `AI_JOBS_QUEUE_PREFIX` no boot e não
+sobe sem elas. Cadastre ambas no scope `api-runtime` do Environment de produção:
+
+```dotenv
+RABBITMQ_URL=amqp://braid:<RABBIT_PASSWORD>@rabbitmq.braid.svc.cluster.local:5672
+AI_JOBS_QUEUE_PREFIX=production
+```
+
+O container da API não tem `.git`, então o prefixo não é derivado da branch como
+em desenvolvimento: use um nome fixo e único por banco.
 
 **Servidor / Bash:**
 
