@@ -46,24 +46,25 @@ class EventDetailViewModel
         fun load(eventId: String) {
             observation?.cancel()
             mutableState.value = EventDetailUiState.Loading
-            observation = viewModelScope.launch {
-                mutableState.value =
-                    when (val result = gateway.detail(eventId)) {
-                        is EventResult.Failure -> EventDetailUiState.Error
-                        is EventResult.Success -> EventDetailUiState.Content(result.value)
-                    }
-                while ((mutableState.value as? EventDetailUiState.Content)?.event?.notes?.any {
-                        it is MealEventNoteDto && it.data.generation?.status == "pending"
-                    } == true
-                ) {
-                    delay(2_000)
-                    val result = gateway.detail(eventId)
-                    if (result is EventResult.Success) {
-                        val current = mutableState.value as? EventDetailUiState.Content ?: break
-                        mutableState.value = current.copy(event = result.value)
+            observation =
+                viewModelScope.launch {
+                    mutableState.value =
+                        when (val result = gateway.detail(eventId)) {
+                            is EventResult.Failure -> EventDetailUiState.Error
+                            is EventResult.Success -> EventDetailUiState.Content(result.value)
+                        }
+                    while ((mutableState.value as? EventDetailUiState.Content)?.event?.notes?.any {
+                            it is MealEventNoteDto && it.data.generation?.status == "pending"
+                        } == true
+                    ) {
+                        delay(2_000)
+                        val result = gateway.detail(eventId)
+                        if (result is EventResult.Success) {
+                            val current = mutableState.value as? EventDetailUiState.Content ?: break
+                            mutableState.value = current.copy(event = result.value)
+                        }
                     }
                 }
-            }
         }
 
         fun delete(eventId: String) {

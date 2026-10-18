@@ -151,7 +151,8 @@ private class FakeSocketFactory : ChatSocketFactory {
 private class FakeChatApi(
     private val responder: suspend (AgentChatTicketRequestDto) -> Response<AgentChatTicketDto>,
 ) : ChatApi {
-    override suspend fun submitJob(request: app.braid.mobile.data.dto.SubmitAiJobDto): Response<app.braid.mobile.data.dto.AiJobDto> = error("not used")
+    override suspend fun submitJob(request: app.braid.mobile.data.dto.SubmitAiJobDto): Response<app.braid.mobile.data.dto.AiJobDto> =
+        error("not used")
 
     override suspend fun listJobs(): Response<List<app.braid.mobile.data.dto.AiJobDto>> = error("not used")
 
