@@ -121,47 +121,49 @@ fun EditEventScreen(
                         Text("Gerando informações da refeição. Aguarde para editar.")
                         TextButton(onClick = onBack) { Text("Voltar") }
                     }
-                } else when (event.kind) {
-                    "meal" ->
-                        MealEditContent(
-                            event = event,
-                            note = primary as? MealEventNoteDto,
-                            modifier = Modifier.padding(paddingValues),
-                            tagViewModel = tagViewModel,
-                            onCancel = onBack,
-                            onSave = viewModel::save,
-                        )
-                    "routine" ->
-                        RoutineEditContent(
-                            event = event,
-                            modifier = Modifier.padding(paddingValues),
-                            tagViewModel = tagViewModel,
-                            onCancel = onBack,
-                            onSave = viewModel::save,
-                        )
-                    "sleep" ->
-                        SleepEditContent(
-                            event = event,
-                            note = primary as? SleepEventNoteDto,
-                            modifier = Modifier.padding(paddingValues),
-                            tagViewModel = tagViewModel,
-                            onCancel = onBack,
-                            onSave = viewModel::save,
-                        )
-                    "training" ->
-                        TrainingEditContent(
-                            event = event,
-                            note = primary as? TrainingEventNoteDto,
-                            modifier = Modifier.padding(paddingValues),
-                            tagViewModel = tagViewModel,
-                            onCancel = onBack,
-                            onSave = viewModel::save,
-                        )
-                    else ->
-                        // Uma natureza que este app ainda não conhece: editar as tripas dela às cegas estragaria o payload.
-                        EditMessage(Modifier.padding(paddingValues), "Este tipo de evento ainda não pode ser editado por aqui.") {
-                            onBack()
-                        }
+                } else {
+                    when (event.kind) {
+                        "meal" ->
+                            MealEditContent(
+                                event = event,
+                                note = primary as? MealEventNoteDto,
+                                modifier = Modifier.padding(paddingValues),
+                                tagViewModel = tagViewModel,
+                                onCancel = onBack,
+                                onSave = viewModel::save,
+                            )
+                        "routine" ->
+                            RoutineEditContent(
+                                event = event,
+                                modifier = Modifier.padding(paddingValues),
+                                tagViewModel = tagViewModel,
+                                onCancel = onBack,
+                                onSave = viewModel::save,
+                            )
+                        "sleep" ->
+                            SleepEditContent(
+                                event = event,
+                                note = primary as? SleepEventNoteDto,
+                                modifier = Modifier.padding(paddingValues),
+                                tagViewModel = tagViewModel,
+                                onCancel = onBack,
+                                onSave = viewModel::save,
+                            )
+                        "training" ->
+                            TrainingEditContent(
+                                event = event,
+                                note = primary as? TrainingEventNoteDto,
+                                modifier = Modifier.padding(paddingValues),
+                                tagViewModel = tagViewModel,
+                                onCancel = onBack,
+                                onSave = viewModel::save,
+                            )
+                        else ->
+                            // Uma natureza que este app ainda não conhece: editar as tripas dela às cegas estragaria o payload.
+                            EditMessage(Modifier.padding(paddingValues), "Este tipo de evento ainda não pode ser editado por aqui.") {
+                                onBack()
+                            }
+                    }
                 }
             }
         }

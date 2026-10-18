@@ -36,10 +36,14 @@ class DurableChatRepository
                     if (!response.isSuccessful) throw IOException("Job recovery unavailable")
                     val userId = session.snapshot()?.user?.userId ?: throw IOException("session_expired")
                     val receipts = outbox.chats(userId)
-                    val jobs = response.body().orEmpty().filter {
-                        it.kind == "agent-turn" &&
-                            (it.pending || receipts.any { receipt -> receipt.clientMessageId == it.request?.clientMessageId })
-                    }.toMutableList()
+                    val jobs =
+                        response
+                            .body()
+                            .orEmpty()
+                            .filter {
+                                it.kind == "agent-turn" &&
+                                    (it.pending || receipts.any { receipt -> receipt.clientMessageId == it.request?.clientMessageId })
+                            }.toMutableList()
                     for (request in receipts) {
                         val known = jobs.any { it.request?.clientMessageId == request.clientMessageId }
                         if (!known) {
@@ -105,7 +109,10 @@ class DurableChatRepository
             while (current.pending) {
                 mutableEvents.emit(
                     AgentChatEvent.Status(
-                        AgentChatStatusFrameDto(messageId, current.progress ?: if (current.status == "queued") "Na fila" else "Preparando resposta"),
+                        AgentChatStatusFrameDto(
+                            messageId,
+                            current.progress ?: if (current.status == "queued") "Na fila" else "Preparando resposta",
+                        ),
                     ),
                 )
                 delay(2_000)

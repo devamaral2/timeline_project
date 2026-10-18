@@ -46,20 +46,21 @@ class NoteDetailViewModel
         fun load(noteId: String) {
             observation?.cancel()
             mutableState.value = NoteDetailUiState.Loading
-            observation = viewModelScope.launch {
-                mutableState.value =
-                    when (val result = gateway.detail(noteId)) {
-                        is NoteResult.Failure -> NoteDetailUiState.Error
-                        is NoteResult.Success -> NoteDetailUiState.Content(result.value)
-                    }
-                while ((mutableState.value as? NoteDetailUiState.Content)?.note?.generationPending == true) {
-                    delay(2_000)
-                    val result = gateway.detail(noteId)
-                    if (result is NoteResult.Success) {
-                        updateContent { it.copy(note = result.value) }
+            observation =
+                viewModelScope.launch {
+                    mutableState.value =
+                        when (val result = gateway.detail(noteId)) {
+                            is NoteResult.Failure -> NoteDetailUiState.Error
+                            is NoteResult.Success -> NoteDetailUiState.Content(result.value)
+                        }
+                    while ((mutableState.value as? NoteDetailUiState.Content)?.note?.generationPending == true) {
+                        delay(2_000)
+                        val result = gateway.detail(noteId)
+                        if (result is NoteResult.Success) {
+                            updateContent { it.copy(note = result.value) }
+                        }
                     }
                 }
-            }
         }
 
         fun startEditing() = updateContent { if (it.note.generationPending) it else it.copy(isEditing = true, actionError = null) }
