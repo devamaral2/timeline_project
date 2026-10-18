@@ -96,14 +96,24 @@ class AgentChatViewModel
                     val id = job.request?.clientMessageId ?: job.id
                     val conversationId = job.request?.conversationId
                     val messages =
-                        conversationId?.let { history.messages(it) }?.let { result ->
-                            (result as? AgentChatHistoryResult.Success)?.value?.items?.asReversed()?.map(::toUiMessage)
-                        }.orEmpty()
+                        conversationId
+                            ?.let { history.messages(it) }
+                            ?.let { result ->
+                                (result as? AgentChatHistoryResult.Success)
+                                    ?.value
+                                    ?.items
+                                    ?.asReversed()
+                                    ?.map(::toUiMessage)
+                            }.orEmpty()
                     mutableState.update {
                         it.copy(
                             conversationId = conversationId,
-                            messages = if (job.status == "succeeded") messages else
-                                messages + AgentChatUiMessage(id, AgentChatMessageRole.User, job.request?.text.orEmpty()),
+                            messages =
+                                if (job.status == "succeeded") {
+                                    messages
+                                } else {
+                                    messages + AgentChatUiMessage(id, AgentChatMessageRole.User, job.request?.text.orEmpty())
+                                },
                             pending = AgentChatPendingUi(id, job.progress),
                             isRecoveringJobs = false,
                         )
@@ -119,9 +129,14 @@ class AgentChatViewModel
         fun send(text: String) {
             val trimmed = text.trim()
             if (
-                trimmed.isEmpty() || trimmed.length > MAX_MESSAGE_LENGTH || mutableState.value.pending != null ||
-                mutableState.value.isRecoveringJobs || mutableState.value.isLoadingMessages
-            ) return
+                trimmed.isEmpty() ||
+                trimmed.length > MAX_MESSAGE_LENGTH ||
+                mutableState.value.pending != null ||
+                mutableState.value.isRecoveringJobs ||
+                mutableState.value.isLoadingMessages
+            ) {
+                return
+            }
 
             val id = UUID.randomUUID().toString()
             recoveredRequestText = ""
@@ -156,9 +171,13 @@ class AgentChatViewModel
         fun retry(messageId: String) {
             val error = mutableState.value.messages.firstOrNull { it.id == messageId } ?: return
             if (
-                error.role != AgentChatMessageRole.Error || mutableState.value.pending != null ||
-                mutableState.value.isRecoveringJobs || mutableState.value.isLoadingMessages
-            ) return
+                error.role != AgentChatMessageRole.Error ||
+                mutableState.value.pending != null ||
+                mutableState.value.isRecoveringJobs ||
+                mutableState.value.isLoadingMessages
+            ) {
+                return
+            }
             mutableState.update { current ->
                 current.copy(
                     messages = current.messages.filterNot { it.id == messageId || it.id == error.requestId },
@@ -284,12 +303,13 @@ class AgentChatViewModel
                                         if (!messages.isNullOrEmpty()) {
                                             messages.asReversed().map(::toUiMessage)
                                         } else {
-                                            current.messages + AgentChatUiMessage(
-                                                "${event.frame.id}-reply",
-                                                AgentChatMessageRole.Assistant,
-                                                event.frame.agentResponse,
-                                                event.frame.entities,
-                                            )
+                                            current.messages +
+                                                AgentChatUiMessage(
+                                                    "${event.frame.id}-reply",
+                                                    AgentChatMessageRole.Assistant,
+                                                    event.frame.agentResponse,
+                                                    event.frame.entities,
+                                                )
                                         },
                                 )
                             }

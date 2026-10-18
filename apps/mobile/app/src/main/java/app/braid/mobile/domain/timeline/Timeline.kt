@@ -226,14 +226,21 @@ fun eventDayKeysOf(
     val finished = finishedAt?.let(Instant::parse)
     if (finished == null || !finished.isAfter(started)) return listOf(startKey)
 
-    val endKey = finished.minusMillis(1).atZone(timelineZone).toLocalDate().toString()
+    val endKey =
+        finished
+            .minusMillis(1)
+            .atZone(timelineZone)
+            .toLocalDate()
+            .toString()
     return dayKeyRange(startKey, (daysBetweenKeys(startKey, endKey) + 1).toInt())
 }
 
 private fun daysBetweenKeys(
     from: String,
     to: String,
-): Long = java.time.temporal.ChronoUnit.DAYS.between(LocalDate.parse(from), LocalDate.parse(to))
+): Long =
+    java.time.temporal.ChronoUnit.DAYS
+        .between(LocalDate.parse(from), LocalDate.parse(to))
 
 /** Os eventos de uma janela que ocorrem em `dayKey`, como `eventDayKeysOf` decide. */
 fun eventsOnDay(

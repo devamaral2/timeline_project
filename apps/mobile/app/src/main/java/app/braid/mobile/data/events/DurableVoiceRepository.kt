@@ -30,10 +30,14 @@ class DurableVoiceRepository
                     if (!response.isSuccessful) throw IOException("Job recovery unavailable")
                     val userId = session.snapshot()?.user?.userId ?: throw IOException("session_expired")
                     val receipts = outbox.voices(userId)
-                    val jobs = response.body().orEmpty().filter {
-                        it.kind == "transcript-event" &&
-                            (it.pending || receipts.any { receipt -> receipt.requestId == it.request?.clientMessageId })
-                    }.toMutableList()
+                    val jobs =
+                        response
+                            .body()
+                            .orEmpty()
+                            .filter {
+                                it.kind == "transcript-event" &&
+                                    (it.pending || receipts.any { receipt -> receipt.requestId == it.request?.clientMessageId })
+                            }.toMutableList()
                     for (request in receipts) {
                         val known = jobs.any { it.request?.clientMessageId == request.requestId }
                         if (!known) {
@@ -63,8 +67,9 @@ class DurableVoiceRepository
             requestId: String,
             onProgress: (String?) -> Unit,
         ): EventResult<VoiceEventResponseDto> {
-            val userId = session.snapshot()?.user?.userId
-                ?: return EventResult.Failure(EventRepositoryError(EventErrorKind.Http, 401))
+            val userId =
+                session.snapshot()?.user?.userId
+                    ?: return EventResult.Failure(EventRepositoryError(EventErrorKind.Http, 401))
             val request = SubmitVoiceJobDto(transcript, requestId)
             outbox.remember(userId, request)
             while (true) {
@@ -76,9 +81,16 @@ class DurableVoiceRepository
                         return EventResult.Failure(EventRepositoryError(EventErrorKind.Http, response.code()))
                     }
                     val job = response.body() ?: throw IOException("Empty job response")
-                    return resume(job.copy(request = app.braid.mobile.data.dto.AiJobRequestDto(
-                        transcript, clientMessageId = requestId,
-                    )), onProgress)
+                    return resume(
+                        job.copy(
+                            request =
+                                app.braid.mobile.data.dto.AiJobRequestDto(
+                                    transcript,
+                                    clientMessageId = requestId,
+                                ),
+                        ),
+                        onProgress,
+                    )
                 } catch (cancelled: CancellationException) {
                     throw cancelled
                 } catch (_: SerializationException) {

@@ -24,7 +24,12 @@ class DurableVoiceRepositoryTest {
             val repository = DurableVoiceRepository(eventsApi, jobsApi, mockk<SessionRepository>(), mockk<AiJobOutbox>(relaxed = true))
             val job =
                 AiJobDto(
-                    "job-voice", "transcript-event", "running", "user-1", "2026-09-22T11:00:00Z", "2026-09-22T11:01:00Z",
+                    "job-voice",
+                    "transcript-event",
+                    "running",
+                    "user-1",
+                    "2026-09-22T11:00:00Z",
+                    "2026-09-22T11:01:00Z",
                     progress = "Criando refeição",
                     request = AiJobRequestDto("Almocei arroz", clientMessageId = "stable-voice-id"),
                 )

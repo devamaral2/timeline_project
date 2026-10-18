@@ -51,8 +51,10 @@ class VoiceEventQueueViewModel
             viewModelScope.launch {
                 val recovered = runCatching { gateway.recover() }.getOrDefault(emptyList())
                 mutableJobs.value =
-                    (mutableJobs.value + recovered.map { VoiceJob(it.id, it.request?.text.orEmpty(), progress = it.progress, serverJob = it) })
-                        .distinctBy { it.serverJob?.request?.clientMessageId ?: it.id }
+                    (
+                        mutableJobs.value +
+                            recovered.map { VoiceJob(it.id, it.request?.text.orEmpty(), progress = it.progress, serverJob = it) }
+                    ).distinctBy { it.serverJob?.request?.clientMessageId ?: it.id }
                 drain()
             }
         }

@@ -46,7 +46,10 @@ class AiJobOutbox
 
         private suspend fun entries(prefix: String): List<String> =
             withContext(Dispatchers.IO) {
-                preferences.all.filterKeys { it.startsWith(prefix) }.values.filterIsInstance<String>()
+                preferences.all
+                    .filterKeys { it.startsWith(prefix) }
+                    .values
+                    .filterIsInstance<String>()
             }
 
         private suspend fun write(
