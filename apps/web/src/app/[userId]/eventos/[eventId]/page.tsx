@@ -155,11 +155,11 @@ export default function EventPage({ params }: { params: Promise<{ userId: string
         <nav className={styles.navigation} aria-label="Evento">
           <a href={`/${userId}`} className={styles.backLink}><ArrowLeft {...icon} />Agenda</a>
           <div className={styles.actions}>
-            <button type="button" className={styles.editButton} aria-label="Editar evento" disabled={pendingMeal} title={pendingMeal ? pendingMealEditMessage : undefined} onClick={() => setEditing(true)}><Pencil {...icon} /><span>Editar</span></button>
             <div className={styles.menuAnchor} ref={menuRef}>
               <button type="button" className={styles.iconButton} aria-label="Mais ações" aria-haspopup="menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}><Ellipsis {...icon} /></button>
               {menuOpen ? (
                 <div role="menu" className={styles.menu}>
+                  <button type="button" role="menuitem" className={styles.menuNeutral} disabled={pendingMeal} title={pendingMeal ? pendingMealEditMessage : undefined} onClick={() => { setMenuOpen(false); if (event.kind === "routine") router.push(`/${userId}/eventos/${event.id}/editar`); else setEditing(true); }}><Pencil {...icon} />Editar</button>
                   <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); setDeleting(true); }}><Trash2 {...icon} />Excluir</button>
                 </div>
               ) : null}
