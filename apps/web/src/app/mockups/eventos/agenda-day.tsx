@@ -1,4 +1,4 @@
-import { elapsedSecondsOf, formatStopwatch, formatTime, mediumDate, relativeDayLabel, shortDate } from "@repo/timeline";
+import { formatTime, mediumDate, relativeDayLabel, shortDate } from "@repo/timeline";
 import { ChevronRight, Hourglass } from "lucide-react";
 import Link from "next/link";
 import { ICON_STROKE_WIDTH, visualForItemType } from "@/components/events/event-visuals";
@@ -85,8 +85,6 @@ export function AgendaDay({ dayKey, now, tasks, missedEvents, onSelectEvent, eve
             const task = event.task ? tasks[event.task.id] ?? event.task : undefined;
             const missed = missedEvents[`${dayKey}:${event.id ?? event.name}`] ?? event.missed ?? false;
             const timing = timingForExample(event, dayKey, now);
-            const running = timing.position === "running";
-            const stopwatch = running ? formatStopwatch(elapsedSecondsOf(timing.startedAt, new Date(now))) : null;
             return (
               <li key={event.id ?? `${event.name}-${index}`}>
                 <article className={styles.event} data-type={event.type} data-time-position={timing.position} data-missed={missed || undefined}>
@@ -98,7 +96,7 @@ export function AgendaDay({ dayKey, now, tasks, missedEvents, onSelectEvent, eve
                       </div>
                       <p className={styles.eventTime}>
                         {timing.position === "past" ? <span className={styles.pastMarker} role="img" aria-label="Horário passado" title="Horário passado"><i aria-hidden /></span> : null}
-                        {running ? <>{timing.startLabel}<span className={styles.runningLabel}><i aria-hidden />Em andamento</span></> : event.time}
+                        {event.time}
                       </p>
                       {event.tag || event.tags?.length || missed ? <div className={styles.eventLabels}>
                         {event.tag ? <span className={styles.tag} style={tagColorStyle(event.tag)}>#{event.tag}</span> : null}
@@ -107,13 +105,9 @@ export function AgendaDay({ dayKey, now, tasks, missedEvents, onSelectEvent, eve
                       </div> : null}
                     </div>
                     {event.href ? <ChevronRight className={styles.eventChevron} aria-hidden /> : null}
-                    {stopwatch !== null ? (
-                      <span className={`${styles.eventDuration} ${styles.stopwatch}`} role="timer" aria-label="Tempo decorrido do evento" aria-live="off">{stopwatch}</span>
-                    ) : (
-                      <span className={styles.eventDuration} title={`${timing.position === "upcoming" ? "Duração prevista" : "Duração"}: ${event.duration}`}>
-                        <DurationFigure minutes={event.minutes} forceMinutes={event.minutes === 0} />
-                      </span>
-                    )}
+                    <span className={styles.eventDuration} title={`${timing.position === "upcoming" ? "Duração prevista" : "Duração"}: ${event.duration}`}>
+                      <DurationFigure minutes={event.minutes} forceMinutes={event.minutes === 0} />
+                    </span>
                     {task ? <fieldset className={styles.taskReference} aria-label={`Tarefa vinculada ${task.id}`}>
                       <span>{task.id}</span>
                       <button type="button" className={styles.taskStatusButton} aria-label={`Tarefa de ${event.name}: ${taskStatuses[task.status].label}`} aria-haspopup="dialog" title={`Tarefa ${task.id} · ${taskStatuses[task.status].label}`} onClick={() => onSelectEvent({ event, dayKey })}><TaskStatusIcon status={task.status} /></button>

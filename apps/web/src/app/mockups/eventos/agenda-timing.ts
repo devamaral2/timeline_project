@@ -18,9 +18,8 @@ export function spanForExample(event: ExampleEvent, dayKey: string): TimeSpan & 
 /** Apenas a posição temporal das fixtures; nunca altera task ou missed. */
 export function timingForExample(event: ExampleEvent, dayKey: string, now: number) {
   const { startMs: started, endMs: finished, startLabel } = spanForExample(event, dayKey);
-  // Em andamento é tudo o que já começou e ainda não acabou — com ou sem hora
-  // de fim; a mesma regra de `eventPositionOf`, usada pelo card da timeline.
-  const position = now < started ? "upcoming"
-    : finished === null || finished > now ? "running" : "past";
+  // A agenda não tem estado "em andamento": o evento é futuro até acabar e passado depois
+  // (sem hora de fim, vale o início).
+  const position = (finished ?? started) > now ? "upcoming" : "past";
   return { position, startedAt: new Date(started).toISOString(), startLabel };
 }

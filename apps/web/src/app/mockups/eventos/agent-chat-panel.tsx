@@ -31,7 +31,7 @@ import { useSessionState } from "@/lib/session/use-session";
 import { useSpeechRecognition } from "@/lib/speech/use-speech-recognition";
 import { requestAgendaRefresh } from "./agenda-refresh";
 import { BraidMark } from "./braid-mark";
-import { conversationTime, groupConversations, type HubCommand, type HubCommandId, parseCommand } from "./hub-commands";
+import { conversationTime, groupConversations, HUB_COMMANDS, type HubCommand, type HubCommandId, parseCommand } from "./hub-commands";
 import styles from "./mockup.module.css";
 
 /** O chat e aberto a partir da agenda; o agente decide se isso importa para o pedido. */
@@ -264,6 +264,19 @@ export function AgentChatPanel({
             </button>
             <h2>O que vamos fazer?</h2>
             {signedOut && <p>Entre na sua conta para conversar com a IA.</p>}
+            {onCommand && (
+              <div className={styles.createActions} role="group" aria-label="Criar ou pesquisar">
+                {HUB_COMMANDS.map((item) => {
+                  const Icon = COMMAND_ICONS[item.id];
+                  return (
+                    <button type="button" key={item.id} onClick={() => onCommand(item.id, "")}>
+                      <Icon aria-hidden />
+                      {item.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         ) : chat.loading ? (
           <p className={styles.chatStatus} role="status">
