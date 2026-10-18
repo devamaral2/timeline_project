@@ -37,3 +37,13 @@ fun braidBrand(): Color = if (LocalBraidDarkTheme.current) DarkTokens.brand else
 /** O fundo suave da marca (`--brand-soft`) do tema ativo, usado na opção escolhida de um seletor. */
 @Composable
 fun braidBrandSoft(): Color = if (LocalBraidDarkTheme.current) DarkTokens.brandSoft else LightTokens.brandSoft
+
+/** Os três fios da marca (`--strand-*`) do tema ativo: a trança do chat com IA. */
+@Composable
+fun braidStrandNevoa(): Color = if (LocalBraidDarkTheme.current) DarkTokens.strandNevoa else LightTokens.strandNevoa
+
+@Composable
+fun braidStrandDestaque(): Color = if (LocalBraidDarkTheme.current) DarkTokens.strandDestaque else LightTokens.strandDestaque
+
+@Composable
+fun braidStrandTinta(): Color = if (LocalBraidDarkTheme.current) DarkTokens.strandTinta else LightTokens.strandTinta

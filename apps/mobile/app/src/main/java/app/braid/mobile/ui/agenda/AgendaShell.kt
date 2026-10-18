@@ -39,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -48,6 +49,7 @@ import app.braid.mobile.data.session.SessionUser
 import app.braid.mobile.domain.timeline.TIMELINE_TIME_ZONE
 import app.braid.mobile.ui.chat.AgentChatViewModel
 import app.braid.mobile.ui.hub.HubPanel
+import app.braid.mobile.ui.hub.HubSheetSize
 import app.braid.mobile.ui.notes.NotesScreen
 import app.braid.mobile.ui.voice.VoiceEventQueueViewModel
 import app.braid.mobile.ui.voice.VoiceJobStatus
@@ -59,8 +61,9 @@ import java.time.ZoneId
 /** A altura da barra inferior do web (`.bottomNav`), sem a margem do sistema: onde o painel do hub termina. */
 private val BOTTOM_BAR_HEIGHT = 76.dp
 
-/** O painel do hub não ocupa a tela toda: passa disso só quando o teclado ou a tela baixa pedem menos. */
-private val HUB_PANEL_MAX_HEIGHT = 520.dp
+/** O início do chat é um painel baixo (400 do design); a conversa, a lista, criar e pesquisar sobem até 72 dp do topo. */
+private val HUB_PANEL_COMPACT_HEIGHT = 400.dp
+private val HUB_PANEL_TOP_GAP = 72.dp
 
 /**
  * A casca das telas principais, montada como o shell do web no celular: o
@@ -92,6 +95,7 @@ fun AgendaShell(
     var destination by rememberSaveable { mutableStateOf(BottomBarItem.Agenda) }
     var infinite by rememberSaveable { mutableStateOf(false) }
     var hubOpen by rememberSaveable { mutableStateOf(false) }
+    var hubSize by remember { mutableStateOf(HubSheetSize.Compact) }
     val voiceJobs =
         if (voiceQueueViewModel == null) {
             emptyList()
@@ -157,6 +161,7 @@ fun AgendaShell(
                     onSelect = { item ->
                         if (item == BottomBarItem.Search) {
                             hubOpen = !hubOpen
+                            if (hubOpen) hubSize = HubSheetSize.Compact
                         } else {
                             hubOpen = false
                             destination = item
@@ -227,12 +232,21 @@ fun AgendaShell(
                 exit = slideOutVertically { it },
             ) {
                 BoxWithConstraints(modifier = Modifier.statusBarsPadding()) {
+                    val full = hubSize == HubSheetSize.Full
                     Surface(
-                        modifier = Modifier.fillMaxWidth().height(minOf(maxHeight - 24.dp, HUB_PANEL_MAX_HEIGHT)),
-                        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-                        color = MaterialTheme.colorScheme.surface,
+                        modifier =
+                            Modifier.fillMaxWidth().height(
+                                when (hubSize) {
+                                    HubSheetSize.Compact -> minOf(maxHeight - 24.dp, HUB_PANEL_COMPACT_HEIGHT)
+                                    HubSheetSize.Tall -> maxHeight - HUB_PANEL_TOP_GAP
+                                    HubSheetSize.Full -> maxHeight
+                                },
+                            ),
+                        shape = if (full) RectangleShape else RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+                        color = if (full) MaterialTheme.colorScheme.background else MaterialTheme.colorScheme.surface,
                     ) {
                         HubPanel(
+                            onSizeChange = { hubSize = it },
                             chatViewModel = agentChatViewModel,
                             onClose = { hubOpen = false },
                             onEntitiesChanged = onChatEntitiesChanged,

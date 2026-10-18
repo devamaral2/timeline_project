@@ -112,9 +112,6 @@ object LucideIcons {
 
     fun search(strokeWidth: Float = DEFAULT_STROKE) = icon("Search", strokeWidth, "M3 11a8 8 0 1 0 16 0 8 8 0 1 0-16 0", "m21 21-4.3-4.3")
 
-    fun circlePlus(strokeWidth: Float = DEFAULT_STROKE) =
-        icon("CirclePlus", strokeWidth, "M2 12a10 10 0 1 0 20 0 10 10 0 1 0-20 0", "M8 12h8", "M12 8v8")
-
     fun plus(strokeWidth: Float = DEFAULT_STROKE) = icon("Plus", strokeWidth, "M5 12h14", "M12 5v14")
 
     fun close(strokeWidth: Float = DEFAULT_STROKE) = icon("X", strokeWidth, "M18 6 6 18", "m6 6 12 12")
@@ -123,14 +120,32 @@ object LucideIcons {
 
     fun chevronDown(strokeWidth: Float = DEFAULT_STROKE) = icon("ChevronDown", strokeWidth, "m6 9 6 6 6-6")
 
-    /** O balão com três barras de `BraidAssistantIcon` (`navigation-icons.tsx`), usado no “Chat com IA”. */
-    fun braidAssistant(strokeWidth: Float = DEFAULT_STROKE) =
+    fun arrowLeft(strokeWidth: Float = DEFAULT_STROKE) = icon("ArrowLeft", strokeWidth, "m12 19-7-7 7-7", "M19 12H5")
+
+    fun check(strokeWidth: Float = DEFAULT_STROKE) = icon("Check", strokeWidth, "M20 6 9 17l-5-5")
+
+    fun trash2(strokeWidth: Float = DEFAULT_STROKE) =
         icon(
-            "BraidAssistant",
+            "Trash2",
             strokeWidth,
-            "M3.8 16.8A9 9 0 1 1 7.2 20L2.8 21.2Z",
-            "M8.5 10v4",
-            "M12 8v8",
-            "M15.5 10v4",
+            "M3 6h18",
+            "M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6",
+            "M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2",
+            "M10 11v6",
+            "M14 11v6",
         )
+
+    /** As duas bolhas de "Todas as conversas" no cabeçalho do chat. */
+    fun messagesSquare(strokeWidth: Float = DEFAULT_STROKE) =
+        icon(
+            "MessagesSquare",
+            strokeWidth,
+            "M14 9a2 2 0 0 1-2 2H6l-4 4V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2z",
+            "M18 9h2a2 2 0 0 1 2 2v11l-4-4h-6a2 2 0 0 1-2-2v-1",
+        )
+
+    fun maximize2(strokeWidth: Float = DEFAULT_STROKE) = icon("Maximize2", strokeWidth, "M15 3h6v6", "m21 3-7 7", "m3 21 7-7", "M9 21H3v-6")
+
+    fun minimize2(strokeWidth: Float = DEFAULT_STROKE) =
+        icon("Minimize2", strokeWidth, "m14 10 7-7", "M20 10h-6V4", "m3 21 7-7", "M4 14h6v6")
 }

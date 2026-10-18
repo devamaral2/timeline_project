@@ -3,7 +3,6 @@ package app.braid.mobile.ui.hub
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -14,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -26,21 +24,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.selected
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import app.braid.mobile.core.designsystem.LocalBraidDarkTheme
 import app.braid.mobile.core.designsystem.LucideIcons
 import app.braid.mobile.core.designsystem.braidBrand
-import app.braid.mobile.core.designsystem.braidBrandSoft
 
 /**
  * O campo de texto do web para `hubComposer`, `hubSearch` e `entityControl`: caixa
@@ -119,110 +109,6 @@ fun HubTextBox(
                 },
             )
             trailing?.invoke()
-        }
-    }
-}
-
-/** O botão quadrado de 38 dp do compositor (`.hubComposer button`): fundo suave da marca, ícone da marca. */
-@Composable
-@Suppress("ktlint:standard:function-naming")
-fun HubSquareButton(
-    icon: ImageVector,
-    description: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-) {
-    Box(
-        modifier =
-            modifier
-                .size(38.dp)
-                .clip(RoundedCornerShape(11.dp))
-                .background(braidBrandSoft().copy(alpha = if (enabled) 1f else 0.4f))
-                .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
-                .semantics { contentDescription = description },
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = braidBrand().copy(alpha = if (enabled) 1f else 0.4f),
-            modifier = Modifier.size(18.dp),
-        )
-    }
-}
-
-data class PillOption<T>(
-    val value: T,
-    val label: String,
-    val icon: ImageVector,
-)
-
-/**
- * Grupo de botões do `hubModes` e do `creationToggle`: base suave, o ativo na
- * cor da marca (na Noite, em `accent` com tinta cheia).
- */
-@Composable
-@Suppress("ktlint:standard:function-naming")
-fun <T> PillToggle(
-    options: List<PillOption<T>>,
-    selected: T,
-    onSelect: (T) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val colors = MaterialTheme.colorScheme
-    val dark = LocalBraidDarkTheme.current
-    Row(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(colors.secondary)
-                .padding(4.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        options.forEach { option ->
-            val isSelected = option.value == selected
-            val background =
-                when {
-                    isSelected && dark -> colors.secondaryContainer
-                    isSelected -> braidBrandSoft()
-                    dark -> Color.Transparent
-                    else -> colors.outline
-                }
-            val tint =
-                when {
-                    isSelected && dark -> colors.onBackground
-                    isSelected -> braidBrand()
-                    else -> colors.onSurfaceVariant
-                }
-            Row(
-                modifier =
-                    Modifier
-                        .weight(1f)
-                        .heightIn(min = 44.dp)
-                        .clip(RoundedCornerShape(9.dp))
-                        .background(background)
-                        .clickable(role = Role.Tab) { onSelect(option.value) }
-                        .semantics { this.selected = isSelected }
-                        .padding(horizontal = 3.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-            ) {
-                Icon(
-                    imageVector = option.icon,
-                    contentDescription = null,
-                    tint = tint,
-                    modifier = Modifier.size(16.dp),
-                )
-                Text(
-                    modifier = Modifier.padding(start = 6.dp),
-                    text = option.label,
-                    fontSize = 11.sp,
-                    color = tint,
-                    maxLines = 1,
-                )
-            }
         }
     }
 }

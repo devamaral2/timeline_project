@@ -4,7 +4,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -17,6 +16,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,25 +28,40 @@ import app.braid.mobile.core.designsystem.LucideIcons
 import app.braid.mobile.core.designsystem.braidBrand
 
 /**
- * A aba “Pesquisar”: a lista de resultados (`.hubResults`) com o título da seção
- * e a caixa de busca embaixo, como `manualPanel` do web. Evento e nota abrem a
- * tela deles; a tarefa ainda não tem tela no app.
+ * “Pesquisar” (`/buscar` no chat): a caixa de busca no cabeçalho, ao lado da
+ * seta de volta ao chat, e a lista de resultados (`.hubResults`) embaixo, como o
+ * `manualPanel` do web. Evento e nota abrem a tela deles; a tarefa ainda não tem
+ * tela no app.
  */
 @Composable
 @Suppress("ktlint:standard:function-naming")
 fun HubSearchPanel(
+    onBack: () -> Unit,
     onOpenEvent: (String) -> Unit,
     onOpenNote: (String) -> Unit,
     modifier: Modifier = Modifier,
+    initialQuery: String = "",
     viewModel: HubSearchViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val colors = MaterialTheme.colorScheme
 
+    LaunchedEffect(initialQuery) {
+        if (initialQuery.isNotBlank()) viewModel.setQuery(initialQuery)
+    }
+
     Column(modifier = modifier.fillMaxSize()) {
+        HubBackHeader(onBack = onBack) {
+            HubSearchBox(
+                modifier = Modifier.fillMaxWidth(),
+                value = state.query,
+                onValueChange = viewModel::setQuery,
+                placeholder = "Buscar eventos, tarefas e notas",
+            )
+        }
         Text(
             modifier = Modifier.padding(top = 12.dp, bottom = 12.dp),
-            text = if (state.query.isBlank()) "Eventos, tarefas e notas" else "Resultados",
+            text = if (state.query.isBlank()) "No seu espaço" else "Resultados",
             fontSize = 12.sp,
             color = colors.onSurfaceVariant,
         )
@@ -97,13 +112,6 @@ fun HubSearchPanel(
                     }
                 }
         }
-        if (state.results.isEmpty()) Spacer(modifier = Modifier.weight(1f))
-        HubSearchBox(
-            modifier = Modifier.padding(top = 12.dp),
-            value = state.query,
-            onValueChange = viewModel::setQuery,
-            placeholder = "Buscar eventos, tarefas e notas",
-        )
     }
 }
 

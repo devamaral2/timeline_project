@@ -21,13 +21,11 @@
 .dark .missedBadge { background: color-mix(in oklab, var(--destructive) 15%, transparent); }
 .dark .monthPicker { background: transparent; }
 .dark .accountPopover { border-color: var(--line); }
-.dark .hubDock { background: transparent; }
-.dark .hubModes button, .dark .creationToggle button { background: transparent; }
+.dark .creationToggle button { background: transparent; }
 .dark .viewModes, .dark .taskDialog { border-color: var(--line); }
 .dark .quickCreate input, .dark .quickCreate select, .dark .creationToggle [aria-pressed="true"] { background: var(--accent); color: var(--ink); }
-.dark .hubModes [aria-pressed="true"] { background: var(--accent); color: var(--ink); }
 .dark .entityForm .entityControl { background: var(--background); border-color: var(--line); }
-.dark .hubComposer, .dark .hubSearch, .dark .quickCreate input, .dark .quickCreate select { border-color: var(--line); }
+.dark .quickCreate input, .dark .quickCreate select { border-color: var(--line); }
 .dark .monthPicker button, .dark .accountPopover button, .dark .sectionMenuHeading button { color: var(--ink); }
 .dark .chatBubble[data-role="error"] { background: color-mix(in oklab, var(--destructive) 14%, transparent); border-color: color-mix(in oklab, var(--destructive) 40%, transparent); color: var(--destructive); }
 .dark .chatEntities li[data-change="created"] { border-color: color-mix(in oklab, var(--brand) 40%, transparent); }
@@ -352,9 +350,9 @@
   .bottomNav > .commandButton { color: var(--cyan); }
   .bottomNav > button > span:not(.commandGlyph), .bottomNav > a > span { display: none; }
   .bottomNav > [aria-expanded="true"] { background: transparent; }
-  .commandGlyph { position: relative; display: grid; place-items: center; width: 38px; height: 38px; }
-  .bottomNav .commandGlyph svg { width: 30px; height: 30px; }
-  .wave { transform-box: fill-box; transform-origin: center; opacity: 0; animation: waveOut 2.4s linear infinite; }
+  .bottomNav > .commandButton::after { content: none; }
+  .commandGlyph { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: var(--cyan-soft); }
+  .commandGlyph > span { display: block; width: 12px; height: 12px; border-radius: 50%; background: var(--cyan); }
   .bottomNav .commandButton { gap: 0; }
   .bottomNav svg { width: 25px; height: 25px; stroke-width: 1.4; }
   .bottomNav .bottomMenu { cursor: pointer; }
@@ -383,12 +381,6 @@
 
   .hubDescription { color: var(--muted); font-size: 12px; line-height: 1.6; margin: 0 12px 20px; }
   .hubContent { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 8px 2px; }
-  .sectionMenuHeading, .sheetHandle, .hubDock { flex-shrink: 0; }
-  .hubDock { background: transparent; padding-top: 10px; }
-  .hubModes { display: flex; gap: 4px; border: 0; border-radius: 12px; background: var(--soft); padding: 4px; margin: 0; min-width: 0; }
-  .hubModes button { position: relative; flex: 1; min-width: 0; min-height: 44px; padding: 6px 3px; display: flex; align-items: center; justify-content: center; gap: 6px; border-radius: 9px; background: var(--line); color: var(--muted); font-size: 11px; cursor: pointer; }
-  .hubModes [aria-pressed="true"] { background: var(--cyan-soft); color: var(--cyan); }
-  .sectionMenu .hubModes svg { width: 16px; height: 16px; stroke-width: 1.4; }
   .creationToggle { display: flex; gap: 4px; border: 0; border-radius: 12px; background: var(--soft); padding: 4px; margin: 0 0 9px; min-width: 0; }
   .creationToggle button { flex: 1; min-width: 0; min-height: 44px; padding: 6px 3px; display: flex; align-items: center; justify-content: center; gap: 6px; border-radius: 9px; background: var(--line); color: var(--muted); font-size: 11px; cursor: pointer; }
   .creationToggle [aria-pressed="true"] { background: var(--cyan-soft); color: var(--cyan); }
@@ -477,21 +469,99 @@
   .entitySelect .taskStatusIcon { width: 18px; height: 18px; color: #7f898c; }
   .entityFields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .manualPanel > .hubSearch:last-child { margin-top: 16px; }
-  .assistantWelcome { text-align: center; padding: 10px 15px 20px; }
-  .assistantWelcome > svg { width: 34px; height: 34px; color: var(--cyan); stroke-width: 1.2; margin: 0 auto 12px; }
-  .assistantWelcome h3 { font-size: 21px; font-weight: 500; margin: 0 0 8px; }
-  .assistantWelcome p { max-width: 300px; margin: auto; font-size: 13px; line-height: 1.7; color: var(--muted); }
-  .promptSuggestions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-bottom: 24px; }
-  .promptSuggestions button { padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; color: var(--cyan); font-size: 11px; cursor: pointer; }
-  .hubComposer, .hubSearch { display: flex; align-items: center; gap: 10px; border: 1px solid var(--control-border); padding: 8px 10px 8px 14px; border-radius: 14px; background: var(--control-bg); box-shadow: var(--control-shadow); transition: border-color 140ms, box-shadow 140ms; }
-  .hubComposer:focus-within, .hubSearch:focus-within { border-color: #9ecbd1; box-shadow: 0 0 0 2px #07859916, var(--control-shadow); }
-  .hubComposer input, .hubSearch input { width: 100%; min-width: 0; border: 0; background: transparent; padding: 8px 0; font: inherit; font-size: 16px; color: var(--ink); }
-  .hubComposer input:focus-visible, .hubSearch input:focus-visible { outline: 0; }
-  .hubComposer button { display: grid; place-items: center; width: 38px; height: 38px; flex-shrink: 0; background: var(--cyan-soft); color: var(--cyan); border-radius: 11px; cursor: pointer; }
-  .hubComposer button:disabled { opacity: .4; cursor: default; }
-  .hubComposer button[data-listening="true"] { background: #fdf6f3; color: #d92a55; animation: chatPulse 1.4s ease-in-out infinite; }
-  .dark .hubComposer button[data-listening="true"] { background: #3a2a2e; color: #ff5c7a; }
-  .hubComposerHint { margin: -4px 0 0; font-size: 11px; color: var(--muted); }
+  .sectionMenuHeading, .sheetHandle { flex-shrink: 0; }
+  .hubSearch { display: flex; align-items: center; gap: 10px; border: 1px solid var(--control-border); padding: 8px 10px 8px 14px; border-radius: 14px; background: var(--control-bg); box-shadow: var(--control-shadow); transition: border-color 140ms, box-shadow 140ms; }
+  .hubSearch:focus-within { border-color: var(--cyan); box-shadow: 0 0 0 1px var(--cyan); }
+  .hubSearch input { width: 100%; min-width: 0; border: 0; background: transparent; padding: 8px 0; font: inherit; font-size: 16px; color: var(--ink); }
+  .hubSearch input:focus-visible { outline: 0; }
+  .dark .hubSearch { border-color: var(--line); }
+
+  /* O painel do hub: compacto no inicio do chat, alto na conversa, na lista e nos
+     comandos, e a tela toda (acima da barra) quando expandido. */
+  .sectionMenu[data-hub-view] { height: min(400px, calc(100dvh - 100px - env(safe-area-inset-bottom))); max-height: none; overflow: hidden; padding: 10px 20px 24px; }
+  .sectionMenu[data-hub-view]:has([data-chat-view="conversation"], [data-chat-view="list"]), .sectionMenu[data-hub-view="create"], .sectionMenu[data-hub-view="search"] { height: calc(100dvh - 172px - env(safe-area-inset-bottom)); }
+  .sectionMenu[data-expanded="true"] { inset: 0 0 calc(76px + env(safe-area-inset-bottom)); height: auto; border-radius: 0; background: var(--background); }
+  .sectionMenu[data-expanded="true"] .sheetHandle { visibility: hidden; }
+  .sectionMenu[data-hub-view] .sheetHandle { width: 36px; height: 4px; margin: 0 auto 2px; background: var(--input); }
+  .sectionMenu[data-hub-view] .hubContent { flex: 1; padding: 8px 0 0; }
+  .hubHeader { flex-shrink: 0; display: flex; align-items: center; gap: 6px; min-height: 52px; }
+  .hubBack { display: grid; place-items: center; width: 44px; height: 44px; margin-left: -12px; flex-shrink: 0; border-radius: 50%; color: var(--ink); cursor: pointer; }
+  .hubHeader .creationToggle { flex: 1; margin: 0; padding: 0; gap: 6px; background: transparent; overflow-x: auto; }
+  .hubHeader .creationToggle button { flex: 0 0 auto; min-height: 36px; padding: 0 14px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--muted); font-size: 14px; }
+  .hubHeader .creationToggle [aria-pressed="true"] { border-color: var(--ink); background: transparent; box-shadow: 0 0 0 1px var(--ink); color: var(--ink); font-weight: 600; }
+  .hubHeader .hubSearch { flex: 1; padding: 2px 14px; border-radius: 999px; }
+
+  .assistantPanel { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .chatHeader { flex-shrink: 0; display: flex; align-items: center; gap: 8px; min-height: 52px; margin: 0 -10px; }
+  .chatHeader h2 { flex: 1; min-width: 0; margin: 0; font-size: 14px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  [data-chat-view="list"] .chatHeader h2 { font-size: 17px; }
+  .chatHeader > :last-child { margin-left: auto; }
+  .chatIconButton { display: grid; place-items: center; width: 44px; height: 44px; flex-shrink: 0; border-radius: 50%; color: var(--muted); cursor: pointer; }
+  [data-chat-view="list"] .chatIconButton { color: var(--ink); }
+  .chatIconButton:disabled { opacity: .4; }
+  /* Os botoes do inicio so aparecem depois que a marca termina de se trancar. */
+  .chatIconButton[data-reveal="true"] { animation: chatReveal 2.55s linear both; }
+  /* A margem lateral deixa o realce dos comandos sair 12px do texto sem rolar de lado. */
+  .chatBody { flex: 1; min-height: 0; display: flex; flex-direction: column; margin: 0 -12px; padding: 0 12px; overflow: hidden auto; overscroll-behavior: contain; }
+  /* `margin-top: auto` em vez de `justify-content: flex-end`: se o conteudo passar
+     da altura, o topo continua alcancavel pela rolagem. */
+  [data-chat-view="home"] .assistantWelcome, .chatCommands { margin-top: auto; }
+  .assistantWelcome { display: flex; flex-direction: column; align-items: center; gap: 22px; padding: 0 0 36px; text-align: center; }
+  [data-expanded="true"] .assistantWelcome { padding-bottom: 64px; }
+  .assistantWelcome h2 { margin: 0; font-family: var(--font-display); font-size: 36px; font-weight: 400; line-height: 1; letter-spacing: -.005em; color: var(--ink); }
+  .assistantWelcome p { margin: -10px 0 0; font-size: 13px; color: var(--muted); }
+  .braidReplay { display: block; cursor: pointer; }
+  .braidMark { position: relative; display: block; width: 36px; overflow: hidden; }
+  .braidTails { position: absolute; left: 0; top: 0; overflow: visible; }
+  .braidTails line { stroke-width: 5.81; stroke-linecap: round; stroke-dasharray: var(--braid-dash); stroke-dashoffset: var(--braid-to); animation: braidTails 1.5s cubic-bezier(.45,0,.55,1) .3s both; }
+  .braidMark [data-tone="nevoa"] { stroke: var(--strand-nevoa); }
+  .braidMark [data-tone="destaque"] { stroke: var(--brand); }
+  .braidMark [data-tone="tinta"] { stroke: var(--strand-tinta); }
+  .braidKnot { position: absolute; left: 0; bottom: 0; mask-image: linear-gradient(to bottom, #000 74px, transparent 81px); mask-size: 100% 155px; mask-repeat: no-repeat; mask-position: 0 0; animation: braidKnot .75s cubic-bezier(.25,.55,.4,1) 1.05s both; }
+  .braidDot { position: absolute; left: 12.8px; bottom: .3px; width: 10.5px; height: 10.5px; border-radius: 50%; background: var(--brand); animation: braidDot .45s cubic-bezier(.34,1.56,.64,1) 1.8s both; }
+
+  .chatCommands { list-style: none; margin-bottom: 0; padding: 0 0 4px; display: grid; gap: 2px; }
+  .chatCommands button { width: calc(100% + 24px); margin: 0 -12px; display: flex; align-items: center; gap: 14px; min-height: 56px; padding: 8px 12px; border-radius: 12px; color: var(--ink); text-align: left; cursor: pointer; }
+  .chatCommands button[aria-current="true"] { background: var(--accent); }
+  .chatCommands svg { color: var(--muted); }
+  .chatCommands [aria-current="true"] svg { color: var(--ink); }
+  .chatCommands button > span { flex: 1; min-width: 0; display: grid; gap: 2px; }
+  .chatCommands strong { font-size: 15px; font-weight: 600; }
+  .chatCommands small { font-size: 13px; color: var(--muted); }
+  .chatCommands code { flex-shrink: 0; font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+
+  .chatComposer { flex-shrink: 0; display: flex; align-items: center; gap: 4px; height: 52px; border-bottom: 1px solid var(--input); transition: border-color 140ms, box-shadow 140ms; }
+  .chatComposer:focus-within { border-color: var(--brand); box-shadow: 0 1px 0 var(--brand); }
+  .chatComposer input { flex: 1; min-width: 0; height: 44px; padding: 0; border: 0; border-radius: 0; background: transparent; font: inherit; font-size: 16px; color: var(--ink); }
+  .chatComposer input::placeholder { color: var(--muted); opacity: 1; }
+  .chatComposer input:focus-visible { outline: 0; }
+  .chatComposer button { display: grid; place-items: center; width: 44px; height: 44px; flex-shrink: 0; border-radius: 50%; color: var(--muted); cursor: pointer; }
+  .chatComposer button[data-send="true"] { color: var(--brand); }
+  .chatComposer button[data-send="true"] svg { stroke-width: 2; }
+  .chatComposer button:disabled { opacity: .4; cursor: default; }
+  .chatComposer button[data-listening="true"] { color: #d92a55; animation: chatPulse 1.4s ease-in-out infinite; }
+  .dark .chatComposer button[data-listening="true"] { color: #ff5c7a; }
+  .hubComposerHint { margin: 0 0 4px; font-size: 11px; color: var(--muted); }
+
+  .conversationGroups { display: grid; gap: 18px; padding: 8px 0 16px; }
+  .conversationGroups h3 { margin: 0 0 2px; display: flex; align-items: baseline; gap: 8px; font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--ink); }
+  .conversationGroups h3 span { font-size: 12px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+  .conversationList { list-style: none; margin: 0; padding: 0; }
+  .conversationList li { display: flex; align-items: flex-start; gap: 8px; }
+  .conversationList li + li { border-top: 1px solid var(--line); }
+  .conversationList li > button:first-child { flex: 1; min-width: 0; min-height: 64px; display: grid; align-content: start; gap: 3px; padding: 12px 0; color: var(--ink); text-align: left; cursor: pointer; }
+  .conversationList li > button:first-child:disabled { opacity: .4; cursor: default; }
+  .conversationTitle { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 15px; font-weight: 600; }
+  .conversationTitle > span { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .conversationTitle svg { width: 16px; height: 16px; color: var(--brand); stroke-width: 2; }
+  .conversationList small { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .conversationList time { flex-shrink: 0; padding-top: 14px; font-size: 12px; color: var(--muted); }
+  .conversationList li > button:last-child { display: grid; place-items: center; width: 32px; height: 32px; flex-shrink: 0; margin: 7px -8px 0 0; border-radius: 50%; color: var(--muted); cursor: pointer; }
+  .conversationList li > button:last-child:hover { color: var(--destructive); }
+  .conversationList li > button:last-child svg { width: 15px; height: 15px; }
+  .conversationNotice { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 8px 0; color: var(--muted); font-size: 13px; }
+  .conversationNotice[role="alert"] { color: var(--destructive); }
+  .conversationNotice button { color: var(--brand); font-size: 12px; cursor: pointer; }
   .hubSearch svg { color: var(--cyan); }
   .manualHeading { display: flex; align-items: center; justify-content: space-between; margin: 20px 0 12px; }
   .manualHeading h3 { color: var(--muted); font-size: 12px; font-weight: 400; }
@@ -508,28 +578,6 @@
   .hubNotice { font-size: 12px; color: var(--cyan); margin: 8px 0; }
   .hubNotice:empty { display: none; }
   .hubFootnote { font-size: 9px; color: var(--muted); text-align: center; margin: 16px 0 0; line-height: 1.5; }
-  .chatPreview { font-size: 12px; line-height: 1.7; margin-bottom: 18px; }
-  .chatPreview p { background: var(--cyan-soft); border-radius: 12px 12px 0 12px; padding: 10px 14px; margin: 0 0 12px 25px; }
-  .chatPreview span { color: var(--muted); }
-  .chatPreview button { display: block; }
-  .chatHeader { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
-  .chatHeader > button:first-child { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; padding: 7px 10px; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); font-size: 12px; cursor: pointer; }
-  .chatHeader > button:first-child span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .chatHeader > button:last-child { display: grid; place-items: center; width: 32px; height: 32px; flex-shrink: 0; background: var(--cyan-soft); color: var(--cyan); border-radius: 10px; cursor: pointer; }
-  .chatHeader button:disabled { opacity: .4; cursor: default; }
-  .chatHeader svg { width: 15px; height: 15px; flex-shrink: 0; }
-  .conversationList { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 2px; max-height: 210px; overflow-y: auto; }
-  .conversationList li { display: flex; align-items: center; gap: 4px; border-radius: 9px; }
-  .conversationList li[data-current="true"] { background: var(--cyan-soft); }
-  .conversationList li[data-empty="true"] { padding: 10px 10px; color: var(--muted); font-size: 12px; }
-  .conversationList li[data-error="true"] { align-items: flex-start; justify-content: space-between; padding: 9px 10px; background: #fdf6f3; color: #9a4b32; font-size: 12px; line-height: 1.5; }
-  .conversationList li[data-error="true"] span { flex: 1; }
-  .conversationList li[data-error="true"] button { display: block; width: auto; height: auto; padding: 4px 0 4px 8px; flex-shrink: 0; color: var(--cyan); font-size: 11px; cursor: pointer; }
-  .conversationList li > button:first-child { flex: 1; min-width: 0; padding: 9px 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; color: var(--ink); font-size: 12px; cursor: pointer; }
-  .conversationList li > button:last-child { display: grid; place-items: center; width: 30px; height: 30px; flex-shrink: 0; color: var(--muted); border-radius: 8px; cursor: pointer; }
-  .conversationList li > button:last-child:hover { color: #9a4b32; }
-  .conversationList li > button:first-child:disabled { opacity: .4; cursor: default; }
-  .conversationList svg { width: 14px; height: 14px; }
   .chatLog { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 12px; font-size: 13px; line-height: 1.65; }
   .chatBubble p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
   .chatBubble[data-role="user"] { justify-self: end; max-width: 85%; padding: 10px 14px; border-radius: 14px 14px 4px 14px; background: var(--cyan-soft); }
@@ -583,15 +631,28 @@
 @media (prefers-reduced-motion: reduce) {
   .event { transition: none; }
   .sectionMenu, .sectionMenu::backdrop { animation: none; }
-  .wave { animation: none; opacity: .45; }
-  .wave:last-of-type { transform: scale(1.6); }
   .chatStatus { animation: none; }
+  .chatIconButton[data-reveal="true"], .braidTails line, .braidKnot, .braidDot { animation: none; }
 }
 
-@keyframes waveOut {
-  0% { transform: scale(.4); opacity: 0; }
-  18% { opacity: .95; }
-  100% { transform: scale(1.85); opacity: 0; }
+@keyframes chatReveal {
+  0%, 88.2% { opacity: 0; visibility: hidden; }
+  100% { opacity: 1; visibility: visible; }
+}
+
+@keyframes braidTails {
+  from { stroke-dashoffset: var(--braid-from); }
+  to { stroke-dashoffset: var(--braid-to); }
+}
+
+@keyframes braidKnot {
+  from { mask-position: 0 -81px; }
+  to { mask-position: 0 0; }
+}
+
+@keyframes braidDot {
+  from { transform: scale(0); }
+  to { transform: scale(1); }
 }
 
 @keyframes menuEnter {
