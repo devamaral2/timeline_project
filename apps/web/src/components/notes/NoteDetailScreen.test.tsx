@@ -116,20 +116,15 @@ test("solta a nota da origem com a revisão esperada", async () => {
   );
 });
 
-test("edita a nota enviando só o que o formulário tem", async () => {
-  authedFetch.mockResolvedValueOnce(proposal).mockResolvedValueOnce(undefined).mockResolvedValueOnce({ ...proposal, name: "Nova proposta", revision: 3 });
+test("Editar abre a rota de edição da nota de texto", async () => {
+  authedFetch.mockResolvedValueOnce(proposal);
   render(<NoteDetailScreen userId="user-1" noteId="nota-1" />);
   await screen.findByRole("heading", { level: 1 });
 
   fireEvent.click(screen.getByRole("button", { name: /Mais ações/ }));
   fireEvent.click(screen.getByRole("menuitem", { name: "Editar" }));
-  const dialog = await screen.findByRole("dialog", { name: "Editar nota" });
-  fireEvent.change(within(dialog).getByLabelText("Título"), { target: { value: "Nova proposta" } });
-  fireEvent.click(within(dialog).getByRole("button", { name: "Salvar" }));
 
-  expect(await screen.findByRole("heading", { level: 1, name: "Nova proposta" })).toBeInTheDocument();
-  const [, init] = authedFetch.mock.calls[1] as [string, RequestInit];
-  expect(JSON.parse(init.body as string)).toMatchObject({ expectedRevision: 2, name: "Nova proposta", tags: ["trabalho"] });
+  expect(push).toHaveBeenCalledWith("/user-1/notas/nota-1/editar");
 });
 
 test("exclui a nota depois da confirmação e volta para a lista", async () => {

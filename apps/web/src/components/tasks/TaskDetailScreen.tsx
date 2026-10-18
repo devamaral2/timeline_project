@@ -24,7 +24,6 @@ import {
 } from "@/lib/tasks/tasks-model";
 import { cn } from "@/lib/utils";
 import { DeleteTaskDialog } from "./DeleteTaskDialog";
-import { TaskEditorDialog } from "./TaskEditorDialog";
 import { TaskPriorityMark, TaskStatusIcon } from "./task-visuals";
 import styles from "./tasks.module.css";
 
@@ -50,7 +49,6 @@ export function TaskDetailScreen({ userId, taskId }: { userId: string; taskId: s
   const [reloadKey, setReloadKey] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
-  const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [addingSubtask, setAddingSubtask] = useState(false);
   const [subtaskName, setSubtaskName] = useState("");
@@ -214,7 +212,7 @@ export function TaskDetailScreen({ userId, taskId }: { userId: string; taskId: s
             <button type="button" className={styles.iconButton} aria-label="Mais ações: editar, duplicar, excluir" aria-haspopup="menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}><Ellipsis {...icon} /></button>
             {menuOpen ? (
               <div role="menu" className={styles.menu}>
-                <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); setEditing(true); }}><Pencil {...icon} />Editar</button>
+                <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); router.push(`${listHref}/${task.id}/editar`); }}><Pencil {...icon} />Editar</button>
                 <button type="button" role="menuitem" onClick={() => void duplicate()}><Copy {...icon} />Duplicar</button>
                 <button type="button" role="menuitem" data-danger="true" onClick={() => { setMenuOpen(false); setDeleting(true); }}><Trash2 {...icon} />Excluir</button>
               </div>
@@ -347,7 +345,6 @@ export function TaskDetailScreen({ userId, taskId }: { userId: string; taskId: s
         ) : null}
       </div>
 
-      {editing ? <TaskEditorDialog task={task} onClose={() => setEditing(false)} onSaved={() => { setEditing(false); setReloadKey((key) => key + 1); }} /> : null}
       {deleting ? (
         <DeleteTaskDialog
           taskId={task.id}

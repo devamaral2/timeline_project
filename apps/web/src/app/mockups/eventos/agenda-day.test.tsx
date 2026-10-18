@@ -5,18 +5,15 @@ import { EXAMPLE_NOW, EXAMPLE_TODAY } from "./agenda-examples";
 
 const props = { dayKey: EXAMPLE_TODAY, now: EXAMPLE_NOW, tasks: {}, missedEvents: {}, onSelectEvent: vi.fn() };
 
-test("the running event counts elapsed time instead of showing a finished duration", () => {
-  const { rerender } = render(<AgendaDay {...props} />);
+test("an event in its window shows start and end times, not a running timer", () => {
+  render(<AgendaDay {...props} />);
 
-  expect(screen.getByRole("timer")).toHaveTextContent("35:00");
-  expect(screen.getByText("Em andamento")).toBeInTheDocument();
-  expect(screen.queryByText("09:00 — 10:30")).not.toBeInTheDocument();
-
-  rerender(<AgendaDay {...props} now={EXAMPLE_NOW + 62_000} />);
-  expect(screen.getByRole("timer")).toHaveTextContent("36:02");
+  expect(screen.queryByRole("timer")).not.toBeInTheDocument();
+  expect(screen.queryByText("Em andamento")).not.toBeInTheDocument();
+  expect(screen.getByText("09:00 — 10:30")).toBeInTheDocument();
 });
 
-test("task status and the event annotation do not stop the event timer", () => {
+test("task status and the event annotation do not change the card timing", () => {
   render(<AgendaDay {...props}
     tasks={{ "BRD-25": { id: "BRD-25", status: "completed", priority: "flexible" } }}
     missedEvents={{ [`${EXAMPLE_TODAY}:Revisar proposta`]: true }}
@@ -25,7 +22,7 @@ test("task status and the event annotation do not stop the event timer", () => {
   const task = screen.getByRole("button", { name: "Tarefa de Revisar proposta: Concluída" });
   const card = task.closest("article");
   if (!card) throw new Error("Card da tarefa não encontrado");
-  expect(within(card).getByRole("timer")).toHaveTextContent("35:00");
+  expect(within(card).queryByRole("timer")).not.toBeInTheDocument();
   expect(within(card).getByText("Não realizado")).toBeInTheDocument();
   expect(card).toHaveAttribute("data-missed", "true");
   expect(within(card).getByRole("img", { name: "Prioridade da tarefa: Flexível" })).toBeInTheDocument();
@@ -52,14 +49,14 @@ test("empty days can be omitted from the continuous list", () => {
   expect(screen.queryByText("Um dia livre, do seu jeito.")).not.toBeInTheDocument();
 });
 
-test("an event that already started and has an end time still gets the running highlight", () => {
+test("an event is upcoming until it ends and past afterwards", () => {
   render(<AgendaDay {...props} events={[
     { name: "Reunião longa", type: "routine", time: "09:00 — 11:00", minutes: 120, duration: "2 h", startedAt: "2026-09-14T09:00:00-03:00", finishedAt: "2026-09-14T11:00:00-03:00" },
-    { name: "Mais tarde", type: "meal", time: "12:00 — 12:30", minutes: 30, duration: "30 min", startedAt: "2026-09-14T12:00:00-03:00", finishedAt: "2026-09-14T12:30:00-03:00" },
+    { name: "Mais cedo", type: "meal", time: "07:00 — 07:30", minutes: 30, duration: "30 min", startedAt: "2026-09-14T07:00:00-03:00", finishedAt: "2026-09-14T07:30:00-03:00" },
   ]} />);
 
-  expect(screen.getByRole("button", { name: "Reunião longa" }).closest("article")).toHaveAttribute("data-time-position", "running");
-  expect(screen.getByRole("button", { name: "Mais tarde" }).closest("article")).toHaveAttribute("data-time-position", "upcoming");
+  expect(screen.getByRole("button", { name: "Reunião longa" }).closest("article")).toHaveAttribute("data-time-position", "upcoming");
+  expect(screen.getByRole("button", { name: "Mais cedo" }).closest("article")).toHaveAttribute("data-time-position", "past");
 });
 
 const slotsOf = () => Array.from(document.querySelectorAll<HTMLElement>("[data-free-time]"));

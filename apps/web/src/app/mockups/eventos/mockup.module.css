@@ -323,6 +323,110 @@
   .main { padding-inline: 36px; }
 }
 
+.entityForm { display: grid; gap: 16px; padding: 8px 0 2px; }
+.entityHeading { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+.entityHeading > span { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 14px; background: var(--cyan-soft); color: var(--cyan); }
+.entityHeading > div { flex: 1; min-width: 0; }
+.entityHeading h3 { margin: 0; font-size: 20px; font-weight: 500; }
+.entityHeading p { margin: 3px 0 0; font-size: 12px; color: var(--muted); }
+.entityNameInput { width: 100%; min-width: 0; height: 42px; padding: 7px 2px !important; border: 0 !important; border-bottom: 1px solid var(--line) !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important; color: var(--ink); font-size: 18px !important; }
+.entityNameInput:focus-visible { outline: 0 !important; border-bottom-color: var(--cyan) !important; box-shadow: none !important; }
+.entityEventHeading { display: grid; gap: 7px; margin-bottom: 4px; }
+.entityEventTypeName { color: var(--muted); font-size: 11px; }
+.entityEventTitleRow { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.entityTypeSelect { position: relative; width: 44px; margin: 0; padding: 0; border: 0; flex: 0 0 44px; }
+.entityTypeButton { position: relative; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; color: var(--ink); cursor: pointer !important; }
+.entityTypeButton > svg:last-child { position: absolute; right: -3px; bottom: -3px; width: 15px; height: 15px; padding: 2px; border: 1px solid var(--control-border); border-radius: 50%; background: var(--control-bg); color: var(--muted); transition: transform 140ms; }
+.entityTypeButton[aria-expanded="true"] > svg:last-child { transform: rotate(180deg); }
+.entityTypeButton:focus-visible { outline: 0; }
+.entityTypeButton:focus-visible .entityTypeIcon { box-shadow: 0 0 0 2px #07859916; }
+.entityTypeIcon { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 14px; background: var(--cyan-soft); color: var(--cyan); flex-shrink: 0; }
+.entityTypeIcon svg { width: 21px; height: 21px; }
+.entityTypeIcon[data-event-type="meal"] { color: var(--meal); background: #fbf5ec; }
+.entityTypeIcon[data-event-type="training"] { color: var(--training); background: #edf8f4; }
+.entityTypeIcon[data-event-type="sleep"] { color: var(--sleep); background: #f4f1fa; }
+.entityEventNameInput { flex: 1; min-width: 0; height: 44px; padding: 7px 2px !important; border: 0 !important; border-bottom: 1px solid var(--line) !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important; color: var(--ink); font-size: 18px !important; }
+.entityEventNameInput:focus-visible { outline: 0 !important; border-bottom-color: var(--cyan) !important; box-shadow: none !important; }
+.pickerView { display: flex; flex-direction: column; min-height: 280px; padding: 8px 0 2px; }
+.pickerHeader { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.pickerBack { display: grid; place-items: center; width: 36px; height: 36px; flex-shrink: 0; color: var(--muted); border-radius: 50%; cursor: pointer !important; }
+.pickerBack:hover { background: var(--soft); color: var(--ink); }
+.pickerBack svg { width: 18px; height: 18px; }
+.pickerHeader h3 { margin: 0; color: var(--ink); font-size: 17px; font-weight: 500; }
+.pickerOptions { display: flex; flex: 1; flex-direction: column; justify-content: center; gap: 8px; min-height: 0; }
+.pickerOption { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 54px; padding: 10px 14px; border: 1px solid var(--control-border); border-radius: 14px; background: var(--control-bg); box-shadow: var(--control-shadow); color: var(--ink); font-size: 15px; text-align: left; cursor: pointer !important; transition: border-color 140ms, box-shadow 140ms; }
+.pickerOption:hover { border-color: #c7dadd; }
+.pickerOption[aria-selected="true"] { border-color: #9ecbd1; background: var(--cyan-soft); }
+.pickerOption:focus-visible { outline: 0; border-color: #9ecbd1; box-shadow: 0 0 0 2px #07859916; }
+.pickerOption > svg:last-child { width: 16px; height: 16px; margin-left: auto; color: var(--cyan); flex-shrink: 0; }
+.pickerOption .entityTypeIcon { width: 38px; height: 38px; }
+.pickerOption .taskStatusIcon { width: 20px; height: 20px; }
+.pickerOption .entityPriorityIcon { width: 22px; height: 22px; }
+.eventSchedule { position: relative; display: grid; gap: 2px; padding: 4px 0; }
+.eventDateTimeRow { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 76px; align-items: center; column-gap: 14px; min-height: 48px; border-bottom: 1px solid var(--line); }
+.eventDateTimeRow:last-child { border-bottom: 0; }
+.eventDateTimeLabel { grid-column: 1 / -1; color: var(--muted); font-size: 10px; line-height: 1; }
+.eventDateControl { position: relative; display: flex; align-items: center; min-width: 0; }
+.eventDateControl input, .eventTimeInput { width: 100%; min-width: 0; padding: 7px 0; border: 0 !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important; color: var(--ink); font: inherit; font-size: 14px !important; }
+.eventDateControl input:focus-visible, .eventTimeInput:focus-visible { outline: 0; box-shadow: inset 0 -1px var(--cyan) !important; }
+.eventDateControl button { display: grid; place-items: center; width: 30px; height: 30px; flex-shrink: 0; border-radius: 8px; color: var(--muted); cursor: pointer !important; }
+.eventDateControl button:hover, .eventDateControl button[aria-expanded="true"] { background: var(--soft); color: var(--cyan); }
+.eventDateControl button svg { width: 16px; height: 16px; }
+.eventTimeInput { text-align: right; font-variant-numeric: tabular-nums; }
+.pickerCalendar { width: 100%; }
+.eventDatePickerHeading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; text-transform: capitalize; }
+.eventDatePickerHeading strong { font-size: 14px; font-weight: 500; }
+.eventDatePickerHeading span { display: flex; gap: 2px; }
+.eventDatePickerHeading button { width: 30px; height: 30px; }
+.eventDateWeek, .eventDateGrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; }
+.eventDateWeek { margin-bottom: 4px; color: var(--muted); font-size: 10px; }
+.eventDateWeek span { padding: 5px 0; }
+.eventDateGrid button, .eventDateGrid > span { width: 32px; height: 32px; }
+.eventDateGrid button { border-radius: 50%; color: var(--ink); font-size: 12px; cursor: pointer !important; }
+.eventDateGrid button:hover { background: var(--soft); }
+.eventDateGrid button[aria-pressed="true"] { background: var(--cyan); color: #fff; }
+.entityForm label { display: grid; min-width: 0; gap: 7px; color: var(--muted); font-size: 11px; }
+.entityForm label input, .entityForm select, .entityForm textarea { width: 100%; min-width: 0; padding: 11px 12px; border: 1px solid var(--control-border); border-radius: 10px; background: var(--control-bg); box-shadow: var(--control-shadow); color: var(--ink); font: inherit; font-size: 16px; transition: border-color 140ms, box-shadow 140ms; }
+.entityForm label input:focus-visible, .entityForm select:focus-visible, .entityForm textarea:focus-visible, .quickCreate input:focus-visible, .quickCreate select:focus-visible { outline: 0; border-color: #9ecbd1; box-shadow: 0 0 0 2px #07859916, var(--control-shadow); }
+.entityForm .entityControl { min-height: 56px; padding: 0 14px; border-radius: 14px; }
+.entityForm textarea.entityControl { min-height: 76px; padding: 14px; resize: vertical; }
+.entityForm textarea { resize: vertical; min-height: 76px; }
+.entitySelectors { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.entitySelect { position: relative; min-width: 0; margin: 0; padding: 0; border: 0; }
+.entitySelectLabel { display: block; margin-bottom: 7px; color: var(--muted); font-size: 11px; }
+.entitySelectButton { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 54px; padding: 10px 12px; border: 1px solid var(--control-border); border-radius: 14px; background: var(--control-bg); box-shadow: var(--control-shadow); color: var(--ink); cursor: pointer !important; transition: border-color 140ms, box-shadow 140ms; }
+.entitySelectButton:hover, .entitySelectButton[aria-expanded="true"] { border-color: #c7dadd; }
+.entitySelectButton:focus-visible { outline: 0; border-color: #9ecbd1; box-shadow: 0 0 0 2px #07859916, var(--control-shadow); }
+.entitySelectButton > span:nth-child(2) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.entitySelectButton > svg:last-child { width: 15px; height: 15px; margin-left: auto; color: var(--muted); transition: transform 140ms; }
+.entitySelectButton[aria-expanded="true"] > svg:last-child { transform: rotate(180deg); }
+.entityPriorityIcon { display: inline-grid; place-items: center; width: 20px; height: 20px; color: #7f898c; flex-shrink: 0; }
+.entityPriorityIcon svg { width: 17px; height: 17px; }
+.entityPriorityIcon[data-priority="high"] { color: #9b7b46; }
+.entityPriorityIcon[data-priority="urgent"] { color: #b86b35; }
+.entitySelect .taskStatusIcon { width: 18px; height: 18px; color: #7f898c; }
+.entityFields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+/* Chips de tags e avisos do formulário de novo evento. */
+.entityChips { display: flex; flex-wrap: wrap; gap: 6px; }
+.entityChips button, .entityChip { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 12px; border: 1px solid var(--control-border); border-radius: 999px; background: var(--control-bg); color: var(--ink); font-size: 13px; cursor: pointer; }
+.entityChips button[aria-pressed="true"], .entityChip { border-color: transparent; background: var(--cyan-soft); color: var(--cyan); }
+.offsetAdd { display: flex; gap: 8px; }
+.offsetAdd input { flex: 1; min-width: 0; padding: 11px 12px; border: 1px solid var(--control-border); border-radius: 10px; background: var(--control-bg); color: var(--ink); font: inherit; }
+.offsetAdd input:focus-visible { outline: 0; border-color: var(--cyan); }
+.offsetAdd button { display: inline-flex; align-items: center; gap: 6px; padding: 0 14px; border: 1px solid var(--control-border); border-radius: 10px; color: var(--ink); font-size: 14px; cursor: pointer; }
+.offsetAdd button:hover { background: var(--soft); }
+.offsetAdd svg { width: 15px; height: 15px; }
+.entitySelect > .entityChips { margin-top: 10px; }
+.entityChip button { display: grid; place-items: center; padding: 0; min-height: 0; border: 0; background: transparent; color: inherit; }
+.entityChip svg { width: 13px; height: 13px; }
+.entityContinue { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; border-radius: 12px; background: var(--brand); color: var(--background); font-size: 15px; font-weight: 600; cursor: pointer; }
+.entityContinue svg { width: 18px; height: 18px; }
+.newEventPage { max-width: 480px; margin: 0 auto; }
+.newEventPage .pickerHeader { margin-bottom: 14px; }
+.newEventPage .pickerHeader h1 { margin: 0; color: var(--ink); font-size: 20px; font-weight: 500; }
+.formError { margin: 0; color: var(--destructive); font-size: 13px; }
+
 @media (max-width: 720px) {
   .headerInner { height: 64px; padding: 0 12px 0 20px; column-gap: 10px; }
   .brand { gap: 7px; }
@@ -385,89 +489,6 @@
   .creationToggle button { flex: 1; min-width: 0; min-height: 44px; padding: 6px 3px; display: flex; align-items: center; justify-content: center; gap: 6px; border-radius: 9px; background: var(--line); color: var(--muted); font-size: 11px; cursor: pointer; }
   .creationToggle [aria-pressed="true"] { background: var(--cyan-soft); color: var(--cyan); }
   .creationToggle svg { width: 16px; height: 16px; stroke-width: 1.4; }
-  .entityForm { display: grid; gap: 16px; padding: 8px 0 2px; }
-  .entityHeading { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
-  .entityHeading > span { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 14px; background: var(--cyan-soft); color: var(--cyan); }
-  .entityHeading > div { flex: 1; min-width: 0; }
-  .entityHeading h3 { margin: 0; font-size: 20px; font-weight: 500; }
-  .entityHeading p { margin: 3px 0 0; font-size: 12px; color: var(--muted); }
-  .entityNameInput { width: 100%; min-width: 0; height: 42px; padding: 7px 2px !important; border: 0 !important; border-bottom: 1px solid var(--line) !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important; color: var(--ink); font-size: 18px !important; }
-  .entityNameInput:focus-visible { outline: 0 !important; border-bottom-color: var(--cyan) !important; box-shadow: none !important; }
-  .entityEventHeading { display: grid; gap: 7px; margin-bottom: 4px; }
-  .entityEventTypeName { color: var(--muted); font-size: 11px; }
-  .entityEventTitleRow { display: flex; align-items: center; gap: 10px; min-width: 0; }
-  .entityTypeSelect { position: relative; width: 44px; margin: 0; padding: 0; border: 0; flex: 0 0 44px; }
-  .entityTypeButton { position: relative; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; color: var(--ink); cursor: pointer !important; }
-  .entityTypeButton > svg:last-child { position: absolute; right: -3px; bottom: -3px; width: 15px; height: 15px; padding: 2px; border: 1px solid var(--control-border); border-radius: 50%; background: var(--control-bg); color: var(--muted); transition: transform 140ms; }
-  .entityTypeButton[aria-expanded="true"] > svg:last-child { transform: rotate(180deg); }
-  .entityTypeButton:focus-visible { outline: 0; }
-  .entityTypeButton:focus-visible .entityTypeIcon { box-shadow: 0 0 0 2px #07859916; }
-  .entityTypeIcon { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 14px; background: var(--cyan-soft); color: var(--cyan); flex-shrink: 0; }
-  .entityTypeIcon svg { width: 21px; height: 21px; }
-  .entityTypeIcon[data-event-type="meal"] { color: var(--meal); background: #fbf5ec; }
-  .entityTypeIcon[data-event-type="training"] { color: var(--training); background: #edf8f4; }
-  .entityTypeIcon[data-event-type="sleep"] { color: var(--sleep); background: #f4f1fa; }
-  .entityEventNameInput { flex: 1; min-width: 0; height: 44px; padding: 7px 2px !important; border: 0 !important; border-bottom: 1px solid var(--line) !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important; color: var(--ink); font-size: 18px !important; }
-  .entityEventNameInput:focus-visible { outline: 0 !important; border-bottom-color: var(--cyan) !important; box-shadow: none !important; }
-  .pickerView { display: flex; flex-direction: column; min-height: 280px; padding: 8px 0 2px; }
-  .pickerHeader { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-  .pickerBack { display: grid; place-items: center; width: 36px; height: 36px; flex-shrink: 0; color: var(--muted); border-radius: 50%; cursor: pointer !important; }
-  .pickerBack:hover { background: var(--soft); color: var(--ink); }
-  .pickerBack svg { width: 18px; height: 18px; }
-  .pickerHeader h3 { margin: 0; color: var(--ink); font-size: 17px; font-weight: 500; }
-  .pickerOptions { display: flex; flex: 1; flex-direction: column; justify-content: center; gap: 8px; min-height: 0; }
-  .pickerOption { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 54px; padding: 10px 14px; border: 1px solid var(--control-border); border-radius: 14px; background: var(--control-bg); box-shadow: var(--control-shadow); color: var(--ink); font-size: 15px; text-align: left; cursor: pointer !important; transition: border-color 140ms, box-shadow 140ms; }
-  .pickerOption:hover { border-color: #c7dadd; }
-  .pickerOption[aria-selected="true"] { border-color: #9ecbd1; background: var(--cyan-soft); }
-  .pickerOption:focus-visible { outline: 0; border-color: #9ecbd1; box-shadow: 0 0 0 2px #07859916; }
-  .pickerOption > svg:last-child { width: 16px; height: 16px; margin-left: auto; color: var(--cyan); flex-shrink: 0; }
-  .pickerOption .entityTypeIcon { width: 38px; height: 38px; }
-  .pickerOption .taskStatusIcon { width: 20px; height: 20px; }
-  .pickerOption .entityPriorityIcon { width: 22px; height: 22px; }
-  .eventSchedule { position: relative; display: grid; gap: 2px; padding: 4px 0; }
-  .eventDateTimeRow { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 76px; align-items: center; column-gap: 14px; min-height: 48px; border-bottom: 1px solid var(--line); }
-  .eventDateTimeRow:last-child { border-bottom: 0; }
-  .eventDateTimeLabel { grid-column: 1 / -1; color: var(--muted); font-size: 10px; line-height: 1; }
-  .eventDateControl { position: relative; display: flex; align-items: center; min-width: 0; }
-  .eventDateControl input, .eventTimeInput { width: 100%; min-width: 0; padding: 7px 0; border: 0 !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important; color: var(--ink); font: inherit; font-size: 14px !important; }
-  .eventDateControl input:focus-visible, .eventTimeInput:focus-visible { outline: 0; box-shadow: inset 0 -1px var(--cyan) !important; }
-  .eventDateControl button { display: grid; place-items: center; width: 30px; height: 30px; flex-shrink: 0; border-radius: 8px; color: var(--muted); cursor: pointer !important; }
-  .eventDateControl button:hover, .eventDateControl button[aria-expanded="true"] { background: var(--soft); color: var(--cyan); }
-  .eventDateControl button svg { width: 16px; height: 16px; }
-  .eventTimeInput { text-align: right; font-variant-numeric: tabular-nums; }
-  .pickerCalendar { width: 100%; }
-  .eventDatePickerHeading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; text-transform: capitalize; }
-  .eventDatePickerHeading strong { font-size: 14px; font-weight: 500; }
-  .eventDatePickerHeading span { display: flex; gap: 2px; }
-  .eventDatePickerHeading button { width: 30px; height: 30px; }
-  .eventDateWeek, .eventDateGrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; }
-  .eventDateWeek { margin-bottom: 4px; color: var(--muted); font-size: 10px; }
-  .eventDateWeek span { padding: 5px 0; }
-  .eventDateGrid button, .eventDateGrid > span { width: 32px; height: 32px; }
-  .eventDateGrid button { border-radius: 50%; color: var(--ink); font-size: 12px; cursor: pointer !important; }
-  .eventDateGrid button:hover { background: var(--soft); }
-  .eventDateGrid button[aria-pressed="true"] { background: var(--cyan); color: #fff; }
-  .entityForm label { display: grid; min-width: 0; gap: 7px; color: var(--muted); font-size: 11px; }
-  .entityForm label input, .entityForm select, .entityForm textarea { width: 100%; min-width: 0; padding: 11px 12px; border: 1px solid var(--control-border); border-radius: 10px; background: var(--control-bg); box-shadow: var(--control-shadow); color: var(--ink); font: inherit; font-size: 16px; transition: border-color 140ms, box-shadow 140ms; }
-  .entityForm label input:focus-visible, .entityForm select:focus-visible, .entityForm textarea:focus-visible, .quickCreate input:focus-visible, .quickCreate select:focus-visible { outline: 0; border-color: #9ecbd1; box-shadow: 0 0 0 2px #07859916, var(--control-shadow); }
-  .entityForm .entityControl { min-height: 56px; padding: 0 14px; border-radius: 14px; }
-  .entityForm textarea.entityControl { min-height: 76px; padding: 14px; resize: vertical; }
-  .entityForm textarea { resize: vertical; min-height: 76px; }
-  .entitySelectors { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-  .entitySelect { position: relative; min-width: 0; margin: 0; padding: 0; border: 0; }
-  .entitySelectLabel { display: block; margin-bottom: 7px; color: var(--muted); font-size: 11px; }
-  .entitySelectButton { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 54px; padding: 10px 12px; border: 1px solid var(--control-border); border-radius: 14px; background: var(--control-bg); box-shadow: var(--control-shadow); color: var(--ink); cursor: pointer !important; transition: border-color 140ms, box-shadow 140ms; }
-  .entitySelectButton:hover, .entitySelectButton[aria-expanded="true"] { border-color: #c7dadd; }
-  .entitySelectButton:focus-visible { outline: 0; border-color: #9ecbd1; box-shadow: 0 0 0 2px #07859916, var(--control-shadow); }
-  .entitySelectButton > span:nth-child(2) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .entitySelectButton > svg:last-child { width: 15px; height: 15px; margin-left: auto; color: var(--muted); transition: transform 140ms; }
-  .entitySelectButton[aria-expanded="true"] > svg:last-child { transform: rotate(180deg); }
-  .entityPriorityIcon { display: inline-grid; place-items: center; width: 20px; height: 20px; color: #7f898c; flex-shrink: 0; }
-  .entityPriorityIcon svg { width: 17px; height: 17px; }
-  .entityPriorityIcon[data-priority="high"] { color: #9b7b46; }
-  .entityPriorityIcon[data-priority="urgent"] { color: #b86b35; }
-  .entitySelect .taskStatusIcon { width: 18px; height: 18px; color: #7f898c; }
-  .entityFields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .manualPanel > .hubSearch:last-child { margin-top: 16px; }
   .sectionMenuHeading, .sheetHandle { flex-shrink: 0; }
   .hubSearch { display: flex; align-items: center; gap: 10px; border: 1px solid var(--control-border); padding: 8px 10px 8px 14px; border-radius: 14px; background: var(--control-bg); box-shadow: var(--control-shadow); transition: border-color 140ms, box-shadow 140ms; }
@@ -479,7 +500,9 @@
   /* O painel do hub: compacto no inicio do chat, alto na conversa, na lista e nos
      comandos, e a tela toda (acima da barra) quando expandido. */
   .sectionMenu[data-hub-view] { height: min(400px, calc(100dvh - 100px - env(safe-area-inset-bottom))); max-height: none; overflow: hidden; padding: 10px 20px 24px; }
-  .sectionMenu[data-hub-view]:has([data-chat-view="conversation"], [data-chat-view="list"]), .sectionMenu[data-hub-view="create"], .sectionMenu[data-hub-view="search"] { height: calc(100dvh - 172px - env(safe-area-inset-bottom)); }
+  .sectionMenu[data-hub-view]:has([data-chat-view="conversation"], [data-chat-view="list"]) { height: calc(100dvh - 172px - env(safe-area-inset-bottom)); }
+  /* Criar e buscar acompanham o conteudo; so rolam se passarem da tela. */
+  .sectionMenu[data-hub-view="create"], .sectionMenu[data-hub-view="search"] { height: auto; max-height: calc(100dvh - 172px - env(safe-area-inset-bottom)); overflow-y: auto; }
   .sectionMenu[data-expanded="true"] { inset: 0 0 calc(76px + env(safe-area-inset-bottom)); height: auto; border-radius: 0; background: var(--background); }
   .sectionMenu[data-expanded="true"] .sheetHandle { visibility: hidden; }
   .sectionMenu[data-hub-view] .sheetHandle { width: 36px; height: 4px; margin: 0 auto 2px; background: var(--input); }
@@ -505,11 +528,16 @@
   .chatBody { flex: 1; min-height: 0; display: flex; flex-direction: column; margin: 0 -12px; padding: 0 12px; overflow: hidden auto; overscroll-behavior: contain; }
   /* `margin-top: auto` em vez de `justify-content: flex-end`: se o conteudo passar
      da altura, o topo continua alcancavel pela rolagem. */
-  [data-chat-view="home"] .assistantWelcome, .chatCommands { margin-top: auto; }
+  [data-chat-view="home"] .assistantWelcome { margin-block: auto; }
+  .chatCommands { margin-top: auto; }
   .assistantWelcome { display: flex; flex-direction: column; align-items: center; gap: 22px; padding: 0 0 36px; text-align: center; }
   [data-expanded="true"] .assistantWelcome { padding-bottom: 64px; }
   .assistantWelcome h2 { margin: 0; font-family: var(--font-display); font-size: 36px; font-weight: 400; line-height: 1; letter-spacing: -.005em; color: var(--ink); }
   .assistantWelcome p { margin: -10px 0 0; font-size: 13px; color: var(--muted); }
+  .createActions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+  .createActions button { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px; border: 1px solid var(--line, currentColor); border-radius: 999px; color: var(--ink); font-size: 14px; cursor: pointer; }
+  .createActions button:hover { background: var(--accent); }
+  .createActions svg { width: 16px; height: 16px; color: var(--muted); }
   .braidReplay { display: block; cursor: pointer; }
   .braidMark { position: relative; display: block; width: 36px; overflow: hidden; }
   .braidTails { position: absolute; left: 0; top: 0; overflow: visible; }

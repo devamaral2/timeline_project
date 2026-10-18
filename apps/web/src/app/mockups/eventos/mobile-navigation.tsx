@@ -2,7 +2,7 @@
 
 import { ArrowLeft, CalendarDays, Check, ChevronDown, NotepadText, Plus, Search, SquareCheck, X } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 import { creatableItemTypes, ICON_STROKE_WIDTH, visualForItemType } from "@/components/events/event-visuals";
 import { AgentChatPanel, useAgendaChat } from "./agent-chat-panel";
@@ -11,6 +11,7 @@ import { CalendarPicker, type DateField, EventScheduleFields } from "./event-sch
 import styles from "./mockup.module.css";
 import type { HubCommandId } from "./hub-commands";
 import { TaskStatusIcon, taskStatuses } from "./task-controls";
+import { NewEventForm, type NewItemFormProps, NewNoteForm, NewTaskForm } from "./new-item-forms";
 
 type Kind = "Evento" | "Tarefa" | "Nota";
 type Picker = "eventType" | "status" | "priority" | DateField;
@@ -48,9 +49,15 @@ function DraftPriorityIcon({ priority }: { priority: DraftPriority }) {
   </span>;
 }
 
+function LiveCreateForm({ kind, ...props }: NewItemFormProps & { kind: Kind }) {
+  const Form = kind === "Tarefa" ? NewTaskForm : kind === "Evento" ? NewEventForm : NewNoteForm;
+  return <Form {...props} />;
+}
+
 export function MobileNavigation({ userId }: { userId?: string }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const pathname = usePathname();
+  const router = useRouter();
   const notesHref = userId ? `/${userId}/notas` : "/mockups/eventos/notas";
   const onNotes = notesHref !== null && (pathname === notesHref || pathname.startsWith(`${notesHref}/`));
   const tasksHref = userId ? `/${userId}/tarefas` : null;
@@ -68,6 +75,8 @@ export function MobileNavigation({ userId }: { userId?: string }) {
   const [title, setTitle] = useState("");
   const [entries, setEntries] = useState(initialEntries);
   const [notice, setNotice] = useState("");
+  const [liveName, setLiveName] = useState("");
+  const [formPicker, setFormPicker] = useState(false);
   const [drafts, setDrafts] = useState<Record<string, Record<string, string>>>({});
   const [activePicker, setActivePicker] = useState<Picker | null>(null);
   const dialogId = useId();
@@ -89,6 +98,9 @@ export function MobileNavigation({ userId }: { userId?: string }) {
       return;
     }
     const next: Kind = command === "task" ? "Tarefa" : command === "event" ? "Evento" : "Nota";
+    // Logado, o formulário é o de verdade (`new-item-forms.tsx`); o nome do comando vai nele.
+    setLiveName(argument);
+    setFormPicker(false);
     setKind(next);
     setCategory("Rotina");
     // `/tarefa comprar pão` ja chega com o nome preenchido.
@@ -152,9 +164,9 @@ export function MobileNavigation({ userId }: { userId?: string }) {
           <button type="button" onClick={() => dialogRef.current?.close()} aria-label="Fechar painel"><X aria-hidden /></button>
         </div>}
         {panel === "hub" && hubView === "chat" ? <AgentChatPanel {...agendaChat} expanded={expanded} onToggleExpanded={() => setExpanded(current => !current)} onCommand={runCommand} /> : <>
-        {panel === "hub" && !activePicker && <div className={styles.hubHeader}>
+        {panel === "hub" && !activePicker && !formPicker && <div className={styles.hubHeader}>
           <button type="button" className={styles.hubBack} onClick={backToChat} aria-label="Voltar para o chat"><ArrowLeft aria-hidden /></button>
-          {hubView === "create" ? <fieldset className={styles.creationToggle} aria-label="Tipo de criação">{(["Tarefa", "Evento", "Nota"] as Kind[]).map(value => { const Icon = icons[value]; return <button type="button" key={value} aria-pressed={kind === value} onClick={() => { setKind(value); setActivePicker(null); setNotice(""); }}><Icon aria-hidden /><span>{value}</span></button>; })}</fieldset>
+          {hubView === "create" ? <fieldset className={styles.creationToggle} aria-label="Tipo de criação">{(["Tarefa", "Evento", "Nota"] as Kind[]).map(value => { const Icon = icons[value]; return <button type="button" key={value} aria-pressed={kind === value} onClick={() => { setKind(value); setActivePicker(null); setNotice(""); setFormPicker(false); }}><Icon aria-hidden /><span>{value}</span></button>; })}</fieldset>
             : <label className={styles.hubSearch}><Search aria-hidden /><input aria-label="Pesquisar eventos, tarefas e notas" value={query} onChange={event => setQuery(event.target.value)} placeholder="Buscar eventos, tarefas e notas" autoFocus /></label>}
         </div>}
         <div className={styles.hubContent}>
@@ -185,7 +197,7 @@ export function MobileNavigation({ userId }: { userId?: string }) {
               {priority === selectedPriority ? <Check aria-hidden /> : null}
             </button>)}
           </div>}
-        </div> : panel === "hub" && hubView === "create" ? <div className={styles.entityForm}>
+        </div> : panel === "hub" && hubView === "create" && userId ? <LiveCreateForm key={kind} kind={kind} initialName={liveName} onPickerChange={setFormPicker} onCreated={path => { dialogRef.current?.close(); router.push(`/${userId}${path}`); }} /> : panel === "hub" && hubView === "create" ? <div className={styles.entityForm}>
             {kind === "Evento" ? <div className={styles.entityEventHeading}>
               <span className={styles.entityEventTypeName}>{eventVisual.label}</span>
               <div className={styles.entityEventTitleRow}>

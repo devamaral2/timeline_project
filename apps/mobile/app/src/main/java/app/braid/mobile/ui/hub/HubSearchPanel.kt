@@ -4,8 +4,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -50,7 +50,7 @@ fun HubSearchPanel(
         if (initialQuery.isNotBlank()) viewModel.setQuery(initialQuery)
     }
 
-    Column(modifier = modifier.fillMaxSize()) {
+    Column(modifier = modifier.fillMaxWidth()) {
         HubBackHeader(onBack = onBack) {
             HubSearchBox(
                 modifier = Modifier.fillMaxWidth(),
@@ -76,7 +76,10 @@ fun HubSearchPanel(
             state.results.isEmpty() ->
                 Text("Nenhum resultado. Que tal criar algo novo?", fontSize = 12.sp, color = colors.onSurfaceVariant)
             else ->
-                LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(0.dp)) {
+                LazyColumn(
+                    modifier = Modifier.weight(1f, fill = false).heightIn(max = 260.dp),
+                    verticalArrangement = Arrangement.spacedBy(0.dp),
+                ) {
                     items(state.results, key = { "${it.kind}:${it.id}" }) { result ->
                         Row(
                             modifier =

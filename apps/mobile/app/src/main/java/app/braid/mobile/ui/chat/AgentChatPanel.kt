@@ -14,6 +14,8 @@ import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -176,6 +178,7 @@ fun AgentChatPanel(
                         expanded = expanded,
                         markRun = markRun,
                         onReplay = { markRun++ },
+                        onCommand = onCommand,
                     )
                 state.isLoadingMessages ->
                     Text(
@@ -299,16 +302,18 @@ private fun ChatIconButton(
 }
 
 /** O início: a marca (toque para repetir) e “O que vamos fazer?”, sem sugestões. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ChatHome(
     expanded: Boolean,
     markRun: Int,
     onReplay: () -> Unit,
+    onCommand: ((ChatCommand, String) -> Unit)? = null,
 ) {
     Column(
         modifier = Modifier.fillMaxSize().padding(bottom = if (expanded) 64.dp else 36.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(22.dp, Alignment.Bottom),
+        verticalArrangement = Arrangement.spacedBy(22.dp, Alignment.CenterVertically),
     ) {
         // Só a trança ocupa lugar; os fios soltos sobem por cima do cabeçalho.
         Box(
@@ -335,6 +340,35 @@ private fun ChatHome(
             lineHeight = 36.sp,
             textAlign = TextAlign.Center,
         )
+        // `.createActions`: criar e pesquisar sem digitar "/".
+        if (onCommand != null) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                ChatCommand.entries.forEach { command ->
+                    Row(
+                        modifier =
+                            Modifier
+                                .heightIn(min = 40.dp)
+                                .clip(CircleShape)
+                                .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant), CircleShape)
+                                .clickable(onClickLabel = command.label) { onCommand(command, "") }
+                                .padding(horizontal = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Icon(
+                            imageVector = command.icon(),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(16.dp),
+                        )
+                        Text(text = command.label, fontSize = 14.sp)
+                    }
+                }
+            }
+        }
     }
 }
 

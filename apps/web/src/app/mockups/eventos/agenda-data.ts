@@ -14,14 +14,13 @@ export function agendaEventFromCard(event: TimelineEventCardDto): ExampleEvent {
     id: event.id,
     name: event.name,
     type: event.kind,
-    time: `${formatTime(event.startedAt)} — ${event.finishedAt ? formatTime(event.finishedAt) : "em andamento"}`,
+    time: event.finishedAt ? `${formatTime(event.startedAt)} — ${formatTime(event.finishedAt)}` : formatTime(event.startedAt),
     minutes,
     duration: event.durationLabel,
     startedAt: event.startedAt,
     finishedAt: event.finishedAt,
     tags: event.tags,
     missed: event.missed,
-    running: !event.finishedAt,
     notifyOffsetsMinutes: event.notifyOffsetsMinutes,
   };
 }

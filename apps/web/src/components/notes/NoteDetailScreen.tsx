@@ -105,7 +105,7 @@ export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: s
             <button type="button" className={styles.iconButton} aria-label="Mais ações: editar, soltar, excluir" aria-haspopup="menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}><Ellipsis {...icon} /></button>
             {menuOpen ? (
               <div role="menu" className={styles.menu}>
-                <button type="button" role="menuitem" disabled={pendingMeal} title={pendingMeal ? pendingMealEditMessage : undefined} onClick={() => { setMenuOpen(false); setEditing(true); }}><Pencil {...icon} />Editar</button>
+                <button type="button" role="menuitem" disabled={pendingMeal} title={pendingMeal ? pendingMealEditMessage : undefined} onClick={() => { setMenuOpen(false); if (note.type === "text") router.push(`${listHref}/${note.id}/editar`); else setEditing(true); }}><Pencil {...icon} />Editar</button>
                 {links.length ? <button type="button" role="menuitem" disabled={pendingMeal} title={pendingMeal ? pendingMealEditMessage : undefined} onClick={() => void detach()}><Unlink {...icon} />Soltar da origem</button> : null}
                 <button type="button" role="menuitem" data-danger="true" onClick={() => { setMenuOpen(false); setDeleting(true); }}><Trash2 {...icon} />Excluir</button>
               </div>

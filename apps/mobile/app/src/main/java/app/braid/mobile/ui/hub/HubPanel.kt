@@ -60,8 +60,11 @@ enum class HubView { Chat, Create, Search }
 /** O que “Criar” cria (`.creationToggle`, agora no cabeçalho). */
 enum class CreateKind { Task, Event, Note }
 
-/** A altura do painel: compacto no início do chat, alto no resto e a tela toda quando expandido. */
-enum class HubSheetSize { Compact, Tall, Full }
+/**
+ * A altura do painel: compacto no início do chat, alto no resto, a tela toda quando
+ * expandido e `Fit` (acompanha o conteúdo, até o limite do alto) em Criar e Buscar.
+ */
+enum class HubSheetSize { Compact, Tall, Full, Fit }
 
 /**
  * O painel de “Buscar e criar”: o `dialog.sectionMenu` do web, que abre sobre a
@@ -89,6 +92,7 @@ fun HubPanel(
     val createState by createViewModel.state.collectAsStateWithLifecycle()
     val size =
         when {
+            view == HubView.Create || view == HubView.Search -> HubSheetSize.Fit
             view != HubView.Chat -> HubSheetSize.Tall
             expanded -> HubSheetSize.Full
             chatView == ChatView.Home -> HubSheetSize.Compact
@@ -113,7 +117,7 @@ fun HubPanel(
         }
     }
 
-    Column(modifier = modifier.fillMaxSize().padding(top = 10.dp)) {
+    Column(modifier = (if (size == HubSheetSize.Fit) modifier.fillMaxWidth() else modifier.fillMaxSize()).padding(top = 10.dp)) {
         Box(
             modifier =
                 Modifier
@@ -183,7 +187,7 @@ fun HubPanel(
                             },
                         )
                     }
-                    Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                    Box(modifier = Modifier.weight(1f, fill = false).fillMaxWidth()) {
                         key(kind) {
                             when (kind) {
                                 CreateKind.Task ->

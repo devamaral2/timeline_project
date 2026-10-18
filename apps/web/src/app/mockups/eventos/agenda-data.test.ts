@@ -26,18 +26,18 @@ test("maps a real card to the visual event model", () => {
     time: "09:00 — 09:30",
     minutes: 30,
     tags: ["pessoal"],
-    running: false,
   });
+  expect(agendaEventFromCard(card())).not.toHaveProperty("running");
 });
 
-test("keeps running cards without inventing a duration and sorts each day", () => {
+test("shows only the start time for cards without an end, without inventing a duration and sorts each day", () => {
   const grouped = agendaEventsByDay([
     card({ id: "late", startedAt: "2026-09-14T15:00:00.000Z" }),
     card({ id: "early", startedAt: "2026-09-14T12:00:00.000Z", finishedAt: undefined, durationLabel: "--" }),
   ]);
 
   expect(grouped["2026-09-14"]?.map((event) => event.id)).toEqual(["early", "late"]);
-  expect(grouped["2026-09-14"]?.[0]).toMatchObject({ running: true, minutes: 0, time: "09:00 — em andamento" });
+  expect(grouped["2026-09-14"]?.[0]).toMatchObject({ minutes: 0, time: "09:00" });
 });
 
 test("deduplicates cards returned by adjacent pages", () => {

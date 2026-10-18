@@ -30,6 +30,8 @@
 .menuAnchor { position: relative; }
 .menu { position: absolute; top: calc(100% + 4px); right: 0; z-index: 10; min-width: 180px; padding: 6px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); box-shadow: 0 12px 28px oklch(0.249 0.022 220.8 / 0.12); }
 .menu button { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 0 12px; border: 0; border-radius: 8px; background: transparent; color: var(--destructive); font-size: 14px; }
+.menu button.menuNeutral { color: var(--ink); }
+.menu button:disabled { opacity: .55; cursor: not-allowed; }
 .menu button:hover { background: var(--soft); }
 .menu svg { width: 18px; height: 18px; }
 
