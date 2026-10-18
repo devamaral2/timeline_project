@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.navigationBars
@@ -235,13 +236,14 @@ fun AgendaShell(
                     val full = hubSize == HubSheetSize.Full
                     Surface(
                         modifier =
-                            Modifier.fillMaxWidth().height(
+                            Modifier.fillMaxWidth().let { base ->
                                 when (hubSize) {
-                                    HubSheetSize.Compact -> minOf(maxHeight - 24.dp, HUB_PANEL_COMPACT_HEIGHT)
-                                    HubSheetSize.Tall -> maxHeight - HUB_PANEL_TOP_GAP
-                                    HubSheetSize.Full -> maxHeight
-                                },
-                            ),
+                                    HubSheetSize.Compact -> base.height(minOf(maxHeight - 24.dp, HUB_PANEL_COMPACT_HEIGHT))
+                                    HubSheetSize.Tall -> base.height(maxHeight - HUB_PANEL_TOP_GAP)
+                                    HubSheetSize.Full -> base.height(maxHeight)
+                                    HubSheetSize.Fit -> base.heightIn(max = maxHeight - HUB_PANEL_TOP_GAP)
+                                }
+                            },
                         shape = if (full) RectangleShape else RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
                         color = if (full) MaterialTheme.colorScheme.background else MaterialTheme.colorScheme.surface,
                     ) {

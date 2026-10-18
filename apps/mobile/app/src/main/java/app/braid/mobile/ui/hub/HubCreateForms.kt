@@ -3,7 +3,6 @@ package app.braid.mobile.ui.hub
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -56,7 +55,7 @@ fun TaskCreateForm(
     var draft by rememberSaveable(stateSaver = TaskDraftSaver) { mutableStateOf(TaskDraft(name = initialName)) }
 
     Column(
-        modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(vertical = 8.dp),
+        modifier = modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         HubTextBox(
@@ -117,7 +116,7 @@ fun NoteCreateForm(
     var tags by rememberSaveable { mutableStateOf(emptyList<String>()) }
 
     Column(
-        modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(vertical = 8.dp),
+        modifier = modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         HubTextBox(
