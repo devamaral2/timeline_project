@@ -40,10 +40,11 @@ const createClient = (options: AgentChatClientOptions) => {
   };
 };
 
-function Harness({ live = true }: { live?: boolean }) {
+function Harness({ live = true, onCommand }: { live?: boolean; onCommand?: (command: string, argument: string) => void }) {
   return (
     <AgentChatPanel
       {...useAgendaChat({ live, createClient, loadConversations, loadMessages, removeConversation })}
+      onCommand={onCommand}
     />
   );
 }
@@ -234,7 +235,7 @@ test("opening a conversation from the list loads it from the server", async () =
   render(<Harness />);
 
   await act(async () => {
-    fireEvent.click(screen.getByRole("button", { name: "Suas conversas" }));
+    fireEvent.click(screen.getByRole("button", { name: "Todas as conversas" }));
   });
   await act(async () => {
     fireEvent.click(screen.getByRole("button", { name: "quanto dormi ontem?" }));
@@ -256,9 +257,11 @@ test("starting a new conversation drops the id the server had given", () => {
   ask("crie a tarefa");
   emit(reply(sent[0].id, "Criei."));
 
+  fireEvent.click(screen.getByRole("button", { name: "Todas as conversas" }));
   fireEvent.click(screen.getByRole("button", { name: "Nova conversa" }));
 
   expect(screen.queryByRole("log")).not.toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "O que vamos fazer?" })).toBeInTheDocument();
   ask("outra coisa");
   expect(sent[1]).not.toHaveProperty("conversationId");
 });
@@ -294,19 +297,68 @@ test("deleting the open conversation starts a fresh one", async () => {
   render(<Harness />);
 
   await act(async () => {
-    fireEvent.click(screen.getByRole("button", { name: "Suas conversas" }));
+    fireEvent.click(screen.getByRole("button", { name: "Todas as conversas" }));
   });
   await act(async () => {
     fireEvent.click(screen.getByRole("button", { name: "quanto dormi ontem?" }));
   });
   await act(async () => {
-    fireEvent.click(screen.getByRole("button", { name: "Suas conversas" }));
+    fireEvent.click(screen.getByRole("button", { name: "Todas as conversas" }));
   });
   await act(async () => {
     fireEvent.click(screen.getByRole("button", { name: "Apagar conversa: quanto dormi ontem?" }));
   });
 
   expect(removed).toEqual([OTHER_CONVERSATION]);
+  fireEvent.click(screen.getByRole("button", { name: "Voltar para o chat" }));
   ask("começando de novo");
   expect(sent[0]).not.toHaveProperty("conversationId");
+});
+
+test("the start is only the question and the field, with no suggestions", () => {
+  render(<Harness />);
+
+  expect(screen.getByRole("heading", { name: "O que vamos fazer?" })).toBeInTheDocument();
+  expect(screen.getByRole("textbox", { name: "Mensagem para a IA" })).toHaveAttribute(
+    "placeholder",
+    "Pergunte ou digite / para comandos",
+  );
+  expect(screen.queryByRole("button", { name: "O que tenho na agenda hoje?" })).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Todas as conversas" })).toBeInTheDocument();
+});
+
+test("typing a slash lists the commands and Enter runs the highlighted one, nothing goes to the AI", () => {
+  const onCommand = vi.fn();
+  render(<Harness onCommand={onCommand} />);
+  const textbox = screen.getByRole("textbox", { name: "Mensagem para a IA" });
+
+  fireEvent.change(textbox, { target: { value: "/" } });
+  const commands = screen.getByRole("list", { name: "Comandos" });
+  expect(within(commands).getAllByRole("button").map((button) => button.textContent)).toEqual([
+    "Criar tarefaNome, status, prioridade e dia/tarefa",
+    "Criar eventoTipo, início e término/evento",
+    "Criar notaA primeira linha vira o título/nota",
+    "PesquisarEventos, tarefas e notas/buscar",
+  ]);
+
+  fireEvent.keyDown(textbox, { key: "ArrowDown" });
+  expect(within(commands).getByRole("button", { name: /Criar evento/ })).toHaveAttribute("aria-current", "true");
+
+  fireEvent.change(textbox, { target: { value: "/tarefa comprar pão" } });
+  fireEvent.submit(textbox.closest("form") as HTMLFormElement);
+
+  expect(onCommand).toHaveBeenCalledWith("task", "comprar pão");
+  expect(sent).toEqual([]);
+  expect(textbox).toHaveValue("");
+});
+
+test("an unknown slash command is just a message", () => {
+  const onCommand = vi.fn();
+  render(<Harness onCommand={onCommand} />);
+
+  ask("/xyz o que é isso?");
+
+  expect(screen.queryByRole("list", { name: "Comandos" })).not.toBeInTheDocument();
+  expect(onCommand).not.toHaveBeenCalled();
+  expect(sent[0]).toMatchObject({ text: "/xyz o que é isso?" });
 });

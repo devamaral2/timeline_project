@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, ArrowUp, CalendarDays, Check, ChevronDown, CirclePlus, NotepadText, Plus, Search, SquareCheck, X } from "lucide-react";
+import { ArrowLeft, CalendarDays, Check, ChevronDown, NotepadText, Plus, Search, SquareCheck, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
@@ -9,7 +9,7 @@ import { AgentChatPanel, useAgendaChat } from "./agent-chat-panel";
 import { EXAMPLE_TODAY, exampleEventsOn, type TaskStatus } from "./agenda-examples";
 import { CalendarPicker, type DateField, EventScheduleFields } from "./event-schedule-fields";
 import styles from "./mockup.module.css";
-import { BraidAssistantIcon, IntelligenceIcon } from "./navigation-icons";
+import type { HubCommandId } from "./hub-commands";
 import { TaskStatusIcon, taskStatuses } from "./task-controls";
 
 type Kind = "Evento" | "Tarefa" | "Nota";
@@ -57,7 +57,9 @@ export function MobileNavigation({ userId }: { userId?: string }) {
   const onTasks = tasksHref !== null && (pathname === tasksHref || pathname.startsWith(`${tasksHref}/`));
   const agendaChat = useAgendaChat({ live: Boolean(userId) });
   const [panel, setPanel] = useState<"hub" | "Tarefa" | "Nota" | null>(null);
-  const [mode, setMode] = useState<"ai" | "create" | "search">("ai");
+  // O chat e a porta do painel; criar e pesquisar abrem pelos comandos "/" dele.
+  const [hubView, setHubView] = useState<"chat" | "create" | "search">("chat");
+  const [expanded, setExpanded] = useState(false);
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState<Kind>("Tarefa");
   const [category, setCategory] = useState<Category>("Rotina");
@@ -65,8 +67,6 @@ export function MobileNavigation({ userId }: { userId?: string }) {
   const [creating, setCreating] = useState(false);
   const [title, setTitle] = useState("");
   const [entries, setEntries] = useState(initialEntries);
-  const [prompt, setPrompt] = useState("");
-  const [sentPrompt, setSentPrompt] = useState("");
   const [notice, setNotice] = useState("");
   const [drafts, setDrafts] = useState<Record<string, Record<string, string>>>({});
   const [activePicker, setActivePicker] = useState<Picker | null>(null);
@@ -80,11 +80,28 @@ export function MobileNavigation({ userId }: { userId?: string }) {
   function updateDraft(field: string, value: string) {
     setDrafts(current => ({ ...current, [draftKey]: { ...current[draftKey], [field]: value } }));
   }
-  function selectMode(next: "ai" | "create" | "search") {
-    if (next === "create" && mode !== "create") { setKind("Tarefa"); setCategory("Rotina"); }
+  function runCommand(command: HubCommandId, argument: string) {
     setActivePicker(null);
     setNotice("");
-    setMode(next);
+    if (command === "search") {
+      setQuery(argument);
+      setHubView("search");
+      return;
+    }
+    const next: Kind = command === "task" ? "Tarefa" : command === "event" ? "Evento" : "Nota";
+    setKind(next);
+    setCategory("Rotina");
+    // `/tarefa comprar pão` ja chega com o nome preenchido.
+    if (argument) {
+      const key = next === "Evento" ? `${next}:${eventType}` : `${next}:Rotina`;
+      setDrafts(current => ({ ...current, [key]: { ...current[key], title: argument } }));
+    }
+    setHubView("create");
+  }
+  function backToChat() {
+    setActivePicker(null);
+    setNotice("");
+    setHubView("chat");
   }
 
   useEffect(() => {
@@ -100,7 +117,7 @@ export function MobileNavigation({ userId }: { userId?: string }) {
     setCreating(false);
     setActivePicker(null);
     setNotice("");
-    if (next === "hub") setMode("ai");
+    if (next === "hub") { setHubView("chat"); setExpanded(false); }
     if (next !== "hub") setKind(next);
     dialogRef.current?.showModal();
   }
@@ -121,20 +138,27 @@ export function MobileNavigation({ userId }: { userId?: string }) {
         ) : (
           <button type="button" aria-label="Notas" onClick={() => openPanel("Nota")} aria-haspopup="dialog" aria-expanded={panel === "Nota"} aria-controls={dialogId}><NotepadText aria-hidden /><span>Notas</span></button>
         )}
-        <button type="button" className={styles.commandButton} onClick={() => openPanel("hub")} aria-haspopup="dialog" aria-expanded={panel === "hub"} aria-controls={dialogId} aria-label="Buscar e criar"><span className={styles.commandGlyph}><IntelligenceIcon /></span><span>Buscar e criar</span></button>
+        <button type="button" className={styles.commandButton} onClick={() => openPanel("hub")} aria-haspopup="dialog" aria-expanded={panel === "hub"} aria-controls={dialogId} aria-label="Buscar e criar"><span className={styles.commandGlyph}><span /></span><span>Buscar e criar</span></button>
       </nav>
       <dialog ref={dialogRef} id={dialogId} aria-labelledby={panel === "hub" ? undefined : titleId} aria-label={panel === "hub" ? "Buscar e criar" : undefined} className={styles.sectionMenu} onClose={() => setPanel(null)}
+        data-hub-view={panel === "hub" ? hubView : undefined} data-expanded={panel === "hub" && hubView === "chat" && expanded ? "true" : undefined}
         onPointerDown={event => {
           const bounds = event.currentTarget.getBoundingClientRect();
           if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) { event.preventDefault(); dialogRef.current?.close(); }
         }}>
         <div className={styles.sheetHandle} aria-hidden />
-        <div className={styles.sectionMenuHeading}>
-          <h2 id={titleId}>{panel === "Tarefa" ? "Tarefas" : panel === "Nota" ? "Notas" : ""}</h2>
+        {panel !== "hub" && <div className={styles.sectionMenuHeading}>
+          <h2 id={titleId}>{panel === "Tarefa" ? "Tarefas" : "Notas"}</h2>
           <button type="button" onClick={() => dialogRef.current?.close()} aria-label="Fechar painel"><X aria-hidden /></button>
-        </div>
+        </div>}
+        {panel === "hub" && hubView === "chat" ? <AgentChatPanel {...agendaChat} expanded={expanded} onToggleExpanded={() => setExpanded(current => !current)} onCommand={runCommand} /> : <>
+        {panel === "hub" && !activePicker && <div className={styles.hubHeader}>
+          <button type="button" className={styles.hubBack} onClick={backToChat} aria-label="Voltar para o chat"><ArrowLeft aria-hidden /></button>
+          {hubView === "create" ? <fieldset className={styles.creationToggle} aria-label="Tipo de criação">{(["Tarefa", "Evento", "Nota"] as Kind[]).map(value => { const Icon = icons[value]; return <button type="button" key={value} aria-pressed={kind === value} onClick={() => { setKind(value); setActivePicker(null); setNotice(""); }}><Icon aria-hidden /><span>{value}</span></button>; })}</fieldset>
+            : <label className={styles.hubSearch}><Search aria-hidden /><input aria-label="Pesquisar eventos, tarefas e notas" value={query} onChange={event => setQuery(event.target.value)} placeholder="Buscar eventos, tarefas e notas" autoFocus /></label>}
+        </div>}
         <div className={styles.hubContent}>
-        {panel === "hub" && mode === "create" && activePicker ? <div className={styles.pickerView}>
+        {panel === "hub" && hubView === "create" && activePicker ? <div className={styles.pickerView}>
           <div className={styles.pickerHeader}>
             <button type="button" className={styles.pickerBack} onClick={() => setActivePicker(null)} aria-label="Voltar"><ArrowLeft aria-hidden /></button>
             <h3>{pickerTitles[activePicker]}</h3>
@@ -161,17 +185,7 @@ export function MobileNavigation({ userId }: { userId?: string }) {
               {priority === selectedPriority ? <Check aria-hidden /> : null}
             </button>)}
           </div>}
-        </div> : panel === "hub" && mode === "ai" && userId ? <AgentChatPanel {...agendaChat} /> : panel === "hub" && mode === "ai" ? <div className={styles.assistantPanel}>
-          <div className={styles.assistantWelcome}><BraidAssistantIcon /><h3>O que vamos fazer?</h3><p>Encontre o que precisa ou transforme uma ideia em algo para o seu dia.</p></div>
-          <div className={styles.promptSuggestions}>
-            {["O que tenho na agenda hoje?", "Criar uma tarefa", "Anotar uma ideia"].map(suggestion => <button type="button" key={suggestion} onClick={() => setPrompt(suggestion)}>{suggestion}</button>)}
-          </div>
-          {sentPrompt && <div className={styles.chatPreview}><p>{sentPrompt}</p><span>Esta é uma prévia da conversa. Experimente criar ou pesquisar usando os ícones abaixo.</span></div>}
-          <form className={styles.hubComposer} onSubmit={event => { event.preventDefault(); if (prompt.trim()) { setSentPrompt(prompt.trim()); setPrompt(""); } }}>
-            <input aria-label="Mensagem para a IA" value={prompt} onChange={event => setPrompt(event.target.value)} placeholder="Pergunte ou peça para criar…" />
-            <button type="submit" disabled={!prompt.trim()} aria-label="Enviar mensagem"><ArrowUp aria-hidden /></button>
-          </form>
-        </div> : panel === "hub" && mode === "create" ? <div className={styles.entityForm}>
+        </div> : panel === "hub" && hubView === "create" ? <div className={styles.entityForm}>
             {kind === "Evento" ? <div className={styles.entityEventHeading}>
               <span className={styles.entityEventTypeName}>{eventVisual.label}</span>
               <div className={styles.entityEventTitleRow}>
@@ -243,23 +257,13 @@ export function MobileNavigation({ userId }: { userId?: string }) {
           </form>}
           <p className={styles.hubNotice} role="status">{notice}</p>
           </>}
-          {panel === "hub" && <div className={styles.manualHeading}><h3>{query ? "Resultados" : "Eventos, tarefas e notas"}</h3></div>}
+          {panel === "hub" && <div className={styles.manualHeading}><h3>{query ? "Resultados" : "No seu espaço"}</h3></div>}
           <ul className={styles.hubResults}>{visibleEntries.map(entry => { const Icon = icons[entry.kind]; return <li key={entry.id}><Icon aria-hidden /><span>{entry.title}<small>{entry.kind}{entry.category ? ` · ${entry.category}` : ""}</small></span></li>; })}</ul>
           {visibleEntries.length === 0 && <p className={styles.hubDescription}>Nenhum resultado. Que tal criar algo novo?</p>}
-          {panel === "hub" && <label className={styles.hubSearch}><Search aria-hidden /><input aria-label="Pesquisar manualmente" value={query} onChange={event => setQuery(event.target.value)} placeholder="Buscar eventos, tarefas e notas" /></label>}
         </div>}
         </div>
-        {panel === "hub" && !activePicker && <div className={styles.hubDock}>
-          {mode === "create" && <>
-            <fieldset className={styles.creationToggle} aria-label="Tipo de criação">{(["Tarefa", "Evento", "Nota"] as Kind[]).map(value => { const Icon = icons[value]; return <button type="button" key={value} aria-pressed={kind === value} onClick={() => { setKind(value); setActivePicker(null); setNotice(""); }}><Icon aria-hidden /><span>{value}</span></button>; })}</fieldset>
-          </>}
-          <fieldset className={styles.hubModes} aria-label="Modo de busca e criação">
-            <button type="button" aria-pressed={mode === "ai"} onClick={() => selectMode("ai")}><BraidAssistantIcon /><span>Chat com IA</span></button>
-            <button type="button" aria-pressed={mode === "create"} onClick={() => selectMode("create")}><CirclePlus aria-hidden /><span>Criar</span></button>
-            <button type="button" aria-pressed={mode === "search"} onClick={() => selectMode("search")}><Search aria-hidden /><span>Pesquisar</span></button>
-          </fieldset>
-        </div>}
         {panel !== "hub" && <p className={styles.hubFootnote}>Prévia interativa · dados de exemplo · rascunhos só nesta sessão</p>}
+        </>}
       </dialog>
     </>
   );

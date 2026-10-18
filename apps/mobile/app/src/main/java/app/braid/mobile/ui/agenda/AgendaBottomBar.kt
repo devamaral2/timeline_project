@@ -1,6 +1,5 @@
 package app.braid.mobile.ui.agenda
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -22,10 +21,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -35,6 +30,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.braid.mobile.core.designsystem.LucideIcons
 import app.braid.mobile.core.designsystem.braidBrand
+import app.braid.mobile.core.designsystem.braidBrandSoft
 
 /**
  * As quatro entradas da barra inferior, na mesma ordem e com os mesmos ícones
@@ -122,7 +118,7 @@ private fun BottomBarButton(
         contentAlignment = Alignment.Center,
     ) {
         if (item == BottomBarItem.Search) {
-            IntelligenceGlyph(tint = tint, modifier = Modifier.size(30.dp))
+            SearchCreateGlyph()
         } else {
             Icon(
                 imageVector = item.vector(),
@@ -131,7 +127,7 @@ private fun BottomBarButton(
                 modifier = Modifier.size(25.dp),
             )
         }
-        if (selected) {
+        if (selected && item != BottomBarItem.Search) {
             Box(
                 modifier =
                     Modifier
@@ -145,26 +141,15 @@ private fun BottomBarButton(
     }
 }
 
-/** O ponto com ondas de `IntelligenceIcon`, parado como no `prefers-reduced-motion` do web. */
+/** O ponto da marca num círculo suave (`.commandGlyph` do web): a porta do chat com IA. */
 @Composable
 @Suppress("ktlint:standard:function-naming")
-private fun IntelligenceGlyph(
-    tint: Color,
-    modifier: Modifier = Modifier,
-) {
-    Canvas(modifier = modifier) {
-        val unit = size.width / 24f
-        val center = center
-        drawCircle(color = tint, radius = 2.4f * unit, center = center)
-        val dashes = PathEffect.dashPathEffect(floatArrayOf(1.1f * unit * 1.5f, 1.7f * unit * 1.5f))
-        listOf(5f to 1f, 8f to 0.45f).forEach { (radius, alpha) ->
-            drawCircle(
-                color = tint.copy(alpha = alpha),
-                radius = radius * unit,
-                center = center,
-                style = Stroke(width = 1.5f * unit, cap = StrokeCap.Round, pathEffect = dashes),
-            )
-        }
+private fun SearchCreateGlyph() {
+    Box(
+        modifier = Modifier.size(48.dp).clip(CircleShape).background(braidBrandSoft()),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(modifier = Modifier.size(12.dp).clip(CircleShape).background(braidBrand()))
     }
 }
 

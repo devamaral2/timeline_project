@@ -2,77 +2,114 @@
 
 package app.braid.mobile.ui.chat
 
+import android.animation.ValueAnimator
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Stop
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.braid.mobile.core.designsystem.BraidDisplayFont
+import app.braid.mobile.core.designsystem.BraidMonoFont
 import app.braid.mobile.core.designsystem.LucideIcons
 import app.braid.mobile.core.designsystem.braidBrand
 import app.braid.mobile.core.designsystem.braidBrandSoft
 import app.braid.mobile.data.dto.AgentChatEntityRefDto
-import app.braid.mobile.ui.hub.HubSquareButton
-import app.braid.mobile.ui.hub.HubTextBox
+import java.time.LocalDate
 
-private val CHAT_SUGGESTIONS = listOf("O que tenho na agenda hoje?", "Criar uma tarefa", "Anotar uma ideia")
+/** As três vistas do chat; o hub ajusta a altura do painel a elas. */
+enum class ChatView { Home, Conversation, List }
 
 /**
  * O “Chat com IA” do hub, como `AgentChatPanel` (`mockups/eventos/agent-chat-panel.tsx`):
- * cabeçalho com as conversas e “nova”, boas-vindas com sugestões, o registro da
- * conversa e o compositor com a mesma caixa do web. Vive dentro do painel do hub,
- * sem barra própria.
+ * o início (marca, pergunta e campo), a conversa e a lista de conversas. Criar e
+ * pesquisar saem do próprio campo, pela barra "/" (`onCommand`).
  */
 @Composable
 fun AgentChatPanel(
     viewModel: AgentChatViewModel,
     modifier: Modifier = Modifier,
+    expanded: Boolean = false,
+    onToggleExpanded: (() -> Unit)? = null,
+    onCommand: ((ChatCommand, String) -> Unit)? = null,
+    onViewChange: (ChatView) -> Unit = {},
     onEntitiesChanged: () -> Unit = {},
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var prompt by remember { mutableStateOf("") }
-    var historyOpen by remember { mutableStateOf(false) }
+    var listOpen by remember { mutableStateOf(false) }
+    var markRun by remember { mutableIntStateOf(0) }
     val listState = rememberLazyListState()
     val currentConversation = state.conversations.firstOrNull { it.id == state.conversationId }
+    val view =
+        when {
+            listOpen -> ChatView.List
+            state.isLoadingMessages || state.messages.isNotEmpty() -> ChatView.Conversation
+            else -> ChatView.Home
+        }
+    val command = if (onCommand != null) parseChatCommand(prompt) else null
+    val highlighted = command?.matches?.firstOrNull()
+    val canStartNew = state.pending == null && !state.isRecoveringJobs
+    val reveal = rememberHomeReveal()
 
+    LaunchedEffect(view) { onViewChange(view) }
     LaunchedEffect(state.messages.size, state.pending) {
         if (state.messages.isNotEmpty()) listState.animateScrollToItem(state.messages.lastIndex)
     }
@@ -82,35 +119,75 @@ fun AgentChatPanel(
         }
     }
 
+    fun runCommand(target: ChatCommand) {
+        onCommand?.invoke(target, command?.argument.orEmpty())
+        prompt = ""
+    }
+
     Column(modifier = modifier.fillMaxSize()) {
-        ChatHeader(
-            title = currentConversation?.title ?: currentConversation?.preview ?: "Nova conversa",
-            historyOpen = historyOpen,
-            canStartNew = state.pending == null && !state.isRecoveringJobs,
-            onToggleHistory = { historyOpen = !historyOpen },
-            onNew = {
-                historyOpen = false
-                viewModel.startNewConversation()
-            },
-        )
-        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+        if (view == ChatView.List) {
+            ChatHeaderRow {
+                ChatIconButton(LucideIcons.arrowLeft(), "Voltar para o chat", tint = MaterialTheme.colorScheme.onSurface) {
+                    listOpen = false
+                }
+                ChatHeaderTitle("Conversas", fontSize = 17)
+                ChatIconButton(LucideIcons.plus(), "Nova conversa", enabled = canStartNew, tint = MaterialTheme.colorScheme.onSurface) {
+                    listOpen = false
+                    viewModel.startNewConversation()
+                }
+            }
+        } else {
+            val buttonAlpha = if (view == ChatView.Home) reveal else 1f
+            ChatHeaderRow {
+                ChatIconButton(LucideIcons.messagesSquare(), "Todas as conversas", modifier = Modifier.alpha(buttonAlpha)) {
+                    listOpen = true
+                }
+                if (view == ChatView.Conversation) {
+                    ChatHeaderTitle(currentConversation?.label() ?: "Nova conversa", fontSize = 14)
+                } else {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+                if (onToggleExpanded != null) {
+                    ChatIconButton(
+                        icon = if (expanded) LucideIcons.minimize2() else LucideIcons.maximize2(),
+                        description = if (expanded) "Recolher para o painel" else "Expandir para tela inteira",
+                        modifier = Modifier.alpha(buttonAlpha),
+                        onClick = onToggleExpanded,
+                    )
+                }
+            }
+        }
+
+        Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 20.dp)) {
             when {
-                historyOpen ->
-                    ConversationHistory(
+                view == ChatView.List ->
+                    ConversationList(
                         state = state,
                         onOpen = {
                             viewModel.openConversation(it)
-                            historyOpen = false
+                            listOpen = false
                         },
                         onDelete = viewModel::deleteConversation,
                         onLoadMore = viewModel::loadMoreConversations,
                     )
-                state.messages.isEmpty() -> ChatWelcome(onSuggestion = { prompt = it })
+                command != null -> CommandList(commands = command.matches, highlighted = highlighted, onRun = ::runCommand)
+                view == ChatView.Home ->
+                    ChatHome(
+                        expanded = expanded,
+                        markRun = markRun,
+                        onReplay = { markRun++ },
+                    )
+                state.isLoadingMessages ->
+                    Text(
+                        text = "Carregando a conversa…",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 else ->
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         state = listState,
-                        contentPadding = PaddingValues(bottom = 14.dp),
+                        contentPadding = PaddingValues(top = 8.dp, bottom = 14.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         items(state.messages, key = { it.id }) { message ->
@@ -132,182 +209,303 @@ fun AgentChatPanel(
                     }
             }
         }
-        ChatComposer(
-            value = prompt,
-            enabled = state.pending == null && !state.isRecoveringJobs && !state.isLoadingMessages,
-            pending = state.pending,
-            onValueChange = { prompt = it.take(4000) },
-            onSend = {
-                if (prompt.isNotBlank() && !state.isRecoveringJobs && !state.isLoadingMessages) {
-                    viewModel.send(prompt)
-                    prompt = ""
-                }
-            },
-            onCancel = viewModel::cancel,
+
+        if (view != ChatView.List) {
+            ChatComposer(
+                modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 24.dp),
+                value = prompt,
+                enabled = state.pending == null && !state.isRecoveringJobs && !state.isLoadingMessages,
+                pending = state.pending,
+                onValueChange = { prompt = it.take(4000) },
+                onSend = {
+                    when {
+                        highlighted != null -> runCommand(highlighted)
+                        prompt.isNotBlank() && !state.isRecoveringJobs && !state.isLoadingMessages -> {
+                            viewModel.send(prompt)
+                            prompt = ""
+                        }
+                    }
+                },
+                onCancel = viewModel::cancel,
+            )
+        }
+    }
+}
+
+/**
+ * Os botões do início só aparecem depois que a marca termina de se trançar
+ * (`data-reveal` do web, 2,25 s); com as animações do sistema desligadas, já estão lá.
+ */
+@Composable
+private fun rememberHomeReveal(): Float {
+    val animate = remember { ValueAnimator.areAnimatorsEnabled() }
+    val alpha = remember { Animatable(if (animate) 0f else 1f) }
+    LaunchedEffect(alpha) {
+        if (animate) alpha.animateTo(1f, tween(durationMillis = 300, delayMillis = 2250))
+    }
+    return alpha.value
+}
+
+@Composable
+private fun ChatHeaderRow(content: @Composable RowScope.() -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) { content() }
+}
+
+@Composable
+private fun RowScope.ChatHeaderTitle(
+    text: String,
+    fontSize: Int,
+) {
+    Text(
+        modifier = Modifier.weight(1f).semantics { heading() },
+        text = text,
+        fontSize = fontSize.sp,
+        fontWeight = FontWeight.SemiBold,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+    )
+}
+
+/** `.chatIconButton`: alvo de 44 dp, ícone de 20 sem fundo. */
+@Composable
+private fun ChatIconButton(
+    icon: ImageVector,
+    description: String,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    tint: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier =
+            modifier
+                .size(44.dp)
+                .clip(CircleShape)
+                .clickable(enabled = enabled, onClickLabel = description, onClick = onClick)
+                .semantics { contentDescription = description },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = tint.copy(alpha = if (enabled) 1f else 0.4f),
+            modifier = Modifier.size(20.dp),
         )
     }
 }
 
-/** `.chatHeader`: o botão com a conversa atual (abre a lista) e o “+” de nova conversa. */
+/** O início: a marca (toque para repetir) e “O que vamos fazer?”, sem sugestões. */
 @Composable
-private fun ChatHeader(
-    title: String,
-    historyOpen: Boolean,
-    canStartNew: Boolean,
-    onToggleHistory: () -> Unit,
-    onNew: () -> Unit,
+private fun ChatHome(
+    expanded: Boolean,
+    markRun: Int,
+    onReplay: () -> Unit,
 ) {
-    val colors = MaterialTheme.colorScheme
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    Column(
+        modifier = Modifier.fillMaxSize().padding(bottom = if (expanded) 64.dp else 36.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(22.dp, Alignment.Bottom),
     ) {
-        Row(
-            modifier =
-                Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(10.dp))
-                    .border(BorderStroke(1.dp, colors.outline), RoundedCornerShape(10.dp))
-                    .clickable(onClickLabel = "Suas conversas", onClick = onToggleHistory)
-                    .padding(horizontal = 10.dp, vertical = 7.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.History,
-                contentDescription = "Suas conversas",
-                modifier = Modifier.size(15.dp),
-                tint = if (historyOpen) braidBrand() else colors.onSurface,
-            )
-            Text(text = title, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
+        // Só a trança ocupa lugar; os fios soltos sobem por cima do cabeçalho.
         Box(
             modifier =
                 Modifier
-                    .size(32.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(braidBrandSoft().copy(alpha = if (canStartNew) 1f else 0.4f))
-                    .clickable(enabled = canStartNew, onClickLabel = "Nova conversa", onClick = onNew),
-            contentAlignment = Alignment.Center,
+                    .height(74.dp)
+                    .wrapContentHeight(align = Alignment.Bottom, unbounded = true)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClickLabel = "Repetir a animação da marca",
+                        onClick = onReplay,
+                    ),
         ) {
-            Icon(
-                imageVector = LucideIcons.plus(),
-                contentDescription = "Nova conversa",
-                modifier = Modifier.size(15.dp),
-                tint = braidBrand().copy(alpha = if (canStartNew) 1f else 0.4f),
-            )
+            androidx.compose.runtime.key(markRun, expanded) {
+                BraidMark(tail = if (expanded) BRAID_TAIL_FULL else BRAID_TAIL_PANEL)
+            }
+        }
+        Text(
+            modifier = Modifier.semantics { heading() },
+            text = "O que vamos fazer?",
+            fontFamily = BraidDisplayFont,
+            fontSize = 36.sp,
+            lineHeight = 36.sp,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+/** `.chatCommands`: o que a barra "/" oferece, o primeiro realçado (é o que o Enviar roda). */
+@Composable
+private fun CommandList(
+    commands: List<ChatCommand>,
+    highlighted: ChatCommand?,
+    onRun: (ChatCommand) -> Unit,
+) {
+    val colors = MaterialTheme.colorScheme
+    Column(
+        modifier = Modifier.fillMaxSize().padding(bottom = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.Bottom),
+    ) {
+        commands.forEach { command ->
+            val active = command == highlighted
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 56.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (active) colors.surfaceVariant else androidx.compose.ui.graphics.Color.Transparent)
+                        .clickable(onClickLabel = command.label) { onRun(command) }
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                Icon(
+                    imageVector = command.icon(),
+                    contentDescription = null,
+                    tint = if (active) colors.onSurface else colors.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
+                )
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(text = command.label, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Text(text = command.hint, fontSize = 13.sp, color = colors.onSurfaceVariant)
+                }
+                Text(text = "/${command.slug}", fontFamily = BraidMonoFont, fontSize = 12.sp, color = colors.onSurfaceVariant)
+            }
         }
     }
 }
 
+private fun ChatCommand.icon(): ImageVector =
+    when (this) {
+        ChatCommand.Task -> LucideIcons.squareCheck()
+        ChatCommand.Event -> LucideIcons.calendarDays()
+        ChatCommand.Note -> LucideIcons.notepadText()
+        ChatCommand.Search -> LucideIcons.search()
+    }
+
+/** A lista de conversas por Hoje, Esta semana e Antes, como a tela “Conversas” do design. */
 @Composable
-private fun ConversationHistory(
+private fun ConversationList(
     state: AgentChatUiState,
     onOpen: (String) -> Unit,
     onDelete: (String) -> Unit,
     onLoadMore: () -> Unit,
 ) {
-    Column(modifier = Modifier.fillMaxSize()) {
-        when {
-            state.conversations.isEmpty() && state.isLoadingConversations ->
-                Text("Carregando conversas…", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            state.conversations.isEmpty() ->
-                Text("Nenhuma conversa ainda.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            else -> {
-                LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    items(state.conversations, key = { it.id }) { conversation ->
+    val colors = MaterialTheme.colorScheme
+    val today = remember { LocalDate.now() }
+    when {
+        state.conversations.isEmpty() && state.isLoadingConversations ->
+            Text("Carregando conversas…", fontSize = 13.sp, color = colors.onSurfaceVariant)
+        state.conversations.isEmpty() ->
+            Text("Nenhuma conversa ainda.", fontSize = 13.sp, color = colors.onSurfaceVariant)
+        else ->
+            LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp)) {
+                groupConversations(state.conversations, today).forEachIndexed { index, group ->
+                    item(key = "group:${group.label}") {
                         Row(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .clip(MaterialTheme.shapes.medium)
-                                    .clickable { onOpen(conversation.id) },
-                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(top = if (index == 0) 0.dp else 18.dp, bottom = 2.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.Bottom,
                         ) {
-                            Column(modifier = Modifier.weight(1f).padding(horizontal = 10.dp, vertical = 8.dp)) {
-                                Text(conversation.title ?: conversation.preview, maxLines = 1, fontSize = 13.sp)
-                                Text(
-                                    text = conversation.lastMessageAt,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                            IconButton(onClick = { onDelete(conversation.id) }, enabled = state.pending == null) {
-                                Icon(
-                                    Icons.Outlined.Delete,
-                                    contentDescription = "Apagar conversa",
-                                    modifier = Modifier.size(18.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
+                            Text(
+                                text = group.label.label.uppercase(),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                letterSpacing = 1.3.sp,
+                            )
+                            Text(text = "${group.items.size}", fontSize = 12.sp, color = colors.onSurfaceVariant)
                         }
                     }
-                    if (state.conversationsNextCursor != null) {
-                        item {
-                            TextButton(onClick = onLoadMore, enabled = !state.isLoadingConversations) {
-                                Text(if (state.isLoadingConversations) "Carregando…" else "Carregar mais")
+                    items(group.items, key = { it.id }) { conversation ->
+                        val current = conversation.id == state.conversationId
+                        if (conversation != group.items.first()) HorizontalDivider(color = colors.outline)
+                        Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Column(
+                                modifier =
+                                    Modifier
+                                        .weight(1f)
+                                        .heightIn(min = 64.dp)
+                                        .clickable(enabled = state.pending == null, onClickLabel = conversation.label()) {
+                                            onOpen(conversation.id)
+                                        }.padding(vertical = 12.dp),
+                                verticalArrangement = Arrangement.spacedBy(3.dp),
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text(
+                                        modifier = Modifier.weight(1f, fill = false),
+                                        text = conversation.label(),
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                    if (current) {
+                                        Icon(
+                                            imageVector = LucideIcons.check(2f),
+                                            contentDescription = "Conversa atual",
+                                            tint = braidBrand(),
+                                            modifier = Modifier.size(16.dp),
+                                        )
+                                    }
+                                }
+                                if (conversation.title != null && conversation.preview != conversation.title) {
+                                    Text(
+                                        text = conversation.preview,
+                                        fontSize = 13.sp,
+                                        color = colors.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+                            }
+                            Text(
+                                modifier = Modifier.padding(top = 14.dp),
+                                text = conversationTime(conversation.lastMessageAt, today),
+                                fontSize = 12.sp,
+                                color = colors.onSurfaceVariant,
+                            )
+                            Box(
+                                modifier =
+                                    Modifier
+                                        .padding(top = 7.dp)
+                                        .size(32.dp)
+                                        .clip(CircleShape)
+                                        .clickable(enabled = state.pending == null, onClickLabel = "Apagar conversa") {
+                                            onDelete(conversation.id)
+                                        }.semantics { contentDescription = "Apagar conversa: ${conversation.label()}" },
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    imageVector = LucideIcons.trash2(),
+                                    contentDescription = null,
+                                    tint = colors.onSurfaceVariant,
+                                    modifier = Modifier.size(15.dp),
+                                )
                             }
                         }
                     }
                 }
+                if (state.conversationsNextCursor != null) {
+                    item(key = "more") {
+                        TextButton(onClick = onLoadMore, enabled = !state.isLoadingConversations) {
+                            Text(if (state.isLoadingConversations) "Carregando…" else "Carregar mais", color = braidBrand())
+                        }
+                    }
+                }
             }
-        }
     }
 }
 
-/** `.assistantWelcome` e `.promptSuggestions`. */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun ChatWelcome(onSuggestion: (String) -> Unit) {
-    val colors = MaterialTheme.colorScheme
-    Column(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 15.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Icon(
-            imageVector = LucideIcons.braidAssistant(1.2f),
-            contentDescription = null,
-            tint = braidBrand(),
-            modifier = Modifier.size(34.dp),
-        )
-        Text(
-            text = "O que vamos fazer?",
-            modifier = Modifier.padding(top = 12.dp),
-            fontSize = 21.sp,
-            fontWeight = FontWeight.Medium,
-        )
-        Text(
-            text = "Pergunte sobre o seu dia ou peça para criar eventos, tarefas e notas.",
-            modifier = Modifier.padding(top = 8.dp, bottom = 20.dp),
-            fontSize = 13.sp,
-            lineHeight = 22.sp,
-            textAlign = TextAlign.Center,
-            color = colors.onSurfaceVariant,
-        )
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            CHAT_SUGGESTIONS.forEach { suggestion ->
-                Text(
-                    modifier =
-                        Modifier
-                            .clip(RoundedCornerShape(10.dp))
-                            .border(BorderStroke(1.dp, colors.outline), RoundedCornerShape(10.dp))
-                            .clickable { onSuggestion(suggestion) }
-                            .padding(horizontal = 12.dp, vertical = 9.dp),
-                    text = suggestion,
-                    fontSize = 11.sp,
-                    color = braidBrand(),
-                )
-            }
-        }
-    }
-}
-
-/** `.hubComposer`: a caixa do web, com o botão de enviar (ou de parar a resposta) dentro dela. */
+/**
+ * `.chatComposer`: o campo sublinhado do design, com o fio na cor da marca
+ * enquanto tem o foco. À direita, enviar quando há texto e parar quando a IA
+ * está respondendo. A voz fica na barra da agenda, como antes.
+ */
 @Composable
 private fun ChatComposer(
     value: String,
@@ -316,33 +514,58 @@ private fun ChatComposer(
     onValueChange: (String) -> Unit,
     onSend: () -> Unit,
     onCancel: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    HubTextBox(
-        modifier = Modifier.fillMaxWidth(),
-        value = value,
-        onValueChange = onValueChange,
-        enabled = enabled,
-        placeholder = "Pergunte ou peça para criar…",
-        singleLine = false,
-        maxLines = 4,
-        trailing = {
-            if (pending == null) {
-                HubSquareButton(
-                    icon = LucideIcons.arrowUp(),
-                    description = "Enviar mensagem",
-                    onClick = onSend,
-                    enabled = value.isNotBlank(),
-                )
-            } else {
-                HubSquareButton(
-                    icon = Icons.Outlined.Stop,
-                    description = "Parar resposta",
-                    onClick = onCancel,
-                    enabled = !pending.cancelling,
-                )
-            }
-        },
-    )
+    val colors = MaterialTheme.colorScheme
+    val interaction = remember { MutableInteractionSource() }
+    val focused by interaction.collectIsFocusedAsState()
+    val line = if (focused) braidBrand() else colors.outlineVariant
+    Row(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .heightIn(min = 52.dp)
+                .drawBehind {
+                    val stroke = (if (focused) 2.dp else 1.dp).toPx()
+                    drawLine(line, Offset(0f, size.height - stroke / 2), Offset(size.width, size.height - stroke / 2), stroke)
+                },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        BasicTextField(
+            modifier = Modifier.weight(1f).semantics { contentDescription = "Mensagem para a IA" },
+            value = value,
+            onValueChange = onValueChange,
+            enabled = enabled,
+            maxLines = 4,
+            interactionSource = interaction,
+            textStyle = MaterialTheme.typography.bodyLarge.copy(color = colors.onSurface, fontSize = 16.sp),
+            cursorBrush = SolidColor(braidBrand()),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+            keyboardActions = KeyboardActions(onSend = { onSend() }),
+            decorationBox = { inner ->
+                Box(modifier = Modifier.padding(vertical = 12.dp)) {
+                    if (value.isEmpty()) {
+                        Text(
+                            text = "Pergunte ou digite / para comandos",
+                            style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp),
+                            color = colors.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    inner()
+                }
+            },
+        )
+        when {
+            pending != null ->
+                ChatIconButton(Icons.Outlined.Stop, "Parar resposta", enabled = !pending.cancelling, onClick = onCancel)
+            value.isNotBlank() ->
+                ChatIconButton(LucideIcons.arrowUp(2f), "Enviar mensagem", tint = braidBrand(), onClick = onSend)
+            else -> Spacer(modifier = Modifier.width(0.dp))
+        }
+    }
 }
 
 /** `.chatBubble`: o balão da pessoa na cor suave da marca, a IA sem fundo e o erro avermelhado. */

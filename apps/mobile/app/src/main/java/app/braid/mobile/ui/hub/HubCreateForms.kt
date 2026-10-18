@@ -51,8 +51,9 @@ fun TaskCreateForm(
     onSubmit: (TaskDraft) -> Unit,
     onEdited: () -> Unit,
     modifier: Modifier = Modifier,
+    initialName: String = "",
 ) {
-    var draft by rememberSaveable(stateSaver = TaskDraftSaver) { mutableStateOf(TaskDraft()) }
+    var draft by rememberSaveable(stateSaver = TaskDraftSaver) { mutableStateOf(TaskDraft(name = initialName)) }
 
     Column(
         modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(vertical = 8.dp),
@@ -108,10 +109,11 @@ fun NoteCreateForm(
     onSubmit: (NoteDraft) -> Unit,
     onEdited: () -> Unit,
     modifier: Modifier = Modifier,
+    initialContent: String = "",
     tagViewModel: TagSuggestionViewModel = hiltViewModel(),
 ) {
     var name by rememberSaveable { mutableStateOf("") }
-    var content by rememberSaveable { mutableStateOf("") }
+    var content by rememberSaveable { mutableStateOf(initialContent) }
     var tags by rememberSaveable { mutableStateOf(emptyList<String>()) }
 
     Column(

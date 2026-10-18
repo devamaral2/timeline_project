@@ -7,6 +7,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
@@ -36,7 +37,7 @@ class NoteDetailViewModelTest {
             val gateway = gatewayWith(pending, completed)
             val viewModel = NoteDetailViewModel(gateway)
             viewModel.load("note-1")
-            kotlinx.coroutines.test.runCurrent()
+            runCurrent()
             viewModel.startEditing()
             viewModel.save(NoteDraft(content = "Não deve salvar"))
             viewModel.detach()
