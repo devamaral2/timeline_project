@@ -22,3 +22,11 @@ Em 2026-09-27, com `jev-latest` resolvendo para `jev-1.13.0`, foram executados 1
 - `pnpm --filter @repo/web run typecheck` e `pnpm --filter @repo/mobile run typecheck`: passaram.
 
 Quando um evento novo começa dentro de outro já existente, a implementação pede qual evento deve manter o horário. Essa escolha ainda depende da resposta do usuário à pergunta feita durante o planejamento.
+
+## Fase 1 do ADR 002 — observabilidade e avaliação (sem mudar comportamento)
+
+- `ai_turn_traces` (migração `0018`): uma linha por tentativa de turno, gravada também em falha, timeout e cancelamento. Guarda rota, decisão do JEV (inclusive `fallbackReason`), tempo por etapa, chamadas de ferramenta com duração, desfecho, código de erro, tentativa e espera desde o envio. Nunca guarda texto do usuário ou do modelo. Consultas prontas em [`turn-trace-queries.sql`](./turn-trace-queries.sql).
+- A gravação da trilha é best-effort: falha no banco vira `console.warn` e não altera nem atrasa o turno.
+- O roteador JEV passou a informar por que mandou um pedido ao agente complexo (`goal_uncertain`, `count_many`, `target_uncertain`, `provider_timeout`, `no_api_key`...). A rota escolhida é a mesma de antes.
+- Conjunto de avaliação de refeições (24 pedidos) em `apps/api/src/api-core/agent/testing/evaluation/meal-cases.json` e relatório de roteamento: `ONEPASSWORD_SCOPE=api-runtime pnpm secrets:exec -- pnpm exec tsx scripts/evaluate-meal-routing.ts [--repeat N] [--json saida.json]`.
+- Ainda não medido: o relatório de roteamento e as consultas SQL precisam rodar contra a API real. Só depois disso as fases 2 e 3 do ADR devem começar.

@@ -22,7 +22,7 @@ import type { DayContextEvent, DayContextQuery } from "./day-context.query";
 import { AgentChangeSession, type StagedSeries } from "./services/agent-change-session";
 import { describeRecurrenceRule } from "../recurrences/describe-recurrence-rule";
 import { planDayRearrangement, type EventShift } from "./services/plan-day-rearrangement";
-import { TurnTimings } from "./services/turn-timings";
+import { TurnTrace, type TurnTraceSink } from "./services/turn-trace";
 import { toChatEntityRefs, toConversationInput } from "./services/agent-chat-history";
 import { AgentPromptBuilderService } from "./services/agent-prompt-builder.service";
 import type { AgentSkill } from "./skills/agent-skill";
@@ -78,6 +78,7 @@ export class RunAgentUseCase {
     private readonly router?: AgentRouter,
     private readonly dayContext?: DayContextQuery,
     private readonly recurrences?: RecurrenceMaterializer,
+    private readonly traces?: TurnTraceSink,
   ) {}
 
   async execute(
@@ -168,12 +169,51 @@ export class RunAgentUseCase {
     return response;
   }
 
+  /**
+   * Cada tentativa deixa uma trilha, inclusive quando falha, estoura o tempo ou
+   * e cancelada: e nesses casos que a lentidao precisa de explicacao.
+   */
   private async executeRouted(
     input: RunAgentRequest,
     actor: AuthenticatedUser,
     options: RunAgentOptions,
+  ): Promise<RunAgentResponse> {
+    const trace = new TurnTrace();
+    const job = getCurrentAiJob();
+    const submittedAt = job?.createdAt ? new Date(job.createdAt).getTime() : undefined;
+    const identity = {
+      jobId: job?.id ?? null, userId: input.userId, actorId: actor.userId,
+      attempt: job?.attempts ?? null,
+      sinceSubmittedMs: submittedAt === undefined ? null : Math.max(0, Date.now() - submittedAt),
+      mode: options.conversation ? "chat" as const : "rest" as const,
+    };
+    try {
+      return await this.runRouted(input, actor, options, trace);
+    } catch (error) {
+      trace.fail(error);
+      throw error;
+    } finally {
+      await this.recordTrace(trace, identity);
+    }
+  }
+
+  private async recordTrace(trace: TurnTrace, identity: Parameters<TurnTrace["toRecord"]>[0]): Promise<void> {
+    const record = trace.toRecord(identity);
+    if (record.outcome !== "ok" && record.outcome !== "clarification") console.warn("[AgentTurn] failed", record);
+    try {
+      await this.traces?.record(record);
+    } catch (error) {
+      // A trilha nunca derruba nem atrasa o turno do usuario.
+      console.warn("[AgentTurn] trace not recorded", { error: error instanceof Error ? error.message : "unknown" });
+    }
+  }
+
+  private async runRouted(
+    input: RunAgentRequest,
+    actor: AuthenticatedUser,
+    options: RunAgentOptions,
+    timings: TurnTrace,
     forcedRoute?: Awaited<ReturnType<AgentRouter["route"]>>,
-    timings = new TurnTimings(),
   ): Promise<RunAgentResponse> {
     const now = this.clock();
     const scope: ScopedSqlScope = { includeChat: actor.userId === input.userId };
@@ -185,7 +225,9 @@ export class RunAgentUseCase {
       history: scope.includeChat ? options.history : undefined,
       now,
       signal: options.signal,
+      onDecision: (decision) => timings.setDecision(decision),
     }));
+    timings.setRoute(route.kind === "single" ? route.skill : route.kind, forcedRoute !== undefined);
     if (options.signal?.aborted) throw new AgentRunCancelledError();
 
     const session = new AgentChangeSession(input.userId, this.repositories, this.createEvent, this.clock);
@@ -205,7 +247,7 @@ export class RunAgentUseCase {
     const tools = bindAgentTools(readSkills, context).map((tool) => ({
       ...tool,
       execute: async (args: unknown) => {
-        const result = await timings.time("reads", () => tool.execute(args));
+        const result = await timings.time("reads", () => timings.tool(tool.name, () => tool.execute(args)));
         if ((result as { ok?: boolean })?.ok) reads += 1;
         return result;
       },
@@ -227,12 +269,13 @@ export class RunAgentUseCase {
         if (label) options.onProgress?.(label);
       },
     }));
+    timings.setRun(run);
     if (options.signal?.aborted) throw new AgentRunCancelledError();
     if (run.stoppedByLimit && route.kind !== "read") throw new AgentLimitReachedError();
 
     let reply = run.text.trim();
     if (route.kind === "read" && claimsAWrite(reply)) {
-      return this.executeRouted(input, actor, options, { kind: "complex" }, timings);
+      return this.runRouted(input, actor, options, timings, { kind: "complex" });
     }
     let report: string | undefined;
     const shifted = new Map<string, EventShift>();
@@ -245,6 +288,7 @@ export class RunAgentUseCase {
       }
       report = envelope.report && !claimsAWrite(envelope.report) ? envelope.report : undefined;
       reply = envelope.clarification ?? "";
+      if (envelope.clarification) timings.markClarification();
       if (envelope.commands.length && reads === 0) throw new InvalidInputError("Consulte os dados antes de gravar.");
       for (const command of envelope.commands) {
         const skill = writeSkills.find((candidate) => candidate.name === command.skill);
@@ -267,6 +311,7 @@ export class RunAgentUseCase {
           const plan = planDayRearrangement(target, dayEvents, session.eventBeforeChange(target.id));
           if (plan.kind === "clarification") {
             reply = plan.message;
+            timings.markClarification();
             return this.finishRouted(input, options, new AgentChangeSession(input.userId, this.repositories, this.createEvent), {
               agentResponse: reply, createdEntities: [], updatedEntities: [], deletedEntities: [],
             }, timings, route.kind);
@@ -300,7 +345,7 @@ export class RunAgentUseCase {
     options: RunAgentOptions,
     session: AgentChangeSession,
     response: RunAgentResponse,
-    timings: TurnTimings,
+    timings: TurnTrace,
     route: string,
   ): Promise<RunAgentResponse> {
     if (options.signal?.aborted) throw new AgentRunCancelledError();
@@ -316,11 +361,9 @@ export class RunAgentUseCase {
       const result = await timings.time("commit", () => this.batchWriter.commit(session.toBatch()));
       if (result.conversation) options.onConversationWritten?.(result.conversation);
     }
-    console.info("[AgentTurn] timings", {
-      route,
-      changes: response.createdEntities.length + response.updatedEntities.length + response.deletedEntities.length,
-      ...timings.summary(),
-    });
+    const changes = response.createdEntities.length + response.updatedEntities.length + response.deletedEntities.length;
+    timings.setChanges(changes);
+    console.info("[AgentTurn] timings", { route, changes, ...timings.summary() });
     return response;
   }
 }

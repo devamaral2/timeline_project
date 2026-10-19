@@ -38,6 +38,9 @@ import { GenerateMealNoteUseCase } from "./notes/generate-meal-note.usecase";
 import type { MealNoteGenerationRepository } from "../domain/ports";
 import { CreateEventFromTranscriptUseCase } from "./events/create-event-from-transcript.usecase";
 import { getCurrentAiJob } from "../infrastructure/ai-jobs/ai-job-context";
+import { DATABASE } from "../infrastructure/persistence/persistence.module";
+import type { PostgresDatabase } from "../infrastructure/persistence/database/postgres-database";
+import { PostgresAiTurnTraceStore } from "../infrastructure/persistence/ai-turn-traces/postgres-ai-turn-trace.store";
 
 /** Queue wait/retry must not change what "today" or "now" meant at submission. */
 function requestClock(): Date {
@@ -91,6 +94,7 @@ export class ApiCoreModule {
             JevAgentRouter,
             DAY_CONTEXT_QUERY,
             MaterializeRecurrencesUseCase,
+            DATABASE,
           ],
           useFactory: (
             gateway: OpenRouterAgentGateway,
@@ -104,9 +108,11 @@ export class ApiCoreModule {
             router: JevAgentRouter,
             dayContext: DayContextQuery,
             recurrences: MaterializeRecurrencesUseCase,
+            database: PostgresDatabase,
           ) => new RunAgentUseCase(
             gateway, query, batchWriter, { events, tasks, notes, recurrences: recurrenceRepository }, createEvent,
             undefined, undefined, requestClock, router, dayContext, recurrences,
+            new PostgresAiTurnTraceStore(database),
           ),
         },
         {

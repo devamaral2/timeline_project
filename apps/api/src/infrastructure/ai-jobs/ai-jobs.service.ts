@@ -197,7 +197,7 @@ export class AiJobsService implements OnModuleInit, OnApplicationShutdown {
         () => abort.abort()).finally(() => { heartbeatRunning = false; });
     }, Math.floor(this.env.AI_JOBS_LEASE_MS / 3));
     try {
-      await aiJobContext.run({ id, token, createdAt: job.createdAt }, async () => {
+      await aiJobContext.run({ id, token, createdAt: job.createdAt, attempts: job.attempts }, async () => {
         if (job.attempts > this.env.AI_JOBS_MAX_ATTEMPTS) throw new Error("Worker attempts exhausted");
         const result = await handler(job.payload, { jobId: id, userId: job.userId, actorId: job.actorId,
           signal: abort.signal, progress: (value) => this.store.progress(id, token, value) });

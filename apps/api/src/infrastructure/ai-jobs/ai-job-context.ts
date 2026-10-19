@@ -17,6 +17,8 @@ export interface CurrentAiJob {
   id: string;
   token: string;
   createdAt?: Date;
+  /** Tentativa em curso (1 = primeira). */
+  attempts?: number;
   result?: unknown;
   prepared?: boolean;
   failureCode?: string;

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { getServerEnv } from "../../../config/env";
 import { jevRoutingConfig } from "../config/agent-config";
-import type { AgentRoute, AgentRouter } from "./agent-router";
+import type { AgentRoute, AgentRouter, RouteDecision } from "./agent-router";
 
 const choice = z.object({
   type: z.literal("choice"),
@@ -30,7 +30,10 @@ export class JevAgentRouter implements AgentRouter {
   }
 
   async route(input: Parameters<AgentRouter["route"]>[0]): Promise<AgentRoute> {
-    if (!this.apiKey) return { kind: "complex" };
+    if (!this.apiKey) {
+      input.onDecision?.({ source: "none", latencyMs: 0, fallbackReason: "no_api_key" });
+      return { kind: "complex" };
+    }
     const startedAt = performance.now();
     const signal = input.signal
       ? AbortSignal.any([input.signal, AbortSignal.timeout(timeoutMs)])
@@ -55,31 +58,50 @@ export class JevAgentRouter implements AgentRouter {
       const parsed = responseSchema.parse(await response.json());
       const { goal, count, target } = parsed.answers;
       let route: AgentRoute = { kind: "complex" };
-      if (accepted(goal)) {
-        if (goal.choice === "read") route = { kind: "read" };
-        else if (goal.choice === "write" && accepted(count) && count.choice === "one" && accepted(target)) {
-          const skill = targetSkills[target.choice] as Extract<AgentRoute, { kind: "single" }>["skill"] | undefined;
-          if (skill) route = { kind: "single", skill };
-        }
+      let fallbackReason: string | undefined;
+      if (!accepted(goal)) fallbackReason = "goal_uncertain";
+      else if (goal.choice === "read") route = { kind: "read" };
+      else if (goal.choice !== "write") fallbackReason = `goal_${goal.choice}`;
+      else if (!accepted(count)) fallbackReason = "count_uncertain";
+      else if (count.choice !== "one") fallbackReason = `count_${count.choice}`;
+      else if (!accepted(target)) fallbackReason = "target_uncertain";
+      else {
+        const skill = targetSkills[target.choice] as Extract<AgentRoute, { kind: "single" }>["skill"] | undefined;
+        if (skill) route = { kind: "single", skill };
+        else fallbackReason = `target_${target.choice}`;
       }
-      console.info("[JevAgentRouter] decision", {
-        route: route.kind === "single" ? route.skill : route.kind,
+      const decision: RouteDecision = {
+        source: "jev",
         model: parsed.model,
         latencyMs: Math.round(performance.now() - startedAt),
+        ...(fallbackReason ? { fallbackReason } : {}),
         goal: judgmentSummary(goal),
-        count: goal.choice === "write" ? judgmentSummary(count) : undefined,
-        target: goal.choice === "write" && count.choice === "one" ? judgmentSummary(target) : undefined,
+        ...(goal.choice === "write" ? { count: judgmentSummary(count) } : {}),
+        ...(goal.choice === "write" && count.choice === "one" ? { target: judgmentSummary(target) } : {}),
+      };
+      input.onDecision?.(decision);
+      console.info("[JevAgentRouter] decision", {
+        route: route.kind === "single" ? route.skill : route.kind,
+        ...decision,
       });
       return route;
     } catch (error) {
       if (input.signal?.aborted) throw error;
+      const latencyMs = Math.round(performance.now() - startedAt);
+      input.onDecision?.({ source: "jev", latencyMs, fallbackReason: `provider_${errorKind(error)}` });
       console.warn("[JevAgentRouter] falling back to complex agent", {
         reason: error instanceof Error ? error.message : "unknown error",
-        latencyMs: Math.round(performance.now() - startedAt),
+        latencyMs,
       });
       return { kind: "complex" };
     }
   }
+}
+
+function errorKind(error: unknown): string {
+  if (error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError")) return "timeout";
+  if (error instanceof z.ZodError) return "invalid_response";
+  return "error";
 }
 
 function judgmentSummary(answer: z.infer<typeof choice>) {

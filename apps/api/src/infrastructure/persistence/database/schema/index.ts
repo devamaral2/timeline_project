@@ -9,3 +9,4 @@ export * from "./notes";
 export * from "./agent-chat-tickets";
 export * from "./agent-conversations";
 export * from "./ai-jobs";
+export * from "./ai-turn-traces";
