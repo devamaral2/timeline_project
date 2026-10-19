@@ -8,13 +8,13 @@ export class PostgresAiTurnTraceStore implements TurnTraceSink {
   async record(trace: TurnTraceRecord): Promise<void> {
     await this.database.pool.query(
       `INSERT INTO ai_turn_traces (id,job_id,user_id,actor_id,attempt,since_submitted_ms,mode,route,rerouted,
-        route_decision,model,outcome,error_code,stopped_by_limit,changes,total_ms,stages,tools)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11,$12,$13,$14,$15,$16,$17::jsonb,$18::jsonb)`,
+        route_decision,model,outcome,error_code,stopped_by_limit,changes,total_ms,stages,tools,pipeline,fast_fallback)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11,$12,$13,$14,$15,$16,$17::jsonb,$18::jsonb,$19,$20)`,
       [
         ulid(), trace.jobId, trace.userId, trace.actorId, trace.attempt, trace.sinceSubmittedMs, trace.mode,
         trace.route, trace.rerouted, trace.routeDecision ? JSON.stringify(trace.routeDecision) : null,
         trace.model, trace.outcome, trace.errorCode, trace.stoppedByLimit, trace.changes, trace.totalMs,
-        JSON.stringify(trace.stages), JSON.stringify(trace.tools),
+        JSON.stringify(trace.stages), JSON.stringify(trace.tools), trace.pipeline, trace.fastFallback,
       ],
     );
   }

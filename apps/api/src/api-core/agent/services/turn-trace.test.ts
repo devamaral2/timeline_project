@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AgentLimitReachedError, InvalidInputError, LlmUnavailableError } from "../errors/agent.errors";
+import { AgentLimitReachedError, FastStageError, InvalidInputError, LlmUnavailableError } from "../errors/agent.errors";
 import { TurnTrace } from "./turn-trace";
 
 const identity = { jobId: "job-1", userId: "u1", actorId: "u1", attempt: 2, sinceSubmittedMs: 4_000, mode: "chat" as const };
@@ -38,6 +38,7 @@ describe("TurnTrace", () => {
   it.each([
     [new LlmUnavailableError("x"), "unavailable", "LlmUnavailableError"],
     [new AgentLimitReachedError(), "limit_reached", "AgentLimitReachedError"],
+    [new FastStageError("planner", "timeout"), "stage_failed", "FastStageError"],
     [new InvalidInputError("x"), "invalid_input", "InvalidInputError"],
     [new TypeError("boom"), "error", "TypeError"],
   ])("traduz o erro %s em desfecho", (error, outcome, code) => {
@@ -45,6 +46,18 @@ describe("TurnTrace", () => {
     trace.fail(error);
 
     expect(trace.toRecord(identity)).toMatchObject({ outcome, errorCode: code });
+  });
+
+  it("diferencia o pipeline rapido do legado e guarda por que o rapido nao cobriu o pedido", () => {
+    const fast = new TurnTrace();
+    fast.setPipeline("fast");
+    const fellBack = new TurnTrace();
+    fellBack.setPipeline("fast");
+    fellBack.fallBackToLegacy("read");
+
+    expect(new TurnTrace().toRecord(identity)).toMatchObject({ pipeline: "legacy", fastFallback: null });
+    expect(fast.toRecord(identity)).toMatchObject({ pipeline: "fast", fastFallback: null });
+    expect(fellBack.toRecord(identity)).toMatchObject({ pipeline: "legacy", fastFallback: "read" });
   });
 
   it("marca esclarecimento e novo roteamento", () => {

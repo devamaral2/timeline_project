@@ -134,6 +134,13 @@
       "when": 1792368697692,
       "tag": "0018_ai_turn_traces",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1792373143752,
+      "tag": "0019_ai_turn_traces_pipeline",
+      "breakpoints": true
     }
   ]
 }

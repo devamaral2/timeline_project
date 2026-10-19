@@ -65,14 +65,14 @@ export class AgentPromptBuilderService {
   }
 }
 
-function describeContext(context: AgentScreenContext | undefined): string {
+export function describeContext(context: AgentScreenContext | undefined): string {
   const { screenContext } = prompts;
   if (!context) return screenContext.none;
   const entity = context.entityId ? fill(screenContext.entitySuffix, { entityId: context.entityId }) : "";
   return screenContext.lines.map((line) => fill(line, { screen: context.screen, entity })).join("\n");
 }
 
-function formatNow(now: Date): string {
+export function formatNow(now: Date): string {
   return new Intl.DateTimeFormat("pt-BR", {
     timeZone: TIME_ZONE,
     dateStyle: "full",

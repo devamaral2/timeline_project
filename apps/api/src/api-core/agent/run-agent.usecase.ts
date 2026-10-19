@@ -14,7 +14,7 @@ import { dayKeyOf, formatTime } from "@repo/timeline";
 import { z } from "zod";
 import type { CreateEventUseCase } from "../events/create-event.usecase";
 import type { RecurrenceMaterializer } from "../recurrences/materialize-recurrences.usecase";
-import { AgentLimitReachedError, AgentRunCancelledError, InvalidInputError, LlmUnavailableError } from "./errors/agent.errors";
+import { AgentLimitReachedError, AgentRunCancelledError, FastStageError, InvalidInputError, LlmUnavailableError } from "./errors/agent.errors";
 import { agentsConfig, fill, promptsConfig } from "./config/agent-config";
 import type { AgentGateway } from "./gateways/agent.gateway";
 import type { AgentRouter } from "./routing/agent-router";
@@ -25,7 +25,9 @@ import { planDayRearrangement, type EventShift } from "./services/plan-day-rearr
 import { TurnTrace, type TurnTraceSink } from "./services/turn-trace";
 import { toChatEntityRefs, toConversationInput } from "./services/agent-chat-history";
 import { AgentPromptBuilderService } from "./services/agent-prompt-builder.service";
-import type { AgentSkill } from "./skills/agent-skill";
+import type { AgentSkill, AgentSkillContext } from "./skills/agent-skill";
+import type { FastPipeline } from "./fast/fast-pipeline";
+import type { PlannedOperation } from "./fast/turn-planner";
 import { AGENT_SKILLS, bindAgentTools } from "./skills/agent-skill-registry";
 import { getDayContextSkill } from "./skills/get-day-context.skill";
 import { getCurrentAiJob, setAiJobResult } from "../../infrastructure/ai-jobs/ai-job-context";
@@ -79,6 +81,8 @@ export class RunAgentUseCase {
     private readonly dayContext?: DayContextQuery,
     private readonly recurrences?: RecurrenceMaterializer,
     private readonly traces?: TurnTraceSink,
+    /** Pipeline rapido (ADR 002). Ausente: todo turno segue o roteador e o agente de sempre. */
+    private readonly fast?: FastPipeline,
   ) {}
 
   async execute(
@@ -215,6 +219,10 @@ export class RunAgentUseCase {
     timings: TurnTrace,
     forcedRoute?: Awaited<ReturnType<AgentRouter["route"]>>,
   ): Promise<RunAgentResponse> {
+    if (this.fast && !forcedRoute) {
+      const response = await this.runFast(input, actor, options, timings, this.fast);
+      if (response) return response;
+    }
     const now = this.clock();
     const scope: ScopedSqlScope = { includeChat: actor.userId === input.userId };
     const router = this.router;
@@ -290,44 +298,15 @@ export class RunAgentUseCase {
       reply = envelope.clarification ?? "";
       if (envelope.clarification) timings.markClarification();
       if (envelope.commands.length && reads === 0) throw new InvalidInputError("Consulte os dados antes de gravar.");
-      for (const command of envelope.commands) {
-        const skill = writeSkills.find((candidate) => candidate.name === command.skill);
-        if (!skill) throw new InvalidInputError(`Skill não permitida nesta rota: ${command.skill}`);
-        const parsed = skill.parameters.strict().safeParse(command.args);
-        if (!parsed.success) throw new InvalidInputError(z.prettifyError(parsed.error));
-        options.onProgress?.(skill.progressLabel);
-        // Inclui o parse de refeicao pelo modelo, que roda dentro de `prepare`.
-        const outcome = await timings.time("commands", () => skill.run(parsed.data, context)) as { ok?: boolean; error?: string; id?: string; kind?: string };
-        if (!outcome?.ok) throw new InvalidInputError(outcome?.error ?? "Comando inválido.");
-        if (outcome.kind === "event" && command.skill !== "delete_entity") {
-          const target = outcome.id ? session.stagedEvent(outcome.id) : undefined;
-          if (!target) throw new InvalidInputError("Evento preparado não encontrado.");
-          const firstDay = dayKeyOf(target.startedAt, "America/Sao_Paulo");
-          const lastDay = dayKeyOf(target.finishedAt ?? target.startedAt, "America/Sao_Paulo");
-          if (!loadedDays.has(firstDay) || !loadedDays.has(lastDay)) {
-            throw new InvalidInputError(`Consulte todos os eventos de ${firstDay}${lastDay === firstDay ? "" : ` e ${lastDay}`} antes de gravar.`);
-          }
-          const dayEvents = dayEventsWithStagedChanges(loadedDays, session);
-          const plan = planDayRearrangement(target, dayEvents, session.eventBeforeChange(target.id));
-          if (plan.kind === "clarification") {
-            reply = plan.message;
-            timings.markClarification();
-            return this.finishRouted(input, options, new AgentChangeSession(input.userId, this.repositories, this.createEvent), {
-              agentResponse: reply, createdEntities: [], updatedEntities: [], deletedEntities: [],
-            }, timings, route.kind);
-          }
-          for (const shift of plan.shifts) {
-            const shiftedStartDay = dayKeyOf(shift.startedAt, "America/Sao_Paulo");
-            const shiftedEndDay = dayKeyOf(shift.finishedAt, "America/Sao_Paulo");
-            if (!loadedDays.has(shiftedStartDay) || !loadedDays.has(shiftedEndDay)) {
-              throw new InvalidInputError(`Consulte ${shiftedStartDay}${shiftedEndDay === shiftedStartDay ? "" : ` e ${shiftedEndDay}`} antes de deslocar eventos.`);
-            }
-            const outcomeOfShift = await session.updateEvent(shift.id, shift.kind, async (current) =>
-              current.revise({ startedAt: shift.startedAt, finishedAt: shift.finishedAt }));
-            if (!outcomeOfShift.ok) throw new InvalidInputError(outcomeOfShift.error);
-            shifted.set(shift.id, shift);
-          }
-        }
+      const clarification = await this.applyCommands(envelope.commands, writeSkills, {
+        session, context, loadedDays, options, timings, shifted,
+      });
+      if (clarification !== undefined) {
+        reply = clarification;
+        timings.markClarification();
+        return this.finishRouted(input, options, new AgentChangeSession(input.userId, this.repositories, this.createEvent), {
+          agentResponse: reply, createdEntities: [], updatedEntities: [], deletedEntities: [],
+        }, timings, route.kind);
       }
     }
 
@@ -338,6 +317,199 @@ export class RunAgentUseCase {
       createdEntities: created, updatedEntities: updated, deletedEntities: deleted,
     };
     return this.finishRouted(input, options, session, response, timings, route.kind);
+  }
+
+  /**
+   * Valida e prepara cada comando na sessao e reorganiza o dia a cada evento. Devolve a pergunta
+   * quando o rearranjo nao decide sozinho; nesse caso nada pode ser gravado. Comum aos dois pipelines.
+   */
+  private async applyCommands(
+    commands: ReadonlyArray<AppliedCommand>,
+    writeSkills: readonly AgentSkill[],
+    run: {
+      session: AgentChangeSession;
+      context: AgentSkillContext;
+      loadedDays: Map<string, Awaited<ReturnType<DayContextQuery["get"]>>>;
+      options: RunAgentOptions;
+      timings: TurnTrace;
+      shifted: Map<string, EventShift>;
+      /** Ultima chance de ajustar o comando (vinculos, dias a ler) antes de ele ser validado. */
+      before?(command: AppliedCommand, index: number): Promise<AppliedCommand>;
+      after?(command: AppliedCommand, index: number, outcome: { id?: string; kind?: string }): void;
+    },
+  ): Promise<string | undefined> {
+    const { session, context, loadedDays, options, timings, shifted } = run;
+    for (const [index, original] of commands.entries()) {
+      const command = run.before ? await run.before(original, index) : original;
+      const skill = writeSkills.find((candidate) => candidate.name === command.skill);
+      if (!skill) throw new InvalidInputError(`Skill não permitida nesta rota: ${command.skill}`);
+      const parsed = skill.parameters.strict().safeParse(command.args);
+      if (!parsed.success) throw new InvalidInputError(z.prettifyError(parsed.error));
+      options.onProgress?.(skill.progressLabel);
+      // A refeicao so passa pelo modelo depois da gravacao (job meal-note): aqui e so preparar.
+      const outcome = await timings.time("commands", () => skill.run(parsed.data, context)) as { ok?: boolean; error?: string; id?: string; kind?: string };
+      if (!outcome?.ok) throw new InvalidInputError(outcome?.error ?? "Comando inválido.");
+      run.after?.(command, index, outcome);
+      if (outcome.kind === "event" && command.skill !== "delete_entity") {
+        const target = outcome.id ? session.stagedEvent(outcome.id) : undefined;
+        if (!target) throw new InvalidInputError("Evento preparado não encontrado.");
+        const firstDay = dayKeyOf(target.startedAt, "America/Sao_Paulo");
+        const lastDay = dayKeyOf(target.finishedAt ?? target.startedAt, "America/Sao_Paulo");
+        if (!loadedDays.has(firstDay) || !loadedDays.has(lastDay)) {
+          throw new InvalidInputError(`Consulte todos os eventos de ${firstDay}${lastDay === firstDay ? "" : ` e ${lastDay}`} antes de gravar.`);
+        }
+        const dayEvents = dayEventsWithStagedChanges(loadedDays, session);
+        const plan = planDayRearrangement(target, dayEvents, session.eventBeforeChange(target.id));
+        if (plan.kind === "clarification") return plan.message;
+        for (const shift of plan.shifts) {
+          const shiftedStartDay = dayKeyOf(shift.startedAt, "America/Sao_Paulo");
+          const shiftedEndDay = dayKeyOf(shift.finishedAt, "America/Sao_Paulo");
+          if (!loadedDays.has(shiftedStartDay) || !loadedDays.has(shiftedEndDay)) {
+            throw new InvalidInputError(`Consulte ${shiftedStartDay}${shiftedEndDay === shiftedStartDay ? "" : ` e ${shiftedEndDay}`} antes de deslocar eventos.`);
+          }
+          const outcomeOfShift = await session.updateEvent(shift.id, shift.kind, async (current) =>
+            current.revise({ startedAt: shift.startedAt, finishedAt: shift.finishedAt }));
+          if (!outcomeOfShift.ok) throw new InvalidInputError(outcomeOfShift.error);
+          shifted.set(shift.id, shift);
+        }
+      }
+    }
+    return undefined;
+  }
+
+  /**
+   * Pipeline rapido (ADR 002): um planejador divide o pedido em operacoes; um especialista por
+   * operacao preenche os argumentos em paralelo, sem loop de ferramentas, com o dia ja lido pelo
+   * servidor; a juncao e sequencial na MESMA sessao e termina num unico commit atomico.
+   *
+   * Devolve `undefined` quando o pedido nao e do fluxo rapido (consulta, apagar, recorrencia,
+   * alterar tarefa/nota): o chamador segue o roteador e o agente de sempre.
+   */
+  private async runFast(
+    input: RunAgentRequest,
+    actor: AuthenticatedUser,
+    options: RunAgentOptions,
+    timings: TurnTrace,
+    fast: FastPipeline,
+  ): Promise<RunAgentResponse | undefined> {
+    const now = this.clock();
+    const scope: ScopedSqlScope = { includeChat: actor.userId === input.userId };
+    const request = options.history?.length ? toConversationInput(options.history, input.text) : input.text;
+    timings.setPipeline("fast");
+
+    let plan: Awaited<ReturnType<FastPipeline["planner"]["plan"]>>;
+    try {
+      plan = await timings.time("plan", () => timings.tool("planner", () =>
+        fast.planner.plan({ text: request, context: input.context, now, signal: options.signal })));
+    } catch (error) {
+      // Sem plano, o pedido ainda tem o caminho de sempre: ultimo recurso, marcado na trilha.
+      if (!(error instanceof FastStageError)) throw error;
+      timings.fallBackToLegacy(`planner_${error.reason}`);
+      return undefined;
+    }
+    if (options.signal?.aborted) throw new AgentRunCancelledError();
+    if (plan.kind === "legacy") {
+      timings.fallBackToLegacy(plan.reason);
+      return undefined;
+    }
+
+    timings.setRoute("fast");
+    const session = new AgentChangeSession(input.userId, this.repositories, this.createEvent, this.clock);
+    const reply = (agentResponse: string): Promise<RunAgentResponse> => {
+      timings.markClarification();
+      return this.finishRouted(input, options, session, {
+        agentResponse, createdEntities: [], updatedEntities: [], deletedEntities: [],
+      }, timings, "fast");
+    };
+    if (plan.kind === "clarify") return reply(plan.question);
+
+    const loadedDays = new Map<string, Awaited<ReturnType<DayContextQuery["get"]>>>();
+    const dayPages = new Map<string, { pages: Awaited<ReturnType<DayContextQuery["get"]>>[]; next: number }>();
+    const context: AgentSkillContext = {
+      session, query: this.query, scope, dayContext: this.dayContext, recurrences: this.recurrences, loadedDays, dayPages,
+    };
+    const catalog = new Map(this.skills.map((skill) => [skill.name, skill]));
+    const skillOf = (operation: PlannedOperation): AgentSkill => {
+      const skill = catalog.get(operation.skill);
+      if (!skill) throw new Error(`Unknown fast skill: ${operation.skill}`);
+      return skill;
+    };
+    const writeSkills = [...new Set(plan.operations.map(skillOf))];
+
+    // O dia e lido uma vez, em paralelo ao modelo: criar nao espera por ele, alterar sim.
+    const days = new Map<string, Promise<DayContextEvent[]>>();
+    const loadDay = (date: string): Promise<DayContextEvent[]> => {
+      let day = days.get(date);
+      if (!day) {
+        day = this.readDay(date, context, timings);
+        days.set(date, day);
+      }
+      return day;
+    };
+    const eventDates = [...new Set(plan.operations.flatMap((operation) => (operation.date ? [operation.date] : [])))];
+
+    const filled = await timings.time("specialists", async () => {
+      const reads = Promise.all(eventDates.map(loadDay));
+      const results = await Promise.all(plan.operations.map((operation) =>
+        timings.tool(`specialist:${operation.skill}`, async () =>
+          fast.specialist.fill({
+            operation, skill: skillOf(operation), request, context: input.context, now, signal: options.signal,
+            dayEvents: operation.mode === "update" && operation.date ? await loadDay(operation.date) : undefined,
+          }))));
+      await reads;
+      return results;
+    });
+    if (options.signal?.aborted) throw new AgentRunCancelledError();
+
+    const questions = filled.flatMap((result) => (result.kind === "clarify" ? [result.question] : []));
+    if (questions.length) return reply([...new Set(questions)].join("\n"));
+    timings.setRun({ modelName: filled[0]?.modelName ?? "unknown", stoppedByLimit: false });
+
+    const commands = filled.flatMap((result, index) =>
+      result.kind === "command" ? [{ skill: plan.operations[index].skill, args: result.args }] : []);
+    const refs = new Map<string, { kind: string; id: string }>();
+    const shifted = new Map<string, EventShift>();
+    const clarification = await this.applyCommands(commands, writeSkills, {
+      session, context, loadedDays, options, timings, shifted,
+      before: async (command, index) => {
+        const operation = plan.operations[index];
+        let args = command.args;
+        // O servidor conhece o id que o especialista nao tinha: o vinculo vem do plano, nao do modelo.
+        const target = operation.linkTo ? refs.get(operation.linkTo) : undefined;
+        if (target) {
+          const { eventId: _event, taskId: _task, ...rest } = args;
+          args = { ...rest, [target.kind === "event" ? "eventId" : "taskId"]: target.id };
+        }
+        // O especialista escolhe horarios que podem cair em outro dia: ele tambem precisa estar lido.
+        if (operation.date) {
+          for (const date of daysOf(args)) await loadDay(date);
+        }
+        return { ...command, args };
+      },
+      after: (_command, index, outcome) => {
+        if (outcome.id && outcome.kind) refs.set(plan.operations[index].ref, { kind: outcome.kind, id: outcome.id });
+      },
+    });
+    if (clarification !== undefined) return reply(clarification);
+
+    const { created, updated, deleted } = await session.result();
+    const summary = describeChanges(created, updated, deleted, session.series(), shifted);
+    return this.finishRouted(input, options, session, {
+      agentResponse: summary || promptsConfig.responses.nothingToDo,
+      createdEntities: created, updatedEntities: updated, deletedEntities: deleted,
+    }, timings, "fast");
+  }
+
+  /** Todas as paginas do dia, pela mesma skill do agente: ela materializa recorrencias e marca o dia como lido. */
+  private async readDay(date: string, context: AgentSkillContext, timings: TurnTrace): Promise<DayContextEvent[]> {
+    const events: DayContextEvent[] = [];
+    for (let page = 1; ; page += 1) {
+      const result = await timings.tool("get_day_context", () => getDayContextSkill.run({ date, page }, context)) as
+        { ok: boolean; error?: string; events?: DayContextEvent[]; hasMore?: boolean };
+      if (!result.ok) throw new InvalidInputError(result.error ?? "Não foi possível ler o dia.");
+      events.push(...(result.events ?? []));
+      if (!result.hasMore) return events;
+    }
   }
 
   private async finishRouted(
@@ -366,6 +538,21 @@ export class RunAgentUseCase {
     console.info("[AgentTurn] timings", { route, changes, ...timings.summary() });
     return response;
   }
+}
+
+interface AppliedCommand {
+  skill: string;
+  args: Record<string, unknown>;
+}
+
+/** Os dias (fuso do usuario) em que os horarios dos argumentos caem. */
+function daysOf(args: Record<string, unknown>): string[] {
+  const days = [args.startedAt, args.finishedAt].flatMap((value) => {
+    if (typeof value !== "string") return [];
+    const instant = new Date(value);
+    return Number.isNaN(instant.getTime()) ? [] : [dayKeyOf(instant, "America/Sao_Paulo")];
+  });
+  return [...new Set(days)];
 }
 
 function dayEventsWithStagedChanges(

@@ -38,5 +38,12 @@ SELECT t->>'name' AS ferramenta, count(*) AS chamadas,
 FROM ai_turn_traces, jsonb_array_elements(tools) AS t
 WHERE created_at > now() - interval '7 days' GROUP BY 1 ORDER BY p95_ms DESC;
 
+-- 6. Legado x rapido: latencia, desfecho e por que o rapido nao cobriu o pedido.
+SELECT pipeline, outcome, coalesce(fast_fallback, '-') AS fast_fallback, count(*) AS turnos,
+       percentile_cont(0.5) WITHIN GROUP (ORDER BY total_ms) AS p50_ms,
+       percentile_cont(0.95) WITHIN GROUP (ORDER BY total_ms) AS p95_ms
+FROM ai_turn_traces WHERE created_at > now() - interval '7 days'
+GROUP BY 1, 2, 3 ORDER BY turnos DESC;
+
 -- Retencao sugerida (rodar periodicamente):
 -- DELETE FROM ai_turn_traces WHERE created_at < now() - interval '30 days';

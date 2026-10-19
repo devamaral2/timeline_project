@@ -14,6 +14,12 @@ const serverSchema = z.object({
   // Modelo do agente de skills. Precisa suportar tool calling — nem todo modelo
   // do OpenRouter suporta. Sem valor, cai no OPENROUTER_MODEL.
   OPENROUTER_AGENT_MODEL: z.string().min(1).optional(),
+  // Pipeline rapido (ADR 002): modelos das chamadas estruturadas, sem tool calling. Sem valor,
+  // caem no OPENROUTER_MODEL.
+  OPENROUTER_PLANNER_MODEL: z.string().min(1).optional(),
+  OPENROUTER_SPECIALIST_MODEL: z.string().min(1).optional(),
+  // `legacy`: roteador JEV + agente com ferramentas. `fast`: planejador + especialistas.
+  AI_PIPELINE: z.enum(["legacy", "fast"]).default("legacy"),
 });
 
 export type ServerEnv = z.infer<typeof serverSchema>;
@@ -38,6 +44,9 @@ export function getServerEnv(source?: Record<string, string | undefined>): Serve
     JEV_API_KEY: read("JEV_API_KEY"),
     OPENROUTER_MODEL: read("OPENROUTER_MODEL"),
     OPENROUTER_AGENT_MODEL: read("OPENROUTER_AGENT_MODEL"),
+    OPENROUTER_PLANNER_MODEL: read("OPENROUTER_PLANNER_MODEL"),
+    OPENROUTER_SPECIALIST_MODEL: read("OPENROUTER_SPECIALIST_MODEL"),
+    AI_PIPELINE: read("AI_PIPELINE"),
   });
 }
 

@@ -28,6 +28,7 @@ import { NoteBuilder } from "./notes/services/note-builder.service";
 import { MaterializeRecurrencesUseCase } from "./recurrences/materialize-recurrences.usecase";
 import { OpenRouterAgentGateway } from "./agent/gateways/openrouter-agent.gateway";
 import { RunAgentUseCase } from "./agent/run-agent.usecase";
+import { createFastPipeline } from "./agent/fast/create-fast-pipeline";
 import { JevAgentRouter } from "./agent/routing/jev-agent.router";
 import type { DayContextQuery } from "./agent/day-context.query";
 import { RunChatTurnUseCase } from "./agent/run-chat-turn.usecase";
@@ -112,7 +113,7 @@ export class ApiCoreModule {
           ) => new RunAgentUseCase(
             gateway, query, batchWriter, { events, tasks, notes, recurrences: recurrenceRepository }, createEvent,
             undefined, undefined, requestClock, router, dayContext, recurrences,
-            new PostgresAiTurnTraceStore(database),
+            new PostgresAiTurnTraceStore(database), createFastPipeline(),
           ),
         },
         {

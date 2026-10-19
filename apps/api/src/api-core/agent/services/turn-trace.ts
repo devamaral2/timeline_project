@@ -8,6 +8,7 @@ export type TurnOutcome =
   | "limit_reached"
   | "invalid_input"
   | "unavailable"
+  | "stage_failed"
   | "conflict"
   | "error";
 
@@ -30,6 +31,10 @@ export interface TurnTraceRecord {
   /** Do envio do job ate o inicio desta tentativa. Inclui fila e tentativas anteriores. */
   sinceSubmittedMs: number | null;
   mode: "chat" | "rest";
+  /** `fast` quando o planejador tratou o turno; `legacy` quando o roteador e o agente de sempre. */
+  pipeline: "legacy" | "fast";
+  /** Por que um turno que comecou no pipeline rapido seguiu para o legado (`read`, `other`, `invalid`). */
+  fastFallback: string | null;
   route: string;
   rerouted: boolean;
   routeDecision: RouteDecision | null;
@@ -52,11 +57,14 @@ const ERROR_OUTCOMES: Record<string, TurnOutcome> = {
   AgentLimitReachedError: "limit_reached",
   InvalidInputError: "invalid_input",
   LlmUnavailableError: "unavailable",
+  FastStageError: "stage_failed",
   EntityBatchConflictError: "conflict",
 };
 
 /** Cronometra as etapas de um turno e junta o que explica a lentidao ou a falha. */
 export class TurnTrace extends TurnTimings {
+  private pipelineName: "legacy" | "fast" = "legacy";
+  private fallback: string | null = null;
   private routeName = "unrouted";
   private reroutedFlag = false;
   private decision: RouteDecision | null = null;
@@ -65,6 +73,16 @@ export class TurnTrace extends TurnTimings {
   private changeCount = 0;
   private result: { outcome: TurnOutcome; errorCode: string | null } = { outcome: "ok", errorCode: null };
   private readonly toolCalls: ToolCallTrace[] = [];
+
+  setPipeline(pipeline: "legacy" | "fast"): void {
+    this.pipelineName = pipeline;
+  }
+
+  /** O pipeline rapido nao cobriu o pedido; o turno segue o caminho legado. */
+  fallBackToLegacy(reason: string): void {
+    this.pipelineName = "legacy";
+    this.fallback = reason;
+  }
 
   setRoute(route: string, rerouted = false): void {
     this.routeName = route;
@@ -112,6 +130,8 @@ export class TurnTrace extends TurnTimings {
     const { totalMs, ...stages } = this.summary();
     return {
       ...identity,
+      pipeline: this.pipelineName,
+      fastFallback: this.fallback,
       route: this.routeName,
       rerouted: this.reroutedFlag,
       routeDecision: this.decision,

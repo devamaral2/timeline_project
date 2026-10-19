@@ -35,6 +35,18 @@ rota ─► prompt (prompts.json + skills.json + schema do banco) ─► OpenRou
 Sem roteador (sem `JEV_API_KEY` fora de produção) vale o caminho `legacy` de `prompts.json`,
 com todas as skills em todo turno.
 
+## Pipeline rápido (`AI_PIPELINE=fast`, ADR 002)
+
+```
+texto ─► planejador (prompts.json › fast.planner; uma chamada estruturada)
+          ├─ read / other / falha / JSON inválido ─► fluxo acima (JEV + agente), `fast_fallback` na trilha
+          ├─ clarify                              ─► pergunta ao usuário, nada é gravado
+          └─ write: operações ─► um especialista por operação, em paralelo (fast.specialist)
+                                 + dia lido pelo servidor ─► junção na mesma sessão ─► rearranjo ─► commit único
+```
+
+Limites e skills cobertas: `agents.json › fast`. Sem `AI_PIPELINE=fast` nada disso roda.
+
 ## Como mudar
 
 - **Instrução de uma skill:** `skills.json`.

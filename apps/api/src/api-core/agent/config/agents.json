@@ -27,5 +27,14 @@
     "maxToolResultChars": 24000,
     "maxCommands": 30,
     "maxDayContextChars": 20000
+  },
+  "fast": {
+    "_when": "Pipeline rápido (AI_PIPELINE=fast, ADR 002): planejador + especialistas em chamadas estruturadas, sem loop de ferramentas.",
+    "plannerTimeoutMs": 5000,
+    "plannerAttemptMs": 3000,
+    "specialistTimeoutMs": 15000,
+    "specialistAttemptMs": 5000,
+    "maxOperations": 8,
+    "skills": ["save_routine_event", "save_meal_event", "save_training_event", "save_sleep_event", "finish_event", "save_task", "save_note"]
   }
 }

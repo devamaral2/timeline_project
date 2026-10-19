@@ -1,6 +1,6 @@
 # ADR 002 — Pipeline rápido: planejador, especialistas estruturados e commit único
 
-Status: **proposto**. A fase 1 (observabilidade e avaliação) é implementada sem mudar o comportamento; as demais fases só começam depois de ler os números dela.
+Status: **fases 1 e 2 implementadas**; o pipeline rápido está atrás de `AI_PIPELINE=fast` e desligado por padrão. A fase 3 (comparar e ativar) depende de resolver o risco de travas do provedor descrito em [implementation-status.md](./implementation-status.md). Desvios da proposta original: o planejador é um modelo rápido (não o JEV) e tem orçamento de tentativa; falha do planejador cai no legado, e falha do especialista falha rápido em vez de cair no agente complexo.
 
 ## Contexto
 

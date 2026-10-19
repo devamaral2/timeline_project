@@ -14,6 +14,8 @@ export const aiTurnTraces = pgTable("ai_turn_traces", {
   attempt: integer("attempt"),
   sinceSubmittedMs: integer("since_submitted_ms"),
   mode: text("mode").notNull(),
+  pipeline: text("pipeline").notNull().default("legacy"),
+  fastFallback: text("fast_fallback"),
   route: text("route").notNull(),
   rerouted: boolean("rerouted").notNull().default(false),
   routeDecision: jsonb("route_decision"),

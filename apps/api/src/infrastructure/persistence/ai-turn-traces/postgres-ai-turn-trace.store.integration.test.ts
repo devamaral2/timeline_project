@@ -14,7 +14,7 @@ beforeAll(async () => {
 afterAll(async () => { await postgres?.stop(); }, 30000);
 
 const trace: TurnTraceRecord = {
-  jobId: "job-1", userId: "u1", actorId: "u1", attempt: 2, sinceSubmittedMs: 9000, mode: "chat",
+  jobId: "job-1", userId: "u1", actorId: "u1", attempt: 2, sinceSubmittedMs: 9000, mode: "chat", pipeline: "legacy", fastFallback: null,
   route: "complex", rerouted: false, model: "modelo-x", outcome: "unavailable", errorCode: "LlmUnavailableError",
   stoppedByLimit: false, changes: 0, totalMs: 120500,
   routeDecision: { source: "jev", latencyMs: 310, fallbackReason: "count_many" },

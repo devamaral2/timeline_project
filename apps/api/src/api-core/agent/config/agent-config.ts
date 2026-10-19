@@ -45,6 +45,14 @@ const agentsSchema = z.object({
     maxCommands: z.number().int().positive(),
     maxDayContextChars: z.number().int().positive(),
   }),
+  fast: z.object({
+    plannerTimeoutMs: z.number().int().positive(),
+    plannerAttemptMs: z.number().int().positive(),
+    specialistTimeoutMs: z.number().int().positive(),
+    specialistAttemptMs: z.number().int().positive(),
+    maxOperations: z.number().int().positive(),
+    skills: z.array(z.string()).min(1),
+  }),
 });
 
 const skillsSchema = z.record(
@@ -65,6 +73,7 @@ const promptsSchema = z.object({
     skillsHeading: z.string(),
     jsonSchemaLabel: z.string(),
   }),
+  fast: z.object({ planner: lines, specialist: lines, clarificationFallback: z.string() }),
   screenContext: z.object({ none: z.string(), entitySuffix: z.string(), lines }),
   writeCheck: lines,
   finalResponseDirective: z.string(),
@@ -115,6 +124,9 @@ for (const [route, spec] of Object.entries(agentsConfig.routes)) {
   for (const name of named) {
     if (!skillsConfig[name]) throw new Error(`agents.json › ${route}: skill sem entrada em skills.json: ${name}`);
   }
+}
+for (const name of agentsConfig.fast.skills) {
+  if (!skillsConfig[name]) throw new Error(`agents.json › fast: skill sem entrada em skills.json: ${name}`);
 }
 for (const [target, skill] of Object.entries(jevRoutingConfig.targetSkills)) {
   if (!skillsConfig[skill]) throw new Error(`jev-routing.json › targetSkills.${target}: skill sem entrada em skills.json: ${skill}`);
