@@ -265,7 +265,7 @@ export function AgentChatPanel({
             <h2>O que vamos fazer?</h2>
             {signedOut && <p>Entre na sua conta para conversar com a IA.</p>}
             {onCommand && (
-              <div className={styles.createActions} role="group" aria-label="Criar ou pesquisar">
+              <fieldset className={styles.createActions} aria-label="Criar ou pesquisar">
                 {HUB_COMMANDS.map((item) => {
                   const Icon = COMMAND_ICONS[item.id];
                   return (
@@ -275,7 +275,7 @@ export function AgentChatPanel({
                     </button>
                   );
                 })}
-              </div>
+              </fieldset>
             )}
           </div>
         ) : chat.loading ? (
