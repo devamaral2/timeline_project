@@ -151,7 +151,7 @@ export function NewEventForm({ initialName, onCreated, onPickerChange, existing 
     </div>;
   }
 
-  return <>
+  return (
     <form className={styles.entityForm} onSubmit={event => void submit(event)} noValidate>
       <div className={styles.entityEventHeading}>
         <span className={styles.entityEventTypeName}>{visual.label}</span>
@@ -174,7 +174,7 @@ export function NewEventForm({ initialName, onCreated, onPickerChange, existing 
       {error ? <p role="alert" className={styles.formError}>{error}</p> : null}
       <button type="submit" className={styles.entityContinue} disabled={submitting}>{submitting ? (existing ? "Salvando…" : "Criando…") : (existing ? "Salvar alterações" : "Criar evento")}</button>
     </form>
-  </>;
+  );
 }
 
 /** Nova tarefa: nome, status, prioridade, dia e horário, detalhes com #tags e avisos. */
