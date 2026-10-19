@@ -56,9 +56,11 @@ for app in api auth web; do
 done
 
 TRAEFIK_IP=$(kubectl -n kube-system get svc traefik -o jsonpath='{.spec.clusterIP}')
-curl -fsS -o /dev/null -w 'web=%{http_code}\n' -H "Host: web.$DOMAIN" "http://$TRAEFIK_IP"
-curl -fsS -H "Host: auth.$DOMAIN" "http://$TRAEFIK_IP/health/ready" >/dev/null
-API_STATUS=$(curl -sS -o /dev/null -w '%{http_code}' -H "Host: api.$DOMAIN" "http://$TRAEFIK_IP/api/events")
+# Logo após o rollout o Traefik ainda pode apontar para o pod antigo (502); repete até assentar.
+SMOKE_RETRY=(--retry 10 --retry-delay 3 --retry-all-errors)
+curl -fsS "${SMOKE_RETRY[@]}" -o /dev/null -w 'web=%{http_code}\n' -H "Host: web.$DOMAIN" "http://$TRAEFIK_IP"
+curl -fsS "${SMOKE_RETRY[@]}" -H "Host: auth.$DOMAIN" "http://$TRAEFIK_IP/health/ready" >/dev/null
+API_STATUS=$(curl -sS "${SMOKE_RETRY[@]}" -o /dev/null -w '%{http_code}' -H "Host: api.$DOMAIN" "http://$TRAEFIK_IP/api/events")
 test "$API_STATUS" = 401
 
 printf 'export SHA=%q\n' "$SHA" > /opt/braid/release.env
