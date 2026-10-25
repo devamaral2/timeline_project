@@ -96,7 +96,7 @@ test("a complex request rearranges events created earlier in the same atomic bat
   expect(study).toMatchObject({ startedAt: new Date(local(15)).toISOString(), finishedAt: new Date(local(16)).toISOString() });
 });
 
-test("a long day requires every context page before an event can be written", async () => {
+test("the server reads the remaining pages of a long day the model only partly read", async () => {
   const day: DayContext = {
     date: "2026-09-16", timeZone: "America/Sao_Paulo", tasks: [], notes: [],
     events: Array.from({ length: 30 }, (_, index) => ({
@@ -110,10 +110,10 @@ test("a long day requires every context page before an event can be written", as
   } }] };
   const partial = setup({ kind: "single", skill: "save_routine_event" },
     [{ name: "get_day_context", args: { date: day.date } }], answer, day);
-  await expect(partial.useCase.execute({ userId: "user-1", text: "Trabalhei" }, owner))
-    .rejects.toThrow("Consulte todos os eventos");
+  const completed = await partial.useCase.execute({ userId: "user-1", text: "Trabalhei" }, owner);
   expect(partial.agent.results[0]).toMatchObject({ ok: true, page: 1, hasMore: true, nextPage: 2 });
-  expect(partial.writer.commits).toHaveLength(0);
+  expect(completed.createdEntities).toHaveLength(1);
+  expect(partial.writer.commits).toHaveLength(1);
 
   const complete = setup({ kind: "single", skill: "save_routine_event" }, [
     { name: "get_day_context", args: { date: day.date } },
@@ -210,4 +210,22 @@ describe("finish_event", () => {
       .rejects.toThrow("ainda não começou");
     expect(ctx.writer.commits).toEqual([]);
   });
+});
+
+test("an event that crosses midnight makes the server read the next day the model skipped", async () => {
+  const requested: string[] = [];
+  const ctx = setup({ kind: "single", skill: "save_routine_event" },
+    [{ name: "get_day_context", args: { date: "2026-09-16" } }],
+    { commands: [{ skill: "save_routine_event", args: { name: "Ler", startedAt: "2026-09-16T23:30:00-03:00", finishedAt: "2026-09-17T00:30:00-03:00" } }] });
+  const useCase = new RunAgentUseCase(
+    ctx.agent, new StubScopedSqlQuery(), ctx.writer, { events: ctx.events, tasks: ctx.tasks, notes: ctx.notes },
+    ctx.createEvent, undefined, undefined, () => NOW, { route: async () => ({ kind: "single", skill: "save_routine_event" }) },
+    { get: async ({ date }) => { requested.push(date); return { date, timeZone: "America/Sao_Paulo", events: [], tasks: [], notes: [] }; } },
+  );
+
+  const response = await useCase.execute({ userId: "user-1", text: "Vou ler depois da meia-noite" }, owner);
+
+  expect(requested.sort()).toEqual(["2026-09-16", "2026-09-17"]);
+  expect(response.createdEntities).toHaveLength(1);
+  expect(ctx.writer.commits).toHaveLength(1);
 });

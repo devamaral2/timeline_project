@@ -195,6 +195,9 @@ export class RunAgentUseCase {
       return await this.runRouted(input, actor, options, trace);
     } catch (error) {
       trace.fail(error);
+      // So no console, nunca na trilha do banco: a mensagem pode citar o que o modelo gerou.
+      // E o unico lugar que diz QUAL regra recusou o pedido (o usuario so ve "nao consegui ler").
+      if (error instanceof InvalidInputError) console.warn("[AgentTurn] invalid input", { reason: error.message });
       throw error;
     } finally {
       await this.recordTrace(trace, identity);
@@ -355,18 +358,16 @@ export class RunAgentUseCase {
         if (!target) throw new InvalidInputError("Evento preparado não encontrado.");
         const firstDay = dayKeyOf(target.startedAt, "America/Sao_Paulo");
         const lastDay = dayKeyOf(target.finishedAt ?? target.startedAt, "America/Sao_Paulo");
-        if (!loadedDays.has(firstDay) || !loadedDays.has(lastDay)) {
-          throw new InvalidInputError(`Consulte todos os eventos de ${firstDay}${lastDay === firstDay ? "" : ` e ${lastDay}`} antes de gravar.`);
-        }
+        // O modelo escolhe o horario e pode cair num dia que ele nao consultou (um evento depois da
+        // meia-noite): o servidor le o dia que falta em vez de recusar o pedido.
+        await this.ensureDaysLoaded([firstDay, lastDay], context, loadedDays, timings);
         const dayEvents = dayEventsWithStagedChanges(loadedDays, session);
         const plan = planDayRearrangement(target, dayEvents, session.eventBeforeChange(target.id));
         if (plan.kind === "clarification") return plan.message;
         for (const shift of plan.shifts) {
           const shiftedStartDay = dayKeyOf(shift.startedAt, "America/Sao_Paulo");
           const shiftedEndDay = dayKeyOf(shift.finishedAt, "America/Sao_Paulo");
-          if (!loadedDays.has(shiftedStartDay) || !loadedDays.has(shiftedEndDay)) {
-            throw new InvalidInputError(`Consulte ${shiftedStartDay}${shiftedEndDay === shiftedStartDay ? "" : ` e ${shiftedEndDay}`} antes de deslocar eventos.`);
-          }
+          await this.ensureDaysLoaded([shiftedStartDay, shiftedEndDay], context, loadedDays, timings);
           const outcomeOfShift = await session.updateEvent(shift.id, shift.kind, async (current) =>
             current.revise({ startedAt: shift.startedAt, finishedAt: shift.finishedAt }));
           if (!outcomeOfShift.ok) throw new InvalidInputError(outcomeOfShift.error);
@@ -498,6 +499,18 @@ export class RunAgentUseCase {
       agentResponse: summary || promptsConfig.responses.nothingToDo,
       createdEntities: created, updatedEntities: updated, deletedEntities: deleted,
     }, timings, "fast");
+  }
+
+  /** Le, pela mesma skill do agente, os dias que o rearranjo precisa e ainda nao foram lidos. */
+  private async ensureDaysLoaded(
+    days: readonly string[],
+    context: AgentSkillContext,
+    loadedDays: ReadonlyMap<string, unknown>,
+    timings: TurnTrace,
+  ): Promise<void> {
+    for (const day of new Set(days)) {
+      if (!loadedDays.has(day)) await this.readDay(day, context, timings);
+    }
   }
 
   /** Todas as paginas do dia, pela mesma skill do agente: ela materializa recorrencias e marca o dia como lido. */
