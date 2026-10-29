@@ -26,7 +26,7 @@ export interface DailyOverviewDto {
     finishedAt?: string;
     workouts: Array<
       | {
-          workoutCode: "treadmill" | "running";
+          workoutCode: "walking" | "treadmill" | "running";
           workoutName: string;
           calories: number;
           duration: number;

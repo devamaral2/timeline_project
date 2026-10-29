@@ -27,6 +27,8 @@ import { UpdateRecurrenceModule } from "./features/update-recurrence/update-recu
 import { DeleteRecurrenceModule } from "./features/delete-recurrence/delete-recurrence.controller";
 import { AttachNotesToRecurrenceModule } from "./features/attach-notes-to-recurrence/attach-notes-to-recurrence.controller";
 import { RunAgentModule } from "./features/run-agent/run-agent.controller";
+import { StartProcessModule } from "./features/start-process/start-process.controller";
+import { GetProcessModule } from "./features/get-process/get-process.controller";
 import { IssueAgentChatTicketModule } from "./features/issue-agent-chat-ticket/issue-agent-chat-ticket.controller";
 import { ListAgentConversationsModule } from "./features/list-agent-conversations/list-agent-conversations.controller";
 import { ListAgentChatMessagesModule } from "./features/list-agent-chat-messages/list-agent-chat-messages.controller";
@@ -69,6 +71,8 @@ import { SubmitTranscriptJobModule } from "./features/submit-transcript-job/subm
     DeleteRecurrenceModule,
     AttachNotesToRecurrenceModule,
     RunAgentModule,
+    StartProcessModule,
+    GetProcessModule,
     SubmitAiJobModule,
     ListAiJobsModule,
     GetAiJobModule,

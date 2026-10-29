@@ -2,7 +2,7 @@ import { Recurrence, type Note } from "../../domain";
 import type { CreateRecurrenceInput } from "@repo/contracts";
 import type { TaskRepository } from "../../domain/ports";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
-import type { CreateEventUseCase } from "../events/create-event.usecase";
+import type { CreateEventUseCase, PrepareEventOptions } from "../events/create-event.usecase";
 import { prepareEventTemplate, prepareTaskTemplate } from "./recurrence-templates";
 
 export interface PreparedRecurrence {
@@ -23,6 +23,7 @@ export async function prepareRecurrence(
   },
   input: CreateRecurrenceInput,
   actor: AuthenticatedUser,
+  options?: PrepareEventOptions,
 ): Promise<PreparedRecurrence> {
   const { target, template, ...rule } = input;
   // A regra e validada antes do template: nao adianta chamar o modelo para
@@ -31,7 +32,7 @@ export async function prepareRecurrence(
 
   const prepared =
     input.target === "event"
-      ? await prepareEventTemplate(deps.createEvent, input.template, draft.rule, actor)
+      ? await prepareEventTemplate(deps.createEvent, input.template, draft.rule, actor, options)
       : {
           template: await prepareTaskTemplate(deps.tasks, input.template, draft.rule, actor),
           notes: [],

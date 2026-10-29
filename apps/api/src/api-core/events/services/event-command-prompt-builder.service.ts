@@ -56,7 +56,7 @@ export class EventCommandPromptBuilderService {
         "- foodInputText: apenas a parte da frase que descreve o que foi consumido, sem o verbo.",
         "- sleepHours: horas dormidas em formato decimal, por exemplo 7.5. Nunca em minutos.",
         "- sleepScore: qualidade do sono de 0 a 100.",
-        "- workoutKind: 'running' para corrida ao ar livre, 'treadmill' para esteira, 'weightlifting' para musculacao, 'free' para o resto.",
+        "- workoutKind: 'walking' para caminhada, 'running' para corrida ao ar livre, 'treadmill' para esteira, 'weightlifting' para musculacao, 'free' para o resto.",
         "- workoutDurationMinutes: duracao do treino em minutos.",
         "- workoutCalories: calorias gastas no treino em kcal.",
         "- workoutDistanceKm: distancia percorrida em quilometros.",

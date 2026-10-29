@@ -17,7 +17,7 @@ import type {
 import type { TaskRepository } from "../../domain/ports";
 import { dayKeyOf, expandOccurrences, occurrenceWindow, shiftDayKey } from "@repo/timeline";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
-import type { CreateEventUseCase } from "../events/create-event.usecase";
+import type { CreateEventUseCase, PrepareEventOptions } from "../events/create-event.usecase";
 import { assertParentTaskAssignable } from "../tasks/assert-parent-task";
 
 /** O que cada ocorrencia de evento copia, ja resolvido. */
@@ -75,11 +75,12 @@ export async function prepareEventTemplate(
   template: EventRecurrenceTemplate,
   rule: RecurrenceRule,
   actor: AuthenticatedUser,
+  options?: PrepareEventOptions,
 ): Promise<PreparedEventTemplate> {
   if (typeof template !== "object" || template === null) {
     throw new RecurrenceValidationError("An event template must be an object");
   }
-  const { event, notes } = await createEvent.prepare(template, actor, occurrenceWindow(rule, sampleDayOf(rule)));
+  const { event, notes } = await createEvent.prepare(template, actor, occurrenceWindow(rule, sampleDayOf(rule)), options);
   return {
     template: {
       name: event.name,

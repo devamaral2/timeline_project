@@ -3,7 +3,7 @@ import { getServerEnv } from "../../../config/env";
 import { AgentRunCancelledError, FastStageError, LlmUnavailableError } from "../errors/agent.errors";
 
 export interface StructuredCompletionInput {
-  stage: "planner" | "specialist";
+  stage: "planner" | "specialist" | "process";
   system: string;
   user: string;
   schemaName: string;

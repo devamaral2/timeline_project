@@ -71,6 +71,31 @@ test("parses the four known note payloads", () => {
   expect(parseTrainingData(validTraining, 1).workouts[0].workoutName).toBe("Corrida");
 });
 
+test("parses walking as a cardio workout with pace and distance", () => {
+  const parsed = parseTrainingData(
+    {
+      workouts: [
+        {
+          workoutCode: "walking",
+          workoutName: "Caminhada",
+          calories: 100,
+          duration: 120,
+          pace: 5,
+          distance: 24,
+        },
+      ],
+      caloriesBurned: 100,
+    },
+    1,
+  );
+
+  expect(parsed.workouts[0]).toMatchObject({
+    workoutCode: "walking",
+    pace: 5,
+    distance: 24,
+  });
+});
+
 test("rejects an unsupported schema version", () => {
   expect(() => defaultNoteTypeRegistry.parse("meal", validMeal, 2)).toThrow(
     "Unsupported schema version",

@@ -11,6 +11,9 @@ import app.braid.mobile.data.chat.ChatApi
 import app.braid.mobile.data.chat.ChatSocketFactory
 import app.braid.mobile.data.chat.DurableChatRepository
 import app.braid.mobile.data.chat.OkHttpChatSocketFactory
+import app.braid.mobile.data.chat.ProcessApi
+import app.braid.mobile.data.chat.ProcessGateway
+import app.braid.mobile.data.chat.ProcessRepository
 import app.braid.mobile.data.events.DurableVoiceRepository
 import app.braid.mobile.data.events.EventGateway
 import app.braid.mobile.data.events.EventRepository
@@ -59,6 +62,10 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideAgentChatGateway(repository: DurableChatRepository): AgentChatGateway = repository
+
+    @Provides
+    @Singleton
+    fun provideProcessGateway(repository: ProcessRepository): ProcessGateway = repository
 
     @Provides
     @Singleton
@@ -160,6 +167,20 @@ object NetworkModule {
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
             .create(ChatApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideProcessApi(
+        json: Json,
+        @Named("apiClient") client: OkHttpClient,
+    ): ProcessApi =
+        Retrofit
+            .Builder()
+            .baseUrl(BuildConfig.API_BASE_URL.withTrailingSlash())
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(ProcessApi::class.java)
 
     @Provides
     @Singleton

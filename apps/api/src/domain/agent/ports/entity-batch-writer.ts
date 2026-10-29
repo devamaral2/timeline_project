@@ -48,6 +48,12 @@ export interface EntityBatch {
    */
   recurrenceChanges?: readonly RecurrenceChange[];
   conversation?: ConversationAppend;
+  /**
+   * Roda na mesma transacao, depois das entidades e antes de o job ser concluido: o que ela grava
+   * (o passo de um processo, a fila de finalizacao) existe se e somente se as entidades existem.
+   * O argumento e a transacao do escritor; so a infraestrutura que a entrega sabe o tipo.
+   */
+  afterWrite?: (tx: unknown) => Promise<void>;
 }
 
 export interface EntityBatchResult {

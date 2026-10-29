@@ -1,16 +1,17 @@
 import { ulid } from "ulid";
 import { NoteValidationError } from "../errors/note.errors";
 
-export type WorkoutCode = "treadmill" | "running" | "weightlifting" | "free";
+export type WorkoutCode = "walking" | "treadmill" | "running" | "weightlifting" | "free";
 
 const KNOWN_WORKOUT_CODES: readonly WorkoutCode[] = [
+  "walking",
   "treadmill",
   "running",
   "weightlifting",
   "free",
 ];
 
-const CARDIO_WORKOUT_CODES: readonly WorkoutCode[] = ["treadmill", "running"];
+const CARDIO_WORKOUT_CODES: readonly WorkoutCode[] = ["walking", "treadmill", "running"];
 
 export interface WorkoutSet {
   id: string;
@@ -28,7 +29,7 @@ export interface WorkoutSnapshotBase {
 }
 
 export interface CardioWorkoutSnapshot extends WorkoutSnapshotBase {
-  workoutCode: "treadmill" | "running";
+  workoutCode: "walking" | "treadmill" | "running";
   pace: number;
   distance: number;
 }

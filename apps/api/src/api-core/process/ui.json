@@ -1,0 +1,20 @@
+{
+  "_when": "Textos predefinidos da caixa de processo (ADR 003). Nada aqui passa por modelo.",
+  "title": "Realizando processos:",
+  "steps": {
+    "event-create": "Criando eventos",
+    "task-create": "Criando tarefas",
+    "note-create": "Criando notas",
+    "event-edit": "Editando eventos",
+    "task-edit": "Editando tarefas",
+    "note-edit": "Editando notas",
+    "recurring-event-create": "Criando eventos recorrentes",
+    "recurring-task-create": "Criando tarefas recorrentes",
+    "recurring-event-edit": "Editando eventos recorrentes",
+    "recurring-task-edit": "Editando tarefas recorrentes",
+    "query": "Consultando dados",
+    "fallback": "Analisando o pedido"
+  },
+  "failure": "Não consegui concluir: {{label}}.",
+  "dispatchFailed": "Não consegui entender o pedido a tempo. Tente de novo em instantes."
+}

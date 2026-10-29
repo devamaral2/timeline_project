@@ -23,6 +23,28 @@ test("meal generation contract remains strict and legacy meals remain valid", ()
   expect(noteSchema.safeParse({ ...base, data: { ...meal, nutritionSource: "catalog" } }).success).toBe(false);
 });
 
+test("a training note accepts walking as a cardio workout", () => {
+  const note = {
+    id: "note", name: "Caminhada", type: "training", schemaVersion: 1, tags: [], revision: 1,
+    createdAt: "2026-01-01", updatedAt: "2026-01-01",
+    data: {
+      workouts: [
+        {
+          id: "workout",
+          workoutCode: "walking",
+          workoutName: "Caminhada",
+          calories: 100,
+          duration: 120,
+          pace: 5,
+          distance: 24,
+        },
+      ],
+      caloriesBurned: 100,
+    },
+  };
+  expect(noteSchema.parse(note)).toEqual(note);
+});
+
 test("chat compatibility transport accepts a durable queue receipt", () => {
   const receipt = { type: "queued", id: "request-1", jobId: "job-1" };
   expect(agentChatServerFrameSchema.parse(receipt)).toEqual(receipt);

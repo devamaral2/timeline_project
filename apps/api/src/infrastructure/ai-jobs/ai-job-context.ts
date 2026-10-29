@@ -2,7 +2,25 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { sql, type SQL } from "drizzle-orm";
 import { ulid } from "ulid";
 
-export type AiJobKind = "agent-turn" | "transcript-event" | "meal-note";
+/** Filas da rota por processo (ADR 003): despacho, um passo por agente, finalizacao e fallback. */
+export const PROCESS_JOB_KINDS = [
+  "process-dispatch",
+  "process-event-create",
+  "process-task-create",
+  "process-note-create",
+  "process-event-edit",
+  "process-task-edit",
+  "process-note-edit",
+  "process-query",
+  "process-recurring-event-create",
+  "process-recurring-task-create",
+  "process-recurring-event-edit",
+  "process-recurring-task-edit",
+  "process-fallback",
+  "process-finalize",
+] as const;
+export type ProcessJobKind = (typeof PROCESS_JOB_KINDS)[number];
+export type AiJobKind = "agent-turn" | "transcript-event" | "meal-note" | ProcessJobKind;
 export interface EnqueueAiJobInput {
   kind: AiJobKind;
   userId: string;

@@ -85,7 +85,7 @@ export interface SleepItem {
   score: number;
 }
 
-export type WorkoutCode = "treadmill" | "running" | "weightlifting" | "free";
+export type WorkoutCode = "walking" | "treadmill" | "running" | "weightlifting" | "free";
 
 export interface WorkoutSet {
   id: string;
@@ -103,7 +103,7 @@ interface WorkoutSnapshotBase {
 }
 
 export type WorkoutSnapshot =
-  | (WorkoutSnapshotBase & { workoutCode: "treadmill" | "running"; pace: number; distance: number })
+  | (WorkoutSnapshotBase & { workoutCode: "walking" | "treadmill" | "running"; pace: number; distance: number })
   | (WorkoutSnapshotBase & { workoutCode: "weightlifting"; sets: WorkoutSet[] })
   | (WorkoutSnapshotBase & { workoutCode: "free" });
 
@@ -113,7 +113,7 @@ export interface TrainingData {
 }
 
 export type WorkoutInput =
-  | (Omit<Extract<WorkoutSnapshot, { workoutCode: "treadmill" | "running" }>, "id" | "workoutName" | "calories"> & {
+  | (Omit<Extract<WorkoutSnapshot, { workoutCode: "walking" | "treadmill" | "running" }>, "id" | "workoutName" | "calories"> & {
       id?: string;
       calories?: number;
     })
@@ -507,4 +507,49 @@ export interface AgentChatMessageDto {
 export interface AgentChatMessagePageDto {
   items: AgentChatMessageDto[];
   nextCursor?: string;
+}
+
+/** A rota de IA por processo (ADR 003): a caixa de processo que o chat mostra. */
+export type AiProcessStatus = "dispatching" | "running" | "completed" | "failed";
+export type AiProcessStepStatus = "pending" | "running" | "succeeded" | "failed";
+
+export interface AiProcessQueryResult {
+  columns: string[];
+  rows: unknown[][];
+  truncated: boolean;
+}
+
+export interface AiProcessStepDto {
+  id: string;
+  agent: string;
+  /** Texto predefinido pelo servidor ("Criando eventos"). */
+  label: string;
+  status: AiProcessStepStatus;
+  errorCode?: string;
+  /** Linhas da consulta, so no passo de consulta. */
+  result?: AiProcessQueryResult;
+}
+
+export interface AiProcessEntityDto {
+  kind: "event" | "task" | "note";
+  id: string;
+  name: string;
+  operation: "create" | "update";
+  linkedTo: Array<{ kind: string; id: string }>;
+}
+
+export interface AiProcessDto {
+  id: string;
+  status: AiProcessStatus;
+  title: string;
+  steps: AiProcessStepDto[];
+  entities: AiProcessEntityDto[];
+  /** Resposta do fallback ou o que falhou; ausente quando tudo deu certo. */
+  message?: string;
+}
+
+export interface StartAiProcessRequest {
+  userId: string;
+  text: string;
+  context?: AgentScreenContext;
 }

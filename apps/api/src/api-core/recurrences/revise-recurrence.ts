@@ -3,7 +3,7 @@ import type { EventRecurrenceTemplate, TaskRecurrenceTemplate } from "@repo/cont
 import type { TaskRepository } from "../../domain/ports";
 import { shiftDayKey } from "@repo/timeline";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
-import type { CreateEventUseCase } from "../events/create-event.usecase";
+import type { CreateEventUseCase, PrepareEventOptions } from "../events/create-event.usecase";
 import { prepareEventTemplate, prepareTaskTemplate, todayOf } from "./recurrence-templates";
 
 export interface RecurrenceRevision {
@@ -44,6 +44,7 @@ export async function reviseRecurrence(
   revision: RecurrenceRevision,
   actor: AuthenticatedUser,
   now: Date,
+  options?: PrepareEventOptions,
 ): Promise<RevisedRecurrence> {
   // A regra revisada vem primeiro: o template novo e resolvido com a janela dela.
   const withRule = existing.revise({ rule: revision.rule });
@@ -52,7 +53,7 @@ export async function reviseRecurrence(
     revision.template === undefined
       ? undefined
       : withRule.target === "event"
-        ? await prepareEventTemplate(deps.createEvent, revision.template as EventRecurrenceTemplate, withRule.rule, actor)
+        ? await prepareEventTemplate(deps.createEvent, revision.template as EventRecurrenceTemplate, withRule.rule, actor, options)
         : {
             template: await prepareTaskTemplate(deps.tasks, revision.template as TaskRecurrenceTemplate, withRule.rule, actor),
             notes: [] as Note[],

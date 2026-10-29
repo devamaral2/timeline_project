@@ -67,7 +67,7 @@ const eventCommandSchema = {
       sleepScore: { type: ["number", "null"] },
       workoutKind: {
         type: "string",
-        enum: ["treadmill", "running", "weightlifting", "free"],
+        enum: ["walking", "treadmill", "running", "weightlifting", "free"],
       },
       workoutDurationMinutes: { type: ["number", "null"] },
       workoutCalories: { type: ["number", "null"] },
@@ -254,6 +254,7 @@ function toWorkouts(raw: Partial<RawEventCommand>): WorkoutInput[] {
   switch (raw.workoutKind) {
     case "weightlifting":
       return [{ workoutCode: "weightlifting", ...base, sets: [] }];
+    case "walking":
     case "running":
     case "treadmill":
       return [{ workoutCode: raw.workoutKind, ...base, distance: distance ?? 0, pace: 0 }];

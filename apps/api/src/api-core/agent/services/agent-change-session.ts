@@ -27,7 +27,7 @@ import type {
   CreateRecurrenceInput,
 } from "@repo/contracts";
 import { dayKeyOf, expandOccurrences } from "@repo/timeline";
-import type { CreateEventUseCase } from "../../events/create-event.usecase";
+import type { CreateEventUseCase, PrepareEventOptions } from "../../events/create-event.usecase";
 import { prepareRecurrence } from "../../recurrences/prepare-recurrence";
 import { buildEventOccurrence, buildTaskOccurrenceOf, todayOf } from "../../recurrences/recurrence-templates";
 import { reviseRecurrence, type RecurrenceRevision } from "../../recurrences/revise-recurrence";
@@ -125,6 +125,17 @@ export class AgentChangeSession {
     private readonly clock: () => Date = () => new Date(),
   ) {}
 
+  private keepUnlinkedMealNotes = false;
+
+  /**
+   * Uma nota de refeicao criada sozinha (rota por processo) nao e descartada por falta de evento:
+   * a finalizacao a vincula depois.
+   */
+  keepUnlinkedMeals(): this {
+    this.keepUnlinkedMealNotes = true;
+    return this;
+  }
+
   /** O dia civil de hoje no fuso dado — a data de partida de uma serie nova. */
   todayIn(timeZone: string): string {
     return dayKeyOf(this.clock(), timeZone);
@@ -136,12 +147,13 @@ export class AgentChangeSession {
    * lista. As demais saem da materializacao preguicosa, que ignora o dia que ja
    * existe — por isso a marca d'agua nao anda aqui.
    */
-  createRecurrence(input: CreateRecurrenceInput): Promise<StageResult> {
+  createRecurrence(input: CreateRecurrenceInput, options?: PrepareEventOptions): Promise<StageResult> {
     return this.attempt(async () => {
       const { recurrence, notes } = await prepareRecurrence(
         { createEvent: this.createEventUseCase, tasks: this.taskView },
         input,
         { userId: this.userId },
+        options,
       );
 
       const day = this.firstOccurrenceDay(recurrence, dayKeyOf(this.clock(), recurrence.rule.timeZone));
@@ -159,7 +171,11 @@ export class AgentChangeSession {
    * ocorrencias futuras que ninguem mexeu a mao saem e a primeira da regra nova
    * entra neste lote. As demais saem da proxima leitura da lista.
    */
-  updateRecurrence(id: string, plan: (current: Recurrence) => RecurrenceRevision): Promise<StageResult> {
+  updateRecurrence(
+    id: string,
+    plan: (current: Recurrence) => RecurrenceRevision,
+    options?: PrepareEventOptions,
+  ): Promise<StageResult> {
     return this.attempt(async () => {
       const current = await this.loadRecurrence(id);
       const { recurrence, notes, fromDay } = await reviseRecurrence(
@@ -168,6 +184,7 @@ export class AgentChangeSession {
         plan(current),
         { userId: this.userId },
         this.clock(),
+        options,
       );
 
       for (const note of notes) this.stageNewNote(note);
@@ -250,9 +267,9 @@ export class AgentChangeSession {
   }
 
   /** As notes novas do evento entram no mesmo lote, antes dele (o vinculo aponta para elas). */
-  createEvent(input: CreateEventInput): Promise<StageResult> {
+  createEvent(input: CreateEventInput, options?: PrepareEventOptions): Promise<StageResult> {
     return this.attempt(async () => {
-      const { event, notes } = await this.createEventUseCase.prepare(input, { userId: this.userId });
+      const { event, notes } = await this.createEventUseCase.prepare(input, { userId: this.userId }, undefined, options);
       for (const note of notes) this.stageNewNote(note);
       this.events.set(event.id, { change: { op: "create", entity: event } });
       return { ok: true, kind: "event", op: "create", id: event.id };
@@ -269,6 +286,11 @@ export class AgentChangeSession {
     revise: (current: Event) => Promise<Event>,
   ): Promise<StageResult> {
     return this.stageEventUpdate(id, kind, revise);
+  }
+
+  /** Revisa um evento de qualquer tipo, sem exigir que o chamador conheca o tipo atual. */
+  reviseEvent(id: string, revise: (current: Event) => Promise<Event>): Promise<StageResult> {
+    return this.stageEventUpdate(id, undefined, revise);
   }
 
   /**
@@ -474,6 +496,7 @@ export class AgentChangeSession {
 
   /** Superseded pending notes never reached storage and need no orphan AI jobs. */
   private discardUnlinkedPendingMeals(): void {
+    if (this.keepUnlinkedMealNotes) return;
     const linked = new Set<string>();
     for (const { change } of [...this.events.values(), ...this.tasks.values()]) {
       if (change.op !== "delete") {

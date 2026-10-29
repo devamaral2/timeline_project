@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { AgentChatEntityRef, AgentChatMessageDto, AgentScreenContext } from "@/lib/api/contracts";
+import { ApiError } from "@/lib/api/authed-fetch";
+import type { AgentChatEntityRef, AgentChatMessageDto, AgentScreenContext, AiProcessDto } from "@/lib/api/contracts";
+import { type AiProcessApi, aiProcess, isProcessRouteOff, isProcessTerminal } from "@/lib/ai-process/ai-process";
 import type { AgentChatClient, AgentChatClientOptions, AgentChatEvent } from "./agent-chat-client";
 import { DurableAgentChatClient } from "./durable-agent-chat-client";
 import { operationId } from "@/lib/ai-jobs/ai-jobs";
@@ -10,7 +12,9 @@ import { fetchConversationMessages } from "./agent-conversations-api";
 export type AgentChatMessage =
   | { id: string; role: "user"; text: string; failed?: boolean }
   | { id: string; role: "assistant"; text: string; entities: AgentChatEntityRef[] }
-  | { id: string; role: "error"; text: string; retryText: string; requestId: string };
+  | { id: string; role: "error"; text: string; retryText: string; requestId: string }
+  /** A caixa de processo (ADR 003): `null` ate o servidor responder o primeiro estado. Nao entra no historico. */
+  | { id: string; role: "process"; process: AiProcessDto | null };
 
 export interface AgentChatPending {
   id: string;
@@ -27,7 +31,15 @@ interface UseAgentChatOptions {
   onEntitiesChanged?: () => void;
   createClient?: (options: AgentChatClientOptions) => Pick<AgentChatClient, "send" | "cancel" | "close">;
   loadMessages?: typeof fetchConversationMessages | undefined;
+  /** A rota de IA por processo. `null` a desliga; ausente, vale a real, exceto quando o teste injeta `createClient`. */
+  processApi?: AiProcessApi | null;
+  processPollMs?: number;
 }
+
+/** Quanto tempo a caixa de processo espera o servidor terminar antes de dar o pedido como perdido. */
+const PROCESS_TIMEOUT_MS = 180_000;
+/** Falhas seguidas ao consultar o processo antes de desistir de acompanhar. */
+const PROCESS_POLL_FAILURES = 5;
 
 const ERROR_TEXTS: Record<Extract<AgentChatEvent, { type: "error" }>["code"], string> = {
   busy: "Ainda estou respondendo a mensagem anterior.",
@@ -69,7 +81,13 @@ export function useAgentChat({
   onEntitiesChanged,
   createClient,
   loadMessages = fetchConversationMessages,
+  processApi: processApiOption,
+  processPollMs = 1000,
 }: UseAgentChatOptions) {
+  const processApi = processApiOption === undefined ? (createClient ? null : aiProcess) : processApiOption;
+  /** `unknown` ate a primeira resposta do servidor: 404 desliga a rota por processo para o resto da sessao. */
+  const processModeRef = useRef<"unknown" | "on" | "off">("unknown");
+  const disposedRef = useRef(false);
   const [messages, setMessages] = useState<AgentChatMessage[]>([]);
   const [pending, setPending] = useState<AgentChatPending | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -199,7 +217,8 @@ export function useAgentChat({
       // A conversa sumiu debaixo do cliente: o id local nao serve mais para nada.
       if (event.code === "conversation_gone") commitConversation(null);
 
-      const request = messagesRef.current.find((message) => message.id === event.id);
+      const found = messagesRef.current.find((message) => message.id === event.id);
+      const request = found?.role === "user" ? found : undefined;
       commitMessages((current) => [
         ...current.map((message) =>
           message.id === event.id && message.role === "user" ? { ...message, failed: true } : message,
@@ -236,12 +255,75 @@ export function useAgentChat({
       },
     });
     clientRef.current = client;
+    disposedRef.current = false;
     return () => {
+      disposedRef.current = true;
       client.close();
       clientRef.current = null;
       commitPending(null);
     };
   }, [commitConversation, commitMessages, commitPending, createClient, handleEvent, reload, userId]);
+
+  /**
+   * Segue o processo ate o fim: a caixa mostra cada passo com seu estado. Devolve `false` quando a rota por
+   * processo esta desligada no servidor (404 ao iniciar), e o chat segue pelo caminho de sempre.
+   */
+  const runProcess = useCallback(
+    async (id: string, text: string): Promise<boolean> => {
+      if (!processApi || !userId) return false;
+      let processId: string;
+      try {
+        ({ processId } = await processApi.start({ userId, text, ...(context ? { context } : {}) }));
+        processModeRef.current = "on";
+      } catch (error) {
+        if (isProcessRouteOff(error)) {
+          processModeRef.current = "off";
+          return false;
+        }
+        const code = error instanceof ApiError && error.status === 401 ? "session_expired" : "connection_failed";
+        handleEvent({ type: "error", id, code });
+        return true;
+      }
+
+      const messageId = `${id}-process`;
+      commitMessages((current) => [...current, { id: messageId, role: "process", process: null }]);
+      commitPending({ id, label: "Realizando processos" });
+      const deadline = Date.now() + PROCESS_TIMEOUT_MS;
+      let failures = 0;
+      while (!disposedRef.current && pendingRef.current?.id === id) {
+        try {
+          const view = await processApi.get(processId);
+          failures = 0;
+          if (disposedRef.current || pendingRef.current?.id !== id) return true;
+          commitMessages((current) =>
+            current.map((message) => (message.id === messageId ? { id: messageId, role: "process", process: view } : message)));
+          if (isProcessTerminal(view)) {
+            commitPending(null);
+            // Criar, editar e vincular mudam a agenda; uma consulta pura ou uma resposta nao.
+            if (view.entities.length > 0) onEntitiesChangedRef.current?.();
+            return true;
+          }
+        } catch (error) {
+          failures += 1;
+          if (error instanceof ApiError && error.status === 401) {
+            handleEvent({ type: "error", id, code: "session_expired" });
+            return true;
+          }
+          if (failures >= PROCESS_POLL_FAILURES) {
+            handleEvent({ type: "error", id, code: "connection_lost" });
+            return true;
+          }
+        }
+        if (Date.now() > deadline) {
+          handleEvent({ type: "error", id, code: "connection_lost" });
+          return true;
+        }
+        await new Promise((resolve) => setTimeout(resolve, processPollMs));
+      }
+      return true;
+    },
+    [commitMessages, commitPending, context, handleEvent, processApi, processPollMs, userId],
+  );
 
   const send = useCallback(
     (text: string) => {
@@ -252,20 +334,29 @@ export function useAgentChat({
       const id = operationId();
       commitMessages((current) => [...current, { id, role: "user", text: trimmed }]);
       commitPending({ id });
-      void client.send({
+      const sendThroughChat = () => client.send({
         id,
         text: trimmed,
         context,
         ...(conversationRef.current ? { conversationId: conversationRef.current } : {}),
       });
+      if (processApi && processModeRef.current !== "off") {
+        void runProcess(id, trimmed).then((handled) => {
+          if (!handled) void sendThroughChat();
+        });
+      } else {
+        void sendThroughChat();
+      }
       return true;
     },
-    [commitMessages, commitPending, context, loading],
+    [commitMessages, commitPending, context, loading, processApi, runProcess],
   );
 
   const cancel = useCallback(() => {
     const current = pendingRef.current;
     if (!current || current.cancelling) return;
+    // O processo ja foi entregue as filas e nao ha cancelamento por esta rota: o botao nao se aplica.
+    if (messagesRef.current.some((message) => message.id === `${current.id}-process`)) return;
     clientRef.current?.cancel(current.id);
     commitPending({ id: current.id, label: "Cancelando", cancelling: true });
   }, [commitPending]);

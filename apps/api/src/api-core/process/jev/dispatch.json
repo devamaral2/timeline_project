@@ -1,0 +1,109 @@
+{
+  "_when": "JEV de entrada da rota por processo (ADR 003): uma chamada, uma pergunta por operação × entidade, todas respondidas em paralelo pelo provedor.",
+  "endpoint": "https://api.typesafe.ai/v1/systemone",
+  "model": "jev-latest",
+  "timeoutMs": 8000,
+  "minCertainty": 0.92,
+  "_uncertainPolicy": "fallback: resposta incerta em qualquer pergunta manda o pedido ao fallback; ignore: pergunta incerta conta como nenhum.",
+  "uncertainPolicy": "fallback",
+  "questions": {
+    "event_create": {
+      "type": "choice",
+      "instructions": "Quantos EVENTOS NOVOS da timeline o pedido quer criar? Relatos de atividades realizadas, em andamento ou planejadas ('almocei', 'comendo arroz', 'vou nadar', 'volto para casa para ver um filme', 'dormi às 23h') são eventos novos, um por atividade. Recorrências ('toda segunda', 'todo dia') não contam aqui. Notas e tarefas não contam.",
+      "criteria": {
+        "none": "Nenhum evento novo.",
+        "one": "Exatamente um evento novo.",
+        "many": "Dois ou mais eventos novos."
+      }
+    },
+    "event_edit": {
+      "type": "choice",
+      "instructions": "Quantos EVENTOS JÁ EXISTENTES o pedido quer alterar? 'Parei de trabalhar', 'terminei a reunião', 'mude o jantar para as 21h' alteram eventos existentes. Recorrências não contam aqui.",
+      "criteria": {
+        "none": "Nenhum evento existente é alterado.",
+        "one": "Exatamente um evento existente é alterado.",
+        "many": "Dois ou mais eventos existentes são alterados."
+      }
+    },
+    "task_create": {
+      "type": "choice",
+      "instructions": "Quantas TAREFAS NOVAS o pedido quer criar? Tarefa é algo a fazer, com ou sem prazo ('preciso pagar o aluguel', 'lembrar de ligar para o dentista'). Atividades já realizadas ou com horário na timeline são eventos, não tarefas. Tarefas que se repetem não contam aqui.",
+      "criteria": {
+        "none": "Nenhuma tarefa nova.",
+        "one": "Exatamente uma tarefa nova.",
+        "many": "Duas ou mais tarefas novas."
+      }
+    },
+    "task_edit": {
+      "type": "choice",
+      "instructions": "Quantas TAREFAS JÁ EXISTENTES o pedido quer alterar (concluir, mudar prazo, prioridade, nome, status)? Tarefas que se repetem não contam aqui.",
+      "criteria": {
+        "none": "Nenhuma tarefa existente é alterada.",
+        "one": "Exatamente uma tarefa existente é alterada.",
+        "many": "Duas ou mais tarefas existentes são alteradas."
+      }
+    },
+    "note_create": {
+      "type": "choice",
+      "instructions": "Quantas NOTAS NOVAS o pedido quer criar? Uma nota guarda informação: o que foi comido (alimentos e quantidades de uma refeição), detalhes de um treino, uma observação ou ideia. Detalhes de alimentos e quantidades ('300g de arroz com 200g de feijão') pedem uma nota de refeição; o evento da refeição, à parte, é um evento novo.",
+      "criteria": {
+        "none": "Nenhuma nota nova.",
+        "one": "Exatamente uma nota nova.",
+        "many": "Duas ou mais notas novas."
+      }
+    },
+    "note_edit": {
+      "type": "choice",
+      "instructions": "Quantas NOTAS JÁ EXISTENTES o pedido quer alterar (acrescentar texto, renomear, corrigir)?",
+      "criteria": {
+        "none": "Nenhuma nota existente é alterada.",
+        "one": "Exatamente uma nota existente é alterada.",
+        "many": "Duas ou mais notas existentes são alteradas."
+      }
+    },
+    "recurring_event_create": {
+      "type": "choice",
+      "instructions": "Quantos EVENTOS RECORRENTES NOVOS o pedido quer criar? Atividades que se repetem ('corrida toda segunda às 7h', 'reunião todo dia útil às 10h').",
+      "criteria": {
+        "none": "Nenhum evento recorrente novo.",
+        "one": "Exatamente um evento recorrente novo.",
+        "many": "Dois ou mais eventos recorrentes novos."
+      }
+    },
+    "recurring_event_edit": {
+      "type": "choice",
+      "instructions": "Quantas SÉRIES de EVENTOS RECORRENTES já existentes o pedido quer alterar (a regra ou o modelo da série inteira: 'mude a corrida de segunda para as 8h', 'agora é toda terça')? Alterar apenas UMA ocorrência isolada ('hoje a corrida foi às 8h') é uma edição de evento comum (event_edit), não de série.",
+      "criteria": {
+        "none": "Nenhum evento recorrente existente é alterado.",
+        "one": "Exatamente um evento recorrente existente é alterado.",
+        "many": "Dois ou mais eventos recorrentes existentes são alterados."
+      }
+    },
+    "recurring_task_create": {
+      "type": "choice",
+      "instructions": "Quantas TAREFAS RECORRENTES NOVAS o pedido quer criar ('pagar o aluguel todo dia 5', 'regar as plantas toda semana')?",
+      "criteria": {
+        "none": "Nenhuma tarefa recorrente nova.",
+        "one": "Exatamente uma tarefa recorrente nova.",
+        "many": "Duas ou mais tarefas recorrentes novas."
+      }
+    },
+    "recurring_task_edit": {
+      "type": "choice",
+      "instructions": "Quantas SÉRIES de TAREFAS RECORRENTES já existentes o pedido quer alterar (a regra ou o modelo da série inteira)? Alterar só uma ocorrência isolada é uma edição de tarefa comum (task_edit).",
+      "criteria": {
+        "none": "Nenhuma tarefa recorrente existente é alterada.",
+        "one": "Exatamente uma tarefa recorrente existente é alterada.",
+        "many": "Duas ou mais tarefas recorrentes existentes são alteradas."
+      }
+    },
+    "query": {
+      "type": "choice",
+      "instructions": "O usuário pede para CONSULTAR dados da própria timeline, tarefas ou notas ('o que tenho amanhã?', 'quanto treinei esta semana?')? Relatos de atividades e pedidos de registro não são consultas.",
+      "criteria": {
+        "no": "Não pede consulta de dados.",
+        "yes": "Pede para consultar ou resumir dados já registrados."
+      }
+    }
+  }
+}

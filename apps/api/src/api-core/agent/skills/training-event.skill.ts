@@ -21,6 +21,7 @@ const cardioFields = {
 // como `oneOf`, que o function calling da familia OpenAI nao aceita — alguns
 // provedores recusam a tool com 400. z.union emite `anyOf`.
 const workoutSchema = z.union([
+  z.object({ type: z.literal("walking"), ...cardioFields }),
   z.object({ type: z.literal("running"), ...cardioFields }),
   z.object({ type: z.literal("treadmill"), ...cardioFields }),
   z.object({

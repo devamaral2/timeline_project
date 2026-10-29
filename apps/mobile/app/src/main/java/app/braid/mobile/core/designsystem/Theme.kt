@@ -34,6 +34,10 @@ fun BraidTheme(
 @Composable
 fun braidBrand(): Color = if (LocalBraidDarkTheme.current) DarkTokens.brand else LightTokens.brand
 
+/** O verde de sucesso (`--success`) do tema ativo: o check de um passo concluído na caixa de processo. */
+@Composable
+fun braidSuccess(): Color = if (LocalBraidDarkTheme.current) DarkTokens.success else LightTokens.success
+
 /** O fundo suave da marca (`--brand-soft`) do tema ativo, usado na opção escolhida de um seletor. */
 @Composable
 fun braidBrandSoft(): Color = if (LocalBraidDarkTheme.current) DarkTokens.brandSoft else LightTokens.brandSoft

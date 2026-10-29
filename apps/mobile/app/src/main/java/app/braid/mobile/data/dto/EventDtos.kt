@@ -160,6 +160,17 @@ data class RunningWorkoutDto(
 ) : WorkoutSnapshotDto
 
 @Serializable
+@SerialName("walking")
+data class WalkingWorkoutDto(
+    override val id: String,
+    override val workoutName: String,
+    override val calories: Double,
+    override val duration: Double,
+    val pace: Double,
+    val distance: Double,
+) : WorkoutSnapshotDto
+
+@Serializable
 @SerialName("weightlifting")
 data class WeightliftingWorkoutDto(
     override val id: String,

@@ -1,4 +1,4 @@
-export type WorkoutCode = "treadmill" | "running" | "weightlifting" | "free";
+export type WorkoutCode = "walking" | "treadmill" | "running" | "weightlifting" | "free";
 
 export interface WorkoutSet {
   id: string;
@@ -16,7 +16,7 @@ export interface WorkoutSnapshotBase {
 }
 
 export interface CardioWorkoutSnapshot extends WorkoutSnapshotBase {
-  workoutCode: "treadmill" | "running";
+  workoutCode: "walking" | "treadmill" | "running";
   pace: number;
   distance: number;
 }

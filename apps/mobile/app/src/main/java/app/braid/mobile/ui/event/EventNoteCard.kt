@@ -63,6 +63,7 @@ import app.braid.mobile.data.dto.TextEventNoteDto
 import app.braid.mobile.data.dto.TrainingDataDto
 import app.braid.mobile.data.dto.TrainingEventNoteDto
 import app.braid.mobile.data.dto.TreadmillWorkoutDto
+import app.braid.mobile.data.dto.WalkingWorkoutDto
 import app.braid.mobile.data.dto.WeightliftingWorkoutDto
 import app.braid.mobile.data.dto.WorkoutSnapshotDto
 import app.braid.mobile.domain.timeline.formatDecimal
@@ -341,6 +342,10 @@ private fun WorkoutRow(
                     add(formatPace(workout.pace))
                 }
                 is RunningWorkoutDto -> {
+                    add("${formatDecimal(workout.distance)} km")
+                    add(formatPace(workout.pace))
+                }
+                is WalkingWorkoutDto -> {
                     add("${formatDecimal(workout.distance)} km")
                     add(formatPace(workout.pace))
                 }

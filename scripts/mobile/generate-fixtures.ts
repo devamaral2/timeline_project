@@ -233,6 +233,61 @@ export function generateFixtures(): void {
       { id: "message-1", seq: 1, role: "user", content: "O que tenho hoje?", entities: [], createdAt: "2026-09-22T10:59:00.000Z" },
     ],
   });
+  writeFixture("ai-process", z.array(mobileContractSchemas.aiProcess), [
+    {
+      id: "process-guide",
+      status: "completed" as const,
+      title: "Realizando processos:",
+      steps: [
+        { id: "step-1", agent: "event-create", label: "Criando eventos", status: "succeeded" as const },
+        { id: "step-2", agent: "note-create", label: "Criando notas", status: "succeeded" as const },
+      ],
+      entities: [
+        { kind: "event" as const, id: "event-1", name: "Refeição", operation: "create" as const, linkedTo: [{ kind: "note", id: "note-1" }] },
+        { kind: "note" as const, id: "note-1", name: "Arroz e feijão", operation: "create" as const, linkedTo: [{ kind: "event", id: "event-1" }] },
+      ],
+    },
+    {
+      id: "process-running",
+      status: "running" as const,
+      title: "Realizando processos:",
+      steps: [
+        { id: "step-1", agent: "event-create", label: "Criando eventos", status: "succeeded" as const },
+        { id: "step-2", agent: "note-create", label: "Criando notas", status: "running" as const },
+        { id: "step-3", agent: "task-edit", label: "Editando tarefas", status: "pending" as const },
+      ],
+      entities: [],
+    },
+    {
+      id: "process-failed",
+      status: "completed" as const,
+      title: "Realizando processos:",
+      steps: [
+        { id: "step-1", agent: "event-create", label: "Criando eventos", status: "succeeded" as const },
+        { id: "step-2", agent: "note-create", label: "Criando notas", status: "failed" as const, errorCode: "agent_timeout" },
+      ],
+      entities: [],
+      message: "Criei o evento, mas não consegui criar a nota.",
+    },
+    {
+      id: "process-query",
+      status: "completed" as const,
+      title: "Realizando processos:",
+      steps: [{
+        id: "step-1", agent: "query", label: "Consultando dados", status: "succeeded" as const,
+        result: { columns: ["name", "started_at"], rows: [["Reunião", "2026-10-25T13:00:00.000Z"]], truncated: false },
+      }],
+      entities: [],
+    },
+    {
+      id: "process-reply",
+      status: "completed" as const,
+      title: "Realizando processos:",
+      steps: [{ id: "step-1", agent: "fallback", label: "Analisando o pedido", status: "succeeded" as const }],
+      entities: [],
+      message: "Paris.",
+    },
+  ]);
 
   const page = { items: timelineEvents, nextCursor: "cursor-2" };
   const grouped = groupEventsByDay(timelineEvents, "2026-09-22");

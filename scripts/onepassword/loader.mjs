@@ -34,6 +34,7 @@ const SCOPES = Object.freeze({
       "OPENROUTER_PLANNER_MODEL",
       "OPENROUTER_SPECIALIST_MODEL",
       "AI_PIPELINE",
+      "AI_PROCESS",
       "JEV_API_KEY",
       "AI_JOBS_CONCURRENCY",
       "AI_JOBS_LEASE_MS",

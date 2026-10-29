@@ -8,6 +8,7 @@ import type { WorkoutCode } from "@/lib/api/contracts";
  * ainda esta escolhendo, e por isso vivem no frontend, junto do formulario.
  */
 export const workoutCodeLabels: Record<WorkoutCode, string> = {
+  walking: "Caminhada",
   treadmill: "Esteira",
   running: "Corrida",
   weightlifting: "Musculação",

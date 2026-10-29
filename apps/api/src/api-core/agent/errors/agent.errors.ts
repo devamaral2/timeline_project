@@ -56,7 +56,7 @@ export class InvalidInputError extends Error {
  */
 export class FastStageError extends Error {
   constructor(
-    readonly stage: "planner" | "specialist",
+    readonly stage: "planner" | "specialist" | "process",
     readonly reason: "timeout" | "provider" | "invalid",
     readonly status?: number,
   ) {

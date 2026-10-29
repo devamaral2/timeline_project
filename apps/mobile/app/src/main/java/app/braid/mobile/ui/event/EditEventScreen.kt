@@ -46,6 +46,7 @@ import app.braid.mobile.data.dto.TrainingEventNoteDto
 import app.braid.mobile.data.dto.TreadmillWorkoutDto
 import app.braid.mobile.data.dto.UpdateEventInputDto
 import app.braid.mobile.data.dto.UpdateEventNoteDto
+import app.braid.mobile.data.dto.WalkingWorkoutDto
 import app.braid.mobile.data.dto.WeightliftingWorkoutDto
 import app.braid.mobile.data.dto.WorkoutSetDto
 import app.braid.mobile.data.dto.WorkoutSnapshotDto
@@ -513,7 +514,7 @@ private fun TrainingEditContent(
                         singleLine = true,
                     )
                 }
-                if (workout.code == "treadmill" || workout.code == "running") {
+                if (workout.code == "walking" || workout.code == "treadmill" || workout.code == "running") {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         TextField(
                             modifier = Modifier.weight(1f),
@@ -666,6 +667,7 @@ private data class WorkoutDraft(
         return when (code) {
             "treadmill" -> TreadmillWorkoutDto(id, name, calories, duration, pace.toDoubleOrNull() ?: 0.0, distance.toDoubleOrNull() ?: 0.0)
             "running" -> RunningWorkoutDto(id, name, calories, duration, pace.toDoubleOrNull() ?: 0.0, distance.toDoubleOrNull() ?: 0.0)
+            "walking" -> WalkingWorkoutDto(id, name, calories, duration, pace.toDoubleOrNull() ?: 0.0, distance.toDoubleOrNull() ?: 0.0)
             "weightlifting" ->
                 WeightliftingWorkoutDto(
                     id = id,
@@ -691,6 +693,7 @@ private val workoutCodeOptions =
     listOf(
         "treadmill" to "Esteira",
         "running" to "Corrida",
+        "walking" to "Caminhada",
         "weightlifting" to "Musculação",
         "free" to "Livre",
     )
@@ -699,6 +702,7 @@ private fun workoutDraftOf(workout: WorkoutSnapshotDto): WorkoutDraft =
     when (workout) {
         is TreadmillWorkoutDto -> workout.draft(pace = workout.pace, distance = workout.distance)
         is RunningWorkoutDto -> workout.draft(pace = workout.pace, distance = workout.distance)
+        is WalkingWorkoutDto -> workout.draft(pace = workout.pace, distance = workout.distance)
         is WeightliftingWorkoutDto ->
             workout.draft(
                 sets =
@@ -720,6 +724,7 @@ private fun WorkoutSnapshotDto.draft(
             when (this) {
                 is TreadmillWorkoutDto -> "treadmill"
                 is RunningWorkoutDto -> "running"
+                is WalkingWorkoutDto -> "walking"
                 is WeightliftingWorkoutDto -> "weightlifting"
                 is FreeWorkoutDto -> "free"
             },

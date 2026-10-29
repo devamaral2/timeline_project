@@ -6,12 +6,18 @@ import app.braid.mobile.data.chat.AgentChatEvent
 import app.braid.mobile.data.chat.AgentChatGateway
 import app.braid.mobile.data.chat.AgentChatHistoryGateway
 import app.braid.mobile.data.chat.AgentChatHistoryResult
+import app.braid.mobile.data.chat.DisabledProcessGateway
+import app.braid.mobile.data.chat.ProcessGateway
+import app.braid.mobile.data.chat.ProcessPoll
+import app.braid.mobile.data.chat.ProcessStart
 import app.braid.mobile.data.dto.AgentChatEntityRefDto
 import app.braid.mobile.data.dto.AgentChatMessageDto
 import app.braid.mobile.data.dto.AgentChatMessageFrameDto
 import app.braid.mobile.data.dto.AgentConversationDto
 import app.braid.mobile.data.dto.AgentScreenContextDto
+import app.braid.mobile.data.dto.AiProcessDto
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -28,6 +34,9 @@ enum class AgentChatMessageRole {
     User,
     Assistant,
     Error,
+
+    /** A caixa de processo (ADR 003): passos com check; não entra no histórico da conversa. */
+    Process,
 }
 
 data class AgentChatUiMessage(
@@ -38,6 +47,7 @@ data class AgentChatUiMessage(
     val failed: Boolean = false,
     val retryText: String = "",
     val requestId: String? = null,
+    val process: AiProcessDto? = null,
 )
 
 data class AgentChatPendingUi(
@@ -67,11 +77,18 @@ class AgentChatViewModel
     constructor(
         private val gateway: AgentChatGateway,
         private val history: AgentChatHistoryGateway,
+        private val processes: ProcessGateway = DisabledProcessGateway,
     ) : ViewModel() {
         private val mutableState = MutableStateFlow(AgentChatUiState())
         private val mutableEffects = MutableSharedFlow<AgentChatUiEffect>(extraBufferCapacity = 8)
         private var recoveredTurn = false
         private var recoveredRequestText = ""
+
+        /** `false` até o servidor responder 404 ao iniciar: então a rota por processo está desligada para o resto da sessão. */
+        private var processRouteOff = false
+
+        /** Intervalo entre consultas ao processo; os testes o encurtam. */
+        internal var processPollMillis = PROCESS_POLL_MILLIS
 
         val state: StateFlow<AgentChatUiState> = mutableState.asStateFlow()
         val effects: SharedFlow<AgentChatUiEffect> = mutableEffects.asSharedFlow()
@@ -147,23 +164,91 @@ class AgentChatViewModel
                     pending = AgentChatPendingUi(id),
                 )
             }
+            val frame =
+                AgentChatMessageFrameDto(
+                    id = id,
+                    text = trimmed,
+                    context = AgentScreenContextDto(screen = "agenda"),
+                    conversationId = conversationId,
+                )
             viewModelScope.launch {
-                runCatching {
-                    gateway.send(
-                        AgentChatMessageFrameDto(
-                            id = id,
-                            text = trimmed,
-                            context = AgentScreenContextDto(screen = "agenda"),
-                            conversationId = conversationId,
-                        ),
-                    )
-                }.onFailure { handleClientError(id, "connection_failed") }
+                if (!processRouteOff && startProcess(id, frame)) return@launch
+                runCatching { gateway.send(frame) }.onFailure { handleClientError(id, "connection_failed") }
+            }
+        }
+
+        /**
+         * Tenta a rota por processo. `false` quando ela está desligada no servidor (404): o pedido segue pelo
+         * chat de sempre. `true` quando o processo foi iniciado, ou falhou de um jeito que já virou erro na tela.
+         */
+        private suspend fun startProcess(
+            id: String,
+            frame: AgentChatMessageFrameDto,
+        ): Boolean {
+            when (val start = processes.start(frame.text, frame.context)) {
+                ProcessStart.RouteOff -> {
+                    processRouteOff = true
+                    return false
+                }
+
+                is ProcessStart.Failed -> {
+                    handleClientError(id, if (start.status == 401) "session_expired" else "connection_failed")
+                    return true
+                }
+
+                is ProcessStart.Started -> trackProcess(id, start.processId)
+            }
+            return true
+        }
+
+        /** Acompanha o processo até o fim: a caixa mostra cada passo com seu estado. */
+        private suspend fun trackProcess(
+            id: String,
+            processId: String,
+        ) {
+            val boxId = "$id-process"
+            mutableState.update { current ->
+                current.copy(
+                    messages = current.messages + AgentChatUiMessage(boxId, AgentChatMessageRole.Process, ""),
+                    pending = AgentChatPendingUi(id, PROCESS_LABEL),
+                )
+            }
+            var failures = 0
+            var waited = 0L
+            while (mutableState.value.pending?.id == id) {
+                when (val poll = processes.get(processId)) {
+                    is ProcessPoll.View -> {
+                        failures = 0
+                        mutableState.update { current ->
+                            current.copy(
+                                messages = current.messages.map { if (it.id == boxId) it.copy(process = poll.process) else it },
+                            )
+                        }
+                        if (poll.process.terminal) {
+                            mutableState.update { it.copy(pending = null) }
+                            // Criar, editar e vincular mudam a agenda; uma consulta pura ou uma resposta, não.
+                            if (poll.process.entities.isNotEmpty()) mutableEffects.tryEmit(AgentChatUiEffect.EntitiesChanged)
+                            return
+                        }
+                    }
+
+                    is ProcessPoll.Failed -> {
+                        failures += 1
+                        if (poll.status == 401) return handleClientError(id, "session_expired")
+                        if (failures >= PROCESS_POLL_FAILURES) return handleClientError(id, "connection_lost")
+                    }
+                }
+                if (waited >= PROCESS_TIMEOUT_MILLIS) return handleClientError(id, "connection_lost")
+                delay(processPollMillis)
+                waited += processPollMillis
             }
         }
 
         fun cancel() {
             val pending = mutableState.value.pending ?: return
             if (pending.cancelling) return
+            // O processo já foi entregue às filas e não há cancelamento por esta rota: o botão não se aplica.
+            if (mutableState.value.messages.any { it.id == "${pending.id}-process" }) return
             gateway.cancel(pending.id)
             mutableState.update { it.copy(pending = pending.copy(label = "Cancelando", cancelling = true)) }
         }
@@ -378,6 +463,10 @@ class AgentChatViewModel
 
         private companion object {
             const val MAX_MESSAGE_LENGTH = 4000
+            const val PROCESS_LABEL = "Realizando processos"
+            const val PROCESS_POLL_MILLIS = 1_000L
+            const val PROCESS_TIMEOUT_MILLIS = 180_000L
+            const val PROCESS_POLL_FAILURES = 5
 
             fun toUiMessage(message: AgentChatMessageDto): AgentChatUiMessage =
                 AgentChatUiMessage(

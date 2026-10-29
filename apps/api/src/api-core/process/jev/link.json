@@ -1,0 +1,12 @@
+{
+  "_when": "JEV da fila de finalização (ADR 003): decide se a entidade que acabou de ser concluída deve ser vinculada a uma das já criadas no mesmo processo.",
+  "endpoint": "https://api.typesafe.ai/v1/systemone",
+  "model": "jev-latest",
+  "timeoutMs": 8000,
+  "minCertainty": 0.92,
+  "maxCandidates": 12,
+  "question": {
+    "instructions": "A entidade abaixo foi criada a partir do pedido do usuário. Alguma das outras entidades do mesmo pedido é aquela a que ela pertence e a que deve ficar vinculada? Uma nota de refeição pertence ao evento da refeição que descreve (os alimentos e quantidades batem com o que foi comido); uma nota de texto pertence ao evento ou à tarefa de que trata; uma tarefa pertence ao evento a que se refere. Na dúvida, não vincule.",
+    "none": "Nenhuma delas: a entidade fica sem vínculo."
+  }
+}

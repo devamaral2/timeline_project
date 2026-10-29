@@ -258,7 +258,7 @@ export function TrainingEditForm({
                 />
               </div>
 
-              {workout.workoutCode === "treadmill" || workout.workoutCode === "running" ? (
+              {workout.workoutCode === "walking" || workout.workoutCode === "treadmill" || workout.workoutCode === "running" ? (
                 <>
                   <div className="flex flex-col gap-1">
                     <label htmlFor={`training-${workout.key}-pace`} className="text-[12px] text-muted-foreground">Ritmo (min/km)</label>

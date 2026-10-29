@@ -2,6 +2,7 @@ import type { WorkoutCatalog, WorkoutDefinition } from "../../../domain/ports";
 import type { WorkoutCode } from "../../../domain";
 
 const DEFAULT_DEFINITIONS: WorkoutDefinition[] = [
+  { code: "walking", name: "Caminhada", category: "cardio", active: true },
   { code: "treadmill", name: "Esteira", category: "cardio", active: true },
   { code: "running", name: "Corrida", category: "cardio", active: true },
   { code: "weightlifting", name: "Musculação", category: "strength", active: true },

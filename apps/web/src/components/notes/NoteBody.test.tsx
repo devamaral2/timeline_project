@@ -76,3 +76,35 @@ test("generated nutrition is explicitly an estimate and model recipe is suggeste
   expect(screen.getByText("Estimativa nutricional gerada por IA.")).toBeInTheDocument();
   expect(screen.getByText("Sugerida")).toBeInTheDocument();
 });
+
+test("a walking note shows the cardio summary with distance and pace", () => {
+  const note: NoteDto = {
+    id: "n-walking",
+    name: "Caminhada",
+    type: "training",
+    schemaVersion: 1,
+    tags: [],
+    revision: 1,
+    createdAt: "2026-10-26T23:50:53-03:00",
+    updatedAt: "2026-10-26T23:50:53-03:00",
+    data: {
+      workouts: [
+        {
+          id: "w-walking",
+          workoutCode: "walking",
+          workoutName: "Caminhada",
+          calories: 100,
+          duration: 120,
+          pace: 5,
+          distance: 24,
+        },
+      ],
+      caloriesBurned: 100,
+    },
+  };
+
+  render(<NoteBody note={note} />);
+
+  expect(screen.getByText(/24 km/)).toBeInTheDocument();
+  expect(screen.getByText(/5′00″\/km/)).toBeInTheDocument();
+});

@@ -30,7 +30,7 @@ const NOTE_DATA_DESCRIPTION = [
   "meal → {name, description, totals: {totalCaloriesKcal, totalProteinGrams, totalCarbohydrateGrams, totalFatGrams, totalFiberGrams},",
   "foodItems: [{name, portion, approximateWeightGrams, caloriesKcal, macronutrients: {carbohydratesGrams, proteinsGrams, totalFatGrams, fiberGrams}}],",
   "recipe?: {source: user|model, servings?, prepTimeMinutes?, ingredients: [{name, quantity}], steps: [texto]}};",
-  "training → {caloriesBurned, workouts: [{workoutCode: running|treadmill|weightlifting|free, workoutName, calories, duration: minutos,",
+  "training → {caloriesBurned, workouts: [{workoutCode: walking|running|treadmill|weightlifting|free, workoutName, calories, duration: minutos,",
   "pace?: min/km, distance?: km, sets?: [{exercise, repetitions, weight: kg}]}]}",
 ].join(" ");
 

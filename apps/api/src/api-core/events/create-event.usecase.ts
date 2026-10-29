@@ -35,6 +35,11 @@ function parseInstant(value: string | undefined): Date | undefined {
   return instant;
 }
 
+/** `derivedNotes: false` nao cria a nota que o tipo do evento implicaria (refeicao): quem cria notas e outro passo. */
+export interface PrepareEventOptions {
+  derivedNotes?: boolean;
+}
+
 export class CreateEventUseCase {
   constructor(
     private readonly eventRepository: EventRepository,
@@ -71,6 +76,7 @@ export class CreateEventUseCase {
     input: CreateEventInput,
     actor: AuthenticatedUser,
     schedule?: ResolvedEventSchedule,
+    options: PrepareEventOptions = {},
   ): Promise<PreparedEvent> {
     const startedAt = schedule?.startedAt ?? parseInstant(input.startedAt) ?? this.clock();
     const finishedAt = schedule?.finishedAt ?? parseInstant(input.finishedAt);
@@ -89,7 +95,7 @@ export class CreateEventUseCase {
     const existing = await this.assertOwnedNotes(input.noteIds ?? [], actor);
 
     const kind = input.kind ?? inferKind(created);
-    if (kind === "meal" && ![...created, ...existing].some((note) => note.type === "meal")) {
+    if (options.derivedNotes !== false && kind === "meal" && ![...created, ...existing].some((note) => note.type === "meal")) {
       created.push(await this.noteBuilder.fromCreateInput({
         type: "meal",
         data: { inputText: input.description?.trim() || input.name?.trim() || getMealEventName(startedAt, EVENT_TIME_ZONE) },

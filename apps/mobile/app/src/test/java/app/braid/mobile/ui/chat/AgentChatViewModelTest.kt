@@ -4,17 +4,26 @@ import app.braid.mobile.data.chat.AgentChatEvent
 import app.braid.mobile.data.chat.AgentChatGateway
 import app.braid.mobile.data.chat.AgentChatHistoryGateway
 import app.braid.mobile.data.chat.AgentChatHistoryResult
+import app.braid.mobile.data.chat.DisabledProcessGateway
+import app.braid.mobile.data.chat.ProcessGateway
+import app.braid.mobile.data.chat.ProcessPoll
+import app.braid.mobile.data.chat.ProcessStart
 import app.braid.mobile.data.dto.AgentChatEntityRefDto
 import app.braid.mobile.data.dto.AgentChatMessageFrameDto
 import app.braid.mobile.data.dto.AgentChatMessagePageDto
 import app.braid.mobile.data.dto.AgentChatReplyFrameDto
 import app.braid.mobile.data.dto.AgentChatStatusFrameDto
 import app.braid.mobile.data.dto.AgentConversationPageDto
+import app.braid.mobile.data.dto.AgentScreenContextDto
+import app.braid.mobile.data.dto.AiProcessDto
+import app.braid.mobile.data.dto.AiProcessEntityDto
+import app.braid.mobile.data.dto.AiProcessStepDto
 import app.cash.turbine.test
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -133,6 +142,172 @@ class AgentChatViewModelTest {
             assertEquals(emptyList<AgentChatMessageFrameDto>(), gateway.sent)
         }
 
+    @Test
+    fun processRouteShowsTheBoxStepByStepAndRefreshesTheAgendaOnce() =
+        runTest {
+            Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+            val gateway = FakeAgentChatGateway()
+            val processes = FakeProcessGateway()
+            val viewModel = viewModel(gateway, processes)
+            runCurrent()
+
+            viewModel.effects.test {
+                viewModel.send("comendo arroz, depois vou nadar")
+                runCurrent()
+
+                val box =
+                    viewModel.state.value.messages
+                        .last()
+                assertEquals(AgentChatMessageRole.Process, box.role)
+                assertEquals(
+                    "Realizando processos",
+                    viewModel.state.value.pending
+                        ?.label,
+                )
+                assertEquals(emptyList<AgentChatMessageFrameDto>(), gateway.sent)
+                assertEquals("comendo arroz, depois vou nadar", processes.started.single().first)
+
+                processes.views.clear()
+                processes.views.add(process("running", "succeeded", "running"))
+                advanceTimeBy(10)
+                runCurrent()
+                assertEquals(
+                    listOf("succeeded", "running"),
+                    viewModel.state.value.messages
+                        .last()
+                        .process
+                        ?.steps
+                        ?.map { it.status },
+                )
+                expectNoEvents()
+
+                processes.views.clear()
+                processes.views.add(process("completed", "succeeded", "succeeded", entities = 1))
+                advanceTimeBy(10)
+                runCurrent()
+                assertNull(viewModel.state.value.pending)
+                assertEquals(AgentChatUiEffect.EntitiesChanged, awaitItem())
+                expectNoEvents()
+            }
+        }
+
+    @Test
+    fun routeOffFallsBackToTheUsualChatAndIsNotTriedAgain() =
+        runTest {
+            Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+            val gateway = FakeAgentChatGateway()
+            val processes = FakeProcessGateway().apply { routeOff = true }
+            val viewModel = viewModel(gateway, processes)
+            runCurrent()
+
+            viewModel.send("oi")
+            runCurrent()
+            assertEquals(listOf("oi"), gateway.sent.map { it.text })
+            assertEquals(
+                listOf(AgentChatMessageRole.User),
+                viewModel.state.value.messages
+                    .map { it.role },
+            )
+
+            gateway.emit(
+                AgentChatEvent.Reply(
+                    AgentChatReplyFrameDto(gateway.sent.single().id, "c1", 2, "Ok", emptyList(), emptyList(), emptyList(), emptyList()),
+                ),
+            )
+            runCurrent()
+            viewModel.send("de novo")
+            runCurrent()
+            assertEquals(listOf("oi", "de novo"), gateway.sent.map { it.text })
+            assertEquals(1, processes.started.size)
+        }
+
+    @Test
+    fun failedStepsStayInTheBoxAndNothingElseIsAnError() =
+        runTest {
+            Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+            val processes = FakeProcessGateway()
+            val viewModel = viewModel(FakeAgentChatGateway(), processes)
+            runCurrent()
+            processes.views.add(process("completed", "succeeded", "failed", message = "Criei o evento, mas não consegui criar a nota."))
+
+            viewModel.send("almocei e anota")
+            runCurrent()
+
+            val box =
+                viewModel.state.value.messages
+                    .last()
+            assertEquals("Criei o evento, mas não consegui criar a nota.", box.process?.message)
+            assertEquals(
+                listOf(AgentChatMessageRole.User, AgentChatMessageRole.Process),
+                viewModel.state.value.messages
+                    .map { it.role },
+            )
+            assertNull(viewModel.state.value.pending)
+        }
+
+    @Test
+    fun startFailureBecomesTheUsualErrorWithRetry() =
+        runTest {
+            Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+            val processes = FakeProcessGateway().apply { startFailure = ProcessStart.Failed(500) }
+            val viewModel = viewModel(FakeAgentChatGateway(), processes)
+            runCurrent()
+
+            viewModel.send("oi")
+            runCurrent()
+
+            val error =
+                viewModel.state.value.messages
+                    .last()
+            assertEquals(AgentChatMessageRole.Error, error.role)
+            assertEquals("oi", error.retryText)
+            assertEquals("Não consegui conectar ao assistente. Tente de novo.", error.text)
+            assertNull(viewModel.state.value.pending)
+        }
+
+    @Test
+    fun repeatedPollFailuresBecomeConnectionLost() =
+        runTest {
+            Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+            val processes = FakeProcessGateway().apply { pollFailure = ProcessPoll.Failed(500) }
+            val viewModel = viewModel(FakeAgentChatGateway(), processes)
+            runCurrent()
+
+            viewModel.send("oi")
+            advanceTimeBy(100)
+            runCurrent()
+
+            assertEquals(5, processes.polls)
+            assertEquals(
+                AgentChatMessageRole.Error,
+                viewModel.state.value.messages
+                    .last()
+                    .role,
+            )
+            assertNull(viewModel.state.value.pending)
+        }
+
+    @Test
+    fun cancelDoesNotApplyToADeliveredProcess() =
+        runTest {
+            Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+            val gateway = FakeAgentChatGateway()
+            val processes = FakeProcessGateway().apply { views.add(process("running", "running", "pending")) }
+            val viewModel = viewModel(gateway, processes)
+            runCurrent()
+            viewModel.send("oi")
+            runCurrent()
+
+            viewModel.cancel()
+
+            assertNull(gateway.cancelledId)
+            assertEquals(
+                false,
+                viewModel.state.value.pending
+                    ?.cancelling,
+            )
+        }
+
     @org.junit.After
     fun tearDown() {
         Dispatchers.resetMain()
@@ -210,7 +385,54 @@ class AgentChatViewModelTest {
             assertEquals("Não consegui conectar ao assistente. Tente de novo.", state.messages.last().text)
         }
 
-    private fun viewModel(gateway: FakeAgentChatGateway): AgentChatViewModel = AgentChatViewModel(gateway, FakeAgentChatHistoryGateway())
+    private fun viewModel(
+        gateway: FakeAgentChatGateway,
+        processes: ProcessGateway = DisabledProcessGateway,
+    ): AgentChatViewModel = AgentChatViewModel(gateway, FakeAgentChatHistoryGateway(), processes).apply { processPollMillis = 10 }
+
+    private fun process(
+        status: String,
+        vararg states: String,
+        entities: Int = 0,
+        message: String? = null,
+    ) = AiProcessDto(
+        id = "process-1",
+        status = status,
+        title = "Realizando processos:",
+        steps = states.mapIndexed { index, state -> AiProcessStepDto("s$index", "event-create", "Passo $index", state) },
+        entities = List(entities) { AiProcessEntityDto("event", "e$it", "Evento", "create") },
+        message = message,
+    )
+}
+
+/** A rota por processo: o que o servidor respondeu ao iniciar e a fila de estados que ele devolve a cada consulta. */
+private class FakeProcessGateway : ProcessGateway {
+    var routeOff = false
+    var startFailure: ProcessStart.Failed? = null
+    var pollFailure: ProcessPoll.Failed? = null
+    val started = mutableListOf<Pair<String, AgentScreenContextDto?>>()
+    val views = mutableListOf<AiProcessDto>()
+    var polls = 0
+
+    override suspend fun start(
+        text: String,
+        context: AgentScreenContextDto?,
+    ): ProcessStart {
+        started += text to context
+        return when {
+            routeOff -> ProcessStart.RouteOff
+            startFailure != null -> startFailure!!
+            else -> ProcessStart.Started("process-1")
+        }
+    }
+
+    override suspend fun get(processId: String): ProcessPoll {
+        polls += 1
+        pollFailure?.let { return it }
+        // O último estado conhecido se repete até o teste empurrar o próximo.
+        val view = if (views.size > 1) views.removeAt(0) else views.firstOrNull()
+        return view?.let { ProcessPoll.View(it) } ?: ProcessPoll.Failed()
+    }
 }
 
 private class FakeAgentChatGateway : AgentChatGateway {

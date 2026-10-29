@@ -68,6 +68,8 @@ const treadmillWorkoutSchema = z.object({
 
 const runningWorkoutSchema = treadmillWorkoutSchema.extend({ workoutCode: z.literal("running") });
 
+const walkingWorkoutSchema = treadmillWorkoutSchema.extend({ workoutCode: z.literal("walking") });
+
 const weightliftingWorkoutSchema = z.object({
   id: z.string(),
   workoutCode: z.literal("weightlifting"),
@@ -86,6 +88,7 @@ const freeWorkoutSchema = z.object({
 }).strict();
 
 const workoutSchema = z.discriminatedUnion("workoutCode", [
+  walkingWorkoutSchema,
   treadmillWorkoutSchema,
   runningWorkoutSchema,
   weightliftingWorkoutSchema,
@@ -225,6 +228,30 @@ export const agentChatMessagePageSchema = z.object({
   nextCursor: z.string().optional(),
 }).strict();
 
+export const aiProcessSchema = z.object({
+  id: z.string(),
+  status: z.enum(["dispatching", "running", "completed", "failed"]),
+  title: z.string(),
+  steps: z.array(z.object({
+    id: z.string(),
+    agent: z.string(),
+    label: z.string(),
+    status: z.enum(["pending", "running", "succeeded", "failed"]),
+    errorCode: z.string().optional(),
+    result: z.object({
+      columns: z.array(z.string()), rows: z.array(z.array(z.unknown())), truncated: z.boolean(),
+    }).strict().optional(),
+  }).strict()),
+  entities: z.array(z.object({
+    kind: z.enum(["event", "task", "note"]),
+    id: z.string(),
+    name: z.string(),
+    operation: z.enum(["create", "update"]),
+    linkedTo: z.array(z.object({ kind: z.string(), id: z.string() }).strict()),
+  }).strict()),
+  message: z.string().optional(),
+}).strict();
+
 export const mobileContractSchemas = {
   timelineEventPage: timelineEventPageSchema,
   eventDetail: eventDetailSchema,
@@ -240,4 +267,5 @@ export const mobileContractSchemas = {
   agentChatServerFrame: agentChatServerFrameSchema,
   agentConversationPage: agentConversationPageSchema,
   agentChatMessagePage: agentChatMessagePageSchema,
+  aiProcess: aiProcessSchema,
 } as const;

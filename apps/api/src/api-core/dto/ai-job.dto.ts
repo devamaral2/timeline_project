@@ -1,3 +1,4 @@
+import { NotFoundException } from "@nestjs/common";
 import type { AiJobDto, AgentChatErrorCode } from "@repo/contracts";
 import type { AiJobsService } from "../../infrastructure/ai-jobs/ai-jobs.service";
 
@@ -8,6 +9,8 @@ const errorCodes = new Set<AgentChatErrorCode>([
 
 /** Excludes actor snapshots, provider inputs, leases and private error messages. */
 export function toAiJobDto(job: Job): AiJobDto {
+  // Os jobs da rota por processo sao internos: o cliente acompanha o processo, nao as filas.
+  if (job.kind.startsWith("process-")) throw new NotFoundException("AI job not found");
   const payload = job.payload as {
     mode?: string;
     clientMessageId?: string;
@@ -19,7 +22,7 @@ export function toAiJobDto(job: Job): AiJobDto {
     ? { text: payload.input.text, conversationId: payload.input.conversationId, clientMessageId: payload.clientMessageId }
     : payload.transcript ? { text: payload.transcript, clientMessageId: payload.requestId } : undefined;
   return {
-    id: job.id, kind: job.kind, status: job.status, userId: job.userId,
+    id: job.id, kind: job.kind as AiJobDto["kind"], status: job.status, userId: job.userId,
     createdAt: new Date(job.createdAt).toISOString(),
     updatedAt: new Date(job.updatedAt).toISOString(),
     progress: typeof job.progress === "string" ? job.progress : undefined,

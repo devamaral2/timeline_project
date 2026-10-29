@@ -104,6 +104,7 @@ describe("PostgreSQL schema", () => {
       { code: "free", category: "free" },
       { code: "running", category: "cardio" },
       { code: "treadmill", category: "cardio" },
+      { code: "walking", category: "cardio" },
       { code: "weightlifting", category: "strength" },
     ]);
   });

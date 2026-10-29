@@ -612,6 +612,10 @@ private fun ChatMessageBubble(
     val colors = MaterialTheme.colorScheme
     val isUser = message.role == AgentChatMessageRole.User
     val isError = message.role == AgentChatMessageRole.Error
+    if (message.role == AgentChatMessageRole.Process) {
+        ProcessBox(message.process, Modifier.fillMaxWidth())
+        return
+    }
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = if (isUser) Alignment.End else Alignment.Start,

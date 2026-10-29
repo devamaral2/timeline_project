@@ -58,6 +58,7 @@ export class InMemoryEntityBatchWriter implements EntityBatchWriter {
     }
     await this.apply(this.repositories.tasks, batch.userId, batch.tasks);
     await this.apply(this.repositories.events, batch.userId, batch.events);
+    await batch.afterWrite?.(undefined);
     this.commits.push(batch);
 
     if (!batch.conversation) return {};

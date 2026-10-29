@@ -3,7 +3,9 @@ import * as amqp from "amqplib";
 import { setTimeout as delay } from "node:timers/promises";
 import { getAiJobsEnv, type AiJobsEnv } from "../../config/env";
 import { PostgresAiJobStore, type AiJob, retryDelay } from "../persistence/ai-jobs/postgres-ai-job.store";
-import { aiJobContext, completeCurrentAiJob, setAiJobResult, type AiJobKind, type EnqueueAiJobInput } from "./ai-job-context";
+import {
+  aiJobContext, completeCurrentAiJob, PROCESS_JOB_KINDS, setAiJobResult, type AiJobKind, type EnqueueAiJobInput,
+} from "./ai-job-context";
 
 export type { AiJob } from "../persistence/ai-jobs/postgres-ai-job.store";
 export class RetryableAiJobError extends Error {}
@@ -48,7 +50,7 @@ export function isRetryableAiJobError(error: unknown, seen = new Set<unknown>())
     (e.name === "TypeError" && e.message === "fetch failed") ||
     isRetryableAiJobError(e.cause, seen);
 }
-const kinds: AiJobKind[] = ["agent-turn", "transcript-event", "meal-note"];
+const kinds: AiJobKind[] = ["agent-turn", "transcript-event", "meal-note", ...PROCESS_JOB_KINDS];
 
 export class AiJobsService implements OnModuleInit, OnApplicationShutdown {
   private readonly logger = new Logger(AiJobsService.name);

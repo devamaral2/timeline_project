@@ -180,6 +180,33 @@ test("builds a running workout with the reported distance", () => {
   });
 });
 
+test("builds a walking workout with distance and pace", () => {
+  const input = toCreateEventInput(
+    aRawCommand({
+      type: "training",
+      workoutKind: "walking",
+      workoutDurationMinutes: 120,
+      workoutDistanceKm: 24,
+    }),
+    "caminhei vinte e quatro quilometros",
+  );
+
+  expect(input).toEqual({
+    kind: "training",
+    notes: [
+      {
+        type: "training",
+        data: {
+          workouts: [
+            { workoutCode: "walking", calories: 0, duration: 120, distance: 24, pace: 0 },
+          ],
+        },
+      },
+    ],
+    tags: [],
+  });
+});
+
 test("keeps the workout list empty when the phrase carried no numbers", () => {
   const input = toCreateEventInput(aRawCommand({ type: "training" }), "fui pra academia");
 

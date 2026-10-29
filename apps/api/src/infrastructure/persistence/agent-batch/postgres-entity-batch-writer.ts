@@ -112,6 +112,8 @@ export class PostgresEntityBatchWriter implements EntityBatchWriter {
         for (const id of await softDeleteTaskTree(tx, change.id, batch.userId)) deletedTaskIds.add(id);
       }
 
+      await batch.afterWrite?.(tx);
+
       // Por ultimo: um turno so vira conversa gravada depois que as entidades
       // que ele afirma ter mudado passaram.
       if (!batch.conversation || nextSeq === undefined) {

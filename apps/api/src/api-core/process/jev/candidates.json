@@ -1,0 +1,14 @@
+{
+  "_when": "JEV que escolhe, dentre a lista curta montada pelo servidor, quais entidades um pedido de edição está alterando (ADR 003, fase B). Uma pergunta binária por candidato, respondidas em paralelo.",
+  "endpoint": "https://api.typesafe.ai/v1/systemone",
+  "model": "jev-latest",
+  "timeoutMs": 8000,
+  "minCertainty": 0.92,
+  "question": {
+    "instructions": "O pedido do usuário quer ALTERAR a entidade descrita abaixo, que já existe? Responda 'edit' só se o pedido se refere a ela (nome, assunto, horário, conteúdo). Relatos como 'parei de trabalhar' ou 'terminei a reunião' alteram o evento em andamento correspondente. Na dúvida, 'keep'.",
+    "criteria": {
+      "edit": "O pedido altera esta entidade.",
+      "keep": "O pedido não se refere a esta entidade."
+    }
+  }
+}

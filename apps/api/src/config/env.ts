@@ -20,6 +20,10 @@ const serverSchema = z.object({
   OPENROUTER_SPECIALIST_MODEL: z.string().min(1).optional(),
   // `legacy`: roteador JEV + agente com ferramentas. `fast`: planejador + especialistas.
   AI_PIPELINE: z.enum(["legacy", "fast"]).default("legacy"),
+  // Rota por processo (ADR 003): JEV despacha, filas trabalham, finalizacao vincula. Desligada por padrao.
+  AI_PROCESS: z.enum(["off", "on"]).default("off"),
+  // Modelo dos agentes da rota por processo (chamadas estruturadas). Sem valor, cai no OPENROUTER_MODEL.
+  OPENROUTER_PROCESS_MODEL: z.string().min(1).optional(),
 });
 
 export type ServerEnv = z.infer<typeof serverSchema>;
@@ -47,6 +51,8 @@ export function getServerEnv(source?: Record<string, string | undefined>): Serve
     OPENROUTER_PLANNER_MODEL: read("OPENROUTER_PLANNER_MODEL"),
     OPENROUTER_SPECIALIST_MODEL: read("OPENROUTER_SPECIALIST_MODEL"),
     AI_PIPELINE: read("AI_PIPELINE"),
+    AI_PROCESS: read("AI_PROCESS"),
+    OPENROUTER_PROCESS_MODEL: read("OPENROUTER_PROCESS_MODEL"),
   });
 }
 

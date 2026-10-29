@@ -31,8 +31,8 @@ export class PostgresAiJobStore {
   }
   async list(userId: string): Promise<AiJob[]> {
     return (await this.database.pool.query<AiJob>(`SELECT ${projection} FROM ai_jobs
-      WHERE user_id=$1 AND (status IN ('queued','running') OR id IN (
-        SELECT id FROM ai_jobs WHERE user_id=$1 AND status NOT IN ('queued','running')
+      WHERE user_id=$1 AND kind NOT LIKE 'process-%' AND (status IN ('queued','running') OR id IN (
+        SELECT id FROM ai_jobs WHERE user_id=$1 AND kind NOT LIKE 'process-%' AND status NOT IN ('queued','running')
         ORDER BY created_at DESC, id DESC LIMIT 100
       )) ORDER BY (status IN ('queued','running')) DESC, created_at DESC, id DESC`, [userId])).rows;
   }
@@ -41,15 +41,21 @@ export class PostgresAiJobStore {
   }
   async claim(id: string): Promise<AiJob | undefined> {
     return this.database.db.transaction(async (tx) => {
-      // Serializes concurrent claim decisions for this user's agent turns.
-      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(user_id))
-        FROM ai_jobs WHERE id=${id} AND kind='agent-turn'`);
+      // Serializes concurrent claim decisions: a user's agent turns, and one process's finalizations.
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(
+          CASE kind WHEN 'agent-turn' THEN user_id ELSE 'process:' || (payload->>'processId') END))
+        FROM ai_jobs WHERE id=${id} AND kind IN ('agent-turn','process-finalize')`);
       const result = await tx.execute(sql`UPDATE ai_jobs j SET status='running',
         attempts=attempts+1,lease_token=${randomUUID()},
         lease_until=clock_timestamp()+${this.leaseMs}*interval '1 millisecond',updated_at=now()
         WHERE id=${id} AND status='queued' AND available_at<=now()
         AND (kind<>'agent-turn' OR NOT EXISTS (SELECT 1 FROM ai_jobs other
           WHERE other.user_id=j.user_id AND other.kind='agent-turn'
+          AND (other.status='running' OR (other.status='queued'
+            AND (other.created_at,other.id)<(j.created_at,j.id)))))
+        AND (kind<>'process-finalize' OR NOT EXISTS (SELECT 1 FROM ai_jobs other
+          WHERE other.kind='process-finalize' AND other.id<>j.id
+          AND other.payload->>'processId'=j.payload->>'processId'
           AND (other.status='running' OR (other.status='queued'
             AND (other.created_at,other.id)<(j.created_at,j.id)))))
         RETURNING id`);

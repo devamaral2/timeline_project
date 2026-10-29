@@ -244,7 +244,7 @@ export function MobileNavigation({ userId }: { userId?: string }) {
                 <label>Porção<input value={draft.portion ?? ""} onChange={event => updateDraft("portion", event.target.value)} placeholder="Ex.: 1 prato" /></label>
               </div> : null}
               {eventType === "training" ? <div className={styles.entityFields}>
-                <label>Modalidade<select value={draft.workout ?? "free"} onChange={event => updateDraft("workout", event.target.value)}><option value="free">Livre</option><option value="running">Corrida</option><option value="treadmill">Esteira</option><option value="weightlifting">Musculação</option></select></label>
+                <label>Modalidade<select value={draft.workout ?? "free"} onChange={event => updateDraft("workout", event.target.value)}><option value="free">Livre</option><option value="walking">Caminhada</option><option value="running">Corrida</option><option value="treadmill">Esteira</option><option value="weightlifting">Musculação</option></select></label>
                 <label>Duração (min)<input type="number" min="0" inputMode="numeric" value={draft.duration ?? ""} onChange={event => updateDraft("duration", event.target.value)} placeholder="60" /></label>
               </div> : null}
               {eventType === "sleep" ? <div className={styles.entityFields}>

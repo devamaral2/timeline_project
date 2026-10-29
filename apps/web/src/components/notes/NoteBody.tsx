@@ -147,7 +147,7 @@ function MealNote({ data }: { data: MealItem }) {
 
 function workoutSummary(workout: WorkoutSnapshot): string {
   const parts = [formatMinutes(workout.duration)];
-  if (workout.workoutCode === "treadmill" || workout.workoutCode === "running") {
+  if (workout.workoutCode === "walking" || workout.workoutCode === "treadmill" || workout.workoutCode === "running") {
     parts.push(`${formatDecimal(workout.distance)} km`, formatPace(workout.pace));
   } else if (workout.workoutCode === "weightlifting") {
     const exercises = groupSetsByExercise(workout.sets).length;
