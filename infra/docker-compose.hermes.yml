@@ -1,0 +1,40 @@
+# Hermes local (ADR 004), compartilhado por todas as worktrees: um unico
+# gateway por maquina, porque o volume /opt/data nao pode ser aberto por dois
+# containers. O bind em 127.0.0.1 mantem o Hermes fora da rede; quem fala com
+# ele e a API (apps/api), nunca o navegador.
+#
+# Suba com `pnpm hermes:up`: o escopo `hermes-runtime` do 1Password entrega
+# HERMES_API_KEY e OPENROUTER_API_KEY. Nada disso fica em arquivo.
+name: braid-hermes
+services:
+  hermes:
+    image: nousresearch/hermes-agent:${HERMES_IMAGE_TAG:-stable}
+    container_name: braid-hermes
+    command: ["gateway", "run"]
+    restart: unless-stopped
+    environment:
+      API_SERVER_ENABLED: "true"
+      # 0.0.0.0 vale so dentro do container; o publish abaixo e que limita a 127.0.0.1.
+      API_SERVER_HOST: "0.0.0.0"
+      API_SERVER_KEY: ${HERMES_API_KEY:?HERMES_API_KEY must come from the hermes-runtime scope}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:?OPENROUTER_API_KEY must come from the hermes-runtime scope}
+      # Bearer do MCP (apps/mcp); o config.yaml do Hermes o referencia como ${MCP_TOKEN}.
+      MCP_TOKEN: ${MCP_TOKEN:?MCP_TOKEN must come from the hermes-runtime scope}
+    # O MCP local roda no host (`pnpm dev:mcp`); o container o alcanca por este nome.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "127.0.0.1:${HERMES_HOST_PORT:-8642}:8642"
+    volumes:
+      - hermes-data:/opt/data
+
+volumes:
+  hermes-data:
+
+networks:
+  default:
+    # Sub-rede fixa: o ufw do host libera so ela para a porta do MCP, e uma sub-rede
+    # sorteada pelo Docker a cada recriacao quebraria essa regra.
+    ipam:
+      config:
+        - subnet: 172.29.250.0/24

@@ -20,6 +20,7 @@ docker build --target builder -f apps/api/Dockerfile -t "braid-api-migrate:$SHA"
 docker build --target builder -f apps/auth/Dockerfile -t "braid-auth-migrate:$SHA" .
 docker build -f apps/api/Dockerfile -t "braid-api:$SHA" .
 docker build -f apps/auth/Dockerfile -t "braid-auth:$SHA" .
+docker build -f apps/mcp/Dockerfile -t "braid-mcp:$SHA" .
 docker build --no-cache \
   --build-arg "OP_ENVIRONMENT_ID=$OP_ENVIRONMENT_ID" \
   --secret id=onepassword-token,src=/opt/braid/private/onepassword-token \
@@ -44,14 +45,14 @@ kubectl -n braid exec -i postgres-0 -- \
   psql -v ON_ERROR_STOP=1 --single-transaction -U auth_owner -d braid_auth \
   < apps/auth/ops/grant-runtime.sql
 
-docker save "braid-api:$SHA" "braid-auth:$SHA" "braid-web:$SHA" -o /opt/braid/images.tar
+docker save "braid-api:$SHA" "braid-auth:$SHA" "braid-web:$SHA" "braid-mcp:$SHA" -o /opt/braid/images.tar
 k3s ctr images import /opt/braid/images.tar
 rm -f /opt/braid/images.tar
 k3s ctr images list | grep -F "$SHA"
 
 sed "s/REPLACE_SHA/$SHA/g" ops/production/apps.template.yaml > /opt/braid/k8s/apps.yaml
 kubectl apply -f /opt/braid/k8s/apps.yaml
-for app in api auth web; do
+for app in api auth web mcp; do
   kubectl -n braid rollout status "deployment/$app" --timeout=300s
 done
 

@@ -1,0 +1,9 @@
+[Unit]
+Description=Atualiza o Hermes para a imagem stable e valida (ADR 004)
+After=k3s.service
+Wants=k3s.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/braid/bin/hermes-update.sh
+TimeoutStartSec=20min
