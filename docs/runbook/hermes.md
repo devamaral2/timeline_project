@@ -218,7 +218,10 @@ crie uma nota com o resumo do meu dia
 ```
 
 `/hermes <mensagem>` liga o modo e já envia a mensagem. Em modo normal, sem `/hermes`, o
-chat continua sendo o assistente da agenda. A resposta do Hermes aparece no chat e a
+chat continua sendo o assistente da agenda. Enquanto o Hermes trabalha, o chat mostra os **passos** dele: cada ferramenta numa linha
+(`Executou um comando · date`, `Pesquisou na web · …`, `Criou uma nota`), e cada pensamento
+recolhido, que abre ao clicar. Os passos ficam acima da resposta depois que o turno
+termina. A resposta do Hermes aparece no chat e a
 agenda atualiza ao fim, porque ele pode ter criado ou editado registros pelo MCP. As
 mensagens do modo Hermes não entram no histórico da conversa do app (o Hermes guarda a
 própria sessão), então recarregar a página limpa a tela.
