@@ -14,3 +14,7 @@
 | Sessão de mudanças | Mudanças preparadas pelo agente e validadas antes do commit único. |
 | Rearranjo | Deslocamento em cadeia dos eventos seguintes que passaram a se sobrepor, preservando a duração de cada um e parando na primeira folga. |
 | Ocorrência destacada | Instância de recorrência revisada sem alterar a regra da série. |
+| Processo | Pedido tratado pela rota por processo (ADR 003): gravado antes de qualquer entidade e ligado a cada uma que seus passos criam ou editam. |
+| Passo | Trabalho de um processo entregue à fila de um agente (criar eventos, criar notas...). Termina em verde (sucesso) ou vermelho (falha). |
+| Finalização | Fila com lock por processo em que cada entidade concluída é comparada, pelo JEV, com as já criadas para decidir vínculos. |
+| Fallback | Fila do pedido que não cai em nenhuma operação de entidade; seu agente responde ou, nas fases seguintes, orquestra os especialistas. |
