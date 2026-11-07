@@ -1,14 +1,23 @@
 import { NotFoundException } from "@nestjs/common";
 import type { AiJobDto, AgentChatErrorCode } from "@repo/contracts";
 import type { AiJobsService } from "../../infrastructure/ai-jobs/ai-jobs.service";
+import type { HermesStep } from "../../infrastructure/hermes/hermes-steps";
 
 type Job = Awaited<ReturnType<AiJobsService["get"]>>;
 const errorCodes = new Set<AgentChatErrorCode>([
   "conflict", "conversation_gone", "invalid_input", "limit_reached", "unavailable", "forbidden", "internal",
 ]);
 
+/** Os passos que o Hermes deu: no resultado quando o turno terminou, no progresso enquanto ele trabalha. */
+function hermesSteps(job: Job): HermesStep[] {
+  const fromResult = (job.result as { steps?: unknown } | null)?.steps;
+  const fromProgress = (job.progress as { steps?: unknown } | null)?.steps;
+  const steps = Array.isArray(fromResult) ? fromResult : Array.isArray(fromProgress) ? fromProgress : [];
+  return steps as HermesStep[];
+}
+
 /** Excludes actor snapshots, provider inputs, leases and private error messages. */
-export function toAiJobDto(job: Job): AiJobDto {
+export function toAiJobDto(job: Job): AiJobDto & { steps?: HermesStep[] } {
   // Os jobs da rota por processo sao internos: o cliente acompanha o processo, nao as filas.
   if (job.kind.startsWith("process-")) throw new NotFoundException("AI job not found");
   const payload = job.payload as {
@@ -31,5 +40,7 @@ export function toAiJobDto(job: Job): AiJobDto {
       : undefined,
     request,
     result: job.result as AiJobDto["result"],
+    // So os jobs do Hermes (ADR 004): os demais clientes do contrato nao veem o campo.
+    ...(job.kind === "hermes-turn" ? { steps: hermesSteps(job) } : {}),
   };
 }

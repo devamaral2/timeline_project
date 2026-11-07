@@ -15,6 +15,8 @@ interface AgentJobPayload {
   clientMessageId?: string;
 }
 
+const HERMES_PROGRESS_INTERVAL_MS = 400;
+
 interface HermesJobPayload {
   mode: "hermes";
   input: { userId: string; text: string; conversationId?: string };
@@ -53,11 +55,22 @@ export class QueuedAiOperations implements OnModuleInit {
     this.jobs.register("hermes-turn", async (raw, context) => {
       const { input } = raw as HermesJobPayload;
       if (!this.hermes) throw new HermesRequestError("Hermes is not configured");
-      return this.hermes.chat({
+      // Cada passo e uma escrita no banco: so uma por intervalo; o resultado final traz a lista completa.
+      let lastWrite = 0;
+      let writes: Promise<unknown> = Promise.resolve();
+      const reply = await this.hermes.chat({
         text: input.text,
         sessionId: hermesSessionId(input.userId, input.conversationId),
         signal: context.signal,
+        onSteps: (steps) => {
+          const now = Date.now();
+          if (now - lastWrite < HERMES_PROGRESS_INTERVAL_MS) return;
+          lastWrite = now;
+          writes = writes.then(() => context.progress({ steps })).catch(() => {});
+        },
       });
+      await writes;
+      return reply;
     });
     this.jobs.register("meal-note", async (raw) => {
       return this.mealNote.execute(raw as Parameters<GenerateMealNoteUseCase["execute"]>[0]);
