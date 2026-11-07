@@ -18,3 +18,9 @@
 | Passo | Trabalho de um processo entregue à fila de um agente (criar eventos, criar notas...). Termina em verde (sucesso) ou vermelho (falha). |
 | Finalização | Fila com lock por processo em que cada entidade concluída é comparada, pelo JEV, com as já criadas para decidir vínculos. |
 | Fallback | Fila do pedido que não cai em nenhuma operação de entidade; seu agente responde ou, nas fases seguintes, orquestra os especialistas. |
+| Hermes | Agente de terceiros (`nousresearch/hermes-agent`) que roda como container interno e executa as automações. Nunca é exposto: só a API fala com ele (ADR 004). |
+| Automação | Trabalho recorrente ou agendado ("todo dia às 7h...") que o Hermes guarda e dispara pelo cron dele, em vez de virar entidade da agenda. |
+| Rota de automação | Ramo do roteador por processo (ADR 003) que entrega ao Hermes o pedido classificado como automação e devolve a resposta ao mesmo chat. |
+| Atualização diária | Rotina agendada na VPS que troca a imagem do Hermes pela `stable` mais recente, valida e volta ao digest anterior se a validação falhar. |
+| MCP do Hermes | Serviço nosso (`apps/mcp`) pelo qual o Hermes cria, lê e edita eventos, tarefas, notas e recorrências do dono. Não apaga; a identidade vem da credencial, nunca de um argumento. |
+| Chave de idempotência | Texto escolhido pela automação (`resumo-diario:2026-11-03`) que torna uma criação repetível: a segunda chamada devolve a entidade já criada. Vale por usuário e rota (`Idempotency-Key`). |

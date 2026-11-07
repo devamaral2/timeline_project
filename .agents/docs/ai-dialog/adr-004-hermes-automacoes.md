@@ -1,0 +1,48 @@
+# ADR 004 — Hermes interno para as automações, alcançado só pela API
+
+Status: **infraestrutura, runbook, MCP (`apps/mcp`) e idempotência da API implementados; o ramo de automação no roteador e a chamada da API ao Hermes ainda não.** Perguntas em aberto no fim.
+
+## Contexto
+
+O chat (`/api/ai/chat`, WebSocket com ticket de 30 s) e a rota por processo (ADR 003) tratam pedidos sobre a agenda: eventos, tarefas, notas e recorrências. Falta um executor para **automações**: trabalho agendado ou recorrente ("todo dia às 7h...") que não é uma entidade da agenda. O Hermes (`nousresearch/hermes-agent`) traz isso pronto: cron próprio, memória, skills e uma API OpenAI-compatível. O usuário só o acessa pela aplicação; o Hermes nunca fica exposto.
+
+Infra existente relevante: Postgres e RabbitMQ locais compartilhados pelas worktrees (`infra/docker-compose.*.yml`, bind em `127.0.0.1`); produção em k3s numa VPS (`ops/production/`), com imagens `braid-*` construídas na própria VPS e `imagePullPolicy: Never`; segredos pelo 1Password (`scripts/onepassword`, escopos por serviço).
+
+## Decisão
+
+1. **A API é a porta de entrada e chama o Hermes.** O WebSocket, o ticket e a autorização por usuário ficam como estão. A rota de automação é um ramo novo do roteador por processo (ADR 003) que chama a API OpenAI-compatível do Hermes (`POST /v1/chat/completions` ou `/v1/responses`, `Authorization: Bearer`) e devolve a resposta ao mesmo chat. O Hermes não conhece usuários e não entra no chat como cliente.
+2. **Nada fora da rede interna.** Na VPS: `Service` ClusterIP e `NetworkPolicy` que só aceita o pod da API; sem Ingress, Traefik ou Tunnel. Local: porta publicada só em `127.0.0.1`. A chave `API_SERVER_KEY` é obrigatória mesmo assim.
+3. **Só pedidos de automação vão ao Hermes** *(premissa a confirmar)*. O roteador classifica; eventos, notas e consultas seguem o fluxo atual, rápido e sem depender do Hermes.
+4. **Atualização diária contínua, reversível.** A imagem usa a tag `stable` (nunca `latest`/`main`). Na VPS, um timer do systemd roda `hermes-update.sh` às 04:00: guarda o digest atual, reinicia com `imagePullPolicy: Always`, espera o rollout, valida `/health` e `/v1/models` de dentro do cluster e, se falhar, volta ao digest guardado e sai com erro. Local: `pnpm hermes:update` (manual).
+5. **Um gateway por volume.** `replicas: 1` com estratégia `Recreate`; localmente, um único Hermes por máquina, compartilhado pelas worktrees como o Postgres e o RabbitMQ.
+6. **Segredos só do 1Password.** Novo escopo `hermes-runtime` (`HERMES_API_KEY`, `OPENROUTER_API_KEY`). A imagem é de terceiros e não roda o loader: local, `secrets:exec` injeta o ambiente no `docker compose`; VPS, o Secret `hermes-env` é gerado a partir do escopo.
+
+7. **Aplicação de um só usuário (o dono) por enquanto.** O Hermes atende só o dono. Visitantes (papel `viewer`) apenas visualizam e **não usam o chat**. Um Hermes sem separação de usuários é aceitável nesse recorte; para vários usuários o caminho é um perfil do Hermes por usuário, cada um com a própria credencial.
+8. **O Hermes cria entidades por um MCP nosso.** A documentação do Hermes resolve as credenciais do MCP uma vez, na conexão (`headers`/`env` do `config.yaml`), sem variar por mensagem ou automação. Por isso a **credencial define o usuário**; nenhuma ferramenta recebe `userId` como argumento (o modelo poderia escolher outro usuário). As ferramentas são só de criação e o Hermes é limitado por `tools.include`.
+9. **A entrega do resultado de uma automação é uma entidade criada** pelo MCP (nota, tarefa ou evento). Mensagem no chat e notificação ficam para depois.
+
+10. **O MCP é um serviço nosso (`apps/mcp`), em pod próprio e só na rede interna.** O Hermes guarda apenas um token Bearer do MCP (`MCP_TOKEN`). O MCP guarda a chave interna do gateway e o `userId` do dono, e chama os endpoints REST de criação já existentes com os cabeçalhos do gateway; a validação é a mesma da web. A `NetworkPolicy` só aceita o Hermes como origem. Isso limita o que a **credencial do MCP** permite (criar, ler e editar entidades do dono); não limita o container do Hermes, que hoje tem ferramentas próprias de terminal e execução de código sem sandbox (ver a pergunta em aberto 0).
+
+11. **Ferramentas do MCP: criação, leitura e edição, sem exclusão** *(revisada: a primeira versão não editava)*. Criação: `create_event`, `create_task`, `create_note`, `create_recurrence`, todas com `idempotencyKey` obrigatória (repetir a chave devolve a entidade já criada). Leitura: `list_timeline_events`, `list_tasks`, `list_notes` e `get_event`, `get_task`, `get_note`, `get_recurrence` (o `get_*` devolve a `revision`). Edição: `update_event`, `update_task`, `update_note`, `update_recurrence`, todas com `expectedRevision` obrigatório: se a entidade mudou desde a leitura, a API recusa (409) e o erro volta ao modelo, que relê e tenta de novo. A edição não precisa de `idempotencyKey`: repeti-la falha por revisão. Notas, interrupções e tarefas vinculadas de um evento, e os vínculos de uma nota, não são alterados pelo MCP. Nenhuma ferramenta apaga. O risco aceito passa a ser um Hermes enganado **sobrescrever** campos de uma entidade (o dono desfaz pelo histórico que tiver, mas a API não guarda versões anteriores).
+12. **Idempotência na API, por cabeçalho.** As quatro rotas de criação aceitam `Idempotency-Key` opcional (`IdempotencyInterceptor`, tabela `idempotency_keys`, migração `0022`). A reserva é atômica no Postgres; repetir a chave com o mesmo corpo devolve a resposta guardada (`Idempotent-Replayed: true`), com outro corpo é 422 e execução simultânea é 409. A chave vale por usuário e rota, por 30 dias; uma reserva sem resposta há mais de 2 minutos (execução que morreu) é retomada. Web e mobile não mandam o cabeçalho e não mudam. O MCP apenas repassa a chave que a automação escolheu.
+
+## Consequências
+
+- O Hermes muda de comportamento sem passar pelo CI. A mitigação é a validação automática com rollback, não a revisão; uma regressão que o `/health` não detecta só aparece no uso.
+- Há ~1 min de indisponibilidade do Hermes por dia (Recreate); a API precisa tratar a rota de automação como indisponível sem derrubar o chat.
+- O estado do Hermes (memória, sessões, cron) vive no volume `/opt/data` e **não** está no `backup.sh` ainda.
+- Worktrees compartilham as automações do Hermes local: um teste numa worktree pode disparar cron para todas.
+
+## Fora do escopo desta entrega
+
+Cliente HTTP do Hermes na API, o ramo de automação no roteador, `HERMES_URL`/`HERMES_API_KEY` no `api-runtime`, bloqueio do chat para visitantes, mudanças em web e mobile (e a linha de `docs/mobile-parity.md` que elas exigem).
+
+## Perguntas em aberto
+
+0. **Menor privilégio por conexão (pendente).** O Hermes terá outras conexões além do MCP, então ele não será restrito a ele. O gateway avisa que o backend de terminal é `local` e sem sandbox; o agente chegou a usar `terminal` e `execute_code`, e dentro do container ele vê `OPENROUTER_API_KEY`, `HERMES_API_KEY` e `MCP_TOKEN` e alcança o que o firewall do host liberar. A defesa passa a ser: o container é a fronteira (sem montar `docker.sock` nem pastas do host, só as chaves necessárias no ambiente, firewall liberando só o que ele precisa), cada nova conexão entra com a menor credencial possível e é avaliada antes de entrar, e o uso fora do ambiente local depende de decidir se o terminal fica ligado. Revisar a cada conexão nova.
+
+1. **Limite da idempotência.** Se a API cair entre criar a entidade e gravar a resposta, a chave fica reservada por 2 minutos e depois pode duplicar. Aceito; a criação e o registro não são uma única transação.
+3. **Visitantes no chat.** O papel `viewer` já existe, mas o vocabulário de permissões não tem chat/IA e não encontrei checagem de papel na emissão do ticket (`/api/ai/chat`); verificar e fechar antes de abrir o app a visitantes.
+4. **Roteamento.** Critério de "isto é automação" e o que acontece na dúvida.
+5. **Limites.** Quantas automações, custo de modelo e timeout da chamada.
+6. **Backup** do volume do Hermes.
