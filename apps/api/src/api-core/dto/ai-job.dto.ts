@@ -18,7 +18,7 @@ export function toAiJobDto(job: Job): AiJobDto {
     transcript?: string;
     requestId?: string;
   };
-  const request = payload.mode === "chat" && payload.input
+  const request = (payload.mode === "chat" || payload.mode === "hermes") && payload.input
     ? { text: payload.input.text, conversationId: payload.input.conversationId, clientMessageId: payload.clientMessageId }
     : payload.transcript ? { text: payload.transcript, clientMessageId: payload.requestId } : undefined;
   return {

@@ -24,6 +24,10 @@ const serverSchema = z.object({
   AI_PROCESS: z.enum(["off", "on"]).default("off"),
   // Modelo dos agentes da rota por processo (chamadas estruturadas). Sem valor, cai no OPENROUTER_MODEL.
   OPENROUTER_PROCESS_MODEL: z.string().min(1).optional(),
+  // Rota do Hermes (ADR 004): `POST /api/ai/automation`. Desligada por padrao; ligada exige a chave do Hermes.
+  AI_AUTOMATION: z.enum(["off", "on"]).default("off"),
+  HERMES_URL: z.string().url().default("http://127.0.0.1:8642"),
+  HERMES_API_KEY: z.string().min(1).optional(),
 });
 
 export type ServerEnv = z.infer<typeof serverSchema>;
@@ -53,6 +57,9 @@ export function getServerEnv(source?: Record<string, string | undefined>): Serve
     AI_PIPELINE: read("AI_PIPELINE"),
     AI_PROCESS: read("AI_PROCESS"),
     OPENROUTER_PROCESS_MODEL: read("OPENROUTER_PROCESS_MODEL"),
+    AI_AUTOMATION: read("AI_AUTOMATION"),
+    HERMES_URL: read("HERMES_URL"),
+    HERMES_API_KEY: read("HERMES_API_KEY"),
   });
 }
 

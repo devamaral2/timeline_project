@@ -20,7 +20,7 @@ export const PROCESS_JOB_KINDS = [
   "process-finalize",
 ] as const;
 export type ProcessJobKind = (typeof PROCESS_JOB_KINDS)[number];
-export type AiJobKind = "agent-turn" | "transcript-event" | "meal-note" | ProcessJobKind;
+export type AiJobKind = "agent-turn" | "transcript-event" | "meal-note" | "hermes-turn" | ProcessJobKind;
 export interface EnqueueAiJobInput {
   kind: AiJobKind;
   userId: string;

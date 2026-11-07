@@ -15,7 +15,7 @@ const input = { userId: "u1", text: "Almocei arroz" };
 
 type Handler = (payload: unknown, context: unknown) => Promise<unknown>;
 
-function setup() {
+function setup(hermes?: { chat: ReturnType<typeof vi.fn> }) {
   const handlers = new Map<string, Handler>();
   const jobs = {
     register: vi.fn((kind: string, handler: Handler) => { handlers.set(kind, handler); }),
@@ -35,6 +35,7 @@ function setup() {
     chat as unknown as RunChatTurnUseCase,
     transcript as unknown as CreateEventFromTranscriptUseCase,
     meal as unknown as GenerateMealNoteUseCase,
+    hermes as unknown as ConstructorParameters<typeof QueuedAiOperations>[5],
   );
   operations.onModuleInit();
   return { operations, jobs, handlers, agent, chat, transcript, meal };
@@ -91,4 +92,39 @@ test("explicit cancel is separate from observer disconnect", async () => {
   expect(jobs.cancel).toHaveBeenCalledWith("job-1", "u1");
   finish(response);
   await waiting;
+});
+
+test("a Hermes turn is persisted with its own dedupe key and never calls Hermes at submission", async () => {
+  const hermes = { chat: vi.fn(async () => ({ text: "ok" })) };
+  const { operations, jobs } = setup(hermes);
+
+  expect(await operations.submitHermes(input, actor, "client-9")).toBe("job-1");
+
+  expect(jobs.enqueue).toHaveBeenCalledWith({
+    kind: "hermes-turn", userId: "u1", actorId: "u1", dedupeKey: "hermes:u1:client-9",
+    payload: { mode: "hermes", input, actor, clientMessageId: "client-9" },
+  });
+  expect(hermes.chat).not.toHaveBeenCalled();
+});
+
+test("the hermes-turn handler sends the text on the conversation's session and returns the reply", async () => {
+  const hermes = { chat: vi.fn(async () => ({ text: "Feito." })) };
+  const { handlers } = setup(hermes);
+  const signal = new AbortController().signal;
+
+  const result = await handlers.get("hermes-turn")!(
+    { mode: "hermes", input: { userId: "u1", text: "crie", conversationId: "C1" }, actor },
+    { signal },
+  );
+
+  expect(result).toEqual({ text: "Feito." });
+  expect(hermes.chat).toHaveBeenCalledWith({ text: "crie", sessionId: "braid-u1-C1", signal });
+});
+
+test("without a configured Hermes the job fails instead of waiting", async () => {
+  const { handlers } = setup(undefined);
+
+  await expect(
+    handlers.get("hermes-turn")!({ mode: "hermes", input: { userId: "u1", text: "oi" } }, { signal: new AbortController().signal }),
+  ).rejects.toThrow("Hermes is not configured");
 });

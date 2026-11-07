@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readEnvKeys, resolveEnvironmentWithClient, applyLocalOverrides, scopeKeys, queuePrefixFromBranch } from "./loader.mjs";
+import { readEnvKeys, resolveEnvironmentWithClient, applyLocalOverrides, scopeKeys, defaultScope, queuePrefixFromBranch } from "./loader.mjs";
 
 test("uses the env example as the complete allowlist", () => {
   const keys = readEnvKeys();
@@ -183,4 +183,12 @@ test("derives the AI jobs queue prefix from the branch, dropping invalid charact
   assert.equal(queuePrefixFromBranch("feat/durable-ai-job-queues"), "featdurable-ai-job-queues");
   assert.equal(queuePrefixFromBranch("fix/ação#12 v1.0"), "fixao12v1.0");
   assert.equal(queuePrefixFromBranch("///"), "");
+});
+
+test("the default scope loads the Hermes key when present but does not require it", () => {
+  const scope = defaultScope();
+
+  assert.ok(scope.optional.includes("HERMES_API_KEY"));
+  assert.ok(!scope.required.includes("HERMES_API_KEY"));
+  assert.ok(scope.required.includes("DATABASE_URL"));
 });

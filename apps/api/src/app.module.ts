@@ -32,6 +32,7 @@ import { AttachNotesToRecurrenceModule } from "./features/attach-notes-to-recurr
 import { RunAgentModule } from "./features/run-agent/run-agent.controller";
 import { StartProcessModule } from "./features/start-process/start-process.controller";
 import { GetProcessModule } from "./features/get-process/get-process.controller";
+import { StartHermesTurnModule } from "./features/start-hermes-turn/start-hermes-turn.controller";
 import { IssueAgentChatTicketModule } from "./features/issue-agent-chat-ticket/issue-agent-chat-ticket.controller";
 import { ListAgentConversationsModule } from "./features/list-agent-conversations/list-agent-conversations.controller";
 import { ListAgentChatMessagesModule } from "./features/list-agent-chat-messages/list-agent-chat-messages.controller";
@@ -77,6 +78,7 @@ import { SubmitTranscriptJobModule } from "./features/submit-transcript-job/subm
     RunAgentModule,
     StartProcessModule,
     GetProcessModule,
+    StartHermesTurnModule,
     SubmitAiJobModule,
     ListAiJobsModule,
     GetAiJobModule,

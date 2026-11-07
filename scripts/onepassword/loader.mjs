@@ -15,7 +15,12 @@ const INITIAL_VALUES = {
   AI_JOBS_CONCURRENCY: "4",
   AI_JOBS_LEASE_MS: "60000",
   AI_JOBS_MAX_ATTEMPTS: "4",
+  // Rota do Hermes (ADR 004): desligada, e o Hermes local no loopback.
+  AI_AUTOMATION: "off",
+  HERMES_URL: "http://127.0.0.1:8642",
 };
+// Chaves do .env.example que o carregador padrao usa quando existem, mas que nao impedem `pnpm dev` de subir.
+const DEFAULT_SCOPE_OPTIONAL_KEYS = new Set(["HERMES_API_KEY"]);
 const SCOPES = Object.freeze({
   "api-runtime": {
     // A API valida a fila de jobs de IA no boot; sem estas duas ela nao sobe.
@@ -35,6 +40,9 @@ const SCOPES = Object.freeze({
       "OPENROUTER_SPECIALIST_MODEL",
       "AI_PIPELINE",
       "AI_PROCESS",
+      "AI_AUTOMATION",
+      "HERMES_URL",
+      "HERMES_API_KEY",
       "JEV_API_KEY",
       "AI_JOBS_CONCURRENCY",
       "AI_JOBS_LEASE_MS",
@@ -87,6 +95,9 @@ const LOCAL_OVERRIDE_KEYS = new Set([
   // Por worktree: a porta do MCP e o id do admin da base dessa worktree.
   "MCP_PORT",
   "MCP_OWNER_USER_ID",
+  // Liga a rota do Hermes so nesta worktree, sem mexer no 1Password.
+  "AI_AUTOMATION",
+  "HERMES_URL",
   "POSTGRES_HOST_PORT",
   "POSTGRES_DB",
   "AUTH_POSTGRES_DB",
@@ -223,6 +234,14 @@ export async function resolveEnvironmentWithClient(client, environmentId, keys, 
   return keys.map((key) => [key, variables.get(key) || fallbacks[key]]);
 }
 
+export function defaultScope() {
+  const keys = [...new Set(readEnvKeys())];
+  return {
+    required: keys.filter((key) => !DEFAULT_SCOPE_OPTIONAL_KEYS.has(key)),
+    optional: keys.filter((key) => DEFAULT_SCOPE_OPTIONAL_KEYS.has(key)),
+  };
+}
+
 export function scopeKeys(scope) {
   const definition = SCOPES[scope];
   if (!definition) throw error(`scope desconhecido: '${scope}'`);
@@ -253,7 +272,7 @@ export async function loadOnePasswordEnvironment(source = process.env) {
   if (!environmentId) throw error(`${ENVIRONMENT_ID_ENV} não está definido`);
 
   const scope = source.ONEPASSWORD_SCOPE;
-  const definition = scope ? scopeKeys(scope) : { required: [...new Set(readEnvKeys())], optional: [] };
+  const definition = scope ? scopeKeys(scope) : defaultScope();
   const keys = [...new Set([...definition.required, ...definition.optional])];
   const client = await createClient(token);
   // O prefixo das filas é sempre o nome da branch (uma fila por worktree) e

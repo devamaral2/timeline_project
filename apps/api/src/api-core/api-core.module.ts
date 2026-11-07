@@ -45,6 +45,7 @@ import { PostgresAiTurnTraceStore } from "../infrastructure/persistence/ai-turn-
 import { PostgresAiProcessStore } from "../infrastructure/persistence/ai-processes/postgres-ai-process.store";
 import { OpenRouterStructuredCompletionGateway } from "./agent/gateways/structured-completion.gateway";
 import { getServerEnv } from "../config/env";
+import { HermesClient } from "../infrastructure/hermes/hermes.client";
 import { JevProcessClient } from "./process/jev-process.client";
 import { ProcessAgentRunner } from "./process/process-agent-runner";
 import { ProcessDispatcher } from "./process/process-dispatcher";
@@ -186,7 +187,13 @@ export class ApiCoreModule {
           useFactory: (
             jobs: AiJobsService, agent: RunAgentUseCase, chat: RunChatTurnUseCase,
             transcript: CreateEventFromTranscriptUseCase, meal: GenerateMealNoteUseCase,
-          ) => new QueuedAiOperations(jobs, agent, chat, transcript, meal),
+          ) => {
+            const env = getServerEnv();
+            return new QueuedAiOperations(
+              jobs, agent, chat, transcript, meal,
+              new HermesClient({ url: env.HERMES_URL, apiKey: env.HERMES_API_KEY }),
+            );
+          },
         },
       ],
       exports: [

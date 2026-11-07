@@ -50,7 +50,7 @@ export function isRetryableAiJobError(error: unknown, seen = new Set<unknown>())
     (e.name === "TypeError" && e.message === "fetch failed") ||
     isRetryableAiJobError(e.cause, seen);
 }
-const kinds: AiJobKind[] = ["agent-turn", "transcript-event", "meal-note", ...PROCESS_JOB_KINDS];
+const kinds: AiJobKind[] = ["agent-turn", "transcript-event", "meal-note", "hermes-turn", ...PROCESS_JOB_KINDS];
 
 export class AiJobsService implements OnModuleInit, OnApplicationShutdown {
   private readonly logger = new Logger(AiJobsService.name);

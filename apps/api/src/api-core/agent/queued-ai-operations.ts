@@ -6,12 +6,20 @@ import type { RunAgentUseCase } from "./run-agent.usecase";
 import type { RunChatTurnRequest, RunChatTurnResponse, RunChatTurnUseCase } from "./run-chat-turn.usecase";
 import type { CreateEventFromTranscriptUseCase } from "../events/create-event-from-transcript.usecase";
 import type { GenerateMealNoteUseCase } from "../notes/generate-meal-note.usecase";
+import { HermesRequestError, hermesSessionId, type HermesChat } from "../../infrastructure/hermes/hermes.client";
 
 interface AgentJobPayload {
   mode: "chat" | "rest";
   input: RunChatTurnRequest;
   actor: AuthenticatedUser;
   clientMessageId?: string;
+}
+
+interface HermesJobPayload {
+  mode: "hermes";
+  input: { userId: string; text: string; conversationId?: string };
+  actor: AuthenticatedUser;
+  clientMessageId: string;
 }
 
 /** Transports submit work; only registered job handlers invoke the AI use cases. */
@@ -23,6 +31,8 @@ export class QueuedAiOperations implements OnModuleInit {
     private readonly chat: RunChatTurnUseCase,
     private readonly transcript: CreateEventFromTranscriptUseCase,
     private readonly mealNote: GenerateMealNoteUseCase,
+    /** Ausente quando o servidor nao configura o Hermes: o job falha sem tentar de novo. */
+    private readonly hermes?: HermesChat,
   ) {}
 
   onModuleInit(): void {
@@ -40,6 +50,15 @@ export class QueuedAiOperations implements OnModuleInit {
       const payload = raw as { transcript: string; actor: AuthenticatedUser };
       return this.transcript.execute({ transcript: payload.transcript }, payload.actor);
     });
+    this.jobs.register("hermes-turn", async (raw, context) => {
+      const { input } = raw as HermesJobPayload;
+      if (!this.hermes) throw new HermesRequestError("Hermes is not configured");
+      return this.hermes.chat({
+        text: input.text,
+        sessionId: hermesSessionId(input.userId, input.conversationId),
+        signal: context.signal,
+      });
+    });
     this.jobs.register("meal-note", async (raw) => {
       return this.mealNote.execute(raw as Parameters<GenerateMealNoteUseCase["execute"]>[0]);
     }, {
@@ -52,6 +71,15 @@ export class QueuedAiOperations implements OnModuleInit {
       kind: "agent-turn", userId: input.userId, actorId: actor.userId,
       dedupeKey: `chat:${actor.userId}:${clientMessageId}`,
       payload: { mode: "chat", input, actor, clientMessageId },
+    });
+  }
+
+  /** Uma mensagem para o Hermes (ADR 004); o job devolve `{ text }` e o cliente acompanha por `GET /api/ai/jobs/:id`. */
+  submitHermes(input: HermesJobPayload["input"], actor: AuthenticatedUser, clientMessageId: string) {
+    return this.jobs.enqueue({
+      kind: "hermes-turn", userId: input.userId, actorId: actor.userId,
+      dedupeKey: `hermes:${actor.userId}:${clientMessageId}`,
+      payload: { mode: "hermes", input, actor, clientMessageId } satisfies HermesJobPayload,
     });
   }
 

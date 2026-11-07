@@ -31,8 +31,8 @@ export class PostgresAiJobStore {
   }
   async list(userId: string): Promise<AiJob[]> {
     return (await this.database.pool.query<AiJob>(`SELECT ${projection} FROM ai_jobs
-      WHERE user_id=$1 AND kind NOT LIKE 'process-%' AND (status IN ('queued','running') OR id IN (
-        SELECT id FROM ai_jobs WHERE user_id=$1 AND kind NOT LIKE 'process-%' AND status NOT IN ('queued','running')
+      WHERE user_id=$1 AND kind NOT LIKE 'process-%' AND kind <> 'hermes-turn' AND (status IN ('queued','running') OR id IN (
+        SELECT id FROM ai_jobs WHERE user_id=$1 AND kind NOT LIKE 'process-%' AND kind <> 'hermes-turn' AND status NOT IN ('queued','running')
         ORDER BY created_at DESC, id DESC LIMIT 100
       )) ORDER BY (status IN ('queued','running')) DESC, created_at DESC, id DESC`, [userId])).rows;
   }
