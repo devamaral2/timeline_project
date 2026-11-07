@@ -49,6 +49,14 @@ export default defineWorkspace([
     },
   },
   {
+    test: {
+      name: "mcp",
+      root: "./apps/mcp",
+      environment: "node",
+      include: ["src/**/*.{test,spec}.ts"],
+    },
+  },
+  {
     resolve: { alias: packageAliases },
     test: {
       name: "contracts",
