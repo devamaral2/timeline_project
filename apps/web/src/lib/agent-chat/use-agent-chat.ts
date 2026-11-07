@@ -4,6 +4,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "@/lib/api/authed-fetch";
 import type { AgentChatEntityRef, AgentChatMessageDto, AgentScreenContext, AiProcessDto } from "@/lib/api/contracts";
 import { type AiProcessApi, aiProcess, isProcessRouteOff, isProcessTerminal } from "@/lib/ai-process/ai-process";
+import {
+  type AiAutomationApi,
+  aiAutomation,
+  isAutomationRouteOff,
+  isHermesTurnTerminal,
+  parseHermesCommand,
+} from "@/lib/ai-automation/ai-automation";
 import type { AgentChatClient, AgentChatClientOptions, AgentChatEvent } from "./agent-chat-client";
 import { DurableAgentChatClient } from "./durable-agent-chat-client";
 import { operationId } from "@/lib/ai-jobs/ai-jobs";
@@ -34,12 +41,18 @@ interface UseAgentChatOptions {
   /** A rota de IA por processo. `null` a desliga; ausente, vale a real, exceto quando o teste injeta `createClient`. */
   processApi?: AiProcessApi | null;
   processPollMs?: number;
+  /** A rota do Hermes (`/hermes <mensagem>`). `null` a desliga; ausente, vale a real, exceto quando o teste injeta `createClient`. */
+  automationApi?: AiAutomationApi | null;
+  automationPollMs?: number;
 }
 
 /** Quanto tempo a caixa de processo espera o servidor terminar antes de dar o pedido como perdido. */
 const PROCESS_TIMEOUT_MS = 180_000;
 /** Falhas seguidas ao consultar o processo antes de desistir de acompanhar. */
 const PROCESS_POLL_FAILURES = 5;
+/** O Hermes pode usar modelo e ferramentas; espera mais que um turno comum antes de dar por perdido. */
+const HERMES_TIMEOUT_MS = 180_000;
+const HERMES_DISABLED_TEXT = "O Hermes está desligado neste ambiente (AI_AUTOMATION).";
 
 const ERROR_TEXTS: Record<Extract<AgentChatEvent, { type: "error" }>["code"], string> = {
   busy: "Ainda estou respondendo a mensagem anterior.",
@@ -83,11 +96,16 @@ export function useAgentChat({
   loadMessages = fetchConversationMessages,
   processApi: processApiOption,
   processPollMs = 1000,
+  automationApi: automationApiOption,
+  automationPollMs = 1000,
 }: UseAgentChatOptions) {
   const processApi = processApiOption === undefined ? (createClient ? null : aiProcess) : processApiOption;
+  const automationApi = automationApiOption === undefined ? (createClient ? null : aiAutomation) : automationApiOption;
   /** `unknown` ate a primeira resposta do servidor: 404 desliga a rota por processo para o resto da sessao. */
   const processModeRef = useRef<"unknown" | "on" | "off">("unknown");
   const disposedRef = useRef(false);
+  /** O turno do Hermes em curso: ele nao tem como ser cancelado pelo socket. */
+  const hermesPendingIdRef = useRef<string | null>(null);
   const [messages, setMessages] = useState<AgentChatMessage[]>([]);
   const [pending, setPending] = useState<AgentChatPending | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -325,6 +343,74 @@ export function useAgentChat({
     [commitMessages, commitPending, context, handleEvent, processApi, processPollMs, userId],
   );
 
+  /**
+   * `/hermes <mensagem>`: a API entrega a mensagem ao Hermes e o chat mostra a resposta dele. A resposta e
+   * transitoria (nao entra no historico da conversa) e, como o Hermes pode ter criado ou editado registros,
+   * a agenda e atualizada ao fim.
+   */
+  const runHermes = useCallback(
+    async (id: string, text: string): Promise<void> => {
+      if (!automationApi || !userId) return;
+      const replyId = `${id}-hermes`;
+      let jobId: string;
+      try {
+        ({ id: jobId } = await automationApi.start({
+          userId,
+          text,
+          clientMessageId: id,
+          ...(conversationRef.current ? { conversationId: conversationRef.current } : {}),
+        }));
+      } catch (error) {
+        if (isAutomationRouteOff(error)) {
+          commitPending(null);
+          commitMessages((current) => [...current, { id: replyId, role: "assistant", text: HERMES_DISABLED_TEXT, entities: [] }]);
+          return;
+        }
+        const code = error instanceof ApiError && error.status === 401 ? "session_expired" : "connection_failed";
+        handleEvent({ type: "error", id, code });
+        return;
+      }
+
+      commitPending({ id, label: "Falando com o Hermes" });
+      const deadline = Date.now() + HERMES_TIMEOUT_MS;
+      let failures = 0;
+      while (!disposedRef.current && pendingRef.current?.id === id) {
+        try {
+          const job = await automationApi.get(jobId);
+          failures = 0;
+          if (disposedRef.current || pendingRef.current?.id !== id) return;
+          if (isHermesTurnTerminal(job)) {
+            if (job.status === "succeeded" && job.result) {
+              commitPending(null);
+              const reply = job.result.text;
+              commitMessages((current) => [...current, { id: replyId, role: "assistant", text: reply, entities: [] }]);
+              onEntitiesChangedRef.current?.();
+            } else {
+              handleEvent({ type: "error", id, code: job.errorCode === "cancelled" ? "cancelled" : "unavailable" });
+            }
+            return;
+          }
+        } catch (error) {
+          failures += 1;
+          if (error instanceof ApiError && error.status === 401) {
+            handleEvent({ type: "error", id, code: "session_expired" });
+            return;
+          }
+          if (failures >= PROCESS_POLL_FAILURES) {
+            handleEvent({ type: "error", id, code: "connection_lost" });
+            return;
+          }
+        }
+        if (Date.now() > deadline) {
+          handleEvent({ type: "error", id, code: "connection_lost" });
+          return;
+        }
+        await new Promise((resolve) => setTimeout(resolve, automationPollMs));
+      }
+    },
+    [automationApi, automationPollMs, commitMessages, commitPending, handleEvent, userId],
+  );
+
   const send = useCallback(
     (text: string) => {
       const trimmed = text.trim();
@@ -334,6 +420,14 @@ export function useAgentChat({
       const id = operationId();
       commitMessages((current) => [...current, { id, role: "user", text: trimmed }]);
       commitPending({ id });
+      const hermesText = automationApi ? parseHermesCommand(trimmed) : null;
+      if (hermesText !== null) {
+        hermesPendingIdRef.current = id;
+        void runHermes(id, hermesText).finally(() => {
+          if (hermesPendingIdRef.current === id) hermesPendingIdRef.current = null;
+        });
+        return true;
+      }
       const sendThroughChat = () => client.send({
         id,
         text: trimmed,
@@ -349,12 +443,13 @@ export function useAgentChat({
       }
       return true;
     },
-    [commitMessages, commitPending, context, loading, processApi, runProcess],
+    [automationApi, commitMessages, commitPending, context, loading, processApi, runHermes, runProcess],
   );
 
   const cancel = useCallback(() => {
     const current = pendingRef.current;
     if (!current || current.cancelling) return;
+    if (current.id === hermesPendingIdRef.current) return;
     // O processo ja foi entregue as filas e nao ha cancelamento por esta rota: o botao nao se aplica.
     if (messagesRef.current.some((message) => message.id === `${current.id}-process`)) return;
     clientRef.current?.cancel(current.id);
