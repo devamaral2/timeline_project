@@ -33,6 +33,11 @@ Os scopes de produção são:
   `AUTH_AUDIENCE`, `API_SERVICE_URL`, a chave interna e os limites de senha.
 - `web-build`: `BACKEND_URL=http://api.braid.svc.cluster.local:3001` e
   `AUTH_SERVICE_URL=http://auth.braid.svc.cluster.local:3002`.
+- `hermes-runtime`: `HERMES_API_KEY`, `OPENROUTER_API_KEY` e `MCP_TOKEN`, para o
+  container do Hermes (imagem de terceiros, sem o loader). Ver o
+  [runbook do Hermes](./hermes.md).
+- `mcp-runtime`: `MCP_TOKEN`, `AUTH_INTERNAL_SERVICE_KEY`, `MCP_OWNER_USER_ID` e,
+  em produção, `API_SERVICE_URL=http://api.braid.svc.cluster.local:3001`.
 
 Não adicione ao ambiente de produção `AUTH_TEST_DATABASE_URL`, `ADMIN_PASSWORD`,
 portas locais ou o IP privado usado pelo mobile. O mobile continua fora do

@@ -175,6 +175,8 @@ test("defines minimal production scopes without requiring mobile or test variabl
   ]);
   assert.ok(scopeKeys("auth-runtime").required.includes("AUTH_KEY_ENCRYPTION_KEY"));
   assert.deepEqual(scopeKeys("web-build").required, ["BACKEND_URL", "AUTH_SERVICE_URL"]);
+  assert.deepEqual(scopeKeys("hermes-runtime").required, ["HERMES_API_KEY", "OPENROUTER_API_KEY", "MCP_TOKEN"]);
+  assert.deepEqual(scopeKeys("mcp-runtime").required, ["MCP_TOKEN", "AUTH_INTERNAL_SERVICE_KEY", "MCP_OWNER_USER_ID"]);
 });
 
 test("derives the AI jobs queue prefix from the branch, dropping invalid characters", () => {

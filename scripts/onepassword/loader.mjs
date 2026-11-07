@@ -60,6 +60,19 @@ const SCOPES = Object.freeze({
       "AUTH_PASSWORD_WINDOW_SECONDS",
     ],
   },
+  // Container do Hermes (ADR 004): imagem de terceiros, sem o loader dentro.
+  // O valor chega por `secrets:exec` (local) ou pelo Secret `hermes-env` (VPS).
+  "hermes-runtime": {
+    required: ["HERMES_API_KEY", "OPENROUTER_API_KEY", "MCP_TOKEN"],
+    optional: [],
+  },
+  // Servidor MCP que o Hermes usa para criar entidades (ADR 004). Age sempre como
+  // MCP_OWNER_USER_ID. Em producao API_SERVICE_URL vem do Environment, porque o
+  // fallback do loader aponta para 127.0.0.1.
+  "mcp-runtime": {
+    required: ["MCP_TOKEN", "AUTH_INTERNAL_SERVICE_KEY", "MCP_OWNER_USER_ID"],
+    optional: ["API_SERVICE_URL"],
+  },
   "web-build": {
     required: ["BACKEND_URL", "AUTH_SERVICE_URL"],
     optional: ["NODE_ENV"],
@@ -71,6 +84,9 @@ const LOCAL_OVERRIDE_KEYS = new Set([
   "API_HOST",
   "AUTH_PORT",
   "AUTH_HOST",
+  // Por worktree: a porta do MCP e o id do admin da base dessa worktree.
+  "MCP_PORT",
+  "MCP_OWNER_USER_ID",
   "POSTGRES_HOST_PORT",
   "POSTGRES_DB",
   "AUTH_POSTGRES_DB",
