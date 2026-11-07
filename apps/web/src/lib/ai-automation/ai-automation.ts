@@ -1,6 +1,17 @@
 import { ApiError, authedFetch } from "@/lib/api/authed-fetch";
 import type { AgentChatErrorCode } from "@/lib/api/contracts";
 
+/** Um passo do Hermes: uma ferramenta que ele usou ou um pensamento (ADR 004). */
+export interface HermesStepDto {
+  id: string;
+  kind: "thought" | "tool";
+  label: string;
+  /** O que o Hermes mostrou para a ferramenta (comando, caminho, busca) ou o texto do pensamento. */
+  detail?: string;
+  status: "running" | "done" | "failed";
+  durationMs?: number;
+}
+
 /** Uma mensagem para o Hermes, acompanhada como job: `POST /api/ai/automation` e `GET /api/ai/jobs/:id`. */
 export interface HermesTurnJobDto {
   id: string;
@@ -9,6 +20,8 @@ export interface HermesTurnJobDto {
   errorCode?: AgentChatErrorCode;
   /** So na conclusao: o texto que o Hermes respondeu. */
   result?: { text: string };
+  /** Os passos dados ate agora; crescem enquanto o job roda e ficam completos ao fim. */
+  steps?: HermesStepDto[];
 }
 
 export interface StartHermesTurnRequest {

@@ -641,9 +641,24 @@
   .processRows p { margin: 6px 0 0; color: var(--muted); }
   .processMessage { margin: 0; font-size: 13px; }
   .chatBubble[data-role="process"] [data-status="failed"] ~ .processMessage, .processBox[data-status="failed"] .processMessage { color: var(--destructive); }
+  .chatBubble[data-role="hermes-steps"] { justify-self: start; width: min(100%, 420px); padding: 0; background: none; }
+  .hermesSteps ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 13px; line-height: 1.4; color: var(--muted); }
+  .hermesTool { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+  .hermesTool code { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; opacity: .8; }
+  .hermesMark { display: grid; place-items: center; flex: none; width: 16px; height: 16px; align-self: center; }
+  .hermesMark svg { width: 13px; height: 13px; stroke-width: 2.4; }
+  .hermesSteps [data-status="done"] .hermesMark { color: var(--success); }
+  .hermesSteps [data-status="failed"] .hermesMark { color: var(--destructive); }
+  .hermesSteps [data-status="running"] .hermesMark { color: var(--brand-accent); }
+  .hermesSteps [data-status="running"] .hermesMark svg { animation: processSpin 1s linear infinite; }
+  .hermesSteps details summary { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; list-style: none; }
+  .hermesSteps details summary::-webkit-details-marker { display: none; }
+  .hermesSteps details summary svg { width: 14px; height: 14px; transition: transform .15s; }
+  .hermesSteps details[open] summary svg { transform: rotate(90deg); }
+  .hermesSteps details p { margin: 4px 0 0 18px; white-space: pre-wrap; }
   .srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   @media (prefers-reduced-motion: reduce) {
-    .processWaiting svg, .processSteps li[data-status="running"] .processMark svg { animation: none; }
+    .processWaiting svg, .processSteps li[data-status="running"] .processMark svg, .hermesSteps [data-status="running"] .hermesMark svg, .hermesSteps details summary svg { animation: none; transition: none; }
   }
 
   .shell:has(.detailMain) .header, .shell:has(.detailMain) .bottomNav { display: none; }

@@ -30,6 +30,7 @@ import type { AgentChatEntityRef, AgentConversationDto, AgentScreenContext } fro
 import { useSessionState } from "@/lib/session/use-session";
 import { useSpeechRecognition } from "@/lib/speech/use-speech-recognition";
 import { requestAgendaRefresh } from "./agenda-refresh";
+import { HermesSteps } from "./hermes-steps";
 import { ProcessBox } from "./process-box";
 import { BraidMark } from "./braid-mark";
 import { conversationTime, groupConversations, HUB_COMMANDS, type HubCommand, type HubCommandId, parseCommand } from "./hub-commands";
@@ -448,6 +449,14 @@ function ChatBubble({ message, onRetry }: { message: AgentChatMessage; onRetry?:
     return (
       <li className={styles.chatBubble} data-role="process">
         <ProcessBox process={message.process} />
+      </li>
+    );
+  }
+
+  if (message.role === "hermes-steps") {
+    return (
+      <li className={styles.chatBubble} data-role="hermes-steps">
+        <HermesSteps steps={message.steps} running={message.running} />
       </li>
     );
   }

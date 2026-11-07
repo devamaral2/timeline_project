@@ -49,6 +49,43 @@ test("/hermes manda so a mensagem ao Hermes, acompanha o job e mostra a resposta
   expect(onEntitiesChanged).toHaveBeenCalledTimes(1);
 });
 
+test("os passos do Hermes aparecem enquanto ele trabalha, ficam depois e vem antes da resposta", async () => {
+  const start = vi.fn(async () => job("queued"));
+  const working = [{ id: "c1", kind: "tool" as const, label: "Executou um comando", detail: "date", status: "running" as const }];
+  const finished = [{ ...working[0], status: "done" as const, durationMs: 800 }];
+  let release: (value: HermesTurnJobDto) => void = () => {};
+  const get = vi.fn()
+    .mockResolvedValueOnce(job("running", { steps: working }))
+    .mockImplementationOnce(() => new Promise<HermesTurnJobDto>((resolve) => { release = resolve; }));
+  const { result } = setup({ start, get });
+
+  act(() => { result.current.send("/hermes que ano e hoje?"); });
+
+  await waitFor(() => expect(get).toHaveBeenCalledTimes(2));
+  expect(result.current.messages.map((message) => message.role)).toEqual(["user", "hermes-steps"]);
+  expect(result.current.messages[1]).toMatchObject({ running: true, steps: working });
+
+  await act(async () => { release(job("succeeded", { steps: finished, result: { text: "2026" } })); });
+  await waitFor(() => expect(result.current.pending).toBeNull());
+
+  expect(result.current.messages.map((message) => message.role)).toEqual(["user", "hermes-steps", "assistant"]);
+  expect(result.current.messages[1]).toMatchObject({ running: false, steps: finished });
+  expect(result.current.messages[2]).toMatchObject({ text: "2026" });
+});
+
+test("um turno que falha mantem os passos ja dados e mostra o erro", async () => {
+  const start = vi.fn(async () => job("queued"));
+  const steps = [{ id: "c1", kind: "tool" as const, label: "Leu um arquivo", status: "failed" as const }];
+  const get = vi.fn(async () => job("failed", { errorCode: "unavailable", steps }));
+  const { result } = setup({ start, get });
+
+  act(() => { result.current.send("/hermes leia o arquivo"); });
+
+  await waitFor(() => expect(result.current.messages.at(-1)).toMatchObject({ role: "error" }));
+  expect(result.current.messages.map((message) => message.role)).toEqual(["user", "hermes-steps", "error"]);
+  expect(result.current.messages[1]).toMatchObject({ running: false });
+});
+
 test("um pedido comum segue pelo chat e nunca chama o Hermes", async () => {
   const start = vi.fn();
   const { result, client } = setup({ start, get: vi.fn() });

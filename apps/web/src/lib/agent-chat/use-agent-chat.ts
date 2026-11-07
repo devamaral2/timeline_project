@@ -6,6 +6,7 @@ import type { AgentChatEntityRef, AgentChatMessageDto, AgentScreenContext, AiPro
 import { type AiProcessApi, aiProcess, isProcessRouteOff, isProcessTerminal } from "@/lib/ai-process/ai-process";
 import {
   type AiAutomationApi,
+  type HermesStepDto,
   aiAutomation,
   isAutomationRouteOff,
   isHermesTurnTerminal,
@@ -21,7 +22,9 @@ export type AgentChatMessage =
   | { id: string; role: "assistant"; text: string; entities: AgentChatEntityRef[] }
   | { id: string; role: "error"; text: string; retryText: string; requestId: string }
   /** A caixa de processo (ADR 003): `null` ate o servidor responder o primeiro estado. Nao entra no historico. */
-  | { id: string; role: "process"; process: AiProcessDto | null };
+  | { id: string; role: "process"; process: AiProcessDto | null }
+  /** Os passos do Hermes (ferramentas e pensamentos), ao vivo e depois do fim do turno. Nao entra no historico. */
+  | { id: string; role: "hermes-steps"; steps: HermesStepDto[]; running: boolean };
 
 export interface AgentChatPending {
   id: string;
@@ -384,6 +387,15 @@ export function useAgentChat({
       }
 
       commitPending({ id, label: "Falando com o Hermes" });
+      const stepsId = `${id}-steps`;
+      const showSteps = (steps: HermesStepDto[], running: boolean) => {
+        const message: AgentChatMessage = { id: stepsId, role: "hermes-steps", steps, running };
+        commitMessages((current) =>
+          current.some((entry) => entry.id === stepsId)
+            ? current.map((entry) => (entry.id === stepsId ? message : entry))
+            : [...current, message],
+        );
+      };
       const deadline = Date.now() + HERMES_TIMEOUT_MS;
       let failures = 0;
       while (!disposedRef.current && pendingRef.current?.id === id) {
@@ -391,6 +403,8 @@ export function useAgentChat({
           const job = await automationApi.get(jobId);
           failures = 0;
           if (disposedRef.current || pendingRef.current?.id !== id) return;
+          const steps = job.steps ?? [];
+          if (steps.length > 0) showSteps(steps, !isHermesTurnTerminal(job));
           if (isHermesTurnTerminal(job)) {
             if (job.status === "succeeded" && job.result) {
               commitPending(null);
