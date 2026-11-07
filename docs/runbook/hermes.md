@@ -201,6 +201,39 @@ Reinicie (`docker restart braid-hermes`) e confira nos logs
 `mcp_braid_*`. Se `host.docker.internal` não resolver, confirme que o
 `docker-compose.hermes.yml` tem o `extra_hosts` e recrie com `pnpm hermes:up`.
 
+### 1.2 Falar com o Hermes pela aplicação (local)
+
+A API tem uma rota que entrega mensagens ao Hermes: `POST /api/ai/automation`. O
+navegador nunca fala com o Hermes; ele fala com a API, que chama o Hermes pela rede
+interna (`HERMES_URL`, `HERMES_API_KEY`) e devolve a resposta como um job comum
+(`GET /api/ai/jobs/:id`). No chat da web, escreva:
+
+```text
+/hermes crie uma nota com o resumo do meu dia
+```
+
+A resposta do Hermes aparece no chat e a agenda atualiza ao fim, porque ele pode ter
+criado ou editado registros pelo MCP. A mensagem do `/hermes` e a resposta não entram
+no histórico da conversa.
+
+A rota vem **desligada**. Para ligá-la nesta worktree, ponha no `.env.local` da raiz:
+
+```dotenv
+AI_AUTOMATION=on
+```
+
+Reinicie `pnpm dev`. `HERMES_API_KEY` vem do 1Password (o mesmo campo do Hermes) e
+`HERMES_URL` assume `http://127.0.0.1:8642`; mude-o no `.env.local` se mapeou outra
+porta (`HERMES_HOST_PORT`). Requisitos: o container do Hermes no ar (`pnpm hermes:up`) e
+o RabbitMQ (as mensagens são jobs duráveis, como o chat).
+
+- **404 no chat ("O Hermes está desligado"):** `AI_AUTOMATION` não está `on` na API.
+- **"A IA está indisponível":** o Hermes está fora do ar, a chave está errada ou o turno
+  passou de 150 s. A API repete sozinha só quando o Hermes está fora do ar ou ocupado
+  (429/503); um tempo esgotado não é repetido, porque o Hermes pode já ter criado
+  entidades. Confira `pnpm hermes:logs` e o log da API.
+- Só o dono fala com o Hermes: a API recusa (403) um `userId` diferente do usuário logado.
+
 ## 2. VPS (k3s)
 
 Pré-requisitos: o [deploy k3s](./deploy-k3s.md) concluído, esta mudança já em
