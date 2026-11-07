@@ -92,6 +92,76 @@ test("sessao expirada ao iniciar vira erro de sessao", async () => {
   await waitFor(() => expect(result.current.messages.at(-1)).toMatchObject({ role: "error", text: expect.stringContaining("sessão") }));
 });
 
+test("depois de /hermes, as mensagens seguintes continuam com o Hermes ate /app", async () => {
+  const start = vi.fn(async () => job("queued"));
+  const get = vi.fn(async () => job("succeeded", { result: { text: "resposta do hermes" } }));
+  const { result, client } = setup({ start, get });
+
+  act(() => { result.current.send("/hermes oi"); });
+  await waitFor(() => expect(result.current.pending).toBeNull());
+  expect(result.current.hermesMode).toBe(true);
+
+  act(() => { result.current.send("me diga como conectar ao google agenda"); });
+  await waitFor(() => expect(start).toHaveBeenCalledTimes(2));
+  await waitFor(() => expect(result.current.pending).toBeNull());
+  expect(start).toHaveBeenLastCalledWith({
+    userId: "owner", text: "me diga como conectar ao google agenda", clientMessageId: expect.any(String),
+  });
+  expect(client.send).not.toHaveBeenCalled();
+
+  act(() => { result.current.send("/app"); });
+  expect(result.current.hermesMode).toBe(false);
+  expect(result.current.messages.at(-1)).toMatchObject({ role: "assistant", text: expect.stringContaining("De volta") });
+
+  act(() => { result.current.send("almocei arroz"); });
+  await waitFor(() => expect(client.send).toHaveBeenCalledTimes(1));
+  expect(start).toHaveBeenCalledTimes(2);
+});
+
+test("/hermes sozinho so liga o modo, sem chamar o servidor", async () => {
+  const start = vi.fn();
+  const { result, client } = setup({ start, get: vi.fn() });
+
+  act(() => { result.current.send("/hermes"); });
+
+  expect(result.current.hermesMode).toBe(true);
+  expect(result.current.pending).toBeNull();
+  expect(result.current.messages.map((message) => message.role)).toEqual(["user", "assistant"]);
+  expect(result.current.messages.at(-1)).toMatchObject({ text: expect.stringContaining("/app") });
+  expect(start).not.toHaveBeenCalled();
+  expect(client.send).not.toHaveBeenCalled();
+});
+
+test("/app fora do modo Hermes e um pedido comum", async () => {
+  const { result, client } = setup({ start: vi.fn(), get: vi.fn() });
+
+  act(() => { result.current.send("/app"); });
+
+  await waitFor(() => expect(client.send).toHaveBeenCalledTimes(1));
+  expect(result.current.hermesMode).toBe(false);
+});
+
+test("nova conversa sai do modo Hermes", async () => {
+  const { result } = setup({ start: vi.fn(), get: vi.fn() });
+  act(() => { result.current.send("/hermes"); });
+  expect(result.current.hermesMode).toBe(true);
+
+  act(() => { result.current.startNewConversation(); });
+
+  expect(result.current.hermesMode).toBe(false);
+  expect(result.current.messages).toEqual([]);
+});
+
+test("404 no modo Hermes: avisa e volta ao assistente da agenda", async () => {
+  const start = vi.fn(async () => { throw new ApiError(404, "POST /api/ai/automation -> 404"); });
+  const { result } = setup({ start, get: vi.fn() });
+
+  act(() => { result.current.send("/hermes oi"); });
+
+  await waitFor(() => expect(result.current.pending).toBeNull());
+  expect(result.current.hermesMode).toBe(false);
+});
+
 test("sem a rota (automationApi nulo) o /hermes e um pedido comum", async () => {
   const { result, client } = setup(null);
 

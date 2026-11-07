@@ -1,15 +1,25 @@
 import { expect, test } from "vitest";
 import { ApiError } from "@/lib/api/authed-fetch";
-import { isAutomationRouteOff, isHermesTurnTerminal, parseHermesCommand } from "./ai-automation";
+import { isAutomationRouteOff, isHermesTurnTerminal, parseChatCommand } from "./ai-automation";
 
-test("so '/hermes <mensagem>' e um comando; o resto e pedido comum", () => {
-  expect(parseHermesCommand("/hermes crie uma nota")).toBe("crie uma nota");
-  expect(parseHermesCommand("  /HERMES   oi  ")).toBe("oi");
-  expect(parseHermesCommand("/hermes\nlinha 1\nlinha 2")).toBe("linha 1\nlinha 2");
-  expect(parseHermesCommand("/hermes")).toBeNull();
-  expect(parseHermesCommand("/hermes   ")).toBeNull();
-  expect(parseHermesCommand("/hermesx oi")).toBeNull();
-  expect(parseHermesCommand("fale com o /hermes agora")).toBeNull();
+test("/hermes entra no modo Hermes, com ou sem mensagem", () => {
+  expect(parseChatCommand("/hermes crie uma nota")).toEqual({ kind: "hermes", text: "crie uma nota" });
+  expect(parseChatCommand("  /HERMES   oi  ")).toEqual({ kind: "hermes", text: "oi" });
+  expect(parseChatCommand("/hermes\nlinha 1\nlinha 2")).toEqual({ kind: "hermes", text: "linha 1\nlinha 2" });
+  expect(parseChatCommand("/hermes")).toEqual({ kind: "hermes", text: null });
+  expect(parseChatCommand("/hermes   ")).toEqual({ kind: "hermes", text: null });
+});
+
+test("/app, /assistente e /sair voltam ao assistente da agenda", () => {
+  for (const text of ["/app", "/APP", " /assistente ", "/sair"]) {
+    expect(parseChatCommand(text)).toEqual({ kind: "leave" });
+  }
+});
+
+test("o resto e pedido comum", () => {
+  for (const text of ["/hermesx oi", "fale com o /hermes agora", "/app agora", "almocei", "/tarefa comprar pao"]) {
+    expect(parseChatCommand(text)).toBeNull();
+  }
 });
 
 test("404 significa rota desligada; outros erros nao", () => {

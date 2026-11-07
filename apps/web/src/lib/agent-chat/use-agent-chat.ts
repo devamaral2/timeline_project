@@ -9,7 +9,7 @@ import {
   aiAutomation,
   isAutomationRouteOff,
   isHermesTurnTerminal,
-  parseHermesCommand,
+  parseChatCommand,
 } from "@/lib/ai-automation/ai-automation";
 import type { AgentChatClient, AgentChatClientOptions, AgentChatEvent } from "./agent-chat-client";
 import { DurableAgentChatClient } from "./durable-agent-chat-client";
@@ -53,6 +53,8 @@ const PROCESS_POLL_FAILURES = 5;
 /** O Hermes pode usar modelo e ferramentas; espera mais que um turno comum antes de dar por perdido. */
 const HERMES_TIMEOUT_MS = 180_000;
 const HERMES_DISABLED_TEXT = "O Hermes está desligado neste ambiente (AI_AUTOMATION).";
+const HERMES_ENTER_TEXT = "Agora você está falando com o Hermes. Escreva /app para voltar ao assistente da agenda.";
+const HERMES_LEAVE_TEXT = "De volta ao assistente da agenda.";
 
 const ERROR_TEXTS: Record<Extract<AgentChatEvent, { type: "error" }>["code"], string> = {
   busy: "Ainda estou respondendo a mensagem anterior.",
@@ -106,6 +108,13 @@ export function useAgentChat({
   const disposedRef = useRef(false);
   /** O turno do Hermes em curso: ele nao tem como ser cancelado pelo socket. */
   const hermesPendingIdRef = useRef<string | null>(null);
+  /** `/hermes` liga o modo: as mensagens seguintes vao ao Hermes ate `/app`, ou ate abrir outra conversa. */
+  const hermesModeRef = useRef(false);
+  const [hermesMode, setHermesMode] = useState(false);
+  const commitHermesMode = useCallback((next: boolean) => {
+    hermesModeRef.current = next;
+    setHermesMode(next);
+  }, []);
   const [messages, setMessages] = useState<AgentChatMessage[]>([]);
   const [pending, setPending] = useState<AgentChatPending | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -170,22 +179,24 @@ export function useAgentChat({
   const openConversation = useCallback(
     async (id: string) => {
       if (pendingRef.current) return;
+      commitHermesMode(false);
       commitConversation(id);
       commitPending(null);
       await reload(id);
     },
-    [commitConversation, commitPending, reload],
+    [commitConversation, commitHermesMode, commitPending, reload],
   );
 
   /** Comecar de novo e estado local: a conversa so nasce no primeiro turno gravado. */
   const startNewConversation = useCallback(() => {
     if (pendingRef.current) return;
+    commitHermesMode(false);
     commitConversation(null);
     commitPending(null);
     lastSeqRef.current = 0;
     messagesRef.current = [];
     setMessages([]);
-  }, [commitConversation, commitPending]);
+  }, [commitConversation, commitHermesMode, commitPending]);
 
   const handleEvent = useCallback(
     (event: AgentChatEvent) => {
@@ -362,6 +373,7 @@ export function useAgentChat({
         }));
       } catch (error) {
         if (isAutomationRouteOff(error)) {
+          commitHermesMode(false);
           commitPending(null);
           commitMessages((current) => [...current, { id: replyId, role: "assistant", text: HERMES_DISABLED_TEXT, entities: [] }]);
           return;
@@ -408,7 +420,7 @@ export function useAgentChat({
         await new Promise((resolve) => setTimeout(resolve, automationPollMs));
       }
     },
-    [automationApi, automationPollMs, commitMessages, commitPending, handleEvent, userId],
+    [automationApi, automationPollMs, commitHermesMode, commitMessages, commitPending, handleEvent, userId],
   );
 
   const send = useCallback(
@@ -418,9 +430,25 @@ export function useAgentChat({
       if (!trimmed || !client || pendingRef.current || loading) return false;
 
       const id = operationId();
+      const command = automationApi ? parseChatCommand(trimmed) : null;
+      const notice = (text: string) => ({ id: `${id}-notice`, role: "assistant" as const, text, entities: [] });
+
+      // `/hermes` sozinho so liga o modo; `/app` o desliga. Nenhum dos dois vai ao servidor.
+      if (command?.kind === "leave" && hermesModeRef.current) {
+        commitHermesMode(false);
+        commitMessages((current) => [...current, { id, role: "user", text: trimmed }, notice(HERMES_LEAVE_TEXT)]);
+        return true;
+      }
+      if (command?.kind === "hermes" && command.text === null) {
+        commitHermesMode(true);
+        commitMessages((current) => [...current, { id, role: "user", text: trimmed }, notice(HERMES_ENTER_TEXT)]);
+        return true;
+      }
+      if (command?.kind === "hermes") commitHermesMode(true);
+
       commitMessages((current) => [...current, { id, role: "user", text: trimmed }]);
       commitPending({ id });
-      const hermesText = automationApi ? parseHermesCommand(trimmed) : null;
+      const hermesText = command?.kind === "hermes" ? command.text : hermesModeRef.current && automationApi ? trimmed : null;
       if (hermesText !== null) {
         hermesPendingIdRef.current = id;
         void runHermes(id, hermesText).finally(() => {
@@ -443,7 +471,7 @@ export function useAgentChat({
       }
       return true;
     },
-    [automationApi, commitMessages, commitPending, context, loading, processApi, runHermes, runProcess],
+    [automationApi, commitHermesMode, commitMessages, commitPending, context, loading, processApi, runHermes, runProcess],
   );
 
   const cancel = useCallback(() => {
@@ -474,6 +502,8 @@ export function useAgentChat({
     conversationId,
     loading,
     ready: Boolean(userId),
+    /** `true` enquanto as mensagens vao ao Hermes (`/hermes`); `/app` volta ao assistente da agenda. */
+    hermesMode,
     send,
     cancel,
     retry,

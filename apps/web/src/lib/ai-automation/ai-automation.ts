@@ -43,10 +43,19 @@ export function isHermesTurnTerminal(job: Pick<HermesTurnJobDto, "status">): boo
   return job.status === "succeeded" || job.status === "failed" || job.status === "cancelled";
 }
 
-const HERMES_COMMAND = /^\/hermes\s+([\s\S]+)$/i;
+const HERMES_COMMAND = /^\/hermes(?:\s+([\s\S]+))?$/i;
+const LEAVE_COMMAND = /^\/(?:app|assistente|sair)$/i;
 
-/** `/hermes <mensagem>` no chat: devolve a mensagem, ou `null` quando o texto e um pedido comum. */
-export function parseHermesCommand(text: string): string | null {
-  const body = HERMES_COMMAND.exec(text.trim())?.[1]?.trim();
-  return body ? body : null;
+/**
+ * Comandos de modo do chat. `/hermes` entra no modo Hermes (com uma mensagem, ja a envia); `/app` volta ao
+ * assistente da agenda. Qualquer outro texto nao e comando: devolve `null`.
+ */
+export type ChatModeCommand = { kind: "hermes"; text: string | null } | { kind: "leave" };
+
+export function parseChatCommand(text: string): ChatModeCommand | null {
+  const trimmed = text.trim();
+  const hermes = HERMES_COMMAND.exec(trimmed);
+  if (hermes) return { kind: "hermes", text: hermes[1]?.trim() || null };
+  if (LEAVE_COMMAND.test(trimmed)) return { kind: "leave" };
+  return null;
 }
