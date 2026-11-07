@@ -1,5 +1,8 @@
 import { Module } from "@nestjs/common";
+import { APP_INTERCEPTOR } from "@nestjs/core";
 import { ApiCoreModule } from "./api-core/api-core.module";
+import { IdempotencyInterceptor } from "./http/idempotency/idempotency.interceptor";
+import { PersistenceModule } from "./infrastructure/persistence";
 import { AgentChatModule } from "./http/websocket/agent-chat/agent-chat.module";
 import { CreateEventModule } from "./features/create-event/create-event.module";
 import { CreateEventFromTranscriptModule } from "./features/create-event-from-transcript/create-event-from-transcript.controller";
@@ -43,6 +46,7 @@ import { SubmitTranscriptJobModule } from "./features/submit-transcript-job/subm
 @Module({
   imports: [
     ApiCoreModule.forRoot(),
+    PersistenceModule,
     // Rotas estaticas devem ser registradas antes das rotas parametrizadas.
     GetDailyOverviewModule,
     SubmitTranscriptJobModule,
@@ -84,5 +88,6 @@ import { SubmitTranscriptJobModule } from "./features/submit-transcript-job/subm
     DeleteAgentConversationModule,
     AgentChatModule,
   ],
+  providers: [{ provide: APP_INTERCEPTOR, useClass: IdempotencyInterceptor }],
 })
 export class AppModule {}

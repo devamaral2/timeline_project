@@ -22,6 +22,7 @@ export interface PostgresTestContext {
 
 const MUTABLE_TABLES = [
   "agent_chat_tickets",
+  "idempotency_keys",
   "agent_chat_messages",
   "agent_conversations",
   "note_tags",

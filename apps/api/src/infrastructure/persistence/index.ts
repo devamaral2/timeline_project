@@ -25,3 +25,4 @@ export * from "./agent-chat/queries/agent-chat-cursors";
 export * from "./agent-chat/queries/postgres-agent-conversation.query";
 export * from "./recurrences/mappers/recurrence-row.mapper";
 export * from "./recurrences/repositories/postgres-recurrence.repository";
+export * from "./idempotency/postgres-idempotency.store";

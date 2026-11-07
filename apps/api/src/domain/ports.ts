@@ -19,3 +19,4 @@ export type * from "./agent/ports/entity-batch-writer";
 export type * from "./agent/ports/agent-chat-ticket-store";
 export type * from "./agent-chat/ports/agent-conversation-repository";
 export type * from "./agent-chat/ports/agent-conversation-query";
+export type * from "./idempotency/ports/idempotency-store";

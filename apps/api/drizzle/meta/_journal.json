@@ -155,6 +155,13 @@
       "when": 1793070221251,
       "tag": "0021_walking_workout",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1793665859516,
+      "tag": "0022_idempotency_keys",
+      "breakpoints": true
     }
   ]
 }

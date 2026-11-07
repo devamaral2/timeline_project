@@ -4,6 +4,7 @@ import type {
   AgentConversationQuery,
   AgentConversationRepository,
   DailyOverviewQuery,
+  IdempotencyStore,
   EntityBatchWriter,
   EventRepository,
   NoteLinkQuery,
@@ -32,6 +33,7 @@ import { PostgresAgentConversationRepository } from "./agent-chat/repositories/p
 import { PostgresAgentConversationQuery } from "./agent-chat/queries/postgres-agent-conversation.query";
 import { PostgresRecurrenceRepository } from "./recurrences/repositories/postgres-recurrence.repository";
 import { PostgresWorkoutCatalog } from "./catalog/postgres-workout.catalog";
+import { PostgresIdempotencyStore } from "./idempotency/postgres-idempotency.store";
 
 /**
  * Tokens de injecao. Sao strings, e nao symbols, porque o Nest os imprime tal
@@ -57,6 +59,7 @@ export const ENTITY_BATCH_WRITER = "ENTITY_BATCH_WRITER";
 export const AGENT_CHAT_TICKET_STORE = "AGENT_CHAT_TICKET_STORE";
 export const AGENT_CONVERSATION_REPOSITORY = "AGENT_CONVERSATION_REPOSITORY";
 export const AGENT_CONVERSATION_QUERY = "AGENT_CONVERSATION_QUERY";
+export const IDEMPOTENCY_STORE = "IDEMPOTENCY_STORE";
 
 function requireDatabaseUrl(): string {
   const value = process.env.DATABASE_URL;
@@ -158,6 +161,11 @@ function requireDatabaseUrl(): string {
       useFactory: (database: PostgresDatabase): AgentConversationQuery =>
         new PostgresAgentConversationQuery(database.db),
     },
+    {
+      provide: IDEMPOTENCY_STORE,
+      inject: [DATABASE],
+      useFactory: (database: PostgresDatabase): IdempotencyStore => new PostgresIdempotencyStore(database.db),
+    },
   ],
   exports: [
     DATABASE,
@@ -176,6 +184,7 @@ function requireDatabaseUrl(): string {
     AGENT_CHAT_TICKET_STORE,
     AGENT_CONVERSATION_REPOSITORY,
     AGENT_CONVERSATION_QUERY,
+    IDEMPOTENCY_STORE,
   ],
 })
 export class PersistenceModule {}
