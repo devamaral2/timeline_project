@@ -206,15 +206,22 @@ Reinicie (`docker restart braid-hermes`) e confira nos logs
 A API tem uma rota que entrega mensagens ao Hermes: `POST /api/ai/automation`. O
 navegador nunca fala com o Hermes; ele fala com a API, que chama o Hermes pela rede
 interna (`HERMES_URL`, `HERMES_API_KEY`) e devolve a resposta como um job comum
-(`GET /api/ai/jobs/:id`). No chat da web, escreva:
+(`GET /api/ai/jobs/:id`). No chat da web, `/hermes` liga o **modo Hermes**: dali em diante as mensagens vão ao
+Hermes, e não ao assistente da agenda, até você escrever `/app` (ou `/assistente`,
+`/sair`) ou abrir outra conversa.
 
 ```text
-/hermes crie uma nota com o resumo do meu dia
+/hermes
+me diga como conectar ao google agenda
+crie uma nota com o resumo do meu dia
+/app
 ```
 
-A resposta do Hermes aparece no chat e a agenda atualiza ao fim, porque ele pode ter
-criado ou editado registros pelo MCP. A mensagem do `/hermes` e a resposta não entram
-no histórico da conversa.
+`/hermes <mensagem>` liga o modo e já envia a mensagem. Em modo normal, sem `/hermes`, o
+chat continua sendo o assistente da agenda. A resposta do Hermes aparece no chat e a
+agenda atualiza ao fim, porque ele pode ter criado ou editado registros pelo MCP. As
+mensagens do modo Hermes não entram no histórico da conversa do app (o Hermes guarda a
+própria sessão), então recarregar a página limpa a tela.
 
 A rota vem **desligada**. Para ligá-la nesta worktree, ponha no `.env.local` da raiz:
 
