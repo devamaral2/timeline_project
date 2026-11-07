@@ -90,7 +90,7 @@ export function TagInput({ tags, onTagsChange }: TagInputProps) {
       <label htmlFor="event-tags" className={fieldLabelClass}>
         Tags
       </label>
-      <div className="flex min-h-11 flex-wrap items-center gap-1.5 rounded-lg border border-input bg-background/60 px-2 py-1.5 transition-all focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/25">
+      <div className="flex min-h-11 flex-wrap items-center gap-1.5 rounded-lg border border-input bg-background/60 px-2 py-1.5 transition-[border-color,box-shadow] focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/25">
         {tags.map((tag) => (
           <span
             key={tag}
@@ -128,7 +128,7 @@ export function TagInput({ tags, onTagsChange }: TagInputProps) {
       </div>
 
       {open && suggestions.length ? (
-        <ul className="surface-glass absolute top-full z-10 mt-1.5 w-full overflow-hidden rounded-xl border border-border shadow-card-hover">
+        <ul className="surface-solid absolute top-full z-10 mt-1.5 w-full overflow-hidden rounded-xl border border-border shadow-card-hover">
           {suggestions.map((suggestion, index) => (
             <li key={suggestion.id}>
               <button

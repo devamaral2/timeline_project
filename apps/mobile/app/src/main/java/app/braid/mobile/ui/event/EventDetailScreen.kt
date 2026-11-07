@@ -60,7 +60,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.braid.mobile.core.designsystem.LocalBraidDarkTheme
@@ -370,8 +369,8 @@ private fun SectionLabelColored(
     color: Color,
 ) {
     Text(
-        text = text.uppercase(),
-        style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.3.sp),
+        text = text,
+        style = MaterialTheme.typography.labelMedium,
         color = color,
     )
 }

@@ -209,7 +209,7 @@ internal fun NotesContent(
                             )
                             Text(
                                 text = group.label,
-                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold, letterSpacing = 1.3.sp),
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
                             )
                             Text(
                                 text = group.notes.size.toString(),

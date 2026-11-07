@@ -174,43 +174,17 @@
 }
 
 /*
- * Superficie de vidro: o painel translucido que deixa a timeline passar por
- * tras. E o acabamento do cabecalho e das barras flutuantes. A borda fica
- * por conta de quem usa (`border-b border-border`, por exemplo), para nao
- * competir com os utilitarios de borda do Tailwind.
+ * Superficie opaca: o painel do cabecalho e do que flutua (sugestoes, avisos).
+ * Um passo de tom acima do chao, sem vidro nem desfoque — a timeline nao
+ * atravessa o painel, entao o texto nunca disputa com o que passa atras. A
+ * borda fica por conta de quem usa (`border-b border-border`, por exemplo),
+ * para nao competir com os utilitarios de borda do Tailwind.
+ *
+ * O esqueleto de carregamento nao tem utilitario: sao barras lisas em
+ * `bg-muted`, no tamanho real do valor, sem brilho que atravesse.
  */
-@utility surface-glass {
-  background-color: color-mix(in oklab, var(--card) 78%, transparent);
-  backdrop-filter: blur(14px);
-}
-
-/*
- * Brilho que atravessa o esqueleto de carregamento. Mais discreto que um
- * `animate-pulse` no escuro, onde piscar opacidade fica pesado.
- * `prefers-reduced-motion` derruba a animacao junto com as outras, la embaixo.
- */
-@keyframes shimmer {
-  to {
-    transform: translateX(100%);
-  }
-}
-
-@utility shimmer {
-  position: relative;
-  overflow: hidden;
-  &::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    transform: translateX(-100%);
-    background: linear-gradient(
-      90deg,
-      transparent,
-      color-mix(in oklab, var(--foreground) 9%, transparent),
-      transparent
-    );
-    animation: shimmer 1.6s ease-in-out infinite;
-  }
+@utility surface-solid {
+  background-color: var(--card);
 }
 
 @utility scrollbar-none {

@@ -37,7 +37,7 @@
 
 .heading { display: flex; flex-direction: column; }
 .kindRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.type { display: inline-flex; align-items: center; gap: 8px; color: var(--event-color); font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; }
+.type { display: inline-flex; align-items: center; gap: 8px; color: var(--event-color); font-size: 13px; font-weight: 600; }
 .type svg { width: 18px; height: 18px; }
 .status { display: grid; place-items: center; width: 44px; height: 44px; margin: -11px -11px -11px 0; border: 0; border-radius: 50%; background: transparent; color: var(--muted); }
 button.status { cursor: pointer; }
@@ -48,7 +48,7 @@ button.status:disabled { opacity: .6; cursor: wait; }
 .statusRunning { color: var(--cyan); }
 .statusDone { color: var(--ink); }
 .statusMissed { color: var(--destructive); }
-.heading h1 { margin: 18px 0 12px; font-family: var(--font-display); font-size: 52px; font-weight: 400; line-height: 1.05; letter-spacing: -.01em; text-wrap: balance; }
+.heading h1 { margin: 14px 0 12px; font-family: var(--font-display); font-size: 32px; font-weight: 400; line-height: 1.05; letter-spacing: -.01em; text-wrap: balance; }
 .date { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.5; font-variant-numeric: tabular-nums; }
 .window { color: var(--ink); }
 
@@ -64,7 +64,7 @@ button.status:disabled { opacity: .6; cursor: wait; }
 .readMore { min-height: 44px; padding: 0; border: 0; background: transparent; color: var(--cyan); font-size: 14px; font-weight: 600; }
 
 .sectionLabel { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
-.sectionLabel h2 { margin: 0; color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; }
+.sectionLabel h2 { margin: 0; color: var(--muted); font-size: 13px; font-weight: 600; }
 .sectionLabel span { color: var(--muted); font-size: 12px; }
 
 .note { display: flex; flex-direction: column; gap: 18px; padding: 18px 18px 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); }
@@ -73,7 +73,7 @@ button.status:disabled { opacity: .6; cursor: wait; }
 .noteToggle:hover { background: var(--soft); color: var(--ink); }
 .noteToggle svg { width: 18px; height: 18px; }
 .noteHead { display: flex; flex: 1; flex-direction: column; gap: 8px; min-width: 0; }
-.noteKind { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; }
+.noteKind { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; font-weight: 600; }
 .noteKind svg { width: 16px; height: 16px; }
 .noteTitle { color: var(--ink); font-family: var(--font-display); font-size: 26px; line-height: 1.15; letter-spacing: -.005em; }
 a.noteTitle:hover { color: var(--cyan); }
@@ -97,7 +97,7 @@ a.noteTitle:hover { color: var(--cyan); }
   .content { gap: 28px; padding-block: 0 24px; }
   .editButton { width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--muted); }
   .editButton span { display: none; }
-  .heading h1 { font-size: 36px; }
+  .heading h1 { font-size: 28px; }
   .date { font-size: 14px; }
   .noteTitle { font-size: 24px; }
 }

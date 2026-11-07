@@ -266,7 +266,7 @@ function TextDetails({ title, body }: { title: string; body: string }) {
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+    <h4 className="text-[13px] font-semibold text-muted-foreground">
       {children}
     </h4>
   );

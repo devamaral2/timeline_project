@@ -144,14 +144,9 @@ fun EventCard(
                     if (isRunning) {
                         Box(Modifier.size(6.dp).clip(CircleShape).background(brand))
                         Text(
-                            text = "EM ANDAMENTO",
-                            style =
-                                MaterialTheme.typography.labelSmall.copy(
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    letterSpacing = 1.sp,
-                                ),
-                            color = brand,
+                            text = "Em andamento",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                            color = MaterialTheme.colorScheme.tertiary,
                         )
                     } else if (finishedAt == null) {
                         Text(text = "sem hora de fim", style = MaterialTheme.typography.labelSmall, color = muted)
@@ -177,14 +172,9 @@ fun EventCard(
                         if (event.missed) {
                             Surface(shape = RoundedCornerShape(5.dp), color = destructive.copy(alpha = if (dark) 0.15f else 0.12f)) {
                                 Text(
-                                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp),
-                                    text = "NÃO REALIZADO",
-                                    style =
-                                        MaterialTheme.typography.labelSmall.copy(
-                                            fontSize = 10.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                            letterSpacing = 0.8.sp,
-                                        ),
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                    text = "Não realizado",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
                                     color = destructive,
                                 )
                             }

@@ -2,15 +2,15 @@
 .heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 32px; }
 .heading p, .metadata, .footnote { color: var(--muted-foreground); font-size: 13px; }
 .heading p { margin: 0 0 14px; }
-.heading h1 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 84px; line-height: .92; letter-spacing: -.01em; }
+.heading h1 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 32px; line-height: 1.1; letter-spacing: -.01em; }
 .actions { display: flex; align-items: center; gap: 12px; }
 .actions > button { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border: 1px solid var(--border); border-radius: 50%; background: var(--card); cursor: pointer; }
 .actions > .primary, .primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: auto; height: 40px; padding: 0 16px; border: 0; border-radius: 8px; background: var(--primary); color: var(--primary-foreground); font-weight: 600; cursor: pointer; }
 .filters { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; margin: 0 0 32px; padding: 0; border: 0; }
 .filters button { height: 36px; padding: 0 16px; border: 1px solid var(--border); border-radius: 999px; color: var(--muted-foreground); background: transparent; font-size: 13px; cursor: pointer; }
-.filters button[aria-pressed="true"] { border-color: var(--foreground); box-shadow: 0 0 0 1px var(--foreground); color: var(--foreground); background: var(--card); font-weight: 600; }
+.filters button[aria-pressed="true"] { border-color: var(--foreground); color: var(--foreground); background: var(--card); font-weight: 600; }
 .groups { display: flex; flex-direction: column; gap: 32px; }
-.groups h2 { display: flex; align-items: baseline; gap: 10px; margin: 0 0 12px; font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; }
+.groups h2 { display: flex; align-items: baseline; gap: 10px; margin: 0 0 12px; font-size: 13px; font-weight: 600; }
 .groups h2 span { color: var(--muted-foreground); font-size: 12px; font-weight: 500; letter-spacing: 0; }
 .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: start; }
 .grid .card { display: flex; flex-direction: column; gap: 10px; min-width: 0; padding: 18px; background: var(--card); border: 1px solid var(--border); border-radius: 14px; color: var(--foreground); text-align: left; cursor: pointer; }
@@ -27,7 +27,7 @@
 .detail { max-width: 680px; margin: auto; padding: 40px 0 64px; display: flex; flex-direction: column; gap: 36px; }
 .back { display: inline-flex; align-items: center; gap: 8px; align-self: flex-start; min-height: 44px; cursor: pointer; }
 .detail header { display: flex; flex-direction: column; gap: 14px; }
-.detail h1, .create h1 { margin: 0 0 2px; font-family: var(--font-display); font-weight: 400; font-size: 52px; line-height: 1.05; letter-spacing: -.01em; }
+.detail h1, .create h1 { margin: 0 0 2px; font-family: var(--font-display); font-weight: 400; font-size: 32px; line-height: 1.15; letter-spacing: -.01em; }
 .detail .source { font-size: 14px; }
 .metadata { margin: 0; }
 .body { border-top: 1px solid var(--border); padding-top: 36px; font-size: 17px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -42,7 +42,7 @@
 .create label { display: flex; flex-direction: column; gap: 10px; font-size: 13px; }
 .create .primary { height: 48px; }
 .footnote { margin-top: 32px; }
-.metrics { display: flex; gap: 40px; margin-top: 12px; font-family: var(--font-display); font-size: 52px; line-height: 1; }
+.metrics { display: flex; gap: 40px; margin-top: 12px; font-family: var(--font-display); font-size: 40px; line-height: 1; }
 .metrics small { font-family: var(--font-sans); font-size: 14px; color: var(--muted-foreground); }
 .workout, .workoutDetails summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--border); }
 .workout h3 { margin: 0; font-size: 17px; font-weight: 600; }
@@ -55,13 +55,13 @@
   .heading { align-items: center; margin-bottom: 24px; }
   .heading > div:first-child { display: flex; flex-direction: column-reverse; gap: 8px; }
   .heading p { margin: 0; }
-  .heading h1 { font-size: 40px; line-height: 1; }
+  .heading h1 { font-size: 28px; line-height: 1.1; }
   .actions { gap: 4px; }
   .actions > button { width: 44px; height: 44px; border: 0; background: transparent; }
   .actions > .primary { width: auto; padding: 0 10px; background: var(--primary); }
   .grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
   .groups { gap: 28px; }
   .detail { padding: 8px 20px 110px; gap: 28px; }
-  .detail h1 { font-size: 36px; }
+  .detail h1 { font-size: 28px; }
   .body { padding-top: 28px; }
 }

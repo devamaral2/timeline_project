@@ -38,9 +38,9 @@ class EventCardTest {
         }
 
         composeRule.onNodeWithText("Café da manhã").assertIsDisplayed()
-        composeRule.onNodeWithText("EM ANDAMENTO").assertIsDisplayed()
+        composeRule.onNodeWithText("Em andamento").assertIsDisplayed()
         composeRule.onNodeWithText("04:05").assertIsDisplayed()
         composeRule.onNodeWithText("#foco").assertIsDisplayed()
-        composeRule.onNodeWithText("NÃO REALIZADO").assertIsDisplayed()
+        composeRule.onNodeWithText("Não realizado").assertIsDisplayed()
     }
 }

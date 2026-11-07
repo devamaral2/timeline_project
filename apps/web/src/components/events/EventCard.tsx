@@ -157,8 +157,8 @@ function CardContent({ event, visual: { Icon, label, text }, onOpenDetails }: Ca
             </span>
           )}
           {running ? (
-            <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-brand">
-              <span aria-hidden className="size-1.5 rounded-full bg-brand shadow-[0_0_0_3px_color-mix(in_oklab,var(--brand)_22%,transparent)]" />
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-accent">
+              <span aria-hidden className="size-1.5 rounded-full bg-brand" />
               Em andamento
             </span>
           ) : null}
@@ -179,7 +179,7 @@ function CardContent({ event, visual: { Icon, label, text }, onOpenDetails }: Ca
               </li>
             ))}
             {event.missed ? (
-              <li className="rounded-[5px] bg-destructive/12 px-[7px] dark:bg-destructive/15 py-1 text-[10px] font-semibold uppercase leading-[1.2] tracking-[0.08em] text-destructive">
+              <li className="rounded-[5px] bg-destructive/12 px-2 dark:bg-destructive/15 py-[3px] text-xs font-semibold leading-[1.2] text-destructive">
                 {missedLabel}
               </li>
             ) : null}

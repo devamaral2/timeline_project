@@ -447,10 +447,9 @@ private fun ConversationList(
                             verticalAlignment = Alignment.Bottom,
                         ) {
                             Text(
-                                text = group.label.label.uppercase(),
-                                fontSize = 11.sp,
+                                text = group.label.label,
+                                fontSize = 13.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                letterSpacing = 1.3.sp,
                             )
                             Text(text = "${group.items.size}", fontSize = 12.sp, color = colors.onSurfaceVariant)
                         }

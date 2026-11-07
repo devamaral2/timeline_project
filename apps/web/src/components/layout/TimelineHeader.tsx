@@ -23,7 +23,7 @@ export function TimelineHeader({
   const user = useCurrentUser();
 
   return (
-    <header className="surface-glass sticky top-0 z-30">
+    <header className="surface-solid sticky top-0 z-30">
       <div className="mx-auto max-w-[1400px] px-4 py-3 sm:px-6">
         <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
           <div className="flex min-w-0 items-center gap-3">

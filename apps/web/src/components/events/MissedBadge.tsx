@@ -23,7 +23,7 @@ export function MissedBadge({ missed, className }: MissedBadgeProps) {
   return (
     <span
       className={cn(
-        "shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-3 tracking-wide",
+        "shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold leading-4",
         missedBadgeClass,
         className,
       )}

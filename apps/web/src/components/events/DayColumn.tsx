@@ -22,7 +22,7 @@ export function DayColumn({ day, todayKey }: DayColumnProps) {
             {mediumDate(day.dayKey)}
           </span>
         </h2>
-        <p className="text-[10px] font-medium uppercase leading-none tracking-[0.12em] text-muted-foreground">
+        <p className="text-xs font-medium leading-none text-muted-foreground">
           {day.events.length} {eventLabel}
         </p>
       </div>

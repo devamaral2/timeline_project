@@ -106,7 +106,7 @@ fun HubSearchPanel(
                                 Text(
                                     modifier = Modifier.padding(top = 4.dp),
                                     text = result.subtitle,
-                                    fontSize = 10.sp,
+                                    fontSize = 12.sp,
                                     color = colors.onSurfaceVariant,
                                 )
                             }

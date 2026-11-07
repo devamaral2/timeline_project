@@ -58,7 +58,7 @@ export function VoiceEventButton({
           <p
             aria-live="polite"
             className={cn(
-              "surface-glass absolute right-0 top-12 z-40 max-w-[16rem] truncate rounded-xl border border-border px-3 py-2 text-xs shadow-card-hover duration-200 animate-in fade-in slide-in-from-top-1",
+              "surface-solid absolute right-0 top-12 z-40 max-w-[16rem] truncate rounded-xl border border-border px-3 py-2 text-xs shadow-card-hover duration-200 animate-in fade-in slide-in-from-top-1",
               error ? "text-destructive" : "text-muted-foreground",
             )}
           >

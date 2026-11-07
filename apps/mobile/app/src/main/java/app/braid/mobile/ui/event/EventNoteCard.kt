@@ -161,8 +161,8 @@ private fun EventNoteCard(
 @Composable
 internal fun SectionLabel(text: String) {
     Text(
-        text = text.uppercase(),
-        style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.3.sp),
+        text = text,
+        style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 }

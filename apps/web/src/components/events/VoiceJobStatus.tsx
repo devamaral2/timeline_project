@@ -26,7 +26,7 @@ export function VoiceJobStatus({ jobs, onRetry, onDismiss, onCancel }: VoiceJobS
       {failedJobs.map((job) => (
         <div
           key={job.id}
-          className="surface-glass pointer-events-auto flex w-full max-w-md items-center gap-2 rounded-full border border-destructive/40 py-2 pl-3 pr-2 text-sm shadow-card-hover duration-200 animate-in fade-in slide-in-from-bottom-2"
+          className="surface-solid pointer-events-auto flex w-full max-w-md items-center gap-2 rounded-full border border-destructive/40 py-2 pl-3 pr-2 text-sm shadow-card-hover duration-200 animate-in fade-in slide-in-from-bottom-2"
         >
           <AlertTriangle aria-hidden className="size-4 shrink-0 text-destructive" />
           <span className="min-w-0 flex-1 truncate text-foreground">{job.error}</span>
@@ -49,7 +49,7 @@ export function VoiceJobStatus({ jobs, onRetry, onDismiss, onCancel }: VoiceJobS
       ))}
 
       {pendingCount > 0 ? (
-        <div className="surface-glass pointer-events-auto flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm text-foreground shadow-card-hover duration-200 animate-in fade-in slide-in-from-bottom-2">
+        <div className="surface-solid pointer-events-auto flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm text-foreground shadow-card-hover duration-200 animate-in fade-in slide-in-from-bottom-2">
           <Loader2 aria-hidden className="size-4 animate-spin text-brand-accent" />
           {pendingCount === 1 ? jobs.find((job) => job.status === "pending")?.progress ?? "Criando evento..." : `Criando ${pendingCount} eventos...`}
           {onCancel ? jobs.filter((job) => job.status === "pending").map((job, index) => (

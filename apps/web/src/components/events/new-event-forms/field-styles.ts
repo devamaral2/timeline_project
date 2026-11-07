@@ -7,7 +7,7 @@
  * classe brigando por precedencia.
  */
 const fieldSurface =
-  "rounded-lg border border-input bg-background/60 text-foreground outline-none transition-all placeholder:text-muted-foreground/70 focus:border-brand focus:ring-2 focus:ring-brand/25";
+  "rounded-lg border border-input bg-background/60 text-foreground outline-none transition-[border-color,box-shadow] placeholder:text-muted-foreground/70 focus:border-brand focus:ring-2 focus:ring-brand/25";
 
 export const fieldInputClass = `${fieldSurface} h-11 px-3 text-sm`;
 

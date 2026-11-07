@@ -36,9 +36,9 @@
 /* Grupos e linhas */
 .groups { display: flex; flex-direction: column; gap: 36px; }
 .columns { display: grid; grid-template-columns: 44px minmax(0, 1fr) 160px 160px 120px; column-gap: 16px; margin-bottom: 14px; }
-.columns span { font-size: 10px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.columns span { font-size: 12px; font-weight: 500; color: var(--muted); }
 .group { display: flex; flex-direction: column; gap: 6px; }
-.groupTitle { display: flex; align-items: center; gap: 10px; min-height: 36px; margin: 0; font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--ink); }
+.groupTitle { display: flex; align-items: center; gap: 10px; min-height: 36px; margin: 0; font-size: 13px; font-weight: 600; color: var(--ink); }
 .groupTitle svg, .statusIcon { width: 18px; height: 18px; flex-shrink: 0; }
 .groupCount { font-size: 12px; font-weight: 500; letter-spacing: 0; color: var(--muted); font-variant-numeric: tabular-nums; }
 .list { margin: 0; padding: 0; list-style: none; }
@@ -105,10 +105,10 @@ a.name:hover { color: var(--cyan); }
 .statusMenu { right: auto; left: 0; min-width: 220px; }
 
 .header { display: flex; flex-direction: column; }
-.header h1 { margin: 0 0 16px; font-family: var(--font-display); font-weight: 400; font-size: 52px; line-height: 1.05; letter-spacing: -.01em; text-wrap: balance; }
+.header h1 { margin: 0 0 12px; font-family: var(--font-display); font-weight: 400; font-size: 32px; line-height: 1.05; letter-spacing: -.01em; text-wrap: balance; }
 .statusRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .statusButton { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin: -10px 0; padding: 0; border: 0; background: transparent; color: var(--ink); cursor: pointer; }
-.statusButton span { font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; }
+.statusButton span { font-size: 13px; font-weight: 600; }
 .statusButton .caret { width: 14px; height: 14px; color: var(--muted); }
 .statusButton[aria-expanded="true"] .caret { transform: rotate(180deg); }
 .dateLines { display: flex; flex-direction: column; gap: 2px; margin-top: 14px; font-size: 15px; line-height: 1.5; color: var(--muted); font-variant-numeric: tabular-nums; }
@@ -125,7 +125,7 @@ a.name:hover { color: var(--cyan); }
 .prose { margin: 0; max-width: 60ch; font-size: 15px; line-height: 1.6; white-space: pre-wrap; }
 
 .sectionLabel { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
-.sectionLabel h2 { margin: 0; color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; }
+.sectionLabel h2 { margin: 0; color: var(--muted); font-size: 13px; font-weight: 600; }
 .sectionLabel span { color: var(--muted); font-size: 12px; }
 .card { margin: 0; padding: 4px 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); list-style: none; }
 .card > li + li { border-top: 1px solid var(--line); }
@@ -168,7 +168,7 @@ textarea.line { height: auto; min-height: 64px; padding: 10px 0; line-height: 1.
   .screen { padding: 22px 18px 110px; }
   .heading { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "title actions" "count count"; align-items: center; gap: 8px 0; margin-bottom: 26px; }
   .titleBlock { display: contents; }
-  .title { grid-area: title; font-size: 40px; line-height: 1; letter-spacing: -.005em; }
+  .title { grid-area: title; font-size: 28px; line-height: 1.1; letter-spacing: -.005em; }
   .count { grid-area: count; margin-top: 0; }
   .headingActions { grid-area: actions; gap: 0; }
   .roundButton { width: 44px; height: 44px; border: 0; background: transparent; color: var(--muted); }
