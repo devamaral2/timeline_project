@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>RepoScope</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Azeret+Mono:wght@400;500&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Sora:wght@500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem("reposcope-theme");
+          if (saved === "dark" || saved === "light") {
+            document.documentElement.dataset.theme = saved;
+          } else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+            document.documentElement.dataset.theme = "dark";
+          }
+        } catch (err) {
+          /* armazenamento bloqueado: segue o tema claro */
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <header class="mast">
+      <div class="brand">
+        <p class="eyebrow"><span class="ring" aria-hidden="true"></span> Leitura de campo</p>
+        <h1>RepoScope</h1>
+      </div>
+      <button type="button" id="theme" aria-pressed="false">Tema escuro</button>
+    </header>
+
+    <main>
+      <form id="scan-form" class="finder">
+        <span class="tick nw" aria-hidden="true"></span>
+        <span class="tick ne" aria-hidden="true"></span>
+        <span class="tick sw" aria-hidden="true"></span>
+        <span class="tick se" aria-hidden="true"></span>
+        <div class="sweep" aria-hidden="true"><span></span></div>
+        <label for="path">Pasta a medir</label>
+        <div class="finder-row">
+          <input
+            id="path"
+            name="path"
+            type="text"
+            value="samples"
+            placeholder="samples"
+            autocomplete="off"
+            spellcheck="false"
+            required
+          />
+          <button type="submit" class="shutter" id="scan">Medir</button>
+        </div>
+        <p id="status" role="status">
+          Caminhos relativos partem da raiz permitida, a pasta de onde o servidor foi iniciado.
+        </p>
+      </form>
+
+      <section id="empty" class="plate empty">
+        <h2>Nenhuma leitura ainda</h2>
+        <p>
+          Informe uma pasta dentro da raiz permitida e escolha Medir. A leitura mostra
+          quantas linhas existem por linguagem, as marcas deixadas no código e o ritmo
+          dos commits.
+        </p>
+      </section>
+
+      <section id="report" hidden>
+        <div class="dials" aria-label="Resumo da leitura">
+          <p><strong id="n-files">0</strong> <span>Arquivos</span></p>
+          <p><strong id="n-lines">0</strong> <span>Linhas</span></p>
+          <p><strong id="n-marks">0</strong> <span>Marcas</span></p>
+          <p><strong id="n-authors">0</strong> <span>Autores em 12 semanas</span></p>
+        </div>
+        <p id="scanned-path" class="scanned"></p>
+
+        <div class="split">
+          <section class="plate" aria-labelledby="lang-title">
+            <h2 id="lang-title">Linhas por linguagem</h2>
+            <svg id="lang-chart" viewBox="0 0 640 250" role="img"></svg>
+          </section>
+          <section class="plate" aria-labelledby="week-title">
+            <h2 id="week-title">Commits por semana</h2>
+            <svg id="week-chart" viewBox="0 0 640 250" role="img"></svg>
+            <p id="git-note" class="note" hidden></p>
+          </section>
+        </div>
+
+        <div class="split">
+          <section class="plate" aria-labelledby="large-title">
+            <h2 id="large-title">Maiores arquivos</h2>
+            <ol id="largest"></ol>
+          </section>
+          <section class="plate" aria-labelledby="todo-title">
+            <div class="section-head">
+              <h2 id="todo-title">Marcas no código</h2>
+              <p id="todo-count" class="note"></p>
+            </div>
+            <label for="todo-filter">Filtrar marcas</label>
+            <input id="todo-filter" type="search" placeholder="Arquivo, tipo ou texto" />
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th aria-sort="ascending"><button type="button" data-sort="path">Arquivo</button></th>
+                    <th aria-sort="none"><button type="button" data-sort="line">Linha</button></th>
+                    <th aria-sort="none"><button type="button" data-sort="kind">Tipo</button></th>
+                    <th aria-sort="none"><button type="button" data-sort="text">Texto</button></th>
+                  </tr>
+                </thead>
+                <tbody id="todo-body"></tbody>
+              </table>
+            </div>
+            <p id="todo-empty" class="note" hidden>Nenhuma marca com esse filtro.</p>
+          </section>
+        </div>
+      </section>
+    </main>
+    <script src="/app.js"></script>
+  </body>
+</html>
