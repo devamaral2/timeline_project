@@ -1,0 +1,1674 @@
+{
+ "url": "http://localhost:3000/mockups/eventos/notas",
+ "at": "2026-11-07T01:01:25.713Z",
+ "allow": [],
+ "viewports": [
+  {
+   "width": 1440,
+   "height": 900,
+   "load": "load",
+   "screens": 2,
+   "filled": [
+    0.29,
+    0.34
+   ],
+   "motion": {
+    "elements": 1,
+    "css": 0,
+    "transitions": 0,
+    "scripted": 1,
+    "videos": 0,
+    "playingVideos": 0
+   },
+   "metrics": {
+    "viewport": {
+     "w": 1440,
+     "h": 900
+    },
+    "page": {
+     "height": 1141,
+     "screens": 1.3,
+     "words": 192,
+     "img": 0,
+     "video": 0,
+     "canvas": 0,
+     "svg": 19,
+     "sections": 3,
+     "horizontalOverflow": 0,
+     "overflowCulprits": [],
+     "uiFragments": 0,
+     "uiAbuse": false,
+     "realPictures": 0,
+     "videoCount": 0,
+     "uiPictures": 0,
+     "pictureSamples": [],
+     "blendText": 0,
+     "sideScrollers": 0,
+     "brokenImages": [],
+     "emoji": [],
+     "videosNoPoster": 0
+    },
+    "hero": {
+     "text": "Notas",
+     "words": 1,
+     "chars": 5,
+     "lines": 1,
+     "size": 32,
+     "vw": 2.2,
+     "font": "newsreader",
+     "weight": 400,
+     "tracking": -0.01,
+     "leading": 1.1,
+     "top": 163,
+     "tag": "h1",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "h1": {
+     "text": "Notas",
+     "words": 1,
+     "lines": 1,
+     "size": 32,
+     "font": "newsreader"
+    },
+    "headings": [
+     {
+      "text": "braid",
+      "words": 1,
+      "chars": 5,
+      "lines": 1,
+      "size": 30,
+      "vw": 2.1,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": -0.01,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.04,
+      "top": 21,
+      "tag": "a",
+      "kind": "heading"
+     },
+     {
+      "text": "Notas",
+      "words": 1,
+      "chars": 5,
+      "lines": 1,
+      "size": 32,
+      "vw": 2.2,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": -0.01,
+      "leading": 1.1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.05,
+      "top": 163,
+      "tag": "h1",
+      "kind": "heading"
+     }
+    ],
+    "headingSummary": {
+     "count": 2,
+     "maxLines": 1,
+     "over2Lines": 0,
+     "statements": 0,
+     "centered": 0,
+     "medianWords": 1,
+     "mixedFontHeadings": 0
+    },
+    "type": {
+     "families": [
+      {
+       "family": "figtree",
+       "share": 0.84,
+       "mono": false
+      },
+      {
+       "family": "newsreader",
+       "share": 0.16,
+       "mono": false
+      }
+     ],
+     "familyCount": 2,
+     "sizes": [
+      12,
+      13,
+      14,
+      22,
+      30,
+      32
+     ],
+     "sizeCount": 6,
+     "notLoaded": [],
+     "body": {
+      "font": "figtree",
+      "size": 14,
+      "leading": 1.5,
+      "weight": 400,
+      "tracking": 0,
+      "contrast": 5.7
+     },
+     "measureChars": 43,
+     "max": {
+      "size": 32,
+      "vw": 2.2,
+      "font": "newsreader",
+      "text": "Notas"
+     },
+     "monoShare": 0,
+     "monoProseShare": 0,
+     "monoFamilies": [],
+     "monoSamples": [],
+     "microLabels": 0,
+     "microLabelShare": 0,
+     "microSamples": [],
+     "upperShare": 0,
+     "centerShare": 0.03,
+     "smallText": 6
+    },
+    "eyebrows": [
+     {
+      "text": "6 notas",
+      "above": "Notas",
+      "upper": false,
+      "tracked": false,
+      "mono": false,
+      "pill": false,
+      "size": 13,
+      "top": 129
+     }
+    ],
+    "numbered": [],
+    "color": {
+     "bodyBg": "#f1f5f6",
+     "bodyBgHsl": {
+      "h": 192,
+      "s": 0.22,
+      "l": 0.95
+     },
+     "dark": false,
+     "sectionBgs": [
+      {
+       "color": "#f1f5f6",
+       "top": 0,
+       "hsl": {
+        "h": 192,
+        "s": 0.22,
+        "l": 0.95
+       }
+      }
+     ],
+     "textColors": [
+      {
+       "color": "#586a70",
+       "share": 0.74
+      },
+      {
+       "color": "#152429",
+       "share": 0.21
+      },
+      {
+       "color": "#ffffff",
+       "share": 0.01
+      },
+      {
+       "color": "#995749",
+       "share": 0.01
+      },
+      {
+       "color": "#965a3d",
+       "share": 0.01
+      }
+     ],
+     "button": {
+      "bg": "#ffffff",
+      "hsl": {
+       "h": 0,
+       "s": 0,
+       "l": 1
+      },
+      "fg": "#152429"
+     },
+     "lowContrast": []
+    },
+    "buttons": {
+     "count": 7,
+     "inHero": 7,
+     "radius": "pill",
+     "height": 36,
+     "withShadow": 0,
+     "withGradient": 0,
+     "mono": 0,
+     "upper": 0,
+     "heroLabels": [
+      "Pular para o conteúdo",
+      "Notas",
+      "Nova nota",
+      "Todas",
+      "Eventos"
+     ]
+    },
+    "surfaces": {
+     "shadowStatic": 0,
+     "shadowOverlay": 0,
+     "shadowSamples": [],
+     "gradients": 0,
+     "scrims": 0,
+     "gradientSamples": [],
+     "gradientText": 0,
+     "hairlines": 1,
+     "hairlineSamples": [
+      "header.mockup-module__zBfSSa__header 1440px"
+     ],
+     "outlinedBoxes": 6,
+     "dashed": 0,
+     "blurred": 0,
+     "roundedBoxes": 6,
+     "boxRadius": 14,
+     "squareMedia": 0,
+     "roundedMedia": 0,
+     "mediaRadius": 0,
+     "textShadow": 0,
+     "cardRows": [
+      {
+       "count": 3,
+       "iconTopped": true,
+       "rounded": true,
+       "top": 329
+      }
+     ]
+    },
+    "heroMedia": [],
+    "nav": {
+     "links": 4,
+     "fixed": false,
+     "height": 73,
+     "floatingPill": false,
+     "blur": false
+    },
+    "fontsLoaded": [
+     "figtree",
+     "newsreader"
+    ]
+   },
+   "layout": {
+    "viewport": {
+     "w": 1440,
+     "h": 900
+    },
+    "pageH": 1141,
+    "margins": {
+     "left": 192,
+     "right": 192
+    },
+    "sections": [
+     {
+      "sel": "section",
+      "tag": "section",
+      "top": 298,
+      "height": 237,
+      "words": 87,
+      "media": 0,
+      "middle": 16,
+      "heading": {
+       "text": "Frango grelhado com arroz integral e legumes",
+       "size": 22,
+       "tag": "h3"
+      },
+      "left": 192,
+      "right": 192,
+      "textLeft": 192,
+      "textRight": 211,
+      "fullBleed": false,
+      "footer": false,
+      "hero": true,
+      "continues": false,
+      "pinned": false
+     },
+     {
+      "sel": "section",
+      "tag": "section",
+      "top": 567,
+      "height": 232,
+      "words": 28,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "Ideias para a proposta",
+       "size": 22,
+       "tag": "h3"
+      },
+      "left": 192,
+      "right": 907,
+      "textLeft": 192,
+      "textRight": 926,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": false,
+      "pinned": false
+     },
+     {
+      "sel": "section",
+      "tag": "section",
+      "top": 830,
+      "height": 211,
+      "words": 44,
+      "media": 0,
+      "middle": 16,
+      "heading": {
+       "text": "Livros para ler",
+       "size": 22,
+       "tag": "h3"
+      },
+      "left": 192,
+      "right": 549,
+      "textLeft": 192,
+      "textRight": 568,
+      "fullBleed": false,
+      "footer": true,
+      "hero": false,
+      "continues": false,
+      "pinned": false
+     }
+    ],
+    "gaps": [],
+    "h1s": [
+     {
+      "text": "Notas",
+      "size": 32,
+      "top": 163,
+      "firstScreen": true
+     }
+    ],
+    "edgeText": [],
+    "edges": [
+     {
+      "x": 211,
+      "n": 6
+     },
+     {
+      "x": 568,
+      "n": 4
+     },
+     {
+      "x": 926,
+      "n": 2
+     },
+     {
+      "x": 192,
+      "n": 1
+     }
+    ],
+    "leftBlocks": 13,
+    "bodySize": 14,
+    "stage": false,
+    "explains": false,
+    "slivers": [],
+    "voidShare": 0.21,
+    "voidBox": {
+     "x": 540,
+     "y": 540,
+     "w": 900,
+     "h": 300
+    }
+   },
+   "app": {
+    "viewport": {
+     "w": 1440,
+     "h": 900
+    },
+    "dark": false,
+    "ground": "#f1f5f6",
+    "sidebar": null,
+    "topbar": {
+     "h": 73
+    },
+    "canvas": {
+     "left": 160,
+     "right": 172
+    },
+    "hero": {
+     "text": "Notas",
+     "words": 1,
+     "chars": 5,
+     "lines": 1,
+     "size": 32,
+     "vw": 2.2,
+     "font": "newsreader",
+     "weight": 400,
+     "tracking": -0.01,
+     "leading": 1.1,
+     "top": 163,
+     "tag": "h1",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "charts": 0,
+    "layout": {
+     "panels": 6,
+     "firstScreen": 4,
+     "ragged": [
+      {
+       "diff": 49,
+       "top": 329
+      },
+      {
+       "diff": 43,
+       "top": 329
+      }
+     ],
+     "voids": []
+    },
+    "tiles": 0,
+    "panels": {
+     "count": 6,
+     "radii": [
+      [
+       14,
+       6
+      ]
+     ],
+     "heavyBorders": 0,
+     "borderSamples": [],
+     "heavyShadows": 0,
+     "softShadows": 0,
+     "shadowSamples": [],
+     "glass": 0
+    },
+    "chips": {
+     "count": 0,
+     "hues": 0,
+     "samples": []
+    },
+    "numbers": {
+     "cells": 0,
+     "leftAligned": 0,
+     "figures": 0,
+     "tabularShare": null,
+     "kpiMax": null
+    },
+    "rows": null,
+    "chartHues": 0,
+    "placeholders": [],
+    "type": {
+     "under13": 0.04,
+     "tiny": 0,
+     "tinySamples": [],
+     "sizes": [
+      12,
+      13,
+      14,
+      22,
+      30,
+      32
+     ]
+    },
+    "title": {
+     "text": "Notas",
+     "size": 32,
+     "top": 163
+    },
+    "colourShare": 0
+   },
+   "consoleErrors": []
+  },
+  {
+   "width": 768,
+   "height": 1024,
+   "load": "load",
+   "screens": 2,
+   "filled": [
+    0.41,
+    0.53
+   ],
+   "motion": {
+    "elements": 1,
+    "css": 0,
+    "transitions": 0,
+    "scripted": 1,
+    "videos": 0,
+    "playingVideos": 0
+   },
+   "metrics": {
+    "viewport": {
+     "w": 768,
+     "h": 1024
+    },
+    "page": {
+     "height": 1313,
+     "screens": 1.3,
+     "words": 192,
+     "img": 0,
+     "video": 0,
+     "canvas": 0,
+     "svg": 19,
+     "sections": 3,
+     "horizontalOverflow": 0,
+     "overflowCulprits": [],
+     "uiFragments": 0,
+     "uiAbuse": false,
+     "realPictures": 0,
+     "videoCount": 0,
+     "uiPictures": 0,
+     "pictureSamples": [],
+     "blendText": 0,
+     "sideScrollers": 0,
+     "brokenImages": [],
+     "emoji": [],
+     "videosNoPoster": 0
+    },
+    "hero": {
+     "text": "Notas",
+     "words": 1,
+     "chars": 5,
+     "lines": 1,
+     "size": 32,
+     "vw": 4.2,
+     "font": "newsreader",
+     "weight": 400,
+     "tracking": -0.01,
+     "leading": 1.1,
+     "top": 163,
+     "tag": "h1",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "h1": {
+     "text": "Notas",
+     "words": 1,
+     "lines": 1,
+     "size": 32,
+     "font": "newsreader"
+    },
+    "headings": [
+     {
+      "text": "braid",
+      "words": 1,
+      "chars": 5,
+      "lines": 1,
+      "size": 30,
+      "vw": 3.9,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": -0.01,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.08,
+      "top": 21,
+      "tag": "a",
+      "kind": "heading"
+     },
+     {
+      "text": "Notas",
+      "words": 1,
+      "chars": 5,
+      "lines": 1,
+      "size": 32,
+      "vw": 4.2,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": -0.01,
+      "leading": 1.1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.1,
+      "top": 163,
+      "tag": "h1",
+      "kind": "heading"
+     }
+    ],
+    "headingSummary": {
+     "count": 2,
+     "maxLines": 1,
+     "over2Lines": 0,
+     "statements": 0,
+     "centered": 0,
+     "medianWords": 1,
+     "mixedFontHeadings": 0
+    },
+    "type": {
+     "families": [
+      {
+       "family": "figtree",
+       "share": 0.84,
+       "mono": false
+      },
+      {
+       "family": "newsreader",
+       "share": 0.16,
+       "mono": false
+      }
+     ],
+     "familyCount": 2,
+     "sizes": [
+      12,
+      13,
+      14,
+      22,
+      30,
+      32
+     ],
+     "sizeCount": 6,
+     "notLoaded": [],
+     "body": {
+      "font": "figtree",
+      "size": 14,
+      "leading": 1.5,
+      "weight": 400,
+      "tracking": 0,
+      "contrast": 5.7
+     },
+     "measureChars": 44,
+     "max": {
+      "size": 32,
+      "vw": 4.2,
+      "font": "newsreader",
+      "text": "Notas"
+     },
+     "monoShare": 0,
+     "monoProseShare": 0,
+     "monoFamilies": [],
+     "monoSamples": [],
+     "microLabels": 0,
+     "microLabelShare": 0,
+     "microSamples": [],
+     "upperShare": 0,
+     "centerShare": 0.03,
+     "smallText": 6
+    },
+    "eyebrows": [
+     {
+      "text": "6 notas",
+      "above": "Notas",
+      "upper": false,
+      "tracked": false,
+      "mono": false,
+      "pill": false,
+      "size": 13,
+      "top": 129
+     }
+    ],
+    "numbered": [],
+    "color": {
+     "bodyBg": "#f1f5f6",
+     "bodyBgHsl": {
+      "h": 192,
+      "s": 0.22,
+      "l": 0.95
+     },
+     "dark": false,
+     "sectionBgs": [
+      {
+       "color": "#f1f5f6",
+       "top": 0,
+       "hsl": {
+        "h": 192,
+        "s": 0.22,
+        "l": 0.95
+       }
+      }
+     ],
+     "textColors": [
+      {
+       "color": "#586a70",
+       "share": 0.74
+      },
+      {
+       "color": "#152429",
+       "share": 0.21
+      },
+      {
+       "color": "#ffffff",
+       "share": 0.01
+      },
+      {
+       "color": "#995749",
+       "share": 0.01
+      },
+      {
+       "color": "#965a3d",
+       "share": 0.01
+      }
+     ],
+     "button": {
+      "bg": "#ffffff",
+      "hsl": {
+       "h": 0,
+       "s": 0,
+       "l": 1
+      },
+      "fg": "#152429"
+     },
+     "lowContrast": []
+    },
+    "buttons": {
+     "count": 7,
+     "inHero": 7,
+     "radius": "pill",
+     "height": 36,
+     "withShadow": 0,
+     "withGradient": 0,
+     "mono": 0,
+     "upper": 0,
+     "heroLabels": [
+      "Pular para o conteúdo",
+      "Notas",
+      "Nova nota",
+      "Todas",
+      "Eventos"
+     ]
+    },
+    "surfaces": {
+     "shadowStatic": 0,
+     "shadowOverlay": 0,
+     "shadowSamples": [],
+     "gradients": 0,
+     "scrims": 0,
+     "gradientSamples": [],
+     "gradientText": 0,
+     "hairlines": 1,
+     "hairlineSamples": [
+      "header.mockup-module__zBfSSa__header 768px"
+     ],
+     "outlinedBoxes": 6,
+     "dashed": 0,
+     "blurred": 0,
+     "roundedBoxes": 6,
+     "boxRadius": 14,
+     "squareMedia": 0,
+     "roundedMedia": 0,
+     "mediaRadius": 0,
+     "textShadow": 0,
+     "cardRows": [
+      {
+       "count": 3,
+       "iconTopped": true,
+       "rounded": true,
+       "top": 329
+      }
+     ]
+    },
+    "heroMedia": [],
+    "nav": {
+     "links": 4,
+     "fixed": false,
+     "height": 73,
+     "floatingPill": false,
+     "blur": false
+    },
+    "fontsLoaded": [
+     "figtree",
+     "newsreader"
+    ]
+   },
+   "layout": {
+    "viewport": {
+     "w": 768,
+     "h": 1024
+    },
+    "pageH": 1313,
+    "margins": {
+     "left": 32,
+     "right": 32
+    },
+    "sections": [
+     {
+      "sel": "section",
+      "tag": "section",
+      "top": 298,
+      "height": 409,
+      "words": 87,
+      "media": 0,
+      "middle": 16,
+      "heading": {
+       "text": "Frango grelhado com arroz integral e legumes",
+       "size": 22,
+       "tag": "h3"
+      },
+      "left": 32,
+      "right": 32,
+      "textLeft": 32,
+      "textRight": 51,
+      "fullBleed": false,
+      "footer": false,
+      "hero": true,
+      "continues": false,
+      "pinned": false
+     },
+     {
+      "sel": "section",
+      "tag": "section",
+      "top": 739,
+      "height": 232,
+      "words": 28,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "Ideias para a proposta",
+       "size": 22,
+       "tag": "h3"
+      },
+      "left": 32,
+      "right": 392,
+      "textLeft": 32,
+      "textRight": 411,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": false,
+      "pinned": false
+     },
+     {
+      "sel": "section",
+      "tag": "section",
+      "top": 1003,
+      "height": 211,
+      "words": 44,
+      "media": 0,
+      "middle": 16,
+      "heading": {
+       "text": "Livros para ler",
+       "size": 22,
+       "tag": "h3"
+      },
+      "left": 32,
+      "right": 32,
+      "textLeft": 32,
+      "textRight": 51,
+      "fullBleed": false,
+      "footer": true,
+      "hero": false,
+      "continues": false,
+      "pinned": false
+     }
+    ],
+    "gaps": [],
+    "h1s": [
+     {
+      "text": "Notas",
+      "size": 32,
+      "top": 163,
+      "firstScreen": true
+     }
+    ],
+    "edgeText": [],
+    "edges": [
+     {
+      "x": 51,
+      "n": 8
+     },
+     {
+      "x": 411,
+      "n": 4
+     },
+     {
+      "x": 32,
+      "n": 1
+     }
+    ],
+    "leftBlocks": 13,
+    "bodySize": 14,
+    "stage": false,
+    "explains": false,
+    "slivers": [],
+    "voidShare": 0,
+    "voidBox": null
+   },
+   "app": {
+    "viewport": {
+     "w": 768,
+     "h": 1024
+    },
+    "dark": false,
+    "ground": "#f1f5f6",
+    "sidebar": null,
+    "topbar": {
+     "h": 73
+    },
+    "canvas": {
+     "left": 32,
+     "right": 32
+    },
+    "hero": {
+     "text": "Notas",
+     "words": 1,
+     "chars": 5,
+     "lines": 1,
+     "size": 32,
+     "vw": 4.2,
+     "font": "newsreader",
+     "weight": 400,
+     "tracking": -0.01,
+     "leading": 1.1,
+     "top": 163,
+     "tag": "h1",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "charts": 0,
+    "layout": {
+     "panels": 6,
+     "firstScreen": 4,
+     "ragged": [],
+     "voids": []
+    },
+    "tiles": 0,
+    "panels": {
+     "count": 6,
+     "radii": [
+      [
+       14,
+       6
+      ]
+     ],
+     "heavyBorders": 0,
+     "borderSamples": [],
+     "heavyShadows": 0,
+     "softShadows": 0,
+     "shadowSamples": [],
+     "glass": 0
+    },
+    "chips": {
+     "count": 0,
+     "hues": 0,
+     "samples": []
+    },
+    "numbers": {
+     "cells": 0,
+     "leftAligned": 0,
+     "figures": 0,
+     "tabularShare": null,
+     "kpiMax": null
+    },
+    "rows": null,
+    "chartHues": 0,
+    "placeholders": [],
+    "type": {
+     "under13": 0.04,
+     "tiny": 0,
+     "tinySamples": [],
+     "sizes": [
+      12,
+      13,
+      14,
+      22,
+      30,
+      32
+     ]
+    },
+    "title": {
+     "text": "Notas",
+     "size": 32,
+     "top": 163
+    },
+    "colourShare": 0
+   },
+   "consoleErrors": []
+  },
+  {
+   "width": 390,
+   "height": 844,
+   "load": "load",
+   "screens": 3,
+   "filled": [
+    0.62,
+    0.65,
+    0.58
+   ],
+   "motion": {
+    "elements": 1,
+    "css": 0,
+    "transitions": 0,
+    "scripted": 1,
+    "videos": 0,
+    "playingVideos": 0
+   },
+   "metrics": {
+    "viewport": {
+     "w": 390,
+     "h": 844
+    },
+    "page": {
+     "height": 1706,
+     "screens": 2,
+     "words": 189,
+     "img": 0,
+     "video": 0,
+     "canvas": 0,
+     "svg": 19,
+     "sections": 3,
+     "horizontalOverflow": 0,
+     "overflowCulprits": [],
+     "uiFragments": 0,
+     "uiAbuse": false,
+     "realPictures": 0,
+     "videoCount": 0,
+     "uiPictures": 0,
+     "pictureSamples": [],
+     "blendText": 0,
+     "sideScrollers": 0,
+     "brokenImages": [],
+     "emoji": [],
+     "videosNoPoster": 0
+    },
+    "hero": {
+     "text": "Notas",
+     "words": 1,
+     "chars": 5,
+     "lines": 1,
+     "size": 28,
+     "vw": 7.2,
+     "font": "newsreader",
+     "weight": 400,
+     "tracking": -0.01,
+     "leading": 1.1,
+     "top": 87,
+     "tag": "h1",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "h1": {
+     "text": "Notas",
+     "words": 1,
+     "lines": 1,
+     "size": 28,
+     "font": "newsreader"
+    },
+    "headings": [
+     {
+      "text": "braid",
+      "words": 1,
+      "chars": 5,
+      "lines": 1,
+      "size": 28,
+      "vw": 7.2,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": -0.01,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.15,
+      "top": 18,
+      "tag": "a",
+      "kind": "heading"
+     },
+     {
+      "text": "Notas",
+      "words": 1,
+      "chars": 5,
+      "lines": 1,
+      "size": 28,
+      "vw": 7.2,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": -0.01,
+      "leading": 1.1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.17,
+      "top": 87,
+      "tag": "h1",
+      "kind": "heading"
+     },
+     {
+      "text": "Frango grelhado com arroz integral e legumes",
+      "words": 7,
+      "chars": 44,
+      "lines": 2,
+      "size": 22,
+      "vw": 5.6,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": -0.005,
+      "leading": 1.2,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.81,
+      "top": 318,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Treino A · peito e tríceps",
+      "words": 6,
+      "chars": 26,
+      "lines": 1,
+      "size": 22,
+      "vw": 5.6,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": -0.005,
+      "leading": 1.2,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.81,
+      "top": 535,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Noite de 13 para 14 de setembro",
+      "words": 7,
+      "chars": 31,
+      "lines": 1,
+      "size": 22,
+      "vw": 5.6,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": -0.005,
+      "leading": 1.2,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.81,
+      "top": 747,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Ideias para a proposta",
+      "words": 4,
+      "chars": 22,
+      "lines": 1,
+      "size": 22,
+      "vw": 5.6,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": -0.005,
+      "leading": 1.2,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.81,
+      "top": 963,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Livros para ler",
+      "words": 3,
+      "chars": 15,
+      "lines": 1,
+      "size": 22,
+      "vw": 5.6,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": -0.005,
+      "leading": 1.2,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.81,
+      "top": 1223,
+      "tag": "h3",
+      "kind": "heading"
+     },
+     {
+      "text": "Lista do mercado",
+      "words": 3,
+      "chars": 16,
+      "lines": 1,
+      "size": 22,
+      "vw": 5.6,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": -0.005,
+      "leading": 1.2,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.81,
+      "top": 1414,
+      "tag": "h3",
+      "kind": "heading"
+     }
+    ],
+    "headingSummary": {
+     "count": 8,
+     "maxLines": 2,
+     "over2Lines": 0,
+     "statements": 0,
+     "centered": 0,
+     "medianWords": 4,
+     "mixedFontHeadings": 0
+    },
+    "type": {
+     "families": [
+      {
+       "family": "figtree",
+       "share": 0.84,
+       "mono": false
+      },
+      {
+       "family": "newsreader",
+       "share": 0.16,
+       "mono": false
+      }
+     ],
+     "familyCount": 2,
+     "sizes": [
+      12,
+      13,
+      14,
+      22,
+      28
+     ],
+     "sizeCount": 5,
+     "notLoaded": [],
+     "body": {
+      "font": "figtree",
+      "size": 14,
+      "leading": 1.5,
+      "weight": 400,
+      "tracking": 0,
+      "contrast": 5.7
+     },
+     "measureChars": 45,
+     "max": {
+      "size": 28,
+      "vw": 7.2,
+      "font": "newsreader",
+      "text": "braid"
+     },
+     "monoShare": 0,
+     "monoProseShare": 0,
+     "monoFamilies": [],
+     "monoSamples": [],
+     "microLabels": 0,
+     "microLabelShare": 0,
+     "microSamples": [],
+     "upperShare": 0,
+     "centerShare": 0.03,
+     "smallText": 6
+    },
+    "eyebrows": [],
+    "numbered": [],
+    "color": {
+     "bodyBg": "#f1f5f6",
+     "bodyBgHsl": {
+      "h": 192,
+      "s": 0.22,
+      "l": 0.95
+     },
+     "dark": false,
+     "sectionBgs": [
+      {
+       "color": "#f1f5f6",
+       "top": 0,
+       "hsl": {
+        "h": 192,
+        "s": 0.22,
+        "l": 0.95
+       }
+      }
+     ],
+     "textColors": [
+      {
+       "color": "#586a70",
+       "share": 0.74
+      },
+      {
+       "color": "#152429",
+       "share": 0.21
+      },
+      {
+       "color": "#ffffff",
+       "share": 0.01
+      },
+      {
+       "color": "#995749",
+       "share": 0.01
+      },
+      {
+       "color": "#965a3d",
+       "share": 0.01
+      }
+     ],
+     "button": {
+      "bg": "#ffffff",
+      "hsl": {
+       "h": 0,
+       "s": 0,
+       "l": 1
+      },
+      "fg": "#152429"
+     },
+     "lowContrast": []
+    },
+    "buttons": {
+     "count": 6,
+     "inHero": 6,
+     "radius": "pill",
+     "height": 36,
+     "withShadow": 0,
+     "withGradient": 0,
+     "mono": 0,
+     "upper": 0,
+     "heroLabels": [
+      "Pular para o conteúdo",
+      "Nova nota",
+      "Todas",
+      "Eventos",
+      "Tarefas"
+     ]
+    },
+    "surfaces": {
+     "shadowStatic": 0,
+     "shadowOverlay": 0,
+     "shadowSamples": [],
+     "gradients": 0,
+     "scrims": 0,
+     "gradientSamples": [],
+     "gradientText": 0,
+     "hairlines": 2,
+     "hairlineSamples": [
+      "header.mockup-module__zBfSSa__header 390px",
+      "nav.mockup-module__zBfSSa__bottomNav 390px"
+     ],
+     "outlinedBoxes": 6,
+     "dashed": 0,
+     "blurred": 0,
+     "roundedBoxes": 6,
+     "boxRadius": 14,
+     "squareMedia": 0,
+     "roundedMedia": 0,
+     "mediaRadius": 0,
+     "textShadow": 0,
+     "cardRows": []
+    },
+    "heroMedia": [],
+    "nav": {
+     "links": 1,
+     "fixed": false,
+     "height": 65,
+     "floatingPill": false,
+     "blur": false
+    },
+    "fontsLoaded": [
+     "figtree",
+     "newsreader"
+    ]
+   },
+   "layout": {
+    "viewport": {
+     "w": 390,
+     "h": 844
+    },
+    "pageH": 1706,
+    "margins": {
+     "left": 18,
+     "right": 18
+    },
+    "sections": [
+     {
+      "sel": "section",
+      "tag": "section",
+      "top": 237,
+      "height": 618,
+      "words": 87,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "Frango grelhado com arroz integral e legumes",
+       "size": 22,
+       "tag": "h3"
+      },
+      "left": 18,
+      "right": 18,
+      "textLeft": 18,
+      "textRight": 37,
+      "fullBleed": false,
+      "footer": false,
+      "hero": true,
+      "continues": false,
+      "pinned": false
+     },
+     {
+      "sel": "section",
+      "tag": "section",
+      "top": 883,
+      "height": 232,
+      "words": 28,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "Ideias para a proposta",
+       "size": 22,
+       "tag": "h3"
+      },
+      "left": 18,
+      "right": 18,
+      "textLeft": 18,
+      "textRight": 37,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": false,
+      "pinned": false
+     },
+     {
+      "sel": "section",
+      "tag": "section",
+      "top": 1143,
+      "height": 402,
+      "words": 44,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "Livros para ler",
+       "size": 22,
+       "tag": "h3"
+      },
+      "left": 18,
+      "right": 18,
+      "textLeft": 18,
+      "textRight": 37,
+      "fullBleed": false,
+      "footer": true,
+      "hero": false,
+      "continues": false,
+      "pinned": false
+     }
+    ],
+    "gaps": [],
+    "h1s": [
+     {
+      "text": "Notas",
+      "size": 28,
+      "top": 87,
+      "firstScreen": true
+     }
+    ],
+    "edgeText": [],
+    "edges": [
+     {
+      "x": 37,
+      "n": 12
+     },
+     {
+      "x": 18,
+      "n": 1
+     }
+    ],
+    "leftBlocks": 13,
+    "bodySize": 14,
+    "stage": false,
+    "explains": false,
+    "slivers": [],
+    "voidShare": 0,
+    "voidBox": null
+   },
+   "app": {
+    "viewport": {
+     "w": 390,
+     "h": 844
+    },
+    "dark": false,
+    "ground": "#f1f5f6",
+    "sidebar": null,
+    "topbar": {
+     "h": 65
+    },
+    "canvas": {
+     "left": 18,
+     "right": 18
+    },
+    "hero": {
+     "text": "Notas",
+     "words": 1,
+     "chars": 5,
+     "lines": 1,
+     "size": 28,
+     "vw": 7.2,
+     "font": "newsreader",
+     "weight": 400,
+     "tracking": -0.01,
+     "leading": 1.1,
+     "top": 87,
+     "tag": "h1",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "charts": 0,
+    "layout": {
+     "panels": 6,
+     "firstScreen": 3,
+     "ragged": [],
+     "voids": []
+    },
+    "tiles": 0,
+    "panels": {
+     "count": 6,
+     "radii": [
+      [
+       14,
+       6
+      ]
+     ],
+     "heavyBorders": 0,
+     "borderSamples": [],
+     "heavyShadows": 0,
+     "softShadows": 0,
+     "shadowSamples": [],
+     "glass": 0
+    },
+    "chips": {
+     "count": 0,
+     "hues": 0,
+     "samples": []
+    },
+    "numbers": {
+     "cells": 0,
+     "leftAligned": 0,
+     "figures": 0,
+     "tabularShare": null,
+     "kpiMax": null
+    },
+    "rows": null,
+    "chartHues": 0,
+    "placeholders": [],
+    "type": {
+     "under13": 0.15,
+     "tiny": 0,
+     "tinySamples": [],
+     "sizes": [
+      12,
+      13,
+      14,
+      20,
+      22,
+      28
+     ]
+    },
+    "title": {
+     "text": "Notas",
+     "size": 28,
+     "top": 87
+    },
+    "colourShare": 0.001
+   },
+   "consoleErrors": []
+  }
+ ],
+ "findings": [
+  {
+   "level": "WARN",
+   "id": "ragged-row",
+   "width": 1440,
+   "message": "2 pair(s) of cards in one row end at different heights (by 49px, 43px).",
+   "fix": "Cards that share a row share a bottom edge: balance them by their content (the same number of rows, a block of similar height beside it), or stack them. In testing, ragged rows were marked down every time."
+  }
+ ],
+ "images": [
+  {
+   "viewport": "desktop",
+   "width": 1440,
+   "fold": "/home/rafaelamaral/Documents/projects/timeline_project/.taste-skill/after-notas/desktop-fold.jpg",
+   "pages": [
+    "/home/rafaelamaral/Documents/projects/timeline_project/.taste-skill/after-notas/desktop-page-01.jpg"
+   ],
+   "film": []
+  },
+  {
+   "viewport": "tablet",
+   "width": 768,
+   "fold": "/home/rafaelamaral/Documents/projects/timeline_project/.taste-skill/after-notas/tablet-fold.jpg",
+   "pages": [
+    "/home/rafaelamaral/Documents/projects/timeline_project/.taste-skill/after-notas/tablet-page-01.jpg"
+   ],
+   "film": []
+  },
+  {
+   "viewport": "mobile",
+   "width": 390,
+   "fold": "/home/rafaelamaral/Documents/projects/timeline_project/.taste-skill/after-notas/mobile-fold.jpg",
+   "pages": [
+    "/home/rafaelamaral/Documents/projects/timeline_project/.taste-skill/after-notas/mobile-page-01.jpg"
+   ],
+   "film": []
+  }
+ ]
+}
