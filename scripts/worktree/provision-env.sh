@@ -66,6 +66,8 @@ if [ -z "$(read_env_var "$ENV_FILE" WORKTREE_SLUG)" ]; then
   API_PORT="$(find_unreserved_port $((WEB_PORT + 1)))"
   RESERVED_PORTS="$RESERVED_PORTS $API_PORT"
   AUTH_PORT="$(find_unreserved_port $((API_PORT + 1)))"
+  RESERVED_PORTS="$RESERVED_PORTS $AUTH_PORT"
+  MCP_PORT="$(find_unreserved_port $((AUTH_PORT + 1)))"
   # Este arquivo guarda so configuracao local derivada. Segredos e URLs com
   # senha continuam vindo do 1Password (o carregador monta as URLs das bases).
   cat > "$ENV_FILE" <<EOT
@@ -75,6 +77,7 @@ API_PORT=${API_PORT}
 API_HOST=127.0.0.1
 AUTH_PORT=${AUTH_PORT}
 AUTH_HOST=127.0.0.1
+MCP_PORT=${MCP_PORT}
 POSTGRES_HOST_PORT=${SHARED_PG_PORT}
 POSTGRES_DB=${DB_NAME}
 AUTH_POSTGRES_DB=${AUTH_DB_NAME}

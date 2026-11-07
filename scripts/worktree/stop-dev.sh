@@ -16,6 +16,9 @@ ports=(
   "$(port_from_local_env API_PORT 3001)"
   "$(port_from_local_env AUTH_PORT 3002)"
 )
+# O MCP so tem porta propria quando a worktree foi provisionada com MCP_PORT.
+mcp_port="$(port_from_local_env MCP_PORT "")"
+[[ -n "$mcp_port" ]] && ports+=("$mcp_port")
 
 for port in "${ports[@]}"; do
   if [[ ! "$port" =~ ^[0-9]+$ ]]; then
