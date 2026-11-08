@@ -32,11 +32,11 @@ export function TaskStatusIcon({ status, size = 18, className }: { status: WorkI
 }
 
 /** As tres barras da prioridade: quantas acendem dizem o quanto. Urgente e a unica em vermelho. */
-export function TaskPriorityMark({ priority, withLabel = false }: { priority: WorkItemPriority; withLabel?: boolean }) {
+export function TaskPriorityMark({ priority, withLabel = false, alwaysLabel = false }: { priority: WorkItemPriority; withLabel?: boolean; alwaysLabel?: boolean }) {
   const lit = taskPriorityBars[priority];
   const label = `Prioridade: ${taskPriorityLabels[priority]}`;
   return (
-    <span role="img" aria-label={label} title={label} className={styles.priority} data-priority={priority}>
+    <span role="img" aria-label={label} title={label} className={styles.priority} data-priority={priority} data-label={alwaysLabel ? "always" : undefined}>
       <svg viewBox="0 0 16 16" fill="none" aria-hidden="true" className={styles.priorityBars}>
         <path d="M3 13V10" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
         <path d="M8 13V7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" opacity={lit >= 2 ? 1 : 0.22} />

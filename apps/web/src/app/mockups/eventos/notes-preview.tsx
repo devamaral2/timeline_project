@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Clock, Dumbbell, Moon, NotepadText, Plus, Search, Utensils } from "lucide-react";
+import { ArrowLeft, Clock, Dumbbell, Moon, FileText, Plus, Search, Utensils } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { tagColorStyle } from "@/lib/tags/tag-color";
 import { noteExamples, type NotePreview } from "./notes-examples";
@@ -10,7 +10,7 @@ const filters = ["Todas", "Eventos", "Tarefas", "Soltas"];
 const groups = ["Hoje", "Ontem", "Esta semana"];
 
 function SourceIcon({ source }: { source: string }) {
-  const Icon = source.includes("Almoço") ? Utensils : source.includes("Academia") ? Dumbbell : source.includes("sono") ? Moon : source.startsWith("Tarefa") ? Clock : NotepadText;
+  const Icon = source.includes("Almoço") ? Utensils : source.includes("Academia") ? Dumbbell : source.includes("sono") ? Moon : source.startsWith("Tarefa") ? Clock : FileText;
   const color = source.includes("Almoço") ? "var(--food)" : source.includes("Academia") ? "var(--training)" : source.includes("sono") ? "var(--sleep)" : undefined;
   return <Icon aria-hidden size={16} strokeWidth={1.75} style={{ color }} />;
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { Logo, Wordmark } from '@/components/brand/Logo';
+import { Wordmark } from '@/components/brand/Logo';
 import { SessionButton } from '@/components/auth/SessionButton';
 import { VoiceEventButton } from '@/components/events/VoiceEventButton';
 import { DateNavigator } from '@/components/events/DateNavigator';
@@ -27,8 +27,7 @@ export function TimelineHeader({
       <div className="mx-auto max-w-[1400px] px-4 py-3 sm:px-6">
         <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
           <div className="flex min-w-0 items-center gap-3">
-            <Logo size={34} />
-            <Wordmark className="hidden text-lg leading-6 text-foreground sm:block" />
+            <Wordmark className="text-lg leading-6 text-foreground" />
           </div>
 
           <DateNavigator

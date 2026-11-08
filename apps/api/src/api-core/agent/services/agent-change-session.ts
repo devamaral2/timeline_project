@@ -33,6 +33,7 @@ import { buildEventOccurrence, buildTaskOccurrenceOf, todayOf } from "../../recu
 import { reviseRecurrence, type RecurrenceRevision } from "../../recurrences/revise-recurrence";
 import { assertParentTaskAssignable } from "../../tasks/assert-parent-task";
 import { firstSearchLimit } from "../skills/recurrence-rule";
+import { entityChanges } from "./agent-entity-changes";
 import { eventItem, noteItem, taskItem } from "./agent-entity-dto";
 
 export type EntityKind = "event" | "task" | "note";
@@ -569,11 +570,18 @@ export class AgentChangeSession {
       toItem: (entity: T) => AgentEntityItem,
       skip: (entity: T) => boolean = () => false,
     ) => {
+      // O diff sai do item ja montado (e nao da entidade): e o que o cliente enxerga.
+      const withChanges = (item: AgentEntityItem, was?: AgentEntityItem): AgentEntityItem => {
+        const changes = entityChanges(was, item);
+        return changes.length > 0 ? { ...item, changes } : item;
+      };
       for (const { change, before } of staged.values()) {
         if (change.op === "create") {
-          if (!skip(change.entity)) result.created.push(toItem(change.entity));
+          if (!skip(change.entity)) result.created.push(withChanges(toItem(change.entity)));
         } else if (change.op === "update") {
-          if (!skip(change.entity)) result.updated.push(toItem(change.entity));
+          if (!skip(change.entity)) {
+            result.updated.push(withChanges(toItem(change.entity), before ? toItem(before) : undefined));
+          }
         } else if (before) result.deleted.push(toItem(before));
       }
     };

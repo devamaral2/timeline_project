@@ -30,7 +30,7 @@ export function EventRail() {
   return (
     <div className={styles.page}>
       <header className={styles.topbar}>
-        <span className={styles.wordmark}>braid</span>
+        <span className={styles.wordmark}>Agente pessoal</span>
         <span className={styles.pill}>Protótipo</span>
       </header>
 

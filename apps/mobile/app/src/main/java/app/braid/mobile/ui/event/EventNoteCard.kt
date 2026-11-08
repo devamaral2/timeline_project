@@ -24,7 +24,6 @@ import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.LocalFireDepartment
 import androidx.compose.material.icons.outlined.Restaurant
 import androidx.compose.material.icons.outlined.Schedule
-import androidx.compose.material.icons.outlined.StickyNote2
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material.icons.outlined.WaterDrop
 import androidx.compose.material3.HorizontalDivider
@@ -73,7 +72,7 @@ import app.braid.mobile.domain.timeline.groupSetsByExercise
 import app.braid.mobile.domain.timeline.pluralize
 import app.braid.mobile.ui.notes.MarkdownText
 
-/** As notes do evento: um cabeçalho com a contagem e um cartão por note, na ordem em que aparecem. */
+/** As notes do evento, na ordem em que aparecem: o conteúdo integral de cada uma, sem cabeçalho de seção. */
 @Composable
 internal fun EventNotesSection(
     notes: List<EventNoteDto>,
@@ -82,19 +81,9 @@ internal fun EventNotesSection(
     agendaMinutes: Int?,
 ) {
     if (notes.isEmpty()) return
-    Column {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 14.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Bottom,
-        ) {
-            SectionLabel("Notas")
-            Text(notes.size.toString(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            notes.forEach { note ->
-                EventNoteCard(note = note, eventName = eventName, dateTitle = dateTitle, agendaMinutes = agendaMinutes)
-            }
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        notes.forEach { note ->
+            EventNoteCard(note = note, eventName = eventName, dateTitle = dateTitle, agendaMinutes = agendaMinutes)
         }
     }
 }
@@ -106,7 +95,6 @@ private fun EventNoteCard(
     dateTitle: String,
     agendaMinutes: Int?,
 ) {
-    var open by rememberSaveable(note.id) { mutableStateOf(true) }
     val title =
         when (note) {
             is MealEventNoteDto -> note.data.name.ifBlank { eventName }
@@ -114,45 +102,19 @@ private fun EventNoteCard(
             is TrainingEventNoteDto -> eventName
             is TextEventNoteDto -> note.name.ifBlank { eventName }
         }
-    Column {
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.large,
-            color = MaterialTheme.colorScheme.surface,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-        ) {
-            Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().clickable { open = !open },
-                    verticalAlignment = Alignment.Top,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Icon(
-                                Icons.Outlined.StickyNote2,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            SectionLabel("Nota")
-                        }
-                        Text(title, style = MaterialTheme.typography.headlineSmall.copy(fontSize = 26.sp, lineHeight = 30.sp))
-                    }
-                    Icon(
-                        imageVector = if (open) Icons.Outlined.KeyboardArrowUp else Icons.Outlined.KeyboardArrowDown,
-                        contentDescription = if (open) "Recolher nota" else "Expandir nota",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                if (open) {
-                    when (note) {
-                        is MealEventNoteDto -> MealNote(note.data)
-                        is TrainingEventNoteDto -> TrainingNote(note.data)
-                        is SleepEventNoteDto -> SleepNote(note.data, agendaMinutes)
-                        is TextEventNoteDto -> MarkdownText(source = note.data.body)
-                    }
-                }
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+    ) {
+        Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+            Text(title, style = MaterialTheme.typography.headlineSmall.copy(fontSize = 26.sp, lineHeight = 30.sp))
+            when (note) {
+                is MealEventNoteDto -> MealNote(note.data)
+                is TrainingEventNoteDto -> TrainingNote(note.data)
+                is SleepEventNoteDto -> SleepNote(note.data, agendaMinutes)
+                is TextEventNoteDto -> MarkdownText(source = note.data.body)
             }
         }
     }

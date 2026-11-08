@@ -1,4 +1,4 @@
-import { Clock, NotepadText, type LucideIcon } from "lucide-react";
+import { Clock, FileText, type LucideIcon } from "lucide-react";
 import { ICON_STROKE_WIDTH, visualForItemType } from "@/components/events/event-visuals";
 import type { NoteDto, NoteLinkDto } from "@/lib/api/contracts";
 import { noteOriginLabel, primaryLinkOf } from "@/lib/notes/notes-model";
@@ -14,7 +14,7 @@ export function originOfLink(link: NoteLinkDto): { Icon: LucideIcon; origin: str
 /** O que prende a nota pela primeira vez: o alvo principal ou nada (nota solta). */
 export function originOf(note: Pick<NoteDto, "links">): { Icon: LucideIcon; origin: string } {
   const link = primaryLinkOf(note);
-  return link ? originOfLink(link) : { Icon: NotepadText, origin: "loose" };
+  return link ? originOfLink(link) : { Icon: FileText, origin: "loose" };
 }
 
 export function NoteOrigin({ note }: { note: NoteDto }) {

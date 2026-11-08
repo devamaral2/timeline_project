@@ -1,6 +1,8 @@
 package app.braid.mobile.data.dto
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
@@ -45,7 +47,13 @@ data class AiJobResultDto(
                             if (kind == null || id == null) {
                                 null
                             } else {
-                                AgentChatEntityRefDto(kind, id, change, (item["name"] as? JsonPrimitive)?.content)
+                                AgentChatEntityRefDto(
+                                    kind,
+                                    id,
+                                    change,
+                                    (item["name"] as? JsonPrimitive)?.content,
+                                    fieldChangesOf(item["changes"]),
+                                )
                             }
                         }
                     }
@@ -73,3 +81,16 @@ data class SubmitVoiceJobDto(
     val transcript: String,
     val requestId: String,
 )
+
+/** Os `changes` de um item do resultado do job; o que não for do formato é ignorado. */
+private fun fieldChangesOf(element: JsonElement?): List<AgentChatFieldChangeDto> =
+    (element as? JsonArray)
+        ?.mapNotNull { entry ->
+            val change = entry as? JsonObject ?: return@mapNotNull null
+            val field = (change["field"] as? JsonPrimitive)?.content ?: return@mapNotNull null
+            AgentChatFieldChangeDto(
+                field = field,
+                before = (change["before"] as? JsonPrimitive)?.content,
+                after = (change["after"] as? JsonPrimitive)?.content,
+            )
+        }.orEmpty()

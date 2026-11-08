@@ -12,7 +12,7 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -30,7 +30,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.braid.mobile.core.designsystem.LucideIcons
 import app.braid.mobile.core.designsystem.braidBrand
-import app.braid.mobile.core.designsystem.braidBrandSoft
 
 /**
  * As quatro entradas da barra inferior, na mesma ordem e com os mesmos ícones
@@ -48,7 +47,7 @@ enum class BottomBarItem(
 
 /**
  * Barra inferior como a do web no celular: só ícones (os rótulos vão para a
- * acessibilidade), fio no topo, o item ativo em tinta cheia com um ponto da cor
+ * acessibilidade), fio no topo, o item ativo em tinta cheia com um traço da cor
  * da marca embaixo, e “Buscar e criar” sempre na cor da marca.
  */
 @Composable
@@ -117,46 +116,30 @@ private fun BottomBarButton(
                 ),
         contentAlignment = Alignment.Center,
     ) {
-        if (item == BottomBarItem.Search) {
-            SearchCreateGlyph()
-        } else {
-            Icon(
-                imageVector = item.vector(),
-                contentDescription = null,
-                tint = tint,
-                modifier = Modifier.size(25.dp),
-            )
-        }
+        Icon(
+            imageVector = item.vector(filled = selected),
+            contentDescription = null,
+            tint = tint,
+            modifier = Modifier.size(25.dp),
+        )
         if (selected && item != BottomBarItem.Search) {
             Box(
                 modifier =
                     Modifier
                         .align(Alignment.BottomCenter)
                         .padding(bottom = 4.dp)
-                        .size(4.dp)
-                        .clip(CircleShape)
+                        .size(width = 16.dp, height = 2.dp)
+                        .clip(RoundedCornerShape(1.dp))
                         .background(braidBrand()),
             )
         }
     }
 }
 
-/** O ponto da marca num círculo suave (`.commandGlyph` do web): a porta do chat com IA. */
-@Composable
-@Suppress("ktlint:standard:function-naming")
-private fun SearchCreateGlyph() {
-    Box(
-        modifier = Modifier.size(48.dp).clip(CircleShape).background(braidBrandSoft()),
-        contentAlignment = Alignment.Center,
-    ) {
-        Box(modifier = Modifier.size(12.dp).clip(CircleShape).background(braidBrand()))
-    }
-}
-
-private fun BottomBarItem.vector(): ImageVector =
+private fun BottomBarItem.vector(filled: Boolean): ImageVector =
     when (this) {
-        BottomBarItem.Tasks -> LucideIcons.squareCheck(LucideIcons.NAV_STROKE)
+        BottomBarItem.Tasks -> LucideIcons.listChecks(LucideIcons.NAV_STROKE)
         BottomBarItem.Agenda -> LucideIcons.calendarDays(LucideIcons.NAV_STROKE)
-        BottomBarItem.Notes -> LucideIcons.notepadText(LucideIcons.NAV_STROKE)
-        BottomBarItem.Search -> error("A busca desenha o próprio glifo")
+        BottomBarItem.Notes -> LucideIcons.fileText(LucideIcons.NAV_STROKE)
+        BottomBarItem.Search -> LucideIcons.messageSquare(LucideIcons.NAV_STROKE, filled = filled)
     }

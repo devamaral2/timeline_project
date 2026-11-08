@@ -5,21 +5,23 @@ import {
   ArrowUp,
   CalendarDays,
   Check,
+  FileText,
+  ListChecks,
   Maximize2,
   MessagesSquare,
   Mic,
   Minimize2,
-  NotepadText,
   Plus,
   RotateCcw,
   Search,
   Square,
-  SquareCheck,
   Trash2,
+  X,
 } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import type { AgentChatClient, AgentChatClientOptions } from "@/lib/agent-chat/agent-chat-client";
 import { type AgentChatMessage, useAgentChat } from "@/lib/agent-chat/use-agent-chat";
+import { changeLines } from "@/lib/agent-chat/format-entity-change";
 import { useAgentConversations } from "@/lib/agent-chat/use-agent-conversations";
 import type {
   deleteConversation,
@@ -31,24 +33,29 @@ import { useSessionState } from "@/lib/session/use-session";
 import { useSpeechRecognition } from "@/lib/speech/use-speech-recognition";
 import { requestAgendaRefresh } from "./agenda-refresh";
 import { HermesSteps } from "./hermes-steps";
+import { CHANGE_LABELS, EntityRows } from "./entity-rows";
 import { ProcessBox } from "./process-box";
-import { BraidMark } from "./braid-mark";
 import { conversationTime, groupConversations, HUB_COMMANDS, type HubCommand, type HubCommandId, parseCommand } from "./hub-commands";
 import styles from "./mockup.module.css";
 
 /** O chat e aberto a partir da agenda; o agente decide se isso importa para o pedido. */
 const AGENDA_CONTEXT: AgentScreenContext = { screen: "agenda" };
 
-const CHANGE_LABELS: Record<AgentChatEntityRef["kind"], Record<AgentChatEntityRef["change"], string>> = {
-  event: { created: "Evento criado", updated: "Evento alterado", deleted: "Evento apagado" },
-  task: { created: "Tarefa criada", updated: "Tarefa alterada", deleted: "Tarefa apagada" },
-  note: { created: "Nota criada", updated: "Nota alterada", deleted: "Nota apagada" },
-};
-
 export function entityChipText(entity: AgentChatEntityRef): string {
   const change = CHANGE_LABELS[entity.kind][entity.change];
   return entity.label ? `${change} · ${entity.label}` : change;
 }
+
+const ENTITY_ROUTES: Record<AgentChatEntityRef["kind"], string> = { event: "eventos", task: "tarefas", note: "notas" };
+
+/** A pagina do registro que a resposta tocou; o que foi apagado nao tem para onde ir. */
+export function agentEntityHref(userId: string, entity: AgentChatEntityRef): string | undefined {
+  if (entity.change === "deleted") return undefined;
+  return `/${userId}/${ENTITY_ROUTES[entity.kind]}/${encodeURIComponent(entity.id)}`;
+}
+
+/** Os atalhos da caixa de mensagem: escrevem o comando no campo, como digitar "/". */
+const COMPOSER_COMMANDS = HUB_COMMANDS.filter((command) => command.id !== "search");
 
 type ChatClientFactory = (options: AgentChatClientOptions) => Pick<AgentChatClient, "send" | "cancel" | "close">;
 
@@ -110,12 +117,16 @@ interface AgentChatPanelProps extends ReturnType<typeof useAgendaChat> {
   onToggleExpanded?: () => void;
   /** Um comando da barra "/" (`/tarefa`, `/buscar`…) com o texto que veio depois dele. */
   onCommand?: (command: HubCommandId, argument: string) => void;
+  /** Fecha o painel; tambem e chamado ao abrir um registro da resposta. */
+  onClose?: () => void;
+  /** Para onde leva cada registro da resposta; sem ela (o mockup), os registros sao so texto. */
+  entityHref?: (entity: AgentChatEntityRef) => string | undefined;
 }
 
-const COMMAND_ICONS: Record<HubCommandId, typeof SquareCheck> = {
-  task: SquareCheck,
+const COMMAND_ICONS: Record<HubCommandId, typeof ListChecks> = {
+  task: ListChecks,
   event: CalendarDays,
-  note: NotepadText,
+  note: FileText,
   search: Search,
 };
 
@@ -132,12 +143,14 @@ export function AgentChatPanel({
   expanded = false,
   onToggleExpanded,
   onCommand,
+  onClose,
+  entityHref,
 }: AgentChatPanelProps) {
   const [prompt, setPrompt] = useState("");
   const [listOpen, setListOpen] = useState(false);
   const [activeCommand, setActiveCommand] = useState(0);
-  const [markRun, setMarkRun] = useState(0);
   const endRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const commandsId = useId();
   const { supported: voiceSupported, listening, interim, error: voiceError, start, stop } = useSpeechRecognition({
     onFinalTranscript: (transcript) => {
@@ -159,6 +172,12 @@ export function AgentChatPanel({
   const commandMatches = command?.matches ?? [];
   const highlighted = commandMatches[Math.min(activeCommand, commandMatches.length - 1)];
   const current = conversations.conversations.find((item) => item.id === chat.conversationId);
+  // Os atalhos so aparecem na conversa; no inicio as pilulas de criar ja fazem esse papel.
+  const showShortcuts = Boolean(onCommand) && view === "conversation";
+  // Com os atalhos, a voz e o enviar ficam lado a lado; numa linha so, um ou outro, para o campo caber.
+  const hasText = Boolean(prompt.trim());
+  const showMic = voiceSupported && (showShortcuts || !hasText);
+  const showSend = showShortcuts || hasText || !voiceSupported;
 
   function updatePrompt(value: string) {
     setPrompt(value);
@@ -179,6 +198,12 @@ export function AgentChatPanel({
       aria-label={expanded ? "Recolher para o painel" : "Expandir para tela inteira"}
     >
       {expanded ? <Minimize2 aria-hidden /> : <Maximize2 aria-hidden />}
+    </button>
+  ) : null;
+
+  const closeButton = onClose ? (
+    <button type="button" className={styles.chatIconButton} data-reveal={view === "home"} onClick={onClose} aria-label="Fechar o chat">
+      <X aria-hidden />
     </button>
   ) : null;
 
@@ -216,8 +241,18 @@ export function AgentChatPanel({
               <MessagesSquare aria-hidden />
             </button>
           )}
-          {view === "conversation" && <h2>{current ? conversationLabel(current) : "Nova conversa"}</h2>}
+          {view === "conversation" ? (
+            <div className={styles.chatTitle}>
+              <span className={styles.chatLive} data-busy={Boolean(chat.pending)}>
+                {chat.hermesMode ? "Hermes" : "Assistente"}
+              </span>
+              <h2>{current ? conversationLabel(current) : "Nova conversa"}</h2>
+            </div>
+          ) : (
+            <span className={styles.chatHeaderSpacer} />
+          )}
           {expandButton}
+          {closeButton}
         </div>
       )}
 
@@ -261,9 +296,6 @@ export function AgentChatPanel({
           </ul>
         ) : view === "home" ? (
           <div className={styles.assistantWelcome}>
-            <button type="button" className={styles.braidReplay} onClick={() => setMarkRun((run) => run + 1)} aria-label="Repetir a animação da marca">
-              <BraidMark key={markRun} tail={expanded ? 194.94 : 73.61} />
-            </button>
             <h2>O que vamos fazer?</h2>
             {signedOut && <p>Entre na sua conta para conversar com a IA.</p>}
             {onCommand && (
@@ -288,7 +320,13 @@ export function AgentChatPanel({
           <>
             <ol className={styles.chatLog} role="log" aria-live="polite" aria-label="Conversa com a IA">
               {chat.messages.map((message) => (
-                <ChatBubble key={message.id} message={message} onRetry={chat.pending ? undefined : chat.retry} />
+                <ChatBubble
+                  key={message.id}
+                  message={message}
+                  onRetry={chat.pending ? undefined : chat.retry}
+                  entityHref={entityHref}
+                  onOpenEntity={onClose}
+                />
               ))}
             </ol>
             {chat.pending && (
@@ -306,6 +344,7 @@ export function AgentChatPanel({
           {voiceError && <p className={styles.hubComposerHint}>{voiceError}</p>}
           <form
             className={styles.chatComposer}
+            data-shortcuts={showShortcuts}
             onSubmit={(event) => {
               event.preventDefault();
               if (highlighted) runCommand(highlighted);
@@ -313,6 +352,7 @@ export function AgentChatPanel({
             }}
           >
             <input
+              ref={inputRef}
               aria-label="Mensagem para a IA"
               aria-controls={commandMatches.length > 0 ? commandsId : undefined}
               aria-activedescendant={highlighted ? `${commandsId}-${highlighted.id}` : undefined}
@@ -331,23 +371,50 @@ export function AgentChatPanel({
               enterKeyHint="send"
               disabled={!chat.ready || listening}
             />
-            {chat.pending ? (
-              <button type="button" onClick={chat.cancel} disabled={chat.pending.cancelling} aria-label="Parar resposta">
-                <Square aria-hidden />
-              </button>
-            ) : listening ? (
-              <button type="button" onClick={stop} aria-pressed aria-label="Parar gravação" data-listening="true">
-                <Square aria-hidden />
-              </button>
-            ) : prompt.trim() ? (
-              <button type="submit" aria-label="Enviar mensagem" data-send="true">
-                <ArrowUp aria-hidden />
-              </button>
-            ) : voiceSupported ? (
-              <button type="button" onClick={start} disabled={!chat.ready} aria-pressed={false} aria-label="Falar com a IA">
-                <Mic aria-hidden />
-              </button>
-            ) : null}
+            <div className={styles.chatComposerRow}>
+              {showShortcuts && (
+                <fieldset className={styles.chatComposerCommands} aria-label="Comandos rápidos">
+                  {COMPOSER_COMMANDS.map((item) => (
+                    <button
+                      type="button"
+                      key={item.id}
+                      title={item.label}
+                      disabled={!chat.ready || listening}
+                      onClick={() => {
+                        updatePrompt(`/${item.slug} `);
+                        inputRef.current?.focus();
+                      }}
+                    >
+                      /{item.slug}
+                    </button>
+                  ))}
+                </fieldset>
+              )}
+              <div className={styles.chatComposerActions}>
+                {chat.pending ? (
+                  <button type="button" onClick={chat.cancel} disabled={chat.pending.cancelling} aria-label="Parar resposta">
+                    <Square aria-hidden />
+                  </button>
+                ) : listening ? (
+                  <button type="button" onClick={stop} aria-pressed aria-label="Parar gravação" data-listening="true">
+                    <Square aria-hidden />
+                  </button>
+                ) : (
+                  <>
+                    {showMic && (
+                      <button type="button" onClick={start} disabled={!chat.ready} aria-pressed={false} aria-label="Falar com a IA">
+                        <Mic aria-hidden />
+                      </button>
+                    )}
+                    {showSend && (
+                      <button type="submit" aria-label="Enviar mensagem" data-send="true" disabled={!chat.ready || !hasText}>
+                        <ArrowUp aria-hidden />
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
           </form>
         </>
       )}
@@ -419,7 +486,42 @@ function ConversationList({ conversations, loading, error, refresh, currentId, b
   );
 }
 
-function ChatBubble({ message, onRetry }: { message: AgentChatMessage; onRetry?: (id: string) => void }) {
+interface ChatBubbleProps {
+  message: AgentChatMessage;
+  onRetry?: (id: string) => void;
+  entityHref?: (entity: AgentChatEntityRef) => string | undefined;
+  onOpenEntity?: () => void;
+}
+
+/** O que o pedido tirou (`-`) e pôs (`+`) num registro, em mono, como o diff do Hermes. */
+function EntityDiff({ entity }: { entity: AgentChatEntityRef }) {
+  const lines = entity.changes?.length ? changeLines(entity.changes) : [];
+  if (lines.length === 0) return null;
+  return (
+    <figure className={styles.chatDiff} aria-label={`Mudanças em ${entity.label ?? "registro"}`}>
+      {entity.label && <figcaption>{entity.label}</figcaption>}
+      {lines.map((line, index) => (
+        <div key={index} className={styles.chatDiffLine} data-sign={line.sign}>
+          <span aria-hidden>{line.sign}</span>
+          <span className="sr-only">{line.sign === "-" ? "saiu" : "entrou"}</span>
+          {line.label && <span className={styles.chatDiffLabel}>{line.label}</span>}
+          <span>{line.value}</span>
+        </div>
+      ))}
+    </figure>
+  );
+}
+
+/** Linhas em branco separam parágrafos; quebras simples ficam dentro do parágrafo. */
+function splitParagraphs(text: string): string[] {
+  const paragraphs = text
+    .split(/\n\s*\n/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean);
+  return paragraphs.length > 0 ? paragraphs : [text];
+}
+
+function ChatBubble({ message, onRetry, entityHref, onOpenEntity }: ChatBubbleProps) {
   if (message.role === "user") {
     return (
       <li className={styles.chatBubble} data-role="user">
@@ -431,16 +533,15 @@ function ChatBubble({ message, onRetry }: { message: AgentChatMessage; onRetry?:
   if (message.role === "assistant") {
     return (
       <li className={styles.chatBubble} data-role="assistant">
-        <p>{message.text}</p>
-        {message.entities.length > 0 && (
-          <ul className={styles.chatEntities} aria-label="Registros desta resposta">
-            {message.entities.map((entity) => (
-              <li key={`${entity.change}:${entity.id}`} data-change={entity.change}>
-                {entityChipText(entity)}
-              </li>
-            ))}
-          </ul>
-        )}
+        <div className={styles.chatProse}>
+          {splitParagraphs(message.text).map((paragraph, index) => (
+            <p key={index}>{paragraph}</p>
+          ))}
+        </div>
+        {message.entities.map((entity) => (
+          <EntityDiff key={`${entity.change}:${entity.id}`} entity={entity} />
+        ))}
+        <EntityRows entities={message.entities} entityHref={entityHref} onOpenEntity={onOpenEntity} />
       </li>
     );
   }
@@ -448,7 +549,7 @@ function ChatBubble({ message, onRetry }: { message: AgentChatMessage; onRetry?:
   if (message.role === "process") {
     return (
       <li className={styles.chatBubble} data-role="process">
-        <ProcessBox process={message.process} />
+        <ProcessBox process={message.process} entityHref={entityHref} onOpenEntity={onOpenEntity} />
       </li>
     );
   }

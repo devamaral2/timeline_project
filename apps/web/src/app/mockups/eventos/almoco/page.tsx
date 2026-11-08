@@ -1,6 +1,5 @@
 import { Apple, ArrowLeft, CalendarDays, Clock3, FileText, MapPin, MoreHorizontal, Pencil, Utensils } from "lucide-react";
 import Link from "next/link";
-import { BrandIcon } from "../mockup-shell";
 import styles from "../mockup.module.css";
 
 export default function LunchMockup() {
@@ -8,7 +7,7 @@ export default function LunchMockup() {
     <main id="conteudo" className={styles.detailMain}>
       <div className={styles.detailNavigation}>
         <Link href="/mockups/eventos" className={styles.backLink} aria-label="Voltar à agenda"><ArrowLeft aria-hidden /><span>Agenda</span></Link>
-        <Link href="/mockups/eventos" className={styles.detailBrand} aria-label="Braid — agenda"><BrandIcon /><span className={styles.wordmark}>Braid</span></Link>
+        <Link href="/mockups/eventos" className={styles.detailBrand} aria-label="Agente pessoal — agenda"><span className={styles.wordmark}>Agente pessoal</span></Link>
         <button type="button" disabled className={styles.iconButton} aria-label="Mais opções do evento"><MoreHorizontal aria-hidden /></button>
       </div>
 

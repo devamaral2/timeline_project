@@ -1,16 +1,22 @@
 "use client";
 
-import { ArrowLeft, Bell, Ellipsis, Pencil, Tag, Trash2 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Bell, Clock3, FileText, Pencil, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  BackButton, BackLink, DetailHead, DetailMenu, DetailMessage, DetailOrigin, DetailScreen, DetailSection,
+  DetailTitle, DetailTopBar, KindRow, LinkGroup, LinkMessage, LinkRow, MenuItem, MetaList, MetaRow, Prose,
+  TagPills, TaskLinkRow, detailIcon,
+} from "@/components/detail/detail-parts";
 import { DeleteEventDialog } from "@/components/events/DeleteEventDialog";
 import { EditEventModal } from "@/components/events/EditEventModal";
-import { ICON_STROKE_WIDTH, notificationOffsetLabel, visualForItemType } from "@/components/events/event-visuals";
+import { notificationOffsetLabel, visualForItemType } from "@/components/events/event-visuals";
 import { authedFetch } from "@/lib/api/authed-fetch";
 import { useNow } from "@/lib/events/use-now";
-import type { EventDetailDto, TaskDetailDto } from "@/lib/api/contracts";
-import { tagColorStyle } from "@/lib/tags/tag-color";
-import { taskStatusLabels } from "@/lib/tasks/tasks-model";
+import type { EventDetailDto, TaskDetailDto, WorkItemStatus } from "@/lib/api/contracts";
+import { noteSnippet } from "@/lib/notes/notes-model";
+import { updateTask } from "@/lib/tasks/task-api";
+import { taskStatusLabels, taskWhenLabel } from "@/lib/tasks/tasks-model";
 import { elapsedSecondsOf, eventPositionOf, formatStopwatch, formatTime } from "@repo/timeline";
 import { agendaRefreshEvent } from "../../../mockups/eventos/agenda-refresh";
 import shellStyles from "../../../mockups/eventos/mockup.module.css";
@@ -18,11 +24,8 @@ import { dateLineOf, formatMinutes, minutesBetween, pluralize } from "@/lib/even
 import { Collapsible } from "@/components/notes/NoteBody";
 import { hasPendingMeal, pendingMealEditMessage } from "@/lib/notes/meal-generation";
 import { usePendingMealRefresh } from "@/lib/notes/use-pending-meal-refresh";
-import { NoteCard, StatusIcon, statusLabelOf } from "./event-detail-parts";
+import { NoteContent, StatusIcon, noteTitleOf, statusLabelOf } from "./event-detail-parts";
 import styles from "./event-details.module.css";
-
-const icon = { "aria-hidden": true, strokeWidth: ICON_STROKE_WIDTH } as const;
-const DESCRIPTION_CLAMP = 180;
 
 export default function EventPage({ params }: { params: Promise<{ userId: string; eventId: string }> }) {
   const now = useNow();
@@ -37,11 +40,9 @@ export default function EventPage({ params }: { params: Promise<{ userId: string
   const [reloadKey, setReloadKey] = useState(0);
   const [savingMissed, setSavingMissed] = useState(false);
   const [mutationError, setMutationError] = useState<string | null>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [savingTaskId, setSavingTaskId] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [descriptionOpen, setDescriptionOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
   const pendingMeal = hasPendingMeal(event?.notes ?? []);
   usePendingMealRefresh(pendingMeal, async () => {
     if (eventId) setEvent(await authedFetch<EventDetailDto>(`/api/events/${eventId}`));
@@ -90,18 +91,21 @@ export default function EventPage({ params }: { params: Promise<{ userId: string
     return () => { cancelled = true; };
   }, [taskIds]);
 
-  useEffect(() => {
-    if (!menuOpen) return;
-    function close(pointer: Event) {
-      if (pointer instanceof KeyboardEvent ? pointer.key === "Escape" : !menuRef.current?.contains(pointer.target as Node)) setMenuOpen(false);
+  /** Troca o status de uma tarefa vinculada, sem sair do evento; a falha volta o status e avisa. */
+  async function updateTaskStatus(task: TaskDetailDto, status: WorkItemStatus) {
+    if (savingTaskId) return;
+    setMutationError(null);
+    setSavingTaskId(task.id);
+    setTasks((current) => current.map((item) => (item.id === task.id ? { ...item, status, revision: item.revision + 1 } : item)));
+    try {
+      await updateTask(task.id, { expectedRevision: task.revision, status });
+    } catch {
+      setTasks((current) => current.map((item) => (item.id === task.id ? task : item)));
+      setMutationError("Não foi possível trocar o status da tarefa. Tente novamente.");
+    } finally {
+      setSavingTaskId(null);
     }
-    document.addEventListener("pointerdown", close);
-    document.addEventListener("keydown", close);
-    return () => {
-      document.removeEventListener("pointerdown", close);
-      document.removeEventListener("keydown", close);
-    };
-  }, [menuOpen]);
+  }
 
   async function updateMissed(missed: boolean) {
     if (!event || savingMissed) return;
@@ -124,11 +128,13 @@ export default function EventPage({ params }: { params: Promise<{ userId: string
     }
   }
 
-  if (loading) return <main id="conteudo" className={shellStyles.detailMain}><p role="status" className={styles.message}>Carregando evento…</p></main>;
+  if (loading) return <main id="conteudo" className={shellStyles.detailMain}><DetailMessage>Carregando evento…</DetailMessage></main>;
   if (error || !event || !userId) return (
     <main id="conteudo" className={shellStyles.detailMain}>
-      <button type="button" className={styles.backLink} onClick={() => router.back()}><ArrowLeft {...icon} />Voltar</button>
-      <p role="alert" className={styles.message}>Não foi possível carregar o evento. Tente novamente.</p>
+      <DetailScreen>
+        <DetailTopBar label="Evento" back={<BackButton onClick={() => router.back()}>Voltar</BackButton>} />
+        <DetailMessage alert>Não foi possível carregar o evento. Tente novamente.</DetailMessage>
+      </DetailScreen>
     </main>
   );
 
@@ -146,101 +152,114 @@ export default function EventPage({ params }: { params: Promise<{ userId: string
     position === "running" && now
       ? formatStopwatch(elapsedSecondsOf(event.startedAt, now))
       : agendaMinutes !== null ? formatMinutes(agendaMinutes) : null;
-    const longDescription = event.description.length > DESCRIPTION_CLAMP || event.description.split("\n").length > 3;
   const linkedTasks = event.taskIds?.length ?? 0;
+  const richNotes = event.notes.filter((note) => note.type !== "text");
+  const hasLinks = event.notes.length > 0 || linkedTasks > 0;
 
   return (
     <main id="conteudo" className={shellStyles.detailMain}>
-      <div className={styles.content} data-type={type}>
-        <nav className={styles.navigation} aria-label="Evento">
-          <a href={`/${userId}`} className={styles.backLink}><ArrowLeft {...icon} />Agenda</a>
-          <div className={styles.actions}>
-            <div className={styles.menuAnchor} ref={menuRef}>
-              <button type="button" className={styles.iconButton} aria-label="Mais ações" aria-haspopup="menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}><Ellipsis {...icon} /></button>
-              {menuOpen ? (
-                <div role="menu" className={styles.menu}>
-                  <button type="button" role="menuitem" className={styles.menuNeutral} disabled={pendingMeal} title={pendingMeal ? pendingMealEditMessage : undefined} onClick={() => { setMenuOpen(false); if (event.kind === "routine") router.push(`/${userId}/eventos/${event.id}/editar`); else setEditing(true); }}><Pencil {...icon} />Editar</button>
-                  <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); setDeleting(true); }}><Trash2 {...icon} />Excluir</button>
-                </div>
-              ) : null}
-            </div>
-          </div>
-        </nav>
+      <DetailScreen type={type}>
+        <DetailTopBar label="Evento" back={<BackLink href={`/${userId}`}>Agenda</BackLink>}>
+          <DetailMenu label="Mais ações">
+            {(close) => (
+              <>
+                <MenuItem icon={<Pencil {...detailIcon} />} disabled={pendingMeal} title={pendingMeal ? pendingMealEditMessage : undefined} onClick={() => { close(); if (event.kind === "routine") router.push(`/${userId}/eventos/${event.id}/editar`); else setEditing(true); }}>Editar</MenuItem>
+                <MenuItem icon={<Trash2 {...detailIcon} />} danger onClick={() => { close(); setDeleting(true); }}>Excluir</MenuItem>
+              </>
+            )}
+          </DetailMenu>
+        </DetailTopBar>
 
-        <header className={styles.heading}>
-          <div className={styles.kindRow}>
-            <span className={styles.type}><TypeIcon {...icon} />{visual.label}</span>
-            {position === "past" ? (
+        <DetailHead>
+          <KindRow
+            icon={<TypeIcon {...detailIcon} />}
+            label={visual.label === "Evento" ? "Evento" : `Evento · ${visual.label}`}
+            trailing={position === "past" ? (
               <button type="button" className={styles.status} aria-pressed={event.missed} disabled={savingMissed}
                 aria-label={`Situação: ${statusLabel}. Toque para marcar como ${event.missed ? "aconteceu" : "não realizado"}`} title={statusLabel}
                 onClick={() => void updateMissed(!event.missed)}><StatusIcon position={position} missed={event.missed} /></button>
-            ) : position ? (
+            ) : position === "running" ? (
               <span className={styles.status} role="img" aria-label={`Situação: ${statusLabel}`} title={statusLabel}><StatusIcon position={position} missed={event.missed} /></span>
-            ) : (
-              <span className={styles.status} aria-hidden="true" />
-            )}
-          </div>
-          <h1>{event.name}</h1>
-          <p className={styles.date}>{dateLine}</p>
-          <p className={styles.date}>
-            <span className={styles.window}><time dateTime={event.startedAt}>{formatTime(event.startedAt)}</time> → {event.finishedAt ? <time dateTime={event.finishedAt}>{endLabel}</time> : endLabel}</span>
-            {durationLabel ? <> · {durationLabel}</> : null}
-          </p>
-        </header>
+            ) : <span className={styles.status} aria-hidden="true" />}
+          />
+          <DetailTitle>{event.name}</DetailTitle>
+          <TagPills tags={event.tags} label="Tags do evento" />
+        </DetailHead>
 
-        {event.notifyOffsetsMinutes.length || event.tags.length ? (
-          <section className={styles.info} aria-label="Informações">
-            {event.notifyOffsetsMinutes.length ? (
-              <div><Bell {...icon} /><div>{event.notifyOffsetsMinutes.map((minutes) => <span key={minutes}>{notificationOffsetLabel(minutes)}</span>)}</div></div>
-            ) : null}
-            {event.tags.length ? (
-              <div><Tag {...icon} /><ul aria-label="Tags do evento">{event.tags.map((tag) => <li key={tag} style={tagColorStyle(tag)}>#{tag}</li>)}</ul></div>
-            ) : null}
+        <MetaList label="Informações">
+          <MetaRow
+            icon={<Clock3 {...detailIcon} />}
+            main={dateLine}
+            sub={
+              <>
+                <time dateTime={event.startedAt}>{formatTime(event.startedAt)}</time> → {event.finishedAt ? <time dateTime={event.finishedAt}>{endLabel}</time> : endLabel}
+                {durationLabel ? <> · {durationLabel}</> : null}
+              </>
+            }
+          />
+          {event.notifyOffsetsMinutes.length ? (
+            <MetaRow icon={<Bell {...detailIcon} />} main={event.notifyOffsetsMinutes.map(notificationOffsetLabel).join(" · ")} />
+          ) : null}
+        </MetaList>
+
+        {event.description ? <Prose clamp>{event.description}</Prose> : null}
+
+        {richNotes.map((note) => <NoteContent key={note.id} note={note} title={noteTitleOf(note, event.name, dateLine)} agendaMinutes={agendaMinutes} />)}
+
+        {event.interruptions.length ? (
+          <section className={styles.collapsibles} aria-label="Mais detalhes">
+            <Collapsible title="Interrupções" summary={pluralize(event.interruptions.length, "interrupção", "interrupções")}>
+              <ul className={styles.list}>
+                {event.interruptions.map((interruption) => (
+                  <li key={interruption.id}>
+                    <div><p>{interruption.name}</p>{interruption.description ? <p className={styles.secondary}>{interruption.description}</p> : null}</div>
+                    <span>{formatMinutes(minutesBetween(interruption.startedAt, interruption.finishedAt))}</span>
+                  </li>
+                ))}
+              </ul>
+            </Collapsible>
           </section>
         ) : null}
 
-        {event.description ? (
-          <div className={styles.descriptionBlock}>
-            <p className={styles.description} data-clamped={longDescription && !descriptionOpen}>{event.description}</p>
-            {longDescription ? <button type="button" className={styles.readMore} aria-expanded={descriptionOpen} onClick={() => setDescriptionOpen((open) => !open)}>{descriptionOpen ? "Ler menos" : "Ler mais"}</button> : null}
-          </div>
-        ) : null}
-
-        {event.notes.map((note) => <NoteCard key={note.id} userId={userId} note={note} eventName={event.name} dateTitle={dateLine} agendaMinutes={agendaMinutes} />)}
-
-        {event.interruptions.length || linkedTasks ? (
-          <section className={styles.collapsibles} aria-label="Mais detalhes">
-            {event.interruptions.length ? (
-              <Collapsible title="Interrupções" summary={pluralize(event.interruptions.length, "interrupção", "interrupções")}>
-                <ul className={styles.list}>
-                  {event.interruptions.map((interruption) => (
-                    <li key={interruption.id}>
-                      <div><p>{interruption.name}</p>{interruption.description ? <p className={styles.secondary}>{interruption.description}</p> : null}</div>
-                      <span>{formatMinutes(minutesBetween(interruption.startedAt, interruption.finishedAt))}</span>
-                    </li>
-                  ))}
-                </ul>
-              </Collapsible>
+        {hasLinks ? (
+          <DetailSection title="Vínculos" labelId="ev-links" className="links">
+            {event.notes.length ? (
+              <LinkGroup id="ev-links-notes" title="Notas vinculadas" count={event.notes.length}>
+                {event.notes.map((note) => (
+                  <LinkRow key={note.id} kind="note" icon={<FileText {...detailIcon} />} title={noteTitleOf(note, event.name, dateLine)} sub={`Nota${noteSnippet(note) ? ` · ${noteSnippet(note)}` : ""}`} href={`/${userId}/notas/${note.id}`} />
+                ))}
+              </LinkGroup>
             ) : null}
             {linkedTasks ? (
-              <Collapsible title="Tarefas vinculadas" summary={pluralize(linkedTasks, "tarefa", "tarefas")}>
-                <ul className={styles.list}>
-                  {tasks.length ? tasks.map((task) => (
-                    <li key={task.id}><p>{task.name}</p><span>{taskStatusLabels[task.status]}</span></li>
-                  )) : (
-                    <li><p>{tasksLoading ? "Carregando tarefas…" : "Não foi possível carregar as tarefas vinculadas."}</p></li>
-                  )}
-                </ul>
-              </Collapsible>
+              <LinkGroup id="ev-links-tasks" title="Tarefas vinculadas" count={linkedTasks}>
+                {tasks.length ? tasks.map((task) => (
+                  <TaskLinkRow
+                    key={task.id}
+                    name={task.name}
+                    status={task.status}
+                    sub={`Tarefa · ${now ? lowerFirst(taskWhenLabel(task, now)) : taskStatusLabels[task.status].toLowerCase()}`}
+                    href={`/${userId}/tarefas/${task.id}`}
+                    busy={savingTaskId === task.id}
+                    onStatusChange={(status) => void updateTaskStatus(task, status)}
+                  />
+                )) : <LinkMessage>{tasksLoading ? "Carregando tarefas…" : "Não foi possível carregar as tarefas vinculadas."}</LinkMessage>}
+              </LinkGroup>
             ) : null}
-          </section>
+          </DetailSection>
         ) : null}
 
-        {mutationError ? <p role="alert" className={styles.message}>{mutationError}</p> : null}
-      </div>
+        <DetailOrigin id="event" />
+
+        {mutationError ? <DetailMessage alert>{mutationError}</DetailMessage> : null}
+      </DetailScreen>
 
       {editing ? <EditEventModal eventId={event.id} onClose={() => setEditing(false)} onUpdated={() => { setEditing(false); setReloadKey((key) => key + 1); window.dispatchEvent(new Event(agendaRefreshEvent)); }} /> : null}
       {deleting ? <DeleteEventDialog eventId={event.id} eventName={event.name} onClose={() => setDeleting(false)} onDeleted={() => { window.dispatchEvent(new Event(agendaRefreshEvent)); router.push(`/${userId}`); }} /> : null}
     </main>
   );
+}
+
+/** "Hoje, 09:00" → "hoje, 09:00": o rótulo da lista, em minúsculas, para ir depois de "Tarefa ·". */
+function lowerFirst(label: string): string {
+  return label.charAt(0).toLocaleLowerCase("pt-BR") + label.slice(1);
 }

@@ -8,6 +8,7 @@ interface MessageEntitiesColumn {
   id: string;
   change: "created" | "updated" | "deleted";
   label?: string;
+  changes?: { field: string; before?: string; after?: string }[];
 }
 
 /**

@@ -356,10 +356,12 @@ private fun StatusIcon(
         ) {
             Icon(icon, contentDescription = null, modifier = Modifier.size(28.dp), tint = tint)
         }
-    } else {
+    } else if (position == EventPosition.Running) {
         Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
             Icon(icon, contentDescription = "Situação: $label", modifier = Modifier.size(28.dp), tint = tint)
         }
+    } else {
+        Box(modifier = Modifier.size(48.dp))
     }
 }
 

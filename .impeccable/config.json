@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "apps/web/src/app/mockups/eventos/mockup.module.css"
+        ],
+        "createdAt": "2026-11-08T09:46:58.457Z",
+        "reason": "Claude triage: L176 is the round 6px 'past' dot in the agenda legend (.timeLegend); the file has no border-left/border-inline-start, so no side-tab accent exists"
+      }
+    ]
+  }
+}

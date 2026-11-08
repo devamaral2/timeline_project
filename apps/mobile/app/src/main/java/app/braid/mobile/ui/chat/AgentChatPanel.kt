@@ -4,11 +4,16 @@ package app.braid.mobile.ui.chat
 
 import android.animation.ValueAnimator
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -26,11 +31,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -46,7 +51,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -55,16 +59,25 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -72,12 +85,64 @@ import app.braid.mobile.core.designsystem.BraidDisplayFont
 import app.braid.mobile.core.designsystem.BraidMonoFont
 import app.braid.mobile.core.designsystem.LucideIcons
 import app.braid.mobile.core.designsystem.braidBrand
-import app.braid.mobile.core.designsystem.braidBrandSoft
+import app.braid.mobile.core.designsystem.braidBrandAccent
+import app.braid.mobile.core.designsystem.braidOnBrand
+import app.braid.mobile.core.designsystem.braidSuccess
 import app.braid.mobile.data.dto.AgentChatEntityRefDto
 import java.time.LocalDate
 
 /** As três vistas do chat; o hub ajusta a altura do painel a elas. */
 enum class ChatView { Home, Conversation, List }
+
+/** Para onde um registro da resposta leva no app. */
+sealed interface ChatEntityTarget {
+    data class Event(
+        val id: String,
+    ) : ChatEntityTarget
+
+    data class Note(
+        val id: String,
+    ) : ChatEntityTarget
+}
+
+/**
+ * A tela do registro que a resposta tocou, como `agentEntityHref` do web. O apagado não
+ * tem para onde ir, e tarefa ainda não tem tela própria no app: as duas ficam só como texto.
+ */
+fun AgentChatEntityRefDto.openTarget(): ChatEntityTarget? =
+    when {
+        change == "deleted" -> null
+        kind == "event" -> ChatEntityTarget.Event(id)
+        kind == "note" -> ChatEntityTarget.Note(id)
+        else -> null
+    }
+
+/** "Evento alterado", "Tarefa criada": o que aconteceu com o registro, como `CHANGE_LABELS` do web. */
+fun entityChangeText(entity: AgentChatEntityRefDto): String {
+    val feminine = entity.kind == "task" || entity.kind == "note"
+    val noun =
+        when (entity.kind) {
+            "event" -> "Evento"
+            "task" -> "Tarefa"
+            "note" -> "Nota"
+            else -> entity.kind
+        }
+    val verb =
+        when (entity.change) {
+            "created" -> if (feminine) "criada" else "criado"
+            "updated" -> if (feminine) "alterada" else "alterado"
+            "deleted" -> if (feminine) "apagada" else "apagado"
+            else -> entity.change
+        }
+    return "$noun $verb"
+}
+
+/** O texto inteiro do registro, como `entityChipText` do web: "Tarefa criada · Limpar a casa". */
+fun entityChipText(entity: AgentChatEntityRefDto): String =
+    entity.label?.let { "${entityChangeText(entity)} · $it" } ?: entityChangeText(entity)
+
+/** Os atalhos da caixa de mensagem: escrevem o comando no campo, como digitar "/". */
+private val COMPOSER_COMMANDS = ChatCommand.entries.filter { it != ChatCommand.Search }
 
 /**
  * O “Chat com IA” do hub, como `AgentChatPanel` (`mockups/eventos/agent-chat-panel.tsx`):
@@ -93,11 +158,15 @@ fun AgentChatPanel(
     onCommand: ((ChatCommand, String) -> Unit)? = null,
     onViewChange: (ChatView) -> Unit = {},
     onEntitiesChanged: () -> Unit = {},
+    onClose: (() -> Unit)? = null,
+    onOpenEntity: ((ChatEntityTarget) -> Unit)? = null,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    var prompt by remember { mutableStateOf("") }
+    // TextFieldValue, não String: o atalho de comando põe o cursor depois do que escreveu.
+    var field by remember { mutableStateOf(TextFieldValue("")) }
+    val prompt = field.text
+    val focusRequester = remember { FocusRequester() }
     var listOpen by remember { mutableStateOf(false) }
-    var markRun by remember { mutableIntStateOf(0) }
     val listState = rememberLazyListState()
     val currentConversation = state.conversations.firstOrNull { it.id == state.conversationId }
     val view =
@@ -123,7 +192,7 @@ fun AgentChatPanel(
 
     fun runCommand(target: ChatCommand) {
         onCommand?.invoke(target, command?.argument.orEmpty())
-        prompt = ""
+        field = TextFieldValue("")
     }
 
     Column(modifier = modifier.fillMaxSize()) {
@@ -140,12 +209,12 @@ fun AgentChatPanel(
             }
         } else {
             val buttonAlpha = if (view == ChatView.Home) reveal else 1f
-            ChatHeaderRow {
+            ChatHeaderRow(divider = view == ChatView.Conversation) {
                 ChatIconButton(LucideIcons.messagesSquare(), "Todas as conversas", modifier = Modifier.alpha(buttonAlpha)) {
                     listOpen = true
                 }
                 if (view == ChatView.Conversation) {
-                    ChatHeaderTitle(currentConversation?.label() ?: "Nova conversa", fontSize = 14)
+                    ChatConversationTitle(currentConversation?.label() ?: "Nova conversa", busy = state.pending != null)
                 } else {
                     Spacer(modifier = Modifier.weight(1f))
                 }
@@ -156,6 +225,9 @@ fun AgentChatPanel(
                         modifier = Modifier.alpha(buttonAlpha),
                         onClick = onToggleExpanded,
                     )
+                }
+                if (onClose != null) {
+                    ChatIconButton(LucideIcons.close(), "Fechar o chat", modifier = Modifier.alpha(buttonAlpha), onClick = onClose)
                 }
             }
         }
@@ -176,8 +248,6 @@ fun AgentChatPanel(
                 view == ChatView.Home ->
                     ChatHome(
                         expanded = expanded,
-                        markRun = markRun,
-                        onReplay = { markRun++ },
                         onCommand = onCommand,
                     )
                 state.isLoadingMessages ->
@@ -190,14 +260,15 @@ fun AgentChatPanel(
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         state = listState,
-                        contentPadding = PaddingValues(top = 8.dp, bottom = 14.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = PaddingValues(top = 12.dp, bottom = 14.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp),
                     ) {
                         items(state.messages, key = { it.id }) { message ->
                             ChatMessageBubble(
                                 message = message,
                                 onRetry = { viewModel.retry(message.id) },
                                 canRetry = state.pending == null,
+                                onOpenEntity = onOpenEntity,
                             )
                         }
                         state.pending?.let { pending ->
@@ -216,16 +287,25 @@ fun AgentChatPanel(
         if (view != ChatView.List) {
             ChatComposer(
                 modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 24.dp),
-                value = prompt,
+                value = field,
                 enabled = state.pending == null && !state.isRecoveringJobs && !state.isLoadingMessages,
                 pending = state.pending,
-                onValueChange = { prompt = it.take(4000) },
+                focusRequester = focusRequester,
+                shortcuts = if (onCommand != null && view == ChatView.Conversation) COMPOSER_COMMANDS else emptyList(),
+                onValueChange = { next ->
+                    field = if (next.text.length > 4000) TextFieldValue(next.text.take(4000), TextRange(4000)) else next
+                },
+                onShortcut = { shortcut ->
+                    val text = "/${shortcut.slug} "
+                    field = TextFieldValue(text, TextRange(text.length))
+                    focusRequester.requestFocus()
+                },
                 onSend = {
                     when {
                         highlighted != null -> runCommand(highlighted)
                         prompt.isNotBlank() && !state.isRecoveringJobs && !state.isLoadingMessages -> {
                             viewModel.send(prompt)
-                            prompt = ""
+                            field = TextFieldValue("")
                         }
                     }
                 },
@@ -250,12 +330,82 @@ private fun rememberHomeReveal(): Float {
 }
 
 @Composable
-private fun ChatHeaderRow(content: @Composable RowScope.() -> Unit) {
+private fun ChatHeaderRow(
+    divider: Boolean = false,
+    content: @Composable RowScope.() -> Unit,
+) {
+    val line = MaterialTheme.colorScheme.outline
     Row(
-        modifier = Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 10.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .drawBehind {
+                    if (divider) {
+                        val stroke = 1.dp.toPx()
+                        drawLine(line, Offset(0f, size.height - stroke / 2), Offset(size.width, size.height - stroke / 2), stroke)
+                    }
+                }.padding(horizontal = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) { content() }
+}
+
+/** O título da conversa com quem responde em cima (`.chatTitle` + `.chatLive` do web). */
+@Composable
+private fun RowScope.ChatConversationTitle(
+    title: String,
+    busy: Boolean,
+) {
+    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        ChatLiveLabel(text = "Assistente", busy = busy)
+        Text(
+            modifier = Modifier.semantics { heading() },
+            text = title,
+            fontSize = 15.sp,
+            lineHeight = 19.sp,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+/** O ponto da marca com o halo e o nome em caixa alta; o ponto pulsa enquanto a resposta não chega. */
+@Composable
+private fun ChatLiveLabel(
+    text: String,
+    busy: Boolean,
+) {
+    val brand = braidBrand()
+    val animate = remember { ValueAnimator.areAnimatorsEnabled() }
+    val pulse =
+        if (busy && animate) {
+            val transition = rememberInfiniteTransition(label = "chatLive")
+            transition
+                .animateFloat(
+                    initialValue = 1f,
+                    targetValue = 0.35f,
+                    animationSpec = infiniteRepeatable(tween(durationMillis = 700), RepeatMode.Reverse),
+                    label = "chatLiveDot",
+                ).value
+        } else {
+            1f
+        }
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+        Box(modifier = Modifier.size(12.dp), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.size(12.dp).background(brand.copy(alpha = 0.22f), CircleShape))
+            Box(modifier = Modifier.size(6.dp).alpha(pulse).background(brand, CircleShape))
+        }
+        Text(
+            text = text.uppercase(),
+            fontSize = 11.sp,
+            lineHeight = 13.sp,
+            fontWeight = FontWeight.SemiBold,
+            letterSpacing = 1.3.sp,
+            color = braidBrandAccent(),
+        )
+    }
 }
 
 @Composable
@@ -301,13 +451,11 @@ private fun ChatIconButton(
     }
 }
 
-/** O início: a marca (toque para repetir) e “O que vamos fazer?”, sem sugestões. */
+/** O início: “O que vamos fazer?” e as pílulas de criar, sem marca. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ChatHome(
     expanded: Boolean,
-    markRun: Int,
-    onReplay: () -> Unit,
     onCommand: ((ChatCommand, String) -> Unit)? = null,
 ) {
     Column(
@@ -315,23 +463,6 @@ private fun ChatHome(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(22.dp, Alignment.CenterVertically),
     ) {
-        // Só a trança ocupa lugar; os fios soltos sobem por cima do cabeçalho.
-        Box(
-            modifier =
-                Modifier
-                    .height(74.dp)
-                    .wrapContentHeight(align = Alignment.Bottom, unbounded = true)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClickLabel = "Repetir a animação da marca",
-                        onClick = onReplay,
-                    ),
-        ) {
-            androidx.compose.runtime.key(markRun, expanded) {
-                BraidMark(tail = if (expanded) BRAID_TAIL_FULL else BRAID_TAIL_PANEL)
-            }
-        }
         Text(
             modifier = Modifier.semantics { heading() },
             text = "O que vamos fazer?",
@@ -416,9 +547,9 @@ private fun CommandList(
 
 private fun ChatCommand.icon(): ImageVector =
     when (this) {
-        ChatCommand.Task -> LucideIcons.squareCheck()
+        ChatCommand.Task -> LucideIcons.listChecks()
         ChatCommand.Event -> LucideIcons.calendarDays()
-        ChatCommand.Note -> LucideIcons.notepadText()
+        ChatCommand.Note -> LucideIcons.fileText()
         ChatCommand.Search -> LucideIcons.search()
     }
 
@@ -535,16 +666,20 @@ private fun ConversationList(
 }
 
 /**
- * `.chatComposer`: o campo sublinhado do design, com o fio na cor da marca
- * enquanto tem o foco. À direita, enviar quando há texto e parar quando a IA
- * está respondendo. A voz fica na barra da agenda, como antes.
+ * `.chatComposer`: a caixa de mensagem, com o fio na cor da marca enquanto tem o
+ * foco. Em cima o campo; embaixo os atalhos de comando, e à direita o enviar (o
+ * círculo da marca) ou o parar enquanto a IA responde. A voz fica na barra da
+ * agenda, como antes.
  */
 @Composable
 private fun ChatComposer(
-    value: String,
+    value: TextFieldValue,
     enabled: Boolean,
     pending: AgentChatPendingUi?,
-    onValueChange: (String) -> Unit,
+    focusRequester: FocusRequester,
+    shortcuts: List<ChatCommand>,
+    onValueChange: (TextFieldValue) -> Unit,
+    onShortcut: (ChatCommand) -> Unit,
     onSend: () -> Unit,
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
@@ -552,112 +687,229 @@ private fun ChatComposer(
     val colors = MaterialTheme.colorScheme
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
-    val line = if (focused) braidBrand() else colors.outlineVariant
-    Row(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .heightIn(min = 52.dp)
-                .drawBehind {
-                    val stroke = (if (focused) 2.dp else 1.dp).toPx()
-                    drawLine(line, Offset(0f, size.height - stroke / 2), Offset(size.width, size.height - stroke / 2), stroke)
-                },
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        BasicTextField(
-            modifier = Modifier.weight(1f).semantics { contentDescription = "Mensagem para a IA" },
-            value = value,
-            onValueChange = onValueChange,
-            enabled = enabled,
-            maxLines = 4,
-            interactionSource = interaction,
-            textStyle = MaterialTheme.typography.bodyLarge.copy(color = colors.onSurface, fontSize = 16.sp),
-            cursorBrush = SolidColor(braidBrand()),
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-            keyboardActions = KeyboardActions(onSend = { onSend() }),
-            decorationBox = { inner ->
-                Box(modifier = Modifier.padding(vertical = 12.dp)) {
-                    if (value.isEmpty()) {
-                        Text(
-                            text = "Pergunte ou digite / para comandos",
-                            style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp),
-                            color = colors.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                    inner()
-                }
-            },
-        )
+    val shape = RoundedCornerShape(14.dp)
+    val boxModifier =
+        modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(colors.surfaceVariant)
+            .border(BorderStroke(1.dp, if (focused) braidBrand() else colors.outline), shape)
+    val action: @Composable () -> Unit = {
         when {
             pending != null ->
                 ChatIconButton(Icons.Outlined.Stop, "Parar resposta", enabled = !pending.cancelling, onClick = onCancel)
-            value.isNotBlank() ->
-                ChatIconButton(LucideIcons.arrowUp(2f), "Enviar mensagem", tint = braidBrand(), onClick = onSend)
-            else -> Spacer(modifier = Modifier.width(0.dp))
+            // Numa linha só (o início), o enviar aparece com o texto, como antes; com os atalhos fica sempre.
+            shortcuts.isNotEmpty() || value.text.isNotBlank() ->
+                SendButton(enabled = enabled && value.text.isNotBlank(), onClick = onSend)
+        }
+    }
+    val field: @Composable (Modifier) -> Unit = { fieldModifier ->
+        ComposerField(value, enabled, focusRequester, interaction, onValueChange, onSend, fieldModifier)
+    }
+    if (shortcuts.isEmpty()) {
+        Row(
+            modifier = boxModifier.heightIn(min = 52.dp).padding(start = 14.dp, end = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            field(Modifier.weight(1f))
+            action()
+        }
+        return
+    }
+    Column(modifier = boxModifier.padding(start = 14.dp, end = 4.dp, top = 8.dp, bottom = 4.dp)) {
+        field(Modifier.fillMaxWidth())
+        Row(
+            modifier = Modifier.fillMaxWidth().heightIn(min = 44.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            shortcuts.forEach { shortcut ->
+                CommandShortcut(shortcut = shortcut, enabled = enabled, onClick = { onShortcut(shortcut) })
+            }
+            Spacer(modifier = Modifier.weight(1f))
+            action()
         }
     }
 }
 
-/** `.chatBubble`: o balão da pessoa na cor suave da marca, a IA sem fundo e o erro avermelhado. */
+/** O campo da caixa de mensagem, com o texto de ajuda enquanto está vazio. */
+@Composable
+private fun ComposerField(
+    value: TextFieldValue,
+    enabled: Boolean,
+    focusRequester: FocusRequester,
+    interaction: MutableInteractionSource,
+    onValueChange: (TextFieldValue) -> Unit,
+    onSend: () -> Unit,
+    modifier: Modifier,
+) {
+    val colors = MaterialTheme.colorScheme
+    BasicTextField(
+        modifier =
+            modifier
+                .focusRequester(focusRequester)
+                .semantics { contentDescription = "Mensagem para a IA" },
+        value = value,
+        onValueChange = onValueChange,
+        enabled = enabled,
+        maxLines = 4,
+        interactionSource = interaction,
+        textStyle = MaterialTheme.typography.bodyLarge.copy(color = colors.onSurface, fontSize = 16.sp),
+        cursorBrush = SolidColor(braidBrand()),
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+        keyboardActions = KeyboardActions(onSend = { onSend() }),
+        decorationBox = { inner ->
+            Box(modifier = Modifier.padding(vertical = 8.dp)) {
+                if (value.text.isEmpty()) {
+                    Text(
+                        text = "Pergunte ou digite / para comandos",
+                        style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp),
+                        color = colors.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                inner()
+            }
+        },
+    )
+}
+
+/** `.chatComposerCommands button`: `/tarefa`, `/evento`, `/nota` em mono, com fio. */
+@Composable
+private fun CommandShortcut(
+    shortcut: ChatCommand,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    val colors = MaterialTheme.colorScheme
+    val shape = RoundedCornerShape(7.dp)
+    Box(
+        modifier =
+            Modifier
+                .heightIn(min = 32.dp)
+                .clip(shape)
+                .border(BorderStroke(1.dp, colors.outline), shape)
+                .clickable(enabled = enabled, onClickLabel = shortcut.label, onClick = onClick)
+                .padding(horizontal = 9.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = "/${shortcut.slug}",
+            fontFamily = BraidMonoFont,
+            fontSize = 12.sp,
+            color = colors.onSurfaceVariant.copy(alpha = if (enabled) 1f else 0.4f),
+        )
+    }
+}
+
+/** O enviar: o círculo da marca de 36 dp dentro do alvo de 44, apagado enquanto não há texto. */
+@Composable
+private fun SendButton(
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier =
+            Modifier
+                .size(44.dp)
+                .clip(CircleShape)
+                .clickable(enabled = enabled, onClickLabel = "Enviar mensagem", onClick = onClick)
+                .semantics { contentDescription = "Enviar mensagem" },
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .size(36.dp)
+                    .alpha(if (enabled) 1f else 0.4f)
+                    .clip(CircleShape)
+                    .background(braidBrand()),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = LucideIcons.arrowUp(2.2f),
+                contentDescription = null,
+                tint = braidOnBrand(),
+                modifier = Modifier.size(18.dp),
+            )
+        }
+    }
+}
+
+/**
+ * `.chatBubble`: o pedido é um bloco de largura inteira, com fio, como no Hermes; a
+ * resposta é texto solto e o erro fica avermelhado.
+ */
+/** Linhas em branco separam parágrafos; quebras simples ficam dentro do parágrafo (`splitParagraphs` do web). */
+internal fun splitParagraphs(text: String): List<String> =
+    text.split(Regex("\\n\\s*\\n")).map { it.trim() }.filter { it.isNotEmpty() }.ifEmpty { listOf(text) }
+
 @Composable
 private fun ChatMessageBubble(
     message: AgentChatUiMessage,
     onRetry: () -> Unit,
     canRetry: Boolean,
+    onOpenEntity: ((ChatEntityTarget) -> Unit)?,
 ) {
     val colors = MaterialTheme.colorScheme
     val isUser = message.role == AgentChatMessageRole.User
     val isError = message.role == AgentChatMessageRole.Error
     if (message.role == AgentChatMessageRole.Process) {
-        ProcessBox(message.process, Modifier.fillMaxWidth())
+        ProcessBox(message.process, Modifier.fillMaxWidth(), onOpenEntity = onOpenEntity)
         return
     }
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = if (isUser) Alignment.End else Alignment.Start,
-    ) {
+    val blockShape = RoundedCornerShape(8.dp)
+    Column(modifier = Modifier.fillMaxWidth()) {
         when {
             isUser ->
                 Text(
                     modifier =
                         Modifier
-                            .fillMaxWidth(0.85f)
-                            .background(braidBrandSoft(), RoundedCornerShape(14.dp, 14.dp, 4.dp, 14.dp))
-                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                            .fillMaxWidth()
+                            .clip(blockShape)
+                            .background(colors.surfaceVariant)
+                            .border(BorderStroke(1.dp, colors.outline), blockShape)
+                            .padding(horizontal = 13.dp, vertical = 11.dp),
                     text = message.text,
-                    fontSize = 13.sp,
-                    lineHeight = 21.sp,
+                    fontSize = 15.sp,
+                    lineHeight = 23.sp,
                 )
             isError ->
                 Text(
                     modifier =
                         Modifier
-                            .fillMaxWidth(0.92f)
-                            .background(colors.error.copy(alpha = 0.12f), RoundedCornerShape(14.dp))
-                            .border(BorderStroke(1.dp, colors.error.copy(alpha = 0.4f)), RoundedCornerShape(14.dp))
-                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                            .fillMaxWidth()
+                            .background(colors.error.copy(alpha = 0.12f), blockShape)
+                            .border(BorderStroke(1.dp, colors.error.copy(alpha = 0.4f)), blockShape)
+                            .padding(horizontal = 13.dp, vertical = 11.dp),
                     text = message.text,
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     color = colors.error,
                 )
             else ->
-                Text(
-                    modifier = Modifier.fillMaxWidth(0.92f).padding(end = 2.dp),
-                    text = message.text,
-                    fontSize = 13.sp,
-                    lineHeight = 21.sp,
-                )
+                Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    splitParagraphs(message.text).forEach { paragraph ->
+                        Text(
+                            modifier = Modifier.fillMaxWidth(),
+                            text = paragraph,
+                            fontSize = 15.sp,
+                            lineHeight = 22.sp,
+                        )
+                    }
+                }
         }
+        message.entities.forEach { entity -> EntityDiff(entity) }
         if (message.entities.isNotEmpty()) {
             Column(
-                modifier = Modifier.padding(top = 8.dp),
-                horizontalAlignment = if (isUser) Alignment.End else Alignment.Start,
-                verticalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
-                message.entities.forEach { entity -> EntityChip(entity) }
+                message.entities.forEach { entity ->
+                    val target = entity.openTarget()
+                    EntityRow(entity, onOpen = if (target != null && onOpenEntity != null) ({ onOpenEntity(target) }) else null)
+                }
             }
         }
         if (isError && canRetry && message.retryText.isNotBlank()) {
@@ -666,38 +918,102 @@ private fun ChatMessageBubble(
     }
 }
 
-/** `.chatEntities li`: pílula de fio, na cor da marca quando o registro foi criado. */
+/**
+ * `.chatEntityRow`: cada registro da resposta numa linha com fio, o ícone do tipo na cor
+ * da marca e a seta quando abre a tela dele. O apagado fica riscado.
+ */
+/** O que o pedido tirou (`-`) e pôs (`+`) num registro, em mono (`EntityDiff` do web). */
 @Composable
-private fun EntityChip(entity: AgentChatEntityRefDto) {
-    val created = entity.change == "created"
-    val color = if (created) braidBrand() else MaterialTheme.colorScheme.onSurfaceVariant
-    Text(
+private fun EntityDiff(entity: AgentChatEntityRefDto) {
+    val lines = remember(entity.changes) { changeLines(entity.changes) }
+    if (lines.isEmpty()) return
+    val colors = MaterialTheme.colorScheme
+    val shape = RoundedCornerShape(8.dp)
+    val mono = TextStyle(fontFamily = BraidMonoFont, fontSize = 12.5.sp, lineHeight = 19.sp)
+    Column(
         modifier =
             Modifier
-                .border(
-                    BorderStroke(1.dp, if (created) braidBrand().copy(alpha = 0.4f) else MaterialTheme.colorScheme.outline),
-                    CircleShape,
-                ).padding(horizontal = 9.dp, vertical = 4.dp),
-        text = entityChipText(entity),
-        fontSize = 11.sp,
-        color = color,
-    )
+                .fillMaxWidth()
+                .padding(top = 10.dp)
+                .clip(shape)
+                .background(colors.surfaceVariant)
+                .border(BorderStroke(1.dp, colors.outline), shape)
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        entity.label?.let { Text(text = it, style = mono, color = colors.onSurfaceVariant, maxLines = 1, softWrap = false) }
+        lines.forEach { line ->
+            val removed = line.sign == '-'
+            val tint = if (removed) colors.error else braidSuccess()
+            val spoken = if (removed) "saiu" else "entrou"
+            Row(
+                modifier = Modifier.semantics(mergeDescendants = true) { contentDescription = "$spoken: ${line.label} ${line.value}".trim() },
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Text(text = line.sign.toString(), style = mono, color = tint)
+                if (line.label.isNotEmpty()) {
+                    Text(modifier = Modifier.widthIn(min = 70.dp), text = line.label, style = mono, color = tint.copy(alpha = 0.75f), softWrap = false)
+                }
+                Text(text = line.value, style = mono, color = tint, softWrap = false)
+            }
+        }
+    }
 }
 
-private fun entityChipText(entity: AgentChatEntityRefDto): String {
-    val noun =
-        when (entity.kind) {
-            "event" -> "Evento"
-            "task" -> "Tarefa"
-            "note" -> "Nota"
-            else -> entity.kind
+@Composable
+internal fun EntityRow(
+    entity: AgentChatEntityRefDto,
+    onOpen: (() -> Unit)?,
+) {
+    val colors = MaterialTheme.colorScheme
+    val shape = RoundedCornerShape(8.dp)
+    val text =
+        buildAnnotatedString {
+            withStyle(SpanStyle(color = colors.onSurfaceVariant)) {
+                append(entityChangeText(entity))
+                if (entity.label != null) append(" · ")
+            }
+            entity.label?.let { append(it) }
         }
-    val verb =
-        when (entity.change) {
-            "created" -> "criado"
-            "updated" -> "alterado"
-            "deleted" -> "apagado"
-            else -> entity.change
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = 40.dp)
+                .clip(shape)
+                .then(if (onOpen != null) Modifier.clickable(onClickLabel = "Abrir", onClick = onOpen) else Modifier),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Icon(
+            imageVector = entity.icon(),
+            contentDescription = null,
+            tint = braidBrand(),
+            modifier = Modifier.size(17.dp),
+        )
+        Text(
+            modifier = Modifier.weight(1f),
+            text = text,
+            fontSize = 14.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textDecoration = if (entity.change == "deleted") TextDecoration.LineThrough else null,
+        )
+        if (onOpen != null) {
+            Icon(
+                imageVector = LucideIcons.chevronRight(),
+                contentDescription = null,
+                tint = colors.onSurfaceVariant,
+                modifier = Modifier.size(16.dp),
+            )
         }
-    return entity.label?.let { "$noun $verb · $it" } ?: "$noun $verb"
+    }
 }
+
+private fun AgentChatEntityRefDto.icon(): ImageVector =
+    when (kind) {
+        "event" -> LucideIcons.calendarDays()
+        "note" -> LucideIcons.fileText()
+        else -> LucideIcons.listChecks()
+    }

@@ -1,38 +1,34 @@
 "use client";
 
-import { ArrowLeft, CalendarPlus, ChevronRight, Ellipsis, Pencil, Tag, Trash2, Unlink } from "lucide-react";
-import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { ListChecks, Pencil, Trash2, Unlink } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ICON_STROKE_WIDTH } from "@/components/events/event-visuals";
+import {
+  BackLink, DetailHead, DetailMenu, DetailMessage, DetailOrigin, DetailScreen, DetailSection, DetailTitle,
+  DetailTopBar, LinkGroup, LinkRow, MenuItem, Rule, Stamp, TagPills, detailIcon,
+} from "@/components/detail/detail-parts";
 import { authedFetch } from "@/lib/api/authed-fetch";
 import type { NoteDto } from "@/lib/api/contracts";
 import { useNow } from "@/lib/events/use-now";
 import { noteDates, sleepAgendaOf, whenLabel } from "@/lib/notes/notes-model";
 import { hasPendingMeal, pendingMealEditMessage } from "@/lib/notes/meal-generation";
 import { usePendingMealRefresh } from "@/lib/notes/use-pending-meal-refresh";
-import { tagColorStyle } from "@/lib/tags/tag-color";
 import shellStyles from "@/app/mockups/eventos/mockup.module.css";
 import { DeleteNoteDialog } from "./DeleteNoteDialog";
 import { NoteContent } from "./NoteContent";
 import { NoteEditorDialog } from "./NoteEditorDialog";
 import { originOfLink } from "./NoteOrigin";
-import styles from "./notes.module.css";
 
-const icon = { "aria-hidden": true, strokeWidth: ICON_STROKE_WIDTH } as const;
-
-/** A nota aberta: título, datas, tags, onde ela aparece e o conteúdo — com editar, soltar e excluir no menu. */
+/** A nota aberta: título, datas, tags, o conteúdo e os vínculos — com editar, soltar e excluir no menu. */
 export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: string }) {
   const router = useRouter();
   const now = useNow();
   const [note, setNote] = useState<NoteDto | null>(null);
   const [error, setError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
   const listHref = `/${userId}/notas`;
   const pendingMeal = hasPendingMeal(note ? [note] : []);
   usePendingMealRefresh(pendingMeal, async () => {
@@ -49,22 +45,8 @@ export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: s
     return () => { cancelled = true; };
   }, [noteId, reloadKey]);
 
-  useEffect(() => {
-    if (!menuOpen) return;
-    function close(event: Event) {
-      if (event instanceof KeyboardEvent ? event.key === "Escape" : !menuRef.current?.contains(event.target as Node)) setMenuOpen(false);
-    }
-    document.addEventListener("pointerdown", close);
-    document.addEventListener("keydown", close);
-    return () => {
-      document.removeEventListener("pointerdown", close);
-      document.removeEventListener("keydown", close);
-    };
-  }, [menuOpen]);
-
   async function detach() {
     if (!note) return;
-    setMenuOpen(false);
     setActionError(null);
     try {
       await authedFetch(`/api/notes/${note.id}`, {
@@ -81,94 +63,68 @@ export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: s
   if (error) {
     return (
       <main id="conteudo" className={shellStyles.detailMain}>
-        <div className={styles.detail}>
-          <Link href={listHref} className={styles.backLink}><ArrowLeft {...icon} />Notas</Link>
-          <p role="alert" className={styles.message}>Não foi possível carregar a nota. Tente novamente.</p>
-        </div>
+        <DetailScreen>
+          <DetailTopBar label="Nota" back={<BackLink href={listHref}>Notas</BackLink>} />
+          <DetailMessage alert>Não foi possível carregar a nota. Tente novamente.</DetailMessage>
+        </DetailScreen>
       </main>
     );
   }
   if (!note) {
-    return <main id="conteudo" className={shellStyles.detailMain}><p role="status" className={styles.message}>Carregando nota…</p></main>;
+    return <main id="conteudo" className={shellStyles.detailMain}><DetailMessage>Carregando nota…</DetailMessage></main>;
   }
 
   const links = note.links ?? [];
+  const taskLinks = links.filter((link) => link.kind === "task");
+  const eventLinks = links.filter((link) => link.kind === "event");
   const dates = now ? noteDates(note, now) : null;
   const sleep = sleepAgendaOf(note);
 
+  function linkRow(link: (typeof links)[number]) {
+    const { Icon } = originOfLink(link);
+    const when = link.at && now ? ` · ${whenLabel(link.at, now)}` : "";
+    return link.kind === "event"
+      ? <LinkRow key={`event-${link.id}`} kind="event" icon={<Icon {...detailIcon} />} title={link.name} sub={`Evento${when}`} href={`/${userId}/eventos/${link.id}`} />
+      : <LinkRow key={`task-${link.id}`} kind="task" icon={<ListChecks {...detailIcon} />} title={link.name} sub={`Tarefa${when}`} href={`/${userId}/tarefas/${link.id}`} />;
+  }
+
   return (
     <main id="conteudo" className={shellStyles.detailMain}>
-      <div className={styles.detail}>
-        <nav className={styles.navigation} aria-label="Nota">
-          <Link href={listHref} className={styles.backLink}><ArrowLeft {...icon} />Notas</Link>
-          <div className={styles.menuAnchor} ref={menuRef}>
-            <button type="button" className={styles.iconButton} aria-label="Mais ações: editar, soltar, excluir" aria-haspopup="menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}><Ellipsis {...icon} /></button>
-            {menuOpen ? (
-              <div role="menu" className={styles.menu}>
-                <button type="button" role="menuitem" disabled={pendingMeal} title={pendingMeal ? pendingMealEditMessage : undefined} onClick={() => { setMenuOpen(false); if (note.type === "text") router.push(`${listHref}/${note.id}/editar`); else setEditing(true); }}><Pencil {...icon} />Editar</button>
-                {links.length ? <button type="button" role="menuitem" disabled={pendingMeal} title={pendingMeal ? pendingMealEditMessage : undefined} onClick={() => void detach()}><Unlink {...icon} />Soltar da origem</button> : null}
-                <button type="button" role="menuitem" data-danger="true" onClick={() => { setMenuOpen(false); setDeleting(true); }}><Trash2 {...icon} />Excluir</button>
-              </div>
-            ) : null}
-          </div>
-        </nav>
+      <DetailScreen>
+        <DetailTopBar label="Nota" back={<BackLink href={listHref}>Notas</BackLink>}>
+          <DetailMenu label="Mais ações: editar, soltar, excluir">
+            {(close) => (
+              <>
+                <MenuItem icon={<Pencil {...detailIcon} />} disabled={pendingMeal} title={pendingMeal ? pendingMealEditMessage : undefined} onClick={() => { close(); if (note.type === "text") router.push(`${listHref}/${note.id}/editar`); else setEditing(true); }}>Editar</MenuItem>
+                {links.length ? <MenuItem icon={<Unlink {...detailIcon} />} disabled={pendingMeal} title={pendingMeal ? pendingMealEditMessage : undefined} onClick={() => { close(); void detach(); }}>Soltar da origem</MenuItem> : null}
+                <MenuItem icon={<Trash2 {...detailIcon} />} danger onClick={() => { close(); setDeleting(true); }}>Excluir</MenuItem>
+              </>
+            )}
+          </DetailMenu>
+        </DetailTopBar>
 
-        <header className={styles.heading}>
-          <h1>{note.name}</h1>
-        </header>
+        <DetailHead>
+          <DetailTitle>{note.name}</DetailTitle>
+          <TagPills tags={note.tags} label="Tags da nota" />
+          {dates ? <Stamp>Criada {dates.created}</Stamp> : null}
+          {dates?.edited ? <Stamp>Editada {dates.edited}</Stamp> : null}
+        </DetailHead>
 
-        {dates || note.tags.length ? (
-          <section className={styles.info} aria-label="Informações">
-            {dates ? (
-              <div><CalendarPlus {...icon} /><span>Criada {dates.created}</span></div>
-            ) : null}
-            {dates?.edited ? <div><Pencil {...icon} /><span>Editada {dates.edited}</span></div> : null}
-            {note.tags.length ? (
-              <div>
-                <Tag {...icon} />
-                <ul aria-label="Tags da nota">
-                  {note.tags.map((tag) => <li key={tag} style={tagColorStyle(tag)}>#{tag}</li>)}
-                </ul>
-              </div>
-            ) : null}
-          </section>
-        ) : null}
-
-        {links.length ? (
-          <section aria-label="Onde a nota aparece">
-            <div className={styles.sectionLabel}><h2>Aparece em</h2><span>{links.length}</span></div>
-            <ul className={styles.links}>
-              {links.map((link) => {
-                const { Icon, origin } = originOfLink(link);
-                const href = link.kind === "event" ? `/${userId}/eventos/${link.id}` : null;
-                const row = (
-                  <>
-                    <Icon {...icon} />
-                    <span className={styles.linkText}>
-                      <span className={styles.linkName}>{link.name}</span>
-                      <span className={styles.linkMeta}>{link.kind === "event" ? "Evento" : "Tarefa"}{link.at && now ? ` · ${whenLabel(link.at, now)}` : ""}</span>
-                    </span>
-                    {href ? <ChevronRight {...icon} /> : null}
-                  </>
-                );
-                return (
-                  <li key={`${link.kind}-${link.id}`}>
-                    {href ? (
-                      <Link href={href} className={styles.linkRow} data-origin={origin}>{row}</Link>
-                    ) : (
-                      <span className={styles.linkRow} data-origin={origin}>{row}</span>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        ) : null}
+        <Rule />
 
         <NoteContent note={note} title={sleep?.title} agendaMinutes={sleep?.agendaMinutes} />
-        {pendingMeal ? <p className={styles.message}>{pendingMealEditMessage}</p> : null}
-        {actionError ? <p role="alert" className={styles.message}>{actionError}</p> : null}
-      </div>
+        {pendingMeal ? <DetailMessage>{pendingMealEditMessage}</DetailMessage> : null}
+        {actionError ? <DetailMessage alert>{actionError}</DetailMessage> : null}
+
+        {links.length ? (
+          <DetailSection title="Vínculos" labelId="nt-links" className="links">
+            {taskLinks.length ? <LinkGroup id="nt-links-tasks" title="Tarefas vinculadas" count={taskLinks.length}>{taskLinks.map(linkRow)}</LinkGroup> : null}
+            {eventLinks.length ? <LinkGroup id="nt-links-events" title="Eventos vinculados" count={eventLinks.length}>{eventLinks.map(linkRow)}</LinkGroup> : null}
+          </DetailSection>
+        ) : null}
+
+        <DetailOrigin id="note" />
+      </DetailScreen>
 
       {editing ? <NoteEditorDialog note={note} onClose={() => setEditing(false)} onSaved={() => { setEditing(false); setReloadKey((key) => key + 1); }} /> : null}
       {deleting ? <DeleteNoteDialog noteId={note.id} noteName={note.name} onClose={() => setDeleting(false)} onDeleted={() => router.push(listHref)} /> : null}

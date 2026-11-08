@@ -413,12 +413,20 @@ export interface AgentChatTicketDto {
 
 export type AgentEntityKind = "event" | "task" | "note";
 
+/** O que mudou num campo: `before` saiu, `after` entrou (`AgentChatFieldChange` dos contratos). */
+export interface AgentChatFieldChange {
+  field: "time" | "deadline" | "name" | "description" | "status" | "priority" | "tags";
+  before?: string;
+  after?: string;
+}
+
 /** Um registro que a resposta tocou. */
 export interface AgentChatEntityRef {
   kind: AgentEntityKind;
   id: string;
   change: "created" | "updated" | "deleted";
   label?: string;
+  changes?: AgentChatFieldChange[];
 }
 
 export interface AgentScreenContext {

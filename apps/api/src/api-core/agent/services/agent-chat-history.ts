@@ -103,7 +103,13 @@ export function toChatEntityRefs(response: RunAgentResponse): AgentChatEntityRef
 
 function refOf(item: AgentEntityItem, change: AgentChatEntityRef["change"]): AgentChatEntityRef {
   const label = item.name;
-  return { kind: item.kind, id: item.id, change, label: truncate(label.trim()) };
+  return {
+    kind: item.kind,
+    id: item.id,
+    change,
+    label: truncate(label.trim()),
+    ...(item.changes?.length ? { changes: item.changes } : {}),
+  };
 }
 
 function truncate(text: string): string {

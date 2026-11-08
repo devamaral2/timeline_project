@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  ArrowDown, ArrowUp, ChevronDown, ChevronUp, Clock, Droplet, Drumstick, Flame, Moon, Timer, Wheat,
+  ArrowDown, ArrowUp, ChevronDown, ChevronUp, Clock, Flame, Moon, Timer,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { ICON_STROKE_WIDTH } from "@/components/events/event-visuals";
@@ -107,6 +107,41 @@ function BigNumber({ label, children, icon: iconNode, tone }: { label: string; c
   );
 }
 
+/** O quanto cada macro pesa nas calorias (proteína e carboidrato 4 kcal/g, gordura 9), para a barra e o rótulo dela. */
+function macroShares(totals: MealItem["totals"]): [number, number, number] {
+  const kcal = [totals.totalProteinGrams * 4, totals.totalCarbohydrateGrams * 4, totals.totalFatGrams * 9];
+  const sum = kcal[0] + kcal[1] + kcal[2];
+  if (sum <= 0) return [0, 0, 0];
+  const shares = kcal.map((value) => Math.round((value / sum) * 100));
+  return [shares[0] ?? 0, shares[1] ?? 0, shares[2] ?? 0];
+}
+
+function Macros({ totals }: { totals: MealItem["totals"] }) {
+  const [protein, carbs, fat] = macroShares(totals);
+  const items = [
+    { key: "protein", name: "Proteínas", grams: totals.totalProteinGrams, share: protein },
+    { key: "carbs", name: "Carboidratos", grams: totals.totalCarbohydrateGrams, share: carbs },
+    { key: "fat", name: "Gorduras", grams: totals.totalFatGrams, share: fat },
+  ] as const;
+  return (
+    <>
+      {protein + carbs + fat > 0 ? (
+        <div className={styles.macroBar} role="img" aria-label={`Distribuição de calorias: ${items.map((item) => `${item.name.toLowerCase()} ${item.share}%`).join(", ")}`}>
+          {items.map((item) => <i key={item.key} data-macro={item.key} style={{ flex: item.share }} />)}
+        </div>
+      ) : null}
+      <div className={styles.macros}>
+        {items.map((item) => (
+          <div key={item.key} className={styles.macro} data-macro={item.key}>
+            <span className={styles.macroName}><i />{item.name}</span>
+            <span className={styles.macroValue} role="img" aria-label={`${item.name}: ${formatDecimal(item.grams)} gramas`}>{formatDecimal(item.grams)}<small>g</small></span>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
 function MealNote({ data }: { data: MealItem }) {
   const { totals } = data;
   if (data.generation?.status === "pending" || data.generation?.status === "failed") {
@@ -122,11 +157,7 @@ function MealNote({ data }: { data: MealItem }) {
       <h3 className={styles.noteHeading}>Informações nutricionais</h3>
       <BigNumber label="Calorias consumidas" tone="consumed" icon={<KcalIcon kind="consumed" />}>{formatDecimal(totals.totalCaloriesKcal)}<small>kcal</small></BigNumber>
       <hr />
-      <div className={styles.metrics} data-columns="3">
-        <Metric label={`Carboidratos: ${formatDecimal(totals.totalCarbohydrateGrams)} gramas`} Icon={Wheat}>{formatDecimal(totals.totalCarbohydrateGrams)}<small>g</small></Metric>
-        <Metric label={`Proteína: ${formatDecimal(totals.totalProteinGrams)} gramas`} Icon={Drumstick}>{formatDecimal(totals.totalProteinGrams)}<small>g</small></Metric>
-        <Metric label={`Gorduras: ${formatDecimal(totals.totalFatGrams)} gramas`} Icon={Droplet}>{formatDecimal(totals.totalFatGrams)}<small>g</small></Metric>
-      </div>
+      <Macros totals={totals} />
       {data.foodItems.length ? (
         <div>
           <h4 className={styles.listHeading}>Alimentos</h4>

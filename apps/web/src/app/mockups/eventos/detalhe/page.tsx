@@ -4,7 +4,7 @@ import type { EventDetailDto, TaskDetailDto } from "@/lib/api/contracts";
 import styles from "../mockup.module.css";
 
 export const metadata: Metadata = {
-  title: "Detalhe do evento — Braid · Mockup",
+  title: "Detalhe do evento — Agente pessoal · Mockup",
   description: "Estudo visual da tela de detalhe do evento, com dados ilustrativos.",
   robots: { index: false, follow: false },
 };

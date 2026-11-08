@@ -6,7 +6,6 @@ const { useCurrentUser } = vi.hoisted(() => ({ useCurrentUser: vi.fn() }));
 
 vi.mock("@/lib/session/use-session", () => ({ useCurrentUser }));
 vi.mock("@/components/brand/Logo", () => ({
-  Logo: () => <span>Logo</span>,
   Wordmark: () => <span>Timeline</span>,
 }));
 vi.mock("@/components/events/DateNavigator", () => ({

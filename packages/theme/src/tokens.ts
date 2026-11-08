@@ -8,12 +8,12 @@
  * `apps/web/src/styles/theme-tokens.test.ts` que le o globals.css e compara com
  * o que esta aqui.
  *
- * A paleta e a "Névoa e Noite" do design system Braid
- * (`design system/Névoa e Noite-html/`): a névoa e o chao claro; a noite, um
- * azul de ardosia quase preto. O verde-agua e sempre o ponto (`brand`), e a
- * acao principal e sempre o fio tinta (`primary`). Os hexadecimais de
- * referencia estao ao lado de cada token — o oklch e a conversao exata deles,
- * conferida pelo `oklchToCss` daqui.
+ * A paleta clara e a "Névoa" do design system Braid
+ * (`design system/Névoa e Noite-html/`): a névoa e o chao claro. A escura e a
+ * paleta do Hermes: um indigo quase preto, sem a ardosia da noite antiga. O
+ * verde-agua e sempre o ponto (`brand`), e a acao principal e sempre o fio
+ * tinta (`primary`). Os hexadecimais de referencia estao ao lado de cada token
+ * — o oklch e a conversao exata deles, conferida pelo `oklchToCss` daqui.
  */
 
 /** Nomes dos tokens de cor, na ordem em que aparecem no globals.css. */
@@ -127,37 +127,40 @@ export const lightTokens: ThemeTokens = {
   tag: { lightness: 0.53, chroma: 0.09 },
 };
 
-/** Noite, o tema escuro. */
+/**
+ * Hermes, o tema escuro: um indigo quase preto, texto em cinza-lavanda, titulos
+ * em branco-gelo e o ponto em verde-azulado. Referencia: o painel do Hermes.
+ */
 export const darkTokens: ThemeTokens = {
   colors: {
-    background: "oklch(0.234 0.025 246.5)", // #141f29
-    foreground: "oklch(0.955 0.009 205.9)", // #eaf2f3
-    card: "oklch(0.283 0.025 244)", // #1f2b35
-    cardForeground: "oklch(0.955 0.009 205.9)", // #eaf2f3
-    primary: "oklch(0.955 0.009 205.9)", // #eaf2f3
-    primaryForeground: "oklch(0.283 0.025 244)", // #1f2b35
-    secondary: "oklch(0.33 0.024 243.7)", // #2b3741
-    secondaryForeground: "oklch(0.955 0.009 205.9)", // #eaf2f3
-    muted: "oklch(0.33 0.024 243.7)", // #2b3741
-    mutedForeground: "oklch(0.741 0.025 223.8)", // #9bafb7
-    accent: "oklch(0.361 0.023 243.6)", // #333f49
-    accentForeground: "oklch(0.955 0.009 205.9)", // #eaf2f3
-    // O texto por cima do destrutivo e a propria noite: o rosa e claro demais
+    background: "oklch(0.2089 0.0177 284.76)", // #171720
+    foreground: "oklch(0.9222 0.0013 286.37)", // #e5e5e6
+    card: "oklch(0.2396 0.023 280.79)", // #1d1e2a
+    cardForeground: "oklch(0.9222 0.0013 286.37)", // #e5e5e6
+    primary: "oklch(0.9222 0.0013 286.37)", // #e5e5e6
+    primaryForeground: "oklch(0.2396 0.023 280.79)", // #1d1e2a
+    secondary: "oklch(0.2591 0.0249 274.44)", // #202330
+    secondaryForeground: "oklch(0.9222 0.0013 286.37)", // #e5e5e6
+    muted: "oklch(0.2591 0.0249 274.44)", // #202330
+    mutedForeground: "oklch(0.7351 0.0526 276.4)", // #a0a7cb
+    accent: "oklch(0.3105 0.0364 275.35)", // #2b2f43
+    accentForeground: "oklch(0.9222 0.0013 286.37)", // #e5e5e6
+    // O texto por cima do destrutivo e o proprio fundo: o rosa e claro demais
     // para carregar branco.
     destructive: "oklch(0.8 0.111 17.7)", // #fda0a3
-    destructiveForeground: "oklch(0.283 0.025 244)", // #1f2b35
+    destructiveForeground: "oklch(0.2396 0.023 280.79)", // #1d1e2a
     warning: "oklch(0.801 0.09 72.5)", // #e2b57c (= meal)
-    success: "oklch(0.7421 0.1095 177.7)", // #4fc2ab (= brand)
-    border: "oklch(0.369 0.023 245.9)", // #36414b
-    input: "oklch(0.435 0.021 240.4)", // #47535c
-    ring: "oklch(0.7421 0.1095 177.7)", // #4fc2ab
-    brand: "oklch(0.7421 0.1095 177.7)", // #4fc2ab
-    brandAccent: "oklch(0.8 0.099 179)", // #6fd3bf
-    brandSoft: "oklch(0.369 0.045 188.8)", // #204744
-    strandTile: "oklch(0.283 0.025 244)", // #1f2b35
-    strandNevoa: "oklch(0.638 0.042 219.1)", // #6f929d
-    strandDestaque: "oklch(0.7421 0.1095 177.7)", // #4fc2ab
-    strandTinta: "oklch(0.955 0.009 205.9)", // #eaf2f3
+    success: "oklch(0.6965 0.1212 187.82)", // #00b5ab (= brand)
+    border: "oklch(0.3299 0.0284 279.15)", // #323444
+    input: "oklch(0.3982 0.0325 275.54)", // #424659
+    ring: "oklch(0.6965 0.1212 187.82)", // #00b5ab
+    brand: "oklch(0.6965 0.1212 187.82)", // #00b5ab
+    brandAccent: "oklch(0.775 0.1244 187.69)", // #34cfc4
+    brandSoft: "oklch(0.3257 0.0435 199.9)", // #143b3d
+    strandTile: "oklch(0.2396 0.023 280.79)", // #1d1e2a
+    strandNevoa: "oklch(0.5424 0.0397 274.43)", // #686e87
+    strandDestaque: "oklch(0.6965 0.1212 187.82)", // #00b5ab
+    strandTinta: "oklch(0.9222 0.0013 286.37)", // #e5e5e6
     sleep: "oklch(0.8 0.09 287.8)", // #bab5f5
     training: "oklch(0.8 0.09 134.7)", // #a5cb90
     meal: "oklch(0.801 0.09 72.5)", // #e2b57c

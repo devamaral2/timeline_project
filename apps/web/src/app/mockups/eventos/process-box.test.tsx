@@ -57,3 +57,24 @@ test("consulta sem linhas", () => {
   }} />);
   expect(screen.getByText("Nenhum resultado.")).toBeTruthy();
 });
+
+test("cada registro criado ou alterado vira uma linha de prévia, com link quando há destino", () => {
+  render(<ProcessBox
+    process={{
+      ...base, status: "completed",
+      entities: [
+        { kind: "task", id: "t1", name: "Comprar faixa elástica", operation: "create", linkedTo: [] },
+        { kind: "event", id: "e1", name: "Treino de mobilidade", operation: "update", linkedTo: [] },
+      ],
+    }}
+    entityHref={(entity) => `/u/${entity.kind}/${entity.id}`}
+  />);
+  const rows = within(screen.getByRole("list", { name: "Registros desta resposta" })).getAllByRole("listitem");
+  expect(rows.map((row) => row.textContent)).toEqual(["Tarefa criada · Comprar faixa elástica", "Evento alterado · Treino de mobilidade"]);
+  expect(within(rows[0]).getByRole("link").getAttribute("href")).toBe("/u/task/t1");
+});
+
+test("sem entidades, nenhuma lista de prévias", () => {
+  render(<ProcessBox process={base} />);
+  expect(screen.queryByRole("list", { name: "Registros desta resposta" })).toBeNull();
+});

@@ -13,7 +13,7 @@ export async function generateMetadata({
 }: UserTimelinePageProps): Promise<Metadata> {
   const { userId } = await params;
   return {
-    title: `Agenda de ${userId} — Braid`,
+    title: `Agenda de ${userId} — Agente pessoal`,
     description: 'Sono, treinos, refeições e rotina organizados por dia.',
   };
 }

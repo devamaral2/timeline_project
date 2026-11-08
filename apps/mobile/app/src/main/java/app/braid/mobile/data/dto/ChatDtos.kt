@@ -24,6 +24,16 @@ data class AgentChatEntityRefDto(
     val id: String,
     val change: String,
     val label: String? = null,
+    /** O que a resposta tirou e pôs neste registro (`changes` do web). */
+    val changes: List<AgentChatFieldChangeDto> = emptyList(),
+)
+
+/** `before` saiu (`-`), `after` entrou (`+`); `time` e `deadline` vêm em ISO 8601, `time` como `início/fim`. */
+@Serializable
+data class AgentChatFieldChangeDto(
+    val field: String,
+    val before: String? = null,
+    val after: String? = null,
 )
 
 @Serializable

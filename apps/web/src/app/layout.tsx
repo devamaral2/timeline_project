@@ -3,7 +3,7 @@ import localFont from "next/font/local";
 import "../styles/globals.css";
 
 export const metadata: Metadata = {
-  title: "Braid",
+  title: "Agente pessoal",
   description: "Sua vida organizada. Sua mente em equilíbrio.",
 };
 
@@ -53,7 +53,7 @@ export const viewport: Viewport = {
   colorScheme: "light dark",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#f1f5f6" },
-    { media: "(prefers-color-scheme: dark)", color: "#141f29" },
+    { media: "(prefers-color-scheme: dark)", color: "#171720" },
   ],
 };
 

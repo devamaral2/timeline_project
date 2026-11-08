@@ -38,6 +38,14 @@ fun braidBrand(): Color = if (LocalBraidDarkTheme.current) DarkTokens.brand else
 @Composable
 fun braidSuccess(): Color = if (LocalBraidDarkTheme.current) DarkTokens.success else LightTokens.success
 
+/** O verde da marca para texto (`--brand-accent`): o rótulo de quem responde no chat. */
+@Composable
+fun braidBrandAccent(): Color = if (LocalBraidDarkTheme.current) DarkTokens.brandAccent else LightTokens.brandAccent
+
+/** O que vai por cima do verde da marca: o fundo no escuro, o branco no claro (o enviar do chat). */
+@Composable
+fun braidOnBrand(): Color = if (LocalBraidDarkTheme.current) DarkTokens.background else LightTokens.primaryForeground
+
 /** O fundo suave da marca (`--brand-soft`) do tema ativo, usado na opção escolhida de um seletor. */
 @Composable
 fun braidBrandSoft(): Color = if (LocalBraidDarkTheme.current) DarkTokens.brandSoft else LightTokens.brandSoft

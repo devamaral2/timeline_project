@@ -2,11 +2,12 @@ import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, expect, test, vi } from "vitest";
 import type { AgentChatClientOptions, AgentChatEvent } from "@/lib/agent-chat/agent-chat-client";
 import type {
+  AgentChatEntityRef,
   AgentChatMessagePageDto,
   AgentChatMessageFrame,
   AgentConversationPageDto,
 } from "@/lib/api/contracts";
-import { AgentChatPanel, useAgendaChat } from "./agent-chat-panel";
+import { AgentChatPanel, agentEntityHref, useAgendaChat } from "./agent-chat-panel";
 
 const { session, requestAgendaRefresh } = vi.hoisted(() => ({
   session: { user: { userId: "user-1", name: "Ana", email: null } as { userId: string } | null, ready: true },
@@ -40,11 +41,23 @@ const createClient = (options: AgentChatClientOptions) => {
   };
 };
 
-function Harness({ live = true, onCommand }: { live?: boolean; onCommand?: (command: string, argument: string) => void }) {
+function Harness({
+  live = true,
+  onCommand,
+  onClose,
+  entityHref,
+}: {
+  live?: boolean;
+  onCommand?: (command: string, argument: string) => void;
+  onClose?: () => void;
+  entityHref?: (entity: AgentChatEntityRef) => string | undefined;
+}) {
   return (
     <AgentChatPanel
       {...useAgendaChat({ live, createClient, loadConversations, loadMessages, removeConversation })}
       onCommand={onCommand}
+      onClose={onClose}
+      entityHref={entityHref}
     />
   );
 }
@@ -167,7 +180,66 @@ test("the stop button cancels the running message", () => {
   emit({ type: "error", id: sent[0].id, code: "cancelled" });
 
   expect(screen.getByText("Pedido cancelado.")).toBeInTheDocument();
-  expect(screen.queryByRole("button", { name: "Enviar mensagem" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Parar resposta" })).not.toBeInTheDocument();
+  // O campo voltou vazio: o enviar fica no lugar, mas sem o que mandar.
+  expect(screen.getByRole("button", { name: "Enviar mensagem" })).toBeDisabled();
+});
+
+test("the conversation header says who answers and the close button closes the chat", () => {
+  const onClose = vi.fn();
+  render(<Harness onClose={onClose} />);
+  ask("o que tenho hoje?");
+
+  const header = screen.getByRole("heading", { name: "Nova conversa" }).parentElement;
+  expect(header).toHaveTextContent("Assistente");
+  fireEvent.click(screen.getByRole("button", { name: "Fechar o chat" }));
+  expect(onClose).toHaveBeenCalledTimes(1);
+});
+
+test("each record of the reply opens its page, and closes the chat on the way", () => {
+  const onClose = vi.fn();
+  render(<Harness onClose={onClose} entityHref={(entity) => agentEntityHref("user-1", entity)} />);
+  ask("move o treino");
+  emit(
+    reply(sent[0].id, "Pronto.", [
+      { kind: "event", id: "01EVENT", change: "updated", label: "Treino de mobilidade" },
+      { kind: "note", id: "01NOTE", change: "deleted", label: "Rascunho" },
+    ]),
+  );
+
+  const records = screen.getByRole("list", { name: "Registros desta resposta" });
+  const link = within(records).getByRole("link", { name: "Evento alterado · Treino de mobilidade" });
+  expect(link).toHaveAttribute("href", "/user-1/eventos/01EVENT");
+  // O apagado nao tem pagina: fica so o texto.
+  expect(within(records).getAllByRole("link")).toHaveLength(1);
+  expect(records).toHaveTextContent("Nota apagada · Rascunho");
+
+  // O jsdom nao navega; o que importa aqui e o painel fechar.
+  link.addEventListener("click", (event) => event.preventDefault());
+  fireEvent.click(link);
+  expect(onClose).toHaveBeenCalledTimes(1);
+});
+
+test("the composer shortcuts write the command in the field", () => {
+  const onCommand = vi.fn();
+  render(<Harness onCommand={onCommand} />);
+  ask("oi");
+
+  const shortcuts = screen.getByRole("group", { name: "Comandos rápidos" });
+  expect(within(shortcuts).getAllByRole("button").map((button) => button.textContent)).toEqual(["/tarefa", "/evento", "/nota"]);
+
+  fireEvent.click(within(shortcuts).getByRole("button", { name: "/tarefa" }));
+  const textbox = screen.getByRole("textbox", { name: "Mensagem para a IA" });
+  expect(textbox).toHaveValue("/tarefa ");
+  expect(textbox).toHaveFocus();
+  expect(screen.getByRole("list", { name: "Comandos" })).toBeInTheDocument();
+  expect(onCommand).not.toHaveBeenCalled();
+});
+
+test("a record's page lives under the user; a deleted record has none", () => {
+  expect(agentEntityHref("u1", { kind: "task", id: "01T", change: "created" })).toBe("/u1/tarefas/01T");
+  expect(agentEntityHref("u1", { kind: "note", id: "01N", change: "updated" })).toBe("/u1/notas/01N");
+  expect(agentEntityHref("u1", { kind: "event", id: "01E", change: "deleted" })).toBeUndefined();
 });
 
 test("a failed message can be retried, and the failed turn left no conversation behind", () => {
@@ -361,4 +433,46 @@ test("an unknown slash command is just a message", () => {
   expect(screen.queryByRole("list", { name: "Comandos" })).not.toBeInTheDocument();
   expect(onCommand).not.toHaveBeenCalled();
   expect(sent[0]).toMatchObject({ text: "/xyz o que é isso?" });
+});
+
+test("a blank line in the answer starts a new paragraph instead of leaving a full-line gap", () => {
+  render(<Harness />);
+  ask("crie um jantar");
+  emit(reply(sent[0].id, "Jantar hoje.\n\nCriar com um clique.\nOu importar o arquivo."));
+
+  const log = screen.getByRole("log");
+  const paragraphs = within(log).getAllByText(/Jantar hoje\.|Criar com um clique|Ou importar/);
+  expect(paragraphs.map((node) => node.textContent)).toEqual(["Jantar hoje.", "Criar com um clique.\nOu importar o arquivo."]);
+});
+
+test("a changed event shows what left and what came in, above the record rows", () => {
+  render(<Harness />);
+  ask("mude o treino para as 18h");
+  emit(
+    reply(
+      sent[0].id,
+      "Feito.",
+      [
+        {
+          kind: "event",
+          id: "e1",
+          change: "updated",
+          label: "Treino de mobilidade",
+          changes: [
+            { field: "time", before: "2026-09-15T07:00:00.000Z/2026-09-15T07:45:00.000Z", after: "2026-09-15T18:00:00.000Z/2026-09-15T18:45:00.000Z" },
+          ],
+        },
+        { kind: "task", id: "t1", change: "created", label: "Comprar faixa elástica" },
+      ],
+    ),
+  );
+
+  const log = screen.getByRole("log");
+  const diff = within(log).getByRole("figure", { name: "Mudanças em Treino de mobilidade" });
+  expect(within(diff).getByText("Treino de mobilidade")).toBeTruthy();
+  const signs = diff.querySelectorAll("[data-sign]");
+  expect(Array.from(signs).map((line) => line.getAttribute("data-sign"))).toEqual(["-", "+"]);
+  // A tarefa criada sem diff fica so como linha.
+  expect(within(log).getAllByRole("figure")).toHaveLength(1);
+  expect(within(log).getByText(/Tarefa criada/)).toBeTruthy();
 });

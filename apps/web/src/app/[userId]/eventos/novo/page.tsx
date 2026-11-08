@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { NewEventRoute } from "@/components/new-item/NewItemRoutes";
 
 export const metadata: Metadata = {
-  title: "Novo evento — Braid",
+  title: "Novo evento — Agente pessoal",
 };
 
 export default async function Page({ params }: { params: Promise<{ userId: string }> }) {

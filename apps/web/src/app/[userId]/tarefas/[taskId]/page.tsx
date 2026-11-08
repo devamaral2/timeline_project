@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { TaskDetailScreen } from "@/components/tasks/TaskDetailScreen";
 
 export const metadata: Metadata = {
-  title: "Tarefa — Braid",
+  title: "Tarefa — Agente pessoal",
 };
 
 export default async function TaskPage({ params }: { params: Promise<{ userId: string; taskId: string }> }) {

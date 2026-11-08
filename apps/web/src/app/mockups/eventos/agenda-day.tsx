@@ -95,8 +95,7 @@ export function AgendaDay({ dayKey, now, tasks, missedEvents, onSelectEvent, eve
                         <h3>{event.href || userId ? <Link href={event.href ?? `/${userId}/eventos/${event.id}`} className={styles.eventLink}>{event.name}</Link> : <button type="button" className={styles.eventTitleButton} onClick={() => onSelectEvent({ event, dayKey })}>{event.name}</button>}</h3>
                       </div>
                       <p className={styles.eventTime}>
-                        {timing.position === "past" ? <span className={styles.pastMarker} role="img" aria-label="Horário passado" title="Horário passado"><i aria-hidden /></span> : null}
-                        {event.time}
+                        <span>{event.time}</span>
                       </p>
                       {event.tag || event.tags?.length || missed ? <div className={styles.eventLabels}>
                         {event.tag ? <span className={styles.tag} style={tagColorStyle(event.tag)}>#{event.tag}</span> : null}
@@ -104,10 +103,10 @@ export function AgendaDay({ dayKey, now, tasks, missedEvents, onSelectEvent, eve
                         {missed ? <span className={styles.missedBadge}>Não realizado</span> : null}
                       </div> : null}
                     </div>
-                    {event.href ? <ChevronRight className={styles.eventChevron} aria-hidden /> : null}
-                    <span className={styles.eventDuration} title={`${timing.position === "upcoming" ? "Duração prevista" : "Duração"}: ${event.duration}`}>
-                      <DurationFigure minutes={event.minutes} forceMinutes={event.minutes === 0} />
-                    </span>
+                    {event.minutes > 0 ? <span className={styles.eventDuration} title={`${timing.position === "upcoming" ? "Duração prevista" : "Duração"}: ${event.duration}`}>
+                      <DurationFigure minutes={event.minutes} />
+                    </span> : null}
+                    {event.href || userId ? <ChevronRight className={styles.eventChevron} aria-hidden /> : null}
                     {task ? <fieldset className={styles.taskReference} aria-label={`Tarefa vinculada ${task.id}`}>
                       <span>{task.id}</span>
                       <button type="button" className={styles.taskStatusButton} aria-label={`Tarefa de ${event.name}: ${taskStatuses[task.status].label}`} aria-haspopup="dialog" title={`Tarefa ${task.id} · ${taskStatuses[task.status].label}`} onClick={() => onSelectEvent({ event, dayKey })}><TaskStatusIcon status={task.status} /></button>

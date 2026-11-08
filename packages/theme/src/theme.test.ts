@@ -8,10 +8,10 @@ test("resolves the palette to the hex the browser computes for the same oklch", 
   expect(lightTheme.colors.border).toBe("#d9e3e6");
   expect(lightTheme.colors.primary).toBe("#203d46");
   expect(lightTheme.colors.brandAccent).toBe("#1e796b");
-  expect(darkTheme.colors.background).toBe("#141f29");
-  expect(darkTheme.colors.card).toBe("#1f2b35");
-  expect(darkTheme.colors.brand).toBe("#4fc2ab");
-  expect(darkTheme.colors.brandSoft).toBe("#204744");
+  expect(darkTheme.colors.background).toBe("#171720");
+  expect(darkTheme.colors.card).toBe("#1d1e2a");
+  expect(darkTheme.colors.brand).toBe("#00b5ab");
+  expect(darkTheme.colors.brandSoft).toBe("#143b3d");
   expect(darkTheme.colors.training).toBe("#a5cb90");
   expect(darkTheme.colors.meal).toBe("#e2b57c");
   expect(lightTheme.colors.routine).toBe("#19759b");

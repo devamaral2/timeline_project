@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Clock, NotepadText, Plus, SquareCheck, X } from "lucide-react";
+import { ArrowLeft, Clock, FileText, Plus, ListChecks, X } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { createTask, updateTask } from "@/lib/tasks/task-api";
 import {
@@ -219,7 +219,7 @@ export function NewTaskForm({ initialName, onCreated, existing }: EditItemFormPr
 
   return <form className={styles.entityForm} onSubmit={event => void submit(event)} noValidate>
     <div className={styles.entityHeading}>
-      <span><SquareCheck aria-hidden /></span>
+      <span><ListChecks aria-hidden /></span>
       <div><input className={styles.entityNameInput} aria-label="Nome da tarefa" value={name} onChange={event => setName(event.target.value)} placeholder="Nome da tarefa" autoComplete="off" /></div>
     </div>
     <div className={styles.entityFields}>
@@ -278,7 +278,7 @@ export function NewNoteForm({ initialName, onCreated, existing }: EditItemFormPr
 
   return <form className={styles.entityForm} onSubmit={event => void submit(event)} noValidate>
     <div className={styles.entityHeading}>
-      <span><NotepadText aria-hidden /></span>
+      <span><FileText aria-hidden /></span>
       <div><input className={styles.entityNameInput} aria-label="Nome da nota" value={name} onChange={event => setName(event.target.value)} placeholder="Nome da nota (opcional)" autoComplete="off" /></div>
     </div>
     <label>Conteúdo da nota<textarea className={styles.entityControl} rows={4} value={content} onChange={event => setContent(event.target.value)} placeholder="Escreva em markdown: ## subtítulo, **negrito**, - lista…" /></label>

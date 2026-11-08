@@ -1,5 +1,6 @@
 import { Check, Circle, LoaderCircle, X } from "lucide-react";
-import type { AiProcessDto, AiProcessStepDto } from "@/lib/api/contracts";
+import type { AgentChatEntityRef, AiProcessDto, AiProcessStepDto } from "@/lib/api/contracts";
+import { EntityRows, processEntityRef } from "./entity-rows";
 import styles from "./mockup.module.css";
 
 const STATUS_TEXT: Record<AiProcessStepDto["status"], string> = {
@@ -14,10 +15,17 @@ const FALLBACK_TITLE = "Realizando processos:";
 
 /**
  * A caixa de processo (ADR 003): o titulo e a lista de passos, com check verde ao concluir e vermelho ao
- * falhar. Todo texto vem predefinido do servidor; so a mensagem do fim (resposta do fallback ou o que falhou)
+ * falhar, e, abaixo, a prévia de cada registro criado ou alterado. Todo texto vem predefinido do servidor; so a mensagem do fim (resposta do fallback ou o que falhou)
  * e livre, e so existe quando precisa.
  */
-export function ProcessBox({ process }: { process: AiProcessDto | null }) {
+interface ProcessBoxProps {
+  process: AiProcessDto | null;
+  /** Para onde leva cada registro criado ou alterado; sem ela, as linhas sao so texto. */
+  entityHref?: (entity: AgentChatEntityRef) => string | undefined;
+  onOpenEntity?: () => void;
+}
+
+export function ProcessBox({ process, entityHref, onOpenEntity }: ProcessBoxProps) {
   const steps = process?.steps ?? [];
   const query = steps.find((step) => step.result);
   return (
@@ -64,6 +72,7 @@ export function ProcessBox({ process }: { process: AiProcessDto | null }) {
           {query.result.truncated && <p>Mostrando só as primeiras linhas.</p>}
         </section>
       )}
+      <EntityRows entities={(process?.entities ?? []).map(processEntityRef)} entityHref={entityHref} onOpenEntity={onOpenEntity} />
       {process?.message && <p className={styles.processMessage}>{process.message}</p>}
     </section>
   );

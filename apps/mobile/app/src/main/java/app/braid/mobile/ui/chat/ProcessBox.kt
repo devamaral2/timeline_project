@@ -38,7 +38,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.braid.mobile.core.designsystem.braidBrand
 import app.braid.mobile.core.designsystem.braidSuccess
+import app.braid.mobile.data.dto.AgentChatEntityRefDto
 import app.braid.mobile.data.dto.AiProcessDto
+import app.braid.mobile.data.dto.AiProcessEntityDto
 import app.braid.mobile.data.dto.AiProcessQueryResultDto
 import app.braid.mobile.data.dto.AiProcessStepDto
 import kotlinx.serialization.json.JsonNull
@@ -55,6 +57,7 @@ private const val FALLBACK_TITLE = "Realizando processos:"
 internal fun ProcessBox(
     process: AiProcessDto?,
     modifier: Modifier = Modifier,
+    onOpenEntity: ((ChatEntityTarget) -> Unit)? = null,
 ) {
     val colors = MaterialTheme.colorScheme
     val steps = process?.steps.orEmpty()
@@ -82,6 +85,11 @@ internal fun ProcessBox(
         }
         steps.forEach { ProcessStepRow(it) }
         query?.let { ProcessRows(it) }
+        process?.entities.orEmpty().forEach { entity ->
+            val ref = entity.toChatRef()
+            val target = ref.openTarget()
+            EntityRow(ref, onOpen = if (target != null && onOpenEntity != null) ({ onOpenEntity(target) }) else null)
+        }
         process?.message?.let { message ->
             Text(
                 text = message,
@@ -92,6 +100,10 @@ internal fun ProcessBox(
         }
     }
 }
+
+/** A entidade que o processo tocou, na forma da linha do chat (`processEntityRef` do web). */
+internal fun AiProcessEntityDto.toChatRef(): AgentChatEntityRefDto =
+    AgentChatEntityRefDto(kind = kind, id = id, change = if (operation == "create") "created" else "updated", label = name)
 
 /** O texto que o leitor de tela diz para o estado do passo. */
 internal fun stepStatusText(step: AiProcessStepDto): String =

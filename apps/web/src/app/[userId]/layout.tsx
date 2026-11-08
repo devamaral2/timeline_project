@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { MockupShell } from "../mockups/eventos/mockup-shell";
 
 export const metadata: Metadata = {
-  title: "Agenda — Braid",
+  title: "Agenda — Agente pessoal",
   description: "Sono, treinos, refeições e rotina organizados por dia.",
 };
 

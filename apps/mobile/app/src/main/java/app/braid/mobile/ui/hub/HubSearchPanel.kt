@@ -121,6 +121,6 @@ fun HubSearchPanel(
 private fun SearchKind.icon() =
     when (this) {
         SearchKind.Event -> LucideIcons.calendarDays(1.3f)
-        SearchKind.Task -> LucideIcons.squareCheck(1.3f)
-        SearchKind.Note -> LucideIcons.notepadText(1.3f)
+        SearchKind.Task -> LucideIcons.listChecks(1.3f)
+        SearchKind.Note -> LucideIcons.fileText(1.3f)
     }

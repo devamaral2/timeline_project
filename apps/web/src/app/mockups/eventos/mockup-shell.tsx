@@ -1,23 +1,14 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useState, type ReactNode } from "react";
 import { AgendaHeaderActions } from "./agenda-header-actions";
 import { MobileNavigation } from "./mobile-navigation";
 import { PrimaryNavigation } from "./primary-navigation";
 import styles from "./mockup.module.css";
 
-export function BrandIcon() {
-  return (
-    <span className={styles.brandIcon}>
-      <Image src="/mockups/braid/icon.png" alt="" width={80} height={80} priority />
-    </span>
-  );
-}
-
-/** A assinatura: "braid" na serifa, em minusculas. */
+/** A assinatura: "Agente pessoal" na serifa, sem símbolo. */
 function BrandLogo() {
-  return <span className={styles.wordmark}>braid</span>;
+  return <span className={styles.wordmark}>Agente pessoal</span>;
 }
 
 export function MockupShell({
@@ -55,7 +46,7 @@ export function MockupShell({
       <a href="#conteudo" className={styles.skipLink}>Pular para o conteúdo</a>
       <header className={styles.header}>
         <div className={styles.headerInner}>
-          <a href={userId ? `/${userId}` : "/mockups/eventos"} className={styles.brand} aria-label="Braid — agenda">
+          <a href={userId ? `/${userId}` : "/mockups/eventos"} className={styles.brand} aria-label="Agente pessoal — agenda">
             <BrandLogo />
           </a>
           <PrimaryNavigation userId={userId} />

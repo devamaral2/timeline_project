@@ -47,6 +47,17 @@
 .metricValue { display: inline-flex; align-items: baseline; gap: 3px; color: var(--ink); font-family: var(--font-display); font-size: 28px; line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .metricValue small { margin-right: 4px; color: var(--muted); font-family: var(--font-sans); font-size: 12px; }
 .metricValue small:last-child { margin-right: 0; }
+.macroBar { display: flex; height: 8px; gap: 2px; overflow: hidden; border-radius: 4px; }
+.macroBar > i { display: block; min-width: 2px; background: var(--macro); }
+.macroBar > i[data-macro="protein"], .macro[data-macro="protein"] { --macro: var(--brand); }
+.macroBar > i[data-macro="carbs"], .macro[data-macro="carbs"] { --macro: var(--training); }
+.macroBar > i[data-macro="fat"], .macro[data-macro="fat"] { --macro: var(--sleep); }
+.macros { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.macro { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.macroName { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 14px; }
+.macroName i { display: block; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--macro); }
+.macroValue { display: inline-flex; align-items: baseline; gap: 2px; font-family: var(--font-display); font-size: 28px; line-height: 1.1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.macroValue small { color: var(--muted); font-family: var(--font-sans); font-size: 14px; }
 .listHeading { margin: 0 0 10px; color: var(--muted); font-size: 12px; font-weight: 600; }
 .foods { margin: 0; padding: 0; list-style: none; }
 .foods li { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 10px 0; border-top: 1px solid var(--line); }

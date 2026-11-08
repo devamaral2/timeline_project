@@ -9,11 +9,12 @@
  * O bloco @theme inline mapeia as custom properties para utilitarios do
  * Tailwind (ex.: --color-primary -> bg-primary, text-primary).
  *
- * A paleta e a "Névoa e Noite": a névoa e o chao claro (#f1f5f6); a noite,
- * um azul de ardosia quase preto (#141f29, cartoes em #1f2b35). O verde-agua
- * (`--brand`, #2e8a7a / #4fc2ab) e sempre o ponto — agora, hoje, foco — e
- * `--brand-soft` e o fundo do que esta ativo. A acao principal e sempre o fio
- * tinta (`--primary`, #203d46 no claro, #eaf2f3 no escuro).
+ * A paleta clara e a "Névoa": a névoa e o chao claro (#f1f5f6). A escura e a
+ * do Hermes: um indigo quase preto (#171720, cartoes em #1d1e2a) com texto
+ * cinza-lavanda. O verde-agua (`--brand`, #2e8a7a / #00b5ab) e sempre o ponto
+ * — agora, hoje, foco — e `--brand-soft` e o fundo do que esta ativo. A acao
+ * principal e sempre o fio tinta (`--primary`, #203d46 no claro, #e5e5e6 no
+ * escuro).
  *
  * As cores por tipo de evento seguem o vocabulario do dominio:
  * routine | meal | training | sleep — mesma luminosidade e croma, so o matiz
@@ -118,33 +119,33 @@
 }
 
 .dark {
-  --background: oklch(0.234 0.025 246.5);
-  --foreground: oklch(0.955 0.009 205.9);
-  --card: oklch(0.283 0.025 244);
-  --card-border: oklch(0.369 0.023 245.9);
-  --card-foreground: oklch(0.955 0.009 205.9);
-  --primary: oklch(0.955 0.009 205.9);
-  --primary-foreground: oklch(0.283 0.025 244);
-  --secondary: oklch(0.33 0.024 243.7);
-  --secondary-foreground: oklch(0.955 0.009 205.9);
-  --muted: oklch(0.33 0.024 243.7);
-  --muted-foreground: oklch(0.741 0.025 223.8);
-  --accent: oklch(0.361 0.023 243.6);
-  --accent-foreground: oklch(0.955 0.009 205.9);
+  --background: oklch(0.2089 0.0177 284.76);
+  --foreground: oklch(0.9222 0.0013 286.37);
+  --card: oklch(0.2396 0.023 280.79);
+  --card-border: oklch(0.3299 0.0284 279.15);
+  --card-foreground: oklch(0.9222 0.0013 286.37);
+  --primary: oklch(0.9222 0.0013 286.37);
+  --primary-foreground: oklch(0.2396 0.023 280.79);
+  --secondary: oklch(0.2591 0.0249 274.44);
+  --secondary-foreground: oklch(0.9222 0.0013 286.37);
+  --muted: oklch(0.2591 0.0249 274.44);
+  --muted-foreground: oklch(0.7351 0.0526 276.4);
+  --accent: oklch(0.3105 0.0364 275.35);
+  --accent-foreground: oklch(0.9222 0.0013 286.37);
   --destructive: oklch(0.8 0.111 17.7);
-  --destructive-foreground: oklch(0.283 0.025 244);
+  --destructive-foreground: oklch(0.2396 0.023 280.79);
   --warning: oklch(0.801 0.09 72.5);
-  --success: oklch(0.7421 0.1095 177.7);
-  --border: oklch(0.369 0.023 245.9);
-  --input: oklch(0.435 0.021 240.4);
-  --ring: oklch(0.7421 0.1095 177.7);
-  --brand: oklch(0.7421 0.1095 177.7);
-  --brand-accent: oklch(0.8 0.099 179);
-  --brand-soft: oklch(0.369 0.045 188.8);
-  --strand-tile: oklch(0.283 0.025 244);
-  --strand-nevoa: oklch(0.638 0.042 219.1);
-  --strand-destaque: oklch(0.7421 0.1095 177.7);
-  --strand-tinta: oklch(0.955 0.009 205.9);
+  --success: oklch(0.6965 0.1212 187.82);
+  --border: oklch(0.3299 0.0284 279.15);
+  --input: oklch(0.3982 0.0325 275.54);
+  --ring: oklch(0.6965 0.1212 187.82);
+  --brand: oklch(0.6965 0.1212 187.82);
+  --brand-accent: oklch(0.775 0.1244 187.69);
+  --brand-soft: oklch(0.3257 0.0435 199.9);
+  --strand-tile: oklch(0.2396 0.023 280.79);
+  --strand-nevoa: oklch(0.5424 0.0397 274.43);
+  --strand-destaque: oklch(0.6965 0.1212 187.82);
+  --strand-tinta: oklch(0.9222 0.0013 286.37);
   --sleep: oklch(0.8 0.09 287.8);
   --training: oklch(0.8 0.09 134.7);
   --meal: oklch(0.801 0.09 72.5);

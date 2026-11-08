@@ -1,11 +1,11 @@
 "use client";
 
-import { ArrowLeft, CalendarDays, Check, ChevronDown, NotepadText, Plus, Search, SquareCheck, X } from "lucide-react";
+import { ArrowLeft, CalendarDays, Check, ChevronDown, FileText, ListChecks, MessageSquare, Plus, Search, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 import { creatableItemTypes, ICON_STROKE_WIDTH, visualForItemType } from "@/components/events/event-visuals";
-import { AgentChatPanel, useAgendaChat } from "./agent-chat-panel";
+import { AgentChatPanel, agentEntityHref, useAgendaChat } from "./agent-chat-panel";
 import { EXAMPLE_TODAY, exampleEventsOn, type TaskStatus } from "./agenda-examples";
 import { CalendarPicker, type DateField, EventScheduleFields } from "./event-schedule-fields";
 import styles from "./mockup.module.css";
@@ -33,7 +33,7 @@ const initialEntries: Entry[] = [
   ...exampleEventsOn(EXAMPLE_TODAY).flatMap(event => event.task ? [{ id: event.task.id, title: event.name, kind: "Tarefa" as const }] : []),
   { id: "note-1", title: "Ideias para a proposta", kind: "Nota" },
 ];
-const icons = { Evento: CalendarDays, Tarefa: SquareCheck, Nota: NotepadText };
+const icons = { Evento: CalendarDays, Tarefa: ListChecks, Nota: FileText };
 
 function DraftPriorityIcon({ priority }: { priority: DraftPriority }) {
   if (priority === "urgent") return <span className={styles.entityPriorityIcon} data-priority={priority} aria-hidden>
@@ -140,17 +140,17 @@ export function MobileNavigation({ userId }: { userId?: string }) {
     <>
       <nav className={styles.bottomNav} aria-label="Navegação inferior">
         {tasksHref ? (
-          <Link href={tasksHref} aria-label="Tarefas" aria-current={onTasks && !panel ? "page" : undefined}><SquareCheck aria-hidden /><span>Tarefas</span></Link>
+          <Link href={tasksHref} aria-label="Tarefas" aria-current={onTasks && !panel ? "page" : undefined}><ListChecks aria-hidden /><span>Tarefas</span></Link>
         ) : (
-          <button type="button" aria-label="Tarefas" onClick={() => openPanel("Tarefa")} aria-haspopup="dialog" aria-expanded={panel === "Tarefa"} aria-controls={dialogId}><SquareCheck aria-hidden /><span>Tarefas</span></button>
+          <button type="button" aria-label="Tarefas" onClick={() => openPanel("Tarefa")} aria-haspopup="dialog" aria-expanded={panel === "Tarefa"} aria-controls={dialogId}><ListChecks aria-hidden /><span>Tarefas</span></button>
         )}
         <Link href={userId ? `/${userId}` : "/mockups/eventos"} aria-label="Agenda" aria-current={panel || onNotes || onTasks ? undefined : "page"}><CalendarDays aria-hidden /><span>Agenda</span></Link>
         {notesHref ? (
-          <Link href={notesHref} aria-label="Notas" aria-current={onNotes && !panel ? "page" : undefined}><NotepadText aria-hidden /><span>Notas</span></Link>
+          <Link href={notesHref} aria-label="Notas" aria-current={onNotes && !panel ? "page" : undefined}><FileText aria-hidden /><span>Notas</span></Link>
         ) : (
-          <button type="button" aria-label="Notas" onClick={() => openPanel("Nota")} aria-haspopup="dialog" aria-expanded={panel === "Nota"} aria-controls={dialogId}><NotepadText aria-hidden /><span>Notas</span></button>
+          <button type="button" aria-label="Notas" onClick={() => openPanel("Nota")} aria-haspopup="dialog" aria-expanded={panel === "Nota"} aria-controls={dialogId}><FileText aria-hidden /><span>Notas</span></button>
         )}
-        <button type="button" className={styles.commandButton} onClick={() => openPanel("hub")} aria-haspopup="dialog" aria-expanded={panel === "hub"} aria-controls={dialogId} aria-label="Buscar e criar"><span className={styles.commandGlyph}><span /></span><span>Buscar e criar</span></button>
+        <button type="button" className={styles.commandButton} onClick={() => openPanel("hub")} aria-haspopup="dialog" aria-expanded={panel === "hub"} aria-controls={dialogId} aria-label="Buscar e criar"><MessageSquare aria-hidden /><span>Buscar e criar</span></button>
       </nav>
       <dialog ref={dialogRef} id={dialogId} aria-labelledby={panel === "hub" ? undefined : titleId} aria-label={panel === "hub" ? "Buscar e criar" : undefined} className={styles.sectionMenu} onClose={() => setPanel(null)}
         data-hub-view={panel === "hub" ? hubView : undefined} data-expanded={panel === "hub" && hubView === "chat" && expanded ? "true" : undefined}
@@ -163,7 +163,7 @@ export function MobileNavigation({ userId }: { userId?: string }) {
           <h2 id={titleId}>{panel === "Tarefa" ? "Tarefas" : "Notas"}</h2>
           <button type="button" onClick={() => dialogRef.current?.close()} aria-label="Fechar painel"><X aria-hidden /></button>
         </div>}
-        {panel === "hub" && hubView === "chat" ? <AgentChatPanel {...agendaChat} expanded={expanded} onToggleExpanded={() => setExpanded(current => !current)} onCommand={runCommand} /> : <>
+        {panel === "hub" && hubView === "chat" ? <AgentChatPanel {...agendaChat} expanded={expanded} onToggleExpanded={() => setExpanded(current => !current)} onCommand={runCommand} onClose={() => dialogRef.current?.close()} entityHref={userId ? entity => agentEntityHref(userId, entity) : undefined} /> : <>
         {panel === "hub" && !activePicker && !formPicker && <div className={styles.hubHeader}>
           <button type="button" className={styles.hubBack} onClick={backToChat} aria-label="Voltar para o chat"><ArrowLeft aria-hidden /></button>
           {hubView === "create" ? <fieldset className={styles.creationToggle} aria-label="Tipo de criação">{(["Tarefa", "Evento", "Nota"] as Kind[]).map(value => { const Icon = icons[value]; return <button type="button" key={value} aria-pressed={kind === value} onClick={() => { setKind(value); setActivePicker(null); setNotice(""); setFormPicker(false); }}><Icon aria-hidden /><span>{value}</span></button>; })}</fieldset>

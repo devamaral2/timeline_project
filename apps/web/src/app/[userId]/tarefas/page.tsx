@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { TasksScreen } from "@/components/tasks/TasksScreen";
 
 export const metadata: Metadata = {
-  title: "Tarefas — Braid",
+  title: "Tarefas — Agente pessoal",
   description: "Suas tarefas por status, com prazo, prioridade e subtarefas.",
 };
 
