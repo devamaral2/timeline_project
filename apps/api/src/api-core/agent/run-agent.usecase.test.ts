@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test } from "vitest";
 import {
   AgentConversation,
   EntityBatchConflictError,
@@ -21,6 +21,13 @@ import { InMemoryEntityBatchWriter } from "./testing/in-memory-entity-batch-writ
 import { ScriptedAgentGateway, type ScriptedToolCall } from "./testing/scripted-agent.gateway";
 import { StubScopedSqlQuery } from "./testing/stub-scoped-sql-query";
 import { claimsAWrite, RunAgentUseCase } from "./run-agent.usecase";
+import {
+  FACTORY_AGENT_CONFIG,
+  activateAgentConfig,
+  agentsConfig,
+  factoryAgentConfig,
+  parseAgentConfig,
+} from "./config/agent-config";
 
 const NOW = new Date("2026-09-16T15:00:00.000Z");
 const owner: AuthenticatedUser = { userId: "user-1" };
@@ -735,5 +742,32 @@ describe("conversation turns", () => {
       { firstSeq: 1, lastSeq: 2 },
       { firstSeq: 3, lastSeq: 4 },
     ]);
+  });
+});
+
+describe("RunAgentUseCase — configuration snapshot", () => {
+  afterEach(() => activateAgentConfig(factoryAgentConfig()));
+
+  test("a publish in the middle of a turn does not change what the rest of the turn reads", async () => {
+    const original = agentsConfig.limits.maxSteps;
+    const seen: number[] = [];
+    const gateway: AgentGateway = {
+      async run() {
+        seen.push(agentsConfig.limits.maxSteps);
+        const documents = structuredClone(FACTORY_AGENT_CONFIG);
+        (documents.agents as { limits: { maxSteps: number } }).limits.maxSteps = original + 7;
+        activateAgentConfig(parseAgentConfig(documents));
+        await Promise.resolve();
+        seen.push(agentsConfig.limits.maxSteps);
+        return { text: "ok", modelName: "m", stoppedByLimit: false };
+      },
+    };
+    const { useCase } = setup({ gateway });
+
+    await run(useCase);
+
+    expect(seen).toEqual([original, original]);
+    // O pedido seguinte ja le a versao nova.
+    expect(agentsConfig.limits.maxSteps).toBe(original + 7);
   });
 });

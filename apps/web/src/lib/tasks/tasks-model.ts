@@ -1,4 +1,4 @@
-import { dayKeyOf, formatTime, weekday, zonedDayStart, zonedTimeAt } from "@repo/timeline";
+import { dayKeyOf, formatTime, TIMELINE_TIME_ZONE, weekday, zonedDayStart, zonedTimeAt } from "@repo/timeline";
 import type { TaskSummaryDto, WorkItemPriority, WorkItemStatus } from "@/lib/api/contracts";
 
 /**
@@ -68,6 +68,11 @@ type TaskDates = Pick<TaskSummaryDto, "startedAt" | "estimatedFinishAt">;
 export function taskDayOf(task: TaskDates): string | null {
   const instant = task.startedAt ?? task.estimatedFinishAt;
   return instant ? dayKeyOf(instant) : null;
+}
+
+/** A tarefa cai no dia de hoje, aberta ou não. */
+export function isTodayTask(task: TaskDates, now: Date): boolean {
+  return taskDayOf(task) === dayKeyOf(now);
 }
 
 function isDayStart(instant: string): boolean {
@@ -167,13 +172,36 @@ export function groupTasks(tasks: readonly TaskSummaryDto[], sort: TaskSort = "d
   })).filter((group) => group.tasks.length > 0);
 }
 
-/** "9 abertas" e "1 atrasada", sobre as tarefas de topo. */
-export function taskCounts(tasks: readonly TaskSummaryDto[], now: Date): { open: number; overdue: number } {
+/** "9 abertas", "1 atrasada" e "2 para hoje", sobre as tarefas de topo. */
+export function taskCounts(tasks: readonly TaskSummaryDto[], now: Date): { open: number; overdue: number; today: number } {
   const top = topLevelTasks(tasks);
   return {
     open: top.filter(isOpenTask).length,
     overdue: top.filter((task) => isOverdueTask(task, now)).length,
+    today: top.filter((task) => isOpenTask(task) && isTodayTask(task, now)).length,
   };
+}
+
+export function todayCountLabel(today: number): string {
+  return `${today} para hoje`;
+}
+
+const TODAY_LINE = new Intl.DateTimeFormat("pt-BR", { timeZone: TIMELINE_TIME_ZONE, weekday: "long", day: "numeric", month: "long" });
+
+/** "domingo, 8 de novembro": o dia de hoje por extenso, no fuso da timeline. */
+export function todayLine(now: Date): string {
+  return TODAY_LINE.format(now);
+}
+
+function foldText(text: string): string {
+  return text.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLocaleLowerCase("pt-BR");
+}
+
+/** A busca da lista: o nome ou uma tag, sem acento nem caixa. Vazia, deixa tudo passar. */
+export function matchesTaskQuery(task: Pick<TaskSummaryDto, "name" | "tags">, query: string): boolean {
+  const needle = foldText(query.trim().replace(/^#/, ""));
+  if (!needle) return true;
+  return [task.name, ...task.tags].some((text) => foldText(text).includes(needle));
 }
 
 export function countLabel(open: number): string {

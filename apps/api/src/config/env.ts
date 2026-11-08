@@ -28,6 +28,10 @@ const serverSchema = z.object({
   AI_AUTOMATION: z.enum(["off", "on"]).default("off"),
   HERMES_URL: z.string().url().default("http://127.0.0.1:8642"),
   HERMES_API_KEY: z.string().min(1).optional(),
+  // Dono da configuracao editavel do agente (ADR 0004). Sem valor, ninguem altera a configuracao.
+  AGENT_CONFIG_OWNER_USER_ID: z.string().min(1).optional(),
+  // Pasta de skills e agentes compartilhada com o Hermes (ADR 0005). Sem valor, vale o padrao de fabrica.
+  AGENT_FILES_DIR: z.string().min(1).optional(),
 });
 
 export type ServerEnv = z.infer<typeof serverSchema>;
@@ -60,6 +64,8 @@ export function getServerEnv(source?: Record<string, string | undefined>): Serve
     AI_AUTOMATION: read("AI_AUTOMATION"),
     HERMES_URL: read("HERMES_URL"),
     HERMES_API_KEY: read("HERMES_API_KEY"),
+    AGENT_CONFIG_OWNER_USER_ID: read("AGENT_CONFIG_OWNER_USER_ID"),
+    AGENT_FILES_DIR: read("AGENT_FILES_DIR"),
   });
 }
 

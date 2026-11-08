@@ -9,8 +9,6 @@ import { isoNow } from "./now-iso";
 import type { AgentSkill } from "../skills/agent-skill";
 import type { PlannedOperation } from "./turn-planner";
 
-const TIME_ZONE = promptsConfig.timeZone;
-
 export interface SpecialistRequest {
   operation: PlannedOperation;
   skill: AgentSkill;
@@ -61,7 +59,7 @@ export class EntitySpecialist {
       stage: "specialist",
       system: promptsConfig.fast.specialist
         .map((line) => fill(line, {
-          now: formatNow(request.now), nowIso: isoNow(request.now), timeZone: TIME_ZONE, skill: skill.name, skillInstructions: skill.instructions,
+          now: formatNow(request.now), nowIso: isoNow(request.now), timeZone: promptsConfig.timeZone, skill: skill.name, skillInstructions: skill.instructions,
         }))
         .join("\n"),
       user: this.describe(request),

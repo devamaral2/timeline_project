@@ -3,6 +3,7 @@ import type { TaskSummaryDto } from "@/lib/api/contracts";
 import {
   groupTasks,
   isOverdueTask,
+  matchesTaskQuery,
   overdueLabel,
   pendingDependencies,
   releasedBy,
@@ -16,6 +17,8 @@ import {
   taskTimeOf,
   taskWhenLabel,
   toggledStatus,
+  todayCountLabel,
+  todayLine,
 } from "./tasks-model";
 
 /** Segunda, 14 de setembro de 2026, 10:00 no fuso da timeline. */
@@ -96,7 +99,32 @@ test("conta abertas e atrasadas so entre as tarefas de topo", () => {
     task({ id: "c", status: "done" }),
     task({ id: "d", parentTaskId: "a", startedAt: "2026-09-10T00:00:00-03:00" }),
   ];
-  expect(taskCounts(tasks, now)).toEqual({ open: 2, overdue: 1 });
+  expect(taskCounts(tasks, now)).toEqual({ open: 2, overdue: 1, today: 0 });
+});
+
+test("conta as abertas de hoje, de topo, com ou sem horario", () => {
+  const tasks = [
+    task({ id: "a", startedAt: "2026-09-14T00:00:00-03:00" }),
+    task({ id: "b", status: "scheduled", startedAt: "2026-09-14T18:00:00-03:00" }),
+    task({ id: "c", status: "done", startedAt: "2026-09-14T08:00:00-03:00" }),
+    task({ id: "d", parentTaskId: "a", startedAt: "2026-09-14T09:00:00-03:00" }),
+    task({ id: "e", startedAt: "2026-09-15T00:00:00-03:00" }),
+  ];
+  expect(taskCounts(tasks, now).today).toBe(2);
+  expect(todayCountLabel(2)).toBe("2 para hoje");
+});
+
+test("escreve o dia de hoje por extenso no fuso da timeline", () => {
+  expect(todayLine(new Date("2026-11-08T23:30:00-03:00"))).toBe("domingo, 8 de novembro");
+});
+
+test("a busca olha o nome e as tags sem acento nem caixa", () => {
+  const luz = task({ name: "Pagar conta de luz", tags: ["casa", "saúde"] });
+  expect(matchesTaskQuery(luz, "")).toBe(true);
+  expect(matchesTaskQuery(luz, "  CONTA ")).toBe(true);
+  expect(matchesTaskQuery(luz, "saude")).toBe(true);
+  expect(matchesTaskQuery(luz, "#casa")).toBe(true);
+  expect(matchesTaskQuery(luz, "dentista")).toBe(false);
 });
 
 test("progresso de subtarefas, dependencias e o que a tarefa libera", () => {

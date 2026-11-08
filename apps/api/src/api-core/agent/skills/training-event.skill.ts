@@ -1,6 +1,5 @@
 import { z } from "zod";
 import type { TrainingData, WorkoutInput } from "../../../domain";
-import { skillText } from "../config/agent-config";
 import { defineAgentSkill, fail } from "./agent-skill";
 import { eventBaseFields, toBaseChanges, toCreateEventInput } from "./event-skill-fields";
 
@@ -57,7 +56,6 @@ function toWorkoutInput(workout: WorkoutArgs): WorkoutInput {
 
 export const trainingEventSkill = defineAgentSkill({
   name: "save_training_event",
-  ...skillText("save_training_event"),
   parameters: z.object({
     ...eventBaseFields,
     workouts: z

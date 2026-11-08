@@ -1,17 +1,19 @@
 "use client";
 
-import { ChevronDown, Link2, ListChecks, Plus, SlidersHorizontal, TriangleAlert } from "lucide-react";
+import { ChevronDown, Clock, Link2, ListChecks, Plus, Search, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { authedFetch } from "@/lib/api/authed-fetch";
 import type { TaskSummaryDto, WorkItemStatus } from "@/lib/api/contracts";
 import { useNow } from "@/lib/events/use-now";
-import { tagColorStyle } from "@/lib/tags/tag-color";
+import { tagAccentStyle, tagColorStyle } from "@/lib/tags/tag-color";
 import { updateTask } from "@/lib/tasks/task-api";
 import {
   countLabel,
   groupTasks,
   isOverdueTask,
+  isTodayTask,
+  matchesTaskQuery,
   overdueCountLabel,
   overdueLabel,
   pendingDependencies,
@@ -21,6 +23,8 @@ import {
   taskDayOf,
   taskStatusLabels,
   taskWhenLabel,
+  todayCountLabel,
+  todayLine,
   toggledStatus,
   topLevelTasks,
   waitingLabel,
@@ -34,18 +38,32 @@ function toggleIn<T>(list: T[], value: T): T[] {
   return list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
 }
 
-/** Tarefas agrupadas por status: as abertas na ordem do design e, no fim, Concluídas e Canceladas recolhidas. */
+/** Quanto o aviso de "Concluída" fica na tela antes de sumir. */
+const TOAST_MS = 5000;
+
+interface Toast {
+  message: string;
+  undo: () => void;
+}
+
+/**
+ * Tarefas agrupadas por status: as abertas na ordem do design e, no fim,
+ * Concluídas e Canceladas recolhidas. Busca pelo nome, filtro por tags e, dentro
+ * de cada grupo, prioridade e depois data (ou o inverso).
+ */
 export function TasksScreen({ userId }: { userId: string }) {
   const now = useNow();
   const [tasks, setTasks] = useState<TaskSummaryDto[] | null>(null);
   const [error, setError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
-  const [sort, setSort] = useState<TaskSort>("date");
-  const [hiddenTags, setHiddenTags] = useState<string[]>([]);
+  const [sort, setSort] = useState<TaskSort>("priority");
+  const [query, setQuery] = useState("");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [expanded, setExpanded] = useState<WorkItemStatus[]>([]);
   const [pending, setPending] = useState<string[]>([]);
   const [actionError, setActionError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [toast, setToast] = useState<Toast | null>(null);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: reloadKey força o refetch.
   useEffect(() => {
@@ -57,6 +75,12 @@ export function TasksScreen({ userId }: { userId: string }) {
     return () => { cancelled = true; };
   }, [reloadKey]);
 
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(null), TOAST_MS);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
+
   const retry = useCallback(() => {
     setTasks(null);
     setReloadKey((key) => key + 1);
@@ -67,67 +91,106 @@ export function TasksScreen({ userId }: { userId: string }) {
     [tasks],
   );
   const visible = useMemo(
-    () => (tasks ?? []).filter((task) => task.tags.length === 0 ? true : task.tags.some((tag) => !hiddenTags.includes(tag))),
-    [tasks, hiddenTags],
+    () => (tasks ?? []).filter((task) =>
+      (selectedTags.length === 0 || task.tags.some((tag) => selectedTags.includes(tag))) && matchesTaskQuery(task, query)),
+    [tasks, selectedTags, query],
   );
   const groups = useMemo(() => groupTasks(visible, sort), [visible, sort]);
   const counts = tasks && now ? taskCounts(tasks, now) : null;
+  const hasTasks = tasks ? topLevelTasks(tasks).length > 0 : false;
+  const filtered = query.trim() !== "" || selectedTags.length > 0;
 
-  async function toggle(task: TaskSummaryDto) {
-    const status = toggledStatus(task);
+  function clearFilters() {
+    setQuery("");
+    setSelectedTags([]);
+  }
+
+  /** Muda o status com a revisão da lista; devolve se a API aceitou. */
+  async function applyStatus(target: Pick<TaskSummaryDto, "id" | "revision">, status: WorkItemStatus): Promise<boolean> {
     setActionError(null);
-    setPending((current) => [...current, task.id]);
+    setPending((current) => [...current, target.id]);
     try {
-      await updateTask(task.id, { expectedRevision: task.revision, status });
-      setTasks((current) => current?.map((item) => item.id === task.id ? { ...item, status, revision: item.revision + 1 } : item) ?? current);
+      await updateTask(target.id, { expectedRevision: target.revision, status });
+      setTasks((current) => current?.map((item) => item.id === target.id ? { ...item, status, revision: target.revision + 1 } : item) ?? current);
+      return true;
     } catch {
       setActionError("Não foi possível atualizar a tarefa. Tente novamente.");
       // A revisão pode ter andado em outra aba: recarregar traz a atual.
       setReloadKey((key) => key + 1);
+      return false;
     } finally {
-      setPending((current) => current.filter((id) => id !== task.id));
+      setPending((current) => current.filter((id) => id !== target.id));
     }
+  }
+
+  async function toggle(task: TaskSummaryDto) {
+    const previous = task.status;
+    const status = toggledStatus(task);
+    if (!(await applyStatus(task, status))) return;
+    setToast({
+      message: `${status === "done" ? "Concluída" : "Reaberta"}: ${task.name}`,
+      // A revisão que a API acabou de devolver é a seguinte à da lista.
+      undo: () => { setToast(null); void applyStatus({ id: task.id, revision: task.revision + 1 }, previous); },
+    });
   }
 
   return (
     <main id="conteudo" className={styles.screen}>
-      <div className={styles.heading}>
+      <header className={styles.pageHead}>
         <div className={styles.titleBlock}>
-          <p className={styles.count} aria-live="polite">
+          <p className={styles.eyebrow}>{now ? todayLine(now) : " "}</p>
+          <h1 className={styles.title}>Tarefas</h1>
+          <p className={styles.summary} aria-live="polite">
             {counts ? (
               <>
                 <span>{countLabel(counts.open)}</span>
-                {counts.overdue > 0 ? <><span aria-hidden="true">·</span><span className={styles.overdue}>{overdueCountLabel(counts.overdue)}</span></> : null}
+                {counts.overdue > 0 ? <><span aria-hidden="true">·</span><span>{overdueCountLabel(counts.overdue)}</span></> : null}
+                {counts.today > 0 ? <><span aria-hidden="true">·</span><span>{todayCountLabel(counts.today)}</span></> : null}
               </>
             ) : " "}
           </p>
-          <h1 className={styles.title}>Tarefas</h1>
         </div>
         <div className={styles.headingActions}>
-          <details className={styles.options} onKeyDown={(event) => {
-            if (event.key === "Escape") { event.currentTarget.open = false; event.currentTarget.querySelector("summary")?.focus(); }
-          }} onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false; }}>
-            <summary className={styles.roundButton} aria-label="Filtrar e ordenar" title="Filtrar e ordenar"><SlidersHorizontal aria-hidden /></summary>
-            <div className={styles.optionsPanel}>
-              <fieldset>
-                <legend>Ordenar por</legend>
-                <label><input type="radio" name="task-sort" checked={sort === "date"} onChange={() => setSort("date")} /><span>Data</span></label>
-                <label><input type="radio" name="task-sort" checked={sort === "priority"} onChange={() => setSort("priority")} /><span>Prioridade</span></label>
-              </fieldset>
-              <fieldset>
-                <legend>Tags exibidas</legend>
-                {allTags.length === 0 ? <p>Nenhuma tag disponível.</p> : allTags.map((tag) => (
-                  <label key={tag}>
-                    <input type="checkbox" checked={!hiddenTags.includes(tag)} onChange={() => setHiddenTags((current) => toggleIn(current, tag))} />
-                    <span>#{tag}</span>
-                  </label>
-                ))}
-              </fieldset>
-            </div>
-          </details>
+          <label className={styles.search}>
+            <Search aria-hidden />
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Buscar tarefas"
+              aria-label="Buscar tarefas"
+              autoComplete="off"
+            />
+          </label>
           <button type="button" className={styles.createButton} onClick={() => setCreating(true)}><Plus aria-hidden />Nova tarefa</button>
         </div>
-      </div>
+      </header>
+
+      {hasTasks ? (
+        <div className={styles.filters}>
+          <fieldset className={styles.chips} aria-label="Filtrar por tag">
+            {allTags.map((tag) => (
+              <button
+                key={tag}
+                type="button"
+                className={styles.chip}
+                aria-pressed={selectedTags.includes(tag)}
+                onClick={() => setSelectedTags((current) => toggleIn(current, tag))}
+              >
+                <span className={styles.dot} style={tagAccentStyle(tag)} aria-hidden="true" />#{tag}
+              </button>
+            ))}
+            {selectedTags.length > 0 ? <button type="button" className={styles.chip} onClick={() => setSelectedTags([])}>Limpar tags</button> : null}
+          </fieldset>
+          <label className={styles.sort}>
+            Ordenar por
+            <select className={styles.select} value={sort} onChange={(event) => setSort(event.target.value as TaskSort)}>
+              <option value="priority">Prioridade</option>
+              <option value="date">Data</option>
+            </select>
+          </label>
+        </div>
+      ) : null}
 
       {actionError ? <p role="alert" className={styles.message}>{actionError}</p> : null}
 
@@ -135,55 +198,72 @@ export function TasksScreen({ userId }: { userId: string }) {
         <p role="alert" className={styles.message}>Não foi possível carregar as tarefas.<button type="button" className={styles.retry} onClick={retry}>Tentar de novo</button></p>
       ) : !tasks || !now ? (
         <div className={styles.groups} aria-busy="true"><p role="status" className={styles.message}>Carregando tarefas…</p></div>
-      ) : topLevelTasks(tasks).length === 0 ? (
-        <p className={styles.message}>Você ainda não tem tarefas.</p>
+      ) : !hasTasks ? (
+        <div className={styles.empty}>
+          <ListChecks aria-hidden />
+          <h2 className={styles.emptyTitle}>Nenhuma tarefa por aqui</h2>
+          <p className={styles.emptyText}>Crie a primeira tarefa para começar a organizar o seu dia.</p>
+          <button type="button" className={styles.emptyAction} onClick={() => setCreating(true)}>Nova tarefa</button>
+        </div>
       ) : groups.length === 0 ? (
-        <p className={styles.message}>Nenhuma tarefa com as tags selecionadas. Escolha as tags no menu de opções.</p>
+        <div className={styles.empty}>
+          <ListChecks aria-hidden />
+          <h2 className={styles.emptyTitle}>Nenhuma tarefa encontrada</h2>
+          <p className={styles.emptyText}>
+            {filtered
+              ? "Nada combina com a busca e os filtros atuais. Remova um filtro para ver mais tarefas."
+              : "Não há tarefas para mostrar."}
+          </p>
+          <button type="button" className={styles.emptyAction} onClick={clearFilters}>Limpar filtros</button>
+        </div>
       ) : (
-        <div>
-          <div className={styles.columns} aria-hidden="true">
-            <span /><span>Tarefa</span><span>Tags</span><span>Quando</span><span>Prioridade</span>
-          </div>
-          <div className={styles.groups}>
-            {groups.map((group) => {
-              const labelId = `tarefas-${group.status}`;
-              const open = !group.collapsedByDefault || expanded.includes(group.status);
-              const heading = (
-                <h2 id={labelId} className={styles.groupTitle} data-status={group.status}>
-                  <TaskStatusIcon status={group.status} />
-                  {group.title}
-                  <span className={styles.groupCount}>{group.tasks.length}</span>
-                </h2>
-              );
-              return (
-                <section key={group.status} aria-labelledby={labelId} className={cn(styles.group, group.collapsedByDefault && styles.closed)}>
+        <div className={styles.groups}>
+          {groups.map((group) => {
+            const labelId = `tarefas-${group.status}`;
+            const open = !group.collapsedByDefault || expanded.includes(group.status);
+            return (
+              <section key={group.status} aria-labelledby={labelId} className={styles.group}>
+                <h2 id={labelId} className={styles.groupHead} data-status={group.status}>
                   {group.collapsedByDefault ? (
-                    <button type="button" className={styles.closedToggle} aria-expanded={open} onClick={() => setExpanded((current) => toggleIn(current, group.status))}>
-                      {heading}
-                      <span className={styles.chevron}><ChevronDown aria-hidden /></span>
+                    <button type="button" className={styles.groupToggle} aria-expanded={open} onClick={() => setExpanded((current) => toggleIn(current, group.status))}>
+                      <ChevronDown aria-hidden />
+                      <span className={styles.groupTitle}>{group.title}</span>
+                      <span className={styles.groupCount}>{group.tasks.length}</span>
                     </button>
-                  ) : heading}
-                  {open ? (
-                    <ul className={styles.list}>
-                      {group.tasks.map((task) => (
-                        <TaskRow
-                          key={task.id}
-                          task={task}
-                          tasks={tasks}
-                          now={now}
-                          href={`/${userId}/tarefas/${task.id}`}
-                          pending={pending.includes(task.id)}
-                          onToggle={() => void toggle(task)}
-                        />
-                      ))}
-                    </ul>
-                  ) : null}
-                </section>
-              );
-            })}
-          </div>
+                  ) : (
+                    <>
+                      <span className={styles.groupTitle}>{group.title}</span>
+                      <span className={styles.groupCount}>{group.tasks.length}</span>
+                    </>
+                  )}
+                </h2>
+                {open ? (
+                  <ul className={styles.list}>
+                    {group.tasks.map((task) => (
+                      <TaskRow
+                        key={task.id}
+                        task={task}
+                        tasks={tasks}
+                        now={now}
+                        href={`/${userId}/tarefas/${task.id}`}
+                        pending={pending.includes(task.id)}
+                        onToggle={() => void toggle(task)}
+                      />
+                    ))}
+                  </ul>
+                ) : null}
+              </section>
+            );
+          })}
         </div>
       )}
+
+      {toast ? (
+        <div className={styles.toast} role="status" aria-live="polite">
+          <span className={styles.toastMessage}>{toast.message}</span>
+          <button type="button" className={styles.toastUndo} onClick={toast.undo}>Desfazer</button>
+        </div>
+      ) : null}
 
       {creating ? (
         <TaskEditorDialog
@@ -208,6 +288,7 @@ function TaskRow({ task, tasks, now, href, pending, onToggle }: TaskRowProps) {
   const progress = subtaskProgress(task.id, tasks);
   const waiting = pendingDependencies(task, tasks).length;
   const overdue = isOverdueTask(task, now);
+  const today = isTodayTask(task, now);
   const hasDay = taskDayOf(task) !== null;
   const when = overdue ? overdueLabel(task, now) : taskWhenLabel(task, now);
   const closed = task.status === "done" || task.status === "cancel";
@@ -217,44 +298,43 @@ function TaskRow({ task, tasks, now, href, pending, onToggle }: TaskRowProps) {
     <li className={styles.row} data-status={task.status} data-pending={pending}>
       <button
         type="button"
-        className={styles.check}
+        className={styles.rowCheck}
         data-status={task.status}
         disabled={pending}
         aria-label={`${taskStatusLabels[task.status]}. Toque para ${action} “${task.name}”`}
         title={taskStatusLabels[task.status]}
         onClick={onToggle}
       >
-        <TaskStatusIcon status={task.status} size={22} />
+        <TaskStatusIcon status={task.status} size={24} />
       </button>
 
       <div className={styles.main}>
-        <Link href={href} className={styles.name}>{task.name}</Link>
-        <ul className={styles.meta}>
-          {hasDay ? (
-            <li className={cn(styles.onlyMobile, overdue && styles.late)}>
-              {overdue ? <TriangleAlert aria-hidden /> : null}
-              {when}
-            </li>
-          ) : null}
-          {waiting > 0 ? <li><Link2 aria-hidden />{waitingLabel(waiting)}</li> : null}
-          {progress ? (
-            <li role="img" aria-label={`${progress.done} de ${progress.total} subtarefas feitas`}>
-              <ListChecks aria-hidden />{progress.done}/{progress.total}
-            </li>
-          ) : null}
-          {task.tags.map((tag) => (
-            <li key={tag} className={cn(styles.chip, styles.onlyMobile)} style={tagColorStyle(tag)}>#{tag}</li>
-          ))}
-        </ul>
+        <Link href={href} className={styles.name} title={task.name}>{task.name}</Link>
+        {task.tags.length > 0 || waiting > 0 || progress ? (
+          <ul className={styles.meta}>
+            {task.tags.map((tag) => (
+              <li key={tag} className={styles.tag} style={tagColorStyle(tag)}>#{tag}</li>
+            ))}
+            {waiting > 0 ? <li className={styles.waiting}><Link2 aria-hidden />{waitingLabel(waiting)}</li> : null}
+            {progress ? (
+              <li className={styles.progress} role="img" aria-label={`${progress.done} de ${progress.total} subtarefas feitas`}>
+                <span className={styles.progressBar} aria-hidden="true"><i style={{ width: `${Math.round((progress.done / progress.total) * 100)}%` }} /></span>
+                <span className={styles.progressCount} aria-hidden="true">{progress.done}/{progress.total}</span>
+              </li>
+            ) : null}
+          </ul>
+        ) : null}
       </div>
 
-      <ul className={cn(styles.tags, styles.onlyDesktop)} aria-label="Tags">
-        {task.tags.map((tag) => <li key={tag} style={tagColorStyle(tag)}>#{tag}</li>)}
-      </ul>
-      <div className={cn(styles.when, styles.onlyDesktop)}>
-        {overdue ? <span className={styles.late}><TriangleAlert aria-hidden />{when}</span> : when}
+      <div className={styles.side}>
+        {closed ? null : <TaskPriorityMark priority={task.priority} withLabel alwaysLabel />}
+        {hasDay ? (
+          <span className={cn(styles.due, overdue && styles.dueLate, !overdue && today && styles.dueToday)}>
+            {overdue ? <TriangleAlert aria-hidden /> : today ? <Clock aria-hidden /> : null}
+            {when}
+          </span>
+        ) : null}
       </div>
-      <TaskPriorityMark priority={task.priority} withLabel />
     </li>
   );
 }

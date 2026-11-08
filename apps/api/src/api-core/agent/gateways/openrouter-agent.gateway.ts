@@ -3,16 +3,25 @@ import { agentsConfig, promptsConfig } from "../config/agent-config";
 import { AgentRunCancelledError, LlmUnavailableError } from "../errors/agent.errors";
 import type { AgentGateway, AgentRunInput, AgentRunResult } from "./agent.gateway";
 
-/** Consultas encadeadas + preparacao das mudancas + resposta. */
-export const MAX_STEPS = agentsConfig.limits.maxSteps;
-/** Teto de gasto por requisicao, em dolares. `maxCost` conta custo nao reportado como 0 — o teto de passos e o limite real. */
-export const MAX_COST_USD = agentsConfig.limits.maxCostUsd;
-/** Uma query com timeout proprio de 3s, ou o parse de refeicao pelo modelo. */
-const TOOL_TIMEOUT_MS = agentsConfig.limits.toolTimeoutMs;
-const RUN_TIMEOUT_MS = agentsConfig.limits.runTimeoutMs;
-export const MAX_TOOL_RESULT_CHARS = agentsConfig.limits.maxToolResultChars;
+/*
+ * Limites lidos a cada uso, da versao ativa da configuracao (ver config/agent-config.ts).
+ * Funcoes, e nao constantes, para que uma publicacao valha no pedido seguinte.
+ */
 
-export const FINAL_RESPONSE_DIRECTIVE = promptsConfig.finalResponseDirective;
+/** Consultas encadeadas + preparacao das mudancas + resposta. */
+export function maxSteps(): number {
+  return agentsConfig.limits.maxSteps;
+}
+/** Teto de gasto por requisicao, em dolares. `maxCost` conta custo nao reportado como 0 — o teto de passos e o limite real. */
+export function maxCostUsd(): number {
+  return agentsConfig.limits.maxCostUsd;
+}
+export function maxToolResultChars(): number {
+  return agentsConfig.limits.maxToolResultChars;
+}
+export function finalResponseDirective(): string {
+  return promptsConfig.finalResponseDirective;
+}
 
 type AgentModule = typeof import("@openrouter/agent", { with: { "resolution-mode": "import" } });
 type AgentClient = Pick<InstanceType<AgentModule["OpenRouter"]>, "callModel">;
@@ -78,15 +87,15 @@ export class OpenRouterAgentGateway implements AgentGateway {
         instructions: input.systemPrompt,
         input: input.text,
         tools,
-        stopWhen: [limit(stepCountIs(MAX_STEPS)), limit(maxCost(MAX_COST_USD))],
-        allowFinalResponse: FINAL_RESPONSE_DIRECTIVE,
+        stopWhen: [limit(stepCountIs(maxSteps())), limit(maxCost(maxCostUsd()))],
+        allowFinalResponse: finalResponseDirective(),
         // Duas mudancas no mesmo registro na mesma rodada nao podem correr em
         // paralelo: a segunda precisa ver a primeira ja preparada.
         toolConcurrency: 1,
-        toolTimeoutMs: TOOL_TIMEOUT_MS,
+        toolTimeoutMs: agentsConfig.limits.toolTimeoutMs,
         signal: input.signal
-          ? AbortSignal.any([AbortSignal.timeout(RUN_TIMEOUT_MS), input.signal])
-          : AbortSignal.timeout(RUN_TIMEOUT_MS),
+          ? AbortSignal.any([AbortSignal.timeout(agentsConfig.limits.runTimeoutMs), input.signal])
+          : AbortSignal.timeout(agentsConfig.limits.runTimeoutMs),
       });
 
       const text = await result.getText();
@@ -102,6 +111,7 @@ export class OpenRouterAgentGateway implements AgentGateway {
 
 export function capToolResult(result: unknown): unknown {
   const serialized = JSON.stringify(result) ?? "null";
-  if (serialized.length <= MAX_TOOL_RESULT_CHARS) return result;
-  return { truncated: true, preview: serialized.slice(0, MAX_TOOL_RESULT_CHARS) };
+  const max = maxToolResultChars();
+  if (serialized.length <= max) return result;
+  return { truncated: true, preview: serialized.slice(0, max) };
 }

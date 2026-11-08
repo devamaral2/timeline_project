@@ -57,6 +57,10 @@ import { ProcessEditWorker } from "./process/process-edit-worker";
 import { ProcessQueryWorker } from "./process/process-query-worker";
 import { PostgresProcessCandidateQuery } from "../infrastructure/persistence/ai-processes/postgres-process-candidate.query";
 import type { ProcessStore } from "./process/process-store";
+import { AgentFilesService } from "./agent/config/agent-files.service";
+import { AgentFilesBootstrap } from "../infrastructure/agent-files/agent-files.bootstrap";
+import { AGENT_SKILLS } from "./agent/skills/agent-skill-registry";
+import { getDayContextSkill } from "./agent/skills/get-day-context.skill";
 
 /** Queue wait/retry must not change what "today" or "now" meant at submission. */
 function requestClock(): Date {
@@ -75,6 +79,15 @@ export class ApiCoreModule {
       module: ApiCoreModule,
       imports: [PersistenceModule, AiJobsModule],
       providers: [
+        {
+          provide: AgentFilesService,
+          useFactory: () =>
+            new AgentFilesService(
+              getServerEnv().AGENT_FILES_DIR ?? "",
+              [...AGENT_SKILLS, getDayContextSkill].map((skill) => skill.name),
+            ),
+        },
+        AgentFilesBootstrap,
         {
           provide: MaterializeRecurrencesUseCase,
           inject: [RECURRENCE_REPOSITORY],
@@ -210,6 +223,7 @@ export class ApiCoreModule {
         CreateEventFromTranscriptUseCase,
         QueuedAiOperations,
         ProcessOperations,
+        AgentFilesService,
         AiJobsModule,
       ],
     };

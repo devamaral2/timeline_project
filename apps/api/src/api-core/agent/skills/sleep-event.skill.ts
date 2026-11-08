@@ -1,12 +1,10 @@
 import { z } from "zod";
 import type { SleepItem } from "../../../domain";
-import { skillText } from "../config/agent-config";
 import { defineAgentSkill, fail } from "./agent-skill";
 import { eventBaseFields, toBaseChanges, toCreateEventInput } from "./event-skill-fields";
 
 export const sleepEventSkill = defineAgentSkill({
   name: "save_sleep_event",
-  ...skillText("save_sleep_event"),
   parameters: z.object({
     ...eventBaseFields,
     trackedSleepTime: z

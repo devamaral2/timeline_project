@@ -1,11 +1,9 @@
 import { z } from "zod";
-import { skillText } from "../config/agent-config";
 import { defineAgentSkill, fail } from "./agent-skill";
 import { eventBaseFields, toBaseChanges, toCreateEventInput } from "./event-skill-fields";
 
 export const routineEventSkill = defineAgentSkill({
   name: "save_routine_event",
-  ...skillText("save_routine_event"),
   parameters: z.object(eventBaseFields),
   run: async (args, { session }) => {
     if (!args.id) {

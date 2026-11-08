@@ -82,3 +82,17 @@ test("GET of a missing series is a 404", async () => {
     "Recurrence not found",
   );
 });
+
+test("lists only the series of the requested target", async () => {
+  const { database, createEvent } = createEventsKit();
+  const repository = new InMemoryRecurrenceRepository(database);
+  const tasks = new InMemoryTaskRepository();
+  const create = new CreateRecurrenceUseCase(repository, createEvent, tasks);
+  const list = new ListRecurrencesUseCase(repository);
+  await create.execute(body, actor);
+  await create.execute({ ...body, target: "task", template: { name: "Revisar semana" } }, actor);
+
+  expect(await list.execute(undefined, actor)).toHaveLength(2);
+  expect((await list.execute({ target: "task" }, actor)).map((r) => r.target)).toEqual(["task"]);
+  expect((await list.execute({ target: "event" }, actor)).map((r) => r.target)).toEqual(["event"]);
+});

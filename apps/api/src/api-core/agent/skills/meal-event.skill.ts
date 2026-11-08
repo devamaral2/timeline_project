@@ -1,12 +1,10 @@
 import { z } from "zod";
 import type { MealItem } from "../../../domain";
-import { skillText } from "../config/agent-config";
 import { defineAgentSkill, fail } from "./agent-skill";
 import { eventBaseFields, toBaseChanges, toCreateEventInput } from "./event-skill-fields";
 
 export const mealEventSkill = defineAgentSkill({
   name: "save_meal_event",
-  ...skillText("save_meal_event"),
   parameters: z.object({
     ...eventBaseFields,
     inputText: z

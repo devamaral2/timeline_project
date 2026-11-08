@@ -3,7 +3,7 @@ import { isEventPriority, isWorkItemPriority } from "../../../domain";
 import type { CreateRecurrenceInput, EventRecurrenceTemplate, TaskRecurrenceTemplate } from "@repo/contracts";
 import type { Recurrence } from "../../../domain";
 import type { RecurrenceRevision } from "../../recurrences/revise-recurrence";
-import { promptsConfig, skillText } from "../config/agent-config";
+import { promptsConfig } from "../config/agent-config";
 import { defineAgentSkill, fail } from "./agent-skill";
 import { buildRecurrenceRule, ruleArgsOf, WEEKDAY_CODES, type RecurrenceRuleArgs } from "./recurrence-rule";
 
@@ -70,7 +70,6 @@ type RecurrenceArgs = z.infer<typeof recurrenceParameters>;
 
 export const recurrenceSkill = defineAgentSkill({
   name: "save_recurrence",
-  ...skillText("save_recurrence"),
   parameters: recurrenceParameters,
   run: async (args, { session }) => {
     const timeZone = promptsConfig.timeZone;

@@ -24,11 +24,14 @@ const eventShape = {
   kind: z.enum(["routine", "meal", "sleep", "training"]).optional().describe("Omit for a routine event."),
 };
 
+const taskStatus = z.enum(["todo", "scheduled", "toDefine", "inHold", "done", "cancel"]);
+const taskPriority = z.enum(["urgent", "high", "medium", "low"]);
+
 const taskShape = {
   name: z.string().min(1),
   description: z.string().optional(),
-  status: z.enum(["todo", "scheduled", "toDefine", "inHold", "done", "cancel"]).optional(),
-  priority: z.enum(["urgent", "high", "medium", "low"]).optional(),
+  status: taskStatus.optional(),
+  priority: taskPriority.optional(),
   startedAt: instant.optional(),
   estimatedFinishAt: instant.optional(),
   tags,
@@ -152,28 +155,67 @@ export function registerTools(server: McpServer, api: ApiClient): void {
   server.registerTool(
     "list_timeline_events",
     {
-      description: "List the owner's events in a time window, newest first. Use it to check what already exists before creating.",
+      description:
+        "List the owner's events in a time window, newest first. Use it to check what already exists before creating. When the result has a next cursor, pass it as 'cursor' to get the following page.",
       inputSchema: {
         from: instant.optional(),
         to: instant.optional(),
+        kind: z.enum(["routine", "meal", "sleep", "training"]).optional().describe("Only events of this kind."),
         tag: z.string().optional(),
+        cursor: z.string().optional().describe("The cursor returned by the previous page."),
         limit: z.number().int().min(1).max(100).default(20),
       },
       annotations: READ_ONLY,
     },
-    (query) => guarded(() => api.get("/api/events", query)),
+    ({ kind, ...query }) => guarded(() => api.get("/api/events", { ...query, type: kind })),
   );
 
   server.registerTool(
     "list_tasks",
-    { description: "List the owner's tasks.", inputSchema: {}, annotations: READ_ONLY },
-    () => guarded(() => api.get("/api/tasks")),
+    {
+      description:
+        "List the owner's tasks, all of them unless filtered. Filters combine with AND. 'from'/'to' compare against the task's start, or its estimated finish when it has no start; tasks with neither date never match a window.",
+      inputSchema: {
+        status: z.array(taskStatus).min(1).optional().describe("Match any of these statuses."),
+        priority: z.array(taskPriority).min(1).optional().describe("Match any of these priorities."),
+        tag: z.string().optional().describe("Exact tag, ignoring case."),
+        q: z.string().optional().describe("Text to find in the task name, ignoring case."),
+        from: instant.optional(),
+        to: instant.optional(),
+        limit: z.number().int().min(1).max(100).optional(),
+      },
+      annotations: READ_ONLY,
+    },
+    ({ status, priority, ...query }) =>
+      guarded(() => api.get("/api/tasks", { ...query, status: status?.join(","), priority: priority?.join(",") })),
   );
 
   server.registerTool(
     "list_notes",
-    { description: "List the owner's notes.", inputSchema: {}, annotations: READ_ONLY },
-    () => guarded(() => api.get("/api/notes")),
+    {
+      description:
+        "List the owner's notes, all of them unless filtered. Filters combine with AND. Use eventId/taskId to find the notes attached to one event or task.",
+      inputSchema: {
+        type: z.enum(["text", "meal", "sleep", "training"]).optional(),
+        tag: z.string().optional().describe("Exact tag, ignoring case."),
+        q: z.string().optional().describe("Text to find in the note name or, for text notes, its body, ignoring case."),
+        eventId: z.string().min(1).optional().describe("Only notes attached to this event."),
+        taskId: z.string().min(1).optional().describe("Only notes attached to this task."),
+        limit: z.number().int().min(1).max(100).optional(),
+      },
+      annotations: READ_ONLY,
+    },
+    (query) => guarded(() => api.get("/api/notes", query)),
+  );
+
+  server.registerTool(
+    "list_recurrences",
+    {
+      description: "List the owner's recurring series, optionally only those that generate events or only tasks.",
+      inputSchema: { target: z.enum(["event", "task"]).optional() },
+      annotations: READ_ONLY,
+    },
+    (query) => guarded(() => api.get("/api/recurrences", query)),
   );
 
   registerReadAndEditTools(server, api);

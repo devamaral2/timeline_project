@@ -43,6 +43,13 @@ import { ListAiJobsModule } from "./features/list-ai-jobs/list-ai-jobs.controlle
 import { GetAiJobModule } from "./features/get-ai-job/get-ai-job.controller";
 import { CancelAiJobModule } from "./features/cancel-ai-job/cancel-ai-job.controller";
 import { SubmitTranscriptJobModule } from "./features/submit-transcript-job/submit-transcript-job.controller";
+import { ListAgentFilesModule } from "./features/list-agent-files/list-agent-files.module";
+import { ReadAgentFileModule } from "./features/read-agent-file/read-agent-file.module";
+import { ListAgentFileBackupsModule } from "./features/list-agent-file-backups/list-agent-file-backups.module";
+import { PublishAgentFilesModule } from "./features/publish-agent-files/publish-agent-files.module";
+import { RestoreAgentFileModule } from "./features/restore-agent-file/restore-agent-file.module";
+import { RestoreAgentFilesFactoryModule } from "./features/restore-agent-files-factory/restore-agent-files-factory.module";
+import { ReloadAgentFilesModule } from "./features/reload-agent-files/reload-agent-files.module";
 
 @Module({
   imports: [
@@ -76,6 +83,13 @@ import { SubmitTranscriptJobModule } from "./features/submit-transcript-job/subm
     DeleteRecurrenceModule,
     AttachNotesToRecurrenceModule,
     RunAgentModule,
+    ListAgentFilesModule,
+    ReadAgentFileModule,
+    ListAgentFileBackupsModule,
+    PublishAgentFilesModule,
+    RestoreAgentFileModule,
+    RestoreAgentFilesFactoryModule,
+    ReloadAgentFilesModule,
     StartProcessModule,
     GetProcessModule,
     StartHermesTurnModule,

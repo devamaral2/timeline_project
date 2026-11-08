@@ -1,10 +1,8 @@
 import { z } from "zod";
-import { skillText } from "../config/agent-config";
 import { defineAgentSkill } from "./agent-skill";
 
 export const noteSkill = defineAgentSkill({
   name: "save_note",
-  ...skillText("save_note"),
   parameters: z.object({
     id: z
       .string()

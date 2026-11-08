@@ -1,13 +1,10 @@
 import { z } from "zod";
 import type { DayContext } from "../day-context.query";
-import { agentsConfig, skillText } from "../config/agent-config";
+import { agentsConfig } from "../config/agent-config";
 import { defineAgentSkill, fail } from "./agent-skill";
-
-const MAX_CONTEXT_CHARS = agentsConfig.limits.maxDayContextChars;
 
 export const getDayContextSkill = defineAgentSkill({
   name: "get_day_context",
-  ...skillText("get_day_context"),
   parameters: z.object({ date: z.iso.date(), page: z.number().int().positive().optional() }),
   run: async ({ date, page = 1 }, { session, dayContext, recurrences, loadedDays, dayPages }) => {
     if (!dayContext) return fail("Consulta diária indisponível.");
@@ -42,12 +39,12 @@ function paginateDay(day: DayContext): DayContext[] | null {
   const append = (push: (part: DayContext) => void, pop: (part: DayContext) => void): boolean => {
     let current = pages[pages.length - 1];
     push(current);
-    if (JSON.stringify(current).length <= MAX_CONTEXT_CHARS) return true;
+    if (JSON.stringify(current).length <= agentsConfig.limits.maxDayContextChars) return true;
     pop(current);
     if (!current.events.length && !current.tasks.length && !current.notes.length) return false;
     current = empty();
     push(current);
-    if (JSON.stringify(current).length > MAX_CONTEXT_CHARS) return false;
+    if (JSON.stringify(current).length > agentsConfig.limits.maxDayContextChars) return false;
     pages.push(current);
     return true;
   };

@@ -3,6 +3,7 @@ import type { ScopedSqlQuery, ScopedSqlScope } from "../../../domain/ports";
 import type { AgentChangeSession } from "../services/agent-change-session";
 import type { DayContext, DayContextQuery } from "../day-context.query";
 import type { RecurrenceMaterializer } from "../../recurrences/materialize-recurrences.usecase";
+import { skillText } from "../config/agent-config";
 
 export interface AgentSkillContext {
   session: AgentChangeSession;
@@ -32,17 +33,15 @@ export interface AgentSkill {
 
 export function defineAgentSkill<TSchema extends z.ZodObject>(config: {
   name: string;
-  description: string;
-  instructions: string;
-  progressLabel: string;
   parameters: TSchema;
   run: (args: z.infer<TSchema>, context: AgentSkillContext) => Promise<unknown>;
 }): AgentSkill {
   return {
     name: config.name,
-    description: config.description,
-    instructions: config.instructions,
-    progressLabel: config.progressLabel,
+    // Os textos vem da configuracao ativa, lidos a cada uso: uma publicacao vale no pedido seguinte.
+    get description() { return skillText(config.name).description; },
+    get instructions() { return skillText(config.name).instructions; },
+    get progressLabel() { return skillText(config.name).progressLabel; },
     parameters: config.parameters,
     // Erro vira resultado da ferramenta: o modelo corrige os argumentos na
     // rodada seguinte em vez de a requisicao inteira cair.

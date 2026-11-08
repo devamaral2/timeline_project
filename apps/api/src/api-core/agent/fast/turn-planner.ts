@@ -6,8 +6,6 @@ import { jsonSchemaOf, type StructuredCompletionGateway } from "../gateways/stru
 import { describeContext, formatNow } from "../services/agent-prompt-builder.service";
 import { isoNow } from "./now-iso";
 
-const { fast } = agentsConfig;
-const TIME_ZONE = promptsConfig.timeZone;
 const EVENT_SKILLS = new Set([
   "save_routine_event", "save_meal_event", "save_training_event", "save_sleep_event", "finish_event",
 ]);
@@ -32,18 +30,22 @@ export type TurnPlan =
   /** O fluxo rapido nao cobre o pedido: segue o roteador e o agente de sempre. */
   | { kind: "legacy"; reason: "read" | "other" | "invalid" };
 
-const planSchema = z.object({
-  intent: z.enum(["write", "read", "other", "clarify"]),
-  clarification: z.string().nullable(),
-  operations: z.array(z.object({
-    ref: z.string().min(1).max(12),
-    skill: z.enum(fast.skills as [string, ...string[]]),
-    mode: z.enum(["create", "update"]),
-    span: z.string().min(1),
-    date: z.string().nullable(),
-    linkTo: z.string().nullable(),
-  })).max(fast.maxOperations),
-});
+/** Depende das skills e do limite da versao ativa: montado a cada uso, nao na carga. */
+function planSchema() {
+  const { fast } = agentsConfig;
+  return z.object({
+    intent: z.enum(["write", "read", "other", "clarify"]),
+    clarification: z.string().nullable(),
+    operations: z.array(z.object({
+      ref: z.string().min(1).max(12),
+      skill: z.enum(fast.skills as [string, ...string[]]),
+      mode: z.enum(["create", "update"]),
+      span: z.string().min(1),
+      date: z.string().nullable(),
+      linkTo: z.string().nullable(),
+    })).max(fast.maxOperations),
+  });
+}
 
 export interface PlanRequest {
   text: string;
@@ -57,15 +59,15 @@ export class TurnPlanner {
   constructor(private readonly gateway: StructuredCompletionGateway) {}
 
   async plan(request: PlanRequest): Promise<TurnPlan> {
-    const values = { now: formatNow(request.now), nowIso: isoNow(request.now), timeZone: TIME_ZONE };
+    const values = { now: formatNow(request.now), nowIso: isoNow(request.now), timeZone: promptsConfig.timeZone };
     const { value } = await this.gateway.complete({
       stage: "planner",
       system: promptsConfig.fast.planner.map((line) => fill(line, values)).join("\n"),
       user: [describeContext(request.context), "", "Pedido:", request.text].join("\n"),
       schemaName: "turn_plan",
-      schema: jsonSchemaOf(planSchema),
-      timeoutMs: fast.plannerTimeoutMs,
-      attemptMs: fast.plannerAttemptMs,
+      schema: jsonSchemaOf(planSchema()),
+      timeoutMs: agentsConfig.fast.plannerTimeoutMs,
+      attemptMs: agentsConfig.fast.plannerAttemptMs,
       signal: request.signal,
     });
     return normalizePlan(value, request.now);
@@ -77,7 +79,7 @@ export class TurnPlanner {
  * plano vira `legacy`: o pedido segue o caminho conhecido em vez de gravar o que nao entendemos.
  */
 export function normalizePlan(value: unknown, now: Date): TurnPlan {
-  const parsed = planSchema.safeParse(value);
+  const parsed = planSchema().safeParse(value);
   if (!parsed.success) return { kind: "legacy", reason: "invalid" };
   const { intent, clarification, operations } = parsed.data;
 
@@ -90,7 +92,7 @@ export function normalizePlan(value: unknown, now: Date): TurnPlan {
   }
   if (operations.length === 0) return { kind: "legacy", reason: "other" };
 
-  const today = dayKeyOf(now, TIME_ZONE);
+  const today = dayKeyOf(now, promptsConfig.timeZone);
   const seen = new Set<string>();
   const planned: PlannedOperation[] = [];
   for (const operation of operations) {

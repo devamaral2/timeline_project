@@ -3,8 +3,6 @@ import { z } from "zod";
 import { fill, promptsConfig as prompts } from "../config/agent-config";
 import type { AgentSkill } from "../skills/agent-skill";
 
-const TIME_ZONE = prompts.timeZone;
-
 export interface AgentPromptInput {
   now: Date;
   context?: AgentScreenContext;
@@ -26,7 +24,7 @@ export class AgentPromptBuilderService {
   build(input: AgentPromptInput): string {
     if (input.routed) return this.buildRouted(input);
     const { legacy, rules } = prompts;
-    const values = { now: formatNow(input.now), timeZone: TIME_ZONE };
+    const values = { now: formatNow(input.now), timeZone: prompts.timeZone };
     return [
       ...legacy.beforeRules,
       ...(input.conversational ? rules.conversation : rules.singleRequest),
@@ -45,7 +43,7 @@ export class AgentPromptBuilderService {
 
   private buildRouted(input: AgentPromptInput): string {
     const { routed, rules } = prompts;
-    const values = { now: formatNow(input.now), timeZone: TIME_ZONE };
+    const values = { now: formatNow(input.now), timeZone: prompts.timeZone };
     return [
       ...routed.preamble.map((line) => fill(line, values)),
       describeContext(input.context),
@@ -74,7 +72,7 @@ export function describeContext(context: AgentScreenContext | undefined): string
 
 export function formatNow(now: Date): string {
   return new Intl.DateTimeFormat("pt-BR", {
-    timeZone: TIME_ZONE,
+    timeZone: prompts.timeZone,
     dateStyle: "full",
     timeStyle: "short",
   }).format(now);

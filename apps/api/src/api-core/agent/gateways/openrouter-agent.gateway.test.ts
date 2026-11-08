@@ -3,10 +3,10 @@ import { z } from "zod";
 import { AgentRunCancelledError, LlmUnavailableError } from "../errors/agent.errors";
 import type { AgentTool } from "./agent.gateway";
 import {
-  FINAL_RESPONSE_DIRECTIVE,
-  MAX_TOOL_RESULT_CHARS,
   OpenRouterAgentGateway,
   capToolResult,
+  finalResponseDirective,
+  maxToolResultChars,
 } from "./openrouter-agent.gateway";
 
 interface CapturedTool {
@@ -54,7 +54,7 @@ test("sends the prompt, the tools and the loop options, and returns the final te
     model: "test/model",
     instructions: "PROMPT",
     input: "pedido",
-    allowFinalResponse: FINAL_RESPONSE_DIRECTIVE,
+    allowFinalResponse: finalResponseDirective(),
     toolConcurrency: 1,
   });
   expect(client.requests[0].tools.map((tool) => tool.function.name)).toEqual(["echo"]);
@@ -92,7 +92,7 @@ test("flags a run that stopped on the step limit", async () => {
 });
 
 test("caps a tool result that is too large for the context", () => {
-  const huge = { rows: ["x".repeat(MAX_TOOL_RESULT_CHARS + 10)] };
+  const huge = { rows: ["x".repeat(maxToolResultChars() + 10)] };
 
   expect(capToolResult(huge)).toMatchObject({ truncated: true });
   expect(capToolResult({ ok: true })).toEqual({ ok: true });

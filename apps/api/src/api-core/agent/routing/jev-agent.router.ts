@@ -15,9 +15,8 @@ const responseSchema = z.object({
   answers: z.object({ goal: choice, count: choice, target: choice }),
 });
 
-const { endpoint, model, timeoutMs, minCertainty, historyTurns, targetSkills, questions } = jevRoutingConfig;
-
 function accepted(answer: z.infer<typeof choice>): boolean {
+  const { minCertainty } = jevRoutingConfig;
   return answer.confidence > minCertainty && (answer.probabilities[answer.choice] ?? 0) > minCertainty;
 }
 
@@ -30,6 +29,7 @@ export class JevAgentRouter implements AgentRouter {
   }
 
   async route(input: Parameters<AgentRouter["route"]>[0]): Promise<AgentRoute> {
+    const { endpoint, model, timeoutMs, historyTurns, targetSkills, questions } = jevRoutingConfig;
     if (!this.apiKey) {
       input.onDecision?.({ source: "none", latencyMs: 0, fallbackReason: "no_api_key" });
       return { kind: "complex" };

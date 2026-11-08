@@ -81,6 +81,7 @@ describe("MCP over HTTP", () => {
       "get_recurrence",
       "get_task",
       "list_notes",
+      "list_recurrences",
       "list_tasks",
       "list_timeline_events",
       "update_event",
@@ -232,6 +233,64 @@ describe("MCP over HTTP", () => {
     const [url, init] = fetchApi.mock.calls[0] as [string, RequestInit];
     expect(url).toBe("http://api.test:3001/api/events?tag=saude&limit=5");
     expect(init.method).toBe("GET");
+    await client.close();
+  });
+
+  test("list_timeline_events maps kind to the API's type and forwards the cursor", async () => {
+    fetchApi.mockResolvedValue(new Response(JSON.stringify({ items: [] }), { status: 200 }));
+    const client = await connect();
+
+    await client.callTool({ name: "list_timeline_events", arguments: { kind: "meal", cursor: "abc", limit: 10 } });
+
+    expect(fetchApi.mock.calls[0]?.[0]).toBe("http://api.test:3001/api/events?cursor=abc&limit=10&type=meal");
+    await client.close();
+  });
+
+  test("list_tasks sends list filters as comma-separated query values", async () => {
+    fetchApi.mockResolvedValue(new Response("[]", { status: 200 }));
+    const client = await connect();
+
+    await client.callTool({
+      name: "list_tasks",
+      arguments: { status: ["todo", "scheduled"], priority: ["urgent"], tag: "casa", q: "conta", from: "2026-11-01T00:00:00-03:00", limit: 5 },
+    });
+
+    const url = new URL(fetchApi.mock.calls[0]?.[0] as string);
+    expect(url.pathname).toBe("/api/tasks");
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      status: "todo,scheduled",
+      priority: "urgent",
+      tag: "casa",
+      q: "conta",
+      from: "2026-11-01T00:00:00-03:00",
+      limit: "5",
+    });
+    await client.close();
+  });
+
+  test("list_tasks refuses an unknown status before calling the API", async () => {
+    const client = await connect();
+
+    const result = await client.callTool({ name: "list_tasks", arguments: { status: ["nope"] } });
+
+    expect(result.isError).toBe(true);
+    expect(fetchApi).not.toHaveBeenCalled();
+    await client.close();
+  });
+
+  test("list_notes and list_recurrences forward their filters", async () => {
+    fetchApi.mockImplementation(async () => new Response("[]", { status: 200 }));
+    const client = await connect();
+
+    await client.callTool({ name: "list_notes", arguments: { type: "text", q: "tinta", eventId: "e1" } });
+    await client.callTool({ name: "list_recurrences", arguments: { target: "task" } });
+    await client.callTool({ name: "list_recurrences", arguments: {} });
+
+    const [notes, series, all] = fetchApi.mock.calls.map(([url]) => new URL(url as string));
+    expect(notes?.pathname).toBe("/api/notes");
+    expect(Object.fromEntries(notes?.searchParams ?? [])).toEqual({ type: "text", q: "tinta", eventId: "e1" });
+    expect(series?.search).toBe("?target=task");
+    expect(all?.search).toBe("");
     await client.close();
   });
 

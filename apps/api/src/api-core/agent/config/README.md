@@ -2,8 +2,34 @@
 
 Tudo o que o agente lê ou usa como parâmetro está nesta pasta, em JSON. O código
 (`../run-agent.usecase.ts`, `../routing`, `../gateways`, `../skills`) só aplica.
-`agent-config.ts` valida os arquivos ao subir: campo faltando, skill inexistente ou
-placeholder `{{x}}` sem valor derrubam o processo na carga, não no pedido de um usuário.
+
+**Estes arquivos são o padrão de fábrica.** A versão em vigor vive no banco
+(`agent_config_versions` / `agent_config_active`) e é editada pela aplicação, pelo dono
+(`AGENT_CONFIG_OWNER_USER_ID`, rotas `/api/ai/config`). `agent-config.ts` lê a versão ativa
+a cada uso, então uma publicação vale no pedido seguinte, sem reiniciar. Um pedido lê uma
+única versão do começo ao fim (`withConfigSnapshot`, aplicado em `RunAgentUseCase.execute`):
+uma publicação que chega no meio dele não o afeta. As publicações entram numa fila, uma por
+vez, para que o banco e a memória terminem na mesma versão. Cada publicação
+grava um instantâneo do conjunto inteiro; a reversão cria um instantâneo novo a partir de
+um anterior; `POST /api/ai/config/padrao` volta a estes arquivos.
+
+Tudo é validado antes de virar a versão ativa (`parseAgentConfig`), e uma publicação
+inválida é recusada com a versão anterior valendo. A validação recusa: campo faltando;
+skill com código e sem entrada em `skills.json`, ou entrada sem código; referência quebrada
+entre roteador e skills; skill de escrita na rota de consulta (`readSkills` só aceita
+`query_data` e `get_day_context`) ou skill de leitura como destino de escrita; e placeholder
+`{{x}}` que o texto não recebe (as chaves aceitas por texto estão em `PLACEHOLDERS`, em
+`agent-config.ts`; ao incluir um `fill()` novo, atualize a tabela).
+
+Editável pela aplicação: textos (instruções, prompts, descrições) e parâmetros de limite
+(passos, custo, timeouts, limiar de certeza). **Fixos, sempre os deste repositório:** o `model`
+e o `endpoint` do JEV, o mapa `targetSkills` e, em cada rota, `prompt`, `readSkills` e
+`writeSkills`, além de `fast.skills` (`PINNED_FIELDS`). Uma edição que toque um deles é
+recusada. Reversão e restauração do padrão aplicam os valores fixos de hoje (e o conjunto de
+skills do código) ao instantâneo antigo, então trocar o modelo aqui vale no deploy seguinte.
+
+Na subida, se a versão gravada não puder ser lida ou não validar mais, a API usa o padrão de
+fábrica e registra o erro em vez de cair.
 
 | Arquivo | O que define | Quem lê |
 | --- | --- | --- |

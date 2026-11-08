@@ -305,3 +305,22 @@ test("assertNoteRequest validates the wire shape", () => {
   expect(() => assertNoteRequest({ eventIds: [], tags: [] }, false)).not.toThrow();
   expect(() => assertNoteRequest({ type: "text", data: { body: "a" } }, false)).not.toThrow();
 });
+
+test("filters the list by type, tag, text, linked event or task, and limit", async () => {
+  const onEvent = text("Frango com batata", "user-1", { name: "Receita", tags: ["cozinha"] });
+  const idea = text("Comprar tinta azul", "user-1", { name: "Ideias", tags: ["casa"] });
+  const event = lunch("user-1", [link(onEvent)]);
+  const { list } = setup({ notes: [onEvent, idea], events: [event] });
+
+  const names = async (filter: Parameters<typeof list.execute>[0]) =>
+    (await list.execute(filter, actor)).map((note) => note.name).sort();
+
+  expect(await names({ type: "text" })).toEqual(["Ideias", "Receita"]);
+  expect(await names({ type: "meal" })).toEqual([]);
+  expect(await names({ tag: "CASA" })).toEqual(["Ideias"]);
+  expect(await names({ q: "tinta" })).toEqual(["Ideias"]);
+  expect(await names({ q: "receita" })).toEqual(["Receita"]);
+  expect(await names({ eventId: event.id })).toEqual(["Receita"]);
+  expect(await names({ taskId: "no-such-task" })).toEqual([]);
+  expect(await names({ limit: 1 })).toHaveLength(1);
+});

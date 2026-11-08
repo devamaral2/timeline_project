@@ -1,11 +1,9 @@
 import { z } from "zod";
 import { WORK_ITEM_PRIORITIES, WORK_ITEM_STATUSES } from "../../../domain";
-import { skillText } from "../config/agent-config";
 import { defineAgentSkill, fail, isoInstant, parseInstant } from "./agent-skill";
 
 export const taskSkill = defineAgentSkill({
   name: "save_task",
-  ...skillText("save_task"),
   parameters: z.object({
     id: z
       .string()

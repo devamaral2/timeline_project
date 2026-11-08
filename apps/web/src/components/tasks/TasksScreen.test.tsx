@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import type { TaskSummaryDto } from "@/lib/api/contracts";
 import { summaryTask } from "./task-fixtures";
@@ -35,12 +35,14 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-test("agrupa por status, conta abertas e atrasadas e deixa Concluídas e Canceladas recolhidas", async () => {
+test("agrupa por status, conta abertas, atrasadas e de hoje e deixa Concluídas e Canceladas recolhidas", async () => {
   authedFetch.mockResolvedValue(tasks);
   render(<TasksScreen userId="user-1" />);
 
   await screen.findByText("6 abertas");
   expect(screen.getByText("1 atrasada")).toBeInTheDocument();
+  expect(screen.getByText("1 para hoje")).toBeInTheDocument();
+  expect(screen.getByText("segunda-feira, 14 de setembro")).toBeInTheDocument();
   expect(screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent)).toEqual([
     "A fazer3",
     "Agendadas1",
@@ -67,6 +69,23 @@ test("agrupa por status, conta abertas e atrasadas e deixa Concluídas e Cancela
   expect(screen.getByRole("link", { name: "Enviar relatório" })).toBeInTheDocument();
 });
 
+test("a linha mostra a prioridade e o prazo das abertas, e só o prazo das concluídas", async () => {
+  authedFetch.mockResolvedValue(tasks);
+  render(<TasksScreen userId="user-1" />);
+  await screen.findByText("6 abertas");
+
+  const luz = screen.getByRole("link", { name: "Pagar conta de luz" }).closest("li") as HTMLElement;
+  expect(within(luz).getByRole("img", { name: "Prioridade: Urgente" })).toBeInTheDocument();
+  expect(within(luz).getByText("Venceu ontem")).toBeInTheDocument();
+
+  const proposta = screen.getByRole("link", { name: "Revisar proposta" }).closest("li") as HTMLElement;
+  expect(within(proposta).getByText("Hoje, 09:00")).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: /Concluídas/ }));
+  const feita = screen.getByRole("link", { name: "Enviar relatório" }).closest("li") as HTMLElement;
+  expect(within(feita).queryByRole("img", { name: /Prioridade/ })).not.toBeInTheDocument();
+});
+
 test("o círculo conclui a tarefa com a revisão da lista", async () => {
   authedFetch.mockImplementation((_path: string, init?: RequestInit) =>
     init?.method === "PATCH" ? Promise.resolve(undefined) : Promise.resolve([summaryTask({ id: "luz", revision: 4 })]),
@@ -85,7 +104,31 @@ test("o círculo conclui a tarefa com a revisão da lista", async () => {
   expect(screen.getByRole("button", { name: /Toque para reabrir “Pagar conta de luz”/ })).toBeInTheDocument();
 });
 
-test("ordena pela prioridade e filtra por tag", async () => {
+test("avisa ao concluir, desfaz com a revisão seguinte e some sozinho", async () => {
+  authedFetch.mockImplementation((_path: string, init?: RequestInit) =>
+    init?.method === "PATCH" ? Promise.resolve(undefined) : Promise.resolve([summaryTask({ id: "luz", revision: 4 })]),
+  );
+  render(<TasksScreen userId="user-1" />);
+
+  fireEvent.click(await screen.findByRole("button", { name: /Toque para concluir “Pagar conta de luz”/ }));
+  expect(await screen.findByRole("status")).toHaveTextContent("Concluída: Pagar conta de luz");
+
+  fireEvent.click(screen.getByRole("button", { name: "Desfazer" }));
+  await waitFor(() =>
+    expect(authedFetch).toHaveBeenLastCalledWith("/api/tasks/luz", expect.objectContaining({ method: "PATCH", body: JSON.stringify({ expectedRevision: 5, status: "todo" }) })),
+  );
+  expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  expect(await screen.findByRole("button", { name: /Toque para concluir “Pagar conta de luz”/ })).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: /Toque para concluir “Pagar conta de luz”/ }));
+  expect(await screen.findByRole("status")).toBeInTheDocument();
+  // O relógio do aviso nasce num efeito: deixa o React assentá-lo antes de avançar o tempo.
+  await act(async () => {});
+  await act(async () => { await vi.advanceTimersByTimeAsync(5000); });
+  expect(screen.queryByRole("status")).not.toBeInTheDocument();
+});
+
+test("ordena pela prioridade, depois pela data, e filtra por tag", async () => {
   authedFetch.mockResolvedValue([
     summaryTask({ id: "a", name: "Alfa", priority: "low", startedAt: "2026-09-15T00:00:00-03:00" }),
     summaryTask({ id: "b", name: "Beta", priority: "urgent", tags: ["casa"], startedAt: "2026-09-20T00:00:00-03:00" }),
@@ -93,21 +136,44 @@ test("ordena pela prioridade e filtra por tag", async () => {
   render(<TasksScreen userId="user-1" />);
   await screen.findByText("2 abertas");
   const order = () => screen.getAllByRole("link").map((link) => link.textContent);
-  expect(order()).toEqual(["Alfa", "Beta"]);
-
-  fireEvent.click(screen.getByLabelText("Filtrar e ordenar"));
-  fireEvent.click(screen.getByRole("radio", { name: "Prioridade" }));
   expect(order()).toEqual(["Beta", "Alfa"]);
 
-  fireEvent.click(screen.getByRole("checkbox", { name: "#casa" }));
-  expect(screen.queryByRole("link", { name: "Beta" })).not.toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText("Ordenar por"), { target: { value: "date" } });
+  expect(order()).toEqual(["Alfa", "Beta"]);
+
+  const casa = screen.getByRole("button", { name: "#casa" });
+  expect(casa).toHaveAttribute("aria-pressed", "false");
+  fireEvent.click(casa);
+  expect(casa).toHaveAttribute("aria-pressed", "true");
+  expect(screen.queryByRole("link", { name: "Alfa" })).not.toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Beta" })).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: "Limpar tags" }));
   expect(screen.getByRole("link", { name: "Alfa" })).toBeInTheDocument();
+});
+
+test("busca pelo nome e limpa os filtros quando nada combina", async () => {
+  authedFetch.mockResolvedValue(tasks);
+  render(<TasksScreen userId="user-1" />);
+  await screen.findByText("6 abertas");
+
+  const search = screen.getByRole("searchbox", { name: "Buscar tarefas" });
+  fireEvent.change(search, { target: { value: "dentista" } });
+  expect(screen.getByRole("link", { name: "Marcar consulta no dentista" })).toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: "Pagar conta de luz" })).not.toBeInTheDocument();
+
+  fireEvent.change(search, { target: { value: "zzz" } });
+  expect(screen.getByRole("heading", { name: "Nenhuma tarefa encontrada" })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Limpar filtros" }));
+  expect(search).toHaveValue("");
+  expect(screen.getByRole("link", { name: "Pagar conta de luz" })).toBeInTheDocument();
 });
 
 test("convida a criar a primeira tarefa e avisa quando a lista falha", async () => {
   authedFetch.mockResolvedValueOnce([]);
   const { unmount } = render(<TasksScreen userId="user-1" />);
-  expect(await screen.findByText(/ainda não tem tarefas/)).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: "Nenhuma tarefa por aqui" })).toBeInTheDocument();
+  expect(screen.getByText(/Crie a primeira tarefa/)).toBeInTheDocument();
   unmount();
 
   authedFetch.mockRejectedValueOnce(new Error("falhou"));

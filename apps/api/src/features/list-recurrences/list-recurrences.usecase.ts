@@ -6,8 +6,9 @@ import { toRecurrenceDto } from "../../api-core/recurrences/recurrence.dto";
 export class ListRecurrencesUseCase {
   constructor(private readonly recurrences: RecurrenceRepository) {}
 
-  async execute(_input: unknown, actor: AuthenticatedUser): Promise<RecurrenceDto[]> {
+  async execute(input: { target?: "event" | "task" } | undefined, actor: AuthenticatedUser): Promise<RecurrenceDto[]> {
     const recurrences = await this.recurrences.listByUserId(actor.userId);
-    return recurrences.map(toRecurrenceDto);
+    const target = input?.target;
+    return recurrences.filter((recurrence) => target === undefined || recurrence.target === target).map(toRecurrenceDto);
   }
 }

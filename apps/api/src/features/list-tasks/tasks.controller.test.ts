@@ -123,3 +123,28 @@ test("DELETE /api/tasks/:taskId removes the task", async () => {
 
   expect(await taskRepository.findById(task.id)).toBeNull();
 });
+
+test("GET /api/tasks filters by status, priority, tag, name and planned window", async () => {
+  const make = (name: string, extra: Partial<Parameters<typeof Task.create>[0]> = {}) =>
+    Task.create({ userId: "user-1", name, description: "", tags: [], ...extra });
+  const tasks = [
+    make("Pagar conta de luz", { priority: "urgent", tags: ["casa"], startedAt: new Date("2026-11-10T12:00:00.000Z") }),
+    make("Revisar proposta", { priority: "low", tags: ["trabalho"], estimatedFinishAt: new Date("2026-11-20T12:00:00.000Z") }),
+    make("Ideia solta"),
+  ];
+  const { controller } = makeController(tasks);
+  const useCase = new ListTasksUseCase(new InMemoryTaskRepository(tasks));
+  const names = async (filter: Parameters<ListTasksUseCase["execute"]>[0]) =>
+    (await useCase.execute(filter, actor)).map((task) => task.name).sort();
+
+  expect(await controller.list(actor)).toHaveLength(3);
+  expect(await names({ priority: ["urgent"] })).toEqual(["Pagar conta de luz"]);
+  expect(await names({ priority: ["urgent", "low"] })).toHaveLength(2);
+  expect(await names({ tag: "Trabalho" })).toEqual(["Revisar proposta"]);
+  expect(await names({ q: "conta" })).toEqual(["Pagar conta de luz"]);
+  expect(await names({ status: ["done"] })).toEqual([]);
+  // Sem data planejada a tarefa fica fora de qualquer janela; a data de fim estimada vale quando nao ha inicio.
+  expect(await names({ from: new Date("2026-11-15T00:00:00.000Z") })).toEqual(["Revisar proposta"]);
+  expect(await names({ to: new Date("2026-11-15T00:00:00.000Z") })).toEqual(["Pagar conta de luz"]);
+  expect(await names({ limit: 2 })).toHaveLength(2);
+});

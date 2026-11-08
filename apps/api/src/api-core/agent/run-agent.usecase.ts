@@ -15,7 +15,7 @@ import { z } from "zod";
 import type { CreateEventUseCase } from "../events/create-event.usecase";
 import type { RecurrenceMaterializer } from "../recurrences/materialize-recurrences.usecase";
 import { AgentLimitReachedError, AgentRunCancelledError, FastStageError, InvalidInputError, LlmUnavailableError } from "./errors/agent.errors";
-import { agentsConfig, fill, promptsConfig } from "./config/agent-config";
+import { agentsConfig, fill, promptsConfig, withConfigSnapshot } from "./config/agent-config";
 import type { AgentGateway } from "./gateways/agent.gateway";
 import type { AgentRouter } from "./routing/agent-router";
 import type { DayContextEvent, DayContextQuery } from "./day-context.query";
@@ -54,10 +54,13 @@ export interface RunAgentOptions {
   onConversationWritten?(seqs: { firstSeq: number; lastSeq: number }): void;
 }
 
-export const SAVING_PROGRESS_LABEL = promptsConfig.responses.savingProgressLabel;
+/** Lido a cada uso: a versao ativa pode mudar entre um pedido e outro. */
+export function savingProgressLabel(): string {
+  return promptsConfig.responses.savingProgressLabel;
+}
 
 const commandEnvelope = z.object({
-  commands: z.array(z.object({ skill: z.string(), args: z.record(z.string(), z.unknown()) }).strict()).max(agentsConfig.limits.maxCommands),
+  commands: z.array(z.object({ skill: z.string(), args: z.record(z.string(), z.unknown()) }).strict()),
   clarification: z.string().optional(),
   report: z.string().optional(),
 }).strict();
@@ -85,10 +88,19 @@ export class RunAgentUseCase {
     private readonly fast?: FastPipeline,
   ) {}
 
-  async execute(
+  /** Um pedido le uma unica versao da configuracao, do roteador ao commit (ADR 0002). */
+  execute(
     input: RunAgentRequest,
     actor: AuthenticatedUser,
     options: RunAgentOptions = {},
+  ): Promise<RunAgentResponse> {
+    return withConfigSnapshot(() => this.executeTurn(input, actor, options));
+  }
+
+  private async executeTurn(
+    input: RunAgentRequest,
+    actor: AuthenticatedUser,
+    options: RunAgentOptions,
   ): Promise<RunAgentResponse> {
     if (this.router) return this.executeRouted(input, actor, options);
 
@@ -161,7 +173,7 @@ export class RunAgentUseCase {
     if (session.hasChanges() || session.hasMessages()) {
       // "Salvando" so quando ha o que salvar alem da propria conversa: um turno
       // de pura consulta nao deve anunciar gravacao que nao houve.
-      if (session.hasChanges()) options.onProgress?.(SAVING_PROGRESS_LABEL);
+      if (session.hasChanges()) options.onProgress?.(savingProgressLabel());
       if (getCurrentAiJob()) setAiJobResult({
         ...response,
         ...(options.conversation ? { conversationId: options.conversation.conversationId } : {}),
@@ -292,7 +304,10 @@ export class RunAgentUseCase {
     const shifted = new Map<string, EventShift>();
     if (route.kind !== "read") {
       let envelope: z.infer<typeof commandEnvelope>;
-      try { envelope = commandEnvelope.parse(JSON.parse(run.text)); }
+      try {
+        envelope = commandEnvelope.parse(JSON.parse(run.text));
+        if (envelope.commands.length > agentsConfig.limits.maxCommands) throw new Error("Comandos acima do limite configurado");
+      }
       catch (error) { throw new LlmUnavailableError("Resposta JSON inválida do agente", error); }
       if (envelope.clarification && envelope.commands.length) {
         throw new InvalidInputError("O agente pediu esclarecimento e também tentou gravar.");
@@ -538,7 +553,7 @@ export class RunAgentUseCase {
       session.stageConversationTurn(options.conversation, input.text, response.agentResponse, toChatEntityRefs(response));
     }
     if (session.hasChanges() || session.hasMessages()) {
-      if (session.hasChanges()) options.onProgress?.(SAVING_PROGRESS_LABEL);
+      if (session.hasChanges()) options.onProgress?.(savingProgressLabel());
       if (getCurrentAiJob()) setAiJobResult({
         ...response,
         ...(options.conversation ? { conversationId: options.conversation.conversationId } : {}),
