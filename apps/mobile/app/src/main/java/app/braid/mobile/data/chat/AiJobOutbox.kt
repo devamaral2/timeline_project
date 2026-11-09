@@ -1,7 +1,6 @@
 package app.braid.mobile.data.chat
 
 import android.content.Context
-import app.braid.mobile.data.dto.SubmitAiJobDto
 import app.braid.mobile.data.dto.SubmitVoiceJobDto
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -20,16 +19,10 @@ class AiJobOutbox
     ) {
         private val preferences = context.getSharedPreferences("ai-job-outbox", Context.MODE_PRIVATE)
 
-        suspend fun remember(request: SubmitAiJobDto) =
-            write("chat:${request.userId}:${request.clientMessageId}", json.encodeToString(SubmitAiJobDto.serializer(), request))
-
         suspend fun remember(
             userId: String,
             request: SubmitVoiceJobDto,
         ) = write("voice:$userId:${request.requestId}", json.encodeToString(SubmitVoiceJobDto.serializer(), request))
-
-        suspend fun chats(userId: String): List<SubmitAiJobDto> =
-            entries("chat:$userId:").map { json.decodeFromString(SubmitAiJobDto.serializer(), it) }
 
         suspend fun voices(userId: String): List<SubmitVoiceJobDto> =
             entries("voice:$userId:").map { json.decodeFromString(SubmitVoiceJobDto.serializer(), it) }

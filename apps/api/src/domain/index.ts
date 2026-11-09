@@ -19,6 +19,7 @@ export * from "./tasks/errors/task.errors";
 
 export * from "./notes/entities/note.entity";
 export * from "./notes/value-objects/note-id";
+export * from "./notes/types/agent-file-note";
 export * from "./notes/types/note-type-definition";
 export * from "./notes/types/note-type-registry";
 export * from "./notes/types/text-note";
@@ -32,11 +33,6 @@ export * from "./notes/errors/note.errors";
 
 export * from "./agent/errors/entity-batch.errors";
 
-export * from "./agent-chat/entities/agent-conversation.entity";
-export * from "./agent-chat/entities/agent-chat-message.entity";
-export * from "./agent-chat/value-objects/agent-conversation-id";
-export * from "./agent-chat/value-objects/agent-chat-message-id";
-export * from "./agent-chat/errors/agent-conversation.errors";
 
 export * from "./recurrences/contracts/recurrence-rule";
 export * from "./recurrences/entities/recurrence.entity";

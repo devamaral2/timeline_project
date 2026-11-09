@@ -13,15 +13,10 @@ const serverSchema = z.object({
   OPENROUTER_MODEL: z.string().min(1).optional(),
   // Modelo do agente de skills. Precisa suportar tool calling — nem todo modelo
   // do OpenRouter suporta. Sem valor, cai no OPENROUTER_MODEL.
-  OPENROUTER_AGENT_MODEL: z.string().min(1).optional(),
   // Pipeline rapido (ADR 002): modelos das chamadas estruturadas, sem tool calling. Sem valor,
   // caem no OPENROUTER_MODEL.
-  OPENROUTER_PLANNER_MODEL: z.string().min(1).optional(),
-  OPENROUTER_SPECIALIST_MODEL: z.string().min(1).optional(),
   // `legacy`: roteador JEV + agente com ferramentas. `fast`: planejador + especialistas.
-  AI_PIPELINE: z.enum(["legacy", "fast"]).default("legacy"),
   // Rota por processo (ADR 003): JEV despacha, filas trabalham, finalizacao vincula. Desligada por padrao.
-  AI_PROCESS: z.enum(["off", "on"]).default("off"),
   // Modelo dos agentes da rota por processo (chamadas estruturadas). Sem valor, cai no OPENROUTER_MODEL.
   OPENROUTER_PROCESS_MODEL: z.string().min(1).optional(),
   // Rota do Hermes (ADR 004): `POST /api/ai/automation`. Desligada por padrao; ligada exige a chave do Hermes.
@@ -55,12 +50,7 @@ export function getServerEnv(source?: Record<string, string | undefined>): Serve
     OPENROUTER_API_KEY: read("OPENROUTER_API_KEY"),
     JEV_API_KEY: read("JEV_API_KEY"),
     OPENROUTER_MODEL: read("OPENROUTER_MODEL"),
-    OPENROUTER_AGENT_MODEL: read("OPENROUTER_AGENT_MODEL"),
-    OPENROUTER_PLANNER_MODEL: read("OPENROUTER_PLANNER_MODEL"),
-    OPENROUTER_SPECIALIST_MODEL: read("OPENROUTER_SPECIALIST_MODEL"),
-    AI_PIPELINE: read("AI_PIPELINE"),
-    AI_PROCESS: read("AI_PROCESS"),
-    OPENROUTER_PROCESS_MODEL: read("OPENROUTER_PROCESS_MODEL"),
+              OPENROUTER_PROCESS_MODEL: read("OPENROUTER_PROCESS_MODEL"),
     AI_AUTOMATION: read("AI_AUTOMATION"),
     HERMES_URL: read("HERMES_URL"),
     HERMES_API_KEY: read("HERMES_API_KEY"),

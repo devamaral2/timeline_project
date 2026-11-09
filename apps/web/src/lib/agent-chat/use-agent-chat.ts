@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "@/lib/api/authed-fetch";
-import type { AgentChatEntityRef, AgentChatMessageDto, AgentScreenContext, AiProcessDto } from "@/lib/api/contracts";
-import { type AiProcessApi, aiProcess, isProcessRouteOff, isProcessTerminal } from "@/lib/ai-process/ai-process";
+import type { AgentChatEntityRef, AgentScreenContext, AiProcessDto } from "@/lib/api/contracts";
+import { type AiProcessApi, aiProcess, isProcessTerminal } from "@/lib/ai-process/ai-process";
 import {
   type AiAutomationApi,
   type HermesStepDto,
@@ -12,10 +12,7 @@ import {
   isHermesTurnTerminal,
   parseChatCommand,
 } from "@/lib/ai-automation/ai-automation";
-import type { AgentChatClient, AgentChatClientOptions, AgentChatEvent } from "./agent-chat-client";
-import { DurableAgentChatClient } from "./durable-agent-chat-client";
 import { operationId } from "@/lib/ai-jobs/ai-jobs";
-import { fetchConversationMessages } from "./agent-conversations-api";
 
 export type AgentChatMessage =
   | { id: string; role: "user"; text: string; failed?: boolean }
@@ -29,9 +26,20 @@ export type AgentChatMessage =
 export interface AgentChatPending {
   id: string;
   label?: string;
-  /** Parar ja foi pedido; o servidor so confirma quando a ferramenta em curso termina. */
-  cancelling?: boolean;
 }
+
+/** Por que um pedido falhou; cada codigo tem seu texto em `ERROR_TEXTS`. */
+export type ChatFailureCode =
+  | "invalid_input"
+  | "forbidden"
+  | "limit_reached"
+  | "conflict"
+  | "unavailable"
+  | "cancelled"
+  | "internal"
+  | "connection_lost"
+  | "connection_failed"
+  | "session_expired";
 
 interface UseAgentChatOptions {
   /** Sem usuario (sessao ainda nao respondeu, ou ninguem entrou) nada e enviado. */
@@ -39,13 +47,11 @@ interface UseAgentChatOptions {
   context?: AgentScreenContext;
   /** Chamado quando uma resposta mexeu em registros — ou pode ter mexido. */
   onEntitiesChanged?: () => void;
-  createClient?: (options: AgentChatClientOptions) => Pick<AgentChatClient, "send" | "cancel" | "close">;
-  loadMessages?: typeof fetchConversationMessages | undefined;
-  /** A rota de IA por processo. `null` a desliga; ausente, vale a real, exceto quando o teste injeta `createClient`. */
-  processApi?: AiProcessApi | null;
+  /** A rota de IA por processo; ausente, vale a real. */
+  processApi?: AiProcessApi;
   processPollMs?: number;
-  /** A rota do Hermes (`/hermes <mensagem>`). `null` a desliga; ausente, vale a real, exceto quando o teste injeta `createClient`. */
-  automationApi?: AiAutomationApi | null;
+  /** A rota do Hermes (`/hermes <mensagem>`); ausente, vale a real. */
+  automationApi?: AiAutomationApi;
   automationPollMs?: number;
 }
 
@@ -59,14 +65,11 @@ const HERMES_DISABLED_TEXT = "O Hermes está desligado neste ambiente (AI_AUTOMA
 const HERMES_ENTER_TEXT = "Agora você está falando com o Hermes. Escreva /app para voltar ao assistente da agenda.";
 const HERMES_LEAVE_TEXT = "De volta ao assistente da agenda.";
 
-const ERROR_TEXTS: Record<Extract<AgentChatEvent, { type: "error" }>["code"], string> = {
-  busy: "Ainda estou respondendo a mensagem anterior.",
-  invalid_frame: "Não consegui ler essa mensagem. Tente escrever de outro jeito.",
+const ERROR_TEXTS: Record<ChatFailureCode, string> = {
   invalid_input: "Não consegui ler essa mensagem. Tente escrever de outro jeito.",
   forbidden: "Você não tem permissão para acessar esses dados.",
   limit_reached: "O pedido ficou grande demais e nada foi gravado. Tente dividir em partes menores.",
   conflict: "Os dados mudaram enquanto eu preparava a resposta. Nada foi gravado; tente de novo.",
-  conversation_gone: "Esta conversa não existe mais. Sua mensagem não foi enviada — comece outra.",
   unavailable: "A IA está indisponível agora. Tente de novo em instantes.",
   cancelled: "Pedido cancelado.",
   internal: "Algo deu errado. Tente de novo.",
@@ -76,42 +79,21 @@ const ERROR_TEXTS: Record<Extract<AgentChatEvent, { type: "error" }>["code"], st
   session_expired: "Sua sessão acabou. Entre de novo para continuar.",
 };
 
-/** Cada turno gravado sao duas mensagens: o pedido e a resposta. */
-const TURN_SIZE = 2;
-
-function toMessage(dto: AgentChatMessageDto): AgentChatMessage {
-  return dto.role === "user"
-    ? { id: dto.id, role: "user", text: dto.content }
-    : { id: dto.id, role: "assistant", text: dto.content, entities: dto.entities };
-}
-
 /**
- * A conversa aberta com o agente.
- *
- * O historico deixou de ser do cliente: quem o guarda e o servidor, e o que
- * esta aqui e o cache da conversa aberta. O socket leva so o id da conversa —
- * uma conversa nova nao tem id nenhum ate o primeiro turno ser gravado, e e o
- * `reply` que o traz.
+ * A conversa da agenda. Cada pedido vai pela rota de processo (ADR 003) ou, com `/hermes`, ao Hermes
+ * (ADR 004). O historico e so do que esta na tela: nada e recarregado do servidor.
  */
 export function useAgentChat({
   userId,
   context,
   onEntitiesChanged,
-  createClient,
-  loadMessages = fetchConversationMessages,
-  processApi: processApiOption,
+  processApi = aiProcess,
   processPollMs = 1000,
-  automationApi: automationApiOption,
+  automationApi = aiAutomation,
   automationPollMs = 1000,
 }: UseAgentChatOptions) {
-  const processApi = processApiOption === undefined ? (createClient ? null : aiProcess) : processApiOption;
-  const automationApi = automationApiOption === undefined ? (createClient ? null : aiAutomation) : automationApiOption;
-  /** `unknown` ate a primeira resposta do servidor: 404 desliga a rota por processo para o resto da sessao. */
-  const processModeRef = useRef<"unknown" | "on" | "off">("unknown");
   const disposedRef = useRef(false);
-  /** O turno do Hermes em curso: ele nao tem como ser cancelado pelo socket. */
-  const hermesPendingIdRef = useRef<string | null>(null);
-  /** `/hermes` liga o modo: as mensagens seguintes vao ao Hermes ate `/app`, ou ate abrir outra conversa. */
+  /** `/hermes` liga o modo: as mensagens seguintes vao ao Hermes ate `/app`, ou ate comecar de novo. */
   const hermesModeRef = useRef(false);
   const [hermesMode, setHermesMode] = useState(false);
   const commitHermesMode = useCallback((next: boolean) => {
@@ -120,22 +102,13 @@ export function useAgentChat({
   }, []);
   const [messages, setMessages] = useState<AgentChatMessage[]>([]);
   const [pending, setPending] = useState<AgentChatPending | null>(null);
-  const [conversationId, setConversationId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
   const messagesRef = useRef(messages);
   const pendingRef = useRef(pending);
-  const conversationRef = useRef(conversationId);
-  /** Ultimo `seq` conhecido desta conversa; 0 enquanto ela e nova. */
-  const lastSeqRef = useRef(0);
-  const reloadVersionRef = useRef(0);
-  const clientRef = useRef<Pick<AgentChatClient, "send" | "cancel" | "close"> | null>(null);
   const onEntitiesChangedRef = useRef(onEntitiesChanged);
-  const loadMessagesRef = useRef(loadMessages);
 
   useEffect(() => {
     onEntitiesChangedRef.current = onEntitiesChanged;
-    loadMessagesRef.current = loadMessages;
-  }, [loadMessages, onEntitiesChanged]);
+  }, [onEntitiesChanged]);
 
   const commitMessages = useCallback((update: (current: AgentChatMessage[]) => AgentChatMessage[]) => {
     messagesRef.current = update(messagesRef.current);
@@ -147,174 +120,52 @@ export function useAgentChat({
     setPending(next);
   }, []);
 
-  const commitConversation = useCallback((next: string | null) => {
-    conversationRef.current = next;
-    setConversationId(next);
-  }, []);
-
-  /**
-   * Recarrega a thread do servidor. Balao local que falhou fica de fora: ele
-   * nunca chegou a ser gravado, e mante-lo ao lado do que o servidor devolveu
-   * faria a lista afirmar uma mensagem que nao existe.
-   */
-  const reload = useCallback(
-    async (id: string, recoveringRequestId?: string) => {
-      const version = ++reloadVersionRef.current;
-      setLoading(true);
-      try {
-        const page = await loadMessagesRef.current(id);
-        if (conversationRef.current !== id || reloadVersionRef.current !== version) return;
-        const ordered = [...page.items].reverse();
-        // A recovered turn isn't canonical until it commits. Keep its local
-        // bubble and any failure/retry state during this first history load.
-        const local = recoveringRequestId ? messagesRef.current.filter((message) =>
-          message.id === recoveringRequestId || message.id === `${recoveringRequestId}-error`) : [];
-        messagesRef.current = [...ordered.map(toMessage), ...local];
-        setMessages(messagesRef.current);
-        lastSeqRef.current = ordered.at(-1)?.seq ?? 0;
-      } finally {
-        if (reloadVersionRef.current === version) setLoading(false);
-      }
-    },
-    [],
-  );
-
-  const openConversation = useCallback(
-    async (id: string) => {
-      if (pendingRef.current) return;
-      commitHermesMode(false);
-      commitConversation(id);
-      commitPending(null);
-      await reload(id);
-    },
-    [commitConversation, commitHermesMode, commitPending, reload],
-  );
-
-  /** Comecar de novo e estado local: a conversa so nasce no primeiro turno gravado. */
+  /** Comecar de novo e estado local: limpa a tela e volta ao assistente da agenda. */
   const startNewConversation = useCallback(() => {
     if (pendingRef.current) return;
     commitHermesMode(false);
-    commitConversation(null);
     commitPending(null);
-    lastSeqRef.current = 0;
     messagesRef.current = [];
     setMessages([]);
-  }, [commitConversation, commitHermesMode, commitPending]);
+  }, [commitHermesMode, commitPending]);
 
-  const handleEvent = useCallback(
-    (event: AgentChatEvent) => {
-      if (pendingRef.current?.id !== event.id) return;
-
-      if (event.type === "status") {
-        if (!pendingRef.current.cancelling) commitPending({ id: event.id, label: event.label });
-        return;
-      }
-
+  const fail = useCallback(
+    (id: string, code: ChatFailureCode) => {
+      if (pendingRef.current?.id !== id) return;
       commitPending(null);
-      if (event.type === "reply") {
-        const startedFresh = lastSeqRef.current === 0;
-        commitConversation(event.conversationId);
-
-        // Durable jobs are persisted before completion. Replace the local
-        // optimistic turn with canonical history, including on page recovery.
-        if (!createClient) {
-          void reload(event.conversationId).catch(() => {
-            commitMessages((current) => current.some((message) => message.id === `${event.id}-reply`)
-              ? current : [...current, { id: `${event.id}-reply`, role: "assistant",
-                text: event.agentResponse, entities: event.entities }]);
-          });
-          onEntitiesChangedRef.current?.();
-          return;
-        }
-
-        // Um salto no `seq` so acontece se outra aba escreveu nesta conversa no
-        // meio do turno: o que esta na tela ja nao e a conversa inteira.
-        const expected = lastSeqRef.current + TURN_SIZE;
-        if (!startedFresh && event.assistantSeq !== expected) {
-          lastSeqRef.current = event.assistantSeq;
-          void reload(event.conversationId);
-          if (event.entities.length) onEntitiesChangedRef.current?.();
-          return;
-        }
-
-        lastSeqRef.current = event.assistantSeq;
-        commitMessages((current) => [
-          ...current,
-          { id: `${event.id}-reply`, role: "assistant", text: event.agentResponse, entities: event.entities },
-        ]);
-        if (event.entities.length) onEntitiesChangedRef.current?.();
-        return;
-      }
-
-      // A conversa sumiu debaixo do cliente: o id local nao serve mais para nada.
-      if (event.code === "conversation_gone") commitConversation(null);
-
-      const found = messagesRef.current.find((message) => message.id === event.id);
+      const found = messagesRef.current.find((message) => message.id === id);
       const request = found?.role === "user" ? found : undefined;
       commitMessages((current) => [
         ...current.map((message) =>
-          message.id === event.id && message.role === "user" ? { ...message, failed: true } : message,
+          message.id === id && message.role === "user" ? { ...message, failed: true } : message,
         ),
-        {
-          id: `${event.id}-error`,
-          role: "error",
-          text: ERROR_TEXTS[event.code],
-          retryText: request?.text ?? "",
-          requestId: event.id,
-        },
+        { id: `${id}-error`, role: "error", text: ERROR_TEXTS[code], retryText: request?.text ?? "", requestId: id },
       ]);
-      if (event.code === "connection_lost") onEntitiesChangedRef.current?.();
+      if (code === "connection_lost") onEntitiesChangedRef.current?.();
     },
-    [commitConversation, commitMessages, commitPending, createClient, reload],
+    [commitMessages, commitPending],
   );
 
   useEffect(() => {
-    if (!userId) return;
-    const options: AgentChatClientOptions = { userId, onEvent: handleEvent };
-    const client = createClient ? createClient(options) : new DurableAgentChatClient({
-      ...options,
-      onRecover: (job) => {
-        if (pendingRef.current || conversationRef.current || messagesRef.current.length) return false;
-        const id = job.request?.clientMessageId ?? job.id;
-        commitPending({ id, label: job.progress ?? "Recuperando pedido" });
-        commitMessages(() => [{ id, role: "user", text: job.request?.text ?? "" }]);
-        if (job.request?.conversationId) {
-          commitConversation(job.request.conversationId);
-          // Keep the uncommitted request while loading older canonical turns.
-          void reload(job.request.conversationId, id).catch(() => {});
-        }
-        return true;
-      },
-    });
-    clientRef.current = client;
     disposedRef.current = false;
     return () => {
       disposedRef.current = true;
-      client.close();
-      clientRef.current = null;
       commitPending(null);
     };
-  }, [commitConversation, commitMessages, commitPending, createClient, handleEvent, reload, userId]);
+  }, [commitPending]);
 
   /**
-   * Segue o processo ate o fim: a caixa mostra cada passo com seu estado. Devolve `false` quando a rota por
-   * processo esta desligada no servidor (404 ao iniciar), e o chat segue pelo caminho de sempre.
+   * Segue o processo ate o fim: a caixa mostra cada passo com seu estado.
    */
   const runProcess = useCallback(
-    async (id: string, text: string): Promise<boolean> => {
-      if (!processApi || !userId) return false;
+    async (id: string, text: string): Promise<void> => {
+      if (!userId) return;
       let processId: string;
       try {
         ({ processId } = await processApi.start({ userId, text, ...(context ? { context } : {}) }));
-        processModeRef.current = "on";
       } catch (error) {
-        if (isProcessRouteOff(error)) {
-          processModeRef.current = "off";
-          return false;
-        }
-        const code = error instanceof ApiError && error.status === 401 ? "session_expired" : "connection_failed";
-        handleEvent({ type: "error", id, code });
-        return true;
+        fail(id, error instanceof ApiError && error.status === 401 ? "session_expired" : "connection_failed");
+        return;
       }
 
       const messageId = `${id}-process`;
@@ -326,35 +177,35 @@ export function useAgentChat({
         try {
           const view = await processApi.get(processId);
           failures = 0;
-          if (disposedRef.current || pendingRef.current?.id !== id) return true;
+          if (disposedRef.current || pendingRef.current?.id !== id) return;
           commitMessages((current) =>
             current.map((message) => (message.id === messageId ? { id: messageId, role: "process", process: view } : message)));
           if (isProcessTerminal(view)) {
             commitPending(null);
             // Criar, editar e vincular mudam a agenda; uma consulta pura ou uma resposta nao.
             if (view.entities.length > 0) onEntitiesChangedRef.current?.();
-            return true;
+            return;
           }
         } catch (error) {
           failures += 1;
           if (error instanceof ApiError && error.status === 401) {
-            handleEvent({ type: "error", id, code: "session_expired" });
-            return true;
+            fail(id, "session_expired");
+            return;
           }
           if (failures >= PROCESS_POLL_FAILURES) {
-            handleEvent({ type: "error", id, code: "connection_lost" });
-            return true;
+            fail(id, "connection_lost");
+            return;
           }
         }
         if (Date.now() > deadline) {
-          handleEvent({ type: "error", id, code: "connection_lost" });
-          return true;
+          fail(id, "connection_lost");
+          return;
         }
         await new Promise((resolve) => setTimeout(resolve, processPollMs));
       }
-      return true;
+      return;
     },
-    [commitMessages, commitPending, context, handleEvent, processApi, processPollMs, userId],
+    [commitMessages, commitPending, context, fail, processApi, processPollMs, userId],
   );
 
   /**
@@ -364,7 +215,7 @@ export function useAgentChat({
    */
   const runHermes = useCallback(
     async (id: string, text: string): Promise<void> => {
-      if (!automationApi || !userId) return;
+      if (!userId) return;
       const replyId = `${id}-hermes`;
       let jobId: string;
       try {
@@ -372,7 +223,6 @@ export function useAgentChat({
           userId,
           text,
           clientMessageId: id,
-          ...(conversationRef.current ? { conversationId: conversationRef.current } : {}),
         }));
       } catch (error) {
         if (isAutomationRouteOff(error)) {
@@ -382,7 +232,7 @@ export function useAgentChat({
           return;
         }
         const code = error instanceof ApiError && error.status === 401 ? "session_expired" : "connection_failed";
-        handleEvent({ type: "error", id, code });
+        fail(id, code);
         return;
       }
 
@@ -412,39 +262,38 @@ export function useAgentChat({
               commitMessages((current) => [...current, { id: replyId, role: "assistant", text: reply, entities: [] }]);
               onEntitiesChangedRef.current?.();
             } else {
-              handleEvent({ type: "error", id, code: job.errorCode === "cancelled" ? "cancelled" : "unavailable" });
+              fail(id, job.errorCode === "cancelled" ? "cancelled" : "unavailable");
             }
             return;
           }
         } catch (error) {
           failures += 1;
           if (error instanceof ApiError && error.status === 401) {
-            handleEvent({ type: "error", id, code: "session_expired" });
+            fail(id, "session_expired");
             return;
           }
           if (failures >= PROCESS_POLL_FAILURES) {
-            handleEvent({ type: "error", id, code: "connection_lost" });
+            fail(id, "connection_lost");
             return;
           }
         }
         if (Date.now() > deadline) {
-          handleEvent({ type: "error", id, code: "connection_lost" });
+          fail(id, "connection_lost");
           return;
         }
         await new Promise((resolve) => setTimeout(resolve, automationPollMs));
       }
     },
-    [automationApi, automationPollMs, commitHermesMode, commitMessages, commitPending, handleEvent, userId],
+    [automationApi, automationPollMs, commitHermesMode, commitMessages, commitPending, fail, userId],
   );
 
   const send = useCallback(
     (text: string) => {
       const trimmed = text.trim();
-      const client = clientRef.current;
-      if (!trimmed || !client || pendingRef.current || loading) return false;
+      if (!trimmed || !userId || pendingRef.current) return false;
 
       const id = operationId();
-      const command = automationApi ? parseChatCommand(trimmed) : null;
+      const command = parseChatCommand(trimmed);
       const notice = (text: string) => ({ id: `${id}-notice`, role: "assistant" as const, text, entities: [] });
 
       // `/hermes` sozinho so liga o modo; `/app` o desliga. Nenhum dos dois vai ao servidor.
@@ -462,41 +311,13 @@ export function useAgentChat({
 
       commitMessages((current) => [...current, { id, role: "user", text: trimmed }]);
       commitPending({ id });
-      const hermesText = command?.kind === "hermes" ? command.text : hermesModeRef.current && automationApi ? trimmed : null;
-      if (hermesText !== null) {
-        hermesPendingIdRef.current = id;
-        void runHermes(id, hermesText).finally(() => {
-          if (hermesPendingIdRef.current === id) hermesPendingIdRef.current = null;
-        });
-        return true;
-      }
-      const sendThroughChat = () => client.send({
-        id,
-        text: trimmed,
-        context,
-        ...(conversationRef.current ? { conversationId: conversationRef.current } : {}),
-      });
-      if (processApi && processModeRef.current !== "off") {
-        void runProcess(id, trimmed).then((handled) => {
-          if (!handled) void sendThroughChat();
-        });
-      } else {
-        void sendThroughChat();
-      }
+      const hermesText = command?.kind === "hermes" ? command.text : hermesModeRef.current ? trimmed : null;
+      if (hermesText !== null) void runHermes(id, hermesText);
+      else void runProcess(id, trimmed);
       return true;
     },
-    [automationApi, commitHermesMode, commitMessages, commitPending, context, loading, processApi, runHermes, runProcess],
+    [commitHermesMode, commitMessages, commitPending, runHermes, runProcess, userId],
   );
-
-  const cancel = useCallback(() => {
-    const current = pendingRef.current;
-    if (!current || current.cancelling) return;
-    if (current.id === hermesPendingIdRef.current) return;
-    // O processo ja foi entregue as filas e nao ha cancelamento por esta rota: o botao nao se aplica.
-    if (messagesRef.current.some((message) => message.id === `${current.id}-process`)) return;
-    clientRef.current?.cancel(current.id);
-    commitPending({ id: current.id, label: "Cancelando", cancelling: true });
-  }, [commitPending]);
 
   /** Tira o pedido que falhou e o erro dele, e manda o texto de novo. */
   const retry = useCallback(
@@ -513,15 +334,11 @@ export function useAgentChat({
   return {
     messages,
     pending,
-    conversationId,
-    loading,
     ready: Boolean(userId),
     /** `true` enquanto as mensagens vao ao Hermes (`/hermes`); `/app` volta ao assistente da agenda. */
     hermesMode,
     send,
-    cancel,
     retry,
-    openConversation,
     startNewConversation,
   };
 }

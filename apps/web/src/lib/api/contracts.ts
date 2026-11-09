@@ -17,7 +17,15 @@ export type EventKind = "routine" | "meal" | "sleep" | "training";
 
 export const eventKinds: readonly EventKind[] = ["routine", "meal", "sleep", "training"];
 
-export type KnownNoteType = "text" | "meal" | "sleep" | "training";
+export type KnownNoteType = "text" | "meal" | "sleep" | "training" | "skill" | "agent" | "router";
+
+/** Nota que aponta para um arquivo de skill ou agente do Hermes (ADR 0005). Nunca o conteudo. */
+export interface AgentFileNote {
+  path: string;
+  hash: string;
+  missing: boolean;
+  description?: string;
+}
 
 export interface TextNote {
   body: string;
@@ -163,7 +171,10 @@ export type NoteDto =
   | NoteDtoOf<"text", TextNote>
   | NoteDtoOf<"meal", MealItem>
   | NoteDtoOf<"sleep", SleepItem>
-  | NoteDtoOf<"training", TrainingData>;
+  | NoteDtoOf<"training", TrainingData>
+  | NoteDtoOf<"skill", AgentFileNote>
+  | NoteDtoOf<"agent", AgentFileNote>
+  | NoteDtoOf<"router", TextNote>;
 
 export interface MealCreateInput {
   inputText: string;
@@ -398,27 +409,7 @@ export interface TagSuggestionDto {
   name: string;
 }
 
-/**
- * Chat com o agente (`/api/ai/chat`). O socket so abre com um ticket de uso
- * unico emitido por `POST /api/ai/chat/tickets`.
- *
- * O historico **nao** trafega mais: quem o guarda e o servidor, e o frame leva
- * so o id da conversa. Ler a conversa e REST (`/api/ai/conversations`), porque
- * o frame e limitado a 64 KiB e o socket morre a cada 15 min.
- */
-export interface AgentChatTicketDto {
-  ticket: string;
-  expiresAt: string;
-}
-
 export type AgentEntityKind = "event" | "task" | "note";
-
-/** O que mudou num campo: `before` saiu, `after` entrou (`AgentChatFieldChange` dos contratos). */
-export interface AgentChatFieldChange {
-  field: "time" | "deadline" | "name" | "description" | "status" | "priority" | "tags";
-  before?: string;
-  after?: string;
-}
 
 /** Um registro que a resposta tocou. */
 export interface AgentChatEntityRef {
@@ -426,7 +417,6 @@ export interface AgentChatEntityRef {
   id: string;
   change: "created" | "updated" | "deleted";
   label?: string;
-  changes?: AgentChatFieldChange[];
 }
 
 export interface AgentScreenContext {
@@ -434,88 +424,15 @@ export interface AgentScreenContext {
   entityId?: string;
 }
 
-export interface AgentChatMessageFrame {
-  type: "message";
-  id: string;
-  text: string;
-  context?: AgentScreenContext;
-  /** Ausente e conversa nova: o servidor devolve o id dela no `reply`. */
-  conversationId?: string;
-}
-
-export interface AgentChatCancelFrame {
-  type: "cancel";
-  id: string;
-}
-
+/** Por que um job de IA falhou (`errorCode` do job). */
 export type AgentChatErrorCode =
-  | "invalid_frame"
-  | "busy"
   | "invalid_input"
   | "forbidden"
   | "limit_reached"
   | "conflict"
-  | "conversation_gone"
   | "unavailable"
   | "cancelled"
   | "internal";
-
-/** O web so le `kind` e `id` dos registros; o detalhe completo vem junto, mas nao e usado. */
-export interface AgentEntityItemDto {
-  kind: AgentEntityKind;
-  id: string;
-}
-
-export type AgentChatServerFrame =
-  | { type: "ready"; userId: string; expiresAt: string }
-  | { type: "queued"; id: string; jobId: string }
-  | { type: "status"; id: string; label: string }
-  | {
-      type: "reply";
-      id: string;
-      /** A conversa do turno — adotado pelo cliente quando ela acabou de nascer. */
-      conversationId: string;
-      /** Onde a resposta caiu; um salto significa que outra aba escreveu no meio. */
-      assistantSeq: number;
-      agentResponse: string;
-      entities: AgentChatEntityRef[];
-      createdEntities: AgentEntityItemDto[];
-      updatedEntities: AgentEntityItemDto[];
-      deletedEntities: AgentEntityItemDto[];
-    }
-  | { type: "error"; id?: string; code: AgentChatErrorCode };
-
-/** Uma conversa na lista de `GET /api/ai/conversations`. */
-export interface AgentConversationDto {
-  id: string;
-  title?: string;
-  /** O comeco do primeiro pedido: nomeia a conversa enquanto nao ha titulo. */
-  preview: string;
-  lastMessageAt: string;
-  revision: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface AgentConversationPageDto {
-  items: AgentConversationDto[];
-  nextCursor?: string;
-}
-
-export interface AgentChatMessageDto {
-  id: string;
-  seq: number;
-  role: "user" | "assistant";
-  content: string;
-  entities: AgentChatEntityRef[];
-  createdAt: string;
-}
-
-/** Uma pagina de mensagens, da mais nova para a mais velha. */
-export interface AgentChatMessagePageDto {
-  items: AgentChatMessageDto[];
-  nextCursor?: string;
-}
 
 /** A rota de IA por processo (ADR 003): a caixa de processo que o chat mostra. */
 export type AiProcessStatus = "dispatching" | "running" | "completed" | "failed";

@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { agentChatServerFrameSchema, noteSchema } from "./schemas";
+import { noteSchema } from "./schemas";
 
 const meal = {
   name: "Almoço", description: "arroz", foodItems: [],
@@ -43,9 +43,4 @@ test("a training note accepts walking as a cardio workout", () => {
     },
   };
   expect(noteSchema.parse(note)).toEqual(note);
-});
-
-test("chat compatibility transport accepts a durable queue receipt", () => {
-  const receipt = { type: "queued", id: "request-1", jobId: "job-1" };
-  expect(agentChatServerFrameSchema.parse(receipt)).toEqual(receipt);
 });

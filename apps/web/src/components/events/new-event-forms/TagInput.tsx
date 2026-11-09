@@ -124,6 +124,8 @@ export function TagInput({ tags, onTagsChange }: TagInputProps) {
           }}
           placeholder={tags.length ? "" : "Ex.: foco, manhã"}
           className="min-w-[80px] flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+          // O destaque de foco fica no contorno do campo; sem isto o `:focus-visible` global do shell desenha um segundo.
+          style={{ outline: "none", borderRadius: 0 }}
         />
       </div>
 

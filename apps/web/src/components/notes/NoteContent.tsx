@@ -11,12 +11,13 @@ import styles from "./notes.module.css";
  * mostra); sem mais nada, não há o que exibir.
  */
 export function NoteContent({ note, title, agendaMinutes = null }: { note: NoteDto; title?: string; agendaMinutes?: number | null }) {
-  const body = note.type === "text" ? noteMarkdownOf(note) : null;
+  const isMarkdown = note.type === "text" || note.type === "router";
+  const body = isMarkdown ? noteMarkdownOf(note) : null;
   if (body === "") return null;
   return (
     <article className={styles.noteCard} aria-label="Conteúdo da nota">
       {title ? <h2 className={styles.noteTitle}>{title}</h2> : null}
-      <NoteBody note={note.type === "text" ? { ...note, data: { body: body ?? "" } } : note} agendaMinutes={agendaMinutes} />
+      <NoteBody note={note.type === "text" || note.type === "router" ? { ...note, data: { body: body ?? "" } } : note} agendaMinutes={agendaMinutes} />
     </article>
   );
 }

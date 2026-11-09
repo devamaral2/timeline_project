@@ -9,10 +9,6 @@ import {
 } from "@nestjs/common";
 import type { Response } from "express";
 import {
-  AgentConversationNotFoundError,
-  AgentConversationOwnershipError,
-  AgentConversationRevisionConflictError,
-  AgentConversationValidationError,
   EntityBatchConflictError,
   EventNotFoundError,
   EventOwnershipError,
@@ -74,7 +70,7 @@ export class DomainExceptionFilter implements ExceptionFilter {
     if (exception instanceof AiJobFailedError) {
       const statuses: Record<string, number> = {
         invalid_input: HttpStatus.BAD_REQUEST, forbidden: HttpStatus.FORBIDDEN,
-        conflict: HttpStatus.CONFLICT, conversation_gone: HttpStatus.NOT_FOUND,
+        conflict: HttpStatus.CONFLICT,
         limit_reached: HttpStatus.UNPROCESSABLE_ENTITY, unavailable: HttpStatus.BAD_GATEWAY,
       };
       return statuses[exception.code] ?? HttpStatus.INTERNAL_SERVER_ERROR;
@@ -84,10 +80,6 @@ export class DomainExceptionFilter implements ExceptionFilter {
     if (exception instanceof AgentTargetForbiddenError) return HttpStatus.FORBIDDEN;
     if (exception instanceof AgentLimitReachedError) return HttpStatus.UNPROCESSABLE_ENTITY;
     if (exception instanceof EntityBatchConflictError) return HttpStatus.CONFLICT;
-    if (exception instanceof AgentConversationValidationError) return HttpStatus.BAD_REQUEST;
-    if (exception instanceof AgentConversationOwnershipError) return HttpStatus.FORBIDDEN;
-    if (exception instanceof AgentConversationNotFoundError) return HttpStatus.NOT_FOUND;
-    if (exception instanceof AgentConversationRevisionConflictError) return HttpStatus.CONFLICT;
     if (exception instanceof NoteValidationError) return HttpStatus.BAD_REQUEST;
     if (exception instanceof NoteOwnershipError) return HttpStatus.FORBIDDEN;
     if (exception instanceof NoteNotFoundError) return HttpStatus.NOT_FOUND;

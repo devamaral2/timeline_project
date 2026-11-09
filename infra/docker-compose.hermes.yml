@@ -20,6 +20,10 @@ services:
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:?OPENROUTER_API_KEY must come from the hermes-runtime scope}
       # Bearer do MCP (apps/mcp); o config.yaml do Hermes o referencia como ${MCP_TOKEN}.
       MCP_TOKEN: ${MCP_TOKEN:?MCP_TOKEN must come from the hermes-runtime scope}
+      # O usuario do Hermes passa a ter o uid/gid do dono da pasta de skills (a imagem remapeia no boot),
+      # senao ele nao consegue gravar nela. Padrao 1000; exporte AGENT_FILES_UID/GID se o seu for outro.
+      HERMES_UID: ${AGENT_FILES_UID:-1000}
+      HERMES_GID: ${AGENT_FILES_GID:-1000}
     # O MCP local roda no host (`pnpm dev:mcp`); o container o alcanca por este nome.
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -27,6 +31,14 @@ services:
       - "127.0.0.1:${HERMES_HOST_PORT:-8642}:8642"
     volumes:
       - hermes-data:/opt/data
+      # ADR 0005: skills e agentes do Hermes como arquivos, na pasta que a API tambem le (AGENT_FILES_DIR).
+      # As skills ficam montadas direto em /opt/data/skills: e la que o Hermes cria e edita as suas,
+      # entao elas caem na pasta sem sincronizacao. A montagem esconde o que o volume tinha nesse
+      # caminho; copie as skills antes de recriar o container (ADR 0005, "Migracao").
+      - ${AGENT_FILES_DIR:-${HOME}/.braid/agent-files}/hermes/skills:/opt/data/skills
+      # A pasta inteira, para o Hermes alcancar os agentes pelo caminho que as notas mostram
+      # (hermes/agents/<nome>.md), que e o que o pedido de edicao do app informa.
+      - ${AGENT_FILES_DIR:-${HOME}/.braid/agent-files}:/opt/agent-files
 
 volumes:
   hermes-data:

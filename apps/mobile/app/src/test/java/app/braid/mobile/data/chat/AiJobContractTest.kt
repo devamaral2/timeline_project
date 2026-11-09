@@ -20,8 +20,7 @@ class AiJobContractTest {
         assertTrue(jobs[0].pending)
         assertTrue(jobs[1].pending)
         assertFalse(jobs[2].pending)
-        assertEquals("conversation-1", jobs[2].result?.conversationId)
-        assertEquals(2, jobs[2].result?.assistantSeq)
+        assertEquals("Pronto.", jobs[2].result?.text)
         assertEquals("event-1", jobs[3].result?.eventId)
         assertEquals(true, jobs[4].result?.skipped)
     }

@@ -8,7 +8,19 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 
 const authedFetch = vi.fn();
 vi.mock("@/lib/api/authed-fetch", () => ({ authedFetch: (...args: unknown[]) => authedFetch(...args) }));
-vi.mock("@/components/events/new-event-forms/TagInput", () => ({ TagInput: () => null }));
+vi.mock("@/components/events/new-event-forms/TagInput", () => ({
+  TagInput: ({ tags, onTagsChange }: { tags: string[]; onTagsChange: (tags: string[]) => void }) => (
+    <input
+      aria-label="Tags"
+      data-tags={tags.join(",")}
+      onKeyDown={(event) => {
+        if (event.key !== "Enter") return;
+        onTagsChange([...tags, event.currentTarget.value]);
+        event.currentTarget.value = "";
+      }}
+    />
+  ),
+}));
 
 const { NotesScreen } = await import("./NotesScreen");
 
@@ -31,84 +43,35 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-test("agrupa por tag, mantém notas sem tag acessíveis e oferece busca e criação", async () => {
+test("agrupa só por tipo, sem divisão por tag, busca, filtros nem botão de criar", async () => {
+  const agent = { ...note({ id: "revisor", name: "revisor", tags: ["agent", "review"] }), type: "agent", data: { path: "hermes/agents/revisor.md", hash: "a".repeat(64), missing: false } } as unknown as NoteDto;
+  authedFetch.mockResolvedValue([...notes, agent]);
+  render(<NotesScreen userId="user-1" />);
+  await screen.findByText("4 notas");
+
+  const text = screen.getByRole("region", { name: "Notas de texto" });
+  expect(within(text).getByRole("link", { name: /Treino A/ })).toHaveAttribute("href", "/user-1/notas/treino");
+  expect(within(text).getByText("Livros para ler")).toBeInTheDocument();
+  const agents = screen.getByRole("region", { name: "Agentes" });
+  expect(within(agents).getByText("revisor")).toBeInTheDocument();
+  expect(within(agents).queryByText("Livros para ler")).not.toBeInTheDocument();
+
+  expect(screen.getAllByRole("region")).toHaveLength(2);
+  expect(screen.queryByText("Sem tag")).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Nova nota" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();
+});
+
+test("recolhe e expande um tipo", async () => {
   authedFetch.mockResolvedValue(notes);
   render(<NotesScreen userId="user-1" />);
   await screen.findByText("3 notas");
-  const health = screen.getByRole("region", { name: "#saúde" });
-  expect(within(health).getByRole("link", { name: /Treino A/ })).toHaveAttribute("href", "/user-1/notas/treino");
-  const untagged = screen.getByRole("region", { name: "Sem tag" });
-  expect(within(untagged).getByText("Livros para ler")).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Nova nota" })).toBeInTheDocument();
-  expect(screen.getByRole("searchbox", { name: "Buscar notas" })).toBeInTheDocument();
-  expect(screen.getByRole("group", { name: "Filtrar por tag" })).toBeInTheDocument();
-});
-
-test("filtra pelas tags em chips e limpa a seleção", async () => {
-  authedFetch.mockResolvedValue(notes);
-  render(<NotesScreen userId="user-1" />);
-  await screen.findByText("3 notas");
-  const chips = within(screen.getByRole("group", { name: "Filtrar por tag" }));
-
-  const health = chips.getByRole("button", { name: "#saúde" });
-  expect(health).toHaveAttribute("aria-pressed", "false");
-  fireEvent.click(health);
-  expect(health).toHaveAttribute("aria-pressed", "true");
-  expect(screen.getByText("Treino A")).toBeInTheDocument();
-  expect(screen.queryByText("Livros para ler")).not.toBeInTheDocument();
-
-  fireEvent.click(chips.getByRole("button", { name: "Sem tag" }));
-  expect(screen.getByText("Livros para ler")).toBeInTheDocument();
-
-  fireEvent.click(chips.getByRole("button", { name: "#saúde" }));
-  expect(screen.queryByText("Treino A")).not.toBeInTheDocument();
-  expect(screen.getByText("Livros para ler")).toBeInTheDocument();
-
-  fireEvent.click(chips.getByRole("button", { name: "Limpar tags" }));
-  expect(screen.getByText("Treino A")).toBeInTheDocument();
-  expect(chips.queryByRole("button", { name: "Limpar tags" })).not.toBeInTheDocument();
-});
-
-test("busca pelo texto e limpa os filtros quando nada combina", async () => {
-  authedFetch.mockResolvedValue(notes);
-  render(<NotesScreen userId="user-1" />);
-  await screen.findByText("3 notas");
-
-  const search = screen.getByRole("searchbox", { name: "Buscar notas" });
-  fireEvent.change(search, { target: { value: "torto" } });
-  expect(screen.getByText("Livros para ler")).toBeInTheDocument();
-  expect(screen.queryByText("Treino A")).not.toBeInTheDocument();
-  // Os chips seguem à vista: a busca estreita a lista, não as tags.
-  expect(within(screen.getByRole("group", { name: "Filtrar por tag" })).getByRole("button", { name: "#saúde" })).toBeInTheDocument();
-
-  fireEvent.change(search, { target: { value: "zzz" } });
-  expect(screen.getByRole("heading", { name: "Nenhuma nota encontrada" })).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "Limpar filtros" }));
-  expect(search).toHaveValue("");
-  expect(screen.getByText("Treino A")).toBeInTheDocument();
-});
-
-test("expande e recolhe cada tag independentemente e repete notas com várias tags", async () => {
-  authedFetch.mockResolvedValue([note({ id: "multi", name: "Nota compartilhada", tags: ["saúde", "pessoal"] })]);
-  render(<NotesScreen userId="user-1" />);
-  await screen.findByText("1 nota");
-  expect(screen.getAllByRole("link", { name: /Nota compartilhada/ })).toHaveLength(2);
-  const toggle = within(screen.getByRole("region", { name: "#saúde" })).getByRole("button", { name: /#saúde/ });
+  const toggle = within(screen.getByRole("region", { name: "Notas de texto" })).getByRole("button");
   fireEvent.click(toggle);
   expect(toggle).toHaveAttribute("aria-expanded", "false");
-  expect(screen.getAllByRole("link", { name: /Nota compartilhada/ })).toHaveLength(1);
+  expect(screen.queryByRole("link", { name: /Treino A/ })).not.toBeInTheDocument();
   fireEvent.click(toggle);
-  expect(screen.getAllByRole("link", { name: /Nota compartilhada/ })).toHaveLength(2);
-});
-
-test("Nova nota abre o formulário de criar", async () => {
-  authedFetch.mockResolvedValue(notes);
-  render(<NotesScreen userId="user-1" />);
-  await screen.findByText("3 notas");
-
-  fireEvent.click(screen.getByRole("button", { name: "Nova nota" }));
-
-  expect(await screen.findByRole("dialog", { name: "Nova nota" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /Treino A/ })).toBeInTheDocument();
 });
 
 test("convida a escrever a primeira nota quando não há nenhuma", async () => {
@@ -116,7 +79,6 @@ test("convida a escrever a primeira nota quando não há nenhuma", async () => {
   render(<NotesScreen userId="user-1" />);
 
   expect(await screen.findByRole("heading", { name: "Nenhuma nota ainda" })).toBeInTheDocument();
-  expect(screen.getByText(/Escreva a primeira nota/)).toBeInTheDocument();
 });
 
 test("oferece tentar de novo quando a leitura falha", async () => {
@@ -127,4 +89,45 @@ test("oferece tentar de novo quando a leitura falha", async () => {
   fireEvent.click(screen.getByRole("button", { name: "Tentar de novo" }));
 
   expect(await screen.findByText("3 notas")).toBeInTheDocument();
+});
+
+test("o ícone de opções filtra por tipo e por várias tags, e limpa os filtros", async () => {
+  const agent = { ...note({ id: "revisor", name: "revisor", tags: ["agent", "criacao"] }), type: "agent", data: { path: "hermes/agents/revisor.md", hash: "a".repeat(64), missing: false } } as unknown as NoteDto;
+  authedFetch.mockResolvedValue([...notes, agent]);
+  render(<NotesScreen userId="user-1" />);
+  await screen.findByText("4 notas");
+
+  fireEvent.click(screen.getByRole("button", { name: "Opções de visualização" }));
+  const panel = within(screen.getByRole("dialog", { name: "Opções de visualização" }));
+
+  fireEvent.click(panel.getByRole("button", { name: "Agentes" }));
+  expect(screen.queryByText("Livros para ler")).not.toBeInTheDocument();
+  expect(screen.getByText("revisor")).toBeInTheDocument();
+  fireEvent.click(panel.getByRole("button", { name: "Agentes" }));
+
+  const tags = panel.getByLabelText("Tags") as HTMLInputElement;
+  fireEvent.change(tags, { target: { value: "saúde" } });
+  fireEvent.keyDown(tags, { key: "Enter" });
+  expect(screen.getByText("Treino A")).toBeInTheDocument();
+  expect(screen.queryByText("revisor")).not.toBeInTheDocument();
+  fireEvent.change(tags, { target: { value: "agent" } });
+  fireEvent.keyDown(tags, { key: "Enter" });
+  expect(screen.getByText("Treino A")).toBeInTheDocument();
+  expect(screen.getByText("revisor")).toBeInTheDocument();
+  expect(screen.queryByText("Livros para ler")).not.toBeInTheDocument();
+  expect(screen.getByLabelText("2 filtros ativos")).toBeInTheDocument();
+
+  fireEvent.click(panel.getByRole("button", { name: "Limpar filtros" }));
+  expect(screen.getByText("Livros para ler")).toBeInTheDocument();
+});
+
+test("avisa quando nenhum filtro combina", async () => {
+  authedFetch.mockResolvedValue(notes);
+  render(<NotesScreen userId="user-1" />);
+  await screen.findByText("3 notas");
+  fireEvent.click(screen.getByRole("button", { name: "Opções de visualização" }));
+  const tags = screen.getByLabelText("Tags") as HTMLInputElement;
+  fireEvent.change(tags, { target: { value: "inexistente" } });
+  fireEvent.keyDown(tags, { key: "Enter" });
+  expect(await screen.findByRole("heading", { name: "Nenhuma nota encontrada" })).toBeInTheDocument();
 });

@@ -41,8 +41,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -92,7 +90,7 @@ import app.braid.mobile.data.dto.AgentChatEntityRefDto
 import java.time.LocalDate
 
 /** As três vistas do chat; o hub ajusta a altura do painel a elas. */
-enum class ChatView { Home, Conversation, List }
+enum class ChatView { Home, Conversation }
 
 /** Para onde um registro da resposta leva no app. */
 sealed interface ChatEntityTarget {
@@ -166,18 +164,15 @@ fun AgentChatPanel(
     var field by remember { mutableStateOf(TextFieldValue("")) }
     val prompt = field.text
     val focusRequester = remember { FocusRequester() }
-    var listOpen by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
-    val currentConversation = state.conversations.firstOrNull { it.id == state.conversationId }
     val view =
         when {
-            listOpen -> ChatView.List
-            state.isLoadingMessages || state.messages.isNotEmpty() -> ChatView.Conversation
+            state.messages.isNotEmpty() -> ChatView.Conversation
             else -> ChatView.Home
         }
     val command = if (onCommand != null) parseChatCommand(prompt) else null
     val highlighted = command?.matches?.firstOrNull()
-    val canStartNew = state.pending == null && !state.isRecoveringJobs
+    val canStartNew = state.pending == null
     val reveal = rememberHomeReveal()
 
     LaunchedEffect(view) { onViewChange(view) }
@@ -196,65 +191,41 @@ fun AgentChatPanel(
     }
 
     Column(modifier = modifier.fillMaxSize()) {
-        if (view == ChatView.List) {
-            ChatHeaderRow {
-                ChatIconButton(LucideIcons.arrowLeft(), "Voltar para o chat", tint = MaterialTheme.colorScheme.onSurface) {
-                    listOpen = false
-                }
-                ChatHeaderTitle("Conversas", fontSize = 17)
-                ChatIconButton(LucideIcons.plus(), "Nova conversa", enabled = canStartNew, tint = MaterialTheme.colorScheme.onSurface) {
-                    listOpen = false
+        val buttonAlpha = if (view == ChatView.Home) reveal else 1f
+        ChatHeaderRow(divider = view == ChatView.Conversation) {
+            if (view == ChatView.Conversation) {
+                ChatIconButton(
+                    LucideIcons.plus(),
+                    "Nova conversa",
+                    enabled = canStartNew,
+                    tint = MaterialTheme.colorScheme.onSurface,
+                ) {
                     viewModel.startNewConversation()
                 }
+                ChatConversationTitle("Conversa", busy = state.pending != null)
+            } else {
+                Spacer(modifier = Modifier.weight(1f))
             }
-        } else {
-            val buttonAlpha = if (view == ChatView.Home) reveal else 1f
-            ChatHeaderRow(divider = view == ChatView.Conversation) {
-                ChatIconButton(LucideIcons.messagesSquare(), "Todas as conversas", modifier = Modifier.alpha(buttonAlpha)) {
-                    listOpen = true
-                }
-                if (view == ChatView.Conversation) {
-                    ChatConversationTitle(currentConversation?.label() ?: "Nova conversa", busy = state.pending != null)
-                } else {
-                    Spacer(modifier = Modifier.weight(1f))
-                }
-                if (onToggleExpanded != null) {
-                    ChatIconButton(
-                        icon = if (expanded) LucideIcons.minimize2() else LucideIcons.maximize2(),
-                        description = if (expanded) "Recolher para o painel" else "Expandir para tela inteira",
-                        modifier = Modifier.alpha(buttonAlpha),
-                        onClick = onToggleExpanded,
-                    )
-                }
-                if (onClose != null) {
-                    ChatIconButton(LucideIcons.close(), "Fechar o chat", modifier = Modifier.alpha(buttonAlpha), onClick = onClose)
-                }
+            if (onToggleExpanded != null) {
+                ChatIconButton(
+                    icon = if (expanded) LucideIcons.minimize2() else LucideIcons.maximize2(),
+                    description = if (expanded) "Recolher para o painel" else "Expandir para tela inteira",
+                    modifier = Modifier.alpha(buttonAlpha),
+                    onClick = onToggleExpanded,
+                )
+            }
+            if (onClose != null) {
+                ChatIconButton(LucideIcons.close(), "Fechar o chat", modifier = Modifier.alpha(buttonAlpha), onClick = onClose)
             }
         }
 
         Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 20.dp)) {
             when {
-                view == ChatView.List ->
-                    ConversationList(
-                        state = state,
-                        onOpen = {
-                            viewModel.openConversation(it)
-                            listOpen = false
-                        },
-                        onDelete = viewModel::deleteConversation,
-                        onLoadMore = viewModel::loadMoreConversations,
-                    )
                 command != null -> CommandList(commands = command.matches, highlighted = highlighted, onRun = ::runCommand)
                 view == ChatView.Home ->
                     ChatHome(
                         expanded = expanded,
                         onCommand = onCommand,
-                    )
-                state.isLoadingMessages ->
-                    Text(
-                        text = "Carregando a conversa…",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 else ->
                     LazyColumn(
@@ -284,11 +255,11 @@ fun AgentChatPanel(
             }
         }
 
-        if (view != ChatView.List) {
+        run {
             ChatComposer(
                 modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 24.dp),
                 value = field,
-                enabled = state.pending == null && !state.isRecoveringJobs && !state.isLoadingMessages,
+                enabled = state.pending == null,
                 pending = state.pending,
                 focusRequester = focusRequester,
                 shortcuts = if (onCommand != null && view == ChatView.Conversation) COMPOSER_COMMANDS else emptyList(),
@@ -303,13 +274,12 @@ fun AgentChatPanel(
                 onSend = {
                     when {
                         highlighted != null -> runCommand(highlighted)
-                        prompt.isNotBlank() && !state.isRecoveringJobs && !state.isLoadingMessages -> {
+                        prompt.isNotBlank() -> {
                             viewModel.send(prompt)
                             field = TextFieldValue("")
                         }
                     }
                 },
-                onCancel = viewModel::cancel,
             )
         }
     }
@@ -553,122 +523,10 @@ private fun ChatCommand.icon(): ImageVector =
         ChatCommand.Search -> LucideIcons.search()
     }
 
-/** A lista de conversas por Hoje, Esta semana e Antes, como a tela “Conversas” do design. */
-@Composable
-private fun ConversationList(
-    state: AgentChatUiState,
-    onOpen: (String) -> Unit,
-    onDelete: (String) -> Unit,
-    onLoadMore: () -> Unit,
-) {
-    val colors = MaterialTheme.colorScheme
-    val today = remember { LocalDate.now() }
-    when {
-        state.conversations.isEmpty() && state.isLoadingConversations ->
-            Text("Carregando conversas…", fontSize = 13.sp, color = colors.onSurfaceVariant)
-        state.conversations.isEmpty() ->
-            Text("Nenhuma conversa ainda.", fontSize = 13.sp, color = colors.onSurfaceVariant)
-        else ->
-            LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp)) {
-                groupConversations(state.conversations, today).forEachIndexed { index, group ->
-                    item(key = "group:${group.label}") {
-                        Row(
-                            modifier = Modifier.padding(top = if (index == 0) 0.dp else 18.dp, bottom = 2.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.Bottom,
-                        ) {
-                            Text(
-                                text = group.label.label,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold,
-                            )
-                            Text(text = "${group.items.size}", fontSize = 12.sp, color = colors.onSurfaceVariant)
-                        }
-                    }
-                    items(group.items, key = { it.id }) { conversation ->
-                        val current = conversation.id == state.conversationId
-                        if (conversation != group.items.first()) HorizontalDivider(color = colors.outline)
-                        Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Column(
-                                modifier =
-                                    Modifier
-                                        .weight(1f)
-                                        .heightIn(min = 64.dp)
-                                        .clickable(enabled = state.pending == null, onClickLabel = conversation.label()) {
-                                            onOpen(conversation.id)
-                                        }.padding(vertical = 12.dp),
-                                verticalArrangement = Arrangement.spacedBy(3.dp),
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Text(
-                                        modifier = Modifier.weight(1f, fill = false),
-                                        text = conversation.label(),
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
-                                    if (current) {
-                                        Icon(
-                                            imageVector = LucideIcons.check(2f),
-                                            contentDescription = "Conversa atual",
-                                            tint = braidBrand(),
-                                            modifier = Modifier.size(16.dp),
-                                        )
-                                    }
-                                }
-                                if (conversation.title != null && conversation.preview != conversation.title) {
-                                    Text(
-                                        text = conversation.preview,
-                                        fontSize = 13.sp,
-                                        color = colors.onSurfaceVariant,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
-                                }
-                            }
-                            Text(
-                                modifier = Modifier.padding(top = 14.dp),
-                                text = conversationTime(conversation.lastMessageAt, today),
-                                fontSize = 12.sp,
-                                color = colors.onSurfaceVariant,
-                            )
-                            Box(
-                                modifier =
-                                    Modifier
-                                        .padding(top = 7.dp)
-                                        .size(32.dp)
-                                        .clip(CircleShape)
-                                        .clickable(enabled = state.pending == null, onClickLabel = "Apagar conversa") {
-                                            onDelete(conversation.id)
-                                        }.semantics { contentDescription = "Apagar conversa: ${conversation.label()}" },
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Icon(
-                                    imageVector = LucideIcons.trash2(),
-                                    contentDescription = null,
-                                    tint = colors.onSurfaceVariant,
-                                    modifier = Modifier.size(15.dp),
-                                )
-                            }
-                        }
-                    }
-                }
-                if (state.conversationsNextCursor != null) {
-                    item(key = "more") {
-                        TextButton(onClick = onLoadMore, enabled = !state.isLoadingConversations) {
-                            Text(if (state.isLoadingConversations) "Carregando…" else "Carregar mais", color = braidBrand())
-                        }
-                    }
-                }
-            }
-    }
-}
-
 /**
  * `.chatComposer`: a caixa de mensagem, com o fio na cor da marca enquanto tem o
  * foco. Em cima o campo; embaixo os atalhos de comando, e à direita o enviar (o
- * círculo da marca) ou o parar enquanto a IA responde. A voz fica na barra da
+ * círculo da marca), desligado enquanto a IA responde. A voz fica na barra da
  * agenda, como antes.
  */
 @Composable
@@ -681,7 +539,6 @@ private fun ChatComposer(
     onValueChange: (TextFieldValue) -> Unit,
     onShortcut: (ChatCommand) -> Unit,
     onSend: () -> Unit,
-    onCancel: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = MaterialTheme.colorScheme
@@ -696,8 +553,7 @@ private fun ChatComposer(
             .border(BorderStroke(1.dp, if (focused) braidBrand() else colors.outline), shape)
     val action: @Composable () -> Unit = {
         when {
-            pending != null ->
-                ChatIconButton(Icons.Outlined.Stop, "Parar resposta", enabled = !pending.cancelling, onClick = onCancel)
+            pending != null -> SendButton(enabled = false, onClick = onSend)
             // Numa linha só (o início), o enviar aparece com o texto, como antes; com os atalhos fica sempre.
             shortcuts.isNotEmpty() || value.text.isNotBlank() ->
                 SendButton(enabled = enabled && value.text.isNotBlank(), onClick = onSend)
@@ -900,7 +756,6 @@ private fun ChatMessageBubble(
                     }
                 }
         }
-        message.entities.forEach { entity -> EntityDiff(entity) }
         if (message.entities.isNotEmpty()) {
             Column(
                 modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
@@ -922,45 +777,6 @@ private fun ChatMessageBubble(
  * `.chatEntityRow`: cada registro da resposta numa linha com fio, o ícone do tipo na cor
  * da marca e a seta quando abre a tela dele. O apagado fica riscado.
  */
-/** O que o pedido tirou (`-`) e pôs (`+`) num registro, em mono (`EntityDiff` do web). */
-@Composable
-private fun EntityDiff(entity: AgentChatEntityRefDto) {
-    val lines = remember(entity.changes) { changeLines(entity.changes) }
-    if (lines.isEmpty()) return
-    val colors = MaterialTheme.colorScheme
-    val shape = RoundedCornerShape(8.dp)
-    val mono = TextStyle(fontFamily = BraidMonoFont, fontSize = 12.5.sp, lineHeight = 19.sp)
-    Column(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(top = 10.dp)
-                .clip(shape)
-                .background(colors.surfaceVariant)
-                .border(BorderStroke(1.dp, colors.outline), shape)
-                .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
-    ) {
-        entity.label?.let { Text(text = it, style = mono, color = colors.onSurfaceVariant, maxLines = 1, softWrap = false) }
-        lines.forEach { line ->
-            val removed = line.sign == '-'
-            val tint = if (removed) colors.error else braidSuccess()
-            val spoken = if (removed) "saiu" else "entrou"
-            Row(
-                modifier = Modifier.semantics(mergeDescendants = true) { contentDescription = "$spoken: ${line.label} ${line.value}".trim() },
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                Text(text = line.sign.toString(), style = mono, color = tint)
-                if (line.label.isNotEmpty()) {
-                    Text(modifier = Modifier.widthIn(min = 70.dp), text = line.label, style = mono, color = tint.copy(alpha = 0.75f), softWrap = false)
-                }
-                Text(text = line.value, style = mono, color = tint, softWrap = false)
-            }
-        }
-    }
-}
-
 @Composable
 internal fun EntityRow(
     entity: AgentChatEntityRefDto,

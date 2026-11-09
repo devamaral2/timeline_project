@@ -50,7 +50,7 @@ export function getCurrentAiJob(): CurrentAiJob | undefined {
 export function setAiJobFailure(code: string): void {
   const context = aiJobContext.getStore();
   if (!context) throw new Error("No current AI job");
-  if (!["conflict", "conversation_gone", "invalid_input", "limit_reached", "unavailable", "forbidden"].includes(code)) {
+  if (!["conflict", "invalid_input", "limit_reached", "unavailable", "forbidden"].includes(code)) {
     throw new Error("Unknown safe AI job failure code");
   }
   context.failureCode = code;

@@ -2,8 +2,11 @@ package app.braid.mobile.data.notes
 
 import app.braid.mobile.data.dto.CreateNoteInputDto
 import app.braid.mobile.data.dto.NoteDto
+import app.braid.mobile.data.dto.agentFileVersion
+import app.braid.mobile.data.dto.isAgentFile
 import app.braid.mobile.data.dto.UpdateNoteInput
 import app.braid.mobile.data.dto.toJsonObject
+import app.braid.mobile.domain.notes.noteOriginLabel
 import app.braid.mobile.domain.notes.noteSnippet
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -50,6 +53,22 @@ class NoteDtoContractTest {
         assertEquals(null, loose.link)
         assertEquals("", sleep.content)
         assertEquals("Sono", noteSnippet(sleep))
+    }
+
+    @Test
+    fun readsSkillAndAgentNotesAsFileReferences() {
+        val skill =
+            json.decodeFromString<NoteDto>(
+                """{"id":"n4","name":"deploy","type":"skill","schemaVersion":1,
+                   "data":{"path":"hermes/skills/deploy/SKILL.md","hash":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","missing":false},
+                   "links":[],"tags":[],"revision":1,"createdAt":"2026-11-08T12:00:00.000Z","updatedAt":"2026-11-08T12:00:00.000Z"}""",
+            )
+
+        assertEquals(true, skill.isAgentFile)
+        assertEquals("", skill.content)
+        assertEquals("hermes/skills/deploy/SKILL.md", noteSnippet(skill))
+        assertEquals("aaaaaaaa", skill.agentFileVersion)
+        assertEquals("Skill do Hermes", noteOriginLabel(skill))
     }
 
     @Test

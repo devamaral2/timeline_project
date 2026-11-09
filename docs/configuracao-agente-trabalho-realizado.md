@@ -1,3 +1,5 @@
+> **Substituído pela [ADR 0005](../adr/0005-skills-e-agentes-do-hermes-como-arquivos.md).** Este documento descreve a configuração do agente guardada no banco, que foi removida junto com o chat legado.
+
 # Configuração editável do agente: trabalho realizado
 
 Estado em 2026-11-08, branch `feat/ai-process-route`. Nada foi commitado.

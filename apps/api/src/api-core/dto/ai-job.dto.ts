@@ -5,7 +5,7 @@ import type { HermesStep } from "../../infrastructure/hermes/hermes-steps";
 
 type Job = Awaited<ReturnType<AiJobsService["get"]>>;
 const errorCodes = new Set<AgentChatErrorCode>([
-  "conflict", "conversation_gone", "invalid_input", "limit_reached", "unavailable", "forbidden", "internal",
+  "conflict", "invalid_input", "limit_reached", "unavailable", "forbidden", "internal",
 ]);
 
 /** Os passos que o Hermes deu: no resultado quando o turno terminou, no progresso enquanto ele trabalha. */

@@ -125,3 +125,17 @@ test("o corpo em markdown fica sem o título repetido e só existe para nota de 
   expect(noteMarkdownOf(textNote({ name: "Ideias", content: "# Ideias\n\nTexto **forte**" }))).toBe("Texto **forte**");
   expect(noteMarkdownOf(textNote({ name: "Outro", content: "Primeira\nSegunda" }))).toBe("Primeira\nSegunda");
 });
+
+test("o trecho de uma skill é a descrição do arquivo, ou o caminho quando não há", () => {
+  const file = (data: object) => ({ ...textNote({ id: "s", name: "deploy" }), type: "skill", data }) as unknown as NoteDto;
+  const base = { path: "hermes/skills/deploy/SKILL.md", hash: "a".repeat(64), missing: false };
+  expect(noteSnippet(file({ ...base, description: "Publica a versão." }))).toBe("Publica a versão.");
+  expect(noteSnippet(file(base))).toBe(base.path);
+  expect(noteSnippet(file({ ...base, description: "Publica.", missing: true }))).toBe("Publica. (arquivo ausente)");
+});
+
+test("uma nota router mostra o markdown do JEV e a origem Roteador", () => {
+  const router = { ...textNote({ id: "r", name: "JEV · Despacho", content: "# JEV · Despacho\n\nParâmetros do despacho." }), type: "router" } as unknown as NoteDto;
+  expect(noteOriginLabel(router)).toBe("Roteador");
+  expect(noteSnippet(router)).toBe("Parâmetros do despacho.");
+});

@@ -24,8 +24,6 @@ interface Store<T> {
  */
 export class InMemoryEntityBatchWriter implements EntityBatchWriter {
   readonly commits: EntityBatch[] = [];
-  /** Ultimo `seq` por conversa — o que a trava da linha faz no Postgres. */
-  private readonly lastSeq = new Map<string, number>();
 
   constructor(
     private readonly repositories: {
@@ -61,12 +59,7 @@ export class InMemoryEntityBatchWriter implements EntityBatchWriter {
     await batch.afterWrite?.(undefined);
     this.commits.push(batch);
 
-    if (!batch.conversation) return {};
-    const { conversationId, messages } = batch.conversation;
-    const firstSeq = (this.lastSeq.get(conversationId) ?? 0) + 1;
-    const lastSeq = firstSeq + messages.length - 1;
-    this.lastSeq.set(conversationId, lastSeq);
-    return { conversation: { firstSeq, lastSeq } };
+    return {};
   }
 
   private async check<T extends { id: string }>(

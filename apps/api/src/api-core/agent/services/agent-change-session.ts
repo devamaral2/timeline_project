@@ -1,8 +1,6 @@
 import {
-  AgentChatMessage,
   Note,
   Task,
-  type AgentConversation,
   type Event,
   type EventKind,
   type OccurrenceLink,
@@ -10,7 +8,6 @@ import {
   type TaskReviseChanges,
 } from "../../../domain";
 import type {
-  ConversationAppend,
   EntityBatch,
   EventRepository,
   NoteRepository,
@@ -20,21 +17,24 @@ import type {
   TaskRepository,
 } from "../../../domain/ports";
 import type {
-  AgentChatEntityRef,
   AgentEntityItem,
   CreateEventInput,
   CreateNoteInput,
   CreateRecurrenceInput,
 } from "@repo/contracts";
-import { dayKeyOf, expandOccurrences } from "@repo/timeline";
+import { dayKeyOf, expandOccurrences, shiftDayKey } from "@repo/timeline";
 import type { CreateEventUseCase, PrepareEventOptions } from "../../events/create-event.usecase";
 import { prepareRecurrence } from "../../recurrences/prepare-recurrence";
 import { buildEventOccurrence, buildTaskOccurrenceOf, todayOf } from "../../recurrences/recurrence-templates";
 import { reviseRecurrence, type RecurrenceRevision } from "../../recurrences/revise-recurrence";
 import { assertParentTaskAssignable } from "../../tasks/assert-parent-task";
-import { firstSearchLimit } from "../skills/recurrence-rule";
 import { entityChanges } from "./agent-entity-changes";
 import { eventItem, noteItem, taskItem } from "./agent-entity-dto";
+
+/** Quatro anos a frente cobrem ate o 29 de fevereiro: a primeira ocorrencia de qualquer regra valida cai ali. */
+function firstSearchLimit(from: string): string {
+  return shiftDayKey(from, 366 * 4);
+}
 
 export type EntityKind = "event" | "task" | "note";
 type DeletableKind = EntityKind | "recurrence";
@@ -112,7 +112,6 @@ export class AgentChangeSession {
   private readonly recurrences = new Map<string, StagedSeries>();
   /** Ocorrencias que uma serie alterada ou apagada leva embora e a resposta mostra no lugar dela. */
   private readonly removedPreviews: AgentEntityItem[] = [];
-  private conversationTurn: ConversationAppend | undefined;
 
   constructor(
     readonly userId: string,
@@ -468,33 +467,6 @@ export class AgentChangeSession {
     return this.events.get(id)?.before;
   }
 
-  /**
-   * O turno de conversa entra no mesmo lote das entidades, e nao numa gravacao
-   * propria: assim a conversa nunca registra uma escrita que o banco recusou.
-   * Chamado uma unica vez, no fim do run, quando a resposta ja existe.
-   */
-  stageConversationTurn(
-    conversation: { conversationId: string; create?: AgentConversation },
-    userText: string,
-    assistantText: string,
-    entities: readonly AgentChatEntityRef[],
-  ): void {
-    const conversationId = conversation.conversationId;
-    this.conversationTurn = {
-      conversationId,
-      create: conversation.create,
-      messages: [
-        AgentChatMessage.create({ conversationId, role: "user", content: userText }),
-        AgentChatMessage.create({ conversationId, role: "assistant", content: assistantText, entities }),
-      ],
-    };
-  }
-
-  /** Ha o que gravar mesmo sem entidade nenhuma: um turno de pura consulta. */
-  hasMessages(): boolean {
-    return this.conversationTurn !== undefined;
-  }
-
   /** Superseded pending notes never reached storage and need no orphan AI jobs. */
   private discardUnlinkedPendingMeals(): void {
     if (this.keepUnlinkedMealNotes) return;
@@ -539,7 +511,6 @@ export class AgentChangeSession {
           ? [{ op: "delete", id: staged.recurrence.id, fromDay: staged.fromDay as string }]
           : [];
       }),
-      conversation: this.conversationTurn,
     };
   }
 

@@ -6,7 +6,7 @@ import { describeCandidate, type CandidateQuery, type EditCandidate } from "./pr
 import { candidatesConfig, dispatchConfig, type ChoiceQuestion } from "./process-config";
 import type { NewStep, ProcessRecord, ProcessStore } from "./process-store";
 import { DISPATCH_STEPS, EDIT_AGENTS, newStepId, EDIT_SELECTOR, selects, type EditAgent, type Expected } from "./process-steps";
-import { formatNow } from "../agent/services/agent-prompt-builder.service";
+import { formatNow } from "../agent/time";
 
 export interface DispatchRecord {
   model?: string;

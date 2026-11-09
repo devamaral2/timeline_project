@@ -10,13 +10,6 @@ export interface AgentScreenContext {
   entityId?: string;
 }
 
-export interface RunAgentRequest {
-  /** Dono dos dados lidos e alterados. Outro usuario so para super admin. */
-  userId: string;
-  text: string;
-  context?: AgentScreenContext;
-}
-
 /**
  * `kind` aqui e o discriminante da entidade (event | task | note); por isso a
  * natureza do evento (routine, meal...) viaja como `eventKind` nestes itens.
@@ -29,11 +22,3 @@ export type AgentEntityItem = (
   /** Criado ou alterado neste pedido: o que entrou e o que saiu (`AgentChatFieldChange`). */
   changes?: AgentChatFieldChange[];
 };
-
-export interface RunAgentResponse {
-  agentResponse: string;
-  createdEntities: AgentEntityItem[];
-  updatedEntities: AgentEntityItem[];
-  /** Como estavam antes de apagar. */
-  deletedEntities: AgentEntityItem[];
-}

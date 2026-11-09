@@ -4,7 +4,7 @@ import { getCurrentAiJob, setAiJobResult } from "../../infrastructure/ai-jobs/ai
 import { AgentRunCancelledError } from "../agent/errors/agent.errors";
 import { AgentChangeSession } from "../agent/services/agent-change-session";
 import type { CreateEventUseCase } from "../events/create-event.usecase";
-import { promptsConfig } from "../agent/config/agent-config";
+import { TIME_ZONE } from "../agent/time";
 import {
   eventCreateOutput, noteCreateOutput, recurringEventCreateOutput, recurringTaskCreateOutput, taskCreateOutput,
   type EventCreateOutput, type NoteCreateOutput, type TaskCreateOutput,
@@ -81,16 +81,16 @@ export class ProcessStepWorker {
       }
       case "recurring-event-create": {
         const { value } = await this.deps.runner.run({ ...base, schema: recurringEventCreateOutput });
-        const today = session.todayIn(promptsConfig.timeZone);
+        const today = session.todayIn(TIME_ZONE);
         return this.stageSeries(session, value.series.map((series) => ({
-          name: series.name, input: () => eventSeriesInput(series, today, promptsConfig.timeZone),
+          name: series.name, input: () => eventSeriesInput(series, today, TIME_ZONE),
         })));
       }
       case "recurring-task-create": {
         const { value } = await this.deps.runner.run({ ...base, schema: recurringTaskCreateOutput });
-        const today = session.todayIn(promptsConfig.timeZone);
+        const today = session.todayIn(TIME_ZONE);
         return this.stageSeries(session, value.series.map((series) => ({
-          name: series.name, input: () => taskSeriesInput(series, today, promptsConfig.timeZone),
+          name: series.name, input: () => taskSeriesInput(series, today, TIME_ZONE),
         })));
       }
     }

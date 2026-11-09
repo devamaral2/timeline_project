@@ -5,7 +5,7 @@ import { AgentRunCancelledError } from "../agent/errors/agent.errors";
 import { AgentChangeSession } from "../agent/services/agent-change-session";
 import type { CreateEventUseCase } from "../events/create-event.usecase";
 import type { EditCandidate } from "./process-candidates";
-import { promptsConfig } from "../agent/config/agent-config";
+import { TIME_ZONE } from "../agent/time";
 import {
   eventEditOutput, noteEditOutput, recurringEventEditOutput, recurringTaskEditOutput, taskEditOutput,
   type EventEditOutput, type NoteEditOutput, type RecurringEventEditOutput, type RecurringTaskEditOutput,
@@ -162,7 +162,7 @@ export class ProcessEditWorker {
         edit.id,
         (current) => {
           try {
-            return planSeriesEdit(current, edit, promptsConfig.timeZone);
+            return planSeriesEdit(current, edit, TIME_ZONE);
           } catch (error) {
             if (error instanceof RuleError) throw new Error(error.message);
             throw error;

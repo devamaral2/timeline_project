@@ -4,6 +4,7 @@ const eventPrioritySchema = z.enum(["urgent", "normal", "flexible"]);
 const notificationOffsetsSchema = z.array(z.number());
 const eventKindSchema = z.enum(["routine", "meal", "sleep", "training"]);
 const textNoteSchema = z.object({ body: z.string() }).strict();
+const agentFileNoteSchema = z.object({ path: z.string(), hash: z.string(), missing: z.boolean(), description: z.string().optional() }).strict();
 const sleepDataSchema = z.object({ trackedSleepTime: z.number(), score: z.number() }).strict();
 
 const foodItemSchema = z.object({
@@ -114,6 +115,9 @@ export const noteSchema = z.discriminatedUnion("type", [
   z.object({ ...noteBase, type: z.literal("meal"), data: mealItemSchema }).strict(),
   z.object({ ...noteBase, type: z.literal("sleep"), data: sleepDataSchema }).strict(),
   z.object({ ...noteBase, type: z.literal("training"), data: trainingDataSchema }).strict(),
+  z.object({ ...noteBase, type: z.literal("skill"), data: agentFileNoteSchema }).strict(),
+  z.object({ ...noteBase, type: z.literal("agent"), data: agentFileNoteSchema }).strict(),
+  z.object({ ...noteBase, type: z.literal("router"), data: textNoteSchema }).strict(),
 ]);
 
 const noteInputBase = { name: z.string().optional(), tags: z.array(z.string()).optional() };
@@ -194,40 +198,6 @@ export const updateNoteInputSchema = z.union([
 
 export const tagSuggestionSchema = z.object({ id: z.string(), name: z.string() }).strict();
 
-const agentEntityRefSchema = z.object({
-  kind: z.enum(["event", "task", "note"]), id: z.string(), change: z.enum(["created", "updated", "deleted"]), label: z.string().optional(),
-}).strict();
-
-const agentScreenContextSchema = z.object({ screen: z.string(), entityId: z.string().optional() }).strict();
-
-export const agentChatTicketSchema = z.object({ ticket: z.string(), expiresAt: z.string() }).strict();
-
-export const agentChatClientFrameSchema = z.discriminatedUnion("type", [
-  z.object({ type: z.literal("message"), id: z.string(), text: z.string(), context: agentScreenContextSchema.optional(), conversationId: z.string().optional() }).strict(),
-  z.object({ type: z.literal("cancel"), id: z.string() }).strict(),
-]);
-
-const agentChatErrorCodeSchema = z.enum(["invalid_frame", "busy", "invalid_input", "forbidden", "limit_reached", "conflict", "conversation_gone", "unavailable", "cancelled", "internal"]);
-const agentEntityItemSchema = z.object({ kind: z.enum(["event", "task", "note"]), id: z.string() }).passthrough();
-
-export const agentChatServerFrameSchema = z.discriminatedUnion("type", [
-  z.object({ type: z.literal("ready"), userId: z.string(), expiresAt: z.string() }).strict(),
-  z.object({ type: z.literal("queued"), id: z.string(), jobId: z.string() }).strict(),
-  z.object({ type: z.literal("status"), id: z.string(), label: z.string() }).strict(),
-  z.object({
-    type: z.literal("reply"), id: z.string(), conversationId: z.string(), assistantSeq: z.number().int(), agentResponse: z.string(),
-    entities: z.array(agentEntityRefSchema), createdEntities: z.array(agentEntityItemSchema), updatedEntities: z.array(agentEntityItemSchema), deletedEntities: z.array(agentEntityItemSchema),
-  }).strict(),
-  z.object({ type: z.literal("error"), id: z.string().optional(), code: agentChatErrorCodeSchema }).strict(),
-]);
-
-export const agentConversationSchema = z.object({ id: z.string(), title: z.string().optional(), preview: z.string(), lastMessageAt: z.string(), revision: z.number().int(), createdAt: z.string(), updatedAt: z.string() }).strict();
-export const agentConversationPageSchema = z.object({ items: z.array(agentConversationSchema), nextCursor: z.string().optional() }).strict();
-export const agentChatMessagePageSchema = z.object({
-  items: z.array(z.object({ id: z.string(), seq: z.number().int(), role: z.enum(["user", "assistant"]), content: z.string(), entities: z.array(agentEntityRefSchema), createdAt: z.string() }).strict()),
-  nextCursor: z.string().optional(),
-}).strict();
-
 export const aiProcessSchema = z.object({
   id: z.string(),
   status: z.enum(["dispatching", "running", "completed", "failed"]),
@@ -262,10 +232,5 @@ export const mobileContractSchemas = {
   createNoteResponse: createNoteResponseSchema,
   updateNoteInput: updateNoteInputSchema,
   tagSuggestion: tagSuggestionSchema,
-  agentChatTicket: agentChatTicketSchema,
-  agentChatClientFrame: agentChatClientFrameSchema,
-  agentChatServerFrame: agentChatServerFrameSchema,
-  agentConversationPage: agentConversationPageSchema,
-  agentChatMessagePage: agentChatMessagePageSchema,
   aiProcess: aiProcessSchema,
 } as const;

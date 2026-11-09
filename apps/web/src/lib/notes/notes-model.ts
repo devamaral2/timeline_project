@@ -1,6 +1,6 @@
 import { TIMELINE_TIME_ZONE, dayKeyOf, formatTime } from "@repo/timeline";
 import { dateLineOf, minutesBetween } from "@/lib/events/event-detail-format";
-import type { MealItem, NoteDto, NoteLinkDto, SleepItem, TextNote, TrainingData } from "@/lib/api/contracts";
+import type { AgentFileNote, MealItem, NoteDto, NoteLinkDto, SleepItem, TextNote, TrainingData } from "@/lib/api/contracts";
 
 /**
  * O que a tela de Notas decide a partir dos dados: o filtro, o agrupamento por
@@ -35,6 +35,7 @@ export function noteTextOf(note: Pick<NoteDto, "type" | "data">): string {
   // `type` e `data` chegam separados (um `Pick` desfaz a uniao discriminada): o par e conferido pela API.
   switch (note.type) {
     case "text":
+    case "router":
       return (note.data as TextNote).body;
     case "meal": {
       const meal = note.data as MealItem;
@@ -50,6 +51,12 @@ export function noteTextOf(note: Pick<NoteDto, "type" | "data">): string {
       return (note.data as TrainingData).workouts
         .map((workout) => `${workout.workoutName} · ${workout.duration} min`)
         .join("\n");
+    case "skill":
+    case "agent": {
+      const file = note.data as AgentFileNote;
+      const text = file.description || file.path;
+      return file.missing ? `${text} (arquivo ausente)` : text;
+    }
     default:
       return "";
   }
@@ -177,7 +184,10 @@ export function sleepAgendaOf(note: Pick<NoteDto, "type" | "links">): { title: s
 }
 
 /** O rotulo da origem: "Evento · Almoço", "Tarefa · Revisar proposta" (com "+N" se ha mais) ou "Nota solta". */
-export function noteOriginLabel(note: Pick<NoteDto, "links">): string {
+export function noteOriginLabel(note: Pick<NoteDto, "links"> & Partial<Pick<NoteDto, "type">>): string {
+  if (note.type === "skill") return "Skill do Hermes";
+  if (note.type === "agent") return "Agente do Hermes";
+  if (note.type === "router") return "Roteador";
   const link = primaryLinkOf(note);
   if (!link) return "Nota solta";
   const more = (note.links?.length ?? 1) - 1;
@@ -206,7 +216,7 @@ export function stripInlineMarkdown(line: string): string {
  * linha (a tela ja o mostra). Notas estruturadas nao tem markdown: vazio.
  */
 export function noteMarkdownOf(note: Pick<NoteDto, "name" | "type" | "data">): string {
-  if (note.type !== "text") return "";
+  if (note.type !== "text" && note.type !== "router") return "";
   const lines = noteTextOf(note).split(/\r?\n/);
   const firstIndex = lines.findIndex((line) => line.trim());
   if (firstIndex >= 0 && lines[firstIndex]?.trim().replace(HEADING_MARKER, "") === note.name) {
@@ -239,4 +249,36 @@ export function groupNotesByTag(notes: readonly NoteDto[]): NoteGroup[] {
     }
   }
   return [...groups.values()].sort((a, b) => !a.key ? 1 : !b.key ? -1 : a.key.localeCompare(b.key, "pt-BR"));
+}
+
+export interface NoteTypeGroup {
+  key: string;
+  label: string;
+  notes: NoteDto[];
+}
+
+const NOTE_TYPE_LABELS: ReadonlyArray<readonly [string, string]> = [
+  ["text", "Notas de texto"],
+  ["meal", "Refeições"],
+  ["training", "Treinos"],
+  ["sleep", "Sono"],
+  ["skill", "Skills"],
+  ["agent", "Agentes"],
+  ["router", "Roteadores"],
+];
+
+/** Um grupo por tipo de nota, na ordem de NOTE_TYPE_LABELS (tipos desconhecidos ao fim), da edição mais recente para a mais antiga. */
+export function groupNotesByType(notes: readonly NoteDto[]): NoteTypeGroup[] {
+  const byType = new Map<string, NoteDto[]>();
+  for (const note of notes) byType.set(note.type, [...(byType.get(note.type) ?? []), note]);
+  const known = NOTE_TYPE_LABELS.map(([key]) => key);
+  const keys = [...known.filter((key) => byType.has(key)), ...[...byType.keys()].filter((key) => !known.includes(key)).sort()];
+  return keys.map((key) => {
+    const typed = byType.get(key) ?? [];
+    return {
+      key,
+      label: NOTE_TYPE_LABELS.find(([type]) => type === key)?.[1] ?? key,
+      notes: [...typed].sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt)),
+    };
+  });
 }

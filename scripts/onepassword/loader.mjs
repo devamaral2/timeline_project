@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { resolve } from "node:path";
 
 const ROOT = resolve(new URL("../..", import.meta.url).pathname);
@@ -18,6 +19,8 @@ const INITIAL_VALUES = {
   // Rota do Hermes (ADR 004): desligada, e o Hermes local no loopback.
   AI_AUTOMATION: "off",
   HERMES_URL: "http://127.0.0.1:8642",
+  // ADR 0005: pasta de skills e agentes do Hermes, a mesma que o compose do Hermes monta em /opt/agent-files.
+  AGENT_FILES_DIR: resolve(homedir(), ".braid", "agent-files"),
 };
 // Chaves do .env.example que o carregador padrao usa quando existem, mas que nao impedem `pnpm dev` de subir.
 const DEFAULT_SCOPE_OPTIONAL_KEYS = new Set(["HERMES_API_KEY"]);
@@ -35,14 +38,11 @@ const SCOPES = Object.freeze({
     optional: [
       "OPENROUTER_API_KEY",
       "OPENROUTER_MODEL",
-      "OPENROUTER_AGENT_MODEL",
-      "OPENROUTER_PLANNER_MODEL",
-      "OPENROUTER_SPECIALIST_MODEL",
-      "AI_PIPELINE",
-      "AI_PROCESS",
       "AI_AUTOMATION",
       "HERMES_URL",
       "HERMES_API_KEY",
+      "AGENT_FILES_DIR",
+      "AGENT_CONFIG_OWNER_USER_ID",
       "JEV_API_KEY",
       "AI_JOBS_CONCURRENCY",
       "AI_JOBS_LEASE_MS",
@@ -87,6 +87,7 @@ const SCOPES = Object.freeze({
   },
 });
 const LOCAL_OVERRIDE_KEYS = new Set([
+  "AGENT_CONFIG_OWNER_USER_ID",
   "WEB_PORT",
   "API_PORT",
   "API_HOST",

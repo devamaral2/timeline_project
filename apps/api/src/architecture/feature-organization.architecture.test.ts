@@ -18,7 +18,6 @@ test("does not retain the old feature aggregators or artificial HTTP areas", () 
     expect(existsSync(join(features, name))).toBe(false);
   }
   expect(existsSync(join(src, "http/request-identity"))).toBe(true);
-  expect(existsSync(join(src, "http/websocket/agent-chat"))).toBe(true);
 });
 
 test("each Nest controller source declares one public route operation", () => {

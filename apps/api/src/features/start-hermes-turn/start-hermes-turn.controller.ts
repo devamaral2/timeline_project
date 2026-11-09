@@ -10,8 +10,10 @@ import { getServerEnv } from "../../config/env";
 import { GatewayIdentityGuard } from "../../http/request-identity/gateway-identity.guard";
 import { CurrentUser } from "../../http/request-identity/current-user.decorator";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
-import { CONVERSATION_ID_FORMAT } from "../../http/websocket/agent-chat/chat-protocol";
 import { AiJobsService } from "../../infrastructure/ai-jobs/ai-jobs.service";
+
+/** Identificador opaco (ULID) que o cliente escolhe para manter a sessao do Hermes. */
+const CONVERSATION_ID_FORMAT = /^[0-9A-HJKMNP-TV-Z]{26}$/;
 
 const startHermesTurnBody = z.object({
   userId: z.string().min(1).max(128),

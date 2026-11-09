@@ -1,6 +1,6 @@
 import type { UpdateNoteRequest } from "@repo/contracts";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
-import { NoteNotFoundError, NoteOwnershipError, NoteRevisionConflictError } from "../../domain";
+import { NoteNotFoundError, NoteOwnershipError, NoteRevisionConflictError, NoteValidationError, isAgentFileNoteType, isRouterNoteType } from "../../domain";
 import type { EntityBatchWriter, NoteLinkQuery, NoteRepository } from "../../domain/ports";
 import type { NoteBuilder } from "../../api-core/notes/services/note-builder.service";
 import { planNoteLinks, uniqueIds, type NoteTargetRepositories } from "../../api-core/notes/note-targets";
@@ -19,6 +19,13 @@ export class UpdateNoteUseCase {
     const existing = await this.noteRepository.findById(input.noteId);
     if (!existing) throw new NoteNotFoundError(`Note not found: ${input.noteId}`);
     if (existing.userId !== actor.userId) throw new NoteOwnershipError();
+    // O texto vive no arquivo; a nota so o referencia. Mudar o arquivo e pedir ao Hermes (ADR 0005).
+    if (isAgentFileNoteType(existing.type)) {
+      throw new NoteValidationError("Skill and agent notes follow the files; ask Hermes to change the file");
+    }
+    if (isRouterNoteType(existing.type)) {
+      throw new NoteValidationError("Router notes follow the JEV config and cannot be edited");
+    }
     if (existing.revision !== input.expectedRevision) {
       throw new NoteRevisionConflictError(
         `Expected revision ${input.expectedRevision} but found ${existing.revision}`,

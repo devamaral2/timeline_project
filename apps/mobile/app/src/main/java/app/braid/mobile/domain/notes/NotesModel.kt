@@ -1,7 +1,11 @@
 package app.braid.mobile.domain.notes
 
 import app.braid.mobile.data.dto.NoteDto
+import app.braid.mobile.data.dto.ROUTER_NOTE_TYPE
 import app.braid.mobile.data.dto.TEXT_NOTE_TYPE
+import app.braid.mobile.data.dto.agentFileMissing
+import app.braid.mobile.data.dto.agentFilePath
+import app.braid.mobile.data.dto.isAgentFile
 import app.braid.mobile.domain.timeline.TIMELINE_TIME_ZONE
 import app.braid.mobile.domain.timeline.dayKeyOf
 import app.braid.mobile.domain.timeline.formatTime
@@ -167,6 +171,7 @@ fun noteDatesLine(
 
 /** O rótulo da origem: "Evento · Almoço", "Tarefa · Revisar proposta" ou "Nota solta". */
 fun noteOriginLabel(note: NoteDto): String {
+    if (note.isAgentFile) return noteTypeLabel(note.type)
     val link = note.link ?: return "Nota solta"
     return "${if (link.kind == "event") "Evento" else "Tarefa"} · ${link.name}"
 }
@@ -203,13 +208,20 @@ fun noteTypeLabel(type: String): String =
         "meal" -> "Refeição"
         "sleep" -> "Sono"
         "training" -> "Treino"
+        "skill" -> "Skill do Hermes"
+        "agent" -> "Agente do Hermes"
+        "router" -> "Roteador"
         else -> "Nota"
     }
 
 /** O trecho da lista: o texto sem o título repetido, sem marcação do markdown e numa linha só. */
 fun noteSnippet(note: NoteDto): String {
     // Refeição, sono e treino ainda não têm texto para o trecho: o app mostra o tipo.
-    if (note.type != TEXT_NOTE_TYPE) return noteTypeLabel(note.type)
+    if (note.isAgentFile) {
+        val text = note.agentFileDescription.ifEmpty { note.agentFilePath }
+        return if (note.agentFileMissing) "$text (arquivo ausente)" else text
+    }
+    if (note.type != TEXT_NOTE_TYPE && note.type != ROUTER_NOTE_TYPE) return noteTypeLabel(note.type)
     val lines = note.content.lines().map { it.trim() }
     val firstIndex = lines.indexOfFirst { it.isNotEmpty() }
     val first = lines.getOrNull(firstIndex)?.replace(headingMarker, "")

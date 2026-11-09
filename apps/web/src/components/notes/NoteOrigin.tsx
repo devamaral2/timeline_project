@@ -1,4 +1,4 @@
-import { Clock, FileText, type LucideIcon } from "lucide-react";
+import { Bot, Clock, FileText, Route, Wrench, type LucideIcon } from "lucide-react";
 import { ICON_STROKE_WIDTH, visualForItemType } from "@/components/events/event-visuals";
 import type { NoteDto, NoteLinkDto } from "@/lib/api/contracts";
 import { noteOriginLabel, primaryLinkOf } from "@/lib/notes/notes-model";
@@ -12,7 +12,10 @@ export function originOfLink(link: NoteLinkDto): { Icon: LucideIcon; origin: str
 }
 
 /** O que prende a nota pela primeira vez: o alvo principal ou nada (nota solta). */
-export function originOf(note: Pick<NoteDto, "links">): { Icon: LucideIcon; origin: string } {
+export function originOf(note: Pick<NoteDto, "links"> & Partial<Pick<NoteDto, "type">>): { Icon: LucideIcon; origin: string } {
+  if (note.type === "skill") return { Icon: Wrench, origin: "hermes" };
+  if (note.type === "agent") return { Icon: Bot, origin: "hermes" };
+  if (note.type === "router") return { Icon: Route, origin: "hermes" };
   const link = primaryLinkOf(note);
   return link ? originOfLink(link) : { Icon: FileText, origin: "loose" };
 }

@@ -1,6 +1,7 @@
 import { NoteValidationError } from "../errors/note.errors";
 import type { NoteTypeDefinition } from "./note-type-definition";
 import { parseMealItem } from "./meal-item";
+import { parseAgentFileNote } from "./agent-file-note";
 import { parseSleepItem } from "./sleep-item";
 import { parseTextNote } from "./text-note";
 import { parseTrainingData } from "./training-data";
@@ -44,4 +45,7 @@ export const defaultNoteTypeRegistry = new NoteTypeRegistry([
   { type: "meal", currentSchemaVersion: 1, parse: parseMealItem },
   { type: "sleep", currentSchemaVersion: 1, parse: parseSleepItem },
   { type: "training", currentSchemaVersion: 1, parse: parseTrainingData },
+  { type: "router", currentSchemaVersion: 1, parse: parseTextNote },
+  { type: "skill", currentSchemaVersion: 1, parse: parseAgentFileNote },
+  { type: "agent", currentSchemaVersion: 1, parse: parseAgentFileNote },
 ]);

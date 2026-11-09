@@ -1,4 +1,3 @@
-import type { AgentConversationDto } from "@/lib/api/contracts";
 
 /** O que a barra "/" do chat abre: os formularios de criar e a pesquisa. */
 export type HubCommandId = "task" | "event" | "note" | "search";
@@ -41,42 +40,4 @@ export function parseCommand(input: string): CommandQuery | null {
       : command.slug.startsWith(typed) || fold(command.label).split(" ").some((word) => word.startsWith(typed)),
   );
   return matches.length > 0 ? { matches, argument: rest.trim() } : null;
-}
-
-export interface ConversationGroup {
-  label: "Hoje" | "Esta semana" | "Antes";
-  items: AgentConversationDto[];
-}
-
-const DAY_MS = 24 * 60 * 60 * 1000;
-const startOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
-
-/** Hoje, os ultimos sete dias e o resto, cada grupo do mais recente para o mais antigo. */
-export function groupConversations(conversations: AgentConversationDto[], now = new Date()): ConversationGroup[] {
-  const today = startOfDay(now).getTime();
-  const groups: ConversationGroup[] = [
-    { label: "Hoje", items: [] },
-    { label: "Esta semana", items: [] },
-    { label: "Antes", items: [] },
-  ];
-  const sorted = [...conversations].sort((a, b) => b.lastMessageAt.localeCompare(a.lastMessageAt));
-  for (const conversation of sorted) {
-    const day = startOfDay(new Date(conversation.lastMessageAt)).getTime();
-    const group = day >= today ? groups[0] : today - day < 7 * DAY_MS ? groups[1] : groups[2];
-    group.items.push(conversation);
-  }
-  return groups.filter((group) => group.items.length > 0);
-}
-
-/** "14:32" hoje, "ter." nesta semana e "28 set." antes disso. */
-export function conversationTime(lastMessageAt: string, now = new Date()): string {
-  const date = new Date(lastMessageAt);
-  const today = startOfDay(now).getTime();
-  const day = startOfDay(date).getTime();
-  if (day >= today) {
-    return date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-  }
-  if (today - day < 7 * DAY_MS) return date.toLocaleDateString("pt-BR", { weekday: "short" });
-  const month = date.toLocaleDateString("pt-BR", { month: "short" });
-  return `${date.getDate()} ${month}`;
 }

@@ -69,9 +69,6 @@ importers:
       '@nestjs/swagger':
         specifier: ^11.4.7
         version: 11.4.7(@nestjs/common@11.2.1(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1))(@nestjs/core@11.2.1)(reflect-metadata@0.2.2)
-      '@openrouter/agent':
-        specifier: ^0.11.0
-        version: 0.11.0
       '@repo/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
@@ -102,9 +99,6 @@ importers:
       ulid:
         specifier: ^3.0.1
         version: 3.0.2
-      ws:
-        specifier: ^8.21.3
-        version: 8.21.3
       zod:
         specifier: ^4.0.0
         version: 4.4.3
@@ -133,9 +127,6 @@ importers:
       '@types/pg':
         specifier: ^8.23.1
         version: 8.23.1
-      '@types/ws':
-        specifier: ^8.18.1
-        version: 8.18.1
       drizzle-kit:
         specifier: ^0.31.10
         version: 0.31.10
@@ -1727,17 +1718,6 @@ packages:
   '@open-draft/until@2.1.0':
     resolution: {integrity: sha512-U69T3ItWHvLwGg5eJ0n3I62nWuE6ilHlmz7zM0npLBRvPRd7e6NYmg54vvRtP5mZG7kZqZCFVdsTWo7BPtBujg==}
 
-  '@openrouter/agent@0.11.0':
-    resolution: {integrity: sha512-8idTYNZ4MjQyNJ2HKMTSmocVgQYajB43xG3rqa7ronK8Xfqx6XnIKvfhtqmAeJTPkhYppVuuQ+DKkMXlVEA+SA==}
-    peerDependencies:
-      '@modelcontextprotocol/client': ^2.0.0
-    peerDependenciesMeta:
-      '@modelcontextprotocol/client':
-        optional: true
-
-  '@openrouter/sdk@0.13.67':
-    resolution: {integrity: sha512-kUVaFYA9Xehq67ndTk98i+tRLfYH/F6xSf/WuC8dsukBzcgBvYQydoeKw4Xe+peXG/wOVtDxukWt5SqzhbloKw==}
-
   '@opentelemetry/api@1.9.1':
     resolution: {integrity: sha512-gLyJlPHPZYdAk1JENA9LeHejZe1Ti77/pTeFm/nMXmQH/HFZlcS/O2XJB+L8fkbrNSqhdtlvjBVjxwUYanNH5Q==}
     engines: {node: '>=8.0.0'}
@@ -2210,9 +2190,6 @@ packages:
 
   '@types/unist@3.0.3':
     resolution: {integrity: sha512-ko/gIFJRv177XgZsZcBwnqJN5x/Gien8qNOn0D5bQU/zAzVf9Zt3BlcUiLqhV9y4ARk0GbT3tnUiPNgnTXzc/Q==}
-
-  '@types/ws@8.18.1':
-    resolution: {integrity: sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==}
 
   '@typesafe-ai/sdk@0.6.0':
     resolution: {integrity: sha512-IddX+Q0XM+VagOUZFeP7wZjaO4SHMdvnh2zEBdrZZnXedWI3BNK1lKhMx3ayrkFWvVLbVcUHJy6AVZlY+e6Jaw==}
@@ -5962,15 +5939,6 @@ snapshots:
 
   '@open-draft/until@2.1.0': {}
 
-  '@openrouter/agent@0.11.0':
-    dependencies:
-      '@openrouter/sdk': 0.13.67
-      zod: 4.4.3
-
-  '@openrouter/sdk@0.13.67':
-    dependencies:
-      zod: 4.4.3
-
   '@opentelemetry/api@1.9.1':
     optional: true
 
@@ -6376,10 +6344,6 @@ snapshots:
   '@types/unist@2.0.11': {}
 
   '@types/unist@3.0.3': {}
-
-  '@types/ws@8.18.1':
-    dependencies:
-      '@types/node': 24.13.3
 
   '@typesafe-ai/sdk@0.6.0': {}
 

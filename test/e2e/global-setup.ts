@@ -110,7 +110,6 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
       RABBITMQ_URL: `amqp://127.0.0.1:${brokerPort}`,
       AI_JOBS_QUEUE_PREFIX: `e2e-${nextBuildId.slice(0, 12)}`,
       OPENROUTER_API_KEY: "e2e-mocked-key",
-      OPENROUTER_AGENT_MODEL: "e2e-mocked-model",
       WEB_PORT: String(webPort),
       E2E_NEXT_BUILD_ID: nextBuildId,
     };

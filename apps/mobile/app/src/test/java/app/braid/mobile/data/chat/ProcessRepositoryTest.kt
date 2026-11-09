@@ -46,10 +46,10 @@ class ProcessRepositoryTest {
         }
 
     @Test
-    fun a404MeansTheRouteIsOffNotAFailure() =
+    fun a404IsJustAFailureNowThatTheRouteIsAlwaysOn() =
         runBlocking {
             coEvery { api.startProcess(any()) } returns error(404)
-            assertEquals(ProcessStart.RouteOff, repository().start("oi", null))
+            assertEquals(ProcessStart.Failed(404), repository().start("oi", null))
         }
 
     @Test
@@ -78,11 +78,5 @@ class ProcessRepositoryTest {
             assertEquals(ProcessPoll.Failed(401), repository().get("process-1"))
             coEvery { api.process("process-1") } throws IOException("offline")
             assertTrue(repository().get("process-1") is ProcessPoll.Failed)
-        }
-
-    @Test
-    fun disabledGatewayAlwaysSaysTheRouteIsOff() =
-        runBlocking {
-            assertEquals(ProcessStart.RouteOff, DisabledProcessGateway.start("oi", null))
         }
 }

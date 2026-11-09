@@ -15,7 +15,7 @@ import type {
   StagedChange,
 } from "../../../domain/ports";
 import * as schema from "../database/schema";
-import { completeCurrentAiJob, getCurrentAiJob, setAiJobResult } from "../../ai-jobs/ai-job-context";
+import { completeCurrentAiJob } from "../../ai-jobs/ai-job-context";
 import {
   insertEventAggregate,
   softDeleteEvent,
@@ -37,11 +37,6 @@ import {
   insertRecurrenceAggregate,
   updateRecurrenceAggregate,
 } from "../recurrences/repositories/postgres-recurrence.repository";
-import {
-  appendMessages,
-  insertConversation,
-  lockConversationForAppend,
-} from "../agent-chat/repositories/postgres-agent-conversation.repository";
 
 type TargetTable = "events" | "tasks" | "notes";
 
@@ -55,11 +50,6 @@ export class PostgresEntityBatchWriter implements EntityBatchWriter {
 
   async commit(batch: EntityBatch): Promise<EntityBatchResult> {
     return this.db.transaction(async (tx): Promise<EntityBatchResult> => {
-      // A conversa e travada antes de qualquer entidade: com a ordem de trava
-      // fixa, dois turnos simultaneos esperam um pelo outro em vez de se
-      // cruzarem. E e aqui que sai o `seq`, que so existe sob esta trava.
-      const nextSeq = await prepareConversation(tx, batch);
-
       await lockTargets(tx, "events", batch.userId, batch.events);
       await lockTargets(tx, "tasks", batch.userId, batch.tasks);
       await lockTargets(tx, "notes", batch.userId, batch.notes);
@@ -114,51 +104,10 @@ export class PostgresEntityBatchWriter implements EntityBatchWriter {
 
       await batch.afterWrite?.(tx);
 
-      // Por ultimo: um turno so vira conversa gravada depois que as entidades
-      // que ele afirma ter mudado passaram.
-      if (!batch.conversation || nextSeq === undefined) {
-        await completeCurrentAiJob(tx);
-        return {};
-      }
-
-      await appendMessages(
-        tx,
-        batch.conversation.conversationId,
-        batch.conversation.messages,
-        nextSeq,
-      );
-      const job = getCurrentAiJob();
-      if (job?.prepared) {
-        setAiJobResult({
-          ...(job.result as Record<string, unknown>),
-          conversationId: batch.conversation.conversationId,
-          assistantSeq: nextSeq + batch.conversation.messages.length - 1,
-        });
-      }
       await completeCurrentAiJob(tx);
-      return {
-        conversation: {
-          firstSeq: nextSeq,
-          lastSeq: nextSeq + batch.conversation.messages.length - 1,
-        },
-      };
+      return {};
     });
   }
-}
-
-/**
- * Cria ou trava a conversa do turno e devolve o `seq` da primeira mensagem.
- * Sem turno de conversa (o caminho REST do agente), nao ha nada a fazer.
- */
-async function prepareConversation(tx: Tx, batch: EntityBatch): Promise<number | undefined> {
-  const append = batch.conversation;
-  if (!append) return undefined;
-
-  if (append.create) {
-    await insertConversation(tx, append.create);
-    return 1;
-  }
-  return lockConversationForAppend(tx, append.conversationId, batch.userId);
 }
 
 async function applyRecurrenceChange(tx: Tx, userId: string, change: RecurrenceChange): Promise<void> {

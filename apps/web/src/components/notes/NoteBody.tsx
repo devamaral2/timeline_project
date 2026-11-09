@@ -23,6 +23,7 @@ const icon = { "aria-hidden": true, strokeWidth: ICON_STROKE_WIDTH } as const;
 export function NoteBody({ note, agendaMinutes = null }: { note: NoteDto; agendaMinutes?: number | null }) {
   switch (note.type) {
     case "text":
+    case "router":
       return <div className={styles.noteBody}><MarkdownView source={note.data.body} /></div>;
     case "meal":
       return <MealNote data={note.data} />;

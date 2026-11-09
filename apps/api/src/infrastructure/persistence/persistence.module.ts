@@ -1,8 +1,5 @@
 import { Module } from "@nestjs/common";
 import type {
-  AgentChatTicketStore,
-  AgentConversationQuery,
-  AgentConversationRepository,
   DailyOverviewQuery,
   IdempotencyStore,
   EntityBatchWriter,
@@ -25,12 +22,7 @@ import { PostgresTaskRepository } from "./tasks/repositories/postgres-task.repos
 import { PostgresNoteRepository } from "./notes/repositories/postgres-note.repository";
 import { PostgresNoteLinkQuery } from "./notes/queries/postgres-note-link.query";
 import { PostgresScopedSqlQuery } from "./agent-sql/postgres-scoped-sql.query";
-import { PostgresDayContextQuery } from "./agent-sql/postgres-day-context.query";
-import type { DayContextQuery } from "../../api-core/agent/day-context.query";
 import { PostgresEntityBatchWriter } from "./agent-batch/postgres-entity-batch-writer";
-import { PostgresAgentChatTicketStore } from "./agent-chat/postgres-agent-chat-ticket.store";
-import { PostgresAgentConversationRepository } from "./agent-chat/repositories/postgres-agent-conversation.repository";
-import { PostgresAgentConversationQuery } from "./agent-chat/queries/postgres-agent-conversation.query";
 import { PostgresRecurrenceRepository } from "./recurrences/repositories/postgres-recurrence.repository";
 import { PostgresWorkoutCatalog } from "./catalog/postgres-workout.catalog";
 import { PostgresIdempotencyStore } from "./idempotency/postgres-idempotency.store";
@@ -54,11 +46,7 @@ export const RECURRENCE_REPOSITORY = "RECURRENCE_REPOSITORY";
 export const NOTE_REPOSITORY = "NOTE_REPOSITORY";
 export const NOTE_LINK_QUERY = "NOTE_LINK_QUERY";
 export const SCOPED_SQL_QUERY = "SCOPED_SQL_QUERY";
-export const DAY_CONTEXT_QUERY = "DAY_CONTEXT_QUERY";
 export const ENTITY_BATCH_WRITER = "ENTITY_BATCH_WRITER";
-export const AGENT_CHAT_TICKET_STORE = "AGENT_CHAT_TICKET_STORE";
-export const AGENT_CONVERSATION_REPOSITORY = "AGENT_CONVERSATION_REPOSITORY";
-export const AGENT_CONVERSATION_QUERY = "AGENT_CONVERSATION_QUERY";
 export const IDEMPOTENCY_STORE = "IDEMPOTENCY_STORE";
 
 function requireDatabaseUrl(): string {
@@ -133,33 +121,10 @@ function requireDatabaseUrl(): string {
         new PostgresScopedSqlQuery(database.pool),
     },
     {
-      provide: DAY_CONTEXT_QUERY,
-      inject: [DATABASE],
-      useFactory: (database: PostgresDatabase): DayContextQuery => new PostgresDayContextQuery(database.pool),
-    },
-    {
       provide: ENTITY_BATCH_WRITER,
       inject: [DATABASE],
       useFactory: (database: PostgresDatabase): EntityBatchWriter =>
         new PostgresEntityBatchWriter(database.db),
-    },
-    {
-      provide: AGENT_CHAT_TICKET_STORE,
-      inject: [DATABASE],
-      useFactory: (database: PostgresDatabase): AgentChatTicketStore =>
-        new PostgresAgentChatTicketStore(database.db),
-    },
-    {
-      provide: AGENT_CONVERSATION_REPOSITORY,
-      inject: [DATABASE],
-      useFactory: (database: PostgresDatabase): AgentConversationRepository =>
-        new PostgresAgentConversationRepository(database.db),
-    },
-    {
-      provide: AGENT_CONVERSATION_QUERY,
-      inject: [DATABASE],
-      useFactory: (database: PostgresDatabase): AgentConversationQuery =>
-        new PostgresAgentConversationQuery(database.db),
     },
     {
       provide: IDEMPOTENCY_STORE,
@@ -179,11 +144,7 @@ function requireDatabaseUrl(): string {
     NOTE_REPOSITORY,
     NOTE_LINK_QUERY,
     SCOPED_SQL_QUERY,
-    DAY_CONTEXT_QUERY,
     ENTITY_BATCH_WRITER,
-    AGENT_CHAT_TICKET_STORE,
-    AGENT_CONVERSATION_REPOSITORY,
-    AGENT_CONVERSATION_QUERY,
     IDEMPOTENCY_STORE,
   ],
 })

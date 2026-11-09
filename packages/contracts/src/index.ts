@@ -21,7 +21,6 @@ export type * from "./agent/contracts/agent-run.dto";
 export type * from "./agent/contracts/agent-chat.dto";
 export type * from "./agent/contracts/ai-job.dto";
 export type * from "./agent/contracts/ai-process.dto";
-export type * from "./agent-chat/contracts/agent-conversation.dto";
 
 // Tipos de dados de dominio que os DTOs referenciam, reexportados para que o
 // front nunca precise importar o subpath raiz (onde vivem as classes). Sao os
@@ -30,6 +29,7 @@ export type * from "./agent-chat/contracts/agent-conversation.dto";
 export type { EventPriority } from "./events/types/event-priority";
 export type { EventKind } from "./events/types/event-kind";
 export type { NotificationOffsetMinutes } from "./notifications/types/notification-offset-minutes";
+export type { AgentFileNote } from "./notes/types/agent-file-note";
 export type { TextNote } from "./notes/types/text-note";
 export type { FoodItem, FoodItemMacronutrients } from "./notes/types/food-item";
 export type {

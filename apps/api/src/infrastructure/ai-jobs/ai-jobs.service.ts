@@ -14,13 +14,13 @@ export class AiJobFailedError extends Error {
   constructor(readonly code: string) { super(code); }
 }
 export function aiJobErrorCode(error: unknown): string {
-  const known = new Set(["conflict", "conversation_gone", "invalid_input", "limit_reached", "unavailable", "forbidden"]);
+  const known = new Set(["conflict", "invalid_input", "limit_reached", "unavailable", "forbidden"]);
   const candidate = error && typeof error === "object" ? (error as { code?: unknown }).code : undefined;
   if (typeof candidate === "string" && known.has(candidate)) return candidate;
   if (error instanceof Error) {
     const names: Record<string, string> = {
       LlmUnavailableError: "unavailable", EntityBatchConflictError: "conflict",
-      AgentConversationNotFoundError: "conversation_gone", InvalidInputError: "invalid_input",
+      InvalidInputError: "invalid_input",
       AgentLimitReachedError: "limit_reached", AgentTargetForbiddenError: "forbidden",
     };
     return names[error.constructor.name] ?? "unavailable";

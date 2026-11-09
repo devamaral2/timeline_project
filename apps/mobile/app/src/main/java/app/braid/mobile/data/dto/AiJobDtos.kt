@@ -1,10 +1,6 @@
 package app.braid.mobile.data.dto
 
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
 
 @Serializable
 data class AiJobRequestDto(
@@ -13,52 +9,15 @@ data class AiJobRequestDto(
     val clientMessageId: String? = null,
 )
 
-@Serializable
-data class SubmitAiJobDto(
-    val userId: String,
-    val text: String,
-    val clientMessageId: String,
-    val context: AgentScreenContextDto? = null,
-    val conversationId: String? = null,
-)
-
+/** O resultado de um job: a voz traz `eventId` e `kind`; a nota de refeição, `noteId`; o Hermes, `text`. */
 @Serializable
 data class AiJobResultDto(
-    val agentResponse: String? = null,
-    val conversationId: String? = null,
-    val assistantSeq: Int? = null,
-    val entities: List<AgentChatEntityRefDto> = emptyList(),
-    val createdEntities: List<JsonObject> = emptyList(),
-    val updatedEntities: List<JsonObject> = emptyList(),
-    val deletedEntities: List<JsonObject> = emptyList(),
     val eventId: String? = null,
     val kind: String? = null,
     val noteId: String? = null,
     val skipped: Boolean? = null,
-) {
-    val entityRefs: List<AgentChatEntityRefDto>
-        get() =
-            entities.ifEmpty {
-                listOf("created" to createdEntities, "updated" to updatedEntities, "deleted" to deletedEntities)
-                    .flatMap { (change, items) ->
-                        items.mapNotNull { item ->
-                            val kind = (item["kind"] as? JsonPrimitive)?.content
-                            val id = (item["id"] as? JsonPrimitive)?.content
-                            if (kind == null || id == null) {
-                                null
-                            } else {
-                                AgentChatEntityRefDto(
-                                    kind,
-                                    id,
-                                    change,
-                                    (item["name"] as? JsonPrimitive)?.content,
-                                    fieldChangesOf(item["changes"]),
-                                )
-                            }
-                        }
-                    }
-            }
-}
+    val text: String? = null,
+)
 
 @Serializable
 data class AiJobDto(
@@ -81,16 +40,3 @@ data class SubmitVoiceJobDto(
     val transcript: String,
     val requestId: String,
 )
-
-/** Os `changes` de um item do resultado do job; o que não for do formato é ignorado. */
-private fun fieldChangesOf(element: JsonElement?): List<AgentChatFieldChangeDto> =
-    (element as? JsonArray)
-        ?.mapNotNull { entry ->
-            val change = entry as? JsonObject ?: return@mapNotNull null
-            val field = (change["field"] as? JsonPrimitive)?.content ?: return@mapNotNull null
-            AgentChatFieldChangeDto(
-                field = field,
-                before = (change["before"] as? JsonPrimitive)?.content,
-                after = (change["after"] as? JsonPrimitive)?.content,
-            )
-        }.orEmpty()

@@ -51,6 +51,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.braid.mobile.data.dto.NoteDto
 import app.braid.mobile.data.dto.TEXT_NOTE_TYPE
+import app.braid.mobile.data.dto.isAgentFile
 import app.braid.mobile.domain.notes.noteDatesLine
 import app.braid.mobile.domain.notes.noteOriginLabel
 import app.braid.mobile.domain.notes.whenLabel
@@ -163,7 +164,8 @@ private fun NoteDetailBody(
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Notas", color = MaterialTheme.colorScheme.onBackground)
             }
-            Box {
+            // Skill e agente seguem o arquivo: não se editam, soltam nem excluem pelo app.
+            if (!note.isAgentFile) Box {
                 IconButton(onClick = { menuOpen = true }) {
                     Icon(
                         Icons.Outlined.MoreVert,

@@ -14,9 +14,6 @@ sealed interface ProcessStart {
         val processId: String,
     ) : ProcessStart
 
-    /** O servidor responde 404 enquanto a rota por processo está desligada: o chat segue pelo caminho de sempre. */
-    data object RouteOff : ProcessStart
-
     data class Failed(
         val status: Int? = null,
     ) : ProcessStart
@@ -41,16 +38,6 @@ interface ProcessGateway {
     suspend fun get(processId: String): ProcessPoll
 }
 
-/** Sem a rota por processo: todo pedido segue pelo chat de sempre. Usado onde nada a oferece. */
-object DisabledProcessGateway : ProcessGateway {
-    override suspend fun start(
-        text: String,
-        context: AgentScreenContextDto?,
-    ): ProcessStart = ProcessStart.RouteOff
-
-    override suspend fun get(processId: String): ProcessPoll = ProcessPoll.Failed()
-}
-
 @Singleton
 class ProcessRepository
     @Inject
@@ -71,7 +58,6 @@ class ProcessRepository
                 } catch (_: SerializationException) {
                     return ProcessStart.Failed()
                 }
-            if (response.code() == 404) return ProcessStart.RouteOff
             if (!response.isSuccessful) return ProcessStart.Failed(response.code())
             return response.body()?.let { ProcessStart.Started(it.processId) } ?: ProcessStart.Failed(502)
         }

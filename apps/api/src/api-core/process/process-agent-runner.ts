@@ -2,9 +2,9 @@ import type { AgentScreenContext } from "@repo/contracts";
 import type { z } from "zod";
 import { FastStageError } from "../agent/errors/agent.errors";
 import { jsonSchemaOf, type StructuredCompletionGateway } from "../agent/gateways/structured-completion.gateway";
-import { formatNow } from "../agent/services/agent-prompt-builder.service";
-import { isoNow } from "../agent/fast/now-iso";
-import { promptsConfig } from "../agent/config/agent-config";
+import { formatNow } from "../agent/time";
+import { isoNow } from "../agent/time";
+import { TIME_ZONE } from "../agent/time";
 import type { EditCandidate } from "./process-candidates";
 import { loadAgentDefinition, renderAgentPrompt } from "./process-config";
 import type { QueryResult } from "./process-store";
@@ -34,7 +34,7 @@ export class ProcessAgentRunner {
       system: renderAgentPrompt(definition, {
         now: formatNow(input.now),
         nowIso: isoNow(input.now),
-        timeZone: promptsConfig.timeZone,
+        timeZone: TIME_ZONE,
       }),
       user: input.user,
       schemaName: definition.name.replace(/-/g, "_"),

@@ -18,6 +18,8 @@ import { DeleteNoteDialog } from "./DeleteNoteDialog";
 import { NoteContent } from "./NoteContent";
 import { NoteEditorDialog } from "./NoteEditorDialog";
 import { originOfLink } from "./NoteOrigin";
+import { AgentFileNoteView } from "./AgentFileNoteView";
+import { agentFileKindLabel, isAgentFileNote } from "@/lib/notes/agent-file-notes";
 
 /** A nota aberta: título, datas, tags, o conteúdo e os vínculos — com editar, soltar e excluir no menu. */
 export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: string }) {
@@ -92,7 +94,7 @@ export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: s
     <main id="conteudo" className={shellStyles.detailMain}>
       <DetailScreen>
         <DetailTopBar label="Nota" back={<BackLink href={listHref}>Notas</BackLink>}>
-          <DetailMenu label="Mais ações: editar, soltar, excluir">
+          {isAgentFileNote(note) || note.type === "router" ? null : <DetailMenu label="Mais ações: editar, soltar, excluir">
             {(close) => (
               <>
                 <MenuItem icon={<Pencil {...detailIcon} />} disabled={pendingMeal} title={pendingMeal ? pendingMealEditMessage : undefined} onClick={() => { close(); if (note.type === "text") router.push(`${listHref}/${note.id}/editar`); else setEditing(true); }}>Editar</MenuItem>
@@ -100,10 +102,12 @@ export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: s
                 <MenuItem icon={<Trash2 {...detailIcon} />} danger onClick={() => { close(); setDeleting(true); }}>Excluir</MenuItem>
               </>
             )}
-          </DetailMenu>
+          </DetailMenu>}
         </DetailTopBar>
 
         <DetailHead>
+          {isAgentFileNote(note) ? <Stamp>{agentFileKindLabel(note.type)}</Stamp> : null}
+          {note.type === "router" ? <Stamp>Roteador</Stamp> : null}
           <DetailTitle>{note.name}</DetailTitle>
           <TagPills tags={note.tags} label="Tags da nota" />
           {dates ? <Stamp>Criada {dates.created}</Stamp> : null}
@@ -112,7 +116,9 @@ export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: s
 
         <Rule />
 
-        <NoteContent note={note} title={sleep?.title} agendaMinutes={sleep?.agendaMinutes} />
+        {isAgentFileNote(note)
+          ? <AgentFileNoteView note={note} />
+          : <NoteContent note={note} title={sleep?.title} agendaMinutes={sleep?.agendaMinutes} />}
         {pendingMeal ? <DetailMessage>{pendingMealEditMessage}</DetailMessage> : null}
         {actionError ? <DetailMessage alert>{actionError}</DetailMessage> : null}
 

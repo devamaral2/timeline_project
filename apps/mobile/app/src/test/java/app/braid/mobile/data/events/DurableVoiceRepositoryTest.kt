@@ -1,7 +1,7 @@
 package app.braid.mobile.data.events
 
 import app.braid.mobile.data.chat.AiJobOutbox
-import app.braid.mobile.data.chat.ChatApi
+import app.braid.mobile.data.chat.JobsApi
 import app.braid.mobile.data.dto.AiJobDto
 import app.braid.mobile.data.dto.AiJobRequestDto
 import app.braid.mobile.data.dto.AiJobResultDto
@@ -20,7 +20,7 @@ class DurableVoiceRepositoryTest {
     fun recoveredVoiceJobOnlyPollsAndPreservesProgressAcrossNetworkLoss() =
         runTest {
             val eventsApi = mockk<EventsApi>()
-            val jobsApi = mockk<ChatApi>()
+            val jobsApi = mockk<JobsApi>()
             val repository = DurableVoiceRepository(eventsApi, jobsApi, mockk<SessionRepository>(), mockk<AiJobOutbox>(relaxed = true))
             val job =
                 AiJobDto(

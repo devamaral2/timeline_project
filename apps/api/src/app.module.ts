@@ -3,7 +3,6 @@ import { APP_INTERCEPTOR } from "@nestjs/core";
 import { ApiCoreModule } from "./api-core/api-core.module";
 import { IdempotencyInterceptor } from "./http/idempotency/idempotency.interceptor";
 import { PersistenceModule } from "./infrastructure/persistence";
-import { AgentChatModule } from "./http/websocket/agent-chat/agent-chat.module";
 import { CreateEventModule } from "./features/create-event/create-event.module";
 import { CreateEventFromTranscriptModule } from "./features/create-event-from-transcript/create-event-from-transcript.controller";
 import { GetDailyOverviewModule } from "./features/get-daily-overview/get-daily-overview.module";
@@ -29,26 +28,18 @@ import { GetRecurrenceModule } from "./features/get-recurrence/get-recurrence.mo
 import { UpdateRecurrenceModule } from "./features/update-recurrence/update-recurrence.controller";
 import { DeleteRecurrenceModule } from "./features/delete-recurrence/delete-recurrence.controller";
 import { AttachNotesToRecurrenceModule } from "./features/attach-notes-to-recurrence/attach-notes-to-recurrence.controller";
-import { RunAgentModule } from "./features/run-agent/run-agent.controller";
 import { StartProcessModule } from "./features/start-process/start-process.controller";
 import { GetProcessModule } from "./features/get-process/get-process.controller";
 import { StartHermesTurnModule } from "./features/start-hermes-turn/start-hermes-turn.controller";
-import { IssueAgentChatTicketModule } from "./features/issue-agent-chat-ticket/issue-agent-chat-ticket.controller";
-import { ListAgentConversationsModule } from "./features/list-agent-conversations/list-agent-conversations.controller";
-import { ListAgentChatMessagesModule } from "./features/list-agent-chat-messages/list-agent-chat-messages.controller";
-import { RenameAgentConversationModule } from "./features/rename-agent-conversation/rename-agent-conversation.controller";
-import { DeleteAgentConversationModule } from "./features/delete-agent-conversation/delete-agent-conversation.controller";
-import { SubmitAiJobModule } from "./features/submit-ai-job/submit-ai-job.controller";
 import { ListAiJobsModule } from "./features/list-ai-jobs/list-ai-jobs.controller";
 import { GetAiJobModule } from "./features/get-ai-job/get-ai-job.controller";
 import { CancelAiJobModule } from "./features/cancel-ai-job/cancel-ai-job.controller";
 import { SubmitTranscriptJobModule } from "./features/submit-transcript-job/submit-transcript-job.controller";
 import { ListAgentFilesModule } from "./features/list-agent-files/list-agent-files.module";
 import { ReadAgentFileModule } from "./features/read-agent-file/read-agent-file.module";
+import { RequestAgentFileEditModule } from "./features/request-agent-file-edit/request-agent-file-edit.controller";
 import { ListAgentFileBackupsModule } from "./features/list-agent-file-backups/list-agent-file-backups.module";
-import { PublishAgentFilesModule } from "./features/publish-agent-files/publish-agent-files.module";
 import { RestoreAgentFileModule } from "./features/restore-agent-file/restore-agent-file.module";
-import { RestoreAgentFilesFactoryModule } from "./features/restore-agent-files-factory/restore-agent-files-factory.module";
 import { ReloadAgentFilesModule } from "./features/reload-agent-files/reload-agent-files.module";
 
 @Module({
@@ -82,27 +73,18 @@ import { ReloadAgentFilesModule } from "./features/reload-agent-files/reload-age
     UpdateRecurrenceModule,
     DeleteRecurrenceModule,
     AttachNotesToRecurrenceModule,
-    RunAgentModule,
     ListAgentFilesModule,
     ReadAgentFileModule,
+    RequestAgentFileEditModule,
     ListAgentFileBackupsModule,
-    PublishAgentFilesModule,
     RestoreAgentFileModule,
-    RestoreAgentFilesFactoryModule,
     ReloadAgentFilesModule,
     StartProcessModule,
     GetProcessModule,
     StartHermesTurnModule,
-    SubmitAiJobModule,
     ListAiJobsModule,
     GetAiJobModule,
     CancelAiJobModule,
-    IssueAgentChatTicketModule,
-    ListAgentConversationsModule,
-    ListAgentChatMessagesModule,
-    RenameAgentConversationModule,
-    DeleteAgentConversationModule,
-    AgentChatModule,
   ],
   providers: [{ provide: APP_INTERCEPTOR, useClass: IdempotencyInterceptor }],
 })

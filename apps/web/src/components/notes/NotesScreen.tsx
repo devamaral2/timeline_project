@@ -1,17 +1,16 @@
 "use client";
 
-import { ChevronDown, FileText, Plus, Search } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { ChevronDown, FileText, SlidersHorizontal } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { TagInput } from "@/components/events/new-event-forms/TagInput";
 import { authedFetch } from "@/lib/api/authed-fetch";
 import type { NoteDto } from "@/lib/api/contracts";
 import { useNow } from "@/lib/events/use-now";
-import { filterNotes, groupNotesByTag } from "@/lib/notes/notes-model";
+import { groupNotesByType } from "@/lib/notes/notes-model";
 import { hasPendingMeal } from "@/lib/notes/meal-generation";
 import { usePendingMealRefresh } from "@/lib/notes/use-pending-meal-refresh";
-import { tagAccentStyle } from "@/lib/tags/tag-color";
 import { agendaRefreshEvent } from "@/app/mockups/eventos/agenda-refresh";
 import { NoteCard } from "./NoteCard";
-import { NoteEditorDialog } from "./NoteEditorDialog";
 import styles from "./notes.module.css";
 
 function countLabel(total: number): string {
@@ -22,19 +21,25 @@ function toggleIn<T>(list: T[], value: T): T[] {
   return list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
 }
 
+/** Notas com pelo menos uma das tags (qualquer uma) e de um dos tipos escolhidos; sem escolha, todas. */
+function matchesFilters(note: NoteDto, types: string[], tags: string[]): boolean {
+  if (types.length > 0 && !types.includes(note.type)) return false;
+  return tags.length === 0 || note.tags.some((tag) => tags.includes(tag));
+}
+
 /**
- * Notas agrupadas por tag, com grupos recolhíveis. Busca pelo texto e filtro por
- * tags em chips; uma nota com várias tags aparece em cada grupo.
+ * Notas agrupadas por tipo (texto, refeição, treino, sono, skill, agente); cada grupo recolhe.
  */
 export function NotesScreen({ userId }: { userId: string }) {
   const now = useNow();
   const [notes, setNotes] = useState<NoteDto[] | null>(null);
   const [error, setError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
-  const [query, setQuery] = useState("");
+  const [collapsed, setCollapsed] = useState<string[]>([]);
+  const [optionsOpen, setOptionsOpen] = useState(false);
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [collapsedTags, setCollapsedTags] = useState<string[]>([]);
-  const [creating, setCreating] = useState(false);
+  const optionsRef = useRef<HTMLDivElement>(null);
   usePendingMealRefresh(hasPendingMeal(notes ?? []), async () => {
     setNotes(await authedFetch<NoteDto[]>("/api/notes"));
   });
@@ -59,16 +64,27 @@ export function NotesScreen({ userId }: { userId: string }) {
     setReloadKey((key) => key + 1);
   }, []);
 
-  // Os chips vêm de todas as notas, para não sumirem enquanto a busca estreita a lista.
-  const allGroups = useMemo(() => groupNotesByTag(notes ?? []), [notes]);
-  const groups = useMemo(
-    () => groupNotesByTag(filterNotes(notes ?? [], "all", query)).filter((group) => selectedTags.length === 0 || selectedTags.includes(group.key)),
-    [notes, query, selectedTags],
+  // As opções de tipo vêm de todas as notas, para não sumirem enquanto o filtro estreita a lista.
+  const typeOptions = useMemo(() => groupNotesByType(notes ?? []).map(({ key, label }) => ({ key, label })), [notes]);
+  const typeGroups = useMemo(
+    () => groupNotesByType((notes ?? []).filter((note) => matchesFilters(note, selectedTypes, selectedTags))),
+    [notes, selectedTypes, selectedTags],
   );
-  const filtered = query.trim() !== "" || selectedTags.length > 0;
+  const activeFilters = selectedTypes.length + selectedTags.length;
+
+  useEffect(() => {
+    if (!optionsOpen) return;
+    const close = (event: MouseEvent | KeyboardEvent) => {
+      if (event instanceof KeyboardEvent) { if (event.key === "Escape") setOptionsOpen(false); return; }
+      if (!optionsRef.current?.contains(event.target as Node)) setOptionsOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    document.addEventListener("keydown", close);
+    return () => { document.removeEventListener("mousedown", close); document.removeEventListener("keydown", close); };
+  }, [optionsOpen]);
 
   function clearFilters() {
-    setQuery("");
+    setSelectedTypes([]);
     setSelectedTags([]);
   }
 
@@ -78,41 +94,46 @@ export function NotesScreen({ userId }: { userId: string }) {
         <div className={styles.titleBlock}>
           <p className={styles.eyebrow} aria-live="polite">{notes ? countLabel(notes.length) : " "}</p>
           <h1 className={styles.title}>Notas</h1>
-          <p className={styles.sub}>Registros curtos de treino, refeições, sono e rotina.</p>
         </div>
-        <div className={styles.headingActions}>
-          <label className={styles.search}>
-            <Search aria-hidden />
-            <input
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Buscar notas"
-              aria-label="Buscar notas"
-              autoComplete="off"
-            />
-          </label>
-          <button type="button" className={styles.createButton} onClick={() => setCreating(true)}><Plus aria-hidden />Nova nota</button>
-        </div>
-      </header>
-
-      {notes && notes.length > 0 ? (
-        <fieldset className={styles.chips} aria-label="Filtrar por tag">
-          {allGroups.map((group) => (
+        {notes && notes.length > 0 ? (
+          <div className={styles.options} ref={optionsRef}>
             <button
-              key={group.key}
               type="button"
-              className={styles.chip}
-              aria-pressed={selectedTags.includes(group.key)}
-              onClick={() => setSelectedTags((current) => toggleIn(current, group.key))}
+              className={styles.optionsButton}
+              aria-label="Opções de visualização"
+              title="Opções de visualização"
+              aria-expanded={optionsOpen}
+              aria-haspopup="dialog"
+              onClick={() => setOptionsOpen((open) => !open)}
             >
-              <span className={styles.dot} style={group.key ? tagAccentStyle(group.key) : undefined} aria-hidden="true" />
-              {group.label}
+              <SlidersHorizontal aria-hidden />
+              {activeFilters > 0 ? <span className={styles.optionsBadge} aria-label={`${activeFilters} filtros ativos`}>{activeFilters}</span> : null}
             </button>
-          ))}
-          {selectedTags.length > 0 ? <button type="button" className={styles.chip} onClick={() => setSelectedTags([])}>Limpar tags</button> : null}
-        </fieldset>
-      ) : null}
+            {optionsOpen ? (
+              <div className={styles.optionsPanel} role="dialog" aria-label="Opções de visualização">
+                <fieldset className={styles.optionsGroup}>
+                  <legend>Tipo de nota</legend>
+                  <div className={styles.typeChips}>
+                    {typeOptions.map((type) => (
+                      <button
+                        key={type.key}
+                        type="button"
+                        className={styles.chip}
+                        aria-pressed={selectedTypes.includes(type.key)}
+                        onClick={() => setSelectedTypes((current) => toggleIn(current, type.key))}
+                      >
+                        {type.label}
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+                <TagInput tags={selectedTags} onTagsChange={setSelectedTags} />
+                <button type="button" className={styles.optionsClear} onClick={clearFilters} disabled={activeFilters === 0}>Limpar filtros</button>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </header>
 
       {error ? (
         <p role="alert" className={styles.message}>Não foi possível carregar as notas.<button type="button" className={styles.retry} onClick={retry}>Tentar de novo</button></p>
@@ -122,36 +143,30 @@ export function NotesScreen({ userId }: { userId: string }) {
         <div className={styles.empty}>
           <FileText aria-hidden />
           <h2 className={styles.emptyTitle}>Nenhuma nota ainda</h2>
-          <p className={styles.emptyText}>Escreva a primeira nota para guardar o que vale lembrar.</p>
-          <button type="button" className={styles.emptyAction} onClick={() => setCreating(true)}>Nova nota</button>
+          <p className={styles.emptyText}>As notas aparecem aqui assim que existirem.</p>
         </div>
-      ) : groups.length === 0 ? (
+      ) : typeGroups.length === 0 ? (
         <div className={styles.empty}>
           <FileText aria-hidden />
           <h2 className={styles.emptyTitle}>Nenhuma nota encontrada</h2>
-          <p className={styles.emptyText}>
-            {filtered
-              ? "Nada combina com a busca e as tags escolhidas. Tente outra palavra ou remova um filtro."
-              : "Não há notas para mostrar."}
-          </p>
+          <p className={styles.emptyText}>Nada combina com o tipo e as tags escolhidos.</p>
           <button type="button" className={styles.emptyAction} onClick={clearFilters}>Limpar filtros</button>
         </div>
       ) : (
         <div className={styles.groups}>
-          {groups.map((group) => {
-            const collapsed = collapsedTags.includes(group.key);
+          {typeGroups.map((type) => {
+            const typeCollapsed = collapsed.includes(type.key);
             return (
-              <section key={group.key} aria-label={group.label} className={styles.group}>
+              <section key={type.key} aria-label={type.label} className={styles.group}>
                 <h2 className={styles.groupHead}>
-                  <button type="button" className={styles.groupToggle} aria-expanded={!collapsed} onClick={() => setCollapsedTags((current) => toggleIn(current, group.key))}>
+                  <button type="button" className={styles.groupToggle} aria-expanded={!typeCollapsed} onClick={() => setCollapsed((current) => toggleIn(current, type.key))}>
                     <ChevronDown className={styles.chevron} aria-hidden />
-                    <span className={styles.dot} style={group.key ? tagAccentStyle(group.key) : undefined} aria-hidden="true" />
-                    <span className={styles.groupTitle}>{group.label}</span>
-                    <span className={styles.groupCount}>{group.notes.length}</span>
+                    <span className={styles.groupTitle}>{type.label}</span>
+                    <span className={styles.groupCount}>{type.notes.length}</span>
                   </button>
                 </h2>
-                <ul className={styles.noteGrid} hidden={collapsed}>
-                  {group.notes.map((note) => (
+                <ul className={styles.noteGrid} hidden={typeCollapsed}>
+                  {type.notes.map((note) => (
                     <li key={note.id}><NoteCard note={note} now={now} href={`/${userId}/notas/${note.id}`} /></li>
                   ))}
                 </ul>
@@ -160,13 +175,6 @@ export function NotesScreen({ userId }: { userId: string }) {
           })}
         </div>
       )}
-
-      {creating ? (
-        <NoteEditorDialog
-          onClose={() => setCreating(false)}
-          onSaved={() => { setCreating(false); retry(); }}
-        />
-      ) : null}
     </main>
   );
 }

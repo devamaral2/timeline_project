@@ -3,6 +3,7 @@
 package app.braid.mobile.ui.notes
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.padding
@@ -19,6 +20,10 @@ import app.braid.mobile.core.designsystem.LocalBraidDarkTheme
 import app.braid.mobile.core.designsystem.tagColors
 import app.braid.mobile.data.dto.MealItemDto
 import app.braid.mobile.data.dto.NoteDto
+import app.braid.mobile.data.dto.agentFileMissing
+import app.braid.mobile.data.dto.agentFilePath
+import app.braid.mobile.data.dto.agentFileVersion
+import app.braid.mobile.data.dto.isAgentFile
 import app.braid.mobile.domain.notes.noteMarkdownOf
 import app.braid.mobile.ui.event.MealNote
 import kotlinx.serialization.json.Json
@@ -58,6 +63,10 @@ internal fun NoteContent(
     note: NoteDto,
     modifier: Modifier = Modifier,
 ) {
+    if (note.isAgentFile) {
+        AgentFileInfo(note, modifier)
+        return
+    }
     if (note.type == "meal") {
         val meal = runCatching { Json { ignoreUnknownKeys = true }.decodeFromJsonElement<MealItemDto>(note.data) }.getOrNull()
         if (meal != null) {
@@ -66,4 +75,30 @@ internal fun NoteContent(
         }
     }
     MarkdownText(source = noteMarkdownOf(note), modifier = modifier)
+}
+
+/**
+ * O arquivo de uma skill ou agente do Hermes: caminho e versão. Ler o texto e pedir alterações ao Hermes
+ * ainda é só do web (ADR 0005, `docs/mobile-parity.md`).
+ */
+@Composable
+private fun AgentFileInfo(
+    note: NoteDto,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(note.agentFilePath, style = MaterialTheme.typography.bodyMedium)
+        Text(
+            text = "versão ${note.agentFileVersion}",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (note.agentFileMissing) {
+            Text(
+                text = "Arquivo ausente: o último texto continua guardado.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
 }

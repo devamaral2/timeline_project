@@ -1,13 +1,10 @@
 import { authedFetch } from "@/lib/api/authed-fetch";
-import type { AgentChatErrorCode, AgentChatServerFrame, AgentScreenContext } from "@/lib/api/contracts";
+import type { AgentChatErrorCode } from "@/lib/api/contracts";
 
-type RunAgentResponse = Pick<Extract<AgentChatServerFrame, { type: "reply" }>,
-  "agentResponse" | "entities" | "createdEntities" | "updatedEntities" | "deletedEntities">;
-
-/** HTTP wire shape shared by chat, voice capture and meal generation. */
+/** HTTP wire shape shared by voice capture, meal generation and the Hermes turn. */
 export interface AiJobDto {
   id: string;
-  kind: "agent-turn" | "transcript-event" | "meal-note";
+  kind: "transcript-event" | "meal-note" | "hermes-turn";
   status: "queued" | "running" | "succeeded" | "failed" | "cancelled";
   userId: string;
   createdAt: string;
@@ -15,23 +12,13 @@ export interface AiJobDto {
   progress?: string;
   errorCode?: AgentChatErrorCode;
   request?: { text: string; conversationId?: string; clientMessageId?: string };
-  result?: (RunAgentResponse & { conversationId?: string; assistantSeq?: number })
-    | { eventId: string; kind: string }
+  result?: { eventId: string; kind: string }
     | { noteId: string; skipped?: boolean };
-}
-
-export interface SubmitAiJobRequest {
-  userId: string;
-  text: string;
-  context?: AgentScreenContext;
-  conversationId?: string;
-  clientMessageId: string;
 }
 
 export const aiJobs = {
   list: () => authedFetch<AiJobDto[]>("/api/ai/jobs"),
   get: (id: string) => authedFetch<AiJobDto>(`/api/ai/jobs/${encodeURIComponent(id)}`),
-  submit: (request: SubmitAiJobRequest) => authedFetch<AiJobDto>("/api/ai/jobs", json(request)),
   voice: (transcript: string, requestId: string) =>
     authedFetch<AiJobDto>("/api/events/voice/jobs", json({ transcript, requestId })),
   cancel: (id: string) => authedFetch<AiJobDto>(`/api/ai/jobs/${encodeURIComponent(id)}/cancel`, json({})),

@@ -1,3 +1,4 @@
+import type { AgentFileNote } from "../types/agent-file-note";
 import type { MealItem } from "../types/meal-item";
 import type { SleepItem } from "../types/sleep-item";
 import type { TextNote } from "../types/text-note";
@@ -16,7 +17,7 @@ export interface NoteLinkDto {
   endsAt?: string;
 }
 
-export type KnownNoteType = "text" | "meal" | "sleep" | "training";
+export type KnownNoteType = "text" | "meal" | "sleep" | "training" | "skill" | "agent" | "router";
 
 export interface NoteDtoOf<TType extends KnownNoteType, TData> {
   id: string;
@@ -37,7 +38,10 @@ export type NoteDto =
   | NoteDtoOf<"text", TextNote>
   | NoteDtoOf<"meal", MealItem>
   | NoteDtoOf<"sleep", SleepItem>
-  | NoteDtoOf<"training", TrainingData>;
+  | NoteDtoOf<"training", TrainingData>
+  | NoteDtoOf<"skill", AgentFileNote>
+  | NoteDtoOf<"agent", AgentFileNote>
+  | NoteDtoOf<"router", TextNote>;
 
 export interface MealCreateInput {
   inputText: string;

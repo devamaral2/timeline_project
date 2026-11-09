@@ -206,33 +206,6 @@ export function generateFixtures(): void {
     expectedRevision: 2, name: "Novo título", type: "text" as const, data: { body: "Texto novo" }, eventIds: [], taskIds: [], tags: ["casa"],
   });
   writeFixture("tag-suggestions", z.array(mobileContractSchemas.tagSuggestion), [{ id: "tag-1", name: "foco" }, { id: "tag-2", name: "saúde" }]);
-  writeFixture("agent-chat-ticket", mobileContractSchemas.agentChatTicket, { ticket: "ticket_abc123", expiresAt: "2026-09-22T12:00:00.000Z" });
-  writeFixture("agent-client-frames", z.array(mobileContractSchemas.agentChatClientFrame), [
-    { type: "message", id: "frame-1", text: "O que tenho hoje?", context: { screen: "agenda", entityId: "2026-09-22" } },
-    { type: "cancel", id: "frame-2" },
-  ]);
-  writeFixture("agent-server-frames", z.array(mobileContractSchemas.agentChatServerFrame), [
-    { type: "ready", userId: "user-1", expiresAt: "2026-09-22T12:00:00.000Z" },
-    { type: "status", id: "frame-1", label: "Consultando sua agenda" },
-    {
-      type: "reply", id: "frame-1", conversationId: "conversation-1", assistantSeq: 2,
-      agentResponse: "Você tem um treino às oito.", entities: [{ kind: "event", id: "event-training", change: "updated", label: "Treino da manhã" }],
-      createdEntities: [], updatedEntities: [{ kind: "event", id: "event-training", name: "Treino da manhã" }], deletedEntities: [],
-    },
-    { type: "error", id: "frame-2", code: "cancelled" },
-  ]);
-  writeFixture("agent-conversations", mobileContractSchemas.agentConversationPage, {
-    items: [
-      { id: "conversation-1", preview: "O que tenho hoje?", lastMessageAt: "2026-09-22T11:00:00.000Z", revision: 2, createdAt: "2026-09-22T10:00:00.000Z", updatedAt: "2026-09-22T11:00:00.000Z" },
-      { id: "conversation-2", title: "Planejamento", preview: "Planejar a semana", lastMessageAt: "2026-09-21T18:00:00.000Z", revision: 1, createdAt: "2026-09-21T17:00:00.000Z", updatedAt: "2026-09-21T18:00:00.000Z" },
-    ],
-  });
-  writeFixture("agent-messages", mobileContractSchemas.agentChatMessagePage, {
-    items: [
-      { id: "message-2", seq: 2, role: "assistant", content: "Você tem um treino às oito.", entities: [], createdAt: "2026-09-22T11:00:00.000Z" },
-      { id: "message-1", seq: 1, role: "user", content: "O que tenho hoje?", entities: [], createdAt: "2026-09-22T10:59:00.000Z" },
-    ],
-  });
   writeFixture("ai-process", z.array(mobileContractSchemas.aiProcess), [
     {
       id: "process-guide",

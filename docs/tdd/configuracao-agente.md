@@ -3,6 +3,8 @@ status: draft
 date: 2026-11-08
 ---
 
+> **Substituído pela [ADR 0005](../adr/0005-skills-e-agentes-do-hermes-como-arquivos.md).** Este documento descreve a configuração do agente guardada no banco, que foi removida junto com o chat legado.
+
 # TDD: Configuração editável do agente
 
 ## Contexto e objetivo

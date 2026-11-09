@@ -2,7 +2,7 @@ import { expect, test, vi } from "vitest";
 import { aiJobContext, completeCurrentAiJob, getCurrentAiJob, setAiJobResult, setAiJobFailure, enqueueAiJobInTransaction } from "./ai-job-context";
 import { AiJobsService, RetryableAiJobError, isRetryableAiJobError, AiJobCancelledError, aiJobErrorCode } from "./ai-jobs.service";
 import { LlmUnavailableError, LlmHttpError, AgentLimitReachedError, InvalidInputError } from "../../api-core/agent/errors/agent.errors";
-import { EntityBatchConflictError, AgentConversationNotFoundError } from "../../domain";
+import { EntityBatchConflictError } from "../../domain";
 import { retryDelay, type AiJob, type PostgresAiJobStore } from "../persistence/ai-jobs/postgres-ai-job.store";
 import { getAiJobsEnv } from "../../config/env";
 
@@ -101,7 +101,6 @@ test("real gateway HTTP errors and wrapped SDK causes preserve retry classificat
 
 test("actual domain exception classes survive persisted safe failure codes", () => {
   expect(aiJobErrorCode(new EntityBatchConflictError("private"))).toBe("conflict");
-  expect(aiJobErrorCode(new AgentConversationNotFoundError("private"))).toBe("conversation_gone");
   expect(aiJobErrorCode(new AgentLimitReachedError())).toBe("limit_reached");
   expect(aiJobErrorCode(new InvalidInputError("private"))).toBe("invalid_input");
 });

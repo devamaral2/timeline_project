@@ -23,6 +23,17 @@
 .createButton svg { width: 18px; height: 18px; }
 
 /* Tags */
+.options { position: relative; margin-left: auto; }
+.optionsButton { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 1px solid var(--input); border-radius: 8px; background: var(--card); color: var(--muted); cursor: pointer; }
+.optionsButton:hover, .optionsButton[aria-expanded="true"] { color: var(--ink); border-color: var(--brand); }
+.optionsButton svg { width: 20px; height: 20px; }
+.optionsBadge { position: absolute; top: -6px; right: -6px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--brand); color: var(--primary-foreground); font-size: 11px; font-weight: 700; line-height: 18px; text-align: center; }
+.optionsPanel { position: absolute; top: calc(100% + 8px); right: 0; z-index: 20; display: flex; flex-direction: column; gap: 16px; width: min(360px, calc(100vw - 32px)); padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); box-shadow: 0 12px 32px rgba(0, 0, 0, .35); }
+.optionsGroup { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; border: 0; min-width: 0; }
+.optionsGroup legend { padding: 0; margin-bottom: 8px; color: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.typeChips { display: flex; flex-wrap: wrap; gap: 8px; }
+.optionsClear { align-self: flex-start; padding: 0; border: 0; background: none; color: var(--brand); font: inherit; font-weight: 600; cursor: pointer; }
+.optionsClear:disabled { color: var(--muted); cursor: default; opacity: .6; }
 .chips { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; margin: 0; padding: 0; border: 0; }
 .chip { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 12px; border: 1px solid var(--input); border-radius: 999px; background: transparent; color: var(--muted); font: inherit; font-size: 14px; font-weight: 500; cursor: pointer; transition: background .15s, border-color .15s, color .15s; }
 .chip[aria-pressed="true"] { border-color: var(--brand); background: var(--brand-soft); color: var(--ink); }
@@ -118,6 +129,7 @@ a.linkRow:hover .linkName { color: var(--cyan); }
 :is(.origin, .linkRow)[data-origin="training"] { --origin-color: var(--training); }
 :is(.origin, .linkRow)[data-origin="sleep"] { --origin-color: var(--sleep); }
 :is(.origin, .linkRow)[data-origin="task"] { --origin-color: var(--ink); }
+:is(.origin, .linkRow)[data-origin="hermes"] { --origin-color: var(--brand); }
 
 @media (max-width: 720px) {
   .page { gap: 20px; padding: 22px 16px 110px; }
@@ -131,3 +143,13 @@ a.linkRow:hover .linkName { color: var(--cyan); }
   .detail { gap: 28px; padding-block: 0 8px; }
   .heading h1 { font-size: 36px; }
 }
+
+/* Notas de skill e agente: o arquivo do Hermes, lido da pasta compartilhada. */
+.fileMeta { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0; color: var(--muted); font-size: 13px; }
+.fileMeta code { color: var(--ink); font-size: 12px; word-break: break-all; }
+.fileMissing { color: var(--ink); font-weight: 600; }
+.fileText { margin: 0; padding: 12px; max-height: 420px; overflow: auto; border-radius: 10px; background: var(--soft); color: var(--ink); font-size: 12.5px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+.fileModes { display: inline-flex; align-self: flex-start; gap: 2px; padding: 2px; border-radius: 999px; background: var(--soft); }
+.fileModes button { padding: 5px 12px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.fileModes button[aria-pressed="true"] { background: var(--input); color: var(--ink); }
+.fileRendered { max-height: 420px; overflow: auto; padding: 4px 2px; }
