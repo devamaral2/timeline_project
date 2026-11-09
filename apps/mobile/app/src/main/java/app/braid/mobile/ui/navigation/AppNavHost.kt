@@ -90,6 +90,7 @@ fun AppNavHost(
                             eventId = eventId,
                             onBack = { navController.popBackStack() },
                             onEdit = { navController.navigate("edit/$eventId") },
+                            onEdited = { agendaRefreshSignal += 1 },
                             onDeleted = {
                                 reminderScheduler?.cancel(eventId)
                                 agendaRefreshSignal += 1

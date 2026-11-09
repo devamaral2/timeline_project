@@ -152,4 +152,7 @@ a.linkRow:hover .linkName { color: var(--cyan); }
 .fileModes { display: inline-flex; align-self: flex-start; gap: 2px; padding: 2px; border-radius: 999px; background: var(--soft); }
 .fileModes button { padding: 5px 12px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
 .fileModes button[aria-pressed="true"] { background: var(--input); color: var(--ink); }
-.fileRendered { max-height: 420px; overflow: auto; padding: 4px 2px; }
+.fileRendered { display: flex; flex-direction: column; gap: 14px; max-height: 420px; overflow-y: auto; overflow-x: hidden; padding: 4px 2px; }
+.fileSummary { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 12px 14px; border-radius: 10px; background: var(--soft); color: var(--muted); font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
+.fileSummary p { margin: 0; white-space: pre-wrap; }
+.fileSummary span { color: var(--ink); font-weight: 600; }

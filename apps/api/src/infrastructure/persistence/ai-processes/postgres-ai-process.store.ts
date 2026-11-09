@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import type { AgentScreenContext } from "@repo/contracts";
+import type { AgentScreenContext, AiProcessEditEntityType } from "@repo/contracts";
 import { jobKindOf } from "../../../api-core/process/process-steps";
 import type {
   LinkRecord,
@@ -40,6 +40,25 @@ export class PostgresAiProcessStore implements ProcessStore {
       await enqueueAiJobInTransaction(tx, {
         kind: "process-dispatch", userId: input.userId, actorId: input.actorId,
         payload: { processId: input.id }, dedupeKey: input.id,
+      });
+    });
+  }
+
+  async startEdit(input: {
+    id: string;
+    userId: string;
+    actorId: string;
+    prompt: string;
+    entityType: AiProcessEditEntityType;
+    entityId: string;
+  }): Promise<void> {
+    await this.inTransaction(undefined, async (tx) => {
+      await tx.execute(sql`INSERT INTO ai_processes (id,user_id,actor_id,prompt,context)
+        VALUES (${input.id},${input.userId},${input.actorId},${input.prompt},
+          ${JSON.stringify({ screen: "detail", entityId: input.entityId })}::jsonb)`);
+      await enqueueAiJobInTransaction(tx, {
+        kind: "process-edit-target", userId: input.userId, actorId: input.actorId,
+        payload: { processId: input.id, entityType: input.entityType, entityId: input.entityId }, dedupeKey: input.id,
       });
     });
   }

@@ -35,6 +35,7 @@ a rota por processo (ADR 003, agentes em `api-core/process/agents/*.md`) e o Her
    pedido compromete o fluxo. *Implementado* em `POST /api/ai/config/edit-request` (só o dono; 404 com
    `AI_AUTOMATION` desligada), que envia o pedido pelo mesmo job da rota do Hermes. A resposta do Hermes
    aparece na nota; a nota se atualiza sozinha quando o hash muda (até 2 s depois da gravação).
+   A tela de detalhe da skill/agente edita por outro caminho, sem o Hermes: ver a [ADR 0006](0006-edicao-por-alvo-pela-rota-por-processo.md).
 
 ## Consequências
 

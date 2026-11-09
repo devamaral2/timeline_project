@@ -1,5 +1,5 @@
-import { afterAll, beforeAll, beforeEach, expect, test } from "vitest";
-import { Event } from "../../domain";
+import { afterAll, afterEach, beforeAll, beforeEach, expect, test, vi } from "vitest";
+import { Event, Note } from "../../domain";
 import { PostgresProcessCandidateQuery } from "../../infrastructure/persistence/ai-processes/postgres-process-candidate.query";
 import { StubMealParsingGateway } from "../events/testing/stub-meal-parsing.gateway";
 import { InMemoryWorkoutCatalog } from "../events/testing/in-memory-workout.catalog";
@@ -20,13 +20,15 @@ import { createPostgresTestContext, type PostgresTestContext } from "../../infra
 import { ProcessAgentRunner } from "./process-agent-runner";
 import { ProcessDispatcher } from "./process-dispatcher";
 import { ProcessEditWorker } from "./process-edit-worker";
+import { ProcessEditTargetWorker } from "./process-edit-target-worker";
+import { ProcessTargetEditWorker } from "./process-target-edit-worker";
 import { ProcessFallback } from "./process-fallback";
 import { ProcessQueryWorker } from "./process-query-worker";
 import { ProcessFinalizer } from "./process-finalizer";
 import { ProcessOperations } from "./process-operations";
 import { ProcessStepWorker } from "./process-step-worker";
-import { dispatchConfig } from "./process-config";
-import { confident, result, scriptedJev, ScriptedStructuredGateway } from "./testing/process-test-kit";
+import { dispatchConfig, uiConfig } from "./process-config";
+import { confident, FakeAgentFiles, result, scriptedJev, ScriptedStructuredGateway } from "./testing/process-test-kit";
 
 let ctx: PostgresTestContext;
 let service: AiJobsService;
@@ -34,6 +36,7 @@ let operations: ProcessOperations;
 let scenario: "guide" | "edit" | "query" | "fallback" | "series-create" | "series-edit" | "fail" = "guide";
 let events: PostgresEventRepository;
 const gateway = new ScriptedStructuredGateway();
+const files = new FakeAgentFiles(new Map([["hermes/skills/cafe/SKILL.md", "---\nname: cafe\n---\n# Café"]]));
 const actor = { userId: "user-1" };
 
 const iso = (hour: number) => `2026-10-25T${String(hour).padStart(2, "0")}:00:00-03:00`;
@@ -53,9 +56,10 @@ beforeAll(async () => {
     notes: new PostgresNoteRepository(ctx.db),
     recurrences: new PostgresRecurrenceRepository(ctx.db),
   };
+  const noteBuilder = new NoteBuilder(new StubMealParsingGateway({ items: [], modelProvider: "stub", modelName: "stub" }), new InMemoryWorkoutCatalog());
   const createEvent = new CreateEventUseCase(
     repositories.events, repositories.notes,
-    new NoteBuilder(new StubMealParsingGateway({ items: [], modelProvider: "stub", modelName: "stub" }), new InMemoryWorkoutCatalog()),
+    noteBuilder,
     () => new Date("2026-10-25T15:00:00Z"),
   );
   const store = new PostgresAiProcessStore(database);
@@ -106,6 +110,11 @@ beforeAll(async () => {
     new ProcessQueryWorker({ store, runner, sql }),
     new ProcessFinalizer({ store, jev: jev.client, batchWriter, repositories, createEvent, runner }),
     new ProcessFallback({ store, runner }),
+    new ProcessEditTargetWorker({ store, repositories, files, failureText: (code) => uiConfig.targetFailed[code] }),
+    new ProcessTargetEditWorker({
+      store, runner, batchWriter, repositories, createEvent, noteBuilder, files,
+      mealParsing: new StubMealParsingGateway({ items: [], modelProvider: "stub", modelName: "stub" }),
+    }),
   );
   operations.onModuleInit();
 }, 60000);
@@ -115,6 +124,11 @@ beforeEach(async () => {
   await ctx.pool.query("TRUNCATE ai_process_entities, ai_process_steps, ai_processes, ai_job_outbox, ai_jobs CASCADE");
   gateway.outputs.clear();
   scenario = "guide";
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+  files.written.length = 0;
 });
 
 afterAll(async () => {
@@ -306,4 +320,58 @@ test("falha: a explicacao do agente substitui a linha predefinida, so quando alg
     ["Criando eventos", "succeeded"], ["Criando notas", "failed"],
   ]);
   expect(view.message).toBe("Criei o evento, mas não consegui criar a nota.");
+}, 60000);
+
+test("edicao pela tela de detalhe: o worker escolhe o agente pelo tipo e o agente altera so o alvo (Postgres)", async () => {
+  const notes = new PostgresNoteRepository(ctx.db);
+  const sleep = Note.create({ userId: "user-1", name: "Sono", type: "sleep", data: { trackedSleepTime: 400, score: 70 }, tags: [] });
+  const other = Note.create({ userId: "user-1", name: "Outro", type: "sleep", data: { trackedSleepTime: 300, score: 50 }, tags: [] });
+  await notes.save(sleep);
+  await notes.save(other);
+  gateway.outputs.set("sleep_note_edit", { edits: [{ id: sleep.id, name: null, trackedSleepTime: 480, score: null, tags: null }] });
+
+  const processId = await operations.startEdit(
+    { userId: "user-1", text: "dormi 8h", entityType: "sleep_note", entityId: sleep.id }, actor);
+  const ran = await drain();
+
+  expect(ran).toEqual(["process-edit-target", "process-sleep-note-edit", "process-finalize"]);
+  const stored = (await ctx.pool.query("SELECT name,revision,data FROM notes ORDER BY name")).rows;
+  expect(stored.map((row) => [row.name, row.revision, row.data])).toEqual([
+    ["Outro", 1, { trackedSleepTime: 300, score: 50 }],
+    ["Sono", 2, { trackedSleepTime: 480, score: 70 }],
+  ]);
+  const view = await operations.view(processId, actor);
+  expect(view).toMatchObject({ status: "completed", entities: [{ kind: "note", id: sleep.id, operation: "update" }] });
+  expect(view.steps.map((step) => [step.label, step.status])).toEqual([["Editando a nota de sono", "succeeded"]]);
+  expect((await ctx.pool.query("SELECT kind,status FROM ai_jobs WHERE kind LIKE 'process-%' AND status<>'succeeded'")).rows).toEqual([]);
+}, 60000);
+
+test("edicao de skill: o arquivo muda, o job termina e o passo fecha o processo (Postgres)", async () => {
+  const notes = new PostgresNoteRepository(ctx.db);
+  const skill = Note.create({
+    userId: "user-1", name: "cafe", type: "skill", tags: ["skill"],
+    data: { path: "hermes/skills/cafe/SKILL.md", hash: "a".repeat(64), missing: false },
+  });
+  await notes.save(skill);
+  const text = "---\nname: cafe\n---\n# Café\nUse 18 g.";
+  gateway.outputs.set("agent_skill_note_edit", { edits: [{ id: skill.id, text }] });
+  vi.stubEnv("AGENT_CONFIG_OWNER_USER_ID", "user-1");
+
+  const processId = await operations.startEdit(
+    { userId: "user-1", text: "use 18 g", entityType: "skill_note", entityId: skill.id }, actor);
+  const ran = await drain();
+
+  expect(ran).toEqual(["process-edit-target", "process-agent-skill-note-edit", "process-finalize"]);
+  expect(files.written).toEqual([{ path: "hermes/skills/cafe/SKILL.md", text }]);
+  expect((await operations.view(processId, actor)).status).toBe("completed");
+  expect((await ctx.pool.query("SELECT kind,status FROM ai_jobs WHERE kind LIKE 'process-%' AND status<>'succeeded'")).rows).toEqual([]);
+}, 60000);
+
+test("edicao de alvo inexistente fecha o processo como falho, com o texto predefinido, sem passo", async () => {
+  const processId = await operations.startEdit(
+    { userId: "user-1", text: "muda", entityType: "event", entityId: "nao-existe" }, actor);
+  expect(await drain()).toEqual(["process-edit-target"]);
+  expect(await operations.view(processId, actor)).toMatchObject({
+    status: "failed", steps: [], message: uiConfig.targetFailed.not_found,
+  });
 }, 60000);

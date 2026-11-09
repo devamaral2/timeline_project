@@ -218,6 +218,27 @@ export class AgentFilesService {
     });
   }
 
+  /**
+   * Grava o texto novo de um arquivo que ja e conhecido (edicao pelo app, ADR 0006). O texto anterior vai para
+   * backup antes, entao a edicao tambem se desfaz. Quem escreve nao cria arquivos nem escolhe caminho: so troca
+   * o texto de um skill ou agente que a pasta ja tem. Sessoes do Hermes que ja leram o arquivo nao mudam; as novas
+   * leem o texto novo.
+   */
+  write(path: string, text: string): Promise<AgentFileEntry[]> {
+    return this.serial(async () => {
+      this.assertTracked(path);
+      if (Buffer.byteLength(text, "utf8") > MAX_FILE_BYTES) throw new InvalidInputError("O arquivo passou do limite de 256 KB.");
+      const current = this.tracked.get(path);
+      if (current && !current.missing && current.text === text) return this.entries();
+      if (current && !current.missing) await this.backup(path, current.text);
+      await this.atomicWrite(path, text);
+      this.tracked.set(path, { text, hash: sha(text), missing: false });
+      const entries = this.entries();
+      for (const listener of this.listeners) listener(entries);
+      return entries;
+    });
+  }
+
   // --- helpers -------------------------------------------------------------------------------
 
   private async scan(): Promise<void> {

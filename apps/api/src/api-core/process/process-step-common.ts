@@ -48,6 +48,9 @@ export async function runStep(
     await body({ process, step, timings });
   } catch (error) {
     if (error instanceof AgentRunCancelledError || signal?.aborted) throw error;
-    await store.failStep({ processId: process.id, stepId: step.id, errorCode: failureCode(error), timings });
+    const errorCode = failureCode(error);
+    // So o codigo vai para a caixa de processo; a causa de um erro inesperado precisa ficar no log do servidor.
+    if (errorCode === "internal") console.error(`[process] passo ${step.agent} (${step.id}) falhou por erro interno`, error);
+    await store.failStep({ processId: process.id, stepId: step.id, errorCode, timings });
   }
 }

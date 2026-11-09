@@ -10,6 +10,8 @@ export class InMemoryProcessStore implements ProcessStore {
   readonly entityRecords: ProcessEntityRecord[] = [];
   /** Jobs que o Postgres enfileiraria: `dispatch`, um por passo e um `finalize` por passo concluido. */
   readonly jobs: Array<{ kind: string; processId: string; stepId?: string }> = [];
+  /** O payload dos jobs `process-edit-target` que o Postgres enfileiraria. */
+  readonly editJobs: Array<{ processId: string; entityType: string; entityId: string }> = [];
   dispatch: unknown;
 
   constructor(private readonly clock: () => Date = () => new Date()) {}
@@ -20,6 +22,15 @@ export class InMemoryProcessStore implements ProcessStore {
       status: "dispatching", createdAt: this.clock(),
     });
     this.jobs.push({ kind: "process-dispatch", processId: input.id });
+  }
+
+  async startEdit(input: { id: string; userId: string; actorId: string; prompt: string; entityType: string; entityId: string }): Promise<void> {
+    this.processes.set(input.id, {
+      id: input.id, userId: input.userId, actorId: input.actorId, prompt: input.prompt,
+      status: "dispatching", createdAt: this.clock(),
+    });
+    this.editJobs.push({ processId: input.id, entityType: input.entityType, entityId: input.entityId });
+    this.jobs.push({ kind: "process-edit-target", processId: input.id });
   }
 
   /** Atalho de teste: um processo ja em andamento. */

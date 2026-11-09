@@ -7,11 +7,36 @@ import { type AgentFileApi, type AgentFileNoteDto, agentFileApi, shortHash } fro
 import { MarkdownView } from "./MarkdownView";
 import styles from "./notes.module.css";
 
-/** O cabecalho `---` (YAML) das skills vira um bloco de codigo; sem isso o markdown o leria como linha e titulo. */
-function withFrontmatterAsCode(text: string): string {
-  const match = /^---\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/.exec(text);
-  if (!match) return text;
-  return `\`\`\`yaml\n${match[1]}\n\`\`\`\n\n${text.slice(match[0].length)}`;
+const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/;
+
+/** O cabecalho `---` (YAML) das skills e agentes: o sumario do arquivo, separado do corpo em markdown. */
+function splitFrontmatter(text: string): { summary: string[]; body: string } {
+  const match = FRONTMATTER.exec(text);
+  if (!match) return { summary: [], body: text };
+  return { summary: match[1].split(/\r?\n/).filter((line) => line.trim() !== ""), body: text.slice(match[0].length) };
+}
+
+/** O sumario com a fonte do resto do texto, quebrando a linha ao chegar na borda do cartao (sem rolagem lateral). */
+function FileSummary({ lines }: { lines: string[] }) {
+  return (
+    <div className={styles.fileSummary} role="group" aria-label="Sumário do arquivo">
+      {lines.map((line, index) => {
+        const split = /^([\w.-]+):(?:\s+(.*))?$/.exec(line);
+        // biome-ignore lint/suspicious/noArrayIndexKey: as linhas do cabecalho sao fixas e podem repetir.
+        return split ? <p key={index}><span>{split[1]}:</span> {split[2]}</p> : <p key={index}>{line}</p>;
+      })}
+    </div>
+  );
+}
+
+function FileRendered({ text }: { text: string }) {
+  const { summary, body } = splitFrontmatter(text);
+  return (
+    <div className={styles.fileRendered} aria-label="Texto do arquivo">
+      {summary.length > 0 ? <FileSummary lines={summary} /> : null}
+      <MarkdownView source={body} />
+    </div>
+  );
 }
 
 /**
@@ -55,7 +80,7 @@ export function AgentFileNoteView({ note, api = agentFileApi }: { note: AgentFil
           </div>
           {raw
             ? <pre className={styles.fileText} aria-label="Texto do arquivo">{text}</pre>
-            : <div className={styles.fileRendered} aria-label="Texto do arquivo"><MarkdownView source={withFrontmatterAsCode(text)} /></div>}
+            : <FileRendered text={text} />}
         </>
       ) : null}
 

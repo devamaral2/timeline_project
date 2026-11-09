@@ -48,6 +48,8 @@ const uiSchema = z.object({
   steps: z.record(z.string(), z.string().min(1)),
   failure: z.string().includes("{{label}}"),
   dispatchFailed: z.string().min(1),
+  /** O alvo da edicao pela tela de detalhe nao pode ser editado (ADR 006). */
+  targetFailed: z.object({ not_found: z.string().min(1), type_mismatch: z.string().min(1), busy: z.string().min(1) }),
 });
 
 export const dispatchConfig = dispatchSchema.parse(dispatchJson);

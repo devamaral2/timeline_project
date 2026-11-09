@@ -8,6 +8,7 @@ import {
   DetailTitle, DetailTopBar, KindRow, LinkGroup, LinkMessage, LinkRow, MenuItem, MetaList, MetaRow, Prose,
   TagPills, TaskLinkRow, detailIcon,
 } from "@/components/detail/detail-parts";
+import { EntityAiEditBar } from "@/components/detail/EntityAiEditBar";
 import { DeleteEventDialog } from "@/components/events/DeleteEventDialog";
 import { EditEventModal } from "@/components/events/EditEventModal";
 import { notificationOffsetLabel, visualForItemType } from "@/components/events/event-visuals";
@@ -252,6 +253,15 @@ export default function EventPage({ params }: { params: Promise<{ userId: string
 
         {mutationError ? <DetailMessage alert>{mutationError}</DetailMessage> : null}
       </DetailScreen>
+
+      {userId ? (
+        <EntityAiEditBar
+          userId={userId}
+          entityType="event"
+          entityId={event.id}
+          onEdited={() => { setReloadKey((key) => key + 1); window.dispatchEvent(new Event(agendaRefreshEvent)); }}
+        />
+      ) : null}
 
       {editing ? <EditEventModal eventId={event.id} onClose={() => setEditing(false)} onUpdated={() => { setEditing(false); setReloadKey((key) => key + 1); window.dispatchEvent(new Event(agendaRefreshEvent)); }} /> : null}
       {deleting ? <DeleteEventDialog eventId={event.id} eventName={event.name} onClose={() => setDeleting(false)} onDeleted={() => { window.dispatchEvent(new Event(agendaRefreshEvent)); router.push(`/${userId}`); }} /> : null}

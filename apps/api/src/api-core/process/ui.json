@@ -13,8 +13,17 @@
     "recurring-event-edit": "Editando eventos recorrentes",
     "recurring-task-edit": "Editando tarefas recorrentes",
     "query": "Consultando dados",
-    "fallback": "Analisando o pedido"
+    "fallback": "Analisando o pedido",
+    "food-note-edit": "Editando a refeição",
+    "sleep-note-edit": "Editando a nota de sono",
+    "training-edit": "Editando o treino",
+    "agent-skill-note-edit": "Editando a skill ou o agente"
   },
   "failure": "Não consegui concluir: {{label}}.",
-  "dispatchFailed": "Não consegui entender o pedido a tempo. Tente de novo em instantes."
+  "dispatchFailed": "Não consegui entender o pedido a tempo. Tente de novo em instantes.",
+  "targetFailed": {
+    "not_found": "Não encontrei o item para editar.",
+    "type_mismatch": "Esse item não é do tipo esperado para a edição.",
+    "busy": "Essa nota ainda está sendo gerada. Tente de novo em instantes."
+  }
 }

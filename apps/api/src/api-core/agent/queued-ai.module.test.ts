@@ -17,10 +17,12 @@ test("all feature imports share one set of queue handlers", async () => {
   try {
     await app.init();
     expect(register.mock.calls.map(([kind]) => kind).sort()).toEqual([
-      "hermes-turn", "meal-note", "process-dispatch", "process-event-create", "process-event-edit",
-      "process-fallback", "process-finalize", "process-note-create", "process-note-edit", "process-query",
-      "process-recurring-event-create", "process-recurring-event-edit", "process-recurring-task-create",
-      "process-recurring-task-edit", "process-task-create", "process-task-edit", "transcript-event",
+      "hermes-turn", "meal-note", "process-agent-skill-note-edit", "process-dispatch", "process-edit-target",
+      "process-event-create", "process-event-edit", "process-fallback", "process-finalize", "process-food-note-edit",
+      "process-note-create", "process-note-edit", "process-query", "process-recurring-event-create",
+      "process-recurring-event-edit", "process-recurring-task-create", "process-recurring-task-edit",
+      "process-sleep-note-edit", "process-task-create", "process-task-edit", "process-training-edit",
+      "transcript-event",
     ]);
   } finally {
     await app.close();

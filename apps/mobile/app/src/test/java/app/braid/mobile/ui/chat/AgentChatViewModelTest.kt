@@ -233,6 +233,12 @@ private class FakeProcessGateway : ProcessGateway {
         return startFailure ?: ProcessStart.Started("process-1")
     }
 
+    override suspend fun startEdit(
+        text: String,
+        entityType: String,
+        entityId: String,
+    ): ProcessStart = ProcessStart.Started("process-1")
+
     override suspend fun get(processId: String): ProcessPoll {
         polls += 1
         pollFailure?.let { return it }

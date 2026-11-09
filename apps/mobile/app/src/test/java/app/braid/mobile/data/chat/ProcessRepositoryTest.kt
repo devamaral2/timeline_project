@@ -69,6 +69,31 @@ class ProcessRepositoryTest {
         }
 
     @Test
+    fun startsAnEditWithTheEntityTypeAndIdForTheSignedInUser() =
+        runBlocking {
+            coEvery { api.startEdit(any()) } returns Response.success(StartAiProcessResponseDto("process-2"))
+
+            val result = repository().startEdit("mude para 19h", "event", "e1")
+
+            assertEquals(ProcessStart.Started("process-2"), result)
+            coVerify {
+                api.startEdit(
+                    match { it.userId == "user-1" && it.text == "mude para 19h" && it.entityType == "event" && it.entityId == "e1" },
+                )
+            }
+        }
+
+    @Test
+    fun anEditFailsWithTheStatusOrWithoutASession() =
+        runBlocking {
+            coEvery { api.startEdit(any()) } returns error(403)
+            assertEquals(ProcessStart.Failed(403), repository().startEdit("x", "skill_note", "n1"))
+            coEvery { api.startEdit(any()) } throws IOException("offline")
+            assertEquals(ProcessStart.Failed(null), repository().startEdit("x", "note", "n1"))
+            assertEquals(ProcessStart.Failed(401), repository(signedIn = false).startEdit("x", "note", "n1"))
+        }
+
+    @Test
     fun pollsTheProcessAndReportsFailures() =
         runBlocking {
             val view = AiProcessDto("process-1", "running", "Realizando processos:")

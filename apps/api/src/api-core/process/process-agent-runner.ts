@@ -7,7 +7,7 @@ import { isoNow } from "../agent/time";
 import { TIME_ZONE } from "../agent/time";
 import type { EditCandidate } from "./process-candidates";
 import { loadAgentDefinition, renderAgentPrompt } from "./process-config";
-import type { QueryResult } from "./process-store";
+import type { EditTarget, QueryResult } from "./process-store";
 
 
 export interface AgentRunInput<T> {
@@ -87,5 +87,16 @@ export function describeEditRequest(
         columns: lookup.columns, rows: lookup.rows.slice(0, LOOKUP_ROWS),
       }).slice(0, LOOKUP_CHARS)]
       : []),
+  ].join("\n");
+}
+
+/** Edicao pela tela de detalhe: o pedido e o retrato completo do unico alvo. Nada mais entra no prompt. */
+export function describeTargetedEdit(prompt: string, target: EditTarget): string {
+  return [
+    "Pedido:",
+    prompt,
+    "",
+    "Alvo (JSON):",
+    JSON.stringify({ id: target.id, ...target.snapshot }),
   ].join("\n");
 }

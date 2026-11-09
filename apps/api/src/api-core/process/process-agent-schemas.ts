@@ -80,6 +80,64 @@ export const noteEditOutput = z.object({
   query: lookup,
 });
 
+/**
+ * Edicao pela tela de detalhe (ADR 006): o alvo e conhecido, entao nao ha `query`. O `id` e sempre o do alvo; o
+ * servidor recusa qualquer outro. `null` e "nao muda".
+ */
+export const foodNoteEditOutput = z.object({
+  edits: z.array(z.object({
+    id: z.string().min(1),
+    name: z.string().min(1).nullable(),
+    /** O que foi comido, em texto; o servidor estima de novo itens, totais e receita a partir dele. */
+    description: z.string().min(1).nullable(),
+    tags: z.array(z.string()).nullable(),
+  })),
+});
+
+export const sleepNoteEditOutput = z.object({
+  edits: z.array(z.object({
+    id: z.string().min(1),
+    name: z.string().min(1).nullable(),
+    /** Minutos dormidos. */
+    trackedSleepTime: z.number().min(0).nullable(),
+    score: z.number().min(0).max(100).nullable(),
+    tags: z.array(z.string()).nullable(),
+  })),
+});
+
+export const WORKOUT_CODES = ["walking", "treadmill", "running", "weightlifting", "free"] as const;
+
+/** A lista de treinos vem COMPLETA (o que fica), nao so o que muda. */
+export const trainingEditOutput = z.object({
+  edits: z.array(z.object({
+    id: z.string().min(1),
+    name: z.string().min(1).nullable(),
+    tags: z.array(z.string()).nullable(),
+    workouts: z.array(z.object({
+      workoutCode: z.enum(WORKOUT_CODES),
+      calories: z.number().min(0).nullable(),
+      /** Minutos. */
+      duration: z.number().min(0),
+      /** min/km, so em caminhada, esteira e corrida. */
+      pace: z.number().min(0).nullable(),
+      /** km, so em caminhada, esteira e corrida. */
+      distance: z.number().min(0).nullable(),
+      /** So em musculacao. */
+      sets: z.array(z.object({
+        exercise: z.string().min(1), repetitions: z.number().min(0), weight: z.number().min(0),
+      })).nullable(),
+    })).nullable(),
+  })),
+});
+
+/** O texto COMPLETO novo do arquivo da skill ou do agente do Hermes; o caminho e o do alvo, nunca do modelo. */
+export const agentSkillNoteEditOutput = z.object({
+  edits: z.array(z.object({
+    id: z.string().min(1),
+    text: z.string().min(1).nullable(),
+  })),
+});
+
 /** O agente de consulta devolve exatamente uma consulta de leitura. */
 export const queryOutput = z.object({ sql: z.string().min(1) });
 
@@ -169,6 +227,10 @@ export type RecurringTaskCreateOutput = z.infer<typeof recurringTaskCreateOutput
 export type RecurringEventEditOutput = z.infer<typeof recurringEventEditOutput>;
 export type RecurringTaskEditOutput = z.infer<typeof recurringTaskEditOutput>;
 export type FallbackOutput = z.infer<typeof fallbackOutput>;
+export type FoodNoteEditOutput = z.infer<typeof foodNoteEditOutput>;
+export type SleepNoteEditOutput = z.infer<typeof sleepNoteEditOutput>;
+export type TrainingEditOutput = z.infer<typeof trainingEditOutput>;
+export type AgentSkillNoteEditOutput = z.infer<typeof agentSkillNoteEditOutput>;
 export type EventEditOutput = z.infer<typeof eventEditOutput>;
 export type TaskEditOutput = z.infer<typeof taskEditOutput>;
 export type NoteEditOutput = z.infer<typeof noteEditOutput>;

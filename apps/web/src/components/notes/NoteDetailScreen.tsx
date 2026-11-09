@@ -13,6 +13,8 @@ import { useNow } from "@/lib/events/use-now";
 import { noteDates, sleepAgendaOf, whenLabel } from "@/lib/notes/notes-model";
 import { hasPendingMeal, pendingMealEditMessage } from "@/lib/notes/meal-generation";
 import { usePendingMealRefresh } from "@/lib/notes/use-pending-meal-refresh";
+import { EntityAiEditBar } from "@/components/detail/EntityAiEditBar";
+import { editEntityTypeOfNote } from "@/lib/ai-process/entity-edit";
 import shellStyles from "@/app/mockups/eventos/mockup.module.css";
 import { DeleteNoteDialog } from "./DeleteNoteDialog";
 import { NoteContent } from "./NoteContent";
@@ -81,6 +83,7 @@ export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: s
   const eventLinks = links.filter((link) => link.kind === "event");
   const dates = now ? noteDates(note, now) : null;
   const sleep = sleepAgendaOf(note);
+  const editType = editEntityTypeOfNote(note);
 
   function linkRow(link: (typeof links)[number]) {
     const { Icon } = originOfLink(link);
@@ -131,6 +134,16 @@ export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: s
 
         <DetailOrigin id="note" />
       </DetailScreen>
+
+      {editType ? (
+        <EntityAiEditBar
+          userId={userId}
+          entityType={editType}
+          entityId={note.id}
+          disabledReason={pendingMeal ? pendingMealEditMessage : undefined}
+          onEdited={() => setReloadKey((key) => key + 1)}
+        />
+      ) : null}
 
       {editing ? <NoteEditorDialog note={note} onClose={() => setEditing(false)} onSaved={() => { setEditing(false); setReloadKey((key) => key + 1); }} /> : null}
       {deleting ? <DeleteNoteDialog noteId={note.id} noteName={note.name} onClose={() => setDeleting(false)} onDeleted={() => router.push(listHref)} /> : null}

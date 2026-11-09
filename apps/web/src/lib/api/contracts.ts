@@ -478,3 +478,15 @@ export interface StartAiProcessRequest {
   text: string;
   context?: AgentScreenContext;
 }
+
+/** O tipo da entidade da tela de detalhe; o servidor confere contra a entidade real (ADR 006). */
+export type AiProcessEditEntityType =
+  | "event" | "task" | "note" | "meal_note" | "sleep_note" | "training_note" | "skill_note" | "agent_note";
+
+/** `POST /api/ai/process/edit`. */
+export interface StartAiProcessEditRequest {
+  userId: string;
+  text: string;
+  entityType: AiProcessEditEntityType;
+  entityId: string;
+}

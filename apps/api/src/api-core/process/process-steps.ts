@@ -1,3 +1,4 @@
+import type { AiProcessEditEntityType } from "@repo/contracts";
 import { monotonicFactory } from "ulid";
 import type { ProcessJobKind } from "../../infrastructure/ai-jobs/ai-job-context";
 
@@ -8,7 +9,9 @@ export const CREATE_AGENTS = [...ENTITY_CREATE_AGENTS, ...SERIES_CREATE_AGENTS] 
 export const ENTITY_EDIT_AGENTS = ["event-edit", "task-edit", "note-edit"] as const;
 export const SERIES_EDIT_AGENTS = ["recurring-event-edit", "recurring-task-edit"] as const;
 export const EDIT_AGENTS = [...ENTITY_EDIT_AGENTS, ...SERIES_EDIT_AGENTS] as const;
-export const STEP_AGENTS = [...CREATE_AGENTS, ...EDIT_AGENTS, "query"] as const;
+/** Edicao de um alvo ja conhecido (a tela de detalhe): sem JEV, sem candidatos, so o alvo (ADR 006). */
+export const TARGET_EDIT_AGENTS = ["food-note-edit", "sleep-note-edit", "training-edit", "agent-skill-note-edit"] as const;
+export const STEP_AGENTS = [...CREATE_AGENTS, ...EDIT_AGENTS, ...TARGET_EDIT_AGENTS, "query"] as const;
 export type StepAgent = (typeof STEP_AGENTS)[number];
 export type ProcessAgent = StepAgent | "fallback";
 
@@ -47,6 +50,20 @@ export function selects(agent: (typeof EDIT_AGENTS)[number], candidate: { kind: 
   const wanted = EDIT_SELECTOR[agent];
   return candidate.kind === wanted.kind && candidate.target === wanted.target;
 }
+
+export type TargetEditAgent = (typeof TARGET_EDIT_AGENTS)[number];
+
+/** O agente de cada tipo de entidade da tela de detalhe: a escolha e esta tabela, nao um modelo. */
+export const EDIT_TARGET_AGENTS: Readonly<Record<AiProcessEditEntityType, StepAgent>> = {
+  event: "event-edit",
+  task: "task-edit",
+  note: "note-edit",
+  meal_note: "food-note-edit",
+  sleep_note: "sleep-note-edit",
+  training_note: "training-edit",
+  skill_note: "agent-skill-note-edit",
+  agent_note: "agent-skill-note-edit",
+};
 
 export type CreateAgent = (typeof CREATE_AGENTS)[number];
 export type EditAgent = (typeof EDIT_AGENTS)[number];

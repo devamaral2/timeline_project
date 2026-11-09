@@ -38,7 +38,14 @@ data class NoteDto(
 ) {
     /** O markdown de uma nota de texto; vazio nas demais, que o app ainda não desenha por tipo. */
     val content: String
-        get() = if (type == TEXT_NOTE_TYPE || type == ROUTER_NOTE_TYPE) (data["body"] as? JsonPrimitive)?.takeIf { it.isString }?.content.orEmpty() else ""
+        get() =
+            if (type == TEXT_NOTE_TYPE ||
+                type == ROUTER_NOTE_TYPE
+            ) {
+                (data["body"] as? JsonPrimitive)?.takeIf { it.isString }?.content.orEmpty()
+            } else {
+                ""
+            }
 
     /** A origem principal: a primeira em que a nota aparece. */
     val link: NoteLinkDto? get() = links.firstOrNull()
@@ -48,6 +55,7 @@ data class NoteDto(
 }
 
 const val TEXT_NOTE_TYPE = "text"
+
 /** Nota de texto mantida pelo servidor com os parâmetros de um JEV; somente leitura. */
 const val ROUTER_NOTE_TYPE = "router"
 const val SKILL_NOTE_TYPE = "skill"
@@ -59,7 +67,12 @@ val NoteDto.isAgentFile: Boolean get() = type == SKILL_NOTE_TYPE || type == AGEN
 val NoteDto.agentFilePath: String get() = (data["path"] as? JsonPrimitive)?.takeIf { it.isString }?.content.orEmpty()
 
 /** Os 8 primeiros caracteres do hash do arquivo: o bastante para ver que ele mudou. */
-val NoteDto.agentFileVersion: String get() = (data["hash"] as? JsonPrimitive)?.takeIf { it.isString }?.content.orEmpty().take(8)
+val NoteDto.agentFileVersion: String get() =
+    (data["hash"] as? JsonPrimitive)
+        ?.takeIf { it.isString }
+        ?.content
+        .orEmpty()
+        .take(8)
 
 /** O `description` do cabeçalho do arquivo, ou vazio quando a skill/agente não tem. */
 val NoteDto.agentFileDescription: String get() = (data["description"] as? JsonPrimitive)?.takeIf { it.isString }?.content.orEmpty()

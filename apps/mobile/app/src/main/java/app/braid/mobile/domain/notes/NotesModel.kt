@@ -3,6 +3,7 @@ package app.braid.mobile.domain.notes
 import app.braid.mobile.data.dto.NoteDto
 import app.braid.mobile.data.dto.ROUTER_NOTE_TYPE
 import app.braid.mobile.data.dto.TEXT_NOTE_TYPE
+import app.braid.mobile.data.dto.agentFileDescription
 import app.braid.mobile.data.dto.agentFileMissing
 import app.braid.mobile.data.dto.agentFilePath
 import app.braid.mobile.data.dto.isAgentFile

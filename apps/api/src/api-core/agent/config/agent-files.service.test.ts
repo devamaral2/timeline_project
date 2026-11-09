@@ -134,4 +134,36 @@ describe("parseFrontmatterDescription", () => {
     expect(parseFrontmatterDescription("# so texto")).toBe("");
     expect(parseFrontmatterDescription("---\nname: x\n---\n")).toBe("");
   });
+  describe("write", () => {
+    it("replaces the text, keeps a backup and tells the listeners", async () => {
+      await writeSkill("# v1");
+      await service.start();
+      const heard = vi.fn();
+      service.onReconciled(heard);
+      const entries = await service.write(SKILL, "# v2");
+      expect(await readFile(join(dir, SKILL), "utf8")).toBe("# v2");
+      expect(service.read(SKILL).text).toBe("# v2");
+      expect(entries[0]?.hash).not.toBe("");
+      expect(heard).toHaveBeenCalledTimes(1);
+      const backups = await service.listBackups(SKILL);
+      expect(backups).toHaveLength(1);
+      expect(await readFile(join(dir, ".backups", SKILL, backups[0]!.id), "utf8")).toBe("# v1");
+    });
+
+    it("does nothing when the text is the same", async () => {
+      await writeSkill("# v1");
+      await service.start();
+      await service.write(SKILL, "# v1");
+      expect(await service.listBackups(SKILL)).toHaveLength(0);
+    });
+
+    it("refuses unknown paths, paths outside the folder and files over the limit", async () => {
+      await writeSkill("# v1");
+      await service.start();
+      await expect(service.write("hermes/skills/nova/SKILL.md", "x")).rejects.toBeInstanceOf(AgentFileNotFoundError);
+      await expect(service.write("../../etc/passwd", "x")).rejects.toBeInstanceOf(AgentFileNotFoundError);
+      await expect(service.write(SKILL, "x".repeat(256 * 1024 + 1))).rejects.toThrow(/256 KB/);
+      expect(service.read(SKILL).text).toBe("# v1");
+    });
+  });
 });

@@ -73,6 +73,7 @@ import app.braid.mobile.domain.timeline.formatMinutes
 import app.braid.mobile.domain.timeline.formatTime
 import app.braid.mobile.domain.timeline.minutesBetween
 import app.braid.mobile.domain.timeline.pluralize
+import app.braid.mobile.ui.chat.EntityAiEditBar
 
 private data class DetailVisual(
     val icon: ImageVector,
@@ -86,6 +87,8 @@ fun EventDetailScreen(
     onBack: () -> Unit,
     onEdit: () -> Unit = {},
     onDeleted: () -> Unit = {},
+    /** A edição por IA mudou o evento: a agenda recarrega ao voltar. */
+    onEdited: () -> Unit = {},
     viewModel: EventDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -125,14 +128,24 @@ fun EventDetailScreen(
                     )
                 }
             is EventDetailUiState.Content ->
-                EventDetailBody(
-                    state = current,
-                    modifier = Modifier.padding(paddingValues),
-                    onBack = onBack,
-                    onEdit = onEdit,
-                    onDelete = { showDeleteConfirmation = true },
-                    onToggleMissed = { viewModel.setMissed(!current.event.missed) },
-                )
+                Column(modifier = Modifier.padding(paddingValues)) {
+                    EventDetailBody(
+                        state = current,
+                        modifier = Modifier.weight(1f),
+                        onBack = onBack,
+                        onEdit = onEdit,
+                        onDelete = { showDeleteConfirmation = true },
+                        onToggleMissed = { viewModel.setMissed(!current.event.missed) },
+                    )
+                    EntityAiEditBar(
+                        entityType = "event",
+                        entityId = eventId,
+                        onEdited = {
+                            viewModel.refresh(eventId)
+                            onEdited()
+                        },
+                    )
+                }
             EventDetailUiState.Deleted -> Unit
         }
     }

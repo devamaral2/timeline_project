@@ -42,7 +42,6 @@ test("agrupa por status, conta abertas, atrasadas e de hoje e deixa Concluídas 
   await screen.findByText("6 abertas");
   expect(screen.getByText("1 atrasada")).toBeInTheDocument();
   expect(screen.getByText("1 para hoje")).toBeInTheDocument();
-  expect(screen.getByText("segunda-feira, 14 de setembro")).toBeInTheDocument();
   expect(screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent)).toEqual([
     "A fazer3",
     "Agendadas1",
@@ -138,6 +137,7 @@ test("ordena pela prioridade, depois pela data, e filtra por tag", async () => {
   const order = () => screen.getAllByRole("link").map((link) => link.textContent);
   expect(order()).toEqual(["Beta", "Alfa"]);
 
+  fireEvent.click(screen.getByRole("button", { name: "Opções de visualização" }));
   fireEvent.change(screen.getByLabelText("Ordenar por"), { target: { value: "date" } });
   expect(order()).toEqual(["Alfa", "Beta"]);
 
@@ -148,25 +148,20 @@ test("ordena pela prioridade, depois pela data, e filtra por tag", async () => {
   expect(screen.queryByRole("link", { name: "Alfa" })).not.toBeInTheDocument();
   expect(screen.getByRole("link", { name: "Beta" })).toBeInTheDocument();
 
-  fireEvent.click(screen.getByRole("button", { name: "Limpar tags" }));
+  fireEvent.click(screen.getByRole("button", { name: "Limpar filtros" }));
   expect(screen.getByRole("link", { name: "Alfa" })).toBeInTheDocument();
 });
 
-test("busca pelo nome e limpa os filtros quando nada combina", async () => {
-  authedFetch.mockResolvedValue(tasks);
+test("limpa os filtros quando nenhuma tarefa combina", async () => {
+  authedFetch.mockResolvedValue([summaryTask({ id: "a", name: "Alfa", tags: ["casa"] }), summaryTask({ id: "b", name: "Beta", tags: ["rua"] })]);
   render(<TasksScreen userId="user-1" />);
-  await screen.findByText("6 abertas");
-
-  const search = screen.getByRole("searchbox", { name: "Buscar tarefas" });
-  fireEvent.change(search, { target: { value: "dentista" } });
-  expect(screen.getByRole("link", { name: "Marcar consulta no dentista" })).toBeInTheDocument();
-  expect(screen.queryByRole("link", { name: "Pagar conta de luz" })).not.toBeInTheDocument();
-
-  fireEvent.change(search, { target: { value: "zzz" } });
-  expect(screen.getByRole("heading", { name: "Nenhuma tarefa encontrada" })).toBeInTheDocument();
+  await screen.findByText("2 abertas");
+  fireEvent.click(screen.getByRole("button", { name: "Opções de visualização" }));
+  fireEvent.click(screen.getByRole("button", { name: "#casa" }));
+  fireEvent.click(screen.getByRole("button", { name: "#rua" }));
+  expect(screen.getByRole("link", { name: "Alfa" })).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Limpar filtros" }));
-  expect(search).toHaveValue("");
-  expect(screen.getByRole("link", { name: "Pagar conta de luz" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Beta" })).toBeInTheDocument();
 });
 
 test("convida a criar a primeira tarefa e avisa quando a lista falha", async () => {

@@ -1,6 +1,7 @@
 import { vi } from "vitest";
+import { AgentFileNotFoundError } from "../../agent/config/agent-files.service";
+import { uiConfig } from "../process-config";
 import { createEventsKit } from "../../events/testing/in-memory-events-kit";
-import { StubMealParsingGateway } from "../../events/testing/stub-meal-parsing.gateway";
 import { InMemoryTaskRepository } from "../../tasks/testing/in-memory-task.repository";
 import { InMemoryEntityBatchWriter } from "../../agent/testing/in-memory-entity-batch-writer";
 import { InMemoryRecurrenceRepository } from "../../recurrences/testing/in-memory-recurrence.repository";
@@ -10,6 +11,9 @@ import type { StructuredCompletionGateway, StructuredCompletionInput } from "../
 import type { JevProcessClient, JevResult } from "../jev-process.client";
 import { ProcessAgentRunner } from "../process-agent-runner";
 import { ProcessEditWorker } from "../process-edit-worker";
+import { ProcessEditTargetWorker } from "../process-edit-target-worker";
+import { ProcessTargetEditWorker } from "../process-target-edit-worker";
+import type { MealParsingGateway } from "../../events/gateways/meal-parsing.gateway";
 import { ProcessFinalizer } from "../process-finalizer";
 import { ProcessQueryWorker } from "../process-query-worker";
 import { ProcessStepWorker } from "../process-step-worker";
@@ -52,9 +56,37 @@ export function result(answers: JevResult["answers"]): JevResult {
   return { model: "jev-test", latencyMs: 5, answers };
 }
 
+/** A estimativa da refeicao que o teste combina; a padrao e uma refeicao sem itens. */
+export class ScriptedMealParsing implements MealParsingGateway {
+  readonly texts: string[] = [];
+  response: Awaited<ReturnType<MealParsingGateway["parseMeal"]>> = { items: [], modelProvider: "stub", modelName: "stub" };
+
+  async parseMeal(input: { text: string }) {
+    this.texts.push(input.text);
+    return this.response;
+  }
+}
+
+/** Os arquivos de skills e agentes em memoria: `write` guarda o texto e lembra o que foi escrito. */
+export class FakeAgentFiles {
+  readonly written: Array<{ path: string; text: string }> = [];
+  constructor(readonly texts: Map<string, string> = new Map()) {}
+  read(path: string) {
+    const text = this.texts.get(path);
+    if (text === undefined) throw new AgentFileNotFoundError(path);
+    return { path, text };
+  }
+  async write(path: string, text: string) {
+    this.texts.set(path, text);
+    this.written.push({ path, text });
+    return [];
+  }
+}
+
 export function setupProcess(prompt = "pedido", sqlOutcome?: ScopedSqlOutcome) {
+  const mealParsing = new ScriptedMealParsing();
   const kit = createEventsKit({
-    mealParsingGateway: new StubMealParsingGateway({ items: [], modelProvider: "stub", modelName: "stub" }),
+    mealParsingGateway: mealParsing,
     clock: () => NOW,
   });
   const tasks = new InMemoryTaskRepository();
@@ -70,8 +102,13 @@ export function setupProcess(prompt = "pedido", sqlOutcome?: ScopedSqlOutcome) {
   const worker = new ProcessStepWorker(deps);
   const editWorker = new ProcessEditWorker({ ...deps, sql });
   const queryWorker = new ProcessQueryWorker({ store, runner, sql });
+  const files = new FakeAgentFiles();
+  const targetEditWorker = new ProcessTargetEditWorker({ ...deps, mealParsing, noteBuilder: kit.noteBuilder, files });
+  const editTargetWorker = new ProcessEditTargetWorker({
+    store, repositories, files, failureText: (code) => uiConfig.targetFailed[code],
+  });
   const finalizer = (jev: JevProcessClient) => new ProcessFinalizer({ ...deps, jev });
-  return { ...kit, recurrences, repositories, batchWriter, store, gateway, runner, process, worker, editWorker, queryWorker, sql, finalizer, tasks };
+  return { ...kit, mealParsing, files, targetEditWorker, editTargetWorker, recurrences, repositories, batchWriter, store, gateway, runner, process, worker, editWorker, queryWorker, sql, finalizer, tasks };
 }
 
 export async function addStep(
@@ -83,4 +120,14 @@ export async function addStep(
 ) {
   await ctx.store.beginSteps("p1", [{ id, agent, expected, input }], {});
   return { processId: "p1", stepId: id };
+}
+
+const ZERO_TOTALS = { totalCaloriesKcal: 0, totalProteinGrams: 0, totalCarbohydrateGrams: 0, totalFatGrams: 0, totalFiberGrams: 0 };
+
+/** O `data` de uma nota de refeicao: pronta (com receita) ou ainda em geracao. */
+export function mealData(description: string, status: "completed" | "pending" = "completed") {
+  return {
+    name: "Almoço", description, foodItems: [], totals: ZERO_TOTALS, generation: { status },
+    ...(status === "completed" ? { recipe: { source: "model", ingredients: [{ name: "arroz", quantity: "100 g" }], steps: ["Cozinhe."] }, nutritionSource: "model-estimate" } : {}),
+  };
 }

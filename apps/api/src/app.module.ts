@@ -29,6 +29,7 @@ import { UpdateRecurrenceModule } from "./features/update-recurrence/update-recu
 import { DeleteRecurrenceModule } from "./features/delete-recurrence/delete-recurrence.controller";
 import { AttachNotesToRecurrenceModule } from "./features/attach-notes-to-recurrence/attach-notes-to-recurrence.controller";
 import { StartProcessModule } from "./features/start-process/start-process.controller";
+import { StartProcessEditModule } from "./features/start-process-edit/start-process-edit.controller";
 import { GetProcessModule } from "./features/get-process/get-process.controller";
 import { StartHermesTurnModule } from "./features/start-hermes-turn/start-hermes-turn.controller";
 import { ListAiJobsModule } from "./features/list-ai-jobs/list-ai-jobs.controller";
@@ -80,6 +81,7 @@ import { ReloadAgentFilesModule } from "./features/reload-agent-files/reload-age
     RestoreAgentFileModule,
     ReloadAgentFilesModule,
     StartProcessModule,
+StartProcessEditModule,
     GetProcessModule,
     StartHermesTurnModule,
     ListAiJobsModule,

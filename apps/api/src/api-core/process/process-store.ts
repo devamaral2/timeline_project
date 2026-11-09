@@ -1,4 +1,4 @@
-import type { AgentScreenContext } from "@repo/contracts";
+import type { AgentScreenContext, AiProcessEditEntityType } from "@repo/contracts";
 import type { EditCandidate } from "./process-candidates";
 import type { EntityKind, Expected, ProcessAgent } from "./process-steps";
 
@@ -42,8 +42,17 @@ export interface ProcessRecord {
   createdAt: Date;
 }
 
+/** A entidade da tela de detalhe: o id e o retrato completo que o agente de edicao recebe. */
+export interface EditTarget {
+  entityType: AiProcessEditEntityType;
+  id: string;
+  snapshot: Record<string, unknown>;
+}
+
 /** O que o dispatcher entrega a um passo alem do pedido: as entidades que o JEV escolheu para editar. */
 export interface StepInput {
+  /** Edicao pela tela de detalhe: o unico alvo permitido. Quando existe, nao ha candidatos nem consulta. */
+  target?: EditTarget;
   candidates?: EditCandidate[];
   /** O foco que o fallback deu ao especialista que ele chamou; o pedido inteiro segue junto. */
   instruction?: string;
@@ -105,6 +114,15 @@ export interface ProcessStore {
     actorId: string;
     prompt: string;
     context?: AgentScreenContext;
+  }): Promise<void>;
+  /** Grava o processo de uma edicao pela tela de detalhe e enfileira o worker que escolhe o agente. */
+  startEdit(input: {
+    id: string;
+    userId: string;
+    actorId: string;
+    prompt: string;
+    entityType: AiProcessEditEntityType;
+    entityId: string;
   }): Promise<void>;
   find(id: string): Promise<ProcessRecord | undefined>;
   steps(processId: string): Promise<StepRecord[]>;

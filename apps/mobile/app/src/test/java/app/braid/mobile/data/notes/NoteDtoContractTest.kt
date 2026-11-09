@@ -2,9 +2,9 @@ package app.braid.mobile.data.notes
 
 import app.braid.mobile.data.dto.CreateNoteInputDto
 import app.braid.mobile.data.dto.NoteDto
+import app.braid.mobile.data.dto.UpdateNoteInput
 import app.braid.mobile.data.dto.agentFileVersion
 import app.braid.mobile.data.dto.isAgentFile
-import app.braid.mobile.data.dto.UpdateNoteInput
 import app.braid.mobile.data.dto.toJsonObject
 import app.braid.mobile.domain.notes.noteOriginLabel
 import app.braid.mobile.domain.notes.noteSnippet

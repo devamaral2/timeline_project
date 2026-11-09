@@ -63,6 +63,14 @@ class NoteDetailViewModel
                 }
         }
 
+        /** Recarrega sem voltar ao carregando: a edição por IA acabou de mudar a nota. */
+        fun refresh(noteId: String) {
+            viewModelScope.launch {
+                val result = gateway.detail(noteId)
+                if (result is NoteResult.Success) updateContent { it.copy(note = result.value) }
+            }
+        }
+
         fun startEditing() = updateContent { if (it.note.generationPending) it else it.copy(isEditing = true, actionError = null) }
 
         fun dismissEditing() = updateContent { if (it.isSaving) it else it.copy(isEditing = false, actionError = null) }

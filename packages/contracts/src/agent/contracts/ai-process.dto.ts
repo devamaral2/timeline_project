@@ -56,3 +56,18 @@ export interface StartAiProcessResponse {
 export function isAiProcessTerminal(process: Pick<AiProcessDto, "status">): boolean {
   return process.status === "completed" || process.status === "failed";
 }
+
+/**
+ * O tipo da entidade que a tela de detalhe esta editando. A nota carrega o subtipo (`meal_note`, `sleep_note`,
+ * `training_note`, `skill_note`, `agent_note`); `note` e a nota de texto. O servidor confere contra a entidade real.
+ */
+export type AiProcessEditEntityType =
+  | "event" | "task" | "note" | "meal_note" | "sleep_note" | "training_note" | "skill_note" | "agent_note";
+
+/** `POST /api/ai/process/edit`: um pedido de edicao da entidade aberta na tela. Responde `202 { processId }`. */
+export interface StartAiProcessEditRequest {
+  userId: string;
+  text: string;
+  entityType: AiProcessEditEntityType;
+  entityId: string;
+}

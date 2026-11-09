@@ -55,6 +55,8 @@ import app.braid.mobile.data.dto.isAgentFile
 import app.braid.mobile.domain.notes.noteDatesLine
 import app.braid.mobile.domain.notes.noteOriginLabel
 import app.braid.mobile.domain.notes.whenLabel
+import app.braid.mobile.ui.chat.EntityAiEditBar
+import app.braid.mobile.ui.chat.editEntityTypeOfNote
 import app.braid.mobile.ui.event.SectionLabel
 import java.time.Instant
 
@@ -89,16 +91,28 @@ fun NoteDetailScreen(
                         TextButton(onClick = { viewModel.load(noteId) }) { Text("Tentar de novo") }
                     }
                 }
-            is NoteDetailUiState.Content ->
-                NoteDetailBody(
-                    state = current,
-                    modifier = Modifier.padding(padding),
-                    onBack = onBack,
-                    onOpenEvent = onOpenEvent,
-                    onEdit = viewModel::startEditing,
-                    onDetach = viewModel::detach,
-                    onDelete = viewModel::startDeleting,
-                )
+            is NoteDetailUiState.Content -> {
+                val editType = editEntityTypeOfNote(current.note.type)
+                Column(modifier = Modifier.padding(padding)) {
+                    NoteDetailBody(
+                        state = current,
+                        modifier = Modifier.weight(1f),
+                        onBack = onBack,
+                        onOpenEvent = onOpenEvent,
+                        onEdit = viewModel::startEditing,
+                        onDetach = viewModel::detach,
+                        onDelete = viewModel::startDeleting,
+                    )
+                    if (editType != null) {
+                        EntityAiEditBar(
+                            entityType = editType,
+                            entityId = noteId,
+                            disabledReason = if (current.note.generationPending) "A refeição ainda está sendo gerada." else null,
+                            onEdited = { viewModel.refresh(noteId) },
+                        )
+                    }
+                }
+            }
             NoteDetailUiState.Deleted -> Unit
         }
     }
@@ -165,47 +179,49 @@ private fun NoteDetailBody(
                 Text("Notas", color = MaterialTheme.colorScheme.onBackground)
             }
             // Skill e agente seguem o arquivo: não se editam, soltam nem excluem pelo app.
-            if (!note.isAgentFile) Box {
-                IconButton(onClick = { menuOpen = true }) {
-                    Icon(
-                        Icons.Outlined.MoreVert,
-                        contentDescription = "Mais ações: editar, soltar, excluir",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                    // Só a nota de texto se edita aqui; refeição, sono e treino mudam no evento.
-                    if (note.type == TEXT_NOTE_TYPE) {
+            if (!note.isAgentFile) {
+                Box {
+                    IconButton(onClick = { menuOpen = true }) {
+                        Icon(
+                            Icons.Outlined.MoreVert,
+                            contentDescription = "Mais ações: editar, soltar, excluir",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        // Só a nota de texto se edita aqui; refeição, sono e treino mudam no evento.
+                        if (note.type == TEXT_NOTE_TYPE) {
+                            DropdownMenuItem(
+                                text = { Text("Editar") },
+                                leadingIcon = { Icon(Icons.Outlined.Edit, contentDescription = null) },
+                                onClick = {
+                                    menuOpen = false
+                                    onEdit()
+                                },
+                            )
+                        }
+                        if (note.link != null && !note.generationPending) {
+                            DropdownMenuItem(
+                                text = { Text("Soltar da origem") },
+                                leadingIcon = { Icon(Icons.Outlined.LinkOff, contentDescription = null) },
+                                enabled = !state.isSaving,
+                                onClick = {
+                                    menuOpen = false
+                                    onDetach()
+                                },
+                            )
+                        }
                         DropdownMenuItem(
-                            text = { Text("Editar") },
-                            leadingIcon = { Icon(Icons.Outlined.Edit, contentDescription = null) },
+                            text = { Text("Excluir", color = MaterialTheme.colorScheme.error) },
+                            leadingIcon = {
+                                Icon(Icons.Outlined.DeleteOutline, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                            },
                             onClick = {
                                 menuOpen = false
-                                onEdit()
+                                onDelete()
                             },
                         )
                     }
-                    if (note.link != null && !note.generationPending) {
-                        DropdownMenuItem(
-                            text = { Text("Soltar da origem") },
-                            leadingIcon = { Icon(Icons.Outlined.LinkOff, contentDescription = null) },
-                            enabled = !state.isSaving,
-                            onClick = {
-                                menuOpen = false
-                                onDetach()
-                            },
-                        )
-                    }
-                    DropdownMenuItem(
-                        text = { Text("Excluir", color = MaterialTheme.colorScheme.error) },
-                        leadingIcon = {
-                            Icon(Icons.Outlined.DeleteOutline, contentDescription = null, tint = MaterialTheme.colorScheme.error)
-                        },
-                        onClick = {
-                            menuOpen = false
-                            onDelete()
-                        },
-                    )
                 }
             }
         }

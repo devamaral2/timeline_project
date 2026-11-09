@@ -11,6 +11,7 @@ import {
   type EventEditOutput, type NoteEditOutput, type RecurringEventEditOutput, type RecurringTaskEditOutput,
   type TaskEditOutput,
 } from "./process-agent-schemas";
+import { askTarget } from "./process-target-edit";
 import { changesNothing, planSeriesEdit, RuleError } from "./process-recurrence";
 import { describeEditRequest, type ProcessAgentRunner } from "./process-agent-runner";
 import { runStep, StepFailure, validInstant, type StepPayload } from "./process-step-common";
@@ -95,6 +96,8 @@ export class ProcessEditWorker {
     step: StepRecord,
     signal?: AbortSignal,
   ): Promise<T["edits"]> {
+    // Tela de detalhe: o alvo e conhecido, entao nao ha candidatos nem consulta (ADR 006).
+    if (step.input?.target) return askTarget(this.deps.runner, agent, schema, process, step, signal) as Promise<T["edits"]>;
     const candidates: readonly EditCandidate[] = step.input?.candidates ?? [];
     const allowed = new Set(candidates.map((candidate) => candidate.id));
     const ask = (lookup?: Lookup) => this.deps.runner.run({

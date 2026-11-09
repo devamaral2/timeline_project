@@ -3,8 +3,11 @@ package app.braid.mobile.data.chat
 import app.braid.mobile.data.dto.AgentScreenContextDto
 import app.braid.mobile.data.dto.AiProcessDto
 import app.braid.mobile.data.dto.StartAiProcessDto
+import app.braid.mobile.data.dto.StartAiProcessEditDto
+import app.braid.mobile.data.dto.StartAiProcessResponseDto
 import app.braid.mobile.data.session.SessionRepository
 import kotlinx.serialization.SerializationException
+import retrofit2.Response
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -35,6 +38,13 @@ interface ProcessGateway {
         context: AgentScreenContextDto?,
     ): ProcessStart
 
+    /** Edita a entidade aberta na tela de detalhe; `entityType` é o do contrato (`event`, `meal_note`…). */
+    suspend fun startEdit(
+        text: String,
+        entityType: String,
+        entityId: String,
+    ): ProcessStart
+
     suspend fun get(processId: String): ProcessPoll
 }
 
@@ -50,9 +60,22 @@ class ProcessRepository
             context: AgentScreenContextDto?,
         ): ProcessStart {
             val userId = session.snapshot()?.user?.userId ?: return ProcessStart.Failed(401)
+            return started { api.startProcess(StartAiProcessDto(userId, text, context)) }
+        }
+
+        override suspend fun startEdit(
+            text: String,
+            entityType: String,
+            entityId: String,
+        ): ProcessStart {
+            val userId = session.snapshot()?.user?.userId ?: return ProcessStart.Failed(401)
+            return started { api.startEdit(StartAiProcessEditDto(userId, text, entityType, entityId)) }
+        }
+
+        private suspend fun started(call: suspend () -> Response<StartAiProcessResponseDto>): ProcessStart {
             val response =
                 try {
-                    api.startProcess(StartAiProcessDto(userId, text, context))
+                    call()
                 } catch (_: IOException) {
                     return ProcessStart.Failed()
                 } catch (_: SerializationException) {

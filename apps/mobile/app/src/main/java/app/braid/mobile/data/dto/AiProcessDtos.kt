@@ -11,6 +11,16 @@ data class StartAiProcessDto(
     val context: AgentScreenContextDto? = null,
 )
 
+/** `POST /api/ai/process/edit` (ADR 006): o pedido de edição da entidade aberta na tela de detalhe. */
+@Serializable
+data class StartAiProcessEditDto(
+    val userId: String,
+    val text: String,
+    /** `event`, `task`, `note`, `meal_note`, `sleep_note`, `training_note`, `skill_note` ou `agent_note`. */
+    val entityType: String,
+    val entityId: String,
+)
+
 @Serializable
 data class StartAiProcessResponseDto(
     val processId: String,

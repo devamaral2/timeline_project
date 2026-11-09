@@ -1,8 +1,8 @@
 "use client";
 
-import { ChevronDown, Clock, Link2, ListChecks, Plus, Search, TriangleAlert } from "lucide-react";
+import { ChevronDown, Clock, Link2, ListChecks, SlidersHorizontal, TriangleAlert } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { authedFetch } from "@/lib/api/authed-fetch";
 import type { TaskSummaryDto, WorkItemStatus } from "@/lib/api/contracts";
 import { useNow } from "@/lib/events/use-now";
@@ -13,7 +13,6 @@ import {
   groupTasks,
   isOverdueTask,
   isTodayTask,
-  matchesTaskQuery,
   overdueCountLabel,
   overdueLabel,
   pendingDependencies,
@@ -24,7 +23,6 @@ import {
   taskStatusLabels,
   taskWhenLabel,
   todayCountLabel,
-  todayLine,
   toggledStatus,
   topLevelTasks,
   waitingLabel,
@@ -57,7 +55,8 @@ export function TasksScreen({ userId }: { userId: string }) {
   const [error, setError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [sort, setSort] = useState<TaskSort>("priority");
-  const [query, setQuery] = useState("");
+  const [optionsOpen, setOptionsOpen] = useState(false);
+  const optionsRef = useRef<HTMLDivElement>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [expanded, setExpanded] = useState<WorkItemStatus[]>([]);
   const [pending, setPending] = useState<string[]>([]);
@@ -81,6 +80,17 @@ export function TasksScreen({ userId }: { userId: string }) {
     return () => window.clearTimeout(timer);
   }, [toast]);
 
+  useEffect(() => {
+    if (!optionsOpen) return;
+    const close = (event: MouseEvent | KeyboardEvent) => {
+      if (event instanceof KeyboardEvent) { if (event.key === "Escape") setOptionsOpen(false); return; }
+      if (!optionsRef.current?.contains(event.target as Node)) setOptionsOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    document.addEventListener("keydown", close);
+    return () => { document.removeEventListener("mousedown", close); document.removeEventListener("keydown", close); };
+  }, [optionsOpen]);
+
   const retry = useCallback(() => {
     setTasks(null);
     setReloadKey((key) => key + 1);
@@ -92,16 +102,15 @@ export function TasksScreen({ userId }: { userId: string }) {
   );
   const visible = useMemo(
     () => (tasks ?? []).filter((task) =>
-      (selectedTags.length === 0 || task.tags.some((tag) => selectedTags.includes(tag))) && matchesTaskQuery(task, query)),
-    [tasks, selectedTags, query],
+      (selectedTags.length === 0 || task.tags.some((tag) => selectedTags.includes(tag)))),
+    [tasks, selectedTags],
   );
   const groups = useMemo(() => groupTasks(visible, sort), [visible, sort]);
   const counts = tasks && now ? taskCounts(tasks, now) : null;
   const hasTasks = tasks ? topLevelTasks(tasks).length > 0 : false;
-  const filtered = query.trim() !== "" || selectedTags.length > 0;
+  const filtered = selectedTags.length > 0;
 
   function clearFilters() {
-    setQuery("");
     setSelectedTags([]);
   }
 
@@ -138,7 +147,6 @@ export function TasksScreen({ userId }: { userId: string }) {
     <main id="conteudo" className={styles.screen}>
       <header className={styles.pageHead}>
         <div className={styles.titleBlock}>
-          <p className={styles.eyebrow}>{now ? todayLine(now) : " "}</p>
           <h1 className={styles.title}>Tarefas</h1>
           <p className={styles.summary} aria-live="polite">
             {counts ? (
@@ -150,47 +158,50 @@ export function TasksScreen({ userId }: { userId: string }) {
             ) : " "}
           </p>
         </div>
-        <div className={styles.headingActions}>
-          <label className={styles.search}>
-            <Search aria-hidden />
-            <input
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Buscar tarefas"
-              aria-label="Buscar tarefas"
-              autoComplete="off"
-            />
-          </label>
-          <button type="button" className={styles.createButton} onClick={() => setCreating(true)}><Plus aria-hidden />Nova tarefa</button>
-        </div>
+        {hasTasks ? (
+          <div className={styles.options} ref={optionsRef}>
+            <button
+              type="button"
+              className={styles.optionsButton}
+              aria-label="Opções de visualização"
+              title="Opções de visualização"
+              aria-expanded={optionsOpen}
+              aria-haspopup="dialog"
+              onClick={() => setOptionsOpen((open) => !open)}
+            >
+              <SlidersHorizontal aria-hidden />
+              {selectedTags.length > 0 ? <span className={styles.optionsBadge} aria-label={`${selectedTags.length} filtros ativos`}>{selectedTags.length}</span> : null}
+            </button>
+            {optionsOpen ? (
+              <div className={styles.optionsPanel} role="dialog" aria-label="Opções de visualização">
+                <label className={styles.sort}>
+                  Ordenar por
+                  <select className={styles.select} value={sort} onChange={(event) => setSort(event.target.value as TaskSort)}>
+                    <option value="priority">Prioridade</option>
+                    <option value="date">Data</option>
+                  </select>
+                </label>
+                {allTags.length > 0 ? (
+                  <fieldset className={styles.chips} aria-label="Filtrar por tag">
+                    {allTags.map((tag) => (
+                      <button
+                        key={tag}
+                        type="button"
+                        className={styles.chip}
+                        aria-pressed={selectedTags.includes(tag)}
+                        onClick={() => setSelectedTags((current) => toggleIn(current, tag))}
+                      >
+                        <span className={styles.dot} style={tagAccentStyle(tag)} aria-hidden="true" />#{tag}
+                      </button>
+                    ))}
+                  </fieldset>
+                ) : null}
+                <button type="button" className={styles.optionsClear} onClick={clearFilters} disabled={selectedTags.length === 0}>Limpar filtros</button>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </header>
-
-      {hasTasks ? (
-        <div className={styles.filters}>
-          <fieldset className={styles.chips} aria-label="Filtrar por tag">
-            {allTags.map((tag) => (
-              <button
-                key={tag}
-                type="button"
-                className={styles.chip}
-                aria-pressed={selectedTags.includes(tag)}
-                onClick={() => setSelectedTags((current) => toggleIn(current, tag))}
-              >
-                <span className={styles.dot} style={tagAccentStyle(tag)} aria-hidden="true" />#{tag}
-              </button>
-            ))}
-            {selectedTags.length > 0 ? <button type="button" className={styles.chip} onClick={() => setSelectedTags([])}>Limpar tags</button> : null}
-          </fieldset>
-          <label className={styles.sort}>
-            Ordenar por
-            <select className={styles.select} value={sort} onChange={(event) => setSort(event.target.value as TaskSort)}>
-              <option value="priority">Prioridade</option>
-              <option value="date">Data</option>
-            </select>
-          </label>
-        </div>
-      ) : null}
 
       {actionError ? <p role="alert" className={styles.message}>{actionError}</p> : null}
 

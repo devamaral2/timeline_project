@@ -4,6 +4,7 @@ import { Bell, Copy, Hash, FileText, Pencil, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
+import { EntityAiEditBar } from "@/components/detail/EntityAiEditBar";
 import shellStyles from "@/app/mockups/eventos/mockup.module.css";
 import {
   BackLink, DateLines, DetailHead, DetailMenu, DetailMessage, DetailOrigin, DetailScreen, DetailSection,
@@ -288,6 +289,8 @@ export function TaskDetailScreen({ userId, taskId }: { userId: string; taskId: s
 
         <DetailOrigin id="task" />
       </DetailScreen>
+
+      <EntityAiEditBar userId={userId} entityType="task" entityId={task.id} onEdited={() => setReloadKey((key) => key + 1)} />
 
       {deleting ? (
         <DeleteTaskDialog

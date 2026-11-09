@@ -45,6 +45,9 @@ import { ProcessOperations } from "./process/process-operations";
 import { ProcessStepWorker } from "./process/process-step-worker";
 import { ProcessEditWorker } from "./process/process-edit-worker";
 import { ProcessQueryWorker } from "./process/process-query-worker";
+import { ProcessEditTargetWorker } from "./process/process-edit-target-worker";
+import { ProcessTargetEditWorker } from "./process/process-target-edit-worker";
+import { uiConfig } from "./process/process-config";
 import { PostgresProcessCandidateQuery } from "../infrastructure/persistence/ai-processes/postgres-process-candidate.query";
 import type { ProcessStore } from "./process/process-store";
 import { AgentFilesService } from "./agent/config/agent-files.service";
@@ -127,11 +130,13 @@ export class ApiCoreModule {
           inject: [
             AiJobsService, PostgresAiProcessStore, ENTITY_BATCH_WRITER, EVENT_REPOSITORY, TASK_REPOSITORY,
             NOTE_REPOSITORY, CreateEventUseCase, SCOPED_SQL_QUERY, DATABASE, RECURRENCE_REPOSITORY,
+            OpenRouterMealParsingGateway, NoteBuilder, AgentFilesService,
           ],
           useFactory: (
             jobs: AiJobsService, store: ProcessStore, batchWriter: EntityBatchWriter, events: EventRepository,
             tasks: TaskRepository, notes: NoteRepository, createEvent: CreateEventUseCase, sql: ScopedSqlQuery,
             database: PostgresDatabase, recurrenceRepository: RecurrenceRepository,
+            mealParsing: OpenRouterMealParsingGateway, noteBuilder: NoteBuilder, files: AgentFilesService,
           ) => {
             const env = getServerEnv();
             const runner = new ProcessAgentRunner(new OpenRouterStructuredCompletionGateway(
@@ -146,6 +151,12 @@ export class ApiCoreModule {
               new ProcessQueryWorker({ store, runner, sql }),
               new ProcessFinalizer({ store, jev, batchWriter, repositories, createEvent, runner }),
               new ProcessFallback({ store, runner }),
+              new ProcessEditTargetWorker({
+                store, repositories, files, failureText: (code) => uiConfig.targetFailed[code],
+              }),
+              new ProcessTargetEditWorker({
+                store, runner, batchWriter, repositories, createEvent, mealParsing, noteBuilder, files,
+              }),
             );
           },
         },
