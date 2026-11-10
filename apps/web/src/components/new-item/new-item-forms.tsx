@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Clock, FileText, Plus, ListChecks, X } from "lucide-react";
+import { ArrowLeft, FileText, Plus, ListChecks, X } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { createTask, updateTask } from "@/lib/tasks/task-api";
 import {
@@ -46,7 +46,7 @@ function OffsetChips({ offsets, onChange }: { offsets: number[]; onChange: (offs
   }
 
   return <fieldset className={styles.entitySelect}>
-    <span className={styles.entitySelectLabel}><Clock aria-hidden style={{ width: 11, height: 11, verticalAlign: "-1px" }} /> Notificações</span>
+    <span className={styles.entitySelectLabel}>Lembretes</span>
     <div className={styles.offsetAdd}>
       <input type="number" min="1" step="1" inputMode="numeric" aria-label="Minutos antes do início" placeholder="Minutos antes" value={draft}
         onChange={event => { setDraft(event.target.value); setError(null); }}
@@ -62,7 +62,7 @@ function OffsetChips({ offsets, onChange }: { offsets: number[]; onChange: (offs
   </fieldset>;
 }
 
-const DETAILS_PLACEHOLDER = "Acrescente o que for importante… Use #tag para marcar.";
+const DETAILS_PLACEHOLDER = "Detalhes e #tags";
 
 /** Novo evento (rotina): nome, início e término, detalhes com #tags e avisos. */
 export function NewEventForm({ initialName, onCreated, onPickerChange, existing }: EditItemFormProps<EventDetailDto>) {

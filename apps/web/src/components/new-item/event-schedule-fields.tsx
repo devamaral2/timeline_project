@@ -160,6 +160,28 @@ function DateTimeRow({ label, field, date, time, calendarOpen, onDateChange, onT
   </div>;
 }
 
+/** Quantos minutos vão do início ao término; `null` se algum horário está incompleto ou o término vem antes. */
+export function scheduleMinutes(startDate: string, startTime: string, endDate: string, endTime: string): number | null {
+  const start = new Date(`${startDate}T${startTime}`).getTime();
+  const end = new Date(`${endDate}T${endTime}`).getTime();
+  if (Number.isNaN(start) || Number.isNaN(end) || end <= start) return null;
+  return Math.round((end - start) / 60_000);
+}
+
+/** A linha "Duração": o que o início e o término somam, na serifa. Some enquanto não dá para calcular. */
+function DurationRow({ minutes }: { minutes: number | null }) {
+  if (minutes === null) return null;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return <div className={styles.eventDateTimeRow}>
+    <span className={styles.eventDateTimeLabel}>Duração</span>
+    <output className={styles.eventDuration} aria-label={`Duração: ${[hours ? `${hours} h` : "", rest ? `${rest} min` : ""].filter(Boolean).join(" ")}`}>
+      {hours ? <><strong>{hours}</strong><small>h</small></> : null}
+      {rest ? <><strong>{rest}</strong><small>min</small></> : null}
+    </output>
+  </div>;
+}
+
 export function EventScheduleFields({ startDate, startTime, endDate, endTime, activeField, onChange, onOpenCalendar }: {
   startDate: string;
   startTime: string;
@@ -172,5 +194,6 @@ export function EventScheduleFields({ startDate, startTime, endDate, endTime, ac
   return <div className={styles.eventSchedule}>
     <DateTimeRow label="Início" field="startDate" date={startDate} time={startTime} calendarOpen={activeField === "startDate"} onDateChange={onChange} onTimeChange={value => onChange("startTime", value)} onOpenCalendar={onOpenCalendar} />
     <DateTimeRow label="Término" field="endDate" date={endDate} time={endTime} calendarOpen={activeField === "endDate"} onDateChange={onChange} onTimeChange={value => onChange("endTime", value)} onOpenCalendar={onOpenCalendar} />
+    <DurationRow minutes={scheduleMinutes(startDate, startTime, endDate, endTime)} />
   </div>;
 }
