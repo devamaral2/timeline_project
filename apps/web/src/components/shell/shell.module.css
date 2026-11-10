@@ -67,7 +67,6 @@
 .iconButton { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; color: var(--muted); border-radius: 50%; cursor: pointer; }
 .iconButton:hover { background: var(--soft); color: var(--ink); }
 .iconButton svg { width: 20px; height: 20px; stroke-width: 1.75; }
-.avatar { margin-left: 7px; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--soft); color: var(--muted); font-size: 12px; font-weight: 600; }
 
 .notificationBell { position: relative; display: inline-flex; }
 .notificationBadge { position: absolute; top: 5px; right: 4px; display: grid; place-items: center; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: var(--destructive); color: var(--destructive-foreground); font-size: 12px; font-weight: 600; line-height: 1; }
@@ -100,13 +99,7 @@
 .dark .notificationToast { border-color: var(--line); color: var(--ink); }
 
 .main { composes: container from "../ui/page.module.css"; }
-.pageHeading { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
 .eyebrow { color: var(--muted); font-size: 12px; font-weight: 500; margin-bottom: 8px; }
-.pageTitle { composes: title from "../ui/page.module.css"; }
-.pageTitle > span { color: var(--brand-accent); }
-.createButton { display: flex; align-items: center; gap: 9px; border-radius: 8px; background: var(--primary); color: var(--primary-foreground); padding: 13px 20px; font-weight: 500; font-size: 13px; }
-.createButton svg { width: 18px; height: 18px; }
-.contentGrid { display: grid; grid-template-columns: minmax(0, 1fr) 245px; column-gap: 80px; }
 .agenda { min-width: 0; }
 .toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 29px; }
 .filters { display: flex; align-items: center; gap: 7px; }
@@ -117,7 +110,6 @@
 .dayHeading h2 { display: flex; align-items: baseline; gap: 10px; font-family: var(--font-display); font-size: 24px; font-weight: 400; line-height: 1.1; color: var(--ink); }
 .dayHeading h2 span { font-family: var(--font-sans); font-size: 13px; font-weight: 400; color: var(--muted); }
 .dayHeading > span { font-size: 12px; font-weight: 500; line-height: 1; color: var(--muted); }
-.eventList { display: grid; gap: 10px; list-style: none; padding: 0; margin: 0; }
 .event { position: relative; line-height: normal; padding: 16px 24px; margin-inline: 0; border: 1px solid var(--card-border); border-radius: 14px; overflow: hidden; background: var(--card); box-shadow: none; transition: background 200ms, border-color 200ms, opacity 200ms; }
 .event[data-time-position="past"] { background: transparent; }
 .event[data-time-position="past"]:focus-within { background: var(--card); }
@@ -127,20 +119,13 @@
    cartao inteiro levava o texto secundario abaixo de 3:1. */
 .event[data-missed="true"] h3, .event[data-missed="true"] .eventDuration { color: var(--muted); }
 .event:not([data-time-position="past"]):has(.eventLink):hover { border-color: color-mix(in oklab, var(--brand) 40%, transparent); }
-.eventMain { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto auto; align-items: start; column-gap: 16px; row-gap: 0; }
 .event .typeIcon { grid-column: 1; grid-row: 1 / 3; align-self: start; margin-top: 2px; width: 22px; height: 22px; color: var(--event-color); }
 .shell [data-type="routine"] { --event-color: var(--routine); }
 .shell [data-type="training"] { --event-color: var(--training); }
 .shell [data-type="meal"] { --event-color: var(--meal); }
 .shell [data-type="sleep"] { --event-color: var(--sleep); }
-.eventText { display: contents; }
-.eventTitleLine { grid-column: 2; grid-row: 1; min-width: 0; display: flex; align-items: center; }
 .event h3 { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; font-weight: 600; line-height: 1.4; letter-spacing: 0; color: var(--card-foreground); }
 .event h3 > a, .event h3 > button { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
-.eventLink::after { content: ""; position: absolute; inset: 0; border-radius: 14px; }
-.eventTime { grid-column: 2; grid-row: 2; margin-top: 4px; display: flex; flex-wrap: wrap; align-items: center; gap: 0 6px; font-family: var(--font-mono); font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.runningLabel { display: inline-flex; align-items: center; gap: 6px; color: var(--brand-accent); font-size: 12px; font-weight: 600; white-space: nowrap; }
-.runningLabel i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 .eventDuration { grid-column: 3; grid-row: 1 / 3; justify-self: end; align-self: center; display: inline-flex; align-items: baseline; justify-content: flex-end; gap: 3px; color: var(--card-foreground); font-family: var(--font-display); font-size: 22px; line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .eventDuration strong { font-weight: 400; }
 .eventDuration small { color: var(--muted); font-family: var(--font-sans); font-size: 12px; letter-spacing: 0; }
@@ -150,83 +135,19 @@
 @media (hover: hover) { .event:hover .eventChevron { opacity: 1; transform: none; } }
 .event:has(.eventLink:focus-visible) .eventChevron { opacity: 1; transform: none; }
 @media (hover: none) { .event .eventChevron { opacity: .6; transform: none; } }
-.listNote { margin-top: 26px; color: var(--muted); font-size: 12px; }
 
 /* Tempo livre entre eventos: só leitura, tracejado e sem fundo de cartão, para
    nunca ser confundido com algo registrado. */
-.freeSlot { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: center; column-gap: 16px; padding: 9px 16px; border: 1px dashed color-mix(in oklab, var(--muted) 45%, transparent); border-radius: 14px; background: transparent; color: var(--muted); }
-.freeSlot[data-time-position="past"] { border-color: color-mix(in oklab, var(--muted) 25%, transparent); }
-.freeSlot[data-time-position="past"] .freeSlotIcon { opacity: .6; }
-.freeSlot[data-time-position="now"] { border-color: color-mix(in oklab, var(--brand) 60%, transparent); }
-.freeSlot .freeSlotIcon { width: 20px; height: 20px; justify-self: center; color: var(--muted); }
-.freeSlotText { min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 10px; }
-.freeSlotLabel { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0; font-size: 12px; font-weight: 500; color: var(--muted); }
-.freeSlotNow { display: inline-flex; align-items: center; gap: 6px; color: var(--brand-accent); font-weight: 600; white-space: nowrap; }
-.freeSlotNow i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
-.freeSlotTime { margin: 0; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.freeSlot .freeSlotDuration { grid-column: 3; grid-row: auto; font-size: 20px; color: var(--muted); }
 
-.sidebar { padding-top: 3px; }
-.calendarHeading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.calendarHeading h2 { font-size: 13px; font-weight: 600; }
-.calendarHeading h2 span { color: var(--muted); font-weight: 400; margin-left: 5px; }
-.calendarHeading > div { display: flex; gap: 9px; }
-.calendarHeading button { width: 24px; height: 28px; display: grid; place-items: center; color: var(--muted); }
-.calendarHeading svg { width: 15px; height: 15px; }
-.calendarGrid { display: grid; grid-template-columns: repeat(7, 1fr); row-gap: 5px; margin-top: 18px; font-size: 12px; text-align: center; }
-.calendarGrid > span { position: relative; width: 30px; height: 30px; display: grid; place-items: center; justify-self: center; }
 .weekday { color: var(--muted); font-size: 12px; margin-bottom: 4px; }
-.outsideMonth { color: color-mix(in oklab, var(--muted) 65%, transparent); }
-.selectedDate { background: var(--primary); color: var(--primary-foreground); border-radius: 50%; font-weight: 600; }
-.calendarDot { position: absolute; bottom: 1px; width: 3px; height: 3px; border-radius: 50%; background: var(--cyan); }
-.typeLegend { border-top: 1px solid var(--line); margin-top: 30px; padding-top: 26px; display: grid; grid-template-columns: 1fr 1fr; gap: 18px 8px; }
-.typeLegend h2, .timeLegend h2 { grid-column: 1 / -1; font-size: 13px; font-weight: 600; }
-.typeLegend h2 { margin-bottom: 3px; }
-.typeLegend > div { display: flex; align-items: center; gap: 9px; color: var(--muted); font-size: 12px; }
-.typeLegend svg { width: 17px; height: 17px; color: var(--event-color); }
-.timeLegend { display: grid; gap: 16px; border-top: 1px solid var(--line); margin-top: 29px; padding-top: 25px; }
-.timeLegend > div { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--muted); }
-.timeLegend i { position: relative; width: 24px; height: 20px; border-radius: 5px; border: 1px solid var(--line); }
-.timeLegend [data-time-position="past"] { border: 0; }
-.timeLegend [data-time-position="past"]::after { content: ""; position: absolute; inset: 0; margin: auto; width: 6px; height: 6px; border-radius: 50%; background: var(--muted); }
-.timeLegend [data-time-position="running"] { background: var(--brand-soft); border-color: color-mix(in oklab, var(--brand) 45%, transparent); }
-.timeLegend [data-time-position="free"] { border-style: dashed; border-color: color-mix(in oklab, var(--muted) 45%, transparent); }
-.timeLegend > p { color: var(--muted); font-size: 12px; line-height: 1.6; }
-.prototypeNote { margin-top: 46px; color: var(--muted); font-size: 12px; }
 .bottomNav, .bottomFade { display: none; }
 .sectionMenu { display: none; }
 
 /* Ações compactas da agenda. */
-.headingActions { display: flex; align-items: center; gap: 7px; }
-.viewOptions { position: relative; }
-.viewOptions > summary { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; color: var(--ink); list-style: none; }
-.viewOptions > summary { cursor: pointer; }
-.viewOptions > summary::-webkit-details-marker { display: none; }
-.viewOptions > summary:hover, .viewOptions[open] > summary { background: var(--soft); }
-.viewOptions > summary svg { width: 21px; height: 21px; }
-.viewModes { position: absolute; z-index: 10; top: 49px; right: 0; width: 224px; padding: 10px; border: 1px solid var(--line); border-radius: 16px; background: var(--card); box-shadow: var(--shadow-float); }
-.viewModes legend { float: left; width: 100%; padding: 7px 10px 10px; font-size: 12px; color: var(--muted); }
-.viewModes button { display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px; border-radius: 9px; color: var(--muted); font-size: 12px; cursor: pointer; text-align: left; }
-.viewModes button[aria-pressed="true"] { background: var(--cyan-soft); color: var(--brand-accent); }
-.viewModes small { display: block; font-size: 12px; margin-top: 3px; color: var(--muted); }
-.viewModes svg { width: 18px; height: 18px; }
-.agendaControls { position: sticky; top: 0; z-index: 5; padding: 0 0 14px; margin-bottom: 6px; background: var(--background); }
-.dateToolbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; }
 .monthToggle { display: flex; align-items: center; gap: 7px; color: var(--ink); font-size: 14px; font-weight: 600; cursor: pointer; min-height: 44px; }
 .monthToggle svg { width: 14px; height: 14px; color: var(--muted); transition: transform 160ms; }
 .monthToggle[aria-expanded="true"] svg { transform: rotate(180deg); }
-.dateActions { display: flex; align-items: center; gap: 3px; }
-.dateActions button { display: grid; place-items: center; min-width: 32px; min-height: 40px; border-radius: 8px; cursor: pointer; color: var(--muted); }
-.dateActions svg { width: 16px; height: 16px; }
-.dateActions .todayButton { display: inline-flex; align-items: center; height: 40px; padding: 0 10px; color: var(--brand-accent); font-size: 13px; font-weight: 600; }
-.monthJump { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 12px 0; color: var(--muted); font-size: 12px; }
-.monthJump input { max-width: 175px; min-height: 36px; padding: 5px 10px; border-radius: 8px; background: var(--soft); font: inherit; color: var(--ink); }
-.monthDays { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); text-align: center; }
 .monthDays .weekday { padding: 7px 0; font-size: 12px; }
-.monthDays button { display: grid; place-items: center; min-height: 40px; width: 100%; border-radius: 10px; font-size: 12px; cursor: pointer; }
-.monthDays [data-outside="true"] { color: color-mix(in oklab, var(--muted) 65%, transparent); }
-.monthDays [aria-pressed="true"] { color: var(--brand-accent); background: var(--cyan-soft); font-weight: 600; }
-.monthDays [aria-current="date"] { color: var(--brand-accent); }
 .horizontalDays { display: flex; align-items: flex-start; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none; margin-inline: -14px; }
 .verticalDays { overflow-anchor: auto; }
 .horizontalDays::-webkit-scrollbar { display: none; }
@@ -234,8 +155,6 @@
 .freeDay { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-height: 240px; padding: 40px 24px; text-align: center; }
 .freeDay p { margin: 0; color: var(--ink); font-family: var(--font-display); font-size: 26px; line-height: 1.25; }
 .freeDay span { max-width: 280px; color: var(--muted); font-size: 13px; line-height: 1.6; }
-.emptyDay { padding: 31px 0 38px; color: var(--muted); font-size: 12px; }
-.sidebar > .typeLegend { margin-top: 10px; padding-top: 0; border-top: 0; }
 
 .detailMain { max-width: 784px; padding: 34px 32px 60px; margin: auto; }
 /* O detalhe com a barra "Peça ao Hermes…" é um rodapé: a página vira uma coluna de altura total e a barra
@@ -276,10 +195,6 @@
 .nutritionGrid p > span { font-size: 12px; color: var(--muted); margin-left: 5px; letter-spacing: 0; font-weight: 400; }
 .nutritionGrid h3 { font-size: 12px; color: var(--muted); margin-top: 4px; font-weight: 400; }
 .detailFooter { display: flex; justify-content: space-between; align-items: center; gap: 18px; border-top: 1px solid var(--line); margin-top: 37px; padding-top: 24px; }
-.detailActions { display: flex; align-items: center; gap: 8px; }
-.deleteButton { padding: 12px 14px; border-radius: 10px; color: var(--destructive); display: flex; align-items: center; gap: 7px; font-size: 12px; }
-.deleteButton svg { width: 16px; height: 16px; }
-.detailError { margin-top: 18px; color: var(--destructive); font-size: 12px; line-height: 1.6; }
 .missedCheckbox { display: inline-flex; align-items: center; gap: 10px; font-size: 12px; color: var(--muted); }
 .missedCheckbox input { appearance: none; border: 1px solid var(--input); width: 15px; height: 15px; border-radius: 4px; }
 .editButton { padding: 12px 19px; border-radius: 10px; background: var(--primary); color: var(--primary-foreground); display: flex; align-items: center; gap: 9px; font-size: 12px; }
@@ -287,13 +202,8 @@
 .detailPrototypeNote { margin-top: 26px; color: var(--muted); font-size: 12px; }
 
 /* Status da tarefa e anotação do evento têm sinais independentes. */
-.eventTitleButton { text-align: left; cursor: pointer; }
-.eventTitleButton:hover { color: var(--brand-accent); }
-.eventLabels { grid-column: 2 / -1; grid-row: 3; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .event:has(.taskReference) .eventLabels { grid-column: 2; }
-.missedBadge { border: 1px solid var(--input); border-radius: 5px; padding: 1px 7px; color: var(--muted); background: transparent; font-size: 13px; font-weight: 500; line-height: 20px; }
 .tag { padding: 2px 8px; border-radius: 5px; background: var(--soft); color: var(--muted); font-size: 13px; font-weight: 500; line-height: 20px; }
-.taskReference { grid-column: 3; grid-row: 3; justify-self: end; display: inline-flex; align-items: center; gap: 6px; min-width: 0; margin: 2px 0 0; padding: 0; border: 0; color: var(--muted); font-size: 12px; white-space: nowrap; }
 .taskPriority { display: inline-flex; align-items: center; color: var(--priority-low); }
 .taskPriority svg { width: 14px; height: 14px; }
 .taskPriority[data-priority="urgent"] { color: var(--priority-urgent); }
@@ -335,7 +245,6 @@
 .taskDemoNote { margin-top: 22px; font-size: 12px; color: var(--muted); }
 
 @media (max-width: 1000px) {
-  .contentGrid { column-gap: 44px; grid-template-columns: minmax(0, 1fr) 220px; }
   .headerInner { column-gap: 16px; }
   .primaryNav { gap: 2px; }
   /* Sem espaco para o campo: fica so o circulo do Hermes, no tamanho dos vizinhos. */
@@ -463,22 +372,17 @@
   .brand { gap: 7px; }
   .event { padding: 16px; }
   .headerActions { margin-left: auto; gap: 0; }
-  .avatar, .desktopSearch { display: none; }
   .primaryNav, .shell .hubTrigger { display: none; }
   /* Sem cabeçalho no celular: a barra inferior e o chat levam tudo. O sino segue montado só para entregar os avisos (toasts). */
   .header { border: 0; }
   .headerInner { height: 0; padding: 0; overflow: hidden; }
   .brand, .headerActions .iconButton, .accountMenu { display: none; }
-  .pageHeading { margin-bottom: 10px; }
   .eyebrow { display: none; }
-  .createButton, .sidebar { display: none; }
-  .contentGrid { display: block; }
   .toolbar { margin-bottom: 27px; }
   .filters { gap: 5px; }
   .filters button { padding: 7px 17px; font-size: 12px; }
   .toolbar > .iconButton { width: 30px; }
   .dayGroup + .dayGroup { margin-top: 30px; }
-  .listNote { font-size: 12px; max-width: 245px; line-height: 1.6; }
   /* A barra inferior flutua: uma pilula com as tres telas e, na ponta, o
      circulo do Hermes. A tela atual abre com o nome, preenchida em `--primary`;
      atras da barra o conteudo se apaga no chao. */
@@ -502,13 +406,6 @@
 .sectionMenuHeading h2 { color: var(--ink); font-size: 20px; font-weight: 500; }
 .sectionMenuHeading button { display: grid; place-items: center; width: 40px; height: 40px; color: var(--muted); cursor: pointer; border-radius: 50%; }
 .sectionMenuHeading svg { width: 17px; height: 17px; }
-.sectionLinks { display: grid; gap: 3px; }
-.sectionLinks > a, .sectionLinks > button { display: flex; align-items: center; gap: 14px; min-height: 53px; width: 100%; padding: 10px 13px; border-radius: 12px; color: var(--ink); font-size: 15px; text-align: left; }
-.sectionLinks > a { cursor: pointer; }
-.sectionLinks [aria-current="page"] { color: var(--brand-accent); background: var(--cyan-soft); }
-.sectionLinks > button { color: var(--muted); }
-.sectionLinks > a > svg:first-child, .sectionLinks > button > svg:first-child { width: 22px; height: 22px; }
-.sectionLinks > a > svg:last-child, .sectionLinks > button > svg:last-child { margin-left: auto; width: 16px; height: 16px; opacity: .65; }
 
 .hubDescription { color: var(--muted); font-size: 12px; line-height: 1.6; margin: 0 12px 20px; }
 .hubContent { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 8px 2px; }
@@ -534,7 +431,6 @@
 .assistantPanel { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .chatHeader { flex-shrink: 0; display: flex; align-items: center; gap: 4px; min-height: 60px; margin: 0 -8px; border-bottom: 1px solid var(--line); }
 .chatHeader h2, .chatTitle p { min-width: 0; margin: 0; overflow: hidden; font-size: 15px; font-weight: 600; line-height: 20px; color: var(--ink); text-overflow: ellipsis; white-space: nowrap; }
-.chatHeaderSpacer { flex: 1; }
 /* O titulo da conversa leva em cima quem responde: o assistente da agenda ou o Hermes (`/hermes`). */
 .chatTitle { flex: 1; min-width: 0; display: flex; flex-direction: column; padding-left: 4px; }
 .chatLive { font-family: var(--font-mono); font-size: 12px; line-height: 16px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
@@ -557,14 +453,6 @@
 .createActions button { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 52px; padding: 0; border: 0; border-bottom: 1px solid var(--hairline); border-radius: 0; color: var(--ink); font-size: 16px; font-weight: 500; text-align: left; cursor: pointer; }
 .createActions button:hover { text-decoration: underline; text-underline-offset: 4px; }
 .createActions svg { width: 20px; height: 20px; color: var(--muted); }
-.braidMark { position: relative; display: block; width: 36px; overflow: hidden; }
-.braidTails { position: absolute; left: 0; top: 0; overflow: visible; }
-.braidTails line { stroke-width: 5.81; stroke-linecap: round; stroke-dasharray: var(--braid-dash); stroke-dashoffset: var(--braid-to); animation: braidTails 1.5s cubic-bezier(.45,0,.55,1) .3s both; }
-.braidMark [data-tone="nevoa"] { stroke: var(--strand-nevoa); }
-.braidMark [data-tone="destaque"] { stroke: var(--brand); }
-.braidMark [data-tone="tinta"] { stroke: var(--strand-tinta); }
-.braidKnot { position: absolute; left: 0; bottom: 0; mask-image: linear-gradient(to bottom, #000 74px, transparent 81px); mask-size: 100% 155px; mask-repeat: no-repeat; mask-position: 0 0; animation: braidKnot .75s cubic-bezier(.25,.55,.4,1) 1.05s both; }
-.braidDot { position: absolute; left: 12.8px; bottom: .3px; width: 10.5px; height: 10.5px; border-radius: 50%; background: var(--brand); animation: braidDot .45s cubic-bezier(.34,1.56,.64,1) 1.8s both; }
 
 .chatCommands { list-style: none; margin-bottom: 0; padding: 0 0 4px; display: grid; gap: 2px; }
 .chatCommands button { width: calc(100% + 24px); margin: 0 -12px; display: flex; align-items: center; gap: 14px; min-height: 56px; padding: 8px 12px; border-radius: 12px; color: var(--ink); text-align: left; cursor: pointer; }
@@ -587,25 +475,6 @@
 .chatWindowDuration small:last-child { margin-right: 0; }
 .hubComposerHint { margin: 0 0 4px; font-size: 12px; color: var(--muted); }
 
-.conversationGroups { display: grid; gap: 18px; padding: 8px 0 16px; }
-.conversationGroups h3 { margin: 0 0 2px; display: flex; align-items: baseline; gap: 8px; font-size: 13px; font-weight: 600; color: var(--ink); }
-.conversationGroups h3 span { font-size: 12px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
-.conversationList { list-style: none; margin: 0; padding: 0; }
-.conversationList li { display: flex; align-items: flex-start; gap: 8px; }
-.conversationList li + li { border-top: 1px solid var(--line); }
-.conversationList li > button:first-child { flex: 1; min-width: 0; min-height: 64px; display: grid; align-content: start; gap: 3px; padding: 12px 0; color: var(--ink); text-align: left; cursor: pointer; }
-.conversationList li > button:first-child:disabled { opacity: .4; cursor: default; }
-.conversationTitle { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 15px; font-weight: 600; }
-.conversationTitle > span { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.conversationTitle svg { width: 16px; height: 16px; color: var(--brand); stroke-width: 2; }
-.conversationList small { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.conversationList time { flex-shrink: 0; padding-top: 14px; font-size: 12px; color: var(--muted); }
-.conversationList li > button:last-child { display: grid; place-items: center; width: 32px; height: 32px; flex-shrink: 0; margin: 7px -8px 0 0; border-radius: 50%; color: var(--muted); cursor: pointer; }
-.conversationList li > button:last-child:hover { color: var(--destructive); }
-.conversationList li > button:last-child svg { width: 15px; height: 15px; }
-.conversationNotice { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 8px 0; color: var(--muted); font-size: 13px; }
-.conversationNotice[role="alert"] { color: var(--destructive); }
-.conversationNotice button { color: var(--brand); font-size: 12px; cursor: pointer; }
 .hubSearch svg { color: var(--brand-accent); }
 .manualHeading { display: flex; align-items: center; justify-content: space-between; margin: 20px 0 12px; }
 .manualHeading h3 { color: var(--muted); font-size: 12px; font-weight: 400; }
@@ -637,14 +506,8 @@
 .chatBubble[data-role="error"] svg { width: 14px; height: 14px; }
 /* Cada registro da resposta e uma linha que abre a pagina dele (o apagado fica so como texto). */
 .chatEntities { list-style: none; margin: 12px 0 0; padding: 0; border-top: 1px solid var(--hairline); }
-.chatDiff { margin: 10px 0 0; padding: 10px 12px; display: grid; gap: 2px; border: 1px solid var(--line); border-radius: 8px; background: var(--secondary); font-family: var(--font-mono); font-size: 12.5px; line-height: 1.5; overflow-x: auto; }
-.chatDiff figcaption { margin-bottom: 4px; color: var(--muted); white-space: nowrap; }
-.chatDiffLine { display: flex; gap: 10px; white-space: nowrap; }
-.chatDiffLine[data-sign="-"] { color: var(--destructive); }
-.chatDiffLine[data-sign="+"] { color: var(--success); }
 .dark .chatDiffLine[data-sign="-"] { color: color-mix(in oklab, var(--destructive) 55%, white); }
 .dark .chatDiffLine[data-sign="+"] { color: color-mix(in oklab, var(--success) 60%, white); }
-.chatDiffLabel { min-width: 8ch; opacity: .75; }
 .chatEntityRow { display: flex; align-items: center; gap: 14px; min-height: 64px; padding: 0; border-bottom: 1px solid var(--hairline); color: var(--ink); }
 a.chatEntityRow { cursor: pointer; }
 a.chatEntityRow:hover .chatEntityName { text-decoration: underline; text-underline-offset: 4px; }
@@ -750,7 +613,6 @@ a.chatEntityRow:hover .chatEntityName { text-decoration: underline; text-underli
   .nutritionGrid p > span { font-size: 12px; margin-left: 3px; }
   .nutritionGrid h3 { font-size: 12px; }
   .detailFooter { margin-top: 29px; }
-  .detailActions { gap: 4px; }
   .missedCheckbox { font-size: 12px; gap: 8px; }
   .editButton { padding: 12px 14px; font-size: 12px; gap: 7px; }
   .detailPrototypeNote { margin-top: 21px; }
@@ -774,7 +636,6 @@ a.chatEntityRow:hover .chatEntityName { text-decoration: underline; text-underli
 
 @media (max-width: 360px) {
   .monthToggle { font-size: 12px; }
-  .dateActions button { min-width: 28px; }
   .headerInner { padding-left: 20px; }
   .filters button { padding-inline: 13px; }
   .detailMain { padding-inline: 20px; }
@@ -785,7 +646,6 @@ a.chatEntityRow:hover .chatEntityName { text-decoration: underline; text-underli
 @media (prefers-reduced-motion: reduce) {
   .event { transition: none; }
   .sectionMenu, .sectionMenu::backdrop { animation: none; }
-  .braidTails line, .braidKnot, .braidDot { animation: none; }
 }
 
 @keyframes chatReveal {
