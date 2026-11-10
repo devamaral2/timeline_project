@@ -25,14 +25,18 @@ import type { AiProcessApi } from "@/lib/ai-process/ai-process";
 import { type AgentChatMessage, useAgentChat } from "@/lib/agent-chat/use-agent-chat";
 import type { AgentChatEntityRef, AgentScreenContext } from "@/lib/api/contracts";
 import { useSessionState } from "@/lib/session/use-session";
+import { speechErrorMessage } from "@/lib/speech/speech-error-messages";
 import { useSpeechRecognition } from "@/lib/speech/use-speech-recognition";
 import { requestAgendaRefresh } from "@/components/agenda/agenda-refresh";
 import type { FreeWindow } from "./hub-events";
 import { HermesSteps } from "./hermes-steps";
 import { CHANGE_LABELS, EntityRows } from "./entity-rows";
 import { ProcessBox } from "./process-box";
-import { HUB_COMMANDS, type HubCommand, type HubCommandId, parseCommand } from "./hub-commands";
+import { HUB_COMMANDS, type HubCommand, type HubCommandId, isStopSpeech, parseCommand } from "./hub-commands";
 import styles from "@/components/shell/shell.module.css";
+
+/** Quanto a voz precisa ficar parada para o que foi dito seguir para a IA. */
+const SILENCE_SEND_MS = 1800;
 
 /** O chat e aberto a partir da agenda; o agente decide se isso importa para o pedido. */
 const AGENDA_CONTEXT: AgentScreenContext = { screen: "agenda" };
@@ -111,6 +115,11 @@ interface AgentChatPanelProps extends ReturnType<typeof useAgendaChat> {
   onClearFreeWindow?: () => void;
   /** O dia de hoje, para dizer "hoje" na janela anexada. */
   todayKey?: string;
+  /**
+   * O chat acabou de ser aberto pela pessoa (o botão da barra, o campo do
+   * cabeçalho, uma janela livre): já começa ouvindo, sem esperar o toque na onda.
+   */
+  listenOnOpen?: boolean;
 }
 
 const COMMAND_ICONS: Record<HubCommandId, typeof ListChecks> = {
@@ -138,16 +147,39 @@ export function AgentChatPanel({
   freeWindow = null,
   onClearFreeWindow,
   todayKey,
+  listenOnOpen = false,
 }: AgentChatPanelProps) {
   const [prompt, setPrompt] = useState("");
   const [activeCommand, setActiveCommand] = useState(0);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const commandsId = useId();
-  const { supported: voiceSupported, listening, interim, error: voiceError, start, stop } = useSpeechRecognition({
-    // A onda transcreve para o campo; quem envia e a pessoa.
+  // Aberto pela pessoa, o chat ja monta ouvindo (se da para falar com a IA agora).
+  const listensOnOpen = listenOnOpen && chat.ready && !chat.pending;
+  const { supported: voiceSupported, listening, heard, error: voiceError, start, stop, cancel } = useSpeechRecognition({
+    // Parar a onda com um toque transcreve para o campo; quem envia e a pessoa.
     onFinalTranscript: (transcript) => setPrompt((current) => (current ? `${current} ${transcript}` : transcript).slice(0, 4000)),
+    // Se a voz parar sozinha, o que foi dito segue para a IA.
+    silenceMs: SILENCE_SEND_MS,
+    onSilenceTranscript: (transcript) => sendSpokenRef.current(transcript),
+    autoStart: listensOnOpen,
   });
+  const sendSpokenRef = useRef<(transcript: string) => void>(() => {});
+  // Pedido feito por voz: depois da resposta o chat volta a escutar, ate a pessoa pedir
+  // para parar, tocar na onda, digitar ou enviar pelo teclado.
+  const [voiceLoop, setVoiceLoop] = useState(false);
+  useEffect(() => {
+    if (!voiceLoop || listening || chat.pending || !chat.ready) return;
+    // Silencio nao encerra o ciclo; qualquer outro erro (permissao, microfone, rede) sim.
+    if (voiceError && voiceError !== speechErrorMessage("no-speech")) {
+      setVoiceLoop(false);
+      return;
+    }
+    start();
+  }, [voiceLoop, listening, chat.pending, chat.ready, voiceError, start]);
+  // O microfone que abriu sozinho nao reclama: silencio ou permissao negada so
+  // viram aviso quando foi a pessoa quem tocou na onda.
+  const [quietVoice, setQuietVoice] = useState(listensOnOpen);
 
   const lastMessageId = chat.messages.at(-1)?.id;
   const progressLabel = chat.pending?.label;
@@ -162,7 +194,9 @@ export function AgentChatPanel({
   const command = onCommand && !listening ? parseCommand(prompt) : null;
   const commandMatches = command?.matches ?? [];
   const highlighted = commandMatches[Math.min(activeCommand, commandMatches.length - 1)];
-  const hasText = Boolean(prompt.trim());
+  // O que esta no campo: o texto digitado e, enquanto o microfone esta aberto, o que ja foi ouvido.
+  const draft = (listening && heard ? `${prompt ? `${prompt} ` : ""}${heard}` : prompt).slice(0, 4000);
+  const hasText = Boolean(draft.trim());
   const lastRole = chat.messages.at(-1)?.role;
   const state: HermesState = listening ? "listening" : chat.pending ? "thinking" : lastRole === "error" ? "error" : "idle";
   const statusText = listening ? "Ouvindo…"
@@ -187,11 +221,32 @@ export function AgentChatPanel({
       return;
     }
     if (!hasText) return;
-    if (chat.send(freeWindow ? requestWithWindow(freeWindow, prompt) : prompt)) {
+    // Enviar pelo teclado ou pelo botao e pedido de texto: o ciclo de voz acaba.
+    if (chat.send(freeWindow ? requestWithWindow(freeWindow, draft) : draft)) {
+      // Enviar o que foi dito fecha o microfone: o pedido ja foi.
+      if (listening) cancel();
+      setVoiceLoop(false);
       updatePrompt("");
       onClearFreeWindow?.();
     }
   }
+
+  // Sem texto que vire comando e sem a IA ocupada, a fala vai direto; senao, cai no campo.
+  sendSpokenRef.current = (transcript) => {
+    if (isStopSpeech(transcript)) {
+      setVoiceLoop(false);
+      return;
+    }
+    const text = (prompt ? `${prompt} ${transcript}` : transcript).slice(0, 4000);
+    if (!parseCommand(text) && chat.send(freeWindow ? requestWithWindow(freeWindow, text) : text)) {
+      setVoiceLoop(true);
+      updatePrompt("");
+      onClearFreeWindow?.();
+      return;
+    }
+    setVoiceLoop(false);
+    updatePrompt(text);
+  };
 
   function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
@@ -296,7 +351,7 @@ export function AgentChatPanel({
       </div>
 
       <div className={styles.chatField}>
-        {voiceError && <p className={styles.hubComposerHint}>{voiceError}</p>}
+        {voiceError && !quietVoice && !voiceLoop && <p className={styles.hubComposerHint}>{voiceError}</p>}
         <p className={field.status} data-state={state} role="status" aria-live="polite">
           <HermesMark state={state} />
           <span>{statusText}</span>
@@ -331,21 +386,26 @@ export function AgentChatPanel({
               aria-label="Mensagem para a IA"
               aria-controls={commandMatches.length > 0 ? commandsId : undefined}
               aria-activedescendant={highlighted ? `${commandsId}-${highlighted.id}` : undefined}
-              value={listening && interim ? `${prompt ? `${prompt} ` : ""}${interim}` : prompt}
-              onChange={(event) => updatePrompt(event.target.value)}
+              value={draft}
+              onChange={(event) => {
+                // Quem digita assume o campo: a primeira tecla desliga o microfone
+                // e o que ja estava escrito (ouvido ou nao) fica como texto.
+                if (listening) cancel();
+                setVoiceLoop(false);
+                updatePrompt(event.target.value.slice(0, 4000));
+              }}
               onKeyDown={onKeyDown}
               placeholder={freeWindow ? "Diga o que quer fazer nesse tempo" : "Diga ou escreva o que precisa"}
               maxLength={4000}
               autoComplete="off"
               enterKeyHint="send"
               disabled={!chat.ready}
-              readOnly={listening}
             />
             {voiceSupported ? (
               <button
                 type="button"
                 className={field.voice}
-                onClick={listening ? stop : start}
+                onClick={listening ? () => { setVoiceLoop(false); stop(); } : () => { setQuietVoice(false); start(); }}
                 disabled={!chat.ready || Boolean(chat.pending)}
                 aria-pressed={listening}
                 aria-label={listening ? "Parar de transcrever" : "Transcrever o que eu disser"}

@@ -10,6 +10,8 @@ import { WeekStrip } from "@/components/events/WeekStrip";
 import { requestHubOpen } from "@/components/hub/hub-events";
 import page from "@/components/ui/page.module.css";
 import { authedFetch } from "@/lib/api/authed-fetch";
+import { slideIn } from "@/lib/motion/enter";
+import { reflow } from "@/lib/motion/view-transition";
 import { briefDate, weekdayDate } from "@/lib/dates/day-labels";
 import type { TimelineEventCardDto, TimelineEventPageDto } from "@/lib/api/contracts";
 import { useNow } from "@/lib/events/use-now";
@@ -28,6 +30,9 @@ type ViewMode = AgendaViewMode;
 
 /** Onde a escolha "mostrar o tempo livre" fica guardada, por navegador. */
 const FREE_TIME_STORAGE_KEY = "braid-agenda-free-time";
+
+/** Quanto a linha recém-chegada fica marcada, o tempo do banho escorrer. */
+const FRESH_MS = 2000;
 
 /** Dias carregados a cada vez que a rolagem infinita chega a uma borda. */
 const INFINITE_STEP_DAYS = 7;
@@ -76,6 +81,12 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
   const [dayRange, setDayRange] = useState({ before: 0, after: 0 });
   const [monthOpen, setMonthOpen] = useState(false);
   const [browsingMonth, setBrowsingMonth] = useState(EXAMPLE_TODAY);
+  const [freshIds, setFreshIds] = useState<ReadonlySet<string>>(() => new Set());
+  // O que já está na tela, para a recarga saber o que é novo; e o último dia
+  // escolhido, para o seguinte entrar pelo lado certo.
+  const eventsRef = useRef(eventsByDay);
+  eventsRef.current = eventsByDay;
+  const shownDay = useRef(todayKey);
   const controlsRef = useRef<HTMLDivElement>(null);
   const daysRef = useRef<HTMLElement>(null);
   const touchY = useRef<number | null>(null);
@@ -95,7 +106,8 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
   }, []);
 
   function changeShowFreeTime(show: boolean) {
-    setShowFreeTime(show);
+    // As linhas de tempo livre somem ou voltam e as outras deslizam para o lugar.
+    reflow(daysRef.current, () => setShowFreeTime(show));
     try {
       window.localStorage.setItem(FREE_TIME_STORAGE_KEY, show ? "on" : "off");
     } catch {}
@@ -133,11 +145,25 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
         if (cancelled) return;
         // Um evento que veio da noite anterior tambem tem chave fora da janela; esse dia
         // so e completo quando a propria janela dele carrega.
-        const next = Object.fromEntries(
-          Object.entries(agendaEventsByDay(loaded)).filter(([dayKey]) => dayKey >= rangeStart && dayKey <= rangeEnd),
-        );
-        setEventsByDay(current => ({ ...current, ...next }));
-        setLoadState("idle");
+        // Todo dia da janela ganha a sua chave, mesmo vazio: é ela que diz que o dia já chegou.
+        const byDay = agendaEventsByDay(loaded);
+        const next: Record<string, ExampleEvent[]> = {};
+        for (let dayKey = rangeStart; dayKey <= rangeEnd; dayKey = shiftDayKey(dayKey, 1)) next[dayKey] = byDay[dayKey] ?? [];
+        // Numa recarga, o evento que não estava no dia é novo (o Hermes acabou de criar).
+        const known = eventsRef.current;
+        const fresh = Object.entries(next).flatMap(([dayKey, events]) => {
+          const before = known[dayKey];
+          if (!before) return [];
+          const ids = new Set(before.map((event) => event.id));
+          return events.flatMap((event) => event.id && !ids.has(event.id) ? [event.id] : []);
+        });
+        const apply = () => {
+          setEventsByDay(current => ({ ...current, ...next }));
+          setLoadState("idle");
+          if (fresh.length > 0) setFreshIds(new Set(fresh));
+        };
+        if (fresh.length > 0) reflow(daysRef.current, apply);
+        else apply();
       } catch {
         if (!cancelled) setLoadState("failed");
       }
@@ -146,6 +172,12 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
     void loadEvents();
     return () => { cancelled = true; };
   }, [rangeEnd, rangeStart, ready, refreshVersion, user, userId]);
+
+  useEffect(() => {
+    if (freshIds.size === 0) return;
+    const timer = window.setTimeout(() => setFreshIds(new Set()), FRESH_MS);
+    return () => window.clearTimeout(timer);
+  }, [freshIds]);
 
   function selectDay(dayKey: string) {
     setSelectedDay(dayKey);
@@ -170,6 +202,10 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
     const strip = daysRef.current;
     if (mode !== "day" || !strip) return;
     strip.scrollLeft = weekOf(navigation.dayKey).indexOf(navigation.dayKey) * strip.clientWidth;
+    // O dia escolhido entra no sentido do tempo: o seguinte pela direita, o anterior pela esquerda.
+    const previous = shownDay.current;
+    shownDay.current = navigation.dayKey;
+    if (previous !== navigation.dayKey) slideIn(strip.querySelector(`[data-agenda-day="${navigation.dayKey}"]`), navigation.dayKey > previous ? 1 : -1);
   }, [mode, navigation, stripMounted]);
 
   // No modo por dia, o carrossel tem a altura do dia visível, não a do dia mais longo da semana.
@@ -287,7 +323,7 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
     <main id="conteudo" className={page.frame}>
       <section className={`${page.lead} ${styles.lead}`} aria-label="O dia em foco">
         <div className={styles.dateRow}>
-          <h1 className={page.eyebrow}>{weekdayDate(selectedDay)}</h1>
+          <h1 key={selectedDay} className={`${page.eyebrow} ${styles.dateRoll}`}>{weekdayDate(selectedDay)}</h1>
           <div className={styles.phoneOptions}><AgendaOptions {...options} withModes align="end" /></div>
         </div>
 
@@ -359,7 +395,7 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
             if (dayKey) setSelectedDay(dayKey);
           }}
         >
-          {pageDays.map((dayKey) => <AgendaDay key={dayKey} dayKey={dayKey} now={now} tasks={tasks} missedEvents={missedEvents} onSelectEvent={setSelectedEvent} onPlanFreeWindow={(freeWindow) => requestHubOpen({ freeWindow })} events={userId ? eventsByDay[dayKey] ?? [] : undefined} userId={userId} todayKey={todayKey} hideWhenEmpty={mode === "list"} showHeading={mode === "list"} showFreeTime={showFreeTime} />)}
+          {pageDays.map((dayKey) => <AgendaDay key={dayKey} dayKey={dayKey} now={now} tasks={tasks} missedEvents={missedEvents} onSelectEvent={setSelectedEvent} onPlanFreeWindow={(freeWindow) => requestHubOpen({ freeWindow })} events={userId ? eventsByDay[dayKey] ?? [] : undefined} userId={userId} todayKey={todayKey} hideWhenEmpty={mode === "list"} showHeading={mode === "list"} showFreeTime={showFreeTime} loading={Boolean(userId) && loadState === "loading" && !(dayKey in eventsByDay)} selected={mode === "day" && dayKey === selectedDay} freshIds={freshIds} />)}
         </section>
         {userId && loadState === "loading" ? <p role="status" className={styles.note}>Carregando sua agenda…</p> : null}
         {userId && loadState === "failed" ? <p role="alert" className={styles.note}>Não foi possível carregar a agenda. Tente novamente.</p> : null}

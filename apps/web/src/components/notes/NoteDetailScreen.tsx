@@ -3,7 +3,7 @@
 import { FileText, ListChecks, Pencil, Trash2, Unlink } from "lucide-react";
 import { formatTime } from "@repo/timeline";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useMotionRouter } from "@/components/shell/navigation-motion";
 import {
   ActionPill, BackLink, DetailActions, DetailFact, DetailFacts, DetailFrame, DetailHeading, DetailMenu, DetailMessage,
   DetailNav, DetailOrigin, DetailSection, LinkList, LinkRow, MenuItem, OriginLink, TagPills, detailIcon,
@@ -31,7 +31,7 @@ import { agentFileKindLabel, isAgentFileNote } from "@/lib/notes/agent-file-note
  * campo do Hermes.
  */
 export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: string }) {
-  const router = useRouter();
+  const router = useMotionRouter();
   const now = useNow();
   const [note, setNote] = useState<NoteDto | null>(null);
   const [error, setError] = useState(false);

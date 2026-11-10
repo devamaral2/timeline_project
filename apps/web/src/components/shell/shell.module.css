@@ -141,6 +141,9 @@
 
 .weekday { color: var(--muted); font-size: 12px; margin-bottom: 4px; }
 .bottomNav, .bottomFade { display: none; }
+/* O circulo que voa entre a barra inferior e o icone de status do campo. */
+.hermesFlyer { position: fixed; z-index: 21; display: grid; place-items: center; border-radius: 50%; background: var(--brand); color: var(--background); pointer-events: none; visibility: hidden; will-change: transform; }
+.hermesFlyer svg { width: 58%; height: 58%; }
 .sectionMenu { display: none; }
 
 /* Ações compactas da agenda. */
@@ -388,11 +391,20 @@
      atras da barra o conteudo se apaga no chao. */
   .bottomFade { display: block; position: fixed; z-index: 19; left: 0; right: 0; bottom: 0; height: calc(140px + env(safe-area-inset-bottom)); background: linear-gradient(to bottom, transparent, var(--background) 58%); pointer-events: none; }
   .bottomNav { position: fixed; z-index: 20; left: 16px; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 4px; padding: 6px; border: 1px solid var(--line); border-radius: 33px; background: var(--card); }
-  .bottomNav > button, .bottomNav > a { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; height: 52px; border-radius: 26px; color: var(--muted); font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; }
-  .bottomNav > button > span, .bottomNav > a > span { display: none; }
-  .bottomNav > [aria-current="page"] { flex: 1.8; background: var(--primary); color: var(--primary-foreground); }
-  .bottomNav > [aria-current="page"] > span { display: inline; }
-  .bottomNav svg { width: 24px; height: 24px; stroke-width: 1.75; }
+  /* A pilula da tela atual e uma so e desliza ate a secao escolhida
+     (`--nav-index`, 0 a 2). As tres secoes dividem o que sobra do circulo do
+     Hermes (52) e dos respiros (76 ao todo) em 1 : 1,8 : 1 — a atual e a larga. */
+  .bottomNav::before { content: ""; position: absolute; top: 6px; left: calc(6px + var(--nav-index, 1) * ((100% - 76px) / 3.8 + 4px)); width: calc((100% - 76px) * 1.8 / 3.8); height: 52px; border-radius: 26px; background: var(--primary); transition: left 300ms var(--ease-out), opacity 200ms; }
+  .bottomNav > button, .bottomNav > a { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; height: 52px; border-radius: 26px; color: var(--muted); font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: flex-grow 300ms var(--ease-out), color var(--duration-fast); }
+  /* O nome so aparece na tela atual. Ao trocar, o antigo sobe e sai e o novo
+     entra por baixo, dentro da altura da linha; a margem negativa cancela o
+     respiro do icone enquanto o nome nao ocupa lugar. */
+  .bottomNav > button > span, .bottomNav > a > span { display: inline-block; height: 20px; max-width: 0; margin-left: -8px; overflow: hidden; line-height: 20px; transition: max-width 300ms var(--ease-out), margin-left 300ms var(--ease-out); }
+  .bottomNav > button > span > i, .bottomNav > a > span > i { display: inline-block; font-style: normal; opacity: 0; transform: translateY(-100%); transition: transform var(--duration-fast) var(--ease-in), opacity var(--duration-fast) linear; }
+  .bottomNav > [aria-current="page"] { flex: 1.8; color: var(--primary-foreground); }
+  .bottomNav > [aria-current="page"] > span { max-width: 96px; margin-left: 0; }
+  .bottomNav > [aria-current="page"] > span > i { opacity: 1; transform: none; animation: navLabelIn 280ms var(--ease-out) 110ms backwards; }
+  .bottomNav svg { width: 24px; height: 24px; stroke-width: 1.75; transition: width 300ms var(--ease-out), height 300ms var(--ease-out); }
   .bottomNav > [aria-current="page"] svg { width: 22px; height: 22px; }
   .bottomNav > .commandButton { flex: none; width: 52px; height: 52px; border-radius: 50%; background: var(--brand); color: var(--background); }
   .bottomNav > .commandButton svg { width: 30px; height: 30px; }
@@ -455,7 +467,7 @@
 .createActions svg { width: 20px; height: 20px; color: var(--muted); }
 
 .chatCommands { list-style: none; margin-bottom: 0; padding: 0 0 4px; display: grid; gap: 2px; }
-.chatCommands button { width: calc(100% + 24px); margin: 0 -12px; display: flex; align-items: center; gap: 14px; min-height: 56px; padding: 8px 12px; border-radius: 12px; color: var(--ink); text-align: left; cursor: pointer; }
+.chatCommands button { width: calc(100% + 24px); margin: 0 -12px; display: flex; align-items: center; gap: 14px; min-height: 56px; padding: 8px 12px; border-radius: var(--radius-xs); color: var(--ink); text-align: left; cursor: pointer; }
 .chatCommands button[aria-current="true"] { background: var(--accent); }
 .chatCommands svg { color: var(--muted); }
 .chatCommands [aria-current="true"] svg { color: var(--ink); }
@@ -495,13 +507,14 @@
 .chatLog { list-style: none; margin: 0 0 8px; padding: 20px 4px 0; display: flex; flex-direction: column; gap: 20px; min-width: 0; font-size: 15px; line-height: 24px; }
 .chatBubble { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
 .chatBubble p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
-/* O pedido e um balao a direita; a resposta e texto solto. */
-.chatBubble[data-role="user"] { align-self: flex-end; max-width: 84%; padding: 12px 16px; border: 1px solid var(--line); border-radius: 20px 20px 6px 20px; background: var(--background); line-height: 22px; }
+/* A conversa e reta, ao modo do Hermes: o pedido e um retangulo de largura inteira
+   (fio e fundo do campo), nao um balao; a resposta e texto solto. O campo segue redondo. */
+.chatBubble[data-role="user"] { margin: 0 -4px; padding: 10px 14px; border: 1px solid var(--line); border-radius: var(--radius-xs); background: var(--background); line-height: 22px; }
 .chatBubble[data-role="assistant"] { padding: 0; }
 .chatProse { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; min-width: 0; text-wrap: pretty; }
 .chatBubble[data-role="user"] p { white-space: pre-wrap; }
 .chatProse p { white-space: pre-line; overflow-wrap: anywhere; }
-.chatBubble[data-role="error"] { align-self: flex-start; max-width: 92%; padding: 10px 14px; border: 1px solid color-mix(in oklab, var(--destructive) 40%, transparent); border-radius: 16px; color: var(--destructive); font-size: 13px; line-height: 20px; }
+.chatBubble[data-role="error"] { margin: 0 -4px; padding: 10px 14px; border: 1px solid color-mix(in oklab, var(--destructive) 40%, transparent); border-radius: var(--radius-xs); color: var(--destructive); font-size: 13px; line-height: 20px; }
 .chatBubble[data-role="error"] button { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; margin-top: 4px; padding: 0; color: var(--ink); font-size: 13px; font-weight: 600; cursor: pointer; }
 .chatBubble[data-role="error"] svg { width: 14px; height: 14px; }
 /* Cada registro da resposta e uma linha que abre a pagina dele (o apagado fica so como texto). */
@@ -511,7 +524,7 @@
 .chatEntityRow { display: flex; align-items: center; gap: 14px; min-height: 64px; padding: 0; border-bottom: 1px solid var(--hairline); color: var(--ink); }
 a.chatEntityRow { cursor: pointer; }
 a.chatEntityRow:hover .chatEntityName { text-decoration: underline; text-underline-offset: 4px; }
-.shell .chatEntityRow > svg:first-child { box-sizing: border-box; width: 40px; height: 40px; padding: 10px; border: 1px solid var(--line); border-radius: 12px; color: var(--muted); stroke-width: 1.75; }
+.shell .chatEntityRow > svg:first-child { box-sizing: border-box; width: 40px; height: 40px; padding: 10px; border: 1px solid var(--line); border-radius: var(--radius-xs); color: var(--muted); stroke-width: 1.75; }
 .chatEntityText { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .chatEntityName { overflow: hidden; font-size: 15px; font-weight: 600; line-height: 22px; text-overflow: ellipsis; white-space: nowrap; }
 .chatEntityChange { font-size: 12px; line-height: 18px; color: var(--muted); }
@@ -582,18 +595,41 @@ a.chatEntityRow:hover .chatEntityName { text-decoration: underline; text-underli
   .sectionMenu.sectionMenu[data-hub-view] { z-index: 19; inset: 0; height: auto; max-height: none; padding: 0 16px calc(98px + env(safe-area-inset-bottom)); border-radius: 0; background: var(--background); animation: none; }
   .sectionMenu.sectionMenu[data-hub-view="chat"] { overflow: hidden; }
   .sectionMenu[data-hub-view] .sheetHandle { display: none; }
-  .sectionMenu[data-hub-view="chat"] .chatField form { background: var(--card); }
+  .sectionMenu[data-hub-view="chat"] .chatField form, .sectionMenu[data-hub-view="chat"] .chatBubble[data-role="user"] { background: var(--card); }
   .sectionMenu[data-hub-view="chat"] [data-chat-control] { display: none; }
   .sectionMenu[data-hub-view="chat"] .assistantWelcome h2 { font-size: 38px; line-height: 42px; }
   .shell:has(.sectionMenu[open]) .bottomFade { display: none; }
-  .shell:has(.sectionMenu[open][data-hub-view]) .bottomNav > a, .shell:has(.sectionMenu[open][data-hub-view]) .bottomNav > button { flex: 1; border: 1px solid transparent; font-weight: 500; }
-  .shell:has(.sectionMenu[open][data-hub-view]) .bottomNav > a > span, .shell:has(.sectionMenu[open][data-hub-view]) .bottomNav > button > span { display: inline; }
-  .shell:has(.sectionMenu[open][data-hub-view]) .bottomNav > [aria-current="page"] { border-color: var(--input); background: transparent; color: var(--ink); font-weight: 600; }
-  .shell:has(.sectionMenu[open][data-hub-view]) .bottomNav svg { width: 20px; height: 20px; }
-  .shell:has(.sectionMenu[open][data-hub-view]) .bottomNav > .commandButton { flex: none; width: 52px; padding: 0; border: 0; background: var(--muted); color: var(--background); }
-  .shell:has(.sectionMenu[open][data-hub-view]) .bottomNav > .commandButton svg { width: 24px; height: 24px; }
+  .bottomNav[data-hub-open] > a, .bottomNav[data-hub-open] > button { flex: 1; border: 1px solid transparent; font-weight: 500; }
+  .bottomNav[data-hub-open] > a > span, .bottomNav[data-hub-open] > button > span { max-width: 96px; margin-left: 0; }
+  .bottomNav[data-hub-open] > a > span > i, .bottomNav[data-hub-open] > button > span > i { opacity: 1; transform: none; animation: none; }
+  /* Com o chat aberto nenhuma secao e preenchida: a pilula se apaga e a de onde se veio fica so contornada. */
+  .bottomNav[data-hub-open]::before { opacity: 0; }
+  .bottomNav[data-hub-open] > [aria-current="page"] { border-color: var(--input); color: var(--ink); font-weight: 600; }
+  .bottomNav[data-hub-open] svg { width: 20px; height: 20px; }
+  /* Com o chat aberto, o lugar do botao do Hermes e do X que fecha o painel. */
+  .bottomNav > .commandButton[data-close] { flex: none; width: 52px; padding: 0; border: 0; background: var(--muted); color: var(--background); }
+  .bottomNav > .commandButton[data-close] svg { width: 24px; height: 24px; }
 
-  .shell:has(:is(.detailMain, [data-detail])) .header, .shell:has(:is(.detailMain, [data-detail])) .bottomNav, .shell:has(:is(.detailMain, [data-detail])) .bottomFade { display: none; }
+  /* O voo do botao do Hermes (`hermes-flight.ts`): o circulo sai da barra e
+     pousa como o icone de status do campo, que so aparece no pouso; o painel
+     entra por baixo dele e o X surge no lugar que o botao deixou. Na volta, o
+     painel se apaga, o X some e o circulo retorna para a barra. */
+  .bottomNav[data-flight] > a, .bottomNav[data-flight] > button:not(.commandButton) { transition: flex-grow 260ms cubic-bezier(.2,.7,.2,1), background-color 200ms, color 200ms, border-color 200ms; }
+  .bottomNav[data-flight="out"] > a, .bottomNav[data-flight="out"] > button:not(.commandButton) { transition-duration: 130ms, 100ms, 100ms, 100ms; }
+  .bottomNav[data-flight="out"] > * > span { animation: flightCome 100ms 60ms backwards; }
+  .bottomNav[data-flight="out"] > .commandButton { animation: closeEnter 120ms 70ms cubic-bezier(.2,.7,.2,1) backwards; }
+  .bottomNav[data-flight="back"] > .commandButton { animation: flightAway 200ms forwards; }
+  .sectionMenu.sectionMenu[data-hub-view][data-flight="out"] { animation: flightCome 137ms 73ms backwards; }
+  .sectionMenu.sectionMenu[data-hub-view][data-flight="back"] { animation: flightAway 234ms forwards; }
+  .sectionMenu[data-flight] .chatField [data-hermes-mark] { visibility: hidden; }
+  .sectionMenu[data-flight="out"] .chatField > form, .sectionMenu[data-flight="out"] .chatField > p > span:not([data-hermes-mark]) { animation: flightRise 137ms 73ms ease-out backwards; }
+  /* Entrar num detalhe: a barra se apaga enquanto o botao voa para o campo do
+     registro; ao sair, ela volta e o botao pousa de novo na ponta. */
+  .bottomNav[data-flight="dock"] { animation: flightAway 126ms forwards; pointer-events: none; }
+  .bottomNav[data-flight="undock"] { animation: flightCome 216ms 144ms backwards; }
+  .bottomNav[data-flight="dock"] > .commandButton, .bottomNav[data-flight="undock"] > .commandButton { visibility: hidden; }
+
+  .shell:has(:is(.detailMain, [data-detail])) .header, .shell:has(:is(.detailMain, [data-detail])) .bottomNav:not([data-flight="dock"]), .shell:has(:is(.detailMain, [data-detail])) .bottomFade { display: none; }
   .detailMain { padding: 20px 25px 36px; }
   .detailNavigation { margin-bottom: 35px; }
   .detailNavigation .backLink { width: 40px; height: 40px; }
@@ -685,8 +721,28 @@ a.chatEntityRow:hover .chatEntityName { text-decoration: underline; text-underli
   50% { opacity: .45; }
 }
 
+@keyframes flightCome { from { opacity: 0; } }
+@keyframes navLabelIn { from { opacity: 0; transform: translateY(100%); } }
+@keyframes flightAway { to { opacity: 0; } }
+@keyframes flightRise { from { transform: translateY(14px); } }
+@keyframes closeEnter { from { opacity: 0; transform: scale(.6); } }
+
 @keyframes backdropEnter {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 
+
+/*
+ * Numa troca de tela (`html[data-nav]`, ver `lib/motion`) o que e do shell tem
+ * nome proprio e por isso fica parado enquanto o conteudo se move (a pilula da
+ * barra desliza por conta propria, ver `.bottomNav::before`). Os nomes so
+ * existem durante a troca, para nao criar camadas no resto do tempo.
+ */
+@media (min-width: 721px) {
+  :global(html[data-nav]) .header { view-transition-name: shell-header; }
+}
+@media (max-width: 720px) {
+  :global(html[data-nav]) .bottomFade { view-transition-name: shell-fade; }
+  :global(html[data-nav]) .bottomNav { view-transition-name: shell-nav; }
+}

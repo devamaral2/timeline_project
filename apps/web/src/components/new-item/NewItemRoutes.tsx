@@ -1,7 +1,8 @@
 "use client";
 
 import { ArrowLeft } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { useMotionRouter } from "@/components/shell/navigation-motion";
 import { type ComponentType, type ReactNode, useEffect, useState } from "react";
 import { type EditItemFormProps, NewEventForm, type NewItemFormProps, NewNoteForm, NewTaskForm } from "./new-item-forms";
 import { authedFetch } from "@/lib/api/authed-fetch";
@@ -14,7 +15,7 @@ import styles from "@/components/shell/shell.module.css";
  * criado; a seta volta à lista. `?nome=` preenche o título.
  */
 function NewItemRoute({ userId, title, listPath, Form }: { userId: string; title: string; listPath: string; Form: ComponentType<NewItemFormProps> }): ReactNode {
-  const router = useRouter();
+  const router = useMotionRouter();
   const initialName = useSearchParams().get("nome") ?? undefined;
   return (
     <main id="conteudo" className={styles.newEventPage}>
@@ -38,7 +39,7 @@ export const NewEventRoute = ({ userId }: { userId: string }) => <NewItemRoute u
 function EditItemRoute<Item>({ userId, title, apiPath, detailPath, Form }: {
   userId: string; title: string; apiPath: string; detailPath: string; Form: ComponentType<EditItemFormProps<Item>>;
 }): ReactNode {
-  const router = useRouter();
+  const router = useMotionRouter();
   const [item, setItem] = useState<Item | null>(null);
   const [failed, setFailed] = useState(false);
   useEffect(() => {

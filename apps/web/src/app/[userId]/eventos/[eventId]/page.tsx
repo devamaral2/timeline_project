@@ -2,7 +2,7 @@
 
 import { CalendarX, Pencil, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useMotionRouter } from "@/components/shell/navigation-motion";
 import {
   ActionPill, BackButton, BackLink, DetailActions, DetailFact, DetailFacts, DetailFrame, DetailMenu, DetailMessage,
   DetailNav, DetailOrigin, DetailSection, LinkList, LinkMessage, MenuItem, Prose, Reminders,
@@ -29,7 +29,7 @@ import styles from "./event-details.module.css";
 
 export default function EventPage({ params }: { params: Promise<{ userId: string; eventId: string }> }) {
   const now = useNow();
-  const router = useRouter();
+  const router = useMotionRouter();
   const [eventId, setEventId] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [event, setEvent] = useState<EventDetailDto | null>(null);

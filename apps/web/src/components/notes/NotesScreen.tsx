@@ -1,8 +1,9 @@
 "use client";
 
-import { ChevronDown, FileText, SlidersHorizontal } from "lucide-react";
+import { ChevronDown, FileText } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ICON_STROKE_WIDTH } from "@/components/events/event-visuals";
+import { OptionsGlyph } from "@/components/ui/options-glyph";
 import page from "@/components/ui/page.module.css";
 import { authedFetch } from "@/lib/api/authed-fetch";
 import type { NoteDto } from "@/lib/api/contracts";
@@ -12,7 +13,9 @@ import { tagAccentStyle } from "@/lib/tags/tag-color";
 import { hasPendingMeal } from "@/lib/notes/meal-generation";
 import { usePendingMealRefresh } from "@/lib/notes/use-pending-meal-refresh";
 import { agendaRefreshEvent } from "@/components/agenda/agenda-refresh";
-import { NoteCard, noteTypeIcon } from "./NoteCard";
+import { ListSkeleton } from "@/components/ui/list-skeleton";
+import { NoteCard } from "./NoteCard";
+import { noteTypeIcon } from "./NoteSheet";
 import styles from "./notes.module.css";
 
 function toggleIn<T>(list: T[], value: T): T[] {
@@ -157,7 +160,7 @@ export function NotesScreen({ userId }: { userId: string }) {
                 aria-haspopup="dialog"
                 onClick={() => setOptionsOpen((open) => !open)}
               >
-                <SlidersHorizontal aria-hidden />
+                <OptionsGlyph />
                 {activeFilters > 0 ? <span className={styles.optionsBadge} aria-hidden="true">{activeFilters}</span> : null}
               </button>
               {optionsOpen ? <div className={styles.optionsPanel} role="dialog" aria-label="Opções de visualização">{filters}</div> : null}
@@ -171,7 +174,7 @@ export function NotesScreen({ userId }: { userId: string }) {
         {error ? (
           <p role="alert" className={styles.message}>Não foi possível carregar as notas.<button type="button" className={styles.retry} onClick={retry}>Tentar de novo</button></p>
         ) : !notes ? (
-          <div aria-busy="true"><p role="status" className={styles.message}>Carregando notas…</p></div>
+          <ListSkeleton label="Carregando notas…" />
         ) : notes.length === 0 ? (
           <div className={styles.empty}>
             <FileText aria-hidden />

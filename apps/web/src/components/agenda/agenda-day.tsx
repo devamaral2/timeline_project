@@ -4,6 +4,8 @@ import Link from "next/link";
 import type { CSSProperties } from "react";
 import { ICON_STROKE_WIDTH, visualForItemType } from "@/components/events/event-visuals";
 import type { FreeWindow } from "@/components/hub/hub-events";
+import { ListSkeleton } from "@/components/ui/list-skeleton";
+import { vtName } from "@/lib/motion/view-transition";
 import { tagAccentStyle } from "@/lib/tags/tag-color";
 import { EXAMPLE_TODAY, type ExampleEvent, type ExampleTask, exampleEventsOn } from "./agenda-examples";
 import { spanForExample, timingForExample } from "./agenda-timing";
@@ -45,7 +47,7 @@ function FreeTimeRow({ slot, dayKey, now, onPlan }: { slot: FreeSlot; dayKey: st
   const position = now >= slot.endMs ? "past" : now >= slot.startMs ? "now" : "upcoming";
   const grade = freeWindowGrade(slot.minutes);
   return (
-    <li>
+    <li style={{ "--vt": vtName("agenda", `${dayKey}-livre-${slot.startMs}`) } as CSSProperties}>
       <button
         type="button" className={styles.freeRow} data-free-time data-time-position={position}
         style={{ "--free-low": `${grade.low}%`, "--free-high": `${grade.high}%` } as CSSProperties}
@@ -63,7 +65,7 @@ function FreeTimeRow({ slot, dayKey, now, onPlan }: { slot: FreeSlot; dayKey: st
   );
 }
 
-export function AgendaDay({ dayKey, now, tasks, missedEvents, onSelectEvent, onPlanFreeWindow, events: suppliedEvents, userId, todayKey = EXAMPLE_TODAY, hideWhenEmpty = false, showHeading = true, showFreeTime = true }: {
+export function AgendaDay({ dayKey, now, tasks, missedEvents, onSelectEvent, onPlanFreeWindow, events: suppliedEvents, userId, todayKey = EXAMPLE_TODAY, hideWhenEmpty = false, showHeading = true, showFreeTime = true, loading = false, selected = false, freshIds }: {
   dayKey: string;
   now: number;
   tasks: Record<string, ExampleTask>;
@@ -76,18 +78,24 @@ export function AgendaDay({ dayKey, now, tasks, missedEvents, onSelectEvent, onP
   hideWhenEmpty?: boolean;
   showHeading?: boolean;
   showFreeTime?: boolean;
+  /** O dia ainda não chegou da API: linhas-fantasma no lugar do "dia livre". */
+  loading?: boolean;
+  /** O dia em foco: só as linhas dele deslizam quando a lista muda. */
+  selected?: boolean;
+  /** Eventos que acabaram de aparecer numa recarga; a linha deles chega com o banho. */
+  freshIds?: ReadonlySet<string>;
 }) {
   const events = suppliedEvents ?? exampleEventsOn(dayKey);
   if (hideWhenEmpty && events.length === 0) return null;
   const rows = agendaRowsOf(events, dayKey, showFreeTime);
 
   return (
-    <section className={styles.dayGroup} data-agenda-day={dayKey} aria-label={mediumDate(dayKey)}>
+    <section className={styles.dayGroup} data-agenda-day={dayKey} data-selected={selected || undefined} aria-label={mediumDate(dayKey)}>
       {showHeading ? <div className={styles.dayHeading}>
         <h2>{relativeDayLabel(dayKey, todayKey)}<span>{shortDate(dayKey).toLowerCase()}</span></h2>
         <span>{events.length} {events.length === 1 ? "evento" : "eventos"}</span>
       </div> : null}
-      {events.length === 0 ? <div className={styles.freeDay}><p>Um dia livre, do seu jeito.</p><span>Sua agenda está aberta para o que faz bem a você.</span></div> : (
+      {events.length === 0 && loading ? <ListSkeleton /> : events.length === 0 ? <div className={styles.freeDay}><p>Um dia livre, do seu jeito.</p><span>Sua agenda está aberta para o que faz bem a você.</span></div> : (
         <ol className={styles.list}>
           {rows.map((row) => {
             if (row.kind === "free") return <FreeTimeRow key={`free-${row.slot.startMs}`} slot={row.slot} dayKey={dayKey} now={now} onPlan={onPlanFreeWindow} />;
@@ -98,7 +106,7 @@ export function AgendaDay({ dayKey, now, tasks, missedEvents, onSelectEvent, onP
             const timing = timingForExample(event, dayKey, now);
             const tags = [...(event.tag ? [event.tag] : []), ...(event.tags ?? [])];
             return (
-              <li key={event.id ?? `${event.name}-${index}`}>
+              <li key={event.id ?? `${event.name}-${index}`} data-fresh={(event.id && freshIds?.has(event.id)) || undefined} style={{ "--vt": vtName("agenda", `${dayKey}-${event.id ?? index}`) } as CSSProperties}>
                 <article className={styles.row} data-type={event.type} data-time-position={timing.position} data-missed={missed || undefined}>
                   <span className={styles.tile}><Icon strokeWidth={ICON_STROKE_WIDTH} aria-label={label} /></span>
                   <div className={styles.rowText}>

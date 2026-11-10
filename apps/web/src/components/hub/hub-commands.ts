@@ -43,3 +43,10 @@ export function parseCommand(input: string): CommandQuery | null {
   );
   return matches.length > 0 ? { matches, argument: rest.trim() } : null;
 }
+
+const STOP_SPEECH = /^(pode |por favor )?(para|parar|pare|chega|encerrar|encerra|cancelar|cancela|stop)( de (ouvir|escutar))?( por favor)?$/;
+
+/** A fala que pede para o chat parar de escutar ("para", "pode parar", "chega"): nao vai para a IA. */
+export function isStopSpeech(transcript: string): boolean {
+  return STOP_SPEECH.test(fold(transcript).replace(/[^\p{L}\p{N}\s]/gu, " ").replace(/\s+/g, " ").trim());
+}

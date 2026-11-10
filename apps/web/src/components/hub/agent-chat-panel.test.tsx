@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { beforeEach, expect, test, vi } from "vitest";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import type { AiProcessDto } from "@/lib/api/contracts";
 import type { AgentChatEntityRef } from "@/lib/api/contracts";
 import { AgentChatPanel, agentEntityHref, requestWithWindow, useAgendaChat } from "./agent-chat-panel";
@@ -32,7 +32,9 @@ function Harness({
   freeWindow,
   onClearFreeWindow,
   todayKey,
+  listenOnOpen,
 }: {
+  listenOnOpen?: boolean;
   freeWindow?: FreeWindow;
   onClearFreeWindow?: () => void;
   todayKey?: string;
@@ -46,7 +48,7 @@ function Harness({
     processApi: { start: processStart, get: processGet } as never,
     automationApi: { start: vi.fn(), get: vi.fn() } as never,
   });
-  return <AgentChatPanel {...agenda} onCommand={onCommand} onClose={onClose} entityHref={entityHref} freeWindow={freeWindow} onClearFreeWindow={onClearFreeWindow} todayKey={todayKey} />;
+  return <AgentChatPanel {...agenda} onCommand={onCommand} onClose={onClose} entityHref={entityHref} freeWindow={freeWindow} onClearFreeWindow={onClearFreeWindow} todayKey={todayKey} listenOnOpen={listenOnOpen} />;
 }
 
 function ask(text: string) {
@@ -213,4 +215,189 @@ test("an unknown slash command is just a message", () => {
   expect(screen.queryByRole("list", { name: "Comandos" })).not.toBeInTheDocument();
   expect(onCommand).not.toHaveBeenCalled();
   expect(processStart).toHaveBeenCalledWith(expect.objectContaining({ text: "/xyz o que é isso?" }));
+});
+
+/** O microfone do navegador, de mentira: guarda as sessões abertas e deixa o teste dizer o que foi ouvido. */
+class FakeSpeechRecognition {
+  static instances: FakeSpeechRecognition[] = [];
+  aborted = false;
+  onresult: ((event: SpeechRecognitionEvent) => void) | null = null;
+  onerror: ((event: SpeechRecognitionErrorEvent) => void) | null = null;
+  onend: (() => void) | null = null;
+  constructor() { FakeSpeechRecognition.instances.push(this); }
+  start(): void {}
+  // Como o Chrome: ao parar, fecha a frase que estava saindo e so depois avisa o fim.
+  stop(): void {
+    if (this.lastHeard) this.onresult?.({ resultIndex: 0, results: [Object.assign([{ transcript: this.lastHeard }], { isFinal: true })] } as unknown as SpeechRecognitionEvent);
+    this.onend?.();
+  }
+  abort(): void { this.aborted = true; }
+  lastHeard = "";
+  hear(transcript: string): void {
+    this.lastHeard = transcript;
+    this.onresult?.({ resultIndex: 0, results: [Object.assign([{ transcript }], { isFinal: false })] } as unknown as SpeechRecognitionEvent);
+  }
+}
+
+function withMicrophone() {
+  FakeSpeechRecognition.instances = [];
+  vi.stubGlobal("SpeechRecognition", FakeSpeechRecognition);
+}
+
+afterEach(() => vi.unstubAllGlobals());
+
+test("opened by the person, the chat is already listening", () => {
+  withMicrophone();
+  render(<Harness listenOnOpen />);
+
+  expect(FakeSpeechRecognition.instances).toHaveLength(1);
+  expect(screen.getByRole("button", { name: "Parar de transcrever" })).toHaveAttribute("aria-pressed", "true");
+  expect(screen.getByRole("status")).toHaveTextContent("Ouvindo…");
+});
+
+test("otherwise the microphone waits for the wave button", () => {
+  withMicrophone();
+  render(<Harness />);
+
+  expect(FakeSpeechRecognition.instances).toHaveLength(0);
+  expect(screen.getByRole("button", { name: "Transcrever o que eu disser" })).toHaveAttribute("aria-pressed", "false");
+});
+
+test("the first typed letter turns the microphone off and keeps what was on the field", () => {
+  withMicrophone();
+  render(<Harness listenOnOpen />);
+  const textbox = screen.getByRole("textbox", { name: "Mensagem para a IA" });
+  act(() => FakeSpeechRecognition.instances[0].hear("comprar pão"));
+  expect(textbox).toHaveValue("comprar pão");
+
+  fireEvent.change(textbox, { target: { value: "comprar pão e" } });
+
+  expect(FakeSpeechRecognition.instances[0].aborted).toBe(true);
+  expect(screen.getByRole("button", { name: "Transcrever o que eu disser" })).toHaveAttribute("aria-pressed", "false");
+  expect(textbox).toHaveValue("comprar pão e");
+});
+
+test("what was said can be sent as it is, and sending closes the microphone", () => {
+  withMicrophone();
+  render(<Harness listenOnOpen />);
+  const textbox = screen.getByRole("textbox", { name: "Mensagem para a IA" });
+  act(() => FakeSpeechRecognition.instances[0].hear("o que tenho hoje?"));
+
+  fireEvent.submit(textbox.closest("form") as HTMLFormElement);
+
+  expect(processStart).toHaveBeenCalledWith({ userId: "user-1", text: "o que tenho hoje?", context: { screen: "agenda" } });
+  expect(FakeSpeechRecognition.instances[0].aborted).toBe(true);
+  expect(textbox).toHaveValue("");
+});
+
+test("a microphone that opened by itself does not complain about silence", () => {
+  withMicrophone();
+  render(<Harness listenOnOpen />);
+
+  act(() => FakeSpeechRecognition.instances[0].onerror?.({ error: "no-speech" } as SpeechRecognitionErrorEvent));
+
+  expect(screen.queryByText("Não ouvi nada. Tente de novo.")).not.toBeInTheDocument();
+});
+
+test("when the voice stops, what was said goes to the AI by itself", () => {
+  vi.useFakeTimers();
+  try {
+    withMicrophone();
+    render(<Harness listenOnOpen />);
+    act(() => FakeSpeechRecognition.instances[0].hear("o que tenho hoje?"));
+    expect(processStart).not.toHaveBeenCalled();
+
+    act(() => { vi.advanceTimersByTime(2000); });
+
+    expect(processStart).toHaveBeenCalledWith({ userId: "user-1", text: "o que tenho hoje?", context: { screen: "agenda" } });
+    expect(screen.getByRole("textbox", { name: "Mensagem para a IA" })).toHaveValue("");
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+test("typing before the voice stops cancels the automatic send", () => {
+  vi.useFakeTimers();
+  try {
+    withMicrophone();
+    render(<Harness listenOnOpen />);
+    const textbox = screen.getByRole("textbox", { name: "Mensagem para a IA" });
+    act(() => FakeSpeechRecognition.instances[0].hear("comprar pão"));
+
+    fireEvent.change(textbox, { target: { value: "comprar pão e leite" } });
+    act(() => { vi.advanceTimersByTime(5000); });
+
+    expect(processStart).not.toHaveBeenCalled();
+    expect(textbox).toHaveValue("comprar pão e leite");
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+async function speakAndWaitForReply(text: string) {
+  vi.useFakeTimers();
+  try {
+    act(() => FakeSpeechRecognition.instances.at(-1)?.hear(text));
+    act(() => { vi.advanceTimersByTime(2000); });
+  } finally {
+    vi.useRealTimers();
+  }
+  await waitFor(() => expect(screen.getByRole("status")).not.toHaveTextContent("…"));
+}
+
+test("after the answer to a spoken request, the chat listens again, over and over", async () => {
+  withMicrophone();
+  render(<Harness listenOnOpen />);
+
+  await speakAndWaitForReply("o que tenho hoje?");
+  await waitFor(() => expect(FakeSpeechRecognition.instances).toHaveLength(2));
+  expect(screen.getByRole("status")).toHaveTextContent("Ouvindo…");
+
+  await speakAndWaitForReply("e amanhã?");
+  await waitFor(() => expect(FakeSpeechRecognition.instances).toHaveLength(3));
+  expect(processStart).toHaveBeenCalledTimes(2);
+});
+
+test("saying stop ends the cycle without sending the word", async () => {
+  withMicrophone();
+  render(<Harness listenOnOpen />);
+  await speakAndWaitForReply("o que tenho hoje?");
+  await waitFor(() => expect(FakeSpeechRecognition.instances).toHaveLength(2));
+
+  vi.useFakeTimers();
+  try {
+    act(() => FakeSpeechRecognition.instances[1].hear("Pode parar."));
+    act(() => { vi.advanceTimersByTime(2000); });
+  } finally {
+    vi.useRealTimers();
+  }
+
+  expect(processStart).toHaveBeenCalledTimes(1);
+  expect(screen.getByRole("button", { name: "Transcrever o que eu disser" })).toHaveAttribute("aria-pressed", "false");
+  expect(FakeSpeechRecognition.instances).toHaveLength(2);
+});
+
+test("tapping the wave while it listens ends the cycle", async () => {
+  withMicrophone();
+  render(<Harness listenOnOpen />);
+  await speakAndWaitForReply("o que tenho hoje?");
+  await waitFor(() => expect(FakeSpeechRecognition.instances).toHaveLength(2));
+
+  fireEvent.click(screen.getByRole("button", { name: "Parar de transcrever" }));
+
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  expect(FakeSpeechRecognition.instances).toHaveLength(2);
+  expect(screen.getByRole("button", { name: "Transcrever o que eu disser" })).toHaveAttribute("aria-pressed", "false");
+});
+
+test("typing ends the cycle too", async () => {
+  withMicrophone();
+  render(<Harness listenOnOpen />);
+  await speakAndWaitForReply("o que tenho hoje?");
+  await waitFor(() => expect(FakeSpeechRecognition.instances).toHaveLength(2));
+
+  fireEvent.change(screen.getByRole("textbox", { name: "Mensagem para a IA" }), { target: { value: "a" } });
+
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  expect(FakeSpeechRecognition.instances).toHaveLength(2);
 });

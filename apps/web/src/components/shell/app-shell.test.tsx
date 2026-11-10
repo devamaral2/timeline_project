@@ -1,5 +1,6 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeAll, expect, test, vi } from "vitest";
+import { requestHubOpen } from "@/components/hub/hub-events";
 import { AppShell } from "./app-shell";
 
 vi.mock("next/navigation", () => ({
@@ -12,9 +13,14 @@ vi.mock("@/lib/session/use-session", () => ({
 }));
 // O chat tem os proprios testes; aqui so interessa quem abre e fecha o painel.
 vi.mock("@/components/hub/agent-chat-panel", () => ({
-  AgentChatPanel: () => <p>chat</p>,
+  AgentChatPanel: ({ listenOnOpen, onCommand }: { listenOnOpen?: boolean; onCommand?: (command: string, argument: string) => void }) => (
+    <div>
+      <textarea aria-label="Mensagem para a IA" data-listen={String(Boolean(listenOnOpen))} />
+      <button type="button" onClick={() => onCommand?.("search", "")}>comando buscar</button>
+    </div>
+  ),
   agentEntityHref: () => "#",
-  useAgendaChat: () => ({ chat: {}, signedOut: true }),
+  useAgendaChat: () => ({ chat: { startNewConversation: () => {} }, signedOut: true }),
 }));
 
 beforeAll(() => {
@@ -70,4 +76,39 @@ test("a plain K, or K with another modifier, is left to the page", () => {
   fireEvent.keyDown(window, { key: "k", ctrlKey: true, shiftKey: true });
 
   expect(hubDialog().hasAttribute("open")).toBe(false);
+});
+
+const chatField = () => screen.getByRole("textbox", { name: "Mensagem para a IA", hidden: true });
+
+test("opening the chat puts the cursor on the field and asks it to listen; coming back from a command does not", () => {
+  render(<AppShell>conteúdo</AppShell>);
+
+  fireEvent.click(headerTrigger());
+  expect(chatField()).toHaveFocus();
+  expect(chatField().dataset.listen).toBe("true");
+
+  fireEvent.click(screen.getByRole("button", { name: "comando buscar", hidden: true }));
+  fireEvent.click(screen.getByRole("button", { name: "Voltar para o chat", hidden: true }));
+  expect(chatField().dataset.listen).toBe("false");
+});
+
+test("a free window from the agenda opens the chat listening too", () => {
+  render(<AppShell>conteúdo</AppShell>);
+
+  act(() => requestHubOpen({ freeWindow: { dayKey: "2026-09-14", startMs: 0, endMs: 3_600_000, minutes: 60, endsAtMidnight: false } }));
+
+  expect(hubDialog().hasAttribute("open")).toBe(true);
+  expect(chatField()).toHaveFocus();
+  expect(chatField().dataset.listen).toBe("true");
+});
+
+test("closing the chat ends the listening request: the next opening asks again", async () => {
+  render(<AppShell>conteúdo</AppShell>);
+
+  fireEvent.click(headerTrigger());
+  fireEvent.keyDown(window, { key: "k", ctrlKey: true });
+  expect(hubDialog().hasAttribute("open")).toBe(false);
+
+  fireEvent.click(headerTrigger());
+  expect(chatField().dataset.listen).toBe("true");
 });

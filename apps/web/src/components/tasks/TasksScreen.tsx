@@ -1,12 +1,15 @@
 "use client";
 
-import { Check, ChevronDown, Clock, Link2, ListChecks, SlidersHorizontal, TriangleAlert } from "lucide-react";
+import { Check, ChevronDown, Clock, Link2, ListChecks, TriangleAlert } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { authedFetch } from "@/lib/api/authed-fetch";
 import type { TaskSummaryDto, WorkItemStatus } from "@/lib/api/contracts";
 import { useNow } from "@/lib/events/use-now";
+import { ListSkeleton } from "@/components/ui/list-skeleton";
+import { OptionsGlyph } from "@/components/ui/options-glyph";
 import page from "@/components/ui/page.module.css";
+import { canTransition, motionAllowed, reflow, vtName } from "@/lib/motion/view-transition";
 import { tagAccentStyle } from "@/lib/tags/tag-color";
 import { updateTask } from "@/lib/tasks/task-api";
 import {
@@ -57,6 +60,9 @@ const SORTS: readonly TaskSort[] = ["priority", "date"];
 /** Quanto o aviso de "Concluída" fica na tela antes de sumir. */
 const TOAST_MS = 5000;
 
+/** Quanto a linha fica no lugar com o status novo (o visto, o risco) antes de mudar de grupo. */
+const SETTLE_MS = 700;
+
 interface Toast {
   message: string;
   undo: () => void;
@@ -78,6 +84,9 @@ export function TasksScreen({ userId }: { userId: string }) {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [expanded, setExpanded] = useState<WorkItemStatus[]>([]);
   const [pending, setPending] = useState<string[]>([]);
+  // O status que a linha já mostra enquanto a API responde e ela ainda não mudou de grupo.
+  const [settling, setSettling] = useState<Record<string, WorkItemStatus>>({});
+  const groupsRef = useRef<HTMLDivElement>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [toast, setToast] = useState<Toast | null>(null);
@@ -135,11 +144,21 @@ export function TasksScreen({ userId }: { userId: string }) {
   async function applyStatus(target: Pick<TaskSummaryDto, "id" | "revision">, status: WorkItemStatus): Promise<boolean> {
     setActionError(null);
     setPending((current) => [...current, target.id]);
+    setSettling((current) => ({ ...current, [target.id]: status }));
+    const settled = () => setSettling(({ [target.id]: _, ...rest }) => rest);
+    // Com movimento, a linha assenta antes de sair; sem ele, muda na hora.
+    const hold = canTransition() && motionAllowed() ? new Promise((resolve) => window.setTimeout(resolve, SETTLE_MS)) : null;
     try {
       await updateTask(target.id, { expectedRevision: target.revision, status });
-      setTasks((current) => current?.map((item) => item.id === target.id ? { ...item, status, revision: target.revision + 1 } : item) ?? current);
+      await hold;
+      // As linhas deslizam para fechar o espaço (ou abrir, ao desfazer).
+      reflow(groupsRef.current, () => {
+        setTasks((current) => current?.map((item) => item.id === target.id ? { ...item, status, revision: target.revision + 1 } : item) ?? current);
+        settled();
+      });
       return true;
     } catch {
+      settled();
       setActionError("Não foi possível atualizar a tarefa. Tente novamente.");
       // A revisão pode ter andado em outra aba: recarregar traz a atual.
       setReloadKey((key) => key + 1);
@@ -194,7 +213,7 @@ export function TasksScreen({ userId }: { userId: string }) {
                 aria-haspopup="dialog"
                 onClick={() => setOptionsOpen((open) => !open)}
               >
-                <SlidersHorizontal aria-hidden />
+                <OptionsGlyph />
                 {filtered ? <span className={styles.optionsBadge} aria-hidden="true">{selectedTags.length}</span> : null}
               </button>
               {optionsOpen ? (
@@ -256,7 +275,7 @@ export function TasksScreen({ userId }: { userId: string }) {
         {error ? (
           <p role="alert" className={styles.message}>Não foi possível carregar as tarefas.<button type="button" className={styles.retry} onClick={retry}>Tentar de novo</button></p>
         ) : !tasks || !now ? (
-          <div aria-busy="true"><p role="status" className={styles.message}>Carregando tarefas…</p></div>
+          <ListSkeleton label="Carregando tarefas…" />
         ) : !hasTasks ? (
           <div className={styles.empty}>
             <ListChecks aria-hidden />
@@ -276,7 +295,7 @@ export function TasksScreen({ userId }: { userId: string }) {
             <button type="button" className={styles.emptyAction} onClick={clearFilters}>Limpar filtros</button>
           </div>
         ) : (
-          <div className={styles.groups}>
+          <div className={styles.groups} ref={groupsRef}>
             {groups.map((group) => {
               const labelId = `tarefas-${group.status}`;
               const open = !group.collapsedByDefault || expanded.includes(group.status);
@@ -301,6 +320,7 @@ export function TasksScreen({ userId }: { userId: string }) {
                           now={now}
                           href={`/${userId}/tarefas/${task.id}`}
                           pending={pending.includes(task.id)}
+                          settling={settling[task.id]}
                           onStatusChange={(status) => void changeStatus(task, status)}
                         />
                       ))}
@@ -314,7 +334,7 @@ export function TasksScreen({ userId }: { userId: string }) {
       </section>
 
       {toast ? (
-        <div className={styles.toast} role="status" aria-live="polite">
+        <div className={styles.toast} role="status" aria-live="polite" style={{ "--toast-ms": `${TOAST_MS}ms` } as CSSProperties}>
           <span className={styles.toastMessage}>{toast.message}</span>
           <button type="button" className={styles.toastUndo} onClick={toast.undo}>Desfazer</button>
         </div>
@@ -336,25 +356,31 @@ interface TaskRowProps {
   now: Date;
   href: string;
   pending: boolean;
+  /** O status recém-escolhido, enquanto a linha ainda está no grupo antigo. */
+  settling?: WorkItemStatus;
   onStatusChange: (status: WorkItemStatus) => void;
 }
 
-function TaskRow({ task, tasks, now, href, pending, onStatusChange }: TaskRowProps) {
+function TaskRow({ task, tasks, now, href, pending, settling, onStatusChange }: TaskRowProps) {
+  const status = settling ?? task.status;
   const progress = subtaskProgress(task.id, tasks);
   const waiting = pendingDependencies(task, tasks).length;
   const overdue = isOverdueTask(task, now);
   const today = isTodayTask(task, now);
   const hasDay = taskDayOf(task) !== null;
   const when = overdue ? overdueLabel(task, now) : taskWhenLabel(task, now);
-  const closed = task.status === "done" || task.status === "cancel";
+  const closed = status === "done" || status === "cancel";
 
   const day = taskDayOf(task);
   const figure = day ? dayFigure(day) : null;
+  // Sem dia, etiqueta, dependência nem subtarefa não há segunda linha: o círculo,
+  // o nome e a prioridade dividem uma linha só.
+  const bare = !hasDay && task.tags.length === 0 && waiting === 0 && !progress;
 
   return (
-    <li className={styles.row} data-status={task.status} data-pending={pending}>
+    <li className={styles.row} data-status={status} data-bare={bare || undefined} data-pending={pending && !settling} style={{ "--vt": vtName("task", task.id) } as CSSProperties}>
       <div className={styles.rowCheck}>
-        <TaskStatusPicker status={task.status} name={task.name} busy={pending} onChange={onStatusChange} />
+        <TaskStatusPicker status={status} name={task.name} busy={pending} onChange={onStatusChange} />
       </div>
 
       <div className={styles.main}>

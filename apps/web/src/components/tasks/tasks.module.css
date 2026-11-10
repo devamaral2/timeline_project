@@ -12,10 +12,9 @@
 }
 .headRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .phoneOptions { display: none; position: relative; flex: none; }
-.optionsButton { composes: roundButton from "../ui/controls.module.css"; position: relative; color: var(--muted); }
-.optionsButton svg { width: 18px; height: 18px; }
+.optionsButton { composes: menuButton from "../ui/controls.module.css"; position: relative; }
 .optionsBadge { composes: badge from "../ui/controls.module.css"; }
-.optionsPanel { composes: menuPanel from "../ui/controls.module.css"; left: auto; right: 0; padding-bottom: 16px; }
+.optionsPanel { composes: menuPanel from "../ui/controls.module.css"; --menu-origin: top right; left: auto; right: 0; padding-bottom: 16px; }
 .optionsLabel { composes: menuLabel from "../ui/controls.module.css"; }
 .optionsSort { composes: menuOption from "../ui/controls.module.css"; }
 .optionsText { composes: menuText from "../ui/controls.module.css"; }
@@ -57,21 +56,42 @@
 .groupToggle[aria-expanded="false"] svg { transform: rotate(-90deg); }
 
 .list { list-style: none; margin: 0; padding: 0; }
-.row { position: relative; display: flex; align-items: flex-start; gap: 16px; padding: 14px 0; }
+.row { position: relative; display: flex; align-items: flex-start; gap: 16px; padding: 14px 0; transition: opacity var(--duration-fast); animation: rowIn 300ms var(--ease-out) backwards; animation-delay: calc(5 * var(--stagger)); }
+.row:nth-child(1) { animation-delay: 0ms; }
+.row:nth-child(2) { animation-delay: var(--stagger); }
+.row:nth-child(3) { animation-delay: calc(2 * var(--stagger)); }
+.row:nth-child(4) { animation-delay: calc(3 * var(--stagger)); }
+.row:nth-child(5) { animation-delay: calc(4 * var(--stagger)); }
+/* Ao mudar de status a linha troca de grupo: cada uma tem nome e desliza para o
+   lugar novo (`reflow`). */
+.groups[data-reflow] .row { view-transition-name: var(--vt); }
+@keyframes rowIn { from { opacity: 0; transform: translateY(10px); } }
 .row + .row::before { content: ""; position: absolute; top: 0; left: 60px; right: 0; height: 1px; background: var(--hairline); }
 .row[data-pending="true"] { opacity: .6; }
+/* Sem segunda linha o cartão encolhe: círculo, nome e prioridade no mesmo eixo. */
+.row[data-bare] { align-items: center; padding: 8px 0; }
+.row[data-bare] .rowCheck { margin-top: 0; }
+.row[data-bare] .side { flex-direction: row; align-items: center; }
 .rowCheck { flex: none; display: grid; place-items: center; width: 44px; height: 44px; margin-top: 2px; }
 .rowCheck svg { width: 22px; height: 22px; }
 .rowCheck .statusIcon[data-status="done"] circle { fill: currentColor; }
 .rowCheck .statusIcon[data-status="done"] path { stroke: var(--background); }
+/* Concluir: o círculo enche e o visto se desenha. */
+.statusIcon[data-status="done"] circle { animation: pop 260ms var(--ease-out); transform-box: fill-box; transform-origin: center; }
+.statusIcon[data-status="done"] path { stroke-dasharray: 12; animation: tick 200ms var(--ease-out) 60ms backwards; }
+@keyframes pop { 0% { transform: scale(.85); } 60% { transform: scale(1.08); } }
+@keyframes tick { from { stroke-dashoffset: 12; } }
 @media (hover: hover) {
   .name a:hover { text-decoration: underline; text-underline-offset: 4px; }
 }
 
 .main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .name { margin: 0; overflow: hidden; font-size: var(--font-size-md); font-weight: 600; line-height: 24px; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); }
-.name a { color: inherit; }
-.row[data-status="done"] .name, .row[data-status="cancel"] .name { color: var(--faint); text-decoration: line-through; }
+/* O risco de quem foi concluída ou cancelada é um fio que atravessa o nome. */
+.name { transition: color var(--duration-slow); }
+.name a { color: inherit; background: linear-gradient(currentColor, currentColor) no-repeat 0 56% / 0 1px; transition: background-size var(--duration-slow) var(--ease-out) 80ms; }
+.row[data-status="done"] .name, .row[data-status="cancel"] .name { color: var(--faint); }
+.row[data-status="done"] .name a, .row[data-status="cancel"] .name a { background-size: 100% 1px; }
 .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; margin: 0; padding: 0; list-style: none; font-size: 13px; line-height: 20px; color: var(--muted); }
 .meta li { display: inline-flex; align-items: center; gap: 5px; font-variant-numeric: tabular-nums; }
 .meta li + li::before { content: "·"; margin-right: 3px; font-weight: 400; color: var(--muted); }
@@ -99,6 +119,9 @@
 .emptyText { composes: emptyText from "../ui/page.module.css"; }
 .emptyAction { composes: pill from "../ui/controls.module.css"; color: var(--ink); font-weight: 600; }
 .toast { position: fixed; inset-inline: 0; bottom: 24px; z-index: var(--z-toast); display: flex; align-items: center; gap: 16px; width: fit-content; max-width: calc(100vw - 32px); min-height: 56px; margin-inline: auto; padding: 6px 6px 6px 20px; border: 1px solid var(--line); border-radius: 28px; background: var(--card); box-shadow: var(--shadow-float); animation: rise var(--duration-slow) var(--ease-out); }
+/* O fio do aviso encolhe com o tempo que resta para desfazer. */
+.toast::after { content: ""; position: absolute; left: 24px; right: 24px; bottom: 0; height: 2px; border-radius: 1px; background: var(--brand); transform-origin: left; animation: toastLife var(--toast-ms, 5000ms) linear forwards; }
+@keyframes toastLife { to { transform: scaleX(0); } }
 .toastMessage { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .toastUndo { min-height: 44px; padding: 0 16px; border: 0; border-radius: 22px; background: transparent; color: var(--ink); font: inherit; font-weight: 600; cursor: pointer; }
 @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }

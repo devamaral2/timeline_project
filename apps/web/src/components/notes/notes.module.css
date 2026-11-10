@@ -10,10 +10,9 @@
 }
 .headRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .phoneOptions { display: none; position: relative; flex: none; }
-.optionsButton { composes: roundButton from "../ui/controls.module.css"; position: relative; color: var(--muted); }
-.optionsButton svg { width: 18px; height: 18px; }
+.optionsButton { composes: menuButton from "../ui/controls.module.css"; position: relative; }
 .optionsBadge { composes: badge from "../ui/controls.module.css"; }
-.optionsPanel { composes: menuPanel from "../ui/controls.module.css"; left: auto; right: 0; display: flex; flex-direction: column; gap: 20px; max-height: min(70vh, 560px); overflow-y: auto; padding: 16px 18px; }
+.optionsPanel { composes: menuPanel from "../ui/controls.module.css"; --menu-origin: top right; left: auto; right: 0; display: flex; flex-direction: column; gap: 20px; max-height: min(70vh, 560px); overflow-y: auto; padding: 16px 18px; }
 
 .leadFilters { display: flex; flex-direction: column; gap: 36px; }
 .typeGroup { min-width: 0; margin: 0; padding: 0; border: 0; }
@@ -34,7 +33,9 @@
 .typeToggle[data-note-type="meal"], .row[data-note-type="meal"] { --note-color: var(--meal); }
 .typeToggle[data-note-type="training"], .row[data-note-type="training"] { --note-color: var(--training); }
 .typeToggle[data-note-type="sleep"], .row[data-note-type="sleep"] { --note-color: var(--sleep); }
-.typeToggle[data-note-type="skill"], .row[data-note-type="skill"], .typeToggle[data-note-type="agent"], .row[data-note-type="agent"], .typeToggle[data-note-type="router"], .row[data-note-type="router"] { --note-color: var(--brand-accent); }
+.typeToggle[data-note-type="skill"], .row[data-note-type="skill"] { --note-color: var(--note-skill); }
+.typeToggle[data-note-type="agent"], .row[data-note-type="agent"] { --note-color: var(--note-agent); }
+.typeToggle[data-note-type="router"], .row[data-note-type="router"] { --note-color: var(--note-router); }
 
 .tagFilter { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
 .tagLabel { composes: eyebrow from "../ui/page.module.css"; }
@@ -52,11 +53,16 @@
 
 .noteList { list-style: none; margin: 0; padding: 0; }
 .noteList[hidden] { display: none; }
-.noteList > li { position: relative; }
+.noteList > li { position: relative; animation: rowIn 300ms var(--ease-out) backwards; animation-delay: calc(5 * var(--stagger)); }
+.noteList > li:nth-child(1) { animation-delay: 0ms; }
+.noteList > li:nth-child(2) { animation-delay: var(--stagger); }
+.noteList > li:nth-child(3) { animation-delay: calc(2 * var(--stagger)); }
+.noteList > li:nth-child(4) { animation-delay: calc(3 * var(--stagger)); }
+.noteList > li:nth-child(5) { animation-delay: calc(4 * var(--stagger)); }
+@keyframes rowIn { from { opacity: 0; transform: translateY(10px); } }
 .noteList > li + li::before { content: ""; position: absolute; top: 0; left: 60px; right: 0; height: 1px; background: var(--hairline); }
 .row { display: flex; align-items: flex-start; gap: 16px; padding: 14px 0; color: inherit; overflow-wrap: anywhere; }
-.tile { flex: none; display: grid; place-items: center; width: 44px; height: 44px; margin-top: 2px; border: 1px solid var(--line); border-radius: 13px; color: var(--note-color, var(--muted)); }
-.tile svg { width: 20px; height: 20px; }
+.sheet { margin-top: 2px; }
 .rowText { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .rowHead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .rowTitle { min-width: 0; overflow: hidden; font-size: var(--font-size-md); font-weight: 600; line-height: 24px; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); }

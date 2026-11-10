@@ -1,7 +1,9 @@
 "use client";
 
 import { ArrowUp, Check, Circle, LoaderCircle, X } from "lucide-react";
-import { type FormEvent, type KeyboardEvent, type ReactNode, useState } from "react";
+import { type FormEvent, type KeyboardEvent, type ReactNode, useCallback, useRef, useState } from "react";
+import { armChangeFlash } from "@/lib/motion/change-flash";
+import { useHermesDock } from "@/components/ui/hermes-flight";
 import { HermesGlyph } from "@/components/ui/hermes-glyph";
 import { HermesMark, type HermesState } from "@/components/ui/hermes-mark";
 import type { AiProcessEditApi } from "@/lib/ai-process/ai-process";
@@ -38,7 +40,12 @@ interface EntityAiEditBarProps {
  */
 export function EntityAiEditBar({ userId, entityType, entityId, onEdited, disabledReason, context, api, pollMs }: EntityAiEditBarProps) {
   const [text, setText] = useState("");
-  const { phase, process, error, submit, dismiss, busy } = useEntityAiEdit({ userId, entityType, entityId, onEdited, api, pollMs });
+  // No celular, o botão do Hermes da barra inferior pousa no status deste campo.
+  const barRef = useRef<HTMLElement>(null);
+  useHermesDock(barRef);
+  // O que mudar na recarga depois da edição se anuncia na tela (`useChangeFlash`).
+  const edited = useCallback(() => { armChangeFlash(); onEdited?.(); }, [onEdited]);
+  const { phase, process, error, submit, dismiss, busy } = useEntityAiEdit({ userId, entityType, entityId, onEdited: edited, api, pollMs });
   const speech = useSpeechRecognition({
     onFinalTranscript: (transcript) => setText((current) => (current ? `${current} ${transcript}` : transcript).slice(0, 4000)),
   });
@@ -71,7 +78,7 @@ export function EntityAiEditBar({ userId, entityType, entityId, onEdited, disabl
     : phase === "sending" || phase === "running" ? (running?.label ?? "Entendendo o pedido…")
     : "Esperando o seu pedido";
   return (
-    <section className={styles.bar} data-entity-ai-bar aria-label={`Editar ${target} com IA`}>
+    <section ref={barRef} className={styles.bar} data-entity-ai-bar aria-label={`Editar ${target} com IA`}>
       {steps.length > 0 || message ? (
         <div className={styles.result} data-phase={phase}>
           {steps.length > 0 ? (

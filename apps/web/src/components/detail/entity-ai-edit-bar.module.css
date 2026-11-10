@@ -50,10 +50,15 @@
 .reason { margin: 0; padding-inline: 6px; color: var(--muted); font-size: 13px; }
 .bar [data-spin] { animation: entityAiSpin 1s linear infinite; }
 @keyframes entityAiSpin { to { transform: rotate(360deg); } }
+@keyframes dock { from { opacity: 0; transform: translateY(14px); } }
 @media (prefers-reduced-motion: reduce) { .bar [data-spin] { animation: none; } }
 
 @media (max-width: 720px) {
   /* Preso ao pé da tela; atrás dele o conteúdo se apaga no chão. */
   .bar { position: fixed; z-index: var(--z-sticky); left: 16px; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); width: auto; }
+  /* O botao do Hermes chega voando da barra inferior (`hermes-flight.ts`): o
+     icone de status so aparece no pouso e o resto do campo sobe para o lugar. */
+  .bar[data-hermes-flight] [data-hermes-mark] { visibility: hidden; }
+  .bar[data-hermes-flight] > :not(.status), .bar[data-hermes-flight] > .status > :not([data-hermes-mark]) { animation: dock 137ms 73ms ease-out backwards; }
   .bar::before { content: ""; position: absolute; z-index: -1; left: -16px; right: -16px; top: -72px; bottom: calc(-16px - env(safe-area-inset-bottom)); background: linear-gradient(to bottom, transparent, var(--background) 30%); pointer-events: none; }
 }

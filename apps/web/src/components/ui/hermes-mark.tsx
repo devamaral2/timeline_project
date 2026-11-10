@@ -14,7 +14,7 @@ const BAR_X = [3.4, 8.9, 14.4, 19.9, 25.4];
 /** O círculo do Hermes num dos cinco estados. É só um sinal: quem fala do estado é o texto ao lado. */
 export function HermesMark({ state = "idle", className }: { state?: HermesState; className?: string }) {
   return (
-    <span className={`${styles.mark} ${className ?? ""}`} data-state={state} aria-hidden>
+    <span className={`${styles.mark} ${className ?? ""}`} data-state={state} data-hermes-mark="" aria-hidden>
       {state === "idle" || state === "listening" ? <HermesGlyph /> : null}
       {state === "thinking" ? (
         <svg viewBox="0 0 32 32" fill="currentColor" aria-hidden>

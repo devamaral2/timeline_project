@@ -1,32 +1,22 @@
-import { Bot, FileText, Route, Wrench, type LucideIcon } from "lucide-react";
 import Link from "next/link";
-import { ICON_STROKE_WIDTH, visualForItemType } from "@/components/events/event-visuals";
 import type { NoteDto } from "@/lib/api/contracts";
 import { noteFigure, noteOriginLabel, noteSnippet, noteStamp } from "@/lib/notes/notes-model";
 import { tagAccentStyle } from "@/lib/tags/tag-color";
 import { MealGenerationStatus } from "./MealGenerationStatus";
+import { NoteSheet } from "./NoteSheet";
 import styles from "./notes.module.css";
 
-const HERMES_ICONS: Record<string, LucideIcon> = { skill: Wrench, agent: Bot, router: Route };
-
-/** O ícone de um tipo de nota: o do tipo de evento nas estruturadas, o do arquivo nas do Hermes, a folha no texto. */
-export function noteTypeIcon(type: string): LucideIcon {
-  if (type === "meal" || type === "training" || type === "sleep") return visualForItemType(type).Icon;
-  return HERMES_ICONS[type] ?? FileText;
-}
-
 /**
- * Uma nota na lista: o quadrado com o ícone do tipo, o nome e quando foi
+ * Uma nota na lista: a folha com o ícone do tipo, o nome e quando foi
  * editada, o trecho numa linha, a origem e as tags e, nas estruturadas, o
  * número em destaque na serifa (kcal, minutos).
  */
 export function NoteCard({ note, href, now }: { note: NoteDto; href: string; now: Date | null }) {
   const snippet = noteSnippet(note);
-  const Icon = noteTypeIcon(note.type);
   const figure = noteFigure(note);
   return (
     <Link href={href} className={styles.row} data-note-type={note.type}>
-      <span className={styles.tile} aria-hidden><Icon strokeWidth={ICON_STROKE_WIDTH} /></span>
+      <NoteSheet type={note.type} className={styles.sheet} />
       <span className={styles.rowText}>
         <span className={styles.rowHead}>
           <span className={styles.rowTitle}>{note.name}</span>

@@ -7,6 +7,7 @@ import { ICON_STROKE_WIDTH } from "@/components/events/event-visuals";
 import { TaskStatusIcon } from "@/components/tasks/task-visuals";
 import page from "@/components/ui/page.module.css";
 import type { WorkItemStatus } from "@/lib/api/contracts";
+import { useChangeFlash } from "@/lib/motion/change-flash";
 import { tagAccentStyle } from "@/lib/tags/tag-color";
 import { TASK_STATUS_ORDER, taskStatusLabels } from "@/lib/tasks/tasks-model";
 import styles from "./detail.module.css";
@@ -35,10 +36,13 @@ export function DetailNav({ label, back, children }: { label: string; back: Reac
 
 /** A legenda em mono (a data, "Atualizada hoje, 09:20") e o título serifado do registro. */
 export function DetailHeading({ eyebrow, children, done = false }: { eyebrow?: ReactNode; children: ReactNode; done?: boolean }) {
+  // O que o Hermes muda no registro se anuncia: o valor novo entra com um fio por baixo.
+  const eyebrowRef = useChangeFlash<HTMLParagraphElement>();
+  const titleRef = useChangeFlash<HTMLHeadingElement>();
   return (
     <div className={styles.heading}>
-      {eyebrow ? <p className={styles.eyebrow}>{eyebrow}</p> : null}
-      <h1 className={styles.display} data-done={done || undefined}>{children}</h1>
+      {eyebrow ? <p ref={eyebrowRef} className={styles.eyebrow}>{eyebrow}</p> : null}
+      <h1 ref={titleRef} className={styles.display} data-done={done || undefined}>{children}</h1>
     </div>
   );
 }
@@ -49,7 +53,8 @@ export function DetailFacts({ label, children }: { label: string; children: Reac
 }
 
 export function DetailFact({ label, children }: { label: string; children: ReactNode }) {
-  return <div className={styles.fact}><dt>{label}</dt><dd>{children}</dd></div>;
+  const valueRef = useChangeFlash<HTMLElement>();
+  return <div className={styles.fact}><dt>{label}</dt><dd ref={valueRef}>{children}</dd></div>;
 }
 
 /** As ações do registro como pílulas (desktop); no celular elas moram no menu do topo. */

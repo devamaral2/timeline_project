@@ -1,8 +1,8 @@
 "use client";
 
-import { Copy, FileText, ListChecks, Pencil, Plus, Trash2 } from "lucide-react";
+import { Copy, ListChecks, Pencil, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useMotionRouter } from "@/components/shell/navigation-motion";
 import { type FormEvent, useEffect, useState } from "react";
 import { EntityAiEditBar } from "@/components/detail/EntityAiEditBar";
 import {
@@ -15,6 +15,7 @@ import { authedFetch } from "@/lib/api/authed-fetch";
 import type { NoteDto, TaskDetailDto, TaskSummaryDto, WorkItemStatus } from "@/lib/api/contracts";
 import { formatTime } from "@repo/timeline";
 import { useNow } from "@/lib/events/use-now";
+import { NoteSheet } from "@/components/notes/NoteSheet";
 import { noteSnippet } from "@/lib/notes/notes-model";
 import { createTask, updateTask } from "@/lib/tasks/task-api";
 import {
@@ -42,7 +43,7 @@ function lowerFirst(label: string): string {
  * depende, as subtarefas, o que ela libera, as notas e o campo do Hermes.
  */
 export function TaskDetailScreen({ userId, taskId }: { userId: string; taskId: string }) {
-  const router = useRouter();
+  const router = useMotionRouter();
   const now = useNow();
   const [task, setTask] = useState<TaskDetailDto | null>(null);
   const [all, setAll] = useState<TaskSummaryDto[]>([]);
@@ -292,7 +293,7 @@ export function TaskDetailScreen({ userId, taskId }: { userId: string; taskId: s
           <DetailSection title="Vínculos" labelId="tk-links" className="links">
             <LinkGroup id="tk-links-notes" title="Notas vinculadas" count={notes.length}>
               {notes.map((note) => (
-                <LinkRow key={note.id} kind="note" icon={<FileText {...detailIcon} />} title={note.name} sub={`Nota${noteSnippet(note) ? ` · ${noteSnippet(note)}` : ""}`} href={`/${userId}/notas/${note.id}`} />
+                <LinkRow key={note.id} kind="note" icon={<NoteSheet type={note.type} size="cite" />} title={note.name} sub={`Nota${noteSnippet(note) ? ` · ${noteSnippet(note)}` : ""}`} href={`/${userId}/notas/${note.id}`} />
               ))}
             </LinkGroup>
           </DetailSection>

@@ -148,7 +148,14 @@
   --control-lg: 56px;
   --duration-fast: 150ms;
   --duration-slow: 240ms;
+  /* Trocar de tela ou abrir uma folha leva mais: 380 para entrar, 280 para
+     voltar. O que entra desacelera (`--ease-out`), o que sai acelera
+     (`--ease-in`); numa lista que chega, cada linha espera `--stagger`. */
+  --duration-screen: 380ms;
+  --duration-screen-back: 280ms;
   --ease-out: cubic-bezier(.2, .8, .2, 1);
+  --ease-in: cubic-bezier(.4, 0, 1, 1);
+  --stagger: 40ms;
   --z-sticky: 5;
   --z-popover: 20;
   --z-overlay: 30;
@@ -168,8 +175,14 @@
   --macro-protein: var(--routine);
   --macro-carbs: var(--meal);
   --macro-fat: oklch(var(--tag-lightness) var(--tag-chroma) 340);
+  /* As notas do Hermes, cada tipo com a sua cor na folha: a skill num rosa da
+     mesma luminosidade e croma das tags (troca de tema junto com elas), o
+     agente no verde-agua do proprio Hermes e o roteador no azul de `--routine`. */
+  --note-skill: oklch(var(--tag-lightness) var(--tag-chroma) 350);
+  --note-agent: var(--brand-accent);
+  --note-router: var(--routine);
   --faint: var(--muted-foreground);
-  --hairline: var(--border);
+  --hairline: oklch(0.82 0.016 218); /* divisores: mais firmes que --border para ler sobre o fundo Névoa */
   --on-primary-muted: color-mix(in oklab, var(--primary-foreground) 70%, var(--primary));
   --on-primary-brand: var(--strand-destaque);
 }
@@ -275,11 +288,59 @@
   }
 }
 
+/*
+ * Trocar de tela. Quem navega marca o sentido em `<html data-nav>` e o
+ * navegador anima a foto da tela antiga contra a da nova (`lib/motion`):
+ *   next / prev — entre Agenda, Tarefas e Notas: a antiga sai em 90 ms e a nova
+ *                 entra deslizando 24 px no sentido da aba;
+ *   open        — a linha tocada cresce ate virar a tela (o recorte parte de
+ *                 `--nav-top/right/bottom/left`, a caixa da linha);
+ *   close       — a tela desce e some, e a lista volta de 97% para o tamanho.
+ * O cabecalho e a barra inferior tem nome proprio (no shell) e ficam parados.
+ * Sem `data-nav` — movimento reduzido — sobra so a troca de opacidade.
+ */
+::view-transition-group(*) {
+  animation-duration: var(--duration-slow);
+  animation-timing-function: var(--ease-out);
+}
+::view-transition-old(*),
+::view-transition-new(*) {
+  animation-duration: var(--duration-fast);
+}
+html[data-nav]::view-transition-old(root),
+html[data-nav]::view-transition-new(root) {
+  mix-blend-mode: normal;
+}
+html[data-nav="next"]::view-transition-old(root) { animation: nav-out-left 90ms var(--ease-in) both; }
+html[data-nav="next"]::view-transition-new(root) { animation: nav-in-right 300ms var(--ease-out) 90ms both; }
+html[data-nav="prev"]::view-transition-old(root) { animation: nav-out-right 90ms var(--ease-in) both; }
+html[data-nav="prev"]::view-transition-new(root) { animation: nav-in-left 300ms var(--ease-out) 90ms both; }
+html[data-nav="open"]::view-transition-old(root) { animation: nav-recede var(--duration-screen) var(--ease-out) both; }
+html[data-nav="open"]::view-transition-new(root) { animation: nav-grow var(--duration-screen) var(--ease-out) both; }
+html[data-nav="close"]::view-transition-old(root) { z-index: 1; animation: nav-sink 200ms var(--ease-in) both; }
+html[data-nav="close"]::view-transition-new(root) { animation: nav-return var(--duration-screen-back) var(--ease-out) both; }
+
+@keyframes nav-out-left { to { opacity: 0; transform: translateX(-24px); } }
+@keyframes nav-out-right { to { opacity: 0; transform: translateX(24px); } }
+@keyframes nav-in-right { from { opacity: 0; transform: translateX(24px); } }
+@keyframes nav-in-left { from { opacity: 0; transform: translateX(-24px); } }
+@keyframes nav-recede { to { opacity: .25; transform: scale(.97); } }
+@keyframes nav-grow {
+  from { opacity: 0; clip-path: inset(var(--nav-top, 30%) var(--nav-right, 6%) var(--nav-bottom, 30%) var(--nav-left, 6%) round 14px); }
+  20% { opacity: 1; }
+  to { opacity: 1; clip-path: inset(0 0 0 0 round 0px); }
+}
+@keyframes nav-sink { to { opacity: 0; transform: translateY(16px); } }
+@keyframes nav-return { from { opacity: .25; transform: scale(.97); } }
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+  ::view-transition-group(*) {
+    animation: none;
   }
 }

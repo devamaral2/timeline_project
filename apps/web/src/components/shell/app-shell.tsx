@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { HeaderActions } from "./header-actions";
 import { type HubHandle, MobileNavigation } from "./mobile-navigation";
+import { NavigationMotion } from "./navigation-motion";
 import { PrimaryNavigation } from "./primary-navigation";
 import styles from "./shell.module.css";
 
@@ -47,6 +48,7 @@ export function AppShell({
 
   return (
     <div className={`${styles.shell} ${darkMode ? styles.dark : ""}`}>
+      <NavigationMotion />
       <a href="#conteudo" className={styles.skipLink}>Pular para o conteúdo</a>
       <header className={styles.header}>
         <div className={styles.headerInner}>
