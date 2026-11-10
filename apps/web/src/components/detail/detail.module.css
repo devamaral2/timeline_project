@@ -41,6 +41,18 @@
 .timeRow > p small:last-child { margin-right: 0; }
 .timeNote { margin: 0; font-size: var(--font-size-sm); color: var(--muted); }
 
+/* De onde o registro vem: o quadrado do tipo, duas linhas e a seta. */
+.originLink { display: flex; align-items: center; gap: 14px; min-height: 60px; color: var(--ink); }
+.originTile { position: relative; flex: none; display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 13px; color: var(--event-color, var(--muted)); }
+.originTile svg { width: 20px; height: 20px; }
+.originTile[data-live="true"] { border-color: var(--brand); }
+.originTile[data-live="true"]::after { content: ""; position: absolute; top: -5px; right: -5px; width: 12px; height: 12px; border: 2px solid var(--background); border-radius: 50%; background: var(--brand); }
+.originText { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.originText > span:first-child { font-size: 13px; line-height: 20px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.originText > span:last-child { font-size: 15px; font-weight: 600; line-height: 22px; }
+.originLink > svg:last-child { flex: none; width: 16px; height: 16px; stroke-width: 2; color: var(--faint); }
+.originLink:hover .originText > span:last-child { text-decoration: underline; text-underline-offset: 4px; }
+
 /* Molde antigo, de uma coluna so: as telas que ainda nao foram para as duas
    colunas seguem aqui. */
 .screen {
@@ -230,4 +242,5 @@
   .timeRow > p { font-size: var(--font-size-xl); line-height: 24px; gap: 8px; }
   .prose { font-size: 15px; line-height: 25px; }
   .relationMeta { display: none; }
+  .originLink { border-top: 1px solid var(--line); border-bottom: 1px solid var(--hairline); }
 }

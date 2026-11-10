@@ -49,8 +49,9 @@ test("mostra título, datas, tags, onde aparece e o texto", async () => {
   expect(screen.getByText("Revisar proposta")).toBeInTheDocument();
   expect(screen.getByText("Tarefa · hoje, 09:00")).toBeInTheDocument();
   expect(screen.getByText("#trabalho")).toBeInTheDocument();
-  expect(screen.getByText("Criada em 12 set.")).toBeInTheDocument();
-  expect(screen.getByText("Editada ontem, 21:12")).toBeInTheDocument();
+  // A legenda em mono diz quando mudou; a criação é um dos fatos da coluna.
+  expect(screen.getByText("Atualizada ontem, 21:12")).toBeInTheDocument();
+  expect(screen.getByText("12 set.")).toBeInTheDocument();
   expect(screen.getByText("Começar pelo problema do cliente.")).toBeInTheDocument();
   expect(screen.getByRole("heading", { level: 2, name: "Pontos para a reunião" })).toBeInTheDocument();
   expect(screen.getAllByRole("listitem").map((item) => item.textContent)).toEqual(
@@ -60,7 +61,7 @@ test("mostra título, datas, tags, onde aparece e o texto", async () => {
   expect(authedFetch).toHaveBeenCalledWith("/api/notes/nota-1");
 });
 
-test("agrupa em Vínculos as tarefas e os eventos que usam a nota, e abre cada um", async () => {
+test("a origem fica no resumo e os outros vínculos em seções, e cada um abre o seu registro", async () => {
   authedFetch.mockResolvedValue({
     ...proposal,
     links: [
@@ -74,9 +75,9 @@ test("agrupa em Vínculos as tarefas e os eventos que usam a nota, e abre cada u
 
   expect(link).toHaveAttribute("href", "/user-1/eventos/ev-9");
   expect(screen.getByRole("link", { name: /Revisar proposta/ })).toHaveAttribute("href", "/user-1/tarefas/t1");
-  expect(screen.getByRole("heading", { level: 2, name: "Vínculos" })).toBeInTheDocument();
-  expect(within(screen.getByRole("group", { name: /Tarefas vinculadas/ })).getAllByRole("link")).toHaveLength(1);
-  expect(within(screen.getByRole("group", { name: /Eventos vinculados/ })).getAllByRole("link")).toHaveLength(1);
+  expect(within(screen.getByRole("region", { name: "Resumo da nota" })).getByRole("link", { name: /Academia/ })).toBe(link);
+  expect(within(screen.getByRole("region", { name: "Tarefas vinculadas" })).getAllByRole("link")).toHaveLength(1);
+  expect(screen.queryByRole("region", { name: "Eventos vinculados" })).not.toBeInTheDocument();
   expect(screen.queryByText("Criado pelo Hermes")).not.toBeInTheDocument();
 });
 
@@ -113,7 +114,7 @@ test("solta a nota da origem com a revisão esperada", async () => {
   fireEvent.click(screen.getByRole("button", { name: /Mais ações/ }));
   fireEvent.click(screen.getByRole("menuitem", { name: "Soltar da origem" }));
 
-  await waitFor(() => expect(screen.queryByRole("heading", { name: "Vínculos" })).not.toBeInTheDocument());
+  await waitFor(() => expect(screen.queryByRole("link", { name: /Revisar proposta/ })).not.toBeInTheDocument());
   expect(authedFetch).toHaveBeenCalledWith(
     "/api/notes/nota-1",
     expect.objectContaining({ method: "PATCH", body: JSON.stringify({ expectedRevision: 2, eventIds: [], taskIds: [] }) }),

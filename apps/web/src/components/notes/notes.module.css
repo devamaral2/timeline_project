@@ -82,8 +82,8 @@
 .emptyAction { composes: pill from "../ui/controls.module.css"; color: var(--ink); font-weight: 600; }
 @media (prefers-reduced-motion: reduce) { .chevron { transition: none; } }
 
-/* O cartão do conteúdo, igual ao da nota dentro do detalhe do evento, sem o cabeçalho. */
-.noteCard { display: flex; flex-direction: column; gap: 18px; padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); }
+/* O conteúdo da nota aberta: corre direto na coluna, sem moldura. */
+.noteCard { display: flex; flex-direction: column; gap: 18px; }
 .noteTitle { margin: 0; color: var(--ink); font-family: var(--font-display); font-weight: 400; font-size: 26px; line-height: 1.15; letter-spacing: -.005em; }
 
 @media (max-width: 720px) {

@@ -79,6 +79,26 @@ export function TimeRange({ start, end, minutes, note }: { start?: string | null
   );
 }
 
+/**
+ * De onde o registro vem (o evento ou a tarefa de uma nota): o quadrado com o
+ * ícone, "Evento · hoje, 09:00 — 10:30" e o nome, com a seta. `live` marca o
+ * evento em andamento com a borda e o ponto da marca.
+ */
+export function OriginLink({ href, icon, type, live = false, meta, title }: { href: string; icon: ReactNode; type?: string; live?: boolean; meta: string; title: string }) {
+  return (
+    <Link href={href} className={styles.originLink} data-type={type}>
+      <span className={styles.originTile} data-live={live || undefined} aria-hidden>{icon}</span>
+      <span className={styles.originText}><span>{meta}</span><span>{title}</span></span>
+      <ChevronRight {...detailIcon} />
+    </Link>
+  );
+}
+
+/** Uma lista de vínculos sem o cabeçalho de grupo (a seção já diz o que são). */
+export function LinkList({ children }: { children: ReactNode }) {
+  return <ul className={styles.cardList}>{children}</ul>;
+}
+
 /** O contêiner de toda tela de detalhe. `type` pinta o tipo do evento (rotina, refeição, treino, sono). */
 export function DetailScreen({ type, children }: { type?: string; children: ReactNode }) {
   return <div className={styles.screen} data-type={type}>{children}</div>;
