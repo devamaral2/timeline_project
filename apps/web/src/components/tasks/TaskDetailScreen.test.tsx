@@ -63,8 +63,8 @@ test("lista de quem depende, as subtarefas e o que a tarefa libera", async () =>
 
   const subtasks = screen.getByRole("region", { name: "Subtarefas" });
   expect(within(subtasks).getByText("1 de 2")).toBeInTheDocument();
-  expect(within(subtasks).getByRole("button", { name: /Toque para concluir “Montar o roteiro”/ })).toBeInTheDocument();
-  expect(within(subtasks).getByRole("button", { name: /Toque para reabrir “Fazer os slides”/ })).toBeInTheDocument();
+  expect(within(subtasks).getByRole("button", { name: /Trocar status de Montar o roteiro/ })).toBeInTheDocument();
+  expect(within(subtasks).getByRole("button", { name: /Status: Concluída. Trocar status de Fazer os slides/ })).toBeInTheDocument();
 
   const releases = screen.getByRole("region", { name: "Libera" });
   expect(within(releases).getByText("A fazer · sáb., 19 set.")).toBeInTheDocument();
@@ -87,7 +87,8 @@ test("troca o status pelo seletor, com a revisão do detalhe", async () => {
 
 test("conclui uma subtarefa e adiciona outra", async () => {
   render(<TaskDetailScreen userId="user-1" taskId="t1" />);
-  fireEvent.click(await screen.findByRole("button", { name: /Toque para concluir “Montar o roteiro”/ }));
+  fireEvent.click(await screen.findByRole("button", { name: /Trocar status de Montar o roteiro/ }));
+  fireEvent.click(screen.getByRole("option", { name: /Concluída/ }));
   await waitFor(() =>
     expect(authedFetch).toHaveBeenCalledWith("/api/tasks/s1", expect.objectContaining({ body: JSON.stringify({ expectedRevision: 2, status: "done" }) })),
   );

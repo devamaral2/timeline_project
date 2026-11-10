@@ -82,6 +82,8 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
   const tasksHref = userId ? `/${userId}/tarefas` : null;
   const onTasks = tasksHref !== null && (pathname === tasksHref || pathname.startsWith(`${tasksHref}/`));
   const agendaChat = useAgendaChat({ live: Boolean(userId) });
+  const startNewConversationRef = useRef(agendaChat.chat.startNewConversation);
+  startNewConversationRef.current = agendaChat.chat.startNewConversation;
   const [panel, setPanel] = useState<"hub" | "Tarefa" | "Nota" | null>(null);
   // O chat e a porta do painel; criar e pesquisar abrem pelos comandos "/" dele.
   const [hubView, setHubView] = useState<"chat" | "create" | "search" | "notifications" | "settings">("chat");
@@ -184,7 +186,10 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
   // Uma tela pede o painel (a janela livre da agenda, por exemplo).
   useEffect(() => {
     function onRequest(event: Event) {
-      setFreeWindow((event as CustomEvent<HubOpenDetail>).detail?.freeWindow ?? null);
+      const requested = (event as CustomEvent<HubOpenDetail>).detail?.freeWindow ?? null;
+      // Planejar um tempo livre (+) sempre começa uma conversa nova, nunca retoma a última.
+      if (requested) startNewConversationRef.current();
+      setFreeWindow(requested);
       if (!dialogRef.current?.open) openHubRef.current();
     }
     window.addEventListener(hubOpenEvent, onRequest);
@@ -220,7 +225,7 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
         ) : (
           <button type="button" aria-label="Notas" onClick={() => openPanel("Nota")} aria-haspopup="dialog" aria-expanded={panel === "Nota"} aria-controls={dialogId}><FileText aria-hidden /><span>Notas</span></button>
         )}
-        <button type="button" className={styles.commandButton} onClick={() => openPanel("hub")} aria-haspopup="dialog" aria-expanded={panel === "hub"} aria-controls={dialogId} aria-label="Buscar e criar"><HermesGlyph /></button>
+        <button type="button" className={styles.commandButton} onClick={() => panel === "hub" ? closePanel() : openPanel("hub")} aria-haspopup="dialog" aria-expanded={panel === "hub"} aria-controls={dialogId} aria-label={panel === "hub" ? "Fechar chat com IA" : "Buscar e criar"}>{panel === "hub" ? <X aria-hidden /> : <HermesGlyph />}</button>
       </nav>
       <dialog ref={dialogRef} id={dialogId} aria-labelledby={panel === "hub" ? undefined : titleId} aria-label={panel === "hub" ? "Buscar e criar" : undefined} className={styles.sectionMenu} onClose={() => { setPanel(null); setFreeWindow(null); }}
         data-hub-view={panel === "hub" ? hubView : undefined} data-expanded={panel === "hub" && hubView === "chat" && expanded ? "true" : undefined}

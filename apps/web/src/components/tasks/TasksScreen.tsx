@@ -24,11 +24,11 @@ import {
   taskStatusLabels,
   taskWhenLabel,
   todayCountLabel,
-  toggledStatus,
   topLevelTasks,
   waitingLabel,
 } from "@/lib/tasks/tasks-model";
 import { cn } from "@/lib/utils";
+import { TaskStatusPicker } from "@/components/detail/detail-parts";
 import { TaskEditorDialog } from "./TaskEditorDialog";
 import { TaskPriorityMark, TaskStatusIcon } from "./task-visuals";
 import styles from "./tasks.module.css";
@@ -149,12 +149,12 @@ export function TasksScreen({ userId }: { userId: string }) {
     }
   }
 
-  async function toggle(task: TaskSummaryDto) {
+  async function changeStatus(task: TaskSummaryDto, status: WorkItemStatus) {
     const previous = task.status;
-    const status = toggledStatus(task);
+    if (status === previous) return;
     if (!(await applyStatus(task, status))) return;
     setToast({
-      message: `${status === "done" ? "Concluída" : "Reaberta"}: ${task.name}`,
+      message: `${taskStatusLabels[status]}: ${task.name}`,
       // A revisão que a API acabou de devolver é a seguinte à da lista.
       undo: () => { setToast(null); void applyStatus({ id: task.id, revision: task.revision + 1 }, previous); },
     });
@@ -301,7 +301,7 @@ export function TasksScreen({ userId }: { userId: string }) {
                           now={now}
                           href={`/${userId}/tarefas/${task.id}`}
                           pending={pending.includes(task.id)}
-                          onToggle={() => void toggle(task)}
+                          onStatusChange={(status) => void changeStatus(task, status)}
                         />
                       ))}
                     </ul>
@@ -336,10 +336,10 @@ interface TaskRowProps {
   now: Date;
   href: string;
   pending: boolean;
-  onToggle: () => void;
+  onStatusChange: (status: WorkItemStatus) => void;
 }
 
-function TaskRow({ task, tasks, now, href, pending, onToggle }: TaskRowProps) {
+function TaskRow({ task, tasks, now, href, pending, onStatusChange }: TaskRowProps) {
   const progress = subtaskProgress(task.id, tasks);
   const waiting = pendingDependencies(task, tasks).length;
   const overdue = isOverdueTask(task, now);
@@ -347,24 +347,15 @@ function TaskRow({ task, tasks, now, href, pending, onToggle }: TaskRowProps) {
   const hasDay = taskDayOf(task) !== null;
   const when = overdue ? overdueLabel(task, now) : taskWhenLabel(task, now);
   const closed = task.status === "done" || task.status === "cancel";
-  const action = closed ? "reabrir" : "concluir";
 
   const day = taskDayOf(task);
   const figure = day ? dayFigure(day) : null;
 
   return (
     <li className={styles.row} data-status={task.status} data-pending={pending}>
-      <button
-        type="button"
-        className={styles.rowCheck}
-        data-status={task.status}
-        disabled={pending}
-        aria-label={`${taskStatusLabels[task.status]}. Toque para ${action} “${task.name}”`}
-        title={taskStatusLabels[task.status]}
-        onClick={onToggle}
-      >
-        <TaskStatusIcon status={task.status} size={22} />
-      </button>
+      <div className={styles.rowCheck}>
+        <TaskStatusPicker status={task.status} name={task.name} busy={pending} onChange={onStatusChange} />
+      </div>
 
       <div className={styles.main}>
         <h3 className={styles.name}><Link href={href} title={task.name}>{task.name}</Link></h3>

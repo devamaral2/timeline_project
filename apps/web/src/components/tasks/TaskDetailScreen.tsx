@@ -8,7 +8,7 @@ import { EntityAiEditBar } from "@/components/detail/EntityAiEditBar";
 import {
   ActionPill, BackLink, DetailActions, DetailFact, DetailFacts, DetailFrame, DetailHeading, DetailMenu, DetailMessage,
   DetailNav, DetailOrigin, DetailSection, LinkGroup, LinkRow, MenuItem, Prose, Reminders, RelationRow,
-  RowCard, StatusRow, TagPills, TaskStatusButton, TimeRange, detailIcon, detailStyles as styles,
+  RowCard, StatusRow, TagPills, TaskStatusButton, TaskStatusPicker, TimeRange, detailIcon, detailStyles as styles,
 } from "@/components/detail/detail-parts";
 import { notificationOffsetLabel } from "@/components/events/event-visuals";
 import { authedFetch } from "@/lib/api/authed-fetch";
@@ -25,7 +25,6 @@ import {
   taskStatusLabels,
   taskTimeOf,
   taskWhenLabel,
-  toggledStatus,
 } from "@/lib/tasks/tasks-model";
 import { DeleteTaskDialog } from "./DeleteTaskDialog";
 import { TaskPriorityMark, TaskStatusIcon } from "./task-visuals";
@@ -108,9 +107,9 @@ export function TaskDetailScreen({ userId, taskId }: { userId: string; taskId: s
     void run(() => updateTask(task.id, { expectedRevision: task.revision, status }), "Não foi possível trocar o status. Tente novamente.");
   }
 
-  function toggleSubtask(subtask: TaskSummaryDto) {
+  function changeSubtaskStatus(subtask: TaskSummaryDto, status: WorkItemStatus) {
     void run(
-      () => updateTask(subtask.id, { expectedRevision: subtask.revision, status: toggledStatus(subtask) }),
+      () => updateTask(subtask.id, { expectedRevision: subtask.revision, status }),
       "Não foi possível atualizar a subtarefa. Tente novamente.",
     );
   }
@@ -253,16 +252,9 @@ export function TaskDetailScreen({ userId, taskId }: { userId: string; taskId: s
               const closed = subtask.status === "done" || subtask.status === "cancel";
               return (
                 <li key={subtask.id} className={styles.subtask}>
-                  <button
-                    type="button"
-                    className={styles.check}
-                    data-status={subtask.status}
-                    disabled={busy}
-                    aria-label={`${taskStatusLabels[subtask.status]}. Toque para ${closed ? "reabrir" : "concluir"} “${subtask.name}”`}
-                    onClick={() => toggleSubtask(subtask)}
-                  >
-                    <TaskStatusIcon status={subtask.status} size={20} />
-                  </button>
+                  <span className={styles.check}>
+                    <TaskStatusPicker status={subtask.status} name={subtask.name} busy={busy} onChange={(status) => changeSubtaskStatus(subtask, status)} />
+                  </span>
                   <Link href={`${listHref}/${subtask.id}`} className={styles.subtaskName} data-done={closed}>{subtask.name}</Link>
                 </li>
               );

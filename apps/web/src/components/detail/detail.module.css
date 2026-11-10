@@ -161,9 +161,7 @@
 .card > li { border-bottom: 1px solid var(--hairline); }
 .card > li:last-child:has(.addSubtask, .subtaskForm) { border-bottom: 0; }
 .subtask { display: flex; align-items: center; gap: 3px; min-height: 56px; }
-.check { flex: none; display: grid; place-items: center; width: 44px; height: 44px; margin: 0 0 0 -11px; padding: 0; border: 0; border-radius: 50%; background: transparent; cursor: pointer; }
-.check:hover { background: var(--soft); }
-.check:disabled { opacity: .6; cursor: wait; }
+.check { flex: none; display: grid; place-items: center; width: 44px; height: 44px; margin: 0 0 0 -11px; }
 .check svg { width: 22px; height: 22px; }
 .check[data-status="done"] circle { fill: currentColor; }
 .check[data-status="done"] path { stroke: var(--background); }

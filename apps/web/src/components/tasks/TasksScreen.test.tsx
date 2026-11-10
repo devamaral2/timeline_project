@@ -83,22 +83,28 @@ test("a linha mostra a prioridade e o prazo das abertas, e só o prazo das concl
   expect(within(feita).queryByRole("img", { name: /Prioridade/ })).not.toBeInTheDocument();
 });
 
+/** Abre a lista de status da tarefa e escolhe um. */
+async function pickStatus(name: string, label: string) {
+  fireEvent.click(await screen.findByRole("button", { name: new RegExp(`Trocar status de ${name}`) }));
+  fireEvent.click(screen.getByRole("option", { name: new RegExp(label) }));
+}
+
 test("o círculo conclui a tarefa com a revisão da lista", async () => {
   authedFetch.mockImplementation((_path: string, init?: RequestInit) =>
     init?.method === "PATCH" ? Promise.resolve(undefined) : Promise.resolve([summaryTask({ id: "luz", revision: 4 })]),
   );
   render(<TasksScreen userId="user-1" />);
 
-  fireEvent.click(await screen.findByRole("button", { name: /Toque para concluir “Pagar conta de luz”/ }));
+  await pickStatus("Pagar conta de luz", "Concluída");
 
   await waitFor(() =>
     expect(authedFetch).toHaveBeenCalledWith("/api/tasks/luz", expect.objectContaining({ method: "PATCH", body: JSON.stringify({ expectedRevision: 4, status: "done" }) })),
   );
   // Concluída vai para o grupo recolhido; abrindo-o, o círculo passa a reabrir.
   const closed = await screen.findByRole("button", { name: /Concluídas/ });
-  expect(screen.queryByRole("button", { name: /Toque para concluir “Pagar conta de luz”/ })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /Status: A fazer/ })).not.toBeInTheDocument();
   fireEvent.click(closed);
-  expect(screen.getByRole("button", { name: /Toque para reabrir “Pagar conta de luz”/ })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /Status: Concluída. Trocar status de Pagar conta de luz/ })).toBeInTheDocument();
 });
 
 test("avisa ao concluir, desfaz com a revisão seguinte e some sozinho", async () => {
@@ -107,7 +113,7 @@ test("avisa ao concluir, desfaz com a revisão seguinte e some sozinho", async (
   );
   render(<TasksScreen userId="user-1" />);
 
-  fireEvent.click(await screen.findByRole("button", { name: /Toque para concluir “Pagar conta de luz”/ }));
+  await pickStatus("Pagar conta de luz", "Concluída");
   expect(await screen.findByRole("status")).toHaveTextContent("Concluída: Pagar conta de luz");
 
   fireEvent.click(screen.getByRole("button", { name: "Desfazer" }));
@@ -115,9 +121,9 @@ test("avisa ao concluir, desfaz com a revisão seguinte e some sozinho", async (
     expect(authedFetch).toHaveBeenLastCalledWith("/api/tasks/luz", expect.objectContaining({ method: "PATCH", body: JSON.stringify({ expectedRevision: 5, status: "todo" }) })),
   );
   expect(screen.queryByRole("status")).not.toBeInTheDocument();
-  expect(await screen.findByRole("button", { name: /Toque para concluir “Pagar conta de luz”/ })).toBeInTheDocument();
+  expect(await screen.findByRole("button", { name: /Status: A fazer. Trocar status de Pagar conta de luz/ })).toBeInTheDocument();
 
-  fireEvent.click(screen.getByRole("button", { name: /Toque para concluir “Pagar conta de luz”/ }));
+  await pickStatus("Pagar conta de luz", "Concluída");
   expect(await screen.findByRole("status")).toBeInTheDocument();
   // O relógio do aviso nasce num efeito: deixa o React assentá-lo antes de avançar o tempo.
   await act(async () => {});

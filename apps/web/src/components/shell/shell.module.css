@@ -590,7 +590,8 @@ a.chatEntityRow:hover .chatEntityName { text-decoration: underline; text-underli
   .shell:has(.sectionMenu[open][data-hub-view]) .bottomNav > a > span, .shell:has(.sectionMenu[open][data-hub-view]) .bottomNav > button > span { display: inline; }
   .shell:has(.sectionMenu[open][data-hub-view]) .bottomNav > [aria-current="page"] { border-color: var(--input); background: transparent; color: var(--ink); font-weight: 600; }
   .shell:has(.sectionMenu[open][data-hub-view]) .bottomNav svg { width: 20px; height: 20px; }
-  .shell:has(.sectionMenu[open][data-hub-view]) .bottomNav > .commandButton { display: none; }
+  .shell:has(.sectionMenu[open][data-hub-view]) .bottomNav > .commandButton { flex: none; width: 52px; padding: 0; border: 0; background: var(--muted); color: var(--background); }
+  .shell:has(.sectionMenu[open][data-hub-view]) .bottomNav > .commandButton svg { width: 24px; height: 24px; }
 
   .shell:has(:is(.detailMain, [data-detail])) .header, .shell:has(:is(.detailMain, [data-detail])) .bottomNav, .shell:has(:is(.detailMain, [data-detail])) .bottomFade { display: none; }
   .detailMain { padding: 20px 25px 36px; }

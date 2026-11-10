@@ -1,0 +1,995 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Braid · Tarefas e Notas</title>
+<style>
+/* OD-LAYOUT-PRIMITIVES v1 — structure only: display, flex/grid, overflow, wrapping, ratio, geometry.
+   Put this @layer first; product CSS outside the layer wins ordinary layout rules.
+   Native hidden and closed-dialog states take precedence over component display rules. */
+@layer od-layout {
+  [hidden]:not([hidden="until-found" i]) { display: none !important; }
+  dialog:not([open]) { display: none !important; }
+
+  :where(.od-stack,.od-row,.od-row-top,.od-cluster,.od-grid,.od-field,.od-stat,.od-cell,.od-tile) > :where(*) { min-width: 0; }
+
+  /* containers */
+  .od-stack   { display: flex; flex-direction: column; gap: var(--od-gap, 8px); }
+  .od-row     { display: flex; align-items: center; gap: var(--od-gap, 8px); }
+  .od-row-top { display: flex; align-items: flex-start; gap: var(--od-gap, 8px); }
+  .od-cluster { display: flex; flex-wrap: wrap; align-items: center; gap: var(--od-gap, 8px); }
+  .od-fill    { flex: 1 1 0; min-width: 0; }
+  .od-fixed   { flex: none; }
+  .od-grid    { display: grid; gap: var(--od-gap, 12px); grid-template-columns: repeat(var(--od-cols, 3), minmax(0, 1fr)); }
+
+  /* stacked information: each piece is its own line — never sibling inline spans */
+  .od-stat, .od-field, .od-cell { display: grid; gap: var(--od-gap, 2px); }
+  :where(.od-stat,.od-field,.od-cell) > :where(*) { display: block; }
+  .od-tile { display: grid; grid-template-rows: auto 1fr; }
+  :where(.od-tile) > :where(*) { display: block; }
+
+  /* media keeps its intrinsic ratio by default; never a distorted or cropped
+     cover by accident. height:auto lets the ratio win over an <img height="…">
+     attribute. Cropping to a uniform box is an explicit opt-in: set --od-ratio
+     AND add .od-media-cover together (per the core rule, only where a crop is
+     deliberate — tile thumbs, decorative fills — never on full-frame content). */
+  .od-media { display: block; width: 100%; height: auto; aspect-ratio: var(--od-ratio, auto); }
+  .od-media-cover { object-fit: cover; }
+
+  /* functional inline SVG icons opt into bounded geometry; content SVGs keep their own */
+  .od-icon { display: inline-block; inline-size: var(--od-icon-size, 1em); block-size: var(--od-icon-size, 1em); flex: none; }
+
+  /* data text only — authored copy is rewritten to its budget instead */
+  .od-truncate { display: block; max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .od-clamp-2, .od-clamp-3 { display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+  .od-clamp-2 { -webkit-line-clamp: 2; }
+  .od-clamp-3 { -webkit-line-clamp: 3; }
+  .od-lines-2 { min-height: calc(2 * 1.4em); }   /* block-level reservation for a shared baseline */
+  .od-nowrap  { white-space: nowrap; }           /* 数字+单位 · 价格+起 · 日期+星期 */
+  .od-keep    { word-break: keep-all; overflow-wrap: anywhere; } /* CJK labels break at spaces / <wbr> first */
+
+  /* screen skeleton (optional): bars take their own space, the middle scrolls — no padding guessed for chrome */
+  .od-screen { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; height: 100%; }
+  .od-scroll { overflow-y: auto; overscroll-behavior: contain; min-height: 0; }
+
+  /* horizontal rail: the next item peeks at the edge; trailing room survives overflow */
+  .od-rail { display: flex; gap: var(--od-gap, 8px); overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none;
+             padding-inline: var(--od-rail-pad, 16px); scroll-padding-inline: var(--od-rail-pad, 16px); }
+  .od-rail::-webkit-scrollbar { display: none; }
+  :where(.od-rail) > :where(*) { flex: none; scroll-snap-align: start; }
+  :where(.od-rail) > :where(:last-child) { margin-inline-end: var(--od-rail-pad, 16px); }
+
+  .od-spacer { flex: none; visibility: hidden; pointer-events: none; }
+  .od-touch  { min-width: 44px; min-height: 44px; }
+}
+:root [hidden]:where(:not([hidden="until-found" i])) { display: none; }
+/* /OD-LAYOUT-PRIMITIVES v1 */
+
+/* ───────── Fontes locais (as mesmas do app web) ───────── */
+@font-face { font-family: "Figtree"; src: url("assets/fonts/Figtree.ttf") format("truetype"); font-weight: 300 900; font-display: swap; }
+@font-face { font-family: "Newsreader"; src: url("assets/fonts/Newsreader.ttf") format("truetype"); font-weight: 200 800; font-style: normal; font-display: swap; }
+@font-face { font-family: "Newsreader"; src: url("assets/fonts/Newsreader-Italic.ttf") format("truetype"); font-weight: 200 800; font-style: italic; font-display: swap; }
+@font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/JetBrainsMono.ttf") format("truetype"); font-weight: 100 800; font-display: swap; }
+
+/* ───────── Tokens · tema escuro Hermes ───────── */
+:root {
+  color-scheme: dark;
+
+  /* superfícies e texto */
+  --bg: oklch(0.2089 0.0177 284.76);
+  --surface: oklch(0.2396 0.023 280.79);
+  --surface-hover: oklch(0.2591 0.0249 274.44);
+  --surface-active: oklch(0.3105 0.0364 275.35);
+  --line: oklch(0.3299 0.0284 279.15);
+  --line-strong: oklch(0.3982 0.0325 275.54);
+  --fg: oklch(0.9222 0.0013 286.37);
+  --muted: oklch(0.7351 0.0526 276.4);
+  --on-primary: oklch(0.2396 0.023 280.79);
+  --primary-hover: oklch(0.97 0.0013 286.37);
+
+  /* acento: o verde-água é sempre o agora */
+  --brand: oklch(0.6965 0.1212 187.82);
+  --brand-hi: oklch(0.775 0.1244 187.69);
+  --brand-soft: oklch(0.3257 0.0435 199.9);
+
+  /* estados */
+  --danger: oklch(0.8 0.111 17.7);
+  --warn: oklch(0.801 0.09 72.5);
+
+  /* tags por tipo */
+  --tag-l: 0.8;
+  --tag-c: 0.08;
+
+  /* tipografia */
+  --font-sans: "Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Newsreader", Georgia, "Times New Roman", serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  --fs-meta: 0.875rem;
+  --fs-body: 1rem;
+  --fs-lead: 1.25rem;
+  --fs-h1: clamp(2rem, 1.4rem + 2vw, 2.75rem);
+
+  /* espaço (múltiplos de 4/8) */
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 24px; --sp-6: 32px; --sp-7: 48px;
+
+  /* raios: 5 tags · 8 botões e campos · 14 cartões · 18 painéis */
+  --r-xs: 5px; --r-sm: 8px; --r-md: 14px; --r-lg: 18px;
+
+  /* movimento */
+  --t-fast: 150ms;
+  --t-base: 240ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+
+  --sidebar-w: 248px;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; min-height: 100vh;
+  background: var(--bg); color: var(--fg);
+  font-family: var(--font-sans); font-size: var(--fs-body); line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; background: none; border: 0; padding: 0; }
+h1, h2, h3, p, ul { margin: 0; padding: 0; }
+ul { list-style: none; }
+:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* ───────── Estrutura ───────── */
+.app { display: grid; grid-template-columns: var(--sidebar-w) minmax(0, 1fr); min-height: 100vh; }
+
+.sidebar {
+  position: sticky; top: 0; height: 100vh;
+  display: flex; flex-direction: column; gap: var(--sp-5);
+  padding: var(--sp-5) var(--sp-4);
+  background: var(--surface); border-right: 1px solid var(--line);
+}
+.brand { display: flex; align-items: center; gap: var(--sp-3); padding: 0 var(--sp-2); }
+.brand-name { font-family: var(--font-display); font-style: italic; font-weight: 500; font-size: 1.75rem; line-height: 1; letter-spacing: -0.01em; }
+.nav { display: flex; flex-direction: column; gap: var(--sp-1); }
+.nav-item {
+  display: flex; align-items: center; gap: var(--sp-3);
+  min-height: 44px; padding: 0 var(--sp-3);
+  border-radius: var(--r-sm); color: var(--muted); text-align: left; width: 100%;
+  transition: background var(--t-fast) var(--ease-out), color var(--t-fast) var(--ease-out);
+}
+.nav-item .od-icon { --od-icon-size: 20px; }
+.nav-label { flex: 1 1 0; min-width: 0; font-weight: 500; }
+.nav-count { font-family: var(--font-mono); font-size: var(--fs-meta); }
+.nav-item[aria-current="page"] { background: var(--brand-soft); color: var(--fg); }
+.nav-item[aria-current="page"] .od-icon { color: var(--brand-hi); }
+.sidebar-foot { margin-top: auto; padding: var(--sp-3) var(--sp-2) 0; border-top: 1px solid var(--line); }
+.avatar { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-active); font-weight: 600; font-size: var(--fs-meta); }
+.who-name { font-weight: 600; }
+.who-sub { font-size: var(--fs-meta); color: var(--muted); }
+
+.main { padding: var(--sp-6) clamp(16px, 4vw, 56px) var(--sp-7); }
+.view { max-width: 1040px; margin-inline: auto; display: flex; flex-direction: column; gap: var(--sp-5); }
+
+.page-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--sp-4) var(--sp-5); }
+.eyebrow { color: var(--muted); font-size: var(--fs-meta); }
+.page-title { font-family: var(--font-display); font-weight: 500; font-size: var(--fs-h1); line-height: 1.1; letter-spacing: -0.015em; }
+.page-sub { color: var(--muted); }
+.page-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); }
+
+/* ───────── Controles ───────── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2);
+  min-height: 44px; padding: 0 var(--sp-4);
+  border-radius: var(--r-sm); border: 1px solid var(--line-strong);
+  background: var(--surface); color: var(--fg); font-weight: 600; white-space: nowrap;
+  transition: background var(--t-fast) var(--ease-out), border-color var(--t-fast) var(--ease-out);
+}
+.btn .od-icon { --od-icon-size: 18px; }
+.btn-primary { background: var(--fg); color: var(--on-primary); border-color: var(--fg); }
+.btn-ghost { background: transparent; border-color: transparent; color: var(--muted); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.search {
+  display: flex; align-items: center; gap: var(--sp-2);
+  min-height: 44px; padding: 0 var(--sp-3); width: min(100%, 280px);
+  background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-sm);
+  color: var(--muted); transition: border-color var(--t-fast) var(--ease-out);
+}
+.search .od-icon { --od-icon-size: 18px; }
+.search input { flex: 1 1 0; min-width: 0; height: 42px; background: none; border: 0; color: var(--fg); outline: none; }
+.search input::placeholder { color: var(--muted); }
+.search:focus-within { border-color: var(--brand); outline: 2px solid var(--brand); outline-offset: 2px; }
+
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-3) var(--sp-4); }
+.seg { display: inline-flex; flex-wrap: wrap; gap: var(--sp-1); padding: var(--sp-1); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); }
+.seg-btn {
+  display: inline-flex; align-items: center; gap: var(--sp-2);
+  min-height: 40px; padding: 0 var(--sp-3); border-radius: var(--r-sm);
+  color: var(--muted); font-weight: 500; white-space: nowrap;
+  transition: background var(--t-fast) var(--ease-out), color var(--t-fast) var(--ease-out);
+}
+.seg-btn .n { font-family: var(--font-mono); font-size: var(--fs-meta); }
+.seg-btn[aria-pressed="true"] { background: var(--surface-active); color: var(--fg); }
+
+.filters { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-4); }
+.chip-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); }
+.chip-btn {
+  display: inline-flex; align-items: center; gap: var(--sp-2);
+  min-height: 36px; padding: 0 var(--sp-3); border-radius: 999px;
+  border: 1px solid var(--line-strong); color: var(--muted); font-size: var(--fs-meta); font-weight: 500;
+  transition: background var(--t-fast) var(--ease-out), border-color var(--t-fast) var(--ease-out), color var(--t-fast) var(--ease-out);
+}
+.chip-btn .od-icon { --od-icon-size: 14px; }
+.chip-btn[aria-pressed="true"] { background: var(--brand-soft); border-color: var(--brand); color: var(--fg); }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: oklch(var(--tag-l) var(--tag-c) var(--h)); }
+.sort { display: inline-flex; align-items: center; gap: var(--sp-2); color: var(--muted); font-size: var(--fs-meta); }
+.select {
+  min-height: 40px; padding: 0 var(--sp-3); background: var(--surface); color: var(--fg);
+  border: 1px solid var(--line-strong); border-radius: var(--r-sm);
+}
+
+@media (hover: hover) {
+  .nav-item:hover:not([aria-current="page"]) { background: var(--surface-hover); color: var(--fg); }
+  .btn:hover { background: var(--surface-hover); border-color: var(--muted); }
+  .btn-primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
+  .btn-ghost:hover { background: var(--surface-hover); color: var(--fg); }
+  .seg-btn:hover:not([aria-pressed="true"]) { background: var(--surface-hover); color: var(--fg); }
+  .chip-btn:hover:not([aria-pressed="true"]) { border-color: var(--muted); color: var(--fg); }
+  .search:hover { border-color: var(--muted); }
+}
+
+/* ───────── Tags ───────── */
+.tag {
+  display: inline-flex; align-items: center; min-height: 24px; padding: 0 var(--sp-2);
+  border-radius: var(--r-xs); font-size: var(--fs-meta); font-weight: 500; white-space: nowrap;
+  color: oklch(var(--tag-l) var(--tag-c) var(--h));
+  background: oklch(var(--tag-l) var(--tag-c) var(--h) / 0.14);
+}
+
+/* ───────── Tarefas ───────── */
+.groups { display: flex; flex-direction: column; gap: var(--sp-5); }
+.group-head { display: flex; align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-2); min-height: 32px; }
+.group-title { font-size: var(--fs-meta); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.group-title.is-danger { color: var(--danger); }
+.group-count { font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--muted); }
+.group-toggle { display: flex; align-items: center; gap: var(--sp-3); min-height: 44px; margin-bottom: var(--sp-2); width: 100%; text-align: left; border-radius: var(--r-sm); }
+.group-toggle .od-icon { --od-icon-size: 18px; color: var(--muted); transition: transform var(--t-base) var(--ease-out); }
+.group-toggle[aria-expanded="false"] .od-icon { transform: rotate(-90deg); }
+
+.task-list { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); overflow: hidden; }
+.task { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; column-gap: var(--sp-2); padding: var(--sp-3) var(--sp-4) var(--sp-3) var(--sp-2); border-top: 1px solid var(--line); min-height: 72px; transition: background var(--t-fast) var(--ease-out); }
+.task:first-child { border-top: 0; }
+.task.is-new { animation: rise var(--t-base) var(--ease-out); }
+.check { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; color: var(--muted); }
+.check .od-icon { --od-icon-size: 24px; }
+.check[aria-checked="mixed"], .check[aria-checked="true"] { color: var(--brand); }
+.check .ink { stroke: var(--on-primary); }
+.task-title { font-weight: 500; }
+.task.is-done .task-title { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--line-strong); }
+.task-meta { --od-gap: 8px; }
+.status-text { font-size: var(--fs-meta); color: var(--brand-hi); font-weight: 500; white-space: nowrap; }
+.sub { display: inline-flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-meta); color: var(--muted); }
+.sub-bar { width: 32px; height: 4px; border-radius: 2px; background: var(--line-strong); overflow: hidden; }
+.sub-bar > i { display: block; height: 100%; background: var(--brand); }
+.sub .n { font-family: var(--font-mono); }
+.task-side { display: flex; flex-direction: column; align-items: flex-end; gap: var(--sp-1); text-align: right; }
+.prio { display: inline-flex; align-items: center; gap: var(--sp-1); font-size: var(--fs-meta); font-weight: 500; white-space: nowrap; }
+.prio .od-icon { --od-icon-size: 16px; }
+.prio-alta { color: var(--danger); }
+.prio-media { color: var(--warn); }
+.prio-baixa { color: var(--muted); }
+.due { display: inline-flex; align-items: center; gap: var(--sp-1); font-size: var(--fs-meta); color: var(--muted); white-space: nowrap; }
+.due .od-icon { --od-icon-size: 16px; }
+.due.is-late { color: var(--danger); font-weight: 600; }
+.due.is-today { color: var(--fg); }
+
+/* ───────── Notas ───────── */
+.note-grid { display: grid; gap: var(--sp-4); grid-template-columns: repeat(auto-fill, minmax(min(100%, 296px), 1fr)); }
+.note {
+  --od-gap: 12px;
+  width: 100%; height: 100%; padding: var(--sp-5); text-align: left; align-items: stretch;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md);
+  transition: border-color var(--t-fast) var(--ease-out), background var(--t-fast) var(--ease-out);
+}
+.note-date { font-size: var(--fs-meta); color: var(--muted); }
+.note-title { font-family: var(--font-display); font-weight: 500; font-size: var(--fs-lead); line-height: 1.25; letter-spacing: -0.005em; }
+.note-excerpt { color: var(--muted); }
+.note-tags { margin-top: auto; padding-top: var(--sp-1); }
+@media (hover: hover) { .note:hover { border-color: var(--brand); background: var(--surface-hover); } }
+
+/* ───────── Estado vazio ───────── */
+.empty { display: flex; flex-direction: column; align-items: center; gap: var(--sp-3); text-align: center; padding: var(--sp-7) var(--sp-5); border: 1px dashed var(--line-strong); border-radius: var(--r-md); }
+.empty .od-icon { --od-icon-size: 32px; color: var(--muted); }
+.empty-title { font-family: var(--font-display); font-size: var(--fs-lead); font-weight: 500; }
+.empty-text { color: var(--muted); max-width: 44ch; }
+
+/* ───────── Diálogos ───────── */
+dialog { color: var(--fg); background: var(--surface); border: 1px solid var(--line); padding: 0; }
+dialog::backdrop { background: oklch(0 0 0 / 0.6); }
+dialog.modal { width: min(480px, calc(100vw - 32px)); border-radius: var(--r-lg); margin: auto; }
+dialog.modal[open] { animation: rise var(--t-base) var(--ease-out); }
+dialog.drawer { width: min(560px, 100vw); height: 100dvh; max-height: none; margin: 0 0 0 auto; border-radius: 0; border-width: 0 0 0 1px; }
+dialog.drawer[open] { display: flex; flex-direction: column; animation: slide var(--t-base) var(--ease-out); }
+.dlg-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); padding: var(--sp-4) var(--sp-5); border-bottom: 1px solid var(--line); }
+.dlg-title { font-family: var(--font-display); font-size: var(--fs-lead); font-weight: 500; }
+.dlg-body { display: flex; flex-direction: column; gap: var(--sp-4); padding: var(--sp-5); }
+.dlg-foot { display: flex; justify-content: flex-end; gap: var(--sp-3); padding: var(--sp-4) var(--sp-5); border-top: 1px solid var(--line); }
+.icon-btn { display: grid; place-items: center; width: 44px; height: 44px; border-radius: var(--r-sm); color: var(--muted); }
+.icon-btn .od-icon { --od-icon-size: 20px; }
+@media (hover: hover) { .icon-btn:hover { background: var(--surface-hover); color: var(--fg); } }
+
+.field-label { font-size: var(--fs-meta); font-weight: 600; }
+.field-label .req { color: var(--danger); }
+.input, .textarea {
+  width: 100%; min-height: 44px; padding: 0 var(--sp-3);
+  background: var(--bg); color: var(--fg); border: 1px solid var(--line-strong); border-radius: var(--r-sm);
+  transition: border-color var(--t-fast) var(--ease-out);
+}
+.textarea { min-height: 144px; padding: var(--sp-3); resize: vertical; line-height: 1.5; }
+.input[aria-invalid="true"], .textarea[aria-invalid="true"] { border-color: var(--danger); }
+.field-error { color: var(--danger); font-size: var(--fs-meta); }
+.field-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-4); }
+
+.note-view { overflow-y: auto; flex: 1 1 0; min-height: 0; padding: var(--sp-6) var(--sp-5) var(--sp-7); display: flex; flex-direction: column; gap: var(--sp-4); }
+.note-view h2 { font-family: var(--font-display); font-weight: 500; font-size: clamp(1.75rem, 1.4rem + 1.2vw, 2.25rem); line-height: 1.15; letter-spacing: -0.01em; }
+.note-view p { max-width: 65ch; }
+.note-view p + p { margin-top: var(--sp-1); }
+
+/* ───────── Aviso ───────── */
+.toast {
+  position: fixed; left: 0; right: 0; margin-inline: auto; width: fit-content; bottom: var(--sp-5);
+  display: flex; align-items: center; gap: var(--sp-4);
+  min-height: 52px; padding: var(--sp-2) var(--sp-2) var(--sp-2) var(--sp-4);
+  background: var(--surface-active); border: 1px solid var(--line-strong); border-radius: var(--r-md);
+  box-shadow: 0 16px 40px oklch(0 0 0 / 0.45); max-width: calc(100vw - 32px); z-index: 20;
+  animation: rise var(--t-base) var(--ease-out);
+}
+.toast-msg { min-width: 0; }
+
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes slide { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+
+/* ───────── Responsivo ───────── */
+@media (max-width: 899px) {
+  .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+  .sidebar { position: static; height: auto; flex-direction: row; align-items: center; gap: var(--sp-4); padding: var(--sp-2) var(--sp-4); border-right: 0; border-bottom: 1px solid var(--line); overflow-x: auto; }
+  .nav { flex-direction: row; margin-left: auto; }
+  .nav-item { width: auto; }
+  .sidebar-foot { display: none; }
+  .main { padding-top: var(--sp-5); }
+}
+@media (max-width: 639px) {
+  .page-actions { width: 100%; }
+  .page-actions .search { width: 100%; flex: 1 1 100%; }
+  .page-actions .btn-primary { width: 100%; }
+  .brand-name { display: none; }
+  .nav { margin-left: 0; }
+  .nav-count { display: none; }
+  .task { grid-template-columns: 44px minmax(0, 1fr); row-gap: var(--sp-1); }
+  .task-side { grid-column: 2; flex-direction: row; align-items: center; justify-content: flex-start; gap: var(--sp-4); text-align: left; }
+  .field-row { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" aria-label="Navegação principal">
+    <div class="brand">
+      <svg width="28" height="28" viewBox="0 0 28 28" role="img" aria-label="Braid">
+        <rect x="3" y="8" width="4" height="14" rx="2" fill="oklch(0.5424 0.0397 274.43)"/>
+        <rect x="9" y="4" width="4" height="20" rx="2" fill="oklch(0.6965 0.1212 187.82)"/>
+        <rect x="15" y="6" width="4" height="18" rx="2" fill="oklch(0.9222 0.0013 286.37)"/>
+        <rect x="21" y="10" width="4" height="12" rx="2" fill="oklch(0.3982 0.0325 275.54)"/>
+      </svg>
+      <span class="brand-name">Braid</span>
+    </div>
+    <nav class="nav" aria-label="Seções">
+      <button type="button" class="nav-item" data-nav="tasks" aria-current="page">
+        <span data-icon="tasks"></span><span class="nav-label">Tarefas</span><span class="nav-count" id="nav-tasks-count"></span>
+      </button>
+      <button type="button" class="nav-item" data-nav="notes">
+        <span data-icon="notes"></span><span class="nav-label">Notas</span><span class="nav-count" id="nav-notes-count"></span>
+      </button>
+    </nav>
+    <div class="sidebar-foot od-row" style="--od-gap:12px">
+      <span class="avatar od-fixed" aria-hidden="true">RA</span>
+      <div class="od-fill od-stat" style="--od-gap:0">
+        <span class="who-name od-truncate">Rafael Amaral</span>
+        <span class="who-sub">Conta pessoal</span>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <!-- ═════════ TAREFAS ═════════ -->
+    <section class="view" id="view-tasks" aria-labelledby="tasks-title">
+      <header class="page-head">
+        <div class="od-stack" style="--od-gap:4px">
+          <p class="eyebrow">domingo, 8 de novembro</p>
+          <h1 class="page-title" id="tasks-title" tabindex="-1">Tarefas</h1>
+          <p class="page-sub" id="tasks-summary"></p>
+        </div>
+        <div class="page-actions">
+          <label class="search"><span data-icon="search"></span>
+            <input type="search" id="task-search" placeholder="Buscar tarefas" aria-label="Buscar tarefas" autocomplete="off">
+          </label>
+          <button type="button" class="btn btn-primary" id="task-new"><span data-icon="plus"></span>Nova tarefa</button>
+        </div>
+      </header>
+
+      <div class="filters">
+        <div class="chip-row" role="group" aria-label="Filtrar por tag" id="task-tags"></div>
+      </div>
+
+      <div class="groups" id="task-groups"></div>
+      <div class="empty" id="task-empty" hidden>
+        <span data-icon="tasks"></span>
+        <h2 class="empty-title" id="task-empty-title"></h2>
+        <p class="empty-text" id="task-empty-text"></p>
+        <button type="button" class="btn" id="task-empty-action"></button>
+      </div>
+    </section>
+
+    <!-- ═════════ NOTAS ═════════ -->
+    <section class="view" id="view-notes" aria-labelledby="notes-title" hidden>
+      <header class="page-head">
+        <div class="od-stack" style="--od-gap:4px">
+          <p class="eyebrow" id="notes-eyebrow"></p>
+          <h1 class="page-title" id="notes-title" tabindex="-1">Notas</h1>
+          <p class="page-sub">Registros curtos de treino, refeições, sono e rotina.</p>
+        </div>
+        <div class="page-actions">
+          <label class="search"><span data-icon="search"></span>
+            <input type="search" id="note-search" placeholder="Buscar notas" aria-label="Buscar notas" autocomplete="off">
+          </label>
+          <button type="button" class="btn btn-primary" id="note-new"><span data-icon="plus"></span>Nova nota</button>
+        </div>
+      </header>
+
+      <div class="toolbar">
+        <div class="chip-row" role="group" aria-label="Filtrar por tag" id="note-tags"></div>
+      </div>
+
+      <div class="groups" id="note-grid"></div>
+      <div class="empty" id="note-empty" hidden>
+        <span data-icon="notes"></span>
+        <h2 class="empty-title" id="note-empty-title"></h2>
+        <p class="empty-text" id="note-empty-text"></p>
+        <button type="button" class="btn" id="note-empty-action"></button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- Nova tarefa -->
+<dialog class="modal" id="task-dialog" aria-labelledby="task-dialog-title">
+  <div class="dlg-head">
+    <h2 class="dlg-title" id="task-dialog-title">Nova tarefa</h2>
+    <button type="button" class="icon-btn" data-close aria-label="Fechar"><span data-icon="x"></span></button>
+  </div>
+  <div class="dlg-body">
+    <div class="od-field">
+      <label class="field-label" for="f-task-title">Título <span class="req" aria-hidden="true">*</span></label>
+      <input class="input" id="f-task-title" type="text" autocomplete="off" aria-describedby="f-task-title-err" required>
+      <p class="field-error" id="f-task-title-err" hidden></p>
+    </div>
+    <div class="field-row">
+      <div class="od-field">
+        <label class="field-label" for="f-task-tag">Tag</label>
+        <select class="input" id="f-task-tag"></select>
+      </div>
+      <div class="od-field">
+        <label class="field-label" for="f-task-prio">Prioridade</label>
+        <select class="input" id="f-task-prio">
+          <option value="alta">Alta</option>
+          <option value="media" selected>Média</option>
+          <option value="baixa">Baixa</option>
+        </select>
+      </div>
+    </div>
+    <div class="od-field">
+      <label class="field-label" for="f-task-due">Prazo</label>
+      <input class="input" id="f-task-due" type="date" value="2026-11-09">
+    </div>
+  </div>
+  <div class="dlg-foot">
+    <button type="button" class="btn" data-close>Cancelar</button>
+    <button type="button" class="btn btn-primary" id="task-save">Criar tarefa</button>
+  </div>
+</dialog>
+
+<!-- Nova nota -->
+<dialog class="modal" id="note-dialog" aria-labelledby="note-dialog-title">
+  <div class="dlg-head">
+    <h2 class="dlg-title" id="note-dialog-title">Nova nota</h2>
+    <button type="button" class="icon-btn" data-close aria-label="Fechar"><span data-icon="x"></span></button>
+  </div>
+  <div class="dlg-body">
+    <div class="od-field">
+      <label class="field-label" for="f-note-title">Título <span class="req" aria-hidden="true">*</span></label>
+      <input class="input" id="f-note-title" type="text" autocomplete="off" aria-describedby="f-note-title-err" required>
+      <p class="field-error" id="f-note-title-err" hidden></p>
+    </div>
+    <div class="od-field">
+      <label class="field-label" for="f-note-tag">Tag</label>
+      <select class="input" id="f-note-tag"></select>
+    </div>
+    <div class="od-field">
+      <label class="field-label" for="f-note-body">Texto</label>
+      <textarea class="textarea" id="f-note-body"></textarea>
+    </div>
+  </div>
+  <div class="dlg-foot">
+    <button type="button" class="btn" data-close>Cancelar</button>
+    <button type="button" class="btn btn-primary" id="note-save">Salvar nota</button>
+  </div>
+</dialog>
+
+<!-- Painel da nota -->
+<dialog class="drawer" id="note-drawer" aria-labelledby="note-drawer-title">
+  <div class="dlg-head">
+    <span class="eyebrow" id="note-drawer-date"></span>
+    <button type="button" class="icon-btn" data-close aria-label="Fechar nota"><span data-icon="x"></span></button>
+  </div>
+  <div class="note-view" id="note-drawer-body"></div>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden>
+  <span class="toast-msg od-truncate" id="toast-msg"></span>
+  <button type="button" class="btn btn-ghost" id="toast-undo" hidden>Desfazer</button>
+</div>
+
+<script>
+(() => {
+  /* ── ícones: uma família, traço 1.75, pontas redondas ── */
+  const PATHS = {
+    tasks: '<path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/>',
+    notes: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h6"/>',
+    plus: '<path d="M12 5v14"/><path d="M5 12h14"/>',
+    search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+    x: '<path d="M6 6l12 12"/><path d="M18 6 6 18"/>',
+    chevron: '<path d="m6 9 6 6 6-6"/>',
+    alert: '<path d="M12 4 2.5 20h19z"/><path d="M12 10v4"/><path d="M12 17.5v.01"/>',
+    circle: '<circle cx="12" cy="12" r="8.5"/>',
+    doing: '<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/>',
+    done: '<circle cx="12" cy="12" r="9.25" fill="currentColor" stroke="none"/><path class="ink" d="m8 12.5 3 3 5-6"/>',
+    clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>'
+  };
+  const svg = (name, extra = '') =>
+    `<svg class="od-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" ${extra}>${PATHS[name]}</svg>`;
+  const prioIcon = (level) => {
+    const on = { alta: 3, media: 2, baixa: 1 }[level];
+    const bars = [['M6 19v-4', 1], ['M12 19v-8', 2], ['M18 19V6', 3]]
+      .map(([d, i]) => `<path d="${d}" opacity="${i <= on ? 1 : 0.3}"/>`).join('');
+    return `<svg class="od-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">${bars}</svg>`;
+  };
+  const hydrateIcons = (root) => root.querySelectorAll('[data-icon]').forEach((el) => {
+    el.insertAdjacentHTML('afterend', svg(el.dataset.icon));
+    el.remove();
+  });
+
+  /* ── utilitários ── */
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const norm = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const h = (tag, props = {}, ...kids) => {
+    const el = document.createElement(tag);
+    for (const [k, v] of Object.entries(props)) {
+      if (v == null || v === false) continue;
+      if (k === 'class') el.className = v;
+      else if (k === 'text') el.textContent = v;
+      else if (k === 'html') el.innerHTML = v;
+      else if (k === 'style') el.style.cssText = v;
+      else el.setAttribute(k, v === true ? '' : v);
+    }
+    for (const kid of kids.flat()) if (kid != null && kid !== false) el.append(kid);
+    return el;
+  };
+
+  const TODAY = '2026-11-08';
+  const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+  const WEEKDAYS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+  const utc = (iso) => { const [y, m, d] = iso.split('-').map(Number); return Date.UTC(y, m - 1, d); };
+  const dayDiff = (iso) => Math.round((utc(iso) - utc(TODAY)) / 864e5);
+  const shortDate = (iso) => { const [, m, d] = iso.split('-').map(Number); return `${d} ${MONTHS[m - 1]}`; };
+  const weekdayDate = (iso) => `${WEEKDAYS[new Date(utc(iso)).getUTCDay()]}, ${shortDate(iso)}`;
+
+  const TAGS = {
+    rotina:   { label: 'Rotina',   hue: 232 },
+    refeicao: { label: 'Refeição', hue: 72 },
+    treino:   { label: 'Treino',   hue: 135 },
+    sono:     { label: 'Sono',     hue: 288 },
+    ideias:   { label: 'Ideias',   hue: 20 }
+  };
+  const tagChip = (key) => h('span', { class: 'tag', style: `--h:${TAGS[key].hue}`, text: TAGS[key].label });
+  const PRIO = { alta: 'Alta', media: 'Média', baixa: 'Baixa' };
+
+  /* ── dados de exemplo ── */
+  let uid = 100;
+  const tasks = [
+    { id: 't1', title: 'Pagar a fatura do cartão', tag: 'rotina', prio: 'alta', due: '2026-11-07', status: 'todo' },
+    { id: 't2', title: 'Revisar o plano de treino da semana', tag: 'treino', prio: 'alta', due: '2026-11-06', status: 'todo', sub: [1, 3] },
+    { id: 't3', title: 'Treino de pernas', tag: 'treino', prio: 'alta', due: '2026-11-08', time: '18:00', status: 'doing', sub: [2, 4] },
+    { id: 't4', title: 'Preparar as marmitas da semana', tag: 'refeicao', prio: 'media', due: '2026-11-08', time: '15:00', status: 'todo', sub: [2, 5] },
+    { id: 't5', title: 'Dormir às 22h30 para ajustar o horário', tag: 'sono', prio: 'media', due: '2026-11-08', time: '22:30', status: 'todo' },
+    { id: 't6', title: 'Comprar proteínas e verduras', tag: 'refeicao', prio: 'media', due: '2026-11-09', status: 'todo', sub: [3, 6] },
+    { id: 't7', title: 'Marcar consulta de rotina com o clínico', tag: 'rotina', prio: 'baixa', due: '2026-11-10', status: 'todo' },
+    { id: 't8', title: 'Registrar medidas e fotos do mês', tag: 'treino', prio: 'baixa', due: '2026-11-12', status: 'todo' },
+    { id: 't9', title: 'Renovar o seguro do carro', tag: 'rotina', prio: 'media', due: '2026-11-13', status: 'todo' },
+    { id: 't10', title: 'Testar a receita de risoto de cogumelos', tag: 'refeicao', prio: 'baixa', due: '2026-11-20', status: 'todo' },
+    { id: 't11', title: 'Planejar a rotina de sono para a viagem', tag: 'sono', prio: 'baixa', due: '2026-11-24', status: 'todo' },
+    { id: 't12', title: 'Alongamento da manhã', tag: 'treino', prio: 'baixa', due: '2026-11-08', time: '07:00', status: 'done' },
+    { id: 't13', title: 'Enviar o relatório mensal', tag: 'rotina', prio: 'alta', due: '2026-11-05', status: 'done' },
+    { id: 't14', title: 'Lavar a roupa de cama', tag: 'rotina', prio: 'baixa', due: '2026-11-07', status: 'done' }
+  ];
+
+  const notes = [
+    { id: 'n1', title: 'Rotina de sono: o que mudou em outubro', tags: ['sono'], date: '2026-11-07', body: [
+      'Em outubro passei a desligar as telas meia hora antes de deitar. A diferença mais clara foi acordar sem precisar do segundo alarme.',
+      'Ainda falha nos dias de treino à noite: o corpo demora a baixar a atividade. Vale testar treinar mais cedo ou fechar com alongamento leve.',
+      'Próximo passo: manter o horário de deitar às 22h30 por duas semanas seguidas, inclusive no fim de semana.' ] },
+    { id: 'n2', title: 'Receitas rápidas para a semana', tags: ['refeicao'], date: '2026-11-06', body: [
+      'Frango desfiado com legumes assados rende três marmitas e pode ser feito de uma vez no domingo.',
+      'Omelete de forno com espinafre e queijo branco: dez minutos de preparo, serve bem no café da manhã ou no jantar.',
+      'Para variar, arroz com lentilha e ovo cozido. Barato, simples e segura bem a tarde.' ] },
+    { id: 'n3', title: 'Treino A/B/C: progressão de cargas', tags: ['treino'], date: '2026-11-05', body: [
+      'A: peito, ombro e tríceps. B: costas e bíceps. C: pernas e abdômen. Descanso no quarto dia ou quando a recuperação pedir.',
+      'Regra de progressão: quando fechar todas as séries na repetição máxima com boa execução, subir a carga na sessão seguinte.',
+      'Anotar a carga de cada exercício no fim do treino, não depois.' ] },
+    { id: 'n4', title: 'Ideias para a revisão semanal', tags: ['ideias', 'rotina'], date: '2026-11-04', body: [
+      'Reservar quinze minutos no domingo à noite: o que foi feito, o que ficou para trás e o que importa de verdade na próxima semana.',
+      'Olhar a agenda dos próximos sete dias antes de abrir a lista de tarefas, para encaixar as tarefas nos horários livres.',
+      'Fechar sempre com uma única prioridade da semana.' ] },
+    { id: 'n5', title: 'Checklist para a consulta de rotina', tags: ['rotina'], date: '2026-11-03', body: [
+      'Levar os exames mais recentes e a lista de medicamentos e suplementos em uso.',
+      'Perguntar sobre sono, dor nas costas ao fim do dia e quando repetir o exame de sangue.',
+      'Anotar as orientações logo depois, ainda no consultório.' ] },
+    { id: 'n6', title: 'Café da manhã proteico: combinações', tags: ['refeicao'], date: '2026-11-01', body: [
+      'Iogurte natural com aveia e fruta. Ovos mexidos com pão integral. Tapioca com queijo e ovo.',
+      'O que funciona melhor é deixar metade pronta na véspera: cozinhar os ovos e cortar as frutas.' ] },
+    { id: 'n7', title: 'Alongamento e mobilidade: sequência de dez minutos', tags: ['treino'], date: '2026-10-30', body: [
+      'Quadril em quatro apoios, abertura de peitoral na parede, rotação de coluna deitado e alongamento de posterior sentado.',
+      'Respirar fundo em cada posição e não forçar além do ponto de leve tensão.' ] },
+    { id: 'n8', title: 'Lista de leitura para o fim de ano', tags: ['ideias'], date: '2026-10-28', body: [
+      'Dois livros de não ficção sobre hábitos e sono, um romance longo e uma releitura de algo antigo.',
+      'Meta realista: vinte páginas por dia, sempre antes de dormir, no lugar das telas.' ] },
+    { id: 'n9', title: 'Como foi a semana de 27 de outubro', tags: ['rotina', 'sono'], date: '2026-10-27', body: [
+      'Três treinos feitos de quatro planejados. Duas noites abaixo de sete horas de sono, ambas depois de jantar tarde.',
+      'O que ajudou: marmitas prontas na segunda e caminhada curta depois do almoço.' ] }
+  ];
+
+  /* ── estado de tela ── */
+  const T = { tags: new Set(), q: '', doneOpen: false };
+  const N = { tags: new Set(), q: '' };
+  let lastTrigger = null;
+  let undoFn = null;
+  let toastTimer = 0;
+
+  /* ── navegação ── */
+  function showView(name) {
+    $('#view-tasks').hidden = name !== 'tasks';
+    $('#view-notes').hidden = name !== 'notes';
+    document.querySelectorAll('[data-nav]').forEach((b) => {
+      if (b.dataset.nav === name) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+    });
+    $(name === 'tasks' ? '#tasks-title' : '#notes-title').focus({ preventScroll: true });
+  }
+  document.querySelectorAll('[data-nav]').forEach((b) => b.addEventListener('click', () => showView(b.dataset.nav)));
+
+  /* ── tarefas ── */
+  const rankDue = (t) => (t.due ? dayDiff(t.due) * 1440 + (t.time ? Number(t.time.slice(0, 2)) * 60 + Number(t.time.slice(3)) : 0) : 1e9);
+  const rankPrio = (t) => ({ alta: 0, media: 1, baixa: 2 }[t.prio]);
+  // dentro de cada status: prioridade (alta → baixa) e depois data
+  const sorter = () => (a, b) => rankPrio(a) - rankPrio(b) || rankDue(a) - rankDue(b);
+
+  const baseTasks = () => {
+    const q = norm(T.q.trim());
+    return tasks.filter((t) => (!T.tags.size || T.tags.has(t.tag)) && (!q || norm(t.title).includes(q)));
+  };
+  function dueNode(t) {
+    if (!t.due) return null;
+    const d = dayDiff(t.due);
+    const open = t.status !== 'done';
+    let cls = 'due', label, icon = '';
+    if (open && d < 0) { cls += ' is-late'; label = `Atrasada · ${shortDate(t.due)}`; icon = svg('alert'); }
+    else if (d === 0) { cls += ' is-today'; label = t.time ? `Hoje, ${t.time}` : 'Hoje'; icon = svg('clock'); }
+    else if (d === 1) { label = 'Amanhã'; }
+    else { label = weekdayDate(t.due); }
+    const el = h('span', { class: cls, html: icon });
+    el.append(label);
+    return el;
+  }
+
+  function taskRow(t, isNew) {
+    const state = t.status === 'done' ? 'true' : t.status === 'doing' ? 'mixed' : 'false';
+    const icon = t.status === 'done' ? 'done' : t.status === 'doing' ? 'doing' : 'circle';
+    const meta = h('div', { class: 'task-meta od-cluster' }, tagChip(t.tag),
+      t.status === 'doing' && h('span', { class: 'status-text', text: 'Em andamento' }),
+      t.sub && h('span', { class: 'sub', role: 'img', 'aria-label': `${t.sub[0]} de ${t.sub[1]} subtarefas` },
+        h('span', { class: 'sub-bar' }, h('i', { style: `width:${Math.round((t.sub[0] / t.sub[1]) * 100)}%` })),
+        h('span', { class: 'n', text: `${t.sub[0]}/${t.sub[1]}` })));
+    const side = h('div', { class: 'task-side' },
+      t.status !== 'done' && h('span', { class: `prio prio-${t.prio}`, html: prioIcon(t.prio) + `<span>${PRIO[t.prio]}</span>` }),
+      dueNode(t));
+    return h('li', { class: `task${t.status === 'done' ? ' is-done' : ''}${isNew ? ' is-new' : ''}`, 'data-id': t.id },
+      h('button', { type: 'button', class: 'check', role: 'checkbox', 'aria-checked': state, 'data-action': 'toggle', 'data-id': t.id,
+        'aria-label': `${t.status === 'done' ? 'Reabrir' : 'Concluir'}: ${t.title}`, html: svg(icon) }),
+      h('div', { class: 'od-stack', style: '--od-gap:4px' }, h('span', { class: 'task-title od-truncate', title: t.title, text: t.title }), meta),
+      side);
+  }
+
+  let newTaskId = null;
+  const STATUS_GROUPS = [['doing', 'Em andamento'], ['todo', 'A fazer'], ['done', 'Concluídas']];
+  function renderTasks() {
+    const base = baseTasks();
+
+    const tagRow = $('#task-tags');
+    const present = Object.keys(TAGS).filter((k) => tasks.some((t) => t.tag === k));
+    tagRow.replaceChildren(...present.map((k) => h('button', { type: 'button', class: 'chip-btn', 'aria-pressed': String(T.tags.has(k)), 'data-tag': k },
+      h('span', { class: 'dot', style: `--h:${TAGS[k].hue}` }), TAGS[k].label)));
+    if (T.tags.size) tagRow.append(h('button', { type: 'button', class: 'chip-btn', 'data-clear-tags': '' }, 'Limpar tags'));
+
+    const box = $('#task-groups');
+    const sort = sorter();
+    const nodes = [];
+    for (const [status, title] of STATUS_GROUPS) {
+      const list = base.filter((t) => t.status === status).sort(sort);
+      if (!list.length) continue;
+      if (status === 'done') {
+        const expanded = T.doneOpen;
+        nodes.push(h('section', { class: 'group', 'aria-label': title },
+          h('button', { type: 'button', class: 'group-toggle', id: 'done-toggle', 'aria-expanded': String(expanded), 'aria-controls': 'done-list' },
+            h('span', { html: svg('chevron') }),
+            h('span', { class: 'group-title', text: title }),
+            h('span', { class: 'group-count', text: String(list.length) })),
+          h('ul', { class: 'task-list', id: 'done-list', hidden: !expanded }, list.map((t) => taskRow(t, false)))));
+      } else {
+        nodes.push(h('section', { class: 'group', 'aria-label': title },
+          h('div', { class: 'group-head' }, h('h2', { class: 'group-title', text: title }), h('span', { class: 'group-count', text: String(list.length) })),
+          h('ul', { class: 'task-list' }, list.map((t) => taskRow(t, t.id === newTaskId)))));
+      }
+    }
+    box.replaceChildren(...nodes);
+    newTaskId = null;
+
+    const isEmpty = nodes.length === 0;
+    $('#task-empty').hidden = !isEmpty;
+    box.hidden = isEmpty;
+    if (isEmpty) {
+      const filtered = T.q.trim() || T.tags.size;
+      $('#task-empty-title').textContent = filtered ? 'Nenhuma tarefa encontrada' : 'Nenhuma tarefa por aqui';
+      $('#task-empty-text').textContent = filtered
+        ? 'Nada combina com a busca e os filtros atuais. Remova um filtro para ver mais tarefas.'
+        : 'Crie a primeira tarefa para começar a organizar o seu dia.';
+      const act = $('#task-empty-action');
+      act.textContent = filtered ? 'Limpar filtros' : 'Nova tarefa';
+      act.dataset.mode = filtered ? 'clear' : 'new';
+    }
+
+    const openAll = tasks.filter((t) => t.status !== 'done');
+    const late = openAll.filter((t) => t.due && dayDiff(t.due) < 0).length;
+    const today = openAll.filter((t) => t.due && dayDiff(t.due) === 0).length;
+    $('#tasks-summary').textContent = `${openAll.length} abertas · ${late} atrasadas · ${today} para hoje`;
+    $('#nav-tasks-count').textContent = String(openAll.length);
+  }
+
+  function toggleTask(id) {
+    const t = tasks.find((x) => x.id === id);
+    if (!t) return;
+    const prev = t.status;
+    t.status = prev === 'done' ? 'todo' : 'done';
+    renderTasks();
+    const btn = $(`.check[data-id="${id}"]`);
+    (btn || $('#done-toggle') || $('#tasks-title')).focus({ preventScroll: true });
+    toast(t.status === 'done' ? `Concluída: ${t.title}` : `Reaberta: ${t.title}`, () => {
+      t.status = prev;
+      renderTasks();
+      ($(`.check[data-id="${id}"]`) || $('#tasks-title')).focus({ preventScroll: true });
+    });
+  }
+
+  $('#task-groups').addEventListener('click', (e) => {
+    const chk = e.target.closest('[data-action="toggle"]');
+    if (chk) return toggleTask(chk.dataset.id);
+    const dt = e.target.closest('#done-toggle');
+    if (dt) { T.doneOpen = !T.doneOpen; renderTasks(); $('#done-toggle').focus({ preventScroll: true }); }
+  });
+  $('#task-tags').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.clearTags !== undefined) { T.tags.clear(); renderTasks(); return $('#task-tags button')?.focus(); }
+    const k = b.dataset.tag; T.tags.has(k) ? T.tags.delete(k) : T.tags.add(k);
+    renderTasks(); $(`#task-tags [data-tag="${k}"]`).focus();
+  });
+  $('#task-search').addEventListener('input', (e) => { T.q = e.target.value; renderTasks(); });
+  $('#task-empty-action').addEventListener('click', (e) => {
+    if (e.currentTarget.dataset.mode === 'clear') {
+      T.q = ''; T.tags.clear(); $('#task-search').value = ''; renderTasks(); $('#task-search').focus();
+    } else openTaskDialog(e.currentTarget);
+  });
+
+  /* ── notas ── */
+  const noteExcerpt = (n) => n.body[0];
+  const noteCard = (n) => h('li', {},
+    h('button', { type: 'button', class: 'note od-stack', 'data-note': n.id },
+      h('span', { class: 'note-date', text: shortDate(n.date) }),
+      h('span', { class: 'note-title od-clamp-2', text: n.title }),
+      h('span', { class: 'note-excerpt od-clamp-3', text: noteExcerpt(n) }),
+      h('span', { class: 'note-tags od-cluster' }, n.tags.map(tagChip))));
+
+  // grupos por tag (a primeira tag da nota); dentro de cada grupo, da data mais recente para a mais antiga
+  function renderNotes() {
+    const q = norm(N.q.trim());
+    const list = notes
+      .filter((n) => (!N.tags.size || n.tags.some((t) => N.tags.has(t))) && (!q || norm(n.title + ' ' + n.body.join(' ')).includes(q)))
+      .sort((a, b) => utc(b.date) - utc(a.date));
+
+    const tagRow = $('#note-tags');
+    const present = Object.keys(TAGS).filter((k) => notes.some((n) => n.tags.includes(k)));
+    tagRow.replaceChildren(...present.map((k) => h('button', { type: 'button', class: 'chip-btn', 'aria-pressed': String(N.tags.has(k)), 'data-tag': k },
+      h('span', { class: 'dot', style: `--h:${TAGS[k].hue}` }), TAGS[k].label)));
+    if (N.tags.size) tagRow.append(h('button', { type: 'button', class: 'chip-btn', 'data-clear-tags': '' }, 'Limpar tags'));
+
+    const groups = Object.keys(TAGS).map((k) => [k, list.filter((n) => n.tags[0] === k)]).filter(([, l]) => l.length);
+    $('#note-grid').replaceChildren(...groups.map(([k, l]) => h('section', { class: 'group', 'aria-label': TAGS[k].label },
+      h('div', { class: 'group-head' },
+        h('span', { class: 'dot', style: `--h:${TAGS[k].hue}` }),
+        h('h2', { class: 'group-title', text: TAGS[k].label }),
+        h('span', { class: 'group-count', text: String(l.length) })),
+      h('ul', { class: 'note-grid' }, l.map(noteCard)))));
+
+    const isEmpty = list.length === 0;
+    $('#note-empty').hidden = !isEmpty;
+    $('#note-grid').hidden = isEmpty;
+    if (isEmpty) {
+      const filtered = q || N.tags.size;
+      $('#note-empty-title').textContent = filtered ? 'Nenhuma nota encontrada' : 'Nenhuma nota ainda';
+      $('#note-empty-text').textContent = filtered
+        ? 'Nada combina com a busca e as tags escolhidas. Tente outra palavra ou remova um filtro.'
+        : 'Escreva a primeira nota para guardar o que vale lembrar.';
+      const act = $('#note-empty-action');
+      act.textContent = filtered ? 'Limpar filtros' : 'Nova nota';
+      act.dataset.mode = filtered ? 'clear' : 'new';
+    }
+    $('#notes-eyebrow').textContent = `${notes.length} notas`;
+    $('#nav-notes-count').textContent = String(notes.length);
+  }
+
+  $('#note-tags').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.clearTags !== undefined) { N.tags.clear(); renderNotes(); return $('#note-tags button')?.focus(); }
+    const k = b.dataset.tag; N.tags.has(k) ? N.tags.delete(k) : N.tags.add(k);
+    renderNotes(); $(`#note-tags [data-tag="${k}"]`).focus();
+  });
+  $('#note-search').addEventListener('input', (e) => { N.q = e.target.value; renderNotes(); });
+  $('#note-empty-action').addEventListener('click', (e) => {
+    if (e.currentTarget.dataset.mode === 'clear') {
+      N.q = ''; N.tags.clear(); $('#note-search').value = ''; renderNotes(); $('#note-search').focus();
+    } else openNoteDialog(e.currentTarget);
+  });
+
+  /* painel da nota */
+  const drawer = $('#note-drawer');
+  $('#note-grid').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-note]'); if (!b) return;
+    const n = notes.find((x) => x.id === b.dataset.note); if (!n) return;
+    lastTrigger = b;
+    $('#note-drawer-date').textContent = `Nota de ${shortDate(n.date)}`;
+    $('#note-drawer-body').replaceChildren(
+      h('h2', { id: 'note-drawer-title', text: n.title }),
+      h('div', { class: 'od-cluster' }, n.tags.map(tagChip)),
+      ...n.body.map((p) => h('p', { text: p })));
+    drawer.showModal();
+  });
+
+  /* ── diálogos ── */
+  document.querySelectorAll('dialog').forEach((dlg) => {
+    dlg.addEventListener('click', (e) => {
+      if (e.target === dlg || e.target.closest('[data-close]')) dlg.close();
+    });
+    dlg.addEventListener('close', () => {
+      const back = lastTrigger && document.contains(lastTrigger) ? lastTrigger : null;
+      (back || $(dlg.id.startsWith('task') ? '#task-new' : '#note-new')).focus({ preventScroll: true });
+    });
+  });
+
+  const fieldError = (input, errEl, msg) => {
+    if (msg) { errEl.textContent = msg; errEl.hidden = false; input.setAttribute('aria-invalid', 'true'); }
+    else { errEl.hidden = true; errEl.textContent = ''; input.removeAttribute('aria-invalid'); }
+  };
+  const tagOptions = (sel, keys) => sel.replaceChildren(...keys.map((k) => h('option', { value: k, text: TAGS[k].label })));
+
+  const taskTitle = $('#f-task-title');
+  const validateTask = () => {
+    const bad = !taskTitle.value.trim();
+    fieldError(taskTitle, $('#f-task-title-err'), bad ? 'Dê um nome à tarefa para salvá-la, por exemplo “Treino de costas”.' : '');
+    return !bad;
+  };
+  function openTaskDialog(trigger) {
+    lastTrigger = trigger;
+    tagOptions($('#f-task-tag'), ['rotina', 'refeicao', 'treino', 'sono']);
+    taskTitle.value = ''; fieldError(taskTitle, $('#f-task-title-err'), '');
+    $('#f-task-prio').value = 'media'; $('#f-task-due').value = '2026-11-09';
+    $('#task-dialog').showModal();
+    taskTitle.focus();
+  }
+  taskTitle.addEventListener('blur', () => { if (taskTitle.value || taskTitle.hasAttribute('aria-invalid')) validateTask(); });
+  function saveTask() {
+    if (!validateTask()) return taskTitle.focus();
+    const t = { id: `t${++uid}`, title: taskTitle.value.trim(), tag: $('#f-task-tag').value, prio: $('#f-task-prio').value, due: $('#f-task-due').value || null, status: 'todo' };
+    tasks.push(t);
+    T.q = ''; T.tags.clear(); $('#task-search').value = '';
+    newTaskId = t.id;
+    lastTrigger = null;
+    $('#task-dialog').close();
+    renderTasks();
+    ($(`.check[data-id="${t.id}"]`) || $('#task-new')).focus({ preventScroll: false });
+    toast('Tarefa criada');
+  }
+  $('#task-new').addEventListener('click', (e) => openTaskDialog(e.currentTarget));
+  $('#task-save').addEventListener('click', saveTask);
+  taskTitle.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); saveTask(); } });
+
+  const noteTitle = $('#f-note-title');
+  const validateNote = () => {
+    const bad = !noteTitle.value.trim();
+    fieldError(noteTitle, $('#f-note-title-err'), bad ? 'Dê um título à nota para encontrá-la depois.' : '');
+    return !bad;
+  };
+  function openNoteDialog(trigger) {
+    lastTrigger = trigger;
+    tagOptions($('#f-note-tag'), Object.keys(TAGS));
+    noteTitle.value = ''; $('#f-note-body').value = ''; fieldError(noteTitle, $('#f-note-title-err'), '');
+    $('#note-dialog').showModal();
+    noteTitle.focus();
+  }
+  noteTitle.addEventListener('blur', () => { if (noteTitle.value || noteTitle.hasAttribute('aria-invalid')) validateNote(); });
+  function saveNote() {
+    if (!validateNote()) return noteTitle.focus();
+    const body = $('#f-note-body').value.split(/\n+/).map((s) => s.trim()).filter(Boolean);
+    const n = { id: `n${++uid}`, title: noteTitle.value.trim(), tags: [$('#f-note-tag').value], date: TODAY, body: body.length ? body : ['Sem texto ainda.'] };
+    notes.push(n);
+    N.q = ''; N.tags.clear(); $('#note-search').value = '';
+    lastTrigger = null;
+    $('#note-dialog').close();
+    renderNotes();
+    ($(`[data-note="${n.id}"]`) || $('#note-new')).focus();
+    toast('Nota salva');
+  }
+  $('#note-new').addEventListener('click', (e) => openNoteDialog(e.currentTarget));
+  $('#note-save').addEventListener('click', saveNote);
+  noteTitle.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); saveNote(); } });
+
+  /* ── aviso ── */
+  function toast(msg, undo) {
+    clearTimeout(toastTimer);
+    undoFn = undo || null;
+    $('#toast-msg').textContent = msg;
+    $('#toast-undo').hidden = !undo;
+    $('#toast').hidden = false;
+    toastTimer = setTimeout(() => { $('#toast').hidden = true; undoFn = null; }, 5000);
+  }
+  $('#toast-undo').addEventListener('click', () => {
+    const fn = undoFn; undoFn = null; $('#toast').hidden = true; clearTimeout(toastTimer);
+    if (fn) fn();
+  });
+
+  /* ── atalho: "/" foca a busca da tela ativa ── */
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return;
+    const tag = document.activeElement?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || document.querySelector('dialog[open]')) return;
+    e.preventDefault();
+    $($('#view-tasks').hidden ? '#note-search' : '#task-search').focus();
+  });
+
+  hydrateIcons(document);
+  renderTasks();
+  renderNotes();
+})();
+</script>
+</body>
+</html>

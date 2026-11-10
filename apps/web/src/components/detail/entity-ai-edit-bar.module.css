@@ -24,6 +24,7 @@
 .contextText > span:last-child { font-size: 15px; font-weight: 600; line-height: 22px; font-variant-numeric: tabular-nums; color: var(--ink); }
 .row { display: flex; align-items: flex-end; gap: 2px; padding-left: 12px; }
 .input { flex: 1; min-width: 0; max-height: 132px; min-height: 44px; padding: 11px 0; border: 0; border-radius: 8px; outline: 0; background: transparent; color: var(--ink); font: inherit; font-size: 15px; line-height: 22px; resize: none; field-sizing: content; }
+.input:focus, .input:focus-visible { outline: 0 !important; border: 0; box-shadow: none; }
 .input::placeholder { color: var(--faint); opacity: 1; }
 .input:disabled { opacity: .6; }
 .voice, .send { flex: none; display: grid; place-items: center; width: var(--control-md); height: var(--control-md); padding: 0; border: 0; border-radius: 50%; cursor: pointer; }

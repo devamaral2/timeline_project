@@ -60,13 +60,11 @@
 .row { position: relative; display: flex; align-items: flex-start; gap: 16px; padding: 14px 0; }
 .row + .row::before { content: ""; position: absolute; top: 0; left: 60px; right: 0; height: 1px; background: var(--hairline); }
 .row[data-pending="true"] { opacity: .6; }
-.rowCheck { flex: none; display: grid; place-items: center; width: 44px; height: 44px; margin-top: 2px; padding: 0; border: 1px solid var(--line); border-radius: 13px; background: transparent; cursor: pointer; }
-.rowCheck:disabled { cursor: progress; }
+.rowCheck { flex: none; display: grid; place-items: center; width: 44px; height: 44px; margin-top: 2px; }
 .rowCheck svg { width: 22px; height: 22px; }
 .rowCheck .statusIcon[data-status="done"] circle { fill: currentColor; }
 .rowCheck .statusIcon[data-status="done"] path { stroke: var(--background); }
 @media (hover: hover) {
-  .rowCheck:hover:not(:disabled) { border-color: var(--muted); }
   .name a:hover { text-decoration: underline; text-underline-offset: 4px; }
 }
 
@@ -138,7 +136,7 @@ textarea.line { height: auto; min-height: 64px; padding: 10px 0; line-height: 1.
 @media (max-width: 720px) {
   /* No celular a faixa do topo leva a contagem e o botao de opcoes; a ordem e o
      filtro moram no painel dele. */
-  .headRow { margin: -4px -20px 0; padding: 0 14px 10px 20px; border-bottom: 1px solid var(--line); }
+  .headRow { margin: -4px -20px 0; padding: 0 14px 10px 20px; }
   .phoneOptions { display: block; }
   .groupNav, .tagFilter, .toolbar { display: none; }
   .phoneOptions .tagFilter { display: flex; }
