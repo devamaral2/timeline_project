@@ -2,26 +2,32 @@
 
 import {
   dayKeyRange, dayNumber, isSameMonth, longDate, monthGridOf,
-  monthLabel, shiftDayKey, weekOf, weekday, zonedDayEnd, zonedDayStart,
+  monthLabel, shiftDayKey, shiftMonthKey, weekOf, weekday, zonedDayEnd, zonedDayStart,
 } from "@repo/timeline";
-import { ChevronDown, Columns2, Infinity as InfinityIcon, SlidersHorizontal } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { WeekStrip } from "@/components/events/WeekStrip";
-import { ICON_STROKE_WIDTH, visualForItemType } from "@/components/events/event-visuals";
+import { requestHubOpen } from "@/components/hub/hub-events";
+import page from "@/components/ui/page.module.css";
 import { authedFetch } from "@/lib/api/authed-fetch";
+import { briefDate, weekdayDate } from "@/lib/dates/day-labels";
 import type { TimelineEventCardDto, TimelineEventPageDto } from "@/lib/api/contracts";
 import { useNow } from "@/lib/events/use-now";
 import { useSessionState } from "@/lib/session/use-session";
 import { useAiJobRefresh } from "@/lib/ai-jobs/use-ai-job-refresh";
 import { AgendaDay } from "./agenda-day";
+import { AgendaOptions, type AgendaViewMode } from "./agenda-options";
 import { agendaEventsByDay } from "./agenda-data";
-import { EXAMPLE_NOW, EXAMPLE_TODAY, type ExampleEvent, type ExampleTask } from "./agenda-examples";
+import { EXAMPLE_NOW, EXAMPLE_TODAY, type ExampleEvent, type ExampleTask, exampleEventsOn } from "./agenda-examples";
 import { agendaRefreshEvent } from "./agenda-refresh";
 import { type AgendaScrollBoundary, agendaScrollBoundaryFromAttempt } from "./agenda-scroll-boundary";
 import { EventTaskDialog, type SelectedEvent } from "./task-controls";
-import styles from "@/components/shell/shell.module.css";
+import styles from "./agenda.module.css";
 
-type ViewMode = "list" | "day";
+type ViewMode = AgendaViewMode;
+
+/** Onde a escolha "mostrar o tempo livre" fica guardada, por navegador. */
+const FREE_TIME_STORAGE_KEY = "braid-agenda-free-time";
 
 /** Dias carregados a cada vez que a rolagem infinita chega a uma borda. */
 const INFINITE_STEP_DAYS = 7;
@@ -31,6 +37,19 @@ const INFINITE_MAX_DAYS = 364;
 /** "Setembro" no ano corrente; "Setembro de 2027" quando se navega para outro ano. */
 function monthName(dayKey: string, todayKey: string) {
   return dayKey.slice(0, 4) === todayKey.slice(0, 4) ? monthLabel(dayKey).replace(/ de \d{4}$/, "") : monthLabel(dayKey);
+}
+
+/** "5 eventos · 3 h 50 planejadas": quanto do dia já tem dono. */
+export function daySummary(events: readonly ExampleEvent[]) {
+  if (events.length === 0) return "Nenhum evento";
+  const count = `${events.length} ${events.length === 1 ? "evento" : "eventos"}`;
+  const minutes = events.reduce((total, event) => total + event.minutes, 0);
+  if (minutes === 0) return count;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  if (hours === 0) return `${count} · ${rest} min planejados`;
+  if (rest === 0) return `${count} · ${hours} h ${hours === 1 ? "planejada" : "planejadas"}`;
+  return `${count} · ${hours} h ${String(rest).padStart(2, "0")} planejadas`;
 }
 
 export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: string; todayKey?: string }) {
@@ -50,8 +69,8 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
     setRefreshVersion((version) => version + 1);
   });
   const [selectedEvent, setSelectedEvent] = useState<SelectedEvent | null>(null);
-  const viewOptionsRef = useRef<HTMLDetailsElement>(null);
   const [mode, setMode] = useState<ViewMode>("day");
+  const [showFreeTime, setShowFreeTime] = useState(true);
   const [selectedDay, setSelectedDay] = useState(todayKey);
   const [navigation, setNavigation] = useState({ dayKey: todayKey });
   const [dayRange, setDayRange] = useState({ before: 0, after: 0 });
@@ -67,6 +86,20 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
     : dayKeyRange(shiftDayKey(navigation.dayKey, -dayRange.before), dayRange.before + dayRange.after + 1);
   const rangeStart = pageDays[0] ?? todayKey;
   const rangeEnd = pageDays[pageDays.length - 1] ?? todayKey;
+
+  // A chave do tempo livre é uma preferência do navegador; lê-se depois de montar.
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem(FREE_TIME_STORAGE_KEY) === "off") setShowFreeTime(false);
+    } catch {}
+  }, []);
+
+  function changeShowFreeTime(show: boolean) {
+    setShowFreeTime(show);
+    try {
+      window.localStorage.setItem(FREE_TIME_STORAGE_KEY, show ? "on" : "off");
+    } catch {}
+  }
 
   useEffect(() => {
     function refresh() {
@@ -124,7 +157,6 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
 
   function changeMode(nextMode: ViewMode) {
     setMode(nextMode);
-    if (viewOptionsRef.current) viewOptionsRef.current.open = false;
     selectDay(selectedDay);
     setDayRange({ before: 0, after: nextMode === "list" ? INFINITE_STEP_DAYS : 0 });
   }
@@ -224,7 +256,11 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
     function syncVisibleDay() {
       cancelAnimationFrame(scrollFrame.current);
       scrollFrame.current = requestAnimationFrame(() => {
-        const top = (controlsRef.current?.getBoundingClientRect().bottom ?? 0) + 12;
+        // Com duas colunas o calendário fica ao lado da lista, não por cima dela.
+        const controls = controlsRef.current?.getBoundingClientRect();
+        const list = daysRef.current?.getBoundingClientRect();
+        const stacked = controls && list ? controls.right > list.left : false;
+        const top = (stacked ? controls?.bottom ?? 0 : 0) + 12;
         const sections = daysRef.current?.querySelectorAll<HTMLElement>("[data-agenda-day]");
         const current = Array.from(sections ?? []).find((section) => section.getBoundingClientRect().bottom > top);
         if (current?.dataset.agendaDay) setSelectedDay(current.dataset.agendaDay);
@@ -238,107 +274,97 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
   }, [mode]);
 
   if (userId && !ready) {
-    return <main id="conteudo" className={styles.main}><p role="status" className={styles.emptyDay}>Carregando sua sessão…</p></main>;
+    return <main id="conteudo" className={page.frame}><p role="status" className={styles.status}>Carregando sua sessão…</p></main>;
   }
   if (userId && ready && !user) {
-    return <main id="conteudo" className={styles.main}><p className={styles.emptyDay}>Entre na sua conta para ver sua agenda.</p></main>;
+    return <main id="conteudo" className={page.frame}><p className={styles.status}>Entre na sua conta para ver sua agenda.</p></main>;
   }
 
+  const dayEvents = userId ? eventsByDay[selectedDay] ?? [] : exampleEventsOn(selectedDay);
+  const options = { mode, onModeChange: changeMode, showFreeTime, onShowFreeTimeChange: changeShowFreeTime };
+
   return (
-    <main id="conteudo" className={styles.main}>
-      <div className={styles.pageHeading}>
-        <h1 className={styles.pageTitle}>Agenda</h1>
-        <div className={styles.headingActions}>
-          <details ref={viewOptionsRef} className={styles.viewOptions} onKeyDown={(event) => {
-            if (event.key === "Escape") { event.currentTarget.open = false; event.currentTarget.querySelector("summary")?.focus(); }
-          }} onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false; }}>
-            <summary aria-label="Opções de visualização" title="Opções de visualização"><SlidersHorizontal aria-hidden /></summary>
-            <fieldset className={styles.viewModes} aria-label="Visualização da agenda">
-              <legend>Visualização</legend>
-              <button type="button" aria-pressed={mode === "list"} onClick={() => changeMode("list")}><InfinityIcon aria-hidden /><span>Lista infinita<small>Dias em sequência</small></span></button>
-              <button type="button" aria-pressed={mode === "day"} onClick={() => changeMode("day")}><Columns2 aria-hidden /><span>Lista por dia<small>Um dia de cada vez</small></span></button>
-            </fieldset>
-          </details>
+    <main id="conteudo" className={page.frame}>
+      <section className={`${page.lead} ${styles.lead}`} aria-label="O dia em foco">
+        <div className={styles.dateRow}>
+          <h1 className={page.eyebrow}>{weekdayDate(selectedDay)}</h1>
+          <div className={styles.phoneOptions}><AgendaOptions {...options} withModes align="end" /></div>
         </div>
-      </div>
 
-      <div className={styles.contentGrid}>
-        <div className={styles.agenda}>
-          <div className={styles.agendaControls} ref={controlsRef}>
-            <div className={styles.dateToolbar}>
-              <button
-                type="button" className={styles.monthToggle} aria-expanded={monthOpen} aria-controls="agenda-month-picker"
-                onClick={() => { setBrowsingMonth(selectedDay); setMonthOpen((open) => !open); }}
-              >{monthName(monthOpen ? browsingMonth : selectedDay, todayKey)}<ChevronDown aria-hidden /></button>
-              <div className={styles.dateActions}>
-                <button type="button" className={styles.todayButton} onClick={() => selectDay(todayKey)}>Hoje</button>
-              </div>
-            </div>
-
-            {monthOpen || mode === "list" ? null : <WeekStrip selectedDayKey={selectedDay} todayKey={todayKey} onSelect={selectDay} />}
-
-            {monthOpen ? (
-              <section id="agenda-month-picker" className={styles.monthPicker} aria-label="Escolher dia do mês">
-                <label className={styles.monthJump}>Ir para o mês
-                  <input type="month" aria-label="Escolher mês e ano" min="1900-01" max="2100-12" value={browsingMonth.slice(0, 7)} onChange={(event) => {
-                    if (event.target.validity.valid && /^\d{4}-\d{2}$/.test(event.target.value)) setBrowsingMonth(`${event.target.value}-01`);
-                  }} />
-                </label>
-                <div className={styles.monthDays}>
-                  {weekOf(browsingMonth).map((dayKey) => <span className={styles.weekday} key={dayKey}>{weekday(dayKey).slice(0, 3)}</span>)}
-                  {monthGridOf(browsingMonth).map((dayKey) => (
-                    <button type="button" key={dayKey} aria-label={longDate(dayKey)} aria-pressed={dayKey === selectedDay} aria-current={dayKey === todayKey ? "date" : undefined} data-outside={!isSameMonth(dayKey, browsingMonth)} onClick={() => selectDay(dayKey)}>{dayNumber(dayKey)}</button>
-                  ))}
+        <div className={styles.calendar} ref={controlsRef}>
+          {monthOpen ? (
+            <section id="agenda-month-picker" className={styles.monthCard} aria-label="Escolher dia do mês">
+              <div className={styles.monthHead}>
+                <button type="button" className={styles.monthToggle} aria-expanded aria-controls="agenda-month-picker" onClick={() => setMonthOpen(false)}>
+                  {monthLabel(browsingMonth).replace(" de ", " ")}<ChevronDown aria-hidden />
+                </button>
+                <div className={styles.monthNav}>
+                  <button type="button" aria-label="Mês anterior" onClick={() => setBrowsingMonth((month) => shiftMonthKey(month, -1))}><ChevronLeft aria-hidden /></button>
+                  <button type="button" aria-label="Próximo mês" onClick={() => setBrowsingMonth((month) => shiftMonthKey(month, 1))}><ChevronRight aria-hidden /></button>
                 </div>
-              </section>
-            ) : null}
-          </div>
+              </div>
+              <div className={styles.monthWeekdays} aria-hidden>
+                {weekOf(browsingMonth).map((dayKey) => <span key={dayKey}>{weekday(dayKey).slice(0, 3)}</span>)}
+              </div>
+              <ul className={styles.monthGrid}>
+                {monthGridOf(browsingMonth).map((dayKey) => (
+                  <li key={dayKey}>
+                    <button type="button" aria-label={dayKey === todayKey ? `${longDate(dayKey)}, hoje` : longDate(dayKey)} aria-pressed={dayKey === selectedDay} aria-current={dayKey === todayKey ? "date" : undefined} data-outside={!isSameMonth(dayKey, browsingMonth)} onClick={() => selectDay(dayKey)}>{dayNumber(dayKey)}</button>
+                  </li>
+                ))}
+              </ul>
+              <div className={styles.monthFoot}>
+                <button type="button" className={styles.todayPill} onClick={() => selectDay(todayKey)}>Hoje</button>
+                <p>{briefDate(todayKey)}</p>
+              </div>
+            </section>
+          ) : (
+            <>
+              <button
+                type="button" className={styles.monthToggle} aria-expanded={false} aria-controls="agenda-month-picker"
+                onClick={() => { setBrowsingMonth(selectedDay); setMonthOpen(true); }}
+              >{monthName(selectedDay, todayKey)}<ChevronDown aria-hidden /></button>
+              {mode === "day" ? <WeekStrip selectedDayKey={selectedDay} todayKey={todayKey} onSelect={selectDay} /> : null}
+            </>
+          )}
+        </div>
+      </section>
 
-          <section
-            ref={daysRef} className={mode === "list" ? styles.verticalDays : styles.horizontalDays}
-            aria-label={mode === "list" ? "Agenda em lista contínua" : "Agenda com dias na horizontal"}
-            tabIndex={mode === "day" ? 0 : undefined}
-            onKeyDown={(event) => {
-              if (mode !== "day" || event.target !== event.currentTarget) return;
-              if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
-                event.preventDefault();
-                selectDay(shiftDayKey(selectedDay, event.key === "ArrowLeft" ? -1 : 1));
-              }
-            }}
-            onScroll={(event) => {
-              if (mode !== "day") return;
-              const strip = event.currentTarget;
-              if (strip.scrollTop !== 0) strip.scrollTop = 0;
-              const dayKey = pageDays[Math.round(strip.scrollLeft / strip.clientWidth)];
-              if (dayKey) setSelectedDay(dayKey);
-            }}
-          >
-            {pageDays.map((dayKey) => <AgendaDay key={dayKey} dayKey={dayKey} now={now} tasks={tasks} missedEvents={missedEvents} onSelectEvent={setSelectedEvent} events={userId ? eventsByDay[dayKey] ?? [] : undefined} userId={userId} todayKey={todayKey} hideWhenEmpty={mode === "list"} showHeading={mode === "list"} />)}
-          </section>
-          {userId && loadState === "loading" ? <p role="status" className={styles.listNote}>Carregando sua agenda…</p> : null}
-          {userId && loadState === "failed" ? <p role="alert" className={styles.listNote}>Não foi possível carregar a agenda. Tente novamente.</p> : null}
-          {!userId ? <p className={styles.listNote}>Dados de exemplo · relógio ilustrativo iniciado às 09:35</p> : null}
+      <section className={page.body} aria-label={`Eventos de ${mode === "day" ? weekday(selectedDay).toLowerCase() : "todos os dias"}`}>
+        <div className={styles.toolbar}>
+          <div className={styles.viewControls}>
+            <button type="button" className={styles.modePill} aria-pressed={mode === "day"} onClick={() => changeMode("day")}>Por dia</button>
+            <button type="button" className={styles.modePill} aria-pressed={mode === "list"} onClick={() => changeMode("list")}>Em sequência</button>
+            <AgendaOptions {...options} />
+          </div>
+          {mode === "day" && loadState !== "loading" ? <p className={styles.summary}>{daySummary(dayEvents)}</p> : null}
         </div>
 
-        <aside className={styles.sidebar} aria-label="Legenda da agenda">
-          <section className={styles.typeLegend} aria-label="Tipos de evento">
-            <h2>Na sua agenda</h2>
-            {["routine", "training", "meal", "sleep"].map((type) => {
-              const { Icon, label } = visualForItemType(type);
-              return <div key={type} data-type={type}><Icon aria-hidden strokeWidth={ICON_STROKE_WIDTH} /><span>{label}</span></div>;
-            })}
-          </section>
-          <section className={styles.timeLegend} aria-label="Posição dos eventos no tempo">
-            <h2>O seu dia, em perspectiva</h2>
-            <div><i data-time-position="past" aria-hidden /><span>Horários passados</span></div>
-            <div><i data-time-position="running" aria-hidden /><span>Em andamento</span></div>
-            <div><i data-time-position="upcoming" aria-hidden /><span>A seguir</span></div>
-            <div><i data-time-position="free" aria-hidden /><span>Tempo livre</span></div>
-            <p>O relógio situa o evento. O status continua sendo da tarefa.</p>
-          </section>
-          <p className={styles.prototypeNote}>Estudo visual · dados de exemplo</p>
-        </aside>
-      </div>
+        <section
+          ref={daysRef} className={mode === "list" ? styles.verticalDays : styles.horizontalDays}
+          aria-label={mode === "list" ? "Agenda em lista contínua" : "Agenda com dias na horizontal"}
+          tabIndex={mode === "day" ? 0 : undefined}
+          onKeyDown={(event) => {
+            if (mode !== "day" || event.target !== event.currentTarget) return;
+            if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+              event.preventDefault();
+              selectDay(shiftDayKey(selectedDay, event.key === "ArrowLeft" ? -1 : 1));
+            }
+          }}
+          onScroll={(event) => {
+            if (mode !== "day") return;
+            const strip = event.currentTarget;
+            if (strip.scrollTop !== 0) strip.scrollTop = 0;
+            const dayKey = pageDays[Math.round(strip.scrollLeft / strip.clientWidth)];
+            if (dayKey) setSelectedDay(dayKey);
+          }}
+        >
+          {pageDays.map((dayKey) => <AgendaDay key={dayKey} dayKey={dayKey} now={now} tasks={tasks} missedEvents={missedEvents} onSelectEvent={setSelectedEvent} onPlanFreeWindow={(freeWindow) => requestHubOpen({ freeWindow })} events={userId ? eventsByDay[dayKey] ?? [] : undefined} userId={userId} todayKey={todayKey} hideWhenEmpty={mode === "list"} showHeading={mode === "list"} showFreeTime={showFreeTime} />)}
+        </section>
+        {userId && loadState === "loading" ? <p role="status" className={styles.note}>Carregando sua agenda…</p> : null}
+        {userId && loadState === "failed" ? <p role="alert" className={styles.note}>Não foi possível carregar a agenda. Tente novamente.</p> : null}
+        {!userId ? <p className={styles.note}>Dados de exemplo · relógio ilustrativo às 09:35</p> : null}
+      </section>
       <EventTaskDialog
         selected={selectedEvent}
         task={selectedEvent?.event.task ? tasks[selectedEvent.event.task.id] ?? selectedEvent.event.task : undefined}

@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
 import { AgendaDay } from "./agenda-day";
 import { EXAMPLE_NOW, EXAMPLE_TODAY } from "./agenda-examples";
@@ -49,38 +49,43 @@ test("empty days can be omitted from the continuous list", () => {
   expect(screen.queryByText("Um dia livre, do seu jeito.")).not.toBeInTheDocument();
 });
 
-test("an event is upcoming until it ends and past afterwards", () => {
+test("an event is running inside its window, past afterwards and upcoming before", () => {
   render(<AgendaDay {...props} events={[
     { name: "Reunião longa", type: "routine", time: "09:00 — 11:00", minutes: 120, duration: "2 h", startedAt: "2026-09-14T09:00:00-03:00", finishedAt: "2026-09-14T11:00:00-03:00" },
     { name: "Mais cedo", type: "meal", time: "07:00 — 07:30", minutes: 30, duration: "30 min", startedAt: "2026-09-14T07:00:00-03:00", finishedAt: "2026-09-14T07:30:00-03:00" },
+    { name: "Mais tarde", type: "meal", time: "12:00 — 12:30", minutes: 30, duration: "30 min", startedAt: "2026-09-14T12:00:00-03:00", finishedAt: "2026-09-14T12:30:00-03:00" },
   ]} />);
 
-  expect(screen.getByRole("button", { name: "Reunião longa" }).closest("article")).toHaveAttribute("data-time-position", "upcoming");
+  // O estado aparece só na borda e no ponto do ícone, nunca como texto.
+  expect(screen.getByRole("button", { name: "Reunião longa" }).closest("article")).toHaveAttribute("data-time-position", "running");
   expect(screen.getByRole("button", { name: "Mais cedo" }).closest("article")).toHaveAttribute("data-time-position", "past");
+  expect(screen.getByRole("button", { name: "Mais tarde" }).closest("article")).toHaveAttribute("data-time-position", "upcoming");
+  expect(screen.queryByText("Em andamento")).not.toBeInTheDocument();
 });
 
 const slotsOf = () => Array.from(document.querySelectorAll<HTMLElement>("[data-free-time]"));
 
-test("free time blocks fill the gaps between events and until midnight, with their duration highlighted", () => {
-  render(<AgendaDay {...props} dayKey="2026-09-15" events={[
+test("free windows fill the gaps between events and until midnight, with their duration highlighted", () => {
+  const onPlanFreeWindow = vi.fn();
+  render(<AgendaDay {...props} dayKey="2026-09-15" onPlanFreeWindow={onPlanFreeWindow} events={[
     { name: "Almoço", type: "meal", time: "13:00 — 14:00", minutes: 60, duration: "1 h", startedAt: "2026-09-15T13:00:00-03:00", finishedAt: "2026-09-15T14:00:00-03:00" },
     { name: "Jantar", type: "meal", time: "20:00 — 21:00", minutes: 60, duration: "1 h", startedAt: "2026-09-15T20:00:00-03:00", finishedAt: "2026-09-15T21:00:00-03:00" },
   ]} />);
 
   const [between, afterLast] = slotsOf();
   expect(slotsOf()).toHaveLength(2);
-  expect(between).toHaveTextContent("Tempo livre14:00 — 20:00");
+  expect(between).toHaveTextContent("Livre14:00 — 20:00");
   expect(within(between).getByText("6")).toBeInTheDocument();
   expect(within(between).getByText("h")).toBeInTheDocument();
-  expect(afterLast).toHaveTextContent("Tempo livre21:00 — 24:00");
+  expect(afterLast).toHaveTextContent("Livre até o fim do dia21:00 — 24:00");
   expect(within(afterLast).getByText("3")).toBeInTheDocument();
-  // São leitura: não são cartões de evento nem têm ação.
+  // Não são eventos: a linha é um botão que leva a janela ao chat do Hermes.
   expect(screen.getAllByRole("article")).toHaveLength(2);
-  expect(within(between).queryByRole("button")).not.toBeInTheDocument();
-  expect(within(between).queryByRole("link")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Planejar com o Hermes a janela livre das 14:00 às 20:00" }));
+  expect(onPlanFreeWindow).toHaveBeenCalledWith(expect.objectContaining({ dayKey: "2026-09-15", minutes: 360, endsAtMidnight: false }));
 });
 
-test("free time keeps the chronological order and marks the block that is happening now", () => {
+test("free windows keep the chronological order and know which one is happening now", () => {
   render(<AgendaDay {...props} now={new Date("2026-09-14T15:00:00-03:00").getTime()} events={[
     { name: "Manhã", type: "routine", time: "08:00 — 09:00", minutes: 60, duration: "1 h", startedAt: "2026-09-14T08:00:00-03:00", finishedAt: "2026-09-14T09:00:00-03:00" },
     { name: "Noite", type: "routine", time: "20:00 — 21:00", minutes: 60, duration: "1 h", startedAt: "2026-09-14T20:00:00-03:00", finishedAt: "2026-09-14T21:00:00-03:00" },
@@ -88,15 +93,27 @@ test("free time keeps the chronological order and marks the block that is happen
 
   const items = screen.getAllByRole("listitem").map((item) => item.textContent ?? "");
   expect(items[0]).toContain("Manhã");
-  expect(items[1]).toContain("Tempo livre");
+  expect(items[1]).toContain("Livre");
   expect(items[2]).toContain("Noite");
-  expect(items[3]).toContain("Tempo livre");
+  expect(items[3]).toContain("Livre até o fim do dia");
   expect(slotsOf()[0]).toHaveAttribute("data-time-position", "now");
-  expect(within(slotsOf()[0]).getByText("Livre agora")).toBeInTheDocument();
   expect(slotsOf()[1]).toHaveAttribute("data-time-position", "upcoming");
 });
 
-test("an empty day and the event count do not get free time blocks", () => {
+test("a gap shorter than 15 minutes is not a free window, and the switch hides them all", () => {
+  const events = [
+    { name: "Primeiro", type: "routine", time: "08:00 — 09:00", minutes: 60, duration: "1 h", startedAt: "2026-09-15T08:00:00-03:00", finishedAt: "2026-09-15T09:00:00-03:00" },
+    { name: "Segundo", type: "routine", time: "09:10 — 10:00", minutes: 50, duration: "50 min", startedAt: "2026-09-15T09:10:00-03:00", finishedAt: "2026-09-15T10:00:00-03:00" },
+  ];
+  const { rerender } = render(<AgendaDay {...props} dayKey="2026-09-15" events={events} />);
+  expect(slotsOf()).toHaveLength(1);
+  expect(slotsOf()[0]).toHaveTextContent("10:00 — 24:00");
+
+  rerender(<AgendaDay {...props} dayKey="2026-09-15" events={events} showFreeTime={false} />);
+  expect(slotsOf()).toHaveLength(0);
+});
+
+test("an empty day and the event count do not get free windows", () => {
   render(<AgendaDay {...props} events={[]} />);
   expect(slotsOf()).toHaveLength(0);
 });

@@ -32,7 +32,30 @@
 .emptyTitle { margin: 0; font-family: var(--font-display); font-size: 1.25rem; font-weight: 500; }
 .emptyText { max-width: 44ch; margin: 0; color: var(--muted); }
 
+/*
+ * O molde do redesenho: duas colunas numa moldura de 1184 px. A da esquerda
+ * (400 px) leva o que situa — a data, o calendario, o resumo do registro — e a
+ * da direita, o conteudo. Abaixo de 720 px viram uma coluna so, com a folga da
+ * barra inferior flutuante.
+ */
+.frame { width: 100%; max-width: 1184px; margin: 0 auto; padding: 64px min(32px, 5%) 96px; display: flex; flex-wrap: wrap; align-items: flex-start; column-gap: 96px; row-gap: 48px; font-size: var(--font-size-sm); line-height: 1.45; }
+.lead { flex: 0 1 400px; min-width: 0; display: flex; flex-direction: column; gap: 36px; }
+.body { flex: 1 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 20px; }
+/* A legenda em mono: a data no topo da tela, o rotulo de uma secao. */
+.eyebrow { margin: 0; font-family: var(--font-mono); font-size: var(--font-size-xs); font-weight: 400; line-height: 16px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+/* O rotulo de secao: a legenda em mono e um fio ate a margem. */
+.sectionLabel { composes: eyebrow; display: flex; align-items: center; gap: 12px; font-weight: 500; }
+.sectionLabel::after { content: ""; flex: 1; height: 1px; background: var(--hairline); }
+.sectionLabel > span { color: var(--faint); }
+/* O titulo serifado de um registro e de uma lista. */
+.display { margin: 0; font-family: var(--font-display); font-size: 44px; font-weight: 400; line-height: 48px; letter-spacing: -.015em; text-wrap: balance; }
+
 @media (max-width: 720px) {
-  .container { padding: 22px 16px 110px; }
+  .container { padding: 22px 16px 120px; }
   .page { gap: 20px; }
+  .frame { flex-direction: column; flex-wrap: nowrap; align-items: stretch; row-gap: 20px; padding: 14px 20px calc(120px + env(safe-area-inset-bottom)); }
+  .lead { flex: none; gap: 14px; }
+  .body { flex: none; }
+  .eyebrow { letter-spacing: .08em; }
+  .display { font-size: 32px; line-height: 36px; }
 }

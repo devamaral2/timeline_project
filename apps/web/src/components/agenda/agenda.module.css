@@ -1,0 +1,161 @@
+/*
+ * A agenda do redesenho: à esquerda a data em mono, o mês e a tira da semana;
+ * à direita o dia como um livro-razão — linhas com fio entre elas, sem cartão.
+ * O tempo livre é uma linha tracejada cuja cor cresce com a janela.
+ *
+ * Cores, tamanhos e tempos vêm das escalas do globals.css; os apelidos
+ * (`--ink`, `--muted`, `--line`) são os do shell, que envolve a tela.
+ */
+
+/* Coluna esquerda: gruda no topo enquanto a lista rola, quando há duas colunas. */
+@media (min-width: 1100px) {
+  .lead { position: sticky; top: 24px; }
+}
+.dateRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.phoneOptions { display: none; }
+.calendar { display: flex; flex-direction: column; gap: 6px; }
+
+.monthToggle { align-self: flex-start; display: flex; align-items: center; gap: 6px; min-height: var(--control-md); padding: 0; border: 0; background: transparent; color: var(--ink); font-size: var(--font-size-sm); font-weight: 600; text-transform: capitalize; cursor: pointer; }
+.monthToggle svg { width: 14px; height: 14px; color: var(--muted); stroke-width: 2; transition: transform var(--duration-fast); }
+.monthToggle[aria-expanded="true"] svg { transform: rotate(180deg); }
+
+/* A tira da semana: o dia escolhido é preenchido em `--primary`. */
+.week { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.weekDay { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 0; border: 0; border-radius: 16px; background: transparent; color: var(--ink); cursor: pointer; transition: background var(--duration-fast); }
+.weekDay > span { font-family: var(--font-mono); font-size: var(--font-size-xs); line-height: 16px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.weekDay > strong { font-size: var(--font-size-md); font-weight: 500; line-height: 22px; font-variant-numeric: tabular-nums; }
+.weekDay > i { width: 4px; height: 4px; border-radius: 50%; background: transparent; }
+.weekDay[data-today="true"] > strong { color: var(--brand-accent); font-weight: 700; }
+.weekDay[data-today="true"] > i { background: var(--brand); }
+.weekDay[aria-current="date"] { background: var(--primary); color: var(--primary-foreground); }
+.weekDay[aria-current="date"] > span { color: var(--on-primary-muted); }
+.weekDay[aria-current="date"] > strong { color: inherit; font-weight: 700; }
+.weekDay[aria-current="date"][data-today="true"] > i { background: var(--on-primary-brand); }
+@media (hover: hover) {
+  .weekDay:hover:not([aria-current="date"]) { background: var(--soft); }
+}
+
+/* O mês aberto: um cartão com as setas, a grade e o atalho "Hoje". */
+.monthCard { display: flex; flex-direction: column; gap: 10px; padding: 12px 20px 16px; border: 1px solid var(--line); border-radius: 22px; background: var(--card); }
+.monthHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.monthNav { display: flex; align-items: center; gap: 2px; }
+.monthNav button { display: grid; place-items: center; width: var(--control-md); height: var(--control-md); padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--muted); cursor: pointer; }
+.monthNav button:hover { background: var(--soft); color: var(--ink); }
+.monthNav svg { width: 18px; height: 18px; }
+.monthWeekdays { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; font-family: var(--font-mono); font-size: var(--font-size-xs); line-height: 20px; letter-spacing: .06em; text-transform: uppercase; text-align: center; color: var(--muted); }
+.monthGrid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+.monthGrid button { position: relative; width: 100%; height: var(--control-md); display: grid; place-items: center; padding: 0; border: 0; border-radius: 14px; background: transparent; color: var(--ink); font-size: 15px; font-variant-numeric: tabular-nums; cursor: pointer; }
+.monthGrid button[data-outside="true"] { color: var(--faint); }
+.monthGrid button[aria-current="date"] { color: var(--brand-accent); font-weight: 700; }
+.monthGrid button[aria-current="date"]::after { content: ""; position: absolute; left: 50%; bottom: 5px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--brand); }
+.monthGrid button[aria-pressed="true"] { background: var(--primary); color: var(--primary-foreground); font-weight: 700; }
+.monthGrid button[aria-pressed="true"]::after { background: var(--on-primary-brand); }
+@media (hover: hover) {
+  .monthGrid button:hover:not([aria-pressed="true"]) { background: var(--soft); }
+}
+.monthFoot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.monthFoot p { margin: 0; font-size: 13px; line-height: 20px; font-variant-numeric: tabular-nums; color: var(--muted); }
+.todayPill { composes: pill from "../ui/controls.module.css"; padding: 0 16px; color: var(--ink); font-weight: 600; }
+.todayPill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--brand); }
+
+/* Coluna direita: o modo de leitura, as opções e o resumo do dia. */
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; }
+.viewControls { display: flex; align-items: center; gap: 8px; }
+.modePill { composes: pill from "../ui/controls.module.css"; }
+.summary { margin: 0; font-size: 13px; line-height: 20px; color: var(--muted); }
+
+.options { position: relative; flex: none; }
+.optionsButton { composes: roundButton from "../ui/controls.module.css"; }
+.optionsPanel { composes: floating from "../ui/controls.module.css"; position: absolute; top: 52px; left: 0; z-index: var(--z-popover); width: 304px; max-width: calc(100vw - 40px); padding: 4px 18px 6px; border-radius: 20px; text-align: left; }
+.options[data-align="end"] .optionsPanel { left: auto; right: 0; }
+.optionsLabel { margin: 0; padding: 12px 0 4px; font-family: var(--font-mono); font-size: var(--font-size-xs); line-height: 16px; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
+.optionsMode { width: 100%; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0; border: 0; border-bottom: 1px solid var(--hairline); background: transparent; color: inherit; text-align: left; cursor: pointer; }
+.optionsMode svg { width: 18px; height: 18px; stroke-width: 2; }
+.optionsText { flex: 1; display: flex; flex-direction: column; }
+.optionsText strong { font-size: 15px; font-weight: 600; line-height: 22px; }
+.optionsText small { font-size: var(--font-size-xs); line-height: 18px; color: var(--muted); }
+.optionsMode[aria-pressed="false"] strong { font-weight: 500; color: var(--muted); }
+.optionsRow { display: flex; align-items: center; gap: 16px; min-height: 64px; }
+.optionsSwitch { composes: switch from "../ui/controls.module.css"; }
+
+/* Os dias: um por vez, lado a lado, ou todos em sequência. */
+.horizontalDays { display: flex; align-items: flex-start; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none; margin-inline: -14px; }
+.horizontalDays::-webkit-scrollbar { display: none; }
+.horizontalDays > .dayGroup, .horizontalDays > .dayGroup + .dayGroup { flex: 0 0 100%; min-width: 0; padding: 0 14px 15px; margin-top: 0; scroll-snap-align: start; scroll-snap-stop: always; }
+.verticalDays { overflow-anchor: auto; }
+.dayGroup + .dayGroup { margin-top: 36px; }
+.dayHeading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.dayHeading h2 { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; font-family: var(--font-display); font-size: var(--font-size-xl); font-weight: 400; line-height: 1.1; color: var(--ink); }
+.dayHeading h2 span { font-family: var(--font-mono); font-size: var(--font-size-xs); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.dayHeading > span { flex: none; font-size: 13px; color: var(--muted); }
+
+/* O livro-razão: um fio no topo e um fio curto entre as linhas. */
+.list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; }
+.list > li { position: relative; }
+.list > li + li::before { content: ""; position: absolute; top: 0; left: 60px; right: 0; height: 1px; background: var(--hairline); }
+
+.row { position: relative; display: flex; align-items: flex-start; gap: 16px; padding: 14px 0; }
+.tile { position: relative; flex: none; display: grid; place-items: center; width: 44px; height: 44px; margin-top: 2px; border: 1px solid var(--line); border-radius: 13px; background: var(--card); color: var(--event-color, var(--muted)); }
+.tile svg { width: 20px; height: 20px; stroke-width: 1.75; }
+.row[data-time-position="past"] .tile { background: transparent; }
+/* Em andamento: a borda e o ponto da marca, sem rótulo. */
+.row[data-time-position="running"] .tile { border-color: var(--brand); }
+.row[data-time-position="running"] .tile::after { content: ""; position: absolute; top: -5px; right: -5px; width: 12px; height: 12px; border: 2px solid var(--background); border-radius: 50%; background: var(--brand); }
+.rowText { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.rowText h3 { margin: 0; overflow: hidden; font-size: var(--font-size-md); font-weight: 600; line-height: 24px; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); }
+.row[data-time-position="past"] h3, .row[data-time-position="past"] .duration, .row[data-missed="true"] h3, .row[data-missed="true"] .duration { color: var(--muted); }
+.rowLink { color: inherit; }
+/* A linha inteira abre o evento. */
+.rowLink::after { content: ""; position: absolute; inset: 0; }
+.rowLink:hover { text-decoration: underline; text-underline-offset: 4px; }
+.rowTitleButton { max-width: 100%; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.rowTitleButton:hover { text-decoration: underline; text-underline-offset: 4px; }
+.rowMeta { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; font-size: 13px; line-height: 20px; color: var(--muted); }
+.rowMeta > span:first-child { font-variant-numeric: tabular-nums; }
+.missed { margin-left: 4px; padding: 0 7px; border: 1px solid var(--input); border-radius: 6px; font-size: var(--font-size-xs); font-weight: 500; line-height: 18px; }
+.rowAside { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.duration { margin: 0; display: flex; align-items: baseline; gap: 3px; font-family: var(--font-display); font-size: var(--font-size-xl); line-height: 24px; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--ink); }
+.duration strong { font-weight: 400; }
+.duration small { font-family: var(--font-sans); font-size: var(--font-size-xs); color: var(--muted); }
+.duration small + strong { margin-left: 4px; }
+.taskRef { position: relative; z-index: 1; display: flex; align-items: center; gap: 6px; height: 20px; margin: 0; padding: 0; border: 0; font-size: var(--font-size-xs); color: var(--muted); }
+.taskRef > span:first-child { font-family: var(--font-mono); }
+.taskRef svg { width: 16px; height: 16px; }
+
+/* Tempo livre: tracejado, e a cor acompanha o tamanho da janela — do cinza
+   apagado (15 min) ao verde-água (2 h) e ao verde-água claro (4 h ou mais). */
+.freeRow { --free-color: color-mix(in oklab, var(--brand-accent) var(--free-high, 0%), color-mix(in oklab, var(--brand) var(--free-low, 0%), var(--faint))); width: 100%; display: flex; align-items: center; gap: 16px; padding: 14px 0; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
+.freeTile { flex: none; display: grid; place-items: center; width: 44px; height: 44px; border: 1px dashed var(--free-color); border-radius: 13px; color: var(--free-color); }
+.freeTile svg { width: 20px; height: 20px; stroke-width: 1.75; }
+.freeText { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.freeText strong { font-size: var(--font-size-md); font-weight: 500; line-height: 24px; color: var(--muted); }
+.freeText span { font-size: 13px; line-height: 20px; font-variant-numeric: tabular-nums; color: var(--muted); }
+.freeRow .duration { color: var(--free-color); }
+@media (hover: hover) {
+  .freeRow:hover .freeText strong { color: var(--ink); }
+}
+
+.freeDay { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-height: 240px; padding: 40px 24px; border-top: 1px solid var(--line); text-align: center; }
+.freeDay p { margin: 0; color: var(--ink); font-family: var(--font-display); font-size: 26px; line-height: 1.25; }
+.freeDay span { max-width: 280px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.note { margin: 8px 0 0; font-family: var(--font-mono); font-size: var(--font-size-xs); line-height: 16px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+.status { margin: 0; padding: 28px 0; color: var(--muted); }
+
+@media (max-width: 720px) {
+  .phoneOptions { display: block; }
+  .toolbar { display: none; }
+  /* A data sai da tela ao rolar; o mês e a semana ficam. */
+  .calendar { position: sticky; top: 0; z-index: var(--z-sticky); gap: 4px; margin: 0 -20px; padding: 0 20px 10px; background: var(--background); }
+  .week { gap: 2px; }
+  .weekDay { gap: 4px; padding: 8px 0; border-radius: 15px; }
+  .weekDay > span { letter-spacing: .04em; }
+  .monthCard { gap: 8px; padding: 8px 14px 14px; }
+  .monthToggle[aria-expanded="true"] { padding-left: 6px; }
+  .monthWeekdays { letter-spacing: .04em; }
+  .list > li + li::before { left: 58px; }
+  .row, .freeRow { gap: 14px; }
+  .rowMeta { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .rowMeta > i { display: none; }
+  .missed { margin: 2px 0 0; }
+  .duration { font-size: 22px; }
+}

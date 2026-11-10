@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, CalendarDays, Check, ChevronDown, FileText, ListChecks, MessageSquare, Plus, Search, X } from "lucide-react";
+import { ArrowLeft, CalendarDays, Check, ChevronDown, FileText, ListChecks, Plus, Search, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { type RefObject, useEffect, useId, useRef, useState } from "react";
@@ -9,9 +9,11 @@ import { AgentChatPanel, agentEntityHref, useAgendaChat } from "@/components/hub
 import { EXAMPLE_TODAY, exampleEventsOn, type TaskStatus } from "@/components/agenda/agenda-examples";
 import { CalendarPicker, type DateField, EventScheduleFields } from "@/components/new-item/event-schedule-fields";
 import { NotificationFeed, useNotificationFeed } from "./notification-bell";
+import { HermesGlyph } from "@/components/ui/hermes-glyph";
 import { SettingsView } from "./settings-view";
 import styles from "./shell.module.css";
 import type { HubCommandId } from "@/components/hub/hub-commands";
+import { hubOpenEvent } from "@/components/hub/hub-events";
 import { TaskStatusIcon, taskStatuses } from "@/components/agenda/task-controls";
 import { NewEventForm, type NewItemFormProps, NewNoteForm, NewTaskForm } from "@/components/new-item/new-item-forms";
 
@@ -167,6 +169,15 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
     dialogRef.current?.querySelector<HTMLInputElement>('input[aria-label="Mensagem para a IA"]')?.focus();
   }, [panel, hubView]);
 
+  // Uma tela pede o painel (a janela livre da agenda, por exemplo).
+  useEffect(() => {
+    function onRequest() {
+      if (!dialogRef.current?.open) openHubRef.current();
+    }
+    window.addEventListener(hubOpenEvent, onRequest);
+    return () => window.removeEventListener(hubOpenEvent, onRequest);
+  }, []);
+
   // Ctrl/⌘ K abre o painel de qualquer tela e fecha se já estiver aberto.
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -183,6 +194,7 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
 
   return (
     <>
+      <div className={styles.bottomFade} aria-hidden />
       <nav className={styles.bottomNav} aria-label="Navegação inferior">
         {tasksHref ? (
           <Link href={tasksHref} aria-label="Tarefas" aria-current={onTasks && !panel ? "page" : undefined}><ListChecks aria-hidden /><span>Tarefas</span></Link>
@@ -195,7 +207,7 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
         ) : (
           <button type="button" aria-label="Notas" onClick={() => openPanel("Nota")} aria-haspopup="dialog" aria-expanded={panel === "Nota"} aria-controls={dialogId}><FileText aria-hidden /><span>Notas</span></button>
         )}
-        <button type="button" className={styles.commandButton} onClick={() => openPanel("hub")} aria-haspopup="dialog" aria-expanded={panel === "hub"} aria-controls={dialogId} aria-label="Buscar e criar"><MessageSquare aria-hidden /><span>Buscar e criar</span></button>
+        <button type="button" className={styles.commandButton} onClick={() => openPanel("hub")} aria-haspopup="dialog" aria-expanded={panel === "hub"} aria-controls={dialogId} aria-label="Buscar e criar"><HermesGlyph /></button>
       </nav>
       <dialog ref={dialogRef} id={dialogId} aria-labelledby={panel === "hub" ? undefined : titleId} aria-label={panel === "hub" ? "Buscar e criar" : undefined} className={styles.sectionMenu} onClose={() => setPanel(null)}
         data-hub-view={panel === "hub" ? hubView : undefined} data-expanded={panel === "hub" && hubView === "chat" && expanded ? "true" : undefined}

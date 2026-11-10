@@ -130,22 +130,22 @@ export const lightTokens: ThemeTokens = {
 
 /**
  * Hermes, o tema escuro: um indigo quase preto, texto em cinza-lavanda, titulos
- * em branco-gelo e o ponto em verde-azulado. Referencia: o painel do Hermes.
+ * em marfim quente (a "neve", #ece8df) e o ponto em verde-azulado. Referencia: o painel do Hermes.
  */
 export const darkTokens: ThemeTokens = {
   colors: {
     background: "oklch(0.2089 0.0177 284.76)", // #171720
-    foreground: "oklch(0.9222 0.0013 286.37)", // #e5e5e6
+    foreground: "oklch(0.932 0.013 86.8)", // #ece8df
     card: "oklch(0.2396 0.023 280.79)", // #1d1e2a
-    cardForeground: "oklch(0.9222 0.0013 286.37)", // #e5e5e6
-    primary: "oklch(0.9222 0.0013 286.37)", // #e5e5e6
+    cardForeground: "oklch(0.932 0.013 86.8)", // #ece8df
+    primary: "oklch(0.932 0.013 86.8)", // #ece8df
     primaryForeground: "oklch(0.2396 0.023 280.79)", // #1d1e2a
     secondary: "oklch(0.2591 0.0249 274.44)", // #202330
-    secondaryForeground: "oklch(0.9222 0.0013 286.37)", // #e5e5e6
+    secondaryForeground: "oklch(0.932 0.013 86.8)", // #ece8df
     muted: "oklch(0.2591 0.0249 274.44)", // #202330
     mutedForeground: "oklch(0.7351 0.0526 276.4)", // #a0a7cb
     accent: "oklch(0.3105 0.0364 275.35)", // #2b2f43
-    accentForeground: "oklch(0.9222 0.0013 286.37)", // #e5e5e6
+    accentForeground: "oklch(0.932 0.013 86.8)", // #ece8df
     // O texto por cima do destrutivo e o proprio fundo: o rosa e claro demais
     // para carregar branco.
     destructive: "oklch(0.8 0.111 17.7)", // #fda0a3
@@ -161,7 +161,7 @@ export const darkTokens: ThemeTokens = {
     strandTile: "oklch(0.2396 0.023 280.79)", // #1d1e2a
     strandNevoa: "oklch(0.5424 0.0397 274.43)", // #686e87
     strandDestaque: "oklch(0.6965 0.1212 187.82)", // #00b5ab
-    strandTinta: "oklch(0.9222 0.0013 286.37)", // #e5e5e6
+    strandTinta: "oklch(0.932 0.013 86.8)", // #ece8df
     sleep: "oklch(0.8 0.09 287.8)", // #bab5f5
     training: "oklch(0.8 0.09 134.7)", // #a5cb90
     meal: "oklch(0.801 0.09 72.5)", // #e2b57c

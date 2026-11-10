@@ -6,6 +6,9 @@ export interface TimeSpan {
   endMs: number | null;
 }
 
+/** A menor janela que entra na lista: abaixo de 15 minutos não é tempo livre que se planeje. */
+export const MIN_FREE_WINDOW_MINUTES = 15;
+
 /** Uma lacuna entre eventos do mesmo dia. Só existe na tela; nada disso é salvo. */
 export interface FreeSlot {
   startMs: number;
@@ -48,4 +51,14 @@ function pushSlot(slots: FreeSlot[], startMs: number, endMs: number, dayEndMs: n
   const minutes = Math.round((endMs - startMs) / 60_000);
   if (minutes < 1) return;
   slots.push({ startMs, endMs, minutes, endsAtMidnight: endMs === dayEndMs });
+}
+
+/**
+ * Quanto a cor de uma janela livre anda na régua: `low` vai do tom apagado
+ * (15 min) ao verde-água (2 h) e `high`, dali ao verde-água claro (4 h ou mais).
+ * Em porcentagem, para o `color-mix` da linha.
+ */
+export function freeWindowGrade(minutes: number): { low: number; high: number } {
+  const clamp = (value: number) => Math.round(Math.min(1, Math.max(0, value)) * 100);
+  return { low: clamp((minutes - 15) / 105), high: clamp((minutes - 120) / 120) };
 }

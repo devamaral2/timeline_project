@@ -4,6 +4,7 @@ import { Bell, CircleUserRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { signOut, useCurrentUser } from "@/lib/session/use-session";
+import { HermesGlyph } from "@/components/ui/hermes-glyph";
 import { NotificationBell } from "./notification-bell";
 import styles from "./shell.module.css";
 
@@ -21,11 +22,7 @@ function HubTrigger({ open, onOpen }: { open: boolean; onOpen: () => void }) {
 
   return (
     <button type="button" className={styles.hubTrigger} onClick={onOpen} aria-label="Buscar e criar" title="Buscar e criar" aria-haspopup="dialog" aria-expanded={open} aria-keyshortcuts="Meta+K Control+K">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-        <circle cx="12" cy="12" r="2.8" fill="currentColor" stroke="none" />
-        <circle cx="12" cy="12" r="6.2" strokeDasharray="1.1 1.7" />
-        <circle cx="12" cy="12" r="9.6" strokeDasharray="1.1 2" opacity=".45" />
-      </svg>
+      <i className={styles.hubMark} aria-hidden><HermesGlyph /></i>
       <span>Buscar e criar</span>
       <kbd>{shortcut}</kbd>
     </button>

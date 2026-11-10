@@ -40,24 +40,25 @@
 .skipLink:focus { top: 12px; }
 
 .header { border-bottom: 1px solid var(--line); }
-.headerInner { max-width: 1184px; height: 72px; padding: 0 32px; margin: auto; display: flex; align-items: center; justify-content: space-between; gap: 32px; }
+.headerInner { max-width: 1184px; margin: 0 auto; padding: 14px min(32px, 5%); display: flex; flex-wrap: wrap; align-items: center; column-gap: 40px; row-gap: 8px; }
 .brand { display: flex; align-items: center; gap: 10px; color: var(--ink); }
-.wordmark { font-family: var(--font-display); font-size: 30px; font-weight: 400; letter-spacing: -.01em; line-height: 1; }
-.primaryNav { display: flex; align-items: center; gap: 6px; margin-right: auto; }
-.primaryNav a, .primaryNav button { display: flex; align-items: center; justify-content: center; gap: 9px; height: 40px; padding: 0 16px; color: var(--muted); border-radius: 8px; font-size: 14px; font-weight: 500; }
+.wordmark { font-family: var(--font-display); font-size: 27px; font-weight: 400; letter-spacing: -.01em; line-height: 44px; }
+/* A navegacao e so texto: a tela atual ganha peso e o ponto da marca. */
+.primaryNav { display: flex; align-items: center; gap: 4px; margin-right: auto; }
+.primaryNav a { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; color: var(--muted); border-radius: 8px; font-size: 14px; font-weight: 500; }
 .primaryNav a:hover { color: var(--ink); }
-.primaryNav .navActive { background: var(--soft); color: var(--ink); font-weight: 600; }
-.primaryNav svg { width: 19px; height: 19px; }
-.headerActions { display: flex; align-items: center; gap: 5px; }
+.primaryNav .navActive { color: var(--ink); font-weight: 600; }
+.primaryNav .navActive::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--brand); }
+.headerActions { display: flex; align-items: center; gap: 6px; }
 /* O campo "Buscar e criar" do cabecalho abre o painel no desktop (Ctrl/⌘ K);
    no celular quem abre e a barra inferior. `.shell .hubTrigger` vence o
    `font: inherit` e o `cursor: default` que o shell da a todo botao. */
-.shell .hubTrigger { display: flex; align-items: center; gap: 10px; width: 260px; height: 40px; margin-right: 6px; padding: 0 7px 0 10px; border: 1px solid var(--input); border-radius: 999px; background: var(--card); color: var(--muted); font-size: 13px; text-align: left; cursor: pointer; transition: border-color 140ms, box-shadow 140ms, background 140ms; }
+.shell .hubTrigger { display: flex; align-items: center; gap: 10px; width: 248px; height: 44px; padding: 0 8px 0 7px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--muted); font-size: 13px; text-align: left; cursor: pointer; transition: border-color 140ms, box-shadow 140ms, background 140ms; }
 .shell .hubTrigger:hover { border-color: var(--muted); }
 .shell .hubTrigger[aria-expanded="true"] { border-color: var(--ring); box-shadow: 0 0 0 1px var(--ring); }
-.hubTrigger > svg { color: var(--brand); }
+.hubMark { composes: hermesMark from "../ui/controls.module.css"; }
 .hubTrigger > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.hubTrigger kbd { padding: 4px 6px; border: 1px solid var(--line); border-radius: 5px; color: var(--muted); font-family: var(--font-mono); font-size: 12px; line-height: 1; white-space: nowrap; }
+.hubTrigger kbd { padding: 4px 7px; border: 1px solid var(--line); border-radius: 6px; color: var(--muted); font-family: var(--font-mono); font-size: 12px; line-height: 1; white-space: nowrap; }
 .accountMenu { position: relative; }
 .accountMenu > summary { list-style: none; }
 .accountMenu > summary::-webkit-details-marker { display: none; }
@@ -66,7 +67,7 @@
 .accountPopover button:hover { background: var(--soft); }
 .iconButton { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; color: var(--muted); border-radius: 50%; cursor: pointer; }
 .iconButton:hover { background: var(--soft); color: var(--ink); }
-.iconButton svg { width: 21px; height: 21px; }
+.iconButton svg { width: 20px; height: 20px; stroke-width: 1.75; }
 .avatar { margin-left: 7px; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--soft); color: var(--muted); font-size: 12px; font-weight: 600; }
 
 .notificationBell { position: relative; display: inline-flex; }
@@ -193,7 +194,7 @@
 .timeLegend [data-time-position="free"] { border-style: dashed; border-color: color-mix(in oklab, var(--muted) 45%, transparent); }
 .timeLegend > p { color: var(--muted); font-size: 12px; line-height: 1.6; }
 .prototypeNote { margin-top: 46px; color: var(--muted); font-size: 12px; }
-.bottomNav { display: none; }
+.bottomNav, .bottomFade { display: none; }
 .sectionMenu { display: none; }
 
 /* Ações compactas da agenda. */
@@ -336,12 +337,10 @@
 
 @media (max-width: 1000px) {
   .contentGrid { column-gap: 44px; grid-template-columns: minmax(0, 1fr) 220px; }
-  .headerInner { padding: 0 24px; gap: 16px; }
+  .headerInner { column-gap: 16px; }
   .primaryNav { gap: 2px; }
-  .primaryNav a, .primaryNav button { padding-inline: 14px; }
-  .headerActions { gap: 5px; }
-  /* Sem espaco para o campo: fica so o icone, no tamanho dos vizinhos. */
-  .shell .hubTrigger { justify-content: center; width: 44px; height: 44px; margin-right: 0; padding: 0; border-color: transparent; background: transparent; }
+  /* Sem espaco para o campo: fica so o circulo do Hermes, no tamanho dos vizinhos. */
+  .shell .hubTrigger { justify-content: center; width: 44px; height: 44px; padding: 0; border-color: transparent; background: transparent; }
   .shell .hubTrigger:hover { border-color: transparent; background: var(--soft); }
   .hubTrigger > span, .hubTrigger kbd { display: none; }
 }
@@ -454,16 +453,14 @@
 .formError { margin: 0; color: var(--destructive); font-size: 13px; }
 
 @media (max-width: 720px) {
-  .headerInner { height: 64px; padding: 0 12px 0 20px; column-gap: 10px; }
   .brand { gap: 7px; }
   .event { padding: 16px; }
-  .wordmark { font-size: 28px; letter-spacing: -.01em; }
   .headerActions { margin-left: auto; gap: 0; }
   .avatar, .desktopSearch { display: none; }
   .primaryNav, .shell .hubTrigger { display: none; }
   /* Sem cabeçalho no celular: a barra inferior e o chat levam tudo. O sino segue montado só para entregar os avisos (toasts). */
   .header { border: 0; }
-  .headerInner { height: 0; padding: 0; }
+  .headerInner { height: 0; padding: 0; overflow: hidden; }
   .brand, .headerActions .iconButton, .accountMenu { display: none; }
   .pageHeading { margin-bottom: 10px; }
   .eyebrow { display: none; }
@@ -475,22 +472,19 @@
   .toolbar > .iconButton { width: 30px; }
   .dayGroup + .dayGroup { margin-top: 30px; }
   .listNote { font-size: 12px; max-width: 245px; line-height: 1.6; }
-  .bottomNav { border-top: 1px solid var(--line); position: fixed; z-index: 20; bottom: 0; left: 0; right: 0; height: calc(76px + env(safe-area-inset-bottom)); padding: 8px 24px calc(8px + env(safe-area-inset-bottom)); display: flex; align-items: center; justify-content: space-between; background: var(--background); }
-  .bottomNav > button, .bottomNav > a { position: relative; width: 25%; height: 60px; display: flex; flex-direction: column; gap: 5px; align-items: center; justify-content: center; color: var(--muted); border-radius: 12px; font-size: 12px; cursor: pointer; white-space: nowrap; }
-  .bottomNav > [aria-current="page"]::after, .bottomNav > [aria-expanded="true"]::after { content: ""; position: absolute; bottom: 4px; width: 16px; height: 2px; border-radius: 1px; background: var(--cyan); }
-  .bottomNav > [aria-current="page"] { color: var(--ink); font-weight: 600; }
-  .bottomNav > .commandButton { color: var(--brand-accent); }
+  /* A barra inferior flutua: uma pilula com as tres telas e, na ponta, o
+     circulo do Hermes. A tela atual abre com o nome, preenchida em `--primary`;
+     atras da barra o conteudo se apaga no chao. */
+  .bottomFade { display: block; position: fixed; z-index: 19; left: 0; right: 0; bottom: 0; height: calc(140px + env(safe-area-inset-bottom)); background: linear-gradient(to bottom, transparent, var(--background) 58%); pointer-events: none; }
+  .bottomNav { position: fixed; z-index: 20; left: 16px; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 4px; padding: 6px; border: 1px solid var(--line); border-radius: 33px; background: var(--card); }
+  .bottomNav > button, .bottomNav > a { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; height: 52px; border-radius: 26px; color: var(--muted); font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; }
   .bottomNav > button > span, .bottomNav > a > span { display: none; }
-  .bottomNav > [aria-expanded="true"] { background: transparent; }
-  .bottomNav > .commandButton::after { content: none; }
-  .bottomNav .commandButton { gap: 0; }
-  .bottomNav > .commandButton[aria-expanded="true"] svg { fill: currentColor; }
-  .bottomNav svg { width: 25px; height: 25px; stroke-width: 1.4; }
-  .bottomNav .bottomMenu { cursor: pointer; }
-  .bottomMenu[aria-expanded="true"] { background: transparent; color: var(--brand-accent); }
-  .bottomNav .aiButton { color: var(--brand-accent); }
-  .assistantGlyph { display: grid; place-items: center; width: 47px; height: 47px; }
-  .bottomNav .assistantGlyph svg { width: 29px; height: 29px; stroke-width: 1.2; }
+  .bottomNav > [aria-current="page"] { flex: 1.8; background: var(--primary); color: var(--primary-foreground); }
+  .bottomNav > [aria-current="page"] > span { display: inline; }
+  .bottomNav svg { width: 24px; height: 24px; stroke-width: 1.75; }
+  .bottomNav > [aria-current="page"] svg { width: 22px; height: 22px; }
+  .bottomNav > .commandButton { flex: none; width: 52px; height: 52px; border-radius: 50%; background: var(--brand); color: var(--background); }
+  .bottomNav > .commandButton svg { width: 30px; height: 30px; }
 }
 
 /* O painel "Buscar e criar" (chat, criar, pesquisar): o conteudo e o mesmo no
@@ -717,20 +711,20 @@ a.chatEntityRow:active { background: var(--secondary); }
 /* No celular o painel e uma folha presa acima da barra inferior. */
 @media (max-width: 720px) {
   .shell:has(.sectionMenu[open]) .header, .shell:has(.sectionMenu[open]) .main { filter: blur(2px); }
-  .sectionMenu { position: fixed; inset: auto 0 calc(76px + env(safe-area-inset-bottom)); margin: 0; width: 100%; max-width: none; max-height: calc(100dvh - 100px - env(safe-area-inset-bottom)); overflow-y: auto; overscroll-behavior: contain; padding: 10px 26px 15px; background: var(--card); color: var(--ink); border: 0; border-radius: 24px 24px 0 0; animation: menuEnter 200ms cubic-bezier(.2,.7,.2,1); }
-  .sectionMenu::backdrop { background: linear-gradient(to bottom, var(--scrim) calc(100% - 76px - env(safe-area-inset-bottom)), transparent 0); animation: backdropEnter 160ms ease-out; }
+  .sectionMenu { position: fixed; inset: auto 0 calc(98px + env(safe-area-inset-bottom)); margin: 0; width: 100%; max-width: none; max-height: calc(100dvh - 122px - env(safe-area-inset-bottom)); overflow-y: auto; overscroll-behavior: contain; padding: 10px 26px 15px; background: var(--card); color: var(--ink); border: 0; border-radius: 24px 24px 0 0; animation: menuEnter 200ms cubic-bezier(.2,.7,.2,1); }
+  .sectionMenu::backdrop { background: linear-gradient(to bottom, var(--scrim) calc(100% - 98px - env(safe-area-inset-bottom)), transparent 0); animation: backdropEnter 160ms ease-out; }
   .sheetHandle { width: 30px; height: 3px; margin: 0 auto 7px; border-radius: 4px; background: var(--line); }
   /* O painel do hub: compacto no inicio do chat, alto na conversa, na lista e nos
      comandos, e a tela toda (acima da barra) quando expandido. */
-  .sectionMenu[data-hub-view] { height: min(400px, calc(100dvh - 100px - env(safe-area-inset-bottom))); max-height: none; overflow: hidden; padding: 10px 20px 24px; }
-  .sectionMenu[data-hub-view]:has([data-chat-view="conversation"], [data-chat-view="list"]) { height: calc(100dvh - 172px - env(safe-area-inset-bottom)); }
+  .sectionMenu[data-hub-view] { height: min(400px, calc(100dvh - 122px - env(safe-area-inset-bottom))); max-height: none; overflow: hidden; padding: 10px 20px 24px; }
+  .sectionMenu[data-hub-view]:has([data-chat-view="conversation"], [data-chat-view="list"]) { height: calc(100dvh - 194px - env(safe-area-inset-bottom)); }
   /* Criar e buscar acompanham o conteudo; so rolam se passarem da tela. */
-  .sectionMenu[data-hub-view="create"], .sectionMenu[data-hub-view="search"], .sectionMenu[data-hub-view="notifications"], .sectionMenu[data-hub-view="settings"] { height: auto; max-height: calc(100dvh - 172px - env(safe-area-inset-bottom)); overflow-y: auto; }
-  .sectionMenu[data-expanded="true"] { inset: 0 0 calc(76px + env(safe-area-inset-bottom)); height: auto; border-radius: 0; background: var(--background); }
+  .sectionMenu[data-hub-view="create"], .sectionMenu[data-hub-view="search"], .sectionMenu[data-hub-view="notifications"], .sectionMenu[data-hub-view="settings"] { height: auto; max-height: calc(100dvh - 194px - env(safe-area-inset-bottom)); overflow-y: auto; }
+  .sectionMenu[data-expanded="true"] { inset: 0 0 calc(98px + env(safe-area-inset-bottom)); height: auto; border-radius: 0; background: var(--background); }
   .sectionMenu[data-expanded="true"] .sheetHandle { visibility: hidden; }
   .sectionMenu[data-hub-view] .sheetHandle { width: 36px; height: 4px; margin: 0 auto 2px; background: var(--input); }
 
-  .shell:has(.detailMain) .header, .shell:has(.detailMain) .bottomNav { display: none; }
+  .shell:has(.detailMain) .header, .shell:has(.detailMain) .bottomNav, .shell:has(.detailMain) .bottomFade { display: none; }
   .detailMain { padding: 20px 25px 36px; }
   .detailNavigation { margin-bottom: 35px; }
   .detailNavigation .backLink { width: 40px; height: 40px; }

@@ -1,6 +1,5 @@
 "use client";
 
-import { CalendarDays, FileText, ListChecks } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import styles from "./shell.module.css";
@@ -17,13 +16,13 @@ export function PrimaryNavigation({ userId }: { userId?: string }) {
   return (
     <nav className={styles.primaryNav} aria-label="Principal">
       <Link href={base} className={onNotes || onTasks ? undefined : styles.navActive} aria-current={onNotes || onTasks ? undefined : "page"}>
-        <CalendarDays aria-hidden />Agenda
+        Agenda
       </Link>
       <Link href={tasksHref} className={onTasks ? styles.navActive : undefined} aria-current={onTasks ? "page" : undefined}>
-        <ListChecks aria-hidden />Tarefas
+        Tarefas
       </Link>
       <Link href={notesHref} className={onNotes ? styles.navActive : undefined} aria-current={onNotes ? "page" : undefined}>
-        <FileText aria-hidden />Notas
+        Notas
       </Link>
     </nav>
   );

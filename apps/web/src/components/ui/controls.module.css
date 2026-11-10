@@ -46,3 +46,26 @@
 
 /* A superficie do que flutua: menus, paineis de opcoes, avisos. Raio 12. */
 .floating { border: 1px solid var(--line); border-radius: 12px; background: var(--card); box-shadow: var(--shadow-float); }
+
+/* As pilulas do redesenho: a escolhida e preenchida em `--primary`. 44 de altura. */
+.pill { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: var(--control-md); padding: 0 18px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--muted); font: inherit; font-size: var(--font-size-sm); font-weight: 500; white-space: nowrap; cursor: pointer; transition: background var(--duration-fast), border-color var(--duration-fast), color var(--duration-fast); }
+.pill[aria-pressed="true"] { border-color: var(--primary); background: var(--primary); color: var(--primary-foreground); font-weight: 600; }
+.pill svg { width: 16px; height: 16px; }
+@media (hover: hover) {
+  .pill:hover:not([aria-pressed="true"]) { border-color: var(--muted); color: var(--ink); }
+}
+
+/* Botao redondo de icone com contorno (opcoes de visualizacao). */
+.roundButton { flex: none; display: grid; place-items: center; width: var(--control-md); height: var(--control-md); padding: 0; border: 1px solid var(--line); border-radius: 50%; background: transparent; color: var(--ink); cursor: pointer; transition: border-color var(--duration-fast); }
+.roundButton:hover, .roundButton[aria-expanded="true"] { border-color: var(--ink); }
+.roundButton svg { width: 19px; height: 19px; }
+
+/* O circulo do Hermes: verde-agua, com a onda na cor do chao. */
+.hermesMark { flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--brand); color: var(--background); }
+.hermesMark svg { width: 58%; height: 58%; }
+
+/* A chave liga/desliga das opcoes. */
+.switch { flex: none; display: flex; align-items: center; width: 48px; height: 28px; padding: 3px; border: 0; border-radius: 14px; background: var(--input); cursor: pointer; transition: background var(--duration-fast); }
+.switch::before { content: ""; width: 22px; height: 22px; border-radius: 50%; background: var(--background); transition: transform var(--duration-fast) var(--ease-out); }
+.switch[aria-checked="true"] { background: var(--primary); }
+.switch[aria-checked="true"]::before { transform: translateX(20px); }
