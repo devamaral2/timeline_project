@@ -13,7 +13,8 @@ import { HermesGlyph } from "@/components/ui/hermes-glyph";
 import { SettingsView } from "./settings-view";
 import styles from "./shell.module.css";
 import type { HubCommandId } from "@/components/hub/hub-commands";
-import { hubOpenEvent } from "@/components/hub/hub-events";
+import { type FreeWindow, type HubOpenDetail, hubOpenEvent } from "@/components/hub/hub-events";
+import { dayKeyOf } from "@repo/timeline";
 import { TaskStatusIcon, taskStatuses } from "@/components/agenda/task-controls";
 import { NewEventForm, type NewItemFormProps, NewNoteForm, NewTaskForm } from "@/components/new-item/new-item-forms";
 
@@ -85,6 +86,8 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
   // O chat e a porta do painel; criar e pesquisar abrem pelos comandos "/" dele.
   const [hubView, setHubView] = useState<"chat" | "create" | "search" | "notifications" | "settings">("chat");
   const [expanded, setExpanded] = useState(false);
+  // A janela livre que abriu o chat: fica anexada ao campo ate ser enviada ou tirada.
+  const [freeWindow, setFreeWindow] = useState<FreeWindow | null>(null);
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState<Kind>("Tarefa");
   const [category, setCategory] = useState<Category>("Rotina");
@@ -146,7 +149,16 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
     setNotice("");
     if (next === "hub") { setHubView("chat"); setExpanded(false); }
     if (next !== "hub") setKind(next);
-    dialogRef.current?.showModal();
+    // No celular o chat nao e modal: a barra inferior fica viva por baixo, e
+    // tocar num destino navega e fecha o chat (ali ele nao tem botao de fechar).
+    const desktop = typeof window.matchMedia === "function" && window.matchMedia("(min-width: 721px)").matches;
+    const dialog = dialogRef.current;
+    if (next === "hub" && !desktop && typeof dialog?.show === "function") dialog.show();
+    else dialog?.showModal();
+  }
+
+  function closePanel() {
+    if (dialogRef.current?.open) dialogRef.current.close();
   }
 
   // O cabeçalho e o atalho de teclado abrem o painel sem conhecer o estado dele:
@@ -166,12 +178,13 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
   // subiria o teclado por cima da folha antes de a pessoa escolher o que fazer.
   useEffect(() => {
     if (panel !== "hub" || hubView !== "chat" || !window.matchMedia("(min-width: 721px)").matches) return;
-    dialogRef.current?.querySelector<HTMLInputElement>('input[aria-label="Mensagem para a IA"]')?.focus();
+    dialogRef.current?.querySelector<HTMLElement>('[aria-label="Mensagem para a IA"]')?.focus();
   }, [panel, hubView]);
 
   // Uma tela pede o painel (a janela livre da agenda, por exemplo).
   useEffect(() => {
-    function onRequest() {
+    function onRequest(event: Event) {
+      setFreeWindow((event as CustomEvent<HubOpenDetail>).detail?.freeWindow ?? null);
       if (!dialogRef.current?.open) openHubRef.current();
     }
     window.addEventListener(hubOpenEvent, onRequest);
@@ -197,19 +210,19 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
       <div className={styles.bottomFade} aria-hidden />
       <nav className={styles.bottomNav} aria-label="Navegação inferior">
         {tasksHref ? (
-          <Link href={tasksHref} aria-label="Tarefas" aria-current={onTasks && !panel ? "page" : undefined}><ListChecks aria-hidden /><span>Tarefas</span></Link>
+          <Link href={tasksHref} aria-label="Tarefas" aria-current={onTasks ? "page" : undefined} onClick={closePanel}><ListChecks aria-hidden /><span>Tarefas</span></Link>
         ) : (
           <button type="button" aria-label="Tarefas" onClick={() => openPanel("Tarefa")} aria-haspopup="dialog" aria-expanded={panel === "Tarefa"} aria-controls={dialogId}><ListChecks aria-hidden /><span>Tarefas</span></button>
         )}
-        <Link href={userId ? `/${userId}` : "/mockups/eventos"} aria-label="Agenda" aria-current={panel || onNotes || onTasks ? undefined : "page"}><CalendarDays aria-hidden /><span>Agenda</span></Link>
+        <Link href={userId ? `/${userId}` : "/mockups/eventos"} aria-label="Agenda" aria-current={onNotes || onTasks ? undefined : "page"} onClick={closePanel}><CalendarDays aria-hidden /><span>Agenda</span></Link>
         {notesHref ? (
-          <Link href={notesHref} aria-label="Notas" aria-current={onNotes && !panel ? "page" : undefined}><FileText aria-hidden /><span>Notas</span></Link>
+          <Link href={notesHref} aria-label="Notas" aria-current={onNotes ? "page" : undefined} onClick={closePanel}><FileText aria-hidden /><span>Notas</span></Link>
         ) : (
           <button type="button" aria-label="Notas" onClick={() => openPanel("Nota")} aria-haspopup="dialog" aria-expanded={panel === "Nota"} aria-controls={dialogId}><FileText aria-hidden /><span>Notas</span></button>
         )}
         <button type="button" className={styles.commandButton} onClick={() => openPanel("hub")} aria-haspopup="dialog" aria-expanded={panel === "hub"} aria-controls={dialogId} aria-label="Buscar e criar"><HermesGlyph /></button>
       </nav>
-      <dialog ref={dialogRef} id={dialogId} aria-labelledby={panel === "hub" ? undefined : titleId} aria-label={panel === "hub" ? "Buscar e criar" : undefined} className={styles.sectionMenu} onClose={() => setPanel(null)}
+      <dialog ref={dialogRef} id={dialogId} aria-labelledby={panel === "hub" ? undefined : titleId} aria-label={panel === "hub" ? "Buscar e criar" : undefined} className={styles.sectionMenu} onClose={() => { setPanel(null); setFreeWindow(null); }}
         data-hub-view={panel === "hub" ? hubView : undefined} data-expanded={panel === "hub" && hubView === "chat" && expanded ? "true" : undefined}
         onPointerDown={event => {
           const bounds = event.currentTarget.getBoundingClientRect();
@@ -220,7 +233,7 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
           <h2 id={titleId}>{panel === "Tarefa" ? "Tarefas" : "Notas"}</h2>
           <button type="button" onClick={() => dialogRef.current?.close()} aria-label="Fechar painel"><X aria-hidden /></button>
         </div>}
-        {panel === "hub" && hubView === "chat" ? <AgentChatPanel {...agendaChat} expanded={expanded} onToggleExpanded={() => setExpanded(current => !current)} onCommand={runCommand} onClose={() => dialogRef.current?.close()} entityHref={userId ? entity => agentEntityHref(userId, entity) : undefined} /> : <>
+        {panel === "hub" && hubView === "chat" ? <AgentChatPanel {...agendaChat} expanded={expanded} onToggleExpanded={() => setExpanded(current => !current)} onCommand={runCommand} onClose={() => dialogRef.current?.close()} entityHref={userId ? entity => agentEntityHref(userId, entity) : undefined} freeWindow={freeWindow} onClearFreeWindow={() => setFreeWindow(null)} todayKey={userId ? dayKeyOf(new Date()) : EXAMPLE_TODAY} /> : <>
         {panel === "hub" && !activePicker && !formPicker && <div className={styles.hubHeader}>
           <button type="button" className={styles.hubBack} onClick={backToChat} aria-label="Voltar para o chat"><ArrowLeft aria-hidden /></button>
           {hubView === "notifications" || hubView === "settings" ? null

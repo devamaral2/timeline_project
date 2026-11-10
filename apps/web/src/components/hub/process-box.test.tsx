@@ -70,7 +70,8 @@ test("cada registro criado ou alterado vira uma linha de prévia, com link quand
     entityHref={(entity) => `/u/${entity.kind}/${entity.id}`}
   />);
   const rows = within(screen.getByRole("list", { name: "Registros desta resposta" })).getAllByRole("listitem");
-  expect(rows.map((row) => row.textContent)).toEqual(["Tarefa criada · Comprar faixa elástica", "Evento alterado · Treino de mobilidade"]);
+  // Duas linhas por registro: o que aconteceu em cima, o nome embaixo.
+  expect(rows.map((row) => row.textContent)).toEqual(["Tarefa criadaComprar faixa elástica", "Evento alteradoTreino de mobilidade"]);
   expect(within(rows[0]).getByRole("link").getAttribute("href")).toBe("/u/task/t1");
 });
 

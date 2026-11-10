@@ -2,7 +2,8 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { beforeEach, expect, test, vi } from "vitest";
 import type { AiProcessDto } from "@/lib/api/contracts";
 import type { AgentChatEntityRef } from "@/lib/api/contracts";
-import { AgentChatPanel, agentEntityHref, useAgendaChat } from "./agent-chat-panel";
+import { AgentChatPanel, agentEntityHref, requestWithWindow, useAgendaChat } from "./agent-chat-panel";
+import type { FreeWindow } from "./hub-events";
 
 const { session, requestAgendaRefresh } = vi.hoisted(() => ({
   session: { user: { userId: "user-1", name: "Ana", email: null } as { userId: string } | null, ready: true },
@@ -28,7 +29,13 @@ function Harness({
   onCommand,
   onClose,
   entityHref,
+  freeWindow,
+  onClearFreeWindow,
+  todayKey,
 }: {
+  freeWindow?: FreeWindow;
+  onClearFreeWindow?: () => void;
+  todayKey?: string;
   live?: boolean;
   onCommand?: (command: string, argument: string) => void;
   onClose?: () => void;
@@ -39,7 +46,7 @@ function Harness({
     processApi: { start: processStart, get: processGet } as never,
     automationApi: { start: vi.fn(), get: vi.fn() } as never,
   });
-  return <AgentChatPanel {...agenda} onCommand={onCommand} onClose={onClose} entityHref={entityHref} />;
+  return <AgentChatPanel {...agenda} onCommand={onCommand} onClose={onClose} entityHref={entityHref} freeWindow={freeWindow} onClearFreeWindow={onClearFreeWindow} todayKey={todayKey} />;
 }
 
 function ask(text: string) {
@@ -96,20 +103,30 @@ test("the home offers notifications and settings next to create and search", () 
   expect(onCommand).toHaveBeenNthCalledWith(2, "settings", "");
 });
 
-test("the composer shortcuts write the command in the field", () => {
-  const onCommand = vi.fn();
-  render(<Harness onCommand={onCommand} />);
+test("the conversation offers no command shortcuts: the field is the only way in", () => {
+  render(<Harness onCommand={vi.fn()} />);
   ask("oi");
 
-  const shortcuts = screen.getByRole("group", { name: "Comandos rápidos" });
-  expect(within(shortcuts).getAllByRole("button").map((button) => button.textContent)).toEqual(["/tarefa", "/evento", "/nota"]);
+  expect(screen.queryByRole("group", { name: "Comandos rápidos" })).not.toBeInTheDocument();
+  expect(screen.getByRole("form", { name: "Pedido ao Hermes" })).toBeInTheDocument();
+  // Enquanto o Hermes responde, o enviar fica desligado e diz por quê.
+  expect(screen.getByRole("button", { name: "Aguardando a resposta" })).toBeDisabled();
+});
 
-  fireEvent.click(within(shortcuts).getByRole("button", { name: "/tarefa" }));
-  const textbox = screen.getByRole("textbox", { name: "Mensagem para a IA" });
-  expect(textbox).toHaveValue("/tarefa ");
-  expect(textbox).toHaveFocus();
-  expect(screen.getByRole("list", { name: "Comandos" })).toBeInTheDocument();
-  expect(onCommand).not.toHaveBeenCalled();
+test("a free window from the agenda is attached to the field and travels with the request", () => {
+  const onClearFreeWindow = vi.fn();
+  const freeWindow = { dayKey: "2026-09-14", startMs: Date.parse("2026-09-14T10:30:00-03:00"), endMs: Date.parse("2026-09-14T12:30:00-03:00"), minutes: 120, endsAtMidnight: false };
+  expect(requestWithWindow(freeWindow, " caminhar ")).toBe("Sobre a janela livre de seg, 14 de set, das 10:30 às 12:30 (2 h): caminhar");
+
+  render(<Harness onCommand={vi.fn()} freeWindow={freeWindow} onClearFreeWindow={onClearFreeWindow} todayKey="2026-09-14" />);
+  expect(screen.getByRole("heading", { name: "O que vamos fazer das 10:30 às 12:30?" })).toBeInTheDocument();
+  expect(screen.getByText("Janela livre · hoje")).toBeInTheDocument();
+  // Com a janela, os atalhos de criar saem: a pergunta já é o convite.
+  expect(screen.queryByRole("group", { name: "Criar, pesquisar e ajustar" })).not.toBeInTheDocument();
+  expect(screen.getByRole("textbox", { name: "Mensagem para a IA" })).toHaveAttribute("placeholder", "Diga o que quer fazer nesse tempo");
+
+  fireEvent.click(screen.getByRole("button", { name: "Tirar a janela livre do pedido" }));
+  expect(onClearFreeWindow).toHaveBeenCalled();
 });
 
 test("a record's page lives under the user; a deleted record has none", () => {
@@ -154,7 +171,7 @@ test("the start is only the question and the field, with no suggestions or conve
   expect(screen.getByRole("heading", { name: "O que vamos fazer?" })).toBeInTheDocument();
   expect(screen.getByRole("textbox", { name: "Mensagem para a IA" })).toHaveAttribute(
     "placeholder",
-    "Pergunte ou digite / para comandos",
+    "Diga ou escreva o que precisa",
   );
   expect(screen.queryByRole("button", { name: "O que tenho na agenda hoje?" })).not.toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Todas as conversas" })).not.toBeInTheDocument();

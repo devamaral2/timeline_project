@@ -525,35 +525,31 @@
 .hubHeader .hubSearch { flex: 1; padding: 2px 14px; border-radius: 999px; }
 
 .assistantPanel { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-.chatHeader { flex-shrink: 0; display: flex; align-items: center; gap: 8px; min-height: 52px; margin: 0 -10px; }
-.chatHeader h2 { flex: 1; min-width: 0; margin: 0; font-size: 15px; font-weight: 600; line-height: 1.3; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-[data-chat-view="list"] .chatHeader h2 { font-size: 17px; }
-[data-chat-view="conversation"] .chatHeader { margin-bottom: 4px; border-bottom: 1px solid var(--line); }
+.chatHeader { flex-shrink: 0; display: flex; align-items: center; gap: 4px; min-height: 60px; margin: 0 -8px; border-bottom: 1px solid var(--line); }
+.chatHeader h2, .chatTitle p { min-width: 0; margin: 0; overflow: hidden; font-size: 15px; font-weight: 600; line-height: 20px; color: var(--ink); text-overflow: ellipsis; white-space: nowrap; }
 .chatHeaderSpacer { flex: 1; }
 /* O titulo da conversa leva em cima quem responde: o assistente da agenda ou o Hermes (`/hermes`). */
-.chatTitle { flex: 1; min-width: 0; display: grid; gap: 2px; }
-.chatLive { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 600; letter-spacing: .12em; line-height: 1.2; text-transform: uppercase; color: var(--brand-accent); }
-.chatLive::before { content: ""; width: 6px; height: 6px; flex-shrink: 0; border-radius: 50%; background: var(--brand); box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand) 22%, transparent); }
-.chatLive[data-busy="true"]::before { animation: chatPulse 1.4s ease-in-out infinite; }
+.chatTitle { flex: 1; min-width: 0; display: flex; flex-direction: column; padding-left: 4px; }
+.chatLive { font-family: var(--font-mono); font-size: 12px; line-height: 16px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
 .chatIconButton { display: grid; place-items: center; width: 44px; height: 44px; flex-shrink: 0; border-radius: 50%; color: var(--muted); cursor: pointer; }
+.chatIconButton:hover:not(:disabled) { color: var(--ink); }
 [data-chat-view="list"] .chatIconButton { color: var(--ink); }
 .chatIconButton:disabled { opacity: .4; }
 /* Os botoes do inicio so aparecem depois que a marca termina de se trancar. */
-.chatIconButton[data-reveal="true"] { animation: chatReveal 2.55s linear both; }
 /* A margem lateral deixa o realce dos comandos sair 12px do texto sem rolar de lado. */
 .chatBody { flex: 1; min-height: 0; display: flex; flex-direction: column; margin: 0 -12px; padding: 0 12px; overflow: hidden auto; min-width: 0; overscroll-behavior: contain; }
 /* `margin-top: auto` em vez de `justify-content: flex-end`: se o conteudo passar
    da altura, o topo continua alcancavel pela rolagem. */
-[data-chat-view="home"] .assistantWelcome { margin-block: auto; }
+[data-chat-view="home"] .assistantWelcome { margin-top: auto; }
 .chatCommands { margin-top: auto; }
-.assistantWelcome { display: flex; flex-direction: column; align-items: center; gap: 22px; padding: 0 0 36px; text-align: center; }
-[data-expanded="true"] .assistantWelcome { padding-bottom: 64px; }
-.assistantWelcome h2 { margin: 0; font-family: var(--font-display); font-size: 36px; font-weight: 400; line-height: 1; letter-spacing: -.005em; color: var(--ink); }
-.assistantWelcome p { margin: -10px 0 0; font-size: 13px; color: var(--muted); }
-.createActions { min-width: 0; margin: 0; padding: 0; border: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
-.createActions button { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px; border: 1px solid var(--line, currentColor); border-radius: 999px; color: var(--ink); font-size: 14px; cursor: pointer; }
-.createActions button:hover { background: var(--accent); }
-.createActions svg { width: 16px; height: 16px; color: var(--muted); }
+.assistantWelcome { display: flex; flex-direction: column; gap: 24px; padding: 24px 4px 12px; text-align: left; }
+.assistantWelcome h2 { margin: 0; font-family: var(--font-display); font-size: 36px; font-weight: 400; line-height: 40px; letter-spacing: -.015em; text-wrap: balance; color: var(--ink); }
+.assistantWelcome p { margin: -12px 0 0; font-size: 13px; color: var(--muted); }
+/* Os atalhos do inicio: uma linha por acao, com fio. */
+.createActions { min-width: 0; margin: 0; padding: 0; border: 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; }
+.createActions button { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 52px; padding: 0; border: 0; border-bottom: 1px solid var(--hairline); border-radius: 0; color: var(--ink); font-size: 16px; font-weight: 500; text-align: left; cursor: pointer; }
+.createActions button:hover { text-decoration: underline; text-underline-offset: 4px; }
+.createActions svg { width: 20px; height: 20px; color: var(--muted); }
 .braidMark { position: relative; display: block; width: 36px; overflow: hidden; }
 .braidTails { position: absolute; left: 0; top: 0; overflow: visible; }
 .braidTails line { stroke-width: 5.81; stroke-linecap: round; stroke-dasharray: var(--braid-dash); stroke-dashoffset: var(--braid-to); animation: braidTails 1.5s cubic-bezier(.45,0,.55,1) .3s both; }
@@ -573,30 +569,15 @@
 .chatCommands small { font-size: 13px; color: var(--muted); }
 .chatCommands code { flex-shrink: 0; font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
 
-/* A caixa de mensagem: o campo em cima e, embaixo, os atalhos de comando, a voz e o enviar. */
-.chatComposer { flex-shrink: 0; display: grid; gap: 2px; padding: 8px 4px 4px 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--secondary); transition: border-color 140ms; }
-.chatComposer:focus-within { border-color: var(--ring); box-shadow: 0 0 0 1px var(--ring); }
-.chatComposer input { width: 100%; min-width: 0; height: 36px; padding: 0; border: 0; border-radius: 0; background: transparent; font: inherit; font-size: 16px; color: var(--ink); }
-.chatComposer input::placeholder { color: var(--muted); opacity: 1; }
-.chatComposer input:focus-visible { outline: 0; }
-.chatComposerRow { display: flex; align-items: center; gap: 6px; min-height: 44px; }
-/* Sem atalhos (o inicio), a caixa volta a uma linha: o campo e, ao lado, a voz e o enviar. */
-.chatComposer[data-shortcuts="false"] { display: flex; align-items: center; gap: 4px; padding: 4px 4px 4px 14px; }
-.chatComposer[data-shortcuts="false"] input { flex: 1; height: 44px; }
-.chatComposer[data-shortcuts="false"] .chatComposerRow { flex-shrink: 0; }
-.chatComposerCommands { display: flex; align-items: center; gap: 6px; min-width: 0; margin: 0; padding: 0; border: 0; overflow-x: auto; scrollbar-width: none; }
-.chatComposerCommands button { flex-shrink: 0; height: 32px; padding: 0 9px; border: 1px solid var(--line); border-radius: 7px; font-family: var(--font-mono); font-size: 12px; color: var(--muted); cursor: pointer; transition: color 140ms, background 140ms; }
-.chatComposerCommands button:active { background: var(--accent); color: var(--ink); }
-.chatComposerCommands button:disabled { opacity: .4; cursor: default; }
-.chatComposerActions { display: flex; align-items: center; margin-left: auto; }
-.chatComposerActions button { display: grid; place-items: center; width: 44px; height: 44px; flex-shrink: 0; border-radius: 50%; color: var(--muted); cursor: pointer; transition: transform 100ms, opacity 140ms; }
-.chatComposerActions button:active { transform: scale(.92); }
-/* O enviar e o circulo da marca dentro do alvo de 44 px. */
-.chatComposerActions button[data-send="true"] { padding: 5px; background: var(--brand); background-clip: content-box; color: var(--primary-foreground); }
-.dark .chatComposerActions button[data-send="true"] { color: var(--background); }
-.chatComposerActions button[data-send="true"] svg { width: 18px; height: 18px; stroke-width: 2.2; }
-.chatComposerActions button:disabled { opacity: .4; cursor: default; }
-.chatComposerActions button[data-listening="true"] { color: var(--destructive); animation: chatPulse 1.4s ease-in-out infinite; }
+/* O campo do Hermes no pe do chat (o desenho e o de `components/detail/entity-ai-edit-bar.module.css`);
+   aqui so a posicao e a janela livre anexada: tracejada, na cor da marca. */
+.chatField { flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; padding-top: 12px; }
+.chatField form { background: var(--background); }
+.chatWindow { padding-right: 2px; border-style: dashed; border-color: var(--brand); }
+.chatWindow > span:first-child { color: var(--brand); }
+.chatWindowDuration { flex: none; display: flex; align-items: baseline; gap: 3px; font-family: var(--font-display); font-size: 22px; line-height: 22px; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--brand); }
+.chatWindowDuration small { margin-right: 4px; font-family: var(--font-sans); font-size: 12px; color: var(--muted); }
+.chatWindowDuration small:last-child { margin-right: 0; }
 .hubComposerHint { margin: 0 0 4px; font-size: 12px; color: var(--muted); }
 
 .conversationGroups { display: grid; gap: 18px; padding: 8px 0 16px; }
@@ -635,20 +616,20 @@
 .hubNotice:empty { display: none; }
 .hubFootnote { font-size: 12px; color: var(--muted); text-align: center; margin: 16px 0 0; line-height: 1.5; }
 /* `minmax(0, 1fr)`: sem isso a coluna implicita cresce ate o max-content da linha mais longa e o texto passa da borda em vez de quebrar. */
-.chatLog { list-style: none; margin: 0 0 14px; padding: 12px 0 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; min-width: 0; font-size: 15px; line-height: 1.55; }
+.chatLog { list-style: none; margin: 0 0 8px; padding: 20px 4px 0; display: flex; flex-direction: column; gap: 20px; min-width: 0; font-size: 15px; line-height: 24px; }
 .chatBubble { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
 .chatBubble p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
-/* O pedido e um bloco de largura inteira, com fio, como no Hermes; a resposta e texto solto. */
-.chatBubble[data-role="user"] { justify-self: stretch; padding: 11px 13px; border: 1px solid var(--line); border-radius: 8px; background: var(--secondary); }
-.chatBubble[data-role="assistant"] { justify-self: stretch; padding: 0; line-height: 1.45; }
-.chatProse { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; min-width: 0; }
+/* O pedido e um balao a direita; a resposta e texto solto. */
+.chatBubble[data-role="user"] { align-self: flex-end; max-width: 84%; padding: 12px 16px; border: 1px solid var(--line); border-radius: 20px 20px 6px 20px; background: var(--background); line-height: 22px; }
+.chatBubble[data-role="assistant"] { padding: 0; }
+.chatProse { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; min-width: 0; text-wrap: pretty; }
 .chatBubble[data-role="user"] p { white-space: pre-wrap; }
 .chatProse p { white-space: pre-line; overflow-wrap: anywhere; }
-.chatBubble[data-role="error"] { justify-self: start; max-width: 92%; padding: 10px 14px; border: 1px solid color-mix(in oklab, var(--destructive) 40%, transparent); border-radius: 14px; background: color-mix(in oklab, var(--destructive) 10%, transparent); color: var(--destructive); font-size: 12px; }
-.chatBubble[data-role="error"] button { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; padding: 6px 0; color: var(--brand-accent); font-size: 12px; cursor: pointer; }
+.chatBubble[data-role="error"] { align-self: flex-start; max-width: 92%; padding: 10px 14px; border: 1px solid color-mix(in oklab, var(--destructive) 40%, transparent); border-radius: 16px; color: var(--destructive); font-size: 13px; line-height: 20px; }
+.chatBubble[data-role="error"] button { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; margin-top: 4px; padding: 0; color: var(--ink); font-size: 13px; font-weight: 600; cursor: pointer; }
 .chatBubble[data-role="error"] svg { width: 14px; height: 14px; }
 /* Cada registro da resposta e uma linha que abre a pagina dele (o apagado fica so como texto). */
-.chatEntities { list-style: none; display: grid; gap: 2px; margin: 10px 0 0; padding: 0; }
+.chatEntities { list-style: none; margin: 12px 0 0; padding: 0; border-top: 1px solid var(--hairline); }
 .chatDiff { margin: 10px 0 0; padding: 10px 12px; display: grid; gap: 2px; border: 1px solid var(--line); border-radius: 8px; background: var(--secondary); font-family: var(--font-mono); font-size: 12.5px; line-height: 1.5; overflow-x: auto; }
 .chatDiff figcaption { margin-bottom: 4px; color: var(--muted); white-space: nowrap; }
 .chatDiffLine { display: flex; gap: 10px; white-space: nowrap; }
@@ -657,38 +638,38 @@
 .dark .chatDiffLine[data-sign="-"] { color: color-mix(in oklab, var(--destructive) 55%, white); }
 .dark .chatDiffLine[data-sign="+"] { color: color-mix(in oklab, var(--success) 60%, white); }
 .chatDiffLabel { min-width: 8ch; opacity: .75; }
-.chatEntityRow { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 0; border-radius: 8px; color: var(--ink); font-size: 14px; line-height: 1.35; }
-a.chatEntityRow { cursor: pointer; transition: background 140ms; }
-a.chatEntityRow:active { background: var(--secondary); }
-.shell .chatEntityRow > svg:first-child { width: 17px; height: 17px; color: var(--brand); }
-.chatEntityText { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.chatEntityChange { color: var(--muted); }
-.shell .chatEntityGo { width: 16px; height: 16px; color: var(--muted); }
-.chatEntities li[data-change="deleted"] .chatEntityText { text-decoration: line-through; }
-.chatStatus { margin: 0 0 12px; color: var(--muted); font-size: 12px; animation: chatPulse 1.4s ease-in-out infinite; }
-.chatBubble[data-role="process"] { justify-self: start; width: min(100%, 380px); padding: 12px 14px; border: 1px solid var(--line); border-radius: 14px; }
+.chatEntityRow { display: flex; align-items: center; gap: 14px; min-height: 64px; padding: 0; border-bottom: 1px solid var(--hairline); color: var(--ink); }
+a.chatEntityRow { cursor: pointer; }
+a.chatEntityRow:hover .chatEntityName { text-decoration: underline; text-underline-offset: 4px; }
+.shell .chatEntityRow > svg:first-child { box-sizing: border-box; width: 40px; height: 40px; padding: 10px; border: 1px solid var(--line); border-radius: 12px; color: var(--muted); stroke-width: 1.75; }
+.chatEntityText { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.chatEntityName { overflow: hidden; font-size: 15px; font-weight: 600; line-height: 22px; text-overflow: ellipsis; white-space: nowrap; }
+.chatEntityChange { font-size: 12px; line-height: 18px; color: var(--muted); }
+.shell .chatEntityGo { width: 16px; height: 16px; stroke-width: 2; color: var(--faint); }
+.chatEntities li[data-change="deleted"] .chatEntityName { text-decoration: line-through; color: var(--muted); }
+.chatBubble[data-role="process"] { padding: 0; }
 .processBox { display: grid; gap: 8px; }
-.processTitle { margin: 0; color: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: .02em; }
+.processTitle { margin: 0; font-family: var(--font-mono); font-size: 12px; font-weight: 500; line-height: 16px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
 .processWaiting { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--muted); font-size: 12px; }
 .processWaiting svg { width: 14px; height: 14px; animation: processSpin 1s linear infinite; }
-.processSteps { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 13px; line-height: 1.4; }
+.processSteps { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-family: var(--font-mono); font-size: 12px; line-height: 18px; color: var(--muted); }
 .processSteps li { display: flex; align-items: center; gap: 8px; }
 .processSteps li[data-status="pending"] { color: var(--muted); }
-.processMark { display: grid; place-items: center; flex: none; width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--line); }
-.processMark svg { width: 12px; height: 12px; stroke-width: 2.4; }
-.processSteps li[data-status="succeeded"] .processMark { border-color: var(--success); background: var(--success); color: var(--primary-foreground); }
-.processSteps li[data-status="failed"] .processMark { border-color: var(--destructive); background: var(--destructive); color: var(--destructive-foreground); }
-.processSteps li[data-status="running"] .processMark { border-color: var(--cyan); color: var(--brand-accent); }
+.processMark { display: grid; place-items: center; flex: none; width: 14px; height: 14px; }
+.shell .processMark svg { width: 14px; height: 14px; stroke-width: 2.2; }
+.processSteps li[data-status="succeeded"] .processMark { color: var(--brand); }
+.processSteps li[data-status="failed"] .processMark { color: var(--destructive); }
+.processSteps li[data-status="running"] .processMark { color: var(--brand-accent); }
 .processSteps li[data-status="running"] .processMark svg { animation: processSpin 1s linear infinite; }
 .processRows { overflow-x: auto; max-height: 220px; font-size: 12px; }
 .processRows table { border-collapse: collapse; width: 100%; }
 .processRows th, .processRows td { padding: 4px 8px 4px 0; text-align: left; white-space: nowrap; border-bottom: 1px solid var(--line); }
 .processRows th { color: var(--muted); font-weight: 600; }
 .processRows p { margin: 6px 0 0; color: var(--muted); }
-.processMessage { margin: 0; font-size: 13px; }
+.processMessage { margin: 0; font-size: 15px; line-height: 24px; text-wrap: pretty; }
 .chatBubble[data-role="process"] [data-status="failed"] ~ .processMessage, .processBox[data-status="failed"] .processMessage { color: var(--destructive); }
 .chatBubble[data-role="hermes-steps"] { justify-self: stretch; padding: 0; background: none; }
-.hermesSteps ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; font-size: 14px; line-height: 1.4; color: var(--muted); }
+.hermesSteps ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; font-family: var(--font-mono); font-size: 12px; line-height: 18px; color: var(--muted); }
 .hermesSteps li { min-height: 30px; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
 .hermesTool { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .hermesTool code { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 1px 6px; border-radius: 4px; background: var(--secondary); font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
@@ -723,6 +704,23 @@ a.chatEntityRow:active { background: var(--secondary); }
   .sectionMenu[data-expanded="true"] { inset: 0 0 calc(98px + env(safe-area-inset-bottom)); height: auto; border-radius: 0; background: var(--background); }
   .sectionMenu[data-expanded="true"] .sheetHandle { visibility: hidden; }
   .sectionMenu[data-hub-view] .sheetHandle { width: 36px; height: 4px; margin: 0 auto 2px; background: var(--input); }
+
+  /* O painel do Hermes (chat, criar, pesquisar) ocupa a tela, por baixo da
+     barra: sem alca, sem veu. A barra troca o botao do Hermes (que vira o icone
+     de status do campo) pelos tres destinos com nome, e contorna o de onde a
+     pessoa veio. */
+  .sectionMenu.sectionMenu[data-hub-view] { z-index: 19; inset: 0; height: auto; max-height: none; padding: 0 16px calc(98px + env(safe-area-inset-bottom)); border-radius: 0; background: var(--background); animation: none; }
+  .sectionMenu.sectionMenu[data-hub-view="chat"] { overflow: hidden; }
+  .sectionMenu[data-hub-view] .sheetHandle { display: none; }
+  .sectionMenu[data-hub-view="chat"] .chatField form { background: var(--card); }
+  .sectionMenu[data-hub-view="chat"] [data-chat-control] { display: none; }
+  .sectionMenu[data-hub-view="chat"] .assistantWelcome h2 { font-size: 38px; line-height: 42px; }
+  .shell:has(.sectionMenu[open]) .bottomFade { display: none; }
+  .shell:has(.sectionMenu[open][data-hub-view]) .bottomNav > a, .shell:has(.sectionMenu[open][data-hub-view]) .bottomNav > button { flex: 1; border: 1px solid transparent; font-weight: 500; }
+  .shell:has(.sectionMenu[open][data-hub-view]) .bottomNav > a > span, .shell:has(.sectionMenu[open][data-hub-view]) .bottomNav > button > span { display: inline; }
+  .shell:has(.sectionMenu[open][data-hub-view]) .bottomNav > [aria-current="page"] { border-color: var(--input); background: transparent; color: var(--ink); font-weight: 600; }
+  .shell:has(.sectionMenu[open][data-hub-view]) .bottomNav svg { width: 20px; height: 20px; }
+  .shell:has(.sectionMenu[open][data-hub-view]) .bottomNav > .commandButton { display: none; }
 
   .shell:has(:is(.detailMain, [data-detail])) .header, .shell:has(:is(.detailMain, [data-detail])) .bottomNav, .shell:has(:is(.detailMain, [data-detail])) .bottomFade { display: none; }
   .detailMain { padding: 20px 25px 36px; }
@@ -761,6 +759,9 @@ a.chatEntityRow:active { background: var(--secondary); }
   .sectionMenu[data-hub-view="create"], .sectionMenu[data-hub-view="search"], .sectionMenu[data-hub-view="notifications"], .sectionMenu[data-hub-view="settings"] { height: fit-content; max-height: calc(100dvh - 96px); overflow-y: auto; }
   .sectionMenu[data-expanded="true"] { width: min(960px, calc(100vw - 48px)); height: calc(100dvh - 48px); }
   .sheetHandle { display: none; }
+  /* O chat e um painel de 480 px encostado a direita, com a tela a vista atras. */
+  .sectionMenu.sectionMenu[data-hub-view="chat"] { inset: 24px 24px 24px auto; margin: 0; width: min(480px, calc(100vw - 48px)); height: auto; padding: 8px 16px 16px; border-radius: 24px; }
+  .sectionMenu.sectionMenu[data-hub-view="chat"][data-expanded="true"] { inset: 24px; width: auto; }
 }
 
 
@@ -777,8 +778,7 @@ a.chatEntityRow:active { background: var(--secondary); }
 @media (prefers-reduced-motion: reduce) {
   .event { transition: none; }
   .sectionMenu, .sectionMenu::backdrop { animation: none; }
-  .chatStatus { animation: none; }
-  .chatIconButton[data-reveal="true"], .braidTails line, .braidKnot, .braidDot { animation: none; }
+  .braidTails line, .braidKnot, .braidDot { animation: none; }
 }
 
 @keyframes chatReveal {

@@ -46,11 +46,8 @@ export function EntityRows({ entities, entityHref, onOpenEntity }: EntityRowsPro
           <>
             <Icon aria-hidden />
             <span className={styles.chatEntityText}>
-              <span className={styles.chatEntityChange}>
-                {CHANGE_LABELS[entity.kind][entity.change]}
-                {entity.label ? " · " : ""}
-              </span>
-              {entity.label}
+              <span className={styles.chatEntityChange}>{CHANGE_LABELS[entity.kind][entity.change]}</span>
+              {entity.label ? <span className={styles.chatEntityName}>{entity.label}</span> : null}
             </span>
             {href && <ChevronRight aria-hidden className={styles.chatEntityGo} />}
           </>
