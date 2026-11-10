@@ -33,7 +33,7 @@ import app.braid.mobile.core.designsystem.braidBrand
 
 /**
  * As quatro entradas da barra inferior, na mesma ordem e com os mesmos ícones
- * do `bottomNav` de `mockups/eventos/mobile-navigation.tsx`: Tarefas, Agenda,
+ * do `bottomNav` de `components/shell/mobile-navigation.tsx`: Tarefas, Agenda,
  * Notas e “Buscar e criar”.
  */
 enum class BottomBarItem(

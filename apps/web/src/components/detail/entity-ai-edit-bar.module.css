@@ -8,8 +8,9 @@
   z-index: 5;
   display: grid;
   gap: 8px;
+  width: 100%;
   max-width: 680px;
-  margin: 24px auto 0;
+  margin: auto auto 0;
   padding: 10px 0 calc(10px + env(safe-area-inset-bottom));
   background: linear-gradient(to top, var(--background, var(--card)) 70%, transparent);
 }
@@ -39,7 +40,7 @@
 .waiting svg, .mark svg { width: 14px; height: 14px; }
 .steps { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
 .steps li { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink); }
-.steps li[data-status="succeeded"] .mark { color: var(--success, oklch(0.55 0.13 150)); }
+.steps li[data-status="succeeded"] .mark { color: var(--success); }
 .steps li[data-status="failed"] .mark { color: var(--destructive); }
 .mark { display: grid; place-items: center; width: 16px; height: 16px; color: var(--muted); }
 .message { margin: 0; font-size: 14px; line-height: 1.5; color: var(--ink); }

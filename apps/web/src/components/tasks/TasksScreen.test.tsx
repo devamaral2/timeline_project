@@ -35,13 +35,11 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-test("agrupa por status, conta abertas, atrasadas e de hoje e deixa Concluídas e Canceladas recolhidas", async () => {
+test("agrupa por status e deixa Concluídas e Canceladas recolhidas", async () => {
   authedFetch.mockResolvedValue(tasks);
   render(<TasksScreen userId="user-1" />);
 
-  await screen.findByText("6 abertas");
-  expect(screen.getByText("1 atrasada")).toBeInTheDocument();
-  expect(screen.getByText("1 para hoje")).toBeInTheDocument();
+  await screen.findByText("Pagar conta de luz");
   expect(screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent)).toEqual([
     "A fazer3",
     "Agendadas1",
@@ -71,7 +69,7 @@ test("agrupa por status, conta abertas, atrasadas e de hoje e deixa Concluídas 
 test("a linha mostra a prioridade e o prazo das abertas, e só o prazo das concluídas", async () => {
   authedFetch.mockResolvedValue(tasks);
   render(<TasksScreen userId="user-1" />);
-  await screen.findByText("6 abertas");
+  await screen.findByText("Pagar conta de luz");
 
   const luz = screen.getByRole("link", { name: "Pagar conta de luz" }).closest("li") as HTMLElement;
   expect(within(luz).getByRole("img", { name: "Prioridade: Urgente" })).toBeInTheDocument();
@@ -133,7 +131,7 @@ test("ordena pela prioridade, depois pela data, e filtra por tag", async () => {
     summaryTask({ id: "b", name: "Beta", priority: "urgent", tags: ["casa"], startedAt: "2026-09-20T00:00:00-03:00" }),
   ]);
   render(<TasksScreen userId="user-1" />);
-  await screen.findByText("2 abertas");
+  await screen.findByText("Alfa");
   const order = () => screen.getAllByRole("link").map((link) => link.textContent);
   expect(order()).toEqual(["Beta", "Alfa"]);
 
@@ -155,7 +153,7 @@ test("ordena pela prioridade, depois pela data, e filtra por tag", async () => {
 test("limpa os filtros quando nenhuma tarefa combina", async () => {
   authedFetch.mockResolvedValue([summaryTask({ id: "a", name: "Alfa", tags: ["casa"] }), summaryTask({ id: "b", name: "Beta", tags: ["rua"] })]);
   render(<TasksScreen userId="user-1" />);
-  await screen.findByText("2 abertas");
+  await screen.findByText("Alfa");
   fireEvent.click(screen.getByRole("button", { name: "Opções de visualização" }));
   fireEvent.click(screen.getByRole("button", { name: "#casa" }));
   fireEvent.click(screen.getByRole("button", { name: "#rua" }));

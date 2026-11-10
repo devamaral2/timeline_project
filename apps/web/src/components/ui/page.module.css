@@ -1,0 +1,38 @@
+/*
+ * O esqueleto de uma tela de lista (Tarefas, Notas): a coluna, o cabecalho com
+ * o titulo serifado, os grupos recolhiveis e os estados de carregamento, erro
+ * e vazio. As telas apontam para ca com `composes`, e so guardam no proprio
+ * modulo o que e delas (a linha de tarefa, o cartao de nota).
+ */
+/* A coluna de toda pagina: a largura do conteudo mais a margem lateral fluida,
+   32 de respiro no topo e, no celular, a folga da barra inferior. Quem usa
+   escolhe a largura com `--page-width`: 1040 nas listas (o padrao), menos nos
+   formularios. */
+.container { width: 100%; max-width: calc(var(--page-width, 1040px) + 2 * clamp(16px, 4vw, 56px)); margin: 0 auto; padding: 32px clamp(16px, 4vw, 56px) 48px; }
+.page { composes: container; display: flex; flex-direction: column; gap: 24px; font-size: var(--font-size-md); line-height: 1.5; }
+
+/* Cabecalho: o titulo de pagina (serifa, 44 no desktop e 32 no celular, peso
+   500) e, ao lado, as acoes da tela */
+.pageHead { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px 24px; }
+.titleBlock { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.title { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: clamp(2rem, 1.4rem + 2vw, 2.75rem); line-height: 1.1; letter-spacing: -.015em; }
+
+/* Grupos: titulo em caixa alta, contagem em mono, seta que recolhe */
+.groups { display: flex; flex-direction: column; gap: 24px; }
+.group { display: flex; flex-direction: column; }
+.groupTitle { font-size: var(--font-size-sm); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.groupCount { font-family: var(--font-mono); font-size: var(--font-size-sm); font-weight: 400; letter-spacing: 0; color: var(--muted); font-variant-numeric: tabular-nums; }
+.groupToggle { display: flex; align-items: center; gap: 12px; width: 100%; min-height: var(--control-md); padding: 0; border: 0; border-radius: 8px; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+
+/* Carregando, erro e vazio */
+.message { margin: 0; padding: 28px 0; color: var(--muted); }
+.retry { margin-left: 8px; border: 0; background: transparent; color: var(--ink); font: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; }
+.empty { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 48px 24px; border: 1px dashed var(--input); border-radius: 14px; text-align: center; }
+.empty svg { width: 32px; height: 32px; color: var(--muted); }
+.emptyTitle { margin: 0; font-family: var(--font-display); font-size: 1.25rem; font-weight: 500; }
+.emptyText { max-width: 44ch; margin: 0; color: var(--muted); }
+
+@media (max-width: 720px) {
+  .container { padding: 22px 16px 110px; }
+  .page { gap: 20px; }
+}

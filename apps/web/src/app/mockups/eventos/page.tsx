@@ -1,5 +1,5 @@
-import { AgendaPreview } from "./agenda-preview";
+import { AgendaScreen } from "@/components/agenda/agenda-screen";
 
 export default function EventsMockup() {
-  return <AgendaPreview />;
+  return <AgendaScreen />;
 }

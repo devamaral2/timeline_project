@@ -194,7 +194,7 @@ function EventDetailsBody({ event }: { event: EventDetailDto }) {
             <li
               key={tag}
               style={tagColorStyle(tag)}
-              className="rounded-full px-2 py-0.5 text-[11.5px] font-medium"
+              className="rounded-full px-2 py-0.5 text-xs font-medium"
             >
               #{tag}
             </li>

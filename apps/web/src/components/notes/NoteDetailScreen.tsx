@@ -15,7 +15,7 @@ import { hasPendingMeal, pendingMealEditMessage } from "@/lib/notes/meal-generat
 import { usePendingMealRefresh } from "@/lib/notes/use-pending-meal-refresh";
 import { EntityAiEditBar } from "@/components/detail/EntityAiEditBar";
 import { editEntityTypeOfNote } from "@/lib/ai-process/entity-edit";
-import shellStyles from "@/app/mockups/eventos/mockup.module.css";
+import shellStyles from "@/components/shell/shell.module.css";
 import { DeleteNoteDialog } from "./DeleteNoteDialog";
 import { NoteContent } from "./NoteContent";
 import { NoteEditorDialog } from "./NoteEditorDialog";

@@ -3,10 +3,10 @@
 import { ArrowLeft } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { type ComponentType, type ReactNode, useEffect, useState } from "react";
-import { type EditItemFormProps, NewEventForm, type NewItemFormProps, NewNoteForm, NewTaskForm } from "@/app/mockups/eventos/new-item-forms";
+import { type EditItemFormProps, NewEventForm, type NewItemFormProps, NewNoteForm, NewTaskForm } from "./new-item-forms";
 import { authedFetch } from "@/lib/api/authed-fetch";
 import type { EventDetailDto, NoteDto, TaskDetailDto } from "@/lib/api/contracts";
-import styles from "@/app/mockups/eventos/mockup.module.css";
+import styles from "@/components/shell/shell.module.css";
 
 /**
  * As rotas de criação manual (`/tarefas/nova`, `/eventos/novo`, `/notas/nova`): o
@@ -17,13 +17,13 @@ function NewItemRoute({ userId, title, listPath, Form }: { userId: string; title
   const router = useRouter();
   const initialName = useSearchParams().get("nome") ?? undefined;
   return (
-    <div className={styles.newEventPage}>
+    <main id="conteudo" className={styles.newEventPage}>
       <div className={styles.pickerHeader}>
         <button type="button" className={styles.pickerBack} onClick={() => router.replace(`/${userId}${listPath}`)} aria-label="Cancelar"><ArrowLeft aria-hidden /></button>
         <h1>{title}</h1>
       </div>
       <Form initialName={initialName} onCreated={path => router.replace(`/${userId}${path}`)} />
-    </div>
+    </main>
   );
 }
 
@@ -48,7 +48,7 @@ function EditItemRoute<Item>({ userId, title, apiPath, detailPath, Form }: {
   }, [apiPath]);
   const back = () => router.replace(`/${userId}${detailPath}`);
   return (
-    <div className={styles.newEventPage}>
+    <main id="conteudo" className={styles.newEventPage}>
       <div className={styles.pickerHeader}>
         <button type="button" className={styles.pickerBack} onClick={back} aria-label="Cancelar"><ArrowLeft aria-hidden /></button>
         <h1>{title}</h1>
@@ -56,7 +56,7 @@ function EditItemRoute<Item>({ userId, title, apiPath, detailPath, Form }: {
       {failed ? <p role="alert">Não foi possível carregar o item. Tente novamente.</p>
         : item ? <Form existing={item} onCreated={path => router.replace(`/${userId}${path}`)} />
         : <p role="status">Carregando…</p>}
-    </div>
+    </main>
   );
 }
 

@@ -57,7 +57,7 @@
   border: 1px solid var(--control-border);
   border-radius: 14px;
   background: var(--control-bg);
-  box-shadow: 0 14px 34px #252b2d1f;
+  box-shadow: var(--shadow-float);
 }
 
 .menuPanel button {
@@ -78,7 +78,7 @@
 .menuPanel button:hover { background: var(--soft); }
 .menuPanel button:disabled { opacity: .55; cursor: wait; }
 .menuPanel svg { width: 16px; height: 16px; color: var(--muted); }
-.menuPanel .danger { color: #b75058; }
+.menuPanel .danger { color: var(--destructive); }
 .menuPanel .danger svg { color: currentColor; }
 
 /* Cabeçalho: o tipo em cima, o nome e a data na mesma linha de base. */
@@ -87,7 +87,7 @@
   align-items: center;
   gap: 8px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: .2px;
 }
 
@@ -161,7 +161,7 @@
 }
 
 .duration.live { color: var(--cyan); }
-.endsOnAnotherDay { display: block; margin-top: 5px; color: var(--muted); font-size: 10px; letter-spacing: 0; }
+.endsOnAnotherDay { display: block; margin-top: 5px; color: var(--muted); font-size: 12px; letter-spacing: 0; }
 
 /* Metadados: pares de ícone e texto, um por linha. */
 .metadata {
@@ -206,11 +206,11 @@
   border: 1px solid var(--line);
   border-radius: 20px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.6;
 }
 
-.tags .missed { border-color: color-mix(in srgb, #b75058 32%, transparent); color: #b75058; }
+.tags .missed { border-color: color-mix(in srgb, var(--destructive) 32%, transparent); color: var(--destructive); }
 
 /*
  * A situação do evento no tempo: já aconteceu, está acontecendo ou ainda vai
@@ -248,7 +248,7 @@
 .section h2 {
   margin-bottom: 10px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   letter-spacing: .3px;
 }
@@ -286,12 +286,12 @@
 .tasks li[data-done="true"] { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--line); }
 
 .nutrition { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
-.nutrition dt { color: var(--muted); font-size: 10px; }
+.nutrition dt { color: var(--muted); font-size: 12px; }
 .nutrition dd { margin: 4px 0 0; font-size: 19px; font-variant-numeric: tabular-nums; letter-spacing: -.4px; }
-.nutrition dd span { margin-left: 3px; color: var(--muted); font-size: 10px; letter-spacing: 0; }
+.nutrition dd span { margin-left: 3px; color: var(--muted); font-size: 12px; letter-spacing: 0; }
 
 .message { margin-top: 20px; color: var(--muted); font-size: 13px; line-height: 1.6; }
-.error { color: #b75058; }
+.error { color: var(--destructive); }
 
 @media (max-width: 420px) {
   .topBar { margin-bottom: 22px; }

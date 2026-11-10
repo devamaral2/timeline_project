@@ -1,6 +1,6 @@
 import { Apple, ArrowLeft, CalendarDays, Clock3, FileText, MapPin, MoreHorizontal, Pencil, Utensils } from "lucide-react";
 import Link from "next/link";
-import styles from "../mockup.module.css";
+import styles from "@/components/shell/shell.module.css";
 
 export default function LunchMockup() {
   return (

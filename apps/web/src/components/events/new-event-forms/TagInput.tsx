@@ -90,7 +90,7 @@ export function TagInput({ tags, onTagsChange }: TagInputProps) {
       <label htmlFor="event-tags" className={fieldLabelClass}>
         Tags
       </label>
-      <div className="flex min-h-11 flex-wrap items-center gap-1.5 rounded-lg border border-input bg-background/60 px-2 py-1.5 transition-[border-color,box-shadow] focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/25">
+      <div className="flex min-h-11 flex-wrap items-center gap-1.5 rounded-lg border border-input bg-background/60 px-2 py-1.5 transition-[border-color,box-shadow] focus-within:border-ring focus-within:ring-1 focus-within:ring-ring">
         {tags.map((tag) => (
           <span
             key={tag}

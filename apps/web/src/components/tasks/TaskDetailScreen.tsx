@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
 import { EntityAiEditBar } from "@/components/detail/EntityAiEditBar";
-import shellStyles from "@/app/mockups/eventos/mockup.module.css";
+import shellStyles from "@/components/shell/shell.module.css";
 import {
   BackLink, DateLines, DetailHead, DetailMenu, DetailMessage, DetailOrigin, DetailScreen, DetailSection,
   DetailTitle, DetailTopBar, LinkGroup, LinkRow, MenuItem, MetaList, MetaRow, Prose, Reminders, RelationRow,

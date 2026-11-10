@@ -110,7 +110,8 @@ export const lightTokens: ThemeTokens = {
     warning: "oklch(0.53 0.1 72)", // #8f611e (= meal)
     success: "oklch(0.575 0.089 179.2)", // #2e8a7a (= brand)
     border: "oklch(0.909 0.012 217.5)", // #d9e3e6
-    input: "oklch(0.826 0.019 222.2)", // #b9c9cf
+    // A borda do campo e o que o identifica: 3:1 contra o chao e o cartao.
+    input: "oklch(0.64 0.019 222.2)", // #808f95
     ring: "oklch(0.575 0.089 179.2)", // #2e8a7a
     brand: "oklch(0.575 0.089 179.2)", // #2e8a7a
     brandAccent: "oklch(0.5208 0.0853 180.1)", // #1e796b
@@ -152,7 +153,7 @@ export const darkTokens: ThemeTokens = {
     warning: "oklch(0.801 0.09 72.5)", // #e2b57c (= meal)
     success: "oklch(0.6965 0.1212 187.82)", // #00b5ab (= brand)
     border: "oklch(0.3299 0.0284 279.15)", // #323444
-    input: "oklch(0.3982 0.0325 275.54)", // #424659
+    input: "oklch(0.53 0.0325 275.54)", // #666b7f
     ring: "oklch(0.6965 0.1212 187.82)", // #00b5ab
     brand: "oklch(0.6965 0.1212 187.82)", // #00b5ab
     brandAccent: "oklch(0.775 0.1244 187.69)", // #34cfc4

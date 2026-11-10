@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { AgendaPreview } from '../mockups/eventos/agenda-preview';
+import { AgendaScreen } from '@/components/agenda/agenda-screen';
 import { dayKeyOf } from '@repo/timeline';
 
 export const dynamic = 'force-dynamic';
@@ -35,5 +35,5 @@ export default async function UserTimelinePage({
   const { userId } = await params;
   const todayKey = dayKeyOf(new Date());
 
-  return <AgendaPreview userId={userId} todayKey={todayKey} />;
+  return <AgendaScreen userId={userId} todayKey={todayKey} />;
 }

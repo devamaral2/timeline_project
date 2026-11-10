@@ -9,13 +9,9 @@ import { useNow } from "@/lib/events/use-now";
 import { groupNotesByType } from "@/lib/notes/notes-model";
 import { hasPendingMeal } from "@/lib/notes/meal-generation";
 import { usePendingMealRefresh } from "@/lib/notes/use-pending-meal-refresh";
-import { agendaRefreshEvent } from "@/app/mockups/eventos/agenda-refresh";
+import { agendaRefreshEvent } from "@/components/agenda/agenda-refresh";
 import { NoteCard } from "./NoteCard";
 import styles from "./notes.module.css";
-
-function countLabel(total: number): string {
-  return total === 1 ? "1 nota" : `${total} notas`;
-}
 
 function toggleIn<T>(list: T[], value: T): T[] {
   return list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
@@ -91,10 +87,7 @@ export function NotesScreen({ userId }: { userId: string }) {
   return (
     <main id="conteudo" className={styles.page}>
       <header className={styles.pageHead}>
-        <div className={styles.titleBlock}>
-          <p className={styles.eyebrow} aria-live="polite">{notes ? countLabel(notes.length) : " "}</p>
-          <h1 className={styles.title}>Notas</h1>
-        </div>
+        <h1 className={styles.title}>Notas</h1>
         {notes && notes.length > 0 ? (
           <div className={styles.options} ref={optionsRef}>
             <button

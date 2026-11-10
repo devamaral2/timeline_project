@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { MockupShell } from "./mockup-shell";
+import { AppShell } from "@/components/shell/app-shell";
 
 export const metadata: Metadata = {
   title: "Agenda — Agente pessoal · Mockup",
@@ -10,8 +10,8 @@ export const metadata: Metadata = {
 
 export default function MockupLayout({ children }: { children: ReactNode }) {
   return (
-    <MockupShell>
+    <AppShell>
       {children}
-    </MockupShell>
+    </AppShell>
   );
 }

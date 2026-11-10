@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { EventDetailScreen } from "@/components/events/EventDetailScreen";
 import type { EventDetailDto, TaskDetailDto } from "@/lib/api/contracts";
-import styles from "../mockup.module.css";
+import styles from "@/components/shell/shell.module.css";
 
 export const metadata: Metadata = {
   title: "Detalhe do evento — Agente pessoal · Mockup",

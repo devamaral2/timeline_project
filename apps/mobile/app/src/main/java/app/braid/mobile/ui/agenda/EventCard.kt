@@ -88,6 +88,9 @@ fun EventCard(
     val brand = if (dark) DarkTokens.brand else LightTokens.brand
     val input = if (dark) DarkTokens.input else LightTokens.input
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    // Não realizado: título e duração no tom apagado, como o `.event[data-missed]`
+    // do web. Opacidade no cartão inteiro levava o texto secundário abaixo de 3:1.
+    val emphasis = if (event.missed) muted else MaterialTheme.colorScheme.onSurface
     val position = eventPositionOf(event, now)
     val isRunning = position == EventPosition.Running
     val finishedAt = event.finishedAt
@@ -100,7 +103,7 @@ fun EventCard(
 
     Surface(
         onClick = onClick,
-        modifier = Modifier.alpha(if (event.missed) 0.7f else 1f).semantics { contentDescription = "${visual.label}: ${event.name}" },
+        modifier = Modifier.semantics { contentDescription = "${visual.label}: ${event.name}" },
         shape = RoundedCornerShape(14.dp),
         color = if (position == EventPosition.Past) Color.Transparent else MaterialTheme.colorScheme.surface,
         border = BorderStroke(if (isRunning) 2.dp else 1.dp, if (isRunning) brand else MaterialTheme.colorScheme.outline),
@@ -120,6 +123,7 @@ fun EventCard(
                 Text(
                     text = event.name,
                     style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp, fontWeight = FontWeight.SemiBold),
+                    color = emphasis,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -174,11 +178,12 @@ fun EventCard(
                                     Text(
                                         text = part.value.toString(),
                                         style = MaterialTheme.typography.titleLarge.copy(fontFamily = BraidDisplayFont, fontSize = 22.sp),
+                                        color = emphasis,
                                     )
                                     Text(
                                         modifier = Modifier.padding(start = 3.dp, bottom = 2.dp),
                                         text = part.unit,
-                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
                                         color = muted,
                                     )
                                 }

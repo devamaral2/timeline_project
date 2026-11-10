@@ -1,6 +1,6 @@
 'use client';
 
-import { dayNumber, longDate, weekdayInitial, weekOf } from '@repo/timeline';
+import { dayNumber, longDate, weekday, weekOf } from '@repo/timeline';
 import { cn } from '@/lib/utils';
 
 interface WeekStripProps {
@@ -33,30 +33,25 @@ export function WeekStrip({
               onClick={() => onSelect(dayKey)}
               aria-current={selected ? 'date' : undefined}
               aria-label={longDate(dayKey)}
-              className="flex min-h-16 w-[46px] flex-col items-center gap-[5px] rounded-lg py-1 transition-colors hover:bg-foreground/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
+              className="flex w-[46px] flex-col items-center gap-1 rounded-[10px] py-1 transition-colors hover:bg-foreground/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <span className="text-[11px] font-semibold tracking-[0.06em] text-muted-foreground">
-                {weekdayInitial(dayKey)}
+              <span className="text-xs text-muted-foreground">
+                {weekday(dayKey).slice(0, 3)}
               </span>
+              {/* Como os números do calendário do mês: hoje na cor da marca e o
+                  dia em foco num retângulo suave. */}
               <span
                 className={cn(
-                  'flex size-8 items-center justify-center rounded-full text-[15px] tabular-nums transition-colors',
+                  'flex h-10 w-full items-center justify-center rounded-[10px] text-xs tabular-nums transition-colors',
                   selected
-                    ? 'bg-primary font-bold text-primary-foreground'
-                    : 'font-medium text-foreground',
+                    ? 'bg-[var(--cyan-soft)] font-semibold text-[var(--brand-accent)]'
+                    : isToday
+                      ? 'text-[var(--brand-accent)]'
+                      : 'text-foreground',
                 )}
               >
                 {dayNumber(dayKey)}
               </span>
-              {/* O ponto marca hoje, para que hoje continue visivel depois de
-                  navegar para longe dele. */}
-              <span
-                aria-hidden
-                className={cn(
-                  'size-[5px] rounded-full',
-                  isToday ? 'bg-brand' : 'bg-transparent',
-                )}
-              />
             </button>
           </li>
         );

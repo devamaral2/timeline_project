@@ -46,7 +46,7 @@ export function EntityAiEditBar({ userId, entityType, entityId, onEdited, disabl
   const steps = process?.steps ?? [];
   const message = phase === "failed" ? error : process?.message;
   return (
-    <section className={styles.bar} aria-label={`Editar ${target} com IA`}>
+    <section className={styles.bar} data-entity-ai-bar aria-label={`Editar ${target} com IA`}>
       {phase !== "idle" ? (
         <div className={styles.result} data-phase={phase} role="status" aria-live="polite">
           <div className={styles.resultHead}>

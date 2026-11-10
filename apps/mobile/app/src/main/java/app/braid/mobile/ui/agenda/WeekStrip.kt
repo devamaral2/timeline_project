@@ -5,11 +5,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -32,7 +30,7 @@ import app.braid.mobile.core.designsystem.LightTokens
 import app.braid.mobile.core.designsystem.LocalBraidDarkTheme
 import app.braid.mobile.domain.timeline.dayNumber
 import app.braid.mobile.domain.timeline.weekOf
-import app.braid.mobile.domain.timeline.weekdayInitial
+import app.braid.mobile.domain.timeline.weekday
 
 @Composable
 @Suppress("ktlint:standard:function-naming")
@@ -52,8 +50,7 @@ fun WeekStrip(
                 modifier =
                     Modifier
                         .width(46.dp)
-                        .heightIn(min = 64.dp)
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(RoundedCornerShape(10.dp))
                         .semantics {
                             contentDescription = dayKey
                             role = Role.Button
@@ -61,40 +58,33 @@ fun WeekStrip(
                         }.clickable(onClick = { onSelect(dayKey) })
                         .padding(vertical = 4.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(5.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Text(
-                    text = weekdayInitial(dayKey),
-                    style =
-                        MaterialTheme.typography.labelSmall.copy(
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            letterSpacing = 0.66.sp,
-                        ),
+                    text = weekday(dayKey).take(3),
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                // Como os números do calendário do mês: hoje na cor da marca e o dia em foco num retângulo suave.
+                val dark = LocalBraidDarkTheme.current
+                val accent = if (dark) DarkTokens.brandAccent else LightTokens.brandAccent
                 Surface(
-                    modifier = Modifier.size(32.dp),
-                    shape = CircleShape,
-                    color = if (selected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                    modifier = Modifier.fillMaxWidth().height(40.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (selected) (if (dark) DarkTokens.brandSoft else LightTokens.brandSoft) else Color.Transparent,
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                         Text(
                             text = dayNumber(dayKey),
                             style =
                                 MaterialTheme.typography.labelLarge.copy(
-                                    fontSize = 15.sp,
-                                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                                    fontSize = 12.sp,
+                                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
                                 ),
-                            color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                            color = if (selected || isToday) accent else MaterialTheme.colorScheme.onSurface,
                         )
                     }
                 }
-                Surface(
-                    modifier = Modifier.size(5.dp),
-                    shape = CircleShape,
-                    color = if (isToday) (if (LocalBraidDarkTheme.current) DarkTokens.brand else LightTokens.brand) else Color.Transparent,
-                ) {}
             }
         }
     }

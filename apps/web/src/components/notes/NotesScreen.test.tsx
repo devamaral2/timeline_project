@@ -47,7 +47,7 @@ test("agrupa só por tipo, sem divisão por tag, busca, filtros nem botão de cr
   const agent = { ...note({ id: "revisor", name: "revisor", tags: ["agent", "review"] }), type: "agent", data: { path: "hermes/agents/revisor.md", hash: "a".repeat(64), missing: false } } as unknown as NoteDto;
   authedFetch.mockResolvedValue([...notes, agent]);
   render(<NotesScreen userId="user-1" />);
-  await screen.findByText("4 notas");
+  await screen.findByRole("heading", { name: "Notas" });
 
   const text = screen.getByRole("region", { name: "Notas de texto" });
   expect(within(text).getByRole("link", { name: /Treino A/ })).toHaveAttribute("href", "/user-1/notas/treino");
@@ -65,7 +65,7 @@ test("agrupa só por tipo, sem divisão por tag, busca, filtros nem botão de cr
 test("recolhe e expande um tipo", async () => {
   authedFetch.mockResolvedValue(notes);
   render(<NotesScreen userId="user-1" />);
-  await screen.findByText("3 notas");
+  await screen.findByRole("heading", { name: "Notas" });
   const toggle = within(screen.getByRole("region", { name: "Notas de texto" })).getByRole("button");
   fireEvent.click(toggle);
   expect(toggle).toHaveAttribute("aria-expanded", "false");
@@ -88,14 +88,14 @@ test("oferece tentar de novo quando a leitura falha", async () => {
   expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível carregar as notas.");
   fireEvent.click(screen.getByRole("button", { name: "Tentar de novo" }));
 
-  expect(await screen.findByText("3 notas")).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: "Notas" })).toBeInTheDocument();
 });
 
 test("o ícone de opções filtra por tipo e por várias tags, e limpa os filtros", async () => {
   const agent = { ...note({ id: "revisor", name: "revisor", tags: ["agent", "criacao"] }), type: "agent", data: { path: "hermes/agents/revisor.md", hash: "a".repeat(64), missing: false } } as unknown as NoteDto;
   authedFetch.mockResolvedValue([...notes, agent]);
   render(<NotesScreen userId="user-1" />);
-  await screen.findByText("4 notas");
+  await screen.findByRole("heading", { name: "Notas" });
 
   fireEvent.click(screen.getByRole("button", { name: "Opções de visualização" }));
   const panel = within(screen.getByRole("dialog", { name: "Opções de visualização" }));
@@ -124,7 +124,7 @@ test("o ícone de opções filtra por tipo e por várias tags, e limpa os filtro
 test("avisa quando nenhum filtro combina", async () => {
   authedFetch.mockResolvedValue(notes);
   render(<NotesScreen userId="user-1" />);
-  await screen.findByText("3 notas");
+  await screen.findByRole("heading", { name: "Notas" });
   fireEvent.click(screen.getByRole("button", { name: "Opções de visualização" }));
   const tags = screen.getByLabelText("Tags") as HTMLInputElement;
   fireEvent.change(tags, { target: { value: "inexistente" } });

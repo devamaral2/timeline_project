@@ -136,7 +136,7 @@ fun entityChipText(entity: AgentChatEntityRefDto): String =
 private val COMPOSER_COMMANDS = ChatCommand.entries.filter { it != ChatCommand.Search }
 
 /**
- * O “Chat com IA” do hub, como `AgentChatPanel` (`mockups/eventos/agent-chat-panel.tsx`):
+ * O “Chat com IA” do hub, como `AgentChatPanel` (`components/hub/agent-chat-panel.tsx`):
  * o início (marca, pergunta e campo), a conversa e a lista de conversas. Criar e
  * pesquisar saem do próprio campo, pela barra "/" (`onCommand`).
  */
@@ -362,7 +362,7 @@ private fun ChatLiveLabel(
         }
         Text(
             text = text.uppercase(),
-            fontSize = 11.sp,
+            fontSize = 12.sp,
             lineHeight = 13.sp,
             fontWeight = FontWeight.SemiBold,
             letterSpacing = 1.3.sp,

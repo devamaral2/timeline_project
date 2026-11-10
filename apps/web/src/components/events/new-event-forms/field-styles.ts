@@ -1,13 +1,14 @@
 /**
  * Campos de formulario do design system: superficie afundada no fundo escuro,
- * borda discreta e um anel da cor da marca quando o campo esta em foco.
+ * borda de 3:1 (`--input`) e, em foco, a borda e um anel de 1 px na cor cheia de
+ * `--ring` — 2 px de contorno solido, sem a transparencia que apagava o foco.
  *
  * `fieldSurface` nao define tamanho de texto de proposito — quem compoe e que
  * decide, e assim `text-sm` e `text-[13px]` nunca aparecem juntos na mesma
  * classe brigando por precedencia.
  */
 const fieldSurface =
-  "rounded-lg border border-input bg-background/60 text-foreground outline-none transition-[border-color,box-shadow] placeholder:text-muted-foreground/70 focus:border-brand focus:ring-2 focus:ring-brand/25";
+  "rounded-lg border border-input bg-background/60 text-foreground outline-none transition-[border-color,box-shadow] placeholder:text-muted-foreground focus:border-ring focus:ring-1 focus:ring-ring";
 
 export const fieldInputClass = `${fieldSurface} h-11 px-3 text-sm`;
 

@@ -57,14 +57,20 @@ fun FreeTimeCard(
     val isNow = !isPast && !now.isBefore(slot.start)
     val start = formatTime(slot.start.toString())
     val end = if (slot.endsAtMidnight) "24:00" else formatTime(slot.end.toString())
-    val dashColor = if (isNow) brand.copy(alpha = 0.6f) else muted.copy(alpha = 0.45f)
+    // Passado: só o tracejado e a ampulheta apagam; o texto fica no tom apagado
+    // cheio, como o `.freeSlot[data-time-position="past"]` do web.
+    val dashColor =
+        when {
+            isNow -> brand.copy(alpha = 0.6f)
+            isPast -> muted.copy(alpha = 0.25f)
+            else -> muted.copy(alpha = 0.45f)
+        }
     val parts = durationPartsOfMinutes(slot.minutes)
 
     Row(
         modifier =
             modifier
                 .fillMaxWidth()
-                .alpha(if (isPast) 0.6f else 1f)
                 .semantics { contentDescription = "Tempo livre, de $start até $end" }
                 .drawBehind {
                     drawRoundRect(
@@ -81,7 +87,7 @@ fun FreeTimeCard(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            modifier = Modifier.size(22.dp),
+            modifier = Modifier.size(22.dp).alpha(if (isPast) 0.6f else 1f),
             imageVector = Icons.Outlined.HourglassEmpty,
             contentDescription = null,
             tint = muted,
@@ -132,7 +138,7 @@ fun FreeTimeCard(
                     Text(
                         modifier = Modifier.padding(start = 3.dp, bottom = 3.dp),
                         text = part.unit,
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
                         color = muted,
                     )
                 }

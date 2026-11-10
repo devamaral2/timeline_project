@@ -9,20 +9,16 @@ import { useNow } from "@/lib/events/use-now";
 import { tagAccentStyle, tagColorStyle } from "@/lib/tags/tag-color";
 import { updateTask } from "@/lib/tasks/task-api";
 import {
-  countLabel,
   groupTasks,
   isOverdueTask,
   isTodayTask,
-  overdueCountLabel,
   overdueLabel,
   pendingDependencies,
   subtaskProgress,
   type TaskSort,
-  taskCounts,
   taskDayOf,
   taskStatusLabels,
   taskWhenLabel,
-  todayCountLabel,
   toggledStatus,
   topLevelTasks,
   waitingLabel,
@@ -106,7 +102,6 @@ export function TasksScreen({ userId }: { userId: string }) {
     [tasks, selectedTags],
   );
   const groups = useMemo(() => groupTasks(visible, sort), [visible, sort]);
-  const counts = tasks && now ? taskCounts(tasks, now) : null;
   const hasTasks = tasks ? topLevelTasks(tasks).length > 0 : false;
   const filtered = selectedTags.length > 0;
 
@@ -146,18 +141,7 @@ export function TasksScreen({ userId }: { userId: string }) {
   return (
     <main id="conteudo" className={styles.screen}>
       <header className={styles.pageHead}>
-        <div className={styles.titleBlock}>
-          <h1 className={styles.title}>Tarefas</h1>
-          <p className={styles.summary} aria-live="polite">
-            {counts ? (
-              <>
-                <span>{countLabel(counts.open)}</span>
-                {counts.overdue > 0 ? <><span aria-hidden="true">·</span><span>{overdueCountLabel(counts.overdue)}</span></> : null}
-                {counts.today > 0 ? <><span aria-hidden="true">·</span><span>{todayCountLabel(counts.today)}</span></> : null}
-              </>
-            ) : " "}
-          </p>
-        </div>
+        <h1 className={styles.title}>Tarefas</h1>
         {hasTasks ? (
           <div className={styles.options} ref={optionsRef}>
             <button
