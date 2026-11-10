@@ -69,3 +69,15 @@
 .switch::before { content: ""; width: 22px; height: 22px; border-radius: 50%; background: var(--background); transition: transform var(--duration-fast) var(--ease-out); }
 .switch[aria-checked="true"] { background: var(--primary); }
 .switch[aria-checked="true"]::before { transform: translateX(20px); }
+
+/* O painel de opcoes de uma lista: rotulos em mono, uma linha por escolha (com
+   ✓ na atual) e linhas com chave. Quem usa posiciona (`left`/`right`). */
+.menuPanel { composes: floating; position: absolute; top: 52px; left: 0; z-index: var(--z-popover); width: 304px; max-width: calc(100vw - 40px); padding: 4px 18px 6px; border-radius: 20px; text-align: left; }
+.menuLabel { margin: 0; padding: 12px 0 4px; font-family: var(--font-mono); font-size: var(--font-size-xs); line-height: 16px; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
+.menuOption { width: 100%; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0; border: 0; border-bottom: 1px solid var(--hairline); background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.menuOption svg { width: 18px; height: 18px; stroke-width: 2; }
+.menuText { flex: 1; display: flex; flex-direction: column; }
+.menuText strong { font-size: 15px; font-weight: 600; line-height: 22px; }
+.menuText small { font-size: var(--font-size-xs); line-height: 18px; color: var(--muted); }
+.menuOption[aria-pressed="false"] strong { font-weight: 500; color: var(--muted); }
+.menuRow { display: flex; align-items: center; gap: 16px; min-height: 64px; }

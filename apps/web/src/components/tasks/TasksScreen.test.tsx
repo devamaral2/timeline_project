@@ -132,11 +132,13 @@ test("ordena pela prioridade, depois pela data, e filtra por tag", async () => {
   ]);
   render(<TasksScreen userId="user-1" />);
   await screen.findByText("Alfa");
-  const order = () => screen.getAllByRole("link").map((link) => link.textContent);
+  const list = screen.getByRole("region", { name: "Lista de tarefas" });
+  const order = () => within(list).getAllByRole("link").map((link) => link.textContent);
   expect(order()).toEqual(["Beta", "Alfa"]);
+  expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("2 tarefas abertas");
 
-  fireEvent.click(screen.getByRole("button", { name: "Opções de visualização" }));
-  fireEvent.change(screen.getByLabelText("Ordenar por"), { target: { value: "date" } });
+  expect(within(list).getByRole("button", { name: "Prioridade" })).toHaveAttribute("aria-pressed", "true");
+  fireEvent.click(within(list).getByRole("button", { name: "Data" }));
   expect(order()).toEqual(["Alfa", "Beta"]);
 
   const casa = screen.getByRole("button", { name: "#casa" });
@@ -154,7 +156,6 @@ test("limpa os filtros quando nenhuma tarefa combina", async () => {
   authedFetch.mockResolvedValue([summaryTask({ id: "a", name: "Alfa", tags: ["casa"] }), summaryTask({ id: "b", name: "Beta", tags: ["rua"] })]);
   render(<TasksScreen userId="user-1" />);
   await screen.findByText("Alfa");
-  fireEvent.click(screen.getByRole("button", { name: "Opções de visualização" }));
   fireEvent.click(screen.getByRole("button", { name: "#casa" }));
   fireEvent.click(screen.getByRole("button", { name: "#rua" }));
   expect(screen.getByRole("link", { name: "Alfa" })).toBeInTheDocument();

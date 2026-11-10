@@ -119,9 +119,10 @@
   /* Status e prioridade de tarefa: apelidos dos tokens acima, para que a mesma
      situacao tenha a mesma cor na agenda, na lista e no detalhe. Como `.dark`
      fica no <html>, eles trocam de tema junto com o que apontam. Concluida e o
-     verde-agua de `--success`; urgente e cancelada, o `--destructive`. */
+     verde-agua de `--success`; agendada, o azul de `--routine`; urgente e
+     cancelada, o `--destructive`. */
   --status-todo: var(--muted-foreground);
-  --status-scheduled: var(--foreground);
+  --status-scheduled: var(--routine);
   --status-hold: var(--warning);
   --status-done: var(--success);
   --status-cancel: var(--destructive);

@@ -66,16 +66,12 @@
 
 .options { position: relative; flex: none; }
 .optionsButton { composes: roundButton from "../ui/controls.module.css"; }
-.optionsPanel { composes: floating from "../ui/controls.module.css"; position: absolute; top: 52px; left: 0; z-index: var(--z-popover); width: 304px; max-width: calc(100vw - 40px); padding: 4px 18px 6px; border-radius: 20px; text-align: left; }
+.optionsPanel { composes: menuPanel from "../ui/controls.module.css"; }
 .options[data-align="end"] .optionsPanel { left: auto; right: 0; }
-.optionsLabel { margin: 0; padding: 12px 0 4px; font-family: var(--font-mono); font-size: var(--font-size-xs); line-height: 16px; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
-.optionsMode { width: 100%; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0; border: 0; border-bottom: 1px solid var(--hairline); background: transparent; color: inherit; text-align: left; cursor: pointer; }
-.optionsMode svg { width: 18px; height: 18px; stroke-width: 2; }
-.optionsText { flex: 1; display: flex; flex-direction: column; }
-.optionsText strong { font-size: 15px; font-weight: 600; line-height: 22px; }
-.optionsText small { font-size: var(--font-size-xs); line-height: 18px; color: var(--muted); }
-.optionsMode[aria-pressed="false"] strong { font-weight: 500; color: var(--muted); }
-.optionsRow { display: flex; align-items: center; gap: 16px; min-height: 64px; }
+.optionsLabel { composes: menuLabel from "../ui/controls.module.css"; }
+.optionsMode { composes: menuOption from "../ui/controls.module.css"; }
+.optionsText { composes: menuText from "../ui/controls.module.css"; }
+.optionsRow { composes: menuRow from "../ui/controls.module.css"; }
 .optionsSwitch { composes: switch from "../ui/controls.module.css"; }
 
 /* Os dias: um por vez, lado a lado, ou todos em sequência. */
