@@ -1,30 +1,49 @@
 /*
- * O que sobrou do detalhe do evento fora da composição compartilhada
- * (`components/detail`): o ícone de situação, o cartão de nota anexada
- * (refeição, treino e sono) e a lista de interrupções. Tokens vêm do shell.
+ * O que é só do evento aberto, fora das partes compartilhadas
+ * (`components/detail`): o quadrado do tipo ao lado da data, o andamento do
+ * que está acontecendo, as notas inteiras dentro do evento e as interrupções.
+ * Tokens vêm do shell.
  */
-.status { display: grid; place-items: center; width: 44px; height: 44px; margin: -11px -11px -11px 0; border: 0; border-radius: 50%; background: transparent; color: var(--muted); }
-button.status { cursor: pointer; }
-button.status:hover { background: var(--soft); }
-button.status:disabled { opacity: .6; cursor: wait; }
-.status svg { width: 28px; height: 28px; }
-.statusUpcoming { color: var(--muted); }
-.statusRunning { color: var(--cyan); }
-.statusDone { color: var(--ink); }
-.statusMissed { color: var(--destructive); }
+.kindRow { display: flex; align-items: center; gap: 14px; }
+.kindDate { composes: eyebrow from "../../../../components/ui/page.module.css"; }
+.kindTile { position: relative; flex: none; display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 13px; color: var(--detail-color); }
+.kindTile svg { width: 20px; height: 20px; }
+.kindTile[data-live="true"] { border-color: var(--brand); }
+.kindTile[data-live="true"]::after { content: ""; position: absolute; top: -5px; right: -5px; width: 12px; height: 12px; border: 2px solid var(--background); border-radius: 50%; background: var(--brand); }
+.headingBlock { display: flex; flex-direction: column; gap: 16px; }
+.title { composes: display from "../../../../components/ui/page.module.css"; }
+.timeBlock { display: flex; flex-direction: column; gap: 16px; }
+/* Em andamento: o ponto da marca, o cronômetro em mono e a barra do que já passou. */
+.live { display: flex; flex-direction: column; gap: 10px; }
+.live > p { margin: 0; display: flex; align-items: center; gap: 8px; }
+.live > p > i { width: 8px; height: 8px; border-radius: 50%; background: var(--brand); }
+.live > p > span { font-family: var(--font-mono); font-size: 13px; font-variant-numeric: tabular-nums; color: var(--ink); }
+.liveBar { height: 3px; overflow: hidden; border-radius: 2px; background: var(--line); }
+.liveBar > i { display: block; height: 100%; border-radius: 2px; background: var(--brand); }
+.missed { align-self: flex-start; padding: 0 7px; border: 1px solid var(--input); border-radius: 6px; color: var(--muted); font-size: var(--font-size-xs); font-weight: 500; line-height: 18px; }
+.priority { display: inline-flex; align-items: center; gap: 6px; font-size: var(--font-size-xs); font-weight: 400; color: var(--muted); }
+.priority[data-priority="urgent"] { color: var(--priority-urgent); }
+.priority svg { width: 14px; height: 14px; }
 
-.note { display: flex; flex-direction: column; gap: 18px; padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); }
-.noteTitle { margin: 0; color: var(--ink); font-weight: 400; font-family: var(--font-display); font-size: 26px; line-height: 1.15; letter-spacing: -.005em; }
+/* As notas do evento, inteiras: um bloco por nota, com um fio entre eles. */
+.notes { display: flex; flex-direction: column; gap: 28px; }
+.note { display: flex; flex-direction: column; gap: 16px; overflow-wrap: anywhere; }
+.note + .note { padding-top: 12px; border-top: 1px solid var(--hairline); }
+.note[data-note-type="meal"] { --note-color: var(--meal); }
+.note[data-note-type="training"] { --note-color: var(--training); }
+.note[data-note-type="sleep"] { --note-color: var(--sleep); }
+.noteHead { display: flex; align-items: center; gap: 14px; min-height: 64px; }
+.noteIcon { flex: none; display: grid; color: var(--note-color, var(--muted)); }
+.noteIcon svg { width: 20px; height: 20px; }
+.noteHeadText { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.noteTitle { margin: 0; color: var(--ink); font-size: var(--font-size-md); font-weight: 600; line-height: 24px; }
+.noteMeta { margin: 0; color: var(--muted); font-size: 13px; line-height: 20px; font-variant-numeric: tabular-nums; }
+.noteOpen { flex: none; display: grid; place-items: center end; width: 44px; height: 44px; color: var(--faint); }
+.noteOpen:hover { color: var(--ink); }
+.noteOpen svg { width: 16px; height: 16px; stroke-width: 2; }
 
-.collapsibles > * { border-top: 1px solid var(--line); }
-.collapsibles > :last-child { border-bottom: 1px solid var(--line); }
-
-.list { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; font-size: 14px; line-height: 1.5; }
-.list li { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
-.list p { margin: 0; }
-.list li > span { flex-shrink: 0; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
-.secondary { color: var(--muted); font-size: 12px; white-space: pre-wrap; }
-
-@media (max-width: 640px) {
-  .noteTitle { font-size: 24px; }
-}
+.list { margin: 0; padding: 0; list-style: none; }
+.list li { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 56px; padding: 6px 0; border-bottom: 1px solid var(--hairline); }
+.list p { margin: 0; font-size: 15px; font-weight: 500; line-height: 22px; }
+.list li > span { flex-shrink: 0; color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.list .secondary { color: var(--muted); font-size: 13px; font-weight: 400; line-height: 20px; white-space: pre-wrap; }

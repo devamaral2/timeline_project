@@ -43,7 +43,7 @@ test("a meal note shows its macros and the preparation steps", () => {
     />,
   );
 
-  expect(screen.getByText("Informações nutricionais")).toBeInTheDocument();
+  expect(screen.getByRole("region", { name: "Informações nutricionais" })).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "Modo de preparo" })).toBeInTheDocument();
   expect(screen.getByText("Misture o molho.")).toBeInTheDocument();
   expect(screen.queryByText("Sugerida")).not.toBeInTheDocument();
@@ -52,14 +52,14 @@ test("a meal note shows its macros and the preparation steps", () => {
 test("a meal note without a recipe shows no recipe section", () => {
   render(<NoteBody note={noteOf(meal)} />);
 
-  expect(screen.getByText("Informações nutricionais")).toBeInTheDocument();
+  expect(screen.getByRole("region", { name: "Informações nutricionais" })).toBeInTheDocument();
   expect(screen.queryByRole("heading", { name: "Modo de preparo" })).not.toBeInTheDocument();
 });
 
 test("pending meal generation shows status, never placeholder nutrition", () => {
   render(<NoteBody note={noteOf({ ...meal, generation: { status: "pending" } })} />);
   expect(screen.getByRole("status")).toHaveTextContent("Preparando informações nutricionais e receita");
-  expect(screen.queryByText("Informações nutricionais")).not.toBeInTheDocument();
+  expect(screen.queryByRole("region", { name: "Informações nutricionais" })).not.toBeInTheDocument();
   expect(screen.queryByText("kcal")).not.toBeInTheDocument();
 });
 

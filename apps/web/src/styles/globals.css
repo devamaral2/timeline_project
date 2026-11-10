@@ -162,6 +162,12 @@
      apagado (legendas em mono, dia fora do mes), o fio entre as linhas de uma
      lista e o que vai por cima do preenchido em `--primary` (o dia escolhido).
      No claro apontam para tokens existentes; no escuro tem valor proprio. */
+  /* Os tres macronutrientes da refeicao, cada um com a sua cor: proteinas no
+     azul de `--routine`, carboidratos no ambar de `--meal` e gorduras num rosa
+     da mesma luminosidade e croma das tags (troca de tema junto com elas). */
+  --macro-protein: var(--routine);
+  --macro-carbs: var(--meal);
+  --macro-fat: oklch(var(--tag-lightness) var(--tag-chroma) 340);
   --faint: var(--muted-foreground);
   --hairline: var(--border);
   --on-primary-muted: color-mix(in oklab, var(--primary-foreground) 70%, var(--primary));

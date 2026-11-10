@@ -1,31 +1,30 @@
 "use client";
 
-import { Bell, Clock3, FileText, Pencil, Trash2 } from "lucide-react";
+import { CalendarX, Pencil, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  BackButton, BackLink, DetailHead, DetailMenu, DetailMessage, DetailOrigin, DetailScreen, DetailSection,
-  DetailTitle, DetailTopBar, KindRow, LinkGroup, LinkMessage, LinkRow, MenuItem, MetaList, MetaRow, Prose,
-  TagPills, TaskLinkRow, detailIcon,
+  ActionPill, BackButton, BackLink, DetailActions, DetailFact, DetailFacts, DetailFrame, DetailMenu, DetailMessage,
+  DetailNav, DetailOrigin, DetailSection, LinkList, LinkMessage, MenuItem, Prose, Reminders,
+  TagPills, TaskLinkRow, TimeRange, detailIcon,
 } from "@/components/detail/detail-parts";
 import { EntityAiEditBar } from "@/components/detail/EntityAiEditBar";
 import { DeleteEventDialog } from "@/components/events/DeleteEventDialog";
 import { EditEventModal } from "@/components/events/EditEventModal";
-import { notificationOffsetLabel, visualForItemType } from "@/components/events/event-visuals";
+import { notificationOffsetLabel, priorityLabels, visualForItemType } from "@/components/events/event-visuals";
+import { TaskPriorityIcon } from "@/components/agenda/task-controls";
 import { authedFetch } from "@/lib/api/authed-fetch";
 import { useNow } from "@/lib/events/use-now";
 import type { EventDetailDto, TaskDetailDto, WorkItemStatus } from "@/lib/api/contracts";
-import { noteSnippet } from "@/lib/notes/notes-model";
+import { whenLabel } from "@/lib/notes/notes-model";
 import { updateTask } from "@/lib/tasks/task-api";
 import { taskStatusLabels, taskWhenLabel } from "@/lib/tasks/tasks-model";
 import { elapsedSecondsOf, eventPositionOf, formatStopwatch, formatTime } from "@repo/timeline";
 import { agendaRefreshEvent } from "@/components/agenda/agenda-refresh";
-import shellStyles from "@/components/shell/shell.module.css";
-import { dateLineOf, formatMinutes, minutesBetween, pluralize } from "@/lib/events/event-detail-format";
-import { Collapsible } from "@/components/notes/NoteBody";
+import { dateLineOf, formatMinutes, minutesBetween } from "@/lib/events/event-detail-format";
 import { hasPendingMeal, pendingMealEditMessage } from "@/lib/notes/meal-generation";
 import { usePendingMealRefresh } from "@/lib/notes/use-pending-meal-refresh";
-import { NoteContent, StatusIcon, noteTitleOf, statusLabelOf } from "./event-detail-parts";
+import { EventNote, noteTitleOf, statusLabelOf } from "./event-detail-parts";
 import styles from "./event-details.module.css";
 
 export default function EventPage({ params }: { params: Promise<{ userId: string; eventId: string }> }) {
@@ -129,15 +128,17 @@ export default function EventPage({ params }: { params: Promise<{ userId: string
     }
   }
 
-  if (loading) return <main id="conteudo" className={shellStyles.detailMain}><DetailMessage>Carregando evento…</DetailMessage></main>;
-  if (error || !event || !userId) return (
-    <main id="conteudo" className={shellStyles.detailMain}>
-      <DetailScreen>
-        <DetailTopBar label="Evento" back={<BackButton onClick={() => router.back()}>Voltar</BackButton>} />
+  const frame = { leadLabel: "Resumo do evento", bodyLabel: "Conteúdo do evento" };
+  if (loading) {
+    return <DetailFrame {...frame} lead={<DetailNav label="Navegação do registro" back={<BackButton onClick={() => router.back()}>Voltar</BackButton>} />}><DetailMessage>Carregando evento…</DetailMessage></DetailFrame>;
+  }
+  if (error || !event || !userId) {
+    return (
+      <DetailFrame {...frame} lead={<DetailNav label="Navegação do registro" back={<BackButton onClick={() => router.back()}>Voltar</BackButton>} />}>
         <DetailMessage alert>Não foi possível carregar o evento. Tente novamente.</DetailMessage>
-      </DetailScreen>
-    </main>
-  );
+      </DetailFrame>
+    );
+  }
 
   const type = event.kind;
   const visual = visualForItemType(type);
@@ -146,126 +147,133 @@ export default function EventPage({ params }: { params: Promise<{ userId: string
   const statusLabel = position ? statusLabelOf(position, event.missed) : "Situação do evento";
   const agendaMinutes = event.finishedAt ? minutesBetween(event.startedAt, event.finishedAt) : null;
   const dateLine = dateLineOf(event.startedAt, event.finishedAt);
-  const endLabel = event.finishedAt
-    ? formatTime(event.finishedAt)
-    : position === "running" ? "em andamento" : "sem hora de fim";
-  const durationLabel =
-    position === "running" && now
-      ? formatStopwatch(elapsedSecondsOf(event.startedAt, now))
-      : agendaMinutes !== null ? formatMinutes(agendaMinutes) : null;
   const linkedTasks = event.taskIds?.length ?? 0;
-  const richNotes = event.notes.filter((note) => note.type !== "text");
-  const hasLinks = event.notes.length > 0 || linkedTasks > 0;
+  const running = position === "running";
+  const elapsedSeconds = running && now ? elapsedSecondsOf(event.startedAt, now) : 0;
+  const progress = running && agendaMinutes ? Math.min(100, Math.round((elapsedSeconds / 60 / agendaMinutes) * 100)) : null;
+  const blocked = pendingMeal ? pendingMealEditMessage : undefined;
+  const edit = () => { if (event.kind === "routine") router.push(`/${userId}/eventos/${event.id}/editar`); else setEditing(true); };
+  const refresh = () => { setReloadKey((key) => key + 1); window.dispatchEvent(new Event(agendaRefreshEvent)); };
+  const when = now ? `${whenLabel(event.startedAt, now)}${event.finishedAt ? ` — ${formatTime(event.finishedAt)}` : ""}` : null;
 
   return (
-    <main id="conteudo" className={shellStyles.detailMain}>
-      <DetailScreen type={type}>
-        <DetailTopBar label="Evento" back={<BackLink href={`/${userId}`}>Agenda</BackLink>}>
-          <DetailMenu label="Mais ações">
-            {(close) => (
-              <>
-                <MenuItem icon={<Pencil {...detailIcon} />} disabled={pendingMeal} title={pendingMeal ? pendingMealEditMessage : undefined} onClick={() => { close(); if (event.kind === "routine") router.push(`/${userId}/eventos/${event.id}/editar`); else setEditing(true); }}>Editar</MenuItem>
-                <MenuItem icon={<Trash2 {...detailIcon} />} danger onClick={() => { close(); setDeleting(true); }}>Excluir</MenuItem>
-              </>
-            )}
-          </DetailMenu>
-        </DetailTopBar>
+    <DetailFrame
+      {...frame}
+      type={type}
+      lead={
+        <>
+          <DetailNav label="Navegação do registro" back={<BackLink href={`/${userId}`}>Agenda</BackLink>}>
+            <DetailMenu label="Mais ações">
+              {(close) => (
+                <>
+                  <MenuItem icon={<Pencil {...detailIcon} />} disabled={pendingMeal} title={blocked} onClick={() => { close(); edit(); }}>Editar</MenuItem>
+                  {position === "past" ? <MenuItem icon={<CalendarX {...detailIcon} />} disabled={savingMissed} onClick={() => { close(); void updateMissed(!event.missed); }}>{event.missed ? "Marcar como realizado" : "Não realizado"}</MenuItem> : null}
+                  <MenuItem icon={<Trash2 {...detailIcon} />} danger onClick={() => { close(); setDeleting(true); }}>Excluir</MenuItem>
+                </>
+              )}
+            </DetailMenu>
+          </DetailNav>
 
-        <DetailHead>
-          <KindRow
-            icon={<TypeIcon {...detailIcon} />}
-            label={visual.label === "Evento" ? "Evento" : `Evento · ${visual.label}`}
-            trailing={position === "past" ? (
-              <button type="button" className={styles.status} aria-pressed={event.missed} disabled={savingMissed}
-                aria-label={`Situação: ${statusLabel}. Toque para marcar como ${event.missed ? "aconteceu" : "não realizado"}`} title={statusLabel}
-                onClick={() => void updateMissed(!event.missed)}><StatusIcon position={position} missed={event.missed} /></button>
-            ) : position === "running" ? (
-              <span className={styles.status} role="img" aria-label={`Situação: ${statusLabel}`} title={statusLabel}><StatusIcon position={position} missed={event.missed} /></span>
-            ) : <span className={styles.status} aria-hidden="true" />}
-          />
-          <DetailTitle>{event.name}</DetailTitle>
-          <TagPills tags={event.tags} label="Tags do evento" />
-        </DetailHead>
+          <div className={styles.headingBlock}>
+            <div className={styles.kindRow}>
+              <span className={styles.kindTile} data-live={running || undefined} role="img" aria-label={running ? `${visual.label}, em andamento` : visual.label} title={statusLabel}><TypeIcon {...detailIcon} /></span>
+              <p className={styles.kindDate}>{dateLine}</p>
+            </div>
+            <h1 className={styles.title}>{event.name}</h1>
+            {event.missed ? <span className={styles.missed}>Não realizado</span> : null}
+          </div>
 
-        <MetaList label="Informações">
-          <MetaRow
-            icon={<Clock3 {...detailIcon} />}
-            main={dateLine}
-            sub={
-              <>
-                <time dateTime={event.startedAt}>{formatTime(event.startedAt)}</time> → {event.finishedAt ? <time dateTime={event.finishedAt}>{endLabel}</time> : endLabel}
-                {durationLabel ? <> · {durationLabel}</> : null}
-              </>
-            }
-          />
-          {event.notifyOffsetsMinutes.length ? (
-            <MetaRow icon={<Bell {...detailIcon} />} main={event.notifyOffsetsMinutes.map(notificationOffsetLabel).join(" · ")} />
-          ) : null}
-        </MetaList>
-
-        {event.description ? <Prose clamp>{event.description}</Prose> : null}
-
-        {richNotes.map((note) => <NoteContent key={note.id} note={note} title={noteTitleOf(note, event.name, dateLine)} agendaMinutes={agendaMinutes} />)}
-
-        {event.interruptions.length ? (
-          <section className={styles.collapsibles} aria-label="Mais detalhes">
-            <Collapsible title="Interrupções" summary={pluralize(event.interruptions.length, "interrupção", "interrupções")}>
-              <ul className={styles.list}>
-                {event.interruptions.map((interruption) => (
-                  <li key={interruption.id}>
-                    <div><p>{interruption.name}</p>{interruption.description ? <p className={styles.secondary}>{interruption.description}</p> : null}</div>
-                    <span>{formatMinutes(minutesBetween(interruption.startedAt, interruption.finishedAt))}</span>
-                  </li>
-                ))}
-              </ul>
-            </Collapsible>
-          </section>
-        ) : null}
-
-        {hasLinks ? (
-          <DetailSection title="Vínculos" labelId="ev-links" className="links">
-            {event.notes.length ? (
-              <LinkGroup id="ev-links-notes" title="Notas vinculadas" count={event.notes.length}>
-                {event.notes.map((note) => (
-                  <LinkRow key={note.id} kind="note" icon={<FileText {...detailIcon} />} title={noteTitleOf(note, event.name, dateLine)} sub={`Nota${noteSnippet(note) ? ` · ${noteSnippet(note)}` : ""}`} href={`/${userId}/notas/${note.id}`} />
-                ))}
-              </LinkGroup>
+          <div className={styles.timeBlock}>
+            <TimeRange start={formatTime(event.startedAt)} end={event.finishedAt ? formatTime(event.finishedAt) : null} minutes={agendaMinutes} />
+            {running ? (
+              <div className={styles.live}>
+                <p><i aria-hidden /><span role="timer" aria-label="Tempo decorrido">{formatStopwatch(elapsedSeconds)}</span></p>
+                {progress !== null && agendaMinutes ? <div className={styles.liveBar} role="img" aria-label={`${Math.floor(elapsedSeconds / 60)} de ${agendaMinutes} minutos decorridos`}><i style={{ width: `${progress}%` }} /></div> : null}
+              </div>
             ) : null}
-            {linkedTasks ? (
-              <LinkGroup id="ev-links-tasks" title="Tarefas vinculadas" count={linkedTasks}>
-                {tasks.length ? tasks.map((task) => (
-                  <TaskLinkRow
-                    key={task.id}
-                    name={task.name}
-                    status={task.status}
-                    sub={`Tarefa · ${now ? lowerFirst(taskWhenLabel(task, now)) : taskStatusLabels[task.status].toLowerCase()}`}
-                    href={`/${userId}/tarefas/${task.id}`}
-                    busy={savingTaskId === task.id}
-                    onStatusChange={(status) => void updateTaskStatus(task, status)}
-                  />
-                )) : <LinkMessage>{tasksLoading ? "Carregando tarefas…" : "Não foi possível carregar as tarefas vinculadas."}</LinkMessage>}
-              </LinkGroup>
-            ) : null}
-          </DetailSection>
-        ) : null}
+          </div>
 
-        <DetailOrigin id="event" />
+          <DetailFacts label="Informações">
+            <DetailFact label="Prioridade">
+              <span className={styles.priority} data-priority={event.priority}><TaskPriorityIcon priority={event.priority} decorative />{priorityLabels[event.priority]}</span>
+            </DetailFact>
+            {event.notifyOffsetsMinutes.length ? <DetailFact label={event.notifyOffsetsMinutes.length === 1 ? "Lembrete" : "Lembretes"}><Reminders labels={event.notifyOffsetsMinutes.map(notificationOffsetLabel)} /></DetailFact> : null}
+            {event.tags.length ? <DetailFact label="Tags"><TagPills tags={event.tags} label="Tags do evento" /></DetailFact> : null}
+          </DetailFacts>
 
-        {mutationError ? <DetailMessage alert>{mutationError}</DetailMessage> : null}
-      </DetailScreen>
+          <DetailActions>
+            <ActionPill icon={<Pencil {...detailIcon} />} disabled={pendingMeal} title={blocked} onClick={edit}>Editar</ActionPill>
+            {position === "past" ? <ActionPill icon={<CalendarX {...detailIcon} />} pressed={event.missed} disabled={savingMissed} onClick={() => void updateMissed(!event.missed)}>Não realizado</ActionPill> : null}
+            <ActionPill icon={<Trash2 {...detailIcon} />} danger onClick={() => setDeleting(true)}>Excluir</ActionPill>
+          </DetailActions>
+        </>
+      }
+    >
+      {event.description ? <DetailSection title="Descrição" labelId="ev-description"><Prose clamp>{event.description}</Prose></DetailSection> : null}
 
-      {userId ? (
-        <EntityAiEditBar
-          userId={userId}
-          entityType="event"
-          entityId={event.id}
-          onEdited={() => { setReloadKey((key) => key + 1); window.dispatchEvent(new Event(agendaRefreshEvent)); }}
-        />
+      {event.interruptions.length ? (
+        <DetailSection title="Interrupções" labelId="ev-interruptions" count={event.interruptions.length}>
+          <ul className={styles.list}>
+            {event.interruptions.map((interruption) => (
+              <li key={interruption.id}>
+                <div><p>{interruption.name}</p>{interruption.description ? <p className={styles.secondary}>{interruption.description}</p> : null}</div>
+                <span>{formatMinutes(minutesBetween(interruption.startedAt, interruption.finishedAt))}</span>
+              </li>
+            ))}
+          </ul>
+        </DetailSection>
       ) : null}
 
-      {editing ? <EditEventModal eventId={event.id} onClose={() => setEditing(false)} onUpdated={() => { setEditing(false); setReloadKey((key) => key + 1); window.dispatchEvent(new Event(agendaRefreshEvent)); }} /> : null}
+      {linkedTasks ? (
+        <DetailSection title="Tarefas" labelId="ev-tasks" count={linkedTasks}>
+          <LinkList>
+            {tasks.length ? tasks.map((task) => (
+              <TaskLinkRow
+                key={task.id}
+                name={task.name}
+                status={task.status}
+                sub={`Tarefa · ${now ? lowerFirst(taskWhenLabel(task, now)) : taskStatusLabels[task.status].toLowerCase()}`}
+                href={`/${userId}/tarefas/${task.id}`}
+                busy={savingTaskId === task.id}
+                onStatusChange={(status) => void updateTaskStatus(task, status)}
+              />
+            )) : <LinkMessage>{tasksLoading ? "Carregando tarefas…" : "Não foi possível carregar as tarefas vinculadas."}</LinkMessage>}
+          </LinkList>
+        </DetailSection>
+      ) : null}
+
+      {event.notes.length ? (
+        <DetailSection title="Notas" labelId="ev-notes" count={event.notes.length}>
+          <div className={styles.notes}>
+            {event.notes.map((note) => (
+              <EventNote
+                key={note.id}
+                note={note}
+                title={noteTitleOf(note, event.name, dateLine)}
+                updated={now ? whenLabel(note.updatedAt, now) : undefined}
+                href={`/${userId}/notas/${note.id}`}
+                agendaMinutes={agendaMinutes}
+              />
+            ))}
+          </div>
+        </DetailSection>
+      ) : null}
+
+      <DetailOrigin id="event" />
+
+      {mutationError ? <DetailMessage alert>{mutationError}</DetailMessage> : null}
+
+      <EntityAiEditBar
+        userId={userId}
+        entityType="event"
+        entityId={event.id}
+        onEdited={refresh}
+        context={{ icon: <TypeIcon aria-hidden />, meta: when ? `Evento · ${when}` : "Evento", title: event.name }}
+      />
+
+      {editing ? <EditEventModal eventId={event.id} onClose={() => setEditing(false)} onUpdated={() => { setEditing(false); refresh(); }} /> : null}
       {deleting ? <DeleteEventDialog eventId={event.id} eventName={event.name} onClose={() => setDeleting(false)} onDeleted={() => { window.dispatchEvent(new Event(agendaRefreshEvent)); router.push(`/${userId}`); }} /> : null}
-    </main>
+    </DetailFrame>
   );
 }
 

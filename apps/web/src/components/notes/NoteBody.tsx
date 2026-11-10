@@ -1,8 +1,6 @@
 "use client";
 
-import {
-  ArrowDown, ArrowUp, ChevronDown, ChevronUp, Clock, Flame, Moon, Timer,
-} from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { ICON_STROKE_WIDTH } from "@/components/events/event-visuals";
 import type { MealItem, NoteDto, SleepItem, TrainingData, WorkoutSnapshot } from "@/lib/api/contracts";
@@ -51,7 +49,7 @@ export function Collapsible({ title, summary, trailing, defaultOpen = false, chi
     );
   }
   return (
-    <div className={styles.collapsible}>
+    <div>
       <button type="button" aria-expanded={open} className={styles.collapsibleToggle} onClick={() => setOpen((value) => !value)}>
         <span className={styles.rowHead}>
           <span className={styles.rowText}><span className={styles.rowTitle}>{title}</span>{summary ? <span className={styles.rowSummary}>{summary}</span> : null}</span>
@@ -64,15 +62,9 @@ export function Collapsible({ title, summary, trailing, defaultOpen = false, chi
   );
 }
 
-function KcalIcon({ kind }: { kind: "burned" | "consumed" }) {
-  const Badge = kind === "burned" ? ArrowUp : ArrowDown;
-  return <span className={styles.kcalIcon} data-kind={kind} aria-hidden><Flame {...icon} /><span className={styles.kcalBadge}><Badge {...icon} strokeWidth={2.5} /></span></span>;
-}
-
 function Calories({ value, kind }: { value: number; kind: "burned" | "consumed" }) {
   return (
-    <span className={styles.kcal} data-kind={kind} role="img" aria-label={`${formatDecimal(value)} quilocalorias ${kind === "burned" ? "gastas" : "consumidas"}`}>
-      <KcalIcon kind={kind} />
+    <span className={styles.kcal} role="img" aria-label={`${formatDecimal(value)} quilocalorias ${kind === "burned" ? "gastas" : "consumidas"}`}>
       <span className={styles.kcalValue}>{formatDecimal(value)}<small>kcal</small></span>
     </span>
   );
@@ -91,19 +83,20 @@ function Duration({ minutes }: { minutes: number }) {
   );
 }
 
-function Metric({ label, children, Icon }: { label: string; children: ReactNode; Icon: typeof Timer }) {
+/** O número ao lado do principal (tempo ativo, tempo registrado): rótulo em cima, valor na serifa. */
+function Metric({ label, title, children }: { label: string; title: string; children: ReactNode }) {
   return (
     <div role="img" aria-label={label} title={label} className={styles.metric}>
-      <Icon {...icon} /><span className={styles.metricValue}>{children}</span>
+      <span className={styles.metricLabel}>{title}</span><span className={styles.metricValue}>{children}</span>
     </div>
   );
 }
 
-function BigNumber({ label, children, icon: iconNode, tone }: { label: string; children: ReactNode; icon: ReactNode; tone: "burned" | "consumed" | "sleep" }) {
+/** O número principal da nota: rótulo em cima e o valor em 56 px na serifa. */
+function BigNumber({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className={styles.bigNumber} data-tone={tone}>
-      {iconNode}
-      <div><span className={styles.bigNumberLabel}>{label}</span><span className={styles.bigNumberValue}>{children}</span></div>
+    <div className={styles.bigNumber}>
+      <span className={styles.bigNumberLabel}>{label}</span><span className={styles.bigNumberValue}>{children}</span>
     </div>
   );
 }
@@ -125,9 +118,9 @@ function Macros({ totals }: { totals: MealItem["totals"] }) {
     { key: "fat", name: "Gorduras", grams: totals.totalFatGrams, share: fat },
   ] as const;
   return (
-    <>
+    <div className={styles.macroBlock}>
       {protein + carbs + fat > 0 ? (
-        <div className={styles.macroBar} role="img" aria-label={`Distribuição de calorias: ${items.map((item) => `${item.name.toLowerCase()} ${item.share}%`).join(", ")}`}>
+        <div className={styles.macroBar} role="img" aria-label={`De onde vêm as calorias: ${items.map((item) => `${item.name.toLowerCase()} ${item.share}%`).join(", ")}`}>
           {items.map((item) => <i key={item.key} data-macro={item.key} style={{ flex: item.share }} />)}
         </div>
       ) : null}
@@ -135,11 +128,14 @@ function Macros({ totals }: { totals: MealItem["totals"] }) {
         {items.map((item) => (
           <div key={item.key} className={styles.macro} data-macro={item.key}>
             <span className={styles.macroName}><i />{item.name}</span>
-            <span className={styles.macroValue} role="img" aria-label={`${item.name}: ${formatDecimal(item.grams)} gramas`}>{formatDecimal(item.grams)}<small>g</small></span>
+            <span className={styles.macroLine}>
+              <span className={styles.macroValue} role="img" aria-label={`${item.name}: ${formatDecimal(item.grams)} gramas`}>{formatDecimal(item.grams)}<small>g</small></span>
+              {protein + carbs + fat > 0 ? <span className={styles.macroShare}>{item.share}%</span> : null}
+            </span>
           </div>
         ))}
       </div>
-    </>
+    </div>
   );
 }
 
@@ -154,14 +150,16 @@ function MealNote({ data }: { data: MealItem }) {
   return (
     <div className={styles.noteBody}>
       {data.description ? <p className={styles.noteText}>{data.description}</p> : null}
-      <MealGenerationStatus data={data} />
-      <h3 className={styles.noteHeading}>Informações nutricionais</h3>
-      <BigNumber label="Calorias consumidas" tone="consumed" icon={<KcalIcon kind="consumed" />}>{formatDecimal(totals.totalCaloriesKcal)}<small>kcal</small></BigNumber>
-      <hr />
-      <Macros totals={totals} />
+      <section className={styles.noteBody} aria-label="Informações nutricionais">
+        <div className={styles.figures}>
+          <BigNumber label="Calorias consumidas">{formatDecimal(totals.totalCaloriesKcal)}<small>kcal</small></BigNumber>
+        </div>
+        <Macros totals={totals} />
+        <MealGenerationStatus data={data} />
+      </section>
       {data.foodItems.length ? (
-        <div>
-          <h4 className={styles.listHeading}>Alimentos</h4>
+        <div className={styles.listBlock}>
+          <h4 className={styles.listHeading}>Alimentos<span>{data.foodItems.length}</span></h4>
           <ul className={styles.foods}>
             {data.foodItems.map((food) => (
               <li key={food.id}>
@@ -193,14 +191,13 @@ function TrainingNote({ data }: { data: TrainingData }) {
   const burned = data.caloriesBurned || data.workouts.reduce((sum, workout) => sum + workout.calories, 0);
   return (
     <div className={styles.noteBody}>
-      <BigNumber label="Calorias gastas" tone="burned" icon={<KcalIcon kind="burned" />}>{formatDecimal(burned)}<small>kcal</small></BigNumber>
-      <hr />
-      <div className={styles.metrics}>
-        <Metric label={`Tempo ativo: ${formatMinutes(active)}`} Icon={Timer}><Duration minutes={active} /></Metric>
+      <div className={styles.figures}>
+        <BigNumber label="Calorias gastas">{formatDecimal(burned)}<small>kcal</small></BigNumber>
+        <Metric label={`Tempo ativo: ${formatMinutes(active)}`} title="Tempo ativo"><Duration minutes={active} /></Metric>
       </div>
       {data.workouts.length ? (
-        <div>
-          <h4 className={styles.listHeading}>Treinos</h4>
+        <div className={styles.listBlock}>
+          <h4 className={styles.listHeading}>Treinos<span>{data.workouts.length}</span></h4>
           <div className={styles.workouts}>
             {data.workouts.map((workout) => {
               const trailing = <Calories value={workout.calories} kind="burned" />;
@@ -228,17 +225,14 @@ function TrainingNote({ data }: { data: TrainingData }) {
 }
 
 function SleepNote({ data, agendaMinutes }: { data: SleepItem; agendaMinutes: number | null }) {
+  const score = Math.min(100, Math.max(0, data.score));
   return (
     <div className={styles.noteBody}>
-      <BigNumber label="Pontuação do sono" tone="sleep" icon={<span className={styles.sleepIcon}><Moon {...icon} /></span>}>
-        {data.score}<small>de 100</small>
-      </BigNumber>
-      <hr />
-      <div className={styles.metrics}>
-        <Metric label={`Tempo registrado: ${formatMinutes(data.trackedSleepTime)}`} Icon={Clock}>
-          <Duration minutes={data.trackedSleepTime} />
-        </Metric>
+      <div className={styles.figures}>
+        <BigNumber label="Pontuação do sono">{data.score}<small>de 100</small></BigNumber>
+        <Metric label={`Tempo registrado: ${formatMinutes(data.trackedSleepTime)}`} title="Tempo registrado"><Duration minutes={data.trackedSleepTime} /></Metric>
       </div>
+      <div className={styles.scoreBar} role="img" aria-label={`Pontuação do sono: ${data.score} de 100`}><i style={{ width: `${score}%` }} /></div>
       {agendaMinutes !== null ? <p className={styles.noteFoot}>Registrado pelo app de sono. Na agenda, o evento durou {formatMinutes(agendaMinutes)}.</p> : null}
     </div>
   );

@@ -52,7 +52,8 @@ test("mostra o tipo, o título, as tags, quando acontece e a descrição", async
   renderPage();
 
   expect(await screen.findByRole("heading", { level: 1, name: "Revisão semanal" })).toBeInTheDocument();
-  expect(screen.getByText("Evento · Rotina")).toBeInTheDocument();
+  // O tipo é o ícone no quadrado ao lado da data; a prioridade e os lembretes são fatos do resumo.
+  expect(screen.getByRole("img", { name: "Rotina" })).toBeInTheDocument();
   expect(screen.getByText("#planejamento")).toBeInTheDocument();
   expect(screen.getByText("15 minutos antes")).toBeInTheDocument();
   expect(screen.getByText("Fechar a agenda da semana.")).toBeInTheDocument();
@@ -60,13 +61,13 @@ test("mostra o tipo, o título, as tags, quando acontece e a descrição", async
   expect(screen.queryByText("Criado pelo Hermes")).not.toBeInTheDocument();
 });
 
-test("agrupa em Vínculos as notas e as tarefas, e cada linha abre a tela dela", async () => {
+test("as notas aparecem inteiras numa seção e as tarefas em outra, e cada uma abre a sua tela", async () => {
   renderPage();
 
-  const notes = await screen.findByRole("group", { name: /Notas vinculadas/ });
-  expect(within(notes).getByRole("link", { name: /Pauta da revisão semanal/ })).toHaveAttribute("href", "/user-1/notas/nota-1");
+  const notes = await screen.findByRole("region", { name: /^Notas/ });
+  expect(within(notes).getByRole("link", { name: "Abrir a nota Pauta da revisão semanal" })).toHaveAttribute("href", "/user-1/notas/nota-1");
 
-  const tasks = await screen.findByRole("group", { name: /Tarefas vinculadas/ });
+  const tasks = await screen.findByRole("region", { name: /^Tarefas/ });
   expect(await within(tasks).findByRole("link", { name: /Mover as tarefas atrasadas/ })).toHaveAttribute("href", "/user-1/tarefas/t1");
   expect(within(tasks).getByText("Tarefa · hoje, 17:30")).toBeInTheDocument();
 });
@@ -103,14 +104,14 @@ test("o menu leva à edição da rotina e à exclusão", async () => {
   expect(push).toHaveBeenCalledWith("/user-1/eventos/ev-1/editar");
 });
 
-test("mostra a nota de sono inteira, sem a seção Notas, e a lista em Notas vinculadas", async () => {
+test("mostra a nota de sono inteira dentro da seção Notas, com a seta que a abre", async () => {
   const sleepNote = { ...textNote({ id: "sono-1", name: "Sono" }), type: "sleep", data: { trackedSleepTime: 480, score: 83 } } as unknown as NoteDto;
   const sleepEvent: EventDetailDto = { ...event, kind: "sleep", name: "Dormir", description: "", notes: [sleepNote], taskIds: [] };
   authedFetch.mockImplementation(() => Promise.resolve(sleepEvent));
   renderPage();
 
   expect(await screen.findByText("Pontuação do sono")).toBeInTheDocument();
-  expect(screen.queryByRole("heading", { name: "Notas" })).not.toBeInTheDocument();
-  const notes = screen.getByRole("group", { name: /Notas vinculadas/ });
-  expect(within(notes).getByRole("link", { name: /Segunda, 14 de setembro|14 de setembro/ })).toHaveAttribute("href", "/user-1/notas/sono-1");
+  const notes = screen.getByRole("region", { name: /^Notas/ });
+  expect(within(notes).getByText(/^Nota de sono/)).toBeInTheDocument();
+  expect(within(notes).getByRole("link", { name: /Abrir a nota .*14 de setembro/ })).toHaveAttribute("href", "/user-1/notas/sono-1");
 });

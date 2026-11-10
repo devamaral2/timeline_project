@@ -57,10 +57,11 @@ export function DetailActions({ children }: { children: ReactNode }) {
   return <div className={styles.actions}>{children}</div>;
 }
 
-export function ActionPill({ icon, danger = false, disabled = false, title, onClick, children }: {
-  icon: ReactNode; danger?: boolean; disabled?: boolean; title?: string; onClick: () => void; children: ReactNode;
+/** `pressed` faz da pílula uma chave liga/desliga (o "Não realizado" do evento). */
+export function ActionPill({ icon, danger = false, disabled = false, pressed, title, onClick, children }: {
+  icon: ReactNode; danger?: boolean; disabled?: boolean; pressed?: boolean; title?: string; onClick: () => void; children: ReactNode;
 }) {
-  return <button type="button" className={styles.actionPill} data-danger={danger || undefined} disabled={disabled} title={title} onClick={onClick}>{icon}{children}</button>;
+  return <button type="button" className={styles.actionPill} data-danger={danger || undefined} aria-pressed={pressed} disabled={disabled} title={title} onClick={onClick}>{icon}{children}</button>;
 }
 
 /** O horário na serifa: "09:00 — 10:30" e, na ponta, quanto dura. Sem `start`, só a observação. */
