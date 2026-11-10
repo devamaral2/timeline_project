@@ -188,14 +188,14 @@ export function TasksScreen({ userId }: { userId: string }) {
               <button
                 type="button"
                 className={styles.optionsButton}
-                aria-label="Opções de visualização"
+                aria-label={filtered ? `Opções de visualização, ${selectedTags.length} filtros ativos` : "Opções de visualização"}
                 title="Opções de visualização"
                 aria-expanded={optionsOpen}
                 aria-haspopup="dialog"
                 onClick={() => setOptionsOpen((open) => !open)}
               >
                 <SlidersHorizontal aria-hidden />
-                {filtered ? <span className={styles.optionsBadge}>{selectedTags.length}<span className="sr-only"> filtros ativos</span></span> : null}
+                {filtered ? <span className={styles.optionsBadge} aria-hidden="true">{selectedTags.length}</span> : null}
               </button>
               {optionsOpen ? (
                 <div className={styles.optionsPanel} role="dialog" aria-label="Opções de visualização">

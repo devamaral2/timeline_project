@@ -282,3 +282,28 @@ export function groupNotesByType(notes: readonly NoteDto[]): NoteTypeGroup[] {
     };
   });
 }
+
+/** O número em destaque de uma nota estruturada na lista: kcal da refeição, minutos do treino, tempo de sono. */
+export type NoteFigure = { kind: "kcal"; value: number } | { kind: "minutes"; value: number };
+
+export function noteFigure(note: NoteDto): NoteFigure | null {
+  if (note.type === "meal") {
+    const kcal = Math.round(note.data.totals?.totalCaloriesKcal ?? 0);
+    return kcal > 0 ? { kind: "kcal", value: kcal } : null;
+  }
+  if (note.type === "training") {
+    const minutes = Math.round((note.data.workouts ?? []).reduce((sum, workout) => sum + workout.duration, 0));
+    return minutes > 0 ? { kind: "minutes", value: minutes } : null;
+  }
+  if (note.type === "sleep") {
+    const minutes = Math.round(note.data.trackedSleepTime ?? 0);
+    return minutes > 0 ? { kind: "minutes", value: minutes } : null;
+  }
+  return null;
+}
+
+/** "11 notas": a legenda no topo da lista. */
+export function noteCountLabel(count: number): string {
+  if (count === 0) return "Nenhuma nota";
+  return count === 1 ? "1 nota" : `${count} notas`;
+}

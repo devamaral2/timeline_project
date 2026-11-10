@@ -3,51 +3,75 @@
  * de leitura ainda usa daqui. Os tokens (--ink, --muted, --line, --card, --soft)
  * vêm do shell e trocam sozinhos entre Névoa e Noite.
  */
-.page { composes: page from "../ui/page.module.css"; }
-
-/* Cabeçalho: contagem, título, subtítulo e as ações */
-.pageHead { composes: pageHead from "../ui/page.module.css"; align-items: center; flex-wrap: nowrap; }
-@media (max-width: 720px) { .pageHead { margin-bottom: -14px; } }
-.title { composes: title from "../ui/page.module.css"; }
-
-/* Tags */
-.options { position: relative; margin-left: auto; }
-.optionsButton { position: relative; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; color: var(--ink); cursor: pointer; }
-.optionsButton:hover, .optionsButton[aria-expanded="true"] { background: var(--soft); }
-.optionsButton svg { width: 21px; height: 21px; }
+/* A lista do redesenho: a esquerda, quantas notas, os tipos (que filtram) e as
+   tags; a direita, um grupo por tipo com as notas em linhas de livro-razao. */
+@media (min-width: 1100px) {
+  .lead { position: sticky; top: 24px; }
+}
+.headRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.phoneOptions { display: none; position: relative; flex: none; }
+.optionsButton { composes: roundButton from "../ui/controls.module.css"; position: relative; color: var(--muted); }
+.optionsButton svg { width: 18px; height: 18px; }
 .optionsBadge { composes: badge from "../ui/controls.module.css"; }
-.optionsPanel { composes: floating from "../ui/controls.module.css"; position: absolute; top: calc(100% + 8px); right: 0; z-index: 20; display: flex; flex-direction: column; gap: 16px; width: min(360px, calc(100vw - 32px)); padding: 16px; }
-.optionsGroup { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; border: 0; min-width: 0; }
-.optionsGroup legend { padding: 0; margin-bottom: 8px; color: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
-.typeChips { display: flex; flex-wrap: wrap; gap: 8px; }
-.optionsClear { composes: textButton from "../ui/controls.module.css"; }
-.chip { composes: chip from "../ui/controls.module.css"; }
+.optionsPanel { composes: menuPanel from "../ui/controls.module.css"; left: auto; right: 0; display: flex; flex-direction: column; gap: 20px; max-height: min(70vh, 560px); overflow-y: auto; padding: 16px 18px; }
 
-/* Grupos por tag */
-.groups { composes: groups from "../ui/page.module.css"; }
-.group { composes: group from "../ui/page.module.css"; }
-.groupHead { margin: 0 0 8px; }
-.groupToggle { composes: groupToggle from "../ui/page.module.css"; overflow-wrap: anywhere; }
-.chevron { flex: none; width: 18px; height: 18px; color: var(--muted); transition: transform .24s cubic-bezier(.2, .8, .2, 1); }
+.leadFilters { display: flex; flex-direction: column; gap: 36px; }
+.typeGroup { min-width: 0; margin: 0; padding: 0; border: 0; }
+.typeList { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.typeToggle { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px; padding: 0; border: 0; border-bottom: 1px solid var(--hairline); background: transparent; color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
+.typeToggle > i { flex: none; display: grid; color: var(--note-color, var(--muted)); }
+.typeToggle svg { width: 18px; height: 18px; stroke-width: 1.75; }
+.typeToggle > span { flex: 1; font-size: 15px; font-weight: 500; line-height: 22px; }
+.typeToggle > strong { font-family: var(--font-display); font-size: 22px; font-weight: 400; line-height: 24px; font-variant-numeric: tabular-nums; }
+/* Com um tipo escolhido, os outros descem para o tom apagado. */
+.typeList[data-filtered="true"] .typeToggle[aria-pressed="false"] { color: var(--faint); }
+.typeList[data-filtered="true"] .typeToggle[aria-pressed="false"] > i { color: var(--faint); }
+.typeToggle[aria-pressed="true"] > span { font-weight: 600; }
+@media (hover: hover) {
+  .typeToggle:hover > span { text-decoration: underline; text-underline-offset: 4px; }
+}
+/* A cor de cada tipo de nota: a do tipo de evento, e a da marca nas do Hermes. */
+.typeToggle[data-note-type="meal"], .row[data-note-type="meal"] { --note-color: var(--meal); }
+.typeToggle[data-note-type="training"], .row[data-note-type="training"] { --note-color: var(--training); }
+.typeToggle[data-note-type="sleep"], .row[data-note-type="sleep"] { --note-color: var(--sleep); }
+.typeToggle[data-note-type="skill"], .row[data-note-type="skill"], .typeToggle[data-note-type="agent"], .row[data-note-type="agent"], .typeToggle[data-note-type="router"], .row[data-note-type="router"] { --note-color: var(--brand-accent); }
+
+.tagFilter { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+.tagLabel { composes: eyebrow from "../ui/page.module.css"; }
+.tagChips { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.tagChip { composes: pill from "../ui/controls.module.css"; padding: 0 16px 0 14px; font-size: 13px; }
+.tagChip > i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.clear { composes: textButton from "../ui/controls.module.css"; }
+
+/* Grupos por tipo: o rotulo em mono recolhe o grupo */
+.groups { display: flex; flex-direction: column; margin-top: -14px; }
+.groupHead { margin: 0; }
+.groupToggle { composes: sectionLabel from "../ui/page.module.css"; width: 100%; min-height: var(--control-md); padding: 0; border: 0; background: transparent; text-align: left; cursor: pointer; overflow-wrap: anywhere; }
+.chevron { flex: none; width: 14px; height: 14px; stroke-width: 2; transition: transform var(--duration-slow) var(--ease-out); }
 .groupToggle[aria-expanded="false"] .chevron { transform: rotate(-90deg); }
-.groupTitle { composes: groupTitle from "../ui/page.module.css"; }
-.groupCount { composes: groupCount from "../ui/page.module.css"; }
 
-.noteGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 296px), 1fr)); gap: 16px; margin: 0; padding: 0; list-style: none; }
-.noteGrid[hidden] { display: none; }
-.noteGrid > li { display: flex; min-width: 0; }
-
-.card { display: flex; flex-direction: column; gap: 12px; width: 100%; padding: 24px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); color: inherit; overflow-wrap: anywhere; transition: border-color .15s, background .15s; }
-@media (hover: hover) { .card:hover { border-color: var(--brand); background: var(--secondary); } }
-.cardMeta { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.origin { display: inline-flex; align-items: center; gap: 8px; min-width: 0; font-size: 14px; color: var(--muted); }
-.origin svg { flex: none; width: 16px; height: 16px; color: var(--origin-color, var(--muted)); }
-.origin span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.stamp { flex-shrink: 0; font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.cardTitle { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; margin: 0; overflow: hidden; font-family: var(--font-display); font-weight: 500; font-size: 1.25rem; line-height: 1.25; letter-spacing: -.005em; color: var(--ink); }
-.snippet { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; margin: 0; overflow: hidden; color: var(--muted); }
-.tags { display: flex; flex-wrap: wrap; gap: 8px; margin: auto 0 0; padding: 4px 0 0; list-style: none; }
-.tags li { display: inline-flex; align-items: center; min-height: 24px; padding: 0 8px; border-radius: 5px; font-size: 14px; font-weight: 500; }
+.noteList { list-style: none; margin: 0; padding: 0; }
+.noteList[hidden] { display: none; }
+.noteList > li { position: relative; }
+.noteList > li + li::before { content: ""; position: absolute; top: 0; left: 60px; right: 0; height: 1px; background: var(--hairline); }
+.row { display: flex; align-items: flex-start; gap: 16px; padding: 14px 0; color: inherit; overflow-wrap: anywhere; }
+.tile { flex: none; display: grid; place-items: center; width: 44px; height: 44px; margin-top: 2px; border: 1px solid var(--line); border-radius: 13px; color: var(--note-color, var(--muted)); }
+.tile svg { width: 20px; height: 20px; }
+.rowText { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.rowHead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.rowTitle { min-width: 0; overflow: hidden; font-size: var(--font-size-md); font-weight: 600; line-height: 24px; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); }
+.stamp { flex: none; font-size: var(--font-size-xs); line-height: 20px; white-space: nowrap; color: var(--muted); font-variant-numeric: tabular-nums; }
+.snippet { overflow: hidden; font-size: var(--font-size-sm); line-height: 22px; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+.rowMeta { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; font-size: 13px; line-height: 20px; color: var(--faint); }
+.rowMeta > span + span::before { content: "·"; margin-right: 8px; color: var(--faint); }
+.figure { flex: none; min-width: 76px; display: flex; justify-content: flex-end; padding-top: 2px; }
+.figure > span { display: flex; align-items: baseline; gap: 3px; font-family: var(--font-display); font-size: var(--font-size-xl); line-height: 24px; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--ink); }
+.figure strong { font-weight: 400; }
+.figure small { font-family: var(--font-sans); font-size: var(--font-size-xs); color: var(--muted); }
+.figure small + strong { margin-left: 4px; }
+@media (hover: hover) {
+  .row:hover .rowTitle { text-decoration: underline; text-underline-offset: 4px; }
+}
 
 /* Estados: mensagem e vazio */
 .message { composes: message from "../ui/page.module.css"; }
@@ -55,7 +79,7 @@
 .empty { composes: empty from "../ui/page.module.css"; }
 .emptyTitle { composes: emptyTitle from "../ui/page.module.css"; }
 .emptyText { composes: emptyText from "../ui/page.module.css"; }
-.emptyAction { composes: outlineButton from "../ui/controls.module.css"; }
+.emptyAction { composes: pill from "../ui/controls.module.css"; color: var(--ink); font-weight: 600; }
 @media (prefers-reduced-motion: reduce) { .chevron { transition: none; } }
 
 /* O cartão do conteúdo, igual ao da nota dentro do detalhe do evento, sem o cabeçalho. */
@@ -63,9 +87,20 @@
 .noteTitle { margin: 0; color: var(--ink); font-family: var(--font-display); font-weight: 400; font-size: 26px; line-height: 1.15; letter-spacing: -.005em; }
 
 @media (max-width: 720px) {
-  .noteGrid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
-  .card { gap: 8px; padding: 16px; }
-  .snippet { -webkit-line-clamp: 2; }
+  /* No celular a faixa do topo leva a contagem e o botao de opcoes; os tipos e
+     as tags moram no painel dele. */
+  .headRow { margin: -4px -20px 0; padding: 0 14px 10px 20px; border-bottom: 1px solid var(--line); }
+  .phoneOptions { display: block; }
+  .leadFilters { display: none; }
+  .body { margin-top: -20px; }
+  .groups { margin-top: 0; }
+  .row { gap: 14px; }
+  .noteList > li + li::before { left: 58px; }
+  .rowMeta { column-gap: 12px; }
+  .rowMeta > span + span::before { content: none; }
+  .figure { min-width: 0; }
+  .figure:empty { display: none; }
+  .figure > span { font-size: 22px; }
   .noteTitle { font-size: 24px; }
 }
 
