@@ -25,7 +25,7 @@ function setup(props: Partial<React.ComponentProps<typeof EntityAiEditBar>> = {}
 test("o campo fala do que esta sendo editado e envia o tipo e o id da entidade", async () => {
   const { api, onEdited } = setup();
   const input = screen.getByRole("textbox", { name: "Pedir à IA para editar este evento" });
-  expect(input).toHaveAttribute("placeholder", "Peça ao Hermes para editar este evento");
+  expect(input).toHaveAttribute("placeholder", "Peça uma mudança neste evento");
 
   fireEvent.change(input, { target: { value: "mude para 19h" } });
   fireEvent.click(screen.getByRole("button", { name: "Enviar pedido" }));
@@ -44,7 +44,7 @@ test("enviar fica desligado sem texto", () => {
 
 test("o placeholder muda por tipo", () => {
   setup({ entityType: "skill_note" });
-  expect(screen.getByPlaceholderText("Peça ao Hermes para editar esta skill")).toBeInTheDocument();
+  expect(screen.getByPlaceholderText("Peça uma mudança nesta skill")).toBeInTheDocument();
 });
 
 test("com motivo para desligar, o campo fica desabilitado e mostra o motivo", () => {

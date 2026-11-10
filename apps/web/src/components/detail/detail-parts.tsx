@@ -1,16 +1,83 @@
 "use client";
 
-import { ArrowLeft, Check, ChevronDown, ChevronRight, Ellipsis, Sparkles, Wrench } from "lucide-react";
+import { ArrowLeft, Check, ChevronDown, ChevronRight, EllipsisVertical, Sparkles, Wrench } from "lucide-react";
 import Link from "next/link";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { ICON_STROKE_WIDTH } from "@/components/events/event-visuals";
 import { TaskStatusIcon } from "@/components/tasks/task-visuals";
+import page from "@/components/ui/page.module.css";
 import type { WorkItemStatus } from "@/lib/api/contracts";
-import { tagColorStyle } from "@/lib/tags/tag-color";
+import { tagAccentStyle } from "@/lib/tags/tag-color";
 import { TASK_STATUS_ORDER, taskStatusLabels } from "@/lib/tasks/tasks-model";
 import styles from "./detail.module.css";
 
 export const detailIcon = { "aria-hidden": true, strokeWidth: ICON_STROKE_WIDTH } as const;
+
+/**
+ * O molde de duas colunas do registro aberto: `lead` é o resumo (voltar, data,
+ * título, situação, fatos, ações) e `children`, o conteúdo, que fecha com o
+ * campo do Hermes. `type` pinta o tipo do evento. No celular vira uma coluna e
+ * o shell esconde o cabeçalho e a barra inferior (`data-detail`).
+ */
+export function DetailFrame({ type, leadLabel, bodyLabel, lead, children }: { type?: string; leadLabel: string; bodyLabel: string; lead: ReactNode; children: ReactNode }) {
+  return (
+    <main id="conteudo" className={`${page.frame} ${styles.frame}`} data-detail data-type={type}>
+      <section className={`${page.lead} ${styles.lead}`} aria-label={leadLabel}>{lead}</section>
+      <section className={`${page.body} ${styles.body}`} aria-label={bodyLabel}>{children}</section>
+    </main>
+  );
+}
+
+/** O topo do resumo: voltar e, só no celular, o menu "mais ações" (no desktop as ações são pílulas). */
+export function DetailNav({ label, back, children }: { label: string; back: ReactNode; children?: ReactNode }) {
+  return <nav className={styles.nav} aria-label={label}>{back}{children ? <div className={styles.navMenu}>{children}</div> : null}</nav>;
+}
+
+/** A legenda em mono (a data, "Atualizada hoje, 09:20") e o título serifado do registro. */
+export function DetailHeading({ eyebrow, children, done = false }: { eyebrow?: ReactNode; children: ReactNode; done?: boolean }) {
+  return (
+    <div className={styles.heading}>
+      {eyebrow ? <p className={styles.eyebrow}>{eyebrow}</p> : null}
+      <h1 className={styles.display} data-done={done || undefined}>{children}</h1>
+    </div>
+  );
+}
+
+/** Os fatos do registro (lembrete, tags, criada em): rótulo à esquerda, valor à direita. */
+export function DetailFacts({ label, children }: { label: string; children: ReactNode }) {
+  return <dl className={styles.facts} aria-label={label}>{children}</dl>;
+}
+
+export function DetailFact({ label, children }: { label: string; children: ReactNode }) {
+  return <div className={styles.fact}><dt>{label}</dt><dd>{children}</dd></div>;
+}
+
+/** As ações do registro como pílulas (desktop); no celular elas moram no menu do topo. */
+export function DetailActions({ children }: { children: ReactNode }) {
+  return <div className={styles.actions}>{children}</div>;
+}
+
+export function ActionPill({ icon, danger = false, disabled = false, title, onClick, children }: {
+  icon: ReactNode; danger?: boolean; disabled?: boolean; title?: string; onClick: () => void; children: ReactNode;
+}) {
+  return <button type="button" className={styles.actionPill} data-danger={danger || undefined} disabled={disabled} title={title} onClick={onClick}>{icon}{children}</button>;
+}
+
+/** O horário na serifa: "09:00 — 10:30" e, na ponta, quanto dura. Sem `start`, só a observação. */
+export function TimeRange({ start, end, minutes, note }: { start?: string | null; end?: string | null; minutes?: number | null; note?: string }) {
+  if (!start) return note ? <p className={styles.timeNote}>{note}</p> : null;
+  return (
+    <div className={styles.timeRow}>
+      <p><span>{start}</span>{end ? <><i aria-hidden>—</i><span>{end}</span></> : null}</p>
+      {minutes && minutes > 0 ? (
+        <p>
+          {minutes >= 60 ? <><span>{Math.floor(minutes / 60)}</span><small>h</small></> : null}
+          {minutes % 60 > 0 ? <><span>{minutes % 60}</span><small>min</small></> : null}
+        </p>
+      ) : null}
+    </div>
+  );
+}
 
 /** O contêiner de toda tela de detalhe. `type` pinta o tipo do evento (rotina, refeição, treino, sono). */
 export function DetailScreen({ type, children }: { type?: string; children: ReactNode }) {
@@ -60,7 +127,7 @@ export function DetailMenu({ label, children }: { label: string; children: (clos
   return (
     <div className={styles.anchor} ref={ref}>
       <button type="button" className={styles.iconButton} aria-label={label} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
-        <Ellipsis {...detailIcon} />
+        <EllipsisVertical {...detailIcon} />
       </button>
       {open ? <div role="menu" className={styles.menu}>{children(close)}</div> : null}
     </div>
@@ -92,7 +159,7 @@ export function DetailTitle({ children, done = false }: { children: ReactNode; d
 
 export function TagPills({ tags, label }: { tags: readonly string[]; label: string }) {
   if (!tags.length) return null;
-  return <ul className={styles.tags} aria-label={label}>{tags.map((tag) => <li key={tag} style={tagColorStyle(tag)}>#{tag}</li>)}</ul>;
+  return <ul className={styles.tags} aria-label={label}>{tags.map((tag) => <li key={tag} style={tagAccentStyle(tag)}>#{tag}</li>)}</ul>;
 }
 
 export function Stamp({ children }: { children: ReactNode }) {

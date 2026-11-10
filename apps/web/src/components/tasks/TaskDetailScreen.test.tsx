@@ -105,7 +105,8 @@ test("exclui pelo menu e volta para a lista", async () => {
   fireEvent.click(await screen.findByRole("button", { name: /Mais ações/ }));
   fireEvent.click(screen.getByRole("menuitem", { name: "Excluir" }));
   expect(screen.getByText(/junto com as 2 subtarefas/)).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "Excluir" }));
+  // No desktop "Excluir" também é uma pílula do resumo; aqui vale o botão do diálogo.
+  fireEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Excluir" }));
 
   await waitFor(() => expect(authedFetch).toHaveBeenCalledWith("/api/tasks/t1", { method: "DELETE" }));
   await waitFor(() => expect(push).toHaveBeenCalledWith("/user-1/tarefas"));

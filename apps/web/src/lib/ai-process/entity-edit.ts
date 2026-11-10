@@ -13,7 +13,7 @@ export function editEntityTypeOfNote(note: Pick<NoteDto, "type">): AiProcessEdit
   }
 }
 
-/** O que o campo diz que vai editar: "Peça ao Hermes para editar este evento". */
+/** O que o campo diz que vai editar: "Peça uma mudança neste evento" (o "n" vem do campo). */
 export const EDIT_TARGET_LABELS: Record<AiProcessEditEntityType, string> = {
   event: "este evento",
   task: "esta tarefa",

@@ -1,51 +1,58 @@
 /*
- * O campo de conversa com a IA no pe das telas de detalhe (ADR 006). Gruda no fim da tela, sobre o conteudo,
- * com os tokens do shell (--card, --line, --ink, --muted, --soft, --cyan) para trocar sozinho entre Nevoa e Noite.
+ * O campo do Hermes (um só desenho): a linha de status com o círculo num dos
+ * cinco estados, o cartão com o contexto (o registro aberto), o texto que
+ * quebra em linhas, a onda que liga a transcrição e a seta de enviar. No
+ * desktop fecha a coluna do conteúdo; no celular fica preso ao pé da tela.
+ * Os tokens (--card, --line, --ink, --muted) são os do shell.
  */
-.bar {
-  position: sticky;
-  bottom: 0;
-  z-index: 5;
-  display: grid;
-  gap: 8px;
-  width: 100%;
-  max-width: 680px;
-  margin: auto auto 0;
-  padding: 10px 0 calc(10px + env(safe-area-inset-bottom));
-  background: linear-gradient(to top, var(--background, var(--card)) 70%, transparent);
-}
-.form { display: flex; align-items: center; gap: 8px; min-height: 52px; padding: 4px 6px 4px 18px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); }
-.form:focus-within { border-color: var(--cyan); }
-.input { flex: 1; min-width: 0; height: 44px; border: 0; outline: 0; background: transparent; color: var(--ink); font: inherit; font-size: 16px; }
-.input::placeholder { color: var(--muted); }
-.input:disabled { opacity: .6; }
-.send, .mic, .dismiss { display: grid; place-items: center; flex: none; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; cursor: pointer; }
-.send { background: var(--cyan); color: var(--card); }
-.send:disabled { background: var(--soft); color: var(--muted); cursor: not-allowed; }
-.mic { background: var(--soft); color: var(--ink); }
-.mic[data-listening="true"] { background: var(--destructive); color: var(--card); }
-.mic:disabled { opacity: .55; cursor: not-allowed; }
-.send svg, .mic svg { width: 20px; height: 20px; }
-.input:focus-visible { outline: none; }
-.send:focus-visible, .mic:focus-visible, .dismiss:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
-
-.result { display: grid; gap: 8px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); }
-.result[data-phase="failed"] { border-color: var(--destructive); }
-.resultHead { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.title { margin: 0; color: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: .02em; }
-.dismiss { width: 32px; height: 32px; background: transparent; color: var(--muted); }
-.dismiss:hover { background: var(--soft); color: var(--ink); }
+.bar { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+.status { margin: 0; display: flex; align-items: center; gap: 12px; min-height: 28px; padding-left: 6px; font-size: var(--font-size-sm); line-height: 20px; color: var(--muted); }
+.status[data-state="error"] { color: var(--destructive); }
+.status > span:last-of-type { flex: 1; min-width: 0; }
+.dismiss { flex: none; display: grid; place-items: center; width: var(--control-md); height: var(--control-md); margin: -8px 0; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--muted); cursor: pointer; }
+.dismiss:hover { color: var(--ink); }
 .dismiss svg { width: 16px; height: 16px; }
-.waiting { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--muted); font-size: 13px; }
-.waiting svg, .mark svg { width: 14px; height: 14px; }
+
+.form { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 6px; border: 1px solid var(--line); border-radius: 28px; background: var(--card); transition: border-color var(--duration-fast); }
+.form:focus-within { border-color: var(--input); }
+.context { display: flex; align-items: center; gap: 8px; min-height: 52px; padding: 5px 16px 5px 6px; border: 1px solid var(--line); border-radius: 22px; }
+.contextIcon { flex: none; display: grid; place-items: center; width: 40px; height: 40px; color: var(--muted); }
+.contextIcon svg { width: 20px; height: 20px; stroke-width: 1.75; }
+.contextText { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.contextText > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.contextText > span:first-child { font-size: var(--font-size-xs); line-height: 18px; color: var(--muted); }
+.contextText > span:last-child { font-size: 15px; font-weight: 600; line-height: 22px; font-variant-numeric: tabular-nums; color: var(--ink); }
+.row { display: flex; align-items: flex-end; gap: 2px; padding-left: 12px; }
+.input { flex: 1; min-width: 0; max-height: 132px; min-height: 44px; padding: 11px 0; border: 0; border-radius: 8px; outline: 0; background: transparent; color: var(--ink); font: inherit; font-size: 15px; line-height: 22px; resize: none; field-sizing: content; }
+.input::placeholder { color: var(--faint); opacity: 1; }
+.input:disabled { opacity: .6; }
+.voice, .send { flex: none; display: grid; place-items: center; width: var(--control-md); height: var(--control-md); padding: 0; border: 0; border-radius: 50%; cursor: pointer; }
+.voice { background: transparent; color: var(--muted); }
+.voice svg { width: 22px; height: 22px; }
+.voice[aria-pressed="true"] { background: color-mix(in oklab, var(--brand) 16%, transparent); color: var(--brand-accent); }
+.voice:disabled { opacity: .55; cursor: not-allowed; }
+.send { background: var(--primary); color: var(--primary-foreground); }
+.send svg { width: 20px; height: 20px; stroke-width: 2; }
+.send:disabled { border: 1px solid var(--line); background: transparent; color: var(--input); cursor: not-allowed; }
+.voice:focus-visible, .send:focus-visible, .dismiss:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+/* O que o processo fez: os passos e a mensagem do fim, acima da linha de status. */
+.result { display: flex; flex-direction: column; gap: 8px; padding: 0 6px 4px; }
 .steps { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
-.steps li { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink); }
+.steps li { display: flex; align-items: center; gap: 8px; font-size: var(--font-size-sm); color: var(--ink); }
 .steps li[data-status="succeeded"] .mark { color: var(--success); }
 .steps li[data-status="failed"] .mark { color: var(--destructive); }
 .mark { display: grid; place-items: center; width: 16px; height: 16px; color: var(--muted); }
-.message { margin: 0; font-size: 14px; line-height: 1.5; color: var(--ink); }
+.mark svg { width: 14px; height: 14px; }
+.message { margin: 0; font-size: var(--font-size-sm); line-height: 1.5; color: var(--ink); }
 .message[data-failed="true"] { color: var(--destructive); }
-.reason { margin: 0; padding-inline: 18px; color: var(--muted); font-size: 13px; }
+.reason { margin: 0; padding-inline: 6px; color: var(--muted); font-size: 13px; }
 .bar [data-spin] { animation: entityAiSpin 1s linear infinite; }
 @keyframes entityAiSpin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .bar [data-spin] { animation: none; } }
+
+@media (max-width: 720px) {
+  /* Preso ao pé da tela; atrás dele o conteúdo se apaga no chão. */
+  .bar { position: fixed; z-index: var(--z-sticky); left: 16px; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); width: auto; }
+  .bar::before { content: ""; position: absolute; z-index: -1; left: -16px; right: -16px; top: -72px; bottom: calc(-16px - env(safe-area-inset-bottom)); background: linear-gradient(to bottom, transparent, var(--background) 30%); pointer-events: none; }
+}

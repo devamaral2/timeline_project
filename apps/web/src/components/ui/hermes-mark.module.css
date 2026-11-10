@@ -1,0 +1,25 @@
+/*
+ * O círculo do Hermes e os seus cinco estados. O tamanho vem de quem usa
+ * (28 px na linha de status, 52 px na barra do celular); o glifo ocupa 58%.
+ */
+.mark { composes: hermesMark from "./controls.module.css"; position: relative; transition: background var(--duration-fast), box-shadow var(--duration-slow); }
+.mark[data-state="error"] { background: var(--destructive); color: var(--destructive-foreground); }
+/* Ouvindo: as barras pulsam e um halo sai do círculo. */
+.mark[data-state="listening"] { box-shadow: 0 0 0 5px color-mix(in oklab, var(--brand) 30%, transparent); }
+.mark[data-state="listening"] rect { transform-box: fill-box; transform-origin: center; animation: wave 900ms ease-in-out infinite; }
+.mark[data-state="listening"] rect:nth-child(2) { animation-delay: -150ms; }
+.mark[data-state="listening"] rect:nth-child(3) { animation-delay: -300ms; }
+.mark[data-state="listening"] rect:nth-child(4) { animation-delay: -450ms; }
+.mark[data-state="listening"] rect:nth-child(5) { animation-delay: -600ms; }
+/* Pensando: os cinco pontos acendem um depois do outro. */
+.mark[data-state="thinking"] circle { opacity: .35; animation: dots 1200ms ease-in-out infinite; }
+.mark[data-state="thinking"] circle:nth-child(2) { animation-delay: 150ms; }
+.mark[data-state="thinking"] circle:nth-child(3) { animation-delay: 300ms; }
+.mark[data-state="thinking"] circle:nth-child(4) { animation-delay: 450ms; }
+.mark[data-state="thinking"] circle:nth-child(5) { animation-delay: 600ms; }
+@keyframes wave { 0%, 100% { transform: scaleY(.4); } 50% { transform: scaleY(1); } }
+@keyframes dots { 0%, 60%, 100% { opacity: .35; } 30% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .mark[data-state="listening"] rect, .mark[data-state="thinking"] circle { animation: none; }
+  .mark[data-state="thinking"] circle { opacity: 1; }
+}

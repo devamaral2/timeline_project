@@ -1,19 +1,19 @@
 "use client";
 
-import { Bell, Copy, Hash, FileText, Pencil, Plus, Trash2 } from "lucide-react";
+import { Copy, FileText, ListChecks, Pencil, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
 import { EntityAiEditBar } from "@/components/detail/EntityAiEditBar";
-import shellStyles from "@/components/shell/shell.module.css";
 import {
-  BackLink, DateLines, DetailHead, DetailMenu, DetailMessage, DetailOrigin, DetailScreen, DetailSection,
-  DetailTitle, DetailTopBar, LinkGroup, LinkRow, MenuItem, MetaList, MetaRow, Prose, Reminders, RelationRow,
-  RowCard, StatusRow, TagPills, TaskStatusButton, detailIcon, detailStyles as styles,
+  ActionPill, BackLink, DetailActions, DetailFact, DetailFacts, DetailFrame, DetailHeading, DetailMenu, DetailMessage,
+  DetailNav, DetailOrigin, DetailSection, LinkGroup, LinkRow, MenuItem, Prose, Reminders, RelationRow,
+  RowCard, StatusRow, TagPills, TaskStatusButton, TimeRange, detailIcon, detailStyles as styles,
 } from "@/components/detail/detail-parts";
 import { notificationOffsetLabel } from "@/components/events/event-visuals";
 import { authedFetch } from "@/lib/api/authed-fetch";
 import type { NoteDto, TaskDetailDto, TaskSummaryDto, WorkItemStatus } from "@/lib/api/contracts";
+import { formatTime } from "@repo/timeline";
 import { useNow } from "@/lib/events/use-now";
 import { noteSnippet } from "@/lib/notes/notes-model";
 import { createTask, updateTask } from "@/lib/tasks/task-api";
@@ -23,7 +23,7 @@ import {
   taskDateLine,
   taskDayOf,
   taskStatusLabels,
-  taskTimeLine,
+  taskTimeOf,
   taskWhenLabel,
   toggledStatus,
 } from "@/lib/tasks/tasks-model";
@@ -36,10 +36,11 @@ function lowerFirst(label: string): string {
 }
 
 /**
- * A tarefa aberta: nome, status (toque para trocar) e prioridade, dia e hora,
- * lembretes, tags, descricao e as tres relacoes — de quem depende, as
- * subtarefas e o que ela libera. Nao ha botao de concluir nem de editar: o
- * status muda no seletor e a edicao fica no menu "···".
+ * A tarefa aberta, em duas colunas. A esquerda o resumo: voltar, o dia em
+ * mono, o nome na serifa, o status (toque para trocar) e a prioridade, o
+ * horario, lembretes e tags, e as acoes (editar, duplicar, excluir — pilulas no
+ * desktop, menu "mais acoes" no celular). A direita: descricao, de quem
+ * depende, as subtarefas, o que ela libera, as notas e o campo do Hermes.
  */
 export function TaskDetailScreen({ userId, taskId }: { userId: string; taskId: string }) {
   const router = useRouter();
@@ -151,23 +152,30 @@ export function TaskDetailScreen({ userId, taskId }: { userId: string; taskId: s
 
   if (error) {
     return (
-      <main id="conteudo" className={shellStyles.detailMain}>
-        <DetailScreen>
-          <DetailTopBar label="Tarefa" back={<BackLink href={listHref}>Tarefas</BackLink>} />
-          <DetailMessage alert>Não foi possível carregar a tarefa. Tente novamente.</DetailMessage>
-        </DetailScreen>
-      </main>
+      <DetailFrame leadLabel="Resumo da tarefa" bodyLabel="Conteúdo da tarefa" lead={<DetailNav label="Navegação do registro" back={<BackLink href={listHref}>Tarefas</BackLink>} />}>
+        <DetailMessage alert>Não foi possível carregar a tarefa. Tente novamente.</DetailMessage>
+      </DetailFrame>
     );
   }
   if (!task) {
-    return <main id="conteudo" className={shellStyles.detailMain}><DetailMessage>Carregando tarefa…</DetailMessage></main>;
+    return (
+      <DetailFrame leadLabel="Resumo da tarefa" bodyLabel="Conteúdo da tarefa" lead={<DetailNav label="Navegação do registro" back={<BackLink href={listHref}>Tarefas</BackLink>} />}>
+        <DetailMessage>Carregando tarefa…</DetailMessage>
+      </DetailFrame>
+    );
   }
 
   const byId = new Map(all.map((item) => [item.id, item]));
   const dependsOn = task.dependsOnTaskIds.map((id) => byId.get(id)).filter((item): item is TaskSummaryDto => item !== undefined);
   const subtasks = subtasksOf(task.id, all);
   const released = releasedBy(task.id, all);
-  const timeLine = taskTimeLine(task);
+  const hasDay = taskDayOf(task) !== null;
+  const startTime = taskTimeOf(task);
+  const endsAfterStart = Boolean(task.startedAt && task.estimatedFinishAt && task.estimatedFinishAt > task.startedAt);
+  const endTime = startTime && endsAfterStart && task.estimatedFinishAt ? formatTime(task.estimatedFinishAt) : null;
+  const durationMinutes = endTime && task.startedAt && task.estimatedFinishAt
+    ? Math.round((new Date(task.estimatedFinishAt).getTime() - new Date(task.startedAt).getTime()) / 60_000)
+    : null;
   const doneSubtasks = subtasks.filter((item) => item.status === "done").length;
   const closedTask = task.status === "done" || task.status === "cancel";
 
@@ -181,44 +189,55 @@ export function TaskDetailScreen({ userId, taskId }: { userId: string; taskId: s
     return <RelationRow key={item.id} href={`${listHref}/${item.id}`} name={item.name} status={item.status} meta={relationMeta(item)} />;
   }
 
-  return (
-    <main id="conteudo" className={shellStyles.detailMain}>
-      <DetailScreen>
-        <DetailTopBar
-          label="Tarefa"
-          back={<BackLink href={task.parentTaskId ? `${listHref}/${task.parentTaskId}` : listHref}>{task.parentTaskId ? (byId.get(task.parentTaskId)?.name ?? "Tarefa") : "Tarefas"}</BackLink>}
-        >
-          <DetailMenu label="Mais ações: editar, duplicar, excluir">
-            {(close) => (
-              <>
-                <MenuItem icon={<Pencil {...detailIcon} />} onClick={() => { close(); router.push(`${listHref}/${task.id}/editar`); }}>Editar</MenuItem>
-                <MenuItem icon={<Copy {...detailIcon} />} onClick={() => { close(); void duplicate(); }}>Duplicar</MenuItem>
-                <MenuItem icon={<Trash2 {...detailIcon} />} danger onClick={() => { close(); setDeleting(true); }}>Excluir</MenuItem>
-              </>
-            )}
-          </DetailMenu>
-        </DetailTopBar>
+  const parent = task.parentTaskId ? byId.get(task.parentTaskId) : undefined;
+  const edit = () => router.push(`${listHref}/${task.id}/editar`);
 
-        <DetailHead>
-          <DetailTitle done={closedTask}>{task.name}</DetailTitle>
+  return (
+    <DetailFrame
+      leadLabel="Resumo da tarefa"
+      bodyLabel="Conteúdo da tarefa"
+      lead={
+        <>
+          <DetailNav
+            label="Navegação do registro"
+            back={<BackLink href={task.parentTaskId ? `${listHref}/${task.parentTaskId}` : listHref}>{task.parentTaskId ? (parent?.name ?? "Tarefa") : "Tarefas"}</BackLink>}
+          >
+            <DetailMenu label="Mais ações: editar, duplicar, excluir">
+              {(close) => (
+                <>
+                  <MenuItem icon={<Pencil {...detailIcon} />} onClick={() => { close(); edit(); }}>Editar</MenuItem>
+                  <MenuItem icon={<Copy {...detailIcon} />} onClick={() => { close(); void duplicate(); }}>Duplicar</MenuItem>
+                  <MenuItem icon={<Trash2 {...detailIcon} />} danger onClick={() => { close(); setDeleting(true); }}>Excluir</MenuItem>
+                </>
+              )}
+            </DetailMenu>
+          </DetailNav>
+
+          <DetailHeading eyebrow={taskDateLine(task)} done={closedTask}>{task.name}</DetailHeading>
+
           <StatusRow>
             <TaskStatusButton status={task.status} busy={busy} onChange={changeStatus} />
             <TaskPriorityMark priority={task.priority} withLabel alwaysLabel />
           </StatusRow>
-          <DateLines>
-            <p>{taskDateLine(task)}</p>
-            {timeLine ? <p>{timeLine}</p> : null}
-          </DateLines>
-        </DetailHead>
 
-        {task.notifyOffsetsMinutes.length || task.tags.length ? (
-          <MetaList label="Informações" tight>
-            {task.notifyOffsetsMinutes.length ? <MetaRow icon={<Bell {...detailIcon} />} main={<Reminders labels={task.notifyOffsetsMinutes.map(notificationOffsetLabel)} />} /> : null}
-            {task.tags.length ? <MetaRow icon={<Hash {...detailIcon} />} main={<TagPills tags={task.tags} label="Tags da tarefa" />} /> : null}
-          </MetaList>
-        ) : null}
+          {hasDay ? <TimeRange start={startTime} end={endTime} minutes={durationMinutes} note="Sem horário definido" /> : null}
 
-        {task.description ? <Prose>{task.description}</Prose> : null}
+          {task.notifyOffsetsMinutes.length || task.tags.length ? (
+            <DetailFacts label="Informações">
+              {task.notifyOffsetsMinutes.length ? <DetailFact label={task.notifyOffsetsMinutes.length === 1 ? "Lembrete" : "Lembretes"}><Reminders labels={task.notifyOffsetsMinutes.map(notificationOffsetLabel)} /></DetailFact> : null}
+              {task.tags.length ? <DetailFact label="Tags"><TagPills tags={task.tags} label="Tags da tarefa" /></DetailFact> : null}
+            </DetailFacts>
+          ) : null}
+
+          <DetailActions>
+            <ActionPill icon={<Pencil {...detailIcon} />} onClick={edit}>Editar</ActionPill>
+            <ActionPill icon={<Copy {...detailIcon} />} disabled={busy} onClick={() => void duplicate()}>Duplicar</ActionPill>
+            <ActionPill icon={<Trash2 {...detailIcon} />} danger onClick={() => setDeleting(true)}>Excluir</ActionPill>
+          </DetailActions>
+        </>
+      }
+    >
+        {task.description ? <DetailSection title="Descrição" labelId="tk-description"><Prose>{task.description}</Prose></DetailSection> : null}
 
         {actionError ? <DetailMessage alert>{actionError}</DetailMessage> : null}
 
@@ -288,9 +307,18 @@ export function TaskDetailScreen({ userId, taskId }: { userId: string; taskId: s
         ) : null}
 
         <DetailOrigin id="task" />
-      </DetailScreen>
 
-      <EntityAiEditBar userId={userId} entityType="task" entityId={task.id} onEdited={() => setReloadKey((key) => key + 1)} />
+        <EntityAiEditBar
+          userId={userId}
+          entityType="task"
+          entityId={task.id}
+          onEdited={() => setReloadKey((key) => key + 1)}
+          context={{
+            icon: <ListChecks aria-hidden />,
+            meta: now && hasDay ? `Tarefa · ${lowerFirst(taskWhenLabel(task, now))}` : `Tarefa · ${lowerFirst(taskStatusLabels[task.status])}`,
+            title: task.name,
+          }}
+        />
 
       {deleting ? (
         <DeleteTaskDialog
@@ -301,6 +329,6 @@ export function TaskDetailScreen({ userId, taskId }: { userId: string; taskId: s
           onDeleted={() => router.push(listHref)}
         />
       ) : null}
-    </main>
+    </DetailFrame>
   );
 }
