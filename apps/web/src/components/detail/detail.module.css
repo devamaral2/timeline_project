@@ -174,6 +174,8 @@
 .subtaskForm { display: flex; align-items: center; gap: 8px; min-height: 56px; }
 .subtaskForm input { flex: 1; min-width: 0; height: 44px; border: 0; border-bottom: 1px solid var(--input); background: transparent; color: var(--ink); font: inherit; font-size: 15px; outline: none; }
 .subtaskForm input:focus { border-bottom-color: var(--ink); }
+/* O anel global de foco (.shell :focus-visible) venceria o outline: none acima; aqui o foco é a linha de baixo. */
+.subtaskForm input:focus-visible { outline: 0; }
 .subtaskForm button { height: 44px; padding: 0 12px; border: 0; border-radius: 22px; background: transparent; color: var(--ink); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
 .subtaskForm button[type="button"] { color: var(--muted); font-weight: 500; }
 .subtaskForm button:disabled { opacity: .5; cursor: not-allowed; }
