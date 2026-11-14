@@ -37,6 +37,7 @@
 .typeToggle[data-note-type="agent"], .row[data-note-type="agent"] { --note-color: var(--note-agent); }
 .typeToggle[data-note-type="router"], .row[data-note-type="router"] { --note-color: var(--note-router); }
 
+.search { width: 100%; min-height: var(--control-md); padding: 0 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); color: var(--ink); font: inherit; font-size: var(--font-size-sm); }
 .tagFilter { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
 .tagLabel { composes: eyebrow from "../ui/page.module.css"; }
 .tagChips { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; margin: 0; padding: 0; border: 0; }
