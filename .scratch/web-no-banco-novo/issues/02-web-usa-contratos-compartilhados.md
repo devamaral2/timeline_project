@@ -4,12 +4,12 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Leia antes:** o [README](README.md) desta pasta. Spec: “Contratos no web”.
 
-- [ ] O web declara a dependência do pacote de contratos e resolve os dois pontos de entrada dele (tipos e esquemas).
-- [ ] Um teste do web valida um cartão de evento de exemplo contra o esquema do contrato, provando que os esquemas carregam no ambiente de teste.
-- [ ] Os tipos de fio antigos do web continuam onde estão; nada é apagado neste ticket.
-- [ ] O build do web continua passando.
-- [ ] Os testes novos passam, e `pnpm run test:unit` e `pnpm run typecheck` continuam verdes.
+- [x] O web declara a dependência do pacote de contratos e resolve os dois pontos de entrada dele (tipos e esquemas).
+- [x] Um teste do web valida um cartão de evento de exemplo contra o esquema do contrato, provando que os esquemas carregam no ambiente de teste.
+- [x] Os tipos de fio antigos do web continuam onde estão; nada é apagado neste ticket.
+- [x] O build do web continua passando.
+- [x] Os testes novos passam, e `pnpm run test:unit` e `pnpm run typecheck` continuam verdes.
