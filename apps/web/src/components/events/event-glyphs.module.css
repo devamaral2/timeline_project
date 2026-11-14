@@ -1,0 +1,60 @@
+/* Glifos de status, tipo e prioridade. Sem moldura: so o desenho.
+   Cores so por token (o teste css-module-colors reprova hex e rgb). */
+
+.statusGlyph {
+  flex: none;
+  display: block;
+  overflow: visible;
+  color: var(--muted-foreground);
+}
+.statusGlyph[data-status="todo"],
+.statusGlyph[data-status="toDefine"],
+.statusGlyph[data-status="queued"],
+.statusGlyph[data-status="cancel"],
+.statusGlyph[data-status="missed"] { color: var(--muted-foreground); }
+.statusGlyph[data-status="doing"],
+.statusGlyph[data-status="inHold"],
+.statusGlyph[data-status="running"],
+.statusGlyph[data-status="waiting"] { color: var(--warning); }
+.statusGlyph[data-status="done"] { color: var(--success); }
+.statusGlyph[data-status="failed"] { color: var(--destructive); }
+.statusGlyph[data-status="reference"] { color: var(--routine); }
+
+/* O ponto verde-agua de "em curso" e "executando": recortado em fundo, para
+   separar do contorno. */
+.activeDot {
+  fill: var(--brand);
+  stroke: var(--background);
+  stroke-width: 2;
+}
+
+.kindMark {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--muted-foreground);
+}
+.kindMark[data-kind="meal"] .kindIcon { color: var(--meal); }
+.kindMark[data-kind="sleep"] .kindIcon { color: var(--sleep); }
+.kindMark[data-kind="training"] .kindIcon { color: var(--training); }
+.kindMark[data-kind="routine"] .kindIcon { color: var(--muted-foreground); }
+.kindMark[data-actor="agent"] .kindIcon { color: var(--brand); }
+.kindIcon { flex: none; }
+.code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+.priorityMark {
+  flex: none;
+  display: inline-block;
+  color: var(--muted-foreground);
+}
+.priorityMark[data-priority="urgent"] { color: var(--priority-urgent); }
+.priorityMark[data-priority="high"] { color: var(--priority-high); }
+.priorityMark[data-priority="medium"] { color: var(--priority-medium); }
+.priorityMark[data-priority="low"] { color: var(--priority-low); }

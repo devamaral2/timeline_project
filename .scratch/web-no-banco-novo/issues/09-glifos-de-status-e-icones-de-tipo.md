@@ -4,14 +4,14 @@
 
 **Blocked by:** 02 (Web usa os contratos compartilhados)
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Leia antes:** o [README](README.md) desta pasta. Canvas: quadros Status e Tipos. Glossário: Executor, Evento de referência.
 
-- [ ] Há um glifo para cada status de pessoa (`todo`, `toDefine`, `doing`, `inHold`, `done`, `cancel`, `missed`), um ponto azul para o evento de referência (sem status) e um para cada status de agente (`queued`, `running`, `waiting`, `done`, `failed`, `cancel`).
-- [ ] O glifo nunca fica dentro de uma moldura ou de um quadrado.
-- [ ] Cada glifo tem nome acessível: “A fazer”, “Sem data”, “Em curso”, “Em espera”, “Feito”, “Cancelado”, “Não realizado”, “Só agenda”; e, no agente, “Agente, na fila”, “Agente, executando”, “Agente, aguardando você”, “Agente, feito”, “Agente, falhou”, “Agente, cancelado”.
-- [ ] Cada tipo tem ícone e o código escrito em fonte mono ao lado: `routine`, `meal`, `sleep`, `training`, `request`, `search_request`, `build_request`, `inquiry_request`, `review_request`, `cron` e `step`.
-- [ ] A prioridade tem quatro níveis (urgente, alta, média, baixa), com um indicador de quatro barras.
-- [ ] Os testes conferem o nome acessível de cada status e o código de cada tipo.
-- [ ] Os testes novos passam, e `pnpm run test:unit` e `pnpm run typecheck` continuam verdes.
+- [x] Há um glifo para cada status de pessoa (`todo`, `toDefine`, `doing`, `inHold`, `done`, `cancel`, `missed`), um ponto azul para o evento de referência (sem status) e um para cada status de agente (`queued`, `running`, `waiting`, `done`, `failed`, `cancel`).
+- [x] O glifo nunca fica dentro de uma moldura ou de um quadrado.
+- [x] Cada glifo tem nome acessível: “A fazer”, “Sem data”, “Em curso”, “Em espera”, “Feito”, “Cancelado”, “Não realizado”, “Só agenda”; e, no agente, “Agente, na fila”, “Agente, executando”, “Agente, aguardando você”, “Agente, feito”, “Agente, falhou”, “Agente, cancelado”.
+- [x] Cada tipo tem ícone e o código escrito em fonte mono ao lado: `routine`, `meal`, `sleep`, `training`, `request`, `search_request`, `build_request`, `inquiry_request`, `review_request`, `cron` e `step`.
+- [x] A prioridade tem quatro níveis (urgente, alta, média, baixa), com um indicador de quatro barras.
+- [x] Os testes conferem o nome acessível de cada status e o código de cada tipo.
+- [x] Os testes novos passam, e `pnpm run test:unit` e `pnpm run typecheck` continuam verdes.
