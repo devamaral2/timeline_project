@@ -1,90 +1,69 @@
-import type { DailyOverviewQuery, DailyOverviewQueryParams } from "../../../domain/ports";
 import type { DailyOverviewDto } from "@repo/contracts";
-import type { Event, MealItem, TrainingData } from "../../../domain";
+import { MAX_EVENT_BLOCK_DAYS, type Event, type FoodData, type SleepData, type TrainingData } from "../../../domain";
+import type { DailyOverviewQuery, DailyOverviewQueryParams } from "../../../domain/ports";
 import type { InMemoryEventDatabase } from "./in-memory-event-database";
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** O resumo do dia sobre o banco em memoria, com a mesma semantica de `PostgresDailyOverviewQuery`. */
 export class InMemoryDailyOverviewQuery implements DailyOverviewQuery {
   constructor(private readonly database: InMemoryEventDatabase) {}
 
   async get(params: DailyOverviewQueryParams): Promise<DailyOverviewDto> {
-    const events = this.database.events.filter((event) => {
-      if (event.userId !== params.userId) return false;
-      const startedDate = dateInTimeZone(event.startedAt, params.timeZone);
-      const finishedDate = dateInTimeZone(event.finishedAt ?? event.startedAt, params.timeZone);
-      return startedDate <= params.date && finishedDate >= params.date;
-    });
+    // Sao Paulo nao tem horario de verao desde 2019: o dia civil e sempre UTC-3.
+    const dayStart = new Date(`${params.date}T00:00:00-03:00`);
+    const dayEnd = new Date(dayStart.getTime() + DAY_MS);
 
+    // Os eventos de pessoa da agenda que tocam o dia: comecam nele, ou comecaram antes e ainda nao terminaram.
+    const events = this.database.events
+      .filter((event) => {
+        const startedAt = event.startedAt;
+        if (event.userId !== params.userId || !startedAt || event.longRunning || event.kind === "step") return false;
+        if (event.actor !== "human") return false;
+        if (startedAt >= dayEnd) return false;
+        if (startedAt.getTime() < dayStart.getTime() - MAX_EVENT_BLOCK_DAYS * DAY_MS) return false;
+        return (event.estimatedFinishAt ?? event.finishedAt ?? startedAt) >= dayStart;
+      })
+      .sort((left, right) => (left.id < right.id ? -1 : left.id > right.id ? 1 : 0));
+
+    // Um evento pode usar varios alimentos: as calorias dele sao a soma.
     const mealEvents: DailyOverviewDto["mealEvents"] = [];
     const trainingEvents: DailyOverviewDto["trainingEvents"] = [];
-    let latestSleep: { event: Event; data: { trackedSleepTime: number; score: number } } | undefined;
+    let latestSleep: { event: Event; data: SleepData } | undefined;
 
     for (const event of events) {
-      for (const item of this.database.notesOf(event)) {
-        if (item.type === "sleep") {
-          const data = item.data as { trackedSleepTime: number; score: number };
-          if (!latestSleep || event.startedAt > latestSleep.event.startedAt) {
-            latestSleep = { event, data };
+      const startedAt = event.startedAt as Date;
+      const base = {
+        id: event.id,
+        name: event.name,
+        description: event.description,
+        startedAt: startedAt.toISOString(),
+        estimatedFinishAt: event.estimatedFinishAt?.toISOString(),
+      };
+      let meal: DailyOverviewDto["mealEvents"][number] | undefined;
+
+      for (const link of event.artifactLinks) {
+        if (link.relation === "deletes") continue;
+        const artifact = this.database.artifacts.find((candidate) => candidate.id === link.artifactId);
+        if (!artifact) continue;
+
+        if (artifact.type === "food") {
+          const { totals } = artifact.data as FoodData;
+          meal ??= { ...base, kcal: 0, protein: 0, carbohydrate: 0, fat: 0 };
+          meal.kcal += totals.totalCaloriesKcal;
+          meal.protein += totals.totalProteinGrams;
+          meal.carbohydrate += totals.totalCarbohydrateGrams;
+          meal.fat += totals.totalFatGrams;
+        } else if (artifact.type === "sleep") {
+          if (!latestSleep || startedAt > (latestSleep.event.startedAt as Date)) {
+            latestSleep = { event, data: artifact.data as SleepData };
           }
-          continue;
-        }
-
-        if (item.type === "meal" && dateInTimeZone(event.startedAt, params.timeZone) === params.date) {
-          const data = item.data as MealItem;
-          mealEvents.push({
-            id: event.id,
-            name: event.name,
-            description: event.description,
-            startedAt: event.startedAt.toISOString(),
-            finishedAt: event.finishedAt?.toISOString(),
-            kcal: data.totals.totalCaloriesKcal,
-            protein: data.totals.totalProteinGrams,
-            carbohydrate: data.totals.totalCarbohydrateGrams,
-            fat: data.totals.totalFatGrams,
-            micronutrients: {},
-          });
-          continue;
-        }
-
-        if (item.type === "training" && dateInTimeZone(event.startedAt, params.timeZone) === params.date) {
-          const data = item.data as TrainingData;
-          trainingEvents.push({
-            id: event.id,
-            name: event.name,
-            description: event.description,
-            startedAt: event.startedAt.toISOString(),
-            finishedAt: event.finishedAt?.toISOString(),
-            workouts: data.workouts.map((workout) =>
-              workout.workoutCode === "weightlifting"
-                ? {
-                    workoutCode: "weightlifting",
-                    workoutName: workout.workoutName,
-                    calories: workout.calories,
-                    duration: workout.duration,
-                    sets: workout.sets.map((set) => ({
-                      exercise: set.exercise,
-                      repetitions: set.repetitions,
-                      weight: set.weight,
-                    })),
-                  }
-                : workout.workoutCode === "free"
-                  ? {
-                      workoutCode: "free",
-                      workoutName: workout.workoutName,
-                      calories: workout.calories,
-                      duration: workout.duration,
-                    }
-                  : {
-                      workoutCode: workout.workoutCode,
-                      workoutName: workout.workoutName,
-                      calories: workout.calories,
-                      duration: workout.duration,
-                      pace: workout.pace,
-                      distance: workout.distance,
-                    },
-            ),
-          });
+        } else if (artifact.type === "training") {
+          const data = artifact.data as TrainingData;
+          trainingEvents.push({ ...base, workouts: data.workouts.map(({ id: _id, ...workout }) => workout) });
         }
       }
+      if (meal) mealEvents.push(meal);
     }
 
     return {
@@ -103,20 +82,8 @@ export class InMemoryDailyOverviewQuery implements DailyOverviewQuery {
         carbohydrate: mealEvents.reduce((total, event) => total + event.carbohydrate, 0),
         fat: mealEvents.reduce((total, event) => total + event.fat, 0),
       },
-      micronutrients: {},
       mealEvents,
       trainingEvents,
     };
   }
-}
-
-function dateInTimeZone(value: Date, timeZone: string): string {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(value);
-  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((item) => item.type === type)?.value;
-  return `${part("year")}-${part("month")}-${part("day")}`;
 }

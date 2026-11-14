@@ -1,0 +1,25 @@
+{
+  "_when": "Textos predefinidos do pedido por passos (ADR 003). Nada aqui passa por modelo.",
+  "steps": {
+    "event-create": "Criando eventos",
+    "artifact-create": "Criando artefatos",
+    "event-edit": "Editando eventos",
+    "artifact-edit": "Editando artefatos",
+    "recurring-event-create": "Criando eventos recorrentes",
+    "recurring-event-edit": "Editando eventos recorrentes",
+    "query": "Consultando dados",
+    "fallback": "Analisando o pedido",
+    "food-edit": "Editando o alimento",
+    "sleep-edit": "Editando o sono",
+    "training-edit": "Editando o treino",
+    "agent-file-edit": "Editando a skill ou o agente"
+  },
+  "failure": "Não consegui concluir: {{label}}.",
+  "dispatchFailed": "Não consegui entender o pedido a tempo. Tente de novo em instantes.",
+  "requestFailed": "Não consegui concluir o pedido. Tente de novo em instantes.",
+  "targetFailed": {
+    "not_found": "Não encontrei o item para editar.",
+    "type_mismatch": "Esse item não é do tipo esperado para a edição.",
+    "busy": "Esse alimento ainda está sendo calculado. Tente de novo em instantes."
+  }
+}

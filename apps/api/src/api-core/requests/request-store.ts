@@ -1,0 +1,249 @@
+import type {
+  AgentRequestKind,
+  AgentTraceDto,
+  RequestEditEntityType,
+  RequestErrorCode,
+  RequestQueryResult,
+  RequestRoute,
+  RequestScreenContext,
+} from "@repo/contracts";
+import type { EditCandidate } from "./request-candidates";
+import type { EntityKind, Expected, RequestAgent, RequestJobKind } from "./request-steps";
+
+export type RequestStatus = "queued" | "running" | "waiting" | "done" | "failed" | "cancel";
+export type StepStatus = Exclude<RequestStatus, "waiting">;
+
+/** O que a finalizacao mostra ao JEV sobre uma entidade, lido da propria entidade: nunca o texto bruto do pedido. */
+export interface EntitySummary {
+  name: string;
+  eventKind?: string;
+  artifactType?: string;
+  startedAt?: string;
+  estimatedFinishAt?: string;
+  /** Inicio do texto do artefato, para o JEV casar alimentos e assunto. */
+  text?: string;
+  /** Ocorrencia de uma serie, ainda ligada a ela: nao entra nas ligacoes, que valem para a serie e nao para um dia. */
+  series?: boolean;
+}
+
+export interface EntityRef {
+  kind: EntityKind;
+  id: string;
+}
+
+/** Uma ligacao que a finalizacao aplicou: `from` pertence a `to` (o artefato ao evento, a subtarefa ao evento maior). */
+export interface LinkRecord {
+  from: EntityRef;
+  to: EntityRef;
+}
+
+export interface FailedStep {
+  agent: RequestAgent;
+  errorCode: string;
+}
+
+/** O que o JEV de entrada escolheu: so escolhas, confiancas e medidas, nada do texto do usuario. */
+export interface DispatchRecord {
+  model?: string;
+  latencyMs?: number;
+  answers: Record<string, { choice: string; confidence: number; probability: number }>;
+  uncertain: string[];
+  unsupported: string[];
+  fallbackReason?: string;
+  /** Quantos candidatos de edicao o servidor listou e quantos o JEV escolheu. */
+  candidates?: { shortlisted: number; selected: number };
+}
+
+/** A entidade aberta na tela de detalhe quando o pedido de edicao foi feito. */
+export interface RequestTarget {
+  entityType: RequestEditEntityType;
+  entityId: string;
+}
+
+/** Como um pedido termina. O texto vira a mensagem do agente; o raciocinio e o rastro viram entradas. */
+export interface RequestOutcome {
+  failedSteps?: FailedStep[];
+  errorCode?: RequestErrorCode;
+  /** A resposta do agente, ou o que falhou. */
+  message?: string;
+  /** O que o agente de explicacao pensou antes de escrever a mensagem. */
+  thought?: string;
+  /** O rastro que precisa sobreviver ao job (o do Hermes, que nao tem passos gravados). */
+  trace?: AgentTraceDto;
+}
+
+export interface RequestRecord {
+  id: string;
+  userId: string;
+  kind: AgentRequestKind;
+  route: RequestRoute;
+  status: RequestStatus;
+  /** O nome do evento: o inicio do que o usuario pediu. */
+  title: string;
+  /** O que o usuario escreveu ou falou, inteiro. */
+  prompt: string;
+  context?: RequestScreenContext;
+  target?: RequestTarget;
+  /** O pedido veio com `fallback:`: o despacho nao pergunta ao JEV. */
+  forceFallback?: boolean;
+  /** O primeiro pedido da sessao; ausente quando este e o primeiro. */
+  sessionId?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  finishedAt?: Date;
+  dispatch?: DispatchRecord;
+  failedSteps: FailedStep[];
+  errorCode?: RequestErrorCode;
+  /** A ultima mensagem do agente. */
+  answer?: string;
+  answerThought?: string;
+  /** O rastro gravado quando o pedido terminou (rota do Hermes). */
+  trace?: AgentTraceDto;
+}
+
+/** A entidade da tela de detalhe: o id e o retrato completo que o agente de edicao recebe. */
+export interface EditTarget {
+  entityType: RequestEditEntityType;
+  id: string;
+  snapshot: Record<string, unknown>;
+}
+
+/** O insumo de um passo: o que o despacho entrega a ele alem do pedido. */
+export interface StepInput {
+  /** Edicao pela tela de detalhe: o unico alvo permitido. Quando existe, nao ha candidatos nem consulta. */
+  target?: EditTarget;
+  candidates?: EditCandidate[];
+  /** O foco que o fallback deu ao especialista que ele chamou; o pedido inteiro segue junto. */
+  instruction?: string;
+  /** So no passo do fallback pedido por `fallback:`: a rodada do laco, a partir de 1. Sem ela, e chamada unica. */
+  round?: number;
+}
+
+/** O que o modelo pensou numa chamada do passo, para a aba "Processo" conferir. */
+export interface StepThought {
+  text: string;
+  /** ISO 8601: quando a chamada voltou. */
+  at: string;
+  model?: string;
+}
+
+export interface StepRecord {
+  id: string;
+  requestId: string;
+  agent: RequestAgent;
+  /** O rotulo predefinido do passo. */
+  label: string;
+  expected: Expected;
+  status: StepStatus;
+  errorCode?: string;
+  input?: StepInput;
+  result?: RequestQueryResult;
+  startedAt?: Date;
+  finishedAt?: Date;
+  /** Quanto cada etapa do passo levou, em ms. */
+  timings?: Record<string, number>;
+  /** Um por chamada ao modelo que trouxe raciocinio, na ordem em que voltaram. */
+  thoughts?: StepThought[];
+}
+
+/** Um evento ou artefato que o pedido tocou: a relacao que parte do passo (ou do proprio pedido, na voz). */
+export interface RequestEntityRecord {
+  requestId: string;
+  kind: EntityKind;
+  id: string;
+  /** O evento de agente de onde a relacao parte. */
+  stepId: string;
+  operation: "create" | "update" | "delete";
+  summary: EntitySummary;
+  finalized: boolean;
+  links: LinkRecord[];
+}
+
+export interface NewStep {
+  id: string;
+  agent: RequestAgent;
+  expected: Expected;
+  input?: StepInput;
+}
+
+export interface NewEntity {
+  kind: EntityKind;
+  id: string;
+  operation: "create" | "update" | "delete";
+}
+
+export interface NewRequest {
+  userId: string;
+  route: Exclude<RequestRoute, "food">;
+  /** O que o usuario escreveu ou falou. */
+  text: string;
+  context?: RequestScreenContext;
+  target?: RequestTarget;
+  forceFallback?: boolean;
+  /** O primeiro pedido da sessao que este continua. */
+  sessionId?: string;
+  /** Estavel por mensagem: reenviar o mesmo id devolve o pedido ja aceito. */
+  clientMessageId?: string;
+  /** O job que comeca a executar o pedido. */
+  job: RequestJobKind;
+}
+
+/**
+ * Persistencia do pedido (ADR 0013): o pedido e cada passo sao eventos de agente, o que se acrescenta a eles sao
+ * entradas e o que um passo tocou sao relacoes partindo dele. Os metodos que recebem `tx` rodam na transacao do
+ * escritor em lote (`EntityBatch.afterWrite`): o passo concluido e a finalizacao enfileirada existem se e somente
+ * se as entidades existem.
+ */
+export interface RequestStore {
+  /** Grava o pedido, a mensagem do usuario e o job que o executa, numa transacao so. */
+  start(input: NewRequest): Promise<{ requestId: string; created: boolean }>;
+  /** Um pedido, nunca um passo. */
+  find(id: string): Promise<RequestRecord | undefined>;
+  /** Os pedidos do usuario, do mais novo para o mais antigo. Passos nao entram. */
+  list(userId: string, limit: number): Promise<RequestRecord[]>;
+  steps(requestId: string): Promise<StepRecord[]>;
+  entities(requestId: string): Promise<RequestEntityRecord[]>;
+  /** O job comecou a trabalhar no pedido que nao se desdobra em passos (Hermes, voz, alimento). */
+  markRunning(requestId: string): Promise<void>;
+  /** Cria os passos e enfileira todos os jobs de uma vez; o pedido passa a `running`. */
+  beginSteps(requestId: string, steps: readonly NewStep[], dispatch?: DispatchRecord): Promise<void>;
+  markStepRunning(stepId: string): Promise<void>;
+  /** Acrescenta ao passo o que o modelo pensou numa chamada. Vale assim que a chamada volta, com o passo em curso. */
+  recordThought(stepId: string, thought: StepThought): Promise<void>;
+  recordStepSuccess(tx: unknown, input: {
+    requestId: string;
+    stepId: string;
+    entities: readonly NewEntity[];
+    timings: Record<string, number>;
+  }): Promise<void>;
+  /** O passo de consulta terminou: resultado guardado, passo concluido e finalizacao enfileirada, juntos. */
+  recordQueryResult(input: { requestId: string; stepId: string; result: RequestQueryResult; timings: Record<string, number> }): Promise<void>;
+  failStep(input: { requestId: string; stepId: string; errorCode: string; timings?: Record<string, number> }): Promise<void>;
+  /** Marca a entidade como finalizada e guarda as ligacoes aplicadas. `tx` ausente abre a propria. */
+  markFinalized(
+    tx: unknown | undefined,
+    entity: Pick<RequestEntityRecord, "kind" | "id" | "stepId">,
+    links: readonly LinkRecord[],
+  ): Promise<void>;
+  /** Encerra o pedido se ele ainda esta aberto. */
+  finish(requestId: string, status: "done" | "failed", outcome: RequestOutcome): Promise<void>;
+  /**
+   * O fallback chamou especialistas: os passos novos e seus jobs entram e o passo do fallback termina, na
+   * mesma transacao. O pedido nao fecha no meio: os passos novos ja existem quando o fallback termina.
+   */
+  handOff(requestId: string, fallbackStepId: string, steps: readonly NewStep[]): Promise<void>;
+  /**
+   * O laco do fallback (`fallback:`): os especialistas da rodada terminaram e o passo da rodada seguinte entra na
+   * fila. So entra se o pedido segue aberto e essa rodada ainda nao existe: duas finalizacoes nao a duplicam.
+   */
+  continueFallback(requestId: string, step: NewStep): Promise<void>;
+  /** O fallback respondeu: passo concluido e pedido encerrado, juntos. No laco, com o que falhou no caminho. */
+  finishFallback(requestId: string, stepId: string, text: string, failedSteps?: FailedStep[]): Promise<void>;
+  /** A fala virou um evento de pessoa: a relacao do pedido com ele e o pedido concluido, na transacao do evento. */
+  completeVoice(tx: unknown, input: { requestId: string; eventId: string }): Promise<void>;
+  /**
+   * Cancela o pedido e os passos que nao terminaram. Devolve os eventos cujos jobs vivos precisam ser
+   * cancelados; vazio quando o pedido ja tinha terminado.
+   */
+  cancel(requestId: string): Promise<string[]>;
+}

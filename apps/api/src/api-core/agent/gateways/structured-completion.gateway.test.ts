@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { isRetryableAiJobError } from "../../../infrastructure/ai-jobs/ai-jobs.service";
+import { isRetryableJobError } from "../../../infrastructure/jobs/jobs.service";
 import { AgentRunCancelledError, FastStageError, LlmUnavailableError } from "../errors/agent.errors";
 import { OpenRouterStructuredCompletionGateway, type StructuredCompletionInput } from "./structured-completion.gateway";
 
 const input: StructuredCompletionInput = {
-  stage: "planner", system: "sys", user: "usr", schemaName: "plan", schema: { type: "object" }, timeoutMs: 1000,
+  system: "sys", user: "usr", schemaName: "plan", schema: { type: "object" }, timeoutMs: 1000,
 };
 const reply = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
 const content = (value: unknown) => reply({ choices: [{ message: { content: JSON.stringify(value) } }] });
@@ -28,6 +28,38 @@ describe("OpenRouterStructuredCompletionGateway", () => {
     expect(body).not.toHaveProperty("tools");
   });
 
+  it("com raciocinio pedido, manda o esforco e devolve o que o modelo pensou", async () => {
+    const request = vi.fn(async () => reply({
+      choices: [{ message: { content: JSON.stringify({ ok: true }), reasoning: "  O pedido fala de um almoço.  " } }],
+    }));
+
+    const result = await new OpenRouterStructuredCompletionGateway("k", "m", request as unknown as typeof fetch)
+      .complete({ ...input, reasoning: "low" });
+
+    expect(result).toEqual({ value: { ok: true }, modelName: "m", reasoning: "O pedido fala de um almoço." });
+    const [, init] = request.mock.calls[0] as unknown as [string, RequestInit];
+    expect(JSON.parse(String(init.body)).reasoning).toEqual({ effort: "low" });
+  });
+
+  it("sem o texto pronto, o raciocinio sai dos blocos legiveis; sem pedir, nao volta", async () => {
+    const message = {
+      content: JSON.stringify({ ok: true }),
+      reasoning: null,
+      reasoning_details: [
+        { type: "reasoning.summary", summary: "Resumo do que pensei." },
+        { type: "reasoning.encrypted", data: "x" },
+        { type: "reasoning.text", text: "Segundo bloco." },
+      ],
+    };
+    const request = (async () => reply({ choices: [{ message }] })) as unknown as typeof fetch;
+
+    const asked = await new OpenRouterStructuredCompletionGateway("k", "m", request).complete({ ...input, reasoning: "high" });
+    expect(asked.reasoning).toBe("Resumo do que pensei.\n\nSegundo bloco.");
+
+    const silent = await new OpenRouterStructuredCompletionGateway("k", "m", request).complete(input);
+    expect(silent).toEqual({ value: { ok: true }, modelName: "m" });
+  });
+
   it("sem chave ou modelo, a indisponibilidade e do provedor", async () => {
     await expect(new OpenRouterStructuredCompletionGateway(undefined, "m").complete(input)).rejects.toBeInstanceOf(LlmUnavailableError);
     await expect(new OpenRouterStructuredCompletionGateway("k", undefined).complete(input)).rejects.toBeInstanceOf(LlmUnavailableError);
@@ -42,8 +74,8 @@ describe("OpenRouterStructuredCompletionGateway", () => {
       .complete({ ...input, timeoutMs: 20 }).catch((e: unknown) => e);
 
     expect(error).toBeInstanceOf(FastStageError);
-    expect(error).toMatchObject({ stage: "planner", reason: "timeout" });
-    expect(isRetryableAiJobError(error)).toBe(false);
+    expect(error).toMatchObject({ reason: "timeout" });
+    expect(isRetryableJobError(error)).toBe(false);
   });
 
   it("uma chamada que trava e refeita com o que sobrou do orcamento", async () => {
@@ -92,9 +124,9 @@ describe("OpenRouterStructuredCompletionGateway", () => {
       new OpenRouterStructuredCompletionGateway("k", "m", (async () => reply({}, status)) as unknown as typeof fetch)
         .complete(input).catch((e: unknown) => e);
 
-    expect(isRetryableAiJobError(await failWith(429))).toBe(true);
-    expect(isRetryableAiJobError(await failWith(503))).toBe(true);
-    expect(isRetryableAiJobError(await failWith(400))).toBe(false);
+    expect(isRetryableJobError(await failWith(429))).toBe(true);
+    expect(isRetryableJobError(await failWith(503))).toBe(true);
+    expect(isRetryableJobError(await failWith(400))).toBe(false);
     expect(await failWith(400)).toMatchObject({ reason: "provider", status: 400 });
   });
 

@@ -1,0 +1,232 @@
+import { describe, expect, test } from "vitest";
+import { Artifact, Event, Recurrence } from "../../domain";
+import { toArtifactDto, toArtifactEventLinkDto } from "./artifact.dto";
+import { toEventCardDto, toEventDto } from "./event.dto";
+
+const userId = "auth-user-1";
+const startedAt = new Date("2026-08-17T15:00:00.000Z");
+const rule = { frequency: "daily" as const, interval: 1, timeOfDay: "12:00", timeZone: "America/Sao_Paulo", startsOn: "2026-08-01" };
+const series = Recurrence.create({ id: "rec-1", userId, rule, template: { name: "Almoço" } });
+const occurrence = { recurrenceId: "rec-1", occurrenceOn: "2026-08-17", detached: false };
+
+function artifact(id: string, body = id): Artifact {
+  return Artifact.rehydrate({
+    id,
+    userId,
+    name: `Nota ${id}`,
+    type: "text",
+    schemaVersion: 1,
+    data: { body },
+    tags: ["casa"],
+    revision: 2,
+    createdAt: new Date("2026-08-01T10:00:00.000Z"),
+    updatedAt: new Date("2026-08-02T10:00:00.000Z"),
+  });
+}
+
+describe("toEventCardDto", () => {
+  test("maps a reference event as it is stored, without a status", () => {
+    const event = Event.create({ id: "event-1", userId, name: "Reunião", description: "Semanal", startedAt, tags: ["trabalho"] });
+
+    const card = toEventCardDto({ event, artifactTypes: ["text", "food"] });
+
+    expect(card).toEqual({
+      id: "event-1",
+      actor: "human",
+      kind: "routine",
+      priority: "medium",
+      name: "Reunião",
+      description: "Semanal",
+      startedAt: "2026-08-17T15:00:00.000Z",
+      estimatedFinishAt: "2026-08-17T16:00:00.000Z",
+      finishedAt: undefined,
+      longRunning: false,
+      notifyOffsetsMinutes: [5],
+      tags: ["trabalho"],
+      artifactTypes: ["text", "food"],
+      parentEventIds: [],
+      blockedByEventIds: [],
+      revision: 1,
+    });
+    expect(card).not.toHaveProperty("status");
+    expect(card).not.toHaveProperty("recurrence");
+    expect(card).not.toHaveProperty("missed");
+  });
+
+  test("maps a tracked event without dates, with its status and incoming relations", () => {
+    const event = Event.rehydrate({
+      id: "event-1",
+      userId,
+      actor: "human",
+      kind: "routine",
+      status: "inHold",
+      priority: "urgent",
+      name: "Projeto",
+      longRunning: true,
+      finishedAt: startedAt,
+      parentIds: ["p1"],
+      blockedByIds: ["b1", "b2"],
+      revision: 4,
+    });
+
+    const card = toEventCardDto({ event, artifactTypes: [] });
+
+    expect(card).toMatchObject({
+      status: "inHold",
+      priority: "urgent",
+      longRunning: true,
+      finishedAt: "2026-08-17T15:00:00.000Z",
+      parentEventIds: ["p1"],
+      blockedByEventIds: ["b1", "b2"],
+      notifyOffsetsMinutes: [],
+      revision: 4,
+    });
+    expect(card.startedAt).toBeUndefined();
+    expect(card.estimatedFinishAt).toBeUndefined();
+  });
+
+  test("maps an agent event with the agent kind and status", () => {
+    const event = Event.create({ userId, actor: "agent", kind: "search_request", status: "waiting", name: "Pesquisar voos" });
+
+    expect(toEventCardDto({ event, artifactTypes: [] })).toMatchObject({
+      actor: "agent",
+      kind: "search_request",
+      status: "waiting",
+    });
+  });
+
+  test("shows the series of an occurrence, with its rule and whether it was detached", () => {
+    const event = Event.create({ userId, name: "Almoço", startedAt, occurrence: { ...occurrence, detached: true } });
+
+    const card = toEventCardDto({ event, artifactTypes: [], recurrence: series });
+
+    expect(card.recurrence).toEqual({ id: "rec-1", occurrenceOn: "2026-08-17", detached: true, rule });
+  });
+
+  test("leaves the series out when the event is not an occurrence or the series was not loaded", () => {
+    const plain = Event.create({ userId, name: "Almoço", startedAt });
+    const orphan = Event.create({ userId, name: "Almoço", startedAt, occurrence });
+
+    expect(toEventCardDto({ event: plain, artifactTypes: [], recurrence: series })).not.toHaveProperty("recurrence");
+    expect(toEventCardDto({ event: orphan, artifactTypes: [] })).not.toHaveProperty("recurrence");
+  });
+
+  test("the lists of the dto are copies of the lists of the event", () => {
+    const event = Event.rehydrate({
+      id: "event-1", userId, actor: "human", kind: "routine", name: "x", startedAt, parentIds: ["p1"], notifyOffsetsMinutes: [5], revision: 1,
+    });
+
+    const card = toEventCardDto({ event, artifactTypes: [] });
+    card.parentEventIds.push("p2");
+    card.notifyOffsetsMinutes.push(10);
+
+    expect(event.parentIds).toEqual(["p1"]);
+    expect(event.notifyOffsetsMinutes).toEqual([5]);
+  });
+});
+
+describe("toEventDto", () => {
+  const linked = Event.create({
+    id: "event-1",
+    userId,
+    name: "Reunião",
+    startedAt,
+    artifactLinks: [
+      { artifactId: "b", relation: "uses", fromRecurrence: true },
+      { artifactId: "gone", relation: "creates", fromRecurrence: false },
+      { artifactId: "a", relation: "creates", fromRecurrence: false },
+    ],
+    subtaskIds: ["s1", "s2"],
+    blocksIds: ["x1"],
+  });
+
+  test("returns the artifacts in the order of the links, whatever the order they were loaded in", () => {
+    const dto = toEventDto(linked, [artifact("a"), artifact("b")]);
+
+    expect(dto.artifacts.map((entry) => [entry.artifact.id, entry.relation, entry.fromRecurrence])).toEqual([
+      ["b", "uses", true],
+      ["a", "creates", false],
+    ]);
+    expect(dto.artifactTypes).toEqual(["text", "text"]);
+  });
+
+  test("an artifact that was deleted simply does not appear", () => {
+    const dto = toEventDto(linked, [artifact("a")]);
+
+    expect(dto.artifacts.map((entry) => entry.artifact.id)).toEqual(["a"]);
+    expect(dto.artifactTypes).toEqual(["text"]);
+  });
+
+  test("the artifacts inside an event come without the list of events they appear in", () => {
+    const [entry] = toEventDto(linked, [artifact("a", "corpo")]).artifacts;
+
+    expect(entry?.artifact).toEqual({
+      id: "a",
+      name: "Nota a",
+      type: "text",
+      schemaVersion: 1,
+      data: { body: "corpo" },
+      global: false,
+      derived: false,
+      tags: ["casa"],
+      revision: 2,
+      createdAt: "2026-08-01T10:00:00.000Z",
+      updatedAt: "2026-08-02T10:00:00.000Z",
+    });
+  });
+
+  test("adds the outgoing relations to the card fields", () => {
+    const dto = toEventDto(linked);
+
+    expect(dto).toMatchObject({ id: "event-1", name: "Reunião", subtaskEventIds: ["s1", "s2"], blocksEventIds: ["x1"], revision: 1 });
+    expect(dto.artifacts).toEqual([]);
+    expect(dto.artifactTypes).toEqual([]);
+    expect(dto).not.toHaveProperty("recurrence");
+  });
+
+  test("includes the series when the event is an occurrence", () => {
+    const event = Event.create({ userId, name: "Almoço", startedAt, occurrence });
+
+    expect(toEventDto(event, [], series).recurrence).toEqual({ id: "rec-1", occurrenceOn: "2026-08-17", detached: false, rule });
+  });
+});
+
+describe("toArtifactDto", () => {
+  test("lists the events the artifact appears in when they are given, even if none", () => {
+    const withEvents = toArtifactDto(artifact("a"), [
+      { eventId: "e1", relation: "creates", name: "Reunião", actor: "human", kind: "routine", startedAt, estimatedFinishAt: startedAt },
+      { eventId: "e2", relation: "uses", name: "Projeto", actor: "human", kind: "routine" },
+    ]);
+
+    expect(withEvents.events).toEqual([
+      {
+        eventId: "e1",
+        relation: "creates",
+        name: "Reunião",
+        actor: "human",
+        kind: "routine",
+        startedAt: "2026-08-17T15:00:00.000Z",
+        estimatedFinishAt: "2026-08-17T15:00:00.000Z",
+      },
+      { eventId: "e2", relation: "uses", name: "Projeto", actor: "human", kind: "routine" },
+    ]);
+    expect(toArtifactDto(artifact("a"), []).events).toEqual([]);
+    expect(toArtifactDto(artifact("a"))).not.toHaveProperty("events");
+  });
+
+  test("marks global artifacts and derived copies", () => {
+    const totals = { totalCaloriesKcal: 0, totalProteinGrams: 0, totalCarbohydrateGrams: 0, totalFatGrams: 0, totalFiberGrams: 0 };
+    const global = Artifact.create({ type: "food", name: "Banana", data: { description: "banana", items: [], totals } });
+    const copy = global.copyForEvent(userId, "1 unidade");
+
+    expect(toArtifactDto(global)).toMatchObject({ global: true, derived: false, type: "food" });
+    expect(toArtifactDto(copy)).toMatchObject({ global: false, derived: true, data: { quantity: "1 unidade" } });
+  });
+
+  test("a link without dates has no date keys", () => {
+    const link = toArtifactEventLinkDto({ eventId: "e1", relation: "updates", name: "Pedido", actor: "agent", kind: "request" });
+
+    expect(link).toEqual({ eventId: "e1", relation: "updates", name: "Pedido", actor: "agent", kind: "request" });
+    expect(link).not.toHaveProperty("startedAt");
+  });
+});

@@ -1,26 +1,52 @@
 import { BadRequestException } from "@nestjs/common";
-import { isEventPriority, isNotificationOffsetMinutes, isWorkItemPriority, isWorkItemStatus } from "../domain";
-import { decodeTimelineCursor } from "../infrastructure/persistence";
+import { HUMAN_KINDS, HUMAN_STATUSES, PRIORITIES, isNotificationOffsetMinutes } from "../domain";
+import { decodeAgendaCursor } from "../infrastructure/persistence";
 
-export function assertEventMarks(body: {
-  missed?: unknown;
-  priority?: unknown;
-  notifyOffsetsMinutes?: unknown;
-}): void {
-  if (body?.missed !== undefined && typeof body.missed !== "boolean") {
-    throw new BadRequestException("Invalid missed flag");
-  }
-  if (body?.priority !== undefined && !isEventPriority(body.priority)) {
-    throw new BadRequestException("Invalid event priority");
-  }
-  if (body?.notifyOffsetsMinutes !== undefined && !isNotificationOffsets(body.notifyOffsetsMinutes)) {
-    throw new BadRequestException("Invalid notifyOffsetsMinutes");
+/** Os tipos de artefato que o usuario cria e edita. Os demais sao do servidor. */
+const EDITABLE_ARTIFACT_TYPES = ["text", "food", "sleep", "training"];
+
+function isStringList(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+function isOneOf(values: readonly string[], value: unknown): boolean {
+  return typeof value === "string" && values.includes(value);
+}
+
+function assertInstant(value: unknown, field: string, nullable: boolean): void {
+  if (value === undefined || (nullable && value === null)) return;
+  if (typeof value !== "string" || Number.isNaN(new Date(value).getTime())) {
+    throw new BadRequestException(`Invalid ${field}`);
   }
 }
 
-export function assertEventWindow(body: { startedAt?: unknown; finishedAt?: unknown }): void {
-  assertInstant(body?.startedAt, "startedAt");
-  assertInstant(body?.finishedAt, "finishedAt");
+/**
+ * O que a rota de eventos confere antes do dominio: a forma do corpo. As
+ * regras (o que cada executor aceita, evento longo, janela) sao do dominio. Na
+ * edicao, `null` apaga o status e as datas.
+ */
+export function assertEventFields(body: Record<string, unknown>, editing: boolean): void {
+  if (body?.kind !== undefined && !isOneOf(HUMAN_KINDS, body.kind)) throw new BadRequestException("Invalid kind");
+  if (body?.status !== undefined && !(editing && body.status === null) && !isOneOf(HUMAN_STATUSES, body.status)) {
+    throw new BadRequestException("Invalid status");
+  }
+  if (body?.priority !== undefined && !isOneOf(PRIORITIES, body.priority)) {
+    throw new BadRequestException("Invalid priority");
+  }
+  if (
+    body?.notifyOffsetsMinutes !== undefined &&
+    !(Array.isArray(body.notifyOffsetsMinutes) && body.notifyOffsetsMinutes.every(isNotificationOffsetMinutes))
+  ) {
+    throw new BadRequestException("Invalid notifyOffsetsMinutes");
+  }
+  if (body?.longRunning !== undefined && typeof body.longRunning !== "boolean") {
+    throw new BadRequestException("Invalid longRunning");
+  }
+  for (const field of ["tags", "subtaskEventIds", "blocksEventIds", "parentEventIds", "blockedByEventIds", "artifactIds"]) {
+    if (body?.[field] !== undefined && !isStringList(body[field])) throw new BadRequestException(`Invalid ${field}`);
+  }
+  if (body?.artifacts !== undefined && !Array.isArray(body.artifacts)) throw new BadRequestException("Invalid artifacts");
+  for (const field of ["startedAt", "estimatedFinishAt", "finishedAt"]) assertInstant(body?.[field], field, editing);
 }
 
 export function assertExpectedRevision(body: { expectedRevision?: unknown }): void {
@@ -29,9 +55,9 @@ export function assertExpectedRevision(body: { expectedRevision?: unknown }): vo
   }
 }
 
-export function assertTimelineCursor(cursor: string): void {
+export function assertAgendaCursor(cursor: string): void {
   try {
-    decodeTimelineCursor(cursor);
+    decodeAgendaCursor(cursor);
   } catch {
     throw new BadRequestException("Invalid cursor");
   }
@@ -46,47 +72,16 @@ export function parseLimit(raw?: string): number | undefined {
   return value;
 }
 
-export function assertTaskFields(body: {
-  status?: unknown;
-  priority?: unknown;
-  notifyOffsetsMinutes?: unknown;
-  dependsOnTaskIds?: unknown;
-}): void {
-  if (body?.status !== undefined && !isWorkItemStatus(body.status)) {
-    throw new BadRequestException("Invalid status");
-  }
-  if (body?.priority !== undefined && !isWorkItemPriority(body.priority)) {
-    throw new BadRequestException("Invalid priority");
-  }
-  if (body?.notifyOffsetsMinutes !== undefined && !isNotificationOffsets(body.notifyOffsetsMinutes)) {
-    throw new BadRequestException("Invalid notifyOffsetsMinutes");
-  }
-  if (
-    body?.dependsOnTaskIds !== undefined &&
-    (!Array.isArray(body.dependsOnTaskIds) || body.dependsOnTaskIds.some((id) => typeof id !== "string"))
-  ) {
-    throw new BadRequestException("Invalid dependsOnTaskIds");
-  }
-}
-
-export function assertParentTaskId(body: { parentTaskId?: unknown }): void {
-  if (body?.parentTaskId !== undefined && body.parentTaskId !== null && typeof body.parentTaskId !== "string") {
-    throw new BadRequestException("Invalid parentTaskId");
-  }
-}
-
-const NOTE_TYPES = ["text", "meal", "sleep", "training"];
-
 /**
- * O que a rota de notas confere antes do dominio: a forma do corpo. Quem valida
- * o `data` de cada tipo e o registro de tipos da note. Na criacao, `type` ausente
- * e texto livre; na edicao, `data` so vem com `type`.
+ * O que a rota de artefatos confere antes do dominio: a forma do corpo. Quem
+ * valida o `data` de cada tipo e o registro de tipos do artefato. Na criacao,
+ * `type` ausente e texto livre; na edicao, `data` so vem com `type`.
  */
-export function assertNoteRequest(
-  body: { type?: unknown; data?: unknown; name?: unknown; tags?: unknown; eventIds?: unknown; taskIds?: unknown },
+export function assertArtifactRequest(
+  body: { type?: unknown; data?: unknown; name?: unknown; tags?: unknown; eventIds?: unknown },
   creating: boolean,
 ): void {
-  if (body?.type !== undefined && !NOTE_TYPES.includes(body.type as string)) {
+  if (body?.type !== undefined && !EDITABLE_ARTIFACT_TYPES.includes(body.type as string)) {
     throw new BadRequestException("Invalid type");
   }
   if (creating ? body?.data === undefined && (body?.type === undefined || body?.type === "text") : (body?.type === undefined) !== (body?.data === undefined)) {
@@ -95,18 +90,9 @@ export function assertNoteRequest(
   if (body?.data !== undefined && (typeof body.data !== "object" || body.data === null || Array.isArray(body.data))) {
     throw new BadRequestException("Invalid data");
   }
-  if (body?.name !== undefined && typeof body.name !== "string") {
-    throw new BadRequestException("Invalid name");
-  }
-  for (const field of ["eventIds", "taskIds"] as const) {
-    const value = body?.[field];
-    if (value !== undefined && (!Array.isArray(value) || value.some((id) => typeof id !== "string"))) {
-      throw new BadRequestException(`Invalid ${field}`);
-    }
-  }
-  if (body?.tags !== undefined && (!Array.isArray(body.tags) || body.tags.some((tag) => typeof tag !== "string"))) {
-    throw new BadRequestException("Invalid tags");
-  }
+  if (body?.name !== undefined && typeof body.name !== "string") throw new BadRequestException("Invalid name");
+  if (body?.tags !== undefined && !isStringList(body.tags)) throw new BadRequestException("Invalid tags");
+  if (body?.eventIds !== undefined && !isStringList(body.eventIds)) throw new BadRequestException("Invalid eventIds");
 }
 
 export function assertRecurrenceTemplate(template: unknown, required: boolean): void {
@@ -114,15 +100,4 @@ export function assertRecurrenceTemplate(template: unknown, required: boolean): 
   if (typeof template !== "object" || template === null || Array.isArray(template)) {
     throw new BadRequestException("Invalid template");
   }
-}
-
-function assertInstant(value: unknown, field: string): void {
-  if (value === undefined) return;
-  if (typeof value !== "string" || Number.isNaN(new Date(value).getTime())) {
-    throw new BadRequestException(`Invalid ${field}`);
-  }
-}
-
-function isNotificationOffsets(value: unknown): boolean {
-  return Array.isArray(value) && value.every((entry) => isNotificationOffsetMinutes(entry));
 }

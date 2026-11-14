@@ -1,51 +1,44 @@
-import { Recurrence, type Note } from "../../domain";
+import { Recurrence, type Artifact } from "../../domain";
 import type { CreateRecurrenceInput } from "@repo/contracts";
-import type { TaskRepository } from "../../domain/ports";
+import type { EventRepository } from "../../domain/ports";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
 import type { CreateEventUseCase, PrepareEventOptions } from "../events/create-event.usecase";
-import { prepareEventTemplate, prepareTaskTemplate } from "./recurrence-templates";
+import { prepareTemplate } from "./recurrence-templates";
 
 export interface PreparedRecurrence {
   recurrence: Recurrence;
-  /** As notes novas do template, que precisam ser gravadas antes da serie. */
-  notes: Note[];
+  /** Os artefatos novos do template, que precisam ser gravados antes da serie. */
+  artifacts: Artifact[];
+  derivations: { originalId: string; copyId: string }[];
+}
+
+export interface RecurrenceTemplateDeps {
+  createEvent: Pick<CreateEventUseCase, "prepare">;
+  events: Pick<EventRepository, "findByIds">;
 }
 
 /**
  * Valida a regra, resolve o template uma vez e monta a serie, sem gravar. E o
  * que `POST /api/recurrences` e o agente compartilham: quem grava decide como
- * (repositorio sozinho, ou no mesmo lote do turno do chat).
+ * (repositorio sozinho, ou no mesmo lote do passo do agente).
  */
 export async function prepareRecurrence(
-  deps: {
-    createEvent: Pick<CreateEventUseCase, "prepare">;
-    tasks: Pick<TaskRepository, "findById">;
-  },
+  deps: RecurrenceTemplateDeps,
   input: CreateRecurrenceInput,
   actor: AuthenticatedUser,
   options?: PrepareEventOptions,
 ): Promise<PreparedRecurrence> {
-  const { target, template, ...rule } = input;
-  // A regra e validada antes do template: nao adianta chamar o modelo para
-  // resolver uma refeicao de uma serie que nunca vai acontecer.
-  const draft = Recurrence.create({ userId: actor.userId, target, rule, template: {} });
-
-  const prepared =
-    input.target === "event"
-      ? await prepareEventTemplate(deps.createEvent, input.template, draft.rule, actor, options)
-      : {
-          template: await prepareTaskTemplate(deps.tasks, input.template, draft.rule, actor),
-          notes: [],
-          noteIds: [],
-        };
+  const { template, ...rule } = input;
+  // A regra e validada antes do template: nao adianta resolver o template de
+  // uma serie que nunca vai acontecer.
+  const draft = Recurrence.create({ userId: actor.userId, rule, template: {} });
+  const prepared = await prepareTemplate(deps, template, draft.rule, actor, options);
 
   const recurrence = Recurrence.create({
     id: draft.id,
     userId: actor.userId,
-    target,
     rule: draft.rule,
     template: { ...prepared.template },
-    noteIds: prepared.noteIds,
   });
-  return { recurrence, notes: prepared.notes };
+  return { recurrence, artifacts: prepared.artifacts, derivations: prepared.derivations };
 }

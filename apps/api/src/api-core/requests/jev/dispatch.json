@@ -1,0 +1,73 @@
+{
+  "_when": "JEV de entrada do pedido por passos (ADR 003): uma chamada, uma pergunta por operação × entidade, todas respondidas em paralelo pelo provedor.",
+  "endpoint": "https://api.typesafe.ai/v1/systemone",
+  "model": "jev-latest",
+  "timeoutMs": 8000,
+  "minCertainty": 0.92,
+  "_uncertainPolicy": "fallback: resposta incerta em qualquer pergunta manda o pedido ao fallback; ignore: pergunta incerta conta como nenhum.",
+  "uncertainPolicy": "fallback",
+  "questions": {
+    "event_create": {
+      "type": "choice",
+      "instructions": "Quantos EVENTOS NOVOS o pedido quer criar? Evento é tudo o que a pessoa faz ou vai fazer. Relatos de atividades realizadas, em andamento ou planejadas ('almocei', 'comendo arroz', 'vou nadar', 'volto para casa para ver um filme', 'dormi às 23h') são eventos novos, um por atividade. Algo a fazer, com ou sem prazo ('preciso pagar o aluguel', 'lembrar de ligar para o dentista'), também é um evento novo. Recorrências ('toda segunda', 'todo dia') não contam aqui. Artefatos não contam.",
+      "criteria": {
+        "none": "Nenhum evento novo.",
+        "one": "Exatamente um evento novo.",
+        "many": "Dois ou mais eventos novos."
+      }
+    },
+    "event_edit": {
+      "type": "choice",
+      "instructions": "Quantos EVENTOS JÁ EXISTENTES o pedido quer alterar (horário, prazo, concluir, prioridade, nome, status)? 'Parei de trabalhar', 'terminei a reunião', 'mude o jantar para as 21h', 'já paguei o aluguel' alteram eventos existentes. Recorrências não contam aqui.",
+      "criteria": {
+        "none": "Nenhum evento existente é alterado.",
+        "one": "Exatamente um evento existente é alterado.",
+        "many": "Dois ou mais eventos existentes são alterados."
+      }
+    },
+    "artifact_create": {
+      "type": "choice",
+      "instructions": "Quantos ARTEFATOS NOVOS o pedido quer criar? Um artefato guarda conteúdo: o que foi comido (alimentos e quantidades de uma refeição), uma observação, uma ideia ou uma lista em texto. Detalhes de alimentos e quantidades ('300g de arroz com 200g de feijão') pedem um artefato de alimento; o evento da refeição, à parte, é um evento novo.",
+      "criteria": {
+        "none": "Nenhum artefato novo.",
+        "one": "Exatamente um artefato novo.",
+        "many": "Dois ou mais artefatos novos."
+      }
+    },
+    "artifact_edit": {
+      "type": "choice",
+      "instructions": "Quantos ARTEFATOS JÁ EXISTENTES o pedido quer alterar (acrescentar texto, renomear, corrigir)?",
+      "criteria": {
+        "none": "Nenhum artefato existente é alterado.",
+        "one": "Exatamente um artefato existente é alterado.",
+        "many": "Dois ou mais artefatos existentes são alterados."
+      }
+    },
+    "recurring_event_create": {
+      "type": "choice",
+      "instructions": "Quantos EVENTOS RECORRENTES NOVOS o pedido quer criar? Atividades ou coisas a fazer que se repetem ('corrida toda segunda às 7h', 'reunião todo dia útil às 10h', 'pagar o aluguel todo dia 5', 'regar as plantas toda semana').",
+      "criteria": {
+        "none": "Nenhum evento recorrente novo.",
+        "one": "Exatamente um evento recorrente novo.",
+        "many": "Dois ou mais eventos recorrentes novos."
+      }
+    },
+    "recurring_event_edit": {
+      "type": "choice",
+      "instructions": "Quantas SÉRIES de EVENTOS RECORRENTES já existentes o pedido quer alterar (a regra ou o modelo da série inteira: 'mude a corrida de segunda para as 8h', 'agora é toda terça')? Alterar apenas UMA ocorrência isolada ('hoje a corrida foi às 8h') é uma edição de evento comum (event_edit), não de série.",
+      "criteria": {
+        "none": "Nenhum evento recorrente existente é alterado.",
+        "one": "Exatamente um evento recorrente existente é alterado.",
+        "many": "Dois ou mais eventos recorrentes existentes são alterados."
+      }
+    },
+    "query": {
+      "type": "choice",
+      "instructions": "O usuário pede para CONSULTAR dados da própria agenda ou dos artefatos ('o que tenho amanhã?', 'quanto treinei esta semana?', 'o que falta fazer?')? Relatos de atividades e pedidos de registro não são consultas.",
+      "criteria": {
+        "no": "Não pede consulta de dados.",
+        "yes": "Pede para consultar ou resumir dados já registrados."
+      }
+    }
+  }
+}

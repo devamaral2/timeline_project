@@ -1,186 +1,198 @@
 import {
+  ArtifactNotFoundError,
+  ArtifactOwnershipError,
   EventValidationError,
-  Interruption,
-  isEventKind,
-  NoteNotFoundError,
-  NoteOwnershipError,
+  type Artifact,
+  type ArtifactLink,
+  type ArtifactWrites,
   type Event,
-  type Note,
-  type NoteLink,
-  type NoteWrites,
 } from "../../../domain";
-import type { NoteRepository } from "../../../domain/ports";
-import type {
-  InterruptionPatchInput,
-  UpdateEventInput,
-  UpdateEventNoteInput,
-} from "@repo/contracts";
-import type { NoteBuilder } from "../../notes/services/note-builder.service";
+import type { ArtifactRepository, EntityBatch, EventRepository } from "../../../domain/ports";
+import type { UpdateEventArtifactInput, UpdateEventInput } from "@repo/contracts";
+import type { ArtifactBuilder, ArtifactContentInput } from "../../artifacts/services/artifact-builder.service";
+import { isHumanEventKind, isHumanEventStatus } from "../create-event.usecase";
+import { planIncomingRelations, type OriginUpdate } from "./event-origins";
 
-/** O evento revisado e as notes que precisam ser gravadas junto com ele. */
+/** O evento revisado e o que precisa ser gravado junto com ele. */
 export interface MergedEventUpdate {
   event: Event;
-  notes: NoteWrites;
+  artifacts: Required<ArtifactWrites>;
+  /** Os eventos maiores e os bloqueadores que ganharam ou perderam este evento. */
+  origins: OriginUpdate[];
+}
+
+export interface EventUpdateDeps {
+  artifactBuilder: ArtifactBuilder;
+  artifactRepository: Pick<ArtifactRepository, "findByIds">;
+  eventRepository: Pick<EventRepository, "findByIds">;
+}
+
+function instantChange(value: string | null | undefined): Date | null | undefined {
+  if (value === undefined || value === null) return value;
+  const instant = new Date(value);
+  if (Number.isNaN(instant.getTime())) throw new EventValidationError("Invalid date");
+  return instant;
+}
+
+export function toUpdateBatch(merged: MergedEventUpdate, expectedRevision: number): EntityBatch {
+  return {
+    userId: merged.event.userId,
+    artifacts: [
+      ...merged.artifacts.created.map((entity) => ({ op: "create" as const, entity })),
+      ...merged.artifacts.updated.map(({ artifact, expectedRevision: revision }) => ({
+        op: "update" as const, entity: artifact, expectedRevision: revision,
+      })),
+    ],
+    derivations: merged.artifacts.derivations,
+    events: [
+      { op: "update", entity: merged.event, expectedRevision },
+      ...merged.origins.map((origin) => ({ op: "update" as const, entity: origin.event, expectedRevision: origin.expectedRevision })),
+    ],
+  };
 }
 
 export async function mergeEventUpdate(
   existingEvent: Event,
   input: UpdateEventInput,
-  deps: { noteBuilder: NoteBuilder; noteRepository: Pick<NoteRepository, "findByIds"> },
-  now: Date,
+  deps: EventUpdateDeps,
 ): Promise<MergedEventUpdate> {
-  if (input.kind !== undefined && !isEventKind(input.kind)) {
+  if (input.kind !== undefined && !isHumanEventKind(input.kind)) {
     throw new EventValidationError(`Unknown event kind: ${String(input.kind)}`);
   }
-  const merged: { noteLinks: NoteLink[] | undefined; writes: NoteWrites } = input.notes
-    ? await mergeNotes(existingEvent, input.notes, deps)
-    : { noteLinks: undefined, writes: {} as NoteWrites };
+  if (input.status !== undefined && input.status !== null && !isHumanEventStatus(input.status)) {
+    throw new EventValidationError(`Unknown event status: ${String(input.status)}`);
+  }
+  const startedAt = instantChange(input.startedAt);
 
+  const merged: { links: ArtifactLink[] | undefined; writes: Required<ArtifactWrites> } = input.artifacts
+    ? await mergeArtifacts(existingEvent, input.artifacts, deps)
+    : { links: undefined, writes: { created: [], updated: [], derivations: [] } };
+
+  // Um evento de refeicao sempre tem um alimento: sem nenhum, nasce um a partir do que o evento diz.
   if ((input.kind ?? existingEvent.kind) === "meal") {
-    const links = merged.noteLinks ?? existingEvent.noteLinks;
-    const staged = [
-      ...(merged.writes.created ?? []),
-      ...(merged.writes.updated ?? []).map(({ note }) => note),
-    ];
-    const byId = new Map(staged.map((note) => [note.id, note]));
-    const unresolved = links.map(({ noteId }) => noteId).filter((id) => !byId.has(id));
-    const persisted = unresolved.length ? await deps.noteRepository.findByIds(unresolved) : [];
-    for (const note of persisted) byId.set(note.id, note);
-    const hasMeal = links.some(({ noteId }) => {
-      const note = byId.get(noteId);
-      return note?.type === "meal" && note.userId === existingEvent.userId;
-    });
-    if (!hasMeal) {
-      const note = await deps.noteBuilder.fromCreateInput({
-        type: "meal",
-        data: {
-          inputText: (input.description ?? existingEvent.description).trim() ||
-            (input.name ?? existingEvent.name),
+    const links = merged.links ?? existingEvent.artifactLinks;
+    const staged = [...merged.writes.created, ...merged.writes.updated.map(({ artifact }) => artifact)];
+    const byId = new Map(staged.map((artifact) => [artifact.id, artifact]));
+    const unresolved = links.map(({ artifactId }) => artifactId).filter((id) => !byId.has(id));
+    const persisted = unresolved.length ? await deps.artifactRepository.findByIds(unresolved) : [];
+    for (const artifact of persisted) byId.set(artifact.id, artifact);
+    const hasFood = links.some(({ artifactId }) => byId.get(artifactId)?.type === "food");
+    if (!hasFood) {
+      const food = await deps.artifactBuilder.fromCreateInput(
+        {
+          type: "food",
+          data: { inputText: (input.description ?? existingEvent.description).trim() || (input.name ?? existingEvent.name) },
         },
-      }, existingEvent.userId, input.startedAt ? new Date(input.startedAt) : existingEvent.startedAt);
-      merged.writes = { ...merged.writes, created: [...(merged.writes.created ?? []), note] };
-      merged.noteLinks = [...links, { noteId: note.id, fromRecurrence: false }];
+        existingEvent.userId,
+        startedAt ?? existingEvent.startedAt ?? new Date(),
+      );
+      merged.writes = { ...merged.writes, created: [...merged.writes.created, food] };
+      merged.links = [...links, { artifactId: food.id, relation: "creates", fromRecurrence: false }];
     }
   }
 
   const event = existingEvent.revise({
+    kind: input.kind,
+    status: input.status,
+    priority: input.priority,
     name: input.name,
     description: input.description,
-    startedAt: input.startedAt ? new Date(input.startedAt) : undefined,
-    finishedAt: input.finishedAt !== undefined ? new Date(input.finishedAt) : undefined,
-    tags: input.tags,
-    kind: input.kind,
-    missed: input.missed,
-    priority: input.priority,
+    startedAt,
+    estimatedFinishAt: instantChange(input.estimatedFinishAt),
+    finishedAt: instantChange(input.finishedAt),
     notifyOffsetsMinutes: input.notifyOffsetsMinutes,
-    interruptions: mergeInterruptions(existingEvent.interruptions, input.interruptions, now),
-    noteLinks: merged.noteLinks,
+    tags: input.tags,
+    longRunning: input.longRunning,
+    artifactLinks: merged.links,
+    subtaskIds: input.subtaskEventIds,
+    blocksIds: input.blocksEventIds,
   });
-  return { event, notes: merged.writes };
+
+  const origins = await planIncomingRelations(
+    existingEvent.id,
+    { parentIds: existingEvent.parentIds, blockedByIds: existingEvent.blockedByIds },
+    { parentIds: input.parentEventIds, blockedByIds: input.blockedByEventIds },
+    deps.eventRepository,
+    existingEvent.userId,
+  );
+  return { event, artifacts: merged.writes, origins };
 }
 
 /**
- * A lista de notes de um evento ao editar. Cada entrada com `id` e uma note que
- * ja existe — ja estava no evento, ou e outra do mesmo usuario que passa a
- * estar —; sem `id`, nasce uma note nova. Quem nao esta na lista deixa de
- * aparecer no evento, mas a note continua existindo.
+ * A lista de artefatos de um evento ao editar. Cada entrada com `id` e um
+ * artefato que ja existe: ja estava no evento, ou e outro do usuario (ou
+ * global) que passa a estar. Sem `id`, nasce um artefato novo; com `copyOf`,
+ * uma copia de um alimento. Quem nao esta na lista deixa de aparecer no
+ * evento, mas o artefato continua existindo.
  */
-async function mergeNotes(
+async function mergeArtifacts(
   existingEvent: Event,
-  entries: UpdateEventNoteInput[],
-  deps: { noteBuilder: NoteBuilder; noteRepository: Pick<NoteRepository, "findByIds"> },
-): Promise<{ noteLinks: NoteLink[]; writes: NoteWrites }> {
-  const ids = entries.flatMap((entry) => (entry.id ? [entry.id] : []));
-  const found = ids.length > 0 ? await deps.noteRepository.findByIds(ids) : [];
-  const byId = new Map(found.map((note) => [note.id, note]));
-  const currentLinks = new Map(existingEvent.noteLinks.map((link) => [link.noteId, link]));
+  entries: UpdateEventArtifactInput[],
+  deps: EventUpdateDeps,
+): Promise<{ links: ArtifactLink[]; writes: Required<ArtifactWrites> }> {
+  const ids = entries.flatMap((entry) => ("copyOf" in entry ? [entry.copyOf] : entry.id ? [entry.id] : []));
+  const found = ids.length > 0 ? await deps.artifactRepository.findByIds(ids) : [];
+  const byId = new Map(found.map((artifact) => [artifact.id, artifact]));
+  const currentLinks = new Map(existingEvent.artifactLinks.map((link) => [link.artifactId, link]));
+  const reachable = (id: string): Artifact => {
+    const artifact = byId.get(id);
+    if (!artifact) throw new ArtifactNotFoundError(`Artifact not found: ${id}`);
+    if (!artifact.isGlobal && artifact.userId !== existingEvent.userId) throw new ArtifactOwnershipError();
+    return artifact;
+  };
 
-  const created: Note[] = [];
-  const updated: { note: Note; expectedRevision: number }[] = [];
-  const noteLinks: NoteLink[] = [];
+  const created: Artifact[] = [];
+  const updated: { artifact: Artifact; expectedRevision: number }[] = [];
+  const derivations: { originalId: string; copyId: string }[] = [];
+  const links: ArtifactLink[] = [];
 
   for (const entry of entries) {
-    if (!entry.id) {
-      if (entry.data === undefined) throw new EventValidationError("A new note requires data");
-      const note = await deps.noteBuilder.fromUpdateInput(entry, existingEvent.userId);
-      created.push(note);
-      noteLinks.push({ noteId: note.id, fromRecurrence: false });
+    if ("copyOf" in entry) {
+      const original = reachable(entry.copyOf);
+      const copy = original.copyForEvent(existingEvent.userId, entry.quantity);
+      created.push(copy);
+      derivations.push({ originalId: original.id, copyId: copy.id });
+      links.push({ artifactId: copy.id, relation: "uses", fromRecurrence: false });
       continue;
     }
 
-    const note = byId.get(entry.id);
-    if (!note) throw new NoteNotFoundError(`Note not found: ${entry.id}`);
-    if (note.userId !== existingEvent.userId) throw new NoteOwnershipError();
+    if (!entry.id) {
+      if (entry.data === undefined) throw new EventValidationError("A new artifact requires data");
+      const artifact = await deps.artifactBuilder.fromUpdateInput(entry as ArtifactContentInput, existingEvent.userId);
+      created.push(artifact);
+      links.push({ artifactId: artifact.id, relation: entry.relation ?? "creates", fromRecurrence: false });
+      continue;
+    }
 
-    const revised = await reviseNote(note, entry, deps.noteBuilder);
-    if (revised) updated.push({ note: revised, expectedRevision: note.revision });
-    // O vinculo herdado da serie continua sendo da serie, mesmo se a note foi editada aqui.
-    noteLinks.push({ noteId: note.id, fromRecurrence: currentLinks.get(note.id)?.fromRecurrence ?? false });
+    const artifact = reachable(entry.id);
+    const revised = await reviseArtifact(artifact, entry, deps.artifactBuilder);
+    if (revised) updated.push({ artifact: revised, expectedRevision: artifact.revision });
+    const current = currentLinks.get(artifact.id);
+    links.push({
+      artifactId: artifact.id,
+      relation: entry.relation ?? current?.relation ?? "uses",
+      // A relacao herdada da serie continua sendo da serie, mesmo se o artefato foi editado aqui.
+      fromRecurrence: current?.fromRecurrence ?? false,
+    });
   }
 
-  return { noteLinks, writes: { created, updated } };
+  return { links, writes: { created, updated, derivations } };
 }
 
-/** `undefined` quando a entrada so mantem a note, sem mudar nada nela. */
-async function reviseNote(note: Note, entry: UpdateEventNoteInput, noteBuilder: NoteBuilder): Promise<Note | undefined> {
+/** `undefined` quando a entrada so mantem o artefato, sem mudar nada nele. */
+async function reviseArtifact(
+  artifact: Artifact,
+  entry: Exclude<UpdateEventArtifactInput, { copyOf: string }>,
+  artifactBuilder: ArtifactBuilder,
+): Promise<Artifact | undefined> {
   if (entry.name === undefined && entry.tags === undefined && entry.data === undefined) return undefined;
 
-  const resolved = entry.data !== undefined ? await noteBuilder.resolveUpdateData(entry) : undefined;
-  return note.revise({
+  const resolved = entry.data !== undefined ? await artifactBuilder.resolveUpdateData(entry as ArtifactContentInput) : undefined;
+  return artifact.revise({
     name: entry.name,
     tags: entry.tags,
     type: resolved?.type,
     schemaVersion: "schemaVersion" in entry ? entry.schemaVersion : undefined,
     data: resolved?.data,
-  });
-}
-
-function mergeInterruptions(
-  existingInterruptions: Interruption[],
-  input: InterruptionPatchInput[] | undefined,
-  now: Date,
-): Interruption[] {
-  if (!input) return existingInterruptions;
-
-  const existingById = new Map(existingInterruptions.map((interruption) => [interruption.id, interruption]));
-  const patchedById = new Map<string, Interruption>();
-  const newInterruptions: Interruption[] = [];
-
-  for (const patch of input) {
-    if (!patch.id) {
-      newInterruptions.push(createNewInterruption(patch, now));
-      continue;
-    }
-
-    const existing = existingById.get(patch.id);
-    if (!existing) throw new EventValidationError("Interruption not found on event");
-    patchedById.set(patch.id, patchInterruption(existing, patch));
-  }
-
-  return [
-    ...existingInterruptions.map((interruption) => patchedById.get(interruption.id) ?? interruption),
-    ...newInterruptions,
-  ];
-}
-
-function createNewInterruption(input: InterruptionPatchInput, now: Date): Interruption {
-  if (!input.name) throw new EventValidationError("New interruptions require a name");
-  const startedAt = input.startedAt ? new Date(input.startedAt) : now;
-  const finishedAt = input.finishedAt ? new Date(input.finishedAt) : new Date(now.getTime() + 120000);
-  return Interruption.create({
-    name: input.name,
-    description: input.description ?? "",
-    startedAt,
-    finishedAt,
-  });
-}
-
-function patchInterruption(existing: Interruption, input: InterruptionPatchInput): Interruption {
-  return Interruption.create({
-    id: existing.id,
-    name: input.name ?? existing.name,
-    description: input.description ?? existing.description,
-    startedAt: input.startedAt ? new Date(input.startedAt) : existing.startedAt,
-    finishedAt: input.finishedAt ? new Date(input.finishedAt) : existing.finishedAt,
   });
 }

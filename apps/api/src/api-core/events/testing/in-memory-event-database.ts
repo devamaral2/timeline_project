@@ -1,34 +1,74 @@
-import type { Event, Note } from "../../../domain";
+import { Event, type Artifact } from "../../../domain";
 
 /**
- * Estado compartilhado entre EventRepository, TagRepository, NoteRepository e
- * as query ports em memoria, para que tags e notes gravadas atomicamente com
- * eventos aparecam nas leituras — espelhando a transacao unica do repositorio
- * PostgreSQL.
+ * Estado compartilhado entre os repositorios e as consultas em memoria, para
+ * que o que e gravado junto (o evento, os artefatos dele, as relacoes) apareca
+ * nas leituras, como na transacao unica do Postgres.
  */
 export class InMemoryEventDatabase {
   events: Event[];
-  /** Mutado no lugar: o `InMemoryNoteRepository` compartilha esta mesma lista. */
-  readonly notes: Note[];
+  /** Mutado no lugar: o `InMemoryArtifactRepository` compartilha esta mesma lista. */
+  readonly artifacts: Artifact[];
+  /** De qual original saiu cada copia. */
+  readonly derivations: { originalId: string; copyId: string }[] = [];
 
-  constructor(events: Event[] = [], notes: Note[] = []) {
+  constructor(events: Event[] = [], artifacts: Artifact[] = []) {
     this.events = [...events];
-    this.notes = [...notes];
+    this.artifacts = [...artifacts];
   }
 
-  /** As notes vivas de um evento, na ordem dos vinculos. */
-  notesOf(event: Event): Note[] {
-    return event.noteLinks.flatMap((link) => {
-      const note = this.notes.find((candidate) => candidate.id === link.noteId);
-      return note ? [note] : [];
+  /** O evento como o repositorio o devolve: com as relacoes que chegam nele, lidas dos eventos de origem. */
+  hydrate(event: Event): Event {
+    const origins = (pick: (origin: Event) => readonly string[]) =>
+      this.events.filter((origin) => pick(origin).includes(event.id)).map((origin) => origin.id);
+    return Event.rehydrate({
+      id: event.id,
+      userId: event.userId,
+      actor: event.actor,
+      kind: event.kind,
+      status: event.status,
+      priority: event.priority,
+      name: event.name,
+      description: event.description,
+      startedAt: event.startedAt,
+      estimatedFinishAt: event.estimatedFinishAt,
+      finishedAt: event.finishedAt,
+      notifyOffsetsMinutes: [...event.notifyOffsetsMinutes],
+      tags: [...event.tags],
+      longRunning: event.longRunning,
+      data: { ...event.data },
+      artifactLinks: event.artifactLinks.filter((link) => this.artifacts.some((artifact) => artifact.id === link.artifactId)),
+      subtaskIds: event.subtaskIds.filter((id) => this.events.some((other) => other.id === id)),
+      blocksIds: event.blocksIds.filter((id) => this.events.some((other) => other.id === id)),
+      parentIds: origins((origin) => origin.subtaskIds),
+      blockedByIds: origins((origin) => origin.blocksIds),
+      occurrence: event.occurrence,
+      revision: event.revision,
     });
   }
 
-  writeNotes(writes: { created?: readonly Note[]; updated?: readonly { note: Note }[] } | undefined): void {
-    for (const note of writes?.created ?? []) this.notes.push(note);
-    for (const { note } of writes?.updated ?? []) {
-      const index = this.notes.findIndex((stored) => stored.id === note.id);
-      if (index !== -1) this.notes[index] = note;
+  /** Os artefatos vivos de um evento, na ordem das relacoes. */
+  artifactsOf(event: Event): Artifact[] {
+    return event.artifactLinks.flatMap((link) => {
+      const artifact = this.artifacts.find((candidate) => candidate.id === link.artifactId);
+      return artifact ? [artifact] : [];
+    });
+  }
+
+  writeArtifacts(
+    writes:
+      | {
+          created?: readonly Artifact[];
+          updated?: readonly { artifact: Artifact }[];
+          derivations?: readonly { originalId: string; copyId: string }[];
+        }
+      | undefined,
+  ): void {
+    for (const artifact of writes?.created ?? []) this.artifacts.push(artifact);
+    for (const { artifact } of writes?.updated ?? []) {
+      const index = this.artifacts.findIndex((stored) => stored.id === artifact.id);
+      if (index !== -1) this.artifacts[index] = artifact;
     }
+    this.derivations.push(...(writes?.derivations ?? []));
   }
 }

@@ -113,7 +113,7 @@ describe("AgentFilesService (pasta do Hermes)", () => {
 describe("parseFrontmatterTags", () => {
   it("reads tags from metadata, inline lists, block lists and plain text", () => {
     expect(parseFrontmatterTags("---\nname: x\nmetadata:\n  hermes:\n    tags: [DevOps, \"release\"]\n---\n# x")).toEqual(["devops", "release"]);
-    expect(parseFrontmatterTags("---\ntags:\n  - a\n  - b # nota\nname: x\n---\n")).toEqual(["a", "b"]);
+    expect(parseFrontmatterTags("---\ntags:\n  - a\n  - b # extra\nname: x\n---\n")).toEqual(["a", "b"]);
     expect(parseFrontmatterTags("---\ntags: a, b, a\n---\n")).toEqual(["a", "b"]);
   });
 

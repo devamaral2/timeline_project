@@ -1,6 +1,6 @@
 import { BadRequestException } from "@nestjs/common";
 
-/** Valor de query com lista separada por virgula ("todo,scheduled"); vazio vira `undefined`. */
+/** Valor de query com lista separada por virgula ("todo,doing"); vazio vira `undefined`. */
 export function parseEnumList<T extends string>(name: string, raw: string | undefined, allowed: readonly T[]): T[] | undefined {
   if (raw === undefined || raw.trim() === "") return undefined;
   const values = raw.split(",").map((value) => value.trim());
@@ -31,10 +31,4 @@ export function parseInstant(name: string, raw: string | undefined): Date | unde
 export function normalizeSearch(raw: string | undefined): string | undefined {
   const text = raw?.trim().toLowerCase();
   return text ? text : undefined;
-}
-
-export function hasTag(tags: readonly string[], wanted: string | undefined): boolean {
-  if (wanted === undefined) return true;
-  const target = wanted.trim().toLowerCase();
-  return tags.some((tag) => tag.toLowerCase() === target);
 }

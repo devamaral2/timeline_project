@@ -5,7 +5,7 @@ import { InvalidInputError } from "../errors/agent.errors";
 
 /**
  * Skills e agentes do Hermes como arquivos numa pasta compartilhada entre a API e o Hermes (ADR 0005).
- * Os conteudos so existem aqui; o banco guarda notas que apontam para os arquivos. O Hermes edita a
+ * Os conteudos so existem aqui; o banco guarda artefatos que apontam para os arquivos. O Hermes edita a
  * pasta; a API le de tempos em tempos, registra o que mudou e guarda o texto anterior em `.backups/`,
  * para que qualquer edicao possa ser desfeita.
  */
@@ -17,7 +17,7 @@ const BACKUP_ID = /^[\w.-]+\.bak$/;
 
 export type AgentFileKind = "skill" | "agent";
 
-/** O que as notas `skill`/`agent` mostram de um arquivo. Nunca o conteudo. */
+/** O que os artefatos `skill`/`agent` mostram de um arquivo. Nunca o conteudo. */
 export interface AgentFileEntry {
   /** Caminho relativo a pasta, sempre com `/`. */
   path: string;
@@ -66,7 +66,7 @@ function kindOf(path: string): AgentFileKind {
 
 /**
  * So o que e skill ou agente: `SKILL.md` de cada skill e os `.md` de `hermes/agents/`. O resto da pasta de
- * skills (DESCRIPTION.md, referencias, scripts, estado do Hermes) e do Hermes e nao vira nota.
+ * skills (DESCRIPTION.md, referencias, scripts, estado do Hermes) e do Hermes e nao vira artefato.
  */
 function isTracked(path: string): boolean {
   if (path.startsWith(`${HERMES_DIR}/agents/`)) return path.endsWith(".md");
@@ -155,7 +155,7 @@ export class AgentFilesService {
     this.timer = null;
   }
 
-  /** Avisa quando uma leitura da pasta termina (para as notas acompanharem os arquivos). */
+  /** Avisa quando uma leitura da pasta termina (para os artefatos acompanharem os arquivos). */
   onReconciled(listener: (entries: AgentFileEntry[]) => void): void {
     this.listeners.push(listener);
   }

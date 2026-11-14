@@ -1,50 +1,86 @@
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
-import type { EventRepository, NoteRepository } from "../../domain/ports";
-import type { CreateEventInput, CreateNoteInput } from "@repo/contracts";
+import type { ArtifactRepository, EntityBatch, EntityBatchWriter, EventRepository } from "../../domain/ports";
+import type { CreateEventArtifactInput, CreateEventInput } from "@repo/contracts";
 import {
+  ArtifactNotFoundError,
+  ArtifactOwnershipError,
   DEFAULT_EVENT_KIND,
   Event,
   EventValidationError,
-  NoteNotFoundError,
-  NoteOwnershipError,
-  isEventKind,
-  type EventKind,
-  type Note,
-  type NoteLink,
+  HUMAN_KINDS,
+  HUMAN_STATUSES,
+  type Artifact,
+  type ArtifactLink,
+  type HumanEventKind,
+  type HumanEventStatus,
 } from "../../domain";
-import { getMealEventName } from "./services/meal-event-name.service";
+import type { ArtifactBuilder } from "../artifacts/services/artifact-builder.service";
+import { planIncomingRelations, type OriginUpdate } from "./services/event-origins";
 import type { ResolvedEventSchedule } from "./services/event-schedule.service";
-import type { NoteBuilder } from "../notes/services/note-builder.service";
+import { getMealEventName } from "./services/meal-event-name.service";
 
 export const EVENT_TIME_ZONE = "America/Sao_Paulo";
 
-/** O evento montado e as notes novas que nascem com ele — nada gravado ainda. */
+/** O evento montado e o que nasce ou muda com ele. Nada gravado ainda. */
 export interface PreparedEvent {
   event: Event;
-  notes: Note[];
+  /** Os artefatos novos, na ordem em que aparecem no evento. */
+  artifacts: Artifact[];
+  /** De qual original saiu cada copia de alimento. */
+  derivations: { originalId: string; copyId: string }[];
+  /** Os eventos maiores e os bloqueadores, revisados para apontar para este. */
+  origins: OriginUpdate[];
 }
 
 /**
  * O controller ja recusa uma data invalida; aqui so traduzimos o que veio. Nao
  * ha limite de quao longe no passado ou no futuro o evento pode cair.
  */
-function parseInstant(value: string | undefined): Date | undefined {
+export function parseInstant(value: string | undefined): Date | undefined {
   if (value === undefined) return undefined;
   const instant = new Date(value);
   if (Number.isNaN(instant.getTime())) throw new EventValidationError("Invalid date");
   return instant;
 }
 
-/** `derivedNotes: false` nao cria a nota que o tipo do evento implicaria (refeicao): quem cria notas e outro passo. */
+/** `derivedArtifacts: false` nao cria o alimento que um evento de refeicao implicaria: quem cria artefatos e outro passo. */
 export interface PrepareEventOptions {
-  derivedNotes?: boolean;
+  derivedArtifacts?: boolean;
+}
+
+export function isHumanEventKind(value: unknown): value is HumanEventKind {
+  return HUMAN_KINDS.includes(value as HumanEventKind);
+}
+
+export function isHumanEventStatus(value: unknown): value is HumanEventStatus {
+  return HUMAN_STATUSES.includes(value as HumanEventStatus);
+}
+
+/** O tipo do artefato que da a natureza do evento quando ninguem disse qual e. */
+const KIND_BY_ARTIFACT_TYPE: Readonly<Record<string, HumanEventKind>> = {
+  food: "meal",
+  sleep: "sleep",
+  training: "training",
+};
+
+export function toEntityBatch(prepared: PreparedEvent): EntityBatch {
+  return {
+    userId: prepared.event.userId,
+    artifacts: prepared.artifacts.map((entity) => ({ op: "create", entity })),
+    derivations: prepared.derivations,
+    events: [
+      { op: "create", entity: prepared.event },
+      ...prepared.origins.map((origin) => ({ op: "update" as const, entity: origin.event, expectedRevision: origin.expectedRevision })),
+    ],
+  };
 }
 
 export class CreateEventUseCase {
   constructor(
-    private readonly eventRepository: EventRepository,
-    private readonly noteRepository: Pick<NoteRepository, "findByIds">,
-    private readonly noteBuilder: NoteBuilder,
+    private readonly eventRepository: Pick<EventRepository, "findByIds">,
+    private readonly artifactRepository: Pick<ArtifactRepository, "findByIds">,
+    private readonly artifactBuilder: ArtifactBuilder,
+    private readonly batchWriter: EntityBatchWriter,
     private readonly clock: () => Date = () => new Date(),
   ) {}
 
@@ -58,19 +94,19 @@ export class CreateEventUseCase {
     return { eventId: prepared.event.id };
   }
 
-  /** Monta uma note como a criacao de evento montaria: refeicao pendente, treino pelo catalogo. */
-  buildNote(input: CreateNoteInput, actor: AuthenticatedUser, startedAt: Date): Promise<Note> {
-    return this.noteBuilder.fromCreateInput(input, actor.userId, startedAt);
+  /** Grava o que `prepare` montou: os artefatos novos, o evento e os eventos de origem, numa transacao so. */
+  async save(prepared: PreparedEvent): Promise<void> {
+    await this.batchWriter.commit(toEntityBatch(prepared));
   }
 
-  /** Grava o que `prepare` montou: as notes novas e o evento, numa transacao so. */
-  async save({ event, notes }: PreparedEvent): Promise<void> {
-    await this.eventRepository.save(event, { created: notes });
+  /** Monta um artefato como a criacao de evento montaria: alimento pendente, treino pelos exercicios globais. */
+  buildArtifact(input: Exclude<CreateEventArtifactInput, { copyOf: string }>, actor: AuthenticatedUser, at: Date): Promise<Artifact> {
+    return this.artifactBuilder.fromCreateInput(input, actor.userId, at);
   }
 
   /**
-   * Monta o evento sem gravar. A serie usa isto para validar o template e
-   * resolver o template. A refeicao so passa pelo modelo depois da gravacao.
+   * Monta o evento sem gravar. A serie usa isto para validar o template. O
+   * alimento so passa pelo agente depois da gravacao.
    */
   async prepare(
     input: CreateEventInput,
@@ -78,84 +114,110 @@ export class CreateEventUseCase {
     schedule?: ResolvedEventSchedule,
     options: PrepareEventOptions = {},
   ): Promise<PreparedEvent> {
-    const startedAt = schedule?.startedAt ?? parseInstant(input.startedAt) ?? this.clock();
-    const finishedAt = schedule?.finishedAt ?? parseInstant(input.finishedAt);
-    if (input.kind !== undefined && !isEventKind(input.kind)) {
+    if (input.kind !== undefined && !isHumanEventKind(input.kind)) {
       throw new EventValidationError(`Unknown event kind: ${String(input.kind)}`);
     }
-
-    const created = await Promise.all(
-      (input.notes ?? []).map((noteInput) => this.noteBuilder.fromCreateInput(
-        noteInput.type === "meal" && !noteInput.data?.inputText?.trim()
-          ? { ...noteInput, data: { inputText: input.description?.trim() || input.name?.trim() || getMealEventName(startedAt, EVENT_TIME_ZONE) } }
-          : noteInput,
-        actor.userId, startedAt,
-      )),
-    );
-    const existing = await this.assertOwnedNotes(input.noteIds ?? [], actor);
-
-    const kind = input.kind ?? inferKind(created);
-    if (options.derivedNotes !== false && kind === "meal" && ![...created, ...existing].some((note) => note.type === "meal")) {
-      created.push(await this.noteBuilder.fromCreateInput({
-        type: "meal",
-        data: { inputText: input.description?.trim() || input.name?.trim() || getMealEventName(startedAt, EVENT_TIME_ZONE) },
-      }, actor.userId, startedAt));
+    if (input.status !== undefined && !isHumanEventStatus(input.status)) {
+      throw new EventValidationError(`Unknown event status: ${String(input.status)}`);
     }
-    const noteLinks: NoteLink[] = [
-      ...created.map((note) => ({ noteId: note.id, fromRecurrence: false })),
-      ...(input.noteIds ?? []).map((noteId) => ({ noteId, fromRecurrence: false })),
-    ];
+    const now = this.clock();
+    const tracked = input.status !== undefined || input.longRunning === true;
+    // Um evento de referencia sem inicio dito comeca agora; um evento acompanhado pode nao ter data.
+    const startedAt = schedule?.startedAt ?? parseInstant(input.startedAt) ?? (tracked ? undefined : now);
+    const estimatedFinishAt = schedule?.estimatedFinishAt ?? parseInstant(input.estimatedFinishAt);
+    const at = startedAt ?? now;
+    const fallbackFoodText = () => input.description?.trim() || input.name?.trim() || getMealEventName(at, EVENT_TIME_ZONE);
+
+    const created: Artifact[] = [];
+    const derivations: PreparedEvent["derivations"] = [];
+    const links: ArtifactLink[] = [];
+
+    for (const entry of input.artifacts ?? []) {
+      if ("copyOf" in entry) {
+        const original = await this.ownedOrGlobal(entry.copyOf, actor);
+        const copy = original.copyForEvent(actor.userId, entry.quantity);
+        created.push(copy);
+        derivations.push({ originalId: original.id, copyId: copy.id });
+        links.push({ artifactId: copy.id, relation: "uses", fromRecurrence: false });
+        continue;
+      }
+      const artifact = await this.artifactBuilder.fromCreateInput(
+        entry.type === "food" && !entry.data?.inputText?.trim() ? { ...entry, data: { inputText: fallbackFoodText() } } : entry,
+        actor.userId,
+        at,
+      );
+      created.push(artifact);
+      links.push({ artifactId: artifact.id, relation: "creates", fromRecurrence: false });
+    }
+
+    const existing: Artifact[] = [];
+    for (const artifactId of input.artifactIds ?? []) {
+      existing.push(await this.ownedOrGlobal(artifactId, actor));
+      links.push({ artifactId, relation: "uses", fromRecurrence: false });
+    }
+
+    const kind = input.kind ?? inferKind([...created, ...existing]);
+    if (options.derivedArtifacts !== false && kind === "meal" && ![...created, ...existing].some((artifact) => artifact.type === "food")) {
+      const food = await this.artifactBuilder.fromCreateInput({ type: "food", data: { inputText: fallbackFoodText() } }, actor.userId, at);
+      created.push(food);
+      links.push({ artifactId: food.id, relation: "creates", fromRecurrence: false });
+    }
 
     const event = Event.create({
       userId: actor.userId,
-      name: input.name ?? this.deriveName(kind, startedAt, created),
+      kind,
+      status: input.status,
+      priority: input.priority,
+      name: input.name ?? deriveName(kind, at, created),
       description: input.description ?? "",
       startedAt,
-      finishedAt,
-      tags: input.tags ?? [],
-      interruptions: [],
-      kind,
-      noteLinks,
-      missed: input.missed,
-      priority: input.priority,
+      estimatedFinishAt,
+      finishedAt: parseInstant(input.finishedAt),
       notifyOffsetsMinutes: input.notifyOffsetsMinutes,
+      tags: input.tags ?? [],
+      longRunning: input.longRunning,
+      artifactLinks: links,
+      subtaskIds: input.subtaskEventIds,
+      blocksIds: input.blocksEventIds,
     });
-    return { event, notes: created };
+
+    const origins = await planIncomingRelations(
+      event.id,
+      { parentIds: [], blockedByIds: [] },
+      { parentIds: input.parentEventIds ?? [], blockedByIds: input.blockedByEventIds ?? [] },
+      this.eventRepository,
+      actor.userId,
+    );
+    return { event, artifacts: created, derivations, origins };
   }
 
-  /** Notes existentes so entram no evento se forem do mesmo usuario. */
-  private async assertOwnedNotes(noteIds: readonly string[], actor: AuthenticatedUser): Promise<Note[]> {
-    if (noteIds.length === 0) return [];
-    const found = await this.noteRepository.findByIds(noteIds);
-    const byId = new Map(found.map((note) => [note.id, note]));
-    for (const noteId of noteIds) {
-      const note = byId.get(noteId);
-      if (!note) throw new NoteNotFoundError(`Note not found: ${noteId}`);
-      if (note.userId !== actor.userId) throw new NoteOwnershipError();
-    }
-    return found;
-  }
-
-  private deriveName(kind: EventKind, startedAt: Date, notes: readonly Note[]): string {
-    switch (kind) {
-      case "sleep":
-        return "Sono";
-      case "training":
-        return "Treino";
-      case "meal": {
-        const meal = notes.find((note) => note.type === "meal");
-        return meal ? (meal.data as { name: string }).name : getMealEventName(startedAt, EVENT_TIME_ZONE);
-      }
-      default:
-        throw new EventValidationError("Event requires a name");
-    }
+  /** Um artefato que ja existe so entra no evento se for do usuario ou global. */
+  private async ownedOrGlobal(artifactId: string, actor: AuthenticatedUser): Promise<Artifact> {
+    const [artifact] = await this.artifactRepository.findByIds([artifactId]);
+    if (!artifact) throw new ArtifactNotFoundError(`Artifact not found: ${artifactId}`);
+    if (!artifact.isGlobal && artifact.userId !== actor.userId) throw new ArtifactOwnershipError();
+    return artifact;
   }
 }
 
-/** Sem `kind` dito, a primeira note de meal, sleep ou training da a natureza; senao e rotina. */
-function inferKind(notes: readonly Note[]): EventKind {
-  for (const note of notes) {
-    if (isEventKind(note.type) && note.type !== DEFAULT_EVENT_KIND) return note.type;
+function deriveName(kind: HumanEventKind, at: Date, artifacts: readonly Artifact[]): string {
+  switch (kind) {
+    case "sleep":
+      return "Sono";
+    case "training":
+      return "Treino";
+    case "meal":
+      return artifacts.find((artifact) => artifact.type === "food")?.name ?? getMealEventName(at, EVENT_TIME_ZONE);
+    default:
+      throw new EventValidationError("Event requires a name");
   }
-  return DEFAULT_EVENT_KIND;
+}
+
+/** Sem `kind` dito, o primeiro artefato de alimento, sono ou treino (novo ou ja existente) da a natureza; senao e rotina. */
+function inferKind(artifacts: readonly Artifact[]): HumanEventKind {
+  for (const artifact of artifacts) {
+    const kind = KIND_BY_ARTIFACT_TYPE[artifact.type];
+    if (kind) return kind;
+  }
+  return DEFAULT_EVENT_KIND as HumanEventKind;
 }

@@ -121,7 +121,7 @@ test("reads sleep values above 24 as minutes", () => {
 
   expect(input).toEqual({
     kind: "sleep",
-    notes: [{ type: "sleep", data: { trackedSleepTime: 450, score: 80 } }],
+    artifacts: [{ type: "sleep", data: { trackedSleepTime: 450, score: 80 } }],
     tags: [],
   });
 });
@@ -134,7 +134,7 @@ test("clamps the sleep score and drops a missing duration", () => {
 
   expect(input).toEqual({
     kind: "sleep",
-    notes: [{ type: "sleep", data: { trackedSleepTime: undefined, score: 100 } }],
+    artifacts: [{ type: "sleep", data: { trackedSleepTime: undefined, score: 100 } }],
     tags: [],
   });
 });
@@ -152,7 +152,7 @@ test("builds a weightlifting workout with empty sets", () => {
 
   expect(input).toEqual({
     kind: "training",
-    notes: [{ type: "training", data: { workouts: [{ workoutCode: "weightlifting", calories: 300, duration: 50, sets: [] }] } }],
+    artifacts: [{ type: "training", data: { workouts: [{ workoutCode: "weightlifting", calories: 300, duration: 50, sets: [] }] } }],
     tags: [],
   });
 });
@@ -170,7 +170,7 @@ test("builds a running workout with the reported distance", () => {
 
   expect(input).toEqual({
     kind: "training",
-    notes: [
+    artifacts: [
       {
         type: "training",
         data: { workouts: [{ workoutCode: "running", calories: 0, duration: 30, distance: 5, pace: 0 }] },
@@ -193,7 +193,7 @@ test("builds a walking workout with distance and pace", () => {
 
   expect(input).toEqual({
     kind: "training",
-    notes: [
+    artifacts: [
       {
         type: "training",
         data: {
@@ -210,7 +210,7 @@ test("builds a walking workout with distance and pace", () => {
 test("keeps the workout list empty when the phrase carried no numbers", () => {
   const input = toCreateEventInput(aRawCommand({ type: "training" }), "fui pra academia");
 
-  expect(input).toEqual({ kind: "training", notes: [{ type: "training", data: { workouts: [] } }], tags: [] });
+  expect(input).toEqual({ kind: "training", artifacts: [{ type: "training", data: { workouts: [] } }], tags: [] });
 });
 
 test("carries the spoken window through to the schedule", () => {
@@ -237,11 +237,11 @@ test("treats empty clock strings as no window at all", () => {
   });
 });
 
-test("uses the transcript when the model returns no meal text", () => {
+test("uses the transcript when the model returns no food text", () => {
   const input = toCreateEventInput(
     aRawCommand({ type: "food", foodInputText: "" }),
     "comi uma banana",
   );
 
-  expect(input).toEqual({ kind: "meal", notes: [{ type: "meal", data: { inputText: "comi uma banana" } }], tags: [] });
+  expect(input).toEqual({ kind: "meal", artifacts: [{ type: "food", data: { inputText: "comi uma banana" } }], tags: [] });
 });

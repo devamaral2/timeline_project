@@ -9,21 +9,21 @@ test("leaves the event open when the phrase carried no window", () => {
   const schedule = resolveEventSchedule({}, lateNight, TIME_ZONE);
 
   expect(schedule.startedAt).toEqual(lateNight);
-  expect(schedule.finishedAt).toBeUndefined();
+  expect(schedule.estimatedFinishAt).toBeUndefined();
 });
 
 test("closes the event after the spoken duration, crossing midnight", () => {
   const schedule = resolveEventSchedule({ durationMinutes: 360 }, lateNight, TIME_ZONE);
 
   expect(schedule.startedAt).toEqual(lateNight);
-  expect(schedule.finishedAt?.toISOString()).toBe("2026-08-24T08:00:00.000Z");
+  expect(schedule.estimatedFinishAt?.toISOString()).toBe("2026-08-24T08:00:00.000Z");
 });
 
 test("closes the event at the next occurrence of the spoken clock time", () => {
   const schedule = resolveEventSchedule({ endTimeOfDay: "06:00" }, lateNight, TIME_ZONE);
 
   // 06:00 de 24/08 no horario local, ou seja, ja no dia seguinte a fala.
-  expect(schedule.finishedAt?.toISOString()).toBe("2026-08-24T09:00:00.000Z");
+  expect(schedule.estimatedFinishAt?.toISOString()).toBe("2026-08-24T09:00:00.000Z");
 });
 
 test("keeps the end on the same day when it is still ahead", () => {
@@ -31,7 +31,7 @@ test("keeps the end on the same day when it is still ahead", () => {
 
   const schedule = resolveEventSchedule({ endTimeOfDay: "06:00" }, earlyMorning, TIME_ZONE);
 
-  expect(schedule.finishedAt?.toISOString()).toBe("2026-08-24T09:00:00.000Z");
+  expect(schedule.estimatedFinishAt?.toISOString()).toBe("2026-08-24T09:00:00.000Z");
 });
 
 test("prefers an explicit duration over a spoken end time", () => {
@@ -41,7 +41,7 @@ test("prefers an explicit duration over a spoken end time", () => {
     TIME_ZONE,
   );
 
-  expect(schedule.finishedAt?.toISOString()).toBe("2026-08-24T03:00:00.000Z");
+  expect(schedule.estimatedFinishAt?.toISOString()).toBe("2026-08-24T03:00:00.000Z");
 });
 
 test("starts the event in the past when the phrase says so", () => {
@@ -82,7 +82,7 @@ test("measures the duration from the spoken start, not from now", () => {
   );
 
   expect(schedule.startedAt.toISOString()).toBe("2026-08-24T02:00:00.000Z");
-  expect(schedule.finishedAt?.toISOString()).toBe("2026-08-24T09:00:00.000Z");
+  expect(schedule.estimatedFinishAt?.toISOString()).toBe("2026-08-24T09:00:00.000Z");
 });
 
 test("ignores windows longer than a month, in either direction", () => {
@@ -93,7 +93,7 @@ test("ignores windows longer than a month, in either direction", () => {
   );
 
   expect(schedule.startedAt).toEqual(lateNight);
-  expect(schedule.finishedAt).toBeUndefined();
+  expect(schedule.estimatedFinishAt).toBeUndefined();
 });
 
 test("ignores a malformed clock time", () => {
@@ -104,5 +104,5 @@ test("ignores a malformed clock time", () => {
   );
 
   expect(schedule.startedAt).toEqual(lateNight);
-  expect(schedule.finishedAt).toBeUndefined();
+  expect(schedule.estimatedFinishAt).toBeUndefined();
 });

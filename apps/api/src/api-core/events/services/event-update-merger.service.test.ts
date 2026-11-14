@@ -1,237 +1,586 @@
-import { expect, test } from "vitest";
-import { Event, Note, type NoteLink } from "../../../domain";
+import { describe, expect, test } from "vitest";
+import type { UpdateEventInput } from "@repo/contracts";
+import {
+  Artifact,
+  ArtifactNotFoundError,
+  ArtifactOwnershipError,
+  Event,
+  EventNotFoundError,
+  EventOwnershipError,
+  EventValidationError,
+  type FoodData,
+} from "../../../domain";
+import { eventWith, type EventFixture } from "../testing/event-fixtures";
 import { createEventsKit } from "../testing/in-memory-events-kit";
-import { mergeEventUpdate } from "./event-update-merger.service";
+import { mergeEventUpdate, toUpdateBatch } from "./event-update-merger.service";
 
-const workouts = [
-  { id: "01K2R1J5M8S0Y2Z7ABCDFREEWK", workoutCode: "free", workoutName: "Livre", calories: 420, duration: 60 },
-];
+const userId = "auth-user-1";
+const startedAt = new Date("2026-08-17T15:00:00.000Z");
+const zeroTotals = {
+  totalCaloriesKcal: 0,
+  totalProteinGrams: 0,
+  totalCarbohydrateGrams: 0,
+  totalFatGrams: 0,
+  totalFiberGrams: 0,
+};
+const foodData = { description: "arroz branco", items: [], totals: { ...zeroTotals, totalCaloriesKcal: 130 } };
 
-function trainingNote(userId = "auth-user-1") {
-  return Note.create({ userId, type: "training", data: { workouts, caloriesBurned: 420 } });
-}
-
-function trainingEvent(noteLinks: NoteLink[] = []) {
-  return Event.create({
-    id: "01K2R1J5M8S0Y2Z7ABCD123456",
-    userId: "auth-user-1",
-    name: "Treino",
-    description: "",
-    startedAt: new Date("2026-08-16T18:00:00.000Z"),
-    tags: ["old"],
-    interruptions: [],
-    kind: "training",
-    noteLinks,
+function setup(fixtures: EventFixture[], extra: { events?: Event[]; artifacts?: Artifact[] } = {}) {
+  const kit = createEventsKit({
+    events: [...fixtures.map((fixture) => fixture.event), ...(extra.events ?? [])],
+    artifacts: [...fixtures.flatMap((fixture) => fixture.artifacts), ...(extra.artifacts ?? [])],
   });
+  const merge = async (eventId: string, input: Omit<UpdateEventInput, "eventId" | "expectedRevision">) => {
+    const existing = (await kit.eventRepository.findById(eventId)) as Event;
+    return mergeEventUpdate(
+      existing,
+      { eventId, expectedRevision: existing.revision, ...input },
+      { artifactBuilder: kit.artifactBuilder, artifactRepository: kit.artifactRepository, eventRepository: kit.eventRepository },
+    );
+  };
+  return { ...kit, merge };
 }
 
-function depsOf(kit: ReturnType<typeof createEventsKit>) {
-  return { noteBuilder: kit.noteBuilder, noteRepository: kit.noteRepository };
+function meeting(artifacts: Parameters<typeof eventWith>[1] = []): EventFixture {
+  return eventWith({ id: "event-1", userId, name: "Reunião", description: "Semanal", startedAt, tags: ["trabalho"] }, artifacts);
 }
 
-test.each(["change-kind", "remove-notes", "deleted-note"] as const)(
-  "ensures a pending meal note after update: %s",
-  async (scenario) => {
-    const kit = createEventsKit({ mealParsingGateway: {
-      parseMeal: async () => { throw new Error("Must not call provider synchronously"); },
-    } });
-    const existing = trainingEvent().revise({
-      kind: scenario === "change-kind" ? "training" : "meal",
-      noteLinks: scenario === "deleted-note" ? [{ noteId: "deleted-note-id", fromRecurrence: true }] : [],
-    });
-    const merged = await mergeEventUpdate(existing, {
-      eventId: existing.id, expectedRevision: existing.revision, kind: "meal",
-      description: "arroz e feijao", ...(scenario === "remove-notes" ? { notes: [] } : {}),
-    }, depsOf(kit), new Date());
-    expect(merged.event.kind).toBe("meal");
-    expect(merged.event.revision).toBe(existing.revision + 1);
-    expect(merged.notes.created).toHaveLength(1);
-    const note = merged.notes.created?.[0];
-    expect(note?.data).toMatchObject({
-      description: "arroz e feijao", generation: { status: "pending" }, foodItems: [],
-    });
-    expect(merged.event.noteLinks).toContainEqual({ noteId: note?.id, fromRecurrence: false });
-  },
-);
+describe("fields", () => {
+  test("changes what was sent, keeps the rest and bumps the revision", async () => {
+    const { merge } = setup([meeting()]);
 
-test("meal updates preserve an existing owned meal note or explicitly reused note", async () => {
-  const kit = createEventsKit();
-  const note = await kit.noteBuilder.fromCreateInput(
-    { type: "meal", data: { inputText: "salada" } }, "auth-user-1", new Date(),
-  );
-  await kit.noteRepository.save(note);
-  const event = trainingEvent().revise({ kind: "meal", noteLinks: [{ noteId: note.id, fromRecurrence: true }] });
-  for (const notes of [undefined, [{ id: note.id }]]) {
-    const merged = await mergeEventUpdate(event, {
-      eventId: event.id, expectedRevision: event.revision, notes,
-    }, depsOf(kit), new Date());
-    expect(merged.event.noteLinks).toEqual(event.noteLinks);
-    expect(merged.notes.created ?? []).toEqual([]);
-    expect(merged.notes.updated ?? []).toEqual([]);
-  }
+    const { event, artifacts, origins } = await merge("event-1", {
+      name: "Retrospectiva",
+      priority: "high",
+      tags: ["Time"],
+      notifyOffsetsMinutes: [30],
+      status: "doing",
+      startedAt: "2026-08-18T15:00:00.000Z",
+      estimatedFinishAt: "2026-08-18T16:30:00.000Z",
+      finishedAt: "2026-08-18T16:10:00.000Z",
+    });
+
+    expect(event).toMatchObject({
+      id: "event-1",
+      name: "Retrospectiva",
+      description: "Semanal",
+      kind: "routine",
+      priority: "high",
+      tags: ["time"],
+      notifyOffsetsMinutes: [30],
+      status: "doing",
+      revision: 2,
+    });
+    expect(event.startedAt?.toISOString()).toBe("2026-08-18T15:00:00.000Z");
+    expect(event.estimatedFinishAt?.toISOString()).toBe("2026-08-18T16:30:00.000Z");
+    expect(event.finishedAt?.toISOString()).toBe("2026-08-18T16:10:00.000Z");
+    expect(artifacts).toEqual({ created: [], updated: [], derivations: [] });
+    expect(origins).toEqual([]);
+  });
+
+  test("an empty change is still a revision of the event", async () => {
+    const { merge } = setup([meeting([{ type: "text", data: { body: "pauta" } }])]);
+
+    const { event } = await merge("event-1", {});
+
+    expect(event.revision).toBe(2);
+    expect(event.name).toBe("Reunião");
+    expect(event.artifactLinks).toHaveLength(1);
+  });
+
+  test("null clears the status and the dates", async () => {
+    const tracked = eventWith({
+      id: "event-1",
+      userId,
+      name: "Entregar relatório",
+      status: "done",
+      startedAt,
+      estimatedFinishAt: new Date("2026-08-17T16:00:00.000Z"),
+      finishedAt: new Date("2026-08-17T15:50:00.000Z"),
+    });
+    const { merge } = setup([tracked]);
+
+    const dates = await merge("event-1", { startedAt: null, estimatedFinishAt: null, finishedAt: null });
+    const status = await merge("event-1", { status: null });
+
+    expect(dates.event.startedAt).toBeUndefined();
+    expect(dates.event.estimatedFinishAt).toBeUndefined();
+    expect(dates.event.finishedAt).toBeUndefined();
+    expect(dates.event.status).toBe("done");
+    expect(status.event.status).toBeUndefined();
+    expect(status.event.isReference).toBe(true);
+  });
+
+  test("a reference event cannot lose its start", async () => {
+    const { merge } = setup([meeting()]);
+
+    await expect(merge("event-1", { startedAt: null })).rejects.toThrow("A reference event requires startedAt");
+  });
+
+  test("rejects an invalid date, an unknown kind and an unknown status", async () => {
+    const { merge } = setup([meeting()]);
+
+    await expect(merge("event-1", { startedAt: "amanha" })).rejects.toThrow("Invalid date");
+    await expect(merge("event-1", { finishedAt: "x" })).rejects.toThrow(EventValidationError);
+    await expect(merge("event-1", { kind: "step" as never })).rejects.toThrow("Unknown event kind: step");
+    await expect(merge("event-1", { status: "running" as never })).rejects.toThrow("Unknown event status: running");
+  });
+
+  test("replaces the lists of subtasks and blocked events", async () => {
+    const fixture = eventWith({ id: "event-1", userId, name: "Reforma", status: "todo", subtaskIds: ["s1"], blocksIds: ["b1"] });
+    const others = ["s1", "s2", "b1"].map((id) => Event.create({ id, userId, name: id, status: "todo" }));
+    const { merge } = setup([fixture], { events: others });
+
+    const { event, origins } = await merge("event-1", { subtaskEventIds: ["s2"], blocksEventIds: [] });
+
+    expect(event.subtaskIds).toEqual(["s2"]);
+    expect(event.blocksIds).toEqual([]);
+    expect(origins).toEqual([]);
+  });
+
+  test("turns a tracked event into a long-running one", async () => {
+    const fixture = eventWith({ id: "event-1", userId, name: "Reforma", status: "todo" });
+    const { merge } = setup([fixture]);
+
+    expect((await merge("event-1", { longRunning: true })).event.longRunning).toBe(true);
+  });
+
+  test("detaches an occurrence from its series", async () => {
+    const occurrence = { recurrenceId: "rec-1", occurrenceOn: "2026-08-17", detached: false };
+    const { merge } = setup([eventWith({ id: "event-1", userId, name: "Correr", startedAt, occurrence })]);
+
+    expect((await merge("event-1", { description: "na esteira" })).event.occurrence?.detached).toBe(true);
+  });
 });
 
-test("replaces training workouts of a linked note and recomputes what is derived", async () => {
-  const note = trainingNote();
-  const kit = createEventsKit({ notes: [note] });
-  const event = trainingEvent([{ noteId: note.id, fromRecurrence: false }]);
+describe("list of artifacts", () => {
+  const twoNotes = () => meeting([
+    { id: "note-1", type: "text", data: { body: "pauta" } },
+    { id: "note-2", type: "text", data: { body: "ata" } },
+  ]);
 
-  const merged = await mergeEventUpdate(
-    event,
-    {
-      eventId: event.id,
-      expectedRevision: 1,
-      tags: ["new"],
-      notes: [
+  test("absent, the artifacts of the event stay as they are", async () => {
+    const { merge } = setup([twoNotes()]);
+
+    const { event, artifacts } = await merge("event-1", { name: "Outra" });
+
+    expect(event.artifactLinks.map((link) => link.artifactId)).toEqual(["note-1", "note-2"]);
+    expect(artifacts).toEqual({ created: [], updated: [], derivations: [] });
+  });
+
+  test("an entry with only the id keeps the artifact and its relation, without editing it", async () => {
+    const { merge } = setup([twoNotes()]);
+
+    const { event, artifacts } = await merge("event-1", { artifacts: [{ id: "note-2" }, { id: "note-1" }] });
+
+    expect(event.artifactLinks).toEqual([
+      { artifactId: "note-2", relation: "creates", fromRecurrence: false },
+      { artifactId: "note-1", relation: "creates", fromRecurrence: false },
+    ]);
+    expect(artifacts).toEqual({ created: [], updated: [], derivations: [] });
+  });
+
+  test("an artifact left out of the list leaves the event but is not deleted", async () => {
+    const kit = setup([twoNotes()]);
+
+    const merged = await kit.merge("event-1", { artifacts: [{ id: "note-2" }] });
+    await kit.batchWriter.commit(toUpdateBatch(merged, 1));
+
+    expect(merged.event.artifactLinks.map((link) => link.artifactId)).toEqual(["note-2"]);
+    expect(kit.database.artifacts.map((artifact) => artifact.id)).toEqual(["note-1", "note-2"]);
+    expect((await kit.artifactRepository.findById("note-1"))?.revision).toBe(1);
+  });
+
+  test("an empty list removes every artifact from the event", async () => {
+    const { merge } = setup([twoNotes()]);
+
+    expect((await merge("event-1", { artifacts: [] })).event.artifactLinks).toEqual([]);
+  });
+
+  test("an entry with id and data edits the artifact at the revision that was read", async () => {
+    const { merge } = setup([twoNotes()]);
+
+    const { event, artifacts } = await merge("event-1", {
+      artifacts: [{ id: "note-1", type: "text", data: { body: "pauta revisada" }, name: "Pauta", tags: ["Time"] }, { id: "note-2" }],
+    });
+
+    expect(artifacts.created).toEqual([]);
+    expect(artifacts.updated).toHaveLength(1);
+    expect(artifacts.updated[0]?.expectedRevision).toBe(1);
+    expect(artifacts.updated[0]?.artifact).toMatchObject({
+      id: "note-1",
+      name: "Pauta",
+      tags: ["time"],
+      data: { body: "pauta revisada" },
+      revision: 2,
+    });
+    expect(event.artifactLinks.map((link) => link.artifactId)).toEqual(["note-1", "note-2"]);
+  });
+
+  test("an entry with id and only a name or tags edits just that", async () => {
+    const { merge } = setup([twoNotes()]);
+
+    const { artifacts } = await merge("event-1", { artifacts: [{ id: "note-1", name: "Pauta" }, { id: "note-2", tags: ["ata"] }] });
+
+    expect(artifacts.updated.map(({ artifact }) => [artifact.id, artifact.name, artifact.tags, artifact.data])).toEqual([
+      ["note-1", "Pauta", [], { body: "pauta" }],
+      ["note-2", "ata", ["ata"], { body: "ata" }],
+    ]);
+  });
+
+  test("an edited training has its workout names and calories recalculated", async () => {
+    const training = eventWith({ id: "event-1", userId, name: "Treino", startedAt }, [
+      { id: "training-1", type: "training", data: { workouts: [], caloriesBurned: 0 } },
+    ]);
+    const { merge } = setup([training]);
+
+    const { artifacts } = await merge("event-1", {
+      artifacts: [
         {
-          id: note.id,
+          id: "training-1",
           type: "training",
           data: {
-            workouts: [
-              {
-                id: "01K2R1J5M8S0Y2Z7ABCDLIFTWK",
-                workoutCode: "weightlifting",
-                workoutName: "ignored",
-                calories: 300,
-                duration: 45,
-                sets: [{ id: "01K2R1J5M8S0Y2Z7ABCDSET001", exercise: "Squat", repetitions: 10, weight: 80 }],
-              },
-            ],
+            workouts: [{ id: "w1", workoutCode: "free", workoutName: "Qualquer", calories: 200, duration: 30 }],
             caloriesBurned: 9999,
           },
         },
       ],
-    },
-    depsOf(kit),
-    new Date("2026-08-17T12:00:00.000Z"),
-  );
+    });
 
-  expect(merged.event.tags).toEqual(["new"]);
-  expect(merged.event.revision).toBe(2);
-  expect(merged.notes.created).toEqual([]);
-  expect(merged.notes.updated).toHaveLength(1);
+    expect(artifacts.updated[0]?.artifact.data).toEqual({
+      workouts: [{ id: "w1", workoutCode: "free", workoutName: "Livre", calories: 200, duration: 30 }],
+      caloriesBurned: 200,
+    });
+  });
 
-  const [{ note: revised, expectedRevision }] = merged.notes.updated ?? [];
-  expect(expectedRevision).toBe(1);
-  expect(revised.id).toBe(note.id);
-  expect(revised.revision).toBe(2);
-  const data = revised.data as {
-    caloriesBurned: number;
-    workouts: Array<{ workoutCode: string; workoutName: string; calories: number; duration: number; id: string; sets: Array<{ id: string }> }>;
-  };
-  // O nome vem do catalogo e as calorias sao a soma — nao o que o cliente mandou.
-  expect(data.workouts[0]).toMatchObject({ workoutCode: "weightlifting", workoutName: "Musculação", calories: 300, duration: 45 });
-  expect(data.workouts[0].id).toBe("01K2R1J5M8S0Y2Z7ABCDLIFTWK");
-  expect(data.workouts[0].sets[0].id).toBe("01K2R1J5M8S0Y2Z7ABCDSET001");
-  expect(data.caloriesBurned).toBe(300);
+  test("an entry without id creates a new artifact, created by the event unless said otherwise", async () => {
+    const { merge } = setup([twoNotes()]);
+
+    const { event, artifacts } = await merge("event-1", {
+      artifacts: [
+        { id: "note-1" },
+        { type: "text", data: { body: "decisões" }, name: "Decisões" },
+        { type: "sleep", data: { trackedSleepTime: 400, score: 70 }, relation: "updates" },
+      ],
+    });
+
+    expect(artifacts.created.map((artifact) => [artifact.type, artifact.name, artifact.userId, artifact.revision])).toEqual([
+      ["text", "Decisões", userId, 1],
+      ["sleep", "Sono", userId, 1],
+    ]);
+    expect(event.artifactLinks).toEqual([
+      { artifactId: "note-1", relation: "creates", fromRecurrence: false },
+      { artifactId: artifacts.created[0]?.id, relation: "creates", fromRecurrence: false },
+      { artifactId: artifacts.created[1]?.id, relation: "updates", fromRecurrence: false },
+    ]);
+    expect(artifacts.updated).toEqual([]);
+  });
+
+  test("a new artifact requires data, and a new food cannot bring generation metadata", async () => {
+    const { merge } = setup([meeting()]);
+
+    await expect(merge("event-1", { artifacts: [{ name: "vazio" } as never] })).rejects.toThrow(
+      "A new artifact requires data",
+    );
+    await expect(
+      merge("event-1", { artifacts: [{ type: "food", data: { ...foodData, nutritionSource: "model-estimate" } }] }),
+    ).rejects.toThrow("Food generation metadata is server-owned");
+    await expect(
+      merge("event-1", { artifacts: [{ type: "food", data: { ...foodData, generation: { status: "pending" } } }] }),
+    ).rejects.toThrow("Only food creation can schedule the nutrient calculation");
+  });
+
+  test("`copyOf` creates a derived copy with the quantity and never touches the original", async () => {
+    const original = Artifact.create({ id: "food-1", userId, type: "food", name: "Arroz", data: foodData });
+    const { merge } = setup([meeting()], { artifacts: [original] });
+
+    const { event, artifacts } = await merge("event-1", { artifacts: [{ copyOf: "food-1", quantity: "1 prato" }] });
+
+    const [copy] = artifacts.created;
+    expect(copy).toMatchObject({ type: "food", name: "Arroz", derived: true, userId });
+    expect(copy?.id).not.toBe("food-1");
+    expect(copy?.data).toEqual({ ...foodData, quantity: "1 prato" });
+    expect(artifacts.derivations).toEqual([{ originalId: "food-1", copyId: copy?.id }]);
+    expect(artifacts.updated).toEqual([]);
+    expect(event.artifactLinks).toEqual([{ artifactId: copy?.id, relation: "uses", fromRecurrence: false }]);
+    expect(original.revision).toBe(1);
+  });
+
+  test("an artifact of the user, or a global one, that was not in the event enters as used", async () => {
+    const own = Artifact.create({ id: "own-1", userId, data: { body: "checklist" } });
+    const global = Artifact.create({ id: "global-1", type: "food", name: "Banana", data: foodData });
+    const { merge } = setup([twoNotes()], { artifacts: [own, global] });
+
+    const { event, artifacts } = await merge("event-1", {
+      artifacts: [{ id: "note-1" }, { id: "own-1" }, { id: "global-1", relation: "updates" }],
+    });
+
+    expect(event.artifactLinks).toEqual([
+      { artifactId: "note-1", relation: "creates", fromRecurrence: false },
+      { artifactId: "own-1", relation: "uses", fromRecurrence: false },
+      { artifactId: "global-1", relation: "updates", fromRecurrence: false },
+    ]);
+    expect(artifacts).toEqual({ created: [], updated: [], derivations: [] });
+  });
+
+  test("the relation of an artifact already in the event can be changed", async () => {
+    const { merge } = setup([twoNotes()]);
+
+    const { event } = await merge("event-1", { artifacts: [{ id: "note-1", relation: "uses" }] });
+
+    expect(event.artifactLinks).toEqual([{ artifactId: "note-1", relation: "uses", fromRecurrence: false }]);
+  });
+
+  test("a link inherited from the series stays from the series, even when the artifact is edited here", async () => {
+    const note = Artifact.create({ id: "series-note", userId, data: { body: "alongar" } });
+    const own = Artifact.create({ id: "own-note", userId, data: { body: "so hoje" } });
+    const occurrence = Event.create({
+      id: "event-1",
+      userId,
+      name: "Correr",
+      startedAt,
+      artifactLinks: [
+        { artifactId: "series-note", relation: "uses", fromRecurrence: true },
+        { artifactId: "own-note", relation: "creates", fromRecurrence: false },
+      ],
+      occurrence: { recurrenceId: "rec-1", occurrenceOn: "2026-08-17", detached: false },
+    });
+    const { merge } = setup([], { events: [occurrence], artifacts: [note, own] });
+
+    const { event, artifacts } = await merge("event-1", {
+      artifacts: [{ id: "own-note" }, { id: "series-note", type: "text", data: { body: "alongar 10 min" } }],
+    });
+
+    expect(event.artifactLinks).toEqual([
+      { artifactId: "own-note", relation: "creates", fromRecurrence: false },
+      { artifactId: "series-note", relation: "uses", fromRecurrence: true },
+    ]);
+    expect(artifacts.updated[0]?.artifact.data).toEqual({ body: "alongar 10 min" });
+  });
+
+  test("refuses an artifact that does not exist or belongs to someone else, as id or as copyOf", async () => {
+    const theirs = Artifact.create({ id: "theirs", userId: "someone-else", type: "food", name: "Arroz", data: foodData });
+    const { merge } = setup([meeting()], { artifacts: [theirs] });
+
+    await expect(merge("event-1", { artifacts: [{ id: "missing" }] })).rejects.toThrow(ArtifactNotFoundError);
+    await expect(merge("event-1", { artifacts: [{ copyOf: "missing" }] })).rejects.toThrow("Artifact not found: missing");
+    await expect(merge("event-1", { artifacts: [{ id: "theirs" }] })).rejects.toThrow(ArtifactOwnershipError);
+    await expect(merge("event-1", { artifacts: [{ copyOf: "theirs" }] })).rejects.toThrow(ArtifactOwnershipError);
+  });
+
+  test("a global artifact can be kept in the event but not edited through it", async () => {
+    const global = Artifact.create({ id: "global-1", type: "food", name: "Banana", data: foodData });
+    const { merge } = setup([meeting()], { artifacts: [global] });
+
+    await expect(merge("event-1", { artifacts: [{ id: "global-1", name: "Minha banana" }] })).rejects.toThrow(
+      "A global artifact cannot be edited",
+    );
+  });
+
+  test("the same artifact cannot be listed twice", async () => {
+    const { merge } = setup([twoNotes()]);
+
+    await expect(merge("event-1", { artifacts: [{ id: "note-1" }, { id: "note-1" }] })).rejects.toThrow(
+      "Duplicate artifact link: note-1",
+    );
+  });
 });
 
-test("preserves the notes when an update does not mention them", async () => {
-  const note = trainingNote();
-  const kit = createEventsKit({ notes: [note] });
-  const event = trainingEvent([{ noteId: note.id, fromRecurrence: true }]);
+describe("a meal event always has a food", () => {
+  const descriptionOf = (artifact: Artifact | undefined) => (artifact?.data as FoodData | undefined)?.description;
 
-  const merged = await mergeEventUpdate(
-    event,
-    { eventId: event.id, expectedRevision: 1, description: "Imported workout" },
-    depsOf(kit),
-    new Date("2026-08-16T19:00:00.000Z"),
-  );
+  test("an event that becomes a meal gets a pending food from its description", async () => {
+    const { merge } = setup([meeting([{ id: "note-1", type: "text", data: { body: "pauta" } }])]);
 
-  expect(merged.event.description).toBe("Imported workout");
-  expect(merged.event.noteLinks).toEqual(event.noteLinks);
-  expect(merged.notes).toEqual({});
+    const { event, artifacts } = await merge("event-1", { kind: "meal" });
+
+    const [food] = artifacts.created;
+    expect(food).toMatchObject({ type: "food", userId, revision: 1 });
+    expect(food?.data).toMatchObject({ description: "Semanal", items: [], generation: { status: "pending" } });
+    expect(event.kind).toBe("meal");
+    expect(event.artifactLinks).toEqual([
+      { artifactId: "note-1", relation: "creates", fromRecurrence: false },
+      { artifactId: food?.id, relation: "creates", fromRecurrence: false },
+    ]);
+  });
+
+  test("the pending food uses the new description, or the name when there is none", async () => {
+    const plain = eventWith({ id: "event-1", userId, name: "Lanche", startedAt });
+    const { merge } = setup([plain]);
+
+    const described = await merge("event-1", { kind: "meal", description: "  pão com ovo " });
+    const named = await merge("event-1", { kind: "meal", name: "Tapioca" });
+    const bare = await merge("event-1", { kind: "meal" });
+
+    expect(descriptionOf(described.artifacts.created[0])).toBe("pão com ovo");
+    expect(descriptionOf(named.artifacts.created[0])).toBe("Tapioca");
+    expect(descriptionOf(bare.artifacts.created[0])).toBe("Lanche");
+  });
+
+  test("a meal that already has a food gets no other, whatever is edited", async () => {
+    const meal = eventWith({ id: "event-1", userId, name: "Almoço", startedAt }, [{ id: "food-1", type: "food", data: foodData }]);
+    const { merge } = setup([meal]);
+
+    const renamed = await merge("event-1", { name: "Almoço de domingo" });
+    const kept = await merge("event-1", { artifacts: [{ id: "food-1" }] });
+
+    expect(renamed.event.kind).toBe("meal");
+    expect(renamed.artifacts.created).toEqual([]);
+    expect(kept.artifacts.created).toEqual([]);
+    expect(kept.event.artifactLinks.map((link) => link.artifactId)).toEqual(["food-1"]);
+  });
+
+  test("a food that enters through the list counts: new, copied or edited", async () => {
+    const meal = eventWith({ id: "event-1", userId, name: "Almoço", startedAt }, [{ id: "food-1", type: "food", data: foodData }]);
+    const other = Artifact.create({ id: "food-2", userId, type: "food", name: "Feijão", data: foodData });
+    const { merge } = setup([meal], { artifacts: [other] });
+
+    const created = await merge("event-1", { artifacts: [{ type: "food", data: foodData }] });
+    const copied = await merge("event-1", { artifacts: [{ copyOf: "food-2" }] });
+    const edited = await merge("event-1", { artifacts: [{ id: "food-1", type: "food", data: { ...foodData, description: "arroz integral" } }] });
+
+    expect(created.artifacts.created).toHaveLength(1);
+    expect(copied.artifacts.created).toHaveLength(1);
+    expect(edited.artifacts.created).toEqual([]);
+    expect(edited.event.artifactLinks).toHaveLength(1);
+  });
+
+  test("a meal whose foods all left the list gets a new pending one, after what stayed", async () => {
+    const meal = eventWith({ id: "event-1", userId, name: "Almoço", description: "feijoada", startedAt }, [
+      { id: "food-1", type: "food", data: foodData },
+      { id: "note-1", type: "text", data: { body: "estava bom" } },
+    ]);
+    const { merge } = setup([meal]);
+
+    const { event, artifacts } = await merge("event-1", { artifacts: [{ id: "note-1" }] });
+
+    expect(artifacts.created).toHaveLength(1);
+    expect(descriptionOf(artifacts.created[0])).toBe("feijoada");
+    expect(event.artifactLinks.map((link) => link.artifactId)).toEqual(["note-1", artifacts.created[0]?.id]);
+  });
+
+  test("a meal that stops being one gets no food", async () => {
+    const meal = eventWith({ id: "event-1", userId, name: "Almoço", startedAt, kind: "meal" });
+    const { merge } = setup([meal]);
+
+    const { event, artifacts } = await merge("event-1", { kind: "routine" });
+
+    expect(event.kind).toBe("routine");
+    expect(artifacts.created).toEqual([]);
+  });
 });
 
-test("an entry with only an id keeps the note, and the list is the new order", async () => {
-  const first = Note.create({ userId: "auth-user-1", data: { body: "primeira" } });
-  const second = Note.create({ userId: "auth-user-1", data: { body: "segunda" } });
-  const kit = createEventsKit({ notes: [first, second] });
-  const event = trainingEvent([
-    { noteId: first.id, fromRecurrence: true },
-    { noteId: second.id, fromRecurrence: false },
-  ]);
+describe("incoming relations (parents and blockers)", () => {
+  function family() {
+    const child = eventWith({ id: "child", userId, name: "Pintar", status: "todo" });
+    const origin = (id: string, relations: { subtaskIds?: string[]; blocksIds?: string[] } = {}) =>
+      Event.create({ id, userId, name: id, status: "todo", ...relations });
+    return setup([child], {
+      events: [
+        origin("p1", { subtaskIds: ["child"] }),
+        origin("p2", { subtaskIds: ["child", "p3"] }),
+        origin("p3"),
+        origin("b1", { blocksIds: ["child"] }),
+        origin("b2"),
+      ],
+    });
+  }
 
-  const merged = await mergeEventUpdate(
-    event,
-    { eventId: event.id, expectedRevision: 1, notes: [{ id: second.id }, { id: first.id }] },
-    depsOf(kit),
-    new Date(),
-  );
+  test("absent, no origin event is touched", async () => {
+    const { merge } = family();
 
-  expect(merged.event.noteLinks).toEqual([
-    { noteId: second.id, fromRecurrence: false },
-    { noteId: first.id, fromRecurrence: true },
-  ]);
-  // So ordenar nao edita note nenhuma.
-  expect(merged.notes.updated).toEqual([]);
-  expect(merged.notes.created).toEqual([]);
+    const { event, origins } = await merge("child", { name: "Pintar a sala" });
+
+    expect(origins).toEqual([]);
+    expect(event.parentIds).toEqual(["p1", "p2"]);
+    expect(event.blockedByIds).toEqual(["b1"]);
+  });
+
+  test("sending the same lists touches no origin event", async () => {
+    const { merge } = family();
+
+    const { origins } = await merge("child", { parentEventIds: ["p2", "p1"], blockedByEventIds: ["b1"] });
+
+    expect(origins).toEqual([]);
+  });
+
+  test("edits only the origins that gained or lost the event", async () => {
+    const { merge } = family();
+
+    const { origins } = await merge("child", { parentEventIds: ["p2", "p3"], blockedByEventIds: ["b2"] });
+
+    const byId = new Map(origins.map((origin) => [origin.event.id, origin]));
+    expect([...byId.keys()].sort()).toEqual(["b1", "b2", "p1", "p3"]);
+    expect(byId.get("p3")?.event.subtaskIds).toEqual(["child"]);
+    expect(byId.get("p1")?.event.subtaskIds).toEqual([]);
+    expect(byId.get("b2")?.event.blocksIds).toEqual(["child"]);
+    expect(byId.get("b1")?.event.blocksIds).toEqual([]);
+    for (const origin of origins) {
+      expect(origin.expectedRevision).toBe(1);
+      expect(origin.event.revision).toBe(2);
+    }
+  });
+
+  test("an empty list removes the event from every origin, keeping their other relations", async () => {
+    const { merge } = family();
+
+    const { origins } = await merge("child", { parentEventIds: [] });
+
+    expect(origins.map((origin) => [origin.event.id, origin.event.subtaskIds])).toEqual([
+      ["p1", []],
+      ["p2", ["p3"]],
+    ]);
+  });
+
+  test("the edited event itself only reads the relations that arrive at it", async () => {
+    const kit = family();
+
+    const merged = await kit.merge("child", { parentEventIds: ["p3"], blockedByEventIds: [] });
+    await kit.batchWriter.commit(toUpdateBatch(merged, 1));
+
+    const child = await kit.eventRepository.findById("child");
+    expect(child?.parentIds).toEqual(["p3"]);
+    expect(child?.blockedByIds).toEqual([]);
+    expect(child?.revision).toBe(2);
+    expect((await kit.eventRepository.findById("p2"))?.revision).toBe(2);
+    expect((await kit.eventRepository.findById("b2"))?.revision).toBe(1);
+  });
+
+  test("refuses an origin that does not exist, belongs to someone else or is the event itself", async () => {
+    const child = eventWith({ id: "child", userId, name: "Pintar", status: "todo" });
+    const theirs = Event.create({ id: "theirs", userId: "someone-else", name: "Deles", status: "todo" });
+    const { merge } = setup([child], { events: [theirs] });
+
+    await expect(merge("child", { parentEventIds: ["missing"] })).rejects.toThrow(EventNotFoundError);
+    await expect(merge("child", { blockedByEventIds: ["theirs"] })).rejects.toThrow(EventOwnershipError);
+    await expect(merge("child", { parentEventIds: ["child"] })).rejects.toThrow("An event cannot be related to itself");
+  });
 });
 
-test("a note left out of the list stops appearing but is not deleted", async () => {
-  const note = Note.create({ userId: "auth-user-1", data: { body: "sai da lista" } });
-  const kit = createEventsKit({ notes: [note] });
-  const event = trainingEvent([{ noteId: note.id, fromRecurrence: false }]);
+describe("toUpdateBatch", () => {
+  test("carries the event at the expected revision, the artifacts and the origins", async () => {
+    const original = Artifact.create({ id: "food-1", userId, type: "food", name: "Arroz", data: foodData });
+    const parent = Event.create({ id: "parent", userId, name: "Projeto", status: "todo" });
+    const kit = setup([meeting([{ id: "note-1", type: "text", data: { body: "pauta" } }])], {
+      events: [parent],
+      artifacts: [original],
+    });
+    const merged = await kit.merge("event-1", {
+      artifacts: [{ id: "note-1", name: "Pauta" }, { copyOf: "food-1" }],
+      parentEventIds: ["parent"],
+    });
 
-  const merged = await mergeEventUpdate(
-    event,
-    { eventId: event.id, expectedRevision: 1, notes: [] },
-    depsOf(kit),
-    new Date(),
-  );
+    const batch = toUpdateBatch(merged, 1);
 
-  expect(merged.event.noteLinks).toEqual([]);
-  expect(merged.notes).toEqual({ created: [], updated: [] });
-  expect(kit.database.notes).toContain(note);
-});
-
-test("an entry without id creates a new note with the full data", async () => {
-  const kit = createEventsKit();
-  const event = trainingEvent();
-
-  const merged = await mergeEventUpdate(
-    event,
-    {
-      eventId: event.id,
-      expectedRevision: 1,
-      notes: [{ type: "sleep", data: { trackedSleepTime: 400, score: 70 }, name: "Noite" }],
-    },
-    depsOf(kit),
-    new Date(),
-  );
-
-  const [created] = merged.notes.created ?? [];
-  expect(created).toMatchObject({ type: "sleep", name: "Noite", userId: "auth-user-1", data: { trackedSleepTime: 400, score: 70 } });
-  expect(merged.event.noteLinks).toEqual([{ noteId: created.id, fromRecurrence: false }]);
-});
-
-test("can link an existing note of the same user, and refuses another user's note", async () => {
-  const mine = Note.create({ userId: "auth-user-1", data: { body: "minha" } });
-  const theirs = Note.create({ userId: "auth-user-2", data: { body: "dele" } });
-  const kit = createEventsKit({ notes: [mine, theirs] });
-  const event = trainingEvent();
-
-  const linked = await mergeEventUpdate(
-    event,
-    { eventId: event.id, expectedRevision: 1, notes: [{ id: mine.id }] },
-    depsOf(kit),
-    new Date(),
-  );
-  expect(linked.event.noteLinks).toEqual([{ noteId: mine.id, fromRecurrence: false }]);
-
-  await expect(
-    mergeEventUpdate(event, { eventId: event.id, expectedRevision: 1, notes: [{ id: theirs.id }] }, depsOf(kit), new Date()),
-  ).rejects.toThrow("Only the note owner can modify it");
-  await expect(
-    mergeEventUpdate(event, { eventId: event.id, expectedRevision: 1, notes: [{ id: "01HZZZZZZZZZZZZZZZZZZZZZZZ" }] }, depsOf(kit), new Date()),
-  ).rejects.toThrow("Note not found");
-});
-
-test("the kind can change on update", async () => {
-  const kit = createEventsKit();
-  const event = trainingEvent();
-
-  const merged = await mergeEventUpdate(event, { eventId: event.id, expectedRevision: 1, kind: "routine" }, depsOf(kit), new Date());
-
-  expect(merged.event.kind).toBe("routine");
+    expect(batch.userId).toBe(userId);
+    expect(batch.artifacts).toEqual([
+      { op: "create", entity: merged.artifacts.created[0] },
+      { op: "update", entity: merged.artifacts.updated[0]?.artifact, expectedRevision: 1 },
+    ]);
+    expect(batch.derivations).toEqual([{ originalId: "food-1", copyId: merged.artifacts.created[0]?.id }]);
+    expect(batch.events).toEqual([
+      { op: "update", entity: merged.event, expectedRevision: 1 },
+      { op: "update", entity: merged.origins[0]?.event, expectedRevision: 1 },
+    ]);
+  });
 });

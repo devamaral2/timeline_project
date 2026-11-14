@@ -3,7 +3,6 @@ import { getServerEnv } from "../../../config/env";
 import { AgentRunCancelledError, FastStageError, LlmUnavailableError } from "../errors/agent.errors";
 
 export interface StructuredCompletionInput {
-  stage: "planner" | "specialist" | "process";
   system: string;
   user: string;
   schemaName: string;
@@ -13,12 +12,26 @@ export interface StructuredCompletionInput {
   timeoutMs: number;
   /** Teto da primeira tentativa; o que sobrar do orcamento fica para a segunda. Padrao: 60% do orcamento. */
   attemptMs?: number;
+  /**
+   * Esforco de raciocinio pedido ao modelo. Sem valor, o raciocinio fica desligado: custa 1-3 s por chamada.
+   * Com valor, o texto do raciocinio volta em `reasoning` quando o modelo o entrega.
+   */
+  reasoning?: ReasoningEffort;
   signal?: AbortSignal;
+}
+
+export type ReasoningEffort = "low" | "medium" | "high";
+
+export interface StructuredCompletionResult {
+  value: unknown;
+  modelName: string;
+  /** O que o modelo pensou antes de responder. Ausente quando nao foi pedido ou o modelo nao o expoe. */
+  reasoning?: string;
 }
 
 /** Uma chamada ao modelo com saida estruturada e sem ferramentas: o oposto do loop do agente. */
 export interface StructuredCompletionGateway {
-  complete(input: StructuredCompletionInput): Promise<{ value: unknown; modelName: string }>;
+  complete(input: StructuredCompletionInput): Promise<StructuredCompletionResult>;
 }
 
 /** JSON Schema de um schema Zod, sem o `$schema` que alguns provedores recusam. */
@@ -33,8 +46,25 @@ const FIRST_ATTEMPT_SHARE = 0.6;
 /** Menos que isto nao da para uma segunda chamada: falhar logo e melhor que esperar. */
 const MIN_RETRY_MS = 500;
 
+interface CompletionMessage {
+  content?: string;
+  reasoning?: string | null;
+  /** Blocos do raciocinio: texto, resumo (modelos que nao entregam o bruto) ou cifrado, que nao se le. */
+  reasoning_details?: Array<{ type?: string; text?: string | null; summary?: string | null }> | null;
+}
+
 interface CompletionPayload {
-  choices?: Array<{ message?: { content?: string } }>;
+  choices?: Array<{ message?: CompletionMessage }>;
+}
+
+/** O raciocinio como texto: o campo pronto ou, na falta dele, os blocos legiveis. */
+function reasoningOf(message: CompletionMessage | undefined): string | undefined {
+  const whole = typeof message?.reasoning === "string" ? message.reasoning.trim() : "";
+  if (whole) return whole;
+  const parts = (Array.isArray(message?.reasoning_details) ? message.reasoning_details : [])
+    .map((detail) => (typeof detail?.text === "string" ? detail.text : typeof detail?.summary === "string" ? detail.summary : "").trim())
+    .filter(Boolean);
+  return parts.length > 0 ? parts.join("\n\n") : undefined;
 }
 
 export class OpenRouterStructuredCompletionGateway implements StructuredCompletionGateway {
@@ -45,7 +75,7 @@ export class OpenRouterStructuredCompletionGateway implements StructuredCompleti
     private readonly minRetryMs = MIN_RETRY_MS,
   ) {}
 
-  async complete(input: StructuredCompletionInput): Promise<{ value: unknown; modelName: string }> {
+  async complete(input: StructuredCompletionInput): Promise<StructuredCompletionResult> {
     if (!this.apiKey) throw new LlmUnavailableError("Missing OPENROUTER_API_KEY");
     if (!this.modelName) throw new LlmUnavailableError("Missing OPENROUTER_MODEL");
 
@@ -63,14 +93,14 @@ export class OpenRouterStructuredCompletionGateway implements StructuredCompleti
   }
 
   private async attempt(input: StructuredCompletionInput, timeoutMs: number): Promise<
-    | { ok: true; result: { value: unknown; modelName: string } }
+    | { ok: true; result: StructuredCompletionResult }
     | { ok: false; reason: "timeout" | "provider" | "invalid"; error: FastStageError }
   > {
     const modelName = this.modelName as string;
     const timeout = AbortSignal.timeout(timeoutMs);
     const signal = input.signal ? AbortSignal.any([input.signal, timeout]) : timeout;
     const failure = (reason: "timeout" | "provider" | "invalid", status?: number) =>
-      ({ ok: false as const, reason, error: new FastStageError(input.stage, reason, status) });
+      ({ ok: false as const, reason, error: new FastStageError(reason, status) });
 
     let response: Response;
     try {
@@ -80,8 +110,9 @@ export class OpenRouterStructuredCompletionGateway implements StructuredCompleti
         body: JSON.stringify({
           model: modelName,
           temperature: 0,
-          // Extracao curta: o raciocinio do modelo custa 1-3 s por chamada e nao melhora o resultado.
-          reasoning: { enabled: false },
+          // Extracao curta: o raciocinio do modelo custa 1-3 s por chamada e nao melhora o resultado. So liga
+          // quando quem chama o pede, para conferir o que o modelo pensou.
+          reasoning: input.reasoning ? { effort: input.reasoning } : { enabled: false },
           // A cauda de latencia do provedor pesa mais que o preco numa chamada de ~1 s.
           provider: { sort: "latency" },
           messages: [
@@ -105,9 +136,10 @@ export class OpenRouterStructuredCompletionGateway implements StructuredCompleti
 
     try {
       const payload = (await response.json()) as CompletionPayload;
-      const content = payload.choices?.[0]?.message?.content;
-      if (!content) throw new Error("empty content");
-      return { ok: true, result: { value: JSON.parse(content), modelName } };
+      const message = payload.choices?.[0]?.message;
+      if (!message?.content) throw new Error("empty content");
+      const reasoning = input.reasoning ? reasoningOf(message) : undefined;
+      return { ok: true, result: { value: JSON.parse(message.content), modelName, ...(reasoning ? { reasoning } : {}) } };
     } catch {
       if (input.signal?.aborted) throw new AgentRunCancelledError();
       return failure(timeout.aborted ? "timeout" : "invalid");

@@ -19,7 +19,7 @@ export interface ParsedEventSchedule {
 
 export interface ResolvedEventSchedule {
   startedAt: Date;
-  finishedAt?: Date;
+  estimatedFinishAt?: Date;
 }
 
 interface WallClock {
@@ -40,11 +40,11 @@ export function resolveEventSchedule(
   timeZone: string,
 ): ResolvedEventSchedule {
   const startedAt = resolveStart(schedule, now, timeZone);
-  const finishedAt = resolveFinish(schedule, startedAt, timeZone);
+  const estimatedFinishAt = resolveFinish(schedule, startedAt, timeZone);
 
   // Uma janela invertida faria a entidade recusar o evento em toda leitura: melhor deixar aberto.
-  if (finishedAt && finishedAt < startedAt) return { startedAt };
-  return { startedAt, finishedAt };
+  if (estimatedFinishAt && estimatedFinishAt < startedAt) return { startedAt };
+  return { startedAt, estimatedFinishAt };
 }
 
 function resolveStart(schedule: ParsedEventSchedule, now: Date, timeZone: string): Date {

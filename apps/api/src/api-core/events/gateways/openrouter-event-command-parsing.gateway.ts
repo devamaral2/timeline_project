@@ -181,13 +181,13 @@ export function toCreateEventInput(
     case "food":
       return {
         kind: "meal",
-        notes: [{ type: "meal", data: { inputText: raw.foodInputText?.trim() || transcript.trim() } }],
+        artifacts: [{ type: "food", data: { inputText: raw.foodInputText?.trim() || transcript.trim() } }],
         tags: [],
       };
     case "sleep":
       return {
         kind: "sleep",
-        notes: [
+        artifacts: [
           {
             type: "sleep",
             data: {
@@ -201,7 +201,7 @@ export function toCreateEventInput(
     case "training":
       return {
         kind: "training",
-        notes: [{ type: "training", data: { workouts: toWorkouts(raw) } }],
+        artifacts: [{ type: "training", data: { workouts: toWorkouts(raw) } }],
         tags: [],
       };
     default:
@@ -227,7 +227,7 @@ export function toEventSchedule(raw: Partial<RawEventCommand>): ParsedEventSched
 }
 
 /**
- * O item de sono guarda trackedSleepTime em MINUTOS. Modelos as vezes respondem
+ * O artefato de sono guarda trackedSleepTime em MINUTOS. Modelos as vezes respondem
  * ja em minutos apesar da instrucao pedir horas decimais, entao qualquer valor
  * acima de 24 e tratado como minutos antes da conversao final.
  */
