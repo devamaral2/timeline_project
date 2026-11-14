@@ -4,14 +4,14 @@
 
 **Blocked by:** 15 (Lista de tarefas lê a API nova, em seis grupos)
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Leia antes:** o [README](README.md) desta pasta. Spec: histórias 9 a 11, “Lista de tarefas”. TDD: “O que o cartão das listas lê”. Canvas: quadro Tarefas.
 
-- [ ] Se vierem várias ocorrências em aberto da mesma série, a lista mostra só a mais próxima, com a regra no lugar do horário.
-- [ ] A fração de subtarefas (“1/3”) é calculada com os eventos da lista que apontam para o evento como pai.
-- [ ] Um evento sem subtarefas não mostra fração.
-- [ ] Um evento em espera com bloqueios mostra “Espera por N evento(s)”.
-- [ ] O teste de tela cobre os três casos.
-- [ ] A linha desta tela em `docs/mobile-parity.md` foi atualizada, com o Android marcado como em progresso.
-- [ ] Os testes novos passam, e `pnpm run test:unit` e `pnpm run typecheck` continuam verdes.
+- [x] Se vierem várias ocorrências em aberto da mesma série, a lista mostra só a mais próxima, com a regra no lugar do horário.
+- [x] A fração de subtarefas (“1/3”) é calculada com os eventos da lista que apontam para o evento como pai.
+- [x] Um evento sem subtarefas não mostra fração.
+- [x] Um evento em espera com bloqueios mostra “Espera por N evento(s)”.
+- [x] O teste de tela cobre os três casos.
+- [x] A linha desta tela em `docs/mobile-parity.md` foi atualizada, com o Android marcado como em progresso.
+- [x] Os testes novos passam, e `pnpm run test:unit` e `pnpm run typecheck` continuam verdes.

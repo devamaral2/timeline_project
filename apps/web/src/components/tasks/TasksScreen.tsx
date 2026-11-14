@@ -8,7 +8,13 @@ import { ListSkeleton } from "@/components/ui/list-skeleton";
 import page from "@/components/ui/page.module.css";
 import { listTrackedEvents } from "@/lib/api/events";
 import { useNow } from "@/lib/events/use-now";
-import { groupTrackedEvents, type TaskGroupKey } from "@/lib/events/task-groups";
+import {
+  groupTrackedEvents,
+  oneRowPerSeries,
+  showsSeriesRule,
+  subtaskProgress,
+  type TaskGroupKey,
+} from "@/lib/events/task-groups";
 import { TaskEditorDialog } from "./TaskEditorDialog";
 import styles from "./tasks.module.css";
 
@@ -51,7 +57,9 @@ export function TasksScreen({ userId }: { userId: string }) {
     setReloadKey((key) => key + 1);
   }, []);
 
-  const groups = useMemo(() => groupTrackedEvents(cards ?? []), [cards]);
+  // Uma série aparece uma vez; a fração de subtarefas conta só as linhas da lista.
+  const rows = useMemo(() => oneRowPerSeries(cards ?? []), [cards]);
+  const groups = useMemo(() => groupTrackedEvents(rows), [rows]);
   const open = groups
     .filter((group) => !group.collapsedByDefault)
     .reduce((total, group) => total + group.cards.length, 0);
@@ -95,7 +103,14 @@ export function TasksScreen({ userId }: { userId: string }) {
                   {isOpen ? (
                     <ul className={styles.list}>
                       {group.cards.map((card) => (
-                        <EventRow key={card.id} card={card} userId={userId} now={now} />
+                        <EventRow
+                          key={card.id}
+                          card={card}
+                          userId={userId}
+                          now={now}
+                          ruleInPlaceOfTime={showsSeriesRule(card)}
+                          subtasks={subtaskProgress(rows, card.id)}
+                        />
                       ))}
                     </ul>
                   ) : null}

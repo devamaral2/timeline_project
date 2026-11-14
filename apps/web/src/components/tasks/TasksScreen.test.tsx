@@ -126,3 +126,46 @@ test("convida a criar a primeira tarefa quando não há nenhum evento com status
   expect(await screen.findByRole("heading", { name: "Nenhuma tarefa por aqui" })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Nova tarefa" })).toBeInTheDocument();
 });
+
+const serieRule = { frequency: "daily" as const, interval: 1, timeOfDay: "18:00", timeZone: "America/Sao_Paulo", startsOn: "2026-09-01" };
+
+test("uma série aparece uma vez, pela ocorrência em aberto mais próxima, com a regra no lugar do horário", async () => {
+  serve([
+    eventFixture({ id: "dia-14", name: "Pagar fatura", status: "todo", startedAt: "2026-09-14T18:00:00-03:00", recurrence: { id: "serie-1", occurrenceOn: "2026-09-14", detached: false, rule: serieRule } }),
+    eventFixture({ id: "dia-15", name: "Pagar fatura", status: "todo", startedAt: "2026-09-15T18:00:00-03:00", recurrence: { id: "serie-1", occurrenceOn: "2026-09-15", detached: false, rule: serieRule } }),
+  ]);
+  render(<TasksScreen userId="user-1" />);
+
+  const links = await screen.findAllByRole("link", { name: /Pagar fatura/ });
+  expect(links).toHaveLength(1);
+  expect(links[0]).toHaveAttribute("href", "/user-1/eventos/dia-14");
+  expect(within(screen.getByRole("region", { name: /A fazer/ })).getByText("Todo dia, 18:00")).toBeInTheDocument();
+});
+
+test("um evento com subtarefas mostra quantas já foram feitas; sem subtarefas não mostra fração", async () => {
+  serve([
+    eventFixture({ id: "proposta", name: "Revisar proposta", status: "doing" }),
+    eventFixture({ id: "ler", name: "Ler a proposta", status: "done", parentEventIds: ["proposta"] }),
+    eventFixture({ id: "rascunho", name: "Escrever rascunho", status: "todo", parentEventIds: ["proposta"] }),
+    eventFixture({ id: "enviar", name: "Enviar proposta", status: "todo", parentEventIds: ["proposta"] }),
+    eventFixture({ id: "luz", name: "Pagar conta de luz", status: "todo" }),
+  ]);
+  render(<TasksScreen userId="user-1" />);
+
+  const proposta = (await screen.findByRole("link", { name: /Revisar proposta/ })).closest("li") as HTMLElement;
+  expect(within(proposta).getByText("1/3")).toBeInTheDocument();
+  expect(within(proposta).getByText("1 de 3 partes feitas")).toBeInTheDocument();
+
+  const luz = screen.getByRole("link", { name: /Pagar conta de luz/ }).closest("li") as HTMLElement;
+  expect(within(luz).queryByText(/\d\/\d/)).not.toBeInTheDocument();
+});
+
+test("um evento em espera com bloqueios diz por quantos eventos espera", async () => {
+  serve([
+    eventFixture({ id: "pneu", name: "Trocar o pneu", status: "inHold", blockedByEventIds: ["orcamento", "agenda"] }),
+  ]);
+  render(<TasksScreen userId="user-1" />);
+
+  const pneu = (await screen.findByRole("link", { name: /Trocar o pneu/ })).closest("li") as HTMLElement;
+  expect(within(pneu).getByText("Espera por 2 eventos")).toBeInTheDocument();
+});
