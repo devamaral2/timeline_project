@@ -1,33 +1,32 @@
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import type { TaskSummaryDto } from "@/lib/api/contracts";
-import { summaryTask } from "./task-fixtures";
+import type { EventDto } from "@repo/contracts";
+import { createFakeApi } from "@/test/fake-api";
+import { eventFixture, eventsArea } from "@/test/fake-api/events";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
-
-const authedFetch = vi.fn();
-vi.mock("@/lib/api/authed-fetch", () => ({ authedFetch: (...args: unknown[]) => authedFetch(...args) }));
 vi.mock("@/components/events/new-event-forms/TagInput", () => ({ TagInput: () => null }));
+
+const net = vi.hoisted(() => ({ authedFetch: vi.fn() }));
+vi.mock("@/lib/api/authed-fetch", async (original) => ({
+  ...(await original<typeof import("@/lib/api/authed-fetch")>()),
+  authedFetch: net.authedFetch,
+}));
 
 const { TasksScreen } = await import("./TasksScreen");
 
-const tasks: TaskSummaryDto[] = [
-  summaryTask({ id: "luz", name: "Pagar conta de luz", priority: "urgent", tags: ["casa"], startedAt: "2026-09-13T00:00:00-03:00" }),
-  summaryTask({ id: "dentista", name: "Marcar consulta no dentista", tags: ["saúde"], startedAt: "2026-09-17T00:00:00-03:00" }),
-  summaryTask({ id: "apresentacao", name: "Preparar apresentação", priority: "high", dependsOnTaskIds: ["proposta"], startedAt: "2026-09-18T00:00:00-03:00" }),
-  summaryTask({ id: "proposta", name: "Revisar proposta", status: "scheduled", startedAt: "2026-09-14T09:00:00-03:00" }),
-  summaryTask({ id: "sub", name: "Ler a proposta", parentTaskId: "proposta", status: "done" }),
-  summaryTask({ id: "fotos", name: "Organizar fotos da viagem", status: "toDefine", priority: "low" }),
-  summaryTask({ id: "pneu", name: "Trocar o pneu", status: "inHold" }),
-  summaryTask({ id: "feita", name: "Enviar relatório", status: "done" }),
-  summaryTask({ id: "cancelada", name: "Renovar assinatura", status: "cancel" }),
-];
+/** Liga a tela à API falsa com estes eventos e devolve a API, para conferir a rede. */
+function serve(events: EventDto[]) {
+  const api = createFakeApi({ areas: [eventsArea], seed: { events } });
+  net.authedFetch.mockImplementation(api.authedFetch);
+  return api;
+}
 
 beforeEach(() => {
   vi.useFakeTimers({ shouldAdvanceTime: true });
   vi.setSystemTime(new Date("2026-09-14T10:00:00-03:00"));
-  authedFetch.mockReset();
+  net.authedFetch.mockReset();
   push.mockReset();
 });
 
@@ -35,148 +34,95 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-test("agrupa por status e deixa Concluídas e Canceladas recolhidas", async () => {
-  authedFetch.mockResolvedValue(tasks);
+const events: EventDto[] = [
+  eventFixture({ id: "luz", name: "Pagar conta de luz", status: "todo", startedAt: "2026-09-13T00:00:00-03:00", tags: ["casa"] }),
+  eventFixture({ id: "pesquisa", name: "Pesquisar voos", actor: "agent", kind: "request", status: "running" }),
+  eventFixture({ id: "pneu", name: "Trocar o pneu", status: "inHold" }),
+  eventFixture({ id: "fotos", name: "Organizar fotos da viagem", status: "toDefine" }),
+  eventFixture({ id: "relatorio", name: "Enviar relatório", status: "done" }),
+  eventFixture({ id: "assinatura", name: "Renovar assinatura", status: "cancel" }),
+];
+
+test("agrupa pessoa e agente nos grupos do canvas, com a contagem e a linha de cada evento", async () => {
+  serve(events);
   render(<TasksScreen userId="user-1" />);
 
-  await screen.findByText("Pagar conta de luz");
+  await screen.findByRole("link", { name: /Pagar conta de luz/ });
+  expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("4 tarefas abertas");
   expect(screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent)).toEqual([
-    "A fazer3",
-    "Agendadas1",
-    "A definir1",
+    "Em curso1",
+    "A fazer1",
+    "Sem data1",
     "Em espera1",
-    "Concluídas1",
-    "Canceladas1",
+    "Feitas1",
+    "Encerradas1",
   ]);
+
+  const doing = screen.getByRole("region", { name: /Em curso/ });
+  const agent = within(doing).getByRole("link", { name: /Pesquisar voos/ }).closest("li") as HTMLElement;
+  expect(agent).toHaveAttribute("data-actor", "agent");
 
   const todo = screen.getByRole("region", { name: /A fazer/ });
-  expect(within(todo).getByRole("link", { name: "Pagar conta de luz" })).toHaveAttribute("href", "/user-1/tarefas/luz");
-  expect(within(todo).getAllByText("Venceu ontem").length).toBeGreaterThan(0);
+  const luz = within(todo).getByRole("link", { name: /Pagar conta de luz/ });
+  expect(luz).toHaveAttribute("href", "/user-1/eventos/luz");
+  expect(within(todo).getByText("Era ontem")).toBeInTheDocument();
+  expect(within(todo).getByText("#casa")).toBeInTheDocument();
 
-  // A subtarefa vive dentro da tarefa: aparece como 1/1 no pai, nao como linha.
-  expect(screen.queryByRole("link", { name: "Ler a proposta" })).not.toBeInTheDocument();
-  expect(screen.getByRole("img", { name: "1 de 1 subtarefas feitas" })).toBeInTheDocument();
-  expect(screen.getByText("Aguarda 1 tarefa")).toBeInTheDocument();
+  expect(within(screen.getByRole("region", { name: /Sem data/ })).getByRole("link", { name: /Organizar fotos da viagem/ })).toBeInTheDocument();
+  expect(within(screen.getByRole("region", { name: /Em espera/ })).getByRole("link", { name: /Trocar o pneu/ })).toBeInTheDocument();
+});
 
-  expect(screen.queryByRole("link", { name: "Enviar relatório" })).not.toBeInTheDocument();
-  const closed = screen.getByRole("button", { name: /Concluídas/ });
+test("Feitas e Encerradas vêm recolhidas e abrem ao toque", async () => {
+  serve(events);
+  render(<TasksScreen userId="user-1" />);
+  await screen.findByRole("link", { name: /Pagar conta de luz/ });
+
+  const closed = screen.getByRole("button", { name: /Feitas/ });
   expect(closed).toHaveAttribute("aria-expanded", "false");
+  expect(screen.queryByRole("link", { name: /Enviar relatório/ })).not.toBeInTheDocument();
+
   fireEvent.click(closed);
   expect(closed).toHaveAttribute("aria-expanded", "true");
-  expect(screen.getByRole("link", { name: "Enviar relatório" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /Enviar relatório/ })).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: /Encerradas/ }));
+  expect(screen.getByRole("link", { name: /Renovar assinatura/ })).toBeInTheDocument();
 });
 
-test("a linha mostra a prioridade e o prazo das abertas, e só o prazo das concluídas", async () => {
-  authedFetch.mockResolvedValue(tasks);
-  render(<TasksScreen userId="user-1" />);
-  await screen.findByText("Pagar conta de luz");
-
-  const luz = screen.getByRole("link", { name: "Pagar conta de luz" }).closest("li") as HTMLElement;
-  expect(within(luz).getByRole("img", { name: "Prioridade: Urgente" })).toBeInTheDocument();
-  expect(within(luz).getByText("Venceu ontem")).toBeInTheDocument();
-
-  const proposta = screen.getByRole("link", { name: "Revisar proposta" }).closest("li") as HTMLElement;
-  expect(within(proposta).getByText("Hoje, 09:00")).toBeInTheDocument();
-
-  fireEvent.click(screen.getByRole("button", { name: /Concluídas/ }));
-  const feita = screen.getByRole("link", { name: "Enviar relatório" }).closest("li") as HTMLElement;
-  expect(within(feita).queryByRole("img", { name: /Prioridade/ })).not.toBeInTheDocument();
-});
-
-/** Abre a lista de status da tarefa e escolhe um. */
-async function pickStatus(name: string, label: string) {
-  fireEvent.click(await screen.findByRole("button", { name: new RegExp(`Trocar status de ${name}`) }));
-  fireEvent.click(screen.getByRole("option", { name: new RegExp(label) }));
-}
-
-test("o círculo conclui a tarefa com a revisão da lista", async () => {
-  authedFetch.mockImplementation((_path: string, init?: RequestInit) =>
-    init?.method === "PATCH" ? Promise.resolve(undefined) : Promise.resolve([summaryTask({ id: "luz", revision: 4 })]),
-  );
-  render(<TasksScreen userId="user-1" />);
-
-  await pickStatus("Pagar conta de luz", "Concluída");
-
-  await waitFor(() =>
-    expect(authedFetch).toHaveBeenCalledWith("/api/tasks/luz", expect.objectContaining({ method: "PATCH", body: JSON.stringify({ expectedRevision: 4, status: "done" }) })),
-  );
-  // Concluída vai para o grupo recolhido; abrindo-o, o círculo passa a reabrir.
-  const closed = await screen.findByRole("button", { name: /Concluídas/ });
-  expect(screen.queryByRole("button", { name: /Status: A fazer/ })).not.toBeInTheDocument();
-  fireEvent.click(closed);
-  expect(screen.getByRole("button", { name: /Status: Concluída. Trocar status de Pagar conta de luz/ })).toBeInTheDocument();
-});
-
-test("avisa ao concluir, desfaz com a revisão seguinte e some sozinho", async () => {
-  authedFetch.mockImplementation((_path: string, init?: RequestInit) =>
-    init?.method === "PATCH" ? Promise.resolve(undefined) : Promise.resolve([summaryTask({ id: "luz", revision: 4 })]),
-  );
-  render(<TasksScreen userId="user-1" />);
-
-  await pickStatus("Pagar conta de luz", "Concluída");
-  expect(await screen.findByRole("status")).toHaveTextContent("Concluída: Pagar conta de luz");
-
-  fireEvent.click(screen.getByRole("button", { name: "Desfazer" }));
-  await waitFor(() =>
-    expect(authedFetch).toHaveBeenLastCalledWith("/api/tasks/luz", expect.objectContaining({ method: "PATCH", body: JSON.stringify({ expectedRevision: 5, status: "todo" }) })),
-  );
-  expect(screen.queryByRole("status")).not.toBeInTheDocument();
-  expect(await screen.findByRole("button", { name: /Status: A fazer. Trocar status de Pagar conta de luz/ })).toBeInTheDocument();
-
-  await pickStatus("Pagar conta de luz", "Concluída");
-  expect(await screen.findByRole("status")).toBeInTheDocument();
-  // O relógio do aviso nasce num efeito: deixa o React assentá-lo antes de avançar o tempo.
-  await act(async () => {});
-  await act(async () => { await vi.advanceTimersByTimeAsync(5000); });
-  expect(screen.queryByRole("status")).not.toBeInTheDocument();
-});
-
-test("ordena pela prioridade, depois pela data, e filtra por tag", async () => {
-  authedFetch.mockResolvedValue([
-    summaryTask({ id: "a", name: "Alfa", priority: "low", startedAt: "2026-09-15T00:00:00-03:00" }),
-    summaryTask({ id: "b", name: "Beta", priority: "urgent", tags: ["casa"], startedAt: "2026-09-20T00:00:00-03:00" }),
+test("a subtarefa cujo pai está na lista não aparece como linha própria", async () => {
+  serve([
+    eventFixture({ id: "proposta", name: "Revisar proposta", status: "doing" }),
+    eventFixture({ id: "ler", name: "Ler a proposta", status: "todo", parentEventIds: ["proposta"] }),
   ]);
   render(<TasksScreen userId="user-1" />);
-  await screen.findByText("Alfa");
-  const list = screen.getByRole("region", { name: "Lista de tarefas" });
-  const order = () => within(list).getAllByRole("link").map((link) => link.textContent);
-  expect(order()).toEqual(["Beta", "Alfa"]);
-  expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("2 tarefas abertas");
 
-  expect(within(list).getByRole("button", { name: "Prioridade" })).toHaveAttribute("aria-pressed", "true");
-  fireEvent.click(within(list).getByRole("button", { name: "Data" }));
-  expect(order()).toEqual(["Alfa", "Beta"]);
-
-  const casa = screen.getByRole("button", { name: "#casa" });
-  expect(casa).toHaveAttribute("aria-pressed", "false");
-  fireEvent.click(casa);
-  expect(casa).toHaveAttribute("aria-pressed", "true");
-  expect(screen.queryByRole("link", { name: "Alfa" })).not.toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "Beta" })).toBeInTheDocument();
-
-  fireEvent.click(screen.getByRole("button", { name: "Limpar filtros" }));
-  expect(screen.getByRole("link", { name: "Alfa" })).toBeInTheDocument();
+  await screen.findByRole("link", { name: /Revisar proposta/ });
+  expect(screen.queryByRole("link", { name: /Ler a proposta/ })).not.toBeInTheDocument();
 });
 
-test("limpa os filtros quando nenhuma tarefa combina", async () => {
-  authedFetch.mockResolvedValue([summaryTask({ id: "a", name: "Alfa", tags: ["casa"] }), summaryTask({ id: "b", name: "Beta", tags: ["rua"] })]);
+test("a lista pede a rota de eventos com status, sem o contrato antigo", async () => {
+  const api = serve(events);
   render(<TasksScreen userId="user-1" />);
-  await screen.findByText("Alfa");
-  fireEvent.click(screen.getByRole("button", { name: "#casa" }));
-  fireEvent.click(screen.getByRole("button", { name: "#rua" }));
-  expect(screen.getByRole("link", { name: "Alfa" })).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "Limpar filtros" }));
-  expect(screen.getByRole("link", { name: "Beta" })).toBeInTheDocument();
+  await screen.findByRole("link", { name: /Pagar conta de luz/ });
+
+  expect(api.calls.map((call) => call.pathname)).toContain("/api/events/tracked");
+  expect(api.calls.map((call) => call.pathname)).not.toContain("/api/tasks");
 });
 
-test("convida a criar a primeira tarefa e avisa quando a lista falha", async () => {
-  authedFetch.mockResolvedValueOnce([]);
-  const { unmount } = render(<TasksScreen userId="user-1" />);
-  expect(await screen.findByRole("heading", { name: "Nenhuma tarefa por aqui" })).toBeInTheDocument();
-  expect(screen.getByText(/Crie a primeira tarefa/)).toBeInTheDocument();
-  unmount();
-
-  authedFetch.mockRejectedValueOnce(new Error("falhou"));
+test("avisa quando a lista falha e recarrega ao tentar de novo", async () => {
+  const api = serve(events);
+  api.failNext("GET", "/api/events/tracked", 503);
   render(<TasksScreen userId="user-1" />);
+
   expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível carregar as tarefas.");
+  fireEvent.click(screen.getByRole("button", { name: "Tentar de novo" }));
+  expect(await screen.findByRole("link", { name: /Pagar conta de luz/ })).toBeInTheDocument();
+});
+
+test("convida a criar a primeira tarefa quando não há nenhum evento com status", async () => {
+  serve([]);
+  render(<TasksScreen userId="user-1" />);
+
+  expect(await screen.findByRole("heading", { name: "Nenhuma tarefa por aqui" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Nova tarefa" })).toBeInTheDocument();
 });

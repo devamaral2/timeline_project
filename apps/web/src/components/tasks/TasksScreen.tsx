@@ -1,39 +1,15 @@
 "use client";
 
-import { Check, ChevronDown, Clock, Link2, ListChecks, TriangleAlert } from "lucide-react";
-import Link from "next/link";
-import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { authedFetch } from "@/lib/api/authed-fetch";
-import type { TaskSummaryDto, WorkItemStatus } from "@/lib/api/contracts";
-import { useNow } from "@/lib/events/use-now";
+import { ChevronDown, ListChecks } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type { EventCardDto } from "@repo/contracts";
+import { EventRow } from "@/components/events/event-row";
 import { ListSkeleton } from "@/components/ui/list-skeleton";
-import { OptionsGlyph } from "@/components/ui/options-glyph";
 import page from "@/components/ui/page.module.css";
-import { canTransition, motionAllowed, reflow, vtName } from "@/lib/motion/view-transition";
-import { tagAccentStyle } from "@/lib/tags/tag-color";
-import { updateTask } from "@/lib/tasks/task-api";
-import {
-  groupTasks,
-  isOverdueTask,
-  isTodayTask,
-  overdueCountLabel,
-  overdueLabel,
-  pendingDependencies,
-  subtaskProgress,
-  taskCounts,
-  type TaskSort,
-  taskDayOf,
-  taskGroupLabels,
-  taskStatusLabels,
-  taskWhenLabel,
-  todayCountLabel,
-  topLevelTasks,
-  waitingLabel,
-} from "@/lib/tasks/tasks-model";
-import { cn } from "@/lib/utils";
-import { TaskStatusPicker } from "@/components/detail/detail-parts";
+import { listTrackedEvents } from "@/lib/api/events";
+import { useNow } from "@/lib/events/use-now";
+import { groupTrackedEvents, type TaskGroupKey } from "@/lib/events/task-groups";
 import { TaskEditorDialog } from "./TaskEditorDialog";
-import { TaskPriorityMark, TaskStatusIcon } from "./task-visuals";
 import styles from "./tasks.module.css";
 
 function toggleIn<T>(list: T[], value: T): T[] {
@@ -46,283 +22,80 @@ function openTasksLabel(open: number): string {
   return open === 1 ? "1 tarefa aberta" : `${open} tarefas abertas`;
 }
 
-const MONTH_SHORT = new Intl.DateTimeFormat("pt-BR", { month: "short", timeZone: "UTC" });
-
-/** O dia da tarefa como o número e o mês curto ("13" e "set"), para a coluna da direita. */
-function dayFigure(dayKey: string): { day: string; month: string } {
-  return { day: String(Number(dayKey.slice(8, 10))), month: MONTH_SHORT.format(new Date(`${dayKey}T12:00:00Z`)).replace(".", "") };
-}
-
-const sortLabels: Record<TaskSort, string> = { priority: "Prioridade", date: "Data" };
-const sortHints: Record<TaskSort, string> = { priority: "As mais urgentes primeiro", date: "As mais próximas primeiro" };
-const SORTS: readonly TaskSort[] = ["priority", "date"];
-
-/** Quanto o aviso de "Concluída" fica na tela antes de sumir. */
-const TOAST_MS = 5000;
-
-/** Quanto a linha fica no lugar com o status novo (o visto, o risco) antes de mudar de grupo. */
-const SETTLE_MS = 700;
-
-interface Toast {
-  message: string;
-  undo: () => void;
-}
-
 /**
- * Tarefas agrupadas por status: as abertas na ordem do design e, no fim,
- * Concluídas e Canceladas recolhidas. Busca pelo nome, filtro por tags e, dentro
- * de cada grupo, prioridade e depois data (ou o inverso).
+ * A lista de tarefas: os eventos com status (de pessoa e de agente) da rota
+ * `tracked`, nos grupos do canvas. Feitas e Encerradas vêm recolhidos. Cada
+ * linha é a `EventRow`. Concluir, filtrar e recarregar sozinha ficam para
+ * outros tickets.
  */
 export function TasksScreen({ userId }: { userId: string }) {
   const now = useNow();
-  const [tasks, setTasks] = useState<TaskSummaryDto[] | null>(null);
+  const [cards, setCards] = useState<EventCardDto[] | null>(null);
   const [error, setError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
-  const [sort, setSort] = useState<TaskSort>("priority");
-  const [optionsOpen, setOptionsOpen] = useState(false);
-  const optionsRef = useRef<HTMLDivElement>(null);
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [expanded, setExpanded] = useState<WorkItemStatus[]>([]);
-  const [pending, setPending] = useState<string[]>([]);
-  // O status que a linha já mostra enquanto a API responde e ela ainda não mudou de grupo.
-  const [settling, setSettling] = useState<Record<string, WorkItemStatus>>({});
-  const groupsRef = useRef<HTMLDivElement>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<TaskGroupKey[]>([]);
   const [creating, setCreating] = useState(false);
-  const [toast, setToast] = useState<Toast | null>(null);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: reloadKey força o refetch.
   useEffect(() => {
     let cancelled = false;
     setError(false);
-    void authedFetch<TaskSummaryDto[]>("/api/tasks")
-      .then((data) => { if (!cancelled) setTasks(data); })
+    listTrackedEvents()
+      .then((data) => { if (!cancelled) setCards(data); })
       .catch(() => { if (!cancelled) setError(true); });
     return () => { cancelled = true; };
   }, [reloadKey]);
 
-  useEffect(() => {
-    if (!toast) return;
-    const timer = window.setTimeout(() => setToast(null), TOAST_MS);
-    return () => window.clearTimeout(timer);
-  }, [toast]);
-
-  useEffect(() => {
-    if (!optionsOpen) return;
-    const close = (event: MouseEvent | KeyboardEvent) => {
-      if (event instanceof KeyboardEvent) { if (event.key === "Escape") setOptionsOpen(false); return; }
-      if (!optionsRef.current?.contains(event.target as Node)) setOptionsOpen(false);
-    };
-    document.addEventListener("mousedown", close);
-    document.addEventListener("keydown", close);
-    return () => { document.removeEventListener("mousedown", close); document.removeEventListener("keydown", close); };
-  }, [optionsOpen]);
-
   const retry = useCallback(() => {
-    setTasks(null);
+    setCards(null);
     setReloadKey((key) => key + 1);
   }, []);
 
-  const allTags = useMemo(
-    () => [...new Set((tasks ?? []).flatMap((task) => task.tags))].sort((a, b) => a.localeCompare(b, "pt-BR")),
-    [tasks],
-  );
-  const visible = useMemo(
-    () => (tasks ?? []).filter((task) =>
-      (selectedTags.length === 0 || task.tags.some((tag) => selectedTags.includes(tag)))),
-    [tasks, selectedTags],
-  );
-  const groups = useMemo(() => groupTasks(visible, sort), [visible, sort]);
-  const hasTasks = tasks ? topLevelTasks(tasks).length > 0 : false;
-  const filtered = selectedTags.length > 0;
-
-  function clearFilters() {
-    setSelectedTags([]);
-  }
-
-  /** Muda o status com a revisão da lista; devolve se a API aceitou. */
-  async function applyStatus(target: Pick<TaskSummaryDto, "id" | "revision">, status: WorkItemStatus): Promise<boolean> {
-    setActionError(null);
-    setPending((current) => [...current, target.id]);
-    setSettling((current) => ({ ...current, [target.id]: status }));
-    const settled = () => setSettling(({ [target.id]: _, ...rest }) => rest);
-    // Com movimento, a linha assenta antes de sair; sem ele, muda na hora.
-    const hold = canTransition() && motionAllowed() ? new Promise((resolve) => window.setTimeout(resolve, SETTLE_MS)) : null;
-    try {
-      await updateTask(target.id, { expectedRevision: target.revision, status });
-      await hold;
-      // As linhas deslizam para fechar o espaço (ou abrir, ao desfazer).
-      reflow(groupsRef.current, () => {
-        setTasks((current) => current?.map((item) => item.id === target.id ? { ...item, status, revision: target.revision + 1 } : item) ?? current);
-        settled();
-      });
-      return true;
-    } catch {
-      settled();
-      setActionError("Não foi possível atualizar a tarefa. Tente novamente.");
-      // A revisão pode ter andado em outra aba: recarregar traz a atual.
-      setReloadKey((key) => key + 1);
-      return false;
-    } finally {
-      setPending((current) => current.filter((id) => id !== target.id));
-    }
-  }
-
-  async function changeStatus(task: TaskSummaryDto, status: WorkItemStatus) {
-    const previous = task.status;
-    if (status === previous) return;
-    if (!(await applyStatus(task, status))) return;
-    setToast({
-      message: `${taskStatusLabels[status]}: ${task.name}`,
-      // A revisão que a API acabou de devolver é a seguinte à da lista.
-      undo: () => { setToast(null); void applyStatus({ id: task.id, revision: task.revision + 1 }, previous); },
-    });
-  }
-
-  const counts = tasks && now ? taskCounts(tasks, now) : null;
-  const allGroups = useMemo(() => groupTasks(tasks ?? [], sort), [tasks, sort]);
-
-  /** Os chips de tag: no desktop ficam na coluna esquerda; no celular, dentro do painel de opções. */
-  const tagFilter = allTags.length > 0 ? (
-    <div className={styles.tagFilter}>
-      <p className={styles.tagLabel}>Filtrar por tag</p>
-      <fieldset className={styles.tagChips} aria-label="Filtrar por tag">
-        {allTags.map((tag) => (
-          <button key={tag} type="button" className={styles.tagChip} aria-pressed={selectedTags.includes(tag)} onClick={() => setSelectedTags((current) => toggleIn(current, tag))}>
-            <i style={tagAccentStyle(tag)} aria-hidden="true" />#{tag}
-          </button>
-        ))}
-      </fieldset>
-      {filtered ? <button type="button" className={styles.clear} onClick={clearFilters}>Limpar filtros</button> : null}
-    </div>
-  ) : null;
+  const groups = useMemo(() => groupTrackedEvents(cards ?? []), [cards]);
+  const open = groups
+    .filter((group) => !group.collapsedByDefault)
+    .reduce((total, group) => total + group.cards.length, 0);
 
   return (
     <main id="conteudo" className={page.frame}>
       <section className={`${page.lead} ${styles.lead}`} aria-label="Resumo das tarefas">
         <div className={styles.headRow}>
-          <h1 className={page.eyebrow}>{counts ? openTasksLabel(counts.open) : "Tarefas"}</h1>
-          {hasTasks ? (
-            <div className={styles.phoneOptions} ref={optionsRef}>
-              <button
-                type="button"
-                className={styles.optionsButton}
-                aria-label={filtered ? `Opções de visualização, ${selectedTags.length} filtros ativos` : "Opções de visualização"}
-                title="Opções de visualização"
-                aria-expanded={optionsOpen}
-                aria-haspopup="dialog"
-                onClick={() => setOptionsOpen((open) => !open)}
-              >
-                <OptionsGlyph />
-                {filtered ? <span className={styles.optionsBadge} aria-hidden="true">{selectedTags.length}</span> : null}
-              </button>
-              {optionsOpen ? (
-                <div className={styles.optionsPanel} role="dialog" aria-label="Opções de visualização">
-                  <p className={styles.optionsLabel}>Ordenar por</p>
-                  {SORTS.map((value) => (
-                    <button key={value} type="button" className={styles.optionsSort} aria-pressed={sort === value} onClick={() => setSort(value)}>
-                      <span className={styles.optionsText}><strong>{sortLabels[value]}</strong><small>{sortHints[value]}</small></span>
-                      {sort === value ? <Check aria-hidden /> : null}
-                    </button>
-                  ))}
-                  {tagFilter}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
+          <h1 className={page.eyebrow}>{cards && now ? openTasksLabel(open) : "Tarefas"}</h1>
         </div>
-
-        {hasTasks ? (
-          <nav className={styles.groupNav} aria-label="Grupos de tarefas">
-            <ul>
-              {allGroups.map(({ status, tasks: groupTasksList, collapsedByDefault }) => (
-                <li key={status}>
-                  <a href={`#tarefas-${status}`} data-closed={collapsedByDefault} onClick={() => { if (collapsedByDefault) setExpanded((current) => current.includes(status) ? current : [...current, status]); }}>
-                    <TaskStatusIcon status={status} />
-                    <span>{taskGroupLabels[status]}</span>
-                    <strong>{groupTasksList.length}</strong>
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </nav>
-        ) : null}
-
-        {optionsOpen ? null : tagFilter}
       </section>
 
       <section className={`${page.body} ${styles.body}`} aria-label="Lista de tarefas">
-        {hasTasks ? (
-          <div className={styles.toolbar}>
-            <fieldset className={styles.sortGroup} aria-label="Ordenar por">
-              <span aria-hidden="true">Ordenar por</span>
-              {SORTS.map((value) => (
-                <button key={value} type="button" className={styles.sortPill} aria-pressed={sort === value} onClick={() => setSort(value)}>{sortLabels[value]}</button>
-              ))}
-            </fieldset>
-            {counts && (counts.overdue > 0 || counts.today > 0) ? (
-              <p className={styles.summary}>
-                {counts.overdue > 0 ? <span className={styles.summaryLate}>{overdueCountLabel(counts.overdue)}</span> : null}
-                {counts.overdue > 0 && counts.today > 0 ? <span aria-hidden="true">·</span> : null}
-                {counts.today > 0 ? <span>{todayCountLabel(counts.today)}</span> : null}
-              </p>
-            ) : null}
-          </div>
-        ) : null}
-
-        {actionError ? <p role="alert" className={styles.message}>{actionError}</p> : null}
-
         {error ? (
           <p role="alert" className={styles.message}>Não foi possível carregar as tarefas.<button type="button" className={styles.retry} onClick={retry}>Tentar de novo</button></p>
-        ) : !tasks || !now ? (
+        ) : !cards || !now ? (
           <ListSkeleton label="Carregando tarefas…" />
-        ) : !hasTasks ? (
+        ) : groups.length === 0 ? (
           <div className={styles.empty}>
             <ListChecks aria-hidden />
             <h2 className={styles.emptyTitle}>Nenhuma tarefa por aqui</h2>
             <p className={styles.emptyText}>Crie a primeira tarefa para começar a organizar o seu dia.</p>
             <button type="button" className={styles.emptyAction} onClick={() => setCreating(true)}>Nova tarefa</button>
           </div>
-        ) : groups.length === 0 ? (
-          <div className={styles.empty}>
-            <ListChecks aria-hidden />
-            <h2 className={styles.emptyTitle}>Nenhuma tarefa encontrada</h2>
-            <p className={styles.emptyText}>
-              {filtered
-                ? "Nada combina com os filtros atuais. Remova um filtro para ver mais tarefas."
-                : "Não há tarefas para mostrar."}
-            </p>
-            <button type="button" className={styles.emptyAction} onClick={clearFilters}>Limpar filtros</button>
-          </div>
         ) : (
-          <div className={styles.groups} ref={groupsRef}>
+          <div className={styles.groups}>
             {groups.map((group) => {
-              const labelId = `tarefas-${group.status}`;
-              const open = !group.collapsedByDefault || expanded.includes(group.status);
+              const labelId = `tarefas-${group.key}`;
+              const isOpen = !group.collapsedByDefault || expanded.includes(group.key);
               return (
-                <section key={group.status} id={labelId} aria-labelledby={`${labelId}-titulo`} className={styles.group}>
+                <section key={group.key} id={labelId} aria-labelledby={`${labelId}-titulo`} className={styles.group}>
                   {group.collapsedByDefault ? (
                     <h2 id={`${labelId}-titulo`} className={styles.groupHead} data-collapsible="true">
-                      <button type="button" className={styles.groupToggle} aria-expanded={open} onClick={() => setExpanded((current) => toggleIn(current, group.status))}>
-                        <ChevronDown aria-hidden />{group.title}<span>{group.tasks.length}</span>
+                      <button type="button" className={styles.groupToggle} aria-expanded={isOpen} onClick={() => setExpanded((current) => toggleIn(current, group.key))}>
+                        <ChevronDown aria-hidden />{group.title}<span>{group.cards.length}</span>
                       </button>
                     </h2>
                   ) : (
-                    <h2 id={`${labelId}-titulo`} className={styles.groupHead}>{group.title}<span>{group.tasks.length}</span></h2>
+                    <h2 id={`${labelId}-titulo`} className={styles.groupHead}>{group.title}<span>{group.cards.length}</span></h2>
                   )}
-                  {open ? (
+                  {isOpen ? (
                     <ul className={styles.list}>
-                      {group.tasks.map((task) => (
-                        <TaskRow
-                          key={task.id}
-                          task={task}
-                          tasks={tasks}
-                          now={now}
-                          href={`/${userId}/tarefas/${task.id}`}
-                          pending={pending.includes(task.id)}
-                          settling={settling[task.id]}
-                          onStatusChange={(status) => void changeStatus(task, status)}
-                        />
+                      {group.cards.map((card) => (
+                        <EventRow key={card.id} card={card} userId={userId} now={now} />
                       ))}
                     </ul>
                   ) : null}
@@ -333,13 +106,6 @@ export function TasksScreen({ userId }: { userId: string }) {
         )}
       </section>
 
-      {toast ? (
-        <div className={styles.toast} role="status" aria-live="polite" style={{ "--toast-ms": `${TOAST_MS}ms` } as CSSProperties}>
-          <span className={styles.toastMessage}>{toast.message}</span>
-          <button type="button" className={styles.toastUndo} onClick={toast.undo}>Desfazer</button>
-        </div>
-      ) : null}
-
       {creating ? (
         <TaskEditorDialog
           onClose={() => setCreating(false)}
@@ -347,70 +113,5 @@ export function TasksScreen({ userId }: { userId: string }) {
         />
       ) : null}
     </main>
-  );
-}
-
-interface TaskRowProps {
-  task: TaskSummaryDto;
-  tasks: readonly TaskSummaryDto[];
-  now: Date;
-  href: string;
-  pending: boolean;
-  /** O status recém-escolhido, enquanto a linha ainda está no grupo antigo. */
-  settling?: WorkItemStatus;
-  onStatusChange: (status: WorkItemStatus) => void;
-}
-
-function TaskRow({ task, tasks, now, href, pending, settling, onStatusChange }: TaskRowProps) {
-  const status = settling ?? task.status;
-  const progress = subtaskProgress(task.id, tasks);
-  const waiting = pendingDependencies(task, tasks).length;
-  const overdue = isOverdueTask(task, now);
-  const today = isTodayTask(task, now);
-  const hasDay = taskDayOf(task) !== null;
-  const when = overdue ? overdueLabel(task, now) : taskWhenLabel(task, now);
-  const closed = status === "done" || status === "cancel";
-
-  const day = taskDayOf(task);
-  const figure = day ? dayFigure(day) : null;
-  // Sem dia, etiqueta, dependência nem subtarefa não há segunda linha: o círculo,
-  // o nome e a prioridade dividem uma linha só.
-  const bare = !hasDay && task.tags.length === 0 && waiting === 0 && !progress;
-
-  return (
-    <li className={styles.row} data-status={status} data-bare={bare || undefined} data-pending={pending && !settling} style={{ "--vt": vtName("task", task.id) } as CSSProperties}>
-      <div className={styles.rowCheck}>
-        <TaskStatusPicker status={status} name={task.name} busy={pending} onChange={onStatusChange} />
-      </div>
-
-      <div className={styles.main}>
-        <h3 className={styles.name}><Link href={href} title={task.name}>{task.name}</Link></h3>
-        {hasDay || task.tags.length > 0 || waiting > 0 || progress ? (
-          <ul className={styles.meta}>
-            {hasDay ? (
-              <li className={cn(overdue && styles.whenLate, !overdue && today && styles.whenToday)}>
-                {overdue ? <TriangleAlert aria-hidden /> : today ? <Clock aria-hidden /> : null}
-                {when}
-              </li>
-            ) : null}
-            {task.tags.map((tag) => (
-              <li key={tag} style={tagAccentStyle(tag)}>#{tag}</li>
-            ))}
-            {waiting > 0 ? <li><Link2 aria-hidden />{waitingLabel(waiting)}</li> : null}
-            {progress ? (
-              <li className={styles.progress} role="img" aria-label={`${progress.done} de ${progress.total} subtarefas feitas`}>
-                <span className={styles.progressBar} aria-hidden="true"><i style={{ width: `${Math.round((progress.done / progress.total) * 100)}%` }} /></span>
-                <span aria-hidden="true">{progress.done}/{progress.total}</span>
-              </li>
-            ) : null}
-          </ul>
-        ) : null}
-      </div>
-
-      <div className={styles.side}>
-        {figure ? <p className={cn(styles.date, overdue && styles.dateLate)} aria-hidden="true">{figure.day}<small>{figure.month}</small></p> : null}
-        {closed ? null : <TaskPriorityMark priority={task.priority} withLabel alwaysLabel />}
-      </div>
-    </li>
   );
 }
