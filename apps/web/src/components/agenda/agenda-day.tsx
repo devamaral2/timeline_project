@@ -30,9 +30,11 @@ type AgendaRow =
   | { kind: "event"; event: ExampleEvent; index: number; startMs: number }
   | { kind: "free"; slot: FreeSlot };
 
+/** O tempo livre é só de pessoa: um evento do agente não divide nem encurta uma janela. A prévia sem cartão conta como de pessoa. */
 function agendaRowsOf(events: readonly ExampleEvent[], dayKey: string, showFreeTime: boolean): AgendaRow[] {
   const spans = events.map((event) => spanForExample(event, dayKey));
-  const freeSlots = showFreeTime ? freeTimeSlots(spans, dayKey).filter((slot) => slot.minutes >= MIN_FREE_WINDOW_MINUTES) : [];
+  const personSpans = events.filter((event) => event.card?.actor !== "agent").map((event) => spanForExample(event, dayKey));
+  const freeSlots = showFreeTime ? freeTimeSlots(personSpans, dayKey).filter((slot) => slot.minutes >= MIN_FREE_WINDOW_MINUTES) : [];
   const rows: AgendaRow[] = [
     ...events.map((event, index): AgendaRow => ({ kind: "event", event, index, startMs: spans[index].startMs })),
     ...freeSlots.map((slot): AgendaRow => ({ kind: "free", slot })),

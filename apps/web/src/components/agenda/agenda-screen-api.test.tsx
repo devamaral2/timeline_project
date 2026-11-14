@@ -145,3 +145,21 @@ test("a failed load shows the error alert", async () => {
 
   expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível carregar a agenda. Tente novamente.");
 });
+
+test("free time counts only person events: an agent event inside a free window does not split it", async () => {
+  installApi([
+    eventFixture({ id: "ev-a", name: "Revisar proposta", kind: "routine", status: "todo", startedAt: "2026-09-14T09:00:00-03:00", estimatedFinishAt: "2026-09-14T10:30:00-03:00" }),
+    eventFixture({ id: "ev-g", name: "Agente compila o briefing", actor: "agent", kind: "request", status: "running", startedAt: "2026-09-14T11:00:00-03:00", estimatedFinishAt: "2026-09-14T11:30:00-03:00" }),
+    eventFixture({ id: "ev-b", name: "Almoço no escritório", kind: "meal", status: undefined, startedAt: "2026-09-14T12:30:00-03:00", estimatedFinishAt: "2026-09-14T13:30:00-03:00" }),
+  ]);
+  render(<AgendaScreen userId="user-1" todayKey={TODAY} />);
+  await waitFor(() => expect(within(dayOf(TODAY)).getAllByRole("link")).toHaveLength(3));
+
+  const freeWindows = within(dayOf(TODAY)).getAllByRole("button", { name: /Planejar com o Hermes a janela livre/ });
+  expect(freeWindows.map((button) => button.getAttribute("aria-label"))).toEqual([
+    "Planejar com o Hermes a janela livre das 10:30 às 12:30",
+    "Planejar com o Hermes a janela livre das 13:30 às 24:00",
+  ]);
+  expect(within(dayOf(TODAY)).getByText("Livre")).toBeInTheDocument();
+  expect(within(dayOf(TODAY)).getByTitle("Tempo livre: 120 min")).toBeInTheDocument();
+});

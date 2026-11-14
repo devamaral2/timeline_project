@@ -4,13 +4,13 @@
 
 **Blocked by:** 11 (Agenda lê a API nova)
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Leia antes:** o [README](README.md) desta pasta. Spec: histórias 23 e 24, “Agenda”. Canvas: quadro Agenda (linha “Livre”).
 
-- [ ] Um evento de agente dentro de uma janela não a divide nem a encurta.
-- [ ] O bloco “Livre” mostra o intervalo e a duração, como hoje.
-- [ ] O toque na janela livre continua fazendo o que faz hoje: abre o chat do agente com a janela preenchida.
-- [ ] O teste de tela cobre um dia com eventos de pessoa e de agente intercalados.
-- [ ] A linha desta tela em `docs/mobile-parity.md` foi atualizada, com o Android marcado como em progresso.
-- [ ] Os testes novos passam, e `pnpm run test:unit` e `pnpm run typecheck` continuam verdes.
+- [x] Um evento de agente dentro de uma janela não a divide nem a encurta.
+- [x] O bloco “Livre” mostra o intervalo e a duração, como hoje.
+- [x] O toque na janela livre continua fazendo o que faz hoje: abre o chat do agente com a janela preenchida.
+- [x] O teste de tela cobre um dia com eventos de pessoa e de agente intercalados.
+- [x] A linha desta tela em `docs/mobile-parity.md` foi atualizada, com o Android marcado como em progresso.
+- [x] Os testes novos passam, e `pnpm run test:unit` e `pnpm run typecheck` continuam verdes.
