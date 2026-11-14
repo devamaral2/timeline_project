@@ -129,7 +129,7 @@ export function BackButton({ onClick, children }: { onClick: () => void; childre
 }
 
 /** Fecha o que está aberto num toque fora ou no Esc. */
-function useDismiss(open: boolean, ref: React.RefObject<HTMLElement | null>, close: () => void) {
+export function useDismiss(open: boolean, ref: React.RefObject<HTMLElement | null>, close: () => void) {
   useEffect(() => {
     if (!open) return;
     function onEvent(event: Event) {

@@ -1,11 +1,7 @@
-import type { Metadata } from "next";
-import { TaskDetailScreen } from "@/components/tasks/TaskDetailScreen";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "Tarefa — Agente pessoal",
-};
-
+/** O detalhe de tarefa virou o detalhe de evento: o endereço antigo leva para a rota única. */
 export default async function TaskPage({ params }: { params: Promise<{ userId: string; taskId: string }> }) {
   const { userId, taskId } = await params;
-  return <TaskDetailScreen userId={userId} taskId={taskId} />;
+  redirect(`/${userId}/eventos/${taskId}`);
 }

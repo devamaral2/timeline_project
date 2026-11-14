@@ -1,43 +1,50 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import { textNote } from "@/components/notes/note-fixtures";
-import { detailTask } from "@/components/tasks/task-fixtures";
-import type { EventDetailDto, NoteDto } from "@/lib/api/contracts";
+import type { EventDto } from "@repo/contracts";
+import { type FakeApi, createFakeApi } from "@/test/fake-api";
+import { eventFixture, eventsArea } from "@/test/fake-api/events";
 
 const push = vi.fn();
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push, back: vi.fn() }) }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push, back: vi.fn(), replace: vi.fn() }) }));
 
-const authedFetch = vi.fn();
-vi.mock("@/lib/api/authed-fetch", () => ({ authedFetch: (...args: unknown[]) => authedFetch(...args) }));
-vi.mock("@/components/events/new-event-forms/TagInput", () => ({ TagInput: () => null }));
+const net = vi.hoisted(() => ({ authedFetch: vi.fn() }));
+vi.mock("@/lib/api/authed-fetch", async (original) => ({
+  ...(await original<typeof import("@/lib/api/authed-fetch")>()),
+  authedFetch: net.authedFetch,
+}));
 
 const { default: EventPage } = await import("./page");
 
-const event: EventDetailDto = {
-  id: "ev-1",
-  name: "Revisão semanal",
-  description: "Fechar a agenda da semana.",
-  startedAt: "2026-09-14T18:00:00-03:00",
-  finishedAt: "2026-09-14T18:45:00-03:00",
-  tags: ["planejamento"],
-  missed: false,
-  priority: "normal",
-  notifyOffsetsMinutes: [15],
-  interruptions: [],
-  revision: 1,
-  kind: "routine",
-  notes: [textNote({ id: "nota-1", name: "Pauta da revisão semanal", content: "Pauta da revisão semanal\nAgenda e pendências." })],
-  taskIds: ["t1"],
-};
+const NAME = "Treino de força";
+
+/** Um treino de hoje, em curso, com lembretes, tags e descrição. */
+function training(overrides: Partial<EventDto> = {}): EventDto {
+  return eventFixture({
+    id: "ev-1",
+    name: NAME,
+    kind: "training",
+    status: "doing",
+    priority: "medium",
+    startedAt: "2026-11-14T18:30:00-03:00",
+    estimatedFinishAt: "2026-11-14T19:20:00-03:00",
+    notifyOffsetsMinutes: [30, 1440],
+    tags: ["saúde", "pessoal"],
+    description: "Foco em peito e tríceps.",
+    ...overrides,
+  });
+}
+
+let api: FakeApi;
+
+function install(events: EventDto[]) {
+  api = createFakeApi({ areas: [eventsArea], seed: { events } });
+  net.authedFetch.mockImplementation(api.authedFetch);
+}
 
 beforeEach(() => {
   vi.useFakeTimers({ shouldAdvanceTime: true });
-  vi.setSystemTime(new Date("2026-09-14T10:00:00-03:00"));
-  authedFetch.mockReset();
-  authedFetch.mockImplementation((path: string, init?: RequestInit) => {
-    if (init?.method === "PATCH") return Promise.resolve(undefined);
-    return Promise.resolve(path === "/api/events/ev-1" ? event : detailTask({ id: "t1", name: "Mover as tarefas atrasadas", startedAt: "2026-09-14T17:30:00-03:00" }));
-  });
+  vi.setSystemTime(new Date("2026-11-14T10:00:00-03:00"));
+  push.mockReset();
 });
 
 afterEach(() => {
@@ -48,70 +55,150 @@ function renderPage() {
   return render(<EventPage params={Promise.resolve({ userId: "user-1", eventId: "ev-1" })} />);
 }
 
-test("mostra o tipo, o título, as tags, quando acontece e a descrição", async () => {
+function patches() {
+  return api.calls.filter((call) => call.method === "PATCH");
+}
+
+test("o topo mostra o código do tipo, o título, o status e a prioridade", async () => {
+  install([training()]);
   renderPage();
 
-  expect(await screen.findByRole("heading", { level: 1, name: "Revisão semanal" })).toBeInTheDocument();
-  // O tipo é o ícone no quadrado ao lado da data; a prioridade e os lembretes são fatos do resumo.
-  expect(screen.getByRole("img", { name: "Rotina" })).toBeInTheDocument();
-  expect(screen.getByText("#planejamento")).toBeInTheDocument();
-  expect(screen.getByText("15 minutos antes")).toBeInTheDocument();
-  expect(screen.getByText("Fechar a agenda da semana.")).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { level: 1, name: NAME })).toBeInTheDocument();
+  expect(screen.getByText("training")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: `Status: Em curso. Trocar status de ${NAME}` })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: `Prioridade: Média. Trocar prioridade de ${NAME}` })).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "Agenda" })).toHaveAttribute("href", "/user-1");
-  expect(screen.queryByText("Criado pelo Hermes")).not.toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Editar evento" })).toHaveAttribute("href", "/user-1/eventos/ev-1/editar");
 });
 
-test("as notas aparecem inteiras numa seção e as tarefas em outra, e cada uma abre a sua tela", async () => {
+test("a seção Informações mostra início, término com a duração, tags, lembretes e descrição em texto", async () => {
+  install([training()]);
   renderPage();
 
-  const notes = await screen.findByRole("region", { name: /^Notas/ });
-  expect(within(notes).getByRole("link", { name: "Abrir a nota Pauta da revisão semanal" })).toHaveAttribute("href", "/user-1/notas/nota-1");
-
-  const tasks = await screen.findByRole("region", { name: /^Tarefas/ });
-  expect(await within(tasks).findByRole("link", { name: /Mover as tarefas atrasadas/ })).toHaveAttribute("href", "/user-1/tarefas/t1");
-  expect(within(tasks).getByText("Tarefa · hoje, 17:30")).toBeInTheDocument();
+  const info = await screen.findByRole("region", { name: "Informações" });
+  expect(within(info).getByText("Sáb, 14 nov · 18:30")).toBeInTheDocument();
+  expect(within(info).getByText("Término")).toBeInTheDocument();
+  expect(within(info).getByText("Sáb, 14 nov · 19:20")).toBeInTheDocument();
+  expect(within(info).getByText("50 min")).toBeInTheDocument();
+  expect(within(info).getByText("Não")).toBeInTheDocument();
+  expect(within(info).getByRole("list", { name: "Lembretes" })).toHaveTextContent(/30 min1 dia/);
+  expect(within(info).getByText("#saúde")).toBeInTheDocument();
+  expect(within(info).getByText("Foco em peito e tríceps.")).toBeInTheDocument();
+  expect(screen.queryByText("Localização")).not.toBeInTheDocument();
+  expect(screen.queryByText("Gerado por")).not.toBeInTheDocument();
 });
 
-test("troca o status da tarefa vinculada com a revisão dela", async () => {
+test("o evento longo mostra a previsão de entrega, sem término nem início", async () => {
+  install([training({ longRunning: true, startedAt: undefined, estimatedFinishAt: "2026-11-20T00:00:00-03:00", notifyOffsetsMinutes: [] })]);
   renderPage();
-  fireEvent.click(await screen.findByRole("button", { name: /Status: A fazer. Trocar status de Mover as tarefas atrasadas/ }));
-  fireEvent.click(within(screen.getByRole("listbox", { name: "Status da tarefa" })).getByRole("option", { name: "Concluída" }));
 
-  await waitFor(() =>
-    expect(authedFetch).toHaveBeenCalledWith("/api/tasks/t1", expect.objectContaining({ method: "PATCH", body: JSON.stringify({ expectedRevision: 3, status: "done" }) })),
-  );
-  expect(await screen.findByRole("button", { name: /Status: Concluída/ })).toBeInTheDocument();
+  const info = await screen.findByRole("region", { name: "Informações" });
+  expect(within(info).getByText("Previsão de entrega")).toBeInTheDocument();
+  expect(within(info).getByText("Sex, 20 nov")).toBeInTheDocument();
+  expect(within(info).queryByText("Término")).not.toBeInTheDocument();
+  expect(within(info).queryByText("Início")).not.toBeInTheDocument();
+  expect(within(info).getByText("Sim")).toBeInTheDocument();
 });
 
-test("devolve o status e avisa quando a troca falha", async () => {
-  authedFetch.mockImplementation((path: string, init?: RequestInit) => {
-    if (init?.method === "PATCH") return Promise.reject(new Error("409"));
-    return Promise.resolve(path === "/api/events/ev-1" ? event : detailTask({ id: "t1", name: "Mover as tarefas atrasadas" }));
-  });
+test("a ocorrência de uma série mostra a regra e que ela segue a série", async () => {
+  install([
+    training({
+      recurrence: {
+        id: "rec-1",
+        occurrenceOn: "2026-11-14",
+        detached: false,
+        rule: { frequency: "weekly", interval: 1, byWeekday: 42, timeOfDay: "18:30", timeZone: "America/Sao_Paulo", startsOn: "2026-11-03" },
+      },
+    }),
+  ]);
   renderPage();
-  fireEvent.click(await screen.findByRole("button", { name: /Status: A fazer. Trocar status de Mover/ }));
-  fireEvent.click(within(screen.getByRole("listbox", { name: "Status da tarefa" })).getByRole("option", { name: "Concluída" }));
 
-  expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível trocar o status da tarefa.");
-  expect(screen.getByRole("button", { name: /Status: A fazer/ })).toBeInTheDocument();
+  const info = await screen.findByRole("region", { name: "Informações" });
+  expect(within(info).getByText("Seg, qua e sex, 18:30")).toBeInTheDocument();
+  expect(within(info).getByText("desde 3 nov · sem fim · esta ocorrência segue a série")).toBeInTheDocument();
 });
 
-test("o menu leva à edição da rotina e à exclusão", async () => {
+test("concluir envia o status com finishedAt do instante atual e mostra o status novo", async () => {
+  install([training()]);
+  renderPage();
+  fireEvent.click(await screen.findByRole("button", { name: `Status: Em curso. Trocar status de ${NAME}` }));
+  fireEvent.click(within(screen.getByRole("listbox", { name: "Status do evento" })).getByRole("option", { name: "Feito" }));
+
+  await waitFor(() => expect(patches()).toHaveLength(1));
+  // O relógio falso anda sozinho (`shouldAdvanceTime`): o instante exato não importa, só o dia e a hora.
+  expect(patches()[0]?.body).toEqual({ expectedRevision: 1, status: "done", finishedAt: expect.stringMatching(/^2026-11-14T13:00:/) });
+  expect(await screen.findByRole("button", { name: `Status: Feito. Trocar status de ${NAME}` })).toBeInTheDocument();
+});
+
+test("reabrir um evento feito manda finishedAt nulo", async () => {
+  install([training({ status: "done", finishedAt: "2026-11-14T12:00:00.000Z" })]);
+  renderPage();
+  fireEvent.click(await screen.findByRole("button", { name: `Status: Feito. Trocar status de ${NAME}` }));
+  fireEvent.click(within(screen.getByRole("listbox", { name: "Status do evento" })).getByRole("option", { name: "Em espera" }));
+
+  await waitFor(() => expect(patches()).toHaveLength(1));
+  expect(patches()[0]?.body).toEqual({ expectedRevision: 1, status: "inHold", finishedAt: null });
+  expect(await screen.findByRole("button", { name: `Status: Em espera. Trocar status de ${NAME}` })).toBeInTheDocument();
+});
+
+test("trocar a prioridade manda a revisão lida e mostra a prioridade nova", async () => {
+  install([training()]);
+  renderPage();
+  fireEvent.click(await screen.findByRole("button", { name: `Prioridade: Média. Trocar prioridade de ${NAME}` }));
+  fireEvent.click(within(screen.getByRole("listbox", { name: "Prioridade do evento" })).getByRole("option", { name: "Urgente" }));
+
+  await waitFor(() => expect(patches()).toHaveLength(1));
+  expect(patches()[0]?.body).toEqual({ expectedRevision: 1, priority: "urgent" });
+  expect(await screen.findByRole("button", { name: `Prioridade: Urgente. Trocar prioridade de ${NAME}` })).toBeInTheDocument();
+});
+
+test("a falha na troca devolve o status e avisa", async () => {
+  install([training()]);
+  api.failNext("PATCH", "/api/events/ev-1", 500);
+  renderPage();
+  fireEvent.click(await screen.findByRole("button", { name: `Status: Em curso. Trocar status de ${NAME}` }));
+  fireEvent.click(within(screen.getByRole("listbox", { name: "Status do evento" })).getByRole("option", { name: "Feito" }));
+
+  expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível trocar o status. Tente novamente.");
+  expect(screen.getByRole("button", { name: `Status: Em curso. Trocar status de ${NAME}` })).toBeInTheDocument();
+});
+
+test("revisão velha: relê o evento e avisa, sem gravar a troca", async () => {
+  install([training()]);
+  renderPage();
+  await screen.findByRole("heading", { level: 1, name: NAME });
+  // Outra aba muda o evento antes desta troca: a revisão lida (1) já não vale.
+  api.store.table<EventDto>("events").set("ev-1", { ...training(), name: NAME, revision: 2, priority: "high" });
+  fireEvent.click(screen.getByRole("button", { name: `Prioridade: Média. Trocar prioridade de ${NAME}` }));
+  fireEvent.click(within(screen.getByRole("listbox", { name: "Prioridade do evento" })).getByRole("option", { name: "Baixa" }));
+
+  expect(await screen.findByRole("alert")).toHaveTextContent("Este evento mudou em outro lugar.");
+  expect(await screen.findByRole("button", { name: `Prioridade: Alta. Trocar prioridade de ${NAME}` })).toBeInTheDocument();
+});
+
+test("evento de agente: status e prioridade só aparecem, sem seletor", async () => {
+  install([
+    eventFixture({ id: "ev-1", actor: "agent", kind: "request", status: "running", priority: "medium", name: "Pesquisar voos" }),
+  ]);
+  renderPage();
+
+  expect(await screen.findByRole("heading", { level: 1, name: "Pesquisar voos" })).toBeInTheDocument();
+  expect(screen.getByText("Agente, executando")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /Trocar/ })).not.toBeInTheDocument();
+});
+
+test("evento inexistente mostra a tela de não encontrado", async () => {
+  install([]);
+  renderPage();
+
+  expect(await screen.findByRole("alert")).toHaveTextContent("Evento não encontrado.");
+});
+
+test("o menu Mais ações leva à rota de edição", async () => {
+  install([training()]);
   renderPage();
   fireEvent.click(await screen.findByRole("button", { name: "Mais ações" }));
   fireEvent.click(screen.getByRole("menuitem", { name: "Editar" }));
 
   expect(push).toHaveBeenCalledWith("/user-1/eventos/ev-1/editar");
-});
-
-test("mostra a nota de sono inteira dentro da seção Notas, com a seta que a abre", async () => {
-  const sleepNote = { ...textNote({ id: "sono-1", name: "Sono" }), type: "sleep", data: { trackedSleepTime: 480, score: 83 } } as unknown as NoteDto;
-  const sleepEvent: EventDetailDto = { ...event, kind: "sleep", name: "Dormir", description: "", notes: [sleepNote], taskIds: [] };
-  authedFetch.mockImplementation(() => Promise.resolve(sleepEvent));
-  renderPage();
-
-  expect(await screen.findByText("Pontuação do sono")).toBeInTheDocument();
-  const notes = screen.getByRole("region", { name: /^Notas/ });
-  expect(within(notes).getByText(/^Nota de sono/)).toBeInTheDocument();
-  expect(within(notes).getByRole("link", { name: /Abrir a nota .*14 de setembro/ })).toHaveAttribute("href", "/user-1/notas/sono-1");
 });
