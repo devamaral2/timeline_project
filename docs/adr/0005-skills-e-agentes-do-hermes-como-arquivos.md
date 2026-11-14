@@ -41,7 +41,7 @@ a rota por processo (ADR 003, agentes em `api-core/process/agents/*.md`) e o Her
 
 - A edição é livre dentro da pasta: a API não valida o conteúdo dos arquivos do Hermes, só o isola (caminho
   dentro da pasta, apenas `.md`, até 256 KB). O rollback é o guarda.
-- Os endpoints `api/ai/config` (listar, ler, backups, restaurar, recarregar) passam a tratar só da pasta do
+- Os endpoints `api/ai/config` (listar, ler, backups, restaurar) passam a tratar só da pasta do
   Hermes. Publicar e restaurar o padrão de fábrica deixaram de existir.
 - Só viram nota o `SKILL.md` de cada skill e os `.md` de `hermes/agents/`. O resto da pasta de skills
   (`DESCRIPTION.md`, referências, scripts, estado do Hermes como `.usage.json` e `.bundled_manifest`) pertence

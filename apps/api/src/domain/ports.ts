@@ -5,7 +5,6 @@
 export type * from "./events/ports/event-repository";
 export type * from "./events/ports/event-card-query";
 export type * from "./events/ports/tag-repository";
-export type * from "./events/ports/daily-overview-query";
 export type * from "./artifacts/ports/artifact-repository";
 export type * from "./artifacts/ports/artifact-event-link-query";
 export type * from "./artifacts/ports/food-generation-repository";

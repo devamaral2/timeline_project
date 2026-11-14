@@ -7,7 +7,6 @@ import { InvalidInputError } from "../../api-core/agent/errors/agent.errors";
 import { GatewayIdentityGuard } from "../../http/request-identity/gateway-identity.guard";
 import { ListAgentFileBackupsController } from "../list-agent-file-backups/list-agent-file-backups.controller";
 import { ReadAgentFileController } from "../read-agent-file/read-agent-file.controller";
-import { ReloadAgentFilesController } from "../reload-agent-files/reload-agent-files.controller";
 import { RestoreAgentFileController } from "../restore-agent-file/restore-agent-file.controller";
 import { ListAgentFilesController } from "./list-agent-files.controller";
 
@@ -35,7 +34,6 @@ describe("/api/ai/config (arquivos do Hermes)", () => {
       ReadAgentFileController,
       ListAgentFileBackupsController,
       RestoreAgentFileController,
-      ReloadAgentFilesController,
     ]) {
       const handler = Object.getOwnPropertyNames(controller.prototype).find((name) => name !== "constructor") as string;
       const guards = Reflect.getMetadata(GUARDS_METADATA, controller.prototype[handler as keyof typeof controller.prototype]);
@@ -50,11 +48,9 @@ describe("/api/ai/config (arquivos do Hermes)", () => {
     expect(() => new ListAgentFilesController(asFiles).list(owner)).toThrow(ForbiddenException);
     vi.stubEnv("AGENT_CONFIG_OWNER_USER_ID", owner.userId);
     expect(() => new ListAgentFilesController(asFiles).list(stranger)).toThrow(ForbiddenException);
-    await expect(new ReloadAgentFilesController(asFiles).execute(stranger)).rejects.toBeInstanceOf(ForbiddenException);
     await expect(
       new RestoreAgentFileController(asFiles).execute({ path: "hermes/skills/a.md", backupId: "a.bak" }, stranger),
     ).rejects.toBeInstanceOf(ForbiddenException);
-    expect(files.reload).not.toHaveBeenCalled();
     expect(files.restoreBackup).not.toHaveBeenCalled();
   });
 

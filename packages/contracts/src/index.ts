@@ -6,7 +6,6 @@
 export type * from "./events/event-types";
 export type * from "./events/event.dto";
 export type * from "./events/event.input";
-export type * from "./events/daily-overview.dto";
 export type * from "./events/tag-suggestion.dto";
 export type * from "./events/notification-offset-minutes";
 export type * from "./artifacts/artifact.dto";

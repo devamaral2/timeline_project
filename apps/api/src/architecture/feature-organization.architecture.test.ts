@@ -39,7 +39,6 @@ test("has one folder per operation on events, artifacts and recurrences, and non
     "list-agenda-events",
     "list-tracked-events",
     "list-subtasks",
-    "get-daily-overview",
     "suggest-tags",
     "create-artifact",
     "get-artifact",

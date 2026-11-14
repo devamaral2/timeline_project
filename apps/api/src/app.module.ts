@@ -4,7 +4,6 @@ import { ApiCoreModule } from "./api-core/api-core.module";
 import { IdempotencyInterceptor } from "./http/idempotency/idempotency.interceptor";
 import { PersistenceModule } from "./infrastructure/persistence";
 import { CreateEventModule } from "./features/create-event/create-event.module";
-import { GetDailyOverviewModule } from "./features/get-daily-overview/get-daily-overview.module";
 import { GetEventModule } from "./features/get-event/get-event.module";
 import { ListAgendaEventsModule } from "./features/list-agenda-events/list-agenda-events.module";
 import { ListTrackedEventsModule } from "./features/list-tracked-events/list-tracked-events.module";
@@ -33,7 +32,6 @@ import { ListAgentFilesModule } from "./features/list-agent-files/list-agent-fil
 import { ReadAgentFileModule } from "./features/read-agent-file/read-agent-file.module";
 import { ListAgentFileBackupsModule } from "./features/list-agent-file-backups/list-agent-file-backups.module";
 import { RestoreAgentFileModule } from "./features/restore-agent-file/restore-agent-file.module";
-import { ReloadAgentFilesModule } from "./features/reload-agent-files/reload-agent-files.module";
 import { RequestAgentFileEditModule } from "./features/request-agent-file-edit/request-agent-file-edit.controller";
 
 @Module({
@@ -41,7 +39,6 @@ import { RequestAgentFileEditModule } from "./features/request-agent-file-edit/r
     ApiCoreModule.forRoot(),
     PersistenceModule,
     // Rotas estaticas devem ser registradas antes das rotas parametrizadas.
-    GetDailyOverviewModule,
     ListTrackedEventsModule,
     ListAgendaEventsModule,
     CreateEventModule,
@@ -65,7 +62,6 @@ import { RequestAgentFileEditModule } from "./features/request-agent-file-edit/r
     RequestAgentFileEditModule,
     ListAgentFileBackupsModule,
     RestoreAgentFileModule,
-    ReloadAgentFilesModule,
     StartRequestModule,
     StartEditRequestModule,
     StartHermesRequestModule,

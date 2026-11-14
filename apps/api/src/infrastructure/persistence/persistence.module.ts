@@ -2,7 +2,6 @@ import { Module } from "@nestjs/common";
 import type {
   ArtifactEventLinkQuery,
   ArtifactRepository,
-  DailyOverviewQuery,
   EntityBatchWriter,
   EventCardQuery,
   EventRepository,
@@ -18,7 +17,6 @@ import { PostgresScopedSqlQuery } from "./agent-sql/postgres-scoped-sql.query";
 import { PostgresWorkoutCatalog } from "./artifacts/postgres-workout.catalog";
 import { PostgresArtifactEventLinkQuery } from "./artifacts/queries/postgres-artifact-event-link.query";
 import { PostgresArtifactRepository } from "./artifacts/repositories/postgres-artifact.repository";
-import { PostgresDailyOverviewQuery } from "./events/queries/postgres-daily-overview.query";
 import { PostgresEventCardQuery } from "./events/queries/postgres-event-card.query";
 import { PostgresEventRepository } from "./events/repositories/postgres-event.repository";
 import { PostgresTagRepository } from "./events/repositories/postgres-tag.repository";
@@ -37,7 +35,6 @@ export const DATABASE = "DATABASE";
 export const EVENT_REPOSITORY = "EVENT_REPOSITORY";
 export const EVENT_CARD_QUERY = "EVENT_CARD_QUERY";
 export const TAG_REPOSITORY = "TAG_REPOSITORY";
-export const DAILY_OVERVIEW_QUERY = "DAILY_OVERVIEW_QUERY";
 export const ARTIFACT_REPOSITORY = "ARTIFACT_REPOSITORY";
 export const ARTIFACT_EVENT_LINK_QUERY = "ARTIFACT_EVENT_LINK_QUERY";
 export const WORKOUT_CATALOG = "WORKOUT_CATALOG";
@@ -72,11 +69,6 @@ function requireDatabaseUrl(): string {
       provide: TAG_REPOSITORY,
       inject: [DATABASE],
       useFactory: (database: PostgresDatabase): TagRepository => new PostgresTagRepository(database.db),
-    },
-    {
-      provide: DAILY_OVERVIEW_QUERY,
-      inject: [DATABASE],
-      useFactory: (database: PostgresDatabase): DailyOverviewQuery => new PostgresDailyOverviewQuery(database.db),
     },
     {
       provide: ARTIFACT_REPOSITORY,
@@ -121,7 +113,6 @@ function requireDatabaseUrl(): string {
     EVENT_REPOSITORY,
     EVENT_CARD_QUERY,
     TAG_REPOSITORY,
-    DAILY_OVERVIEW_QUERY,
     ARTIFACT_REPOSITORY,
     ARTIFACT_EVENT_LINK_QUERY,
     WORKOUT_CATALOG,

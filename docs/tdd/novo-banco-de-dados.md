@@ -49,7 +49,6 @@ A migration inicial tem duas edições à mão, que precisam ser refeitas se ela
 |---|---|
 | `GET /api/events` | Janela da agenda, em páginas; filtros `from`, `to`, `actor`, `kind`, `tag` |
 | `GET /api/events/tracked` | Lista de tarefas; filtros `status`, `priority`, `actor`, `tag`, `q`, `from`, `to`, `longRunning` |
-| `GET /api/events/daily` | Resumo de um dia: sono, alimentos e treinos |
 | `POST /api/events`, `GET`, `PATCH` e `DELETE /api/events/:eventId` | Criar, ler, editar e apagar um evento de pessoa |
 | `GET /api/events/:eventId/subtasks` | Os eventos em que um evento se desdobra |
 | `GET` e `POST /api/artifacts`, `GET`, `PATCH` e `DELETE /api/artifacts/:artifactId` | Artefatos; `scope=global` lista os globais de um tipo |
