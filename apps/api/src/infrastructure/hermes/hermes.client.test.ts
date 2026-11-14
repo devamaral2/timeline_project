@@ -1,7 +1,7 @@
 import { describe, expect, test, vi } from "vitest";
-import { RetryableAiJobError } from "../ai-jobs/ai-jobs.service";
+import { RetryableJobError } from "../jobs/jobs.service";
 import { HermesClient, HermesRequestError, hermesSessionId } from "./hermes.client";
-import type { HermesStep } from "./hermes-steps";
+import type { AgentTraceDto } from "@repo/contracts";
 
 const KEY = "k".repeat(32);
 
@@ -11,7 +11,7 @@ const sse = (events: object[], { tail = "" }: { tail?: string } = {}) =>
       start(controller) {
         const encoder = new TextEncoder();
         controller.enqueue(encoder.encode(": open\n\n"));
-        events.forEach((event, index) => controller.enqueue(encoder.encode(`id: ${index}\ndata: ${JSON.stringify(event)}\n\n`)));
+        for (const [index, event] of events.entries()) controller.enqueue(encoder.encode(`id: ${index}\ndata: ${JSON.stringify(event)}\n\n`));
         if (tail) controller.enqueue(encoder.encode(tail));
         controller.close();
       },
@@ -51,32 +51,34 @@ function client(fetchImpl: typeof fetch, extra: { apiKey?: string | undefined; t
 const completed = (output: string) => ({ event: "run.completed", run_id: "run_1", output });
 
 describe("HermesClient", () => {
-  test("starts a run on the conversation's session and returns the final text with the steps", async () => {
+  test("starts a run on the session and returns the final text with the trace", async () => {
     const fetchImpl = hermes({
       events: () =>
         sse([
-          { event: "reasoning.available", text: "Vou criar a nota." },
-          { event: "tool.started", tool: "mcp_braid_create_note", preview: "teste", tool_call_id: "c1" },
-          { event: "tool.completed", tool: "mcp_braid_create_note", duration: 0.5, error: false, tool_call_id: "c1" },
-          completed("Nota criada."),
+          { event: "reasoning.available", text: "Vou criar o artefato." },
+          { event: "tool.started", tool: "mcp_braid_create_artifact", preview: "teste", tool_call_id: "c1" },
+          { event: "tool.completed", tool: "mcp_braid_create_artifact", duration: 0.5, error: false, tool_call_id: "c1" },
+          completed("Artefato criado."),
         ]),
     });
-    const seen: HermesStep[][] = [];
+    const seen: AgentTraceDto[] = [];
 
-    const reply = await client(fetchImpl).chat({ text: "crie uma nota", sessionId: "braid-u1-main", onSteps: (steps) => seen.push(steps) });
+    const reply = await client(fetchImpl).chat({ text: "crie um artefato", sessionId: "braid-u1-main", onTrace: (trace) => seen.push(trace) });
 
-    expect(reply.text).toBe("Nota criada.");
-    expect(reply.steps.map((step) => [step.label, step.status])).toEqual([
-      ["Pensou", "done"],
-      ["Criou uma nota", "done"],
+    expect(reply.text).toBe("Artefato criado.");
+    expect(seen.some((trace) => trace.entries.some((entry) => entry.kind === "tool" && entry.status === "running"))).toBe(true);
+    expect(reply.trace.status).toBe("done");
+    expect(reply.trace.entries.map((entry) => [entry.kind, entry.label, entry.status])).toEqual([
+      ["request", "Pedido", "done"],
+      ["thought", "Pensou", "done"],
+      ["tool", "Criou um artefato", "done"],
+      ["answer", "Respondeu", "done"],
     ]);
-    expect(seen.length).toBe(3);
-    expect(seen[1]?.[1]).toMatchObject({ status: "running" });
 
     const [startUrl, startInit] = fetchImpl.mock.calls[0] as [string, RequestInit];
     expect(startUrl).toBe("http://hermes.test:8642/v1/runs");
     expect(startInit.headers).toMatchObject({ authorization: `Bearer ${KEY}` });
-    expect(JSON.parse(startInit.body as string)).toEqual({ input: "crie uma nota", session_id: "braid-u1-main" });
+    expect(JSON.parse(startInit.body as string)).toEqual({ input: "crie um artefato", session_id: "braid-u1-main" });
   });
 
   test("frames split across chunks and keepalive comments are handled", async () => {
@@ -109,13 +111,13 @@ describe("HermesClient", () => {
   test("when starting, 429 and 503 are retried by the queue; other statuses are not", async () => {
     for (const status of [429, 503]) {
       const failing = client(hermes({ start: () => json({}, status) }));
-      await expect(failing.chat({ text: "oi", sessionId: "s" })).rejects.toBeInstanceOf(RetryableAiJobError);
+      await expect(failing.chat({ text: "oi", sessionId: "s" })).rejects.toBeInstanceOf(RetryableJobError);
     }
     for (const status of [400, 401, 500, 502]) {
       const failing = client(hermes({ start: () => json({}, status) }));
       const error = await failing.chat({ text: "oi", sessionId: "s" }).catch((cause: unknown) => cause);
       expect(error).toBeInstanceOf(HermesRequestError);
-      expect(error).not.toBeInstanceOf(RetryableAiJobError);
+      expect(error).not.toBeInstanceOf(RetryableJobError);
     }
   });
 
@@ -148,8 +150,7 @@ describe("HermesClient", () => {
     const reply = await client(fetchImpl).chat({ text: "oi", sessionId: "s" });
 
     expect(reply.text).toBe("feito");
-    expect(reply.steps).toHaveLength(1);
-    expect(reply.steps[0]?.status).toBe("done");
+    expect(reply.trace.entries.filter((entry) => entry.kind === "tool").map((entry) => entry.status)).toEqual(["done"]);
   });
 
   test("a lost connection after the run started is final, because Hermes may already have acted", async () => {
@@ -187,7 +188,7 @@ describe("HermesClient", () => {
   });
 
   test("the session id keeps only header-safe characters", () => {
-    expect(hermesSessionId("u 1", undefined)).toBe("braid-u_1-main");
+    expect(hermesSessionId("u 1", "01ARZ3NDEKTSV4RRFFQ69G5FAV")).toBe("braid-u_1-01ARZ3NDEKTSV4RRFFQ69G5FAV");
     expect(hermesSessionId("u1", "01ARZ3NDEKTSV4RRFFQ69G5FAV")).toBe("braid-u1-01ARZ3NDEKTSV4RRFFQ69G5FAV");
   });
 });

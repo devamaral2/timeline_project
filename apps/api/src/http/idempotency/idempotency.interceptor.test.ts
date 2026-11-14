@@ -20,7 +20,7 @@ function contextFor(options: { key?: string; body?: unknown; path?: string; user
     method: options.method ?? "POST",
     body: options.body ?? { name: "x" },
     actor: { userId: options.userId ?? "owner" },
-    route: { path: options.path ?? "/api/notes" },
+    route: { path: options.path ?? "/api/artifacts" },
     header: (name) => headers.get(name.toLowerCase()),
   };
   const context = {
@@ -32,7 +32,7 @@ function contextFor(options: { key?: string; body?: unknown; path?: string; user
 function setup() {
   const store = new InMemoryIdempotencyStore();
   const interceptor = new IdempotencyInterceptor(store);
-  const handler = vi.fn(() => of({ noteId: "note-1" }));
+  const handler = vi.fn(() => of({ artifactId: "artifact-1" }));
   return { store, interceptor, handler };
 }
 
@@ -55,8 +55,8 @@ describe("IdempotencyInterceptor", () => {
     const created = await firstValueFrom(interceptor.intercept(first.context, { handle: handler }));
     const replayed = await firstValueFrom(interceptor.intercept(second.context, { handle: handler }));
 
-    expect(created).toEqual({ noteId: "note-1" });
-    expect(replayed).toEqual({ noteId: "note-1" });
+    expect(created).toEqual({ artifactId: "artifact-1" });
+    expect(replayed).toEqual({ artifactId: "artifact-1" });
     expect(handler).toHaveBeenCalledTimes(1);
     expect(second.setHeader).toHaveBeenCalledWith("Idempotent-Replayed", "true");
     expect(first.setHeader).not.toHaveBeenCalled();
@@ -67,7 +67,7 @@ describe("IdempotencyInterceptor", () => {
 
     await firstValueFrom(interceptor.intercept(contextFor({ key: "k" }).context, { handle: handler }));
     await firstValueFrom(interceptor.intercept(contextFor({ key: "k", userId: "other" }).context, { handle: handler }));
-    await firstValueFrom(interceptor.intercept(contextFor({ key: "k", path: "/api/tasks" }).context, { handle: handler }));
+    await firstValueFrom(interceptor.intercept(contextFor({ key: "k", path: "/api/recurrences" }).context, { handle: handler }));
 
     expect(handler).toHaveBeenCalledTimes(3);
   });
@@ -85,7 +85,7 @@ describe("IdempotencyInterceptor", () => {
     const { store, interceptor, handler } = setup();
     const body = { name: "x" };
     const requestHash = createHash("sha256").update(JSON.stringify(body)).digest("hex");
-    await store.claim({ userId: "owner", scope: "/api/notes", key: "k", requestHash });
+    await store.claim({ userId: "owner", scope: "/api/artifacts", key: "k", requestHash });
 
     await expect(
       firstValueFrom(interceptor.intercept(contextFor({ key: "k", body }).context, { handle: handler })),
@@ -96,19 +96,19 @@ describe("IdempotencyInterceptor", () => {
   test("a failed handler frees the key for a retry", async () => {
     const { interceptor } = setup();
     const failing = vi.fn(() => throwError(() => new Error("boom")));
-    const working = vi.fn(() => of({ noteId: "note-2" }));
+    const working = vi.fn(() => of({ artifactId: "artifact-2" }));
 
     await expect(
       firstValueFrom(interceptor.intercept(contextFor({ key: "k" }).context, { handle: failing })),
     ).rejects.toThrow("boom");
     const retried = await firstValueFrom(interceptor.intercept(contextFor({ key: "k" }).context, { handle: working }));
 
-    expect(retried).toEqual({ noteId: "note-2" });
+    expect(retried).toEqual({ artifactId: "artifact-2" });
   });
 
   test("routes outside the creation list ignore the header", async () => {
     const { interceptor, handler } = setup();
-    const { context } = contextFor({ key: "k", path: "/api/ai/process" });
+    const { context } = contextFor({ key: "k", path: "/api/requests" });
 
     await firstValueFrom(interceptor.intercept(context, { handle: handler }));
     await firstValueFrom(interceptor.intercept(context, { handle: handler }));

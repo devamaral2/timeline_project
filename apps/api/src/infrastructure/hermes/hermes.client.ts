@@ -1,21 +1,22 @@
-import { RetryableAiJobError } from "../ai-jobs/ai-jobs.service";
-import { HermesStepsTracker, type HermesRunEvent, type HermesStep } from "./hermes-steps";
+import { RetryableJobError } from "../jobs/jobs.service";
+import type { AgentTraceDto } from "@repo/contracts";
+import { HermesTraceTracker, type HermesTraceEvent } from "./hermes-trace";
 
 export interface HermesChatInput {
   text: string;
-  /** Identifica a conversa no Hermes: a mesma sessao continua o assunto e a memoria dele. */
+  /** Identifica a sessao no Hermes: a mesma sessao continua o assunto e a memoria dele. */
   sessionId: string;
   signal?: AbortSignal;
-  /** Chamado a cada mudanca na lista de passos (ferramentas, pensamentos) enquanto o Hermes trabalha. */
-  onSteps?(steps: HermesStep[]): void;
+  /** Chamado a cada mudanca no rastro do turno (ferramentas, pensamentos) enquanto o Hermes trabalha. */
+  onTrace?(trace: AgentTraceDto): void;
 }
 
 export interface HermesReply {
   text: string;
-  steps: HermesStep[];
+  trace: AgentTraceDto;
 }
 
-/** O que a fila de jobs precisa do Hermes: uma mensagem entra; os passos saem durante o turno e o texto no fim. */
+/** O que a fila de jobs precisa do Hermes: uma mensagem entra; o rastro sai durante o turno e o texto no fim. */
 export interface HermesChat {
   chat(input: HermesChatInput): Promise<HermesReply>;
 }
@@ -42,33 +43,41 @@ const DEFAULT_TIMEOUT_MS = 150_000;
 const DEFAULT_POLL_MS = 1_000;
 const TERMINAL = new Set(["completed", "failed", "cancelled", "interrupted"]);
 
-interface RunEvent extends HermesRunEvent {
+interface RunEvent {
+  event?: unknown;
+  error?: unknown;
   output?: unknown;
 }
 
 /**
  * Fala com o Hermes pela API de runs (`POST /v1/runs` + `GET /v1/runs/{id}/events`), sempre pela rede interna.
- * Os eventos de ferramenta e de raciocinio viram a lista de passos que o chat mostra.
+ * Os eventos de ferramenta e de raciocinio viram o rastro que o chat mostra.
  */
 export class HermesClient implements HermesChat {
   constructor(private readonly config: HermesClientConfig) {}
 
-  async chat({ text, sessionId, signal, onSteps }: HermesChatInput): Promise<HermesReply> {
+  async chat({ text, sessionId, signal, onTrace }: HermesChatInput): Promise<HermesReply> {
     if (!this.config.apiKey) throw new HermesRequestError("HERMES_API_KEY is not configured");
     const timeout = AbortSignal.timeout(this.config.timeoutMs ?? DEFAULT_TIMEOUT_MS);
     const combined = signal ? AbortSignal.any([signal, timeout]) : timeout;
 
     // Ate aqui o Hermes ainda nao agiu: uma falha de conexao pode ser repetida pela fila.
+    const trace = new HermesTraceTracker(text);
     const runId = await this.start(text, sessionId, combined, timeout, signal);
 
     // Depois de iniciada, nada e repetido: o Hermes pode ter criado ou editado entidades. Toda falha vira definitiva.
     try {
-      return await this.follow(runId, combined, onSteps);
+      return await this.follow(runId, combined, trace, onTrace);
     } catch (error) {
       void this.stop(runId);
+      // O rastro fecha com a falha: e o ultimo estado que o chat ve antes de o pedido falhar.
+      const reason = signal?.aborted ? "A execução foi cancelada."
+        : error instanceof HermesRequestError ? error.message
+          : timeout.aborted ? "Hermes timed out" : "Lost the connection to Hermes";
+      onTrace?.(trace.finish({ error: reason }));
       if (signal?.aborted) throw error;
       if (error instanceof HermesRequestError) throw error;
-      throw new HermesRequestError(timeout.aborted ? "Hermes timed out" : "Lost the connection to Hermes");
+      throw new HermesRequestError(reason);
     }
   }
 
@@ -83,7 +92,7 @@ export class HermesClient implements HermesChat {
     if (!response.ok) {
       // So 429 e 503 (nao atendeu) valem uma nova tentativa da fila; o resto e erro de configuracao ou de pedido.
       const message = `Hermes responded ${response.status}`;
-      if (response.status === 429 || response.status === 503) throw new RetryableAiJobError(message);
+      if (response.status === 429 || response.status === 503) throw new RetryableJobError(message);
       throw new HermesRequestError(message, response.status);
     }
     const body = (await response.json()) as { run_id?: unknown };
@@ -91,8 +100,12 @@ export class HermesClient implements HermesChat {
     return body.run_id;
   }
 
-  private async follow(runId: string, signal: AbortSignal, onSteps?: (steps: HermesStep[]) => void): Promise<HermesReply> {
-    const tracker = new HermesStepsTracker();
+  private async follow(
+    runId: string,
+    signal: AbortSignal,
+    trace: HermesTraceTracker,
+    onTrace?: (trace: AgentTraceDto) => void,
+  ): Promise<HermesReply> {
     let output: string | undefined;
     let failure: string | undefined;
 
@@ -101,7 +114,7 @@ export class HermesClient implements HermesChat {
       if (!events.ok || !events.body) throw new HermesRequestError(`Hermes events responded ${events.status}`);
       for await (const raw of sseData(events.body)) {
         const event = raw as RunEvent;
-        if (tracker.apply(event)) onSteps?.(tracker.snapshot());
+        if (trace.apply(raw as HermesTraceEvent)) onTrace?.(trace.snapshot());
         if (event.event === "run.completed" && typeof event.output === "string") output = event.output;
         if (event.event === "run.failed") failure = typeof event.error === "string" ? event.error : "Hermes run failed";
         if (event.event === "run.cancelled" || event.event === "run.interrupted") failure = "Hermes run was cancelled";
@@ -113,7 +126,7 @@ export class HermesClient implements HermesChat {
 
     if (failure) throw new HermesRequestError(failure);
     if (output === undefined) output = await this.pollOutput(runId, signal);
-    return { text: output, steps: tracker.finish() };
+    return { text: output, trace: trace.finish({ output }) };
   }
 
   private async pollOutput(runId: string, signal: AbortSignal): Promise<string> {
@@ -194,7 +207,7 @@ function sleep(ms: number, signal: AbortSignal): Promise<void> {
   });
 }
 
-/** O id de sessao do Hermes por conversa do app; so caracteres seguros para um cabecalho. */
-export function hermesSessionId(userId: string, conversationId: string | undefined): string {
-  return `braid-${userId}-${conversationId ?? "main"}`.replace(/[^A-Za-z0-9_-]/g, "_").slice(0, 128);
+/** O id de sessao do Hermes por sessao do app (o primeiro pedido dela); so caracteres seguros para um cabecalho. */
+export function hermesSessionId(userId: string, firstRequestId: string): string {
+  return `braid-${userId}-${firstRequestId}`.replace(/[^A-Za-z0-9_-]/g, "_").slice(0, 128);
 }
