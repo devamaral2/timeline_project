@@ -450,6 +450,23 @@
 .chatIconButton:hover:not(:disabled) { color: var(--ink); }
 [data-chat-view="list"] .chatIconButton { color: var(--ink); }
 .chatIconButton:disabled { opacity: .4; }
+/* As duas vistas do chat: a conversa e o processo da IA. No painel estreito uma toma o lugar da outra; com
+   largura (o chat expandido no desktop) o processo abre ao lado, em paralelo. */
+.assistantPanel { container: chat / inline-size; }
+.chatPanes { flex-shrink: 0; display: flex; gap: 20px; min-width: 0; margin: 0 -8px; padding: 0 12px; border: 0; border-bottom: 1px solid var(--hairline); }
+.chatPanes button { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; font-family: var(--font-mono); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); cursor: pointer; }
+.chatPanes button:hover { color: var(--ink); }
+.chatPanes button[aria-pressed="true"] { border-bottom-color: var(--ink); color: var(--ink); }
+.chatPaneCount { min-width: 20px; padding: 0 6px; border-radius: 999px; background: var(--soft); font-size: 11px; line-height: 18px; letter-spacing: 0; text-align: center; font-variant-numeric: tabular-nums; color: var(--muted); }
+.chatPaneCount[data-running="true"] { background: var(--cyan-soft); color: var(--brand-accent); }
+.chatSplit { flex: 1; min-height: 0; min-width: 0; display: flex; }
+.chatProcess { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.chatSplit[data-pane="process"] > .chatBody { display: none; }
+@container chat (min-width: 860px) {
+  .chatSplit[data-pane="process"] { gap: 24px; }
+  .chatSplit[data-pane="process"] > .chatBody { display: flex; flex: 1 1 0; }
+  .chatSplit[data-pane="process"] > .chatProcess { flex: 1 1 0; padding-left: 24px; border-left: 1px solid var(--line); }
+}
 /* Os botoes do inicio so aparecem depois que a marca termina de se trancar. */
 /* A margem lateral deixa o realce dos comandos sair 12px do texto sem rolar de lado. */
 .chatBody { flex: 1; min-height: 0; display: flex; flex-direction: column; margin: 0 -12px; padding: 0 12px; overflow: hidden auto; min-width: 0; overscroll-behavior: contain; }

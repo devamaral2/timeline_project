@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "@/lib/api/authed-fetch";
-import type { AgentChatEntityRef, AgentScreenContext, AiProcessDto } from "@/lib/api/contracts";
+import type { AgentChatEntityRef, AgentScreenContext, AgentTraceDto, AiProcessDto } from "@/lib/api/contracts";
 import { type AiProcessApi, aiProcess, isProcessTerminal } from "@/lib/ai-process/ai-process";
 import {
   type AiAutomationApi,
@@ -22,6 +22,19 @@ export type AgentChatMessage =
   | { id: string; role: "process"; process: AiProcessDto | null }
   /** Os passos do Hermes (ferramentas e pensamentos), ao vivo e depois do fim do turno. Nao entra no historico. */
   | { id: string; role: "hermes-steps"; steps: HermesStepDto[]; running: boolean };
+
+/**
+ * O rastro de um pedido, para a aba "Processo": um por pedido enviado, na ordem da conversa. `trace` fica
+ * `null` ate o servidor responder o primeiro estado (ou quando ele nao manda rastro).
+ */
+export interface AgentChatTrace {
+  /** O id do pedido: o mesmo da mensagem do usuario. */
+  id: string;
+  request: string;
+  route: "process" | "hermes";
+  running: boolean;
+  trace: AgentTraceDto | null;
+}
 
 export interface AgentChatPending {
   id: string;
@@ -102,6 +115,8 @@ export function useAgentChat({
   }, []);
   const [messages, setMessages] = useState<AgentChatMessage[]>([]);
   const [pending, setPending] = useState<AgentChatPending | null>(null);
+  const [traces, setTraces] = useState<AgentChatTrace[]>([]);
+  const tracesRef = useRef(traces);
   const messagesRef = useRef(messages);
   const pendingRef = useRef(pending);
   const onEntitiesChangedRef = useRef(onEntitiesChanged);
@@ -115,6 +130,22 @@ export function useAgentChat({
     setMessages(messagesRef.current);
   }, []);
 
+  const commitTraces = useCallback((update: (current: AgentChatTrace[]) => AgentChatTrace[]) => {
+    tracesRef.current = update(tracesRef.current);
+    setTraces(tracesRef.current);
+  }, []);
+
+  /** Abre o rastro do pedido ou atualiza o que ja existe. */
+  const showTrace = useCallback(
+    (next: AgentChatTrace) => {
+      commitTraces((current) =>
+        current.some((entry) => entry.id === next.id)
+          ? current.map((entry) => (entry.id === next.id ? next : entry))
+          : [...current, next]);
+    },
+    [commitTraces],
+  );
+
   const commitPending = useCallback((next: AgentChatPending | null) => {
     pendingRef.current = next;
     setPending(next);
@@ -127,6 +158,8 @@ export function useAgentChat({
     commitPending(null);
     messagesRef.current = [];
     setMessages([]);
+    tracesRef.current = [];
+    setTraces([]);
   }, [commitHermesMode, commitPending]);
 
   const fail = useCallback(
@@ -141,9 +174,11 @@ export function useAgentChat({
         ),
         { id: `${id}-error`, role: "error", text: ERROR_TEXTS[code], retryText: request?.text ?? "", requestId: id },
       ]);
+      // O pedido acabou sem resposta: o rastro para de girar onde estava.
+      commitTraces((current) => current.map((entry) => (entry.id === id ? { ...entry, running: false } : entry)));
       if (code === "connection_lost") onEntitiesChangedRef.current?.();
     },
-    [commitMessages, commitPending],
+    [commitMessages, commitPending, commitTraces],
   );
 
   useEffect(() => {
@@ -170,6 +205,7 @@ export function useAgentChat({
 
       const messageId = `${id}-process`;
       commitMessages((current) => [...current, { id: messageId, role: "process", process: null }]);
+      showTrace({ id, request: text, route: "process", running: true, trace: null });
       commitPending({ id, label: "Realizando processos" });
       const deadline = Date.now() + PROCESS_TIMEOUT_MS;
       let failures = 0;
@@ -180,6 +216,7 @@ export function useAgentChat({
           if (disposedRef.current || pendingRef.current?.id !== id) return;
           commitMessages((current) =>
             current.map((message) => (message.id === messageId ? { id: messageId, role: "process", process: view } : message)));
+          showTrace({ id, request: text, route: "process", running: !isProcessTerminal(view), trace: view.trace ?? null });
           if (isProcessTerminal(view)) {
             commitPending(null);
             // Criar, editar e vincular mudam a agenda; uma consulta pura ou uma resposta nao.
@@ -205,7 +242,7 @@ export function useAgentChat({
       }
       return;
     },
-    [commitMessages, commitPending, context, fail, processApi, processPollMs, userId],
+    [commitMessages, commitPending, context, fail, processApi, processPollMs, showTrace, userId],
   );
 
   /**
@@ -237,6 +274,7 @@ export function useAgentChat({
       }
 
       commitPending({ id, label: "Falando com o Hermes" });
+      showTrace({ id, request: text, route: "hermes", running: true, trace: null });
       const stepsId = `${id}-steps`;
       const showSteps = (steps: HermesStepDto[], running: boolean) => {
         const message: AgentChatMessage = { id: stepsId, role: "hermes-steps", steps, running };
@@ -255,6 +293,7 @@ export function useAgentChat({
           if (disposedRef.current || pendingRef.current?.id !== id) return;
           const steps = job.steps ?? [];
           if (steps.length > 0) showSteps(steps, !isHermesTurnTerminal(job));
+          showTrace({ id, request: text, route: "hermes", running: !isHermesTurnTerminal(job), trace: job.trace ?? null });
           if (isHermesTurnTerminal(job)) {
             if (job.status === "succeeded" && job.result) {
               commitPending(null);
@@ -284,7 +323,7 @@ export function useAgentChat({
         await new Promise((resolve) => setTimeout(resolve, automationPollMs));
       }
     },
-    [automationApi, automationPollMs, commitHermesMode, commitMessages, commitPending, fail, userId],
+    [automationApi, automationPollMs, commitHermesMode, commitMessages, commitPending, fail, showTrace, userId],
   );
 
   const send = useCallback(
@@ -326,14 +365,17 @@ export function useAgentChat({
       if (error?.role !== "error" || pendingRef.current) return;
       const { requestId } = error;
       commitMessages((current) => current.filter((message) => message.id !== errorId && message.id !== requestId));
+      commitTraces((current) => current.filter((entry) => entry.id !== requestId));
       send(error.retryText);
     },
-    [commitMessages, send],
+    [commitMessages, commitTraces, send],
   );
 
   return {
     messages,
     pending,
+    /** O rastro de cada pedido da conversa, para a aba "Processo". */
+    traces,
     ready: Boolean(userId),
     /** `true` enquanto as mensagens vao ao Hermes (`/hermes`); `/app` volta ao assistente da agenda. */
     hermesMode,

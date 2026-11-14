@@ -1,5 +1,5 @@
 import { ApiError, authedFetch } from "@/lib/api/authed-fetch";
-import type { AgentChatErrorCode } from "@/lib/api/contracts";
+import type { AgentChatErrorCode, AgentTraceDto } from "@/lib/api/contracts";
 
 /** Um passo do Hermes: uma ferramenta que ele usou ou um pensamento (ADR 004). */
 export interface HermesStepDto {
@@ -22,6 +22,8 @@ export interface HermesTurnJobDto {
   result?: { text: string };
   /** Os passos dados ate agora; crescem enquanto o job roda e ficam completos ao fim. */
   steps?: HermesStepDto[];
+  /** O rastro do turno (pensamentos, ferramentas com entrada e resultado, tokens), para a aba "Processo". */
+  trace?: AgentTraceDto;
 }
 
 export interface StartHermesTurnRequest {

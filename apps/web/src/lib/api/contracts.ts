@@ -463,6 +463,51 @@ export interface AiProcessEntityDto {
   linkedTo: Array<{ kind: string; id: string }>;
 }
 
+/**
+ * O rastro de um pedido a IA, para a aba "Processo" do chat: tudo o que ela fez, em ordem, com o detalhe de
+ * cada passo. As duas rotas (processo e Hermes) falam esta forma, e todo rotulo ja vem escrito pelo servidor.
+ */
+export type AgentTraceKind = "request" | "routing" | "thought" | "agent" | "tool" | "message" | "answer";
+export type AgentTraceStatus = "pending" | "running" | "done" | "failed";
+
+export interface AgentTraceField {
+  label: string;
+  value: string;
+}
+
+export interface AgentTraceSection {
+  title: string;
+  text: string;
+  /** Comando, JSON ou saida de ferramenta: vai em fonte mono. */
+  code?: boolean;
+}
+
+export interface AgentTraceEntryDto {
+  id: string;
+  kind: AgentTraceKind;
+  label: string;
+  /** O nome tecnico por tras do rotulo: a ferramenta, o agente. */
+  source?: string;
+  summary?: string;
+  status: AgentTraceStatus;
+  startedAt?: string;
+  durationMs?: number;
+  fields?: AgentTraceField[];
+  sections?: AgentTraceSection[];
+  /** O registro como o servidor o tem, para a vista "Bruto". */
+  raw?: unknown;
+}
+
+export interface AgentTraceDto {
+  route: "process" | "hermes";
+  status: "running" | "done" | "failed";
+  startedAt?: string;
+  durationMs?: number;
+  /** Totais do pedido: modelo, provedor, tokens. */
+  fields: AgentTraceField[];
+  entries: AgentTraceEntryDto[];
+}
+
 export interface AiProcessDto {
   id: string;
   status: AiProcessStatus;
@@ -471,6 +516,8 @@ export interface AiProcessDto {
   entities: AiProcessEntityDto[];
   /** Resposta do fallback ou o que falhou; ausente quando tudo deu certo. */
   message?: string;
+  /** O rastro do pedido, para a aba "Processo". */
+  trace?: AgentTraceDto;
 }
 
 export interface StartAiProcessRequest {

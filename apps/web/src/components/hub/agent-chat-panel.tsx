@@ -29,6 +29,7 @@ import { speechErrorMessage } from "@/lib/speech/speech-error-messages";
 import { useSpeechRecognition } from "@/lib/speech/use-speech-recognition";
 import { requestAgendaRefresh } from "@/components/agenda/agenda-refresh";
 import type { FreeWindow } from "./hub-events";
+import { AgentTrace } from "./agent-trace";
 import { HermesSteps } from "./hermes-steps";
 import { CHANGE_LABELS, EntityRows } from "./entity-rows";
 import { ProcessBox } from "./process-box";
@@ -151,6 +152,8 @@ export function AgentChatPanel({
 }: AgentChatPanelProps) {
   const [prompt, setPrompt] = useState("");
   const [activeCommand, setActiveCommand] = useState(0);
+  // A vista da conversa: so ela, ou com o processo da IA (em paralelo quando ha largura; no lugar dela quando nao).
+  const [pane, setPane] = useState<"chat" | "process">("chat");
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const commandsId = useId();
@@ -204,6 +207,9 @@ export function AgentChatPanel({
     : lastRole === "error" ? "Não deu certo"
     : "Esperando o seu pedido";
   const range = freeWindow ? windowRange(freeWindow) : null;
+  // Os comandos da barra "/" moram na conversa: enquanto ha comandos a escolher, e ela que aparece.
+  const shownPane = view === "conversation" && commandMatches.length === 0 ? pane : "chat";
+  const traceSteps = chat.traces.at(-1)?.trace?.entries.length ?? 0;
 
   function updatePrompt(value: string) {
     setPrompt(value);
@@ -289,6 +295,17 @@ export function AgentChatPanel({
         ) : null}
       </div>
 
+      {view === "conversation" ? (
+        <fieldset className={styles.chatPanes} aria-label="Vista do chat">
+          <button type="button" aria-pressed={pane === "chat"} onClick={() => setPane("chat")}>Conversa</button>
+          <button type="button" aria-pressed={pane === "process"} onClick={() => setPane("process")}>
+            Processo
+            {traceSteps > 0 ? <span className={styles.chatPaneCount} data-running={Boolean(chat.pending)}>{traceSteps}</span> : null}
+          </button>
+        </fieldset>
+      ) : null}
+
+      <div className={styles.chatSplit} data-pane={shownPane}>
       <div className={styles.chatBody}>
         {commandMatches.length > 0 ? (
           <ul className={styles.chatCommands} id={commandsId} aria-label="Comandos">
@@ -348,6 +365,12 @@ export function AgentChatPanel({
             <div ref={endRef} />
           </>
         )}
+      </div>
+      {shownPane === "process" ? (
+        <div className={styles.chatProcess}>
+          <AgentTrace traces={chat.traces} />
+        </div>
+      ) : null}
       </div>
 
       <div className={styles.chatField}>

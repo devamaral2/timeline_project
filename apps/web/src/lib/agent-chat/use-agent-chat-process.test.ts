@@ -96,3 +96,39 @@ test("falhas seguidas ao consultar o processo viram conexao perdida", async () =
   expect(get).toHaveBeenCalledTimes(5);
   expect(result.current.messages.at(-1)).toMatchObject({ role: "error", retryText: "oi" });
 });
+
+test("o rastro do processo abre com o pedido, segue cada consulta e para de girar no fim", async () => {
+  const trace = (status: "running" | "done") => ({
+    route: "process" as const, status, fields: [],
+    entries: [{ id: "s1", kind: "agent" as const, label: "Criando eventos", status }],
+  });
+  const start = vi.fn(async () => ({ processId: "p1" }));
+  let release: (view: AiProcessDto) => void = () => {};
+  const get = vi.fn()
+    .mockResolvedValueOnce({ ...running, trace: trace("running") })
+    .mockImplementationOnce(() => new Promise<AiProcessDto>((resolve) => { release = resolve; }));
+  const { result } = setup({ start, get });
+
+  act(() => { result.current.send("almoço ao meio-dia"); });
+
+  await waitFor(() => expect(get).toHaveBeenCalledTimes(2));
+  expect(result.current.traces).toEqual([
+    { id: result.current.messages[0]?.id, request: "almoço ao meio-dia", route: "process", running: true, trace: trace("running") },
+  ]);
+
+  await act(async () => { release({ ...done, trace: trace("done") }); });
+  await waitFor(() => expect(result.current.pending).toBeNull());
+
+  expect(result.current.traces).toMatchObject([{ running: false, trace: { status: "done" } }]);
+});
+
+test("um servidor que nao manda rastro deixa o pedido na aba, sem detalhes", async () => {
+  const start = vi.fn(async () => ({ processId: "p1" }));
+  const get = vi.fn().mockResolvedValue(done);
+  const { result } = setup({ start, get });
+
+  act(() => { result.current.send("almoço ao meio-dia"); });
+  await waitFor(() => expect(result.current.pending).toBeNull());
+
+  expect(result.current.traces).toMatchObject([{ request: "almoço ao meio-dia", running: false, trace: null }]);
+});

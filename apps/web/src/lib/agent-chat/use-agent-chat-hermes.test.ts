@@ -195,3 +195,51 @@ test("404 no modo Hermes: avisa e volta ao assistente da agenda", async () => {
   expect(result.current.hermesMode).toBe(false);
 });
 
+
+test("o rastro do turno acompanha o job: abre ao enviar, cresce enquanto roda e fecha com a resposta", async () => {
+  const start = vi.fn(async () => job("queued"));
+  const working = {
+    route: "hermes" as const, status: "running" as const, fields: [],
+    entries: [{ id: "c1", kind: "tool" as const, label: "Executou um comando", status: "running" as const }],
+  };
+  const finished = { ...working, status: "done" as const, durationMs: 900, entries: [{ ...working.entries[0], status: "done" as const }] };
+  let release: (value: HermesTurnJobDto) => void = () => {};
+  const get = vi.fn()
+    .mockResolvedValueOnce(job("running", { trace: working }))
+    .mockImplementationOnce(() => new Promise<HermesTurnJobDto>((resolve) => { release = resolve; }));
+  const { result } = setup({ start, get });
+
+  act(() => { result.current.send("/hermes que horas sao?"); });
+
+  await waitFor(() => expect(get).toHaveBeenCalledTimes(2));
+  expect(result.current.traces).toEqual([
+    { id: result.current.messages[0]?.id, request: "que horas sao?", route: "hermes", running: true, trace: working },
+  ]);
+
+  await act(async () => { release(job("succeeded", { trace: finished, result: { text: "18h" } })); });
+  await waitFor(() => expect(result.current.pending).toBeNull());
+
+  expect(result.current.traces).toEqual([
+    { id: result.current.messages[0]?.id, request: "que horas sao?", route: "hermes", running: false, trace: finished },
+  ]);
+
+  act(() => { result.current.startNewConversation(); });
+  expect(result.current.traces).toEqual([]);
+});
+
+test("um turno que falha deixa o rastro parado; tentar de novo o tira junto com o pedido", async () => {
+  const start = vi.fn(async () => job("queued"));
+  const get = vi.fn().mockResolvedValue(job("failed", { errorCode: "unavailable" }));
+  const { result } = setup({ start, get });
+
+  act(() => { result.current.send("/hermes oi"); });
+  await waitFor(() => expect(result.current.pending).toBeNull());
+
+  expect(result.current.traces).toMatchObject([{ request: "oi", running: false, trace: null }]);
+  const failedId = result.current.traces[0]?.id;
+
+  get.mockImplementation(() => new Promise<never>(() => {}));
+  act(() => { result.current.retry(`${failedId}-error`); });
+  await waitFor(() => expect(result.current.traces).toHaveLength(1));
+  expect(result.current.traces[0]?.id).not.toBe(failedId);
+});

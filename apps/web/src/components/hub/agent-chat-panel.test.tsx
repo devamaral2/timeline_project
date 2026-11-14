@@ -93,6 +93,44 @@ test("the conversation header says who answers, a new conversation clears it and
   expect(screen.getByRole("heading", { name: "O que vamos fazer?" })).toBeInTheDocument();
 });
 
+test("the process view sits beside the conversation: it lists what the AI did for each request", async () => {
+  processGet.mockResolvedValue({
+    ...done,
+    trace: {
+      route: "process", status: "done", startedAt: "2026-11-11T12:00:00.000Z", durationMs: 1500, fields: [],
+      entries: [
+        { id: "p1-request", kind: "request", label: "Pedido", summary: "o que tenho hoje?", status: "done" },
+        { id: "s1", kind: "agent", label: "Consultando a agenda", source: "query", status: "done", durationMs: 900 },
+      ],
+    },
+  });
+  render(<Harness onCommand={vi.fn()} />);
+  expect(screen.queryByRole("group", { name: "Vista do chat" })).not.toBeInTheDocument();
+
+  ask("o que tenho hoje?");
+  await screen.findByText("Você tem um treino às 7h.");
+
+  const views = within(screen.getByRole("group", { name: "Vista do chat" }));
+  expect(views.getByRole("button", { name: "Conversa" })).toHaveAttribute("aria-pressed", "true");
+  const process = views.getByRole("button", { name: /Processo/ });
+  expect(process).toHaveTextContent("2");
+  expect(process).toHaveAttribute("aria-pressed", "false");
+  expect(screen.getByRole("log").closest("[data-pane]")).toHaveAttribute("data-pane", "chat");
+
+  fireEvent.click(process);
+
+  expect(process).toHaveAttribute("aria-pressed", "true");
+  expect(screen.getByRole("log").closest("[data-pane]")).toHaveAttribute("data-pane", "process");
+  const trace = within(screen.getByRole("region", { name: "Processo da IA" }));
+  expect(trace.getByRole("article", { name: "Pedido: o que tenho hoje?" })).toBeInTheDocument();
+  expect(trace.getByRole("button", { name: /Consultando a agenda/ })).toHaveTextContent("900 ms");
+
+  // Os comandos da barra "/" moram na conversa: ao digitar um, e ela que aparece.
+  fireEvent.change(screen.getByRole("textbox", { name: "Mensagem para a IA" }), { target: { value: "/" } });
+  expect(screen.getByRole("list", { name: "Comandos" }).closest("[data-pane]")).toHaveAttribute("data-pane", "chat");
+  expect(screen.queryByRole("region", { name: "Processo da IA" })).not.toBeInTheDocument();
+});
+
 test("the home offers notifications and settings next to create and search", () => {
   const onCommand = vi.fn();
   render(<Harness onCommand={onCommand} />);
