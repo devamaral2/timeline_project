@@ -1,0 +1,18 @@
+/*
+ * As seções de relação do detalhe de evento: Subtarefas (com a linha única de
+ * `components/events`) e Bloqueios (nos dois sentidos). Cor só por token, para
+ * o tema trocar junto.
+ */
+
+.list { list-style: none; margin: 0; padding: 0; }
+.empty { margin: 0; padding: 13px 0; font-size: 15px; line-height: 22px; color: var(--muted); }
+
+.group { display: flex; flex-direction: column; gap: 4px; padding-top: 14px; }
+.groupLabel { margin: 0; font-family: var(--font-mono); font-size: var(--font-size-xs); font-weight: 400; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+
+.blockRow { display: flex; align-items: flex-start; gap: 14px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.blockRow:last-child { border-bottom: 0; }
+.blockBody { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 3px; color: var(--ink); text-decoration: none; }
+.blockBody:focus-visible { outline: 2px solid var(--color-ring); outline-offset: 2px; border-radius: 6px; }
+.blockName { font-size: 15px; font-weight: 600; line-height: 24px; overflow-wrap: anywhere; }
+.blockMeta { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 12px; font-size: 13px; line-height: 20px; color: var(--muted); }

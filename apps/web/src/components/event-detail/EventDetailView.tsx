@@ -12,8 +12,10 @@ import { useMotionRouter } from "@/components/shell/navigation-motion";
 import { ApiRequestError } from "@/lib/api/client-request";
 import { type EditEventInput, updateEvent } from "@/lib/api/events";
 import { momentLabel, priorityPatch, statusPatch } from "@/lib/events/event-read-model";
+import { EventBlocksSection } from "./EventBlocksSection";
 import { EventDetailHeader } from "./EventDetailHeader";
 import { EventInfoSection } from "./EventInfoSection";
+import { EventSubtasksSection } from "./EventSubtasksSection";
 import styles from "./event-detail.module.css";
 
 interface EventDetailViewProps {
@@ -28,9 +30,9 @@ const STALE_MESSAGE = "Este evento mudou em outro lugar. Carregamos a versão at
 /**
  * O detalhe de evento em modo de leitura, a rota única para agenda e lista de
  * tarefas. A tela é uma coluna de seções separadas: o topo (este arquivo e
- * `EventDetailHeader`) e as Informações (`EventInfoSection`). Os próximos
- * tickets acrescentam as deles no corpo, depois de Informações:
- *   - 21: subtarefas e bloqueios, como `DetailSection` próprias;
+ * `EventDetailHeader`), as Informações (`EventInfoSection`), e as seções de
+ * relação: Subtarefas (`EventSubtasksSection`) e Bloqueios (`EventBlocksSection`).
+ * Os próximos tickets acrescentam as deles no corpo, depois dessas:
  *   - 22: artefatos do evento;
  *   - 23: "Apagar evento", no menu "Mais ações" do topo.
  */
@@ -91,7 +93,9 @@ export function EventDetailView({ userId, event, onChanged }: EventDetailViewPro
   return (
     <DetailFrame type={event.kind} leadLabel="Resumo do evento" bodyLabel="Conteúdo do evento" lead={lead}>
       <EventInfoSection event={event} />
-      {/* Ticket 21: subtarefas e bloqueios. Ticket 22: artefatos do evento. */}
+      <EventSubtasksSection userId={userId} event={event} />
+      <EventBlocksSection userId={userId} event={event} />
+      {/* Ticket 22: artefatos do evento. */}
       {error ? <DetailMessage alert>{error}</DetailMessage> : null}
       <EntityAiEditBar
         userId={userId}
