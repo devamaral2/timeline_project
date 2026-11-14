@@ -3,6 +3,7 @@ import { Logger } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
 import { DomainExceptionFilter } from "./common/domain-exception.filter";
+import { configureApiDocumentation } from "./common/openapi";
 import { getDatabaseEnv, getServerEnv, isLoopbackHost } from "./config/env";
 import { loadRootEnv } from "./config/load-env";
 
@@ -27,6 +28,7 @@ async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
   app.useGlobalFilters(new DomainExceptionFilter());
   app.enableShutdownHooks();
+  configureApiDocumentation(app);
 
   // Clientes nativos nao aplicam a politica de origem. Quem precisa e o alvo
   // web, util para depurar telas no navegador — e ele so existe quando a API

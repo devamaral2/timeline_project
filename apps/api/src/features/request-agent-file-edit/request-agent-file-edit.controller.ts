@@ -11,7 +11,7 @@ import { GatewayIdentityGuard } from "../../http/request-identity/gateway-identi
 import { CurrentUser } from "../../http/request-identity/current-user.decorator";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
 
-const editRequestBody = z.object({
+export const editRequestBody = z.object({
   path: configPath,
   request: z.string().trim().min(1).max(4000),
   /** Estavel por pedido: reenviar devolve o pedido ja aceito, sem uma segunda mensagem ao Hermes. */

@@ -11,6 +11,7 @@ const resolve = (relativePath: string) =>
  * `Tests pass`) depende de a saida ser so a do Vitest.
  */
 const packageAliases = {
+  "@repo/contracts/schemas": resolve("./packages/contracts/src/schemas.ts"),
   "@repo/contracts": resolve("./packages/contracts/src/index.ts"),
   "@repo/theme": resolve("./packages/theme/src/index.ts"),
   "@repo/timeline": resolve("./packages/timeline/src/index.ts"),

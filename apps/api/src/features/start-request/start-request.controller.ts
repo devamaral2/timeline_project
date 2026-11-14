@@ -9,7 +9,7 @@ import { GatewayIdentityGuard } from "../../http/request-identity/gateway-identi
 import { CurrentUser } from "../../http/request-identity/current-user.decorator";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
 
-const startRequestBody = z.object({
+export const startRequestBody = z.object({
   userId: z.string().min(1).max(128),
   text: agentTextSchema,
   context: agentScreenContextSchema.optional(),

@@ -241,6 +241,20 @@ export const recurrenceSchema = z.object({
   ...recurrenceRuleShape, id: z.string(), template: z.record(z.string(), z.unknown()), revision: z.number().int(),
 }).strict();
 
+/** O que cada ocorrencia copia: o evento sem a janela, que vem da regra. */
+const recurrenceTemplateSchema = createEventInputSchema.omit({
+  startedAt: true, estimatedFinishAt: true, finishedAt: true, longRunning: true,
+  subtaskEventIds: true, blocksEventIds: true, blockedByEventIds: true,
+});
+
+/** `POST /api/recurrences`: a regra e o que cada ocorrencia copia. */
+export const createRecurrenceInputSchema = z.object({ ...recurrenceRuleShape, template: recurrenceTemplateSchema }).strict();
+
+/** `PATCH /api/recurrences/:recurrenceId`: so o que muda; `template` troca o template inteiro. */
+export const updateRecurrenceInputSchema = z.object(recurrenceRuleShape).partial().extend({
+  recurrenceId: z.string(), expectedRevision: z.number().int(), template: recurrenceTemplateSchema.optional(),
+}).strict();
+
 const agentTraceFieldSchema = z.object({ label: z.string(), value: z.string() }).strict();
 
 export const agentTraceSchema = z.object({
@@ -310,5 +324,7 @@ export const contractSchemas = {
   updateArtifactRequest: updateArtifactRequestSchema,
   tagSuggestion: tagSuggestionSchema,
   recurrence: recurrenceSchema,
+  createRecurrenceInput: createRecurrenceInputSchema,
+  updateRecurrenceInput: updateRecurrenceInputSchema,
   request: requestSchema,
 } as const;

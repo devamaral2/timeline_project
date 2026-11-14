@@ -6,7 +6,7 @@ import type { AuthenticatedUser } from "../../http/request-identity/authenticate
 import { CurrentUser } from "../../http/request-identity/current-user.decorator";
 import { GatewayIdentityGuard } from "../../http/request-identity/gateway-identity.guard";
 
-const restoreBody = z.object({ path: configPath, backupId: z.string().min(1).max(200) });
+export const restoreBody = z.object({ path: configPath, backupId: z.string().min(1).max(200) });
 
 /** Skills e agentes como arquivos (ADR 0005). So o dono acessa. */
 @Controller("api/ai/config")

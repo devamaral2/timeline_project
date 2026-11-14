@@ -10,7 +10,7 @@ import { GatewayIdentityGuard } from "../../http/request-identity/gateway-identi
 import { CurrentUser } from "../../http/request-identity/current-user.decorator";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
 
-const startHermesRequestBody = z.object({
+export const startHermesRequestBody = z.object({
   userId: z.string().min(1).max(128),
   text: agentTextSchema,
   /** O primeiro pedido da sessao: o Hermes continua o mesmo assunto e a mesma memoria. */

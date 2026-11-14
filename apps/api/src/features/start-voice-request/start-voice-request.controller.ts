@@ -10,7 +10,7 @@ import { GatewayIdentityGuard } from "../../http/request-identity/gateway-identi
 import { CurrentUser } from "../../http/request-identity/current-user.decorator";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
 
-const startVoiceRequestBody = z.object({
+export const startVoiceRequestBody = z.object({
   transcript: z.string().trim().min(1).max(MAX_TRANSCRIPT_LENGTH),
   clientMessageId: clientMessageIdSchema.optional(),
 });
