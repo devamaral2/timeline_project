@@ -12,8 +12,8 @@ import {
   Wrench,
 } from "lucide-react";
 import { type Ref, useEffect, useRef, useState } from "react";
-import type { AgentChatTrace } from "@/lib/agent-chat/use-agent-chat";
-import type { AgentTraceDto, AgentTraceEntryDto, AgentTraceKind, AgentTraceStatus } from "@/lib/api/contracts";
+import type { AgentChatTrace, AgentTraceView } from "@/lib/agent-chat/use-agent-chat";
+import type { AgentTraceEntryDto, AgentTraceKind, AgentTraceStatus } from "@/lib/api/contracts";
 import styles from "./agent-trace.module.css";
 
 const KIND_ICONS: Record<AgentTraceKind, typeof Bot> = {
@@ -43,7 +43,7 @@ const STATUS_TEXT: Record<AgentTraceStatus, string> = {
   failed: "falhou",
 };
 
-const ROUTE_NAMES: Record<AgentChatTrace["route"], string> = { process: "Assistente", hermes: "Hermes" };
+const ROUTE_NAMES: Record<AgentChatTrace["route"], string> = { steps: "Assistente", hermes: "Hermes" };
 
 /** As raias da linha do tempo: a conversa (o que entrou e o que saiu), o modelo e as ferramentas. */
 const LANES = ["talk", "model", "tool"] as const;
@@ -86,7 +86,7 @@ interface TimelineBar {
  * Onde cada passo cai no tempo do pedido. Um passo sem inicio (ainda na fila) nao entra; um passo em curso
  * vai ate agora, que e ate onde o pedido ja andou.
  */
-export function timelineBars(trace: AgentTraceDto, now: number = Date.now()): { bars: TimelineBar[]; totalMs: number } {
+export function timelineBars(trace: AgentTraceView, now: number = Date.now()): { bars: TimelineBar[]; totalMs: number } {
   const origin = trace.startedAt ? new Date(trace.startedAt).getTime() : Number.NaN;
   if (Number.isNaN(origin)) return { bars: [], totalMs: 0 };
   const placed = trace.entries.flatMap((entry) => {
@@ -215,7 +215,7 @@ function Total({ label, value }: { label: string; value: string }) {
 }
 
 interface TraceTimelineProps {
-  trace: AgentTraceDto;
+  trace: AgentTraceView;
   openEntry: string | null;
   onToggle: (entryId: string) => void;
 }

@@ -1,133 +1,236 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
+import type { AgentEventStatus, RequestDto } from "@repo/contracts";
 import { beforeEach, expect, test, vi } from "vitest";
 import { ApiError } from "@/lib/api/authed-fetch";
-import type { AiProcessDto } from "@/lib/api/contracts";
+import { createFakeApi, type FakeApi } from "@/test/fake-api";
+import { advanceRequest, requestsArea } from "@/test/fake-api/requests";
 import { useAgentChat } from "./use-agent-chat";
 
-const base = { title: "Realizando processos:", entities: [] as AiProcessDto["entities"] };
-const running: AiProcessDto = {
-  ...base, id: "p1", status: "running",
-  steps: [
-    { id: "s1", agent: "event-create", label: "Criando eventos", status: "succeeded" },
-    { id: "s2", agent: "note-create", label: "Criando notas", status: "running" },
-  ],
-};
-const done: AiProcessDto = {
-  ...running, status: "completed",
-  steps: running.steps.map((step) => ({ ...step, status: "succeeded" as const })),
-  entities: [{ kind: "event", id: "e1", name: "Refeição", operation: "create", linkedTo: [] }],
-};
+// A conversa fala com a API falsa: o authedFetch vira a API em memória (a mesma costura dos outros testes).
+const net = vi.hoisted(() => ({ authedFetch: vi.fn() }));
+vi.mock("@/lib/api/authed-fetch", async (original) => ({
+  ...(await original<typeof import("@/lib/api/authed-fetch")>()),
+  authedFetch: net.authedFetch,
+}));
 
-function setup(processApi: { start: ReturnType<typeof vi.fn>; get: ReturnType<typeof vi.fn> }) {
+let api: FakeApi;
+
+beforeEach(() => {
+  api = createFakeApi({ areas: [requestsArea()] });
+  net.authedFetch.mockReset();
+  net.authedFetch.mockImplementation(api.authedFetch);
+});
+
+const requests = () => api.store.table<RequestDto>("requests");
+const ids = () => [...requests().keys()];
+const posts = () => api.calls.filter((call) => call.method === "POST" && call.pathname === "/api/requests");
+const bodyOf = (index: number) => posts()[index]?.body as Record<string, unknown>;
+const clientIdOf = (index: number) => bodyOf(index).clientMessageId;
+
+function setup() {
   const onEntitiesChanged = vi.fn();
-  const hook = renderHook(() => useAgentChat({ userId: "u", onEntitiesChanged, processApi, processPollMs: 5 }));
+  const hook = renderHook(() => useAgentChat({ userId: "u", onEntitiesChanged, processPollMs: 5 }));
   return { ...hook, onEntitiesChanged };
 }
 
-beforeEach(() => vi.clearAllMocks());
+type Chat = { current: ReturnType<typeof useAgentChat> };
+
+/** Manda uma mensagem e espera a API aceitá-la: devolve o id do pedido novo. */
+async function ask(chat: Chat, text: string): Promise<string> {
+  const before = requests().size;
+  act(() => { chat.current.send(text); });
+  await waitFor(() => expect(requests().size).toBe(before + 1));
+  return ids().at(-1) as string;
+}
+
+const step = (id: string, label: string, status: AgentEventStatus) => ({ id, agent: "event-create", label, status });
 
 test("a caixa de processo acompanha os passos ate o fim e a agenda atualiza uma vez", async () => {
-  const start = vi.fn(async () => ({ processId: "p1" }));
-  let release: (view: AiProcessDto) => void = () => {};
-  const get = vi.fn()
-    .mockResolvedValueOnce(running)
-    .mockImplementationOnce(() => new Promise<AiProcessDto>((resolve) => { release = resolve; }))
-    .mockResolvedValue(done);
-  const { result, onEntitiesChanged } = setup({ start, get });
-
-  act(() => { result.current.send("comendo arroz, depois vou nadar"); });
+  const { result, onEntitiesChanged } = setup();
+  const id = await ask(result, "comendo arroz, depois vou nadar");
 
   await waitFor(() => expect(result.current.messages.map((message) => message.role)).toEqual(["user", "process"]));
-  await waitFor(() => expect(get).toHaveBeenCalledTimes(2));
-  expect(result.current.pending).toMatchObject({ label: "Realizando processos" });
-  expect(result.current.messages.at(-1)).toMatchObject({ process: { status: "running" } });
+  advanceRequest(api, id, { status: "running", steps: [step("s1", "Criando eventos", "done"), step("s2", "Criando notas", "running")] });
+  await waitFor(() => expect(result.current.messages.at(-1)).toMatchObject({ role: "process", request: { status: "running" } }));
+  expect(result.current.pending).toMatchObject({ label: "Realizando processos", requestId: id });
   expect(onEntitiesChanged).not.toHaveBeenCalled();
-  await act(async () => { release(done); });
-  await waitFor(() => expect(result.current.pending).toBeNull());
 
-  const box = result.current.messages.at(-1);
-  expect(box).toMatchObject({ role: "process", process: { status: "completed" } });
-  expect(start).toHaveBeenCalledWith({ userId: "u", text: "comendo arroz, depois vou nadar", context: undefined });
+  advanceRequest(api, id, {
+    status: "done",
+    steps: [step("s1", "Criando eventos", "done"), step("s2", "Criando notas", "done")],
+    entities: [{ kind: "event", id: "e1", name: "Refeição", operation: "create", linkedTo: [] }],
+  });
+  await waitFor(() => expect(result.current.pending).toBeNull());
+  expect(result.current.messages.at(-1)).toMatchObject({ role: "process", request: { status: "done" } });
+  expect(bodyOf(0)).toEqual({ userId: "u", text: "comendo arroz, depois vou nadar", clientMessageId: expect.any(String) });
   expect(onEntitiesChanged).toHaveBeenCalledTimes(1);
 });
 
 test("consulta ou resposta sem entidades nao atualiza a agenda", async () => {
-  const start = vi.fn(async () => ({ processId: "p1" }));
-  const get = vi.fn(async () => ({ ...done, entities: [], message: "Paris." }));
-  const { result, onEntitiesChanged } = setup({ start, get });
-  act(() => { result.current.send("qual a capital da França?"); });
+  const { result, onEntitiesChanged } = setup();
+  const id = await ask(result, "qual a capital da França?");
+  advanceRequest(api, id, { status: "done", message: "Paris." });
+
   await waitFor(() => expect(result.current.pending).toBeNull());
-  expect(result.current.messages.at(-1)).toMatchObject({ process: { message: "Paris." } });
+  expect(result.current.messages.at(-1)).toMatchObject({ request: { message: "Paris." } });
   expect(onEntitiesChanged).not.toHaveBeenCalled();
 });
 
-test("404 ao iniciar nao cai em outro caminho: vira o erro de conexao com tentar de novo", async () => {
-  const start = vi.fn(async () => { throw new ApiError(404, "POST /api/ai/process -> 404"); });
-  const { result } = setup({ start, get: vi.fn() });
-  act(() => { result.current.send("primeira"); });
-  await waitFor(() => expect(result.current.pending).toBeNull());
-  expect(result.current.messages.at(-1)).toMatchObject({ role: "error", retryText: "primeira" });
-  expect(start).toHaveBeenCalledTimes(1);
-});
-
 test("erro ao iniciar vira o erro de conexao com tentar de novo", async () => {
-  const start = vi.fn(async () => { throw new ApiError(500, "boom"); });
-  const { result } = setup({ start, get: vi.fn() });
+  api.failNext("POST", "/api/requests", 500);
+  const { result } = setup();
   act(() => { result.current.send("oi"); });
+
   await waitFor(() => expect(result.current.pending).toBeNull());
-  expect(result.current.messages.at(-1)).toMatchObject({ role: "error", retryText: "oi" });
+  expect(result.current.messages.at(-1)).toMatchObject({
+    role: "error",
+    text: "Não consegui conectar ao assistente. Tente de novo.",
+    retryText: "oi",
+  });
+  expect(posts()).toHaveLength(1);
 });
 
-test("sessao expirada ao acompanhar o processo", async () => {
-  const start = vi.fn(async () => ({ processId: "p1" }));
-  const get = vi.fn(async () => { throw new ApiError(401, "expired"); });
-  const { result } = setup({ start, get });
+test("um pedido que falha mostra a mensagem do codigo do erro; tentar de novo abre um pedido novo", async () => {
+  const { result } = setup();
+  const id = await ask(result, "crie a tarefa");
+  advanceRequest(api, id, { status: "failed", errorCode: "unavailable" });
+
+  await waitFor(() => expect(result.current.pending).toBeNull());
+  const error = result.current.messages.at(-1);
+  expect(error).toMatchObject({
+    role: "error",
+    text: "A IA está indisponível agora. Tente de novo em instantes.",
+    retryText: "crie a tarefa",
+  });
+  expect(result.current.messages.find((message) => message.role === "user")).toMatchObject({ failed: true });
+
+  act(() => result.current.retry((error as { id: string }).id));
+  await waitFor(() => expect(posts()).toHaveLength(2));
+  expect(clientIdOf(1)).not.toBe(clientIdOf(0));
+  await waitFor(() => expect(requests().size).toBe(2));
+});
+
+test("reenviar a mesma mensagem depois de uma falha de rede nao abre um segundo pedido", async () => {
+  // A API aceita o pedido, mas a resposta se perde na rede.
+  net.authedFetch.mockImplementationOnce(async (path: string, init?: RequestInit) => {
+    await api.authedFetch(path, init);
+    throw new TypeError("Failed to fetch");
+  });
+  const { result } = setup();
+  act(() => { result.current.send("crie a tarefa"); });
+
+  await waitFor(() => expect(result.current.messages.at(-1)).toMatchObject({ role: "error", retryText: "crie a tarefa" }));
+  expect(requests().size).toBe(1);
+
+  act(() => result.current.retry((result.current.messages.at(-1) as { id: string }).id));
+
+  await waitFor(() => expect(posts()).toHaveLength(2));
+  expect(clientIdOf(1)).toBe(clientIdOf(0));
+  await waitFor(() => expect(result.current.messages.at(-1)).toMatchObject({ role: "process" }));
+  expect(requests().size).toBe(1);
+  expect(result.current.messages.filter((message) => message.role === "user")).toHaveLength(1);
+});
+
+test("a mensagem seguinte manda o id do primeiro pedido como sessao", async () => {
+  const { result } = setup();
+  const first = await ask(result, "o que tenho hoje?");
+  advanceRequest(api, first, { status: "done", message: "Um treino." });
+  await waitFor(() => expect(result.current.pending).toBeNull());
+
+  await ask(result, "e amanhã?");
+  expect(bodyOf(0)).not.toHaveProperty("sessionId");
+  expect(bodyOf(1)).toMatchObject({ sessionId: first });
+});
+
+test("comecar uma conversa nova desfaz a sessao", async () => {
+  const { result } = setup();
+  const first = await ask(result, "primeira");
+  advanceRequest(api, first, { status: "done", message: "Ok." });
+  await waitFor(() => expect(result.current.pending).toBeNull());
+
+  act(() => result.current.startNewConversation());
+  await ask(result, "outra conversa");
+  expect(bodyOf(1)).not.toHaveProperty("sessionId");
+});
+
+test("cancelar pelo chat cancela o pedido na API; a mensagem nao vira falha", async () => {
+  const { result } = setup();
+  const id = await ask(result, "crie uma nota");
+  await waitFor(() => expect(result.current.pending).toMatchObject({ requestId: id }));
+
+  act(() => result.current.cancel());
+
+  await waitFor(() => expect(result.current.pending).toBeNull());
+  expect(requests().get(id)).toMatchObject({ status: "cancel" });
+  expect(result.current.messages.at(-1)).toMatchObject({ role: "error", text: "Pedido cancelado.", retryText: "crie uma nota" });
+  expect(result.current.messages.find((message) => message.role === "user")).not.toHaveProperty("failed", true);
+});
+
+test("sessao expirada ao acompanhar o pedido", async () => {
+  net.authedFetch.mockImplementation(async (path: string, init?: RequestInit) => {
+    if ((init?.method ?? "GET") === "GET" && path.startsWith("/api/requests/")) throw new ApiError(401, "expired");
+    return api.authedFetch(path, init);
+  });
+  const { result } = setup();
   act(() => { result.current.send("oi"); });
+
   await waitFor(() => expect(result.current.pending).toBeNull());
   expect(result.current.messages.at(-1)).toMatchObject({ role: "error", text: "Sua sessão acabou. Entre de novo para continuar." });
 });
 
-test("falhas seguidas ao consultar o processo viram conexao perdida", async () => {
-  const start = vi.fn(async () => ({ processId: "p1" }));
-  const get = vi.fn(async () => { throw new ApiError(500, "down"); });
-  const { result } = setup({ start, get });
+test("falhas seguidas ao consultar o pedido viram conexao perdida; tentar de novo retoma o mesmo pedido", async () => {
+  let broken = true;
+  net.authedFetch.mockImplementation(async (path: string, init?: RequestInit) => {
+    if (broken && (init?.method ?? "GET") === "GET" && path.startsWith("/api/requests/")) throw new ApiError(500, "down");
+    return api.authedFetch(path, init);
+  });
+  const { result } = setup();
   act(() => { result.current.send("oi"); });
+
   await waitFor(() => expect(result.current.pending).toBeNull());
-  expect(get).toHaveBeenCalledTimes(5);
   expect(result.current.messages.at(-1)).toMatchObject({ role: "error", retryText: "oi" });
+
+  broken = false;
+  act(() => result.current.retry((result.current.messages.at(-1) as { id: string }).id));
+
+  await waitFor(() => expect(posts()).toHaveLength(2));
+  expect(clientIdOf(1)).toBe(clientIdOf(0));
+  expect(requests().size).toBe(1);
+  const id = ids()[0] as string;
+  await waitFor(() => expect(result.current.messages.at(-1)).toMatchObject({ role: "process" }));
+  advanceRequest(api, id, { status: "done", message: "Pronto." });
+  await waitFor(() => expect(result.current.pending).toBeNull());
+  expect(result.current.messages.at(-1)).toMatchObject({ request: { message: "Pronto." } });
 });
 
-test("o rastro do processo abre com o pedido, segue cada consulta e para de girar no fim", async () => {
+test("o rastro do pedido abre com a mensagem, segue cada consulta e para de girar no fim", async () => {
   const trace = (status: "running" | "done") => ({
-    route: "process" as const, status, fields: [],
+    route: "steps" as const, status, fields: [],
     entries: [{ id: "s1", kind: "agent" as const, label: "Criando eventos", status }],
   });
-  const start = vi.fn(async () => ({ processId: "p1" }));
-  let release: (view: AiProcessDto) => void = () => {};
-  const get = vi.fn()
-    .mockResolvedValueOnce({ ...running, trace: trace("running") })
-    .mockImplementationOnce(() => new Promise<AiProcessDto>((resolve) => { release = resolve; }));
-  const { result } = setup({ start, get });
+  const { result } = setup();
+  const id = await ask(result, "almoço ao meio-dia");
 
-  act(() => { result.current.send("almoço ao meio-dia"); });
+  advanceRequest(api, id, { status: "running", trace: trace("running") });
+  await waitFor(() => expect(result.current.traces).toEqual([
+    {
+      id: result.current.messages[0]?.id,
+      request: "almoço ao meio-dia",
+      route: "steps",
+      running: true,
+      trace: expect.objectContaining({ status: "running" }),
+    },
+  ]));
 
-  await waitFor(() => expect(get).toHaveBeenCalledTimes(2));
-  expect(result.current.traces).toEqual([
-    { id: result.current.messages[0]?.id, request: "almoço ao meio-dia", route: "process", running: true, trace: trace("running") },
-  ]);
-
-  await act(async () => { release({ ...done, trace: trace("done") }); });
+  advanceRequest(api, id, { status: "done", trace: trace("done") });
   await waitFor(() => expect(result.current.pending).toBeNull());
-
   expect(result.current.traces).toMatchObject([{ running: false, trace: { status: "done" } }]);
 });
 
 test("um servidor que nao manda rastro deixa o pedido na aba, sem detalhes", async () => {
-  const start = vi.fn(async () => ({ processId: "p1" }));
-  const get = vi.fn().mockResolvedValue(done);
-  const { result } = setup({ start, get });
-
-  act(() => { result.current.send("almoço ao meio-dia"); });
+  const { result } = setup();
+  const id = await ask(result, "almoço ao meio-dia");
+  advanceRequest(api, id, { status: "done" });
   await waitFor(() => expect(result.current.pending).toBeNull());
 
   expect(result.current.traces).toMatchObject([{ request: "almoço ao meio-dia", running: false, trace: null }]);

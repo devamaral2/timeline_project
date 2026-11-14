@@ -1,6 +1,7 @@
 import { CalendarDays, ChevronRight, FileText, ListChecks } from "lucide-react";
 import Link from "next/link";
-import type { AgentChatEntityRef, AiProcessEntityDto } from "@/lib/api/contracts";
+import type { RequestEntityDto } from "@repo/contracts";
+import type { AgentChatEntityRef } from "@/lib/api/contracts";
 import styles from "@/components/shell/shell.module.css";
 
 export const CHANGE_LABELS: Record<AgentChatEntityRef["kind"], Record<AgentChatEntityRef["change"], string>> = {
@@ -15,12 +16,16 @@ const ENTITY_ICONS: Record<AgentChatEntityRef["kind"], typeof ListChecks> = {
   note: FileText,
 };
 
-/** A entidade que um processo tocou, na forma da linha do chat (`Tarefa criada · Comprar faixa`). */
-export function processEntityRef(entity: AiProcessEntityDto): AgentChatEntityRef {
+/**
+ * A entidade que um pedido tocou, na forma da linha do chat (`Evento criado · Comprar faixa`). Um artefato
+ * aparece como nota: a linha do chat só conhece esses três tipos.
+ */
+export function requestEntityRef(entity: RequestEntityDto): AgentChatEntityRef {
+  const change = entity.operation === "create" ? "created" : entity.operation === "delete" ? "deleted" : "updated";
   return {
-    kind: entity.kind,
+    kind: entity.kind === "event" ? "event" : "note",
     id: entity.id,
-    change: entity.operation === "create" ? "created" : "updated",
+    change,
     label: entity.name,
   };
 }

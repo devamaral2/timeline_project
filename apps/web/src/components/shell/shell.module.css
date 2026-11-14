@@ -567,6 +567,7 @@ a.chatEntityRow:hover .chatEntityName { text-decoration: underline; text-underli
 .processRows th { color: var(--muted); font-weight: 600; }
 .processRows p { margin: 6px 0 0; color: var(--muted); }
 .processMessage { margin: 0; font-size: 15px; line-height: 24px; text-wrap: pretty; }
+.processCancel { justify-self: start; display: inline-flex; align-items: center; min-height: 44px; padding: 0; border: 0; background: none; color: var(--ink); font-size: 13px; font-weight: 600; cursor: pointer; }
 .chatBubble[data-role="process"] [data-status="failed"] ~ .processMessage, .processBox[data-status="failed"] .processMessage { color: var(--destructive); }
 .chatBubble[data-role="hermes-steps"] { justify-self: stretch; padding: 0; background: none; }
 .hermesSteps ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; font-family: var(--font-mono); font-size: 12px; line-height: 18px; color: var(--muted); }

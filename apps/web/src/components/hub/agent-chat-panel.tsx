@@ -21,7 +21,6 @@ import { HermesGlyph } from "@/components/ui/hermes-glyph";
 import { HermesMark, type HermesState } from "@/components/ui/hermes-mark";
 import { briefDate } from "@/lib/dates/day-labels";
 import type { AiAutomationApi } from "@/lib/ai-automation/ai-automation";
-import type { AiProcessApi } from "@/lib/ai-process/ai-process";
 import { type AgentChatMessage, useAgentChat } from "@/lib/agent-chat/use-agent-chat";
 import type { AgentChatEntityRef, AgentScreenContext } from "@/lib/api/contracts";
 import { useSessionState } from "@/lib/session/use-session";
@@ -83,19 +82,19 @@ export function requestWithWindow(freeWindow: FreeWindow, text: string): string 
  */
 interface AgendaChatOptions {
   live: boolean;
-  /** Injetaveis pelos testes: nenhum deles toca a rede la. */
-  processApi?: AiProcessApi;
+  /** Injetaveis pelos testes: nenhum deles toca a rede la. `pollMs` encurta o intervalo de consulta do pedido. */
   automationApi?: AiAutomationApi;
+  pollMs?: number;
 }
 
-export function useAgendaChat({ live, processApi, automationApi }: AgendaChatOptions) {
+export function useAgendaChat({ live, automationApi, pollMs }: AgendaChatOptions) {
   const { user, ready } = useSessionState();
   const userId = live ? user?.userId : undefined;
   const chat = useAgentChat({
     userId,
     context: AGENDA_CONTEXT,
     onEntitiesChanged: requestAgendaRefresh,
-    processApi,
+    processPollMs: pollMs,
     automationApi,
   });
   return { chat, signedOut: ready && !user };
@@ -357,6 +356,7 @@ export function AgentChatPanel({
                   key={message.id}
                   message={message}
                   onRetry={chat.pending ? undefined : chat.retry}
+                  onCancel={chat.pending ? chat.cancel : undefined}
                   entityHref={entityHref}
                   onOpenEntity={onClose}
                 />
@@ -449,6 +449,7 @@ export function AgentChatPanel({
 interface ChatBubbleProps {
   message: AgentChatMessage;
   onRetry?: (id: string) => void;
+  onCancel?: () => void;
   entityHref?: (entity: AgentChatEntityRef) => string | undefined;
   onOpenEntity?: () => void;
 }
@@ -462,7 +463,7 @@ function splitParagraphs(text: string): string[] {
   return paragraphs.length > 0 ? paragraphs : [text];
 }
 
-function ChatBubble({ message, onRetry, entityHref, onOpenEntity }: ChatBubbleProps) {
+function ChatBubble({ message, onRetry, onCancel, entityHref, onOpenEntity }: ChatBubbleProps) {
   if (message.role === "user") {
     return (
       <li className={styles.chatBubble} data-role="user">
@@ -487,7 +488,7 @@ function ChatBubble({ message, onRetry, entityHref, onOpenEntity }: ChatBubblePr
   if (message.role === "process") {
     return (
       <li className={styles.chatBubble} data-role="process">
-        <ProcessBox process={message.process} entityHref={entityHref} onOpenEntity={onOpenEntity} />
+        <ProcessBox request={message.request} entityHref={entityHref} onOpenEntity={onOpenEntity} onCancel={onCancel} />
       </li>
     );
   }

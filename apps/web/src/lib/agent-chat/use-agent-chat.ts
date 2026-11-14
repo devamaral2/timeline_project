@@ -1,9 +1,11 @@
 "use client";
 
+import type { AgentEventStatus, AgentTraceDto, RequestDto } from "@repo/contracts";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "@/lib/api/authed-fetch";
-import type { AgentChatEntityRef, AgentScreenContext, AgentTraceDto, AiProcessDto } from "@/lib/api/contracts";
-import { type AiProcessApi, aiProcess, isProcessTerminal } from "@/lib/ai-process/ai-process";
+import { ApiRequestError } from "@/lib/api/client-request";
+import type { AgentChatEntityRef, AgentScreenContext } from "@/lib/api/contracts";
+import { cancelRequest, getRequest, startRequest } from "@/lib/api/requests";
 import {
   type AiAutomationApi,
   type HermesStepDto,
@@ -14,12 +16,19 @@ import {
 } from "@/lib/ai-automation/ai-automation";
 import { operationId } from "@/lib/ai-jobs/ai-jobs";
 
+/** O rastro sem o `route`: o da rota por passos e o do Hermes falam a mesma forma. */
+export type AgentTraceView = Omit<AgentTraceDto, "route">;
+
 export type AgentChatMessage =
   | { id: string; role: "user"; text: string; failed?: boolean }
   | { id: string; role: "assistant"; text: string; entities: AgentChatEntityRef[] }
-  | { id: string; role: "error"; text: string; retryText: string; requestId: string }
+  /**
+   * `messageId` é o id da mensagem que falhou (o que a API guarda como `clientMessageId`). `reuseMessageId`
+   * diz se "Tentar de novo" reenvia com o mesmo id (a API devolve o pedido que já aceitou) ou abre um novo.
+   */
+  | { id: string; role: "error"; text: string; retryText: string; messageId: string; reuseMessageId: boolean }
   /** A caixa de processo (ADR 003): `null` ate o servidor responder o primeiro estado. Nao entra no historico. */
-  | { id: string; role: "process"; process: AiProcessDto | null }
+  | { id: string; role: "process"; request: RequestDto | null }
   /** Os passos do Hermes (ferramentas e pensamentos), ao vivo e depois do fim do turno. Nao entra no historico. */
   | { id: string; role: "hermes-steps"; steps: HermesStepDto[]; running: boolean };
 
@@ -28,17 +37,19 @@ export type AgentChatMessage =
  * `null` ate o servidor responder o primeiro estado (ou quando ele nao manda rastro).
  */
 export interface AgentChatTrace {
-  /** O id do pedido: o mesmo da mensagem do usuario. */
+  /** O id da mensagem do usuario. */
   id: string;
   request: string;
-  route: "process" | "hermes";
+  route: "steps" | "hermes";
   running: boolean;
-  trace: AgentTraceDto | null;
+  trace: AgentTraceView | null;
 }
 
 export interface AgentChatPending {
   id: string;
   label?: string;
+  /** O pedido aceito pela API (o que o botão de cancelar cancela). Ausente até a API aceitar. */
+  requestId?: string;
 }
 
 /** Por que um pedido falhou; cada codigo tem seu texto em `ERROR_TEXTS`. */
@@ -60,8 +71,7 @@ interface UseAgentChatOptions {
   context?: AgentScreenContext;
   /** Chamado quando uma resposta mexeu em registros — ou pode ter mexido. */
   onEntitiesChanged?: () => void;
-  /** A rota de IA por processo; ausente, vale a real. */
-  processApi?: AiProcessApi;
+  /** Intervalo entre consultas do pedido por passos; os testes o encurtam. */
   processPollMs?: number;
   /** A rota do Hermes (`/hermes <mensagem>`); ausente, vale a real. */
   automationApi?: AiAutomationApi;
@@ -93,14 +103,36 @@ const ERROR_TEXTS: Record<ChatFailureCode, string> = {
 };
 
 /**
- * A conversa da agenda. Cada pedido vai pela rota de processo (ADR 003) ou, com `/hermes`, ao Hermes
+ * Falhas de rede ou de sessão: reenviar a mesma mensagem (mesmo id) não abre um segundo pedido, porque a API
+ * devolve o que já aceitou. As demais são do pedido; "Tentar de novo" abre um pedido novo.
+ */
+const RESUMABLE: ReadonlySet<ChatFailureCode> = new Set(["connection_failed", "connection_lost", "session_expired"]);
+
+/** O pedido ainda não terminou: a API o entrega como fila, execução ou espera. */
+export function isRequestOpen(request: Pick<RequestDto, "status">): boolean {
+  return request.status === "queued" || request.status === "running" || request.status === "waiting";
+}
+
+/** Por que o envio do pedido falhou, do ponto de vista do chat. */
+function startFailureCode(error: unknown): ChatFailureCode {
+  if (error instanceof ApiError && error.status === 401) return "session_expired";
+  if (error instanceof ApiRequestError) {
+    if (error.kind === "invalid_input") return "invalid_input";
+    if (error.kind === "forbidden") return "forbidden";
+    if (error.kind === "conflict") return "conflict";
+    if (error.kind === "unavailable") return "unavailable";
+  }
+  return "connection_failed";
+}
+
+/**
+ * A conversa da agenda. Cada mensagem vira um pedido na API (rota por passos) ou, com `/hermes`, vai ao Hermes
  * (ADR 004). O historico e so do que esta na tela: nada e recarregado do servidor.
  */
 export function useAgentChat({
   userId,
   context,
   onEntitiesChanged,
-  processApi = aiProcess,
   processPollMs = 1000,
   automationApi = aiAutomation,
   automationPollMs = 1000,
@@ -113,6 +145,8 @@ export function useAgentChat({
     hermesModeRef.current = next;
     setHermesMode(next);
   }, []);
+  /** O primeiro pedido da conversa: toda mensagem seguinte o manda como `sessionId`. */
+  const sessionRef = useRef<string | undefined>(undefined);
   const [messages, setMessages] = useState<AgentChatMessage[]>([]);
   const [pending, setPending] = useState<AgentChatPending | null>(null);
   const [traces, setTraces] = useState<AgentChatTrace[]>([]);
@@ -151,11 +185,12 @@ export function useAgentChat({
     setPending(next);
   }, []);
 
-  /** Comecar de novo e estado local: limpa a tela e volta ao assistente da agenda. */
+  /** Comecar de novo e estado local: limpa a tela, a sessao e volta ao assistente da agenda. */
   const startNewConversation = useCallback(() => {
     if (pendingRef.current) return;
     commitHermesMode(false);
     commitPending(null);
+    sessionRef.current = undefined;
     messagesRef.current = [];
     setMessages([]);
     tracesRef.current = [];
@@ -170,9 +205,16 @@ export function useAgentChat({
       const request = found?.role === "user" ? found : undefined;
       commitMessages((current) => [
         ...current.map((message) =>
-          message.id === id && message.role === "user" ? { ...message, failed: true } : message,
+          message.id === id && message.role === "user" && code !== "cancelled" ? { ...message, failed: true } : message,
         ),
-        { id: `${id}-error`, role: "error", text: ERROR_TEXTS[code], retryText: request?.text ?? "", requestId: id },
+        {
+          id: `${id}-error`,
+          role: "error",
+          text: ERROR_TEXTS[code],
+          retryText: request?.text ?? "",
+          messageId: id,
+          reuseMessageId: RESUMABLE.has(code),
+        },
       ]);
       // O pedido acabou sem resposta: o rastro para de girar onde estava.
       commitTraces((current) => current.map((entry) => (entry.id === id ? { ...entry, running: false } : entry)));
@@ -189,40 +231,54 @@ export function useAgentChat({
     };
   }, [commitPending]);
 
-  /**
-   * Segue o processo ate o fim: a caixa mostra cada passo com seu estado.
-   */
-  const runProcess = useCallback(
-    async (id: string, text: string): Promise<void> => {
-      if (!userId) return;
-      let processId: string;
-      try {
-        ({ processId } = await processApi.start({ userId, text, ...(context ? { context } : {}) }));
-      } catch (error) {
-        fail(id, error instanceof ApiError && error.status === 401 ? "session_expired" : "connection_failed");
+  /** Mostra o estado do pedido na caixa de processo e no rastro da aba "Processo". */
+  const applyView = useCallback(
+    (id: string, view: RequestDto) => {
+      const processId = `${id}-process`;
+      commitMessages((current) =>
+        current.map((message) => (message.id === processId ? { id: processId, role: "process", request: view } : message)));
+      commitTraces((current) =>
+        current.map((entry) =>
+          entry.id === id ? { ...entry, running: isRequestOpen(view), trace: view.trace ?? null } : entry));
+    },
+    [commitMessages, commitTraces],
+  );
+
+  /** O pedido terminou: feito (com a agenda atualizada se algo mudou), ou falhou / foi cancelado. */
+  const finishRequest = useCallback(
+    (id: string, view: RequestDto) => {
+      applyView(id, view);
+      if (view.status === "done") {
+        commitPending(null);
+        // Criar, editar e vincular mudam a agenda; uma consulta pura ou uma resposta nao.
+        if (view.entities.length > 0) onEntitiesChangedRef.current?.();
         return;
       }
+      // Um pedido que falhou ou foi cancelado pode ter gravado algo antes de parar.
+      if (view.entities.length > 0) onEntitiesChangedRef.current?.();
+      fail(id, view.status === "cancel" ? "cancelled" : (view.errorCode ?? "internal"));
+    },
+    [applyView, commitPending, fail],
+  );
 
-      const messageId = `${id}-process`;
-      commitMessages((current) => [...current, { id: messageId, role: "process", process: null }]);
-      showTrace({ id, request: text, route: "process", running: true, trace: null });
-      commitPending({ id, label: "Realizando processos" });
+  /**
+   * Segue o pedido ate o fim: a caixa mostra cada passo com seu estado. O pedido ja foi aceito pela API
+   * (`requestId`); se a consulta falhar, o mesmo id (reenvio do "Tentar de novo") retoma o acompanhamento.
+   */
+  const followRequest = useCallback(
+    async (id: string, requestId: string): Promise<void> => {
       const deadline = Date.now() + PROCESS_TIMEOUT_MS;
       let failures = 0;
       while (!disposedRef.current && pendingRef.current?.id === id) {
         try {
-          const view = await processApi.get(processId);
+          const view = await getRequest(requestId);
           failures = 0;
           if (disposedRef.current || pendingRef.current?.id !== id) return;
-          commitMessages((current) =>
-            current.map((message) => (message.id === messageId ? { id: messageId, role: "process", process: view } : message)));
-          showTrace({ id, request: text, route: "process", running: !isProcessTerminal(view), trace: view.trace ?? null });
-          if (isProcessTerminal(view)) {
-            commitPending(null);
-            // Criar, editar e vincular mudam a agenda; uma consulta pura ou uma resposta nao.
-            if (view.entities.length > 0) onEntitiesChangedRef.current?.();
+          if (!isRequestOpen(view)) {
+            finishRequest(id, view);
             return;
           }
+          applyView(id, view);
         } catch (error) {
           failures += 1;
           if (error instanceof ApiError && error.status === 401) {
@@ -240,9 +296,42 @@ export function useAgentChat({
         }
         await new Promise((resolve) => setTimeout(resolve, processPollMs));
       }
-      return;
     },
-    [commitMessages, commitPending, context, fail, processApi, processPollMs, showTrace, userId],
+    [applyView, fail, finishRequest, processPollMs],
+  );
+
+  /**
+   * Abre o pedido na API (com o id da mensagem como `clientMessageId` e, depois da primeira, o da primeira
+   * mensagem como `sessionId`) e o acompanha ate o fim.
+   */
+  const runRequest = useCallback(
+    async (id: string, text: string): Promise<void> => {
+      if (!userId) return;
+      let requestId: string;
+      try {
+        requestId = await startRequest({
+          userId,
+          text,
+          ...(context ? { context } : {}),
+          ...(sessionRef.current ? { sessionId: sessionRef.current } : {}),
+          clientMessageId: id,
+        });
+      } catch (error) {
+        fail(id, startFailureCode(error));
+        return;
+      }
+      sessionRef.current ??= requestId;
+
+      const processId = `${id}-process`;
+      commitMessages((current) => [
+        ...current.filter((message) => message.id !== processId),
+        { id: processId, role: "process", request: null },
+      ]);
+      showTrace({ id, request: text, route: "steps", running: true, trace: null });
+      commitPending({ id, label: "Realizando processos", requestId });
+      await followRequest(id, requestId);
+    },
+    [commitMessages, commitPending, context, fail, followRequest, showTrace, userId],
   );
 
   /**
@@ -326,12 +415,12 @@ export function useAgentChat({
     [automationApi, automationPollMs, commitHermesMode, commitMessages, commitPending, fail, showTrace, userId],
   );
 
-  const send = useCallback(
-    (text: string) => {
+  /** Envia uma mensagem com o id dado (o da mensagem nova, ou o de uma mensagem que falhou ao ser reenviada). */
+  const dispatch = useCallback(
+    (text: string, id: string): boolean => {
       const trimmed = text.trim();
       if (!trimmed || !userId || pendingRef.current) return false;
 
-      const id = operationId();
       const command = parseChatCommand(trimmed);
       const notice = (text: string) => ({ id: `${id}-notice`, role: "assistant" as const, text, entities: [] });
 
@@ -352,24 +441,44 @@ export function useAgentChat({
       commitPending({ id });
       const hermesText = command?.kind === "hermes" ? command.text : hermesModeRef.current ? trimmed : null;
       if (hermesText !== null) void runHermes(id, hermesText);
-      else void runProcess(id, trimmed);
+      else void runRequest(id, trimmed);
       return true;
     },
-    [commitHermesMode, commitMessages, commitPending, runHermes, runProcess, userId],
+    [commitHermesMode, commitMessages, commitPending, runHermes, runRequest, userId],
   );
 
-  /** Tira o pedido que falhou e o erro dele, e manda o texto de novo. */
+  const send = useCallback((text: string) => dispatch(text, operationId()), [dispatch]);
+
+  /** Tira o pedido que falhou e o erro dele, e manda o texto de novo (com o mesmo id, se a falha foi de rede). */
   const retry = useCallback(
     (errorId: string) => {
       const error = messagesRef.current.find((message) => message.id === errorId);
       if (error?.role !== "error" || pendingRef.current) return;
-      const { requestId } = error;
-      commitMessages((current) => current.filter((message) => message.id !== errorId && message.id !== requestId));
-      commitTraces((current) => current.filter((entry) => entry.id !== requestId));
-      send(error.retryText);
+      const { messageId, reuseMessageId, retryText } = error;
+      commitMessages((current) =>
+        current.filter((message) =>
+          message.id !== errorId && message.id !== messageId && message.id !== `${messageId}-process` && message.id !== `${messageId}-steps`));
+      commitTraces((current) => current.filter((entry) => entry.id !== messageId));
+      dispatch(retryText, reuseMessageId ? messageId : operationId());
     },
-    [commitMessages, commitTraces, send],
+    [commitMessages, commitTraces, dispatch],
   );
+
+  /** Cancela o pedido aberto pela API. O que ja foi gravado continua gravado; o pedido termina como cancelado. */
+  const cancel = useCallback(() => {
+    const current = pendingRef.current;
+    if (!current?.requestId) return;
+    const { id, requestId } = current;
+    cancelRequest(requestId).then(
+      (view) => {
+        if (pendingRef.current?.id === id) finishRequest(id, view);
+      },
+      () => {
+        // Sem resposta do cancelamento não se sabe o estado: o reenvio retoma o mesmo pedido.
+        fail(id, "connection_lost");
+      },
+    );
+  }, [fail, finishRequest]);
 
   return {
     messages,
@@ -381,6 +490,7 @@ export function useAgentChat({
     hermesMode,
     send,
     retry,
+    cancel,
     startNewConversation,
   };
 }

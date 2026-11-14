@@ -1,28 +1,39 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import type { RequestDto } from "@repo/contracts";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import type { AiProcessDto } from "@/lib/api/contracts";
 import type { AgentChatEntityRef } from "@/lib/api/contracts";
+import { type FakeApi, createFakeApi } from "@/test/fake-api";
+import { advanceRequest, requestsArea } from "@/test/fake-api/requests";
 import { AgentChatPanel, agentEntityHref, requestWithWindow, useAgendaChat } from "./agent-chat-panel";
 import type { FreeWindow } from "./hub-events";
 
-const { session, requestAgendaRefresh } = vi.hoisted(() => ({
+const { session, requestAgendaRefresh, net } = vi.hoisted(() => ({
   session: { user: { userId: "user-1", name: "Ana", email: null } as { userId: string } | null, ready: true },
   requestAgendaRefresh: vi.fn(),
+  net: { authedFetch: vi.fn() },
 }));
 vi.mock("@/lib/session/use-session", () => ({ useSessionState: () => session }));
 vi.mock("@/components/agenda/agenda-refresh", () => ({ requestAgendaRefresh }));
+// A conversa fala com a API falsa de pedidos: é ela que aceita, avança e cancela.
+vi.mock("@/lib/api/authed-fetch", async (original) => ({
+  ...(await original<typeof import("@/lib/api/authed-fetch")>()),
+  authedFetch: net.authedFetch,
+}));
 
-const done: AiProcessDto = {
-  id: "p1",
-  title: "Realizando processos:",
-  status: "completed",
-  steps: [],
-  entities: [],
-  message: "Você tem um treino às 7h.",
-};
+let api: FakeApi;
 
-let processStart: ReturnType<typeof vi.fn>;
-let processGet: ReturnType<typeof vi.fn>;
+const requests = () => api.store.table<RequestDto>("requests");
+const requestPosts = () => api.calls.filter((call) => call.method === "POST" && call.pathname === "/api/requests");
+
+/** Espera a API aceitar o pedido número `count` e o avança para `change` (o que o agente faria). */
+async function answer(count: number, change: Partial<RequestDto>) {
+  await waitFor(() => expect(requestPosts()).toHaveLength(count));
+  const id = [...requests().keys()][count - 1];
+  if (!id) throw new Error(`Pedido ${count} não existe na API falsa.`);
+  advanceRequest(api, id, change);
+}
+
+const finished = { status: "done" as const, message: "Você tem um treino às 7h." };
 
 function Harness({
   live = true,
@@ -45,7 +56,7 @@ function Harness({
 }) {
   const agenda = useAgendaChat({
     live,
-    processApi: { start: processStart, get: processGet } as never,
+    pollMs: 5,
     automationApi: { start: vi.fn(), get: vi.fn() } as never,
   });
   return <AgentChatPanel {...agenda} onCommand={onCommand} onClose={onClose} entityHref={entityHref} freeWindow={freeWindow} onClearFreeWindow={onClearFreeWindow} todayKey={todayKey} listenOnOpen={listenOnOpen} />;
@@ -60,20 +71,28 @@ function ask(text: string) {
 }
 
 beforeEach(() => {
-  processStart = vi.fn(async () => ({ processId: "p1" }));
-  processGet = vi.fn(async () => done);
+  api = createFakeApi({ areas: [requestsArea()] });
+  net.authedFetch.mockReset();
+  net.authedFetch.mockImplementation(api.authedFetch);
   session.user = { userId: "user-1" };
   session.ready = true;
   requestAgendaRefresh.mockReset();
 });
 
-test("sends the message through the process route for the session user, from the agenda", async () => {
+test("sends the message as a request for the session user, from the agenda", async () => {
   render(<Harness />);
   ask("o que tenho hoje?");
 
-  expect(processStart).toHaveBeenCalledWith({ userId: "user-1", text: "o que tenho hoje?", context: { screen: "agenda" } });
+  await waitFor(() => expect(requestPosts()).toHaveLength(1));
+  expect(requestPosts()[0]?.body).toEqual({
+    userId: "user-1",
+    text: "o que tenho hoje?",
+    context: { screen: "agenda" },
+    clientMessageId: expect.any(String),
+  });
   const log = screen.getByRole("log");
   expect(within(log).getByText("o que tenho hoje?")).toBeInTheDocument();
+  await answer(1, finished);
   await waitFor(() => expect(within(log).getByText("Você tem um treino às 7h.")).toBeInTheDocument());
   expect(requestAgendaRefresh).not.toHaveBeenCalled();
 });
@@ -82,6 +101,7 @@ test("the conversation header says who answers, a new conversation clears it and
   const onClose = vi.fn();
   render(<Harness onClose={onClose} />);
   ask("o que tenho hoje?");
+  await answer(1, finished);
 
   const header = screen.getByRole("heading", { name: "Conversa" }).parentElement;
   expect(header).toHaveTextContent("Assistente");
@@ -94,20 +114,20 @@ test("the conversation header says who answers, a new conversation clears it and
 });
 
 test("the process view sits beside the conversation: it lists what the AI did for each request", async () => {
-  processGet.mockResolvedValue({
-    ...done,
+  render(<Harness onCommand={vi.fn()} />);
+  expect(screen.queryByRole("group", { name: "Vista do chat" })).not.toBeInTheDocument();
+
+  ask("o que tenho hoje?");
+  await answer(1, {
+    ...finished,
     trace: {
-      route: "process", status: "done", startedAt: "2026-11-11T12:00:00.000Z", durationMs: 1500, fields: [],
+      route: "steps", status: "done", startedAt: "2026-11-11T12:00:00.000Z", durationMs: 1500, fields: [],
       entries: [
         { id: "p1-request", kind: "request", label: "Pedido", summary: "o que tenho hoje?", status: "done" },
         { id: "s1", kind: "agent", label: "Consultando a agenda", source: "query", status: "done", durationMs: 900 },
       ],
     },
   });
-  render(<Harness onCommand={vi.fn()} />);
-  expect(screen.queryByRole("group", { name: "Vista do chat" })).not.toBeInTheDocument();
-
-  ask("o que tenho hoje?");
   await screen.findByText("Você tem um treino às 7h.");
 
   const views = within(screen.getByRole("group", { name: "Vista do chat" }));
@@ -149,7 +169,7 @@ test("the conversation offers no command shortcuts: the field is the only way in
 
   expect(screen.queryByRole("group", { name: "Comandos rápidos" })).not.toBeInTheDocument();
   expect(screen.getByRole("form", { name: "Pedido ao Hermes" })).toBeInTheDocument();
-  // Enquanto o Hermes responde, o enviar fica desligado e diz por quê.
+  // Enquanto a IA responde, o enviar fica desligado e diz por quê.
   expect(screen.getByRole("button", { name: "Aguardando a resposta" })).toBeDisabled();
 });
 
@@ -175,16 +195,17 @@ test("a record's page lives under the user; a deleted record has none", () => {
   expect(agentEntityHref("u1", { kind: "event", id: "01E", change: "deleted" })).toBeUndefined();
 });
 
-test("a failed message can be retried", async () => {
-  processStart.mockRejectedValueOnce(new Error("boom"));
+test("a message that could not reach the API can be retried, with the same id: no second request", async () => {
+  api.failNext("POST", "/api/requests", 500);
   render(<Harness />);
   ask("crie a tarefa");
 
   await waitFor(() => expect(screen.getByText(/Não consegui conectar ao assistente/)).toBeInTheDocument());
   fireEvent.click(screen.getByRole("button", { name: "Tentar de novo" }));
 
-  await waitFor(() => expect(processStart).toHaveBeenCalledTimes(2));
-  expect(processStart).toHaveBeenLastCalledWith(expect.objectContaining({ text: "crie a tarefa" }));
+  await waitFor(() => expect(requestPosts()).toHaveLength(2));
+  const firstClientId = (requestPosts()[0]?.body as { clientMessageId: string }).clientMessageId;
+  expect(requestPosts()[1]?.body).toMatchObject({ text: "crie a tarefa", clientMessageId: firstClientId });
   expect(screen.queryByText(/Não consegui conectar ao assistente/)).not.toBeInTheDocument();
   expect(within(screen.getByRole("log")).getAllByText("crie a tarefa")).toHaveLength(1);
 });
@@ -195,14 +216,14 @@ test("without a session the chat asks to sign in and sends nothing", () => {
 
   expect(screen.getByText("Entre na sua conta para conversar com a IA.")).toBeInTheDocument();
   expect(screen.getByRole("textbox", { name: "Mensagem para a IA" })).toBeDisabled();
-  expect(processStart).not.toHaveBeenCalled();
+  expect(requestPosts()).toHaveLength(0);
 });
 
 test("the mockup never connects", () => {
   render(<Harness live={false} />);
 
   expect(screen.getByRole("textbox", { name: "Mensagem para a IA" })).toBeDisabled();
-  expect(processStart).not.toHaveBeenCalled();
+  expect(requestPosts()).toHaveLength(0);
 });
 
 test("the start is only the question and the field, with no suggestions or conversation list", () => {
@@ -240,11 +261,11 @@ test("typing a slash lists the commands and Enter runs the highlighted one, noth
   fireEvent.submit(textbox.closest("form") as HTMLFormElement);
 
   expect(onCommand).toHaveBeenCalledWith("task", "comprar pão");
-  expect(processStart).not.toHaveBeenCalled();
+  expect(requestPosts()).toHaveLength(0);
   expect(textbox).toHaveValue("");
 });
 
-test("an unknown slash command is just a message", () => {
+test("an unknown slash command is just a message", async () => {
   const onCommand = vi.fn();
   render(<Harness onCommand={onCommand} />);
 
@@ -252,7 +273,19 @@ test("an unknown slash command is just a message", () => {
 
   expect(screen.queryByRole("list", { name: "Comandos" })).not.toBeInTheDocument();
   expect(onCommand).not.toHaveBeenCalled();
-  expect(processStart).toHaveBeenCalledWith(expect.objectContaining({ text: "/xyz o que é isso?" }));
+  await waitFor(() => expect(requestPosts()[0]?.body).toMatchObject({ text: "/xyz o que é isso?" }));
+});
+
+test("cancelling a request from the process box cancels it in the API", async () => {
+  render(<Harness />);
+  ask("crie uma nota");
+  await waitFor(() => expect(requestPosts()).toHaveLength(1));
+
+  fireEvent.click(await screen.findByRole("button", { name: "Cancelar pedido" }));
+
+  await waitFor(() => expect(screen.getByText("Pedido cancelado.")).toBeInTheDocument());
+  expect([...requests().values()][0]).toMatchObject({ status: "cancel" });
+  expect(screen.queryByRole("button", { name: "Cancelar pedido" })).not.toBeInTheDocument();
 });
 
 /** O microfone do navegador, de mentira: guarda as sessões abertas e deixa o teste dizer o que foi ouvido. */
@@ -315,7 +348,7 @@ test("the first typed letter turns the microphone off and keeps what was on the 
   expect(textbox).toHaveValue("comprar pão e");
 });
 
-test("what was said can be sent as it is, and sending closes the microphone", () => {
+test("what was said can be sent as it is, and sending closes the microphone", async () => {
   withMicrophone();
   render(<Harness listenOnOpen />);
   const textbox = screen.getByRole("textbox", { name: "Mensagem para a IA" });
@@ -323,9 +356,9 @@ test("what was said can be sent as it is, and sending closes the microphone", ()
 
   fireEvent.submit(textbox.closest("form") as HTMLFormElement);
 
-  expect(processStart).toHaveBeenCalledWith({ userId: "user-1", text: "o que tenho hoje?", context: { screen: "agenda" } });
   expect(FakeSpeechRecognition.instances[0].aborted).toBe(true);
   expect(textbox).toHaveValue("");
+  await waitFor(() => expect(requestPosts()[0]?.body).toMatchObject({ userId: "user-1", text: "o que tenho hoje?", context: { screen: "agenda" } }));
 });
 
 test("a microphone that opened by itself does not complain about silence", () => {
@@ -337,21 +370,21 @@ test("a microphone that opened by itself does not complain about silence", () =>
   expect(screen.queryByText("Não ouvi nada. Tente de novo.")).not.toBeInTheDocument();
 });
 
-test("when the voice stops, what was said goes to the AI by itself", () => {
+test("when the voice stops, what was said goes to the AI by itself", async () => {
   vi.useFakeTimers();
   try {
     withMicrophone();
     render(<Harness listenOnOpen />);
     act(() => FakeSpeechRecognition.instances[0].hear("o que tenho hoje?"));
-    expect(processStart).not.toHaveBeenCalled();
+    expect(requestPosts()).toHaveLength(0);
 
     act(() => { vi.advanceTimersByTime(2000); });
-
-    expect(processStart).toHaveBeenCalledWith({ userId: "user-1", text: "o que tenho hoje?", context: { screen: "agenda" } });
-    expect(screen.getByRole("textbox", { name: "Mensagem para a IA" })).toHaveValue("");
   } finally {
     vi.useRealTimers();
   }
+
+  await waitFor(() => expect(requestPosts()[0]?.body).toMatchObject({ userId: "user-1", text: "o que tenho hoje?", context: { screen: "agenda" } }));
+  expect(screen.getByRole("textbox", { name: "Mensagem para a IA" })).toHaveValue("");
 });
 
 test("typing before the voice stops cancels the automatic send", () => {
@@ -365,14 +398,15 @@ test("typing before the voice stops cancels the automatic send", () => {
     fireEvent.change(textbox, { target: { value: "comprar pão e leite" } });
     act(() => { vi.advanceTimersByTime(5000); });
 
-    expect(processStart).not.toHaveBeenCalled();
+    expect(requestPosts()).toHaveLength(0);
     expect(textbox).toHaveValue("comprar pão e leite");
   } finally {
     vi.useRealTimers();
   }
 });
 
-async function speakAndWaitForReply(text: string) {
+/** Fala e espera a API receber o pedido número `count` e a resposta dele aparecer (o campo volta a aguardar). */
+async function speakAndWaitForReply(text: string, count: number) {
   vi.useFakeTimers();
   try {
     act(() => FakeSpeechRecognition.instances.at(-1)?.hear(text));
@@ -380,6 +414,7 @@ async function speakAndWaitForReply(text: string) {
   } finally {
     vi.useRealTimers();
   }
+  await answer(count, finished);
   await waitFor(() => expect(screen.getByRole("status")).not.toHaveTextContent("…"));
 }
 
@@ -387,19 +422,19 @@ test("after the answer to a spoken request, the chat listens again, over and ove
   withMicrophone();
   render(<Harness listenOnOpen />);
 
-  await speakAndWaitForReply("o que tenho hoje?");
+  await speakAndWaitForReply("o que tenho hoje?", 1);
   await waitFor(() => expect(FakeSpeechRecognition.instances).toHaveLength(2));
   expect(screen.getByRole("status")).toHaveTextContent("Ouvindo…");
 
-  await speakAndWaitForReply("e amanhã?");
+  await speakAndWaitForReply("e amanhã?", 2);
   await waitFor(() => expect(FakeSpeechRecognition.instances).toHaveLength(3));
-  expect(processStart).toHaveBeenCalledTimes(2);
+  expect(requestPosts()).toHaveLength(2);
 });
 
 test("saying stop ends the cycle without sending the word", async () => {
   withMicrophone();
   render(<Harness listenOnOpen />);
-  await speakAndWaitForReply("o que tenho hoje?");
+  await speakAndWaitForReply("o que tenho hoje?", 1);
   await waitFor(() => expect(FakeSpeechRecognition.instances).toHaveLength(2));
 
   vi.useFakeTimers();
@@ -410,7 +445,8 @@ test("saying stop ends the cycle without sending the word", async () => {
     vi.useRealTimers();
   }
 
-  expect(processStart).toHaveBeenCalledTimes(1);
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  expect(requestPosts()).toHaveLength(1);
   expect(screen.getByRole("button", { name: "Transcrever o que eu disser" })).toHaveAttribute("aria-pressed", "false");
   expect(FakeSpeechRecognition.instances).toHaveLength(2);
 });
@@ -418,7 +454,7 @@ test("saying stop ends the cycle without sending the word", async () => {
 test("tapping the wave while it listens ends the cycle", async () => {
   withMicrophone();
   render(<Harness listenOnOpen />);
-  await speakAndWaitForReply("o que tenho hoje?");
+  await speakAndWaitForReply("o que tenho hoje?", 1);
   await waitFor(() => expect(FakeSpeechRecognition.instances).toHaveLength(2));
 
   fireEvent.click(screen.getByRole("button", { name: "Parar de transcrever" }));
@@ -431,7 +467,7 @@ test("tapping the wave while it listens ends the cycle", async () => {
 test("typing ends the cycle too", async () => {
   withMicrophone();
   render(<Harness listenOnOpen />);
-  await speakAndWaitForReply("o que tenho hoje?");
+  await speakAndWaitForReply("o que tenho hoje?", 1);
   await waitFor(() => expect(FakeSpeechRecognition.instances).toHaveLength(2));
 
   fireEvent.change(screen.getByRole("textbox", { name: "Mensagem para a IA" }), { target: { value: "a" } });

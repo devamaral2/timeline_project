@@ -62,7 +62,7 @@ test("each step falls on the timeline where it happened, in its own lane", () =>
 
 test("a running step stretches up to now; a step that has not started stays off the timeline", () => {
   const { bars, totalMs } = timelineBars({
-    route: "process", status: "running", startedAt: START, fields: [],
+    status: "running", startedAt: START, fields: [],
     entries: [
       { id: "r", kind: "routing", label: "Roteamento do pedido", status: "done", startedAt: START, durationMs: 400 },
       { id: "s1", kind: "agent", label: "Criando eventos", status: "running", startedAt: at(100) },
@@ -141,7 +141,7 @@ test("while the AI works the request says so; before the first step it waits", (
   expect(screen.getByText("Hermes · em andamento")).toBeInTheDocument();
   expect(screen.getByRole("status")).toHaveTextContent("Esperando o primeiro passo…");
 
-  rerender(<AgentTrace traces={[turn({ running: false, trace: null, route: "process" })]} />);
+  rerender(<AgentTrace traces={[turn({ running: false, trace: null, route: "steps" })]} />);
   expect(screen.getByText("Assistente · não concluído")).toBeInTheDocument();
   expect(screen.getByRole("status")).toHaveTextContent("Sem detalhes deste pedido.");
 });

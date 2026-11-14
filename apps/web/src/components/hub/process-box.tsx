@@ -1,55 +1,66 @@
+import type { AgentEventStatus, RequestDto } from "@repo/contracts";
 import { Check, Circle, LoaderCircle, X } from "lucide-react";
-import type { AgentChatEntityRef, AiProcessDto, AiProcessStepDto } from "@/lib/api/contracts";
-import { EntityRows, processEntityRef } from "./entity-rows";
+import type { AgentChatEntityRef } from "@/lib/api/contracts";
+import { isRequestOpen } from "@/lib/agent-chat/use-agent-chat";
+import { EntityRows, requestEntityRef } from "./entity-rows";
 import styles from "@/components/shell/shell.module.css";
 
-const STATUS_TEXT: Record<AiProcessStepDto["status"], string> = {
-  pending: "aguardando",
-  running: "em andamento",
-  succeeded: "concluído",
-  failed: "falhou",
+/** Como a caixa mostra cada passo: a marca, o estado nos dados (`data-status`) e o texto que o leitor de tela ouve. */
+const STEP_VIEW: Record<AgentEventStatus, { state: "pending" | "running" | "succeeded" | "failed" | "cancelled"; text: string }> = {
+  queued: { state: "pending", text: "aguardando" },
+  waiting: { state: "pending", text: "aguardando" },
+  running: { state: "running", text: "em andamento" },
+  done: { state: "succeeded", text: "concluído" },
+  failed: { state: "failed", text: "falhou" },
+  cancel: { state: "cancelled", text: "cancelado" },
 };
 
-/** Antes de o servidor responder o primeiro estado a caixa ja mostra o titulo, como o servidor o escreve. */
-const FALLBACK_TITLE = "Realizando processos:";
+/** O titulo da caixa e fixo: o texto do pedido ja aparece na mensagem do usuario. */
+const TITLE = "Realizando processos:";
 
 /**
  * A caixa de processo (ADR 003): o titulo e a lista de passos, com check verde ao concluir e vermelho ao
- * falhar, e, abaixo, a prévia de cada registro criado ou alterado. Todo texto vem predefinido do servidor; so a mensagem do fim (resposta do fallback ou o que falhou)
- * e livre, e so existe quando precisa.
+ * falhar, e, abaixo, a prévia de cada registro criado ou alterado. Todo texto vem predefinido do servidor; so a
+ * resposta (quando o pedido termina) e livre. Enquanto o pedido esta aberto, um botão cancela.
  */
 interface ProcessBoxProps {
-  process: AiProcessDto | null;
+  request: RequestDto | null;
   /** Para onde leva cada registro criado ou alterado; sem ela, as linhas sao so texto. */
   entityHref?: (entity: AgentChatEntityRef) => string | undefined;
   onOpenEntity?: () => void;
+  /** Cancela o pedido enquanto ele esta aberto; sem ele, a caixa nao mostra o botão. */
+  onCancel?: () => void;
 }
 
-export function ProcessBox({ process, entityHref, onOpenEntity }: ProcessBoxProps) {
-  const steps = process?.steps ?? [];
+export function ProcessBox({ request, entityHref, onOpenEntity, onCancel }: ProcessBoxProps) {
+  const steps = request?.steps ?? [];
   const query = steps.find((step) => step.result);
+  const open = request === null || isRequestOpen(request);
   return (
-    <section className={styles.processBox} aria-label="Processo" data-status={process?.status ?? "dispatching"}>
-      <p className={styles.processTitle}>{process?.title ?? FALLBACK_TITLE}</p>
-      {steps.length === 0 && !process?.message && (
+    <section className={styles.processBox} aria-label="Processo" data-status={request?.status ?? "queued"}>
+      <p className={styles.processTitle}>{TITLE}</p>
+      {steps.length === 0 && open && (
         <p className={styles.processWaiting} role="status">
           <LoaderCircle aria-hidden />
           Entendendo o pedido…
         </p>
       )}
       <ul className={styles.processSteps} aria-label="Passos do processo">
-        {steps.map((step) => (
-          <li key={step.id} data-status={step.status}>
-            <span className={styles.processMark} aria-hidden>
-              {step.status === "succeeded" && <Check />}
-              {step.status === "failed" && <X />}
-              {step.status === "running" && <LoaderCircle data-spin />}
-              {step.status === "pending" && <Circle />}
-            </span>
-            <span>{step.label}</span>
-            <span className={styles.srOnly}>{STATUS_TEXT[step.status]}</span>
-          </li>
-        ))}
+        {steps.map((step) => {
+          const view = STEP_VIEW[step.status];
+          return (
+            <li key={step.id} data-status={view.state}>
+              <span className={styles.processMark} aria-hidden>
+                {view.state === "succeeded" && <Check />}
+                {view.state === "failed" && <X />}
+                {view.state === "running" && <LoaderCircle data-spin />}
+                {(view.state === "pending" || view.state === "cancelled") && <Circle />}
+              </span>
+              <span>{step.label}</span>
+              <span className={styles.srOnly}>{view.text}</span>
+            </li>
+          );
+        })}
       </ul>
       {query?.result && (
         <section className={styles.processRows} aria-label="Resultado da consulta">
@@ -72,8 +83,13 @@ export function ProcessBox({ process, entityHref, onOpenEntity }: ProcessBoxProp
           {query.result.truncated && <p>Mostrando só as primeiras linhas.</p>}
         </section>
       )}
-      <EntityRows entities={(process?.entities ?? []).map(processEntityRef)} entityHref={entityHref} onOpenEntity={onOpenEntity} />
-      {process?.message && <p className={styles.processMessage}>{process.message}</p>}
+      <EntityRows entities={(request?.entities ?? []).map(requestEntityRef)} entityHref={entityHref} onOpenEntity={onOpenEntity} />
+      {request?.status === "done" && request.message && <p className={styles.processMessage}>{request.message}</p>}
+      {onCancel && request && isRequestOpen(request) && (
+        <button type="button" className={styles.processCancel} onClick={onCancel}>
+          Cancelar pedido
+        </button>
+      )}
     </section>
   );
 }

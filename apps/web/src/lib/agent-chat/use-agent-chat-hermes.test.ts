@@ -2,7 +2,19 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, expect, test, vi } from "vitest";
 import { ApiError } from "@/lib/api/authed-fetch";
 import type { HermesTurnJobDto } from "@/lib/ai-automation/ai-automation";
+import { type FakeApi, createFakeApi } from "@/test/fake-api";
+import { requestsArea } from "@/test/fake-api/requests";
 import { useAgentChat } from "./use-agent-chat";
+
+// A mensagem comum vai pela API de pedidos: a API falsa a recebe no lugar do authedFetch.
+const net = vi.hoisted(() => ({ authedFetch: vi.fn() }));
+vi.mock("@/lib/api/authed-fetch", async (original) => ({
+  ...(await original<typeof import("@/lib/api/authed-fetch")>()),
+  authedFetch: net.authedFetch,
+}));
+
+let api: FakeApi;
+const requestPosts = () => api.calls.filter((call) => call.method === "POST" && call.pathname === "/api/requests");
 
 const job = (status: HermesTurnJobDto["status"], extra: Partial<HermesTurnJobDto> = {}): HermesTurnJobDto => ({
   id: "job-1",
@@ -13,16 +25,16 @@ const job = (status: HermesTurnJobDto["status"], extra: Partial<HermesTurnJobDto
 
 function setup(automationApi: { start: ReturnType<typeof vi.fn>; get: ReturnType<typeof vi.fn> }) {
   const onEntitiesChanged = vi.fn();
-  /** Mensagem comum vai pela rota de processo; aqui so importa que ela foi (ou nao) iniciada. */
-  const processStart = vi.fn(async () => ({ processId: "p1" }));
-  const processApi = { start: processStart, get: vi.fn(() => new Promise<never>(() => {})) };
-  const hook = renderHook(() =>
-    useAgentChat({ userId: "owner", onEntitiesChanged, automationApi, automationPollMs: 5, processApi }),
-  );
-  return { ...hook, processStart, onEntitiesChanged };
+  const hook = renderHook(() => useAgentChat({ userId: "owner", onEntitiesChanged, automationApi, automationPollMs: 5 }));
+  return { ...hook, onEntitiesChanged };
 }
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  api = createFakeApi({ areas: [requestsArea()] });
+  net.authedFetch.mockReset();
+  net.authedFetch.mockImplementation(api.authedFetch);
+});
 
 test("/hermes manda so a mensagem ao Hermes, acompanha o job e mostra a resposta", async () => {
   const start = vi.fn(async () => job("queued"));
@@ -87,11 +99,11 @@ test("um turno que falha mantem os passos ja dados e mostra o erro", async () =>
 
 test("um pedido comum segue pelo chat e nunca chama o Hermes", async () => {
   const start = vi.fn();
-  const { result, processStart } = setup({ start, get: vi.fn() });
+  const { result } = setup({ start, get: vi.fn() });
 
   act(() => { result.current.send("almocei arroz e feijao"); });
 
-  await waitFor(() => expect(processStart).toHaveBeenCalledTimes(1));
+  await waitFor(() => expect(requestPosts()).toHaveLength(1));
   expect(start).not.toHaveBeenCalled();
 });
 
@@ -130,7 +142,7 @@ test("sessao expirada ao iniciar vira erro de sessao", async () => {
 test("depois de /hermes, as mensagens seguintes continuam com o Hermes ate /app", async () => {
   const start = vi.fn(async () => job("queued"));
   const get = vi.fn(async () => job("succeeded", { result: { text: "resposta do hermes" } }));
-  const { result, processStart } = setup({ start, get });
+  const { result } = setup({ start, get });
 
   act(() => { result.current.send("/hermes oi"); });
   await waitFor(() => expect(result.current.pending).toBeNull());
@@ -148,7 +160,7 @@ test("depois de /hermes, as mensagens seguintes continuam com o Hermes ate /app"
   expect(result.current.messages.at(-1)).toMatchObject({ role: "assistant", text: expect.stringContaining("De volta") });
 
   act(() => { result.current.send("almocei arroz"); });
-  await waitFor(() => expect(processStart).toHaveBeenCalledTimes(1));
+  await waitFor(() => expect(requestPosts()).toHaveLength(1));
   expect(start).toHaveBeenCalledTimes(2);
 });
 
@@ -166,11 +178,11 @@ test("/hermes sozinho so liga o modo, sem chamar o servidor", async () => {
 });
 
 test("/app fora do modo Hermes e um pedido comum", async () => {
-  const { result, processStart } = setup({ start: vi.fn(), get: vi.fn() });
+  const { result } = setup({ start: vi.fn(), get: vi.fn() });
 
   act(() => { result.current.send("/app"); });
 
-  await waitFor(() => expect(processStart).toHaveBeenCalledTimes(1));
+  await waitFor(() => expect(requestPosts()).toHaveLength(1));
   expect(result.current.hermesMode).toBe(false);
 });
 
