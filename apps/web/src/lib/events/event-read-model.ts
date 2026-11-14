@@ -22,7 +22,7 @@ export function humanStatusOptions(event: Pick<EventDto, "longRunning">): HumanE
  * atual, e tirar de `done` envia `finishedAt` nulo: a API não grava a conclusão
  * sozinha (ver api-rotas). A revisão é a que a tela leu.
  */
-export function statusPatch(event: Pick<EventDto, "revision" | "status">, status: HumanEventStatus, now: Date): EditEventInput {
+export function statusPatch(event: Pick<EventDto, "revision" | "status">, status: HumanEventStatus | null, now: Date): EditEventInput {
   const patch: EditEventInput = { expectedRevision: event.revision, status };
   if (status === "done") patch.finishedAt = now.toISOString();
   else if (event.status === "done") patch.finishedAt = null;

@@ -6,7 +6,7 @@ import { useMotionRouter } from "@/components/shell/navigation-motion";
 import { type ComponentType, type ReactNode, useEffect, useState } from "react";
 import { type EditItemFormProps, NewEventForm, type NewItemFormProps, NewNoteForm, NewTaskForm } from "./new-item-forms";
 import { authedFetch } from "@/lib/api/authed-fetch";
-import type { EventDetailDto, NoteDto, TaskDetailDto } from "@/lib/api/contracts";
+import type { NoteDto, TaskDetailDto } from "@/lib/api/contracts";
 import styles from "@/components/shell/shell.module.css";
 
 /**
@@ -33,7 +33,7 @@ export const NewNoteRoute = ({ userId }: { userId: string }) => <NewItemRoute us
 export const NewEventRoute = ({ userId }: { userId: string }) => <NewItemRoute userId={userId} title="Novo evento" listPath="" Form={NewEventForm} />;
 
 /**
- * As rotas de edição (`/eventos/:id/editar`, `/tarefas/:id/editar`, `/notas/:id/editar`): o formulário
+ * As rotas de edição de tarefa e de nota (`/tarefas/:id/editar`, `/notas/:id/editar`): o formulário
  * de criar, preenchido com o item. Salvar ou cancelar volta ao detalhe.
  */
 function EditItemRoute<Item>({ userId, title, apiPath, detailPath, Form }: {
@@ -65,5 +65,3 @@ export const EditTaskRoute = ({ userId, taskId }: { userId: string; taskId: stri
   <EditItemRoute<TaskDetailDto> userId={userId} title="Editar tarefa" apiPath={`/api/tasks/${taskId}`} detailPath={`/tarefas/${taskId}`} Form={NewTaskForm} />;
 export const EditNoteRoute = ({ userId, noteId }: { userId: string; noteId: string }) =>
   <EditItemRoute<NoteDto> userId={userId} title="Editar nota" apiPath={`/api/notes/${noteId}`} detailPath={`/notas/${noteId}`} Form={NewNoteForm} />;
-export const EditEventRoute = ({ userId, eventId }: { userId: string; eventId: string }) =>
-  <EditItemRoute<EventDetailDto> userId={userId} title="Editar evento" apiPath={`/api/events/${eventId}`} detailPath={`/eventos/${eventId}`} Form={NewEventForm} />;

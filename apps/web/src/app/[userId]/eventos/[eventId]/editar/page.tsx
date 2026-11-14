@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { EditEventRoute } from "@/components/new-item/NewItemRoutes";
+import { EventEditRoute } from "@/components/event-detail/EventEditRoute";
 
 export const metadata: Metadata = {
   title: "Editar evento — Agente pessoal",
@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 
 export default async function Page({ params }: { params: Promise<{ userId: string; eventId: string }> }) {
   const { userId, eventId } = await params;
-  return <EditEventRoute userId={userId} eventId={eventId} />;
+  return <EventEditRoute userId={userId} eventId={eventId} />;
 }
