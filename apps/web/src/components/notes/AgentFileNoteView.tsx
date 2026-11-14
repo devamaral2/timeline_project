@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { DetailMessage } from "@/components/detail/detail-parts";
 import { ApiError } from "@/lib/api/authed-fetch";
-import { type AgentFileApi, type AgentFileNoteDto, agentFileApi, shortHash } from "@/lib/notes/agent-file-notes";
+import type { AgentFileData } from "@repo/contracts";
+import { type AgentFileApi, agentFileApi, shortHash } from "@/lib/notes/agent-file-notes";
 import { MarkdownView } from "./MarkdownView";
 import styles from "./notes.module.css";
 
@@ -43,8 +44,8 @@ function FileRendered({ text }: { text: string }) {
  * O arquivo de uma skill ou agente do Hermes: o caminho, a versao (hash) e o texto lido da pasta
  * compartilhada, so para leitura. A nota acompanha o arquivo e se atualiza sozinha quando o hash muda.
  */
-export function AgentFileNoteView({ note, api = agentFileApi }: { note: AgentFileNoteDto; api?: AgentFileApi }) {
-  const { path, hash, missing } = note.data;
+export function AgentFileNoteView({ data, api = agentFileApi }: { data: AgentFileData; api?: AgentFileApi }) {
+  const { path, hash, missing } = data;
   const [text, setText] = useState<string | null>(null);
   const [raw, setRaw] = useState(false);
   const [readError, setReadError] = useState<string | null>(null);
@@ -67,7 +68,7 @@ export function AgentFileNoteView({ note, api = agentFileApi }: { note: AgentFil
     <article className={styles.noteCard} aria-label="Arquivo do Hermes">
       <p className={styles.fileMeta}>
         <code>{path}</code>
-        <span>versão <code>{shortHash(note.data)}</code></span>
+        <span>versão <code>{shortHash(data)}</code></span>
         {missing ? <span className={styles.fileMissing}>arquivo ausente: o último texto continua guardado</span> : null}
       </p>
       {readError ? <DetailMessage alert>{readError}</DetailMessage> : null}

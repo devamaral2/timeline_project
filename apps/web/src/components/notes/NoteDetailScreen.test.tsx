@@ -1,158 +1,186 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import type { NoteDto } from "@/lib/api/contracts";
-import { textNote } from "./note-fixtures";
+import { render, screen, within } from "@testing-library/react";
+import { beforeEach, expect, test, vi } from "vitest";
+import { type FakeApi, createFakeApi } from "@/test/fake-api";
+import { type StoredArtifact, artifactFixture, artifactsArea } from "@/test/fake-api/artifacts";
+import { eventFixture, eventsArea } from "@/test/fake-api/events";
 
-const push = vi.fn();
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
-
-const authedFetch = vi.fn();
-vi.mock("@/lib/api/authed-fetch", () => ({ authedFetch: (...args: unknown[]) => authedFetch(...args) }));
-vi.mock("@/components/events/new-event-forms/TagInput", () => ({ TagInput: () => null }));
+// A tela troca o authedFetch pela API falsa: a rede inteira passa por ela.
+const net = vi.hoisted(() => ({ authedFetch: vi.fn() }));
+vi.mock("@/lib/api/authed-fetch", async (original) => ({
+  ...(await original<typeof import("@/lib/api/authed-fetch")>()),
+  authedFetch: net.authedFetch,
+}));
 
 const { NoteDetailScreen } = await import("./NoteDetailScreen");
 
-const proposal: NoteDto = textNote({
-  id: "nota-1",
-  name: "Ideias para a proposta",
-  content: [
-    "Ideias para a proposta",
-    "Começar pelo problema do cliente.",
-    "",
-    "## Pontos para a reunião",
-    "- Mostrar o cronograma",
-    "- Separar o preço",
-  ].join("\n"),
-  tags: ["trabalho"],
-  revision: 2,
-  createdAt: "2026-09-12T09:00:00-03:00",
-  updatedAt: "2026-09-13T21:12:00-03:00",
-  link: { kind: "task", id: "t1", name: "Revisar proposta", at: "2026-09-14T09:00:00-03:00" },
-});
+type Seed = Parameters<typeof createFakeApi>[0]["seed"];
+
+let api: FakeApi;
+
+function install(seed: Seed = {}) {
+  api = createFakeApi({ areas: [artifactsArea, eventsArea], seed });
+  net.authedFetch.mockImplementation(api.authedFetch);
+}
+
+function renderArtifact(id: string) {
+  render(<NoteDetailScreen userId="user-1" noteId={id} />);
+}
+
+const FOOD = {
+  description: "Arroz e feijão",
+  items: [
+    { id: "i1", name: "Arroz", portion: "2 colheres", approximateWeightGrams: 120, caloriesKcal: 150, macronutrients: { carbohydratesGrams: 33, proteinsGrams: 3, totalFatGrams: 0, fiberGrams: 0 } },
+  ],
+  totals: { totalCaloriesKcal: 412, totalProteinGrams: 18, totalCarbohydrateGrams: 60, totalFatGrams: 9, totalFiberGrams: 7 },
+  recipe: { source: "user", ingredients: [{ name: "Arroz", quantity: "2 xícaras" }], steps: ["Cozinhar o arroz."] },
+  generation: { status: "completed" },
+};
 
 beforeEach(() => {
   vi.useFakeTimers({ shouldAdvanceTime: true });
   vi.setSystemTime(new Date("2026-09-14T10:00:00-03:00"));
-  authedFetch.mockReset();
-  push.mockReset();
+  net.authedFetch.mockReset();
 });
 
-afterEach(() => {
-  vi.useRealTimers();
-});
-
-test("mostra título, datas, tags, onde aparece e o texto", async () => {
-  authedFetch.mockResolvedValue(proposal);
-  render(<NoteDetailScreen userId="user-1" noteId="nota-1" />);
-
-  expect(await screen.findByRole("heading", { level: 1, name: "Ideias para a proposta" })).toBeInTheDocument();
-  expect(screen.getByText("Revisar proposta")).toBeInTheDocument();
-  expect(screen.getByText("Tarefa · hoje, 09:00")).toBeInTheDocument();
-  expect(screen.getByText("#trabalho")).toBeInTheDocument();
-  // A legenda em mono diz quando mudou; a criação é um dos fatos da coluna.
-  expect(screen.getByText("Atualizada ontem, 21:12")).toBeInTheDocument();
-  expect(screen.getByText("12 set.")).toBeInTheDocument();
-  expect(screen.getByText("Começar pelo problema do cliente.")).toBeInTheDocument();
-  expect(screen.getByRole("heading", { level: 2, name: "Pontos para a reunião" })).toBeInTheDocument();
-  expect(screen.getAllByRole("listitem").map((item) => item.textContent)).toEqual(
-    expect.arrayContaining(["Mostrar o cronograma", "Separar o preço"]),
-  );
-  expect(screen.getByRole("link", { name: "Notas" })).toHaveAttribute("href", "/user-1/notas");
-  expect(authedFetch).toHaveBeenCalledWith("/api/notes/nota-1");
-});
-
-test("a origem fica no resumo e os outros vínculos em seções, e cada um abre o seu registro", async () => {
-  authedFetch.mockResolvedValue({
-    ...proposal,
-    links: [
-      { kind: "event", id: "ev-9", name: "Academia", eventKind: "training", at: "2026-09-14T07:00:00-03:00" },
-      { kind: "task", id: "t1", name: "Revisar proposta", at: "2026-09-14T09:00:00-03:00" },
+test("mostra título, tipo, tags, o registro e o texto de uma nota própria", async () => {
+  install({
+    artifacts: [
+      artifactFixture({
+        id: "art-1",
+        name: "Ideias para a proposta",
+        data: { body: "Ideias para a proposta\nComeçar pelo problema do cliente.\n\n## Pontos para a reunião\n- Mostrar o cronograma" },
+        tags: ["trabalho"],
+        revision: 2,
+        createdAt: "2026-09-12T09:00:00-03:00",
+        updatedAt: "2026-09-13T21:12:00-03:00",
+      }),
     ],
   });
-  render(<NoteDetailScreen userId="user-1" noteId="nota-1" />);
+  renderArtifact("art-1");
 
-  const link = await screen.findByRole("link", { name: /Academia/ });
-
-  expect(link).toHaveAttribute("href", "/user-1/eventos/ev-9");
-  expect(screen.getByRole("link", { name: /Revisar proposta/ })).toHaveAttribute("href", "/user-1/tarefas/t1");
-  expect(within(screen.getByRole("region", { name: "Resumo da nota" })).getByRole("link", { name: /Academia/ })).toBe(link);
-  expect(within(screen.getByRole("region", { name: "Tarefas vinculadas" })).getAllByRole("link")).toHaveLength(1);
-  expect(screen.queryByRole("region", { name: "Eventos vinculados" })).not.toBeInTheDocument();
-  expect(screen.queryByText("Criado pelo Hermes")).not.toBeInTheDocument();
+  expect(await screen.findByRole("heading", { level: 1, name: "Ideias para a proposta" })).toBeInTheDocument();
+  expect(screen.getByText("Nota")).toBeInTheDocument();
+  expect(screen.getByText("#trabalho")).toBeInTheDocument();
+  expect(screen.getByText("Começar pelo problema do cliente.")).toBeInTheDocument();
+  expect(screen.getByRole("heading", { level: 2, name: "Pontos para a reunião" })).toBeInTheDocument();
+  const registro = screen.getByRole("region", { name: "Registro" });
+  expect(within(registro).getByText("12 set., 09:00")).toBeInTheDocument();
+  expect(within(registro).getByText("ontem, 21:12")).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Notas" })).toHaveAttribute("href", "/user-1/notas");
+  expect(api.calls.at(-1)).toMatchObject({ method: "GET", pathname: "/api/artifacts/art-1" });
 });
 
-test("uma nota de sono usa o mesmo cartão do evento", async () => {
-  authedFetch.mockResolvedValue({
-    ...proposal,
-    name: "Sono",
-    type: "sleep",
-    data: { score: 80, trackedSleepTime: 450 },
-    links: [{ kind: "event", id: "ev-1", name: "Sono", eventKind: "sleep", at: "2026-10-03T23:30:00-03:00", endsAt: "2026-10-04T07:00:00-03:00" }],
+test("lista os eventos em que o artefato aparece, com a relação, e cada um abre o detalhe do evento", async () => {
+  install({
+    events: [
+      eventFixture({ id: "ev-9", name: "Academia", kind: "training", startedAt: "2026-09-14T07:00:00-03:00", estimatedFinishAt: "2026-09-14T08:00:00-03:00" }),
+      eventFixture({ id: "ev-1", name: "Almoço", kind: "meal", startedAt: "2026-09-13T12:00:00-03:00" }),
+    ],
+    artifacts: [
+      artifactFixture({
+        id: "art-1",
+        name: "Arroz e feijão",
+        type: "food",
+        data: FOOD,
+        links: [{ eventId: "ev-9", relation: "uses" }, { eventId: "ev-1", relation: "creates" }],
+      }),
+    ],
   });
-  render(<NoteDetailScreen userId="user-1" noteId="nota-1" />);
+  renderArtifact("art-1");
 
-  expect(await screen.findByRole("heading", { level: 1, name: "Sono" })).toBeInTheDocument();
-  expect(screen.getByRole("heading", { level: 2, name: "Sábado, 3 → domingo, 4 de outubro" })).toBeInTheDocument();
-  expect(screen.getByText("Pontuação do sono")).toBeInTheDocument();
+  const eventos = await screen.findByRole("region", { name: "Eventos" });
+  const academia = within(eventos).getByRole("link", { name: /Academia/ });
+  expect(academia).toHaveAttribute("href", "/user-1/eventos/ev-9");
+  expect(academia).toHaveTextContent("uses");
+  expect(within(eventos).getByRole("link", { name: /Almoço/ })).toHaveAttribute("href", "/user-1/eventos/ev-1");
+  expect(within(eventos).getByRole("link", { name: /Almoço/ })).toHaveTextContent("creates");
+});
+
+test("um artefato sem evento diz que não aparece em nenhum", async () => {
+  install({ artifacts: [artifactFixture({ id: "art-1", name: "Rascunho" })] });
+  renderArtifact("art-1");
+
+  expect(await screen.findByText("Não aparece em nenhum evento.")).toBeInTheDocument();
+});
+
+test("um artefato global mostra o catálogo global, o conteúdo do tipo e nenhuma ação de editar ou apagar", async () => {
+  install({
+    artifacts: [
+      artifactFixture({
+        id: "wk-1",
+        name: "Corrida",
+        type: "workout",
+        global: true,
+        data: { code: "running", category: "cardio", active: true },
+      }),
+    ],
+  });
+  renderArtifact("wk-1");
+
+  expect(await screen.findByRole("heading", { level: 1, name: "Corrida" })).toBeInTheDocument();
+  expect(screen.getByText("Catálogo global")).toBeInTheDocument();
+  expect(screen.getByText("Cardio")).toBeInTheDocument();
+  expect(screen.queryByRole("region", { name: "Eventos" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /Editar|Excluir|Mais ações/ })).not.toBeInTheDocument();
+  expect(screen.queryByRole("menuitem")).not.toBeInTheDocument();
+});
+
+test("um alimento mostra os totais e a receita", async () => {
+  install({ artifacts: [artifactFixture({ id: "art-1", name: "Arroz e feijão", type: "food", data: FOOD })] });
+  renderArtifact("art-1");
+
+  expect(await screen.findByRole("heading", { level: 1, name: "Arroz e feijão" })).toBeInTheDocument();
+  expect(screen.getByText("Calorias consumidas")).toBeInTheDocument();
+  expect(screen.getByText("412")).toBeInTheDocument();
+  expect(screen.getByRole("region", { name: "Receita" })).toBeInTheDocument();
+  expect(screen.getByText("Cozinhar o arroz.")).toBeInTheDocument();
+});
+
+test("um alimento com o cálculo pendente é relido até o servidor terminar", async () => {
+  install({
+    artifacts: [artifactFixture({ id: "art-1", name: "Arroz e feijão", type: "food", data: { ...FOOD, generation: { status: "pending" } } })],
+  });
+  renderArtifact("art-1");
+
+  expect(await screen.findByText("Preparando informações nutricionais e receita…")).toBeInTheDocument();
+  // O servidor termina o cálculo: a próxima leitura já traz os totais.
+  const stored = api.store.table<StoredArtifact>("artifacts").get("art-1");
+  if (stored) stored.data = FOOD;
+  expect(await screen.findByText("412", {}, { timeout: 4000 })).toBeInTheDocument();
+});
+
+test("uma nota de sono usa o cartão da noite e o tempo que durou na agenda", async () => {
+  install({
+    events: [
+      eventFixture({ id: "ev-1", name: "Sono", kind: "sleep", startedAt: "2026-10-03T23:30:00-03:00", estimatedFinishAt: "2026-10-04T07:00:00-03:00" }),
+    ],
+    artifacts: [
+      artifactFixture({
+        id: "art-1",
+        name: "Sono",
+        type: "sleep",
+        data: { trackedSleepTime: 450, score: 80 },
+        links: [{ eventId: "ev-1", relation: "creates" }],
+      }),
+    ],
+  });
+  renderArtifact("art-1");
+
+  expect(await screen.findByRole("heading", { level: 2, name: "Sábado, 3 → domingo, 4 de outubro" })).toBeInTheDocument();
   expect(screen.getByText("Registrado pelo app de sono. Na agenda, o evento durou 7 h 30.")).toBeInTheDocument();
-  expect(screen.getByText("80")).toBeInTheDocument();
   expect(screen.getByRole("img", { name: "Tempo registrado: 7 h 30" })).toBeInTheDocument();
 });
 
-test("avisa quando a nota não carrega", async () => {
-  authedFetch.mockRejectedValue(new Error("404"));
-  render(<NoteDetailScreen userId="user-1" noteId="nota-1" />);
+test("um artefato inexistente mostra a tela de não encontrado", async () => {
+  install({});
+  renderArtifact("nao-existe");
 
-  expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível carregar a nota.");
+  expect(await screen.findByRole("alert")).toHaveTextContent("Artefato não encontrado.");
 });
 
-test("solta a nota da origem com a revisão esperada", async () => {
-  authedFetch.mockResolvedValueOnce(proposal).mockResolvedValueOnce(undefined).mockResolvedValueOnce({ ...proposal, links: [], revision: 3 });
-  render(<NoteDetailScreen userId="user-1" noteId="nota-1" />);
-  await screen.findByRole("heading", { level: 1 });
+test("avisa quando o artefato não carrega por outro motivo", async () => {
+  net.authedFetch.mockRejectedValue(new Error("rede"));
+  renderArtifact("art-1");
 
-  fireEvent.click(screen.getByRole("button", { name: /Mais ações/ }));
-  fireEvent.click(screen.getByRole("menuitem", { name: "Soltar da origem" }));
-
-  await waitFor(() => expect(screen.queryByRole("link", { name: /Revisar proposta/ })).not.toBeInTheDocument());
-  expect(authedFetch).toHaveBeenCalledWith(
-    "/api/notes/nota-1",
-    expect.objectContaining({ method: "PATCH", body: JSON.stringify({ expectedRevision: 2, eventIds: [], taskIds: [] }) }),
-  );
-});
-
-test("Editar abre a rota de edição da nota de texto", async () => {
-  authedFetch.mockResolvedValueOnce(proposal);
-  render(<NoteDetailScreen userId="user-1" noteId="nota-1" />);
-  await screen.findByRole("heading", { level: 1 });
-
-  fireEvent.click(screen.getByRole("button", { name: /Mais ações/ }));
-  fireEvent.click(screen.getByRole("menuitem", { name: "Editar" }));
-
-  expect(push).toHaveBeenCalledWith("/user-1/notas/nota-1/editar");
-});
-
-test("exclui a nota depois da confirmação e volta para a lista", async () => {
-  authedFetch.mockResolvedValueOnce(proposal).mockResolvedValueOnce(undefined);
-  render(<NoteDetailScreen userId="user-1" noteId="nota-1" />);
-  await screen.findByRole("heading", { level: 1 });
-
-  fireEvent.click(screen.getByRole("button", { name: /Mais ações/ }));
-  fireEvent.click(screen.getByRole("menuitem", { name: "Excluir" }));
-  fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Excluir" }));
-
-  await waitFor(() => expect(push).toHaveBeenCalledWith("/user-1/notas"));
-  expect(authedFetch).toHaveBeenLastCalledWith("/api/notes/nota-1", { method: "DELETE" });
-});
-
-test("a nota de texto é lida como markdown", async () => {
-  authedFetch.mockResolvedValue({
-    ...proposal,
-    data: { body: "Ideias para a proposta\n\nIsto é **importante** e [aqui](https://exemplo.dev).\n\n- [ ] enviar\n- [x] revisar" },
-  });
-  render(<NoteDetailScreen userId="user-1" noteId="nota-1" />);
-
-  expect((await screen.findByText("importante")).tagName).toBe("STRONG");
-  expect(screen.getByRole("link", { name: "aqui" })).toHaveAttribute("href", "https://exemplo.dev");
-  expect(screen.getByRole("checkbox", { name: "Feito" })).toBeChecked();
+  expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível carregar o artefato.");
 });

@@ -3,7 +3,8 @@
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { ICON_STROKE_WIDTH } from "@/components/events/event-visuals";
-import type { MealItem, NoteDto, SleepItem, TrainingData, WorkoutSnapshot } from "@/lib/api/contracts";
+import type { FoodData } from "@repo/contracts";
+import type { NoteDto, SleepItem, TrainingData, WorkoutSnapshot } from "@/lib/api/contracts";
 import { formatDecimal, formatMinutes, formatPace, groupSetsByExercise, pluralize } from "@/lib/events/event-detail-format";
 import { MarkdownView } from "./MarkdownView";
 import { MealRecipeView } from "./MealRecipeView";
@@ -22,9 +23,9 @@ export function NoteBody({ note, agendaMinutes = null }: { note: NoteDto; agenda
   switch (note.type) {
     case "text":
     case "router":
-      return <div className={styles.noteBody}><MarkdownView source={note.data.body} /></div>;
+      return <TextBody body={note.data.body} />;
     case "meal":
-      return <MealNote data={note.data} />;
+      return <MealNote data={{ ...note.data, items: note.data.foodItems }} />;
     case "training":
       return <TrainingNote data={note.data} />;
     case "sleep":
@@ -32,6 +33,11 @@ export function NoteBody({ note, agendaMinutes = null }: { note: NoteDto; agenda
     default:
       return null;
   }
+}
+
+/** O texto de uma nota de texto ou roteador, em markdown. */
+export function TextBody({ body }: { body: string }) {
+  return <div className={styles.noteBody}><MarkdownView source={body} /></div>;
 }
 
 /** Seção que abre dentro da própria página; fechada, já diz quanto tem dentro. */
@@ -102,7 +108,7 @@ function BigNumber({ label, children }: { label: string; children: ReactNode }) 
 }
 
 /** O quanto cada macro pesa nas calorias (proteína e carboidrato 4 kcal/g, gordura 9), para a barra e o rótulo dela. */
-function macroShares(totals: MealItem["totals"]): [number, number, number] {
+function macroShares(totals: FoodData["totals"]): [number, number, number] {
   const kcal = [totals.totalProteinGrams * 4, totals.totalCarbohydrateGrams * 4, totals.totalFatGrams * 9];
   const sum = kcal[0] + kcal[1] + kcal[2];
   if (sum <= 0) return [0, 0, 0];
@@ -110,7 +116,7 @@ function macroShares(totals: MealItem["totals"]): [number, number, number] {
   return [shares[0] ?? 0, shares[1] ?? 0, shares[2] ?? 0];
 }
 
-function Macros({ totals }: { totals: MealItem["totals"] }) {
+function Macros({ totals }: { totals: FoodData["totals"] }) {
   const [protein, carbs, fat] = macroShares(totals);
   const items = [
     { key: "protein", name: "Proteínas", grams: totals.totalProteinGrams, share: protein },
@@ -139,7 +145,10 @@ function Macros({ totals }: { totals: MealItem["totals"] }) {
   );
 }
 
-function MealNote({ data }: { data: MealItem }) {
+/** O alimento (ou a refeição) que as duas telas desenham: os totais, a receita e os itens. */
+export type FoodNoteData = Pick<FoodData, "description" | "items" | "totals" | "recipe" | "generation" | "nutritionSource">;
+
+export function MealNote({ data }: { data: FoodNoteData }) {
   const { totals } = data;
   if (data.generation?.status === "pending" || data.generation?.status === "failed") {
     return <div className={styles.noteBody}>
@@ -157,11 +166,11 @@ function MealNote({ data }: { data: MealItem }) {
         <Macros totals={totals} />
         <MealGenerationStatus data={data} />
       </section>
-      {data.foodItems.length ? (
+      {data.items.length ? (
         <div className={styles.listBlock}>
-          <h4 className={styles.listHeading}>Alimentos<span>{data.foodItems.length}</span></h4>
+          <h4 className={styles.listHeading}>Alimentos<span>{data.items.length}</span></h4>
           <ul className={styles.foods}>
-            {data.foodItems.map((food) => (
+            {data.items.map((food) => (
               <li key={food.id}>
                 <div className={styles.rowText}><span className={styles.foodName}>{food.name}</span><span className={styles.rowSummary}>{food.portion || `${formatDecimal(food.approximateWeightGrams)} g`}</span></div>
                 <Calories value={food.caloriesKcal} kind="consumed" />
@@ -186,7 +195,7 @@ function workoutSummary(workout: WorkoutSnapshot): string {
   return parts.join(" · ");
 }
 
-function TrainingNote({ data }: { data: TrainingData }) {
+export function TrainingNote({ data }: { data: TrainingData }) {
   const active = data.workouts.reduce((sum, workout) => sum + workout.duration, 0);
   const burned = data.caloriesBurned || data.workouts.reduce((sum, workout) => sum + workout.calories, 0);
   return (
@@ -224,7 +233,7 @@ function TrainingNote({ data }: { data: TrainingData }) {
   );
 }
 
-function SleepNote({ data, agendaMinutes }: { data: SleepItem; agendaMinutes: number | null }) {
+export function SleepNote({ data, agendaMinutes }: { data: SleepItem; agendaMinutes: number | null }) {
   const score = Math.min(100, Math.max(0, data.score));
   return (
     <div className={styles.noteBody}>
