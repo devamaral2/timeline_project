@@ -14,4 +14,4 @@
 - [x] Apagar tem confirmação e volta para a lista.
 - [x] O teste de tela confere os corpos enviados e o caso de revisão desatualizada.
 - [x] A linha desta tela em `docs/mobile-parity.md` foi atualizada, com o Android marcado como em progresso.
-- [ ] Os testes novos passam, e `pnpm run test:unit` e `pnpm run typecheck` continuam verdes.
+- [x] Os testes novos passam, e `pnpm run test:unit` e `pnpm run typecheck` continuam verdes.
