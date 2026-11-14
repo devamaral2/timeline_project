@@ -2,7 +2,7 @@ import { afterAll, beforeEach, describe, expect, test } from "vitest";
 import { PostgresIdempotencyStore } from "../idempotency/postgres-idempotency.store";
 import { createPostgresTestContext, type PostgresTestContext } from "../testing/postgres-test-context";
 
-const ref = { userId: "owner", scope: "/api/notes", key: "resumo:2026-11-03" };
+const ref = { userId: "owner", scope: "/api/artifacts", key: "resumo:2026-11-03" };
 const hash = (seed: string) => seed.repeat(64).slice(0, 64);
 
 describe("PostgresIdempotencyStore", () => {
@@ -33,11 +33,11 @@ describe("PostgresIdempotencyStore", () => {
 
   test("a completed key replays its response", async () => {
     await store.claim({ ...ref, requestHash: hash("a") });
-    await store.complete({ ...ref, response: { noteId: "note-1" } });
+    await store.complete({ ...ref, response: { artifactId: "artifact-1" } });
 
     expect(await store.claim({ ...ref, requestHash: hash("a") })).toEqual({
       kind: "replay",
-      response: { noteId: "note-1" },
+      response: { artifactId: "artifact-1" },
     });
   });
 
@@ -52,7 +52,7 @@ describe("PostgresIdempotencyStore", () => {
     await store.release(ref);
     expect((await store.claim({ ...ref, requestHash: hash("a") })).kind).toBe("claimed");
 
-    await store.complete({ ...ref, response: { noteId: "note-1" } });
+    await store.complete({ ...ref, response: { artifactId: "artifact-1" } });
     await store.release(ref);
     expect((await store.claim({ ...ref, requestHash: hash("a") })).kind).toBe("replay");
   });
@@ -66,7 +66,7 @@ describe("PostgresIdempotencyStore", () => {
 
   test("keys older than the retention window are purged on the next claim", async () => {
     await store.claim({ ...ref, requestHash: hash("a") });
-    await store.complete({ ...ref, response: { noteId: "note-1" } });
+    await store.complete({ ...ref, response: { artifactId: "artifact-1" } });
     await ctx.pool.query("UPDATE idempotency_keys SET created_at = now() - interval '31 days'");
 
     expect((await store.claim({ ...ref, requestHash: hash("a") })).kind).toBe("claimed");

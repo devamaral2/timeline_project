@@ -1,14 +1,11 @@
 import { describe, expect, test } from "vitest";
 import { validateAgentSql } from "./validate-agent-sql";
 
-/** O escopo normal: o ator e o dono dos dados. */
-const OWNER = { includeChat: true };
-
 const REJECTED: Array<[string, string]> = [
   ["delete", "DELETE FROM events"],
   ["update", "UPDATE events SET name = 'x'"],
-  ["insert", "INSERT INTO notes (id) VALUES ('x')"],
-  ["merge", "MERGE INTO notes n USING events e ON n.id = e.id WHEN MATCHED THEN DELETE"],
+  ["insert", "INSERT INTO artifacts (id) VALUES ('x')"],
+  ["merge", "MERGE INTO artifacts n USING events e ON n.id = e.id WHEN MATCHED THEN DELETE"],
   ["explain analyze", "EXPLAIN ANALYZE SELECT 1"],
   ["set", "SET statement_timeout = 0"],
   ["show", "SHOW search_path"],
@@ -26,7 +23,9 @@ const REJECTED: Array<[string, string]> = [
   // `recurrences` e visivel (so as colunas do logical-schema); a de excecoes nao.
   ["hidden table recurrence_exceptions", "SELECT * FROM recurrence_exceptions"],
   ["hidden table tags", "SELECT * FROM tags"],
-  ["hidden table food", "SELECT * FROM food"],
+  ["hidden table jobs", "SELECT * FROM jobs"],
+  ["hidden table event_entries", "SELECT * FROM event_entries"],
+  ["hidden relation graph", "SELECT * FROM event_event_relation"],
   ["quoted uppercase name", 'SELECT * FROM "Events"'],
   ["CTE from a sibling subquery", "SELECT (WITH tags AS (SELECT 1) SELECT 1), (SELECT count(*) FROM tags)"],
   ["CTE declared after its user", "WITH a AS (SELECT * FROM tags), tags AS (SELECT 1) SELECT * FROM a"],
@@ -65,54 +64,41 @@ const ACCEPTED: Array<[string, string]> = [
   ["plain select", "SELECT id, name FROM events"],
   ["date functions", "SELECT date_trunc('week', now()), started_on FROM events WHERE started_at > now() - interval '7 days'"],
   ["extract at time zone", "SELECT EXTRACT(dow FROM started_at AT TIME ZONE 'America/Sao_Paulo') FROM events"],
-  ["cast", "SELECT CAST(position AS integer), position::text, started_at::date FROM event_notes, events"],
+  ["cast", "SELECT CAST(position AS integer), position::text, started_at::date FROM event_artifacts, events"],
   ["conditional expressions", "SELECT COALESCE(description, ''), NULLIF(name, ''), GREATEST(1, 2), CASE WHEN missed THEN 1 ELSE 0 END FROM events"],
-  ["jsonb", "SELECT data->>'trackedSleepTime', (data->'totals'->>'totalCaloriesKcal')::numeric FROM notes WHERE type = 'sleep'"],
-  ["set-returning function in select list", "SELECT jsonb_array_elements(data->'foodItems')->>'name' FROM notes"],
+  ["jsonb", "SELECT data->>'trackedSleepTime', (data->'totals'->>'totalCaloriesKcal')::numeric FROM artifacts WHERE type = 'sleep'"],
+  ["set-returning function in select list", "SELECT jsonb_array_elements(data->'items')->>'name' FROM artifacts"],
   ["window function", "SELECT name, row_number() OVER (PARTITION BY started_on ORDER BY started_at DESC) FROM events"],
   ["aggregate with filter", "SELECT started_on, count(*) FILTER (WHERE missed) FROM events GROUP BY started_on ORDER BY 1"],
-  ["join and exists", "SELECT t.name FROM tasks t JOIN task_tags tt ON tt.task_id = t.id WHERE EXISTS (SELECT 1 FROM task_notes tn WHERE tn.task_id = t.id)"],
+  ["join and exists", "SELECT t.name FROM events t JOIN event_tags tt ON tt.event_id = t.id WHERE EXISTS (SELECT 1 FROM event_artifacts tn WHERE tn.event_id = t.id)"],
   ["user CTE shadowing a table", "WITH events AS (SELECT * FROM events WHERE missed) SELECT count(*) FROM events"],
-  ["nested WITH", "SELECT * FROM (WITH x AS (SELECT id FROM tasks) SELECT * FROM x) q"],
-  ["CTE used by both union branches", "WITH x AS (SELECT id FROM tasks) SELECT id FROM x UNION SELECT id FROM x"],
+  ["nested WITH", "SELECT * FROM (WITH x AS (SELECT id FROM events) SELECT * FROM x) q"],
+  ["CTE used by both union branches", "WITH x AS (SELECT id FROM events) SELECT id FROM x UNION SELECT id FROM x"],
   ["TABLE shorthand", "TABLE events"],
-  ["like escape", "SELECT * FROM notes WHERE name LIKE '%50!%%' ESCAPE '!'"],
+  ["like escape", "SELECT * FROM artifacts WHERE name LIKE '%50!%%' ESCAPE '!'"],
   ["current_date", "SELECT * FROM events WHERE started_on = CURRENT_DATE"],
   ["trailing semicolon", "SELECT 1;"],
 ];
 
 describe("validateAgentSql", () => {
   test.each(REJECTED)("rejects %s", async (_label, sql) => {
-    const result = await validateAgentSql(sql, OWNER);
+    const result = await validateAgentSql(sql);
     expect(result.ok).toBe(false);
   });
 
   test.each(ACCEPTED)("accepts %s", async (_label, sql) => {
-    const result = await validateAgentSql(sql, OWNER);
+    const result = await validateAgentSql(sql);
     expect(result).toMatchObject({ ok: true });
   });
 
   test("explains what was refused", async () => {
-    expect(await validateAgentSql("SELECT pg_sleep(1)", OWNER)).toEqual({
+    expect(await validateAgentSql("SELECT pg_sleep(1)")).toEqual({
       ok: false,
       error: "Função não permitida: pg_sleep.",
     });
-    expect(await validateAgentSql("SELECT * FROM tags", OWNER)).toEqual({
+    expect(await validateAgentSql("SELECT * FROM tags")).toEqual({
       ok: false,
       error: "Tabela desconhecida: tags.",
     });
-  });
-});
-
-test("chat_messages existe ou nao conforme o escopo", async () => {
-  const sql = "SELECT content FROM chat_messages";
-
-  expect(await validateAgentSql(sql, OWNER)).toMatchObject({ ok: true });
-  // Sem o chat no escopo a tabela nao e "proibida": ela nao existe, e o erro e o
-  // mesmo de qualquer nome desconhecido. Nada no texto conta ao modelo do admin
-  // que ha um historico de conversa que ele nao esta vendo.
-  expect(await validateAgentSql(sql, { includeChat: false })).toEqual({
-    ok: false,
-    error: "Tabela desconhecida: chat_messages.",
   });
 });

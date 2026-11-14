@@ -1,75 +1,42 @@
-import {
-  Event,
-  Interruption,
-  type EventKind,
-  type EventPriority,
-  type NoteLink,
-  type NotificationOffsetMinutes,
-} from "../../../../domain";
-import { occurrenceLinkOf, type OccurrenceColumns } from "../../recurrences/mappers/occurrence-columns";
+import { Event, type ArtifactLink } from "../../../../domain";
+import type * as schema from "../../database/schema";
+import { occurrenceLinkOf } from "../../recurrences/mappers/occurrence-columns";
 
-export interface EventRow extends Partial<OccurrenceColumns> {
-  id: string;
-  revision: number;
-  userId: string;
-  name: string;
-  description: string;
-  startedAt: Date;
-  finishedAt: Date | null;
-  missed: boolean;
-  priority: EventPriority;
-  kind: EventKind;
-  /** `number[]` e nao a uniao: quem restringe os valores e o CHECK da coluna, nao o tipo Drizzle de um array de integer. */
-  notifyOffsetsMinutes: number[];
+export type EventRow = typeof schema.events.$inferSelect;
+
+/** O que vem das outras tabelas para completar o agregado. */
+export interface EventRowParts {
+  tags?: readonly string[];
+  artifactLinks?: readonly ArtifactLink[];
+  subtaskIds?: readonly string[];
+  blocksIds?: readonly string[];
+  parentIds?: readonly string[];
+  blockedByIds?: readonly string[];
 }
 
-export interface EventInterruptionRow {
-  id: string;
-  eventId: string;
-  position: number;
-  name: string;
-  description: string;
-  startedAt: Date;
-  finishedAt: Date;
-}
-
-export function mapEventInterruptionRow(row: EventInterruptionRow): Interruption {
-  return Interruption.create({
+export function mapEventRow(row: EventRow, parts: EventRowParts = {}): Event {
+  return Event.rehydrate({
     id: row.id,
+    userId: row.userId,
+    actor: row.actor,
+    kind: row.kind,
+    status: row.status ?? undefined,
+    priority: row.priority,
     name: row.name,
     description: row.description,
-    startedAt: row.startedAt,
-    finishedAt: row.finishedAt,
-  });
-}
-
-export function mapEventRow(
-  eventRow: EventRow,
-  noteLinks: readonly NoteLink[],
-  interruptionRows: readonly EventInterruptionRow[],
-  tagNames: readonly string[],
-  taskIds: readonly string[] = [],
-): Event {
-  const interruptions = [...interruptionRows]
-    .sort((a, b) => a.position - b.position)
-    .map((row) => mapEventInterruptionRow(row));
-
-  return Event.rehydrate({
-    id: eventRow.id,
-    userId: eventRow.userId,
-    name: eventRow.name,
-    description: eventRow.description,
-    startedAt: eventRow.startedAt,
-    finishedAt: eventRow.finishedAt ?? undefined,
-    tags: [...tagNames],
-    interruptions,
-    kind: eventRow.kind,
-    noteLinks: [...noteLinks],
-    missed: eventRow.missed,
-    priority: eventRow.priority,
-    notifyOffsetsMinutes: eventRow.notifyOffsetsMinutes as NotificationOffsetMinutes[],
-    taskIds: [...taskIds],
-    occurrence: occurrenceLinkOf(eventRow),
-    revision: eventRow.revision,
+    startedAt: row.startedAt ?? undefined,
+    estimatedFinishAt: row.estimatedFinishAt ?? undefined,
+    finishedAt: row.finishedAt ?? undefined,
+    notifyOffsetsMinutes: [...row.notifyOffsetsMinutes],
+    tags: [...(parts.tags ?? [])],
+    longRunning: row.longRunning,
+    data: (row.data ?? {}) as Record<string, unknown>,
+    artifactLinks: [...(parts.artifactLinks ?? [])],
+    subtaskIds: [...(parts.subtaskIds ?? [])],
+    blocksIds: [...(parts.blocksIds ?? [])],
+    parentIds: [...(parts.parentIds ?? [])],
+    blockedByIds: [...(parts.blockedByIds ?? [])],
+    occurrence: occurrenceLinkOf(row),
+    revision: row.revision,
   });
 }

@@ -1,8 +1,9 @@
-import { index, jsonb, pgTable, primaryKey, text, timestamp, char } from "drizzle-orm/pg-core";
+import { char, index, jsonb, pgTable, primaryKey, text, timestamp } from "drizzle-orm/pg-core";
 
 /**
- * Chaves de idempotencia das rotas de criacao (header `Idempotency-Key`).
- * `response` nulo significa "em andamento"; preenchido, e a resposta a repetir.
+ * Chaves de idempotencia das rotas de criacao (header `Idempotency-Key`) e do
+ * reenvio da mesma mensagem a IA. `response` nulo significa "em andamento";
+ * preenchido, e a resposta a repetir.
  */
 export const idempotencyKeys = pgTable(
   "idempotency_keys",

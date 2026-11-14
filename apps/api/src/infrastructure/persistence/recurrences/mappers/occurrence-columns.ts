@@ -1,6 +1,6 @@
 import type { OccurrenceLink } from "../../../../domain";
 
-/** As tres colunas de ocorrencia, iguais em `events` e em `tasks`. */
+/** As tres colunas de `events` que ligam uma ocorrencia a serie dela. */
 export interface OccurrenceColumns {
   recurrenceId: string | null;
   occurrenceOn: string | null;
@@ -15,10 +15,7 @@ export function occurrenceColumnsOf(link: OccurrenceLink | undefined): Occurrenc
   };
 }
 
-/**
- * Colunas opcionais de proposito: as linhas montadas a mao nos testes (e as de
- * antes da serie existir) nao as trazem, e isso quer dizer "nao e ocorrencia".
- */
+/** Colunas opcionais de proposito: uma linha montada a mao sem elas quer dizer "nao e ocorrencia". */
 export function occurrenceLinkOf(row: Partial<OccurrenceColumns>): OccurrenceLink | undefined {
   if (!row.recurrenceId || !row.occurrenceOn) return undefined;
   return {

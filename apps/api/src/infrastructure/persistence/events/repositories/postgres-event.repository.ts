@@ -1,75 +1,64 @@
-import { and, eq, isNull, sql } from "drizzle-orm";
-import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import {
   Event,
   EventNotFoundError,
   EventOwnershipError,
   EventRevisionConflictError,
-  type NoteWrites,
+  type ArtifactLink,
+  type ArtifactWrites,
 } from "../../../../domain";
 import type { EventRepository } from "../../../../domain/ports";
 import * as schema from "../../database/schema";
-import { mapEventRow } from "../mappers/event-row.mapper";
+import { writeArtifacts } from "../../artifacts/repositories/postgres-artifact.repository";
+import { occurrenceColumnsOf } from "../../recurrences/mappers/occurrence-columns";
 import { classifyUpdateFailure } from "../../shared/classify-update-failure";
 import { pgIntegerArrayLiteral } from "../../shared/pg-integer-array";
-import { occurrenceColumnsOf } from "../../recurrences/mappers/occurrence-columns";
+import type { Db, Tx } from "../../shared/tx";
 import { upsertTagIds } from "../../shared/upsert-tag-ids";
-import { writeNotes } from "../../notes/repositories/postgres-note.repository";
-import { insertEventNoteLinks, selectEventNoteLinks } from "../../notes/repositories/note-links";
-import { completeCurrentAiJob } from "../../../ai-jobs/ai-job-context";
+import { mapEventRow, type EventRow, type EventRowParts } from "../mappers/event-row.mapper";
+import {
+  HUMAN_EVENT_RELATIONS,
+  assertEventReferences,
+  deleteEventRelations,
+  insertEventRelations,
+} from "./event-relations";
 
-export type Tx = Parameters<Parameters<NodePgDatabase<typeof schema>["transaction"]>[0]>[0];
+export type { Tx } from "../../shared/tx";
 
 async function insertChildren(tx: Tx, event: Event): Promise<void> {
-  await insertEventNoteLinks(tx, event.id, event.noteLinks);
-
-  if (event.interruptions.length > 0) {
-    await tx.insert(schema.eventInterruptions).values(
-      event.interruptions.map((interruption, index) => ({
-        id: interruption.id,
-        eventId: event.id,
-        position: index,
-        name: interruption.name,
-        description: interruption.description,
-        startedAt: interruption.startedAt,
-        finishedAt: interruption.finishedAt,
-      })),
-    );
-  }
+  await assertEventReferences(tx, event);
+  await insertEventRelations(tx, event);
 
   if (event.tags.length > 0) {
     const tagIds = await upsertTagIds(tx, event.userId, event.tags);
-
     await tx.insert(schema.eventTags).values(tagIds.map((tagId) => ({ eventId: event.id, tagId })));
-  }
-
-  if (event.taskIds.length > 0) {
-    await tx
-      .insert(schema.eventTasks)
-      .values(event.taskIds.map((taskId) => ({ eventId: event.id, taskId })));
   }
 }
 
 /**
- * Insere o evento e os filhos. Devolve `false` quando o evento e uma ocorrencia
- * de um dia que a serie ja gerou — o indice unico recusa a linha e os filhos
- * nem sao tentados, porque apontariam para um evento que nao entrou.
+ * Insere o evento e o que sai dele. Devolve `false` quando o evento e uma
+ * ocorrencia de um dia que a serie ja gerou: o indice unico recusa a linha e o
+ * resto nem e tentado, porque apontaria para um evento que nao entrou.
  */
-export async function insertEventAggregate(tx: Tx, event: Event, notes?: NoteWrites): Promise<boolean> {
+export async function insertEventAggregate(tx: Tx, event: Event, artifacts?: ArtifactWrites): Promise<boolean> {
   const inserted = await tx
     .insert(schema.events)
     .values({
       id: event.id,
       revision: event.revision,
       userId: event.userId,
+      actor: event.actor,
+      kind: event.kind,
+      status: event.status ?? null,
+      priority: event.priority,
       name: event.name,
       description: event.description,
-      startedAt: event.startedAt,
+      startedAt: event.startedAt ?? null,
+      estimatedFinishAt: event.estimatedFinishAt ?? null,
       finishedAt: event.finishedAt ?? null,
-      missed: event.missed,
-      priority: event.priority,
-      kind: event.kind,
       notifyOffsetsMinutes: [...event.notifyOffsetsMinutes],
+      longRunning: event.longRunning,
+      data: event.data,
       ...occurrenceColumnsOf(event.occurrence),
     })
     .onConflictDoNothing({
@@ -79,38 +68,42 @@ export async function insertEventAggregate(tx: Tx, event: Event, notes?: NoteWri
     .returning({ id: schema.events.id });
 
   if (inserted.length === 0) return false;
-  await writeNotes(tx, notes);
+  await writeArtifacts(tx, artifacts);
   await insertChildren(tx, event);
   return true;
 }
 
 /**
- * Atualiza a linha e regrava os filhos. Linha apagada conta como inexistente:
- * quem edita algo que outra aba ja apagou recebe "nao encontrado".
+ * Atualiza a linha e regrava o que sai do evento. Linha apagada conta como
+ * inexistente: quem edita algo que outra aba ja apagou recebe "nao encontrado".
+ * So eventos de pessoa passam por aqui; os de agente mudam pelo proprio agente.
  */
 export async function updateEventAggregate(
   tx: Tx,
   event: Event,
   actorUserId: string,
   expectedRevision: number,
-  notes?: NoteWrites,
+  artifacts?: ArtifactWrites,
 ): Promise<void> {
   const result = await tx.execute(sql`
     UPDATE events
-    SET name = ${event.name},
-        description = ${event.description},
-        started_at = ${event.startedAt},
-        finished_at = ${event.finishedAt ?? null},
-        missed = ${event.missed},
+    SET kind = ${event.kind},
+        status = ${event.status ?? null},
         priority = ${event.priority},
-        kind = ${event.kind},
+        name = ${event.name},
+        description = ${event.description},
+        started_at = ${event.startedAt ?? null},
+        estimated_finish_at = ${event.estimatedFinishAt ?? null},
+        finished_at = ${event.finishedAt ?? null},
         notify_offsets_minutes = ${pgIntegerArrayLiteral(event.notifyOffsetsMinutes)}::integer[],
+        long_running = ${event.longRunning},
         recurrence_detached = ${event.occurrence?.detached ?? false},
         revision = ${event.revision},
         updated_at = now()
     WHERE id = ${event.id}
       AND user_id = ${actorUserId}
       AND revision = ${expectedRevision}
+      AND actor = 'human'
       AND deleted_at IS NULL
     RETURNING revision
   `);
@@ -119,7 +112,7 @@ export async function updateEventAggregate(
     const [existing] = await tx
       .select({ userId: schema.events.userId, revision: schema.events.revision })
       .from(schema.events)
-      .where(and(eq(schema.events.id, event.id), isNull(schema.events.deletedAt)));
+      .where(and(eq(schema.events.id, event.id), eq(schema.events.actor, "human"), isNull(schema.events.deletedAt)));
 
     classifyUpdateFailure(existing, actorUserId, expectedRevision, {
       notFound: () => new EventNotFoundError(`Event not found: ${event.id}`),
@@ -128,15 +121,14 @@ export async function updateEventAggregate(
     });
   }
 
-  await writeNotes(tx, notes);
-  await tx.delete(schema.eventNotes).where(eq(schema.eventNotes.eventId, event.id));
-  await tx.delete(schema.eventInterruptions).where(eq(schema.eventInterruptions.eventId, event.id));
+  await writeArtifacts(tx, artifacts);
+  await deleteEventRelations(tx, event.id);
   await tx.delete(schema.eventTags).where(eq(schema.eventTags.eventId, event.id));
-  await tx.delete(schema.eventTasks).where(eq(schema.eventTasks.eventId, event.id));
 
   await insertChildren(tx, event);
 }
 
+/** Soft delete de um evento de pessoa. As relacoes ficam e a leitura filtra `deleted_at IS NULL`. */
 export async function softDeleteEvent(tx: Tx, eventId: string, actorUserId: string): Promise<void> {
   const [existing] = await tx
     .select({
@@ -145,7 +137,7 @@ export async function softDeleteEvent(tx: Tx, eventId: string, actorUserId: stri
       occurrenceOn: schema.events.occurrenceOn,
     })
     .from(schema.events)
-    .where(and(eq(schema.events.id, eventId), isNull(schema.events.deletedAt)));
+    .where(and(eq(schema.events.id, eventId), eq(schema.events.actor, "human"), isNull(schema.events.deletedAt)));
 
   if (!existing) {
     throw new EventNotFoundError(`Event not found: ${eventId}`);
@@ -169,19 +161,111 @@ export async function softDeleteEvent(tx: Tx, eventId: string, actorUserId: stri
     .where(eq(schema.events.id, eventId));
 }
 
-export class PostgresEventRepository implements EventRepository {
-  constructor(private readonly db: NodePgDatabase<typeof schema>) {}
+interface MutableEventParts extends EventRowParts {
+  tags: string[];
+  artifactLinks: ArtifactLink[];
+  subtaskIds: string[];
+  blocksIds: string[];
+  parentIds: string[];
+  blockedByIds: string[];
+}
 
-  async save(event: Event, notes?: NoteWrites): Promise<void> {
+/** O que completa cada evento, lido das outras tabelas em poucas consultas, para qualquer quantidade de eventos. */
+export async function loadEventParts(db: Db | Tx, eventIds: readonly string[]): Promise<Map<string, EventRowParts>> {
+  const parts = new Map<string, MutableEventParts>();
+  for (const id of eventIds) {
+    parts.set(id, { tags: [], artifactLinks: [], subtaskIds: [], blocksIds: [], parentIds: [], blockedByIds: [] });
+  }
+  if (eventIds.length === 0) return parts;
+  const ids = [...eventIds];
+
+  const [tagRows, artifactRows, outgoing, incoming] = await Promise.all([
+    db
+      .select({ eventId: schema.eventTags.eventId, name: schema.tags.name })
+      .from(schema.eventTags)
+      .innerJoin(schema.tags, eq(schema.eventTags.tagId, schema.tags.id))
+      .where(inArray(schema.eventTags.eventId, ids))
+      .orderBy(asc(schema.tags.name)),
+    db
+      .select({
+        eventId: schema.eventArtifactRelation.eventId,
+        artifactId: schema.eventArtifactRelation.artifactId,
+        relation: schema.eventArtifactRelation.relation,
+        fromRecurrence: schema.eventArtifactRelation.fromRecurrence,
+      })
+      .from(schema.eventArtifactRelation)
+      .innerJoin(schema.artifacts, eq(schema.eventArtifactRelation.artifactId, schema.artifacts.id))
+      .where(and(inArray(schema.eventArtifactRelation.eventId, ids), isNull(schema.artifacts.deletedAt)))
+      .orderBy(asc(schema.eventArtifactRelation.position), asc(schema.eventArtifactRelation.createdAt)),
+    db
+      .select({
+        eventId: schema.eventEventRelation.fromEventId,
+        otherId: schema.eventEventRelation.toEventId,
+        relation: schema.eventEventRelation.relation,
+      })
+      .from(schema.eventEventRelation)
+      .innerJoin(schema.events, eq(schema.eventEventRelation.toEventId, schema.events.id))
+      .where(
+        and(
+          inArray(schema.eventEventRelation.fromEventId, ids),
+          inArray(schema.eventEventRelation.relation, [...HUMAN_EVENT_RELATIONS]),
+          isNull(schema.events.deletedAt),
+        ),
+      )
+      .orderBy(asc(schema.eventEventRelation.createdAt), asc(schema.eventEventRelation.toEventId)),
+    db
+      .select({
+        eventId: schema.eventEventRelation.toEventId,
+        otherId: schema.eventEventRelation.fromEventId,
+        relation: schema.eventEventRelation.relation,
+      })
+      .from(schema.eventEventRelation)
+      .innerJoin(schema.events, eq(schema.eventEventRelation.fromEventId, schema.events.id))
+      .where(
+        and(
+          inArray(schema.eventEventRelation.toEventId, ids),
+          inArray(schema.eventEventRelation.relation, [...HUMAN_EVENT_RELATIONS]),
+          isNull(schema.events.deletedAt),
+        ),
+      )
+      .orderBy(asc(schema.eventEventRelation.createdAt), asc(schema.eventEventRelation.fromEventId)),
+  ]);
+
+  for (const row of tagRows) parts.get(row.eventId)?.tags.push(row.name);
+  for (const row of artifactRows) {
+    const link: ArtifactLink = { artifactId: row.artifactId, relation: row.relation, fromRecurrence: row.fromRecurrence };
+    parts.get(row.eventId)?.artifactLinks.push(link);
+  }
+  for (const row of outgoing) {
+    const bucket = parts.get(row.eventId);
+    if (row.relation === "subtask") bucket?.subtaskIds.push(row.otherId);
+    else bucket?.blocksIds.push(row.otherId);
+  }
+  for (const row of incoming) {
+    const bucket = parts.get(row.eventId);
+    if (row.relation === "subtask") bucket?.parentIds.push(row.otherId);
+    else bucket?.blockedByIds.push(row.otherId);
+  }
+  return parts;
+}
+
+export async function hydrateEvents(db: Db | Tx, rows: readonly EventRow[]): Promise<Event[]> {
+  const parts = await loadEventParts(db, rows.map((row) => row.id));
+  return rows.map((row) => mapEventRow(row, parts.get(row.id)));
+}
+
+export class PostgresEventRepository implements EventRepository {
+  constructor(private readonly db: Db) {}
+
+  async save(event: Event, artifacts?: ArtifactWrites): Promise<void> {
     await this.db.transaction(async (tx) => {
-      await insertEventAggregate(tx, event, notes);
-      await completeCurrentAiJob(tx);
+      await insertEventAggregate(tx, event, artifacts);
     });
   }
 
-  async update(event: Event, actorUserId: string, expectedRevision: number, notes?: NoteWrites): Promise<void> {
+  async update(event: Event, actorUserId: string, expectedRevision: number, artifacts?: ArtifactWrites): Promise<void> {
     await this.db.transaction(async (tx) => {
-      await updateEventAggregate(tx, event, actorUserId, expectedRevision, notes);
+      await updateEventAggregate(tx, event, actorUserId, expectedRevision, artifacts);
     });
   }
 
@@ -192,37 +276,16 @@ export class PostgresEventRepository implements EventRepository {
   }
 
   async findById(eventId: string): Promise<Event | null> {
-    const [eventRow] = await this.db
-      .select()
-      .from(schema.events)
-      .where(and(eq(schema.events.id, eventId), isNull(schema.events.deletedAt)));
-    if (!eventRow) return null;
-    return this.hydrate(eventRow);
+    const [event] = await this.findByIds([eventId]);
+    return event ?? null;
   }
 
-  private async hydrate(eventRow: typeof schema.events.$inferSelect): Promise<Event> {
-    const noteLinks = await selectEventNoteLinks(this.db, eventRow.id);
-    const interruptionRows = await this.db
+  async findByIds(eventIds: readonly string[]): Promise<Event[]> {
+    if (eventIds.length === 0) return [];
+    const rows = await this.db
       .select()
-      .from(schema.eventInterruptions)
-      .where(eq(schema.eventInterruptions.eventId, eventRow.id));
-    const tagRows = await this.db
-      .select({ name: schema.tags.name })
-      .from(schema.eventTags)
-      .innerJoin(schema.tags, eq(schema.eventTags.tagId, schema.tags.id))
-      .where(eq(schema.eventTags.eventId, eventRow.id));
-    const taskRows = await this.db
-      .select({ taskId: schema.eventTasks.taskId })
-      .from(schema.eventTasks)
-      .innerJoin(schema.tasks, eq(schema.eventTasks.taskId, schema.tasks.id))
-      .where(and(eq(schema.eventTasks.eventId, eventRow.id), isNull(schema.tasks.deletedAt)));
-
-    return mapEventRow(
-      eventRow,
-      noteLinks,
-      interruptionRows,
-      tagRows.map((row) => row.name),
-      taskRows.map((row) => row.taskId),
-    );
+      .from(schema.events)
+      .where(and(inArray(schema.events.id, [...eventIds]), isNull(schema.events.deletedAt)));
+    return hydrateEvents(this.db, rows);
   }
 }
