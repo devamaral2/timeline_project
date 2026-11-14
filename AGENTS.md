@@ -2,22 +2,19 @@
 
 - `apps/web`: browser interface for the timeline and event management.
 - `apps/mobile`: Android native app (Kotlin + Compose) that mirrors the web experience.
-- `apps/api`: business use cases and the HTTP API for events, notes, tasks, and recurrences.
+- `apps/api`: business use cases and the HTTP API for events, artifacts, recurrences, and AI requests.
 - `apps/auth`: identity gateway handling sign-in, sessions, access, and roles.
 - `packages/contracts`: shared data contracts and types.
 - `packages/timeline`: shared date windows, grouping, and timeline calculations.
 - `packages/theme`: shared visual tokens and colors.
-- `packages/entities`: shared domain entities and DTOs.
-- `packages/persistence`: database schemas, migrations, repositories, and persistence queries.
 
 Use `pnpm` from the repository root. Common commands: `pnpm install`, `pnpm dev`, `pnpm build`, and `pnpm test`.
 Create an isolated worktree with `pnpm worktree:new <caminho> -b <branch>`.
 Toda criação de worktree DEVE seguir esse comando e não pode pular nenhum passo
 (`scripts/worktree/provision-env.sh`): alias `<worktree>.braid.local` (Caddy +
 `/etc/hosts`), `node_modules` íntegros, bases `<worktree>` e `<worktree>_auth` no
-Postgres compartilhado (porta 54391), fila `<worktree>.health` no RabbitMQ
-compartilhado, migrations, usuário `admin@admin.com` (senha `ADMIN_PASSWORD`) e
-servidores de dev no ar. Ao final, informe o link `http://<worktree>.braid.local:8080`.
+Postgres compartilhado (porta 54391), migrations, usuário `admin@admin.com`
+(senha `ADMIN_PASSWORD`) e servidores de dev no ar. Ao final, informe o link `http://<worktree>.braid.local:8080`.
 Remova com `pnpm worktree:teardown <caminho>`. Pré-requisito único por máquina:
 `sudo bash scripts/worktree/hosts-install.sh`.
 Run development commands from the root, not from an individual app directory.

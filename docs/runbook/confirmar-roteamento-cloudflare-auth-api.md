@@ -368,8 +368,7 @@ alcançar tanto a API quanto as rotas públicas de autenticação. Portanto:
 
 - não deve existir uma aplicação Access cobrindo todo `api.SEUDOMINIO/*`;
 - não deve existir uma aplicação Access cobrindo todo `auth.SEUDOMINIO/*`;
-- Access pode continuar protegendo painéis administrativos como Grafana e
-  RabbitMQ.
+- Access pode continuar protegendo painéis administrativos como o Grafana.
 
 Para verificar:
 

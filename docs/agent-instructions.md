@@ -36,22 +36,19 @@ Skills: `db-migrations`, `e2e-tests`, `frontend-design`, `grill-me`,
 
 - `apps/web`: browser interface for the timeline and event management.
 - `apps/mobile`: Android native app (Kotlin + Compose) that mirrors the web experience.
-- `apps/api`: business use cases and the HTTP API for events, notes, tasks, and recurrences.
+- `apps/api`: business use cases and the HTTP API for events, artifacts, recurrences, and AI requests.
 - `apps/auth`: identity gateway handling sign-in, sessions, access, and roles.
 - `packages/contracts`: shared data contracts and types.
 - `packages/timeline`: shared date windows, grouping, and timeline calculations.
 - `packages/theme`: shared visual tokens and colors.
-- `packages/entities`: shared domain entities and DTOs.
-- `packages/persistence`: database schemas, migrations, repositories, and persistence queries.
 
 Use `pnpm` from the repository root. Common commands: `pnpm install`, `pnpm dev`, `pnpm build`, and `pnpm test`.
 Create an isolated worktree with `pnpm worktree:new <caminho> -b <branch>`.
 Toda criação de worktree DEVE seguir esse comando e não pode pular nenhum passo
 (`scripts/worktree/provision-env.sh`): alias `<worktree>.braid.local` (Caddy +
 `/etc/hosts`), `node_modules` íntegros, bases `<worktree>` e `<worktree>_auth` no
-Postgres compartilhado (porta 54391), fila `<worktree>.health` no RabbitMQ
-compartilhado, migrations, usuário `admin@admin.com` (senha `ADMIN_PASSWORD`) e
-servidores de dev no ar. Ao final, informe o link `http://<worktree>.braid.local:8080`.
+Postgres compartilhado (porta 54391), migrations, usuário `admin@admin.com`
+(senha `ADMIN_PASSWORD`) e servidores de dev no ar. Ao final, informe o link `http://<worktree>.braid.local:8080`.
 Remova com `pnpm worktree:teardown <caminho>`. Pré-requisito único por máquina:
 `sudo bash scripts/worktree/hosts-install.sh`.
 Run development commands from the root, not from an individual app directory.
@@ -1078,8 +1075,9 @@ rodarem a app ao mesmo tempo sem isolamento, uma pisa na porta e no banco da
 outra. `scripts/worktree/` resolve isso: cada worktree ganha seu proprio
 `.env.local` com portas livres calculadas na hora, bases proprias para a API
 (`<worktree>`) e para o Auth (`<worktree>_auth`) dentro do Postgres
-compartilhado (porta 54391), fila `<worktree>.health` no RabbitMQ
-compartilhado e o dominio `<worktree>.braid.local` (Caddy, porta 8080).
+compartilhado (porta 54391) e o dominio `<worktree>.braid.local` (Caddy,
+porta 8080). A fila de jobs de IA e a tabela `jobs` da base da API, entao ja
+nasce isolada por worktree.
 
 ## Passo a passo
 
@@ -1089,7 +1087,7 @@ compartilhado e o dominio `<worktree>.braid.local` (Caddy, porta 8080).
    ```
    Se `nao-provisionada`, rode `bash scripts/worktree/provision-env.sh` (ou
    `pnpm worktree:provision`) de dentro da worktree. Isso gera o
-   `.env.local`, cria as bases e a fila da worktree, roda as migrations, cria o
+   `.env.local`, cria as bases da worktree, roda as migrations, cria o
    admin `admin@admin.com`, builda os pacotes e sobe web/api/auth. Leva um tempo na primeira vez — normal.
    Se voce esta na worktree principal do checkout (a original, nao uma criada
    com `git worktree add`), o script se recusa a rodar de proposito: a
@@ -1133,9 +1131,9 @@ compartilhado e o dominio `<worktree>.braid.local` (Caddy, porta 8080).
      que a mudanca afeta, nao so a tela inicial.
 
 6. **Ao terminar**, encerre os processos de dev que voce subiu em background
-   (as bases e a fila da worktree ficam; isso e normal entre sessoes). Só rode
+   (as bases da worktree ficam; isso e normal entre sessoes). Só rode
    `pnpm worktree:teardown <caminho>` quando for remover a worktree de vez —
-   isso apaga as bases e as filas dela.
+   isso apaga as bases dela.
 
 ## O que nao fazer
 

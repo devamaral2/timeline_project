@@ -70,8 +70,8 @@ Esperado: sem variável ausente.
 Pré-requisito: Docker rodando e o 1Password configurado como em
 [onepassword.md](./onepassword.md).
 
-Há **um Hermes por máquina**, compartilhado pelas worktrees (como o Postgres e o
-RabbitMQ), porque o volume não pode ser aberto por dois gateways. Consequência:
+Há **um Hermes por máquina**, compartilhado pelas worktrees (como o Postgres),
+porque o volume não pode ser aberto por dois gateways. Consequência:
 as automações e a memória do Hermes local valem para todas as worktrees.
 
 **Primeira vez: configurar antes de subir.**
@@ -129,7 +129,8 @@ locais: `docker volume rm braid-hermes_hermes-data` (irreversível).
 ### 1.1 Conectar o Hermes ao MCP (local)
 
 O MCP (`apps/mcp`) é o único caminho do Hermes até a sua agenda: cria, lê e edita
-eventos, tarefas, notas e recorrências, sempre como o `MCP_OWNER_USER_ID`, e não
+eventos (com status, o evento é o que a tela chama de tarefa), artefatos de texto
+(as notas) e recorrências, sempre como o `MCP_OWNER_USER_ID`, e não
 apaga nada. Toda edição exige a `revision` lida antes (`get_*`).
 
 O MCP sobe junto com o resto: `pnpm dev` (web, API, auth e MCP) e `pnpm worktree:new`
@@ -152,7 +153,7 @@ já o iniciam. Para subir só ele (com a API já rodando): `pnpm dev:mcp`.
 - **Opcional:** sem `MCP_TOKEN` ou `MCP_OWNER_USER_ID` no 1Password o MCP não sobe, avisa
   no log (`[mcp] nao iniciou`) e o `pnpm dev` segue com web, API e auth.
 
-Teste o MCP sozinho (deve listar as 15 ferramentas):
+Teste o MCP sozinho (deve listar as 13 ferramentas):
 
 ```bash
 ONEPASSWORD_SCOPE=mcp-runtime pnpm secrets:exec -- sh -c \
@@ -179,19 +180,17 @@ mcp_servers:
     tools:
       include:
         - create_event
-        - create_task
-        - create_note
+        - create_artifact
         - create_recurrence
         - list_timeline_events
-        - list_tasks
-        - list_notes
+        - list_tracked_events
+        - list_artifacts
+        - list_recurrences
         - get_event
-        - get_task
-        - get_note
+        - get_artifact
         - get_recurrence
         - update_event
-        - update_task
-        - update_note
+        - update_artifact
         - update_recurrence
 ```
 
@@ -203,10 +202,10 @@ Reinicie (`docker restart braid-hermes`) e confira nos logs
 
 ### 1.2 Falar com o Hermes pela aplicação (local)
 
-A API tem uma rota que entrega mensagens ao Hermes: `POST /api/ai/automation`. O
+A API tem uma rota que entrega mensagens ao Hermes: `POST /api/requests/hermes`. O
 navegador nunca fala com o Hermes; ele fala com a API, que chama o Hermes pela rede
-interna (`HERMES_URL`, `HERMES_API_KEY`) e devolve a resposta como um job comum
-(`GET /api/ai/jobs/:id`). No chat da web, `/hermes` liga o **modo Hermes**: dali em diante as mensagens vão ao
+interna (`HERMES_URL`, `HERMES_API_KEY`) e devolve a resposta como um pedido comum
+(`GET /api/requests/:requestId`). No chat da web, `/hermes` liga o **modo Hermes**: dali em diante as mensagens vão ao
 Hermes, e não ao assistente da agenda, até você escrever `/app` (ou `/assistente`,
 `/sair`) ou abrir outra conversa.
 
@@ -234,8 +233,8 @@ AI_AUTOMATION=on
 
 Reinicie `pnpm dev`. `HERMES_API_KEY` vem do 1Password (o mesmo campo do Hermes) e
 `HERMES_URL` assume `http://127.0.0.1:8642`; mude-o no `.env.local` se mapeou outra
-porta (`HERMES_HOST_PORT`). Requisitos: o container do Hermes no ar (`pnpm hermes:up`) e
-o RabbitMQ (as mensagens são jobs duráveis, como o chat).
+porta (`HERMES_HOST_PORT`). Requisito: o container do Hermes no ar (`pnpm hermes:up`). As mensagens
+são jobs na fila única do Postgres ([ai-jobs.md](./ai-jobs.md)); não há broker para subir.
 
 - **404 no chat ("O Hermes está desligado"):** `AI_AUTOMATION` não está `on` na API.
 - **"A IA está indisponível":** o Hermes está fora do ar, a chave está errada ou o turno
@@ -411,19 +410,17 @@ mcp_servers:
     tools:
       include:
         - create_event
-        - create_task
-        - create_note
+        - create_artifact
         - create_recurrence
         - list_timeline_events
-        - list_tasks
-        - list_notes
+        - list_tracked_events
+        - list_artifacts
+        - list_recurrences
         - get_event
-        - get_task
-        - get_note
+        - get_artifact
         - get_recurrence
         - update_event
-        - update_task
-        - update_note
+        - update_artifact
         - update_recurrence
 ```
 
@@ -453,15 +450,15 @@ printf '%s' "$KEY" | kubectl -n braid exec -i deploy/api -- node -e '
       method: "POST",
       headers: { authorization: "Bearer " + key, "content-type": "application/json" },
       body: JSON.stringify({ model: "hermes-agent", messages: [{ role: "user", content:
-        "Use a ferramenta create_note para criar uma nota com o texto \"teste do hermes\" e idempotencyKey \"teste-hermes-1\". Responda só com o id." }] }),
+        "Use a ferramenta create_event para criar um evento com o nome \"teste do hermes\" e idempotencyKey \"teste-hermes-1\". Responda só com o id." }] }),
     }).then(r => r.json());
     console.log(JSON.stringify(await ask()).slice(0, 400));
     console.log(JSON.stringify(await ask()).slice(0, 400));
   });'
 ```
 
-Esperado: as duas respostas trazem o mesmo `noteId`, e a agenda mostra **uma**
-nota "teste do hermes". Apague-a pelo app depois. Se o Hermes responder sem usar a
+Esperado: as duas respostas trazem o mesmo `eventId`, e a agenda mostra **um**
+evento "teste do hermes". Apague-o pelo app depois. Se o Hermes responder sem usar a
 ferramenta, veja os logs do MCP (`kubectl -n braid logs deploy/mcp`).
 
 ## 3. Operação
