@@ -1,31 +1,31 @@
 import { expect, test } from "vitest";
-import { noteSchema } from "./schemas";
+import { artifactSchema } from "./schemas";
 
-const meal = {
-  name: "Almoço", description: "arroz", foodItems: [],
+const food = {
+  description: "arroz", items: [],
   totals: { totalCaloriesKcal: 0, totalProteinGrams: 0, totalCarbohydrateGrams: 0, totalFatGrams: 0, totalFiberGrams: 0 },
 };
 
-test.each(["pending", "completed", "failed"])("meal DTO accepts the %s generation state", (status) => {
-  const note = {
-    id: "note", name: "Almoço", type: "meal", schemaVersion: 1, tags: [], revision: 1,
+test.each(["pending", "completed", "failed"])("food DTO accepts the %s generation state", (status) => {
+  const artifact = {
+    id: "artifact", name: "Almoço", type: "food", schemaVersion: 1, global: false, derived: false, tags: [], revision: 1,
     createdAt: "2026-01-01", updatedAt: "2026-01-01",
-    data: { ...meal, generation: { status }, ...(status === "completed" ? { nutritionSource: "model-estimate" } : {}) },
+    data: { ...food, generation: { status }, ...(status === "completed" ? { nutritionSource: "model-estimate" } : {}) },
   };
-  expect(noteSchema.parse(note)).toEqual(note);
+  expect(artifactSchema.parse(artifact)).toEqual(artifact);
 });
 
-test("meal generation contract remains strict and legacy meals remain valid", () => {
-  const base = { id: "note", name: "Almoço", type: "meal", schemaVersion: 1, tags: [], revision: 1,
-    createdAt: "", updatedAt: "", data: meal };
-  expect(noteSchema.safeParse(base).success).toBe(true);
-  expect(noteSchema.safeParse({ ...base, data: { ...meal, generation: { status: "invented" } } }).success).toBe(false);
-  expect(noteSchema.safeParse({ ...base, data: { ...meal, nutritionSource: "catalog" } }).success).toBe(false);
+test("food generation contract remains strict and a food without generation is valid", () => {
+  const base = { id: "artifact", name: "Almoço", type: "food", schemaVersion: 1, global: false, derived: false, tags: [], revision: 1,
+    createdAt: "", updatedAt: "", data: food };
+  expect(artifactSchema.safeParse(base).success).toBe(true);
+  expect(artifactSchema.safeParse({ ...base, data: { ...food, generation: { status: "invented" } } }).success).toBe(false);
+  expect(artifactSchema.safeParse({ ...base, data: { ...food, nutritionSource: "catalog" } }).success).toBe(false);
 });
 
-test("a training note accepts walking as a cardio workout", () => {
-  const note = {
-    id: "note", name: "Caminhada", type: "training", schemaVersion: 1, tags: [], revision: 1,
+test("a training artifact accepts walking as a cardio workout", () => {
+  const artifact = {
+    id: "artifact", name: "Caminhada", type: "training", schemaVersion: 1, global: false, derived: false, tags: [], revision: 1,
     createdAt: "2026-01-01", updatedAt: "2026-01-01",
     data: {
       workouts: [
@@ -42,5 +42,5 @@ test("a training note accepts walking as a cardio workout", () => {
       caloriesBurned: 100,
     },
   };
-  expect(noteSchema.parse(note)).toEqual(note);
+  expect(artifactSchema.parse(artifact)).toEqual(artifact);
 });

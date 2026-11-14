@@ -1,5 +1,4 @@
 export type RecurrenceFrequency = "daily" | "weekly" | "monthly" | "yearly";
-export type RecurrenceTarget = "event" | "task";
 
 /** Dados compartilhados da regra; a validacao e propriedade do dominio da API. */
 export interface RecurrenceRule {
