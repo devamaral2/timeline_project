@@ -10,7 +10,7 @@
 
 - [ ] O painel de criação oferece Evento e Nota; a opção Tarefa não existe mais.
 - [ ] O formulário de criação é o da edição, vazio; sem status, o evento criado é um evento de referência.
-- [ ] Criar a partir de uma janela livre da agenda abre o formulário com o início e o fim preenchidos.
+- [ ] A janela livre da agenda continua abrindo o chat do agente; ela não passa a abrir este formulário.
 - [ ] A chave de idempotência é a mesma enquanto o formulário está aberto: tocar em Salvar duas vezes cria um evento só.
 - [ ] Depois de criar, o usuário volta para a tela de onde veio e o evento aparece nela.
 - [ ] O teste de tela confere o corpo enviado e o toque repetido.

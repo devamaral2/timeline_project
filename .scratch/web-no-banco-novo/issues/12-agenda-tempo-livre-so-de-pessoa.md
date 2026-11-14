@@ -10,7 +10,7 @@
 
 - [ ] Um evento de agente dentro de uma janela não a divide nem a encurta.
 - [ ] O bloco “Livre” mostra o intervalo e a duração, como hoje.
-- [ ] O atalho de criar evento a partir da janela livre continua abrindo a criação com o horário preenchido.
+- [ ] O toque na janela livre continua fazendo o que faz hoje: abre o chat do agente com a janela preenchida.
 - [ ] O teste de tela cobre um dia com eventos de pessoa e de agente intercalados.
 - [ ] A linha desta tela em `docs/mobile-parity.md` foi atualizada, com o Android marcado como em progresso.
 - [ ] Os testes novos passam, e `pnpm run test:unit` e `pnpm run typecheck` continuam verdes.

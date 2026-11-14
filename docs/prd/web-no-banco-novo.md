@@ -319,7 +319,8 @@ De onde cada chamada antiga vai:
 ### Agenda
 
 - A janela é carregada por páginas até o fim. O filtro por executor vem do modo em uso.
-- O tempo livre continua calculado na tela e conta só os eventos de pessoa.
+- O tempo livre continua calculado na tela e conta só os eventos de pessoa. O toque na janela livre continua abrindo
+  o chat do agente com a janela preenchida, como hoje.
 - O título com o dia sai do cabeçalho; a tira da semana fica.
 - No evento de referência, o toque no glifo abre a escolha de status, e escolher um passa a acompanhá-lo.
 - Os avisos continuam calculados no cliente, agora a partir da janela da agenda e da lista de tarefas, sem contar
@@ -341,8 +342,9 @@ De onde cada chamada antiga vai:
   ordem dos artefatos é a ordem da lista.
 - O alimento ligado a uma refeição entra como cópia do original, com a quantidade. O exercício ligado a um treino é
   o artefato global, por referência.
-- A recorrência é criada, alterada e apagada pelas rotas de série. O formulário mostra a regra, desde quando vale, se
-  tem fim e se a ocorrência segue a série.
+- A recorrência é criada, alterada e apagada pelas rotas de série. A série nasce no formulário de criação: com a
+  regra definida, Salvar cria a série em vez de um evento avulso. Numa ocorrência, o formulário mostra a regra, desde
+  quando vale, se tem fim e se a ocorrência segue a série. Um evento avulso que já existe não vira série.
 - "Tarefa persistente" liga e desliga o evento longo. Ligada, o fim planejado passa a ser o prazo, a recorrência
   some do formulário e o evento precisa ter status.
 - O Registro não aparece no evento de pessoa: o contrato do evento não traz as datas de criação e de alteração. Ele
@@ -475,6 +477,8 @@ mudança começa pela API:
 | "Continuações" na seção Sessão | O pedido traz o `sessionId`, mas não há consulta das continuações. |
 | "Registro" no detalhe do evento de pessoa | O evento não traz as datas de criação e de alteração; o pedido e o artefato trazem. |
 | "Gerado por" no detalhe do evento de pessoa | O evento não traz a relação `generates` de volta; a origem só é conhecida a partir do pedido. |
+| Ler o texto de um backup antes de restaurar | A lista de backups traz só data e tamanho; não há rota que devolva o texto de um backup. |
+| Criar uma série a partir de um evento que já existe | A rota de séries cria a regra e o modelo; não liga um evento existente a ela. A série nasce no formulário de criação. |
 | "Aguardando você" | O status `waiting` existe no contrato, mas nenhum fluxo da API o produz hoje. A tela o trata; a resposta do usuário segue como continuação da sessão. |
 
 Escolhas desta spec que o canvas não desenha e que merecem revisão antes de virar código:
@@ -490,6 +494,9 @@ Pontos de atenção para quem implementa:
 
 - Na API, `finishedAt` é a conclusão real e `estimatedFinishAt` é o fim planejado. O web de hoje usa `finishedAt`
   como fim planejado em vários lugares; o cálculo de posição do evento já foi corrigido, os demais mudam com o porte.
+- A API não grava a conclusão sozinha: ao levar um evento de pessoa a `done`, o web envia `finishedAt` com o instante
+  atual, e ao tirá-lo de `done` envia `finishedAt` nulo.
+- O botão de voz não está montado em nenhuma tela hoje; o porte cobre o componente e a fila, sem montá-lo.
 - O status "agendado" não existe mais: um a fazer com horário é mostrado com o horário.
 - Um dia sem horário é o início à meia-noite local, e não se distingue de um evento que começa de fato à meia-noite.
 - O detalhe de um pedido responde pelo mesmo id do evento de agente.

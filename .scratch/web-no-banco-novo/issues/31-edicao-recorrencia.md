@@ -1,16 +1,17 @@
 # 31: Edição: recorrência
 
-**What to build:** No modo de edição, o usuário cria, altera e apaga a série de um evento, e vê se a ocorrência aberta segue a série ou foi destacada dela.
+**What to build:** O usuário cria um evento que se repete e, numa ocorrência, vê a regra, altera a série ou a apaga.
 
-**Blocked by:** 24 (Edição: campos básicos, Descartar e Salvar); 05 (Cliente da API e API falsa: séries)
+**Blocked by:** 24 (Edição: campos básicos, Descartar e Salvar); 05 (Cliente da API e API falsa: séries); 32 (Criação de evento pelo formulário)
 
 **Status:** ready-for-agent
 
 **Leia antes:** o [README](README.md) desta pasta. Spec: história 44, “Detalhe e formulário do evento”. TDD: “Recorrência”. Canvas: quadro Detalhe · edição (Recorrência).
 
-- [ ] Num evento sem série, a linha Recorrência permite criar uma: frequência, intervalo, dia, hora, duração, início e fim opcional.
-- [ ] A série criada copia do evento o tipo, o nome, a descrição, a prioridade, as tags e os lembretes.
-- [ ] Num evento de série, a linha mostra a regra, desde quando vale, se tem fim e “esta ocorrência segue a série” ou que foi destacada.
+- [ ] No formulário de criação, a linha Recorrência permite definir a regra: frequência, intervalo, dia, hora, duração, início e fim opcional.
+- [ ] Com a regra definida, Salvar cria a série, com o tipo, o nome, a descrição, a prioridade, as tags e os lembretes do formulário, em vez de um evento avulso.
+- [ ] Num evento avulso que já existe, a linha diz que ele não se repete e não oferece criar série: a API não liga um evento existente a uma série.
+- [ ] Numa ocorrência, a linha mostra a regra, desde quando vale, se tem fim e “esta ocorrência segue a série” ou que foi destacada.
 - [ ] Alterar a regra edita a série com a revisão dela; apagar a série tem confirmação.
 - [ ] A linha não aparece em evento longo.
 - [ ] O teste de tela cobre criar, alterar e apagar.

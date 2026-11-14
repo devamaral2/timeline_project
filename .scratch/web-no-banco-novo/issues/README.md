@@ -22,6 +22,8 @@ ticket cabe numa sessão: leia este arquivo, o ticket e o que ele manda ler, e n
   ticket troca só a tela dele.
 - **Paridade.** Um ticket que muda uma tela atualiza a linha dela em `docs/mobile-parity.md`, com o Android marcado
   como em progresso. Não mexa em `apps/mobile`.
+- **Concluir e reabrir.** A API não grava a conclusão sozinha. Toda troca de status de um evento de pessoa para
+  `done` envia junto `finishedAt` com o instante atual, e toda troca que sai de `done` envia `finishedAt` nulo.
 - **Comandos**, sempre da raiz do repositório: `pnpm run test:unit` e `pnpm run typecheck`. Os testes de contrato do
   mobile já estão quebrados nesta branch, por decisão; não os conserte.
 - **Pronto** é: todos os critérios do ticket marcados e os dois comandos verdes.
@@ -63,7 +65,7 @@ frentes andam em paralelo: linha e listas, detalhe, artefatos e pedidos.
 | [28](28-edicao-bloqueios.md) | Edição: bloqueios | 24, 21 |
 | [29](29-edicao-artefatos.md) | Edição: ligar, reordenar e remover artefatos | 24, 22, 04 |
 | [30](30-edicao-alimento-e-exercicio.md) | Edição: alimento na refeição e exercício no treino | 29 |
-| [31](31-edicao-recorrencia.md) | Edição: recorrência | 24, 05 |
+| [31](31-edicao-recorrencia.md) | Edição: recorrência | 24, 05, 32 |
 | [32](32-criacao-de-evento.md) | Criação de evento pelo formulário | 24 |
 | [33](33-aba-notas-lista-artefatos.md) | Aba Notas lista artefatos | 04 |
 | [34](34-detalhe-do-artefato.md) | Detalhe do artefato | 33 |
