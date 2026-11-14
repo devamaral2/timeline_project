@@ -36,7 +36,6 @@
     "caddy:sync": "bash scripts/worktree/caddy.sh sync",
     "caddy:status": "bash scripts/worktree/caddy.sh status",
     "worktree:hosts": "bash scripts/worktree/hosts.sh sync",
-    "rabbitmq:up": "bash scripts/worktree/rabbitmq.sh up",
     "hermes:up": "cross-env ONEPASSWORD_SCOPE=hermes-runtime node scripts/onepassword/exec.mjs docker compose -f infra/docker-compose.hermes.yml up -d",
     "hermes:update": "cross-env ONEPASSWORD_SCOPE=hermes-runtime node scripts/onepassword/exec.mjs sh -c \"docker compose -f infra/docker-compose.hermes.yml pull && docker compose -f infra/docker-compose.hermes.yml up -d\"",
     "hermes:setup": "cross-env ONEPASSWORD_SCOPE=hermes-runtime node scripts/onepassword/exec.mjs docker compose -f infra/docker-compose.hermes.yml run --rm hermes setup",

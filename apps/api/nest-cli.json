@@ -4,7 +4,7 @@
   "sourceRoot": "src",
   "compilerOptions": {
     "deleteOutDir": true,
-    "assets": [{ "include": "api-core/process/agents/*.md", "watchAssets": true }],
+    "assets": [{ "include": "api-core/requests/agents/*.md", "watchAssets": true }],
     "tsConfigPath": "tsconfig.build.json"
   }
 }
