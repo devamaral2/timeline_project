@@ -3,6 +3,7 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import type { EventDto } from "@repo/contracts";
 import { type FakeApi, createFakeApi } from "@/test/fake-api";
 import { eventFixture, eventsArea } from "@/test/fake-api/events";
+import { requestFixture, requestsArea } from "@/test/fake-api/requests";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push, back: vi.fn(), replace: vi.fn() }) }));
@@ -177,9 +178,15 @@ test("revisão velha: relê o evento e avisa, sem gravar a troca", async () => {
 });
 
 test("evento de agente: status e prioridade só aparecem, sem seletor", async () => {
-  install([
-    eventFixture({ id: "ev-1", actor: "agent", kind: "request", status: "running", priority: "medium", name: "Pesquisar voos" }),
-  ]);
+  // O evento de agente abre na forma do agente (ticket 45), que lê o pedido de mesmo id.
+  api = createFakeApi({
+    areas: [eventsArea, requestsArea()],
+    seed: {
+      events: [eventFixture({ id: "ev-1", actor: "agent", kind: "request", status: "running", priority: "medium", name: "Pesquisar voos" })],
+      requests: [requestFixture({ id: "ev-1", title: "Pesquisar voos", status: "running" })],
+    },
+  });
+  net.authedFetch.mockImplementation(api.authedFetch);
   renderPage();
 
   expect(await screen.findByRole("heading", { level: 1, name: "Pesquisar voos" })).toBeInTheDocument();

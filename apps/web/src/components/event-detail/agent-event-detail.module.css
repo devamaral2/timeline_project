@@ -1,0 +1,11 @@
+/*
+ * As seções próprias do evento de agente (Passos e o que vier depois). O topo, as Informações e os
+ * fatos vêm de `event-detail.module.css`. Cor só por token, para o tema trocar junto.
+ */
+
+.steps { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
+.step { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 4px 12px; min-height: 48px; padding: 8px 0; border-bottom: 1px solid var(--hairline); }
+.glyph { display: inline-flex; flex: none; }
+.stepLabel { min-width: 0; font-size: var(--font-size-sm); font-weight: 500; line-height: 20px; color: var(--ink); overflow-wrap: anywhere; }
+.stepAgent { grid-column: 2; font-family: var(--font-mono); font-size: var(--font-size-xs); letter-spacing: .04em; color: var(--muted); }
+.stepStatus { grid-column: 3; grid-row: 1; font-size: 13px; line-height: 20px; color: var(--muted); white-space: nowrap; }

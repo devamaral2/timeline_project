@@ -132,7 +132,7 @@ function dayWhenLabel(startedAt: string, status: EventCardDto["status"], now: Da
 }
 
 /** "há 12 min", "há 2 h", "há 3 dias"; menos de um minuto, "agora". */
-function elapsedLabel(instant: string, now: Date): string {
+export function elapsedLabel(instant: string, now: Date): string {
   const minutes = Math.max(0, Math.floor((now.getTime() - new Date(instant).getTime()) / MINUTE_MS));
   if (minutes < 1) return "agora";
   if (minutes < 60) return `há ${minutes} min`;

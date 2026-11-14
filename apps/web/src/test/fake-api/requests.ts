@@ -78,6 +78,24 @@ export function requestsArea(options: RequestsAreaOptions = {}): FakeArea {
 }
 
 /**
+ * Um pedido válido do contrato para semear a API falsa. Só o que o teste diz; o resto vem preenchido, como em
+ * `eventFixture`. Para avançá-lo depois, use `advanceRequest`.
+ */
+export function requestFixture(overrides: Partial<RequestDto> & { id: string }): RequestDto {
+  return requestSchema.parse({
+    kind: "request",
+    route: "steps",
+    status: "queued",
+    title: "Pedido",
+    createdAt: "2026-11-14T09:41:00-03:00",
+    updatedAt: "2026-11-14T09:41:00-03:00",
+    steps: [],
+    entities: [],
+    ...overrides,
+  }) as RequestDto;
+}
+
+/**
  * Avança um pedido entre duas leituras, como o agente faria: o teste escreve o estado (fila, executando, feito,
  * falhou), os passos, as entidades e a resposta. O resultado passa pelo esquema do contrato.
  */

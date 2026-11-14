@@ -4,6 +4,7 @@ import type { EventDto } from "@repo/contracts";
 import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { useMotionRouter } from "@/components/shell/navigation-motion";
 import { BackButton, DetailFrame, DetailMessage, DetailNav } from "@/components/detail/detail-parts";
+import { AgentEventDetailView } from "@/components/event-detail/AgentEventDetailView";
 import { EventDetailView } from "@/components/event-detail/EventDetailView";
 import { ApiRequestError } from "@/lib/api/client-request";
 import { getEvent } from "@/lib/api/events";
@@ -74,6 +75,7 @@ export default function EventPage({ params }: { params: Promise<{ userId: string
   }
   if (state === "loading" || !event || !userId) return frame(<DetailMessage>Carregando evento…</DetailMessage>);
 
+  if (event.actor === "agent") return <AgentEventDetailView userId={userId} event={event} onChanged={reload} />;
   return <EventDetailView userId={userId} event={event} onChanged={reload} />;
 }
 
