@@ -72,15 +72,14 @@ export class ApiGatewayController {
 }
 
 export function policyFor(method: string, path: string): {
-  resource: "event" | "tag" | "task" | "note" | "recurrence" | "agent";
+  resource: "event" | "tag" | "artifact" | "recurrence" | "agent";
   action: "read" | "create" | "update" | "delete" | "execute";
 } {
   const resource = path.startsWith("/api/events") ? "event"
     : path.startsWith("/api/tags") ? "tag"
-    : path.startsWith("/api/tasks") ? "task"
-    : path.startsWith("/api/notes") ? "note"
+    : path.startsWith("/api/artifacts") ? "artifact"
     : path.startsWith("/api/recurrences") ? "recurrence"
-    : path.startsWith("/api/ai") ? "agent"
+    : path.startsWith("/api/ai") || path.startsWith("/api/requests") ? "agent"
     : null;
   if (!resource) throw new Error(`No gateway policy for ${path}`);
   const action = method === "GET" ? "read"

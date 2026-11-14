@@ -9,7 +9,7 @@ import { canSignIn } from "../../domain/users/user";
 import type { AuthenticatedActor } from "../../domain/users/user";
 import type { Permission } from "../../domain/rbac/permissions";
 
-export const ACCESS_RESOURCES = ["event", "tag", "task", "note", "recurrence", "agent"] as const;
+export const ACCESS_RESOURCES = ["event", "tag", "artifact", "recurrence", "agent"] as const;
 export const ACCESS_ACTIONS = ["read", "create", "update", "delete", "execute"] as const;
 export type AccessResource = (typeof ACCESS_RESOURCES)[number];
 export type AccessAction = (typeof ACCESS_ACTIONS)[number];
