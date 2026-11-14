@@ -4,17 +4,17 @@
 
 **Blocked by:** 02 (Web usa os contratos compartilhados)
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Leia antes:** o [README](README.md) desta pasta. Spec: “Cliente da API”, “Rotas que o web passa a usar” e “Decisões de teste” (costura 1). Swagger da API em `/docs`.
 
-- [ ] Há funções para: agenda de uma janela, lista de tarefas, criar, ler, editar e apagar evento, subtarefas de um evento e sugestão de tags.
-- [ ] A função da agenda segue o `nextCursor` até a janela acabar e devolve uma lista só.
-- [ ] A lista de tarefas aceita os filtros `actor`, `status` e `priority` (vários valores), `tag`, `q` e `longRunning`.
-- [ ] Toda edição envia `expectedRevision`; toda criação envia `Idempotency-Key`.
-- [ ] O cliente devolve erros que a tela distingue: não encontrado, revisão desatualizada, entrada inválida e sem permissão. Resposta sem corpo (204) não quebra.
-- [ ] A API falsa entra no lugar do cliente HTTP autenticado, a mesma costura que os testes de tela de hoje usam.
-- [ ] A API falsa guarda os eventos em memória, incrementa a revisão a cada edição, responde revisão desatualizada, não encontrado, devolve a mesma resposta para a mesma chave de idempotência e pagina a agenda.
-- [ ] A API falsa faz o teste falhar quando um corpo recebido ou uma resposta devolvida não passa no esquema do contrato.
-- [ ] Os testes do cliente rodam contra a API falsa.
-- [ ] Os testes novos passam, e `pnpm run test:unit` e `pnpm run typecheck` continuam verdes.
+- [x] Há funções para: agenda de uma janela, lista de tarefas, criar, ler, editar e apagar evento, subtarefas de um evento e sugestão de tags.
+- [x] A função da agenda segue o `nextCursor` até a janela acabar e devolve uma lista só.
+- [x] A lista de tarefas aceita os filtros `actor`, `status` e `priority` (vários valores), `tag`, `q` e `longRunning`.
+- [x] Toda edição envia `expectedRevision`; toda criação envia `Idempotency-Key`.
+- [x] O cliente devolve erros que a tela distingue: não encontrado, revisão desatualizada, entrada inválida e sem permissão. Resposta sem corpo (204) não quebra.
+- [x] A API falsa entra no lugar do cliente HTTP autenticado, a mesma costura que os testes de tela de hoje usam.
+- [x] A API falsa guarda os eventos em memória, incrementa a revisão a cada edição, responde revisão desatualizada, não encontrado, devolve a mesma resposta para a mesma chave de idempotência e pagina a agenda.
+- [x] A API falsa faz o teste falhar quando um corpo recebido ou uma resposta devolvida não passa no esquema do contrato.
+- [x] Os testes do cliente rodam contra a API falsa.
+- [x] Os testes novos passam, e `pnpm run test:unit` e `pnpm run typecheck` continuam verdes.
