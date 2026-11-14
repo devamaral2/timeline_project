@@ -15,7 +15,7 @@ import {
   subtaskProgress,
   type TaskGroupKey,
 } from "@/lib/events/task-groups";
-import { TaskEditorDialog } from "./TaskEditorDialog";
+import { useMotionRouter } from "@/components/shell/navigation-motion";
 import styles from "./tasks.module.css";
 
 function toggleIn<T>(list: T[], value: T): T[] {
@@ -40,7 +40,7 @@ export function TasksScreen({ userId }: { userId: string }) {
   const [error, setError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [expanded, setExpanded] = useState<TaskGroupKey[]>([]);
-  const [creating, setCreating] = useState(false);
+  const router = useMotionRouter();
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: reloadKey força o refetch.
   useEffect(() => {
@@ -82,7 +82,7 @@ export function TasksScreen({ userId }: { userId: string }) {
             <ListChecks aria-hidden />
             <h2 className={styles.emptyTitle}>Nenhuma tarefa por aqui</h2>
             <p className={styles.emptyText}>Crie a primeira tarefa para começar a organizar o seu dia.</p>
-            <button type="button" className={styles.emptyAction} onClick={() => setCreating(true)}>Nova tarefa</button>
+            <button type="button" className={styles.emptyAction} onClick={() => router.push(`/${userId}/eventos/novo`)}>Novo evento</button>
           </div>
         ) : (
           <div className={styles.groups}>
@@ -120,13 +120,6 @@ export function TasksScreen({ userId }: { userId: string }) {
           </div>
         )}
       </section>
-
-      {creating ? (
-        <TaskEditorDialog
-          onClose={() => setCreating(false)}
-          onSaved={() => { setCreating(false); retry(); }}
-        />
-      ) : null}
     </main>
   );
 }

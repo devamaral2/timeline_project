@@ -119,12 +119,13 @@ test("avisa quando a lista falha e recarrega ao tentar de novo", async () => {
   expect(await screen.findByRole("link", { name: /Pagar conta de luz/ })).toBeInTheDocument();
 });
 
-test("convida a criar a primeira tarefa quando não há nenhum evento com status", async () => {
+test("convida a criar o primeiro evento quando não há nenhum evento com status, e leva ao formulário de evento", async () => {
   serve([]);
   render(<TasksScreen userId="user-1" />);
 
   expect(await screen.findByRole("heading", { name: "Nenhuma tarefa por aqui" })).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Nova tarefa" })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Novo evento" }));
+  expect(push).toHaveBeenCalledWith("/user-1/eventos/novo");
 });
 
 const serieRule = { frequency: "daily" as const, interval: 1, timeOfDay: "18:00", timeZone: "America/Sao_Paulo", startsOn: "2026-09-01" };

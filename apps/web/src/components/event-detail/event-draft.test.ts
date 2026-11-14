@@ -1,7 +1,39 @@
 import type { EventDto } from "@repo/contracts";
 import { describe, expect, it } from "vitest";
 import { eventFixture } from "@/test/fake-api/events";
-import { buildEventPatch, draftFromEvent, instantFromDraft, rebaseDraft, validateEventDraft } from "./event-draft";
+import { buildCreateEventInput, buildEventPatch, draftFromEvent, emptyEventDraft, instantFromDraft, rebaseDraft, validateEventDraft } from "./event-draft";
+
+describe("emptyEventDraft e buildCreateEventInput", () => {
+  it("o rascunho vazio é uma rotina sem status, com o nome do comando", () => {
+    expect(emptyEventDraft("comprar pão")).toEqual({
+      kind: "routine", name: "comprar pão", status: null, priority: "medium",
+      startDate: "", startTime: "", endDate: "", endTime: "", description: "",
+    });
+  });
+
+  it("sem status e sem data, o corpo é só o que foi preenchido: a API põe agora e estima o fim", () => {
+    expect(buildCreateEventInput({ ...emptyEventDraft(), name: "  Dentista  " }, NOW)).toEqual({
+      kind: "routine", name: "Dentista", description: "", priority: "medium",
+    });
+  });
+
+  it("com status, data e hora, manda o status e os instantes no fuso da timeline", () => {
+    const body = buildCreateEventInput({
+      ...emptyEventDraft("Treino"), kind: "training", status: "todo", startDate: "2026-11-14", startTime: "18:30", endDate: "2026-11-14", endTime: "19:20",
+    }, NOW);
+
+    expect(body).toEqual({
+      kind: "training", name: "Treino", description: "", priority: "medium", status: "todo",
+      startedAt: "2026-11-14T21:30:00.000Z", estimatedFinishAt: "2026-11-14T22:20:00.000Z",
+    });
+  });
+
+  it("criar já concluído manda finishedAt com o instante atual, como a troca de status", () => {
+    const body = buildCreateEventInput({ ...emptyEventDraft("Pagar luz"), status: "done" }, NOW);
+
+    expect(body).toMatchObject({ status: "done", finishedAt: "2026-11-14T13:00:00.000Z" });
+  });
+});
 
 /** 10:00 em São Paulo: o relógio da edição não entra no corpo, só o instante de conclusão. */
 const NOW = new Date("2026-11-14T13:00:00.000Z");

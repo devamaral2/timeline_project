@@ -1,4 +1,4 @@
-import type { EventDto, EventPriority, HumanEventKind, HumanEventStatus } from "@repo/contracts";
+import type { CreateEventInput, EventDto, EventPriority, HumanEventKind, HumanEventStatus } from "@repo/contracts";
 import { dayKeyOf, formatTime, zonedDayStart, zonedTimeAt } from "@repo/timeline";
 import type { EditEventInput } from "@/lib/api/events";
 import { statusPatch } from "@/lib/events/event-read-model";
@@ -67,6 +67,44 @@ export function draftFromEvent(event: EventDto): EventDraft {
     reminders: sortReminders(event.notifyOffsetsMinutes),
     tags: [...event.tags],
   };
+}
+
+/** O rascunho da criação: tudo vazio e sem status, o evento de referência. `name` vem de `/evento comprar pão`. */
+export function emptyEventDraft(name = ""): EventDraft {
+  return {
+    kind: "routine",
+    name,
+    status: null,
+    priority: "medium",
+    startDate: "",
+    startTime: "",
+    endDate: "",
+    endTime: "",
+    description: "",
+  };
+}
+
+/**
+ * O corpo da criação: só o que a pessoa preencheu. Sem data, a API põe agora e
+ * estima o fim; sem status, o evento nasce de referência. Criar já concluído
+ * manda `finishedAt`, como a troca de status na edição.
+ */
+export function buildCreateEventInput(draft: EventDraft, now: Date): CreateEventInput {
+  const input: CreateEventInput = {
+    kind: draft.kind,
+    name: draft.name.trim(),
+    description: draft.description,
+    priority: draft.priority,
+  };
+  if (draft.status !== null) {
+    input.status = draft.status;
+    if (draft.status === "done") input.finishedAt = now.toISOString();
+  }
+  const startedAt = instantFromDraft(draft.startDate, draft.startTime);
+  if (startedAt) input.startedAt = startedAt;
+  const estimatedFinishAt = instantFromDraft(draft.endDate, draft.endTime);
+  if (estimatedFinishAt) input.estimatedFinishAt = estimatedFinishAt;
+  return input;
 }
 
 function splitInstant(instant: string | undefined): { date: string; time: string } {

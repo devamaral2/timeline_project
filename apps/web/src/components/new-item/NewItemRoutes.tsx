@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useMotionRouter } from "@/components/shell/navigation-motion";
 import { type ComponentType, type ReactNode, useEffect, useState } from "react";
-import { type EditItemFormProps, NewEventForm, type NewItemFormProps, NewNoteForm, NewTaskForm } from "./new-item-forms";
+import { type EditItemFormProps, type NewItemFormProps, NewNoteForm, NewTaskForm } from "./new-item-forms";
 import { authedFetch } from "@/lib/api/authed-fetch";
 import type { TaskDetailDto } from "@/lib/api/contracts";
 import type { ArtifactDto } from "@repo/contracts";
@@ -12,9 +12,9 @@ import { getArtifact } from "@/lib/api/artifacts";
 import styles from "@/components/shell/shell.module.css";
 
 /**
- * As rotas de criação manual (`/tarefas/nova`, `/eventos/novo`, `/notas/nova`): o
- * mesmo formulário do menu "Buscar e criar", em tela cheia. Salvar abre o item
- * criado; a seta volta à lista. `?nome=` preenche o título.
+ * A rota de criação de nota (`/notas/nova`): o mesmo formulário do menu "Buscar e
+ * criar", em tela cheia. Salvar abre a nota criada; a seta volta à lista. `?nome=`
+ * preenche o título. A criação de evento tem a sua rota (`/eventos/novo`).
  */
 function NewItemRoute({ userId, title, listPath, Form }: { userId: string; title: string; listPath: string; Form: ComponentType<NewItemFormProps> }): ReactNode {
   const router = useMotionRouter();
@@ -30,9 +30,7 @@ function NewItemRoute({ userId, title, listPath, Form }: { userId: string; title
   );
 }
 
-export const NewTaskRoute = ({ userId }: { userId: string }) => <NewItemRoute userId={userId} title="Nova tarefa" listPath="/tarefas" Form={NewTaskForm} />;
 export const NewNoteRoute = ({ userId }: { userId: string }) => <NewItemRoute userId={userId} title="Nova nota" listPath="/notas" Form={NewNoteForm} />;
-export const NewEventRoute = ({ userId }: { userId: string }) => <NewItemRoute userId={userId} title="Novo evento" listPath="" Form={NewEventForm} />;
 
 /**
  * As rotas de edição de tarefa e de nota (`/tarefas/:id/editar`, `/notas/:id/editar`): o formulário

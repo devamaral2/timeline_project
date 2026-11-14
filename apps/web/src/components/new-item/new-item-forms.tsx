@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, FileText, Plus, ListChecks, X } from "lucide-react";
+import { FileText, Plus, ListChecks, X } from "lucide-react";
 import { type FormEvent, useId, useState } from "react";
 import type { ArtifactDto } from "@repo/contracts";
 import { createTask, updateTask } from "@/lib/tasks/task-api";
@@ -12,17 +12,10 @@ import {
   scheduleToInstants, statusForSchedule, TASK_PRIORITY_ORDER, TASK_STATUS_ORDER, taskDayOf, taskPriorityLabels, taskStatusLabels, taskTimeOf,
 } from "@/lib/tasks/tasks-model";
 import type { WorkItemPriority, WorkItemStatus } from "@/lib/api/contracts";
-import { notificationOffsetLabel, visualForItemType, ICON_STROKE_WIDTH } from "@/components/events/event-visuals";
-import { authedFetch } from "@/lib/api/authed-fetch";
-import type { CreateEventInput, EventDetailDto, TaskDetailDto } from "@/lib/api/contracts";
+import { notificationOffsetLabel } from "@/components/events/event-visuals";
+import type { TaskDetailDto } from "@/lib/api/contracts";
 import { joinDetailsAndTags, splitDetailsAndTags } from "@/lib/tags/details-tags";
-import { agendaRefreshEvent } from "@/components/agenda/agenda-refresh";
-import { CalendarPicker, type DateField, EventScheduleFields } from "./event-schedule-fields";
 import styles from "@/components/shell/shell.module.css";
-
-const pad = (value: number) => String(value).padStart(2, "0");
-const dayOf = (date: Date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-const timeOf = (date: Date) => `${pad(date.getHours())}:${pad(date.getMinutes())}`;
 
 /** Props comuns: `onCreated` recebe o caminho do item criado; `initialName` vem de `/tarefa comprar pão`. */
 export interface NewItemFormProps {
@@ -68,119 +61,6 @@ function OffsetChips({ offsets, onChange }: { offsets: number[]; onChange: (offs
 }
 
 const DETAILS_PLACEHOLDER = "Detalhes e #tags";
-
-/** Novo evento (rotina): nome, início e término, detalhes com #tags e avisos. */
-export function NewEventForm({ initialName, onCreated, onPickerChange, existing }: EditItemFormProps<EventDetailDto>) {
-  const [initial] = useState(() => {
-    const start = existing ? new Date(existing.startedAt) : new Date();
-    const end = existing?.finishedAt ? new Date(existing.finishedAt) : new Date(start.getTime() + 60 * 60 * 1000);
-    return {
-      title: existing?.name ?? initialName ?? "", startDate: dayOf(start), startTime: timeOf(start), endDate: dayOf(end), endTime: timeOf(end),
-      details: existing ? joinDetailsAndTags(existing.description, existing.tags) : "",
-    };
-  });
-  const [form, setForm] = useState(initial);
-  const [offsets, setOffsets] = useState<number[]>(existing?.notifyOffsetsMinutes ?? []);
-  const [picker, setPickerState] = useState<DateField | null>(null);
-  function setPicker(next: DateField | null) {
-    setPickerState(next);
-    onPickerChange?.(next !== null);
-  }
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const visual = visualForItemType("routine");
-
-  function update(field: string, value: string) {
-    setForm(current => ({ ...current, [field]: value }));
-  }
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    if (!form.title.trim()) { setError("Dê um nome ao evento."); return; }
-    const startedAt = new Date(`${form.startDate}T${form.startTime || "00:00"}`);
-    const finishedAt = new Date(`${form.endDate}T${form.endTime || "00:00"}`);
-    if (finishedAt < startedAt) { setError("O término não pode ser antes do início."); return; }
-    const { description, tags } = splitDetailsAndTags(form.details);
-    setSubmitting(true);
-    setError(null);
-    if (existing) {
-      // Um evento sem fim declarado só ganha um se a pessoa mexer no término.
-      const endTouched = form.endDate !== initial.endDate || form.endTime !== initial.endTime;
-      try {
-        await authedFetch(`/api/events/${existing.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            expectedRevision: existing.revision, name: form.title.trim(), description, tags, notifyOffsetsMinutes: offsets,
-            startedAt: startedAt.toISOString(), ...(existing.finishedAt || endTouched ? { finishedAt: finishedAt.toISOString() } : {}),
-          }),
-        });
-        window.dispatchEvent(new Event(agendaRefreshEvent));
-        onCreated(`/eventos/${existing.id}`);
-      } catch {
-        setError("Não foi possível salvar o evento. Tente novamente.");
-        setSubmitting(false);
-      }
-      return;
-    }
-    const body: CreateEventInput = {
-      name: form.title.trim(),
-      description,
-      tags,
-      notifyOffsetsMinutes: offsets,
-      startedAt: startedAt.toISOString(),
-      finishedAt: finishedAt.toISOString(),
-    };
-    try {
-      const { eventId } = await authedFetch<{ eventId: string }>("/api/events", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      onCreated(`/eventos/${eventId}`);
-    } catch {
-      setError("Não foi possível criar o evento. Tente novamente.");
-      setSubmitting(false);
-    }
-  }
-
-  if (picker) {
-    const value = picker === "startDate" ? form.startDate : form.endDate;
-    return <div className={styles.pickerView}>
-      <div className={styles.pickerHeader}>
-        <button type="button" className={styles.pickerBack} onClick={() => setPicker(null)} aria-label="Voltar"><ArrowLeft aria-hidden /></button>
-        <h3>{picker === "startDate" ? "Início" : "Término"}</h3>
-      </div>
-      <div className={styles.pickerOptions}>
-        <CalendarPicker value={value} onChange={next => update(picker, next)} onClose={() => setPicker(null)} />
-      </div>
-    </div>;
-  }
-
-  return (
-    <form className={styles.entityForm} onSubmit={event => void submit(event)} noValidate>
-      <div className={styles.entityEventHeading}>
-        <span className={styles.entityEventTypeName}>{visual.label}</span>
-        <div className={styles.entityEventTitleRow}>
-          <span className={styles.entityTypeIcon} data-event-type="routine"><visual.Icon aria-hidden strokeWidth={ICON_STROKE_WIDTH} /></span>
-          <input className={styles.entityEventNameInput} aria-label="Nome do evento" value={form.title} onChange={event => update("title", event.target.value)} placeholder="Nome do evento" autoComplete="off" />
-        </div>
-      </div>
-      <EventScheduleFields
-        startDate={form.startDate}
-        startTime={form.startTime}
-        endDate={form.endDate}
-        endTime={form.endTime}
-        activeField={null}
-        onChange={update}
-        onOpenCalendar={setPicker}
-      />
-      <label>Detalhes<textarea className={styles.entityControl} rows={2} value={form.details} onChange={event => update("details", event.target.value)} placeholder={DETAILS_PLACEHOLDER} /></label>
-      <OffsetChips offsets={offsets} onChange={setOffsets} />
-      {error ? <p role="alert" className={styles.formError}>{error}</p> : null}
-      <button type="submit" className={styles.entityContinue} disabled={submitting}>{submitting ? (existing ? "Salvando…" : "Criando…") : (existing ? "Salvar alterações" : "Criar evento")}</button>
-    </form>
-  );
-}
 
 /** Nova tarefa: nome, status, prioridade, dia e horário, detalhes com #tags e avisos. */
 export function NewTaskForm({ initialName, onCreated, existing }: EditItemFormProps<TaskDetailDto>) {

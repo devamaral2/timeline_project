@@ -1,21 +1,26 @@
 import { useCallback, useState } from "react";
 import type { EventDto } from "@repo/contracts";
-import { type EventDraft, type EventDraftField, draftFromEvent, rebaseDraft } from "./event-draft";
+import { type EventDraft, type EventDraftField, draftFromEvent, emptyEventDraft, rebaseDraft } from "./event-draft";
 
 interface DraftState {
-  event: EventDto;
+  /** `null` na criação: não há evento de origem. */
+  event: EventDto | null;
   draft: EventDraft;
 }
 
 /**
- * O único estado do formulário de edição. Quando o evento chega de novo (uma
- * recarga depois de revisão velha), o rascunho se rebaseia durante a renderização:
- * o que a pessoa digitou fica, e o resto segue a versão nova.
+ * O único estado do formulário de edição e de criação. Sem evento (criação), o
+ * rascunho começa vazio, com `initialName` no título. Quando o evento chega de
+ * novo (uma recarga depois de revisão velha), o rascunho se rebaseia durante a
+ * renderização: o que a pessoa digitou fica, e o resto segue a versão nova.
  */
-export function useEventDraft(event: EventDto) {
-  const [state, setState] = useState<DraftState>(() => ({ event, draft: draftFromEvent(event) }));
+export function useEventDraft(event: EventDto | null, initialName?: string) {
+  const [state, setState] = useState<DraftState>(() => ({
+    event,
+    draft: event ? draftFromEvent(event) : emptyEventDraft(initialName),
+  }));
   let current = state;
-  if (state.event !== event) {
+  if (event && state.event && state.event !== event) {
     current = { event, draft: rebaseDraft(state.draft, state.event, event) };
     setState(current);
   }

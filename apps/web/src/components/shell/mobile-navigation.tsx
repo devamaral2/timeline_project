@@ -17,7 +17,7 @@ import type { HubCommandId } from "@/components/hub/hub-commands";
 import { type FreeWindow, type HubOpenDetail, hubOpenEvent } from "@/components/hub/hub-events";
 import { dayKeyOf } from "@repo/timeline";
 import { TaskStatusIcon, taskStatuses } from "@/components/agenda/task-controls";
-import { NewEventForm, type NewItemFormProps, NewNoteForm, NewTaskForm } from "@/components/new-item/new-item-forms";
+import { NewNoteForm } from "@/components/new-item/new-item-forms";
 
 type Kind = "Evento" | "Tarefa" | "Nota";
 type Picker = "eventType" | "status" | "priority" | DateField;
@@ -53,11 +53,6 @@ function DraftPriorityIcon({ priority }: { priority: DraftPriority }) {
       <path d="M13 12V3" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" opacity={activeBars === 3 ? 1 : .2} />
     </svg>
   </span>;
-}
-
-function LiveCreateForm({ kind, ...props }: NewItemFormProps & { kind: Kind }) {
-  const Form = kind === "Tarefa" ? NewTaskForm : kind === "Evento" ? NewEventForm : NewNoteForm;
-  return <Form {...props} />;
 }
 
 /**
@@ -148,8 +143,13 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
       setHubView(command);
       return;
     }
-    const next: Kind = command === "task" ? "Tarefa" : command === "event" ? "Evento" : "Nota";
-    // Logado, o formulário é o de verdade (`new-item-forms.tsx`); o nome do comando vai nele.
+    // Tarefa não existe mais na criação: `/tarefa` e `/evento` abrem o formulário de evento.
+    if ((command === "task" || command === "event") && userId) {
+      openEventCreation(argument);
+      return;
+    }
+    const next: Kind = command === "task" || command === "event" ? "Evento" : "Nota";
+    // Logado, a nota é o formulário de verdade (`new-item-forms.tsx`); o nome do comando vai nele.
     setLiveName(argument);
     setFormPicker(false);
     setKind(next);
@@ -202,6 +202,13 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
   }
   const closePanelRef = useRef(closePanel);
   closePanelRef.current = closePanel;
+
+  // Criar evento é a rota `/eventos/novo` (o mesmo formulário da edição): o painel fecha e a rota abre com o nome, se houver.
+  function openEventCreation(name: string) {
+    if (!userId) return;
+    closePanel();
+    router.push(`/${userId}/eventos/novo${name ? `?nome=${encodeURIComponent(name)}` : ""}`);
+  }
 
   // O cabeçalho e o atalho de teclado abrem o painel sem conhecer o estado dele:
   // a referência guarda sempre a versão atual de `openPanel`.
@@ -349,7 +356,7 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
         {panel === "hub" && !activePicker && !formPicker && <div className={styles.hubHeader}>
           <button type="button" className={styles.hubBack} onClick={backToChat} aria-label="Voltar para o chat"><ArrowLeft aria-hidden /></button>
           {hubView === "notifications" || hubView === "settings" ? null
-            : hubView === "create" ? <fieldset className={styles.creationToggle} aria-label="Tipo de criação">{(["Tarefa", "Evento", "Nota"] as Kind[]).map(value => { const Icon = icons[value]; return <button type="button" key={value} aria-pressed={kind === value} onClick={() => { setKind(value); setActivePicker(null); setNotice(""); setFormPicker(false); }}><Icon aria-hidden /><span>{value}</span></button>; })}</fieldset>
+            : hubView === "create" ? <fieldset className={styles.creationToggle} aria-label="Tipo de criação">{(["Evento", "Nota"] as Kind[]).map(value => { const Icon = icons[value]; return <button type="button" key={value} aria-pressed={kind === value} onClick={() => { if (value === "Evento" && userId) { openEventCreation(""); return; } setKind(value); setActivePicker(null); setNotice(""); setFormPicker(false); }}><Icon aria-hidden /><span>{value}</span></button>; })}</fieldset>
             : <label className={styles.hubSearch}><Search aria-hidden /><input aria-label="Pesquisar eventos, tarefas e notas" value={query} onChange={event => setQuery(event.target.value)} placeholder="Buscar eventos, tarefas e notas" autoFocus /></label>}
         </div>}
         <div className={styles.hubContent}>
@@ -382,7 +389,7 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
           </div>}
         </div> : panel === "hub" && hubView === "notifications" ? (userId ? <NotificationsView userId={userId} /> : <p className={styles.notificationEmpty}>Entre na sua conta para ver os avisos.</p>)
           : panel === "hub" && hubView === "settings" ? <SettingsView darkMode={darkMode} onThemeToggle={onThemeToggle} onSignedOut={() => { closePanel(); router.replace("/"); }} />
-          : panel === "hub" && hubView === "create" && userId ? <LiveCreateForm key={kind} kind={kind} initialName={liveName} onPickerChange={setFormPicker} onCreated={path => { closePanel(); router.push(`/${userId}${path}`); }} /> : panel === "hub" && hubView === "create" ? <div className={styles.entityForm}>
+          : panel === "hub" && hubView === "create" && userId ? <NewNoteForm initialName={liveName} onCreated={path => { closePanel(); router.push(`/${userId}${path}`); }} /> :panel === "hub" && hubView === "create" ? <div className={styles.entityForm}>
             {kind === "Evento" ? <div className={styles.entityEventHeading}>
               <span className={styles.entityEventTypeName}>{eventVisual.label}</span>
               <div className={styles.entityEventTitleRow}>
