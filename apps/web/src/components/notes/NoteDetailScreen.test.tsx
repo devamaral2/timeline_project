@@ -1,8 +1,15 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, expect, test, vi } from "vitest";
 import { type FakeApi, createFakeApi } from "@/test/fake-api";
 import { type StoredArtifact, artifactFixture, artifactsArea } from "@/test/fake-api/artifacts";
 import { eventFixture, eventsArea } from "@/test/fake-api/events";
+
+const replace = vi.fn();
+const push = vi.fn();
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push, replace, back: vi.fn() }),
+  usePathname: () => "/user-1/notas/art-1",
+}));
 
 // A tela troca o authedFetch pela API falsa: a rede inteira passa por ela.
 const net = vi.hoisted(() => ({ authedFetch: vi.fn() }));
@@ -40,6 +47,8 @@ beforeEach(() => {
   vi.useFakeTimers({ shouldAdvanceTime: true });
   vi.setSystemTime(new Date("2026-09-14T10:00:00-03:00"));
   net.authedFetch.mockReset();
+  replace.mockReset();
+  push.mockReset();
 });
 
 test("mostra título, tipo, tags, o registro e o texto de uma nota própria", async () => {
@@ -183,4 +192,37 @@ test("avisa quando o artefato não carrega por outro motivo", async () => {
   renderArtifact("art-1");
 
   expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível carregar o artefato.");
+});
+
+test("uma nota de texto própria tem Editar, que abre o formulário de edição", async () => {
+  install({ artifacts: [artifactFixture({ id: "art-1", name: "Ideias", data: { body: "Ideias" } })] });
+  renderArtifact("art-1");
+
+  fireEvent.click(await screen.findByRole("button", { name: "Editar" }));
+  expect(push).toHaveBeenCalledWith("/user-1/notas/art-1/editar");
+});
+
+test("Excluir pede confirmação, apaga a nota e volta para a lista", async () => {
+  install({ artifacts: [artifactFixture({ id: "art-1", name: "Ideias", data: { body: "Ideias" } })] });
+  renderArtifact("art-1");
+
+  fireEvent.click(await screen.findByRole("button", { name: "Excluir" }));
+  const dialog = await screen.findByRole("alertdialog");
+  expect(within(dialog).getByText(/“Ideias” será excluída/)).toBeInTheDocument();
+  fireEvent.click(within(dialog).getByRole("button", { name: "Excluir" }));
+
+  await waitFor(() => expect(replace).toHaveBeenCalledWith("/user-1/notas"));
+  expect(api.calls.at(-1)).toMatchObject({ method: "DELETE", pathname: "/api/artifacts/art-1" });
+});
+
+test("Cancelar na confirmação mantém a nota e não apaga nada", async () => {
+  install({ artifacts: [artifactFixture({ id: "art-1", name: "Ideias", data: { body: "Ideias" } })] });
+  renderArtifact("art-1");
+
+  fireEvent.click(await screen.findByRole("button", { name: "Excluir" }));
+  fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Cancelar" }));
+
+  expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+  expect(api.calls.some((call) => call.method === "DELETE")).toBe(false);
+  expect(replace).not.toHaveBeenCalled();
 });

@@ -1,15 +1,20 @@
 "use client";
 
 import { ArrowLeft, FileText, Plus, ListChecks, X } from "lucide-react";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useId, useState } from "react";
+import type { ArtifactDto } from "@repo/contracts";
 import { createTask, updateTask } from "@/lib/tasks/task-api";
+import { createArtifact, editArtifact, getArtifact } from "@/lib/api/artifacts";
+import { ApiRequestError, newIdempotencyKey } from "@/lib/api/client-request";
+import { MarkdownEditor, type MarkdownEditorMode } from "@/components/notes/MarkdownEditor";
+import { TagInput } from "@/components/events/new-event-forms/TagInput";
 import {
   scheduleToInstants, statusForSchedule, TASK_PRIORITY_ORDER, TASK_STATUS_ORDER, taskDayOf, taskPriorityLabels, taskStatusLabels, taskTimeOf,
 } from "@/lib/tasks/tasks-model";
 import type { WorkItemPriority, WorkItemStatus } from "@/lib/api/contracts";
 import { notificationOffsetLabel, visualForItemType, ICON_STROKE_WIDTH } from "@/components/events/event-visuals";
 import { authedFetch } from "@/lib/api/authed-fetch";
-import type { CreateEventInput, CreateNoteRequest, EventDetailDto, NoteDto, TaskDetailDto, UpdateNoteRequest } from "@/lib/api/contracts";
+import type { CreateEventInput, EventDetailDto, TaskDetailDto } from "@/lib/api/contracts";
 import { joinDetailsAndTags, splitDetailsAndTags } from "@/lib/tags/details-tags";
 import { agendaRefreshEvent } from "@/components/agenda/agenda-refresh";
 import { CalendarPicker, type DateField, EventScheduleFields } from "./event-schedule-fields";
@@ -239,37 +244,58 @@ export function NewTaskForm({ initialName, onCreated, existing }: EditItemFormPr
   </form>;
 }
 
-/** Nova nota de texto: o título é opcional (vem da primeira linha) e o conteúdo é markdown. */
-export function NewNoteForm({ initialName, onCreated, existing }: EditItemFormProps<NoteDto>) {
+const STALE_NOTE_MESSAGE = "Esta nota mudou em outro lugar. Atualizamos a revisão; o que você digitou continua aqui. Confira e salve de novo.";
+
+/**
+ * Nova nota de texto e edição dela: o título é opcional (vem da primeira linha), o conteúdo é markdown
+ * (Escrever e Visualizar) e há tags. A criação leva uma chave de idempotência guardada enquanto o formulário
+ * estiver aberto; a edição manda a revisão lida e o conteúdo inteiro.
+ */
+export function NewNoteForm({ initialName, onCreated, existing }: EditItemFormProps<ArtifactDto>) {
+  const contentId = useId();
   const [name, setName] = useState(existing?.name ?? initialName ?? "");
   const [content, setContent] = useState(existing?.type === "text" ? existing.data.body : "");
+  const [tags, setTags] = useState<string[]>(existing?.tags ?? []);
+  const [revision, setRevision] = useState(existing?.revision ?? 0);
+  const [mode, setMode] = useState<MarkdownEditorMode>("write");
+  const [idempotencyKey] = useState(() => newIdempotencyKey());
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  /** Revisão velha: lê a revisão atual para a próxima tentativa. O texto digitado fica como está. */
+  async function refreshRevision(artifactId: string) {
+    try {
+      setRevision((await getArtifact(artifactId)).revision);
+    } catch {
+      // Sem a revisão nova, a próxima tentativa avisa de novo.
+    }
+  }
+
   async function submit(event: FormEvent) {
     event.preventDefault();
+    if (submitting) return;
     if (!content.trim()) { setError("Escreva o texto da nota."); return; }
     setSubmitting(true);
     setError(null);
+    const title = name.trim() || undefined;
     if (existing) {
-      const update: UpdateNoteRequest = { expectedRevision: existing.revision, name: name.trim() || undefined, tags: existing.tags, type: "text", data: { body: content } };
       try {
-        await authedFetch(`/api/notes/${existing.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(update) });
+        await editArtifact(existing.id, { expectedRevision: revision, name: title, tags, type: "text", data: { body: content } });
         onCreated(`/notas/${existing.id}`);
-      } catch {
-        setError("Não foi possível salvar a nota. Tente novamente.");
+      } catch (cause) {
+        if (cause instanceof ApiRequestError && cause.kind === "stale_revision") {
+          await refreshRevision(existing.id);
+          setError(STALE_NOTE_MESSAGE);
+        } else {
+          setError("Não foi possível salvar a nota. Tente novamente.");
+        }
         setSubmitting(false);
       }
       return;
     }
-    const body: CreateNoteRequest = { type: "text", data: { body: content }, name: name.trim() || undefined, tags: [] };
     try {
-      const { noteId } = await authedFetch<{ noteId: string }>("/api/notes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      onCreated(`/notas/${noteId}`);
+      const artifactId = await createArtifact({ type: "text", name: title, tags, data: { body: content } }, { idempotencyKey });
+      onCreated(`/notas/${artifactId}`);
     } catch {
       setError("Não foi possível criar a nota. Tente novamente.");
       setSubmitting(false);
@@ -281,7 +307,16 @@ export function NewNoteForm({ initialName, onCreated, existing }: EditItemFormPr
       <span><FileText aria-hidden /></span>
       <div><input className={styles.entityNameInput} aria-label="Nome da nota" value={name} onChange={event => setName(event.target.value)} placeholder="Nome da nota (opcional)" autoComplete="off" /></div>
     </div>
-    <label>Conteúdo da nota<textarea className={styles.entityControl} rows={4} value={content} onChange={event => setContent(event.target.value)} placeholder="Escreva em markdown: ## subtítulo, **negrito**, - lista…" /></label>
+    <label htmlFor={contentId}>Conteúdo da nota</label>
+    <MarkdownEditor
+      id={contentId}
+      value={content}
+      onChange={setContent}
+      mode={mode}
+      onModeChange={setMode}
+      placeholder="Escreva em markdown: ## subtítulo, **negrito**, - lista, - [ ] tarefa, > citação."
+    />
+    <TagInput tags={tags} onTagsChange={setTags} />
     {error ? <p role="alert" className={styles.formError}>{error}</p> : null}
     <button type="submit" className={styles.entityContinue} disabled={submitting}>{submitting ? (existing ? "Salvando…" : "Criando…") : (existing ? "Salvar alterações" : "Criar nota")}</button>
   </form>;

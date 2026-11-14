@@ -3,7 +3,7 @@
 import { useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
 import { AlertTriangle } from "lucide-react";
-import { authedFetch } from "@/lib/api/authed-fetch";
+import { deleteArtifact } from "@/lib/api/artifacts";
 import { cn } from "@/lib/utils";
 import { destructiveButtonClass, outlineButtonClass } from "@/components/ui/button-styles";
 import { dialogOverlayClass, dialogPanelClass, dialogTitleClass } from "@/components/ui/dialog-styles";
@@ -32,7 +32,7 @@ export function DeleteNoteDialog({ noteId, noteName, onClose, onDeleted }: Delet
     setDeleting(true);
     setError(null);
     try {
-      await authedFetch(`/api/notes/${noteId}`, { method: "DELETE" });
+      await deleteArtifact(noteId);
       onDeleted();
     } catch {
       setError("Não foi possível excluir a nota. Tente novamente.");

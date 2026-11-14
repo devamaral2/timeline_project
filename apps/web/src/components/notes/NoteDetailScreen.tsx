@@ -1,11 +1,13 @@
 "use client";
 
 import type { ArtifactDto, ArtifactEventLinkDto } from "@repo/contracts";
+import { Pencil, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
-  BackLink, DetailFact, DetailFacts, DetailFrame, DetailHeading, DetailMessage, DetailNav, DetailSection, LinkList, LinkRow, TagPills, detailIcon,
+  ActionPill, BackLink, DetailActions, DetailFact, DetailFacts, DetailFrame, DetailHeading, DetailMenu, DetailMessage, DetailNav, DetailSection, LinkList, LinkRow, MenuItem, TagPills, detailIcon,
 } from "@/components/detail/detail-parts";
 import { visualForItemType } from "@/components/events/event-visuals";
+import { useMotionRouter } from "@/components/shell/navigation-motion";
 import { getArtifact } from "@/lib/api/artifacts";
 import { ApiRequestError } from "@/lib/api/client-request";
 import { artifactTypeLabel } from "@/lib/artifacts/artifact-model";
@@ -13,21 +15,26 @@ import { useNow } from "@/lib/events/use-now";
 import { whenLabel } from "@/lib/notes/notes-model";
 import { usePendingMealRefresh } from "@/lib/notes/use-pending-meal-refresh";
 import { ArtifactContent } from "./ArtifactContent";
+import { DeleteNoteDialog } from "./DeleteNoteDialog";
 
 type LoadState = "loading" | "ready" | "missing" | "error";
 
 /**
- * O artefato aberto, em duas colunas. À esquerda: voltar, o tipo (em mono), o nome na serifa e os fatos
- * (tags e, num artefato global, "Catálogo global"). À direita: o conteúdo conforme o tipo, os eventos em que o
- * artefato aparece com a relação de cada um, e o Registro (criação e última alteração).
+ * O artefato aberto, em duas colunas. À esquerda: voltar, o tipo (em mono), o nome na serifa, os fatos
+ * (tags e, num artefato global, "Catálogo global") e as ações. À direita: o conteúdo conforme o tipo, os eventos
+ * em que o artefato aparece com a relação de cada um, e o Registro (criação e última alteração).
  *
- * Ainda sem ações: editar, apagar e pedir ao agente entram nos tickets 35 a 39 e 43, só para o artefato próprio.
+ * Editar e excluir valem só para a nota de texto própria: pílulas na coluna da esquerda (desktop) e o menu
+ * "Mais ações" do topo (celular). Alimento, sono, treino e o catálogo global não têm essas ações.
  */
 export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: string }) {
   const now = useNow();
+  const router = useMotionRouter();
   const [artifact, setArtifact] = useState<ArtifactDto | null>(null);
   const [state, setState] = useState<LoadState>("loading");
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const listHref = `/${userId}/notas`;
+  const editHref = `/${userId}/notas/${noteId}/editar`;
 
   useEffect(() => {
     let cancelled = false;
@@ -65,6 +72,25 @@ export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: s
 
   const events = artifact.events ?? [];
   const dates = now ? { created: whenLabel(artifact.createdAt, now), updated: whenLabel(artifact.updatedAt, now) } : null;
+  const ownsText = artifact.type === "text" && !artifact.global;
+
+  const actions = ownsText ? (
+    <DetailActions>
+      <ActionPill icon={<Pencil {...detailIcon} />} onClick={() => router.push(editHref)}>Editar</ActionPill>
+      <ActionPill icon={<Trash2 {...detailIcon} />} danger onClick={() => setConfirmingDelete(true)}>Excluir</ActionPill>
+    </DetailActions>
+  ) : null;
+
+  const menu = ownsText ? (
+    <DetailMenu label="Mais ações">
+      {(close) => (
+        <>
+          <MenuItem icon={<Pencil {...detailIcon} />} onClick={() => { close(); router.push(editHref); }}>Editar</MenuItem>
+          <MenuItem icon={<Trash2 {...detailIcon} />} danger onClick={() => { close(); setConfirmingDelete(true); }}>Excluir</MenuItem>
+        </>
+      )}
+    </DetailMenu>
+  ) : null;
 
   /** Uma linha por evento: o ícone do tipo, o nome, a relação (código em mono) e quando o evento começa. */
   function eventRow(link: ArtifactEventLinkDto) {
@@ -87,7 +113,7 @@ export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: s
       {...frame}
       lead={
         <>
-          <DetailNav label="Navegação do registro" back={<BackLink href={listHref}>Notas</BackLink>} />
+          <DetailNav label="Navegação do registro" back={<BackLink href={listHref}>Notas</BackLink>}>{menu}</DetailNav>
 
           <DetailHeading eyebrow={artifactTypeLabel(artifact.type)}>{artifact.name}</DetailHeading>
 
@@ -97,6 +123,8 @@ export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: s
               {artifact.global ? <DetailFact label="Origem">Catálogo global</DetailFact> : null}
             </DetailFacts>
           ) : null}
+
+          {actions}
         </>
       }
     >
@@ -115,6 +143,15 @@ export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: s
             <DetailFact label="Última alteração">{dates.updated}</DetailFact>
           </DetailFacts>
         </DetailSection>
+      ) : null}
+
+      {confirmingDelete ? (
+        <DeleteNoteDialog
+          noteId={artifact.id}
+          noteName={artifact.name}
+          onClose={() => setConfirmingDelete(false)}
+          onDeleted={() => router.replace(listHref)}
+        />
       ) : null}
     </DetailFrame>
   );
