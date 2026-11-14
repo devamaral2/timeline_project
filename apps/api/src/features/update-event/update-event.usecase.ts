@@ -1,29 +1,34 @@
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
-import { EventNotFoundError, EventOwnershipError } from "../../domain";
-import type { EventRepository, NoteRepository } from "../../domain/ports";
+import { EventNotFoundError, EventOwnershipError, EventRevisionConflictError } from "../../domain";
+import type { ArtifactRepository, EntityBatchWriter, EventRepository } from "../../domain/ports";
 import type { UpdateEventInput } from "@repo/contracts";
-import { mergeEventUpdate } from "../../api-core/events/services/event-update-merger.service";
-import type { NoteBuilder } from "../../api-core/notes/services/note-builder.service";
+import type { ArtifactBuilder } from "../../api-core/artifacts/services/artifact-builder.service";
+import { mergeEventUpdate, toUpdateBatch } from "../../api-core/events/services/event-update-merger.service";
 
 export class UpdateEventUseCase {
   constructor(
-    private readonly eventRepository: EventRepository,
-    private readonly noteRepository: Pick<NoteRepository, "findByIds">,
-    private readonly noteBuilder: NoteBuilder,
-    private readonly clock: () => Date = () => new Date(),
+    private readonly eventRepository: Pick<EventRepository, "findById" | "findByIds">,
+    private readonly artifactRepository: Pick<ArtifactRepository, "findByIds">,
+    private readonly artifactBuilder: ArtifactBuilder,
+    private readonly batchWriter: EntityBatchWriter,
   ) {}
 
+  /** O evento, os artefatos editados e os eventos de origem das relacoes mudam numa transacao so. */
   async execute(input: UpdateEventInput, actor: AuthenticatedUser): Promise<void> {
     const existingEvent = await this.eventRepository.findById(input.eventId);
     if (!existingEvent) throw new EventNotFoundError(`Event not found: ${input.eventId}`);
     if (existingEvent.userId !== actor.userId) throw new EventOwnershipError();
+    if (existingEvent.revision !== input.expectedRevision) {
+      throw new EventRevisionConflictError(
+        `Expected revision ${input.expectedRevision} but found ${existingEvent.revision}`,
+      );
+    }
 
-    const { event, notes } = await mergeEventUpdate(
-      existingEvent,
-      input,
-      { noteBuilder: this.noteBuilder, noteRepository: this.noteRepository },
-      this.clock(),
-    );
-    await this.eventRepository.update(event, actor.userId, input.expectedRevision, notes);
+    const merged = await mergeEventUpdate(existingEvent, input, {
+      artifactBuilder: this.artifactBuilder,
+      artifactRepository: this.artifactRepository,
+      eventRepository: this.eventRepository,
+    });
+    await this.batchWriter.commit(toUpdateBatch(merged, input.expectedRevision));
   }
 }

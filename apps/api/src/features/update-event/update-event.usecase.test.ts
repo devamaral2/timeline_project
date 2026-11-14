@@ -1,236 +1,164 @@
 import { expect, test } from "vitest";
-import { Event, Interruption, Note } from "../../domain";
+import {
+  Artifact,
+  EntityBatchConflictError,
+  Event,
+  EventNotFoundError,
+  EventOwnershipError,
+  EventRevisionConflictError,
+} from "../../domain";
+import { createEventsKit, type EventsKitOptions } from "../../api-core/events/testing/in-memory-events-kit";
 import { UpdateEventUseCase } from "./update-event.usecase";
-import { createEventsKit } from "../../api-core/events/testing/in-memory-events-kit";
 
-function trainingEvent(id: string, interruptions: Interruption[] = []) {
-  return Event.create({
-    id,
-    userId: "auth-user-1",
-    name: "Treino",
-    description: "Gym session",
-    startedAt: new Date("2026-08-16T18:00:00-03:00"),
-    tags: ["gym"],
-    interruptions,
-    kind: "training",
+const actor = { userId: "auth-user-1" };
+const startedAt = new Date("2026-08-17T15:00:00.000Z");
+
+function setup(options: EventsKitOptions) {
+  const kit = createEventsKit(options);
+  const useCase = new UpdateEventUseCase(kit.eventRepository, kit.artifactRepository, kit.artifactBuilder, kit.batchWriter);
+  return { ...kit, useCase };
+}
+
+function meeting(overrides: Partial<Parameters<typeof Event.create>[0]> = {}): Event {
+  return Event.create({ id: "event-1", userId: actor.userId, name: "Reunião", startedAt, ...overrides });
+}
+
+test("updates the event and bumps its revision", async () => {
+  const { useCase, eventRepository } = setup({ events: [meeting()] });
+
+  await useCase.execute({ eventId: "event-1", expectedRevision: 1, name: "Retrospectiva", status: "doing", tags: ["Time"] }, actor);
+
+  expect(await eventRepository.findById("event-1")).toMatchObject({
+    name: "Retrospectiva",
+    status: "doing",
+    tags: ["time"],
+    revision: 2,
   });
-}
+});
 
-function updateUseCaseOf(kit: ReturnType<typeof createEventsKit>) {
-  return new UpdateEventUseCase(kit.eventRepository, kit.noteRepository, kit.noteBuilder);
-}
+test("null turns a tracked event back into a reference one", async () => {
+  const { useCase, eventRepository } = setup({ events: [meeting({ status: "todo" })] });
 
-test("updates an event without requiring startedAt in the payload", async () => {
-  const existingEvent = trainingEvent("01K2R1J5M8S0Y2Z7ABCD123456");
-  const kit = createEventsKit({ events: [existingEvent] });
-  const eventRepository = kit.eventRepository;
-  const updateUseCase = updateUseCaseOf(kit);
+  await useCase.execute({ eventId: "event-1", expectedRevision: 1, status: null }, actor);
+
+  expect((await eventRepository.findById("event-1"))?.status).toBeUndefined();
+});
+
+test("the event, the edited and the new artifacts are written in one batch", async () => {
+  const note = Artifact.create({ id: "note-1", userId: actor.userId, data: { body: "pauta" } });
+  const event = meeting({ artifactLinks: [{ artifactId: "note-1", relation: "creates", fromRecurrence: false }] });
+  const { useCase, eventRepository, artifactRepository, batchWriter, database } = setup({ events: [event], artifacts: [note] });
+
+  await useCase.execute(
+    {
+      eventId: "event-1",
+      expectedRevision: 1,
+      artifacts: [{ id: "note-1", type: "text", data: { body: "pauta revisada" } }, { type: "text", data: { body: "ata" } }],
+    },
+    actor,
+  );
+
+  const saved = await eventRepository.findById("event-1");
+  expect(batchWriter.commits).toHaveLength(1);
+  expect(database.artifacts).toHaveLength(2);
+  expect(await artifactRepository.findById("note-1")).toMatchObject({ data: { body: "pauta revisada" }, revision: 2 });
+  expect(saved?.artifactLinks.map((link) => link.relation)).toEqual(["creates", "creates"]);
+  expect(saved?.artifactLinks[1]?.artifactId).toBe(database.artifacts[1]?.id);
+  expect(saved?.revision).toBe(2);
+});
+
+test("changing the parents edits the origin events in the same batch, and only them", async () => {
+  const oldParent = Event.create({ id: "old", userId: actor.userId, name: "Antigo", status: "todo", subtaskIds: ["event-1"] });
+  const newParent = Event.create({ id: "new", userId: actor.userId, name: "Novo", status: "todo" });
+  const { useCase, eventRepository, batchWriter } = setup({ events: [meeting(), oldParent, newParent] });
+
+  await useCase.execute({ eventId: "event-1", expectedRevision: 1, parentEventIds: ["new"] }, actor);
+
+  expect(batchWriter.commits).toHaveLength(1);
+  expect(await eventRepository.findById("old")).toMatchObject({ subtaskIds: [], revision: 2 });
+  expect(await eventRepository.findById("new")).toMatchObject({ subtaskIds: ["event-1"], revision: 2 });
+  expect(await eventRepository.findById("event-1")).toMatchObject({ parentIds: ["new"], revision: 2 });
+});
+
+test("editing an occurrence detaches it from its series", async () => {
+  const occurrence = { recurrenceId: "rec-1", occurrenceOn: "2026-08-17", detached: false };
+  const { useCase, eventRepository } = setup({ events: [meeting({ occurrence })] });
+
+  await useCase.execute({ eventId: "event-1", expectedRevision: 1, status: "missed" }, actor);
+
+  expect(await eventRepository.findById("event-1")).toMatchObject({ status: "missed", occurrence: { detached: true } });
+});
+
+test("rejects an event that does not exist", async () => {
+  const { useCase } = setup({});
+
+  await expect(useCase.execute({ eventId: "missing", expectedRevision: 1, name: "x" }, actor)).rejects.toThrow(EventNotFoundError);
+});
+
+test("rejects an event that belongs to another user, before looking at the revision", async () => {
+  const { useCase, database, batchWriter } = setup({ events: [meeting()] });
 
   await expect(
-    updateUseCase.execute(
-      {
-        eventId: existingEvent.id,
-        expectedRevision: 1,
-        description: "Updated description",
-        tags: ["focus"],
-      },
-      { userId: "auth-user-1" },
+    useCase.execute({ eventId: "event-1", expectedRevision: 99, name: "Invadido" }, { userId: "attacker-1" }),
+  ).rejects.toThrow(EventOwnershipError);
+  expect(database.events[0]?.name).toBe("Reunião");
+  expect(batchWriter.commits).toEqual([]);
+});
+
+test("rejects a stale revision before preparing or writing anything", async () => {
+  const stored = Event.rehydrate({ id: "event-1", userId: actor.userId, actor: "human", kind: "routine", name: "Reunião", startedAt, revision: 3 });
+  const { useCase, database, batchWriter } = setup({ events: [stored] });
+
+  await expect(
+    // A lista de artefatos e invalida de proposito: o conflito de revisao vem antes de qualquer preparo.
+    useCase.execute({ eventId: "event-1", expectedRevision: 2, name: "Atrasado", artifacts: [{ id: "missing" }] }, actor),
+  ).rejects.toThrow(EventRevisionConflictError);
+  await expect(useCase.execute({ eventId: "event-1", expectedRevision: 2 }, actor)).rejects.toThrow(
+    "Expected revision 2 but found 3",
+  );
+  expect(database.events[0]).toBe(stored);
+  expect(batchWriter.commits).toEqual([]);
+});
+
+test("writes nothing when the change is invalid", async () => {
+  const { useCase, database, batchWriter } = setup({ events: [meeting()] });
+
+  await expect(
+    useCase.execute(
+      { eventId: "event-1", expectedRevision: 1, artifacts: [{ type: "text", data: { body: "nova" } }], parentEventIds: ["missing"] },
+      actor,
     ),
-  ).resolves.toBeUndefined();
-
-  const savedEvent = await eventRepository.findById(existingEvent.id);
-  expect(savedEvent?.description).toBe("Updated description");
-  expect(savedEvent?.tags).toEqual(["focus"]);
-  expect(savedEvent?.revision).toBe(2);
+  ).rejects.toThrow(EventNotFoundError);
+  expect(database.artifacts).toEqual([]);
+  expect(database.events[0]?.revision).toBe(1);
+  expect(batchWriter.commits).toEqual([]);
 });
 
-test("appends new interruptions and patches existing ones by id", async () => {
-  const existingInterruption = Interruption.create({
-    id: "01K2R1J5M8S0Y2Z7ABCD123459",
-    name: "Water break",
-    description: "Short pause",
-    startedAt: new Date("2026-08-16T18:30:00.000Z"),
-    finishedAt: new Date("2026-08-16T18:32:00.000Z"),
-  });
-  const existingEvent = trainingEvent("01K2R1J5M8S0Y2Z7ABCD123456", [existingInterruption]);
-  const kit = createEventsKit({ events: [existingEvent] });
-  const eventRepository = kit.eventRepository;
-  const updateUseCase = updateUseCaseOf(kit);
-
-  await updateUseCase.execute(
-    {
-      eventId: existingEvent.id,
-      expectedRevision: 1,
-      interruptions: [
-        { id: existingInterruption.id, description: "Updated pause" },
-        { name: "Phone call" },
-      ],
-    },
-    { userId: "auth-user-1" },
-  );
-
-  const savedEvent = await eventRepository.findById(existingEvent.id);
-  expect(savedEvent?.interruptions).toHaveLength(2);
-  expect(savedEvent?.interruptions[0]).toMatchObject({
-    id: existingInterruption.id,
-    name: "Water break",
-    description: "Updated pause",
-  });
-  const appendedInterruption = savedEvent?.interruptions[1];
-  expect(appendedInterruption).toBeDefined();
-  if (!appendedInterruption) return;
-  expect(appendedInterruption.finishedAt.getTime() - appendedInterruption.startedAt.getTime()).toBe(120000);
-});
-
-test("replaces a meal note and recalculates totals", async () => {
-  const mealNote = Note.create({
-    id: "01K2R1J5M8S0Y2Z7ABCD123458",
-    userId: "auth-user-1",
-    type: "meal",
-    data: {
-      name: "Almoço",
-      description: "rice",
-      foodItems: [
-        {
-          id: "01K2R1J5M8S0Y2Z7ABCDFOOD001",
-          name: "Rice",
-          portion: "100 g",
-          approximateWeightGrams: 100,
-          caloriesKcal: 130,
-          macronutrients: { carbohydratesGrams: 28, proteinsGrams: 2, totalFatGrams: 0, fiberGrams: 1 },
-          micronutrients: {},
-        },
-      ],
-      totals: {
-        totalCaloriesKcal: 130,
-        totalProteinGrams: 2,
-        totalCarbohydrateGrams: 28,
-        totalFatGrams: 0,
-        totalFiberGrams: 1,
-      },
-    },
-  });
-  const existingEvent = Event.create({
-    id: "01K2R1J5M8S0Y2Z7ABCD123457",
-    userId: "auth-user-1",
-    name: "Almoço",
-    description: "",
-    startedAt: new Date("2026-08-16T12:00:00.000Z"),
-    tags: [],
-    interruptions: [],
-    kind: "meal",
-    noteLinks: [{ noteId: mealNote.id, fromRecurrence: false }],
-  });
-  const kit = createEventsKit({ events: [existingEvent], notes: [mealNote] });
-
-  await updateUseCaseOf(kit).execute(
-    {
-      eventId: existingEvent.id,
-      expectedRevision: 1,
-      notes: [
-        {
-          id: mealNote.id,
-          type: "meal",
-          data: {
-            name: "Almoço",
-            description: "rice and beans",
-            foodItems: [
-              {
-                id: "01K2R1J5M8S0Y2Z7ABCDFOOD001",
-                name: "Rice",
-                portion: "200 g",
-                approximateWeightGrams: 200,
-                caloriesKcal: 180,
-                macronutrients: { carbohydratesGrams: 36, proteinsGrams: 4, totalFatGrams: 1, fiberGrams: 2 },
-                micronutrients: {},
-              },
-              {
-                id: "01K2R1J5M8S0Y2Z7ABCDFOOD002",
-                name: "Beans",
-                portion: "100 g",
-                approximateWeightGrams: 100,
-                caloriesKcal: 80,
-                macronutrients: { carbohydratesGrams: 14, proteinsGrams: 5, totalFatGrams: 0, fiberGrams: 6 },
-                micronutrients: {},
-              },
-            ],
-            totals: { totalCaloriesKcal: 0, totalProteinGrams: 0, totalCarbohydrateGrams: 0, totalFatGrams: 0, totalFiberGrams: 0 },
-          },
-        },
-      ],
-    },
-    { userId: "auth-user-1" },
-  );
-
-  const savedEvent = await kit.eventRepository.findById(existingEvent.id);
-  const [savedNote] = kit.database.notesOf(savedEvent as Event);
-  const mealData = savedNote.data as {
-    foodItems: Array<{ id: string; portion: string; caloriesKcal: number }>;
-    totals: { totalCaloriesKcal: number };
+test("writes nothing when an origin event changed while the edit was being prepared", async () => {
+  const parent = Event.create({ id: "parent", userId: actor.userId, name: "Projeto", status: "todo" });
+  const kit = setup({ events: [meeting(), parent] });
+  const findByIds = kit.eventRepository.findByIds.bind(kit.eventRepository);
+  // Outra aba edita o evento maior logo depois de ele ser lido.
+  kit.eventRepository.findByIds = async (ids) => {
+    const found = await findByIds(ids);
+    const [origin] = found;
+    if (origin) await kit.eventRepository.update(origin.revise({ name: "Editado em outra aba" }), actor.userId, origin.revision);
+    return found;
   };
-  expect(savedNote.id).toBe(mealNote.id);
-  expect(savedNote.revision).toBe(2);
-  expect(mealData.foodItems[0]).toMatchObject({ id: "01K2R1J5M8S0Y2Z7ABCDFOOD001", portion: "200 g", caloriesKcal: 180 });
-  expect(mealData.foodItems[1].id).toBe("01K2R1J5M8S0Y2Z7ABCDFOOD002");
-  expect(mealData.totals.totalCaloriesKcal).toBe(260);
-});
-
-test("updates sleep metrics without retaining unrelated data", async () => {
-  const sleepNote = Note.create({ userId: "auth-user-1", type: "sleep", data: { score: 70, trackedSleepTime: 420 } });
-  const sleepEvent = Event.create({
-    id: "01K2R1J5M8S0Y2Z7ABCD123459",
-    userId: "auth-user-1",
-    name: "Sono",
-    description: "",
-    startedAt: new Date("2026-08-16T22:00:00.000Z"),
-    tags: [],
-    interruptions: [],
-    kind: "sleep",
-    noteLinks: [{ noteId: sleepNote.id, fromRecurrence: false }],
-  });
-  const kit = createEventsKit({ events: [sleepEvent], notes: [sleepNote] });
-
-  await updateUseCaseOf(kit).execute(
-    {
-      eventId: sleepEvent.id,
-      expectedRevision: 1,
-      notes: [{ id: sleepNote.id, type: "sleep", data: { score: 85, trackedSleepTime: 420 } }],
-    },
-    { userId: "auth-user-1" },
-  );
-
-  const savedEvent = await kit.eventRepository.findById(sleepEvent.id);
-  expect(kit.database.notesOf(savedEvent as Event)[0].data).toEqual({ score: 85, trackedSleepTime: 420 });
-});
-
-test("creates and links a new note, saving it together with the event", async () => {
-  const existingEvent = trainingEvent("01K2R1J5M8S0Y2Z7ABCD123461");
-  const kit = createEventsKit({ events: [existingEvent] });
-
-  await updateUseCaseOf(kit).execute(
-    {
-      eventId: existingEvent.id,
-      expectedRevision: 1,
-      notes: [{ type: "text", data: { body: "Treino de perna" } }],
-    },
-    { userId: "auth-user-1" },
-  );
-
-  const savedEvent = await kit.eventRepository.findById(existingEvent.id);
-  expect(kit.database.notes).toHaveLength(1);
-  expect(savedEvent?.noteLinks).toEqual([{ noteId: kit.database.notes[0].id, fromRecurrence: false }]);
-  expect(savedEvent?.revision).toBe(2);
-});
-
-test("rejects an expectedRevision that does not match the stored event", async () => {
-  const existingEvent = trainingEvent("01K2R1J5M8S0Y2Z7ABCD123460");
-  const kit = createEventsKit({ events: [existingEvent] });
-  const updateUseCase = updateUseCaseOf(kit);
 
   await expect(
-    updateUseCase.execute(
-      { eventId: existingEvent.id, expectedRevision: 5, description: "x" },
-      { userId: "auth-user-1" },
-    ),
-  ).rejects.toThrow();
+    kit.useCase.execute({ eventId: "event-1", expectedRevision: 1, name: "Nova", parentEventIds: ["parent"] }, actor),
+  ).rejects.toThrow(EntityBatchConflictError);
+
+  expect(kit.database.events.find((event) => event.id === "event-1")).toMatchObject({ name: "Reunião", revision: 1 });
+  expect(kit.database.events.find((event) => event.id === "parent")?.subtaskIds).toEqual([]);
+});
+
+test("an agent event cannot be edited", async () => {
+  const request = Event.create({ id: "request", userId: actor.userId, actor: "agent", kind: "request", status: "running", name: "Pedido" });
+  const { useCase } = setup({ events: [request] });
+
+  await expect(useCase.execute({ eventId: "request", expectedRevision: 1, name: "Outro" }, actor)).rejects.toThrow(
+    "An agent event cannot be edited",
+  );
 });

@@ -14,10 +14,47 @@ function filesUnder(directory: string): string[] {
 }
 
 test("does not retain the old feature aggregators or artificial HTTP areas", () => {
-  for (const name of ["events", "tasks", "recurrences", "agent", "request-identity", "notes", "catalog"]) {
-    expect(existsSync(join(features, name))).toBe(false);
+  for (const name of ["events", "tasks", "artifacts", "recurrences", "agent", "request-identity", "notes", "catalog"]) {
+    expect(existsSync(join(features, name)), name).toBe(false);
   }
   expect(existsSync(join(src, "http/request-identity"))).toBe(true);
+});
+
+test("has one folder per operation on events, artifacts and recurrences, and none left for tasks or notes", () => {
+  const folders = readdirSync(features, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name);
+
+  // Tarefa e nota deixaram de ser entidades (ADR 0011): o que era delas e de evento e de artefato.
+  const retired = folders.filter(
+    (name) => /-(task|tasks|note|notes|interruption|interruptions)(-|$)/.test(name) || name === "list-timeline-events",
+  );
+  expect(retired).toEqual([]);
+
+  for (const name of [
+    "create-event",
+    "get-event",
+    "update-event",
+    "delete-event",
+    "list-agenda-events",
+    "list-tracked-events",
+    "list-subtasks",
+    "get-daily-overview",
+    "suggest-tags",
+    "create-artifact",
+    "get-artifact",
+    "update-artifact",
+    "delete-artifact",
+    "list-artifacts",
+    "create-recurrence",
+    "get-recurrence",
+    "update-recurrence",
+    "delete-recurrence",
+    "list-recurrences",
+  ]) {
+    expect(folders, name).toContain(name);
+    expect(filesUnder(join(features, name)).some((path) => path.endsWith(".controller.ts")), name).toBe(true);
+  }
 });
 
 test("each Nest controller source declares one public route operation", () => {

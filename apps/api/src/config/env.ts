@@ -11,15 +11,12 @@ const serverSchema = z.object({
   OPENROUTER_API_KEY: z.string().min(1).optional(),
   JEV_API_KEY: z.string().min(1).optional(),
   OPENROUTER_MODEL: z.string().min(1).optional(),
-  // Modelo do agente de skills. Precisa suportar tool calling — nem todo modelo
-  // do OpenRouter suporta. Sem valor, cai no OPENROUTER_MODEL.
-  // Pipeline rapido (ADR 002): modelos das chamadas estruturadas, sem tool calling. Sem valor,
-  // caem no OPENROUTER_MODEL.
-  // `legacy`: roteador JEV + agente com ferramentas. `fast`: planejador + especialistas.
-  // Rota por processo (ADR 003): JEV despacha, filas trabalham, finalizacao vincula. Desligada por padrao.
-  // Modelo dos agentes da rota por processo (chamadas estruturadas). Sem valor, cai no OPENROUTER_MODEL.
+  // Modelo dos agentes de entidade (ADR 003), em chamadas estruturadas. Sem valor, cai no OPENROUTER_MODEL.
   OPENROUTER_PROCESS_MODEL: z.string().min(1).optional(),
-  // Rota do Hermes (ADR 004): `POST /api/ai/automation`. Desligada por padrao; ligada exige a chave do Hermes.
+  // Raciocinio do fallback escolhido (`fallback: <pedido>`), mostrado na aba "Processo" do chat. `off`
+  // desliga. Os outros agentes nunca pensam: cada chamada leva ~1 s.
+  OPENROUTER_PROCESS_REASONING: z.enum(["off", "low", "medium", "high"]).default("low"),
+  // Rota do Hermes (ADR 004): `POST /api/requests/hermes`. Desligada por padrao; ligada exige a chave do Hermes.
   AI_AUTOMATION: z.enum(["off", "on"]).default("off"),
   HERMES_URL: z.string().url().default("http://127.0.0.1:8642"),
   HERMES_API_KEY: z.string().min(1).optional(),
@@ -50,7 +47,8 @@ export function getServerEnv(source?: Record<string, string | undefined>): Serve
     OPENROUTER_API_KEY: read("OPENROUTER_API_KEY"),
     JEV_API_KEY: read("JEV_API_KEY"),
     OPENROUTER_MODEL: read("OPENROUTER_MODEL"),
-              OPENROUTER_PROCESS_MODEL: read("OPENROUTER_PROCESS_MODEL"),
+    OPENROUTER_PROCESS_MODEL: read("OPENROUTER_PROCESS_MODEL"),
+    OPENROUTER_PROCESS_REASONING: read("OPENROUTER_PROCESS_REASONING"),
     AI_AUTOMATION: read("AI_AUTOMATION"),
     HERMES_URL: read("HERMES_URL"),
     HERMES_API_KEY: read("HERMES_API_KEY"),
@@ -82,16 +80,16 @@ export function getDatabaseEnv(source?: Record<string, string | undefined>): Dat
   });
 }
 
-const aiJobsSchema = z.object({
-  RABBITMQ_URL: z.string().url().refine((value) => /^amqps?:\/\//.test(value), "Must be an AMQP URL"),
-  AI_JOBS_QUEUE_PREFIX: z.string().regex(/^[a-zA-Z0-9._-]+$/),
+const jobsSchema = z.object({
   AI_JOBS_CONCURRENCY: z.coerce.number().int().min(1).max(64).default(4),
   AI_JOBS_LEASE_MS: z.coerce.number().int().min(3000).max(3600000).default(60000),
   AI_JOBS_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(20).default(4),
+  // De quanto em quanto tempo o worker olha a fila no Postgres.
+  AI_JOBS_POLL_MS: z.coerce.number().int().min(50).max(60000).default(500),
 });
-export type AiJobsEnv = z.infer<typeof aiJobsSchema>;
-export function getAiJobsEnv(source: Record<string, string | undefined> = process.env): AiJobsEnv {
-  return aiJobsSchema.parse(Object.fromEntries(
-    Object.keys(aiJobsSchema.shape).map((key) => [key, orUndefined(source[key])]),
+export type JobsEnv = z.infer<typeof jobsSchema>;
+export function getJobsEnv(source: Record<string, string | undefined> = process.env): JobsEnv {
+  return jobsSchema.parse(Object.fromEntries(
+    Object.keys(jobsSchema.shape).map((key) => [key, orUndefined(source[key])]),
   ));
 }

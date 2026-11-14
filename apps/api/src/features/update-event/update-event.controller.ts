@@ -1,10 +1,10 @@
 import { Body, Controller, HttpCode, HttpStatus, Inject, Module, Param, Patch, UseGuards } from "@nestjs/common";
 import type { UpdateEventInput } from "@repo/contracts";
-import { EVENT_REPOSITORY, NOTE_REPOSITORY } from "../../infrastructure/persistence";
-import type { EventRepository, NoteRepository } from "../../domain/ports";
-import { NoteBuilder } from "../../api-core/notes/services/note-builder.service";
+import { ARTIFACT_REPOSITORY, ENTITY_BATCH_WRITER, EVENT_REPOSITORY } from "../../infrastructure/persistence";
+import type { ArtifactRepository, EntityBatchWriter, EventRepository } from "../../domain/ports";
 import { ApiCoreModule } from "../../api-core/api-core.module";
-import { assertEventMarks, assertEventWindow, assertExpectedRevision } from "../../api-core/http-input-validation";
+import { ArtifactBuilder } from "../../api-core/artifacts/services/artifact-builder.service";
+import { assertEventFields, assertExpectedRevision } from "../../api-core/http-input-validation";
 import { CurrentUser } from "../../http/request-identity/current-user.decorator";
 import { GatewayIdentityGuard } from "../../http/request-identity/gateway-identity.guard";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
@@ -22,8 +22,7 @@ export class UpdateEventController {
     @Body() body: UpdateEventInput,
     @CurrentUser() actor: AuthenticatedUser,
   ): Promise<void> {
-    assertEventMarks(body);
-    assertEventWindow(body);
+    assertEventFields(body as unknown as Record<string, unknown>, true);
     assertExpectedRevision(body);
     await this.updateEvent.execute({ ...body, eventId }, actor);
   }
@@ -34,9 +33,10 @@ export class UpdateEventController {
   controllers: [UpdateEventController],
   providers: [{
     provide: UpdateEventUseCase,
-    inject: [EVENT_REPOSITORY, NOTE_REPOSITORY, NoteBuilder],
-    useFactory: (events: EventRepository, notes: NoteRepository, builder: NoteBuilder) =>
-      new UpdateEventUseCase(events, notes, builder),
+    inject: [EVENT_REPOSITORY, ARTIFACT_REPOSITORY, ArtifactBuilder, ENTITY_BATCH_WRITER],
+    useFactory: (
+      events: EventRepository, artifacts: ArtifactRepository, builder: ArtifactBuilder, writer: EntityBatchWriter,
+    ) => new UpdateEventUseCase(events, artifacts, builder, writer),
   }],
 })
 export class UpdateEventModule {}

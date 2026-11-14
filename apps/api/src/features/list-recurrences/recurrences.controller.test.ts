@@ -1,32 +1,36 @@
-import { BadRequestException } from "@nestjs/common";
+import "reflect-metadata";
+import { BadRequestException, NotFoundException } from "@nestjs/common";
+import { GUARDS_METADATA } from "@nestjs/common/constants";
 import { expect, test } from "vitest";
 import { createEventsKit } from "../../api-core/events/testing/in-memory-events-kit";
-import { InMemoryTaskRepository } from "../../api-core/tasks/testing/in-memory-task.repository";
 import { InMemoryRecurrenceRepository } from "../../api-core/recurrences/testing/in-memory-recurrence.repository";
+import { GatewayIdentityGuard } from "../../http/request-identity/gateway-identity.guard";
+import { CreateRecurrenceController } from "../create-recurrence/create-recurrence.controller";
 import { CreateRecurrenceUseCase } from "../create-recurrence/create-recurrence.usecase";
+import { DeleteRecurrenceController } from "../delete-recurrence/delete-recurrence.controller";
 import { DeleteRecurrenceUseCase } from "../delete-recurrence/delete-recurrence.usecase";
+import { GetRecurrenceController } from "../get-recurrence/get-recurrence.controller";
 import { GetRecurrenceUseCase } from "../get-recurrence/get-recurrence.usecase";
-import { ListRecurrencesUseCase } from "./list-recurrences.usecase";
+import { UpdateRecurrenceController } from "../update-recurrence/update-recurrence.controller";
 import { UpdateRecurrenceUseCase } from "../update-recurrence/update-recurrence.usecase";
-import { RecurrencesController } from "./test-recurrences-controller";
+import { ListRecurrencesController } from "./list-recurrences.controller";
+import { ListRecurrencesUseCase } from "./list-recurrences.usecase";
 
 const actor = { userId: "auth-user-1" };
 
-function makeController() {
-  const { database, createEvent } = createEventsKit();
+function makeControllers() {
+  const { database, createEvent, eventRepository } = createEventsKit();
   const recurrences = new InMemoryRecurrenceRepository(database);
-  const tasks = new InMemoryTaskRepository();
-  return new RecurrencesController(
-    new ListRecurrencesUseCase(recurrences),
-    new CreateRecurrenceUseCase(recurrences, createEvent, tasks),
-    new GetRecurrenceUseCase(recurrences),
-    new UpdateRecurrenceUseCase(recurrences, createEvent, tasks),
-    new DeleteRecurrenceUseCase(recurrences),
-  );
+  return {
+    list: new ListRecurrencesController(new ListRecurrencesUseCase(recurrences)),
+    create: new CreateRecurrenceController(new CreateRecurrenceUseCase(recurrences, createEvent, eventRepository)),
+    detail: new GetRecurrenceController(new GetRecurrenceUseCase(recurrences)),
+    update: new UpdateRecurrenceController(new UpdateRecurrenceUseCase(recurrences, createEvent, eventRepository)),
+    remove: new DeleteRecurrenceController(new DeleteRecurrenceUseCase(recurrences)),
+  };
 }
 
 const body = {
-  target: "event" as const,
   frequency: "weekly" as const,
   interval: 1,
   byWeekday: 0b0101010,
@@ -36,63 +40,79 @@ const body = {
   template: { name: "Academia", kind: "routine" as const },
 };
 
-test("creates a series and returns it with the stored template", async () => {
-  const controller = makeController();
+test("POST creates a series and GET returns it with the stored template", async () => {
+  const { create, detail, list } = makeControllers();
 
-  const { recurrenceId } = await controller.create(body, actor);
-  const detail = await controller.detail(recurrenceId, actor);
+  const { recurrenceId } = await create.execute(body, actor);
+  const stored = await detail.execute(recurrenceId, actor);
 
-  expect(detail).toMatchObject({
-    id: recurrenceId,
-    target: "event",
-    frequency: "weekly",
-    byWeekday: 0b0101010,
-    revision: 1,
-  });
-  expect(detail.template).toMatchObject({ name: "Academia", priority: "normal" });
-  expect(await controller.list(actor)).toHaveLength(1);
+  expect(stored).toMatchObject({ id: recurrenceId, frequency: "weekly", byWeekday: 0b0101010, revision: 1 });
+  expect(stored.template).toMatchObject({ name: "Academia", kind: "routine", priority: "medium", artifactIds: [] });
+  expect(stored).not.toHaveProperty("target");
+  expect(await list.execute(actor)).toEqual([stored]);
 });
 
-test("rejects an unknown target", async () => {
-  await expect(makeController().create({ ...body, target: "habit" } as never, actor)).rejects.toThrow(
-    BadRequestException,
-  );
+test("GET lists only the series of the authenticated actor", async () => {
+  const { create, list } = makeControllers();
+  await create.execute(body, actor);
+
+  expect(await list.execute({ userId: "someone-else" })).toEqual([]);
 });
 
-test("rejects a template that is not an object", async () => {
-  await expect(makeController().create({ ...body, template: "Academia" } as never, actor)).rejects.toThrow(
+test("POST rejects a template that is missing or is not an object", async () => {
+  const { create } = makeControllers();
+
+  await expect(async () => create.execute({ ...body, template: "Academia" } as never, actor)).rejects.toThrow("Invalid template");
+  await expect(async () => create.execute({ ...body, template: undefined } as never, actor)).rejects.toThrow(BadRequestException);
+  await expect(async () => create.execute({ ...body, template: [] } as never, actor)).rejects.toThrow(BadRequestException);
+});
+
+test("PATCH requires expectedRevision and an object template when one is sent", async () => {
+  const { create, update } = makeControllers();
+  const { recurrenceId } = await create.execute(body, actor);
+
+  await expect(update.execute(recurrenceId, { interval: 2 } as never, actor)).rejects.toThrow("Invalid expectedRevision");
+  await expect(update.execute(recurrenceId, { expectedRevision: 0 }, actor)).rejects.toThrow("Invalid expectedRevision");
+  await expect(update.execute(recurrenceId, { expectedRevision: 1.5 }, actor)).rejects.toThrow(BadRequestException);
+  await expect(update.execute(recurrenceId, { expectedRevision: 1, template: null } as never, actor)).rejects.toThrow(
     "Invalid template",
   );
 });
 
-test("PATCH requires expectedRevision and cannot change the target", async () => {
-  const controller = makeController();
-  const { recurrenceId } = await controller.create(body, actor);
+test("PATCH edits the series named in the route, whatever id the body carries", async () => {
+  const { create, update, detail } = makeControllers();
+  const { recurrenceId } = await create.execute(body, actor);
+  const other = await create.execute({ ...body, template: { name: "Natação" } }, actor);
 
-  await expect(controller.update(recurrenceId, { interval: 2 } as never, actor)).rejects.toThrow(
-    "Invalid expectedRevision",
-  );
-  await expect(
-    controller.update(recurrenceId, { expectedRevision: 1, target: "task" } as never, actor),
-  ).rejects.toThrow("The target of a recurrence cannot change");
+  await update.execute(recurrenceId, { expectedRevision: 1, interval: 2, recurrenceId: other.recurrenceId } as never, actor);
+
+  expect(await detail.execute(recurrenceId, actor)).toMatchObject({ interval: 2, revision: 2 });
+  expect(await detail.execute(other.recurrenceId, actor)).toMatchObject({ interval: 1, revision: 1 });
 });
 
 test("GET of a missing series is a 404", async () => {
-  await expect(makeController().detail("01K2MISSING000000000000000A", actor)).rejects.toThrow(
-    "Recurrence not found",
-  );
+  await expect(makeControllers().detail.execute("01K2MISSING000000000000000A", actor)).rejects.toThrow(NotFoundException);
 });
 
-test("lists only the series of the requested target", async () => {
-  const { database, createEvent } = createEventsKit();
-  const repository = new InMemoryRecurrenceRepository(database);
-  const tasks = new InMemoryTaskRepository();
-  const create = new CreateRecurrenceUseCase(repository, createEvent, tasks);
-  const list = new ListRecurrencesUseCase(repository);
-  await create.execute(body, actor);
-  await create.execute({ ...body, target: "task", template: { name: "Revisar semana" } }, actor);
+test("DELETE removes the series", async () => {
+  const { create, remove, list } = makeControllers();
+  const { recurrenceId } = await create.execute(body, actor);
 
-  expect(await list.execute(undefined, actor)).toHaveLength(2);
-  expect((await list.execute({ target: "task" }, actor)).map((r) => r.target)).toEqual(["task"]);
-  expect((await list.execute({ target: "event" }, actor)).map((r) => r.target)).toEqual(["event"]);
+  await remove.execute(recurrenceId, actor);
+
+  expect(await list.execute(actor)).toEqual([]);
+});
+
+test("every recurrence route requires GatewayIdentityGuard", () => {
+  for (const controller of [
+    ListRecurrencesController,
+    CreateRecurrenceController,
+    GetRecurrenceController,
+    UpdateRecurrenceController,
+    DeleteRecurrenceController,
+  ]) {
+    const guards = Reflect.getMetadata(GUARDS_METADATA, controller.prototype.execute) as unknown[] | undefined;
+
+    expect(guards, controller.name).toContain(GatewayIdentityGuard);
+  }
 });

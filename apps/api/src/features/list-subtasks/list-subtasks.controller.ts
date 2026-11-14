@@ -1,21 +1,21 @@
 import { Controller, Get, Inject, Module, Param, UseGuards } from "@nestjs/common";
-import type { TaskSummaryDto } from "@repo/contracts";
-import { TASK_REPOSITORY } from "../../infrastructure/persistence";
-import type { TaskRepository } from "../../domain/ports";
+import type { EventCardDto } from "@repo/contracts";
+import { EVENT_CARD_QUERY, EVENT_REPOSITORY } from "../../infrastructure/persistence";
+import type { EventCardQuery, EventRepository } from "../../domain/ports";
 import { ApiCoreModule } from "../../api-core/api-core.module";
 import { CurrentUser } from "../../http/request-identity/current-user.decorator";
 import { GatewayIdentityGuard } from "../../http/request-identity/gateway-identity.guard";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
 import { ListSubtasksUseCase } from "./list-subtasks.usecase";
 
-@Controller("api/tasks")
+@Controller("api/events")
 export class ListSubtasksController {
   constructor(@Inject(ListSubtasksUseCase) private readonly listSubtasks: ListSubtasksUseCase) {}
 
-  @Get(":taskId/subtasks")
+  @Get(":eventId/subtasks")
   @UseGuards(GatewayIdentityGuard)
-  execute(@Param("taskId") taskId: string, @CurrentUser() actor: AuthenticatedUser): Promise<TaskSummaryDto[]> {
-    return this.listSubtasks.execute({ taskId }, actor);
+  execute(@Param("eventId") eventId: string, @CurrentUser() actor: AuthenticatedUser): Promise<EventCardDto[]> {
+    return this.listSubtasks.execute({ eventId }, actor);
   }
 }
 
@@ -24,8 +24,8 @@ export class ListSubtasksController {
   controllers: [ListSubtasksController],
   providers: [{
     provide: ListSubtasksUseCase,
-    inject: [TASK_REPOSITORY],
-    useFactory: (tasks: TaskRepository) => new ListSubtasksUseCase(tasks),
+    inject: [EVENT_REPOSITORY, EVENT_CARD_QUERY],
+    useFactory: (events: EventRepository, cards: EventCardQuery) => new ListSubtasksUseCase(events, cards),
   }],
 })
 export class ListSubtasksModule {}
