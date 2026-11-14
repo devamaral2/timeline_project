@@ -1,4 +1,4 @@
-import type { EventKind } from "./event-kind";
+import type { EventKind } from "../../sets";
 
 /**
  * So `Event.create` usa isto — evento novo sem `finishedAt` declarado nasce

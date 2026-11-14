@@ -1,7 +1,6 @@
+import type { Artifact } from "../../artifacts/entities/artifact.entity";
 import type { Event } from "../../events/entities/event.entity";
-import type { Note } from "../../notes/entities/note.entity";
 import type { Recurrence } from "../../recurrences/entities/recurrence.entity";
-import type { Task } from "../../tasks/entities/task.entity";
 
 /** `expectedRevision` e a revisao lida quando a mudanca foi preparada. */
 export type StagedChange<T> =
@@ -20,12 +19,14 @@ export type RecurrenceChange =
 export interface EntityBatch {
   userId: string;
   events: StagedChange<Event>[];
-  tasks: StagedChange<Task>[];
-  notes: StagedChange<Note>[];
+  /** Entram antes dos eventos: as relacoes de um evento apontam para eles. */
+  artifacts: StagedChange<Artifact>[];
+  /** De qual original saiu cada copia nova do lote. */
+  derivations?: readonly { originalId: string; copyId: string }[];
   /**
    * Series novas. A serie e gravada antes das ocorrencias que o lote tambem
    * traz (a primeira, que o agente ja mostra na resposta); as demais saem da
-   * materializacao preguicosa, na proxima leitura da timeline ou das tarefas.
+   * materializacao preguicosa, na proxima leitura da agenda ou das tarefas.
    */
   recurrences?: readonly Recurrence[];
   /**
@@ -34,9 +35,10 @@ export interface EntityBatch {
    */
   recurrenceChanges?: readonly RecurrenceChange[];
   /**
-   * Roda na mesma transacao, depois das entidades e antes de o job ser concluido: o que ela grava
-   * (o passo de um processo, a fila de finalizacao) existe se e somente se as entidades existem.
-   * O argumento e a transacao do escritor; so a infraestrutura que a entrega sabe o tipo.
+   * Roda na mesma transacao, depois das entidades: o que ela grava (o passo de
+   * um pedido, a relacao do passo com o que ele tocou) existe se e somente se
+   * as entidades existem. O argumento e a transacao do escritor; so a
+   * infraestrutura que a entrega sabe o tipo.
    */
   afterWrite?: (tx: unknown) => Promise<void>;
 }

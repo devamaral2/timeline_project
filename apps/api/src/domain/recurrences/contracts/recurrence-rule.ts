@@ -1,18 +1,11 @@
-import type { RecurrenceFrequency, RecurrenceTarget } from "@repo/contracts";
-export type { RecurrenceFrequency, RecurrenceRule, RecurrenceTarget } from "@repo/contracts";
+import type { RecurrenceFrequency } from "@repo/contracts";
+export type { RecurrenceFrequency, RecurrenceRule } from "@repo/contracts";
 
 /** Com que passo a serie se repete. */
 export const RECURRENCE_FREQUENCIES = ["daily", "weekly", "monthly", "yearly"] as const;
 
 export function isRecurrenceFrequency(value: unknown): value is RecurrenceFrequency {
   return RECURRENCE_FREQUENCIES.includes(value as RecurrenceFrequency);
-}
-
-/** O que a serie gera: eventos na timeline ou tarefas. */
-export const RECURRENCE_TARGETS = ["event", "task"] as const;
-
-export function isRecurrenceTarget(value: unknown): value is RecurrenceTarget {
-  return RECURRENCE_TARGETS.includes(value as RecurrenceTarget);
 }
 
 /**
