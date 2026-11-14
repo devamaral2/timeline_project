@@ -1,8 +1,17 @@
-import { eventPositionOf, formatTime } from "@repo/timeline";
+import { eventPositionOf, formatTime, type EventPosition } from "@repo/timeline";
 
 interface EventWindow {
   startedAt: string;
   finishedAt?: string;
+}
+
+/**
+ * A situacao do evento no tempo. Os DTOs do web ainda chamam o fim planejado de
+ * `finishedAt`; `@repo/timeline` le `estimatedFinishAt`. Sem esta traducao, todo
+ * evento ja iniciado apareceria em andamento.
+ */
+export function positionOf(event: EventWindow, now: Date): EventPosition {
+  return eventPositionOf({ startedAt: event.startedAt, estimatedFinishAt: event.finishedAt }, now);
 }
 
 /**
@@ -15,6 +24,6 @@ interface EventWindow {
  */
 export function endLabelOf(event: EventWindow, now: Date | null): string {
   if (event.finishedAt) return formatTime(event.finishedAt);
-  if (now && eventPositionOf(event, now) === "upcoming") return "sem hora de fim";
+  if (now && positionOf(event, now) === "upcoming") return "sem hora de fim";
   return "em andamento";
 }

@@ -6,6 +6,18 @@ import "@testing-library/jest-dom/vitest";
 afterEach(cleanup);
 
 /**
+ * A partir do Node 25 existe um `localStorage` global proprio, que vale
+ * `undefined` sem `--localstorage-file` e toma o lugar do que o jsdom oferece.
+ * Devolvemos o do jsdom, para os testes nao dependerem da versao do Node.
+ */
+const jsdomWindow = (globalThis as { jsdom?: { window: Window } }).jsdom?.window;
+for (const name of ["localStorage", "sessionStorage"] as const) {
+  if (jsdomWindow && globalThis[name] === undefined) {
+    Object.defineProperty(globalThis, name, { value: jsdomWindow[name], configurable: true, writable: true });
+  }
+}
+
+/**
  * jsdom nao implementa IntersectionObserver. O stub registra os alvos e expoe
  * um gatilho manual, para que os testes controlem quando o sentinel aparece.
  */

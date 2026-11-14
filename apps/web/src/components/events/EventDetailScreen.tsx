@@ -7,10 +7,11 @@ import {
 import Link from "next/link";
 import type { ReactNode } from "react";
 import {
-  compactDate, dayKeyOf, elapsedSecondsOf, eventPositionOf, formatStopwatch,
+  compactDate, dayKeyOf, elapsedSecondsOf, formatStopwatch,
   formatTime, longDate, type EventPosition,
 } from "@repo/timeline";
 import type { EventDetailDto, MealItem, NoteDto, TaskDetailDto, WorkItemStatus } from "@/lib/api/contracts";
+import { positionOf } from "@/lib/events/event-window";
 import { useNow } from "@/lib/events/use-now";
 import {
   ICON_STROKE_WIDTH, missedLabel, notificationOffsetLabel,
@@ -139,7 +140,7 @@ function EventSummary({ event, dayKey }: { event: EventDetailDto; dayKey: string
   const now = useNow();
   // Sem relogio nao ha situacao no tempo: o HTML do servidor nasce num instante
   // e hidrata em outro, e os dois discordariam de um evento que acabou de virar.
-  const position = now ? eventPositionOf(event, now) : null;
+  const position = now ? positionOf(event, now) : null;
   const running = position === "running";
   const endDayKey = event.finishedAt ? dayKeyOf(event.finishedAt) : null;
   const metadata = metadataOf(event);
