@@ -9,6 +9,8 @@ import { updateEvent } from "@/lib/api/events";
 import { buildEventPatch, type EventDraftErrors, validateEventDraft } from "./event-draft";
 import { EventEditHeaderFields } from "./EventEditHeaderFields";
 import { EventEditInfoSection } from "./EventEditInfoSection";
+import { EventEditReminderSection } from "./EventEditReminderSection";
+import { EventEditTagSection } from "./EventEditTagSection";
 import { useEventDraft } from "./use-event-draft";
 import styles from "./event-edit.module.css";
 
@@ -91,7 +93,9 @@ export function EventEditView({ event: loaded, onReload, onLeave }: EventEditVie
         }}
       >
         <EventEditInfoSection draft={draft} errors={errors} longRunning={event.longRunning} onChange={setField} />
-        {/* Ticket 25: lembretes e tags. 26: tarefa persistente. 27: subtarefas. 28: bloqueios.
+        <EventEditReminderSection draft={draft} onChange={setField} />
+        <EventEditTagSection draft={draft} onChange={setField} />
+        {/* 26: tarefa persistente. 27: subtarefas. 28: bloqueios.
             29 e 30: artefatos. 31: recorrência. Cada um entra aqui como uma seção nova. */}
         {failure ? <DetailMessage alert>{failure}</DetailMessage> : null}
         <footer className={styles.footer}>

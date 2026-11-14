@@ -177,6 +177,61 @@ describe("validateEventDraft", () => {
   });
 });
 
+describe("lembretes e tags", () => {
+  it("o rascunho lê os lembretes em ordem crescente e as tags como estão", () => {
+    const draft = draftFromEvent(training({ notifyOffsetsMinutes: [1440, 30], tags: ["saúde", "pessoal"] }));
+
+    expect(draft).toMatchObject({ reminders: [30, 1440], tags: ["saúde", "pessoal"] });
+  });
+
+  it("lembretes e tags trocados entram no corpo, com o conjunto inteiro", () => {
+    const event = training({ notifyOffsetsMinutes: [30], tags: ["saúde"] });
+    const draft = { ...draftFromEvent(event), reminders: [30, 1440], tags: ["saúde", "foco"] };
+
+    expect(buildEventPatch(event, draft, NOW)).toEqual({
+      expectedRevision: 3,
+      notifyOffsetsMinutes: [30, 1440],
+      tags: ["saúde", "foco"],
+    });
+  });
+
+  it("uma lista com os mesmos valores, mesmo vinda de outra leitura, não é mudança", () => {
+    const event = training({ notifyOffsetsMinutes: [1440, 30], tags: ["foco"] });
+
+    expect(buildEventPatch(event, draftFromEvent(event), NOW)).toBeNull();
+  });
+
+  it("uma tag removida manda a lista sem ela, e a lista vazia vai como vazia", () => {
+    const event = training({ tags: ["foco"], notifyOffsetsMinutes: [30] });
+
+    expect(buildEventPatch(event, { ...draftFromEvent(event), tags: [], reminders: [] }, NOW)).toEqual({
+      expectedRevision: 3,
+      notifyOffsetsMinutes: [],
+      tags: [],
+    });
+  });
+
+  it("a lista que a pessoa não mexeu acompanha a versão nova na releitura", () => {
+    const before = training({ tags: ["foco"], notifyOffsetsMinutes: [30] });
+    const after = training({ revision: 4, tags: ["foco", "pessoal"], notifyOffsetsMinutes: [30, 1440] });
+    const typed = { ...draftFromEvent(before), name: "Meu título" };
+
+    expect(rebaseDraft(typed, before, after)).toMatchObject({
+      name: "Meu título",
+      tags: ["foco", "pessoal"],
+      reminders: [30, 1440],
+    });
+  });
+
+  it("a lista que a pessoa mexeu fica como ela deixou", () => {
+    const before = training({ tags: ["foco"] });
+    const after = training({ revision: 4, tags: ["pessoal"] });
+    const typed = { ...draftFromEvent(before), tags: ["foco", "casa"] };
+
+    expect(rebaseDraft(typed, before, after)).toMatchObject({ tags: ["foco", "casa"] });
+  });
+});
+
 describe("rebaseDraft", () => {
   it("o campo que a pessoa não mexeu acompanha a versão nova, e o que ela digitou fica", () => {
     const before = training();

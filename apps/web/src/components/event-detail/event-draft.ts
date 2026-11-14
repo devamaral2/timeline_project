@@ -2,6 +2,7 @@ import type { EventDto, EventPriority, HumanEventKind, HumanEventStatus } from "
 import { dayKeyOf, formatTime, zonedDayStart, zonedTimeAt } from "@repo/timeline";
 import type { EditEventInput } from "@/lib/api/events";
 import { statusPatch } from "@/lib/events/event-read-model";
+import { sameList, sortReminders } from "./event-reminders-tags";
 
 /**
  * O formulário de edição do evento de pessoa, como texto. O estado da tela
@@ -24,6 +25,10 @@ export interface EventDraft {
   endDate: string;
   endTime: string;
   description: string;
+  /** Minutos antes do evento, em ordem crescente (`notifyOffsetsMinutes`). */
+  reminders: number[];
+  /** Tags já normalizadas (minúsculas, sem espaços nas pontas). */
+  tags: string[];
 }
 
 export type EventDraftField = keyof EventDraft;
@@ -39,6 +44,8 @@ const FIELD_SET: Record<EventDraftField, true> = {
   endDate: true,
   endTime: true,
   description: true,
+  reminders: true,
+  tags: true,
 };
 export const EVENT_DRAFT_FIELDS = Object.keys(FIELD_SET) as EventDraftField[];
 
@@ -57,6 +64,8 @@ export function draftFromEvent(event: EventDto): EventDraft {
     endDate: end.date,
     endTime: end.time,
     description: event.description,
+    reminders: sortReminders(event.notifyOffsetsMinutes),
+    tags: [...event.tags],
   };
 }
 
@@ -92,6 +101,8 @@ export function buildEventPatch(event: EventDto, draft: EventDraft, now: Date): 
   if (draft.endDate !== base.endDate || draft.endTime !== base.endTime) {
     patch.estimatedFinishAt = instantFromDraft(draft.endDate, draft.endTime);
   }
+  if (!sameList(draft.reminders, base.reminders)) patch.notifyOffsetsMinutes = draft.reminders;
+  if (!sameList(draft.tags, base.tags)) patch.tags = draft.tags;
   return Object.keys(patch).length > 1 ? patch : null;
 }
 
@@ -116,7 +127,13 @@ export function rebaseDraft(draft: EventDraft, previous: EventDto, next: EventDt
   const after = draftFromEvent(next);
   const rebased: EventDraft = { ...draft };
   for (const field of EVENT_DRAFT_FIELDS) {
-    if (draft[field] === before[field]) Object.assign(rebased, { [field]: after[field] });
+    if (sameDraftValue(draft[field], before[field])) Object.assign(rebased, { [field]: after[field] });
   }
   return rebased;
+}
+
+/** Listas se comparam pelo conteúdo: `draftFromEvent` cria arrays novos a cada leitura. */
+function sameDraftValue(a: EventDraft[EventDraftField], b: EventDraft[EventDraftField]): boolean {
+  if (Array.isArray(a) && Array.isArray(b)) return sameList<unknown>(a, b);
+  return a === b;
 }

@@ -89,7 +89,9 @@ describe("modo de edição", () => {
     expect(field("Data de término")).toHaveValue("2026-11-14");
     expect(field("Hora de término")).toHaveValue("19:20");
     expect(field("Descrição")).toHaveValue("Foco em peito e tríceps.");
-    expect(screen.getAllByRole("button").map((button) => button.textContent)).toEqual(["Descartar", "Salvar"]);
+    // O rodapé tem só Descartar e Salvar; as seções de lembretes e tags têm os seus próprios botões.
+    const footer = screen.getByRole("button", { name: "Descartar" }).parentElement as HTMLElement;
+    expect(within(footer).getAllByRole("button").map((button) => button.textContent)).toEqual(["Descartar", "Salvar"]);
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
 
