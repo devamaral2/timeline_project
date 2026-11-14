@@ -1,25 +1,24 @@
-import type { TimelineEventCardDto } from "@repo/contracts";
 import { eventDayKeysOf } from "./event-days";
-import type { TimelineDay } from "./timeline-day";
+import type { AgendaDay, AgendaEventCard } from "./agenda-day";
 
 /**
- * Agrupa os eventos pelos dias civis que ocupam no fuso da timeline: um evento
+ * Agrupa os eventos pelos dias civis que ocupam no fuso da agenda: um evento
  * que atravessa a meia-noite aparece no dia em que comecou e no dia em que
  * terminou. Dias e eventos saem em ordem decrescente e ids repetidos sao
  * descartados, porque janelas vizinhas podem se sobrepor.
  */
 export function groupEventsByDay(
-  events: readonly TimelineEventCardDto[],
+  events: readonly AgendaEventCard[],
   todayKey: string,
-): TimelineDay[] {
-  const uniqueEvents = new Map<string, TimelineEventCardDto>();
+): AgendaDay[] {
+  const uniqueEvents = new Map<string, AgendaEventCard>();
   for (const event of events) {
     if (!uniqueEvents.has(event.id)) uniqueEvents.set(event.id, event);
   }
 
-  const eventsByDay = new Map<string, TimelineEventCardDto[]>();
+  const eventsByDay = new Map<string, AgendaEventCard[]>();
   for (const event of uniqueEvents.values()) {
-    for (const key of eventDayKeysOf(event.startedAt, event.finishedAt)) {
+    for (const key of eventDayKeysOf(event.startedAt, event.estimatedFinishAt)) {
       const bucket = eventsByDay.get(key);
       if (bucket) bucket.push(event);
       else eventsByDay.set(key, [event]);

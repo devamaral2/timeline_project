@@ -1,33 +1,33 @@
-import type { TimelineEventCardDto } from "@repo/contracts";
+import type { AgendaEventCard } from "./agenda-day";
 
 /**
- * Onde o evento esta em relacao a agora. Sao tres estados, e nao dois: desde
- * que a timeline registra tambem o que ainda vai acontecer, "sem finishedAt"
- * deixou de significar "acontecendo agora" -- pode ser um compromisso de
- * amanha, que nao tem cronometro nenhum para mostrar.
+ * Onde o evento esta em relacao a agora, pelo bloco dele na agenda. Sao tres
+ * estados, e nao dois: a agenda registra tambem o que ainda vai acontecer,
+ * entao "sem fim planejado" nao significa "acontecendo agora": pode ser um
+ * compromisso de amanha, que nao tem cronometro nenhum para mostrar.
  */
 export type EventPosition = "upcoming" | "running" | "past";
 
 export function eventPositionOf(
-  event: Pick<TimelineEventCardDto, "startedAt" | "finishedAt">,
+  event: Pick<AgendaEventCard, "startedAt" | "estimatedFinishAt">,
   now: Date = new Date(),
 ): EventPosition {
   const started = new Date(event.startedAt).getTime();
   if (now.getTime() < started) return "upcoming";
-  if (!event.finishedAt) return "running";
-  return new Date(event.finishedAt).getTime() <= now.getTime() ? "past" : "running";
+  if (!event.estimatedFinishAt) return "running";
+  return new Date(event.estimatedFinishAt).getTime() <= now.getTime() ? "past" : "running";
 }
 
-/** Duracao do evento em minutos, ou null enquanto ele nao terminou. */
-export function durationMinutesOf(event: TimelineEventCardDto): number | null {
-  if (!event.finishedAt) return null;
+/** Duracao do bloco do evento em minutos, ou null quando ele nao tem fim planejado. */
+export function durationMinutesOf(event: AgendaEventCard): number | null {
+  if (!event.estimatedFinishAt) return null;
   const started = new Date(event.startedAt).getTime();
-  const finished = new Date(event.finishedAt).getTime();
+  const finished = new Date(event.estimatedFinishAt).getTime();
   return Math.round((finished - started) / 60000);
 }
 
 /** Soma das duracoes dos eventos ja encerrados, em minutos. */
-export function trackedMinutesOf(events: readonly TimelineEventCardDto[]): number {
+export function trackedMinutesOf(events: readonly AgendaEventCard[]): number {
   return events.reduce((total, event) => total + (durationMinutesOf(event) ?? 0), 0);
 }
 
@@ -39,7 +39,7 @@ export function trackedMinutesOf(events: readonly TimelineEventCardDto[]): numbe
 export const MIN_DURATION_RATIO = 0.06;
 
 /** Maior duracao entre os eventos ja encerrados, em minutos. */
-export function longestDurationOf(events: readonly TimelineEventCardDto[]): number {
+export function longestDurationOf(events: readonly AgendaEventCard[]): number {
   return events.reduce((longest, event) => Math.max(longest, durationMinutesOf(event) ?? 0), 0);
 }
 
@@ -51,7 +51,7 @@ export function longestDurationOf(events: readonly TimelineEventCardDto[]): numb
  * desenhar uma barra qualquer seria inventar um numero.
  */
 export function durationRatioOf(
-  event: TimelineEventCardDto,
+  event: AgendaEventCard,
   longestMinutes: number,
 ): number | null {
   const minutes = durationMinutesOf(event);
@@ -69,8 +69,8 @@ export function elapsedSecondsOf(startedAt: string, now: Date = new Date()): num
 /**
  * A leitura do cronometro: `MM:SS` na primeira hora, `H:MM:SS` daí em diante.
  *
- * E de proposito que ela nao se pareca com o `durationLabel` que vem da API
- * ("1h 25m"): aquele e o registro do que ja aconteceu, este e um numero que
+ * E de proposito que ela nao se pareca com a duracao escrita de um bloco
+ * ("1h 25m"): aquela e o tamanho do que foi planejado, este e um numero que
  * ainda esta subindo. Formatos diferentes para coisas diferentes.
  */
 export function formatStopwatch(totalSeconds: number): string {
@@ -89,7 +89,7 @@ export function formatStopwatch(totalSeconds: number): string {
  * ainda nem comecou -- um evento futuro ficaria travado em `0:00`, o que le
  * como quebrado e nao como "ainda nao".
  */
-export function stopwatchOf(event: TimelineEventCardDto, now: Date = new Date()): string | null {
+export function stopwatchOf(event: AgendaEventCard, now: Date = new Date()): string | null {
   if (eventPositionOf(event, now) !== "running") return null;
   return formatStopwatch(elapsedSecondsOf(event.startedAt, now));
 }

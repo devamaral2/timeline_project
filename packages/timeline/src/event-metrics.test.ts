@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import type { TimelineEventCardDto } from "@repo/contracts";
+import type { AgendaEventCard } from "./agenda-day";
 import {
   MIN_DURATION_RATIO,
   durationRatioOf,
@@ -11,20 +11,23 @@ import {
   trackedMinutesOf,
 } from "./event-metrics";
 
-function event(startedAt: string, finishedAt: string | null): TimelineEventCardDto {
+function event(startedAt: string, estimatedFinishAt: string | null): AgendaEventCard {
   return {
-    id: `${startedAt}-${finishedAt}`,
+    id: `${startedAt}-${estimatedFinishAt}`,
+    actor: "human",
     kind: "routine",
-    noteTypes: [],
-    missed: false,
+    priority: "medium",
+    longRunning: false,
+    artifactTypes: [],
+    parentEventIds: [],
+    blockedByEventIds: [],
+    revision: 1,
     notifyOffsetsMinutes: [],
     name: "evento",
     description: "",
     startedAt,
-    finishedAt: finishedAt ?? undefined,
-    durationLabel: "",
+    estimatedFinishAt: estimatedFinishAt ?? undefined,
     tags: [],
-    interruptions: [],
   };
 }
 

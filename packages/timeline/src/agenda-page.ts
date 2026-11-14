@@ -1,8 +1,8 @@
-import type { TimelineEventCardDto, TimelineEventPageDto } from "@repo/contracts";
+import type { AgendaPageDto, EventCardDto } from "@repo/contracts";
 
 /** Os eventos ja carregados de um dia e o cursor da proxima pagina, se houver. */
-export interface TimelinePageState {
-  items: TimelineEventCardDto[];
+export interface AgendaPageState {
+  items: EventCardDto[];
   nextCursor?: string;
 }
 
@@ -15,10 +15,10 @@ export interface TimelinePageState {
  * resposta, acabou a lista: e por isso que `nextCursor` some em vez de virar
  * string vazia.
  */
-export function mergeTimelinePage(
-  current: readonly TimelineEventCardDto[],
-  page: TimelineEventPageDto,
-): TimelinePageState {
+export function mergeAgendaPage(
+  current: readonly EventCardDto[],
+  page: AgendaPageDto,
+): AgendaPageState {
   const merged = [...current];
   const seen = new Set(current.map((event) => event.id));
 

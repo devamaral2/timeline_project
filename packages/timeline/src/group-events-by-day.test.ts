@@ -1,28 +1,31 @@
 import { expect, test } from "vitest";
-import type { TimelineEventCardDto } from "@repo/contracts";
+import type { AgendaEventCard } from "./agenda-day";
 import { groupEventsByDay } from "./group-events-by-day";
 
-function anEvent(overrides: Partial<TimelineEventCardDto> = {}): TimelineEventCardDto {
+function anEvent(overrides: Partial<AgendaEventCard> = {}): AgendaEventCard {
   return {
     id: "event-1",
+    actor: "human",
     kind: "routine",
-    noteTypes: [],
-    missed: false,
+    priority: "medium",
+    longRunning: false,
+    artifactTypes: [],
+    parentEventIds: [],
+    blockedByEventIds: [],
+    revision: 1,
     notifyOffsetsMinutes: [],
     name: "Bloco de trabalho",
     description: "",
     startedAt: "2026-08-19T12:00:00.000Z",
-    finishedAt: "2026-08-19T13:00:00.000Z",
-    durationLabel: "1h 00m",
+    estimatedFinishAt: "2026-08-19T13:00:00.000Z",
     tags: [],
-    interruptions: [],
     ...overrides,
   };
 }
 
 test("keeps a late night event on its Sao Paulo day, not the UTC one", () => {
   const days = groupEventsByDay(
-    [anEvent({ id: "late", startedAt: "2026-08-15T23:30:00-03:00", finishedAt: undefined })],
+    [anEvent({ id: "late", startedAt: "2026-08-15T23:30:00-03:00", estimatedFinishAt: undefined })],
     "2026-08-19",
   );
 
@@ -33,9 +36,9 @@ test("keeps a late night event on its Sao Paulo day, not the UTC one", () => {
 test("groups events by day in descending order and flags today", () => {
   const days = groupEventsByDay(
     [
-      anEvent({ id: "a", startedAt: "2026-08-17T12:00:00-03:00", finishedAt: undefined }),
-      anEvent({ id: "b", startedAt: "2026-08-19T09:00:00-03:00", finishedAt: undefined }),
-      anEvent({ id: "c", startedAt: "2026-08-19T18:00:00-03:00", finishedAt: undefined }),
+      anEvent({ id: "a", startedAt: "2026-08-17T12:00:00-03:00", estimatedFinishAt: undefined }),
+      anEvent({ id: "b", startedAt: "2026-08-19T09:00:00-03:00", estimatedFinishAt: undefined }),
+      anEvent({ id: "c", startedAt: "2026-08-19T18:00:00-03:00", estimatedFinishAt: undefined }),
     ],
     "2026-08-19",
   );
@@ -49,8 +52,8 @@ test("groups events by day in descending order and flags today", () => {
 test("drops duplicated ids coming from overlapping windows", () => {
   const days = groupEventsByDay(
     [
-      anEvent({ id: "same", startedAt: "2026-08-19T09:00:00-03:00", finishedAt: undefined }),
-      anEvent({ id: "same", startedAt: "2026-08-19T09:00:00-03:00", finishedAt: undefined }),
+      anEvent({ id: "same", startedAt: "2026-08-19T09:00:00-03:00", estimatedFinishAt: undefined }),
+      anEvent({ id: "same", startedAt: "2026-08-19T09:00:00-03:00", estimatedFinishAt: undefined }),
     ],
     "2026-08-19",
   );
@@ -64,7 +67,7 @@ test("lists an event that crosses midnight on the day it started and the day it 
       anEvent({
         id: "night",
         startedAt: "2026-08-18T22:00:00-03:00",
-        finishedAt: "2026-08-19T02:00:00-03:00",
+        estimatedFinishAt: "2026-08-19T02:00:00-03:00",
       }),
     ],
     "2026-08-19",
@@ -80,7 +83,7 @@ test("does not carry an event ending exactly at midnight into the next day", () 
       anEvent({
         id: "until-midnight",
         startedAt: "2026-08-18T22:00:00-03:00",
-        finishedAt: "2026-08-19T00:00:00-03:00",
+        estimatedFinishAt: "2026-08-19T00:00:00-03:00",
       }),
     ],
     "2026-08-19",
