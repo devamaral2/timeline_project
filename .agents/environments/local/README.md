@@ -1,7 +1,8 @@
 # Ambiente local efêmero para testes de IA
 
 `compose.yaml` descreve um ambiente de desenvolvimento separado da aplicação
-principal: PostgreSQL, RabbitMQ, Grafana e placeholders para auth, api e web.
+principal: PostgreSQL, Grafana e placeholders para auth, api e web. A fila de
+jobs de IA é uma tabela do próprio PostgreSQL, então não há broker.
 
 O compose usa um nome de projeto próprio e portas vinculadas a `127.0.0.1`.
 Nada é publicado para a rede e nenhum serviço remoto é necessário.

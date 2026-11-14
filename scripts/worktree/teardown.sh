@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Remove uma worktree: encerra os servidores de dev, apaga as bases dela no
-# Postgres compartilhado (ou o container proprio, no modelo antigo), apaga as
-# filas do slug e da branch no RabbitMQ, remove a worktree do git e atualiza Caddy e
-# /etc/hosts. Destrutivo: apaga os dados daquela worktree.
+# Postgres compartilhado (ou o container proprio, no modelo antigo), remove a
+# worktree do git e atualiza Caddy e /etc/hosts. Destrutivo: apaga os dados
+# daquela worktree (a fila de jobs de IA e uma tabela da base e vai junto).
 #
 # Precisa do ambiente do 1Password (use `pnpm worktree:teardown <caminho>`).
 # Recusa worktree com mudancas nao commitadas, salvo TEARDOWN_FORCE=1.
@@ -54,12 +54,6 @@ if [ -n "$SLUG" ]; then
   else
     echo "Aviso: Postgres compartilhado parado; as bases de '$SLUG' ficaram." >&2
   fi
-  # As filas de jobs de IA usam a branch (so caracteres validos) como prefixo.
-  BRANCH_PREFIX="$(git -C "$WORKTREE_PATH" rev-parse --abbrev-ref HEAD 2>/dev/null | tr -cd 'a-zA-Z0-9._-')"
-  for prefix in "$SLUG" "$BRANCH_PREFIX"; do
-    [ -n "$prefix" ] && [ "$prefix" != "HEAD" ] || continue
-    bash "$SCRIPT_DIR/rabbitmq.sh" delete "$prefix" || echo "Aviso: nao consegui limpar as filas de '$prefix'." >&2
-  done
 elif [ -n "$PROJECT_NAME" ]; then
   echo "Derrubando Postgres do projeto '$PROJECT_NAME' (container + volume)..."
   docker compose --env-file "$ENV_FILE" --project-name "$PROJECT_NAME" -f "$WORKTREE_PATH/infra/docker-compose.local.yml" down -v || true

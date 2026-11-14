@@ -19,8 +19,9 @@ rodarem a app ao mesmo tempo sem isolamento, uma pisa na porta e no banco da
 outra. `scripts/worktree/` resolve isso: cada worktree ganha seu proprio
 `.env.local` com portas livres calculadas na hora, bases proprias para a API
 (`<worktree>`) e para o Auth (`<worktree>_auth`) dentro do Postgres
-compartilhado (porta 54391), fila `<worktree>.health` no RabbitMQ
-compartilhado e o dominio `<worktree>.braid.local` (Caddy, porta 8080).
+compartilhado (porta 54391) e o dominio `<worktree>.braid.local` (Caddy,
+porta 8080). A fila de jobs de IA e a tabela `jobs` da base da API, entao ja
+nasce isolada por worktree.
 
 ## Passo a passo
 
@@ -30,7 +31,7 @@ compartilhado e o dominio `<worktree>.braid.local` (Caddy, porta 8080).
    ```
    Se `nao-provisionada`, rode `bash scripts/worktree/provision-env.sh` (ou
    `pnpm worktree:provision`) de dentro da worktree. Isso gera o
-   `.env.local`, cria as bases e a fila da worktree, roda as migrations, cria o
+   `.env.local`, cria as bases da worktree, roda as migrations, cria o
    admin `admin@admin.com`, builda os pacotes e sobe web/api/auth. Leva um tempo na primeira vez — normal.
    Se voce esta na worktree principal do checkout (a original, nao uma criada
    com `git worktree add`), o script se recusa a rodar de proposito: a
@@ -74,9 +75,9 @@ compartilhado e o dominio `<worktree>.braid.local` (Caddy, porta 8080).
      que a mudanca afeta, nao so a tela inicial.
 
 6. **Ao terminar**, encerre os processos de dev que voce subiu em background
-   (as bases e a fila da worktree ficam; isso e normal entre sessoes). Só rode
+   (as bases da worktree ficam; isso e normal entre sessoes). Só rode
    `pnpm worktree:teardown <caminho>` quando for remover a worktree de vez —
-   isso apaga as bases e as filas dela.
+   isso apaga as bases dela.
 
 ## O que nao fazer
 

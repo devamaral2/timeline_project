@@ -13,18 +13,6 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
 
-  rabbitmq:
-    image: rabbitmq:3.13-management-alpine
-    profiles: [ia-staging]
-    environment:
-      RABBITMQ_DEFAULT_USER: timeline_staging
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?set RABBITMQ_PASSWORD outside Git}
-    ports:
-      - "127.0.0.1:${IA_STAGING_RABBITMQ_PORT:-18001}:5672"
-      - "127.0.0.1:${IA_STAGING_RABBITMQ_MANAGEMENT_PORT:-18002}:15672"
-    volumes:
-      - rabbitmq-data:/var/lib/rabbitmq
-
   grafana:
     image: grafana/grafana:11.2.0
     profiles: [ia-staging]
@@ -39,12 +27,12 @@ services:
   auth:
     image: ${AUTH_IMAGE:?set AUTH_IMAGE outside Git}
     profiles: [ia-staging-app]
-    depends_on: [postgres, rabbitmq]
+    depends_on: [postgres]
 
   api:
     image: ${API_IMAGE:?set API_IMAGE outside Git}
     profiles: [ia-staging-app]
-    depends_on: [postgres, rabbitmq]
+    depends_on: [postgres]
 
   web:
     image: ${WEB_IMAGE:?set WEB_IMAGE outside Git}
@@ -53,5 +41,4 @@ services:
 
 volumes:
   postgres-data:
-  rabbitmq-data:
   grafana-data:

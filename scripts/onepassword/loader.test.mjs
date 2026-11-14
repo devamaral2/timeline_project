@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readEnvKeys, resolveEnvironmentWithClient, applyLocalOverrides, scopeKeys, defaultScope, queuePrefixFromBranch } from "./loader.mjs";
+import { readEnvKeys, resolveEnvironmentWithClient, applyLocalOverrides, scopeKeys, defaultScope } from "./loader.mjs";
 
 test("uses the env example as the complete allowlist", () => {
   const keys = readEnvKeys();
@@ -170,19 +170,13 @@ test("defines minimal production scopes without requiring mobile or test variabl
     "DATABASE_URL",
     "AUTH_SERVICE_URL",
     "AUTH_INTERNAL_SERVICE_KEY",
-    "RABBITMQ_URL",
-    "AI_JOBS_QUEUE_PREFIX",
   ]);
+  // A fila de jobs de IA e uma tabela do Postgres: so ajustes opcionais, nenhum broker.
+  assert.ok(scopeKeys("api-runtime").optional.includes("AI_JOBS_POLL_MS"));
   assert.ok(scopeKeys("auth-runtime").required.includes("AUTH_KEY_ENCRYPTION_KEY"));
   assert.deepEqual(scopeKeys("web-build").required, ["BACKEND_URL", "AUTH_SERVICE_URL"]);
   assert.deepEqual(scopeKeys("hermes-runtime").required, ["HERMES_API_KEY", "OPENROUTER_API_KEY", "MCP_TOKEN"]);
   assert.deepEqual(scopeKeys("mcp-runtime").required, ["MCP_TOKEN", "AUTH_INTERNAL_SERVICE_KEY", "MCP_OWNER_USER_ID"]);
-});
-
-test("derives the AI jobs queue prefix from the branch, dropping invalid characters", () => {
-  assert.equal(queuePrefixFromBranch("feat/durable-ai-job-queues"), "featdurable-ai-job-queues");
-  assert.equal(queuePrefixFromBranch("fix/ação#12 v1.0"), "fixao12v1.0");
-  assert.equal(queuePrefixFromBranch("///"), "");
 });
 
 test("the default scope loads the Hermes key when present but does not require it", () => {
