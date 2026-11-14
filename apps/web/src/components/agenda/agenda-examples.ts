@@ -1,3 +1,4 @@
+import type { EventCardDto } from "@repo/contracts";
 import { weekdayIndexOf } from "@repo/timeline";
 import type { NotificationOffsetMinutes } from "@/lib/api/contracts";
 
@@ -30,6 +31,8 @@ export interface ExampleEvent {
   /** Sem horário de término registrado, como o contador do app principal. */
   running?: boolean;
   notifyOffsetsMinutes?: NotificationOffsetMinutes[];
+  /** Só nos eventos da API: o cartão do contrato, que a linha única desenha. A prévia não o tem. */
+  card?: EventCardDto;
 }
 
 const todayEvents: ExampleEvent[] = [

@@ -9,11 +9,10 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { WeekStrip } from "@/components/events/WeekStrip";
 import { requestHubOpen } from "@/components/hub/hub-events";
 import page from "@/components/ui/page.module.css";
-import { authedFetch } from "@/lib/api/authed-fetch";
+import { listAgenda } from "@/lib/api/events";
 import { slideIn } from "@/lib/motion/enter";
 import { reflow } from "@/lib/motion/view-transition";
-import { briefDate, weekdayDate } from "@/lib/dates/day-labels";
-import type { TimelineEventCardDto, TimelineEventPageDto } from "@/lib/api/contracts";
+import { briefDate } from "@/lib/dates/day-labels";
 import { useNow } from "@/lib/events/use-now";
 import { useSessionState } from "@/lib/session/use-session";
 import { useAiJobRefresh } from "@/lib/ai-jobs/use-ai-job-refresh";
@@ -131,16 +130,7 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
       try {
         const from = zonedDayStart(rangeStart).toISOString();
         const to = zonedDayEnd(rangeEnd).toISOString();
-        const loaded: TimelineEventCardDto[] = [];
-        let cursor: string | undefined;
-
-        do {
-          const params = new URLSearchParams({ from, to, limit: "100" });
-          if (cursor) params.set("cursor", cursor);
-          const response = await authedFetch<TimelineEventPageDto>(`/api/events?${params.toString()}`);
-          loaded.push(...response.items);
-          cursor = response.nextCursor;
-        } while (cursor);
+        const loaded = await listAgenda({ from, to });
 
         if (cancelled) return;
         // Um evento que veio da noite anterior tambem tem chave fora da janela; esse dia
@@ -323,7 +313,6 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
     <main id="conteudo" className={page.frame}>
       <section className={`${page.lead} ${styles.lead}`} aria-label="O dia em foco">
         <div className={styles.dateRow}>
-          <h1 key={selectedDay} className={`${page.eyebrow} ${styles.dateRoll}`}>{weekdayDate(selectedDay)}</h1>
           <div className={styles.phoneOptions}><AgendaOptions {...options} withModes align="end" /></div>
         </div>
 

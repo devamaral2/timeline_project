@@ -2,6 +2,7 @@ import { formatTime, mediumDate, relativeDayLabel, shortDate } from "@repo/timel
 import { Plus } from "lucide-react";
 import Link from "next/link";
 import type { CSSProperties } from "react";
+import { EventRow } from "@/components/events/event-row";
 import { ICON_STROKE_WIDTH, visualForItemType } from "@/components/events/event-visuals";
 import type { FreeWindow } from "@/components/hub/hub-events";
 import { ListSkeleton } from "@/components/ui/list-skeleton";
@@ -100,6 +101,8 @@ export function AgendaDay({ dayKey, now, tasks, missedEvents, onSelectEvent, onP
           {rows.map((row) => {
             if (row.kind === "free") return <FreeTimeRow key={`free-${row.slot.startMs}`} slot={row.slot} dayKey={dayKey} now={now} onPlan={onPlanFreeWindow} />;
             const { event, index } = row;
+            // Evento da API: a linha única desenha o cartão do contrato; a prévia sem usuário segue com o desenho de exemplo.
+            if (userId && event.card) return <EventRow key={event.card.id} card={event.card} userId={userId} now={new Date(now)} />;
             const { Icon, label } = visualForItemType(event.type);
             const task = event.task ? tasks[event.task.id] ?? event.task : undefined;
             const missed = missedEvents[`${dayKey}:${event.id ?? event.name}`] ?? event.missed ?? false;
