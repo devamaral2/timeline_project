@@ -2,11 +2,14 @@
 
 import { ChevronDown, ListChecks } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { EventCardDto } from "@repo/contracts";
+import type { EventCardDto, EventStatus, HumanEventStatus } from "@repo/contracts";
+import { agendaRefreshEvent } from "@/components/agenda/agenda-refresh";
 import { EventRow } from "@/components/events/event-row";
 import { ListSkeleton } from "@/components/ui/list-skeleton";
 import page from "@/components/ui/page.module.css";
-import { listTrackedEvents } from "@/lib/api/events";
+import { ApiRequestError } from "@/lib/api/client-request";
+import { listTrackedEvents, updateEvent } from "@/lib/api/events";
+import { statusPatch } from "@/lib/events/event-read-model";
 import { useNow } from "@/lib/events/use-now";
 import {
   groupTrackedEvents,
@@ -21,6 +24,17 @@ import styles from "./tasks.module.css";
 function toggleIn<T>(list: T[], value: T): T[] {
   return list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
 }
+
+/** Estados de pessoa que o glifo reabre: feito, cancelado e não realizado. */
+const CLOSED_STATUSES: ReadonlySet<EventStatus> = new Set<EventStatus>(["done", "cancel", "missed"]);
+
+/** Concluir ou reabrir pelo glifo: o que está em aberto vai a `done`; o fechado volta a `todo`. */
+function toggledStatus(card: EventCardDto): HumanEventStatus {
+  return card.status !== undefined && CLOSED_STATUSES.has(card.status) ? "todo" : "done";
+}
+
+const STALE_MESSAGE = "Esta tarefa mudou em outro lugar. Carregamos a lista atual; confira e tente de novo.";
+const FAILURE_MESSAGE = "Não foi possível trocar o status. Tente novamente.";
 
 /** "9 tarefas abertas": a legenda em mono no topo da tela. */
 function openTasksLabel(open: number): string {
@@ -38,24 +52,54 @@ export function TasksScreen({ userId }: { userId: string }) {
   const now = useNow();
   const [cards, setCards] = useState<EventCardDto[] | null>(null);
   const [error, setError] = useState(false);
-  const [reloadKey, setReloadKey] = useState(0);
   const [expanded, setExpanded] = useState<TaskGroupKey[]>([]);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const router = useMotionRouter();
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: reloadKey força o refetch.
+  /** Relê a lista inteira. Falha vira o aviso de carregamento com "Tentar de novo". */
+  const refresh = useCallback(async () => {
+    try {
+      setCards(await listTrackedEvents());
+      setError(false);
+    } catch {
+      setError(true);
+    }
+  }, []);
+
   useEffect(() => {
-    let cancelled = false;
-    setError(false);
-    listTrackedEvents()
-      .then((data) => { if (!cancelled) setCards(data); })
-      .catch(() => { if (!cancelled) setError(true); });
-    return () => { cancelled = true; };
-  }, [reloadKey]);
+    void refresh();
+  }, [refresh]);
 
   const retry = useCallback(() => {
+    setError(false);
     setCards(null);
-    setReloadKey((key) => key + 1);
-  }, []);
+    void refresh();
+  }, [refresh]);
+
+  /**
+   * Troca o status pelo glifo de um evento de pessoa. Manda a revisão lida;
+   * revisão velha relê a lista e avisa. Evento de agente não muda status.
+   */
+  async function toggleStatus(card: EventCardDto) {
+    if (saving || card.actor !== "human" || card.status === undefined) return;
+    setSaving(true);
+    setNotice(null);
+    try {
+      await updateEvent(card.id, statusPatch(card, toggledStatus(card), new Date()));
+      window.dispatchEvent(new Event(agendaRefreshEvent));
+      await refresh();
+    } catch (cause) {
+      if (cause instanceof ApiRequestError && cause.kind === "stale_revision") {
+        await refresh();
+        setNotice(STALE_MESSAGE);
+      } else {
+        setNotice(FAILURE_MESSAGE);
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
 
   // Uma série aparece uma vez; a fração de subtarefas conta só as linhas da lista.
   const rows = useMemo(() => oneRowPerSeries(cards ?? []), [cards]);
@@ -73,6 +117,7 @@ export function TasksScreen({ userId }: { userId: string }) {
       </section>
 
       <section className={`${page.body} ${styles.body}`} aria-label="Lista de tarefas">
+        {notice ? <p role="alert" className={styles.message}>{notice}</p> : null}
         {error ? (
           <p role="alert" className={styles.message}>Não foi possível carregar as tarefas.<button type="button" className={styles.retry} onClick={retry}>Tentar de novo</button></p>
         ) : !cards || !now ? (
@@ -110,6 +155,7 @@ export function TasksScreen({ userId }: { userId: string }) {
                           now={now}
                           ruleInPlaceOfTime={showsSeriesRule(card)}
                           subtasks={subtaskProgress(rows, card.id)}
+                          onStatusClick={(target) => void toggleStatus(target)}
                         />
                       ))}
                     </ul>

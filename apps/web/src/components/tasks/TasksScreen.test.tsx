@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import type { EventDto } from "@repo/contracts";
 import { createFakeApi } from "@/test/fake-api";
@@ -169,4 +169,71 @@ test("um evento em espera com bloqueios diz por quantos eventos espera", async (
 
   const pneu = (await screen.findByRole("link", { name: /Trocar o pneu/ })).closest("li") as HTMLElement;
   expect(within(pneu).getByText("Espera por 2 eventos")).toBeInTheDocument();
+});
+
+const glyphOf = (name: string) => new RegExp(`Mudar status de “${name}”`);
+
+test("tocar no glifo de um evento em aberto envia a conclusão com a revisão lida e a linha vai para Feitas", async () => {
+  const api = serve([eventFixture({ id: "luz", name: "Pagar conta de luz", status: "todo", revision: 3 })]);
+  render(<TasksScreen userId="user-1" />);
+
+  const row = (await screen.findByRole("link", { name: /Pagar conta de luz/ })).closest("li") as HTMLElement;
+  fireEvent.click(within(row).getByRole("button", { name: glyphOf("Pagar conta de luz") }));
+
+  await waitFor(() => expect(api.calls.some((call) => call.method === "PATCH")).toBe(true));
+  const patch = api.calls.find((call) => call.method === "PATCH");
+  expect(patch?.pathname).toBe("/api/events/luz");
+  // O relógio falso avança sozinho: confere o instante pelo começo (13:00 UTC = 10:00 em São Paulo).
+  expect(patch?.body).toMatchObject({ expectedRevision: 3, status: "done" });
+  expect((patch?.body as { finishedAt: string }).finishedAt).toMatch(/^2026-09-14T13:00:00/);
+
+  await waitFor(() => expect(screen.queryByRole("region", { name: /A fazer/ })).not.toBeInTheDocument());
+  fireEvent.click(screen.getByRole("button", { name: /Feitas/ }));
+  expect(within(screen.getByRole("region", { name: /Feitas/ })).getByRole("link", { name: /Pagar conta de luz/ })).toBeInTheDocument();
+});
+
+test("tocar no glifo de um evento encerrado reabre para a fazer e limpa a conclusão", async () => {
+  const api = serve([
+    eventFixture({ id: "relatorio", name: "Enviar relatório", status: "done", revision: 4, finishedAt: "2026-09-13T15:00:00-03:00" }),
+    eventFixture({ id: "assinatura", name: "Renovar assinatura", status: "cancel", revision: 2 }),
+  ]);
+  render(<TasksScreen userId="user-1" />);
+
+  fireEvent.click(await screen.findByRole("button", { name: /Feitas/ }));
+  fireEvent.click(screen.getByRole("button", { name: glyphOf("Enviar relatório") }));
+
+  await waitFor(() => expect(api.calls.some((call) => call.method === "PATCH")).toBe(true));
+  expect(api.calls.find((call) => call.method === "PATCH")?.body).toEqual({ expectedRevision: 4, status: "todo", finishedAt: null });
+  await waitFor(() => expect(within(screen.getByRole("region", { name: /A fazer/ })).getByRole("link", { name: /Enviar relatório/ })).toBeInTheDocument());
+
+  fireEvent.click(screen.getByRole("button", { name: /Encerradas/ }));
+  fireEvent.click(screen.getByRole("button", { name: glyphOf("Renovar assinatura") }));
+  await waitFor(() => expect(api.calls.filter((call) => call.method === "PATCH")).toHaveLength(2));
+  expect(api.calls.filter((call) => call.method === "PATCH")[1]?.body).toEqual({ expectedRevision: 2, status: "todo" });
+});
+
+test("o glifo de um evento de agente não aparece como botão e não muda status", async () => {
+  const api = serve([eventFixture({ id: "pesquisa", name: "Pesquisar voos", actor: "agent", kind: "request", status: "running" })]);
+  render(<TasksScreen userId="user-1" />);
+
+  const row = (await screen.findByRole("link", { name: /Pesquisar voos/ })).closest("li") as HTMLElement;
+  expect(within(row).queryByRole("button")).not.toBeInTheDocument();
+  expect(api.calls.some((call) => call.method === "PATCH")).toBe(false);
+});
+
+test("revisão desatualizada: a tela avisa, relê a lista e não grava nada", async () => {
+  const api = serve([eventFixture({ id: "luz", name: "Pagar conta de luz", status: "todo", revision: 1 })]);
+  render(<TasksScreen userId="user-1" />);
+
+  const row = (await screen.findByRole("link", { name: /Pagar conta de luz/ })).closest("li") as HTMLElement;
+  // Outra tela editou a tarefa depois da leitura: a revisão no servidor passa a 2.
+  const events = api.store.table<EventDto>("events");
+  events.set("luz", { ...(events.get("luz") as EventDto), revision: 2 });
+
+  fireEvent.click(within(row).getByRole("button", { name: glyphOf("Pagar conta de luz") }));
+
+  expect(await screen.findByRole("alert")).toHaveTextContent("Esta tarefa mudou em outro lugar");
+  expect(api.calls.filter((call) => call.method === "PATCH")).toHaveLength(1);
+  expect(api.calls.find((call) => call.method === "PATCH")?.body).toMatchObject({ expectedRevision: 1 });
+  expect(within(screen.getByRole("region", { name: /A fazer/ })).getByRole("link", { name: /Pagar conta de luz/ })).toBeInTheDocument();
 });

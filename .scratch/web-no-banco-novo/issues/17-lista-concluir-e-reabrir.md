@@ -4,15 +4,15 @@
 
 **Blocked by:** 15 (Lista de tarefas lê a API nova, em seis grupos)
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Leia antes:** o [README](README.md) desta pasta. Spec: história 13, “Lista de tarefas”.
 
-- [ ] O toque no glifo de um evento em aberto o leva a `done`; o de um evento `done`, `cancel` ou `missed` o leva a `todo`.
-- [ ] A edição envia o status novo e a revisão lida.
-- [ ] Depois da edição, a linha muda de grupo.
-- [ ] Diante de revisão desatualizada, a tela avisa e recarrega a lista.
-- [ ] O glifo de um evento de agente não muda status.
-- [ ] O teste de tela confere a edição enviada e o grupo depois dela.
-- [ ] A linha desta tela em `docs/mobile-parity.md` foi atualizada, com o Android marcado como em progresso.
-- [ ] Os testes novos passam, e `pnpm run test:unit` e `pnpm run typecheck` continuam verdes.
+- [x] O toque no glifo de um evento em aberto o leva a `done`; o de um evento `done`, `cancel` ou `missed` o leva a `todo`.
+- [x] A edição envia o status novo e a revisão lida.
+- [x] Depois da edição, a linha muda de grupo.
+- [x] Diante de revisão desatualizada, a tela avisa e recarrega a lista.
+- [x] O glifo de um evento de agente não muda status.
+- [x] O teste de tela confere a edição enviada e o grupo depois dela.
+- [x] A linha desta tela em `docs/mobile-parity.md` foi atualizada, com o Android marcado como em progresso.
+- [x] Os testes novos passam, e `pnpm run test:unit` e `pnpm run typecheck` continuam verdes.
