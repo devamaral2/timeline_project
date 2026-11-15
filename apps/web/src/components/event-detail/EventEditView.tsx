@@ -6,17 +6,28 @@ import { agendaRefreshEvent } from "@/components/agenda/agenda-refresh";
 import { DetailFrame, DetailMessage } from "@/components/detail/detail-parts";
 import { ApiRequestError } from "@/lib/api/client-request";
 import { createEvent, newIdempotencyKey, updateEvent } from "@/lib/api/events";
+import { createRecurrence, editRecurrence } from "@/lib/api/recurrences";
 import { buildCreateEventInput, buildEventPatch, type EventDraftErrors, validateEventDraft } from "./event-draft";
+import {
+  type RecurrenceErrors,
+  browserTimeZone,
+  buildCreateRecurrenceInput,
+  planSeriesEdit,
+  validateNewRecurrence,
+  validateSeriesEdit,
+} from "./event-recurrence-draft";
 import { EventEditArtifactsSection } from "./EventEditArtifactsSection";
 import { EventEditBlocksSection } from "./EventEditBlocksSection";
 import { EventEditHeaderFields } from "./EventEditHeaderFields";
 import { EventEditInfoSection } from "./EventEditInfoSection";
 import { EventEditPersistentSection } from "./EventEditPersistentSection";
+import { EventEditRecurrenceSection } from "./EventEditRecurrenceSection";
 import { EventEditReminderSection } from "./EventEditReminderSection";
 import { EventEditSubtaskSection } from "./EventEditSubtaskSection";
 import { EventEditTagSection } from "./EventEditTagSection";
 import { planSubtaskChanges, subtaskPlanHasWork, validateSubtaskRows } from "./event-subtask-draft";
 import { useEventDraft } from "./use-event-draft";
+import { useRecurrenceDraft } from "./use-recurrence-draft";
 import { useSubtaskDraft } from "./use-subtask-draft";
 import styles from "./event-edit.module.css";
 
@@ -46,6 +57,9 @@ const CREATE_FAILED_MESSAGE = "Não foi possível criar o evento. Tente novament
 export function EventEditView({ event: loaded, initialName, onReload, onLeave }: EventEditViewProps) {
   const { event, draft, setField } = useEventDraft(loaded ?? null, initialName);
   const subtasks = useSubtaskDraft(event);
+  // A recorrência é outra chamada, com a revisão da série: o rascunho dela fica fora do `EventDraft`.
+  const recurrence = useRecurrenceDraft(event?.recurrence?.id ?? null);
+  const [recurrenceErrors, setRecurrenceErrors] = useState<RecurrenceErrors>({});
   const [subtaskErrors, setSubtaskErrors] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<EventDraftErrors>({});
   const [saving, setSaving] = useState(false);
@@ -59,9 +73,14 @@ export function EventEditView({ event: loaded, initialName, onReload, onLeave }:
     if (busy.current) return;
     const problems = validateEventDraft(draft);
     const rowProblems = validateSubtaskRows(subtasks.rows);
+    // A regra vale na criação (Salvar cria a série) e na troca da série de uma ocorrência; sem a linha (tarefa persistente), não vale.
+    const ruleProblems: RecurrenceErrors = event
+      ? recurrence.series && recurrence.draft && !draft.longRunning ? validateSeriesEdit(recurrence.series, recurrence.draft) : {}
+      : recurrence.draft ? validateNewRecurrence(recurrence.draft, draft) : {};
     setErrors(problems);
     setSubtaskErrors(rowProblems);
-    if (Object.keys(problems).length > 0 || Object.keys(rowProblems).length > 0) return;
+    setRecurrenceErrors(ruleProblems);
+    if (Object.keys(problems).length > 0 || Object.keys(rowProblems).length > 0 || Object.keys(ruleProblems).length > 0) return;
 
     const patch = event ? buildEventPatch(event, draft, new Date()) : null;
     const plan = planSubtaskChanges(subtasks.rows);
@@ -69,7 +88,11 @@ export function EventEditView({ event: loaded, initialName, onReload, onLeave }:
     const parentPatch = event && plan.removedIds.length > 0
       ? { ...(patch ?? { expectedRevision: event.revision }), subtaskEventIds: plan.keptIds }
       : patch;
-    if (event && !parentPatch && !subtaskPlanHasWork(plan)) {
+    const seriesPatch = event && recurrence.series && recurrence.draft && !draft.longRunning
+      ? planSeriesEdit(recurrence.series, recurrence.draft)
+      : null;
+    const newSeries = !event && recurrence.draft ? buildCreateRecurrenceInput(recurrence.draft, draft, browserTimeZone()) : null;
+    if (event && !parentPatch && !seriesPatch && !subtaskPlanHasWork(plan)) {
       onLeave();
       return;
     }
@@ -79,8 +102,12 @@ export function EventEditView({ event: loaded, initialName, onReload, onLeave }:
     setFailure(null);
     try {
       if (event) {
+        // A série vai primeiro: se a API recusar a regra, o evento fica como estava.
+        if (seriesPatch && recurrence.series) await editRecurrence(recurrence.series.id, seriesPatch);
         if (parentPatch) await updateEvent(event.id, parentPatch);
         await subtasks.applyChanges(event.id, plan);
+      } else if (newSeries) {
+        await createRecurrence(newSeries, { idempotencyKey });
       } else {
         await createEvent(buildCreateEventInput(draft, new Date()), { idempotencyKey });
       }
@@ -92,6 +119,7 @@ export function EventEditView({ event: loaded, initialName, onReload, onLeave }:
       void subtasks.refresh();
       if (cause instanceof ApiRequestError && cause.kind === "stale_revision") {
         await onReload?.();
+        await recurrence.reloadSeries();
         setFailure(STALE_MESSAGE);
       } else {
         setFailure(failureMessage(cause, event !== null));
@@ -124,6 +152,20 @@ export function EventEditView({ event: loaded, initialName, onReload, onLeave }:
         <EventEditInfoSection draft={draft} errors={errors} onChange={setField} />
         {/* A tarefa persistente só existe na edição: a criação ainda não a envia. */}
         {event ? <EventEditPersistentSection draft={draft} onChange={setField} /> : null}
+        {/* A recorrência não aparece com a tarefa persistente: o evento longo não se repete. */}
+        {draft.longRunning ? null : (
+          <EventEditRecurrenceSection
+            event={event}
+            draft={draft}
+            recurrence={recurrence}
+            errors={recurrenceErrors}
+            onSeriesDeleted={() => {
+              window.dispatchEvent(new Event(agendaRefreshEvent));
+              void onReload?.();
+              void recurrence.reloadSeries();
+            }}
+          />
+        )}
         <EventEditReminderSection draft={draft} noDeadline={draft.longRunning && !draft.endDate} error={errors.reminders} onChange={setField} />
         <EventEditTagSection draft={draft} onChange={setField} />
         {/* A subtarefa só existe na edição: a criação ainda não a mostra. */}
@@ -140,7 +182,7 @@ export function EventEditView({ event: loaded, initialName, onReload, onLeave }:
         {event ? <EventEditBlocksSection eventId={event.id} draft={draft} onChange={setField} /> : null}
         {/* A lista de artefatos só existe na edição: a criação ainda não a mostra. */}
         {event ? <EventEditArtifactsSection draft={draft} onChange={setField} /> : null}
-        {/* 31: recorrência, que não aparece quando draft.longRunning. */}
+        {/* 30: alimento e exercício entram na mesma lista. */}
         {failure ? <DetailMessage alert>{failure}</DetailMessage> : null}
         <footer className={styles.footer}>
           <button type="button" className={styles.discard} onClick={onLeave}>Descartar</button>

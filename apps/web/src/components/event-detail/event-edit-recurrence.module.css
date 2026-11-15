@@ -1,0 +1,44 @@
+/*
+ * "Recorrência" da edição: a pílula com a regra, o texto de desde quando vale, o
+ * editor da regra e o apagar com confirmação. Cor só por token, para o tema trocar junto.
+ */
+
+.block { display: flex; flex-direction: column; gap: 8px; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.value { margin: 0; font-size: 15px; line-height: 22px; color: var(--ink); }
+.meta { margin: 0; font-size: 13px; line-height: 20px; color: var(--muted); }
+.hint { margin: 0; font-size: 13px; line-height: 18px; color: var(--muted); }
+
+.pill {
+  display: flex; align-items: center; gap: 8px; width: 100%; min-width: 0; height: 48px; padding: 0 16px;
+  border: 1px solid var(--input); border-radius: 24px; background: transparent; color: var(--ink);
+  font: inherit; font-size: 15px; text-align: left; cursor: pointer;
+}
+.pill:focus-visible { outline: 2px solid var(--color-ring); outline-offset: 1px; }
+.pillText { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pillHint { flex: none; font-size: 13px; color: var(--muted); }
+
+.editor { display: flex; flex-direction: column; gap: 14px; padding-top: 6px; }
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.intervalRow { display: flex; align-items: center; gap: 10px; }
+.unit { flex: none; font-size: 14px; color: var(--muted); }
+
+.days { display: flex; flex-wrap: wrap; gap: 6px; }
+.day {
+  width: 40px; height: 40px; padding: 0; border: 1px solid var(--input); border-radius: 20px;
+  background: transparent; color: var(--muted); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.day[aria-pressed="true"] { background: var(--secondary); color: var(--ink); }
+.day:focus-visible { outline: 2px solid var(--color-ring); outline-offset: 1px; }
+
+.actions { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 16px; }
+.link {
+  padding: 0; border: 0; background: transparent; color: var(--ink); font: inherit; font-size: 14px;
+  text-decoration: underline; cursor: pointer;
+}
+.danger {
+  padding: 0; border: 0; background: transparent; color: var(--destructive); font: inherit; font-size: 14px;
+  font-weight: 600; cursor: pointer;
+}
+.danger:disabled { opacity: .6; cursor: default; }
+.confirm { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border: 1px solid var(--input); border-radius: 12px; }
