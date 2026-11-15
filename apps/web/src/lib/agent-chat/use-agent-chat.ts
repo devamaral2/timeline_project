@@ -8,7 +8,7 @@ import type { AgentChatEntityRef, AgentScreenContext } from "@/lib/api/contracts
 import { HermesOffError, cancelRequest, getRequest, listRequests, sendHermesMessage, startRequest } from "@/lib/api/requests";
 import { parseChatCommand } from "./chat-mode-command";
 import { type HermesStep, hermesStepsOf } from "./hermes-steps";
-import { operationId } from "@/lib/ai-jobs/ai-jobs";
+import { operationId } from "@/lib/api/operation-id";
 
 /** O rastro sem o `route`: o da rota por passos e o do Hermes falam a mesma forma. */
 export type AgentTraceView = Omit<AgentTraceDto, "route">;

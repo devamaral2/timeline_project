@@ -21,7 +21,6 @@ import { briefDate } from "@/lib/dates/day-labels";
 import { useNow } from "@/lib/events/use-now";
 import { useViewMode } from "@/lib/events/view-mode";
 import { useSessionState } from "@/lib/session/use-session";
-import { useAiJobRefresh } from "@/lib/ai-jobs/use-ai-job-refresh";
 import { AgendaDay } from "./agenda-day";
 import { AgendaStatusPicker } from "./agenda-status-picker";
 import { AgendaOptions, type AgendaViewMode } from "./agenda-options";
@@ -82,9 +81,6 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
   const [refreshVersion, setRefreshVersion] = useState(0);
   // O modo em uso filtra a agenda pelo executor; trocá-lo relê a janela.
   const viewMode = useViewMode();
-  useAiJobRefresh(Boolean(userId && user && ready), agendaRefreshEvent, () => {
-    setRefreshVersion((version) => version + 1);
-  });
   // Com evento de agente em aberto na janela, a agenda se relê sozinha. A releitura é silenciosa: troca os dados
   // sem voltar ao estado de carregando, para a tela não piscar nem perder a rolagem.
   const silentReload = useRef(false);

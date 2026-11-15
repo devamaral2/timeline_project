@@ -1,5 +1,6 @@
 "use client";
 
+import type { RequestEntityDto } from "@repo/contracts";
 import { Mic, Square } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSpeechRecognition } from "@/lib/speech/use-speech-recognition";
@@ -8,7 +9,8 @@ import { destructiveButtonClass, primaryButtonClass } from "@/components/ui/butt
 import { VoiceJobStatus } from "./VoiceJobStatus";
 
 interface VoiceEventButtonProps {
-  onCreated?: () => void;
+  /** Recebe o evento que o pedido de voz criou (lido das entidades do pedido). */
+  onCreated?: (event: RequestEntityDto) => void;
   className?: string;
 }
 
@@ -16,7 +18,7 @@ export function VoiceEventButton({
   onCreated = () => window.location.reload(),
   className,
 }: VoiceEventButtonProps) {
-  const { jobs, enqueue, retry, dismiss, cancel } = useVoiceEventQueue({ onAllDone: onCreated });
+  const { jobs, enqueue, retry, dismiss, cancel } = useVoiceEventQueue({ onCreated });
   const { supported, listening, interim, error, start, stop } = useSpeechRecognition({
     onFinalTranscript: enqueue,
   });

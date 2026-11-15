@@ -1,16 +1,24 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { RequestDto, RequestEntityDto } from "@repo/contracts";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
+import { type FakeApi, createFakeApi } from "@/test/fake-api";
+import { advanceRequest, requestFixture, requestsArea } from "@/test/fake-api/requests";
 import { VoiceEventButton } from "./VoiceEventButton";
 
-const { voice, get, list, cancel } = vi.hoisted(() => ({ voice: vi.fn(), get: vi.fn(), list: vi.fn(), cancel: vi.fn() }));
-vi.mock("@/lib/ai-jobs/ai-jobs", async (original) => ({
-  ...await original<typeof import("@/lib/ai-jobs/ai-jobs")>(),
-  aiJobs: { voice, get, list, cancel },
+const net = vi.hoisted(() => ({ authedFetch: vi.fn() }));
+vi.mock("@/lib/api/authed-fetch", async (original) => ({
+  ...(await original<typeof import("@/lib/api/authed-fetch")>()),
+  authedFetch: net.authedFetch,
 }));
 vi.mock("@/lib/session/use-session", () => ({
   useSessionState: () => ({ user: { userId: "user-1" }, ready: true }),
 }));
-const completed = { id: "j1", kind: "transcript-event", status: "succeeded" };
+
+let api: FakeApi;
+const requests = () => api.store.table<RequestDto>("requests");
+const voicePosts = () => api.calls.filter((call) => call.method === "POST" && call.pathname === "/api/requests/voice");
+const lastRequestId = () => [...requests().keys()].at(-1) as string;
+const createdEvent: RequestEntityDto = { kind: "event", id: "ev-9", name: "Estudar inglês", operation: "create", linkedTo: [] };
 
 class FakeSpeechRecognition {
   static instances: FakeSpeechRecognition[] = [];
@@ -54,17 +62,14 @@ function speak(transcript: string): void {
 
 beforeEach(() => {
   localStorage.clear();
-  voice.mockReset().mockResolvedValue(completed);
-  get.mockReset().mockResolvedValue(completed);
-  cancel.mockReset().mockResolvedValue({ ...completed, status: "cancelled" });
-  list.mockReset().mockResolvedValue([]);
+  api = createFakeApi({ areas: [requestsArea()] });
+  net.authedFetch.mockReset().mockImplementation(api.authedFetch);
   FakeSpeechRecognition.instances = [];
   vi.stubGlobal("SpeechRecognition", FakeSpeechRecognition);
   vi.stubGlobal("webkitSpeechRecognition", undefined);
 });
 
 afterEach(() => {
-  vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.clearAllMocks();
 });
@@ -77,18 +82,20 @@ test("renders nothing when the browser has no speech recognition", () => {
   expect(screen.queryByRole("button")).not.toBeInTheDocument();
 });
 
-test("posts the transcript to the voice route and refreshes when it lands", async () => {
+test("sends the transcript as a voice request and hands the created event over when it is done", async () => {
   const onCreated = vi.fn();
   render(<VoiceEventButton onCreated={onCreated} />);
 
   speak("comecei a estudar ingles");
 
-  await waitFor(() => expect(onCreated).toHaveBeenCalledTimes(1));
-  expect(voice).toHaveBeenCalledWith("comecei a estudar ingles", expect.any(String));
-});
+  await waitFor(() => expect(voicePosts()).toHaveLength(1));
+  expect(voicePosts()[0]?.body).toEqual({ transcript: "comecei a estudar ingles", clientMessageId: expect.any(String) });
+  advanceRequest(api, lastRequestId(), { status: "done", entities: [createdEvent] });
+
+  await waitFor(() => expect(onCreated).toHaveBeenCalledWith(createdEvent), { timeout: 4000 });
+}, 15000);
 
 test("shows the pending chip while the agent works", async () => {
-  voice.mockReturnValue(new Promise(() => {}));
   render(<VoiceEventButton onCreated={vi.fn()} />);
 
   speak("almocei arroz e feijao");
@@ -97,79 +104,86 @@ test("shows the pending chip while the agent works", async () => {
 });
 
 test("never keeps two creations in flight at the same time", async () => {
-  const resolvers: Array<(value: unknown) => void> = [];
-  voice.mockImplementation(() => new Promise((resolve) => resolvers.push(resolve)));
-  render(<VoiceEventButton onCreated={vi.fn()} />);
+  const onCreated = vi.fn();
+  render(<VoiceEventButton onCreated={onCreated} />);
 
   speak("almocei arroz e feijao");
-  await waitFor(() => expect(voice).toHaveBeenCalledTimes(1));
+  await waitFor(() => expect(voicePosts()).toHaveLength(1));
   speak("comecei a estudar ingles");
 
-  // Em paralelo, o evento lento gravaria depois do rapido e o fecharia com um finishedAt
-  // anterior ao seu startedAt, corrompendo a timeline.
-  expect(voice).toHaveBeenCalledTimes(1);
+  // O segundo pedido só segue depois que o primeiro termina: dois eventos em paralelo se fechariam na ordem errada.
   expect(await screen.findByText("Criando 2 eventos...")).toBeInTheDocument();
+  expect(voicePosts()).toHaveLength(1);
 
-  await act(async () => {
-    resolvers[0](completed);
-  });
-
-  await waitFor(() => expect(voice).toHaveBeenCalledTimes(2));
+  advanceRequest(api, lastRequestId(), { status: "done", entities: [createdEvent] });
+  await waitFor(() => expect(voicePosts()).toHaveLength(2), { timeout: 4000 });
 });
 
-test("offers a retry when the agent fails", async () => {
-  voice.mockResolvedValueOnce({ ...completed, status: "failed" })
-    .mockResolvedValueOnce(completed);
+test("shows the failure message of a voice request that fails, and retries with a new request", async () => {
   const onCreated = vi.fn();
   render(<VoiceEventButton onCreated={onCreated} />);
 
   speak("comecei a estudar ingles");
+  await waitFor(() => expect(voicePosts()).toHaveLength(1));
+  advanceRequest(api, lastRequestId(), { status: "failed", errorCode: "internal", message: "Não consegui criar o evento: a fala ficou vaga." });
 
-  expect(await screen.findByText("Não foi possível criar o evento.")).toBeInTheDocument();
+  expect(await screen.findByText("Não consegui criar o evento: a fala ficou vaga.", {}, { timeout: 4000 })).toBeInTheDocument();
   expect(onCreated).not.toHaveBeenCalled();
 
   fireEvent.click(screen.getByRole("button", { name: "Tentar de novo" }));
+  await waitFor(() => expect(voicePosts()).toHaveLength(2));
+  expect(voicePosts()[1]?.body).not.toEqual(voicePosts()[0]?.body);
+  advanceRequest(api, lastRequestId(), { status: "done", entities: [createdEvent] });
 
-  await waitFor(() => expect(onCreated).toHaveBeenCalledTimes(1));
-});
+  await waitFor(() => expect(onCreated).toHaveBeenCalledTimes(1), { timeout: 4000 });
+}, 15000);
 
-test("lost submission response retries with the same request id, then only polls the accepted job", async () => {
-  vi.useFakeTimers();
-  voice.mockRejectedValueOnce(new TypeError("offline"))
-    .mockResolvedValueOnce({ ...completed, status: "queued" });
+test("a lost submission response is retried with the same message id, and the accepted request is then polled", async () => {
+  let lost = true;
+  net.authedFetch.mockImplementation((path: string, init?: RequestInit) => {
+    if (path === "/api/requests/voice" && lost) {
+      lost = false;
+      return Promise.reject(new TypeError("offline"));
+    }
+    return api.authedFetch(path, init);
+  });
   const onCreated = vi.fn();
   render(<VoiceEventButton onCreated={onCreated} />);
+
   speak("almocei arroz");
-  await act(async () => {});
-  const firstRequest = voice.mock.calls[0];
-  await act(async () => { await vi.advanceTimersByTimeAsync(1500); });
-  expect(voice.mock.calls[1]).toEqual(firstRequest);
-  await act(async () => { await vi.advanceTimersByTimeAsync(1500); });
-  expect(get).toHaveBeenCalledWith("j1");
-  expect(voice).toHaveBeenCalledTimes(2);
-  expect(onCreated).toHaveBeenCalledTimes(1);
-});
+  expect(await screen.findByText("Reconectando — seu pedido continua salvo.")).toBeInTheDocument();
 
-test("reload recovers pending owned voice jobs without submitting again", async () => {
-  vi.useFakeTimers();
-  list.mockResolvedValue([{ ...completed, status: "running", createdAt: "2026-01-01",
-    request: { text: "almocei arroz", clientMessageId: "original-voice-id" } }]);
+  // A tentativa perdida não chegou à API falsa: conta-se no mock de rede, que vê as duas tentativas.
+  const sent = () => net.authedFetch.mock.calls.filter(([path]) => path === "/api/requests/voice");
+  await waitFor(() => expect(sent()).toHaveLength(2), { timeout: 4000 });
+  expect(sent()[1]?.[1]).toEqual(sent()[0]?.[1]);
+  expect(requests().size).toBe(1);
+  advanceRequest(api, lastRequestId(), { status: "done", entities: [createdEvent] });
+
+  await waitFor(() => expect(onCreated).toHaveBeenCalledTimes(1), { timeout: 6000 });
+}, 15000);
+
+test("reload recovers the open voice request without submitting it again", async () => {
+  const open = requestFixture({ id: "R0000000000000000000000002", route: "voice", status: "running", text: "almocei arroz" });
+  requests().set(open.id, open);
   const onCreated = vi.fn();
   render(<VoiceEventButton onCreated={onCreated} />);
-  await act(async () => { await vi.advanceTimersByTimeAsync(0); });
-  expect(get).toHaveBeenCalledWith("j1");
-  expect(voice).not.toHaveBeenCalled();
-  expect(onCreated).toHaveBeenCalledTimes(1);
+
+  expect(await screen.findByText("Criando evento...")).toBeInTheDocument();
+  advanceRequest(api, open.id, { status: "done", entities: [createdEvent] });
+
+  await waitFor(() => expect(onCreated).toHaveBeenCalledWith(createdEvent), { timeout: 4000 });
+  expect(voicePosts()).toHaveLength(0);
 });
 
-test("explicit voice cancel targets the accepted job, not another submission", async () => {
-  voice.mockResolvedValue({ ...completed, status: "queued" });
+test("explicit voice cancel targets the accepted request, not another submission", async () => {
   render(<VoiceEventButton onCreated={vi.fn()} />);
   speak("almocei arroz");
-  await waitFor(() => expect(voice).toHaveBeenCalledTimes(1));
-  await act(async () => {});
+  await waitFor(() => expect(requests().size).toBe(1));
+
   fireEvent.click(screen.getByRole("button", { name: "Cancelar evento por voz" }));
-  await waitFor(() => expect(cancel).toHaveBeenCalledWith("j1"));
-  expect(voice).toHaveBeenCalledTimes(1);
-  expect(await screen.findByText("Pedido cancelado.")).toBeInTheDocument();
+
+  expect(await screen.findByText("Pedido cancelado.", {}, { timeout: 4000 })).toBeInTheDocument();
+  expect(api.calls.filter((call) => call.method === "POST" && call.pathname === `/api/requests/${lastRequestId()}/cancel`)).toHaveLength(1);
+  expect(voicePosts()).toHaveLength(1);
 });

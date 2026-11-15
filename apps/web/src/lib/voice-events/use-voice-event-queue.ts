@@ -1,14 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ApiError } from "@/lib/api/authed-fetch";
-import { aiJobs, isJobPending, operationId } from "@/lib/ai-jobs/ai-jobs";
+import type { RequestDto, RequestEntityDto } from "@repo/contracts";
+import { ApiRequestError } from "@/lib/api/client-request";
+import { operationId } from "@/lib/api/operation-id";
+import { cancelRequest, getRequest, listRequests, startVoiceRequest } from "@/lib/api/requests";
+import { isOpenRequest } from "@/lib/events/agent-request-model";
 import { useSessionState } from "@/lib/session/use-session";
 
 export interface VoiceJob {
-  /** Stable requestId, retained if the submission response is lost. */
+  /** Id de mensagem estável (`clientMessageId`), guardado antes do envio: reenviar com ele não abre outro pedido. */
   id: string;
-  jobId?: string;
+  /** O pedido aceito pela API, quando a resposta do envio chegou. */
+  requestId?: string;
   transcript: string;
   status: "pending" | "error";
   error?: string;
@@ -16,7 +20,24 @@ export interface VoiceJob {
   cancelling?: boolean;
 }
 
-export function useVoiceEventQueue({ onAllDone }: { onAllDone: () => void }) {
+/** O que ficou no navegador antes deste formato: `jobId` era o id de um job da API antiga, que a nova não conhece. */
+type StoredVoiceJob = VoiceJob & { jobId?: string };
+
+const CREATION_FAILED = "Não foi possível criar o evento.";
+
+/** Lê o outbox guardado. Um item do formato antigo não tem como ser acompanhado: vira erro, e "Tentar de novo" decide. */
+function restore(stored: StoredVoiceJob[]): VoiceJob[] {
+  return stored.map(({ jobId, ...item }): VoiceJob => jobId && !item.requestId
+    ? { ...item, status: "error", error: CREATION_FAILED }
+    : item);
+}
+
+/** O evento que o pedido criou, lido das entidades dele. */
+function createdEventOf(request: RequestDto): RequestEntityDto | undefined {
+  return request.entities.find((entity) => entity.kind === "event" && entity.operation === "create");
+}
+
+export function useVoiceEventQueue({ onCreated }: { onCreated: (event: RequestEntityDto) => void }) {
   const { user } = useSessionState();
   const userId = user?.userId;
   const [jobs, setJobs] = useState<VoiceJob[]>([]);
@@ -25,20 +46,20 @@ export function useVoiceEventQueue({ onAllDone }: { onAllDone: () => void }) {
   const activeRef = useRef(false);
   const generationRef = useRef(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const onAllDoneRef = useRef(onAllDone);
+  const onCreatedRef = useRef(onCreated);
   const key = userId ? `voice-jobs:${userId}` : null;
-  onAllDoneRef.current = onAllDone;
+  onCreatedRef.current = onCreated;
 
   const commit = useCallback((next: VoiceJob[]) => {
     jobsRef.current = next;
     setJobs(next);
     try {
       if (key) localStorage.setItem(key, JSON.stringify(next));
-    } catch { /* Accepted jobs remain recoverable by server-side list. */ }
+    } catch { /* Os pedidos aceitos continuam na lista do servidor. */ }
   }, [key]);
 
-  // Preserve capture order. Accepted work is only queried; ambiguous
-  // submission responses are retried with the same id, not a new operation.
+  // Ordem de captura preservada: um pedido por vez. Pedido aceito só é lido; envio sem resposta é refeito com o
+  // mesmo id, e a API devolve o pedido que já aceitou.
   const drain = useCallback(async function drainQueue() {
     if (!activeRef.current || runningRef.current) return;
     const generation = generationRef.current;
@@ -47,24 +68,30 @@ export function useVoiceEventQueue({ onAllDone }: { onAllDone: () => void }) {
     runningRef.current = true;
     let terminal = false;
     try {
-      const result = job.jobId
-        ? await (job.cancelling ? aiJobs.cancel(job.jobId) : aiJobs.get(job.jobId))
-        : await aiJobs.voice(job.transcript, job.id);
-      if (!activeRef.current || generationRef.current !== generation) return;
-      terminal = !isJobPending(result);
-      if (result.status === "succeeded") {
-        commit(jobsRef.current.filter((item) => item.id !== job.id));
-        onAllDoneRef.current();
+      if (!job.requestId) {
+        const requestId = await startVoiceRequest({ transcript: job.transcript, clientMessageId: job.id });
+        if (!activeRef.current || generationRef.current !== generation) return;
+        commit(jobsRef.current.map((item) => item.id !== job.id ? item : { ...item, requestId }));
       } else {
-        commit(jobsRef.current.map((item) => item.id !== job.id ? item : {
-          ...item, jobId: result.id, progress: result.progress,
-          status: terminal ? "error" : "pending",
-          error: terminal ? (result.status === "cancelled" ? "Pedido cancelado." : "Não foi possível criar o evento.") : undefined,
-        }));
+        const request = job.cancelling ? await cancelRequest(job.requestId) : await getRequest(job.requestId);
+        if (!activeRef.current || generationRef.current !== generation) return;
+        const created = request.status === "done" ? createdEventOf(request) : undefined;
+        if (isOpenRequest(request.status)) {
+          commit(jobsRef.current.map((item) => item.id !== job.id ? item : { ...item, progress: request.progress }));
+        } else if (created) {
+          commit(jobsRef.current.filter((item) => item.id !== job.id));
+          onCreatedRef.current(created);
+        } else {
+          terminal = true;
+          const error = request.status === "cancel" ? "Pedido cancelado." : request.message ?? CREATION_FAILED;
+          commit(jobsRef.current.map((item) => item.id !== job.id ? item : { ...item, status: "error", error, cancelling: false }));
+        }
       }
     } catch (error) {
       if (!activeRef.current || generationRef.current !== generation) return;
-      terminal = !job.jobId && error instanceof ApiError && [400, 403, 404, 422].includes(error.status);
+      // Recusa da API antes de aceitar (dado inválido, sem permissão, sem usuário) não se refaz sozinha.
+      terminal = !job.requestId && error instanceof ApiRequestError
+        && ["invalid_input", "forbidden", "not_found"].includes(error.kind);
       commit(jobsRef.current.map((item) => item.id !== job.id ? item : {
         ...item, status: terminal ? "error" : "pending",
         error: terminal ? "Não entendi o que você falou." : undefined,
@@ -84,17 +111,19 @@ export function useVoiceEventQueue({ onAllDone }: { onAllDone: () => void }) {
     generationRef.current++;
     activeRef.current = true;
     try {
-      commit(JSON.parse(localStorage.getItem(key) ?? "[]"));
+      commit(restore(JSON.parse(localStorage.getItem(key) ?? "[]") as StoredVoiceJob[]));
     } catch { commit([]); }
     void drain();
-    void aiJobs.list().then((list) => {
+    void listRequests(50).then((list) => {
       if (cancelled) return;
-      const recovered = list.filter((job) => job.kind === "transcript-event" && isJobPending(job))
+      const recovered = list
+        .filter((request) => request.route === "voice" && isOpenRequest(request.status))
         .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
-        .filter((job) => !jobsRef.current.some((item) => item.jobId === job.id || item.id === job.request?.clientMessageId))
-        .map((job): VoiceJob => ({
-          id: job.request?.clientMessageId ?? job.id, jobId: job.id,
-          transcript: job.request?.text ?? "", status: "pending", progress: job.progress,
+        // Já na fila: pelo id do pedido, ou um envio sem resposta com o mesmo texto (será refeito com o mesmo id).
+        .filter((request) => !jobsRef.current.some((item) => item.requestId === request.id
+          || (!item.requestId && item.transcript === request.text)))
+        .map((request): VoiceJob => ({
+          id: request.id, requestId: request.id, transcript: request.text ?? "", status: "pending", progress: request.progress,
         }));
       if (recovered.length) {
         commit([...jobsRef.current, ...recovered]);
@@ -117,7 +146,7 @@ export function useVoiceEventQueue({ onAllDone }: { onAllDone: () => void }) {
   }, [commit, drain, userId]);
 
   const retry = useCallback((id: string) => {
-    // A new operation is safe only after an explicitly terminal failure.
+    // Um novo pedido só depois de uma falha terminal explícita.
     commit(jobsRef.current.map((item) => item.id === id && item.status === "error"
       ? { id: operationId(), transcript: item.transcript, status: "pending" } : item));
     void drain();

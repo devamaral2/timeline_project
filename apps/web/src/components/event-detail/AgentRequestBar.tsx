@@ -9,7 +9,7 @@ import { useHermesDock } from "@/components/ui/hermes-flight";
 import styles from "@/components/detail/entity-ai-edit-bar.module.css";
 import agentStyles from "./agent-event-detail.module.css";
 import { agentFailureText } from "@/lib/agent-chat/use-agent-chat";
-import { operationId } from "@/lib/ai-jobs/ai-jobs";
+import { operationId } from "@/lib/api/operation-id";
 import { FoodCancelConflictError, cancelRequest, getRequest, startRequest } from "@/lib/api/requests";
 import { isOpenRequest, runningStepLabel } from "@/lib/events/agent-request-model";
 import { momentLabel } from "@/lib/events/event-read-model";
