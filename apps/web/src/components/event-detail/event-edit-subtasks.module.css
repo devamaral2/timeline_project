@@ -1,0 +1,31 @@
+/*
+ * Subtarefas da edição: uma linha por subtarefa, com o nome editável e o remover,
+ * e "Nova subtarefa" no fim. Cor só por token, como nas outras seções da edição.
+ */
+
+.list { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 12px 0 0; list-style: none; }
+.row { display: grid; grid-template-columns: minmax(0, 1fr) 44px; gap: 8px; align-items: center; }
+
+.input {
+  min-height: var(--control-md); padding: 0 14px; border: 1px solid var(--input); border-radius: 22px;
+  background: transparent; color: var(--ink); font: inherit; font-size: 15px; min-width: 0;
+}
+.input::placeholder { color: var(--muted); }
+.input:focus-visible { outline: 2px solid var(--color-ring); outline-offset: 1px; }
+.input[aria-invalid="true"] { border-color: var(--destructive); }
+
+.remove {
+  display: grid; place-items: center; width: 44px; height: 44px; padding: 0;
+  border: 1px solid var(--input); border-radius: 50%; background: transparent; color: var(--muted); cursor: pointer;
+}
+.remove:focus-visible { outline: 2px solid var(--color-ring); outline-offset: 1px; }
+
+.error { grid-column: 1 / -1; margin: 0; font-size: 13px; line-height: 18px; color: var(--destructive); }
+.empty { margin: 12px 0 0; font-size: 13px; line-height: 18px; color: var(--muted); }
+
+.add {
+  display: inline-flex; align-items: center; height: 44px; margin-top: 12px; padding: 0 14px;
+  border: 1px solid var(--input); border-radius: 22px; background: transparent; color: var(--primary);
+  font: inherit; font-size: 15px; cursor: pointer;
+}
+.add:focus-visible { outline: 2px solid var(--color-ring); outline-offset: 1px; }

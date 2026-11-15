@@ -139,6 +139,8 @@ function tracked(request: FakeRequest, store: FakeStore): FakeResult {
 
 function create(request: FakeRequest, store: FakeStore): FakeResult {
   const input = request.body as CreateEventInput;
+  const parents = (input.parentEventIds ?? []).map((parentId) => table(store).get(parentId));
+  if (parents.some((parent) => parent === undefined)) return { status: 404 };
   const id = store.nextId("ev");
   const event: StoredEvent = eventSchema.parse({
     id,
@@ -163,6 +165,11 @@ function create(request: FakeRequest, store: FakeStore): FakeResult {
     blocksEventIds: input.blocksEventIds ?? [],
   });
   table(store).set(id, event);
+  // A subtarefa criada com `parentEventIds` entra na lista do pai, e a revisão dele sobe, como na API real.
+  for (const parent of parents) {
+    if (!parent) continue;
+    table(store).set(parent.id, eventSchema.parse({ ...parent, subtaskEventIds: [...parent.subtaskEventIds, id], revision: parent.revision + 1 }));
+  }
   return { status: 201, body: createdEventSchema.parse({ eventId: id }) };
 }
 
@@ -187,7 +194,24 @@ function update(request: FakeRequest, store: FakeStore): FakeResult {
   }
   next.revision = event.revision + 1;
   table(store).set(event.id, eventSchema.parse(next));
+  if (Array.isArray(input.subtaskEventIds)) relinkSubtasks(store, event, input.subtaskEventIds as string[]);
   return { status: 204 };
+}
+
+/** A relação de subtarefa tem dois lados: o pai guarda os filhos, e cada filho guarda o pai em `parentEventIds`. */
+function relinkSubtasks(store: FakeStore, parent: StoredEvent, nextIds: string[]) {
+  const before = new Set(parent.subtaskEventIds);
+  const after = new Set(nextIds);
+  for (const id of before) if (!after.has(id)) setParentLink(store, id, parent.id, false);
+  for (const id of after) if (!before.has(id)) setParentLink(store, id, parent.id, true);
+}
+
+/** Tirar a ligação não apaga o filho: só o `parentEventIds` dele muda. */
+function setParentLink(store: FakeStore, childId: string, parentId: string, linked: boolean) {
+  const child = table(store).get(childId);
+  if (!child) return;
+  const others = child.parentEventIds.filter((id) => id !== parentId);
+  table(store).set(childId, { ...child, parentEventIds: linked ? [...others, parentId] : others });
 }
 
 function remove(request: FakeRequest, store: FakeStore): FakeResult {

@@ -11,8 +11,11 @@ import { EventEditHeaderFields } from "./EventEditHeaderFields";
 import { EventEditInfoSection } from "./EventEditInfoSection";
 import { EventEditPersistentSection } from "./EventEditPersistentSection";
 import { EventEditReminderSection } from "./EventEditReminderSection";
+import { EventEditSubtaskSection } from "./EventEditSubtaskSection";
 import { EventEditTagSection } from "./EventEditTagSection";
+import { planSubtaskChanges, subtaskPlanHasWork, validateSubtaskRows } from "./event-subtask-draft";
 import { useEventDraft } from "./use-event-draft";
+import { useSubtaskDraft } from "./use-subtask-draft";
 import styles from "./event-edit.module.css";
 
 interface EventEditViewProps {
@@ -40,6 +43,8 @@ const CREATE_FAILED_MESSAGE = "Não foi possível criar o evento. Tente novament
  */
 export function EventEditView({ event: loaded, initialName, onReload, onLeave }: EventEditViewProps) {
   const { event, draft, setField } = useEventDraft(loaded ?? null, initialName);
+  const subtasks = useSubtaskDraft(event);
+  const [subtaskErrors, setSubtaskErrors] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<EventDraftErrors>({});
   const [saving, setSaving] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
@@ -51,11 +56,18 @@ export function EventEditView({ event: loaded, initialName, onReload, onLeave }:
   async function save() {
     if (busy.current) return;
     const problems = validateEventDraft(draft);
+    const rowProblems = validateSubtaskRows(subtasks.rows);
     setErrors(problems);
-    if (Object.keys(problems).length > 0) return;
+    setSubtaskErrors(rowProblems);
+    if (Object.keys(problems).length > 0 || Object.keys(rowProblems).length > 0) return;
 
     const patch = event ? buildEventPatch(event, draft, new Date()) : null;
-    if (event && !patch) {
+    const plan = planSubtaskChanges(subtasks.rows);
+    // Tirar subtarefas da lista vai no PATCH do pai, com a lista que fica. Criar e renomear vêm depois dele.
+    const parentPatch = event && plan.removedIds.length > 0
+      ? { ...(patch ?? { expectedRevision: event.revision }), subtaskEventIds: plan.keptIds }
+      : patch;
+    if (event && !parentPatch && !subtaskPlanHasWork(plan)) {
       onLeave();
       return;
     }
@@ -64,13 +76,18 @@ export function EventEditView({ event: loaded, initialName, onReload, onLeave }:
     setSaving(true);
     setFailure(null);
     try {
-      if (event && patch) await updateEvent(event.id, patch);
-      else await createEvent(buildCreateEventInput(draft, new Date()), { idempotencyKey });
+      if (event) {
+        if (parentPatch) await updateEvent(event.id, parentPatch);
+        await subtasks.applyChanges(event.id, plan);
+      } else {
+        await createEvent(buildCreateEventInput(draft, new Date()), { idempotencyKey });
+      }
       window.dispatchEvent(new Event(agendaRefreshEvent));
       onLeave();
     } catch (cause) {
       busy.current = false;
       setSaving(false);
+      void subtasks.refresh();
       if (cause instanceof ApiRequestError && cause.kind === "stale_revision") {
         await onReload?.();
         setFailure(STALE_MESSAGE);
@@ -107,7 +124,17 @@ export function EventEditView({ event: loaded, initialName, onReload, onLeave }:
         {event ? <EventEditPersistentSection draft={draft} onChange={setField} /> : null}
         <EventEditReminderSection draft={draft} noDeadline={draft.longRunning && !draft.endDate} error={errors.reminders} onChange={setField} />
         <EventEditTagSection draft={draft} onChange={setField} />
-        {/* 27: subtarefas. 28: bloqueios. 29 e 30: artefatos.
+        {/* A subtarefa só existe na edição: a criação ainda não a mostra. */}
+        {event ? (
+          <EventEditSubtaskSection
+            rows={subtasks.rows}
+            errors={subtaskErrors}
+            loaded={subtasks.loaded}
+            loadFailed={subtasks.loadFailed}
+            onChange={subtasks.setRows}
+          />
+        ) : null}
+        {/* 28: bloqueios. 29 e 30: artefatos.
             31: recorrência, que não aparece quando draft.longRunning. Cada um entra aqui como uma seção nova. */}
         {failure ? <DetailMessage alert>{failure}</DetailMessage> : null}
         <footer className={styles.footer}>
