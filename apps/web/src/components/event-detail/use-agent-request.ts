@@ -6,6 +6,8 @@ import { ApiRequestError } from "@/lib/api/client-request";
 import { getRequest } from "@/lib/api/requests";
 import { AGENT_REQUEST_POLL_MS, isOpenRequest } from "@/lib/events/agent-request-model";
 
+export { AGENT_REQUEST_POLL_MS };
+
 export type AgentRequestLoad = "loading" | "ready" | "missing" | "error";
 
 /**
