@@ -8,7 +8,6 @@ import styles from "./event-edit.module.css";
 interface EventEditInfoSectionProps {
   draft: EventDraft;
   errors: EventDraftErrors;
-  longRunning: boolean;
   onChange: <K extends EventDraftField>(field: K, value: EventDraft[K]) => void;
 }
 
@@ -17,8 +16,8 @@ interface EventEditInfoSectionProps {
  * evento longo), e a descrição. Data e hora são campos separados; data vazia
  * tira a data do evento, e hora vazia com data é o dia inteiro.
  */
-export function EventEditInfoSection({ draft, errors, longRunning, onChange }: EventEditInfoSectionProps) {
-  const end = longRunning
+export function EventEditInfoSection({ draft, errors, onChange }: EventEditInfoSectionProps) {
+  const end = draft.longRunning
     ? { legend: "Previsão de entrega", date: "Data da previsão de entrega", time: "Hora da previsão de entrega" }
     : { legend: "Término", date: "Data de término", time: "Hora de término" };
 

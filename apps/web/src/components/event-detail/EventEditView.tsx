@@ -9,6 +9,7 @@ import { createEvent, newIdempotencyKey, updateEvent } from "@/lib/api/events";
 import { buildCreateEventInput, buildEventPatch, type EventDraftErrors, validateEventDraft } from "./event-draft";
 import { EventEditHeaderFields } from "./EventEditHeaderFields";
 import { EventEditInfoSection } from "./EventEditInfoSection";
+import { EventEditPersistentSection } from "./EventEditPersistentSection";
 import { EventEditReminderSection } from "./EventEditReminderSection";
 import { EventEditTagSection } from "./EventEditTagSection";
 import { useEventDraft } from "./use-event-draft";
@@ -88,7 +89,7 @@ export function EventEditView({ event: loaded, initialName, onReload, onLeave }:
         <header className={styles.head}>
           <p className={styles.eyebrow}>Evento</p>
           <h1 className={styles.title}>{event ? "Editar evento" : "Novo evento"}</h1>
-          <EventEditHeaderFields draft={draft} errors={errors} longRunning={event?.longRunning ?? false} onChange={setField} />
+          <EventEditHeaderFields draft={draft} errors={errors} onChange={setField} />
         </header>
       }
     >
@@ -101,11 +102,13 @@ export function EventEditView({ event: loaded, initialName, onReload, onLeave }:
           void save();
         }}
       >
-        <EventEditInfoSection draft={draft} errors={errors} longRunning={event?.longRunning ?? false} onChange={setField} />
-        <EventEditReminderSection draft={draft} onChange={setField} />
+        <EventEditInfoSection draft={draft} errors={errors} onChange={setField} />
+        {/* A tarefa persistente só existe na edição: a criação ainda não a envia. */}
+        {event ? <EventEditPersistentSection draft={draft} onChange={setField} /> : null}
+        <EventEditReminderSection draft={draft} noDeadline={draft.longRunning && !draft.endDate} error={errors.reminders} onChange={setField} />
         <EventEditTagSection draft={draft} onChange={setField} />
-        {/* 26: tarefa persistente. 27: subtarefas. 28: bloqueios.
-            29 e 30: artefatos. 31: recorrência. Cada um entra aqui como uma seção nova. */}
+        {/* 27: subtarefas. 28: bloqueios. 29 e 30: artefatos.
+            31: recorrência, que não aparece quando draft.longRunning. Cada um entra aqui como uma seção nova. */}
         {failure ? <DetailMessage alert>{failure}</DetailMessage> : null}
         <footer className={styles.footer}>
           <button type="button" className={styles.discard} onClick={onLeave}>Descartar</button>

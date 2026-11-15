@@ -17,16 +17,16 @@ const PRIORITY_ORDER: EventPriority[] = ["urgent", "high", "medium", "low"];
 interface EventEditHeaderFieldsProps {
   draft: EventDraft;
   errors: EventDraftErrors;
-  longRunning: boolean;
   onChange: <K extends EventDraftField>(field: K, value: EventDraft[K]) => void;
 }
 
 /**
  * Os campos do topo do formulário: tipo, título, status e prioridade. O status
  * "Sem status" vale só para evento que não é longo (o longo sempre tem status).
+ * O que vale é o rascunho: a tarefa persistente ligada agora já muda as opções.
  */
-export function EventEditHeaderFields({ draft, errors, longRunning, onChange }: EventEditHeaderFieldsProps) {
-  const statuses = humanStatusOptions({ longRunning });
+export function EventEditHeaderFields({ draft, errors, onChange }: EventEditHeaderFieldsProps) {
+  const statuses = humanStatusOptions({ longRunning: draft.longRunning });
 
   return (
     <div className={styles.fields}>
@@ -50,7 +50,7 @@ export function EventEditHeaderFields({ draft, errors, longRunning, onChange }: 
         />
       </EditField>
 
-      <EditField id="event-status" label="Status">
+      <EditField id="event-status" label="Status" error={errors.status}>
         <select
           id="event-status"
           className={styles.input}
@@ -60,7 +60,7 @@ export function EventEditHeaderFields({ draft, errors, longRunning, onChange }: 
           {statuses.map((status) => (
             <option key={status} value={status}>{eventStatusName("human", status)}</option>
           ))}
-          {longRunning ? null : <option value="">Sem status</option>}
+          {draft.longRunning ? null : <option value="">Sem status</option>}
         </select>
       </EditField>
 

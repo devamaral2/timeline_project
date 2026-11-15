@@ -7,7 +7,7 @@ describe("emptyEventDraft e buildCreateEventInput", () => {
   it("o rascunho vazio é uma rotina sem status, com o nome do comando", () => {
     expect(emptyEventDraft("comprar pão")).toEqual({
       kind: "routine", name: "comprar pão", status: null, priority: "medium",
-      startDate: "", startTime: "", endDate: "", endTime: "", description: "",
+      startDate: "", startTime: "", endDate: "", endTime: "", description: "", reminders: [], tags: [], longRunning: false,
     });
   });
 
@@ -172,6 +172,24 @@ describe("buildEventPatch", () => {
     });
   });
 
+  it("ligar a tarefa persistente manda longRunning verdadeiro", () => {
+    const event = training();
+
+    expect(buildEventPatch(event, { ...draftFromEvent(event), longRunning: true }, NOW)).toEqual({
+      expectedRevision: 3,
+      longRunning: true,
+    });
+  });
+
+  it("desligar a tarefa persistente manda longRunning falso", () => {
+    const event = training({ longRunning: true });
+
+    expect(buildEventPatch(event, { ...draftFromEvent(event), longRunning: false }, NOW)).toEqual({
+      expectedRevision: 3,
+      longRunning: false,
+    });
+  });
+
   it("não reenvia um horário que já está gravado, mesmo com segundos", () => {
     const event = training({ startedAt: "2026-11-14T18:30:15-03:00" });
 
@@ -200,6 +218,45 @@ describe("validateEventDraft", () => {
     expect(validateEventDraft({ ...draftFromEvent(event), endTime: "18:00" })).toEqual({
       endDate: "O término não pode ser antes do início.",
     });
+  });
+
+  it("evento longo: o prazo pode vir antes do início, porque o início é o real", () => {
+    const event = training({ longRunning: true });
+
+    expect(validateEventDraft({ ...draftFromEvent(event), endDate: "2026-11-10", endTime: "" })).toEqual({});
+  });
+
+  it("evento longo sem status, ou como não realizado, é recusado no status", () => {
+    const event = training({ longRunning: true });
+
+    expect(validateEventDraft({ ...draftFromEvent(event), status: null })).toHaveProperty("status");
+    expect(validateEventDraft({ ...draftFromEvent(event), status: "missed" })).toHaveProperty("status");
+    expect(validateEventDraft({ ...draftFromEvent(event), status: "todo" })).toEqual({});
+  });
+
+  it("evento longo sem prazo não pode ter lembrete", () => {
+    const event = training({ longRunning: true });
+    const noDeadline = { ...draftFromEvent(event), endDate: "", endTime: "", reminders: [30] };
+
+    expect(validateEventDraft(noDeadline)).toEqual({
+      reminders: "Tarefa persistente sem previsão de entrega não tem lembrete.",
+    });
+    expect(validateEventDraft({ ...noDeadline, reminders: [] })).toEqual({});
+    expect(validateEventDraft({ ...draftFromEvent(event), reminders: [30] })).toEqual({});
+  });
+
+  it("sem ser longo, um bloco de mais de 31 dias é recusado e sugere a tarefa persistente", () => {
+    const event = training();
+
+    expect(validateEventDraft({ ...draftFromEvent(event), endDate: "2026-12-15", endTime: "19:20" })).toEqual({
+      endDate: "Um bloco não dura mais de 31 dias. Para algo que segue por mais tempo, marque como tarefa persistente.",
+    });
+  });
+
+  it("sem ser longo, um bloco de exatos 31 dias é aceito", () => {
+    const event = training();
+
+    expect(validateEventDraft({ ...draftFromEvent(event), endDate: "2026-12-15", endTime: "18:30" })).toEqual({});
   });
 
   it("uma entrada válida não tem erro", () => {

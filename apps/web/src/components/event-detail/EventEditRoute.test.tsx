@@ -315,6 +315,95 @@ describe("entrada recusada pela API", () => {
   });
 });
 
+describe("tarefa persistente", () => {
+  const SIM = "Sim";
+  const NAO = "Não";
+
+  function persistentChoice(label: string): HTMLElement {
+    return within(screen.getByRole("group", { name: "Tarefa persistente" })).getByRole("button", { name: label });
+  }
+
+  it("Não é o valor atual de um evento comum, e Sim e Não trocam o botão marcado", async () => {
+    install([training()]);
+    renderRoute();
+    await screen.findByRole("heading", { level: 1, name: "Editar evento" });
+
+    expect(persistentChoice(NAO)).toHaveAttribute("aria-pressed", "true");
+    expect(persistentChoice(SIM)).toHaveAttribute("aria-pressed", "false");
+
+    fireEvent.click(persistentChoice(SIM));
+    expect(persistentChoice(SIM)).toHaveAttribute("aria-pressed", "true");
+    expect(persistentChoice(NAO)).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("ligar troca Término por Previsão de entrega, e salvar manda só longRunning", async () => {
+    install([training()]);
+    renderRoute();
+    await screen.findByRole("heading", { level: 1, name: "Editar evento" });
+
+    fireEvent.click(persistentChoice(SIM));
+
+    expect(field("Data da previsão de entrega")).toHaveValue("2026-11-14");
+    expect(screen.queryByLabelText("Data de término")).not.toBeInTheDocument();
+    save();
+
+    await waitFor(() => expect(replace).toHaveBeenCalledWith(DETAIL_PATH));
+    expect(patches()[0]?.body).toEqual({ expectedRevision: 3, longRunning: true });
+  });
+
+  it("desligar volta a Término, e salvar manda longRunning falso", async () => {
+    install([training({ longRunning: true })]);
+    renderRoute();
+    await screen.findByRole("heading", { level: 1, name: "Editar evento" });
+
+    fireEvent.click(persistentChoice(NAO));
+
+    expect(field("Data de término")).toHaveValue("2026-11-14");
+    save();
+
+    await waitFor(() => expect(replace).toHaveBeenCalledWith(DETAIL_PATH));
+    expect(patches()[0]?.body).toEqual({ expectedRevision: 3, longRunning: false });
+  });
+
+  it("evento longo com status Não realizado é recusado no status, sem enviar", async () => {
+    install([training({ status: "missed" })]);
+    renderRoute();
+    await screen.findByRole("heading", { level: 1, name: "Editar evento" });
+
+    fireEvent.click(persistentChoice(SIM));
+    save();
+
+    expect(await screen.findByText("Tarefa persistente precisa de um status: não pode ficar sem status nem como não realizado.")).toBeInTheDocument();
+    expect(patches()).toHaveLength(0);
+    expect(replace).not.toHaveBeenCalled();
+  });
+
+  it("sem ser longo, um bloco de mais de 31 dias é recusado com a sugestão, e não envia", async () => {
+    install([training()]);
+    renderRoute();
+    await screen.findByRole("heading", { level: 1, name: "Editar evento" });
+
+    type("Data de término", "2026-12-20");
+    save();
+
+    expect(await screen.findByText(/marque como tarefa persistente/)).toBeInTheDocument();
+    expect(patches()).toHaveLength(0);
+  });
+
+  it("evento longo sem previsão de entrega não oferece lembrete, e um lembrete que sobra é recusado", async () => {
+    install([training({ longRunning: true, estimatedFinishAt: undefined, notifyOffsetsMinutes: [30] })]);
+    renderRoute();
+    await screen.findByRole("heading", { level: 1, name: "Editar evento" });
+
+    expect(screen.queryByRole("button", { name: "Adicionar lembrete" })).not.toBeInTheDocument();
+    expect(screen.getByText("Sem previsão de entrega não há lembrete.")).toBeInTheDocument();
+    save();
+
+    expect(await screen.findByText("Tarefa persistente sem previsão de entrega não tem lembrete.")).toBeInTheDocument();
+    expect(patches()).toHaveLength(0);
+  });
+});
+
 describe("casos de tela", () => {
   it("evento inexistente mostra a tela de não encontrado", async () => {
     install([]);

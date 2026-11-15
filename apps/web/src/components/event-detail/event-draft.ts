@@ -29,9 +29,17 @@ export interface EventDraft {
   reminders: number[];
   /** Tags já normalizadas (minúsculas, sem espaços nas pontas). */
   tags: string[];
+  /** A tarefa persistente: o evento longo, que não é um bloco de tempo e tem a previsão de entrega como prazo. */
+  longRunning: boolean;
 }
 
 export type EventDraftField = keyof EventDraft;
+
+/** O limite de um bloco de tempo, em milissegundos (`events_block` no TDD: 31 dias). */
+const MAX_BLOCK_MS = 31 * 24 * 60 * 60 * 1000;
+const LONG_BLOCK_MESSAGE = "Um bloco não dura mais de 31 dias. Para algo que segue por mais tempo, marque como tarefa persistente.";
+const LONG_STATUS_MESSAGE = "Tarefa persistente precisa de um status: não pode ficar sem status nem como não realizado.";
+const LONG_NO_DEADLINE_REMINDER = "Tarefa persistente sem previsão de entrega não tem lembrete.";
 
 /** Um `true` para cada campo: se o tipo ganhar um campo, este objeto não compila até ele ser listado. */
 const FIELD_SET: Record<EventDraftField, true> = {
@@ -46,6 +54,7 @@ const FIELD_SET: Record<EventDraftField, true> = {
   description: true,
   reminders: true,
   tags: true,
+  longRunning: true,
 };
 export const EVENT_DRAFT_FIELDS = Object.keys(FIELD_SET) as EventDraftField[];
 
@@ -66,6 +75,7 @@ export function draftFromEvent(event: EventDto): EventDraft {
     description: event.description,
     reminders: sortReminders(event.notifyOffsetsMinutes),
     tags: [...event.tags],
+    longRunning: event.longRunning,
   };
 }
 
@@ -81,6 +91,9 @@ export function emptyEventDraft(name = ""): EventDraft {
     endDate: "",
     endTime: "",
     description: "",
+    reminders: [],
+    tags: [],
+    longRunning: false,
   };
 }
 
@@ -141,10 +154,15 @@ export function buildEventPatch(event: EventDto, draft: EventDraft, now: Date): 
   }
   if (!sameList(draft.reminders, base.reminders)) patch.notifyOffsetsMinutes = draft.reminders;
   if (!sameList(draft.tags, base.tags)) patch.tags = draft.tags;
+  if (draft.longRunning !== base.longRunning) patch.longRunning = draft.longRunning;
   return Object.keys(patch).length > 1 ? patch : null;
 }
 
-/** As recusas da própria tela, antes de enviar. A API continua valendo: o que ela recusar volta como mensagem. */
+/**
+ * As recusas da própria tela, antes de enviar. A API continua valendo: o que ela recusar volta como mensagem.
+ * No evento longo (tarefa persistente) o prazo não se compara com o início, o status é obrigatório e não pode
+ * ser "não realizado", e sem prazo não há lembrete. Fora dele, o bloco não dura mais de 31 dias.
+ */
 export function validateEventDraft(draft: EventDraft): EventDraftErrors {
   const errors: EventDraftErrors = {};
   if (!draft.name.trim()) errors.name = "Dê um título ao evento.";
@@ -152,7 +170,13 @@ export function validateEventDraft(draft: EventDraft): EventDraftErrors {
   if (draft.endTime && !draft.endDate) errors.endTime = "Informe a data para marcar a hora.";
   const start = instantFromDraft(draft.startDate, draft.startTime);
   const end = instantFromDraft(draft.endDate, draft.endTime);
-  if (start && end && Date.parse(end) < Date.parse(start)) errors.endDate = "O término não pode ser antes do início.";
+  if (draft.longRunning) {
+    if (draft.status === null || draft.status === "missed") errors.status = LONG_STATUS_MESSAGE;
+    if (!end && draft.reminders.length > 0) errors.reminders = LONG_NO_DEADLINE_REMINDER;
+  } else if (start && end) {
+    if (Date.parse(end) < Date.parse(start)) errors.endDate = "O término não pode ser antes do início.";
+    else if (Date.parse(end) - Date.parse(start) > MAX_BLOCK_MS) errors.endDate = LONG_BLOCK_MESSAGE;
+  }
   return errors;
 }
 

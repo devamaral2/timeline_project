@@ -9,17 +9,22 @@ import styles from "./event-edit-lists.module.css";
 
 interface EventEditReminderSectionProps {
   draft: EventDraft;
+  /** A tarefa persistente sem previsão de entrega: não há aviso, então não se adiciona lembrete. */
+  noDeadline?: boolean;
+  /** A recusa de `validateEventDraft` para os lembretes que já estão na lista. */
+  error?: string;
   onChange: <K extends EventDraftField>(field: K, value: EventDraft[K]) => void;
 }
 
 const RANGE_MESSAGE = "Use de 1 minuto a 30 dias.";
+const NO_DEADLINE_HINT = "Sem previsão de entrega não há lembrete.";
 
 /**
  * "Lembrar antes de": um cartão por lembrete, com remover, e um "Adicionar" que
  * abre a quantidade e a unidade (minutos ou dias). Fora de 1 minuto a 30 dias,
- * o campo avisa e não entra na lista.
+ * o campo avisa e não entra na lista. Sem prazo, o "Adicionar" some.
  */
-export function EventEditReminderSection({ draft, onChange }: EventEditReminderSectionProps) {
+export function EventEditReminderSection({ draft, noDeadline = false, error: refusal, onChange }: EventEditReminderSectionProps) {
   const [adding, setAdding] = useState(false);
   const [amount, setAmount] = useState("");
   const [unit, setUnit] = useState<ReminderUnit>("minutes");
@@ -65,7 +70,9 @@ export function EventEditReminderSection({ draft, onChange }: EventEditReminderS
         </ul>
       ) : null}
 
-      {adding ? (
+      {noDeadline ? (
+        <p className={styles.hint}>{NO_DEADLINE_HINT}</p>
+      ) : adding ? (
         // Não é um <form>: a edição já é um, e formulário dentro de formulário é HTML inválido.
         <div className={styles.adder} role="group" aria-label="Novo lembrete">
           <input
@@ -105,6 +112,7 @@ export function EventEditReminderSection({ draft, onChange }: EventEditReminderS
           <Plus {...detailIcon} />
         </button>
       )}
+      {refusal ? <p className={styles.error}>{refusal}</p> : null}
     </DetailSection>
   );
 }
