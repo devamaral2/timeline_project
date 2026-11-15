@@ -9,6 +9,7 @@ import {
 } from "@repo/contracts/schemas";
 import { z } from "zod";
 import type { FakeArea, FakeRequest, FakeResult, FakeStore } from ".";
+import { artifactsOfEvent } from "./artifacts";
 
 /** Área de eventos: agenda, lista de tarefas, evento, subtarefas e tags. */
 
@@ -176,7 +177,8 @@ function create(request: FakeRequest, store: FakeStore): FakeResult {
 function read(request: FakeRequest, store: FakeStore): FakeResult {
   const event = table(store).get(request.params.eventId ?? "");
   if (!event) return { status: 404 };
-  return { status: 200, body: event };
+  // Os vínculos vivem no artefato (área de artefatos): o detalhe os monta aqui, na ordem da tabela.
+  return { status: 200, body: { ...event, artifacts: artifactsOfEvent(store, event.id) } };
 }
 
 function update(request: FakeRequest, store: FakeStore): FakeResult {

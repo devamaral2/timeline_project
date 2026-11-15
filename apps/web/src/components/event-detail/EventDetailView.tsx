@@ -13,6 +13,7 @@ import { useMotionRouter } from "@/components/shell/navigation-motion";
 import { ApiRequestError } from "@/lib/api/client-request";
 import { type EditEventInput, updateEvent } from "@/lib/api/events";
 import { momentLabel, priorityPatch, statusPatch } from "@/lib/events/event-read-model";
+import { EventArtifactsSection } from "./EventArtifactsSection";
 import { EventBlocksSection } from "./EventBlocksSection";
 import { EventDetailHeader } from "./EventDetailHeader";
 import { EventInfoSection } from "./EventInfoSection";
@@ -32,9 +33,9 @@ const STALE_MESSAGE = "Este evento mudou em outro lugar. Carregamos a versão at
  * O detalhe de evento em modo de leitura, a rota única para agenda e lista de
  * tarefas. A tela é uma coluna de seções separadas: o topo (este arquivo e
  * `EventDetailHeader`), as Informações (`EventInfoSection`), e as seções de
- * relação: Subtarefas (`EventSubtasksSection`) e Bloqueios (`EventBlocksSection`).
- * O próximo ticket acrescenta a seção de artefatos no corpo, depois dessas (22).
- * "Excluir" fica no menu "Mais ações" do topo, ao lado de "Editar" (23).
+ * relação: Subtarefas (`EventSubtasksSection`), Bloqueios (`EventBlocksSection`)
+ * e Artefatos (`EventArtifactsSection`). "Excluir" fica no menu "Mais ações" do
+ * topo, ao lado de "Editar" (ticket 23).
  */
 export function EventDetailView({ userId, event, onChanged }: EventDetailViewProps) {
   const router = useMotionRouter();
@@ -99,7 +100,7 @@ export function EventDetailView({ userId, event, onChanged }: EventDetailViewPro
       <EventInfoSection event={event} />
       <EventSubtasksSection userId={userId} event={event} />
       <EventBlocksSection userId={userId} event={event} />
-      {/* Ticket 22: artefatos do evento. */}
+      <EventArtifactsSection userId={userId} event={event} />
       {error ? <DetailMessage alert>{error}</DetailMessage> : null}
       <EntityAiEditBar
         userId={userId}

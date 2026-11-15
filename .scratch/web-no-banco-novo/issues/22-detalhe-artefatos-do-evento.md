@@ -4,14 +4,14 @@
 
 **Blocked by:** 20 (Rota única de detalhe do evento)
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Leia antes:** o [README](README.md) desta pasta. Spec: história 34. Canvas: quadro Detalhe · leitura (Artefatos). Glossário: Artefato, Relação, Artefato global.
 
-- [ ] A seção Artefatos mostra a contagem e, para cada um: a posição, o nome, o código do tipo, “seu artefato” ou “catálogo global” e o código da relação (`uses`, `creates`, `updates`, `deletes`).
-- [ ] A ordem é a que veio no evento; artefato sem posição mostra “—” e “sem posição na lista”.
-- [ ] Tocar num artefato abre o detalhe dele.
-- [ ] Evento sem artefatos não mostra a seção.
-- [ ] O teste de tela cobre um evento com artefato próprio, global e sem posição.
-- [ ] A linha desta tela em `docs/mobile-parity.md` foi atualizada, com o Android marcado como em progresso.
-- [ ] Os testes novos passam, e `pnpm run test:unit` e `pnpm run typecheck` continuam verdes.
+- [x] A seção Artefatos mostra a contagem e, para cada um: a posição, o nome, o código do tipo, “seu artefato” ou “catálogo global” e o código da relação (`uses`, `creates`, `updates`, `deletes`).
+- [x] A ordem é a que veio no evento; artefato sem posição mostra “—” e “sem posição na lista”.
+- [x] Tocar num artefato abre o detalhe dele.
+- [x] Evento sem artefatos não mostra a seção.
+- [x] O teste de tela cobre um evento com artefato próprio, global e sem posição.
+- [x] A linha desta tela em `docs/mobile-parity.md` foi atualizada, com o Android marcado como em progresso.
+- [x] Os testes novos passam, e `pnpm run test:unit` e `pnpm run typecheck` continuam verdes.

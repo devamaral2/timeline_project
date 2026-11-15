@@ -1,0 +1,20 @@
+/*
+ * A seção Artefatos do detalhe de evento: a lista na ordem do evento, com a
+ * posição, o nome, o tipo e a relação. Cor só por token, para o tema trocar junto.
+ */
+
+.list { list-style: none; margin: 0; padding: 0; }
+
+.row { display: flex; align-items: flex-start; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.row:last-child { border-bottom: 0; }
+
+.position { flex: none; width: 22px; font-size: 20px; line-height: 24px; text-align: center; color: var(--muted); }
+
+.body { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 3px; color: var(--ink); text-decoration: none; }
+.body:focus-visible { outline: 2px solid var(--color-ring); outline-offset: 2px; border-radius: 6px; }
+
+.name { font-size: 15px; font-weight: 600; line-height: 24px; overflow-wrap: anywhere; }
+.meta { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 12px; font-size: 13px; line-height: 20px; color: var(--muted); }
+.type { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 12px; }
+
+.relation { flex: none; font-family: var(--font-mono); font-size: 12px; line-height: 24px; color: var(--muted); }

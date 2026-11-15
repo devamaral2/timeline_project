@@ -3,6 +3,7 @@ import type {
   ArtifactEventLinkDto,
   ArtifactType,
   CreateArtifactRequest,
+  EventArtifactDto,
   EventDto,
 } from "@repo/contracts";
 import {
@@ -116,8 +117,9 @@ function linksOf(artifact: StoredArtifact, store: FakeStore): ArtifactEventLinkD
   return result;
 }
 
-function toDto(artifact: StoredArtifact, store: FakeStore): ArtifactDto {
-  return {
+/** Sem `store`, é o artefato como vem dentro de um evento: sem `events`, que só as listas de artefatos trazem. */
+function toDto(artifact: StoredArtifact, store?: FakeStore): ArtifactDto {
+  const dto = {
     id: artifact.id,
     name: artifact.name,
     type: artifact.type,
@@ -129,8 +131,25 @@ function toDto(artifact: StoredArtifact, store: FakeStore): ArtifactDto {
     revision: artifact.revision,
     createdAt: artifact.createdAt,
     updatedAt: artifact.updatedAt,
-    events: linksOf(artifact, store),
-  } as ArtifactDto;
+  };
+  return (store ? { ...dto, events: linksOf(artifact, store) } : dto) as ArtifactDto;
+}
+
+/**
+ * Os artefatos ligados a um evento, na ordem da tabela (a ordem em que foram semeados ou criados). É o que
+ * `GET /api/events/{id}` embute em `artifacts`: cada um com a relação do vínculo e o artefato inteiro, globais
+ * e cópias derivadas incluídos, e sem os apagados.
+ */
+export function artifactsOfEvent(store: FakeStore, eventId: string): EventArtifactDto[] {
+  const found: EventArtifactDto[] = [];
+  for (const artifact of table(store).values()) {
+    if (artifact.deleted) continue;
+    const link = artifact.links.find((item) => item.eventId === eventId);
+    if (!link) continue;
+    // A API falsa não guarda a série que criou o vínculo, então nenhum vínculo vem dela.
+    found.push({ relation: link.relation, fromRecurrence: false, artifact: toDto(artifact) });
+  }
+  return found;
 }
 
 function matchesText(artifact: StoredArtifact, q: string): boolean {
