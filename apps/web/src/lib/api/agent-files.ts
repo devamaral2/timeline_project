@@ -10,6 +10,15 @@ import { HermesOffError } from "./requests";
 
 export type AgentFileKind = "skill" | "agent";
 
+/** Rota que cada função desta área chama, no formato do catálogo da API. `route-coverage.test.ts` confere. */
+export const agentFilesRoutes = {
+  listAgentFiles: "GET /api/ai/config",
+  readAgentFileText: "GET /api/ai/config/file",
+  listAgentFileBackups: "GET /api/ai/config/backups",
+  restoreAgentFileBackup: "POST /api/ai/config/restore",
+  requestAgentFileEdit: "POST /api/ai/config/edit-request",
+} as const;
+
 /** Um arquivo da pasta, sem o texto. `missing` = saiu da pasta; o último texto continua legível e restaurável. */
 export interface AgentFileEntry {
   path: string;

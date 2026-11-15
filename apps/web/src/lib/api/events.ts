@@ -13,6 +13,18 @@ import { apiRequest, newIdempotencyKey } from "./client-request";
 /** Edição: a rota leva o `eventId`, então o corpo não o repete. `expectedRevision` vem do evento lido. */
 export type EditEventInput = Omit<UpdateEventInput, "eventId">;
 
+/** Rota que cada função desta área chama, no formato do catálogo da API. `route-coverage.test.ts` confere. */
+export const eventsRoutes = {
+  listAgenda: "GET /api/events",
+  listTrackedEvents: "GET /api/events/tracked",
+  createEvent: "POST /api/events",
+  getEvent: "GET /api/events/{eventId}",
+  updateEvent: "PATCH /api/events/{eventId}",
+  deleteEvent: "DELETE /api/events/{eventId}",
+  listSubtasks: "GET /api/events/{eventId}/subtasks",
+  suggestTags: "GET /api/tags",
+} as const;
+
 export interface AgendaWindow {
   from: string;
   to: string;

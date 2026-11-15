@@ -8,6 +8,17 @@ import type {
 } from "@repo/contracts";
 import { ApiRequestError, apiRequest } from "./client-request";
 
+/** Rota que cada função desta área chama, no formato do catálogo da API. `route-coverage.test.ts` confere. */
+export const requestsRoutes = {
+  startRequest: "POST /api/requests",
+  startEditRequest: "POST /api/requests/edit",
+  sendHermesMessage: "POST /api/requests/hermes",
+  startVoiceRequest: "POST /api/requests/voice",
+  getRequest: "GET /api/requests/{requestId}",
+  listRequests: "GET /api/requests",
+  cancelRequest: "POST /api/requests/{requestId}/cancel",
+} as const;
+
 /** O Hermes está desligado nesta API (`AI_AUTOMATION`): a rota dele responde não encontrado. */
 export class HermesOffError extends Error {
   constructor() {

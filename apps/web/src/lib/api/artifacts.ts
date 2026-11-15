@@ -5,6 +5,15 @@ import { apiRequest, newIdempotencyKey } from "./client-request";
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
 export type EditArtifactInput = DistributiveOmit<UpdateArtifactRequest, "artifactId">;
 
+/** Rota que cada função desta área chama, no formato do catálogo da API. `route-coverage.test.ts` confere. */
+export const artifactsRoutes = {
+  listArtifacts: "GET /api/artifacts",
+  getArtifact: "GET /api/artifacts/{artifactId}",
+  createArtifact: "POST /api/artifacts",
+  editArtifact: "PATCH /api/artifacts/{artifactId}",
+  deleteArtifact: "DELETE /api/artifacts/{artifactId}",
+} as const;
+
 export interface ArtifactFilters {
   type?: ArtifactType;
   /** `global` exige `type`: lista o catálogo global daquele tipo. */
