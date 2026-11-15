@@ -45,7 +45,14 @@ function headerTrigger(): HTMLElement {
   return trigger;
 }
 
-const hubDialog = () => screen.getByRole("dialog", { hidden: true });
+// A barra inferior tem o botão do Hermes, que controla o painel do chat. Há outros diálogos (o menu de modos),
+// então o painel é achado por esse vínculo, e não pelo papel "dialog".
+const hubDialog = () => {
+  const controller = screen.getAllByRole("button", { hidden: true, name: /Buscar e criar|Fechar chat com IA/ }).find((button) => button.hasAttribute("aria-controls"));
+  const dialog = controller ? document.getElementById(controller.getAttribute("aria-controls") ?? "") : null;
+  if (!(dialog instanceof HTMLDialogElement)) throw new Error("hub dialog not found");
+  return dialog;
+};
 
 test("the header field opens the Buscar e criar panel and reports it as expanded", async () => {
   render(<AppShell>conteúdo</AppShell>);

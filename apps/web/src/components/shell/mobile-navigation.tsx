@@ -3,7 +3,7 @@
 import { ArrowLeft, CalendarDays, Check, ChevronDown, FileText, ListChecks, Plus, Search, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { type CSSProperties, type RefObject, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { type CSSProperties, type MouseEvent as ReactMouseEvent, type RefObject, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { creatableItemTypes, ICON_STROKE_WIDTH, visualForItemType } from "@/components/events/event-visuals";
 import { AgentChatPanel, agentEntityHref, useAgendaChat } from "@/components/hub/agent-chat-panel";
 import { EXAMPLE_TODAY, exampleEventsOn, type TaskStatus } from "@/components/agenda/agenda-examples";
@@ -17,6 +17,7 @@ import type { HubCommandId } from "@/components/hub/hub-commands";
 import { type FreeWindow, type HubOpenDetail, hubOpenEvent } from "@/components/hub/hub-events";
 import { dayKeyOf } from "@repo/timeline";
 import { useViewMode } from "@/lib/events/view-mode";
+import { ViewModeMenu } from "./view-mode-menu";
 import { TaskStatusIcon, taskStatuses } from "@/components/agenda/task-controls";
 import { NewNoteForm } from "@/components/new-item/new-item-forms";
 
@@ -87,6 +88,11 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
   const onNotes = notesHref !== null && (pathname === notesHref || pathname.startsWith(`${notesHref}/`));
   const tasksHref = userId ? `/${userId}/tarefas` : null;
   const onTasks = tasksHref !== null && (pathname === tasksHref || pathname.startsWith(`${tasksHref}/`));
+  // A aba da Agenda fica marcada em qualquer rota que não seja Notas nem Tarefas.
+  const onAgenda = !onNotes && !onTasks;
+  // Menu de modos: aberto por tocar na aba já selecionada; a aba que abriu recebe o foco ao fechar.
+  const [modesOpen, setModesOpen] = useState(false);
+  const modeTabRef = useRef<HTMLElement | null>(null);
   const agendaChat = useAgendaChat({ live: Boolean(userId) });
   // A cor do modo pinta a aba selecionada só em Agenda e em Tarefas (o `data-list-mode` some em Notas).
   const viewMode = useViewMode();
@@ -205,6 +211,15 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
   }
   const closePanelRef = useRef(closePanel);
   closePanelRef.current = closePanel;
+
+  // Tocar numa aba selecionada abre o menu de modos e não navega; numa aba não selecionada, só navega.
+  function tabClick(event: ReactMouseEvent<HTMLAnchorElement>, selected: boolean) {
+    closePanel();
+    if (!selected) return;
+    event.preventDefault();
+    modeTabRef.current = event.currentTarget;
+    setModesOpen(true);
+  }
 
   // Criar evento é a rota `/eventos/novo` (o mesmo formulário da edição): o painel fecha e a rota abre com o nome, se houver.
   function openEventCreation(name: string) {
@@ -330,11 +345,11 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
       <div className={styles.bottomFade} aria-hidden />
       <nav className={styles.bottomNav} aria-label="Navegação inferior" data-list-mode={onNotes ? undefined : viewMode.id} style={{ "--nav-index": onTasks ? 0 : onNotes ? 2 : 1 } as CSSProperties} data-hub-open={panel === "hub" && flight?.kind !== "back" ? "true" : undefined} data-flight={flight?.kind === "dock" && flight.late ? undefined : flight?.kind}>
         {tasksHref ? (
-          <Link href={tasksHref} aria-label="Tarefas" aria-current={onTasks ? "page" : undefined} onClick={closePanel}><ListChecks aria-hidden /><span><i>Tarefas</i></span></Link>
+          <Link href={tasksHref} aria-label="Tarefas" aria-current={onTasks ? "page" : undefined} data-no-motion={onTasks ? "" : undefined} onClick={event => tabClick(event, onTasks)}><ListChecks aria-hidden /><span><i>Tarefas</i></span></Link>
         ) : (
           <button type="button" aria-label="Tarefas" onClick={() => openPanel("Tarefa")} aria-haspopup="dialog" aria-expanded={panel === "Tarefa"} aria-controls={dialogId}><ListChecks aria-hidden /><span><i>Tarefas</i></span></button>
         )}
-        <Link href={userId ? `/${userId}` : "/mockups/eventos"} aria-label="Agenda" aria-current={onNotes || onTasks ? undefined : "page"} onClick={closePanel}><CalendarDays aria-hidden /><span><i>Agenda</i></span></Link>
+        <Link href={userId ? `/${userId}` : "/mockups/eventos"} aria-label="Agenda" aria-current={onAgenda ? "page" : undefined} data-no-motion={onAgenda ? "" : undefined} onClick={event => tabClick(event, onAgenda)}><CalendarDays aria-hidden /><span><i>Agenda</i></span></Link>
         {notesHref ? (
           <Link href={notesHref} aria-label="Notas" aria-current={onNotes ? "page" : undefined} onClick={closePanel}><FileText aria-hidden /><span><i>Notas</i></span></Link>
         ) : (
@@ -343,6 +358,7 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
         <button ref={commandRef} type="button" className={styles.commandButton} data-close={panel === "hub" ? "true" : undefined} onClick={() => panel === "hub" ? closePanel() : openPanel("hub")} aria-haspopup="dialog" aria-expanded={panel === "hub"} aria-controls={dialogId} aria-label={panel === "hub" ? "Fechar chat com IA" : "Buscar e criar"}>{panel === "hub" ? <X aria-hidden /> : <HermesGlyph />}</button>
       </nav>
       {flight ? <span ref={flyerRef} className={styles.hermesFlyer} aria-hidden><HermesGlyph /></span> : null}
+      <ViewModeMenu open={modesOpen} onClose={() => setModesOpen(false)} returnFocusRef={modeTabRef} />
       <dialog ref={dialogRef} id={dialogId} aria-labelledby={panel === "hub" ? undefined : titleId} aria-label={panel === "hub" ? "Buscar e criar" : undefined} className={styles.sectionMenu} onClose={() => { setPanel(null); setFreeWindow(null); setChatJustOpened(false); setFlight(current => current?.kind === "out" || current?.kind === "back" ? null : current); }}
         data-flight={flight?.kind === "out" || flight?.kind === "back" ? flight.kind : undefined}
         data-hub-view={panel === "hub" ? hubView : undefined} data-expanded={panel === "hub" && hubView === "chat" && expanded ? "true" : undefined}
