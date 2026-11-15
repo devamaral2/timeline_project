@@ -1,8 +1,8 @@
 import { Check, ChevronRight, LoaderCircle, X } from "lucide-react";
-import type { HermesStepDto } from "@/lib/ai-automation/ai-automation";
+import type { HermesStep } from "@/lib/agent-chat/hermes-steps";
 import styles from "@/components/shell/shell.module.css";
 
-const STATUS_TEXT: Record<HermesStepDto["status"], string> = {
+const STATUS_TEXT: Record<HermesStep["status"], string> = {
   running: "em andamento",
   done: "concluído",
   failed: "falhou",
@@ -13,7 +13,7 @@ const STATUS_TEXT: Record<HermesStepDto["status"], string> = {
  * arquivo, busca), e cada pensamento recolhido, que se abre para ler. Ao vivo enquanto ele trabalha e, depois, o
  * registro do que foi feito.
  */
-export function HermesSteps({ steps, running }: { steps: HermesStepDto[]; running: boolean }) {
+export function HermesSteps({ steps, running }: { steps: HermesStep[]; running: boolean }) {
   return (
     <section className={styles.hermesSteps} aria-label="Passos do Hermes" data-running={running}>
       <ul>

@@ -20,7 +20,6 @@ import field from "@/components/detail/entity-ai-edit-bar.module.css";
 import { HermesGlyph } from "@/components/ui/hermes-glyph";
 import { HermesMark, type HermesState } from "@/components/ui/hermes-mark";
 import { briefDate } from "@/lib/dates/day-labels";
-import type { AiAutomationApi } from "@/lib/ai-automation/ai-automation";
 import { type AgentChatMessage, useAgentChat } from "@/lib/agent-chat/use-agent-chat";
 import type { AgentChatEntityRef, AgentScreenContext } from "@/lib/api/contracts";
 import { useSessionState } from "@/lib/session/use-session";
@@ -82,12 +81,11 @@ export function requestWithWindow(freeWindow: FreeWindow, text: string): string 
  */
 interface AgendaChatOptions {
   live: boolean;
-  /** Injetaveis pelos testes: nenhum deles toca a rede la. `pollMs` encurta o intervalo de consulta do pedido. */
-  automationApi?: AiAutomationApi;
+  /** Injetavel pelos testes: `pollMs` encurta o intervalo de consulta do pedido. */
   pollMs?: number;
 }
 
-export function useAgendaChat({ live, automationApi, pollMs }: AgendaChatOptions) {
+export function useAgendaChat({ live, pollMs }: AgendaChatOptions) {
   const { user, ready } = useSessionState();
   const userId = live ? user?.userId : undefined;
   const chat = useAgentChat({
@@ -95,7 +93,6 @@ export function useAgendaChat({ live, automationApi, pollMs }: AgendaChatOptions
     context: AGENDA_CONTEXT,
     onEntitiesChanged: requestAgendaRefresh,
     processPollMs: pollMs,
-    automationApi,
   });
   return { chat, signedOut: ready && !user };
 }

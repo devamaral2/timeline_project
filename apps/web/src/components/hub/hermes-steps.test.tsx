@@ -1,11 +1,11 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { expect, test } from "vitest";
-import type { HermesStepDto } from "@/lib/ai-automation/ai-automation";
+import type { HermesStep } from "@/lib/agent-chat/hermes-steps";
 import { HermesSteps } from "./hermes-steps";
 
-const steps: HermesStepDto[] = [
+const steps: HermesStep[] = [
   { id: "t1", kind: "thought", label: "Pensou", detail: "Preciso ler a documentação do provedor.", status: "done" },
-  { id: "c1", kind: "tool", label: "Pesquisou na web", detail: "opencode-go provider hermes agent", status: "done", durationMs: 1200 },
+  { id: "c1", kind: "tool", label: "Pesquisou na web", detail: "opencode-go provider hermes agent", status: "done" },
   { id: "c2", kind: "tool", label: "Executou um comando", detail: "ls -la", status: "running" },
   { id: "c3", kind: "tool", label: "Leu um arquivo", status: "failed" },
 ];

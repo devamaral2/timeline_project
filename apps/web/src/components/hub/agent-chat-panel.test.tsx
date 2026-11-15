@@ -54,11 +54,7 @@ function Harness({
   onClose?: () => void;
   entityHref?: (entity: AgentChatEntityRef) => string | undefined;
 }) {
-  const agenda = useAgendaChat({
-    live,
-    pollMs: 5,
-    automationApi: { start: vi.fn(), get: vi.fn() } as never,
-  });
+  const agenda = useAgendaChat({ live, pollMs: 5 });
   return <AgentChatPanel {...agenda} onCommand={onCommand} onClose={onClose} entityHref={entityHref} freeWindow={freeWindow} onClearFreeWindow={onClearFreeWindow} todayKey={todayKey} listenOnOpen={listenOnOpen} />;
 }
 
@@ -286,6 +282,52 @@ test("cancelling a request from the process box cancels it in the API", async ()
   await waitFor(() => expect(screen.getByText("Pedido cancelado.")).toBeInTheDocument());
   expect([...requests().values()][0]).toMatchObject({ status: "cancel" });
   expect(screen.queryByRole("button", { name: "Cancelar pedido" })).not.toBeInTheDocument();
+});
+
+/** A API falsa com o Hermes ligado ou desligado (`AI_AUTOMATION`). */
+function serveHermes(hermes: "on" | "off") {
+  api = createFakeApi({ areas: [requestsArea({ hermes })] });
+  net.authedFetch.mockImplementation(api.authedFetch);
+}
+const hermesPosts = () => api.calls.filter((call) => call.method === "POST" && call.pathname === "/api/requests/hermes");
+
+test("com o Hermes ligado, /hermes manda a mensagem a ele: os passos aparecem, a resposta fecha e o rastro vai para Processo", async () => {
+  serveHermes("on");
+  render(<Harness />);
+  ask("/hermes que horas são?");
+
+  await waitFor(() => expect(hermesPosts()).toHaveLength(1));
+  expect(hermesPosts()[0]?.body).toEqual({ userId: "user-1", text: "que horas são?", clientMessageId: expect.any(String) });
+  const id = [...requests().keys()][0] as string;
+  advanceRequest(api, id, {
+    status: "running",
+    trace: {
+      route: "hermes", status: "running", fields: [],
+      entries: [{ id: "c1", kind: "tool", label: "Executou um comando", summary: "date", status: "running" }],
+    },
+  });
+  const steps = await screen.findByRole("region", { name: "Passos do Hermes" });
+  expect(within(steps).getByText("Executou um comando")).toBeInTheDocument();
+
+  advanceRequest(api, id, { status: "done", message: "São 18h." });
+  await waitFor(() => expect(within(screen.getByRole("log")).getByText("São 18h.")).toBeInTheDocument());
+  expect(screen.getByText("Hermes", { selector: "span" })).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: /Processo/ }));
+  const trace = within(screen.getByRole("region", { name: "Processo da IA" }));
+  expect(trace.getByRole("button", { name: /Executou um comando/ })).toBeInTheDocument();
+});
+
+test("com o Hermes desligado, /hermes avisa e o chat volta ao assistente da agenda", async () => {
+  serveHermes("off");
+  render(<Harness />);
+  ask("/hermes oi");
+
+  await waitFor(() => expect(screen.getByText(/O Hermes está desligado/)).toBeInTheDocument());
+  expect(hermesPosts()).toHaveLength(1);
+  expect(requestPosts()).toHaveLength(0);
+  expect(screen.getByText("Assistente")).toBeInTheDocument();
+  expect(screen.queryByText("Hermes", { selector: "span" })).not.toBeInTheDocument();
 });
 
 /** O microfone do navegador, de mentira: guarda as sessões abertas e deixa o teste dizer o que foi ouvido. */

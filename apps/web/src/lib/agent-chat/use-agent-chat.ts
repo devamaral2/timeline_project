@@ -5,15 +5,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "@/lib/api/authed-fetch";
 import { ApiRequestError } from "@/lib/api/client-request";
 import type { AgentChatEntityRef, AgentScreenContext } from "@/lib/api/contracts";
-import { cancelRequest, getRequest, startRequest } from "@/lib/api/requests";
-import {
-  type AiAutomationApi,
-  type HermesStepDto,
-  aiAutomation,
-  isAutomationRouteOff,
-  isHermesTurnTerminal,
-  parseChatCommand,
-} from "@/lib/ai-automation/ai-automation";
+import { HermesOffError, cancelRequest, getRequest, sendHermesMessage, startRequest } from "@/lib/api/requests";
+import { parseChatCommand } from "./chat-mode-command";
+import { type HermesStep, hermesStepsOf } from "./hermes-steps";
 import { operationId } from "@/lib/ai-jobs/ai-jobs";
 
 /** O rastro sem o `route`: o da rota por passos e o do Hermes falam a mesma forma. */
@@ -30,7 +24,7 @@ export type AgentChatMessage =
   /** A caixa de processo (ADR 003): `null` ate o servidor responder o primeiro estado. Nao entra no historico. */
   | { id: string; role: "process"; request: RequestDto | null }
   /** Os passos do Hermes (ferramentas e pensamentos), ao vivo e depois do fim do turno. Nao entra no historico. */
-  | { id: string; role: "hermes-steps"; steps: HermesStepDto[]; running: boolean };
+  | { id: string; role: "hermes-steps"; steps: HermesStep[]; running: boolean };
 
 /**
  * O rastro de um pedido, para a aba "Processo": um por pedido enviado, na ordem da conversa. `trace` fica
@@ -71,19 +65,14 @@ interface UseAgentChatOptions {
   context?: AgentScreenContext;
   /** Chamado quando uma resposta mexeu em registros — ou pode ter mexido. */
   onEntitiesChanged?: () => void;
-  /** Intervalo entre consultas do pedido por passos; os testes o encurtam. */
+  /** Intervalo entre consultas do pedido (por passos ou do Hermes); os testes o encurtam. */
   processPollMs?: number;
-  /** A rota do Hermes (`/hermes <mensagem>`); ausente, vale a real. */
-  automationApi?: AiAutomationApi;
-  automationPollMs?: number;
 }
 
 /** Quanto tempo a caixa de processo espera o servidor terminar antes de dar o pedido como perdido. */
 const PROCESS_TIMEOUT_MS = 180_000;
 /** Falhas seguidas ao consultar o processo antes de desistir de acompanhar. */
 const PROCESS_POLL_FAILURES = 5;
-/** O Hermes pode usar modelo e ferramentas; espera mais que um turno comum antes de dar por perdido. */
-const HERMES_TIMEOUT_MS = 180_000;
 const HERMES_DISABLED_TEXT = "O Hermes está desligado neste ambiente (AI_AUTOMATION).";
 const HERMES_ENTER_TEXT = "Agora você está falando com o Hermes. Escreva /app para voltar ao assistente da agenda.";
 const HERMES_LEAVE_TEXT = "De volta ao assistente da agenda.";
@@ -139,8 +128,6 @@ export function useAgentChat({
   context,
   onEntitiesChanged,
   processPollMs = 1000,
-  automationApi = aiAutomation,
-  automationPollMs = 1000,
 }: UseAgentChatOptions) {
   const disposedRef = useRef(false);
   /** `/hermes` liga o modo: as mensagens seguintes vao ao Hermes ate `/app`, ou ate comecar de novo. */
@@ -245,6 +232,18 @@ export function useAgentChat({
       commitTraces((current) =>
         current.map((entry) =>
           entry.id === id ? { ...entry, running: isRequestOpen(view), trace: view.trace ?? null } : entry));
+      // O Hermes não grava passos: os pensamentos e as ferramentas vêm do rastro, ao vivo e depois do fim.
+      if (view.route === "hermes") {
+        const steps = hermesStepsOf(view.trace?.entries);
+        if (steps.length > 0) {
+          const stepsId = `${id}-steps`;
+          const message: AgentChatMessage = { id: stepsId, role: "hermes-steps", steps, running: isRequestOpen(view) };
+          commitMessages((current) =>
+            current.some((entry) => entry.id === stepsId)
+              ? current.map((entry) => (entry.id === stepsId ? message : entry))
+              : [...current, message]);
+        }
+      }
     },
     [commitMessages, commitTraces],
   );
@@ -255,6 +254,12 @@ export function useAgentChat({
       applyView(id, view);
       if (view.status === "done") {
         commitPending(null);
+        if (view.route === "hermes") {
+          // A resposta do Hermes entra na conversa; ele pode ter mexido em qualquer registro, então a agenda atualiza.
+          commitMessages((current) => [...current, { id: `${id}-answer`, role: "assistant", text: view.message ?? "", entities: [] }]);
+          onEntitiesChangedRef.current?.();
+          return;
+        }
         // Criar, editar e vincular mudam a agenda; uma consulta pura ou uma resposta nao.
         if (view.entities.length > 0) onEntitiesChangedRef.current?.();
         return;
@@ -263,7 +268,7 @@ export function useAgentChat({
       if (view.entities.length > 0) onEntitiesChangedRef.current?.();
       fail(id, view.status === "cancel" ? "cancelled" : (view.errorCode ?? "internal"));
     },
-    [applyView, commitPending, fail],
+    [applyView, commitMessages, commitPending, fail],
   );
 
   /**
@@ -340,84 +345,38 @@ export function useAgentChat({
   );
 
   /**
-   * `/hermes <mensagem>`: a API entrega a mensagem ao Hermes e o chat mostra a resposta dele. A resposta e
-   * transitoria (nao entra no historico da conversa) e, como o Hermes pode ter criado ou editado registros,
-   * a agenda e atualizada ao fim.
+   * `/hermes <mensagem>`: a mensagem vira um pedido na rota do Hermes, com o id da mensagem (reenviar não abre
+   * outro) e a sessão. O pedido é acompanhado como os demais: os passos vêm do rastro e a resposta, em
+   * `message`. Com o Hermes desligado a API responde não encontrado: o chat avisa e sai do modo.
    */
   const runHermes = useCallback(
     async (id: string, text: string): Promise<void> => {
       if (!userId) return;
-      const replyId = `${id}-hermes`;
-      let jobId: string;
+      let request: RequestDto;
       try {
-        ({ id: jobId } = await automationApi.start({
+        request = await sendHermesMessage({
           userId,
           text,
           clientMessageId: id,
-        }));
+          ...(sessionRef.current ? { sessionId: sessionRef.current } : {}),
+        });
       } catch (error) {
-        if (isAutomationRouteOff(error)) {
+        if (error instanceof HermesOffError) {
           commitHermesMode(false);
           commitPending(null);
-          commitMessages((current) => [...current, { id: replyId, role: "assistant", text: HERMES_DISABLED_TEXT, entities: [] }]);
+          commitMessages((current) => [...current, { id: `${id}-hermes`, role: "assistant", text: HERMES_DISABLED_TEXT, entities: [] }]);
           return;
         }
-        const code = error instanceof ApiError && error.status === 401 ? "session_expired" : "connection_failed";
-        fail(id, code);
+        fail(id, startFailureCode(error));
         return;
       }
+      sessionRef.current ??= request.id;
 
-      commitPending({ id, label: "Falando com o Hermes" });
       showTrace({ id, request: text, route: "hermes", running: true, trace: null });
-      const stepsId = `${id}-steps`;
-      const showSteps = (steps: HermesStepDto[], running: boolean) => {
-        const message: AgentChatMessage = { id: stepsId, role: "hermes-steps", steps, running };
-        commitMessages((current) =>
-          current.some((entry) => entry.id === stepsId)
-            ? current.map((entry) => (entry.id === stepsId ? message : entry))
-            : [...current, message],
-        );
-      };
-      const deadline = Date.now() + HERMES_TIMEOUT_MS;
-      let failures = 0;
-      while (!disposedRef.current && pendingRef.current?.id === id) {
-        try {
-          const job = await automationApi.get(jobId);
-          failures = 0;
-          if (disposedRef.current || pendingRef.current?.id !== id) return;
-          const steps = job.steps ?? [];
-          if (steps.length > 0) showSteps(steps, !isHermesTurnTerminal(job));
-          showTrace({ id, request: text, route: "hermes", running: !isHermesTurnTerminal(job), trace: job.trace ?? null });
-          if (isHermesTurnTerminal(job)) {
-            if (job.status === "succeeded" && job.result) {
-              commitPending(null);
-              const reply = job.result.text;
-              commitMessages((current) => [...current, { id: replyId, role: "assistant", text: reply, entities: [] }]);
-              onEntitiesChangedRef.current?.();
-            } else {
-              fail(id, job.errorCode === "cancelled" ? "cancelled" : "unavailable");
-            }
-            return;
-          }
-        } catch (error) {
-          failures += 1;
-          if (error instanceof ApiError && error.status === 401) {
-            fail(id, "session_expired");
-            return;
-          }
-          if (failures >= PROCESS_POLL_FAILURES) {
-            fail(id, "connection_lost");
-            return;
-          }
-        }
-        if (Date.now() > deadline) {
-          fail(id, "connection_lost");
-          return;
-        }
-        await new Promise((resolve) => setTimeout(resolve, automationPollMs));
-      }
+      commitPending({ id, label: "Falando com o Hermes", requestId: request.id });
+      await followRequest(id, request.id);
     },
-    [automationApi, automationPollMs, commitHermesMode, commitMessages, commitPending, fail, showTrace, userId],
+    [commitHermesMode, commitMessages, commitPending, fail, followRequest, showTrace, userId],
   );
 
   /** Envia uma mensagem com o id dado (o da mensagem nova, ou o de uma mensagem que falhou ao ser reenviada). */

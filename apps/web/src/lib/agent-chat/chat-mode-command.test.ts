@@ -1,6 +1,5 @@
 import { expect, test } from "vitest";
-import { ApiError } from "@/lib/api/authed-fetch";
-import { isAutomationRouteOff, isHermesTurnTerminal, parseChatCommand } from "./ai-automation";
+import { parseChatCommand } from "./chat-mode-command";
 
 test("/hermes entra no modo Hermes, com ou sem mensagem", () => {
   expect(parseChatCommand("/hermes crie uma nota")).toEqual({ kind: "hermes", text: "crie uma nota" });
@@ -20,18 +19,4 @@ test("o resto e pedido comum", () => {
   for (const text of ["/hermesx oi", "fale com o /hermes agora", "/app agora", "almocei", "/tarefa comprar pao"]) {
     expect(parseChatCommand(text)).toBeNull();
   }
-});
-
-test("404 significa rota desligada; outros erros nao", () => {
-  expect(isAutomationRouteOff(new ApiError(404, "x"))).toBe(true);
-  expect(isAutomationRouteOff(new ApiError(500, "x"))).toBe(false);
-  expect(isAutomationRouteOff(new Error("x"))).toBe(false);
-});
-
-test("o job termina em sucesso, falha ou cancelamento", () => {
-  expect(isHermesTurnTerminal({ status: "succeeded" })).toBe(true);
-  expect(isHermesTurnTerminal({ status: "failed" })).toBe(true);
-  expect(isHermesTurnTerminal({ status: "cancelled" })).toBe(true);
-  expect(isHermesTurnTerminal({ status: "queued" })).toBe(false);
-  expect(isHermesTurnTerminal({ status: "running" })).toBe(false);
 });
