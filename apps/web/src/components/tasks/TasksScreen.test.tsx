@@ -237,3 +237,88 @@ test("revisão desatualizada: a tela avisa, relê a lista e não grava nada", as
   expect(api.calls.find((call) => call.method === "PATCH")?.body).toMatchObject({ expectedRevision: 1 });
   expect(within(screen.getByRole("region", { name: /A fazer/ })).getByRole("link", { name: /Pagar conta de luz/ })).toBeInTheDocument();
 });
+
+/** Os parâmetros da última consulta à lista de tarefas, como saíram na rede. */
+function lastTrackedQuery(api: ReturnType<typeof serve>): Record<string, string> {
+  const tracked = api.calls.filter((call) => call.pathname === "/api/events/tracked");
+  return tracked[tracked.length - 1]?.query ?? {};
+}
+
+test("a tag filtra pela consulta, e as outras tags continuam como opções", async () => {
+  const api = serve([
+    eventFixture({ id: "luz", name: "Pagar conta de luz", status: "todo", tags: ["casa"] }),
+    eventFixture({ id: "treino", name: "Treino de força", status: "todo", tags: ["saude"] }),
+  ]);
+  render(<TasksScreen userId="user-1" />);
+  await screen.findByRole("link", { name: /Pagar conta de luz/ });
+
+  fireEvent.click(screen.getByRole("button", { name: "#casa" }));
+
+  await waitFor(() => expect(lastTrackedQuery(api)).toMatchObject({ tag: "casa" }));
+  await waitFor(() => expect(screen.queryByRole("link", { name: /Treino de força/ })).not.toBeInTheDocument());
+  expect(screen.getByRole("link", { name: /Pagar conta de luz/ })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "#casa" })).toHaveAttribute("aria-pressed", "true");
+  expect(screen.getByRole("button", { name: "#saude" })).toBeInTheDocument();
+});
+
+test("prioridade aceita mais de um nível e os manda juntos, na ordem da escala", async () => {
+  const api = serve([
+    eventFixture({ id: "a", name: "Urgente da casa", status: "todo", priority: "urgent" }),
+    eventFixture({ id: "b", name: "Baixa do dia", status: "todo", priority: "low" }),
+    eventFixture({ id: "c", name: "Média do dia", status: "todo", priority: "medium" }),
+  ]);
+  render(<TasksScreen userId="user-1" />);
+  await screen.findByRole("link", { name: /Média do dia/ });
+
+  fireEvent.click(screen.getByRole("button", { name: "Baixa" }));
+  fireEvent.click(screen.getByRole("button", { name: "Urgente" }));
+
+  await waitFor(() => expect(lastTrackedQuery(api)).toMatchObject({ priority: "urgent,low" }));
+  await waitFor(() => expect(screen.queryByRole("link", { name: /Média do dia/ })).not.toBeInTheDocument());
+  expect(screen.getByRole("link", { name: /Urgente da casa/ })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /Baixa do dia/ })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Alta" })).toHaveAttribute("aria-pressed", "false");
+});
+
+test("a busca por texto espera a digitação parar, tira os espaços das pontas e manda q", async () => {
+  const api = serve(events);
+  render(<TasksScreen userId="user-1" />);
+  await screen.findByRole("link", { name: /Pagar conta de luz/ });
+
+  fireEvent.change(screen.getByRole("searchbox", { name: "Buscar tarefas" }), { target: { value: "  viagem " } });
+
+  await waitFor(() => expect(lastTrackedQuery(api)).toMatchObject({ q: "viagem" }));
+  expect(await screen.findByRole("link", { name: /Organizar fotos da viagem/ })).toBeInTheDocument();
+  await waitFor(() => expect(screen.queryByRole("link", { name: /Pagar conta de luz/ })).not.toBeInTheDocument());
+});
+
+test("Limpar filtros manda a consulta sem filtro e volta à lista inteira", async () => {
+  const api = serve(events);
+  render(<TasksScreen userId="user-1" />);
+  await screen.findByRole("link", { name: /Pagar conta de luz/ });
+
+  fireEvent.click(screen.getByRole("button", { name: "Média" }));
+  fireEvent.change(screen.getByRole("searchbox", { name: "Buscar tarefas" }), { target: { value: "viagem" } });
+  await waitFor(() => expect(lastTrackedQuery(api)).toMatchObject({ priority: "medium", q: "viagem" }));
+
+  fireEvent.click(screen.getByRole("button", { name: "Limpar filtros" }));
+
+  await waitFor(() => expect(lastTrackedQuery(api)).toEqual({}));
+  expect(screen.getByRole("searchbox", { name: "Buscar tarefas" })).toHaveValue("");
+  expect(screen.getByRole("button", { name: "Média" })).toHaveAttribute("aria-pressed", "false");
+  expect(await screen.findByRole("link", { name: /Pagar conta de luz/ })).toBeInTheDocument();
+});
+
+test("com filtro ativo e nada encontrado, diz que nenhum evento passou no filtro", async () => {
+  serve(events);
+  render(<TasksScreen userId="user-1" />);
+  await screen.findByRole("link", { name: /Pagar conta de luz/ });
+
+  fireEvent.change(screen.getByRole("searchbox", { name: "Buscar tarefas" }), { target: { value: "inexistente" } });
+
+  expect(await screen.findByRole("heading", { name: "Nenhum evento passou no filtro" })).toBeInTheDocument();
+  expect(screen.queryByRole("heading", { name: "Nenhuma tarefa por aqui" })).not.toBeInTheDocument();
+
+  fireEvent.click(within(screen.getByRole("region", { name: "Lista de tarefas" })).getByRole("button", { name: "Limpar filtros" }));
+  expect(await screen.findByRole("link", { name: /Pagar conta de luz/ })).toBeInTheDocument();
+});
