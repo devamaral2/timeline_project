@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "@/lib/api/authed-fetch";
 import { ApiRequestError } from "@/lib/api/client-request";
 import type { AgentChatEntityRef, AgentScreenContext } from "@/lib/api/contracts";
-import { HermesOffError, cancelRequest, getRequest, sendHermesMessage, startRequest } from "@/lib/api/requests";
+import { HermesOffError, cancelRequest, getRequest, listRequests, sendHermesMessage, startRequest } from "@/lib/api/requests";
 import { parseChatCommand } from "./chat-mode-command";
 import { type HermesStep, hermesStepsOf } from "./hermes-steps";
 import { operationId } from "@/lib/ai-jobs/ai-jobs";
@@ -107,6 +107,13 @@ export function isRequestOpen(request: Pick<RequestDto, "status">): boolean {
   return request.status === "queued" || request.status === "running" || request.status === "waiting";
 }
 
+/** Um pedido aberto que o chat mostra: a rota por passos ou a do Hermes. */
+type ChatRouteRequest = RequestDto & { route: "steps" | "hermes" };
+
+function isOpenChatRequest(request: RequestDto): request is ChatRouteRequest {
+  return (request.route === "steps" || request.route === "hermes") && isRequestOpen(request);
+}
+
 /** Por que o envio do pedido falhou, do ponto de vista do chat. */
 export function startFailureCode(error: unknown): ChatFailureCode {
   if (error instanceof ApiError && error.status === 401) return "session_expired";
@@ -145,6 +152,13 @@ export function useAgentChat({
   const tracesRef = useRef(traces);
   const messagesRef = useRef(messages);
   const pendingRef = useRef(pending);
+  /** As mensagens (ids) cujo pedido o chat está acompanhando agora: a enviada e as recuperadas ao abrir. */
+  const followingRef = useRef(new Set<string>());
+  /** Os pedidos (ids da API) que a conversa já mostra ou enviou: a lista ao abrir não os repete. */
+  const knownRequestsRef = useRef(new Set<string>());
+  /** Enquanto a lista de pedidos abertos é lida, os envios esperam aqui (a mensagem já aparece na conversa). */
+  const recoveringRef = useRef(false);
+  const deferredRef = useRef<Array<() => void>>([]);
   const onEntitiesChangedRef = useRef(onEntitiesChanged);
 
   useEffect(() => {
@@ -182,6 +196,7 @@ export function useAgentChat({
     if (pendingRef.current) return;
     commitHermesMode(false);
     commitPending(null);
+    followingRef.current.clear();
     sessionRef.current = undefined;
     messagesRef.current = [];
     setMessages([]);
@@ -191,8 +206,9 @@ export function useAgentChat({
 
   const fail = useCallback(
     (id: string, code: ChatFailureCode) => {
-      if (pendingRef.current?.id !== id) return;
-      commitPending(null);
+      if (!followingRef.current.has(id)) return;
+      followingRef.current.delete(id);
+      if (pendingRef.current?.id === id) commitPending(null);
       const found = messagesRef.current.find((message) => message.id === id);
       const request = found?.role === "user" ? found : undefined;
       commitMessages((current) => [
@@ -253,7 +269,8 @@ export function useAgentChat({
     (id: string, view: RequestDto) => {
       applyView(id, view);
       if (view.status === "done") {
-        commitPending(null);
+        followingRef.current.delete(id);
+        if (pendingRef.current?.id === id) commitPending(null);
         if (view.route === "hermes") {
           // A resposta do Hermes entra na conversa; ele pode ter mexido em qualquer registro, então a agenda atualiza.
           commitMessages((current) => [...current, { id: `${id}-answer`, role: "assistant", text: view.message ?? "", entities: [] }]);
@@ -279,11 +296,11 @@ export function useAgentChat({
     async (id: string, requestId: string): Promise<void> => {
       const deadline = Date.now() + PROCESS_TIMEOUT_MS;
       let failures = 0;
-      while (!disposedRef.current && pendingRef.current?.id === id) {
+      while (!disposedRef.current && followingRef.current.has(id)) {
         try {
           const view = await getRequest(requestId);
           failures = 0;
-          if (disposedRef.current || pendingRef.current?.id !== id) return;
+          if (disposedRef.current || !followingRef.current.has(id)) return;
           if (!isRequestOpen(view)) {
             finishRequest(id, view);
             return;
@@ -331,6 +348,7 @@ export function useAgentChat({
         return;
       }
       sessionRef.current ??= requestId;
+      knownRequestsRef.current.add(requestId);
 
       const processId = `${id}-process`;
       commitMessages((current) => [
@@ -363,6 +381,7 @@ export function useAgentChat({
       } catch (error) {
         if (error instanceof HermesOffError) {
           commitHermesMode(false);
+          followingRef.current.delete(id);
           commitPending(null);
           commitMessages((current) => [...current, { id: `${id}-hermes`, role: "assistant", text: HERMES_DISABLED_TEXT, entities: [] }]);
           return;
@@ -371,6 +390,7 @@ export function useAgentChat({
         return;
       }
       sessionRef.current ??= request.id;
+      knownRequestsRef.current.add(request.id);
 
       showTrace({ id, request: text, route: "hermes", running: true, trace: null });
       commitPending({ id, label: "Falando com o Hermes", requestId: request.id });
@@ -402,10 +422,15 @@ export function useAgentChat({
       if (command?.kind === "hermes") commitHermesMode(true);
 
       commitMessages((current) => [...current, { id, role: "user", text: trimmed }]);
+      followingRef.current.add(id);
       commitPending({ id });
       const hermesText = command?.kind === "hermes" ? command.text : hermesModeRef.current ? trimmed : null;
-      if (hermesText !== null) void runHermes(id, hermesText);
-      else void runRequest(id, trimmed);
+      const run = () => {
+        if (hermesText !== null) void runHermes(id, hermesText);
+        else void runRequest(id, trimmed);
+      };
+      if (recoveringRef.current) deferredRef.current.push(run);
+      else run();
       return true;
     },
     [commitHermesMode, commitMessages, commitPending, runHermes, runRequest, userId],
@@ -444,12 +469,62 @@ export function useAgentChat({
     );
   }, [fail, finishRequest]);
 
+  /**
+   * Ao abrir o chat: lê a lista de pedidos e volta a acompanhar os que ainda estão na fila, executando ou
+   * aguardando (rota por passos ou Hermes), como um pedido recém-enviado. Não repete o que a conversa já mostra
+   * ou enviou, nem o que já terminou. Um envio feito enquanto a lista é lida espera o fim dela: assim o pedido
+   * enviado não aparece na lista sem o id que a tela já conhece. Sem lista (rede), a conversa segue.
+   */
+  const recover = useCallback(async (): Promise<void> => {
+    if (!userId || recoveringRef.current) return;
+    recoveringRef.current = true;
+    let open: ChatRouteRequest[] = [];
+    try {
+      // A lista vem do mais novo para o mais antigo; a conversa mostra do mais antigo para o mais novo.
+      open = (await listRequests()).filter(isOpenChatRequest).filter((request) => !knownRequestsRef.current.has(request.id)).reverse();
+    } catch {
+      // Sem a lista, o que estava em aberto não volta; a conversa continua como estava.
+    }
+    recoveringRef.current = false;
+    if (disposedRef.current) return;
+
+    if (open.length > 0) {
+      const restored: AgentChatMessage[] = [];
+      for (const request of open) {
+        knownRequestsRef.current.add(request.id);
+        followingRef.current.add(request.id);
+        restored.push({ id: request.id, role: "user", text: request.text ?? request.title });
+        if (request.route === "steps") restored.push({ id: `${request.id}-process`, role: "process", request });
+      }
+      commitMessages((current) => [...restored, ...current]);
+      commitTraces((current) => [
+        ...open.map((request) => ({
+          id: request.id,
+          request: request.text ?? request.title,
+          route: request.route,
+          running: true,
+          trace: null,
+        })),
+        ...current,
+      ]);
+      const newest = open[open.length - 1];
+      if (newest && !pendingRef.current) {
+        const label = newest.route === "hermes" ? "Falando com o Hermes" : "Realizando processos";
+        commitPending({ id: newest.id, label, requestId: newest.id });
+      }
+      for (const request of open) void followRequest(request.id, request.id);
+    }
+
+    for (const run of deferredRef.current.splice(0)) run();
+  }, [commitMessages, commitPending, commitTraces, followRequest, userId]);
+
   return {
     messages,
     pending,
     /** O rastro de cada pedido da conversa, para a aba "Processo". */
     traces,
     ready: Boolean(userId),
+    recover,
     /** `true` enquanto as mensagens vao ao Hermes (`/hermes`); `/app` volta ao assistente da agenda. */
     hermesMode,
     send,

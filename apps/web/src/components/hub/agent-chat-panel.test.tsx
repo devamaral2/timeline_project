@@ -3,7 +3,7 @@ import type { RequestDto } from "@repo/contracts";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import type { AgentChatEntityRef } from "@/lib/api/contracts";
 import { type FakeApi, createFakeApi } from "@/test/fake-api";
-import { advanceRequest, requestsArea } from "@/test/fake-api/requests";
+import { advanceRequest, requestFixture, requestsArea } from "@/test/fake-api/requests";
 import { AgentChatPanel, agentEntityHref, requestWithWindow, useAgendaChat } from "./agent-chat-panel";
 import type { FreeWindow } from "./hub-events";
 
@@ -516,4 +516,108 @@ test("typing ends the cycle too", async () => {
 
   await new Promise((resolve) => setTimeout(resolve, 50));
   expect(FakeSpeechRecognition.instances).toHaveLength(2);
+});
+
+/** Um id de pedido no formato da API (ULID de 26 caracteres de Crockford). */
+const requestIdOf = (n: number) => `01HZ${String(n).padStart(22, "0")}`;
+
+/** O chat como o `MobileNavigation` o monta: o hook fica no pai e o painel abre e fecha por cima dele. */
+function ToggledChat({ open }: { open: boolean }) {
+  const agenda = useAgendaChat({ live: true, pollMs: 5 });
+  return open ? <AgentChatPanel {...agenda} /> : null;
+}
+
+/** Os pedidos que o chat pediu à lista ao abrir (`GET /api/requests`, sem id no caminho). */
+const listCalls = () => api.calls.filter((call) => call.method === "GET" && call.pathname === "/api/requests");
+
+/** Deixa a leitura da lista terminar e o chat aplicar o que ela trouxe (a API falsa responde no mesmo tick). */
+const settle = () => act(() => new Promise<void>((resolve) => setTimeout(resolve, 50)));
+
+test("reopening the chat picks up a request that is still running and shows its answer when it ends", async () => {
+  const id = requestIdOf(1);
+  api = createFakeApi({
+    areas: [requestsArea()],
+    seed: {
+      requests: [requestFixture({ id, text: "comi arroz no almoço", title: "comi arroz no almoço", status: "running" })],
+    },
+  });
+  net.authedFetch.mockImplementation(api.authedFetch);
+
+  render(<Harness />);
+
+  const log = await screen.findByRole("log");
+  expect(within(log).getByText("comi arroz no almoço")).toBeInTheDocument();
+  expect(requestPosts()).toHaveLength(0);
+
+  advanceRequest(api, id, { status: "done", message: "Anotei o almoço." });
+  await waitFor(() => expect(within(log).getByText("Anotei o almoço.")).toBeInTheDocument());
+  expect(screen.getByRole("textbox", { name: "Mensagem para a IA" })).toBeEnabled();
+});
+
+test("reopening the chat picks up a Hermes request still running and shows its answer when it ends", async () => {
+  const id = requestIdOf(4);
+  api = createFakeApi({
+    areas: [requestsArea({ hermes: "on" })],
+    seed: {
+      requests: [requestFixture({ id, route: "hermes", text: "resume o meu dia", title: "resume o meu dia", status: "running" })],
+    },
+  });
+  net.authedFetch.mockImplementation(api.authedFetch);
+
+  render(<Harness />);
+
+  const log = await screen.findByRole("log");
+  expect(within(log).getByText("resume o meu dia")).toBeInTheDocument();
+  advanceRequest(api, id, { status: "done", message: "Seu dia está livre à tarde." });
+  await waitFor(() => expect(within(log).getByText("Seu dia está livre à tarde.")).toBeInTheDocument());
+  expect(requestPosts()).toHaveLength(0);
+});
+
+test("a request that already finished is not reopened when the chat opens", async () => {
+  api = createFakeApi({
+    areas: [requestsArea()],
+    seed: {
+      requests: [requestFixture({ id: requestIdOf(2), text: "comi arroz", title: "comi arroz", status: "done", message: "Anotado." })],
+    },
+  });
+  net.authedFetch.mockImplementation(api.authedFetch);
+
+  render(<Harness />);
+
+  await waitFor(() => expect(listCalls()).toHaveLength(1));
+  await settle();
+  expect(screen.queryByText("comi arroz")).not.toBeInTheDocument();
+  expect(api.calls.filter((call) => call.pathname === `/api/requests/${requestIdOf(2)}`)).toHaveLength(0);
+});
+
+test("closing and reopening the chat does not follow twice a request it already shows or sent", async () => {
+  api = createFakeApi({
+    areas: [requestsArea()],
+    seed: {
+      requests: [requestFixture({ id: requestIdOf(3), text: "comi arroz", title: "comi arroz", status: "running" })],
+    },
+  });
+  net.authedFetch.mockImplementation(api.authedFetch);
+
+  const { rerender } = render(<ToggledChat open />);
+  await waitFor(() => expect(within(screen.getByRole("log")).getByText("comi arroz")).toBeInTheDocument());
+
+  // Fechar e abrir de novo: a lista devolve o pedido que a conversa já segue, e ele não pode aparecer de novo.
+  rerender(<ToggledChat open={false} />);
+  rerender(<ToggledChat open />);
+  await waitFor(() => expect(listCalls()).toHaveLength(2));
+  await settle();
+  expect(within(screen.getByRole("log")).getAllByText("comi arroz")).toHaveLength(1);
+
+  // Um pedido que a própria tela enviou: depois de fechar e reabrir, a lista também o devolve, e ele não se repete.
+  // Antes, o pedido recuperado termina: enquanto ele roda, a conversa não aceita outro envio.
+  advanceRequest(api, requestIdOf(3), { status: "done", message: "Anotado." });
+  await waitFor(() => expect(within(screen.getByRole("log")).getByText("Anotado.")).toBeInTheDocument());
+  ask("o que tenho hoje?");
+  await waitFor(() => expect(requestPosts()).toHaveLength(1));
+  rerender(<ToggledChat open={false} />);
+  rerender(<ToggledChat open />);
+  await waitFor(() => expect(listCalls()).toHaveLength(3));
+  await settle();
+  expect(within(screen.getByRole("log")).getAllByText("o que tenho hoje?")).toHaveLength(1);
 });

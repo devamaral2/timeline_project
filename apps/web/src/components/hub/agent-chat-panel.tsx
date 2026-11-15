@@ -152,6 +152,10 @@ export function AgentChatPanel({
   const [pane, setPane] = useState<"chat" | "process">("chat");
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  // Ao abrir o chat, volta a acompanhar os pedidos que ainda rodam (o hook não repete o que já mostra).
+  useEffect(() => {
+    void chat.recover();
+  }, [chat.recover]);
   const commandsId = useId();
   // Aberto pela pessoa, o chat ja monta ouvindo (se da para falar com a IA agora).
   const listensOnOpen = listenOnOpen && chat.ready && !chat.pending;
