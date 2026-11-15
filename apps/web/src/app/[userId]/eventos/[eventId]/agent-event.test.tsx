@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import type { AgentTraceDto, EventDto, RequestDto } from "@repo/contracts";
 import { type FakeApi, createFakeApi } from "@/test/fake-api";
@@ -56,6 +56,9 @@ let api: FakeApi;
 
 function install(events: EventDto[], requests: RequestDto[]) {
   api = createFakeApi({ areas: [eventsArea, requestsArea()], seed: { events, requests } });
+  // Os pedidos semeados são do usuário da tela: a API falsa só aceita `sessionId` de pedido do mesmo dono.
+  const owners = api.store.table<string>("requestOwners");
+  for (const request of requests) owners.set(request.id, "user-1");
   net.authedFetch.mockImplementation(api.authedFetch);
 }
 
@@ -291,4 +294,114 @@ test("Entradas, Produziu e Sessão não aparecem sem conteúdo", async () => {
   expect(screen.queryByRole("region", { name: "Entradas" })).not.toBeInTheDocument();
   expect(screen.queryByRole("region", { name: "Produziu" })).not.toBeInTheDocument();
   expect(screen.queryByRole("region", { name: "Sessão" })).not.toBeInTheDocument();
+});
+
+const FIELD = "Editar este pedido com IA";
+
+test("com o pedido em aberto, a linha de status do campo mostra o andamento e Cancelar pedido", async () => {
+  install([agentEvent()], [agentRequest({ progress: "Comparando preços…" })]);
+  renderPage();
+  await loaded();
+
+  const field = await screen.findByRole("region", { name: FIELD });
+  expect(within(field).getByText("Comparando preços…")).toBeInTheDocument();
+  expect(within(field).getByRole("button", { name: "Cancelar pedido" })).toBeInTheDocument();
+});
+
+test("um pedido terminado não mostra Cancelar pedido no campo", async () => {
+  install([agentEvent({ status: "done", finishedAt: "2026-11-14T09:58:00-03:00" })], [agentRequest({ status: "done" })]);
+  renderPage();
+  await loaded();
+
+  const field = await screen.findByRole("region", { name: FIELD });
+  expect(within(field).queryByRole("button", { name: "Cancelar pedido" })).not.toBeInTheDocument();
+});
+
+test("Cancelar pedido chama a API, e o detalhe passa a mostrar o pedido cancelado", async () => {
+  install([agentEvent()], [agentRequest({ progress: "Comparando preços…" })]);
+  renderPage();
+  await loaded();
+
+  const field = await screen.findByRole("region", { name: FIELD });
+  fireEvent.click(within(field).getByRole("button", { name: "Cancelar pedido" }));
+
+  const top = screen.getByRole("region", { name: "Resumo do evento" });
+  expect(await within(top).findByText("Agente, cancelado")).toBeInTheDocument();
+  expect(api.calls.some((call) => call.method === "POST" && call.pathname === `/api/requests/${ID}/cancel`)).toBe(true);
+  expect(within(field).queryByRole("button", { name: "Cancelar pedido" })).not.toBeInTheDocument();
+});
+
+test("cancelar um pedido de alimento diz que é preciso apagar o alimento para interromper o cálculo", async () => {
+  install([agentEvent()], [agentRequest({ route: "food", progress: "Calculando nutrientes…" })]);
+  renderPage();
+  await loaded();
+
+  const field = await screen.findByRole("region", { name: FIELD });
+  fireEvent.click(within(field).getByRole("button", { name: "Cancelar pedido" }));
+
+  expect(await within(field).findByRole("alert")).toHaveTextContent("apague o alimento");
+});
+
+test.each([
+  ["limit_reached", "O pedido ficou grande demais e nada foi gravado. Tente dividir em partes menores."],
+  ["unavailable", "A IA está indisponível agora. Tente de novo em instantes."],
+] as const)("um pedido que falhou (%s) mostra o motivo, conforme o código do erro", async (code, reason) => {
+  install([agentEvent({ status: "failed" })], [agentRequest({ status: "failed", errorCode: code })]);
+  renderPage();
+  await loaded();
+
+  const failure = await screen.findByRole("region", { name: "Falha" });
+  expect(within(failure).getByText(reason)).toBeInTheDocument();
+});
+
+/** O pedido novo que a API criou ao continuar: o que não é o pedido da tela. */
+function continuationId(): string {
+  const created = [...api.store.table<RequestDto>("requests").values()].find((request) => request.id !== ID);
+  if (!created) throw new Error("Nenhum pedido novo na API falsa.");
+  return created.id;
+}
+
+test("enviar pelo campo abre um pedido na mesma sessão, e a linha de status passa a acompanhá-lo", async () => {
+  install([agentEvent()], [agentRequest({ status: "done" })]);
+  renderPage();
+  await loaded();
+
+  const field = await screen.findByRole("region", { name: FIELD });
+  fireEvent.change(within(field).getByRole("textbox", { name: "Pedir à IA para editar este pedido" }), {
+    target: { value: "Refine: prefiro voo direto" },
+  });
+  fireEvent.click(within(field).getByRole("button", { name: "Enviar pedido" }));
+
+  await waitFor(() => expect(api.calls.some((call) => call.method === "POST" && call.pathname === "/api/requests")).toBe(true));
+  const sent = api.calls.find((call) => call.method === "POST" && call.pathname === "/api/requests");
+  expect(sent?.body).toMatchObject({ userId: "user-1", text: "Refine: prefiro voo direto", sessionId: ID });
+  expect((sent?.body as { clientMessageId?: string }).clientMessageId).toEqual(expect.any(String));
+
+  advanceRequest(api, continuationId(), { status: "running", progress: "Lendo o calendário…" });
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(3000);
+  });
+  expect(within(field).getByText("Lendo o calendário…")).toBeInTheDocument();
+
+  advanceRequest(api, continuationId(), { status: "done" });
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(3000);
+  });
+  expect(within(field).getByText("Pronto")).toBeInTheDocument();
+  expect(within(field).queryByRole("button", { name: "Cancelar pedido" })).not.toBeInTheDocument();
+});
+
+test("continuar um pedido que já tem sessão abre o pedido com o sessionId dele", async () => {
+  const first = requestFixture({ id: FIRST_ID, title: "Planejar viagem a Lisboa", status: "done" });
+  install([agentEvent()], [first, agentRequest({ status: "done", sessionId: FIRST_ID })]);
+  renderPage();
+  await loaded();
+
+  const field = await screen.findByRole("region", { name: FIELD });
+  fireEvent.change(within(field).getByRole("textbox", { name: "Pedir à IA para editar este pedido" }), { target: { value: "Mais um" } });
+  fireEvent.click(within(field).getByRole("button", { name: "Enviar pedido" }));
+
+  await waitFor(() => expect(api.calls.some((call) => call.method === "POST" && call.pathname === "/api/requests")).toBe(true));
+  const sent = api.calls.find((call) => call.method === "POST" && call.pathname === "/api/requests");
+  expect(sent?.body).toMatchObject({ sessionId: FIRST_ID });
 });

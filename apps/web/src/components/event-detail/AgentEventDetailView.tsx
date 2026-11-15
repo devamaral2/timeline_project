@@ -4,6 +4,8 @@ import type { EventDto } from "@repo/contracts";
 import { BackLink, DetailFrame, DetailMessage } from "@/components/detail/detail-parts";
 import { AgentEventHeader } from "./AgentEventHeader";
 import { AgentEntriesSection } from "./AgentEntriesSection";
+import { AgentFailureSection } from "./AgentFailureSection";
+import { AgentRequestBar } from "./AgentRequestBar";
 import { AgentInfoSection } from "./AgentInfoSection";
 import { AgentProducedSection } from "./AgentProducedSection";
 import { AgentRecordSection } from "./AgentRecordSection";
@@ -26,7 +28,7 @@ interface AgentEventDetailViewProps {
  *     (no topo, em `AgentEventHeader`), e o menu "Mais ações" na barra do topo.
  */
 export function AgentEventDetailView({ userId, event, onChanged }: AgentEventDetailViewProps) {
-  const { request, load } = useAgentRequest(event.id, onChanged);
+  const { request, load, applyRequest } = useAgentRequest(event.id, onChanged);
 
   const lead = (
     <>
@@ -49,7 +51,8 @@ export function AgentEventDetailView({ userId, event, onChanged }: AgentEventDet
           <AgentProducedSection userId={userId} entities={request.entities} />
           <AgentSessionSection sessionId={request.sessionId} />
           <AgentRecordSection request={request} />
-          {/* Ticket 47: a falha do pedido e o campo do agente no rodapé. */}
+          <AgentFailureSection request={request} />
+          <AgentRequestBar userId={userId} request={request} onRequestChange={applyRequest} />
         </>
       ) : load === "missing" ? (
         <DetailMessage alert>Pedido não encontrado.</DetailMessage>

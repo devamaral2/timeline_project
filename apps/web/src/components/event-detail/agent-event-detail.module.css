@@ -20,3 +20,7 @@
 
 .linkedTitle { display: block; font-size: var(--font-size-sm); font-weight: 500; color: var(--ink); overflow-wrap: anywhere; }
 .linkedWhen { display: block; font-size: 13px; color: var(--muted); }
+/* Cancelar pedido: o texto da linha de status do campo do agente, em destrutivo; some quando o pedido termina. */
+.cancel { flex: none; height: 44px; margin: -8px 0; padding: 0 6px; border: 0; background: transparent; font-size: 13px; font-weight: 600; color: var(--destructive); cursor: pointer; }
+.cancel:disabled { opacity: .55; cursor: not-allowed; }
+.cancel:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }

@@ -16,7 +16,10 @@ export type AgentRequestLoad = "loading" | "ready" | "missing" | "error";
  * chama `onTick`, que relê o evento (a conclusão e a data vêm dele). Para no estado final, depois de uma última
  * releitura do evento. Falha numa releitura mantém a última versão na tela; a próxima tenta de novo.
  */
-export function useAgentRequest(requestId: string, onTick: () => Promise<void>): { request: RequestDto | null; load: AgentRequestLoad } {
+export function useAgentRequest(
+  requestId: string,
+  onTick: () => Promise<void>,
+): { request: RequestDto | null; load: AgentRequestLoad; applyRequest: (view: RequestDto) => void } {
   const [request, setRequest] = useState<RequestDto | null>(null);
   const [load, setLoad] = useState<AgentRequestLoad>("loading");
   const tickRef = useRef(onTick);
@@ -69,7 +72,7 @@ export function useAgentRequest(requestId: string, onTick: () => Promise<void>):
     };
   }, [open, requestId]);
 
-  return { request, load };
+  return { request, load, applyRequest: setRequest };
 }
 
 /** O pedido inexistente responde 404 e o de outro usuário 403: a tela diz só que não há pedido. */

@@ -102,6 +102,11 @@ const ERROR_TEXTS: Record<ChatFailureCode, string> = {
   session_expired: "Sua sessão acabou. Entre de novo para continuar.",
 };
 
+/** O texto que o usuário lê para um código de falha. O detalhe de agente usa o mesmo, sem outra tradução. */
+export function agentFailureText(code: ChatFailureCode): string {
+  return ERROR_TEXTS[code];
+}
+
 /**
  * Falhas de rede ou de sessão: reenviar a mesma mensagem (mesmo id) não abre um segundo pedido, porque a API
  * devolve o que já aceitou. As demais são do pedido; "Tentar de novo" abre um pedido novo.

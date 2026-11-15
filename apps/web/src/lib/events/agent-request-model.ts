@@ -23,6 +23,11 @@ export function stepProgressLabel({ done, total }: { done: number; total: number
   return `${done} de ${total} ${total === 1 ? "passo" : "passos"}`;
 }
 
+/** O texto do passo que está executando agora, quando há um. */
+export function runningStepLabel(request: Pick<RequestDto, "steps">): string | undefined {
+  return request.steps.find((step) => step.status === "running")?.label;
+}
+
 /** O texto de uma entrada: o resumo que o servidor escreveu, ou o rótulo quando não há resumo. */
 export function entryText(entry: AgentTraceEntryDto): string {
   return entry.summary ?? entry.label;
