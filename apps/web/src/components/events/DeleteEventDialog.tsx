@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { AlertTriangle, X } from "lucide-react";
-import { authedFetch } from "@/lib/api/authed-fetch";
+import { ApiRequestError } from "@/lib/api/client-request";
+import { deleteEvent } from "@/lib/api/events";
 import { cn } from "@/lib/utils";
 import {
   destructiveButtonClass,
@@ -21,6 +22,8 @@ interface DeleteEventDialogProps {
 
 export function DeleteEventDialog({ eventId, eventName, onClose, onDeleted }: DeleteEventDialogProps) {
   const [deleting, setDeleting] = useState(false);
+  /** O evento já não existe: a tela avisa e o único botão é voltar, como no caminho de sucesso. */
+  const [gone, setGone] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -43,12 +46,17 @@ export function DeleteEventDialog({ eventId, eventName, onClose, onDeleted }: De
     setError(null);
 
     try {
-      await authedFetch(`/api/events/${eventId}`, { method: "DELETE" });
+      await deleteEvent(eventId);
 
       onDeleted();
       onClose();
-    } catch {
-      setError("Não foi possível excluir o evento. Tente novamente.");
+    } catch (cause) {
+      if (cause instanceof ApiRequestError && cause.kind === "not_found") {
+        setGone(true);
+        setError("Este evento já não existe. Ele foi apagado em outro lugar.");
+      } else {
+        setError("Não foi possível excluir o evento. Tente novamente.");
+      }
       setDeleting(false);
     }
   }
@@ -98,25 +106,33 @@ export function DeleteEventDialog({ eventId, eventName, onClose, onDeleted }: De
           pode ser desfeita.
         </p>
 
-        {error ? <p className="mt-3 text-xs text-destructive">{error}</p> : null}
+        {error ? <p role="alert" className="mt-3 text-xs text-destructive">{error}</p> : null}
 
         <div className="mt-5 flex items-center justify-end gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={deleting}
-            className={outlineButtonClass}
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            onClick={() => void handleDelete()}
-            disabled={deleting}
-            className={destructiveButtonClass}
-          >
-            {deleting ? "Excluindo..." : "Excluir"}
-          </button>
+          {gone ? (
+            <button type="button" onClick={onDeleted} className={outlineButtonClass}>
+              Voltar
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={deleting}
+                className={outlineButtonClass}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleDelete()}
+                disabled={deleting}
+                className={destructiveButtonClass}
+              >
+                {deleting ? "Excluindo..." : "Excluir"}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>,

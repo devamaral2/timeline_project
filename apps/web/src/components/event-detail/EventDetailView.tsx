@@ -1,12 +1,13 @@
 "use client";
 
-import { Pencil } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import type { EventDto, EventPriority, HumanEventStatus } from "@repo/contracts";
 import { agendaRefreshEvent } from "@/components/agenda/agenda-refresh";
 import { BackLink, DetailFrame, DetailMenu, DetailMessage, MenuItem, detailIcon } from "@/components/detail/detail-parts";
 import { EntityAiEditBar } from "@/components/detail/EntityAiEditBar";
+import { DeleteEventDialog } from "@/components/events/DeleteEventDialog";
 import { visualForItemType } from "@/components/events/event-visuals";
 import { useMotionRouter } from "@/components/shell/navigation-motion";
 import { ApiRequestError } from "@/lib/api/client-request";
@@ -32,14 +33,14 @@ const STALE_MESSAGE = "Este evento mudou em outro lugar. Carregamos a versão at
  * tarefas. A tela é uma coluna de seções separadas: o topo (este arquivo e
  * `EventDetailHeader`), as Informações (`EventInfoSection`), e as seções de
  * relação: Subtarefas (`EventSubtasksSection`) e Bloqueios (`EventBlocksSection`).
- * Os próximos tickets acrescentam as deles no corpo, depois dessas:
- *   - 22: artefatos do evento;
- *   - 23: "Apagar evento", no menu "Mais ações" do topo.
+ * O próximo ticket acrescenta a seção de artefatos no corpo, depois dessas (22).
+ * "Excluir" fica no menu "Mais ações" do topo, ao lado de "Editar" (23).
  */
 export function EventDetailView({ userId, event, onChanged }: EventDetailViewProps) {
   const router = useMotionRouter();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const editHref = `/${userId}/eventos/${event.id}/editar`;
   const visual = visualForItemType(event.kind);
   const TypeIcon = visual.Icon;
@@ -81,7 +82,10 @@ export function EventDetailView({ userId, event, onChanged }: EventDetailViewPro
           </Link>
           <DetailMenu label="Mais ações">
             {(close) => (
-              <MenuItem icon={<Pencil {...detailIcon} />} onClick={() => { close(); router.push(editHref); }}>Editar</MenuItem>
+              <>
+                <MenuItem icon={<Pencil {...detailIcon} />} onClick={() => { close(); router.push(editHref); }}>Editar</MenuItem>
+                <MenuItem icon={<Trash2 {...detailIcon} />} danger onClick={() => { close(); setConfirmingDelete(true); }}>Excluir</MenuItem>
+              </>
             )}
           </DetailMenu>
         </div>
@@ -111,6 +115,17 @@ export function EventDetailView({ userId, event, onChanged }: EventDetailViewPro
           title: event.name,
         }}
       />
+      {confirmingDelete ? (
+        <DeleteEventDialog
+          eventId={event.id}
+          eventName={event.name}
+          onClose={() => setConfirmingDelete(false)}
+          onDeleted={() => {
+            window.dispatchEvent(new Event(agendaRefreshEvent));
+            router.back();
+          }}
+        />
+      ) : null}
     </DetailFrame>
   );
 }
