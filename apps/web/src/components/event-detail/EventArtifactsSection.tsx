@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { ArtifactType, EventArtifactDto, EventDto } from "@repo/contracts";
 import { DetailSection } from "@/components/detail/detail-parts";
 import { ICON_STROKE_WIDTH } from "@/components/events/event-visuals";
+import { mealCaloriesKcal } from "@/lib/events/event-read-model";
 import styles from "./event-artifacts.module.css";
 
 interface EventArtifactsSectionProps {
@@ -29,6 +30,7 @@ const TYPE_ICONS: Record<ArtifactType, LucideIcon> = {
  * código do tipo, de quem é (“seu artefato” ou “catálogo global”) e a relação. O
  * que o evento criou (`creates`) não está na lista: sem posição, com “—”. Tocar
  * numa linha abre o detalhe do artefato. Evento sem artefato não mostra a seção.
+ * Na refeição, o total de calorias são os alimentos ligados somados (cópias incluídas).
  */
 export function EventArtifactsSection({ userId, event }: EventArtifactsSectionProps) {
   if (event.artifacts.length === 0) return null;
@@ -41,6 +43,12 @@ export function EventArtifactsSection({ userId, event }: EventArtifactsSectionPr
           <ArtifactRow key={link.artifact.id} link={link} position={positions[index] ?? null} userId={userId} />
         ))}
       </ul>
+      {event.kind === "meal" ? (
+        <p className={styles.total}>
+          <span>Total de calorias</span>
+          <strong>{`${Math.round(mealCaloriesKcal(event.artifacts))} kcal`}</strong>
+        </p>
+      ) : null}
     </DetailSection>
   );
 }

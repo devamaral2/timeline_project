@@ -18,3 +18,7 @@
 .type { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 12px; }
 
 .relation { flex: none; font-family: var(--font-mono); font-size: 12px; line-height: 24px; color: var(--muted); }
+
+/* O total da refeição: o rótulo à esquerda, o número em destaque à direita, sob a lista. */
+.total { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 12px 0 0; padding-top: 12px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+.total strong { font-family: var(--font-mono); font-size: 15px; font-weight: 600; color: var(--ink); }

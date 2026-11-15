@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
-import { humanStatusOptions, momentLabel, priorityPatch, recurrenceLines, reminderLabel, statusPatch } from "./event-read-model";
+import type { EventArtifactDto } from "@repo/contracts";
+import { humanStatusOptions, mealCaloriesKcal, momentLabel, priorityPatch, recurrenceLines, reminderLabel, statusPatch } from "./event-read-model";
 
 const now = new Date("2026-11-14T10:00:00-03:00");
 
@@ -93,5 +94,26 @@ describe("recorrência", () => {
       },
     });
     expect(lines.detail).toBe("desde 3 nov · até 1 dez · esta ocorrência não segue a série");
+  });
+});
+
+describe("calorias da refeição", () => {
+  /** Um vínculo de artefato com o tipo e, se for alimento, o total de calorias. */
+  function link(type: string, kcal?: number): EventArtifactDto {
+    const data = kcal === undefined ? {} : { totals: { totalCaloriesKcal: kcal } };
+    return { relation: "uses", fromRecurrence: false, artifact: { id: `a-${type}-${kcal}`, type, data } } as unknown as EventArtifactDto;
+  }
+
+  test("é a soma das calorias dos alimentos ligados, cópias incluídas", () => {
+    expect(mealCaloriesKcal([link("food", 200), link("food", 350.5)])).toBe(550.5);
+  });
+
+  test("artefatos que não são alimento não entram na soma", () => {
+    expect(mealCaloriesKcal([link("food", 200), link("text"), link("workout")])).toBe(200);
+  });
+
+  test("sem alimento, o total é zero", () => {
+    expect(mealCaloriesKcal([])).toBe(0);
+    expect(mealCaloriesKcal([link("text")])).toBe(0);
   });
 });

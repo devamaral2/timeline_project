@@ -140,7 +140,7 @@ export function EventEditView({ event: loaded, initialName, onReload, onLeave }:
         {event ? <EventEditBlocksSection eventId={event.id} draft={draft} onChange={setField} /> : null}
         {/* A lista de artefatos só existe na edição: a criação ainda não a mostra. */}
         {event ? <EventEditArtifactsSection draft={draft} onChange={setField} /> : null}
-        {/* 30: alimento e exercício entram na mesma lista. 31: recorrência, que não aparece quando draft.longRunning. */}
+        {/* 31: recorrência, que não aparece quando draft.longRunning. */}
         {failure ? <DetailMessage alert>{failure}</DetailMessage> : null}
         <footer className={styles.footer}>
           <button type="button" className={styles.discard} onClick={onLeave}>Descartar</button>

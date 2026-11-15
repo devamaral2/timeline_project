@@ -103,3 +103,113 @@ test("PATCH com artifacts que cita um artefato inexistente responde 404 e não g
   expect(event.revision).toBe(1);
   expect(event.artifacts.map((link) => link.artifact.name)).toEqual(["Ficha A"]);
 });
+
+const FOOD = {
+  description: "Arroz branco",
+  items: [],
+  totals: { totalCaloriesKcal: 200, totalProteinGrams: 4, totalCarbohydrateGrams: 44, totalFatGrams: 0, totalFiberGrams: 1 },
+  generation: { status: "completed" },
+};
+
+test("PATCH com uma cópia de alimento cria a cópia derivada com a quantidade, ligada ao evento na ordem", async () => {
+  const api = createFakeApi({
+    areas: [eventsArea, artifactsArea],
+    seed: {
+      events: [eventFixture({ id: "ev-1", kind: "meal", revision: 2 })],
+      artifacts: [artifactFixture({ id: "food-arroz", name: "Arroz", type: "food", global: true, data: FOOD })],
+    },
+  });
+
+  await patchEvent(api, { expectedRevision: 2, artifacts: [{ copyOf: "food-arroz", quantity: "150 g" }] });
+
+  const event = (await api.authedFetch("/api/events/ev-1")) as EventDto;
+  expect(event.artifacts).toHaveLength(1);
+  const [link] = event.artifacts;
+  expect(link?.relation).toBe("uses");
+  expect(link?.artifact).toMatchObject({ name: "Arroz", type: "food", global: false, derived: true, data: { ...FOOD, quantity: "150 g" } });
+  expect(link?.artifact.id).not.toBe("food-arroz");
+});
+
+test("a cópia não aparece em GET /api/artifacts, e o original global segue igual", async () => {
+  const api = createFakeApi({
+    areas: [eventsArea, artifactsArea],
+    seed: {
+      events: [eventFixture({ id: "ev-1", kind: "meal", revision: 1 })],
+      artifacts: [artifactFixture({ id: "food-arroz", name: "Arroz", type: "food", global: true, data: FOOD })],
+    },
+  });
+
+  await patchEvent(api, { expectedRevision: 1, artifacts: [{ copyOf: "food-arroz", quantity: "1 porção" }] });
+
+  const listed = (await api.authedFetch("/api/artifacts?type=food&scope=global")) as { id: string }[];
+  expect(listed.map((item) => item.id)).toEqual(["food-arroz"]);
+  const own = (await api.authedFetch("/api/artifacts?type=food")) as unknown[];
+  expect(own).toEqual([]);
+});
+
+test("editar o original depois não muda a cópia que já está na refeição", async () => {
+  const api = createFakeApi({
+    areas: [eventsArea, artifactsArea],
+    seed: {
+      events: [eventFixture({ id: "ev-1", kind: "meal", revision: 1 })],
+      artifacts: [artifactFixture({ id: "food-meu", name: "Ovo", type: "food", data: FOOD, revision: 1 })],
+    },
+  });
+
+  await patchEvent(api, { expectedRevision: 1, artifacts: [{ copyOf: "food-meu", quantity: "2" }] });
+  await api.authedFetch("/api/artifacts/food-meu", {
+    method: "PATCH",
+    body: JSON.stringify({ expectedRevision: 1, type: "food", data: { ...FOOD, totals: { ...FOOD.totals, totalCaloriesKcal: 999 } } }),
+  });
+
+  const event = (await api.authedFetch("/api/events/ev-1")) as EventDto;
+  expect(event.artifacts[0]?.artifact.data).toMatchObject({ quantity: "2", totals: { totalCaloriesKcal: 200 } });
+});
+
+test("uma cópia que já está no evento vai como id e continua ligada, sem criar outra cópia", async () => {
+  const api = createFakeApi({
+    areas: [eventsArea, artifactsArea],
+    seed: {
+      events: [eventFixture({ id: "ev-1", kind: "meal", revision: 1 })],
+      artifacts: [artifactFixture({ id: "food-arroz", name: "Arroz", type: "food", global: true, data: FOOD })],
+    },
+  });
+
+  await patchEvent(api, { expectedRevision: 1, artifacts: [{ copyOf: "food-arroz", quantity: "1" }] });
+  const copyId = ((await api.authedFetch("/api/events/ev-1")) as EventDto).artifacts[0]?.artifact.id ?? "";
+  await patchEvent(api, { expectedRevision: 2, artifacts: [{ id: copyId, relation: "uses" }] });
+
+  const event = (await api.authedFetch("/api/events/ev-1")) as EventDto;
+  expect(event.artifacts.map((link) => link.artifact.id)).toEqual([copyId]);
+});
+
+test("PATCH com cópia de um alimento que não existe responde 404 e não grava nada, nem as outras entradas", async () => {
+  const api = createFakeApi({
+    areas: [eventsArea, artifactsArea],
+    seed: {
+      events: [eventFixture({ id: "ev-1", kind: "meal", revision: 1 })],
+      artifacts: [artifactFixture({ id: "food-arroz", name: "Arroz", type: "food", global: true, data: FOOD })],
+    },
+  });
+
+  await expect(
+    patchEvent(api, { expectedRevision: 1, artifacts: [{ copyOf: "food-arroz", quantity: "1" }, { copyOf: "nao-existe", quantity: "1" }] }),
+  ).rejects.toMatchObject({ status: 404 });
+
+  const event = (await api.authedFetch("/api/events/ev-1")) as EventDto;
+  expect(event.revision).toBe(1);
+  expect(event.artifacts).toEqual([]);
+  expect((await api.authedFetch("/api/artifacts?type=food&scope=global")) as unknown[]).toHaveLength(1);
+});
+
+test("PATCH com cópia de um artefato que não é alimento responde 404", async () => {
+  const api = createFakeApi({
+    areas: [eventsArea, artifactsArea],
+    seed: {
+      events: [eventFixture({ id: "ev-1", revision: 1 })],
+      artifacts: [artifactFixture({ id: "art-nota", name: "Nota" })],
+    },
+  });
+
+  await expect(patchEvent(api, { expectedRevision: 1, artifacts: [{ copyOf: "art-nota" }] })).rejects.toMatchObject({ status: 404 });
+});

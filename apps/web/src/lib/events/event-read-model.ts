@@ -1,4 +1,4 @@
-import type { EventDto, EventPriority, EventRecurrenceDto, HumanEventStatus } from "@repo/contracts";
+import type { EventArtifactDto, EventDto, EventPriority, EventRecurrenceDto, HumanEventStatus } from "@repo/contracts";
 import { dayKeyOf, formatTime, shortDate, weekday, zonedDayStart } from "@repo/timeline";
 import type { EditEventInput } from "@/lib/api/events";
 import { recurrenceRuleLabel } from "@/lib/events/card-text";
@@ -60,6 +60,14 @@ export function recurrenceLines(recurrence: EventRecurrenceDto): { rule: string;
   const end = recurrence.rule.endsOn ? `até ${shortDate(recurrence.rule.endsOn).toLowerCase()}` : "sem fim";
   const follows = recurrence.detached ? "esta ocorrência não segue a série" : "esta ocorrência segue a série";
   return { rule: recurrenceRuleLabel(recurrence.rule), detail: `desde ${since} · ${end} · ${follows}` };
+}
+
+/**
+ * O total de calorias da refeição: a soma de `totals.totalCaloriesKcal` dos alimentos ligados ao evento, cópias
+ * incluídas. O que não é alimento não entra; sem alimento, zero.
+ */
+export function mealCaloriesKcal(links: readonly EventArtifactDto[]): number {
+  return links.reduce((sum, link) => (link.artifact.type === "food" ? sum + link.artifact.data.totals.totalCaloriesKcal : sum), 0);
 }
 
 function isDayStart(instant: string): boolean {

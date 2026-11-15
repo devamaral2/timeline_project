@@ -155,19 +155,58 @@ export function artifactsOfEvent(store: FakeStore, eventId: string): EventArtifa
   return found.map(({ link, artifact }) => ({ relation: link.relation, fromRecurrence: false, artifact: toDto(artifact) }));
 }
 
+/** Uma entrada da lista de artefatos do `PATCH` do evento: um artefato ligado, ou uma cópia nova de um alimento. */
+export type EventArtifactEntry = { id: string; relation?: ArtifactLink["relation"] } | { copyOf: string; quantity?: string };
+
+/**
+ * A cópia nova de um alimento, como a API a faz: um artefato derivado, com o conteúdo do original e a quantidade
+ * da entrada, sem dono e fora das listas. Editar o original depois não muda a cópia. Devolve o id da cópia.
+ */
+function copyFood(store: FakeStore, original: StoredArtifact, quantity: string | undefined): string {
+  const id = store.nextId("art");
+  const now = new Date().toISOString();
+  const data = quantity ? { ...(original.data as object), quantity } : original.data;
+  table(store).set(id, {
+    ...original,
+    id,
+    data,
+    tags: [],
+    global: false,
+    derived: true,
+    revision: 1,
+    createdAt: now,
+    updatedAt: now,
+    links: [],
+    deleted: false,
+  });
+  return id;
+}
+
 /**
  * A lista completa de artefatos de um evento, como o `PATCH` do evento a manda: a ordem da lista vira a posição
  * do vínculo, quem sai da lista perde o vínculo (o artefato continua), e a relação vem da entrada ou, se ela não
- * traz, do vínculo que já existia (ou `uses` para um artefato novo na lista). `false` quando algum artefato não
- * existe; nada é gravado nesse caso.
+ * traz, do vínculo que já existia (ou `uses` para um artefato novo na lista). Uma cópia de alimento (`copyOf`) cria
+ * a cópia derivada e a liga com `uses`. `false` quando algum artefato ou alimento não existe, ou quando `copyOf` não
+ * aponta para um alimento; nada é gravado nesse caso.
  */
-export function relinkEventArtifacts(
-  store: FakeStore,
-  eventId: string,
-  entries: readonly { id: string; relation?: ArtifactLink["relation"] }[],
-): boolean {
-  const ids = entries.map((entry) => entry.id);
-  if (ids.some((id) => !visibleOne(store, id))) return false;
+export function relinkEventArtifacts(store: FakeStore, eventId: string, entries: readonly EventArtifactEntry[]): boolean {
+  for (const entry of entries) {
+    if ("copyOf" in entry) {
+      if (visibleOne(store, entry.copyOf)?.type !== "food") return false;
+    } else if (!visibleOne(store, entry.id)) {
+      return false;
+    }
+  }
+
+  // Tudo conferido: agora criam-se as cópias, e a lista ganha os ids e as relações de cada entrada.
+  const resolved = entries.map((entry) => {
+    if ("copyOf" in entry) {
+      const original = visibleOne(store, entry.copyOf);
+      return { id: copyFood(store, original as StoredArtifact, entry.quantity), relation: "uses" as const };
+    }
+    return { id: entry.id, relation: entry.relation };
+  });
+  const ids = resolved.map((entry) => entry.id);
 
   for (const artifact of [...table(store).values()]) {
     const current = artifact.links.find((link) => link.eventId === eventId);
@@ -176,7 +215,7 @@ export function relinkEventArtifacts(
     const others = artifact.links.filter((link) => link.eventId !== eventId);
     const links = index === -1
       ? others
-      : [...others, { eventId, relation: entries[index]?.relation ?? current?.relation ?? "uses", position: index }];
+      : [...others, { eventId, relation: resolved[index]?.relation ?? current?.relation ?? "uses", position: index }];
     table(store).set(artifact.id, { ...artifact, links });
   }
   return true;

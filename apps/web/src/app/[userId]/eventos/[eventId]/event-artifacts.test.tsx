@@ -100,3 +100,57 @@ test("evento sem artefatos não mostra a seção", async () => {
   await screen.findByRole("region", { name: "Informações" });
   expect(screen.queryByRole("region", { name: "Artefatos" })).not.toBeInTheDocument();
 });
+
+/** Um alimento com o total de calorias dado; o resto do conteúdo é o mínimo que o contrato aceita. */
+function foodFixture(id: string, name: string, kcal: number, overrides: Partial<ReturnType<typeof artifactFixture>> = {}) {
+  return artifactFixture({
+    id,
+    name,
+    type: "food",
+    data: {
+      description: name,
+      items: [],
+      totals: { totalCaloriesKcal: kcal, totalProteinGrams: 0, totalCarbohydrateGrams: 0, totalFatGrams: 0, totalFiberGrams: 0 },
+      generation: { status: "completed" },
+    },
+    ...overrides,
+  });
+}
+
+test("refeição mostra o total de calorias: a soma dos alimentos ligados, cópias incluídas", async () => {
+  install(
+    [eventFixture({ id: "ev-1", name: "Almoço", kind: "meal", status: "doing", startedAt: "2026-11-14T12:00:00-03:00" })],
+    [
+      foodFixture("food-arroz", "Arroz", 200, { links: [{ eventId: "ev-1", relation: "uses" }] }),
+      foodFixture("copy-frango", "Frango", 350.4, { derived: true, links: [{ eventId: "ev-1", relation: "uses" }] }),
+      artifactFixture({ id: "art-nota", name: "Observação", links: [{ eventId: "ev-1", relation: "uses" }] }),
+    ],
+  );
+  renderPage();
+  await loaded();
+
+  const section = await screen.findByRole("region", { name: "Artefatos" });
+  expect(within(section).getByText("Total de calorias")).toBeInTheDocument();
+  expect(within(section).getByText("550 kcal")).toBeInTheDocument();
+});
+
+test("refeição sem alimento ligado mostra zero kcal", async () => {
+  install(
+    [eventFixture({ id: "ev-1", name: "Almoço", kind: "meal", status: "doing", startedAt: "2026-11-14T12:00:00-03:00" })],
+    [artifactFixture({ id: "art-nota", name: "Observação", links: [{ eventId: "ev-1", relation: "uses" }] })],
+  );
+  renderPage();
+  await loaded();
+
+  const section = await screen.findByRole("region", { name: "Artefatos" });
+  expect(within(section).getByText("0 kcal")).toBeInTheDocument();
+});
+
+test("treino não mostra total de calorias", async () => {
+  install([TREINO], [foodFixture("food-arroz", "Arroz", 200, { links: [{ eventId: "ev-1", relation: "uses" }] })]);
+  renderPage();
+  await loaded();
+
+  const section = await screen.findByRole("region", { name: "Artefatos" });
+  expect(within(section).queryByText("Total de calorias")).not.toBeInTheDocument();
+});

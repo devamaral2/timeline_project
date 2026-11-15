@@ -9,7 +9,7 @@ import {
 } from "@repo/contracts/schemas";
 import { z } from "zod";
 import type { FakeArea, FakeRequest, FakeResult, FakeStore } from ".";
-import { type ArtifactLink, artifactsOfEvent, relinkEventArtifacts } from "./artifacts";
+import { type ArtifactLink, type EventArtifactEntry, artifactsOfEvent, relinkEventArtifacts } from "./artifacts";
 
 /** Área de eventos: agenda, lista de tarefas, evento, subtarefas e tags. */
 
@@ -186,12 +186,12 @@ function update(request: FakeRequest, store: FakeStore): FakeResult {
   if (!event) return { status: 404 };
   const input = request.body as Record<string, unknown> & { expectedRevision: number };
   if (input.expectedRevision !== event.revision) return { status: 409 };
-  // A lista de artefatos é a completa, na ordem enviada. Só ligar por `id` é modelado: criar ou editar um artefato
-  // dentro do evento a API faz, mas a API falsa ainda não (400 para não fingir que gravou).
+  // A lista de artefatos é a completa, na ordem enviada: ligar por `id` e criar cópia de alimento (`copyOf`) são
+  // modelados. Criar ou editar um artefato novo dentro do evento a API faz, mas a API falsa ainda não (400).
   if (Array.isArray(input.artifacts)) {
-    const entries = input.artifacts as { id?: string; relation?: ArtifactLink["relation"] }[];
-    if (entries.some((entry) => entry.id === undefined)) return { status: 400 };
-    if (!relinkEventArtifacts(store, event.id, entries as { id: string; relation?: ArtifactLink["relation"] }[])) return { status: 404 };
+    const entries = input.artifacts as { id?: string; relation?: ArtifactLink["relation"]; copyOf?: string }[];
+    if (entries.some((entry) => entry.id === undefined && entry.copyOf === undefined)) return { status: 400 };
+    if (!relinkEventArtifacts(store, event.id, entries as EventArtifactEntry[])) return { status: 404 };
   }
 
   const next: Record<string, unknown> = { ...event };

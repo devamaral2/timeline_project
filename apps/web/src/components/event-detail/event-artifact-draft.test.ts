@@ -3,12 +3,14 @@ import { describe, expect, it } from "vitest";
 import {
   type DraftArtifact,
   addDraftArtifact,
+  addFoodCopy,
   artifactLinkInputs,
   draftArtifactPositions,
   draftArtifactsFromEvent,
   moveDraftArtifact,
   removeDraftArtifact,
   sameArtifactLinks,
+  setCopyQuantity,
 } from "./event-artifact-draft";
 
 function draft(id: string, relation: DraftArtifact["relation"] = "uses"): DraftArtifact {
@@ -78,7 +80,46 @@ describe("draftArtifactPositions", () => {
   });
 });
 
+describe("addFoodCopy e setCopyQuantity", () => {
+  const food = { ...artifact("food-1"), type: "food", global: true } as ArtifactDto;
+
+  it("o alimento escolhido entra no fim como cópia: copyOf é o original, a chave local é só da linha", () => {
+    expect(addFoodCopy([draft("a")], food, "row-1")).toEqual([
+      draft("a"),
+      { id: "row-1", name: "Artefato food-1", type: "food", global: true, relation: "uses", copyOf: "food-1" },
+    ]);
+  });
+
+  it("o mesmo alimento pode entrar de novo: cada entrada é uma cópia com a sua quantidade", () => {
+    const once = addFoodCopy([], food, "row-1");
+    const twice = addFoodCopy(once, food, "row-2");
+    expect(twice.map((item) => item.copyOf)).toEqual(["food-1", "food-1"]);
+  });
+
+  it("a quantidade da cópia nova muda só essa linha", () => {
+    const list = addFoodCopy(addFoodCopy([], food, "row-1"), food, "row-2");
+    const next = setCopyQuantity(list, "row-2", "2 porções");
+    expect(next.map((item) => item.quantity)).toEqual([undefined, "2 porções"]);
+  });
+});
+
 describe("artifactLinkInputs e sameArtifactLinks", () => {
+  it("uma cópia nova vai como copyOf e quantity, sem relação e sem id", () => {
+    const list = setCopyQuantity(addFoodCopy([], { ...artifact("food-1"), type: "food", global: true } as ArtifactDto, "row-1"), "row-1", "150 g");
+    expect(artifactLinkInputs(list)).toEqual([{ copyOf: "food-1", quantity: "150 g" }]);
+  });
+
+  it("uma cópia sem quantidade vai só com copyOf; uma quantidade só de espaços não vai", () => {
+    const food = { ...artifact("food-1"), type: "food", global: true } as ArtifactDto;
+    expect(artifactLinkInputs(addFoodCopy([], food, "row-1"))).toEqual([{ copyOf: "food-1" }]);
+    expect(artifactLinkInputs(setCopyQuantity(addFoodCopy([], food, "row-1"), "row-1", "   "))).toEqual([{ copyOf: "food-1" }]);
+  });
+
+  it("uma cópia que já está no evento vai como id e relação, como qualquer artefato ligado", () => {
+    const existing = { ...draft("copy-9"), type: "food" as const, quantity: "1 porção" };
+    expect(artifactLinkInputs([existing])).toEqual([{ id: "copy-9", relation: "uses" }]);
+  });
+
   it("o corpo leva id e relação, na ordem da lista", () => {
     expect(artifactLinkInputs([draft("b", "creates"), draft("a")])).toEqual([
       { id: "b", relation: "creates" },
@@ -91,5 +132,12 @@ describe("artifactLinkInputs e sameArtifactLinks", () => {
     expect(sameArtifactLinks([draft("a"), draft("b")], [draft("b"), draft("a")])).toBe(false);
     expect(sameArtifactLinks([draft("a")], [draft("a", "updates")])).toBe(false);
     expect(sameArtifactLinks([draft("a")], [])).toBe(false);
+  });
+
+  it("uma cópia nova, ou uma quantidade mudada, é mudança", () => {
+    const food = { ...artifact("food-1"), type: "food", global: true } as ArtifactDto;
+    const base = addFoodCopy([], food, "row-1");
+    expect(sameArtifactLinks(base, [])).toBe(false);
+    expect(sameArtifactLinks(base, setCopyQuantity(base, "row-1", "2"))).toBe(false);
   });
 });

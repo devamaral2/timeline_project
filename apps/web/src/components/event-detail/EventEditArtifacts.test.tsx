@@ -19,11 +19,14 @@ const { EventEditRoute } = await import("./EventEditRoute");
 
 const DETAIL_PATH = "/user-1/eventos/ev-1";
 
-/** O evento aberto, com revisão 3, e três artefatos ligados: duas fichas (uses) e o que ele criou. */
+/**
+ * O evento aberto, com revisão 3, e três artefatos ligados: duas fichas (uses) e o que ele criou. É rotina, que
+ * busca os artefatos próprios; refeição e treino têm buscas próprias, testadas mais abaixo.
+ */
 const EVENT = eventFixture({
   id: "ev-1",
   name: "Treino de força",
-  kind: "training",
+  kind: "routine",
   status: "doing",
   startedAt: "2026-11-14T18:30:00-03:00",
   estimatedFinishAt: "2026-11-14T19:20:00-03:00",
@@ -40,8 +43,8 @@ const ARTIFACTS: StoredArtifact[] = [
 
 let api: FakeApi;
 
-function install() {
-  api = createFakeApi({ areas: [eventsArea, artifactsArea], seed: { events: [EVENT], artifacts: ARTIFACTS } });
+function install(event: EventDto = EVENT, artifacts: StoredArtifact[] = ARTIFACTS) {
+  api = createFakeApi({ areas: [eventsArea, artifactsArea], seed: { events: [event], artifacts } });
   net.authedFetch.mockImplementation(api.authedFetch);
 }
 
@@ -217,5 +220,138 @@ describe("artefatos na edição", () => {
 
     await waitFor(() => expect(replace).toHaveBeenCalledWith(DETAIL_PATH));
     expect(patches()).toEqual([expect.objectContaining({ body: { expectedRevision: 3, name: "Treino de costas" } })]);
+  });
+});
+
+const FOOD = {
+  description: "Arroz",
+  items: [],
+  totals: { totalCaloriesKcal: 200, totalProteinGrams: 4, totalCarbohydrateGrams: 44, totalFatGrams: 0, totalFiberGrams: 1 },
+  generation: { status: "completed" },
+};
+
+const MEAL = eventFixture({ id: "ev-1", name: "Almoço", kind: "meal", status: "doing", revision: 3, startedAt: "2026-11-14T12:00:00-03:00" });
+const TRAINING = eventFixture({ id: "ev-1", name: "Treino de força", kind: "training", status: "doing", revision: 3, startedAt: "2026-11-14T18:30:00-03:00" });
+
+describe("refeição: alimento do catálogo global ou dos seus, como cópia com quantidade", () => {
+  const FOODS: StoredArtifact[] = [
+    artifactFixture({ id: "food-global", name: "Arroz cozido", type: "food", global: true, data: FOOD }),
+    artifactFixture({ id: "food-own", name: "Arroz integral da casa", type: "food", data: FOOD }),
+    artifactFixture({ id: "art-own-text", name: "Arroz de uma nota", links: [] }),
+  ];
+
+  it("a busca oferece os alimentos do catálogo global e os seus, e não as notas", async () => {
+    install(MEAL, FOODS);
+    renderRoute();
+    await loaded();
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Buscar alimento para a refeição" }), { target: { value: "Arroz" } });
+    expect(await screen.findByRole("button", { name: "Escolher “Arroz cozido”" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Escolher “Arroz integral da casa”" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Escolher “Arroz de uma nota”" })).not.toBeInTheDocument();
+    const queries = api.calls.filter((call) => call.pathname === "/api/artifacts").map((call) => call.query);
+    expect(queries).toEqual(expect.arrayContaining([expect.objectContaining({ type: "food", scope: "global", q: "Arroz" }), expect.objectContaining({ type: "food", q: "Arroz" })]));
+  });
+
+  it("o alimento escolhido entra com a quantidade informada e Salvar manda copyOf e quantity", async () => {
+    install(MEAL, FOODS);
+    renderRoute();
+    await loaded();
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Buscar alimento para a refeição" }), { target: { value: "Arroz cozido" } });
+    fireEvent.click(await screen.findByRole("button", { name: "Escolher “Arroz cozido”" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "Quantidade de “Arroz cozido”" }), { target: { value: " 150 g " } });
+    save();
+
+    await waitFor(() => expect(replace).toHaveBeenCalledWith(DETAIL_PATH));
+    expect(patches()).toEqual([expect.objectContaining({ body: { expectedRevision: 3, artifacts: [{ copyOf: "food-global", quantity: "150 g" }] } })]);
+    const event = (await api.authedFetch("/api/events/ev-1")) as EventDto;
+    expect(event.artifacts).toEqual([
+      expect.objectContaining({ relation: "uses", artifact: expect.objectContaining({ name: "Arroz cozido", derived: true, data: expect.objectContaining({ quantity: "150 g" }) }) }),
+    ]);
+  });
+
+  it("sem quantidade, a cópia vai só com copyOf; o mesmo alimento pode entrar duas vezes, cada uma com a sua", async () => {
+    install(MEAL, FOODS);
+    renderRoute();
+    await loaded();
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Buscar alimento para a refeição" }), { target: { value: "Arroz integral" } });
+    fireEvent.click(await screen.findByRole("button", { name: "Escolher “Arroz integral da casa”" }));
+    fireEvent.change(screen.getByRole("searchbox", { name: "Buscar alimento para a refeição" }), { target: { value: "Arroz integral" } });
+    fireEvent.click(await screen.findByRole("button", { name: "Escolher “Arroz integral da casa”" }));
+    fireEvent.change(screen.getAllByRole("textbox", { name: "Quantidade de “Arroz integral da casa”" })[1] as HTMLElement, { target: { value: "2" } });
+    save();
+
+    await waitFor(() => expect(replace).toHaveBeenCalledWith(DETAIL_PATH));
+    expect(patches()).toEqual([expect.objectContaining({ body: { expectedRevision: 3, artifacts: [{ copyOf: "food-own" }, { copyOf: "food-own", quantity: "2" }] } })]);
+  });
+
+  it("editar o alimento original depois não muda a refeição que já tem a cópia", async () => {
+    install(MEAL, FOODS);
+    renderRoute();
+    await loaded();
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Buscar alimento para a refeição" }), { target: { value: "Arroz integral" } });
+    fireEvent.click(await screen.findByRole("button", { name: "Escolher “Arroz integral da casa”" }));
+    save();
+    await waitFor(() => expect(replace).toHaveBeenCalledWith(DETAIL_PATH));
+
+    await api.authedFetch("/api/artifacts/food-own", {
+      method: "PATCH",
+      body: JSON.stringify({ expectedRevision: 1, type: "food", data: { ...FOOD, totals: { ...FOOD.totals, totalCaloriesKcal: 999 } } }),
+    });
+    const event = (await api.authedFetch("/api/events/ev-1")) as EventDto;
+    expect(event.artifacts[0]?.artifact.data).toMatchObject({ totals: { totalCaloriesKcal: 200 } });
+  });
+});
+
+describe("treino: exercício do catálogo global, por referência, na ordem da lista", () => {
+  const EXERCISES: StoredArtifact[] = [
+    artifactFixture({ id: "ex-supino", name: "Supino reto", type: "workout", global: true, data: { code: "weightlifting", category: "strength", active: true } }),
+    artifactFixture({ id: "ex-remada", name: "Remada curvada", type: "workout", global: true, data: { code: "weightlifting", category: "strength", active: true } }),
+    artifactFixture({ id: "art-ficha", name: "Ficha de costas", links: [] }),
+  ];
+
+  it("a busca oferece os exercícios do catálogo global, e não os artefatos próprios", async () => {
+    install(TRAINING, EXERCISES);
+    renderRoute();
+    await loaded();
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Buscar exercício para o treino" }), { target: { value: "reto" } });
+    expect(await screen.findByRole("button", { name: "Escolher “Supino reto”" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Escolher “Ficha de costas”" })).not.toBeInTheDocument();
+    const queries = api.calls.filter((call) => call.pathname === "/api/artifacts").map((call) => call.query);
+    expect(queries).toContainEqual(expect.objectContaining({ type: "workout", scope: "global", q: "reto" }));
+  });
+
+  it("o exercício entra por referência, no fim da lista, e Salvar manda id e relação na ordem", async () => {
+    install(TRAINING, EXERCISES);
+    renderRoute();
+    await loaded();
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Buscar exercício para o treino" }), { target: { value: "Supino" } });
+    fireEvent.click(await screen.findByRole("button", { name: "Escolher “Supino reto”" }));
+    fireEvent.change(screen.getByRole("searchbox", { name: "Buscar exercício para o treino" }), { target: { value: "Remada" } });
+    fireEvent.click(await screen.findByRole("button", { name: "Escolher “Remada curvada”" }));
+    expect(linkedNames()).toEqual(["Supino reto", "Remada curvada"]);
+    save();
+
+    await waitFor(() => expect(replace).toHaveBeenCalledWith(DETAIL_PATH));
+    expect(patches()).toEqual([
+      expect.objectContaining({
+        body: { expectedRevision: 3, artifacts: [{ id: "ex-supino", relation: "uses" }, { id: "ex-remada", relation: "uses" }] },
+      }),
+    ]);
+  });
+
+  it("um exercício que já está na lista não é oferecido de novo", async () => {
+    install(TRAINING, EXERCISES.map((item) => (item.id === "ex-supino" ? { ...item, links: [{ eventId: "ev-1", relation: "uses" as const }] } : item)));
+    renderRoute();
+    await loaded();
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Buscar exercício para o treino" }), { target: { value: "Supino" } });
+    await waitFor(() => expect(api.calls.some((call) => call.pathname === "/api/artifacts" && call.query.q === "Supino")).toBe(true));
+    expect(screen.queryByRole("button", { name: "Escolher “Supino reto”" })).not.toBeInTheDocument();
   });
 });
