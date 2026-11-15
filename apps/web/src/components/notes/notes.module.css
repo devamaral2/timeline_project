@@ -115,6 +115,8 @@
 .fileMeta { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0; color: var(--muted); font-size: 13px; }
 .fileMeta code { color: var(--ink); font-size: 12px; word-break: break-all; }
 .fileMissing { color: var(--ink); font-weight: 600; }
+.fileHeader { display: flex; flex-direction: column; gap: 6px; }
+.fileDescription { margin: 0; color: var(--ink); font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
 .fileText { margin: 0; padding: 12px; max-height: 420px; overflow: auto; border-radius: 10px; background: var(--soft); color: var(--ink); font-size: 12.5px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
 .fileModes { display: inline-flex; align-self: flex-start; gap: 2px; padding: 2px; border-radius: 999px; background: var(--soft); }
 .fileModes button { padding: 5px 12px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
