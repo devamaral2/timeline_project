@@ -108,7 +108,7 @@ export function isRequestOpen(request: Pick<RequestDto, "status">): boolean {
 }
 
 /** Por que o envio do pedido falhou, do ponto de vista do chat. */
-function startFailureCode(error: unknown): ChatFailureCode {
+export function startFailureCode(error: unknown): ChatFailureCode {
   if (error instanceof ApiError && error.status === 401) return "session_expired";
   if (error instanceof ApiRequestError) {
     if (error.kind === "invalid_input") return "invalid_input";

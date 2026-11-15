@@ -1,15 +1,15 @@
 "use client";
 
+import type { RequestEditEntityType } from "@repo/contracts";
 import { ArrowUp, Check, Circle, LoaderCircle, X } from "lucide-react";
 import { type FormEvent, type KeyboardEvent, type ReactNode, useCallback, useRef, useState } from "react";
 import { armChangeFlash } from "@/lib/motion/change-flash";
 import { useHermesDock } from "@/components/ui/hermes-flight";
 import { HermesGlyph } from "@/components/ui/hermes-glyph";
 import { HermesMark, type HermesState } from "@/components/ui/hermes-mark";
-import type { AiProcessEditApi } from "@/lib/ai-process/ai-process";
-import { EDIT_TARGET_LABELS } from "@/lib/ai-process/entity-edit";
-import { useEntityAiEdit } from "@/lib/ai-process/use-entity-ai-edit";
-import type { AiProcessEditEntityType } from "@/lib/api/contracts";
+import { runningStepLabel } from "@/lib/events/agent-request-model";
+import { EDIT_TARGET_LABELS } from "@/lib/entity-edit/entity-edit-target";
+import { useEntityAiEdit } from "@/lib/entity-edit/use-entity-ai-edit";
 import { useSpeechRecognition } from "@/lib/speech/use-speech-recognition";
 import styles from "./entity-ai-edit-bar.module.css";
 
@@ -22,7 +22,7 @@ export interface EntityAiEditContext {
 
 interface EntityAiEditBarProps {
   userId: string;
-  entityType: AiProcessEditEntityType;
+  entityType: RequestEditEntityType;
   entityId: string;
   /** A edicao terminou e mudou algo: a tela recarrega a entidade. */
   onEdited: () => void;
@@ -30,22 +30,21 @@ interface EntityAiEditBarProps {
   disabledReason?: string;
   /** O registro que o pedido edita, mostrado dentro do campo. */
   context?: EntityAiEditContext;
-  api?: AiProcessEditApi;
   pollMs?: number;
 }
 
 /**
- * O campo de conversa com a IA no pe das telas de detalhe (ADR 006): o que se escreve edita a entidade aberta.
- * O servidor escolhe o agente pelo tipo; aqui so se envia o texto e se acompanha o processo.
+ * O campo de conversa com a IA no pe das telas de detalhe (ADR 0006): o que se escreve edita a entidade aberta.
+ * O pedido de edicao leva o tipo e o id da entidade; o servidor escolhe o agente e confere o tipo.
  */
-export function EntityAiEditBar({ userId, entityType, entityId, onEdited, disabledReason, context, api, pollMs }: EntityAiEditBarProps) {
+export function EntityAiEditBar({ userId, entityType, entityId, onEdited, disabledReason, context, pollMs }: EntityAiEditBarProps) {
   const [text, setText] = useState("");
   // No celular, o botão do Hermes da barra inferior pousa no status deste campo.
   const barRef = useRef<HTMLElement>(null);
   useHermesDock(barRef);
   // O que mudar na recarga depois da edição se anuncia na tela (`useChangeFlash`).
   const edited = useCallback(() => { armChangeFlash(); onEdited?.(); }, [onEdited]);
-  const { phase, process, error, submit, dismiss, busy } = useEntityAiEdit({ userId, entityType, entityId, onEdited: edited, api, pollMs });
+  const { phase, request, error, submit, dismiss, busy } = useEntityAiEdit({ userId, entityType, entityId, onEdited: edited, pollMs });
   const speech = useSpeechRecognition({
     onFinalTranscript: (transcript) => setText((current) => (current ? `${current} ${transcript}` : transcript).slice(0, 4000)),
   });
@@ -68,28 +67,27 @@ export function EntityAiEditBar({ userId, entityType, entityId, onEdited, disabl
     void send();
   }
 
-  const steps = process?.steps ?? [];
-  const message = phase === "failed" ? error : process?.message;
-  const running = steps.find((step) => step.status === "running");
+  const steps = request?.steps ?? [];
+  const message = phase === "failed" ? error : request?.message;
   const state: HermesState = speech.listening ? "listening" : phase === "sending" || phase === "running" ? "thinking" : phase === "done" ? "done" : phase === "failed" ? "error" : "idle";
   const statusText = speech.listening ? "Ouvindo…"
     : phase === "done" ? "Pronto"
     : phase === "failed" ? "Não deu certo"
-    : phase === "sending" || phase === "running" ? (running?.label ?? "Entendendo o pedido…")
+    : phase === "sending" || phase === "running" ? (request?.progress ?? (request ? runningStepLabel(request) : undefined) ?? "Entendendo o pedido…")
     : "Esperando o seu pedido";
   return (
     <section ref={barRef} className={styles.bar} data-entity-ai-bar aria-label={`Editar ${target} com IA`}>
       {steps.length > 0 || message ? (
         <div className={styles.result} data-phase={phase}>
           {steps.length > 0 ? (
-            <ul className={styles.steps} aria-label="Passos do processo">
+            <ul className={styles.steps} aria-label="Passos do pedido">
               {steps.map((step) => (
                 <li key={step.id} data-status={step.status}>
                   <span className={styles.mark} aria-hidden>
-                    {step.status === "succeeded" && <Check />}
-                    {step.status === "failed" && <X />}
+                    {step.status === "done" && <Check />}
+                    {(step.status === "failed" || step.status === "cancel") && <X />}
                     {step.status === "running" && <LoaderCircle data-spin />}
-                    {step.status === "pending" && <Circle />}
+                    {(step.status === "queued" || step.status === "waiting") && <Circle />}
                   </span>
                   {step.label}
                 </li>

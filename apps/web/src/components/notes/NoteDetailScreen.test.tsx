@@ -3,6 +3,7 @@ import { beforeEach, expect, test, vi } from "vitest";
 import { type FakeApi, createFakeApi } from "@/test/fake-api";
 import { type StoredArtifact, artifactFixture, artifactsArea } from "@/test/fake-api/artifacts";
 import { eventFixture, eventsArea } from "@/test/fake-api/events";
+import { requestsArea } from "@/test/fake-api/requests";
 
 const replace = vi.fn();
 const push = vi.fn();
@@ -25,7 +26,7 @@ type Seed = Parameters<typeof createFakeApi>[0]["seed"];
 let api: FakeApi;
 
 function install(seed: Seed = {}) {
-  api = createFakeApi({ areas: [artifactsArea, eventsArea], seed });
+  api = createFakeApi({ areas: [artifactsArea, eventsArea, requestsArea()], seed });
   net.authedFetch.mockImplementation(api.authedFetch);
 }
 
@@ -132,6 +133,31 @@ test("um artefato global mostra o catálogo global, o conteúdo do tipo e nenhum
   expect(screen.queryByRole("region", { name: "Eventos" })).not.toBeInTheDocument();
   expect(screen.queryByRole("button", { name: /Editar|Excluir|Mais ações/ })).not.toBeInTheDocument();
   expect(screen.queryByRole("menuitem")).not.toBeInTheDocument();
+});
+
+test("uma nota de texto própria tem a barra de edição, que pede a edição desta nota", async () => {
+  install({ artifacts: [artifactFixture({ id: "art-1", name: "Ideias para a proposta", type: "text", data: { body: "Ideias" } })] });
+  renderArtifact("art-1");
+
+  expect(await screen.findByRole("heading", { level: 1, name: "Ideias para a proposta" })).toBeInTheDocument();
+  fireEvent.change(screen.getByRole("textbox", { name: "Pedir à IA para editar esta nota" }), { target: { value: "resuma em duas linhas" } });
+  fireEvent.click(screen.getByRole("button", { name: "Enviar pedido" }));
+
+  await waitFor(() => expect(api.calls.find((call) => call.pathname === "/api/requests/edit")?.body).toEqual({
+    userId: "user-1",
+    text: "resuma em duas linhas",
+    entityType: "artifact",
+    entityId: "art-1",
+  }));
+});
+
+test("um alimento com o cálculo pendente tem a barra desligada e diz por quê", async () => {
+  install({ artifacts: [artifactFixture({ id: "art-1", name: "Arroz e feijão", type: "food", data: { ...FOOD, generation: { status: "pending" } } })] });
+  renderArtifact("art-1");
+
+  expect(await screen.findByRole("heading", { level: 1, name: "Arroz e feijão" })).toBeInTheDocument();
+  expect(screen.getByRole("textbox", { name: "Pedir à IA para editar esta refeição" })).toBeDisabled();
+  expect(screen.getByText("Aguarde a geração da refeição para editar a nota.")).toBeInTheDocument();
 });
 
 test("um alimento mostra os totais e a receita", async () => {
