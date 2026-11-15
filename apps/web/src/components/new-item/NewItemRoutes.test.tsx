@@ -59,6 +59,36 @@ test("criar nota envia um artefato de texto com o nome e o conteúdo", async () 
   expect([...api.store.table<StoredArtifact>("artifacts").values()]).toHaveLength(1);
 });
 
+test("criar alimento envia só o texto do que foi comido e abre o alimento, que nasce pendente", async () => {
+  install();
+  render(<NewNoteRoute userId="user-1" />);
+
+  fireEvent.click(screen.getByRole("button", { name: "Alimento" }));
+  // O formulário de nota some: só o campo do que foi comido e o botão de alimento ficam.
+  expect(screen.queryByLabelText("Conteúdo da nota")).not.toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText("O que você comeu"), { target: { value: "  Arroz, feijão e salada  " } });
+  fireEvent.click(screen.getByRole("button", { name: "Criar alimento" }));
+
+  await waitFor(() => expect(replace).toHaveBeenCalledWith(expect.stringMatching(/^\/user-1\/notas\/.+/)));
+  const post = api.calls.find((call) => call.method === "POST");
+  expect(post).toMatchObject({ pathname: "/api/artifacts", body: { type: "food", data: { inputText: "Arroz, feijão e salada" } } });
+  expect(post?.body).toEqual({ type: "food", data: { inputText: "Arroz, feijão e salada" } });
+  expect(post?.idempotencyKey).toEqual(expect.any(String));
+  const [artifact] = [...api.store.table<StoredArtifact>("artifacts").values()];
+  expect(artifact).toMatchObject({ type: "food", data: { generation: { status: "pending" } } });
+});
+
+test("alimento sem texto não envia nada e pede o que foi comido", async () => {
+  install();
+  render(<NewNoteRoute userId="user-1" />);
+
+  fireEvent.click(screen.getByRole("button", { name: "Alimento" }));
+  fireEvent.click(screen.getByRole("button", { name: "Criar alimento" }));
+
+  expect(await screen.findByRole("alert")).toHaveTextContent("Escreva o que você comeu.");
+  expect(api.calls.some((call) => call.method === "POST")).toBe(false);
+});
+
 test("tentar salvar de novo depois de uma falha reenvia a mesma chave e não cria duas notas", async () => {
   install();
   api.failNext("POST", "/api/artifacts", 503);

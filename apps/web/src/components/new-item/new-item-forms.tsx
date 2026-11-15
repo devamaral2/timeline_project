@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, Plus, ListChecks, X } from "lucide-react";
+import { FileText, Plus, ListChecks, Utensils, X } from "lucide-react";
 import { type FormEvent, useId, useState } from "react";
 import type { ArtifactDto } from "@repo/contracts";
 import { createTask, updateTask } from "@/lib/tasks/task-api";
@@ -126,10 +126,13 @@ export function NewTaskForm({ initialName, onCreated, existing }: EditItemFormPr
 
 const STALE_NOTE_MESSAGE = "Esta nota mudou em outro lugar. Atualizamos a revisão; o que você digitou continua aqui. Confira e salve de novo.";
 
+/** Na criação, o formulário escolhe entre nota de texto e alimento (só o texto do que foi comido). */
+type CreateKind = "note" | "food";
+
 /**
- * Nova nota de texto e edição dela: o título é opcional (vem da primeira linha), o conteúdo é markdown
- * (Escrever e Visualizar) e há tags. A criação leva uma chave de idempotência guardada enquanto o formulário
- * estiver aberto; a edição manda a revisão lida e o conteúdo inteiro.
+ * Nova nota de texto ou alimento, e edição da nota de texto: o título é opcional (vem da primeira linha), o
+ * conteúdo é markdown (Escrever e Visualizar) e há tags. A criação leva uma chave de idempotência guardada enquanto o
+ * formulário estiver aberto; a edição manda a revisão lida e o conteúdo inteiro.
  */
 export function NewNoteForm({ initialName, onCreated, existing }: EditItemFormProps<ArtifactDto>) {
   const contentId = useId();
@@ -138,7 +141,12 @@ export function NewNoteForm({ initialName, onCreated, existing }: EditItemFormPr
   const [tags, setTags] = useState<string[]>(existing?.tags ?? []);
   const [revision, setRevision] = useState(existing?.revision ?? 0);
   const [mode, setMode] = useState<MarkdownEditorMode>("write");
-  const [idempotencyKey] = useState(() => newIdempotencyKey());
+  // Uma chave por tipo: trocar de Nota para Alimento e voltar não reaproveita a chave de outro corpo.
+  const [idempotencyKeys] = useState(() => ({ note: newIdempotencyKey(), food: newIdempotencyKey() }));
+  const [kind, setKind] = useState<CreateKind>("note");
+  const [foodText, setFoodText] = useState("");
+  const foodId = useId();
+  const food = kind === "food" && !existing;
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -151,9 +159,29 @@ export function NewNoteForm({ initialName, onCreated, existing }: EditItemFormPr
     }
   }
 
+  function chooseKind(next: CreateKind) {
+    setKind(next);
+    setError(null);
+  }
+
+  /** O alimento vai só com o texto do que foi comido; os nutrientes são calculados depois, pelo agente. */
+  async function submitFood() {
+    if (!foodText.trim()) { setError("Escreva o que você comeu."); return; }
+    setSubmitting(true);
+    setError(null);
+    try {
+      const artifactId = await createArtifact({ type: "food", data: { inputText: foodText.trim() } }, { idempotencyKey: idempotencyKeys.food });
+      onCreated(`/notas/${artifactId}`);
+    } catch {
+      setError("Não foi possível criar o alimento. Tente novamente.");
+      setSubmitting(false);
+    }
+  }
+
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (submitting) return;
+    if (food) { await submitFood(); return; }
     if (!content.trim()) { setError("Escreva o texto da nota."); return; }
     setSubmitting(true);
     setError(null);
@@ -174,7 +202,7 @@ export function NewNoteForm({ initialName, onCreated, existing }: EditItemFormPr
       return;
     }
     try {
-      const artifactId = await createArtifact({ type: "text", name: title, tags, data: { body: content } }, { idempotencyKey });
+      const artifactId = await createArtifact({ type: "text", name: title, tags, data: { body: content } }, { idempotencyKey: idempotencyKeys.note });
       onCreated(`/notas/${artifactId}`);
     } catch {
       setError("Não foi possível criar a nota. Tente novamente.");
@@ -182,22 +210,33 @@ export function NewNoteForm({ initialName, onCreated, existing }: EditItemFormPr
     }
   }
 
+  const submitLabel = existing ? (submitting ? "Salvando…" : "Salvar alterações") : food ? (submitting ? "Criando…" : "Criar alimento") : (submitting ? "Criando…" : "Criar nota");
+
   return <form className={styles.entityForm} onSubmit={event => void submit(event)} noValidate>
-    <div className={styles.entityHeading}>
-      <span><FileText aria-hidden /></span>
-      <div><input className={styles.entityNameInput} aria-label="Nome da nota" value={name} onChange={event => setName(event.target.value)} placeholder="Nome da nota (opcional)" autoComplete="off" /></div>
-    </div>
-    <label htmlFor={contentId}>Conteúdo da nota</label>
-    <MarkdownEditor
-      id={contentId}
-      value={content}
-      onChange={setContent}
-      mode={mode}
-      onModeChange={setMode}
-      placeholder="Escreva em markdown: ## subtítulo, **negrito**, - lista, - [ ] tarefa, > citação."
-    />
-    <TagInput tags={tags} onTagsChange={setTags} />
+    {existing ? null : <fieldset className={styles.creationToggle} aria-label="Tipo do item">
+      <button type="button" aria-pressed={kind === "note"} onClick={() => chooseKind("note")}><FileText aria-hidden /><span>Nota</span></button>
+      <button type="button" aria-pressed={kind === "food"} onClick={() => chooseKind("food")}><Utensils aria-hidden /><span>Alimento</span></button>
+    </fieldset>}
+    {food ? <>
+      <label htmlFor={foodId}>O que você comeu</label>
+      <textarea id={foodId} className={styles.entityControl} rows={4} value={foodText} onChange={event => setFoodText(event.target.value)} placeholder="Ex.: arroz, feijão, frango grelhado e salada" />
+    </> : <>
+      <div className={styles.entityHeading}>
+        <span><FileText aria-hidden /></span>
+        <div><input className={styles.entityNameInput} aria-label="Nome da nota" value={name} onChange={event => setName(event.target.value)} placeholder="Nome da nota (opcional)" autoComplete="off" /></div>
+      </div>
+      <label htmlFor={contentId}>Conteúdo da nota</label>
+      <MarkdownEditor
+        id={contentId}
+        value={content}
+        onChange={setContent}
+        mode={mode}
+        onModeChange={setMode}
+        placeholder="Escreva em markdown: ## subtítulo, **negrito**, - lista, - [ ] tarefa, > citação."
+      />
+      <TagInput tags={tags} onTagsChange={setTags} />
+    </>}
     {error ? <p role="alert" className={styles.formError}>{error}</p> : null}
-    <button type="submit" className={styles.entityContinue} disabled={submitting}>{submitting ? (existing ? "Salvando…" : "Criando…") : (existing ? "Salvar alterações" : "Criar nota")}</button>
+    <button type="submit" className={styles.entityContinue} disabled={submitting}>{submitLabel}</button>
   </form>;
 }

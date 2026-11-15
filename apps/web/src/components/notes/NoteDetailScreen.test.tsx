@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, expect, test, vi } from "vitest";
 import { type FakeApi, createFakeApi } from "@/test/fake-api";
 import { type StoredArtifact, artifactFixture, artifactsArea } from "@/test/fake-api/artifacts";
@@ -145,17 +145,62 @@ test("um alimento mostra os totais e a receita", async () => {
   expect(screen.getByText("Cozinhar o arroz.")).toBeInTheDocument();
 });
 
-test("um alimento com o cálculo pendente é relido até o servidor terminar", async () => {
+/** Leituras do artefato `id` que a tela fez até agora (a carga inicial e as recargas). */
+function readsOf(id: string): number {
+  return api.calls.filter((call) => call.method === "GET" && call.pathname === `/api/artifacts/${id}`).length;
+}
+
+/** Avança o relógio da tela: a recarga do alimento pendente roda a cada 1,5 s. */
+async function passTime(ms: number) {
+  await act(async () => { await vi.advanceTimersByTimeAsync(ms); });
+}
+
+test("um alimento com o cálculo pendente é relido a cada 1,5 s até o servidor terminar, e a recarga para", async () => {
   install({
     artifacts: [artifactFixture({ id: "art-1", name: "Arroz e feijão", type: "food", data: { ...FOOD, generation: { status: "pending" } } })],
   });
   renderArtifact("art-1");
 
   expect(await screen.findByText("Preparando informações nutricionais e receita…")).toBeInTheDocument();
+  const carga = readsOf("art-1");
+
+  // Passam 1,5 s com o cálculo ainda pendente: a tela lê o artefato de novo e continua pendente.
+  await passTime(1500);
+  expect(readsOf("art-1")).toBeGreaterThan(carga);
+  expect(screen.getByText("Preparando informações nutricionais e receita…")).toBeInTheDocument();
+
   // O servidor termina o cálculo: a próxima leitura já traz os totais.
   const stored = api.store.table<StoredArtifact>("artifacts").get("art-1");
   if (stored) stored.data = FOOD;
-  expect(await screen.findByText("412", {}, { timeout: 4000 })).toBeInTheDocument();
+  await passTime(1500);
+  expect(screen.getByText("412")).toBeInTheDocument();
+  expect(screen.queryByText("Preparando informações nutricionais e receita…")).not.toBeInTheDocument();
+
+  // Concluído: nenhuma leitura nova, mesmo depois de muito tempo.
+  const depois = readsOf("art-1");
+  await passTime(6000);
+  expect(readsOf("art-1")).toBe(depois);
+});
+
+test("um alimento com o cálculo falho diz que falhou, sem totais, e a recarga para", async () => {
+  install({
+    artifacts: [artifactFixture({ id: "art-1", name: "Arroz e feijão", type: "food", data: { ...FOOD, generation: { status: "pending" } } })],
+  });
+  renderArtifact("art-1");
+
+  expect(await screen.findByText("Preparando informações nutricionais e receita…")).toBeInTheDocument();
+  // O servidor desiste do cálculo: a próxima leitura traz a falha.
+  const stored = api.store.table<StoredArtifact>("artifacts").get("art-1");
+  if (stored) stored.data = { ...(stored.data as object), generation: { status: "failed" } };
+  await passTime(1500);
+
+  expect(screen.getByRole("alert")).toHaveTextContent("Não foi possível gerar as informações da refeição.");
+  expect(screen.queryByText("Calorias consumidas")).not.toBeInTheDocument();
+  expect(screen.queryByText("Preparando informações nutricionais e receita…")).not.toBeInTheDocument();
+
+  const depois = readsOf("art-1");
+  await passTime(6000);
+  expect(readsOf("art-1")).toBe(depois);
 });
 
 test("uma nota de sono usa o cartão da noite e o tempo que durou na agenda", async () => {
