@@ -15,6 +15,7 @@ import { statusPatch } from "@/lib/events/event-read-model";
 import { taskFilterCount, tagsByUse, trackedFilters } from "@/lib/events/task-filters";
 import { useNow } from "@/lib/events/use-now";
 import { useOpenAgentRefresh } from "@/lib/events/use-open-agent-refresh";
+import { useViewMode } from "@/lib/events/view-mode";
 import {
   groupTrackedEvents,
   oneRowPerSeries,
@@ -73,6 +74,8 @@ export function TasksScreen({ userId }: { userId: string }) {
   /** Só a resposta da consulta mais recente entra na tela: filtro trocado no meio não deixa lista velha. */
   const latestRequest = useRef(0);
   const router = useMotionRouter();
+  // O modo em uso filtra a lista pelo executor; trocá-lo relê a lista.
+  const viewMode = useViewMode();
 
   useEffect(() => {
     const timer = setTimeout(() => setQuery(typed.trim()), SEARCH_DEBOUNCE_MS);
@@ -90,7 +93,7 @@ export function TasksScreen({ userId }: { userId: string }) {
   const refresh = useCallback(async (quiet = false) => {
     const request = ++latestRequest.current;
     try {
-      const list = await listTrackedEvents(trackedFilters(filters));
+      const list = await listTrackedEvents({ ...trackedFilters(filters), actor: viewMode.actor });
       if (request !== latestRequest.current) return;
       setCards(list);
       setError(false);
@@ -99,7 +102,7 @@ export function TasksScreen({ userId }: { userId: string }) {
     } catch {
       if (request === latestRequest.current && !quiet) setError(true);
     }
-  }, [filters]);
+  }, [filters, viewMode.actor]);
 
   useEffect(() => {
     void refresh();

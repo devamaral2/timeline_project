@@ -16,6 +16,7 @@ import styles from "./shell.module.css";
 import type { HubCommandId } from "@/components/hub/hub-commands";
 import { type FreeWindow, type HubOpenDetail, hubOpenEvent } from "@/components/hub/hub-events";
 import { dayKeyOf } from "@repo/timeline";
+import { useViewMode } from "@/lib/events/view-mode";
 import { TaskStatusIcon, taskStatuses } from "@/components/agenda/task-controls";
 import { NewNoteForm } from "@/components/new-item/new-item-forms";
 
@@ -87,6 +88,8 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
   const tasksHref = userId ? `/${userId}/tarefas` : null;
   const onTasks = tasksHref !== null && (pathname === tasksHref || pathname.startsWith(`${tasksHref}/`));
   const agendaChat = useAgendaChat({ live: Boolean(userId) });
+  // A cor do modo pinta a aba selecionada só em Agenda e em Tarefas (o `data-list-mode` some em Notas).
+  const viewMode = useViewMode();
   const startNewConversationRef = useRef(agendaChat.chat.startNewConversation);
   startNewConversationRef.current = agendaChat.chat.startNewConversation;
   const [panel, setPanel] = useState<"hub" | "Tarefa" | "Nota" | null>(null);
@@ -325,7 +328,7 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
   return (
     <>
       <div className={styles.bottomFade} aria-hidden />
-      <nav className={styles.bottomNav} aria-label="Navegação inferior" style={{ "--nav-index": onTasks ? 0 : onNotes ? 2 : 1 } as CSSProperties} data-hub-open={panel === "hub" && flight?.kind !== "back" ? "true" : undefined} data-flight={flight?.kind === "dock" && flight.late ? undefined : flight?.kind}>
+      <nav className={styles.bottomNav} aria-label="Navegação inferior" data-list-mode={onNotes ? undefined : viewMode.id} style={{ "--nav-index": onTasks ? 0 : onNotes ? 2 : 1 } as CSSProperties} data-hub-open={panel === "hub" && flight?.kind !== "back" ? "true" : undefined} data-flight={flight?.kind === "dock" && flight.late ? undefined : flight?.kind}>
         {tasksHref ? (
           <Link href={tasksHref} aria-label="Tarefas" aria-current={onTasks ? "page" : undefined} onClick={closePanel}><ListChecks aria-hidden /><span><i>Tarefas</i></span></Link>
         ) : (

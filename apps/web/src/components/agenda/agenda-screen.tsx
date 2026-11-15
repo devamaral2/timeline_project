@@ -19,6 +19,7 @@ import { slideIn } from "@/lib/motion/enter";
 import { reflow } from "@/lib/motion/view-transition";
 import { briefDate } from "@/lib/dates/day-labels";
 import { useNow } from "@/lib/events/use-now";
+import { useViewMode } from "@/lib/events/view-mode";
 import { useSessionState } from "@/lib/session/use-session";
 import { useAiJobRefresh } from "@/lib/ai-jobs/use-ai-job-refresh";
 import { AgendaDay } from "./agenda-day";
@@ -79,6 +80,8 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
   const [eventsByDay, setEventsByDay] = useState<Record<string, ExampleEvent[]>>({});
   const [loadState, setLoadState] = useState<"idle" | "loading" | "failed">("idle");
   const [refreshVersion, setRefreshVersion] = useState(0);
+  // O modo em uso filtra a agenda pelo executor; trocá-lo relê a janela.
+  const viewMode = useViewMode();
   useAiJobRefresh(Boolean(userId && user && ready), agendaRefreshEvent, () => {
     setRefreshVersion((version) => version + 1);
   });
@@ -176,7 +179,7 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
       try {
         const from = zonedDayStart(rangeStart).toISOString();
         const to = zonedDayEnd(rangeEnd).toISOString();
-        const loaded = await listAgenda({ from, to });
+        const loaded = await listAgenda({ from, to, actor: viewMode.actor });
 
         if (cancelled) return;
         // Um evento que veio da noite anterior tambem tem chave fora da janela; esse dia
@@ -207,7 +210,7 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
 
     void loadEvents();
     return () => { cancelled = true; };
-  }, [rangeEnd, rangeStart, ready, refreshVersion, user, userId]);
+  }, [rangeEnd, rangeStart, ready, refreshVersion, user, userId, viewMode.actor]);
 
   useEffect(() => {
     if (freshIds.size === 0) return;
