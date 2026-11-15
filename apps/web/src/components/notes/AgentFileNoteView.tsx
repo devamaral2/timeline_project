@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { DetailMessage } from "@/components/detail/detail-parts";
 import { readAgentFileText } from "@/lib/api/agent-files";
 import { ApiRequestError } from "@/lib/api/client-request";
+import { AgentFileEditBar } from "./AgentFileEditBar";
 import { MarkdownView } from "./MarkdownView";
 import styles from "./notes.module.css";
 
@@ -29,7 +30,7 @@ type ReadState =
  * Lê o texto do arquivo. Quem não é o dono recebe 403: isso não é erro para a tela, só fica sem texto.
  * Relê quando o hash muda (o arquivo foi editado), mantendo o texto anterior até chegar o novo.
  */
-function useAgentFileRead(path: string, hash: string): ReadState {
+function useAgentFileRead(path: string, hash: string, revision: number): ReadState {
   const [state, setState] = useState<ReadState>({ status: "loading" });
   // biome-ignore lint/correctness/useExhaustiveDependencies: o hash muda quando o arquivo muda, e o texto acompanha.
   useEffect(() => {
@@ -47,7 +48,7 @@ function useAgentFileRead(path: string, hash: string): ReadState {
     return () => {
       cancelled = true;
     };
-  }, [path, hash]);
+  }, [path, hash, revision]);
   return state;
 }
 
@@ -116,12 +117,15 @@ function AgentFileBody({ read }: { read: ReadState }) {
 
 /** O arquivo de uma skill ou agente do Hermes: caminho, versão, texto (para o dono) e, depois, as ações de arquivo. */
 export function AgentFileNoteView({ data }: { data: AgentFileData }) {
-  const read = useAgentFileRead(data.path, data.hash);
+  // Sobe a cada pedido de edição que termina: o texto é relido (o `AgentFileEditBar` avisa).
+  const [revision, setRevision] = useState(0);
+  const read = useAgentFileRead(data.path, data.hash, revision);
   return (
     <article className={styles.noteCard} aria-label="Arquivo do Hermes">
       <AgentFileHeader data={data} />
       <AgentFileBody read={read} />
-      {/* Tickets 38 e 39: as ações de arquivo (backups, restaurar, pedir edição) entram aqui, depois de AgentFileBody. */}
+      {/* Ticket 39 (pedido de edição): só para o dono, que é quem lê o texto. Ticket 38 entra aqui também. */}
+      {read.status === "forbidden" ? null : <AgentFileEditBar path={data.path} onDone={() => setRevision((count) => count + 1)} />}
     </article>
   );
 }

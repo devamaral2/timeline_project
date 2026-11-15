@@ -77,7 +77,8 @@ export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: s
   const events = artifact.events ?? [];
   const dates = now ? { created: whenLabel(artifact.createdAt, now), updated: whenLabel(artifact.updatedAt, now) } : null;
   const ownsText = artifact.type === "text" && !artifact.global;
-  const editType = editEntityTypeOfArtifact(artifact);
+  // Skill e agente têm o próprio campo, o pedido de edição do arquivo (`AgentFileEditBar`, dentro do conteúdo).
+  const editType = artifact.type === "skill" || artifact.type === "agent" ? null : editEntityTypeOfArtifact(artifact);
   const TypeIcon = noteTypeIcon(artifactVisualType(artifact.type));
 
   const actions = ownsText ? (
