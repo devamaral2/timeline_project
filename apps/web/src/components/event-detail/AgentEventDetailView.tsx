@@ -3,8 +3,11 @@
 import type { EventDto } from "@repo/contracts";
 import { BackLink, DetailFrame, DetailMessage } from "@/components/detail/detail-parts";
 import { AgentEventHeader } from "./AgentEventHeader";
+import { AgentEntriesSection } from "./AgentEntriesSection";
 import { AgentInfoSection } from "./AgentInfoSection";
+import { AgentProducedSection } from "./AgentProducedSection";
 import { AgentRecordSection } from "./AgentRecordSection";
+import { AgentSessionSection } from "./AgentSessionSection";
 import { AgentStepsSection } from "./AgentStepsSection";
 import { useAgentRequest } from "./use-agent-request";
 import styles from "./event-detail.module.css";
@@ -19,7 +22,6 @@ interface AgentEventDetailViewProps {
 /**
  * O detalhe do evento de agente: a forma do agente, sem edição. Os dados vêm do evento e, por cima, do pedido
  * com o mesmo id. A tela é uma coluna de seções separadas, e as próximas acrescentam as suas nos lugares marcados:
- *   - 46: Entradas (entre Informações e Passos); Produziu e Sessão (entre Passos e Registro);
  *   - 47: a falha e o campo do agente no rodapé, depois de Registro; "Cancelar pedido" na linha de status
  *     (no topo, em `AgentEventHeader`), e o menu "Mais ações" na barra do topo.
  */
@@ -42,9 +44,10 @@ export function AgentEventDetailView({ userId, event, onChanged }: AgentEventDet
       {request ? (
         <>
           <AgentInfoSection event={event} />
-          {/* Ticket 46: Entradas. */}
+          <AgentEntriesSection entries={request.trace?.entries ?? []} />
           <AgentStepsSection steps={request.steps} />
-          {/* Ticket 46: Produziu e Sessão. */}
+          <AgentProducedSection userId={userId} entities={request.entities} />
+          <AgentSessionSection sessionId={request.sessionId} />
           <AgentRecordSection request={request} />
           {/* Ticket 47: a falha do pedido e o campo do agente no rodapé. */}
         </>

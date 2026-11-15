@@ -9,3 +9,14 @@
 .stepLabel { min-width: 0; font-size: var(--font-size-sm); font-weight: 500; line-height: 20px; color: var(--ink); overflow-wrap: anywhere; }
 .stepAgent { grid-column: 2; font-family: var(--font-mono); font-size: var(--font-size-xs); letter-spacing: .04em; color: var(--muted); }
 .stepStatus { grid-column: 3; grid-row: 1; font-size: 13px; line-height: 20px; color: var(--muted); white-space: nowrap; }
+
+.entries { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
+.entry { display: flex; flex-direction: column; gap: 4px; padding: 10px 0; border-bottom: 1px solid var(--hairline); }
+.entryHead { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.entryKind { font-size: var(--font-size-xs); font-weight: 500; color: var(--muted); white-space: nowrap; }
+.entrySource { min-width: 0; font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--muted); overflow-wrap: anywhere; }
+.entryTime { margin-left: auto; font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--muted); white-space: nowrap; }
+.entryText { margin: 0; font-size: var(--font-size-sm); line-height: 20px; color: var(--ink); overflow-wrap: anywhere; }
+
+.linkedTitle { display: block; font-size: var(--font-size-sm); font-weight: 500; color: var(--ink); overflow-wrap: anywhere; }
+.linkedWhen { display: block; font-size: 13px; color: var(--muted); }

@@ -26,7 +26,8 @@ const KIND_ICONS: Record<AgentTraceKind, typeof Bot> = {
   answer: CornerDownLeft,
 };
 
-const KIND_NAMES: Record<AgentTraceKind, string> = {
+/** Os nomes dos tipos de entrada, os mesmos na aba "Processo" do chat e no detalhe do evento de agente. */
+export const KIND_NAMES: Record<AgentTraceKind, string> = {
   request: "Pedido",
   routing: "Roteamento",
   thought: "Raciocínio",

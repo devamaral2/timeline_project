@@ -1,6 +1,6 @@
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import type { EventDto, RequestDto } from "@repo/contracts";
+import type { AgentTraceDto, EventDto, RequestDto } from "@repo/contracts";
 import { type FakeApi, createFakeApi } from "@/test/fake-api";
 import { eventFixture, eventsArea } from "@/test/fake-api/events";
 import { advanceRequest, requestFixture, requestsArea } from "@/test/fake-api/requests";
@@ -179,4 +179,116 @@ test("um evento de agente sem pedido diz que o pedido não foi encontrado", asyn
   renderPage();
 
   expect(await screen.findByRole("alert")).toHaveTextContent("Pedido não encontrado.");
+});
+
+/** O primeiro pedido da sessão. O id é de ULID, como o do pedido da tela. */
+const FIRST_ID = "01HZX4R5Q7M8N9P0T1V2W3Y4Z0";
+
+const TRACE: AgentTraceDto = {
+  route: "steps",
+  status: "running",
+  startedAt: "2026-11-14T09:41:00-03:00",
+  fields: [],
+  entries: [
+    { id: "e1", kind: "request", label: "Pedido recebido", status: "done", startedAt: "2026-11-14T09:41:00-03:00", summary: "Pesquise voos de ida e volta para Lisboa." },
+    { id: "e2", kind: "thought", label: "Pensou", status: "done", startedAt: "2026-11-14T09:41:20-03:00", summary: "Datas flexíveis costumam baixar o preço." },
+    { id: "e3", kind: "tool", label: "Executou uma busca", source: "flights.search", status: "done", startedAt: "2026-11-14T09:42:00-03:00", summary: "3 janelas · 14 ofertas" },
+    { id: "e4", kind: "message", label: "Comentou no meio do trabalho", status: "running", startedAt: "2026-11-14T09:44:00-03:00" },
+  ],
+};
+
+const ENTITIES: RequestDto["entities"] = [
+  { kind: "artifact", id: "art-1", name: "Comparativo de voos", artifactType: "text", operation: "create", linkedTo: [] },
+  { kind: "event", id: "ev-9", name: "Escolher o voo", operation: "update", linkedTo: [] },
+  { kind: "event", id: "ev-10", name: "Voo descartado", operation: "delete", linkedTo: [] },
+];
+
+test("Entradas lista o rastro do pedido em ordem, com o tipo, a hora e o texto de cada entrada", async () => {
+  install([agentEvent()], [agentRequest({ trace: TRACE })]);
+  renderPage();
+  await loaded();
+
+  const entries = await screen.findByRole("region", { name: "Entradas" });
+  expect(within(entries).getByText("4")).toBeInTheDocument();
+  const items = within(entries).getAllByRole("listitem");
+  expect(items).toHaveLength(4);
+  expect(items[0]).toHaveTextContent("Pedido");
+  expect(items[0]).toHaveTextContent("09:41");
+  expect(items[0]).toHaveTextContent("Pesquise voos de ida e volta para Lisboa.");
+  expect(items[1]).toHaveTextContent("Raciocínio");
+  expect(items[1]).toHaveTextContent("Datas flexíveis costumam baixar o preço.");
+  expect(items[2]).toHaveTextContent("Ferramenta");
+  expect(items[2]).toHaveTextContent("flights.search");
+  expect(items[2]).toHaveTextContent("09:42");
+  // Sem resumo, o texto é o rótulo do servidor.
+  expect(items[3]).toHaveTextContent("Comentou no meio do trabalho");
+});
+
+test("Produziu lista o que o pedido criou ou alterou e leva ao detalhe; o apagado não é link", async () => {
+  install([agentEvent()], [agentRequest({ entities: ENTITIES })]);
+  renderPage();
+  await loaded();
+
+  const produced = await screen.findByRole("region", { name: "Produziu" });
+  expect(within(produced).getByRole("link", { name: /Comparativo de voos/ })).toHaveAttribute("href", "/user-1/notas/art-1");
+  expect(within(produced).getByRole("link", { name: /Escolher o voo/ })).toHaveAttribute("href", "/user-1/eventos/ev-9");
+  expect(within(produced).getByText("Voo descartado")).toBeInTheDocument();
+  expect(within(produced).queryByRole("link", { name: /Voo descartado/ })).not.toBeInTheDocument();
+  expect(within(produced).getByText(/apagado/)).toBeInTheDocument();
+});
+
+test("Sessão mostra de qual pedido este continua, e Continuações não aparece", async () => {
+  const first = requestFixture({
+    id: FIRST_ID,
+    title: "Planejar viagem a Lisboa",
+    status: "done",
+    createdAt: "2026-11-12T10:00:00-03:00",
+    updatedAt: "2026-11-12T10:05:00-03:00",
+  });
+  install([agentEvent()], [first, agentRequest({ sessionId: FIRST_ID })]);
+  renderPage();
+  await loaded();
+
+  const session = await screen.findByRole("region", { name: "Sessão" });
+  expect(within(session).getByText("Continua de")).toBeInTheDocument();
+  expect(within(session).getByText("Planejar viagem a Lisboa")).toBeInTheDocument();
+  expect(screen.queryByText("Continuações")).not.toBeInTheDocument();
+});
+
+test("Sessão diz que o pedido anterior não foi encontrado quando ele não carrega", async () => {
+  install([agentEvent()], [agentRequest({ sessionId: FIRST_ID })]);
+  renderPage();
+  await loaded();
+
+  const session = await screen.findByRole("region", { name: "Sessão" });
+  expect(await within(session).findByText("Pedido anterior não encontrado.")).toBeInTheDocument();
+});
+
+test("um pedido com entradas, entidades e sessão mostra as três seções na ordem do desenho", async () => {
+  const first = requestFixture({ id: FIRST_ID, title: "Planejar viagem a Lisboa", status: "done", createdAt: "2026-11-12T10:00:00-03:00", updatedAt: "2026-11-12T10:05:00-03:00" });
+  install([agentEvent()], [first, agentRequest({ trace: TRACE, entities: ENTITIES, sessionId: FIRST_ID })]);
+  renderPage();
+  await loaded();
+
+  const entries = await screen.findByRole("region", { name: "Entradas" });
+  const produced = screen.getByRole("region", { name: "Produziu" });
+  const session = await screen.findByRole("region", { name: "Sessão" });
+  expect(within(entries).getAllByRole("listitem")).toHaveLength(4);
+  expect(within(produced).getByRole("link", { name: /Escolher o voo/ })).toBeInTheDocument();
+  expect(within(session).getByText("Planejar viagem a Lisboa")).toBeInTheDocument();
+  const order = ["Informações", "Entradas", "Passos", "Produziu", "Sessão", "Registro"].map((name) => screen.getByRole("region", { name }));
+  for (let i = 1; i < order.length; i++) {
+    expect(order[i - 1].compareDocumentPosition(order[i]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  }
+});
+
+test("Entradas, Produziu e Sessão não aparecem sem conteúdo", async () => {
+  install([agentEvent()], [agentRequest()]);
+  renderPage();
+  await loaded();
+  await screen.findByRole("region", { name: "Passos" });
+
+  expect(screen.queryByRole("region", { name: "Entradas" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("region", { name: "Produziu" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("region", { name: "Sessão" })).not.toBeInTheDocument();
 });
