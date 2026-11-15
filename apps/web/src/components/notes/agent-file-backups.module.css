@@ -1,0 +1,10 @@
+/* A seção de backups do arquivo do Hermes. Dentro do shell: os aliases --ink, --muted e --line vêm de shell.module.css. */
+
+.list { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: var(--control-md); padding: 8px 0; border-bottom: 1px solid var(--line); }
+.row:last-child { border-bottom: 0; }
+.text { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; min-width: 0; }
+.when { color: var(--ink); font-size: var(--font-size-sm); font-weight: 600; }
+.size { color: var(--muted); font-family: var(--font-mono); font-size: var(--font-size-xs); }
+.restore { flex: none; min-height: var(--control-md); padding: 0 14px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--ink); font: inherit; font-size: var(--font-size-sm); font-weight: 600; cursor: pointer; }
+.restore:hover { background: var(--soft); }

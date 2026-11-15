@@ -3,8 +3,9 @@
 import type { AgentFileData } from "@repo/contracts";
 import { useEffect, useState } from "react";
 import { DetailMessage } from "@/components/detail/detail-parts";
-import { readAgentFileText } from "@/lib/api/agent-files";
+import { type AgentFileEntry, readAgentFileText } from "@/lib/api/agent-files";
 import { ApiRequestError } from "@/lib/api/client-request";
+import { AgentFileBackups } from "./AgentFileBackups";
 import { AgentFileEditBar } from "./AgentFileEditBar";
 import { MarkdownView } from "./MarkdownView";
 import styles from "./notes.module.css";
@@ -14,8 +15,8 @@ import styles from "./notes.module.css";
  *   1. `useAgentFileRead`: lê o texto atual pela API e diz se o usuário pode lê-lo.
  *   2. `AgentFileHeader`: caminho, versão, aviso de arquivo ausente e descrição (vem do próprio artefato).
  *   3. `AgentFileBody`: o texto, em markdown ou bruto; some para quem não é o dono.
- *   4. Ações do arquivo (backups, restauração, pedido de edição: tickets 38 e 39) entram depois do corpo,
- *      em `AgentFileNoteView`, sem mexer nas partes acima.
+ *   4. Ações do arquivo entram depois do corpo, em `AgentFileNoteView`, sem mexer nas partes acima:
+ *      backups (ticket 38, `AgentFileBackups.tsx`) e pedido de edição (ticket 39).
  */
 
 const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/;
@@ -115,17 +116,30 @@ function AgentFileBody({ read }: { read: ReadState }) {
   );
 }
 
+/** A versão que a restauração devolveu: vale enquanto o artefato trouxer o mesmo hash de antes (a tela não o relê). */
+interface RestoredFile {
+  fromHash: string;
+  hash: string;
+  missing: boolean;
+}
+
 /** O arquivo de uma skill ou agente do Hermes: caminho, versão, texto (para o dono) e, depois, as ações de arquivo. */
 export function AgentFileNoteView({ data }: { data: AgentFileData }) {
+  const [restored, setRestored] = useState<RestoredFile | null>(null);
+  // Depois de restaurar, a versão e o aviso de ausência vêm da própria resposta; trocar o hash relê o texto.
+  const current = restored && restored.fromHash === data.hash ? { ...data, hash: restored.hash, missing: restored.missing } : data;
   // Sobe a cada pedido de edição que termina: o texto é relido (o `AgentFileEditBar` avisa).
   const [revision, setRevision] = useState(0);
-  const read = useAgentFileRead(data.path, data.hash, revision);
+  const read = useAgentFileRead(current.path, current.hash, revision);
+  const onRestored = (entry: AgentFileEntry) => setRestored({ fromHash: data.hash, hash: entry.hash, missing: entry.missing });
   return (
     <article className={styles.noteCard} aria-label="Arquivo do Hermes">
-      <AgentFileHeader data={data} />
+      <AgentFileHeader data={current} />
       <AgentFileBody read={read} />
-      {/* Ticket 39 (pedido de edição): só para o dono, que é quem lê o texto. Ticket 38 entra aqui também. */}
-      {read.status === "forbidden" ? null : <AgentFileEditBar path={data.path} onDone={() => setRevision((count) => count + 1)} />}
+      {/* Só depois de saber que o usuário pode ler o texto: quem não é o dono não chega a pedir os backups. */}
+      {read.status === "ready" || read.status === "error" ? <AgentFileBackups path={current.path} onRestored={onRestored} /> : null}
+      {/* Só para o dono, que é quem lê o texto (sem leitura permitida, o campo não é montado). */}
+      {read.status === "forbidden" ? null : <AgentFileEditBar path={current.path} onDone={() => setRevision((count) => count + 1)} />}
     </article>
   );
 }
