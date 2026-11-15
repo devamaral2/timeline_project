@@ -49,25 +49,46 @@ export function EventChoice<T extends string>({ ariaLabel, listLabel, value, opt
         <ChevronDown className={styles.caret} {...detailIcon} />
       </button>
       {open ? (
-        <div role="listbox" aria-label={listLabel} className={styles.choiceList}>
-          {options.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              role="option"
-              aria-selected={option.value === value}
-              onClick={() => {
-                setOpen(false);
-                if (option.value !== value) onChange(option.value);
-              }}
-            >
-              <span aria-hidden className={styles.glyph}>{option.icon}</span>
-              {option.label}
-              {option.value === value ? <Check className={styles.selectedMark} {...detailIcon} /> : null}
-            </button>
-          ))}
-        </div>
+        <EventChoiceList
+          listLabel={listLabel}
+          value={value}
+          options={options}
+          onPick={(picked) => {
+            setOpen(false);
+            if (picked !== value) onChange(picked);
+          }}
+        />
       ) : null}
+    </div>
+  );
+}
+
+interface EventChoiceListProps<T extends string> {
+  listLabel: string;
+  /** `null` quando o evento não tem o valor: nenhuma opção fica marcada. */
+  value: T | null;
+  options: ChoiceOption<T>[];
+  /** A classe do quadro da lista; o padrão é o do topo do detalhe (posicionado sob o botão). */
+  className?: string;
+  /** Recebe a opção tocada, marcada ou não; quem chama decide se grava. */
+  onPick: (value: T) => void;
+}
+
+/**
+ * A lista de opções sozinha (um `listbox`), para quem abre a escolha por outro
+ * gatilho: o topo do detalhe usa `EventChoice`, que a põe sob o botão; a agenda
+ * a põe num cartão próprio.
+ */
+export function EventChoiceList<T extends string>({ listLabel, value, options, className = styles.choiceList, onPick }: EventChoiceListProps<T>) {
+  return (
+    <div role="listbox" aria-label={listLabel} className={className}>
+      {options.map((option) => (
+        <button key={option.value} type="button" role="option" aria-selected={option.value === value} onClick={() => onPick(option.value)}>
+          <span aria-hidden className={styles.glyph}>{option.icon}</span>
+          {option.label}
+          {option.value === value ? <Check className={styles.selectedMark} {...detailIcon} /> : null}
+        </button>
+      ))}
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import type { EventCardDto } from "@repo/contracts";
 import { formatTime, mediumDate, relativeDayLabel, shortDate } from "@repo/timeline";
 import { Plus } from "lucide-react";
 import Link from "next/link";
@@ -68,13 +69,15 @@ function FreeTimeRow({ slot, dayKey, now, onPlan }: { slot: FreeSlot; dayKey: st
   );
 }
 
-export function AgendaDay({ dayKey, now, tasks, missedEvents, onSelectEvent, onPlanFreeWindow, events: suppliedEvents, userId, todayKey = EXAMPLE_TODAY, hideWhenEmpty = false, showHeading = true, showFreeTime = true, loading = false, selected = false, freshIds }: {
+export function AgendaDay({ dayKey, now, tasks, missedEvents, onSelectEvent, onPlanFreeWindow, onStatusClick, events: suppliedEvents, userId, todayKey = EXAMPLE_TODAY, hideWhenEmpty = false, showHeading = true, showFreeTime = true, loading = false, selected = false, freshIds }: {
   dayKey: string;
   now: number;
   tasks: Record<string, ExampleTask>;
   missedEvents: Record<string, boolean>;
   onSelectEvent: (selected: SelectedEvent) => void;
   onPlanFreeWindow?: (window: FreeWindow) => void;
+  /** Toque no glifo de um evento de pessoa (a tela decide o que ele abre). */
+  onStatusClick?: (card: EventCardDto) => void;
   events?: ExampleEvent[];
   userId?: string;
   todayKey?: string;
@@ -104,7 +107,7 @@ export function AgendaDay({ dayKey, now, tasks, missedEvents, onSelectEvent, onP
             if (row.kind === "free") return <FreeTimeRow key={`free-${row.slot.startMs}`} slot={row.slot} dayKey={dayKey} now={now} onPlan={onPlanFreeWindow} />;
             const { event, index } = row;
             // Evento da API: a linha única desenha o cartão do contrato; a prévia sem usuário segue com o desenho de exemplo.
-            if (userId && event.card) return <EventRow key={event.card.id} card={event.card} userId={userId} now={new Date(now)} />;
+            if (userId && event.card) return <EventRow key={event.card.id} card={event.card} userId={userId} now={new Date(now)} onStatusClick={onStatusClick} />;
             const { Icon, label } = visualForItemType(event.type);
             const task = event.task ? tasks[event.task.id] ?? event.task : undefined;
             const missed = missedEvents[`${dayKey}:${event.id ?? event.name}`] ?? event.missed ?? false;

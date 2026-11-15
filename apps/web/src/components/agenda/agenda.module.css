@@ -178,3 +178,7 @@
   .missed { margin: 2px 0 0; }
   .duration { font-size: 22px; }
 }
+
+/* A escolha de status do evento de referência: a lista de `EventChoiceList` num cartão no pé da tela, sem posicionar-se sob um botão. */
+.statusPicker { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: var(--z-popover); }
+.statusPicker [role="listbox"] { position: static; }

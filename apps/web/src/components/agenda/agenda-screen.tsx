@@ -4,12 +4,15 @@ import {
   dayKeyRange, dayNumber, isSameMonth, longDate, monthGridOf,
   monthLabel, shiftDayKey, shiftMonthKey, weekOf, weekday, zonedDayEnd, zonedDayStart,
 } from "@repo/timeline";
+import type { EventCardDto, HumanEventStatus } from "@repo/contracts";
 import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { WeekStrip } from "@/components/events/WeekStrip";
 import { requestHubOpen } from "@/components/hub/hub-events";
 import page from "@/components/ui/page.module.css";
-import { listAgenda } from "@/lib/api/events";
+import { ApiRequestError } from "@/lib/api/client-request";
+import { listAgenda, updateEvent } from "@/lib/api/events";
+import { statusPatch } from "@/lib/events/event-read-model";
 import { slideIn } from "@/lib/motion/enter";
 import { reflow } from "@/lib/motion/view-transition";
 import { briefDate } from "@/lib/dates/day-labels";
@@ -17,6 +20,7 @@ import { useNow } from "@/lib/events/use-now";
 import { useSessionState } from "@/lib/session/use-session";
 import { useAiJobRefresh } from "@/lib/ai-jobs/use-ai-job-refresh";
 import { AgendaDay } from "./agenda-day";
+import { AgendaStatusPicker } from "./agenda-status-picker";
 import { AgendaOptions, type AgendaViewMode } from "./agenda-options";
 import { agendaEventsByDay } from "./agenda-data";
 import { EXAMPLE_NOW, EXAMPLE_TODAY, type ExampleEvent, type ExampleTask, exampleEventsOn } from "./agenda-examples";
@@ -29,6 +33,10 @@ type ViewMode = AgendaViewMode;
 
 /** Onde a escolha "mostrar o tempo livre" fica guardada, por navegador. */
 const FREE_TIME_STORAGE_KEY = "braid-agenda-free-time";
+
+/** Aviso quando a troca de status de um evento de referência não é gravada. A revisão velha recarrega a agenda. */
+const STALE_STATUS_MESSAGE = "Este evento mudou em outro lugar. Carregamos a versão atual; confira e tente de novo.";
+const FAILED_STATUS_MESSAGE = "Não foi possível trocar o status. Tente novamente.";
 
 /** Quanto a linha recém-chegada fica marcada, o tempo do banho escorrer. */
 const FRESH_MS = 2000;
@@ -73,6 +81,9 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
     setRefreshVersion((version) => version + 1);
   });
   const [selectedEvent, setSelectedEvent] = useState<SelectedEvent | null>(null);
+  // O evento de referência cujo ponto azul foi tocado, e o aviso da última troca que falhou.
+  const [statusCard, setStatusCard] = useState<EventCardDto | null>(null);
+  const [statusNote, setStatusNote] = useState<string | null>(null);
   const [mode, setMode] = useState<ViewMode>("day");
   const [showFreeTime, setShowFreeTime] = useState(true);
   const [selectedDay, setSelectedDay] = useState(todayKey);
@@ -103,6 +114,28 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
       if (window.localStorage.getItem(FREE_TIME_STORAGE_KEY) === "off") setShowFreeTime(false);
     } catch {}
   }, []);
+
+  /** Só evento de referência (sem status) abre a escolha; o de pessoa com status segue sem ação aqui. */
+  function openStatusPicker(card: EventCardDto) {
+    if (card.status === undefined) setStatusCard(card);
+  }
+
+  /** Grava o status com a revisão que a agenda leu. Revisão velha avisa e recarrega; o recarregamento traz a linha nova. */
+  async function changeReferenceStatus(card: EventCardDto, status: HumanEventStatus) {
+    setStatusCard(null);
+    setStatusNote(null);
+    try {
+      await updateEvent(card.id, statusPatch(card, status, new Date()));
+      window.dispatchEvent(new Event(agendaRefreshEvent));
+    } catch (cause) {
+      if (cause instanceof ApiRequestError && cause.kind === "stale_revision") {
+        window.dispatchEvent(new Event(agendaRefreshEvent));
+        setStatusNote(STALE_STATUS_MESSAGE);
+      } else {
+        setStatusNote(FAILED_STATUS_MESSAGE);
+      }
+    }
+  }
 
   function changeShowFreeTime(show: boolean) {
     // As linhas de tempo livre somem ou voltam e as outras deslizam para o lugar.
@@ -384,12 +417,20 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
             if (dayKey) setSelectedDay(dayKey);
           }}
         >
-          {pageDays.map((dayKey) => <AgendaDay key={dayKey} dayKey={dayKey} now={now} tasks={tasks} missedEvents={missedEvents} onSelectEvent={setSelectedEvent} onPlanFreeWindow={(freeWindow) => requestHubOpen({ freeWindow })} events={userId ? eventsByDay[dayKey] ?? [] : undefined} userId={userId} todayKey={todayKey} hideWhenEmpty={mode === "list"} showHeading={mode === "list"} showFreeTime={showFreeTime} loading={Boolean(userId) && loadState === "loading" && !(dayKey in eventsByDay)} selected={mode === "day" && dayKey === selectedDay} freshIds={freshIds} />)}
+          {pageDays.map((dayKey) => <AgendaDay key={dayKey} dayKey={dayKey} now={now} tasks={tasks} missedEvents={missedEvents} onSelectEvent={setSelectedEvent} onPlanFreeWindow={(freeWindow) => requestHubOpen({ freeWindow })} onStatusClick={openStatusPicker} events={userId ? eventsByDay[dayKey] ?? [] : undefined} userId={userId} todayKey={todayKey} hideWhenEmpty={mode === "list"} showHeading={mode === "list"} showFreeTime={showFreeTime} loading={Boolean(userId) && loadState === "loading" && !(dayKey in eventsByDay)} selected={mode === "day" && dayKey === selectedDay} freshIds={freshIds} />)}
         </section>
         {userId && loadState === "loading" ? <p role="status" className={styles.note}>Carregando sua agenda…</p> : null}
         {userId && loadState === "failed" ? <p role="alert" className={styles.note}>Não foi possível carregar a agenda. Tente novamente.</p> : null}
+        {statusNote ? <p role="alert" className={styles.note}>{statusNote}</p> : null}
         {!userId ? <p className={styles.note}>Dados de exemplo · relógio ilustrativo às 09:35</p> : null}
       </section>
+      {statusCard ? (
+        <AgendaStatusPicker
+          card={statusCard}
+          onPick={(status) => void changeReferenceStatus(statusCard, status)}
+          onClose={() => setStatusCard(null)}
+        />
+      ) : null}
       <EventTaskDialog
         selected={selectedEvent}
         task={selectedEvent?.event.task ? tasks[selectedEvent.event.task.id] ?? selectedEvent.event.task : undefined}

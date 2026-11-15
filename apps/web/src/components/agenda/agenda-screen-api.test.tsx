@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { createFakeApi } from "@/test/fake-api";
 import { eventFixture, eventsArea } from "@/test/fake-api/events";
@@ -162,4 +162,64 @@ test("free time counts only person events: an agent event inside a free window d
   ]);
   expect(within(dayOf(TODAY)).getByText("Livre")).toBeInTheDocument();
   expect(within(dayOf(TODAY)).getByTitle("Tempo livre: 120 min")).toBeInTheDocument();
+});
+
+test("tapping the dot of a reference event opens the seven person statuses", async () => {
+  installApi();
+  render(<AgendaScreen userId="user-1" todayKey={TODAY} />);
+  await waitFor(() => expect(within(dayOf(TODAY)).getAllByRole("link")).toHaveLength(5));
+
+  fireEvent.click(within(dayOf(TODAY)).getByRole("button", { name: "Só agenda. Mudar status de “Almoço no escritório”" }));
+
+  const list = screen.getByRole("listbox", { name: "Status do evento" });
+  expect(within(list).getAllByRole("option").map((option) => option.textContent)).toEqual([
+    "A fazer", "Sem data", "Em curso", "Em espera", "Feito", "Cancelado", "Não realizado",
+  ]);
+});
+
+test("choosing a status sends the edit with the revision read, and the row shows the new glyph", async () => {
+  const api = installApi();
+  render(<AgendaScreen userId="user-1" todayKey={TODAY} />);
+  await waitFor(() => expect(within(dayOf(TODAY)).getAllByRole("link")).toHaveLength(5));
+
+  fireEvent.click(within(dayOf(TODAY)).getByRole("button", { name: "Só agenda. Mudar status de “Almoço no escritório”" }));
+  fireEvent.click(screen.getByRole("option", { name: "Feito" }));
+
+  await waitFor(() => expect(api.calls.filter((call) => call.method === "PATCH")).toHaveLength(1));
+  expect(api.calls.find((call) => call.method === "PATCH")).toMatchObject({
+    pathname: "/api/events/ev-2",
+    body: { expectedRevision: 1, status: "done", finishedAt: expect.stringMatching(/^2026-09-14T13:00:00\.\d{3}Z$/) },
+  });
+  await waitFor(() => expect(within(dayOf(TODAY)).getByRole("button", { name: "Feito. Mudar status de “Almoço no escritório”" })).toBeInTheDocument());
+  expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+});
+
+test("a stale revision warns and reloads the agenda", async () => {
+  const api = installApi();
+  render(<AgendaScreen userId="user-1" todayKey={TODAY} />);
+  await waitFor(() => expect(within(dayOf(TODAY)).getAllByRole("link")).toHaveLength(5));
+  const agendaReads = () => api.calls.filter((call) => call.method === "GET" && call.pathname === "/api/events").length;
+  const readsBefore = agendaReads();
+
+  api.failNext("PATCH", "/api/events/ev-2", 409);
+  fireEvent.click(within(dayOf(TODAY)).getByRole("button", { name: "Só agenda. Mudar status de “Almoço no escritório”" }));
+  fireEvent.click(screen.getByRole("option", { name: "Em curso" }));
+
+  expect(await screen.findByRole("alert")).toHaveTextContent("Este evento mudou em outro lugar. Carregamos a versão atual; confira e tente de novo.");
+  await waitFor(() => expect(agendaReads()).toBeGreaterThan(readsBefore));
+  expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+  expect(within(dayOf(TODAY)).getByRole("button", { name: "Só agenda. Mudar status de “Almoço no escritório”" })).toBeInTheDocument();
+});
+
+test("a refused status change shows the retry message and keeps the row as it was", async () => {
+  const api = installApi();
+  render(<AgendaScreen userId="user-1" todayKey={TODAY} />);
+  await waitFor(() => expect(within(dayOf(TODAY)).getAllByRole("link")).toHaveLength(5));
+
+  api.failNext("PATCH", "/api/events/ev-2", 500);
+  fireEvent.click(within(dayOf(TODAY)).getByRole("button", { name: "Só agenda. Mudar status de “Almoço no escritório”" }));
+  fireEvent.click(screen.getByRole("option", { name: "Em curso" }));
+
+  expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível trocar o status. Tente novamente.");
+  expect(within(dayOf(TODAY)).getByRole("button", { name: "Só agenda. Mudar status de “Almoço no escritório”" })).toBeInTheDocument();
 });
