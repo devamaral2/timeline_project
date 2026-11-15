@@ -1,0 +1,25 @@
+/*
+ * Artefatos da edição: a lista do evento, com a posição, os botões de subir, descer e remover, e a busca para
+ * ligar. Cor só por token, para o tema trocar junto. Fica fora de `event-edit-lists.module.css` para não disputar
+ * o arquivo com as outras seções.
+ */
+
+.empty { margin: 0; padding: 13px 0; font-size: 15px; line-height: 22px; color: var(--muted); }
+
+.list { list-style: none; margin: 0; padding: 0; }
+.row { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.row:last-child { border-bottom: 0; }
+.position { width: 18px; flex: none; padding-top: 2px; font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--muted); text-align: center; }
+.body { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 3px; color: var(--ink); }
+.name { font-size: 15px; font-weight: 600; line-height: 24px; overflow-wrap: anywhere; }
+.meta { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 12px; font-size: 13px; line-height: 20px; color: var(--muted); }
+.type { font-family: var(--font-mono); font-size: var(--font-size-xs); letter-spacing: .04em; }
+
+.steps { display: flex; flex: none; align-items: center; }
+.step, .remove {
+  display: grid; place-items: center; width: 44px; height: 44px; flex: none; margin: -8px -4px 0 0; padding: 0;
+  border: 0; border-radius: 50%; background: transparent; color: var(--muted); cursor: pointer;
+}
+.step:disabled { opacity: .35; cursor: default; }
+.remove { margin-right: -8px; }
+.step:focus-visible, .remove:focus-visible { outline: 2px solid var(--color-ring); outline-offset: 1px; }

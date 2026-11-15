@@ -38,6 +38,8 @@ const numeric = new Intl.Collator("en", { numeric: true });
 export interface ArtifactLink {
   eventId: string;
   relation: ArtifactEventLinkDto["relation"];
+  /** A posição na lista do evento (a ordem enviada no `PATCH` do evento). Sem ela, vale a ordem da tabela. */
+  position?: number;
 }
 
 /** Como o artefato fica guardado: o que a leitura devolve, mais as relações com os eventos. */
@@ -141,15 +143,43 @@ function toDto(artifact: StoredArtifact, store?: FakeStore): ArtifactDto {
  * e cópias derivadas incluídos, e sem os apagados.
  */
 export function artifactsOfEvent(store: FakeStore, eventId: string): EventArtifactDto[] {
-  const found: EventArtifactDto[] = [];
+  const found: { link: ArtifactLink; artifact: StoredArtifact }[] = [];
   for (const artifact of table(store).values()) {
     if (artifact.deleted) continue;
     const link = artifact.links.find((item) => item.eventId === eventId);
-    if (!link) continue;
-    // A API falsa não guarda a série que criou o vínculo, então nenhum vínculo vem dela.
-    found.push({ relation: link.relation, fromRecurrence: false, artifact: toDto(artifact) });
+    if (link) found.push({ link, artifact });
   }
-  return found;
+  // `Array.prototype.sort` é estável: sem posição, a ordem da tabela é a que fica.
+  found.sort((a, b) => (a.link.position ?? Number.MAX_SAFE_INTEGER) - (b.link.position ?? Number.MAX_SAFE_INTEGER));
+  // A API falsa não guarda a série que criou o vínculo, então nenhum vínculo vem dela.
+  return found.map(({ link, artifact }) => ({ relation: link.relation, fromRecurrence: false, artifact: toDto(artifact) }));
+}
+
+/**
+ * A lista completa de artefatos de um evento, como o `PATCH` do evento a manda: a ordem da lista vira a posição
+ * do vínculo, quem sai da lista perde o vínculo (o artefato continua), e a relação vem da entrada ou, se ela não
+ * traz, do vínculo que já existia (ou `uses` para um artefato novo na lista). `false` quando algum artefato não
+ * existe; nada é gravado nesse caso.
+ */
+export function relinkEventArtifacts(
+  store: FakeStore,
+  eventId: string,
+  entries: readonly { id: string; relation?: ArtifactLink["relation"] }[],
+): boolean {
+  const ids = entries.map((entry) => entry.id);
+  if (ids.some((id) => !visibleOne(store, id))) return false;
+
+  for (const artifact of [...table(store).values()]) {
+    const current = artifact.links.find((link) => link.eventId === eventId);
+    const index = ids.indexOf(artifact.id);
+    if (!current && index === -1) continue;
+    const others = artifact.links.filter((link) => link.eventId !== eventId);
+    const links = index === -1
+      ? others
+      : [...others, { eventId, relation: entries[index]?.relation ?? current?.relation ?? "uses", position: index }];
+    table(store).set(artifact.id, { ...artifact, links });
+  }
+  return true;
 }
 
 function matchesText(artifact: StoredArtifact, q: string): boolean {

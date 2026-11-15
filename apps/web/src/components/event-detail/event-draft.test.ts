@@ -1,4 +1,4 @@
-import type { EventDto } from "@repo/contracts";
+import type { EventArtifactDto, EventDto } from "@repo/contracts";
 import { describe, expect, it } from "vitest";
 import { eventFixture } from "@/test/fake-api/events";
 import { buildCreateEventInput, buildEventPatch, draftFromEvent, emptyEventDraft, instantFromDraft, rebaseDraft, validateEventDraft } from "./event-draft";
@@ -8,7 +8,7 @@ describe("emptyEventDraft e buildCreateEventInput", () => {
     expect(emptyEventDraft("comprar pão")).toEqual({
       kind: "routine", name: "comprar pão", status: null, priority: "medium",
       startDate: "", startTime: "", endDate: "", endTime: "", description: "", reminders: [], tags: [], longRunning: false,
-      blockedByEventIds: [], blocksEventIds: [],
+      blockedByEventIds: [], blocksEventIds: [], artifacts: [],
     });
   });
 
@@ -336,6 +336,77 @@ describe("lembretes e tags", () => {
     const typed = { ...draftFromEvent(before), tags: ["foco", "casa"] };
 
     expect(rebaseDraft(typed, before, after)).toMatchObject({ tags: ["foco", "casa"] });
+  });
+});
+
+describe("artefatos na edição", () => {
+  /** Um vínculo como o evento o devolve: o artefato inteiro (catálogo global é treino; o próprio, nota). */
+  function link(id: string, name: string, relation: EventArtifactDto["relation"] = "uses") {
+    const global = id === "art-gym";
+    return {
+      relation,
+      fromRecurrence: false,
+      artifact: {
+        id, name, global, derived: false, schemaVersion: 1, tags: [], revision: 1,
+        createdAt: "2026-09-01T00:00:00.000Z", updatedAt: "2026-09-01T00:00:00.000Z",
+        ...(global
+          ? { type: "workout", data: { code: "weightlifting", category: "strength", active: true } }
+          : { type: "text", data: { body: "" } }),
+      } as EventArtifactDto["artifact"],
+    };
+  }
+  const workout = link("art-gym", "Musculação");
+  const sheet = link("art-sheet", "Ficha A");
+
+  it("o rascunho lê a lista de artefatos do evento, na ordem da API", () => {
+    const draft = draftFromEvent(training({ artifacts: [workout, sheet] }));
+
+    expect(draft.artifacts).toEqual([
+      { id: "art-gym", name: "Musculação", type: "workout", global: true, relation: "uses" },
+      { id: "art-sheet", name: "Ficha A", type: "text", global: false, relation: "uses" },
+    ]);
+  });
+
+  it("a lista mudada vai no PATCH inteira, com id e relação de cada um, na ordem da tela", () => {
+    const event = training({ artifacts: [workout, sheet] });
+    const base = draftFromEvent(event);
+    const reordered = { ...base, artifacts: [...base.artifacts].reverse() };
+
+    expect(buildEventPatch(event, reordered, NOW)).toEqual({
+      expectedRevision: 3,
+      artifacts: [
+        { id: "art-sheet", relation: "uses" },
+        { id: "art-gym", relation: "uses" },
+      ],
+    });
+  });
+
+  it("uma lista sem mudança não entra no PATCH", () => {
+    const event = training({ artifacts: [workout, sheet] });
+
+    expect(buildEventPatch(event, draftFromEvent(event), NOW)).toBeNull();
+  });
+
+  it("quem o evento criou segue na lista com a relação creates", () => {
+    const created = link("art-sheet", "Ficha A", "creates");
+    const event = training({ artifacts: [created] });
+    const kept = draftFromEvent(event);
+
+    expect(buildEventPatch(event, { ...kept, name: "Treino novo" }, NOW)).toEqual({
+      expectedRevision: 3,
+      name: "Treino novo",
+    });
+    expect(buildEventPatch(event, { ...kept, artifacts: [] }, NOW)).toEqual({ expectedRevision: 3, artifacts: [] });
+  });
+
+  it("na releitura, a lista que a pessoa não mexeu acompanha a versão nova, e a que mexeu fica", () => {
+    const before = training({ artifacts: [workout] });
+    const after = training({ revision: 4, artifacts: [workout, sheet] });
+    const untouched = rebaseDraft(draftFromEvent(before), before, after);
+    const touched = rebaseDraft({ ...draftFromEvent(before), artifacts: [] }, before, after);
+
+    expect(untouched.artifacts.map((item) => item.id)).toEqual(["art-gym", "art-sheet"]);
+    expect(touched.artifacts).toEqual([]);
   });
 });
 

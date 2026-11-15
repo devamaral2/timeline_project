@@ -7,6 +7,7 @@ import { DetailFrame, DetailMessage } from "@/components/detail/detail-parts";
 import { ApiRequestError } from "@/lib/api/client-request";
 import { createEvent, newIdempotencyKey, updateEvent } from "@/lib/api/events";
 import { buildCreateEventInput, buildEventPatch, type EventDraftErrors, validateEventDraft } from "./event-draft";
+import { EventEditArtifactsSection } from "./EventEditArtifactsSection";
 import { EventEditBlocksSection } from "./EventEditBlocksSection";
 import { EventEditHeaderFields } from "./EventEditHeaderFields";
 import { EventEditInfoSection } from "./EventEditInfoSection";
@@ -137,8 +138,9 @@ export function EventEditView({ event: loaded, initialName, onReload, onLeave }:
         ) : null}
         {/* A seção de bloqueios só existe na edição: a criação ainda não a mostra. */}
         {event ? <EventEditBlocksSection eventId={event.id} draft={draft} onChange={setField} /> : null}
-        {/* 29 e 30: artefatos.
-            31: recorrência, que não aparece quando draft.longRunning. Cada um entra aqui como uma seção nova. */}
+        {/* A lista de artefatos só existe na edição: a criação ainda não a mostra. */}
+        {event ? <EventEditArtifactsSection draft={draft} onChange={setField} /> : null}
+        {/* 30: alimento e exercício entram na mesma lista. 31: recorrência, que não aparece quando draft.longRunning. */}
         {failure ? <DetailMessage alert>{failure}</DetailMessage> : null}
         <footer className={styles.footer}>
           <button type="button" className={styles.discard} onClick={onLeave}>Descartar</button>

@@ -2,6 +2,7 @@ import type { CreateEventInput, EventDto, EventPriority, HumanEventKind, HumanEv
 import { dayKeyOf, formatTime, zonedDayStart, zonedTimeAt } from "@repo/timeline";
 import type { EditEventInput } from "@/lib/api/events";
 import { statusPatch } from "@/lib/events/event-read-model";
+import { type DraftArtifact, artifactLinkInputs, draftArtifactsFromEvent, sameArtifactLinks } from "./event-artifact-draft";
 import { sameList, sortReminders } from "./event-reminders-tags";
 
 /**
@@ -35,6 +36,11 @@ export interface EventDraft {
   blockedByEventIds: string[];
   /** Os eventos que este bloqueia (ids). */
   blocksEventIds: string[];
+  /**
+   * Os artefatos ligados, na ordem da lista: é a ordem enviada. O que o evento criou (`creates`) segue na lista sem
+   * posição. Guarda nome e tipo para a lista mostrar sem outra chamada.
+   */
+  artifacts: DraftArtifact[];
 }
 
 export type EventDraftField = keyof EventDraft;
@@ -61,6 +67,7 @@ const FIELD_SET: Record<EventDraftField, true> = {
   longRunning: true,
   blockedByEventIds: true,
   blocksEventIds: true,
+  artifacts: true,
 };
 export const EVENT_DRAFT_FIELDS = Object.keys(FIELD_SET) as EventDraftField[];
 
@@ -84,6 +91,7 @@ export function draftFromEvent(event: EventDto): EventDraft {
     longRunning: event.longRunning,
     blockedByEventIds: [...event.blockedByEventIds],
     blocksEventIds: [...event.blocksEventIds],
+    artifacts: draftArtifactsFromEvent(event.artifacts),
   };
 }
 
@@ -104,6 +112,7 @@ export function emptyEventDraft(name = ""): EventDraft {
     longRunning: false,
     blockedByEventIds: [],
     blocksEventIds: [],
+    artifacts: [],
   };
 }
 
@@ -167,6 +176,7 @@ export function buildEventPatch(event: EventDto, draft: EventDraft, now: Date): 
   if (draft.longRunning !== base.longRunning) patch.longRunning = draft.longRunning;
   if (!sameList(draft.blockedByEventIds, base.blockedByEventIds)) patch.blockedByEventIds = draft.blockedByEventIds;
   if (!sameList(draft.blocksEventIds, base.blocksEventIds)) patch.blocksEventIds = draft.blocksEventIds;
+  if (!sameArtifactLinks(draft.artifacts, base.artifacts)) patch.artifacts = artifactLinkInputs(draft.artifacts);
   return Object.keys(patch).length > 1 ? patch : null;
 }
 
@@ -206,8 +216,11 @@ export function rebaseDraft(draft: EventDraft, previous: EventDto, next: EventDt
   return rebased;
 }
 
-/** Listas se comparam pelo conteúdo: `draftFromEvent` cria arrays novos a cada leitura. */
+/**
+ * Listas se comparam pelo conteúdo, e na mesma ordem: `draftFromEvent` cria arrays e objetos novos a cada leitura, e
+ * a lista de artefatos traz objetos (nome e tipo), que só o JSON compara por valor.
+ */
 function sameDraftValue(a: EventDraft[EventDraftField], b: EventDraft[EventDraftField]): boolean {
-  if (Array.isArray(a) && Array.isArray(b)) return sameList<unknown>(a, b);
+  if (Array.isArray(a) && Array.isArray(b)) return JSON.stringify(a) === JSON.stringify(b);
   return a === b;
 }

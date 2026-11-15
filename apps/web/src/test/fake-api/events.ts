@@ -9,7 +9,7 @@ import {
 } from "@repo/contracts/schemas";
 import { z } from "zod";
 import type { FakeArea, FakeRequest, FakeResult, FakeStore } from ".";
-import { artifactsOfEvent } from "./artifacts";
+import { type ArtifactLink, artifactsOfEvent, relinkEventArtifacts } from "./artifacts";
 
 /** Área de eventos: agenda, lista de tarefas, evento, subtarefas e tags. */
 
@@ -19,7 +19,7 @@ const CARD_KEYS = [
   "finishedAt", "longRunning", "notifyOffsetsMinutes", "tags", "artifactTypes", "parentEventIds",
   "blockedByEventIds", "recurrence", "revision",
 ] as const;
-/** Campos que a edição aceita e que o fake aplica; `artifacts` fica para a área de artefatos. */
+/** Campos que a edição aceita e que o fake aplica; `artifacts` não está aqui porque os vínculos vivem no artefato. */
 const EDITABLE_KEYS = [
   "name", "description", "priority", "notifyOffsetsMinutes", "tags", "longRunning", "subtaskEventIds",
   "blocksEventIds", "parentEventIds", "blockedByEventIds", "kind", "status", "startedAt", "estimatedFinishAt", "finishedAt",
@@ -186,6 +186,13 @@ function update(request: FakeRequest, store: FakeStore): FakeResult {
   if (!event) return { status: 404 };
   const input = request.body as Record<string, unknown> & { expectedRevision: number };
   if (input.expectedRevision !== event.revision) return { status: 409 };
+  // A lista de artefatos é a completa, na ordem enviada. Só ligar por `id` é modelado: criar ou editar um artefato
+  // dentro do evento a API faz, mas a API falsa ainda não (400 para não fingir que gravou).
+  if (Array.isArray(input.artifacts)) {
+    const entries = input.artifacts as { id?: string; relation?: ArtifactLink["relation"] }[];
+    if (entries.some((entry) => entry.id === undefined)) return { status: 400 };
+    if (!relinkEventArtifacts(store, event.id, entries as { id: string; relation?: ArtifactLink["relation"] }[])) return { status: 404 };
+  }
 
   const next: Record<string, unknown> = { ...event };
   for (const key of EDITABLE_KEYS) {
