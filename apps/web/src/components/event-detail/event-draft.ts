@@ -31,6 +31,10 @@ export interface EventDraft {
   tags: string[];
   /** A tarefa persistente: o evento longo, que não é um bloco de tempo e tem a previsão de entrega como prazo. */
   longRunning: boolean;
+  /** Os eventos que bloqueiam este (ids, na ordem da API). */
+  blockedByEventIds: string[];
+  /** Os eventos que este bloqueia (ids). */
+  blocksEventIds: string[];
 }
 
 export type EventDraftField = keyof EventDraft;
@@ -55,6 +59,8 @@ const FIELD_SET: Record<EventDraftField, true> = {
   reminders: true,
   tags: true,
   longRunning: true,
+  blockedByEventIds: true,
+  blocksEventIds: true,
 };
 export const EVENT_DRAFT_FIELDS = Object.keys(FIELD_SET) as EventDraftField[];
 
@@ -76,6 +82,8 @@ export function draftFromEvent(event: EventDto): EventDraft {
     reminders: sortReminders(event.notifyOffsetsMinutes),
     tags: [...event.tags],
     longRunning: event.longRunning,
+    blockedByEventIds: [...event.blockedByEventIds],
+    blocksEventIds: [...event.blocksEventIds],
   };
 }
 
@@ -94,6 +102,8 @@ export function emptyEventDraft(name = ""): EventDraft {
     reminders: [],
     tags: [],
     longRunning: false,
+    blockedByEventIds: [],
+    blocksEventIds: [],
   };
 }
 
@@ -155,6 +165,8 @@ export function buildEventPatch(event: EventDto, draft: EventDraft, now: Date): 
   if (!sameList(draft.reminders, base.reminders)) patch.notifyOffsetsMinutes = draft.reminders;
   if (!sameList(draft.tags, base.tags)) patch.tags = draft.tags;
   if (draft.longRunning !== base.longRunning) patch.longRunning = draft.longRunning;
+  if (!sameList(draft.blockedByEventIds, base.blockedByEventIds)) patch.blockedByEventIds = draft.blockedByEventIds;
+  if (!sameList(draft.blocksEventIds, base.blocksEventIds)) patch.blocksEventIds = draft.blocksEventIds;
   return Object.keys(patch).length > 1 ? patch : null;
 }
 

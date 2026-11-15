@@ -8,6 +8,7 @@ describe("emptyEventDraft e buildCreateEventInput", () => {
     expect(emptyEventDraft("comprar pão")).toEqual({
       kind: "routine", name: "comprar pão", status: null, priority: "medium",
       startDate: "", startTime: "", endDate: "", endTime: "", description: "", reminders: [], tags: [], longRunning: false,
+      blockedByEventIds: [], blocksEventIds: [],
     });
   });
 
@@ -72,6 +73,12 @@ describe("draftFromEvent", () => {
     const draft = draftFromEvent(training({ startedAt: "2026-11-15T00:00:00-03:00" }));
 
     expect(draft).toMatchObject({ startDate: "2026-11-15", startTime: "" });
+  });
+
+  it("lê os bloqueios nos dois sentidos", () => {
+    const draft = draftFromEvent(training({ blockedByEventIds: ["ev-2"], blocksEventIds: ["ev-3"] }));
+
+    expect(draft).toMatchObject({ blockedByEventIds: ["ev-2"], blocksEventIds: ["ev-3"] });
   });
 
   it("um evento de referência sem data e sem status tem os campos vazios e o status nulo", () => {
@@ -193,6 +200,17 @@ describe("buildEventPatch", () => {
   it("não reenvia um horário que já está gravado, mesmo com segundos", () => {
     const event = training({ startedAt: "2026-11-14T18:30:15-03:00" });
 
+    expect(buildEventPatch(event, draftFromEvent(event), NOW)).toBeNull();
+  });
+
+  it("bloqueios: manda a lista completa de cada sentido, e só quando ela mudou", () => {
+    const event = training({ blockedByEventIds: ["ev-2"], blocksEventIds: [] });
+
+    expect(buildEventPatch(event, { ...draftFromEvent(event), blockedByEventIds: ["ev-2", "ev-3"], blocksEventIds: ["ev-4"] }, NOW)).toEqual({
+      expectedRevision: 3,
+      blockedByEventIds: ["ev-2", "ev-3"],
+      blocksEventIds: ["ev-4"],
+    });
     expect(buildEventPatch(event, draftFromEvent(event), NOW)).toBeNull();
   });
 });

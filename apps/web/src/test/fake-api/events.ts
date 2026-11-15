@@ -197,7 +197,43 @@ function update(request: FakeRequest, store: FakeStore): FakeResult {
   next.revision = event.revision + 1;
   table(store).set(event.id, eventSchema.parse(next));
   if (Array.isArray(input.subtaskEventIds)) relinkSubtasks(store, event, input.subtaskEventIds as string[]);
+  if (Array.isArray(input.blockedByEventIds)) relinkBlockers(store, event, input.blockedByEventIds as string[]);
+  if (Array.isArray(input.blocksEventIds)) relinkBlocked(store, event, input.blocksEventIds as string[]);
   return { status: 204 };
+}
+
+/**
+ * Quem bloqueia é a origem da relação, como na API real: entrar ou sair dela revisa o bloqueador (sobe a revisão
+ * e ganha este evento em `blocksEventIds`). Este evento não tem a sua revisão mexida por isso: o PATCH dele já a sobe.
+ */
+function relinkBlockers(store: FakeStore, target: StoredEvent, nextIds: string[]) {
+  const before = new Set(target.blockedByEventIds);
+  const after = new Set(nextIds);
+  for (const id of before) if (!after.has(id)) setBlockLink(store, id, "blocksEventIds", target.id, false, true);
+  for (const id of after) if (!before.has(id)) setBlockLink(store, id, "blocksEventIds", target.id, true, true);
+}
+
+/** Este evento é a origem de "Bloqueia": o evento bloqueado não é revisado, só passa a listar este como bloqueador. */
+function relinkBlocked(store: FakeStore, source: StoredEvent, nextIds: string[]) {
+  const before = new Set(source.blocksEventIds);
+  const after = new Set(nextIds);
+  for (const id of before) if (!after.has(id)) setBlockLink(store, id, "blockedByEventIds", source.id, false, false);
+  for (const id of after) if (!before.has(id)) setBlockLink(store, id, "blockedByEventIds", source.id, true, false);
+}
+
+function setBlockLink(
+  store: FakeStore,
+  eventId: string,
+  field: "blockedByEventIds" | "blocksEventIds",
+  otherId: string,
+  linked: boolean,
+  revise: boolean,
+) {
+  const other = table(store).get(eventId);
+  if (!other) return;
+  const others = other[field].filter((id) => id !== otherId);
+  const next = { ...other, [field]: linked ? [...others, otherId] : others };
+  table(store).set(eventId, revise ? { ...next, revision: other.revision + 1 } : next);
 }
 
 /** A relação de subtarefa tem dois lados: o pai guarda os filhos, e cada filho guarda o pai em `parentEventIds`. */
