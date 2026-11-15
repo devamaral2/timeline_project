@@ -122,12 +122,12 @@ test("a day without events shows the empty state", async () => {
   expect(within(dayOf("2026-09-15")).getByText("Um dia livre, do seu jeito.")).toBeInTheDocument();
 });
 
-test("the day title is gone from the header while the week strip stays", async () => {
+test("the header shows today's date while the week strip stays", async () => {
   installApi();
   render(<AgendaScreen userId="user-1" todayKey={TODAY} />);
   await waitFor(() => expect(within(dayOf(TODAY)).getAllByRole("link")).toHaveLength(5));
 
-  expect(screen.queryByRole("heading", { level: 1 })).not.toBeInTheDocument();
+  expect(screen.getByRole("heading", { level: 1, name: "14 de setembro de 2026" })).toBeInTheDocument();
   expect(document.querySelector('button[aria-current="date"]')).not.toBeNull();
 });
 

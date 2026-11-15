@@ -40,6 +40,14 @@ export function artifactVisualType(type: ArtifactType): string {
   return type;
 }
 
+/** Os arquivos do Hermes (skill, agente e roteador) são as notas "de agentes"; as demais são as da pessoa. */
+const AGENT_TYPES: ReadonlySet<ArtifactType> = new Set<ArtifactType>(["skill", "agent", "router"]);
+
+/** De quem é a nota, para as listas Todos, Você e Agentes do menu da barra inferior. */
+export function artifactActor(type: ArtifactType): "human" | "agent" {
+  return AGENT_TYPES.has(type) ? "agent" : "human";
+}
+
 /** Os tipos que aparecem nos artefatos, na ordem de ARTIFACT_TYPE_ORDER. */
 export function artifactTypesIn(artifacts: readonly { type: ArtifactType }[]): ArtifactType[] {
   return ARTIFACT_TYPE_ORDER.filter((type) => artifacts.some((artifact) => artifact.type === type));

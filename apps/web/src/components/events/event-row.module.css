@@ -1,5 +1,6 @@
-/* Linha única das listas (agenda e lista de tarefas). Evento de pessoa fica
-   solto no fundo; evento de agente ganha um cartão verde-água. Cores só por token. */
+/* Linha única das listas (agenda e lista de tarefas). Pessoa e agente usam a
+   mesma grade, soltos no fundo; o agente leva o robô como assinatura à direita.
+   Cores só por token. */
 
 .row {
   display: flex;
@@ -8,10 +9,15 @@
   padding: 10px 0;
   list-style: none;
 }
-.row[data-actor="agent"] {
-  padding: 12px 14px;
-  border-radius: 14px;
-  background: var(--brand-soft);
+
+/* O glifo de agente não é botão: ocupa a mesma caixa de 24px que sobra do
+   botão de pessoa, para o título cair na mesma coluna. */
+.glyphSlot {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
 }
 
 .glyphButton {
@@ -99,6 +105,13 @@
   font-size: 12px;
   line-height: 18px;
   white-space: nowrap;
+}
+
+/* A assinatura do agente: fecha a linha, na borda direita. */
+.agentMark {
+  flex: none;
+  margin-top: 2px;
+  color: var(--brand-accent);
 }
 
 .visuallyHidden {

@@ -1,0 +1,453 @@
+/* Menu de opções da barra inferior: a própria barra cresce para cima (cortina
+   ancorada embaixo) e o conteúdo sobe em cascata. Só cor por var(). */
+
+.menu {
+  --out: cubic-bezier(.22, 1, .36, 1);
+  --inout: cubic-bezier(.5, 0, .2, 1);
+  --spring: cubic-bezier(.34, 1.56, .64, 1);
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 300ms var(--inout) 50ms;
+}
+
+.menu[data-open] {
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 500ms var(--out);
+}
+
+.inner {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  transition: visibility 0s 360ms;
+}
+
+.menu[data-open] .inner {
+  visibility: visible;
+  transition: visibility 0s;
+}
+
+.pad {
+  flex: none;
+  padding: 9px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  padding-left: 9px;
+}
+
+.title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 28px;
+  letter-spacing: -.01em;
+}
+
+.title span,
+.count {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+  letter-spacing: 0;
+  color: var(--faint);
+}
+
+.back {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 44px;
+  margin-left: -9px;
+  padding: 0 12px 0 6px;
+  border: 0;
+  border-radius: 22px;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 20px;
+  cursor: pointer;
+}
+
+.back svg {
+  width: 20px;
+  height: 20px;
+  color: var(--muted);
+}
+
+.gear {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--secondary);
+  color: var(--ink);
+  cursor: pointer;
+  transition: background-color 200ms, color 200ms;
+}
+
+.gear svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 1.75;
+  transform: rotate(-80deg) scale(.7);
+  transition: transform 200ms ease-in;
+}
+
+.menu[data-open] .gear svg {
+  transform: none;
+  transition: transform 700ms var(--spring);
+}
+
+.gear[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--background);
+}
+
+.menu[data-open] .gear[aria-pressed="true"] svg {
+  transform: rotate(60deg);
+}
+
+.pane {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+  animation: paneIn 300ms var(--ease-out) both;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  max-height: min(296px, calc(100dvh - 300px - env(safe-area-inset-bottom)));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+
+.label {
+  margin: 0;
+  padding: 8px 10px 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 14px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.item {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  padding: 6px 12px 6px 10px;
+  border: 0;
+  border-radius: 15px;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.item[aria-pressed="true"] {
+  background: var(--accent);
+}
+
+.icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  color: var(--muted);
+}
+
+.icon svg {
+  width: 19px;
+  height: 19px;
+  stroke-width: 1.75;
+}
+
+.item[aria-pressed="true"] .icon {
+  color: var(--ink);
+}
+
+.body {
+  flex: 1;
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.nameRow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.name {
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 20px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.desc {
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 15px;
+  color: var(--faint);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.dot[data-who="all"] { background: var(--mode-all); }
+.dot[data-who="human"] { background: var(--mode-human); }
+.dot[data-who="agent"] { background: var(--brand-accent); }
+
+.field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 22px;
+  background: var(--secondary);
+  color: var(--faint);
+}
+
+.field:focus-within {
+  box-shadow: inset 0 0 0 1.5px var(--faint);
+}
+
+.field svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  stroke-width: 1.75;
+}
+
+.field input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
+.field input::placeholder {
+  color: var(--faint);
+  opacity: 1;
+}
+
+.field input::-webkit-search-cancel-button {
+  display: none;
+}
+
+/* Configuração. */
+
+.option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  padding: 4px 8px 4px 12px;
+  border: 0;
+  border-radius: 15px;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 20px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.optionText {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.optionText small {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 16px;
+  color: var(--muted);
+}
+
+.switch {
+  position: relative;
+  flex: none;
+  width: 46px;
+  height: 28px;
+  border-radius: 14px;
+  background: var(--accent);
+  transition: background-color 200ms;
+}
+
+.switch i {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--ink);
+  transition: transform 300ms var(--spring), background-color 200ms;
+}
+
+.option[aria-checked="true"] .switch {
+  background: var(--brand);
+}
+
+.option[aria-checked="true"] .switch i {
+  transform: translateX(18px);
+  background: var(--background);
+}
+
+.segment,
+.toggles {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  min-width: 0;
+  margin: 0;
+  padding: 3px;
+  border: 0;
+  border-radius: 25px;
+  background: var(--secondary);
+}
+
+.toggles {
+  gap: 3px;
+}
+
+.segment button,
+.toggles button {
+  min-width: 0;
+  height: 44px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 22px;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  cursor: pointer;
+  transition: background-color 200ms, color 200ms;
+}
+
+.segment button[aria-pressed="true"],
+.toggles button[aria-pressed="true"] {
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+.clear {
+  align-self: flex-start;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  background: none;
+  color: var(--brand-accent);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.menu button:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* A cascata: ao abrir, cada linha sobe com atraso `--s`; ao fechar, some de cima para baixo. */
+
+.st {
+  --s: 0;
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 100ms linear calc((7 - var(--s)) * 8ms), transform 160ms ease-in calc((7 - var(--s)) * 8ms), background-color 150ms;
+}
+
+.menu[data-open] .st {
+  opacity: 1;
+  transform: none;
+  transition: opacity 240ms ease-out calc(60ms + var(--s) * 24ms), transform 460ms var(--out) calc(60ms + var(--s) * 24ms), background-color 150ms;
+}
+
+@keyframes paneIn {
+  from {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu,
+  .menu *,
+  .menu[data-open],
+  .menu[data-open] * {
+    transition-duration: .01ms !important;
+    transition-delay: 0s !important;
+    animation: none !important;
+  }
+}

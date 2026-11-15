@@ -1,18 +1,19 @@
 "use client";
 
-import { ChevronDown, ListChecks } from "lucide-react";
+import { ChevronDown, Hash, ListChecks } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { EventCardDto, EventPriority, EventStatus, HumanEventStatus } from "@repo/contracts";
 import { agendaRefreshEvent } from "@/components/agenda/agenda-refresh";
 import { EventRow } from "@/components/events/event-row";
 import { ListSkeleton } from "@/components/ui/list-skeleton";
-import { OptionsGlyph } from "@/components/ui/options-glyph";
 import page from "@/components/ui/page.module.css";
 import { ApiRequestError } from "@/lib/api/client-request";
 import { listTrackedEvents, updateEvent } from "@/lib/api/events";
 import { hasOpenAgentEvent } from "@/lib/events/agent-request-model";
 import { statusPatch } from "@/lib/events/event-read-model";
-import { taskFilterCount, tagsByUse, trackedFilters } from "@/lib/events/task-filters";
+import { eventPriorityLabels } from "@/components/events/event-priority-mark";
+import { PRIORITY_ORDER, taskFilterCount, tagsByUse, trackedFilters } from "@/lib/events/task-filters";
+import { usePublishSectionMenu } from "@/lib/navigation/section-menu";
 import { useNow } from "@/lib/events/use-now";
 import { useOpenAgentRefresh } from "@/lib/events/use-open-agent-refresh";
 import { useViewMode } from "@/lib/events/view-mode";
@@ -54,7 +55,9 @@ function openTasksLabel(open: number): string {
  * A lista de tarefas: os eventos com status (de pessoa e de agente) da rota
  * `tracked`, nos grupos do canvas. Feitas e Encerradas vêm recolhidos. Cada
  * linha é a `EventRow`. Tag, prioridade e texto são parâmetros da consulta: a
- * tela não filtra na mão. As opções de tag vêm da lista sem filtro. Recarregar
+ * tela não filtra na mão. As opções de tag vêm da lista sem filtro. No celular os
+ * filtros moram no menu de opções da barra inferior (tocar na aba Tarefas já
+ * selecionada): cada tag é uma lista, a prioridade fica na engrenagem. Recarregar
  * sozinha, sem o estado de carregando, enquanto houver evento de agente em aberto.
  */
 export function TasksScreen({ userId }: { userId: string }) {
@@ -69,8 +72,6 @@ export function TasksScreen({ userId }: { userId: string }) {
   const [priorities, setPriorities] = useState<EventPriority[]>([]);
   const [typed, setTyped] = useState("");
   const [query, setQuery] = useState("");
-  const [optionsOpen, setOptionsOpen] = useState(false);
-  const optionsRef = useRef<HTMLDivElement>(null);
   /** Só a resposta da consulta mais recente entra na tela: filtro trocado no meio não deixa lista velha. */
   const latestRequest = useRef(0);
   const router = useMotionRouter();
@@ -124,23 +125,6 @@ export function TasksScreen({ userId }: { userId: string }) {
     setQuery("");
   }
 
-  useEffect(() => {
-    if (!optionsOpen) return;
-    const close = (event: MouseEvent | KeyboardEvent) => {
-      if (event instanceof KeyboardEvent) {
-        if (event.key === "Escape") setOptionsOpen(false);
-        return;
-      }
-      if (!optionsRef.current?.contains(event.target as Node)) setOptionsOpen(false);
-    };
-    document.addEventListener("mousedown", close);
-    document.addEventListener("keydown", close);
-    return () => {
-      document.removeEventListener("mousedown", close);
-      document.removeEventListener("keydown", close);
-    };
-  }, [optionsOpen]);
-
   /**
    * Troca o status pelo glifo de um evento de pessoa. Manda a revisão lida;
    * revisão velha relê a lista e avisa. Evento de agente não muda status.
@@ -174,6 +158,34 @@ export function TasksScreen({ userId }: { userId: string }) {
   const tags = useMemo(() => tagsByUse(facets ?? []), [facets]);
   const hasEvents = (facets?.length ?? 0) > 0;
 
+  // O menu da barra inferior: uma lista por tag, a busca e, na engrenagem, a prioridade.
+  const tagCounts = new Map<string, number>();
+  for (const card of facets ?? []) for (const name of card.tags) tagCounts.set(name, (tagCounts.get(name) ?? 0) + 1);
+  usePublishSectionMenu("tasks", {
+    count: cards && now ? open : undefined,
+    lists: tags.map((name) => ({
+      id: `tag:${name}`,
+      name,
+      desc: `#${name}`,
+      Icon: Hash,
+      count: tagCounts.get(name) ?? 0,
+      selected: tag === name,
+      onPick: () => setTag((current) => (current === name ? null : name)),
+    })),
+    search: { label: "Buscar nas tarefas", value: typed, onChange: setTyped },
+    settings: [{
+      kind: "toggles",
+      label: "Prioridade",
+      options: PRIORITY_ORDER.map((level) => ({
+        label: eventPriorityLabels[level],
+        selected: priorities.includes(level),
+        onPick: () => setPriorities((current) => toggleIn(current, level)),
+      })),
+    }],
+    filtered: activeFilters > 0,
+    onClear: clearFilters,
+  });
+
   const filterControls = (
     <TaskFilters
       tags={tags}
@@ -193,25 +205,8 @@ export function TasksScreen({ userId }: { userId: string }) {
       <section className={`${page.lead} ${styles.lead}`} aria-label="Resumo das tarefas">
         <div className={styles.headRow}>
           <h1 className={page.eyebrow}>{cards && now ? openTasksLabel(open) : "Tarefas"}</h1>
-          {hasEvents ? (
-            <div className={styles.phoneOptions} ref={optionsRef}>
-              <button
-                type="button"
-                className={styles.optionsButton}
-                aria-label={activeFilters > 0 ? `Opções de visualização, ${activeFilters} filtros ativos` : "Opções de visualização"}
-                title="Opções de visualização"
-                aria-expanded={optionsOpen}
-                aria-haspopup="dialog"
-                onClick={() => setOptionsOpen((open) => !open)}
-              >
-                <OptionsGlyph />
-                {activeFilters > 0 ? <span className={styles.optionsBadge} aria-hidden="true">{activeFilters}</span> : null}
-              </button>
-              {optionsOpen ? <div className={styles.optionsPanel} role="dialog" aria-label="Opções de visualização">{filterControls}</div> : null}
-            </div>
-          ) : null}
         </div>
-        {hasEvents && !optionsOpen ? <div className={styles.leadFilters}>{filterControls}</div> : null}
+        {hasEvents ? <div className={styles.leadFilters}>{filterControls}</div> : null}
       </section>
 
       <section className={`${page.body} ${styles.body}`} aria-label="Lista de tarefas">

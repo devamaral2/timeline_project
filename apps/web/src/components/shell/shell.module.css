@@ -140,7 +140,7 @@
    nunca ser confundido com algo registrado. */
 
 .weekday { color: var(--muted); font-size: 12px; margin-bottom: 4px; }
-.bottomNav, .bottomFade { display: none; }
+.bottomNav, .bottomFade, .navScrim { display: none; }
 /* O circulo que voa entre a barra inferior e o icone de status do campo. */
 .hermesFlyer { position: fixed; z-index: 21; display: grid; place-items: center; border-radius: 50%; background: var(--brand); color: var(--background); pointer-events: none; visibility: hidden; will-change: transform; }
 .hermesFlyer svg { width: 58%; height: 58%; }
@@ -390,32 +390,43 @@
      circulo do Hermes. A tela atual abre com o nome, preenchida em `--primary`;
      atras da barra o conteudo se apaga no chao. */
   .bottomFade { display: block; position: fixed; z-index: 19; left: 0; right: 0; bottom: 0; height: calc(140px + env(safe-area-inset-bottom)); background: linear-gradient(to bottom, transparent, var(--background) 58%); pointer-events: none; }
-  .bottomNav { position: fixed; z-index: 20; left: 16px; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 4px; padding: 6px; border: 1px solid var(--line); border-radius: 33px; background: var(--card); }
+  .bottomNav { display: block; position: fixed; z-index: 20; left: 16px; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); border: 1px solid var(--line); border-radius: 33px; background: var(--card); --nav-pill: var(--primary); --nav-pill-ink: var(--primary-foreground); transition: border-radius 300ms cubic-bezier(.5,0,.2,1) 50ms, box-shadow 300ms; }
+  /* Com o menu de opcoes aberto a barra cresce para cima (`section-menu.tsx`) e passa a flutuar. */
+  .bottomNav[data-menu-open] { border-radius: 30px; box-shadow: var(--shadow-float); transition: border-radius 500ms cubic-bezier(.22,1,.36,1), box-shadow 400ms; }
+  .navScrim { display: block; position: fixed; z-index: 19; inset: 0; width: 100%; height: 100%; padding: 0; border: 0; background: var(--scrim); opacity: 0; pointer-events: none; cursor: default; transition: opacity 220ms ease-in; }
+  .navScrim[data-open] { opacity: 1; pointer-events: auto; transition: opacity 340ms ease-out; }
+  .navTabs { position: relative; display: flex; align-items: center; gap: 4px; padding: 6px; }
   /* A pilula da tela atual e uma so e desliza ate a secao escolhida
-     (`--nav-index`, 0 a 2). As tres secoes dividem o que sobra do circulo do
-     Hermes (52) e dos respiros (76 ao todo) em 1 : 1,8 : 1 — a atual e a larga. */
-  .bottomNav::before { content: ""; position: absolute; top: 6px; left: calc(6px + var(--nav-index, 1) * ((100% - 76px) / 3.8 + 4px)); width: calc((100% - 76px) * 1.8 / 3.8); height: 52px; border-radius: 26px; background: var(--primary); transition: left 300ms var(--ease-out), opacity 200ms; }
-  .bottomNav > button, .bottomNav > a { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; height: 52px; border-radius: 26px; color: var(--muted); font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: flex-grow 300ms var(--ease-out), color var(--duration-fast); }
-  /* O nome so aparece na tela atual. Ao trocar, o antigo sobe e sai e o novo
-     entra por baixo, dentro da altura da linha; a margem negativa cancela o
-     respiro do icone enquanto o nome nao ocupa lugar. */
-  .bottomNav > button > span, .bottomNav > a > span { display: inline-block; height: 20px; max-width: 0; margin-left: -8px; overflow: hidden; line-height: 20px; transition: max-width 300ms var(--ease-out), margin-left 300ms var(--ease-out); }
-  .bottomNav > button > span > i, .bottomNav > a > span > i { display: inline-block; font-style: normal; opacity: 0; transform: translateY(-100%); transition: transform var(--duration-fast) var(--ease-in), opacity var(--duration-fast) linear; }
-  .bottomNav > [aria-current="page"] { flex: 1.8; color: var(--primary-foreground); }
-  .bottomNav > [aria-current="page"] > span { max-width: 96px; margin-left: 0; }
-  .bottomNav > [aria-current="page"] > span > i { opacity: 1; transform: none; animation: navLabelIn 280ms var(--ease-out) 110ms backwards; }
-  .bottomNav svg { width: 24px; height: 24px; stroke-width: 1.75; transition: width 300ms var(--ease-out), height 300ms var(--ease-out); }
-  .bottomNav > [aria-current="page"] svg { width: 22px; height: 22px; }
-  .bottomNav > .commandButton { flex: none; width: 52px; height: 52px; border-radius: 50%; background: var(--brand); color: var(--background); }
-  .bottomNav > .commandButton svg { width: 30px; height: 30px; }
-  /* A cor do modo de visualização pinta a pílula só na aba de Agenda e de Tarefas
-     (`data-list-mode` vem do `useViewMode`). Em Notas a pílula segue `--primary`. As cores e as
+     (`--nav-index`, 0 a 2). As tres secoes sao iguais e dividem o que sobra do
+     circulo do Hermes (52) e dos respiros (76 ao todo). Ao trocar, a borda do
+     lado do destino sai na frente (`data-dir`) e a pilula estica ate la. */
+  .navTabs::before { content: ""; position: absolute; top: 6px; bottom: 6px; left: calc(6px + var(--nav-index, 1) * ((100% - 76px) / 3 + 4px)); right: calc(62px + (2 - var(--nav-index, 1)) * ((100% - 76px) / 3 + 4px)); border-radius: 26px; background: var(--nav-pill); transition: left 420ms var(--ease-out), right 420ms var(--ease-out), background-color 300ms, opacity 200ms; }
+  .bottomNav[data-dir="r"] .navTabs::before { transition: right 260ms var(--ease-out), left 460ms var(--ease-out), background-color 300ms, opacity 200ms; }
+  .bottomNav[data-dir="l"] .navTabs::before { transition: left 260ms var(--ease-out), right 460ms var(--ease-out), background-color 300ms, opacity 200ms; }
+  /* So icones: o nome de cada tela fica no `aria-label`. */
+  .navTabs > button, .navTabs > a { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; min-width: 0; height: 52px; border-radius: 26px; color: var(--muted); cursor: pointer; transition: color 250ms; }
+  .navTabs > [aria-current="page"] { color: var(--nav-pill-ink); }
+  .navTabs svg { width: 24px; height: 24px; stroke-width: 1.75; }
+  .navTabs > :not(.commandButton) > svg { transform: scale(.9); transition: transform 500ms cubic-bezier(.34,1.56,.64,1); }
+  .navTabs > [aria-current="page"] > svg { transform: none; }
+  .navTabs > :not(.commandButton):active > svg { transform: scale(.8); transition-duration: 100ms; }
+  .bottomNav[data-menu-open] .navTabs > [aria-current="page"] > svg { transform: scale(.9); }
+  /* As setinhas ao lado do icone da tela atual avisam que tocar de novo abre o menu. */
+  .navHint { display: flex; width: 0; margin-left: 0; overflow: hidden; opacity: 0; transition: width 300ms var(--ease-out), margin-left 300ms var(--ease-out), opacity 200ms; }
+  .navTabs .navHint svg { width: 12px; height: 12px; stroke-width: 2.2; }
+  .navTabs > [aria-current="page"] .navHint { width: 12px; margin-left: 4px; opacity: .6; }
+  .bottomNav[data-menu-open] .navTabs > [aria-current="page"] .navHint { opacity: 1; }
+  /* O ponto: ha busca ou filtro ativo na tela atual. */
+  .navDot { position: absolute; top: 9px; left: calc(50% + 1px); width: 7px; height: 7px; border-radius: 50%; background: var(--brand-accent); box-shadow: 0 0 0 2px var(--nav-pill); transform: scale(0); transition: transform 350ms cubic-bezier(.34,1.56,.64,1); }
+  .navTabs > [aria-current="page"] .navDot[data-on] { transform: none; }
+  .navTabs > .commandButton { flex: none; width: 52px; height: 52px; border-radius: 50%; background: var(--brand); color: var(--background); }
+  .navTabs > .commandButton svg { width: 30px; height: 30px; }
+  /* A cor do modo de visualização pinta a pílula da aba atual, nas três telas
+     (`data-list-mode` vem do `useViewMode`). As cores e as
      tintas do texto são tokens do web (`globals.css`). */
-  .bottomNav[data-list-mode="human"]::before { background: var(--mode-human); }
-  .bottomNav[data-list-mode="agent"]::before { background: var(--mode-agent); }
-  .bottomNav[data-list-mode="all"]::before { background: var(--mode-all); }
-  .bottomNav[data-list-mode="agent"] > [aria-current="page"] { color: var(--mode-agent-ink); }
-  .bottomNav[data-list-mode="all"] > [aria-current="page"] { color: var(--mode-all-ink); }
+  .bottomNav[data-list-mode="human"] { --nav-pill: var(--mode-human); }
+  .bottomNav[data-list-mode="agent"] { --nav-pill: var(--mode-agent); --nav-pill-ink: var(--mode-agent-ink); }
+  .bottomNav[data-list-mode="all"] { --nav-pill: var(--mode-all); --nav-pill-ink: var(--mode-all-ink); }
 }
 
 /* O painel "Buscar e criar" (chat, criar, pesquisar): o conteudo e o mesmo no
@@ -625,26 +636,24 @@ a.chatEntityRow:hover .chatEntityName { text-decoration: underline; text-underli
   .sectionMenu[data-hub-view="chat"] [data-chat-control] { display: none; }
   .sectionMenu[data-hub-view="chat"] .assistantWelcome h2 { font-size: 38px; line-height: 42px; }
   .shell:has(.sectionMenu[open]) .bottomFade { display: none; }
-  .bottomNav[data-hub-open] > a, .bottomNav[data-hub-open] > button { flex: 1; border: 1px solid transparent; font-weight: 500; }
-  .bottomNav[data-hub-open] > a > span, .bottomNav[data-hub-open] > button > span { max-width: 96px; margin-left: 0; }
-  .bottomNav[data-hub-open] > a > span > i, .bottomNav[data-hub-open] > button > span > i { opacity: 1; transform: none; animation: none; }
+  .bottomNav[data-hub-open] .navTabs > a, .bottomNav[data-hub-open] .navTabs > button { border: 1px solid transparent; }
+  .bottomNav[data-hub-open] .navHint, .bottomNav[data-hub-open] .navDot { display: none; }
   /* Com o chat aberto nenhuma secao e preenchida: a pilula se apaga e a de onde se veio fica so contornada. */
-  .bottomNav[data-hub-open]::before { opacity: 0; }
-  .bottomNav[data-hub-open] > [aria-current="page"] { border-color: var(--input); color: var(--ink); font-weight: 600; }
-  .bottomNav[data-hub-open] svg { width: 20px; height: 20px; }
+  .bottomNav[data-hub-open] .navTabs::before { opacity: 0; }
+  .bottomNav[data-hub-open] .navTabs > [aria-current="page"] { border-color: var(--input); color: var(--ink); }
+  .bottomNav[data-hub-open] .navTabs svg { width: 20px; height: 20px; }
   /* Com o chat aberto, o lugar do botao do Hermes e do X que fecha o painel. */
-  .bottomNav > .commandButton[data-close] { flex: none; width: 52px; padding: 0; border: 0; background: var(--muted); color: var(--background); }
-  .bottomNav > .commandButton[data-close] svg { width: 24px; height: 24px; }
+  .navTabs > .commandButton[data-close] { flex: none; width: 52px; padding: 0; border: 0; background: var(--muted); color: var(--background); }
+  .navTabs > .commandButton[data-close] svg { width: 24px; height: 24px; }
 
   /* O voo do botao do Hermes (`hermes-flight.ts`): o circulo sai da barra e
      pousa como o icone de status do campo, que so aparece no pouso; o painel
      entra por baixo dele e o X surge no lugar que o botao deixou. Na volta, o
      painel se apaga, o X some e o circulo retorna para a barra. */
-  .bottomNav[data-flight] > a, .bottomNav[data-flight] > button:not(.commandButton) { transition: flex-grow 260ms cubic-bezier(.2,.7,.2,1), background-color 200ms, color 200ms, border-color 200ms; }
-  .bottomNav[data-flight="out"] > a, .bottomNav[data-flight="out"] > button:not(.commandButton) { transition-duration: 130ms, 100ms, 100ms, 100ms; }
-  .bottomNav[data-flight="out"] > * > span { animation: flightCome 100ms 60ms backwards; }
-  .bottomNav[data-flight="out"] > .commandButton { animation: closeEnter 120ms 70ms cubic-bezier(.2,.7,.2,1) backwards; }
-  .bottomNav[data-flight="back"] > .commandButton { animation: flightAway 200ms forwards; }
+  .bottomNav[data-flight] .navTabs > a, .bottomNav[data-flight] .navTabs > button:not(.commandButton) { transition: background-color 200ms, color 200ms, border-color 200ms; }
+  .bottomNav[data-flight="out"] .navTabs > a, .bottomNav[data-flight="out"] .navTabs > button:not(.commandButton) { transition-duration: 100ms; }
+  .bottomNav[data-flight="out"] .navTabs > .commandButton { animation: closeEnter 120ms 70ms cubic-bezier(.2,.7,.2,1) backwards; }
+  .bottomNav[data-flight="back"] .navTabs > .commandButton { animation: flightAway 200ms forwards; }
   .sectionMenu.sectionMenu[data-hub-view][data-flight="out"] { animation: flightCome 137ms 73ms backwards; }
   .sectionMenu.sectionMenu[data-hub-view][data-flight="back"] { animation: flightAway 234ms forwards; }
   .sectionMenu[data-flight] .chatField [data-hermes-mark] { visibility: hidden; }
@@ -653,7 +662,7 @@ a.chatEntityRow:hover .chatEntityName { text-decoration: underline; text-underli
      registro; ao sair, ela volta e o botao pousa de novo na ponta. */
   .bottomNav[data-flight="dock"] { animation: flightAway 126ms forwards; pointer-events: none; }
   .bottomNav[data-flight="undock"] { animation: flightCome 216ms 144ms backwards; }
-  .bottomNav[data-flight="dock"] > .commandButton, .bottomNav[data-flight="undock"] > .commandButton { visibility: hidden; }
+  .bottomNav[data-flight="dock"] .navTabs > .commandButton, .bottomNav[data-flight="undock"] .navTabs > .commandButton { visibility: hidden; }
 
   .shell:has(:is(.detailMain, [data-detail])) .header, .shell:has(:is(.detailMain, [data-detail])) .bottomNav:not([data-flight="dock"]), .shell:has(:is(.detailMain, [data-detail])) .bottomFade { display: none; }
   .detailMain { padding: 20px 25px 36px; }
@@ -748,7 +757,9 @@ a.chatEntityRow:hover .chatEntityName { text-decoration: underline; text-underli
 }
 
 @keyframes flightCome { from { opacity: 0; } }
-@keyframes navLabelIn { from { opacity: 0; transform: translateY(100%); } }
+@media (prefers-reduced-motion: reduce) {
+  .bottomNav, .navScrim, .navTabs::before, .navTabs > * > svg, .navHint, .navDot { transition-duration: .01ms !important; transition-delay: 0s !important; }
+}
 @keyframes flightAway { to { opacity: 0; } }
 @keyframes flightRise { from { transform: translateY(14px); } }
 @keyframes closeEnter { from { opacity: 0; transform: scale(.6); } }
@@ -762,7 +773,7 @@ a.chatEntityRow:hover .chatEntityName { text-decoration: underline; text-underli
 /*
  * Numa troca de tela (`html[data-nav]`, ver `lib/motion`) o que e do shell tem
  * nome proprio e por isso fica parado enquanto o conteudo se move (a pilula da
- * barra desliza por conta propria, ver `.bottomNav::before`). Os nomes so
+ * barra desliza por conta propria, ver `.navTabs::before`). Os nomes so
  * existem durante a troca, para nao criar camadas no resto do tempo.
  */
 @media (min-width: 721px) {

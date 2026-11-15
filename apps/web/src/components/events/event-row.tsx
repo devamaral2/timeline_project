@@ -1,3 +1,4 @@
+import { Bot } from "lucide-react";
 import Link from "next/link";
 import type { AgentEventStatus, EventCardDto, HumanEventStatus } from "@repo/contracts";
 import { cardBlockedLabel, cardDurationLabel, cardIsOverdue, cardWhenLabel } from "@/lib/events/card-text";
@@ -22,9 +23,9 @@ export interface EventRowProps {
 
 /**
  * A linha única das listas: glifo de status, título, uma linha com o tipo, o
- * "quando", a fração e as tags, e a duração à direita. Evento de pessoa fica
- * solto; evento de agente ganha o cartão verde-água. O glifo de pessoa é um
- * botão; o de agente não muda status.
+ * "quando", a fração e as tags, e a duração à direita. Pessoa e agente usam a
+ * mesma grade; o evento de agente fecha a linha com o robô, a sua assinatura.
+ * O glifo de pessoa é um botão; o de agente não muda status.
  */
 export function EventRow({ card, userId, now, ruleInPlaceOfTime, subtasks, onStatusClick }: EventRowProps) {
   const isAgent = card.actor === "agent";
@@ -43,7 +44,7 @@ export function EventRow({ card, userId, now, ruleInPlaceOfTime, subtasks, onSta
   return (
     <li className={styles.row} data-actor={card.actor} data-status={card.status ?? "reference"}>
       {isAgent ? (
-        glyph
+        <span className={styles.glyphSlot}>{glyph}</span>
       ) : (
         <button
           type="button"
@@ -78,6 +79,8 @@ export function EventRow({ card, userId, now, ruleInPlaceOfTime, subtasks, onSta
           </span>
         </span>
         {duration ? <span className={styles.duration}>{duration}</span> : null}
+        {/* Decorativo: o nome do glifo de status já diz "Agente". */}
+        {isAgent ? <Bot className={styles.agentMark} size={18} strokeWidth={1.9} aria-hidden="true" data-agent-mark /> : null}
       </Link>
     </li>
   );

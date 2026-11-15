@@ -20,6 +20,7 @@ import { reflow } from "@/lib/motion/view-transition";
 import { briefDate } from "@/lib/dates/day-labels";
 import { useNow } from "@/lib/events/use-now";
 import { useViewMode } from "@/lib/events/view-mode";
+import { usePublishSectionMenu } from "@/lib/navigation/section-menu";
 import { useSessionState } from "@/lib/session/use-session";
 import { AgendaDay } from "./agenda-day";
 import { AgendaStatusPicker } from "./agenda-status-picker";
@@ -66,6 +67,11 @@ export function daySummary(events: readonly ExampleEvent[]) {
   return `${count} · ${hours} h ${String(rest).padStart(2, "0")} planejadas`;
 }
 
+/** Minúsculas e sem acento, para a busca do menu achar "cafe" em "Café". */
+function plain(text: string) {
+  return text.toLocaleLowerCase("pt-BR").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
 export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: string; todayKey?: string }) {
   const { user, ready } = useSessionState();
   const realNow = useNow();
@@ -95,6 +101,8 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
   const [statusNote, setStatusNote] = useState<string | null>(null);
   const [mode, setMode] = useState<ViewMode>("day");
   const [showFreeTime, setShowFreeTime] = useState(true);
+  // A busca do menu da barra inferior: filtra pelo nome os eventos já carregados (a rota da agenda não tem texto).
+  const [search, setSearch] = useState("");
   const [selectedDay, setSelectedDay] = useState(todayKey);
   const [navigation, setNavigation] = useState({ dayKey: todayKey });
   const [dayRange, setDayRange] = useState({ before: 0, after: 0 });
@@ -344,6 +352,24 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
     };
   }, [mode]);
 
+  // O menu da barra inferior (tocar na aba Agenda já selecionada): a busca e, na engrenagem, o que antes
+  // ficava no botão de opções do celular.
+  usePublishSectionMenu("agenda", {
+    lists: [],
+    search: { label: "Buscar na agenda", value: search, onChange: setSearch },
+    settings: [
+      { kind: "segment", label: "Visualização", options: [
+        { label: "Por dia", selected: mode === "day", onPick: () => changeMode("day") },
+        { label: "Em sequência", selected: mode === "list", onPick: () => changeMode("list") },
+      ] },
+      { kind: "switch", label: "Tempo livre", hint: "Janelas de 15 min ou mais entre os eventos", on: showFreeTime, onToggle: () => changeShowFreeTime(!showFreeTime) },
+    ],
+    filtered: search.trim() !== "",
+    onClear: () => setSearch(""),
+  });
+  const needle = plain(search.trim());
+  const matching = (events: ExampleEvent[]) => (needle ? events.filter((event) => plain(event.name).includes(needle)) : events);
+
   if (userId && !ready) {
     return <main id="conteudo" className={page.frame}><p role="status" className={styles.status}>Carregando sua sessão…</p></main>;
   }
@@ -358,7 +384,7 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
     <main id="conteudo" className={page.frame}>
       <section className={`${page.lead} ${styles.lead}`} aria-label="O dia em foco">
         <div className={styles.dateRow}>
-          <div className={styles.phoneOptions}><AgendaOptions {...options} withModes align="end" /></div>
+          <h1 className={page.eyebrow}>{longDate(todayKey)}</h1>
         </div>
 
         <div className={styles.calendar} ref={controlsRef}>
@@ -429,7 +455,7 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
             if (dayKey) setSelectedDay(dayKey);
           }}
         >
-          {pageDays.map((dayKey) => <AgendaDay key={dayKey} dayKey={dayKey} now={now} tasks={tasks} missedEvents={missedEvents} onSelectEvent={setSelectedEvent} onPlanFreeWindow={(freeWindow) => requestHubOpen({ freeWindow })} onStatusClick={openStatusPicker} events={userId ? eventsByDay[dayKey] ?? [] : undefined} userId={userId} todayKey={todayKey} hideWhenEmpty={mode === "list"} showHeading={mode === "list"} showFreeTime={showFreeTime} loading={Boolean(userId) && loadState === "loading" && !(dayKey in eventsByDay)} selected={mode === "day" && dayKey === selectedDay} freshIds={freshIds} />)}
+          {pageDays.map((dayKey) => <AgendaDay key={dayKey} dayKey={dayKey} now={now} tasks={tasks} missedEvents={missedEvents} onSelectEvent={setSelectedEvent} onPlanFreeWindow={(freeWindow) => requestHubOpen({ freeWindow })} onStatusClick={openStatusPicker} events={userId ? matching(eventsByDay[dayKey] ?? []) : needle ? matching(exampleEventsOn(dayKey)) : undefined} userId={userId} todayKey={todayKey} hideWhenEmpty={mode === "list"} showHeading={mode === "list"} showFreeTime={showFreeTime && !needle} loading={Boolean(userId) && loadState === "loading" && !(dayKey in eventsByDay)} selected={mode === "day" && dayKey === selectedDay} freshIds={freshIds} />)}
         </section>
         {userId && loadState === "loading" ? <p role="status" className={styles.note}>Carregando sua agenda…</p> : null}
         {userId && loadState === "failed" ? <p role="alert" className={styles.note}>Não foi possível carregar a agenda. Tente novamente.</p> : null}

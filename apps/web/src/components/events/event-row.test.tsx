@@ -55,7 +55,7 @@ describe("EventRow", () => {
       estimatedFinishAt: "2026-09-14T13:30:00-03:00",
     });
 
-    render(<EventRow card={card} userId="user-1" now={NOW} />);
+    const { container } = render(<EventRow card={card} userId="user-1" now={NOW} />);
 
     expect(
       screen.getByRole("button", { name: "Só agenda. Mudar status de “Almoço no escritório”" }),
@@ -63,9 +63,10 @@ describe("EventRow", () => {
     expect(screen.getByText("meal")).toBeInTheDocument();
     expect(screen.getByText("Hoje, 12:30")).toBeInTheDocument();
     expect(screen.getByText("1h")).toBeInTheDocument();
+    expect(container.querySelector("[data-agent-mark]")).not.toBeInTheDocument();
   });
 
-  it("mostra o evento de agente num cartão, com glifo que não é botão e tempo decorrido no quando", () => {
+  it("mostra o evento de agente com o robô de assinatura, glifo que não é botão e tempo decorrido no quando", () => {
     const card = cardOf({
       id: "ev-3",
       actor: "agent",
@@ -83,6 +84,7 @@ describe("EventRow", () => {
     expect(screen.getByText("request")).toBeInTheDocument();
     expect(screen.getByText("há 12 min")).toBeInTheDocument();
     expect(container.querySelector('[data-actor="agent"]')).toBeInTheDocument();
+    expect(container.querySelector("[data-agent-mark]")).toBeInTheDocument();
   });
 
   it("mostra a espera no lugar do quando quando o evento em espera tem bloqueadores", () => {

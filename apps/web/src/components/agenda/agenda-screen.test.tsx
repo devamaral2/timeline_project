@@ -24,9 +24,9 @@ function chooseMode(name: string) {
   fireEvent.click(screen.getByRole("button", { name }));
 }
 
-test("day mode keeps the week selector and the day summary, without a title repeating the day", () => {
+test("day mode keeps the week selector and the day summary, with today's date as the title", () => {
   render(<AgendaScreen />);
-  expect(screen.queryByRole("heading", { level: 1 })).not.toBeInTheDocument();
+  expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
   expect(document.querySelector('button[aria-current="date"]')).not.toBeNull();
   expect(document.querySelector('[data-agenda-day] h2')).toBeNull();
   expect(screen.getByText("5 eventos · 3 h 50 planejadas")).toBeInTheDocument();
