@@ -112,7 +112,7 @@ export function useNotificationFeed() {
   function markRead(items: readonly NotificationFeedItem[]) {
     if (items.length === 0) return;
     const next = { ...readKeys };
-    for (const item of items) next[item.key] = item.startedAtMs;
+    for (const item of items) next[item.key] = item.anchorMs;
     setReadKeys(next);
     writeReadKeys(next, Date.now());
   }

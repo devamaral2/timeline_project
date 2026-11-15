@@ -8,16 +8,17 @@ const minutes = (value: number) => value * 60_000;
 
 const sources: NotificationSource[] = [
   {
-    kind: "event",
     id: "run",
     name: "Corrida",
+    longRunning: false,
     startedAt: new Date(NOW.getTime() + minutes(30)).toISOString(),
     notifyOffsetsMinutes: [60], // venceu ha 30 minutos
   },
   {
-    kind: "task",
     id: "report",
     name: "Entregar relatório",
+    status: "todo", // acompanhado: aparece como tarefa
+    longRunning: false,
     startedAt: new Date(NOW.getTime() + minutes(120)).toISOString(),
     notifyOffsetsMinutes: [15], // vence em 105 minutos
   },
