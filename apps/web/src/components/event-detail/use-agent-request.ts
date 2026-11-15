@@ -4,10 +4,7 @@ import type { RequestDto } from "@repo/contracts";
 import { useEffect, useRef, useState } from "react";
 import { ApiRequestError } from "@/lib/api/client-request";
 import { getRequest } from "@/lib/api/requests";
-import { isOpenRequest } from "@/lib/events/agent-request-model";
-
-/** De quanto em quanto tempo o detalhe de um pedido em aberto se relê. */
-export const AGENT_REQUEST_POLL_MS = 3000;
+import { AGENT_REQUEST_POLL_MS, isOpenRequest } from "@/lib/events/agent-request-model";
 
 export type AgentRequestLoad = "loading" | "ready" | "missing" | "error";
 

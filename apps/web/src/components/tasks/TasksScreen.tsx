@@ -10,9 +10,11 @@ import { OptionsGlyph } from "@/components/ui/options-glyph";
 import page from "@/components/ui/page.module.css";
 import { ApiRequestError } from "@/lib/api/client-request";
 import { listTrackedEvents, updateEvent } from "@/lib/api/events";
+import { hasOpenAgentEvent } from "@/lib/events/agent-request-model";
 import { statusPatch } from "@/lib/events/event-read-model";
 import { taskFilterCount, tagsByUse, trackedFilters } from "@/lib/events/task-filters";
 import { useNow } from "@/lib/events/use-now";
+import { useOpenAgentRefresh } from "@/lib/events/use-open-agent-refresh";
 import {
   groupTrackedEvents,
   oneRowPerSeries,
@@ -52,7 +54,7 @@ function openTasksLabel(open: number): string {
  * `tracked`, nos grupos do canvas. Feitas e Encerradas vêm recolhidos. Cada
  * linha é a `EventRow`. Tag, prioridade e texto são parâmetros da consulta: a
  * tela não filtra na mão. As opções de tag vêm da lista sem filtro. Recarregar
- * sozinha fica para outro ticket.
+ * sozinha, sem o estado de carregando, enquanto houver evento de agente em aberto.
  */
 export function TasksScreen({ userId }: { userId: string }) {
   const now = useNow();
@@ -80,8 +82,12 @@ export function TasksScreen({ userId }: { userId: string }) {
   const filters = useMemo(() => ({ tag, priorities, query }), [tag, priorities, query]);
   const activeFilters = taskFilterCount(filters);
 
-  /** Relê a lista com os filtros atuais. Falha vira o aviso de carregamento com "Tentar de novo". */
-  const refresh = useCallback(async () => {
+  /**
+   * Relê a lista com os filtros atuais. Falha vira o aviso de carregamento com "Tentar de novo". Releitura
+   * silenciosa (`quiet`, a do evento de agente em aberto) troca os dados sem o estado de carregando e, se
+   * falhar, mantém a lista que já está na tela.
+   */
+  const refresh = useCallback(async (quiet = false) => {
     const request = ++latestRequest.current;
     try {
       const list = await listTrackedEvents(trackedFilters(filters));
@@ -91,13 +97,16 @@ export function TasksScreen({ userId }: { userId: string }) {
       // Sem filtro, a lista inteira é também a fonte das opções de tag.
       if (taskFilterCount(filters) === 0) setFacets(list);
     } catch {
-      if (request === latestRequest.current) setError(true);
+      if (request === latestRequest.current && !quiet) setError(true);
     }
   }, [filters]);
 
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  // Enquanto houver evento de agente em aberto nesta lista, ela se relê sozinha; sem ele, não há recarga.
+  useOpenAgentRefresh(hasOpenAgentEvent(cards ?? []), () => refresh(true));
 
   const retry = useCallback(() => {
     setError(false);

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import type { EventDto } from "@repo/contracts";
 import { createFakeApi } from "@/test/fake-api";
@@ -321,4 +321,47 @@ test("com filtro ativo e nada encontrado, diz que nenhum evento passou no filtro
 
   fireEvent.click(within(screen.getByRole("region", { name: "Lista de tarefas" })).getByRole("button", { name: "Limpar filtros" }));
   expect(await screen.findByRole("link", { name: /Pagar conta de luz/ })).toBeInTheDocument();
+});
+
+/** Quantas leituras da lista de tarefas saíram para a rede até agora. */
+function trackedReads(api: ReturnType<typeof serve>) {
+  return () => api.calls.filter((call) => call.pathname === "/api/events/tracked").length;
+}
+
+test("com evento de agente em aberto, a lista se relê sozinha e a linha vai para Feitas", async () => {
+  const api = serve(events);
+  render(<TasksScreen userId="user-1" />);
+  await screen.findByRole("link", { name: /Pesquisar voos/ });
+
+  const table = api.store.table<EventDto>("events");
+  table.set("pesquisa", { ...(table.get("pesquisa") as EventDto), status: "done" });
+  await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
+
+  await waitFor(() => expect(screen.queryByRole("region", { name: /Em curso/ })).not.toBeInTheDocument());
+  fireEvent.click(screen.getByRole("button", { name: /Feitas/ }));
+  expect(within(screen.getByRole("region", { name: /Feitas/ })).getByRole("link", { name: /Pesquisar voos/ })).toBeInTheDocument();
+});
+
+test("sem evento de agente em aberto, a lista não se relê em intervalo", async () => {
+  const api = serve(events.map((event) => (event.id === "pesquisa" ? { ...event, status: "done" as const } : event)));
+  render(<TasksScreen userId="user-1" />);
+  await screen.findByRole("link", { name: /Pagar conta de luz/ });
+  const reads = trackedReads(api);
+  const before = reads();
+
+  await act(async () => { await vi.advanceTimersByTimeAsync(9000); });
+
+  expect(reads()).toBe(before);
+});
+
+test("uma releitura que falha mantém a lista na tela, sem o aviso de erro", async () => {
+  const api = serve(events);
+  render(<TasksScreen userId="user-1" />);
+  await screen.findByRole("link", { name: /Pesquisar voos/ });
+
+  api.failNext("GET", "/api/events/tracked", 503);
+  await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
+
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /Pesquisar voos/ })).toBeInTheDocument();
 });

@@ -12,7 +12,9 @@ import { requestHubOpen } from "@/components/hub/hub-events";
 import page from "@/components/ui/page.module.css";
 import { ApiRequestError } from "@/lib/api/client-request";
 import { listAgenda, updateEvent } from "@/lib/api/events";
+import { hasOpenAgentEvent } from "@/lib/events/agent-request-model";
 import { statusPatch } from "@/lib/events/event-read-model";
+import { useOpenAgentRefresh } from "@/lib/events/use-open-agent-refresh";
 import { slideIn } from "@/lib/motion/enter";
 import { reflow } from "@/lib/motion/view-transition";
 import { briefDate } from "@/lib/dates/day-labels";
@@ -78,6 +80,14 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
   const [loadState, setLoadState] = useState<"idle" | "loading" | "failed">("idle");
   const [refreshVersion, setRefreshVersion] = useState(0);
   useAiJobRefresh(Boolean(userId && user && ready), agendaRefreshEvent, () => {
+    setRefreshVersion((version) => version + 1);
+  });
+  // Com evento de agente em aberto na janela, a agenda se relê sozinha. A releitura é silenciosa: troca os dados
+  // sem voltar ao estado de carregando, para a tela não piscar nem perder a rolagem.
+  const silentReload = useRef(false);
+  const agentOpen = hasOpenAgentEvent(Object.values(eventsByDay).flat().flatMap((event) => (event.card ? [event.card] : [])));
+  useOpenAgentRefresh(Boolean(userId && user && ready && agentOpen), () => {
+    silentReload.current = true;
     setRefreshVersion((version) => version + 1);
   });
   const [selectedEvent, setSelectedEvent] = useState<SelectedEvent | null>(null);
@@ -157,7 +167,10 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
     void refreshVersion;
     if (!userId || !user || !ready) return;
     let cancelled = false;
-    setLoadState("loading");
+    // A releitura do evento de agente não mostra o carregando; uma falha nela mantém a agenda que já está na tela.
+    const silent = silentReload.current;
+    silentReload.current = false;
+    if (!silent) setLoadState("loading");
 
     async function loadEvents() {
       try {
@@ -188,7 +201,7 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
         if (fresh.length > 0) reflow(daysRef.current, apply);
         else apply();
       } catch {
-        if (!cancelled) setLoadState("failed");
+        if (!cancelled && !silent) setLoadState("failed");
       }
     }
 

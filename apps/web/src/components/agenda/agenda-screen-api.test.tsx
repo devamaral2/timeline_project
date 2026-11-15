@@ -1,5 +1,6 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
+import type { EventDto } from "@repo/contracts";
 import { createFakeApi } from "@/test/fake-api";
 import { eventFixture, eventsArea } from "@/test/fake-api/events";
 
@@ -222,4 +223,67 @@ test("a refused status change shows the retry message and keeps the row as it wa
 
   expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível trocar o status. Tente novamente.");
   expect(within(dayOf(TODAY)).getByRole("button", { name: "Só agenda. Mudar status de “Almoço no escritório”" })).toBeInTheDocument();
+});
+
+/** Quantas leituras da agenda saíram para a rede até agora. */
+function agendaReads(api: ReturnType<typeof installApi>) {
+  return () => api.calls.filter((call) => call.method === "GET" && call.pathname === "/api/events").length;
+}
+
+test("com evento de agente em aberto, a agenda se relê sozinha e a linha vira 'Agente, feito'", async () => {
+  const api = installApi();
+  render(<AgendaScreen userId="user-1" todayKey={TODAY} />);
+  await waitFor(() => expect(within(dayOf(TODAY)).getAllByRole("link")).toHaveLength(5));
+  expect(within(dayOf(TODAY)).getByRole("img", { name: "Agente, executando" })).toBeInTheDocument();
+
+  const table = api.store.table<EventDto>("events");
+  table.set("ev-3", { ...(table.get("ev-3") as EventDto), status: "done" });
+  await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
+
+  await waitFor(() => expect(within(dayOf(TODAY)).getByRole("img", { name: "Agente, feito" })).toBeInTheDocument());
+  expect(within(dayOf(TODAY)).queryByRole("img", { name: "Agente, executando" })).not.toBeInTheDocument();
+});
+
+test("sem evento de agente em aberto, a agenda não se relê em intervalo", async () => {
+  const api = installApi(events.map((event) => (event.id === "ev-3" ? { ...event, status: "done" as const } : event)));
+  render(<AgendaScreen userId="user-1" todayKey={TODAY} />);
+  await waitFor(() => expect(within(dayOf(TODAY)).getAllByRole("link")).toHaveLength(5));
+  const reads = agendaReads(api);
+  const before = reads();
+
+  await act(async () => { await vi.advanceTimersByTimeAsync(9000); });
+
+  expect(reads()).toBe(before);
+});
+
+test("a recarga troca os dados sem o carregando e mantém a mesma linha na tela", async () => {
+  const api = installApi();
+  render(<AgendaScreen userId="user-1" todayKey={TODAY} />);
+  await waitFor(() => expect(within(dayOf(TODAY)).getAllByRole("link")).toHaveLength(5));
+  const rowBefore = within(dayOf(TODAY)).getByRole("img", { name: "Agente, executando" }).closest("li");
+
+  const loadingSeen: boolean[] = [];
+  const observer = new MutationObserver(() => loadingSeen.push(screen.queryByText("Carregando sua agenda…") !== null));
+  observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+
+  const table = api.store.table<EventDto>("events");
+  table.set("ev-3", { ...(table.get("ev-3") as EventDto), status: "done" });
+  await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
+  await waitFor(() => expect(within(dayOf(TODAY)).getByRole("img", { name: "Agente, feito" })).toBeInTheDocument());
+  observer.disconnect();
+
+  expect(loadingSeen.some(Boolean)).toBe(false);
+  expect(within(dayOf(TODAY)).getByRole("img", { name: "Agente, feito" }).closest("li")).toBe(rowBefore);
+});
+
+test("uma releitura que falha mantém a agenda na tela, sem o aviso de erro", async () => {
+  const api = installApi();
+  render(<AgendaScreen userId="user-1" todayKey={TODAY} />);
+  await waitFor(() => expect(within(dayOf(TODAY)).getAllByRole("link")).toHaveLength(5));
+
+  api.failNext("GET", "/api/events", 500);
+  await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
+
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  expect(within(dayOf(TODAY)).getAllByRole("link")).toHaveLength(5);
 });

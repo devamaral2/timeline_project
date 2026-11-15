@@ -1,4 +1,4 @@
-import type { AgentEventStatus, AgentTraceEntryDto, RequestDto, RequestEntityDto } from "@repo/contracts";
+import type { AgentEventStatus, AgentTraceEntryDto, EventCardDto, RequestDto, RequestEntityDto } from "@repo/contracts";
 import { artifactTypeLabel } from "@/lib/artifacts/artifact-model";
 
 /**
@@ -8,9 +8,20 @@ import { artifactTypeLabel } from "@/lib/artifacts/artifact-model";
 
 const OPEN_STATUSES: readonly AgentEventStatus[] = ["queued", "running", "waiting"];
 
+/** De quanto em quanto tempo uma tela se relê enquanto há pedido de agente em aberto (detalhe e listas). */
+export const AGENT_REQUEST_POLL_MS = 3000;
+
 /** Pedido em fila, executando ou aguardando o usuário: a tela continua relendo. */
 export function isOpenRequest(status: AgentEventStatus): boolean {
   return OPEN_STATUSES.includes(status);
+}
+
+/**
+ * Há um evento de agente em aberto nesta lista (fila, execução ou espera)? Só ele faz a lista se reler sozinha.
+ * Evento de pessoa nunca conta, mesmo com status parecido.
+ */
+export function hasOpenAgentEvent(cards: readonly EventCardDto[]): boolean {
+  return cards.some((card) => card.actor === "agent" && card.status !== undefined && isOpenRequest(card.status as AgentEventStatus));
 }
 
 /** Quantos passos terminaram e quantos há no total. */
