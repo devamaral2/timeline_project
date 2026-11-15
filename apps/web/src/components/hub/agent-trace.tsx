@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { type Ref, useEffect, useRef, useState } from "react";
 import type { AgentChatTrace, AgentTraceView } from "@/lib/agent-chat/use-agent-chat";
-import type { AgentTraceEntryDto, AgentTraceKind, AgentTraceStatus } from "@/lib/api/contracts";
+import type { AgentTraceEntryDto, AgentTraceKind, AgentTraceStatus } from "@repo/contracts";
 import styles from "./agent-trace.module.css";
 
 const KIND_ICONS: Record<AgentTraceKind, typeof Bot> = {

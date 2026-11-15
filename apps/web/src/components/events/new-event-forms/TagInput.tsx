@@ -3,9 +3,9 @@
 import { useEffect, useState, type KeyboardEvent } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { authedFetch } from "@/lib/api/authed-fetch";
+import { suggestTags } from "@/lib/api/events";
 import { tagAccentStyle, tagColorStyle } from "@/lib/tags/tag-color";
-import type { TagSuggestionDto } from "@/lib/api/contracts";
+import type { TagSuggestionDto } from "@repo/contracts";
 import { fieldLabelClass } from "./field-styles";
 
 interface TagInputProps {
@@ -31,16 +31,15 @@ export function TagInput({ tags, onTagsChange }: TagInputProps) {
       return;
     }
 
-    const controller = new AbortController();
+    let stale = false;
     const timeout = setTimeout(() => {
       // As tags sao do usuario, e a rota so devolve as dele: sem token nao ha a
       // quem perguntar. Uma falha aqui nao vira erro na tela — a sugestao e um
-      // atalho, e quem esta digitando pode terminar a tag na mao.
-      authedFetch<TagSuggestionDto[]>(
-        `/api/tags?query=${encodeURIComponent(query)}&limit=6`,
-        { signal: controller.signal },
-      )
+      // atalho, e quem esta digitando pode terminar a tag na mao. Uma resposta que
+      // chega depois de o rascunho mudar nao entra.
+      suggestTags(query, 6)
         .then((data) => {
+          if (stale) return;
           setSuggestions(data.filter((suggestion) => !tags.includes(suggestion.name)));
           setHighlighted(0);
         })
@@ -48,7 +47,7 @@ export function TagInput({ tags, onTagsChange }: TagInputProps) {
     }, 200);
 
     return () => {
-      controller.abort();
+      stale = true;
       clearTimeout(timeout);
     };
   }, [draft, tags]);

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { expect, test, vi } from "vitest";
-import { DetailOrigin, LinkGroup, LinkRow, TaskLinkRow } from "./detail-parts";
+import { expect, test } from "vitest";
+import { DetailOrigin, LinkGroup, LinkRow } from "./detail-parts";
 
 test("a origem só existe quando a entidade traz o rastro, e abre para mostrar os passos", () => {
   const { rerender } = render(<DetailOrigin id="nota" />);
@@ -46,21 +46,4 @@ test("um grupo de vínculos mostra a contagem e as linhas, abertas ou só de lei
   expect(within(group).getByText("2")).toBeInTheDocument();
   expect(within(group).getByRole("link", { name: /Pauta/ })).toHaveAttribute("href", "/u/notas/1");
   expect(within(group).getAllByRole("link")).toHaveLength(1);
-});
-
-test("a tarefa vinculada troca de status pelo círculo, sem abrir a tarefa", () => {
-  const onStatusChange = vi.fn();
-  render(
-    <ul>
-      <TaskLinkRow name="Fazer a lista" status="todo" sub="Tarefa · hoje" href="/u/tarefas/1" onStatusChange={onStatusChange} />
-    </ul>,
-  );
-
-  fireEvent.click(screen.getByRole("button", { name: "Status: A fazer. Trocar status de Fazer a lista" }));
-  const listbox = screen.getByRole("listbox", { name: "Status da tarefa" });
-  fireEvent.click(within(listbox).getByRole("option", { name: "Concluída" }));
-
-  expect(onStatusChange).toHaveBeenCalledWith("done");
-  expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
-  expect(screen.getByRole("link", { name: /Fazer a lista/ })).toHaveAttribute("href", "/u/tarefas/1");
 });

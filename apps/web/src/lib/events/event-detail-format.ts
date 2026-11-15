@@ -1,5 +1,5 @@
 import { dayKeyOf, weekday } from "@repo/timeline";
-import type { WorkoutSet } from "@/lib/api/contracts";
+import type { WorkoutSet } from "@repo/contracts";
 
 const MONTHS = [
   "janeiro", "fevereiro", "março", "abril", "maio", "junho",

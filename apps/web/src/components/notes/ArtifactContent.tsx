@@ -17,7 +17,7 @@ export function ArtifactContent({ artifact }: { artifact: ArtifactDto }) {
   switch (artifact.type) {
     case "text":
     case "router": {
-      const body = noteMarkdownOf({ name: artifact.name, type: artifact.type, data: artifact.data });
+      const body = noteMarkdownOf(artifact);
       if (body === "") return null;
       return <article className={styles.noteCard} aria-label="Conteúdo da nota"><TextBody body={body} /></article>;
     }

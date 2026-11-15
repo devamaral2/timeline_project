@@ -18,8 +18,9 @@ cada tela casa com o índice feito para ela, mas nenhum foi medido com volume re
 
 ## Estado da implementação
 
-A API já roda sobre este banco: o esquema antigo, as 24 migrations anteriores e o RabbitMQ saíram. O web e o app
-Android ainda falam os contratos antigos e não funcionam contra esta API até serem portados, nessa ordem.
+A API já roda sobre este banco: o esquema antigo, as 24 migrations anteriores e o RabbitMQ saíram. O web já fala os
+contratos novos (o contrato antigo saiu do web no ticket 51); só o app Android falta, e ele não funciona contra esta API
+até ser portado.
 
 | Peça | Onde |
 |---|---|

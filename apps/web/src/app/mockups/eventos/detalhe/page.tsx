@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import { EventDetailScreen } from "@/components/events/EventDetailScreen";
-import type { EventDetailDto, TaskDetailDto } from "@/lib/api/contracts";
+import { EventDetailScreen, type PreviewEvent, type PreviewTask } from "@/components/events/EventDetailScreen";
 import styles from "@/components/shell/shell.module.css";
 
 export const metadata: Metadata = {
@@ -17,7 +16,7 @@ export const metadata: Metadata = {
  * ajustar aqui ja esta ajustado la. As variacoes por tipo de evento nascem
  * nesta pagina antes de ir para a rota real.
  */
-const exampleEvent: EventDetailDto = {
+const exampleEvent: PreviewEvent = {
   id: "mockup-evento",
   name: "Reunião de planejamento",
   description:
@@ -35,7 +34,7 @@ const exampleEvent: EventDetailDto = {
   taskIds: ["mockup-tarefa-1", "mockup-tarefa-2"],
 };
 
-const exampleTasks: TaskDetailDto[] = [
+const exampleTasks: PreviewTask[] = [
   {
     id: "mockup-tarefa-1",
     name: "Revisar as decisões em aberto",

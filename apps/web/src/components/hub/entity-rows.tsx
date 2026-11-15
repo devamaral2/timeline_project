@@ -1,7 +1,7 @@
 import { CalendarDays, ChevronRight, FileText, ListChecks } from "lucide-react";
 import Link from "next/link";
 import type { RequestEntityDto } from "@repo/contracts";
-import type { AgentChatEntityRef } from "@/lib/api/contracts";
+import type { AgentChatEntityRef } from "@/lib/agent-chat/use-agent-chat";
 import styles from "@/components/shell/shell.module.css";
 
 export const CHANGE_LABELS: Record<AgentChatEntityRef["kind"], Record<AgentChatEntityRef["change"], string>> = {

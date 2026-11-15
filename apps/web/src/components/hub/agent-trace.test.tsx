@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { expect, test } from "vitest";
 import type { AgentChatTrace } from "@/lib/agent-chat/use-agent-chat";
-import type { AgentTraceDto } from "@/lib/api/contracts";
+import type { AgentTraceDto } from "@repo/contracts";
 import { AgentTrace, timelineBars, traceDuration } from "./agent-trace";
 
 const START = "2026-11-11T18:17:56.000Z";

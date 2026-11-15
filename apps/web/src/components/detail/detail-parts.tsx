@@ -1,15 +1,12 @@
 "use client";
 
-import { ArrowLeft, Check, ChevronDown, ChevronRight, EllipsisVertical, Sparkles, Wrench } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronRight, EllipsisVertical, Sparkles, Wrench } from "lucide-react";
 import Link from "next/link";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { ICON_STROKE_WIDTH } from "@/components/events/event-visuals";
-import { TaskStatusIcon } from "@/components/tasks/task-visuals";
 import page from "@/components/ui/page.module.css";
-import type { WorkItemStatus } from "@/lib/api/contracts";
 import { useChangeFlash } from "@/lib/motion/change-flash";
 import { tagAccentStyle } from "@/lib/tags/tag-color";
-import { TASK_STATUS_ORDER, taskStatusLabels } from "@/lib/tasks/tasks-model";
 import styles from "./detail.module.css";
 
 export const detailIcon = { "aria-hidden": true, strokeWidth: ICON_STROKE_WIDTH } as const;
@@ -272,95 +269,6 @@ export function LinkMessage({ children }: { children: ReactNode }) {
   return <li><p className={styles.message}>{children}</p></li>;
 }
 
-/** Uma linha de tarefa vinculada: o círculo de status troca o status; o resto abre a tarefa. */
-export function TaskLinkRow({ name, status, sub, href, busy = false, onStatusChange }: {
-  name: string; status: WorkItemStatus; sub: string; href: string; busy?: boolean; onStatusChange: (status: WorkItemStatus) => void;
-}) {
-  return (
-    <li className={styles.taskRow}>
-      <TaskStatusPicker status={status} name={name} busy={busy} onChange={onStatusChange} />
-      <Link href={href} className={styles.linkMain}>
-        <span className={styles.linkText}><span className={styles.linkTitle}>{name}</span><span className={styles.linkSub}>{sub}</span></span>
-        <ChevronRight {...detailIcon} />
-      </Link>
-    </li>
-  );
-}
-
-/** O círculo de status de uma tarefa e a lista dos seis status que ele abre. */
-export function TaskStatusPicker({ status, name, busy, onChange }: { status: WorkItemStatus; name: string; busy: boolean; onChange: (status: WorkItemStatus) => void }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  useDismiss(open, ref, () => setOpen(false));
-  return (
-    <div className={styles.anchor} ref={ref}>
-      <button
-        type="button"
-        className={styles.statusMini}
-        data-status={status}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        aria-label={`Status: ${taskStatusLabels[status]}. Trocar status de ${name}`}
-        disabled={busy}
-        onClick={() => setOpen((value) => !value)}
-      >
-        <TaskStatusIcon status={status} size={20} />
-      </button>
-      {open ? (
-        <div role="listbox" aria-label="Status da tarefa" className={`${styles.menu} ${styles.statusMenu}`}>
-          {TASK_STATUS_ORDER.map((option) => (
-            <button key={option} type="button" role="option" aria-selected={option === status} onClick={() => { setOpen(false); if (option !== status) onChange(option); }}>
-              <TaskStatusIcon status={option} />
-              {taskStatusLabels[option]}
-              {option === status ? <Check className={styles.selectedMark} {...detailIcon} /> : null}
-            </button>
-          ))}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-/** O status grande do cabeçalho da tarefa (mesmo seletor, com o nome do status ao lado). */
-export function TaskStatusButton({ status, busy, onChange }: { status: WorkItemStatus; busy: boolean; onChange: (status: WorkItemStatus) => void }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  useDismiss(open, ref, () => setOpen(false));
-  return (
-    <div className={styles.anchor} ref={ref}>
-      <button
-        type="button"
-        className={styles.statusButton}
-        data-status={status}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        aria-label={`Status: ${taskStatusLabels[status]}. Trocar status`}
-        disabled={busy}
-        onClick={() => setOpen((value) => !value)}
-      >
-        <TaskStatusIcon status={status} />
-        <span>{taskStatusLabels[status]}</span>
-        <ChevronDown className={styles.caret} {...detailIcon} />
-      </button>
-      {open ? (
-        <div role="listbox" aria-label="Status da tarefa" className={`${styles.menu} ${styles.statusMenuBig}`}>
-          {TASK_STATUS_ORDER.map((option) => (
-            <button key={option} type="button" role="option" aria-selected={option === status} data-status={option} onClick={() => { setOpen(false); if (option !== status) onChange(option); }}>
-              <TaskStatusIcon status={option} />
-              {taskStatusLabels[option]}
-              {option === status ? <Check className={styles.selectedMark} {...detailIcon} /> : null}
-            </button>
-          ))}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-export function StatusRow({ children }: { children: ReactNode }) {
-  return <div className={styles.statusRow}>{children}</div>;
-}
-
 /** Um passo do que o Hermes fez: o texto, a ferramenta (opcional) e quanto demorou. */
 export interface DetailOriginStep {
   id: string;
@@ -415,19 +323,6 @@ export function DetailOrigin({ origin, id }: { origin?: DetailOriginData; id: st
 /** Uma lista de linhas dentro de um cartão (depende de, subtarefas, libera). */
 export function RowCard({ children }: { children: ReactNode }) {
   return <ul className={styles.card}>{children}</ul>;
-}
-
-/** Uma tarefa que se relaciona com esta: o círculo mostra o status e a linha abre a tarefa. */
-export function RelationRow({ href, name, status, meta }: { href: string; name: string; status: WorkItemStatus; meta: string }) {
-  return (
-    <li>
-      <Link href={href} className={styles.relation}>
-        <span className={styles.relationIcon} role="img" aria-label={taskStatusLabels[status]}><TaskStatusIcon status={status} size={20} /></span>
-        <span className={styles.relationText}><span className={styles.relationName}>{name}</span><span className={styles.relationMeta}>{meta}</span></span>
-        <ChevronRight {...detailIcon} />
-      </Link>
-    </li>
-  );
 }
 
 export { styles as detailStyles };

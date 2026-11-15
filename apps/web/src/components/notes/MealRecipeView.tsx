@@ -1,4 +1,4 @@
-import type { MealRecipe } from "@/lib/api/contracts";
+import type { FoodRecipe } from "@repo/contracts";
 import { formatMinutes, pluralize } from "@/lib/events/event-detail-format";
 import styles from "./meal-recipe.module.css";
 
@@ -18,7 +18,7 @@ function keyed<T>(items: readonly T[], textOf: (item: T) => string): Array<{ key
  * foi o modelo que a propôs ("Sugerida"), a tela diz isso — quem leu "o que eu
  * fiz" e quem leu "o que o app sugere" não devem confundir as duas.
  */
-export function MealRecipeView({ recipe }: { recipe: MealRecipe }) {
+export function MealRecipeView({ recipe }: { recipe: FoodRecipe }) {
   const meta = [
     recipe.servings ? pluralize(recipe.servings, "porção", "porções") : null,
     recipe.prepTimeMinutes ? `Preparo em ${formatMinutes(recipe.prepTimeMinutes)}` : null,

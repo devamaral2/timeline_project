@@ -21,7 +21,8 @@ import { HermesGlyph } from "@/components/ui/hermes-glyph";
 import { HermesMark, type HermesState } from "@/components/ui/hermes-mark";
 import { briefDate } from "@/lib/dates/day-labels";
 import { type AgentChatMessage, useAgentChat } from "@/lib/agent-chat/use-agent-chat";
-import type { AgentChatEntityRef, AgentScreenContext } from "@/lib/api/contracts";
+import type { RequestScreenContext } from "@repo/contracts";
+import type { AgentChatEntityRef } from "@/lib/agent-chat/use-agent-chat";
 import { useSessionState } from "@/lib/session/use-session";
 import { speechErrorMessage } from "@/lib/speech/speech-error-messages";
 import { useSpeechRecognition } from "@/lib/speech/use-speech-recognition";
@@ -38,7 +39,7 @@ import styles from "@/components/shell/shell.module.css";
 const SILENCE_SEND_MS = 1800;
 
 /** O chat e aberto a partir da agenda; o agente decide se isso importa para o pedido. */
-const AGENDA_CONTEXT: AgentScreenContext = { screen: "agenda" };
+const AGENDA_CONTEXT: RequestScreenContext = { screen: "agenda" };
 
 export function entityChipText(entity: AgentChatEntityRef): string {
   const change = CHANGE_LABELS[entity.kind][entity.change];

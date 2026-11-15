@@ -1,11 +1,10 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import type { EventDetailDto, TaskDetailDto } from "@/lib/api/contracts";
-import { EventDetailScreen } from "./EventDetailScreen";
+import { EventDetailScreen, type PreviewEvent, type PreviewTask } from "./EventDetailScreen";
 import { noteOf } from "./note-fixtures";
 
 /** 15 de abril de 2026, 10:00 — 11:00 no fuso da timeline. */
-function eventAt(overrides: Partial<EventDetailDto> = {}): EventDetailDto {
+function eventAt(overrides: Partial<PreviewEvent> = {}): PreviewEvent {
   return {
     id: "evento-1",
     name: "Reunião de planejamento",
@@ -24,7 +23,7 @@ function eventAt(overrides: Partial<EventDetailDto> = {}): EventDetailDto {
   };
 }
 
-const task: TaskDetailDto = {
+const task: PreviewTask = {
   id: "tarefa-1",
   name: "Escrever a ata",
   description: "",

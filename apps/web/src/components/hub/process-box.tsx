@@ -1,6 +1,6 @@
 import type { AgentEventStatus, RequestDto } from "@repo/contracts";
 import { Check, Circle, LoaderCircle, X } from "lucide-react";
-import type { AgentChatEntityRef } from "@/lib/api/contracts";
+import type { AgentChatEntityRef } from "@/lib/agent-chat/use-agent-chat";
 import { isRequestOpen } from "@/lib/agent-chat/use-agent-chat";
 import { EntityRows, requestEntityRef } from "./entity-rows";
 import styles from "@/components/shell/shell.module.css";

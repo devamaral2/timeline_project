@@ -1,5 +1,5 @@
 import { Apple, CircleDashed, Clock, Dumbbell, Moon, type LucideIcon } from "lucide-react";
-import type { EventKind, EventPriority, NotificationOffsetMinutes } from "@/lib/api/contracts";
+import type { HumanEventKind, NotificationOffsetMinutes } from "@repo/contracts";
 
 /**
  * O traco fino do desenho. O padrao do lucide (2) engorda o icone e, sobre o
@@ -19,7 +19,7 @@ export interface ItemTypeVisual {
   bar: string;
 }
 
-const knownVisuals: Record<EventKind, ItemTypeVisual> = {
+const knownVisuals: Record<HumanEventKind, ItemTypeVisual> = {
   routine: { Icon: Clock, label: "Rotina", text: "text-routine", bar: "bg-routine" },
   meal: { Icon: Apple, label: "Refeição", text: "text-meal", bar: "bg-meal" },
   training: { Icon: Dumbbell, label: "Treino", text: "text-training", bar: "bg-training" },
@@ -47,11 +47,11 @@ const unknownVisual: ItemTypeVisual = {
  * a resposta a pergunta "o que e isto?".
  */
 export function visualForItemType(type: string): ItemTypeVisual {
-  return knownVisuals[type as EventKind] ?? unknownVisual;
+  return knownVisuals[type as HumanEventKind] ?? unknownVisual;
 }
 
 /** As naturezas que o formulario de criacao oferece. */
-export const creatableItemTypes: EventKind[] = ["routine", "meal", "training", "sleep"];
+export const creatableItemTypes: HumanEventKind[] = ["routine", "meal", "training", "sleep"];
 
 /**
  * O unico rotulo de situacao que sobrou.
@@ -61,17 +61,6 @@ export const creatableItemTypes: EventKind[] = ["routine", "meal", "training", "
  * ganha selo nenhum, porque "nao anotado" nao e uma situacao a mostrar.
  */
 export const missedLabel = "Não realizado";
-
-/** Vermelho, o token de falha — separado de `training` e `meal`, que sao tipo. */
-export const missedBadgeClass = "bg-destructive/15 text-destructive";
-
-export const priorityLabels: Record<EventPriority, string> = {
-  urgent: "Urgente",
-  normal: "Normal",
-  flexible: "Flexível",
-};
-
-export const priorities: EventPriority[] = ["urgent", "normal", "flexible"];
 
 const MINUTES_PER_DAY = 1440;
 

@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { RequestDto } from "@repo/contracts";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import type { AgentChatEntityRef } from "@/lib/api/contracts";
+import type { AgentChatEntityRef } from "@/lib/agent-chat/use-agent-chat";
 import { type FakeApi, createFakeApi } from "@/test/fake-api";
 import { advanceRequest, requestFixture, requestsArea } from "@/test/fake-api/requests";
 import { AgentChatPanel, agentEntityHref, requestWithWindow, useAgendaChat } from "./agent-chat-panel";

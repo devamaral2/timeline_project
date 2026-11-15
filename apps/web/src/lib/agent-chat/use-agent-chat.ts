@@ -1,14 +1,21 @@
 "use client";
 
-import type { AgentEventStatus, AgentTraceDto, RequestDto } from "@repo/contracts";
+import type { AgentEventStatus, AgentTraceDto, RequestDto, RequestScreenContext } from "@repo/contracts";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "@/lib/api/authed-fetch";
 import { ApiRequestError } from "@/lib/api/client-request";
-import type { AgentChatEntityRef, AgentScreenContext } from "@/lib/api/contracts";
 import { HermesOffError, cancelRequest, getRequest, listRequests, sendHermesMessage, startRequest } from "@/lib/api/requests";
 import { parseChatCommand } from "./chat-mode-command";
 import { type HermesStep, hermesStepsOf } from "./hermes-steps";
 import { operationId } from "@/lib/api/operation-id";
+
+/** Um registro que a resposta tocou, como a conversa o mostra: o `kind` é o da tela (evento, tarefa ou nota). */
+export interface AgentChatEntityRef {
+  kind: "event" | "task" | "note";
+  id: string;
+  change: "created" | "updated" | "deleted";
+  label?: string;
+}
 
 /** O rastro sem o `route`: o da rota por passos e o do Hermes falam a mesma forma. */
 export type AgentTraceView = Omit<AgentTraceDto, "route">;
@@ -62,7 +69,7 @@ export type ChatFailureCode =
 interface UseAgentChatOptions {
   /** Sem usuario (sessao ainda nao respondeu, ou ninguem entrou) nada e enviado. */
   userId: string | undefined;
-  context?: AgentScreenContext;
+  context?: RequestScreenContext;
   /** Chamado quando uma resposta mexeu em registros — ou pode ter mexido. */
   onEntitiesChanged?: () => void;
   /** Intervalo entre consultas do pedido (por passos ou do Hermes); os testes o encurtam. */

@@ -3,8 +3,7 @@
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { ICON_STROKE_WIDTH } from "@/components/events/event-visuals";
-import type { FoodData } from "@repo/contracts";
-import type { NoteDto, SleepItem, TrainingData, WorkoutSnapshot } from "@/lib/api/contracts";
+import type { FoodData, SleepData, TrainingData, WorkoutSnapshot } from "@repo/contracts";
 import { formatDecimal, formatMinutes, formatPace, groupSetsByExercise, pluralize } from "@/lib/events/event-detail-format";
 import { MarkdownView } from "./MarkdownView";
 import { MealRecipeView } from "./MealRecipeView";
@@ -12,28 +11,6 @@ import { MealGenerationStatus } from "./MealGenerationStatus";
 import styles from "./note-body.module.css";
 
 const icon = { "aria-hidden": true, strokeWidth: ICON_STROKE_WIDTH } as const;
-
-/**
- * O corpo de uma nota, igual onde quer que ela apareça (cartão do evento e
- * detalhe da nota): o markdown de uma nota de texto, ou o número principal,
- * as métricas e a lista de uma refeição, treino ou sono. `agendaMinutes` só
- * existe dentro de um evento, e só o sono o usa.
- */
-export function NoteBody({ note, agendaMinutes = null }: { note: NoteDto; agendaMinutes?: number | null }) {
-  switch (note.type) {
-    case "text":
-    case "router":
-      return <TextBody body={note.data.body} />;
-    case "meal":
-      return <MealNote data={{ ...note.data, items: note.data.foodItems }} />;
-    case "training":
-      return <TrainingNote data={note.data} />;
-    case "sleep":
-      return <SleepNote data={note.data} agendaMinutes={agendaMinutes} />;
-    default:
-      return null;
-  }
-}
 
 /** O texto de uma nota de texto ou roteador, em markdown. */
 export function TextBody({ body }: { body: string }) {
@@ -233,7 +210,7 @@ export function TrainingNote({ data }: { data: TrainingData }) {
   );
 }
 
-export function SleepNote({ data, agendaMinutes }: { data: SleepItem; agendaMinutes: number | null }) {
+export function SleepNote({ data, agendaMinutes }: { data: SleepData; agendaMinutes: number | null }) {
   const score = Math.min(100, Math.max(0, data.score));
   return (
     <div className={styles.noteBody}>

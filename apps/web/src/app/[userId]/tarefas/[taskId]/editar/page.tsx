@@ -1,11 +1,7 @@
-import type { Metadata } from "next";
-import { EditTaskRoute } from "@/components/new-item/NewItemRoutes";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "Editar tarefa — Agente pessoal",
-};
-
+/** A edição de tarefa virou a edição do evento: o endereço antigo leva para a rota única. */
 export default async function Page({ params }: { params: Promise<{ userId: string; taskId: string }> }) {
   const { userId, taskId } = await params;
-  return <EditTaskRoute userId={userId} taskId={taskId} />;
+  redirect(`/${userId}/eventos/${taskId}/editar`);
 }

@@ -10,17 +10,92 @@ import {
   compactDate, dayKeyOf, elapsedSecondsOf, formatStopwatch,
   formatTime, longDate, type EventPosition,
 } from "@repo/timeline";
-import type { EventDetailDto, MealItem, NoteDto, TaskDetailDto, WorkItemStatus } from "@/lib/api/contracts";
+import type { FoodRecipe, SleepData, TextData, TrainingData } from "@repo/contracts";
 import { positionOf } from "@/lib/events/event-window";
 import { useNow } from "@/lib/events/use-now";
-import {
-  ICON_STROKE_WIDTH, missedLabel, notificationOffsetLabel,
-  priorityLabels, visualForItemType,
-} from "./event-visuals";
+import { ICON_STROKE_WIDTH, missedLabel, notificationOffsetLabel, visualForItemType } from "./event-visuals";
 import { MarkdownView } from "@/components/notes/MarkdownView";
 import { MealRecipeView } from "@/components/notes/MealRecipeView";
 import { MealGenerationStatus } from "@/components/notes/MealGenerationStatus";
 import styles from "./event-detail-screen.module.css";
+
+/*
+ * Os dados que a prévia desenha. São a forma local do exemplo, não o contrato da API:
+ * a tela real lê o evento com `getEvent` (ver `@repo/contracts`).
+ */
+export type PreviewPriority = "urgent" | "normal" | "flexible";
+export type PreviewTaskPriority = "urgent" | "high" | "medium" | "low";
+export type PreviewTaskStatus = "todo" | "scheduled" | "toDefine" | "inHold" | "done" | "cancel";
+
+const previewPriorityLabels: Record<PreviewPriority, string> = {
+  urgent: "Urgente",
+  normal: "Normal",
+  flexible: "Flexível",
+};
+
+export interface PreviewTask {
+  id: string;
+  name: string;
+  description: string;
+  status: PreviewTaskStatus;
+  priority: PreviewTaskPriority;
+  notifyOffsetsMinutes: number[];
+  tags: string[];
+  dependsOnTaskIds: string[];
+  revision: number;
+}
+
+export interface PreviewMeal {
+  name: string;
+  description: string;
+  totals: {
+    totalCaloriesKcal: number;
+    totalProteinGrams: number;
+    totalCarbohydrateGrams: number;
+    totalFatGrams: number;
+    totalFiberGrams: number;
+  };
+  recipe?: FoodRecipe;
+  generation?: { status: "pending" | "completed" | "failed" };
+  nutritionSource?: "model-estimate";
+}
+
+interface PreviewNoteBase {
+  id: string;
+  name: string;
+}
+
+/** Uma nota do evento na prévia: a refeição, o treino, o sono ou o texto. */
+export type PreviewNote =
+  | (PreviewNoteBase & { type: "meal"; data: PreviewMeal })
+  | (PreviewNoteBase & { type: "training"; data: TrainingData })
+  | (PreviewNoteBase & { type: "sleep"; data: SleepData })
+  | (PreviewNoteBase & { type: "text"; data: TextData });
+
+export interface PreviewInterruption {
+  id: string;
+  name: string;
+  description: string;
+  startedAt: string;
+  finishedAt: string;
+}
+
+export interface PreviewEvent {
+  id: string;
+  name: string;
+  description: string;
+  startedAt: string;
+  finishedAt?: string;
+  tags: string[];
+  missed: boolean;
+  priority: PreviewPriority;
+  notifyOffsetsMinutes: number[];
+  interruptions: PreviewInterruption[];
+  revision: number;
+  kind: string;
+  notes: PreviewNote[];
+  taskIds?: string[];
+}
 
 /**
  * O que a tela faz alem de mostrar. Ausente, o menu aparece desligado — e o
@@ -34,9 +109,9 @@ export interface EventDetailActions {
 }
 
 export interface EventDetailScreenProps {
-  event: EventDetailDto;
+  event: PreviewEvent;
   /** As tarefas vinculadas, ja resolvidas por quem carregou o evento. */
-  tasks?: TaskDetailDto[];
+  tasks?: PreviewTask[];
   backHref: string;
   actions?: EventDetailActions;
   /** Mensagem de erro de uma acao — some quando a acao da certo. */
@@ -136,7 +211,7 @@ export function EventDetailScreen({ event, tasks = [], backHref, actions, action
  * O cartao de resumo. Le-se de cima para baixo: quando, o que mais se sabe do
  * evento, como ele esta marcado e em que ponto do tempo ele esta.
  */
-function EventSummary({ event, dayKey }: { event: EventDetailDto; dayKey: string }) {
+function EventSummary({ event, dayKey }: { event: PreviewEvent; dayKey: string }) {
   const now = useNow();
   // Sem relogio nao ha situacao no tempo: o HTML do servidor nasce num instante
   // e hidrata em outro, e os dois discordariam de um evento que acabou de virar.
@@ -189,7 +264,7 @@ function EventSummary({ event, dayKey }: { event: EventDetailDto; dayKey: string
  * cronometro de um que ainda corre. Sao formatos diferentes de proposito —
  * "1h 30min" e registro, "1:30:07" e um numero subindo.
  */
-function DurationReadout({ event, now, running }: { event: EventDetailDto; now: Date | null; running: boolean }) {
+function DurationReadout({ event, now, running }: { event: PreviewEvent; now: Date | null; running: boolean }) {
   if (running && now) {
     return (
       <p className={`${styles.duration} ${styles.live}`} title="Tempo decorrido">
@@ -271,7 +346,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   return <section className={styles.section}><h2>{title}</h2>{children}</section>;
 }
 
-const taskStatusVisuals: Record<WorkItemStatus, { Icon: LucideIcon; label: string }> = {
+const taskStatusVisuals: Record<PreviewTaskStatus, { Icon: LucideIcon; label: string }> = {
   todo: { Icon: Circle, label: "A fazer" },
   scheduled: { Icon: Clock3, label: "Agendada" },
   toDefine: { Icon: CircleDashed, label: "A definir" },
@@ -284,16 +359,16 @@ const taskStatusVisuals: Record<WorkItemStatus, { Icon: LucideIcon; label: strin
  * Os metadados que o evento carrega hoje. A prioridade normal nao aparece:
  * dizer "Normal" gasta uma linha para nao informar nada.
  */
-function metadataOf(event: EventDetailDto): Array<{ Icon: LucideIcon; text: string }> {
+function metadataOf(event: PreviewEvent): Array<{ Icon: LucideIcon; text: string }> {
   const rows: Array<{ Icon: LucideIcon; text: string }> = [];
-  if (event.priority !== "normal") rows.push({ Icon: Flag, text: priorityLabels[event.priority] });
+  if (event.priority !== "normal") rows.push({ Icon: Flag, text: previewPriorityLabels[event.priority] });
   if (event.notifyOffsetsMinutes.length) {
     rows.push({ Icon: Bell, text: event.notifyOffsetsMinutes.map(notificationOffsetLabel).join(" · ") });
   }
   return rows;
 }
 
-function NoteSection({ note }: { note: NoteDto }) {
+function NoteSection({ note }: { note: PreviewNote }) {
   if (note.type === "meal") return (
     <Section title="Refeição">
       <p className={styles.prose}>{note.data.name}</p>
@@ -334,7 +409,7 @@ function NoteSection({ note }: { note: NoteDto }) {
   return null;
 }
 
-function Nutrition({ data }: { data: MealItem }) {
+function Nutrition({ data }: { data: PreviewMeal }) {
   if (data.generation?.status === "pending" || data.generation?.status === "failed") {
     return <MealGenerationStatus data={data} />;
   }
