@@ -107,7 +107,7 @@ describe("PostgresEntityBatchWriter", () => {
 
       expect(await events.findById(event.id)).toBeNull();
       expect(await artifacts.findById(note.id)).toBeNull();
-      expect(await countRows(ctx.pool, "events", "deleted_at IS NOT NULL")).toBe(1);
+      expect(await countRows(ctx.pool, "tasks", "deleted_at IS NOT NULL")).toBe(1);
       expect(await countRows(ctx.pool, "artifacts", "deleted_at IS NOT NULL")).toBe(1);
     });
 
@@ -204,7 +204,7 @@ describe("PostgresEntityBatchWriter", () => {
     const sequence = (...pairs: Array<[string, string]>): EntityBatch["sequence"] =>
       pairs.map(([fromId, toId]) => ({ op: "add" as const, fromId, toId }));
     const edges = () =>
-      selectRows(ctx.pool, "SELECT from_event_id, to_event_id, relation FROM event_event_relation ORDER BY relation, from_event_id");
+      selectRows(ctx.pool, "SELECT from_task_id, to_task_id, relation FROM task_task_relation ORDER BY relation, from_task_id");
 
     test("add grava a aresta precedes, lida nos dois lados, sem revisar nenhum dos eventos", async () => {
       const a = await saved(trackedEvent(USER, "Escolher a cor"));
@@ -212,7 +212,7 @@ describe("PostgresEntityBatchWriter", () => {
 
       await writer.commit(batchOf({ sequence: sequence([a.id, b.id]) }));
 
-      expect(await edges()).toEqual([{ from_event_id: a.id, to_event_id: b.id, relation: "precedes" }]);
+      expect(await edges()).toEqual([{ from_task_id: a.id, to_task_id: b.id, relation: "precedes" }]);
       expect(await events.findById(a.id)).toMatchObject({ previousIds: [], nextIds: [b.id], revision: 1 });
       expect(await events.findById(b.id)).toMatchObject({ previousIds: [a.id], nextIds: [], revision: 1 });
     });
@@ -224,7 +224,7 @@ describe("PostgresEntityBatchWriter", () => {
       await writer.commit(batchOf({ sequence: sequence([a.id, b.id], [a.id, b.id]) }));
       await writer.commit(batchOf({ sequence: sequence([a.id, b.id]) }));
 
-      expect(await countRows(ctx.pool, "event_event_relation", "relation = 'precedes'")).toBe(1);
+      expect(await countRows(ctx.pool, "task_task_relation", "relation = 'precedes'")).toBe(1);
       expect((await events.findById(b.id))?.previousIds).toEqual([a.id]);
     });
 
@@ -241,7 +241,7 @@ describe("PostgresEntityBatchWriter", () => {
         }),
       );
 
-      expect(await edges()).toEqual([{ from_event_id: a.id, to_event_id: c.id, relation: "precedes" }]);
+      expect(await edges()).toEqual([{ from_task_id: a.id, to_task_id: c.id, relation: "precedes" }]);
       expect((await events.findById(b.id))?.previousIds).toEqual([]);
       expect((await events.findById(b.id))?.revision).toBe(1);
     });
@@ -253,7 +253,7 @@ describe("PostgresEntityBatchWriter", () => {
 
       await writer.commit(batchOf({ sequence: [{ op: "remove", fromId: a.id, toId: b.id }, { op: "add", fromId: a.id, toId: b.id }] }));
 
-      expect(await countRows(ctx.pool, "event_event_relation", "relation = 'precedes'")).toBe(1);
+      expect(await countRows(ctx.pool, "task_task_relation", "relation = 'precedes'")).toBe(1);
     });
 
     test("uma ponta pode ser evento novo do mesmo lote, mesmo listado depois da aresta", async () => {
@@ -314,7 +314,7 @@ describe("PostgresEntityBatchWriter", () => {
       }
       await expect(writer.commit(batchOf({ sequence: sequence([a.id, a.id]) }))).rejects.toThrow();
 
-      expect(await countRows(ctx.pool, "event_event_relation", "relation = 'precedes'")).toBe(2);
+      expect(await countRows(ctx.pool, "task_task_relation", "relation = 'precedes'")).toBe(2);
     });
 
     test("eventos novos que fecham ciclo entre si recusam o lote inteiro", async () => {
@@ -329,7 +329,7 @@ describe("PostgresEntityBatchWriter", () => {
         ),
       ).rejects.toThrow(EventValidationError);
 
-      expect(await countRows(ctx.pool, "events")).toBe(0);
+      expect(await countRows(ctx.pool, "tasks")).toBe(0);
     });
 
     test("ponta de outro usuario, apagada ou inexistente recusa o lote como conflito", async () => {
@@ -363,7 +363,7 @@ describe("PostgresEntityBatchWriter", () => {
         expect(await artifacts.findById(note.id), what).toBeNull();
         expect(await events.findById(created.id), what).toBeNull();
       }
-      expect(await countRows(ctx.pool, "event_event_relation")).toBe(0);
+      expect(await countRows(ctx.pool, "task_task_relation")).toBe(0);
     });
 
     test("o evento apagado no lote some das listas, mas a aresta continua no banco", async () => {
@@ -374,7 +374,7 @@ describe("PostgresEntityBatchWriter", () => {
       await writer.commit(batchOf({ tasks: [{ op: "delete", id: a.id, expectedRevision: 1 }] }));
 
       expect((await events.findById(b.id))?.previousIds).toEqual([]);
-      expect(await countRows(ctx.pool, "event_event_relation", "relation = 'precedes'")).toBe(1);
+      expect(await countRows(ctx.pool, "task_task_relation", "relation = 'precedes'")).toBe(1);
     });
   });
 
@@ -390,8 +390,8 @@ describe("PostgresEntityBatchWriter", () => {
           tasks: [{ op: "create", entity: created }],
           afterWrite: async (transaction) => {
             const tx = transaction as Tx;
-            seenInsideTransaction = (await tx.execute(sql`SELECT 1 FROM events WHERE id = ${created.id}`)).rows.length;
-            seenOutsideTransaction = await countRows(ctx.pool, "events");
+            seenInsideTransaction = (await tx.execute(sql`SELECT 1 FROM tasks WHERE id = ${created.id}`)).rows.length;
+            seenOutsideTransaction = await countRows(ctx.pool, "tasks");
             await insertAgentEvent(tx, { id: stepId, userId: USER, kind: "step", status: "done", name: "Passo", data: {} });
             await tx.insert(schema.eventEventRelation).values({ fromEventId: stepId, toEventId: created.id, relation: "generates" });
           },
@@ -400,8 +400,8 @@ describe("PostgresEntityBatchWriter", () => {
 
       expect(seenInsideTransaction).toBe(1);
       expect(seenOutsideTransaction).toBe(0);
-      expect(await selectRows(ctx.pool, "SELECT from_event_id, to_event_id, relation FROM event_event_relation")).toEqual([
-        { from_event_id: stepId, to_event_id: created.id, relation: "generates" },
+      expect(await selectRows(ctx.pool, "SELECT from_task_id, to_task_id, relation FROM task_task_relation")).toEqual([
+        { from_task_id: stepId, to_task_id: created.id, relation: "generates" },
       ]);
     });
 
@@ -425,7 +425,7 @@ describe("PostgresEntityBatchWriter", () => {
       ).rejects.toThrow("o passo nao pode ser gravado");
 
       expect(await artifacts.findById(note.id)).toBeNull();
-      expect(await countRows(ctx.pool, "events")).toBe(1);
+      expect(await countRows(ctx.pool, "tasks")).toBe(1);
       expect(await events.findById(origin.id)).not.toBeNull();
     });
   });
@@ -442,7 +442,7 @@ describe("PostgresEntityBatchWriter", () => {
     }
 
     const occurrenceIds = async () =>
-      (await selectRows(ctx.pool, "SELECT id FROM events ORDER BY started_at")).map((row) => row.id);
+      (await selectRows(ctx.pool, "SELECT id FROM tasks ORDER BY started_at")).map((row) => row.id);
 
     test("a serie nova entra antes da primeira ocorrencia que o lote traz", async () => {
       const recurrence = dailyRecurrence(USER, DAYS[0]);
@@ -474,7 +474,7 @@ describe("PostgresEntityBatchWriter", () => {
       ).rejects.toThrow(EntityBatchConflictError);
 
       expect(await recurrences.findById(recurrence.id)).toBeNull();
-      expect(await countRows(ctx.pool, "events")).toBe(0);
+      expect(await countRows(ctx.pool, "tasks")).toBe(0);
     });
 
     test("a serie editada libera os dias de fromDay em diante para a primeira ocorrencia nova", async () => {

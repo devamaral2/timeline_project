@@ -13,7 +13,7 @@ async function scoped(sql: string): Promise<string> {
 
 describe("buildScopedSql", () => {
   test("wraps the query under one materialized CTE per logical table", async () => {
-    const sql = await scoped("SELECT id FROM events");
+    const sql = await scoped("SELECT id FROM tasks");
 
     for (const table of logicalTables()) {
       expect(sql).toContain(`${table.name} AS MATERIALIZED (`);
@@ -22,20 +22,20 @@ describe("buildScopedSql", () => {
   });
 
   test("a trailing line comment cannot swallow the wrapper", async () => {
-    const sql = await scoped("SELECT id FROM events -- os ids");
+    const sql = await scoped("SELECT id FROM tasks -- os ids");
     expect(sql).toContain("-- os ids\n) AS agent_q");
   });
 
   test("strips trailing semicolons", async () => {
-    const sql = await scoped("SELECT id FROM events;;  ");
-    expect(sql).toContain("SELECT id FROM events\n) AS agent_q");
+    const sql = await scoped("SELECT id FROM tasks;;  ");
+    expect(sql).toContain("SELECT id FROM tasks\n) AS agent_q");
   });
 
   test("refuses a statement that differs from the validated one", async () => {
-    const validation = await validateAgentSql("SELECT id FROM events");
+    const validation = await validateAgentSql("SELECT id FROM tasks");
     if (!validation.ok) throw new Error(validation.error);
 
-    await expect(buildScopedSql("SELECT name FROM events", validation.statement, 10)).rejects.toThrow();
+    await expect(buildScopedSql("SELECT name FROM tasks", validation.statement, 10)).rejects.toThrow();
   });
 });
 
@@ -61,7 +61,7 @@ describe("logical schema", () => {
 
   test("so eventos de pessoa entram: nenhum CTE de evento deixa passar um pedido ao agente", () => {
     for (const table of logicalTables()) {
-      if (table.from.includes("public.events")) expect(table.where).toContain("actor = 'human'");
+      if (table.from.includes("public.tasks")) expect(table.where).toContain("actor = 'human'");
     }
   });
 });

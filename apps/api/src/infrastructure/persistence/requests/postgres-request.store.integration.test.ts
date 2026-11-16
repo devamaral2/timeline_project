@@ -34,24 +34,24 @@ describe("PostgresRequestStore", () => {
   const start = (text = "almocei arroz e feijão", extra: Partial<Parameters<PostgresRequestStore["start"]>[0]> = {}) =>
     store.start({ userId: USER, route: "steps", text, job: "request-dispatch", ...extra });
   const rows = async <T extends Record<string, unknown>>(sql: string, params: unknown[] = []) => (await ctx.pool.query<T>(sql, params)).rows;
-  const jobs = () => rows<{ kind: string; event_id: string; concurrency_key: string | null; payload: unknown }>(
-    "SELECT kind, event_id, concurrency_key, payload FROM jobs ORDER BY created_at, id");
+  const jobs = () => rows<{ kind: string; task_id: string; concurrency_key: string | null; payload: unknown }>(
+    "SELECT kind, task_id, concurrency_key, payload FROM jobs ORDER BY created_at, id");
 
   test("o pedido e um evento de agente com a mensagem do usuario como primeira entrada e o job que o executa", async () => {
     const text = `almocei ${"muito bem ".repeat(20)}`;
     const { requestId, created } = await start(text, { context: { screen: "agenda" }, forceFallback: true });
 
     expect(created).toBe(true);
-    const [event] = await rows("SELECT actor, kind, status, name, data, started_at, finished_at FROM events WHERE id = $1", [requestId]);
+    const [event] = await rows("SELECT actor, kind, status, name, data, started_at, finished_at FROM tasks WHERE id = $1", [requestId]);
     expect(event).toMatchObject({
       actor: "agent", kind: "request", status: "queued", finished_at: null,
       data: { route: "steps", context: { screen: "agenda" }, forceFallback: true },
     });
     expect(String(event?.name).length).toBeLessThanOrEqual(80);
     expect(event?.started_at).toBeInstanceOf(Date);
-    expect(await rows("SELECT kind, role, content FROM event_entries WHERE event_id = $1", [requestId]))
+    expect(await rows("SELECT kind, role, content FROM task_entries WHERE task_id = $1", [requestId]))
       .toEqual([{ kind: "message", role: "user", content: text }]);
-    expect(await jobs()).toMatchObject([{ kind: "request-dispatch", event_id: requestId, payload: { requestId } }]);
+    expect(await jobs()).toMatchObject([{ kind: "request-dispatch", task_id: requestId, payload: { requestId } }]);
 
     expect(await store.find(requestId)).toMatchObject({
       id: requestId, userId: USER, kind: "request", route: "steps", status: "queued", prompt: text,
@@ -71,7 +71,7 @@ describe("PostgresRequestStore", () => {
       { scope: "request", key: "m1", response: { requestId: first.requestId } },
       { scope: "request", key: "m2", response: { requestId: left.requestId } },
     ]);
-    expect(await rows("SELECT id FROM events")).toHaveLength(2);
+    expect(await rows("SELECT id FROM tasks")).toHaveLength(2);
     expect(await jobs()).toHaveLength(2);
     // A chave e por usuario: a mesma mensagem de outro usuario e outro pedido.
     const other = await store.start({ userId: "user-2", route: "steps", text: "almocei", job: "request-dispatch", clientMessageId: "m1" });
@@ -94,24 +94,24 @@ describe("PostgresRequestStore", () => {
       { id: loop, agent: "fallback", expected: "one", input: { round: 2 } },
     ], dispatch);
 
-    expect(await rows("SELECT kind, status, name, data FROM events WHERE id = ANY($1::char(26)[]) ORDER BY id", [[first, second, loop]])).toEqual([
+    expect(await rows("SELECT kind, status, name, data FROM tasks WHERE id = ANY($1::char(26)[]) ORDER BY id", [[first, second, loop]])).toEqual([
       { kind: "step", status: "queued", name: "Criando eventos", data: { agent: "event-create", expected: "many" } },
       { kind: "step", status: "queued", name: "Editando eventos", data: { agent: "event-edit", expected: "one" } },
       { kind: "step", status: "queued", name: "Analisando o pedido", data: { agent: "fallback", expected: "one", round: 2 } },
     ]);
-    expect(await rows("SELECT to_event_id, relation FROM event_event_relation WHERE from_event_id = $1 ORDER BY to_event_id", [requestId]))
-      .toEqual([first, second, loop].map((id) => ({ to_event_id: id, relation: "step" })));
+    expect(await rows("SELECT to_task_id, relation FROM task_task_relation WHERE from_task_id = $1 ORDER BY to_task_id", [requestId]))
+      .toEqual([first, second, loop].map((id) => ({ to_task_id: id, relation: "step" })));
     expect((await jobs()).slice(1)).toMatchObject([
-      { kind: "request-step", event_id: first, payload: { requestId, stepId: first } },
-      { kind: "request-step", event_id: second },
-      { kind: "request-fallback", event_id: loop },
+      { kind: "request-step", task_id: first, payload: { requestId, stepId: first } },
+      { kind: "request-step", task_id: second },
+      { kind: "request-fallback", task_id: loop },
     ]);
 
     // As escolhas ficam no pedido; as medidas, numa entrada de trace sem texto.
-    const [request] = await rows("SELECT status, data FROM events WHERE id = $1", [requestId]);
+    const [request] = await rows("SELECT status, data FROM tasks WHERE id = $1", [requestId]);
     expect(request).toMatchObject({ status: "running", data: { dispatch: { answers: dispatch.answers, candidates: dispatch.candidates } } });
     expect(request?.data).not.toHaveProperty("dispatch.model");
-    expect(await rows("SELECT content, data FROM event_entries WHERE event_id = $1 AND kind = 'trace'", [requestId]))
+    expect(await rows("SELECT content, data FROM task_entries WHERE task_id = $1 AND kind = 'trace'", [requestId]))
       .toEqual([{ content: null, data: { stage: "dispatch", model: "jev-test", latencyMs: 12, steps: 3 } }]);
     expect((await store.find(requestId))?.dispatch).toEqual(dispatch);
 
@@ -138,12 +138,12 @@ describe("PostgresRequestStore", () => {
       result: { columns: ["name"], rows: [["Almoço"]], truncated: false },
     });
 
-    const entries = await rows("SELECT kind, role, content, data FROM event_entries WHERE event_id = $1 ORDER BY id", [stepId]);
+    const entries = await rows("SELECT kind, role, content, data FROM task_entries WHERE task_id = $1 ORDER BY id", [stepId]);
     expect(entries.map((entry) => entry.kind)).toEqual(["input", "thought", "thought", "trace", "result"]);
     expect(entries[0]).toMatchObject({ content: "Listar hoje", role: null });
     expect(entries[3]).toEqual({ kind: "trace", role: null, content: null, data: { timings: { total: 850 } } });
     expect(entries[4]?.data).toEqual({ type: "query", columns: ["name"], rows: [["Almoço"]], truncated: false });
-    expect(await rows("SELECT revision, status, finished_at IS NOT NULL AS finished FROM events WHERE id = $1", [stepId]))
+    expect(await rows("SELECT revision, status, finished_at IS NOT NULL AS finished FROM tasks WHERE id = $1", [stepId]))
       .toEqual([{ revision: 1, status: "done", finished: true }]);
 
     const [step] = await store.steps(requestId);
@@ -155,7 +155,7 @@ describe("PostgresRequestStore", () => {
       ],
     });
     // A finalizacao do pedido roda em serie: o job aponta para o passo e leva a chave do pedido.
-    expect((await jobs()).at(-1)).toMatchObject({ kind: "request-finalize", event_id: stepId, concurrency_key: `finalize:${requestId}` });
+    expect((await jobs()).at(-1)).toMatchObject({ kind: "request-finalize", task_id: stepId, concurrency_key: `finalize:${requestId}` });
   });
 
   test("o que um passo tocou vira relacao partindo dele, na transacao das entidades; a finalizacao e uma entrada de resultado", async () => {
@@ -191,21 +191,21 @@ describe("PostgresRequestStore", () => {
       }),
     });
 
-    expect(await rows("SELECT to_event_id, relation FROM event_event_relation WHERE from_event_id = $1 ORDER BY relation", [createStep]))
-      .toEqual([{ to_event_id: gone.id, relation: "deletes" }, { to_event_id: meal.id, relation: "generates" }]);
+    expect(await rows("SELECT to_task_id, relation FROM task_task_relation WHERE from_task_id = $1 ORDER BY relation", [createStep]))
+      .toEqual([{ to_task_id: gone.id, relation: "deletes" }, { to_task_id: meal.id, relation: "generates" }]);
     // O evento tambem aponta para o pedido que o criou ou o apagou, alem do passo.
-    expect(await rows("SELECT to_event_id, relation FROM event_event_relation WHERE from_event_id = $1 AND relation <> 'step' ORDER BY relation", [requestId]))
-      .toEqual([{ to_event_id: gone.id, relation: "deletes" }, { to_event_id: meal.id, relation: "generates" }]);
+    expect(await rows("SELECT to_task_id, relation FROM task_task_relation WHERE from_task_id = $1 AND relation <> 'step' ORDER BY relation", [requestId]))
+      .toEqual([{ to_task_id: gone.id, relation: "deletes" }, { to_task_id: meal.id, relation: "generates" }]);
     // O detalhe do evento le o pedido, nunca o passo.
     expect(await new PostgresEventRequestLinkQuery(ctx.db).linksOf(meal.id))
       .toMatchObject([{ requestId, relation: "generates", name: "almocei arroz e feijão" }]);
-    expect(await rows("SELECT event_id, artifact_id, relation, position FROM event_artifact_relation ORDER BY relation, artifact_id")).toEqual([
-      { event_id: createStep, artifact_id: food.id, relation: "creates", position: null },
-      { event_id: editStep, artifact_id: food.id, relation: "deletes", position: null },
-      { event_id: editStep, artifact_id: old.id, relation: "updates", position: null },
+    expect(await rows("SELECT task_id, artifact_id, relation, position FROM task_artifact_relation ORDER BY relation, artifact_id")).toEqual([
+      { task_id: createStep, artifact_id: food.id, relation: "creates", position: null },
+      { task_id: editStep, artifact_id: food.id, relation: "deletes", position: null },
+      { task_id: editStep, artifact_id: old.id, relation: "updates", position: null },
     ].sort((a, b) => a.relation.localeCompare(b.relation) || a.artifact_id.localeCompare(b.artifact_id)));
     // Relacoes que partem de um evento de agente nao contam como edicao de ninguem.
-    expect(await rows("SELECT revision FROM events WHERE id = $1", [meal.id])).toEqual([{ revision: 1 }]);
+    expect(await rows("SELECT revision FROM tasks WHERE id = $1", [meal.id])).toEqual([{ revision: 1 }]);
 
     const entities = await store.entities(requestId);
     // A mesma entidade tocada por dois passos conta uma vez: vale o primeiro.
@@ -221,7 +221,7 @@ describe("PostgresRequestStore", () => {
     const link = { from: { kind: "artifact" as const, id: food.id }, to: { kind: "event" as const, id: meal.id } };
     await store.markFinalized(undefined, { kind: "artifact", id: food.id, stepId: createStep }, [link]);
     await store.markFinalized(undefined, { kind: "event", id: gone.id, stepId: createStep }, []);
-    expect(await rows("SELECT data FROM event_entries WHERE event_id = $1 AND kind = 'result' ORDER BY id", [createStep])).toEqual([
+    expect(await rows("SELECT data FROM task_entries WHERE task_id = $1 AND kind = 'result' ORDER BY id", [createStep])).toEqual([
       { data: { type: "finalized", entity: { kind: "artifact", id: food.id }, links: [link] } },
       { data: { type: "finalized", entity: { kind: "event", id: gone.id }, links: [] } },
     ]);
@@ -247,7 +247,7 @@ describe("PostgresRequestStore", () => {
       afterWrite: (tx) => store.recordStepSuccess(tx, { requestId, stepId, entities: [{ kind: "event", id: event.id, operation: "create" }], timings: {} }),
     })).rejects.toThrow("no longer open");
 
-    expect(await rows("SELECT id FROM events WHERE id = $1", [event.id])).toEqual([]);
+    expect(await rows("SELECT id FROM tasks WHERE id = $1", [event.id])).toEqual([]);
     expect((await store.steps(requestId))[0]?.status).toBe("cancel");
   });
 
@@ -261,7 +261,7 @@ describe("PostgresRequestStore", () => {
 
     expect((await store.steps(requestId))[0]).toMatchObject({ status: "failed", errorCode: "agent_timeout", timings: { total: 8000 } });
     expect((await jobs()).filter((job) => job.kind === "request-finalize")).toHaveLength(1);
-    expect(await rows("SELECT content, data FROM event_entries WHERE event_id = $1 AND kind = 'trace'", [stepId]))
+    expect(await rows("SELECT content, data FROM task_entries WHERE task_id = $1 AND kind = 'trace'", [stepId]))
       .toEqual([{ content: null, data: { timings: { total: 8000 }, errorCode: "agent_timeout" } }]);
   });
 
@@ -273,7 +273,7 @@ describe("PostgresRequestStore", () => {
     });
     await store.finish(requestId, "failed", { message: "tarde demais" });
 
-    expect((await rows("SELECT kind, role, content FROM event_entries WHERE event_id = $1 ORDER BY id", [requestId])).slice(1)).toEqual([
+    expect((await rows("SELECT kind, role, content FROM task_entries WHERE task_id = $1 ORDER BY id", [requestId])).slice(1)).toEqual([
       { kind: "thought", role: null, content: "O passo de artefatos falhou." },
       { kind: "message", role: "agent", content: "Criei o evento, mas não o alimento." },
     ]);
@@ -302,7 +302,7 @@ describe("PostgresRequestStore", () => {
 
     await store.finish(requestId, "done", { message: "Feito.", trace });
 
-    const entries = await rows("SELECT kind, content, data FROM event_entries WHERE event_id = $1 ORDER BY id", [requestId]);
+    const entries = await rows("SELECT kind, content, data FROM task_entries WHERE task_id = $1 ORDER BY id", [requestId]);
     expect(entries.map((entry) => entry.kind)).toEqual(["message", "thought", "thought", "thought", "trace", "message"]);
     expect(entries[4]).toEqual({
       kind: "trace", content: null,
@@ -322,9 +322,9 @@ describe("PostgresRequestStore", () => {
     const second = await start("e amanhã?", { sessionId: first.requestId });
     const third = await start("e depois?", { sessionId: first.requestId });
 
-    expect(await rows("SELECT from_event_id, to_event_id FROM event_event_relation WHERE relation = 'follow_up' ORDER BY to_event_id")).toEqual([
-      { from_event_id: first.requestId, to_event_id: second.requestId },
-      { from_event_id: first.requestId, to_event_id: third.requestId },
+    expect(await rows("SELECT from_task_id, to_task_id FROM task_task_relation WHERE relation = 'follow_up' ORDER BY to_task_id")).toEqual([
+      { from_task_id: first.requestId, to_task_id: second.requestId },
+      { from_task_id: first.requestId, to_task_id: third.requestId },
     ]);
     expect((await store.find(first.requestId))?.sessionId).toBeUndefined();
     expect((await store.find(second.requestId))?.sessionId).toBe(first.requestId);
@@ -383,13 +383,13 @@ describe("PostgresRequestStore", () => {
       afterWrite: (tx) => store.completeVoice(tx, { requestId, eventId: event.id }),
     });
 
-    expect(await rows("SELECT to_event_id, relation FROM event_event_relation WHERE from_event_id = $1", [requestId]))
-      .toEqual([{ to_event_id: event.id, relation: "generates" }]);
+    expect(await rows("SELECT to_task_id, relation FROM task_task_relation WHERE from_task_id = $1", [requestId]))
+      .toEqual([{ to_task_id: event.id, relation: "generates" }]);
     expect(await store.find(requestId)).toMatchObject({ route: "voice", status: "done" });
     expect(await store.entities(requestId)).toMatchObject([
       { kind: "event", id: event.id, operation: "create", stepId: requestId, finalized: true, summary: { name: "Estudar" } },
     ]);
-    expect((await rows("SELECT kind, data FROM event_entries WHERE event_id = $1 ORDER BY id", [requestId])).at(-1))
+    expect((await rows("SELECT kind, data FROM task_entries WHERE task_id = $1 ORDER BY id", [requestId])).at(-1))
       .toEqual({ kind: "result", data: { type: "voice", eventId: event.id } });
   });
 
@@ -424,8 +424,8 @@ describe("PostgresRequestStore", () => {
     expect(await store.find(step?.id as string)).toBeUndefined();
 
     const plan = await rows<{ "QUERY PLAN": string }>(
-      "EXPLAIN SELECT id FROM events e WHERE e.user_id = $1 AND e.actor = 'agent' AND e.kind <> 'step' AND e.deleted_at IS NULL ORDER BY e.id DESC LIMIT 20", [USER]);
-    expect(plan.map((row) => row["QUERY PLAN"]).join("\n")).toContain("events_requests_idx");
+      "EXPLAIN SELECT id FROM tasks e WHERE e.user_id = $1 AND e.actor = 'agent' AND e.kind <> 'step' AND e.deleted_at IS NULL ORDER BY e.id DESC LIMIT 20", [USER]);
+    expect(plan.map((row) => row["QUERY PLAN"]).join("\n")).toContain("tasks_requests_idx");
   });
 
   test("candidatos de edicao: so eventos de pessoa, artefatos de conteudo do usuario e series", async () => {

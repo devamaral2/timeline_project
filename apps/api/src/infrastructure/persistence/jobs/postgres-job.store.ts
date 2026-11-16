@@ -20,7 +20,7 @@ export interface Job {
 /** As colunas de `jobs` na forma de `Job`; `table` qualifica quando a consulta junta outra relacao. */
 function projectionOf(table = "jobs"): string {
   return `${table}.id, ${table}.kind, ${table}.user_id AS "userId", ${table}.actor_id AS "actorId",
-    ${table}.event_id AS "eventId", ${table}.payload, ${table}.status, ${table}.progress, ${table}.error,
+    ${table}.task_id AS "eventId", ${table}.payload, ${table}.status, ${table}.progress, ${table}.error,
     ${table}.attempts, ${table}.lease_token AS "leaseToken", ${table}.created_at AS "createdAt",
     ${table}.updated_at AS "updatedAt"`;
 }
@@ -48,7 +48,7 @@ export class PostgresJobStore {
   /** O job vivo de um evento, se houver: e dele que sai o progresso passageiro. */
   async activeOfEvent(eventId: string): Promise<Job | undefined> {
     return (await this.database.pool.query<Job>(
-      `SELECT ${projection} FROM jobs WHERE event_id = $1 AND status IN ('queued', 'running')
+      `SELECT ${projection} FROM jobs WHERE task_id = $1 AND status IN ('queued', 'running')
        ORDER BY created_at DESC, id DESC LIMIT 1`, [eventId])).rows[0];
   }
 
@@ -57,7 +57,7 @@ export class PostgresJobStore {
     if (eventIds.length === 0) return [];
     const result = await this.database.pool.query<{ id: string }>(
       `UPDATE jobs SET status = 'cancelled', lease_until = NULL, progress = NULL, updated_at = now()
-       WHERE event_id = ANY($1::char(26)[]) AND user_id = $2 AND status IN ('queued', 'running') RETURNING id`,
+       WHERE task_id = ANY($1::char(26)[]) AND user_id = $2 AND status IN ('queued', 'running') RETURNING id`,
       [eventIds, userId]);
     return result.rows.map((row) => row.id);
   }

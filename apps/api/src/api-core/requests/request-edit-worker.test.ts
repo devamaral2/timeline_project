@@ -106,13 +106,13 @@ describe("passo de editar eventos", () => {
       ctx.gateway.calls.push(input);
       round += 1;
       return round === 1
-        ? { modelName: "stub", value: { edits: [], query: { sql: "SELECT id, name FROM events" } } }
+        ? { modelName: "stub", value: { edits: [], query: { sql: "SELECT id, name FROM tasks" } } }
         : { modelName: "stub", value: { edits: [{ ...noEvent, id: real.id, estimatedFinishAt: iso(11) }], query: null } };
     };
 
     await ctx.editWorker.run("event-edit", payload);
 
-    expect(ctx.sql.calls).toEqual([{ userId: "user-1", sql: "SELECT id, name FROM events" }]);
+    expect(ctx.sql.calls).toEqual([{ userId: "user-1", sql: "SELECT id, name FROM tasks" }]);
     expect(ctx.gateway.calls).toHaveLength(2);
     expect(ctx.gateway.calls[1]?.user).toContain("Resultado da consulta");
     expect(ctx.store.stepRecords[0]?.status).toBe("done");
@@ -123,7 +123,7 @@ describe("passo de editar eventos", () => {
     const payload = await addStep(ctx, "s1", "event-edit", "one", { candidates: [] });
     ctx.gateway.complete = async (input) => {
       ctx.gateway.calls.push(input);
-      return { modelName: "stub", value: { edits: [], query: { sql: "SELECT id FROM events" } } };
+      return { modelName: "stub", value: { edits: [], query: { sql: "SELECT id FROM tasks" } } };
     };
 
     await ctx.editWorker.run("event-edit", payload);

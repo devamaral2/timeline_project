@@ -28,14 +28,14 @@ describe("banco novo: checks, restricoes e indices", () => {
     );
   }
 
-  async function event(overrides: Row = {}): Promise<string> {
+  async function task(overrides: Row = {}): Promise<string> {
     const id = (overrides.id as string | undefined) ?? ulid();
-    await insert("events", { id, user_id: "user-1", actor: "human", kind: "common", name: "Evento", ...overrides });
+    await insert("tasks", { id, user_id: "user-1", actor: "human", kind: "common", name: "Tarefa", ...overrides });
     return id;
   }
 
-  const agentEvent = (overrides: Row = {}) =>
-    event({ actor: "agent", kind: "request", status: "queued", name: "Pedido", ...overrides });
+  const agentTask = (overrides: Row = {}) =>
+    task({ actor: "agent", kind: "request", status: "queued", name: "Pedido", ...overrides });
 
   async function artifact(overrides: Row = {}): Promise<string> {
     const id = (overrides.id as string | undefined) ?? ulid();
@@ -68,25 +68,25 @@ describe("banco novo: checks, restricoes e indices", () => {
       "artifact_artifact_relation",
       "artifact_tags",
       "artifacts",
-      "event_artifact_relation",
-      "event_entries",
-      "event_event_relation",
-      "event_tags",
-      "events",
       "idempotency_keys",
       "jobs",
       "recurrence_exceptions",
       "recurrences",
       "tags",
+      "task_artifact_relation",
+      "task_entries",
+      "task_tags",
+      "task_task_relation",
+      "tasks",
     ]);
   });
 
   describe("events: tipo e status conforme o executor", () => {
     test("pessoa aceita os tipos de pessoa e recusa tipo de agente", async () => {
-      for (const kind of ["common", "meal", "sleep", "training"]) await event({ kind });
+      for (const kind of ["common", "meal", "sleep", "training"]) await task({ kind });
 
-      await expect(event({ kind: "request" })).rejects.toThrow(/events_kind_matches_actor/);
-      await expect(event({ kind: "step" })).rejects.toThrow(/events_kind_matches_actor/);
+      await expect(task({ kind: "request" })).rejects.toThrow(/tasks_kind_matches_actor/);
+      await expect(task({ kind: "step" })).rejects.toThrow(/tasks_kind_matches_actor/);
     });
 
     test("agente aceita os tipos de agente e recusa tipo de pessoa", async () => {
@@ -99,72 +99,72 @@ describe("banco novo: checks, restricoes e indices", () => {
         "cron",
         "step",
       ]) {
-        await agentEvent({ kind });
+        await agentTask({ kind });
       }
 
-      await expect(agentEvent({ kind: "meal" })).rejects.toThrow(/events_kind_matches_actor/);
+      await expect(agentTask({ kind: "meal" })).rejects.toThrow(/tasks_kind_matches_actor/);
     });
 
     test("evento de pessoa pode nao ter status: e o evento de referencia", async () => {
-      const id = await event({ status: null });
+      const id = await task({ status: null });
 
-      const { rows } = await ctx.pool.query("SELECT status, priority, revision FROM events WHERE id = $1", [id]);
+      const { rows } = await ctx.pool.query("SELECT status, priority, revision FROM tasks WHERE id = $1", [id]);
       expect(rows[0]).toEqual({ status: null, priority: "medium", revision: 1 });
     });
 
     test("evento de agente sempre tem status", async () => {
-      await expect(agentEvent({ status: null })).rejects.toThrow(/events_status_matches_actor/);
+      await expect(agentTask({ status: null })).rejects.toThrow(/tasks_status_matches_actor/);
     });
 
     test("cada executor so aceita os seus status; done e cancel valem para os dois", async () => {
-      for (const status of ["todo", "toDefine", "doing", "inHold", "done", "cancel", "missed"]) await event({ status });
-      for (const status of ["queued", "running", "waiting", "done", "failed", "cancel"]) await agentEvent({ status });
+      for (const status of ["todo", "toDefine", "doing", "inHold", "done", "cancel", "missed"]) await task({ status });
+      for (const status of ["queued", "running", "waiting", "done", "failed", "cancel"]) await agentTask({ status });
 
-      await expect(event({ status: "queued" })).rejects.toThrow(/events_status_matches_actor/);
-      await expect(event({ status: "scheduled" })).rejects.toThrow(/events_status_matches_actor/);
-      await expect(agentEvent({ status: "todo" })).rejects.toThrow(/events_status_matches_actor/);
-      await expect(agentEvent({ status: "missed" })).rejects.toThrow(/events_status_matches_actor/);
+      await expect(task({ status: "queued" })).rejects.toThrow(/tasks_status_matches_actor/);
+      await expect(task({ status: "scheduled" })).rejects.toThrow(/tasks_status_matches_actor/);
+      await expect(agentTask({ status: "todo" })).rejects.toThrow(/tasks_status_matches_actor/);
+      await expect(agentTask({ status: "missed" })).rejects.toThrow(/tasks_status_matches_actor/);
     });
 
     test("executor e prioridade fora do conjunto sao recusados", async () => {
-      await expect(event({ actor: "bot" })).rejects.toThrow(/events_actor_valid/);
-      await expect(event({ priority: "normal" })).rejects.toThrow(/events_priority_valid/);
+      await expect(task({ actor: "bot" })).rejects.toThrow(/tasks_actor_valid/);
+      await expect(task({ priority: "normal" })).rejects.toThrow(/tasks_priority_valid/);
     });
   });
 
   describe("events: datas", () => {
     test("o fim planejado nao vem antes do inicio", async () => {
       await expect(
-        event({ started_at: "2026-11-14T10:00:00Z", estimated_finish_at: "2026-11-14T09:00:00Z" }),
-      ).rejects.toThrow(/events_block_span/);
+        task({ started_at: "2026-11-14T10:00:00Z", estimated_finish_at: "2026-11-14T09:00:00Z" }),
+      ).rejects.toThrow(/tasks_block_span/);
     });
 
     test("fora do evento longo o bloco dura no maximo 31 dias", async () => {
-      await event({ started_at: "2026-11-01T10:00:00Z", estimated_finish_at: "2026-12-02T10:00:00Z" });
+      await task({ started_at: "2026-11-01T10:00:00Z", estimated_finish_at: "2026-12-02T10:00:00Z" });
 
       await expect(
-        event({ started_at: "2026-11-01T10:00:00Z", estimated_finish_at: "2026-12-02T10:00:01Z" }),
-      ).rejects.toThrow(/events_block_span/);
+        task({ started_at: "2026-11-01T10:00:00Z", estimated_finish_at: "2026-12-02T10:00:01Z" }),
+      ).rejects.toThrow(/tasks_block_span/);
     });
 
     test("concluir antes do inicio planejado e valido", async () => {
-      await event({ status: "done", started_at: "2026-11-15T10:00:00Z", finished_at: "2026-11-14T08:00:00Z" });
+      await task({ status: "done", started_at: "2026-11-15T10:00:00Z", finished_at: "2026-11-14T08:00:00Z" });
     });
 
     test("so o prazo, sem inicio, e valido", async () => {
-      await event({ status: "todo", estimated_finish_at: "2026-11-20T23:00:00Z" });
+      await task({ status: "todo", estimated_finish_at: "2026-11-20T23:00:00Z" });
     });
 
     test("os avisos ficam entre 1 minuto e 30 dias", async () => {
-      await event({ started_at: "2026-11-14T10:00:00Z", notify_offsets_minutes: [10, 43200] });
+      await task({ started_at: "2026-11-14T10:00:00Z", notify_offsets_minutes: [10, 43200] });
 
-      await expect(event({ notify_offsets_minutes: [0] })).rejects.toThrow(/events_notify_offsets_valid/);
-      await expect(event({ notify_offsets_minutes: [43201] })).rejects.toThrow(/events_notify_offsets_valid/);
+      await expect(task({ notify_offsets_minutes: [0] })).rejects.toThrow(/tasks_notify_offsets_valid/);
+      await expect(task({ notify_offsets_minutes: [43201] })).rejects.toThrow(/tasks_notify_offsets_valid/);
     });
   });
 
   describe("events: evento longo", () => {
-    const long = (overrides: Row = {}) => event({ long_running: true, status: "doing", ...overrides });
+    const long = (overrides: Row = {}) => task({ long_running: true, status: "doing", ...overrides });
 
     test("aceita meses de duracao e inicio real depois do prazo", async () => {
       await long({ started_at: "2026-11-01T10:00:00Z", estimated_finish_at: "2027-03-01T10:00:00Z" });
@@ -175,18 +175,18 @@ describe("banco novo: checks, restricoes e indices", () => {
     test("e sempre de pessoa, com status, sem serie e nunca perdido", async () => {
       const series = await recurrence();
 
-      await expect(agentEvent({ long_running: true })).rejects.toThrow(/events_long_running_shape/);
-      await expect(long({ status: null })).rejects.toThrow(/events_long_running_shape/);
-      await expect(long({ status: "missed" })).rejects.toThrow(/events_long_running_shape/);
+      await expect(agentTask({ long_running: true })).rejects.toThrow(/tasks_long_running_shape/);
+      await expect(long({ status: null })).rejects.toThrow(/tasks_long_running_shape/);
+      await expect(long({ status: "missed" })).rejects.toThrow(/tasks_long_running_shape/);
       await expect(long({ recurrence_id: series, occurrence_on: "2026-11-14" })).rejects.toThrow(
-        /events_long_running_shape/,
+        /tasks_long_running_shape/,
       );
     });
 
     test("sem prazo nao tem aviso; com prazo tem", async () => {
       await long({ estimated_finish_at: "2026-12-20T10:00:00Z", notify_offsets_minutes: [1440] });
 
-      await expect(long({ notify_offsets_minutes: [1440] })).rejects.toThrow(/events_long_running_notify/);
+      await expect(long({ notify_offsets_minutes: [1440] })).rejects.toThrow(/tasks_long_running_notify/);
     });
   });
 
@@ -194,36 +194,36 @@ describe("banco novo: checks, restricoes e indices", () => {
     test("ocorrencia precisa do dia", async () => {
       const series = await recurrence();
 
-      await expect(event({ recurrence_id: series })).rejects.toThrow(/events_occurrence_requires_day/);
+      await expect(task({ recurrence_id: series })).rejects.toThrow(/tasks_occurrence_requires_day/);
     });
 
     test("uma ocorrencia por dia, e a apagada continua ocupando o dia", async () => {
       const series = await recurrence();
-      await event({ recurrence_id: series, occurrence_on: "2026-11-14", deleted_at: "2026-11-14T12:00:00Z" });
-      await event({ recurrence_id: series, occurrence_on: "2026-11-15" });
+      await task({ recurrence_id: series, occurrence_on: "2026-11-14", deleted_at: "2026-11-14T12:00:00Z" });
+      await task({ recurrence_id: series, occurrence_on: "2026-11-15" });
 
-      await expect(event({ recurrence_id: series, occurrence_on: "2026-11-14" })).rejects.toThrow(
-        /events_recurrence_occurrence_unique/,
+      await expect(task({ recurrence_id: series, occurrence_on: "2026-11-14" })).rejects.toThrow(
+        /tasks_recurrence_occurrence_unique/,
       );
     });
 
     test("apagar a regra nao apaga as ocorrencias: so tira o vinculo", async () => {
       const series = await recurrence();
-      const id = await event({ recurrence_id: series, occurrence_on: "2026-11-14" });
+      const id = await task({ recurrence_id: series, occurrence_on: "2026-11-14" });
 
       await ctx.pool.query("DELETE FROM recurrences WHERE id = $1", [series]);
 
-      const { rows } = await ctx.pool.query("SELECT recurrence_id, occurrence_on::text FROM events WHERE id = $1", [id]);
+      const { rows } = await ctx.pool.query("SELECT recurrence_id, occurrence_on::text FROM tasks WHERE id = $1", [id]);
       expect(rows[0]).toEqual({ recurrence_id: null, occurrence_on: "2026-11-14" });
     });
   });
 
-  describe("event_entries", () => {
-    const entry = (eventId: string, overrides: Row) =>
-      insert("event_entries", { id: ulid(), event_id: eventId, user_id: "user-1", ...overrides });
+  describe("task_entries", () => {
+    const entry = (taskId: string, overrides: Row) =>
+      insert("task_entries", { id: ulid(), task_id: taskId, user_id: "user-1", ...overrides });
 
     test("aceita os cinco tipos", async () => {
-      const request = await agentEvent();
+      const request = await agentTask();
 
       await entry(request, { kind: "message", role: "user", content: "marca o treino" });
       await entry(request, { kind: "thought", content: "vou procurar o treino" });
@@ -231,38 +231,38 @@ describe("banco novo: checks, restricoes e indices", () => {
       await entry(request, { kind: "result", data: { eventId: "x" } });
       await entry(request, { kind: "input", content: "retrato do evento" });
 
-      expect(await count("event_entries")).toBe(5);
+      expect(await count("task_entries")).toBe(5);
     });
 
     test("role existe so em mensagem, e so user ou agent", async () => {
-      const request = await agentEvent();
+      const request = await agentTask();
 
       await expect(entry(request, { kind: "message", content: "sem role" })).rejects.toThrow(
-        /event_entries_role_only_in_message/,
+        /task_entries_role_only_in_message/,
       );
       await expect(entry(request, { kind: "thought", role: "agent", content: "x" })).rejects.toThrow(
-        /event_entries_role_only_in_message/,
+        /task_entries_role_only_in_message/,
       );
       await expect(entry(request, { kind: "message", role: "assistant", content: "x" })).rejects.toThrow(
-        /event_entries_role_valid/,
+        /task_entries_role_valid/,
       );
     });
 
     test("trace nao guarda texto", async () => {
-      const request = await agentEvent();
+      const request = await agentTask();
 
       await expect(entry(request, { kind: "trace", content: "texto do usuario" })).rejects.toThrow(
-        /event_entries_trace_without_text/,
+        /task_entries_trace_without_text/,
       );
     });
 
     test("apagar fisicamente o evento leva as entradas", async () => {
-      const request = await agentEvent();
+      const request = await agentTask();
       await entry(request, { kind: "message", role: "user", content: "oi" });
 
-      await ctx.pool.query("DELETE FROM events WHERE id = $1", [request]);
+      await ctx.pool.query("DELETE FROM tasks WHERE id = $1", [request]);
 
-      expect(await count("event_entries")).toBe(0);
+      expect(await count("task_entries")).toBe(0);
     });
   });
 
@@ -301,96 +301,96 @@ describe("banco novo: checks, restricoes e indices", () => {
 
   describe("relacoes entre eventos", () => {
     const relate = (from: string, to: string, relation: string) =>
-      insert("event_event_relation", { from_event_id: from, to_event_id: to, relation });
+      insert("task_task_relation", { from_task_id: from, to_task_id: to, relation });
 
     test("um evento pode seguir mais de um antecessor e anteceder mais de um sucessor", async () => {
-      const [first, second, shared, after] = [await event(), await event(), await event(), await event()];
+      const [first, second, shared, after] = [await task(), await task(), await task(), await task()];
 
       await relate(first, shared, "precedes");
       await relate(second, shared, "precedes");
       await relate(shared, after, "precedes");
 
-      expect(await count("event_event_relation")).toBe(3);
+      expect(await count("task_task_relation")).toBe(3);
     });
 
     test("o mesmo par pode ter relacoes de tipos diferentes, mas nao a mesma duas vezes", async () => {
-      const [a, b] = [await event(), await event()];
+      const [a, b] = [await task(), await task()];
       await relate(a, b, "precedes");
       await relate(a, b, "follow_up");
 
-      await expect(relate(a, b, "precedes")).rejects.toThrow(/event_event_relation_.*_pk/);
+      await expect(relate(a, b, "precedes")).rejects.toThrow(/task_task_relation_.*_pk/);
     });
 
     test("um evento nao se relaciona consigo mesmo, e o tipo e do conjunto", async () => {
-      const [a, b] = [await event(), await event()];
+      const [a, b] = [await task(), await task()];
 
-      await expect(relate(a, a, "precedes")).rejects.toThrow(/event_event_not_self/);
-      await expect(relate(a, b, "parent")).rejects.toThrow(/event_event_relation_valid/);
+      await expect(relate(a, a, "precedes")).rejects.toThrow(/task_task_not_self/);
+      await expect(relate(a, b, "parent")).rejects.toThrow(/task_task_relation_valid/);
     });
 
     test("os tipos antigos subtask e blocks nao existem mais", async () => {
-      const [a, b] = [await event(), await event()];
+      const [a, b] = [await task(), await task()];
 
-      await expect(relate(a, b, "subtask")).rejects.toThrow(/event_event_relation_valid/);
-      await expect(relate(a, b, "blocks")).rejects.toThrow(/event_event_relation_valid/);
+      await expect(relate(a, b, "subtask")).rejects.toThrow(/task_task_relation_valid/);
+      await expect(relate(a, b, "blocks")).rejects.toThrow(/task_task_relation_valid/);
       for (const relation of ["generates", "updates", "deletes", "step", "precedes", "follow_up"]) {
         await relate(a, b, relation);
       }
-      expect(await count("event_event_relation")).toBe(6);
+      expect(await count("task_task_relation")).toBe(6);
     });
 
     test("cada continuacao tem um so primeiro pedido", async () => {
-      const [first, other, followUp] = [await agentEvent(), await agentEvent(), await agentEvent()];
+      const [first, other, followUp] = [await agentTask(), await agentTask(), await agentTask()];
       await relate(first, followUp, "follow_up");
 
-      await expect(relate(other, followUp, "follow_up")).rejects.toThrow(/event_event_follow_up_unique/);
+      await expect(relate(other, followUp, "follow_up")).rejects.toThrow(/task_task_follow_up_unique/);
     });
 
     test("apagar fisicamente uma ponta leva a relacao, e nao a outra ponta", async () => {
-      const [project, session] = [await event(), await event()];
+      const [project, session] = [await task(), await task()];
       await relate(project, session, "precedes");
 
-      await ctx.pool.query("DELETE FROM events WHERE id = $1", [project]);
+      await ctx.pool.query("DELETE FROM tasks WHERE id = $1", [project]);
 
-      expect(await count("event_event_relation")).toBe(0);
-      expect(await count("events")).toBe(1);
+      expect(await count("task_task_relation")).toBe(0);
+      expect(await count("tasks")).toBe(1);
     });
   });
 
   describe("relacoes entre evento e artefato", () => {
-    const link = (eventId: string, artifactId: string, overrides: Row = {}) =>
-      insert("event_artifact_relation", { event_id: eventId, artifact_id: artifactId, relation: "uses", ...overrides });
+    const link = (taskId: string, artifactId: string, overrides: Row = {}) =>
+      insert("task_artifact_relation", { task_id: taskId, artifact_id: artifactId, relation: "uses", ...overrides });
 
     test("uma linha por par", async () => {
-      const [meal, food] = [await event({ kind: "meal" }), await artifact({ type: "food" })];
+      const [meal, food] = [await task({ kind: "meal" }), await artifact({ type: "food" })];
       await link(meal, food, { relation: "creates", position: 0 });
 
       await expect(link(meal, food, { relation: "uses", position: 1 })).rejects.toThrow(
-        /event_artifact_relation_.*_pk/,
+        /task_artifact_relation_.*_pk/,
       );
     });
 
     test("a posicao e unica no evento, mas a relacao de um passo nao tem posicao", async () => {
-      const [meal, step] = [await event({ kind: "meal" }), await agentEvent({ kind: "step" })];
+      const [meal, step] = [await task({ kind: "meal" }), await agentTask({ kind: "step" })];
       const [a, b, c] = [await artifact(), await artifact(), await artifact()];
       await link(meal, a, { position: 0 });
       await link(step, a, { relation: "updates" });
       await link(step, b, { relation: "creates" });
 
-      await expect(link(meal, c, { position: 0 })).rejects.toThrow(/event_artifact_event_position_unique/);
-      await expect(link(meal, c, { position: -1 })).rejects.toThrow(/event_artifact_position_nonneg/);
+      await expect(link(meal, c, { position: 0 })).rejects.toThrow(/task_artifact_task_position_unique/);
+      await expect(link(meal, c, { position: -1 })).rejects.toThrow(/task_artifact_position_nonneg/);
     });
 
     test("reordenar com position + 1 nao colide no meio do UPDATE", async () => {
-      const meal = await event({ kind: "meal" });
+      const meal = await task({ kind: "meal" });
       const [a, b] = [await artifact(), await artifact()];
       await link(meal, a, { position: 0 });
       await link(meal, b, { position: 1 });
 
-      await ctx.pool.query("UPDATE event_artifact_relation SET position = position + 1 WHERE event_id = $1", [meal]);
+      await ctx.pool.query("UPDATE task_artifact_relation SET position = position + 1 WHERE task_id = $1", [meal]);
 
       const { rows } = await ctx.pool.query(
-        "SELECT artifact_id, position FROM event_artifact_relation WHERE event_id = $1 ORDER BY position",
+        "SELECT artifact_id, position FROM task_artifact_relation WHERE task_id = $1 ORDER BY position",
         [meal],
       );
       expect(rows).toEqual([
@@ -400,9 +400,9 @@ describe("banco novo: checks, restricoes e indices", () => {
     });
 
     test("o tipo e do conjunto", async () => {
-      const [meal, food] = [await event({ kind: "meal" }), await artifact({ type: "food" })];
+      const [meal, food] = [await task({ kind: "meal" }), await artifact({ type: "food" })];
 
-      await expect(link(meal, food, { relation: "derives" })).rejects.toThrow(/event_artifact_relation_valid/);
+      await expect(link(meal, food, { relation: "derives" })).rejects.toThrow(/task_artifact_relation_valid/);
     });
   });
 
@@ -462,10 +462,10 @@ describe("banco novo: checks, restricoes e indices", () => {
     });
 
     test("apagar fisicamente o passo leva o job dele", async () => {
-      const step = await agentEvent({ kind: "step" });
-      await job({ event_id: step });
+      const step = await agentTask({ kind: "step" });
+      await job({ task_id: step });
 
-      await ctx.pool.query("DELETE FROM events WHERE id = $1", [step]);
+      await ctx.pool.query("DELETE FROM tasks WHERE id = $1", [step]);
 
       expect(await count("jobs")).toBe(0);
     });
@@ -512,84 +512,84 @@ describe("banco novo: checks, restricoes e indices", () => {
 
     test("janela da agenda", async () => {
       const plan = await planOf(`
-        SELECT id FROM events
+        SELECT id FROM tasks
         WHERE user_id = 'user-1' AND deleted_at IS NULL AND NOT long_running AND kind <> 'step'
           AND started_at <= '2026-11-21T03:00:00Z'
           AND started_at >= timestamptz '2026-11-14T03:00:00Z' - interval '31 days'
           AND coalesce(estimated_finish_at, finished_at, started_at) >= '2026-11-14T03:00:00Z'
         ORDER BY started_at, id`);
 
-      expect(plan).toContain("events_agenda_idx");
+      expect(plan).toContain("tasks_agenda_idx");
     });
 
     test("sem o filtro de passos a consulta nao casa com o indice da agenda", async () => {
       const plan = await planOf(`
-        SELECT id FROM events
+        SELECT id FROM tasks
         WHERE user_id = 'user-1' AND deleted_at IS NULL AND NOT long_running
           AND started_at BETWEEN '2026-11-14T03:00:00Z' AND '2026-11-21T03:00:00Z'
         ORDER BY started_at, id`);
 
-      expect(plan).not.toContain("events_agenda_idx");
+      expect(plan).not.toContain("tasks_agenda_idx");
     });
 
     test("agenda so de pessoa", async () => {
       const plan = await planOf(`
-        SELECT id FROM events
+        SELECT id FROM tasks
         WHERE user_id = 'user-1' AND deleted_at IS NULL AND NOT long_running AND kind <> 'step'
           AND actor = 'human' AND started_at BETWEEN '2026-11-14T03:00:00Z' AND '2026-11-21T03:00:00Z'
         ORDER BY started_at, id`);
 
-      expect(plan).toContain("events_agenda_idx");
+      expect(plan).toContain("tasks_agenda_idx");
     });
 
     test("lista de tarefas por status e data", async () => {
       const plan = await planOf(`
-        SELECT id FROM events
+        SELECT id FROM tasks
         WHERE user_id = 'user-1' AND deleted_at IS NULL AND kind <> 'step' AND status = 'todo'
         ORDER BY coalesce(started_at, estimated_finish_at), id LIMIT 50`);
 
-      expect(plan).toContain("events_tracked_idx");
+      expect(plan).toContain("tasks_tracked_idx");
     });
 
     test("lista de pedidos", async () => {
       const plan = await planOf(`
-        SELECT id FROM events
+        SELECT id FROM tasks
         WHERE user_id = 'user-1' AND deleted_at IS NULL AND actor = 'agent' AND kind <> 'step'
         ORDER BY id DESC LIMIT 50`);
 
-      expect(plan).toContain("events_requests_idx");
+      expect(plan).toContain("tasks_requests_idx");
     });
 
     test("todos os eventos vivos de pessoa", async () => {
       const plan = await planOf(
-        "SELECT id FROM events WHERE user_id = 'user-1' AND deleted_at IS NULL AND actor = 'human'",
+        "SELECT id FROM tasks WHERE user_id = 'user-1' AND deleted_at IS NULL AND actor = 'human'",
       );
 
-      expect(plan).toContain("events_user_live_idx");
+      expect(plan).toContain("tasks_user_live_idx");
     });
 
     test("entradas de um evento, em ordem e a partir da ultima lida", async () => {
       const plan = await planOf(`
-        SELECT id FROM event_entries
-        WHERE event_id = '01JCZ0000000000000000000AA' AND id > '01JCZ0000000000000000000AB' ORDER BY id`);
+        SELECT id FROM task_entries
+        WHERE task_id = '01JCZ0000000000000000000AA' AND id > '01JCZ0000000000000000000AB' ORDER BY id`);
 
-      expect(plan).toContain("event_entries_event_idx");
+      expect(plan).toContain("task_entries_task_idx");
     });
 
     test("relacoes para um evento, por tipo", async () => {
       const plan = await planOf(`
-        SELECT from_event_id FROM event_event_relation
-        WHERE to_event_id = '01JCZ0000000000000000000AA' AND relation = 'precedes'`);
+        SELECT from_task_id FROM task_task_relation
+        WHERE to_task_id = '01JCZ0000000000000000000AA' AND relation = 'precedes'`);
 
-      expect(plan).toContain("event_event_reverse_idx");
+      expect(plan).toContain("task_task_reverse_idx");
     });
 
     test("em quais eventos um artefato aparece", async () => {
       const plan = await planOf(
-        "SELECT event_id FROM event_artifact_relation WHERE artifact_id = '01JCZ0000000000000000000AA'",
+        "SELECT task_id FROM task_artifact_relation WHERE artifact_id = '01JCZ0000000000000000000AA'",
       );
 
-      expect(plan).toContain("event_artifact_reverse_idx");
+      expect(plan).toContain("task_artifact_reverse_idx");
     });
 
     test("lista de artefatos por tipo, sem copias", async () => {

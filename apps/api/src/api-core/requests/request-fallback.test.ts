@@ -143,7 +143,7 @@ describe("laco do fallback (comando fallback:)", () => {
       ok: true, columns: ["name"], rows: [["Lavar a louça"]], truncated: false,
     });
     ctx.gateway.outputs.set("fallback_loop", { reply: null, invoke: [{ agent: "query", instruction: "Listar os eventos da casa" }] });
-    ctx.gateway.outputs.set("query", { sql: "SELECT name FROM events" });
+    ctx.gateway.outputs.set("query", { sql: "SELECT name FROM tasks" });
 
     await fallback.run(stepOf("fallback"));
     expect(loopCalls()[0]?.user).toContain("Rodada: 1 de 4");
@@ -183,7 +183,7 @@ describe("laco do fallback (comando fallback:)", () => {
     const runner = new RequestAgentRunner(ctx.gateway, { thoughts: ctx.store, reasoning: "low" });
     const fallback = new RequestFallback({ store: ctx.store, runner });
     ctx.gateway.outputs.set("fallback_loop", { reply: null, invoke: [{ agent: "query", instruction: "Contar os eventos" }] });
-    ctx.gateway.outputs.set("query", { sql: "SELECT count(*) FROM events" });
+    ctx.gateway.outputs.set("query", { sql: "SELECT count(*) FROM tasks" });
 
     await fallback.run(stepOf("fallback"));
     await new RequestQueryWorker({ store: ctx.store, runner, sql: ctx.sql }).run(stepOf("query"));

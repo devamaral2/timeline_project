@@ -43,6 +43,10 @@ export const ARQUIVOS_COM_OUTRO_EVENTO: { motivo: string; arquivo: RegExp }[] = 
     motivo: "eventos do stream de execucao do Hermes (`GET /v1/runs/{id}/events`): protocolo do Hermes, nao a entidade",
     arquivo: /^apps\/api\/src\/infrastructure\/hermes\/(hermes-trace|hermes\.client)[\w.-]*\.ts$/,
   },
+  {
+    motivo: "teste da migration que renomeia o banco: grava dados com os nomes antigos de proposito, para provar que a migration os troca",
+    arquivo: /^apps\/api\/src\/infrastructure\/persistence\/integration\/task-rename-migration\.integration\.test\.ts$/,
+  },
 ];
 
 const EXTENSOES_DE_TEXTO =

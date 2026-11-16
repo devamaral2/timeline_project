@@ -33,7 +33,7 @@ import {
 } from "../recurrences/repositories/postgres-recurrence.repository";
 import type { Db, Tx } from "../shared/tx";
 
-type TargetTable = "events" | "artifacts";
+type TargetTable = "tasks" | "artifacts";
 
 interface LockedRow extends Record<string, unknown> {
   id: string;
@@ -45,7 +45,7 @@ export class PostgresEntityBatchWriter implements EntityBatchWriter {
 
   async commit(batch: EntityBatch): Promise<EntityBatchResult> {
     return this.db.transaction(async (tx): Promise<EntityBatchResult> => {
-      await lockTargets(tx, "events", batch.userId, batch.tasks);
+      await lockTargets(tx, "tasks", batch.userId, batch.tasks);
       await lockTargets(tx, "artifacts", batch.userId, batch.artifacts);
 
       // Artefatos primeiro: as relacoes de um evento apontam para eles.

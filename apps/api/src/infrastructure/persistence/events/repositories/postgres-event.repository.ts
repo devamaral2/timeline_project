@@ -87,7 +87,7 @@ export async function updateEventAggregate(
   artifacts?: ArtifactWrites,
 ): Promise<void> {
   const result = await tx.execute(sql`
-    UPDATE events
+    UPDATE tasks
     SET kind = ${event.kind},
         status = ${event.status ?? null},
         priority = ${event.priority},

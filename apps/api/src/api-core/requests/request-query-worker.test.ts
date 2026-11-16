@@ -8,13 +8,13 @@ describe("passo de consulta", () => {
       ok: true, columns: ["name", "started_at"], rows: [["Reunião", "2026-10-25T13:00:00Z"]], truncated: false,
     });
     const payload = await addStep(ctx, "s1", "query");
-    ctx.gateway.outputs.set("query", { sql: "SELECT name, started_at FROM events LIMIT 20" });
+    ctx.gateway.outputs.set("query", { sql: "SELECT name, started_at FROM tasks LIMIT 20" });
 
     await ctx.queryWorker.run(payload);
 
     expect(ctx.gateway.calls).toHaveLength(1);
     expect(ctx.gateway.calls[0]?.user).toContain("Esquema:");
-    expect(ctx.sql.calls).toEqual([{ userId: "user-1", sql: "SELECT name, started_at FROM events LIMIT 20" }]);
+    expect(ctx.sql.calls).toEqual([{ userId: "user-1", sql: "SELECT name, started_at FROM tasks LIMIT 20" }]);
     expect(ctx.store.stepRecords[0]).toMatchObject({
       status: "done", result: { columns: ["name", "started_at"], rows: [["Reunião", "2026-10-25T13:00:00Z"]], truncated: false },
     });
@@ -38,7 +38,7 @@ describe("passo de consulta", () => {
   test("consulta recusada pelo executor vira passo vermelho", async () => {
     const ctx = setupRequest("x", { ok: false, error: "so SELECT" });
     const payload = await addStep(ctx, "s1", "query");
-    ctx.gateway.outputs.set("query", { sql: "DELETE FROM events" });
+    ctx.gateway.outputs.set("query", { sql: "DELETE FROM tasks" });
     await ctx.queryWorker.run(payload);
     expect(ctx.store.stepRecords[0]).toMatchObject({ status: "failed", errorCode: "query_rejected" });
   });

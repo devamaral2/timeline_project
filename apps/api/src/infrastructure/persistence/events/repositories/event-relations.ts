@@ -58,7 +58,7 @@ export async function applySequenceChanges(tx: Tx, userId: string, changes: read
   const ids = [...new Set(added.flatMap((change) => [change.fromId, change.toId]))].sort();
   if (ids.length > 0) {
     const found = await tx.execute<{ id: string }>(sql`
-      SELECT id FROM events
+      SELECT id FROM tasks
       WHERE id IN ${ids} AND user_id = ${userId} AND deleted_at IS NULL
       ORDER BY id
       FOR SHARE
@@ -93,11 +93,11 @@ export async function applySequenceChanges(tx: Tx, userId: string, changes: read
 async function assertAcyclic(tx: Tx, eventId: string): Promise<void> {
   const result = await tx.execute(sql`
     WITH RECURSIVE reach(id) AS (
-      SELECT to_event_id FROM event_event_relation
-      WHERE from_event_id = ${eventId} AND relation = ${SEQUENCE_RELATION}
+      SELECT to_task_id FROM task_task_relation
+      WHERE from_task_id = ${eventId} AND relation = ${SEQUENCE_RELATION}
       UNION
-      SELECT r.to_event_id FROM event_event_relation r
-      JOIN reach ON r.from_event_id = reach.id
+      SELECT r.to_task_id FROM task_task_relation r
+      JOIN reach ON r.from_task_id = reach.id
       WHERE r.relation = ${SEQUENCE_RELATION}
     )
     SELECT 1 FROM reach WHERE id = ${eventId} LIMIT 1

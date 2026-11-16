@@ -70,7 +70,7 @@ describe("PostgresRecurrenceRepository", () => {
     selectRows<{ day: string; detached: boolean; deleted: boolean }>(
       ctx.pool,
       `SELECT occurrence_on::text AS day, recurrence_detached AS detached, deleted_at IS NOT NULL AS deleted
-       FROM events WHERE recurrence_id = $1 ORDER BY occurrence_on`,
+       FROM tasks WHERE recurrence_id = $1 ORDER BY occurrence_on`,
       [recurrenceId],
     );
 
@@ -143,7 +143,7 @@ describe("PostgresRecurrenceRepository", () => {
       // A segunda leitura monta eventos novos para os mesmos dias: o indice unico por dia os descarta.
       await materialized(recurrence, DAYS.slice(0, 3));
 
-      const rows = await selectRows(ctx.pool, "SELECT id FROM events ORDER BY occurrence_on");
+      const rows = await selectRows(ctx.pool, "SELECT id FROM tasks ORDER BY occurrence_on");
       expect(rows.map((row) => row.id)).toEqual(first.map((event) => event.id));
       expect((await found(recurrence.id)).materializedThrough).toBe("2026-11-12");
       expect((await events.findById(first[0].id))?.occurrence).toEqual({
@@ -176,8 +176,8 @@ describe("PostgresRecurrenceRepository", () => {
         occurrenceOf(recurrence, DAYS[0], { artifactLinks: links, tags: ["duplicada"] }),
       ]);
 
-      expect(await selectRows(ctx.pool, "SELECT event_id, from_recurrence FROM event_artifact_relation")).toEqual([
-        { event_id: kept.id, from_recurrence: true },
+      expect(await selectRows(ctx.pool, "SELECT task_id, from_recurrence FROM task_artifact_relation")).toEqual([
+        { task_id: kept.id, from_recurrence: true },
       ]);
       expect(await countRows(ctx.pool, "tags")).toBe(0);
     });
@@ -188,7 +188,7 @@ describe("PostgresRecurrenceRepository", () => {
 
       await events.save(occurrenceOf(recurrence, DAYS[0], { name: "Duplicada" }));
 
-      expect(await selectRows(ctx.pool, "SELECT id, name FROM events")).toEqual([{ id: kept.id, name: "Serie" }]);
+      expect(await selectRows(ctx.pool, "SELECT id, name FROM tasks")).toEqual([{ id: kept.id, name: "Serie" }]);
     });
 
     test("se a regra mudou no meio do caminho, nada e gerado e a marca d'agua nao avanca", async () => {
@@ -197,7 +197,7 @@ describe("PostgresRecurrenceRepository", () => {
 
       await expect(materialized(recurrence, DAYS.slice(0, 3))).rejects.toThrow(RecurrenceRevisionConflictError);
 
-      expect(await countRows(ctx.pool, "events")).toBe(0);
+      expect(await countRows(ctx.pool, "tasks")).toBe(0);
       expect((await found(recurrence.id)).materializedThrough).toBeUndefined();
     });
 
@@ -220,7 +220,7 @@ describe("PostgresRecurrenceRepository", () => {
         DAYS.slice(0, 3).map((day) => occurrenceOf(recurrence, day)),
         [previous.id],
       );
-      expect(await countRows(ctx.pool, "event_event_relation", "relation = 'precedes'")).toBe(3);
+      expect(await countRows(ctx.pool, "task_task_relation", "relation = 'precedes'")).toBe(3);
     });
 
     test("a ocorrencia segue varios antecessores, inclusive um evento de agente", async () => {
@@ -245,13 +245,13 @@ describe("PostgresRecurrenceRepository", () => {
         DAYS.slice(0, 3).map((day) => occurrenceOf(recurrence, day)),
         [previous.id],
       );
-      expect(await countRows(ctx.pool, "event_event_relation", "relation = 'precedes'")).toBe(3);
+      expect(await countRows(ctx.pool, "task_task_relation", "relation = 'precedes'")).toBe(3);
 
       await recurrences.update(recurrence.revise({ rule: { timeOfDay: "19:00" } }), USER, 1, DAYS[1]);
 
       // So a primeira ocorrencia (antes de fromDay) sobrevive, com a aresta dela.
-      expect(await countRows(ctx.pool, "events", "recurrence_id IS NOT NULL")).toBe(1);
-      expect(await countRows(ctx.pool, "event_event_relation", "relation = 'precedes'")).toBe(1);
+      expect(await countRows(ctx.pool, "tasks", "recurrence_id IS NOT NULL")).toBe(1);
+      expect(await countRows(ctx.pool, "task_task_relation", "relation = 'precedes'")).toBe(1);
       expect((await events.findById(previous.id))?.nextIds).toHaveLength(1);
     });
 
@@ -267,8 +267,8 @@ describe("PostgresRecurrenceRepository", () => {
         await recurrences.materialize(recurrence.materializedUntil(DAYS[1]), [occurrenceOf(recurrence, DAYS[0])], previousIds);
       }
 
-      expect(await countRows(ctx.pool, "events", "recurrence_id IS NOT NULL")).toBe(0);
-      expect(await countRows(ctx.pool, "event_event_relation")).toBe(0);
+      expect(await countRows(ctx.pool, "tasks", "recurrence_id IS NOT NULL")).toBe(0);
+      expect(await countRows(ctx.pool, "task_task_relation")).toBe(0);
     });
   });
 
@@ -314,7 +314,7 @@ describe("PostgresRecurrenceRepository", () => {
 
       await materialized(await found(recurrence.id), DAYS.slice(2));
 
-      const rows = await selectRows(ctx.pool, "SELECT occurrence_on::text AS day, id, name FROM events ORDER BY occurrence_on");
+      const rows = await selectRows(ctx.pool, "SELECT occurrence_on::text AS day, id, name FROM tasks ORDER BY occurrence_on");
       expect(rows.map((row) => row.day)).toEqual([...DAYS]);
       expect(rows[3]).toMatchObject({ id: occurrences[3].id, name: "Editada a mao" });
       expect(rows[2].id).not.toBe(occurrences[2].id);
@@ -379,7 +379,7 @@ describe("PostgresRecurrenceRepository", () => {
       expect(await countRows(ctx.pool, "recurrence_exceptions")).toBe(0);
       const rows = await selectRows(
         ctx.pool,
-        "SELECT id, recurrence_id, occurrence_on, recurrence_detached FROM events ORDER BY started_at",
+        "SELECT id, recurrence_id, occurrence_on, recurrence_detached FROM tasks ORDER BY started_at",
       );
       expect(rows).toEqual(
         [occurrences[0], occurrences[1], occurrences[3]].map((event) => ({
@@ -390,7 +390,7 @@ describe("PostgresRecurrenceRepository", () => {
         })),
       );
       // A relacao herdada da serie passa a ser da propria ocorrencia.
-      expect(await selectRows(ctx.pool, "SELECT DISTINCT from_recurrence FROM event_artifact_relation")).toEqual([
+      expect(await selectRows(ctx.pool, "SELECT DISTINCT from_recurrence FROM task_artifact_relation")).toEqual([
         { from_recurrence: false },
       ]);
       const read = await events.findById(occurrences[0].id);

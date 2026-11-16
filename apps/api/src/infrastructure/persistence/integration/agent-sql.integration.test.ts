@@ -10,7 +10,7 @@ const id = (prefix: string, n: number) => `${prefix}${String(n).padStart(26 - pr
 const A_TRAINING = id("AE", 1);
 const A_DELETED = id("AE", 2);
 const A_TRACKED = id("AE", 3);
-const B_EVENT = id("BE", 1);
+const B_TASK = id("BE", 1);
 const B_TRACKED = id("BE", 2);
 // Eventos de agente do usuario A
 const A_REQUEST = id("AG", 1);
@@ -45,17 +45,17 @@ describe("PostgresScopedSqlQuery", () => {
   // As linhas de B entram primeiro, para que uma varredura que ignorasse o escopo as encontrasse antes das de A.
   async function seed(pool: Pool): Promise<void> {
     await pool.query(`
-      INSERT INTO events (id, user_id, actor, kind, status, name, started_at) VALUES
-        ('${B_EVENT}', 'user-b', 'human', 'common', NULL, 'Segredo do B', '2026-09-15T12:00:00Z'),
+      INSERT INTO tasks (id, user_id, actor, kind, status, name, started_at) VALUES
+        ('${B_TASK}', 'user-b', 'human', 'common', NULL, 'Segredo do B', '2026-09-15T12:00:00Z'),
         ('${B_TRACKED}', 'user-b', 'human', 'common', 'todo', 'Tarefa do B', NULL),
         ('${A_TRAINING}', 'user-a', 'human', 'training', NULL, 'Treino', '2026-09-15T12:00:00Z'),
         ('${A_DELETED}', 'user-a', 'human', 'common', NULL, 'Apagado', '2026-09-15T13:00:00Z'),
         ('${A_TRACKED}', 'user-a', 'human', 'common', 'todo', 'Tarefa do A', NULL),
         ('${A_REQUEST}', 'user-a', 'agent', 'request', 'done', 'Pedido do A', '2026-09-15T14:00:00Z'),
         ('${A_STEP}', 'user-a', 'agent', 'step', 'done', 'Passo do A', '2026-09-15T14:00:01Z');
-      UPDATE events SET deleted_at = now() WHERE id = '${A_DELETED}';
+      UPDATE tasks SET deleted_at = now() WHERE id = '${A_DELETED}';
 
-      INSERT INTO event_entries (id, event_id, user_id, kind, role, content) VALUES
+      INSERT INTO task_entries (id, task_id, user_id, kind, role, content) VALUES
         ('${id("EN", 1)}', '${A_REQUEST}', 'user-a', 'message', 'user', 'corro 10 km por semana');
 
       INSERT INTO artifacts (id, user_id, name, type, data) VALUES
@@ -67,8 +67,8 @@ describe("PostgresScopedSqlQuery", () => {
         ('${A_SKILL}', 'user-a', 'Skill do A', 'skill', '{"path": "hermes/skills/x/SKILL.md", "missing": false}');
       UPDATE artifacts SET deleted_at = now() WHERE id = '${A_SLEEP_DELETED}';
 
-      INSERT INTO event_artifact_relation (event_id, artifact_id, relation, position) VALUES
-        ('${B_EVENT}', '${B_SLEEP}', 'uses', 0),
+      INSERT INTO task_artifact_relation (task_id, artifact_id, relation, position) VALUES
+        ('${B_TASK}', '${B_SLEEP}', 'uses', 0),
         ('${A_TRAINING}', '${A_SLEEP}', 'uses', 0),
         -- artefato apagado: a relacao some
         ('${A_TRAINING}', '${A_SLEEP_DELETED}', 'uses', 1),
@@ -77,12 +77,12 @@ describe("PostgresScopedSqlQuery", () => {
         -- evento apagado: a relacao some, o artefato nao
         ('${A_DELETED}', '${A_TEXT}', 'uses', 0),
         -- cruza usuarios (evento de B, artefato de A): nao aparece para nenhum dos dois
-        ('${B_EVENT}', '${A_TEXT}', 'uses', 1),
+        ('${B_TASK}', '${A_TEXT}', 'uses', 1),
         -- evento de agente e arquivo de agente: fora do esquema logico
         ('${A_REQUEST}', '${A_TEXT}', 'updates', NULL),
         ('${A_TRACKED}', '${A_SKILL}', 'uses', 0);
 
-      INSERT INTO event_event_relation (from_event_id, to_event_id, relation) VALUES
+      INSERT INTO task_task_relation (from_task_id, to_task_id, relation) VALUES
         ('${A_TRACKED}', '${A_TRAINING}', 'precedes'),
         ('${A_TRACKED}', '${A_DELETED}', 'precedes'),
         ('${A_DELETED}', '${A_TRAINING}', 'precedes'),
@@ -94,13 +94,13 @@ describe("PostgresScopedSqlQuery", () => {
         -- cruza usuarios: nao aparece para nenhum dos dois
         ('${B_TRACKED}', '${A_TRAINING}', 'precedes'),
         ('${A_TRAINING}', '${B_TRACKED}', 'precedes'),
-        ('${B_EVENT}', '${B_TRACKED}', 'precedes');
+        ('${B_TASK}', '${B_TRACKED}', 'precedes');
 
       INSERT INTO tags (id, user_id, name) VALUES
         ('${id("TB", 1)}', 'user-b', 'segredo'),
         ('${id("TA", 1)}', 'user-a', 'saude');
-      INSERT INTO event_tags (event_id, tag_id) VALUES
-        ('${B_EVENT}', '${id("TB", 1)}'),
+      INSERT INTO task_tags (task_id, tag_id) VALUES
+        ('${B_TASK}', '${id("TB", 1)}'),
         ('${A_TRAINING}', '${id("TA", 1)}'),
         ('${A_DELETED}', '${id("TA", 1)}'),
         ('${A_REQUEST}', '${id("TA", 1)}');
@@ -119,14 +119,14 @@ describe("PostgresScopedSqlQuery", () => {
   }
 
   test("events mostra so os eventos vivos de pessoa do proprio usuario", async () => {
-    expect(await rows("SELECT name, kind, status FROM events ORDER BY name")).toEqual([
+    expect(await rows("SELECT name, kind, status FROM tasks ORDER BY name")).toEqual([
       ["Tarefa do A", "common", "todo"],
       ["Treino", "training", null],
     ]);
-    expect(await rows("SELECT name FROM events ORDER BY name", "user-b")).toEqual([["Segredo do B"], ["Tarefa do B"]]);
-    expect(await rows("SELECT name FROM events ORDER BY name", "user-sem-dados")).toEqual([]);
+    expect(await rows("SELECT name FROM tasks ORDER BY name", "user-b")).toEqual([["Segredo do B"], ["Tarefa do B"]]);
+    expect(await rows("SELECT name FROM tasks ORDER BY name", "user-sem-dados")).toEqual([]);
     // Os pedidos e os passos do agente nao sao eventos para a consulta, nem os do proprio usuario.
-    expect(await rows("SELECT count(*)::int FROM events WHERE kind IN ('request', 'step') OR status = 'done'")).toEqual([[0]]);
+    expect(await rows("SELECT count(*)::int FROM tasks WHERE kind IN ('request', 'step') OR status = 'done'")).toEqual([[0]]);
   });
 
   test("artifacts mostra os artefatos vivos do usuario e os globais, sem os arquivos de agente", async () => {
@@ -149,27 +149,27 @@ describe("PostgresScopedSqlQuery", () => {
     ]);
   });
 
-  test("event_artifacts esconde a relacao cujo evento ou artefato esta apagado, e de agente ou de outro usuario", async () => {
-    expect(await rows("SELECT event_id, artifact_id, relation, position FROM event_artifacts ORDER BY position")).toEqual([
+  test("task_artifacts esconde a relacao cuja tarefa ou artefato esta apagado, e de agente ou de outro usuario", async () => {
+    expect(await rows("SELECT task_id, artifact_id, relation, position FROM task_artifacts ORDER BY position")).toEqual([
       [A_TRAINING, A_SLEEP, "uses", 0],
       [A_TRAINING, GLOBAL_WORKOUT_ID, "uses", 2],
     ]);
-    expect(await rows("SELECT event_id, artifact_id FROM event_artifacts", "user-b")).toEqual([[B_EVENT, B_SLEEP]]);
+    expect(await rows("SELECT task_id, artifact_id FROM task_artifacts", "user-b")).toEqual([[B_TASK, B_SLEEP]]);
     // O evento apagado esconde a relacao, nao o artefato.
     expect(await rows(`SELECT name FROM artifacts WHERE id = '${A_TEXT}'`)).toEqual([["nota do A"]]);
   });
 
-  test("event_sequence so liga eventos vivos de pessoa do mesmo usuario, e nao expoe as tabelas antigas", async () => {
-    expect(await rows("SELECT previous_event_id, next_event_id FROM event_sequence")).toEqual([[A_TRACKED, A_TRAINING]]);
-    expect(await rows("SELECT previous_event_id, next_event_id FROM event_sequence", "user-b")).toEqual([[B_EVENT, B_TRACKED]]);
-    await expect(rows("SELECT * FROM event_subtasks")).rejects.toThrow();
-    await expect(rows("SELECT * FROM event_blocks")).rejects.toThrow();
+  test("task_sequence so liga tarefas vivas de pessoa do mesmo usuario, e nao expoe as tabelas antigas", async () => {
+    expect(await rows("SELECT previous_task_id, next_task_id FROM task_sequence")).toEqual([[A_TRACKED, A_TRAINING]]);
+    expect(await rows("SELECT previous_task_id, next_task_id FROM task_sequence", "user-b")).toEqual([[B_TASK, B_TRACKED]]);
+    await expect(rows("SELECT * FROM task_subtasks")).rejects.toThrow();
+    await expect(rows("SELECT * FROM task_blocks")).rejects.toThrow();
   });
 
-  test("event_tags e artifact_tags seguem a visibilidade do dono da tag", async () => {
-    expect(await rows("SELECT event_id, tag FROM event_tags")).toEqual([[A_TRAINING, "saude"]]);
+  test("task_tags e artifact_tags seguem a visibilidade do dono da tag", async () => {
+    expect(await rows("SELECT task_id, tag FROM task_tags")).toEqual([[A_TRAINING, "saude"]]);
     expect(await rows("SELECT artifact_id, tag FROM artifact_tags")).toEqual([[A_TEXT, "saude"]]);
-    expect(await rows("SELECT tag FROM event_tags UNION SELECT tag FROM artifact_tags", "user-b")).toEqual([["segredo"]]);
+    expect(await rows("SELECT tag FROM task_tags UNION SELECT tag FROM artifact_tags", "user-b")).toEqual([["segredo"]]);
   });
 
   test("recurrences mostra so as series do proprio usuario, sem o template cru", async () => {
@@ -178,7 +178,7 @@ describe("PostgresScopedSqlQuery", () => {
         ('${id("RB", 1)}', 'user-b', 'daily', 1, NULL, '06:00', NULL, '2026-09-01', '{"name": "Segredo do B", "kind": "common"}'),
         ('${id("RA", 1)}', 'user-a', 'weekly', 1, 10, '07:00', 60, '2026-09-01',
           '{"name": "Corrida", "kind": "training", "status": "todo", "artifactIds": ["so o servidor ve"]}');
-      UPDATE events SET recurrence_id = '${id("RA", 1)}', occurrence_on = '2026-09-15' WHERE id = '${A_TRAINING}';
+      UPDATE tasks SET recurrence_id = '${id("RA", 1)}', occurrence_on = '2026-09-15' WHERE id = '${A_TRAINING}';
     `);
 
     expect(
@@ -186,7 +186,7 @@ describe("PostgresScopedSqlQuery", () => {
     ).toEqual([["Corrida", "training", "todo", "weekly", 10, "07:00", 60, "2026-09-01", null]]);
     expect(await rows("SELECT name FROM recurrences", "user-b")).toEqual([["Segredo do B"]]);
     expect(
-      await rows("SELECT r.name, e.occurrence_on FROM events e JOIN recurrences r ON r.id = e.recurrence_id"),
+      await rows("SELECT r.name, e.occurrence_on FROM tasks e JOIN recurrences r ON r.id = e.recurrence_id"),
     ).toEqual([["Corrida", "2026-09-15"]]);
     // O jsonb do template nao e uma coluna: so o que o esquema logico escolheu expor.
     expect((await query.run({ userId: "user-a", sql: "SELECT template FROM recurrences" })).ok).toBe(false);
@@ -194,10 +194,10 @@ describe("PostgresScopedSqlQuery", () => {
 
   test("as tabelas do agente e o grafo de relacoes nao existem para a consulta", async () => {
     for (const table of [
-      "event_entries",
+      "task_entries",
       "jobs",
-      "event_event_relation",
-      "event_artifact_relation",
+      "task_task_relation",
+      "task_artifact_relation",
       "artifact_artifact_relation",
       "tags",
       "recurrence_exceptions",
@@ -211,12 +211,12 @@ describe("PostgresScopedSqlQuery", () => {
     }
     // As colunas de escopo tambem nao: nao ha como pedir as linhas de outro usuario ou as apagadas.
     for (const column of ["user_id", "actor", "deleted_at", "data"]) {
-      expect((await query.run({ userId: "user-a", sql: `SELECT ${column} FROM events` })).ok, column).toBe(false);
+      expect((await query.run({ userId: "user-a", sql: `SELECT ${column} FROM tasks` })).ok, column).toBe(false);
     }
   });
 
   test("um CTE da consulta com nome de tabela ainda le a tabela do escopo", async () => {
-    expect(await rows("WITH events AS (SELECT * FROM events) SELECT count(*)::int FROM events")).toEqual([[2]]);
+    expect(await rows("WITH tasks AS (SELECT * FROM tasks) SELECT count(*)::int FROM tasks")).toEqual([[2]]);
   });
 
   test("agregacoes, joins e funcoes de data rodam em America/Sao_Paulo", async () => {
@@ -225,7 +225,7 @@ describe("PostgresScopedSqlQuery", () => {
       sql: `
         SELECT e.started_on, e.started_at, sum((a.data->>'trackedSleepTime')::int) AS minutes,
                EXTRACT(hour FROM e.started_at) AS local_hour
-        FROM events e JOIN event_artifacts ea ON ea.event_id = e.id JOIN artifacts a ON a.id = ea.artifact_id
+        FROM tasks e JOIN task_artifacts ea ON ea.task_id = e.id JOIN artifacts a ON a.id = ea.artifact_id
         WHERE a.type = 'sleep' AND e.started_at > timestamptz '2026-09-01' - interval '1 day'
         GROUP BY e.started_on, e.started_at
       `,
@@ -240,7 +240,7 @@ describe("PostgresScopedSqlQuery", () => {
   });
 
   test("um cast que falha so chega a ver valores do proprio usuario", async () => {
-    const outcome = await query.run({ userId: "user-a", sql: "SELECT id FROM events WHERE name::int = 1" });
+    const outcome = await query.run({ userId: "user-a", sql: "SELECT id FROM tasks WHERE name::int = 1" });
 
     expect(outcome.ok).toBe(false);
     if (outcome.ok) return;
@@ -250,24 +250,24 @@ describe("PostgresScopedSqlQuery", () => {
 
   test("recusa tentativas de sair do escopo ou de escrever, e o banco fica como estava", async () => {
     const attempts = [
-      "SELECT name FROM public.events",
+      "SELECT name FROM public.tasks",
       "SELECT (WITH tags AS (SELECT 1) SELECT 1), (SELECT count(*) FROM tags)",
-      "SELECT name FROM events WHERE user_id = 'user-b' OR true",
+      "SELECT name FROM tasks WHERE user_id = 'user-b' OR true",
       "SELECT set_config('x', 'y', true)",
-      "SELECT name FROM events; DELETE FROM events",
-      "DELETE FROM events",
-      "UPDATE events SET name = 'x'",
+      "SELECT name FROM tasks; DELETE FROM tasks",
+      "DELETE FROM tasks",
+      "UPDATE tasks SET name = 'x'",
       "INSERT INTO artifacts (id) VALUES ('x')",
-      "WITH gone AS (DELETE FROM events RETURNING id) SELECT * FROM gone",
-      "SELECT * FROM events FOR UPDATE",
-      "SELECT * INTO copia FROM events",
+      "WITH gone AS (DELETE FROM tasks RETURNING id) SELECT * FROM gone",
+      "SELECT * FROM tasks FOR UPDATE",
+      "SELECT * INTO copia FROM tasks",
     ];
     for (const sql of attempts) {
       const outcome = await query.run({ userId: "user-a", sql });
       expect(outcome.ok, sql).toBe(false);
     }
 
-    const { rows: counts } = await ctx.pool.query("SELECT count(*)::int AS n, count(*) FILTER (WHERE name = 'x')::int AS renamed FROM events");
+    const { rows: counts } = await ctx.pool.query("SELECT count(*)::int AS n, count(*) FILTER (WHERE name = 'x')::int AS renamed FROM tasks");
     expect(counts[0]).toEqual({ n: 7, renamed: 0 });
   });
 
@@ -280,13 +280,13 @@ describe("PostgresScopedSqlQuery", () => {
       maxErrorChars: 300,
     });
 
-    expect(await small.run({ userId: "user-a", sql: "SELECT name FROM events ORDER BY name" })).toEqual({
+    expect(await small.run({ userId: "user-a", sql: "SELECT name FROM tasks ORDER BY name" })).toEqual({
       ok: true,
       columns: ["name"],
       rows: [["Taref…"]],
       truncated: true,
     });
-    expect(await small.run({ userId: "user-a", sql: "SELECT kind FROM events WHERE name = 'Treino'" })).toEqual({
+    expect(await small.run({ userId: "user-a", sql: "SELECT kind FROM tasks WHERE name = 'Treino'" })).toEqual({
       ok: true,
       columns: ["kind"],
       rows: [["train…"]],
@@ -303,14 +303,14 @@ describe("PostgresScopedSqlQuery", () => {
       maxErrorChars: 20,
     });
 
-    expect(await tight.run({ userId: "user-a", sql: "SELECT name FROM events ORDER BY name" })).toEqual({
+    expect(await tight.run({ userId: "user-a", sql: "SELECT name FROM tasks ORDER BY name" })).toEqual({
       ok: true,
       columns: ["name"],
       rows: [["Tarefa do A"]],
       truncated: true,
     });
     // A mensagem de erro que volta para o modelo tambem tem teto.
-    const failed = await tight.run({ userId: "user-a", sql: "SELECT coluna_que_nao_existe FROM events" });
+    const failed = await tight.run({ userId: "user-a", sql: "SELECT coluna_que_nao_existe FROM tasks" });
     expect(failed.ok).toBe(false);
     if (!failed.ok) expect(failed.error.length).toBeLessThanOrEqual(21);
   });
@@ -319,7 +319,7 @@ describe("PostgresScopedSqlQuery", () => {
     const pool = new Pool({ connectionString: ctx.connectionString, max: 1 });
     try {
       await pool.query(`
-        INSERT INTO events (id, user_id, actor, kind, name, started_at)
+        INSERT INTO tasks (id, user_id, actor, kind, name, started_at)
         SELECT lpad(n::text, 26, 'Z'), 'user-a', 'human', 'common', 'massa', now() FROM generate_series(1, 3000) AS n
       `);
       const slow = new PostgresScopedSqlQuery(pool, {
@@ -330,7 +330,7 @@ describe("PostgresScopedSqlQuery", () => {
         maxErrorChars: 300,
       });
 
-      const outcome = await slow.run({ userId: "user-a", sql: "SELECT count(*) FROM events a, events b, events c" });
+      const outcome = await slow.run({ userId: "user-a", sql: "SELECT count(*) FROM tasks a, tasks b, tasks c" });
 
       expect(outcome).toEqual({ ok: false, error: "canceling statement due to statement timeout" });
       const { rows: settings } = await pool.query("SHOW statement_timeout");
@@ -338,7 +338,7 @@ describe("PostgresScopedSqlQuery", () => {
       const { rows: readOnly } = await pool.query("SHOW transaction_read_only");
       expect(readOnly[0].transaction_read_only).toBe("off");
       // A mesma conexao volta a servir consultas.
-      expect(await slow.run({ userId: "user-b", sql: "SELECT count(*)::int FROM events" })).toMatchObject({ ok: true, rows: [[2]] });
+      expect(await slow.run({ userId: "user-b", sql: "SELECT count(*)::int FROM tasks" })).toMatchObject({ ok: true, rows: [[2]] });
     } finally {
       await pool.end();
     }
@@ -347,9 +347,9 @@ describe("PostgresScopedSqlQuery", () => {
   test("a descricao do esquema para o prompt lista so as tabelas do escopo", () => {
     const description = query.describeSchema();
 
-    for (const table of ["events", "event_sequence", "event_artifacts", "event_tags", "recurrences", "artifacts", "artifact_tags"]) {
+    for (const table of ["tasks", "task_sequence", "task_artifacts", "task_tags", "recurrences", "artifacts", "artifact_tags"]) {
       expect(description).toContain(`${table}:`);
     }
-    expect(description).not.toMatch(/event_entries|jobs|user_id|event_event_relation/);
+    expect(description).not.toMatch(/task_entries|jobs|user_id|task_task_relation/);
   });
 });

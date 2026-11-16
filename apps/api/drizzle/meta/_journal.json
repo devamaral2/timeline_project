@@ -36,6 +36,13 @@
       "when": 1795034278235,
       "tag": "0004_tipo_comum_do_evento",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1795120678235,
+      "tag": "0005_tarefa_no_lugar_de_evento",
+      "breakpoints": true
     }
   ]
 }

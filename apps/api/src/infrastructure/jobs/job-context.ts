@@ -58,7 +58,7 @@ export async function completeCurrentJob(tx: JobTransaction): Promise<void> {
 export async function enqueueJobInTransaction(tx: JobTransaction, input: EnqueueJobInput): Promise<string> {
   if (!input.userId || !input.actorId) throw new Error("Jobs require authenticated ownership");
   const result = await tx.execute(sql`
-    INSERT INTO jobs (id, kind, user_id, actor_id, event_id, payload, dedupe_key, concurrency_key)
+    INSERT INTO jobs (id, kind, user_id, actor_id, task_id, payload, dedupe_key, concurrency_key)
     VALUES (${ulid()}, ${input.kind}, ${input.userId}, ${input.actorId}, ${input.eventId ?? null},
       ${JSON.stringify(input.payload)}::jsonb, ${input.dedupeKey ?? null}, ${input.concurrencyKey ?? null})
     ON CONFLICT (user_id, kind, dedupe_key) DO UPDATE SET dedupe_key = excluded.dedupe_key

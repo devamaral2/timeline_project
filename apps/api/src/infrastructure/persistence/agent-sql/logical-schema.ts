@@ -6,9 +6,9 @@
  * `$1` e o id do usuario. Toda tabela filha junta com o pai para herdar o
  * filtro, porque ela nao tem `user_id` proprio.
  *
- * So entram os eventos de pessoa e os artefatos: os pedidos ao agente, os
+ * So entram as tarefas de pessoa e os artefatos: os pedidos ao agente, os
  * passos e as entradas deles ficam de fora. As relacoes aparecem como visoes
- * com nome (`event_sequence`, `event_artifacts`), e nao como o
+ * com nome (`task_sequence`, `task_artifacts`), e nao como o
  * grafo de relacoes.
  */
 interface LogicalColumn {
@@ -40,24 +40,24 @@ const ARTIFACT_DATA_DESCRIPTION = [
 
 /** Os tipos de artefato que guardam conteudo do usuario. Os arquivos do agente ficam de fora. */
 const VISIBLE_ARTIFACT = "a.deleted_at IS NULL AND (a.user_id = $1 OR a.user_id IS NULL) AND a.type IN ('text', 'food', 'sleep', 'training', 'workout')";
-const VISIBLE_EVENT = (alias: string) => `${alias}.user_id = $1 AND ${alias}.actor = 'human' AND ${alias}.deleted_at IS NULL`;
+const VISIBLE_TASK = (alias: string) => `${alias}.user_id = $1 AND ${alias}.actor = 'human' AND ${alias}.deleted_at IS NULL`;
 
 const TABLES: readonly LogicalTable[] = [
   {
-    name: "events",
+    name: "tasks",
     description:
-      "Eventos do usuario (passado, agora ou futuro; podem se sobrepor). Com status, o evento e acompanhado como uma tarefa; sem status, so marca um horario na agenda.",
-    from: "public.events e",
-    where: VISIBLE_EVENT("e"),
+      "Tarefas do usuario (passado, agora ou futuro; podem se sobrepor). Com status, a tarefa e acompanhada na lista de tarefas; sem status, e tarefa de referencia e so marca um horario na agenda.",
+    from: "public.tasks e",
+    where: VISIBLE_TASK("e"),
     columns: [
       { name: "id", expr: "e.id", type: "text" },
       { name: "name", expr: "e.name", type: "text" },
       { name: "description", expr: "e.description", type: "text" },
-      { name: "location", expr: "e.location", type: "text", description: "onde o evento acontece; vazio se nao tem" },
+      { name: "location", expr: "e.location", type: "text", description: "onde a tarefa acontece; vazio se nao tem" },
       { name: "kind", expr: "e.kind", type: "text", description: "default | meal | sleep | training" },
       {
         name: "status", expr: "e.status", type: "text",
-        description: "nulo = evento de referencia, que so marca um horario; senao todo | toDefine | doing | inHold | done | cancel | missed (nao realizado)",
+        description: "nulo = tarefa de referencia, que so marca um horario; senao todo | toDefine | doing | inHold | done | cancel | missed (nao realizado)",
       },
       { name: "priority", expr: "e.priority", type: "text", description: "urgent | high | medium | low" },
       { name: "started_at", expr: "e.started_at", type: "timestamptz", description: "inicio planejado; nulo se nao tem" },
@@ -67,12 +67,12 @@ const TABLES: readonly LogicalTable[] = [
       },
       {
         name: "estimated_finish_at", expr: "e.estimated_finish_at", type: "timestamptz",
-        description: "fim planejado: o fim do bloco na agenda ou, no evento longo, o prazo",
+        description: "fim planejado: o fim do bloco na agenda ou, na tarefa longa, o prazo",
       },
       { name: "finished_at", expr: "e.finished_at", type: "timestamptz", description: "conclusao real; nulo se nao terminou" },
       {
         name: "long_running", expr: "e.long_running", type: "boolean",
-        description: "evento longo (um projeto): fica fora da agenda e sempre tem status",
+        description: "tarefa longa (um projeto): fica fora da agenda e sempre tem status",
       },
       { name: "recurrence_id", expr: "e.recurrence_id", type: "text", description: "serie de origem, se for ocorrencia" },
       { name: "occurrence_on", expr: "e.occurrence_on", type: "date" },
@@ -81,41 +81,41 @@ const TABLES: readonly LogicalTable[] = [
     ],
   },
   {
-    name: "event_sequence",
-    description: "Sequencia entre eventos: next_event_id se segue de previous_event_id (previous vem antes). Um evento pode ter varios antecessores e varios sucessores.",
-    from: "public.event_event_relation r JOIN public.events p ON p.id = r.from_event_id JOIN public.events c ON c.id = r.to_event_id",
-    where: `r.relation = 'precedes' AND ${VISIBLE_EVENT("p")} AND ${VISIBLE_EVENT("c")}`,
+    name: "task_sequence",
+    description: "Sequencia entre tarefas: next_task_id se segue de previous_task_id (previous vem antes). Uma tarefa pode ter varios antecessores e varios sucessores.",
+    from: "public.task_task_relation r JOIN public.tasks p ON p.id = r.from_task_id JOIN public.tasks c ON c.id = r.to_task_id",
+    where: `r.relation = 'precedes' AND ${VISIBLE_TASK("p")} AND ${VISIBLE_TASK("c")}`,
     columns: [
-      { name: "previous_event_id", expr: "r.from_event_id", type: "text" },
-      { name: "next_event_id", expr: "r.to_event_id", type: "text" },
+      { name: "previous_task_id", expr: "r.from_task_id", type: "text" },
+      { name: "next_task_id", expr: "r.to_task_id", type: "text" },
     ],
   },
   {
-    name: "event_artifacts",
-    description: "Artefatos de um evento, na ordem em que aparecem (position). Um artefato pode estar em varios eventos.",
-    from: "public.event_artifact_relation l JOIN public.events e ON e.id = l.event_id JOIN public.artifacts a ON a.id = l.artifact_id",
-    where: `${VISIBLE_EVENT("e")} AND ${VISIBLE_ARTIFACT}`,
+    name: "task_artifacts",
+    description: "Artefatos de uma tarefa, na ordem em que aparecem (position). Um artefato pode estar em varias tarefas.",
+    from: "public.task_artifact_relation l JOIN public.tasks e ON e.id = l.task_id JOIN public.artifacts a ON a.id = l.artifact_id",
+    where: `${VISIBLE_TASK("e")} AND ${VISIBLE_ARTIFACT}`,
     columns: [
-      { name: "event_id", expr: "l.event_id", type: "text" },
+      { name: "task_id", expr: "l.task_id", type: "text" },
       { name: "artifact_id", expr: "l.artifact_id", type: "text" },
-      { name: "relation", expr: "l.relation", type: "text", description: "o que o evento fez com o artefato: creates | updates | uses | deletes" },
+      { name: "relation", expr: "l.relation", type: "text", description: "o que a tarefa fez com o artefato: creates | updates | uses | deletes" },
       { name: "position", expr: "l.position", type: "integer" },
     ],
   },
   {
-    name: "event_tags",
-    description: "Tags de cada evento.",
-    from: "public.event_tags et JOIN public.tags t ON t.id = et.tag_id JOIN public.events e ON e.id = et.event_id",
-    where: `${VISIBLE_EVENT("e")} AND t.user_id = $1`,
+    name: "task_tags",
+    description: "Tags de cada tarefa.",
+    from: "public.task_tags et JOIN public.tags t ON t.id = et.tag_id JOIN public.tasks e ON e.id = et.task_id",
+    where: `${VISIBLE_TASK("e")} AND t.user_id = $1`,
     columns: [
-      { name: "event_id", expr: "et.event_id", type: "text" },
+      { name: "task_id", expr: "et.task_id", type: "text" },
       { name: "tag", expr: "t.name", type: "text" },
     ],
   },
   {
     name: "recurrences",
     description:
-      "Series recorrentes. Cada ocorrencia e uma linha em events com recurrence_id apontando para ca; so as dos proximos dias ja foram geradas.",
+      "Series recorrentes. Cada ocorrencia e uma linha em tasks com recurrence_id apontando para ca; so as dos proximos dias ja foram geradas.",
     from: "public.recurrences r",
     where: "r.user_id = $1",
     columns: [
@@ -137,7 +137,7 @@ const TABLES: readonly LogicalTable[] = [
   {
     name: "artifacts",
     description:
-      "Artefatos: objetos que guardam conteudo (uma nota de texto, um alimento, um sono, um treino, um exercicio). Podem estar soltos ou ligados a eventos (event_artifacts); o conteudo fica em data, conforme type.",
+      "Artefatos: objetos que guardam conteudo (uma nota de texto, um alimento, um sono, um treino, um exercicio). Podem estar soltos ou ligados a tarefas (task_artifacts); o conteudo fica em data, conforme type.",
     from: "public.artifacts a",
     where: VISIBLE_ARTIFACT,
     columns: [
@@ -146,7 +146,7 @@ const TABLES: readonly LogicalTable[] = [
       { name: "type", expr: "a.type", type: "text", description: "text | food | sleep | training | workout" },
       { name: "data", expr: "a.data", type: "jsonb", description: ARTIFACT_DATA_DESCRIPTION },
       { name: "global", expr: "a.user_id IS NULL", type: "boolean", description: "sem dono: alimento ou exercicio que todos leem" },
-      { name: "derived", expr: "a.derived", type: "boolean", description: "copia de um alimento, feita para o evento em que foi comido" },
+      { name: "derived", expr: "a.derived", type: "boolean", description: "copia de um alimento, feita para a tarefa em que foi comido" },
       { name: "created_at", expr: "a.created_at", type: "timestamptz" },
       { name: "updated_at", expr: "a.updated_at", type: "timestamptz" },
     ],

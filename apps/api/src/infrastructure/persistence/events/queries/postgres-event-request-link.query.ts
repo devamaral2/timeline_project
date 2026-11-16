@@ -15,9 +15,9 @@ export class PostgresEventRequestLinkQuery implements EventRequestLinkQuery {
   async linksOf(eventId: string): Promise<EventRequestLink[]> {
     const result = await this.db.execute<LinkRow>(sql`
       SELECT e.id AS request_id, r.relation, e.name, r.created_at
-      FROM event_event_relation r
-      JOIN events e ON e.id = r.from_event_id
-      WHERE r.to_event_id = ${eventId}
+      FROM task_task_relation r
+      JOIN tasks e ON e.id = r.from_task_id
+      WHERE r.to_task_id = ${eventId}
         AND r.relation IN ('generates', 'updates')
         AND e.actor = 'agent' AND e.kind <> 'step' AND e.deleted_at IS NULL
       ORDER BY r.created_at, e.id

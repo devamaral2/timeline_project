@@ -40,338 +40,18 @@
 # eventos de auditoria do Auth, eventos do stream do Hermes, migrations ja aplicadas.
 
 == banco ==
-apps/api/src/infrastructure/jobs/job-context.ts	INSERT INTO jobs (id, kind, user_id, actor_id, event_id, payload, dedupe_key, concurrency_key)
-apps/api/src/infrastructure/persistence/artifacts/queries/postgres-artifact-event-link.query.ts	event_id: string;
-apps/api/src/infrastructure/persistence/artifacts/queries/postgres-artifact-event-link.query.ts	SELECT r.artifact_id, e.id AS event_id, r.relation, e.name, e.actor, e.kind, e.started_at, e.estimated_finish_at
-apps/api/src/infrastructure/persistence/artifacts/queries/postgres-artifact-event-link.query.ts	FROM event_artifact_relation r
-apps/api/src/infrastructure/persistence/artifacts/queries/postgres-artifact-event-link.query.ts	JOIN events e ON e.id = r.event_id
-apps/api/src/infrastructure/persistence/artifacts/queries/postgres-artifact-event-link.query.ts	eventId: row.event_id,
-apps/api/src/infrastructure/persistence/artifacts/repositories/postgres-artifact.repository.ts	UPDATE events e
-apps/api/src/infrastructure/persistence/artifacts/repositories/postgres-artifact.repository.ts	FROM event_artifact_relation r
-apps/api/src/infrastructure/persistence/artifacts/repositories/postgres-artifact.repository.ts	WHERE r.artifact_id = ${payload.artifactId} AND r.event_id = e.id
-apps/api/src/infrastructure/persistence/database/schema/events.ts	// contexto de tela. O que cresce vai para `event_entries`.
-apps/api/src/infrastructure/persistence/database/schema/events.ts	index("events_agenda_idx")
-apps/api/src/infrastructure/persistence/database/schema/events.ts	index("events_tracked_idx")
-apps/api/src/infrastructure/persistence/database/schema/events.ts	index("events_requests_idx")
-apps/api/src/infrastructure/persistence/database/schema/events.ts	index("events_user_live_idx")
-apps/api/src/infrastructure/persistence/database/schema/events.ts	uniqueIndex("events_recurrence_occurrence_unique")
-apps/api/src/infrastructure/persistence/database/schema/events.ts	check("events_revision_min", sql`${table.revision} >= 1`),
-apps/api/src/infrastructure/persistence/database/schema/events.ts	check("events_actor_valid", sql`${table.actor} IN (${sqlList(ACTORS)})`),
-apps/api/src/infrastructure/persistence/database/schema/events.ts	check("events_priority_valid", sql`${table.priority} IN (${sqlList(PRIORITIES)})`),
-apps/api/src/infrastructure/persistence/database/schema/events.ts	"events_kind_matches_actor",
-apps/api/src/infrastructure/persistence/database/schema/events.ts	"events_status_matches_actor",
-apps/api/src/infrastructure/persistence/database/schema/events.ts	"events_long_running_shape",
-apps/api/src/infrastructure/persistence/database/schema/events.ts	"events_long_running_notify",
-apps/api/src/infrastructure/persistence/database/schema/events.ts	"events_block_span",
-apps/api/src/infrastructure/persistence/database/schema/events.ts	check("events_occurrence_requires_day", sql`${table.recurrenceId} IS NULL OR ${table.occurrenceOn} IS NOT NULL`),
-apps/api/src/infrastructure/persistence/database/schema/events.ts	"events_notify_offsets_valid",
-apps/api/src/infrastructure/persistence/database/schema/events.ts	check("events_location_human", sql`${table.location} = '' OR ${table.actor} = 'human'`),
-apps/api/src/infrastructure/persistence/database/schema/events.ts	check("events_location_length", sql`char_length(${table.location}) <= 300`),
-apps/api/src/infrastructure/persistence/database/schema/events.ts	check("events_data_object", sql`jsonb_typeof(${table.data}) = 'object'`),
-apps/api/src/infrastructure/persistence/database/schema/events.ts	"event_entries",
-apps/api/src/infrastructure/persistence/database/schema/events.ts	eventId: char("event_id", { length: 26 })
-apps/api/src/infrastructure/persistence/database/schema/events.ts	index("event_entries_event_idx").on(table.eventId, table.id),
-apps/api/src/infrastructure/persistence/database/schema/events.ts	check("event_entries_kind_valid", sql`${table.kind} IN (${sqlList(ENTRY_KINDS)})`),
-apps/api/src/infrastructure/persistence/database/schema/events.ts	check("event_entries_role_only_in_message", sql`(${table.kind} = 'message') = (${table.role} IS NOT NULL)`),
-apps/api/src/infrastructure/persistence/database/schema/events.ts	check("event_entries_role_valid", sql`${table.role} IS NULL OR ${table.role} IN (${sqlList(ENTRY_ROLES)})`),
-apps/api/src/infrastructure/persistence/database/schema/events.ts	check("event_entries_trace_without_text", sql`${table.kind} <> 'trace' OR ${table.content} IS NULL`),
-apps/api/src/infrastructure/persistence/database/schema/events.ts	check("event_entries_data_object", sql`jsonb_typeof(${table.data}) = 'object'`),
-apps/api/src/infrastructure/persistence/database/schema/jobs.ts	eventId: char("event_id", { length: 26 }).references(() => events.id, { onDelete: "cascade" }),
-apps/api/src/infrastructure/persistence/database/schema/jobs.ts	index("jobs_event_idx")
-apps/api/src/infrastructure/persistence/database/schema/relations.ts	"event_event_relation",
-apps/api/src/infrastructure/persistence/database/schema/relations.ts	fromEventId: char("from_event_id", { length: 26 })
-apps/api/src/infrastructure/persistence/database/schema/relations.ts	toEventId: char("to_event_id", { length: 26 })
-apps/api/src/infrastructure/persistence/database/schema/relations.ts	uniqueIndex("event_event_reverse_idx").on(table.toEventId, table.relation, table.fromEventId),
-apps/api/src/infrastructure/persistence/database/schema/relations.ts	uniqueIndex("event_event_follow_up_unique")
-apps/api/src/infrastructure/persistence/database/schema/relations.ts	check("event_event_relation_valid", sql`${table.relation} IN (${sqlList(EVENT_EVENT_RELATIONS)})`),
-apps/api/src/infrastructure/persistence/database/schema/relations.ts	check("event_event_not_self", sql`${table.fromEventId} <> ${table.toEventId}`),
-apps/api/src/infrastructure/persistence/database/schema/relations.ts	* agente. `UNIQUE (event_id, position)` e `DEFERRABLE` na migration (o Drizzle
-apps/api/src/infrastructure/persistence/database/schema/relations.ts	"event_artifact_relation",
-apps/api/src/infrastructure/persistence/database/schema/relations.ts	eventId: char("event_id", { length: 26 })
-apps/api/src/infrastructure/persistence/database/schema/relations.ts	unique("event_artifact_event_position_unique").on(table.eventId, table.position),
-apps/api/src/infrastructure/persistence/database/schema/relations.ts	index("event_artifact_reverse_idx").on(table.artifactId, table.eventId),
-apps/api/src/infrastructure/persistence/database/schema/relations.ts	check("event_artifact_relation_valid", sql`${table.relation} IN (${sqlList(EVENT_ARTIFACT_RELATIONS)})`),
-apps/api/src/infrastructure/persistence/database/schema/relations.ts	check("event_artifact_position_nonneg", sql`${table.position} IS NULL OR ${table.position} >= 0`),
-apps/api/src/infrastructure/persistence/database/schema/tags.ts	"event_tags",
-apps/api/src/infrastructure/persistence/database/schema/tags.ts	eventId: char("event_id", { length: 26 })
-apps/api/src/infrastructure/persistence/database/schema/tags.ts	index("event_tags_tag_idx").on(table.tagId, table.eventId),
-apps/api/src/infrastructure/persistence/events/queries/postgres-event-card.query.ts	SELECT 1 FROM event_tags et
-apps/api/src/infrastructure/persistence/events/queries/postgres-event-card.query.ts	WHERE et.event_id = e.id AND t.user_id = ${userId} AND t.name = ${tag}
-apps/api/src/infrastructure/persistence/events/queries/postgres-event-card.query.ts	// As mesmas condicoes do indice parcial `events_agenda_idx`.
-apps/api/src/infrastructure/persistence/events/queries/postgres-event-card.query.ts	FROM events e
-apps/api/src/infrastructure/persistence/events/queries/postgres-event-card.query.ts	// As mesmas condicoes do indice parcial `events_tracked_idx`.
-apps/api/src/infrastructure/persistence/events/queries/postgres-event-card.query.ts	SELECT o.id FROM events o
-apps/api/src/infrastructure/persistence/events/queries/postgres-event-card.query.ts	FROM events e
-apps/api/src/infrastructure/persistence/events/queries/postgres-event-request-link.query.ts	FROM event_event_relation r
-apps/api/src/infrastructure/persistence/events/queries/postgres-event-request-link.query.ts	JOIN events e ON e.id = r.from_event_id
-apps/api/src/infrastructure/persistence/events/queries/postgres-event-request-link.query.ts	WHERE r.to_event_id = ${eventId}
-apps/api/src/infrastructure/persistence/events/repositories/event-relations.ts	SELECT id FROM events
-apps/api/src/infrastructure/persistence/events/repositories/event-relations.ts	SELECT to_event_id FROM event_event_relation
-apps/api/src/infrastructure/persistence/events/repositories/event-relations.ts	WHERE from_event_id = ${eventId} AND relation = ${SEQUENCE_RELATION}
-apps/api/src/infrastructure/persistence/events/repositories/event-relations.ts	SELECT r.to_event_id FROM event_event_relation r
-apps/api/src/infrastructure/persistence/events/repositories/event-relations.ts	JOIN reach ON r.from_event_id = reach.id
-apps/api/src/infrastructure/persistence/events/repositories/postgres-event.repository.ts	UPDATE events
 apps/api/src/infrastructure/persistence/events/repositories/postgres-event.repository.ts	async update(event: Event, actorUserId: string, expectedRevision: number, artifacts?: ArtifactWrites): Promise<void> {
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	INSERT INTO events (id, user_id, actor, kind, status, name, started_at) VALUES
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	UPDATE events SET deleted_at = now() WHERE id = '${A_DELETED}';
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	INSERT INTO event_entries (id, event_id, user_id, kind, role, content) VALUES
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	INSERT INTO event_artifact_relation (event_id, artifact_id, relation, position) VALUES
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	INSERT INTO event_event_relation (from_event_id, to_event_id, relation) VALUES
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	INSERT INTO event_tags (event_id, tag_id) VALUES
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	expect(await rows("SELECT name, kind, status FROM events ORDER BY name")).toEqual([
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	expect(await rows("SELECT name FROM events ORDER BY name", "user-b")).toEqual([["Segredo do B"], ["Tarefa do B"]]);
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	expect(await rows("SELECT name FROM events ORDER BY name", "user-sem-dados")).toEqual([]);
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	expect(await rows("SELECT count(*)::int FROM events WHERE kind IN ('request', 'step') OR status = 'done'")).toEqual([[0]]);
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	test("event_artifacts esconde a relacao cujo evento ou artefato esta apagado, e de agente ou de outro usuario", async () => {
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	expect(await rows("SELECT event_id, artifact_id, relation, position FROM event_artifacts ORDER BY position")).toEqual([
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	expect(await rows("SELECT event_id, artifact_id FROM event_artifacts", "user-b")).toEqual([[B_EVENT, B_SLEEP]]);
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	test("event_sequence so liga eventos vivos de pessoa do mesmo usuario, e nao expoe as tabelas antigas", async () => {
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	expect(await rows("SELECT previous_event_id, next_event_id FROM event_sequence")).toEqual([[A_TRACKED, A_TRAINING]]);
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	expect(await rows("SELECT previous_event_id, next_event_id FROM event_sequence", "user-b")).toEqual([[B_EVENT, B_TRACKED]]);
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	await expect(rows("SELECT * FROM event_subtasks")).rejects.toThrow();
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	await expect(rows("SELECT * FROM event_blocks")).rejects.toThrow();
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	test("event_tags e artifact_tags seguem a visibilidade do dono da tag", async () => {
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	expect(await rows("SELECT event_id, tag FROM event_tags")).toEqual([[A_TRAINING, "saude"]]);
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	expect(await rows("SELECT tag FROM event_tags UNION SELECT tag FROM artifact_tags", "user-b")).toEqual([["segredo"]]);
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	UPDATE events SET recurrence_id = '${id("RA", 1)}', occurrence_on = '2026-09-15' WHERE id = '${A_TRAINING}';
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	await rows("SELECT r.name, e.occurrence_on FROM events e JOIN recurrences r ON r.id = e.recurrence_id"),
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	"event_entries",
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	"event_event_relation",
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	"event_artifact_relation",
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	expect((await query.run({ userId: "user-a", sql: `SELECT ${column} FROM events` })).ok, column).toBe(false);
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	expect(await rows("WITH events AS (SELECT * FROM events) SELECT count(*)::int FROM events")).toEqual([[2]]);
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	FROM events e JOIN event_artifacts ea ON ea.event_id = e.id JOIN artifacts a ON a.id = ea.artifact_id
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	const outcome = await query.run({ userId: "user-a", sql: "SELECT id FROM events WHERE name::int = 1" });
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	"SELECT name FROM events WHERE user_id = 'user-b' OR true",
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	"SELECT name FROM events; DELETE FROM events",
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	"DELETE FROM events",
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	"UPDATE events SET name = 'x'",
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	"WITH gone AS (DELETE FROM events RETURNING id) SELECT * FROM gone",
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	"SELECT * FROM events FOR UPDATE",
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	"SELECT * INTO copia FROM events",
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	const { rows: counts } = await ctx.pool.query("SELECT count(*)::int AS n, count(*) FILTER (WHERE name = 'x')::int AS renamed FROM events");
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	expect(await small.run({ userId: "user-a", sql: "SELECT name FROM events ORDER BY name" })).toEqual({
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	expect(await small.run({ userId: "user-a", sql: "SELECT kind FROM events WHERE name = 'Treino'" })).toEqual({
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	expect(await tight.run({ userId: "user-a", sql: "SELECT name FROM events ORDER BY name" })).toEqual({
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	const failed = await tight.run({ userId: "user-a", sql: "SELECT coluna_que_nao_existe FROM events" });
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	INSERT INTO events (id, user_id, actor, kind, name, started_at)
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	const outcome = await slow.run({ userId: "user-a", sql: "SELECT count(*) FROM events a, events b, events c" });
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	expect(await slow.run({ userId: "user-b", sql: "SELECT count(*)::int FROM events" })).toMatchObject({ ok: true, rows: [[2]] });
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	for (const table of ["events", "event_sequence", "event_artifacts", "event_tags", "recurrences", "artifacts", "artifact_tags"]) {
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	expect(description).not.toMatch(/event_entries|jobs|user_id|event_event_relation/);
-apps/api/src/infrastructure/persistence/integration/artifacts.integration.test.ts	const [job] = await selectRows<{ payload: FoodGenerationPayload; event_id: string }>(
-apps/api/src/infrastructure/persistence/integration/artifacts.integration.test.ts	"SELECT payload, event_id FROM jobs WHERE kind = $1",
-apps/api/src/infrastructure/persistence/integration/artifacts.integration.test.ts	return { food, payload: job.payload, requestId: job.event_id };
-apps/api/src/infrastructure/persistence/integration/artifacts.integration.test.ts	(await selectRows(ctx.pool, "SELECT status, finished_at FROM events WHERE id = $1", [requestId]))[0];
-apps/api/src/infrastructure/persistence/integration/artifacts.integration.test.ts	selectRows(ctx.pool, "SELECT kind, role, content, data FROM event_entries WHERE event_id = $1 AND kind = 'result'", [requestId]);
-apps/api/src/infrastructure/persistence/integration/artifacts.integration.test.ts	const requests = await selectRows(ctx.pool, "SELECT * FROM events");
-apps/api/src/infrastructure/persistence/integration/artifacts.integration.test.ts	expect(await selectRows(ctx.pool, "SELECT event_id, artifact_id, relation, position FROM event_artifact_relation")).toEqual([
-apps/api/src/infrastructure/persistence/integration/artifacts.integration.test.ts	{ event_id: request.id, artifact_id: food.id, relation: "updates", position: null },
-apps/api/src/infrastructure/persistence/integration/artifacts.integration.test.ts	expect(await selectRows(ctx.pool, "SELECT event_id, user_id, kind, role, content FROM event_entries")).toEqual([
-apps/api/src/infrastructure/persistence/integration/artifacts.integration.test.ts	{ event_id: request.id, user_id: USER, kind: "message", role: "user", content: "feijoada completa" },
-apps/api/src/infrastructure/persistence/integration/artifacts.integration.test.ts	await selectRows(ctx.pool, "SELECT kind, user_id, actor_id, event_id, dedupe_key, status, payload FROM jobs"),
-apps/api/src/infrastructure/persistence/integration/artifacts.integration.test.ts	event_id: request.id,
-apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	selectRows(ctx.pool, "SELECT from_event_id, to_event_id, relation FROM event_event_relation ORDER BY relation, from_event_id");
-apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	expect(await edges()).toEqual([{ from_event_id: a.id, to_event_id: b.id, relation: "precedes" }]);
-apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	expect(await countRows(ctx.pool, "event_event_relation", "relation = 'precedes'")).toBe(1);
-apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	expect(await edges()).toEqual([{ from_event_id: a.id, to_event_id: c.id, relation: "precedes" }]);
-apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	expect(await countRows(ctx.pool, "event_event_relation", "relation = 'precedes'")).toBe(1);
-apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	expect(await countRows(ctx.pool, "event_event_relation", "relation = 'precedes'")).toBe(2);
-apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	expect(await countRows(ctx.pool, "event_event_relation")).toBe(0);
-apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	expect(await countRows(ctx.pool, "event_event_relation", "relation = 'precedes'")).toBe(1);
-apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	seenInsideTransaction = (await tx.execute(sql`SELECT 1 FROM events WHERE id = ${created.id}`)).rows.length;
-apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	expect(await selectRows(ctx.pool, "SELECT from_event_id, to_event_id, relation FROM event_event_relation")).toEqual([
-apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	{ from_event_id: stepId, to_event_id: created.id, relation: "generates" },
-apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	(await selectRows(ctx.pool, "SELECT id FROM events ORDER BY started_at")).map((row) => row.id);
 apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	await events.update(event.revise({ tags: ["trabalho"] }), USER, 1);
-apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	"SELECT artifact_id, position FROM event_artifact_relation WHERE event_id = $1 ORDER BY position",
 apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	await events.update(event.revise({ artifactLinks: [uses(c.id), uses(a.id), uses(d.id)] }), USER, 1);
-apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	expect(await countRows(ctx.pool, "event_artifact_relation", "event_id = $1", [event.id])).toBe(3);
-apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	expect(await countRows(ctx.pool, "event_artifact_relation", "event_id = $1", [event.id])).toBe(2);
-apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	expect(await selectRows(ctx.pool, "SELECT relation FROM event_event_relation")).toEqual([
-apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	expect(await countRows(ctx.pool, "event_event_relation", "relation = 'precedes'")).toBe(1);
 apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	await expect(events.update(event.revise({ artifactLinks: [uses(foreign.id)] }), USER, 1)).rejects.toThrow(
 apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	await events.update(event.revise({ status: null, finishedAt: null }), USER, 1);
 apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	await events.update(event.revise({ name: "Primeira edicao" }), USER, 1);
 apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	await expect(events.update(event.revise({ name: "Edicao atrasada" }), USER, 1)).rejects.toThrow(
 apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	await expect(events.update(event.revise({ name: "Invadido" }), OTHER_USER, 1)).rejects.toThrow(EventOwnershipError);
 apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	await expect(events.update(event.revise({ name: "Tarde demais" }), USER, 1)).rejects.toThrow(EventNotFoundError);
-apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	const [row] = await selectRows(ctx.pool, "SELECT deleted_at FROM events WHERE id = $1", [event.id]);
-apps/api/src/infrastructure/persistence/integration/recurrences.integration.test.ts	FROM events WHERE recurrence_id = $1 ORDER BY occurrence_on`,
-apps/api/src/infrastructure/persistence/integration/recurrences.integration.test.ts	const rows = await selectRows(ctx.pool, "SELECT id FROM events ORDER BY occurrence_on");
-apps/api/src/infrastructure/persistence/integration/recurrences.integration.test.ts	expect(await selectRows(ctx.pool, "SELECT event_id, from_recurrence FROM event_artifact_relation")).toEqual([
-apps/api/src/infrastructure/persistence/integration/recurrences.integration.test.ts	{ event_id: kept.id, from_recurrence: true },
-apps/api/src/infrastructure/persistence/integration/recurrences.integration.test.ts	expect(await selectRows(ctx.pool, "SELECT id, name FROM events")).toEqual([{ id: kept.id, name: "Serie" }]);
-apps/api/src/infrastructure/persistence/integration/recurrences.integration.test.ts	expect(await countRows(ctx.pool, "event_event_relation", "relation = 'precedes'")).toBe(3);
-apps/api/src/infrastructure/persistence/integration/recurrences.integration.test.ts	expect(await countRows(ctx.pool, "event_event_relation", "relation = 'precedes'")).toBe(3);
-apps/api/src/infrastructure/persistence/integration/recurrences.integration.test.ts	expect(await countRows(ctx.pool, "event_event_relation", "relation = 'precedes'")).toBe(1);
-apps/api/src/infrastructure/persistence/integration/recurrences.integration.test.ts	expect(await countRows(ctx.pool, "event_event_relation")).toBe(0);
-apps/api/src/infrastructure/persistence/integration/recurrences.integration.test.ts	const rows = await selectRows(ctx.pool, "SELECT occurrence_on::text AS day, id, name FROM events ORDER BY occurrence_on");
-apps/api/src/infrastructure/persistence/integration/recurrences.integration.test.ts	"SELECT id, recurrence_id, occurrence_on, recurrence_detached FROM events ORDER BY started_at",
-apps/api/src/infrastructure/persistence/integration/recurrences.integration.test.ts	expect(await selectRows(ctx.pool, "SELECT DISTINCT from_recurrence FROM event_artifact_relation")).toEqual([
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	"event_artifact_relation",
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	"event_entries",
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	"event_event_relation",
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	"event_tags",
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	await expect(event({ kind: "request" })).rejects.toThrow(/events_kind_matches_actor/);
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	await expect(event({ kind: "step" })).rejects.toThrow(/events_kind_matches_actor/);
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	await expect(agentEvent({ kind: "meal" })).rejects.toThrow(/events_kind_matches_actor/);
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	const { rows } = await ctx.pool.query("SELECT status, priority, revision FROM events WHERE id = $1", [id]);
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	await expect(agentEvent({ status: null })).rejects.toThrow(/events_status_matches_actor/);
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	await expect(event({ status: "queued" })).rejects.toThrow(/events_status_matches_actor/);
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	await expect(event({ status: "scheduled" })).rejects.toThrow(/events_status_matches_actor/);
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	await expect(agentEvent({ status: "todo" })).rejects.toThrow(/events_status_matches_actor/);
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	await expect(agentEvent({ status: "missed" })).rejects.toThrow(/events_status_matches_actor/);
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	await expect(event({ actor: "bot" })).rejects.toThrow(/events_actor_valid/);
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	await expect(event({ priority: "normal" })).rejects.toThrow(/events_priority_valid/);
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	).rejects.toThrow(/events_block_span/);
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	).rejects.toThrow(/events_block_span/);
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	await expect(event({ notify_offsets_minutes: [0] })).rejects.toThrow(/events_notify_offsets_valid/);
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	await expect(event({ notify_offsets_minutes: [43201] })).rejects.toThrow(/events_notify_offsets_valid/);
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	await expect(agentEvent({ long_running: true })).rejects.toThrow(/events_long_running_shape/);
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	await expect(long({ status: null })).rejects.toThrow(/events_long_running_shape/);
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	await expect(long({ status: "missed" })).rejects.toThrow(/events_long_running_shape/);
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	/events_long_running_shape/,
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	await expect(long({ notify_offsets_minutes: [1440] })).rejects.toThrow(/events_long_running_notify/);
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	await expect(event({ recurrence_id: series })).rejects.toThrow(/events_occurrence_requires_day/);
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	/events_recurrence_occurrence_unique/,
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	const { rows } = await ctx.pool.query("SELECT recurrence_id, occurrence_on::text FROM events WHERE id = $1", [id]);
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	describe("event_entries", () => {
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	insert("event_entries", { id: ulid(), event_id: eventId, user_id: "user-1", ...overrides });
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	expect(await count("event_entries")).toBe(5);
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	/event_entries_role_only_in_message/,
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	/event_entries_role_only_in_message/,
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	/event_entries_role_valid/,
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	/event_entries_trace_without_text/,
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	await ctx.pool.query("DELETE FROM events WHERE id = $1", [request]);
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	expect(await count("event_entries")).toBe(0);
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	insert("event_event_relation", { from_event_id: from, to_event_id: to, relation });
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	expect(await count("event_event_relation")).toBe(3);
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	await expect(relate(a, a, "precedes")).rejects.toThrow(/event_event_not_self/);
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	await expect(relate(a, b, "parent")).rejects.toThrow(/event_event_relation_valid/);
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	await expect(relate(a, b, "subtask")).rejects.toThrow(/event_event_relation_valid/);
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	await expect(relate(a, b, "blocks")).rejects.toThrow(/event_event_relation_valid/);
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	expect(await count("event_event_relation")).toBe(6);
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	await expect(relate(other, followUp, "follow_up")).rejects.toThrow(/event_event_follow_up_unique/);
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	await ctx.pool.query("DELETE FROM events WHERE id = $1", [project]);
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	expect(await count("event_event_relation")).toBe(0);
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	insert("event_artifact_relation", { event_id: eventId, artifact_id: artifactId, relation: "uses", ...overrides });
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	await expect(link(meal, c, { position: 0 })).rejects.toThrow(/event_artifact_event_position_unique/);
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	await expect(link(meal, c, { position: -1 })).rejects.toThrow(/event_artifact_position_nonneg/);
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	await ctx.pool.query("UPDATE event_artifact_relation SET position = position + 1 WHERE event_id = $1", [meal]);
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	"SELECT artifact_id, position FROM event_artifact_relation WHERE event_id = $1 ORDER BY position",
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	await expect(link(meal, food, { relation: "derives" })).rejects.toThrow(/event_artifact_relation_valid/);
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	await job({ event_id: step });
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	await ctx.pool.query("DELETE FROM events WHERE id = $1", [step]);
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	SELECT id FROM events
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	expect(plan).toContain("events_agenda_idx");
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	SELECT id FROM events
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	expect(plan).not.toContain("events_agenda_idx");
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	SELECT id FROM events
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	expect(plan).toContain("events_agenda_idx");
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	SELECT id FROM events
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	expect(plan).toContain("events_tracked_idx");
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	SELECT id FROM events
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	expect(plan).toContain("events_requests_idx");
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	"SELECT id FROM events WHERE user_id = 'user-1' AND deleted_at IS NULL AND actor = 'human'",
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	expect(plan).toContain("events_user_live_idx");
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	SELECT id FROM event_entries
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	WHERE event_id = '01JCZ0000000000000000000AA' AND id > '01JCZ0000000000000000000AB' ORDER BY id`);
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	expect(plan).toContain("event_entries_event_idx");
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	SELECT from_event_id FROM event_event_relation
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	WHERE to_event_id = '01JCZ0000000000000000000AA' AND relation = 'precedes'`);
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	expect(plan).toContain("event_event_reverse_idx");
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	"SELECT event_id FROM event_artifact_relation WHERE artifact_id = '01JCZ0000000000000000000AA'",
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	expect(plan).toContain("event_artifact_reverse_idx");
-apps/api/src/infrastructure/persistence/jobs/postgres-job.store.ts	${table}.event_id AS "eventId", ${table}.payload, ${table}.status, ${table}.progress, ${table}.error,
-apps/api/src/infrastructure/persistence/jobs/postgres-job.store.ts	`SELECT ${projection} FROM jobs WHERE event_id = $1 AND status IN ('queued', 'running')
-apps/api/src/infrastructure/persistence/jobs/postgres-job.store.ts	WHERE event_id = ANY($1::char(26)[]) AND user_id = $2 AND status IN ('queued', 'running') RETURNING id`,
-apps/api/src/infrastructure/persistence/recurrences/repositories/postgres-recurrence.repository.ts	UPDATE event_artifact_relation SET from_recurrence = false
-apps/api/src/infrastructure/persistence/recurrences/repositories/postgres-recurrence.repository.ts	WHERE event_id IN (SELECT id FROM events WHERE recurrence_id = ${recurrenceId})
-apps/api/src/infrastructure/persistence/recurrences/repositories/postgres-recurrence.repository.ts	// alguma coisa, entao os tres saem juntos, numa linha so: o check `events_occurrence_requires_day`
-apps/api/src/infrastructure/persistence/recurrences/repositories/postgres-recurrence.repository.ts	SELECT id FROM events
-apps/api/src/infrastructure/persistence/requests/postgres-candidate.query.ts	// `events_user_live_idx`: os eventos vivos de pessoa do usuario.
-apps/api/src/infrastructure/persistence/requests/postgres-candidate.query.ts	`SELECT ${columns} FROM events
-apps/api/src/infrastructure/persistence/requests/postgres-candidate.query.ts	`SELECT ${columns} FROM events
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	const jobs = () => rows<{ kind: string; event_id: string; concurrency_key: string | null; payload: unknown }>(
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	"SELECT kind, event_id, concurrency_key, payload FROM jobs ORDER BY created_at, id");
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	const [event] = await rows("SELECT actor, kind, status, name, data, started_at, finished_at FROM events WHERE id = $1", [requestId]);
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	expect(await rows("SELECT kind, role, content FROM event_entries WHERE event_id = $1", [requestId]))
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	expect(await jobs()).toMatchObject([{ kind: "request-dispatch", event_id: requestId, payload: { requestId } }]);
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	expect(await rows("SELECT id FROM events")).toHaveLength(2);
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	model: "jev-test", latencyMs: 12, answers: { event_create: { choice: "one", confidence: 0.99, probability: 0.98 } },
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	expect(await rows("SELECT kind, status, name, data FROM events WHERE id = ANY($1::char(26)[]) ORDER BY id", [[first, second, loop]])).toEqual([
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	expect(await rows("SELECT to_event_id, relation FROM event_event_relation WHERE from_event_id = $1 ORDER BY to_event_id", [requestId]))
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	.toEqual([first, second, loop].map((id) => ({ to_event_id: id, relation: "step" })));
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	{ kind: "request-step", event_id: first, payload: { requestId, stepId: first } },
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	{ kind: "request-step", event_id: second },
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	{ kind: "request-fallback", event_id: loop },
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	const [request] = await rows("SELECT status, data FROM events WHERE id = $1", [requestId]);
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	expect(await rows("SELECT content, data FROM event_entries WHERE event_id = $1 AND kind = 'trace'", [requestId]))
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	const entries = await rows("SELECT kind, role, content, data FROM event_entries WHERE event_id = $1 ORDER BY id", [stepId]);
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	expect(await rows("SELECT revision, status, finished_at IS NOT NULL AS finished FROM events WHERE id = $1", [stepId]))
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	expect((await jobs()).at(-1)).toMatchObject({ kind: "request-finalize", event_id: stepId, concurrency_key: `finalize:${requestId}` });
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	expect(await rows("SELECT to_event_id, relation FROM event_event_relation WHERE from_event_id = $1 ORDER BY relation", [createStep]))
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	.toEqual([{ to_event_id: gone.id, relation: "deletes" }, { to_event_id: meal.id, relation: "generates" }]);
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	expect(await rows("SELECT to_event_id, relation FROM event_event_relation WHERE from_event_id = $1 AND relation <> 'step' ORDER BY relation", [requestId]))
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	.toEqual([{ to_event_id: gone.id, relation: "deletes" }, { to_event_id: meal.id, relation: "generates" }]);
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	expect(await rows("SELECT event_id, artifact_id, relation, position FROM event_artifact_relation ORDER BY relation, artifact_id")).toEqual([
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	{ event_id: createStep, artifact_id: food.id, relation: "creates", position: null },
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	{ event_id: editStep, artifact_id: food.id, relation: "deletes", position: null },
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	{ event_id: editStep, artifact_id: old.id, relation: "updates", position: null },
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	expect(await rows("SELECT revision FROM events WHERE id = $1", [meal.id])).toEqual([{ revision: 1 }]);
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	expect(await rows("SELECT data FROM event_entries WHERE event_id = $1 AND kind = 'result' ORDER BY id", [createStep])).toEqual([
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	expect(await rows("SELECT id FROM events WHERE id = $1", [event.id])).toEqual([]);
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	expect(await rows("SELECT content, data FROM event_entries WHERE event_id = $1 AND kind = 'trace'", [stepId]))
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	expect((await rows("SELECT kind, role, content FROM event_entries WHERE event_id = $1 ORDER BY id", [requestId])).slice(1)).toEqual([
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	{ id: "t1", kind: "tool", label: "Criou um evento", source: "mcp_braid_create_event", status: "done", sections: [{ title: "Entrada", text: "almoço", code: true }] },
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	const entries = await rows("SELECT kind, content, data FROM event_entries WHERE event_id = $1 ORDER BY id", [requestId]);
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	message: "Feito.", trace, steps: [{ id: "t1", agent: "mcp_braid_create_event", label: "Criou um evento", status: "done" }],
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	expect(await rows("SELECT from_event_id, to_event_id FROM event_event_relation WHERE relation = 'follow_up' ORDER BY to_event_id")).toEqual([
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	{ from_event_id: first.requestId, to_event_id: second.requestId },
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	{ from_event_id: first.requestId, to_event_id: third.requestId },
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	expect(await rows("SELECT to_event_id, relation FROM event_event_relation WHERE from_event_id = $1", [requestId]))
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	.toEqual([{ to_event_id: event.id, relation: "generates" }]);
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	expect((await rows("SELECT kind, data FROM event_entries WHERE event_id = $1 ORDER BY id", [requestId])).at(-1))
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	"EXPLAIN SELECT id FROM events e WHERE e.user_id = $1 AND e.actor = 'agent' AND e.kind <> 'step' AND e.deleted_at IS NULL ORDER BY e.id DESC LIMIT 20", [USER]);
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	expect(plan.map((row) => row["QUERY PLAN"]).join("\n")).toContain("events_requests_idx");
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	INSERT INTO event_event_relation (from_event_id, to_event_id, relation)
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	FROM event_event_relation r JOIN events s ON s.id = r.to_event_id
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	WHERE r.from_event_id = $1 AND r.relation = 'step' AND s.kind = 'step'
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	SELECT to_event_id, true FROM event_event_relation WHERE from_event_id = $1 AND relation = 'step')`;
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	SELECT sources.id AS source_id, sources.step, 'event' AS kind, e.id, r.relation, e.name, e.kind AS event_kind,
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	JOIN event_event_relation r ON r.from_event_id = sources.id AND r.relation IN ('generates', 'updates', 'deletes')
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	JOIN events e ON e.id = r.to_event_id
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	JOIN event_artifact_relation r ON r.event_id = sources.id
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	SELECT n.data FROM sources JOIN event_entries n ON n.event_id = sources.id
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	name: String(row.name), eventKind: String(row.event_kind),
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	UPDATE events SET status = 'running', updated_at = now()
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	UPDATE events SET status = 'running', updated_at = now(),
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	SELECT count(*)::int AS total FROM event_event_relation r JOIN events s ON s.id = r.to_event_id
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	WHERE r.from_event_id = ${requestId} AND r.relation = 'step' AND s.data->>'agent' = 'fallback'`);
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	SELECT user_id FROM events
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	INSERT INTO event_event_relation (from_event_id, to_event_id, relation)
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	UPDATE events SET status = 'running', updated_at = now(),
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	INSERT INTO event_event_relation (from_event_id, to_event_id, relation)
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	ON CONFLICT (from_event_id, relation, to_event_id) DO NOTHING`);
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	INSERT INTO event_artifact_relation (event_id, artifact_id, relation)
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	ON CONFLICT (event_id, artifact_id) DO NOTHING`);
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	UPDATE events SET status = ${status}, finished_at = now(), updated_at = now(),
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	INSERT INTO event_event_relation (from_event_id, to_event_id, relation)
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	UPDATE events SET status = ${status}, finished_at = now(), updated_at = now(), data = data || ${json(patch)}::jsonb
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	UPDATE events SET status = 'cancel', finished_at = now(), updated_at = now(),
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	UPDATE events s SET status = 'cancel', finished_at = now(), updated_at = now()
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	FROM event_event_relation r
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	WHERE r.from_event_id = ${requestId} AND r.relation = 'step' AND r.to_event_id = s.id
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	SELECT to_event_id AS id FROM event_event_relation WHERE from_event_id = ${requestId} AND relation = 'step'`);
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	INSERT INTO event_entries (id, event_id, user_id, kind, role, content, data)
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	FROM events e WHERE e.id = ${eventId}`);
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	`SELECT id, event_id AS "eventId", kind, role, content, data FROM event_entries
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	WHERE event_id = ANY($1::char(26)[]) ORDER BY id`, [eventIds]);
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	// `events_requests_idx`: pedidos do usuario, nunca passos.
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	s.from_event_id AS session_id
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	FROM events e
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	LEFT JOIN event_event_relation s ON s.to_event_id = e.id AND s.relation = 'follow_up'`;
 
 == auth ==
 apps/auth/src/auth-core/persistence/postgres-session.repository.ts	* Minha decisao ao herdar este arquivo: o evento de auditoria e montado
@@ -2937,8 +2617,7 @@ apps/api/src/infrastructure/persistence/agent-batch/postgres-entity-batch-writer
 apps/api/src/infrastructure/persistence/agent-batch/postgres-entity-batch-writer.ts	softDeleteEvent,
 apps/api/src/infrastructure/persistence/agent-batch/postgres-entity-batch-writer.ts	updateEventAggregate,
 apps/api/src/infrastructure/persistence/agent-batch/postgres-entity-batch-writer.ts	} from "../events/repositories/postgres-event.repository";
-apps/api/src/infrastructure/persistence/agent-batch/postgres-entity-batch-writer.ts	type TargetTable = "events" | "artifacts";
-apps/api/src/infrastructure/persistence/agent-batch/postgres-entity-batch-writer.ts	await lockTargets(tx, "events", batch.userId, batch.events);
+apps/api/src/infrastructure/persistence/agent-batch/postgres-entity-batch-writer.ts	await lockTargets(tx, "tasks", batch.userId, batch.events);
 apps/api/src/infrastructure/persistence/agent-batch/postgres-entity-batch-writer.ts	// Artefatos primeiro: as relacoes de um evento apontam para eles.
 apps/api/src/infrastructure/persistence/agent-batch/postgres-entity-batch-writer.ts	for (const event of created(batch.events)) {
 apps/api/src/infrastructure/persistence/agent-batch/postgres-entity-batch-writer.ts	if (!(await insertEventAggregate(tx, event))) {
@@ -2959,6 +2638,7 @@ apps/api/src/infrastructure/persistence/artifacts/queries/postgres-artifact-even
 apps/api/src/infrastructure/persistence/artifacts/queries/postgres-artifact-event-link.query.ts	async linksOf(artifactIds: readonly string[]): Promise<Map<string, ArtifactEventLink[]>> {
 apps/api/src/infrastructure/persistence/artifacts/queries/postgres-artifact-event-link.query.ts	const links = new Map<string, ArtifactEventLink[]>();
 apps/api/src/infrastructure/persistence/artifacts/queries/postgres-artifact-event-link.query.ts	const link: ArtifactEventLink = {
+apps/api/src/infrastructure/persistence/artifacts/queries/postgres-artifact-event-link.query.ts	eventId: row.task_id,
 apps/api/src/infrastructure/persistence/artifacts/repositories/food-generation.ts	import { appendEntry, insertAgentEvent } from "../../requests/request-rows";
 apps/api/src/infrastructure/persistence/artifacts/repositories/food-generation.ts	await insertAgentEvent(tx, {
 apps/api/src/infrastructure/persistence/artifacts/repositories/food-generation.ts	await tx.insert(schema.eventArtifactRelation).values({
@@ -2976,7 +2656,6 @@ apps/api/src/infrastructure/persistence/database/schema/events.ts	* de acao: tar
 apps/api/src/infrastructure/persistence/database/schema/events.ts	* bloco da agenda, ou o prazo num evento longo) e `finished_at` a conclusao
 apps/api/src/infrastructure/persistence/database/schema/events.ts	* real. Nao ha check entre `finished_at` e `started_at`: concluir hoje um evento
 apps/api/src/infrastructure/persistence/database/schema/events.ts	export const events = pgTable(
-apps/api/src/infrastructure/persistence/database/schema/events.ts	"events",
 apps/api/src/infrastructure/persistence/database/schema/events.ts	kind: text("kind", { enum: EVENT_KINDS }).notNull(),
 apps/api/src/infrastructure/persistence/database/schema/events.ts	// Nulo e o evento de referencia: so marca um horario na agenda.
 apps/api/src/infrastructure/persistence/database/schema/events.ts	status: text("status", { enum: EVENT_STATUSES }),
@@ -2991,12 +2670,15 @@ apps/api/src/infrastructure/persistence/database/schema/events.ts	// dura no max
 apps/api/src/infrastructure/persistence/database/schema/events.ts	* O que se acrescenta a um evento e nunca se altera: mensagem, pensamento,
 apps/api/src/infrastructure/persistence/database/schema/events.ts	* a `revision` do evento. O id e um ULID e da a ordem.
 apps/api/src/infrastructure/persistence/database/schema/events.ts	export const eventEntries = pgTable(
+apps/api/src/infrastructure/persistence/database/schema/events.ts	eventId: char("task_id", { length: 26 })
 apps/api/src/infrastructure/persistence/database/schema/events.ts	.references(() => events.id, { onDelete: "cascade" }),
+apps/api/src/infrastructure/persistence/database/schema/events.ts	index("task_entries_task_idx").on(table.eventId, table.id),
 apps/api/src/infrastructure/persistence/database/schema/index.ts	export * from "./events";
 apps/api/src/infrastructure/persistence/database/schema/jobs.ts	import { events } from "./events";
 apps/api/src/infrastructure/persistence/database/schema/jobs.ts	* O job e descartavel: a fonte de verdade e o evento. `progress` e um retrato
 apps/api/src/infrastructure/persistence/database/schema/jobs.ts	* passageiro; o resultado mora no evento e nas entradas dele, por isso nao ha
 apps/api/src/infrastructure/persistence/database/schema/jobs.ts	* coluna `result`. Todo job de IA aponta para o evento do passo que executa.
+apps/api/src/infrastructure/persistence/database/schema/jobs.ts	eventId: char("task_id", { length: 26 }).references(() => events.id, { onDelete: "cascade" }),
 apps/api/src/infrastructure/persistence/database/schema/jobs.ts	// Cancelar pelo evento.
 apps/api/src/infrastructure/persistence/database/schema/jobs.ts	.on(table.eventId)
 apps/api/src/infrastructure/persistence/database/schema/jobs.ts	.where(sql`${table.eventId} IS NOT NULL`),
@@ -3007,22 +2689,33 @@ apps/api/src/infrastructure/persistence/database/schema/relations.ts	import { ev
 apps/api/src/infrastructure/persistence/database/schema/relations.ts	import { ARTIFACT_ARTIFACT_RELATIONS, EVENT_ARTIFACT_RELATIONS, EVENT_EVENT_RELATIONS, sqlList } from "./sets";
 apps/api/src/infrastructure/persistence/database/schema/relations.ts	* Nao existe `parent_id`: a ordem entre eventos e a relacao `precedes`, do
 apps/api/src/infrastructure/persistence/database/schema/relations.ts	export const eventEventRelation = pgTable(
+apps/api/src/infrastructure/persistence/database/schema/relations.ts	fromEventId: char("from_task_id", { length: 26 })
 apps/api/src/infrastructure/persistence/database/schema/relations.ts	.references(() => events.id, { onDelete: "cascade" }),
+apps/api/src/infrastructure/persistence/database/schema/relations.ts	toEventId: char("to_task_id", { length: 26 })
 apps/api/src/infrastructure/persistence/database/schema/relations.ts	.references(() => events.id, { onDelete: "cascade" }),
 apps/api/src/infrastructure/persistence/database/schema/relations.ts	relation: text("relation", { enum: EVENT_EVENT_RELATIONS }).notNull(),
 apps/api/src/infrastructure/persistence/database/schema/relations.ts	primaryKey({ columns: [table.fromEventId, table.relation, table.toEventId] }),
+apps/api/src/infrastructure/persistence/database/schema/relations.ts	uniqueIndex("task_task_reverse_idx").on(table.toEventId, table.relation, table.fromEventId),
 apps/api/src/infrastructure/persistence/database/schema/relations.ts	.on(table.toEventId)
+apps/api/src/infrastructure/persistence/database/schema/relations.ts	check("task_task_relation_valid", sql`${table.relation} IN (${sqlList(EVENT_EVENT_RELATIONS)})`),
+apps/api/src/infrastructure/persistence/database/schema/relations.ts	check("task_task_not_self", sql`${table.fromEventId} <> ${table.toEventId}`),
 apps/api/src/infrastructure/persistence/database/schema/relations.ts	* Parte sempre do evento, que cria, altera, usa ou apaga o artefato. Uma linha
 apps/api/src/infrastructure/persistence/database/schema/relations.ts	* por par: se o evento criou e depois alterou o artefato, a relacao continua
 apps/api/src/infrastructure/persistence/database/schema/relations.ts	* `position` e a ordem na lista do evento e fica nula na relacao de um passo de
 apps/api/src/infrastructure/persistence/database/schema/relations.ts	export const eventArtifactRelation = pgTable(
+apps/api/src/infrastructure/persistence/database/schema/relations.ts	eventId: char("task_id", { length: 26 })
 apps/api/src/infrastructure/persistence/database/schema/relations.ts	.references(() => events.id, { onDelete: "cascade" }),
 apps/api/src/infrastructure/persistence/database/schema/relations.ts	relation: text("relation", { enum: EVENT_ARTIFACT_RELATIONS }).notNull(),
 apps/api/src/infrastructure/persistence/database/schema/relations.ts	primaryKey({ columns: [table.eventId, table.artifactId] }),
+apps/api/src/infrastructure/persistence/database/schema/relations.ts	unique("task_artifact_task_position_unique").on(table.eventId, table.position),
+apps/api/src/infrastructure/persistence/database/schema/relations.ts	index("task_artifact_reverse_idx").on(table.artifactId, table.eventId),
+apps/api/src/infrastructure/persistence/database/schema/relations.ts	check("task_artifact_relation_valid", sql`${table.relation} IN (${sqlList(EVENT_ARTIFACT_RELATIONS)})`),
 apps/api/src/infrastructure/persistence/database/schema/tags.ts	import { events } from "./events";
 apps/api/src/infrastructure/persistence/database/schema/tags.ts	export const eventTags = pgTable(
+apps/api/src/infrastructure/persistence/database/schema/tags.ts	eventId: char("task_id", { length: 26 })
 apps/api/src/infrastructure/persistence/database/schema/tags.ts	.references(() => events.id, { onDelete: "cascade" }),
 apps/api/src/infrastructure/persistence/database/schema/tags.ts	primaryKey({ columns: [table.eventId, table.tagId] }),
+apps/api/src/infrastructure/persistence/database/schema/tags.ts	index("task_tags_tag_idx").on(table.tagId, table.eventId),
 apps/api/src/infrastructure/persistence/events/	[nome de pasta]
 apps/api/src/infrastructure/persistence/events/mappers/event-row.mapper.ts	[nome de arquivo]
 apps/api/src/infrastructure/persistence/events/mappers/event-row.mapper.ts	import { Event, type ArtifactLink } from "../../../../domain";
@@ -3065,6 +2758,7 @@ apps/api/src/infrastructure/persistence/events/queries/postgres-event-request-li
 apps/api/src/infrastructure/persistence/events/queries/postgres-event-request-link.query.ts	relation: EventRequestRelationKind;
 apps/api/src/infrastructure/persistence/events/queries/postgres-event-request-link.query.ts	export class PostgresEventRequestLinkQuery implements EventRequestLinkQuery {
 apps/api/src/infrastructure/persistence/events/queries/postgres-event-request-link.query.ts	async linksOf(eventId: string): Promise<EventRequestLink[]> {
+apps/api/src/infrastructure/persistence/events/queries/postgres-event-request-link.query.ts	WHERE r.to_task_id = ${eventId}
 apps/api/src/infrastructure/persistence/events/repositories/event-relations.ts	[nome de arquivo]
 apps/api/src/infrastructure/persistence/events/repositories/event-relations.ts	import { EventValidationError, SEQUENCE_RELATION, type Event } from "../../../../domain";
 apps/api/src/infrastructure/persistence/events/repositories/event-relations.ts	export async function assertEventReferences(tx: Tx, event: Event): Promise<void> {
@@ -3090,6 +2784,7 @@ apps/api/src/infrastructure/persistence/events/repositories/event-relations.ts	.
 apps/api/src/infrastructure/persistence/events/repositories/event-relations.ts	.values(added.map((change) => ({ fromEventId: change.fromId, toEventId: change.toId, relation: SEQUENCE_RELATION })))
 apps/api/src/infrastructure/persistence/events/repositories/event-relations.ts	/** A sequencia nao fecha ciclo: seguindo a relacao a partir do evento, ele nao volta a si mesmo. */
 apps/api/src/infrastructure/persistence/events/repositories/event-relations.ts	async function assertAcyclic(tx: Tx, eventId: string): Promise<void> {
+apps/api/src/infrastructure/persistence/events/repositories/event-relations.ts	WHERE from_task_id = ${eventId} AND relation = ${SEQUENCE_RELATION}
 apps/api/src/infrastructure/persistence/events/repositories/event-relations.ts	SELECT 1 FROM reach WHERE id = ${eventId} LIMIT 1
 apps/api/src/infrastructure/persistence/events/repositories/event-relations.ts	if (result.rows.length > 0) throw new EventValidationError("Events cannot follow each other in a cycle");
 apps/api/src/infrastructure/persistence/events/repositories/postgres-event.repository.ts	[nome de arquivo]
@@ -3235,20 +2930,13 @@ apps/api/src/infrastructure/persistence/index.ts	export * from "./events/queries
 apps/api/src/infrastructure/persistence/index.ts	export * from "./events/queries/postgres-event-request-link.query";
 apps/api/src/infrastructure/persistence/index.ts	export * from "./artifacts/queries/postgres-artifact-event-link.query";
 apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	// Eventos de pessoa
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	const B_EVENT = id("BE", 1);
 apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	// Eventos de agente do usuario A
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	('${B_EVENT}', 'user-b', 'human', 'common', NULL, 'Segredo do B', '2026-09-15T12:00:00Z'),
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	('${B_EVENT}', '${B_SLEEP}', 'uses', 0),
 apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	-- evento apagado: a relacao some, o artefato nao
 apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	-- cruza usuarios (evento de B, artefato de A): nao aparece para nenhum dos dois
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	('${B_EVENT}', '${A_TEXT}', 'uses', 1),
 apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	-- evento de agente e arquivo de agente: fora do esquema logico
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	('${B_EVENT}', '${B_TRACKED}', 'precedes');
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	('${B_EVENT}', '${id("TB", 1)}'),
 apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	test("events mostra so os eventos vivos de pessoa do proprio usuario", async () => {
 apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	// Os pedidos e os passos do agente nao sao eventos para a consulta, nem os do proprio usuario.
 apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	// O evento apagado esconde a relacao, nao o artefato.
-apps/api/src/infrastructure/persistence/integration/agent-sql.integration.test.ts	"SELECT name FROM public.events",
 apps/api/src/infrastructure/persistence/integration/artifacts.integration.test.ts	import { PostgresArtifactEventLinkQuery } from "../artifacts/queries/postgres-artifact-event-link.query";
 apps/api/src/infrastructure/persistence/integration/artifacts.integration.test.ts	import { PostgresEventRepository } from "../events/repositories/postgres-event.repository";
 apps/api/src/infrastructure/persistence/integration/artifacts.integration.test.ts	agentEvent,
@@ -3257,11 +2945,9 @@ apps/api/src/infrastructure/persistence/integration/artifacts.integration.test.t
 apps/api/src/infrastructure/persistence/integration/artifacts.integration.test.ts	let events: PostgresEventRepository;
 apps/api/src/infrastructure/persistence/integration/artifacts.integration.test.ts	events = new PostgresEventRepository(ctx.db);
 apps/api/src/infrastructure/persistence/integration/artifacts.integration.test.ts	const copy = await saved(newest.copyForEvent(USER, "meia porcao"));
-apps/api/src/infrastructure/persistence/integration/artifacts.integration.test.ts	expect(await countRows(ctx.pool, "events")).toBe(0);
 apps/api/src/infrastructure/persistence/integration/artifacts.integration.test.ts	test("o alimento pendente que nasce com um evento abre o pedido na mesma transacao", async () => {
 apps/api/src/infrastructure/persistence/integration/artifacts.integration.test.ts	const meal = referenceEvent(USER, "Almoco", "2026-11-10T15:00:00Z", { kind: "meal", artifactLinks: [link(food.id, "creates")] });
 apps/api/src/infrastructure/persistence/integration/artifacts.integration.test.ts	await events.save(meal, { created: [food] });
-apps/api/src/infrastructure/persistence/integration/artifacts.integration.test.ts	expect(await countRows(ctx.pool, "events", "actor = 'agent' AND kind = 'build_request'")).toBe(1);
 apps/api/src/infrastructure/persistence/integration/artifacts.integration.test.ts	describe("PostgresArtifactEventLinkQuery", () => {
 apps/api/src/infrastructure/persistence/integration/artifacts.integration.test.ts	test("lista os eventos vivos de cada artefato, do mais antigo ao mais novo e os sem inicio no fim", async () => {
 apps/api/src/infrastructure/persistence/integration/artifacts.integration.test.ts	const links = new PostgresArtifactEventLinkQuery(ctx.db);
@@ -3302,7 +2988,6 @@ apps/api/src/infrastructure/persistence/integration/entity-batch.integration.tes
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	const event = await saved(trackedEvent(USER, "Sai"));
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	events: [{ op: "delete", id: event.id, expectedRevision: 1 }],
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	expect(await events.findById(event.id)).toBeNull();
-apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	expect(await countRows(ctx.pool, "events", "deleted_at IS NOT NULL")).toBe(1);
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	const mine = await saved(trackedEvent(USER, "Meu"));
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	const edited = await saved(trackedEvent(USER, "Editado por outra requisicao"));
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	await events.update(edited.revise({ name: "Ja mudou" }), USER, 1);
@@ -3364,7 +3049,6 @@ apps/api/src/infrastructure/persistence/integration/entity-batch.integration.tes
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	const [a, b] = [trackedEvent(USER, "A", { id: ulid() }), trackedEvent(USER, "B", { id: ulid() })];
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	events: [a, b].map((entity) => ({ op: "create" as const, entity })),
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	).rejects.toThrow(EventValidationError);
-apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	expect(await countRows(ctx.pool, "events")).toBe(0);
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	const mine = await saved(trackedEvent(USER, "Meu"));
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	const foreign = await saved(trackedEvent(OTHER_USER, "Do outro"));
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	const removed = await saved(trackedEvent(USER, "Apagado"));
@@ -3379,18 +3063,15 @@ apps/api/src/infrastructure/persistence/integration/entity-batch.integration.tes
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	expect((await events.findById(b.id))?.previousIds).toEqual([]);
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	const created = trackedEvent(USER, "Criado pelo passo");
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	events: [{ op: "create", entity: created }],
-apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	seenOutsideTransaction = await countRows(ctx.pool, "events");
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	await insertAgentEvent(tx, { id: stepId, userId: USER, kind: "step", status: "done", name: "Passo", data: {} });
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	await tx.insert(schema.eventEventRelation).values({ fromEventId: stepId, toEventId: created.id, relation: "generates" });
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	const origin = await saved(trackedEvent(USER, "Origem"));
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	events: [
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	{ op: "create", entity: trackedEvent(USER, "Nasceria com o lote") },
-apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	expect(await countRows(ctx.pool, "events")).toBe(1);
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	expect(await events.findById(origin.id)).not.toBeNull();
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	await writer.commit(batchOf({ recurrences: [recurrence], events: [{ op: "create", entity: first }] }));
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	expect((await events.findById(first.id))?.occurrence).toEqual({
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	events: [occurrenceOf(recurrence, DAYS[0]), occurrenceOf(recurrence, DAYS[0])].map((entity) => ({
-apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	expect(await countRows(ctx.pool, "events")).toBe(0);
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	events: [{ op: "create", entity: replacement }],
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	expect(await occurrenceIds()).toEqual(occurrences.map((event) => event.id));
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	expect(await occurrenceIds()).toEqual(occurrences.map((event) => event.id));
@@ -3526,6 +3207,7 @@ apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	e
 apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	[event.id],
 apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	const event = await saved(trackedEvent(USER, "Revisar notas", { artifactLinks: [uses(a.id), uses(b.id), uses(c.id)] }));
 apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	expect((await found(event.id)).artifactLinks.map((link) => link.artifactId)).toEqual([c.id, a.id, d.id]);
+apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	expect(await countRows(ctx.pool, "task_artifact_relation", "task_id = $1", [event.id])).toBe(3);
 apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	test("um artefato global pode ser ligado ao evento", async () => {
 apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	const event = await saved(
 apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	referenceEvent(USER, "Corrida no parque", "2026-11-10T10:00:00Z", {
@@ -3538,10 +3220,10 @@ apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	t
 apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	const event = referenceEvent(USER, "Almoco", "2026-11-10T15:00:00Z", {
 apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	await expect(events.save(event, { created: [food] })).rejects.toThrow(EventValidationError);
 apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	expect(await events.findById(event.id)).toBeNull();
-apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	expect(await countRows(ctx.pool, "events")).toBe(0);
 apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	test("o artefato apagado some da lista do evento, e a relacao fica", async () => {
 apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	const event = await saved(trackedEvent(USER, "Evento", { artifactLinks: [uses(removed.id), uses(kept.id)] }));
 apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	expect((await found(event.id)).artifactLinks.map((link) => link.artifactId)).toEqual([kept.id]);
+apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	expect(await countRows(ctx.pool, "task_artifact_relation", "task_id = $1", [event.id])).toBe(2);
 apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	describe("sequencia entre eventos", () => {
 apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	const first = await saved(trackedEvent(USER, "Escolher a cor"));
 apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	const second = await saved(trackedEvent(USER, "Comprar tinta"));
@@ -3603,6 +3285,7 @@ apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	t
 apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	const event = await saved(trackedEvent(USER, "Evento", { tags: ["casa"] }));
 apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	await events.delete(event.id, USER);
 apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	expect(await events.findById(event.id)).toBeNull();
+apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	const [row] = await selectRows(ctx.pool, "SELECT deleted_at FROM tasks WHERE id = $1", [event.id]);
 apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	await expect(events.delete(event.id, USER)).rejects.toThrow(EventNotFoundError);
 apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	const event = await saved(trackedEvent(USER, "Evento"));
 apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	await expect(events.delete(event.id, OTHER_USER)).rejects.toThrow(EventOwnershipError);
@@ -3625,7 +3308,6 @@ apps/api/src/infrastructure/persistence/integration/recurrences.integration.test
 apps/api/src/infrastructure/persistence/integration/recurrences.integration.test.ts	expect((await events.findById(first[0].id))?.occurrence).toEqual({
 apps/api/src/infrastructure/persistence/integration/recurrences.integration.test.ts	test("gravar pelo repositorio de eventos uma ocorrencia de um dia ja gerado nao duplica", async () => {
 apps/api/src/infrastructure/persistence/integration/recurrences.integration.test.ts	await events.save(occurrenceOf(recurrence, DAYS[0], { name: "Duplicada" }));
-apps/api/src/infrastructure/persistence/integration/recurrences.integration.test.ts	expect(await countRows(ctx.pool, "events")).toBe(0);
 apps/api/src/infrastructure/persistence/integration/recurrences.integration.test.ts	const previous = trackedEvent(USER, "Projeto");
 apps/api/src/infrastructure/persistence/integration/recurrences.integration.test.ts	await events.save(previous);
 apps/api/src/infrastructure/persistence/integration/recurrences.integration.test.ts	const readPrevious = await events.findById(previous.id);
@@ -3639,14 +3321,12 @@ apps/api/src/infrastructure/persistence/integration/recurrences.integration.test
 apps/api/src/infrastructure/persistence/integration/recurrences.integration.test.ts	expect((await events.findById(agent.id))?.revision).toBe(1);
 apps/api/src/infrastructure/persistence/integration/recurrences.integration.test.ts	const previous = trackedEvent(USER, "Projeto");
 apps/api/src/infrastructure/persistence/integration/recurrences.integration.test.ts	await events.save(previous);
-apps/api/src/infrastructure/persistence/integration/recurrences.integration.test.ts	expect(await countRows(ctx.pool, "events", "recurrence_id IS NOT NULL")).toBe(1);
 apps/api/src/infrastructure/persistence/integration/recurrences.integration.test.ts	expect((await events.findById(previous.id))?.nextIds).toHaveLength(1);
 apps/api/src/infrastructure/persistence/integration/recurrences.integration.test.ts	const removed = trackedEvent(USER, "Projeto apagado");
 apps/api/src/infrastructure/persistence/integration/recurrences.integration.test.ts	const foreign = trackedEvent(OTHER_USER, "Projeto do outro");
 apps/api/src/infrastructure/persistence/integration/recurrences.integration.test.ts	const alive = trackedEvent(USER, "Projeto vivo");
 apps/api/src/infrastructure/persistence/integration/recurrences.integration.test.ts	for (const event of [removed, foreign, alive]) await events.save(event);
 apps/api/src/infrastructure/persistence/integration/recurrences.integration.test.ts	await events.delete(removed.id, USER);
-apps/api/src/infrastructure/persistence/integration/recurrences.integration.test.ts	expect(await countRows(ctx.pool, "events", "recurrence_id IS NOT NULL")).toBe(0);
 apps/api/src/infrastructure/persistence/integration/recurrences.integration.test.ts	await events.update(occurrences[3].revise({ name: "Editada a mao" }), USER, 1);
 apps/api/src/infrastructure/persistence/integration/recurrences.integration.test.ts	await events.delete(occurrences[4].id, USER);
 apps/api/src/infrastructure/persistence/integration/recurrences.integration.test.ts	await events.update(occurrences[3].revise({ name: "Editada a mao" }), USER, 1);
@@ -3656,67 +3336,27 @@ apps/api/src/infrastructure/persistence/integration/recurrences.integration.test
 apps/api/src/infrastructure/persistence/integration/recurrences.integration.test.ts	const read = await events.findById(occurrences[0].id);
 apps/api/src/infrastructure/persistence/integration/recurrences.integration.test.ts	await events.delete(occurrences[0].id, USER);
 apps/api/src/infrastructure/persistence/integration/recurrences.integration.test.ts	await events.update(occurrences[1].revise({ name: "Editada a mao" }), USER, 1);
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	async function event(overrides: Row = {}): Promise<string> {
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	await insert("events", { id, user_id: "user-1", actor: "human", kind: "common", name: "Evento", ...overrides });
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	const agentEvent = (overrides: Row = {}) =>
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	event({ actor: "agent", kind: "request", status: "queued", name: "Pedido", ...overrides });
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	"events",
 apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	describe("events: tipo e status conforme o executor", () => {
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	for (const kind of ["common", "meal", "sleep", "training"]) await event({ kind });
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	await agentEvent({ kind });
 apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	test("evento de pessoa pode nao ter status: e o evento de referencia", async () => {
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	const id = await event({ status: null });
 apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	test("evento de agente sempre tem status", async () => {
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	for (const status of ["todo", "toDefine", "doing", "inHold", "done", "cancel", "missed"]) await event({ status });
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	for (const status of ["queued", "running", "waiting", "done", "failed", "cancel"]) await agentEvent({ status });
 apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	describe("events: datas", () => {
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	event({ started_at: "2026-11-14T10:00:00Z", estimated_finish_at: "2026-11-14T09:00:00Z" }),
 apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	test("fora do evento longo o bloco dura no maximo 31 dias", async () => {
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	await event({ started_at: "2026-11-01T10:00:00Z", estimated_finish_at: "2026-12-02T10:00:00Z" });
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	event({ started_at: "2026-11-01T10:00:00Z", estimated_finish_at: "2026-12-02T10:00:01Z" }),
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	await event({ status: "done", started_at: "2026-11-15T10:00:00Z", finished_at: "2026-11-14T08:00:00Z" });
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	await event({ status: "todo", estimated_finish_at: "2026-11-20T23:00:00Z" });
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	await event({ started_at: "2026-11-14T10:00:00Z", notify_offsets_minutes: [10, 43200] });
 apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	describe("events: evento longo", () => {
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	const long = (overrides: Row = {}) => event({ long_running: true, status: "doing", ...overrides });
 apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	describe("events: serie", () => {
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	await event({ recurrence_id: series, occurrence_on: "2026-11-14", deleted_at: "2026-11-14T12:00:00Z" });
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	await event({ recurrence_id: series, occurrence_on: "2026-11-15" });
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	await expect(event({ recurrence_id: series, occurrence_on: "2026-11-14" })).rejects.toThrow(
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	const id = await event({ recurrence_id: series, occurrence_on: "2026-11-14" });
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	const entry = (eventId: string, overrides: Row) =>
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	const request = await agentEvent();
 apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	await entry(request, { kind: "result", data: { eventId: "x" } });
 apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	await entry(request, { kind: "input", content: "retrato do evento" });
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	const request = await agentEvent();
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	const request = await agentEvent();
 apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	test("apagar fisicamente o evento leva as entradas", async () => {
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	const request = await agentEvent();
 apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	describe("relacoes entre eventos", () => {
 apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	test("um evento pode seguir mais de um antecessor e anteceder mais de um sucessor", async () => {
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	const [first, second, shared, after] = [await event(), await event(), await event(), await event()];
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	const [a, b] = [await event(), await event()];
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	await expect(relate(a, b, "precedes")).rejects.toThrow(/event_event_relation_.*_pk/);
 apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	test("um evento nao se relaciona consigo mesmo, e o tipo e do conjunto", async () => {
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	const [a, b] = [await event(), await event()];
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	const [a, b] = [await event(), await event()];
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	const [first, other, followUp] = [await agentEvent(), await agentEvent(), await agentEvent()];
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	const [project, session] = [await event(), await event()];
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	expect(await count("events")).toBe(1);
 apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	describe("relacoes entre evento e artefato", () => {
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	const link = (eventId: string, artifactId: string, overrides: Row = {}) =>
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	const [meal, food] = [await event({ kind: "meal" }), await artifact({ type: "food" })];
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	/event_artifact_relation_.*_pk/,
 apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	test("a posicao e unica no evento, mas a relacao de um passo nao tem posicao", async () => {
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	const [meal, step] = [await event({ kind: "meal" }), await agentEvent({ kind: "step" })];
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	const meal = await event({ kind: "meal" });
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	const [meal, food] = [await event({ kind: "meal" }), await artifact({ type: "food" })];
-apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	const step = await agentEvent({ kind: "step" });
 apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	test("todos os eventos vivos de pessoa", async () => {
 apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	test("entradas de um evento, em ordem e a partir da ultima lida", async () => {
 apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	test("relacoes para um evento, por tipo", async () => {
 apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	test("em quais eventos um artefato aparece", async () => {
 apps/api/src/infrastructure/persistence/jobs/postgres-job.store.ts	eventId: string | null;
+apps/api/src/infrastructure/persistence/jobs/postgres-job.store.ts	${table}.task_id AS "eventId", ${table}.payload, ${table}.status, ${table}.progress, ${table}.error,
 apps/api/src/infrastructure/persistence/jobs/postgres-job.store.ts	* descartavel; a fonte de verdade e o evento.
 apps/api/src/infrastructure/persistence/jobs/postgres-job.store.ts	/** O job vivo de um evento, se houver: e dele que sai o progresso passageiro. */
 apps/api/src/infrastructure/persistence/jobs/postgres-job.store.ts	async activeOfEvent(eventId: string): Promise<Job | undefined> {
@@ -3783,6 +3423,7 @@ apps/api/src/infrastructure/persistence/requests/postgres-candidate.query.ts	/**
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	import { Artifact, Event } from "../../../domain";
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	import { PostgresEventRequestLinkQuery } from "../events/queries/postgres-event-request-link.query";
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	test("o pedido e um evento de agente com a mensagem do usuario como primeira entrada e o job que o executa", async () => {
+apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	const [event] = await rows("SELECT actor, kind, status, name, data, started_at, finished_at FROM tasks WHERE id = $1", [requestId]);
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	expect(event).toMatchObject({
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	expect(String(event?.name).length).toBeLessThanOrEqual(80);
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	expect(event?.started_at).toBeInstanceOf(Date);
@@ -3820,6 +3461,7 @@ apps/api/src/infrastructure/persistence/requests/postgres-request.store.integrat
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	const event = Event.create({ userId: USER, name: "Almoço", startedAt: new Date() });
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	userId: USER, events: [{ op: "create", entity: event }], artifacts: [],
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	afterWrite: (tx) => store.recordStepSuccess(tx, { requestId, stepId, entities: [{ kind: "event", id: event.id, operation: "create" }], timings: {} }),
+apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	expect(await rows("SELECT id FROM tasks WHERE id = $1", [event.id])).toEqual([]);
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	await store.beginSteps(requestId, [{ id: stepId, agent: "event-create", expected: "one" }]);
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	failedSteps: [{ agent: "artifact-create", errorCode: "internal" }], message: "Criei o evento, mas não o alimento.",
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	{ kind: "message", role: "agent", content: "Criei o evento, mas não o alimento." },
@@ -3833,6 +3475,7 @@ apps/api/src/infrastructure/persistence/requests/postgres-request.store.integrat
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	const event = Event.create({ userId: USER, name: "Estudar", startedAt: new Date("2026-10-25T15:00:00Z") });
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	userId: USER, events: [{ op: "create", entity: event }], artifacts: [],
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	afterWrite: (tx) => store.completeVoice(tx, { requestId, eventId: event.id }),
+apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	.toEqual([{ to_task_id: event.id, relation: "generates" }]);
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	{ kind: "event", id: event.id, operation: "create", stepId: requestId, finalized: true, summary: { name: "Estudar" } },
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	.toEqual({ kind: "result", data: { type: "voice", eventId: event.id } });
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	test("a lista traz os pedidos do usuario do mais novo para o mais antigo, e nunca um passo ou um evento de pessoa", async () => {
@@ -3855,7 +3498,9 @@ apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	* O p
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	await insertAgentEvent(tx, {
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	kind: input.job, userId: input.userId, actorId: input.userId, eventId: requestId,
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	// As relacoes partem dos passos; na voz e no alimento, do proprio pedido. O evento que um passo tocou tambem
+apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	SELECT sources.id AS source_id, sources.step, 'event' AS kind, e.id, r.relation, e.name, e.kind AS task_kind,
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	const summary: EntitySummary = kind === "event"
+apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	name: String(row.name), eventKind: String(row.task_kind),
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	await insertAgentEvent(tx, {
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	kind: jobKindOf(step.agent), userId, actorId: userId, eventId: step.id,
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	if (entity.kind === "event") {
@@ -3869,9 +3514,12 @@ apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	await
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	// O pedido foi cancelado enquanto o modelo trabalhava: o erro desfaz o evento.
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	/** Acrescenta uma entrada ao evento, com o dono dele. Entradas nunca mudam e nao contam como revisao. */
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	eventId: string,
+apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	FROM tasks e WHERE e.id = ${eventId}`);
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	private async entriesOf(eventIds: readonly string[]): Promise<Map<string, EntryRow[]>> {
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	const byEvent = new Map<string, EntryRow[]>();
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	if (eventIds.length === 0) return byEvent;
+apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	`SELECT id, task_id AS "eventId", kind, role, content, data FROM task_entries
+apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	WHERE task_id = ANY($1::char(26)[]) ORDER BY id`, [eventIds]);
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	for (const row of rows) byEvent.set(row.eventId, [...(byEvent.get(row.eventId) ?? []), row]);
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	return byEvent;
 apps/api/src/infrastructure/persistence/requests/request-rows.ts	import type { AgentEventKind, AgentEventStatus, EntryKind, EntryRole } from "../../../domain";
@@ -3904,7 +3552,6 @@ apps/api/src/infrastructure/persistence/testing/fixtures.ts	export function agen
 apps/api/src/infrastructure/persistence/testing/fixtures.ts	return Event.create({
 apps/api/src/infrastructure/persistence/testing/fixtures.ts	export function occurrenceOf(recurrence: Recurrence, day: string, props: Partial<EventCreateProps> = {}): Event {
 apps/api/src/infrastructure/persistence/testing/fixtures.ts	return Event.create({
-apps/api/src/infrastructure/persistence/testing/postgres-test-context.ts	const ROOT_TABLES = ["events", "tags", "recurrences", "jobs", "idempotency_keys"] as const;
 
 == agentes ==
 apps/api/src/api-core/agent/services/agent-change-session.test.ts	import { Event } from "../../../domain";
@@ -4108,8 +3755,6 @@ apps/api/src/api-core/requests/agents/fallback.md	- `event-create`: criar evento
 apps/api/src/api-core/requests/agents/fallback.md	- `event-edit`, `artifact-edit`: alterar eventos e artefatos que já existem.
 apps/api/src/api-core/requests/agents/fallback.md	- `recurring-event-create`: criar eventos que se repetem.
 apps/api/src/api-core/requests/agents/fallback.md	- `recurring-event-edit`: alterar a regra ou o modelo de uma série existente.
-apps/api/src/api-core/requests/agents/query.md	Você é o agente de CONSULTA. Sua única tarefa é transformar a pergunta do usuário sobre a própria agenda (eventos, o que há a fazer, artefatos) em UMA consulta SQL de leitura. Você não cria nem altera nada, e não responde em texto: o servidor executa a consulta e mostra as linhas.
-apps/api/src/api-core/requests/agents/query.md	{ "sql": "SELECT name, started_at FROM events ORDER BY started_at DESC LIMIT 20" }
 apps/api/src/api-core/requests/agents/recurring-event-create.md	[nome de arquivo]
 apps/api/src/api-core/requests/agents/recurring-event-create.md	name: recurring-event-create
 apps/api/src/api-core/requests/agents/recurring-event-create.md	Você é o agente que CRIA SÉRIES DE EVENTOS RECORRENTES numa agenda pessoal: atividades que se repetem ("corrida toda segunda às 7h", "reunião todo dia útil às 10h") e coisas a fazer que se repetem ("pagar o aluguel todo dia 5", "regar as plantas toda semana"). Sua única tarefa é ler o pedido do usuário e devolver as séries novas que ele descreve. Você não cria eventos avulsos nem artefatos (nem o alimento de uma refeição), não consulta nada e não altera séries existentes.
@@ -4366,12 +4011,9 @@ apps/api/src/api-core/requests/request-edit-worker.test.ts	expect(ctx.batchWrite
 apps/api/src/api-core/requests/request-edit-worker.test.ts	expect((await ctx.eventRepository.findById(other.id))?.revision).toBe(other.revision);
 apps/api/src/api-core/requests/request-edit-worker.test.ts	const real = await seedEvent(ctx, "Reunião");
 apps/api/src/api-core/requests/request-edit-worker.test.ts	const payload = await addStep(ctx, "s1", "event-edit", "one", { candidates: [] });
-apps/api/src/api-core/requests/request-edit-worker.test.ts	? { modelName: "stub", value: { edits: [], query: { sql: "SELECT id, name FROM events" } } }
 apps/api/src/api-core/requests/request-edit-worker.test.ts	: { modelName: "stub", value: { edits: [{ ...noEvent, id: real.id, estimatedFinishAt: iso(11) }], query: null } };
 apps/api/src/api-core/requests/request-edit-worker.test.ts	await ctx.editWorker.run("event-edit", payload);
-apps/api/src/api-core/requests/request-edit-worker.test.ts	expect(ctx.sql.calls).toEqual([{ userId: "user-1", sql: "SELECT id, name FROM events" }]);
 apps/api/src/api-core/requests/request-edit-worker.test.ts	const payload = await addStep(ctx, "s1", "event-edit", "one", { candidates: [] });
-apps/api/src/api-core/requests/request-edit-worker.test.ts	return { modelName: "stub", value: { edits: [], query: { sql: "SELECT id FROM events" } } };
 apps/api/src/api-core/requests/request-edit-worker.test.ts	await ctx.editWorker.run("event-edit", payload);
 apps/api/src/api-core/requests/request-edit-worker.test.ts	const event = await seedEvent(ctx);
 apps/api/src/api-core/requests/request-edit-worker.test.ts	const payload = await addStep(ctx, "s1", "event-edit", "one", { candidates: [] });
@@ -4422,13 +4064,11 @@ apps/api/src/api-core/requests/request-fallback.test.ts	["Criando eventos", "don
 apps/api/src/api-core/requests/request-fallback.test.ts	await addStep(ctx, "s1", "event-create");
 apps/api/src/api-core/requests/request-fallback.test.ts	const { ctx, fallback, stepOf, loopCalls } = await loopStep("conclua os eventos da casa", {
 apps/api/src/api-core/requests/request-fallback.test.ts	ctx.gateway.outputs.set("fallback_loop", { reply: null, invoke: [{ agent: "query", instruction: "Listar os eventos da casa" }] });
-apps/api/src/api-core/requests/request-fallback.test.ts	ctx.gateway.outputs.set("query", { sql: "SELECT name FROM events" });
 apps/api/src/api-core/requests/request-fallback.test.ts	ctx.gateway.outputs.set("fallback_loop", { reply: "Há um evento da casa: lavar a louça.", invoke: null });
 apps/api/src/api-core/requests/request-fallback.test.ts	agent: "query", instruction: "Listar os eventos da casa", status: "done",
 apps/api/src/api-core/requests/request-fallback.test.ts	status: "done", answer: "Há um evento da casa: lavar a louça.", failedSteps: [],
 apps/api/src/api-core/requests/request-fallback.test.ts	const { ctx, stepOf, loopCalls } = await loopStep("quantos eventos tenho?", {
 apps/api/src/api-core/requests/request-fallback.test.ts	ctx.gateway.outputs.set("fallback_loop", { reply: null, invoke: [{ agent: "query", instruction: "Contar os eventos" }] });
-apps/api/src/api-core/requests/request-fallback.test.ts	ctx.gateway.outputs.set("query", { sql: "SELECT count(*) FROM events" });
 apps/api/src/api-core/requests/request-fallback.test.ts	ctx.gateway.outputs.set("fallback_loop", { reply: null, invoke: [{ agent: "event-create", instruction: "Criar o almoço" }] });
 apps/api/src/api-core/requests/request-fallback.test.ts	await ctx.worker.run("event-create", stepOf("event-create"));
 apps/api/src/api-core/requests/request-fallback.test.ts	await ctx.finalizer(quiet().client).run(stepOf("event-create"));
@@ -4539,7 +4179,6 @@ apps/api/src/api-core/requests/request-flow.integration.test.ts	// O evento da r
 apps/api/src/api-core/requests/request-flow.integration.test.ts	const stored = await events.findById(meal?.id as string);
 apps/api/src/api-core/requests/request-flow.integration.test.ts	expect((await events.findById(swim?.id as string))?.revision).toBe(1);
 apps/api/src/api-core/requests/request-flow.integration.test.ts	// Os pedidos e os passos nao aparecem na consulta do agente nem como evento de pessoa.
-apps/api/src/api-core/requests/request-flow.integration.test.ts	const humans = await ctx.pool.query("SELECT name FROM events WHERE actor = 'human' ORDER BY name");
 apps/api/src/api-core/requests/request-flow.integration.test.ts	dispatch = { event_create: confident("one") };
 apps/api/src/api-core/requests/request-flow.integration.test.ts	gateway.outputs.set("event_create", { events: [event("Reunião", "common", 12)] });
 apps/api/src/api-core/requests/request-flow.integration.test.ts	dispatch = { event_edit: confident("one") };
@@ -4550,7 +4189,6 @@ apps/api/src/api-core/requests/request-flow.integration.test.ts	expect(await eve
 apps/api/src/api-core/requests/request-flow.integration.test.ts	test("consulta: as linhas ficam no passo e so enxergam os eventos de pessoa do usuario", async () => {
 apps/api/src/api-core/requests/request-flow.integration.test.ts	dispatch = { event_create: confident("one") };
 apps/api/src/api-core/requests/request-flow.integration.test.ts	gateway.outputs.set("event_create", { events: [event("Reunião", "common", 12)] });
-apps/api/src/api-core/requests/request-flow.integration.test.ts	gateway.outputs.set("query", { sql: "SELECT name FROM events ORDER BY name" });
 apps/api/src/api-core/requests/request-flow.integration.test.ts	gateway.outputs.set("fallback_loop", { reply: null, invoke: [{ agent: "event-create", instruction: "Criar o almoço" }] });
 apps/api/src/api-core/requests/request-flow.integration.test.ts	gateway.reasonings.set("fallback_loop", "O pedido pede um evento.");
 apps/api/src/api-core/requests/request-flow.integration.test.ts	gateway.outputs.set("event_create", { events: [event("Almoço", "meal", 12)] });
@@ -4570,16 +4208,12 @@ apps/api/src/api-core/requests/request-flow.integration.test.ts	test("voz: o ped
 apps/api/src/api-core/requests/request-flow.integration.test.ts	expect(await drain()).toEqual(["voice-event"]);
 apps/api/src/api-core/requests/request-flow.integration.test.ts	entities: [{ kind: "event", name: "Estudar", operation: "create" }],
 apps/api/src/api-core/requests/request-flow.integration.test.ts	const created = await events.findById(view.entities[0]?.id as string);
-apps/api/src/api-core/requests/request-flow.integration.test.ts	expect((await ctx.pool.query("SELECT 1 FROM events WHERE actor = 'human'")).rows).toHaveLength(1);
 apps/api/src/api-core/requests/request-flow.integration.test.ts	test("voz: o modelo falha de vez e o pedido termina como falha, sem evento", async () => {
 apps/api/src/api-core/requests/request-flow.integration.test.ts	entries: [{ id: "t1", kind: "tool", label: "Listou a agenda", source: "mcp_braid_list_timeline_events", status: "running" }],
 apps/api/src/api-core/requests/request-flow.integration.test.ts	status: "running", trace: live, steps: [{ id: "t1", agent: "mcp_braid_list_timeline_events", status: "running" }],
 apps/api/src/api-core/requests/request-flow.integration.test.ts	dispatch = { event_create: confident("one"), query: confident("yes") };
 apps/api/src/api-core/requests/request-flow.integration.test.ts	gateway.outputs.set("event_create", { events: [event("Almoço", "meal", 12)] });
-apps/api/src/api-core/requests/request-flow.integration.test.ts	expect((await ctx.pool.query("SELECT 1 FROM events WHERE actor = 'human'")).rows).toHaveLength(0);
 apps/api/src/api-core/requests/request-flow.integration.test.ts	dispatch = { event_create: confident("one") };
-apps/api/src/api-core/requests/request-flow.integration.test.ts	"SELECT kind FROM event_entries WHERE kind IN ('trace', 'result') AND (content LIKE '%Zuleide%' OR data::text LIKE '%Zuleide%')");
-apps/api/src/api-core/requests/request-flow.integration.test.ts	const traces = await ctx.pool.query("SELECT content FROM event_entries WHERE kind = 'trace'");
 apps/api/src/api-core/requests/request-jobs.module.test.ts	"request-finalize", "request-step", "voice-event",
 apps/api/src/api-core/requests/request-operations.test.ts	cancelOfEvents: vi.fn(async () => {}),
 apps/api/src/api-core/requests/request-operations.test.ts	progressOfEvent: vi.fn(async (): Promise<unknown> => undefined),
@@ -4626,9 +4260,6 @@ apps/api/src/api-core/requests/request-providers.ts	artifacts: ArtifactRepositor
 apps/api/src/api-core/requests/request-providers.ts	commandParsing: OpenRouterEventCommandParsingGateway, artifactBuilder: ArtifactBuilder, files: AgentFilesService,
 apps/api/src/api-core/requests/request-providers.ts	const repositories = { events, artifacts, recurrences };
 apps/api/src/api-core/requests/request-providers.ts	voice: new VoiceEventWorker({ store, parsing: commandParsing, createEvent, batchWriter, places }),
-apps/api/src/api-core/requests/request-query-worker.test.ts	ctx.gateway.outputs.set("query", { sql: "SELECT name, started_at FROM events LIMIT 20" });
-apps/api/src/api-core/requests/request-query-worker.test.ts	expect(ctx.sql.calls).toEqual([{ userId: "user-1", sql: "SELECT name, started_at FROM events LIMIT 20" }]);
-apps/api/src/api-core/requests/request-query-worker.test.ts	ctx.gateway.outputs.set("query", { sql: "DELETE FROM events" });
 apps/api/src/api-core/requests/request-recurrence.test.ts	const payload = await addStep(ctx, "seed", "recurring-event-create");
 apps/api/src/api-core/requests/request-recurrence.test.ts	ctx.gateway.outputs.set("recurring_event_create", { series: [series()] });
 apps/api/src/api-core/requests/request-recurrence.test.ts	await ctx.worker.run("recurring-event-create", payload);
@@ -4770,75 +4401,8 @@ apps/api/src/infrastructure/hermes/hermes-tool-labels.ts	update_event: "Editou u
 apps/api/src/infrastructure/hermes/hermes-tool-labels.ts	get_event: "Leu um evento",
 apps/api/src/infrastructure/hermes/hermes-tool-labels.ts	list_timeline_events: "Listou a agenda",
 apps/api/src/infrastructure/hermes/hermes-tool-labels.ts	list_tracked_events: "Listou os eventos acompanhados",
-apps/api/src/infrastructure/persistence/agent-sql/logical-schema.ts	* So entram os eventos de pessoa e os artefatos: os pedidos ao agente, os
-apps/api/src/infrastructure/persistence/agent-sql/logical-schema.ts	* com nome (`event_sequence`, `event_artifacts`), e nao como o
-apps/api/src/infrastructure/persistence/agent-sql/logical-schema.ts	const VISIBLE_EVENT = (alias: string) => `${alias}.user_id = $1 AND ${alias}.actor = 'human' AND ${alias}.deleted_at IS NULL`;
-apps/api/src/infrastructure/persistence/agent-sql/logical-schema.ts	name: "events",
-apps/api/src/infrastructure/persistence/agent-sql/logical-schema.ts	"Eventos do usuario (passado, agora ou futuro; podem se sobrepor). Com status, o evento e acompanhado como uma tarefa; sem status, so marca um horario na agenda.",
-apps/api/src/infrastructure/persistence/agent-sql/logical-schema.ts	from: "public.events e",
-apps/api/src/infrastructure/persistence/agent-sql/logical-schema.ts	where: VISIBLE_EVENT("e"),
-apps/api/src/infrastructure/persistence/agent-sql/logical-schema.ts	{ name: "location", expr: "e.location", type: "text", description: "onde o evento acontece; vazio se nao tem" },
-apps/api/src/infrastructure/persistence/agent-sql/logical-schema.ts	description: "nulo = evento de referencia, que so marca um horario; senao todo | toDefine | doing | inHold | done | cancel | missed (nao realizado)",
-apps/api/src/infrastructure/persistence/agent-sql/logical-schema.ts	description: "fim planejado: o fim do bloco na agenda ou, no evento longo, o prazo",
-apps/api/src/infrastructure/persistence/agent-sql/logical-schema.ts	description: "evento longo (um projeto): fica fora da agenda e sempre tem status",
-apps/api/src/infrastructure/persistence/agent-sql/logical-schema.ts	name: "event_sequence",
-apps/api/src/infrastructure/persistence/agent-sql/logical-schema.ts	description: "Sequencia entre eventos: next_event_id se segue de previous_event_id (previous vem antes). Um evento pode ter varios antecessores e varios sucessores.",
-apps/api/src/infrastructure/persistence/agent-sql/logical-schema.ts	from: "public.event_event_relation r JOIN public.events p ON p.id = r.from_event_id JOIN public.events c ON c.id = r.to_event_id",
-apps/api/src/infrastructure/persistence/agent-sql/logical-schema.ts	where: `r.relation = 'precedes' AND ${VISIBLE_EVENT("p")} AND ${VISIBLE_EVENT("c")}`,
-apps/api/src/infrastructure/persistence/agent-sql/logical-schema.ts	{ name: "previous_event_id", expr: "r.from_event_id", type: "text" },
-apps/api/src/infrastructure/persistence/agent-sql/logical-schema.ts	{ name: "next_event_id", expr: "r.to_event_id", type: "text" },
-apps/api/src/infrastructure/persistence/agent-sql/logical-schema.ts	name: "event_artifacts",
-apps/api/src/infrastructure/persistence/agent-sql/logical-schema.ts	description: "Artefatos de um evento, na ordem em que aparecem (position). Um artefato pode estar em varios eventos.",
-apps/api/src/infrastructure/persistence/agent-sql/logical-schema.ts	from: "public.event_artifact_relation l JOIN public.events e ON e.id = l.event_id JOIN public.artifacts a ON a.id = l.artifact_id",
-apps/api/src/infrastructure/persistence/agent-sql/logical-schema.ts	where: `${VISIBLE_EVENT("e")} AND ${VISIBLE_ARTIFACT}`,
-apps/api/src/infrastructure/persistence/agent-sql/logical-schema.ts	{ name: "event_id", expr: "l.event_id", type: "text" },
-apps/api/src/infrastructure/persistence/agent-sql/logical-schema.ts	{ name: "relation", expr: "l.relation", type: "text", description: "o que o evento fez com o artefato: creates | updates | uses | deletes" },
-apps/api/src/infrastructure/persistence/agent-sql/logical-schema.ts	name: "event_tags",
-apps/api/src/infrastructure/persistence/agent-sql/logical-schema.ts	description: "Tags de cada evento.",
-apps/api/src/infrastructure/persistence/agent-sql/logical-schema.ts	from: "public.event_tags et JOIN public.tags t ON t.id = et.tag_id JOIN public.events e ON e.id = et.event_id",
-apps/api/src/infrastructure/persistence/agent-sql/logical-schema.ts	where: `${VISIBLE_EVENT("e")} AND t.user_id = $1`,
-apps/api/src/infrastructure/persistence/agent-sql/logical-schema.ts	{ name: "event_id", expr: "et.event_id", type: "text" },
-apps/api/src/infrastructure/persistence/agent-sql/logical-schema.ts	"Series recorrentes. Cada ocorrencia e uma linha em events com recurrence_id apontando para ca; so as dos proximos dias ja foram geradas.",
-apps/api/src/infrastructure/persistence/agent-sql/logical-schema.ts	"Artefatos: objetos que guardam conteudo (uma nota de texto, um alimento, um sono, um treino, um exercicio). Podem estar soltos ou ligados a eventos (event_artifacts); o conteudo fica em data, conforme type.",
-apps/api/src/infrastructure/persistence/agent-sql/logical-schema.ts	{ name: "derived", expr: "a.derived", type: "boolean", description: "copia de um alimento, feita para o evento em que foi comido" },
-apps/api/src/infrastructure/persistence/agent-sql/rewrite-agent-sql.test.ts	const sql = await scoped("SELECT id FROM events");
-apps/api/src/infrastructure/persistence/agent-sql/rewrite-agent-sql.test.ts	const sql = await scoped("SELECT id FROM events -- os ids");
-apps/api/src/infrastructure/persistence/agent-sql/rewrite-agent-sql.test.ts	const sql = await scoped("SELECT id FROM events;;  ");
-apps/api/src/infrastructure/persistence/agent-sql/rewrite-agent-sql.test.ts	expect(sql).toContain("SELECT id FROM events\n) AS agent_q");
-apps/api/src/infrastructure/persistence/agent-sql/rewrite-agent-sql.test.ts	const validation = await validateAgentSql("SELECT id FROM events");
-apps/api/src/infrastructure/persistence/agent-sql/rewrite-agent-sql.test.ts	await expect(buildScopedSql("SELECT name FROM events", validation.statement, 10)).rejects.toThrow();
 apps/api/src/infrastructure/persistence/agent-sql/rewrite-agent-sql.test.ts	test("so eventos de pessoa entram: nenhum CTE de evento deixa passar um pedido ao agente", () => {
-apps/api/src/infrastructure/persistence/agent-sql/rewrite-agent-sql.test.ts	if (table.from.includes("public.events")) expect(table.where).toContain("actor = 'human'");
-apps/api/src/infrastructure/persistence/agent-sql/validate-agent-sql.test.ts	["delete", "DELETE FROM events"],
-apps/api/src/infrastructure/persistence/agent-sql/validate-agent-sql.test.ts	["update", "UPDATE events SET name = 'x'"],
-apps/api/src/infrastructure/persistence/agent-sql/validate-agent-sql.test.ts	["merge", "MERGE INTO artifacts n USING events e ON n.id = e.id WHEN MATCHED THEN DELETE"],
-apps/api/src/infrastructure/persistence/agent-sql/validate-agent-sql.test.ts	["copy", "COPY events TO STDOUT"],
-apps/api/src/infrastructure/persistence/agent-sql/validate-agent-sql.test.ts	["data-modifying CTE", "WITH x AS (DELETE FROM events RETURNING *) SELECT * FROM x"],
-apps/api/src/infrastructure/persistence/agent-sql/validate-agent-sql.test.ts	["for update", "SELECT * FROM events FOR UPDATE"],
-apps/api/src/infrastructure/persistence/agent-sql/validate-agent-sql.test.ts	["select into", "SELECT * INTO copy_of_events FROM events"],
-apps/api/src/infrastructure/persistence/agent-sql/validate-agent-sql.test.ts	["schema-qualified logical table", "SELECT * FROM public.events"],
-apps/api/src/infrastructure/persistence/agent-sql/validate-agent-sql.test.ts	["hidden table event_entries", "SELECT * FROM event_entries"],
-apps/api/src/infrastructure/persistence/agent-sql/validate-agent-sql.test.ts	["hidden relation graph", "SELECT * FROM event_event_relation"],
 apps/api/src/infrastructure/persistence/agent-sql/validate-agent-sql.test.ts	["quoted uppercase name", 'SELECT * FROM "Events"'],
-apps/api/src/infrastructure/persistence/agent-sql/validate-agent-sql.test.ts	["dblink", "SELECT * FROM events WHERE dblink('x', 'y') IS NOT NULL"],
-apps/api/src/infrastructure/persistence/agent-sql/validate-agent-sql.test.ts	["explicit pg_catalog call", "SELECT pg_catalog.lower(name) FROM events"],
-apps/api/src/infrastructure/persistence/agent-sql/validate-agent-sql.test.ts	["TABLESAMPLE", "SELECT * FROM events TABLESAMPLE SYSTEM (10)"],
-apps/api/src/infrastructure/persistence/agent-sql/validate-agent-sql.test.ts	["parameter", "SELECT * FROM events WHERE id = $1"],
-apps/api/src/infrastructure/persistence/agent-sql/validate-agent-sql.test.ts	["qualified operator", "SELECT * FROM events WHERE name OPERATOR(pg_catalog.=) 'x'"],
-apps/api/src/infrastructure/persistence/agent-sql/validate-agent-sql.test.ts	["collate", 'SELECT name COLLATE "C" FROM events'],
-apps/api/src/infrastructure/persistence/agent-sql/validate-agent-sql.test.ts	["plain select", "SELECT id, name FROM events"],
-apps/api/src/infrastructure/persistence/agent-sql/validate-agent-sql.test.ts	["date functions", "SELECT date_trunc('week', now()), started_on FROM events WHERE started_at > now() - interval '7 days'"],
-apps/api/src/infrastructure/persistence/agent-sql/validate-agent-sql.test.ts	["extract at time zone", "SELECT EXTRACT(dow FROM started_at AT TIME ZONE 'America/Sao_Paulo') FROM events"],
-apps/api/src/infrastructure/persistence/agent-sql/validate-agent-sql.test.ts	["cast", "SELECT CAST(position AS integer), position::text, started_at::date FROM event_artifacts, events"],
-apps/api/src/infrastructure/persistence/agent-sql/validate-agent-sql.test.ts	["conditional expressions", "SELECT COALESCE(description, ''), NULLIF(name, ''), GREATEST(1, 2), CASE WHEN missed THEN 1 ELSE 0 END FROM events"],
-apps/api/src/infrastructure/persistence/agent-sql/validate-agent-sql.test.ts	["window function", "SELECT name, row_number() OVER (PARTITION BY started_on ORDER BY started_at DESC) FROM events"],
-apps/api/src/infrastructure/persistence/agent-sql/validate-agent-sql.test.ts	["aggregate with filter", "SELECT started_on, count(*) FILTER (WHERE missed) FROM events GROUP BY started_on ORDER BY 1"],
-apps/api/src/infrastructure/persistence/agent-sql/validate-agent-sql.test.ts	["join and exists", "SELECT t.name FROM events t JOIN event_tags tt ON tt.event_id = t.id WHERE EXISTS (SELECT 1 FROM event_artifacts tn WHERE tn.event_id = t.id)"],
-apps/api/src/infrastructure/persistence/agent-sql/validate-agent-sql.test.ts	["user CTE shadowing a table", "WITH events AS (SELECT * FROM events WHERE missed) SELECT count(*) FROM events"],
-apps/api/src/infrastructure/persistence/agent-sql/validate-agent-sql.test.ts	["nested WITH", "SELECT * FROM (WITH x AS (SELECT id FROM events) SELECT * FROM x) q"],
-apps/api/src/infrastructure/persistence/agent-sql/validate-agent-sql.test.ts	["CTE used by both union branches", "WITH x AS (SELECT id FROM events) SELECT id FROM x UNION SELECT id FROM x"],
-apps/api/src/infrastructure/persistence/agent-sql/validate-agent-sql.test.ts	["TABLE shorthand", "TABLE events"],
-apps/api/src/infrastructure/persistence/agent-sql/validate-agent-sql.test.ts	["current_date", "SELECT * FROM events WHERE started_on = CURRENT_DATE"],
 
 == web, código ==
 apps/web/src/app/[userId]/eventos/[eventId]/agent-event.test.tsx	[nome de arquivo]

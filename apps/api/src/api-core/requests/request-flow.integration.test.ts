@@ -207,7 +207,7 @@ test("o exemplo-guia: eventos e alimento criados em passos proprios, ligados na 
   expect(build?.trace).toBeUndefined();
 
   // Os pedidos e os passos nao aparecem na consulta do agente nem como evento de pessoa.
-  const humans = await ctx.pool.query("SELECT name FROM events WHERE actor = 'human' ORDER BY name");
+  const humans = await ctx.pool.query("SELECT name FROM tasks WHERE actor = 'human' ORDER BY name");
   expect(humans.rows.map((row) => row.name)).toEqual(["Nadar na praia", "Refeição"]);
 });
 
@@ -244,7 +244,7 @@ test("consulta: as linhas ficam no passo e so enxergam os eventos de pessoa do u
   await drain();
 
   dispatch = { query: confident("yes") };
-  gateway.outputs.set("query", { sql: "SELECT name FROM events ORDER BY name" });
+  gateway.outputs.set("query", { sql: "SELECT name FROM tasks ORDER BY name" });
   const requestId = await operations.start({ userId: "user-1", text: "o que tenho hoje?" }, actor);
   await drain();
 
@@ -348,7 +348,7 @@ test("voz: o pedido gera o evento de pessoa; reenviar a mesma fala nao cria outr
   expect(view.trace).toBeUndefined();
   const created = await events.findById(view.entities[0]?.id as string);
   expect(created).toMatchObject({ actor: "human", description: "comecei a estudar" });
-  expect((await ctx.pool.query("SELECT 1 FROM events WHERE actor = 'human'")).rows).toHaveLength(1);
+  expect((await ctx.pool.query("SELECT 1 FROM tasks WHERE actor = 'human'")).rows).toHaveLength(1);
 });
 
 test("voz: o modelo falha de vez e o pedido termina como falha, sem evento", async () => {
@@ -410,7 +410,7 @@ test("cancelar: os jobs vivos param, o pedido e os passos abertos ficam cancelad
   await drain();
 
   expect((await jobStatuses()).filter((job) => job.kind === "request-step").map((job) => job.status)).toEqual(["cancelled", "cancelled"]);
-  expect((await ctx.pool.query("SELECT 1 FROM events WHERE actor = 'human'")).rows).toHaveLength(0);
+  expect((await ctx.pool.query("SELECT 1 FROM tasks WHERE actor = 'human'")).rows).toHaveLength(0);
   expect(gateway.calls).toHaveLength(0);
   expect(await operations.view(requestId, actor)).toMatchObject({ status: "cancel", entities: [] });
 });
@@ -424,9 +424,9 @@ test("o modelo fora do ar vira passo vermelho com codigo, e o texto do usuario s
 
   expect((await operations.view(requestId, actor)).steps).toMatchObject([{ status: "failed", errorCode: "agent_timeout" }]);
   const leaked = await ctx.pool.query(
-    "SELECT kind FROM event_entries WHERE kind IN ('trace', 'result') AND (content LIKE '%Zuleide%' OR data::text LIKE '%Zuleide%')");
+    "SELECT kind FROM task_entries WHERE kind IN ('trace', 'result') AND (content LIKE '%Zuleide%' OR data::text LIKE '%Zuleide%')");
   expect(leaked.rows).toEqual([]);
-  const traces = await ctx.pool.query("SELECT content FROM event_entries WHERE kind = 'trace'");
+  const traces = await ctx.pool.query("SELECT content FROM task_entries WHERE kind = 'trace'");
   expect(traces.rows.length).toBeGreaterThan(0);
   expect(traces.rows.every((row) => row.content === null)).toBe(true);
 });

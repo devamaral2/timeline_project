@@ -21,9 +21,9 @@ export const tags = pgTable(
 );
 
 export const eventTags = pgTable(
-  "event_tags",
+  "task_tags",
   {
-    eventId: char("event_id", { length: 26 })
+    eventId: char("task_id", { length: 26 })
       .notNull()
       .references(() => events.id, { onDelete: "cascade" }),
     tagId: char("tag_id", { length: 26 })
@@ -32,7 +32,7 @@ export const eventTags = pgTable(
   },
   (table) => [
     primaryKey({ columns: [table.eventId, table.tagId] }),
-    index("event_tags_tag_idx").on(table.tagId, table.eventId),
+    index("task_tags_tag_idx").on(table.tagId, table.eventId),
   ],
 );
 

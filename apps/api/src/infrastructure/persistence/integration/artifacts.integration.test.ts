@@ -266,23 +266,23 @@ describe("PostgresArtifactRepository", () => {
   describe("alimento a espera dos nutrientes", () => {
     async function pendingFood(): Promise<{ food: Artifact; payload: FoodGenerationPayload; requestId: string }> {
       const food = await saved(Artifact.create({ userId: USER, type: "food", name: "Feijoada", data: pendingFoodData("feijoada completa") }));
-      const [job] = await selectRows<{ payload: FoodGenerationPayload; event_id: string }>(
+      const [job] = await selectRows<{ payload: FoodGenerationPayload; task_id: string }>(
         ctx.pool,
-        "SELECT payload, event_id FROM jobs WHERE kind = $1",
+        "SELECT payload, task_id FROM jobs WHERE kind = $1",
         [FOOD_GENERATION_JOB],
       );
-      return { food, payload: job.payload, requestId: job.event_id };
+      return { food, payload: job.payload, requestId: job.task_id };
     }
 
     const requestOf = async (requestId: string) =>
-      (await selectRows(ctx.pool, "SELECT status, finished_at FROM events WHERE id = $1", [requestId]))[0];
+      (await selectRows(ctx.pool, "SELECT status, finished_at FROM tasks WHERE id = $1", [requestId]))[0];
     const resultsOf = (requestId: string) =>
-      selectRows(ctx.pool, "SELECT kind, role, content, data FROM event_entries WHERE event_id = $1 AND kind = 'result'", [requestId]);
+      selectRows(ctx.pool, "SELECT kind, role, content, data FROM task_entries WHERE task_id = $1 AND kind = 'result'", [requestId]);
 
     test("inserir abre o pedido de construcao, a relacao, a mensagem e o job", async () => {
       const { food } = await pendingFood();
 
-      const requests = await selectRows(ctx.pool, "SELECT * FROM events");
+      const requests = await selectRows(ctx.pool, "SELECT * FROM tasks");
       expect(requests).toHaveLength(1);
       const [request] = requests;
       expect(request).toMatchObject({
@@ -296,20 +296,20 @@ describe("PostgresArtifactRepository", () => {
       });
       expect(request.started_at).toBeInstanceOf(Date);
 
-      expect(await selectRows(ctx.pool, "SELECT event_id, artifact_id, relation, position FROM event_artifact_relation")).toEqual([
-        { event_id: request.id, artifact_id: food.id, relation: "updates", position: null },
+      expect(await selectRows(ctx.pool, "SELECT task_id, artifact_id, relation, position FROM task_artifact_relation")).toEqual([
+        { task_id: request.id, artifact_id: food.id, relation: "updates", position: null },
       ]);
-      expect(await selectRows(ctx.pool, "SELECT event_id, user_id, kind, role, content FROM event_entries")).toEqual([
-        { event_id: request.id, user_id: USER, kind: "message", role: "user", content: "feijoada completa" },
+      expect(await selectRows(ctx.pool, "SELECT task_id, user_id, kind, role, content FROM task_entries")).toEqual([
+        { task_id: request.id, user_id: USER, kind: "message", role: "user", content: "feijoada completa" },
       ]);
       expect(
-        await selectRows(ctx.pool, "SELECT kind, user_id, actor_id, event_id, dedupe_key, status, payload FROM jobs"),
+        await selectRows(ctx.pool, "SELECT kind, user_id, actor_id, task_id, dedupe_key, status, payload FROM jobs"),
       ).toEqual([
         {
           kind: "food-generation",
           user_id: USER,
           actor_id: USER,
-          event_id: request.id,
+          task_id: request.id,
           dedupe_key: food.id,
           status: "queued",
           payload: {
@@ -327,7 +327,7 @@ describe("PostgresArtifactRepository", () => {
       await saved(foodArtifact(USER, "Marmita", 500));
       await saved(Artifact.create({ type: "food", name: "Global pendente", data: pendingFoodData("sem dono") }));
 
-      expect(await countRows(ctx.pool, "events")).toBe(0);
+      expect(await countRows(ctx.pool, "tasks")).toBe(0);
       expect(await countRows(ctx.pool, "jobs")).toBe(0);
     });
 
@@ -337,7 +337,7 @@ describe("PostgresArtifactRepository", () => {
 
       await events.save(meal, { created: [food] });
 
-      expect(await countRows(ctx.pool, "events", "actor = 'agent' AND kind = 'build_request'")).toBe(1);
+      expect(await countRows(ctx.pool, "tasks", "actor = 'agent' AND kind = 'build_request'")).toBe(1);
       expect(await countRows(ctx.pool, "jobs", "kind = $1", [FOOD_GENERATION_JOB])).toBe(1);
     });
 

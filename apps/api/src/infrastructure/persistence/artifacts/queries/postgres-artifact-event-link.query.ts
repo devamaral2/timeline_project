@@ -5,7 +5,7 @@ import type { Db } from "../../shared/tx";
 
 interface LinkRow extends Record<string, unknown> {
   artifact_id: string;
-  event_id: string;
+  task_id: string;
   relation: EventArtifactRelationKind;
   name: string;
   actor: Actor;
@@ -22,16 +22,16 @@ export class PostgresArtifactEventLinkQuery implements ArtifactEventLinkQuery {
     if (artifactIds.length === 0) return links;
 
     const result = await this.db.execute<LinkRow>(sql`
-      SELECT r.artifact_id, e.id AS event_id, r.relation, e.name, e.actor, e.kind, e.started_at, e.estimated_finish_at
-      FROM event_artifact_relation r
-      JOIN events e ON e.id = r.event_id
+      SELECT r.artifact_id, e.id AS task_id, r.relation, e.name, e.actor, e.kind, e.started_at, e.estimated_finish_at
+      FROM task_artifact_relation r
+      JOIN tasks e ON e.id = r.task_id
       WHERE r.artifact_id IN ${[...artifactIds]} AND e.deleted_at IS NULL AND e.kind <> 'step'
       ORDER BY r.artifact_id, e.started_at NULLS LAST, e.id
     `);
 
     for (const row of result.rows) {
       const link: ArtifactEventLink = {
-        eventId: row.event_id,
+        eventId: row.task_id,
         relation: row.relation,
         name: row.name,
         actor: row.actor,

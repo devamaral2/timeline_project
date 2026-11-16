@@ -130,7 +130,7 @@ export class PostgresRequestStore implements RequestStore {
       await this.append(tx, requestId, { kind: "message", role: "user", content: input.text });
       if (input.sessionId) {
         await tx.execute(sql`
-          INSERT INTO event_event_relation (from_event_id, to_event_id, relation)
+          INSERT INTO task_task_relation (from_task_id, to_task_id, relation)
           VALUES (${input.sessionId}, ${requestId}, 'follow_up')`);
       }
       await enqueueJobInTransaction(tx, {
@@ -160,8 +160,8 @@ export class PostgresRequestStore implements RequestStore {
   async steps(requestId: string): Promise<StepRecord[]> {
     const { rows } = await this.database.pool.query<Row>(
       `SELECT s.id, s.status, s.name, s.data, s.started_at, s.finished_at
-       FROM event_event_relation r JOIN events s ON s.id = r.to_event_id
-       WHERE r.from_event_id = $1 AND r.relation = 'step' AND s.kind = 'step'
+       FROM task_task_relation r JOIN tasks s ON s.id = r.to_task_id
+       WHERE r.from_task_id = $1 AND r.relation = 'step' AND s.kind = 'step'
        ORDER BY s.id`, [requestId]);
     const entries = await this.entriesOf(rows.map((row) => String(row.id)));
     return rows.map((row) => toStepRecord(requestId, row, entries.get(String(row.id)) ?? []));
@@ -173,26 +173,26 @@ export class PostgresRequestStore implements RequestStore {
     const sources = `WITH sources AS (
       SELECT $1::char(26) AS id, false AS step
       UNION ALL
-      SELECT to_event_id, true FROM event_event_relation WHERE from_event_id = $1 AND relation = 'step')`;
+      SELECT to_task_id, true FROM task_task_relation WHERE from_task_id = $1 AND relation = 'step')`;
     const [touched, finalized] = await Promise.all([
       this.database.pool.query<Row>(
         `${sources}
-         SELECT sources.id AS source_id, sources.step, 'event' AS kind, e.id, r.relation, e.name, e.kind AS event_kind,
+         SELECT sources.id AS source_id, sources.step, 'event' AS kind, e.id, r.relation, e.name, e.kind AS task_kind,
            e.started_at, e.estimated_finish_at, (e.recurrence_id IS NOT NULL AND NOT e.recurrence_detached) AS series,
            NULL AS artifact_type, NULL AS preview, r.created_at
          FROM sources
-         JOIN event_event_relation r ON r.from_event_id = sources.id AND r.relation IN ('generates', 'updates', 'deletes')
-         JOIN events e ON e.id = r.to_event_id
+         JOIN task_task_relation r ON r.from_task_id = sources.id AND r.relation IN ('generates', 'updates', 'deletes')
+         JOIN tasks e ON e.id = r.to_task_id
          UNION ALL
          SELECT sources.id, sources.step, 'artifact', a.id, r.relation, a.name, NULL, NULL, NULL, false, a.type,
            left(COALESCE(a.data->>'body', a.data->>'description', ''), ${TEXT_PREVIEW_CHARS}), r.created_at
          FROM sources
-         JOIN event_artifact_relation r ON r.event_id = sources.id
+         JOIN task_artifact_relation r ON r.task_id = sources.id
          JOIN artifacts a ON a.id = r.artifact_id
          ORDER BY created_at, step DESC, source_id, id`, [requestId]),
       this.database.pool.query<{ data: { entity: { kind: string; id: string }; links: LinkRecord[] } }>(
         `${sources}
-         SELECT n.data FROM sources JOIN event_entries n ON n.event_id = sources.id
+         SELECT n.data FROM sources JOIN task_entries n ON n.task_id = sources.id
          WHERE n.kind = 'result' AND n.data->>'type' = 'finalized' ORDER BY n.id`, [requestId]),
     ]);
 
@@ -205,7 +205,7 @@ export class PostgresRequestStore implements RequestStore {
       if (records.has(key(kind, id))) continue;
       const summary: EntitySummary = kind === "event"
         ? {
-          name: String(row.name), eventKind: String(row.event_kind),
+          name: String(row.name), eventKind: String(row.task_kind),
           ...(row.started_at ? { startedAt: iso(row.started_at) } : {}),
           ...(row.estimated_finish_at ? { estimatedFinishAt: iso(row.estimated_finish_at) } : {}),
           ...(row.series ? { series: true } : {}),
@@ -230,7 +230,7 @@ export class PostgresRequestStore implements RequestStore {
 
   async markRunning(requestId: string): Promise<void> {
     await this.db.execute(sql`
-      UPDATE events SET status = 'running', updated_at = now()
+      UPDATE tasks SET status = 'running', updated_at = now()
       WHERE id = ${requestId} AND actor = 'agent' AND kind <> 'step' AND status = 'queued'`);
   }
 
@@ -242,7 +242,7 @@ export class PostgresRequestStore implements RequestStore {
       // As escolhas ficam no pedido; as medidas (modelo, latencia), numa entrada de trace.
       const { model, latencyMs, ...choices } = dispatch ?? {};
       await tx.execute(sql`
-        UPDATE events SET status = 'running', updated_at = now(),
+        UPDATE tasks SET status = 'running', updated_at = now(),
           data = data || ${json(dispatch ? { dispatch: choices } : {})}::jsonb
         WHERE id = ${requestId}`);
       if (dispatch) {
@@ -269,8 +269,8 @@ export class PostgresRequestStore implements RequestStore {
       const userId = await this.lockOpenRequest(tx, requestId, sql`('running')`);
       if (!userId) return;
       const rounds = await tx.execute<{ total: number }>(sql`
-        SELECT count(*)::int AS total FROM event_event_relation r JOIN events s ON s.id = r.to_event_id
-        WHERE r.from_event_id = ${requestId} AND r.relation = 'step' AND s.data->>'agent' = 'fallback'`);
+        SELECT count(*)::int AS total FROM task_task_relation r JOIN tasks s ON s.id = r.to_task_id
+        WHERE r.from_task_id = ${requestId} AND r.relation = 'step' AND s.data->>'agent' = 'fallback'`);
       if (Number(rounds.rows[0]?.total ?? 0) !== (step.input?.round ?? 1) - 1) return;
       await this.insertSteps(tx, requestId, userId, [step]);
     });
@@ -279,7 +279,7 @@ export class PostgresRequestStore implements RequestStore {
   /** O dono do pedido, com a linha travada; nada se o pedido nao existe ou ja terminou. */
   private async lockOpenRequest(tx: Tx, requestId: string, statuses: SQL = OPEN_REQUEST): Promise<string | undefined> {
     const found = await tx.execute<{ user_id: string }>(sql`
-      SELECT user_id FROM events
+      SELECT user_id FROM tasks
       WHERE id = ${requestId} AND actor = 'agent' AND kind <> 'step' AND status IN ${statuses}
       FOR UPDATE`);
     return found.rows[0]?.user_id;
@@ -293,7 +293,7 @@ export class PostgresRequestStore implements RequestStore {
         data: { agent: step.agent, expected: step.expected, ...(round !== undefined ? { round } : {}) },
       });
       await tx.execute(sql`
-        INSERT INTO event_event_relation (from_event_id, to_event_id, relation)
+        INSERT INTO task_task_relation (from_task_id, to_task_id, relation)
         VALUES (${requestId}, ${step.id}, 'step')`);
       // O insumo e onde o texto do usuario pode aparecer num passo: o foco, os candidatos, o retrato do alvo.
       const { instruction, ...rest } = input;
@@ -309,7 +309,7 @@ export class PostgresRequestStore implements RequestStore {
 
   async markStepRunning(stepId: string): Promise<void> {
     await this.db.execute(sql`
-      UPDATE events SET status = 'running', updated_at = now(),
+      UPDATE tasks SET status = 'running', updated_at = now(),
         started_at = CASE WHEN status = 'queued' THEN now() ELSE started_at END
       WHERE id = ${stepId} AND kind = 'step' AND status IN ('queued', 'running')`);
   }
@@ -339,15 +339,15 @@ export class PostgresRequestStore implements RequestStore {
           // O passo e o pedido apontam para o evento: o evento mostra o pedido ("criado por", "atualizado
           // por") sem descer pelos passos, e cada pedido que o altera deixa a sua propria relacao.
           await run.execute(sql`
-            INSERT INTO event_event_relation (from_event_id, to_event_id, relation)
+            INSERT INTO task_task_relation (from_task_id, to_task_id, relation)
             VALUES (${input.stepId}, ${entity.id}, ${EVENT_RELATION[entity.operation]}),
                    (${input.requestId}, ${entity.id}, ${EVENT_RELATION[entity.operation]})
-            ON CONFLICT (from_event_id, relation, to_event_id) DO NOTHING`);
+            ON CONFLICT (from_task_id, relation, to_task_id) DO NOTHING`);
         } else {
           await run.execute(sql`
-            INSERT INTO event_artifact_relation (event_id, artifact_id, relation)
+            INSERT INTO task_artifact_relation (task_id, artifact_id, relation)
             VALUES (${input.stepId}, ${entity.id}, ${ARTIFACT_RELATION[entity.operation]})
-            ON CONFLICT (event_id, artifact_id) DO NOTHING`);
+            ON CONFLICT (task_id, artifact_id) DO NOTHING`);
         }
       }
       await this.enqueueFinalize(run, input.requestId, input.stepId, userId);
@@ -384,7 +384,7 @@ export class PostgresRequestStore implements RequestStore {
     detail: { timings?: Record<string, number>; errorCode?: string } = {},
   ): Promise<string | undefined> {
     const closed = await tx.execute<{ user_id: string }>(sql`
-      UPDATE events SET status = ${status}, finished_at = now(), updated_at = now(),
+      UPDATE tasks SET status = ${status}, finished_at = now(), updated_at = now(),
         data = data || ${json(detail.errorCode ? { errorCode: detail.errorCode } : {})}::jsonb
       WHERE id = ${stepId} AND kind = 'step' AND status IN ('queued', 'running')
       RETURNING user_id`);
@@ -430,7 +430,7 @@ export class PostgresRequestStore implements RequestStore {
   async completeVoice(tx: unknown, input: { requestId: string; eventId: string }): Promise<void> {
     await this.inTransaction(tx, async (run) => {
       await run.execute(sql`
-        INSERT INTO event_event_relation (from_event_id, to_event_id, relation)
+        INSERT INTO task_task_relation (from_task_id, to_task_id, relation)
         VALUES (${input.requestId}, ${input.eventId}, 'generates')`);
       await this.append(run, input.requestId, { kind: "result", data: { type: "voice", eventId: input.eventId } });
       // O pedido foi cancelado enquanto o modelo trabalhava: o erro desfaz o evento.
@@ -445,7 +445,7 @@ export class PostgresRequestStore implements RequestStore {
       ...(outcome.errorCode ? { errorCode: outcome.errorCode } : {}),
     };
     const closed = await tx.execute(sql`
-      UPDATE events SET status = ${status}, finished_at = now(), updated_at = now(), data = data || ${json(patch)}::jsonb
+      UPDATE tasks SET status = ${status}, finished_at = now(), updated_at = now(), data = data || ${json(patch)}::jsonb
       WHERE id = ${requestId} AND actor = 'agent' AND kind <> 'step' AND status IN ${OPEN_REQUEST}
       RETURNING id`);
     if (closed.rows.length === 0) return false;
@@ -467,18 +467,18 @@ export class PostgresRequestStore implements RequestStore {
   async cancel(requestId: string): Promise<string[]> {
     return this.inTransaction(undefined, async (tx) => {
       const cancelled = await tx.execute(sql`
-        UPDATE events SET status = 'cancel', finished_at = now(), updated_at = now(),
+        UPDATE tasks SET status = 'cancel', finished_at = now(), updated_at = now(),
           data = data || ${json({ errorCode: "cancelled" satisfies RequestErrorCode })}::jsonb
         WHERE id = ${requestId} AND actor = 'agent' AND kind <> 'step' AND status IN ${OPEN_REQUEST}
         RETURNING id`);
       if (cancelled.rows.length === 0) return [];
       await tx.execute(sql`
-        UPDATE events s SET status = 'cancel', finished_at = now(), updated_at = now()
-        FROM event_event_relation r
-        WHERE r.from_event_id = ${requestId} AND r.relation = 'step' AND r.to_event_id = s.id
+        UPDATE tasks s SET status = 'cancel', finished_at = now(), updated_at = now()
+        FROM task_task_relation r
+        WHERE r.from_task_id = ${requestId} AND r.relation = 'step' AND r.to_task_id = s.id
           AND s.kind = 'step' AND s.status IN ('queued', 'running')`);
       const steps = await tx.execute<{ id: string }>(sql`
-        SELECT to_event_id AS id FROM event_event_relation WHERE from_event_id = ${requestId} AND relation = 'step'`);
+        SELECT to_task_id AS id FROM task_task_relation WHERE from_task_id = ${requestId} AND relation = 'step'`);
       return [requestId, ...steps.rows.map((row) => row.id)];
     });
   }
@@ -490,30 +490,30 @@ export class PostgresRequestStore implements RequestStore {
     entry: { kind: EntryKind; role?: EntryRole; content?: string; data?: Row },
   ): Promise<void> {
     await executor.execute(sql`
-      INSERT INTO event_entries (id, event_id, user_id, kind, role, content, data)
+      INSERT INTO task_entries (id, task_id, user_id, kind, role, content, data)
       SELECT ${newOrderedId()}, e.id, e.user_id, ${entry.kind}, ${entry.role ?? null}, ${entry.content ?? null},
         ${json(entry.data ?? {})}::jsonb
-      FROM events e WHERE e.id = ${eventId}`);
+      FROM tasks e WHERE e.id = ${eventId}`);
   }
 
   private async entriesOf(eventIds: readonly string[]): Promise<Map<string, EntryRow[]>> {
     const byEvent = new Map<string, EntryRow[]>();
     if (eventIds.length === 0) return byEvent;
     const { rows } = await this.database.pool.query<EntryRow>(
-      `SELECT id, event_id AS "eventId", kind, role, content, data FROM event_entries
-       WHERE event_id = ANY($1::char(26)[]) ORDER BY id`, [eventIds]);
+      `SELECT id, task_id AS "eventId", kind, role, content, data FROM task_entries
+       WHERE task_id = ANY($1::char(26)[]) ORDER BY id`, [eventIds]);
     for (const row of rows) byEvent.set(row.eventId, [...(byEvent.get(row.eventId) ?? []), row]);
     return byEvent;
   }
 }
 
-// `events_requests_idx`: pedidos do usuario, nunca passos.
+// `tasks_requests_idx`: pedidos do usuario, nunca passos.
 const REQUEST_FILTER = "e.actor = 'agent' AND e.kind <> 'step' AND e.deleted_at IS NULL";
 const REQUEST_SELECT = `
   SELECT e.id, e.user_id, e.kind, e.status, e.name, e.data, e.created_at, e.updated_at, e.finished_at,
-    s.from_event_id AS session_id
-  FROM events e
-  LEFT JOIN event_event_relation s ON s.to_event_id = e.id AND s.relation = 'follow_up'`;
+    s.from_task_id AS session_id
+  FROM tasks e
+  LEFT JOIN task_task_relation s ON s.to_task_id = e.id AND s.relation = 'follow_up'`;
 
 function toRequestRecord(row: Row, entries: readonly EntryRow[]): RequestRecord {
   const data = (row.data ?? {}) as {

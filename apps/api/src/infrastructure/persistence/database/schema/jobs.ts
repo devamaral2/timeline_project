@@ -20,7 +20,7 @@ export const jobs = pgTable(
     kind: text("kind").notNull(),
     userId: text("user_id").notNull(),
     actorId: text("actor_id").notNull(),
-    eventId: char("event_id", { length: 26 }).references(() => events.id, { onDelete: "cascade" }),
+    eventId: char("task_id", { length: 26 }).references(() => events.id, { onDelete: "cascade" }),
     payload: jsonb("payload").notNull(),
     dedupeKey: text("dedupe_key"),
     // Jobs com a mesma chave rodam um por vez, em ordem de criacao.
@@ -47,7 +47,7 @@ export const jobs = pgTable(
       .on(table.leaseUntil)
       .where(sql`${table.status} = 'running'`),
     // Cancelar pelo evento.
-    index("jobs_event_idx")
+    index("jobs_task_idx")
       .on(table.eventId)
       .where(sql`${table.eventId} IS NOT NULL`),
     index("jobs_concurrency_idx")

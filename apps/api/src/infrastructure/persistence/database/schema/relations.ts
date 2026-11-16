@@ -27,12 +27,12 @@ import { ARTIFACT_ARTIFACT_RELATIONS, EVENT_ARTIFACT_RELATIONS, EVENT_EVENT_RELA
  * conferidos na escrita.
  */
 export const eventEventRelation = pgTable(
-  "event_event_relation",
+  "task_task_relation",
   {
-    fromEventId: char("from_event_id", { length: 26 })
+    fromEventId: char("from_task_id", { length: 26 })
       .notNull()
       .references(() => events.id, { onDelete: "cascade" }),
-    toEventId: char("to_event_id", { length: 26 })
+    toEventId: char("to_task_id", { length: 26 })
       .notNull()
       .references(() => events.id, { onDelete: "cascade" }),
     relation: text("relation", { enum: EVENT_EVENT_RELATIONS }).notNull(),
@@ -41,13 +41,13 @@ export const eventEventRelation = pgTable(
   (table) => [
     // As leituras sao sempre "de X, por tipo" e "para X, por tipo".
     primaryKey({ columns: [table.fromEventId, table.relation, table.toEventId] }),
-    uniqueIndex("event_event_reverse_idx").on(table.toEventId, table.relation, table.fromEventId),
+    uniqueIndex("task_task_reverse_idx").on(table.toEventId, table.relation, table.fromEventId),
     // Cada continuacao tem um so primeiro pedido.
-    uniqueIndex("event_event_follow_up_unique")
+    uniqueIndex("task_task_follow_up_unique")
       .on(table.toEventId)
       .where(sql`${table.relation} = 'follow_up'`),
-    check("event_event_relation_valid", sql`${table.relation} IN (${sqlList(EVENT_EVENT_RELATIONS)})`),
-    check("event_event_not_self", sql`${table.fromEventId} <> ${table.toEventId}`),
+    check("task_task_relation_valid", sql`${table.relation} IN (${sqlList(EVENT_EVENT_RELATIONS)})`),
+    check("task_task_not_self", sql`${table.fromEventId} <> ${table.toEventId}`),
   ],
 );
 
@@ -57,7 +57,7 @@ export const eventEventRelation = pgTable(
  * `creates`.
  *
  * `position` e a ordem na lista do evento e fica nula na relacao de um passo de
- * agente. `UNIQUE (event_id, position)` e `DEFERRABLE` na migration (o Drizzle
+ * agente. `UNIQUE (task_id, position)` e `DEFERRABLE` na migration (o Drizzle
  * nao gera isso): reordenar com `position = position + 1` nao colide no meio do
  * UPDATE.
  *
@@ -65,9 +65,9 @@ export const eventEventRelation = pgTable(
  * ocorrencia, para que editar um nao mexa no outro.
  */
 export const eventArtifactRelation = pgTable(
-  "event_artifact_relation",
+  "task_artifact_relation",
   {
-    eventId: char("event_id", { length: 26 })
+    eventId: char("task_id", { length: 26 })
       .notNull()
       .references(() => events.id, { onDelete: "cascade" }),
     artifactId: char("artifact_id", { length: 26 })
@@ -80,10 +80,10 @@ export const eventArtifactRelation = pgTable(
   },
   (table) => [
     primaryKey({ columns: [table.eventId, table.artifactId] }),
-    unique("event_artifact_event_position_unique").on(table.eventId, table.position),
-    index("event_artifact_reverse_idx").on(table.artifactId, table.eventId),
-    check("event_artifact_relation_valid", sql`${table.relation} IN (${sqlList(EVENT_ARTIFACT_RELATIONS)})`),
-    check("event_artifact_position_nonneg", sql`${table.position} IS NULL OR ${table.position} >= 0`),
+    unique("task_artifact_task_position_unique").on(table.eventId, table.position),
+    index("task_artifact_reverse_idx").on(table.artifactId, table.eventId),
+    check("task_artifact_relation_valid", sql`${table.relation} IN (${sqlList(EVENT_ARTIFACT_RELATIONS)})`),
+    check("task_artifact_position_nonneg", sql`${table.position} IS NULL OR ${table.position} >= 0`),
   ],
 );
 

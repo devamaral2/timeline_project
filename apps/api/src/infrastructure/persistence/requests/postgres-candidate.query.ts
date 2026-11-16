@@ -39,15 +39,15 @@ export class PostgresCandidateQuery implements CandidateQuery {
     const dayStart = (offsetDays: number) =>
       new Date(`${dayKeyOf(new Date(new Date(`${today}T00:00:00${LOCAL_OFFSET}`).getTime() + offsetDays * DAY_MS))}T00:00:00${LOCAL_OFFSET}`);
     const columns = "id, name, kind, status, started_at, estimated_finish_at";
-    // `events_user_live_idx`: os eventos vivos de pessoa do usuario.
+    // `tasks_user_live_idx`: as tarefas vivas de pessoa do usuario.
     const live = "user_id = $1 AND actor = 'human' AND deleted_at IS NULL";
     const [scheduled, tracked] = await Promise.all([
       this.database.pool.query<Row>(
-        `SELECT ${columns} FROM events
+        `SELECT ${columns} FROM tasks
          WHERE ${live} AND NOT long_running AND started_at < $3 AND COALESCE(estimated_finish_at, started_at) >= $2
          ORDER BY started_at LIMIT $4`, [userId, dayStart(-1), dayStart(2), CANDIDATE_LIMITS.scheduled]),
       this.database.pool.query<Row>(
-        `SELECT ${columns} FROM events
+        `SELECT ${columns} FROM tasks
          WHERE ${live} AND status IS NOT NULL AND status NOT IN ('done', 'cancel', 'missed')
          ORDER BY updated_at DESC LIMIT $2`, [userId, CANDIDATE_LIMITS.tracked]),
     ]);

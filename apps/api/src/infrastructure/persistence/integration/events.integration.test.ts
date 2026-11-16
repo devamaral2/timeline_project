@@ -227,7 +227,7 @@ describe("PostgresEventRepository", () => {
       expect((await found(event.id)).artifactLinks).toEqual(links);
       const rows = await selectRows(
         ctx.pool,
-        "SELECT artifact_id, position FROM event_artifact_relation WHERE event_id = $1 ORDER BY position",
+        "SELECT artifact_id, position FROM task_artifact_relation WHERE task_id = $1 ORDER BY position",
         [event.id],
       );
       expect(rows).toEqual([
@@ -246,7 +246,7 @@ describe("PostgresEventRepository", () => {
       await events.update(event.revise({ artifactLinks: [uses(c.id), uses(a.id), uses(d.id)] }), USER, 1);
 
       expect((await found(event.id)).artifactLinks.map((link) => link.artifactId)).toEqual([c.id, a.id, d.id]);
-      expect(await countRows(ctx.pool, "event_artifact_relation", "event_id = $1", [event.id])).toBe(3);
+      expect(await countRows(ctx.pool, "task_artifact_relation", "task_id = $1", [event.id])).toBe(3);
     });
 
     test("um artefato global pode ser ligado ao evento", async () => {
@@ -283,7 +283,7 @@ describe("PostgresEventRepository", () => {
       expect(await events.findById(event.id)).toBeNull();
       expect(await artifacts.findById(food.id)).toBeNull();
       // Nem o pedido de construcao do alimento, nem o job dele.
-      expect(await countRows(ctx.pool, "events")).toBe(0);
+      expect(await countRows(ctx.pool, "tasks")).toBe(0);
       expect(await countRows(ctx.pool, "jobs")).toBe(0);
     });
 
@@ -295,7 +295,7 @@ describe("PostgresEventRepository", () => {
       await artifacts.delete(removed.id, USER);
 
       expect((await found(event.id)).artifactLinks.map((link) => link.artifactId)).toEqual([kept.id]);
-      expect(await countRows(ctx.pool, "event_artifact_relation", "event_id = $1", [event.id])).toBe(2);
+      expect(await countRows(ctx.pool, "task_artifact_relation", "task_id = $1", [event.id])).toBe(2);
     });
   });
 
@@ -309,7 +309,7 @@ describe("PostgresEventRepository", () => {
       expect(await found(first.id)).toMatchObject({ previousIds: [], nextIds: [second.id], revision: 1 });
       expect(await found(second.id)).toMatchObject({ previousIds: [first.id], nextIds: [third.id], revision: 1 });
       expect(await found(third.id)).toMatchObject({ previousIds: [second.id], nextIds: [], revision: 1 });
-      expect(await selectRows(ctx.pool, "SELECT relation FROM event_event_relation")).toEqual([
+      expect(await selectRows(ctx.pool, "SELECT relation FROM task_task_relation")).toEqual([
         { relation: "precedes" },
         { relation: "precedes" },
       ]);
@@ -349,7 +349,7 @@ describe("PostgresEventRepository", () => {
 
       expect(await found(first.id)).toMatchObject({ name: "Primeiro, editado", nextIds: [second.id], revision: 2 });
       expect(await found(second.id)).toMatchObject({ name: "Segundo, editado", previousIds: [first.id], revision: 2 });
-      expect(await countRows(ctx.pool, "event_event_relation", "relation = 'precedes'")).toBe(1);
+      expect(await countRows(ctx.pool, "task_task_relation", "relation = 'precedes'")).toBe(1);
     });
 
     test("o evento apagado some das listas de quem aponta para ele e de quem ele aponta", async () => {
@@ -486,7 +486,7 @@ describe("PostgresEventRepository", () => {
       await events.delete(event.id, USER);
 
       expect(await events.findById(event.id)).toBeNull();
-      const [row] = await selectRows(ctx.pool, "SELECT deleted_at FROM events WHERE id = $1", [event.id]);
+      const [row] = await selectRows(ctx.pool, "SELECT deleted_at FROM tasks WHERE id = $1", [event.id]);
       expect(row.deleted_at).toBeInstanceOf(Date);
       await expect(events.delete(event.id, USER)).rejects.toThrow(EventNotFoundError);
     });

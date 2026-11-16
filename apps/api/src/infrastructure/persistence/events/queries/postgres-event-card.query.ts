@@ -19,9 +19,9 @@ const OPEN_STATUSES = ["todo", "toDefine", "doing", "inHold"] as const;
 
 function hasTag(userId: string, tag: string): SQL {
   return sql`EXISTS (
-    SELECT 1 FROM event_tags et
+    SELECT 1 FROM task_tags et
     JOIN tags t ON t.id = et.tag_id
-    WHERE et.event_id = e.id AND t.user_id = ${userId} AND t.name = ${tag}
+    WHERE et.task_id = e.id AND t.user_id = ${userId} AND t.name = ${tag}
   )`;
 }
 
@@ -33,7 +33,7 @@ export class PostgresEventCardQuery implements EventCardQuery {
   constructor(private readonly db: Db) {}
 
   async agenda(params: AgendaQueryParams): Promise<AgendaPage> {
-    // As mesmas condicoes do indice parcial `events_agenda_idx`.
+    // As mesmas condicoes do indice parcial `tasks_agenda_idx`.
     const conditions: SQL[] = [
       sql`e.user_id = ${params.userId}`,
       sql`e.started_at IS NOT NULL`,
@@ -57,7 +57,7 @@ export class PostgresEventCardQuery implements EventCardQuery {
 
     const page = await this.db.execute<{ id: string; started_at: Date }>(sql`
       SELECT e.id, e.started_at
-      FROM events e
+      FROM tasks e
       WHERE ${sql.join(conditions, sql` AND `)}
       ORDER BY e.started_at DESC, e.id DESC
       LIMIT ${params.limit + 1}
@@ -74,7 +74,7 @@ export class PostgresEventCardQuery implements EventCardQuery {
   }
 
   async tracked(params: TrackedQueryParams): Promise<EventCard[]> {
-    // As mesmas condicoes do indice parcial `events_tracked_idx`.
+    // As mesmas condicoes do indice parcial `tasks_tracked_idx`.
     const conditions: SQL[] = [
       sql`e.user_id = ${params.userId}`,
       sql`e.status IS NOT NULL`,
@@ -83,7 +83,7 @@ export class PostgresEventCardQuery implements EventCardQuery {
       // Uma serie aparece uma vez so: pela proxima ocorrencia em aberto. A ocorrencia que alguem
       // editou (concluir e editar) ja nao acompanha a serie e aparece por si.
       sql`(e.recurrence_id IS NULL OR e.recurrence_detached OR e.id = (
-        SELECT o.id FROM events o
+        SELECT o.id FROM tasks o
         WHERE o.recurrence_id = e.recurrence_id AND NOT o.recurrence_detached AND o.deleted_at IS NULL
           AND o.status IN ${[...OPEN_STATUSES]}
         ORDER BY o.occurrence_on
@@ -103,7 +103,7 @@ export class PostgresEventCardQuery implements EventCardQuery {
 
     const result = await this.db.execute<{ id: string }>(sql`
       SELECT e.id
-      FROM events e
+      FROM tasks e
       WHERE ${sql.join(conditions, sql` AND `)}
       ORDER BY coalesce(e.started_at, e.estimated_finish_at) NULLS LAST, e.id
       ${params.limit === undefined ? sql`` : sql`LIMIT ${params.limit}`}

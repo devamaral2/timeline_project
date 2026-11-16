@@ -82,12 +82,12 @@ export async function deleteRecurrenceAggregate(
 
   // A relacao herdada da serie vira da propria ocorrencia: a serie some, o artefato fica.
   await tx.execute(sql`
-    UPDATE event_artifact_relation SET from_recurrence = false
-    WHERE event_id IN (SELECT id FROM events WHERE recurrence_id = ${recurrenceId})
+    UPDATE task_artifact_relation SET from_recurrence = false
+    WHERE task_id IN (SELECT id FROM tasks WHERE recurrence_id = ${recurrenceId})
   `);
 
   // O `set null` da chave estrangeira so soltaria `recurrence_id`; o dia tambem deixa de querer dizer
-  // alguma coisa, entao os tres saem juntos, numa linha so: o check `events_occurrence_requires_day`
+  // alguma coisa, entao os tres saem juntos, numa linha so: o check `tasks_occurrence_requires_day`
   // nao aceita um sem o outro.
   await tx
     .update(schema.events)
@@ -234,7 +234,7 @@ async function assertOwned(tx: Tx, recurrenceId: string, actorUserId: string): P
 async function liveEvents(tx: Tx, userId: string, ids: readonly string[]): Promise<string[]> {
   if (ids.length === 0) return [];
   const found = await tx.execute<{ id: string }>(sql`
-    SELECT id FROM events
+    SELECT id FROM tasks
     WHERE id IN ${[...ids]} AND user_id = ${userId} AND deleted_at IS NULL
   `);
   return found.rows.map((row) => row.id);
