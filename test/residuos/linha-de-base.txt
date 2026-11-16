@@ -3372,7 +3372,6 @@ apps/api/src/infrastructure/persistence/requests/postgres-request.store.integrat
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	const link = { from: { kind: "artifact" as const, id: food.id }, to: { kind: "event" as const, id: meal.id } };
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	await store.markFinalized(undefined, { kind: "event", id: gone.id, stepId: createStep }, []);
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	{ data: { type: "finalized", entity: { kind: "event", id: gone.id }, links: [] } },
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	.toMatchObject({ kind: "event", operation: "create", linkedTo: [{ kind: "artifact", id: food.id }] });
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	await store.beginSteps(requestId, [{ id: stepId, agent: "event-create", expected: "one" }]);
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	const event = Event.create({ userId: USER, name: "Almoço", startedAt: new Date() });
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	userId: USER, tasks: [{ op: "create", entity: event }], artifacts: [],
@@ -4079,8 +4078,6 @@ apps/api/src/api-core/requests/request-flow.integration.test.ts	test("o exemplo-
 apps/api/src/api-core/requests/request-flow.integration.test.ts	dispatch = { event_create: confident("many"), artifact_create: confident("one") };
 apps/api/src/api-core/requests/request-flow.integration.test.ts	gateway.outputs.set("event_create", { events: [event("Refeição", "meal", 12), event("Nadar na praia", "training", 13)] });
 apps/api/src/api-core/requests/request-flow.integration.test.ts	["event-create", "Criando eventos", "done"], ["artifact-create", "Criando artefatos", "done"],
-apps/api/src/api-core/requests/request-flow.integration.test.ts	expect(food).toMatchObject({ artifactType: "food", operation: "create", linkedTo: [{ kind: "event", id: meal?.id }] });
-apps/api/src/api-core/requests/request-flow.integration.test.ts	expect(meal).toMatchObject({ kind: "event", operation: "create", linkedTo: [{ kind: "artifact", id: food?.id }] });
 apps/api/src/api-core/requests/request-flow.integration.test.ts	// O evento da refeicao passou a criar o alimento; o outro evento nao foi tocado.
 apps/api/src/api-core/requests/request-flow.integration.test.ts	const stored = await events.findById(meal?.id as string);
 apps/api/src/api-core/requests/request-flow.integration.test.ts	expect((await events.findById(swim?.id as string))?.revision).toBe(1);
@@ -4090,7 +4087,6 @@ apps/api/src/api-core/requests/request-flow.integration.test.ts	gateway.outputs.
 apps/api/src/api-core/requests/request-flow.integration.test.ts	dispatch = { event_edit: confident("one") };
 apps/api/src/api-core/requests/request-flow.integration.test.ts	gateway.outputs.set("event_edit", { edits: [{ ...noEvent, id: meeting?.id, estimatedFinishAt: iso(14) }], query: null });
 apps/api/src/api-core/requests/request-flow.integration.test.ts	steps: [{ agent: "event-edit", status: "done" }],
-apps/api/src/api-core/requests/request-flow.integration.test.ts	entities: [{ kind: "event", id: meeting?.id, name: "Reunião", operation: "update" }],
 apps/api/src/api-core/requests/request-flow.integration.test.ts	expect(await events.findById(meeting?.id as string)).toMatchObject({ estimatedFinishAt: new Date(iso(14)), revision: 2 });
 apps/api/src/api-core/requests/request-flow.integration.test.ts	test("consulta: as linhas ficam no passo e so enxergam os eventos de pessoa do usuario", async () => {
 apps/api/src/api-core/requests/request-flow.integration.test.ts	dispatch = { event_create: confident("one") };
@@ -4099,7 +4095,6 @@ apps/api/src/api-core/requests/request-flow.integration.test.ts	gateway.outputs.
 apps/api/src/api-core/requests/request-flow.integration.test.ts	gateway.reasonings.set("fallback_loop", "O pedido pede um evento.");
 apps/api/src/api-core/requests/request-flow.integration.test.ts	gateway.outputs.set("event_create", { events: [event("Almoço", "meal", 12)] });
 apps/api/src/api-core/requests/request-flow.integration.test.ts	["fallback", "done"], ["event-create", "done"], ["fallback", "done"],
-apps/api/src/api-core/requests/request-flow.integration.test.ts	expect(view.entities).toMatchObject([{ kind: "event", name: "Almoço", operation: "create" }]);
 apps/api/src/api-core/requests/request-flow.integration.test.ts	expect(second).toContain('"records":[{"kind":"event","operation":"create","name":"Almoço"');
 apps/api/src/api-core/requests/request-flow.integration.test.ts	expect(view.trace?.entries.filter((entry) => entry.kind === "thought").map((entry) => entry.summary)).toContain("O pedido pede um evento.");
 apps/api/src/api-core/requests/request-flow.integration.test.ts	dispatch = { event_create: confident("one"), artifact_create: confident("one") };
@@ -4112,7 +4107,6 @@ apps/api/src/api-core/requests/request-flow.integration.test.ts	expect(view.step
 apps/api/src/api-core/requests/request-flow.integration.test.ts	expect(view).toMatchObject({ status: "failed", message: "Não consegui concluir: criando eventos." });
 apps/api/src/api-core/requests/request-flow.integration.test.ts	test("voz: o pedido gera o evento de pessoa; reenviar a mesma fala nao cria outro", async () => {
 apps/api/src/api-core/requests/request-flow.integration.test.ts	expect(await drain()).toEqual(["voice-event"]);
-apps/api/src/api-core/requests/request-flow.integration.test.ts	entities: [{ kind: "event", name: "Estudar", operation: "create" }],
 apps/api/src/api-core/requests/request-flow.integration.test.ts	const created = await events.findById(view.entities[0]?.id as string);
 apps/api/src/api-core/requests/request-flow.integration.test.ts	test("voz: o modelo falha de vez e o pedido termina como falha, sem evento", async () => {
 apps/api/src/api-core/requests/request-flow.integration.test.ts	entries: [{ id: "t1", kind: "tool", label: "Listou a agenda", source: "mcp_braid_list_timeline_events", status: "running" }],
