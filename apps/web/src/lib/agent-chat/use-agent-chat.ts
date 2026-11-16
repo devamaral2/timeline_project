@@ -1,7 +1,7 @@
 "use client";
 
 import { currentCoordinates } from "@/lib/geolocation/current-coordinates";
-import type { AgentEventStatus, AgentTraceDto, RequestDto, RequestScreenContext } from "@repo/contracts";
+import type { AgentTaskStatus, AgentTraceDto, RequestDto, RequestScreenContext } from "@repo/contracts";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "@/lib/api/authed-fetch";
 import { ApiRequestError } from "@/lib/api/client-request";

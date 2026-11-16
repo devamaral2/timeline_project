@@ -2,7 +2,7 @@
 
 import { currentCoordinates } from "@/lib/geolocation/current-coordinates";
 import { useRef, useState } from "react";
-import type { EventDto } from "@repo/contracts";
+import type { TaskDto } from "@repo/contracts";
 import { agendaRefreshEvent } from "@/components/agenda/agenda-refresh";
 import { DetailFrame, DetailMessage } from "@/components/detail/detail-parts";
 import { EditBar, EditFieldSection, EditFooter, editStyles as edit } from "@/components/edit/edit-parts";
@@ -33,7 +33,7 @@ import { useRecurrenceDraft } from "./use-recurrence-draft";
 
 interface EventEditViewProps {
   /** O evento lido. Sem ele, o formulário é de criação: começa vazio e cria um evento novo. */
-  event?: EventDto;
+  event?: TaskDto;
   /** O título de um evento novo, vindo de `/evento comprar pão`. */
   initialName?: string;
   /** Relê o evento depois de uma revisão velha. Não lança. */

@@ -1,12 +1,12 @@
 import type { ArtifactType } from "../artifacts/artifact.dto";
-import type { AgentEventStatus, AgentRequestKind } from "../events/event-types";
-import type { GeoPointInput } from "../events/place-suggestion.dto";
+import type { AgentTaskStatus, AgentRequestKind } from "../tasks/task-types";
+import type { GeoPointInput } from "../tasks/place-suggestion.dto";
 import type { AgentTraceDto } from "./agent-trace.dto";
 
 /**
  * Por onde o pedido anda: `steps` desdobra o pedido em passos de agentes de
  * entidade (ADR 003); `hermes` entrega a mensagem ao Hermes (ADR 004); `voice`
- * transforma uma fala num evento; `food` calcula os nutrientes de um alimento.
+ * transforma uma fala numa tarefa; `food` calcula os nutrientes de um alimento.
  */
 export type RequestRoute = "steps" | "hermes" | "voice" | "food";
 
@@ -24,7 +24,7 @@ export type RequestErrorCode =
 export interface RequestScreenContext {
   screen: string;
   entityId?: string;
-  /** Onde a pessoa esta (lido pelo navegador): os eventos que o pedido cria nascem com o endereco daqui. */
+  /** Onde a pessoa esta (lido pelo navegador): as tarefas que o pedido cria nascem com o endereco daqui. */
   coordinates?: GeoPointInput;
 }
 
@@ -41,22 +41,22 @@ export interface RequestStepDto {
   /** O agente interno que executa o passo. */
   agent: string;
   label: string;
-  status: AgentEventStatus;
+  status: AgentTaskStatus;
   errorCode?: string;
   /** Linhas da consulta, so no passo de consulta. */
   result?: RequestQueryResult;
 }
 
-/** Um evento ou artefato que o pedido criou ou alterou. */
+/** Uma tarefa ou artefato que o pedido criou ou alterou. */
 export interface RequestEntityDto {
-  kind: "event" | "artifact";
+  kind: "task" | "artifact";
   id: string;
   name: string;
   /** So para `kind: "artifact"`. */
   artifactType?: ArtifactType;
   operation: "create" | "update" | "delete";
   /** As relacoes que o pedido aplicou entre esta entidade e as outras. */
-  linkedTo: Array<{ kind: "event" | "artifact"; id: string }>;
+  linkedTo: Array<{ kind: "task" | "artifact"; id: string }>;
 }
 
 /**
@@ -68,7 +68,7 @@ export interface RequestDto {
   id: string;
   kind: AgentRequestKind;
   route: RequestRoute;
-  status: AgentEventStatus;
+  status: AgentTaskStatus;
   title: string;
   /** O primeiro pedido da sessao; ausente quando este e o primeiro. */
   sessionId?: string;
@@ -105,7 +105,7 @@ export interface StartRequestInput {
  * entidade real.
  */
 export type RequestEditEntityType =
-  | "event"
+  | "task"
   | "artifact"
   | "food_artifact"
   | "sleep_artifact"
@@ -129,10 +129,10 @@ export interface StartHermesRequestInput {
   clientMessageId: string;
 }
 
-/** `POST /api/requests/voice`. Responde `202 { requestId }`; o evento criado aparece em `entities`. */
+/** `POST /api/requests/voice`. Responde `202 { requestId }`; a tarefa criada aparece em `entities`. */
 export interface StartVoiceRequestInput {
   transcript: string;
-  /** Onde a pessoa esta: o evento criado nasce com o endereco daqui. */
+  /** Onde a pessoa esta: a tarefa criada nasce com o endereco daqui. */
   coordinates?: GeoPointInput;
   clientMessageId?: string;
 }

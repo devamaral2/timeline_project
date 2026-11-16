@@ -1,9 +1,23 @@
 import { BadRequestException } from "@nestjs/common";
+import { createTaskInputSchema, updateTaskInputSchema } from "@repo/contracts/schemas";
 import { HUMAN_KINDS, HUMAN_STATUSES, PRIORITIES, isNotificationOffsetMinutes } from "../domain";
 import { decodeAgendaCursor } from "../infrastructure/persistence";
 
 /** Os tipos de artefato que o usuario cria e edita. Os demais sao do servidor. */
 const EDITABLE_ARTIFACT_TYPES = ["text", "food", "sleep", "training"];
+
+/** Os campos que cada corpo conhece: os dos esquemas do contrato. Qualquer outro, inclusive nome antigo, e recusado. */
+const CREATE_TASK_FIELDS = new Set(Object.keys(createTaskInputSchema.shape));
+const UPDATE_TASK_FIELDS = new Set(Object.keys(updateTaskInputSchema.shape));
+const CREATE_ARTIFACT_FIELDS = new Set(["type", "data", "name", "tags", "taskIds"]);
+const UPDATE_ARTIFACT_FIELDS = new Set([...CREATE_ARTIFACT_FIELDS, "expectedRevision", "schemaVersion"]);
+
+function assertKnownFields(body: unknown, known: ReadonlySet<string>): void {
+  if (typeof body !== "object" || body === null) return;
+  for (const key of Object.keys(body)) {
+    if (!known.has(key)) throw new BadRequestException(`Invalid field ${key}`);
+  }
+}
 
 function isStringList(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === "string");
@@ -26,6 +40,7 @@ function assertInstant(value: unknown, field: string, nullable: boolean): void {
  * edicao, `null` apaga o status e as datas.
  */
 export function assertEventFields(body: Record<string, unknown>, editing: boolean): void {
+  assertKnownFields(body, editing ? UPDATE_TASK_FIELDS : CREATE_TASK_FIELDS);
   if (body?.kind !== undefined && !isOneOf(HUMAN_KINDS, body.kind)) throw new BadRequestException("Invalid kind");
   if (body?.status !== undefined && !(editing && body.status === null) && !isOneOf(HUMAN_STATUSES, body.status)) {
     throw new BadRequestException("Invalid status");
@@ -56,7 +71,7 @@ export function assertEventFields(body: Record<string, unknown>, editing: boolea
   if (body?.longRunning !== undefined && typeof body.longRunning !== "boolean") {
     throw new BadRequestException("Invalid longRunning");
   }
-  for (const field of ["tags", "previousEventIds", "nextEventIds", "artifactIds"]) {
+  for (const field of ["tags", "previousTaskIds", "nextTaskIds", "artifactIds"]) {
     if (body?.[field] !== undefined && !isStringList(body[field])) throw new BadRequestException(`Invalid ${field}`);
   }
   if (body?.artifacts !== undefined && !Array.isArray(body.artifacts)) throw new BadRequestException("Invalid artifacts");
@@ -92,9 +107,10 @@ export function parseLimit(raw?: string): number | undefined {
  * `type` ausente e texto livre; na edicao, `data` so vem com `type`.
  */
 export function assertArtifactRequest(
-  body: { type?: unknown; data?: unknown; name?: unknown; tags?: unknown; eventIds?: unknown },
+  body: { type?: unknown; data?: unknown; name?: unknown; tags?: unknown; taskIds?: unknown },
   creating: boolean,
 ): void {
+  assertKnownFields(body, creating ? CREATE_ARTIFACT_FIELDS : UPDATE_ARTIFACT_FIELDS);
   if (body?.type !== undefined && !EDITABLE_ARTIFACT_TYPES.includes(body.type as string)) {
     throw new BadRequestException("Invalid type");
   }
@@ -106,7 +122,7 @@ export function assertArtifactRequest(
   }
   if (body?.name !== undefined && typeof body.name !== "string") throw new BadRequestException("Invalid name");
   if (body?.tags !== undefined && !isStringList(body.tags)) throw new BadRequestException("Invalid tags");
-  if (body?.eventIds !== undefined && !isStringList(body.eventIds)) throw new BadRequestException("Invalid eventIds");
+  if (body?.taskIds !== undefined && !isStringList(body.taskIds)) throw new BadRequestException("Invalid taskIds");
 }
 
 export function assertRecurrenceTemplate(template: unknown, required: boolean): void {

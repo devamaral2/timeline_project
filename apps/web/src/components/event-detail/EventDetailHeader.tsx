@@ -1,7 +1,7 @@
 "use client";
 
 import { Bot } from "lucide-react";
-import type { AgentEventStatus, EventDto, EventPriority, HumanEventStatus } from "@repo/contracts";
+import type { AgentTaskStatus, TaskDto, TaskPriority, HumanTaskStatus } from "@repo/contracts";
 import { EventKindMark } from "@/components/events/event-kind-mark";
 import { EventPriorityMark, eventPriorityLabels } from "@/components/events/event-priority-mark";
 import { EventStatusGlyph, eventStatusName } from "@/components/events/event-status-glyph";
@@ -10,13 +10,13 @@ import { EventChoice } from "./EventChoice";
 import styles from "./event-detail.module.css";
 
 /** A ordem das prioridades no seletor: da mais alta para a mais baixa. */
-const PRIORITY_ORDER: EventPriority[] = ["urgent", "high", "medium", "low"];
+const PRIORITY_ORDER: TaskPriority[] = ["urgent", "high", "medium", "low"];
 
 interface EventDetailHeaderProps {
-  event: EventDto;
+  event: TaskDto;
   busy: boolean;
-  onStatusChange: (status: HumanEventStatus) => void;
-  onPriorityChange: (priority: EventPriority) => void;
+  onStatusChange: (status: HumanTaskStatus) => void;
+  onPriorityChange: (priority: TaskPriority) => void;
 }
 
 /**
@@ -39,8 +39,8 @@ export function EventDetailHeader({ event, busy, onStatusChange, onPriorityChang
           <HumanStatus event={event} busy={busy} onChange={onStatusChange} />
         ) : (
           <span className={styles.agentStatus}>
-            <span aria-hidden className={styles.glyph}><EventStatusGlyph actor="agent" status={event.status as AgentEventStatus} size={16} /></span>
-            {eventStatusName("agent", event.status as AgentEventStatus)}
+            <span aria-hidden className={styles.glyph}><EventStatusGlyph actor="agent" status={event.status as AgentTaskStatus} size={16} /></span>
+            {eventStatusName("agent", event.status as AgentTaskStatus)}
           </span>
         )}
         {event.actor === "human" ? (
@@ -56,11 +56,11 @@ export function EventDetailHeader({ event, busy, onStatusChange, onPriorityChang
   );
 }
 
-function HumanStatus({ event, busy, onChange }: { event: EventDto; busy: boolean; onChange: (status: HumanEventStatus) => void }) {
-  const status = (event.status ?? null) as HumanEventStatus | null;
+function HumanStatus({ event, busy, onChange }: { event: TaskDto; busy: boolean; onChange: (status: HumanTaskStatus) => void }) {
+  const status = (event.status ?? null) as HumanTaskStatus | null;
   const label = eventStatusName("human", status);
   return (
-    <EventChoice<HumanEventStatus>
+    <EventChoice<HumanTaskStatus>
       value={status}
       ariaLabel={`Status: ${label}. Trocar status de ${event.name}`}
       listLabel="Status do evento"
@@ -81,10 +81,10 @@ function HumanStatus({ event, busy, onChange }: { event: EventDto; busy: boolean
   );
 }
 
-function PriorityChoice({ event, busy, onChange }: { event: EventDto; busy: boolean; onChange: (priority: EventPriority) => void }) {
+function PriorityChoice({ event, busy, onChange }: { event: TaskDto; busy: boolean; onChange: (priority: TaskPriority) => void }) {
   const label = eventPriorityLabels[event.priority];
   return (
-    <EventChoice<EventPriority>
+    <EventChoice<TaskPriority>
       value={event.priority}
       ariaLabel={`Prioridade: ${label}. Trocar prioridade de ${event.name}`}
       listLabel="Prioridade do evento"

@@ -1,4 +1,4 @@
-import type { EventCardDto } from "@repo/contracts";
+import type { TaskCardDto } from "@repo/contracts";
 import { formatTime, mediumDate, relativeDayLabel, shortDate } from "@repo/timeline";
 import { Plus } from "lucide-react";
 import Link from "next/link";
@@ -77,7 +77,7 @@ export function AgendaDay({ dayKey, now, tasks, missedEvents, onSelectEvent, onP
   onSelectEvent: (selected: SelectedEvent) => void;
   onPlanFreeWindow?: (window: FreeWindow) => void;
   /** Toque no glifo de um evento de pessoa (a tela decide o que ele abre). */
-  onStatusClick?: (card: EventCardDto, anchor: HTMLElement) => void;
+  onStatusClick?: (card: TaskCardDto, anchor: HTMLElement) => void;
   events?: ExampleEvent[];
   userId?: string;
   todayKey?: string;

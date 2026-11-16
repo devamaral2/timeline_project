@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import type { EventKind, EventPriority } from "@repo/contracts";
+import type { TaskKind, TaskPriority } from "@repo/contracts";
 import { EventKindMark } from "./event-kind-mark";
 import { EventPriorityMark } from "./event-priority-mark";
 import { EventStatusGlyph } from "./event-status-glyph";
@@ -47,8 +47,8 @@ describe("EventStatusGlyph", () => {
 });
 
 describe("EventKindMark", () => {
-  const humanKinds: EventKind[] = ["common", "meal", "sleep", "training"];
-  const agentKinds: EventKind[] = [
+  const humanKinds: TaskKind[] = ["common", "meal", "sleep", "training"];
+  const agentKinds: TaskKind[] = [
     "request",
     "search_request",
     "build_request",
@@ -72,7 +72,7 @@ describe("EventPriorityMark", () => {
     ["high", "Alta", 3],
     ["medium", "Média", 2],
     ["low", "Baixa", 1],
-  ] as const satisfies ReadonlyArray<readonly [EventPriority, string, number]>)(
+  ] as const satisfies ReadonlyArray<readonly [TaskPriority, string, number]>)(
     "nomeia a prioridade %s como %s e acende %i de 4 barras",
     (priority, label, lit) => {
       const { container } = render(<EventPriorityMark priority={priority} />);

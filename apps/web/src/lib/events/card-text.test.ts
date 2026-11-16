@@ -1,4 +1,4 @@
-import type { EventCardDto } from "@repo/contracts";
+import type { TaskCardDto } from "@repo/contracts";
 import { describe, expect, it } from "vitest";
 import {
   cardDurationLabel,
@@ -10,7 +10,7 @@ import {
 // Relogio e fuso fixos: a timeline formata no America/Sao_Paulo (-03:00).
 const NOW = new Date("2026-11-14T10:00:00-03:00");
 
-function card(overrides: Partial<EventCardDto> = {}): EventCardDto {
+function card(overrides: Partial<TaskCardDto> = {}): TaskCardDto {
   return {
     id: "ev-1",
     actor: "human",
@@ -24,7 +24,7 @@ function card(overrides: Partial<EventCardDto> = {}): EventCardDto {
     notifyOffsetsMinutes: [],
     tags: [],
     artifactTypes: [],
-    previousEventIds: [],
+    previousTaskIds: [],
     revision: 1,
     ...overrides,
   };

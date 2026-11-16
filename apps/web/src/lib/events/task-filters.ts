@@ -1,4 +1,4 @@
-import type { EventCardDto, EventPriority } from "@repo/contracts";
+import type { TaskCardDto, TaskPriority } from "@repo/contracts";
 import type { TrackedFilters } from "@/lib/api/events";
 
 /**
@@ -7,13 +7,13 @@ import type { TrackedFilters } from "@/lib/api/events";
  */
 
 /** Ordem fixa dos níveis: é a ordem dos chips e a do parâmetro `priority`. */
-export const PRIORITY_ORDER: readonly EventPriority[] = ["urgent", "high", "medium", "low"];
+export const PRIORITY_ORDER: readonly TaskPriority[] = ["urgent", "high", "medium", "low"];
 
 export interface TaskFilterState {
   /** Uma tag só, como a API aceita. */
   tag: string | null;
   /** Vários níveis ao mesmo tempo; vazio quer dizer todos. */
-  priorities: readonly EventPriority[];
+  priorities: readonly TaskPriority[];
   /** Texto já aplicado (sem espaços nas pontas). */
   query: string;
 }
@@ -34,7 +34,7 @@ export function trackedFilters(filters: TaskFilterState): TrackedFilters {
 }
 
 /** Tags da lista sem filtro, da mais usada para a menos usada (empate: pelo nome). */
-export function tagsByUse(cards: readonly EventCardDto[]): string[] {
+export function tagsByUse(cards: readonly TaskCardDto[]): string[] {
   const uses = new Map<string, number>();
   for (const card of cards) for (const tag of card.tags) uses.set(tag, (uses.get(tag) ?? 0) + 1);
   return [...uses.keys()].sort(

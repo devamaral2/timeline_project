@@ -139,7 +139,7 @@ export function registerTools(server: McpServer, api: ApiClient): void {
         name: z.string().min(1).optional(),
         body: z.string().min(1),
         tags,
-        eventIds: z.array(z.string()).optional().describe("Events in which the artifact appears from the start."),
+        taskIds: z.array(z.string()).optional().describe("Tasks in which the artifact appears from the start."),
         idempotencyKey,
       },
       annotations: CREATE_ONLY,

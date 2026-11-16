@@ -32,7 +32,7 @@ export interface StoredTemplate {
   /** Os mesmos artefatos em todas as ocorrencias, na ordem; cada uma ganha a propria relacao com eles. */
   artifactIds: string[];
   /** Os eventos maiores de que cada ocorrencia nasce subtarefa. */
-  previousEventIds: string[];
+  previousTaskIds: string[];
 }
 
 export interface PreparedTemplate {
@@ -69,7 +69,7 @@ export function storedTemplateOf(recurrence: Recurrence): StoredTemplate {
     priority: template.priority ?? "medium",
     notifyOffsetsMinutes: template.notifyOffsetsMinutes ?? [],
     artifactIds: template.artifactIds ?? [],
-    previousEventIds: template.previousEventIds ?? [],
+    previousTaskIds: template.previousTaskIds ?? [],
   };
 }
 
@@ -89,8 +89,8 @@ export async function prepareTemplate(
     throw new RecurrenceValidationError("A recurrence template must be an object");
   }
   // Os antecessores ficam fora do ensaio: seguir-se deles so acontece quando a ocorrencia nasce.
-  const { previousEventIds = [], ...eventInput } = template;
-  await assertOwnedEvents(deps.events, previousEventIds, actor);
+  const { previousTaskIds = [], ...eventInput } = template;
+  await assertOwnedEvents(deps.events, previousTaskIds, actor);
 
   const { event, artifacts, derivations } = await deps.createEvent.prepare(
     eventInput,
@@ -109,7 +109,7 @@ export async function prepareTemplate(
       priority: event.priority,
       notifyOffsetsMinutes: [...event.notifyOffsetsMinutes],
       artifactIds: event.artifactLinks.map((link) => link.artifactId),
-      previousEventIds: [...new Set(previousEventIds)],
+      previousTaskIds: [...new Set(previousTaskIds)],
     },
     artifacts,
     derivations,

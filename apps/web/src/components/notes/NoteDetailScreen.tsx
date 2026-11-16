@@ -1,6 +1,6 @@
 "use client";
 
-import type { ArtifactDto, ArtifactEventLinkDto } from "@repo/contracts";
+import type { ArtifactDto, ArtifactTaskLinkDto } from "@repo/contracts";
 import { Pencil, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
@@ -74,7 +74,7 @@ export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: s
     return <DetailFrame {...frame} lead={backOnly}><DetailMessage>Carregando artefato…</DetailMessage></DetailFrame>;
   }
 
-  const events = artifact.events ?? [];
+  const events = artifact.tasks ?? [];
   const dates = now ? { created: whenLabel(artifact.createdAt, now), updated: whenLabel(artifact.updatedAt, now) } : null;
   const ownsText = artifact.type === "text" && !artifact.global;
   // Skill e agente têm o próprio campo, o pedido de edição do arquivo (`AgentFileEditBar`, dentro do conteúdo).
@@ -100,17 +100,17 @@ export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: s
   ) : null;
 
   /** Uma linha por evento: o ícone do tipo, o nome, a relação (código em mono) e quando o evento começa. */
-  function eventRow(link: ArtifactEventLinkDto) {
+  function eventRow(link: ArtifactTaskLinkDto) {
     const { Icon } = visualForItemType(link.kind);
     const when = now && link.startedAt ? ` · ${whenLabel(link.startedAt, now)}` : "";
     return (
       <LinkRow
-        key={link.eventId}
+        key={link.taskId}
         kind="event"
         icon={<Icon {...detailIcon} />}
         title={link.name}
         sub={`${link.relation}${when}`}
-        href={`/${userId}/eventos/${link.eventId}`}
+        href={`/${userId}/eventos/${link.taskId}`}
       />
     );
   }

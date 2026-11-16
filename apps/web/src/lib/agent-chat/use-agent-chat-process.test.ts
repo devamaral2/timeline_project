@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import type { AgentEventStatus, RequestDto } from "@repo/contracts";
+import type { AgentTaskStatus, RequestDto } from "@repo/contracts";
 import { beforeEach, expect, test, vi } from "vitest";
 import { ApiError } from "@/lib/api/authed-fetch";
 import { createFakeApi, type FakeApi } from "@/test/fake-api";
@@ -43,7 +43,7 @@ async function ask(chat: Chat, text: string): Promise<string> {
   return ids().at(-1) as string;
 }
 
-const step = (id: string, label: string, status: AgentEventStatus) => ({ id, agent: "event-create", label, status });
+const step = (id: string, label: string, status: AgentTaskStatus) => ({ id, agent: "event-create", label, status });
 
 test("a caixa de processo acompanha os passos ate o fim e a agenda atualiza uma vez", async () => {
   const { result, onEntitiesChanged } = setup();
@@ -58,7 +58,7 @@ test("a caixa de processo acompanha os passos ate o fim e a agenda atualiza uma 
   advanceRequest(api, id, {
     status: "done",
     steps: [step("s1", "Criando eventos", "done"), step("s2", "Criando notas", "done")],
-    entities: [{ kind: "event", id: "e1", name: "Refeição", operation: "create", linkedTo: [] }],
+    entities: [{ kind: "task", id: "e1", name: "Refeição", operation: "create", linkedTo: [] }],
   });
   await waitFor(() => expect(result.current.pending).toBeNull());
   expect(result.current.messages.at(-1)).toMatchObject({ role: "process", request: { status: "done" } });

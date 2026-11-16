@@ -1,8 +1,8 @@
-import type { EventCardDto, NotificationOffsetMinutes } from "@repo/contracts";
+import type { TaskCardDto, NotificationOffsetMinutes } from "@repo/contracts";
 
 /** O que o aviso precisa de um evento: o cartao da agenda ou da lista de acompanhados serve. */
 export type NotificationSource = Pick<
-  EventCardDto,
+  TaskCardDto,
   "id" | "name" | "status" | "longRunning" | "startedAt" | "estimatedFinishAt" | "notifyOffsetsMinutes"
 >;
 

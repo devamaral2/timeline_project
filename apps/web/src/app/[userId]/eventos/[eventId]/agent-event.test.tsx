@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import type { AgentTraceDto, EventDto, RequestDto } from "@repo/contracts";
+import type { AgentTraceDto, TaskDto, RequestDto } from "@repo/contracts";
 import { type FakeApi, createFakeApi } from "@/test/fake-api";
 import { eventFixture, eventsArea } from "@/test/fake-api/events";
 import { advanceRequest, requestFixture, requestsArea } from "@/test/fake-api/requests";
@@ -26,7 +26,7 @@ const STEPS: RequestDto["steps"] = [
   { id: "s4", agent: "writer", label: "Montar o resumo", status: "queued" },
 ];
 
-function agentEvent(overrides: Partial<EventDto> = {}): EventDto {
+function agentEvent(overrides: Partial<TaskDto> = {}): TaskDto {
   return eventFixture({
     id: ID,
     actor: "agent",
@@ -54,7 +54,7 @@ function agentRequest(overrides: Partial<RequestDto> = {}): RequestDto {
 
 let api: FakeApi;
 
-function install(events: EventDto[], requests: RequestDto[]) {
+function install(events: TaskDto[], requests: RequestDto[]) {
   api = createFakeApi({ areas: [eventsArea, requestsArea()], seed: { events, requests } });
   // Os pedidos semeados são do usuário da tela: a API falsa só aceita `sessionId` de pedido do mesmo dono.
   const owners = api.store.table<string>("requestOwners");
@@ -117,9 +117,9 @@ test("Informações mostra o início com o tempo decorrido e 'ainda não conclu�
 });
 
 test("o evento de agente mostra a Sequência, somente leitura, com as pontas de pessoa e de agente", async () => {
-  const review = eventFixture({ id: "rev-1", name: "Revisar o erro", status: "todo", startedAt: "2026-11-14T10:00:00-03:00", previousEventIds: [ID] });
+  const review = eventFixture({ id: "rev-1", name: "Revisar o erro", status: "todo", startedAt: "2026-11-14T10:00:00-03:00", previousTaskIds: [ID] });
   const fix = eventFixture({ id: "fix-1", actor: "agent", kind: "request", status: "queued", name: "Aplicar o conserto", startedAt: "2026-11-14T09:50:00-03:00" });
-  install([agentEvent({ previousEventIds: ["rev-0"], nextEventIds: ["rev-1"] }), eventFixture({ id: "rev-0", name: "Alerta do monitor", status: "done" }), review, fix], [agentRequest()]);
+  install([agentEvent({ previousTaskIds: ["rev-0"], nextTaskIds: ["rev-1"] }), eventFixture({ id: "rev-0", name: "Alerta do monitor", status: "done" }), review, fix], [agentRequest()]);
   renderPage();
   await loaded();
 
@@ -165,7 +165,7 @@ test("com o pedido em aberto, a tela relê o pedido e o evento até o estado fin
   await screen.findByRole("region", { name: "Passos" });
 
   advanceRequest(api, ID, { status: "done", steps: STEPS.map((step) => ({ ...step, status: "done" })) });
-  api.store.table<EventDto>("events").set(ID, agentEvent({ status: "done", finishedAt: "2026-11-14T09:58:00-03:00" }));
+  api.store.table<TaskDto>("events").set(ID, agentEvent({ status: "done", finishedAt: "2026-11-14T09:58:00-03:00" }));
 
   await act(async () => {
     await vi.advanceTimersByTimeAsync(3000);
@@ -217,8 +217,8 @@ const TRACE: AgentTraceDto = {
 
 const ENTITIES: RequestDto["entities"] = [
   { kind: "artifact", id: "art-1", name: "Comparativo de voos", artifactType: "text", operation: "create", linkedTo: [] },
-  { kind: "event", id: "ev-9", name: "Escolher o voo", operation: "update", linkedTo: [] },
-  { kind: "event", id: "ev-10", name: "Voo descartado", operation: "delete", linkedTo: [] },
+  { kind: "task", id: "ev-9", name: "Escolher o voo", operation: "update", linkedTo: [] },
+  { kind: "task", id: "ev-10", name: "Voo descartado", operation: "delete", linkedTo: [] },
 ];
 
 test("Entradas lista o rastro do pedido em ordem, com o tipo, a hora e o texto de cada entrada", async () => {

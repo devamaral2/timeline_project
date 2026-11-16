@@ -1,15 +1,15 @@
-import type { CreateEventInput } from "../events/event.input";
+import type { CreateTaskInput } from "../tasks/task.input";
 import type { RecurrenceRule } from "./recurrence-rule";
 
 /**
- * O que cada ocorrencia copia. A janela vem da regra, nunca daqui. So eventos
- * de pessoa se repetem, e um evento longo nao se repete. `artifactIds` sao os
- * mesmos artefatos em todas as ocorrencias; `previousEventIds`, os eventos
+ * O que cada ocorrencia copia. A janela vem da regra, nunca daqui. So tarefas
+ * de pessoa se repetem, e uma tarefa longa nao se repete. `artifactIds` sao os
+ * mesmos artefatos em todas as ocorrencias; `previousTaskIds`, as tarefas
  * de que cada ocorrencia nasce se seguindo.
  */
 export type RecurrenceTemplate = Omit<
-  CreateEventInput,
-  "startedAt" | "estimatedFinishAt" | "finishedAt" | "longRunning" | "nextEventIds"
+  CreateTaskInput,
+  "startedAt" | "estimatedFinishAt" | "finishedAt" | "longRunning" | "nextTaskIds"
 >;
 
 export type CreateRecurrenceInput = RecurrenceRule & { template: RecurrenceTemplate };

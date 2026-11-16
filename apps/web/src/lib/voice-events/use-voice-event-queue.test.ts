@@ -18,7 +18,7 @@ vi.mock("@/lib/session/use-session", () => ({
 let api: FakeApi;
 const requests = () => api.store.table<RequestDto>("requests");
 const voicePosts = () => api.calls.filter((call) => call.method === "POST" && call.pathname === "/api/requests/voice");
-const createdEvent: RequestEntityDto = { kind: "event", id: "ev-9", name: "Almoço", operation: "create", linkedTo: [] };
+const createdEvent: RequestEntityDto = { kind: "task", id: "ev-9", name: "Almoço", operation: "create", linkedTo: [] };
 
 beforeEach(() => {
   localStorage.clear();

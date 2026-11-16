@@ -1,4 +1,4 @@
-import type { EventActor, EventArtifactRelation, EventKind } from "../events/event-types";
+import type { TaskActor, TaskArtifactRelation, TaskKind } from "../tasks/task-types";
 import type { AgentFileData } from "./types/agent-file-data";
 import type { FoodData } from "./types/food-data";
 import type { SleepData } from "./types/sleep-data";
@@ -8,13 +8,13 @@ import type { WorkoutData } from "./types/workout-data";
 
 export type ArtifactType = "text" | "food" | "sleep" | "training" | "workout" | "skill" | "agent" | "router";
 
-/** Um evento em que o artefato aparece, com o necessario para listar. */
-export interface ArtifactEventLinkDto {
-  eventId: string;
-  relation: EventArtifactRelation;
+/** Uma tarefa em que o artefato aparece, com o necessario para listar. */
+export interface ArtifactTaskLinkDto {
+  taskId: string;
+  relation: TaskArtifactRelation;
   name: string;
-  actor: EventActor;
-  kind: EventKind;
+  actor: TaskActor;
+  kind: TaskKind;
   startedAt?: string;
   estimatedFinishAt?: string;
 }
@@ -27,10 +27,10 @@ export interface ArtifactDtoOf<TType extends ArtifactType, TData> {
   data: TData;
   /** Artefato global: sem dono, todos leem e ninguem edita pelo app. */
   global: boolean;
-  /** Copia de outro artefato, feita para um evento. Nao aparece nas listas. */
+  /** Copia de outro artefato, feita para uma tarefa. Nao aparece nas listas. */
   derived: boolean;
-  /** Preenchido pela API de artefatos (vazio no artefato solto); ausente nos artefatos que um evento devolve. */
-  events?: ArtifactEventLinkDto[];
+  /** Preenchido pela API de artefatos (vazio no artefato solto); ausente nos artefatos que uma tarefa devolve. */
+  tasks?: ArtifactTaskLinkDto[];
   tags: string[];
   revision: number;
   createdAt: string;

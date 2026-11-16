@@ -64,7 +64,7 @@ describe("PostgresEventRepository", () => {
   async function follow(...pairs: Array<[string, string]>): Promise<void> {
     await writer.commit({
       userId: USER,
-      events: [],
+      tasks: [],
       artifacts: [],
       sequence: pairs.map(([fromId, toId]) => ({ op: "add" as const, fromId, toId })),
     });

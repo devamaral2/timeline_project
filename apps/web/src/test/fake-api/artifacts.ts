@@ -1,10 +1,10 @@
 import type {
   ArtifactDto,
-  ArtifactEventLinkDto,
+  ArtifactTaskLinkDto,
   ArtifactType,
   CreateArtifactRequest,
-  EventArtifactDto,
-  EventDto,
+  TaskArtifactDto,
+  TaskDto,
 } from "@repo/contracts";
 import {
   artifactSchema,
@@ -37,7 +37,7 @@ const numeric = new Intl.Collator("en", { numeric: true });
 
 export interface ArtifactLink {
   eventId: string;
-  relation: ArtifactEventLinkDto["relation"];
+  relation: ArtifactTaskLinkDto["relation"];
   /** A posição na lista do evento (a ordem enviada no `PATCH` do evento). Sem ela, vale a ordem da tabela. */
   position?: number;
 }
@@ -83,7 +83,7 @@ function table(store: FakeStore) {
 }
 
 function events(store: FakeStore) {
-  return store.table<EventDto>(EVENTS);
+  return store.table<TaskDto>(EVENTS);
 }
 
 function visibleOne(store: FakeStore, id: string): StoredArtifact | undefined {
@@ -100,14 +100,14 @@ function unique(ids: readonly string[] | undefined): string[] {
 }
 
 /** Os eventos em que o artefato aparece; um evento que não existe mais não entra. Global não tem evento. */
-function linksOf(artifact: StoredArtifact, store: FakeStore): ArtifactEventLinkDto[] {
+function linksOf(artifact: StoredArtifact, store: FakeStore): ArtifactTaskLinkDto[] {
   if (artifact.global) return [];
-  const result: ArtifactEventLinkDto[] = [];
+  const result: ArtifactTaskLinkDto[] = [];
   for (const link of artifact.links) {
     const event = events(store).get(link.eventId);
     if (!event) continue;
     result.push({
-      eventId: event.id,
+      taskId: event.id,
       relation: link.relation,
       name: event.name,
       actor: event.actor,
@@ -134,7 +134,7 @@ function toDto(artifact: StoredArtifact, store?: FakeStore): ArtifactDto {
     createdAt: artifact.createdAt,
     updatedAt: artifact.updatedAt,
   };
-  return (store ? { ...dto, events: linksOf(artifact, store) } : dto) as ArtifactDto;
+  return (store ? { ...dto, tasks: linksOf(artifact, store) } : dto) as ArtifactDto;
 }
 
 /**
@@ -142,7 +142,7 @@ function toDto(artifact: StoredArtifact, store?: FakeStore): ArtifactDto {
  * `GET /api/events/{id}` embute em `artifacts`: cada um com a relação do vínculo e o artefato inteiro, globais
  * e cópias derivadas incluídos, e sem os apagados.
  */
-export function artifactsOfEvent(store: FakeStore, eventId: string): EventArtifactDto[] {
+export function artifactsOfEvent(store: FakeStore, eventId: string): TaskArtifactDto[] {
   const found: { link: ArtifactLink; artifact: StoredArtifact }[] = [];
   for (const artifact of table(store).values()) {
     if (artifact.deleted) continue;
@@ -295,8 +295,8 @@ function initialData(input: CreateArtifactRequest): unknown {
 }
 
 function create(request: FakeRequest, store: FakeStore): FakeResult {
-  const input = request.body as CreateArtifactRequest & { eventIds?: string[] };
-  const eventIds = unique(input.eventIds);
+  const input = request.body as CreateArtifactRequest;
+  const eventIds = unique(input.taskIds);
   if (eventIds.some((id) => !events(store).has(id))) return { status: 404 };
 
   const type: ArtifactType = input.type ?? "text";
@@ -337,13 +337,13 @@ function update(request: FakeRequest, store: FakeStore): FakeResult {
     expectedRevision: number;
     name?: string;
     tags?: string[];
-    eventIds?: string[];
+    taskIds?: string[];
     type?: ArtifactType;
     data?: unknown;
   };
   if (input.expectedRevision !== current.revision) return { status: 409 };
 
-  const desired = input.eventIds === undefined ? undefined : unique(input.eventIds);
+  const desired = input.taskIds === undefined ? undefined : unique(input.taskIds);
   if (desired?.some((id) => !events(store).has(id))) return { status: 404 };
 
   const currentIds = current.links.map((link) => link.eventId);

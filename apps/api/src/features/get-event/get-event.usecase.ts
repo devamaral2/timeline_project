@@ -1,7 +1,7 @@
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
 import { EventOwnershipError } from "../../domain";
 import type { ArtifactRepository, EventRepository, EventRequestLinkQuery, RecurrenceRepository } from "../../domain/ports";
-import type { EventDto } from "@repo/contracts";
+import type { TaskDto } from "@repo/contracts";
 import { toEventDto } from "../../api-core/dto/event.dto";
 
 export class GetEventUseCase {
@@ -12,7 +12,7 @@ export class GetEventUseCase {
     private readonly requestLinks: EventRequestLinkQuery,
   ) {}
 
-  async execute(input: { eventId: string }, actor: AuthenticatedUser): Promise<EventDto | null> {
+  async execute(input: { eventId: string }, actor: AuthenticatedUser): Promise<TaskDto | null> {
     const event = await this.eventRepository.findById(input.eventId);
     if (!event) return null;
     if (event.userId !== actor.userId) {

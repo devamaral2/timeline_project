@@ -58,13 +58,13 @@ describe("what the tracked list shows", () => {
       priority: "urgent",
       estimatedFinishAt: "2026-08-18T12:00:00.000Z",
       tags: ["casa"],
-      previousEventIds: ["project"],
+      previousTaskIds: ["project"],
       longRunning: false,
       revision: 1,
     });
     expect(cards.find((card) => card.id === "review")).not.toHaveProperty("missed");
-    expect(cards.find((card) => card.id === "project")).toMatchObject({ previousEventIds: [] });
-    expect(cards.find((card) => card.id === "project")).not.toHaveProperty("nextEventIds");
+    expect(cards.find((card) => card.id === "project")).toMatchObject({ previousTaskIds: [] });
+    expect(cards.find((card) => card.id === "project")).not.toHaveProperty("nextTaskIds");
   });
 });
 

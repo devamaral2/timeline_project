@@ -1,4 +1,4 @@
-import type { EventCardDto } from "@repo/contracts";
+import type { TaskCardDto } from "@repo/contracts";
 import { listAgenda, listTrackedEvents } from "@/lib/api/events";
 import { FEED_HISTORY_MS, type NotificationSource } from "./due-notifications";
 
@@ -17,8 +17,8 @@ export async function loadNotificationSources(nowMs: number): Promise<Notificati
     to: new Date(nowMs + LOOK_AHEAD_MS).toISOString(),
   };
   const [agenda, tracked] = await Promise.all([
-    listAgenda(range).catch((): EventCardDto[] => []),
-    listTrackedEvents().catch((): EventCardDto[] => []),
+    listAgenda(range).catch((): TaskCardDto[] => []),
+    listTrackedEvents().catch((): TaskCardDto[] => []),
   ]);
 
   const byId = new Map<string, NotificationSource>();

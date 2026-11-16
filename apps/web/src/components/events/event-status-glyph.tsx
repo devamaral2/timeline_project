@@ -1,13 +1,13 @@
-import type { AgentEventStatus, EventActor, HumanEventStatus } from "@repo/contracts";
+import type { AgentTaskStatus, TaskActor, HumanTaskStatus } from "@repo/contracts";
 import styles from "./event-glyphs.module.css";
 
-type HumanStatusOrNone = HumanEventStatus | null;
+type HumanStatusOrNone = HumanTaskStatus | null;
 
 export type EventStatusGlyphProps =
   | { actor: "human"; status: HumanStatusOrNone; size?: number; className?: string }
-  | { actor: "agent"; status: AgentEventStatus; size?: number; className?: string };
+  | { actor: "agent"; status: AgentTaskStatus; size?: number; className?: string };
 
-const humanNames: Record<HumanEventStatus, string> = {
+const humanNames: Record<HumanTaskStatus, string> = {
   todo: "A fazer",
   toDefine: "Sem data",
   doing: "Em curso",
@@ -17,7 +17,7 @@ const humanNames: Record<HumanEventStatus, string> = {
   missed: "Não realizado",
 };
 
-const agentNames: Record<AgentEventStatus, string> = {
+const agentNames: Record<AgentTaskStatus, string> = {
   queued: "Agente, na fila",
   running: "Agente, executando",
   waiting: "Agente, aguardando você",
@@ -27,10 +27,10 @@ const agentNames: Record<AgentEventStatus, string> = {
 };
 
 /** O nome que um leitor de tela anuncia para o glifo. */
-export function eventStatusName(actor: EventActor, status: HumanStatusOrNone | AgentEventStatus): string {
-  if (actor === "agent") return agentNames[status as AgentEventStatus];
+export function eventStatusName(actor: TaskActor, status: HumanStatusOrNone | AgentTaskStatus): string {
+  if (actor === "agent") return agentNames[status as AgentTaskStatus];
   if (status === null) return "Só agenda";
-  return humanNames[status as HumanEventStatus];
+  return humanNames[status as HumanTaskStatus];
 }
 
 /**

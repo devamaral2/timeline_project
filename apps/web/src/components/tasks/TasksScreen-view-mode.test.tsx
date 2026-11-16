@@ -1,6 +1,6 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import type { EventDto } from "@repo/contracts";
+import type { TaskDto } from "@repo/contracts";
 import { createFakeApi } from "@/test/fake-api";
 import { eventFixture, eventsArea } from "@/test/fake-api/events";
 import { writeViewMode } from "@/lib/events/view-mode";
@@ -17,7 +17,7 @@ vi.mock("@/lib/api/authed-fetch", async (original) => ({
 
 const { TasksScreen } = await import("./TasksScreen");
 
-const events: EventDto[] = [
+const events: TaskDto[] = [
   eventFixture({ id: "luz", name: "Pagar conta de luz", status: "todo", startedAt: "2026-09-13T00:00:00-03:00" }),
   eventFixture({ id: "pesquisa", name: "Pesquisar voos", actor: "agent", kind: "request", status: "running" }),
 ];

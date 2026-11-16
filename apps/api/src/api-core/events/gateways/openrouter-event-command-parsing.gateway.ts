@@ -4,7 +4,7 @@ import type {
   EventCommandParsingGateway,
   ParsedEventCommand,
 } from "./event-command-parsing.gateway";
-import type { CreateEventInput } from "@repo/contracts";
+import type { CreateTaskInput } from "@repo/contracts";
 import { EventCommandPromptBuilderService } from "../services/event-command-prompt-builder.service";
 import type { ParsedEventSchedule } from "../services/event-schedule.service";
 import type { WorkoutInput } from "../../../domain";
@@ -179,7 +179,7 @@ export class OpenRouterEventCommandParsingGateway implements EventCommandParsing
 export function toCreateEventInput(
   raw: Partial<RawEventCommand>,
   transcript: string,
-): CreateEventInput {
+): CreateTaskInput {
   const fallbackName = transcript.trim().slice(0, MAX_ROUTINE_NAME_LENGTH);
 
   switch (raw.type) {

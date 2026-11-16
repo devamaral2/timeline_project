@@ -45,7 +45,7 @@ export class PostgresEntityBatchWriter implements EntityBatchWriter {
 
   async commit(batch: EntityBatch): Promise<EntityBatchResult> {
     return this.db.transaction(async (tx): Promise<EntityBatchResult> => {
-      await lockTargets(tx, "events", batch.userId, batch.events);
+      await lockTargets(tx, "events", batch.userId, batch.tasks);
       await lockTargets(tx, "artifacts", batch.userId, batch.artifacts);
 
       // Artefatos primeiro: as relacoes de um evento apontam para eles.
@@ -69,12 +69,12 @@ export class PostgresEntityBatchWriter implements EntityBatchWriter {
       }
 
       try {
-        for (const event of created(batch.events)) {
+        for (const event of created(batch.tasks)) {
           if (!(await insertEventAggregate(tx, event))) {
             throw new EntityBatchConflictError(`Evento ${event.id} já existe`);
           }
         }
-        for (const change of batch.events) {
+        for (const change of batch.tasks) {
           if (change.op === "update") {
             await updateEventAggregate(tx, change.entity, batch.userId, change.expectedRevision);
           }
@@ -93,7 +93,7 @@ export class PostgresEntityBatchWriter implements EntityBatchWriter {
       for (const change of batch.artifacts) {
         if (change.op === "delete") await softDeleteArtifact(tx, change.id, batch.userId);
       }
-      for (const change of batch.events) {
+      for (const change of batch.tasks) {
         if (change.op === "delete") await softDeleteEvent(tx, change.id, batch.userId);
       }
 

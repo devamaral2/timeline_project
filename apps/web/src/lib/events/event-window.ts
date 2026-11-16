@@ -1,4 +1,4 @@
-import { eventPositionOf, formatTime, type EventPosition } from "@repo/timeline";
+import { taskPositionOf, formatTime, type TaskPosition } from "@repo/timeline";
 
 interface EventWindow {
   startedAt: string;
@@ -10,8 +10,8 @@ interface EventWindow {
  * `finishedAt`; `@repo/timeline` le `estimatedFinishAt`. Sem esta traducao, todo
  * evento ja iniciado apareceria em andamento.
  */
-export function positionOf(event: EventWindow, now: Date): EventPosition {
-  return eventPositionOf({ startedAt: event.startedAt, estimatedFinishAt: event.finishedAt }, now);
+export function positionOf(event: EventWindow, now: Date): TaskPosition {
+  return taskPositionOf({ startedAt: event.startedAt, estimatedFinishAt: event.finishedAt }, now);
 }
 
 /**

@@ -1,6 +1,6 @@
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
 import type { ArtifactRepository, EntityBatch, EntityBatchWriter, EventRepository, SequenceChange } from "../../domain/ports";
-import type { CreateEventArtifactInput, CreateEventInput } from "@repo/contracts";
+import type { CreateTaskArtifactInput, CreateTaskInput } from "@repo/contracts";
 import {
   ArtifactNotFoundError,
   ArtifactOwnershipError,
@@ -69,7 +69,7 @@ export function toEntityBatch(prepared: PreparedEvent): EntityBatch {
     userId: prepared.event.userId,
     artifacts: prepared.artifacts.map((entity) => ({ op: "create", entity })),
     derivations: prepared.derivations,
-    events: [{ op: "create", entity: prepared.event }],
+    tasks: [{ op: "create", entity: prepared.event }],
     sequence: prepared.sequence,
   };
 }
@@ -85,13 +85,13 @@ export class CreateEventUseCase {
   ) {}
 
   async execute(
-    input: CreateEventInput,
+    input: CreateTaskInput,
     actor: AuthenticatedUser,
     schedule?: ResolvedEventSchedule,
-  ): Promise<{ eventId: string }> {
+  ): Promise<{ taskId: string }> {
     const prepared = await this.prepare(input, actor, schedule);
     await this.save(prepared);
-    return { eventId: prepared.event.id };
+    return { taskId: prepared.event.id };
   }
 
   /** Grava o que `prepare` montou: os artefatos novos, o evento e a ordem dele, numa transacao so. */
@@ -100,7 +100,7 @@ export class CreateEventUseCase {
   }
 
   /** Monta um artefato como a criacao de evento montaria: alimento pendente, treino pelos exercicios globais. */
-  buildArtifact(input: Exclude<CreateEventArtifactInput, { copyOf: string }>, actor: AuthenticatedUser, at: Date): Promise<Artifact> {
+  buildArtifact(input: Exclude<CreateTaskArtifactInput, { copyOf: string }>, actor: AuthenticatedUser, at: Date): Promise<Artifact> {
     return this.artifactBuilder.fromCreateInput(input, actor.userId, at);
   }
 
@@ -109,7 +109,7 @@ export class CreateEventUseCase {
    * alimento so passa pelo agente depois da gravacao.
    */
   async prepare(
-    input: CreateEventInput,
+    input: CreateTaskInput,
     actor: AuthenticatedUser,
     schedule?: ResolvedEventSchedule,
     options: PrepareEventOptions = {},
@@ -183,7 +183,7 @@ export class CreateEventUseCase {
     const sequence = await planSequence(
       event.id,
       { previousIds: [], nextIds: [] },
-      { previousIds: input.previousEventIds ?? [], nextIds: input.nextEventIds ?? [] },
+      { previousIds: input.previousTaskIds ?? [], nextIds: input.nextTaskIds ?? [] },
       this.eventRepository,
       actor.userId,
     );
@@ -191,7 +191,7 @@ export class CreateEventUseCase {
   }
 
   /** O endereco de onde a pessoa esta; sem coordenadas, sem servico ou sem resposta, o evento fica sem local. */
-  private async locate(point: CreateEventInput["coordinates"]): Promise<string | undefined> {
+  private async locate(point: CreateTaskInput["coordinates"]): Promise<string | undefined> {
     if (!point || !this.placeReverse) return undefined;
     return (await this.placeReverse.reverse(point))?.label;
   }

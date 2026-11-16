@@ -2,7 +2,7 @@
 
 import { Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
-import type { EventDto, EventPriority, HumanEventStatus } from "@repo/contracts";
+import type { TaskDto, TaskPriority, HumanTaskStatus } from "@repo/contracts";
 import { agendaRefreshEvent } from "@/components/agenda/agenda-refresh";
 import { BackLink, DetailFrame, DetailMenu, DetailMessage, MenuItem, detailIcon } from "@/components/detail/detail-parts";
 import { EntityAiEditBar } from "@/components/detail/EntityAiEditBar";
@@ -21,7 +21,7 @@ import styles from "./event-detail.module.css";
 
 interface EventDetailViewProps {
   userId: string;
-  event: EventDto;
+  event: TaskDto;
   /** Relê o evento depois de uma troca. Não lança: a falha fica com a tela que o carregou. */
   onChanged: () => Promise<void>;
 }
@@ -65,9 +65,9 @@ export function EventDetailView({ userId, event, onChanged }: EventDetailViewPro
     }
   }
 
-  const changeStatus = (status: HumanEventStatus) =>
+  const changeStatus = (status: HumanTaskStatus) =>
     change(statusPatch(event, status, new Date()), "Não foi possível trocar o status. Tente novamente.");
-  const changePriority = (priority: EventPriority) =>
+  const changePriority = (priority: TaskPriority) =>
     change(priorityPatch(event, priority), "Não foi possível trocar a prioridade. Tente novamente.");
 
   const lead = (
@@ -99,7 +99,7 @@ export function EventDetailView({ userId, event, onChanged }: EventDetailViewPro
       {error ? <DetailMessage alert>{error}</DetailMessage> : null}
       <EntityAiEditBar
         userId={userId}
-        entityType="event"
+        entityType="task"
         entityId={event.id}
         onEdited={() => {
           window.dispatchEvent(new Event(agendaRefreshEvent));

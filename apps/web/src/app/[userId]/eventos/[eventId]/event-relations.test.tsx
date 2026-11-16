@@ -1,6 +1,6 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import type { EventDto } from "@repo/contracts";
+import type { TaskDto } from "@repo/contracts";
 import { type FakeApi, createFakeApi } from "@/test/fake-api";
 import { eventFixture, eventsArea } from "@/test/fake-api/events";
 
@@ -18,15 +18,15 @@ const { default: EventPage } = await import("./page");
 const OPEN = "Preparar a viagem";
 
 /** O evento aberto: uma revisão de pessoa que se segue ao alerta de um agente e antecede um evento de agente. */
-function opened(overrides: Partial<EventDto> = {}): EventDto {
+function opened(overrides: Partial<TaskDto> = {}): TaskDto {
   return eventFixture({
     id: "ev-1",
     name: OPEN,
     kind: "common",
     status: "doing",
     startedAt: "2026-11-14T09:00:00-03:00",
-    previousEventIds: ["prev-1"],
-    nextEventIds: ["next-1", "next-2"],
+    previousTaskIds: ["prev-1"],
+    nextTaskIds: ["next-1", "next-2"],
     ...overrides,
   });
 }
@@ -39,17 +39,17 @@ const PREVIOUS = eventFixture({
   status: "done",
   name: "Monitorar a aplicação",
   startedAt: "2026-11-14T08:00:00-03:00",
-  nextEventIds: ["ev-1"],
+  nextTaskIds: ["ev-1"],
 });
 
 const NEXT = [
-  eventFixture({ id: "next-1", name: "Arrumar a mala", kind: "common", status: "todo", startedAt: "2026-11-15T07:00:00-03:00", previousEventIds: ["ev-1"] }),
-  eventFixture({ id: "next-2", actor: "agent", kind: "request", status: "queued", name: "Aplicar o conserto", startedAt: "2026-11-14T09:50:00-03:00", previousEventIds: ["ev-1"] }),
+  eventFixture({ id: "next-1", name: "Arrumar a mala", kind: "common", status: "todo", startedAt: "2026-11-15T07:00:00-03:00", previousTaskIds: ["ev-1"] }),
+  eventFixture({ id: "next-2", actor: "agent", kind: "request", status: "queued", name: "Aplicar o conserto", startedAt: "2026-11-14T09:50:00-03:00", previousTaskIds: ["ev-1"] }),
 ];
 
 let api: FakeApi;
 
-function install(events: EventDto[]) {
+function install(events: TaskDto[]) {
   api = createFakeApi({ areas: [eventsArea], seed: { events } });
   net.authedFetch.mockImplementation(api.authedFetch);
 }
@@ -117,7 +117,7 @@ test("a sequência é informativa: não há “Espera por”, nem botão de stat
 });
 
 test("com um lado só, só ele aparece", async () => {
-  install([opened({ previousEventIds: [] }), ...NEXT]);
+  install([opened({ previousTaskIds: [] }), ...NEXT]);
   renderPage();
   await loaded();
 
@@ -127,7 +127,7 @@ test("com um lado só, só ele aparece", async () => {
 });
 
 test("só os antecessores: aparece só “Segue-se de”", async () => {
-  install([opened({ nextEventIds: [] }), PREVIOUS]);
+  install([opened({ nextTaskIds: [] }), PREVIOUS]);
   renderPage();
   await loaded();
 
@@ -137,7 +137,7 @@ test("só os antecessores: aparece só “Segue-se de”", async () => {
 });
 
 test("sem sequência nenhuma, a seção não aparece", async () => {
-  install([opened({ previousEventIds: [], nextEventIds: [] })]);
+  install([opened({ previousTaskIds: [], nextTaskIds: [] })]);
   renderPage();
   await screen.findByRole("heading", { name: OPEN });
   await loaded();
@@ -146,7 +146,7 @@ test("sem sequência nenhuma, a seção não aparece", async () => {
 });
 
 test("um evento da sequência que não carrega some da lista e aparece o aviso", async () => {
-  install([opened({ nextEventIds: ["next-1", "sumiu"] }), PREVIOUS, NEXT[0] as EventDto]);
+  install([opened({ nextTaskIds: ["next-1", "sumiu"] }), PREVIOUS, NEXT[0] as TaskDto]);
   renderPage();
   await loaded();
 

@@ -1,7 +1,7 @@
-import type { EventPriority } from "@repo/contracts";
+import type { TaskPriority } from "@repo/contracts";
 import styles from "./event-glyphs.module.css";
 
-export const eventPriorityLabels: Record<EventPriority, string> = {
+export const eventPriorityLabels: Record<TaskPriority, string> = {
   urgent: "Urgente",
   high: "Alta",
   medium: "Média",
@@ -9,7 +9,7 @@ export const eventPriorityLabels: Record<EventPriority, string> = {
 };
 
 /** Quantas das quatro barras acendem: urgente acende todas, baixa so a primeira. */
-const litBars: Record<EventPriority, number> = { urgent: 4, high: 3, medium: 2, low: 1 };
+const litBars: Record<TaskPriority, number> = { urgent: 4, high: 3, medium: 2, low: 1 };
 
 /** Alturas das barras, do desenho do quadro Tipos (viewBox 20 x 16). */
 const bars = [
@@ -24,7 +24,7 @@ const bars = [
  * O que fica apagado segue no lugar (opacidade baixa), para as quatro barras
  * terem sempre a mesma posição. A cor sai do `data-priority` no CSS.
  */
-export function EventPriorityMark({ priority, className }: { priority: EventPriority; className?: string }) {
+export function EventPriorityMark({ priority, className }: { priority: TaskPriority; className?: string }) {
   const lit = litBars[priority];
   const label = `Prioridade: ${eventPriorityLabels[priority]}`;
 

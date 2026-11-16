@@ -1,4 +1,4 @@
-import type { CreateEventInput } from "@repo/contracts";
+import type { CreateTaskInput } from "@repo/contracts";
 import type { EntityBatchWriter } from "../../domain/ports";
 import { EVENT_TIME_ZONE, toEntityBatch, type CreateEventUseCase } from "../events/create-event.usecase";
 import type { EventCommandParsingGateway } from "../events/gateways/event-command-parsing.gateway";
@@ -37,7 +37,7 @@ export class VoiceEventWorker {
     const said = parsed.place?.trim();
     const location = said ? await (this.deps.places?.resolve(said, coordinates) ?? said) : undefined;
     // A frase falada sempre vira a descricao, para o usuario saber o que foi entendido ao editar.
-    const input: CreateEventInput = {
+    const input: CreateTaskInput = {
       ...parsed.input, description: request.prompt,
       ...(location ? { location } : {}),
       ...(coordinates ? { coordinates } : {}),

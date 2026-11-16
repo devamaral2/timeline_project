@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import type { EventDto, RequestDto } from "@repo/contracts";
+import type { TaskDto, RequestDto } from "@repo/contracts";
 import { type FakeApi, createFakeApi } from "@/test/fake-api";
 import { eventFixture, eventsArea } from "@/test/fake-api/events";
 import { requestFixture, requestsArea } from "@/test/fake-api/requests";
@@ -20,7 +20,7 @@ const { default: EventPage } = await import("./page");
 
 let api: FakeApi;
 
-function install(events: EventDto[], requests: RequestDto[] = []) {
+function install(events: TaskDto[], requests: RequestDto[] = []) {
   api = createFakeApi({ areas: [eventsArea, requestsArea()], seed: { events, requests } });
   const owners = api.store.table<string>("requestOwners");
   for (const request of requests) owners.set(request.id, "user-1");

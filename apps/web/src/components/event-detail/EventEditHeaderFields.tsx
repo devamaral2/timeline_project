@@ -1,6 +1,6 @@
 "use client";
 
-import type { EventPriority, HumanEventKind, HumanEventStatus } from "@repo/contracts";
+import type { TaskPriority, HumanTaskKind, HumanTaskStatus } from "@repo/contracts";
 import { EditCaret, EditSelect, editStyles as edit } from "@/components/edit/edit-parts";
 import { EventKindMark } from "@/components/events/event-kind-mark";
 import { EventPriorityMark, eventPriorityLabels } from "@/components/events/event-priority-mark";
@@ -10,9 +10,9 @@ import { humanStatusOptions } from "@/lib/events/event-read-model";
 import type { EventDraft, EventDraftErrors, EventDraftField } from "./event-draft";
 
 /** Os tipos de evento de pessoa, na ordem do quadro Tipos. */
-const KINDS: HumanEventKind[] = ["common", "meal", "sleep", "training"];
+const KINDS: HumanTaskKind[] = ["common", "meal", "sleep", "training"];
 /** A prioridade da mais alta para a mais baixa, como no seletor da leitura. */
-const PRIORITY_ORDER: EventPriority[] = ["urgent", "high", "medium", "low"];
+const PRIORITY_ORDER: TaskPriority[] = ["urgent", "high", "medium", "low"];
 /** O valor do `<select>` para "sem status": o rascunho guarda `null`. */
 const NO_STATUS = "";
 
@@ -37,7 +37,7 @@ export function EventEditHeaderFields({ draft, errors, onChange }: EventEditHead
   return (
     <div className={edit.summary}>
       <div className={edit.summaryRow}>
-        <EditSelect<HumanEventKind>
+        <EditSelect<HumanTaskKind>
           id="event-kind"
           label="Tipo"
           pill
@@ -72,7 +72,7 @@ export function EventEditHeaderFields({ draft, errors, onChange }: EventEditHead
           options={statusOptions}
           invalid={Boolean(errors.status)}
           describedBy={errors.status ? "event-status-error" : undefined}
-          onChange={(value) => onChange("status", value === NO_STATUS ? null : (value as HumanEventStatus))}
+          onChange={(value) => onChange("status", value === NO_STATUS ? null : (value as HumanTaskStatus))}
         >
           <span className={edit.statusGlyph}><EventStatusGlyph actor="human" status={draft.status} size={28} /></span>
           <span className={edit.statusText}>
@@ -84,7 +84,7 @@ export function EventEditHeaderFields({ draft, errors, onChange }: EventEditHead
           </span>
         </EditSelect>
 
-        <EditSelect<EventPriority>
+        <EditSelect<TaskPriority>
           id="event-priority"
           label="Prioridade"
           value={draft.priority}

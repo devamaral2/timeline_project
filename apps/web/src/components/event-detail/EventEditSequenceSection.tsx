@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { AgentEventStatus, EventCardDto, HumanEventStatus } from "@repo/contracts";
+import type { AgentTaskStatus, TaskCardDto, HumanTaskStatus } from "@repo/contracts";
 import { DetailMessage, DetailSection } from "@/components/detail/detail-parts";
 import { AddButton, RemoveButton, editStyles as edit } from "@/components/edit/edit-parts";
 import { EntityPickerDialog } from "@/components/edit/EntityPickerDialog";
@@ -30,10 +30,10 @@ interface EventEditSequenceSectionProps {
  */
 export function EventEditSequenceSection({ eventId, draft, onChange }: EventEditSequenceSectionProps) {
   const now = useNow();
-  const [cards, setCards] = useState<Record<string, EventCardDto>>({});
+  const [cards, setCards] = useState<Record<string, TaskCardDto>>({});
   const [loadFailed, setLoadFailed] = useState(false);
 
-  const missing = [...new Set([...draft.previousEventIds, ...draft.nextEventIds])].filter((id) => !cards[id]);
+  const missing = [...new Set([...draft.previousTaskIds, ...draft.nextTaskIds])].filter((id) => !cards[id]);
   const missingKey = missing.join(",");
 
   useEffect(() => {
@@ -53,12 +53,12 @@ export function EventEditSequenceSection({ eventId, draft, onChange }: EventEdit
     };
   }, [missingKey]);
 
-  function pick(field: "previousEventIds" | "nextEventIds", card: EventCardDto) {
+  function pick(field: "previousTaskIds" | "nextTaskIds", card: TaskCardDto) {
     setCards((current) => ({ ...current, [card.id]: card }));
     onChange(field, [...draft[field], card.id]);
   }
 
-  function drop(field: "previousEventIds" | "nextEventIds", id: string) {
+  function drop(field: "previousTaskIds" | "nextTaskIds", id: string) {
     onChange(field, draft[field].filter((current) => current !== id));
   }
 
@@ -71,13 +71,13 @@ export function EventEditSequenceSection({ eventId, draft, onChange }: EventEdit
         addLabel="Adicionar evento de que este se segue"
         searchLabel="Buscar evento de que este se segue"
         removeLabel={(name) => `Deixar de se seguir de “${name}”`}
-        ids={draft.previousEventIds}
+        ids={draft.previousTaskIds}
         eventId={eventId}
         cards={cards}
         loadFailed={loadFailed}
         now={now}
-        onPick={(card) => pick("previousEventIds", card)}
-        onDrop={(id) => drop("previousEventIds", id)}
+        onPick={(card) => pick("previousTaskIds", card)}
+        onDrop={(id) => drop("previousTaskIds", id)}
       />
       <SequencePicker
         id="next"
@@ -85,13 +85,13 @@ export function EventEditSequenceSection({ eventId, draft, onChange }: EventEdit
         addLabel="Adicionar evento da sequência"
         searchLabel="Buscar evento da sequência"
         removeLabel={(name) => `Remover “${name}” da sequência`}
-        ids={draft.nextEventIds}
+        ids={draft.nextTaskIds}
         eventId={eventId}
         cards={cards}
         loadFailed={loadFailed}
         now={now}
-        onPick={(card) => pick("nextEventIds", card)}
-        onDrop={(id) => drop("nextEventIds", id)}
+        onPick={(card) => pick("nextTaskIds", card)}
+        onDrop={(id) => drop("nextTaskIds", id)}
       />
     </DetailSection>
   );
@@ -106,10 +106,10 @@ interface SequencePickerProps {
   removeLabel: (name: string) => string;
   ids: string[];
   eventId: string;
-  cards: Record<string, EventCardDto>;
+  cards: Record<string, TaskCardDto>;
   loadFailed: boolean;
   now: Date | null;
-  onPick: (card: EventCardDto) => void;
+  onPick: (card: TaskCardDto) => void;
   onDrop: (id: string) => void;
 }
 
@@ -149,7 +149,7 @@ function SequencePicker({ id, heading, addLabel, searchLabel, removeLabel, ids, 
         {ids.length === 0 ? <p className={edit.empty}>nenhum evento</p> : null}
       </div>
       {picking ? (
-        <EntityPickerDialog<EventCardDto>
+        <EntityPickerDialog<TaskCardDto>
           title={heading}
           searchLabel={searchLabel}
           search={searchTrackedEvents}
@@ -168,10 +168,10 @@ function SequencePicker({ id, heading, addLabel, searchLabel, removeLabel, ids, 
 }
 
 /** O glifo só mostra o status: escolher um evento da sequência não muda o status do evento daqui. */
-function SequenceGlyph({ card }: { card: EventCardDto }) {
+function SequenceGlyph({ card }: { card: TaskCardDto }) {
   if (card.actor === "agent") {
-    return <EventStatusGlyph actor="agent" status={card.status as AgentEventStatus} size={22} />;
+    return <EventStatusGlyph actor="agent" status={card.status as AgentTaskStatus} size={22} />;
   }
-  const status = (card.status ?? null) as HumanEventStatus | null;
+  const status = (card.status ?? null) as HumanTaskStatus | null;
   return <EventStatusGlyph actor="human" status={status} size={22} />;
 }

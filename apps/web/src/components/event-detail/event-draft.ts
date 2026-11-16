@@ -1,4 +1,4 @@
-import type { CreateEventInput, EventDto, EventPriority, HumanEventKind, HumanEventStatus } from "@repo/contracts";
+import type { CreateTaskInput, TaskDto, TaskPriority, HumanTaskKind, HumanTaskStatus } from "@repo/contracts";
 import { dayKeyOf, formatTime, zonedDayStart, zonedTimeAt } from "@repo/timeline";
 import type { EditEventInput } from "@/lib/api/events";
 import { statusPatch } from "@/lib/events/event-read-model";
@@ -14,11 +14,11 @@ import { sameList, sortReminders } from "./event-reminders-tags";
  * não muda.
  */
 export interface EventDraft {
-  kind: HumanEventKind;
+  kind: HumanTaskKind;
   name: string;
   /** `null` é "sem status": o evento volta a ser de referência. */
-  status: HumanEventStatus | null;
-  priority: EventPriority;
+  status: HumanTaskStatus | null;
+  priority: TaskPriority;
   /** `YYYY-MM-DD` no fuso da timeline, ou vazio: sem data. */
   startDate: string;
   /** `HH:MM`, ou vazio: o dia sem hora começa à meia-noite local. */
@@ -35,9 +35,9 @@ export interface EventDraft {
   /** A tarefa persistente: o evento longo, que não é um bloco de tempo e tem a previsão de entrega como prazo. */
   longRunning: boolean;
   /** A sequência, lado "Segue-se de": os eventos que vêm antes deste (ids, na ordem da API). */
-  previousEventIds: string[];
+  previousTaskIds: string[];
   /** A sequência, lado "Da sequência a": os eventos que se seguem a este (ids). */
-  nextEventIds: string[];
+  nextTaskIds: string[];
   /**
    * Os artefatos ligados, na ordem da lista: é a ordem enviada. O que o evento criou (`creates`) segue na lista sem
    * posição. Guarda nome e tipo para a lista mostrar sem outra chamada.
@@ -68,21 +68,21 @@ const FIELD_SET: Record<EventDraftField, true> = {
   reminders: true,
   tags: true,
   longRunning: true,
-  previousEventIds: true,
-  nextEventIds: true,
+  previousTaskIds: true,
+  nextTaskIds: true,
   artifacts: true,
 };
 export const EVENT_DRAFT_FIELDS = Object.keys(FIELD_SET) as EventDraftField[];
 
 export type EventDraftErrors = Partial<Record<EventDraftField, string>>;
 
-export function draftFromEvent(event: EventDto): EventDraft {
+export function draftFromEvent(event: TaskDto): EventDraft {
   const start = splitInstant(event.startedAt);
   const end = splitInstant(event.estimatedFinishAt);
   return {
-    kind: event.kind as HumanEventKind,
+    kind: event.kind as HumanTaskKind,
     name: event.name,
-    status: (event.status ?? null) as HumanEventStatus | null,
+    status: (event.status ?? null) as HumanTaskStatus | null,
     priority: event.priority,
     startDate: start.date,
     startTime: start.time,
@@ -93,8 +93,8 @@ export function draftFromEvent(event: EventDto): EventDraft {
     reminders: sortReminders(event.notifyOffsetsMinutes),
     tags: [...event.tags],
     longRunning: event.longRunning,
-    previousEventIds: [...event.previousEventIds],
-    nextEventIds: [...event.nextEventIds],
+    previousTaskIds: [...event.previousTaskIds],
+    nextTaskIds: [...event.nextTaskIds],
     artifacts: draftArtifactsFromEvent(event.artifacts),
   };
 }
@@ -115,8 +115,8 @@ export function emptyEventDraft(name = ""): EventDraft {
     reminders: [],
     tags: [],
     longRunning: false,
-    previousEventIds: [],
-    nextEventIds: [],
+    previousTaskIds: [],
+    nextTaskIds: [],
     artifacts: [],
   };
 }
@@ -126,8 +126,8 @@ export function emptyEventDraft(name = ""): EventDraft {
  * estima o fim; sem status, o evento nasce de referência. Criar já concluído
  * manda `finishedAt`, como a troca de status na edição.
  */
-export function buildCreateEventInput(draft: EventDraft, now: Date): CreateEventInput {
-  const input: CreateEventInput = {
+export function buildCreateEventInput(draft: EventDraft, now: Date): CreateTaskInput {
+  const input: CreateTaskInput = {
     kind: draft.kind,
     name: draft.name.trim(),
     description: draft.description,
@@ -165,7 +165,7 @@ export function instantFromDraft(date: string, time: string): string | null {
  * revisão lida. `null` quando nada mudou: não há o que enviar. Concluir e
  * reabrir seguem a regra de `statusPatch` (`finishedAt`).
  */
-export function buildEventPatch(event: EventDto, draft: EventDraft, now: Date): EditEventInput | null {
+export function buildEventPatch(event: TaskDto, draft: EventDraft, now: Date): EditEventInput | null {
   const base = draftFromEvent(event);
   const patch: EditEventInput = { expectedRevision: event.revision };
   if (draft.kind !== base.kind) patch.kind = draft.kind;
@@ -183,8 +183,8 @@ export function buildEventPatch(event: EventDto, draft: EventDraft, now: Date): 
   if (!sameList(draft.reminders, base.reminders)) patch.notifyOffsetsMinutes = draft.reminders;
   if (!sameList(draft.tags, base.tags)) patch.tags = draft.tags;
   if (draft.longRunning !== base.longRunning) patch.longRunning = draft.longRunning;
-  if (!sameList(draft.previousEventIds, base.previousEventIds)) patch.previousEventIds = draft.previousEventIds;
-  if (!sameList(draft.nextEventIds, base.nextEventIds)) patch.nextEventIds = draft.nextEventIds;
+  if (!sameList(draft.previousTaskIds, base.previousTaskIds)) patch.previousTaskIds = draft.previousTaskIds;
+  if (!sameList(draft.nextTaskIds, base.nextTaskIds)) patch.nextTaskIds = draft.nextTaskIds;
   if (!sameArtifactLinks(draft.artifacts, base.artifacts)) patch.artifacts = artifactLinkInputs(draft.artifacts);
   return Object.keys(patch).length > 1 ? patch : null;
 }
@@ -216,7 +216,7 @@ export function validateEventDraft(draft: EventDraft): EventDraftErrors {
  * Quando o evento muda em outro lugar, o campo que a pessoa não tocou passa a
  * valer o da versão nova, e o que ela digitou fica para ela conferir.
  */
-export function rebaseDraft(draft: EventDraft, previous: EventDto, next: EventDto): EventDraft {
+export function rebaseDraft(draft: EventDraft, previous: TaskDto, next: TaskDto): EventDraft {
   const before = draftFromEvent(previous);
   const after = draftFromEvent(next);
   const rebased: EventDraft = { ...draft };

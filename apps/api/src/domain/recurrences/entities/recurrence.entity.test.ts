@@ -14,7 +14,7 @@ const weekly: RecurrenceRule = { ...daily, frequency: "weekly", byWeekday: 0b010
 const monthly: RecurrenceRule = { ...daily, frequency: "monthly", byMonthDay: 5 };
 const yearly: RecurrenceRule = { ...daily, frequency: "yearly", byMonthDay: 15, byMonth: 3 };
 
-const template = { name: "Correr", kind: "common", artifactIds: ["artifact-1"], previousEventIds: [] };
+const template = { name: "Correr", kind: "common", artifactIds: ["artifact-1"], previousTaskIds: [] };
 
 function create(rule: Partial<RecurrenceRule> = {}, base: RecurrenceRule = daily): Recurrence {
   return Recurrence.create({ userId: "user-1", rule: { ...base, ...rule }, template });

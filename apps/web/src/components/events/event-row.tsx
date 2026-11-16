@@ -1,6 +1,6 @@
 import { Bot } from "lucide-react";
 import Link from "next/link";
-import type { AgentEventStatus, EventCardDto, HumanEventStatus } from "@repo/contracts";
+import type { AgentTaskStatus, TaskCardDto, HumanTaskStatus } from "@repo/contracts";
 import { cardDurationLabel, cardIsOverdue, cardWhenLabel } from "@/lib/events/card-text";
 import { EventKindMark } from "./event-kind-mark";
 import { EventStatusGlyph, eventStatusName } from "./event-status-glyph";
@@ -8,7 +8,7 @@ import styles from "./event-row.module.css";
 
 export interface EventRowProps {
   /** O cartao de evento do contrato: a linha nao le nenhum campo fora dele. */
-  card: EventCardDto;
+  card: TaskCardDto;
   /** Dono da timeline: o toque no resto da linha leva a `/{userId}/eventos/{id}`. */
   userId: string;
   /** O instante atual: os textos calculados (quando, atrasado, "há 12 min") saem dele. */
@@ -16,7 +16,7 @@ export interface EventRowProps {
   /** A lista pede a regra da serie no lugar do horario, quando a ocorrencia tem uma. */
   ruleInPlaceOfTime?: boolean;
   /** Toque no glifo de um evento de pessoa (a tela abre a escolha de status). */
-  onStatusClick?: (card: EventCardDto, anchor: HTMLElement) => void;
+  onStatusClick?: (card: TaskCardDto, anchor: HTMLElement) => void;
 }
 
 /**
@@ -31,8 +31,8 @@ export function EventRow({ card, userId, now, ruleInPlaceOfTime, onStatusClick }
   const when = cardWhenLabel(card, now, { ruleInPlaceOfTime });
   const duration = cardDurationLabel(card);
   // O contrato garante que o status e de agente quando o ator e agente, e de pessoa (ou ausente) no outro caso.
-  const agentStatus = card.status as AgentEventStatus;
-  const humanStatus = (card.status ?? null) as HumanEventStatus | null;
+  const agentStatus = card.status as AgentTaskStatus;
+  const humanStatus = (card.status ?? null) as HumanTaskStatus | null;
   const glyph = isAgent ? (
     <EventStatusGlyph actor="agent" status={agentStatus} />
   ) : (

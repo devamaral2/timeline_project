@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import { dayEventsUrl } from "@repo/timeline";
+import { dayTasksUrl } from "@repo/timeline";
 import { ApiError, authedFetch } from "./authed-fetch";
 
 beforeEach(() => {
@@ -13,10 +13,10 @@ afterEach(() => {
 test("sends the request with same-origin credentials", async () => {
   vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({ items: [] })));
 
-  await authedFetch(dayEventsUrl("2026-08-31"));
+  await authedFetch(dayTasksUrl("2026-08-31"));
 
   expect(fetch).toHaveBeenCalledWith(
-    expect.stringContaining("/api/events?from="),
+    expect.stringContaining("/api/tasks?from="),
     expect.objectContaining({
       credentials: "same-origin",
     }),

@@ -1,6 +1,6 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import type { EventDto } from "@repo/contracts";
+import type { TaskDto } from "@repo/contracts";
 import { createFakeApi } from "@/test/fake-api";
 import { eventFixture, eventsArea } from "@/test/fake-api/events";
 import { writeViewMode } from "@/lib/events/view-mode";
@@ -21,7 +21,7 @@ const { AgendaScreen } = await import("./agenda-screen");
 
 const TODAY = "2026-09-14";
 
-const events: EventDto[] = [
+const events: TaskDto[] = [
   eventFixture({ id: "ev-1", name: "Revisar proposta", kind: "common", status: "todo", startedAt: "2026-09-14T09:00:00-03:00", estimatedFinishAt: "2026-09-14T10:30:00-03:00" }),
   eventFixture({ id: "ev-3", name: "Pesquisar voos para novembro", actor: "agent", kind: "request", status: "running", startedAt: "2026-09-14T09:48:00-03:00" }),
 ];

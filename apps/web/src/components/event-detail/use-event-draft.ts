@@ -1,10 +1,10 @@
 import { useCallback, useState } from "react";
-import type { EventDto } from "@repo/contracts";
+import type { TaskDto } from "@repo/contracts";
 import { type EventDraft, type EventDraftField, draftFromEvent, emptyEventDraft, rebaseDraft } from "./event-draft";
 
 interface DraftState {
   /** `null` na criação: não há evento de origem. */
-  event: EventDto | null;
+  event: TaskDto | null;
   draft: EventDraft;
 }
 
@@ -14,7 +14,7 @@ interface DraftState {
  * novo (uma recarga depois de revisão velha), o rascunho se rebaseia durante a
  * renderização: o que a pessoa digitou fica, e o resto segue a versão nova.
  */
-export function useEventDraft(event: EventDto | null, initialName?: string) {
+export function useEventDraft(event: TaskDto | null, initialName?: string) {
   const [state, setState] = useState<DraftState>(() => ({
     event,
     draft: event ? draftFromEvent(event) : emptyEventDraft(initialName),

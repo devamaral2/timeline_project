@@ -25,7 +25,7 @@ beforeEach(() => {
 
 function setup(props: Partial<React.ComponentProps<typeof EntityAiEditBar>> = {}) {
   const onEdited = vi.fn();
-  render(<EntityAiEditBar userId="user-1" entityType="event" entityId="e1" onEdited={onEdited} pollMs={1} {...props} />);
+  render(<EntityAiEditBar userId="user-1" entityType="task" entityId="e1" onEdited={onEdited} pollMs={1} {...props} />);
   return { onEdited };
 }
 
@@ -49,7 +49,7 @@ test("um evento: o pedido leva o tipo e o id do evento, mostra o andamento e rec
   fireEvent.click(screen.getByRole("button", { name: "Enviar pedido" }));
 
   await waitFor(() => expect(editCall()).toBeDefined());
-  expect(editCall()?.body).toEqual({ userId: "user-1", text: "mude para 19h", entityType: "event", entityId: "e1" });
+  expect(editCall()?.body).toEqual({ userId: "user-1", text: "mude para 19h", entityType: "task", entityId: "e1" });
 
   await waitFor(() => openedRequest());
   advanceRequest(api, openedRequest(), {
@@ -63,7 +63,7 @@ test("um evento: o pedido leva o tipo e o id do evento, mostra o andamento e rec
     status: "done",
     message: "Troquei para 19h.",
     steps: [{ id: "s1", agent: "event-edit", label: "Editando eventos", status: "done" }],
-    entities: [{ kind: "event", id: "e1", name: "Revisão semanal", operation: "update", linkedTo: [] }],
+    entities: [{ kind: "task", id: "e1", name: "Revisão semanal", operation: "update", linkedTo: [] }],
   });
   expect(await screen.findByText("Pronto")).toBeInTheDocument();
   expect(screen.getByText("Editando eventos")).toBeInTheDocument();

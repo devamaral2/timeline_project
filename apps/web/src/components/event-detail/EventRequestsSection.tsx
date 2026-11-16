@@ -2,14 +2,14 @@
 
 import { Bot } from "lucide-react";
 import Link from "next/link";
-import type { EventDto, EventRequestDto } from "@repo/contracts";
+import type { TaskDto, TaskRequestDto } from "@repo/contracts";
 import { DetailSection, detailIcon } from "@/components/detail/detail-parts";
 import { momentLabel } from "@/lib/events/event-read-model";
 import styles from "./event-relations.module.css";
 
 interface EventRequestsSectionProps {
   userId: string;
-  event: EventDto;
+  event: TaskDto;
 }
 
 const GROUPS = [
@@ -36,7 +36,7 @@ export function EventRequestsSection({ userId, event }: EventRequestsSectionProp
   );
 }
 
-function RequestGroup({ id, label, userId, requests }: { id: string; label: string; userId: string; requests: EventRequestDto[] }) {
+function RequestGroup({ id, label, userId, requests }: { id: string; label: string; userId: string; requests: TaskRequestDto[] }) {
   const headingId = `request-${id}`;
   return (
     <div className={styles.group}>

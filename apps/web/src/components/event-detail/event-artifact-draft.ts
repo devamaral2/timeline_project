@@ -1,7 +1,7 @@
-import type { ArtifactDto, ArtifactType, EventArtifactDto } from "@repo/contracts";
+import type { ArtifactDto, ArtifactType, TaskArtifactDto } from "@repo/contracts";
 
 /** A relação de um artefato com o evento, como a API a guarda. */
-export type ArtifactRelation = EventArtifactDto["relation"];
+export type ArtifactRelation = TaskArtifactDto["relation"];
 
 /**
  * Um artefato na lista de edição do evento: o que a lista mostra (nome, tipo, se é do catálogo global) e a
@@ -24,7 +24,7 @@ export interface DraftArtifact {
 export type ArtifactLinkInput = { id: string; relation: ArtifactRelation } | { copyOf: string; quantity?: string };
 
 /** Os artefatos do evento lido, na ordem da API. Um alimento que já é cópia do evento mostra a quantidade que tem. */
-export function draftArtifactsFromEvent(links: readonly EventArtifactDto[]): DraftArtifact[] {
+export function draftArtifactsFromEvent(links: readonly TaskArtifactDto[]): DraftArtifact[] {
   return links.map(({ artifact, relation }) => {
     const item: DraftArtifact = {
       id: artifact.id,

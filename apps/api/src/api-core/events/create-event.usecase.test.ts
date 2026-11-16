@@ -39,10 +39,10 @@ describe("reference and tracked defaults", () => {
   test("a reference event without a start begins now, with the default duration and notification", async () => {
     const kit = setup();
 
-    const { eventId } = await kit.createEvent.execute({ name: "Reunião", tags: ["Trabalho"] }, actor);
+    const { taskId } = await kit.createEvent.execute({ name: "Reunião", tags: ["Trabalho"] }, actor);
 
-    const saved = await kit.eventRepository.findById(eventId);
-    expect(eventId).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/);
+    const saved = await kit.eventRepository.findById(taskId);
+    expect(taskId).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/);
     expect(saved).toMatchObject({
       userId: "auth-user-1",
       actor: "human",
@@ -64,7 +64,7 @@ describe("reference and tracked defaults", () => {
   test("keeps the window, the conclusion and the fields that were given", async () => {
     const kit = setup();
 
-    const { eventId } = await kit.createEvent.execute(
+    const { taskId } = await kit.createEvent.execute(
       {
         name: "Consulta",
         description: "Dentista",
@@ -77,7 +77,7 @@ describe("reference and tracked defaults", () => {
       actor,
     );
 
-    const saved = await kit.eventRepository.findById(eventId);
+    const saved = await kit.eventRepository.findById(taskId);
     expect(saved).toMatchObject({ description: "Dentista", priority: "high", notifyOffsetsMinutes: [60, 1440] });
     expect(saved?.startedAt?.toISOString()).toBe("2026-08-20T13:00:00.000Z");
     expect(saved?.estimatedFinishAt?.toISOString()).toBe("2026-08-20T13:40:00.000Z");
@@ -87,9 +87,9 @@ describe("reference and tracked defaults", () => {
   test("a tracked event may have no dates and gets no default notification", async () => {
     const kit = setup();
 
-    const { eventId } = await kit.createEvent.execute({ name: "Declarar imposto", status: "toDefine" }, actor);
+    const { taskId } = await kit.createEvent.execute({ name: "Declarar imposto", status: "toDefine" }, actor);
 
-    const saved = await kit.eventRepository.findById(eventId);
+    const saved = await kit.eventRepository.findById(taskId);
     expect(saved?.status).toBe("toDefine");
     expect(saved?.startedAt).toBeUndefined();
     expect(saved?.estimatedFinishAt).toBeUndefined();
@@ -99,12 +99,12 @@ describe("reference and tracked defaults", () => {
   test("a tracked event keeps its start but gets no estimated finish", async () => {
     const kit = setup();
 
-    const { eventId } = await kit.createEvent.execute(
+    const { taskId } = await kit.createEvent.execute(
       { name: "Pagar aluguel", status: "todo", startedAt: "2026-09-05T12:00:00.000Z" },
       actor,
     );
 
-    const saved = await kit.eventRepository.findById(eventId);
+    const saved = await kit.eventRepository.findById(taskId);
     expect(saved?.startedAt?.toISOString()).toBe("2026-09-05T12:00:00.000Z");
     expect(saved?.estimatedFinishAt).toBeUndefined();
   });
@@ -112,9 +112,9 @@ describe("reference and tracked defaults", () => {
   test("a long-running event is born todo, without a start", async () => {
     const kit = setup();
 
-    const { eventId } = await kit.createEvent.execute({ name: "Reforma", longRunning: true }, actor);
+    const { taskId } = await kit.createEvent.execute({ name: "Reforma", longRunning: true }, actor);
 
-    const saved = await kit.eventRepository.findById(eventId);
+    const saved = await kit.eventRepository.findById(taskId);
     expect(saved).toMatchObject({ longRunning: true, status: "todo", notifyOffsetsMinutes: [] });
     expect(saved?.startedAt).toBeUndefined();
   });
@@ -126,13 +126,13 @@ describe("reference and tracked defaults", () => {
       estimatedFinishAt: new Date("2026-08-18T10:30:00.000Z"),
     };
 
-    const { eventId } = await kit.createEvent.execute(
+    const { taskId } = await kit.createEvent.execute(
       { name: "Correr", startedAt: "2026-01-01T00:00:00.000Z", estimatedFinishAt: "2026-01-01T01:00:00.000Z" },
       actor,
       schedule,
     );
 
-    const saved = await kit.eventRepository.findById(eventId);
+    const saved = await kit.eventRepository.findById(taskId);
     expect(saved?.startedAt).toEqual(schedule.startedAt);
     expect(saved?.estimatedFinishAt).toEqual(schedule.estimatedFinishAt);
   });
@@ -218,7 +218,7 @@ describe("kind and name", () => {
   test("a training artifact resolves the workout names from the global exercises", async () => {
     const kit = setup();
 
-    const { eventId } = await kit.createEvent.execute(
+    const { taskId } = await kit.createEvent.execute(
       {
         tags: ["Gym"],
         artifacts: [
@@ -228,7 +228,7 @@ describe("kind and name", () => {
       actor,
     );
 
-    const saved = await kit.eventRepository.findById(eventId);
+    const saved = await kit.eventRepository.findById(taskId);
     expect(saved).toMatchObject({ kind: "training", name: "Treino", tags: ["gym"] });
     expect(saved?.artifactLinks).toEqual([
       { artifactId: kit.database.artifacts[0]?.id, relation: "creates", fromRecurrence: false },
@@ -272,9 +272,9 @@ describe("meal events and their food", () => {
   test("a meal event without a food creates a pending one from what the event says", async () => {
     const kit = setup();
 
-    const { eventId } = await kit.createEvent.execute({ kind: "meal", description: "  arroz, feijão e bife  " }, actor);
+    const { taskId } = await kit.createEvent.execute({ kind: "meal", description: "  arroz, feijão e bife  " }, actor);
 
-    const saved = await kit.eventRepository.findById(eventId);
+    const saved = await kit.eventRepository.findById(taskId);
     const [food] = kit.database.artifacts;
     expect(kit.database.artifacts).toHaveLength(1);
     expect(food).toMatchObject({ type: "food", userId: "auth-user-1", name: "Almoço", derived: false, revision: 1 });
@@ -358,12 +358,12 @@ describe("copy of a food (`copyOf`)", () => {
     const original = Artifact.create({ userId: actor.userId, type: "food", name: "Arroz", data: foodData });
     const kit = setup({ artifacts: [original] });
 
-    const { eventId } = await kit.createEvent.execute(
+    const { taskId } = await kit.createEvent.execute(
       { artifacts: [{ copyOf: original.id, quantity: "2 colheres" }] },
       actor,
     );
 
-    const saved = await kit.eventRepository.findById(eventId);
+    const saved = await kit.eventRepository.findById(taskId);
     const copy = kit.database.artifacts.find((artifact) => artifact.id !== original.id);
     expect(kit.database.artifacts).toHaveLength(2);
     expect(copy).toMatchObject({ type: "food", name: "Arroz", derived: true, userId: "auth-user-1", revision: 1 });
@@ -417,12 +417,12 @@ describe("artifacts that already exist (`artifactIds`)", () => {
     const global = Artifact.create({ type: "workout", name: "Corrida", data: { code: "running", category: "cardio" } });
     const kit = setup({ artifacts: [own, global] });
 
-    const { eventId } = await kit.createEvent.execute(
+    const { taskId } = await kit.createEvent.execute(
       { name: "Reunião", artifacts: [{ data: { body: "ata" } }], artifactIds: [own.id, global.id] },
       actor,
     );
 
-    const saved = await kit.eventRepository.findById(eventId);
+    const saved = await kit.eventRepository.findById(taskId);
     const created = kit.database.artifacts.find((artifact) => artifact.id !== own.id && artifact.id !== global.id);
     expect(saved?.artifactLinks).toEqual([
       { artifactId: created?.id, relation: "creates", fromRecurrence: false },
@@ -458,22 +458,22 @@ describe("artifacts that already exist (`artifactIds`)", () => {
 });
 
 describe("sequence with other events", () => {
-  test("`previousEventIds` and `nextEventIds` put the new event in the sequence, read back from both sides", async () => {
+  test("`previousTaskIds` and `nextTaskIds` put the new event in the sequence, read back from both sides", async () => {
     const kit = setup({ events: [humanEvent("before-1"), humanEvent("after-1")] });
 
-    const { eventId } = await kit.createEvent.execute(
-      { name: "Reforma", status: "todo", previousEventIds: ["before-1"], nextEventIds: ["after-1"] },
+    const { taskId } = await kit.createEvent.execute(
+      { name: "Reforma", status: "todo", previousTaskIds: ["before-1"], nextTaskIds: ["after-1"] },
       actor,
     );
 
-    const saved = await kit.eventRepository.findById(eventId);
+    const saved = await kit.eventRepository.findById(taskId);
     expect(saved?.previousIds).toEqual(["before-1"]);
     expect(saved?.nextIds).toEqual(["after-1"]);
-    expect((await kit.eventRepository.findById("before-1"))?.nextIds).toEqual([eventId]);
-    expect((await kit.eventRepository.findById("after-1"))?.previousIds).toEqual([eventId]);
+    expect((await kit.eventRepository.findById("before-1"))?.nextIds).toEqual([taskId]);
+    expect((await kit.eventRepository.findById("after-1"))?.previousIds).toEqual([taskId]);
     expect(kit.database.edges).toEqual([
-      { fromId: "before-1", toId: eventId },
-      { fromId: eventId, toId: "after-1" },
+      { fromId: "before-1", toId: taskId },
+      { fromId: taskId, toId: "after-1" },
     ]);
   });
 
@@ -482,31 +482,31 @@ describe("sequence with other events", () => {
       events: [humanEvent("before-1"), humanEvent("before-2", { status: "doing" }), humanEvent("after-1")],
     });
 
-    const { eventId } = await kit.createEvent.execute(
-      { name: "Pintar parede", status: "todo", previousEventIds: ["before-1", "before-2"], nextEventIds: ["after-1"] },
+    const { taskId } = await kit.createEvent.execute(
+      { name: "Pintar parede", status: "todo", previousTaskIds: ["before-1", "before-2"], nextTaskIds: ["after-1"] },
       actor,
     );
 
     expect(kit.batchWriter.commits).toHaveLength(1);
     const [batch] = kit.batchWriter.commits;
-    expect(batch?.events.map((change) => change.op)).toEqual(["create"]);
+    expect(batch?.tasks.map((change) => change.op)).toEqual(["create"]);
     expect(batch?.sequence).toEqual([
-      { op: "add", fromId: "before-1", toId: eventId },
-      { op: "add", fromId: "before-2", toId: eventId },
-      { op: "add", fromId: eventId, toId: "after-1" },
+      { op: "add", fromId: "before-1", toId: taskId },
+      { op: "add", fromId: "before-2", toId: taskId },
+      { op: "add", fromId: taskId, toId: "after-1" },
     ]);
     for (const id of ["before-1", "before-2", "after-1"]) {
       expect((await kit.eventRepository.findById(id))?.revision).toBe(1);
     }
-    expect((await kit.eventRepository.findById(eventId))?.revision).toBe(1);
+    expect((await kit.eventRepository.findById(taskId))?.revision).toBe(1);
   });
 
   test("a new event without lists has an empty sequence", async () => {
     const kit = setup({ events: [humanEvent("other")] });
 
-    const { eventId } = await kit.createEvent.execute({ name: "Solta", status: "todo" }, actor);
+    const { taskId } = await kit.createEvent.execute({ name: "Solta", status: "todo" }, actor);
 
-    const saved = await kit.eventRepository.findById(eventId);
+    const saved = await kit.eventRepository.findById(taskId);
     expect(saved?.previousIds).toEqual([]);
     expect(saved?.nextIds).toEqual([]);
     expect(kit.batchWriter.commits[0]?.sequence).toEqual([]);
@@ -516,20 +516,20 @@ describe("sequence with other events", () => {
   test("an event repeated in the list becomes a single edge", async () => {
     const kit = setup({ events: [humanEvent("before-1")] });
 
-    const { eventId } = await kit.createEvent.execute(
-      { name: "Filha", status: "todo", previousEventIds: ["before-1", "before-1"] },
+    const { taskId } = await kit.createEvent.execute(
+      { name: "Filha", status: "todo", previousTaskIds: ["before-1", "before-1"] },
       actor,
     );
 
-    expect(kit.database.edges).toEqual([{ fromId: "before-1", toId: eventId }]);
-    expect((await kit.eventRepository.findById(eventId))?.previousIds).toEqual(["before-1"]);
+    expect(kit.database.edges).toEqual([{ fromId: "before-1", toId: taskId }]);
+    expect((await kit.eventRepository.findById(taskId))?.previousIds).toEqual(["before-1"]);
   });
 
   test("touching an occurrence of a series in the sequence does not detach it", async () => {
     const occurrence = { recurrenceId: "rec-1", occurrenceOn: "2026-08-17", detached: false };
     const kit = setup({ events: [humanEvent("before-1", { occurrence })] });
 
-    await kit.createEvent.execute({ name: "Filha", status: "todo", previousEventIds: ["before-1"] }, actor);
+    await kit.createEvent.execute({ name: "Filha", status: "todo", previousTaskIds: ["before-1"] }, actor);
 
     const before = await kit.eventRepository.findById("before-1");
     expect(before?.occurrence).toEqual(occurrence);
@@ -540,30 +540,30 @@ describe("sequence with other events", () => {
     const request = Event.create({ id: "request-1", userId: actor.userId, actor: "agent", kind: "request", status: "queued", name: "Pedido" });
     const kit = setup({ events: [request] });
 
-    const { eventId } = await kit.createEvent.execute(
-      { name: "Depois do pedido", status: "todo", previousEventIds: ["request-1"] },
+    const { taskId } = await kit.createEvent.execute(
+      { name: "Depois do pedido", status: "todo", previousTaskIds: ["request-1"] },
       actor,
     );
-    const { eventId: beforeId } = await kit.createEvent.execute(
-      { name: "Antes do pedido", status: "todo", nextEventIds: ["request-1"] },
+    const { taskId: beforeId } = await kit.createEvent.execute(
+      { name: "Antes do pedido", status: "todo", nextTaskIds: ["request-1"] },
       actor,
     );
 
     expect((await kit.eventRepository.findById("request-1"))?.previousIds).toEqual([beforeId]);
-    expect((await kit.eventRepository.findById("request-1"))?.nextIds).toEqual([eventId]);
+    expect((await kit.eventRepository.findById("request-1"))?.nextIds).toEqual([taskId]);
     expect((await kit.eventRepository.findById("request-1"))?.revision).toBe(1);
   });
 
   test("refuses an end that does not exist or belongs to someone else", async () => {
     const theirs = Event.create({ id: "theirs", userId: "someone-else", name: "Deles", status: "todo" });
     const kit = setup({ events: [theirs] });
-    const create = (input: { previousEventIds?: string[]; nextEventIds?: string[] }) =>
+    const create = (input: { previousTaskIds?: string[]; nextTaskIds?: string[] }) =>
       kit.createEvent.execute({ name: "Filha", status: "todo", ...input }, actor);
 
-    await expect(create({ previousEventIds: ["missing"] })).rejects.toThrow(EventNotFoundError);
-    await expect(create({ nextEventIds: ["missing"] })).rejects.toThrow(EventNotFoundError);
-    await expect(create({ previousEventIds: ["theirs"] })).rejects.toThrow(EventOwnershipError);
-    await expect(create({ nextEventIds: ["theirs"] })).rejects.toThrow(EventOwnershipError);
+    await expect(create({ previousTaskIds: ["missing"] })).rejects.toThrow(EventNotFoundError);
+    await expect(create({ nextTaskIds: ["missing"] })).rejects.toThrow(EventNotFoundError);
+    await expect(create({ previousTaskIds: ["theirs"] })).rejects.toThrow(EventOwnershipError);
+    await expect(create({ nextTaskIds: ["theirs"] })).rejects.toThrow(EventOwnershipError);
     expect(kit.database.events).toHaveLength(1);
     expect(kit.database.edges).toEqual([]);
     expect(kit.batchWriter.commits).toEqual([]);
@@ -575,13 +575,13 @@ describe("sequence with other events", () => {
 
     // first -> novo -> second, mas second ja vem antes de first.
     await expect(
-      kit.createEvent.execute({ name: "No meio", status: "todo", previousEventIds: ["first"], nextEventIds: ["second"] }, actor),
+      kit.createEvent.execute({ name: "No meio", status: "todo", previousTaskIds: ["first"], nextTaskIds: ["second"] }, actor),
     ).rejects.toThrow("Events cannot follow each other in a cycle");
   });
 
   test("an end that was deleted between preparing and saving refuses the batch", async () => {
     const kit = setup({ events: [humanEvent("before-1")] });
-    const prepared = await kit.createEvent.prepare({ name: "Filha", status: "todo", previousEventIds: ["before-1"] }, actor);
+    const prepared = await kit.createEvent.prepare({ name: "Filha", status: "todo", previousTaskIds: ["before-1"] }, actor);
     await kit.eventRepository.delete("before-1", actor.userId);
 
     await expect(kit.createEvent.save(prepared)).rejects.toThrow(EventValidationError);
@@ -594,7 +594,7 @@ describe("prepare and toEntityBatch", () => {
   test("prepare writes nothing", async () => {
     const kit = setup({ events: [humanEvent("before-1")] });
 
-    await kit.createEvent.prepare({ kind: "meal", previousEventIds: ["before-1"] }, actor);
+    await kit.createEvent.prepare({ kind: "meal", previousTaskIds: ["before-1"] }, actor);
 
     expect(kit.database.events).toHaveLength(1);
     expect(kit.database.edges).toEqual([]);
@@ -606,7 +606,7 @@ describe("prepare and toEntityBatch", () => {
     const original = Artifact.create({ userId: actor.userId, type: "food", name: "Arroz", data: foodData });
     const kit = setup({ events: [humanEvent("before-1"), humanEvent("after-1")], artifacts: [original] });
     const prepared = await kit.createEvent.prepare(
-      { artifacts: [{ copyOf: original.id }], previousEventIds: ["before-1"], nextEventIds: ["after-1"] },
+      { artifacts: [{ copyOf: original.id }], previousTaskIds: ["before-1"], nextTaskIds: ["after-1"] },
       actor,
     );
 
@@ -615,7 +615,7 @@ describe("prepare and toEntityBatch", () => {
     expect(batch.userId).toBe("auth-user-1");
     expect(batch.artifacts).toEqual([{ op: "create", entity: prepared.artifacts[0] }]);
     expect(batch.derivations).toEqual([{ originalId: original.id, copyId: prepared.artifacts[0]?.id }]);
-    expect(batch.events).toEqual([{ op: "create", entity: prepared.event }]);
+    expect(batch.tasks).toEqual([{ op: "create", entity: prepared.event }]);
     expect(prepared.sequence).toEqual([
       { op: "add", fromId: "before-1", toId: prepared.event.id },
       { op: "add", fromId: prepared.event.id, toId: "after-1" },
@@ -641,24 +641,24 @@ describe("location from the coordinates", () => {
   test("without a location, the address of the coordinates becomes the location", async () => {
     const kit = setup({ placeReverse });
 
-    const { eventId } = await kit.createEvent.execute({ name: "Corrida", coordinates: point }, actor);
+    const { taskId } = await kit.createEvent.execute({ name: "Corrida", coordinates: point }, actor);
 
-    expect((await kit.eventRepository.findById(eventId))?.location).toBe("Parque, São Paulo");
+    expect((await kit.eventRepository.findById(taskId))?.location).toBe("Parque, São Paulo");
   });
 
   test("a location the person gave wins over the coordinates", async () => {
     const kit = setup({ placeReverse });
 
-    const { eventId } = await kit.createEvent.execute({ name: "Corrida", location: "Casa", coordinates: point }, actor);
+    const { taskId } = await kit.createEvent.execute({ name: "Corrida", location: "Casa", coordinates: point }, actor);
 
-    expect((await kit.eventRepository.findById(eventId))?.location).toBe("Casa");
+    expect((await kit.eventRepository.findById(taskId))?.location).toBe("Casa");
   });
 
   test("no address for the coordinates leaves the event without a location", async () => {
     const kit = setup({ placeReverse: { reverse: async () => undefined } });
 
-    const { eventId } = await kit.createEvent.execute({ name: "Corrida", coordinates: point }, actor);
+    const { taskId } = await kit.createEvent.execute({ name: "Corrida", coordinates: point }, actor);
 
-    expect((await kit.eventRepository.findById(eventId))?.location).toBeFalsy();
+    expect((await kit.eventRepository.findById(taskId))?.location).toBeFalsy();
   });
 });

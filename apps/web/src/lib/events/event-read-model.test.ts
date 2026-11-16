@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import type { EventArtifactDto } from "@repo/contracts";
+import type { TaskArtifactDto } from "@repo/contracts";
 import { humanStatusOptions, mealCaloriesKcal, momentLabel, priorityPatch, recurrenceLines, reminderLabel, statusPatch } from "./event-read-model";
 
 const now = new Date("2026-11-14T10:00:00-03:00");
@@ -99,9 +99,9 @@ describe("recorrência", () => {
 
 describe("calorias da refeição", () => {
   /** Um vínculo de artefato com o tipo e, se for alimento, o total de calorias. */
-  function link(type: string, kcal?: number): EventArtifactDto {
+  function link(type: string, kcal?: number): TaskArtifactDto {
     const data = kcal === undefined ? {} : { totals: { totalCaloriesKcal: kcal } };
-    return { relation: "uses", fromRecurrence: false, artifact: { id: `a-${type}-${kcal}`, type, data } } as unknown as EventArtifactDto;
+    return { relation: "uses", fromRecurrence: false, artifact: { id: `a-${type}-${kcal}`, type, data } } as unknown as TaskArtifactDto;
   }
 
   test("é a soma das calorias dos alimentos ligados, cópias incluídas", () => {

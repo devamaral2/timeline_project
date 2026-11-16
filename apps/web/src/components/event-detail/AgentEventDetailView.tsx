@@ -1,6 +1,6 @@
 "use client";
 
-import type { EventDto } from "@repo/contracts";
+import type { TaskDto } from "@repo/contracts";
 import { BackLink, DetailFrame, DetailMessage } from "@/components/detail/detail-parts";
 import { AgentEventHeader } from "./AgentEventHeader";
 import { AgentEntriesSection } from "./AgentEntriesSection";
@@ -17,7 +17,7 @@ import styles from "./event-detail.module.css";
 
 interface AgentEventDetailViewProps {
   userId: string;
-  event: EventDto;
+  event: TaskDto;
   /** Relê o evento. A releitura do pedido em aberto chama isto a cada batida, para pegar a conclusão. */
   onChanged: () => Promise<void>;
 }

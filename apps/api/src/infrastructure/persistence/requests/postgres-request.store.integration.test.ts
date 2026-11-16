@@ -168,11 +168,11 @@ describe("PostgresRequestStore", () => {
     const food = Artifact.create({ userId: USER, type: "text", name: "Cardápio", data: { body: "arroz e feijão" } });
     const old = Artifact.create({ userId: USER, type: "text", name: "Velho", data: { body: "x" } });
     const gone = Event.create({ userId: USER, name: "Sumiu", startedAt: new Date("2026-10-25T10:00:00Z") });
-    await writer.commit({ userId: USER, events: [{ op: "create", entity: gone }], artifacts: [{ op: "create", entity: old }] });
+    await writer.commit({ userId: USER, tasks: [{ op: "create", entity: gone }], artifacts: [{ op: "create", entity: old }] });
 
     await writer.commit({
       userId: USER,
-      events: [{ op: "create", entity: meal }, { op: "delete", id: gone.id, expectedRevision: 1 }],
+      tasks: [{ op: "create", entity: meal }, { op: "delete", id: gone.id, expectedRevision: 1 }],
       artifacts: [{ op: "create", entity: food }],
       afterWrite: (tx) => store.recordStepSuccess(tx, {
         requestId, stepId: createStep, timings: { total: 10 },
@@ -183,7 +183,7 @@ describe("PostgresRequestStore", () => {
       }),
     });
     await writer.commit({
-      userId: USER, events: [],
+      userId: USER, tasks: [],
       artifacts: [{ op: "update", entity: old.revise({ name: "Novo" }), expectedRevision: 1 }, { op: "delete", id: food.id, expectedRevision: 1 }],
       afterWrite: (tx) => store.recordStepSuccess(tx, {
         requestId, stepId: editStep, timings: {},
@@ -243,7 +243,7 @@ describe("PostgresRequestStore", () => {
     const event = Event.create({ userId: USER, name: "Almoço", startedAt: new Date() });
 
     await expect(writer.commit({
-      userId: USER, events: [{ op: "create", entity: event }], artifacts: [],
+      userId: USER, tasks: [{ op: "create", entity: event }], artifacts: [],
       afterWrite: (tx) => store.recordStepSuccess(tx, { requestId, stepId, entities: [{ kind: "event", id: event.id, operation: "create" }], timings: {} }),
     })).rejects.toThrow("no longer open");
 
@@ -379,7 +379,7 @@ describe("PostgresRequestStore", () => {
     const { requestId } = await start("comecei a estudar", { route: "voice", job: "voice-event" });
     const event = Event.create({ userId: USER, name: "Estudar", startedAt: new Date("2026-10-25T15:00:00Z") });
     await writer.commit({
-      userId: USER, events: [{ op: "create", entity: event }], artifacts: [],
+      userId: USER, tasks: [{ op: "create", entity: event }], artifacts: [],
       afterWrite: (tx) => store.completeVoice(tx, { requestId, eventId: event.id }),
     });
 
@@ -405,7 +405,7 @@ describe("PostgresRequestStore", () => {
     });
     await writer.commit({
       userId: USER, artifacts: [{ op: "create", entity: food }],
-      events: [{ op: "create", entity: Event.create({ userId: USER, name: "Reunião", startedAt: new Date() }) }],
+      tasks: [{ op: "create", entity: Event.create({ userId: USER, name: "Reunião", startedAt: new Date() }) }],
     });
 
     const list = await store.list(USER, 10);
@@ -438,8 +438,8 @@ describe("PostgresRequestStore", () => {
     const foreign = Event.create({ userId: "user-2", name: "De outro", startedAt: now });
     const text = Artifact.create({ userId: USER, name: "Ideia", data: { body: "Visão semanal" } });
     const skill = Artifact.create({ userId: USER, type: "skill", name: "cafe", data: { path: "hermes/skills/cafe/SKILL.md", hash: "a".repeat(64), missing: false } });
-    await writer.commit({ userId: USER, events: [today, tracked, done, far].map((entity) => ({ op: "create" as const, entity })), artifacts: [text, skill].map((entity) => ({ op: "create" as const, entity })) });
-    await writer.commit({ userId: "user-2", events: [{ op: "create", entity: foreign }], artifacts: [] });
+    await writer.commit({ userId: USER, tasks: [today, tracked, done, far].map((entity) => ({ op: "create" as const, entity })), artifacts: [text, skill].map((entity) => ({ op: "create" as const, entity })) });
+    await writer.commit({ userId: "user-2", tasks: [{ op: "create", entity: foreign }], artifacts: [] });
 
     const candidates = await new PostgresCandidateQuery(new PostgresDatabase(ctx.pool)).shortlist({ userId: USER, now, kinds: ["event", "artifact", "recurrence"] });
 

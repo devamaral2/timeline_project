@@ -8,9 +8,9 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import {
   compactDate, dayKeyOf, elapsedSecondsOf, formatStopwatch,
-  formatTime, longDate, type EventPosition,
+  formatTime, longDate, type TaskPosition,
 } from "@repo/timeline";
-import type { EventCardDto, EventPriority, FoodRecipe, SleepData, TextData, TrainingData } from "@repo/contracts";
+import type { FoodRecipe, SleepData, TaskCardDto, TaskPriority, TextData, TrainingData } from "@repo/contracts";
 import { positionOf } from "@/lib/events/event-window";
 import { useNow } from "@/lib/events/use-now";
 import { ICON_STROKE_WIDTH, missedLabel, notificationOffsetLabel, visualForItemType } from "./event-visuals";
@@ -24,7 +24,7 @@ import styles from "./event-detail-screen.module.css";
  * a tela real lê o evento com `getEvent` (ver `@repo/contracts`).
  */
 export type PreviewPriority = "urgent" | "normal" | "flexible";
-type PreviewStatus = Extract<NonNullable<EventCardDto["status"]>, "todo" | "toDefine" | "inHold" | "done" | "cancel">;
+type PreviewStatus = Extract<NonNullable<TaskCardDto["status"]>, "todo" | "toDefine" | "inHold" | "done" | "cancel">;
 
 const previewPriorityLabels: Record<PreviewPriority, string> = {
   urgent: "Urgente",
@@ -37,7 +37,7 @@ export interface PreviewTask {
   name: string;
   description: string;
   status: PreviewStatus;
-  priority: EventPriority;
+  priority: TaskPriority;
   notifyOffsetsMinutes: number[];
   tags: string[];
   dependsOnTaskIds: string[];
@@ -275,7 +275,7 @@ function DurationReadout({ event, now, running }: { event: PreviewEvent; now: Da
   return <p className={styles.duration}>{durationLabel(event.startedAt, event.finishedAt)}</p>;
 }
 
-const positionLabels: Record<EventPosition, string> = {
+const positionLabels: Record<TaskPosition, string> = {
   past: "Já aconteceu",
   running: "Acontecendo agora",
   upcoming: "Ainda vai acontecer",
@@ -285,7 +285,7 @@ const positionLabels: Record<EventPosition, string> = {
  * A situacao do evento no tempo, num quadro so. Antes da hidratacao ele fica
  * vazio — um estado errado por um quadro le como informacao, nao como espera.
  */
-function PositionBadge({ position }: { position: EventPosition | null }) {
+function PositionBadge({ position }: { position: TaskPosition | null }) {
   if (!position) return <span className={styles.position} aria-hidden />;
   return (
     <span className={styles.position} data-position={position} role="img" aria-label={positionLabels[position]} title={positionLabels[position]}>

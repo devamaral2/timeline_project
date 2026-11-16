@@ -73,7 +73,7 @@ describe("fila de finalizacao", () => {
 
     expect(ctx.store.require("r1")).toMatchObject({ status: "done", failedSteps: [] });
     expect(toRequestDto(ctx.store.require("r1"), ctx.store.stepRecords, entities).entities.find((entity) => entity.kind === "artifact"))
-      .toMatchObject({ artifactType: "food", operation: "create", linkedTo: [{ kind: "event", id: meal?.id }] });
+      .toMatchObject({ artifactType: "food", operation: "create", linkedTo: [{ kind: "task", id: meal?.id }] });
   });
 
   test("a ordem de termino nao importa: alimento primeiro, evento depois, e a ligacao acontece quando o evento chega", async () => {

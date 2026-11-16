@@ -328,7 +328,7 @@ test("edicao pela tela de detalhe: o alvo escolhe o agente, sem JEV; alvo que na
   expect(view.trace?.entries.map((entry) => entry.kind)).toEqual(["request", "agent", "answer"]);
   expect(await artifacts.findById(sleep.id)).toMatchObject({ data: { trackedSleepTime: 480, score: 70 }, revision: 2 });
 
-  const missing = await operations.startEdit({ userId: "user-1", text: "mude", entityType: "event", entityId: "nao-existe" }, actor);
+  const missing = await operations.startEdit({ userId: "user-1", text: "mude", entityType: "task", entityId: "nao-existe" }, actor);
   await drain();
   expect(await operations.view(missing, actor)).toMatchObject({
     status: "failed", errorCode: "invalid_input", message: uiConfig.targetFailed.not_found, steps: [],

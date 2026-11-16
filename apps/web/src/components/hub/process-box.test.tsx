@@ -71,7 +71,7 @@ test("cada registro criado ou alterado vira uma linha de prévia, com link quand
     request={{
       ...base, status: "done",
       entities: [
-        { kind: "event", id: "e1", name: "Comprar faixa elástica", operation: "create", linkedTo: [] },
+        { kind: "task", id: "e1", name: "Comprar faixa elástica", operation: "create", linkedTo: [] },
         { kind: "artifact", id: "a1", name: "Treino de mobilidade", artifactType: "text", operation: "update", linkedTo: [] },
       ],
     }}

@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import type { EventDto } from "@repo/contracts";
+import type { TaskDto } from "@repo/contracts";
 import { createFakeApi } from "@/test/fake-api";
 import { eventFixture, eventsArea } from "@/test/fake-api/events";
 
@@ -236,8 +236,8 @@ test("com evento de agente em aberto, a agenda se relê sozinha e a linha vira '
   await waitFor(() => expect(within(dayOf(TODAY)).getAllByRole("link")).toHaveLength(5));
   expect(within(dayOf(TODAY)).getByRole("img", { name: "Agente, executando" })).toBeInTheDocument();
 
-  const table = api.store.table<EventDto>("events");
-  table.set("ev-3", { ...(table.get("ev-3") as EventDto), status: "done" });
+  const table = api.store.table<TaskDto>("events");
+  table.set("ev-3", { ...(table.get("ev-3") as TaskDto), status: "done" });
   await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
 
   await waitFor(() => expect(within(dayOf(TODAY)).getByRole("img", { name: "Agente, feito" })).toBeInTheDocument());
@@ -266,8 +266,8 @@ test("a recarga troca os dados sem o carregando e mantém a mesma linha na tela"
   const observer = new MutationObserver(() => loadingSeen.push(screen.queryByText("Carregando sua agenda…") !== null));
   observer.observe(document.body, { childList: true, subtree: true, characterData: true });
 
-  const table = api.store.table<EventDto>("events");
-  table.set("ev-3", { ...(table.get("ev-3") as EventDto), status: "done" });
+  const table = api.store.table<TaskDto>("events");
+  table.set("ev-3", { ...(table.get("ev-3") as TaskDto), status: "done" });
   await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
   await waitFor(() => expect(within(dayOf(TODAY)).getByRole("img", { name: "Agente, feito" })).toBeInTheDocument());
   observer.disconnect();

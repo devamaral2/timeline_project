@@ -289,7 +289,7 @@ describe("previous events of the template", () => {
   const sessions: CreateRecurrenceInput = {
     ...dailyRun,
     endsOn: "2026-09-17",
-    template: { name: "Sessão", status: "todo", previousEventIds: ["project"] },
+    template: { name: "Sessão", status: "todo", previousTaskIds: ["project"] },
   };
 
   test("each occurrence is born following the previous events, without counting as an edit of them", async () => {

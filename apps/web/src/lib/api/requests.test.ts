@@ -63,7 +63,7 @@ describe("pedido em texto", () => {
       progress: undefined,
       message: "Faltam 3 dias.",
       steps: [{ id: "s1", agent: "agenda", label: "Lendo a agenda", status: "done" }],
-      entities: [{ kind: "event", id: "ev-9", name: "Prova", operation: "create", linkedTo: [] }],
+      entities: [{ kind: "task", id: "ev-9", name: "Prova", operation: "create", linkedTo: [] }],
     });
     const done = await getRequest(requestId);
     expect(done).toMatchObject({ status: "done", message: "Faltam 3 dias." });
@@ -113,7 +113,7 @@ describe("edição da entidade aberta e voz", () => {
     const requestId = await startEditRequest({
       userId: "ana",
       text: "Mude o nome",
-      entityType: "event",
+      entityType: "task",
       entityId: "ev-1",
     });
 
@@ -124,12 +124,12 @@ describe("edição da entidade aberta e voz", () => {
     const requestId = await startVoiceRequest({ transcript: "Dentista amanhã às 10", clientMessageId: "voz-1" });
     advanceRequest(api, requestId, {
       status: "done",
-      entities: [{ kind: "event", id: "ev-2", name: "Dentista", operation: "create", linkedTo: [] }],
+      entities: [{ kind: "task", id: "ev-2", name: "Dentista", operation: "create", linkedTo: [] }],
     });
 
     const request = await getRequest(requestId);
     expect(request).toMatchObject({ route: "voice", status: "done" });
-    expect(request.entities[0]).toMatchObject({ kind: "event", id: "ev-2", operation: "create" });
+    expect(request.entities[0]).toMatchObject({ kind: "task", id: "ev-2", operation: "create" });
   });
 });
 

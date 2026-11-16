@@ -1,6 +1,6 @@
 "use client";
 
-import type { EventDto } from "@repo/contracts";
+import type { TaskDto } from "@repo/contracts";
 import { MapPin } from "lucide-react";
 import { DetailFact, DetailFacts, DetailSection, Prose, Reminders, TagPills } from "@/components/detail/detail-parts";
 import { cardDurationLabel } from "@/lib/events/card-text";
@@ -14,7 +14,7 @@ import styles from "./event-detail.module.css";
  * O local abre no Google Maps. Horário padrão, "Gerado por" e Registro não entram: o contrato
  * do evento não traz esses dados (ver a tabela de lacunas da spec).
  */
-export function EventInfoSection({ event }: { event: EventDto }) {
+export function EventInfoSection({ event }: { event: TaskDto }) {
   const longRunning = event.longRunning;
   const duration = cardDurationLabel(event);
   const reminders = event.notifyOffsetsMinutes.map(reminderLabel);

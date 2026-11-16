@@ -38,7 +38,7 @@ export class InMemoryEntityBatchWriter implements EntityBatchWriter {
   ) {}
 
   async commit(batch: EntityBatch): Promise<EntityBatchResult> {
-    await this.check(this.repositories.events, batch.userId, batch.events);
+    await this.check(this.repositories.events, batch.userId, batch.tasks);
     await this.check(this.repositories.artifacts, batch.userId, batch.artifacts);
 
     // Artefatos primeiro: as relacoes de um evento apontam para eles.
@@ -54,7 +54,7 @@ export class InMemoryEntityBatchWriter implements EntityBatchWriter {
         await this.recurrences().delete(change.id, batch.userId, change.fromDay);
       }
     }
-    await this.apply(this.repositories.events, batch.userId, batch.events);
+    await this.apply(this.repositories.events, batch.userId, batch.tasks);
     this.repositories.sequence?.apply(batch.userId, batch.sequence ?? []);
     await batch.afterWrite?.(undefined);
     this.commits.push(batch);

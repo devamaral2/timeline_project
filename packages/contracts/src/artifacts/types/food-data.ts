@@ -48,7 +48,7 @@ export interface FoodRecipe {
  */
 export interface FoodData {
   description: string;
-  /** Quanto foi comido. So existe na copia que um evento ganha. */
+  /** Quanto foi comido. So existe na copia que uma tarefa ganha. */
   quantity?: string;
   items: FoodItem[];
   totals: FoodTotals;

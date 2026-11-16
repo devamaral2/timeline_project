@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useRef, useState } from "react";
-import type { ArtifactDto, EventCardDto, EventKind } from "@repo/contracts";
+import type { ArtifactDto, TaskCardDto, TaskKind } from "@repo/contracts";
 import { DetailFrame, DetailMessage, DetailSection, detailStyles } from "@/components/detail/detail-parts";
 import { AddButton, EditBar, EditCaret, EditFieldSection, EditFooter, EditSelect, RemoveButton, editStyles as edit } from "@/components/edit/edit-parts";
 import { EditTagSection } from "@/components/edit/EditTagSection";
@@ -29,7 +29,7 @@ const KIND_OPTIONS: { value: CreateKind; label: string }[] = [
 interface LinkedEvent {
   eventId: string;
   name: string;
-  kind: EventKind;
+  kind: TaskKind;
   startedAt?: string;
   relation?: string;
 }
@@ -49,9 +49,9 @@ const STALE_MESSAGE = "Esta nota mudou em outro lugar. Atualizamos a revisão; o
 
 /** Só os eventos de pessoa entram na lista: os pedidos ao agente que tocaram o artefato não se editam por aqui. */
 function linkedEventsOf(artifact: ArtifactDto | undefined): LinkedEvent[] {
-  return (artifact?.events ?? [])
+  return (artifact?.tasks ?? [])
     .filter((link) => link.actor === "human")
-    .map((link) => ({ eventId: link.eventId, name: link.name, kind: link.kind, startedAt: link.startedAt, relation: link.relation }));
+    .map((link) => ({ eventId: link.taskId, name: link.name, kind: link.kind, startedAt: link.startedAt, relation: link.relation }));
 }
 
 /**
@@ -112,7 +112,7 @@ export function ArtifactEditView({ existing, initialName, onSaved, onLeave }: Ar
     setError(null);
     const title = name.trim() || undefined;
     // Os eventos só vão no corpo quando a pessoa escolheu algum (criação) ou mexeu na lista (edição).
-    const links = eventsChanged ? { eventIds } : {};
+    const links = eventsChanged ? { taskIds: eventIds } : {};
 
     if (existing) {
       try {
@@ -139,7 +139,7 @@ export function ArtifactEditView({ existing, initialName, onSaved, onLeave }: Ar
     }
   }
 
-  function link(card: EventCardDto) {
+  function link(card: TaskCardDto) {
     setEvents((current) => [...current, { eventId: card.id, name: card.name, kind: card.kind, startedAt: card.startedAt }]);
   }
 
@@ -265,7 +265,7 @@ export function ArtifactEditView({ existing, initialName, onSaved, onLeave }: Ar
       </form>
 
       {picking ? (
-        <EntityPickerDialog<EventCardDto>
+        <EntityPickerDialog<TaskCardDto>
           title="Eventos"
           searchLabel="Buscar evento para ligar"
           search={searchHumanEvents}

@@ -1,5 +1,5 @@
 import { BadRequestException, Controller, Get, Inject, Query, UseGuards } from "@nestjs/common";
-import type { EventCardDto } from "@repo/contracts";
+import type { TaskCardDto } from "@repo/contracts";
 import { ACTORS, EVENT_STATUSES, PRIORITIES, type Actor, type EventPriority, type EventStatus } from "../../domain";
 import { parseLimit } from "../../api-core/http-input-validation";
 import { normalizeSearch, parseEnum, parseEnumList, parseInstant } from "../../api-core/list-filters";
@@ -31,7 +31,7 @@ export class ListTrackedEventsController {
     @Query("to") to?: string,
     @Query("longRunning") longRunning?: string,
     @Query("limit") limit?: string,
-  ): Promise<EventCardDto[]> {
+  ): Promise<TaskCardDto[]> {
     return this.listTrackedEvents.execute(
       {
         actor: parseEnum<Actor>("actor", eventActor, ACTORS),

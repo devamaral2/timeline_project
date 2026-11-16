@@ -1,11 +1,11 @@
-import type { EventCardDto } from "@repo/contracts";
-import { eventCardSchema } from "@repo/contracts/schemas";
+import type { TaskCardDto } from "@repo/contracts";
+import { taskCardSchema } from "@repo/contracts/schemas";
 import { expect, test } from "vitest";
 import { groupTrackedEvents, oneRowPerSeries, showsSeriesRule } from "./task-groups";
 
 /** Um cartão válido do contrato: o que o teste não diz fica com o padrão de uma tarefa de pessoa. */
-function card(overrides: { id: string } & Record<string, unknown>): EventCardDto {
-  return eventCardSchema.parse({
+function card(overrides: { id: string } & Record<string, unknown>): TaskCardDto {
+  return taskCardSchema.parse({
     actor: "human",
     kind: "common",
     status: "todo",
@@ -17,7 +17,7 @@ function card(overrides: { id: string } & Record<string, unknown>): EventCardDto
     notifyOffsetsMinutes: [],
     tags: [],
     artifactTypes: [],
-    previousEventIds: [],
+    previousTaskIds: [],
     revision: 1,
     ...overrides,
   });
@@ -67,8 +67,8 @@ test("mantém a ordem recebida dentro de cada grupo", () => {
 test("a sequência não esconde ninguém: todo cartão com status vira linha, tenha antecessor na lista ou não", () => {
   const groups = groupTrackedEvents([
     card({ id: "proposta", status: "todo" }),
-    card({ id: "ler", status: "done", previousEventIds: ["proposta"] }),
-    card({ id: "rascunho", status: "todo", previousEventIds: ["sumiu"] }),
+    card({ id: "ler", status: "done", previousTaskIds: ["proposta"] }),
+    card({ id: "rascunho", status: "todo", previousTaskIds: ["sumiu"] }),
   ]);
 
   const shown = groups.flatMap((group) => group.cards.map((c) => c.id));
@@ -89,7 +89,7 @@ const serieRule = {
   startsOn: "2026-09-01",
 };
 
-function occurrence(id: string, occurrenceOn: string, overrides: Record<string, unknown> = {}): EventCardDto {
+function occurrence(id: string, occurrenceOn: string, overrides: Record<string, unknown> = {}): TaskCardDto {
   return card({
     id,
     recurrence: { id: "serie-1", occurrenceOn, detached: false, rule: serieRule },

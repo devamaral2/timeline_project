@@ -1,7 +1,7 @@
 /**
  * O rastro de um pedido a IA: tudo o que ela fez, em ordem, com o detalhe de cada passo. E o que a aba
  * "Processo" do chat mostra ao lado da conversa. As duas rotas falam a mesma forma: a rota por passos
- * (ADR 003) monta o rastro das entradas que o servidor gravou; o Hermes (ADR 004), dos eventos da execucao dele.
+ * (ADR 003) monta o rastro das entradas que o servidor gravou; o Hermes (ADR 004), dos registros da execucao dele.
  *
  * Todo rotulo ja vem escrito pelo servidor: o cliente so desenha.
  */
@@ -36,7 +36,7 @@ export interface AgentTraceSection {
 export interface AgentTraceEntryDto {
   id: string;
   kind: AgentTraceKind;
-  /** "Pensou", "Executou um comando", "Criando eventos". */
+  /** "Pensou", "Executou um comando", "Criando tarefas". */
   label: string;
   /** O nome tecnico por tras do rotulo: a ferramenta, o agente. */
   source?: string;

@@ -33,7 +33,7 @@ test("creates a loose text artifact owned by the actor", async () => {
     revision: 1,
   });
   expect(batchWriter.commits).toHaveLength(1);
-  expect(batchWriter.commits[0]?.events).toEqual([]);
+  expect(batchWriter.commits[0]?.tasks).toEqual([]);
 });
 
 test("a food is born pending, named after the meal of the hour", async () => {
@@ -53,7 +53,7 @@ test("the artifact is born appearing in the events asked, created by them, in th
     artifacts: [Artifact.create({ id: "other", userId: actor.userId, data: { body: "outra" } })],
   });
 
-  const { artifactId } = await useCase.execute({ data: { body: "ata" }, eventIds: ["e1", "e2", "e1"] }, actor);
+  const { artifactId } = await useCase.execute({ data: { body: "ata" }, taskIds: ["e1", "e2", "e1"] }, actor);
 
   const link = { artifactId, relation: "creates", fromRecurrence: false };
   expect(batchWriter.commits).toHaveLength(1);
@@ -66,7 +66,7 @@ test("appearing in an occurrence of a series detaches it", async () => {
   const occurrence = { recurrenceId: "rec-1", occurrenceOn: "2026-08-17", detached: false };
   const { useCase, eventRepository } = setup({ events: [event("e1", { occurrence })] });
 
-  await useCase.execute({ data: { body: "so hoje" }, eventIds: ["e1"] }, actor);
+  await useCase.execute({ data: { body: "so hoje" }, taskIds: ["e1"] }, actor);
 
   expect((await eventRepository.findById("e1"))?.occurrence?.detached).toBe(true);
 });
@@ -75,8 +75,8 @@ test("the artifact is not born when an event does not exist or belongs to someon
   const theirs = Event.create({ id: "theirs", userId: "someone-else", name: "Deles", startedAt: now });
   const { useCase, database, batchWriter } = setup({ events: [event("e1"), theirs] });
 
-  await expect(useCase.execute({ data: { body: "x" }, eventIds: ["e1", "missing"] }, actor)).rejects.toThrow(EventNotFoundError);
-  await expect(useCase.execute({ data: { body: "x" }, eventIds: ["theirs"] }, actor)).rejects.toThrow(EventOwnershipError);
+  await expect(useCase.execute({ data: { body: "x" }, taskIds: ["e1", "missing"] }, actor)).rejects.toThrow(EventNotFoundError);
+  await expect(useCase.execute({ data: { body: "x" }, taskIds: ["theirs"] }, actor)).rejects.toThrow(EventOwnershipError);
   expect(database.artifacts).toEqual([]);
   expect(database.events.every((stored) => stored.revision === 1)).toBe(true);
   expect(batchWriter.commits).toEqual([]);
@@ -85,7 +85,7 @@ test("the artifact is not born when an event does not exist or belongs to someon
 test("refuses invalid content before touching any event", async () => {
   const { useCase, database } = setup({ events: [event("e1")] });
 
-  await expect(useCase.execute({ data: { body: "  " }, eventIds: ["e1"] }, actor)).rejects.toThrow(ArtifactValidationError);
+  await expect(useCase.execute({ data: { body: "  " }, taskIds: ["e1"] }, actor)).rejects.toThrow(ArtifactValidationError);
   await expect(useCase.execute({ type: "food", data: { inputText: "" } }, actor)).rejects.toThrow(
     "Food description cannot be empty",
   );

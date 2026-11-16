@@ -59,7 +59,7 @@ export class RequestEditTargetWorker {
     id: string,
   ): Promise<{ snapshot: Record<string, unknown> } | { failure: TargetFailure }> {
     const { events, artifacts } = this.deps.repositories;
-    if (entityType === "event") {
+    if (entityType === "task") {
       const event = await events.findById(id);
       if (!event || event.userId !== userId || event.actor !== "human") return { failure: "not_found" };
       return { snapshot: {

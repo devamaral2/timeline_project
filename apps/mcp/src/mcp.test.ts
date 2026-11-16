@@ -96,7 +96,7 @@ describe("MCP over HTTP", () => {
   });
 
   test("create_event posts as the owner with the idempotency key and without it in the body", async () => {
-    fetchApi.mockResolvedValue(new Response(JSON.stringify({ eventId: "event-1" }), { status: 201 }));
+    fetchApi.mockResolvedValue(new Response(JSON.stringify({ taskId: "event-1" }), { status: 201 }));
     const client = await connect();
 
     const result = await client.callTool({
@@ -105,7 +105,7 @@ describe("MCP over HTTP", () => {
     });
 
     expect(result.isError).toBeFalsy();
-    expect(result.content).toEqual([{ type: "text", text: '{"eventId":"event-1"}' }]);
+    expect(result.content).toEqual([{ type: "text", text: '{"taskId":"event-1"}' }]);
     const [url, init] = fetchApi.mock.calls[0] as [string, RequestInit];
     expect(url).toBe("http://api.test:3001/api/events");
     expect(init.headers).toMatchObject({
@@ -118,7 +118,7 @@ describe("MCP over HTTP", () => {
   });
 
   test("create_event with a status creates a tracked event, and refuses a status the API does not have", async () => {
-    fetchApi.mockResolvedValue(new Response(JSON.stringify({ eventId: "event-2" }), { status: 201 }));
+    fetchApi.mockResolvedValue(new Response(JSON.stringify({ taskId: "event-2" }), { status: 201 }));
     const client = await connect();
 
     await client.callTool({
@@ -157,13 +157,13 @@ describe("MCP over HTTP", () => {
 
     await client.callTool({
       name: "create_artifact",
-      arguments: { body: "Beber agua", eventIds: ["e1"], idempotencyKey: "agua:1" },
+      arguments: { body: "Beber agua", taskIds: ["e1"], idempotencyKey: "agua:1" },
     });
 
     const [url, init] = fetchApi.mock.calls[0] as [string, RequestInit];
     expect(url).toBe("http://api.test:3001/api/artifacts");
     expect((init.headers as Record<string, string>)["idempotency-key"]).toBe("agua:1");
-    expect(JSON.parse(init.body as string)).toEqual({ type: "text", data: { body: "Beber agua" }, eventIds: ["e1"] });
+    expect(JSON.parse(init.body as string)).toEqual({ type: "text", data: { body: "Beber agua" }, taskIds: ["e1"] });
     await client.close();
   });
 

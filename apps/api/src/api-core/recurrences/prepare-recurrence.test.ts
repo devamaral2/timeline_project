@@ -59,7 +59,7 @@ describe("prepareRecurrence", () => {
       priority: "medium",
       notifyOffsetsMinutes: [5],
       artifactIds: [],
-      previousEventIds: [],
+      previousTaskIds: [],
     });
     expect(artifacts).toEqual([]);
     expect(derivations).toEqual([]);
@@ -164,10 +164,10 @@ describe("prepareRecurrence", () => {
 
       const { recurrence } = await kit.prepare({
         ...daily,
-        template: { name: "Sessão", status: "todo", previousEventIds: ["project", "project"] },
+        template: { name: "Sessão", status: "todo", previousTaskIds: ["project", "project"] },
       });
 
-      expect(recurrence.template.previousEventIds).toEqual(["project"]);
+      expect(recurrence.template.previousTaskIds).toEqual(["project"]);
       expect(kit.database.events[0]?.revision).toBe(1);
       expect(kit.database.events[0]?.nextIds).toEqual([]);
       expect(kit.database.edges).toEqual([]);
@@ -177,10 +177,10 @@ describe("prepareRecurrence", () => {
       const theirs = Event.create({ id: "theirs", userId: "someone-else", name: "Deles", status: "todo" });
       const kit = setup({ events: [theirs] });
 
-      await expect(kit.prepare({ ...daily, template: { name: "Filha", previousEventIds: ["missing"] } })).rejects.toThrow(
+      await expect(kit.prepare({ ...daily, template: { name: "Filha", previousTaskIds: ["missing"] } })).rejects.toThrow(
         EventNotFoundError,
       );
-      await expect(kit.prepare({ ...daily, template: { name: "Filha", previousEventIds: ["theirs"] } })).rejects.toThrow(
+      await expect(kit.prepare({ ...daily, template: { name: "Filha", previousTaskIds: ["theirs"] } })).rejects.toThrow(
         EventOwnershipError,
       );
     });
@@ -269,20 +269,20 @@ describe("recurrence templates", () => {
       priority: "medium",
       notifyOffsetsMinutes: [],
       artifactIds: [],
-      previousEventIds: [],
+      previousTaskIds: [],
     });
-    expect(storedTemplateOf(series({ kind: "meal", status: "todo", artifactIds: ["a"], previousEventIds: ["p"] }))).toMatchObject({
+    expect(storedTemplateOf(series({ kind: "meal", status: "todo", artifactIds: ["a"], previousTaskIds: ["p"] }))).toMatchObject({
       kind: "meal",
       status: "todo",
       artifactIds: ["a"],
-      previousEventIds: ["p"],
+      previousTaskIds: ["p"],
     });
   });
 
   test("storedTemplateOf ignores the legacy parent list of a template stored before the sequence", () => {
     const legacy = series({ name: "Sessão", parentEventIds: ["p"] } as never);
 
-    expect(storedTemplateOf(legacy).previousEventIds).toEqual([]);
+    expect(storedTemplateOf(legacy).previousTaskIds).toEqual([]);
     expect(storedTemplateOf(legacy)).not.toHaveProperty("parentEventIds");
   });
 
@@ -303,7 +303,7 @@ describe("recurrence templates", () => {
       priority: "high",
       notifyOffsetsMinutes: [15],
       artifactIds: ["a1", "a2"],
-      previousEventIds: ["project"],
+      previousTaskIds: ["project"],
     };
 
     test("copies the template into the window of the day, linked to the series", () => {

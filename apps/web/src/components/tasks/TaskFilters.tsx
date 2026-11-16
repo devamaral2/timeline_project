@@ -1,6 +1,6 @@
 "use client";
 
-import type { EventPriority } from "@repo/contracts";
+import type { TaskPriority } from "@repo/contracts";
 import { useState } from "react";
 import { eventPriorityLabels } from "@/components/events/event-priority-mark";
 import { PRIORITY_ORDER } from "@/lib/events/task-filters";
@@ -15,8 +15,8 @@ interface TaskFiltersProps {
   tags: readonly string[];
   tag: string | null;
   onTagToggle: (tag: string) => void;
-  priorities: readonly EventPriority[];
-  onPriorityToggle: (priority: EventPriority) => void;
+  priorities: readonly TaskPriority[];
+  onPriorityToggle: (priority: TaskPriority) => void;
   /** Texto digitado (ainda sem a espera da busca). */
   query: string;
   onQueryChange: (value: string) => void;

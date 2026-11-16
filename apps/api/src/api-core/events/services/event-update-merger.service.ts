@@ -8,7 +8,7 @@ import {
   type Event,
 } from "../../../domain";
 import type { ArtifactRepository, EntityBatch, EventRepository, SequenceChange } from "../../../domain/ports";
-import type { UpdateEventArtifactInput, UpdateEventInput } from "@repo/contracts";
+import type { UpdateTaskArtifactInput, UpdateTaskInput } from "@repo/contracts";
 import type { ArtifactBuilder, ArtifactContentInput } from "../../artifacts/services/artifact-builder.service";
 import { isHumanEventKind, isHumanEventStatus } from "../create-event.usecase";
 import { planSequence } from "./event-sequence";
@@ -44,14 +44,14 @@ export function toUpdateBatch(merged: MergedEventUpdate, expectedRevision: numbe
       })),
     ],
     derivations: merged.artifacts.derivations,
-    events: [{ op: "update", entity: merged.event, expectedRevision }],
+    tasks: [{ op: "update", entity: merged.event, expectedRevision }],
     sequence: merged.sequence,
   };
 }
 
 export async function mergeEventUpdate(
   existingEvent: Event,
-  input: UpdateEventInput,
+  input: UpdateTaskInput,
   deps: EventUpdateDeps,
 ): Promise<MergedEventUpdate> {
   if (input.kind !== undefined && !isHumanEventKind(input.kind)) {
@@ -108,7 +108,7 @@ export async function mergeEventUpdate(
   const sequence = await planSequence(
     existingEvent.id,
     { previousIds: existingEvent.previousIds, nextIds: existingEvent.nextIds },
-    { previousIds: input.previousEventIds, nextIds: input.nextEventIds },
+    { previousIds: input.previousTaskIds, nextIds: input.nextTaskIds },
     deps.eventRepository,
     existingEvent.userId,
   );
@@ -124,7 +124,7 @@ export async function mergeEventUpdate(
  */
 async function mergeArtifacts(
   existingEvent: Event,
-  entries: UpdateEventArtifactInput[],
+  entries: UpdateTaskArtifactInput[],
   deps: EventUpdateDeps,
 ): Promise<{ links: ArtifactLink[]; writes: Required<ArtifactWrites> }> {
   const ids = entries.flatMap((entry) => ("copyOf" in entry ? [entry.copyOf] : entry.id ? [entry.id] : []));
@@ -179,7 +179,7 @@ async function mergeArtifacts(
 /** `undefined` quando a entrada so mantem o artefato, sem mudar nada nele. */
 async function reviseArtifact(
   artifact: Artifact,
-  entry: Exclude<UpdateEventArtifactInput, { copyOf: string }>,
+  entry: Exclude<UpdateTaskArtifactInput, { copyOf: string }>,
   artifactBuilder: ArtifactBuilder,
 ): Promise<Artifact | undefined> {
   if (entry.name === undefined && entry.tags === undefined && entry.data === undefined) return undefined;

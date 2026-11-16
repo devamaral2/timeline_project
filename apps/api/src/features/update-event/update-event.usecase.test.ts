@@ -26,7 +26,7 @@ function meeting(overrides: Partial<Parameters<typeof Event.create>[0]> = {}): E
 test("updates the event and bumps its revision", async () => {
   const { useCase, eventRepository } = setup({ events: [meeting()] });
 
-  await useCase.execute({ eventId: "event-1", expectedRevision: 1, name: "Retrospectiva", status: "doing", tags: ["Time"] }, actor);
+  await useCase.execute({ taskId: "event-1", expectedRevision: 1, name: "Retrospectiva", status: "doing", tags: ["Time"] }, actor);
 
   expect(await eventRepository.findById("event-1")).toMatchObject({
     name: "Retrospectiva",
@@ -39,7 +39,7 @@ test("updates the event and bumps its revision", async () => {
 test("null turns a tracked event back into a reference one", async () => {
   const { useCase, eventRepository } = setup({ events: [meeting({ status: "todo" })] });
 
-  await useCase.execute({ eventId: "event-1", expectedRevision: 1, status: null }, actor);
+  await useCase.execute({ taskId: "event-1", expectedRevision: 1, status: null }, actor);
 
   expect((await eventRepository.findById("event-1"))?.status).toBeUndefined();
 });
@@ -51,7 +51,7 @@ test("the event, the edited and the new artifacts are written in one batch", asy
 
   await useCase.execute(
     {
-      eventId: "event-1",
+      taskId: "event-1",
       expectedRevision: 1,
       artifacts: [{ id: "note-1", type: "text", data: { body: "pauta revisada" } }, { type: "text", data: { body: "ata" } }],
     },
@@ -74,10 +74,10 @@ test("changing the sequence writes the edges in the same batch and revises only 
   const { useCase, eventRepository, batchWriter, database } = setup({ events: [meeting(), oldBefore, newBefore, after] });
   database.edges.push({ fromId: "old", toId: "event-1" });
 
-  await useCase.execute({ eventId: "event-1", expectedRevision: 1, previousEventIds: ["new"], nextEventIds: ["after"] }, actor);
+  await useCase.execute({ taskId: "event-1", expectedRevision: 1, previousTaskIds: ["new"], nextTaskIds: ["after"] }, actor);
 
   expect(batchWriter.commits).toHaveLength(1);
-  expect(batchWriter.commits[0]?.events.map((change) => change.op)).toEqual(["update"]);
+  expect(batchWriter.commits[0]?.tasks.map((change) => change.op)).toEqual(["update"]);
   expect(batchWriter.commits[0]?.sequence).toEqual([
     { op: "add", fromId: "new", toId: "event-1" },
     { op: "remove", fromId: "old", toId: "event-1" },
@@ -94,7 +94,7 @@ test("an update without the lists keeps the sequence as it is", async () => {
   const { useCase, eventRepository, batchWriter, database } = setup({ events: [meeting(), before] });
   database.edges.push({ fromId: "before", toId: "event-1" });
 
-  await useCase.execute({ eventId: "event-1", expectedRevision: 1, name: "Outro nome" }, actor);
+  await useCase.execute({ taskId: "event-1", expectedRevision: 1, name: "Outro nome" }, actor);
 
   expect(batchWriter.commits[0]?.sequence).toEqual([]);
   expect(await eventRepository.findById("event-1")).toMatchObject({ previousIds: ["before"], name: "Outro nome", revision: 2 });
@@ -105,7 +105,7 @@ test("repeating the same sequence is not a change of the sequence", async () => 
   const { useCase, batchWriter, database } = setup({ events: [meeting(), before] });
   database.edges.push({ fromId: "before", toId: "event-1" });
 
-  await useCase.execute({ eventId: "event-1", expectedRevision: 1, previousEventIds: ["before"] }, actor);
+  await useCase.execute({ taskId: "event-1", expectedRevision: 1, previousTaskIds: ["before"] }, actor);
 
   expect(batchWriter.commits[0]?.sequence).toEqual([]);
   expect(database.edges).toEqual([{ fromId: "before", toId: "event-1" }]);
@@ -115,8 +115,8 @@ test("an agent event can come before or after a human event, and is not revised"
   const request = Event.create({ id: "request", userId: actor.userId, actor: "agent", kind: "request", status: "running", name: "Pedido" });
   const { useCase, eventRepository, database } = setup({ events: [meeting(), request] });
 
-  await useCase.execute({ eventId: "event-1", expectedRevision: 1, previousEventIds: ["request"] }, actor);
-  await useCase.execute({ eventId: "event-1", expectedRevision: 2, previousEventIds: [], nextEventIds: ["request"] }, actor);
+  await useCase.execute({ taskId: "event-1", expectedRevision: 1, previousTaskIds: ["request"] }, actor);
+  await useCase.execute({ taskId: "event-1", expectedRevision: 2, previousTaskIds: [], nextTaskIds: ["request"] }, actor);
 
   expect(database.edges).toEqual([{ fromId: "event-1", toId: "request" }]);
   expect(await eventRepository.findById("request")).toMatchObject({ previousIds: ["event-1"], revision: 1 });
@@ -128,7 +128,7 @@ test("refuses a sequence that closes a cycle, and the event is not revised", asy
   database.edges.push({ fromId: "event-1", toId: "other" });
 
   await expect(
-    useCase.execute({ eventId: "event-1", expectedRevision: 1, previousEventIds: ["other"] }, actor),
+    useCase.execute({ taskId: "event-1", expectedRevision: 1, previousTaskIds: ["other"] }, actor),
   ).rejects.toThrow("Events cannot follow each other in a cycle");
 });
 
@@ -136,7 +136,7 @@ test("refuses an event that follows itself", async () => {
   const { useCase, batchWriter } = setup({ events: [meeting()] });
 
   await expect(
-    useCase.execute({ eventId: "event-1", expectedRevision: 1, nextEventIds: ["event-1"] }, actor),
+    useCase.execute({ taskId: "event-1", expectedRevision: 1, nextTaskIds: ["event-1"] }, actor),
   ).rejects.toThrow("An event cannot follow itself");
   expect(batchWriter.commits).toEqual([]);
 });
@@ -145,7 +145,7 @@ test("editing an occurrence detaches it from its series", async () => {
   const occurrence = { recurrenceId: "rec-1", occurrenceOn: "2026-08-17", detached: false };
   const { useCase, eventRepository } = setup({ events: [meeting({ occurrence })] });
 
-  await useCase.execute({ eventId: "event-1", expectedRevision: 1, status: "missed" }, actor);
+  await useCase.execute({ taskId: "event-1", expectedRevision: 1, status: "missed" }, actor);
 
   expect(await eventRepository.findById("event-1")).toMatchObject({ status: "missed", occurrence: { detached: true } });
 });
@@ -153,14 +153,14 @@ test("editing an occurrence detaches it from its series", async () => {
 test("rejects an event that does not exist", async () => {
   const { useCase } = setup({});
 
-  await expect(useCase.execute({ eventId: "missing", expectedRevision: 1, name: "x" }, actor)).rejects.toThrow(EventNotFoundError);
+  await expect(useCase.execute({ taskId: "missing", expectedRevision: 1, name: "x" }, actor)).rejects.toThrow(EventNotFoundError);
 });
 
 test("rejects an event that belongs to another user, before looking at the revision", async () => {
   const { useCase, database, batchWriter } = setup({ events: [meeting()] });
 
   await expect(
-    useCase.execute({ eventId: "event-1", expectedRevision: 99, name: "Invadido" }, { userId: "attacker-1" }),
+    useCase.execute({ taskId: "event-1", expectedRevision: 99, name: "Invadido" }, { userId: "attacker-1" }),
   ).rejects.toThrow(EventOwnershipError);
   expect(database.events[0]?.name).toBe("Reunião");
   expect(batchWriter.commits).toEqual([]);
@@ -172,9 +172,9 @@ test("rejects a stale revision before preparing or writing anything", async () =
 
   await expect(
     // A lista de artefatos e invalida de proposito: o conflito de revisao vem antes de qualquer preparo.
-    useCase.execute({ eventId: "event-1", expectedRevision: 2, name: "Atrasado", artifacts: [{ id: "missing" }] }, actor),
+    useCase.execute({ taskId: "event-1", expectedRevision: 2, name: "Atrasado", artifacts: [{ id: "missing" }] }, actor),
   ).rejects.toThrow(EventRevisionConflictError);
-  await expect(useCase.execute({ eventId: "event-1", expectedRevision: 2 }, actor)).rejects.toThrow(
+  await expect(useCase.execute({ taskId: "event-1", expectedRevision: 2 }, actor)).rejects.toThrow(
     "Expected revision 2 but found 3",
   );
   expect(database.events[0]).toBe(stored);
@@ -186,7 +186,7 @@ test("writes nothing when the change is invalid", async () => {
 
   await expect(
     useCase.execute(
-      { eventId: "event-1", expectedRevision: 1, artifacts: [{ type: "text", data: { body: "nova" } }], previousEventIds: ["missing"] },
+      { taskId: "event-1", expectedRevision: 1, artifacts: [{ type: "text", data: { body: "nova" } }], previousTaskIds: ["missing"] },
       actor,
     ),
   ).rejects.toThrow(EventNotFoundError);
@@ -208,7 +208,7 @@ test("writes nothing, not even the sequence, when the edited event changed while
   };
 
   await expect(
-    kit.useCase.execute({ eventId: "event-1", expectedRevision: 1, name: "Nova", previousEventIds: ["before"] }, actor),
+    kit.useCase.execute({ taskId: "event-1", expectedRevision: 1, name: "Nova", previousTaskIds: ["before"] }, actor),
   ).rejects.toThrow(EntityBatchConflictError);
 
   expect(kit.database.events.find((event) => event.id === "event-1")).toMatchObject({ name: "Editado em outra aba", revision: 2 });
@@ -219,7 +219,7 @@ test("an agent event cannot be edited", async () => {
   const request = Event.create({ id: "request", userId: actor.userId, actor: "agent", kind: "request", status: "running", name: "Pedido" });
   const { useCase } = setup({ events: [request] });
 
-  await expect(useCase.execute({ eventId: "request", expectedRevision: 1, name: "Outro" }, actor)).rejects.toThrow(
+  await expect(useCase.execute({ taskId: "request", expectedRevision: 1, name: "Outro" }, actor)).rejects.toThrow(
     "An agent event cannot be edited",
   );
 });

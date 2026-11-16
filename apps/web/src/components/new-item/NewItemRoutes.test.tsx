@@ -182,7 +182,7 @@ test("o + de Eventos abre o modal de seleção, e a nota criada já nasce ligada
   save();
 
   await waitFor(() => expect(replace).toHaveBeenCalledWith(expect.stringMatching(/^\/user-1\/notas\/.+/)));
-  expect(api.calls.find((call) => call.method === "POST")?.body).toMatchObject({ type: "text", eventIds: ["ev-1"] });
+  expect(api.calls.find((call) => call.method === "POST")?.body).toMatchObject({ type: "text", taskIds: ["ev-1"] });
 });
 
 test("quem já está na lista não é oferecido de novo no modal", async () => {
@@ -209,7 +209,7 @@ test("editar mostra os eventos ligados; ligar outro e desligar um manda a lista 
   save();
 
   await waitFor(() => expect(replace).toHaveBeenCalledWith("/user-1/notas/art-1"));
-  expect(api.calls.find((call) => call.method === "PATCH")?.body).toMatchObject({ expectedRevision: 2, eventIds: ["ev-2"] });
+  expect(api.calls.find((call) => call.method === "PATCH")?.body).toMatchObject({ expectedRevision: 2, taskIds: ["ev-2"] });
 });
 
 test("sem mexer nos eventos, a edição não manda a lista de eventos", async () => {
@@ -220,7 +220,7 @@ test("sem mexer nos eventos, a edição não manda a lista de eventos", async ()
   save();
 
   await waitFor(() => expect(replace).toHaveBeenCalledWith("/user-1/notas/art-1"));
-  expect(api.calls.find((call) => call.method === "PATCH")?.body).not.toHaveProperty("eventIds");
+  expect(api.calls.find((call) => call.method === "PATCH")?.body).not.toHaveProperty("taskIds");
 });
 
 test("Descartar volta para a lista na criação e para a leitura na edição, sem gravar nada", async () => {

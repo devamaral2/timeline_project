@@ -1,5 +1,5 @@
 import { Body, Controller, HttpCode, HttpStatus, Inject, Module, Param, Patch, UseGuards } from "@nestjs/common";
-import type { UpdateEventInput } from "@repo/contracts";
+import type { UpdateTaskInput } from "@repo/contracts";
 import { ARTIFACT_REPOSITORY, ENTITY_BATCH_WRITER, EVENT_REPOSITORY } from "../../infrastructure/persistence";
 import type { ArtifactRepository, EntityBatchWriter, EventRepository } from "../../domain/ports";
 import { ApiCoreModule } from "../../api-core/api-core.module";
@@ -19,12 +19,12 @@ export class UpdateEventController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async execute(
     @Param("eventId") eventId: string,
-    @Body() body: UpdateEventInput,
+    @Body() body: UpdateTaskInput,
     @CurrentUser() actor: AuthenticatedUser,
   ): Promise<void> {
     assertEventFields(body as unknown as Record<string, unknown>, true);
     assertExpectedRevision(body);
-    await this.updateEvent.execute({ ...body, eventId }, actor);
+    await this.updateEvent.execute({ ...body, taskId: eventId }, actor);
   }
 }
 

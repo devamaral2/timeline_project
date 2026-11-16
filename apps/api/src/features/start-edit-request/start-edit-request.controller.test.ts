@@ -21,7 +21,7 @@ describe("POST /api/requests/edit", () => {
     expect(Reflect.getMetadata("__httpCode__", handler)).toBe(202);
   });
 
-  test.each(["event", "artifact", "food_artifact", "sleep_artifact", "training_artifact", "skill_artifact", "agent_artifact"])(
+  test.each(["task", "artifact", "food_artifact", "sleep_artifact", "training_artifact", "skill_artifact", "agent_artifact"])(
     "aceita o alvo %s e devolve o requestId", async (entityType) => {
       const { startEdit, controller } = setup();
       await expect(controller.start({ ...body, entityType }, owner)).resolves.toEqual({ requestId: "request-1" });

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import type { AgentEventStatus, EventDto, HumanEventStatus } from "@repo/contracts";
+import type { AgentTaskStatus, TaskDto, HumanTaskStatus } from "@repo/contracts";
 import { DetailMessage, DetailSection } from "@/components/detail/detail-parts";
 import { EventKindMark } from "@/components/events/event-kind-mark";
 import { EventStatusGlyph } from "@/components/events/event-status-glyph";
@@ -13,7 +13,7 @@ import styles from "./event-relations.module.css";
 
 interface EventSequenceSectionProps {
   userId: string;
-  event: EventDto;
+  event: TaskDto;
 }
 
 /**
@@ -26,21 +26,21 @@ interface EventSequenceSectionProps {
  */
 export function EventSequenceSection({ userId, event }: EventSequenceSectionProps) {
   const now = useNow();
-  const previousKey = event.previousEventIds.join(",");
-  const nextKey = event.nextEventIds.join(",");
-  const [previous, setPrevious] = useState<EventDto[] | null>(null);
-  const [next, setNext] = useState<EventDto[] | null>(null);
+  const previousKey = event.previousTaskIds.join(",");
+  const nextKey = event.nextTaskIds.join(",");
+  const [previous, setPrevious] = useState<TaskDto[] | null>(null);
+  const [next, setNext] = useState<TaskDto[] | null>(null);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     setFailed(false);
-    void Promise.allSettled(event.previousEventIds.map((id) => getEvent(id))).then((results) => {
+    void Promise.allSettled(event.previousTaskIds.map((id) => getEvent(id))).then((results) => {
       if (cancelled) return;
       setPrevious(loaded(results));
       if (results.some((result) => result.status === "rejected")) setFailed(true);
     });
-    void Promise.allSettled(event.nextEventIds.map((id) => getEvent(id))).then((results) => {
+    void Promise.allSettled(event.nextTaskIds.map((id) => getEvent(id))).then((results) => {
       if (cancelled) return;
       setNext(loaded(results));
       if (results.some((result) => result.status === "rejected")) setFailed(true);
@@ -52,7 +52,7 @@ export function EventSequenceSection({ userId, event }: EventSequenceSectionProp
   }, [previousKey, nextKey]);
 
   // Evento fora de qualquer sequência não mostra a seção.
-  if (event.previousEventIds.length === 0 && event.nextEventIds.length === 0) return null;
+  if (event.previousTaskIds.length === 0 && event.nextTaskIds.length === 0) return null;
 
   return (
     <DetailSection title="Sequência" labelId="event-sequence">
@@ -69,11 +69,11 @@ export function EventSequenceSection({ userId, event }: EventSequenceSectionProp
 }
 
 /** Os eventos que carregaram; o que falhou (apagado, de outro dono) some da lista e aparece no aviso. */
-function loaded(results: PromiseSettledResult<EventDto>[]): EventDto[] {
+function loaded(results: PromiseSettledResult<TaskDto>[]): TaskDto[] {
   return results.flatMap((result) => (result.status === "fulfilled" ? [result.value] : []));
 }
 
-function SequenceGroup({ id, label, userId, cards, now }: { id: string; label: string; userId: string; cards: EventDto[]; now: Date }) {
+function SequenceGroup({ id, label, userId, cards, now }: { id: string; label: string; userId: string; cards: TaskDto[]; now: Date }) {
   const headingId = `sequence-${id}`;
   return (
     <div className={styles.group}>
@@ -97,10 +97,10 @@ function SequenceGroup({ id, label, userId, cards, now }: { id: string; label: s
 }
 
 /** O glifo só mostra o status; não é botão, porque a sequência não muda status daqui. */
-function SequenceGlyph({ card }: { card: EventDto }) {
+function SequenceGlyph({ card }: { card: TaskDto }) {
   if (card.actor === "agent") {
-    return <EventStatusGlyph actor="agent" status={card.status as AgentEventStatus} size={20} />;
+    return <EventStatusGlyph actor="agent" status={card.status as AgentTaskStatus} size={20} />;
   }
-  const status = (card.status ?? null) as HumanEventStatus | null;
+  const status = (card.status ?? null) as HumanTaskStatus | null;
   return <EventStatusGlyph actor="human" status={status} size={20} />;
 }

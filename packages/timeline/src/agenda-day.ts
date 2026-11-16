@@ -1,12 +1,12 @@
-import type { EventCardDto } from "@repo/contracts";
+import type { TaskCardDto } from "@repo/contracts";
 
-/** Um evento da agenda: sempre tem inicio. */
-export type AgendaEventCard = EventCardDto & { startedAt: string };
+/** Uma tarefa da agenda: sempre tem inicio. */
+export type AgendaTaskCard = TaskCardDto & { startedAt: string };
 
-/** Um dia da agenda com os eventos exibidos para ele. */
+/** Um dia da agenda com as tarefas exibidas para ele. */
 export interface AgendaDay {
   /** Chave no formato YYYY-MM-DD no fuso da agenda. */
   dayKey: string;
   isToday: boolean;
-  events: AgendaEventCard[];
+  tasks: AgendaTaskCard[];
 }

@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import type { EventDto } from "@repo/contracts";
+import type { TaskDto } from "@repo/contracts";
 import { createFakeApi } from "@/test/fake-api";
 import { eventFixture, eventsArea } from "@/test/fake-api/events";
 
@@ -17,7 +17,7 @@ vi.mock("@/lib/api/authed-fetch", async (original) => ({
 const { TasksScreen } = await import("./TasksScreen");
 
 /** Liga a tela à API falsa com estes eventos e devolve a API, para conferir a rede. */
-function serve(events: EventDto[]) {
+function serve(events: TaskDto[]) {
   const api = createFakeApi({ areas: [eventsArea], seed: { events } });
   net.authedFetch.mockImplementation(api.authedFetch);
   return api;
@@ -34,7 +34,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-const events: EventDto[] = [
+const events: TaskDto[] = [
   eventFixture({ id: "luz", name: "Pagar conta de luz", status: "todo", startedAt: "2026-09-13T00:00:00-03:00", tags: ["casa"] }),
   eventFixture({ id: "pesquisa", name: "Pesquisar voos", actor: "agent", kind: "request", status: "running" }),
   eventFixture({ id: "pneu", name: "Trocar o pneu", status: "inHold" }),
@@ -91,9 +91,9 @@ test("Feitas e Encerradas vêm recolhidas e abrem ao toque", async () => {
 
 test("a sequência não esconde linhas: o evento que se segue a outro da lista aparece, sem fração nem “Espera por”", async () => {
   serve([
-    eventFixture({ id: "proposta", name: "Revisar proposta", status: "doing", nextEventIds: ["ler"] }),
-    eventFixture({ id: "ler", name: "Ler a proposta", status: "todo", previousEventIds: ["proposta"] }),
-    eventFixture({ id: "pneu", name: "Trocar o pneu", status: "inHold", previousEventIds: ["proposta"] }),
+    eventFixture({ id: "proposta", name: "Revisar proposta", status: "doing", nextTaskIds: ["ler"] }),
+    eventFixture({ id: "ler", name: "Ler a proposta", status: "todo", previousTaskIds: ["proposta"] }),
+    eventFixture({ id: "pneu", name: "Trocar o pneu", status: "inHold", previousTaskIds: ["proposta"] }),
   ]);
   render(<TasksScreen userId="user-1" />);
 
@@ -255,8 +255,8 @@ test("revisão desatualizada: a tela avisa, relê a lista e não grava nada", as
 
   const row = (await screen.findByRole("link", { name: /Pagar conta de luz/ })).closest("li") as HTMLElement;
   // Outra tela editou a tarefa depois da leitura: a revisão no servidor passa a 2.
-  const events = api.store.table<EventDto>("events");
-  events.set("luz", { ...(events.get("luz") as EventDto), revision: 2 });
+  const events = api.store.table<TaskDto>("events");
+  events.set("luz", { ...(events.get("luz") as TaskDto), revision: 2 });
 
   fireEvent.click(within(row).getByRole("button", { name: glyphOf("Pagar conta de luz") }));
   fireEvent.click(screen.getByRole("option", { name: "Feito" }));
@@ -362,8 +362,8 @@ test("com evento de agente em aberto, a lista se relê sozinha e a linha vai par
   render(<TasksScreen userId="user-1" />);
   await screen.findByRole("link", { name: /Pesquisar voos/ });
 
-  const table = api.store.table<EventDto>("events");
-  table.set("pesquisa", { ...(table.get("pesquisa") as EventDto), status: "done" });
+  const table = api.store.table<TaskDto>("events");
+  table.set("pesquisa", { ...(table.get("pesquisa") as TaskDto), status: "done" });
   await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
 
   await waitFor(() => expect(screen.queryByRole("region", { name: /Em curso/ })).not.toBeInTheDocument());

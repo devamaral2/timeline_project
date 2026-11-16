@@ -1,10 +1,10 @@
-import type { EventKind, HumanEventKind } from "@repo/contracts";
+import type { TaskKind, HumanTaskKind } from "@repo/contracts";
 import styles from "./event-glyphs.module.css";
 
-const humanKinds: readonly HumanEventKind[] = ["common", "meal", "sleep", "training"];
+const humanKinds: readonly HumanTaskKind[] = ["common", "meal", "sleep", "training"];
 
 /** O desenho de cada tipo, copiado do quadro Tipos do canvas (traco 2, cantos redondos). */
-function KindPaths({ kind }: { kind: EventKind }) {
+function KindPaths({ kind }: { kind: TaskKind }) {
   switch (kind) {
     case "common":
       return (
@@ -86,8 +86,8 @@ function KindPaths({ kind }: { kind: EventKind }) {
  * O ícone do tipo com o código escrito em mono ao lado. O código é o que o
  * leitor de tela anuncia; o ícone é decorativo. Sem cor própria: só o desenho.
  */
-export function EventKindMark({ kind, size = 14, className }: { kind: EventKind; size?: number; className?: string }) {
-  const actor = humanKinds.includes(kind as HumanEventKind) ? "human" : "agent";
+export function EventKindMark({ kind, size = 14, className }: { kind: TaskKind; size?: number; className?: string }) {
+  const actor = humanKinds.includes(kind as HumanTaskKind) ? "human" : "agent";
 
   return (
     <span className={className ?? styles.kindMark} data-kind={kind} data-actor={actor}>

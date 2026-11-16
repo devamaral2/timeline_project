@@ -1,11 +1,11 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import type { EventCardDto } from "@repo/contracts";
+import type { TaskCardDto } from "@repo/contracts";
 import { EventRow } from "./event-row";
 
 const NOW = new Date("2026-09-14T10:00:00-03:00");
 
-function cardOf(overrides: Partial<EventCardDto>): EventCardDto {
+function cardOf(overrides: Partial<TaskCardDto>): TaskCardDto {
   return {
     id: "ev-1",
     actor: "human",
@@ -18,7 +18,7 @@ function cardOf(overrides: Partial<EventCardDto>): EventCardDto {
     notifyOffsetsMinutes: [],
     tags: [],
     artifactTypes: [],
-    previousEventIds: [],
+    previousTaskIds: [],
     revision: 1,
     ...overrides,
   };
@@ -91,7 +91,7 @@ describe("EventRow", () => {
       kind: "common",
       name: "Renovar passaporte",
       startedAt: "2026-09-14T09:00:00-03:00",
-      previousEventIds: ["ev-9"],
+      previousTaskIds: ["ev-9"],
     });
 
     render(<EventRow card={card} userId="user-1" now={NOW} />);

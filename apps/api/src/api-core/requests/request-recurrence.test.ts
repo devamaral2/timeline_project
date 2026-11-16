@@ -74,7 +74,7 @@ describe("passo de editar series", () => {
 
   const stored = (kind: string, name: string, extra: Record<string, unknown> = {}) => Recurrence.create({
     userId: "user-1", rule: buildRule({ frequency: "weekly", weekdays: ["mon"], timeOfDay: "07:00" }, "2026-10-26", "America/Sao_Paulo"),
-    template: { kind, name, description: "", tags: [], priority: "medium", notifyOffsetsMinutes: [], artifactIds: [], previousEventIds: [], ...extra },
+    template: { kind, name, description: "", tags: [], priority: "medium", notifyOffsetsMinutes: [], artifactIds: [], previousTaskIds: [], ...extra },
   });
 
   test("trocar a frequencia descarta os dias da semana da anterior", () => {
@@ -85,10 +85,10 @@ describe("passo de editar series", () => {
   });
 
   test("renomear a serie troca o template e mantem os artefatos, o status e os eventos de que ela se segue", () => {
-    const current = stored("meal", "Almoço", { status: "todo", artifactIds: ["a1"], previousEventIds: ["e1"] });
+    const current = stored("meal", "Almoço", { status: "todo", artifactIds: ["a1"], previousTaskIds: ["e1"] });
     const revision = planSeriesEdit(current, { ...noEdit, id: current.id, name: "Almoço fixo", priority: "high" }, "America/Sao_Paulo");
     expect(revision).toMatchObject({
-      keepArtifacts: true, template: { kind: "meal", name: "Almoço fixo", status: "todo", priority: "high", previousEventIds: ["e1"] },
+      keepArtifacts: true, template: { kind: "meal", name: "Almoço fixo", status: "todo", priority: "high", previousTaskIds: ["e1"] },
     });
     expect(revision.template).not.toHaveProperty("artifactIds");
   });

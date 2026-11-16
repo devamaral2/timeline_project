@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { EventDto } from "@repo/contracts";
+import type { TaskDto } from "@repo/contracts";
 import { fieldValue, getField, setField } from "@/components/edit/edit-test-helpers";
 import { type FakeApi, createFakeApi } from "@/test/fake-api";
 import { eventFixture, eventsArea } from "@/test/fake-api/events";
@@ -21,7 +21,7 @@ const NAME = "Treino de força";
 const DETAIL_PATH = "/user-1/eventos/ev-1";
 
 /** Um treino de hoje, em curso, com descrição. Revisão 3 para a edição conferir a revisão lida. */
-function training(overrides: Partial<EventDto> = {}): EventDto {
+function training(overrides: Partial<TaskDto> = {}): TaskDto {
   return eventFixture({
     id: "ev-1",
     name: NAME,
@@ -38,7 +38,7 @@ function training(overrides: Partial<EventDto> = {}): EventDto {
 
 let api: FakeApi;
 
-function install(events: EventDto[]) {
+function install(events: TaskDto[]) {
   api = createFakeApi({ areas: [eventsArea], seed: { events } });
   net.authedFetch.mockImplementation(api.authedFetch);
 }
@@ -264,7 +264,7 @@ describe("revisão desatualizada", () => {
 
     type("Título", "Meu título");
     // Outra tela mudou o evento antes deste salvar: a revisão lida (3) já não vale.
-    api.store.table<EventDto>("events").set("ev-1", training({ revision: 4, name: "Outro nome", priority: "high" }));
+    api.store.table<TaskDto>("events").set("ev-1", training({ revision: 4, name: "Outro nome", priority: "high" }));
     save();
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Este evento mudou em outro lugar.");
@@ -280,7 +280,7 @@ describe("revisão desatualizada", () => {
     await screen.findByRole("heading", { level: 1, name: "Editar evento" });
 
     type("Título", "Meu título");
-    api.store.table<EventDto>("events").set("ev-1", training({ revision: 4, name: "Outro nome", priority: "high" }));
+    api.store.table<TaskDto>("events").set("ev-1", training({ revision: 4, name: "Outro nome", priority: "high" }));
     save();
     await screen.findByRole("alert");
 

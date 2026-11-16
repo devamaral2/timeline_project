@@ -1,6 +1,6 @@
 "use client";
 
-import type { EventCardDto, HumanEventStatus } from "@repo/contracts";
+import type { TaskCardDto, HumanTaskStatus } from "@repo/contracts";
 import { useLayoutEffect, useRef } from "react";
 import { useDismiss } from "@/components/detail/detail-parts";
 import { EventChoiceList } from "@/components/event-detail/EventChoice";
@@ -22,9 +22,9 @@ const EDGE = 16;
  * glifo de âncora, fica no cartão do pé da tela que o CSS define.
  */
 export function EventStatusPicker({ card, anchor, onPick, onClose }: {
-  card: EventCardDto;
+  card: TaskCardDto;
   anchor?: HTMLElement | null;
-  onPick: (status: HumanEventStatus) => void;
+  onPick: (status: HumanTaskStatus) => void;
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -53,10 +53,10 @@ export function EventStatusPicker({ card, anchor, onPick, onClose }: {
     };
   }, [anchor]);
   // O contrato garante status de pessoa (ou nenhum) quando o ator é pessoa; o glifo de agente não abre a escolha.
-  const current = card.actor === "human" ? ((card.status ?? null) as HumanEventStatus | null) : null;
+  const current = card.actor === "human" ? ((card.status ?? null) as HumanTaskStatus | null) : null;
   return (
     <div ref={ref} role="dialog" aria-label={`Status de “${card.name}”`} className={styles.statusPicker}>
-      <EventChoiceList<HumanEventStatus>
+      <EventChoiceList<HumanTaskStatus>
         listLabel="Status do evento"
         value={current}
         className={detail.choiceList}

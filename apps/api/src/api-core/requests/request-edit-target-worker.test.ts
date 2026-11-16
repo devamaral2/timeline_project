@@ -24,7 +24,7 @@ async function withArtifact(entityType: string, props: { name?: string; type: st
 describe("worker da edicao pela tela de detalhe", () => {
   test("a escolha do agente e uma tabela: cada tipo tem o seu", () => {
     expect(EDIT_TARGET_AGENTS).toEqual({
-      event: "event-edit", artifact: "artifact-edit", food_artifact: "food-edit", sleep_artifact: "sleep-edit",
+      task: "event-edit", artifact: "artifact-edit", food_artifact: "food-edit", sleep_artifact: "sleep-edit",
       training_artifact: "training-edit", skill_artifact: "agent-file-edit", agent_artifact: "agent-file-edit",
     });
   });
@@ -33,7 +33,7 @@ describe("worker da edicao pela tela de detalhe", () => {
     const event = Event.create({
       userId: "user-1", name: "Reunião", description: "pauta", startedAt: new Date("2026-10-25T12:00:00Z"), tags: ["trabalho"],
     });
-    const ctx = queued("event", event.id);
+    const ctx = queued("task", event.id);
     await ctx.eventRepository.save(event);
 
     await ctx.editTargetWorker.run("r1");
@@ -41,7 +41,7 @@ describe("worker da edicao pela tela de detalhe", () => {
     expect(ctx.store.require("r1").status).toBe("running");
     expect(ctx.store.stepRecords).toMatchObject([{
       agent: "event-edit", status: "queued",
-      input: { target: { entityType: "event", id: event.id, snapshot: { name: "Reunião", description: "pauta", tags: ["trabalho"], status: null } } },
+      input: { target: { entityType: "task", id: event.id, snapshot: { name: "Reunião", description: "pauta", tags: ["trabalho"], status: null } } },
     }]);
     expect(ctx.store.jobs.at(-1)).toMatchObject({ kind: REQUEST_JOBS.step });
   });
@@ -70,7 +70,7 @@ describe("worker da edicao pela tela de detalhe", () => {
   });
 
   test("alvo inexistente: o pedido falha com o texto predefinido, sem passo", async () => {
-    const ctx = queued("event", "nao-existe");
+    const ctx = queued("task", "nao-existe");
     await ctx.editTargetWorker.run("r1");
     expect(ctx.store.stepRecords).toHaveLength(0);
     expect(ctx.store.require("r1")).toMatchObject({ status: "failed", errorCode: "invalid_input", answer: uiConfig.targetFailed.not_found });
@@ -103,7 +103,7 @@ describe("worker da edicao pela tela de detalhe", () => {
 
   test("pedido que ja saiu da fila e ignorado", async () => {
     const ctx = setupRequest();
-    ctx.store.require("r1").target = { entityType: "event", entityId: "qualquer" };
+    ctx.store.require("r1").target = { entityType: "task", entityId: "qualquer" };
     await ctx.editTargetWorker.run("r1");
     expect(ctx.store.stepRecords).toHaveLength(0);
     expect(ctx.store.require("r1").status).toBe("running");

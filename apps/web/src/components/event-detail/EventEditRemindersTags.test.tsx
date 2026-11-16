@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { EventDto } from "@repo/contracts";
+import type { TaskDto } from "@repo/contracts";
 import { type FakeApi, createFakeApi } from "@/test/fake-api";
 import { setField } from "@/components/edit/edit-test-helpers";
 import { eventFixture, eventsArea } from "@/test/fake-api/events";
@@ -20,7 +20,7 @@ const { EventEditRoute } = await import("./EventEditRoute");
 const DETAIL_PATH = "/user-1/eventos/ev-1";
 
 /** Um treino de hoje, em curso, com lembretes e tags de partida. Revisão 3. */
-function training(overrides: Partial<EventDto> = {}): EventDto {
+function training(overrides: Partial<TaskDto> = {}): TaskDto {
   return eventFixture({
     id: "ev-1",
     name: "Treino de força",
@@ -36,7 +36,7 @@ function training(overrides: Partial<EventDto> = {}): EventDto {
 
 let api: FakeApi;
 
-function install(events: EventDto[]) {
+function install(events: TaskDto[]) {
   api = createFakeApi({ areas: [eventsArea], seed: { events } });
   net.authedFetch.mockImplementation(api.authedFetch);
 }

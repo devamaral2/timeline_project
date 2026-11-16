@@ -74,7 +74,7 @@ export const EDIT_SELECTOR: Readonly<Record<EditAgent, CandidateKind>> = {
 
 /** O agente de cada tipo de entidade da tela de detalhe: a escolha e esta tabela, nao um modelo. */
 export const EDIT_TARGET_AGENTS: Readonly<Record<RequestEditEntityType, StepAgent>> = {
-  event: "event-edit",
+  task: "event-edit",
   artifact: "artifact-edit",
   food_artifact: "food-edit",
   sleep_artifact: "sleep-edit",

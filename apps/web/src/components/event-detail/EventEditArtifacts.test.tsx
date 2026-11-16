@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { EventDto } from "@repo/contracts";
+import type { TaskDto } from "@repo/contracts";
 import { type FakeApi, createFakeApi } from "@/test/fake-api";
 import { type StoredArtifact, artifactFixture, artifactsArea } from "@/test/fake-api/artifacts";
 import { eventFixture, eventsArea } from "@/test/fake-api/events";
@@ -43,7 +43,7 @@ const ARTIFACTS: StoredArtifact[] = [
 
 let api: FakeApi;
 
-function install(event: EventDto = EVENT, artifacts: StoredArtifact[] = ARTIFACTS) {
+function install(event: TaskDto = EVENT, artifacts: StoredArtifact[] = ARTIFACTS) {
   api = createFakeApi({ areas: [eventsArea, artifactsArea], seed: { events: [event], artifacts } });
   net.authedFetch.mockImplementation(api.authedFetch);
 }
@@ -172,7 +172,7 @@ describe("artefatos na edição", () => {
         },
       }),
     ]);
-    const event = (await api.authedFetch("/api/events/ev-1")) as EventDto;
+    const event = (await api.authedFetch("/api/events/ev-1")) as TaskDto;
     expect(event.artifacts.map((link) => link.artifact.name)).toEqual(["Ficha B", "Ficha A", "Registro do treino"]);
   });
 
@@ -281,7 +281,7 @@ describe("refeição: alimento do catálogo global ou dos seus, como cópia com 
 
     await waitFor(() => expect(replace).toHaveBeenCalledWith(DETAIL_PATH));
     expect(patches()).toEqual([expect.objectContaining({ body: { expectedRevision: 3, artifacts: [{ copyOf: "food-global", quantity: "150 g" }] } })]);
-    const event = (await api.authedFetch("/api/events/ev-1")) as EventDto;
+    const event = (await api.authedFetch("/api/events/ev-1")) as TaskDto;
     expect(event.artifacts).toEqual([
       expect.objectContaining({ relation: "uses", artifact: expect.objectContaining({ name: "Arroz cozido", derived: true, data: expect.objectContaining({ quantity: "150 g" }) }) }),
     ]);
@@ -317,7 +317,7 @@ describe("refeição: alimento do catálogo global ou dos seus, como cópia com 
       method: "PATCH",
       body: JSON.stringify({ expectedRevision: 1, type: "food", data: { ...FOOD, totals: { ...FOOD.totals, totalCaloriesKcal: 999 } } }),
     });
-    const event = (await api.authedFetch("/api/events/ev-1")) as EventDto;
+    const event = (await api.authedFetch("/api/events/ev-1")) as TaskDto;
     expect(event.artifacts[0]?.artifact.data).toMatchObject({ totals: { totalCaloriesKcal: 200 } });
   });
 });

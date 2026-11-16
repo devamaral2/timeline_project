@@ -1,10 +1,10 @@
 import type { Artifact } from "../../domain";
 import type { ArtifactEventLink } from "../../domain/ports";
-import type { ArtifactDto, ArtifactEventLinkDto } from "@repo/contracts";
+import type { ArtifactDto, ArtifactTaskLinkDto } from "@repo/contracts";
 
-export function toArtifactEventLinkDto(link: ArtifactEventLink): ArtifactEventLinkDto {
+export function toArtifactEventLinkDto(link: ArtifactEventLink): ArtifactTaskLinkDto {
   return {
-    eventId: link.eventId,
+    taskId: link.eventId,
     relation: link.relation,
     name: link.name,
     actor: link.actor,
@@ -24,7 +24,7 @@ export function toArtifactDto(artifact: Artifact, events?: readonly ArtifactEven
     data: artifact.data,
     global: artifact.isGlobal,
     derived: artifact.derived,
-    ...(events ? { events: events.map(toArtifactEventLinkDto) } : {}),
+    ...(events ? { tasks: events.map(toArtifactEventLinkDto) } : {}),
     tags: artifact.tags,
     revision: artifact.revision,
     createdAt: artifact.createdAt.toISOString(),

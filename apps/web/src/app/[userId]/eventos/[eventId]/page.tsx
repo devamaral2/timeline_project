@@ -1,6 +1,6 @@
 "use client";
 
-import type { EventDto } from "@repo/contracts";
+import type { TaskDto } from "@repo/contracts";
 import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { useMotionRouter } from "@/components/shell/navigation-motion";
 import { BackButton, DetailFrame, DetailMessage, DetailNav } from "@/components/detail/detail-parts";
@@ -16,7 +16,7 @@ export default function EventPage({ params }: { params: Promise<{ userId: string
   const router = useMotionRouter();
   const [userId, setUserId] = useState<string | null>(null);
   const [eventId, setEventId] = useState<string | null>(null);
-  const [event, setEvent] = useState<EventDto | null>(null);
+  const [event, setEvent] = useState<TaskDto | null>(null);
   const [state, setState] = useState<LoadState>("loading");
 
   useEffect(() => {

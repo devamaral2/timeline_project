@@ -23,7 +23,7 @@ export function filterArtifacts(artifacts: ArtifactDto[], filter: ListArtifactsF
       const body = artifact.type === "text" || artifact.type === "router" ? artifact.data.body : "";
       if (!`${artifact.name}\n${body}`.toLowerCase().includes(filter.q)) return false;
     }
-    if (filter.eventId && !(artifact.events ?? []).some((link) => link.eventId === filter.eventId)) return false;
+    if (filter.eventId && !(artifact.tasks ?? []).some((link) => link.taskId === filter.eventId)) return false;
     return true;
   });
   return filter.limit === undefined ? matching : matching.slice(0, filter.limit);

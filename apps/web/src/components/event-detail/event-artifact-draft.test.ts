@@ -1,4 +1,4 @@
-import type { ArtifactDto, EventArtifactDto } from "@repo/contracts";
+import type { ArtifactDto, TaskArtifactDto } from "@repo/contracts";
 import { describe, expect, it } from "vitest";
 import {
   type DraftArtifact,
@@ -26,7 +26,7 @@ describe("draftArtifactsFromEvent", () => {
     const links = [
       { relation: "uses", fromRecurrence: false, artifact: { ...artifact("a"), global: true, type: "workout" } },
       { relation: "creates", fromRecurrence: false, artifact: artifact("b") },
-    ] as EventArtifactDto[];
+    ] as TaskArtifactDto[];
 
     expect(draftArtifactsFromEvent(links)).toEqual([
       { id: "a", name: "Artefato a", type: "workout", global: true, relation: "uses" },

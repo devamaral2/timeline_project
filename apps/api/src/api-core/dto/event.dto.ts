@@ -1,9 +1,9 @@
 import type { Artifact, Event, Recurrence } from "../../domain";
 import type { EventCard, EventRequestLink } from "../../domain/ports";
-import type { ArtifactType, EventCardDto, EventDto, EventRecurrenceDto } from "@repo/contracts";
+import type { ArtifactType, TaskCardDto, TaskDto, TaskRecurrenceDto } from "@repo/contracts";
 import { toArtifactDto } from "./artifact.dto";
 
-function recurrenceOf(event: Event, recurrence: Recurrence | undefined): EventRecurrenceDto | undefined {
+function recurrenceOf(event: Event, recurrence: Recurrence | undefined): TaskRecurrenceDto | undefined {
   if (!event.occurrence || !recurrence) return undefined;
   return {
     id: recurrence.id,
@@ -14,7 +14,7 @@ function recurrenceOf(event: Event, recurrence: Recurrence | undefined): EventRe
 }
 
 /** O cartao da agenda e da lista de tarefas: o dado como esta gravado, sem rotulos. */
-export function toEventCardDto({ event, artifactTypes, recurrence }: EventCard): EventCardDto {
+export function toEventCardDto({ event, artifactTypes, recurrence }: EventCard): TaskCardDto {
   const series = recurrenceOf(event, recurrence);
   return {
     id: event.id,
@@ -32,7 +32,7 @@ export function toEventCardDto({ event, artifactTypes, recurrence }: EventCard):
     notifyOffsetsMinutes: [...event.notifyOffsetsMinutes],
     tags: event.tags,
     artifactTypes: artifactTypes as ArtifactType[],
-    previousEventIds: [...event.previousIds],
+    previousTaskIds: [...event.previousIds],
     ...(series ? { recurrence: series } : {}),
     revision: event.revision,
   };
@@ -47,7 +47,7 @@ export function toEventDto(
   artifacts: readonly Artifact[] = [],
   recurrence?: Recurrence,
   requests: readonly EventRequestLink[] = [],
-): EventDto {
+): TaskDto {
   const byId = new Map(artifacts.map((artifact) => [artifact.id, artifact]));
   const linked = event.artifactLinks.flatMap((link) => {
     const artifact = byId.get(link.artifactId);
@@ -60,7 +60,7 @@ export function toEventDto(
       fromRecurrence: link.fromRecurrence,
       artifact: toArtifactDto(artifact),
     })),
-    nextEventIds: [...event.nextIds],
+    nextTaskIds: [...event.nextIds],
     requests: requests.map((link) => ({
       id: link.requestId,
       name: link.name,

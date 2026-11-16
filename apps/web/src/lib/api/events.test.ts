@@ -170,7 +170,7 @@ describe("leitura, edição e remoção", () => {
       pathname: "/api/events/ev-1",
       body: { expectedRevision: 4, status: "done" },
     });
-    expect(api.calls[0].body).not.toHaveProperty("eventId");
+    expect(api.calls[0].body).not.toHaveProperty("taskId");
     expect(api.store.table<{ revision: number }>("events").get("ev-1")?.revision).toBe(5);
   });
 

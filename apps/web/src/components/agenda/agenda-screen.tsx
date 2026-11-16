@@ -4,7 +4,7 @@ import {
   dayKeyRange, dayNumber, isSameMonth, longDate, monthGridOf,
   monthLabel, shiftDayKey, shiftMonthKey, weekOf, weekday, zonedDayEnd, zonedDayStart,
 } from "@repo/timeline";
-import type { EventCardDto, HumanEventStatus } from "@repo/contracts";
+import type { TaskCardDto, HumanTaskStatus } from "@repo/contracts";
 import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { EventStatusPicker } from "@/components/events/event-status-picker";
@@ -97,7 +97,7 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
   });
   const [selectedEvent, setSelectedEvent] = useState<SelectedEvent | null>(null);
   // O evento de referência cujo ponto azul foi tocado, e o aviso da última troca que falhou.
-  const [statusCard, setStatusCard] = useState<EventCardDto | null>(null);
+  const [statusCard, setStatusCard] = useState<TaskCardDto | null>(null);
   const [statusAnchor, setStatusAnchor] = useState<HTMLElement | null>(null);
   const [statusNote, setStatusNote] = useState<string | null>(null);
   const [mode, setMode] = useState<ViewMode>("day");
@@ -134,14 +134,14 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
   }, []);
 
   /** Só evento de referência (sem status) abre a escolha; o de pessoa com status segue sem ação aqui. */
-  function openStatusPicker(card: EventCardDto, anchor: HTMLElement) {
+  function openStatusPicker(card: TaskCardDto, anchor: HTMLElement) {
     if (card.status !== undefined) return;
     setStatusAnchor(anchor);
     setStatusCard(card);
   }
 
   /** Grava o status com a revisão que a agenda leu. Revisão velha avisa e recarrega; o recarregamento traz a linha nova. */
-  async function changeReferenceStatus(card: EventCardDto, status: HumanEventStatus) {
+  async function changeReferenceStatus(card: TaskCardDto, status: HumanTaskStatus) {
     setStatusCard(null);
     setStatusNote(null);
     try {

@@ -34,7 +34,7 @@ const startRequestBody = z.object({
 const startEditBody = z.object({
   userId,
   text,
-  entityType: z.enum(["event", "artifact", "food_artifact", "sleep_artifact", "training_artifact", "skill_artifact", "agent_artifact"]),
+  entityType: z.enum(["task", "artifact", "food_artifact", "sleep_artifact", "training_artifact", "skill_artifact", "agent_artifact"]),
   entityId: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),
 });
 

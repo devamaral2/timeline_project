@@ -1,4 +1,4 @@
-import type { EventArtifactDto, EventDto, EventPriority, EventRecurrenceDto, HumanEventStatus } from "@repo/contracts";
+import type { TaskArtifactDto, TaskDto, TaskPriority, TaskRecurrenceDto, HumanTaskStatus } from "@repo/contracts";
 import { dayKeyOf, formatTime, shortDate, weekday, zonedDayStart } from "@repo/timeline";
 import type { EditEventInput } from "@/lib/api/events";
 import { recurrenceRuleLabel } from "@/lib/events/card-text";
@@ -10,10 +10,10 @@ import { recurrenceRuleLabel } from "@/lib/events/card-text";
  */
 
 /** A ordem dos status no seletor, como no quadro Status do canvas. */
-const HUMAN_STATUS_ORDER: readonly HumanEventStatus[] = ["todo", "toDefine", "doing", "inHold", "done", "cancel", "missed"];
+const HUMAN_STATUS_ORDER: readonly HumanTaskStatus[] = ["todo", "toDefine", "doing", "inHold", "done", "cancel", "missed"];
 
 /** Os status que o seletor oferece. "Não realizado" é marca do evento comum: o evento longo nunca a recebe. */
-export function humanStatusOptions(event: Pick<EventDto, "longRunning">): HumanEventStatus[] {
+export function humanStatusOptions(event: Pick<TaskDto, "longRunning">): HumanTaskStatus[] {
   return HUMAN_STATUS_ORDER.filter((status) => !(event.longRunning && status === "missed"));
 }
 
@@ -22,14 +22,14 @@ export function humanStatusOptions(event: Pick<EventDto, "longRunning">): HumanE
  * atual, e tirar de `done` envia `finishedAt` nulo: a API não grava a conclusão
  * sozinha (ver api-rotas). A revisão é a que a tela leu.
  */
-export function statusPatch(event: Pick<EventDto, "revision" | "status">, status: HumanEventStatus | null, now: Date): EditEventInput {
+export function statusPatch(event: Pick<TaskDto, "revision" | "status">, status: HumanTaskStatus | null, now: Date): EditEventInput {
   const patch: EditEventInput = { expectedRevision: event.revision, status };
   if (status === "done") patch.finishedAt = now.toISOString();
   else if (event.status === "done") patch.finishedAt = null;
   return patch;
 }
 
-export function priorityPatch(event: Pick<EventDto, "revision">, priority: EventPriority): EditEventInput {
+export function priorityPatch(event: Pick<TaskDto, "revision">, priority: TaskPriority): EditEventInput {
   return { expectedRevision: event.revision, priority };
 }
 
@@ -55,7 +55,7 @@ export function momentLabel(instant: string): string {
 }
 
 /** A regra da série e, embaixo, desde quando vale, se tem fim e se a ocorrência ainda a segue. */
-export function recurrenceLines(recurrence: EventRecurrenceDto): { rule: string; detail: string } {
+export function recurrenceLines(recurrence: TaskRecurrenceDto): { rule: string; detail: string } {
   const since = shortDate(recurrence.rule.startsOn).toLowerCase();
   const end = recurrence.rule.endsOn ? `até ${shortDate(recurrence.rule.endsOn).toLowerCase()}` : "sem fim";
   const follows = recurrence.detached ? "esta ocorrência não segue a série" : "esta ocorrência segue a série";
@@ -66,7 +66,7 @@ export function recurrenceLines(recurrence: EventRecurrenceDto): { rule: string;
  * O total de calorias da refeição: a soma de `totals.totalCaloriesKcal` dos alimentos ligados ao evento, cópias
  * incluídas. O que não é alimento não entra; sem alimento, zero.
  */
-export function mealCaloriesKcal(links: readonly EventArtifactDto[]): number {
+export function mealCaloriesKcal(links: readonly TaskArtifactDto[]): number {
   return links.reduce((sum, link) => (link.artifact.type === "food" ? sum + link.artifact.data.totals.totalCaloriesKcal : sum), 0);
 }
 

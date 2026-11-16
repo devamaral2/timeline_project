@@ -1,6 +1,6 @@
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
 import type { EventCardQuery, TrackedQueryParams } from "../../domain/ports";
-import type { EventCardDto } from "@repo/contracts";
+import type { TaskCardDto } from "@repo/contracts";
 import { toEventCardDto } from "../../api-core/dto/event.dto";
 import {
   NO_RECURRENCES,
@@ -19,7 +19,7 @@ export class ListTrackedEventsUseCase {
     private readonly recurrences: RecurrenceMaterializer = NO_RECURRENCES,
   ) {}
 
-  async execute(input: ListTrackedEventsFilter | undefined, actor: AuthenticatedUser): Promise<EventCardDto[]> {
+  async execute(input: ListTrackedEventsFilter | undefined, actor: AuthenticatedUser): Promise<TaskCardDto[]> {
     await this.recurrences.materialize(actor.userId, input?.to);
     const cards = await this.eventCardQuery.tracked({ ...input, userId: actor.userId });
     return cards.map(toEventCardDto);

@@ -1,11 +1,11 @@
-import type { EventDto, RequestDto } from "@repo/contracts";
+import type { TaskDto, RequestDto } from "@repo/contracts";
 import { Bot } from "lucide-react";
 import { EventKindMark } from "@/components/events/event-kind-mark";
 import { EventStatusGlyph, eventStatusName } from "@/components/events/event-status-glyph";
 import styles from "./event-detail.module.css";
 
 interface AgentEventHeaderProps {
-  event: EventDto;
+  event: TaskDto;
   request: RequestDto;
 }
 

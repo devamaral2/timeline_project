@@ -13,7 +13,7 @@ export const startEditRequestBody = z.object({
   userId: z.string().min(1).max(128),
   text: agentTextSchema,
   entityType: z.enum([
-    "event", "artifact", "food_artifact", "sleep_artifact", "training_artifact", "skill_artifact", "agent_artifact",
+    "task", "artifact", "food_artifact", "sleep_artifact", "training_artifact", "skill_artifact", "agent_artifact",
   ]),
   entityId: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),
 });

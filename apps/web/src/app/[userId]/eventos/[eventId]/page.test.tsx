@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import type { EventDto } from "@repo/contracts";
+import type { TaskDto } from "@repo/contracts";
 import { type FakeApi, createFakeApi } from "@/test/fake-api";
 import { eventFixture, eventsArea } from "@/test/fake-api/events";
 import { requestFixture, requestsArea } from "@/test/fake-api/requests";
@@ -19,7 +19,7 @@ const { default: EventPage } = await import("./page");
 const NAME = "Treino de força";
 
 /** Um treino de hoje, em curso, com lembretes, tags e descrição. */
-function training(overrides: Partial<EventDto> = {}): EventDto {
+function training(overrides: Partial<TaskDto> = {}): TaskDto {
   return eventFixture({
     id: "ev-1",
     name: NAME,
@@ -37,7 +37,7 @@ function training(overrides: Partial<EventDto> = {}): EventDto {
 
 let api: FakeApi;
 
-function install(events: EventDto[]) {
+function install(events: TaskDto[]) {
   api = createFakeApi({ areas: [eventsArea], seed: { events } });
   net.authedFetch.mockImplementation(api.authedFetch);
 }
@@ -190,7 +190,7 @@ test("revisão velha: relê o evento e avisa, sem gravar a troca", async () => {
   renderPage();
   await screen.findByRole("heading", { level: 1, name: NAME });
   // Outra aba muda o evento antes desta troca: a revisão lida (1) já não vale.
-  api.store.table<EventDto>("events").set("ev-1", { ...training(), name: NAME, revision: 2, priority: "high" });
+  api.store.table<TaskDto>("events").set("ev-1", { ...training(), name: NAME, revision: 2, priority: "high" });
   fireEvent.click(screen.getByRole("button", { name: `Prioridade: Média. Trocar prioridade de ${NAME}` }));
   fireEvent.click(within(screen.getByRole("listbox", { name: "Prioridade do evento" })).getByRole("option", { name: "Baixa" }));
 

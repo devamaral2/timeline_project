@@ -33,7 +33,7 @@ const link = (artifactId: string, relation: ArtifactLink["relation"] = "uses"): 
   fromRecurrence: false,
 });
 
-const batchOf = (overrides: Partial<EntityBatch>): EntityBatch => ({ userId: USER, events: [], artifacts: [], ...overrides });
+const batchOf = (overrides: Partial<EntityBatch>): EntityBatch => ({ userId: USER, tasks: [], artifacts: [], ...overrides });
 
 describe("PostgresEntityBatchWriter", () => {
   let ctx: PostgresTestContext;
@@ -77,7 +77,7 @@ describe("PostgresEntityBatchWriter", () => {
             { op: "create", entity: note },
             { op: "update", entity: existing.revise({ data: { body: "versao final" } }), expectedRevision: 1 },
           ],
-          events: [
+          tasks: [
             { op: "update", entity: origin.revise({ name: "Semana planejada" }), expectedRevision: 1 },
             { op: "create", entity: created },
           ],
@@ -100,7 +100,7 @@ describe("PostgresEntityBatchWriter", () => {
 
       await writer.commit(
         batchOf({
-          events: [{ op: "delete", id: event.id, expectedRevision: 1 }],
+          tasks: [{ op: "delete", id: event.id, expectedRevision: 1 }],
           artifacts: [{ op: "delete", id: note.id, expectedRevision: 1 }],
         }),
       );
@@ -124,11 +124,11 @@ describe("PostgresEntityBatchWriter", () => {
       await artifacts.update(staleNote.revise({ data: { body: "ja mudou" } }), USER, 1);
 
       const conflicts: Array<[string, Partial<EntityBatch>]> = [
-        ["evento desatualizado", { events: [{ op: "update", entity: edited.revise({ name: "Atrasado" }), expectedRevision: 1 }] }],
-        ["evento desatualizado, ao apagar", { events: [{ op: "delete", id: edited.id, expectedRevision: 1 }] }],
-        ["evento de outro usuario", { events: [{ op: "update", entity: foreign.revise({ name: "Invadido" }), expectedRevision: 1 }] }],
-        ["evento de outro usuario, ao apagar", { events: [{ op: "delete", id: foreign.id, expectedRevision: 1 }] }],
-        ["evento apagado", { events: [{ op: "update", entity: removed.revise({ name: "Voltou" }), expectedRevision: 1 }] }],
+        ["evento desatualizado", { tasks: [{ op: "update", entity: edited.revise({ name: "Atrasado" }), expectedRevision: 1 }] }],
+        ["evento desatualizado, ao apagar", { tasks: [{ op: "delete", id: edited.id, expectedRevision: 1 }] }],
+        ["evento de outro usuario", { tasks: [{ op: "update", entity: foreign.revise({ name: "Invadido" }), expectedRevision: 1 }] }],
+        ["evento de outro usuario, ao apagar", { tasks: [{ op: "delete", id: foreign.id, expectedRevision: 1 }] }],
+        ["evento apagado", { tasks: [{ op: "update", entity: removed.revise({ name: "Voltou" }), expectedRevision: 1 }] }],
         ["artefato desatualizado", { artifacts: [{ op: "update", entity: staleNote.revise({ data: { body: "atrasado" } }), expectedRevision: 1 }] }],
         ["artefato de outro usuario", { artifacts: [{ op: "delete", id: foreignNote.id, expectedRevision: 1 }] }],
       ];
@@ -140,10 +140,10 @@ describe("PostgresEntityBatchWriter", () => {
           writer.commit(
             batchOf({
               artifacts: [{ op: "create", entity: note }, ...(conflict.artifacts ?? [])],
-              events: [
+              tasks: [
                 { op: "create", entity: created },
                 { op: "update", entity: mine.revise({ name: "Nao deveria mudar" }), expectedRevision: 1 },
-                ...(conflict.events ?? []),
+                ...(conflict.tasks ?? []),
               ],
             }),
           ),
@@ -168,7 +168,7 @@ describe("PostgresEntityBatchWriter", () => {
         writer.commit(
           batchOf({
             artifacts: [{ op: "create", entity: note }],
-            events: [{ op: "create", entity: trackedEvent(USER, "Novo", { artifactLinks: [link(removed.id)] }) }],
+            tasks: [{ op: "create", entity: trackedEvent(USER, "Novo", { artifactLinks: [link(removed.id)] }) }],
           }),
         ),
       ).rejects.toThrow(/Related artifacts not found/);
@@ -186,7 +186,7 @@ describe("PostgresEntityBatchWriter", () => {
         batchOf({
           artifacts: [{ op: "create", entity: copy }],
           derivations: [{ originalId: original.id, copyId: copy.id }],
-          events: [{ op: "create", entity: meal }],
+          tasks: [{ op: "create", entity: meal }],
         }),
       );
 
@@ -263,7 +263,7 @@ describe("PostgresEntityBatchWriter", () => {
 
       await writer.commit(
         batchOf({
-          events: [fresh, freshToo].map((entity) => ({ op: "create" as const, entity })),
+          tasks: [fresh, freshToo].map((entity) => ({ op: "create" as const, entity })),
           sequence: sequence([existing.id, fresh.id], [fresh.id, freshToo.id]),
         }),
       );
@@ -288,7 +288,7 @@ describe("PostgresEntityBatchWriter", () => {
 
       await writer.commit(
         batchOf({
-          events: [{ op: "update", entity: a.revise({ name: "A editado" }), expectedRevision: 1 }],
+          tasks: [{ op: "update", entity: a.revise({ name: "A editado" }), expectedRevision: 1 }],
           sequence: sequence([a.id, b.id]),
         }),
       );
@@ -323,7 +323,7 @@ describe("PostgresEntityBatchWriter", () => {
       await expect(
         writer.commit(
           batchOf({
-            events: [a, b].map((entity) => ({ op: "create" as const, entity })),
+            tasks: [a, b].map((entity) => ({ op: "create" as const, entity })),
             sequence: sequence([a.id, b.id], [b.id, a.id]),
           }),
         ),
@@ -353,7 +353,7 @@ describe("PostgresEntityBatchWriter", () => {
           writer.commit(
             batchOf({
               artifacts: [{ op: "create", entity: note }],
-              events: [{ op: "create", entity: created }],
+              tasks: [{ op: "create", entity: created }],
               sequence: sequence(pair),
             }),
           ),
@@ -371,7 +371,7 @@ describe("PostgresEntityBatchWriter", () => {
       const b = await saved(trackedEvent(USER, "B"));
       await writer.commit(batchOf({ sequence: sequence([a.id, b.id]) }));
 
-      await writer.commit(batchOf({ events: [{ op: "delete", id: a.id, expectedRevision: 1 }] }));
+      await writer.commit(batchOf({ tasks: [{ op: "delete", id: a.id, expectedRevision: 1 }] }));
 
       expect((await events.findById(b.id))?.previousIds).toEqual([]);
       expect(await countRows(ctx.pool, "event_event_relation", "relation = 'precedes'")).toBe(1);
@@ -387,7 +387,7 @@ describe("PostgresEntityBatchWriter", () => {
 
       await writer.commit(
         batchOf({
-          events: [{ op: "create", entity: created }],
+          tasks: [{ op: "create", entity: created }],
           afterWrite: async (transaction) => {
             const tx = transaction as Tx;
             seenInsideTransaction = (await tx.execute(sql`SELECT 1 FROM events WHERE id = ${created.id}`)).rows.length;
@@ -413,7 +413,7 @@ describe("PostgresEntityBatchWriter", () => {
         writer.commit(
           batchOf({
             artifacts: [{ op: "create", entity: note }],
-            events: [
+            tasks: [
               { op: "create", entity: trackedEvent(USER, "Nasceria com o lote") },
               { op: "delete", id: origin.id, expectedRevision: 1 },
             ],
@@ -448,7 +448,7 @@ describe("PostgresEntityBatchWriter", () => {
       const recurrence = dailyRecurrence(USER, DAYS[0]);
       const first = occurrenceOf(recurrence, DAYS[0]);
 
-      await writer.commit(batchOf({ recurrences: [recurrence], events: [{ op: "create", entity: first }] }));
+      await writer.commit(batchOf({ recurrences: [recurrence], tasks: [{ op: "create", entity: first }] }));
 
       expect(await recurrences.findById(recurrence.id)).toMatchObject({ revision: 1, materializedThrough: undefined });
       expect((await events.findById(first.id))?.occurrence).toEqual({
@@ -465,7 +465,7 @@ describe("PostgresEntityBatchWriter", () => {
         writer.commit(
           batchOf({
             recurrences: [recurrence],
-            events: [occurrenceOf(recurrence, DAYS[0]), occurrenceOf(recurrence, DAYS[0])].map((entity) => ({
+            tasks: [occurrenceOf(recurrence, DAYS[0]), occurrenceOf(recurrence, DAYS[0])].map((entity) => ({
               op: "create" as const,
               entity,
             })),
@@ -485,7 +485,7 @@ describe("PostgresEntityBatchWriter", () => {
       await writer.commit(
         batchOf({
           recurrenceChanges: [{ op: "update", recurrence: revised, expectedRevision: 1, fromDay: DAYS[1] }],
-          events: [{ op: "create", entity: replacement }],
+          tasks: [{ op: "create", entity: replacement }],
         }),
       );
 
@@ -554,7 +554,7 @@ describe("PostgresEntityBatchWriter", () => {
       const { store, current } = await runningJob();
       const created = trackedEvent(USER, "Criado pelo job");
 
-      await jobContext.run(current, () => writer.commit(batchOf({ events: [{ op: "create", entity: created }] })));
+      await jobContext.run(current, () => writer.commit(batchOf({ tasks: [{ op: "create", entity: created }] })));
 
       expect(await store.get(current.id)).toMatchObject({ status: "succeeded", error: null });
       expect(current.completed).toBe(true);
@@ -579,7 +579,7 @@ describe("PostgresEntityBatchWriter", () => {
             writer.commit(
               batchOf({
                 artifacts: [{ op: "create", entity: note }],
-                events: [{ op: "update", entity: origin.revise({ name: "Nao deveria mudar" }), expectedRevision: 1 }],
+                tasks: [{ op: "update", entity: origin.revise({ name: "Nao deveria mudar" }), expectedRevision: 1 }],
               }),
             ),
           ),
@@ -595,7 +595,7 @@ describe("PostgresEntityBatchWriter", () => {
     test("fora de um job, o lote nao toca na fila", async () => {
       const { store, current } = await runningJob();
 
-      await writer.commit(batchOf({ events: [{ op: "create", entity: trackedEvent(USER, "Sem job") }] }));
+      await writer.commit(batchOf({ tasks: [{ op: "create", entity: trackedEvent(USER, "Sem job") }] }));
 
       expect(await store.get(current.id)).toMatchObject({ status: "running" });
     });

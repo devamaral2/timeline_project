@@ -50,9 +50,9 @@ test("returns the artifact of the actor with the events it appears in, oldest fi
     derived: false,
     revision: 1,
   });
-  expect(result?.events).toEqual([
+  expect(result?.tasks).toEqual([
     {
-      eventId: "first",
+      taskId: "first",
       relation: "creates",
       name: "first",
       actor: "human",
@@ -60,16 +60,16 @@ test("returns the artifact of the actor with the events it appears in, oldest fi
       startedAt: "2026-08-17T15:00:00.000Z",
       estimatedFinishAt: "2026-08-17T16:00:00.000Z",
     },
-    { eventId: "later", relation: "uses", name: "later", actor: "human", kind: "common", startedAt: "2026-08-18T15:00:00.000Z" },
-    { eventId: "request", relation: "updates", name: "request", actor: "agent", kind: "request", startedAt: "2026-08-19T15:00:00.000Z" },
-    { eventId: "undated", relation: "uses", name: "undated", actor: "human", kind: "common" },
+    { taskId: "later", relation: "uses", name: "later", actor: "human", kind: "common", startedAt: "2026-08-18T15:00:00.000Z" },
+    { taskId: "request", relation: "updates", name: "request", actor: "agent", kind: "request", startedAt: "2026-08-19T15:00:00.000Z" },
+    { taskId: "undated", relation: "uses", name: "undated", actor: "human", kind: "common" },
   ]);
 });
 
 test("a loose artifact has an empty list of events", async () => {
   const note = Artifact.create({ id: "note-1", userId: actor.userId, data: { body: "solta" } });
 
-  expect((await useCaseOf([note]).execute({ artifactId: "note-1" }, actor))?.events).toEqual([]);
+  expect((await useCaseOf([note]).execute({ artifactId: "note-1" }, actor))?.tasks).toEqual([]);
 });
 
 test("returns null when the artifact does not exist", async () => {
@@ -89,7 +89,7 @@ test("a global artifact is read by anyone, without the events of the users that 
   const result = await useCase.execute({ artifactId: "note-1" }, actor);
 
   expect(result).toMatchObject({ id: "note-1", name: "Banana", global: true, data: { totals } });
-  expect(result?.events).toEqual([]);
+  expect(result?.tasks).toEqual([]);
 });
 
 test("a derived copy is readable by its owner and says so", async () => {

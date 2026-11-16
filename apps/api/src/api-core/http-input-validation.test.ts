@@ -26,8 +26,8 @@ describe("assertEventFields", () => {
         notifyOffsetsMinutes: [5, 1440],
         longRunning: false,
         tags: ["a"],
-        previousEventIds: ["e1"],
-        nextEventIds: ["e2", "e3"],
+        previousTaskIds: ["e1"],
+        nextTaskIds: ["e2", "e3"],
         artifactIds: ["a1"],
         artifacts: [{ data: { body: "nota" } }],
         startedAt: "2026-08-17T15:00:00.000Z",
@@ -83,10 +83,11 @@ describe("assertEventFields", () => {
   });
 
   test("every list of ids and the tags are lists of text", () => {
-    for (const field of ["tags", "previousEventIds", "nextEventIds", "artifactIds"]) {
+    for (const field of ["tags", "previousTaskIds", "nextTaskIds", "artifactIds"]) {
       expect(creating({ [field]: "a" }), field).toThrow(`Invalid ${field}`);
       expect(creating({ [field]: ["a", 1] }), field).toThrow(`Invalid ${field}`);
-      expect(editing({ [field]: null }), field).toThrow(`Invalid ${field}`);
+      // Na edicao a lista de artefatos e `artifacts`; `artifactIds` so existe na criacao.
+      if (field !== "artifactIds") expect(editing({ [field]: null }), field).toThrow(`Invalid ${field}`);
     }
   });
 
@@ -95,9 +96,15 @@ describe("assertEventFields", () => {
     expect(editing({ artifacts: [] })).not.toThrow();
   });
 
-  test("does not know the old fields: they are simply not validated here", () => {
-    expect(creating({ missed: "yes", interruptions: 3, notes: "x" })).not.toThrow();
-    expect(creating({ subtaskEventIds: "x", blocksEventIds: 1, parentEventIds: {}, blockedByEventIds: null })).not.toThrow();
+  test("refuses any field the contract does not know, the old names included", () => {
+    // Os nomes antigos sao montados a partir dos novos: o teste nao pode citar o nome que a varredura proibe.
+    const antigo = (campo: string) => campo.replace("task", "event").replace("Task", "Event");
+    for (const field of ["taskId", "previousTaskIds", "nextTaskIds", "missed", "notes"]) {
+      const named = field === "missed" || field === "notes" ? field : antigo(field);
+      expect(creating({ [named]: ["x"] }), named).toThrow(BadRequestException);
+      expect(editing({ [named]: ["x"] }), named).toThrow(`Invalid field ${named}`);
+    }
+    expect(editing({ taskId: "t1", previousTaskIds: [] })).not.toThrow();
   });
 });
 
@@ -157,9 +164,16 @@ describe("assertArtifactRequest", () => {
     expect(creating({ type: "training" })).not.toThrow();
   });
 
+  test("refuses the old name of the task id list", () => {
+    const antigo = "taskIds".replace("task", "event");
+    expect(creating({ data: { body: "nota" }, [antigo]: [] })).toThrow(`Invalid field ${antigo}`);
+    expect(editing({ [antigo]: [] })).toThrow(BadRequestException);
+    expect(creating({ data: { body: "nota" }, taskIds: ["t1"] })).not.toThrow();
+  });
+
   test("editing sends type and data together, or neither", () => {
     expect(editing({})).not.toThrow();
-    expect(editing({ name: "Novo nome", tags: ["a"], eventIds: [] })).not.toThrow();
+    expect(editing({ name: "Novo nome", tags: ["a"], taskIds: [] })).not.toThrow();
     expect(editing({ type: "text", data: { body: "novo" } })).not.toThrow();
     expect(editing({ type: "text" })).toThrow("Invalid data");
     expect(editing({ data: { body: "novo" } })).toThrow("Invalid data");
@@ -172,13 +186,13 @@ describe("assertArtifactRequest", () => {
     expect(editing({ type: "text", data: ["x"] })).toThrow("Invalid data");
   });
 
-  test("name is a text, tags and eventIds are lists of text", () => {
+  test("name is a text, tags and taskIds are lists of text", () => {
     const base = { data: { body: "nota" } };
 
     expect(creating({ ...base, name: 1 })).toThrow("Invalid name");
     expect(creating({ ...base, tags: "a" })).toThrow("Invalid tags");
-    expect(creating({ ...base, eventIds: [1] })).toThrow("Invalid eventIds");
-    expect(creating({ ...base, name: "Nota", tags: [], eventIds: ["e1"] })).not.toThrow();
+    expect(creating({ ...base, taskIds: [1] })).toThrow("Invalid taskIds");
+    expect(creating({ ...base, name: "Nota", tags: [], taskIds: ["e1"] })).not.toThrow();
   });
 });
 

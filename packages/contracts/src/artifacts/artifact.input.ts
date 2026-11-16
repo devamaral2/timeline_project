@@ -32,12 +32,12 @@ export type ArtifactDataInput =
   | { type: "training"; data: TrainingData };
 
 /**
- * `POST /api/artifacts`: o artefato e os eventos em que ele ja nasce
- * aparecendo. Quem registra o artefato e o evento, entao aparecer num evento
+ * `POST /api/artifacts`: o artefato e as tarefas em que ele ja nasce
+ * aparecendo. Quem registra o artefato e a tarefa, entao aparecer numa tarefa
  * conta como edita-lo.
  */
 export type CreateArtifactRequest = CreateArtifactInput & {
-  eventIds?: string[];
+  taskIds?: string[];
 };
 
 interface UpdateArtifactBase {
@@ -46,11 +46,11 @@ interface UpdateArtifactBase {
   name?: string;
   tags?: string[];
   /**
-   * Os eventos em que o artefato aparece, a lista completa: quem sai da lista
+   * As tarefas em que o artefato aparece, a lista completa: quem sai da lista
    * perde a relacao (o artefato continua existindo), quem entra o recebe no
    * fim. Ausente, as relacoes ficam como estao.
    */
-  eventIds?: string[];
+  taskIds?: string[];
 }
 
 /** `PATCH /api/artifacts/:artifactId`. Com `type`, o `data` e o novo conteudo inteiro. */

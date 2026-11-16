@@ -3,12 +3,12 @@
  * sempre com `import type`: o JS emitido aqui e vazio de proposito, para que
  * nenhum cliente carregue classe de dominio.
  */
-export type * from "./events/event-types";
-export type * from "./events/event.dto";
-export type * from "./events/event.input";
-export type * from "./events/tag-suggestion.dto";
-export type * from "./events/place-suggestion.dto";
-export type * from "./events/notification-offset-minutes";
+export type * from "./tasks/task-types";
+export type * from "./tasks/task.dto";
+export type * from "./tasks/task.input";
+export type * from "./tasks/tag-suggestion.dto";
+export type * from "./tasks/place-suggestion.dto";
+export type * from "./tasks/notification-offset-minutes";
 export type * from "./artifacts/artifact.dto";
 export type * from "./artifacts/artifact.input";
 export type * from "./artifacts/types/agent-file-data";

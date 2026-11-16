@@ -23,7 +23,7 @@ const ENTITY_ICONS: Record<AgentChatEntityRef["kind"], typeof ListChecks> = {
 export function requestEntityRef(entity: RequestEntityDto): AgentChatEntityRef {
   const change = entity.operation === "create" ? "created" : entity.operation === "delete" ? "deleted" : "updated";
   return {
-    kind: entity.kind === "event" ? "event" : "note",
+    kind: entity.kind === "task" ? "event" : "note",
     id: entity.id,
     change,
     label: entity.name,

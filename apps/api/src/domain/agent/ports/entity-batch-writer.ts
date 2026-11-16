@@ -28,14 +28,14 @@ export interface SequenceChange {
 
 export interface EntityBatch {
   userId: string;
-  events: StagedChange<Event>[];
-  /** Entram antes dos eventos: as relacoes de um evento apontam para eles. */
+  tasks: StagedChange<Event>[];
+  /** Entram antes das tarefas: as relacoes de uma tarefa apontam para eles. */
   artifacts: StagedChange<Artifact>[];
   /** De qual original saiu cada copia nova do lote. */
   derivations?: readonly { originalId: string; copyId: string }[];
   /**
-   * A sequencia entre eventos. Entra depois de todos os eventos do lote, para
-   * que uma ponta possa ser um evento novo do mesmo lote.
+   * A sequencia entre tarefas. Entra depois de todas as tarefas do lote, para
+   * que uma ponta possa ser uma tarefa nova do mesmo lote.
    */
   sequence?: readonly SequenceChange[];
   /**

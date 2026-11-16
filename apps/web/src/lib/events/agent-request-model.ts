@@ -1,4 +1,4 @@
-import type { AgentEventStatus, AgentTraceEntryDto, EventCardDto, RequestDto, RequestEntityDto } from "@repo/contracts";
+import type { AgentTaskStatus, AgentTraceEntryDto, TaskCardDto, RequestDto, RequestEntityDto } from "@repo/contracts";
 import { artifactTypeLabel } from "@/lib/artifacts/artifact-model";
 
 /**
@@ -6,13 +6,13 @@ import { artifactTypeLabel } from "@/lib/artifacts/artifact-model";
  * contagem de passos feitos, o texto das entradas e o que o pedido produziu. Funções puras; a tela só as chama.
  */
 
-const OPEN_STATUSES: readonly AgentEventStatus[] = ["queued", "running", "waiting"];
+const OPEN_STATUSES: readonly AgentTaskStatus[] = ["queued", "running", "waiting"];
 
 /** De quanto em quanto tempo uma tela se relê enquanto há pedido de agente em aberto (detalhe e listas). */
 export const AGENT_REQUEST_POLL_MS = 3000;
 
 /** Pedido em fila, executando ou aguardando o usuário: a tela continua relendo. */
-export function isOpenRequest(status: AgentEventStatus): boolean {
+export function isOpenRequest(status: AgentTaskStatus): boolean {
   return OPEN_STATUSES.includes(status);
 }
 
@@ -20,8 +20,8 @@ export function isOpenRequest(status: AgentEventStatus): boolean {
  * Há um evento de agente em aberto nesta lista (fila, execução ou espera)? Só ele faz a lista se reler sozinha.
  * Evento de pessoa nunca conta, mesmo com status parecido.
  */
-export function hasOpenAgentEvent(cards: readonly EventCardDto[]): boolean {
-  return cards.some((card) => card.actor === "agent" && card.status !== undefined && isOpenRequest(card.status as AgentEventStatus));
+export function hasOpenAgentEvent(cards: readonly TaskCardDto[]): boolean {
+  return cards.some((card) => card.actor === "agent" && card.status !== undefined && isOpenRequest(card.status as AgentTaskStatus));
 }
 
 /** Quantos passos terminaram e quantos há no total. */
@@ -53,11 +53,11 @@ export function entityOperationLabel(operation: RequestEntityDto["operation"]): 
 
 /** "Evento", o tipo do artefato ("Texto", "Alimento"…) ou "Nota" quando o contrato não diz o tipo. */
 export function entityKindLabel(entity: RequestEntityDto): string {
-  if (entity.kind === "event") return "Evento";
+  if (entity.kind === "task") return "Evento";
   return entity.artifactType ? artifactTypeLabel(entity.artifactType) : "Nota";
 }
 
 /** Para onde leva a entidade: o detalhe do evento ou o da nota (aba Notas). */
 export function entityHref(userId: string, entity: RequestEntityDto): string {
-  return entity.kind === "event" ? `/${userId}/eventos/${entity.id}` : `/${userId}/notas/${entity.id}`;
+  return entity.kind === "task" ? `/${userId}/eventos/${entity.id}` : `/${userId}/notas/${entity.id}`;
 }

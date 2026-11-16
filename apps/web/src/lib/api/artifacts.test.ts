@@ -84,7 +84,7 @@ describe("lista", () => {
 
     expect(api.calls[0].query).toEqual({ scope: "global", type: "food" });
     expect(globals.map((artifact) => artifact.id)).toEqual(["art-arroz", "art-feijao"]);
-    expect(globals.every((artifact) => artifact.events?.length === 0)).toBe(true);
+    expect(globals.every((artifact) => artifact.tasks?.length === 0)).toBe(true);
   });
 
   test("scope=global sem tipo é entrada inválida", async () => {
@@ -103,9 +103,9 @@ describe("leitura", () => {
 
     const artifact = await getArtifact("art-1");
 
-    expect(artifact.events).toEqual([
+    expect(artifact.tasks).toEqual([
       {
-        eventId: "ev-1",
+        taskId: "ev-1",
         relation: "uses",
         name: "Almoço de domingo",
         actor: "human",
@@ -166,17 +166,17 @@ describe("criação", () => {
     install({ events: [eventFixture({ id: "ev-1", name: "Almoço", revision: 1 })] });
 
     const artifactId = await createArtifact(
-      { type: "food", data: { inputText: "Arroz" }, eventIds: ["ev-1"] },
+      { type: "food", data: { inputText: "Arroz" }, taskIds: ["ev-1"] },
       { idempotencyKey: newIdempotencyKey() },
     );
 
-    expect((await getArtifact(artifactId)).events).toEqual([expect.objectContaining({ eventId: "ev-1", relation: "creates" })]);
+    expect((await getArtifact(artifactId)).tasks).toEqual([expect.objectContaining({ taskId: "ev-1", relation: "creates" })]);
     expect(api.store.table<{ revision: number }>("events").get("ev-1")?.revision).toBe(2);
   });
 
   test("evento citado que não existe é não encontrado, e nada é criado", async () => {
     await expect(
-      createArtifact({ type: "text", data: { body: "Nota" }, eventIds: ["ev-404"] }, { idempotencyKey: newIdempotencyKey() }),
+      createArtifact({ type: "text", data: { body: "Nota" }, taskIds: ["ev-404"] }, { idempotencyKey: newIdempotencyKey() }),
     ).rejects.toMatchObject({ kind: "not_found" });
     expect(api.store.table("artifacts").size).toBe(0);
   });
@@ -220,9 +220,9 @@ describe("edição", () => {
       ],
     });
 
-    await editArtifact("art-1", { expectedRevision: 1, eventIds: ["ev-2"] });
+    await editArtifact("art-1", { expectedRevision: 1, taskIds: ["ev-2"] });
 
-    expect((await getArtifact("art-1")).events).toEqual([expect.objectContaining({ eventId: "ev-2", relation: "uses" })]);
+    expect((await getArtifact("art-1")).tasks).toEqual([expect.objectContaining({ taskId: "ev-2", relation: "uses" })]);
     expect(api.store.table<{ revision: number }>("events").get("ev-1")?.revision).toBe(2);
     expect(api.store.table<{ revision: number }>("events").get("ev-2")?.revision).toBe(2);
   });
@@ -249,7 +249,7 @@ describe("artefato global", () => {
 
     await expect(editArtifact("art-global", { expectedRevision: 1, name: "Outro" })).rejects.toMatchObject({ kind: "forbidden" });
     await expect(deleteArtifact("art-global")).rejects.toMatchObject({ kind: "forbidden" });
-    expect(await getArtifact("art-global")).toMatchObject({ name: "Feijão", global: true, events: [] });
+    expect(await getArtifact("art-global")).toMatchObject({ name: "Feijão", global: true, tasks: [] });
   });
 
   test("a erro de permissão é ApiRequestError, a que a tela distingue", async () => {

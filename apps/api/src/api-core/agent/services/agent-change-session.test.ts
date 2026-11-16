@@ -28,7 +28,7 @@ describe("sequenceEvents", () => {
     expect(result).toEqual({ ok: true, kind: "event", op: "update", id: "b" });
     const batch = session.toBatch();
     expect(batch.sequence).toEqual([{ op: "add", fromId: "a", toId: "b" }]);
-    expect(batch.events).toEqual([]);
+    expect(batch.tasks).toEqual([]);
   });
 
   test("an agent event can be on either end of the sequence", async () => {
@@ -42,7 +42,7 @@ describe("sequenceEvents", () => {
       { op: "add", fromId: "request", toId: "a" },
       { op: "add", fromId: "a", toId: "request" },
     ]);
-    expect(session.toBatch().events).toEqual([]);
+    expect(session.toBatch().tasks).toEqual([]);
   });
 
   test("repeating the same link does not stage the edge twice", async () => {
@@ -63,7 +63,7 @@ describe("sequenceEvents", () => {
     expect(await session.sequenceEvents("a", created.id)).toMatchObject({ ok: true, id: created.id });
 
     const batch = session.toBatch();
-    expect(batch.events.map((change) => change.op)).toEqual(["create"]);
+    expect(batch.tasks.map((change) => change.op)).toEqual(["create"]);
     expect(batch.sequence).toEqual([{ op: "add", fromId: "a", toId: created.id }]);
   });
 

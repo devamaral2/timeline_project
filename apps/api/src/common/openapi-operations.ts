@@ -3,16 +3,16 @@ import {
   artifactSchema,
   createArtifactRequestSchema,
   createArtifactResponseSchema,
-  createEventInputSchema,
+  createTaskInputSchema,
   createRecurrenceInputSchema,
-  eventCardSchema,
-  eventSchema,
+  taskCardSchema,
+  taskSchema,
   recurrenceSchema,
   requestSchema,
   placeSuggestionSchema,
   tagSuggestionSchema,
   updateArtifactRequestSchema,
-  updateEventInputSchema,
+  updateTaskInputSchema,
   updateRecurrenceInputSchema,
 } from "@repo/contracts/schemas";
 import { z } from "zod";
@@ -38,12 +38,12 @@ const agentFileSchema = z.object({
 
 /** Os formatos nomeados do documento (`components.schemas`). */
 export const documentedSchemas = {
-  EventCard: eventCardSchema,
+  EventCard: taskCardSchema,
   AgendaPage: agendaPageSchema,
-  Event: eventSchema,
-  CreateEventInput: createEventInputSchema,
-  UpdateEventInput: updateEventInputSchema.omit({ eventId: true }),
-  CreatedEvent: z.object({ eventId: z.string() }),
+  Event: taskSchema,
+  CreateEventInput: createTaskInputSchema,
+  UpdateEventInput: updateTaskInputSchema.omit({ taskId: true }),
+  CreatedEvent: z.object({ taskId: z.string() }),
   TagSuggestion: tagSuggestionSchema,
   PlaceSuggestion: placeSuggestionSchema,
   Artifact: artifactSchema,

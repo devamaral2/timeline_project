@@ -45,7 +45,7 @@ describe("toEventCardDto", () => {
       notifyOffsetsMinutes: [5],
       tags: ["trabalho"],
       artifactTypes: ["text", "food"],
-      previousEventIds: [],
+      previousTaskIds: [],
       revision: 1,
     });
     expect(card).not.toHaveProperty("status");
@@ -75,7 +75,7 @@ describe("toEventCardDto", () => {
       priority: "urgent",
       longRunning: true,
       finishedAt: "2026-08-17T15:00:00.000Z",
-      previousEventIds: ["p1", "p2"],
+      previousTaskIds: ["p1", "p2"],
       notifyOffsetsMinutes: [],
       revision: 4,
     });
@@ -115,7 +115,7 @@ describe("toEventCardDto", () => {
     });
 
     const card = toEventCardDto({ event, artifactTypes: [] });
-    card.previousEventIds.push("p2");
+    card.previousTaskIds.push("p2");
     card.notifyOffsetsMinutes.push(10);
 
     expect(event.previousIds).toEqual(["p1"]);
@@ -179,7 +179,7 @@ describe("toEventDto", () => {
   test("adds the events that follow it to the card fields", () => {
     const dto = toEventDto(linked);
 
-    expect(dto).toMatchObject({ id: "event-1", name: "Reunião", previousEventIds: ["p1"], nextEventIds: ["s1", "s2"], revision: 1 });
+    expect(dto).toMatchObject({ id: "event-1", name: "Reunião", previousTaskIds: ["p1"], nextTaskIds: ["s1", "s2"], revision: 1 });
     expect(dto.artifacts).toEqual([]);
     expect(dto.artifactTypes).toEqual([]);
     expect(dto).not.toHaveProperty("recurrence");
@@ -199,9 +199,9 @@ describe("toArtifactDto", () => {
       { eventId: "e2", relation: "uses", name: "Projeto", actor: "human", kind: "common" },
     ]);
 
-    expect(withEvents.events).toEqual([
+    expect(withEvents.tasks).toEqual([
       {
-        eventId: "e1",
+        taskId: "e1",
         relation: "creates",
         name: "Reunião",
         actor: "human",
@@ -209,10 +209,10 @@ describe("toArtifactDto", () => {
         startedAt: "2026-08-17T15:00:00.000Z",
         estimatedFinishAt: "2026-08-17T15:00:00.000Z",
       },
-      { eventId: "e2", relation: "uses", name: "Projeto", actor: "human", kind: "common" },
+      { taskId: "e2", relation: "uses", name: "Projeto", actor: "human", kind: "common" },
     ]);
-    expect(toArtifactDto(artifact("a"), []).events).toEqual([]);
-    expect(toArtifactDto(artifact("a"))).not.toHaveProperty("events");
+    expect(toArtifactDto(artifact("a"), []).tasks).toEqual([]);
+    expect(toArtifactDto(artifact("a"))).not.toHaveProperty("tasks");
   });
 
   test("marks global artifacts and derived copies", () => {
@@ -227,7 +227,7 @@ describe("toArtifactDto", () => {
   test("a link without dates has no date keys", () => {
     const link = toArtifactEventLinkDto({ eventId: "e1", relation: "updates", name: "Pedido", actor: "agent", kind: "request" });
 
-    expect(link).toEqual({ eventId: "e1", relation: "updates", name: "Pedido", actor: "agent", kind: "request" });
+    expect(link).toEqual({ taskId: "e1", relation: "updates", name: "Pedido", actor: "agent", kind: "request" });
     expect(link).not.toHaveProperty("startedAt");
   });
 });

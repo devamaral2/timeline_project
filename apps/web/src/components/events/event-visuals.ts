@@ -1,5 +1,5 @@
 import { Apple, CalendarCheck, CircleDashed, Dumbbell, Moon, type LucideIcon } from "lucide-react";
-import type { HumanEventKind, NotificationOffsetMinutes } from "@repo/contracts";
+import type { HumanTaskKind, NotificationOffsetMinutes } from "@repo/contracts";
 
 /**
  * O traco fino do desenho. O padrao do lucide (2) engorda o icone e, sobre o
@@ -16,7 +16,7 @@ export interface ItemTypeVisual {
   label: string;
 }
 
-const knownVisuals: Record<HumanEventKind, ItemTypeVisual> = {
+const knownVisuals: Record<HumanTaskKind, ItemTypeVisual> = {
   common: { Icon: CalendarCheck, label: "Padrão" },
   meal: { Icon: Apple, label: "Refeição" },
   training: { Icon: Dumbbell, label: "Treino" },
@@ -42,11 +42,11 @@ const unknownVisual: ItemTypeVisual = {
  * a resposta a pergunta "o que e isto?".
  */
 export function visualForItemType(type: string): ItemTypeVisual {
-  return knownVisuals[type as HumanEventKind] ?? unknownVisual;
+  return knownVisuals[type as HumanTaskKind] ?? unknownVisual;
 }
 
 /** As naturezas que o formulario de criacao oferece. */
-export const creatableItemTypes: HumanEventKind[] = ["common", "meal", "training", "sleep"];
+export const creatableItemTypes: HumanTaskKind[] = ["common", "meal", "training", "sleep"];
 
 /**
  * O unico rotulo de situacao que sobrou.

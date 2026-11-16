@@ -1,7 +1,7 @@
 "use client";
 
 import { type ReactNode, useCallback, useEffect, useState } from "react";
-import type { EventDto } from "@repo/contracts";
+import type { TaskDto } from "@repo/contracts";
 import { BackButton, DetailFrame, DetailMessage, DetailNav } from "@/components/detail/detail-parts";
 import { useMotionRouter } from "@/components/shell/navigation-motion";
 import { ApiRequestError } from "@/lib/api/client-request";
@@ -17,7 +17,7 @@ type LoadState = "loading" | "ready" | "missing" | "error";
  */
 export function EventEditRoute({ userId, eventId }: { userId: string; eventId: string }) {
   const router = useMotionRouter();
-  const [event, setEvent] = useState<EventDto | null>(null);
+  const [event, setEvent] = useState<TaskDto | null>(null);
   const [state, setState] = useState<LoadState>("loading");
 
   useEffect(() => {

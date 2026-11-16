@@ -5,15 +5,15 @@ import { z } from "zod";
  * de cada um espelha a interface de mesmo nome; quem valida a entrada da API e
  * o dominio, nao estes esquemas.
  */
-const eventActorSchema = z.enum(["human", "agent"]);
-const humanEventKindSchema = z.enum(["common", "meal", "sleep", "training"]);
+const taskActorSchema = z.enum(["human", "agent"]);
+const humanTaskKindSchema = z.enum(["common", "meal", "sleep", "training"]);
 const agentRequestKindSchema = z.enum(["request", "search_request", "build_request", "inquiry_request", "review_request", "cron"]);
-const eventKindSchema = z.enum([...humanEventKindSchema.options, ...agentRequestKindSchema.options, "step"]);
-const humanEventStatusSchema = z.enum(["todo", "toDefine", "doing", "inHold", "done", "cancel", "missed"]);
-const agentEventStatusSchema = z.enum(["queued", "running", "waiting", "done", "failed", "cancel"]);
-const eventStatusSchema = z.enum([...humanEventStatusSchema.options, "queued", "running", "waiting", "failed"]);
-const eventPrioritySchema = z.enum(["urgent", "high", "medium", "low"]);
-const eventArtifactRelationSchema = z.enum(["creates", "updates", "uses", "deletes"]);
+const taskKindSchema = z.enum([...humanTaskKindSchema.options, ...agentRequestKindSchema.options, "step"]);
+const humanTaskStatusSchema = z.enum(["todo", "toDefine", "doing", "inHold", "done", "cancel", "missed"]);
+const agentTaskStatusSchema = z.enum(["queued", "running", "waiting", "done", "failed", "cancel"]);
+const taskStatusSchema = z.enum([...humanTaskStatusSchema.options, "queued", "running", "waiting", "failed"]);
+const taskPrioritySchema = z.enum(["urgent", "high", "medium", "low"]);
+const taskArtifactRelationSchema = z.enum(["creates", "updates", "uses", "deletes"]);
 const artifactTypeSchema = z.enum(["text", "food", "sleep", "training", "workout", "skill", "agent", "router"]);
 const notificationOffsetsSchema = z.array(z.number());
 
@@ -128,14 +128,14 @@ const recurrenceRuleShape = {
   endsOn: z.string().optional(),
 };
 
-export const artifactEventLinkSchema = z.object({
-  eventId: z.string(), relation: eventArtifactRelationSchema, name: z.string(), actor: eventActorSchema, kind: eventKindSchema,
+export const artifactTaskLinkSchema = z.object({
+  taskId: z.string(), relation: taskArtifactRelationSchema, name: z.string(), actor: taskActorSchema, kind: taskKindSchema,
   startedAt: z.string().optional(), estimatedFinishAt: z.string().optional(),
 }).strict();
 
 const artifactBase = {
   id: z.string(), name: z.string(), schemaVersion: z.number().int(), global: z.boolean(), derived: z.boolean(),
-  events: z.array(artifactEventLinkSchema).optional(), tags: z.array(z.string()),
+  tasks: z.array(artifactTaskLinkSchema).optional(), tags: z.array(z.string()),
   revision: z.number().int(), createdAt: z.string(), updatedAt: z.string(),
 };
 
@@ -163,7 +163,7 @@ const createArtifactVariants = <TExtra extends z.ZodRawShape>(extra: TExtra) => 
 ] as const;
 
 const foodCopySchema = z.object({ copyOf: z.string(), quantity: z.string().optional() }).strict();
-const createEventArtifactSchema = z.union([...createArtifactVariants({}), foodCopySchema]);
+const createTaskArtifactSchema = z.union([...createArtifactVariants({}), foodCopySchema]);
 
 const artifactDataVariants = <TExtra extends z.ZodRawShape>(extra: TExtra) => [
   z.object({ ...artifactInputBase, ...extra, schemaVersion: z.number().int().optional(), type: z.literal("text"), data: textDataSchema }).strict(),
@@ -172,74 +172,74 @@ const artifactDataVariants = <TExtra extends z.ZodRawShape>(extra: TExtra) => [
   z.object({ ...artifactInputBase, ...extra, schemaVersion: z.number().int().optional(), type: z.literal("training"), data: trainingDataSchema }).strict(),
 ] as const;
 
-const updateEventArtifactSchema = z.union([
-  z.object({ ...artifactInputBase, id: z.string(), relation: eventArtifactRelationSchema.optional() }).strict(),
-  ...artifactDataVariants({ id: z.string().optional(), relation: eventArtifactRelationSchema.optional() }),
+const updateTaskArtifactSchema = z.union([
+  z.object({ ...artifactInputBase, id: z.string(), relation: taskArtifactRelationSchema.optional() }).strict(),
+  ...artifactDataVariants({ id: z.string().optional(), relation: taskArtifactRelationSchema.optional() }),
   foodCopySchema,
 ]);
 
-const eventRecurrenceSchema = z.object({
+const taskRecurrenceSchema = z.object({
   id: z.string(), occurrenceOn: z.string(), detached: z.boolean(), rule: z.object(recurrenceRuleShape).strict(),
 }).strict();
 
-const eventCardShape = {
-  id: z.string(), actor: eventActorSchema, kind: eventKindSchema, status: eventStatusSchema.optional(), priority: eventPrioritySchema,
+const taskCardShape = {
+  id: z.string(), actor: taskActorSchema, kind: taskKindSchema, status: taskStatusSchema.optional(), priority: taskPrioritySchema,
   name: z.string(), description: z.string(), location: z.string(), startedAt: z.string().optional(), estimatedFinishAt: z.string().optional(),
   finishedAt: z.string().optional(), longRunning: z.boolean(), notifyOffsetsMinutes: notificationOffsetsSchema,
-  tags: z.array(z.string()), artifactTypes: z.array(artifactTypeSchema), previousEventIds: z.array(z.string()), recurrence: eventRecurrenceSchema.optional(), revision: z.number().int(),
+  tags: z.array(z.string()), artifactTypes: z.array(artifactTypeSchema), previousTaskIds: z.array(z.string()), recurrence: taskRecurrenceSchema.optional(), revision: z.number().int(),
 };
 
-export const eventCardSchema = z.object(eventCardShape).strict();
+export const taskCardSchema = z.object(taskCardShape).strict();
 
-export const agendaPageSchema = z.object({ items: z.array(eventCardSchema), nextCursor: z.string().optional() }).strict();
+export const agendaPageSchema = z.object({ items: z.array(taskCardSchema), nextCursor: z.string().optional() }).strict();
 
-const eventRequestSchema = z.object({
+const taskRequestSchema = z.object({
   id: z.string(), name: z.string(), relation: z.enum(["generates", "updates"]), at: z.string(),
 }).strict();
 
-export const eventSchema = z.object({
-  ...eventCardShape,
-  artifacts: z.array(z.object({ relation: eventArtifactRelationSchema, fromRecurrence: z.boolean(), artifact: artifactSchema }).strict()),
-  nextEventIds: z.array(z.string()),
-  requests: z.array(eventRequestSchema),
+export const taskSchema = z.object({
+  ...taskCardShape,
+  artifacts: z.array(z.object({ relation: taskArtifactRelationSchema, fromRecurrence: z.boolean(), artifact: artifactSchema }).strict()),
+  nextTaskIds: z.array(z.string()),
+  requests: z.array(taskRequestSchema),
 }).strict();
 
-const eventFieldsShape = {
+const taskFieldsShape = {
   name: z.string().optional(), description: z.string().optional(), location: z.string().max(300).optional(),
-  priority: eventPrioritySchema.optional(),
+  priority: taskPrioritySchema.optional(),
   notifyOffsetsMinutes: notificationOffsetsSchema.optional(), tags: z.array(z.string()).optional(), longRunning: z.boolean().optional(),
-  previousEventIds: z.array(z.string()).optional(), nextEventIds: z.array(z.string()).optional(),
+  previousTaskIds: z.array(z.string()).optional(), nextTaskIds: z.array(z.string()).optional(),
 };
 
 export const geoPointSchema = z.object({ latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180) }).strict();
 
-export const createEventInputSchema = z.object({
-  ...eventFieldsShape, kind: humanEventKindSchema.optional(), status: humanEventStatusSchema.optional(),
+export const createTaskInputSchema = z.object({
+  ...taskFieldsShape, kind: humanTaskKindSchema.optional(), status: humanTaskStatusSchema.optional(),
   startedAt: z.string().optional(), estimatedFinishAt: z.string().optional(), finishedAt: z.string().optional(),
-  artifacts: z.array(createEventArtifactSchema).optional(), artifactIds: z.array(z.string()).optional(),
+  artifacts: z.array(createTaskArtifactSchema).optional(), artifactIds: z.array(z.string()).optional(),
   coordinates: geoPointSchema.optional(),
 }).strict();
 
-export const updateEventInputSchema = z.object({
-  ...eventFieldsShape, eventId: z.string(), expectedRevision: z.number().int(), kind: humanEventKindSchema.optional(),
-  status: humanEventStatusSchema.nullable().optional(), startedAt: z.string().nullable().optional(),
+export const updateTaskInputSchema = z.object({
+  ...taskFieldsShape, taskId: z.string(), expectedRevision: z.number().int(), kind: humanTaskKindSchema.optional(),
+  status: humanTaskStatusSchema.nullable().optional(), startedAt: z.string().nullable().optional(),
   estimatedFinishAt: z.string().nullable().optional(), finishedAt: z.string().nullable().optional(),
-  artifacts: z.array(updateEventArtifactSchema).optional(),
+  artifacts: z.array(updateTaskArtifactSchema).optional(),
 }).strict();
 
-/** `POST /api/artifacts`: o artefato e os eventos em que ele ja nasce aparecendo. */
-export const createArtifactRequestSchema = z.union(createArtifactVariants({ eventIds: z.array(z.string()).optional() }));
+/** `POST /api/artifacts`: o artefato e as tarefas em que ele ja nasce aparecendo. */
+export const createArtifactRequestSchema = z.union(createArtifactVariants({ taskIds: z.array(z.string()).optional() }));
 
 export const createArtifactResponseSchema = z.object({ artifactId: z.string() }).strict();
 
 const updateArtifactBase = {
-  expectedRevision: z.number().int(), ...artifactInputBase, eventIds: z.array(z.string()).optional(),
+  expectedRevision: z.number().int(), ...artifactInputBase, taskIds: z.array(z.string()).optional(),
 };
 
 /** `PATCH /api/artifacts/:artifactId`: com `type`, o `data` e o novo conteudo inteiro. */
 export const updateArtifactRequestSchema = z.union([
   z.object(updateArtifactBase).strict(),
-  ...artifactDataVariants({ expectedRevision: z.number().int(), eventIds: z.array(z.string()).optional() }),
+  ...artifactDataVariants({ expectedRevision: z.number().int(), taskIds: z.array(z.string()).optional() }),
 ]);
 
 export const tagSuggestionSchema = z.object({ id: z.string(), name: z.string() }).strict();
@@ -250,10 +250,10 @@ export const recurrenceSchema = z.object({
   ...recurrenceRuleShape, id: z.string(), template: z.record(z.string(), z.unknown()), revision: z.number().int(),
 }).strict();
 
-/** O que cada ocorrencia copia: o evento sem a janela, que vem da regra. */
-const recurrenceTemplateSchema = createEventInputSchema.omit({
+/** O que cada ocorrencia copia: a tarefa sem a janela, que vem da regra. */
+const recurrenceTemplateSchema = createTaskInputSchema.omit({
   startedAt: true, estimatedFinishAt: true, finishedAt: true, longRunning: true,
-  nextEventIds: true, coordinates: true,
+  nextTaskIds: true, coordinates: true,
 });
 
 /** `POST /api/recurrences`: a regra e o que cada ocorrencia copia. */
@@ -291,7 +291,7 @@ export const requestSchema = z.object({
   id: z.string(),
   kind: agentRequestKindSchema,
   route: z.enum(["steps", "hermes", "voice", "food"]),
-  status: agentEventStatusSchema,
+  status: agentTaskStatusSchema,
   title: z.string(),
   sessionId: z.string().optional(),
   createdAt: z.string(),
@@ -301,19 +301,19 @@ export const requestSchema = z.object({
     id: z.string(),
     agent: z.string(),
     label: z.string(),
-    status: agentEventStatusSchema,
+    status: agentTaskStatusSchema,
     errorCode: z.string().optional(),
     result: z.object({
       columns: z.array(z.string()), rows: z.array(z.array(z.unknown())), truncated: z.boolean(),
     }).strict().optional(),
   }).strict()),
   entities: z.array(z.object({
-    kind: z.enum(["event", "artifact"]),
+    kind: z.enum(["task", "artifact"]),
     id: z.string(),
     name: z.string(),
     artifactType: artifactTypeSchema.optional(),
     operation: z.enum(["create", "update", "delete"]),
-    linkedTo: z.array(z.object({ kind: z.enum(["event", "artifact"]), id: z.string() }).strict()),
+    linkedTo: z.array(z.object({ kind: z.enum(["task", "artifact"]), id: z.string() }).strict()),
   }).strict()),
   message: z.string().optional(),
   errorCode: z.enum(["invalid_input", "forbidden", "limit_reached", "conflict", "unavailable", "cancelled", "internal"]).optional(),
@@ -323,10 +323,10 @@ export const requestSchema = z.object({
 
 export const contractSchemas = {
   agendaPage: agendaPageSchema,
-  eventCard: eventCardSchema,
-  event: eventSchema,
-  createEventInput: createEventInputSchema,
-  updateEventInput: updateEventInputSchema,
+  taskCard: taskCardSchema,
+  task: taskSchema,
+  createTaskInput: createTaskInputSchema,
+  updateTaskInput: updateTaskInputSchema,
   artifact: artifactSchema,
   createArtifactRequest: createArtifactRequestSchema,
   createArtifactResponse: createArtifactResponseSchema,

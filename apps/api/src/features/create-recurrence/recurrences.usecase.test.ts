@@ -81,7 +81,7 @@ describe("creating a series", () => {
         priority: "medium",
         notifyOffsetsMinutes: [5],
         artifactIds: [],
-        previousEventIds: [],
+        previousTaskIds: [],
       },
       revision: 1,
     });
@@ -121,7 +121,7 @@ describe("creating a series", () => {
       create.execute({ ...dailyRun, frequency: "monthly", byMonthDay: 31, startsOn: "2026-04-01", endsOn: "2026-04-30" }, actor),
     ).rejects.toThrow(RecurrenceValidationError);
     await expect(
-      create.execute({ ...dailyRun, template: { name: "Filha", artifacts: [{ data: { body: "nota" } }], previousEventIds: ["missing"] } }, actor),
+      create.execute({ ...dailyRun, template: { name: "Filha", artifacts: [{ data: { body: "nota" } }], previousTaskIds: ["missing"] } }, actor),
     ).rejects.toThrow(EventNotFoundError);
     await expect(create.execute({ ...dailyRun, template: {} }, actor)).rejects.toThrow("Event requires a name");
     expect(recurrences.recurrences).toEqual([]);
@@ -369,7 +369,7 @@ describe("ownership", () => {
     const theirs = Event.create({ id: "theirs", userId: intruder.userId, name: "Projeto deles", longRunning: true });
     const { create } = setup({ now }, { events: [theirs] });
 
-    await expect(create.execute({ ...dailyRun, template: { name: "Sessão", previousEventIds: ["theirs"] } }, actor)).rejects.toThrow(
+    await expect(create.execute({ ...dailyRun, template: { name: "Sessão", previousTaskIds: ["theirs"] } }, actor)).rejects.toThrow(
       "Only the event owner can modify it",
     );
   });

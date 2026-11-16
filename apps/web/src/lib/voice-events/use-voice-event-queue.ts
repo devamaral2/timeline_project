@@ -35,7 +35,7 @@ function restore(stored: StoredVoiceJob[]): VoiceJob[] {
 
 /** O evento que o pedido criou, lido das entidades dele. */
 function createdEventOf(request: RequestDto): RequestEntityDto | undefined {
-  return request.entities.find((entity) => entity.kind === "event" && entity.operation === "create");
+  return request.entities.find((entity) => entity.kind === "task" && entity.operation === "create");
 }
 
 export function useVoiceEventQueue({ onCreated }: { onCreated: (event: RequestEntityDto) => void }) {

@@ -56,8 +56,8 @@ test("returns the event with its kind, artifacts and revision for the owner", as
         },
       },
     ],
-    previousEventIds: [],
-    nextEventIds: [],
+    previousTaskIds: [],
+    nextTaskIds: [],
   });
   expect(result).not.toHaveProperty("status");
   expect(result).not.toHaveProperty("notes");
@@ -107,9 +107,9 @@ test("returns the sequence in both directions: the events it follows and the one
   const center = await useCase.execute({ eventId: "middle" }, actor);
   const end = await useCase.execute({ eventId: "last" }, actor);
 
-  expect(start).toMatchObject({ previousEventIds: [], nextEventIds: ["middle"] });
-  expect(center).toMatchObject({ status: "todo", previousEventIds: ["first"], nextEventIds: ["last"] });
-  expect(end).toMatchObject({ previousEventIds: ["middle"], nextEventIds: [] });
+  expect(start).toMatchObject({ previousTaskIds: [], nextTaskIds: ["middle"] });
+  expect(center).toMatchObject({ status: "todo", previousTaskIds: ["first"], nextTaskIds: ["last"] });
+  expect(end).toMatchObject({ previousTaskIds: ["middle"], nextTaskIds: [] });
   expect(center).not.toHaveProperty("subtaskEventIds");
   expect(center).not.toHaveProperty("blockedByEventIds");
 });
@@ -121,8 +121,8 @@ test("an agent event appears in the sequence of a human event, and the other way
   database.edges.push({ fromId: "request", toId: "human" });
   const { useCase } = setup(database);
 
-  expect((await useCase.execute({ eventId: "human" }, actor))?.previousEventIds).toEqual(["request"]);
-  expect((await useCase.execute({ eventId: "request" }, actor))?.nextEventIds).toEqual(["human"]);
+  expect((await useCase.execute({ eventId: "human" }, actor))?.previousTaskIds).toEqual(["request"]);
+  expect((await useCase.execute({ eventId: "request" }, actor))?.nextTaskIds).toEqual(["human"]);
 });
 
 test("an occurrence comes with the rule of its series", async () => {

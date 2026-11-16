@@ -88,7 +88,7 @@ describe("passo de editar eventos", () => {
     await ctx.editWorker.run("event-edit", payload);
 
     expect(ctx.batchWriter.commits).toHaveLength(1);
-    expect(ctx.batchWriter.commits[0]?.events.map((change) => change.op)).toEqual(["update", "update", "update"]);
+    expect(ctx.batchWriter.commits[0]?.tasks.map((change) => change.op)).toEqual(["update", "update", "update"]);
     expect(await updated(ctx)).toHaveLength(3);
     expect((await ctx.eventRepository.findById(other.id))?.revision).toBe(other.revision);
   });

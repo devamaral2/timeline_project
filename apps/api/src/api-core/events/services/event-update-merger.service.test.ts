@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import type { UpdateEventInput } from "@repo/contracts";
+import type { UpdateTaskInput } from "@repo/contracts";
 import {
   Artifact,
   ArtifactNotFoundError,
@@ -30,11 +30,11 @@ function setup(fixtures: EventFixture[], extra: { events?: Event[]; artifacts?: 
     events: [...fixtures.map((fixture) => fixture.event), ...(extra.events ?? [])],
     artifacts: [...fixtures.flatMap((fixture) => fixture.artifacts), ...(extra.artifacts ?? [])],
   });
-  const merge = async (eventId: string, input: Omit<UpdateEventInput, "eventId" | "expectedRevision">) => {
+  const merge = async (eventId: string, input: Omit<UpdateTaskInput, "taskId" | "expectedRevision">) => {
     const existing = (await kit.eventRepository.findById(eventId)) as Event;
     return mergeEventUpdate(
       existing,
-      { eventId, expectedRevision: existing.revision, ...input },
+      { taskId: eventId, expectedRevision: existing.revision, ...input },
       { artifactBuilder: kit.artifactBuilder, artifactRepository: kit.artifactRepository, eventRepository: kit.eventRepository },
     );
   };
@@ -493,7 +493,7 @@ describe("sequence (what the event follows and what follows it)", () => {
   test("sending the same lists changes nothing", async () => {
     const { merge } = chain();
 
-    const { sequence } = await merge("child", { previousEventIds: ["p2", "p1"], nextEventIds: ["n1", "n2"] });
+    const { sequence } = await merge("child", { previousTaskIds: ["p2", "p1"], nextTaskIds: ["n1", "n2"] });
 
     expect(sequence).toEqual([]);
   });
@@ -501,7 +501,7 @@ describe("sequence (what the event follows and what follows it)", () => {
   test("plans only the edges that were gained or lost, on either side", async () => {
     const { merge } = chain();
 
-    const { sequence } = await merge("child", { previousEventIds: ["p2", "p3"], nextEventIds: ["n2", "n3"] });
+    const { sequence } = await merge("child", { previousTaskIds: ["p2", "p3"], nextTaskIds: ["n2", "n3"] });
 
     expect(sequence).toEqual(
       expect.arrayContaining([
@@ -517,7 +517,7 @@ describe("sequence (what the event follows and what follows it)", () => {
   test("an empty list removes every edge of that side and leaves the other side alone", async () => {
     const { merge } = chain();
 
-    const { sequence } = await merge("child", { previousEventIds: [] });
+    const { sequence } = await merge("child", { previousTaskIds: [] });
 
     expect(sequence).toEqual([
       { op: "remove", fromId: "p1", toId: "child" },
@@ -528,7 +528,7 @@ describe("sequence (what the event follows and what follows it)", () => {
   test("changing the sequence revises only the edited event, never the ends", async () => {
     const kit = chain();
 
-    const merged = await kit.merge("child", { previousEventIds: ["p3"], nextEventIds: [] });
+    const merged = await kit.merge("child", { previousTaskIds: ["p3"], nextTaskIds: [] });
     await kit.batchWriter.commit(toUpdateBatch(merged, 1));
 
     const child = await kit.eventRepository.findById("child");
@@ -547,8 +547,8 @@ describe("sequence (what the event follows and what follows it)", () => {
     const request = Event.create({ id: "request-1", userId, actor: "agent", kind: "request", status: "queued", name: "Pedido" });
     const { merge } = setup([child], { events: [request] });
 
-    const before = await merge("child", { previousEventIds: ["request-1"] });
-    const after = await merge("child", { nextEventIds: ["request-1"] });
+    const before = await merge("child", { previousTaskIds: ["request-1"] });
+    const after = await merge("child", { nextTaskIds: ["request-1"] });
 
     expect(before.sequence).toEqual([{ op: "add", fromId: "request-1", toId: "child" }]);
     expect(after.sequence).toEqual([{ op: "add", fromId: "child", toId: "request-1" }]);
@@ -559,16 +559,16 @@ describe("sequence (what the event follows and what follows it)", () => {
     const theirs = Event.create({ id: "theirs", userId: "someone-else", name: "Deles", status: "todo" });
     const { merge } = setup([child], { events: [theirs] });
 
-    await expect(merge("child", { previousEventIds: ["missing"] })).rejects.toThrow(EventNotFoundError);
-    await expect(merge("child", { nextEventIds: ["theirs"] })).rejects.toThrow(EventOwnershipError);
-    await expect(merge("child", { previousEventIds: ["child"] })).rejects.toThrow("An event cannot follow itself");
-    await expect(merge("child", { nextEventIds: ["child"] })).rejects.toThrow(EventValidationError);
+    await expect(merge("child", { previousTaskIds: ["missing"] })).rejects.toThrow(EventNotFoundError);
+    await expect(merge("child", { nextTaskIds: ["theirs"] })).rejects.toThrow(EventOwnershipError);
+    await expect(merge("child", { previousTaskIds: ["child"] })).rejects.toThrow("An event cannot follow itself");
+    await expect(merge("child", { nextTaskIds: ["child"] })).rejects.toThrow(EventValidationError);
   });
 
   test("refuses a change that closes a cycle when it is written", async () => {
     const kit = chain();
     // child -> n1 ja existe: n1 nao pode ser antecessor de child.
-    const merged = await kit.merge("child", { previousEventIds: ["p1", "p2", "n1"] });
+    const merged = await kit.merge("child", { previousTaskIds: ["p1", "p2", "n1"] });
 
     expect(() => kit.database.apply(userId, merged.sequence)).toThrow("Events cannot follow each other in a cycle");
   });
@@ -584,7 +584,7 @@ describe("toUpdateBatch", () => {
     });
     const merged = await kit.merge("event-1", {
       artifacts: [{ id: "note-1", name: "Pauta" }, { copyOf: "food-1" }],
-      previousEventIds: ["parent"],
+      previousTaskIds: ["parent"],
     });
 
     const batch = toUpdateBatch(merged, 1);
@@ -595,7 +595,7 @@ describe("toUpdateBatch", () => {
       { op: "update", entity: merged.artifacts.updated[0]?.artifact, expectedRevision: 1 },
     ]);
     expect(batch.derivations).toEqual([{ originalId: "food-1", copyId: merged.artifacts.created[0]?.id }]);
-    expect(batch.events).toEqual([{ op: "update", entity: merged.event, expectedRevision: 1 }]);
+    expect(batch.tasks).toEqual([{ op: "update", entity: merged.event, expectedRevision: 1 }]);
     expect(batch.sequence).toEqual([{ op: "add", fromId: "parent", toId: "event-1" }]);
   });
 });

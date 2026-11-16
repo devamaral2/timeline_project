@@ -1,4 +1,4 @@
-import type { AgentEventStatus, RequestDto } from "@repo/contracts";
+import type { AgentTaskStatus, RequestDto } from "@repo/contracts";
 import { Check, Circle, LoaderCircle, X } from "lucide-react";
 import type { AgentChatEntityRef } from "@/lib/agent-chat/use-agent-chat";
 import { isRequestOpen } from "@/lib/agent-chat/use-agent-chat";
@@ -6,7 +6,7 @@ import { EntityRows, requestEntityRef } from "./entity-rows";
 import styles from "@/components/shell/shell.module.css";
 
 /** Como a caixa mostra cada passo: a marca, o estado nos dados (`data-status`) e o texto que o leitor de tela ouve. */
-const STEP_VIEW: Record<AgentEventStatus, { state: "pending" | "running" | "succeeded" | "failed" | "cancelled"; text: string }> = {
+const STEP_VIEW: Record<AgentTaskStatus, { state: "pending" | "running" | "succeeded" | "failed" | "cancelled"; text: string }> = {
   queued: { state: "pending", text: "aguardando" },
   waiting: { state: "pending", text: "aguardando" },
   running: { state: "running", text: "em andamento" },

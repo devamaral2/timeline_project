@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { EventDto } from "@repo/contracts";
+import type { TaskDto } from "@repo/contracts";
 import { fieldValue, getField, setField } from "@/components/edit/edit-test-helpers";
 import { type FakeApi, createFakeApi } from "@/test/fake-api";
 import { eventsArea } from "@/test/fake-api/events";
@@ -37,8 +37,8 @@ function posts() {
   return api.calls.filter((call) => call.method === "POST");
 }
 
-function created(): EventDto[] {
-  return [...api.store.table<EventDto>("events").values()];
+function created(): TaskDto[] {
+  return [...api.store.table<TaskDto>("events").values()];
 }
 
 /** Os campos mudam pelo rótulo visível, como a pessoa os acha. */

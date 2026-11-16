@@ -1,8 +1,8 @@
-import type { EventCardDto } from "@repo/contracts";
-import { eventCardSchema } from "@repo/contracts/schemas";
+import type { TaskCardDto } from "@repo/contracts";
+import { taskCardSchema } from "@repo/contracts/schemas";
 import { expect, test } from "vitest";
 
-const card: EventCardDto = {
+const card: TaskCardDto = {
   id: "event-1",
   actor: "human",
   kind: "common",
@@ -17,14 +17,14 @@ const card: EventCardDto = {
   notifyOffsetsMinutes: [10],
   tags: ["saude"],
   artifactTypes: ["training"],
-  previousEventIds: [],
+  previousTaskIds: [],
   revision: 1,
 };
 
 test("um cartao de evento de exemplo passa no esquema do contrato compartilhado", () => {
-  expect(eventCardSchema.parse(card)).toEqual(card);
+  expect(taskCardSchema.parse(card)).toEqual(card);
 });
 
 test("o esquema do contrato recusa um cartao com status inventado", () => {
-  expect(eventCardSchema.safeParse({ ...card, status: "inventado" }).success).toBe(false);
+  expect(taskCardSchema.safeParse({ ...card, status: "inventado" }).success).toBe(false);
 });

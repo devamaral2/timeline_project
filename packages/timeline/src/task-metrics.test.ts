@@ -1,17 +1,17 @@
 import { expect, test } from "vitest";
-import type { AgendaEventCard } from "./agenda-day";
+import type { AgendaTaskCard } from "./agenda-day";
 import {
   MIN_DURATION_RATIO,
   durationRatioOf,
-  eventPositionOf,
+  taskPositionOf,
   longestDurationOf,
   elapsedSecondsOf,
   formatStopwatch,
   stopwatchOf,
   trackedMinutesOf,
-} from "./event-metrics";
+} from "./task-metrics";
 
-function event(startedAt: string, estimatedFinishAt: string | null): AgendaEventCard {
+function task(startedAt: string, estimatedFinishAt: string | null): AgendaTaskCard {
   return {
     id: `${startedAt}-${estimatedFinishAt}`,
     actor: "human",
@@ -19,10 +19,10 @@ function event(startedAt: string, estimatedFinishAt: string | null): AgendaEvent
     priority: "medium",
     longRunning: false,
     artifactTypes: [],
-    previousEventIds: [],
+    previousTaskIds: [],
     revision: 1,
     notifyOffsetsMinutes: [],
-    name: "evento",
+    name: "tarefa",
     location: "",
     description: "",
     startedAt,
@@ -31,13 +31,13 @@ function event(startedAt: string, estimatedFinishAt: string | null): AgendaEvent
   };
 }
 
-const short = event("2026-05-22T12:00:00.000Z", "2026-05-22T12:15:00.000Z");
-const long = event("2026-05-22T14:00:00.000Z", "2026-05-22T17:00:00.000Z");
-const running = event("2026-05-22T18:00:00.000Z", null);
-const upcoming = event("2026-05-23T09:00:00.000Z", "2026-05-23T10:00:00.000Z");
-const openFuture = event("2026-05-23T09:00:00.000Z", null);
+const short = task("2026-05-22T12:00:00.000Z", "2026-05-22T12:15:00.000Z");
+const long = task("2026-05-22T14:00:00.000Z", "2026-05-22T17:00:00.000Z");
+const running = task("2026-05-22T18:00:00.000Z", null);
+const upcoming = task("2026-05-23T09:00:00.000Z", "2026-05-23T10:00:00.000Z");
+const openFuture = task("2026-05-23T09:00:00.000Z", null);
 
-test("takes the longest finished event as the reference of the day", () => {
+test("takes the longest finished task as the reference of the day", () => {
   expect(longestDurationOf([short, long, running])).toBe(180);
   expect(longestDurationOf([running])).toBe(0);
 });
@@ -47,12 +47,12 @@ test("scales the bar against that reference", () => {
   expect(durationRatioOf(short, 180)).toBeCloseTo(15 / 180);
 });
 
-test("keeps a very short event visible instead of drawing nothing", () => {
-  const oneMinute = event("2026-05-22T12:00:00.000Z", "2026-05-22T12:01:00.000Z");
+test("keeps a very short task visible instead of drawing nothing", () => {
+  const oneMinute = task("2026-05-22T12:00:00.000Z", "2026-05-22T12:01:00.000Z");
   expect(durationRatioOf(oneMinute, 600)).toBe(MIN_DURATION_RATIO);
 });
 
-test("has no bar for an event still running — it has no duration yet", () => {
+test("has no bar for a task still running — it has no duration yet", () => {
   expect(durationRatioOf(running, 180)).toBeNull();
 });
 
@@ -60,7 +60,7 @@ test("sums only what has already finished", () => {
   expect(trackedMinutesOf([short, long, running])).toBe(195);
 });
 
-test("counts the seconds since the event started, and never goes backwards", () => {
+test("counts the seconds since the task started, and never goes backwards", () => {
   const now = new Date("2026-05-22T18:30:45.000Z");
   expect(elapsedSecondsOf("2026-05-22T18:00:00.000Z", now)).toBe(1845);
   // Um relogio adiantado no aparelho nao pode produzir um cronometro negativo.
@@ -75,29 +75,29 @@ test("reads the stopwatch as a stopwatch, and not as the recorded duration", () 
   expect(formatStopwatch(45296)).toBe("12:34:56");
 });
 
-test("only a running event has a stopwatch", () => {
+test("only a running task has a stopwatch", () => {
   const now = new Date("2026-05-22T18:30:00.000Z");
   expect(stopwatchOf(running, now)).toBe("30:00");
   expect(stopwatchOf(long, now)).toBeNull();
 });
 
-test("places an event against now in three states, not two", () => {
+test("places a task against now in three states, not two", () => {
   const now = new Date("2026-05-22T18:30:00.000Z");
 
-  expect(eventPositionOf(long, now)).toBe("past");
-  expect(eventPositionOf(running, now)).toBe("running");
-  expect(eventPositionOf(upcoming, now)).toBe("upcoming");
+  expect(taskPositionOf(long, now)).toBe("past");
+  expect(taskPositionOf(running, now)).toBe("running");
+  expect(taskPositionOf(upcoming, now)).toBe("upcoming");
   // Sem fim declarado, mas ainda nem comecou: e futuro, nao cronometro.
-  expect(eventPositionOf(openFuture, now)).toBe("upcoming");
+  expect(taskPositionOf(openFuture, now)).toBe("upcoming");
 });
 
-test("an event already started with an end still ahead is running", () => {
+test("a task already started with an end still ahead is running", () => {
   const now = new Date("2026-05-22T15:00:00.000Z");
 
-  expect(eventPositionOf(long, now)).toBe("running");
+  expect(taskPositionOf(long, now)).toBe("running");
 });
 
-test("an event that has not started has no stopwatch", () => {
+test("a task that has not started has no stopwatch", () => {
   const now = new Date("2026-05-22T18:30:00.000Z");
 
   expect(stopwatchOf(openFuture, now)).toBeNull();

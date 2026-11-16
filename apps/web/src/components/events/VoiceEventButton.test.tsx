@@ -18,7 +18,7 @@ let api: FakeApi;
 const requests = () => api.store.table<RequestDto>("requests");
 const voicePosts = () => api.calls.filter((call) => call.method === "POST" && call.pathname === "/api/requests/voice");
 const lastRequestId = () => [...requests().keys()].at(-1) as string;
-const createdEvent: RequestEntityDto = { kind: "event", id: "ev-9", name: "Estudar inglês", operation: "create", linkedTo: [] };
+const createdEvent: RequestEntityDto = { kind: "task", id: "ev-9", name: "Estudar inglês", operation: "create", linkedTo: [] };
 
 class FakeSpeechRecognition {
   static instances: FakeSpeechRecognition[] = [];

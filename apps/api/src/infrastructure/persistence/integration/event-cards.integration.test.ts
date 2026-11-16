@@ -311,7 +311,7 @@ describe("PostgresEventCardQuery", () => {
       ];
       await new PostgresEntityBatchWriter(ctx.db).commit({
         userId: USER,
-        events: [],
+        tasks: [],
         artifacts: [],
         sequence: [
           { op: "add", fromId: before.id, toId: middle.id },

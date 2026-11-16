@@ -168,7 +168,7 @@ export function planSeriesEdit(current: Recurrence, edit: SeriesEdit, timeZone: 
       tags: edit.tags ?? stored.tags,
       priority: edit.priority ?? stored.priority,
       notifyOffsetsMinutes: stored.notifyOffsetsMinutes as RecurrenceTemplate["notifyOffsetsMinutes"],
-      previousEventIds: stored.previousEventIds,
+      previousTaskIds: stored.previousTaskIds,
     },
   };
 }

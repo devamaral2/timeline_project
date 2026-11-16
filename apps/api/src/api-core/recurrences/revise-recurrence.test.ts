@@ -23,7 +23,7 @@ const template = {
   priority: "medium",
   notifyOffsetsMinutes: [5],
   artifactIds: ["series-note"],
-  previousEventIds: [],
+  previousTaskIds: [],
 };
 
 function existing(overrides: { materializedThrough?: string; startsOn?: string } = {}): Recurrence {
@@ -160,7 +160,7 @@ describe("template", () => {
       priority: "medium",
       notifyOffsetsMinutes: [],
       artifactIds: [],
-      previousEventIds: [],
+      previousTaskIds: [],
     });
     expect(artifacts).toEqual([]);
   });
@@ -230,12 +230,12 @@ describe("template", () => {
     const project = Event.create({ id: "project", userId: actor.userId, name: "Projeto", longRunning: true });
     const kit = setup({ events: [project] });
 
-    const { recurrence } = await kit.revise(existing(), { rule: {}, template: { name: "Sessão", previousEventIds: ["project"] } });
+    const { recurrence } = await kit.revise(existing(), { rule: {}, template: { name: "Sessão", previousTaskIds: ["project"] } });
 
-    expect(recurrence.template.previousEventIds).toEqual(["project"]);
+    expect(recurrence.template.previousTaskIds).toEqual(["project"]);
     expect(kit.database.events[0]?.revision).toBe(1);
     await expect(
-      kit.revise(existing(), { rule: {}, template: { name: "Sessão", previousEventIds: ["missing"] } }),
+      kit.revise(existing(), { rule: {}, template: { name: "Sessão", previousTaskIds: ["missing"] } }),
     ).rejects.toThrow(EventNotFoundError);
   });
 

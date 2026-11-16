@@ -1,17 +1,17 @@
 import type {
   AgendaPageDto,
-  CreateEventInput,
-  EventCardDto,
-  EventDto,
-  EventPriority,
-  EventStatus,
+  CreateTaskInput,
+  TaskCardDto,
+  TaskDto,
+  TaskPriority,
+  TaskStatus,
   TagSuggestionDto,
-  UpdateEventInput,
+  UpdateTaskInput,
 } from "@repo/contracts";
 import { apiRequest, newIdempotencyKey } from "./client-request";
 
 /** Edição: a rota leva o `eventId`, então o corpo não o repete. `expectedRevision` vem do evento lido. */
-export type EditEventInput = Omit<UpdateEventInput, "eventId">;
+export type EditEventInput = Omit<UpdateTaskInput, "taskId">;
 
 /** Rota que cada função desta área chama, no formato do catálogo da API. `route-coverage.test.ts` confere. */
 export const eventsRoutes = {
@@ -33,8 +33,8 @@ export interface AgendaWindow {
 
 export interface TrackedFilters {
   actor?: "human" | "agent";
-  status?: EventStatus[];
-  priority?: EventPriority[];
+  status?: TaskStatus[];
+  priority?: TaskPriority[];
   tag?: string;
   q?: string;
   longRunning?: boolean;
@@ -44,8 +44,8 @@ export interface TrackedFilters {
 }
 
 /** A agenda de uma janela, com todas as páginas: segue o `nextCursor` até acabar. */
-export async function listAgenda(window: AgendaWindow): Promise<EventCardDto[]> {
-  const items: EventCardDto[] = [];
+export async function listAgenda(window: AgendaWindow): Promise<TaskCardDto[]> {
+  const items: TaskCardDto[] = [];
   let cursor: string | undefined;
   do {
     const page = await apiRequest<AgendaPageDto>("GET", "/api/events", {
@@ -57,8 +57,8 @@ export async function listAgenda(window: AgendaWindow): Promise<EventCardDto[]> 
   return items;
 }
 
-export function listTrackedEvents(filters: TrackedFilters = {}): Promise<EventCardDto[]> {
-  return apiRequest<EventCardDto[]>("GET", "/api/events/tracked", {
+export function listTrackedEvents(filters: TrackedFilters = {}): Promise<TaskCardDto[]> {
+  return apiRequest<TaskCardDto[]>("GET", "/api/events/tracked", {
     query: {
       actor: filters.actor,
       status: filters.status,
@@ -75,18 +75,18 @@ export function listTrackedEvents(filters: TrackedFilters = {}): Promise<EventCa
 
 /** Devolve o id do evento criado. Quem cria passa a chave de `newIdempotencyKey`, estável no formulário. */
 export async function createEvent(
-  input: CreateEventInput,
+  input: CreateTaskInput,
   options: { idempotencyKey: string },
 ): Promise<string> {
-  const created = await apiRequest<{ eventId: string }>("POST", "/api/events", {
+  const created = await apiRequest<{ taskId: string }>("POST", "/api/events", {
     body: input,
     idempotencyKey: options.idempotencyKey,
   });
-  return created.eventId;
+  return created.taskId;
 }
 
-export function getEvent(eventId: string): Promise<EventDto> {
-  return apiRequest<EventDto>("GET", `/api/events/${encodeURIComponent(eventId)}`);
+export function getEvent(eventId: string): Promise<TaskDto> {
+  return apiRequest<TaskDto>("GET", `/api/events/${encodeURIComponent(eventId)}`);
 }
 
 export function updateEvent(eventId: string, input: EditEventInput): Promise<void> {

@@ -14,7 +14,7 @@ import type {
   RecurrenceRepository,
   StagedChange,
 } from "../../../domain/ports";
-import type { CreateArtifactInput, CreateEventInput, CreateRecurrenceInput } from "@repo/contracts";
+import type { CreateArtifactInput, CreateTaskInput, CreateRecurrenceInput } from "@repo/contracts";
 import { dayKeyOf, expandOccurrences, shiftDayKey } from "@repo/timeline";
 import type { CreateEventUseCase, PrepareEventOptions } from "../../events/create-event.usecase";
 import { prepareRecurrence } from "../../recurrences/prepare-recurrence";
@@ -143,7 +143,7 @@ export class AgentChangeSession {
   }
 
   /** Os artefatos novos do evento entram no mesmo lote, antes dele (a relacao aponta para eles). */
-  createEvent(input: CreateEventInput, options?: PrepareEventOptions): Promise<StageResult> {
+  createEvent(input: CreateTaskInput, options?: PrepareEventOptions): Promise<StageResult> {
     return this.attempt(async () => {
       const prepared = await this.createEventUseCase.prepare(input, { userId: this.userId }, undefined, options);
       this.stageTemplateArtifacts(prepared.artifacts, prepared.derivations);
@@ -239,7 +239,7 @@ export class AgentChangeSession {
     const series = [...this.recurrences.values()];
     return {
       userId: this.userId,
-      events: changes(this.events),
+      tasks: changes(this.events),
       artifacts: changes(this.artifacts),
       derivations: [...this.derivations],
       sequence: [...this.sequence],
@@ -289,7 +289,7 @@ export class AgentChangeSession {
   private async stageOccurrence(recurrence: Recurrence, day: string): Promise<void> {
     const occurrence = buildOccurrence(recurrence, day);
     this.events.set(occurrence.id, { change: { op: "create", entity: occurrence } });
-    for (const previousId of storedTemplateOf(recurrence).previousEventIds ?? []) {
+    for (const previousId of storedTemplateOf(recurrence).previousTaskIds ?? []) {
       const related = await this.sequenceEvents(previousId, occurrence.id);
       if (!related.ok) throw new StagingError(related.error);
     }

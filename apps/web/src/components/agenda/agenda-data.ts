@@ -1,12 +1,12 @@
-import type { EventCardDto } from "@repo/contracts";
-import { eventDayKeysOf, formatTime } from "@repo/timeline";
+import type { TaskCardDto } from "@repo/contracts";
+import { taskDayKeysOf, formatTime } from "@repo/timeline";
 import { cardDurationLabel } from "@/lib/events/card-text";
 import type { ExampleEvent } from "./agenda-examples";
 
 /** Um cartão que tem horário e entra na grade: evento longo e passo ficam de fora mesmo quando a resposta os traz. */
-export type AgendaCard = EventCardDto & { startedAt: string };
+export type AgendaCard = TaskCardDto & { startedAt: string };
 
-export function isAgendaCard(card: EventCardDto): card is AgendaCard {
+export function isAgendaCard(card: TaskCardDto): card is AgendaCard {
   return card.startedAt !== undefined && !card.longRunning && card.kind !== "step";
 }
 
@@ -36,14 +36,14 @@ export function agendaEventFromCard(card: AgendaCard): ExampleEvent {
 }
 
 /** Agrupa e ordena os cartões por horário; o evento que atravessa a meia-noite aparece no dia em que começou e no dia em que termina. */
-export function agendaEventsByDay(cards: readonly EventCardDto[]): Record<string, ExampleEvent[]> {
+export function agendaEventsByDay(cards: readonly TaskCardDto[]): Record<string, ExampleEvent[]> {
   const byDay: Record<string, ExampleEvent[]> = {};
   const seen = new Set<string>();
   for (const card of cards) {
     if (seen.has(card.id) || !isAgendaCard(card)) continue;
     seen.add(card.id);
     const agendaEvent = agendaEventFromCard(card);
-    for (const dayKey of eventDayKeysOf(card.startedAt, card.estimatedFinishAt)) {
+    for (const dayKey of taskDayKeysOf(card.startedAt, card.estimatedFinishAt)) {
       const dayEvents = byDay[dayKey] ?? [];
       dayEvents.push(agendaEvent);
       byDay[dayKey] = dayEvents;

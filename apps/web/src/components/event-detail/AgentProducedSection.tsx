@@ -23,8 +23,8 @@ export function AgentProducedSection({ userId, entities }: AgentProducedSectionP
         {entities.map((entity) => (
           <LinkRow
             key={`${entity.kind}-${entity.id}`}
-            kind={entity.kind === "event" ? "event" : "note"}
-            icon={entity.kind === "event" ? <CalendarDays {...detailIcon} /> : <FileText {...detailIcon} />}
+            kind={entity.kind === "task" ? "event" : "note"}
+            icon={entity.kind === "task" ? <CalendarDays {...detailIcon} /> : <FileText {...detailIcon} />}
             title={entity.name}
             sub={`${entityOperationLabel(entity.operation)} · ${entityKindLabel(entity)}`}
             href={entity.operation === "delete" ? undefined : entityHref(userId, entity)}

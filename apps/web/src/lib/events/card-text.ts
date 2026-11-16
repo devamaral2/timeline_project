@@ -1,4 +1,4 @@
-import type { EventCardDto, EventRecurrenceDto } from "@repo/contracts";
+import type { TaskCardDto, TaskRecurrenceDto } from "@repo/contracts";
 import { dayKeyOf, formatTime, relativeDayLabel, shiftDayKey, shortDate, zonedDayStart } from "@repo/timeline";
 
 /**
@@ -10,7 +10,7 @@ import { dayKeyOf, formatTime, relativeDayLabel, shiftDayKey, shortDate, zonedDa
  * meia-noite local de `startedAt`.
  */
 
-type RecurrenceRule = EventRecurrenceDto["rule"];
+type RecurrenceRule = TaskRecurrenceDto["rule"];
 
 const MINUTE_MS = 60_000;
 
@@ -28,7 +28,7 @@ export interface WhenOptions {
  * O quando da linha: "Hoje, 09:00", "Hoje", "Era ontem", "Sem data", "Prazo 30 nov",
  * "na fila · há 3 min", "há 12 min", "aguarda sua resposta" ou a regra da serie.
  */
-export function cardWhenLabel(card: EventCardDto, now: Date, options: WhenOptions = {}): string {
+export function cardWhenLabel(card: TaskCardDto, now: Date, options: WhenOptions = {}): string {
   if (options.ruleInPlaceOfTime && card.recurrence && !card.recurrence.detached) {
     return recurrenceRuleLabel(card.recurrence.rule);
   }
@@ -44,7 +44,7 @@ export function cardWhenLabel(card: EventCardDto, now: Date, options: WhenOption
  * Atrasado: a fazer com o dia ja passado, ou evento longo, ainda aberto, com o
  * prazo (o dia de `estimatedFinishAt`) ja passado. Evento de agente nao atrasa.
  */
-export function cardIsOverdue(card: EventCardDto, now: Date): boolean {
+export function cardIsOverdue(card: TaskCardDto, now: Date): boolean {
   if (card.actor === "agent") return false;
   const todayKey = dayKeyOf(now);
   if (card.longRunning) {
@@ -62,7 +62,7 @@ export function cardIsOverdue(card: EventCardDto, now: Date): boolean {
  * A duracao: fim planejado menos inicio, "50 min", "1h30", "2h". Sem os dois
  * instantes, ou no evento longo e no dia sem hora, nao ha duracao.
  */
-export function cardDurationLabel(card: EventCardDto): string | null {
+export function cardDurationLabel(card: TaskCardDto): string | null {
   if (card.longRunning || !card.startedAt || !card.estimatedFinishAt) return null;
   if (isDayStart(card.startedAt)) return null;
   const minutes = Math.round((new Date(card.estimatedFinishAt).getTime() - new Date(card.startedAt).getTime()) / MINUTE_MS);
@@ -103,7 +103,7 @@ function weekdayList(mask: number): string {
   return `${names.slice(0, -1).join(", ")} e ${names[names.length - 1]}`;
 }
 
-function agentWhenLabel(card: EventCardDto, now: Date): string {
+function agentWhenLabel(card: TaskCardDto, now: Date): string {
   if (card.status === "waiting") return "aguarda sua resposta";
   if (card.status === "queued") {
     return card.startedAt ? `na fila · ${elapsedLabel(card.startedAt, now)}` : "na fila";
@@ -112,7 +112,7 @@ function agentWhenLabel(card: EventCardDto, now: Date): string {
   return elapsedLabel(card.startedAt, now);
 }
 
-function dayWhenLabel(startedAt: string, status: EventCardDto["status"], now: Date): string {
+function dayWhenLabel(startedAt: string, status: TaskCardDto["status"], now: Date): string {
   const dayKey = dayKeyOf(startedAt);
   const todayKey = dayKeyOf(now);
   if (status === "todo" && dayKey < todayKey) {

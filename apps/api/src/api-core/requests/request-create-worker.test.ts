@@ -25,10 +25,10 @@ describe("passo de criar eventos", () => {
 
     expect(ctx.batchWriter.commits).toHaveLength(1);
     const batch = ctx.batchWriter.commits[0];
-    expect(batch?.events).toHaveLength(3);
+    expect(batch?.tasks).toHaveLength(3);
     // O agente de criacao de evento nunca cria artefatos: nem o alimento que a refeicao implicaria.
     expect(batch?.artifacts).toHaveLength(0);
-    const meal = batch?.events.find((change) => change.op === "create" && change.entity.kind === "meal");
+    const meal = batch?.tasks.find((change) => change.op === "create" && change.entity.kind === "meal");
     expect(meal && meal.op === "create" && meal.entity.artifactLinks).toEqual([]);
 
     expect(ctx.store.stepRecords[0]?.status).toBe("done");
@@ -120,7 +120,7 @@ describe("passo de criar eventos", () => {
     expect(party?.nextIds).toEqual([cake?.id, serve?.id]);
     expect(cake?.nextIds).toEqual([serve?.id]);
     expect([party, cake, serve].map((candidate) => candidate?.revision)).toEqual([1, 1, 1]);
-    expect(ctx.batchWriter.commits[0]?.events.map((change) => change.op)).toEqual(["create", "create", "create"]);
+    expect(ctx.batchWriter.commits[0]?.tasks.map((change) => change.op)).toEqual(["create", "create", "create"]);
     expect(ctx.batchWriter.commits[0]?.sequence).toEqual([
       { op: "add", fromId: party?.id, toId: cake?.id },
       { op: "add", fromId: party?.id, toId: serve?.id },
@@ -246,7 +246,7 @@ describe("passo de criar series", () => {
 
     const batch = ctx.batchWriter.commits[0];
     expect(batch?.recurrences).toHaveLength(1);
-    expect(batch?.events).toHaveLength(1);
+    expect(batch?.tasks).toHaveLength(1);
     const [entity] = await ctx.store.entities("r1");
     expect(entity).toMatchObject({ kind: "event", operation: "create", summary: { name: "Corrida", series: true } });
   });

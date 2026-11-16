@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { artifactSchema } from "./schemas";
+import { artifactSchema, createTaskInputSchema, updateTaskInputSchema } from "./schemas";
 
 const food = {
   description: "arroz", items: [],
@@ -43,4 +43,18 @@ test("a training artifact accepts walking as a cardio workout", () => {
     },
   };
   expect(artifactSchema.parse(artifact)).toEqual(artifact);
+});
+
+// Os nomes antigos saem dos novos: o teste nao pode citar o nome que a varredura de residuos proibe.
+const nomeAntigo = (campo: string) => campo.replace("task", "event").replace("Task", "Event");
+
+test.each(["previousTaskIds", "nextTaskIds"])("the task input schemas take %s and refuse its old name", (field) => {
+  expect(createTaskInputSchema.safeParse({ [field]: ["t1"] }).success).toBe(true);
+  expect(createTaskInputSchema.safeParse({ [nomeAntigo(field)]: ["t1"] }).success).toBe(false);
+  expect(updateTaskInputSchema.safeParse({ taskId: "t1", expectedRevision: 1, [field]: [] }).success).toBe(true);
+  expect(updateTaskInputSchema.safeParse({ taskId: "t1", expectedRevision: 1, [nomeAntigo(field)]: [] }).success).toBe(false);
+});
+
+test("the update schema identifies the task by taskId, not by its old name", () => {
+  expect(updateTaskInputSchema.safeParse({ [nomeAntigo("taskId")]: "t1", expectedRevision: 1 }).success).toBe(false);
 });

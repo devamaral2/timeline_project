@@ -2,7 +2,7 @@
 
 import { Repeat } from "lucide-react";
 import { type ReactNode, useState } from "react";
-import type { EventDto } from "@repo/contracts";
+import type { TaskDto } from "@repo/contracts";
 import { shortDate } from "@repo/timeline";
 import { DetailMessage } from "@/components/detail/detail-parts";
 import { EditRow, EditSelect, editStyles as edit } from "@/components/edit/edit-parts";
@@ -28,7 +28,7 @@ import styles from "./event-edit-recurrence.module.css";
 
 interface EventEditRecurrenceSectionProps {
   /** O evento lido; `null` na criação. */
-  event: EventDto | null;
+  event: TaskDto | null;
   /** Início e fim planejado do formulário: a criação tira deles a hora, a duração e o início da regra. */
   draft: EventDraft;
   recurrence: RecurrenceState;

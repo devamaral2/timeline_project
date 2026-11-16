@@ -1,8 +1,8 @@
-import type { EventCardDto } from "@repo/contracts";
+import type { TaskCardDto } from "@repo/contracts";
 import { expect, test } from "vitest";
 import { type AgendaCard, agendaEventFromCard, agendaEventsByDay } from "./agenda-data";
 
-function card(overrides: Partial<EventCardDto> = {}): EventCardDto {
+function card(overrides: Partial<TaskCardDto> = {}): TaskCardDto {
   return {
     id: "event-1",
     actor: "human",
@@ -18,7 +18,7 @@ function card(overrides: Partial<EventCardDto> = {}): EventCardDto {
     notifyOffsetsMinutes: [],
     tags: ["pessoal"],
     artifactTypes: [],
-    previousEventIds: [],
+    previousTaskIds: [],
     revision: 1,
     ...overrides,
   };

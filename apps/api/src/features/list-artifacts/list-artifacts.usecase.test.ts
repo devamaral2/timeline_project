@@ -67,9 +67,9 @@ describe("the artifacts of the user", () => {
 
     const artifacts = await useCase.execute(undefined, actor);
 
-    expect(artifacts.find((artifact) => artifact.id === "food-rice")?.events).toEqual([
+    expect(artifacts.find((artifact) => artifact.id === "food-rice")?.tasks).toEqual([
       {
-        eventId: "lunch",
+        taskId: "lunch",
         relation: "uses",
         name: "Almoço",
         actor: "human",
@@ -78,7 +78,7 @@ describe("the artifacts of the user", () => {
         estimatedFinishAt: "2026-08-17T16:00:00.000Z",
       },
     ]);
-    expect(artifacts.find((artifact) => artifact.id === "sleep")?.events).toEqual([]);
+    expect(artifacts.find((artifact) => artifact.id === "sleep")?.tasks).toEqual([]);
     expect(artifacts.find((artifact) => artifact.id === "food-rice")).toMatchObject({ global: false, derived: false, type: "food" });
   });
 
@@ -149,7 +149,7 @@ describe("`scope=global`", () => {
     expect(await ids({ scope: "global", type: "workout" })).toEqual(["global-run"]);
     expect(await ids({ scope: "global", type: "food" }, { userId: "someone-else" })).toEqual(["global-apple", "global-banana"]);
     const [apple] = await useCase.execute({ scope: "global", type: "food" }, actor);
-    expect(apple).toMatchObject({ name: "Abacate", global: true, derived: false, events: [] });
+    expect(apple).toMatchObject({ name: "Abacate", global: true, derived: false, tasks: [] });
   });
 
   test("never mixes in the artifacts of the user, and has nothing for the types that cannot be global", async () => {
@@ -179,7 +179,7 @@ describe("`scope=global`", () => {
 
     const globals = await useCase.execute({ scope: "global", type: "food" }, { userId: "someone-else" });
 
-    expect(globals.every((artifact) => artifact.events?.length === 0)).toBe(true);
+    expect(globals.every((artifact) => artifact.tasks?.length === 0)).toBe(true);
     expect(await ids({ scope: "global", type: "food", eventId: "lunch" })).toEqual([]);
   });
 });

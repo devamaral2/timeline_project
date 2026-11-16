@@ -2,7 +2,7 @@
 
 import { Apple, Bot, Dumbbell, FileCode, FileText, type LucideIcon, Moon, Route } from "lucide-react";
 import Link from "next/link";
-import type { ArtifactType, EventArtifactDto, EventDto } from "@repo/contracts";
+import type { ArtifactType, TaskArtifactDto, TaskDto } from "@repo/contracts";
 import { DetailSection } from "@/components/detail/detail-parts";
 import { ICON_STROKE_WIDTH } from "@/components/events/event-visuals";
 import { mealCaloriesKcal } from "@/lib/events/event-read-model";
@@ -10,7 +10,7 @@ import styles from "./event-artifacts.module.css";
 
 interface EventArtifactsSectionProps {
   userId: string;
-  event: EventDto;
+  event: TaskDto;
 }
 
 const TYPE_ICONS: Record<ArtifactType, LucideIcon> = {
@@ -54,12 +54,12 @@ export function EventArtifactsSection({ userId, event }: EventArtifactsSectionPr
 }
 
 /** 1, 2, … para os artefatos da lista; `null` para o que o evento criou. */
-function artifactPositions(artifacts: readonly EventArtifactDto[]): (number | null)[] {
+function artifactPositions(artifacts: readonly TaskArtifactDto[]): (number | null)[] {
   let next = 0;
   return artifacts.map((link) => (link.relation === "creates" ? null : ++next));
 }
 
-function ArtifactRow({ link, position, userId }: { link: EventArtifactDto; position: number | null; userId: string }) {
+function ArtifactRow({ link, position, userId }: { link: TaskArtifactDto; position: number | null; userId: string }) {
   const { artifact } = link;
   const Icon = TYPE_ICONS[artifact.type];
   return (

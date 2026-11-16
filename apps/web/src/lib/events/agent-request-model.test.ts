@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import type { EventCardDto } from "@repo/contracts";
+import type { TaskCardDto } from "@repo/contracts";
 import { eventFixture } from "@/test/fake-api/events";
 import { hasOpenAgentEvent } from "./agent-request-model";
 
-function agentCard(status: EventCardDto["status"]): EventCardDto {
-  return eventFixture({ id: `agent-${status}`, actor: "agent", kind: "request", status }) as EventCardDto;
+function agentCard(status: TaskCardDto["status"]): TaskCardDto {
+  return eventFixture({ id: `agent-${status}`, actor: "agent", kind: "request", status }) as TaskCardDto;
 }
 
 describe("hasOpenAgentEvent", () => {
@@ -17,7 +17,7 @@ describe("hasOpenAgentEvent", () => {
   });
 
   it("evento de pessoa nunca conta, mesmo com status que o agente também usa", () => {
-    const person = eventFixture({ id: "luz", actor: "human", status: "doing" }) as EventCardDto;
+    const person = eventFixture({ id: "luz", actor: "human", status: "doing" }) as TaskCardDto;
     expect(hasOpenAgentEvent([person])).toBe(false);
   });
 
@@ -26,6 +26,6 @@ describe("hasOpenAgentEvent", () => {
   });
 
   it("basta um evento de agente em aberto no meio de muitos fechados", () => {
-    expect(hasOpenAgentEvent([agentCard("done"), eventFixture({ id: "luz", status: "todo" }) as EventCardDto, agentCard("running")])).toBe(true);
+    expect(hasOpenAgentEvent([agentCard("done"), eventFixture({ id: "luz", status: "todo" }) as TaskCardDto, agentCard("running")])).toBe(true);
   });
 });

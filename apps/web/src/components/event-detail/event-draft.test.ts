@@ -1,4 +1,4 @@
-import type { EventArtifactDto, EventDto } from "@repo/contracts";
+import type { TaskArtifactDto, TaskDto } from "@repo/contracts";
 import { describe, expect, it } from "vitest";
 import { eventFixture } from "@/test/fake-api/events";
 import { buildCreateEventInput, buildEventPatch, draftFromEvent, emptyEventDraft, instantFromDraft, rebaseDraft, validateEventDraft } from "./event-draft";
@@ -8,7 +8,7 @@ describe("emptyEventDraft e buildCreateEventInput", () => {
     expect(emptyEventDraft("comprar pão")).toEqual({
       kind: "common", name: "comprar pão", status: null, priority: "medium",
       startDate: "", startTime: "", endDate: "", endTime: "", description: "", location: "", reminders: [], tags: [], longRunning: false,
-      previousEventIds: [], nextEventIds: [], artifacts: [],
+      previousTaskIds: [], nextTaskIds: [], artifacts: [],
     });
   });
 
@@ -46,7 +46,7 @@ describe("emptyEventDraft e buildCreateEventInput", () => {
 /** 10:00 em São Paulo: o relógio da edição não entra no corpo, só o instante de conclusão. */
 const NOW = new Date("2026-11-14T13:00:00.000Z");
 
-function training(overrides: Partial<EventDto> = {}): EventDto {
+function training(overrides: Partial<TaskDto> = {}): TaskDto {
   return eventFixture({
     id: "ev-1",
     name: "Treino de força",
@@ -83,9 +83,9 @@ describe("draftFromEvent", () => {
   });
 
   it("lê a sequência nos dois lados", () => {
-    const draft = draftFromEvent(training({ previousEventIds: ["ev-2"], nextEventIds: ["ev-3"] }));
+    const draft = draftFromEvent(training({ previousTaskIds: ["ev-2"], nextTaskIds: ["ev-3"] }));
 
-    expect(draft).toMatchObject({ previousEventIds: ["ev-2"], nextEventIds: ["ev-3"] });
+    expect(draft).toMatchObject({ previousTaskIds: ["ev-2"], nextTaskIds: ["ev-3"] });
   });
 
   it("um evento de referência sem data e sem status tem os campos vazios e o status nulo", () => {
@@ -211,16 +211,16 @@ describe("buildEventPatch", () => {
   });
 
   it("sequência: manda a lista completa de cada lado, e só quando ela mudou", () => {
-    const event = training({ previousEventIds: ["ev-2"], nextEventIds: [] });
+    const event = training({ previousTaskIds: ["ev-2"], nextTaskIds: [] });
 
-    expect(buildEventPatch(event, { ...draftFromEvent(event), previousEventIds: ["ev-2", "ev-3"], nextEventIds: ["ev-4"] }, NOW)).toEqual({
+    expect(buildEventPatch(event, { ...draftFromEvent(event), previousTaskIds: ["ev-2", "ev-3"], nextTaskIds: ["ev-4"] }, NOW)).toEqual({
       expectedRevision: 3,
-      previousEventIds: ["ev-2", "ev-3"],
-      nextEventIds: ["ev-4"],
+      previousTaskIds: ["ev-2", "ev-3"],
+      nextTaskIds: ["ev-4"],
     });
-    expect(buildEventPatch(event, { ...draftFromEvent(event), nextEventIds: ["ev-4"] }, NOW)).toEqual({
+    expect(buildEventPatch(event, { ...draftFromEvent(event), nextTaskIds: ["ev-4"] }, NOW)).toEqual({
       expectedRevision: 3,
-      nextEventIds: ["ev-4"],
+      nextTaskIds: ["ev-4"],
     });
     expect(buildEventPatch(event, draftFromEvent(event), NOW)).toBeNull();
   });
@@ -352,7 +352,7 @@ describe("lembretes e tags", () => {
 
 describe("artefatos na edição", () => {
   /** Um vínculo como o evento o devolve: o artefato inteiro (catálogo global é treino; o próprio, nota). */
-  function link(id: string, name: string, relation: EventArtifactDto["relation"] = "uses") {
+  function link(id: string, name: string, relation: TaskArtifactDto["relation"] = "uses") {
     const global = id === "art-gym";
     return {
       relation,
@@ -363,7 +363,7 @@ describe("artefatos na edição", () => {
         ...(global
           ? { type: "workout", data: { code: "weightlifting", category: "strength", active: true } }
           : { type: "text", data: { body: "" } }),
-      } as EventArtifactDto["artifact"],
+      } as TaskArtifactDto["artifact"],
     };
   }
   const workout = link("art-gym", "Musculação");

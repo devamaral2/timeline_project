@@ -54,13 +54,13 @@ export class UpdateArtifactUseCase {
     // So os eventos de pessoa entram na lista: os pedidos ao agente que tocaram o artefato nao sao editados por aqui.
     const links = (await this.linkQuery.linksOf([existing.id])).get(existing.id) ?? [];
     const current = links.filter((link) => link.actor === "human").map((link) => link.eventId);
-    const desired = input.eventIds !== undefined ? uniqueIds(input.eventIds) : current;
+    const desired = input.taskIds !== undefined ? uniqueIds(input.taskIds) : current;
     const events = await planArtifactLinks(existing.id, current, desired, this.eventRepository, actor.userId);
 
     if (!revised && events.length === 0) return;
     await this.batchWriter.commit({
       userId: actor.userId,
-      events,
+      tasks: events,
       artifacts: revised ? [{ op: "update", entity: revised, expectedRevision: existing.revision }] : [],
     });
   }

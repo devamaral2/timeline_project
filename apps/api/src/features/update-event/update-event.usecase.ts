@@ -1,7 +1,7 @@
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
 import { EventNotFoundError, EventOwnershipError, EventRevisionConflictError } from "../../domain";
 import type { ArtifactRepository, EntityBatchWriter, EventRepository } from "../../domain/ports";
-import type { UpdateEventInput } from "@repo/contracts";
+import type { UpdateTaskInput } from "@repo/contracts";
 import type { ArtifactBuilder } from "../../api-core/artifacts/services/artifact-builder.service";
 import { mergeEventUpdate, toUpdateBatch } from "../../api-core/events/services/event-update-merger.service";
 
@@ -14,9 +14,9 @@ export class UpdateEventUseCase {
   ) {}
 
   /** O evento, os artefatos editados e os eventos de origem das relacoes mudam numa transacao so. */
-  async execute(input: UpdateEventInput, actor: AuthenticatedUser): Promise<void> {
-    const existingEvent = await this.eventRepository.findById(input.eventId);
-    if (!existingEvent) throw new EventNotFoundError(`Event not found: ${input.eventId}`);
+  async execute(input: UpdateTaskInput, actor: AuthenticatedUser): Promise<void> {
+    const existingEvent = await this.eventRepository.findById(input.taskId);
+    if (!existingEvent) throw new EventNotFoundError(`Event not found: ${input.taskId}`);
     if (existingEvent.userId !== actor.userId) throw new EventOwnershipError();
     if (existingEvent.revision !== input.expectedRevision) {
       throw new EventRevisionConflictError(

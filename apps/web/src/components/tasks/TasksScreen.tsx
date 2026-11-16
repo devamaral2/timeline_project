@@ -2,7 +2,7 @@
 
 import { ChevronDown, Hash, ListChecks } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { EventCardDto, EventPriority, HumanEventStatus } from "@repo/contracts";
+import type { TaskCardDto, TaskPriority, HumanTaskStatus } from "@repo/contracts";
 import { agendaRefreshEvent } from "@/components/agenda/agenda-refresh";
 import { EventRow } from "@/components/events/event-row";
 import { EventStatusPicker } from "@/components/events/event-status-picker";
@@ -55,17 +55,17 @@ function openTasksLabel(open: number): string {
  */
 export function TasksScreen({ userId }: { userId: string }) {
   const now = useNow();
-  const [cards, setCards] = useState<EventCardDto[] | null>(null);
-  const [facets, setFacets] = useState<EventCardDto[] | null>(null);
+  const [cards, setCards] = useState<TaskCardDto[] | null>(null);
+  const [facets, setFacets] = useState<TaskCardDto[] | null>(null);
   const [error, setError] = useState(false);
   const [expanded, setExpanded] = useState<TaskGroupKey[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   /** A tarefa cujo glifo foi tocado: a escolha de status fica aberta para ela. */
-  const [statusCard, setStatusCard] = useState<EventCardDto | null>(null);
+  const [statusCard, setStatusCard] = useState<TaskCardDto | null>(null);
   const [statusAnchor, setStatusAnchor] = useState<HTMLElement | null>(null);
   const [tag, setTag] = useState<string | null>(null);
-  const [priorities, setPriorities] = useState<EventPriority[]>([]);
+  const [priorities, setPriorities] = useState<TaskPriority[]>([]);
   const [typed, setTyped] = useState("");
   const [query, setQuery] = useState("");
   /** Só a resposta da consulta mais recente entra na tela: filtro trocado no meio não deixa lista velha. */
@@ -122,7 +122,7 @@ export function TasksScreen({ userId }: { userId: string }) {
   }
 
   /** O glifo de um evento de pessoa abre a escolha de status. Evento de agente não muda status. */
-  function openStatusPicker(card: EventCardDto, anchor: HTMLElement) {
+  function openStatusPicker(card: TaskCardDto, anchor: HTMLElement) {
     if (saving || card.actor !== "human") return;
     setStatusAnchor(anchor);
     setStatusCard(card);
@@ -132,7 +132,7 @@ export function TasksScreen({ userId }: { userId: string }) {
    * Grava o status escolhido com a revisão lida; revisão velha relê a lista e
    * avisa. Escolher o status que a tarefa já tem só fecha a escolha.
    */
-  async function changeStatus(card: EventCardDto, status: HumanEventStatus) {
+  async function changeStatus(card: TaskCardDto, status: HumanTaskStatus) {
     setStatusCard(null);
     if (saving || status === card.status) return;
     setSaving(true);

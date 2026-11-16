@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { EventDto } from "@repo/contracts";
+import type { TaskDto } from "@repo/contracts";
 import { type FakeApi, createFakeApi } from "@/test/fake-api";
 import { eventFixture, eventsArea } from "@/test/fake-api/events";
 
@@ -20,7 +20,7 @@ const DETAIL_PATH = "/user-1/eventos/ev-1";
 const REFUSED = "A API recusou alguma entrada. Confira os campos e tente de novo.";
 
 /** O evento aberto: um treino de hoje, revisão 3 para conferir a revisão enviada. */
-function parent(overrides: Partial<EventDto> = {}): EventDto {
+function parent(overrides: Partial<TaskDto> = {}): TaskDto {
   return eventFixture({
     id: "ev-1",
     name: "Treino de força",
@@ -34,7 +34,7 @@ function parent(overrides: Partial<EventDto> = {}): EventDto {
 }
 
 /** Outros eventos da busca: revisão 1 e status a fazer, que é o que a lista de tarefas devolve. */
-function other(id: string, name: string, overrides: Partial<EventDto> = {}): EventDto {
+function other(id: string, name: string, overrides: Partial<TaskDto> = {}): TaskDto {
   return eventFixture({ id, name, status: "todo", startedAt: "2026-11-14T20:00:00-03:00", revision: 1, ...overrides });
 }
 
@@ -52,7 +52,7 @@ const SEED = [parent(), other("ev-2", "Treino de peito", { kind: "training" }), 
 
 let api: FakeApi;
 
-function install(events: EventDto[] = SEED) {
+function install(events: TaskDto[] = SEED) {
   api = createFakeApi({ areas: [eventsArea], seed: { events } });
   net.authedFetch.mockImplementation(api.authedFetch);
 }
@@ -171,7 +171,7 @@ describe("sequência na edição", () => {
     expect(lookup?.query).not.toHaveProperty("actor");
   });
 
-  it("escolher um antecessor e Salvar grava previousEventIds no mesmo PATCH do título, sem revisar o antecessor", async () => {
+  it("escolher um antecessor e Salvar grava previousTaskIds no mesmo PATCH do título, sem revisar o antecessor", async () => {
     install();
     renderRoute();
     await loaded();
@@ -186,16 +186,16 @@ describe("sequência na edição", () => {
     expect(patches()).toEqual([
       expect.objectContaining({
         pathname: "/api/events/ev-1",
-        body: { expectedRevision: 3, name: "Treino de costas", previousEventIds: ["ev-3"] },
+        body: { expectedRevision: 3, name: "Treino de costas", previousTaskIds: ["ev-3"] },
       }),
     ]);
     // A API liga o outro lado, mas só o evento do PATCH sobe a revisão.
-    const before = (await api.authedFetch("/api/events/ev-3")) as EventDto;
+    const before = (await api.authedFetch("/api/events/ev-3")) as TaskDto;
     expect(before.revision).toBe(1);
-    expect(before.nextEventIds).toEqual(["ev-1"]);
+    expect(before.nextTaskIds).toEqual(["ev-1"]);
   });
 
-  it("escolher um evento em “Da sequência a” manda nextEventIds, e o sucessor não é revisado", async () => {
+  it("escolher um evento em “Da sequência a” manda nextTaskIds, e o sucessor não é revisado", async () => {
     install();
     renderRoute();
     await loaded();
@@ -207,11 +207,11 @@ describe("sequência na edição", () => {
 
     await waitFor(() => expect(replace).toHaveBeenCalledWith(DETAIL_PATH));
     expect(patches()).toEqual([
-      expect.objectContaining({ pathname: "/api/events/ev-1", body: { expectedRevision: 3, nextEventIds: ["ev-2"] } }),
+      expect.objectContaining({ pathname: "/api/events/ev-1", body: { expectedRevision: 3, nextTaskIds: ["ev-2"] } }),
     ]);
-    const successor = (await api.authedFetch("/api/events/ev-2")) as EventDto;
+    const successor = (await api.authedFetch("/api/events/ev-2")) as TaskDto;
     expect(successor.revision).toBe(1);
-    expect(successor.previousEventIds).toEqual(["ev-1"]);
+    expect(successor.previousTaskIds).toEqual(["ev-1"]);
   });
 
   it("um evento de agente pode ser a ponta de qualquer lado", async () => {
@@ -227,7 +227,7 @@ describe("sequência na edição", () => {
 
     await waitFor(() => expect(replace).toHaveBeenCalledWith(DETAIL_PATH));
     expect(patches()).toEqual([
-      expect.objectContaining({ pathname: "/api/events/ev-1", body: { expectedRevision: 3, previousEventIds: ["ag-1"] } }),
+      expect.objectContaining({ pathname: "/api/events/ev-1", body: { expectedRevision: 3, previousTaskIds: ["ag-1"] } }),
     ]);
   });
 
@@ -246,15 +246,15 @@ describe("sequência na edição", () => {
     expect(patches()).toEqual([
       expect.objectContaining({
         pathname: "/api/events/ev-1",
-        body: { expectedRevision: 3, previousEventIds: ["ag-1"], nextEventIds: ["ev-3"] },
+        body: { expectedRevision: 3, previousTaskIds: ["ag-1"], nextTaskIds: ["ev-3"] },
       }),
     ]);
   });
 
   it("cada evento já ligado pode ser removido, e a remoção vai no Salvar", async () => {
     install([
-      parent({ previousEventIds: ["ev-3"] }),
-      other("ev-3", "Jantar leve", { kind: "meal", nextEventIds: ["ev-1"] }),
+      parent({ previousTaskIds: ["ev-3"] }),
+      other("ev-3", "Jantar leve", { kind: "meal", nextTaskIds: ["ev-1"] }),
     ]);
     renderRoute();
     await loaded();
@@ -266,18 +266,18 @@ describe("sequência na edição", () => {
 
     await waitFor(() => expect(replace).toHaveBeenCalledWith(DETAIL_PATH));
     expect(patches()).toEqual([
-      expect.objectContaining({ pathname: "/api/events/ev-1", body: { expectedRevision: 3, previousEventIds: [] } }),
+      expect.objectContaining({ pathname: "/api/events/ev-1", body: { expectedRevision: 3, previousTaskIds: [] } }),
     ]);
-    const other3 = (await api.authedFetch("/api/events/ev-3")) as EventDto;
-    expect(other3.nextEventIds).toEqual([]);
+    const other3 = (await api.authedFetch("/api/events/ev-3")) as TaskDto;
+    expect(other3.nextTaskIds).toEqual([]);
     expect(other3.revision).toBe(1);
   });
 
-  it("remover um evento de “Da sequência a” manda nextEventIds sem ele", async () => {
+  it("remover um evento de “Da sequência a” manda nextTaskIds sem ele", async () => {
     install([
-      parent({ nextEventIds: ["ev-2", "ev-3"] }),
-      other("ev-2", "Treino de peito", { previousEventIds: ["ev-1"] }),
-      other("ev-3", "Jantar leve", { previousEventIds: ["ev-1"] }),
+      parent({ nextTaskIds: ["ev-2", "ev-3"] }),
+      other("ev-2", "Treino de peito", { previousTaskIds: ["ev-1"] }),
+      other("ev-3", "Jantar leve", { previousTaskIds: ["ev-1"] }),
     ]);
     renderRoute();
     await loaded();
@@ -288,7 +288,7 @@ describe("sequência na edição", () => {
 
     await waitFor(() => expect(replace).toHaveBeenCalledWith(DETAIL_PATH));
     expect(patches()).toEqual([
-      expect.objectContaining({ pathname: "/api/events/ev-1", body: { expectedRevision: 3, nextEventIds: ["ev-3"] } }),
+      expect.objectContaining({ pathname: "/api/events/ev-1", body: { expectedRevision: 3, nextTaskIds: ["ev-3"] } }),
     ]);
   });
 

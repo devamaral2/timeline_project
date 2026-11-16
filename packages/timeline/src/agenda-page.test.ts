@@ -1,8 +1,8 @@
 import { expect, test } from "vitest";
-import type { AgendaEventCard } from "./agenda-day";
+import type { AgendaTaskCard } from "./agenda-day";
 import { mergeAgendaPage } from "./agenda-page";
 
-function anEvent(id: string): AgendaEventCard {
+function anTask(id: string): AgendaTaskCard {
   return {
     id,
     actor: "human",
@@ -10,7 +10,7 @@ function anEvent(id: string): AgendaEventCard {
     priority: "medium",
     longRunning: false,
     artifactTypes: [],
-    previousEventIds: [],
+    previousTaskIds: [],
     revision: 1,
     notifyOffsetsMinutes: [],
     name: id,
@@ -22,26 +22,26 @@ function anEvent(id: string): AgendaEventCard {
   };
 }
 
-const eventA = anEvent("a");
-const eventB = anEvent("b");
-const eventC = anEvent("c");
+const taskA = anTask("a");
+const taskB = anTask("b");
+const taskC = anTask("c");
 
 test("keeps the cursor of the page that just arrived", () => {
-  const first = mergeAgendaPage([], { items: [eventA, eventB], nextCursor: "page-2" });
+  const first = mergeAgendaPage([], { items: [taskA, taskB], nextCursor: "page-2" });
 
-  expect(first.items.map((event) => event.id)).toEqual(["a", "b"]);
+  expect(first.items.map((task) => task.id)).toEqual(["a", "b"]);
   expect(first.nextCursor).toBe("page-2");
 });
 
-test("does not repeat an event that came in both pages", () => {
-  const first = mergeAgendaPage([], { items: [eventA, eventB], nextCursor: "page-2" });
-  const second = mergeAgendaPage(first.items, { items: [eventB, eventC] });
+test("does not repeat a task that came in both pages", () => {
+  const first = mergeAgendaPage([], { items: [taskA, taskB], nextCursor: "page-2" });
+  const second = mergeAgendaPage(first.items, { items: [taskB, taskC] });
 
-  expect(second.items.map((event) => event.id)).toEqual(["a", "b", "c"]);
+  expect(second.items.map((task) => task.id)).toEqual(["a", "b", "c"]);
 });
 
 test("the end of the list is the page without a cursor", () => {
-  const last = mergeAgendaPage([eventA], { items: [eventB] });
+  const last = mergeAgendaPage([taskA], { items: [taskB] });
 
   expect(last.nextCursor).toBeUndefined();
 });

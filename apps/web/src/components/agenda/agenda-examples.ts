@@ -1,12 +1,12 @@
-import type { EventCardDto } from "@repo/contracts";
+import type { TaskCardDto } from "@repo/contracts";
 import { weekdayIndexOf } from "@repo/timeline";
 
 export const EXAMPLE_TODAY = "2026-09-14";
 export const EXAMPLE_NOW = Date.parse(`${EXAMPLE_TODAY}T09:35:00-03:00`);
 
 // Os estados e as prioridades da prévia são os do cartão do contrato; a prévia só usa um subconjunto deles.
-export type ExampleStatus = Extract<NonNullable<EventCardDto["status"]>, "todo" | "inHold" | "doing" | "done" | "cancel">;
-export type ExamplePriority = Extract<EventCardDto["priority"], "urgent" | "medium" | "low">;
+export type ExampleStatus = Extract<NonNullable<TaskCardDto["status"]>, "todo" | "inHold" | "doing" | "done" | "cancel">;
+export type ExamplePriority = Extract<TaskCardDto["priority"], "urgent" | "medium" | "low">;
 export interface ExampleTask {
   id: string;
   status: ExampleStatus;
@@ -31,7 +31,7 @@ export interface ExampleEvent {
   running?: boolean;
   notifyOffsetsMinutes?: number[];
   /** Só nos eventos da API: o cartão do contrato, que a linha única desenha. A prévia não o tem. */
-  card?: EventCardDto;
+  card?: TaskCardDto;
 }
 
 const todayEvents: ExampleEvent[] = [

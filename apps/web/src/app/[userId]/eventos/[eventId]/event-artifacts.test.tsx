@@ -1,6 +1,6 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import type { EventDto } from "@repo/contracts";
+import type { TaskDto } from "@repo/contracts";
 import { type FakeApi, createFakeApi } from "@/test/fake-api";
 import { artifactFixture, artifactsArea } from "@/test/fake-api/artifacts";
 import { eventFixture, eventsArea } from "@/test/fake-api/events";
@@ -18,7 +18,7 @@ const { default: EventPage } = await import("./page");
 
 let api: FakeApi;
 
-function install(events: EventDto[], artifacts: ReturnType<typeof artifactFixture>[]) {
+function install(events: TaskDto[], artifacts: ReturnType<typeof artifactFixture>[]) {
   api = createFakeApi({ areas: [eventsArea, artifactsArea], seed: { events, artifacts } });
   net.authedFetch.mockImplementation(api.authedFetch);
 }

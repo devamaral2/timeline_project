@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { EventDto, RecurrenceDto } from "@repo/contracts";
+import type { TaskDto, RecurrenceDto } from "@repo/contracts";
 import { type FakeApi, createFakeApi } from "@/test/fake-api";
 import { fieldValue, setField } from "@/components/edit/edit-test-helpers";
 import { eventFixture, eventsArea } from "@/test/fake-api/events";
@@ -44,7 +44,7 @@ const RULE = {
 
 let api: FakeApi;
 
-function install(events: EventDto[], recurrences: RecurrenceDto[] = []) {
+function install(events: TaskDto[], recurrences: RecurrenceDto[] = []) {
   api = createFakeApi({ areas: [eventsArea, recurrencesArea], seed: { events, recurrences } });
   net.authedFetch.mockImplementation(api.authedFetch);
 }
@@ -60,7 +60,7 @@ function series(overrides: Partial<RecurrenceDto> = {}): RecurrenceDto {
 }
 
 /** Uma ocorrência da série: o evento leva a regra e o id da série. */
-function occurrence(overrides: Partial<EventDto> = {}): EventDto {
+function occurrence(overrides: Partial<TaskDto> = {}): TaskDto {
   return eventFixture({
     id: "ev-1",
     name: "Treino de força",

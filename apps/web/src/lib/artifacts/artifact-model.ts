@@ -1,4 +1,4 @@
-import type { ArtifactEventLinkDto, ArtifactType } from "@repo/contracts";
+import type { ArtifactTaskLinkDto, ArtifactType } from "@repo/contracts";
 import { dateLineOf, minutesBetween } from "@/lib/events/event-detail-format";
 
 /**
@@ -64,7 +64,7 @@ export function artifactTagsByUse(artifacts: readonly { tags: readonly string[] 
  * Uma nota de sono vive na noite do evento a que pertence: o título é o dia (ou os dois dias) dele e, com fim
  * planejado, quanto durou na agenda. Sem evento com início, a nota é só a nota.
  */
-export function sleepAgendaOfArtifact(events: readonly ArtifactEventLinkDto[]): { title: string; agendaMinutes: number | null } | null {
+export function sleepAgendaOfArtifact(events: readonly ArtifactTaskLinkDto[]): { title: string; agendaMinutes: number | null } | null {
   const event = events.find((link) => link.startedAt);
   if (!event?.startedAt) return null;
   return {

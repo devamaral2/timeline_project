@@ -1,4 +1,4 @@
-import type { EventCardDto, EventStatus } from "@repo/contracts";
+import type { TaskCardDto, TaskStatus } from "@repo/contracts";
 
 /**
  * Agrupamento da lista de tarefas: os eventos com status da rota `tracked`
@@ -13,11 +13,11 @@ export interface TaskGroup {
   /** Feitas e Encerradas vêm recolhidos; abrem ao toque. */
   collapsedByDefault: boolean;
   /** Os cartões do grupo, na ordem em que a API os devolveu. */
-  cards: EventCardDto[];
+  cards: TaskCardDto[];
 }
 
 /** Cada status (de pessoa ou de agente) cai em exatamente um grupo. */
-const groupOfStatus: Record<EventStatus, TaskGroupKey> = {
+const groupOfStatus: Record<TaskStatus, TaskGroupKey> = {
   doing: "doing",
   running: "doing",
   todo: "todo",
@@ -45,7 +45,7 @@ const GROUPS: readonly Omit<TaskGroup, "cards">[] = [
  * hierarquia (a sequência entre eventos não muda a lista). Cartão sem status
  * (de referência) fica de fora. Grupo vazio não é devolvido.
  */
-export function groupTrackedEvents(cards: readonly EventCardDto[]): TaskGroup[] {
+export function groupTrackedEvents(cards: readonly TaskCardDto[]): TaskGroup[] {
   return GROUPS.map((group) => ({
     ...group,
     cards: cards.filter((card) => card.status !== undefined && groupOfStatus[card.status] === group.key),
@@ -53,15 +53,15 @@ export function groupTrackedEvents(cards: readonly EventCardDto[]): TaskGroup[] 
 }
 
 /** Status de pessoa em aberto: a série só mostra a ocorrência que ainda pede ação. */
-const OPEN_STATUSES: ReadonlySet<EventStatus> = new Set<EventStatus>(["todo", "toDefine", "doing", "inHold"]);
+const OPEN_STATUSES: ReadonlySet<TaskStatus> = new Set<TaskStatus>(["todo", "toDefine", "doing", "inHold"]);
 
 /** Ocorrência que segue a série (não foi editada). Só ela é contada e aparece pela regra. */
-function followsSeries(card: EventCardDto): boolean {
+function followsSeries(card: TaskCardDto): boolean {
   return card.recurrence !== undefined && !card.recurrence.detached;
 }
 
 /** Na linha, a regra da série sai no lugar do horário quando a ocorrência segue a série. */
-export function showsSeriesRule(card: EventCardDto): boolean {
+export function showsSeriesRule(card: TaskCardDto): boolean {
   return followsSeries(card);
 }
 
@@ -71,8 +71,8 @@ export function showsSeriesRule(card: EventCardDto): boolean {
  * posição, a linha fica onde a ocorrência escolhida estava na lista. Cartão
  * sem série e ocorrência destacada passam sem mudança.
  */
-export function oneRowPerSeries(cards: readonly EventCardDto[]): EventCardDto[] {
-  const chosen = new Map<string, EventCardDto>();
+export function oneRowPerSeries(cards: readonly TaskCardDto[]): TaskCardDto[] {
+  const chosen = new Map<string, TaskCardDto>();
   for (const card of cards) {
     if (!followsSeries(card) || !card.recurrence) continue;
     const seriesId = card.recurrence.id;
@@ -82,7 +82,7 @@ export function oneRowPerSeries(cards: readonly EventCardDto[]): EventCardDto[] 
   return cards.filter((card) => !followsSeries(card) || chosen.get(card.recurrence?.id ?? "") === card);
 }
 
-function isPreferredOccurrence(candidate: EventCardDto, current: EventCardDto): boolean {
+function isPreferredOccurrence(candidate: TaskCardDto, current: TaskCardDto): boolean {
   const candidateOpen = candidate.status !== undefined && OPEN_STATUSES.has(candidate.status);
   const currentOpen = current.status !== undefined && OPEN_STATUSES.has(current.status);
   if (candidateOpen !== currentOpen) return candidateOpen;

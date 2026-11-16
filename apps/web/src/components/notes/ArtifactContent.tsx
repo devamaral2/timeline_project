@@ -26,7 +26,7 @@ export function ArtifactContent({ artifact }: { artifact: ArtifactDto }) {
     case "training":
       return <article className={styles.noteCard} aria-label="Conteúdo da nota"><TrainingNote data={artifact.data} /></article>;
     case "sleep": {
-      const sleep = sleepAgendaOfArtifact(artifact.events ?? []);
+      const sleep = sleepAgendaOfArtifact(artifact.tasks ?? []);
       return (
         <article className={styles.noteCard} aria-label="Conteúdo da nota">
           {sleep ? <h2 className={styles.noteTitle}>{sleep.title}</h2> : null}
