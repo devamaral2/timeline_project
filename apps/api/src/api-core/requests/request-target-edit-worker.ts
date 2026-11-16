@@ -1,15 +1,15 @@
 import { ulid } from "ulid";
 import {
-  ArtifactValidationError, EventValidationError, type Artifact, type FoodData, type SleepData, type TrainingData,
+  ArtifactValidationError, TaskValidationError, type Artifact, type FoodData, type SleepData, type TrainingData,
 } from "../../domain";
 import type { EntityBatchWriter } from "../../domain/ports";
 import { AgentRunCancelledError, InvalidInputError } from "../agent/errors/agent.errors";
 import { AgentChangeSession } from "../agent/services/agent-change-session";
 import type { AgentFilesService } from "../agent/config/agent-files.service";
 import type { ArtifactBuilder } from "../artifacts/services/artifact-builder.service";
-import type { CreateEventUseCase } from "../events/create-event.usecase";
-import type { FoodParsingGateway } from "../events/gateways/food-parsing.gateway";
-import { FoodTotalsService } from "../events/services/food-totals.service";
+import type { CreateTaskUseCase } from "../tasks/create-task.usecase";
+import type { FoodParsingGateway } from "../tasks/gateways/food-parsing.gateway";
+import { FoodTotalsService } from "../tasks/services/food-totals.service";
 import {
   agentFileEditOutput, foodEditOutput, sleepEditOutput, trainingEditOutput,
   type AgentFileEditOutput, type FoodEditOutput, type SleepEditOutput, type TrainingEditOutput,
@@ -26,7 +26,7 @@ async function rejecting<T>(run: () => Promise<T>): Promise<T> {
   try {
     return await run();
   } catch (error) {
-    if (error instanceof ArtifactValidationError || error instanceof EventValidationError || error instanceof InvalidInputError) {
+    if (error instanceof ArtifactValidationError || error instanceof TaskValidationError || error instanceof InvalidInputError) {
       throw new StepFailure("rejected");
     }
     throw error;
@@ -47,7 +47,7 @@ export class RequestTargetEditWorker {
       runner: RequestAgentRunner;
       batchWriter: EntityBatchWriter;
       repositories: StepRepositories;
-      createEvent: CreateEventUseCase;
+      createTask: CreateTaskUseCase;
       foodParsing: FoodParsingGateway;
       artifactBuilder: Pick<ArtifactBuilder, "resolveUpdateData">;
       files: Pick<AgentFilesService, "write">;
@@ -60,7 +60,7 @@ export class RequestTargetEditWorker {
       const target = step.input?.target;
       if (!target) throw new StepFailure("target_missing");
       const session = new AgentChangeSession(
-        request.userId, this.deps.repositories, this.deps.createEvent, () => request.createdAt,
+        request.userId, this.deps.repositories, this.deps.createTask, () => request.createdAt,
       );
       const started = performance.now();
       let entities: NewEntity[];

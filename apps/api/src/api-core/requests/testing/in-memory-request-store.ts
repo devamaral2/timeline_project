@@ -1,6 +1,6 @@
 import type { TokenUsage } from "../../agent/gateways/structured-completion.gateway";
 import type { RequestQueryResult } from "@repo/contracts";
-import type { Artifact, Event } from "../../../domain";
+import type { Artifact, Task } from "../../../domain";
 import { newOrderedId } from "../../../infrastructure/persistence/requests/request-rows";
 import { requestTitleOf } from "../../../infrastructure/persistence/requests/postgres-request.store";
 import { stepLabel } from "../request-config";
@@ -28,7 +28,7 @@ export class InMemoryRequestStore implements RequestStore {
 
   constructor(
     private readonly clock: () => Date = () => new Date(),
-    private readonly entitySource: { events: Event[]; artifacts: Artifact[] } = { events: [], artifacts: [] },
+    private readonly entitySource: { tasks: Task[]; artifacts: Artifact[] } = { tasks: [], artifacts: [] },
   ) {}
 
   async start(input: NewRequest): Promise<{ requestId: string; created: boolean }> {
@@ -105,13 +105,13 @@ export class InMemoryRequestStore implements RequestStore {
 
   private summaryOf(entity: Pick<NewEntity, "kind" | "id">): EntitySummary {
     if (entity.kind === "task") {
-      const event = this.entitySource.events.find((candidate) => candidate.id === entity.id);
-      if (!event) return { name: "" };
+      const task = this.entitySource.tasks.find((candidate) => candidate.id === entity.id);
+      if (!task) return { name: "" };
       return {
-        name: event.name, taskKind: event.kind,
-        ...(event.startedAt ? { startedAt: event.startedAt.toISOString() } : {}),
-        ...(event.estimatedFinishAt ? { estimatedFinishAt: event.estimatedFinishAt.toISOString() } : {}),
-        ...(event.occurrence && !event.occurrence.detached ? { series: true } : {}),
+        name: task.name, taskKind: task.kind,
+        ...(task.startedAt ? { startedAt: task.startedAt.toISOString() } : {}),
+        ...(task.estimatedFinishAt ? { estimatedFinishAt: task.estimatedFinishAt.toISOString() } : {}),
+        ...(task.occurrence && !task.occurrence.detached ? { series: true } : {}),
       };
     }
     const artifact = this.entitySource.artifacts.find((candidate) => candidate.id === entity.id);

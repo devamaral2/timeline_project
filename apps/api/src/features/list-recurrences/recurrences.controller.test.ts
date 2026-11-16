@@ -2,7 +2,7 @@ import "reflect-metadata";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { GUARDS_METADATA } from "@nestjs/common/constants";
 import { expect, test } from "vitest";
-import { createEventsKit } from "../../api-core/events/testing/in-memory-events-kit";
+import { createTasksKit } from "../../api-core/tasks/testing/in-memory-tasks-kit";
 import { InMemoryRecurrenceRepository } from "../../api-core/recurrences/testing/in-memory-recurrence.repository";
 import { GatewayIdentityGuard } from "../../http/request-identity/gateway-identity.guard";
 import { CreateRecurrenceController } from "../create-recurrence/create-recurrence.controller";
@@ -19,13 +19,13 @@ import { ListRecurrencesUseCase } from "./list-recurrences.usecase";
 const actor = { userId: "auth-user-1" };
 
 function makeControllers() {
-  const { database, createEvent, eventRepository } = createEventsKit();
+  const { database, createTask, taskRepository } = createTasksKit();
   const recurrences = new InMemoryRecurrenceRepository(database);
   return {
     list: new ListRecurrencesController(new ListRecurrencesUseCase(recurrences)),
-    create: new CreateRecurrenceController(new CreateRecurrenceUseCase(recurrences, createEvent, eventRepository)),
+    create: new CreateRecurrenceController(new CreateRecurrenceUseCase(recurrences, createTask, taskRepository)),
     detail: new GetRecurrenceController(new GetRecurrenceUseCase(recurrences)),
-    update: new UpdateRecurrenceController(new UpdateRecurrenceUseCase(recurrences, createEvent, eventRepository)),
+    update: new UpdateRecurrenceController(new UpdateRecurrenceUseCase(recurrences, createTask, taskRepository)),
     remove: new DeleteRecurrenceController(new DeleteRecurrenceUseCase(recurrences)),
   };
 }

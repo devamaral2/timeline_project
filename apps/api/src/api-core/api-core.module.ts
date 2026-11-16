@@ -3,7 +3,7 @@ import { DynamicModule, Module } from "@nestjs/common";
 import {
   ARTIFACT_REPOSITORY,
   ENTITY_BATCH_WRITER,
-  EVENT_REPOSITORY,
+  TASK_REPOSITORY,
   RECURRENCE_REPOSITORY,
   WORKOUT_CATALOG,
   PersistenceModule,
@@ -11,14 +11,14 @@ import {
 import type {
   ArtifactRepository,
   EntityBatchWriter,
-  EventRepository,
+  TaskRepository,
   RecurrenceRepository,
   WorkoutCatalog,
 } from "../domain/ports";
 import { JobsModule } from "../infrastructure/jobs/jobs.module";
 import { getCurrentJob } from "../infrastructure/jobs/job-context";
 import { ArtifactBuilder } from "./artifacts/services/artifact-builder.service";
-import { CreateEventUseCase } from "./events/create-event.usecase";
+import { CreateTaskUseCase } from "./tasks/create-task.usecase";
 import { MaterializeRecurrencesUseCase } from "./recurrences/materialize-recurrences.usecase";
 import { REQUEST_EXPORTS, REQUEST_PROVIDERS } from "./requests/request-providers";
 
@@ -51,12 +51,12 @@ export class ApiCoreModule {
           useFactory: (workoutCatalog: WorkoutCatalog) => new ArtifactBuilder(workoutCatalog),
         },
         {
-          provide: CreateEventUseCase,
-          inject: [EVENT_REPOSITORY, ARTIFACT_REPOSITORY, ArtifactBuilder, ENTITY_BATCH_WRITER, PLACE_REVERSE_GATEWAY],
+          provide: CreateTaskUseCase,
+          inject: [TASK_REPOSITORY, ARTIFACT_REPOSITORY, ArtifactBuilder, ENTITY_BATCH_WRITER, PLACE_REVERSE_GATEWAY],
           useFactory: (
-            events: EventRepository, artifacts: ArtifactRepository, builder: ArtifactBuilder, writer: EntityBatchWriter,
+            tasks: TaskRepository, artifacts: ArtifactRepository, builder: ArtifactBuilder, writer: EntityBatchWriter,
             placeReverse: PlaceReverseGateway,
-          ) => new CreateEventUseCase(events, artifacts, builder, writer, requestClock, placeReverse),
+          ) => new CreateTaskUseCase(tasks, artifacts, builder, writer, requestClock, placeReverse),
         },
         { provide: PLACE_REVERSE_GATEWAY, useFactory: () => new PhotonPlaceReverseGateway() },
         ...REQUEST_PROVIDERS,
@@ -66,7 +66,7 @@ export class ApiCoreModule {
         JobsModule,
         MaterializeRecurrencesUseCase,
         ArtifactBuilder,
-        CreateEventUseCase,
+        CreateTaskUseCase,
         ...REQUEST_EXPORTS,
       ],
     };

@@ -40,7 +40,7 @@ export function getCurrentJob(): CurrentJob | undefined {
  * Encerra o job em curso na transacao que grava o dominio: ou as duas coisas
  * acontecem, ou nenhuma. Tem de ser a ultima operacao da transacao; se o lease
  * foi perdido ou o job foi cancelado, o erro desfaz as escritas. Fora de um job
- * nao faz nada. O job nao guarda resultado: ele mora no evento e nas entradas.
+ * nao faz nada. O job nao guarda resultado: ele mora na tarefa e nas entradas.
  */
 export async function completeCurrentJob(tx: JobTransaction): Promise<void> {
   const context = jobContext.getStore();

@@ -5,7 +5,7 @@ export type ScopedSqlOutcome =
 /**
  * SELECT escrito pelo agente, executado so sobre os dados de um usuario. Quem
  * garante o escopo e a implementacao (validacao pela AST + CTEs que ja filtram
- * o usuario), nunca o texto da query. So os eventos de pessoa e os artefatos
+ * o usuario), nunca o texto da query. So as tarefas de pessoa e os artefatos
  * entram: os pedidos ao agente e as entradas deles ficam de fora.
  */
 export interface ScopedSqlQuery {

@@ -1,12 +1,12 @@
 import { Body, Controller, HttpCode, HttpStatus, Inject, Module, Param, Patch, UseGuards } from "@nestjs/common";
 import type { UpdateArtifactRequest } from "@repo/contracts";
 import {
-  ARTIFACT_EVENT_LINK_QUERY,
+  ARTIFACT_TASK_LINK_QUERY,
   ARTIFACT_REPOSITORY,
   ENTITY_BATCH_WRITER,
-  EVENT_REPOSITORY,
+  TASK_REPOSITORY,
 } from "../../infrastructure/persistence";
-import type { ArtifactEventLinkQuery, ArtifactRepository, EntityBatchWriter, EventRepository } from "../../domain/ports";
+import type { ArtifactTaskLinkQuery, ArtifactRepository, EntityBatchWriter, TaskRepository } from "../../domain/ports";
 import { ApiCoreModule } from "../../api-core/api-core.module";
 import { ArtifactBuilder } from "../../api-core/artifacts/services/artifact-builder.service";
 import { assertArtifactRequest, assertExpectedRevision } from "../../api-core/http-input-validation";
@@ -38,11 +38,11 @@ export class UpdateArtifactController {
   controllers: [UpdateArtifactController],
   providers: [{
     provide: UpdateArtifactUseCase,
-    inject: [ARTIFACT_REPOSITORY, ARTIFACT_EVENT_LINK_QUERY, ArtifactBuilder, EVENT_REPOSITORY, ENTITY_BATCH_WRITER],
+    inject: [ARTIFACT_REPOSITORY, ARTIFACT_TASK_LINK_QUERY, ArtifactBuilder, TASK_REPOSITORY, ENTITY_BATCH_WRITER],
     useFactory: (
-      artifacts: ArtifactRepository, links: ArtifactEventLinkQuery, builder: ArtifactBuilder,
-      events: EventRepository, writer: EntityBatchWriter,
-    ) => new UpdateArtifactUseCase(artifacts, links, builder, events, writer),
+      artifacts: ArtifactRepository, links: ArtifactTaskLinkQuery, builder: ArtifactBuilder,
+      tasks: TaskRepository, writer: EntityBatchWriter,
+    ) => new UpdateArtifactUseCase(artifacts, links, builder, tasks, writer),
   }],
 })
 export class UpdateArtifactModule {}

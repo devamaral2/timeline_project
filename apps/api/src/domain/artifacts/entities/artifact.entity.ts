@@ -1,6 +1,6 @@
 import { ArtifactId } from "../value-objects/artifact-id";
 import { ArtifactValidationError } from "../errors/artifact.errors";
-import { TagList } from "../../events/value-objects/tag-list";
+import { TagList } from "../../tasks/value-objects/tag-list";
 import {
   DEFAULT_ARTIFACT_TYPE,
   defaultArtifactTypeRegistry,
@@ -18,7 +18,7 @@ export interface ArtifactCreateProps {
   schemaVersion?: number;
   data: unknown;
   tags?: string[];
-  /** Copia de outro artefato, feita para um evento. */
+  /** Copia de outro artefato, feita para uma tarefa. */
   derived?: boolean;
 }
 
@@ -68,7 +68,7 @@ function deepFreeze<T>(value: T): T {
  * Um objeto que guarda conteudo e nao e um fluxo: nao tem status, horario nem
  * executor. `type` + `schemaVersion` dizem que forma o `data` tem. Ele nao sabe
  * onde aparece: quem registra que ele foi criado, alterado ou usado e um
- * evento, e ele pode nao aparecer em nenhum.
+ * tarefa, e ele pode nao aparecer em nenhum.
  */
 export class Artifact {
   readonly id: string;
@@ -174,11 +174,11 @@ export class Artifact {
   }
 
   /**
-   * A copia que um evento ganha de um alimento, com a quantidade comida. E um
-   * artefato proprio do evento: editar o original depois nao muda o passado.
+   * A copia que uma tarefa ganha de um alimento, com a quantidade comida. E um
+   * artefato proprio da tarefa: editar o original depois nao muda o passado.
    */
-  copyForEvent(userId: string, quantity?: string): Artifact {
-    if (this.type !== "food") throw new ArtifactValidationError("Only a food can be copied into an event");
+  copyForTask(userId: string, quantity?: string): Artifact {
+    if (this.type !== "food") throw new ArtifactValidationError("Only a food can be copied into a task");
     const { generation: _generation, ...data } = this.data as Record<string, unknown>;
     return Artifact.create(
       {

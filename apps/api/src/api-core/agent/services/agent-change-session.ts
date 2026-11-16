@@ -1,7 +1,7 @@
 import {
   Artifact,
-  type Event,
-  type EventArtifactRelationKind,
+  type Task,
+  type TaskArtifactRelationKind,
   type OccurrenceLink,
   type Recurrence,
 } from "../../../domain";
@@ -9,14 +9,14 @@ import type {
   ArtifactRepository,
   EntityBatch,
   SequenceChange,
-  EventRepository,
+  TaskRepository,
   RecurrenceChange,
   RecurrenceRepository,
   StagedChange,
 } from "../../../domain/ports";
 import type { CreateArtifactInput, CreateTaskInput, CreateRecurrenceInput } from "@repo/contracts";
 import { dayKeyOf, expandOccurrences, shiftDayKey } from "@repo/timeline";
-import type { CreateEventUseCase, PrepareEventOptions } from "../../events/create-event.usecase";
+import type { CreateTaskUseCase, PrepareTaskOptions } from "../../tasks/create-task.usecase";
 import { prepareRecurrence } from "../../recurrences/prepare-recurrence";
 import { buildOccurrence, storedTemplateOf } from "../../recurrences/recurrence-templates";
 import { reviseRecurrence, type RecurrenceRevision } from "../../recurrences/revise-recurrence";
@@ -77,7 +77,7 @@ export class StagingError extends Error {}
  * pôr uma tarefa na sequencia de outra nao edita nenhuma das duas.
  */
 export class AgentChangeSession {
-  private readonly events = new Map<string, Staged<Event>>();
+  private readonly tasks = new Map<string, Staged<Task>>();
   private readonly artifacts = new Map<string, Staged<Artifact>>();
   private readonly recurrences = new Map<string, StagedSeries>();
   private readonly derivations: { originalId: string; copyId: string }[] = [];
@@ -86,11 +86,11 @@ export class AgentChangeSession {
   constructor(
     readonly userId: string,
     private readonly repositories: {
-      events: Pick<EventRepository, "findById" | "findByIds">;
+      tasks: Pick<TaskRepository, "findById" | "findByIds">;
       artifacts: Pick<ArtifactRepository, "findById">;
       recurrences?: Pick<RecurrenceRepository, "findById">;
     },
-    private readonly createEventUseCase: Pick<CreateEventUseCase, "prepare" | "buildArtifact">,
+    private readonly createTaskUseCase: Pick<CreateTaskUseCase, "prepare" | "buildArtifact">,
     private readonly clock: () => Date = () => new Date(),
   ) {}
 
@@ -100,11 +100,11 @@ export class AgentChangeSession {
   }
 
   /**
-   * Uma serie nova. A primeira ocorrencia entra no mesmo lote: e uma linha de verdade em `events`, entao o
+   * Uma serie nova. A primeira ocorrencia entra no mesmo lote: e uma linha de verdade em `tasks`, entao o
    * pedido a mostra e o app atualiza a lista. As demais saem da materializacao preguicosa, que ignora o dia que
    * ja existe; por isso a marca d'agua nao anda aqui.
    */
-  createRecurrence(input: CreateRecurrenceInput, options?: PrepareEventOptions): Promise<StageResult> {
+  createRecurrence(input: CreateRecurrenceInput, options?: PrepareTaskOptions): Promise<StageResult> {
     return this.attempt(async () => {
       const { recurrence, artifacts, derivations } = await prepareRecurrence(
         this.templateDeps, input, { userId: this.userId }, options,
@@ -126,7 +126,7 @@ export class AgentChangeSession {
   updateRecurrence(
     id: string,
     plan: (current: Recurrence) => RecurrenceRevision,
-    options?: PrepareEventOptions,
+    options?: PrepareTaskOptions,
   ): Promise<StageResult> {
     return this.attempt(async () => {
       const current = await this.loadRecurrence(id);
@@ -143,13 +143,13 @@ export class AgentChangeSession {
   }
 
   /** Os artefatos novos da tarefa entram no mesmo lote, antes dela (a relacao aponta para eles). */
-  createEvent(input: CreateTaskInput, options?: PrepareEventOptions): Promise<StageResult> {
+  createTask(input: CreateTaskInput, options?: PrepareTaskOptions): Promise<StageResult> {
     return this.attempt(async () => {
-      const prepared = await this.createEventUseCase.prepare(input, { userId: this.userId }, undefined, options);
+      const prepared = await this.createTaskUseCase.prepare(input, { userId: this.userId }, undefined, options);
       this.stageTemplateArtifacts(prepared.artifacts, prepared.derivations);
-      this.events.set(prepared.event.id, { change: { op: "create", entity: prepared.event } });
+      this.tasks.set(prepared.task.id, { change: { op: "create", entity: prepared.task } });
       this.stageSequence(prepared.sequence);
-      return { ok: true, kind: "task", op: "create", id: prepared.event.id };
+      return { ok: true, kind: "task", op: "create", id: prepared.task.id };
     });
   }
 
@@ -157,9 +157,9 @@ export class AgentChangeSession {
    * `revise` recebe a tarefa atual (a do banco ou a ja preparada neste pedido) e devolve a versao nova. A criada
    * neste pedido continua sendo uma criacao.
    */
-  reviseTask(id: string, revise: (current: Event) => Event): Promise<StageResult> {
+  reviseTask(id: string, revise: (current: Task) => Task): Promise<StageResult> {
     return this.attempt(async () => {
-      const op = await this.reviseTarget(this.events, id, (key) => this.findTask(key), revise);
+      const op = await this.reviseTarget(this.tasks, id, (key) => this.findTask(key), revise);
       return { ok: true, kind: "task", op, id };
     });
   }
@@ -179,13 +179,13 @@ export class AgentChangeSession {
   }
 
   /** O artefato passa a aparecer na tarefa, depois dos que ja estavam. Quem e editado e a tarefa. */
-  linkArtifact(artifactId: string, taskId: string, relation: EventArtifactRelationKind): Promise<StageResult> {
+  linkArtifact(artifactId: string, taskId: string, relation: TaskArtifactRelationKind): Promise<StageResult> {
     return this.attempt(async () => {
       await this.assertArtifactExists(artifactId);
-      const op = await this.reviseTarget(this.events, taskId, (key) => this.findTask(key), (event) =>
-        event.artifactLinks.some((link) => link.artifactId === artifactId)
-          ? event
-          : event.revise({ artifactLinks: [...event.artifactLinks, { artifactId, relation, fromRecurrence: false }] }),
+      const op = await this.reviseTarget(this.tasks, taskId, (key) => this.findTask(key), (task) =>
+        task.artifactLinks.some((link) => link.artifactId === artifactId)
+          ? task
+          : task.revise({ artifactLinks: [...task.artifactLinks, { artifactId, relation, fromRecurrence: false }] }),
       );
       return { ok: true, kind: "task", op, id: taskId };
     });
@@ -193,7 +193,7 @@ export class AgentChangeSession {
 
   /** Monta como a criacao de tarefa montaria: alimento pendente, treino pelos exercicios globais. */
   buildArtifact(input: CreateArtifactInput, at: Date): Promise<Artifact> {
-    return this.createEventUseCase.buildArtifact(input, { userId: this.userId }, at);
+    return this.createTaskUseCase.buildArtifact(input, { userId: this.userId }, at);
   }
 
   /** Um artefato novo, ainda solto: quem o monta decide onde ele aparece. */
@@ -239,7 +239,7 @@ export class AgentChangeSession {
     const series = [...this.recurrences.values()];
     return {
       userId: this.userId,
-      tasks: changes(this.events),
+      tasks: changes(this.tasks),
       artifacts: changes(this.artifacts),
       derivations: [...this.derivations],
       sequence: [...this.sequence],
@@ -263,13 +263,13 @@ export class AgentChangeSession {
         else if (change.op === "update") result.updated.push({ kind, id });
       }
     };
-    collect("task", this.events);
+    collect("task", this.tasks);
     collect("artifact", this.artifacts);
     return result;
   }
 
   private get templateDeps() {
-    return { createEvent: this.createEventUseCase, events: this.repositories.events };
+    return { createTask: this.createTaskUseCase, tasks: this.repositories.tasks };
   }
 
   private stageTemplateArtifacts(
@@ -288,7 +288,7 @@ export class AgentChangeSession {
   /** A ocorrencia nasce se seguindo das tarefas do template, como as que a serie gera depois. */
   private async stageOccurrence(recurrence: Recurrence, day: string): Promise<void> {
     const occurrence = buildOccurrence(recurrence, day);
-    this.events.set(occurrence.id, { change: { op: "create", entity: occurrence } });
+    this.tasks.set(occurrence.id, { change: { op: "create", entity: occurrence } });
     for (const previousId of storedTemplateOf(recurrence).previousTaskIds ?? []) {
       const related = await this.sequenceTasks(previousId, occurrence.id);
       if (!related.ok) throw new StagingError(related.error);
@@ -318,7 +318,7 @@ export class AgentChangeSession {
     if (!found || found.userId !== this.userId) throw new StagingError(`Não encontrei a recorrência ${id}.`);
 
     // As ocorrencias alteradas aqui sairiam junto com a serie e o lote falharia no meio.
-    const touched = [...this.events.values()].some((entry) => entry.before?.occurrence?.recurrenceId === id);
+    const touched = [...this.tasks.values()].some((entry) => entry.before?.occurrence?.recurrenceId === id);
     if (touched) {
       throw new StagingError(`Uma ocorrência da recorrência ${id} já foi alterada neste pedido: faça a série em outro pedido.`);
     }
@@ -326,15 +326,15 @@ export class AgentChangeSession {
   }
 
   /** So tarefas de pessoa: os pedidos e os passos do agente nao sao alvo de edicao. */
-  private async findTask(id: string): Promise<Event | null> {
-    const event = await this.repositories.events.findById(id);
-    return event?.actor === "human" ? event : null;
+  private async findTask(id: string): Promise<Task | null> {
+    const task = await this.repositories.tasks.findById(id);
+    return task?.actor === "human" ? task : null;
   }
 
   /** Uma ponta da sequencia: criada neste pedido ou do usuario, de pessoa ou de agente. */
   private async assertSequenceEnd(id: string): Promise<void> {
-    if (this.events.has(id)) return;
-    const found = await this.repositories.events.findById(id);
+    if (this.tasks.has(id)) return;
+    const found = await this.repositories.tasks.findById(id);
     if (!found || found.userId !== this.userId) throw new StagingError(`Não encontrei a tarefa ${id}.`);
   }
 

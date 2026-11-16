@@ -388,11 +388,11 @@ describe("Artifact.withGeneratedData", () => {
   });
 });
 
-describe("Artifact.copyForEvent", () => {
+describe("Artifact.copyForTask", () => {
   test("makes a derived food owned by the user, with the quantity eaten", () => {
     const original = Artifact.create({ userId: "user-1", type: "food", name: "Arroz", data: foodData, tags: ["base"] });
 
-    const copy = original.copyForEvent("user-1", "  2 colheres ");
+    const copy = original.copyForTask("user-1", "  2 colheres ");
 
     expect(copy.id).not.toBe(original.id);
     expect(copy.userId).toBe("user-1");
@@ -406,7 +406,7 @@ describe("Artifact.copyForEvent", () => {
   test("never touches the original", () => {
     const original = Artifact.create({ userId: "user-1", type: "food", name: "Arroz", data: foodData });
 
-    original.copyForEvent("user-1", "1 prato");
+    original.copyForTask("user-1", "1 prato");
 
     expect(original.derived).toBe(false);
     expect(original.revision).toBe(1);
@@ -416,14 +416,14 @@ describe("Artifact.copyForEvent", () => {
   test("leaves the quantity out when none was given", () => {
     const original = Artifact.create({ userId: "user-1", type: "food", name: "Arroz", data: foodData });
 
-    expect(original.copyForEvent("user-1").data).toEqual(foodData);
-    expect(original.copyForEvent("user-1", "   ").data).toEqual(foodData);
+    expect(original.copyForTask("user-1").data).toEqual(foodData);
+    expect(original.copyForTask("user-1", "   ").data).toEqual(foodData);
   });
 
   test("a global food becomes a copy owned by whoever ate it", () => {
     const global = Artifact.create({ type: "food", name: "Arroz", data: foodData });
 
-    const copy = global.copyForEvent("user-2", "1 prato");
+    const copy = global.copyForTask("user-2", "1 prato");
 
     expect(copy.isGlobal).toBe(false);
     expect(copy.userId).toBe("user-2");
@@ -437,15 +437,15 @@ describe("Artifact.copyForEvent", () => {
       data: { ...foodData, recipe, generation: { status: "completed" }, nutritionSource: "model-estimate" },
     });
 
-    const copy = generated.copyForEvent("user-1");
+    const copy = generated.copyForTask("user-1");
 
     expect(copy.data).not.toHaveProperty("generation");
     expect(copy.data).toMatchObject({ recipe, nutritionSource: "model-estimate" });
   });
 
-  test("only a food can be copied into an event", () => {
-    expect(() => text().copyForEvent("user-1")).toThrow("Only a food can be copied into an event");
-    expect(() => Artifact.create({ type: "workout", name: "Corrida", data: workoutData }).copyForEvent("user-1")).toThrow(
+  test("only a food can be copied into a task", () => {
+    expect(() => text().copyForTask("user-1")).toThrow("Only a food can be copied into a task");
+    expect(() => Artifact.create({ type: "workout", name: "Corrida", data: workoutData }).copyForTask("user-1")).toThrow(
       ArtifactValidationError,
     );
   });

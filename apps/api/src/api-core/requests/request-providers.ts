@@ -3,7 +3,7 @@ import { getServerEnv } from "../../config/env";
 import type {
   ArtifactRepository,
   EntityBatchWriter,
-  EventRepository,
+  TaskRepository,
   FoodGenerationRepository,
   RecurrenceRepository,
   ScopedSqlQuery,
@@ -16,7 +16,7 @@ import {
   ARTIFACT_REPOSITORY,
   DATABASE,
   ENTITY_BATCH_WRITER,
-  EVENT_REPOSITORY,
+  TASK_REPOSITORY,
   RECURRENCE_REPOSITORY,
   SCOPED_SQL_QUERY,
 } from "../../infrastructure/persistence/persistence.module";
@@ -27,10 +27,10 @@ import { AgentFilesService } from "../agent/config/agent-files.service";
 import { OpenRouterStructuredCompletionGateway } from "../agent/gateways/structured-completion.gateway";
 import { GenerateFoodUseCase } from "../artifacts/generate-food.usecase";
 import { ArtifactBuilder } from "../artifacts/services/artifact-builder.service";
-import { CreateEventUseCase } from "../events/create-event.usecase";
-import { OpenRouterTaskCommandParsingGateway } from "../events/gateways/openrouter-task-command-parsing.gateway";
-import { OpenRouterFoodParsingGateway } from "../events/gateways/openrouter-food-parsing.gateway";
-import { PlaceResolver } from "../events/services/place-resolver.service";
+import { CreateTaskUseCase } from "../tasks/create-task.usecase";
+import { OpenRouterTaskCommandParsingGateway } from "../tasks/gateways/openrouter-task-command-parsing.gateway";
+import { OpenRouterFoodParsingGateway } from "../tasks/gateways/openrouter-food-parsing.gateway";
+import { PlaceResolver } from "../tasks/services/place-resolver.service";
 import { PhotonPlaceSearchGateway } from "../../infrastructure/places/photon-place-search.gateway";
 import { HermesTurnWorker } from "./hermes-turn-worker";
 import { JevClient } from "./jev.client";
@@ -84,13 +84,13 @@ export const REQUEST_PROVIDERS: Provider[] = [
   {
     provide: RequestOperations,
     inject: [
-      JobsService, PostgresRequestStore, ENTITY_BATCH_WRITER, EVENT_REPOSITORY, ARTIFACT_REPOSITORY,
-      RECURRENCE_REPOSITORY, CreateEventUseCase, SCOPED_SQL_QUERY, DATABASE, OpenRouterFoodParsingGateway,
+      JobsService, PostgresRequestStore, ENTITY_BATCH_WRITER, TASK_REPOSITORY, ARTIFACT_REPOSITORY,
+      RECURRENCE_REPOSITORY, CreateTaskUseCase, SCOPED_SQL_QUERY, DATABASE, OpenRouterFoodParsingGateway,
       OpenRouterTaskCommandParsingGateway, ArtifactBuilder, AgentFilesService, GenerateFoodUseCase,
     ],
     useFactory: (
-      jobs: JobsService, store: PostgresRequestStore, batchWriter: EntityBatchWriter, events: EventRepository,
-      artifacts: ArtifactRepository, recurrences: RecurrenceRepository, createEvent: CreateEventUseCase,
+      jobs: JobsService, store: PostgresRequestStore, batchWriter: EntityBatchWriter, tasks: TaskRepository,
+      artifacts: ArtifactRepository, recurrences: RecurrenceRepository, createTask: CreateTaskUseCase,
       sql: ScopedSqlQuery, database: PostgresDatabase, foodParsing: OpenRouterFoodParsingGateway,
       commandParsing: OpenRouterTaskCommandParsingGateway, artifactBuilder: ArtifactBuilder, files: AgentFilesService,
       food: GenerateFoodUseCase,
@@ -102,10 +102,10 @@ export const REQUEST_PROVIDERS: Provider[] = [
         { thoughts: store, ...(reasoning ? { reasoning } : {}) },
       );
       const jev = new JevClient();
-      const repositories = { events, artifacts, recurrences };
+      const repositories = { tasks, artifacts, recurrences };
       // O lugar que a IA tira do pedido passa pela mesma busca de mapas do formulario.
       const places = new PlaceResolver(new PhotonPlaceSearchGateway());
-      const deps = { store, runner, batchWriter, repositories, createEvent, places };
+      const deps = { store, runner, batchWriter, repositories, createTask, places };
       return new RequestOperations(jobs, store, {
         dispatcher: new RequestDispatcher(store, jev, new PostgresCandidateQuery(database)),
         create: new RequestCreateWorker(deps),
@@ -118,7 +118,7 @@ export const REQUEST_PROVIDERS: Provider[] = [
         }),
         targetEdit: new RequestTargetEditWorker({ ...deps, foodParsing, artifactBuilder, files }),
         hermes: new HermesTurnWorker(store, new HermesClient({ url: env.HERMES_URL, apiKey: env.HERMES_API_KEY })),
-        voice: new VoiceTaskWorker({ store, parsing: commandParsing, createEvent, batchWriter, places }),
+        voice: new VoiceTaskWorker({ store, parsing: commandParsing, createTask, batchWriter, places }),
         food,
       });
     },

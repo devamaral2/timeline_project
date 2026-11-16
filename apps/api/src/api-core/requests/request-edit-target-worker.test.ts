@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { Artifact, Event } from "../../domain";
+import { Artifact, Task } from "../../domain";
 import { uiConfig } from "./request-config";
 import { EDIT_TARGET_AGENTS, REQUEST_JOBS } from "./request-steps";
 import { foodData, setupRequest } from "./testing/request-test-kit";
@@ -30,18 +30,18 @@ describe("worker da edicao pela tela de detalhe", () => {
   });
 
   test("tarefa: cria um passo task-edit com o retrato completo do alvo", async () => {
-    const event = Event.create({
+    const task = Task.create({
       userId: "user-1", name: "Reunião", description: "pauta", startedAt: new Date("2026-10-25T12:00:00Z"), tags: ["trabalho"],
     });
-    const ctx = queued("task", event.id);
-    await ctx.eventRepository.save(event);
+    const ctx = queued("task", task.id);
+    await ctx.taskRepository.save(task);
 
     await ctx.editTargetWorker.run("r1");
 
     expect(ctx.store.require("r1").status).toBe("running");
     expect(ctx.store.stepRecords).toMatchObject([{
       agent: "task-edit", status: "queued",
-      input: { target: { entityType: "task", id: event.id, snapshot: { name: "Reunião", description: "pauta", tags: ["trabalho"], status: null } } },
+      input: { target: { entityType: "task", id: task.id, snapshot: { name: "Reunião", description: "pauta", tags: ["trabalho"], status: null } } },
     }]);
     expect(ctx.store.jobs.at(-1)).toMatchObject({ kind: REQUEST_JOBS.step });
   });

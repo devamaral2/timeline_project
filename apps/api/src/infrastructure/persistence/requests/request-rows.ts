@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { monotonicFactory } from "ulid";
-import type { AgentEventKind, AgentEventStatus, EntryKind, EntryRole } from "../../../domain";
+import type { AgentTaskKind, AgentTaskStatus, EntryKind, EntryRole } from "../../../domain";
 import * as schema from "../database/schema";
 import type { Tx } from "../shared/tx";
 
@@ -10,14 +10,14 @@ import type { Tx } from "../shared/tx";
  */
 export const newOrderedId = monotonicFactory();
 
-/** Por onde o pedido anda; fica em `events.data.route`. */
+/** Por onde o pedido anda; fica em `tasks.data.route`. */
 export type RequestRoute = "steps" | "hermes" | "voice" | "food";
 
 export interface NewAgentTask {
   id: string;
   userId: string;
-  kind: AgentEventKind;
-  status: AgentEventStatus;
+  kind: AgentTaskKind;
+  status: AgentTaskStatus;
   name: string;
   /** Pequeno: a rota do pedido, o agente interno do passo, o contexto de tela. */
   data: Record<string, unknown>;
@@ -25,7 +25,7 @@ export interface NewAgentTask {
 
 /** Um pedido ou um passo: tarefa de agente. Comeca agora; a conclusao vem quando ele termina. */
 export async function insertAgentTask(tx: Tx, task: NewAgentTask): Promise<void> {
-  await tx.insert(schema.events).values({
+  await tx.insert(schema.tasks).values({
     id: task.id,
     userId: task.userId,
     actor: "agent",
@@ -51,9 +51,9 @@ export interface NewEntry {
 /** Acrescenta uma entrada à tarefa. Entradas nunca mudam, e nao contam como revisao da tarefa. */
 export async function appendEntry(tx: Pick<Tx, "insert">, entry: NewEntry): Promise<string> {
   const id = newOrderedId();
-  await tx.insert(schema.eventEntries).values({
+  await tx.insert(schema.taskEntries).values({
     id,
-    eventId: entry.taskId,
+    taskId: entry.taskId,
     userId: entry.userId,
     kind: entry.kind,
     role: entry.role ?? null,

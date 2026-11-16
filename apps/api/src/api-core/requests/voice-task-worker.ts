@@ -1,9 +1,9 @@
 import type { CreateTaskInput } from "@repo/contracts";
 import type { EntityBatchWriter } from "../../domain/ports";
-import { EVENT_TIME_ZONE, toEntityBatch, type CreateEventUseCase } from "../events/create-event.usecase";
-import type { TaskCommandParsingGateway } from "../events/gateways/task-command-parsing.gateway";
-import { resolveEventSchedule } from "../events/services/event-schedule.service";
-import type { PlaceResolver } from "../events/services/place-resolver.service";
+import { TASK_TIME_ZONE, toEntityBatch, type CreateTaskUseCase } from "../tasks/create-task.usecase";
+import type { TaskCommandParsingGateway } from "../tasks/gateways/task-command-parsing.gateway";
+import { resolveTaskSchedule } from "../tasks/services/task-schedule.service";
+import type { PlaceResolver } from "../tasks/services/place-resolver.service";
 import type { RequestStore } from "./request-store";
 
 export const MAX_TRANSCRIPT_LENGTH = 1000;
@@ -18,7 +18,7 @@ export class VoiceTaskWorker {
     private readonly deps: {
       store: RequestStore;
       parsing: TaskCommandParsingGateway;
-      createEvent: Pick<CreateEventUseCase, "prepare">;
+      createTask: Pick<CreateTaskUseCase, "prepare">;
       batchWriter: EntityBatchWriter;
       /** Troca o lugar dito pelo endereco de um lugar que existe. Sem ele, o local fica como foi dito. */
       places?: Pick<PlaceResolver, "resolve">;
@@ -42,11 +42,11 @@ export class VoiceTaskWorker {
       ...(location ? { location } : {}),
       ...(coordinates ? { coordinates } : {}),
     };
-    const schedule = resolveEventSchedule(parsed.schedule, request.createdAt, EVENT_TIME_ZONE);
-    const prepared = await this.deps.createEvent.prepare(input, { userId: request.userId }, schedule);
+    const schedule = resolveTaskSchedule(parsed.schedule, request.createdAt, TASK_TIME_ZONE);
+    const prepared = await this.deps.createTask.prepare(input, { userId: request.userId }, schedule);
     await this.deps.batchWriter.commit({
       ...toEntityBatch(prepared),
-      afterWrite: (tx) => store.completeVoice(tx, { requestId: request.id, taskId: prepared.event.id }),
+      afterWrite: (tx) => store.completeVoice(tx, { requestId: request.id, taskId: prepared.task.id }),
     });
   }
 }

@@ -1,7 +1,7 @@
 import { char, check, index, pgTable, primaryKey, text, timestamp, unique } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { artifacts } from "./artifacts";
-import { events } from "./events";
+import { tasks } from "./tasks";
 
 export const tags = pgTable(
   "tags",
@@ -20,19 +20,19 @@ export const tags = pgTable(
   ],
 );
 
-export const eventTags = pgTable(
+export const taskTags = pgTable(
   "task_tags",
   {
-    eventId: char("task_id", { length: 26 })
+    taskId: char("task_id", { length: 26 })
       .notNull()
-      .references(() => events.id, { onDelete: "cascade" }),
+      .references(() => tasks.id, { onDelete: "cascade" }),
     tagId: char("tag_id", { length: 26 })
       .notNull()
       .references(() => tags.id, { onDelete: "cascade" }),
   },
   (table) => [
-    primaryKey({ columns: [table.eventId, table.tagId] }),
-    index("task_tags_tag_idx").on(table.tagId, table.eventId),
+    primaryKey({ columns: [table.taskId, table.tagId] }),
+    index("task_tags_tag_idx").on(table.tagId, table.taskId),
   ],
 );
 

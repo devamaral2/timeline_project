@@ -10,7 +10,7 @@ import {
 } from "../../../domain";
 import type { WorkoutCatalog } from "../../../domain/ports";
 import type { ArtifactDataInput, CreateArtifactInput } from "@repo/contracts";
-import { getMealEventName } from "../../events/services/meal-event-name.service";
+import { getMealTaskName } from "../../tasks/services/meal-task-name.service";
 
 export const ARTIFACT_TIME_ZONE = "America/Sao_Paulo";
 
@@ -46,7 +46,7 @@ export class ArtifactBuilder {
         if (!description) throw new ArtifactValidationError("Food description cannot be empty");
         return Artifact.create({
           ...common,
-          name: input.name ?? getMealEventName(at, ARTIFACT_TIME_ZONE),
+          name: input.name ?? getMealTaskName(at, ARTIFACT_TIME_ZONE),
           type: "food",
           data: {
             description,

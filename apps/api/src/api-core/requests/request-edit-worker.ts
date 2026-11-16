@@ -4,8 +4,8 @@ import type { EntityBatchWriter, ScopedSqlQuery } from "../../domain/ports";
 import { AgentRunCancelledError } from "../agent/errors/agent.errors";
 import { AgentChangeSession } from "../agent/services/agent-change-session";
 import { TIME_ZONE } from "../agent/time";
-import type { CreateEventUseCase } from "../events/create-event.usecase";
-import type { PlaceResolver } from "../events/services/place-resolver.service";
+import type { CreateTaskUseCase } from "../tasks/create-task.usecase";
+import type { PlaceResolver } from "../tasks/services/place-resolver.service";
 import {
   artifactEditOutput, taskEditOutput, recurringTaskEditOutput,
   type ArtifactEditOutput, type TaskEditOutput, type RecurringTaskEditOutput,
@@ -45,7 +45,7 @@ export class RequestEditWorker {
       runner: RequestAgentRunner;
       batchWriter: EntityBatchWriter;
       repositories: StepRepositories;
-      createEvent: CreateEventUseCase;
+      createTask: CreateTaskUseCase;
       sql: ScopedSqlQuery;
       /** Troca o lugar dito pelo endereco de um lugar que existe. Sem ele, o local fica como foi dito. */
       places?: Pick<PlaceResolver, "resolve">;
@@ -56,7 +56,7 @@ export class RequestEditWorker {
     const { store } = this.deps;
     await runStep(store, payload, signal, async ({ request, step, timings }) => {
       const session = new AgentChangeSession(
-        request.userId, this.deps.repositories, this.deps.createEvent, () => request.createdAt,
+        request.userId, this.deps.repositories, this.deps.createTask, () => request.createdAt,
       );
       const started = performance.now();
       switch (agent) {

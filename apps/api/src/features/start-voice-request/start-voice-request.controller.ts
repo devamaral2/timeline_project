@@ -17,7 +17,7 @@ export const startVoiceRequestBody = z.object({
 });
 
 /**
- * `POST /api/requests/voice`: a fala vira um pedido, e o pedido gera o evento. O evento criado aparece em
+ * `POST /api/requests/voice`: a fala vira um pedido, e o pedido gera a tarefa. A tarefa criada aparece em
  * `entities` de `GET /api/requests/:requestId`.
  */
 @Controller("api/requests")

@@ -5,12 +5,12 @@ import {
   ArtifactOwnershipError,
   ArtifactRevisionConflictError,
   ArtifactValidationError,
-  Event,
-  EventNotFoundError,
-  EventOwnershipError,
+  Task,
+  TaskNotFoundError,
+  TaskOwnershipError,
 } from "../../domain";
-import { InMemoryArtifactEventLinkQuery } from "../../api-core/artifacts/testing/in-memory-artifact-event-link.query";
-import { createEventsKit } from "../../api-core/events/testing/in-memory-events-kit";
+import { InMemoryArtifactTaskLinkQuery } from "../../api-core/artifacts/testing/in-memory-artifact-task-link.query";
+import { createTasksKit } from "../../api-core/tasks/testing/in-memory-tasks-kit";
 import { UpdateArtifactUseCase } from "./update-artifact.usecase";
 
 const actor = { userId: "auth-user-1" };
@@ -30,8 +30,8 @@ function note(id = "note-1", userId: string | undefined = actor.userId): Artifac
   return Artifact.create({ id, userId, name: "Pauta", data: { body: "itens" }, tags: ["time"] });
 }
 
-function event(id: string, artifactIds: string[] = [], overrides: Partial<Parameters<typeof Event.create>[0]> = {}): Event {
-  return Event.create({
+function task(id: string, artifactIds: string[] = [], overrides: Partial<Parameters<typeof Task.create>[0]> = {}): Task {
+  return Task.create({
     id,
     userId: actor.userId,
     name: id,
@@ -41,13 +41,13 @@ function event(id: string, artifactIds: string[] = [], overrides: Partial<Parame
   });
 }
 
-function setup(artifacts: Artifact[], events: Event[] = []) {
-  const kit = createEventsKit({ artifacts, events });
+function setup(artifacts: Artifact[], tasks: Task[] = []) {
+  const kit = createTasksKit({ artifacts, tasks });
   const useCase = new UpdateArtifactUseCase(
     kit.artifactRepository,
-    new InMemoryArtifactEventLinkQuery(kit.database),
+    new InMemoryArtifactTaskLinkQuery(kit.database),
     kit.artifactBuilder,
-    kit.eventRepository,
+    kit.taskRepository,
     kit.batchWriter,
   );
   return { ...kit, useCase };
@@ -144,75 +144,75 @@ describe("content", () => {
   });
 });
 
-describe("events the artifact appears in", () => {
-  test("absent, the events stay as they are", async () => {
-    const { useCase, eventRepository } = setup([note()], [event("e1", ["note-1"])]);
+describe("tasks the artifact appears in", () => {
+  test("absent, the tasks stay as they are", async () => {
+    const { useCase, taskRepository } = setup([note()], [task("e1", ["note-1"])]);
 
     await useCase.execute({ artifactId: "note-1", expectedRevision: 1, name: "Outra" }, actor);
 
-    expect(await eventRepository.findById("e1")).toMatchObject({ artifactLinks: [{ artifactId: "note-1" }], revision: 1 });
+    expect(await taskRepository.findById("e1")).toMatchObject({ artifactLinks: [{ artifactId: "note-1" }], revision: 1 });
   });
 
   test("the list is complete: who enters gets the artifact as used, who leaves loses it, in the same batch as the content", async () => {
-    const { useCase, eventRepository, artifactRepository, batchWriter } = setup(
+    const { useCase, taskRepository, artifactRepository, batchWriter } = setup(
       [note()],
-      [event("stays", ["note-1"]), event("leaves", ["note-1"]), event("enters")],
+      [task("stays", ["note-1"]), task("leaves", ["note-1"]), task("enters")],
     );
 
     await useCase.execute({ artifactId: "note-1", expectedRevision: 1, name: "Pauta nova", taskIds: ["stays", "enters", "enters"] }, actor);
 
     expect(batchWriter.commits).toHaveLength(1);
-    expect(await eventRepository.findById("stays")).toMatchObject({ artifactLinks: [{ relation: "creates" }], revision: 1 });
-    expect(await eventRepository.findById("leaves")).toMatchObject({ artifactLinks: [], revision: 2 });
-    expect(await eventRepository.findById("enters")).toMatchObject({
+    expect(await taskRepository.findById("stays")).toMatchObject({ artifactLinks: [{ relation: "creates" }], revision: 1 });
+    expect(await taskRepository.findById("leaves")).toMatchObject({ artifactLinks: [], revision: 2 });
+    expect(await taskRepository.findById("enters")).toMatchObject({
       artifactLinks: [{ artifactId: "note-1", relation: "uses", fromRecurrence: false }],
       revision: 2,
     });
     expect(await artifactRepository.findById("note-1")).toMatchObject({ name: "Pauta nova", revision: 2 });
   });
 
-  test("changing only the events does not revise the artifact", async () => {
-    const { useCase, artifactRepository, eventRepository } = setup([note()], [event("e1", ["note-1"])]);
+  test("changing only the tasks does not revise the artifact", async () => {
+    const { useCase, artifactRepository, taskRepository } = setup([note()], [task("e1", ["note-1"])]);
 
     await useCase.execute({ artifactId: "note-1", expectedRevision: 1, taskIds: [] }, actor);
 
     expect((await artifactRepository.findById("note-1"))?.revision).toBe(1);
-    expect((await eventRepository.findById("e1"))?.artifactLinks).toEqual([]);
+    expect((await taskRepository.findById("e1"))?.artifactLinks).toEqual([]);
   });
 
   test("the requests to the agent that touched the artifact are not part of the list", async () => {
-    const request = event("request", [], {
+    const request = task("request", [], {
       actor: "agent",
       kind: "build_request",
       status: "done",
       artifactLinks: [{ artifactId: "note-1", relation: "updates", fromRecurrence: false }],
     });
-    const { useCase, eventRepository } = setup([note()], [event("e1", ["note-1"]), request]);
+    const { useCase, taskRepository } = setup([note()], [task("e1", ["note-1"]), request]);
 
     await useCase.execute({ artifactId: "note-1", expectedRevision: 1, taskIds: [] }, actor);
 
-    expect((await eventRepository.findById("e1"))?.artifactLinks).toEqual([]);
-    expect(await eventRepository.findById("request")).toMatchObject({ artifactLinks: [{ relation: "updates" }], revision: 1 });
+    expect((await taskRepository.findById("e1"))?.artifactLinks).toEqual([]);
+    expect(await taskRepository.findById("request")).toMatchObject({ artifactLinks: [{ relation: "updates" }], revision: 1 });
   });
 
   test("an occurrence of a series that gains or loses the artifact is detached", async () => {
     const occurrence = { recurrenceId: "rec-1", occurrenceOn: "2026-08-17", detached: false };
-    const { useCase, eventRepository } = setup([note()], [event("e1", [], { occurrence })]);
+    const { useCase, taskRepository } = setup([note()], [task("e1", [], { occurrence })]);
 
     await useCase.execute({ artifactId: "note-1", expectedRevision: 1, taskIds: ["e1"] }, actor);
 
-    expect((await eventRepository.findById("e1"))?.occurrence?.detached).toBe(true);
+    expect((await taskRepository.findById("e1"))?.occurrence?.detached).toBe(true);
   });
 
-  test("refuses an event that does not exist or belongs to someone else, writing nothing", async () => {
-    const theirs = Event.create({ id: "theirs", userId: "someone-else", name: "Deles", startedAt });
+  test("refuses a task that does not exist or belongs to someone else, writing nothing", async () => {
+    const theirs = Task.create({ id: "theirs", userId: "someone-else", name: "Deles", startedAt });
     const { useCase, artifactRepository, batchWriter } = setup([note()], [theirs]);
 
     await expect(
       useCase.execute({ artifactId: "note-1", expectedRevision: 1, name: "Nova", taskIds: ["missing"] }, actor),
-    ).rejects.toThrow(EventNotFoundError);
+    ).rejects.toThrow(TaskNotFoundError);
     await expect(useCase.execute({ artifactId: "note-1", expectedRevision: 1, taskIds: ["theirs"] }, actor)).rejects.toThrow(
-      EventOwnershipError,
+      TaskOwnershipError,
     );
     expect((await artifactRepository.findById("note-1"))?.name).toBe("Pauta");
     expect(batchWriter.commits).toEqual([]);
@@ -221,7 +221,7 @@ describe("events the artifact appears in", () => {
 
 describe("nothing to do", () => {
   test("a request that changes nothing writes nothing", async () => {
-    const { useCase, batchWriter, artifactRepository } = setup([note()], [event("e1", ["note-1"])]);
+    const { useCase, batchWriter, artifactRepository } = setup([note()], [task("e1", ["note-1"])]);
 
     await useCase.execute({ artifactId: "note-1", expectedRevision: 1 }, actor);
     await useCase.execute({ artifactId: "note-1", expectedRevision: 1, taskIds: ["e1"] }, actor);
@@ -265,24 +265,24 @@ describe("who and when", () => {
       createdAt: startedAt,
       updatedAt: startedAt,
     });
-    const { useCase, database, batchWriter } = setup([current], [event("e1")]);
+    const { useCase, database, batchWriter } = setup([current], [task("e1")]);
 
     await expect(
-      // O dado e o evento sao invalidos de proposito: o conflito de revisao vem antes de qualquer preparo.
+      // O dado e a tarefa sao invalidos de proposito: o conflito de revisao vem antes de qualquer preparo.
       useCase.execute({ artifactId: "note-1", expectedRevision: 2, type: "text", data: { body: "" }, taskIds: ["missing"] }, actor),
     ).rejects.toThrow(ArtifactRevisionConflictError);
     await expect(useCase.execute({ artifactId: "note-1", expectedRevision: 2, taskIds: ["e1"] }, actor)).rejects.toThrow(
       "Expected revision 2 but found 3",
     );
     expect(database.artifacts[0]).toBe(current);
-    expect(database.events[0]?.revision).toBe(1);
+    expect(database.tasks[0]?.revision).toBe(1);
     expect(batchWriter.commits).toEqual([]);
   });
 
   test("skill and agent artifacts follow the files and cannot be edited, whatever the revision", async () => {
     const skill = Artifact.create({ id: "skill", userId: actor.userId, type: "skill", name: "Agenda", data: agentFile });
     const agent = Artifact.create({ id: "agent", userId: actor.userId, type: "agent", name: "Planner", data: { ...agentFile, path: "hermes/agents/planner.md" } });
-    const { useCase, batchWriter } = setup([skill, agent], [event("e1")]);
+    const { useCase, batchWriter } = setup([skill, agent], [task("e1")]);
 
     await expect(useCase.execute({ artifactId: "skill", expectedRevision: 1, name: "Outro" }, actor)).rejects.toThrow(
       "Skill and agent artifacts follow the files; ask Hermes to change the file",

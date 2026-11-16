@@ -9,7 +9,7 @@ export interface RecurrenceCreateProps {
   /**
    * O que cada ocorrencia copia, incluindo os artefatos que todas elas usam
    * (`artifactIds`). A entidade so garante que e um objeto: quem sabe se ele
-   * gera um evento valido e o usecase, que monta uma ocorrencia de ensaio antes
+   * gera uma tarefa valido e o usecase, que monta uma ocorrencia de ensaio antes
    * de salvar.
    */
   template: Record<string, unknown>;
@@ -52,9 +52,9 @@ function isIntegerBetween(value: unknown, min: number, max: number): value is nu
 }
 
 /**
- * A regra de repeticao de um evento.
+ * A regra de repeticao de uma tarefa.
  *
- * As ocorrencias sao linhas de verdade em `events`, geradas quando alguem le
+ * As ocorrencias sao linhas de verdade em `tasks`, geradas quando alguem le
  * a agenda ou a lista de tarefas. `materializedThrough` e ate que
  * dia civil isso ja foi feito — a proxima leitura continua dali.
  */

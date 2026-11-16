@@ -32,7 +32,7 @@ const FINISHED_RETENTION = "7 days";
 /**
  * A fila unica, no Postgres. O worker consulta a tabela e pega os jobs com
  * `FOR UPDATE SKIP LOCKED`: dois workers nunca pegam o mesmo. O job e
- * descartavel; a fonte de verdade e o evento.
+ * descartavel; a fonte de verdade e a tarefa.
  */
 export class PostgresJobStore {
   constructor(readonly database: PostgresDatabase, readonly leaseMs: number, readonly maxAttempts: number) {}
@@ -45,14 +45,14 @@ export class PostgresJobStore {
     return (await this.database.pool.query<Job>(`SELECT ${projection} FROM jobs WHERE id = $1`, [id])).rows[0];
   }
 
-  /** O job vivo de um evento, se houver: e dele que sai o progresso passageiro. */
+  /** O job vivo de uma tarefa, se houver: e dele que sai o progresso passageiro. */
   async activeOfTask(taskId: string): Promise<Job | undefined> {
     return (await this.database.pool.query<Job>(
       `SELECT ${projection} FROM jobs WHERE task_id = $1 AND status IN ('queued', 'running')
        ORDER BY created_at DESC, id DESC LIMIT 1`, [taskId])).rows[0];
   }
 
-  /** Cancela os jobs vivos dos eventos; devolve os ids, para o worker abortar os que estao rodando. */
+  /** Cancela os jobs vivos das tarefas; devolve os ids, para o worker abortar os que estao rodando. */
   async cancelOfTasks(taskIds: readonly string[], userId: string): Promise<string[]> {
     if (taskIds.length === 0) return [];
     const result = await this.database.pool.query<{ id: string }>(

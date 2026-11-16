@@ -1,10 +1,10 @@
 import type { AgentTraceDto } from "@repo/contracts";
 import { afterAll, beforeEach, describe, expect, test } from "vitest";
-import { Artifact, Event } from "../../../domain";
+import { Artifact, Task } from "../../../domain";
 import { toRequestDto } from "../../../api-core/requests/request-view";
 import { PostgresEntityBatchWriter } from "../agent-batch/postgres-entity-batch-writer";
 import { PostgresDatabase } from "../database/postgres-database";
-import { PostgresEventRequestLinkQuery } from "../events/queries/postgres-event-request-link.query";
+import { PostgresTaskRequestLinkQuery } from "../tasks/queries/postgres-task-request-link.query";
 import { createPostgresTestContext, type PostgresTestContext } from "../testing/postgres-test-context";
 import { PostgresCandidateQuery } from "./postgres-candidate.query";
 import { PostgresRequestStore } from "./postgres-request.store";
@@ -42,13 +42,13 @@ describe("PostgresRequestStore", () => {
     const { requestId, created } = await start(text, { context: { screen: "agenda" }, forceFallback: true });
 
     expect(created).toBe(true);
-    const [event] = await rows("SELECT actor, kind, status, name, data, started_at, finished_at FROM tasks WHERE id = $1", [requestId]);
-    expect(event).toMatchObject({
+    const [task] = await rows("SELECT actor, kind, status, name, data, started_at, finished_at FROM tasks WHERE id = $1", [requestId]);
+    expect(task).toMatchObject({
       actor: "agent", kind: "request", status: "queued", finished_at: null,
       data: { route: "steps", context: { screen: "agenda" }, forceFallback: true },
     });
-    expect(String(event?.name).length).toBeLessThanOrEqual(80);
-    expect(event?.started_at).toBeInstanceOf(Date);
+    expect(String(task?.name).length).toBeLessThanOrEqual(80);
+    expect(task?.started_at).toBeInstanceOf(Date);
     expect(await rows("SELECT kind, role, content FROM task_entries WHERE task_id = $1", [requestId]))
       .toEqual([{ kind: "message", role: "user", content: text }]);
     expect(await jobs()).toMatchObject([{ kind: "request-dispatch", task_id: requestId, payload: { requestId } }]);
@@ -164,10 +164,10 @@ describe("PostgresRequestStore", () => {
     await store.beginSteps(requestId, [
       { id: createStep, agent: "task-create", expected: "one" }, { id: editStep, agent: "artifact-edit", expected: "one" },
     ]);
-    const meal = Event.create({ userId: USER, kind: "meal", name: "Almoço", startedAt: new Date("2026-10-25T15:00:00Z") });
+    const meal = Task.create({ userId: USER, kind: "meal", name: "Almoço", startedAt: new Date("2026-10-25T15:00:00Z") });
     const food = Artifact.create({ userId: USER, type: "text", name: "Cardápio", data: { body: "arroz e feijão" } });
     const old = Artifact.create({ userId: USER, type: "text", name: "Velho", data: { body: "x" } });
-    const gone = Event.create({ userId: USER, name: "Sumiu", startedAt: new Date("2026-10-25T10:00:00Z") });
+    const gone = Task.create({ userId: USER, name: "Sumiu", startedAt: new Date("2026-10-25T10:00:00Z") });
     await writer.commit({ userId: USER, tasks: [{ op: "create", entity: gone }], artifacts: [{ op: "create", entity: old }] });
 
     await writer.commit({
@@ -197,7 +197,7 @@ describe("PostgresRequestStore", () => {
     expect(await rows("SELECT to_task_id, relation FROM task_task_relation WHERE from_task_id = $1 AND relation <> 'step' ORDER BY relation", [requestId]))
       .toEqual([{ to_task_id: gone.id, relation: "deletes" }, { to_task_id: meal.id, relation: "generates" }]);
     // O detalhe da tarefa le o pedido, nunca o passo.
-    expect(await new PostgresEventRequestLinkQuery(ctx.db).linksOf(meal.id))
+    expect(await new PostgresTaskRequestLinkQuery(ctx.db).linksOf(meal.id))
       .toMatchObject([{ requestId, relation: "generates", name: "almocei arroz e feijão" }]);
     expect(await rows("SELECT task_id, artifact_id, relation, position FROM task_artifact_relation ORDER BY relation, artifact_id")).toEqual([
       { task_id: createStep, artifact_id: food.id, relation: "creates", position: null },
@@ -240,14 +240,14 @@ describe("PostgresRequestStore", () => {
     const stepId = newOrderedId();
     await store.beginSteps(requestId, [{ id: stepId, agent: "task-create", expected: "one" }]);
     await store.cancel(requestId);
-    const event = Event.create({ userId: USER, name: "Almoço", startedAt: new Date() });
+    const task = Task.create({ userId: USER, name: "Almoço", startedAt: new Date() });
 
     await expect(writer.commit({
-      userId: USER, tasks: [{ op: "create", entity: event }], artifacts: [],
-      afterWrite: (tx) => store.recordStepSuccess(tx, { requestId, stepId, entities: [{ kind: "task", id: event.id, operation: "create" }], timings: {} }),
+      userId: USER, tasks: [{ op: "create", entity: task }], artifacts: [],
+      afterWrite: (tx) => store.recordStepSuccess(tx, { requestId, stepId, entities: [{ kind: "task", id: task.id, operation: "create" }], timings: {} }),
     })).rejects.toThrow("no longer open");
 
-    expect(await rows("SELECT id FROM tasks WHERE id = $1", [event.id])).toEqual([]);
+    expect(await rows("SELECT id FROM tasks WHERE id = $1", [task.id])).toEqual([]);
     expect((await store.steps(requestId))[0]?.status).toBe("cancel");
   });
 
@@ -375,22 +375,22 @@ describe("PostgresRequestStore", () => {
     expect((await store.steps(requestId)).at(-1)?.status).toBe("done");
   });
 
-  test("a voz: o pedido gera a tarefa de pessoa e termina na transacao dele", async () => {
+  test("a voz: o pedido gera a tarefa de pessoa e termina na transacao dela", async () => {
     const { requestId } = await start("comecei a estudar", { route: "voice", job: "voice-task" });
-    const event = Event.create({ userId: USER, name: "Estudar", startedAt: new Date("2026-10-25T15:00:00Z") });
+    const task = Task.create({ userId: USER, name: "Estudar", startedAt: new Date("2026-10-25T15:00:00Z") });
     await writer.commit({
-      userId: USER, tasks: [{ op: "create", entity: event }], artifacts: [],
-      afterWrite: (tx) => store.completeVoice(tx, { requestId, taskId: event.id }),
+      userId: USER, tasks: [{ op: "create", entity: task }], artifacts: [],
+      afterWrite: (tx) => store.completeVoice(tx, { requestId, taskId: task.id }),
     });
 
     expect(await rows("SELECT to_task_id, relation FROM task_task_relation WHERE from_task_id = $1", [requestId]))
-      .toEqual([{ to_task_id: event.id, relation: "generates" }]);
+      .toEqual([{ to_task_id: task.id, relation: "generates" }]);
     expect(await store.find(requestId)).toMatchObject({ route: "voice", status: "done" });
     expect(await store.entities(requestId)).toMatchObject([
-      { kind: "task", id: event.id, operation: "create", stepId: requestId, finalized: true, summary: { name: "Estudar" } },
+      { kind: "task", id: task.id, operation: "create", stepId: requestId, finalized: true, summary: { name: "Estudar" } },
     ]);
     expect((await rows("SELECT kind, data FROM task_entries WHERE task_id = $1 ORDER BY id", [requestId])).at(-1))
-      .toEqual({ kind: "result", data: { type: "voice", taskId: event.id } });
+      .toEqual({ kind: "result", data: { type: "voice", taskId: task.id } });
   });
 
   test("a lista traz os pedidos do usuario do mais novo para o mais antigo, e nunca um passo ou uma tarefa de pessoa", async () => {
@@ -405,7 +405,7 @@ describe("PostgresRequestStore", () => {
     });
     await writer.commit({
       userId: USER, artifacts: [{ op: "create", entity: food }],
-      tasks: [{ op: "create", entity: Event.create({ userId: USER, name: "Reunião", startedAt: new Date() }) }],
+      tasks: [{ op: "create", entity: Task.create({ userId: USER, name: "Reunião", startedAt: new Date() }) }],
     });
 
     const list = await store.list(USER, 10);
@@ -431,11 +431,11 @@ describe("PostgresRequestStore", () => {
   test("candidatos de edicao: so tarefas de pessoa, artefatos de conteudo do usuario e series", async () => {
     const now = new Date("2026-10-25T15:00:00Z");
     const { requestId } = await start("pedido antigo");
-    const today = Event.create({ userId: USER, name: "Reunião", startedAt: now });
-    const tracked = Event.create({ userId: USER, name: "Pagar o aluguel", status: "todo" });
-    const done = Event.create({ userId: USER, name: "Já feito", status: "done" });
-    const far = Event.create({ userId: USER, name: "Mês passado", startedAt: new Date("2026-09-01T15:00:00Z") });
-    const foreign = Event.create({ userId: "user-2", name: "De outro", startedAt: now });
+    const today = Task.create({ userId: USER, name: "Reunião", startedAt: now });
+    const tracked = Task.create({ userId: USER, name: "Pagar o aluguel", status: "todo" });
+    const done = Task.create({ userId: USER, name: "Já feito", status: "done" });
+    const far = Task.create({ userId: USER, name: "Mês passado", startedAt: new Date("2026-09-01T15:00:00Z") });
+    const foreign = Task.create({ userId: "user-2", name: "De outro", startedAt: now });
     const text = Artifact.create({ userId: USER, name: "Ideia", data: { body: "Visão semanal" } });
     const skill = Artifact.create({ userId: USER, type: "skill", name: "cafe", data: { path: "hermes/skills/cafe/SKILL.md", hash: "a".repeat(64), missing: false } });
     await writer.commit({ userId: USER, tasks: [today, tracked, done, far].map((entity) => ({ op: "create" as const, entity })), artifacts: [text, skill].map((entity) => ({ op: "create" as const, entity })) });

@@ -1,20 +1,20 @@
 import { expect, test } from "vitest";
-import { Artifact, ArtifactOwnershipError, Event } from "../../domain";
-import { InMemoryArtifactEventLinkQuery } from "../../api-core/artifacts/testing/in-memory-artifact-event-link.query";
+import { Artifact, ArtifactOwnershipError, Task } from "../../domain";
+import { InMemoryArtifactTaskLinkQuery } from "../../api-core/artifacts/testing/in-memory-artifact-task-link.query";
 import { InMemoryArtifactRepository } from "../../api-core/artifacts/testing/in-memory-artifact.repository";
-import { InMemoryEventDatabase } from "../../api-core/events/testing/in-memory-event-database";
+import { InMemoryTaskDatabase } from "../../api-core/tasks/testing/in-memory-task-database";
 import { GetArtifactUseCase } from "./get-artifact.usecase";
 
 const actor = { userId: "auth-user-1" };
 const totals = { totalCaloriesKcal: 89, totalProteinGrams: 1, totalCarbohydrateGrams: 23, totalFatGrams: 0, totalFiberGrams: 3 };
 
-function useCaseOf(artifacts: Artifact[], events: Event[] = []) {
-  const database = new InMemoryEventDatabase(events, artifacts);
-  return new GetArtifactUseCase(new InMemoryArtifactRepository(database.artifacts), new InMemoryArtifactEventLinkQuery(database));
+function useCaseOf(artifacts: Artifact[], tasks: Task[] = []) {
+  const database = new InMemoryTaskDatabase(tasks, artifacts);
+  return new GetArtifactUseCase(new InMemoryArtifactRepository(database.artifacts), new InMemoryArtifactTaskLinkQuery(database));
 }
 
-function linked(id: string, relation: "creates" | "uses" | "updates", overrides: Partial<Parameters<typeof Event.create>[0]> = {}): Event {
-  return Event.create({
+function linked(id: string, relation: "creates" | "uses" | "updates", overrides: Partial<Parameters<typeof Task.create>[0]> = {}): Task {
+  return Task.create({
     id,
     userId: actor.userId,
     name: id,
@@ -24,7 +24,7 @@ function linked(id: string, relation: "creates" | "uses" | "updates", overrides:
   });
 }
 
-test("returns the artifact of the actor with the events it appears in, oldest first and undated last", async () => {
+test("returns the artifact of the actor with the tasks it appears in, oldest first and undated last", async () => {
   const note = Artifact.create({ id: "note-1", userId: actor.userId, name: "Pauta", data: { body: "itens" }, tags: ["time"] });
   const useCase = useCaseOf(
     [note],
@@ -66,7 +66,7 @@ test("returns the artifact of the actor with the events it appears in, oldest fi
   ]);
 });
 
-test("a loose artifact has an empty list of events", async () => {
+test("a loose artifact has an empty list of tasks", async () => {
   const note = Artifact.create({ id: "note-1", userId: actor.userId, data: { body: "solta" } });
 
   expect((await useCaseOf([note]).execute({ artifactId: "note-1" }, actor))?.tasks).toEqual([]);
@@ -82,7 +82,7 @@ test("rejects reading an artifact that belongs to another user", async () => {
   await expect(useCaseOf([theirs]).execute({ artifactId: "theirs" }, actor)).rejects.toThrow(ArtifactOwnershipError);
 });
 
-test("a global artifact is read by anyone, without the events of the users that use it", async () => {
+test("a global artifact is read by anyone, without the tasks of the users that use it", async () => {
   const banana = Artifact.create({ id: "note-1", type: "food", name: "Banana", data: { description: "banana", items: [], totals } });
   const useCase = useCaseOf([banana], [linked("someone-elses-lunch", "uses", { userId: "someone-else" })]);
 
@@ -94,7 +94,7 @@ test("a global artifact is read by anyone, without the events of the users that 
 
 test("a derived copy is readable by its owner and says so", async () => {
   const original = Artifact.create({ type: "food", name: "Banana", data: { description: "banana", items: [], totals } });
-  const copy = original.copyForEvent(actor.userId, "2 unidades");
+  const copy = original.copyForTask(actor.userId, "2 unidades");
 
   const result = await useCaseOf([original, copy]).execute({ artifactId: copy.id }, actor);
 

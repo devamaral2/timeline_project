@@ -1,8 +1,8 @@
 import { Recurrence, type Artifact } from "../../domain";
 import type { CreateRecurrenceInput } from "@repo/contracts";
-import type { EventRepository } from "../../domain/ports";
+import type { TaskRepository } from "../../domain/ports";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
-import type { CreateEventUseCase, PrepareEventOptions } from "../events/create-event.usecase";
+import type { CreateTaskUseCase, PrepareTaskOptions } from "../tasks/create-task.usecase";
 import { prepareTemplate } from "./recurrence-templates";
 
 export interface PreparedRecurrence {
@@ -13,8 +13,8 @@ export interface PreparedRecurrence {
 }
 
 export interface RecurrenceTemplateDeps {
-  createEvent: Pick<CreateEventUseCase, "prepare">;
-  events: Pick<EventRepository, "findByIds">;
+  createTask: Pick<CreateTaskUseCase, "prepare">;
+  tasks: Pick<TaskRepository, "findByIds">;
 }
 
 /**
@@ -26,7 +26,7 @@ export async function prepareRecurrence(
   deps: RecurrenceTemplateDeps,
   input: CreateRecurrenceInput,
   actor: AuthenticatedUser,
-  options?: PrepareEventOptions,
+  options?: PrepareTaskOptions,
 ): Promise<PreparedRecurrence> {
   const { template, ...rule } = input;
   // A regra e validada antes do template: nao adianta resolver o template de

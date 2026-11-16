@@ -2,9 +2,9 @@ import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 import type { JobsEnv } from "../../config/env";
 import { PostgresDatabase } from "../persistence/database/postgres-database";
-import { PostgresEventRepository } from "../persistence/events/repositories/postgres-event.repository";
+import { PostgresTaskRepository } from "../persistence/tasks/repositories/postgres-task.repository";
 import { PostgresJobStore, type Job } from "../persistence/jobs/postgres-job.store";
-import { OTHER_USER, USER, agentEvent, countRows, selectRows } from "../persistence/testing/fixtures";
+import { OTHER_USER, USER, agentTask, countRows, selectRows } from "../persistence/testing/fixtures";
 import { createPostgresTestContext, type PostgresTestContext } from "../persistence/testing/postgres-test-context";
 import { completeCurrentJob, getCurrentJob, type EnqueueJobInput } from "./job-context";
 import { JobsService, RetryableJobError, type JobHandlerContext } from "./jobs.service";
@@ -26,13 +26,13 @@ describe("fila de jobs", () => {
   let ctx: PostgresTestContext;
   let database: PostgresDatabase;
   let store: PostgresJobStore;
-  let events: PostgresEventRepository;
+  let tasks: PostgresTaskRepository;
 
   beforeAll(async () => {
     ctx = await createPostgresTestContext();
     database = new PostgresDatabase(ctx.pool);
     store = new PostgresJobStore(database, ENV.AI_JOBS_LEASE_MS, ENV.AI_JOBS_MAX_ATTEMPTS);
-    events = new PostgresEventRepository(ctx.db);
+    tasks = new PostgresTaskRepository(ctx.db);
     // O efeito de dominio que um handler grava na mesma transacao em que encerra o job.
     await ctx.pool.query("CREATE TABLE job_effects (job_id text PRIMARY KEY)");
   }, 60000);
@@ -78,9 +78,9 @@ describe("fila de jobs", () => {
   }
 
   async function requestTask(name: string): Promise<string> {
-    const event = agentEvent(USER, name);
-    await events.save(event);
-    return event.id;
+    const task = agentTask(USER, name);
+    await tasks.save(task);
+    return task.id;
   }
 
   describe("enfileirar", () => {
@@ -448,11 +448,11 @@ describe("fila de jobs", () => {
       const retried = await enqueue({ taskId, payload: { fail: true } });
       await drain(service);
       expect(await rowOf(retried)).toMatchObject({ status: "queued", progress: null });
-      // O job que espera o retry e o job vivo do evento, mas sem progresso.
+      // O job que espera o retry e o job vivo da tarefa, mas sem progresso.
       expect(await service.progressOfTask(taskId)).toBeUndefined();
     });
 
-    test("cancelOfEvents cancela os jobs vivos dos eventos e aborta o handler em curso", async () => {
+    test("cancelOfTasks cancela os jobs vivos das tarefas e aborta o handler em curso", async () => {
       const service = worker();
       const [runningTask, queuedTask, untouchedTask] = [
         await requestTask("Rodando"),

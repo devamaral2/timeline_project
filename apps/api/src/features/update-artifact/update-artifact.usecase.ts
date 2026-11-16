@@ -7,7 +7,7 @@ import {
   isAgentFileArtifactType,
   isRouterArtifactType,
 } from "../../domain";
-import type { ArtifactEventLinkQuery, ArtifactRepository, EntityBatchWriter, EventRepository } from "../../domain/ports";
+import type { ArtifactTaskLinkQuery, ArtifactRepository, EntityBatchWriter, TaskRepository } from "../../domain/ports";
 import type { UpdateArtifactRequest } from "@repo/contracts";
 import { planArtifactLinks, uniqueIds } from "../../api-core/artifacts/artifact-targets";
 import type { ArtifactBuilder } from "../../api-core/artifacts/services/artifact-builder.service";
@@ -15,13 +15,13 @@ import type { ArtifactBuilder } from "../../api-core/artifacts/services/artifact
 export class UpdateArtifactUseCase {
   constructor(
     private readonly artifactRepository: Pick<ArtifactRepository, "findById">,
-    private readonly linkQuery: ArtifactEventLinkQuery,
+    private readonly linkQuery: ArtifactTaskLinkQuery,
     private readonly artifactBuilder: ArtifactBuilder,
-    private readonly eventRepository: Pick<EventRepository, "findByIds">,
+    private readonly taskRepository: Pick<TaskRepository, "findByIds">,
     private readonly batchWriter: EntityBatchWriter,
   ) {}
 
-  /** O conteudo e os eventos em que o artefato aparece mudam numa transacao so. */
+  /** O conteudo e as tarefas em que o artefato aparece mudam numa transacao so. */
   async execute(input: UpdateArtifactRequest, actor: AuthenticatedUser): Promise<void> {
     const existing = await this.artifactRepository.findById(input.artifactId);
     if (!existing) throw new ArtifactNotFoundError(`Artifact not found: ${input.artifactId}`);
@@ -51,16 +51,16 @@ export class UpdateArtifactUseCase {
         })
       : undefined;
 
-    // So os eventos de pessoa entram na lista: os pedidos ao agente que tocaram o artefato nao sao editados por aqui.
+    // So as tarefas de pessoa entram na lista: os pedidos ao agente que tocaram o artefato nao sao editados por aqui.
     const links = (await this.linkQuery.linksOf([existing.id])).get(existing.id) ?? [];
-    const current = links.filter((link) => link.actor === "human").map((link) => link.eventId);
+    const current = links.filter((link) => link.actor === "human").map((link) => link.taskId);
     const desired = input.taskIds !== undefined ? uniqueIds(input.taskIds) : current;
-    const events = await planArtifactLinks(existing.id, current, desired, this.eventRepository, actor.userId);
+    const tasks = await planArtifactLinks(existing.id, current, desired, this.taskRepository, actor.userId);
 
-    if (!revised && events.length === 0) return;
+    if (!revised && tasks.length === 0) return;
     await this.batchWriter.commit({
       userId: actor.userId,
-      tasks: events,
+      tasks: tasks,
       artifacts: revised ? [{ op: "update", entity: revised, expectedRevision: existing.revision }] : [],
     });
   }

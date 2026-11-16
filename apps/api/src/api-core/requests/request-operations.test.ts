@@ -136,10 +136,10 @@ describe("iniciar um pedido", () => {
 
   test("a edicao pela tela de detalhe nasce com o alvo, na fila que escolhe o agente", async () => {
     const { store, operations } = setup();
-    const id = await operations.startEdit({ userId: "user-1", text: "mude para 19h", entityType: "task", entityId: "01H0EVENT" }, actor);
+    const id = await operations.startEdit({ userId: "user-1", text: "mude para 19h", entityType: "task", entityId: "01H0TASK" }, actor);
     expect(store.require(id)).toMatchObject({
       route: "steps", prompt: "mude para 19h", status: "queued",
-      target: { entityType: "task", entityId: "01H0EVENT" }, context: { screen: "detail", entityId: "01H0EVENT" },
+      target: { entityType: "task", entityId: "01H0TASK" }, context: { screen: "detail", entityId: "01H0TASK" },
     });
     expect(store.jobs).toEqual([{ kind: "request-edit-target", requestId: id }]);
   });

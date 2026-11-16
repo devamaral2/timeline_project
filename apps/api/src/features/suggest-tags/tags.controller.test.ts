@@ -4,9 +4,9 @@ import { expect, test } from "vitest";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
 import { GatewayIdentityGuard } from "../../http/request-identity/gateway-identity.guard";
 import type { TagSuggestionDto } from "@repo/contracts";
-import { Event } from "../../domain";
-import { InMemoryEventDatabase } from "../../api-core/events/testing/in-memory-event-database";
-import { InMemoryTagRepository } from "../../api-core/events/testing/in-memory-tag.repository";
+import { Task } from "../../domain";
+import { InMemoryTaskDatabase } from "../../api-core/tasks/testing/in-memory-task-database";
+import { InMemoryTagRepository } from "../../api-core/tasks/testing/in-memory-tag.repository";
 import { SuggestTagsUseCase } from "./suggest-tags.usecase";
 import { SuggestTagsController } from "./suggest-tags.controller";
 
@@ -43,12 +43,12 @@ test("requires GatewayIdentityGuard on suggest", () => {
   expect(guards).toContain(GatewayIdentityGuard);
 });
 
-function tagged(userId: string, tags: string[]): Event {
-  return Event.create({ userId, name: "Evento", status: "todo", tags });
+function tagged(userId: string, tags: string[]): Task {
+  return Task.create({ userId, name: "Tarefa", status: "todo", tags });
 }
 
 test("suggests the actor's own tags that start with the query, and never another user's", async () => {
-  const database = new InMemoryEventDatabase([
+  const database = new InMemoryTaskDatabase([
     tagged("auth-user-1", ["gym", "casa"]),
     tagged("auth-user-1", ["Gymnastics", "trabalho"]),
     tagged("someone-else", ["gym-secreto"]),
@@ -62,7 +62,7 @@ test("suggests the actor's own tags that start with the query, and never another
 test("limits to 10 suggestions unless a positive integer limit is given", async () => {
   const tags = Array.from({ length: 12 }, (_, index) => `tag-${String(index).padStart(2, "0")}`);
   const controller = new SuggestTagsController(
-    new SuggestTagsUseCase(new InMemoryTagRepository(new InMemoryEventDatabase([tagged("auth-user-1", tags)]))),
+    new SuggestTagsUseCase(new InMemoryTagRepository(new InMemoryTaskDatabase([tagged("auth-user-1", tags)]))),
   );
 
   expect(await controller.execute(actor, "tag")).toHaveLength(10);

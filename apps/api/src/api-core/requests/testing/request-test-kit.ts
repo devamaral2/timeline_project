@@ -4,14 +4,14 @@ import type { ScopedSqlOutcome } from "../../../domain/ports";
 import { AgentFileNotFoundError } from "../../agent/config/agent-files.service";
 import type { StructuredCompletionGateway, StructuredCompletionInput } from "../../agent/gateways/structured-completion.gateway";
 import { StubScopedSqlQuery } from "../../agent/testing/stub-scoped-sql-query";
-import type { FoodParsingGateway } from "../../events/gateways/food-parsing.gateway";
-import { InMemoryEventDatabase } from "../../events/testing/in-memory-event-database";
-import { InMemoryEntityBatchWriter } from "../../events/testing/in-memory-entity-batch-writer";
-import { InMemoryEventRepository } from "../../events/testing/in-memory-event.repository";
-import { InMemoryWorkoutCatalog } from "../../events/testing/in-memory-workout.catalog";
+import type { FoodParsingGateway } from "../../tasks/gateways/food-parsing.gateway";
+import { InMemoryTaskDatabase } from "../../tasks/testing/in-memory-task-database";
+import { InMemoryEntityBatchWriter } from "../../tasks/testing/in-memory-entity-batch-writer";
+import { InMemoryTaskRepository } from "../../tasks/testing/in-memory-task.repository";
+import { InMemoryWorkoutCatalog } from "../../tasks/testing/in-memory-workout.catalog";
 import { InMemoryArtifactRepository } from "../../artifacts/testing/in-memory-artifact.repository";
 import { ArtifactBuilder } from "../../artifacts/services/artifact-builder.service";
-import { CreateEventUseCase } from "../../events/create-event.usecase";
+import { CreateTaskUseCase } from "../../tasks/create-task.usecase";
 import { InMemoryRecurrenceRepository } from "../../recurrences/testing/in-memory-recurrence.repository";
 import type { JevClient, JevResult } from "../jev.client";
 import { RequestAgentRunner } from "../request-agent-runner";
@@ -105,15 +105,15 @@ export class FakeAgentFiles {
 /** Tudo de um pedido por passos montado em memoria, com o pedido `r1` ja em andamento. */
 export function setupRequest(prompt = "pedido", sqlOutcome?: ScopedSqlOutcome) {
   // O mesmo banco em memoria para tarefas, artefatos e series: a serie gera ocorrencias de verdade nele.
-  const database = new InMemoryEventDatabase();
-  const eventRepository = new InMemoryEventRepository(database);
+  const database = new InMemoryTaskDatabase();
+  const taskRepository = new InMemoryTaskRepository(database);
   const artifactRepository = new InMemoryArtifactRepository(database.artifacts);
   const recurrences = new InMemoryRecurrenceRepository(database);
   const artifactBuilder = new ArtifactBuilder(new InMemoryWorkoutCatalog());
-  const repositories = { events: eventRepository, sequence: database, artifacts: artifactRepository, recurrences };
+  const repositories = { tasks: taskRepository, sequence: database, artifacts: artifactRepository, recurrences };
   const batchWriter = new InMemoryEntityBatchWriter(repositories, database.derivations);
-  const createEvent = new CreateEventUseCase(eventRepository, artifactRepository, artifactBuilder, batchWriter, () => NOW);
-  const kit = { database, eventRepository, artifactRepository, artifactBuilder, batchWriter, createEvent };
+  const createTask = new CreateTaskUseCase(taskRepository, artifactRepository, artifactBuilder, batchWriter, () => NOW);
+  const kit = { database, taskRepository, artifactRepository, artifactBuilder, batchWriter, createTask };
   const store = new InMemoryRequestStore(() => NOW, kit.database);
   const gateway = new ScriptedStructuredGateway();
   const runner = new RequestAgentRunner(gateway, { thoughts: store, clock: () => NOW });
@@ -122,7 +122,7 @@ export function setupRequest(prompt = "pedido", sqlOutcome?: ScopedSqlOutcome) {
   const foodParsing = new ScriptedFoodParsing();
   const files = new FakeAgentFiles();
   const places = new ScriptedPlaces();
-  const deps = { store, runner, batchWriter: kit.batchWriter, repositories, createEvent: kit.createEvent, places };
+  const deps = { store, runner, batchWriter: kit.batchWriter, repositories, createTask: kit.createTask, places };
   return {
     ...kit, recurrences, repositories, store, gateway, runner, request, sql, foodParsing, files, places,
     worker: new RequestCreateWorker(deps),

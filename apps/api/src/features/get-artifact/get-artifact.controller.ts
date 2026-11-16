@@ -1,7 +1,7 @@
 import { Controller, Get, Inject, Module, NotFoundException, Param, UseGuards } from "@nestjs/common";
 import type { ArtifactDto } from "@repo/contracts";
-import { ARTIFACT_EVENT_LINK_QUERY, ARTIFACT_REPOSITORY } from "../../infrastructure/persistence";
-import type { ArtifactEventLinkQuery, ArtifactRepository } from "../../domain/ports";
+import { ARTIFACT_TASK_LINK_QUERY, ARTIFACT_REPOSITORY } from "../../infrastructure/persistence";
+import type { ArtifactTaskLinkQuery, ArtifactRepository } from "../../domain/ports";
 import { ApiCoreModule } from "../../api-core/api-core.module";
 import { CurrentUser } from "../../http/request-identity/current-user.decorator";
 import { GatewayIdentityGuard } from "../../http/request-identity/gateway-identity.guard";
@@ -26,8 +26,8 @@ export class GetArtifactController {
   controllers: [GetArtifactController],
   providers: [{
     provide: GetArtifactUseCase,
-    inject: [ARTIFACT_REPOSITORY, ARTIFACT_EVENT_LINK_QUERY],
-    useFactory: (artifacts: ArtifactRepository, links: ArtifactEventLinkQuery) => new GetArtifactUseCase(artifacts, links),
+    inject: [ARTIFACT_REPOSITORY, ARTIFACT_TASK_LINK_QUERY],
+    useFactory: (artifacts: ArtifactRepository, links: ArtifactTaskLinkQuery) => new GetArtifactUseCase(artifacts, links),
   }],
 })
 export class GetArtifactModule {}

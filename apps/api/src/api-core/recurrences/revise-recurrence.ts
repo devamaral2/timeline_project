@@ -2,7 +2,7 @@ import type { Artifact, Recurrence, RecurrenceRule } from "../../domain";
 import type { RecurrenceTemplate } from "@repo/contracts";
 import { shiftDayKey } from "@repo/timeline";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
-import type { PrepareEventOptions } from "../events/create-event.usecase";
+import type { PrepareTaskOptions } from "../tasks/create-task.usecase";
 import type { RecurrenceTemplateDeps } from "./prepare-recurrence";
 import { prepareTemplate, storedTemplateOf, todayOf } from "./recurrence-templates";
 
@@ -42,7 +42,7 @@ export async function reviseRecurrence(
   revision: RecurrenceRevision,
   actor: AuthenticatedUser,
   now: Date,
-  options?: PrepareEventOptions,
+  options?: PrepareTaskOptions,
 ): Promise<RevisedRecurrence> {
   // A regra revisada vem primeiro: o template novo e resolvido com a janela dela.
   const withRule = existing.revise({ rule: revision.rule });

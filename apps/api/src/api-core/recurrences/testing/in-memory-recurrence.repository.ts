@@ -1,5 +1,5 @@
 import {
-  Event,
+  Task,
   RecurrenceNotFoundError,
   RecurrenceOwnershipError,
   RecurrenceRevisionConflictError,
@@ -9,54 +9,54 @@ import {
   type Recurrence,
 } from "../../../domain";
 import type { RecurrenceRepository } from "../../../domain/ports";
-import type { InMemoryEventDatabase } from "../../events/testing/in-memory-event-database";
+import type { InMemoryTaskDatabase } from "../../tasks/testing/in-memory-task-database";
 
 /**
- * O mesmo evento com algo trocado, sem contar como revisao: e como o banco
+ * O mesma tarefa com algo trocado, sem contar como revisao: e como o banco
  * mexe numa linha por fora de uma edicao do usuario (soltar a ocorrencia da
- * serie apagada, ligar a ocorrencia nova ao evento maior).
+ * serie apagada, ligar a ocorrencia nova à tarefa maior).
  */
 function rewrite(
-  event: Event,
+  task: Task,
   changes: { artifactLinks?: ArtifactLink[]; occurrence?: OccurrenceLink | undefined },
-): Event {
-  return Event.rehydrate({
-    id: event.id,
-    userId: event.userId,
-    actor: event.actor,
-    kind: event.kind,
-    status: event.status,
-    priority: event.priority,
-    name: event.name,
-    description: event.description,
-    location: event.location,
-    startedAt: event.startedAt,
-    estimatedFinishAt: event.estimatedFinishAt,
-    finishedAt: event.finishedAt,
-    notifyOffsetsMinutes: [...event.notifyOffsetsMinutes],
-    tags: [...event.tags],
-    longRunning: event.longRunning,
-    data: { ...event.data },
-    artifactLinks: changes.artifactLinks ?? [...event.artifactLinks],
-    occurrence: "occurrence" in changes ? changes.occurrence : event.occurrence,
-    revision: event.revision,
+): Task {
+  return Task.rehydrate({
+    id: task.id,
+    userId: task.userId,
+    actor: task.actor,
+    kind: task.kind,
+    status: task.status,
+    priority: task.priority,
+    name: task.name,
+    description: task.description,
+    location: task.location,
+    startedAt: task.startedAt,
+    estimatedFinishAt: task.estimatedFinishAt,
+    finishedAt: task.finishedAt,
+    notifyOffsetsMinutes: [...task.notifyOffsetsMinutes],
+    tags: [...task.tags],
+    longRunning: task.longRunning,
+    data: { ...task.data },
+    artifactLinks: changes.artifactLinks ?? [...task.artifactLinks],
+    occurrence: "occurrence" in changes ? changes.occurrence : task.occurrence,
+    revision: task.revision,
   });
 }
 
 /**
- * Fake com as ocorrencias de verdade: gera os eventos no mesmo banco em
- * memoria dos testes de eventos, para que os testes possam ler o que a serie
+ * Fake com as ocorrencias de verdade: gera as tarefas no mesmo banco em
+ * memoria dos testes de tarefas, para que os testes possam ler o que a serie
  * produziu pela agenda e pela lista de tarefas.
  */
 export class InMemoryRecurrenceRepository implements RecurrenceRepository {
   recurrences: Recurrence[] = [];
   readonly exceptions = new Map<string, Set<string>>();
 
-  constructor(readonly events: InMemoryEventDatabase) {}
+  constructor(readonly tasks: InMemoryTaskDatabase) {}
 
   async save(recurrence: Recurrence, artifacts?: ArtifactWrites): Promise<void> {
     // Os artefatos antes: o template da serie aponta para eles.
-    this.events.writeArtifacts(artifacts);
+    this.tasks.writeArtifacts(artifacts);
     this.recurrences.push(recurrence);
   }
 
@@ -76,7 +76,7 @@ export class InMemoryRecurrenceRepository implements RecurrenceRepository {
         `Expected revision ${expectedRevision} but found ${existing.revision}`,
       );
     }
-    this.events.writeArtifacts(artifacts);
+    this.tasks.writeArtifacts(artifacts);
     this.recurrences[index] = recurrence;
     this.dropUpcoming(recurrence.id, fromDay);
   }
@@ -88,13 +88,13 @@ export class InMemoryRecurrenceRepository implements RecurrenceRepository {
 
     this.dropUpcoming(recurrenceId, fromDay);
     // As que ficam sao historia: perdem o vinculo com a serie, e a relacao herdada dela vira da propria ocorrencia.
-    this.events.events = this.events.events.map((event) =>
-      event.occurrence?.recurrenceId === recurrenceId
-        ? rewrite(event, {
+    this.tasks.tasks = this.tasks.tasks.map((task) =>
+      task.occurrence?.recurrenceId === recurrenceId
+        ? rewrite(task, {
             occurrence: undefined,
-            artifactLinks: event.artifactLinks.map((link) => ({ ...link, fromRecurrence: false })),
+            artifactLinks: task.artifactLinks.map((link) => ({ ...link, fromRecurrence: false })),
           })
-        : event,
+        : task,
     );
     this.recurrences = this.recurrences.filter((stored) => stored.id !== recurrenceId);
     this.exceptions.delete(recurrenceId);
@@ -105,12 +105,12 @@ export class InMemoryRecurrenceRepository implements RecurrenceRepository {
   }
 
   async findNextOccurrenceId(recurrenceId: string, fromDay: string): Promise<string | null> {
-    const upcoming = this.events.events
+    const upcoming = this.tasks.tasks
       .filter(
-        (event) =>
-          event.occurrence?.recurrenceId === recurrenceId &&
-          !event.occurrence.detached &&
-          event.occurrence.occurrenceOn >= fromDay,
+        (task) =>
+          task.occurrence?.recurrenceId === recurrenceId &&
+          !task.occurrence.detached &&
+          task.occurrence.occurrenceOn >= fromDay,
       )
       .sort((left, right) => (left.occurrence?.occurrenceOn ?? "").localeCompare(right.occurrence?.occurrenceOn ?? ""));
     return upcoming[0]?.id ?? null;
@@ -142,7 +142,7 @@ export class InMemoryRecurrenceRepository implements RecurrenceRepository {
     this.exceptions.set(recurrenceId, days);
   }
 
-  async materialize(recurrence: Recurrence, occurrences: Event[], previousIds: readonly string[] = []): Promise<void> {
+  async materialize(recurrence: Recurrence, occurrences: Task[], previousIds: readonly string[] = []): Promise<void> {
     const index = this.recurrences.findIndex((stored) => stored.id === recurrence.id);
     // A regra mudou no meio do caminho: estas ocorrencias sao da regra velha, e nada e gravado.
     if (index === -1 || (this.recurrences[index] as Recurrence).revision !== recurrence.revision) {
@@ -151,31 +151,31 @@ export class InMemoryRecurrenceRepository implements RecurrenceRepository {
 
     // Um antecessor que sumiu nao pode ganhar sucessor: a serie avanca sem gerar nada.
     const previous = [...new Set(previousIds)].filter((previousId) =>
-      this.events.events.some((event) => event.id === previousId && event.userId === recurrence.userId),
+      this.tasks.tasks.some((task) => task.id === previousId && task.userId === recurrence.userId),
     );
     const inserted: string[] = [];
     for (const occurrence of previous.length < new Set(previousIds).size ? [] : occurrences) {
       const day = occurrence.occurrence?.occurrenceOn;
       // O indice unico do Postgres: um dia da serie existe uma vez so.
-      const taken = this.events.events.some(
+      const taken = this.tasks.tasks.some(
         (stored) => stored.occurrence?.recurrenceId === recurrence.id && stored.occurrence.occurrenceOn === day,
       );
       if (taken) continue;
-      this.events.events.push(occurrence);
+      this.tasks.tasks.push(occurrence);
       inserted.push(occurrence.id);
     }
 
     // A relacao faz parte da criacao da ocorrencia: nao conta como edicao do antecessor.
-    for (const fromId of previous) for (const toId of inserted) this.events.edges.push({ fromId, toId });
+    for (const fromId of previous) for (const toId of inserted) this.tasks.edges.push({ fromId, toId });
     this.recurrences[index] = recurrence;
   }
 
   private dropUpcoming(recurrenceId: string, fromDay: string): void {
-    this.events.events = this.events.events.filter(
-      (event) =>
-        event.occurrence?.recurrenceId !== recurrenceId ||
-        event.occurrence.detached ||
-        event.occurrence.occurrenceOn < fromDay,
+    this.tasks.tasks = this.tasks.tasks.filter(
+      (task) =>
+        task.occurrence?.recurrenceId !== recurrenceId ||
+        task.occurrence.detached ||
+        task.occurrence.occurrenceOn < fromDay,
     );
   }
 }

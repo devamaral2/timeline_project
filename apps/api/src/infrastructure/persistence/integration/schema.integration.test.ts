@@ -81,7 +81,7 @@ describe("banco novo: checks, restricoes e indices", () => {
     ]);
   });
 
-  describe("events: tipo e status conforme o executor", () => {
+  describe("tasks: tipo e status conforme o executor", () => {
     test("pessoa aceita os tipos de pessoa e recusa tipo de agente", async () => {
       for (const kind of ["common", "meal", "sleep", "training"]) await task({ kind });
 
@@ -105,14 +105,14 @@ describe("banco novo: checks, restricoes e indices", () => {
       await expect(agentTask({ kind: "meal" })).rejects.toThrow(/tasks_kind_matches_actor/);
     });
 
-    test("evento de pessoa pode nao ter status: e o evento de referencia", async () => {
+    test("tarefa de pessoa pode nao ter status: e a tarefa de referencia", async () => {
       const id = await task({ status: null });
 
       const { rows } = await ctx.pool.query("SELECT status, priority, revision FROM tasks WHERE id = $1", [id]);
       expect(rows[0]).toEqual({ status: null, priority: "medium", revision: 1 });
     });
 
-    test("evento de agente sempre tem status", async () => {
+    test("tarefa de agente sempre tem status", async () => {
       await expect(agentTask({ status: null })).rejects.toThrow(/tasks_status_matches_actor/);
     });
 
@@ -132,14 +132,14 @@ describe("banco novo: checks, restricoes e indices", () => {
     });
   });
 
-  describe("events: datas", () => {
+  describe("tasks: datas", () => {
     test("o fim planejado nao vem antes do inicio", async () => {
       await expect(
         task({ started_at: "2026-11-14T10:00:00Z", estimated_finish_at: "2026-11-14T09:00:00Z" }),
       ).rejects.toThrow(/tasks_block_span/);
     });
 
-    test("fora do evento longo o bloco dura no maximo 31 dias", async () => {
+    test("fora da tarefa longa o bloco dura no maximo 31 dias", async () => {
       await task({ started_at: "2026-11-01T10:00:00Z", estimated_finish_at: "2026-12-02T10:00:00Z" });
 
       await expect(
@@ -163,7 +163,7 @@ describe("banco novo: checks, restricoes e indices", () => {
     });
   });
 
-  describe("events: evento longo", () => {
+  describe("tasks: tarefa longa", () => {
     const long = (overrides: Row = {}) => task({ long_running: true, status: "doing", ...overrides });
 
     test("aceita meses de duracao e inicio real depois do prazo", async () => {
@@ -190,7 +190,7 @@ describe("banco novo: checks, restricoes e indices", () => {
     });
   });
 
-  describe("events: serie", () => {
+  describe("tasks: serie", () => {
     test("ocorrencia precisa do dia", async () => {
       const series = await recurrence();
 
@@ -228,8 +228,8 @@ describe("banco novo: checks, restricoes e indices", () => {
       await entry(request, { kind: "message", role: "user", content: "marca o treino" });
       await entry(request, { kind: "thought", content: "vou procurar o treino" });
       await entry(request, { kind: "trace", data: { ms: 420, code: "dispatch" } });
-      await entry(request, { kind: "result", data: { eventId: "x" } });
-      await entry(request, { kind: "input", content: "retrato do evento" });
+      await entry(request, { kind: "result", data: { taskId: "x" } });
+      await entry(request, { kind: "input", content: "retrato da tarefa" });
 
       expect(await count("task_entries")).toBe(5);
     });
@@ -256,7 +256,7 @@ describe("banco novo: checks, restricoes e indices", () => {
       );
     });
 
-    test("apagar fisicamente o evento leva as entradas", async () => {
+    test("apagar fisicamente a tarefa leva as entradas", async () => {
       const request = await agentTask();
       await entry(request, { kind: "message", role: "user", content: "oi" });
 
@@ -299,11 +299,11 @@ describe("banco novo: checks, restricoes e indices", () => {
     });
   });
 
-  describe("relacoes entre eventos", () => {
+  describe("relacoes entre tarefas", () => {
     const relate = (from: string, to: string, relation: string) =>
       insert("task_task_relation", { from_task_id: from, to_task_id: to, relation });
 
-    test("um evento pode seguir mais de um antecessor e anteceder mais de um sucessor", async () => {
+    test("uma tarefa pode seguir mais de um antecessor e anteceder mais de um sucessor", async () => {
       const [first, second, shared, after] = [await task(), await task(), await task(), await task()];
 
       await relate(first, shared, "precedes");
@@ -321,7 +321,7 @@ describe("banco novo: checks, restricoes e indices", () => {
       await expect(relate(a, b, "precedes")).rejects.toThrow(/task_task_relation_.*_pk/);
     });
 
-    test("um evento nao se relaciona consigo mesmo, e o tipo e do conjunto", async () => {
+    test("uma tarefa nao se relaciona consigo mesmo, e o tipo e do conjunto", async () => {
       const [a, b] = [await task(), await task()];
 
       await expect(relate(a, a, "precedes")).rejects.toThrow(/task_task_not_self/);
@@ -357,7 +357,7 @@ describe("banco novo: checks, restricoes e indices", () => {
     });
   });
 
-  describe("relacoes entre evento e artefato", () => {
+  describe("relacoes entre tarefa e artefato", () => {
     const link = (taskId: string, artifactId: string, overrides: Row = {}) =>
       insert("task_artifact_relation", { task_id: taskId, artifact_id: artifactId, relation: "uses", ...overrides });
 
@@ -370,7 +370,7 @@ describe("banco novo: checks, restricoes e indices", () => {
       );
     });
 
-    test("a posicao e unica no evento, mas a relacao de um passo nao tem posicao", async () => {
+    test("a posicao e unica na tarefa, mas a relacao de um passo nao tem posicao", async () => {
       const [meal, step] = [await task({ kind: "meal" }), await agentTask({ kind: "step" })];
       const [a, b, c] = [await artifact(), await artifact(), await artifact()];
       await link(meal, a, { position: 0 });
@@ -560,7 +560,7 @@ describe("banco novo: checks, restricoes e indices", () => {
       expect(plan).toContain("tasks_requests_idx");
     });
 
-    test("todos os eventos vivos de pessoa", async () => {
+    test("todos as tarefas vivas de pessoa", async () => {
       const plan = await planOf(
         "SELECT id FROM tasks WHERE user_id = 'user-1' AND deleted_at IS NULL AND actor = 'human'",
       );
@@ -568,7 +568,7 @@ describe("banco novo: checks, restricoes e indices", () => {
       expect(plan).toContain("tasks_user_live_idx");
     });
 
-    test("entradas de um evento, em ordem e a partir da ultima lida", async () => {
+    test("entradas de uma tarefa, em ordem e a partir da ultima lida", async () => {
       const plan = await planOf(`
         SELECT id FROM task_entries
         WHERE task_id = '01JCZ0000000000000000000AA' AND id > '01JCZ0000000000000000000AB' ORDER BY id`);
@@ -576,7 +576,7 @@ describe("banco novo: checks, restricoes e indices", () => {
       expect(plan).toContain("task_entries_task_idx");
     });
 
-    test("relacoes para um evento, por tipo", async () => {
+    test("relacoes para uma tarefa, por tipo", async () => {
       const plan = await planOf(`
         SELECT from_task_id FROM task_task_relation
         WHERE to_task_id = '01JCZ0000000000000000000AA' AND relation = 'precedes'`);
@@ -584,7 +584,7 @@ describe("banco novo: checks, restricoes e indices", () => {
       expect(plan).toContain("task_task_reverse_idx");
     });
 
-    test("em quais eventos um artefato aparece", async () => {
+    test("em quais tarefas um artefato aparece", async () => {
       const plan = await planOf(
         "SELECT task_id FROM task_artifact_relation WHERE artifact_id = '01JCZ0000000000000000000AA'",
       );

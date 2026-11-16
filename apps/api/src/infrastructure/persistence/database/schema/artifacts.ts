@@ -7,7 +7,7 @@ import { ARTIFACT_TYPES, GLOBAL_ARTIFACT_TYPES, sqlList } from "./sets";
  * executor (ADR 0011). Substitui a nota e os catalogos de alimento e exercicio.
  *
  * `user_id` nulo e o artefato global: todos leem, ninguem edita pelo app.
- * `derived` marca a copia de outro artefato (o alimento comido num evento), para
+ * `derived` marca a copia de outro artefato (o alimento comido numa tarefa), para
  * que a lista por tipo nao precise consultar `artifact_artifact_relation`.
  */
 export const artifacts = pgTable(

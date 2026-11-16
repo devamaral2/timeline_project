@@ -40,7 +40,7 @@ export interface JobHandlerContext {
 }
 
 export type JobHandler = (payload: unknown, context: JobHandlerContext) => Promise<void>;
-/** Roda quando o job falha de vez: e onde o evento do job vira `failed`. */
+/** Roda quando o job falha de vez: e onde a tarefa do job vira `failed`. */
 export type JobFailureHandler = (payload: unknown, context: JobHandlerContext, error: unknown) => Promise<void>;
 
 export function isRetryableJobError(error: unknown, seen = new Set<unknown>()): boolean {
@@ -84,12 +84,12 @@ export class JobsService implements OnModuleInit, OnApplicationShutdown {
     return this.store.enqueue(input);
   }
 
-  /** Cancela os jobs vivos dos eventos e aborta os que este worker esta rodando. */
+  /** Cancela os jobs vivos das tarefas e aborta os que este worker esta rodando. */
   async cancelOfTasks(taskIds: readonly string[], userId: string): Promise<void> {
     for (const id of await this.store.cancelOfTasks(taskIds, userId)) this.active.get(id)?.abort();
   }
 
-  /** O progresso passageiro do job vivo de um evento, se houver. */
+  /** O progresso passageiro do job vivo de uma tarefa, se houver. */
   async progressOfTask(taskId: string): Promise<unknown> {
     return (await this.store.activeOfTask(taskId))?.progress ?? undefined;
   }
@@ -166,7 +166,7 @@ export class JobsService implements OnModuleInit, OnApplicationShutdown {
         try {
           await jobContext.run({ ...current }, () => failureHandler(job.payload, context, error));
         } catch {
-          // O evento do job ainda nao sabe que falhou: nunca marcar o job como terminal antes disso.
+          // A tarefa do job ainda nao sabe que falhou: nunca marcar o job como terminal antes disso.
           // O lease vence e a recuperacao tenta a projecao de novo, sem chamar o provedor.
           this.logger.warn("Job failure projection deferred until lease recovery");
           return;

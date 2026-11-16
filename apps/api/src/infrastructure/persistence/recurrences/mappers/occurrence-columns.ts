@@ -1,6 +1,6 @@
 import type { OccurrenceLink } from "../../../../domain";
 
-/** As tres colunas de `events` que ligam uma ocorrencia a serie dela. */
+/** As tres colunas de `tasks` que ligam uma ocorrencia a serie dela. */
 export interface OccurrenceColumns {
   recurrenceId: string | null;
   occurrenceOn: string | null;

@@ -1,5 +1,5 @@
 import type { Artifact } from "../../artifacts/entities/artifact.entity";
-import type { Event } from "../../events/entities/event.entity";
+import type { Task } from "../../tasks/entities/task.entity";
 import type { Recurrence } from "../../recurrences/entities/recurrence.entity";
 
 /** `expectedRevision` e a revisao lida quando a mudanca foi preparada. */
@@ -17,8 +17,8 @@ export type RecurrenceChange =
   | { op: "delete"; id: string; fromDay: string };
 
 /**
- * Uma aresta da sequencia entre eventos: `fromId` vem antes de `toId` (o
- * segundo "segue-se de" o primeiro). Nenhum dos dois eventos e revisado.
+ * Uma aresta da sequencia entre tarefas: `fromId` vem antes de `toId` (o
+ * segundo "segue-se de" o primeiro). Nenhum dos duas tarefas e revisada.
  */
 export interface SequenceChange {
   op: "add" | "remove";
@@ -28,7 +28,7 @@ export interface SequenceChange {
 
 export interface EntityBatch {
   userId: string;
-  tasks: StagedChange<Event>[];
+  tasks: StagedChange<Task>[];
   /** Entram antes das tarefas: as relacoes de uma tarefa apontam para eles. */
   artifacts: StagedChange<Artifact>[];
   /** De qual original saiu cada copia nova do lote. */

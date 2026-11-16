@@ -1,8 +1,8 @@
 import { BadRequestException, Controller, Get, Inject, Module, Query, UseGuards } from "@nestjs/common";
 import type { ArtifactDto } from "@repo/contracts";
 import { ARTIFACT_TYPES, type ArtifactType } from "../../domain";
-import { ARTIFACT_EVENT_LINK_QUERY, ARTIFACT_REPOSITORY } from "../../infrastructure/persistence";
-import type { ArtifactEventLinkQuery, ArtifactRepository } from "../../domain/ports";
+import { ARTIFACT_TASK_LINK_QUERY, ARTIFACT_REPOSITORY } from "../../infrastructure/persistence";
+import type { ArtifactTaskLinkQuery, ArtifactRepository } from "../../domain/ports";
 import { ApiCoreModule } from "../../api-core/api-core.module";
 import { parseLimit } from "../../api-core/http-input-validation";
 import { normalizeSearch, parseEnum } from "../../api-core/list-filters";
@@ -35,7 +35,7 @@ export class ListArtifactsController {
         scope: artifactScope,
         tag: tag?.trim().toLowerCase() || undefined,
         q: normalizeSearch(q),
-        eventId: taskId || undefined,
+        taskId: taskId || undefined,
         limit: parseLimit(limit),
       },
       actor,
@@ -48,8 +48,8 @@ export class ListArtifactsController {
   controllers: [ListArtifactsController],
   providers: [{
     provide: ListArtifactsUseCase,
-    inject: [ARTIFACT_REPOSITORY, ARTIFACT_EVENT_LINK_QUERY],
-    useFactory: (artifacts: ArtifactRepository, links: ArtifactEventLinkQuery) => new ListArtifactsUseCase(artifacts, links),
+    inject: [ARTIFACT_REPOSITORY, ARTIFACT_TASK_LINK_QUERY],
+    useFactory: (artifacts: ArtifactRepository, links: ArtifactTaskLinkQuery) => new ListArtifactsUseCase(artifacts, links),
   }],
 })
 export class ListArtifactsModule {}

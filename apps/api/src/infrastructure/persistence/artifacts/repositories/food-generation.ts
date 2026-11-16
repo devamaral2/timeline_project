@@ -26,8 +26,8 @@ export async function startFoodGeneration(tx: Tx, artifact: Artifact): Promise<v
     name: `Calcular os nutrientes de ${artifact.name}`,
     data: { route: "food" },
   });
-  await tx.insert(schema.eventArtifactRelation).values({
-    eventId: requestId,
+  await tx.insert(schema.taskArtifactRelation).values({
+    taskId: requestId,
     artifactId: artifact.id,
     relation: "updates",
   });

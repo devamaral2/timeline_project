@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   EntityBatchConflictError,
-  EventValidationError,
+  TaskValidationError,
   RecurrenceNotFoundError,
   RecurrenceOwnershipError,
   RecurrenceRevisionConflictError,
@@ -20,12 +20,12 @@ import {
   softDeleteArtifact,
   updateArtifactAggregate,
 } from "../artifacts/repositories/postgres-artifact.repository";
-import { applySequenceChanges } from "../events/repositories/event-relations";
+import { applySequenceChanges } from "../tasks/repositories/task-relations";
 import {
-  insertEventAggregate,
-  softDeleteEvent,
-  updateEventAggregate,
-} from "../events/repositories/postgres-event.repository";
+  insertTaskAggregate,
+  softDeleteTask,
+  updateTaskAggregate,
+} from "../tasks/repositories/postgres-task.repository";
 import {
   deleteRecurrenceAggregate,
   insertRecurrenceAggregate,
@@ -48,7 +48,7 @@ export class PostgresEntityBatchWriter implements EntityBatchWriter {
       await lockTargets(tx, "tasks", batch.userId, batch.tasks);
       await lockTargets(tx, "artifacts", batch.userId, batch.artifacts);
 
-      // Artefatos primeiro: as relacoes de um evento apontam para eles.
+      // Artefatos primeiro: as relacoes de uma tarefa apontam para eles.
       for (const artifact of created(batch.artifacts)) {
         await insertArtifact(tx, artifact);
       }
@@ -69,32 +69,32 @@ export class PostgresEntityBatchWriter implements EntityBatchWriter {
       }
 
       try {
-        for (const event of created(batch.tasks)) {
-          if (!(await insertEventAggregate(tx, event))) {
-            throw new EntityBatchConflictError(`Evento ${event.id} já existe`);
+        for (const task of created(batch.tasks)) {
+          if (!(await insertTaskAggregate(tx, task))) {
+            throw new EntityBatchConflictError(`Tarefa ${task.id} já existe`);
           }
         }
         for (const change of batch.tasks) {
           if (change.op === "update") {
-            await updateEventAggregate(tx, change.entity, batch.userId, change.expectedRevision);
+            await updateTaskAggregate(tx, change.entity, batch.userId, change.expectedRevision);
           }
         }
-        // Depois de todos os eventos: uma ponta da sequencia pode ser um evento novo do lote.
+        // Depois de todas as tarefas: uma ponta da sequencia pode ser uma tarefa nova do lote.
         await applySequenceChanges(tx, batch.userId, batch.sequence ?? []);
       } catch (error) {
         // Um alvo de relacao que sumiu entre preparar e gravar: o lote inteiro volta.
-        if (error instanceof EventValidationError && /not found/.test(error.message)) {
+        if (error instanceof TaskValidationError && /not found/.test(error.message)) {
           throw new EntityBatchConflictError(error.message);
         }
         throw error;
       }
 
-      // O artefato apagado continua ligado ao evento (soft delete); a leitura o esconde.
+      // O artefato apagado continua ligado à tarefa (soft delete); a leitura o esconde.
       for (const change of batch.artifacts) {
         if (change.op === "delete") await softDeleteArtifact(tx, change.id, batch.userId);
       }
       for (const change of batch.tasks) {
-        if (change.op === "delete") await softDeleteEvent(tx, change.id, batch.userId);
+        if (change.op === "delete") await softDeleteTask(tx, change.id, batch.userId);
       }
 
       await batch.afterWrite?.(tx);

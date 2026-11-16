@@ -1,17 +1,17 @@
 import { expect, test } from "vitest";
-import { Artifact, ArtifactNotFoundError, ArtifactOwnershipError, ArtifactValidationError, Event } from "../../domain";
+import { Artifact, ArtifactNotFoundError, ArtifactOwnershipError, ArtifactValidationError, Task } from "../../domain";
 import { InMemoryArtifactRepository } from "../../api-core/artifacts/testing/in-memory-artifact.repository";
-import { InMemoryEventDatabase } from "../../api-core/events/testing/in-memory-event-database";
-import { InMemoryEventRepository } from "../../api-core/events/testing/in-memory-event.repository";
+import { InMemoryTaskDatabase } from "../../api-core/tasks/testing/in-memory-task-database";
+import { InMemoryTaskRepository } from "../../api-core/tasks/testing/in-memory-task.repository";
 import { DeleteArtifactUseCase } from "./delete-artifact.usecase";
 
 const actor = { userId: "auth-user-1" };
 const agentFile = { path: "hermes/skills/agenda/SKILL.md", hash: "a".repeat(64), missing: false };
 
-function setup(artifacts: Artifact[], events: Event[] = []) {
-  const database = new InMemoryEventDatabase(events, artifacts);
+function setup(artifacts: Artifact[], tasks: Task[] = []) {
+  const database = new InMemoryTaskDatabase(tasks, artifacts);
   const useCase = new DeleteArtifactUseCase(new InMemoryArtifactRepository(database.artifacts));
-  return { database, useCase, events: new InMemoryEventRepository(database) };
+  return { database, useCase, tasks: new InMemoryTaskRepository(database) };
 }
 
 test("deletes the artifact of its owner", async () => {
@@ -23,20 +23,20 @@ test("deletes the artifact of its owner", async () => {
   expect(database.artifacts).toEqual([]);
 });
 
-test("the events it appeared in simply stop showing it, without being revised", async () => {
+test("the tasks it appeared in simply stop showing it, without being revised", async () => {
   const note = Artifact.create({ id: "note-1", userId: actor.userId, data: { body: "nota" } });
-  const event = Event.create({
-    id: "event-1",
+  const task = Task.create({
+    id: "task-1",
     userId: actor.userId,
     name: "Reunião",
     startedAt: new Date("2026-08-17T15:00:00.000Z"),
     artifactLinks: [{ artifactId: "note-1", relation: "creates", fromRecurrence: false }],
   });
-  const { useCase, events } = setup([note], [event]);
+  const { useCase, tasks } = setup([note], [task]);
 
   await useCase.execute({ artifactId: "note-1" }, actor);
 
-  expect(await events.findById("event-1")).toMatchObject({ artifactLinks: [], revision: 1 });
+  expect(await tasks.findById("task-1")).toMatchObject({ artifactLinks: [], revision: 1 });
 });
 
 test("refuses an artifact that does not exist or belongs to someone else", async () => {

@@ -7,7 +7,7 @@ import { GatewayIdentityGuard } from "../../http/request-identity/gateway-identi
 import { StartEditRequestController } from "./start-edit-request.controller";
 
 const owner = { userId: "owner-1" };
-const body = { userId: "owner-1", text: "mude para 19h", entityType: "event", entityId: "01H0EVENT" };
+const body = { userId: "owner-1", text: "mude para 19h", entityType: "task", entityId: "01H0TASK" };
 
 function setup() {
   const startEdit = vi.fn(async () => "request-1");

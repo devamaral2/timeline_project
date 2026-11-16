@@ -35,11 +35,11 @@ function assertInstant(value: unknown, field: string, nullable: boolean): void {
 }
 
 /**
- * O que a rota de eventos confere antes do dominio: a forma do corpo. As
- * regras (o que cada executor aceita, evento longo, janela) sao do dominio. Na
+ * O que a rota de tarefas confere antes do dominio: a forma do corpo. As
+ * regras (o que cada executor aceita, tarefa longa, janela) sao do dominio. Na
  * edicao, `null` apaga o status e as datas.
  */
-export function assertEventFields(body: Record<string, unknown>, editing: boolean): void {
+export function assertTaskFields(body: Record<string, unknown>, editing: boolean): void {
   assertKnownFields(body, editing ? UPDATE_TASK_FIELDS : CREATE_TASK_FIELDS);
   if (body?.kind !== undefined && !isOneOf(HUMAN_KINDS, body.kind)) throw new BadRequestException("Invalid kind");
   if (body?.status !== undefined && !(editing && body.status === null) && !isOneOf(HUMAN_STATUSES, body.status)) {

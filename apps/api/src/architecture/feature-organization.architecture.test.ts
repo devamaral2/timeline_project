@@ -14,30 +14,30 @@ function filesUnder(directory: string): string[] {
 }
 
 test("does not retain the old feature aggregators or artificial HTTP areas", () => {
-  for (const name of ["events", "tasks", "artifacts", "recurrences", "agent", "request-identity", "notes", "catalog"]) {
+  for (const name of ["tasks", "artifacts", "recurrences", "agent", "request-identity", "notes", "catalog"]) {
     expect(existsSync(join(features, name)), name).toBe(false);
   }
   expect(existsSync(join(src, "http/request-identity"))).toBe(true);
 });
 
-test("has one folder per operation on events, artifacts and recurrences, and none left for tasks or notes", () => {
+test("has one folder per operation on tasks, artifacts and recurrences, and none left for notes or interruptions", () => {
   const folders = readdirSync(features, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name);
 
-  // Tarefa e nota deixaram de ser entidades (ADR 0011): o que era delas e de evento e de artefato.
+  // Nota e interrupcao deixaram de ser entidades (ADR 0011): o que era delas e de tarefa e de artefato.
   const retired = folders.filter(
-    (name) => /-(task|tasks|note|notes|interruption|interruptions)(-|$)/.test(name) || name === "list-timeline-events",
+    (name) => /-(note|notes|interruption|interruptions)(-|$)/.test(name),
   );
   expect(retired).toEqual([]);
 
   for (const name of [
-    "create-event",
-    "get-event",
-    "update-event",
-    "delete-event",
-    "list-agenda-events",
-    "list-tracked-events",
+    "create-task",
+    "get-task",
+    "update-task",
+    "delete-task",
+    "list-agenda-tasks",
+    "list-tracked-tasks",
     "suggest-tags",
     "search-places",
     "create-artifact",

@@ -1,6 +1,6 @@
 import type { RequestEditEntityType } from "@repo/contracts";
 import type { Artifact, FoodData, SleepData, TrainingData } from "../../domain";
-import type { ArtifactRepository, EventRepository } from "../../domain/ports";
+import type { ArtifactRepository, TaskRepository } from "../../domain/ports";
 import { newOrderedId } from "../../infrastructure/persistence/requests/request-rows";
 import { AgentFileNotFoundError, type AgentFilesService } from "../agent/config/agent-files.service";
 import { EDIT_TARGET_AGENTS } from "./request-steps";
@@ -26,7 +26,7 @@ export class RequestEditTargetWorker {
   constructor(
     private readonly deps: {
       store: RequestStore;
-      repositories: { events: Pick<EventRepository, "findById">; artifacts: Pick<ArtifactRepository, "findById"> };
+      repositories: { tasks: Pick<TaskRepository, "findById">; artifacts: Pick<ArtifactRepository, "findById"> };
       files: Pick<AgentFilesService, "read">;
       /** Textos predefinidos de falha, por codigo. */
       failureText: (code: TargetFailure) => string;
@@ -58,14 +58,14 @@ export class RequestEditTargetWorker {
     entityType: RequestEditEntityType,
     id: string,
   ): Promise<{ snapshot: Record<string, unknown> } | { failure: TargetFailure }> {
-    const { events, artifacts } = this.deps.repositories;
+    const { tasks, artifacts } = this.deps.repositories;
     if (entityType === "task") {
-      const event = await events.findById(id);
-      if (!event || event.userId !== userId || event.actor !== "human") return { failure: "not_found" };
+      const task = await tasks.findById(id);
+      if (!task || task.userId !== userId || task.actor !== "human") return { failure: "not_found" };
       return { snapshot: {
-        name: event.name, kind: event.kind, status: event.status ?? null, priority: event.priority,
-        description: event.description, location: event.location, tags: event.tags, longRunning: event.longRunning,
-        startedAt: iso(event.startedAt), estimatedFinishAt: iso(event.estimatedFinishAt), finishedAt: iso(event.finishedAt),
+        name: task.name, kind: task.kind, status: task.status ?? null, priority: task.priority,
+        description: task.description, location: task.location, tags: task.tags, longRunning: task.longRunning,
+        startedAt: iso(task.startedAt), estimatedFinishAt: iso(task.estimatedFinishAt), finishedAt: iso(task.finishedAt),
       } };
     }
     const artifact = await artifacts.findById(id);

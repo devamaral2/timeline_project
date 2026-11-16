@@ -1,8 +1,8 @@
 import { describe, expect, test } from "vitest";
-import { Artifact, Event } from "../../domain";
-import { InMemoryArtifactEventLinkQuery } from "../../api-core/artifacts/testing/in-memory-artifact-event-link.query";
+import { Artifact, Task } from "../../domain";
+import { InMemoryArtifactTaskLinkQuery } from "../../api-core/artifacts/testing/in-memory-artifact-task-link.query";
 import { InMemoryArtifactRepository } from "../../api-core/artifacts/testing/in-memory-artifact.repository";
-import { InMemoryEventDatabase } from "../../api-core/events/testing/in-memory-event-database";
+import { InMemoryTaskDatabase } from "../../api-core/tasks/testing/in-memory-task-database";
 import { ListArtifactsUseCase, type ListArtifactsFilter } from "./list-artifacts.usecase";
 
 const actor = { userId: "auth-user-1" };
@@ -27,9 +27,9 @@ function stored(id: string, minute: number, props: { userId?: string; type?: str
   });
 }
 
-function setup(artifacts: Artifact[], events: Event[] = []) {
-  const database = new InMemoryEventDatabase(events, artifacts);
-  const useCase = new ListArtifactsUseCase(new InMemoryArtifactRepository(database.artifacts), new InMemoryArtifactEventLinkQuery(database));
+function setup(artifacts: Artifact[], tasks: Task[] = []) {
+  const database = new InMemoryTaskDatabase(tasks, artifacts);
+  const useCase = new ListArtifactsUseCase(new InMemoryArtifactRepository(database.artifacts), new InMemoryArtifactTaskLinkQuery(database));
   const ids = async (filter?: ListArtifactsFilter, as = actor) => (await useCase.execute(filter, as)).map((artifact) => artifact.id);
   return { useCase, ids };
 }
@@ -55,8 +55,8 @@ describe("the artifacts of the user", () => {
     expect(await ids(undefined, { userId: "someone-else" })).toEqual(["theirs"]);
   });
 
-  test("each one comes with the events it appears in, or an empty list", async () => {
-    const lunch = Event.create({
+  test("each one comes with the tasks it appears in, or an empty list", async () => {
+    const lunch = Task.create({
       id: "lunch",
       userId: actor.userId,
       name: "Almoço",
@@ -114,8 +114,8 @@ describe("the artifacts of the user", () => {
     expect(await ids({ q: "triagem" })).toEqual(["router"]);
   });
 
-  test("filters by the event the artifacts appear in", async () => {
-    const meeting = Event.create({
+  test("filters by the task the artifacts appear in", async () => {
+    const meeting = Task.create({
       id: "meeting",
       userId: actor.userId,
       name: "Reunião",
@@ -127,9 +127,9 @@ describe("the artifacts of the user", () => {
     });
     const { ids } = setup(library(), [meeting]);
 
-    expect(await ids({ eventId: "meeting" })).toEqual(["sleep", "note-old"]);
-    expect(await ids({ eventId: "meeting", type: "text" })).toEqual(["note-old"]);
-    expect(await ids({ eventId: "another" })).toEqual([]);
+    expect(await ids({ taskId: "meeting" })).toEqual(["sleep", "note-old"]);
+    expect(await ids({ taskId: "meeting", type: "text" })).toEqual(["note-old"]);
+    expect(await ids({ taskId: "another" })).toEqual([]);
   });
 
   test("combines the filters and applies the limit last", async () => {
@@ -167,8 +167,8 @@ describe("`scope=global`", () => {
     expect(await ids({ scope: "global", type: "food", limit: 1 })).toEqual(["global-apple"]);
   });
 
-  test("does not say which users' events use a global artifact", async () => {
-    const lunch = Event.create({
+  test("does not say which users' tasks use a global artifact", async () => {
+    const lunch = Task.create({
       id: "lunch",
       userId: actor.userId,
       name: "Almoço",
@@ -180,6 +180,6 @@ describe("`scope=global`", () => {
     const globals = await useCase.execute({ scope: "global", type: "food" }, { userId: "someone-else" });
 
     expect(globals.every((artifact) => artifact.tasks?.length === 0)).toBe(true);
-    expect(await ids({ scope: "global", type: "food", eventId: "lunch" })).toEqual([]);
+    expect(await ids({ scope: "global", type: "food", taskId: "lunch" })).toEqual([]);
   });
 });

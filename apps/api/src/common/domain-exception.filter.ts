@@ -14,10 +14,10 @@ import {
   ArtifactRevisionConflictError,
   ArtifactValidationError,
   EntityBatchConflictError,
-  EventNotFoundError,
-  EventOwnershipError,
-  EventRevisionConflictError,
-  EventValidationError,
+  TaskNotFoundError,
+  TaskOwnershipError,
+  TaskRevisionConflictError,
+  TaskValidationError,
   RecurrenceNotFoundError,
   RecurrenceOwnershipError,
   RecurrenceRevisionConflictError,
@@ -69,10 +69,10 @@ export class DomainExceptionFilter implements ExceptionFilter {
     if (exception instanceof ArtifactOwnershipError) return HttpStatus.FORBIDDEN;
     if (exception instanceof ArtifactNotFoundError) return HttpStatus.NOT_FOUND;
     if (exception instanceof ArtifactRevisionConflictError) return HttpStatus.CONFLICT;
-    if (exception instanceof EventValidationError) return HttpStatus.BAD_REQUEST;
-    if (exception instanceof EventOwnershipError) return HttpStatus.FORBIDDEN;
-    if (exception instanceof EventNotFoundError) return HttpStatus.NOT_FOUND;
-    if (exception instanceof EventRevisionConflictError) return HttpStatus.CONFLICT;
+    if (exception instanceof TaskValidationError) return HttpStatus.BAD_REQUEST;
+    if (exception instanceof TaskOwnershipError) return HttpStatus.FORBIDDEN;
+    if (exception instanceof TaskNotFoundError) return HttpStatus.NOT_FOUND;
+    if (exception instanceof TaskRevisionConflictError) return HttpStatus.CONFLICT;
     if (exception instanceof RecurrenceValidationError) return HttpStatus.BAD_REQUEST;
     if (exception instanceof RecurrenceOwnershipError) return HttpStatus.FORBIDDEN;
     if (exception instanceof RecurrenceNotFoundError) return HttpStatus.NOT_FOUND;

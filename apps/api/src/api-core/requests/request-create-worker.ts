@@ -1,10 +1,10 @@
 import type { GeoPointInput } from "@repo/contracts";
-import type { ArtifactRepository, EntityBatchWriter, EventRepository, RecurrenceRepository } from "../../domain/ports";
+import type { ArtifactRepository, EntityBatchWriter, TaskRepository, RecurrenceRepository } from "../../domain/ports";
 import { AgentRunCancelledError } from "../agent/errors/agent.errors";
 import { AgentChangeSession } from "../agent/services/agent-change-session";
 import { TIME_ZONE } from "../agent/time";
-import type { CreateEventUseCase } from "../events/create-event.usecase";
-import type { PlaceResolver } from "../events/services/place-resolver.service";
+import type { CreateTaskUseCase } from "../tasks/create-task.usecase";
+import type { PlaceResolver } from "../tasks/services/place-resolver.service";
 import {
   artifactCreateOutput, taskCreateOutput, recurringTaskCreateOutput,
   type ArtifactCreateOutput, type TaskCreateOutput, type RecurringTaskCreateOutput,
@@ -16,7 +16,7 @@ import type { CreateAgent } from "./request-steps";
 import type { NewEntity, RequestRecord, RequestStore, StepRecord } from "./request-store";
 
 export interface StepRepositories {
-  events: EventRepository;
+  tasks: TaskRepository;
   artifacts: ArtifactRepository;
   recurrences?: RecurrenceRepository;
 }
@@ -33,7 +33,7 @@ export class RequestCreateWorker {
       runner: RequestAgentRunner;
       batchWriter: EntityBatchWriter;
       repositories: StepRepositories;
-      createEvent: CreateEventUseCase;
+      createTask: CreateTaskUseCase;
       /** Troca o lugar dito pelo endereco de um lugar que existe. Sem ele, o local fica como foi dito. */
       places?: Pick<PlaceResolver, "resolve">;
     },
@@ -43,7 +43,7 @@ export class RequestCreateWorker {
     const { store } = this.deps;
     await runStep(store, payload, signal, async ({ request, step, timings }) => {
       const session = new AgentChangeSession(
-        request.userId, this.deps.repositories, this.deps.createEvent, () => request.createdAt,
+        request.userId, this.deps.repositories, this.deps.createTask, () => request.createdAt,
       );
       const started = performance.now();
       const entities = await this.stage(agent, request, step, session, signal);
@@ -121,7 +121,7 @@ export class RequestCreateWorker {
     for (const item of output.tasks) {
       const said = item.location?.trim();
       const location = said ? await (this.deps.places?.resolve(said, coordinates) ?? said) : undefined;
-      const result = await session.createEvent({
+      const result = await session.createTask({
         name: item.name,
         kind: item.kind,
         status: item.status ?? undefined,

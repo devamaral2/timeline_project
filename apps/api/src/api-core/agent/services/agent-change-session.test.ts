@@ -1,26 +1,26 @@
 import { describe, expect, test } from "vitest";
-import { Event } from "../../../domain";
-import { createEventsKit } from "../../events/testing/in-memory-events-kit";
+import { Task } from "../../../domain";
+import { createTasksKit } from "../../tasks/testing/in-memory-tasks-kit";
 import { AgentChangeSession } from "./agent-change-session";
 
 const userId = "auth-user-1";
 
-function human(id: string): Event {
-  return Event.create({ id, userId, name: id, status: "todo" });
+function human(id: string): Task {
+  return Task.create({ id, userId, name: id, status: "todo" });
 }
 
-function setup(...events: Event[]) {
-  const kit = createEventsKit({ events });
+function setup(...tasks: Task[]) {
+  const kit = createTasksKit({ tasks });
   const session = new AgentChangeSession(
     userId,
-    { events: kit.eventRepository, artifacts: kit.artifactRepository },
-    kit.createEvent,
+    { tasks: kit.taskRepository, artifacts: kit.artifactRepository },
+    kit.createTask,
   );
   return { ...kit, session };
 }
 
-describe("sequenceEvents", () => {
-  test("puts the next event after the previous one, revising neither, and answers with the event that gained a predecessor", async () => {
+describe("sequenceTasks", () => {
+  test("puts the next task after the previous one, revising neither, and answers with the task that gained a predecessor", async () => {
     const { session } = setup(human("a"), human("b"));
 
     const result = await session.sequenceTasks("a", "b");
@@ -31,8 +31,8 @@ describe("sequenceEvents", () => {
     expect(batch.tasks).toEqual([]);
   });
 
-  test("an agent event can be on either end of the sequence", async () => {
-    const request = Event.create({ id: "request", userId, actor: "agent", kind: "request", status: "running", name: "Pedido" });
+  test("a agent task can be on either end of the sequence", async () => {
+    const request = Task.create({ id: "request", userId, actor: "agent", kind: "request", status: "running", name: "Pedido" });
     const { session } = setup(human("a"), request);
 
     expect(await session.sequenceTasks("request", "a")).toMatchObject({ ok: true });
@@ -55,9 +55,9 @@ describe("sequenceEvents", () => {
     expect(session.toBatch().sequence).toEqual([{ op: "add", fromId: "a", toId: "b" }]);
   });
 
-  test("an event created in this session can be an end before it exists in the database", async () => {
+  test("a task created in this session can be an end before it exists in the database", async () => {
     const { session } = setup(human("a"));
-    const created = await session.createEvent({ name: "Novo", status: "todo" });
+    const created = await session.createTask({ name: "Novo", status: "todo" });
     if (!created.ok) throw new Error(created.error);
 
     expect(await session.sequenceTasks("a", created.id)).toMatchObject({ ok: true, id: created.id });
@@ -67,8 +67,8 @@ describe("sequenceEvents", () => {
     expect(batch.sequence).toEqual([{ op: "add", fromId: "a", toId: created.id }]);
   });
 
-  test("refuses an event that follows itself, one that does not exist and one that belongs to someone else", async () => {
-    const theirs = Event.create({ id: "theirs", userId: "someone-else", name: "Deles", status: "todo" });
+  test("refuses a task that follows itself, one that does not exist and one that belongs to someone else", async () => {
+    const theirs = Task.create({ id: "theirs", userId: "someone-else", name: "Deles", status: "todo" });
     const { session } = setup(human("a"), theirs);
 
     expect(await session.sequenceTasks("a", "a")).toMatchObject({ ok: false });
@@ -78,14 +78,14 @@ describe("sequenceEvents", () => {
   });
 
   test("the staged sequence is committed with the batch and read back from both sides", async () => {
-    const { session, batchWriter, eventRepository } = setup(human("a"), human("b"));
+    const { session, batchWriter, taskRepository } = setup(human("a"), human("b"));
 
     await session.sequenceTasks("a", "b");
     await batchWriter.commit(session.toBatch());
 
-    expect((await eventRepository.findById("b"))?.previousIds).toEqual(["a"]);
-    expect((await eventRepository.findById("a"))?.nextIds).toEqual(["b"]);
-    expect((await eventRepository.findById("a"))?.revision).toBe(1);
-    expect((await eventRepository.findById("b"))?.revision).toBe(1);
+    expect((await taskRepository.findById("b"))?.previousIds).toEqual(["a"]);
+    expect((await taskRepository.findById("a"))?.nextIds).toEqual(["b"]);
+    expect((await taskRepository.findById("a"))?.revision).toBe(1);
+    expect((await taskRepository.findById("b"))?.revision).toBe(1);
   });
 });

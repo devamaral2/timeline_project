@@ -16,7 +16,7 @@ import {
   updateRecurrenceInputSchema,
 } from "@repo/contracts/schemas";
 import { z } from "zod";
-import { ACTORS, ARTIFACT_TYPES, EVENT_KINDS, EVENT_STATUSES, PRIORITIES } from "../domain";
+import { ACTORS, ARTIFACT_TYPES, TASK_KINDS, TASK_STATUSES, PRIORITIES } from "../domain";
 import { editRequestBody } from "../features/request-agent-file-edit/request-agent-file-edit.controller";
 import { restoreBody } from "../features/restore-agent-file/restore-agent-file.controller";
 import { startEditRequestBody } from "../features/start-edit-request/start-edit-request.controller";
@@ -133,7 +133,7 @@ export const documentedOperations: Record<string, OperationDoc> = {
       from: instant("Início da janela."),
       to: instant("Fim da janela."),
       actor: { description: "De quem é a tarefa.", enum: ACTORS },
-      kind: { description: "Só tarefas deste tipo.", enum: EVENT_KINDS.filter((kind) => kind !== "step") },
+      kind: { description: "Só tarefas deste tipo.", enum: TASK_KINDS.filter((kind) => kind !== "step") },
       tag,
       cursor: { description: "O `nextCursor` da página anterior." },
       limit: limit(100, 50),
@@ -147,7 +147,7 @@ export const documentedOperations: Record<string, OperationDoc> = {
     description: "As tarefas acompanhadas por status, com ou sem data. `status` e `priority` aceitam vários valores separados por vírgula.",
     query: {
       actor: { description: "De quem é a tarefa.", enum: ACTORS },
-      status: { description: `Um ou mais status, separados por vírgula: ${EVENT_STATUSES.join(", ")}.` },
+      status: { description: `Um ou mais status, separados por vírgula: ${TASK_STATUSES.join(", ")}.` },
       priority: { description: `Uma ou mais prioridades, separadas por vírgula: ${PRIORITIES.join(", ")}.` },
       tag,
       q: search,

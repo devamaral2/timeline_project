@@ -1,19 +1,19 @@
 import { BadRequestException } from "@nestjs/common";
 import { describe, expect, test } from "vitest";
-import { encodeAgendaCursor } from "../infrastructure/persistence/events/queries/agenda-cursor";
+import { encodeAgendaCursor } from "../infrastructure/persistence/tasks/queries/agenda-cursor";
 import {
   assertAgendaCursor,
   assertArtifactRequest,
-  assertEventFields,
+  assertTaskFields,
   assertExpectedRevision,
   assertRecurrenceTemplate,
   parseLimit,
 } from "./http-input-validation";
 import { normalizeSearch, parseEnum, parseEnumList, parseInstant } from "./list-filters";
 
-describe("assertEventFields", () => {
-  const creating = (body: Record<string, unknown>) => () => assertEventFields(body, false);
-  const editing = (body: Record<string, unknown>) => () => assertEventFields(body, true);
+describe("assertTaskFields", () => {
+  const creating = (body: Record<string, unknown>) => () => assertTaskFields(body, false);
+  const editing = (body: Record<string, unknown>) => () => assertTaskFields(body, true);
 
   test("accepts an empty body and a complete one", () => {
     expect(creating({})).not.toThrow();
@@ -37,7 +37,7 @@ describe("assertEventFields", () => {
     ).not.toThrow();
   });
 
-  test("only accepts the kinds and statuses of a human event", () => {
+  test("only accepts the kinds and statuses of a human task", () => {
     for (const kind of ["common", "meal", "sleep", "training"]) expect(creating({ kind })).not.toThrow();
     for (const status of ["todo", "toDefine", "doing", "inHold", "done", "cancel", "missed"]) {
       expect(creating({ status })).not.toThrow();
@@ -123,7 +123,7 @@ describe("assertExpectedRevision", () => {
 
 describe("assertAgendaCursor", () => {
   test("accepts a cursor the agenda issued and refuses anything else", () => {
-    const cursor = encodeAgendaCursor({ startedAt: new Date("2026-08-17T15:00:00.000Z"), id: "event-1" });
+    const cursor = encodeAgendaCursor({ startedAt: new Date("2026-08-17T15:00:00.000Z"), id: "task-1" });
 
     expect(() => assertAgendaCursor(cursor)).not.toThrow();
     expect(() => assertAgendaCursor("nao-e-um-cursor")).toThrow("Invalid cursor");

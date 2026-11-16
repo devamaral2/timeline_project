@@ -1,10 +1,10 @@
 import { Logger } from "@nestjs/common";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import type { CreateRecurrenceInput } from "@repo/contracts";
-import { Artifact, Event, RecurrenceRevisionConflictError, type Recurrence } from "../../domain";
-import { InMemoryEventCardQuery } from "../events/testing/in-memory-event-card.query";
-import type { InMemoryEventDatabase } from "../events/testing/in-memory-event-database";
-import { createEventsKit, type EventsKitOptions } from "../events/testing/in-memory-events-kit";
+import { Artifact, Task, RecurrenceRevisionConflictError, type Recurrence } from "../../domain";
+import { InMemoryTaskCardQuery } from "../tasks/testing/in-memory-task-card.query";
+import type { InMemoryTaskDatabase } from "../tasks/testing/in-memory-task-database";
+import { createTasksKit, type TasksKitOptions } from "../tasks/testing/in-memory-tasks-kit";
 import {
   DEFAULT_HORIZON_DAYS,
   MAX_HORIZON_DAYS,
@@ -28,25 +28,25 @@ const dailyRun: CreateRecurrenceInput = {
   template: { name: "Correr", tags: ["saude"] },
 };
 
-function setup(options: EventsKitOptions = {}, clock: { now: Date } = { now }) {
-  const kit = createEventsKit({ clock: () => clock.now, ...options });
+function setup(options: TasksKitOptions = {}, clock: { now: Date } = { now }) {
+  const kit = createTasksKit({ clock: () => clock.now, ...options });
   const recurrences = new InMemoryRecurrenceRepository(kit.database);
   const materializer = new MaterializeRecurrencesUseCase(recurrences, kit.artifactRepository, () => clock.now);
   /** Grava a serie como `POST /api/recurrences` gravaria. */
   const create = async (input: CreateRecurrenceInput, owner = actor): Promise<Recurrence> => {
-    const prepared = await prepareRecurrence({ createEvent: kit.createEvent, events: kit.eventRepository }, input, owner);
+    const prepared = await prepareRecurrence({ createTask: kit.createTask, tasks: kit.taskRepository }, input, owner);
     await recurrences.save(prepared.recurrence, { created: prepared.artifacts, derivations: prepared.derivations });
     return prepared.recurrence;
   };
   return { ...kit, recurrences, materializer, create };
 }
 
-function daysOf(database: InMemoryEventDatabase): (string | undefined)[] {
-  return database.events.map((event) => event.occurrence?.occurrenceOn).sort();
+function daysOf(database: InMemoryTaskDatabase): (string | undefined)[] {
+  return database.tasks.map((task) => task.occurrence?.occurrenceOn).sort();
 }
 
-function on(database: InMemoryEventDatabase, day: string): Event {
-  return database.events.find((event) => event.occurrence?.occurrenceOn === day) as Event;
+function on(database: InMemoryTaskDatabase, day: string): Task {
+  return database.tasks.find((task) => task.occurrence?.occurrenceOn === day) as Task;
 }
 
 afterEach(() => {
@@ -90,11 +90,11 @@ describe("what is generated", () => {
 
     await materializer.materialize(actor.userId);
 
-    expect(database.events.every((event) => event.isReference)).toBe(true);
+    expect(database.tasks.every((task) => task.isReference)).toBe(true);
     expect(on(database, "2026-09-15").notifyOffsetsMinutes).toEqual([5]);
-    const query = new InMemoryEventCardQuery(database, recurrences);
+    const query = new InMemoryTaskCardQuery(database, recurrences);
     const agenda = await query.agenda({ userId: actor.userId, limit: 10 });
-    expect(agenda.items.map((card) => card.event.occurrence?.occurrenceOn)).toEqual(["2026-09-16", "2026-09-15"]);
+    expect(agenda.items.map((card) => card.task.occurrence?.occurrenceOn)).toEqual(["2026-09-16", "2026-09-15"]);
     expect(agenda.items[0]?.recurrence?.id).toBe(series.id);
     expect(await query.tracked({ userId: actor.userId })).toEqual([]);
   });
@@ -122,8 +122,8 @@ describe("what is generated", () => {
     expect(october.startedAt?.toISOString()).toBe("2026-10-05T12:00:00.000Z");
     expect(october.estimatedFinishAt?.toISOString()).toBe("2026-10-05T13:00:00.000Z");
 
-    const tracked = await new InMemoryEventCardQuery(database, recurrences).tracked({ userId: actor.userId });
-    expect(tracked.map((card) => card.event.occurrence?.occurrenceOn)).toEqual(["2026-10-05"]);
+    const tracked = await new InMemoryTaskCardQuery(database, recurrences).tracked({ userId: actor.userId });
+    expect(tracked.map((card) => card.task.occurrence?.occurrenceOn)).toEqual(["2026-10-05"]);
   });
 
   test("skips the days that were removed from the series", async () => {
@@ -142,7 +142,7 @@ describe("what is generated", () => {
 
     await materializer.materialize(actor.userId);
 
-    expect(database.events).toEqual([]);
+    expect(database.tasks).toEqual([]);
   });
 });
 
@@ -153,7 +153,7 @@ describe("horizon and watermark", () => {
 
     await materializer.materialize(actor.userId);
 
-    expect(database.events).toHaveLength(DEFAULT_HORIZON_DAYS + 1);
+    expect(database.tasks).toHaveLength(DEFAULT_HORIZON_DAYS + 1);
     expect((await recurrences.findById(series.id))?.materializedThrough).toBe("2026-11-14");
     expect((await recurrences.findById(series.id))?.revision).toBe(1);
   });
@@ -163,10 +163,10 @@ describe("horizon and watermark", () => {
     await create(dailyRun);
 
     await materializer.materialize(actor.userId);
-    const afterFirst = [...database.events];
+    const afterFirst = [...database.tasks];
     await materializer.materialize(actor.userId);
 
-    expect(database.events).toEqual(afterFirst);
+    expect(database.tasks).toEqual(afterFirst);
   });
 
   test("a later read continues from the watermark", async () => {
@@ -178,9 +178,9 @@ describe("horizon and watermark", () => {
     clock.now = new Date("2026-09-17T15:00:00.000Z");
     await materializer.materialize(actor.userId);
 
-    expect(database.events).toHaveLength(DEFAULT_HORIZON_DAYS + 3);
+    expect(database.tasks).toHaveLength(DEFAULT_HORIZON_DAYS + 3);
     expect(daysOf(database).at(-1)).toBe("2026-11-16");
-    expect(new Set(daysOf(database)).size).toBe(database.events.length);
+    expect(new Set(daysOf(database)).size).toBe(database.tasks.length);
   });
 
   test("reaching further generates up to the day asked, within the ceiling", async () => {
@@ -201,7 +201,7 @@ describe("horizon and watermark", () => {
 
     await materializer.materialize(actor.userId, new Date("2026-01-01T15:00:00.000Z"));
 
-    expect(database.events).toHaveLength(DEFAULT_HORIZON_DAYS + 1);
+    expect(database.tasks).toHaveLength(DEFAULT_HORIZON_DAYS + 1);
     expect(daysOf(database)[0]).toBe("2026-09-15");
   });
 
@@ -222,7 +222,7 @@ describe("horizon and watermark", () => {
     const series = await create({ ...dailyRun, endsOn: "2026-09-16" });
     await materializer.materialize(actor.userId);
     const edited = on(database, "2026-09-16").revise({ description: "editada" });
-    database.events = database.events.map((event) => (event.id === edited.id ? edited : event));
+    database.tasks = database.tasks.map((task) => (task.id === edited.id ? edited : task));
 
     // A marca d'agua volta, como numa edicao da serie que nao apagou a ocorrencia destacada.
     recurrences.recurrences = [series];
@@ -247,9 +247,9 @@ describe("artifacts of the template", () => {
     const [note] = database.artifacts;
     expect(database.artifacts).toHaveLength(1);
     expect(series.template.artifactIds).toEqual([note?.id]);
-    expect(database.events).toHaveLength(3);
-    for (const event of database.events) {
-      expect(event.artifactLinks).toEqual([{ artifactId: note?.id, relation: "uses", fromRecurrence: true }]);
+    expect(database.tasks).toHaveLength(3);
+    for (const task of database.tasks) {
+      expect(task.artifactLinks).toEqual([{ artifactId: note?.id, relation: "uses", fromRecurrence: true }]);
     }
   });
 
@@ -261,8 +261,8 @@ describe("artifacts of the template", () => {
 
     expect(database.artifacts).toHaveLength(1);
     expect(database.artifacts[0]?.data).toMatchObject({ description: "arroz e feijão", generation: { status: "pending" } });
-    expect(database.events.every((event) => event.kind === "meal" && event.name === "Almoço")).toBe(true);
-    expect(database.events.every((event) => event.artifactLinks[0]?.artifactId === database.artifacts[0]?.id)).toBe(true);
+    expect(database.tasks.every((task) => task.kind === "meal" && task.name === "Almoço")).toBe(true);
+    expect(database.tasks.every((task) => task.artifactLinks[0]?.artifactId === database.artifacts[0]?.id)).toBe(true);
   });
 
   test("an artifact of the template that was deleted disappears from the new occurrences, and the series goes on", async () => {
@@ -284,16 +284,16 @@ describe("artifacts of the template", () => {
   });
 });
 
-describe("previous events of the template", () => {
-  const project = () => Event.create({ id: "project", userId: actor.userId, name: "Projeto", longRunning: true });
+describe("previous tasks of the template", () => {
+  const project = () => Task.create({ id: "project", userId: actor.userId, name: "Projeto", longRunning: true });
   const sessions: CreateRecurrenceInput = {
     ...dailyRun,
     endsOn: "2026-09-17",
     template: { name: "Sessão", status: "todo", previousTaskIds: ["project"] },
   };
 
-  test("each occurrence is born following the previous events, without counting as an edit of them", async () => {
-    const { create, materializer, database, recurrences, eventRepository } = setup({ events: [project()] });
+  test("each occurrence is born following the previous tasks, without counting as an edit of them", async () => {
+    const { create, materializer, database, recurrences, taskRepository } = setup({ tasks: [project()] });
     await create(sessions);
     const materialize = vi.spyOn(recurrences, "materialize");
 
@@ -301,19 +301,19 @@ describe("previous events of the template", () => {
 
     expect(materialize).toHaveBeenCalledTimes(1);
     expect(materialize.mock.calls[0]?.[2]).toEqual(["project"]);
-    const parent = await eventRepository.findById("project");
-    const occurrences = database.events.filter((event) => event.occurrence);
+    const parent = await taskRepository.findById("project");
+    const occurrences = database.tasks.filter((task) => task.occurrence);
     expect(occurrences).toHaveLength(3);
-    expect(parent?.nextIds).toEqual(occurrences.map((event) => event.id));
+    expect(parent?.nextIds).toEqual(occurrences.map((task) => task.id));
     expect(parent?.revision).toBe(1);
-    expect(database.edges).toEqual(occurrences.map((event) => ({ fromId: "project", toId: event.id })));
-    const first = await eventRepository.findById(occurrences[0]?.id as string);
+    expect(database.edges).toEqual(occurrences.map((task) => ({ fromId: "project", toId: task.id })));
+    const first = await taskRepository.findById(occurrences[0]?.id as string);
     expect(first?.previousIds).toEqual(["project"]);
     expect(first?.nextIds).toEqual([]);
-    expect(occurrences.map((event) => event.occurrence?.occurrenceOn)).toEqual(["2026-09-15", "2026-09-16", "2026-09-17"]);
+    expect(occurrences.map((task) => task.occurrence?.occurrenceOn)).toEqual(["2026-09-15", "2026-09-16", "2026-09-17"]);
   });
 
-  test("a series without previous events passes none", async () => {
+  test("a series without previous tasks passes none", async () => {
     const { create, materializer, recurrences } = setup();
     await create(dailyRun);
     const materialize = vi.spyOn(recurrences, "materialize");
@@ -323,14 +323,14 @@ describe("previous events of the template", () => {
     expect(materialize.mock.calls[0]?.[2]).toEqual([]);
   });
 
-  test("a previous event that was deleted stops the series from generating, without breaking the read", async () => {
-    const { create, materializer, database, recurrences, eventRepository } = setup({ events: [project()] });
+  test("a previous task that was deleted stops the series from generating, without breaking the read", async () => {
+    const { create, materializer, database, recurrences, taskRepository } = setup({ tasks: [project()] });
     const series = await create(sessions);
-    await eventRepository.delete("project", actor.userId);
+    await taskRepository.delete("project", actor.userId);
 
     await materializer.materialize(actor.userId);
 
-    expect(database.events).toEqual([]);
+    expect(database.tasks).toEqual([]);
     expect((await recurrences.findById(series.id))?.materializedThrough).toBe("2026-11-14");
   });
 });
@@ -349,7 +349,7 @@ describe("failures", () => {
     });
 
     await materializer.materialize(actor.userId);
-    expect(database.events).toEqual([]);
+    expect(database.tasks).toEqual([]);
     expect(error).not.toHaveBeenCalled();
 
     await materializer.materialize(actor.userId);
@@ -380,7 +380,7 @@ describe("failures", () => {
     await materializer.materialize(actor.userId);
 
     expect(error).toHaveBeenCalledTimes(1);
-    expect(database.events.map((event) => event.name)).toEqual(["Inteira", "Inteira"]);
+    expect(database.tasks.map((task) => task.name)).toEqual(["Inteira", "Inteira"]);
     expect((await recurrences.findById(healthy.id))?.materializedThrough).toBe("2026-11-14");
     expect((await recurrences.findById(broken.id))?.materializedThrough).toBeUndefined();
   });

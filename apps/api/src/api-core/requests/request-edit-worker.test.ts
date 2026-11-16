@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { Artifact, Event } from "../../domain";
+import { Artifact, Task } from "../../domain";
 import { FastStageError } from "../agent/errors/agent.errors";
 import type { EditCandidate } from "./request-candidates";
 import { addStep, setupRequest } from "./testing/request-test-kit";
@@ -10,10 +10,10 @@ const noTask = {
   description: null, tags: null,
 };
 
-async function seedTask(ctx: ReturnType<typeof setupRequest>, name = "Trabalhar", extra: Partial<Parameters<typeof Event.create>[0]> = {}) {
-  const event = Event.create({ userId: "user-1", name, startedAt: new Date("2026-10-25T12:00:00Z"), ...extra });
-  await ctx.eventRepository.save(event);
-  return event;
+async function seedTask(ctx: ReturnType<typeof setupRequest>, name = "Trabalhar", extra: Partial<Parameters<typeof Task.create>[0]> = {}) {
+  const task = Task.create({ userId: "user-1", name, startedAt: new Date("2026-10-25T12:00:00Z"), ...extra });
+  await ctx.taskRepository.save(task);
+  return task;
 }
 
 const candidate = (kind: EditCandidate["kind"], id: string, name: string): EditCandidate => ({ kind, id, name });
@@ -22,22 +22,22 @@ const updated = async (ctx: ReturnType<typeof setupRequest>) => ctx.store.entiti
 describe("passo de editar tarefas", () => {
   test("'parei de trabalhar' altera so o fim planejado da tarefa escolhido pelo JEV, num commit proprio", async () => {
     const ctx = setupRequest("parei de trabalhar");
-    const event = await seedTask(ctx);
-    const payload = await addStep(ctx, "s1", "task-edit", "one", { candidates: [candidate("task", event.id, "Trabalhar")] });
-    ctx.gateway.outputs.set("task_edit", { edits: [{ ...noTask, id: event.id, estimatedFinishAt: iso(18) }], query: null });
+    const task = await seedTask(ctx);
+    const payload = await addStep(ctx, "s1", "task-edit", "one", { candidates: [candidate("task", task.id, "Trabalhar")] });
+    ctx.gateway.outputs.set("task_edit", { edits: [{ ...noTask, id: task.id, estimatedFinishAt: iso(18) }], query: null });
 
     await ctx.editWorker.run("task-edit", payload);
 
     expect(ctx.store.stepRecords[0]?.status).toBe("done");
-    const stored = await ctx.eventRepository.findById(event.id);
+    const stored = await ctx.taskRepository.findById(task.id);
     expect(stored?.estimatedFinishAt?.toISOString()).toBe(new Date(iso(18)).toISOString());
     expect(stored?.name).toBe("Trabalhar");
-    expect(stored?.revision).toBe(event.revision + 1);
-    expect(await updated(ctx)).toMatchObject([{ kind: "task", id: event.id, operation: "update", summary: { name: "Trabalhar" } }]);
+    expect(stored?.revision).toBe(task.revision + 1);
+    expect(await updated(ctx)).toMatchObject([{ kind: "task", id: task.id, operation: "update", summary: { name: "Trabalhar" } }]);
     expect(ctx.store.jobs.filter((job) => job.kind === "request-finalize")).toHaveLength(1);
     // O agente recebeu os candidatos que o JEV escolheu, e nada mais.
     expect(ctx.gateway.calls).toHaveLength(1);
-    expect(ctx.gateway.calls[0]?.user).toContain(event.id);
+    expect(ctx.gateway.calls[0]?.user).toContain(task.id);
   });
 
   test("mudar o local: o lugar dito vira o endereco achado no mapa; texto vazio tira o local", async () => {
@@ -45,14 +45,14 @@ describe("passo de editar tarefas", () => {
     const here = { latitude: -19.92, longitude: -43.94 };
     ctx.request.context = { screen: "chat", coordinates: here };
     ctx.places.addresses.set("Hospital Mater Dei", "Hospital Mater Dei Santo Agostinho, Rua Gonçalves Dias 3155, Belo Horizonte");
-    const event = await seedTask(ctx, "Consulta", { location: "Consultório antigo" });
-    const payload = await addStep(ctx, "s1", "task-edit", "one", { candidates: [candidate("task", event.id, "Consulta")] });
-    ctx.gateway.outputs.set("task_edit", { edits: [{ ...noTask, id: event.id, location: "Hospital Mater Dei" }], query: null });
+    const task = await seedTask(ctx, "Consulta", { location: "Consultório antigo" });
+    const payload = await addStep(ctx, "s1", "task-edit", "one", { candidates: [candidate("task", task.id, "Consulta")] });
+    ctx.gateway.outputs.set("task_edit", { edits: [{ ...noTask, id: task.id, location: "Hospital Mater Dei" }], query: null });
 
     await ctx.editWorker.run("task-edit", payload);
 
     expect(ctx.places.calls).toEqual([{ said: "Hospital Mater Dei", near: here }]);
-    expect((await ctx.eventRepository.findById(event.id))?.location).toBe(
+    expect((await ctx.taskRepository.findById(task.id))?.location).toBe(
       "Hospital Mater Dei Santo Agostinho, Rua Gonçalves Dias 3155, Belo Horizonte",
     );
 
@@ -64,33 +64,33 @@ describe("passo de editar tarefas", () => {
     await clearing.editWorker.run("task-edit", clear);
 
     expect(clearing.places.calls).toEqual([]);
-    expect((await clearing.eventRepository.findById(located.id))?.location).toBe("");
+    expect((await clearing.taskRepository.findById(located.id))?.location).toBe("");
   });
 
   test("concluir uma tarefa acompanhada: status e conclusao real", async () => {
     const ctx = setupRequest("já paguei o aluguel");
-    const event = await seedTask(ctx, "Pagar o aluguel", { status: "todo", startedAt: undefined });
-    const payload = await addStep(ctx, "s1", "task-edit", "one", { candidates: [candidate("task", event.id, "Pagar o aluguel")] });
-    ctx.gateway.outputs.set("task_edit", { edits: [{ ...noTask, id: event.id, status: "done", finishedAt: iso(10) }], query: null });
+    const task = await seedTask(ctx, "Pagar o aluguel", { status: "todo", startedAt: undefined });
+    const payload = await addStep(ctx, "s1", "task-edit", "one", { candidates: [candidate("task", task.id, "Pagar o aluguel")] });
+    ctx.gateway.outputs.set("task_edit", { edits: [{ ...noTask, id: task.id, status: "done", finishedAt: iso(10) }], query: null });
 
     await ctx.editWorker.run("task-edit", payload);
 
-    expect(await ctx.eventRepository.findById(event.id)).toMatchObject({ status: "done", finishedAt: new Date(iso(10)) });
+    expect(await ctx.taskRepository.findById(task.id)).toMatchObject({ status: "done", finishedAt: new Date(iso(10)) });
   });
 
   test("tres tarefas no mesmo passo, um commit; os demais nao sao tocados", async () => {
     const ctx = setupRequest();
-    const events = [await seedTask(ctx, "A", { status: "todo" }), await seedTask(ctx, "B", { status: "todo" }), await seedTask(ctx, "C", { status: "todo" })];
+    const tasks = [await seedTask(ctx, "A", { status: "todo" }), await seedTask(ctx, "B", { status: "todo" }), await seedTask(ctx, "C", { status: "todo" })];
     const other = await seedTask(ctx, "Almoço");
-    const payload = await addStep(ctx, "s1", "task-edit", "many", { candidates: events.map((event) => candidate("task", event.id, event.name)) });
-    ctx.gateway.outputs.set("task_edit", { edits: events.map((event) => ({ ...noTask, id: event.id, priority: "high" })), query: null });
+    const payload = await addStep(ctx, "s1", "task-edit", "many", { candidates: tasks.map((task) => candidate("task", task.id, task.name)) });
+    ctx.gateway.outputs.set("task_edit", { edits: tasks.map((task) => ({ ...noTask, id: task.id, priority: "high" })), query: null });
 
     await ctx.editWorker.run("task-edit", payload);
 
     expect(ctx.batchWriter.commits).toHaveLength(1);
     expect(ctx.batchWriter.commits[0]?.tasks.map((change) => change.op)).toEqual(["update", "update", "update"]);
     expect(await updated(ctx)).toHaveLength(3);
-    expect((await ctx.eventRepository.findById(other.id))?.revision).toBe(other.revision);
+    expect((await ctx.taskRepository.findById(other.id))?.revision).toBe(other.revision);
   });
 
   test("nenhum candidato serve: o agente pede UMA consulta e e chamado de novo com o resultado", async () => {
@@ -135,9 +135,9 @@ describe("passo de editar tarefas", () => {
 
   test("id que nao veio dos candidatos nem da consulta e recusado, nada e gravado", async () => {
     const ctx = setupRequest();
-    const event = await seedTask(ctx);
+    const task = await seedTask(ctx);
     const payload = await addStep(ctx, "s1", "task-edit", "one", { candidates: [] });
-    ctx.gateway.outputs.set("task_edit", { edits: [{ ...noTask, id: event.id, name: "Outro" }], query: null });
+    ctx.gateway.outputs.set("task_edit", { edits: [{ ...noTask, id: task.id, name: "Outro" }], query: null });
 
     await ctx.editWorker.run("task-edit", payload);
 
@@ -147,10 +147,10 @@ describe("passo de editar tarefas", () => {
 
   test("um pedido ou passo do agente nunca e alvo de edicao", async () => {
     const ctx = setupRequest();
-    const agentEvent = Event.create({ userId: "user-1", actor: "agent", kind: "request", status: "done", name: "pedido antigo" });
-    await ctx.eventRepository.save(agentEvent);
-    const payload = await addStep(ctx, "s1", "task-edit", "one", { candidates: [candidate("task", agentEvent.id, "pedido antigo")] });
-    ctx.gateway.outputs.set("task_edit", { edits: [{ ...noTask, id: agentEvent.id, name: "Outro" }], query: null });
+    const agentTask = Task.create({ userId: "user-1", actor: "agent", kind: "request", status: "done", name: "pedido antigo" });
+    await ctx.taskRepository.save(agentTask);
+    const payload = await addStep(ctx, "s1", "task-edit", "one", { candidates: [candidate("task", agentTask.id, "pedido antigo")] });
+    ctx.gateway.outputs.set("task_edit", { edits: [{ ...noTask, id: agentTask.id, name: "Outro" }], query: null });
 
     await ctx.editWorker.run("task-edit", payload);
 
@@ -160,16 +160,16 @@ describe("passo de editar tarefas", () => {
   test("consulta recusada pelo executor", async () => {
     const ctx = setupRequest("x", { ok: false, error: "so SELECT" });
     const payload = await addStep(ctx, "s1", "task-edit", "one", { candidates: [] });
-    ctx.gateway.outputs.set("task_edit", { edits: [], query: { sql: "DELETE FROM events" } });
+    ctx.gateway.outputs.set("task_edit", { edits: [], query: { sql: "DELETE FROM tasks" } });
     await ctx.editWorker.run("task-edit", payload);
     expect(ctx.store.stepRecords[0]).toMatchObject({ status: "failed", errorCode: "query_rejected" });
   });
 
   test("edicao sem nenhum campo novo falha com codigo, sem perguntar", async () => {
     const ctx = setupRequest();
-    const event = await seedTask(ctx);
-    const payload = await addStep(ctx, "s1", "task-edit", "one", { candidates: [candidate("task", event.id, "Trabalhar")] });
-    ctx.gateway.outputs.set("task_edit", { edits: [{ ...noTask, id: event.id }], query: null });
+    const task = await seedTask(ctx);
+    const payload = await addStep(ctx, "s1", "task-edit", "one", { candidates: [candidate("task", task.id, "Trabalhar")] });
+    ctx.gateway.outputs.set("task_edit", { edits: [{ ...noTask, id: task.id }], query: null });
     await ctx.editWorker.run("task-edit", payload);
     expect(ctx.store.stepRecords[0]).toMatchObject({ status: "failed", errorCode: "nothing_to_change" });
   });

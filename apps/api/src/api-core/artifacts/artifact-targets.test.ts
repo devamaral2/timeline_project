@@ -1,20 +1,20 @@
 import { expect, test } from "vitest";
-import { Artifact, Event, EventNotFoundError, EventOwnershipError } from "../../domain";
-import { InMemoryEventDatabase } from "../events/testing/in-memory-event-database";
-import { InMemoryEventRepository } from "../events/testing/in-memory-event.repository";
+import { Artifact, Task, TaskNotFoundError, TaskOwnershipError } from "../../domain";
+import { InMemoryTaskDatabase } from "../tasks/testing/in-memory-task-database";
+import { InMemoryTaskRepository } from "../tasks/testing/in-memory-task.repository";
 import { planArtifactLinks, uniqueIds } from "./artifact-targets";
 
 const userId = "auth-user-1";
 const startedAt = new Date("2026-08-17T15:00:00.000Z");
 
-function setup(events: Event[]) {
+function setup(tasks: Task[]) {
   const artifacts = ["artifact-1", "other"].map((id) => Artifact.create({ id, userId, data: { body: id } }));
-  const database = new InMemoryEventDatabase(events, artifacts);
-  return { database, events: new InMemoryEventRepository(database) };
+  const database = new InMemoryTaskDatabase(tasks, artifacts);
+  return { database, tasks: new InMemoryTaskRepository(database) };
 }
 
-function event(id: string, artifactIds: string[] = [], overrides: Partial<Parameters<typeof Event.create>[0]> = {}): Event {
-  return Event.create({
+function task(id: string, artifactIds: string[] = [], overrides: Partial<Parameters<typeof Task.create>[0]> = {}): Task {
+  return Task.create({
     id,
     userId,
     name: id,
@@ -24,7 +24,7 @@ function event(id: string, artifactIds: string[] = [], overrides: Partial<Parame
   });
 }
 
-test("plans nothing when the artifact already appears exactly where it should, without reading any event", async () => {
+test("plans nothing when the artifact already appears exactly where it should, without reading any task", async () => {
   const neverRead = {
     findByIds: async () => {
       throw new Error("nao deveria ler");
@@ -35,10 +35,10 @@ test("plans nothing when the artifact already appears exactly where it should, w
   expect(await planArtifactLinks("artifact-1", [], [], neverRead, userId)).toEqual([]);
 });
 
-test("the events that gain the artifact receive it at the end of their list, as used by default", async () => {
-  const { events } = setup([event("e1", ["other"]), event("e2")]);
+test("the tasks that gain the artifact receive it at the end of their list, as used by default", async () => {
+  const { tasks } = setup([task("e1", ["other"]), task("e2")]);
 
-  const changes = await planArtifactLinks("artifact-1", [], ["e1", "e2"], events, userId);
+  const changes = await planArtifactLinks("artifact-1", [], ["e1", "e2"], tasks, userId);
 
   expect(changes).toHaveLength(2);
   expect(changes[0]).toMatchObject({
@@ -59,17 +59,17 @@ test("the events that gain the artifact receive it at the end of their list, as 
 });
 
 test("the relation of the new links can be chosen", async () => {
-  const { events } = setup([event("e1")]);
+  const { tasks } = setup([task("e1")]);
 
-  const [change] = await planArtifactLinks("artifact-1", [], ["e1"], events, userId, "creates");
+  const [change] = await planArtifactLinks("artifact-1", [], ["e1"], tasks, userId, "creates");
 
   expect(change).toMatchObject({ entity: { artifactLinks: [{ artifactId: "artifact-1", relation: "creates" }] } });
 });
 
-test("the events that leave the list lose the relation and keep their other artifacts", async () => {
-  const { events } = setup([event("e1", ["other", "artifact-1"]), event("e2", ["artifact-1"])]);
+test("the tasks that leave the list lose the relation and keep their other artifacts", async () => {
+  const { tasks } = setup([task("e1", ["other", "artifact-1"]), task("e2", ["artifact-1"])]);
 
-  const changes = await planArtifactLinks("artifact-1", ["e1", "e2"], ["e2"], events, userId);
+  const changes = await planArtifactLinks("artifact-1", ["e1", "e2"], ["e2"], tasks, userId);
 
   expect(changes).toHaveLength(1);
   expect(changes[0]).toMatchObject({
@@ -79,10 +79,10 @@ test("the events that leave the list lose the relation and keep their other arti
   });
 });
 
-test("adds and removes in the same plan, added events first", async () => {
-  const { events } = setup([event("e1", ["artifact-1"]), event("e2")]);
+test("adds and removes in the same plan, added tasks first", async () => {
+  const { tasks } = setup([task("e1", ["artifact-1"]), task("e2")]);
 
-  const changes = await planArtifactLinks("artifact-1", ["e1"], ["e2"], events, userId);
+  const changes = await planArtifactLinks("artifact-1", ["e1"], ["e2"], tasks, userId);
 
   expect(changes.map((change) => (change.op === "update" ? [change.entity.id, change.entity.artifactLinks.length] : []))).toEqual([
     ["e2", 1],
@@ -92,37 +92,37 @@ test("adds and removes in the same plan, added events first", async () => {
 
 test("an occurrence of a series that gains or loses the artifact is detached from the series", async () => {
   const occurrence = { recurrenceId: "rec-1", occurrenceOn: "2026-08-17", detached: false };
-  const { events } = setup([event("e1", [], { occurrence })]);
+  const { tasks } = setup([task("e1", [], { occurrence })]);
 
-  const [change] = await planArtifactLinks("artifact-1", [], ["e1"], events, userId);
+  const [change] = await planArtifactLinks("artifact-1", [], ["e1"], tasks, userId);
 
   expect(change).toMatchObject({ entity: { occurrence: { ...occurrence, detached: true } } });
 });
 
 test("plans without writing anything", async () => {
-  const { database, events } = setup([event("e1")]);
+  const { database, tasks } = setup([task("e1")]);
 
-  await planArtifactLinks("artifact-1", [], ["e1"], events, userId);
+  await planArtifactLinks("artifact-1", [], ["e1"], tasks, userId);
 
-  expect(database.events[0]?.artifactLinks).toEqual([]);
-  expect(database.events[0]?.revision).toBe(1);
+  expect(database.tasks[0]?.artifactLinks).toEqual([]);
+  expect(database.tasks[0]?.revision).toBe(1);
 });
 
-test("every touched event must exist and belong to the user", async () => {
-  const theirs = Event.create({ id: "theirs", userId: "someone-else", name: "Deles", startedAt });
-  const { events } = setup([theirs, event("e1")]);
+test("every touched task must exist and belong to the user", async () => {
+  const theirs = Task.create({ id: "theirs", userId: "someone-else", name: "Deles", startedAt });
+  const { tasks } = setup([theirs, task("e1")]);
 
-  await expect(planArtifactLinks("artifact-1", [], ["e1", "missing"], events, userId)).rejects.toThrow(EventNotFoundError);
-  await expect(planArtifactLinks("artifact-1", [], ["theirs"], events, userId)).rejects.toThrow(EventOwnershipError);
-  await expect(planArtifactLinks("artifact-1", ["missing"], [], events, userId)).rejects.toThrow("Event not found: missing");
+  await expect(planArtifactLinks("artifact-1", [], ["e1", "missing"], tasks, userId)).rejects.toThrow(TaskNotFoundError);
+  await expect(planArtifactLinks("artifact-1", [], ["theirs"], tasks, userId)).rejects.toThrow(TaskOwnershipError);
+  await expect(planArtifactLinks("artifact-1", ["missing"], [], tasks, userId)).rejects.toThrow("Task not found: missing");
 });
 
-test("an agent event cannot gain an artifact by hand", async () => {
-  const request = Event.create({ id: "request", userId, actor: "agent", kind: "request", status: "running", name: "Pedido" });
-  const { events } = setup([request]);
+test("a agent task cannot gain an artifact by hand", async () => {
+  const request = Task.create({ id: "request", userId, actor: "agent", kind: "request", status: "running", name: "Pedido" });
+  const { tasks } = setup([request]);
 
-  await expect(planArtifactLinks("artifact-1", [], ["request"], events, userId)).rejects.toThrow(
-    "An agent event cannot be edited",
+  await expect(planArtifactLinks("artifact-1", [], ["request"], tasks, userId)).rejects.toThrow(
+    "A agent task cannot be edited",
   );
 });
 

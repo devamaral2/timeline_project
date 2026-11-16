@@ -6,7 +6,7 @@ import {
   type Artifact,
 } from "../../../domain";
 
-/** `artifacts` pode ser a lista do `InMemoryEventDatabase`, para que os dois enxerguem os mesmos artefatos. */
+/** `artifacts` pode ser a lista do `InMemoryTaskDatabase`, para que os dois enxerguem os mesmos artefatos. */
 export class InMemoryArtifactRepository implements ArtifactRepository {
   constructor(private readonly artifacts: Artifact[] = []) {}
 

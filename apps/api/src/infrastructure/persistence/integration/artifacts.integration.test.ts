@@ -12,26 +12,26 @@ import {
 import type { FoodGenerationPayload } from "../../../domain/ports";
 import { jobContext } from "../../jobs/job-context";
 import { PostgresWorkoutCatalog } from "../artifacts/postgres-workout.catalog";
-import { PostgresArtifactEventLinkQuery } from "../artifacts/queries/postgres-artifact-event-link.query";
+import { PostgresArtifactTaskLinkQuery } from "../artifacts/queries/postgres-artifact-task-link.query";
 import { FOOD_GENERATION_JOB } from "../artifacts/repositories/food-generation";
 import { PostgresArtifactRepository } from "../artifacts/repositories/postgres-artifact.repository";
 import { PostgresDatabase } from "../database/postgres-database";
-import { PostgresEventRepository } from "../events/repositories/postgres-event.repository";
+import { PostgresTaskRepository } from "../tasks/repositories/postgres-task.repository";
 import { PostgresJobStore } from "../jobs/postgres-job.store";
 import {
   GLOBAL_WORKOUT_ID,
   OTHER_USER,
   USER,
-  agentEvent,
+  agentTask,
   at,
   countRows,
   foodArtifact,
   foodData,
   pendingFoodData,
-  referenceEvent,
+  referenceTask,
   selectRows,
   textArtifact,
-  trackedEvent,
+  trackedTask,
 } from "../testing/fixtures";
 import { createPostgresTestContext, type PostgresTestContext } from "../testing/postgres-test-context";
 
@@ -54,12 +54,12 @@ function generatedFood(description: string, status: "completed" | "failed" = "co
 describe("PostgresArtifactRepository", () => {
   let ctx: PostgresTestContext;
   let artifacts: PostgresArtifactRepository;
-  let events: PostgresEventRepository;
+  let tasks: PostgresTaskRepository;
 
   beforeAll(async () => {
     ctx = await createPostgresTestContext();
     artifacts = new PostgresArtifactRepository(ctx.db);
-    events = new PostgresEventRepository(ctx.db);
+    tasks = new PostgresTaskRepository(ctx.db);
   }, 60000);
 
   beforeEach(async () => {
@@ -101,7 +101,7 @@ describe("PostgresArtifactRepository", () => {
       expect([...read.tags].sort()).toEqual(["casa", "compras"]);
     });
 
-    test("alimento, sono e treino voltam com o data do tipo", async () => {
+    test("alimento, sono e treino voltam com a data do tipo", async () => {
       const food = await saved(foodArtifact(USER, "Marmita", 520));
       const sleep = await saved(Artifact.create({ userId: USER, type: "sleep", data: { trackedSleepTime: 430, score: 82 } }));
       const training = await saved(
@@ -143,7 +143,7 @@ describe("PostgresArtifactRepository", () => {
       expect(await countRows(ctx.pool, "artifact_tags", "artifact_id = $1", [note.id])).toBe(1);
     });
 
-    test("trocar o tipo grava o data do tipo novo", async () => {
+    test("trocar o tipo grava a data do tipo novo", async () => {
       const note = await saved(textArtifact(USER, "dormi bem"));
 
       await artifacts.update(note.revise({ type: "sleep", data: { trackedSleepTime: 480, score: 90 } }), USER, 1);
@@ -213,7 +213,7 @@ describe("PostgresArtifactRepository", () => {
       const oldest = await saved(textArtifact(USER, "mais antigo"));
       const newest = await saved(foodArtifact(USER, "Marmita", 500));
       const middle = await saved(textArtifact(USER, "do meio"));
-      const copy = await saved(newest.copyForEvent(USER, "meia porcao"));
+      const copy = await saved(newest.copyForTask(USER, "meia porcao"));
       const removed = await saved(textArtifact(USER, "apagado"));
       await artifacts.delete(removed.id, USER);
       await saved(textArtifact(OTHER_USER, "do outro"));
@@ -331,11 +331,11 @@ describe("PostgresArtifactRepository", () => {
       expect(await countRows(ctx.pool, "jobs")).toBe(0);
     });
 
-    test("o alimento pendente que nasce com um evento abre o pedido na mesma transacao", async () => {
+    test("o alimento pendente que nasce com uma tarefa abre o pedido na mesma transacao", async () => {
       const food = Artifact.create({ userId: USER, type: "food", name: "Feijoada", data: pendingFoodData("feijoada") });
-      const meal = referenceEvent(USER, "Almoco", "2026-11-10T15:00:00Z", { kind: "meal", artifactLinks: [link(food.id, "creates")] });
+      const meal = referenceTask(USER, "Almoco", "2026-11-10T15:00:00Z", { kind: "meal", artifactLinks: [link(food.id, "creates")] });
 
-      await events.save(meal, { created: [food] });
+      await tasks.save(meal, { created: [food] });
 
       expect(await countRows(ctx.pool, "tasks", "actor = 'agent' AND kind = 'build_request'")).toBe(1);
       expect(await countRows(ctx.pool, "jobs", "kind = $1", [FOOD_GENERATION_JOB])).toBe(1);
@@ -444,28 +444,28 @@ describe("PostgresArtifactRepository", () => {
     });
   });
 
-  describe("PostgresArtifactEventLinkQuery", () => {
-    test("lista os eventos vivos de cada artefato, do mais antigo ao mais novo e os sem inicio no fim", async () => {
-      const links = new PostgresArtifactEventLinkQuery(ctx.db);
+  describe("PostgresArtifactTaskLinkQuery", () => {
+    test("lista as tarefas vivas de cada artefato, do mais antigo ao mais novo e os sem inicio no fim", async () => {
+      const links = new PostgresArtifactTaskLinkQuery(ctx.db);
       const note = await saved(textArtifact(USER, "nota"));
-      const lonely = await saved(textArtifact(USER, "sem evento"));
+      const lonely = await saved(textArtifact(USER, "sem tarefa"));
       const other = await saved(textArtifact(USER, "outra"));
 
-      const late = referenceEvent(USER, "Tarde", "2026-11-10T18:00:00Z", { artifactLinks: [link(note.id), link(other.id)] });
-      const early = referenceEvent(USER, "Cedo", "2026-11-10T08:00:00Z", { artifactLinks: [link(note.id, "creates")] });
-      const noStart = trackedEvent(USER, "Sem hora", { artifactLinks: [link(note.id)] });
-      const removed = referenceEvent(USER, "Apagado", "2026-11-10T09:00:00Z", { artifactLinks: [link(note.id)] });
-      const request = agentEvent(USER, "Pedido", { artifactLinks: [link(note.id, "updates")] });
-      const step = agentEvent(USER, "Passo", { kind: "step", status: "done", artifactLinks: [link(note.id, "updates")] });
-      for (const event of [late, early, noStart, removed, request, step]) await events.save(event);
-      await events.delete(removed.id, USER);
+      const late = referenceTask(USER, "Tarde", "2026-11-10T18:00:00Z", { artifactLinks: [link(note.id), link(other.id)] });
+      const early = referenceTask(USER, "Cedo", "2026-11-10T08:00:00Z", { artifactLinks: [link(note.id, "creates")] });
+      const noStart = trackedTask(USER, "Sem hora", { artifactLinks: [link(note.id)] });
+      const removed = referenceTask(USER, "Apagado", "2026-11-10T09:00:00Z", { artifactLinks: [link(note.id)] });
+      const request = agentTask(USER, "Pedido", { artifactLinks: [link(note.id, "updates")] });
+      const step = agentTask(USER, "Passo", { kind: "step", status: "done", artifactLinks: [link(note.id, "updates")] });
+      for (const task of [late, early, noStart, removed, request, step]) await tasks.save(task);
+      await tasks.delete(removed.id, USER);
 
       const found = await links.linksOf([note.id, lonely.id, other.id]);
 
       expect([...found.keys()].sort()).toEqual([note.id, other.id].sort());
       expect(found.get(note.id)).toEqual([
         {
-          eventId: early.id,
+          taskId: early.id,
           relation: "creates",
           name: "Cedo",
           actor: "human",
@@ -474,7 +474,7 @@ describe("PostgresArtifactRepository", () => {
           estimatedFinishAt: at("2026-11-10T09:00:00Z"),
         },
         {
-          eventId: request.id,
+          taskId: request.id,
           relation: "updates",
           name: "Pedido",
           actor: "agent",
@@ -483,7 +483,7 @@ describe("PostgresArtifactRepository", () => {
           estimatedFinishAt: undefined,
         },
         {
-          eventId: late.id,
+          taskId: late.id,
           relation: "uses",
           name: "Tarde",
           actor: "human",
@@ -492,7 +492,7 @@ describe("PostgresArtifactRepository", () => {
           estimatedFinishAt: at("2026-11-10T19:00:00Z"),
         },
         {
-          eventId: noStart.id,
+          taskId: noStart.id,
           relation: "uses",
           name: "Sem hora",
           actor: "human",
@@ -501,7 +501,7 @@ describe("PostgresArtifactRepository", () => {
           estimatedFinishAt: undefined,
         },
       ]);
-      expect(found.get(other.id)?.map((entry) => entry.eventId)).toEqual([late.id]);
+      expect(found.get(other.id)?.map((entry) => entry.taskId)).toEqual([late.id]);
       expect(await links.linksOf([])).toEqual(new Map());
     });
   });

@@ -9,7 +9,7 @@ import { PostgresScopedSqlQuery } from "../../infrastructure/persistence/agent-s
 import { PostgresWorkoutCatalog } from "../../infrastructure/persistence/artifacts/postgres-workout.catalog";
 import { PostgresArtifactRepository } from "../../infrastructure/persistence/artifacts/repositories/postgres-artifact.repository";
 import { PostgresDatabase } from "../../infrastructure/persistence/database/postgres-database";
-import { PostgresEventRepository } from "../../infrastructure/persistence/events/repositories/postgres-event.repository";
+import { PostgresTaskRepository } from "../../infrastructure/persistence/tasks/repositories/postgres-task.repository";
 import { PostgresJobStore } from "../../infrastructure/persistence/jobs/postgres-job.store";
 import { PostgresRecurrenceRepository } from "../../infrastructure/persistence/recurrences/repositories/postgres-recurrence.repository";
 import { PostgresCandidateQuery } from "../../infrastructure/persistence/requests/postgres-candidate.query";
@@ -18,8 +18,8 @@ import { createPostgresTestContext, type PostgresTestContext } from "../../infra
 import { FastStageError } from "../agent/errors/agent.errors";
 import { GenerateFoodUseCase } from "../artifacts/generate-food.usecase";
 import { ArtifactBuilder } from "../artifacts/services/artifact-builder.service";
-import { CreateEventUseCase } from "../events/create-event.usecase";
-import type { ParsedTaskCommand } from "../events/gateways/task-command-parsing.gateway";
+import { CreateTaskUseCase } from "../tasks/create-task.usecase";
+import type { ParsedTaskCommand } from "../tasks/gateways/task-command-parsing.gateway";
 import { HermesTurnWorker } from "./hermes-turn-worker";
 import { RequestAgentRunner } from "./request-agent-runner";
 import { dispatchConfig, uiConfig } from "./request-config";
@@ -43,7 +43,7 @@ import { VoiceTaskWorker } from "./voice-task-worker";
 let ctx: PostgresTestContext;
 let jobs: JobsService;
 let operations: RequestOperations;
-let events: PostgresEventRepository;
+let tasks: PostgresTaskRepository;
 let artifacts: PostgresArtifactRepository;
 let dispatch: Record<string, ReturnType<typeof confident>> = {};
 let hermesReply: (input: HermesChatInput) => Promise<{ text: string; trace: AgentTraceDto }>;
@@ -55,7 +55,7 @@ const actor = { userId: "user-1" };
 // Hoje: os candidatos de edicao sao as tarefas de ontem, hoje e amanha.
 const TODAY = new Date().toISOString().slice(0, 10);
 const iso = (hour: number) => `${TODAY}T${String(hour).padStart(2, "0")}:00:00-03:00`;
-const event = (name: string, kind: string, hour: number, over: Record<string, unknown> = {}) => ({
+const task = (name: string, kind: string, hour: number, over: Record<string, unknown> = {}) => ({
   name, kind, status: null, priority: null, longRunning: false, startedAt: iso(hour), estimatedFinishAt: null,
   description: null, tags: [], followsFrom: [], ...over,
 });
@@ -69,12 +69,12 @@ beforeAll(async () => {
   const database = new PostgresDatabase(ctx.pool);
   const env = getJobsEnv({ AI_JOBS_LEASE_MS: "60000", AI_JOBS_MAX_ATTEMPTS: "1", AI_JOBS_CONCURRENCY: "4" });
   jobs = new JobsService(new PostgresJobStore(database, env.AI_JOBS_LEASE_MS, env.AI_JOBS_MAX_ATTEMPTS), env);
-  events = new PostgresEventRepository(ctx.db);
+  tasks = new PostgresTaskRepository(ctx.db);
   artifacts = new PostgresArtifactRepository(ctx.db);
-  const repositories = { events, artifacts, recurrences: new PostgresRecurrenceRepository(ctx.db) };
+  const repositories = { tasks, artifacts, recurrences: new PostgresRecurrenceRepository(ctx.db) };
   const artifactBuilder = new ArtifactBuilder(new PostgresWorkoutCatalog(ctx.db));
   const batchWriter = new PostgresEntityBatchWriter(ctx.db);
-  const createEvent = new CreateEventUseCase(events, artifacts, artifactBuilder, batchWriter);
+  const createTask = new CreateTaskUseCase(tasks, artifacts, artifactBuilder, batchWriter);
   const store = new PostgresRequestStore(database);
   const sql = new PostgresScopedSqlQuery(ctx.pool);
   const runner = new RequestAgentRunner(gateway, { thoughts: store, reasoning: "low" });
@@ -101,7 +101,7 @@ beforeAll(async () => {
     return result({ ...answers, ...dispatch });
   });
 
-  const deps = { store, runner, batchWriter, repositories, createEvent };
+  const deps = { store, runner, batchWriter, repositories, createTask };
   operations = new RequestOperations(jobs, store, {
     dispatcher: new RequestDispatcher(store, jev.client, new PostgresCandidateQuery(database)),
     create: new RequestCreateWorker(deps),
@@ -115,7 +115,7 @@ beforeAll(async () => {
     targetEdit: new RequestTargetEditWorker({ ...deps, foodParsing, artifactBuilder, files: new FakeAgentFiles() }),
     hermes: new HermesTurnWorker(store, { chat: (input) => hermesReply(input) }),
     voice: new VoiceTaskWorker({
-      store, parsing: { parseCommand: async () => command }, createEvent, batchWriter,
+      store, parsing: { parseCommand: async () => command }, createTask, batchWriter,
     }),
     food: new GenerateFoodUseCase(artifacts, foodParsing),
   });
@@ -160,7 +160,7 @@ const jobStatuses = async () =>
 
 test("o exemplo-guia: tarefas e alimento criados em passos proprios, ligados na finalizacao, nutrientes calculados depois", async () => {
   dispatch = { task_create: confident("many"), artifact_create: confident("one") };
-  gateway.outputs.set("task_create", { tasks: [event("Refeição", "meal", 12), event("Nadar na praia", "training", 13)] });
+  gateway.outputs.set("task_create", { tasks: [task("Refeição", "meal", 12), task("Nadar na praia", "training", 13)] });
   gateway.outputs.set("artifact_create", { artifacts: [{ type: "food", name: "Arroz e feijão", content: "300g de arroz" }] });
 
   const requestId = await operations.start({ userId: "user-1", text: "comendo 300g de arroz, depois vou nadar", context: { screen: "agenda" } }, actor);
@@ -189,10 +189,10 @@ test("o exemplo-guia: tarefas e alimento criados em passos proprios, ligados na 
   expect(view.trace?.entries.map((entry) => entry.kind)).toEqual(["request", "routing", "agent", "agent", "answer"]);
 
   // A tarefa da refeicao passou a criar o alimento; a outra tarefa nao foi tocada.
-  const stored = await events.findById(meal?.id as string);
+  const stored = await tasks.findById(meal?.id as string);
   expect(stored?.artifactLinks).toEqual([{ artifactId: food?.id, relation: "creates", fromRecurrence: false }]);
   expect(stored?.revision).toBe(2);
-  expect((await events.findById(swim?.id as string))?.revision).toBe(1);
+  expect((await tasks.findById(swim?.id as string))?.revision).toBe(1);
 
   // O alimento nasceu pendente e o pedido de construcao calculou os nutrientes.
   const data = (await artifacts.findById(food?.id as string))?.data as FoodData;
@@ -213,7 +213,7 @@ test("o exemplo-guia: tarefas e alimento criados em passos proprios, ligados na 
 
 test("edicao: o JEV escolhe o candidato, o agente muda so ele; uma continuacao aponta para o primeiro pedido", async () => {
   dispatch = { task_create: confident("one") };
-  gateway.outputs.set("task_create", { tasks: [event("Reunião", "common", 12)] });
+  gateway.outputs.set("task_create", { tasks: [task("Reunião", "common", 12)] });
   const first = await operations.start({ userId: "user-1", text: "reunião ao meio-dia" }, actor);
   await drain();
   const [meeting] = (await operations.view(first, actor)).entities;
@@ -230,7 +230,7 @@ test("edicao: o JEV escolhe o candidato, o agente muda so ele; uma continuacao a
     entities: [{ kind: "task", id: meeting?.id, name: "Reunião", operation: "update" }],
   });
   expect((await operations.view(first, actor)).sessionId).toBeUndefined();
-  expect(await events.findById(meeting?.id as string)).toMatchObject({ estimatedFinishAt: new Date(iso(14)), revision: 2 });
+  expect(await tasks.findById(meeting?.id as string)).toMatchObject({ estimatedFinishAt: new Date(iso(14)), revision: 2 });
   // O agente de edicao recebeu o candidato que o JEV escolheu.
   expect(gateway.calls.at(-1)?.user).toContain(meeting?.id as string);
   const routing = view.trace?.entries.find((entry) => entry.kind === "routing");
@@ -239,7 +239,7 @@ test("edicao: o JEV escolhe o candidato, o agente muda so ele; uma continuacao a
 
 test("consulta: as linhas ficam no passo e so enxergam as tarefas de pessoa do usuario", async () => {
   dispatch = { task_create: confident("one") };
-  gateway.outputs.set("task_create", { tasks: [event("Reunião", "common", 12)] });
+  gateway.outputs.set("task_create", { tasks: [task("Reunião", "common", 12)] });
   await operations.start({ userId: "user-1", text: "reunião ao meio-dia" }, actor);
   await drain();
 
@@ -257,7 +257,7 @@ test("consulta: as linhas ficam no passo e so enxergam as tarefas de pessoa do u
 test("`fallback:` roda em laco: o que os especialistas fizeram volta na rodada seguinte, e o raciocinio fica no passo", async () => {
   gateway.outputs.set("fallback_loop", { reply: null, invoke: [{ agent: "task-create", instruction: "Criar o almoço" }] });
   gateway.reasonings.set("fallback_loop", "O pedido pede uma tarefa.");
-  gateway.outputs.set("task_create", { tasks: [event("Almoço", "meal", 12)] });
+  gateway.outputs.set("task_create", { tasks: [task("Almoço", "meal", 12)] });
 
   const requestId = await operations.start({ userId: "user-1", text: "fallback: almocei ao meio-dia" }, actor);
   // Primeira rodada e o especialista; a segunda rodada so entra depois da finalizacao dele.
@@ -283,7 +283,7 @@ test("`fallback:` roda em laco: o que os especialistas fizeram volta na rodada s
 
 test("um passo que falha nao trava o pedido: ele fecha com a explicacao, e o outro passo fica gravado", async () => {
   dispatch = { task_create: confident("one"), artifact_create: confident("one") };
-  gateway.outputs.set("task_create", { tasks: [event("Refeição", "meal", 12)] });
+  gateway.outputs.set("task_create", { tasks: [task("Refeição", "meal", 12)] });
   gateway.outputs.set("failure_explainer", { message: "Criei a tarefa, mas não consegui criar o alimento." });
 
   const requestId = await operations.start({ userId: "user-1", text: "almocei arroz" }, actor);
@@ -346,7 +346,7 @@ test("voz: o pedido gera a tarefa de pessoa; reenviar a mesma fala nao cria outr
     entities: [{ kind: "task", name: "Estudar", operation: "create" }],
   });
   expect(view.trace).toBeUndefined();
-  const created = await events.findById(view.entities[0]?.id as string);
+  const created = await tasks.findById(view.entities[0]?.id as string);
   expect(created).toMatchObject({ actor: "human", description: "comecei a estudar" });
   expect((await ctx.pool.query("SELECT 1 FROM tasks WHERE actor = 'human'")).rows).toHaveLength(1);
 });
@@ -399,7 +399,7 @@ test("Hermes: o rastro vem do progresso enquanto roda e das entradas depois que 
 
 test("cancelar: os jobs vivos param, o pedido e os passos abertos ficam cancelados e nada mais e gravado", async () => {
   dispatch = { task_create: confident("one"), query: confident("yes") };
-  gateway.outputs.set("task_create", { tasks: [event("Almoço", "meal", 12)] });
+  gateway.outputs.set("task_create", { tasks: [task("Almoço", "meal", 12)] });
   const requestId = await operations.start({ userId: "user-1", text: "almocei; o que tenho hoje?" }, actor);
   await jobs.tick();
   await jobs.idle();

@@ -1,10 +1,10 @@
 import type { Artifact } from "../../domain";
-import type { ArtifactEventLink } from "../../domain/ports";
+import type { ArtifactTaskLink } from "../../domain/ports";
 import type { ArtifactDto, ArtifactTaskLinkDto } from "@repo/contracts";
 
-export function toArtifactEventLinkDto(link: ArtifactEventLink): ArtifactTaskLinkDto {
+export function toArtifactTaskLinkDto(link: ArtifactTaskLink): ArtifactTaskLinkDto {
   return {
-    taskId: link.eventId,
+    taskId: link.taskId,
     relation: link.relation,
     name: link.name,
     actor: link.actor,
@@ -14,8 +14,8 @@ export function toArtifactEventLinkDto(link: ArtifactEventLink): ArtifactTaskLin
   };
 }
 
-/** `events`: onde o artefato aparece. Ausente nos artefatos que viajam dentro de um evento ou da resposta do agente. */
-export function toArtifactDto(artifact: Artifact, events?: readonly ArtifactEventLink[]): ArtifactDto {
+/** `tasks`: onde o artefato aparece. Ausente nos artefatos que viajam dentro de uma tarefa ou da resposta do agente. */
+export function toArtifactDto(artifact: Artifact, tasks?: readonly ArtifactTaskLink[]): ArtifactDto {
   return {
     id: artifact.id,
     name: artifact.name,
@@ -24,7 +24,7 @@ export function toArtifactDto(artifact: Artifact, events?: readonly ArtifactEven
     data: artifact.data,
     global: artifact.isGlobal,
     derived: artifact.derived,
-    ...(events ? { tasks: events.map(toArtifactEventLinkDto) } : {}),
+    ...(tasks ? { tasks: tasks.map(toArtifactTaskLinkDto) } : {}),
     tags: artifact.tags,
     revision: artifact.revision,
     createdAt: artifact.createdAt.toISOString(),

@@ -5,13 +5,13 @@ import {
   RecurrenceOwnershipError,
   RecurrenceRevisionConflictError,
   type ArtifactWrites,
-  type Event,
+  type Task,
   type Recurrence,
 } from "../../../../domain";
 import type { RecurrenceRepository } from "../../../../domain/ports";
 import * as schema from "../../database/schema";
 import { writeArtifacts } from "../../artifacts/repositories/postgres-artifact.repository";
-import { insertEventAggregate } from "../../events/repositories/postgres-event.repository";
+import { insertTaskAggregate } from "../../tasks/repositories/postgres-task.repository";
 import { classifyUpdateFailure } from "../../shared/classify-update-failure";
 import { lockUser, type Db, type Tx } from "../../shared/tx";
 import { mapRecurrenceRow, recurrenceColumnsOf } from "../mappers/recurrence-row.mapper";
@@ -90,9 +90,9 @@ export async function deleteRecurrenceAggregate(
   // alguma coisa, entao os tres saem juntos, numa linha so: o check `tasks_occurrence_requires_day`
   // nao aceita um sem o outro.
   await tx
-    .update(schema.events)
+    .update(schema.tasks)
     .set({ recurrenceId: null, occurrenceOn: null, recurrenceDetached: false })
-    .where(eq(schema.events.recurrenceId, recurrenceId));
+    .where(eq(schema.tasks.recurrenceId, recurrenceId));
 
   await tx.delete(schema.recurrences).where(eq(schema.recurrences.id, recurrenceId));
 }
@@ -133,17 +133,17 @@ export class PostgresRecurrenceRepository implements RecurrenceRepository {
 
   async findNextOccurrenceId(recurrenceId: string, fromDay: string): Promise<string | null> {
     const [row] = await this.db
-      .select({ id: schema.events.id })
-      .from(schema.events)
+      .select({ id: schema.tasks.id })
+      .from(schema.tasks)
       .where(
         and(
-          eq(schema.events.recurrenceId, recurrenceId),
-          gte(schema.events.occurrenceOn, fromDay),
-          eq(schema.events.recurrenceDetached, false),
-          isNull(schema.events.deletedAt),
+          eq(schema.tasks.recurrenceId, recurrenceId),
+          gte(schema.tasks.occurrenceOn, fromDay),
+          eq(schema.tasks.recurrenceDetached, false),
+          isNull(schema.tasks.deletedAt),
         ),
       )
-      .orderBy(asc(schema.events.occurrenceOn))
+      .orderBy(asc(schema.tasks.occurrenceOn))
       .limit(1);
     return row?.id ?? null;
   }
@@ -188,23 +188,23 @@ export class PostgresRecurrenceRepository implements RecurrenceRepository {
       .onConflictDoNothing();
   }
 
-  async materialize(recurrence: Recurrence, occurrences: Event[], previousIds: readonly string[] = []): Promise<void> {
+  async materialize(recurrence: Recurrence, occurrences: Task[], previousIds: readonly string[] = []): Promise<void> {
     await this.db.transaction(async (tx) => {
       // Duas abas lendo a agenda ao mesmo tempo esperam uma pela outra; o
       // indice unico por dia continua sendo a garantia, isto so poupa trabalho.
       await lockUser(tx, recurrence.userId);
 
       // Com o soft delete o antecessor continua na tabela e a chave estrangeira aceitaria a
-      // ocorrencia, que ficaria visivel seguindo um evento escondido.
-      const previous = await liveEvents(tx, recurrence.userId, previousIds);
+      // ocorrencia, que ficaria visivel seguindo uma tarefa escondido.
+      const previous = await liveTasks(tx, recurrence.userId, previousIds);
       if (previous.length < previousIds.length) occurrences = [];
 
       for (const occurrence of occurrences) {
-        if (!(await insertEventAggregate(tx, occurrence))) continue;
+        if (!(await insertTaskAggregate(tx, occurrence))) continue;
         if (previous.length === 0) continue;
         // A relacao faz parte da criacao da ocorrencia: nao conta como edicao do antecessor.
-        await tx.insert(schema.eventEventRelation).values(
-          previous.map((fromEventId) => ({ fromEventId, toEventId: occurrence.id, relation: SEQUENCE_RELATION })),
+        await tx.insert(schema.taskTaskRelation).values(
+          previous.map((fromTaskId) => ({ fromTaskId, toTaskId: occurrence.id, relation: SEQUENCE_RELATION })),
         );
       }
 
@@ -231,7 +231,7 @@ async function assertOwned(tx: Tx, recurrenceId: string, actorUserId: string): P
   if (existing.userId !== actorUserId) throw errors.ownership();
 }
 
-async function liveEvents(tx: Tx, userId: string, ids: readonly string[]): Promise<string[]> {
+async function liveTasks(tx: Tx, userId: string, ids: readonly string[]): Promise<string[]> {
   if (ids.length === 0) return [];
   const found = await tx.execute<{ id: string }>(sql`
     SELECT id FROM tasks
@@ -243,12 +243,12 @@ async function liveEvents(tx: Tx, userId: string, ids: readonly string[]): Promi
 /** As ocorrencias de `fromDay` em diante que ninguem mexeu a mao. As relacoes delas saem em cascata. */
 async function deleteUpcomingOccurrences(tx: Tx, recurrenceId: string, fromDay: string): Promise<void> {
   await tx
-    .delete(schema.events)
+    .delete(schema.tasks)
     .where(
       and(
-        eq(schema.events.recurrenceId, recurrenceId),
-        gte(schema.events.occurrenceOn, fromDay),
-        eq(schema.events.recurrenceDetached, false),
+        eq(schema.tasks.recurrenceId, recurrenceId),
+        gte(schema.tasks.occurrenceOn, fromDay),
+        eq(schema.tasks.recurrenceDetached, false),
       ),
     );
 }

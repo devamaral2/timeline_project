@@ -87,7 +87,7 @@ export async function updateArtifactAggregate(
 }
 
 /**
- * Grava os artefatos que viajam com um evento ou uma serie. Vem antes das
+ * Grava os artefatos que viajam com uma tarefa ou uma serie. Vem antes das
  * relacoes, na mesma transacao: uma relacao aponta para um artefato que ja existe.
  */
 export async function writeArtifacts(tx: Tx, writes: ArtifactWrites | undefined): Promise<void> {
@@ -117,7 +117,7 @@ export async function insertDerivations(
 
 /**
  * Soft delete: as relacoes ficam e a leitura filtra `deleted_at IS NULL`.
- * Apagar um evento nao apaga os artefatos dele; so solta a relacao.
+ * Apagar uma tarefa nao apaga os artefatos dela; so solta a relacao.
  */
 export async function softDeleteArtifact(tx: Tx, artifactId: string, actorUserId: string): Promise<void> {
   const [existing] = await tx

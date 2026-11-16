@@ -1,6 +1,6 @@
 import { char, check, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
-import { events } from "./events";
+import { tasks } from "./tasks";
 import { JOB_STATUSES, sqlList } from "./sets";
 
 /**
@@ -9,9 +9,9 @@ import { JOB_STATUSES, sqlList } from "./sets";
  * para a fila com `available_at` no futuro; worker morto e lease vencido que
  * volta para a fila. Nao ha tabela de saida nem RabbitMQ.
  *
- * O job e descartavel: a fonte de verdade e o evento. `progress` e um retrato
- * passageiro; o resultado mora no evento e nas entradas dele, por isso nao ha
- * coluna `result`. Todo job de IA aponta para o evento do passo que executa.
+ * O job e descartavel: a fonte de verdade e a tarefa. `progress` e um retrato
+ * passageiro; o resultado mora na tarefa e nas entradas dele, por isso nao ha
+ * coluna `result`. Todo job de IA aponta para a tarefa do passo que executa.
  */
 export const jobs = pgTable(
   "jobs",
@@ -20,7 +20,7 @@ export const jobs = pgTable(
     kind: text("kind").notNull(),
     userId: text("user_id").notNull(),
     actorId: text("actor_id").notNull(),
-    eventId: char("task_id", { length: 26 }).references(() => events.id, { onDelete: "cascade" }),
+    taskId: char("task_id", { length: 26 }).references(() => tasks.id, { onDelete: "cascade" }),
     payload: jsonb("payload").notNull(),
     dedupeKey: text("dedupe_key"),
     // Jobs com a mesma chave rodam um por vez, em ordem de criacao.
@@ -46,10 +46,10 @@ export const jobs = pgTable(
     index("jobs_lease_idx")
       .on(table.leaseUntil)
       .where(sql`${table.status} = 'running'`),
-    // Cancelar pelo evento.
+    // Cancelar pela tarefa.
     index("jobs_task_idx")
-      .on(table.eventId)
-      .where(sql`${table.eventId} IS NOT NULL`),
+      .on(table.taskId)
+      .where(sql`${table.taskId} IS NOT NULL`),
     index("jobs_concurrency_idx")
       .on(table.concurrencyKey, table.createdAt, table.id)
       .where(sql`${table.concurrencyKey} IS NOT NULL AND ${table.status} IN ('queued', 'running')`),

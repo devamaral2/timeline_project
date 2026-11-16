@@ -5,22 +5,22 @@ import {
   RecurrenceOwnershipError,
   RecurrenceRevisionConflictError,
   type ArtifactLink,
-  type Event,
+  type Task,
 } from "../../../domain";
 import { PostgresArtifactRepository } from "../artifacts/repositories/postgres-artifact.repository";
-import { PostgresEventRepository } from "../events/repositories/postgres-event.repository";
+import { PostgresTaskRepository } from "../tasks/repositories/postgres-task.repository";
 import { PostgresRecurrenceRepository } from "../recurrences/repositories/postgres-recurrence.repository";
 import {
   OTHER_USER,
   USER,
-  agentEvent,
+  agentTask,
   countRows,
   dailyRecurrence,
   dailyRule,
   occurrenceOf,
   selectRows,
   textArtifact,
-  trackedEvent,
+  trackedTask,
 } from "../testing/fixtures";
 import { createPostgresTestContext, type PostgresTestContext } from "../testing/postgres-test-context";
 
@@ -29,13 +29,13 @@ const DAYS = ["2026-11-10", "2026-11-11", "2026-11-12", "2026-11-13", "2026-11-1
 describe("PostgresRecurrenceRepository", () => {
   let ctx: PostgresTestContext;
   let recurrences: PostgresRecurrenceRepository;
-  let events: PostgresEventRepository;
+  let tasks: PostgresTaskRepository;
   let artifacts: PostgresArtifactRepository;
 
   beforeAll(async () => {
     ctx = await createPostgresTestContext();
     recurrences = new PostgresRecurrenceRepository(ctx.db);
-    events = new PostgresEventRepository(ctx.db);
+    tasks = new PostgresTaskRepository(ctx.db);
     artifacts = new PostgresArtifactRepository(ctx.db);
   }, 60000);
 
@@ -59,13 +59,13 @@ describe("PostgresRecurrenceRepository", () => {
   }
 
   /** Gera as ocorrencias dos dias e avanca a marca d'agua ate o ultimo deles. */
-  async function materialized(recurrence: Recurrence, days: readonly string[], links: ArtifactLink[] = []): Promise<Event[]> {
+  async function materialized(recurrence: Recurrence, days: readonly string[], links: ArtifactLink[] = []): Promise<Task[]> {
     const occurrences = days.map((day) => occurrenceOf(recurrence, day, { artifactLinks: links }));
     await recurrences.materialize(recurrence.materializedUntil(days.at(-1) as string), occurrences);
     return occurrences;
   }
 
-  /** Os dias que ainda tem uma linha em `events`, com o estado do vinculo. */
+  /** Os dias que ainda tem uma linha em `tasks`, com o estado do vinculo. */
   const occurrenceRows = (recurrenceId: string) =>
     selectRows<{ day: string; detached: boolean; deleted: boolean }>(
       ctx.pool,
@@ -140,13 +140,13 @@ describe("PostgresRecurrenceRepository", () => {
       const recurrence = await saved();
 
       const first = await materialized(recurrence, DAYS.slice(0, 3));
-      // A segunda leitura monta eventos novos para os mesmos dias: o indice unico por dia os descarta.
+      // A segunda leitura monta tarefas novas para os mesmos dias: o indice unico por dia os descarta.
       await materialized(recurrence, DAYS.slice(0, 3));
 
       const rows = await selectRows(ctx.pool, "SELECT id FROM tasks ORDER BY occurrence_on");
-      expect(rows.map((row) => row.id)).toEqual(first.map((event) => event.id));
+      expect(rows.map((row) => row.id)).toEqual(first.map((task) => task.id));
       expect((await found(recurrence.id)).materializedThrough).toBe("2026-11-12");
-      expect((await events.findById(first[0].id))?.occurrence).toEqual({
+      expect((await tasks.findById(first[0].id))?.occurrence).toEqual({
         recurrenceId: recurrence.id,
         occurrenceOn: "2026-11-10",
         detached: false,
@@ -182,11 +182,11 @@ describe("PostgresRecurrenceRepository", () => {
       expect(await countRows(ctx.pool, "tags")).toBe(0);
     });
 
-    test("gravar pelo repositorio de eventos uma ocorrencia de um dia ja gerado nao duplica", async () => {
+    test("gravar pelo repositorio de tarefas uma ocorrencia de um dia ja gerado nao duplica", async () => {
       const recurrence = await saved();
       const [kept] = await materialized(recurrence, [DAYS[0]]);
 
-      await events.save(occurrenceOf(recurrence, DAYS[0], { name: "Duplicada" }));
+      await tasks.save(occurrenceOf(recurrence, DAYS[0], { name: "Duplicada" }));
 
       expect(await selectRows(ctx.pool, "SELECT id, name FROM tasks")).toEqual([{ id: kept.id, name: "Serie" }]);
     });
@@ -203,16 +203,16 @@ describe("PostgresRecurrenceRepository", () => {
 
     test("previousIds liga cada ocorrencia ao antecessor, sem editar o antecessor", async () => {
       const recurrence = await saved();
-      const previous = trackedEvent(USER, "Projeto");
-      await events.save(previous);
+      const previous = trackedTask(USER, "Projeto");
+      await tasks.save(previous);
       const occurrences = DAYS.slice(0, 2).map((day) => occurrenceOf(recurrence, day));
 
       await recurrences.materialize(recurrence.materializedUntil(DAYS[1]), occurrences, [previous.id]);
 
-      const readPrevious = await events.findById(previous.id);
-      expect([...(readPrevious?.nextIds ?? [])].sort()).toEqual(occurrences.map((event) => event.id).sort());
+      const readPrevious = await tasks.findById(previous.id);
+      expect([...(readPrevious?.nextIds ?? [])].sort()).toEqual(occurrences.map((task) => task.id).sort());
       expect(readPrevious?.revision).toBe(1);
-      expect((await events.findById(occurrences[0].id))?.previousIds).toEqual([previous.id]);
+      expect((await tasks.findById(occurrences[0].id))?.previousIds).toEqual([previous.id]);
 
       // A segunda leitura nao repete a relacao das ocorrencias que ja existem.
       await recurrences.materialize(
@@ -223,23 +223,23 @@ describe("PostgresRecurrenceRepository", () => {
       expect(await countRows(ctx.pool, "task_task_relation", "relation = 'precedes'")).toBe(3);
     });
 
-    test("a ocorrencia segue varios antecessores, inclusive um evento de agente", async () => {
+    test("a ocorrencia segue varios antecessores, inclusive uma tarefa de agente", async () => {
       const recurrence = await saved();
-      const person = trackedEvent(USER, "Projeto");
-      const agent = agentEvent(USER, "Pedido", { kind: "build_request" });
-      for (const event of [person, agent]) await events.save(event);
+      const person = trackedTask(USER, "Projeto");
+      const agent = agentTask(USER, "Pedido", { kind: "build_request" });
+      for (const task of [person, agent]) await tasks.save(task);
       const occurrence = occurrenceOf(recurrence, DAYS[0]);
 
       await recurrences.materialize(recurrence.materializedUntil(DAYS[0]), [occurrence], [person.id, agent.id]);
 
-      expect([...((await events.findById(occurrence.id))?.previousIds ?? [])].sort()).toEqual([person.id, agent.id].sort());
-      expect((await events.findById(agent.id))?.revision).toBe(1);
+      expect([...((await tasks.findById(occurrence.id))?.previousIds ?? [])].sort()).toEqual([person.id, agent.id].sort());
+      expect((await tasks.findById(agent.id))?.revision).toBe(1);
     });
 
     test("ao regerar a serie, a ocorrencia apagada leva a aresta e o antecessor fica sem ela", async () => {
       const recurrence = await saved();
-      const previous = trackedEvent(USER, "Projeto");
-      await events.save(previous);
+      const previous = trackedTask(USER, "Projeto");
+      await tasks.save(previous);
       await recurrences.materialize(
         recurrence.materializedUntil(DAYS[2]),
         DAYS.slice(0, 3).map((day) => occurrenceOf(recurrence, day)),
@@ -252,16 +252,16 @@ describe("PostgresRecurrenceRepository", () => {
       // So a primeira ocorrencia (antes de fromDay) sobrevive, com a aresta dela.
       expect(await countRows(ctx.pool, "tasks", "recurrence_id IS NOT NULL")).toBe(1);
       expect(await countRows(ctx.pool, "task_task_relation", "relation = 'precedes'")).toBe(1);
-      expect((await events.findById(previous.id))?.nextIds).toHaveLength(1);
+      expect((await tasks.findById(previous.id))?.nextIds).toHaveLength(1);
     });
 
     test("com o antecessor apagado, ou de outro usuario, o lote nao insere nada", async () => {
       const recurrence = await saved();
-      const removed = trackedEvent(USER, "Projeto apagado");
-      const foreign = trackedEvent(OTHER_USER, "Projeto do outro");
-      const alive = trackedEvent(USER, "Projeto vivo");
-      for (const event of [removed, foreign, alive]) await events.save(event);
-      await events.delete(removed.id, USER);
+      const removed = trackedTask(USER, "Projeto apagado");
+      const foreign = trackedTask(OTHER_USER, "Projeto do outro");
+      const alive = trackedTask(USER, "Projeto vivo");
+      for (const task of [removed, foreign, alive]) await tasks.save(task);
+      await tasks.delete(removed.id, USER);
 
       for (const previousIds of [[removed.id], [foreign.id], [alive.id, removed.id]]) {
         await recurrences.materialize(recurrence.materializedUntil(DAYS[1]), [occurrenceOf(recurrence, DAYS[0])], previousIds);
@@ -292,8 +292,8 @@ describe("PostgresRecurrenceRepository", () => {
     test("apaga as ocorrencias de fromDay em diante que ninguem destacou e guarda as destacadas e as passadas", async () => {
       const recurrence = await saved();
       const occurrences = await materialized(recurrence, DAYS);
-      await events.update(occurrences[3].revise({ name: "Editada a mao" }), USER, 1);
-      await events.delete(occurrences[4].id, USER);
+      await tasks.update(occurrences[3].revise({ name: "Editada a mao" }), USER, 1);
+      await tasks.delete(occurrences[4].id, USER);
 
       await recurrences.update(recurrence.revise({ rule: { timeOfDay: "19:00" } }), USER, 1, DAYS[2]);
 
@@ -309,7 +309,7 @@ describe("PostgresRecurrenceRepository", () => {
     test("depois da edicao, a leitura seguinte regera os dias liberados e respeita o dia destacado", async () => {
       const recurrence = await saved();
       const occurrences = await materialized(recurrence, DAYS);
-      await events.update(occurrences[3].revise({ name: "Editada a mao" }), USER, 1);
+      await tasks.update(occurrences[3].revise({ name: "Editada a mao" }), USER, 1);
       await recurrences.update(recurrence.revise({ rule: { timeOfDay: "19:00" } }), USER, 1, DAYS[2]);
 
       await materialized(await found(recurrence.id), DAYS.slice(2));
@@ -370,7 +370,7 @@ describe("PostgresRecurrenceRepository", () => {
         { artifactId: note.id, relation: "uses", fromRecurrence: true },
       ]);
       // Destacada e posterior a fromDay: fica, mesmo sendo "futura".
-      await events.update(occurrences[3].revise({ name: "Editada a mao" }), USER, 1);
+      await tasks.update(occurrences[3].revise({ name: "Editada a mao" }), USER, 1);
       await recurrences.addException(recurrence.id, "2026-11-20");
 
       await recurrences.delete(recurrence.id, USER, DAYS[2]);
@@ -382,8 +382,8 @@ describe("PostgresRecurrenceRepository", () => {
         "SELECT id, recurrence_id, occurrence_on, recurrence_detached FROM tasks ORDER BY started_at",
       );
       expect(rows).toEqual(
-        [occurrences[0], occurrences[1], occurrences[3]].map((event) => ({
-          id: event.id,
+        [occurrences[0], occurrences[1], occurrences[3]].map((task) => ({
+          id: task.id,
           recurrence_id: null,
           occurrence_on: null,
           recurrence_detached: false,
@@ -393,7 +393,7 @@ describe("PostgresRecurrenceRepository", () => {
       expect(await selectRows(ctx.pool, "SELECT DISTINCT from_recurrence FROM task_artifact_relation")).toEqual([
         { from_recurrence: false },
       ]);
-      const read = await events.findById(occurrences[0].id);
+      const read = await tasks.findById(occurrences[0].id);
       expect(read?.occurrence).toBeUndefined();
       expect(read?.artifactLinks).toEqual([{ artifactId: note.id, relation: "uses", fromRecurrence: false }]);
     });
@@ -414,8 +414,8 @@ describe("PostgresRecurrenceRepository", () => {
     test("findNextOccurrenceId pula as destacadas e as apagadas e respeita fromDay", async () => {
       const recurrence = await saved();
       const occurrences = await materialized(recurrence, DAYS.slice(0, 4));
-      await events.delete(occurrences[0].id, USER);
-      await events.update(occurrences[1].revise({ name: "Editada a mao" }), USER, 1);
+      await tasks.delete(occurrences[0].id, USER);
+      await tasks.update(occurrences[1].revise({ name: "Editada a mao" }), USER, 1);
 
       expect(await recurrences.findNextOccurrenceId(recurrence.id, DAYS[0])).toBe(occurrences[2].id);
       expect(await recurrences.findNextOccurrenceId(recurrence.id, DAYS[3])).toBe(occurrences[3].id);

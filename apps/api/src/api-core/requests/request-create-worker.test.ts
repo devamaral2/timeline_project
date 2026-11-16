@@ -4,7 +4,7 @@ import { addStep, setupRequest } from "./testing/request-test-kit";
 
 const iso = (hour: number, minute = 0) => `2026-10-25T${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00-03:00`;
 
-const event = (over: Record<string, unknown> = {}) => ({
+const task = (over: Record<string, unknown> = {}) => ({
   name: "Tarefa", kind: "common", status: null, priority: null, longRunning: false, startedAt: null,
   estimatedFinishAt: null, description: null, tags: [], followsFrom: [], ...over,
 });
@@ -16,9 +16,9 @@ describe("passo de criar tarefas", () => {
     const ctx = setupRequest();
     const payload = await addStep(ctx, "s1", "task-create", "many");
     ctx.gateway.outputs.set("task_create", { tasks: [
-      event({ name: "Refeição", kind: "meal", startedAt: iso(12) }),
-      event({ name: "Nadar na praia", kind: "training", startedAt: iso(12, 30), estimatedFinishAt: iso(13, 30) }),
-      event({ name: "Voltar para casa e ver o filme", startedAt: iso(15, 30) }),
+      task({ name: "Refeição", kind: "meal", startedAt: iso(12) }),
+      task({ name: "Nadar na praia", kind: "training", startedAt: iso(12, 30), estimatedFinishAt: iso(13, 30) }),
+      task({ name: "Voltar para casa e ver o filme", startedAt: iso(15, 30) }),
     ] });
 
     await ctx.worker.run("task-create", payload);
@@ -41,7 +41,7 @@ describe("passo de criar tarefas", () => {
   test("so recebe o pedido: o agente de criacao nao tem ferramenta de consulta nem pergunta", async () => {
     const ctx = setupRequest("Almocei agora");
     const payload = await addStep(ctx, "s1", "task-create");
-    ctx.gateway.outputs.set("task_create", { tasks: [event({ name: "Almoço", kind: "meal" })] });
+    ctx.gateway.outputs.set("task_create", { tasks: [task({ name: "Almoço", kind: "meal" })] });
 
     await ctx.worker.run("task-create", payload);
 
@@ -56,13 +56,13 @@ describe("passo de criar tarefas", () => {
     const ctx = setupRequest();
     const payload = await addStep(ctx, "s1", "task-create", "many");
     ctx.gateway.outputs.set("task_create", { tasks: [
-      event({ name: "Pagar o aluguel", status: "todo", priority: "high" }),
-      event({ name: "Reunião", startedAt: iso(15), estimatedFinishAt: iso(16) }),
+      task({ name: "Pagar o aluguel", status: "todo", priority: "high" }),
+      task({ name: "Reunião", startedAt: iso(15), estimatedFinishAt: iso(16) }),
     ] });
 
     await ctx.worker.run("task-create", payload);
 
-    const [tracked, reference] = ctx.database.events;
+    const [tracked, reference] = ctx.database.tasks;
     expect(tracked).toMatchObject({ name: "Pagar o aluguel", status: "todo", priority: "high", startedAt: undefined });
     expect(reference).toMatchObject({ name: "Reunião", status: undefined });
     expect(reference?.isReference).toBe(true);
@@ -75,14 +75,14 @@ describe("passo de criar tarefas", () => {
     ctx.places.addresses.set("clínica Saúde Emocional", "Clínica Saúde Emocional, Rua dos Timbiras 100, Belo Horizonte");
     const payload = await addStep(ctx, "s1", "task-create", "many");
     ctx.gateway.outputs.set("task_create", { tasks: [
-      event({ name: "Ir à clínica", location: "clínica Saúde Emocional" }),
-      event({ name: "Almoço", kind: "meal" }),
+      task({ name: "Ir à clínica", location: "clínica Saúde Emocional" }),
+      task({ name: "Almoço", kind: "meal" }),
     ] });
 
     await ctx.worker.run("task-create", payload);
 
     expect(ctx.places.calls).toEqual([{ said: "clínica Saúde Emocional", near: here }]);
-    const [clinic, lunch] = ctx.database.events;
+    const [clinic, lunch] = ctx.database.tasks;
     expect(clinic?.location).toBe("Clínica Saúde Emocional, Rua dos Timbiras 100, Belo Horizonte");
     // Sem lugar dito, nada e procurado no mapa.
     expect(lunch?.location).toBe("");
@@ -91,27 +91,27 @@ describe("passo de criar tarefas", () => {
   test("lugar que o mapa nao conhece fica como o usuario disse", async () => {
     const ctx = setupRequest("Jantar na casa da tia Lúcia");
     const payload = await addStep(ctx, "s1", "task-create");
-    ctx.gateway.outputs.set("task_create", { tasks: [event({ name: "Jantar", kind: "meal", location: "casa da tia Lúcia" })] });
+    ctx.gateway.outputs.set("task_create", { tasks: [task({ name: "Jantar", kind: "meal", location: "casa da tia Lúcia" })] });
 
     await ctx.worker.run("task-create", payload);
 
-    expect(ctx.database.events[0]?.location).toBe("casa da tia Lúcia");
+    expect(ctx.database.tasks[0]?.location).toBe("casa da tia Lúcia");
   });
 
   test("a ordem declarada entre tarefas da mesma lista vira sequencia no lote, sem revisar nenhuma tarefa", async () => {
     const ctx = setupRequest();
     const payload = await addStep(ctx, "s1", "task-create", "many");
     ctx.gateway.outputs.set("task_create", { tasks: [
-      event({ name: "Organizar a festa", status: "todo" }),
-      event({ name: "Comprar o bolo", status: "todo", followsFrom: [0] }),
-      event({ name: "Servir o bolo", status: "todo", followsFrom: [0, 1] }),
+      task({ name: "Organizar a festa", status: "todo" }),
+      task({ name: "Comprar o bolo", status: "todo", followsFrom: [0] }),
+      task({ name: "Servir o bolo", status: "todo", followsFrom: [0, 1] }),
     ] });
 
     await ctx.worker.run("task-create", payload);
 
     const byName = async (name: string) => {
-      const created = ctx.database.events.find((candidate) => candidate.name === name);
-      return ctx.eventRepository.findById(created?.id as string);
+      const created = ctx.database.tasks.find((candidate) => candidate.name === name);
+      return ctx.taskRepository.findById(created?.id as string);
     };
     const [party, cake, serve] = [await byName("Organizar a festa"), await byName("Comprar o bolo"), await byName("Servir o bolo")];
     // Quem se segue de quem e lido das arestas; todos nascem na revisao 1.
@@ -132,8 +132,8 @@ describe("passo de criar tarefas", () => {
     const ctx = setupRequest();
     const payload = await addStep(ctx, "s1", "task-create", "many");
     ctx.gateway.outputs.set("task_create", { tasks: [
-      event({ name: "Antes", status: "todo" }),
-      event({ name: "Depois", status: "todo", followsFrom: [0, 0] }),
+      task({ name: "Antes", status: "todo" }),
+      task({ name: "Depois", status: "todo", followsFrom: [0, 0] }),
     ] });
 
     await ctx.worker.run("task-create", payload);
@@ -145,7 +145,7 @@ describe("passo de criar tarefas", () => {
   test("uma lista sem followsFrom nao grava sequencia", async () => {
     const ctx = setupRequest();
     const payload = await addStep(ctx, "s1", "task-create", "many");
-    ctx.gateway.outputs.set("task_create", { tasks: [event({ status: "todo" }), event({ status: "todo" })] });
+    ctx.gateway.outputs.set("task_create", { tasks: [task({ status: "todo" }), task({ status: "todo" })] });
 
     await ctx.worker.run("task-create", payload);
 
@@ -156,7 +156,7 @@ describe("passo de criar tarefas", () => {
   test("uma posicao que nao existe na lista derruba o passo, sem gravar nada", async () => {
     const ctx = setupRequest();
     const payload = await addStep(ctx, "s1", "task-create");
-    ctx.gateway.outputs.set("task_create", { tasks: [event({ status: "todo", followsFrom: [3] })] });
+    ctx.gateway.outputs.set("task_create", { tasks: [task({ status: "todo", followsFrom: [3] })] });
 
     await ctx.worker.run("task-create", payload);
 
@@ -164,10 +164,10 @@ describe("passo de criar tarefas", () => {
     expect(ctx.store.stepRecords[0]).toMatchObject({ status: "failed", errorCode: "rejected" });
   });
 
-  test("uma tarefa que se segue dele mesmo derruba o passo, sem gravar nada", async () => {
+  test("uma tarefa que se segue dela mesma derruba o passo, sem gravar nada", async () => {
     const ctx = setupRequest();
     const payload = await addStep(ctx, "s1", "task-create");
-    ctx.gateway.outputs.set("task_create", { tasks: [event({ status: "todo", followsFrom: [0] })] });
+    ctx.gateway.outputs.set("task_create", { tasks: [task({ status: "todo", followsFrom: [0] })] });
 
     await ctx.worker.run("task-create", payload);
 
@@ -179,8 +179,8 @@ describe("passo de criar tarefas", () => {
     const ctx = setupRequest();
     const payload = await addStep(ctx, "s1", "task-create", "many");
     ctx.gateway.outputs.set("task_create", { tasks: [
-      event({ name: "A", status: "todo", followsFrom: [1] }),
-      event({ name: "B", status: "todo", followsFrom: [0] }),
+      task({ name: "A", status: "todo", followsFrom: [1] }),
+      task({ name: "B", status: "todo", followsFrom: [0] }),
     ] });
 
     await ctx.worker.run("task-create", payload);
@@ -191,13 +191,13 @@ describe("passo de criar tarefas", () => {
   test("horario invalido do modelo cai no padrao em vez de derrubar o passo", async () => {
     const ctx = setupRequest();
     const payload = await addStep(ctx, "s1", "task-create");
-    ctx.gateway.outputs.set("task_create", { tasks: [event({ startedAt: "amanhã cedo", estimatedFinishAt: "x" })] });
+    ctx.gateway.outputs.set("task_create", { tasks: [task({ startedAt: "amanhã cedo", estimatedFinishAt: "x" })] });
 
     await ctx.worker.run("task-create", payload);
 
     expect(ctx.store.stepRecords[0]?.status).toBe("done");
     // Tarefa de referencia sem inicio dito comeca no instante do pedido.
-    expect(ctx.database.events[0]?.startedAt).toEqual(ctx.request.createdAt);
+    expect(ctx.database.tasks[0]?.startedAt).toEqual(ctx.request.createdAt);
   });
 });
 
@@ -264,7 +264,7 @@ describe("passo de criar series", () => {
     await ctx.worker.run("recurring-task-create", payload);
 
     expect(ctx.places.calls).toEqual([{ said: "saude emocional", near: here }]);
-    expect(ctx.database.events[0]?.location).toBe("Clínica Saúde Emocional, Rua dos Timbiras 100, Belo Horizonte");
+    expect(ctx.database.tasks[0]?.location).toBe("Clínica Saúde Emocional, Rua dos Timbiras 100, Belo Horizonte");
   });
 
   test("a serie de algo a fazer gera ocorrencias acompanhadas", async () => {
@@ -277,7 +277,7 @@ describe("passo de criar series", () => {
     await ctx.worker.run("recurring-task-create", payload);
 
     expect(ctx.recurrences.recurrences[0]?.template).toMatchObject({ name: "Pagar o aluguel", status: "todo", priority: "high" });
-    expect(ctx.database.events[0]).toMatchObject({ status: "todo", priority: "high" });
+    expect(ctx.database.tasks[0]).toMatchObject({ status: "todo", priority: "high" });
   });
 
   test("regra que contradiz o que foi dito derruba o passo", async () => {
@@ -319,7 +319,7 @@ describe("falha de passo", () => {
   test("passo ja concluido nao roda de novo, e o de um pedido cancelado nem comeca", async () => {
     const ctx = setupRequest();
     const payload = await addStep(ctx, "s1", "task-create");
-    ctx.gateway.outputs.set("task_create", { tasks: [event()] });
+    ctx.gateway.outputs.set("task_create", { tasks: [task()] });
     await ctx.worker.run("task-create", payload);
     await ctx.worker.run("task-create", payload);
     expect(ctx.batchWriter.commits).toHaveLength(1);

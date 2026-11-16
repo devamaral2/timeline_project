@@ -36,10 +36,10 @@ describe("POST /api/requests/hermes", () => {
     const { controller, startHermes } = setup();
     const sessionId = "01ARZ3NDEKTSV4RRFFQ69G5FAV";
 
-    await expect(controller.start({ userId: "owner-1", text: "  crie um evento  ", sessionId, clientMessageId: "m1" }, actor))
+    await expect(controller.start({ userId: "owner-1", text: "  crie uma tarefa  ", sessionId, clientMessageId: "m1" }, actor))
       .resolves.toBe(accepted);
 
-    expect(startHermes).toHaveBeenCalledWith({ userId: "owner-1", text: "crie um evento", sessionId, clientMessageId: "m1" }, actor);
+    expect(startHermes).toHaveBeenCalledWith({ userId: "owner-1", text: "crie uma tarefa", sessionId, clientMessageId: "m1" }, actor);
   });
 
   test.each([

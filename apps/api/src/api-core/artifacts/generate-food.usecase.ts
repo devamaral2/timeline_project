@@ -1,7 +1,7 @@
 import { calculateFoodTotals, parseFoodData, type FoodData } from "../../domain";
 import type { FoodGenerationOutcome, FoodGenerationPayload, FoodGenerationRepository } from "../../domain/ports";
-import type { FoodParsingGateway } from "../events/gateways/food-parsing.gateway";
-import { FoodTotalsService } from "../events/services/food-totals.service";
+import type { FoodParsingGateway } from "../tasks/gateways/food-parsing.gateway";
+import { FoodTotalsService } from "../tasks/services/food-totals.service";
 
 /**
  * Calcula os nutrientes de um alimento que nasceu pendente (o pedido de construcao, ADR 0013). O alimento so e

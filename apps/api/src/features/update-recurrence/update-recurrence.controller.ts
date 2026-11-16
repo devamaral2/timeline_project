@@ -1,10 +1,10 @@
 import { BadRequestException, Body, Controller, HttpCode, HttpStatus, Inject, Module, Param, Patch, UseGuards } from "@nestjs/common";
 import type { UpdateRecurrenceInput } from "@repo/contracts";
-import { EVENT_REPOSITORY, RECURRENCE_REPOSITORY } from "../../infrastructure/persistence";
-import type { EventRepository, RecurrenceRepository } from "../../domain/ports";
+import { TASK_REPOSITORY, RECURRENCE_REPOSITORY } from "../../infrastructure/persistence";
+import type { TaskRepository, RecurrenceRepository } from "../../domain/ports";
 import { ApiCoreModule } from "../../api-core/api-core.module";
 import { assertRecurrenceTemplate } from "../../api-core/http-input-validation";
-import { CreateEventUseCase } from "../../api-core/events/create-event.usecase";
+import { CreateTaskUseCase } from "../../api-core/tasks/create-task.usecase";
 import { CurrentUser } from "../../http/request-identity/current-user.decorator";
 import { GatewayIdentityGuard } from "../../http/request-identity/gateway-identity.guard";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
@@ -35,9 +35,9 @@ export class UpdateRecurrenceController {
   controllers: [UpdateRecurrenceController],
   providers: [{
     provide: UpdateRecurrenceUseCase,
-    inject: [RECURRENCE_REPOSITORY, CreateEventUseCase, EVENT_REPOSITORY],
-    useFactory: (recurrences: RecurrenceRepository, createEvent: CreateEventUseCase, events: EventRepository) =>
-      new UpdateRecurrenceUseCase(recurrences, createEvent, events),
+    inject: [RECURRENCE_REPOSITORY, CreateTaskUseCase, TASK_REPOSITORY],
+    useFactory: (recurrences: RecurrenceRepository, createTask: CreateTaskUseCase, tasks: TaskRepository) =>
+      new UpdateRecurrenceUseCase(recurrences, createTask, tasks),
   }],
 })
 export class UpdateRecurrenceModule {}

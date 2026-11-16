@@ -48,7 +48,7 @@ describe("Recurrence.create", () => {
   });
 
   test("keeps only the keys of the rule: there is no target anymore", () => {
-    const recurrence = create({ target: "event", template: { name: "x" } } as never);
+    const recurrence = create({ target: "task", template: { name: "x" } } as never);
 
     expect(recurrence.rule).toEqual(daily);
     expect(recurrence.rule).not.toHaveProperty("target");

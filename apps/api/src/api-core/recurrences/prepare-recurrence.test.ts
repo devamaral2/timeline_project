@@ -3,13 +3,13 @@ import type { CreateRecurrenceInput } from "@repo/contracts";
 import {
   Artifact,
   ArtifactOwnershipError,
-  Event,
-  EventNotFoundError,
-  EventOwnershipError,
+  Task,
+  TaskNotFoundError,
+  TaskOwnershipError,
   Recurrence,
   RecurrenceValidationError,
 } from "../../domain";
-import { createEventsKit, type EventsKitOptions } from "../events/testing/in-memory-events-kit";
+import { createTasksKit, type TasksKitOptions } from "../tasks/testing/in-memory-tasks-kit";
 import { prepareRecurrence } from "./prepare-recurrence";
 import { buildOccurrence, sampleDayOf, storedTemplateOf, todayOf } from "./recurrence-templates";
 
@@ -33,10 +33,10 @@ const zeroTotals = {
   totalFiberGrams: 0,
 };
 
-function setup(options: EventsKitOptions = {}) {
-  const kit = createEventsKit({ clock: () => now, ...options });
+function setup(options: TasksKitOptions = {}) {
+  const kit = createTasksKit({ clock: () => now, ...options });
   const prepare = (input: CreateRecurrenceInput, options?: { derivedArtifacts?: boolean }) =>
-    prepareRecurrence({ createEvent: kit.createEvent, events: kit.eventRepository }, input, actor, options);
+    prepareRecurrence({ createTask: kit.createTask, tasks: kit.taskRepository }, input, actor, options);
   return { ...kit, prepare };
 }
 
@@ -63,7 +63,7 @@ describe("prepareRecurrence", () => {
     });
     expect(artifacts).toEqual([]);
     expect(derivations).toEqual([]);
-    expect(kit.database.events).toEqual([]);
+    expect(kit.database.tasks).toEqual([]);
     expect(kit.batchWriter.commits).toEqual([]);
   });
 
@@ -156,11 +156,11 @@ describe("prepareRecurrence", () => {
     );
   });
 
-  describe("previous events", () => {
-    const parent = () => Event.create({ id: "project", userId: actor.userId, name: "Projeto", longRunning: true });
+  describe("previous tasks", () => {
+    const parent = () => Task.create({ id: "project", userId: actor.userId, name: "Projeto", longRunning: true });
 
     test("are stored in the template without repeats, and are not edited by preparing the series", async () => {
-      const kit = setup({ events: [parent()] });
+      const kit = setup({ tasks: [parent()] });
 
       const { recurrence } = await kit.prepare({
         ...daily,
@@ -168,20 +168,20 @@ describe("prepareRecurrence", () => {
       });
 
       expect(recurrence.template.previousTaskIds).toEqual(["project"]);
-      expect(kit.database.events[0]?.revision).toBe(1);
-      expect(kit.database.events[0]?.nextIds).toEqual([]);
+      expect(kit.database.tasks[0]?.revision).toBe(1);
+      expect(kit.database.tasks[0]?.nextIds).toEqual([]);
       expect(kit.database.edges).toEqual([]);
     });
 
     test("must exist and belong to the user", async () => {
-      const theirs = Event.create({ id: "theirs", userId: "someone-else", name: "Deles", status: "todo" });
-      const kit = setup({ events: [theirs] });
+      const theirs = Task.create({ id: "theirs", userId: "someone-else", name: "Deles", status: "todo" });
+      const kit = setup({ tasks: [theirs] });
 
       await expect(kit.prepare({ ...daily, template: { name: "Filha", previousTaskIds: ["missing"] } })).rejects.toThrow(
-        EventNotFoundError,
+        TaskNotFoundError,
       );
       await expect(kit.prepare({ ...daily, template: { name: "Filha", previousTaskIds: ["theirs"] } })).rejects.toThrow(
-        EventOwnershipError,
+        TaskOwnershipError,
       );
     });
   });
@@ -222,12 +222,12 @@ describe("prepareRecurrence", () => {
       await expect(kit.prepare({ ...daily, template: null as never })).rejects.toThrow(RecurrenceValidationError);
     });
 
-    test("a template that does not generate a valid event", async () => {
+    test("a template that does not generate a valid task", async () => {
       const kit = setup();
 
-      await expect(kit.prepare({ ...daily, template: {} })).rejects.toThrow("Event requires a name");
+      await expect(kit.prepare({ ...daily, template: {} })).rejects.toThrow("Task requires a name");
       await expect(kit.prepare({ ...daily, template: { name: "x", status: "queued" as never } })).rejects.toThrow(
-        "Unknown event status: queued",
+        "Unknown task status: queued",
       );
       await expect(kit.prepare({ ...daily, template: { name: "x", notifyOffsetsMinutes: [0] } })).rejects.toThrow(
         "Invalid notification offset",
@@ -238,7 +238,7 @@ describe("prepareRecurrence", () => {
       const kit = setup();
 
       await expect(kit.prepare({ ...daily, durationMinutes: 32 * 24 * 60, template: { name: "Viagem" } })).rejects.toThrow(
-        "An event longer than 31 days must be long-running",
+        "A task longer than 31 days must be long-running",
       );
     });
   });
@@ -280,10 +280,10 @@ describe("recurrence templates", () => {
   });
 
   test("storedTemplateOf ignores the legacy parent list of a template stored before the sequence", () => {
-    const legacy = series({ name: "Sessão", parentEventIds: ["p"] } as never);
+    const legacy = series({ name: "Sessão", parentTaskIds: ["p"] } as never);
 
     expect(storedTemplateOf(legacy).previousTaskIds).toEqual([]);
-    expect(storedTemplateOf(legacy)).not.toHaveProperty("parentEventIds");
+    expect(storedTemplateOf(legacy)).not.toHaveProperty("parentTaskIds");
   });
 
   test("todayOf is the civil day in the time zone of the rule", () => {
@@ -343,7 +343,7 @@ describe("recurrence templates", () => {
       expect(buildOccurrence(series(template), "2026-09-15", new Set()).artifactLinks).toEqual([]);
     });
 
-    test("the previous events are not part of the occurrence: the sequence is written with the batch", () => {
+    test("the previous tasks are not part of the occurrence: the sequence is written with the batch", () => {
       const occurrence = buildOccurrence(series(template), "2026-09-15");
 
       expect(occurrence.previousIds).toEqual([]);

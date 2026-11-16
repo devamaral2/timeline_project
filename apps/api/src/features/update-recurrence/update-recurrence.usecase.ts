@@ -1,8 +1,8 @@
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
 import { RecurrenceNotFoundError, RecurrenceOwnershipError } from "../../domain";
-import type { EventRepository, RecurrenceRepository } from "../../domain/ports";
+import type { TaskRepository, RecurrenceRepository } from "../../domain/ports";
 import type { UpdateRecurrenceInput } from "@repo/contracts";
-import type { CreateEventUseCase } from "../../api-core/events/create-event.usecase";
+import type { CreateTaskUseCase } from "../../api-core/tasks/create-task.usecase";
 import { reviseRecurrence } from "../../api-core/recurrences/revise-recurrence";
 
 /**
@@ -13,8 +13,8 @@ import { reviseRecurrence } from "../../api-core/recurrences/revise-recurrence";
 export class UpdateRecurrenceUseCase {
   constructor(
     private readonly recurrences: Pick<RecurrenceRepository, "findById" | "update">,
-    private readonly createEvent: Pick<CreateEventUseCase, "prepare">,
-    private readonly events: Pick<EventRepository, "findByIds">,
+    private readonly createTask: Pick<CreateTaskUseCase, "prepare">,
+    private readonly tasks: Pick<TaskRepository, "findByIds">,
     private readonly clock: () => Date = () => new Date(),
   ) {}
 
@@ -25,7 +25,7 @@ export class UpdateRecurrenceUseCase {
 
     const { recurrenceId: _id, expectedRevision, template, ...ruleChanges } = input;
     const { recurrence, artifacts, derivations, fromDay } = await reviseRecurrence(
-      { createEvent: this.createEvent, events: this.events },
+      { createTask: this.createTask, tasks: this.tasks },
       existing,
       { rule: ruleChanges, template },
       actor,

@@ -3,12 +3,12 @@ import { APP_INTERCEPTOR } from "@nestjs/core";
 import { ApiCoreModule } from "./api-core/api-core.module";
 import { IdempotencyInterceptor } from "./http/idempotency/idempotency.interceptor";
 import { PersistenceModule } from "./infrastructure/persistence";
-import { CreateEventModule } from "./features/create-event/create-event.module";
-import { GetEventModule } from "./features/get-event/get-event.module";
-import { ListAgendaEventsModule } from "./features/list-agenda-events/list-agenda-events.module";
-import { ListTrackedEventsModule } from "./features/list-tracked-events/list-tracked-events.module";
-import { UpdateEventModule } from "./features/update-event/update-event.controller";
-import { DeleteEventModule } from "./features/delete-event/delete-event.controller";
+import { CreateTaskModule } from "./features/create-task/create-task.module";
+import { GetTaskModule } from "./features/get-task/get-task.module";
+import { ListAgendaTasksModule } from "./features/list-agenda-tasks/list-agenda-tasks.module";
+import { ListTrackedTasksModule } from "./features/list-tracked-tasks/list-tracked-tasks.module";
+import { UpdateTaskModule } from "./features/update-task/update-task.controller";
+import { DeleteTaskModule } from "./features/delete-task/delete-task.controller";
 import { SearchPlacesModule } from "./features/search-places/search-places.controller";
 import { SuggestTagsModule } from "./features/suggest-tags/suggest-tags.controller";
 import { ListArtifactsModule } from "./features/list-artifacts/list-artifacts.controller";
@@ -39,12 +39,12 @@ import { RequestAgentFileEditModule } from "./features/request-agent-file-edit/r
     ApiCoreModule.forRoot(),
     PersistenceModule,
     // Rotas estaticas devem ser registradas antes das rotas parametrizadas.
-    ListTrackedEventsModule,
-    ListAgendaEventsModule,
-    CreateEventModule,
-    GetEventModule,
-    UpdateEventModule,
-    DeleteEventModule,
+    ListTrackedTasksModule,
+    ListAgendaTasksModule,
+    CreateTaskModule,
+    GetTaskModule,
+    UpdateTaskModule,
+    DeleteTaskModule,
     SuggestTagsModule,
     SearchPlacesModule,
     ListArtifactsModule,

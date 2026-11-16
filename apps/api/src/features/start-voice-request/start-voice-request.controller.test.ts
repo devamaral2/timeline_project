@@ -15,7 +15,7 @@ function setup() {
 }
 
 describe("POST /api/requests/voice", () => {
-  test("exige a identidade do gateway e responde 202: nao ha mais rota de voz que espera o evento", () => {
+  test("exige a identidade do gateway e responde 202: nao ha mais rota de voz que espera a tarefa", () => {
     const handler = StartVoiceRequestController.prototype.start;
     expect(Reflect.getMetadata(GUARDS_METADATA, handler)).toContain(GatewayIdentityGuard);
     expect(Reflect.getMetadata("__httpCode__", handler)).toBe(202);

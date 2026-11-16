@@ -13,10 +13,10 @@ import {
   ArtifactRevisionConflictError,
   ArtifactValidationError,
   EntityBatchConflictError,
-  EventNotFoundError,
-  EventOwnershipError,
-  EventRevisionConflictError,
-  EventValidationError,
+  TaskNotFoundError,
+  TaskOwnershipError,
+  TaskRevisionConflictError,
+  TaskValidationError,
   RecurrenceNotFoundError,
   RecurrenceOwnershipError,
   RecurrenceRevisionConflictError,
@@ -52,21 +52,21 @@ function respond(error: unknown) {
 
 const statusOf = (error: unknown) => respond(error).status;
 
-describe("event errors", () => {
-  test("maps EventValidationError to 400", () => {
-    expect(statusOf(new EventValidationError("bad input"))).toBe(400);
+describe("task errors", () => {
+  test("maps TaskValidationError to 400", () => {
+    expect(statusOf(new TaskValidationError("bad input"))).toBe(400);
   });
 
-  test("maps EventOwnershipError to 403", () => {
-    expect(statusOf(new EventOwnershipError())).toBe(403);
+  test("maps TaskOwnershipError to 403", () => {
+    expect(statusOf(new TaskOwnershipError())).toBe(403);
   });
 
-  test("maps EventNotFoundError to 404", () => {
-    expect(statusOf(new EventNotFoundError("Event not found"))).toBe(404);
+  test("maps TaskNotFoundError to 404", () => {
+    expect(statusOf(new TaskNotFoundError("Task not found"))).toBe(404);
   });
 
-  test("maps EventRevisionConflictError to 409", () => {
-    expect(statusOf(new EventRevisionConflictError("Expected revision 1 but found 2"))).toBe(409);
+  test("maps TaskRevisionConflictError to 409", () => {
+    expect(statusOf(new TaskRevisionConflictError("Expected revision 1 but found 2"))).toBe(409);
   });
 });
 
@@ -99,7 +99,7 @@ describe("recurrence errors", () => {
 
 describe("batch and agent errors", () => {
   test("maps EntityBatchConflictError to 409: something changed between preparing and writing", () => {
-    expect(statusOf(new EntityBatchConflictError("event-1 mudou antes do commit"))).toBe(409);
+    expect(statusOf(new EntityBatchConflictError("task-1 mudou antes do commit"))).toBe(409);
   });
 
   test("maps InvalidInputError to 400", () => {
@@ -126,7 +126,7 @@ describe("batch and agent errors", () => {
 describe("everything else", () => {
   test("keeps the status of a Nest HttpException", () => {
     expect(statusOf(new BadRequestException("Invalid limit"))).toBe(400);
-    expect(statusOf(new NotFoundException("Event not found"))).toBe(404);
+    expect(statusOf(new NotFoundException("Task not found"))).toBe(404);
   });
 
   test("maps unexpected errors to 500, and not to 401", () => {
@@ -142,12 +142,12 @@ describe("everything else", () => {
 
 describe("response and log", () => {
   test("answers with the message of the error", () => {
-    expect(respond(new EventOwnershipError()).body).toEqual({ error: "Only the event owner can modify it" });
+    expect(respond(new TaskOwnershipError()).body).toEqual({ error: "Only the task owner can modify it" });
     expect(respond(new ArtifactNotFoundError("Artifact not found: a1")).body).toEqual({ error: "Artifact not found: a1" });
   });
 
   test("warns about client errors and logs server errors as errors", () => {
-    expect(respond(new EventValidationError("bad input")).logged).toEqual([{ level: "warn", message: "400 — bad input" }]);
+    expect(respond(new TaskValidationError("bad input")).logged).toEqual([{ level: "warn", message: "400 — bad input" }]);
     expect(respond(new LlmUnavailableError("provedor fora do ar")).logged).toEqual([
       { level: "error", message: "provedor fora do ar" },
     ]);

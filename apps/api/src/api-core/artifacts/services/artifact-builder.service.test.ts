@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { ArtifactValidationError } from "../../../domain";
-import { InMemoryWorkoutCatalog } from "../../events/testing/in-memory-workout.catalog";
+import { InMemoryWorkoutCatalog } from "../../tasks/testing/in-memory-workout.catalog";
 import { ArtifactBuilder } from "./artifact-builder.service";
 
 const userId = "auth-user-1";

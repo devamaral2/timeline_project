@@ -16,12 +16,12 @@ import { sql } from "drizzle-orm";
 import { RECURRENCE_FREQS, sqlList } from "./sets";
 
 /**
- * A regra de uma serie de eventos. As ocorrencias vivem em `events`, apontando
+ * A regra de uma serie de tarefas. As ocorrencias vivem em `tasks`, apontando
  * para ca por `recurrence_id`; esta tabela guarda so a regra, o template que
  * cada ocorrencia copia e ate onde elas ja foram geradas.
  *
- * So evento tem serie, entao nao ha `target_kind`. O template leva o modelo do
- * evento e a lista de artefatos que cada ocorrencia usa.
+ * So tarefa tem serie, entao nao ha `target_kind`. O template leva o modelo do
+ * tarefa e a lista de artefatos que cada ocorrencia usa.
  */
 export const recurrences = pgTable(
   "recurrences",

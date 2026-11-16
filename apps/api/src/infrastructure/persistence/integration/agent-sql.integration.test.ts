@@ -6,13 +6,13 @@ import { createPostgresTestContext, type PostgresTestContext } from "../testing/
 
 const id = (prefix: string, n: number) => `${prefix}${String(n).padStart(26 - prefix.length, "0")}`;
 
-// Eventos de pessoa
+// Tarefas de pessoa
 const A_TRAINING = id("AE", 1);
 const A_DELETED = id("AE", 2);
 const A_TRACKED = id("AE", 3);
 const B_TASK = id("BE", 1);
 const B_TRACKED = id("BE", 2);
-// Eventos de agente do usuario A
+// Tarefas de agente do usuario A
 const A_REQUEST = id("AG", 1);
 const A_STEP = id("AG", 2);
 // Artefatos
@@ -74,11 +74,11 @@ describe("PostgresScopedSqlQuery", () => {
         ('${A_TRAINING}', '${A_SLEEP_DELETED}', 'uses', 1),
         -- artefato global: aparece
         ('${A_TRAINING}', '${GLOBAL_WORKOUT_ID}', 'uses', 2),
-        -- evento apagado: a relacao some, o artefato nao
+        -- tarefa apagada: a relacao some, o artefato nao
         ('${A_DELETED}', '${A_TEXT}', 'uses', 0),
-        -- cruza usuarios (evento de B, artefato de A): nao aparece para nenhum dos dois
+        -- cruza usuarios (tarefa de B, artefato de A): nao aparece para nenhum dos dois
         ('${B_TASK}', '${A_TEXT}', 'uses', 1),
-        -- evento de agente e arquivo de agente: fora do esquema logico
+        -- tarefa de agente e arquivo de agente: fora do esquema logico
         ('${A_REQUEST}', '${A_TEXT}', 'updates', NULL),
         ('${A_TRACKED}', '${A_SKILL}', 'uses', 0);
 
@@ -118,14 +118,14 @@ describe("PostgresScopedSqlQuery", () => {
     return outcome.rows;
   }
 
-  test("events mostra so os eventos vivos de pessoa do proprio usuario", async () => {
+  test("tasks mostra so as tarefas vivas de pessoa do proprio usuario", async () => {
     expect(await rows("SELECT name, kind, status FROM tasks ORDER BY name")).toEqual([
       ["Tarefa do A", "common", "todo"],
       ["Treino", "training", null],
     ]);
     expect(await rows("SELECT name FROM tasks ORDER BY name", "user-b")).toEqual([["Segredo do B"], ["Tarefa do B"]]);
     expect(await rows("SELECT name FROM tasks ORDER BY name", "user-sem-dados")).toEqual([]);
-    // Os pedidos e os passos do agente nao sao eventos para a consulta, nem os do proprio usuario.
+    // Os pedidos e os passos do agente nao sao tarefas para a consulta, nem os do proprio usuario.
     expect(await rows("SELECT count(*)::int FROM tasks WHERE kind IN ('request', 'step') OR status = 'done'")).toEqual([[0]]);
   });
 
@@ -155,7 +155,7 @@ describe("PostgresScopedSqlQuery", () => {
       [A_TRAINING, GLOBAL_WORKOUT_ID, "uses", 2],
     ]);
     expect(await rows("SELECT task_id, artifact_id FROM task_artifacts", "user-b")).toEqual([[B_TASK, B_SLEEP]]);
-    // O evento apagado esconde a relacao, nao o artefato.
+    // A tarefa apagada esconde a relacao, nao o artefato.
     expect(await rows(`SELECT name FROM artifacts WHERE id = '${A_TEXT}'`)).toEqual([["nota do A"]]);
   });
 

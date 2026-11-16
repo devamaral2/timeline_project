@@ -2,7 +2,7 @@ import { EntityBatchConflictError } from "../../domain";
 import type { EntityBatchWriter } from "../../domain/ports";
 import { jobContext } from "../../infrastructure/jobs/job-context";
 import { AgentChangeSession } from "../agent/services/agent-change-session";
-import type { CreateEventUseCase } from "../events/create-event.usecase";
+import type { CreateTaskUseCase } from "../tasks/create-task.usecase";
 import { isAccepted, type JevClient } from "./jev.client";
 import { failureExplanationOutput } from "./request-agent-schemas";
 import type { RequestAgentRunner } from "./request-agent-runner";
@@ -57,7 +57,7 @@ export class RequestFinalizer {
       jev: JevClient;
       batchWriter: EntityBatchWriter;
       repositories: StepRepositories;
-      createEvent: CreateEventUseCase;
+      createTask: CreateTaskUseCase;
       /** Explica o que falhou quando algum passo falha; sem ele, a caixa do pedido usa a linha predefinida. */
       runner?: RequestAgentRunner;
     },
@@ -148,7 +148,7 @@ export class RequestFinalizer {
     finalized: RequestEntityRecord,
   ): Promise<void> {
     const session = new AgentChangeSession(
-      request.userId, this.deps.repositories, this.deps.createEvent, () => request.createdAt,
+      request.userId, this.deps.repositories, this.deps.createTask, () => request.createdAt,
     );
     const staged = await session.linkArtifact(from.id, to.id, from.operation === "create" ? "creates" : "uses");
     if (!staged.ok) throw new Error(staged.error);

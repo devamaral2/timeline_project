@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { Artifact, Event, type FoodData, type TrainingData } from "../../domain";
+import { Artifact, Task, type FoodData, type TrainingData } from "../../domain";
 import { loadAgentDefinition } from "./request-config";
 import { TARGET_EDIT_AGENTS, type StepAgent } from "./request-steps";
 import type { EditTarget } from "./request-store";
@@ -197,12 +197,12 @@ describe("task-edit e artifact-edit com alvo (sem JEV e sem consulta)", () => {
 
   test("tarefa: so o alvo, uma chamada ao agente, mesmo que ele peca consulta", async () => {
     const ctx = setupRequest("termina as 18h");
-    const event = Event.create({ userId: "user-1", name: "Reunião", startedAt: new Date("2026-10-25T12:00:00Z") });
-    await ctx.eventRepository.save(event);
-    ctx.gateway.outputs.set("task_edit", { edits: [{ ...noTask, id: event.id, estimatedFinishAt: "2026-10-25T18:00:00-03:00" }], query: { sql: "SELECT 1" } });
-    await ctx.editWorker.run("task-edit", await stepFor(ctx, "task-edit", { entityType: "task", id: event.id, snapshot: { name: "Reunião" } }));
+    const task = Task.create({ userId: "user-1", name: "Reunião", startedAt: new Date("2026-10-25T12:00:00Z") });
+    await ctx.taskRepository.save(task);
+    ctx.gateway.outputs.set("task_edit", { edits: [{ ...noTask, id: task.id, estimatedFinishAt: "2026-10-25T18:00:00-03:00" }], query: { sql: "SELECT 1" } });
+    await ctx.editWorker.run("task-edit", await stepFor(ctx, "task-edit", { entityType: "task", id: task.id, snapshot: { name: "Reunião" } }));
     expect(ctx.store.stepRecords[0]?.status).toBe("done");
-    expect((await ctx.eventRepository.findById(event.id))?.estimatedFinishAt?.toISOString()).toBe("2026-10-25T21:00:00.000Z");
+    expect((await ctx.taskRepository.findById(task.id))?.estimatedFinishAt?.toISOString()).toBe("2026-10-25T21:00:00.000Z");
     expect(ctx.gateway.calls).toHaveLength(1);
     expect(ctx.sql.calls).toHaveLength(0);
   });

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
-import { Artifact, Event, EventNotFoundError, Recurrence, RecurrenceValidationError } from "../../domain";
-import { createEventsKit, type EventsKitOptions } from "../events/testing/in-memory-events-kit";
+import { Artifact, Task, TaskNotFoundError, Recurrence, RecurrenceValidationError } from "../../domain";
+import { createTasksKit, type TasksKitOptions } from "../tasks/testing/in-memory-tasks-kit";
 import { reviseRecurrence, type RecurrenceRevision } from "./revise-recurrence";
 
 const actor = { userId: "auth-user-1" };
@@ -37,15 +37,15 @@ function existing(overrides: { materializedThrough?: string; startsOn?: string }
   });
 }
 
-function setup(options: EventsKitOptions = {}) {
+function setup(options: TasksKitOptions = {}) {
   const seriesNote = Artifact.create({ id: "series-note", userId: actor.userId, data: { body: "alongar" } });
-  const kit = createEventsKit({ clock: () => now, ...options, artifacts: [seriesNote, ...(options.artifacts ?? [])] });
+  const kit = createTasksKit({ clock: () => now, ...options, artifacts: [seriesNote, ...(options.artifacts ?? [])] });
   const revise = (
     series: Recurrence,
     revision: RecurrenceRevision,
     at: Date = now,
     options?: { derivedArtifacts?: boolean },
-  ) => reviseRecurrence({ createEvent: kit.createEvent, events: kit.eventRepository }, series, revision, actor, at, options);
+  ) => reviseRecurrence({ createTask: kit.createTask, tasks: kit.taskRepository }, series, revision, actor, at, options);
   return { ...kit, revise };
 }
 
@@ -226,23 +226,23 @@ describe("template", () => {
     expect(artifacts).toEqual([]);
   });
 
-  test("the previous events of the new template must exist, and are stored without being edited", async () => {
-    const project = Event.create({ id: "project", userId: actor.userId, name: "Projeto", longRunning: true });
-    const kit = setup({ events: [project] });
+  test("the previous tasks of the new template must exist, and are stored without being edited", async () => {
+    const project = Task.create({ id: "project", userId: actor.userId, name: "Projeto", longRunning: true });
+    const kit = setup({ tasks: [project] });
 
     const { recurrence } = await kit.revise(existing(), { rule: {}, template: { name: "Sessão", previousTaskIds: ["project"] } });
 
     expect(recurrence.template.previousTaskIds).toEqual(["project"]);
-    expect(kit.database.events[0]?.revision).toBe(1);
+    expect(kit.database.tasks[0]?.revision).toBe(1);
     await expect(
       kit.revise(existing(), { rule: {}, template: { name: "Sessão", previousTaskIds: ["missing"] } }),
-    ).rejects.toThrow(EventNotFoundError);
+    ).rejects.toThrow(TaskNotFoundError);
   });
 
-  test("refuses a template that does not generate a valid event, or a rule that never happens with it", async () => {
+  test("refuses a template that does not generate a valid task, or a rule that never happens with it", async () => {
     const { revise } = setup();
 
-    await expect(revise(existing(), { rule: {}, template: {} })).rejects.toThrow("Event requires a name");
+    await expect(revise(existing(), { rule: {}, template: {} })).rejects.toThrow("Task requires a name");
     await expect(
       revise(existing(), { rule: { frequency: "monthly", byMonthDay: 31, startsOn: "2026-04-01", endsOn: "2026-04-30" }, template: { name: "x" } }),
     ).rejects.toThrow("The recurrence never happens");

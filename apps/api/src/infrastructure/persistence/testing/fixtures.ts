@@ -1,5 +1,5 @@
 import type { Pool } from "pg";
-import { Artifact, Event, Recurrence, type EventCreateProps, type FoodData, type RecurrenceRule } from "../../../domain";
+import { Artifact, Task, Recurrence, type TaskCreateProps, type FoodData, type RecurrenceRule } from "../../../domain";
 
 /** Os dois usuarios dos testes de integracao: o dono dos dados e um estranho. */
 export const USER = "user-1";
@@ -40,19 +40,19 @@ export function foodArtifact(userId: string, name: string, kcal: number): Artifa
   return Artifact.create({ userId, type: "food", name, data: foodData(kcal) });
 }
 
-/** Evento de referencia de pessoa: so marca um horario. */
-export function referenceEvent(userId: string, name: string, startedAt: string, props: Partial<EventCreateProps> = {}): Event {
-  return Event.create({ userId, name, startedAt: at(startedAt), ...props });
+/** Tarefa de referencia de pessoa: so marca um horario. */
+export function referenceTask(userId: string, name: string, startedAt: string, props: Partial<TaskCreateProps> = {}): Task {
+  return Task.create({ userId, name, startedAt: at(startedAt), ...props });
 }
 
-/** Evento acompanhado de pessoa: tem status, e nao precisa de horario. */
-export function trackedEvent(userId: string, name: string, props: Partial<EventCreateProps> = {}): Event {
-  return Event.create({ userId, name, status: "todo", ...props });
+/** Tarefa acompanhada de pessoa: tem status, e nao precisa de horario. */
+export function trackedTask(userId: string, name: string, props: Partial<TaskCreateProps> = {}): Task {
+  return Task.create({ userId, name, status: "todo", ...props });
 }
 
 /** Um pedido ao agente; os passos dele usam `kind: "step"`. */
-export function agentEvent(userId: string, name: string, props: Partial<EventCreateProps> = {}): Event {
-  return Event.create({
+export function agentTask(userId: string, name: string, props: Partial<TaskCreateProps> = {}): Task {
+  return Task.create({
     userId,
     name,
     actor: "agent",
@@ -72,8 +72,8 @@ export function dailyRecurrence(userId: string, startsOn: string, template: Reco
 }
 
 /** A ocorrencia de um dia da serie, as 18:00 de Sao Paulo, montada como a materializacao monta. */
-export function occurrenceOf(recurrence: Recurrence, day: string, props: Partial<EventCreateProps> = {}): Event {
-  return Event.create({
+export function occurrenceOf(recurrence: Recurrence, day: string, props: Partial<TaskCreateProps> = {}): Task {
+  return Task.create({
     userId: recurrence.userId,
     name: String(recurrence.template.name ?? "Serie"),
     startedAt: at(`${day}T21:00:00Z`),
