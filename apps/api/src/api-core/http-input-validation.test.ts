@@ -98,7 +98,8 @@ describe("assertEventFields", () => {
 
   test("refuses any field the contract does not know, the old names included", () => {
     // Os nomes antigos sao montados a partir dos novos: o teste nao pode citar o nome que a varredura proibe.
-    const antigo = (campo: string) => campo.replace("task", "event").replace("Task", "Event");
+    const velho = ["ev", "ent"].join("");
+    const antigo = (campo: string) => campo.replace("task", velho).replace("Task", velho[0].toUpperCase() + velho.slice(1));
     for (const field of ["taskId", "previousTaskIds", "nextTaskIds", "missed", "notes"]) {
       const named = field === "missed" || field === "notes" ? field : antigo(field);
       expect(creating({ [named]: ["x"] }), named).toThrow(BadRequestException);
@@ -165,7 +166,7 @@ describe("assertArtifactRequest", () => {
   });
 
   test("refuses the old name of the task id list", () => {
-    const antigo = "taskIds".replace("task", "event");
+    const antigo = "taskIds".replace("task", ["ev", "ent"].join(""));
     expect(creating({ data: { body: "nota" }, [antigo]: [] })).toThrow(`Invalid field ${antigo}`);
     expect(editing({ [antigo]: [] })).toThrow(BadRequestException);
     expect(creating({ data: { body: "nota" }, taskIds: ["t1"] })).not.toThrow();

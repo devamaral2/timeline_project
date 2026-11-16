@@ -182,8 +182,8 @@ test("o exemplo-guia: eventos e alimento criados em passos proprios, ligados na 
   const meal = view.entities.find((entity) => entity.name === "Refeição");
   const swim = view.entities.find((entity) => entity.name === "Nadar na praia");
   const food = view.entities.find((entity) => entity.kind === "artifact");
-  expect(food).toMatchObject({ artifactType: "food", operation: "create", linkedTo: [{ kind: "event", id: meal?.id }] });
-  expect(meal).toMatchObject({ kind: "event", operation: "create", linkedTo: [{ kind: "artifact", id: food?.id }] });
+  expect(food).toMatchObject({ artifactType: "food", operation: "create", linkedTo: [{ kind: "task", id: meal?.id }] });
+  expect(meal).toMatchObject({ kind: "task", operation: "create", linkedTo: [{ kind: "artifact", id: food?.id }] });
   expect(swim?.linkedTo).toEqual([]);
   expect(view.trace).toMatchObject({ route: "steps", status: "done" });
   expect(view.trace?.entries.map((entry) => entry.kind)).toEqual(["request", "routing", "agent", "agent", "answer"]);
@@ -227,7 +227,7 @@ test("edicao: o JEV escolhe o candidato, o agente muda so ele; uma continuacao a
   expect(view).toMatchObject({
     status: "done", sessionId: first,
     steps: [{ agent: "event-edit", status: "done" }],
-    entities: [{ kind: "event", id: meeting?.id, name: "Reunião", operation: "update" }],
+    entities: [{ kind: "task", id: meeting?.id, name: "Reunião", operation: "update" }],
   });
   expect((await operations.view(first, actor)).sessionId).toBeUndefined();
   expect(await events.findById(meeting?.id as string)).toMatchObject({ estimatedFinishAt: new Date(iso(14)), revision: 2 });
@@ -273,7 +273,7 @@ test("`fallback:` roda em laco: o que os especialistas fizeram volta na rodada s
   expect(view.steps.map((step) => [step.agent, step.status])).toEqual([
     ["fallback", "done"], ["event-create", "done"], ["fallback", "done"],
   ]);
-  expect(view.entities).toMatchObject([{ kind: "event", name: "Almoço", operation: "create" }]);
+  expect(view.entities).toMatchObject([{ kind: "task", name: "Almoço", operation: "create" }]);
   const second = gateway.calls.filter((call) => call.schemaName === "fallback_loop")[1]?.user ?? "";
   expect(second).toContain("Rodada: 2 de 4");
   expect(second).toContain('"records":[{"kind":"event","operation":"create","name":"Almoço"');
@@ -343,7 +343,7 @@ test("voz: o pedido gera o evento de pessoa; reenviar a mesma fala nao cria outr
   const view = await operations.view(requestId, actor);
   expect(view).toMatchObject({
     route: "voice", status: "done", text: "comecei a estudar", steps: [],
-    entities: [{ kind: "event", name: "Estudar", operation: "create" }],
+    entities: [{ kind: "task", name: "Estudar", operation: "create" }],
   });
   expect(view.trace).toBeUndefined();
   const created = await events.findById(view.entities[0]?.id as string);

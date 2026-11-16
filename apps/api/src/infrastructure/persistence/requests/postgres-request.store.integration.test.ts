@@ -232,7 +232,7 @@ describe("PostgresRequestStore", () => {
     const record = await store.find(requestId);
     if (!record) throw new Error("request not found");
     expect(toRequestDto(record, await store.steps(requestId), after).entities.find((entity) => entity.id === meal.id))
-      .toMatchObject({ kind: "event", operation: "create", linkedTo: [{ kind: "artifact", id: food.id }] });
+      .toMatchObject({ kind: "task", operation: "create", linkedTo: [{ kind: "artifact", id: food.id }] });
   });
 
   test("se o passo ja nao esta aberto, as entidades do lote nao sao gravadas", async () => {

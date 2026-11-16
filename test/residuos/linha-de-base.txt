@@ -593,7 +593,6 @@ apps/api/src/api-core/events/create-event.usecase.test.ts	expect((await kit.even
 apps/api/src/api-core/events/create-event.usecase.test.ts	expect((await kit.eventRepository.findById("after-1"))?.previousIds).toEqual([taskId]);
 apps/api/src/api-core/events/create-event.usecase.test.ts	test("the sequence travels in the batch and no other event is revised", async () => {
 apps/api/src/api-core/events/create-event.usecase.test.ts	events: [humanEvent("before-1"), humanEvent("before-2", { status: "doing" }), humanEvent("after-1")],
-apps/api/src/api-core/events/create-event.usecase.test.ts	expect(batch?.events.map((change) => change.op)).toEqual(["create"]);
 apps/api/src/api-core/events/create-event.usecase.test.ts	expect((await kit.eventRepository.findById(id))?.revision).toBe(1);
 apps/api/src/api-core/events/create-event.usecase.test.ts	expect((await kit.eventRepository.findById(taskId))?.revision).toBe(1);
 apps/api/src/api-core/events/create-event.usecase.test.ts	test("a new event without lists has an empty sequence", async () => {
@@ -626,7 +625,7 @@ apps/api/src/api-core/events/create-event.usecase.test.ts	const kit = setup({ ev
 apps/api/src/api-core/events/create-event.usecase.test.ts	expect(kit.database.events).toHaveLength(1);
 apps/api/src/api-core/events/create-event.usecase.test.ts	test("the batch creates the artifacts and the event and carries the sequence, with no other event touched", async () => {
 apps/api/src/api-core/events/create-event.usecase.test.ts	const kit = setup({ events: [humanEvent("before-1"), humanEvent("after-1")], artifacts: [original] });
-apps/api/src/api-core/events/create-event.usecase.test.ts	expect(batch.events).toEqual([{ op: "create", entity: prepared.event }]);
+apps/api/src/api-core/events/create-event.usecase.test.ts	expect(batch.tasks).toEqual([{ op: "create", entity: prepared.event }]);
 apps/api/src/api-core/events/create-event.usecase.test.ts	{ op: "add", fromId: "before-1", toId: prepared.event.id },
 apps/api/src/api-core/events/create-event.usecase.test.ts	{ op: "add", fromId: prepared.event.id, toId: "after-1" },
 apps/api/src/api-core/events/create-event.usecase.test.ts	test("buildArtifact builds what the event creation would, owned by the actor", async () => {
@@ -662,7 +661,7 @@ apps/api/src/api-core/events/create-event.usecase.ts	/** O tipo do artefato que 
 apps/api/src/api-core/events/create-event.usecase.ts	const KIND_BY_ARTIFACT_TYPE: Readonly<Record<string, HumanEventKind>> = {
 apps/api/src/api-core/events/create-event.usecase.ts	export function toEntityBatch(prepared: PreparedEvent): EntityBatch {
 apps/api/src/api-core/events/create-event.usecase.ts	userId: prepared.event.userId,
-apps/api/src/api-core/events/create-event.usecase.ts	events: [{ op: "create", entity: prepared.event }],
+apps/api/src/api-core/events/create-event.usecase.ts	tasks: [{ op: "create", entity: prepared.event }],
 apps/api/src/api-core/events/create-event.usecase.ts	export class CreateEventUseCase {
 apps/api/src/api-core/events/create-event.usecase.ts	private readonly eventRepository: Pick<EventRepository, "findByIds">,
 apps/api/src/api-core/events/create-event.usecase.ts	schedule?: ResolvedEventSchedule,
@@ -935,7 +934,7 @@ apps/api/src/api-core/events/services/event-update-merger.service.test.ts	test("
 apps/api/src/api-core/events/services/event-update-merger.service.test.ts	const parent = Event.create({ id: "parent", userId, name: "Projeto", status: "todo" });
 apps/api/src/api-core/events/services/event-update-merger.service.test.ts	events: [parent],
 apps/api/src/api-core/events/services/event-update-merger.service.test.ts	const merged = await kit.merge("event-1", {
-apps/api/src/api-core/events/services/event-update-merger.service.test.ts	expect(batch.events).toEqual([{ op: "update", entity: merged.event, expectedRevision: 1 }]);
+apps/api/src/api-core/events/services/event-update-merger.service.test.ts	expect(batch.tasks).toEqual([{ op: "update", entity: merged.event, expectedRevision: 1 }]);
 apps/api/src/api-core/events/services/event-update-merger.service.test.ts	expect(batch.sequence).toEqual([{ op: "add", fromId: "parent", toId: "event-1" }]);
 apps/api/src/api-core/events/services/event-update-merger.service.ts	[nome de arquivo]
 apps/api/src/api-core/events/services/event-update-merger.service.ts	EventValidationError,
@@ -952,7 +951,7 @@ apps/api/src/api-core/events/services/event-update-merger.service.ts	eventReposi
 apps/api/src/api-core/events/services/event-update-merger.service.ts	if (Number.isNaN(instant.getTime())) throw new EventValidationError("Invalid date");
 apps/api/src/api-core/events/services/event-update-merger.service.ts	export function toUpdateBatch(merged: MergedEventUpdate, expectedRevision: number): EntityBatch {
 apps/api/src/api-core/events/services/event-update-merger.service.ts	userId: merged.event.userId,
-apps/api/src/api-core/events/services/event-update-merger.service.ts	events: [{ op: "update", entity: merged.event, expectedRevision }],
+apps/api/src/api-core/events/services/event-update-merger.service.ts	tasks: [{ op: "update", entity: merged.event, expectedRevision }],
 apps/api/src/api-core/events/services/event-update-merger.service.ts	export async function mergeEventUpdate(
 apps/api/src/api-core/events/services/event-update-merger.service.ts	existingEvent: Event,
 apps/api/src/api-core/events/services/event-update-merger.service.ts	deps: EventUpdateDeps,
@@ -1009,9 +1008,9 @@ apps/api/src/api-core/events/testing/event-fixtures.ts	fixtures.map((fixture) =>
 apps/api/src/api-core/events/testing/in-memory-entity-batch-writer.ts	EventRepository,
 apps/api/src/api-core/events/testing/in-memory-entity-batch-writer.ts	events: EventRepository;
 apps/api/src/api-core/events/testing/in-memory-entity-batch-writer.ts	/** O banco em memoria, onde a sequencia entre eventos fica registrada. */
-apps/api/src/api-core/events/testing/in-memory-entity-batch-writer.ts	await this.check(this.repositories.events, batch.userId, batch.events);
+apps/api/src/api-core/events/testing/in-memory-entity-batch-writer.ts	await this.check(this.repositories.events, batch.userId, batch.tasks);
 apps/api/src/api-core/events/testing/in-memory-entity-batch-writer.ts	// Artefatos primeiro: as relacoes de um evento apontam para eles.
-apps/api/src/api-core/events/testing/in-memory-entity-batch-writer.ts	await this.apply(this.repositories.events, batch.userId, batch.events);
+apps/api/src/api-core/events/testing/in-memory-entity-batch-writer.ts	await this.apply(this.repositories.events, batch.userId, batch.tasks);
 apps/api/src/api-core/events/testing/in-memory-event-card.query.ts	[nome de arquivo]
 apps/api/src/api-core/events/testing/in-memory-event-card.query.ts	import { MAX_EVENT_BLOCK_DAYS, type Event, type Recurrence } from "../../../domain";
 apps/api/src/api-core/events/testing/in-memory-event-card.query.ts	EventCard,
@@ -1164,9 +1163,7 @@ apps/api/src/api-core/http-input-validation.test.ts	describe("assertEventFields"
 apps/api/src/api-core/http-input-validation.test.ts	const creating = (body: Record<string, unknown>) => () => assertEventFields(body, false);
 apps/api/src/api-core/http-input-validation.test.ts	const editing = (body: Record<string, unknown>) => () => assertEventFields(body, true);
 apps/api/src/api-core/http-input-validation.test.ts	test("only accepts the kinds and statuses of a human event", () => {
-apps/api/src/api-core/http-input-validation.test.ts	const antigo = (campo: string) => campo.replace("task", "event").replace("Task", "Event");
 apps/api/src/api-core/http-input-validation.test.ts	const cursor = encodeAgendaCursor({ startedAt: new Date("2026-08-17T15:00:00.000Z"), id: "event-1" });
-apps/api/src/api-core/http-input-validation.test.ts	const antigo = "taskIds".replace("task", "event");
 apps/api/src/api-core/http-input-validation.ts	* O que a rota de eventos confere antes do dominio: a forma do corpo. As
 apps/api/src/api-core/http-input-validation.ts	* regras (o que cada executor aceita, evento longo, janela) sao do dominio. Na
 apps/api/src/api-core/http-input-validation.ts	export function assertEventFields(body: Record<string, unknown>, editing: boolean): void {
@@ -1395,10 +1392,7 @@ apps/api/src/common/domain-exception.filter.ts	if (exception instanceof EventRev
 apps/api/src/domain/agent/ports/entity-batch-writer.ts	import type { Event } from "../../events/entities/event.entity";
 apps/api/src/domain/agent/ports/entity-batch-writer.ts	* Uma aresta da sequencia entre eventos: `fromId` vem antes de `toId` (o
 apps/api/src/domain/agent/ports/entity-batch-writer.ts	* segundo "segue-se de" o primeiro). Nenhum dos dois eventos e revisado.
-apps/api/src/domain/agent/ports/entity-batch-writer.ts	events: StagedChange<Event>[];
-apps/api/src/domain/agent/ports/entity-batch-writer.ts	/** Entram antes dos eventos: as relacoes de um evento apontam para eles. */
-apps/api/src/domain/agent/ports/entity-batch-writer.ts	* A sequencia entre eventos. Entra depois de todos os eventos do lote, para
-apps/api/src/domain/agent/ports/entity-batch-writer.ts	* que uma ponta possa ser um evento novo do mesmo lote.
+apps/api/src/domain/agent/ports/entity-batch-writer.ts	tasks: StagedChange<Event>[];
 apps/api/src/domain/agent/ports/scoped-sql-query.ts	* o usuario), nunca o texto da query. So os eventos de pessoa e os artefatos
 apps/api/src/domain/artifacts/entities/artifact.entity.test.ts	describe("Artifact.copyForEvent", () => {
 apps/api/src/domain/artifacts/entities/artifact.entity.test.ts	const copy = original.copyForEvent("user-1", "  2 colheres ");
@@ -1834,7 +1828,6 @@ apps/api/src/features/create-artifact/create-artifact.usecase.test.ts	const kit 
 apps/api/src/features/create-artifact/create-artifact.usecase.test.ts	const useCase = new CreateArtifactUseCase(kit.artifactBuilder, kit.eventRepository, kit.batchWriter, () => now);
 apps/api/src/features/create-artifact/create-artifact.usecase.test.ts	function event(id: string, overrides: Partial<Parameters<typeof Event.create>[0]> = {}): Event {
 apps/api/src/features/create-artifact/create-artifact.usecase.test.ts	return Event.create({ id, userId: actor.userId, name: id, startedAt: now, ...overrides });
-apps/api/src/features/create-artifact/create-artifact.usecase.test.ts	expect(batchWriter.commits[0]?.events).toEqual([]);
 apps/api/src/features/create-artifact/create-artifact.usecase.test.ts	test("the artifact is born appearing in the events asked, created by them, in the same batch", async () => {
 apps/api/src/features/create-artifact/create-artifact.usecase.test.ts	const { useCase, eventRepository, batchWriter } = setup({
 apps/api/src/features/create-artifact/create-artifact.usecase.test.ts	events: [event("e1", { artifactLinks: [other] }), event("e2"), event("untouched")],
@@ -1856,7 +1849,7 @@ apps/api/src/features/create-artifact/create-artifact.usecase.ts	private readonl
 apps/api/src/features/create-artifact/create-artifact.usecase.ts	* O artefato e os eventos em que ele ja nasce aparecendo entram numa
 apps/api/src/features/create-artifact/create-artifact.usecase.ts	// O evento em que o artefato nasce e o que o cria.
 apps/api/src/features/create-artifact/create-artifact.usecase.ts	const events = await planArtifactLinks(artifact.id, [], uniqueIds(taskIds), this.eventRepository, actor.userId, "creates");
-apps/api/src/features/create-artifact/create-artifact.usecase.ts	await this.batchWriter.commit({ userId: actor.userId, events, artifacts: [{ op: "create", entity: artifact }] });
+apps/api/src/features/create-artifact/create-artifact.usecase.ts	await this.batchWriter.commit({ userId: actor.userId, tasks: events, artifacts: [{ op: "create", entity: artifact }] });
 apps/api/src/features/create-event/	[nome de pasta]
 apps/api/src/features/create-event/create-event.controller.ts	[nome de arquivo]
 apps/api/src/features/create-event/create-event.controller.ts	import { CreateEventUseCase } from "../../api-core/events/create-event.usecase";
@@ -2374,7 +2367,7 @@ apps/api/src/features/update-artifact/update-artifact.usecase.ts	// So os evento
 apps/api/src/features/update-artifact/update-artifact.usecase.ts	const current = links.filter((link) => link.actor === "human").map((link) => link.eventId);
 apps/api/src/features/update-artifact/update-artifact.usecase.ts	const events = await planArtifactLinks(existing.id, current, desired, this.eventRepository, actor.userId);
 apps/api/src/features/update-artifact/update-artifact.usecase.ts	if (!revised && events.length === 0) return;
-apps/api/src/features/update-artifact/update-artifact.usecase.ts	events,
+apps/api/src/features/update-artifact/update-artifact.usecase.ts	tasks: events,
 apps/api/src/features/update-event/	[nome de pasta]
 apps/api/src/features/update-event/update-event.controller.ts	[nome de arquivo]
 apps/api/src/features/update-event/update-event.controller.ts	import { ARTIFACT_REPOSITORY, ENTITY_BATCH_WRITER, EVENT_REPOSITORY } from "../../infrastructure/persistence";
@@ -2424,7 +2417,6 @@ apps/api/src/features/update-event/update-event.usecase.test.ts	const after = Ev
 apps/api/src/features/update-event/update-event.usecase.test.ts	const { useCase, eventRepository, batchWriter, database } = setup({ events: [meeting(), oldBefore, newBefore, after] });
 apps/api/src/features/update-event/update-event.usecase.test.ts	database.edges.push({ fromId: "old", toId: "event-1" });
 apps/api/src/features/update-event/update-event.usecase.test.ts	await useCase.execute({ taskId: "event-1", expectedRevision: 1, previousTaskIds: ["new"], nextTaskIds: ["after"] }, actor);
-apps/api/src/features/update-event/update-event.usecase.test.ts	expect(batchWriter.commits[0]?.events.map((change) => change.op)).toEqual(["update"]);
 apps/api/src/features/update-event/update-event.usecase.test.ts	{ op: "add", fromId: "new", toId: "event-1" },
 apps/api/src/features/update-event/update-event.usecase.test.ts	{ op: "remove", fromId: "old", toId: "event-1" },
 apps/api/src/features/update-event/update-event.usecase.test.ts	{ op: "add", fromId: "event-1", toId: "after" },
@@ -2566,17 +2558,14 @@ apps/api/src/infrastructure/persistence/agent-batch/postgres-entity-batch-writer
 apps/api/src/infrastructure/persistence/agent-batch/postgres-entity-batch-writer.ts	softDeleteEvent,
 apps/api/src/infrastructure/persistence/agent-batch/postgres-entity-batch-writer.ts	updateEventAggregate,
 apps/api/src/infrastructure/persistence/agent-batch/postgres-entity-batch-writer.ts	} from "../events/repositories/postgres-event.repository";
-apps/api/src/infrastructure/persistence/agent-batch/postgres-entity-batch-writer.ts	await lockTargets(tx, "tasks", batch.userId, batch.events);
 apps/api/src/infrastructure/persistence/agent-batch/postgres-entity-batch-writer.ts	// Artefatos primeiro: as relacoes de um evento apontam para eles.
-apps/api/src/infrastructure/persistence/agent-batch/postgres-entity-batch-writer.ts	for (const event of created(batch.events)) {
+apps/api/src/infrastructure/persistence/agent-batch/postgres-entity-batch-writer.ts	for (const event of created(batch.tasks)) {
 apps/api/src/infrastructure/persistence/agent-batch/postgres-entity-batch-writer.ts	if (!(await insertEventAggregate(tx, event))) {
 apps/api/src/infrastructure/persistence/agent-batch/postgres-entity-batch-writer.ts	throw new EntityBatchConflictError(`Evento ${event.id} já existe`);
-apps/api/src/infrastructure/persistence/agent-batch/postgres-entity-batch-writer.ts	for (const change of batch.events) {
 apps/api/src/infrastructure/persistence/agent-batch/postgres-entity-batch-writer.ts	await updateEventAggregate(tx, change.entity, batch.userId, change.expectedRevision);
 apps/api/src/infrastructure/persistence/agent-batch/postgres-entity-batch-writer.ts	// Depois de todos os eventos: uma ponta da sequencia pode ser um evento novo do lote.
 apps/api/src/infrastructure/persistence/agent-batch/postgres-entity-batch-writer.ts	if (error instanceof EventValidationError && /not found/.test(error.message)) {
 apps/api/src/infrastructure/persistence/agent-batch/postgres-entity-batch-writer.ts	// O artefato apagado continua ligado ao evento (soft delete); a leitura o esconde.
-apps/api/src/infrastructure/persistence/agent-batch/postgres-entity-batch-writer.ts	for (const change of batch.events) {
 apps/api/src/infrastructure/persistence/agent-batch/postgres-entity-batch-writer.ts	if (change.op === "delete") await softDeleteEvent(tx, change.id, batch.userId);
 apps/api/src/infrastructure/persistence/artifacts/queries/postgres-artifact-event-link.query.ts	[nome de arquivo]
 apps/api/src/infrastructure/persistence/artifacts/queries/postgres-artifact-event-link.query.ts	import type { Actor, EventArtifactRelationKind, EventKind } from "../../../../domain";
@@ -2919,7 +2908,6 @@ apps/api/src/infrastructure/persistence/integration/entity-batch.integration.tes
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	import { insertAgentEvent } from "../requests/request-rows";
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	agentEvent,
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	trackedEvent,
-apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	const batchOf = (overrides: Partial<EntityBatch>): EntityBatch => ({ userId: USER, events: [], artifacts: [], ...overrides });
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	let events: PostgresEventRepository;
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	events = new PostgresEventRepository(ctx.db);
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	async function saved(event: Event): Promise<Event> {
@@ -2929,13 +2917,12 @@ apps/api/src/infrastructure/persistence/integration/entity-batch.integration.tes
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	test("grava os artefatos novos, os eventos novos e a edicao do evento de origem", async () => {
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	const origin = await saved(trackedEvent(USER, "Planejar a semana"));
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	const created = trackedEvent(USER, "Fazer as compras", { artifactLinks: [link(note.id, "creates"), link(existing.id)] });
-apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	events: [
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	expect(await events.findById(origin.id)).toMatchObject({ name: "Semana planejada", revision: 2, nextIds: [created.id] });
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	expect(await events.findById(created.id)).toMatchObject({ previousIds: [origin.id], revision: 1 });
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	expect((await events.findById(created.id))?.artifactLinks).toEqual([link(note.id, "creates"), link(existing.id)]);
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	test("apaga eventos e artefatos na revisao esperada, sem tirar a linha", async () => {
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	const event = await saved(trackedEvent(USER, "Sai"));
-apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	events: [{ op: "delete", id: event.id, expectedRevision: 1 }],
+apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	tasks: [{ op: "delete", id: event.id, expectedRevision: 1 }],
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	expect(await events.findById(event.id)).toBeNull();
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	const mine = await saved(trackedEvent(USER, "Meu"));
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	const edited = await saved(trackedEvent(USER, "Editado por outra requisicao"));
@@ -2943,21 +2930,18 @@ apps/api/src/infrastructure/persistence/integration/entity-batch.integration.tes
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	const foreign = await saved(trackedEvent(OTHER_USER, "Do outro"));
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	const removed = await saved(trackedEvent(USER, "Apagado"));
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	await events.delete(removed.id, USER);
-apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	["evento desatualizado", { events: [{ op: "update", entity: edited.revise({ name: "Atrasado" }), expectedRevision: 1 }] }],
-apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	["evento desatualizado, ao apagar", { events: [{ op: "delete", id: edited.id, expectedRevision: 1 }] }],
-apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	["evento de outro usuario", { events: [{ op: "update", entity: foreign.revise({ name: "Invadido" }), expectedRevision: 1 }] }],
-apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	["evento de outro usuario, ao apagar", { events: [{ op: "delete", id: foreign.id, expectedRevision: 1 }] }],
-apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	["evento apagado", { events: [{ op: "update", entity: removed.revise({ name: "Voltou" }), expectedRevision: 1 }] }],
+apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	["evento desatualizado", { tasks: [{ op: "update", entity: edited.revise({ name: "Atrasado" }), expectedRevision: 1 }] }],
+apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	["evento desatualizado, ao apagar", { tasks: [{ op: "delete", id: edited.id, expectedRevision: 1 }] }],
+apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	["evento de outro usuario", { tasks: [{ op: "update", entity: foreign.revise({ name: "Invadido" }), expectedRevision: 1 }] }],
+apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	["evento de outro usuario, ao apagar", { tasks: [{ op: "delete", id: foreign.id, expectedRevision: 1 }] }],
+apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	["evento apagado", { tasks: [{ op: "update", entity: removed.revise({ name: "Voltou" }), expectedRevision: 1 }] }],
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	const created = trackedEvent(USER, "Nasceria com o lote", { artifactLinks: [link(note.id, "creates")] });
-apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	events: [
-apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	...(conflict.events ?? []),
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	expect(await events.findById(created.id), what).toBeNull();
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	expect(await events.findById(mine.id), what).toMatchObject({ name: "Meu", revision: 1 });
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	expect(await events.findById(foreign.id)).toMatchObject({ name: "Do outro", revision: 1 });
-apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	events: [{ op: "create", entity: trackedEvent(USER, "Novo", { artifactLinks: [link(removed.id)] }) }],
+apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	tasks: [{ op: "create", entity: trackedEvent(USER, "Novo", { artifactLinks: [link(removed.id)] }) }],
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	const copy = original.copyForEvent(USER, "2 fatias");
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	const meal = trackedEvent(USER, "Jantar", { kind: "meal", artifactLinks: [link(copy.id)] });
-apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	events: [{ op: "create", entity: meal }],
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	// A copia e do evento: nao aparece na lista de artefatos do usuario.
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	describe("sequencia entre eventos", () => {
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	test("add grava a aresta precedes, lida nos dois lados, sem revisar nenhum dos eventos", async () => {
@@ -2977,7 +2961,6 @@ apps/api/src/infrastructure/persistence/integration/entity-batch.integration.tes
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	const existing = await saved(trackedEvent(USER, "Ja existe"));
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	const fresh = trackedEvent(USER, "Nasce com o lote");
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	const freshToo = trackedEvent(USER, "Tambem nasce");
-apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	events: [fresh, freshToo].map((entity) => ({ op: "create" as const, entity })),
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	expect(await events.findById(fresh.id)).toMatchObject({ previousIds: [existing.id], nextIds: [freshToo.id] });
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	expect((await events.findById(existing.id))?.nextIds).toEqual([fresh.id]);
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	test("uma ponta pode ser evento de agente", async () => {
@@ -2988,7 +2971,6 @@ apps/api/src/infrastructure/persistence/integration/entity-batch.integration.tes
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	test("a sequencia nao revisa o evento editado no mesmo lote alem da propria edicao", async () => {
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	const a = await saved(trackedEvent(USER, "A"));
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	const b = await saved(trackedEvent(USER, "B"));
-apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	events: [{ op: "update", entity: a.revise({ name: "A editado" }), expectedRevision: 1 }],
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	expect(await events.findById(a.id)).toMatchObject({ name: "A editado", revision: 2, nextIds: [b.id] });
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	expect((await events.findById(b.id))?.revision).toBe(1);
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	test("ciclo direto, por um terceiro ou do evento consigo mesmo recusa o lote", async () => {
@@ -2996,42 +2978,32 @@ apps/api/src/infrastructure/persistence/integration/entity-batch.integration.tes
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	).rejects.toThrow(/Events cannot follow each other in a cycle/);
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	test("eventos novos que fecham ciclo entre si recusam o lote inteiro", async () => {
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	const [a, b] = [trackedEvent(USER, "A", { id: ulid() }), trackedEvent(USER, "B", { id: ulid() })];
-apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	events: [a, b].map((entity) => ({ op: "create" as const, entity })),
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	).rejects.toThrow(EventValidationError);
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	const mine = await saved(trackedEvent(USER, "Meu"));
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	const foreign = await saved(trackedEvent(OTHER_USER, "Do outro"));
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	const removed = await saved(trackedEvent(USER, "Apagado"));
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	await events.delete(removed.id, USER);
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	const created = trackedEvent(USER, "Nasceria com o lote");
-apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	events: [{ op: "create", entity: created }],
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	expect(await events.findById(created.id), what).toBeNull();
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	test("o evento apagado no lote some das listas, mas a aresta continua no banco", async () => {
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	const a = await saved(trackedEvent(USER, "A"));
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	const b = await saved(trackedEvent(USER, "B"));
-apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	await writer.commit(batchOf({ events: [{ op: "delete", id: a.id, expectedRevision: 1 }] }));
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	expect((await events.findById(b.id))?.previousIds).toEqual([]);
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	const created = trackedEvent(USER, "Criado pelo passo");
-apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	events: [{ op: "create", entity: created }],
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	await insertAgentEvent(tx, { id: stepId, userId: USER, kind: "step", status: "done", name: "Passo", data: {} });
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	await tx.insert(schema.eventEventRelation).values({ fromEventId: stepId, toEventId: created.id, relation: "generates" });
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	const origin = await saved(trackedEvent(USER, "Origem"));
-apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	events: [
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	{ op: "create", entity: trackedEvent(USER, "Nasceria com o lote") },
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	expect(await events.findById(origin.id)).not.toBeNull();
-apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	await writer.commit(batchOf({ recurrences: [recurrence], events: [{ op: "create", entity: first }] }));
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	expect((await events.findById(first.id))?.occurrence).toEqual({
-apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	events: [occurrenceOf(recurrence, DAYS[0]), occurrenceOf(recurrence, DAYS[0])].map((entity) => ({
-apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	events: [{ op: "create", entity: replacement }],
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	expect(await occurrenceIds()).toEqual(occurrences.map((event) => event.id));
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	expect(await occurrenceIds()).toEqual(occurrences.map((event) => event.id));
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	expect((await events.findById(occurrences[0].id))?.occurrence).toBeUndefined();
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	const created = trackedEvent(USER, "Criado pelo job");
-apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	await jobContext.run(current, () => writer.commit(batchOf({ events: [{ op: "create", entity: created }] })));
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	expect(await events.findById(created.id)).not.toBeNull();
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	const origin = await saved(trackedEvent(USER, "Origem"));
-apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	events: [{ op: "update", entity: origin.revise({ name: "Nao deveria mudar" }), expectedRevision: 1 }],
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	expect(await events.findById(origin.id), loss).toMatchObject({ name: "Origem", revision: 1 });
-apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	await writer.commit(batchOf({ events: [{ op: "create", entity: trackedEvent(USER, "Sem job") }] }));
+apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	await writer.commit(batchOf({ tasks: [{ op: "create", entity: trackedEvent(USER, "Sem job") }] }));
 apps/api/src/infrastructure/persistence/integration/event-cards.integration.test.ts	[nome de arquivo]
 apps/api/src/infrastructure/persistence/integration/event-cards.integration.test.ts	import { Artifact, Event, type ArtifactLink, type EventCreateProps } from "../../../domain";
 apps/api/src/infrastructure/persistence/integration/event-cards.integration.test.ts	import type { AgendaQueryParams, EventCard, TrackedQueryParams } from "../../../domain/ports";
@@ -3077,7 +3049,6 @@ apps/api/src/infrastructure/persistence/integration/event-cards.integration.test
 apps/api/src/infrastructure/persistence/integration/event-cards.integration.test.ts	await events.delete(second.id, USER);
 apps/api/src/infrastructure/persistence/integration/event-cards.integration.test.ts	await events.update(third.revise({ name: "So neste dia" }), USER, 1);
 apps/api/src/infrastructure/persistence/integration/event-cards.integration.test.ts	test("o evento do cartao traz previousIds e nextIds, sem os eventos apagados", async () => {
-apps/api/src/infrastructure/persistence/integration/event-cards.integration.test.ts	events: [],
 apps/api/src/infrastructure/persistence/integration/event-cards.integration.test.ts	await events.delete(removed.id, USER);
 apps/api/src/infrastructure/persistence/integration/event-cards.integration.test.ts	await events.delete(removedNext.id, USER);
 apps/api/src/infrastructure/persistence/integration/event-cards.integration.test.ts	expect(found.find((card) => card.event.id === middle.id)?.event).toMatchObject({
@@ -3111,7 +3082,6 @@ apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	e
 apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	async function saved(event: Event): Promise<Event> {
 apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	await events.save(event);
 apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	return event;
-apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	events: [],
 apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	async function found(eventId: string): Promise<Event> {
 apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	const event = await events.findById(eventId);
 apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	if (!event) throw new Error(`Evento ${eventId} nao foi encontrado`);
@@ -3391,10 +3361,7 @@ apps/api/src/infrastructure/persistence/requests/postgres-request.store.integrat
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	{ id: createStep, agent: "event-create", expected: "one" }, { id: editStep, agent: "artifact-edit", expected: "one" },
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	const meal = Event.create({ userId: USER, kind: "meal", name: "Almoço", startedAt: new Date("2026-10-25T15:00:00Z") });
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	const gone = Event.create({ userId: USER, name: "Sumiu", startedAt: new Date("2026-10-25T10:00:00Z") });
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	await writer.commit({ userId: USER, events: [{ op: "create", entity: gone }], artifacts: [{ op: "create", entity: old }] });
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	events: [{ op: "create", entity: meal }, { op: "delete", id: gone.id, expectedRevision: 1 }],
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	{ kind: "event", id: meal.id, operation: "create" }, { kind: "event", id: gone.id, operation: "delete" },
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	userId: USER, events: [],
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	// O evento tambem aponta para o pedido que o criou ou o apagou, alem do passo.
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	// O detalhe do evento le o pedido, nunca o passo.
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	expect(await new PostgresEventRequestLinkQuery(ctx.db).linksOf(meal.id))
@@ -3408,7 +3375,7 @@ apps/api/src/infrastructure/persistence/requests/postgres-request.store.integrat
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	.toMatchObject({ kind: "event", operation: "create", linkedTo: [{ kind: "artifact", id: food.id }] });
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	await store.beginSteps(requestId, [{ id: stepId, agent: "event-create", expected: "one" }]);
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	const event = Event.create({ userId: USER, name: "Almoço", startedAt: new Date() });
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	userId: USER, events: [{ op: "create", entity: event }], artifacts: [],
+apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	userId: USER, tasks: [{ op: "create", entity: event }], artifacts: [],
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	afterWrite: (tx) => store.recordStepSuccess(tx, { requestId, stepId, entities: [{ kind: "event", id: event.id, operation: "create" }], timings: {} }),
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	expect(await rows("SELECT id FROM tasks WHERE id = $1", [event.id])).toEqual([]);
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	await store.beginSteps(requestId, [{ id: stepId, agent: "event-create", expected: "one" }]);
@@ -3422,22 +3389,20 @@ apps/api/src/infrastructure/persistence/requests/postgres-request.store.integrat
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	test("a voz: o pedido gera o evento de pessoa e termina na transacao dele", async () => {
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	const { requestId } = await start("comecei a estudar", { route: "voice", job: "voice-event" });
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	const event = Event.create({ userId: USER, name: "Estudar", startedAt: new Date("2026-10-25T15:00:00Z") });
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	userId: USER, events: [{ op: "create", entity: event }], artifacts: [],
+apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	userId: USER, tasks: [{ op: "create", entity: event }], artifacts: [],
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	afterWrite: (tx) => store.completeVoice(tx, { requestId, eventId: event.id }),
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	.toEqual([{ to_task_id: event.id, relation: "generates" }]);
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	{ kind: "event", id: event.id, operation: "create", stepId: requestId, finalized: true, summary: { name: "Estudar" } },
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	.toEqual({ kind: "result", data: { type: "voice", eventId: event.id } });
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	test("a lista traz os pedidos do usuario do mais novo para o mais antigo, e nunca um passo ou um evento de pessoa", async () => {
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	await store.beginSteps(first.requestId, [{ id: newOrderedId(), agent: "event-create", expected: "one" }]);
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	events: [{ op: "create", entity: Event.create({ userId: USER, name: "Reunião", startedAt: new Date() }) }],
+apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	tasks: [{ op: "create", entity: Event.create({ userId: USER, name: "Reunião", startedAt: new Date() }) }],
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	test("candidatos de edicao: so eventos de pessoa, artefatos de conteudo do usuario e series", async () => {
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	const today = Event.create({ userId: USER, name: "Reunião", startedAt: now });
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	const tracked = Event.create({ userId: USER, name: "Pagar o aluguel", status: "todo" });
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	const done = Event.create({ userId: USER, name: "Já feito", status: "done" });
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	const far = Event.create({ userId: USER, name: "Mês passado", startedAt: new Date("2026-09-01T15:00:00Z") });
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	const foreign = Event.create({ userId: "user-2", name: "De outro", startedAt: now });
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	await writer.commit({ userId: USER, events: [today, tracked, done, far].map((entity) => ({ op: "create" as const, entity })), artifacts: [text, skill].map((entity) => ({ op: "create" as const, entity })) });
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	await writer.commit({ userId: "user-2", events: [{ op: "create", entity: foreign }], artifacts: [] });
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	const candidates = await new PostgresCandidateQuery(new PostgresDatabase(ctx.pool)).shortlist({ userId: USER, now, kinds: ["event", "artifact", "recurrence"] });
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	["artifact", "Ideia"], ["event", "Pagar o aluguel"], ["event", "Reunião"],
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	import { insertAgentEvent, newOrderedId } from "./request-rows";
@@ -3514,17 +3479,14 @@ apps/api/src/api-core/agent/services/agent-change-session.test.ts	describe("sequ
 apps/api/src/api-core/agent/services/agent-change-session.test.ts	test("puts the next event after the previous one, revising neither, and answers with the event that gained a predecessor", async () => {
 apps/api/src/api-core/agent/services/agent-change-session.test.ts	const result = await session.sequenceEvents("a", "b");
 apps/api/src/api-core/agent/services/agent-change-session.test.ts	expect(result).toEqual({ ok: true, kind: "event", op: "update", id: "b" });
-apps/api/src/api-core/agent/services/agent-change-session.test.ts	expect(batch.events).toEqual([]);
 apps/api/src/api-core/agent/services/agent-change-session.test.ts	test("an agent event can be on either end of the sequence", async () => {
 apps/api/src/api-core/agent/services/agent-change-session.test.ts	const request = Event.create({ id: "request", userId, actor: "agent", kind: "request", status: "running", name: "Pedido" });
 apps/api/src/api-core/agent/services/agent-change-session.test.ts	expect(await session.sequenceEvents("request", "a")).toMatchObject({ ok: true });
 apps/api/src/api-core/agent/services/agent-change-session.test.ts	expect(await session.sequenceEvents("a", "request")).toMatchObject({ ok: true });
-apps/api/src/api-core/agent/services/agent-change-session.test.ts	expect(session.toBatch().events).toEqual([]);
 apps/api/src/api-core/agent/services/agent-change-session.test.ts	await session.sequenceEvents("a", "b");
 apps/api/src/api-core/agent/services/agent-change-session.test.ts	const again = await session.sequenceEvents("a", "b");
 apps/api/src/api-core/agent/services/agent-change-session.test.ts	test("an event created in this session can be an end before it exists in the database", async () => {
 apps/api/src/api-core/agent/services/agent-change-session.test.ts	expect(await session.sequenceEvents("a", created.id)).toMatchObject({ ok: true, id: created.id });
-apps/api/src/api-core/agent/services/agent-change-session.test.ts	expect(batch.events.map((change) => change.op)).toEqual(["create"]);
 apps/api/src/api-core/agent/services/agent-change-session.test.ts	test("refuses an event that follows itself, one that does not exist and one that belongs to someone else", async () => {
 apps/api/src/api-core/agent/services/agent-change-session.test.ts	const theirs = Event.create({ id: "theirs", userId: "someone-else", name: "Deles", status: "todo" });
 apps/api/src/api-core/agent/services/agent-change-session.test.ts	expect(await session.sequenceEvents("a", "a")).toMatchObject({ ok: false });
@@ -3573,7 +3535,7 @@ apps/api/src/api-core/agent/services/agent-change-session.ts	return { ok: true, 
 apps/api/src/api-core/agent/services/agent-change-session.ts	/** Monta como a criacao de evento montaria: alimento pendente, treino pelos exercicios globais. */
 apps/api/src/api-core/agent/services/agent-change-session.ts	return this.createEventUseCase.buildArtifact(input, { userId: this.userId }, at);
 apps/api/src/api-core/agent/services/agent-change-session.ts	/** Revisa um artefato que ja existe (ou criado neste pedido), sem mexer nos eventos em que ele aparece. */
-apps/api/src/api-core/agent/services/agent-change-session.ts	events: changes(this.events),
+apps/api/src/api-core/agent/services/agent-change-session.ts	tasks: changes(this.events),
 apps/api/src/api-core/agent/services/agent-change-session.ts	collect("event", this.events);
 apps/api/src/api-core/agent/services/agent-change-session.ts	return { createEvent: this.createEventUseCase, events: this.repositories.events };
 apps/api/src/api-core/agent/services/agent-change-session.ts	/** A ocorrencia nasce se seguindo dos eventos do template, como as que a serie gera depois. */
@@ -3771,9 +3733,7 @@ apps/api/src/api-core/requests/request-create-worker.test.ts	event({ name: "Refe
 apps/api/src/api-core/requests/request-create-worker.test.ts	event({ name: "Nadar na praia", kind: "training", startedAt: iso(12, 30), estimatedFinishAt: iso(13, 30) }),
 apps/api/src/api-core/requests/request-create-worker.test.ts	event({ name: "Voltar para casa e ver o filme", startedAt: iso(15, 30) }),
 apps/api/src/api-core/requests/request-create-worker.test.ts	await ctx.worker.run("event-create", payload);
-apps/api/src/api-core/requests/request-create-worker.test.ts	expect(batch?.events).toHaveLength(3);
 apps/api/src/api-core/requests/request-create-worker.test.ts	// O agente de criacao de evento nunca cria artefatos: nem o alimento que a refeicao implicaria.
-apps/api/src/api-core/requests/request-create-worker.test.ts	const meal = batch?.events.find((change) => change.op === "create" && change.entity.kind === "meal");
 apps/api/src/api-core/requests/request-create-worker.test.ts	["event", "create", "Refeição"], ["event", "create", "Nadar na praia"], ["event", "create", "Voltar para casa e ver o filme"],
 apps/api/src/api-core/requests/request-create-worker.test.ts	const payload = await addStep(ctx, "s1", "event-create");
 apps/api/src/api-core/requests/request-create-worker.test.ts	ctx.gateway.outputs.set("event_create", { events: [event({ name: "Almoço", kind: "meal" })] });
@@ -3805,7 +3765,6 @@ apps/api/src/api-core/requests/request-create-worker.test.ts	event({ name: "Serv
 apps/api/src/api-core/requests/request-create-worker.test.ts	await ctx.worker.run("event-create", payload);
 apps/api/src/api-core/requests/request-create-worker.test.ts	const created = ctx.database.events.find((candidate) => candidate.name === name);
 apps/api/src/api-core/requests/request-create-worker.test.ts	return ctx.eventRepository.findById(created?.id as string);
-apps/api/src/api-core/requests/request-create-worker.test.ts	expect(ctx.batchWriter.commits[0]?.events.map((change) => change.op)).toEqual(["create", "create", "create"]);
 apps/api/src/api-core/requests/request-create-worker.test.ts	const payload = await addStep(ctx, "s1", "event-create", "many");
 apps/api/src/api-core/requests/request-create-worker.test.ts	ctx.gateway.outputs.set("event_create", { events: [
 apps/api/src/api-core/requests/request-create-worker.test.ts	event({ name: "Antes", status: "todo" }),
@@ -3836,7 +3795,6 @@ apps/api/src/api-core/requests/request-create-worker.test.ts	test("o alimento e 
 apps/api/src/api-core/requests/request-create-worker.test.ts	const payload = await addStep(ctx, "s1", "recurring-event-create");
 apps/api/src/api-core/requests/request-create-worker.test.ts	ctx.gateway.outputs.set("recurring_event_create", { series: [series()] });
 apps/api/src/api-core/requests/request-create-worker.test.ts	await ctx.worker.run("recurring-event-create", payload);
-apps/api/src/api-core/requests/request-create-worker.test.ts	expect(batch?.events).toHaveLength(1);
 apps/api/src/api-core/requests/request-create-worker.test.ts	expect(entity).toMatchObject({ kind: "event", operation: "create", summary: { name: "Corrida", series: true } });
 apps/api/src/api-core/requests/request-create-worker.test.ts	const payload = await addStep(ctx, "s1", "recurring-event-create");
 apps/api/src/api-core/requests/request-create-worker.test.ts	ctx.gateway.outputs.set("recurring_event_create", { series: [series({
@@ -3956,7 +3914,6 @@ apps/api/src/api-core/requests/request-edit-worker.test.ts	const other = await s
 apps/api/src/api-core/requests/request-edit-worker.test.ts	const payload = await addStep(ctx, "s1", "event-edit", "many", { candidates: events.map((event) => candidate("event", event.id, event.name)) });
 apps/api/src/api-core/requests/request-edit-worker.test.ts	ctx.gateway.outputs.set("event_edit", { edits: events.map((event) => ({ ...noEvent, id: event.id, priority: "high" })), query: null });
 apps/api/src/api-core/requests/request-edit-worker.test.ts	await ctx.editWorker.run("event-edit", payload);
-apps/api/src/api-core/requests/request-edit-worker.test.ts	expect(ctx.batchWriter.commits[0]?.events.map((change) => change.op)).toEqual(["update", "update", "update"]);
 apps/api/src/api-core/requests/request-edit-worker.test.ts	expect((await ctx.eventRepository.findById(other.id))?.revision).toBe(other.revision);
 apps/api/src/api-core/requests/request-edit-worker.test.ts	const real = await seedEvent(ctx, "Reunião");
 apps/api/src/api-core/requests/request-edit-worker.test.ts	const payload = await addStep(ctx, "s1", "event-edit", "one", { candidates: [] });
