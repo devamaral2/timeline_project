@@ -14,11 +14,11 @@ const priority = z.enum(PRIORITIES);
 /** A posicao de outro item da mesma lista. */
 const position = z.number().int().min(0);
 
-export const eventCreateOutput = z.object({
-  events: z.array(z.object({
+export const taskCreateOutput = z.object({
+  tasks: z.array(z.object({
     name: z.string().min(1),
     kind,
-    /** `null` e o evento de referencia, que so marca um horario. */
+    /** `null` e a tarefa de referencia, que so marca um horario. */
     status: status.nullable(),
     priority: priority.nullable(),
     longRunning: z.boolean().nullable(),
@@ -28,7 +28,7 @@ export const eventCreateOutput = z.object({
     /** O lugar que o usuario disse, como ele disse: o servidor procura no mapa o endereco de um lugar que existe. */
     location: z.string().nullable().default(null),
     tags,
-    /** Os eventos desta mesma lista de que este se segue: os que vem antes dele na sequencia. */
+    /** As tarefas desta mesma lista de que esta se segue: as que vem antes dela na sequencia. */
     followsFrom: z.array(position).default([]),
   })),
 });
@@ -44,7 +44,7 @@ export const artifactCreateOutput = z.object({
 /** Uma consulta de leitura que o agente de edicao pede quando nenhum candidato serve. */
 const lookup = z.object({ sql: z.string().min(1) }).nullable();
 
-export const eventEditOutput = z.object({
+export const taskEditOutput = z.object({
   edits: z.array(z.object({
     id: z.string().min(1),
     name: z.string().min(1).nullable(),
@@ -55,7 +55,7 @@ export const eventEditOutput = z.object({
     estimatedFinishAt: instant,
     finishedAt: instant,
     description: z.string().nullable(),
-    /** O lugar novo, como o usuario disse (o servidor procura o endereco no mapa); `""` tira o local do evento. */
+    /** O lugar novo, como o usuario disse (o servidor procura o endereco no mapa); `""` tira o local da tarefa. */
     location: z.string().nullable().default(null),
     tags: z.array(z.string()).nullable(),
   })),
@@ -151,7 +151,7 @@ const cadence = {
 /** Na edicao, a frequencia tambem pode nao mudar. */
 const cadenceChanges = { ...cadence, frequency: cadence.frequency.nullable() };
 
-export const recurringEventCreateOutput = z.object({
+export const recurringTaskCreateOutput = z.object({
   series: z.array(z.object({
     name: z.string().min(1),
     kind,
@@ -166,7 +166,7 @@ export const recurringEventCreateOutput = z.object({
   })),
 });
 
-export const recurringEventEditOutput = z.object({
+export const recurringTaskEditOutput = z.object({
   edits: z.array(z.object({
     id: z.string().min(1),
     name: z.string().min(1).nullable(),
@@ -185,8 +185,8 @@ export const fallbackOutput = z.object({
   reply: z.string().min(1).nullable(),
   invoke: z.array(z.object({
     agent: z.enum([
-      "event-create", "artifact-create", "event-edit", "artifact-edit",
-      "recurring-event-create", "recurring-event-edit", "query",
+      "task-create", "artifact-create", "task-edit", "artifact-edit",
+      "recurring-task-create", "recurring-task-edit", "query",
     ]),
     instruction: z.string().min(1),
   })).nullable(),
@@ -198,14 +198,14 @@ export const fallbackFinalOutput = z.object({ reply: z.string().min(1) });
 /** Uma frase curta sobre o que falhou, so quando algum passo falhou. */
 export const failureExplanationOutput = z.object({ message: z.string().min(1) });
 
-export type EventCreateOutput = z.infer<typeof eventCreateOutput>;
+export type TaskCreateOutput = z.infer<typeof taskCreateOutput>;
 export type ArtifactCreateOutput = z.infer<typeof artifactCreateOutput>;
-export type RecurringEventCreateOutput = z.infer<typeof recurringEventCreateOutput>;
-export type RecurringEventEditOutput = z.infer<typeof recurringEventEditOutput>;
+export type RecurringTaskCreateOutput = z.infer<typeof recurringTaskCreateOutput>;
+export type RecurringTaskEditOutput = z.infer<typeof recurringTaskEditOutput>;
 export type FallbackOutput = z.infer<typeof fallbackOutput>;
 export type FoodEditOutput = z.infer<typeof foodEditOutput>;
 export type SleepEditOutput = z.infer<typeof sleepEditOutput>;
 export type TrainingEditOutput = z.infer<typeof trainingEditOutput>;
 export type AgentFileEditOutput = z.infer<typeof agentFileEditOutput>;
-export type EventEditOutput = z.infer<typeof eventEditOutput>;
+export type TaskEditOutput = z.infer<typeof taskEditOutput>;
 export type ArtifactEditOutput = z.infer<typeof artifactEditOutput>;

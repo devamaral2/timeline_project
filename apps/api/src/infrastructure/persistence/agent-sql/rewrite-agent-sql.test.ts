@@ -59,7 +59,7 @@ describe("logical schema", () => {
     }
   });
 
-  test("so eventos de pessoa entram: nenhum CTE de evento deixa passar um pedido ao agente", () => {
+  test("so tarefas de pessoa entram: nenhum CTE de tarefa deixa passar um pedido ao agente", () => {
     for (const table of logicalTables()) {
       if (table.from.includes("public.tasks")) expect(table.where).toContain("actor = 'human'");
     }

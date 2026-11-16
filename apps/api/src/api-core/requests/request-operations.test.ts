@@ -13,8 +13,8 @@ function setup() {
     register: vi.fn((kind: string, run: JobHandler, options?: { onFailure?: JobFailureHandler }) => {
       handlers.set(kind, { run, onFailure: options?.onFailure });
     }),
-    cancelOfEvents: vi.fn(async () => {}),
-    progressOfEvent: vi.fn(async (): Promise<unknown> => undefined),
+    cancelOfTasks: vi.fn(async () => {}),
+    progressOfTask: vi.fn(async (): Promise<unknown> => undefined),
   };
   const worker = () => ({ run: vi.fn(async () => {}) });
   const workers = {
@@ -35,7 +35,7 @@ describe("fila dos pedidos", () => {
     const { handlers } = setup();
     expect([...handlers.keys()].sort()).toEqual([
       "food-generation", "hermes-turn", "request-dispatch", "request-edit-target", "request-fallback",
-      "request-finalize", "request-step", "voice-event",
+      "request-finalize", "request-step", "voice-task",
     ]);
     for (const [kind, handler] of handlers) expect(handler.onFailure, kind).toBeTypeOf("function");
   });
@@ -44,13 +44,13 @@ describe("fila dos pedidos", () => {
     const { store, handlers, workers, context } = setup();
     store.seed({ id: "r1", prompt: "x" });
     await store.beginSteps("r1", [
-      { id: "s1", agent: "event-create", expected: "one" }, { id: "s2", agent: "artifact-edit", expected: "one" },
+      { id: "s1", agent: "task-create", expected: "one" }, { id: "s2", agent: "artifact-edit", expected: "one" },
       { id: "s3", agent: "food-edit", expected: "one" }, { id: "s4", agent: "query", expected: "one" },
     ]);
     const run = handlers.get("request-step")?.run as JobHandler;
     for (const stepId of ["s1", "s2", "s3", "s4"]) await run({ requestId: "r1", stepId }, context);
 
-    expect(workers.create.run).toHaveBeenCalledWith("event-create", { requestId: "r1", stepId: "s1" }, context.signal);
+    expect(workers.create.run).toHaveBeenCalledWith("task-create", { requestId: "r1", stepId: "s1" }, context.signal);
     expect(workers.edit.run).toHaveBeenCalledWith("artifact-edit", { requestId: "r1", stepId: "s2" }, context.signal);
     expect(workers.targetEdit.run).toHaveBeenCalledWith("food-edit", { requestId: "r1", stepId: "s3" }, context.signal);
     expect(workers.query.run).toHaveBeenCalledWith({ requestId: "r1", stepId: "s4" }, context.signal);
@@ -59,7 +59,7 @@ describe("fila dos pedidos", () => {
   test("o job de um passo morreu: o passo fica vermelho com um codigo seguro e a finalizacao fecha o pedido", async () => {
     const { store, handlers, context } = setup();
     store.seed({ id: "r1", prompt: "x" });
-    await store.beginSteps("r1", [{ id: "s1", agent: "event-create", expected: "one" }]);
+    await store.beginSteps("r1", [{ id: "s1", agent: "task-create", expected: "one" }]);
 
     await handlers.get("request-step")?.onFailure?.({ requestId: "r1", stepId: "s1" }, context, new Error("senha do banco: 123"));
 
@@ -67,7 +67,7 @@ describe("fila dos pedidos", () => {
     expect(store.jobs.at(-1)).toEqual({ kind: "request-finalize", requestId: "r1", stepId: "s1" });
   });
 
-  test.each(["request-dispatch", "request-edit-target", "request-finalize", "hermes-turn", "voice-event"])(
+  test.each(["request-dispatch", "request-edit-target", "request-finalize", "hermes-turn", "voice-task"])(
     "o job %s morreu: o pedido nunca fica aberto", async (kind) => {
       const { store, handlers, context } = setup();
       store.seed({ id: "r1", prompt: "x", status: "running" });
@@ -80,7 +80,7 @@ describe("fila dos pedidos", () => {
     const { store, handlers, workers, context } = setup();
     store.seed({ id: "b1", prompt: "banana", route: "food", kind: "build_request", status: "queued" });
     const payload = { artifactId: "a1" };
-    await handlers.get("food-generation")?.run(payload, { ...context, eventId: "b1" });
+    await handlers.get("food-generation")?.run(payload, { ...context, taskId: "b1" });
     expect(store.require("b1").status).toBe("running");
     expect(workers.food.execute).toHaveBeenCalledWith(payload);
     await handlers.get("food-generation")?.onFailure?.(payload, context, new Error("x"));
@@ -158,12 +158,12 @@ describe("iniciar um pedido", () => {
 
   test("a mensagem ao Hermes e a fala viram pedidos da rota certa, cada um com o seu job", async () => {
     const { store, operations } = setup();
-    const hermes = await operations.startHermes({ userId: "user-1", text: "crie um evento", clientMessageId: "m1" }, actor);
+    const hermes = await operations.startHermes({ userId: "user-1", text: "crie uma tarefa", clientMessageId: "m1" }, actor);
     const voice = await operations.startVoice({ transcript: "comecei a estudar" }, actor);
 
-    expect(hermes).toMatchObject({ route: "hermes", status: "queued", text: "crie um evento", steps: [], entities: [] });
+    expect(hermes).toMatchObject({ route: "hermes", status: "queued", text: "crie uma tarefa", steps: [], entities: [] });
     expect(store.require(voice)).toMatchObject({ route: "voice", userId: "user-1", prompt: "comecei a estudar" });
-    expect(store.jobs.map((job) => job.kind)).toEqual(["hermes-turn", "voice-event"]);
+    expect(store.jobs.map((job) => job.kind)).toEqual(["hermes-turn", "voice-task"]);
   });
 });
 
@@ -183,17 +183,17 @@ describe("acompanhar e cancelar", () => {
       route: "hermes" as const, status: "running" as const, fields: [],
       entries: [{ id: "c1", kind: "tool" as const, label: "Listou a agenda", status: "running" as const }],
     };
-    jobs.progressOfEvent.mockResolvedValue({ trace: live });
+    jobs.progressOfTask.mockResolvedValue({ trace: live });
 
     const running = await operations.view("h1", actor);
-    expect(jobs.progressOfEvent).toHaveBeenCalledWith("h1");
+    expect(jobs.progressOfTask).toHaveBeenCalledWith("h1");
     expect(running).toMatchObject({ trace: live, progress: "Listou a agenda", steps: [{ id: "c1", label: "Listou a agenda", status: "running" }] });
 
     const final = { ...live, status: "done" as const, entries: [{ ...live.entries[0], status: "done" as const }] };
     await store.finish("h1", "done", { message: "Pronto.", trace: final });
-    jobs.progressOfEvent.mockClear();
+    jobs.progressOfTask.mockClear();
     const done = await operations.view("h1", actor);
-    expect(jobs.progressOfEvent).not.toHaveBeenCalled();
+    expect(jobs.progressOfTask).not.toHaveBeenCalled();
     expect(done).toMatchObject({ status: "done", message: "Pronto.", trace: final });
     expect(done.progress).toBeUndefined();
   });
@@ -214,25 +214,25 @@ describe("acompanhar e cancelar", () => {
   test("cancelar marca o pedido e os passos abertos e cancela os jobs vivos deles", async () => {
     const { store, jobs, operations } = setup();
     store.seed({ id: "r1", prompt: "x" });
-    await store.beginSteps("r1", [{ id: "s1", agent: "event-create", expected: "one" }, { id: "s2", agent: "query", expected: "one" }]);
+    await store.beginSteps("r1", [{ id: "s1", agent: "task-create", expected: "one" }, { id: "s2", agent: "query", expected: "one" }]);
     await store.recordQueryResult({ requestId: "r1", stepId: "s2", result: { columns: [], rows: [], truncated: false }, timings: {} });
 
     const cancelled = await operations.cancel("r1", actor);
 
-    expect(jobs.cancelOfEvents).toHaveBeenCalledWith(["r1", "s1", "s2"], "user-1");
+    expect(jobs.cancelOfTasks).toHaveBeenCalledWith(["r1", "s1", "s2"], "user-1");
     expect(cancelled).toMatchObject({ status: "cancel", errorCode: "cancelled" });
     expect(cancelled.steps.map((step) => step.status)).toEqual(["cancel", "done"]);
 
     // Cancelar de novo, ou um pedido que ja terminou, nao muda nada.
     await operations.cancel("r1", actor);
-    expect(jobs.cancelOfEvents).toHaveBeenLastCalledWith([], "user-1");
+    expect(jobs.cancelOfTasks).toHaveBeenLastCalledWith([], "user-1");
   });
 
   test("o pedido que calcula um alimento nao se cancela por aqui", async () => {
     const { store, jobs, operations } = setup();
     store.seed({ id: "b1", prompt: "banana", route: "food", kind: "build_request", status: "queued" });
     await expect(operations.cancel("b1", actor)).rejects.toBeInstanceOf(ConflictException);
-    expect(jobs.cancelOfEvents).not.toHaveBeenCalled();
+    expect(jobs.cancelOfTasks).not.toHaveBeenCalled();
     expect(store.require("b1").status).toBe("queued");
   });
 });

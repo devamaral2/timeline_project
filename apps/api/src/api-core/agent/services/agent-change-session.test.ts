@@ -23,9 +23,9 @@ describe("sequenceEvents", () => {
   test("puts the next event after the previous one, revising neither, and answers with the event that gained a predecessor", async () => {
     const { session } = setup(human("a"), human("b"));
 
-    const result = await session.sequenceEvents("a", "b");
+    const result = await session.sequenceTasks("a", "b");
 
-    expect(result).toEqual({ ok: true, kind: "event", op: "update", id: "b" });
+    expect(result).toEqual({ ok: true, kind: "task", op: "update", id: "b" });
     const batch = session.toBatch();
     expect(batch.sequence).toEqual([{ op: "add", fromId: "a", toId: "b" }]);
     expect(batch.tasks).toEqual([]);
@@ -35,8 +35,8 @@ describe("sequenceEvents", () => {
     const request = Event.create({ id: "request", userId, actor: "agent", kind: "request", status: "running", name: "Pedido" });
     const { session } = setup(human("a"), request);
 
-    expect(await session.sequenceEvents("request", "a")).toMatchObject({ ok: true });
-    expect(await session.sequenceEvents("a", "request")).toMatchObject({ ok: true });
+    expect(await session.sequenceTasks("request", "a")).toMatchObject({ ok: true });
+    expect(await session.sequenceTasks("a", "request")).toMatchObject({ ok: true });
 
     expect(session.toBatch().sequence).toEqual([
       { op: "add", fromId: "request", toId: "a" },
@@ -48,8 +48,8 @@ describe("sequenceEvents", () => {
   test("repeating the same link does not stage the edge twice", async () => {
     const { session } = setup(human("a"), human("b"));
 
-    await session.sequenceEvents("a", "b");
-    const again = await session.sequenceEvents("a", "b");
+    await session.sequenceTasks("a", "b");
+    const again = await session.sequenceTasks("a", "b");
 
     expect(again).toMatchObject({ ok: true });
     expect(session.toBatch().sequence).toEqual([{ op: "add", fromId: "a", toId: "b" }]);
@@ -60,7 +60,7 @@ describe("sequenceEvents", () => {
     const created = await session.createEvent({ name: "Novo", status: "todo" });
     if (!created.ok) throw new Error(created.error);
 
-    expect(await session.sequenceEvents("a", created.id)).toMatchObject({ ok: true, id: created.id });
+    expect(await session.sequenceTasks("a", created.id)).toMatchObject({ ok: true, id: created.id });
 
     const batch = session.toBatch();
     expect(batch.tasks.map((change) => change.op)).toEqual(["create"]);
@@ -71,16 +71,16 @@ describe("sequenceEvents", () => {
     const theirs = Event.create({ id: "theirs", userId: "someone-else", name: "Deles", status: "todo" });
     const { session } = setup(human("a"), theirs);
 
-    expect(await session.sequenceEvents("a", "a")).toMatchObject({ ok: false });
-    expect(await session.sequenceEvents("a", "missing")).toMatchObject({ ok: false });
-    expect(await session.sequenceEvents("theirs", "a")).toMatchObject({ ok: false });
+    expect(await session.sequenceTasks("a", "a")).toMatchObject({ ok: false });
+    expect(await session.sequenceTasks("a", "missing")).toMatchObject({ ok: false });
+    expect(await session.sequenceTasks("theirs", "a")).toMatchObject({ ok: false });
     expect(session.toBatch().sequence).toEqual([]);
   });
 
   test("the staged sequence is committed with the batch and read back from both sides", async () => {
     const { session, batchWriter, eventRepository } = setup(human("a"), human("b"));
 
-    await session.sequenceEvents("a", "b");
+    await session.sequenceTasks("a", "b");
     await batchWriter.commit(session.toBatch());
 
     expect((await eventRepository.findById("b"))?.previousIds).toEqual(["a"]);

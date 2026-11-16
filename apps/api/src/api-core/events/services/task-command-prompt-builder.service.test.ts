@@ -1,8 +1,8 @@
 import { expect, test } from "vitest";
-import { EventCommandPromptBuilderService } from "./event-command-prompt-builder.service";
+import { TaskCommandPromptBuilderService } from "./task-command-prompt-builder.service";
 
 test("describes every field of the flat command contract", () => {
-  const prompt = new EventCommandPromptBuilderService().build("dormi sete horas");
+  const prompt = new TaskCommandPromptBuilderService().build("dormi sete horas");
 
   expect(prompt).toContain("sleepHours");
   expect(prompt).toContain("workoutKind");
@@ -12,14 +12,14 @@ test("describes every field of the flat command contract", () => {
 });
 
 test("anchors routine as the default classification", () => {
-  const prompt = new EventCommandPromptBuilderService().build("fui na padaria");
+  const prompt = new TaskCommandPromptBuilderService().build("fui na padaria");
 
   expect(prompt).toContain("'common' e o padrao");
   expect(prompt).toContain("horas dormidas em formato decimal");
 });
 
 test("asks for a relative window instead of dates the model cannot know", () => {
-  const prompt = new EventCommandPromptBuilderService().build("vou dormir agora");
+  const prompt = new TaskCommandPromptBuilderService().build("vou dormir agora");
 
   expect(prompt).toContain("Voce nao sabe que horas sao");
   expect(prompt).toContain("durationMinutes");

@@ -189,28 +189,28 @@ describe("regras comuns a todo agente com alvo", () => {
   });
 });
 
-describe("event-edit e artifact-edit com alvo (sem JEV e sem consulta)", () => {
-  const noEvent = {
+describe("task-edit e artifact-edit com alvo (sem JEV e sem consulta)", () => {
+  const noTask = {
     name: null, kind: null, status: null, priority: null, startedAt: null, estimatedFinishAt: null, finishedAt: null,
     description: null, tags: null,
   };
 
-  test("evento: so o alvo, uma chamada ao agente, mesmo que ele peca consulta", async () => {
+  test("tarefa: so o alvo, uma chamada ao agente, mesmo que ele peca consulta", async () => {
     const ctx = setupRequest("termina as 18h");
     const event = Event.create({ userId: "user-1", name: "Reunião", startedAt: new Date("2026-10-25T12:00:00Z") });
     await ctx.eventRepository.save(event);
-    ctx.gateway.outputs.set("event_edit", { edits: [{ ...noEvent, id: event.id, estimatedFinishAt: "2026-10-25T18:00:00-03:00" }], query: { sql: "SELECT 1" } });
-    await ctx.editWorker.run("event-edit", await stepFor(ctx, "event-edit", { entityType: "task", id: event.id, snapshot: { name: "Reunião" } }));
+    ctx.gateway.outputs.set("task_edit", { edits: [{ ...noTask, id: event.id, estimatedFinishAt: "2026-10-25T18:00:00-03:00" }], query: { sql: "SELECT 1" } });
+    await ctx.editWorker.run("task-edit", await stepFor(ctx, "task-edit", { entityType: "task", id: event.id, snapshot: { name: "Reunião" } }));
     expect(ctx.store.stepRecords[0]?.status).toBe("done");
     expect((await ctx.eventRepository.findById(event.id))?.estimatedFinishAt?.toISOString()).toBe("2026-10-25T21:00:00.000Z");
     expect(ctx.gateway.calls).toHaveLength(1);
     expect(ctx.sql.calls).toHaveLength(0);
   });
 
-  test("evento: id diferente do alvo falha com target_unknown", async () => {
+  test("tarefa: id diferente do alvo falha com target_unknown", async () => {
     const ctx = setupRequest();
-    ctx.gateway.outputs.set("event_edit", { edits: [{ ...noEvent, id: "outro", name: "x" }], query: null });
-    await ctx.editWorker.run("event-edit", await stepFor(ctx, "event-edit", { entityType: "task", id: "alvo", snapshot: {} }));
+    ctx.gateway.outputs.set("task_edit", { edits: [{ ...noTask, id: "outro", name: "x" }], query: null });
+    await ctx.editWorker.run("task-edit", await stepFor(ctx, "task-edit", { entityType: "task", id: "alvo", snapshot: {} }));
     expect(ctx.store.stepRecords[0]).toMatchObject({ status: "failed", errorCode: "target_unknown" });
   });
 

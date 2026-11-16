@@ -24,12 +24,12 @@ async function withArtifact(entityType: string, props: { name?: string; type: st
 describe("worker da edicao pela tela de detalhe", () => {
   test("a escolha do agente e uma tabela: cada tipo tem o seu", () => {
     expect(EDIT_TARGET_AGENTS).toEqual({
-      task: "event-edit", artifact: "artifact-edit", food_artifact: "food-edit", sleep_artifact: "sleep-edit",
+      task: "task-edit", artifact: "artifact-edit", food_artifact: "food-edit", sleep_artifact: "sleep-edit",
       training_artifact: "training-edit", skill_artifact: "agent-file-edit", agent_artifact: "agent-file-edit",
     });
   });
 
-  test("evento: cria um passo event-edit com o retrato completo do alvo", async () => {
+  test("tarefa: cria um passo task-edit com o retrato completo do alvo", async () => {
     const event = Event.create({
       userId: "user-1", name: "Reunião", description: "pauta", startedAt: new Date("2026-10-25T12:00:00Z"), tags: ["trabalho"],
     });
@@ -40,7 +40,7 @@ describe("worker da edicao pela tela de detalhe", () => {
 
     expect(ctx.store.require("r1").status).toBe("running");
     expect(ctx.store.stepRecords).toMatchObject([{
-      agent: "event-edit", status: "queued",
+      agent: "task-edit", status: "queued",
       input: { target: { entityType: "task", id: event.id, snapshot: { name: "Reunião", description: "pauta", tags: ["trabalho"], status: null } } },
     }]);
     expect(ctx.store.jobs.at(-1)).toMatchObject({ kind: REQUEST_JOBS.step });

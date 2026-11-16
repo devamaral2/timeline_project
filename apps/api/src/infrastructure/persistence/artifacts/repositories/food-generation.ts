@@ -3,7 +3,7 @@ import type { Artifact, FoodData } from "../../../../domain";
 import type { FoodGenerationPayload } from "../../../../domain/ports";
 import * as schema from "../../database/schema";
 import { enqueueJobInTransaction } from "../../../jobs/job-context";
-import { appendEntry, insertAgentEvent } from "../../requests/request-rows";
+import { appendEntry, insertAgentTask } from "../../requests/request-rows";
 import type { Tx } from "../../shared/tx";
 
 export const FOOD_GENERATION_JOB = "food-generation";
@@ -18,7 +18,7 @@ export async function startFoodGeneration(tx: Tx, artifact: Artifact): Promise<v
   if (artifact.type !== "food" || food.generation?.status !== "pending" || !artifact.userId) return;
 
   const requestId = ulid();
-  await insertAgentEvent(tx, {
+  await insertAgentTask(tx, {
     id: requestId,
     userId: artifact.userId,
     kind: "build_request",
@@ -32,7 +32,7 @@ export async function startFoodGeneration(tx: Tx, artifact: Artifact): Promise<v
     relation: "updates",
   });
   await appendEntry(tx, {
-    eventId: requestId,
+    taskId: requestId,
     userId: artifact.userId,
     kind: "message",
     role: "user",
@@ -42,7 +42,7 @@ export async function startFoodGeneration(tx: Tx, artifact: Artifact): Promise<v
     kind: FOOD_GENERATION_JOB,
     userId: artifact.userId,
     actorId: artifact.userId,
-    eventId: requestId,
+    taskId: requestId,
     dedupeKey: artifact.id,
     payload: {
       artifactId: artifact.id,

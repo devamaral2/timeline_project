@@ -26,7 +26,7 @@ function firstSearchLimit(from: string): string {
   return shiftDayKey(from, 366 * 4);
 }
 
-export type EntityKind = "event" | "artifact";
+export type EntityKind = "task" | "artifact";
 
 export interface StagedRef {
   kind: EntityKind;
@@ -73,8 +73,8 @@ export class StagingError extends Error {}
  * As mudancas que o agente prepara num passo. Nada e gravado aqui: cada mudanca e validada contra o banco e
  * contra as anteriores, e o lote inteiro vai para o `EntityBatchWriter` so no fim.
  *
- * O usuario vem do pedido ja autorizado; nenhum agente o recebe. Ligar um artefato a um evento edita o evento;
- * pôr um evento na sequencia de outro nao edita nenhum dos dois.
+ * O usuario vem do pedido ja autorizado; nenhum agente o recebe. Ligar um artefato a uma tarefa edita a tarefa;
+ * pôr uma tarefa na sequencia de outra nao edita nenhuma das duas.
  */
 export class AgentChangeSession {
   private readonly events = new Map<string, Staged<Event>>();
@@ -142,56 +142,56 @@ export class AgentChangeSession {
     });
   }
 
-  /** Os artefatos novos do evento entram no mesmo lote, antes dele (a relacao aponta para eles). */
+  /** Os artefatos novos da tarefa entram no mesmo lote, antes dela (a relacao aponta para eles). */
   createEvent(input: CreateTaskInput, options?: PrepareEventOptions): Promise<StageResult> {
     return this.attempt(async () => {
       const prepared = await this.createEventUseCase.prepare(input, { userId: this.userId }, undefined, options);
       this.stageTemplateArtifacts(prepared.artifacts, prepared.derivations);
       this.events.set(prepared.event.id, { change: { op: "create", entity: prepared.event } });
       this.stageSequence(prepared.sequence);
-      return { ok: true, kind: "event", op: "create", id: prepared.event.id };
+      return { ok: true, kind: "task", op: "create", id: prepared.event.id };
     });
   }
 
   /**
-   * `revise` recebe o evento atual (o do banco ou o ja preparado neste pedido) e devolve a versao nova. O criado
+   * `revise` recebe a tarefa atual (a do banco ou a ja preparada neste pedido) e devolve a versao nova. A criada
    * neste pedido continua sendo uma criacao.
    */
-  reviseEvent(id: string, revise: (current: Event) => Event): Promise<StageResult> {
+  reviseTask(id: string, revise: (current: Event) => Event): Promise<StageResult> {
     return this.attempt(async () => {
-      const op = await this.reviseTarget(this.events, id, (key) => this.findEvent(key), revise);
-      return { ok: true, kind: "event", op, id };
+      const op = await this.reviseTarget(this.events, id, (key) => this.findTask(key), revise);
+      return { ok: true, kind: "task", op, id };
     });
   }
 
   /**
-   * Faz `nextId` seguir-se de `previousId`. Nenhum dos dois e revisado, e qualquer um pode ser evento de agente.
-   * O resultado e o evento que ganhou o antecessor. Repetir uma ligacao nao faz nada.
+   * Faz `nextId` seguir-se de `previousId`. Nenhuma das duas e revisada, e qualquer um pode ser tarefa de agente.
+   * O resultado e a tarefa que ganhou o antecessor. Repetir uma ligacao nao faz nada.
    */
-  sequenceEvents(previousId: string, nextId: string): Promise<StageResult> {
+  sequenceTasks(previousId: string, nextId: string): Promise<StageResult> {
     return this.attempt(async () => {
-      if (previousId === nextId) throw new StagingError("Um evento não se segue a ele mesmo.");
+      if (previousId === nextId) throw new StagingError("Uma tarefa não se segue a ela mesma.");
       await this.assertSequenceEnd(previousId);
       await this.assertSequenceEnd(nextId);
       this.stageSequence([{ op: "add", fromId: previousId, toId: nextId }]);
-      return { ok: true, kind: "event", op: "update", id: nextId };
+      return { ok: true, kind: "task", op: "update", id: nextId };
     });
   }
 
-  /** O artefato passa a aparecer no evento, depois dos que ja estavam. Quem e editado e o evento. */
-  linkArtifact(artifactId: string, eventId: string, relation: EventArtifactRelationKind): Promise<StageResult> {
+  /** O artefato passa a aparecer na tarefa, depois dos que ja estavam. Quem e editado e a tarefa. */
+  linkArtifact(artifactId: string, taskId: string, relation: EventArtifactRelationKind): Promise<StageResult> {
     return this.attempt(async () => {
       await this.assertArtifactExists(artifactId);
-      const op = await this.reviseTarget(this.events, eventId, (key) => this.findEvent(key), (event) =>
+      const op = await this.reviseTarget(this.events, taskId, (key) => this.findTask(key), (event) =>
         event.artifactLinks.some((link) => link.artifactId === artifactId)
           ? event
           : event.revise({ artifactLinks: [...event.artifactLinks, { artifactId, relation, fromRecurrence: false }] }),
       );
-      return { ok: true, kind: "event", op, id: eventId };
+      return { ok: true, kind: "task", op, id: taskId };
     });
   }
 
-  /** Monta como a criacao de evento montaria: alimento pendente, treino pelos exercicios globais. */
+  /** Monta como a criacao de tarefa montaria: alimento pendente, treino pelos exercicios globais. */
   buildArtifact(input: CreateArtifactInput, at: Date): Promise<Artifact> {
     return this.createEventUseCase.buildArtifact(input, { userId: this.userId }, at);
   }
@@ -201,7 +201,7 @@ export class AgentChangeSession {
     this.artifacts.set(artifact.id, { change: { op: "create", entity: artifact } });
   }
 
-  /** Revisa um artefato que ja existe (ou criado neste pedido), sem mexer nos eventos em que ele aparece. */
+  /** Revisa um artefato que ja existe (ou criado neste pedido), sem mexer nas tarefas em que ele aparece. */
   async reviseArtifactById(id: string, revise: (current: Artifact) => Artifact): Promise<void> {
     await this.reviseTarget(this.artifacts, id, (key) => this.repositories.artifacts.findById(key), revise);
   }
@@ -263,7 +263,7 @@ export class AgentChangeSession {
         else if (change.op === "update") result.updated.push({ kind, id });
       }
     };
-    collect("event", this.events);
+    collect("task", this.events);
     collect("artifact", this.artifacts);
     return result;
   }
@@ -285,12 +285,12 @@ export class AgentChangeSession {
     return expandOccurrences(recurrence.rule, from, firstSearchLimit(from))[0];
   }
 
-  /** A ocorrencia nasce se seguindo dos eventos do template, como as que a serie gera depois. */
+  /** A ocorrencia nasce se seguindo das tarefas do template, como as que a serie gera depois. */
   private async stageOccurrence(recurrence: Recurrence, day: string): Promise<void> {
     const occurrence = buildOccurrence(recurrence, day);
     this.events.set(occurrence.id, { change: { op: "create", entity: occurrence } });
     for (const previousId of storedTemplateOf(recurrence).previousTaskIds ?? []) {
-      const related = await this.sequenceEvents(previousId, occurrence.id);
+      const related = await this.sequenceTasks(previousId, occurrence.id);
       if (!related.ok) throw new StagingError(related.error);
     }
   }
@@ -325,8 +325,8 @@ export class AgentChangeSession {
     return found;
   }
 
-  /** So eventos de pessoa: os pedidos e os passos do agente nao sao alvo de edicao. */
-  private async findEvent(id: string): Promise<Event | null> {
+  /** So tarefas de pessoa: os pedidos e os passos do agente nao sao alvo de edicao. */
+  private async findTask(id: string): Promise<Event | null> {
     const event = await this.repositories.events.findById(id);
     return event?.actor === "human" ? event : null;
   }
@@ -335,7 +335,7 @@ export class AgentChangeSession {
   private async assertSequenceEnd(id: string): Promise<void> {
     if (this.events.has(id)) return;
     const found = await this.repositories.events.findById(id);
-    if (!found || found.userId !== this.userId) throw new StagingError(`Não encontrei o evento ${id}.`);
+    if (!found || found.userId !== this.userId) throw new StagingError(`Não encontrei a tarefa ${id}.`);
   }
 
   private async assertArtifactExists(id: string): Promise<void> {
@@ -346,7 +346,7 @@ export class AgentChangeSession {
     }
   }
 
-  /** Revisa um alvo: o criado neste pedido continua sendo uma criacao; o do banco vira uma atualizacao. */
+  /** Revisa um alvo: a criada neste pedido continua sendo uma criacao; a do banco vira uma atualizacao. */
   private async reviseTarget<T extends Owned>(
     staged: Map<string, Staged<T>>,
     id: string,

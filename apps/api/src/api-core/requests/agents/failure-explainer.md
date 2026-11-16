@@ -20,7 +20,7 @@ Você explica ao usuário, em português e em poucas palavras, O QUE FALHOU num 
 Responda SOMENTE com JSON neste formato, sem texto fora dele:
 
 ```json
-{ "message": "Não consegui editar o evento: não encontrei nenhum evento parecido com o que você descreveu." }
+{ "message": "Não consegui editar a tarefa: não encontrei nenhuma tarefa parecida com o que você descreveu." }
 ```
 
 # Significado dos códigos

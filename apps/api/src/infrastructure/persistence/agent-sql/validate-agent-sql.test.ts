@@ -26,7 +26,7 @@ const REJECTED: Array<[string, string]> = [
   ["hidden table jobs", "SELECT * FROM jobs"],
   ["hidden table task_entries", "SELECT * FROM task_entries"],
   ["hidden relation graph", "SELECT * FROM task_task_relation"],
-  ["quoted uppercase name", 'SELECT * FROM "Events"'],
+  ["quoted uppercase name", 'SELECT * FROM "Tasks"'],
   ["CTE from a sibling subquery", "SELECT (WITH tags AS (SELECT 1) SELECT 1), (SELECT count(*) FROM tags)"],
   ["CTE declared after its user", "WITH a AS (SELECT * FROM tags), tags AS (SELECT 1) SELECT * FROM a"],
   ["CTE from the other UNION branch", "(WITH tags AS (SELECT 1 AS x) SELECT x FROM tags) UNION SELECT count(*) FROM tags"],

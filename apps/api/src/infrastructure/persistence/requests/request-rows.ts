@@ -5,7 +5,7 @@ import * as schema from "../database/schema";
 import type { Tx } from "../shared/tx";
 
 /**
- * Monotonico: as entradas de um evento e os passos de um pedido ordenam por id
+ * Monotonico: as entradas de uma tarefa e os passos de um pedido ordenam por id
  * na ordem em que foram criados, mesmo no mesmo milissegundo.
  */
 export const newOrderedId = monotonicFactory();
@@ -13,7 +13,7 @@ export const newOrderedId = monotonicFactory();
 /** Por onde o pedido anda; fica em `events.data.route`. */
 export type RequestRoute = "steps" | "hermes" | "voice" | "food";
 
-export interface NewAgentEvent {
+export interface NewAgentTask {
   id: string;
   userId: string;
   kind: AgentEventKind;
@@ -23,8 +23,8 @@ export interface NewAgentEvent {
   data: Record<string, unknown>;
 }
 
-/** Um pedido ou um passo: evento de agente. Comeca agora; a conclusao vem quando ele termina. */
-export async function insertAgentEvent(tx: Tx, event: NewAgentEvent): Promise<void> {
+/** Um pedido ou um passo: tarefa de agente. Comeca agora; a conclusao vem quando ele termina. */
+export async function insertAgentTask(tx: Tx, event: NewAgentTask): Promise<void> {
   await tx.insert(schema.events).values({
     id: event.id,
     userId: event.userId,
@@ -38,7 +38,7 @@ export async function insertAgentEvent(tx: Tx, event: NewAgentEvent): Promise<vo
 }
 
 export interface NewEntry {
-  eventId: string;
+  taskId: string;
   userId: string;
   kind: EntryKind;
   /** So em `message`. */
@@ -48,12 +48,12 @@ export interface NewEntry {
   data?: Record<string, unknown>;
 }
 
-/** Acrescenta uma entrada ao evento. Entradas nunca mudam, e nao contam como revisao do evento. */
+/** Acrescenta uma entrada à tarefa. Entradas nunca mudam, e nao contam como revisao da tarefa. */
 export async function appendEntry(tx: Pick<Tx, "insert">, entry: NewEntry): Promise<string> {
   const id = newOrderedId();
   await tx.insert(schema.eventEntries).values({
     id,
-    eventId: entry.eventId,
+    eventId: entry.taskId,
     userId: entry.userId,
     kind: entry.kind,
     role: entry.role ?? null,

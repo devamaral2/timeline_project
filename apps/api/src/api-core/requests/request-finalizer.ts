@@ -15,17 +15,17 @@ import type { LinkRecord, RequestEntityRecord, RequestRecord, RequestStore, Step
 
 const LINK_ATTEMPTS = 3;
 
-/** So um artefato e um evento se ligam: dois artefatos nao, e a ordem entre dois eventos nao e decidida aqui. */
+/** So um artefato e uma tarefa se ligam: dois artefatos nao, e a ordem entre duas tarefas nao e decidida aqui. */
 export function linkable(a: { kind: EntityKind }, b: { kind: EntityKind }): boolean {
   return a.kind !== b.kind;
 }
 
-/** Quem pertence a quem: o artefato pertence ao evento. */
+/** Quem pertence a quem: o artefato pertence à tarefa. */
 export function orient<A extends { kind: EntityKind }, B extends { kind: EntityKind }>(
   entity: A,
   chosen: B,
 ): { from: A | B; to: A | B } {
-  return entity.kind === "event" ? { from: chosen, to: entity } : { from: entity, to: chosen };
+  return entity.kind === "task" ? { from: chosen, to: entity } : { from: entity, to: chosen };
 }
 
 function alreadyLinked(a: RequestEntityRecord, b: RequestEntityRecord): boolean {
@@ -36,7 +36,7 @@ function alreadyLinked(a: RequestEntityRecord, b: RequestEntityRecord): boolean 
 
 function describe(entity: RequestEntityRecord): string {
   const { summary } = entity;
-  const label = entity.kind === "event" ? `evento (${summary.eventKind ?? "common"})` : `artefato (${summary.artifactType ?? "text"})`;
+  const label = entity.kind === "task" ? `tarefa (${summary.taskKind ?? "common"})` : `artefato (${summary.artifactType ?? "text"})`;
   return [
     `${label}: ${summary.name}`,
     summary.startedAt ? `início ${summary.startedAt}` : undefined,
@@ -137,8 +137,8 @@ export class RequestFinalizer {
   }
 
   /**
-   * A relacao pertence ao evento: o artefato passa a aparecer nele (criado pelo pedido, o evento o cria; ja
-   * existente, o evento o usa).
+   * A relacao pertence à tarefa: o artefato passa a aparecer nela (criado pelo pedido, a tarefa o cria; ja
+   * existente, a tarefa o usa).
    */
   private async applyLink(
     request: RequestRecord,

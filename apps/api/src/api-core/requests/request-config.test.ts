@@ -35,12 +35,12 @@ describe("agentes em .md", () => {
   });
 
   test("os agentes de criacao nao consultam nem criam fora do seu papel", () => {
-    for (const agent of ["event-create", "artifact-create", "recurring-event-create"]) {
+    for (const agent of ["task-create", "artifact-create", "recurring-task-create"]) {
       const text = loadAgentDefinition(agent).template;
       expect(text).toMatch(/NUNCA faça perguntas/);
       expect(text).not.toMatch(/query_data|SELECT /i);
     }
-    expect(loadAgentDefinition("event-create").template).toMatch(/não cria artefatos/);
+    expect(loadAgentDefinition("task-create").template).toMatch(/não cria artefatos/);
   });
 
   test("renderiza so com os placeholders declarados", () => {
@@ -68,7 +68,7 @@ describe("parametros do JEV e textos predefinidos em .json", () => {
     }
     for (const question of Object.keys(DISPATCH_STEPS)) expect(dispatchConfig.questions[question]).toBeDefined();
     expect(Object.keys(dispatchConfig.questions)).toEqual(expect.arrayContaining([
-      "event_create", "event_edit", "artifact_create", "artifact_edit", "recurring_event_create", "recurring_event_edit", "query",
+      "task_create", "task_edit", "artifact_create", "artifact_edit", "recurring_task_create", "recurring_task_edit", "query",
     ]));
     expect(Object.keys(dispatchConfig.questions).sort()).toEqual(Object.keys(DISPATCH_STEPS).sort());
     expect(dispatchConfig.minCertainty).toBe(0.92);
@@ -77,7 +77,7 @@ describe("parametros do JEV e textos predefinidos em .json", () => {
 
   test("todo agente tem rotulo predefinido", () => {
     for (const agent of [...STEP_AGENTS, "fallback"]) expect(uiConfig.steps[agent]).toBeTruthy();
-    expect(stepLabel("event-create")).toBe("Criando eventos");
+    expect(stepLabel("task-create")).toBe("Criando tarefas");
     expect(Object.keys(uiConfig.steps).sort()).toEqual([...STEP_AGENTS, "fallback"].sort());
   });
 });

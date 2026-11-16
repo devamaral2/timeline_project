@@ -6,7 +6,7 @@
   "minCertainty": 0.92,
   "maxCandidates": 12,
   "question": {
-    "instructions": "A entidade abaixo foi criada a partir do pedido do usuário. Alguma das outras entidades do mesmo pedido é aquela a que ela pertence e a que deve ficar ligada? Um alimento pertence ao evento da refeição que descreve (os alimentos e quantidades batem com o que foi comido); um artefato de texto pertence ao evento de que trata; um evento pertence ao evento maior de que é uma parte. Na dúvida, não ligue.",
+    "instructions": "A entidade abaixo foi criada a partir do pedido do usuário. Alguma das outras entidades do mesmo pedido é aquela a que ela pertence e a que deve ficar ligada? Um alimento pertence à tarefa da refeição que descreve (os alimentos e quantidades batem com o que foi comido); um artefato de texto pertence à tarefa de que trata; uma tarefa pertence à tarefa maior de que é uma parte. Na dúvida, não ligue.",
     "none": "Nenhuma delas: a entidade fica sem ligação."
   }
 }

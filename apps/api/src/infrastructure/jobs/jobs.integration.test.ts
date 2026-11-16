@@ -262,13 +262,13 @@ describe("fila de jobs", () => {
       service.register("work", async (payload, context) => {
         seen.push({ payload, context, current: getCurrentJob() });
       });
-      const id = await service.enqueue({ kind: "work", userId: USER, actorId: "admin-1", eventId, payload: { artifactId: "a-1" } });
+      const id = await service.enqueue({ kind: "work", userId: USER, actorId: "admin-1", taskId: eventId, payload: { artifactId: "a-1" } });
 
       await drain(service);
 
       expect(seen).toHaveLength(1);
       expect(seen[0].payload).toEqual({ artifactId: "a-1" });
-      expect(seen[0].context).toMatchObject({ jobId: id, userId: USER, actorId: "admin-1", eventId, attempt: 1 });
+      expect(seen[0].context).toMatchObject({ jobId: id, userId: USER, actorId: "admin-1", taskId: eventId, attempt: 1 });
       expect(seen[0].context.signal.aborted).toBe(false);
       expect(seen[0].current).toMatchObject({ id, attempts: 1, token: expect.any(String) });
       expect(await rowOf(id)).toMatchObject({ status: "succeeded", error: null, lease_until: null, attempts: 1 });
@@ -435,21 +435,21 @@ describe("fila de jobs", () => {
       let during: unknown;
       service.register("work", async (payload, context) => {
         await context.progress({ stage: "pensando" });
-        during = await service.progressOfEvent(eventId);
+        during = await service.progressOfTask(eventId);
         if ((payload as { fail?: boolean }).fail) throw new RetryableJobError("tenta de novo");
       });
 
-      const succeeded = await enqueue({ eventId });
+      const succeeded = await enqueue({ taskId: eventId });
       await drain(service);
       expect(during).toEqual({ stage: "pensando" });
       expect((await rowOf(succeeded)).progress).toBeNull();
-      expect(await service.progressOfEvent(eventId)).toBeUndefined();
+      expect(await service.progressOfTask(eventId)).toBeUndefined();
 
-      const retried = await enqueue({ eventId, payload: { fail: true } });
+      const retried = await enqueue({ taskId: eventId, payload: { fail: true } });
       await drain(service);
       expect(await rowOf(retried)).toMatchObject({ status: "queued", progress: null });
       // O job que espera o retry e o job vivo do evento, mas sem progresso.
-      expect(await service.progressOfEvent(eventId)).toBeUndefined();
+      expect(await service.progressOfTask(eventId)).toBeUndefined();
     });
 
     test("cancelOfEvents cancela os jobs vivos dos eventos e aborta o handler em curso", async () => {
@@ -459,9 +459,9 @@ describe("fila de jobs", () => {
         await requestEvent("Na fila"),
         await requestEvent("Outro pedido"),
       ];
-      const running = await enqueue({ eventId: runningEvent });
-      const queued = await enqueue({ eventId: queuedEvent });
-      const untouched = await enqueue({ eventId: untouchedEvent });
+      const running = await enqueue({ taskId: runningEvent });
+      const queued = await enqueue({ taskId: queuedEvent });
+      const untouched = await enqueue({ taskId: untouchedEvent });
       await ctx.pool.query("UPDATE jobs SET available_at = now() + interval '1 hour' WHERE id = ANY($1)", [[queued, untouched]]);
       let started: () => void = () => {};
       const handlerStarted = new Promise<void>((resolve) => {
@@ -478,10 +478,10 @@ describe("fila de jobs", () => {
       await service.tick();
       await handlerStarted;
       // Outro usuario nao cancela nada.
-      await service.cancelOfEvents([runningEvent, queuedEvent], OTHER_USER);
+      await service.cancelOfTasks([runningEvent, queuedEvent], OTHER_USER);
       expect(await statusOf(running)).toBe("running");
 
-      await service.cancelOfEvents([runningEvent, queuedEvent], USER);
+      await service.cancelOfTasks([runningEvent, queuedEvent], USER);
       await service.idle();
 
       expect(abortedInHandler).toBe(true);

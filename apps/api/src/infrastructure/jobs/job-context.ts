@@ -12,7 +12,7 @@ export interface EnqueueJobInput {
   userId: string;
   actorId: string;
   /** O pedido ou o passo que o job executa. Todo job de IA tem um. */
-  eventId?: string;
+  taskId?: string;
   payload: unknown;
   /** Um job por usuario, tipo e chave: enfileirar de novo devolve o que ja existe. */
   dedupeKey?: string;
@@ -59,7 +59,7 @@ export async function enqueueJobInTransaction(tx: JobTransaction, input: Enqueue
   if (!input.userId || !input.actorId) throw new Error("Jobs require authenticated ownership");
   const result = await tx.execute(sql`
     INSERT INTO jobs (id, kind, user_id, actor_id, task_id, payload, dedupe_key, concurrency_key)
-    VALUES (${ulid()}, ${input.kind}, ${input.userId}, ${input.actorId}, ${input.eventId ?? null},
+    VALUES (${ulid()}, ${input.kind}, ${input.userId}, ${input.actorId}, ${input.taskId ?? null},
       ${JSON.stringify(input.payload)}::jsonb, ${input.dedupeKey ?? null}, ${input.concurrencyKey ?? null})
     ON CONFLICT (user_id, kind, dedupe_key) DO UPDATE SET dedupe_key = excluded.dedupe_key
     RETURNING id`);

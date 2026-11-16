@@ -33,7 +33,7 @@ import type { EntryKind, EntryRole } from "../../../domain";
 import { enqueueJobInTransaction } from "../../jobs/job-context";
 import type { PostgresDatabase } from "../database/postgres-database";
 import type { Tx } from "../shared/tx";
-import { insertAgentEvent, newOrderedId } from "./request-rows";
+import { insertAgentTask, newOrderedId } from "./request-rows";
 
 type Row = Record<string, unknown>;
 
@@ -44,7 +44,7 @@ interface Executor {
 
 interface EntryRow {
   id: string;
-  eventId: string;
+  taskId: string;
   kind: EntryKind;
   role: EntryRole | null;
   content: string | null;
@@ -58,7 +58,7 @@ const TITLE_CHARS = 80;
 const TEXT_PREVIEW_CHARS = 200;
 const OPEN_REQUEST = sql`('queued', 'running', 'waiting')`;
 
-const EVENT_RELATION = { create: "generates", update: "updates", delete: "deletes" } as const;
+const TASK_RELATION = { create: "generates", update: "updates", delete: "deletes" } as const;
 const ARTIFACT_RELATION = { create: "creates", update: "updates", delete: "deletes" } as const;
 const OPERATION: Record<string, RequestEntityRecord["operation"]> = {
   generates: "create", creates: "create", updates: "update", deletes: "delete",
@@ -76,7 +76,7 @@ const iso = (value: unknown): string | undefined => date(value)?.toISOString();
 const json = (value: unknown) => JSON.stringify(value);
 
 /**
- * O pedido e os passos como eventos de agente (ADR 0013). O que se acrescenta a eles sao entradas, o que um
+ * O pedido e os passos como tarefas de agente (ADR 0013). O que se acrescenta a eles sao entradas, o que um
  * passo tocou sao relacoes partindo dele, e os jobs entram sempre na mesma transacao que o estado.
  */
 export class PostgresRequestStore implements RequestStore {
@@ -113,7 +113,7 @@ export class PostgresRequestStore implements RequestStore {
         }
       }
 
-      await insertAgentEvent(tx, {
+      await insertAgentTask(tx, {
         id: requestId,
         userId: input.userId,
         kind: "request",
@@ -134,7 +134,7 @@ export class PostgresRequestStore implements RequestStore {
           VALUES (${input.sessionId}, ${requestId}, 'follow_up')`);
       }
       await enqueueJobInTransaction(tx, {
-        kind: input.job, userId: input.userId, actorId: input.userId, eventId: requestId,
+        kind: input.job, userId: input.userId, actorId: input.userId, taskId: requestId,
         payload: { requestId }, dedupeKey: requestId,
       });
       return { requestId, created: true };
@@ -168,7 +168,7 @@ export class PostgresRequestStore implements RequestStore {
   }
 
   async entities(requestId: string): Promise<RequestEntityRecord[]> {
-    // As relacoes partem dos passos; na voz e no alimento, do proprio pedido. O evento que um passo tocou tambem
+    // As relacoes partem dos passos; na voz e no alimento, do proprio pedido. A tarefa que um passo tocou tambem
     // ganha a relacao do pedido: com o mesmo instante, o passo vem antes e vale (`step DESC`).
     const sources = `WITH sources AS (
       SELECT $1::char(26) AS id, false AS step
@@ -177,7 +177,7 @@ export class PostgresRequestStore implements RequestStore {
     const [touched, finalized] = await Promise.all([
       this.database.pool.query<Row>(
         `${sources}
-         SELECT sources.id AS source_id, sources.step, 'event' AS kind, e.id, r.relation, e.name, e.kind AS task_kind,
+         SELECT sources.id AS source_id, sources.step, 'task' AS kind, e.id, r.relation, e.name, e.kind AS task_kind,
            e.started_at, e.estimated_finish_at, (e.recurrence_id IS NOT NULL AND NOT e.recurrence_detached) AS series,
            NULL AS artifact_type, NULL AS preview, r.created_at
          FROM sources
@@ -203,9 +203,9 @@ export class PostgresRequestStore implements RequestStore {
       const id = String(row.id);
       // A mesma entidade tocada por dois passos conta uma vez: vale o primeiro.
       if (records.has(key(kind, id))) continue;
-      const summary: EntitySummary = kind === "event"
+      const summary: EntitySummary = kind === "task"
         ? {
-          name: String(row.name), eventKind: String(row.task_kind),
+          name: String(row.name), taskKind: String(row.task_kind),
           ...(row.started_at ? { startedAt: iso(row.started_at) } : {}),
           ...(row.estimated_finish_at ? { estimatedFinishAt: iso(row.estimated_finish_at) } : {}),
           ...(row.series ? { series: true } : {}),
@@ -288,7 +288,7 @@ export class PostgresRequestStore implements RequestStore {
   private async insertSteps(tx: Tx, requestId: string, userId: string, steps: readonly NewStep[]): Promise<void> {
     for (const step of steps) {
       const { round, ...input } = step.input ?? {};
-      await insertAgentEvent(tx, {
+      await insertAgentTask(tx, {
         id: step.id, userId, kind: "step", status: "queued", name: stepLabel(step.agent),
         data: { agent: step.agent, expected: step.expected, ...(round !== undefined ? { round } : {}) },
       });
@@ -301,7 +301,7 @@ export class PostgresRequestStore implements RequestStore {
         await this.append(tx, step.id, { kind: "input", content: instruction, data: rest });
       }
       await enqueueJobInTransaction(tx, {
-        kind: jobKindOf(step.agent), userId, actorId: userId, eventId: step.id,
+        kind: jobKindOf(step.agent), userId, actorId: userId, taskId: step.id,
         payload: { requestId, stepId: step.id }, dedupeKey: step.id,
       });
     }
@@ -335,13 +335,13 @@ export class PostgresRequestStore implements RequestStore {
       // O passo foi cancelado enquanto o agente trabalhava: o erro desfaz as entidades do lote.
       if (!userId) throw new Error("Step is no longer open");
       for (const entity of input.entities) {
-        if (entity.kind === "event") {
-          // O passo e o pedido apontam para o evento: o evento mostra o pedido ("criado por", "atualizado
+        if (entity.kind === "task") {
+          // O passo e o pedido apontam para a tarefa: a tarefa mostra o pedido ("criado por", "atualizado
           // por") sem descer pelos passos, e cada pedido que o altera deixa a sua propria relacao.
           await run.execute(sql`
             INSERT INTO task_task_relation (from_task_id, to_task_id, relation)
-            VALUES (${input.stepId}, ${entity.id}, ${EVENT_RELATION[entity.operation]}),
-                   (${input.requestId}, ${entity.id}, ${EVENT_RELATION[entity.operation]})
+            VALUES (${input.stepId}, ${entity.id}, ${TASK_RELATION[entity.operation]}),
+                   (${input.requestId}, ${entity.id}, ${TASK_RELATION[entity.operation]})
             ON CONFLICT (from_task_id, relation, to_task_id) DO NOTHING`);
         } else {
           await run.execute(sql`
@@ -400,7 +400,7 @@ export class PostgresRequestStore implements RequestStore {
 
   private async enqueueFinalize(tx: Tx, requestId: string, stepId: string, userId: string): Promise<void> {
     await enqueueJobInTransaction(tx, {
-      kind: REQUEST_JOBS.finalize, userId, actorId: userId, eventId: stepId,
+      kind: REQUEST_JOBS.finalize, userId, actorId: userId, taskId: stepId,
       payload: { requestId, stepId }, dedupeKey: `finalize:${stepId}`,
       concurrencyKey: finalizeConcurrencyKey(requestId),
     });
@@ -427,13 +427,13 @@ export class PostgresRequestStore implements RequestStore {
     });
   }
 
-  async completeVoice(tx: unknown, input: { requestId: string; eventId: string }): Promise<void> {
+  async completeVoice(tx: unknown, input: { requestId: string; taskId: string }): Promise<void> {
     await this.inTransaction(tx, async (run) => {
       await run.execute(sql`
         INSERT INTO task_task_relation (from_task_id, to_task_id, relation)
-        VALUES (${input.requestId}, ${input.eventId}, 'generates')`);
-      await this.append(run, input.requestId, { kind: "result", data: { type: "voice", eventId: input.eventId } });
-      // O pedido foi cancelado enquanto o modelo trabalhava: o erro desfaz o evento.
+        VALUES (${input.requestId}, ${input.taskId}, 'generates')`);
+      await this.append(run, input.requestId, { kind: "result", data: { type: "voice", taskId: input.taskId } });
+      // O pedido foi cancelado enquanto o modelo trabalhava: o erro desfaz a tarefa.
       if (!(await this.closeRequest(run, input.requestId, "done", {}))) throw new Error("Request is no longer open");
     });
   }
@@ -483,27 +483,27 @@ export class PostgresRequestStore implements RequestStore {
     });
   }
 
-  /** Acrescenta uma entrada ao evento, com o dono dele. Entradas nunca mudam e nao contam como revisao. */
+  /** Acrescenta uma entrada à tarefa, com o dono dela. Entradas nunca mudam e nao contam como revisao. */
   private async append(
     executor: Executor,
-    eventId: string,
+    taskId: string,
     entry: { kind: EntryKind; role?: EntryRole; content?: string; data?: Row },
   ): Promise<void> {
     await executor.execute(sql`
       INSERT INTO task_entries (id, task_id, user_id, kind, role, content, data)
       SELECT ${newOrderedId()}, e.id, e.user_id, ${entry.kind}, ${entry.role ?? null}, ${entry.content ?? null},
         ${json(entry.data ?? {})}::jsonb
-      FROM tasks e WHERE e.id = ${eventId}`);
+      FROM tasks e WHERE e.id = ${taskId}`);
   }
 
-  private async entriesOf(eventIds: readonly string[]): Promise<Map<string, EntryRow[]>> {
-    const byEvent = new Map<string, EntryRow[]>();
-    if (eventIds.length === 0) return byEvent;
+  private async entriesOf(taskIds: readonly string[]): Promise<Map<string, EntryRow[]>> {
+    const byTask = new Map<string, EntryRow[]>();
+    if (taskIds.length === 0) return byTask;
     const { rows } = await this.database.pool.query<EntryRow>(
       `SELECT id, task_id AS "eventId", kind, role, content, data FROM task_entries
-       WHERE task_id = ANY($1::char(26)[]) ORDER BY id`, [eventIds]);
-    for (const row of rows) byEvent.set(row.eventId, [...(byEvent.get(row.eventId) ?? []), row]);
-    return byEvent;
+       WHERE task_id = ANY($1::char(26)[]) ORDER BY id`, [taskIds]);
+    for (const row of rows) byTask.set(row.taskId, [...(byTask.get(row.taskId) ?? []), row]);
+    return byTask;
   }
 }
 

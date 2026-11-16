@@ -3,9 +3,6 @@ import { stepLabel, uiConfig } from "./request-config";
 import type { RequestEntityRecord, RequestRecord, StepRecord, StepStatus } from "./request-store";
 import { toRequestTrace } from "./request-trace";
 
-/** O que o pedido guarda ainda chama a tarefa pelo nome antigo; no contrato ela e `task`. */
-const toEntityKindDto = (kind: RequestEntityRecord["kind"]): "task" | "artifact" => (kind === "artifact" ? "artifact" : "task");
-
 const TRACE_STEP_STATUS: Record<AgentTraceStatus, StepStatus> = {
   pending: "queued", running: "running", done: "done", failed: "failed",
 };
@@ -69,12 +66,11 @@ export function toRequestDto(
     text: request.prompt,
     steps: stepDtos,
     entities: entities.map((entity) => ({
-      kind: toEntityKindDto(entity.kind), id: entity.id, name: entity.summary.name,
+      kind: entity.kind, id: entity.id, name: entity.summary.name,
       ...(entity.summary.artifactType ? { artifactType: entity.summary.artifactType as ArtifactType } : {}),
       operation: entity.operation,
       linkedTo: entity.links
-        .map((link) => (link.from.id === entity.id ? link.to : link.from))
-        .map((ref) => ({ ...ref, kind: toEntityKindDto(ref.kind) })),
+        .map((link) => (link.from.id === entity.id ? link.to : link.from)),
     })),
     ...(message ? { message } : {}),
     ...(request.errorCode ? { errorCode: request.errorCode } : {}),

@@ -1,12 +1,12 @@
 {
   "_when": "Textos predefinidos do pedido por passos (ADR 003). Nada aqui passa por modelo.",
   "steps": {
-    "event-create": "Criando eventos",
+    "task-create": "Criando tarefas",
     "artifact-create": "Criando artefatos",
-    "event-edit": "Editando eventos",
+    "task-edit": "Editando tarefas",
     "artifact-edit": "Editando artefatos",
-    "recurring-event-create": "Criando eventos recorrentes",
-    "recurring-event-edit": "Editando eventos recorrentes",
+    "recurring-task-create": "Criando tarefas recorrentes",
+    "recurring-task-edit": "Editando tarefas recorrentes",
     "query": "Consultando dados",
     "fallback": "Analisando o pedido",
     "food-edit": "Editando o alimento",

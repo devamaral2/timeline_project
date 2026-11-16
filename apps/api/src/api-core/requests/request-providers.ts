@@ -28,7 +28,7 @@ import { OpenRouterStructuredCompletionGateway } from "../agent/gateways/structu
 import { GenerateFoodUseCase } from "../artifacts/generate-food.usecase";
 import { ArtifactBuilder } from "../artifacts/services/artifact-builder.service";
 import { CreateEventUseCase } from "../events/create-event.usecase";
-import { OpenRouterEventCommandParsingGateway } from "../events/gateways/openrouter-event-command-parsing.gateway";
+import { OpenRouterTaskCommandParsingGateway } from "../events/gateways/openrouter-task-command-parsing.gateway";
 import { OpenRouterFoodParsingGateway } from "../events/gateways/openrouter-food-parsing.gateway";
 import { PlaceResolver } from "../events/services/place-resolver.service";
 import { PhotonPlaceSearchGateway } from "../../infrastructure/places/photon-place-search.gateway";
@@ -46,7 +46,7 @@ import { RequestFinalizer } from "./request-finalizer";
 import { RequestOperations } from "./request-operations";
 import { RequestQueryWorker } from "./request-query-worker";
 import { RequestTargetEditWorker } from "./request-target-edit-worker";
-import { VoiceEventWorker } from "./voice-event-worker";
+import { VoiceTaskWorker } from "./voice-task-worker";
 
 const configOwner = () => getServerEnv().AGENT_CONFIG_OWNER_USER_ID;
 
@@ -69,7 +69,7 @@ export const REQUEST_PROVIDERS: Provider[] = [
   },
   AgentFilesBootstrap,
   { provide: OpenRouterFoodParsingGateway, useFactory: () => new OpenRouterFoodParsingGateway() },
-  { provide: OpenRouterEventCommandParsingGateway, useFactory: () => new OpenRouterEventCommandParsingGateway() },
+  { provide: OpenRouterTaskCommandParsingGateway, useFactory: () => new OpenRouterTaskCommandParsingGateway() },
   {
     provide: GenerateFoodUseCase,
     inject: [ARTIFACT_REPOSITORY, OpenRouterFoodParsingGateway],
@@ -86,13 +86,13 @@ export const REQUEST_PROVIDERS: Provider[] = [
     inject: [
       JobsService, PostgresRequestStore, ENTITY_BATCH_WRITER, EVENT_REPOSITORY, ARTIFACT_REPOSITORY,
       RECURRENCE_REPOSITORY, CreateEventUseCase, SCOPED_SQL_QUERY, DATABASE, OpenRouterFoodParsingGateway,
-      OpenRouterEventCommandParsingGateway, ArtifactBuilder, AgentFilesService, GenerateFoodUseCase,
+      OpenRouterTaskCommandParsingGateway, ArtifactBuilder, AgentFilesService, GenerateFoodUseCase,
     ],
     useFactory: (
       jobs: JobsService, store: PostgresRequestStore, batchWriter: EntityBatchWriter, events: EventRepository,
       artifacts: ArtifactRepository, recurrences: RecurrenceRepository, createEvent: CreateEventUseCase,
       sql: ScopedSqlQuery, database: PostgresDatabase, foodParsing: OpenRouterFoodParsingGateway,
-      commandParsing: OpenRouterEventCommandParsingGateway, artifactBuilder: ArtifactBuilder, files: AgentFilesService,
+      commandParsing: OpenRouterTaskCommandParsingGateway, artifactBuilder: ArtifactBuilder, files: AgentFilesService,
       food: GenerateFoodUseCase,
     ) => {
       const env = getServerEnv();
@@ -118,7 +118,7 @@ export const REQUEST_PROVIDERS: Provider[] = [
         }),
         targetEdit: new RequestTargetEditWorker({ ...deps, foodParsing, artifactBuilder, files }),
         hermes: new HermesTurnWorker(store, new HermesClient({ url: env.HERMES_URL, apiKey: env.HERMES_API_KEY })),
-        voice: new VoiceEventWorker({ store, parsing: commandParsing, createEvent, batchWriter, places }),
+        voice: new VoiceTaskWorker({ store, parsing: commandParsing, createEvent, batchWriter, places }),
         food,
       });
     },

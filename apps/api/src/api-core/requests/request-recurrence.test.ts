@@ -46,9 +46,9 @@ describe("regra da serie a partir do que o agente escreveu", () => {
 
 describe("passo de editar series", () => {
   async function seedSeries(ctx: ReturnType<typeof setupRequest>) {
-    const payload = await addStep(ctx, "seed", "recurring-event-create");
-    ctx.gateway.outputs.set("recurring_event_create", { series: [series()] });
-    await ctx.worker.run("recurring-event-create", payload);
+    const payload = await addStep(ctx, "seed", "recurring-task-create");
+    ctx.gateway.outputs.set("recurring_task_create", { series: [series()] });
+    await ctx.worker.run("recurring-task-create", payload);
     const [created] = ctx.batchWriter.commits[0]?.recurrences ?? [];
     return created as Recurrence;
   }
@@ -56,12 +56,12 @@ describe("passo de editar series", () => {
   test("trocar so a hora: a serie e revisada de hoje em diante, o resto da regra fica", async () => {
     const ctx = setupRequest("mude a corrida para as 8h");
     const created = await seedSeries(ctx);
-    const payload = await addStep(ctx, "s2", "recurring-event-edit", "one", {
+    const payload = await addStep(ctx, "s2", "recurring-task-edit", "one", {
       candidates: [{ kind: "recurrence", id: created.id, name: "Corrida", cadence: "toda segunda às 07:00" }],
     });
-    ctx.gateway.outputs.set("recurring_event_edit", { edits: [{ ...noEdit, id: created.id, timeOfDay: "08:00" }], query: null });
+    ctx.gateway.outputs.set("recurring_task_edit", { edits: [{ ...noEdit, id: created.id, timeOfDay: "08:00" }], query: null });
 
-    await ctx.editWorker.run("recurring-event-edit", payload);
+    await ctx.editWorker.run("recurring-task-edit", payload);
 
     expect(ctx.store.stepRecords.find((step) => step.id === "s2")?.status).toBe("done");
     const batch = ctx.batchWriter.commits[1];
@@ -69,7 +69,7 @@ describe("passo de editar series", () => {
     expect(batch?.artifacts).toHaveLength(0);
     // A ocorrencia que a mudanca mostra e nova no banco, mas fruto de uma edicao.
     const shown = (await ctx.store.entities("r1")).filter((entity) => entity.stepId === "s2");
-    expect(shown).toMatchObject([{ kind: "event", operation: "update", summary: { series: true } }]);
+    expect(shown).toMatchObject([{ kind: "task", operation: "update", summary: { series: true } }]);
   });
 
   const stored = (kind: string, name: string, extra: Record<string, unknown> = {}) => Recurrence.create({
@@ -84,7 +84,7 @@ describe("passo de editar series", () => {
     expect(revision.template).toBeUndefined();
   });
 
-  test("renomear a serie troca o template e mantem os artefatos, o status e os eventos de que ela se segue", () => {
+  test("renomear a serie troca o template e mantem os artefatos, o status e as tarefas de que ela se segue", () => {
     const current = stored("meal", "Almoço", { status: "todo", artifactIds: ["a1"], previousTaskIds: ["e1"] });
     const revision = planSeriesEdit(current, { ...noEdit, id: current.id, name: "Almoço fixo", priority: "high" }, "America/Sao_Paulo");
     expect(revision).toMatchObject({
@@ -111,11 +111,11 @@ describe("passo de editar series", () => {
 
   test("serie que nao existe: passo vermelho", async () => {
     const ctx = setupRequest();
-    const payload = await addStep(ctx, "s1", "recurring-event-edit", "one", {
+    const payload = await addStep(ctx, "s1", "recurring-task-edit", "one", {
       candidates: [{ kind: "recurrence", id: "01ARZ3NDEKTSV4RRFFQ69G5FAV", name: "X" }],
     });
-    ctx.gateway.outputs.set("recurring_event_edit", { edits: [{ ...noEdit, id: "01ARZ3NDEKTSV4RRFFQ69G5FAV", timeOfDay: "08:00" }], query: null });
-    await ctx.editWorker.run("recurring-event-edit", payload);
+    ctx.gateway.outputs.set("recurring_task_edit", { edits: [{ ...noEdit, id: "01ARZ3NDEKTSV4RRFFQ69G5FAV", timeOfDay: "08:00" }], query: null });
+    await ctx.editWorker.run("recurring-task-edit", payload);
     expect(ctx.store.stepRecords[0]).toMatchObject({ status: "failed", errorCode: "rejected" });
   });
 });

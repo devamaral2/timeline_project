@@ -43,6 +43,13 @@
       "when": 1795120678235,
       "tag": "0005_tarefa_no_lugar_de_evento",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1795207078235,
+      "tag": "0006_agentes_falam_de_tarefa",
+      "breakpoints": true
     }
   ]
 }

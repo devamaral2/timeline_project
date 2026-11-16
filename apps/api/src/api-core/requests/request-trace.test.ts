@@ -20,16 +20,16 @@ const step = (seed: StepSeed): StepRecord => ({ ...seed, requestId: "r1", label:
 const dispatch: DispatchRecord = {
   model: "jev-latest", latencyMs: 412,
   answers: {
-    event_create: { choice: "one", confidence: 0.98, probability: 0.97 },
+    task_create: { choice: "one", confidence: 0.98, probability: 0.97 },
     artifact_create: { choice: "one", confidence: 0.95, probability: 0.94 },
-    event_edit: { choice: "none", confidence: 0.99, probability: 0.99 },
+    task_edit: { choice: "none", confidence: 0.99, probability: 0.99 },
   },
   uncertain: [], unsupported: [],
 };
 
 const steps: StepRecord[] = [
   step({
-    id: "s1", agent: "event-create", expected: "one", status: "done",
+    id: "s1", agent: "task-create", expected: "one", status: "done",
     startedAt: plus(500), finishedAt: plus(1700), timings: { total: 1150 },
   }),
   step({ id: "s2", agent: "artifact-create", expected: "many", status: "running", startedAt: plus(520) }),
@@ -37,7 +37,7 @@ const steps: StepRecord[] = [
 
 const entities: RequestEntityRecord[] = [
   {
-    requestId: "r1", kind: "event", id: "e1", stepId: "s1", operation: "create",
+    requestId: "r1", kind: "task", id: "e1", stepId: "s1", operation: "create",
     summary: { name: "Almoço" }, finalized: true, links: [],
   },
 ];
@@ -72,7 +72,7 @@ describe("toRequestTrace", () => {
     const routing = trace.entries[1];
     expect(routing).toMatchObject({
       kind: "routing", status: "done", source: "jev-latest", durationMs: 412,
-      summary: "Aciona: Criando eventos, Criando artefatos", raw: dispatch,
+      summary: "Aciona: Criando tarefas, Criando artefatos", raw: dispatch,
     });
     expect(routing?.fields?.slice(0, 2)).toEqual([
       { label: "Modelo", value: "jev-latest" }, { label: "Latência", value: "412 ms" },
@@ -80,9 +80,9 @@ describe("toRequestTrace", () => {
     expect(routing?.sections?.[0]).toEqual({
       title: "Respostas do roteador", code: true,
       text: [
-        "event_create: one · confiança 98% · probabilidade 97% · aciona um agente",
+        "task_create: one · confiança 98% · probabilidade 97% · aciona um agente",
         "artifact_create: one · confiança 95% · probabilidade 94% · aciona um agente",
-        "event_edit: none · confiança 99% · probabilidade 99% · ignorada",
+        "task_edit: none · confiança 99% · probabilidade 99% · ignorada",
       ].join("\n"),
     });
     expect(trace.fields).toEqual([
@@ -94,13 +94,13 @@ describe("toRequestTrace", () => {
     const trace = toRequestTrace(request({ dispatch }), steps, entities);
 
     expect(trace.entries[2]).toMatchObject({
-      id: "s1", kind: "agent", label: "Criando eventos", source: "event-create", status: "done",
+      id: "s1", kind: "agent", label: "Criando tarefas", source: "task-create", status: "done",
       startedAt: plus(500).toISOString(), durationMs: 1200, summary: "Almoço",
       fields: [
         { label: "Quantidade esperada", value: "um" },
         { label: "Tempo do agente", value: "1,1 s" },
       ],
-      sections: [{ title: "Registros", text: "Evento criado · Almoço" }],
+      sections: [{ title: "Registros", text: "Tarefa criado · Almoço" }],
     });
     expect(trace.entries[3]).toMatchObject({ id: "s2", status: "running", fields: [{ label: "Quantidade esperada", value: "vários" }] });
     expect(trace.entries[3]?.durationMs).toBeUndefined();
@@ -110,7 +110,7 @@ describe("toRequestTrace", () => {
   test("what the model thought comes right after the agent that thought it, one entry per call", () => {
     const at = plus(1600).toISOString();
     const thoughts = [
-      { text: "O pedido fala de um almoço ao meio-dia.\nCrio um evento só.", at, model: "modelo-x" },
+      { text: "O pedido fala de um almoço ao meio-dia.\nCrio uma tarefa só.", at, model: "modelo-x" },
       { text: "Confiro o horário.", at: plus(1650).toISOString() },
     ];
     const trace = toRequestTrace(
@@ -119,13 +119,13 @@ describe("toRequestTrace", () => {
 
     expect(trace.entries.map((entry) => entry.id)).toEqual(["r1-request", "r1-routing", "s1", "s1-thought-1", "s1-thought-2", "s2"]);
     expect(trace.entries[3]).toEqual({
-      id: "s1-thought-1", kind: "thought", label: "Pensou", source: "event-create", status: "done",
+      id: "s1-thought-1", kind: "thought", label: "Pensou", source: "task-create", status: "done",
       summary: "O pedido fala de um almoço ao meio-dia.", startedAt: at,
-      fields: [{ label: "Agente", value: "Criando eventos" }, { label: "Modelo", value: "modelo-x" }],
-      sections: [{ title: "Raciocínio", text: "O pedido fala de um almoço ao meio-dia.\nCrio um evento só." }],
-      raw: { stepId: "s1", agent: "event-create", at, model: "modelo-x", chars: 58 },
+      fields: [{ label: "Agente", value: "Criando tarefas" }, { label: "Modelo", value: "modelo-x" }],
+      sections: [{ title: "Raciocínio", text: "O pedido fala de um almoço ao meio-dia.\nCrio uma tarefa só." }],
+      raw: { stepId: "s1", agent: "task-create", at, model: "modelo-x", chars: 58 },
     });
-    expect(trace.entries[4]?.fields).toEqual([{ label: "Agente", value: "Criando eventos" }]);
+    expect(trace.entries[4]?.fields).toEqual([{ label: "Agente", value: "Criando tarefas" }]);
     expect(trace.entries[2]?.raw).toMatchObject({ thoughts: 2 });
     // Os totais contam agentes, nao os pensamentos deles.
     expect(trace.fields).toContainEqual({ label: "Agentes", value: "2" });
@@ -217,7 +217,7 @@ describe("um pedido cancelado", () => {
   test("fecha o rastro como falha, com o passo cancelado em vermelho", () => {
     const trace = toRequestTrace(
       request({ status: "cancel", errorCode: "cancelled", finishedAt: plus(300) }),
-      [step({ id: "s1", agent: "event-create", expected: "one", status: "cancel" })], [],
+      [step({ id: "s1", agent: "task-create", expected: "one", status: "cancel" })], [],
     );
     expect(trace.status).toBe("failed");
     expect(trace.entries.at(-1)).toMatchObject({ kind: "answer", label: "Cancelado", status: "failed" });

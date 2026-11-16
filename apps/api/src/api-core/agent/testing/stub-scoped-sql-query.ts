@@ -8,7 +8,7 @@ export class StubScopedSqlQuery implements ScopedSqlQuery {
   ) {}
 
   describeSchema(): string {
-    return "events: Eventos do usuario.";
+    return "tasks: Tarefas do usuario.";
   }
 
   async run(input: { userId: string; sql: string }): Promise<ScopedSqlOutcome> {

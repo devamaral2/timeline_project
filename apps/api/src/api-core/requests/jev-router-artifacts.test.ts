@@ -17,7 +17,7 @@ describe("jevRouterArtifacts", () => {
     const specs = jevRouterArtifacts();
     expect(specs.map((spec) => spec.name)).toEqual(["JEV · Despacho", "JEV · Vínculo", "JEV · Candidatas de edição"]);
     expect(specs[0]?.body).toContain("Certeza mínima: 0.92");
-    expect(specs[0]?.body).toContain("### `event_create`");
+    expect(specs[0]?.body).toContain("### `task_create`");
     expect(specs[1]?.body).toContain("Máximo de candidatas");
   });
 });

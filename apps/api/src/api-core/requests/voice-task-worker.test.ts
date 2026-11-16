@@ -1,17 +1,17 @@
 import { expect, test } from "vitest";
-import type { EventCommandParsingGateway, ParsedEventCommand } from "../events/gateways/event-command-parsing.gateway";
+import type { TaskCommandParsingGateway, ParsedTaskCommand } from "../events/gateways/task-command-parsing.gateway";
 import { createEventsKit } from "../events/testing/in-memory-events-kit";
 import { InMemoryRequestStore } from "./testing/in-memory-request-store";
-import { VoiceEventWorker } from "./voice-event-worker";
+import { VoiceTaskWorker } from "./voice-task-worker";
 
 const ACCEPTED = new Date("2026-10-25T15:00:00Z");
 
-function setup(command: Partial<ParsedEventCommand> | Error = {}) {
+function setup(command: Partial<ParsedTaskCommand> | Error = {}) {
   const kit = createEventsKit({ clock: () => ACCEPTED });
   const store = new InMemoryRequestStore(() => ACCEPTED, kit.database);
   const request = store.seed({ id: "v1", prompt: "comecei a estudar", route: "voice", status: "queued" });
   const calls: string[] = [];
-  const parsing: EventCommandParsingGateway = {
+  const parsing: TaskCommandParsingGateway = {
     parseCommand: async ({ text }) => {
       calls.push(text);
       if (command instanceof Error) throw command;
@@ -20,11 +20,11 @@ function setup(command: Partial<ParsedEventCommand> | Error = {}) {
   };
   const said: string[] = [];
   const places = { resolve: async (text: string) => { said.push(text); return `${text}, Rua Um 10, Belo Horizonte`; } };
-  const worker = new VoiceEventWorker({ store, parsing, createEvent: kit.createEvent, batchWriter: kit.batchWriter, places });
+  const worker = new VoiceTaskWorker({ store, parsing, createEvent: kit.createEvent, batchWriter: kit.batchWriter, places });
   return { kit, store, request, calls, worker, said };
 }
 
-test("a fala vira um evento de pessoa, com a frase na descricao, e o pedido termina apontando para ele", async () => {
+test("a fala vira uma tarefa de pessoa, com a frase na descricao, e o pedido termina apontando para ele", async () => {
   const { kit, store, calls, worker } = setup();
 
   await worker.run("v1");
@@ -33,8 +33,8 @@ test("a fala vira um evento de pessoa, com a frase na descricao, e o pedido term
   const [event] = kit.database.events;
   expect(event).toMatchObject({ actor: "human", userId: "user-1", name: "Estudar", description: "comecei a estudar", startedAt: ACCEPTED });
   expect(store.require("v1").status).toBe("done");
-  expect(await store.entities("v1")).toMatchObject([{ kind: "event", id: event?.id, operation: "create", stepId: "v1", finalized: true }]);
-  // Uma transacao so: o evento e o fim do pedido saem do mesmo lote.
+  expect(await store.entities("v1")).toMatchObject([{ kind: "task", id: event?.id, operation: "create", stepId: "v1", finalized: true }]);
+  // Uma transacao so: a tarefa e o fim do pedido saem do mesmo lote.
   expect(kit.batchWriter.commits).toHaveLength(1);
 });
 
@@ -58,7 +58,7 @@ test("o lugar citado na fala vira o endereco achado no mapa; sem lugar citado, o
   expect(plain.kit.database.events[0]?.location).toBe("");
 });
 
-test("refeicao falada: o evento nasce com o alimento a espera dos nutrientes", async () => {
+test("refeicao falada: a tarefa nasce com o alimento a espera dos nutrientes", async () => {
   const { kit, worker } = setup({ input: { kind: "meal", artifacts: [{ type: "food", data: { inputText: "arroz e feijão" } }], tags: [] } });
   await worker.run("v1");
   const [event] = kit.database.events;
@@ -73,7 +73,7 @@ test("falha do modelo sobe para a fila sem gravar nada: quem marca o pedido como
   expect(store.require("v1").status).toBe("running");
 });
 
-test("pedido cancelado nao chama o modelo; cancelado no meio, o evento nao e gravado", async () => {
+test("pedido cancelado nao chama o modelo; cancelado no meio, a tarefa nao e gravado", async () => {
   const cancelled = setup();
   await cancelled.store.cancel("v1");
   await cancelled.worker.run("v1");

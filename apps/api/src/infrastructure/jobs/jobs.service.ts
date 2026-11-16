@@ -31,7 +31,7 @@ export interface JobHandlerContext {
   userId: string;
   actorId: string;
   /** O pedido ou o passo que o job executa. */
-  eventId?: string;
+  taskId?: string;
   /** Tentativa em curso (1 = primeira). */
   attempt: number;
   signal: AbortSignal;
@@ -85,13 +85,13 @@ export class JobsService implements OnModuleInit, OnApplicationShutdown {
   }
 
   /** Cancela os jobs vivos dos eventos e aborta os que este worker esta rodando. */
-  async cancelOfEvents(eventIds: readonly string[], userId: string): Promise<void> {
-    for (const id of await this.store.cancelOfEvents(eventIds, userId)) this.active.get(id)?.abort();
+  async cancelOfTasks(taskIds: readonly string[], userId: string): Promise<void> {
+    for (const id of await this.store.cancelOfTasks(taskIds, userId)) this.active.get(id)?.abort();
   }
 
   /** O progresso passageiro do job vivo de um evento, se houver. */
-  async progressOfEvent(eventId: string): Promise<unknown> {
-    return (await this.store.activeOfEvent(eventId))?.progress ?? undefined;
+  async progressOfTask(taskId: string): Promise<unknown> {
+    return (await this.store.activeOfTask(taskId))?.progress ?? undefined;
   }
 
   onModuleInit(): void {
@@ -137,7 +137,7 @@ export class JobsService implements OnModuleInit, OnApplicationShutdown {
     const abort = new AbortController();
     this.active.set(job.id, abort);
     const context: JobHandlerContext = {
-      jobId: job.id, userId: job.userId, actorId: job.actorId, eventId: job.eventId ?? undefined,
+      jobId: job.id, userId: job.userId, actorId: job.actorId, taskId: job.taskId ?? undefined,
       attempt: job.attempts, signal: abort.signal,
       progress: (value) => this.store.progress(job.id, token, value),
     };

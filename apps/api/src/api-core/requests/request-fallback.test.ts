@@ -28,16 +28,16 @@ describe("fila de fallback", () => {
   test("pedido que pede acoes: chama os especialistas pelo mesmo mecanismo do despacho e termina o seu passo", async () => {
     const { ctx, fallback, payload } = await fallbackStep("almocei e conclui o aluguel");
     ctx.gateway.outputs.set("fallback", { reply: null, invoke: [
-      { agent: "event-create", instruction: "Criar o evento do almoço" },
-      { agent: "event-edit", instruction: "Concluir o evento do aluguel" },
+      { agent: "task-create", instruction: "Criar a tarefa do almoço" },
+      { agent: "task-edit", instruction: "Concluir a tarefa do aluguel" },
     ] });
 
     await fallback.run(payload);
 
     expect(ctx.store.stepRecords.map((step) => [step.agent, step.status, step.input?.instruction])).toEqual([
       ["fallback", "done", undefined],
-      ["event-create", "queued", "Criar o evento do almoço"],
-      ["event-edit", "queued", "Concluir o evento do aluguel"],
+      ["task-create", "queued", "Criar a tarefa do almoço"],
+      ["task-edit", "queued", "Concluir a tarefa do aluguel"],
     ]);
     expect(ctx.store.jobs.map((job) => job.kind)).toEqual(["request-fallback", "request-step", "request-step"]);
     // O pedido segue aberto: os passos chamados ainda vao rodar.
@@ -46,24 +46,24 @@ describe("fila de fallback", () => {
 
   test("o foco do orquestrador chega ao especialista junto do pedido inteiro", async () => {
     const { ctx, fallback, payload } = await fallbackStep("almocei e conclui o aluguel");
-    ctx.gateway.outputs.set("fallback", { reply: null, invoke: [{ agent: "event-create", instruction: "Criar o evento do almoço" }] });
+    ctx.gateway.outputs.set("fallback", { reply: null, invoke: [{ agent: "task-create", instruction: "Criar a tarefa do almoço" }] });
     await fallback.run(payload);
-    ctx.gateway.outputs.set("event_create", { events: [
+    ctx.gateway.outputs.set("task_create", { tasks: [
       { name: "Almoço", kind: "meal", status: null, priority: null, longRunning: false, startedAt: null, estimatedFinishAt: null, description: null, tags: [], followsFrom: [] },
     ] });
 
-    await ctx.worker.run("event-create", { requestId: "r1", stepId: ctx.store.stepRecords[1]?.id as string });
+    await ctx.worker.run("task-create", { requestId: "r1", stepId: ctx.store.stepRecords[1]?.id as string });
 
     const call = ctx.gateway.calls.at(-1);
-    expect(call?.user).toContain("Foco (dado pelo orquestrador): Criar o evento do almoço");
+    expect(call?.user).toContain("Foco (dado pelo orquestrador): Criar a tarefa do almoço");
     expect(call?.user).toContain("almocei e conclui o aluguel");
   });
 
   test("limita quantos especialistas chama e nunca chama a si mesmo", async () => {
     const { ctx, fallback, payload } = await fallbackStep();
-    ctx.gateway.outputs.set("fallback", { reply: null, invoke: Array.from({ length: 9 }, () => ({ agent: "event-create", instruction: "x" })) });
+    ctx.gateway.outputs.set("fallback", { reply: null, invoke: Array.from({ length: 9 }, () => ({ agent: "task-create", instruction: "x" })) });
     await fallback.run(payload);
-    expect(ctx.store.stepRecords.filter((step) => step.agent === "event-create")).toHaveLength(6);
+    expect(ctx.store.stepRecords.filter((step) => step.agent === "task-create")).toHaveLength(6);
     expect(ctx.store.stepRecords.filter((step) => step.agent === "fallback")).toHaveLength(1);
     // O schema nem aceita "fallback" como especialista.
     expect(JSON.stringify(ctx.gateway.calls[0]?.schema)).not.toMatch(/"fallback"/);
@@ -90,7 +90,7 @@ describe("fila de fallback", () => {
 describe("caixa do pedido", () => {
   test("rotulos predefinidos; falha vira a linha predefinida, sem modelo", async () => {
     const ctx = setupRequest();
-    await addStep(ctx, "s1", "event-create");
+    await addStep(ctx, "s1", "task-create");
     await addStep(ctx, "s2", "artifact-create");
     await ctx.store.recordQueryResult({ requestId: "r1", stepId: "s1", result: { columns: [], rows: [], truncated: false }, timings: {} });
     await ctx.store.failStep({ requestId: "r1", stepId: "s2", errorCode: "agent_timeout" });
@@ -100,7 +100,7 @@ describe("caixa do pedido", () => {
 
     expect(view.title).toBe("pedido");
     expect(view.steps.map((step) => [step.label, step.status])).toEqual([
-      ["Criando eventos", "done"], ["Criando artefatos", "failed"],
+      ["Criando tarefas", "done"], ["Criando artefatos", "failed"],
     ]);
     expect(view.message).toBe("Não consegui concluir: criando artefatos.");
   });
@@ -116,7 +116,7 @@ describe("caixa do pedido", () => {
 
   test("sucesso total nao tem mensagem: so a lista de passos com seus checks", async () => {
     const ctx = setupRequest();
-    await addStep(ctx, "s1", "event-create");
+    await addStep(ctx, "s1", "task-create");
     await ctx.store.finish("r1", "done", { failedSteps: [] });
     expect(toRequestDto(ctx.store.require("r1"), ctx.store.stepRecords, []).message).toBeUndefined();
   });
@@ -139,10 +139,10 @@ describe("laco do fallback (comando fallback:)", () => {
   }
 
   test("o resultado dos especialistas volta na rodada seguinte e so a resposta fecha o pedido", async () => {
-    const { ctx, fallback, stepOf, loopCalls } = await loopStep("conclua os eventos da casa", {
+    const { ctx, fallback, stepOf, loopCalls } = await loopStep("conclua as tarefas da casa", {
       ok: true, columns: ["name"], rows: [["Lavar a louça"]], truncated: false,
     });
-    ctx.gateway.outputs.set("fallback_loop", { reply: null, invoke: [{ agent: "query", instruction: "Listar os eventos da casa" }] });
+    ctx.gateway.outputs.set("fallback_loop", { reply: null, invoke: [{ agent: "query", instruction: "Listar as tarefas da casa" }] });
     ctx.gateway.outputs.set("query", { sql: "SELECT name FROM tasks" });
 
     await fallback.run(stepOf("fallback"));
@@ -159,7 +159,7 @@ describe("laco do fallback (comando fallback:)", () => {
     ]);
     expect(ctx.store.jobs.at(-1)).toMatchObject({ kind: "request-fallback", stepId: stepOf("fallback").stepId });
 
-    ctx.gateway.outputs.set("fallback_loop", { reply: "Há um evento da casa: lavar a louça.", invoke: null });
+    ctx.gateway.outputs.set("fallback_loop", { reply: "Há uma tarefa da casa: lavar a louça.", invoke: null });
     await fallback.run(stepOf("fallback"));
 
     const second = loopCalls()[1]?.user ?? "";
@@ -167,22 +167,22 @@ describe("laco do fallback (comando fallback:)", () => {
     expect(JSON.parse(second.split("Rodadas anteriores (JSON):\n")[1] ?? "")).toEqual([{
       round: 1,
       calls: [{
-        agent: "query", instruction: "Listar os eventos da casa", status: "done",
+        agent: "query", instruction: "Listar as tarefas da casa", status: "done",
         result: { columns: ["name"], rows: [["Lavar a louça"]], truncated: false },
       }],
     }]);
     expect(ctx.store.require("r1")).toMatchObject({
-      status: "done", answer: "Há um evento da casa: lavar a louça.", failedSteps: [],
+      status: "done", answer: "Há uma tarefa da casa: lavar a louça.", failedSteps: [],
     });
   });
 
   test("so o fallback escolhido pensa: o especialista que ele chama e o fallback do despacho nao", async () => {
-    const { ctx, stepOf, loopCalls } = await loopStep("quantos eventos tenho?", {
+    const { ctx, stepOf, loopCalls } = await loopStep("quantos tarefas tenho?", {
       ok: true, columns: ["total"], rows: [[3]], truncated: false,
     });
     const runner = new RequestAgentRunner(ctx.gateway, { thoughts: ctx.store, reasoning: "low" });
     const fallback = new RequestFallback({ store: ctx.store, runner });
-    ctx.gateway.outputs.set("fallback_loop", { reply: null, invoke: [{ agent: "query", instruction: "Contar os eventos" }] });
+    ctx.gateway.outputs.set("fallback_loop", { reply: null, invoke: [{ agent: "query", instruction: "Contar as tarefas" }] });
     ctx.gateway.outputs.set("query", { sql: "SELECT count(*) FROM tasks" });
 
     await fallback.run(stepOf("fallback"));
@@ -202,12 +202,12 @@ describe("laco do fallback (comando fallback:)", () => {
 
   test("a falha de um especialista volta ao fallback com o codigo e fica registrada na resposta", async () => {
     const { ctx, fallback, stepOf, loopCalls } = await loopStep("almocei");
-    ctx.gateway.outputs.set("fallback_loop", { reply: null, invoke: [{ agent: "event-create", instruction: "Criar o almoço" }] });
+    ctx.gateway.outputs.set("fallback_loop", { reply: null, invoke: [{ agent: "task-create", instruction: "Criar o almoço" }] });
     await fallback.run(stepOf("fallback"));
     ctx.gateway.failure = new FastStageError("timeout");
-    await ctx.worker.run("event-create", stepOf("event-create"));
+    await ctx.worker.run("task-create", stepOf("task-create"));
     ctx.gateway.failure = undefined;
-    await ctx.finalizer(quiet().client).run(stepOf("event-create"));
+    await ctx.finalizer(quiet().client).run(stepOf("task-create"));
 
     ctx.gateway.outputs.set("fallback_loop", { reply: "Não consegui registrar o almoço.", invoke: null });
     await fallback.run(stepOf("fallback"));
@@ -215,7 +215,7 @@ describe("laco do fallback (comando fallback:)", () => {
     expect(loopCalls()[1]?.user).toContain('"status":"failed","errorCode":"agent_timeout"');
     expect(ctx.store.require("r1")).toMatchObject({
       status: "done", answer: "Não consegui registrar o almoço.",
-      failedSteps: [{ agent: "event-create", errorCode: "agent_timeout" }],
+      failedSteps: [{ agent: "task-create", errorCode: "agent_timeout" }],
     });
   });
 
@@ -223,7 +223,7 @@ describe("laco do fallback (comando fallback:)", () => {
     const ctx = setupRequest("x");
     await ctx.store.beginSteps("r1", [{ id: "f4", agent: "fallback", expected: "one", input: { round: 4 } }]);
     // Mesmo que o modelo insista em chamar, o schema da ultima rodada so aceita a resposta.
-    ctx.gateway.outputs.set("fallback_loop", { reply: "Parei por aqui.", invoke: [{ agent: "event-create", instruction: "x" }] });
+    ctx.gateway.outputs.set("fallback_loop", { reply: "Parei por aqui.", invoke: [{ agent: "task-create", instruction: "x" }] });
 
     await new RequestFallback({ store: ctx.store, runner: ctx.runner }).run({ requestId: "r1", stepId: "f4" });
 
@@ -237,16 +237,16 @@ describe("laco do fallback (comando fallback:)", () => {
   test("duas finalizacoes da mesma rodada nao enfileiram a rodada seguinte duas vezes", async () => {
     const { ctx, fallback, stepOf } = await loopStep("x");
     ctx.gateway.outputs.set("fallback_loop", { reply: null, invoke: [
-      { agent: "event-create", instruction: "a" }, { agent: "artifact-create", instruction: "b" },
+      { agent: "task-create", instruction: "a" }, { agent: "artifact-create", instruction: "b" },
     ] });
     await fallback.run(stepOf("fallback"));
     ctx.gateway.failure = new FastStageError("timeout");
-    await ctx.worker.run("event-create", stepOf("event-create"));
+    await ctx.worker.run("task-create", stepOf("task-create"));
     await ctx.worker.run("artifact-create", stepOf("artifact-create"));
     ctx.gateway.failure = undefined;
 
     const finalizer = ctx.finalizer(quiet().client);
-    await finalizer.run(stepOf("event-create"));
+    await finalizer.run(stepOf("task-create"));
     await finalizer.run(stepOf("artifact-create"));
 
     expect(ctx.store.stepRecords.filter((step) => step.agent === "fallback").map((step) => step.input?.round)).toEqual([1, 2]);
@@ -267,18 +267,18 @@ describe("laco do fallback (comando fallback:)", () => {
 
   test("fora do comando nao ha laco: os especialistas terminam e a finalizacao fecha o pedido", async () => {
     const { ctx, fallback, payload } = await fallbackStep("almocei");
-    ctx.gateway.outputs.set("fallback", { reply: null, invoke: [{ agent: "event-create", instruction: "Criar o almoço" }] });
+    ctx.gateway.outputs.set("fallback", { reply: null, invoke: [{ agent: "task-create", instruction: "Criar o almoço" }] });
     await fallback.run(payload);
-    ctx.gateway.outputs.set("event_create", { events: [
+    ctx.gateway.outputs.set("task_create", { tasks: [
       { name: "Almoço", kind: "meal", status: null, priority: null, longRunning: false, startedAt: null, estimatedFinishAt: null, description: null, tags: [], followsFrom: [] },
     ] });
     const step = { requestId: "r1", stepId: ctx.store.stepRecords[1]?.id as string };
-    await ctx.worker.run("event-create", step);
+    await ctx.worker.run("task-create", step);
 
     await ctx.finalizer(quiet().client).run(step);
 
-    expect(ctx.store.stepRecords.map((record) => record.agent)).toEqual(["fallback", "event-create"]);
+    expect(ctx.store.stepRecords.map((record) => record.agent)).toEqual(["fallback", "task-create"]);
     expect(ctx.store.require("r1").status).toBe("done");
-    expect(ctx.gateway.calls.map((call) => call.schemaName)).toEqual(["fallback", "event_create"]);
+    expect(ctx.gateway.calls.map((call) => call.schemaName)).toEqual(["fallback", "task_create"]);
   });
 });

@@ -3,7 +3,7 @@ import { GUARDS_METADATA } from "@nestjs/common/constants";
 import { describe, expect, test, vi } from "vitest";
 import { InvalidInputError } from "../../api-core/agent/errors/agent.errors";
 import type { RequestOperations } from "../../api-core/requests/request-operations";
-import { MAX_TRANSCRIPT_LENGTH } from "../../api-core/requests/voice-event-worker";
+import { MAX_TRANSCRIPT_LENGTH } from "../../api-core/requests/voice-task-worker";
 import { GatewayIdentityGuard } from "../../http/request-identity/gateway-identity.guard";
 import { StartVoiceRequestController } from "./start-voice-request.controller";
 

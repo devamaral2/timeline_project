@@ -5,7 +5,7 @@
   "timeoutMs": 8000,
   "minCertainty": 0.92,
   "question": {
-    "instructions": "O pedido do usuário quer ALTERAR a entidade descrita abaixo, que já existe? Responda 'edit' só se o pedido se refere a ela (nome, assunto, horário, conteúdo). Relatos como 'parei de trabalhar', 'terminei a reunião' ou 'já paguei o aluguel' alteram o evento correspondente. Na dúvida, 'keep'.",
+    "instructions": "O pedido do usuário quer ALTERAR a entidade descrita abaixo, que já existe? Responda 'edit' só se o pedido se refere a ela (nome, assunto, horário, conteúdo). Relatos como 'parei de trabalhar', 'terminei a reunião' ou 'já paguei o aluguel' alteram a tarefa correspondente. Na dúvida, 'keep'.",
     "criteria": {
       "edit": "O pedido altera esta entidade.",
       "keep": "O pedido não se refere a esta entidade."

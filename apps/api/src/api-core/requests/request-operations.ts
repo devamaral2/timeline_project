@@ -25,7 +25,7 @@ import {
 import type { RequestRecord, RequestStore } from "./request-store";
 import type { RequestTargetEditWorker } from "./request-target-edit-worker";
 import { toRequestDto, type RequestProgress } from "./request-view";
-import type { VoiceEventWorker } from "./voice-event-worker";
+import type { VoiceTaskWorker } from "./voice-task-worker";
 
 export const DEFAULT_REQUEST_LIST_LIMIT = 20;
 export const MAX_REQUEST_LIST_LIMIT = 50;
@@ -40,7 +40,7 @@ export interface RequestWorkers {
   editTarget: RequestEditTargetWorker;
   targetEdit: RequestTargetEditWorker;
   hermes: HermesTurnWorker;
-  voice: VoiceEventWorker;
+  voice: VoiceTaskWorker;
   food: GenerateFoodUseCase;
 }
 
@@ -48,7 +48,7 @@ export interface RequestWorkers {
 @Injectable()
 export class RequestOperations implements OnModuleInit {
   constructor(
-    private readonly jobs: Pick<JobsService, "register" | "cancelOfEvents" | "progressOfEvent">,
+    private readonly jobs: Pick<JobsService, "register" | "cancelOfTasks" | "progressOfTask">,
     private readonly store: RequestStore,
     private readonly workers: RequestWorkers,
   ) {}
@@ -82,7 +82,7 @@ export class RequestOperations implements OnModuleInit {
       await workers.voice.run((raw as { requestId: string }).requestId);
     }, { onFailure: this.failRequest() });
     this.jobs.register(FOOD_GENERATION_JOB, async (raw, context) => {
-      if (context.eventId) await this.store.markRunning(context.eventId);
+      if (context.taskId) await this.store.markRunning(context.taskId);
       await workers.food.execute(raw as FoodGenerationPayload);
     }, {
       onFailure: async (raw) => {
@@ -160,7 +160,7 @@ export class RequestOperations implements OnModuleInit {
     return this.view(requestId, actor);
   }
 
-  /** `POST /api/requests/voice`: a fala vira um pedido, e o pedido gera o evento. */
+  /** `POST /api/requests/voice`: a fala vira um pedido, e o pedido gera a tarefa. */
   async startVoice(input: StartVoiceRequestInput, actor: AuthenticatedUser): Promise<string> {
     const { requestId } = await this.store.start({
       userId: actor.userId, route: "voice", text: input.transcript,
@@ -187,8 +187,8 @@ export class RequestOperations implements OnModuleInit {
   async cancel(id: string, actor: AuthenticatedUser): Promise<RequestDto> {
     const request = await this.owned(id, actor);
     if (request.route === "food") throw new ConflictException("Delete the food artifact to stop its generation");
-    const eventIds = await this.store.cancel(request.id);
-    await this.jobs.cancelOfEvents(eventIds, request.userId);
+    const taskIds = await this.store.cancel(request.id);
+    await this.jobs.cancelOfTasks(taskIds, request.userId);
     return this.view(id, actor);
   }
 
@@ -197,7 +197,7 @@ export class RequestOperations implements OnModuleInit {
     const [steps, entities, progress] = await Promise.all([
       this.store.steps(request.id),
       this.store.entities(request.id),
-      live ? this.jobs.progressOfEvent(request.id) : undefined,
+      live ? this.jobs.progressOfTask(request.id) : undefined,
     ]);
     return toRequestDto(request, steps, entities, {
       progress: (progress ?? undefined) as RequestProgress | undefined, withTrace: detailed,

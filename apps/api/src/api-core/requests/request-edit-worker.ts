@@ -7,8 +7,8 @@ import { TIME_ZONE } from "../agent/time";
 import type { CreateEventUseCase } from "../events/create-event.usecase";
 import type { PlaceResolver } from "../events/services/place-resolver.service";
 import {
-  artifactEditOutput, eventEditOutput, recurringEventEditOutput,
-  type ArtifactEditOutput, type EventEditOutput, type RecurringEventEditOutput,
+  artifactEditOutput, taskEditOutput, recurringTaskEditOutput,
+  type ArtifactEditOutput, type TaskEditOutput, type RecurringTaskEditOutput,
 } from "./request-agent-schemas";
 import { describeEditRequest, type RequestAgentRunner } from "./request-agent-runner";
 import type { EditCandidate } from "./request-candidates";
@@ -60,24 +60,24 @@ export class RequestEditWorker {
       );
       const started = performance.now();
       switch (agent) {
-        case "event-edit":
-          await this.applyEvents(
-            session, await this.gather(agent, eventEditOutput, request, step, signal), request.context?.coordinates,
+        case "task-edit":
+          await this.applyTasks(
+            session, await this.gather(agent, taskEditOutput, request, step, signal), request.context?.coordinates,
           );
           break;
         case "artifact-edit":
           await this.applyArtifacts(session, await this.gather(agent, artifactEditOutput, request, step, signal));
           break;
-        case "recurring-event-edit":
+        case "recurring-task-edit":
           await this.applySeries(
-            session, await this.gather(agent, recurringEventEditOutput, request, step, signal), request.context?.coordinates,
+            session, await this.gather(agent, recurringTaskEditOutput, request, step, signal), request.context?.coordinates,
           );
           break;
       }
       timings.total = Math.round(performance.now() - started);
       if (signal?.aborted) throw new AgentRunCancelledError();
 
-      const entities = this.entitiesOf(session, agent === "recurring-event-edit");
+      const entities = this.entitiesOf(session, agent === "recurring-task-edit");
       if (entities.length === 0) throw new StepFailure("nothing_to_change");
       await this.deps.batchWriter.commit({
         ...session.toBatch(),
@@ -116,8 +116,8 @@ export class RequestEditWorker {
   }
 
   /** O lugar novo e procurado no mapa perto de onde a pessoa esta; `""` tira o local. */
-  private async applyEvents(
-    session: AgentChangeSession, edits: EventEditOutput["edits"], coordinates?: GeoPointInput,
+  private async applyTasks(
+    session: AgentChangeSession, edits: TaskEditOutput["edits"], coordinates?: GeoPointInput,
   ): Promise<void> {
     for (const edit of edits) {
       const said = edit.location?.trim();
@@ -129,7 +129,7 @@ export class RequestEditWorker {
         location,
       };
       if (Object.values(changes).every((value) => value === undefined)) continue;
-      const result = await session.reviseEvent(edit.id, (current) => current.revise(changes));
+      const result = await session.reviseTask(edit.id, (current) => current.revise(changes));
       if (!result.ok) throw new StepFailure("rejected");
     }
   }
@@ -149,7 +149,7 @@ export class RequestEditWorker {
    * procurado no mapa perto de onde a pessoa esta; `""` tira o local.
    */
   private async applySeries(
-    session: AgentChangeSession, edits: RecurringEventEditOutput["edits"], coordinates?: GeoPointInput,
+    session: AgentChangeSession, edits: RecurringTaskEditOutput["edits"], coordinates?: GeoPointInput,
   ): Promise<void> {
     for (const asked of edits) {
       if (changesNothing(asked)) continue;
@@ -174,7 +174,7 @@ export class RequestEditWorker {
   /** O que o passo alterou. Numa serie, a ocorrencia que a mudanca mostra (nova no banco, mas fruto de uma edicao). */
   private entitiesOf(session: AgentChangeSession, series: boolean): NewEntity[] {
     const { created, updated } = session.result();
-    const touched = series ? [...created, ...updated].filter((item) => item.kind === "event") : updated;
+    const touched = series ? [...created, ...updated].filter((item) => item.kind === "task") : updated;
     return touched.map((item): NewEntity => ({ ...item, operation: "update" }));
   }
 }

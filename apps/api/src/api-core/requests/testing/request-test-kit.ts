@@ -104,7 +104,7 @@ export class FakeAgentFiles {
 
 /** Tudo de um pedido por passos montado em memoria, com o pedido `r1` ja em andamento. */
 export function setupRequest(prompt = "pedido", sqlOutcome?: ScopedSqlOutcome) {
-  // O mesmo banco em memoria para eventos, artefatos e series: a serie gera ocorrencias de verdade nele.
+  // O mesmo banco em memoria para tarefas, artefatos e series: a serie gera ocorrencias de verdade nele.
   const database = new InMemoryEventDatabase();
   const eventRepository = new InMemoryEventRepository(database);
   const artifactRepository = new InMemoryArtifactRepository(database.artifacts);

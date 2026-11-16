@@ -14,7 +14,7 @@ const OPEN = new Set(["queued", "running", "waiting"]);
 
 /**
  * O `RequestStore` em memoria: o que o Postgres grava na mesma transacao aqui fica em listas conferiveis. O
- * resumo de cada entidade tocada e lido de `entities`, o mesmo banco em memoria dos testes de eventos.
+ * resumo de cada entidade tocada e lido de `entities`, o mesmo banco em memoria dos testes de tarefas.
  */
 export class InMemoryRequestStore implements RequestStore {
   readonly requests = new Map<string, RequestRecord>();
@@ -104,11 +104,11 @@ export class InMemoryRequestStore implements RequestStore {
   }
 
   private summaryOf(entity: Pick<NewEntity, "kind" | "id">): EntitySummary {
-    if (entity.kind === "event") {
+    if (entity.kind === "task") {
       const event = this.entitySource.events.find((candidate) => candidate.id === entity.id);
       if (!event) return { name: "" };
       return {
-        name: event.name, eventKind: event.kind,
+        name: event.name, taskKind: event.kind,
         ...(event.startedAt ? { startedAt: event.startedAt.toISOString() } : {}),
         ...(event.estimatedFinishAt ? { estimatedFinishAt: event.estimatedFinishAt.toISOString() } : {}),
         ...(event.occurrence && !event.occurrence.detached ? { series: true } : {}),
@@ -231,10 +231,10 @@ export class InMemoryRequestStore implements RequestStore {
     await this.finish(requestId, "done", { failedSteps, message: text });
   }
 
-  async completeVoice(_tx: unknown, input: { requestId: string; eventId: string }): Promise<void> {
+  async completeVoice(_tx: unknown, input: { requestId: string; taskId: string }): Promise<void> {
     const request = this.requests.get(input.requestId);
     if (!request || !OPEN.has(request.status)) throw new Error("Request is no longer open");
-    this.touched.push({ kind: "event", id: input.eventId, operation: "create", requestId: input.requestId, stepId: input.requestId });
+    this.touched.push({ kind: "task", id: input.taskId, operation: "create", requestId: input.requestId, stepId: input.requestId });
     await this.finish(input.requestId, "done", {});
   }
 

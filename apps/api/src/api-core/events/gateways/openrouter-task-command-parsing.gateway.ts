@@ -1,11 +1,11 @@
 import { getServerEnv } from "../../../config/env";
 import { LlmHttpError } from "../../agent/errors/agent.errors";
 import type {
-  EventCommandParsingGateway,
-  ParsedEventCommand,
-} from "./event-command-parsing.gateway";
+  TaskCommandParsingGateway,
+  ParsedTaskCommand,
+} from "./task-command-parsing.gateway";
 import type { CreateTaskInput } from "@repo/contracts";
-import { EventCommandPromptBuilderService } from "../services/event-command-prompt-builder.service";
+import { TaskCommandPromptBuilderService } from "../services/task-command-prompt-builder.service";
 import type { ParsedEventSchedule } from "../services/event-schedule.service";
 import type { WorkoutInput } from "../../../domain";
 
@@ -22,7 +22,7 @@ interface OpenRouterResponse {
   }>;
 }
 
-export interface RawEventCommand {
+export interface RawTaskCommand {
   type: string;
   routineName: string;
   foodInputText: string;
@@ -39,8 +39,8 @@ export interface RawEventCommand {
   placeName: string;
 }
 
-const eventCommandSchema = {
-  name: "event_command",
+const taskCommandSchema = {
+  name: "task_command",
   strict: true,
   schema: {
     type: "object",
@@ -83,14 +83,14 @@ const eventCommandSchema = {
   },
 } as const;
 
-export class OpenRouterEventCommandParsingGateway implements EventCommandParsingGateway {
+export class OpenRouterTaskCommandParsingGateway implements TaskCommandParsingGateway {
   constructor(
     private readonly apiKey: string | undefined = getServerEnv().OPENROUTER_API_KEY,
     private readonly modelName: string | undefined = getServerEnv().OPENROUTER_MODEL,
-    private readonly promptBuilder: EventCommandPromptBuilderService = new EventCommandPromptBuilderService(),
+    private readonly promptBuilder: TaskCommandPromptBuilderService = new TaskCommandPromptBuilderService(),
   ) {}
 
-  async parseCommand(input: { text: string }): Promise<ParsedEventCommand> {
+  async parseCommand(input: { text: string }): Promise<ParsedTaskCommand> {
     console.log("[OpenRouterEventCommandParsingGateway] parseCommand called", {
       hasApiKey: Boolean(this.apiKey),
       modelName: this.modelName,
@@ -118,7 +118,7 @@ export class OpenRouterEventCommandParsingGateway implements EventCommandParsing
         messages: [{ role: "user", content: this.promptBuilder.build(input.text) }],
         response_format: {
           type: "json_schema",
-          json_schema: eventCommandSchema,
+          json_schema: taskCommandSchema,
         },
       }),
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
@@ -143,9 +143,9 @@ export class OpenRouterEventCommandParsingGateway implements EventCommandParsing
       throw new Error("OpenRouter response did not include command JSON");
     }
 
-    let raw: Partial<RawEventCommand>;
+    let raw: Partial<RawTaskCommand>;
     try {
-      raw = JSON.parse(content) as Partial<RawEventCommand>;
+      raw = JSON.parse(content) as Partial<RawTaskCommand>;
     } catch (parseError) {
       console.error("[OpenRouterEventCommandParsingGateway] failed to JSON.parse content", {
         content,
@@ -154,8 +154,8 @@ export class OpenRouterEventCommandParsingGateway implements EventCommandParsing
       throw parseError;
     }
 
-    const parsedInput = toCreateEventInput(raw, input.text);
-    const schedule = toEventSchedule(raw);
+    const parsedInput = toCreateTaskInput(raw, input.text);
+    const schedule = toTaskSchedule(raw);
     console.log("[OpenRouterEventCommandParsingGateway] parseCommand succeeded", {
       kind: parsedInput.kind,
       schedule,
@@ -174,10 +174,10 @@ export class OpenRouterEventCommandParsingGateway implements EventCommandParsing
 
 /**
  * Traduz a resposta plana do modelo para o `CreateEventInput` do dominio.
- * Nunca lanca: uma classificacao errada vira um evento de rotina que o usuario edita depois.
+ * Nunca lanca: uma classificacao errada vira uma tarefa de rotina que o usuario edita depois.
  */
-export function toCreateEventInput(
-  raw: Partial<RawEventCommand>,
+export function toCreateTaskInput(
+  raw: Partial<RawTaskCommand>,
   transcript: string,
 ): CreateTaskInput {
   const fallbackName = transcript.trim().slice(0, MAX_ROUTINE_NAME_LENGTH);
@@ -219,10 +219,10 @@ export function toCreateEventInput(
 }
 
 /**
- * Extrai a janela do evento. Os limites e a virada de dia ficam com `resolveEventSchedule`:
+ * Extrai a janela da tarefa. Os limites e a virada de dia ficam com `resolveEventSchedule`:
  * aqui so passamos adiante o que o modelo disse.
  */
-export function toEventSchedule(raw: Partial<RawEventCommand>): ParsedEventSchedule {
+export function toTaskSchedule(raw: Partial<RawTaskCommand>): ParsedEventSchedule {
   return {
     startTimeOfDay: raw.startTimeOfDay?.trim() || undefined,
     startOffsetMinutes: raw.startOffsetMinutes ?? undefined,
@@ -248,7 +248,7 @@ function clamp(value: number | null | undefined, min: number, max: number): numb
   return Math.min(Math.max(value, min), max);
 }
 
-function toWorkouts(raw: Partial<RawEventCommand>): WorkoutInput[] {
+function toWorkouts(raw: Partial<RawTaskCommand>): WorkoutInput[] {
   const duration = clamp(raw.workoutDurationMinutes, 0, Number.MAX_SAFE_INTEGER);
   const calories = clamp(raw.workoutCalories, 0, Number.MAX_SAFE_INTEGER);
   const distance = clamp(raw.workoutDistanceKm, 0, Number.MAX_SAFE_INTEGER);

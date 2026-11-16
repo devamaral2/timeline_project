@@ -37,7 +37,7 @@ describe("PostgresRequestStore", () => {
   const jobs = () => rows<{ kind: string; task_id: string; concurrency_key: string | null; payload: unknown }>(
     "SELECT kind, task_id, concurrency_key, payload FROM jobs ORDER BY created_at, id");
 
-  test("o pedido e um evento de agente com a mensagem do usuario como primeira entrada e o job que o executa", async () => {
+  test("o pedido e uma tarefa de agente com a mensagem do usuario como primeira entrada e o job que o executa", async () => {
     const text = `almocei ${"muito bem ".repeat(20)}`;
     const { requestId, created } = await start(text, { context: { screen: "agenda" }, forceFallback: true });
 
@@ -78,25 +78,25 @@ describe("PostgresRequestStore", () => {
     expect(other.created).toBe(true);
   });
 
-  test("os passos sao eventos `step` ligados ao pedido por `step`, com o insumo numa entrada e um job por passo", async () => {
+  test("os passos sao tarefas `step` ligados ao pedido por `step`, com o insumo numa entrada e um job por passo", async () => {
     const { requestId } = await start();
     const [first, second, loop] = [newOrderedId(), newOrderedId(), newOrderedId()];
     const dispatch = {
-      model: "jev-test", latencyMs: 12, answers: { event_create: { choice: "one", confidence: 0.99, probability: 0.98 } },
+      model: "jev-test", latencyMs: 12, answers: { task_create: { choice: "one", confidence: 0.99, probability: 0.98 } },
       uncertain: [], unsupported: [], candidates: { shortlisted: 3, selected: 1 },
     };
     await store.beginSteps(requestId, [
-      { id: first, agent: "event-create", expected: "many" },
+      { id: first, agent: "task-create", expected: "many" },
       {
-        id: second, agent: "event-edit", expected: "one",
-        input: { instruction: "Concluir o aluguel", candidates: [{ kind: "event", id: "e1", name: "Pagar o aluguel" }] },
+        id: second, agent: "task-edit", expected: "one",
+        input: { instruction: "Concluir o aluguel", candidates: [{ kind: "task", id: "e1", name: "Pagar o aluguel" }] },
       },
       { id: loop, agent: "fallback", expected: "one", input: { round: 2 } },
     ], dispatch);
 
     expect(await rows("SELECT kind, status, name, data FROM tasks WHERE id = ANY($1::char(26)[]) ORDER BY id", [[first, second, loop]])).toEqual([
-      { kind: "step", status: "queued", name: "Criando eventos", data: { agent: "event-create", expected: "many" } },
-      { kind: "step", status: "queued", name: "Editando eventos", data: { agent: "event-edit", expected: "one" } },
+      { kind: "step", status: "queued", name: "Criando tarefas", data: { agent: "task-create", expected: "many" } },
+      { kind: "step", status: "queued", name: "Editando tarefas", data: { agent: "task-edit", expected: "one" } },
       { kind: "step", status: "queued", name: "Analisando o pedido", data: { agent: "fallback", expected: "one", round: 2 } },
     ]);
     expect(await rows("SELECT to_task_id, relation FROM task_task_relation WHERE from_task_id = $1 ORDER BY to_task_id", [requestId]))
@@ -117,21 +117,21 @@ describe("PostgresRequestStore", () => {
 
     const steps = await store.steps(requestId);
     expect(steps.map((step) => [step.agent, step.label, step.expected, step.status])).toEqual([
-      ["event-create", "Criando eventos", "many", "queued"],
-      ["event-edit", "Editando eventos", "one", "queued"],
+      ["task-create", "Criando tarefas", "many", "queued"],
+      ["task-edit", "Editando tarefas", "one", "queued"],
       ["fallback", "Analisando o pedido", "one", "queued"],
     ]);
     expect(steps[0]?.input).toBeUndefined();
-    expect(steps[1]?.input).toEqual({ instruction: "Concluir o aluguel", candidates: [{ kind: "event", id: "e1", name: "Pagar o aluguel" }] });
+    expect(steps[1]?.input).toEqual({ instruction: "Concluir o aluguel", candidates: [{ kind: "task", id: "e1", name: "Pagar o aluguel" }] });
     expect(steps[2]?.input).toEqual({ round: 2 });
   });
 
-  test("as entradas de um passo ficam na ordem em que foram acrescentadas e nao mexem na revisao do evento", async () => {
+  test("as entradas de um passo ficam na ordem em que foram acrescentadas e nao mexem na revisao da tarefa", async () => {
     const { requestId } = await start();
     const stepId = newOrderedId();
     await store.beginSteps(requestId, [{ id: stepId, agent: "query", expected: "one", input: { instruction: "Listar hoje" } }]);
     await store.markStepRunning(stepId);
-    await store.recordThought(stepId, { text: "Preciso dos eventos de hoje.", at: "2026-10-25T15:00:01.000Z", model: "m" });
+    await store.recordThought(stepId, { text: "Preciso das tarefas de hoje.", at: "2026-10-25T15:00:01.000Z", model: "m" });
     await store.recordThought(stepId, { text: "Monto a consulta.", at: "2026-10-25T15:00:02.000Z" });
     await store.recordQueryResult({
       requestId, stepId, timings: { total: 850 },
@@ -150,7 +150,7 @@ describe("PostgresRequestStore", () => {
     expect(step).toMatchObject({
       status: "done", timings: { total: 850 }, result: { columns: ["name"], rows: [["Almoço"]], truncated: false },
       thoughts: [
-        { text: "Preciso dos eventos de hoje.", at: "2026-10-25T15:00:01.000Z", model: "m" },
+        { text: "Preciso das tarefas de hoje.", at: "2026-10-25T15:00:01.000Z", model: "m" },
         { text: "Monto a consulta.", at: "2026-10-25T15:00:02.000Z" },
       ],
     });
@@ -162,7 +162,7 @@ describe("PostgresRequestStore", () => {
     const { requestId } = await start();
     const [createStep, editStep] = [newOrderedId(), newOrderedId()];
     await store.beginSteps(requestId, [
-      { id: createStep, agent: "event-create", expected: "one" }, { id: editStep, agent: "artifact-edit", expected: "one" },
+      { id: createStep, agent: "task-create", expected: "one" }, { id: editStep, agent: "artifact-edit", expected: "one" },
     ]);
     const meal = Event.create({ userId: USER, kind: "meal", name: "Almoço", startedAt: new Date("2026-10-25T15:00:00Z") });
     const food = Artifact.create({ userId: USER, type: "text", name: "Cardápio", data: { body: "arroz e feijão" } });
@@ -177,7 +177,7 @@ describe("PostgresRequestStore", () => {
       afterWrite: (tx) => store.recordStepSuccess(tx, {
         requestId, stepId: createStep, timings: { total: 10 },
         entities: [
-          { kind: "event", id: meal.id, operation: "create" }, { kind: "event", id: gone.id, operation: "delete" },
+          { kind: "task", id: meal.id, operation: "create" }, { kind: "task", id: gone.id, operation: "delete" },
           { kind: "artifact", id: food.id, operation: "create" },
         ],
       }),
@@ -193,10 +193,10 @@ describe("PostgresRequestStore", () => {
 
     expect(await rows("SELECT to_task_id, relation FROM task_task_relation WHERE from_task_id = $1 ORDER BY relation", [createStep]))
       .toEqual([{ to_task_id: gone.id, relation: "deletes" }, { to_task_id: meal.id, relation: "generates" }]);
-    // O evento tambem aponta para o pedido que o criou ou o apagou, alem do passo.
+    // A tarefa tambem aponta para o pedido que o criou ou o apagou, alem do passo.
     expect(await rows("SELECT to_task_id, relation FROM task_task_relation WHERE from_task_id = $1 AND relation <> 'step' ORDER BY relation", [requestId]))
       .toEqual([{ to_task_id: gone.id, relation: "deletes" }, { to_task_id: meal.id, relation: "generates" }]);
-    // O detalhe do evento le o pedido, nunca o passo.
+    // O detalhe da tarefa le o pedido, nunca o passo.
     expect(await new PostgresEventRequestLinkQuery(ctx.db).linksOf(meal.id))
       .toMatchObject([{ requestId, relation: "generates", name: "almocei arroz e feijão" }]);
     expect(await rows("SELECT task_id, artifact_id, relation, position FROM task_artifact_relation ORDER BY relation, artifact_id")).toEqual([
@@ -204,7 +204,7 @@ describe("PostgresRequestStore", () => {
       { task_id: editStep, artifact_id: food.id, relation: "deletes", position: null },
       { task_id: editStep, artifact_id: old.id, relation: "updates", position: null },
     ].sort((a, b) => a.relation.localeCompare(b.relation) || a.artifact_id.localeCompare(b.artifact_id)));
-    // Relacoes que partem de um evento de agente nao contam como edicao de ninguem.
+    // Relacoes que partem de uma tarefa de agente nao contam como edicao de ninguem.
     expect(await rows("SELECT revision FROM tasks WHERE id = $1", [meal.id])).toEqual([{ revision: 1 }]);
 
     const entities = await store.entities(requestId);
@@ -212,18 +212,18 @@ describe("PostgresRequestStore", () => {
     expect(entities.map((entity) => [entity.kind, entity.summary.name, entity.operation, entity.stepId, entity.finalized]).sort()).toEqual([
       ["artifact", "Cardápio", "create", createStep, false],
       ["artifact", "Novo", "update", editStep, false],
-      ["event", "Almoço", "create", createStep, false],
-      ["event", "Sumiu", "delete", createStep, false],
+      ["task", "Almoço", "create", createStep, false],
+      ["task", "Sumiu", "delete", createStep, false],
     ]);
-    expect(entities.find((entity) => entity.id === meal.id)?.summary).toMatchObject({ eventKind: "meal", startedAt: "2026-10-25T15:00:00.000Z" });
+    expect(entities.find((entity) => entity.id === meal.id)?.summary).toMatchObject({ taskKind: "meal", startedAt: "2026-10-25T15:00:00.000Z" });
     expect(entities.find((entity) => entity.id === food.id)?.summary).toMatchObject({ artifactType: "text", text: "arroz e feijão" });
 
-    const link = { from: { kind: "artifact" as const, id: food.id }, to: { kind: "event" as const, id: meal.id } };
+    const link = { from: { kind: "artifact" as const, id: food.id }, to: { kind: "task" as const, id: meal.id } };
     await store.markFinalized(undefined, { kind: "artifact", id: food.id, stepId: createStep }, [link]);
-    await store.markFinalized(undefined, { kind: "event", id: gone.id, stepId: createStep }, []);
+    await store.markFinalized(undefined, { kind: "task", id: gone.id, stepId: createStep }, []);
     expect(await rows("SELECT data FROM task_entries WHERE task_id = $1 AND kind = 'result' ORDER BY id", [createStep])).toEqual([
       { data: { type: "finalized", entity: { kind: "artifact", id: food.id }, links: [link] } },
-      { data: { type: "finalized", entity: { kind: "event", id: gone.id }, links: [] } },
+      { data: { type: "finalized", entity: { kind: "task", id: gone.id }, links: [] } },
     ]);
     const after = await store.entities(requestId);
     // A ligacao vale para os dois lados.
@@ -238,13 +238,13 @@ describe("PostgresRequestStore", () => {
   test("se o passo ja nao esta aberto, as entidades do lote nao sao gravadas", async () => {
     const { requestId } = await start();
     const stepId = newOrderedId();
-    await store.beginSteps(requestId, [{ id: stepId, agent: "event-create", expected: "one" }]);
+    await store.beginSteps(requestId, [{ id: stepId, agent: "task-create", expected: "one" }]);
     await store.cancel(requestId);
     const event = Event.create({ userId: USER, name: "Almoço", startedAt: new Date() });
 
     await expect(writer.commit({
       userId: USER, tasks: [{ op: "create", entity: event }], artifacts: [],
-      afterWrite: (tx) => store.recordStepSuccess(tx, { requestId, stepId, entities: [{ kind: "event", id: event.id, operation: "create" }], timings: {} }),
+      afterWrite: (tx) => store.recordStepSuccess(tx, { requestId, stepId, entities: [{ kind: "task", id: event.id, operation: "create" }], timings: {} }),
     })).rejects.toThrow("no longer open");
 
     expect(await rows("SELECT id FROM tasks WHERE id = $1", [event.id])).toEqual([]);
@@ -254,7 +254,7 @@ describe("PostgresRequestStore", () => {
   test("um passo que falha guarda o codigo e enfileira a finalizacao; fechar duas vezes nao muda nada", async () => {
     const { requestId } = await start();
     const stepId = newOrderedId();
-    await store.beginSteps(requestId, [{ id: stepId, agent: "event-create", expected: "one" }]);
+    await store.beginSteps(requestId, [{ id: stepId, agent: "task-create", expected: "one" }]);
 
     await store.failStep({ requestId, stepId, errorCode: "agent_timeout", timings: { total: 8000 } });
     await store.failStep({ requestId, stepId, errorCode: "internal" });
@@ -268,18 +268,18 @@ describe("PostgresRequestStore", () => {
   test("o fim do pedido: a resposta e a ultima entrada, o raciocinio e um pensamento, e so fecha uma vez", async () => {
     const { requestId } = await start();
     await store.finish(requestId, "done", {
-      failedSteps: [{ agent: "artifact-create", errorCode: "internal" }], message: "Criei o evento, mas não o alimento.",
+      failedSteps: [{ agent: "artifact-create", errorCode: "internal" }], message: "Criei a tarefa, mas não o alimento.",
       thought: "O passo de artefatos falhou.",
     });
     await store.finish(requestId, "failed", { message: "tarde demais" });
 
     expect((await rows("SELECT kind, role, content FROM task_entries WHERE task_id = $1 ORDER BY id", [requestId])).slice(1)).toEqual([
       { kind: "thought", role: null, content: "O passo de artefatos falhou." },
-      { kind: "message", role: "agent", content: "Criei o evento, mas não o alimento." },
+      { kind: "message", role: "agent", content: "Criei a tarefa, mas não o alimento." },
     ]);
     const request = await store.find(requestId);
     expect(request).toMatchObject({
-      status: "done", answer: "Criei o evento, mas não o alimento.", answerThought: "O passo de artefatos falhou.",
+      status: "done", answer: "Criei a tarefa, mas não o alimento.", answerThought: "O passo de artefatos falhou.",
       failedSteps: [{ agent: "artifact-create", errorCode: "internal" }],
     });
     expect(request?.finishedAt).toBeInstanceOf(Date);
@@ -287,15 +287,15 @@ describe("PostgresRequestStore", () => {
   });
 
   test("o rastro do Hermes sobrevive ao job: os itens viram pensamentos e os numeros, um trace sem texto", async () => {
-    const { requestId } = await start("crie um evento", { route: "hermes", job: "hermes-turn" });
+    const { requestId } = await start("crie uma tarefa", { route: "hermes", job: "hermes-turn" });
     await store.markRunning(requestId);
     expect((await store.find(requestId))?.status).toBe("running");
     const trace: AgentTraceDto = {
       route: "hermes", status: "done", startedAt: "2026-10-25T15:00:00.000Z", durationMs: 1200,
       fields: [{ label: "Modelo", value: "m" }],
       entries: [
-        { id: "request", kind: "request", label: "Pedido", status: "done", summary: "crie um evento" },
-        { id: "t1", kind: "tool", label: "Criou um evento", source: "mcp_braid_create_event", status: "done", sections: [{ title: "Entrada", text: "almoço", code: true }] },
+        { id: "request", kind: "request", label: "Pedido", status: "done", summary: "crie uma tarefa" },
+        { id: "t1", kind: "tool", label: "Criou uma tarefa", source: "mcp_braid_create_event", status: "done", sections: [{ title: "Entrada", text: "almoço", code: true }] },
         { id: "answer", kind: "answer", label: "Respondeu", status: "done" },
       ],
     };
@@ -313,7 +313,7 @@ describe("PostgresRequestStore", () => {
     expect(request?.answerThought).toBeUndefined();
     if (!request) throw new Error("request not found");
     expect(toRequestDto(request, [], [])).toMatchObject({
-      message: "Feito.", trace, steps: [{ id: "t1", agent: "mcp_braid_create_event", label: "Criou um evento", status: "done" }],
+      message: "Feito.", trace, steps: [{ id: "t1", agent: "mcp_braid_create_event", label: "Criou uma tarefa", status: "done" }],
     });
   });
 
@@ -334,10 +334,10 @@ describe("PostgresRequestStore", () => {
     expect(await store.steps(first.requestId)).toEqual([]);
   });
 
-  test("cancelar marca o pedido e os passos abertos, devolve os eventos cujos jobs parar e so vale uma vez", async () => {
+  test("cancelar marca o pedido e os passos abertos, devolve as tarefas cujos jobs parar e so vale uma vez", async () => {
     const { requestId } = await start();
     const [open, done] = [newOrderedId(), newOrderedId()];
-    await store.beginSteps(requestId, [{ id: open, agent: "event-create", expected: "one" }, { id: done, agent: "query", expected: "one" }]);
+    await store.beginSteps(requestId, [{ id: open, agent: "task-create", expected: "one" }, { id: done, agent: "query", expected: "one" }]);
     await store.recordQueryResult({ requestId, stepId: done, result: { columns: [], rows: [], truncated: false }, timings: {} });
 
     expect(await store.cancel(requestId)).toEqual([requestId, open, done]);
@@ -375,28 +375,28 @@ describe("PostgresRequestStore", () => {
     expect((await store.steps(requestId)).at(-1)?.status).toBe("done");
   });
 
-  test("a voz: o pedido gera o evento de pessoa e termina na transacao dele", async () => {
-    const { requestId } = await start("comecei a estudar", { route: "voice", job: "voice-event" });
+  test("a voz: o pedido gera a tarefa de pessoa e termina na transacao dele", async () => {
+    const { requestId } = await start("comecei a estudar", { route: "voice", job: "voice-task" });
     const event = Event.create({ userId: USER, name: "Estudar", startedAt: new Date("2026-10-25T15:00:00Z") });
     await writer.commit({
       userId: USER, tasks: [{ op: "create", entity: event }], artifacts: [],
-      afterWrite: (tx) => store.completeVoice(tx, { requestId, eventId: event.id }),
+      afterWrite: (tx) => store.completeVoice(tx, { requestId, taskId: event.id }),
     });
 
     expect(await rows("SELECT to_task_id, relation FROM task_task_relation WHERE from_task_id = $1", [requestId]))
       .toEqual([{ to_task_id: event.id, relation: "generates" }]);
     expect(await store.find(requestId)).toMatchObject({ route: "voice", status: "done" });
     expect(await store.entities(requestId)).toMatchObject([
-      { kind: "event", id: event.id, operation: "create", stepId: requestId, finalized: true, summary: { name: "Estudar" } },
+      { kind: "task", id: event.id, operation: "create", stepId: requestId, finalized: true, summary: { name: "Estudar" } },
     ]);
     expect((await rows("SELECT kind, data FROM task_entries WHERE task_id = $1 ORDER BY id", [requestId])).at(-1))
-      .toEqual({ kind: "result", data: { type: "voice", eventId: event.id } });
+      .toEqual({ kind: "result", data: { type: "voice", taskId: event.id } });
   });
 
-  test("a lista traz os pedidos do usuario do mais novo para o mais antigo, e nunca um passo ou um evento de pessoa", async () => {
+  test("a lista traz os pedidos do usuario do mais novo para o mais antigo, e nunca um passo ou uma tarefa de pessoa", async () => {
     const first = await start("primeiro");
     const second = await start("segundo", { route: "hermes", job: "hermes-turn" });
-    await store.beginSteps(first.requestId, [{ id: newOrderedId(), agent: "event-create", expected: "one" }]);
+    await store.beginSteps(first.requestId, [{ id: newOrderedId(), agent: "task-create", expected: "one" }]);
     await store.start({ userId: "user-2", route: "steps", text: "de outro", job: "request-dispatch" });
     // Um alimento pendente abre um pedido de construcao: tambem e um pedido do usuario.
     const food = Artifact.create({
@@ -428,7 +428,7 @@ describe("PostgresRequestStore", () => {
     expect(plan.map((row) => row["QUERY PLAN"]).join("\n")).toContain("tasks_requests_idx");
   });
 
-  test("candidatos de edicao: so eventos de pessoa, artefatos de conteudo do usuario e series", async () => {
+  test("candidatos de edicao: so tarefas de pessoa, artefatos de conteudo do usuario e series", async () => {
     const now = new Date("2026-10-25T15:00:00Z");
     const { requestId } = await start("pedido antigo");
     const today = Event.create({ userId: USER, name: "Reunião", startedAt: now });
@@ -441,10 +441,10 @@ describe("PostgresRequestStore", () => {
     await writer.commit({ userId: USER, tasks: [today, tracked, done, far].map((entity) => ({ op: "create" as const, entity })), artifacts: [text, skill].map((entity) => ({ op: "create" as const, entity })) });
     await writer.commit({ userId: "user-2", tasks: [{ op: "create", entity: foreign }], artifacts: [] });
 
-    const candidates = await new PostgresCandidateQuery(new PostgresDatabase(ctx.pool)).shortlist({ userId: USER, now, kinds: ["event", "artifact", "recurrence"] });
+    const candidates = await new PostgresCandidateQuery(new PostgresDatabase(ctx.pool)).shortlist({ userId: USER, now, kinds: ["task", "artifact", "recurrence"] });
 
     expect(candidates.map((candidate) => [candidate.kind, candidate.name]).sort()).toEqual([
-      ["artifact", "Ideia"], ["event", "Pagar o aluguel"], ["event", "Reunião"],
+      ["artifact", "Ideia"], ["task", "Pagar o aluguel"], ["task", "Reunião"],
     ]);
     expect(candidates.find((candidate) => candidate.name === "Pagar o aluguel")).toMatchObject({ status: "todo" });
     expect(candidates.find((candidate) => candidate.name === "Ideia")).toMatchObject({ artifactType: "text", text: "Visão semanal" });

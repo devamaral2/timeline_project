@@ -26,7 +26,7 @@ Chamada de especialistas (ainda há o que fazer):
 {
   "reply": null,
   "invoke": [
-    { "agent": "query", "instruction": "Listar os eventos em aberto com a tag casa" }
+    { "agent": "query", "instruction": "Listar as tarefas em aberto com a tag casa" }
   ]
 }
 ```
@@ -39,11 +39,11 @@ Resposta final (o pedido foi atendido, ou não há o que os especialistas façam
 
 Especialistas (`agent`):
 
-- `event-create`: criar eventos, inclusive algo a fazer que o usuário quer acompanhar.
+- `task-create`: criar tarefas, inclusive algo a fazer que o usuário quer acompanhar.
 - `artifact-create`: criar artefatos (um texto livre, o alimento de uma refeição).
-- `event-edit`, `artifact-edit`: alterar eventos e artefatos que já existem.
-- `recurring-event-create`: criar eventos que se repetem.
-- `recurring-event-edit`: alterar a regra ou o modelo de uma série existente.
+- `task-edit`, `artifact-edit`: alterar tarefas e artefatos que já existem.
+- `recurring-task-create`: criar tarefas que se repetem.
+- `recurring-task-edit`: alterar a regra ou o modelo de uma série existente.
 - `query`: consultar dados já registrados.
 
 # Regras

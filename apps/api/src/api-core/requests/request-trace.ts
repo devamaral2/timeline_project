@@ -18,7 +18,7 @@ const FALLBACK_REASONS: Record<string, string> = {
   forced: "pedido direto, pelo prefixo fallback:",
 };
 
-const ENTITY_KINDS: Record<RequestEntityRecord["kind"], string> = { event: "Evento", artifact: "Artefato" };
+const ENTITY_KINDS: Record<RequestEntityRecord["kind"], string> = { task: "Tarefa", artifact: "Artefato" };
 const OPERATIONS: Record<RequestEntityRecord["operation"], string> = { create: "criado", update: "alterado", delete: "apagado" };
 const CLOSED = new Set<RequestRecord["status"]>(["done", "failed", "cancel"]);
 

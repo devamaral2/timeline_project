@@ -17,7 +17,7 @@ const iso = (value: unknown): string | undefined =>
   value === null || value === undefined ? undefined : new Date(value as string | Date).toISOString();
 
 /**
- * A lista curta do que um pedido de edicao pode estar alterando: eventos de pessoa de ontem, hoje e amanha, os
+ * A lista curta do que um pedido de edicao pode estar alterando: tarefas de pessoa de ontem, hoje e amanha, os
  * acompanhados em aberto mais recentes, os artefatos mais recentes e as series. O JEV escolhe dentro dela; o que
  * ficar de fora o agente de edicao ainda pode buscar por uma consulta. Pedidos e passos do agente nunca entram.
  */
@@ -27,7 +27,7 @@ export class PostgresCandidateQuery implements CandidateQuery {
   async shortlist(input: { userId: string; now: Date; kinds: readonly CandidateKind[] }): Promise<EditCandidate[]> {
     const wanted = new Set(input.kinds);
     const found: EditCandidate[][] = await Promise.all([
-      wanted.has("event") ? this.events(input.userId, input.now) : [],
+      wanted.has("task") ? this.events(input.userId, input.now) : [],
       wanted.has("artifact") ? this.artifacts(input.userId) : [],
       wanted.has("recurrence") ? this.series(input.userId) : [],
     ]);
@@ -56,7 +56,7 @@ export class PostgresCandidateQuery implements CandidateQuery {
       const id = String(row.id).trim();
       if (byId.has(id)) continue;
       byId.set(id, {
-        kind: "event", id, name: String(row.name), eventKind: String(row.kind),
+        kind: "task", id, name: String(row.name), taskKind: String(row.kind),
         ...(row.status ? { status: String(row.status) } : {}),
         ...(row.started_at ? { startedAt: iso(row.started_at) } : {}),
         ...(row.estimated_finish_at ? { estimatedFinishAt: iso(row.estimated_finish_at) } : {}),
@@ -85,7 +85,7 @@ export class PostgresCandidateQuery implements CandidateQuery {
     }));
   }
 
-  /** So o conteudo do usuario: os arquivos do agente, os exercicios globais e as copias feitas para um evento ficam de fora. */
+  /** So o conteudo do usuario: os arquivos do agente, os exercicios globais e as copias feitas para uma tarefa ficam de fora. */
   private async artifacts(userId: string): Promise<EditCandidate[]> {
     const { rows } = await this.database.pool.query<Row>(
       `SELECT id, name, type, left(COALESCE(data->>'body', data->>'description', ''), $3) AS preview

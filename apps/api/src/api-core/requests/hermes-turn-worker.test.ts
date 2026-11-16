@@ -10,14 +10,14 @@ const trace = (status: AgentTraceDto["status"], toolStatus: "running" | "done" |
   route: "hermes", status, fields: [{ label: "Modelo", value: "m" }],
   entries: [
     { id: "request", kind: "request", label: "Pedido", status: "done" },
-    { id: "c1", kind: "tool", label: "Criou um evento", source: "mcp_braid_create_event", status: toolStatus },
+    { id: "c1", kind: "tool", label: "Criou uma tarefa", source: "mcp_braid_create_event", status: toolStatus },
   ],
 });
 
 function setup(chat?: (input: HermesChatInput) => Promise<{ text: string; trace: AgentTraceDto }>) {
   const store = new InMemoryRequestStore();
   const first = store.seed({ id: "01FIRST", prompt: "oi", route: "hermes", status: "done" });
-  const request = store.seed({ id: "01NEXT", prompt: "crie um evento", route: "hermes", status: "queued", sessionId: first.id });
+  const request = store.seed({ id: "01NEXT", prompt: "crie uma tarefa", route: "hermes", status: "queued", sessionId: first.id });
   const hermes = chat ? { chat: vi.fn(chat) } : undefined;
   const progress = vi.fn(async () => {});
   const signal = new AbortController().signal;
@@ -32,12 +32,12 @@ test("a mensagem vai na sessao do primeiro pedido; a resposta e o rastro ficam n
 
   await run();
 
-  expect(hermes?.chat).toHaveBeenCalledWith(expect.objectContaining({ text: "crie um evento", sessionId: "braid-user-1-01FIRST" }));
+  expect(hermes?.chat).toHaveBeenCalledWith(expect.objectContaining({ text: "crie uma tarefa", sessionId: "braid-user-1-01FIRST" }));
   expect(progress).toHaveBeenCalledWith({ trace: trace("running", "running") });
   expect(store.require("01NEXT")).toMatchObject({ status: "done", answer: "Feito.", trace: trace("done") });
   // Sem passos gravados: a lista do chat sai do rastro.
   expect(toRequestDto(store.require("01NEXT"), [], []).steps).toEqual([
-    { id: "c1", agent: "mcp_braid_create_event", label: "Criou um evento", status: "done" },
+    { id: "c1", agent: "mcp_braid_create_event", label: "Criou uma tarefa", status: "done" },
   ]);
 });
 

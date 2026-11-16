@@ -39,15 +39,15 @@ describe("comando fallback:", () => {
 });
 
 describe("despacho pelo JEV de entrada", () => {
-  test("o exemplo-guia aciona a fila de eventos (vários) e a de artefatos (uma), de uma vez", async () => {
+  test("o exemplo-guia aciona a fila de tarefas (vários) e a de artefatos (uma), de uma vez", async () => {
     const { store, dispatcher, jev } = setup(() => answers({
-      event_create: confident("many"), artifact_create: confident("one"),
+      task_create: confident("many"), artifact_create: confident("one"),
     }));
 
     await dispatcher.run("r1");
 
     expect(store.stepRecords.map((step) => [step.agent, step.expected])).toEqual([
-      ["event-create", "many"], ["artifact-create", "one"],
+      ["task-create", "many"], ["artifact-create", "one"],
     ]);
     expect(store.jobs.map((job) => job.kind)).toEqual(["request-step", "request-step"]);
     expect(store.require("r1").status).toBe("running");
@@ -69,11 +69,11 @@ describe("despacho pelo JEV de entrada", () => {
 
   test("toda pergunta de operacao do JEV tem agente: nenhum pedido reconhecido sobra sem fila", async () => {
     const { store, dispatcher } = setup(() => answers({
-      recurring_event_create: confident("many"), recurring_event_edit: confident("one"),
+      recurring_task_create: confident("many"), recurring_task_edit: confident("one"),
     }));
     await dispatcher.run("r1");
     expect(store.stepRecords.map((step) => step.agent)).toEqual([
-      "recurring-event-create", "recurring-event-edit",
+      "recurring-task-create", "recurring-task-edit",
     ]);
     expect(store.require("r1").dispatch).toMatchObject({ unsupported: [] });
   });
@@ -87,7 +87,7 @@ describe("despacho pelo JEV de entrada", () => {
 
   test("resposta incerta em qualquer pergunta manda ao fallback", async () => {
     const { store, dispatcher } = setup(() => answers({
-      event_create: confident("one"), artifact_create: confident("one", 0.9),
+      task_create: confident("one"), artifact_create: confident("one", 0.9),
     }));
     await dispatcher.run("r1");
     expect(store.stepRecords.map((step) => step.agent)).toEqual(["fallback"]);
@@ -106,7 +106,7 @@ describe("despacho pelo JEV de entrada", () => {
 
   test("pedido com o prefixo fallback: vai direto ao fallback, sem consultar o JEV", async () => {
     // O JEV reconheceria uma criacao; com o prefixo ele nem e chamado.
-    const { store, dispatcher, jev } = setup(() => answers({ event_create: confident("one") }));
+    const { store, dispatcher, jev } = setup(() => answers({ task_create: confident("one") }));
 
     store.require("r1").forceFallback = true;
     await dispatcher.run("r1");
@@ -121,7 +121,7 @@ describe("despacho pelo JEV de entrada", () => {
   });
 
   test("so despacha pedidos que ainda esperam despacho", async () => {
-    const { store, dispatcher, jev } = setup(() => answers({ event_create: confident("one") }));
+    const { store, dispatcher, jev } = setup(() => answers({ task_create: confident("one") }));
     store.require("r1").status = "running";
     await dispatcher.run("r1");
     expect(jev.ask).not.toHaveBeenCalled();
@@ -131,8 +131,8 @@ describe("despacho pelo JEV de entrada", () => {
 
 describe("candidatos de edicao escolhidos pelo JEV", () => {
   const shortlist: EditCandidate[] = [
-    { kind: "event", id: "e1", name: "Reunião", eventKind: "common" },
-    { kind: "event", id: "e2", name: "Almoço", eventKind: "meal" },
+    { kind: "task", id: "e1", name: "Reunião", taskKind: "common" },
+    { kind: "task", id: "e2", name: "Almoço", taskKind: "meal" },
     { kind: "artifact", id: "a1", name: "Lista de compras", artifactType: "text" },
     { kind: "artifact", id: "a2", name: "Ideia", artifactType: "text" },
     { kind: "recurrence", id: "s1", name: "Corrida", cadence: "toda segunda às 07:00" },
@@ -145,7 +145,7 @@ describe("candidatos de edicao escolhidos pelo JEV", () => {
     store.seed({ id: "r1", prompt: "terminei a reunião e acrescente leite na lista", status: "queued" });
     const jev = scriptedJev((questions) => {
       if ("c1" in questions) return result(chosen);
-      return answers({ event_edit: confident("one"), artifact_edit: confident("one") });
+      return answers({ task_edit: confident("one"), artifact_edit: confident("one") });
     });
     return { store, jev, dispatcher: new RequestDispatcher(store, jev.client, query), query };
   }
@@ -162,25 +162,25 @@ describe("candidatos de edicao escolhidos pelo JEV", () => {
 
     await dispatcher.run("r1");
 
-    expect(calls).toEqual([["event", "artifact"]]);
+    expect(calls).toEqual([["task", "artifact"]]);
     expect(jev.ask).toHaveBeenCalledTimes(2);
     const second = jev.ask.mock.calls[1]?.[2] as Record<string, { instructions: string; criteria: Record<string, string> }>;
     expect(Object.keys(second)).toEqual(["c1", "c2", "c3", "c4"]);
     expect(second.c1?.instructions).toContain("Reunião");
     expect(Object.keys(second.c1?.criteria ?? {})).toEqual(["edit", "keep"]);
     expect(store.stepRecords.map((step) => [step.agent, step.input?.candidates?.map((candidate) => candidate.id)])).toEqual([
-      ["event-edit", ["e1"]], ["artifact-edit", ["a1"]],
+      ["task-edit", ["e1"]], ["artifact-edit", ["a1"]],
     ]);
     expect(store.require("r1").dispatch).toMatchObject({ candidates: { shortlisted: 4, selected: 2 } });
   });
 
   test("pedido so de criacao nunca lista candidatos nem faz a segunda chamada", async () => {
     const { store, jev } = twoStage({});
-    jev.ask.mockImplementation(async () => answers({ event_create: confident("one") }));
+    jev.ask.mockImplementation(async () => answers({ task_create: confident("one") }));
     const query = { shortlist: async () => { throw new Error("nao devia listar"); } };
     await new RequestDispatcher(store, jev.client, query).run("r1");
     expect(jev.ask).toHaveBeenCalledTimes(1);
-    expect(store.stepRecords.map((step) => step.agent)).toEqual(["event-create"]);
+    expect(store.stepRecords.map((step) => step.agent)).toEqual(["task-create"]);
   });
 
   test("resposta incerta sobre um candidato nao o escolhe", async () => {
@@ -192,9 +192,9 @@ describe("candidatos de edicao escolhidos pelo JEV", () => {
   test("JEV dos candidatos fora do ar: o passo de edicao nasce sem candidatos e pode consultar", async () => {
     const store = new InMemoryRequestStore();
     store.seed({ id: "r1", prompt: "terminei a reunião", status: "queued" });
-    const jev = scriptedJev((questions) => ("c1" in questions ? new JevUnavailableError("provider") : answers({ event_edit: confident("one") })));
+    const jev = scriptedJev((questions) => ("c1" in questions ? new JevUnavailableError("provider") : answers({ task_edit: confident("one") })));
     await new RequestDispatcher(store, jev.client, { shortlist: async () => shortlist }).run("r1");
-    expect(store.stepRecords).toMatchObject([{ agent: "event-edit" }]);
+    expect(store.stepRecords).toMatchObject([{ agent: "task-edit" }]);
     expect(store.stepRecords[0]?.input).toBeUndefined();
     expect(store.require("r1").dispatch).toMatchObject({ candidates: { shortlisted: 5, selected: 0 } });
   });
@@ -209,14 +209,14 @@ describe("candidatos de edicao escolhidos pelo JEV", () => {
     const kinds: string[][] = [];
     const jev = scriptedJev((questions) => ("c1" in questions
       ? result({ c1: confident("edit"), c2: confident("edit") })
-      : answers({ recurring_event_edit: confident("many") })));
+      : answers({ recurring_task_edit: confident("many") })));
     await new RequestDispatcher(store, jev.client, {
       shortlist: async (input) => { kinds.push([...input.kinds]); return series; },
     }).run("r1");
 
     expect(kinds).toEqual([["recurrence"]]);
     expect(store.stepRecords.map((step) => [step.agent, step.input?.candidates?.map((candidate) => candidate.id)])).toEqual([
-      ["recurring-event-edit", ["s1", "s2"]],
+      ["recurring-task-edit", ["s1", "s2"]],
     ]);
     const asked = jev.ask.mock.calls[1]?.[2] as Record<string, { instructions: string }>;
     expect(asked.c1?.instructions).toContain("toda segunda");
@@ -225,9 +225,9 @@ describe("candidatos de edicao escolhidos pelo JEV", () => {
   test("lista vazia: segue sem a segunda chamada", async () => {
     const store = new InMemoryRequestStore();
     store.seed({ id: "r1", prompt: "terminei a reunião", status: "queued" });
-    const jev = scriptedJev(() => answers({ event_edit: confident("one") }));
+    const jev = scriptedJev(() => answers({ task_edit: confident("one") }));
     await new RequestDispatcher(store, jev.client, { shortlist: async () => [] }).run("r1");
     expect(jev.ask).toHaveBeenCalledTimes(1);
-    expect(store.stepRecords.map((step) => step.agent)).toEqual(["event-edit"]);
+    expect(store.stepRecords.map((step) => step.agent)).toEqual(["task-edit"]);
   });
 });

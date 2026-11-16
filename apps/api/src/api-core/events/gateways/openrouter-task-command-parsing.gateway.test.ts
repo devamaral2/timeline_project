@@ -1,16 +1,16 @@
 import { afterEach, expect, test, vi } from "vitest";
 import {
-  OpenRouterEventCommandParsingGateway,
-  toCreateEventInput,
-  toEventSchedule,
-  type RawEventCommand,
-} from "./openrouter-event-command-parsing.gateway";
+  OpenRouterTaskCommandParsingGateway,
+  toCreateTaskInput,
+  toTaskSchedule,
+  type RawTaskCommand,
+} from "./openrouter-task-command-parsing.gateway";
 
 afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function aRawCommand(overrides: Partial<RawEventCommand> = {}): Partial<RawEventCommand> {
+function aRawCommand(overrides: Partial<RawTaskCommand> = {}): Partial<RawTaskCommand> {
   return {
     type: "common",
     routineName: "",
@@ -29,7 +29,7 @@ function aRawCommand(overrides: Partial<RawEventCommand> = {}): Partial<RawEvent
   };
 }
 
-test("requests the strict event_command schema and returns the parsed input", async () => {
+test("requests the strict task_command schema and returns the parsed input", async () => {
   const fetchMock = vi.fn().mockResolvedValue({
     ok: true,
     json: async () => ({
@@ -43,7 +43,7 @@ test("requests the strict event_command schema and returns the parsed input", as
     }),
   });
   vi.stubGlobal("fetch", fetchMock);
-  const gateway = new OpenRouterEventCommandParsingGateway("test-api-key", "x-ai/grok-4.5", {
+  const gateway = new OpenRouterTaskCommandParsingGateway("test-api-key", "x-ai/grok-4.5", {
     build: () => "command prompt",
   });
 
@@ -75,7 +75,7 @@ test("requests the strict event_command schema and returns the parsed input", as
   expect(request.response_format).toEqual(
     expect.objectContaining({
       type: "json_schema",
-      json_schema: expect.objectContaining({ name: "event_command", strict: true }),
+      json_schema: expect.objectContaining({ name: "task_command", strict: true }),
     }),
   );
 });
@@ -91,7 +91,7 @@ test("never logs the api key", async () => {
       }),
     }),
   );
-  const gateway = new OpenRouterEventCommandParsingGateway("super-secret-key", "model", {
+  const gateway = new OpenRouterTaskCommandParsingGateway("super-secret-key", "model", {
     build: () => "prompt",
   });
 
@@ -102,19 +102,19 @@ test("never logs the api key", async () => {
 });
 
 test("falls back to the transcript when the model leaves the routine name empty", () => {
-  const input = toCreateEventInput(aRawCommand({ type: "common", routineName: "  " }), "  fui correr no parque  ");
+  const input = toCreateTaskInput(aRawCommand({ type: "common", routineName: "  " }), "  fui correr no parque  ");
 
   expect(input).toEqual({ name: "fui correr no parque", kind: "common", tags: [] });
 });
 
 test("falls back to routine when the model returns an unknown type", () => {
-  const input = toCreateEventInput(aRawCommand({ type: "meditation" }), "meditei 10 minutos");
+  const input = toCreateTaskInput(aRawCommand({ type: "meditation" }), "meditei 10 minutos");
 
   expect(input).toEqual({ name: "meditei 10 minutos", kind: "common", tags: [] });
 });
 
 test("reads sleep values above 24 as minutes", () => {
-  const input = toCreateEventInput(
+  const input = toCreateTaskInput(
     aRawCommand({ type: "sleep", sleepHours: 450, sleepScore: 80 }),
     "dormi",
   );
@@ -127,7 +127,7 @@ test("reads sleep values above 24 as minutes", () => {
 });
 
 test("clamps the sleep score and drops a missing duration", () => {
-  const input = toCreateEventInput(
+  const input = toCreateTaskInput(
     aRawCommand({ type: "sleep", sleepHours: null, sleepScore: 320 }),
     "dormi mal",
   );
@@ -140,7 +140,7 @@ test("clamps the sleep score and drops a missing duration", () => {
 });
 
 test("builds a weightlifting workout with empty sets", () => {
-  const input = toCreateEventInput(
+  const input = toCreateTaskInput(
     aRawCommand({
       type: "training",
       workoutKind: "weightlifting",
@@ -158,7 +158,7 @@ test("builds a weightlifting workout with empty sets", () => {
 });
 
 test("builds a running workout with the reported distance", () => {
-  const input = toCreateEventInput(
+  const input = toCreateTaskInput(
     aRawCommand({
       type: "training",
       workoutKind: "running",
@@ -181,7 +181,7 @@ test("builds a running workout with the reported distance", () => {
 });
 
 test("builds a walking workout with distance and pace", () => {
-  const input = toCreateEventInput(
+  const input = toCreateTaskInput(
     aRawCommand({
       type: "training",
       workoutKind: "walking",
@@ -208,13 +208,13 @@ test("builds a walking workout with distance and pace", () => {
 });
 
 test("keeps the workout list empty when the phrase carried no numbers", () => {
-  const input = toCreateEventInput(aRawCommand({ type: "training" }), "fui pra academia");
+  const input = toCreateTaskInput(aRawCommand({ type: "training" }), "fui pra academia");
 
   expect(input).toEqual({ kind: "training", artifacts: [{ type: "training", data: { workouts: [] } }], tags: [] });
 });
 
 test("carries the spoken window through to the schedule", () => {
-  const schedule = toEventSchedule(
+  const schedule = toTaskSchedule(
     aRawCommand({ type: "sleep", durationMinutes: 360, endTimeOfDay: "06:00" }),
   );
 
@@ -227,7 +227,7 @@ test("carries the spoken window through to the schedule", () => {
 });
 
 test("treats empty clock strings as no window at all", () => {
-  const schedule = toEventSchedule(aRawCommand({ startTimeOfDay: "  ", endTimeOfDay: "" }));
+  const schedule = toTaskSchedule(aRawCommand({ startTimeOfDay: "  ", endTimeOfDay: "" }));
 
   expect(schedule).toEqual({
     startTimeOfDay: undefined,
@@ -238,7 +238,7 @@ test("treats empty clock strings as no window at all", () => {
 });
 
 test("uses the transcript when the model returns no food text", () => {
-  const input = toCreateEventInput(
+  const input = toCreateTaskInput(
     aRawCommand({ type: "food", foodInputText: "" }),
     "comi uma banana",
   );

@@ -10,12 +10,12 @@ const evt = (name: string, kind: string, hour: number, over: Record<string, unkn
   description: null, tags: [], followsFrom: [], ...over,
 });
 
-/** O exemplo-guia ate os passos concluidos: tres eventos e um alimento, cada um no seu passo. */
+/** O exemplo-guia ate os passos concluidos: tres tarefas e um alimento, cada um no seu passo. */
 async function guideExample() {
   const ctx = setupRequest("comendo 300g de arroz com 200g de feijão, depois vou nadar na praia...");
-  const events = await addStep(ctx, "s-events", "event-create", "many");
+  const events = await addStep(ctx, "s-events", "task-create", "many");
   const artifacts = await addStep(ctx, "s-artifacts", "artifact-create");
-  ctx.gateway.outputs.set("event_create", { events: [
+  ctx.gateway.outputs.set("task_create", { tasks: [
     evt("Refeição", "meal", 12), evt("Nadar na praia", "training", 13), evt("Voltar para casa", "common", 15),
   ] });
   ctx.gateway.outputs.set("artifact_create", { artifacts: [
@@ -27,9 +27,9 @@ async function guideExample() {
 const entitiesOf = (ctx: ReturnType<typeof setupRequest>) => ctx.store.entities("r1");
 
 describe("fila de finalizacao", () => {
-  test("eventos concluidos primeiro: o JEV nao liga nenhum e o pedido segue aberto", async () => {
+  test("tarefas concluidos primeiro: o JEV nao liga nenhum e o pedido segue aberto", async () => {
     const { ctx, events } = await guideExample();
-    await ctx.worker.run("event-create", events);
+    await ctx.worker.run("task-create", events);
     const jev = scriptedJev(() => result({ link: confident("none") }));
 
     await ctx.finalizer(jev.client).run(events);
@@ -38,9 +38,9 @@ describe("fila de finalizacao", () => {
     expect(ctx.store.require("r1").status).toBe("running");
   });
 
-  test("o alimento concluido e ligado ao evento da refeicao e o pedido fecha", async () => {
+  test("o alimento concluido e ligado à tarefa da refeicao e o pedido fecha", async () => {
     const { ctx, events, artifacts } = await guideExample();
-    await ctx.worker.run("event-create", events);
+    await ctx.worker.run("task-create", events);
     await ctx.finalizer(scriptedJev(() => result({ link: confident("none") })).client).run(events);
     await ctx.worker.run("artifact-create", artifacts);
 
@@ -51,7 +51,7 @@ describe("fila de finalizacao", () => {
     });
     await ctx.finalizer(jev.client).run(artifacts);
 
-    // O JEV viu o pedido, o alimento e os tres eventos (e "nenhum").
+    // O JEV viu o pedido, o alimento e os tres tarefas (e "nenhum").
     const [, state, questions] = jev.ask.mock.calls[0] as unknown as [unknown, Record<string, string>, { link: { criteria: Record<string, string> } }];
     expect(state.message).toContain("300g de arroz");
     expect(state.entity).toContain("300g de arroz, 200g de feijão");
@@ -60,12 +60,12 @@ describe("fila de finalizacao", () => {
     const entities = await entitiesOf(ctx);
     const food = entities.find((entity) => entity.kind === "artifact");
     const meal = entities.find((entity) => entity.summary.name === "Refeição");
-    const link = { from: { kind: "artifact", id: food?.id }, to: { kind: "event", id: meal?.id } };
+    const link = { from: { kind: "artifact", id: food?.id }, to: { kind: "task", id: meal?.id } };
     // A ligacao vale para os dois lados.
     expect(food?.links).toEqual([link]);
     expect(meal?.links).toEqual([link]);
 
-    // Quem e editado e o evento: ele passa a criar o artefato que o pedido fez para ele.
+    // Quem e editado e a tarefa: ele passa a criar o artefato que o pedido fez para ele.
     const stored = await ctx.eventRepository.findById(meal?.id as string);
     expect(stored?.artifactLinks).toEqual([{ artifactId: food?.id, relation: "creates", fromRecurrence: false }]);
     const swim = entities.find((entity) => entity.summary.name === "Nadar na praia");
@@ -76,13 +76,13 @@ describe("fila de finalizacao", () => {
       .toMatchObject({ artifactType: "food", operation: "create", linkedTo: [{ kind: "task", id: meal?.id }] });
   });
 
-  test("a ordem de termino nao importa: alimento primeiro, evento depois, e a ligacao acontece quando o evento chega", async () => {
+  test("a ordem de termino nao importa: alimento primeiro, tarefa depois, e a ligacao acontece quando a tarefa chega", async () => {
     const { ctx, events, artifacts } = await guideExample();
     await ctx.worker.run("artifact-create", artifacts);
     await ctx.finalizer(scriptedJev(() => result({})).client).run(artifacts);
-    await ctx.worker.run("event-create", events);
+    await ctx.worker.run("task-create", events);
 
-    // Cada evento que chega e comparado com o alimento (e com os outros eventos); so a refeicao fica com ele.
+    // Cada tarefa que chega e comparada com o alimento (e com as outras tarefas); so a refeicao fica com ele.
     const jev = scriptedJev((questions, state) => {
       const criteria = (questions.link as { criteria: Record<string, string> }).criteria;
       const food = Object.entries(criteria).find(([, text]) => text.startsWith("artefato"));
@@ -94,24 +94,24 @@ describe("fila de finalizacao", () => {
     const entities = await entitiesOf(ctx);
     const food = entities.find((entity) => entity.kind === "artifact");
     const meal = entities.find((entity) => entity.summary.name === "Refeição");
-    expect(meal?.links).toEqual([{ from: { kind: "artifact", id: food?.id }, to: { kind: "event", id: meal?.id } }]);
+    expect(meal?.links).toEqual([{ from: { kind: "artifact", id: food?.id }, to: { kind: "task", id: meal?.id } }]);
     expect((await ctx.eventRepository.findById(meal?.id as string))?.artifactLinks.map((link) => link.artifactId)).toEqual([food?.id]);
   });
 
-  test("dois eventos nao se ligam: a ordem entre eles nao e decidida na finalizacao, e nenhum e revisado", async () => {
+  test("duas tarefas nao se ligam: a ordem entre elas nao e decidida na finalizacao, e nenhum e revisado", async () => {
     const ctx = setupRequest("organizar a festa e comprar o bolo");
-    const first = await addStep(ctx, "s1", "event-create");
-    const second = await addStep(ctx, "s2", "event-create");
-    ctx.gateway.outputs.set("event_create", { events: [evt("Organizar a festa", "common", 10, { status: "todo" })] });
-    await ctx.worker.run("event-create", first);
+    const first = await addStep(ctx, "s1", "task-create");
+    const second = await addStep(ctx, "s2", "task-create");
+    ctx.gateway.outputs.set("task_create", { tasks: [evt("Organizar a festa", "common", 10, { status: "todo" })] });
+    await ctx.worker.run("task-create", first);
     await ctx.finalizer(scriptedJev(() => result({})).client).run(first);
-    ctx.gateway.outputs.set("event_create", { events: [evt("Comprar o bolo", "common", 11, { status: "todo" })] });
-    await ctx.worker.run("event-create", second);
+    ctx.gateway.outputs.set("task_create", { tasks: [evt("Comprar o bolo", "common", 11, { status: "todo" })] });
+    await ctx.worker.run("task-create", second);
 
     const jev = scriptedJev(() => result({ link: confident("c1") }));
     await ctx.finalizer(jev.client).run(second);
 
-    // Sem candidato ligavel (so ha outro evento), o JEV nem e consultado.
+    // Sem candidato ligavel (so ha outra tarefa), o JEV nem e consultado.
     expect(jev.ask).not.toHaveBeenCalled();
     const [party, cake] = ctx.database.events;
     expect(ctx.database.edges).toEqual([]);
@@ -125,7 +125,7 @@ describe("fila de finalizacao", () => {
       () => new JevUnavailableError("provider"),
     ]) {
       const { ctx, events, artifacts } = await guideExample();
-      await ctx.worker.run("event-create", events);
+      await ctx.worker.run("task-create", events);
       await ctx.worker.run("artifact-create", artifacts);
       await ctx.finalizer(scriptedJev(reply).client).run(artifacts);
 
@@ -136,7 +136,7 @@ describe("fila de finalizacao", () => {
 
   test("passo que falhou nao trava o pedido: ele fecha com a falha registrada", async () => {
     const { ctx, events, artifacts } = await guideExample();
-    await ctx.worker.run("event-create", events);
+    await ctx.worker.run("task-create", events);
     ctx.gateway.outputs.delete("artifact_create");
     await ctx.worker.run("artifact-create", artifacts);
     const jev = scriptedJev(() => result({}));
@@ -150,15 +150,15 @@ describe("fila de finalizacao", () => {
 
   test("todos os passos falharam: o pedido falhou", async () => {
     const ctx = setupRequest();
-    const events = await addStep(ctx, "s1", "event-create");
-    await ctx.worker.run("event-create", events);
+    const events = await addStep(ctx, "s1", "task-create");
+    await ctx.worker.run("task-create", events);
     await ctx.finalizer(scriptedJev(() => result({})).client).run(events);
     expect(ctx.store.require("r1").status).toBe("failed");
   });
 
   test("pedido cancelado: a finalizacao que ainda estava na fila nao faz nada", async () => {
     const { ctx, events } = await guideExample();
-    await ctx.worker.run("event-create", events);
+    await ctx.worker.run("task-create", events);
     await ctx.store.cancel("r1");
     const jev = scriptedJev(() => result({}));
     await ctx.finalizer(jev.client).run(events);
@@ -174,7 +174,7 @@ describe("explicacao da falha", () => {
     if (explanation) {
       ctx.gateway.outputs.set("failure_explainer", { message: explanation });
     }
-    await ctx.worker.run("event-create", events);
+    await ctx.worker.run("task-create", events);
     ctx.gateway.outputs.delete("artifact_create");
     await ctx.worker.run("artifact-create", artifacts);
     const jev = scriptedJev(() => result({}));
@@ -183,16 +183,16 @@ describe("explicacao da falha", () => {
   }
 
   test("so quando algum passo falha, uma chamada curta diz o que falhou e o que deu certo", async () => {
-    const { ctx, finalize } = await withFailedArtifacts("Criei os eventos, mas não consegui criar o alimento.");
+    const { ctx, finalize } = await withFailedArtifacts("Criei as tarefas, mas não consegui criar o alimento.");
 
     await finalize();
 
     const call = ctx.gateway.calls.find((candidate) => candidate.schemaName === "failure_explainer");
     expect(call?.user).toContain("Criando artefatos (código: internal)");
-    expect(call?.user).toContain("Criando eventos");
+    expect(call?.user).toContain("Criando tarefas");
     const request = ctx.store.require("r1");
-    expect(request).toMatchObject({ status: "done", answer: "Criei os eventos, mas não consegui criar o alimento." });
-    expect(toRequestDto(request, ctx.store.stepRecords, []).message).toBe("Criei os eventos, mas não consegui criar o alimento.");
+    expect(request).toMatchObject({ status: "done", answer: "Criei as tarefas, mas não consegui criar o alimento." });
+    expect(toRequestDto(request, ctx.store.stepRecords, []).message).toBe("Criei as tarefas, mas não consegui criar o alimento.");
   });
 
   test("se a explicacao tambem falha, vale a linha predefinida", async () => {
@@ -205,7 +205,7 @@ describe("explicacao da falha", () => {
 
   test("sucesso total nunca chama o modelo de explicacao", async () => {
     const { ctx, events, artifacts } = await guideExample();
-    await ctx.worker.run("event-create", events);
+    await ctx.worker.run("task-create", events);
     await ctx.worker.run("artifact-create", artifacts);
     const jev = scriptedJev(() => result({ link: confident("none") }));
     await ctx.finalizer(jev.client).run(events);
@@ -218,15 +218,15 @@ describe("explicacao da falha", () => {
 describe("series na finalizacao", () => {
   test("a primeira ocorrencia de uma serie nao e ligada ao artefato: a ligacao valeria para um dia so", async () => {
     const ctx = setupRequest("corrida toda segunda, e anota que preciso de tênis");
-    const series = await addStep(ctx, "s-series", "recurring-event-create");
+    const series = await addStep(ctx, "s-series", "recurring-task-create");
     const artifacts = await addStep(ctx, "s-artifacts", "artifact-create");
-    ctx.gateway.outputs.set("recurring_event_create", { series: [{
+    ctx.gateway.outputs.set("recurring_task_create", { series: [{
       name: "Corrida", kind: "training", status: null, priority: null, description: null, tags: [], frequency: "weekly",
       interval: null, weekdays: ["mon"], monthDay: null, month: null, timeOfDay: "07:00", durationMinutes: null,
       startsOn: null, endsOn: null,
     }] });
     ctx.gateway.outputs.set("artifact_create", { artifacts: [{ type: "text", name: "Tênis", content: "Preciso de tênis" }] });
-    await ctx.worker.run("recurring-event-create", series);
+    await ctx.worker.run("recurring-task-create", series);
     await ctx.worker.run("artifact-create", artifacts);
     const jev = scriptedJev(() => result({ link: confident("c1") }));
 
@@ -239,10 +239,10 @@ describe("series na finalizacao", () => {
 });
 
 describe("sentido da ligacao", () => {
-  test("o artefato pertence ao evento; so um artefato e um evento se ligam, nunca dois do mesmo tipo", () => {
+  test("o artefato pertence à tarefa; so um artefato e uma tarefa se ligam, nunca dois do mesmo tipo", () => {
     const artifact = { kind: "artifact" as const };
-    const event = { kind: "event" as const };
-    const other = { kind: "event" as const };
+    const event = { kind: "task" as const };
+    const other = { kind: "task" as const };
     expect(orient(event, artifact)).toEqual({ from: artifact, to: event });
     expect(orient(artifact, event)).toEqual({ from: artifact, to: event });
     expect(linkable(artifact, event)).toBe(true);

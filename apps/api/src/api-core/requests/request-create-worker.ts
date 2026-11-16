@@ -6,8 +6,8 @@ import { TIME_ZONE } from "../agent/time";
 import type { CreateEventUseCase } from "../events/create-event.usecase";
 import type { PlaceResolver } from "../events/services/place-resolver.service";
 import {
-  artifactCreateOutput, eventCreateOutput, recurringEventCreateOutput,
-  type ArtifactCreateOutput, type EventCreateOutput, type RecurringEventCreateOutput,
+  artifactCreateOutput, taskCreateOutput, recurringTaskCreateOutput,
+  type ArtifactCreateOutput, type TaskCreateOutput, type RecurringTaskCreateOutput,
 } from "./request-agent-schemas";
 import { describeRequest, type RequestAgentRunner } from "./request-agent-runner";
 import { RuleError, seriesInput } from "./request-recurrence";
@@ -68,16 +68,16 @@ export class RequestCreateWorker {
     const user = describeRequest(request.prompt, step.expected, request.context, step.input?.instruction);
     const base = { agent, now: request.createdAt, user, signal, stepId: step.id };
     switch (agent) {
-      case "event-create": {
-        const { value } = await this.deps.runner.run({ ...base, schema: eventCreateOutput });
-        return this.stageEvents(session, value, request.context?.coordinates);
+      case "task-create": {
+        const { value } = await this.deps.runner.run({ ...base, schema: taskCreateOutput });
+        return this.stageTasks(session, value, request.context?.coordinates);
       }
       case "artifact-create": {
         const { value } = await this.deps.runner.run({ ...base, schema: artifactCreateOutput });
         return this.stageArtifacts(session, value, request.createdAt);
       }
-      case "recurring-event-create": {
-        const { value } = await this.deps.runner.run({ ...base, schema: recurringEventCreateOutput });
+      case "recurring-task-create": {
+        const { value } = await this.deps.runner.run({ ...base, schema: recurringTaskCreateOutput });
         return this.stageSeries(session, value, request.context?.coordinates);
       }
     }
@@ -89,7 +89,7 @@ export class RequestCreateWorker {
    * perto de onde a pessoa esta, e toda ocorrencia nasce com ele.
    */
   private async stageSeries(
-    session: AgentChangeSession, output: RecurringEventCreateOutput, coordinates?: GeoPointInput,
+    session: AgentChangeSession, output: RecurringTaskCreateOutput, coordinates?: GeoPointInput,
   ): Promise<NewEntity[]> {
     const today = session.todayIn(TIME_ZONE);
     for (const series of output.series) {
@@ -106,7 +106,7 @@ export class RequestCreateWorker {
       if (!result.ok) throw new StepFailure("rejected");
     }
     return session.result().created
-      .filter((item) => item.kind === "event")
+      .filter((item) => item.kind === "task")
       .map((item): NewEntity => ({ ...item, operation: "create" }));
   }
 
@@ -114,11 +114,11 @@ export class RequestCreateWorker {
    * O alimento de uma refeicao nao nasce aqui: quem cria artefatos e outro passo, e a finalizacao os liga. O lugar
    * dito e procurado no mapa perto de onde a pessoa esta; sem lugar dito, vale o endereco de onde ela esta.
    */
-  private async stageEvents(
-    session: AgentChangeSession, output: EventCreateOutput, coordinates?: GeoPointInput,
+  private async stageTasks(
+    session: AgentChangeSession, output: TaskCreateOutput, coordinates?: GeoPointInput,
   ): Promise<NewEntity[]> {
     const ids: string[] = [];
-    for (const item of output.events) {
+    for (const item of output.tasks) {
       const said = item.location?.trim();
       const location = said ? await (this.deps.places?.resolve(said, coordinates) ?? said) : undefined;
       const result = await session.createEvent({
@@ -138,17 +138,17 @@ export class RequestCreateWorker {
       ids.push(result.id);
     }
 
-    // A sequencia entre os eventos da propria lista: a posicao que o agente deu vira o id recem-criado.
-    for (const [index, item] of output.events.entries()) {
+    // A sequencia entre as tarefas da propria lista: a posicao que o agente deu vira o id recem-criado.
+    for (const [index, item] of output.tasks.entries()) {
       for (const previousIndex of item.followsFrom) {
         const previous = ids[previousIndex];
         const next = ids[index];
         if (!previous || !next || previous === next) throw new StepFailure("rejected");
-        const result = await session.sequenceEvents(previous, next);
+        const result = await session.sequenceTasks(previous, next);
         if (!result.ok) throw new StepFailure("rejected");
       }
     }
-    return ids.map((id): NewEntity => ({ kind: "event", id, operation: "create" }));
+    return ids.map((id): NewEntity => ({ kind: "task", id, operation: "create" }));
   }
 
   /** O alimento nasce pendente: gravar o artefato abre o pedido de construcao que calcula os nutrientes. */

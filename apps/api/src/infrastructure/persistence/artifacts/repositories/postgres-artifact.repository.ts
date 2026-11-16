@@ -176,7 +176,7 @@ export class PostgresArtifactRepository implements ArtifactRepository, FoodGener
       `);
       for (const request of requests.rows) {
         await appendEntry(tx, {
-          eventId: request.id,
+          taskId: request.id,
           userId: payload.userId,
           kind: "result",
           data: { outcome: final, artifactId: payload.artifactId },

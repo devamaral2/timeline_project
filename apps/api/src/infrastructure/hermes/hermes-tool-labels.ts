@@ -17,17 +17,17 @@ const EXACT_LABELS: Record<string, string> = {
 };
 
 const MCP_LABELS: Record<string, string> = {
-  create_event: "Criou um evento",
+  create_task: "Criou uma tarefa",
   create_artifact: "Criou um artefato",
   create_recurrence: "Criou uma recorrência",
-  update_event: "Editou um evento",
+  update_task: "Editou uma tarefa",
   update_artifact: "Editou um artefato",
   update_recurrence: "Editou uma recorrência",
-  get_event: "Leu um evento",
+  get_task: "Leu uma tarefa",
   get_artifact: "Leu um artefato",
   get_recurrence: "Leu uma recorrência",
-  list_timeline_events: "Listou a agenda",
-  list_tracked_events: "Listou os eventos acompanhados",
+  list_agenda_tasks: "Listou a agenda",
+  list_tracked_tasks: "Listou as tarefas acompanhadas",
   list_artifacts: "Listou os artefatos",
   list_recurrences: "Listou as recorrências",
 };

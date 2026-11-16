@@ -16,7 +16,7 @@ export type StepStatus = Exclude<RequestStatus, "waiting">;
 /** O que a finalizacao mostra ao JEV sobre uma entidade, lido da propria entidade: nunca o texto bruto do pedido. */
 export interface EntitySummary {
   name: string;
-  eventKind?: string;
+  taskKind?: string;
   artifactType?: string;
   startedAt?: string;
   estimatedFinishAt?: string;
@@ -31,7 +31,7 @@ export interface EntityRef {
   id: string;
 }
 
-/** Uma ligacao que a finalizacao aplicou: `from` pertence a `to` (o artefato ao evento). */
+/** Uma ligacao que a finalizacao aplicou: `from` pertence a `to` (o artefato à tarefa). */
 export interface LinkRecord {
   from: EntityRef;
   to: EntityRef;
@@ -78,7 +78,7 @@ export interface RequestRecord {
   kind: AgentRequestKind;
   route: RequestRoute;
   status: RequestStatus;
-  /** O nome do evento: o inicio do que o usuario pediu. */
+  /** O nome da tarefa: o inicio do que o usuario pediu. */
   title: string;
   /** O que o usuario escreveu ou falou, inteiro. */
   prompt: string;
@@ -150,12 +150,12 @@ export interface StepRecord {
   usage?: TokenUsage;
 }
 
-/** Um evento ou artefato que o pedido tocou: a relacao que parte do passo (ou do proprio pedido, na voz). */
+/** Uma tarefa ou artefato que o pedido tocou: a relacao que parte do passo (ou do proprio pedido, na voz). */
 export interface RequestEntityRecord {
   requestId: string;
   kind: EntityKind;
   id: string;
-  /** O evento de agente de onde a relacao parte. */
+  /** A tarefa de agente de onde a relacao parte. */
   stepId: string;
   operation: "create" | "update" | "delete";
   summary: EntitySummary;
@@ -193,7 +193,7 @@ export interface NewRequest {
 }
 
 /**
- * Persistencia do pedido (ADR 0013): o pedido e cada passo sao eventos de agente, o que se acrescenta a eles sao
+ * Persistencia do pedido (ADR 0013): o pedido e cada passo sao tarefas de agente, o que se acrescenta a eles sao
  * entradas e o que um passo tocou sao relacoes partindo dele. Os metodos que recebem `tx` rodam na transacao do
  * escritor em lote (`EntityBatch.afterWrite`): o passo concluido e a finalizacao enfileirada existem se e somente
  * se as entidades existem.
@@ -245,10 +245,10 @@ export interface RequestStore {
   continueFallback(requestId: string, step: NewStep): Promise<void>;
   /** O fallback respondeu: passo concluido e pedido encerrado, juntos. No laco, com o que falhou no caminho. */
   finishFallback(requestId: string, stepId: string, text: string, failedSteps?: FailedStep[]): Promise<void>;
-  /** A fala virou um evento de pessoa: a relacao do pedido com ele e o pedido concluido, na transacao do evento. */
-  completeVoice(tx: unknown, input: { requestId: string; eventId: string }): Promise<void>;
+  /** A fala virou uma tarefa de pessoa: a relacao do pedido com ela e o pedido concluido, na transacao da tarefa. */
+  completeVoice(tx: unknown, input: { requestId: string; taskId: string }): Promise<void>;
   /**
-   * Cancela o pedido e os passos que nao terminaram. Devolve os eventos cujos jobs vivos precisam ser
+   * Cancela o pedido e os passos que nao terminaram. Devolve as tarefas cujos jobs vivos precisam ser
    * cancelados; vazio quando o pedido ja tinha terminado.
    */
   cancel(requestId: string): Promise<string[]>;

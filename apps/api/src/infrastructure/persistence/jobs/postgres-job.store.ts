@@ -6,7 +6,7 @@ export interface Job {
   kind: string;
   userId: string;
   actorId: string;
-  eventId: string | null;
+  taskId: string | null;
   payload: unknown;
   status: "queued" | "running" | "succeeded" | "failed" | "cancelled";
   progress: unknown;
@@ -46,19 +46,19 @@ export class PostgresJobStore {
   }
 
   /** O job vivo de um evento, se houver: e dele que sai o progresso passageiro. */
-  async activeOfEvent(eventId: string): Promise<Job | undefined> {
+  async activeOfTask(taskId: string): Promise<Job | undefined> {
     return (await this.database.pool.query<Job>(
       `SELECT ${projection} FROM jobs WHERE task_id = $1 AND status IN ('queued', 'running')
-       ORDER BY created_at DESC, id DESC LIMIT 1`, [eventId])).rows[0];
+       ORDER BY created_at DESC, id DESC LIMIT 1`, [taskId])).rows[0];
   }
 
   /** Cancela os jobs vivos dos eventos; devolve os ids, para o worker abortar os que estao rodando. */
-  async cancelOfEvents(eventIds: readonly string[], userId: string): Promise<string[]> {
-    if (eventIds.length === 0) return [];
+  async cancelOfTasks(taskIds: readonly string[], userId: string): Promise<string[]> {
+    if (taskIds.length === 0) return [];
     const result = await this.database.pool.query<{ id: string }>(
       `UPDATE jobs SET status = 'cancelled', lease_until = NULL, progress = NULL, updated_at = now()
        WHERE task_id = ANY($1::char(26)[]) AND user_id = $2 AND status IN ('queued', 'running') RETURNING id`,
-      [eventIds, userId]);
+      [taskIds, userId]);
     return result.rows.map((row) => row.id);
   }
 
