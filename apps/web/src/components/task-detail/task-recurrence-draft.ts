@@ -123,13 +123,13 @@ export function validateSeriesEdit(series: RecurrenceDto, draft: RecurrenceDraft
 }
 
 /**
- * O início da série quando ela nasce de um evento que já existe: o evento fica como está e é a primeira data, então a
+ * O início da série quando ela nasce de uma tarefa que já existe: a tarefa fica como está e é a primeira data, então a
  * série começa no dia seguinte (senão o dia dele ganharia uma segunda ocorrência). Sem data, nada muda: a validação
  * pede a data.
  */
 export function scheduleAfterTask<T extends RecurrenceSchedule>(form: T): T {
   if (!form.startDate) return form;
-  // O fim anda junto com o início: a duração da série é a do evento, e não pode sair negativa.
+  // O fim anda junto com o início: a duração da série é a da tarefa, e não pode sair negativa.
   return { ...form, startDate: shiftDayKey(form.startDate, 1), ...(form.endDate ? { endDate: shiftDayKey(form.endDate, 1) } : {}) };
 }
 
@@ -157,7 +157,7 @@ export function buildRecurrenceRule(draft: RecurrenceDraft, schedule: Recurrence
   };
 }
 
-/** O que cada ocorrência copia: os campos do evento que a série leva. Sem datas: elas vêm da regra. */
+/** O que cada ocorrência copia: os campos da tarefa que a série leva. Sem datas: elas vêm da regra. */
 function templateOf(form: TaskDraft): CreateRecurrenceInput["template"] {
   return {
     kind: form.kind,

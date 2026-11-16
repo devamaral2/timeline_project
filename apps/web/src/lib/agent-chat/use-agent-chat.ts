@@ -10,7 +10,7 @@ import { parseChatCommand } from "./chat-mode-command";
 import { type HermesStep, hermesStepsOf } from "./hermes-steps";
 import { operationId } from "@/lib/api/operation-id";
 
-/** Um registro que a resposta tocou, como a conversa o mostra: o `kind` é o da tela (evento, tarefa ou nota). */
+/** Um registro que a resposta tocou, como a conversa o mostra: o `kind` é o da tela (tarefa ou nota). */
 export interface AgentChatEntityRef {
   kind: "task" | "note";
   id: string;

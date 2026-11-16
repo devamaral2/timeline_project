@@ -5,7 +5,7 @@ import type { AgentChatEntityRef } from "@/lib/agent-chat/use-agent-chat";
 import styles from "@/components/shell/shell.module.css";
 
 export const CHANGE_LABELS: Record<AgentChatEntityRef["kind"], Record<AgentChatEntityRef["change"], string>> = {
-  task: { created: "Evento criado", updated: "Evento alterado", deleted: "Evento apagado" },
+  task: { created: "Tarefa criada", updated: "Tarefa alterada", deleted: "Tarefa apagada" },
   note: { created: "Nota criada", updated: "Nota alterada", deleted: "Nota apagada" },
 };
 
@@ -15,7 +15,7 @@ const ENTITY_ICONS: Record<AgentChatEntityRef["kind"], typeof ListChecks> = {
 };
 
 /**
- * A entidade que um pedido tocou, na forma da linha do chat (`Evento criado · Comprar faixa`). Um artefato
+ * A entidade que um pedido tocou, na forma da linha do chat (`Tarefa criada · Comprar faixa`). Um artefato
  * aparece como nota: a linha do chat só conhece esses três tipos.
  */
 export function requestEntityRef(entity: RequestEntityDto): AgentChatEntityRef {

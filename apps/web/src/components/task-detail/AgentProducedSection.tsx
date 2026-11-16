@@ -11,7 +11,7 @@ interface AgentProducedSectionProps {
 }
 
 /**
- * A seção "Produziu" do pedido: os eventos e os artefatos que ele criou, alterou ou apagou. Tocar num que
+ * A seção "Produziu" do pedido: as tarefas e os artefatos que ele criou, alterou ou apagou. Tocar num que
  * ainda existe abre o detalhe dele; o apagado aparece só como leitura. Sem entidades, a seção não aparece.
  */
 export function AgentProducedSection({ userId, entities }: AgentProducedSectionProps) {

@@ -1,22 +1,22 @@
 import type { TaskCardDto } from "@repo/contracts";
 import { dayKeyOf, shiftDayKey, zonedDayEnd, zonedDayStart } from "@repo/timeline";
 import { TaskKindMark } from "@/components/tasks/task-kind-mark";
-import { listAgenda, listTrackedEvents } from "@/lib/api/events";
+import { listAgenda, listTrackedTasks } from "@/lib/api/tasks";
 import { cardWhenLabel } from "@/lib/tasks/card-text";
 import styles from "./edit.module.css";
 
-/** Quantos eventos o modal de seleção pede de cada vez. */
+/** Quantos tarefas o modal de seleção pede de cada vez. */
 const CHOICE_LIMIT = 50;
 
 /**
- * A fonte de eventos do modal de seleção: a lista de tarefas, filtrada pelo nome. Sem texto (o modal acabou de
+ * A fonte de tarefas do modal de seleção: a lista de tarefas, filtrada pelo nome. Sem texto (o modal acabou de
  * abrir), devolve os primeiros da lista, para a pessoa escolher sem digitar.
  */
 export function searchTrackedTasks(query: string): Promise<TaskCardDto[]> {
-  return listTrackedEvents(query ? { q: query, limit: CHOICE_LIMIT } : { limit: CHOICE_LIMIT });
+  return listTrackedTasks(query ? { q: query, limit: CHOICE_LIMIT } : { limit: CHOICE_LIMIT });
 }
 
-/** Quantos dias antes e depois de hoje a agenda entra na busca de eventos de pessoa. */
+/** Quantos dias antes e depois de hoje a agenda entra na busca de tarefas de pessoa. */
 const NEARBY_DAYS = 14;
 /** Por quanto tempo a agenda lida vale para as próximas buscas do mesmo modal. */
 const NEARBY_TTL_MS = 60_000;
@@ -43,13 +43,13 @@ function nearbyAgenda(): Promise<TaskCardDto[]> {
 const fold = (text: string) => text.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLocaleLowerCase("pt-BR");
 
 /**
- * A fonte de eventos de pessoa para ligar a um artefato: a lista de tarefas pelo nome e, depois dela, os
- * compromissos da agenda em volta de hoje (os eventos sem status não estão na lista de tarefas). Se a agenda
+ * A fonte de tarefas de pessoa para ligar a um artefato: a lista de tarefas pelo nome e, depois dela, os
+ * compromissos da agenda em volta de hoje (as tarefas sem status não estão na lista de tarefas). Se a agenda
  * falhar, a lista de tarefas ainda responde.
  */
 export async function searchHumanTasks(query: string): Promise<TaskCardDto[]> {
   const [tracked, agenda] = await Promise.all([
-    listTrackedEvents(query ? { actor: "human", q: query, limit: CHOICE_LIMIT } : { actor: "human", limit: CHOICE_LIMIT }),
+    listTrackedTasks(query ? { actor: "human", q: query, limit: CHOICE_LIMIT } : { actor: "human", limit: CHOICE_LIMIT }),
     nearbyAgenda().catch((): TaskCardDto[] => []),
   ]);
   const text = fold(query);
@@ -62,7 +62,7 @@ export async function searchHumanTasks(query: string): Promise<TaskCardDto[]> {
   return [...tracked, ...fromAgenda];
 }
 
-/** Um evento como escolha do modal: o nome e, embaixo, o tipo (código em mono) e quando. */
+/** Uma tarefa como escolha do modal: o nome e, embaixo, o tipo (código em mono) e quando. */
 export function TaskChoiceView({ card, now }: { card: TaskCardDto; now: Date | null }) {
   return (
     <>

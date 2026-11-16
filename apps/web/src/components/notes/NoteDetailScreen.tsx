@@ -25,7 +25,7 @@ type LoadState = "loading" | "ready" | "missing" | "error";
 
 /**
  * O artefato aberto, em duas colunas. À esquerda: voltar, o tipo (em mono), o nome na serifa, os fatos
- * (tags e, num artefato global, "Catálogo global") e as ações. À direita: o conteúdo conforme o tipo, os eventos
+ * (tags e, num artefato global, "Catálogo global") e as ações. À direita: o conteúdo conforme o tipo, as tarefas
  * em que o artefato aparece com a relação de cada um, e o Registro (criação e última alteração).
  *
  * Editar e excluir valem só para a nota de texto própria: pílulas na coluna da esquerda (desktop) e o menu
@@ -99,7 +99,7 @@ export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: s
     </DetailMenu>
   ) : null;
 
-  /** Uma linha por evento: o ícone do tipo, o nome, a relação (código em mono) e quando o evento começa. */
+  /** Uma linha por tarefa: o ícone do tipo, o nome, a relação (código em mono) e quando a tarefa começa. */
   function taskRow(link: ArtifactTaskLinkDto) {
     const { Icon } = visualForItemType(link.kind);
     const when = now && link.startedAt ? ` · ${whenLabel(link.startedAt, now)}` : "";
@@ -110,7 +110,7 @@ export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: s
         icon={<Icon {...detailIcon} />}
         title={link.name}
         sub={`${link.relation}${when}`}
-        href={`/${userId}/eventos/${link.taskId}`}
+        href={`/${userId}/tarefas/${link.taskId}`}
       />
     );
   }
@@ -137,9 +137,9 @@ export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: s
     >
       <ArtifactContent artifact={artifact} />
 
-      {/* Sem evento (ou artefato global), a seção some: só aparece quando há o que mostrar. */}
+      {/* Sem tarefa (ou artefato global), a seção some: só aparece quando há o que mostrar. */}
       {!artifact.global && tasks.length ? (
-        <DetailSection title="Eventos" labelId="nt-events" count={tasks.length > 1 ? tasks.length : undefined}>
+        <DetailSection title="Tarefas" labelId="nt-tasks" count={tasks.length > 1 ? tasks.length : undefined}>
           <LinkList>{tasks.map(taskRow)}</LinkList>
         </DetailSection>
       ) : null}

@@ -8,11 +8,11 @@
 
 **Leia antes:** o [README](README.md). Spec: "Web" (módulos de tela e troca por símbolo).
 
-- [ ] Nenhuma pasta, arquivo, componente, hook, classe CSS de módulo, tipo ou variável de domínio do web tem "event" no nome, fora das exceções da varredura.
+- [x] Nenhuma pasta, arquivo, componente, hook, classe CSS de módulo, tipo ou variável de domínio do web tem "event" no nome, fora das exceções da varredura.
 - [x] Os eventos de DOM, os parâmetros `event` dos handlers e o `text/event-stream` ficam intactos.
 - [x] O módulo da tela Tarefas e o módulo de tarefa não colidem de nome.
 - [x] Os testes de tela conferem o mesmo que antes e passam.
-- [ ] `pnpm run test:unit` e `pnpm run typecheck` verdes; a área "web, código" sai da linha de base.
+- [x] `pnpm run test:unit` e `pnpm run typecheck` verdes; a área "web, código" sai da linha de base.
 
 **Pendências (feitas como parte dos tickets 07 e 11, que mexem nos mesmos arquivos):** a área "web, código" não esvazia
 sozinha. Ficam, por pertencerem ao cliente HTTP, à API falsa e às rotas de página: `getEvent`, `updateEvent`,

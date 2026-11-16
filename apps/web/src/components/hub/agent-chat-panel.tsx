@@ -45,7 +45,7 @@ export function entityChipText(entity: AgentChatEntityRef): string {
   return entity.label ? `${change} · ${entity.label}` : change;
 }
 
-const ENTITY_ROUTES: Record<AgentChatEntityRef["kind"], string> = { task: "eventos", note: "notas" };
+const ENTITY_ROUTES: Record<AgentChatEntityRef["kind"], string> = { task: "tarefas", note: "notas" };
 
 /** A pagina do registro que a resposta tocou; o que foi apagado nao tem para onde ir. */
 export function agentEntityHref(userId: string, entity: AgentChatEntityRef): string | undefined {
@@ -101,7 +101,7 @@ interface AgentChatPanelProps extends ReturnType<typeof useAgendaChat> {
   /** Tela inteira em vez do painel; quem decide o tamanho e o `MobileNavigation`. */
   expanded?: boolean;
   onToggleExpanded?: () => void;
-  /** Um comando da barra "/" (`/evento`, `/buscar`…) com o texto que veio depois dele. */
+  /** Um comando da barra "/" (`/tarefa`, `/buscar`…) com o texto que veio depois dele. */
   onCommand?: (command: HubCommandId, argument: string) => void;
   /** Fecha o painel; tambem e chamado ao abrir um registro da resposta. */
   onClose?: () => void;

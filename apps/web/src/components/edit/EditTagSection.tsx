@@ -4,7 +4,7 @@ import { Plus, X } from "lucide-react";
 import { useEffect, useState, type KeyboardEvent } from "react";
 import { DetailSection } from "@/components/detail/detail-parts";
 import { addTag, normalizeTag, removeTag } from "@/components/task-detail/task-reminders-tags";
-import { suggestTags } from "@/lib/api/events";
+import { suggestTags } from "@/lib/api/tasks";
 import { tagAccentStyle } from "@/lib/tags/tag-color";
 import styles from "./edit.module.css";
 
@@ -12,7 +12,7 @@ interface EditTagSectionProps {
   tags: string[];
   /** O id do título da seção: cada formulário tem o seu. */
   labelId: string;
-  /** O nome da lista para o leitor de tela: "Tags do evento", "Tags do artefato". */
+  /** O nome da lista para o leitor de tela: "Tags da tarefa", "Tags do artefato". */
   listLabel: string;
   onChange: (tags: string[]) => void;
 }

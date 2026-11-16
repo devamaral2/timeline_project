@@ -2,7 +2,7 @@ import type { AgentTaskStatus, AgentTraceEntryDto, TaskCardDto, RequestDto, Requ
 import { artifactTypeLabel } from "@/lib/artifacts/artifact-model";
 
 /**
- * O que o detalhe do evento de agente lê do pedido: se ainda está em aberto (e portanto se relê), a
+ * O que o detalhe da tarefa de agente lê do pedido: se ainda está em aberto (e portanto se relê), a
  * contagem de passos feitos, o texto das entradas e o que o pedido produziu. Funções puras; a tela só as chama.
  */
 
@@ -17,8 +17,8 @@ export function isOpenRequest(status: AgentTaskStatus): boolean {
 }
 
 /**
- * Há um evento de agente em aberto nesta lista (fila, execução ou espera)? Só ele faz a lista se reler sozinha.
- * Evento de pessoa nunca conta, mesmo com status parecido.
+ * Há uma tarefa de agente em aberto nesta lista (fila, execução ou espera)? Só ele faz a lista se reler sozinha.
+ * Tarefa de pessoa nunca conta, mesmo com status parecido.
  */
 export function hasOpenAgentTask(cards: readonly TaskCardDto[]): boolean {
   return cards.some((card) => card.actor === "agent" && card.status !== undefined && isOpenRequest(card.status as AgentTaskStatus));
@@ -51,13 +51,13 @@ export function entityOperationLabel(operation: RequestEntityDto["operation"]): 
   return OPERATION_LABELS[operation];
 }
 
-/** "Evento", o tipo do artefato ("Texto", "Alimento"…) ou "Nota" quando o contrato não diz o tipo. */
+/** "Tarefa", o tipo do artefato ("Texto", "Alimento"…) ou "Nota" quando o contrato não diz o tipo. */
 export function entityKindLabel(entity: RequestEntityDto): string {
-  if (entity.kind === "task") return "Evento";
+  if (entity.kind === "task") return "Tarefa";
   return entity.artifactType ? artifactTypeLabel(entity.artifactType) : "Nota";
 }
 
-/** Para onde leva a entidade: o detalhe do evento ou o da nota (aba Notas). */
+/** Para onde leva a entidade: o detalhe da tarefa ou o da nota (aba Notas). */
 export function entityHref(userId: string, entity: RequestEntityDto): string {
-  return entity.kind === "task" ? `/${userId}/eventos/${entity.id}` : `/${userId}/notas/${entity.id}`;
+  return entity.kind === "task" ? `/${userId}/tarefas/${entity.id}` : `/${userId}/notas/${entity.id}`;
 }

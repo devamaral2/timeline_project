@@ -30,7 +30,7 @@ export interface ExampleTask {
   /** Sem horário de término registrado, como o contador do app principal. */
   running?: boolean;
   notifyOffsetsMinutes?: number[];
-  /** Só nos eventos da API: o cartão do contrato, que a linha única desenha. A prévia não o tem. */
+  /** Só nas tarefas da API: o cartão do contrato, que a linha única desenha. A prévia não o tem. */
   card?: TaskCardDto;
 }
 
@@ -38,7 +38,7 @@ const todayTasks: ExampleTask[] = [
   { name: "Treino de força", type: "training", time: "07:00 — 08:00", minutes: 60, duration: "1 h", tag: "saúde", tracking: { id: "BRD-24", status: "done", priority: "medium" } },
   { name: "Café da manhã", type: "meal", time: "08:15 — 08:45", minutes: 30, duration: "30 min", missed: true },
   { name: "Revisar proposta", type: "common", time: "09:00 — 10:30", minutes: 90, duration: "1 h 30", tag: "trabalho", tracking: { id: "BRD-25", status: "doing", priority: "urgent" } },
-  { name: "Almoço", type: "meal", time: "12:30 — 13:00", minutes: 30, duration: "30 min", href: "/mockups/eventos/almoco" },
+  { name: "Almoço", type: "meal", time: "12:30 — 13:00", minutes: 30, duration: "30 min", href: "/mockups/tarefas/almoco" },
   { name: "Descanso da tarde", type: "sleep", time: "14:00 — 14:20", minutes: 20, duration: "20 min" },
 ];
 

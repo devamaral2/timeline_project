@@ -50,14 +50,14 @@ test("a caixa de processo acompanha os passos ate o fim e a agenda atualiza uma 
   const id = await ask(result, "comendo arroz, depois vou nadar");
 
   await waitFor(() => expect(result.current.messages.map((message) => message.role)).toEqual(["user", "process"]));
-  advanceRequest(api, id, { status: "running", steps: [step("s1", "Criando eventos", "done"), step("s2", "Criando notas", "running")] });
+  advanceRequest(api, id, { status: "running", steps: [step("s1", "Criando tarefas", "done"), step("s2", "Criando notas", "running")] });
   await waitFor(() => expect(result.current.messages.at(-1)).toMatchObject({ role: "process", request: { status: "running" } }));
   expect(result.current.pending).toMatchObject({ label: "Realizando processos", requestId: id });
   expect(onEntitiesChanged).not.toHaveBeenCalled();
 
   advanceRequest(api, id, {
     status: "done",
-    steps: [step("s1", "Criando eventos", "done"), step("s2", "Criando notas", "done")],
+    steps: [step("s1", "Criando tarefas", "done"), step("s2", "Criando notas", "done")],
     entities: [{ kind: "task", id: "e1", name: "Refeição", operation: "create", linkedTo: [] }],
   });
   await waitFor(() => expect(result.current.pending).toBeNull());
@@ -206,7 +206,7 @@ test("falhas seguidas ao consultar o pedido viram conexao perdida; tentar de nov
 test("o rastro do pedido abre com a mensagem, segue cada consulta e para de girar no fim", async () => {
   const trace = (status: "running" | "done") => ({
     route: "steps" as const, status, fields: [],
-    entries: [{ id: "s1", kind: "agent" as const, label: "Criando eventos", status }],
+    entries: [{ id: "s1", kind: "agent" as const, label: "Criando tarefas", status }],
   });
   const { result } = setup();
   const id = await ask(result, "almoço ao meio-dia");

@@ -4,7 +4,7 @@ import styles from "./note-sheet.module.css";
 
 const HERMES_ICONS: Record<string, LucideIcon> = { skill: Wrench, agent: Bot, router: Route };
 
-/** O ícone de um tipo de nota: o do tipo de evento nas estruturadas, o do arquivo nas do Hermes, a folha no texto. */
+/** O ícone de um tipo de nota: o do tipo de tarefa nas estruturadas, o do arquivo nas do Hermes, a folha no texto. */
 export function noteTypeIcon(type: string): LucideIcon {
   if (type === "meal" || type === "training" || type === "sleep") return visualForItemType(type).Icon;
   return HERMES_ICONS[type] ?? FileText;
@@ -13,7 +13,7 @@ export function noteTypeIcon(type: string): LucideIcon {
 /**
  * O desenho da folha em cada tamanho, na caixa quadrada em que ela fica
  * centrada: o contorno com o canto cortado, a dobra e os dois traços de texto
- * embaixo. Os cantos são bem menos arredondados que os do quadrado do evento
+ * embaixo. Os cantos são bem menos arredondados que os do quadrado da tarefa
  * (4 contra 13), para a forma ler como folha de papel. O ícone do tipo é posicionado pelo CSS, no canto de cima à esquerda.
  */
 const SHEETS = {
@@ -42,12 +42,12 @@ function LetterGlyph() {
 }
 
 /**
- * A nota como folha: onde o evento é um quadrado com o ícone no meio, a nota é
+ * A nota como folha: onde a tarefa é um quadrado com o ícone no meio, a nota é
  * uma folha com o canto dobrado em volta do ícone do tipo, que fica menor, no
  * canto de cima à esquerda, com dois traços de texto embaixo. A nota de texto,
  * que não tem ícone de tipo, leva a letra A no lugar dele. `list` é a da lista
- * de notas, do tamanho do quadrado do evento; `cite` é a compacta, para a nota
- * citada dentro de um evento ou de uma tarefa.
+ * de notas, do tamanho do quadrado da tarefa; `cite` é a compacta, para a nota
+ * citada dentro de uma tarefa ou de uma tarefa.
  */
 export function NoteSheet({ type, size = "list", className }: { type: string; size?: keyof typeof SHEETS; className?: string }) {
   const sheet = SHEETS[size];

@@ -186,7 +186,7 @@ test("a free window from the agenda is attached to the field and travels with th
 });
 
 test("a record's page lives under the user; a deleted record has none", () => {
-  expect(agentEntityHref("u1", { kind: "task", id: "01T", change: "created" })).toBe("/u1/eventos/01T");
+  expect(agentEntityHref("u1", { kind: "task", id: "01T", change: "created" })).toBe("/u1/tarefas/01T");
   expect(agentEntityHref("u1", { kind: "note", id: "01N", change: "updated" })).toBe("/u1/notas/01N");
   expect(agentEntityHref("u1", { kind: "task", id: "01E", change: "deleted" })).toBeUndefined();
 });
@@ -242,9 +242,9 @@ test("typing a slash lists the commands and Enter runs the highlighted one, noth
   fireEvent.change(textbox, { target: { value: "/" } });
   const commands = screen.getByRole("list", { name: "Comandos" });
   expect(within(commands).getAllByRole("button").map((button) => button.textContent)).toEqual([
-    "Criar eventoTipo, status, início e término/evento",
+    "Criar tarefaTipo, status, início e término/tarefa",
     "Criar notaA primeira linha vira o título/nota",
-    "PesquisarEventos, tarefas e artefatos/buscar",
+    "PesquisarTarefas e artefatos/buscar",
     "NotificaçõesAvisos recentes e próximos/notificacoes",
     "ConfiguraçõesTema e conta/configuracoes",
   ]);
@@ -252,7 +252,7 @@ test("typing a slash lists the commands and Enter runs the highlighted one, noth
   fireEvent.keyDown(textbox, { key: "ArrowDown" });
   expect(within(commands).getByRole("button", { name: /Criar nota/ })).toHaveAttribute("aria-current", "true");
 
-  fireEvent.change(textbox, { target: { value: "/evento comprar pão" } });
+  fireEvent.change(textbox, { target: { value: "/tarefa comprar pão" } });
   fireEvent.submit(textbox.closest("form") as HTMLFormElement);
 
   expect(onCommand).toHaveBeenCalledWith("task", "comprar pão");

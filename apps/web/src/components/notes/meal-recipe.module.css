@@ -1,5 +1,5 @@
 /*
- * A receita de uma refeição — a mesma na nota, no detalhe do evento e no
+ * A receita de uma refeição — a mesma na nota, no detalhe da tarefa e no
  * modal. Só tokens globais (--foreground, --muted-foreground, --border),
  * porque o shell da agenda redefine --muted como cor de texto e os outros
  * lugares não.

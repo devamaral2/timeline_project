@@ -21,7 +21,7 @@ import styles from "./task-detail-screen.module.css";
 
 /*
  * Os dados que a prévia desenha. São a forma local do exemplo, não o contrato da API:
- * a tela real lê o evento com `getEvent` (ver `@repo/contracts`).
+ * a tela real lê a tarefa com `getTask` (ver `@repo/contracts`).
  */
 export type PreviewPriority = "urgent" | "normal" | "flexible";
 type PreviewStatus = Extract<NonNullable<TaskCardDto["status"]>, "todo" | "toDefine" | "inHold" | "done" | "cancel">;
@@ -64,7 +64,7 @@ interface PreviewNoteBase {
   name: string;
 }
 
-/** Uma nota do evento na prévia: a refeição, o treino, o sono ou o texto. */
+/** Uma nota da tarefa na prévia: a refeição, o treino, o sono ou o texto. */
 export type PreviewNote =
   | (PreviewNoteBase & { type: "meal"; data: PreviewMeal })
   | (PreviewNoteBase & { type: "training"; data: TrainingData })
@@ -109,7 +109,7 @@ export interface TaskDetailActions {
 
 export interface TaskDetailScreenProps {
   task: PreviewTask;
-  /** As tarefas vinculadas, ja resolvidas por quem carregou o evento. */
+  /** As tarefas vinculadas, ja resolvidas por quem carregou a tarefa. */
   linkedTasks?: PreviewLinkedTask[];
   backHref: string;
   actions?: TaskDetailActions;
@@ -118,12 +118,12 @@ export interface TaskDetailScreenProps {
 }
 
 /**
- * A tela de detalhe do evento.
+ * A tela de detalhe da tarefa.
  *
  * A composicao e a mesma para todo tipo: navegacao, tipo, nome com a data ao
  * lado, o cartao de resumo — horario, duracao, metadados, tags e a situacao no
  * tempo — e as secoes de texto (descricao, tarefas, notas). O que o tipo do
- * evento traz de proprio entra como mais uma secao entre a descricao e as
+ * tarefa traz de proprio entra como mais uma secao entre a descricao e as
  * tarefas; o esqueleto nao muda.
  */
 export function TaskDetailScreen({ task, linkedTasks = [], backHref, actions, actionError }: TaskDetailScreenProps) {
@@ -133,7 +133,7 @@ export function TaskDetailScreen({ task, linkedTasks = [], backHref, actions, ac
 
   return (
     <div className={styles.screen}>
-      <nav className={styles.topBar} aria-label="Navegação do evento">
+      <nav className={styles.topBar} aria-label="Navegação da tarefa">
         <Link href={backHref} className={styles.iconAction} aria-label="Voltar para a agenda">
           <ArrowLeft aria-hidden />
         </Link>
@@ -208,19 +208,19 @@ export function TaskDetailScreen({ task, linkedTasks = [], backHref, actions, ac
 
 /**
  * O cartao de resumo. Le-se de cima para baixo: quando, o que mais se sabe do
- * evento, como ele esta marcado e em que ponto do tempo ele esta.
+ * tarefa, como ele esta marcado e em que ponto do tempo ele esta.
  */
 function TaskSummary({ task, dayKey }: { task: PreviewTask; dayKey: string }) {
   const now = useNow();
   // Sem relogio nao ha situacao no tempo: o HTML do servidor nasce num instante
-  // e hidrata em outro, e os dois discordariam de um evento que acabou de virar.
+  // e hidrata em outro, e os dois discordariam de uma tarefa que acabou de virar.
   const position = now ? positionOf(task, now) : null;
   const running = position === "running";
   const endDayKey = task.finishedAt ? dayKeyOf(task.finishedAt) : null;
   const metadata = metadataOf(task);
 
   return (
-    <section className={styles.summary} aria-label="Resumo do evento">
+    <section className={styles.summary} aria-label="Resumo da tarefa">
       <div className={styles.schedule}>
         <p className={styles.range}>
           <time dateTime={task.startedAt}>{formatTime(task.startedAt)}</time>
@@ -248,7 +248,7 @@ function TaskSummary({ task, dayKey }: { task: PreviewTask; dayKey: string }) {
       ) : null}
 
       <div className={styles.summaryFoot}>
-        <ul className={styles.tags} aria-label="Tags do evento">
+        <ul className={styles.tags} aria-label="Tags da tarefa">
           {task.missed ? <li className={styles.missed}>{missedLabel}</li> : null}
           {task.tags.map((tag) => <li key={tag}>{tag}</li>)}
         </ul>
@@ -259,8 +259,8 @@ function TaskSummary({ task, dayKey }: { task: PreviewTask; dayKey: string }) {
 }
 
 /**
- * O numero a direita do horario: a duracao de um evento encerrado ou o
- * cronometro de um que ainda corre. Sao formatos diferentes de proposito —
+ * O numero a direita do horario: a duracao de uma tarefa encerrada ou o
+ * cronometro de uma que ainda corre. Sao formatos diferentes de proposito —
  * "1h 30min" e registro, "1:30:07" e um numero subindo.
  */
 function DurationReadout({ task, now, running }: { task: PreviewTask; now: Date | null; running: boolean }) {
@@ -282,7 +282,7 @@ const positionLabels: Record<TaskPosition, string> = {
 };
 
 /**
- * A situacao do evento no tempo, num quadro so. Antes da hidratacao ele fica
+ * A situacao da tarefa no tempo, num quadro so. Antes da hidratacao ele fica
  * vazio — um estado errado por um quadro le como informacao, nao como espera.
  */
 function PositionBadge({ position }: { position: TaskPosition | null }) {
@@ -294,11 +294,11 @@ function PositionBadge({ position }: { position: TaskPosition | null }) {
   );
 }
 
-/** O menu do evento: editar, anotar o que nao aconteceu, excluir. */
+/** O menu da tarefa: editar, anotar o que nao aconteceu, excluir. */
 function TaskMenu({ missed, actions }: { missed: boolean; actions?: TaskDetailActions }) {
   if (!actions) {
     return (
-      <button type="button" disabled className={styles.iconAction} aria-label="Mais opções do evento">
+      <button type="button" disabled className={styles.iconAction} aria-label="Mais opções da tarefa">
         <MoreVertical aria-hidden />
       </button>
     );
@@ -322,19 +322,19 @@ function TaskMenu({ missed, actions }: { missed: boolean; actions?: TaskDetailAc
         if (!focusTask.currentTarget.contains(focusTask.relatedTarget)) focusTask.currentTarget.open = false;
       }}
     >
-      <summary className={styles.iconAction} aria-label="Mais opções do evento" title="Mais opções do evento">
+      <summary className={styles.iconAction} aria-label="Mais opções da tarefa" title="Mais opções da tarefa">
         <MoreVertical aria-hidden />
       </summary>
       <div className={styles.menuPanel}>
         <button type="button" onClick={(click) => run(click.currentTarget, actions.onEdit)}>
-          <Pencil aria-hidden />Editar evento
+          <Pencil aria-hidden />Editar tarefa
         </button>
         <button type="button" disabled={actions.savingMissed} onClick={(click) => run(click.currentTarget, actions.onToggleMissed)}>
           <CircleSlash aria-hidden />
           {missed ? `Desmarcar "${missedLabel}"` : `Marcar como ${missedLabel.toLowerCase()}`}
         </button>
         <button type="button" className={styles.danger} onClick={(click) => run(click.currentTarget, actions.onDelete)}>
-          <Trash2 aria-hidden />Excluir evento
+          <Trash2 aria-hidden />Excluir tarefa
         </button>
       </div>
     </details>
@@ -354,7 +354,7 @@ const statusView: Record<PreviewStatus, { Icon: LucideIcon; label: string }> = {
 };
 
 /**
- * Os metadados que o evento carrega hoje. A prioridade normal nao aparece:
+ * Os metadados que a tarefa carrega hoje. A prioridade normal nao aparece:
  * dizer "Normal" gasta uma linha para nao informar nada.
  */
 function metadataOf(task: PreviewTask): Array<{ Icon: LucideIcon; text: string }> {

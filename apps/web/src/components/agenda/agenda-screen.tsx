@@ -12,7 +12,7 @@ import { WeekStrip } from "@/components/tasks/WeekStrip";
 import { requestHubOpen } from "@/components/hub/hub-open";
 import page from "@/components/ui/page.module.css";
 import { ApiRequestError } from "@/lib/api/client-request";
-import { listAgenda, updateEvent } from "@/lib/api/events";
+import { listAgenda, updateTask } from "@/lib/api/tasks";
 import { hasOpenAgentTask } from "@/lib/tasks/agent-request-model";
 import { statusPatch } from "@/lib/tasks/task-read-model";
 import { useOpenAgentRefresh } from "@/lib/tasks/use-open-agent-refresh";
@@ -37,8 +37,8 @@ type ViewMode = AgendaViewMode;
 /** Onde a escolha "mostrar o tempo livre" fica guardada, por navegador. */
 const FREE_TIME_STORAGE_KEY = "braid-agenda-free-time";
 
-/** Aviso quando a troca de status de um evento de referência não é gravada. A revisão velha recarrega a agenda. */
-const STALE_STATUS_MESSAGE = "Este evento mudou em outro lugar. Carregamos a versão atual; confira e tente de novo.";
+/** Aviso quando a troca de status de uma tarefa de referência não é gravada. A revisão velha recarrega a agenda. */
+const STALE_STATUS_MESSAGE = "Esta tarefa mudou em outro lugar. Carregamos a versão atual; confira e tente de novo.";
 const FAILED_STATUS_MESSAGE = "Não foi possível trocar o status. Tente novamente.";
 
 /** Quanto a linha recém-chegada fica marcada, o tempo do banho escorrer. */
@@ -54,10 +54,10 @@ function monthName(dayKey: string, todayKey: string) {
   return dayKey.slice(0, 4) === todayKey.slice(0, 4) ? monthLabel(dayKey).replace(/ de \d{4}$/, "") : monthLabel(dayKey);
 }
 
-/** "5 eventos · 3 h 50 planejadas": quanto do dia já tem dono. */
+/** "5 tarefas · 3 h 50 planejadas": quanto do dia já tem dono. */
 export function daySummary(tasks: readonly ExampleTask[]) {
-  if (tasks.length === 0) return "Nenhum evento";
-  const count = `${tasks.length} ${tasks.length === 1 ? "evento" : "eventos"}`;
+  if (tasks.length === 0) return "Nenhuma tarefa";
+  const count = `${tasks.length} ${tasks.length === 1 ? "tarefa" : "tarefas"}`;
   const minutes = tasks.reduce((total, task) => total + task.minutes, 0);
   if (minutes === 0) return count;
   const hours = Math.floor(minutes / 60);
@@ -87,7 +87,7 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
   const [refreshVersion, setRefreshVersion] = useState(0);
   // O modo em uso filtra a agenda pelo executor; trocá-lo relê a janela.
   const viewMode = useViewMode();
-  // Com evento de agente em aberto na janela, a agenda se relê sozinha. A releitura é silenciosa: troca os dados
+  // Com tarefa de agente em aberto na janela, a agenda se relê sozinha. A releitura é silenciosa: troca os dados
   // sem voltar ao estado de carregando, para a tela não piscar nem perder a rolagem.
   const silentReload = useRef(false);
   const agentOpen = hasOpenAgentTask(Object.values(tasksByDay).flat().flatMap((task) => (task.card ? [task.card] : [])));
@@ -96,13 +96,13 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
     setRefreshVersion((version) => version + 1);
   });
   const [selectedTask, setSelectedTask] = useState<SelectedTask | null>(null);
-  // O evento de referência cujo ponto azul foi tocado, e o aviso da última troca que falhou.
+  // A tarefa de referência cujo ponto azul foi tocado, e o aviso da última troca que falhou.
   const [statusCard, setStatusCard] = useState<TaskCardDto | null>(null);
   const [statusAnchor, setStatusAnchor] = useState<HTMLElement | null>(null);
   const [statusNote, setStatusNote] = useState<string | null>(null);
   const [mode, setMode] = useState<ViewMode>("day");
   const [showFreeTime, setShowFreeTime] = useState(true);
-  // A busca do menu da barra inferior: filtra pelo nome os eventos já carregados (a rota da agenda não tem texto).
+  // A busca do menu da barra inferior: filtra pelo nome as tarefas já carregadas (a rota da agenda não tem texto).
   const [search, setSearch] = useState("");
   const [selectedDay, setSelectedDay] = useState(todayKey);
   const [navigation, setNavigation] = useState({ dayKey: todayKey });
@@ -133,7 +133,7 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
     } catch {}
   }, []);
 
-  /** Só evento de referência (sem status) abre a escolha; o de pessoa com status segue sem ação aqui. */
+  /** Só tarefa de referência (sem status) abre a escolha; o de pessoa com status segue sem ação aqui. */
   function openStatusPicker(card: TaskCardDto, anchor: HTMLElement) {
     if (card.status !== undefined) return;
     setStatusAnchor(anchor);
@@ -145,7 +145,7 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
     setStatusCard(null);
     setStatusNote(null);
     try {
-      await updateEvent(card.id, statusPatch(card, status, new Date()));
+      await updateTask(card.id, statusPatch(card, status, new Date()));
       window.dispatchEvent(new Event(agendaRefreshEvent));
     } catch (cause) {
       if (cause instanceof ApiRequestError && cause.kind === "stale_revision") {
@@ -177,7 +177,7 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
     void refreshVersion;
     if (!userId || !user || !ready) return;
     let cancelled = false;
-    // A releitura do evento de agente não mostra o carregando; uma falha nela mantém a agenda que já está na tela.
+    // A releitura da tarefa de agente não mostra o carregando; uma falha nela mantém a agenda que já está na tela.
     const silent = silentReload.current;
     silentReload.current = false;
     if (!silent) setLoadState("loading");
@@ -189,13 +189,13 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
         const loaded = await listAgenda({ from, to, actor: viewMode.actor });
 
         if (cancelled) return;
-        // Um evento que veio da noite anterior tambem tem chave fora da janela; esse dia
+        // Uma tarefa que veio da noite anterior tambem tem chave fora da janela; esse dia
         // so e completo quando a propria janela dele carrega.
         // Todo dia da janela ganha a sua chave, mesmo vazio: é ela que diz que o dia já chegou.
         const byDay = agendaTasksByDay(loaded);
         const next: Record<string, ExampleTask[]> = {};
         for (let dayKey = rangeStart; dayKey <= rangeEnd; dayKey = shiftDayKey(dayKey, 1)) next[dayKey] = byDay[dayKey] ?? [];
-        // Numa recarga, o evento que não estava no dia é novo (o Hermes acabou de criar).
+        // Numa recarga, a tarefa que não estava no dia é novo (o Hermes acabou de criar).
         const known = tasksRef.current;
         const fresh = Object.entries(next).flatMap(([dayKey, tasks]) => {
           const before = known[dayKey];
@@ -429,7 +429,7 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
         </div>
       </section>
 
-      <section className={page.body} aria-label={`Eventos de ${mode === "day" ? weekday(selectedDay).toLowerCase() : "todos os dias"}`}>
+      <section className={page.body} aria-label={`Tarefas de ${mode === "day" ? weekday(selectedDay).toLowerCase() : "todos os dias"}`}>
         <div className={styles.toolbar}>
           <div className={styles.viewControls}>
             <button type="button" className={styles.modePill} aria-pressed={mode === "day"} onClick={() => changeMode("day")}>Por dia</button>

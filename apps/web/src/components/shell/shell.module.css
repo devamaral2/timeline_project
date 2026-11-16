@@ -133,7 +133,7 @@
 .task:has(.taskLink:focus-visible) .taskChevron { opacity: 1; transform: none; }
 @media (hover: none) { .task .taskChevron { opacity: .6; transform: none; } }
 
-/* Tempo livre entre eventos: só leitura, tracejado e sem fundo de cartão, para
+/* Tempo livre entre tarefas: só leitura, tracejado e sem fundo de cartão, para
    nunca ser confundido com algo registrado. */
 
 .weekday { color: var(--muted); font-size: 12px; margin-bottom: 4px; }
@@ -198,7 +198,7 @@
 .editButton svg { width: 16px; height: 16px; }
 .detailPrototypeNote { margin-top: 26px; color: var(--muted); font-size: 12px; }
 
-/* Status da tarefa e anotação do evento têm sinais independentes. */
+/* Status da tarefa e anotação da tarefa têm sinais independentes. */
 .task:has(.taskReference) .taskLabels { grid-column: 2; }
 .tag { padding: 2px 8px; border-radius: 5px; background: var(--soft); color: var(--muted); font-size: 13px; font-weight: 500; line-height: 20px; }
 .taskPriority { display: inline-flex; align-items: center; color: var(--priority-low); }
@@ -250,7 +250,7 @@
   .hubTrigger > span, .hubTrigger kbd { display: none; }
 }
 
-/* Os formularios de criar e editar (evento, tarefa, nota), no redesenho: o
+/* Os formularios de criar e editar (tarefa e nota), no redesenho: o
    nome na serifa ao lado do quadrado do tipo, linhas com fio para o horario,
    rotulos em mono, campos de raio 18 e o botao em pilula de 56 px. */
 .entityForm { display: grid; gap: 28px; padding: 24px 4px 4px; }
@@ -339,7 +339,7 @@
 .entitySelect .taskStatusIcon { width: 18px; height: 18px; color: var(--muted); }
 .entityFields { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 12px; }
 
-/* Chips de tags e avisos do formulário de novo evento. */
+/* Chips de tags e avisos do formulário de nova tarefa. */
 .entityChips { display: flex; flex-wrap: wrap; gap: 6px; }
 .entityChips button, .entityChip { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px 0 16px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--ink); font-size: 14px; font-weight: 500; cursor: pointer; }
 .entityChips button[aria-pressed="true"] { border-color: var(--primary); background: var(--primary); color: var(--primary-foreground); }

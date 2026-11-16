@@ -2,7 +2,7 @@
  * As peças do modo de edição (quadro "Detalhe · edição" do canvas): o topo só
  * com o rótulo, o título como campo, as linhas de rótulo e controle, as pílulas
  * de 48 px, os chips de 44 px, o "+" redondo e o rodapé de Descartar e Salvar.
- * Evento e artefato usam as mesmas. Cor só por token, para o tema trocar junto.
+ * Tarefa e artefato usam as mesmas. Cor só por token, para o tema trocar junto.
  *
  * `.shell svg` (0,1,1) fixa todo svg em 20 px: os tamanhos daqui usam dois
  * níveis de classe para valer.
@@ -12,7 +12,7 @@
 .bar { display: grid; place-items: center; min-height: 64px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
 .barTitle { margin: 0; font-family: var(--font-mono); font-size: var(--font-size-xs); font-weight: 400; line-height: 16px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
 
-/* O resumo: tipo, título e, no evento, status e prioridade. */
+/* O resumo: tipo, título e, na tarefa, status e prioridade. */
 .summary { display: flex; flex-direction: column; align-items: stretch; }
 .summaryRow { display: flex; }
 .titleInput {
@@ -150,7 +150,7 @@ button.control[aria-expanded="true"] { border-color: var(--color-ring); }
 .suggestion { height: 36px; padding: 0 12px; border: 1px solid var(--input); border-radius: 18px; background: var(--card); color: var(--ink); font: inherit; font-size: 14px; cursor: pointer; }
 .suggestion[data-highlighted="true"] { border-color: var(--color-ring); }
 
-/* Uma linha de item ligado (sequência, artefato, evento do artefato): o glifo, o
+/* Uma linha de item ligado (sequência, artefato, tarefa do artefato): o glifo, o
    nome com a linha de detalhe, o que vai na ponta e o "x". */
 .list { list-style: none; margin: 0; padding: 0; }
 .item { display: flex; align-items: flex-start; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--hairline); }

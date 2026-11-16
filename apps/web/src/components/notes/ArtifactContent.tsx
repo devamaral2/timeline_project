@@ -10,7 +10,7 @@ const workoutCategoryLabels = { cardio: "Cardio", strength: "Força", free: "Liv
 
 /**
  * O conteúdo do artefato aberto, conforme o tipo. Texto e roteador: o markdown, sem o título repetido na
- * primeira linha. Alimento, treino e sono: os mesmos desenhos do cartão de evento. Skill e agente: o arquivo
+ * primeira linha. Alimento, treino e sono: os mesmos desenhos do cartão de tarefa. Skill e agente: o arquivo
  * para o qual apontam. Exercício do catálogo: a categoria e a situação.
  */
 export function ArtifactContent({ artifact }: { artifact: ArtifactDto }) {

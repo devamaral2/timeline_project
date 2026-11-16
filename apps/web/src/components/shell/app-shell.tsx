@@ -52,7 +52,7 @@ export function AppShell({
       <a href="#conteudo" className={styles.skipLink}>Pular para o conteúdo</a>
       <header className={styles.header}>
         <div className={styles.headerInner}>
-          <a href={userId ? `/${userId}` : "/mockups/eventos"} className={styles.brand} aria-label="Agente pessoal — agenda">
+          <a href={userId ? `/${userId}` : "/mockups/tarefas"} className={styles.brand} aria-label="Agente pessoal — agenda">
             <BrandLogo />
           </a>
           <PrimaryNavigation userId={userId} />

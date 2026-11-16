@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TaskDto } from "@repo/contracts";
 import { type FakeApi, createFakeApi } from "@/test/fake-api";
 import { type StoredArtifact, artifactFixture, artifactsArea } from "@/test/fake-api/artifacts";
-import { eventFixture, eventsArea } from "@/test/fake-api/events";
+import { taskFixture, tasksArea } from "@/test/fake-api/tasks";
 
 const replace = vi.fn();
 const push = vi.fn();
@@ -17,13 +17,13 @@ vi.mock("@/lib/api/authed-fetch", async (original) => ({
 
 const { TaskEditRoute } = await import("./TaskEditRoute");
 
-const DETAIL_PATH = "/user-1/eventos/ev-1";
+const DETAIL_PATH = "/user-1/tarefas/ev-1";
 
 /**
- * O evento aberto, com revisão 3, e três artefatos ligados: duas fichas (uses) e o que ele criou. É rotina, que
+ * A tarefa aberta, com revisão 3, e três artefatos ligados: duas fichas (uses) e o que ele criou. É rotina, que
  * busca os artefatos próprios; refeição e treino têm buscas próprias, testadas mais abaixo.
  */
-const TASK = eventFixture({
+const TASK = taskFixture({
   id: "ev-1",
   name: "Treino de força",
   kind: "common",
@@ -35,16 +35,16 @@ const TASK = eventFixture({
 
 /** Os artefatos do usuário. "Caminhada" não está ligada e é a que a busca acha. */
 const ARTIFACTS: StoredArtifact[] = [
-  artifactFixture({ id: "art-sheet", name: "Ficha A", links: [{ eventId: "ev-1", relation: "uses" }] }),
-  artifactFixture({ id: "art-sheet-b", name: "Ficha B", links: [{ eventId: "ev-1", relation: "uses" }] }),
-  artifactFixture({ id: "art-created", name: "Registro do treino", links: [{ eventId: "ev-1", relation: "creates" }] }),
+  artifactFixture({ id: "art-sheet", name: "Ficha A", links: [{ taskId: "ev-1", relation: "uses" }] }),
+  artifactFixture({ id: "art-sheet-b", name: "Ficha B", links: [{ taskId: "ev-1", relation: "uses" }] }),
+  artifactFixture({ id: "art-created", name: "Registro do treino", links: [{ taskId: "ev-1", relation: "creates" }] }),
   artifactFixture({ id: "art-walk", name: "Caminhada no parque" }),
 ];
 
 let api: FakeApi;
 
 function install(task: TaskDto = TASK, artifacts: StoredArtifact[] = ARTIFACTS) {
-  api = createFakeApi({ areas: [eventsArea, artifactsArea], seed: { events: [task], artifacts } });
+  api = createFakeApi({ areas: [tasksArea, artifactsArea], seed: { tasks: [task], artifacts } });
   net.authedFetch.mockImplementation(api.authedFetch);
 }
 
@@ -61,10 +61,10 @@ function save() {
 }
 
 async function loaded() {
-  await screen.findByRole("heading", { level: 1, name: "Editar evento" });
+  await screen.findByRole("heading", { level: 1, name: "Editar tarefa" });
 }
 
-/** O "+" da lista, pelo nome da busca do modal que ele abre (depende do tipo do evento). */
+/** O "+" da lista, pelo nome da busca do modal que ele abre (depende do tipo da tarefa). */
 const ADD_BUTTONS: Record<string, string> = {
   "Buscar artefato para ligar": "Adicionar artefato",
   "Buscar alimento para a refeição": "Adicionar alimento à refeição",
@@ -100,7 +100,7 @@ afterEach(() => {
 });
 
 describe("artefatos na edição", () => {
-  it("a lista mostra os artefatos do evento na ordem da API, com o que ele criou sem posição", async () => {
+  it("a lista mostra os artefatos da tarefa na ordem da API, com o que ela criou sem posição", async () => {
     install();
     renderRoute();
     await loaded();
@@ -148,7 +148,7 @@ describe("artefatos na edição", () => {
     expect(screen.queryByRole("button", { name: "Escolher “Ficha B”" })).not.toBeInTheDocument();
   });
 
-  it("subir e descer reordenam, e a ordem enviada é a da tela; o que o evento criou não se move", async () => {
+  it("subir e descer reordenam, e a ordem enviada é a da tela; o que a tarefa criou não se move", async () => {
     install();
     renderRoute();
     await loaded();
@@ -204,7 +204,7 @@ describe("artefatos na edição", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Escolher “Caminhada no parque”" }));
     fireEvent.click(screen.getByRole("button", { name: "Subir “Caminhada no parque”" }));
     fireEvent.click(screen.getByRole("button", { name: "Remover artefato “Ficha A”" }));
-    // Subir a caminhada troca com a Ficha B, que é a posição de cima; o que o evento criou fica no meio, sem número.
+    // Subir a caminhada troca com a Ficha B, que é a posição de cima; o que a tarefa criou fica no meio, sem número.
     expect(linkedNames()).toEqual(["Caminhada no parque", "Registro do treino", "Ficha B"]);
     save();
 
@@ -243,8 +243,8 @@ const FOOD = {
   generation: { status: "completed" },
 };
 
-const MEAL = eventFixture({ id: "ev-1", name: "Almoço", kind: "meal", status: "doing", revision: 3, startedAt: "2026-11-14T12:00:00-03:00" });
-const TRAINING = eventFixture({ id: "ev-1", name: "Treino de força", kind: "training", status: "doing", revision: 3, startedAt: "2026-11-14T18:30:00-03:00" });
+const MEAL = taskFixture({ id: "ev-1", name: "Almoço", kind: "meal", status: "doing", revision: 3, startedAt: "2026-11-14T12:00:00-03:00" });
+const TRAINING = taskFixture({ id: "ev-1", name: "Treino de força", kind: "training", status: "doing", revision: 3, startedAt: "2026-11-14T18:30:00-03:00" });
 
 describe("refeição: alimento do catálogo global ou dos seus, como cópia com quantidade", () => {
   const FOODS: StoredArtifact[] = [
@@ -364,7 +364,7 @@ describe("treino: exercício do catálogo global, por referência, na ordem da l
   });
 
   it("um exercício que já está na lista não é oferecido de novo", async () => {
-    install(TRAINING, EXERCISES.map((item) => (item.id === "ex-supino" ? { ...item, links: [{ eventId: "ev-1", relation: "uses" as const }] } : item)));
+    install(TRAINING, EXERCISES.map((item) => (item.id === "ex-supino" ? { ...item, links: [{ taskId: "ev-1", relation: "uses" as const }] } : item)));
     renderRoute();
     await loaded();
 

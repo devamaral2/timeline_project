@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import type { TaskDto, RequestDto } from "@repo/contracts";
 import { type FakeApi, createFakeApi } from "@/test/fake-api";
-import { eventFixture, eventsArea } from "@/test/fake-api/events";
+import { taskFixture, tasksArea } from "@/test/fake-api/tasks";
 import { requestFixture, requestsArea } from "@/test/fake-api/requests";
 
 const back = vi.fn();
@@ -21,7 +21,7 @@ const { default: TaskPage } = await import("./page");
 let api: FakeApi;
 
 function install(tasks: TaskDto[], requests: RequestDto[] = []) {
-  api = createFakeApi({ areas: [eventsArea, requestsArea()], seed: { events: tasks, requests } });
+  api = createFakeApi({ areas: [tasksArea, requestsArea()], seed: { tasks: tasks, requests } });
   const owners = api.store.table<string>("requestOwners");
   for (const request of requests) owners.set(request.id, "user-1");
   net.authedFetch.mockImplementation(api.authedFetch);
@@ -40,7 +40,7 @@ afterEach(() => {
 });
 
 function renderPage() {
-  return render(<TaskPage params={Promise.resolve({ userId: "user-1", eventId: "ev-1" })} />);
+  return render(<TaskPage params={Promise.resolve({ userId: "user-1", taskId: "ev-1" })} />);
 }
 
 async function loaded() {
@@ -56,11 +56,11 @@ async function openDeleteDialog() {
   await loaded();
   fireEvent.click(screen.getByRole("button", { name: "Mais ações" }));
   fireEvent.click(screen.getByRole("menuitem", { name: "Excluir" }));
-  return screen.findByRole("alertdialog", { name: "Excluir evento" });
+  return screen.findByRole("alertdialog", { name: "Excluir tarefa" });
 }
 
 test("Mais ações oferece Excluir, e Cancelar fecha sem apagar", async () => {
-  install([eventFixture({ id: "ev-1", name: "Reunião de pauta" })]);
+  install([taskFixture({ id: "ev-1", name: "Reunião de pauta" })]);
   renderPage();
 
   const dialog = await openDeleteDialog();
@@ -73,8 +73,8 @@ test("Mais ações oferece Excluir, e Cancelar fecha sem apagar", async () => {
   expect(back).not.toHaveBeenCalled();
 });
 
-test("confirmar apaga o evento pela API e volta para a tela de onde o usuário veio", async () => {
-  install([eventFixture({ id: "ev-1", name: "Reunião de pauta" })]);
+test("confirmar apaga a tarefa pela API e volta para a tela de onde o usuário veio", async () => {
+  install([taskFixture({ id: "ev-1", name: "Reunião de pauta" })]);
   renderPage();
 
   const dialog = await openDeleteDialog();
@@ -82,44 +82,44 @@ test("confirmar apaga o evento pela API e volta para a tela de onde o usuário v
 
   await waitFor(() => expect(back).toHaveBeenCalledTimes(1));
   expect(deletes()).toEqual([expect.objectContaining({ pathname: "/api/tasks/ev-1" })]);
-  expect(api.store.table("events").has("ev-1")).toBe(false);
+  expect(api.store.table("tasks").has("ev-1")).toBe(false);
   expect(push).not.toHaveBeenCalled();
   expect(replace).not.toHaveBeenCalled();
 });
 
-test("se o evento já não existe, a tela avisa e volta do mesmo jeito", async () => {
-  install([eventFixture({ id: "ev-1", name: "Reunião de pauta" })]);
+test("se a tarefa já não existe, a tela avisa e volta do mesmo jeito", async () => {
+  install([taskFixture({ id: "ev-1", name: "Reunião de pauta" })]);
   renderPage();
 
   const dialog = await openDeleteDialog();
   // Apagado em outro lugar depois de abrir o diálogo.
-  api.store.table("events").delete("ev-1");
+  api.store.table("tasks").delete("ev-1");
   fireEvent.click(within(dialog).getByRole("button", { name: "Excluir" }));
 
-  expect(await within(dialog).findByRole("alert")).toHaveTextContent("Este evento já não existe");
+  expect(await within(dialog).findByRole("alert")).toHaveTextContent("Esta tarefa já não existe");
   expect(back).not.toHaveBeenCalled();
 
   fireEvent.click(within(dialog).getByRole("button", { name: "Voltar" }));
   expect(back).toHaveBeenCalledTimes(1);
 });
 
-test("falha ao apagar mantém o evento aberto e avisa, sem voltar", async () => {
-  install([eventFixture({ id: "ev-1", name: "Reunião de pauta" })]);
+test("falha ao apagar mantém a tarefa aberta e avisa, sem voltar", async () => {
+  install([taskFixture({ id: "ev-1", name: "Reunião de pauta" })]);
   renderPage();
 
   const dialog = await openDeleteDialog();
   api.failNext("DELETE", "/api/tasks/ev-1", 503);
   fireEvent.click(within(dialog).getByRole("button", { name: "Excluir" }));
 
-  expect(await within(dialog).findByRole("alert")).toHaveTextContent("Não foi possível excluir o evento");
+  expect(await within(dialog).findByRole("alert")).toHaveTextContent("Não foi possível excluir a tarefa");
   expect(within(dialog).getByRole("button", { name: "Excluir" })).toBeEnabled();
   expect(back).not.toHaveBeenCalled();
-  expect(api.store.table("events").has("ev-1")).toBe(true);
+  expect(api.store.table("tasks").has("ev-1")).toBe(true);
 });
 
-test("evento de agente não oferece Excluir", async () => {
+test("tarefa de agente não oferece Excluir", async () => {
   const request = requestFixture({ id: "ev-1", title: "Pesquisar voos", text: "Pesquisar voos", status: "running" });
-  install([eventFixture({ id: "ev-1", actor: "agent", kind: "request", status: "running", name: "Pesquisar voos" })], [request]);
+  install([taskFixture({ id: "ev-1", actor: "agent", kind: "request", status: "running", name: "Pesquisar voos" })], [request]);
   renderPage();
   await loaded();
 

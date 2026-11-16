@@ -101,7 +101,7 @@ test("delivers the joined final transcript exactly once", () => {
     ]),
   );
   act(() => result.current.stop());
-  // O Chrome ainda dispara o onend depois do ultimo resultado: nao pode virar um segundo evento.
+  // O Chrome ainda dispara o onend depois do ultimo resultado: nao pode virar uma segunda tarefa.
   act(() => FakeSpeechRecognition.instances[0].onend?.());
 
   expect(onFinalTranscript).toHaveBeenCalledTimes(1);
@@ -114,7 +114,7 @@ test("does not repeat a final result the browser delivers more than once", () =>
   const { result } = renderHook(() => useSpeechRecognition({ onFinalTranscript }));
 
   act(() => result.current.start());
-  // `results` e cumulativo: o Chrome reentrega o mesmo final a cada evento seguinte, e no
+  // `results` e cumulativo: o Chrome reentrega o mesmo final a cada disparo seguinte, e no
   // Android o `resultIndex` fica em zero. Doze reentregas repetiam a frase doze vezes.
   for (let attempt = 0; attempt < 12; attempt += 1) {
     act(() =>

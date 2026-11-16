@@ -31,7 +31,7 @@ export function recurrenceFixture(overrides: Partial<RecurrenceDto> & { id: stri
     timeOfDay: "18:00",
     timeZone: "America/Sao_Paulo",
     startsOn: "2026-09-01",
-    template: { name: "Evento", priority: "medium", description: "" },
+    template: { name: "Tarefa", priority: "medium", description: "" },
     revision: 1,
     ...overrides,
   });

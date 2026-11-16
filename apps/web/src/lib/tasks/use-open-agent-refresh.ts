@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { AGENT_REQUEST_POLL_MS } from "./agent-request-model";
 
 /**
- * Relê uma lista a cada `AGENT_REQUEST_POLL_MS` enquanto `enabled` for verdadeiro (há evento de agente em aberto
+ * Relê uma lista a cada `AGENT_REQUEST_POLL_MS` enquanto `enabled` for verdadeiro (há tarefa de agente em aberto
  * nela). A releitura troca os dados; quem chama decide que ela não volta ao estado de carregando. Para quando
  * `enabled` vira falso ou a tela é desmontada. Uma releitura ainda em curso pula a batida seguinte.
  */

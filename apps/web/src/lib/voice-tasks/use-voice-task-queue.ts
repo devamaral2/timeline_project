@@ -24,7 +24,7 @@ export interface VoiceJob {
 /** O que ficou no navegador antes deste formato: `jobId` era o id de um job da API antiga, que a nova não conhece. */
 type StoredVoiceJob = VoiceJob & { jobId?: string };
 
-const CREATION_FAILED = "Não foi possível criar o evento.";
+const CREATION_FAILED = "Não foi possível criar a tarefa.";
 
 /** Lê o outbox guardado. Um item do formato antigo não tem como ser acompanhado: vira erro, e "Tentar de novo" decide. */
 function restore(stored: StoredVoiceJob[]): VoiceJob[] {
@@ -33,8 +33,8 @@ function restore(stored: StoredVoiceJob[]): VoiceJob[] {
     : item);
 }
 
-/** O evento que o pedido criou, lido das entidades dele. */
-function createdEventOf(request: RequestDto): RequestEntityDto | undefined {
+/** A tarefa que o pedido criou, lido das entidades dele. */
+function createdTaskOf(request: RequestDto): RequestEntityDto | undefined {
   return request.entities.find((entity) => entity.kind === "task" && entity.operation === "create");
 }
 
@@ -79,7 +79,7 @@ export function useVoiceTaskQueue({ onCreated }: { onCreated: (task: RequestEnti
       } else {
         const request = job.cancelling ? await cancelRequest(job.requestId) : await getRequest(job.requestId);
         if (!activeRef.current || generationRef.current !== generation) return;
-        const created = request.status === "done" ? createdEventOf(request) : undefined;
+        const created = request.status === "done" ? createdTaskOf(request) : undefined;
         if (isOpenRequest(request.status)) {
           commit(jobsRef.current.map((item) => item.id !== job.id ? item : { ...item, progress: request.progress }));
         } else if (created) {

@@ -2,11 +2,11 @@ import { expect, test, vi } from "vitest";
 import { navKind, pathOf, reflow, startNavigationTransition, vtName } from "./view-transition";
 
 test("opening a record goes in, leaving it goes back", () => {
-  expect(navKind("/ana", "/ana/eventos/01EVT")).toBe("open");
+  expect(navKind("/ana", "/ana/tarefas/01EVT")).toBe("open");
   expect(navKind("/ana/tarefas", "/ana/tarefas/7")).toBe("open");
   expect(navKind("/ana/tarefas/7", "/ana/tarefas/7/editar")).toBe("open");
   expect(navKind("/ana/notas/3", "/ana/notas")).toBe("close");
-  expect(navKind("/ana/eventos/01EVT", "/ana")).toBe("close");
+  expect(navKind("/ana/tarefas/01EVT", "/ana")).toBe("close");
 });
 
 test("sections move sideways in the order they are drawn", () => {
@@ -18,10 +18,10 @@ test("sections move sideways in the order they are drawn", () => {
 });
 
 test("the logged-out preview follows the same rules", () => {
-  expect(navKind("/mockups/eventos", "/mockups/eventos/notas")).toBe("next");
-  expect(navKind("/mockups/eventos/tarefas", "/mockups/eventos/tarefas/1")).toBe("open");
-  expect(navKind("/mockups/eventos", "/mockups/eventos/almoco")).toBe("open");
-  expect(navKind("/mockups/eventos/almoco", "/mockups/eventos")).toBe("close");
+  expect(navKind("/mockups/tarefas", "/mockups/tarefas/notas")).toBe("next");
+  expect(navKind("/mockups/tarefas/tarefas", "/mockups/tarefas/tarefas/1")).toBe("open");
+  expect(navKind("/mockups/tarefas", "/mockups/tarefas/almoco")).toBe("open");
+  expect(navKind("/mockups/tarefas/almoco", "/mockups/tarefas")).toBe("close");
 });
 
 test("a destination's path drops the query and the anchor", () => {

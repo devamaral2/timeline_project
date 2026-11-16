@@ -1,6 +1,6 @@
 /**
  * Lembretes e tags do formulário de edição, como listas puras. O lembrete é um
- * número de minutos antes do evento (a API aceita de 1 a 43200, que são 30
+ * número de minutos antes da tarefa (a API aceita de 1 a 43200, que são 30
  * dias); a tag é o texto como a API guarda: sem espaços nas pontas e em
  * minúsculas.
  */

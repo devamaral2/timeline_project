@@ -41,12 +41,11 @@ function startViewTransition(update: () => void | Promise<void>): ViewTransition
 /** Onde um caminho fica no app: a seção e quantos níveis abaixo da lista dela. */
 function placeOf(pathname: string): { section: string; depth: number } {
   const parts = pathname.split("/").filter(Boolean);
-  // "/mockups/eventos/…" é a prévia sem sessão; "/<userId>/…" é o app.
+  // "/mockups/tarefas/…" é a prévia sem sessão; "/<userId>/…" é o app.
   const rest = parts[0] === "mockups" ? parts.slice(2) : parts.slice(1);
   const head = rest[0];
   if (head === "tarefas" || head === "notas") return { section: head, depth: rest.length - 1 };
-  if (head === "eventos") return { section: "agenda", depth: rest.length - 1 };
-  // Na prévia o evento mora logo abaixo da agenda ("/mockups/eventos/almoco").
+  // Na prévia a tarefa mora logo abaixo da agenda ("/mockups/tarefas/almoco").
   return { section: "agenda", depth: rest.length };
 }
 

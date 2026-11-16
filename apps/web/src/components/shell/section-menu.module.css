@@ -381,7 +381,7 @@
   width: 100%;
 }
 
-/* O mesmo rótulo de seção do detalhe do evento (`sectionLabel` em ui/page.module.css
+/* O mesmo rótulo de seção do detalhe da tarefa (`sectionLabel` em ui/page.module.css
    e o fio de cima de `.facts`): legenda em mono, fio até a margem e a linha embaixo. */
 .menu[data-structured-settings] .settingsPane .label {
   display: flex;

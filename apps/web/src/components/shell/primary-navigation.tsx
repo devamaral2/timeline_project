@@ -7,7 +7,7 @@ import styles from "./shell.module.css";
 /** A navegação principal do cabeçalho no desktop; no celular quem navega é a barra inferior. */
 export function PrimaryNavigation({ userId }: { userId?: string }) {
   const pathname = usePathname();
-  const base = userId ? `/${userId}` : "/mockups/eventos";
+  const base = userId ? `/${userId}` : "/mockups/tarefas";
   const notesHref = `${base}/notas`;
   const tasksHref = `${base}/tarefas`;
   const onNotes = pathname === notesHref || pathname.startsWith(`${notesHref}/`);

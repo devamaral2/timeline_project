@@ -163,7 +163,7 @@ function Calendar({ value, onPick }: { value: string; onPick: (value: string) =>
 }
 
 interface TimePickerProps extends PickerProps {
-  /** `HH:MM`, ou vazio: sem hora (o evento é do dia inteiro). */
+  /** `HH:MM`, ou vazio: sem hora (a tarefa é do dia inteiro). */
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;

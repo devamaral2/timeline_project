@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import type { TaskDto } from "@repo/contracts";
 import { createFakeApi } from "@/test/fake-api";
-import { eventFixture, eventsArea } from "@/test/fake-api/events";
+import { taskFixture, tasksArea } from "@/test/fake-api/tasks";
 
 const net = vi.hoisted(() => ({ authedFetch: vi.fn() }));
 const session = vi.hoisted(() => ({ state: { user: { userId: "user-1" }, ready: true } }));
@@ -23,12 +23,12 @@ const { AgendaScreen } = await import("./agenda-screen");
 const TODAY = "2026-09-14";
 
 const tasks = [
-  eventFixture({ id: "ev-1", name: "Revisar proposta", kind: "common", status: "todo", priority: "medium", tags: ["trabalho"], startedAt: "2026-09-14T09:00:00-03:00", estimatedFinishAt: "2026-09-14T10:30:00-03:00" }),
-  eventFixture({ id: "ev-2", name: "Almoço no escritório", kind: "meal", status: undefined, startedAt: "2026-09-14T12:30:00-03:00", estimatedFinishAt: "2026-09-14T13:30:00-03:00" }),
-  eventFixture({ id: "ev-3", name: "Pesquisar voos para novembro", actor: "agent", kind: "request", status: "running", startedAt: "2026-09-14T09:48:00-03:00" }),
-  eventFixture({ id: "ev-4", name: "Café da manhã", kind: "meal", status: "missed", startedAt: "2026-09-14T07:30:00-03:00", estimatedFinishAt: "2026-09-14T08:00:00-03:00" }),
-  eventFixture({ id: "ev-5", name: "Plantão", kind: "common", status: "doing", startedAt: "2026-09-13T22:00:00-03:00", estimatedFinishAt: "2026-09-14T06:00:00-03:00" }),
-  eventFixture({ id: "ev-6", name: "Entrega longa", kind: "common", status: "doing", longRunning: true, startedAt: "2026-09-14T08:00:00-03:00", estimatedFinishAt: "2026-09-30T18:00:00-03:00" }),
+  taskFixture({ id: "ev-1", name: "Revisar proposta", kind: "common", status: "todo", priority: "medium", tags: ["trabalho"], startedAt: "2026-09-14T09:00:00-03:00", estimatedFinishAt: "2026-09-14T10:30:00-03:00" }),
+  taskFixture({ id: "ev-2", name: "Almoço no escritório", kind: "meal", status: undefined, startedAt: "2026-09-14T12:30:00-03:00", estimatedFinishAt: "2026-09-14T13:30:00-03:00" }),
+  taskFixture({ id: "ev-3", name: "Pesquisar voos para novembro", actor: "agent", kind: "request", status: "running", startedAt: "2026-09-14T09:48:00-03:00" }),
+  taskFixture({ id: "ev-4", name: "Café da manhã", kind: "meal", status: "missed", startedAt: "2026-09-14T07:30:00-03:00", estimatedFinishAt: "2026-09-14T08:00:00-03:00" }),
+  taskFixture({ id: "ev-5", name: "Plantão", kind: "common", status: "doing", startedAt: "2026-09-13T22:00:00-03:00", estimatedFinishAt: "2026-09-14T06:00:00-03:00" }),
+  taskFixture({ id: "ev-6", name: "Entrega longa", kind: "common", status: "doing", longRunning: true, startedAt: "2026-09-14T08:00:00-03:00", estimatedFinishAt: "2026-09-30T18:00:00-03:00" }),
 ];
 
 function dayOf(dayKey: string): HTMLElement {
@@ -37,7 +37,7 @@ function dayOf(dayKey: string): HTMLElement {
   return section;
 }
 
-/** Os caminhos das linhas de evento do dia, na ordem em que aparecem (cada linha de evento é um link). */
+/** Os caminhos das linhas de tarefa do dia, na ordem em que aparecem (cada linha de tarefa é um link). */
 function taskHrefsOn(dayKey: string): string[] {
   return within(dayOf(dayKey)).getAllByRole("link").map((link) => link.getAttribute("href") ?? "");
 }
@@ -53,7 +53,7 @@ afterEach(() => {
 });
 
 function installApi(seed = tasks, pageSize?: number) {
-  const api = createFakeApi({ areas: [eventsArea], seed: { events: seed }, pageSize });
+  const api = createFakeApi({ areas: [tasksArea], seed: { tasks: seed }, pageSize });
   net.authedFetch.mockImplementation(api.authedFetch);
   return api;
 }
@@ -65,11 +65,11 @@ test("the agenda reads the window through the API client and follows every page"
   await waitFor(() => expect(within(dayOf(TODAY)).getAllByRole("link")).toHaveLength(5));
   expect(api.calls.filter((call) => call.pathname === "/api/tasks")).toHaveLength(3);
   expect(taskHrefsOn(TODAY)).toEqual([
-    "/user-1/eventos/ev-5",
-    "/user-1/eventos/ev-4",
-    "/user-1/eventos/ev-1",
-    "/user-1/eventos/ev-3",
-    "/user-1/eventos/ev-2",
+    "/user-1/tarefas/ev-5",
+    "/user-1/tarefas/ev-4",
+    "/user-1/tarefas/ev-1",
+    "/user-1/tarefas/ev-3",
+    "/user-1/tarefas/ev-2",
   ]);
 });
 
@@ -149,9 +149,9 @@ test("a failed load shows the error alert", async () => {
 
 test("free time counts only person tasks: an agent task inside a free window does not split it", async () => {
   installApi([
-    eventFixture({ id: "ev-a", name: "Revisar proposta", kind: "common", status: "todo", startedAt: "2026-09-14T09:00:00-03:00", estimatedFinishAt: "2026-09-14T10:30:00-03:00" }),
-    eventFixture({ id: "ev-g", name: "Agente compila o briefing", actor: "agent", kind: "request", status: "running", startedAt: "2026-09-14T11:00:00-03:00", estimatedFinishAt: "2026-09-14T11:30:00-03:00" }),
-    eventFixture({ id: "ev-b", name: "Almoço no escritório", kind: "meal", status: undefined, startedAt: "2026-09-14T12:30:00-03:00", estimatedFinishAt: "2026-09-14T13:30:00-03:00" }),
+    taskFixture({ id: "ev-a", name: "Revisar proposta", kind: "common", status: "todo", startedAt: "2026-09-14T09:00:00-03:00", estimatedFinishAt: "2026-09-14T10:30:00-03:00" }),
+    taskFixture({ id: "ev-g", name: "Agente compila o briefing", actor: "agent", kind: "request", status: "running", startedAt: "2026-09-14T11:00:00-03:00", estimatedFinishAt: "2026-09-14T11:30:00-03:00" }),
+    taskFixture({ id: "ev-b", name: "Almoço no escritório", kind: "meal", status: undefined, startedAt: "2026-09-14T12:30:00-03:00", estimatedFinishAt: "2026-09-14T13:30:00-03:00" }),
   ]);
   render(<AgendaScreen userId="user-1" todayKey={TODAY} />);
   await waitFor(() => expect(within(dayOf(TODAY)).getAllByRole("link")).toHaveLength(3));
@@ -172,7 +172,7 @@ test("tapping the dot of a reference task opens the seven person statuses", asyn
 
   fireEvent.click(within(dayOf(TODAY)).getByRole("button", { name: "Só agenda. Mudar status de “Almoço no escritório”" }));
 
-  const list = screen.getByRole("listbox", { name: "Status do evento" });
+  const list = screen.getByRole("listbox", { name: "Status da tarefa" });
   expect(within(list).getAllByRole("option").map((option) => option.textContent)).toEqual([
     "A fazer", "Sem data", "Em curso", "Em espera", "Feito", "Cancelado", "Não realizado",
   ]);
@@ -206,7 +206,7 @@ test("a stale revision warns and reloads the agenda", async () => {
   fireEvent.click(within(dayOf(TODAY)).getByRole("button", { name: "Só agenda. Mudar status de “Almoço no escritório”" }));
   fireEvent.click(screen.getByRole("option", { name: "Em curso" }));
 
-  expect(await screen.findByRole("alert")).toHaveTextContent("Este evento mudou em outro lugar. Carregamos a versão atual; confira e tente de novo.");
+  expect(await screen.findByRole("alert")).toHaveTextContent("Esta tarefa mudou em outro lugar. Carregamos a versão atual; confira e tente de novo.");
   await waitFor(() => expect(agendaReads()).toBeGreaterThan(readsBefore));
   expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
   expect(within(dayOf(TODAY)).getByRole("button", { name: "Só agenda. Mudar status de “Almoço no escritório”" })).toBeInTheDocument();
@@ -230,13 +230,13 @@ function agendaReads(api: ReturnType<typeof installApi>) {
   return () => api.calls.filter((call) => call.method === "GET" && call.pathname === "/api/tasks").length;
 }
 
-test("com evento de agente em aberto, a agenda se relê sozinha e a linha vira 'Agente, feito'", async () => {
+test("com tarefa de agente em aberto, a agenda se relê sozinha e a linha vira 'Agente, feito'", async () => {
   const api = installApi();
   render(<AgendaScreen userId="user-1" todayKey={TODAY} />);
   await waitFor(() => expect(within(dayOf(TODAY)).getAllByRole("link")).toHaveLength(5));
   expect(within(dayOf(TODAY)).getByRole("img", { name: "Agente, executando" })).toBeInTheDocument();
 
-  const table = api.store.table<TaskDto>("events");
+  const table = api.store.table<TaskDto>("tasks");
   table.set("ev-3", { ...(table.get("ev-3") as TaskDto), status: "done" });
   await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
 
@@ -244,7 +244,7 @@ test("com evento de agente em aberto, a agenda se relê sozinha e a linha vira '
   expect(within(dayOf(TODAY)).queryByRole("img", { name: "Agente, executando" })).not.toBeInTheDocument();
 });
 
-test("sem evento de agente em aberto, a agenda não se relê em intervalo", async () => {
+test("sem tarefa de agente em aberto, a agenda não se relê em intervalo", async () => {
   const api = installApi(tasks.map((task) => (task.id === "ev-3" ? { ...task, status: "done" as const } : task)));
   render(<AgendaScreen userId="user-1" todayKey={TODAY} />);
   await waitFor(() => expect(within(dayOf(TODAY)).getAllByRole("link")).toHaveLength(5));
@@ -266,7 +266,7 @@ test("a recarga troca os dados sem o carregando e mantém a mesma linha na tela"
   const observer = new MutationObserver(() => loadingSeen.push(screen.queryByText("Carregando sua agenda…") !== null));
   observer.observe(document.body, { childList: true, subtree: true, characterData: true });
 
-  const table = api.store.table<TaskDto>("events");
+  const table = api.store.table<TaskDto>("tasks");
   table.set("ev-3", { ...(table.get("ev-3") as TaskDto), status: "done" });
   await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
   await waitFor(() => expect(within(dayOf(TODAY)).getByRole("img", { name: "Agente, feito" })).toBeInTheDocument());

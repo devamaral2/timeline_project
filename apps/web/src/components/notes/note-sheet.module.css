@@ -1,4 +1,4 @@
-/* A folha da nota: a caixa tem o lado do quadrado do evento (44) para o texto
+/* A folha da nota: a caixa tem o lado do quadrado da tarefa (44) para o texto
    da linha não mudar de lugar; a folha, mais estreita, fica centrada nela. */
 .sheet { position: relative; flex: none; display: block; width: 44px; height: 44px; color: var(--muted-foreground); }
 .sheet[data-size="cite"] { width: 32px; height: 32px; }

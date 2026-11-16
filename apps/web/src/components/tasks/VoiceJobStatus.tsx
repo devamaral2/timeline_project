@@ -51,10 +51,10 @@ export function VoiceJobStatus({ jobs, onRetry, onDismiss, onCancel }: VoiceJobS
       {pendingCount > 0 ? (
         <div className="surface-solid pointer-tasks-auto flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm text-foreground shadow-card-hover duration-200 animate-in fade-in slide-in-from-bottom-2">
           <Loader2 aria-hidden className="size-4 animate-spin text-brand-accent" />
-          {pendingCount === 1 ? jobs.find((job) => job.status === "pending")?.progress ?? "Criando evento..." : `Criando ${pendingCount} eventos...`}
+          {pendingCount === 1 ? jobs.find((job) => job.status === "pending")?.progress ?? "Criando tarefa..." : `Criando ${pendingCount} tarefas...`}
           {onCancel ? jobs.filter((job) => job.status === "pending").map((job, index) => (
             <button key={job.id} type="button" disabled={job.cancelling}
-              aria-label={pendingCount === 1 ? "Cancelar evento por voz" : `Cancelar evento por voz ${index + 1}`}
+              aria-label={pendingCount === 1 ? "Cancelar tarefa por voz" : `Cancelar tarefa por voz ${index + 1}`}
               onClick={() => onCancel(job.id)}
               className="rounded-full px-2 py-1 text-xs font-semibold text-muted-foreground hover:bg-accent disabled:opacity-60">
               {job.cancelling ? "Cancelando" : pendingCount === 1 ? "Cancelar" : `Cancelar ${index + 1}`}

@@ -1,12 +1,12 @@
 import type { CreateTaskInput, TaskDto, TaskPriority, HumanTaskKind, HumanTaskStatus } from "@repo/contracts";
 import { dayKeyOf, formatTime, zonedDayStart, zonedTimeAt } from "@repo/timeline";
-import type { EditEventInput } from "@/lib/api/events";
+import type { EditTaskInput } from "@/lib/api/tasks";
 import { statusPatch } from "@/lib/tasks/task-read-model";
 import { type DraftArtifact, artifactLinkInputs, draftArtifactsFromTask, sameArtifactLinks } from "./task-artifact-draft";
 import { sameList, sortReminders } from "./task-reminders-tags";
 
 /**
- * O formulário de edição do evento de pessoa, como texto. O estado da tela
+ * O formulário de edição da tarefa de pessoa, como texto. O estado da tela
  * inteira mora num `TaskDraft`: cada seção lê e escreve os seus campos aqui.
  * Um ticket que acrescenta uma seção acrescenta os campos neste tipo, em
  * `FIELD_SET` (que obriga a listar cada um), na conferência de
@@ -16,7 +16,7 @@ import { sameList, sortReminders } from "./task-reminders-tags";
 export interface TaskDraft {
   kind: HumanTaskKind;
   name: string;
-  /** `null` é "sem status": o evento volta a ser de referência. */
+  /** `null` é "sem status": a tarefa volta a ser de referência. */
   status: HumanTaskStatus | null;
   priority: TaskPriority;
   /** `YYYY-MM-DD` no fuso da timeline, ou vazio: sem data. */
@@ -28,18 +28,18 @@ export interface TaskDraft {
   description: string;
   /** Onde acontece; vazio é sem local. */
   location: string;
-  /** Minutos antes do evento, em ordem crescente (`notifyOffsetsMinutes`). */
+  /** Minutos antes da tarefa, em ordem crescente (`notifyOffsetsMinutes`). */
   reminders: number[];
   /** Tags já normalizadas (minúsculas, sem espaços nas pontas). */
   tags: string[];
-  /** A tarefa persistente: o evento longo, que não é um bloco de tempo e tem a previsão de entrega como prazo. */
+  /** A tarefa persistente: a tarefa longa, que não é um bloco de tempo e tem a previsão de entrega como prazo. */
   longRunning: boolean;
-  /** A sequência, lado "Segue-se de": os eventos que vêm antes deste (ids, na ordem da API). */
+  /** A sequência, lado "Segue-se de": as tarefas que vêm antes deste (ids, na ordem da API). */
   previousTaskIds: string[];
-  /** A sequência, lado "Da sequência a": os eventos que se seguem a este (ids). */
+  /** A sequência, lado "Da sequência a": as tarefas que se seguem a este (ids). */
   nextTaskIds: string[];
   /**
-   * Os artefatos ligados, na ordem da lista: é a ordem enviada. O que o evento criou (`creates`) segue na lista sem
+   * Os artefatos ligados, na ordem da lista: é a ordem enviada. O que a tarefa criou (`creates`) segue na lista sem
    * posição. Guarda nome e tipo para a lista mostrar sem outra chamada.
    */
   artifacts: DraftArtifact[];
@@ -99,7 +99,7 @@ export function draftFromTask(task: TaskDto): TaskDraft {
   };
 }
 
-/** O rascunho da criação: tudo vazio e sem status, o evento de referência. `name` vem de `/evento comprar pão`. */
+/** O rascunho da criação: tudo vazio e sem status, a tarefa de referência. `name` vem de `/tarefa comprar pão`. */
 export function emptyTaskDraft(name = ""): TaskDraft {
   return {
     kind: "common",
@@ -123,8 +123,9 @@ export function emptyTaskDraft(name = ""): TaskDraft {
 
 /**
  * O corpo da criação: só o que a pessoa preencheu. Sem data, a API põe agora e
- * estima o fim; sem status, o evento nasce de referência. Criar já concluído
- * manda `finishedAt`, como a troca de status na edição.
+ * estima o fim; sem status, a tarefa nasce de referência. Criar já concluído
+ * manda `finishedAt`, como a troca de status na edição. Lembretes e tags entram
+ * só quando a pessoa escolheu algum.
  */
 export function buildCreateTaskInput(draft: TaskDraft, now: Date): CreateTaskInput {
   const input: CreateTaskInput = {
@@ -161,13 +162,13 @@ export function instantFromDraft(date: string, time: string): string | null {
 }
 
 /**
- * O `PATCH` com só os campos que mudaram em relação ao evento lido, com a
+ * O `PATCH` com só os campos que mudaram em relação à tarefa lida, com a
  * revisão lida. `null` quando nada mudou: não há o que enviar. Concluir e
  * reabrir seguem a regra de `statusPatch` (`finishedAt`).
  */
-export function buildTaskPatch(task: TaskDto, draft: TaskDraft, now: Date): EditEventInput | null {
+export function buildTaskPatch(task: TaskDto, draft: TaskDraft, now: Date): EditTaskInput | null {
   const base = draftFromTask(task);
-  const patch: EditEventInput = { expectedRevision: task.revision };
+  const patch: EditTaskInput = { expectedRevision: task.revision };
   if (draft.kind !== base.kind) patch.kind = draft.kind;
   if (draft.name.trim() !== base.name.trim()) patch.name = draft.name.trim();
   if (draft.description !== base.description) patch.description = draft.description;
@@ -191,12 +192,12 @@ export function buildTaskPatch(task: TaskDto, draft: TaskDraft, now: Date): Edit
 
 /**
  * As recusas da própria tela, antes de enviar. A API continua valendo: o que ela recusar volta como mensagem.
- * No evento longo (tarefa persistente) o prazo não se compara com o início, o status é obrigatório e não pode
+ * Na tarefa longa (tarefa persistente) o prazo não se compara com o início, o status é obrigatório e não pode
  * ser "não realizado", e sem prazo não há lembrete. Fora dele, o bloco não dura mais de 31 dias.
  */
 export function validateTaskDraft(draft: TaskDraft): TaskDraftErrors {
   const errors: TaskDraftErrors = {};
-  if (!draft.name.trim()) errors.name = "Dê um título ao evento.";
+  if (!draft.name.trim()) errors.name = "Dê um título à tarefa.";
   if (draft.location.length > 300) errors.location = "O local tem no máximo 300 caracteres.";
   if (draft.startTime && !draft.startDate) errors.startTime = "Informe a data para marcar a hora.";
   if (draft.endTime && !draft.endDate) errors.endTime = "Informe a data para marcar a hora.";
@@ -213,7 +214,7 @@ export function validateTaskDraft(draft: TaskDraft): TaskDraftErrors {
 }
 
 /**
- * Quando o evento muda em outro lugar, o campo que a pessoa não tocou passa a
+ * Quando a tarefa muda em outro lugar, o campo que a pessoa não tocou passa a
  * valer o da versão nova, e o que ela digitou fica para ela conferir.
  */
 export function rebaseDraft(draft: TaskDraft, previous: TaskDto, next: TaskDto): TaskDraft {

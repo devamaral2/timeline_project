@@ -11,9 +11,9 @@ export { AGENT_REQUEST_POLL_MS };
 export type AgentRequestLoad = "loading" | "ready" | "missing" | "error";
 
 /**
- * Lê o pedido do evento de agente (o mesmo id) e, enquanto ele estiver em aberto, relê o pedido a cada intervalo e
- * chama `onTick`, que relê o evento (a conclusão e a data vêm dele). Para no estado final, depois de uma última
- * releitura do evento. Falha numa releitura mantém a última versão na tela; a próxima tenta de novo.
+ * Lê o pedido da tarefa de agente (o mesmo id) e, enquanto ele estiver em aberto, relê o pedido a cada intervalo e
+ * chama `onTick`, que relê a tarefa (a conclusão e a data vêm dele). Para no estado final, depois de uma última
+ * releitura da tarefa. Falha numa releitura mantém a última versão na tela; a próxima tenta de novo.
  */
 export function useAgentRequest(
   requestId: string,

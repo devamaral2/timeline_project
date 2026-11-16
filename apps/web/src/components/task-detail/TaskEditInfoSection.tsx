@@ -17,8 +17,8 @@ interface TaskEditInfoSectionProps {
 /**
  * A seção "Informações" da edição: uma linha por dado, com o rótulo à esquerda
  * e o controle à direita. Aqui ficam o início e o fim (ou a previsão de
- * entrega, no evento longo); as outras linhas entram por `children`. Data e
- * hora são campos separados; data vazia tira a data do evento, e hora vazia
+ * entrega, na tarefa longa); as outras linhas entram por `children`. Data e
+ * hora são campos separados; data vazia tira a data da tarefa, e hora vazia
  * com data é o dia inteiro.
  */
 export function TaskEditInfoSection({ draft, errors, onChange, children }: TaskEditInfoSectionProps) {

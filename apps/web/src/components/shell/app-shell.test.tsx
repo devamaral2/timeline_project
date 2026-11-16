@@ -4,7 +4,7 @@ import { requestHubOpen } from "@/components/hub/hub-open";
 import { AppShell } from "./app-shell";
 
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/mockups/eventos",
+  usePathname: () => "/mockups/tarefas",
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
 }));
 vi.mock("@/lib/session/use-session", () => ({
@@ -25,7 +25,7 @@ vi.mock("@/components/hub/agent-chat-panel", () => ({
 
 beforeAll(() => {
   // O jsdom nem sempre traz o <dialog> modal: o que o painel precisa dele e so
-  // do atributo `open` e do evento `close`.
+  // do atributo `open` e da tarefa `close`.
   HTMLDialogElement.prototype.showModal = function showModal(this: HTMLDialogElement) {
     this.setAttribute("open", "");
   };

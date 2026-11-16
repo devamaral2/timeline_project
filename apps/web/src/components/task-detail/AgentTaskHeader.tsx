@@ -10,7 +10,7 @@ interface AgentTaskHeaderProps {
 }
 
 /**
- * O topo do evento de agente: o código do tipo, o título e o status do agente,
+ * O topo da tarefa de agente: o código do tipo, o título e o status do agente,
  * solto na linha (sem pílula), com o robô na ponta direita como assinatura, igual
  * à linha da agenda. Prioridade e "N de M passos" não aparecem aqui (os passos
  * têm a sua seção). Não há lápis nem troca de status: quem executa é o agente.

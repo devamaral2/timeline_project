@@ -60,7 +60,7 @@ export async function sendHermesMessage(input: StartHermesRequestInput): Promise
   }
 }
 
-/** Abre um pedido de voz. O evento criado aparece em `entities` do pedido quando ele termina. */
+/** Abre um pedido de voz. A tarefa criada aparece em `entities` do pedido quando ele termina. */
 export async function startVoiceRequest(input: StartVoiceRequestInput): Promise<string> {
   const accepted = await apiRequest<StartRequestResponse>("POST", "/api/requests/voice", { body: input });
   return accepted.requestId;

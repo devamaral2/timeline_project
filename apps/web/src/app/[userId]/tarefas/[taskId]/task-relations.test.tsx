@@ -2,7 +2,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import type { TaskDto } from "@repo/contracts";
 import { type FakeApi, createFakeApi } from "@/test/fake-api";
-import { eventFixture, eventsArea } from "@/test/fake-api/events";
+import { taskFixture, tasksArea } from "@/test/fake-api/tasks";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push, back: vi.fn(), replace: vi.fn() }) }));
@@ -17,9 +17,9 @@ const { default: TaskPage } = await import("./page");
 
 const OPEN = "Preparar a viagem";
 
-/** O evento aberto: uma revisão de pessoa que se segue ao alerta de um agente e antecede um evento de agente. */
+/** A tarefa aberta: uma revisão de pessoa que se segue ao alerta de um agente e antecede uma tarefa de agente. */
 function opened(overrides: Partial<TaskDto> = {}): TaskDto {
-  return eventFixture({
+  return taskFixture({
     id: "ev-1",
     name: OPEN,
     kind: "common",
@@ -31,8 +31,8 @@ function opened(overrides: Partial<TaskDto> = {}): TaskDto {
   });
 }
 
-/** Antecessor: o evento de agente que monitora a aplicação e abriu a revisão. */
-const PREVIOUS = eventFixture({
+/** Antecessor: a tarefa de agente que monitora a aplicação e abriu a revisão. */
+const PREVIOUS = taskFixture({
   id: "prev-1",
   actor: "agent",
   kind: "request",
@@ -43,14 +43,14 @@ const PREVIOUS = eventFixture({
 });
 
 const NEXT = [
-  eventFixture({ id: "next-1", name: "Arrumar a mala", kind: "common", status: "todo", startedAt: "2026-11-15T07:00:00-03:00", previousTaskIds: ["ev-1"] }),
-  eventFixture({ id: "next-2", actor: "agent", kind: "request", status: "queued", name: "Aplicar o conserto", startedAt: "2026-11-14T09:50:00-03:00", previousTaskIds: ["ev-1"] }),
+  taskFixture({ id: "next-1", name: "Arrumar a mala", kind: "common", status: "todo", startedAt: "2026-11-15T07:00:00-03:00", previousTaskIds: ["ev-1"] }),
+  taskFixture({ id: "next-2", actor: "agent", kind: "request", status: "queued", name: "Aplicar o conserto", startedAt: "2026-11-14T09:50:00-03:00", previousTaskIds: ["ev-1"] }),
 ];
 
 let api: FakeApi;
 
 function install(tasks: TaskDto[]) {
-  api = createFakeApi({ areas: [eventsArea], seed: { events: tasks } });
+  api = createFakeApi({ areas: [tasksArea], seed: { tasks: tasks } });
   net.authedFetch.mockImplementation(api.authedFetch);
 }
 
@@ -65,7 +65,7 @@ afterEach(() => {
 });
 
 function renderPage() {
-  return render(<TaskPage params={Promise.resolve({ userId: "user-1", eventId: "ev-1" })} />);
+  return render(<TaskPage params={Promise.resolve({ userId: "user-1", taskId: "ev-1" })} />);
 }
 
 /** Espera a seção sair do estado de carregamento. */
@@ -73,23 +73,23 @@ async function loaded() {
   await waitFor(() => expect(screen.queryByText(/Carregando/)).not.toBeInTheDocument());
 }
 
-test("a seção Sequência mostra “Segue-se de” e “Da sequência a”, cada evento com nome, tipo e quando", async () => {
+test("a seção Sequência mostra “Segue-se de” e “Da sequência a”, cada tarefa com nome, tipo e quando", async () => {
   install([opened(), PREVIOUS, ...NEXT]);
   renderPage();
   await loaded();
 
   const section = await screen.findByRole("region", { name: "Sequência" });
   const previous = within(section).getByRole("list", { name: "Segue-se de" });
-  expect(within(previous).getByRole("link", { name: /Monitorar a aplicação/ })).toHaveAttribute("href", "/user-1/eventos/prev-1");
+  expect(within(previous).getByRole("link", { name: /Monitorar a aplicação/ })).toHaveAttribute("href", "/user-1/tarefas/prev-1");
   expect(within(previous).getByText("request")).toBeInTheDocument();
 
   const next = within(section).getByRole("list", { name: "Da sequência a" });
-  expect(within(next).getByRole("link", { name: /Arrumar a mala/ })).toHaveAttribute("href", "/user-1/eventos/next-1");
+  expect(within(next).getByRole("link", { name: /Arrumar a mala/ })).toHaveAttribute("href", "/user-1/tarefas/next-1");
   expect(within(next).getByText("common")).toBeInTheDocument();
   expect(within(next).getByText("Amanhã, 07:00")).toBeInTheDocument();
 });
 
-test("as duas pontas podem ser evento de agente, e o glifo mostra o status dele", async () => {
+test("as duas pontas podem ser tarefa de agente, e o glifo mostra o status delas", async () => {
   install([opened(), PREVIOUS, ...NEXT]);
   renderPage();
   await loaded();
@@ -100,7 +100,7 @@ test("as duas pontas podem ser evento de agente, e o glifo mostra o status dele"
   expect(within(previous).getByRole("img", { name: "Agente, feito" })).toBeInTheDocument();
 
   const next = within(section).getByRole("list", { name: "Da sequência a" });
-  expect(within(next).getByRole("link", { name: /Aplicar o conserto/ })).toHaveAttribute("href", "/user-1/eventos/next-2");
+  expect(within(next).getByRole("link", { name: /Aplicar o conserto/ })).toHaveAttribute("href", "/user-1/tarefas/next-2");
   expect(within(next).getByRole("img", { name: "Agente, na fila" })).toBeInTheDocument();
   expect(within(next).getByText("na fila · há 10 min")).toBeInTheDocument();
 });
@@ -145,12 +145,12 @@ test("sem sequência nenhuma, a seção não aparece", async () => {
   expect(screen.queryByRole("region", { name: "Sequência" })).not.toBeInTheDocument();
 });
 
-test("um evento da sequência que não carrega some da lista e aparece o aviso", async () => {
+test("uma tarefa da sequência que não carrega some da lista e aparece o aviso", async () => {
   install([opened({ nextTaskIds: ["next-1", "sumiu"] }), PREVIOUS, NEXT[0] as TaskDto]);
   renderPage();
   await loaded();
 
   const section = await screen.findByRole("region", { name: "Sequência" });
-  expect(within(section).getByText("Alguns eventos da sequência não carregaram.")).toBeInTheDocument();
+  expect(within(section).getByText("Algumas tarefas da sequência não carregaram.")).toBeInTheDocument();
   expect(within(section).getByRole("link", { name: /Arrumar a mala/ })).toBeInTheDocument();
 });

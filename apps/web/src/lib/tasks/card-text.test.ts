@@ -57,19 +57,19 @@ describe("cardWhenLabel", () => {
     expect(cardIsOverdue(card({ startedAt: "2026-11-14T09:00:00-03:00" }), NOW)).toBe(false);
   });
 
-  it("mostra o prazo do evento longo, sem data de inicio", () => {
+  it("mostra o prazo da tarefa longa, sem data de inicio", () => {
     const longTask = card({ longRunning: true, estimatedFinishAt: "2026-11-30T00:00:00-03:00" });
     expect(cardWhenLabel(longTask, NOW)).toBe("Prazo 30 nov");
     expect(cardIsOverdue(longTask, NOW)).toBe(false);
   });
 
-  it("evento longo com o prazo vencido continua mostrando o prazo e conta como atrasado", () => {
+  it("tarefa longa com o prazo vencido continua mostrando o prazo e conta como atrasada", () => {
     const late = card({ longRunning: true, estimatedFinishAt: "2026-11-13T00:00:00-03:00" });
     expect(cardWhenLabel(late, NOW)).toBe("Prazo 13 nov");
     expect(cardIsOverdue(late, NOW)).toBe(true);
   });
 
-  it("evento longo concluido com prazo passado nao esta atrasado", () => {
+  it("tarefa longa concluida com prazo passado nao esta atrasada", () => {
     const done = card({
       status: "done",
       longRunning: true,
@@ -78,7 +78,7 @@ describe("cardWhenLabel", () => {
     expect(cardIsOverdue(done, NOW)).toBe(false);
   });
 
-  it("evento sem data mostra 'Sem data'", () => {
+  it("tarefa sem data mostra 'Sem data'", () => {
     expect(cardWhenLabel(card({ status: "toDefine" }), NOW)).toBe("Sem data");
   });
 
@@ -144,17 +144,17 @@ describe("cardWhenLabel", () => {
     expect(cardWhenLabel(weekly, NOW, { ruleInPlaceOfTime: true })).toBe("Seg, qua e sex, 18:30");
   });
 
-  it("evento de agente em execucao mostra o tempo decorrido desde o inicio", () => {
+  it("tarefa de agente em execucao mostra o tempo decorrido desde o inicio", () => {
     const running = card({ actor: "agent", kind: "request", status: "running", startedAt: "2026-11-14T09:48:00-03:00" });
     expect(cardWhenLabel(running, NOW)).toBe("há 12 min");
   });
 
-  it("evento de agente na fila mostra 'na fila' com o tempo decorrido", () => {
+  it("tarefa de agente na fila mostra 'na fila' com o tempo decorrido", () => {
     const queued = card({ actor: "agent", kind: "review_request", status: "queued", startedAt: "2026-11-14T09:57:00-03:00" });
     expect(cardWhenLabel(queued, NOW)).toBe("na fila · há 3 min");
   });
 
-  it("evento de agente aguardando mostra 'aguarda sua resposta'", () => {
+  it("tarefa de agente aguardando mostra 'aguarda sua resposta'", () => {
     const waiting = card({ actor: "agent", kind: "build_request", status: "waiting", startedAt: "2026-11-14T09:12:00-03:00" });
     expect(cardWhenLabel(waiting, NOW)).toBe("aguarda sua resposta");
   });
@@ -181,7 +181,7 @@ describe("cardDurationLabel", () => {
     expect(cardDurationLabel(card({ estimatedFinishAt: "2026-11-14T10:00:00-03:00" }))).toBeNull();
   });
 
-  it("dia sem hora e evento longo nao tem duracao", () => {
+  it("dia sem hora e tarefa longa nao tem duracao", () => {
     expect(
       cardDurationLabel(card({ startedAt: "2026-11-14T00:00:00-03:00", estimatedFinishAt: "2026-11-14T10:00:00-03:00" })),
     ).toBeNull();

@@ -124,7 +124,7 @@
 .rowText h3 { margin: 0; overflow: hidden; font-size: var(--font-size-md); font-weight: 600; line-height: 24px; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); }
 .row[data-time-position="past"] h3, .row[data-time-position="past"] .duration, .row[data-missed="true"] h3, .row[data-missed="true"] .duration { color: var(--muted); }
 .rowLink { color: inherit; }
-/* A linha inteira abre o evento. */
+/* A linha inteira abre a tarefa. */
 .rowLink::after { content: ""; position: absolute; inset: 0; }
 .rowLink:hover { text-decoration: underline; text-underline-offset: 4px; }
 .rowTitleButton { max-width: 100%; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }

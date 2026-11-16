@@ -5,9 +5,9 @@ const TIMEOUT_MS = 4_000;
 const MAX_AGE_MS = 5 * 60_000;
 
 /**
- * Onde a pessoa está, lido pelo navegador. Todo evento criado por uma pessoa nasce com o local daqui: a API
+ * Onde a pessoa está, lido pelo navegador. Toda tarefa criada por uma pessoa nasce com o local daqui: a API
  * converte as coordenadas em endereço. Sem permissão, sem suporte ou sem resposta a tempo, devolve `undefined` e
- * o pedido segue sem coordenadas: a localização nunca bloqueia criar um evento.
+ * o pedido segue sem coordenadas: a localização nunca bloqueia criar uma tarefa.
  */
 export function currentCoordinates(): Promise<GeoPointInput | undefined> {
   if (typeof navigator === "undefined" || !navigator.geolocation) return Promise.resolve(undefined);

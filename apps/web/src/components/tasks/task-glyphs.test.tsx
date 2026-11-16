@@ -20,7 +20,7 @@ describe("TaskStatusGlyph", () => {
     expect(screen.getByRole("img", { name })).toBeInTheDocument();
   });
 
-  it("usa o ponto azul com nome 'Só agenda' quando o evento de pessoa não tem status", () => {
+  it("usa o ponto azul com nome 'Só agenda' quando a tarefa de pessoa não tem status", () => {
     render(<TaskStatusGlyph actor="human" status={null} />);
 
     expect(screen.getByRole("img", { name: "Só agenda" })).toBeInTheDocument();

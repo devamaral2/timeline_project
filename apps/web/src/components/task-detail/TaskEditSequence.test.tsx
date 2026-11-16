@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TaskDto } from "@repo/contracts";
 import { type FakeApi, createFakeApi } from "@/test/fake-api";
-import { eventFixture, eventsArea } from "@/test/fake-api/events";
+import { taskFixture, tasksArea } from "@/test/fake-api/tasks";
 
 const replace = vi.fn();
 const push = vi.fn();
@@ -16,12 +16,12 @@ vi.mock("@/lib/api/authed-fetch", async (original) => ({
 
 const { TaskEditRoute } = await import("./TaskEditRoute");
 
-const DETAIL_PATH = "/user-1/eventos/ev-1";
+const DETAIL_PATH = "/user-1/tarefas/ev-1";
 const REFUSED = "A API recusou alguma entrada. Confira os campos e tente de novo.";
 
-/** O evento aberto: um treino de hoje, revisão 3 para conferir a revisão enviada. */
+/** A tarefa aberta: um treino de hoje, revisão 3 para conferir a revisão enviada. */
 function parent(overrides: Partial<TaskDto> = {}): TaskDto {
-  return eventFixture({
+  return taskFixture({
     id: "ev-1",
     name: "Treino de força",
     kind: "training",
@@ -33,13 +33,13 @@ function parent(overrides: Partial<TaskDto> = {}): TaskDto {
   });
 }
 
-/** Outros eventos da busca: revisão 1 e status a fazer, que é o que a lista de tarefas devolve. */
+/** Outras tarefas da busca: revisão 1 e status a fazer, que é o que a lista de tarefas devolve. */
 function other(id: string, name: string, overrides: Partial<TaskDto> = {}): TaskDto {
-  return eventFixture({ id, name, status: "todo", startedAt: "2026-11-14T20:00:00-03:00", revision: 1, ...overrides });
+  return taskFixture({ id, name, status: "todo", startedAt: "2026-11-14T20:00:00-03:00", revision: 1, ...overrides });
 }
 
-/** Um evento de agente: a sequência liga pessoa e agente nas duas pontas. */
-const AGENT = eventFixture({
+/** Uma tarefa de agente: a sequência liga pessoa e agente nas duas pontas. */
+const AGENT = taskFixture({
   id: "ag-1",
   actor: "agent",
   kind: "request",
@@ -53,7 +53,7 @@ const SEED = [parent(), other("ev-2", "Treino de peito", { kind: "training" }), 
 let api: FakeApi;
 
 function install(tasks: TaskDto[] = SEED) {
-  api = createFakeApi({ areas: [eventsArea], seed: { events: tasks } });
+  api = createFakeApi({ areas: [tasksArea], seed: { tasks: tasks } });
   net.authedFetch.mockImplementation(api.authedFetch);
 }
 
@@ -70,13 +70,13 @@ function save() {
 }
 
 async function loaded() {
-  await screen.findByRole("heading", { level: 1, name: "Editar evento" });
+  await screen.findByRole("heading", { level: 1, name: "Editar tarefa" });
 }
 
 /** O "+" de cada lista, pelo nome da busca do modal que ele abre. */
 const ADD_BUTTONS: Record<string, string> = {
-  "Buscar evento de que este se segue": "Adicionar evento de que este se segue",
-  "Buscar evento da sequência": "Adicionar evento da sequência",
+  "Buscar tarefa de que esta se segue": "Adicionar tarefa de que esta se segue",
+  "Buscar tarefa da sequência": "Adicionar tarefa da sequência",
 };
 
 /** Abre o modal de seleção de uma das duas listas pelo "+" dela. */
@@ -90,8 +90,8 @@ function search(label: string, text: string) {
   fireEvent.change(screen.getByRole("searchbox", { name: label }), { target: { value: text } });
 }
 
-const PREVIOUS_SEARCH = "Buscar evento de que este se segue";
-const NEXT_SEARCH = "Buscar evento da sequência";
+const PREVIOUS_SEARCH = "Buscar tarefa de que esta se segue";
+const NEXT_SEARCH = "Buscar tarefa da sequência";
 
 function previous() {
   return screen.getByRole("group", { name: "Segue-se de" });
@@ -136,7 +136,7 @@ describe("sequência na edição", () => {
     expect(patches()).toEqual([]);
   });
 
-  it("o modal já abre com os eventos da lista de tarefas, sem digitar, e escolher um fecha o modal", async () => {
+  it("o modal já abre com as tarefas da lista de tarefas, sem digitar, e escolher um fecha o modal", async () => {
     install();
     renderRoute();
     await loaded();
@@ -148,7 +148,7 @@ describe("sequência na edição", () => {
     expect(within(previous()).getByText("Jantar leve")).toBeInTheDocument();
   });
 
-  it("a busca consulta a lista de tarefas pelo texto e não mostra o evento aberto", async () => {
+  it("a busca consulta a lista de tarefas pelo texto e não mostra a tarefa aberta", async () => {
     install();
     renderRoute();
     await loaded();
@@ -159,7 +159,7 @@ describe("sequência na edição", () => {
     expect(screen.queryByRole("button", { name: "Escolher “Treino de força”" })).not.toBeInTheDocument();
   });
 
-  it("a busca acha também evento de agente, sem filtrar por ator", async () => {
+  it("a busca acha também tarefa de agente, sem filtrar por ator", async () => {
     install();
     renderRoute();
     await loaded();
@@ -189,13 +189,13 @@ describe("sequência na edição", () => {
         body: { expectedRevision: 3, name: "Treino de costas", previousTaskIds: ["ev-3"] },
       }),
     ]);
-    // A API liga o outro lado, mas só o evento do PATCH sobe a revisão.
+    // A API liga o outro lado, mas só a tarefa do PATCH sobe a revisão.
     const before = (await api.authedFetch("/api/tasks/ev-3")) as TaskDto;
     expect(before.revision).toBe(1);
     expect(before.nextTaskIds).toEqual(["ev-1"]);
   });
 
-  it("escolher um evento em “Da sequência a” manda nextTaskIds, e o sucessor não é revisado", async () => {
+  it("escolher uma tarefa em “Da sequência a” manda nextTaskIds, e o sucessor não é revisado", async () => {
     install();
     renderRoute();
     await loaded();
@@ -214,7 +214,7 @@ describe("sequência na edição", () => {
     expect(successor.previousTaskIds).toEqual(["ev-1"]);
   });
 
-  it("um evento de agente pode ser a ponta de qualquer lado", async () => {
+  it("uma tarefa de agente pode ser a ponta de qualquer lado", async () => {
     install();
     renderRoute();
     await loaded();
@@ -251,7 +251,7 @@ describe("sequência na edição", () => {
     ]);
   });
 
-  it("cada evento já ligado pode ser removido, e a remoção vai no Salvar", async () => {
+  it("cada tarefa já ligada pode ser removida, e a remoção vai no Salvar", async () => {
     install([
       parent({ previousTaskIds: ["ev-3"] }),
       other("ev-3", "Jantar leve", { kind: "meal", nextTaskIds: ["ev-1"] }),
@@ -261,7 +261,7 @@ describe("sequência na edição", () => {
 
     expect(await within(previous()).findByText("Jantar leve")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Deixar de se seguir de “Jantar leve”" }));
-    expect(within(previous()).getByText("nenhum evento")).toBeInTheDocument();
+    expect(within(previous()).getByText("nenhuma tarefa")).toBeInTheDocument();
     save();
 
     await waitFor(() => expect(replace).toHaveBeenCalledWith(DETAIL_PATH));
@@ -273,7 +273,7 @@ describe("sequência na edição", () => {
     expect(other3.revision).toBe(1);
   });
 
-  it("remover um evento de “Da sequência a” manda nextTaskIds sem ele", async () => {
+  it("remover uma tarefa de “Da sequência a” manda nextTaskIds sem ela", async () => {
     install([
       parent({ nextTaskIds: ["ev-2", "ev-3"] }),
       other("ev-2", "Treino de peito", { previousTaskIds: ["ev-1"] }),
@@ -292,7 +292,7 @@ describe("sequência na edição", () => {
     ]);
   });
 
-  it("uma recusa da API mostra a mensagem, mantém o formulário e o evento escolhido", async () => {
+  it("uma recusa da API mostra a mensagem, mantém o formulário e a tarefa escolhida", async () => {
     install();
     api.failNext("PATCH", "/api/tasks/ev-1", 400);
     renderRoute();

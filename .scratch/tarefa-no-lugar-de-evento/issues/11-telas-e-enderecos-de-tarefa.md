@@ -4,14 +4,14 @@
 
 **Blocked by:** 07 (Rotas /api/tasks), 10 (Código interno do web com nome de tarefa)
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Leia antes:** o [README](README.md). Spec: "Web" (rotas da tela e revisão dos textos), histórias 1 a 22 e "Decisões de teste", costura 1.
 
-- [ ] As páginas reais de criação, detalhe e edição estão em `/tarefas/...`; as rotas `/eventos/...` foram removidas, sem redirect; todo link interno aponta para `/tarefas/...`.
-- [ ] As páginas de mockup com o nome antigo foram renomeadas.
-- [ ] Nenhum texto visível nem rótulo acessível diz "evento"; "Evento de referência" e "Evento longo" viram "Tarefa de referência" e "Tarefa longa".
-- [ ] A concordância está no feminino em toda frase revista ("Nova tarefa", "Tarefa salva", "Tarefa excluída", "Nenhuma tarefa neste dia", "Excluir tarefa").
-- [ ] Os testes de tela sobre a API falsa conferem os textos novos nos fluxos de criar, ver, editar e excluir, e os endereços `/tarefas/...`.
-- [ ] Os seletores dos testes e2e que procuram texto ou endereço usam os novos.
-- [ ] `pnpm run test:unit` e `pnpm run typecheck` verdes; a área "web, textos e rotas" sai da linha de base.
+- [x] As páginas reais de criação, detalhe e edição estão em `/tarefas/...`; as rotas `/eventos/...` foram removidas, sem redirect; todo link interno aponta para `/tarefas/...`.
+- [x] As páginas de mockup com o nome antigo foram renomeadas.
+- [x] Nenhum texto visível nem rótulo acessível diz "evento"; "Evento de referência" e "Evento longo" viram "Tarefa de referência" e "Tarefa longa".
+- [x] A concordância está no feminino em toda frase revista ("Nova tarefa", "Tarefa salva", "Tarefa excluída", "Nenhuma tarefa neste dia", "Excluir tarefa").
+- [x] Os testes de tela sobre a API falsa conferem os textos novos nos fluxos de criar, ver, editar e excluir, e os endereços `/tarefas/...`.
+- [x] Os seletores dos testes e2e que procuram texto ou endereço usam os novos.
+- [x] `pnpm run test:unit` e `pnpm run typecheck` verdes; a área "web, textos e rotas" sai da linha de base.

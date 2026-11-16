@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { AlertTriangle, X } from "lucide-react";
 import { ApiRequestError } from "@/lib/api/client-request";
-import { deleteEvent } from "@/lib/api/events";
+import { deleteTask } from "@/lib/api/tasks";
 import { cn } from "@/lib/utils";
 import {
   destructiveButtonClass,
@@ -22,7 +22,7 @@ interface DeleteTaskDialogProps {
 
 export function DeleteTaskDialog({ taskId, taskName, onClose, onDeleted }: DeleteTaskDialogProps) {
   const [deleting, setDeleting] = useState(false);
-  /** O evento já não existe: a tela avisa e o único botão é voltar, como no caminho de sucesso. */
+  /** A tarefa já não existe: a tela avisa e o único botão é voltar, como no caminho de sucesso. */
   const [gone, setGone] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,16 +46,16 @@ export function DeleteTaskDialog({ taskId, taskName, onClose, onDeleted }: Delet
     setError(null);
 
     try {
-      await deleteEvent(taskId);
+      await deleteTask(taskId);
 
       onDeleted();
       onClose();
     } catch (cause) {
       if (cause instanceof ApiRequestError && cause.kind === "not_found") {
         setGone(true);
-        setError("Este evento já não existe. Ele foi apagado em outro lugar.");
+        setError("Esta tarefa já não existe. Ela foi apagada em outro lugar.");
       } else {
-        setError("Não foi possível excluir o evento. Tente novamente.");
+        setError("Não foi possível excluir a tarefa. Tente novamente.");
       }
       setDeleting(false);
     }
@@ -86,7 +86,7 @@ export function DeleteTaskDialog({ taskId, taskName, onClose, onDeleted }: Delet
               <AlertTriangle aria-hidden className="size-4.5" />
             </span>
             <h2 id="delete-task-title" className={dialogTitleClass}>
-              Excluir evento
+              Excluir tarefa
             </h2>
           </div>
           <button

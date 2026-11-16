@@ -1,9 +1,9 @@
 import type { TaskCardDto, TaskPriority } from "@repo/contracts";
-import type { TrackedFilters } from "@/lib/api/events";
+import type { TrackedFilters } from "@/lib/api/tasks";
 
 /**
  * Filtros da lista de tarefas. Função pura, sem rede: a tela passa o estado
- * daqui para `listTrackedEvents`, que os manda como parâmetros da consulta.
+ * daqui para `listTrackedTasks`, que os manda como parâmetros da consulta.
  */
 
 /** Ordem fixa dos níveis: é a ordem dos chips e a do parâmetro `priority`. */

@@ -15,7 +15,7 @@ const CHOICES: { value: boolean; label: string }[] = [
 
 /**
  * A linha "Tarefa persistente" de Informações: Não e Sim num controle só, como no
- * quadro "Detalhe · edição". Sim faz do evento um evento longo: a previsão de
+ * quadro "Detalhe · edição". Sim faz da tarefa uma tarefa longa: a previsão de
  * entrega passa a ser o prazo, a recorrência some e o status é obrigatório. As
  * recusas são de `validateTaskDraft`, na hora de salvar; a linha só troca o campo.
  */

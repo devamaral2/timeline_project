@@ -1,6 +1,6 @@
 /*
  * Dados ilustrativos do protótipo "Trilho". Nunca vêm da API: o relógio, os
- * dias e os eventos são fixos para que a tela seja a mesma a cada abertura.
+ * dias e as tarefas são fixos para que a tela seja a mesma a cada abertura.
  */
 
 export type RailTaskType = "training" | "meal" | "common" | "sleep";
@@ -98,7 +98,7 @@ export function statusOf(task: RailTask, relation: RailDayRelation, now: number)
   return "upcoming";
 }
 
-/** Eventos na ordem do relógio, com o tempo livre entre um e outro como lacuna. */
+/** Tarefas na ordem do relógio, com o tempo livre entre um e outro como lacuna. */
 export function railItemsOf(day: RailDay, now: number): RailItem[] {
   const tasks = [...day.tasks].sort((left, right) => left.start - right.start);
   const items: RailItem[] = [];

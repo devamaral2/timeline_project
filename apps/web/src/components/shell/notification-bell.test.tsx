@@ -61,11 +61,11 @@ test("shows an unread badge and lists recent and upcoming notifications", async 
 
   const panel = within(screen.getByRole("region", { name: "Notificações" }));
   expect(panel.getByRole("heading", { name: "Recentes" })).toBeTruthy();
-  expect(panel.getByRole("link", { name: /Corrida/ }).getAttribute("href")).toBe("/user-1/eventos/run");
+  expect(panel.getByRole("link", { name: /Corrida/ }).getAttribute("href")).toBe("/user-1/tarefas/run");
   expect(panel.getByRole("heading", { name: "Próximos" })).toBeTruthy();
   expect(panel.getByText("Entregar relatório")).toBeTruthy();
 
-  // O aviso venceu ha 30 minutos e o evento nao comecou: tambem vira toast.
+  // O aviso venceu ha 30 minutos e a tarefa nao comecou: tambem vira toast.
   expect(screen.getByRole("status").textContent).toContain("Corrida — 60 minutos antes");
 });
 

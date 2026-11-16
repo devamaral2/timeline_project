@@ -2,14 +2,17 @@ import { expect, test } from "vitest";
 import { isStopSpeech, parseCommand } from "./hub-commands";
 
 test("a slash alone offers every command; the typed prefix narrows them", () => {
-  expect(parseCommand("/")?.matches.map((command) => command.slug)).toEqual(["evento", "nota", "buscar", "notificacoes", "configuracoes"]);
-  expect(parseCommand("/ev")?.matches.map((command) => command.slug)).toEqual(["evento"]);
+  expect(parseCommand("/")?.matches.map((command) => command.slug)).toEqual(["tarefa", "nota", "buscar", "notificacoes", "configuracoes"]);
+  expect(parseCommand("/tar")?.matches.map((command) => command.slug)).toEqual(["tarefa"]);
   expect(parseCommand("/pesq")?.matches.map((command) => command.slug)).toEqual(["buscar"]);
 });
 
-test("there is no task shortcut: an task with a status is the task", () => {
-  expect(parseCommand("/tarefa")).toBeNull();
-  expect(parseCommand("/tarefa comprar pão")).toBeNull();
+test("the task shortcut opens the creation form, with or without a name", () => {
+  expect(parseCommand("/tarefa")?.matches.map((command) => command.id)).toEqual(["task"]);
+  expect(parseCommand("/tarefa comprar pão")).toEqual({
+    matches: [expect.objectContaining({ id: "task" })],
+    argument: "comprar pão",
+  });
 });
 
 test("the text after a known command is its argument", () => {
@@ -21,7 +24,7 @@ test("the text after a known command is its argument", () => {
 
 test("text without a slash, or an unknown command, is not a command", () => {
   expect(parseCommand("crie uma tarefa")).toBeNull();
-  expect(parseCommand("/ev amanhã")).toBeNull();
+  expect(parseCommand("/tar amanhã")).toBeNull();
   expect(parseCommand("/xyz")).toBeNull();
 });
 

@@ -19,9 +19,9 @@ afterEach(() => {
 
 test("há três modos fixos, com nome e executor de cada um", () => {
   expect(VIEW_MODES.map((mode) => [mode.id, mode.label, mode.actor])).toEqual([
-    ["human", "Todos os seus eventos", "human"],
-    ["agent", "Todos os eventos de agentes", "agent"],
-    ["all", "Todos os eventos", undefined],
+    ["human", "Todas as suas tarefas", "human"],
+    ["agent", "Todas as tarefas de agentes", "agent"],
+    ["all", "Todas as tarefas", undefined],
   ]);
 });
 
@@ -30,12 +30,12 @@ test("cada modo aponta para a sua variável de cor, e as três são diferentes",
   expect(colors).toEqual(["--mode-human", "--mode-agent", "--mode-all"]);
 });
 
-test("sem escolha guardada, o modo é Todos os eventos", () => {
+test("sem escolha guardada, o modo é Todas as tarefas", () => {
   expect(readViewMode()).toBe("all");
   expect(viewModeOf(null).id).toBe("all");
 });
 
-test("um valor guardado que não é um modo cai em Todos os eventos", () => {
+test("um valor guardado que não é um modo cai em Todas as tarefas", () => {
   window.localStorage.setItem(VIEW_MODE_STORAGE_KEY, "configurado");
   expect(readViewMode()).toBe("all");
 });
@@ -56,7 +56,7 @@ test("o hook devolve o modo guardado e reage à troca na mesma aba", () => {
   expect(result.current.actor).toBe("agent");
 });
 
-test("com o armazenamento bloqueado, a leitura vale Todos os eventos e a gravação não quebra", () => {
+test("com o armazenamento bloqueado, a leitura vale Todas as tarefas e a gravação não quebra", () => {
   vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
     throw new Error("bloqueado");
   });

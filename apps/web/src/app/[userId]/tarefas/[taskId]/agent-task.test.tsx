@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import type { AgentTraceDto, TaskDto, RequestDto } from "@repo/contracts";
 import { type FakeApi, createFakeApi } from "@/test/fake-api";
-import { eventFixture, eventsArea } from "@/test/fake-api/events";
+import { taskFixture, tasksArea } from "@/test/fake-api/tasks";
 import { advanceRequest, requestFixture, requestsArea } from "@/test/fake-api/requests";
 
 const push = vi.fn();
@@ -16,7 +16,7 @@ vi.mock("@/lib/api/authed-fetch", async (original) => ({
 
 const { default: TaskPage } = await import("./page");
 
-/** O pedido e o evento de agente têm o mesmo id. 26 caracteres de Crockford, como o ULID da API. */
+/** O pedido e a tarefa de agente têm o mesmo id. 26 caracteres de Crockford, como o ULID da API. */
 const ID = "01HZX4R5Q7M8N9P0T1V2W3Y4Z5";
 
 const STEPS: RequestDto["steps"] = [
@@ -27,7 +27,7 @@ const STEPS: RequestDto["steps"] = [
 ];
 
 function agentTask(overrides: Partial<TaskDto> = {}): TaskDto {
-  return eventFixture({
+  return taskFixture({
     id: ID,
     actor: "agent",
     kind: "request",
@@ -55,7 +55,7 @@ function agentRequest(overrides: Partial<RequestDto> = {}): RequestDto {
 let api: FakeApi;
 
 function install(tasks: TaskDto[], requests: RequestDto[]) {
-  api = createFakeApi({ areas: [eventsArea, requestsArea()], seed: { events: tasks, requests } });
+  api = createFakeApi({ areas: [tasksArea, requestsArea()], seed: { tasks: tasks, requests } });
   // Os pedidos semeados são do usuário da tela: a API falsa só aceita `sessionId` de pedido do mesmo dono.
   const owners = api.store.table<string>("requestOwners");
   for (const request of requests) owners.set(request.id, "user-1");
@@ -73,10 +73,10 @@ afterEach(() => {
 });
 
 function renderPage() {
-  return render(<TaskPage params={Promise.resolve({ userId: "user-1", eventId: ID })} />);
+  return render(<TaskPage params={Promise.resolve({ userId: "user-1", taskId: ID })} />);
 }
 
-/** Espera o evento e o pedido saírem do estado de carregamento. */
+/** Espera a tarefa e o pedido saírem do estado de carregamento. */
 async function loaded() {
   await waitFor(() => expect(screen.queryByText(/Carregando/)).not.toBeInTheDocument());
 }
@@ -86,19 +86,19 @@ function requestReads() {
   return api.calls.filter((call) => call.method === "GET" && call.pathname === `/api/requests/${ID}`).length;
 }
 
-test("um evento de agente abre na forma do agente: tipo, título, status e o robô, sem prioridade, contagem de passos nem editar", async () => {
+test("uma tarefa de agente abre na forma do agente: tipo, título, status e o robô, sem prioridade, contagem de passos nem editar", async () => {
   install([agentTask()], [agentRequest()]);
   renderPage();
   await loaded();
 
-  const top = screen.getByRole("region", { name: "Resumo do evento" });
+  const top = screen.getByRole("region", { name: "Resumo da tarefa" });
   expect(within(top).getByRole("heading", { level: 1, name: "Pesquisar voos para novembro" })).toBeInTheDocument();
   expect(within(top).getByText("request")).toBeInTheDocument();
   expect(within(top).getByText("Agente, executando")).toBeInTheDocument();
   expect(top.querySelector("[data-agent-mark]")).not.toBeNull();
   expect(within(top).queryByText("2 de 4 passos")).not.toBeInTheDocument();
   expect(within(top).queryByText("Média")).not.toBeInTheDocument();
-  expect(screen.queryByRole("link", { name: "Editar evento" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: "Editar tarefa" })).not.toBeInTheDocument();
   expect(screen.queryByRole("button", { name: /Trocar status/ })).not.toBeInTheDocument();
 });
 
@@ -116,16 +116,16 @@ test("Informações mostra o início com o tempo decorrido e 'ainda não conclu�
   expect(screen.queryByText("Job")).not.toBeInTheDocument();
 });
 
-test("o evento de agente mostra a Sequência, somente leitura, com as pontas de pessoa e de agente", async () => {
-  const review = eventFixture({ id: "rev-1", name: "Revisar o erro", status: "todo", startedAt: "2026-11-14T10:00:00-03:00", previousTaskIds: [ID] });
-  const fix = eventFixture({ id: "fix-1", actor: "agent", kind: "request", status: "queued", name: "Aplicar o conserto", startedAt: "2026-11-14T09:50:00-03:00" });
-  install([agentTask({ previousTaskIds: ["rev-0"], nextTaskIds: ["rev-1"] }), eventFixture({ id: "rev-0", name: "Alerta do monitor", status: "done" }), review, fix], [agentRequest()]);
+test("a tarefa de agente mostra a Sequência, somente leitura, com as pontas de pessoa e de agente", async () => {
+  const review = taskFixture({ id: "rev-1", name: "Revisar o erro", status: "todo", startedAt: "2026-11-14T10:00:00-03:00", previousTaskIds: [ID] });
+  const fix = taskFixture({ id: "fix-1", actor: "agent", kind: "request", status: "queued", name: "Aplicar o conserto", startedAt: "2026-11-14T09:50:00-03:00" });
+  install([agentTask({ previousTaskIds: ["rev-0"], nextTaskIds: ["rev-1"] }), taskFixture({ id: "rev-0", name: "Alerta do monitor", status: "done" }), review, fix], [agentRequest()]);
   renderPage();
   await loaded();
 
   const section = await screen.findByRole("region", { name: "Sequência" });
-  expect(within(section).getByRole("link", { name: /Alerta do monitor/ })).toHaveAttribute("href", "/user-1/eventos/rev-0");
-  expect(within(section).getByRole("link", { name: /Revisar o erro/ })).toHaveAttribute("href", "/user-1/eventos/rev-1");
+  expect(within(section).getByRole("link", { name: /Alerta do monitor/ })).toHaveAttribute("href", "/user-1/tarefas/rev-0");
+  expect(within(section).getByRole("link", { name: /Revisar o erro/ })).toHaveAttribute("href", "/user-1/tarefas/rev-1");
   expect(within(section).queryByRole("button")).not.toBeInTheDocument();
   expect(screen.queryByText(/Espera por/)).not.toBeInTheDocument();
 });
@@ -158,20 +158,20 @@ test("Registro mostra a criação e a última alteração do pedido", async () =
   expect(within(record).getByText(/09:53/)).toBeInTheDocument();
 });
 
-test("com o pedido em aberto, a tela relê o pedido e o evento até o estado final", async () => {
+test("com o pedido em aberto, a tela relê o pedido e a tarefa até o estado final", async () => {
   install([agentTask()], [agentRequest()]);
   renderPage();
   await loaded();
   await screen.findByRole("region", { name: "Passos" });
 
   advanceRequest(api, ID, { status: "done", steps: STEPS.map((step) => ({ ...step, status: "done" })) });
-  api.store.table<TaskDto>("events").set(ID, agentTask({ status: "done", finishedAt: "2026-11-14T09:58:00-03:00" }));
+  api.store.table<TaskDto>("tasks").set(ID, agentTask({ status: "done", finishedAt: "2026-11-14T09:58:00-03:00" }));
 
   await act(async () => {
     await vi.advanceTimersByTimeAsync(3000);
   });
 
-  const top = screen.getByRole("region", { name: "Resumo do evento" });
+  const top = screen.getByRole("region", { name: "Resumo da tarefa" });
   expect(await within(top).findByText("Agente, feito")).toBeInTheDocument();
   const info = screen.getByRole("region", { name: "Informações" });
   expect(within(info).getByText(/09:58/)).toBeInTheDocument();
@@ -192,7 +192,7 @@ test("um pedido no estado final não é relido", async () => {
   expect(requestReads()).toBe(1);
 });
 
-test("um evento de agente sem pedido diz que o pedido não foi encontrado", async () => {
+test("uma tarefa de agente sem pedido diz que o pedido não foi encontrado", async () => {
   install([agentTask()], []);
   renderPage();
 
@@ -249,7 +249,7 @@ test("Produziu lista o que o pedido criou ou alterou e leva ao detalhe; o apagad
 
   const produced = await screen.findByRole("region", { name: "Produziu" });
   expect(within(produced).getByRole("link", { name: /Comparativo de voos/ })).toHaveAttribute("href", "/user-1/notas/art-1");
-  expect(within(produced).getByRole("link", { name: /Escolher o voo/ })).toHaveAttribute("href", "/user-1/eventos/ev-9");
+  expect(within(produced).getByRole("link", { name: /Escolher o voo/ })).toHaveAttribute("href", "/user-1/tarefas/ev-9");
   expect(within(produced).getByText("Voo descartado")).toBeInTheDocument();
   expect(within(produced).queryByRole("link", { name: /Voo descartado/ })).not.toBeInTheDocument();
   expect(within(produced).getByText(/apagado/)).toBeInTheDocument();
@@ -340,7 +340,7 @@ test("Cancelar pedido chama a API, e o detalhe passa a mostrar o pedido cancelad
   const field = await screen.findByRole("region", { name: FIELD });
   fireEvent.click(within(field).getByRole("button", { name: "Cancelar pedido" }));
 
-  const top = screen.getByRole("region", { name: "Resumo do evento" });
+  const top = screen.getByRole("region", { name: "Resumo da tarefa" });
   expect(await within(top).findByText("Agente, cancelado")).toBeInTheDocument();
   expect(api.calls.some((call) => call.method === "POST" && call.pathname === `/api/requests/${ID}/cancel`)).toBe(true);
   expect(within(field).queryByRole("button", { name: "Cancelar pedido" })).not.toBeInTheDocument();

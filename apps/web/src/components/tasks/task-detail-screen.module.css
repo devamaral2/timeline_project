@@ -1,7 +1,7 @@
 /*
- * A tela de detalhe do evento.
+ * A tela de detalhe da tarefa.
  *
- * A composicao e a mesma para todo tipo de evento: barra de navegacao, tipo,
+ * A composicao e a mesma para todo tipo de tarefa: barra de navegacao, tipo,
  * titulo com a data, o cartao de resumo (horario, metadados, tags, situacao) e
  * as secoes de texto. O que muda de um tipo para outro e o conteudo que entra
  * entre a descricao e as tarefas — nao o esqueleto.
@@ -17,7 +17,7 @@
   overflow-wrap: anywhere;
 }
 
-/* Navegação: a seta de volta e o menu do evento, nas duas pontas. */
+/* Navegação: a seta de volta e o menu da tarefa, nas duas pontas. */
 .topBar {
   display: flex;
   align-items: center;
@@ -213,7 +213,7 @@
 .tags .missed { border-color: color-mix(in srgb, var(--destructive) 32%, transparent); color: var(--destructive); }
 
 /*
- * A situação do evento no tempo: já aconteceu, está acontecendo ou ainda vai
+ * A situação da tarefa no tempo: já aconteceu, está acontecendo ou ainda vai
  * acontecer. Um só quadro redondo com três estados — o mesmo lugar responde a
  * mesma pergunta, mude o que mudar dentro dele.
  */

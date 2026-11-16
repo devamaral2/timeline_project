@@ -1,5 +1,5 @@
 /*
- * Protótipo "Trilho": a lista de eventos como uma linha do tempo contínua.
+ * Protótipo "Trilho": a lista de tarefas como uma linha do tempo contínua.
  * Só lê os tokens globais (globals.css), então Névoa e Noite saem de graça.
  */
 
@@ -228,7 +228,7 @@
   background: repeating-linear-gradient(to bottom, var(--border) 0 3px, transparent 3px 8px);
 }
 
-/* ---------- Evento ---------- */
+/* ---------- Tarefa ---------- */
 
 .task {
   position: relative;

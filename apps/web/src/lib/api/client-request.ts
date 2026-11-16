@@ -2,7 +2,7 @@ import { ApiError, authedFetch } from "./authed-fetch";
 
 /**
  * A única função que monta caminho, consulta e cabeçalhos das chamadas da API.
- * Cada área (eventos, artefatos, …) chama `apiRequest` e não conhece HTTP.
+ * Cada área (tarefas, artefatos, …) chama `apiRequest` e não conhece HTTP.
  */
 
 export type ApiMethod = "GET" | "POST" | "PATCH" | "DELETE";

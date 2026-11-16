@@ -1,7 +1,11 @@
-import { redirect } from "next/navigation";
+import type { Metadata } from "next";
+import { TaskCreateRoute } from "@/components/task-detail/TaskCreateRoute";
 
-/** Não há mais criação de tarefa: é um evento, com ou sem status. */
+export const metadata: Metadata = {
+  title: "Nova tarefa — Agente pessoal",
+};
+
 export default async function Page({ params }: { params: Promise<{ userId: string }> }) {
   const { userId } = await params;
-  redirect(`/${userId}/eventos/novo`);
+  return <TaskCreateRoute userId={userId} />;
 }

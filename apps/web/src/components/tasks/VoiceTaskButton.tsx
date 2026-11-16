@@ -9,7 +9,7 @@ import { destructiveButtonClass, primaryButtonClass } from "@/components/ui/butt
 import { VoiceJobStatus } from "./VoiceJobStatus";
 
 interface VoiceTaskButtonProps {
-  /** Recebe o evento que o pedido de voz criou (lido das entidades do pedido). */
+  /** Recebe a tarefa que o pedido de voz criou (lido das entidades do pedido). */
   onCreated?: (task: RequestEntityDto) => void;
   className?: string;
 }
@@ -34,7 +34,7 @@ export function VoiceTaskButton({
         <button
           type="button"
           onClick={listening ? stop : start}
-          aria-label={listening ? "Parar gravação" : "Gravar evento por voz"}
+          aria-label={listening ? "Parar gravação" : "Gravar tarefa por voz"}
           aria-pressed={listening}
           className={cn(
             listening ? destructiveButtonClass : primaryButtonClass,

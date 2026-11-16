@@ -65,7 +65,7 @@ test("a running step stretches up to now; a step that has not started stays off 
     status: "running", startedAt: START, fields: [],
     entries: [
       { id: "r", kind: "routing", label: "Roteamento do pedido", status: "done", startedAt: START, durationMs: 400 },
-      { id: "s1", kind: "agent", label: "Criando eventos", status: "running", startedAt: at(100) },
+      { id: "s1", kind: "agent", label: "Criando tarefas", status: "running", startedAt: at(100) },
       { id: "s2", kind: "agent", label: "Criando notas", status: "pending" },
     ],
   }, new Date(at(1000)).getTime());

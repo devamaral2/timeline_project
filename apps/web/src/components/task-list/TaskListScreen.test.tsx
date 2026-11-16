@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import type { TaskDto } from "@repo/contracts";
 import { createFakeApi } from "@/test/fake-api";
-import { eventFixture, eventsArea } from "@/test/fake-api/events";
+import { taskFixture, tasksArea } from "@/test/fake-api/tasks";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
@@ -16,9 +16,9 @@ vi.mock("@/lib/api/authed-fetch", async (original) => ({
 
 const { TaskListScreen } = await import("./TaskListScreen");
 
-/** Liga a tela à API falsa com estes eventos e devolve a API, para conferir a rede. */
+/** Liga a tela à API falsa com estes tarefas e devolve a API, para conferir a rede. */
 function serve(tasks: TaskDto[]) {
-  const api = createFakeApi({ areas: [eventsArea], seed: { events: tasks } });
+  const api = createFakeApi({ areas: [tasksArea], seed: { tasks: tasks } });
   net.authedFetch.mockImplementation(api.authedFetch);
   return api;
 }
@@ -35,15 +35,15 @@ afterEach(() => {
 });
 
 const tasks: TaskDto[] = [
-  eventFixture({ id: "luz", name: "Pagar conta de luz", status: "todo", startedAt: "2026-09-13T00:00:00-03:00", tags: ["casa"] }),
-  eventFixture({ id: "pesquisa", name: "Pesquisar voos", actor: "agent", kind: "request", status: "running" }),
-  eventFixture({ id: "pneu", name: "Trocar o pneu", status: "inHold" }),
-  eventFixture({ id: "fotos", name: "Organizar fotos da viagem", status: "toDefine" }),
-  eventFixture({ id: "relatorio", name: "Enviar relatório", status: "done" }),
-  eventFixture({ id: "assinatura", name: "Renovar assinatura", status: "cancel" }),
+  taskFixture({ id: "luz", name: "Pagar conta de luz", status: "todo", startedAt: "2026-09-13T00:00:00-03:00", tags: ["casa"] }),
+  taskFixture({ id: "pesquisa", name: "Pesquisar voos", actor: "agent", kind: "request", status: "running" }),
+  taskFixture({ id: "pneu", name: "Trocar o pneu", status: "inHold" }),
+  taskFixture({ id: "fotos", name: "Organizar fotos da viagem", status: "toDefine" }),
+  taskFixture({ id: "relatorio", name: "Enviar relatório", status: "done" }),
+  taskFixture({ id: "assinatura", name: "Renovar assinatura", status: "cancel" }),
 ];
 
-test("agrupa pessoa e agente nos grupos do canvas, com a contagem e a linha de cada evento", async () => {
+test("agrupa pessoa e agente nos grupos do canvas, com a contagem e a linha de cada tarefa", async () => {
   serve(tasks);
   render(<TaskListScreen userId="user-1" />);
 
@@ -64,7 +64,7 @@ test("agrupa pessoa e agente nos grupos do canvas, com a contagem e a linha de c
 
   const todo = screen.getByRole("region", { name: /A fazer/ });
   const luz = within(todo).getByRole("link", { name: /Pagar conta de luz/ });
-  expect(luz).toHaveAttribute("href", "/user-1/eventos/luz");
+  expect(luz).toHaveAttribute("href", "/user-1/tarefas/luz");
   expect(within(todo).getByText("Era ontem")).toBeInTheDocument();
   expect(within(todo).getByText("#casa")).toBeInTheDocument();
 
@@ -89,11 +89,11 @@ test("Feitas e Encerradas vêm recolhidas e abrem ao toque", async () => {
   expect(screen.getByRole("link", { name: /Renovar assinatura/ })).toBeInTheDocument();
 });
 
-test("a sequência não esconde linhas: o evento que se segue a outro da lista aparece, sem fração nem “Espera por”", async () => {
+test("a sequência não esconde linhas: a tarefa que se segue a outra da lista aparece, sem fração nem “Espera por”", async () => {
   serve([
-    eventFixture({ id: "proposta", name: "Revisar proposta", status: "doing", nextTaskIds: ["ler"] }),
-    eventFixture({ id: "ler", name: "Ler a proposta", status: "todo", previousTaskIds: ["proposta"] }),
-    eventFixture({ id: "pneu", name: "Trocar o pneu", status: "inHold", previousTaskIds: ["proposta"] }),
+    taskFixture({ id: "proposta", name: "Revisar proposta", status: "doing", nextTaskIds: ["ler"] }),
+    taskFixture({ id: "ler", name: "Ler a proposta", status: "todo", previousTaskIds: ["proposta"] }),
+    taskFixture({ id: "pneu", name: "Trocar o pneu", status: "inHold", previousTaskIds: ["proposta"] }),
   ]);
   render(<TaskListScreen userId="user-1" />);
 
@@ -123,40 +123,40 @@ test("avisa quando a lista falha e recarrega ao tentar de novo", async () => {
   expect(await screen.findByRole("link", { name: /Pagar conta de luz/ })).toBeInTheDocument();
 });
 
-test("convida a criar o primeiro evento quando não há nenhum evento com status, e leva ao formulário de evento", async () => {
+test("convida a criar a primeira tarefa quando não há nenhuma tarefa com status, e leva ao formulário de tarefa", async () => {
   serve([]);
   render(<TaskListScreen userId="user-1" />);
 
   expect(await screen.findByRole("heading", { name: "Nenhuma tarefa por aqui" })).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "Novo evento" }));
-  expect(push).toHaveBeenCalledWith("/user-1/eventos/novo");
+  fireEvent.click(screen.getByRole("button", { name: "Nova tarefa" }));
+  expect(push).toHaveBeenCalledWith("/user-1/tarefas/nova");
 });
 
 const serieRule = { frequency: "daily" as const, interval: 1, timeOfDay: "18:00", timeZone: "America/Sao_Paulo", startsOn: "2026-09-01" };
 
 test("uma série aparece uma vez, pela ocorrência em aberto mais próxima, com a regra no lugar do horário", async () => {
   serve([
-    eventFixture({ id: "dia-14", name: "Pagar fatura", status: "todo", startedAt: "2026-09-14T18:00:00-03:00", recurrence: { id: "serie-1", occurrenceOn: "2026-09-14", detached: false, rule: serieRule } }),
-    eventFixture({ id: "dia-15", name: "Pagar fatura", status: "todo", startedAt: "2026-09-15T18:00:00-03:00", recurrence: { id: "serie-1", occurrenceOn: "2026-09-15", detached: false, rule: serieRule } }),
+    taskFixture({ id: "dia-14", name: "Pagar fatura", status: "todo", startedAt: "2026-09-14T18:00:00-03:00", recurrence: { id: "serie-1", occurrenceOn: "2026-09-14", detached: false, rule: serieRule } }),
+    taskFixture({ id: "dia-15", name: "Pagar fatura", status: "todo", startedAt: "2026-09-15T18:00:00-03:00", recurrence: { id: "serie-1", occurrenceOn: "2026-09-15", detached: false, rule: serieRule } }),
   ]);
   render(<TaskListScreen userId="user-1" />);
 
   const links = await screen.findAllByRole("link", { name: /Pagar fatura/ });
   expect(links).toHaveLength(1);
-  expect(links[0]).toHaveAttribute("href", "/user-1/eventos/dia-14");
+  expect(links[0]).toHaveAttribute("href", "/user-1/tarefas/dia-14");
   expect(within(screen.getByRole("region", { name: /A fazer/ })).getByText("Todo dia, 18:00")).toBeInTheDocument();
 });
 
 const glyphOf = (name: string) => new RegExp(`Mudar status de “${name}”`);
 
 test("tocar no glifo abre a escolha dos sete status, com o atual marcado, e não grava nada", async () => {
-  const api = serve([eventFixture({ id: "luz", name: "Pagar conta de luz", status: "todo", revision: 3 })]);
+  const api = serve([taskFixture({ id: "luz", name: "Pagar conta de luz", status: "todo", revision: 3 })]);
   render(<TaskListScreen userId="user-1" />);
 
   const row = (await screen.findByRole("link", { name: /Pagar conta de luz/ })).closest("li") as HTMLElement;
   fireEvent.click(within(row).getByRole("button", { name: glyphOf("Pagar conta de luz") }));
 
-  const list = within(screen.getByRole("dialog", { name: "Status de “Pagar conta de luz”" })).getByRole("listbox", { name: "Status do evento" });
+  const list = within(screen.getByRole("dialog", { name: "Status de “Pagar conta de luz”" })).getByRole("listbox", { name: "Status da tarefa" });
   expect(within(list).getAllByRole("option").map((option) => option.textContent)).toEqual([
     "A fazer", "Sem data", "Em curso", "Em espera", "Feito", "Cancelado", "Não realizado",
   ]);
@@ -166,7 +166,7 @@ test("tocar no glifo abre a escolha dos sete status, com o atual marcado, e não
 });
 
 test("escolher o status que a tarefa já tem, ou fechar com Esc, não grava nada", async () => {
-  const api = serve([eventFixture({ id: "luz", name: "Pagar conta de luz", status: "todo", revision: 3 })]);
+  const api = serve([taskFixture({ id: "luz", name: "Pagar conta de luz", status: "todo", revision: 3 })]);
   render(<TaskListScreen userId="user-1" />);
 
   fireEvent.click(await screen.findByRole("button", { name: glyphOf("Pagar conta de luz") }));
@@ -181,7 +181,7 @@ test("escolher o status que a tarefa já tem, ou fechar com Esc, não grava nada
 });
 
 test("escolher um status em aberto grava com a revisão lida e a linha muda de grupo", async () => {
-  const api = serve([eventFixture({ id: "luz", name: "Pagar conta de luz", status: "todo", revision: 3 })]);
+  const api = serve([taskFixture({ id: "luz", name: "Pagar conta de luz", status: "todo", revision: 3 })]);
   render(<TaskListScreen userId="user-1" />);
 
   fireEvent.click(await screen.findByRole("button", { name: glyphOf("Pagar conta de luz") }));
@@ -199,7 +199,7 @@ test("escolher um status em aberto grava com a revisão lida e a linha muda de g
 });
 
 test("escolher Feito envia a conclusão com a revisão lida e a linha vai para Feitas", async () => {
-  const api = serve([eventFixture({ id: "luz", name: "Pagar conta de luz", status: "todo", revision: 3 })]);
+  const api = serve([taskFixture({ id: "luz", name: "Pagar conta de luz", status: "todo", revision: 3 })]);
   render(<TaskListScreen userId="user-1" />);
 
   const row = (await screen.findByRole("link", { name: /Pagar conta de luz/ })).closest("li") as HTMLElement;
@@ -218,10 +218,10 @@ test("escolher Feito envia a conclusão com a revisão lida e a linha vai para F
   expect(within(screen.getByRole("region", { name: /Feitas/ })).getByRole("link", { name: /Pagar conta de luz/ })).toBeInTheDocument();
 });
 
-test("tirar um evento de Feito limpa a conclusão; reabrir um cancelado só troca o status", async () => {
+test("tirar uma tarefa de Feito limpa a conclusão; reabrir um cancelado só troca o status", async () => {
   const api = serve([
-    eventFixture({ id: "relatorio", name: "Enviar relatório", status: "done", revision: 4, finishedAt: "2026-09-13T15:00:00-03:00" }),
-    eventFixture({ id: "assinatura", name: "Renovar assinatura", status: "cancel", revision: 2 }),
+    taskFixture({ id: "relatorio", name: "Enviar relatório", status: "done", revision: 4, finishedAt: "2026-09-13T15:00:00-03:00" }),
+    taskFixture({ id: "assinatura", name: "Renovar assinatura", status: "cancel", revision: 2 }),
   ]);
   render(<TaskListScreen userId="user-1" />);
 
@@ -240,8 +240,8 @@ test("tirar um evento de Feito limpa a conclusão; reabrir um cancelado só troc
   expect(api.calls.filter((call) => call.method === "PATCH")[1]?.body).toEqual({ expectedRevision: 2, status: "doing" });
 });
 
-test("o glifo de um evento de agente não aparece como botão e não muda status", async () => {
-  const api = serve([eventFixture({ id: "pesquisa", name: "Pesquisar voos", actor: "agent", kind: "request", status: "running" })]);
+test("o glifo de uma tarefa de agente não aparece como botão e não muda status", async () => {
+  const api = serve([taskFixture({ id: "pesquisa", name: "Pesquisar voos", actor: "agent", kind: "request", status: "running" })]);
   render(<TaskListScreen userId="user-1" />);
 
   const row = (await screen.findByRole("link", { name: /Pesquisar voos/ })).closest("li") as HTMLElement;
@@ -250,12 +250,12 @@ test("o glifo de um evento de agente não aparece como botão e não muda status
 });
 
 test("revisão desatualizada: a tela avisa, relê a lista e não grava nada", async () => {
-  const api = serve([eventFixture({ id: "luz", name: "Pagar conta de luz", status: "todo", revision: 1 })]);
+  const api = serve([taskFixture({ id: "luz", name: "Pagar conta de luz", status: "todo", revision: 1 })]);
   render(<TaskListScreen userId="user-1" />);
 
   const row = (await screen.findByRole("link", { name: /Pagar conta de luz/ })).closest("li") as HTMLElement;
   // Outra tela editou a tarefa depois da leitura: a revisão no servidor passa a 2.
-  const table = api.store.table<TaskDto>("events");
+  const table = api.store.table<TaskDto>("tasks");
   table.set("luz", { ...(table.get("luz") as TaskDto), revision: 2 });
 
   fireEvent.click(within(row).getByRole("button", { name: glyphOf("Pagar conta de luz") }));
@@ -275,8 +275,8 @@ function lastTrackedQuery(api: ReturnType<typeof serve>): Record<string, string>
 
 test("a tag filtra pela consulta, e as outras tags continuam como opções", async () => {
   const api = serve([
-    eventFixture({ id: "luz", name: "Pagar conta de luz", status: "todo", tags: ["casa"] }),
-    eventFixture({ id: "treino", name: "Treino de força", status: "todo", tags: ["saude"] }),
+    taskFixture({ id: "luz", name: "Pagar conta de luz", status: "todo", tags: ["casa"] }),
+    taskFixture({ id: "treino", name: "Treino de força", status: "todo", tags: ["saude"] }),
   ]);
   render(<TaskListScreen userId="user-1" />);
   await screen.findByRole("link", { name: /Pagar conta de luz/ });
@@ -292,9 +292,9 @@ test("a tag filtra pela consulta, e as outras tags continuam como opções", asy
 
 test("prioridade aceita mais de um nível e os manda juntos, na ordem da escala", async () => {
   const api = serve([
-    eventFixture({ id: "a", name: "Urgente da casa", status: "todo", priority: "urgent" }),
-    eventFixture({ id: "b", name: "Baixa do dia", status: "todo", priority: "low" }),
-    eventFixture({ id: "c", name: "Média do dia", status: "todo", priority: "medium" }),
+    taskFixture({ id: "a", name: "Urgente da casa", status: "todo", priority: "urgent" }),
+    taskFixture({ id: "b", name: "Baixa do dia", status: "todo", priority: "low" }),
+    taskFixture({ id: "c", name: "Média do dia", status: "todo", priority: "medium" }),
   ]);
   render(<TaskListScreen userId="user-1" />);
   await screen.findByRole("link", { name: /Média do dia/ });
@@ -338,14 +338,14 @@ test("Limpar filtros manda a consulta sem filtro e volta à lista inteira", asyn
   expect(await screen.findByRole("link", { name: /Pagar conta de luz/ })).toBeInTheDocument();
 });
 
-test("com filtro ativo e nada encontrado, diz que nenhum evento passou no filtro", async () => {
+test("com filtro ativo e nada encontrado, diz que nenhuma tarefa passou no filtro", async () => {
   serve(tasks);
   render(<TaskListScreen userId="user-1" />);
   await screen.findByRole("link", { name: /Pagar conta de luz/ });
 
   fireEvent.change(screen.getByRole("searchbox", { name: "Buscar tarefas" }), { target: { value: "inexistente" } });
 
-  expect(await screen.findByRole("heading", { name: "Nenhum evento passou no filtro" })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: "Nenhuma tarefa passou no filtro" })).toBeInTheDocument();
   expect(screen.queryByRole("heading", { name: "Nenhuma tarefa por aqui" })).not.toBeInTheDocument();
 
   fireEvent.click(within(screen.getByRole("region", { name: "Lista de tarefas" })).getByRole("button", { name: "Limpar filtros" }));
@@ -357,12 +357,12 @@ function trackedReads(api: ReturnType<typeof serve>) {
   return () => api.calls.filter((call) => call.pathname === "/api/tasks/tracked").length;
 }
 
-test("com evento de agente em aberto, a lista se relê sozinha e a linha vai para Feitas", async () => {
+test("com tarefa de agente em aberto, a lista se relê sozinha e a linha vai para Feitas", async () => {
   const api = serve(tasks);
   render(<TaskListScreen userId="user-1" />);
   await screen.findByRole("link", { name: /Pesquisar voos/ });
 
-  const table = api.store.table<TaskDto>("events");
+  const table = api.store.table<TaskDto>("tasks");
   table.set("pesquisa", { ...(table.get("pesquisa") as TaskDto), status: "done" });
   await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
 
@@ -371,7 +371,7 @@ test("com evento de agente em aberto, a lista se relê sozinha e a linha vai par
   expect(within(screen.getByRole("region", { name: /Feitas/ })).getByRole("link", { name: /Pesquisar voos/ })).toBeInTheDocument();
 });
 
-test("sem evento de agente em aberto, a lista não se relê em intervalo", async () => {
+test("sem tarefa de agente em aberto, a lista não se relê em intervalo", async () => {
   const api = serve(tasks.map((task) => (task.id === "pesquisa" ? { ...task, status: "done" as const } : task)));
   render(<TaskListScreen userId="user-1" />);
   await screen.findByRole("link", { name: /Pagar conta de luz/ });

@@ -61,8 +61,8 @@ export function artifactTagsByUse(artifacts: readonly { tags: readonly string[] 
 }
 
 /**
- * Uma nota de sono vive na noite do evento a que pertence: o título é o dia (ou os dois dias) dele e, com fim
- * planejado, quanto durou na agenda. Sem evento com início, a nota é só a nota.
+ * Uma nota de sono vive na noite da tarefa a que pertence: o título é o dia (ou os dois dias) dele e, com fim
+ * planejado, quanto durou na agenda. Sem tarefa com início, a nota é só a nota.
  */
 export function sleepAgendaOfArtifact(tasks: readonly ArtifactTaskLinkDto[]): { title: string; agendaMinutes: number | null } | null {
   const task = tasks.find((link) => link.startedAt);

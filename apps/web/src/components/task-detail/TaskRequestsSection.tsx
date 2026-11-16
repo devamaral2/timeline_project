@@ -18,10 +18,10 @@ const GROUPS = [
 ] as const;
 
 /**
- * Os pedidos ao agente que criaram e alteraram o evento: "Criado por" (o pedido
+ * Os pedidos ao agente que criaram e alteraram a tarefa: "Criado por" (o pedido
  * que o gerou) e "Atualizado por" (um por pedido que o alterou depois, do mais
  * antigo ao mais novo). O detalhe já traz nome e quando; cada linha leva ao
- * detalhe do pedido. Evento que nenhum pedido tocou não mostra a seção, e com
+ * detalhe do pedido. Tarefa que nenhum pedido tocou não mostra a seção, e com
  * um lado só, só esse lado aparece.
  */
 export function TaskRequestsSection({ userId, task }: TaskRequestsSectionProps) {
@@ -45,7 +45,7 @@ function RequestGroup({ id, label, userId, requests }: { id: string; label: stri
         {requests.map((request) => (
           <li key={`${request.id}-${request.relation}`} className={styles.requestRow}>
             <span className={styles.requestMark}><Bot {...detailIcon} /></span>
-            <Link href={`/${userId}/eventos/${request.id}`} className={styles.requestBody}>
+            <Link href={`/${userId}/tarefas/${request.id}`} className={styles.requestBody}>
               <span className={styles.requestName}>{request.name}</span>
               <span className={styles.requestMeta}>{momentLabel(request.at)}</span>
             </Link>

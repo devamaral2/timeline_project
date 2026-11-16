@@ -1,5 +1,5 @@
 /*
- * A seção de relação do detalhe de evento: Sequência (os dois lados, "Segue-se
+ * A seção de relação do detalhe de tarefa: Sequência (os dois lados, "Segue-se
  * de" e "Da sequência a"). Cor só por token, para o tema trocar junto.
  */
 
@@ -15,7 +15,7 @@
 .sequenceName { font-size: 15px; font-weight: 600; line-height: 24px; overflow-wrap: anywhere; }
 .sequenceMeta { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 12px; font-size: 13px; line-height: 20px; color: var(--muted); }
 
-/* Criado por / Atualizado por: o pedido ao agente que criou ou alterou o evento. */
+/* Criado por / Atualizado por: o pedido ao agente que criou ou alterou a tarefa. */
 .requestRow { display: flex; align-items: flex-start; gap: 14px; padding: 10px 0; border-bottom: 1px solid var(--line); }
 .requestRow:last-child { border-bottom: 0; }
 .requestMark { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 20px; height: 24px; color: var(--success); }

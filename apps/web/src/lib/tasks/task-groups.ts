@@ -1,7 +1,7 @@
 import type { TaskCardDto, TaskStatus } from "@repo/contracts";
 
 /**
- * Agrupamento da lista de tarefas: os eventos com status da rota `tracked`
+ * Agrupamento da lista de tarefas: as tarefas com status da rota `tracked`
  * juntam pessoa e agente nos seis grupos do canvas. Função pura, sem rede.
  */
 
@@ -42,7 +42,7 @@ const GROUPS: readonly Omit<TaskGroup, "cards">[] = [
 
 /**
  * Agrupa os cartões da lista: todo cartão com status vira uma linha, sem
- * hierarquia (a sequência entre eventos não muda a lista). Cartão sem status
+ * hierarquia (a sequência entre tarefas não muda a lista). Cartão sem status
  * (de referência) fica de fora. Grupo vazio não é devolvido.
  */
 export function groupTrackedTasks(cards: readonly TaskCardDto[]): TaskGroup[] {

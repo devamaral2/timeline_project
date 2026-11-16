@@ -3,14 +3,14 @@ import type { TaskDto } from "@repo/contracts";
 import { type TaskDraft, type TaskDraftField, draftFromTask, emptyTaskDraft, rebaseDraft } from "./task-draft";
 
 interface DraftState {
-  /** `null` na criação: não há evento de origem. */
+  /** `null` na criação: não há tarefa de origem. */
   task: TaskDto | null;
   draft: TaskDraft;
 }
 
 /**
- * O único estado do formulário de edição e de criação. Sem evento (criação), o
- * rascunho começa vazio, com `initialName` no título. Quando o evento chega de
+ * O único estado do formulário de edição e de criação. Sem tarefa (criação), o
+ * rascunho começa vazio, com `initialName` no título. Quando a tarefa chega de
  * novo (uma recarga depois de revisão velha), o rascunho se rebaseia durante a
  * renderização: o que a pessoa digitou fica, e o resto segue a versão nova.
  */

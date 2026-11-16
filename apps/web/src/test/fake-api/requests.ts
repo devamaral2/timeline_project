@@ -79,7 +79,7 @@ export function requestsArea(options: RequestsAreaOptions = {}): FakeArea {
 
 /**
  * Um pedido válido do contrato para semear a API falsa. Só o que o teste diz; o resto vem preenchido, como em
- * `eventFixture`. Para avançá-lo depois, use `advanceRequest`.
+ * `taskFixture`. Para avançá-lo depois, use `advanceRequest`.
  */
 export function requestFixture(overrides: Partial<RequestDto> & { id: string }): RequestDto {
   return requestSchema.parse({

@@ -6,7 +6,7 @@ import type { AgentTaskStatus, TaskDto, HumanTaskStatus } from "@repo/contracts"
 import { DetailMessage, DetailSection } from "@/components/detail/detail-parts";
 import { TaskKindMark } from "@/components/tasks/task-kind-mark";
 import { TaskStatusGlyph } from "@/components/tasks/task-status-glyph";
-import { getEvent } from "@/lib/api/events";
+import { getTask } from "@/lib/api/tasks";
 import { cardWhenLabel } from "@/lib/tasks/card-text";
 import { useNow } from "@/lib/tasks/use-now";
 import styles from "./task-relations.module.css";
@@ -17,11 +17,11 @@ interface TaskSequenceSectionProps {
 }
 
 /**
- * A seção Sequência do detalhe, nos dois lados: "Segue-se de" (os eventos que vêm
+ * A seção Sequência do detalhe, nos dois lados: "Segue-se de" (as tarefas que vêm
  * antes deste) e "Da sequência a" (os que se seguem a este). É informativa: não
- * bloqueia nada nem muda status. O evento traz só os ids; nome, tipo e quando
- * vêm de `getEvent`, e as duas pontas podem ser evento de pessoa ou de agente.
- * Cada linha leva ao detalhe do outro evento. Evento fora de qualquer sequência
+ * bloqueia nada nem muda status. A tarefa traz só os ids; nome, tipo e quando
+ * vêm de `getTask`, e as duas pontas podem ser tarefa de pessoa ou de agente.
+ * Cada linha leva ao detalhe da outra tarefa. Tarefa fora de qualquer sequência
  * não mostra a seção; com um lado só, só esse lado aparece.
  */
 export function TaskSequenceSection({ userId, task }: TaskSequenceSectionProps) {
@@ -35,12 +35,12 @@ export function TaskSequenceSection({ userId, task }: TaskSequenceSectionProps) 
   useEffect(() => {
     let cancelled = false;
     setFailed(false);
-    void Promise.allSettled(task.previousTaskIds.map((id) => getEvent(id))).then((results) => {
+    void Promise.allSettled(task.previousTaskIds.map((id) => getTask(id))).then((results) => {
       if (cancelled) return;
       setPrevious(loaded(results));
       if (results.some((result) => result.status === "rejected")) setFailed(true);
     });
-    void Promise.allSettled(task.nextTaskIds.map((id) => getEvent(id))).then((results) => {
+    void Promise.allSettled(task.nextTaskIds.map((id) => getTask(id))).then((results) => {
       if (cancelled) return;
       setNext(loaded(results));
       if (results.some((result) => result.status === "rejected")) setFailed(true);
@@ -51,12 +51,12 @@ export function TaskSequenceSection({ userId, task }: TaskSequenceSectionProps) 
     // Recarrega quando as listas de ids mudam; os ids vêm das chaves acima.
   }, [previousKey, nextKey]);
 
-  // Evento fora de qualquer sequência não mostra a seção.
+  // Tarefa fora de qualquer sequência não mostra a seção.
   if (task.previousTaskIds.length === 0 && task.nextTaskIds.length === 0) return null;
 
   return (
     <DetailSection title="Sequência" labelId="task-sequence">
-      {failed ? <DetailMessage alert>Alguns eventos da sequência não carregaram.</DetailMessage> : null}
+      {failed ? <DetailMessage alert>Algumas tarefas da sequência não carregaram.</DetailMessage> : null}
       {!previous || !next ? <DetailMessage>Carregando sequência…</DetailMessage> : null}
       {previous && next && now ? (
         <>
@@ -68,7 +68,7 @@ export function TaskSequenceSection({ userId, task }: TaskSequenceSectionProps) 
   );
 }
 
-/** Os eventos que carregaram; o que falhou (apagado, de outro dono) some da lista e aparece no aviso. */
+/** As tarefas que carregaram; o que falhou (apagado, de outro dono) some da lista e aparece no aviso. */
 function loaded(results: PromiseSettledResult<TaskDto>[]): TaskDto[] {
   return results.flatMap((result) => (result.status === "fulfilled" ? [result.value] : []));
 }
@@ -82,7 +82,7 @@ function SequenceGroup({ id, label, userId, cards, now }: { id: string; label: s
         {cards.map((card) => (
           <li key={card.id} className={styles.sequenceRow}>
             <SequenceGlyph card={card} />
-            <Link href={`/${userId}/eventos/${card.id}`} className={styles.sequenceBody}>
+            <Link href={`/${userId}/tarefas/${card.id}`} className={styles.sequenceBody}>
               <span className={styles.sequenceName}>{card.name}</span>
               <span className={styles.sequenceMeta}>
                 <TaskKindMark kind={card.kind} />

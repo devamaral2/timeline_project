@@ -3,7 +3,7 @@ import { dayKeyOf, formatTime, relativeDayLabel, shiftDayKey, shortDate, zonedDa
 
 /**
  * Os textos que a linha das listas (agenda e lista de tarefas) calcula a partir
- * do cartao de evento e do instante atual. Sao funcoes puras: quem chama passa
+ * do cartao de tarefa e do instante atual. Sao funcoes puras: quem chama passa
  * o `now`, e os testes fixam o relogio sem depender do fuso da maquina.
  *
  * Todo dia civil sai no fuso da timeline (`dayKeyOf`). "Dia sem hora" e a
@@ -41,8 +41,8 @@ export function cardWhenLabel(card: TaskCardDto, now: Date, options: WhenOptions
 }
 
 /**
- * Atrasado: a fazer com o dia ja passado, ou evento longo, ainda aberto, com o
- * prazo (o dia de `estimatedFinishAt`) ja passado. Evento de agente nao atrasa.
+ * Atrasado: a fazer com o dia ja passado, ou tarefa longa, ainda aberta, com o
+ * prazo (o dia de `estimatedFinishAt`) ja passado. Tarefa de agente nao atrasa.
  */
 export function cardIsOverdue(card: TaskCardDto, now: Date): boolean {
   if (card.actor === "agent") return false;
@@ -60,7 +60,7 @@ export function cardIsOverdue(card: TaskCardDto, now: Date): boolean {
 
 /**
  * A duracao: fim planejado menos inicio, "50 min", "1h30", "2h". Sem os dois
- * instantes, ou no evento longo e no dia sem hora, nao ha duracao.
+ * instantes, ou na tarefa longa e no dia sem hora, nao ha duracao.
  */
 export function cardDurationLabel(card: TaskCardDto): string | null {
   if (card.longRunning || !card.startedAt || !card.estimatedFinishAt) return null;

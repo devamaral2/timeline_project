@@ -24,7 +24,7 @@ test("roteador e exercício não têm barra de edição", () => {
 
 test("cada tipo que a API aceita tem o texto que o campo mostra", () => {
   expect(EDIT_TARGET_LABELS).toEqual({
-    task: "este evento",
+    task: "esta tarefa",
     artifact: "esta nota",
     food_artifact: "esta refeição",
     sleep_artifact: "esta nota de sono",

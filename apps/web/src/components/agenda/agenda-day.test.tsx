@@ -21,7 +21,7 @@ test("task status and the task annotation do not change the card timing", () => 
 
   const task = screen.getByRole("button", { name: "Tarefa de Revisar proposta: Concluída" });
   const card = task.closest("article");
-  if (!card) throw new Error("Card da tarefa não encontrado");
+  if (!card) throw new Error("Card da tarefa não encontrada");
   expect(within(card).queryByRole("timer")).not.toBeInTheDocument();
   expect(within(card).getByText("Não realizado")).toBeInTheDocument();
   expect(card).toHaveAttribute("data-missed", "true");
@@ -79,7 +79,7 @@ test("free windows fill the gaps between tasks and until midnight, with their du
   expect(within(between).getByText("h")).toBeInTheDocument();
   expect(afterLast).toHaveTextContent("Livre até o fim do dia21:00 — 24:00");
   expect(within(afterLast).getByText("3")).toBeInTheDocument();
-  // Não são eventos: a linha é um botão que leva a janela ao chat do Hermes.
+  // Não são tarefas: a linha é um botão que leva a janela ao chat do Hermes.
   expect(screen.getAllByRole("article")).toHaveLength(2);
   fireEvent.click(screen.getByRole("button", { name: "Planejar com o Hermes a janela livre das 14:00 às 20:00" }));
   expect(onPlanFreeWindow).toHaveBeenCalledWith(expect.objectContaining({ dayKey: "2026-09-15", minutes: 360, endsAtMidnight: false }));

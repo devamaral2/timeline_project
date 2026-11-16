@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TaskDto } from "@repo/contracts";
 import { fieldValue, getField, setField } from "@/components/edit/edit-test-helpers";
 import { type FakeApi, createFakeApi } from "@/test/fake-api";
-import { eventFixture, eventsArea } from "@/test/fake-api/events";
+import { taskFixture, tasksArea } from "@/test/fake-api/tasks";
 
 const replace = vi.fn();
 const push = vi.fn();
@@ -18,11 +18,11 @@ vi.mock("@/lib/api/authed-fetch", async (original) => ({
 const { TaskEditRoute } = await import("./TaskEditRoute");
 
 const NAME = "Treino de força";
-const DETAIL_PATH = "/user-1/eventos/ev-1";
+const DETAIL_PATH = "/user-1/tarefas/ev-1";
 
 /** Um treino de hoje, em curso, com descrição. Revisão 3 para a edição conferir a revisão lida. */
 function training(overrides: Partial<TaskDto> = {}): TaskDto {
-  return eventFixture({
+  return taskFixture({
     id: "ev-1",
     name: NAME,
     kind: "training",
@@ -39,7 +39,7 @@ function training(overrides: Partial<TaskDto> = {}): TaskDto {
 let api: FakeApi;
 
 function install(tasks: TaskDto[]) {
-  api = createFakeApi({ areas: [eventsArea], seed: { events: tasks } });
+  api = createFakeApi({ areas: [tasksArea], seed: { tasks: tasks } });
   net.authedFetch.mockImplementation(api.authedFetch);
 }
 
@@ -76,11 +76,11 @@ afterEach(() => {
 });
 
 describe("modo de edição", () => {
-  it("o cabeçalho diz Editar evento, cada campo é uma entrada, e o rodapé tem só Descartar e Salvar", async () => {
+  it("o cabeçalho diz Editar tarefa, cada campo é uma entrada, e o rodapé tem só Descartar e Salvar", async () => {
     install([training()]);
     renderRoute();
 
-    expect(await screen.findByRole("heading", { level: 1, name: "Editar evento" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: "Editar tarefa" })).toBeInTheDocument();
     expect(fieldValue("Tipo")).toBe("training");
     expect(field("Título")).toHaveValue(NAME);
     expect(fieldValue("Status")).toBe("doing");
@@ -96,10 +96,10 @@ describe("modo de edição", () => {
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
 
-  it("os tipos são os quatro de pessoa, e os status são os do evento mais Sem status", async () => {
+  it("os tipos são os quatro de pessoa, e os status são as da tarefa mais Sem status", async () => {
     install([training()]);
     renderRoute();
-    await screen.findByRole("heading", { level: 1, name: "Editar evento" });
+    await screen.findByRole("heading", { level: 1, name: "Editar tarefa" });
 
     fireEvent.click(field("Tipo"));
     expect(within(screen.getByRole("listbox", { name: "Tipo" })).getAllByRole("option").map((option) => option.textContent)).toEqual([
@@ -117,7 +117,7 @@ describe("Salvar", () => {
   it("manda só os campos que mudaram, com a revisão lida, e volta para a leitura", async () => {
     install([training()]);
     renderRoute();
-    await screen.findByRole("heading", { level: 1, name: "Editar evento" });
+    await screen.findByRole("heading", { level: 1, name: "Editar tarefa" });
 
     type("Título", "Treino de peito");
     type("Prioridade", "urgent");
@@ -131,7 +131,7 @@ describe("Salvar", () => {
   it("sem nenhuma mudança volta para a leitura sem enviar nada", async () => {
     install([training()]);
     renderRoute();
-    await screen.findByRole("heading", { level: 1, name: "Editar evento" });
+    await screen.findByRole("heading", { level: 1, name: "Editar tarefa" });
 
     save();
 
@@ -142,7 +142,7 @@ describe("Salvar", () => {
   it("concluir envia o status com finishedAt do instante atual", async () => {
     install([training()]);
     renderRoute();
-    await screen.findByRole("heading", { level: 1, name: "Editar evento" });
+    await screen.findByRole("heading", { level: 1, name: "Editar tarefa" });
 
     type("Status", "done");
     save();
@@ -152,10 +152,10 @@ describe("Salvar", () => {
     expect(patches()[0]?.body).toEqual({ expectedRevision: 3, status: "done", finishedAt: expect.stringMatching(/^2026-11-14T13:00:/) });
   });
 
-  it("reabrir um evento feito manda finishedAt nulo", async () => {
+  it("reabrir uma tarefa feita manda finishedAt nulo", async () => {
     install([training({ status: "done", finishedAt: "2026-11-14T12:00:00.000Z" })]);
     renderRoute();
-    await screen.findByRole("heading", { level: 1, name: "Editar evento" });
+    await screen.findByRole("heading", { level: 1, name: "Editar tarefa" });
 
     type("Status", "inHold");
     save();
@@ -167,7 +167,7 @@ describe("Salvar", () => {
   it("Sem status manda status nulo", async () => {
     install([training()]);
     renderRoute();
-    await screen.findByRole("heading", { level: 1, name: "Editar evento" });
+    await screen.findByRole("heading", { level: 1, name: "Editar tarefa" });
 
     type("Status", "");
     save();
@@ -176,10 +176,10 @@ describe("Salvar", () => {
     expect(patches()[0]?.body).toEqual({ expectedRevision: 3, status: null });
   });
 
-  it("apagar a data de início remove o início do evento", async () => {
+  it("apagar a data de início remove o início da tarefa", async () => {
     install([training()]);
     renderRoute();
-    await screen.findByRole("heading", { level: 1, name: "Editar evento" });
+    await screen.findByRole("heading", { level: 1, name: "Editar tarefa" });
 
     type("Data de início", "");
     type("Hora de início", "");
@@ -192,7 +192,7 @@ describe("Salvar", () => {
   it("uma data sem hora grava o início à meia-noite local", async () => {
     install([training()]);
     renderRoute();
-    await screen.findByRole("heading", { level: 1, name: "Editar evento" });
+    await screen.findByRole("heading", { level: 1, name: "Editar tarefa" });
 
     // Antes do término (14 nov, 19:20), para não cair na recusa de término antes do início.
     type("Data de início", "2026-11-13");
@@ -206,7 +206,7 @@ describe("Salvar", () => {
   it("uma hora nova no início é gravada no fuso da timeline", async () => {
     install([training()]);
     renderRoute();
-    await screen.findByRole("heading", { level: 1, name: "Editar evento" });
+    await screen.findByRole("heading", { level: 1, name: "Editar tarefa" });
 
     type("Hora de início", "19:00");
     save();
@@ -218,12 +218,12 @@ describe("Salvar", () => {
   it("um título vazio não é enviado: o campo avisa e a tela continua aberta", async () => {
     install([training()]);
     renderRoute();
-    await screen.findByRole("heading", { level: 1, name: "Editar evento" });
+    await screen.findByRole("heading", { level: 1, name: "Editar tarefa" });
 
     type("Título", "  ");
     save();
 
-    expect(await screen.findByText("Dê um título ao evento.")).toBeInTheDocument();
+    expect(await screen.findByText("Dê um título à tarefa.")).toBeInTheDocument();
     expect(patches()).toHaveLength(0);
     expect(replace).not.toHaveBeenCalled();
   });
@@ -231,7 +231,7 @@ describe("Salvar", () => {
   it("uma hora sem data e um término antes do início não são enviados", async () => {
     install([training()]);
     renderRoute();
-    await screen.findByRole("heading", { level: 1, name: "Editar evento" });
+    await screen.findByRole("heading", { level: 1, name: "Editar tarefa" });
 
     type("Data de início", "");
     type("Hora de término", "18:00");
@@ -246,7 +246,7 @@ describe("Descartar", () => {
   it("volta para a leitura sem enviar nada", async () => {
     install([training()]);
     renderRoute();
-    await screen.findByRole("heading", { level: 1, name: "Editar evento" });
+    await screen.findByRole("heading", { level: 1, name: "Editar tarefa" });
 
     type("Título", "Outro nome");
     fireEvent.click(screen.getByRole("button", { name: "Descartar" }));
@@ -257,17 +257,17 @@ describe("Descartar", () => {
 });
 
 describe("revisão desatualizada", () => {
-  it("avisa, recarrega o evento e mantém o que a pessoa digitou", async () => {
+  it("avisa, recarrega a tarefa e mantém o que a pessoa digitou", async () => {
     install([training()]);
     renderRoute();
-    await screen.findByRole("heading", { level: 1, name: "Editar evento" });
+    await screen.findByRole("heading", { level: 1, name: "Editar tarefa" });
 
     type("Título", "Meu título");
-    // Outra tela mudou o evento antes deste salvar: a revisão lida (3) já não vale.
-    api.store.table<TaskDto>("events").set("ev-1", training({ revision: 4, name: "Outro nome", priority: "high" }));
+    // Outra tela mudou a tarefa antes deste salvar: a revisão lida (3) já não vale.
+    api.store.table<TaskDto>("tasks").set("ev-1", training({ revision: 4, name: "Outro nome", priority: "high" }));
     save();
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Este evento mudou em outro lugar.");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Esta tarefa mudou em outro lugar.");
     expect(field("Título")).toHaveValue("Meu título");
     // O campo que a pessoa não mexeu mostra a versão nova.
     expect(fieldValue("Prioridade")).toBe("high");
@@ -277,10 +277,10 @@ describe("revisão desatualizada", () => {
   it("salvar de novo usa a revisão recarregada e manda só o que a pessoa mudou", async () => {
     install([training()]);
     renderRoute();
-    await screen.findByRole("heading", { level: 1, name: "Editar evento" });
+    await screen.findByRole("heading", { level: 1, name: "Editar tarefa" });
 
     type("Título", "Meu título");
-    api.store.table<TaskDto>("events").set("ev-1", training({ revision: 4, name: "Outro nome", priority: "high" }));
+    api.store.table<TaskDto>("tasks").set("ev-1", training({ revision: 4, name: "Outro nome", priority: "high" }));
     save();
     await screen.findByRole("alert");
 
@@ -296,7 +296,7 @@ describe("entrada recusada pela API", () => {
     install([training()]);
     api.failNext("PATCH", "/api/tasks/ev-1", 400);
     renderRoute();
-    await screen.findByRole("heading", { level: 1, name: "Editar evento" });
+    await screen.findByRole("heading", { level: 1, name: "Editar tarefa" });
 
     type("Título", "Meu título");
     save();
@@ -310,12 +310,12 @@ describe("entrada recusada pela API", () => {
     install([training()]);
     api.failNext("PATCH", "/api/tasks/ev-1", 500);
     renderRoute();
-    await screen.findByRole("heading", { level: 1, name: "Editar evento" });
+    await screen.findByRole("heading", { level: 1, name: "Editar tarefa" });
 
     type("Título", "Meu título");
     save();
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível salvar o evento. Tente novamente.");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível salvar a tarefa. Tente novamente.");
     expect(field("Título")).toHaveValue("Meu título");
   });
 });
@@ -328,10 +328,10 @@ describe("tarefa persistente", () => {
     return within(screen.getByRole("group", { name: "Tarefa persistente" })).getByRole("button", { name: label });
   }
 
-  it("Não é o valor atual de um evento comum, e Sim e Não trocam o botão marcado", async () => {
+  it("Não é o valor atual de uma tarefa comum, e Sim e Não trocam o botão marcado", async () => {
     install([training()]);
     renderRoute();
-    await screen.findByRole("heading", { level: 1, name: "Editar evento" });
+    await screen.findByRole("heading", { level: 1, name: "Editar tarefa" });
 
     expect(persistentChoice(NAO)).toHaveAttribute("aria-pressed", "true");
     expect(persistentChoice(SIM)).toHaveAttribute("aria-pressed", "false");
@@ -344,7 +344,7 @@ describe("tarefa persistente", () => {
   it("ligar troca Término por Previsão de entrega, e salvar manda só longRunning", async () => {
     install([training()]);
     renderRoute();
-    await screen.findByRole("heading", { level: 1, name: "Editar evento" });
+    await screen.findByRole("heading", { level: 1, name: "Editar tarefa" });
 
     fireEvent.click(persistentChoice(SIM));
 
@@ -359,7 +359,7 @@ describe("tarefa persistente", () => {
   it("desligar volta a Término, e salvar manda longRunning falso", async () => {
     install([training({ longRunning: true })]);
     renderRoute();
-    await screen.findByRole("heading", { level: 1, name: "Editar evento" });
+    await screen.findByRole("heading", { level: 1, name: "Editar tarefa" });
 
     fireEvent.click(persistentChoice(NAO));
 
@@ -370,10 +370,10 @@ describe("tarefa persistente", () => {
     expect(patches()[0]?.body).toEqual({ expectedRevision: 3, longRunning: false });
   });
 
-  it("evento longo com status Não realizado é recusado no status, sem enviar", async () => {
+  it("tarefa longa com status Não realizado é recusado no status, sem enviar", async () => {
     install([training({ status: "missed" })]);
     renderRoute();
-    await screen.findByRole("heading", { level: 1, name: "Editar evento" });
+    await screen.findByRole("heading", { level: 1, name: "Editar tarefa" });
 
     fireEvent.click(persistentChoice(SIM));
     save();
@@ -386,7 +386,7 @@ describe("tarefa persistente", () => {
   it("sem ser longo, um bloco de mais de 31 dias é recusado com a sugestão, e não envia", async () => {
     install([training()]);
     renderRoute();
-    await screen.findByRole("heading", { level: 1, name: "Editar evento" });
+    await screen.findByRole("heading", { level: 1, name: "Editar tarefa" });
 
     type("Data de término", "2026-12-20");
     save();
@@ -395,10 +395,10 @@ describe("tarefa persistente", () => {
     expect(patches()).toHaveLength(0);
   });
 
-  it("evento longo sem previsão de entrega não oferece lembrete, e um lembrete que sobra é recusado", async () => {
+  it("tarefa longa sem previsão de entrega não oferece lembrete, e um lembrete que sobra é recusado", async () => {
     install([training({ longRunning: true, estimatedFinishAt: undefined, notifyOffsetsMinutes: [30] })]);
     renderRoute();
-    await screen.findByRole("heading", { level: 1, name: "Editar evento" });
+    await screen.findByRole("heading", { level: 1, name: "Editar tarefa" });
 
     expect(screen.queryByRole("button", { name: "Adicionar lembrete" })).not.toBeInTheDocument();
     expect(screen.getByText("Sem previsão de entrega não há lembrete.")).toBeInTheDocument();
@@ -410,18 +410,18 @@ describe("tarefa persistente", () => {
 });
 
 describe("casos de tela", () => {
-  it("evento inexistente mostra a tela de não encontrado", async () => {
+  it("tarefa inexistente mostra a tela de não encontrado", async () => {
     install([]);
     renderRoute();
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Evento não encontrado.");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Tarefa não encontrada.");
   });
 
-  it("evento de agente não se edita aqui", async () => {
-    install([eventFixture({ id: "ev-1", actor: "agent", kind: "request", status: "running", priority: "medium", name: "Pesquisar voos" })]);
+  it("tarefa de agente não se edita aqui", async () => {
+    install([taskFixture({ id: "ev-1", actor: "agent", kind: "request", status: "running", priority: "medium", name: "Pesquisar voos" })]);
     renderRoute();
 
-    expect(await screen.findByRole("status")).toHaveTextContent("Este evento é do agente e não se edita aqui.");
+    expect(await screen.findByRole("status")).toHaveTextContent("Esta tarefa é do agente e não se edita aqui.");
     expect(screen.queryByRole("button", { name: "Salvar" })).not.toBeInTheDocument();
   });
 });

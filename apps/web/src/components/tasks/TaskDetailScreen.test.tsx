@@ -6,7 +6,7 @@ import { noteOf } from "./note-fixtures";
 /** 15 de abril de 2026, 10:00 — 11:00 no fuso da timeline. */
 function taskAt(overrides: Partial<PreviewTask> = {}): PreviewTask {
   return {
-    id: "evento-1",
+    id: "tarefa-1",
     name: "Reunião de planejamento",
     description: "Fechar o escopo da próxima entrega.",
     startedAt: "2026-04-15T10:00:00-03:00",
@@ -60,7 +60,7 @@ test("mostra a composição da tela: tipo, nome, data, horário e as seções", 
   expect(screen.getByRole("link", { name: "Voltar para a agenda" })).toHaveAttribute("href", "/alguem");
 });
 
-test("o cartão resume tags, metadados e a situação do evento no tempo", () => {
+test("o cartão resume tags, metadados e a situação da tarefa no tempo", () => {
   render(
     <TaskDetailScreen
       task={taskAt({ priority: "urgent", notifyOffsetsMinutes: [15], missed: true, tags: ["trabalho", "equipe"] })}
@@ -68,7 +68,7 @@ test("o cartão resume tags, metadados e a situação do evento no tempo", () =>
     />,
   );
 
-  const summary = screen.getByRole("region", { name: "Resumo do evento" });
+  const summary = screen.getByRole("region", { name: "Resumo da tarefa" });
   expect(within(summary).getByText("Urgente")).toBeInTheDocument();
   expect(within(summary).getByText("15 minutos antes")).toBeInTheDocument();
   expect(within(summary).getByText("Não realizado")).toBeInTheDocument();
@@ -77,14 +77,14 @@ test("o cartão resume tags, metadados e a situação do evento no tempo", () =>
   expect(within(summary).getByRole("img", { name: "Já aconteceu" })).toBeInTheDocument();
 });
 
-test("um evento que ainda não começou é anunciado como tal", () => {
+test("uma tarefa que ainda não começou é anunciado como tal", () => {
   const task = taskAt({ startedAt: "2026-04-16T10:00:00-03:00", finishedAt: "2026-04-16T11:00:00-03:00" });
   render(<TaskDetailScreen task={task} backHref="/alguem" />);
 
   expect(screen.getByRole("img", { name: "Ainda vai acontecer" })).toBeInTheDocument();
 });
 
-test("um evento sem hora de fim que já começou aparece em andamento, com cronômetro", () => {
+test("uma tarefa sem hora de fim que já começou aparece em andamento, com cronômetro", () => {
   const task = taskAt({ startedAt: "2026-04-15T14:30:00-03:00", finishedAt: undefined });
   render(<TaskDetailScreen task={task} backHref="/alguem" />);
 
@@ -103,10 +103,10 @@ test("as tarefas vinculadas aparecem com o status; sem elas, a seção diz que n
   expect(screen.getByRole("img", { name: "Concluída" })).toBeInTheDocument();
 });
 
-test("sem ações, o menu do evento fica desligado — o estudo visual não promete o que não faz", () => {
+test("sem ações, o menu da tarefa fica desligado — o estudo visual não promete o que não faz", () => {
   render(<TaskDetailScreen task={taskAt()} backHref="/alguem" />);
 
-  expect(screen.getByRole("button", { name: "Mais opções do evento" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Mais opções da tarefa" })).toBeDisabled();
 });
 
 test("o menu conduz editar, a anotação de não realizado e excluir", () => {
@@ -118,17 +118,17 @@ test("o menu conduz editar, a anotação de não realizado e excluir", () => {
   };
   render(<TaskDetailScreen task={taskAt()} backHref="/alguem" actions={actions} />);
 
-  fireEvent.click(screen.getByRole("button", { name: /Editar evento/ }));
+  fireEvent.click(screen.getByRole("button", { name: /Editar tarefa/ }));
   expect(actions.onEdit).toHaveBeenCalledOnce();
 
   fireEvent.click(screen.getByRole("button", { name: /Marcar como não realizado/ }));
   expect(actions.onToggleMissed).toHaveBeenCalledOnce();
 
-  fireEvent.click(screen.getByRole("button", { name: /Excluir evento/ }));
+  fireEvent.click(screen.getByRole("button", { name: /Excluir tarefa/ }));
   expect(actions.onDelete).toHaveBeenCalledOnce();
 });
 
-test("num evento já anotado, o menu oferece desfazer a anotação", () => {
+test("numa tarefa já anotado, o menu oferece desfazer a anotação", () => {
   const actions = { onEdit: vi.fn(), onToggleMissed: vi.fn(), onDelete: vi.fn(), savingMissed: false };
   render(<TaskDetailScreen task={taskAt({ missed: true })} backHref="/alguem" actions={actions} />);
 

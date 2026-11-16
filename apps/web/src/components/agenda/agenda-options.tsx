@@ -64,7 +64,7 @@ export function AgendaOptions({ mode, onModeChange, showFreeTime, onShowFreeTime
           ) : null}
           <p className={styles.optionsLabel}>Na lista</p>
           <div className={styles.optionsRow}>
-            <span id={labelId} className={styles.optionsText}><strong>Tempo livre</strong><small>Janelas de 15 min ou mais entre os eventos</small></span>
+            <span id={labelId} className={styles.optionsText}><strong>Tempo livre</strong><small>Janelas de 15 min ou mais entre as tarefas</small></span>
             <button type="button" role="switch" aria-checked={showFreeTime} aria-labelledby={labelId} className={styles.optionsSwitch} onClick={() => onShowFreeTimeChange(!showFreeTime)} />
           </div>
         </div>

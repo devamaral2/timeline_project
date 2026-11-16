@@ -15,7 +15,7 @@ interface TaskChoiceProps<T extends string> {
   /** O nome que o leitor de tela anuncia no botão, com o valor atual e a ação. */
   ariaLabel: string;
   listLabel: string;
-  /** `null` quando o evento não tem o valor (o evento de referência sem status). */
+  /** `null` quando a tarefa não tem o valor (a tarefa de referência sem status). */
   value: T | null;
   options: ChoiceOption<T>[];
   /** O conteúdo visível do botão, sem o seta. */
@@ -25,7 +25,7 @@ interface TaskChoiceProps<T extends string> {
 }
 
 /**
- * Uma escolha pequena no topo do evento (status e prioridade): o botão abre a
+ * Uma escolha pequena no topo da tarefa (status e prioridade): o botão abre a
  * lista, a lista é um `listbox` e fecha com Esc ou toque fora, como no resto das
  * telas de detalhe. Escolher o valor que já está não grava nada.
  */
@@ -65,7 +65,7 @@ export function TaskChoice<T extends string>({ ariaLabel, listLabel, value, opti
 
 interface TaskChoiceListProps<T extends string> {
   listLabel: string;
-  /** `null` quando o evento não tem o valor: nenhuma opção fica marcada. */
+  /** `null` quando a tarefa não tem o valor: nenhuma opção fica marcada. */
   value: T | null;
   options: ChoiceOption<T>[];
   /** A classe do quadro da lista; o padrão é o do topo do detalhe (posicionado sob o botão). */

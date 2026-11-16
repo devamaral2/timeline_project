@@ -219,7 +219,7 @@ export function SleepNote({ data, agendaMinutes }: { data: SleepData; agendaMinu
         <Metric label={`Tempo registrado: ${formatMinutes(data.trackedSleepTime)}`} title="Tempo registrado"><Duration minutes={data.trackedSleepTime} /></Metric>
       </div>
       <div className={styles.scoreBar} role="img" aria-label={`Pontuação do sono: ${data.score} de 100`}><i style={{ width: `${score}%` }} /></div>
-      {agendaMinutes !== null ? <p className={styles.noteFoot}>Registrado pelo app de sono. Na agenda, o evento durou {formatMinutes(agendaMinutes)}.</p> : null}
+      {agendaMinutes !== null ? <p className={styles.noteFoot}>Registrado pelo app de sono. Na agenda, a tarefa durou {formatMinutes(agendaMinutes)}.</p> : null}
     </div>
   );
 }

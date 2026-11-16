@@ -3,7 +3,7 @@
 import { useEffect, useState, type KeyboardEvent } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { suggestTags } from "@/lib/api/events";
+import { suggestTags } from "@/lib/api/tasks";
 import { tagAccentStyle, tagColorStyle } from "@/lib/tags/tag-color";
 import type { TagSuggestionDto } from "@repo/contracts";
 import { fieldLabelClass } from "./field-styles";

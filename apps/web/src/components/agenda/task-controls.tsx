@@ -89,8 +89,8 @@ export function TrackingDialog({ selected, tracking, missed, onTrackingChange, o
             ))}
           </fieldset>
         </> : null}
-        <section className={styles.taskAnnotation} aria-label="Anotação do evento">
-          <h3>Este evento <span>{mediumDate(selected.dayKey)} · {selected.task.time}</span></h3>
+        <section className={styles.taskAnnotation} aria-label="Anotação da tarefa">
+          <h3>Esta tarefa <span>{mediumDate(selected.dayKey)} · {selected.task.time}</span></h3>
           <label><input type="checkbox" checked={missed} onChange={(event) => onMissedChange(event.target.checked)} />Não realizado</label>
           <p>{tracking ? "A marca vale para este horário. O status e a prioridade pertencem à tarefa." : "Uma anotação sua sobre este horário."}</p>
         </section>

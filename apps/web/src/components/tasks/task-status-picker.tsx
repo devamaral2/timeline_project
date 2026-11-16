@@ -15,7 +15,7 @@ const EDGE = 16;
 
 /**
  * A escolha dos sete status de pessoa, aberta pelo glifo de uma linha: o ponto
- * azul de um evento de referência na agenda e o glifo de qualquer tarefa na
+ * azul de uma tarefa de referência na agenda e o glifo de qualquer tarefa na
  * lista de tarefas. A lista é a mesma do topo do detalhe; aqui ela abre logo
  * abaixo do glifo tocado, alinhada à esquerda dele (acima, quando não cabe
  * embaixo), com o status atual marcado, e fecha com Esc ou toque fora. Sem
@@ -57,7 +57,7 @@ export function TaskStatusPicker({ card, anchor, onPick, onClose }: {
   return (
     <div ref={ref} role="dialog" aria-label={`Status de “${card.name}”`} className={styles.statusPicker}>
       <TaskChoiceList<HumanTaskStatus>
-        listLabel="Status do evento"
+        listLabel="Status da tarefa"
         value={current}
         className={detail.choiceList}
         options={humanStatusOptions(card).map((value) => ({

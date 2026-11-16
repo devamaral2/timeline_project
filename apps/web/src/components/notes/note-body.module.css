@@ -1,5 +1,5 @@
 /*
- * O corpo de uma nota — o mesmo dentro do evento e no detalhe da nota. Texto é
+ * O corpo de uma nota — o mesmo dentro da tarefa e no detalhe da nota. Texto é
  * markdown; refeição, treino e sono abrem com o número principal na serifa (e,
  * ao lado, o tempo), seguido da barra, das listas com fio e da receita. Sem
  * moldura nem ícone: o número carrega. Tokens (--ink, --muted, --line) vêm do

@@ -25,7 +25,7 @@ function cardOf(overrides: Partial<TaskCardDto>): TaskCardDto {
 }
 
 describe("TaskRow", () => {
-  it("mostra o glifo, o título, o tipo, o quando, as tags e a duração de um evento de pessoa", () => {
+  it("mostra o glifo, o título, o tipo, o quando, as tags e a duração de uma tarefa de pessoa", () => {
     const card = cardOf({
       status: "todo",
       kind: "common",
@@ -44,7 +44,7 @@ describe("TaskRow", () => {
     expect(screen.getByText("1h30")).toBeInTheDocument();
   });
 
-  it("mostra o evento de referência como ponto 'Só agenda', com glifo que é botão", () => {
+  it("mostra a tarefa de referência como ponto 'Só agenda', com glifo que é botão", () => {
     const card = cardOf({
       id: "ev-2",
       kind: "meal",
@@ -64,7 +64,7 @@ describe("TaskRow", () => {
     expect(container.querySelector("[data-agent-mark]")).not.toBeInTheDocument();
   });
 
-  it("mostra o evento de agente com o robô de assinatura, glifo que não é botão e tempo decorrido no quando", () => {
+  it("mostra a tarefa de agente com o robô de assinatura, glifo que não é botão e tempo decorrido no quando", () => {
     const card = cardOf({
       id: "ev-3",
       actor: "agent",
@@ -85,7 +85,7 @@ describe("TaskRow", () => {
     expect(container.querySelector("[data-agent-mark]")).toBeInTheDocument();
   });
 
-  it("a sequência não muda a linha: evento em espera que se segue a outro mostra só o quando", () => {
+  it("a sequência não muda a linha: tarefa em espera que se segue a outra mostra só o quando", () => {
     const card = cardOf({
       status: "inHold",
       kind: "common",
@@ -109,7 +109,7 @@ describe("TaskRow", () => {
     expect(when).toHaveAttribute("data-overdue", "true");
   });
 
-  it("chama onStatusClick com o cartão ao tocar no glifo de evento de pessoa", () => {
+  it("chama onStatusClick com o cartão ao tocar no glifo de tarefa de pessoa", () => {
     const onStatusClick = vi.fn();
     const card = cardOf({ status: "todo" });
 
@@ -120,11 +120,11 @@ describe("TaskRow", () => {
     expect(onStatusClick).toHaveBeenCalledWith(card, expect.any(HTMLElement));
   });
 
-  it("leva ao detalhe do evento ao tocar no resto da linha", () => {
+  it("leva ao detalhe da tarefa ao tocar no resto da linha", () => {
     render(<TaskRow card={cardOf({ status: "todo" })} userId="user-1" now={NOW} />);
 
     const link = screen.getByRole("link", { name: /Revisar proposta/ });
-    expect(link).toHaveAttribute("href", "/user-1/eventos/ev-1");
+    expect(link).toHaveAttribute("href", "/user-1/tarefas/ev-1");
     expect(within(link).getByText("Revisar proposta")).toBeInTheDocument();
   });
 });

@@ -9,7 +9,7 @@ import { TaskStatusPicker } from "@/components/tasks/task-status-picker";
 import { ListSkeleton } from "@/components/ui/list-skeleton";
 import page from "@/components/ui/page.module.css";
 import { ApiRequestError } from "@/lib/api/client-request";
-import { listTrackedEvents, updateEvent } from "@/lib/api/events";
+import { listTrackedTasks, updateTask } from "@/lib/api/tasks";
 import { hasOpenAgentTask } from "@/lib/tasks/agent-request-model";
 import { statusPatch } from "@/lib/tasks/task-read-model";
 import { taskPriorityLabels } from "@/components/tasks/task-priority-mark";
@@ -44,14 +44,14 @@ function openTasksLabel(open: number): string {
 }
 
 /**
- * A lista de tarefas: os eventos com status (de pessoa e de agente) da rota
+ * A lista de tarefas: as tarefas com status (de pessoa e de agente) da rota
  * `tracked`, nos grupos do canvas. Feitas e Encerradas vêm recolhidos. Cada
- * linha é a `EventRow`; o glifo de um evento de pessoa abre a escolha dos
+ * linha é a `TaskRow`; o glifo de uma tarefa de pessoa abre a escolha dos
  * status, e a linha muda de grupo com o status escolhido. Tag, prioridade e texto são parâmetros da consulta: a
  * tela não filtra na mão. As opções de tag vêm da lista sem filtro. No celular os
  * filtros moram no menu de opções da barra inferior (tocar na aba Tarefas já
  * selecionada): cada tag é uma lista, a prioridade fica na engrenagem. Recarregar
- * sozinha, sem o estado de carregando, enquanto houver evento de agente em aberto.
+ * sozinha, sem o estado de carregando, enquanto houver tarefa de agente em aberto.
  */
 export function TaskListScreen({ userId }: { userId: string }) {
   const now = useNow();
@@ -84,13 +84,13 @@ export function TaskListScreen({ userId }: { userId: string }) {
 
   /**
    * Relê a lista com os filtros atuais. Falha vira o aviso de carregamento com "Tentar de novo". Releitura
-   * silenciosa (`quiet`, a do evento de agente em aberto) troca os dados sem o estado de carregando e, se
+   * silenciosa (`quiet`, a da tarefa de agente em aberto) troca os dados sem o estado de carregando e, se
    * falhar, mantém a lista que já está na tela.
    */
   const refresh = useCallback(async (quiet = false) => {
     const request = ++latestRequest.current;
     try {
-      const list = await listTrackedEvents({ ...trackedFilters(filters), actor: viewMode.actor });
+      const list = await listTrackedTasks({ ...trackedFilters(filters), actor: viewMode.actor });
       if (request !== latestRequest.current) return;
       setCards(list);
       setError(false);
@@ -105,7 +105,7 @@ export function TaskListScreen({ userId }: { userId: string }) {
     void refresh();
   }, [refresh]);
 
-  // Enquanto houver evento de agente em aberto nesta lista, ela se relê sozinha; sem ele, não há recarga.
+  // Enquanto houver tarefa de agente em aberto nesta lista, ela se relê sozinha; sem ele, não há recarga.
   useOpenAgentRefresh(hasOpenAgentTask(cards ?? []), () => refresh(true));
 
   const retry = useCallback(() => {
@@ -121,7 +121,7 @@ export function TaskListScreen({ userId }: { userId: string }) {
     setQuery("");
   }
 
-  /** O glifo de um evento de pessoa abre a escolha de status. Evento de agente não muda status. */
+  /** O glifo de uma tarefa de pessoa abre a escolha de status. Tarefa de agente não muda status. */
   function openStatusPicker(card: TaskCardDto, anchor: HTMLElement) {
     if (saving || card.actor !== "human") return;
     setStatusAnchor(anchor);
@@ -138,7 +138,7 @@ export function TaskListScreen({ userId }: { userId: string }) {
     setSaving(true);
     setNotice(null);
     try {
-      await updateEvent(card.id, statusPatch(card, status, new Date()));
+      await updateTask(card.id, statusPatch(card, status, new Date()));
       window.dispatchEvent(new Event(agendaRefreshEvent));
       await refresh();
     } catch (cause) {
@@ -223,7 +223,7 @@ export function TaskListScreen({ userId }: { userId: string }) {
           activeFilters > 0 ? (
             <div className={styles.empty}>
               <ListChecks aria-hidden />
-              <h2 className={styles.emptyTitle}>Nenhum evento passou no filtro</h2>
+              <h2 className={styles.emptyTitle}>Nenhuma tarefa passou no filtro</h2>
               <p className={styles.emptyText}>Nada combina com os filtros escolhidos.</p>
               <button type="button" className={styles.emptyAction} onClick={clearFilters}>Limpar filtros</button>
             </div>
@@ -232,7 +232,7 @@ export function TaskListScreen({ userId }: { userId: string }) {
               <ListChecks aria-hidden />
               <h2 className={styles.emptyTitle}>Nenhuma tarefa por aqui</h2>
               <p className={styles.emptyText}>Crie a primeira tarefa para começar a organizar o seu dia.</p>
-              <button type="button" className={styles.emptyAction} onClick={() => router.push(`/${userId}/eventos/novo`)}>Novo evento</button>
+              <button type="button" className={styles.emptyAction} onClick={() => router.push(`/${userId}/tarefas/nova`)}>Nova tarefa</button>
             </div>
           )
         ) : (

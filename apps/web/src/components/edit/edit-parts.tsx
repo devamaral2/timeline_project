@@ -6,7 +6,7 @@ import { detailStyles } from "@/components/detail/detail-parts";
 import styles from "./edit.module.css";
 import { OptionList, Popover } from "./popover";
 
-/** O topo do modo de edição: só o rótulo ("Editar evento", "Novo artefato"), sem botões. */
+/** O topo do modo de edição: só o rótulo ("Editar tarefa", "Novo artefato"), sem botões. */
 export function EditBar({ children }: { children: ReactNode }) {
   return (
     <header className={styles.bar}>

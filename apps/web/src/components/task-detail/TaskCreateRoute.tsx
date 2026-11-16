@@ -5,7 +5,7 @@ import { useMotionRouter } from "@/components/shell/navigation-motion";
 import { TaskEditView } from "./TaskEditView";
 
 /**
- * A criação de evento, na rota `/eventos/novo`: o formulário da edição, vazio.
+ * A criação de tarefa, na rota `/tarefas/nova`: o formulário da edição, vazio.
  * `?nome=` põe o título. Salvar e Descartar voltam para a tela de onde a pessoa
  * veio; sem histórico (a rota aberta direto), vão para a agenda.
  */

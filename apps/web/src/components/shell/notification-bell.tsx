@@ -25,14 +25,14 @@ function browserPermission(): NotificationPermission | "unsupported" {
 }
 
 function hrefOf(userId: string, item: { kind: "agenda" | "task"; sourceId: string }): string | undefined {
-  return item.kind === "agenda" ? `/${userId}/eventos/${item.sourceId}` : undefined;
+  return item.kind === "agenda" ? `/${userId}/tarefas/${item.sourceId}` : undefined;
 }
 
 function showBrowserNotification(userId: string, notification: DueNotification) {
   if (browserPermission() !== "granted") return;
   try {
     const instance = new Notification(notification.name, {
-      body: `${notification.kind === "task" ? "Tarefa" : "Evento"} · ${notificationOffsetLabel(notification.offsetMinutes)}`,
+      body: `Tarefa · ${notificationOffsetLabel(notification.offsetMinutes)}`,
       tag: notification.key,
     });
     const href = hrefOf(userId, notification);
@@ -66,11 +66,11 @@ function upcomingAt(nowMs: number, atMs: number): string {
 
 /**
  * O sino do cabecalho: avisos que ja venceram nas ultimas 24h e os proximos,
- * todos derivados de `notify_offsets_minutes` de eventos e tarefas. Tambem e
+ * todos derivados de `notify_offsets_minutes` de tarefas. Tambem e
  * quem entrega o aviso na hora — toast na pagina e notificacao do navegador —
  * em qualquer tela do app, nao so na agenda.
  */
-/** Os avisos de eventos e tarefas, lidos e atualizados; quem desenha (sino ou tela) é de quem chama. */
+/** Os avisos das tarefas, lidos e atualizados; quem desenha (sino ou tela) é de quem chama. */
 export function useNotificationFeed() {
   const now = useNow();
   const nowMinute = now ? Math.floor(now.getTime() / 60_000) * 60_000 : null;
@@ -133,7 +133,7 @@ export function NotificationFeed({ userId, state }: { userId: string; state: Not
       </header>
 
       {feed.recent.length === 0 && feed.upcoming.length === 0 ? (
-        <p className={styles.notificationEmpty}>Nenhum aviso por enquanto. Defina um aviso ao criar um evento ou tarefa.</p>
+        <p className={styles.notificationEmpty}>Nenhum aviso por enquanto. Defina um aviso ao criar uma tarefa.</p>
       ) : null}
 
       {feed.recent.length > 0 ? (
@@ -176,7 +176,7 @@ export function NotificationFeed({ userId, state }: { userId: string; state: Not
 
 /**
  * O sino do cabecalho: avisos que ja venceram nas ultimas 24h e os proximos,
- * todos derivados de `notify_offsets_minutes` de eventos e tarefas. Tambem e
+ * todos derivados de `notify_offsets_minutes` de tarefas. Tambem e
  * quem entrega o aviso na hora — toast na pagina e notificacao do navegador —
  * em qualquer tela do app, nao so na agenda.
  */
@@ -300,7 +300,7 @@ function NotificationRow({
       <span className={styles.notificationText}>
         <strong>{item.name}</strong>
         <small>
-          {item.kind === "task" ? "Tarefa" : "Evento"} · {notificationOffsetLabel(item.offsetMinutes)}
+          Tarefa · {notificationOffsetLabel(item.offsetMinutes)}
         </small>
       </span>
       <time>{caption}</time>

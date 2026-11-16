@@ -1,5 +1,5 @@
 /*
- * O markdown de uma nota, igual na leitura (detalhe da nota e do evento) e no
+ * O markdown de uma nota, igual na leitura (detalhe da nota e da tarefa) e no
  * preview do editor. Usa os tokens base (--foreground, --muted-foreground,
  * --border) e não os apelidos do shell (--ink, --muted): o editor abre em um
  * portal, fora do shell, onde --muted é uma cor de fundo.

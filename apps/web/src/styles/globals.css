@@ -16,7 +16,7 @@
  * principal e sempre o fio tinta (`--primary`, #203d46 no claro, #ece8df no
  * escuro).
  *
- * As cores por tipo de evento seguem o vocabulario do dominio:
+ * As cores por tipo de tarefa seguem o vocabulario do dominio:
  * routine | meal | training | sleep — mesma luminosidade e croma, so o matiz
  * muda. Os `--strand-*` sao os quatro fios solidos do simbolo.
  *
@@ -119,7 +119,7 @@
   --card-shadow: none;
   --card-shadow-hover: 0 12px 28px oklch(0.249 0.022 220.8 / 0.12);
   /* Paleta de cores para tags geradas por hash: mesma luminosidade/croma dos
-     tokens de tipo de evento acima, variando apenas o matiz (hue), para que
+     tokens de tipo de tarefa acima, variando apenas o matiz (hue), para que
      qualquer cor de tag permaneça harmonica com o resto da UI. */
   --tag-lightness: 0.53;
   --tag-chroma: 0.09;

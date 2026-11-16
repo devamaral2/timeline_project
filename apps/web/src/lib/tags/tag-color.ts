@@ -12,7 +12,7 @@ import { hueForTag } from "@repo/theme";
 
 /**
  * Cor solida da tag (usada em pontos/indicadores), na mesma luminosidade e
- * croma dos tokens de cor por tipo de evento (--sleep, --training, --food,
+ * croma dos tokens de cor por tipo de tarefa (--sleep, --training, --food,
  * --routine) — so o matiz varia, para que qualquer cor de tag permaneca
  * harmonica com o resto do design system.
  */

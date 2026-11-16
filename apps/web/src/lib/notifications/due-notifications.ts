@@ -1,6 +1,6 @@
 import type { TaskCardDto, NotificationOffsetMinutes } from "@repo/contracts";
 
-/** O que o aviso precisa de um evento: o cartao da agenda ou da lista de acompanhados serve. */
+/** O que o aviso precisa de uma tarefa: o cartao da agenda ou da lista de acompanhados serve. */
 export type NotificationSource = Pick<
   TaskCardDto,
   "id" | "name" | "status" | "longRunning" | "startedAt" | "estimatedFinishAt" | "notifyOffsetsMinutes"
@@ -32,8 +32,8 @@ export function kindOf(source: NotificationSource): NotificationKind {
 }
 
 /**
- * O instante de que o aviso conta: o inicio, e no evento longo o prazo. `undefined`
- * quando nao ha o que avisar: sem data, evento longo sem prazo, ou ja concluido ou cancelado.
+ * O instante de que o aviso conta: o inicio, e na tarefa longa o prazo. `undefined`
+ * quando nao ha o que avisar: sem data, tarefa longa sem prazo, ou ja concluido ou cancelado.
  */
 export function notificationAnchorOf(source: NotificationSource): string | undefined {
   if (source.status === "done" || source.status === "cancel") return undefined;
@@ -48,7 +48,7 @@ function anchorTimingOf(source: NotificationSource): { anchor: string; anchorMs:
 }
 
 export function notificationKeyOf(source: NotificationSource, offsetMinutes: NotificationOffsetMinutes): string {
-  // O instante de referencia entra na chave: remarcar um evento (ou mudar o prazo do longo) recria o aviso.
+  // O instante de referencia entra na chave: remarcar uma tarefa (ou mudar o prazo do longo) recria o aviso.
   return `${source.id}:${notificationAnchorOf(source) ?? ""}:${offsetMinutes}`;
 }
 
@@ -143,7 +143,7 @@ export interface NotificationFeedItem {
  * A lista do sino, derivada so dos cartoes de agenda e de acompanhados: o que ja
  * venceu nas ultimas 24h (mais recente primeiro) e os proximos avisos (mais
  * proximo primeiro). Nao ha historico guardado — web e Android calculam o
- * mesmo resultado a partir dos mesmos eventos.
+ * mesmo resultado a partir das mesmas tarefas.
  */
 export function notificationFeedOf(
   sources: readonly NotificationSource[],

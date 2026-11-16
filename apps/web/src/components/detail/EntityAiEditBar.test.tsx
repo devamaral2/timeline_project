@@ -40,10 +40,10 @@ function editCall() {
   return api.calls.find((call) => call.pathname === "/api/requests/edit");
 }
 
-test("um evento: o pedido leva o tipo e o id do evento, mostra o andamento e recarrega ao terminar", async () => {
+test("uma tarefa: o pedido leva o tipo e o id da tarefa, mostra o andamento e recarrega ao terminar", async () => {
   const { onEdited } = setup();
-  const input = screen.getByRole("textbox", { name: "Pedir à IA para editar este evento" });
-  expect(input).toHaveAttribute("placeholder", "Peça uma mudança neste evento");
+  const input = screen.getByRole("textbox", { name: "Pedir à IA para editar esta tarefa" });
+  expect(input).toHaveAttribute("placeholder", "Peça uma mudança nesta tarefa");
 
   fireEvent.change(input, { target: { value: "mude para 19h" } });
   fireEvent.click(screen.getByRole("button", { name: "Enviar pedido" }));
@@ -55,21 +55,21 @@ test("um evento: o pedido leva o tipo e o id do evento, mostra o andamento e rec
   advanceRequest(api, openedRequest(), {
     status: "running",
     progress: "Trocando o horário",
-    steps: [{ id: "s1", agent: "event-edit", label: "Editando eventos", status: "running" }],
+    steps: [{ id: "s1", agent: "task-edit", label: "Editando tarefas", status: "running" }],
   });
   expect(await screen.findByText("Trocando o horário")).toBeInTheDocument();
 
   advanceRequest(api, openedRequest(), {
     status: "done",
     message: "Troquei para 19h.",
-    steps: [{ id: "s1", agent: "event-edit", label: "Editando eventos", status: "done" }],
+    steps: [{ id: "s1", agent: "task-edit", label: "Editando tarefas", status: "done" }],
     entities: [{ kind: "task", id: "e1", name: "Revisão semanal", operation: "update", linkedTo: [] }],
   });
   expect(await screen.findByText("Pronto")).toBeInTheDocument();
-  expect(screen.getByText("Editando eventos")).toBeInTheDocument();
+  expect(screen.getByText("Editando tarefas")).toBeInTheDocument();
   expect(screen.getByText("Troquei para 19h.")).toBeInTheDocument();
   await waitFor(() => expect(onEdited).toHaveBeenCalledTimes(1));
-  expect(screen.getByRole("textbox", { name: "Pedir à IA para editar este evento" })).toHaveValue("");
+  expect(screen.getByRole("textbox", { name: "Pedir à IA para editar esta tarefa" })).toHaveValue("");
 });
 
 test("um artefato de texto: o pedido leva o tipo artifact e o id da nota", async () => {

@@ -14,8 +14,8 @@ function isNotFound(error: unknown): boolean {
 /**
  * O estado da recorrência no formulário, fora do `TaskDraft`. Com `recurrenceId`
  * (uma ocorrência), lê a série com `getRecurrence` e o rascunho começa dela; sem
- * ele (criação ou evento avulso), `draft` é `null` até a pessoa definir a regra.
- * Quando a série some (apagada e o evento relido), o estado volta ao vazio.
+ * ele (criação ou tarefa avulso), `draft` é `null` até a pessoa definir a regra.
+ * Quando a série some (apagada e a tarefa relida), o estado volta ao vazio.
  */
 export function useRecurrenceDraft(recurrenceId: string | null) {
   const [series, setSeries] = useState<RecurrenceDto | null>(null);

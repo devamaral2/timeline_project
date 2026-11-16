@@ -7,7 +7,7 @@ export const noteExamples: NotePreview[] = [
     "group": "Hoje",
     "title": "Frango grelhado com arroz integral e legumes",
     "body": "Informações nutricionais e receita. 512 kcal, 51 g de proteína, preparo em 35 min.",
-    "source": "Evento · Almoço",
+    "source": "Tarefa · Almoço",
     "time": "09:40",
     "tags": [
       "caseiro"
@@ -18,7 +18,7 @@ export const noteExamples: NotePreview[] = [
     "group": "Hoje",
     "title": "Treino A · peito e tríceps",
     "body": "415 kcal gastas em 1 h. Esteira por 20 min e musculação com supino, crucifixo e tríceps na polia.",
-    "source": "Evento · Academia",
+    "source": "Tarefa · Academia",
     "time": "08:05",
     "tags": [
       "saúde",
@@ -30,7 +30,7 @@ export const noteExamples: NotePreview[] = [
     "group": "Hoje",
     "title": "Noite de 13 para 14 de setembro",
     "body": "Pontuação do sono 82 de 100. O app registrou 7 h 02; na agenda foram 7 h 30.",
-    "source": "Evento · Noite de sono",
+    "source": "Tarefa · Noite de sono",
     "time": "06:45",
     "tags": []
   },

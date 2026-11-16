@@ -25,7 +25,7 @@ it("relê a cada intervalo enquanto estiver habilitado", async () => {
   expect(refresh).toHaveBeenCalledTimes(3);
 });
 
-it("sem evento de agente em aberto (desabilitado), não relê", async () => {
+it("sem tarefa de agente em aberto (desabilitado), não relê", async () => {
   const refresh = vi.fn();
   renderHook(() => useOpenAgentRefresh(false, refresh));
 

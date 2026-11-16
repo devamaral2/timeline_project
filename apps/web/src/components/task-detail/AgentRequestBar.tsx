@@ -19,16 +19,16 @@ import { AGENT_REQUEST_POLL_MS } from "./use-agent-request";
 
 interface AgentRequestBarProps {
   userId: string;
-  /** O pedido do evento de agente, como a tela o mostra. */
+  /** O pedido da tarefa de agente, como a tela o mostra. */
   request: RequestDto;
-  /** Um cancelamento que devolveu o pedido do evento: a tela o aplica sem reler. */
+  /** Um cancelamento que devolveu o pedido da tarefa: a tela o aplica sem reler. */
   onRequestChange: (view: RequestDto) => void;
 }
 
 /**
- * O campo do agente no pé do detalhe de um evento de agente. Mesmo desenho do campo de IA (uma linha de status, o
+ * O campo do agente no pé do detalhe de uma tarefa de agente. Mesmo desenho do campo de IA (uma linha de status, o
  * cartão com o pedido e a caixa de texto), ligado direto ao cliente de pedidos: a linha de status acompanha o pedido
- * em aberto (o do evento, ou o último que o campo abriu) e oferece "Cancelar pedido" enquanto ele está em andamento.
+ * em aberto (a da tarefa, ou o último que o campo abriu) e oferece "Cancelar pedido" enquanto ele está em andamento.
  * Enviar abre um pedido novo na mesma sessão e passa a acompanhá-lo com `getRequest`.
  */
 export function AgentRequestBar({ userId, request, onRequestChange }: AgentRequestBarProps) {
@@ -73,7 +73,7 @@ export function AgentRequestBar({ userId, request, onRequestChange }: AgentReque
     };
   }, [followId, followingOpen]);
 
-  // O pedido que a linha de status mostra: o que o campo acompanha, ou o do evento enquanto nenhum foi aberto.
+  // O pedido que a linha de status mostra: o que o campo acompanha, ou a da tarefa enquanto nenhum foi aberto.
   const tracked: RequestDto | null = followId ? followed : request;
   const open = tracked !== null && isOpenRequest(tracked.status);
   const state: HermesState = speech.listening ? "listening"

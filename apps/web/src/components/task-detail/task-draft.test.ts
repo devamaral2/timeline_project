@@ -1,6 +1,6 @@
 import type { TaskArtifactDto, TaskDto } from "@repo/contracts";
 import { describe, expect, it } from "vitest";
-import { eventFixture } from "@/test/fake-api/events";
+import { taskFixture } from "@/test/fake-api/tasks";
 import { buildCreateTaskInput, buildTaskPatch, draftFromTask, emptyTaskDraft, instantFromDraft, rebaseDraft, validateTaskDraft } from "./task-draft";
 
 describe("emptyTaskDraft e buildCreateTaskInput", () => {
@@ -55,7 +55,7 @@ describe("emptyTaskDraft e buildCreateTaskInput", () => {
 const NOW = new Date("2026-11-14T13:00:00.000Z");
 
 function training(overrides: Partial<TaskDto> = {}): TaskDto {
-  return eventFixture({
+  return taskFixture({
     id: "ev-1",
     name: "Treino de força",
     kind: "training",
@@ -96,7 +96,7 @@ describe("draftFromTask", () => {
     expect(draft).toMatchObject({ previousTaskIds: ["ev-2"], nextTaskIds: ["ev-3"] });
   });
 
-  it("um evento de referência sem data e sem status tem os campos vazios e o status nulo", () => {
+  it("uma tarefa de referência sem data e sem status tem os campos vazios e o status nulo", () => {
     const draft = draftFromTask(training({ status: undefined, startedAt: undefined, estimatedFinishAt: undefined }));
 
     expect(draft).toMatchObject({ status: null, startDate: "", startTime: "", endDate: "", endTime: "" });
@@ -238,7 +238,7 @@ describe("validateTaskDraft", () => {
   it("o título não pode ficar vazio", () => {
     const task = training();
 
-    expect(validateTaskDraft({ ...draftFromTask(task), name: "   " })).toEqual({ name: "Dê um título ao evento." });
+    expect(validateTaskDraft({ ...draftFromTask(task), name: "   " })).toEqual({ name: "Dê um título à tarefa." });
   });
 
   it("uma hora sem data é recusada no campo da hora", () => {
@@ -257,13 +257,13 @@ describe("validateTaskDraft", () => {
     });
   });
 
-  it("evento longo: o prazo pode vir antes do início, porque o início é o real", () => {
+  it("tarefa longa: o prazo pode vir antes do início, porque o início é o real", () => {
     const task = training({ longRunning: true });
 
     expect(validateTaskDraft({ ...draftFromTask(task), endDate: "2026-11-10", endTime: "" })).toEqual({});
   });
 
-  it("evento longo sem status, ou como não realizado, é recusado no status", () => {
+  it("tarefa longa sem status, ou como não realizado, é recusado no status", () => {
     const task = training({ longRunning: true });
 
     expect(validateTaskDraft({ ...draftFromTask(task), status: null })).toHaveProperty("status");
@@ -271,7 +271,7 @@ describe("validateTaskDraft", () => {
     expect(validateTaskDraft({ ...draftFromTask(task), status: "todo" })).toEqual({});
   });
 
-  it("evento longo sem prazo não pode ter lembrete", () => {
+  it("tarefa longa sem prazo não pode ter lembrete", () => {
     const task = training({ longRunning: true });
     const noDeadline = { ...draftFromTask(task), endDate: "", endTime: "", reminders: [30] };
 
@@ -359,7 +359,7 @@ describe("lembretes e tags", () => {
 });
 
 describe("artefatos na edição", () => {
-  /** Um vínculo como o evento o devolve: o artefato inteiro (catálogo global é treino; o próprio, nota). */
+  /** Um vínculo como a tarefa o devolve: o artefato inteiro (catálogo global é treino; o próprio, nota). */
   function link(id: string, name: string, relation: TaskArtifactDto["relation"] = "uses") {
     const global = id === "art-gym";
     return {
@@ -377,7 +377,7 @@ describe("artefatos na edição", () => {
   const workout = link("art-gym", "Musculação");
   const sheet = link("art-sheet", "Ficha A");
 
-  it("o rascunho lê a lista de artefatos do evento, na ordem da API", () => {
+  it("o rascunho lê a lista de artefatos da tarefa, na ordem da API", () => {
     const draft = draftFromTask(training({ artifacts: [workout, sheet] }));
 
     expect(draft.artifacts).toEqual([
@@ -406,7 +406,7 @@ describe("artefatos na edição", () => {
     expect(buildTaskPatch(task, draftFromTask(task), NOW)).toBeNull();
   });
 
-  it("quem o evento criou segue na lista com a relação creates", () => {
+  it("quem a tarefa criou segue na lista com a relação creates", () => {
     const created = link("art-sheet", "Ficha A", "creates");
     const task = training({ artifacts: [created] });
     const kept = draftFromTask(task);

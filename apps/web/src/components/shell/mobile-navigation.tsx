@@ -21,9 +21,9 @@ import { type SectionId, useSectionMenu } from "@/lib/navigation/section-menu";
 import { SectionMenu } from "./section-menu";
 import { TaskStatusIcon, statusView } from "@/components/agenda/task-controls";
 
-type Kind = "Evento" | "Tarefa" | "Nota";
+type Kind = "Tarefa" | "Nota";
 type Picker = "taskType" | "status" | "priority" | DateField;
-const pickerTitles: Record<Picker, string> = { taskType: "Tipo de evento", status: "Status", priority: "Prioridade", startDate: "Início", endDate: "Término" };
+const pickerTitles: Record<Picker, string> = { taskType: "Tipo de tarefa", status: "Status", priority: "Prioridade", startDate: "Início", endDate: "Término" };
 type Category = "Rotina" | "Alimentação" | "Exercício";
 type DraftPriority = "low" | "medium" | "high" | "urgent";
 type TaskType = (typeof creatableItemTypes)[number];
@@ -37,11 +37,11 @@ const taskDetailCopy: Record<TaskType, { label: string; placeholder: string }> =
   sleep: { label: "Observações do sono", placeholder: "Acrescente algo importante sobre este período…" },
 };
 const initialEntries: Entry[] = [
-  ...exampleTasksOn(EXAMPLE_TODAY).map((task, index) => ({ id: `event-${index}`, title: task.name, kind: "Evento" as const })),
+  ...exampleTasksOn(EXAMPLE_TODAY).map((task, index) => ({ id: `task-${index}`, title: task.name, kind: "Tarefa" as const })),
   ...exampleTasksOn(EXAMPLE_TODAY).flatMap(task => task.tracking ? [{ id: task.tracking.id, title: task.name, kind: "Tarefa" as const }] : []),
   { id: "note-1", title: "Ideias para a proposta", kind: "Nota" },
 ];
-const icons = { Evento: CalendarDays, Tarefa: SquareCheck, Nota: FileText };
+const icons = { Tarefa: CalendarDays, Nota: FileText };
 
 function DraftPriorityIcon({ priority }: { priority: DraftPriority }) {
   if (priority === "urgent") return <span className={styles.entityPriorityIcon} data-priority={priority} aria-hidden>
@@ -85,7 +85,7 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
   const dialogRef = useRef<HTMLDialogElement>(null);
   const pathname = usePathname();
   const router = useRouter();
-  const notesHref = userId ? `/${userId}/notas` : "/mockups/eventos/notas";
+  const notesHref = userId ? `/${userId}/notas` : "/mockups/tarefas/notas";
   const onNotes = notesHref !== null && (pathname === notesHref || pathname.startsWith(`${notesHref}/`));
   const tasksHref = userId ? `/${userId}/tarefas` : null;
   const onTasks = tasksHref !== null && (pathname === tasksHref || pathname.startsWith(`${tasksHref}/`));
@@ -147,7 +147,7 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
   const leftMarkRef = useRef<{ mark: Box; at: number } | null>(null);
   const dialogId = useId();
   const titleId = useId();
-  const draftKey = kind === "Evento" ? `${kind}:${taskType}` : `${kind}:${category}`;
+  const draftKey = kind === "Tarefa" ? `${kind}:${taskType}` : `${kind}:${category}`;
   const draft = drafts[draftKey] ?? {};
   const taskVisual = visualForItemType(taskType);
   const selectedPriority = draft.priority && draft.priority in draftPriorities ? draft.priority as DraftPriority : "medium";
@@ -168,18 +168,18 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
       setHubView(command);
       return;
     }
-    // Logado, criar é uma rota: `/evento` abre o formulário de evento e `/nota`, o de artefato, já com o nome.
+    // Logado, criar é uma rota: `/tarefa` abre o formulário de tarefa e `/nota`, o de artefato, já com o nome.
     if (userId) {
-      openCreation(command === "task" ? "eventos/novo" : "notas/nova", argument);
+      openCreation(command === "task" ? "tarefas/nova" : "notas/nova", argument);
       return;
     }
-    const next: Kind = command === "task" ? "Evento" : "Nota";
+    const next: Kind = command === "task" ? "Tarefa" : "Nota";
     setFormPicker(false);
     setKind(next);
     setCategory("Rotina");
-    // `/evento comprar pão` ja chega com o nome preenchido.
+    // `/tarefa comprar pão` ja chega com o nome preenchido.
     if (argument) {
-      const key = next === "Evento" ? `${next}:${taskType}` : `${next}:Rotina`;
+      const key = next === "Tarefa" ? `${next}:${taskType}` : `${next}:Rotina`;
       setDrafts(current => ({ ...current, [key]: { ...current[key], title: argument } }));
     }
     setHubView("create");
@@ -259,9 +259,9 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
     menuTabRef.current?.focus();
   }
 
-  // Criar evento e criar artefato são rotas (`/eventos/novo`, `/notas/nova`), com o mesmo formulário da edição:
+  // Criar tarefa e criar artefato são rotas (`/tarefas/nova`, `/notas/nova`), com o mesmo formulário da edição:
   // o painel fecha e a rota abre com o nome, se houver.
-  function openCreation(route: "eventos/novo" | "notas/nova", name: string) {
+  function openCreation(route: "tarefas/nova" | "notas/nova", name: string) {
     if (!userId) return;
     closePanel();
     router.push(`/${userId}/${route}${name ? `?nome=${encodeURIComponent(name)}` : ""}`);
@@ -400,7 +400,7 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
           ) : (
             <button type="button" aria-label="Tarefas" onClick={() => openPanel("Tarefa")} aria-haspopup="dialog" aria-expanded={panel === "Tarefa"} aria-controls={dialogId}><SquareCheck aria-hidden /></button>
           )}
-          <Link href={userId ? `/${userId}` : "/mockups/eventos"} aria-label="Agenda" aria-current={onAgenda ? "page" : undefined} aria-expanded={onAgenda ? menuOpen : undefined} aria-controls={onAgenda ? menuId : undefined} data-no-motion={onAgenda ? "" : undefined} onClick={event => tabClick(event, onAgenda)}><CalendarDays aria-hidden /><i className={styles.navDot} data-on={onAgenda && sectionMenu?.filtered ? "" : undefined} aria-hidden /></Link>
+          <Link href={userId ? `/${userId}` : "/mockups/tarefas"} aria-label="Agenda" aria-current={onAgenda ? "page" : undefined} aria-expanded={onAgenda ? menuOpen : undefined} aria-controls={onAgenda ? menuId : undefined} data-no-motion={onAgenda ? "" : undefined} onClick={event => tabClick(event, onAgenda)}><CalendarDays aria-hidden /><i className={styles.navDot} data-on={onAgenda && sectionMenu?.filtered ? "" : undefined} aria-hidden /></Link>
           {notesHref ? (
             <Link href={notesHref} aria-label="Artefatos" aria-current={onNotes ? "page" : undefined} aria-expanded={onNotes ? menuOpen : undefined} aria-controls={onNotes ? menuId : undefined} data-no-motion={onNotes ? "" : undefined} onClick={event => tabClick(event, onNotes)}><FileText aria-hidden /><i className={styles.navDot} data-on={onNotes && sectionMenu?.filtered ? "" : undefined} aria-hidden /></Link>
           ) : (
@@ -428,8 +428,8 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
         {panel === "hub" && !activePicker && !formPicker && <div className={styles.hubHeader}>
           <button type="button" className={styles.hubBack} onClick={backToChat} aria-label="Voltar para o chat"><ArrowLeft aria-hidden /></button>
           {hubView === "notifications" || hubView === "settings" ? null
-            : hubView === "create" ? <fieldset className={styles.creationToggle} aria-label="Tipo de criação">{(["Evento", "Nota"] as Kind[]).map(value => { const Icon = icons[value]; return <button type="button" key={value} aria-pressed={kind === value} onClick={() => { if (userId) { openCreation(value === "Evento" ? "eventos/novo" : "notas/nova", ""); return; } setKind(value); setActivePicker(null); setNotice(""); setFormPicker(false); }}><Icon aria-hidden /><span>{value}</span></button>; })}</fieldset>
-            : <label className={styles.hubSearch}><Search aria-hidden /><input aria-label="Pesquisar eventos, tarefas e artefatos" value={query} onChange={event => setQuery(event.target.value)} placeholder="Buscar eventos, tarefas e artefatos" autoFocus /></label>}
+            : hubView === "create" ? <fieldset className={styles.creationToggle} aria-label="Tipo de criação">{(["Tarefa", "Nota"] as Kind[]).map(value => { const Icon = icons[value]; return <button type="button" key={value} aria-pressed={kind === value} onClick={() => { if (userId) { openCreation(value === "Tarefa" ? "tarefas/nova" : "notas/nova", ""); return; } setKind(value); setActivePicker(null); setNotice(""); setFormPicker(false); }}><Icon aria-hidden /><span>{value}</span></button>; })}</fieldset>
+            : <label className={styles.hubSearch}><Search aria-hidden /><input aria-label="Pesquisar tarefas e artefatos" value={query} onChange={event => setQuery(event.target.value)} placeholder="Buscar tarefas e artefatos" autoFocus /></label>}
         </div>}
         <div className={styles.hubContent}>
         {panel === "hub" && hubView === "create" && activePicker ? <div className={styles.pickerView}>
@@ -462,16 +462,16 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
         </div> : panel === "hub" && hubView === "notifications" ? (userId ? <NotificationsView userId={userId} /> : <p className={styles.notificationEmpty}>Entre na sua conta para ver os avisos.</p>)
           : panel === "hub" && hubView === "settings" ? <SettingsView darkMode={darkMode} onThemeToggle={onThemeToggle} onSignedOut={() => { closePanel(); router.replace("/"); }} />
           : panel === "hub" && hubView === "create" ? <div className={styles.entityForm}>
-            {kind === "Evento" ? <div className={styles.entityTaskHeading}>
+            {kind === "Tarefa" ? <div className={styles.entityTaskHeading}>
               <span className={styles.entityTaskTypeName}>{taskVisual.label}</span>
               <div className={styles.entityTaskTitleRow}>
                 <fieldset className={styles.entityTypeSelect}>
-                  <button type="button" className={styles.entityTypeButton} aria-label={`Tipo do evento: ${taskVisual.label}`} aria-haspopup="dialog" aria-expanded={activePicker === "taskType"} onClick={() => setActivePicker("taskType")}>
+                  <button type="button" className={styles.entityTypeButton} aria-label={`Tipo da tarefa: ${taskVisual.label}`} aria-haspopup="dialog" aria-expanded={activePicker === "taskType"} onClick={() => setActivePicker("taskType")}>
                     <span className={styles.entityTypeIcon} data-task-type={taskType}><taskVisual.Icon aria-hidden strokeWidth={ICON_STROKE_WIDTH} /></span>
                     <ChevronDown aria-hidden />
                   </button>
                 </fieldset>
-                <input className={styles.entityTaskNameInput} aria-label="Nome do evento" value={draft.title ?? ""} onChange={event => updateDraft("title", event.target.value)} placeholder="Nome do evento" />
+                <input className={styles.entityTaskNameInput} aria-label="Nome da tarefa" value={draft.title ?? ""} onChange={event => updateDraft("title", event.target.value)} placeholder="Nome da tarefa" />
               </div>
             </div> : <div className={styles.entityHeading}><span>{(() => { const Icon = icons[kind]; return <Icon aria-hidden />; })()}</span><div><input className={styles.entityNameInput} aria-label={`Nome da ${kind.toLocaleLowerCase("pt-BR")}`} value={draft.title ?? ""} onChange={event => updateDraft("title", event.target.value)} placeholder={`Nome da ${kind.toLocaleLowerCase("pt-BR")}`} /><p>{category}</p></div></div>}
             {kind === "Tarefa" && <div className={styles.entitySelectors}>
@@ -492,7 +492,7 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
                 </button>
               </fieldset>
             </div>}
-            {kind === "Evento" && <>
+            {kind === "Tarefa" && <>
               <TaskScheduleFields
                 key={taskType}
                 startDate={draft.startDate ?? EXAMPLE_TODAY}
@@ -516,10 +516,10 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
                 <label>Qualidade (0–100)<input type="number" min="0" max="100" inputMode="numeric" value={draft.sleepScore ?? ""} onChange={event => updateDraft("sleepScore", event.target.value)} placeholder="80" /></label>
               </div> : null}
             </>}
-            <label>{kind === "Evento" ? taskDetailCopy[taskType].label : kind === "Nota" ? "Conteúdo da nota" : category === "Alimentação" ? "Refeição e preparo" : category === "Exercício" ? "Treino e objetivo" : "Detalhes"}<textarea className={styles.entityControl} rows={2} value={draft.details ?? ""} onChange={event => updateDraft("details", event.target.value)} placeholder={kind === "Evento" ? taskDetailCopy[taskType].placeholder : kind === "Nota" ? `Suas anotações sobre ${category.toLocaleLowerCase("pt-BR")}…` : category === "Alimentação" ? "Ingredientes, porções ou modo de preparo…" : category === "Exercício" ? "Exercícios, séries ou duração…" : "Acrescente o que for importante…"} /></label>
+            <label>{kind === "Tarefa" ? taskDetailCopy[taskType].label : kind === "Nota" ? "Conteúdo da nota" : category === "Alimentação" ? "Refeição e preparo" : category === "Exercício" ? "Treino e objetivo" : "Detalhes"}<textarea className={styles.entityControl} rows={2} value={draft.details ?? ""} onChange={event => updateDraft("details", event.target.value)} placeholder={kind === "Tarefa" ? taskDetailCopy[taskType].placeholder : kind === "Nota" ? `Suas anotações sobre ${category.toLocaleLowerCase("pt-BR")}…` : category === "Alimentação" ? "Ingredientes, porções ou modo de preparo…" : category === "Exercício" ? "Exercícios, séries ou duração…" : "Acrescente o que for importante…"} /></label>
           </div> : <div className={styles.manualPanel}>
           {panel !== "hub" && <>
-          <label className={styles.hubSearch}><Search aria-hidden /><input aria-label="Buscar eventos, tarefas e artefatos" value={query} onChange={event => setQuery(event.target.value)} placeholder={`Buscar ${panel === "Tarefa" ? "tarefas" : "notas"}`} /></label>
+          <label className={styles.hubSearch}><Search aria-hidden /><input aria-label="Buscar tarefas e artefatos" value={query} onChange={event => setQuery(event.target.value)} placeholder={`Buscar ${panel === "Tarefa" ? "tarefas" : "notas"}`} /></label>
           <div className={styles.manualHeading}><h3>{query ? "Resultados" : "No seu espaço"}</h3><button type="button" onClick={() => { setCreating(!creating); setNotice(""); }}><Plus aria-hidden />Criar novo</button></div>
           {creating && <form className={styles.quickCreate} onSubmit={event => {
             event.preventDefault();
@@ -527,7 +527,7 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
             setEntries(current => [{ id: `draft-${Date.now()}`, title: title.trim(), kind }, ...current]);
             setTitle(""); setQuery(""); setCreating(false); setNotice(`${kind}: rascunho adicionado à prévia.`);
           }}>
-            <label>Tipo<select value={kind} onChange={event => setKind(event.target.value as Kind)} disabled><option>Evento</option><option>Tarefa</option><option>Nota</option></select></label>
+            <label>Tipo<select value={kind} onChange={event => setKind(event.target.value as Kind)} disabled><option>Tarefa</option><option>Nota</option></select></label>
             <label>Título<input value={title} onChange={event => setTitle(event.target.value)} placeholder="Dê um nome à sua ideia" required /></label>
             <button type="submit" disabled={!title.trim()}>Criar rascunho</button>
           </form>}

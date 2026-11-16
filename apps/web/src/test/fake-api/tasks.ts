@@ -10,11 +10,11 @@ import {
 } from "@repo/contracts/schemas";
 import { z } from "zod";
 import type { FakeArea, FakeRequest, FakeResult, FakeStore } from ".";
-import { type ArtifactLink, type EventArtifactEntry, artifactsOfEvent, relinkEventArtifacts } from "./artifacts";
+import { type ArtifactLink, type TaskArtifactEntry, artifactsOfTask, relinkTaskArtifacts } from "./artifacts";
 
-/** Área de eventos: agenda, lista de tarefas, evento, sequência e tags. */
+/** Área de tarefas: agenda, lista acompanhada, tarefa, sequência e tags. */
 
-const EVENTS = "events";
+const TASKS = "tasks";
 const CARD_KEYS = [
   "id", "actor", "kind", "status", "priority", "name", "description", "location", "startedAt", "estimatedFinishAt",
   "finishedAt", "longRunning", "notifyOffsetsMinutes", "tags", "artifactTypes", "previousTaskIds",
@@ -26,16 +26,16 @@ const EDITABLE_KEYS = [
   "nextTaskIds", "kind", "status", "startedAt", "estimatedFinishAt", "finishedAt",
 ] as const;
 
-const createdEventSchema = z.object({ taskId: z.string() }).strict();
+const createdTaskSchema = z.object({ taskId: z.string() }).strict();
 
-/** Um evento completo para o seed: os campos que você não passa ganham o padrão de uma tarefa de pessoa. */
-export function eventFixture(overrides: Partial<TaskDto> & { id: string }): TaskDto {
+/** Uma tarefa completa para o seed: os campos que você não passa ganham o padrão de uma tarefa de pessoa. */
+export function taskFixture(overrides: Partial<TaskDto> & { id: string }): TaskDto {
   return taskSchema.parse({
     actor: "human",
     kind: "common",
     status: "todo",
     priority: "medium",
-    name: "Evento",
+    name: "Tarefa",
     description: "",
     location: "",
     longRunning: false,
@@ -51,15 +51,15 @@ export function eventFixture(overrides: Partial<TaskDto> & { id: string }): Task
   });
 }
 
-type StoredEvent = TaskDto;
+type StoredTask = TaskDto;
 
 function table(store: FakeStore) {
-  return store.table<StoredEvent>(EVENTS);
+  return store.table<StoredTask>(TASKS);
 }
 
-function toCard(event: StoredEvent): TaskCardDto {
+function toCard(task: StoredTask): TaskCardDto {
   const card: Record<string, unknown> = {};
-  for (const key of CARD_KEYS) if (event[key] !== undefined) card[key] = event[key];
+  for (const key of CARD_KEYS) if (task[key] !== undefined) card[key] = task[key];
   return card as unknown as TaskCardDto;
 }
 
@@ -69,7 +69,7 @@ function instant(value: string | null): number | undefined {
   return Number.isNaN(time) ? Number.NaN : time;
 }
 
-function byStart(a: StoredEvent, b: StoredEvent): number {
+function byStart(a: StoredTask, b: StoredTask): number {
   const left = a.startedAt ? Date.parse(a.startedAt) : Number.POSITIVE_INFINITY;
   const right = b.startedAt ? Date.parse(b.startedAt) : Number.POSITIVE_INFINITY;
   return left - right || a.id.localeCompare(b.id);
@@ -80,10 +80,10 @@ function listParam(request: FakeRequest, name: string): string[] | undefined {
   return raw ? raw.split(",") : undefined;
 }
 
-function inWindow(event: StoredEvent, from: number | undefined, to: number | undefined): boolean {
+function inWindow(task: StoredTask, from: number | undefined, to: number | undefined): boolean {
   if (from === undefined && to === undefined) return true;
-  if (!event.startedAt) return false;
-  const at = Date.parse(event.startedAt);
+  if (!task.startedAt) return false;
+  const at = Date.parse(task.startedAt);
   return (from === undefined || at >= from) && (to === undefined || at < to);
 }
 
@@ -99,16 +99,16 @@ function agenda(request: FakeRequest, store: FakeStore): FakeResult {
   if (!Number.isInteger(offset) || offset < 0) return { status: 400 };
   const limit = Math.min(Number(request.query.get("limit") ?? store.pageSize), 100);
 
-  // A agenda mostra o que tem horário e não é evento longo; passos nunca aparecem.
-  const events = [...table(store).values()]
-    .filter((event) => event.kind !== "step" && !event.longRunning)
-    .filter((event) => inWindow(event, from, to))
-    .filter((event) => !actor || event.actor === actor)
-    .filter((event) => !tag || event.tags.includes(tag))
+  // A agenda mostra o que tem horário e não é tarefa longa; passos nunca aparecem.
+  const tasks = [...table(store).values()]
+    .filter((task) => task.kind !== "step" && !task.longRunning)
+    .filter((task) => inWindow(task, from, to))
+    .filter((task) => !actor || task.actor === actor)
+    .filter((task) => !tag || task.tags.includes(tag))
     .sort(byStart);
 
-  const items = events.slice(offset, offset + limit).map(toCard);
-  const next = offset + limit < events.length ? { nextCursor: String(offset + limit) } : {};
+  const items = tasks.slice(offset, offset + limit).map(toCard);
+  const next = offset + limit < tasks.length ? { nextCursor: String(offset + limit) } : {};
   return { status: 200, body: { items, ...next } };
 }
 
@@ -124,19 +124,19 @@ function tracked(request: FakeRequest, store: FakeStore): FakeResult {
   if (longRunning !== null && longRunning !== "true" && longRunning !== "false") return { status: 400 };
   if (from !== undefined && to !== undefined && (Number.isNaN(from) || Number.isNaN(to))) return { status: 400 };
 
-  const events = [...table(store).values()]
-    .filter((event) => event.status !== undefined)
-    .filter((event) => !actor || event.actor === actor)
-    .filter((event) => !statuses || (event.status !== undefined && statuses.includes(event.status)))
-    .filter((event) => !priorities || priorities.includes(event.priority))
-    .filter((event) => !tag || event.tags.includes(tag))
-    .filter((event) => !q || `${event.name} ${event.description}`.toLocaleLowerCase("pt-BR").includes(q))
-    .filter((event) => longRunning === null || event.longRunning === (longRunning === "true"))
-    .filter((event) => (from === undefined && to === undefined) || inWindow(event, from, to))
+  const tasks = [...table(store).values()]
+    .filter((task) => task.status !== undefined)
+    .filter((task) => !actor || task.actor === actor)
+    .filter((task) => !statuses || (task.status !== undefined && statuses.includes(task.status)))
+    .filter((task) => !priorities || priorities.includes(task.priority))
+    .filter((task) => !tag || task.tags.includes(tag))
+    .filter((task) => !q || `${task.name} ${task.description}`.toLocaleLowerCase("pt-BR").includes(q))
+    .filter((task) => longRunning === null || task.longRunning === (longRunning === "true"))
+    .filter((task) => (from === undefined && to === undefined) || inWindow(task, from, to))
     .sort(byStart)
     .slice(0, Math.min(Number(request.query.get("limit") ?? 100), 100));
 
-  return { status: 200, body: events.map(toCard) };
+  return { status: 200, body: tasks.map(toCard) };
 }
 
 function create(request: FakeRequest, store: FakeStore): FakeResult {
@@ -144,7 +144,7 @@ function create(request: FakeRequest, store: FakeStore): FakeResult {
   // Ids de sequência que não existem a API recusa (404), antes de criar qualquer coisa.
   if (!allExist(store, [...(input.previousTaskIds ?? []), ...(input.nextTaskIds ?? [])])) return { status: 404 };
   const id = store.nextId("ev");
-  const event: StoredEvent = taskSchema.parse({
+  const task: StoredTask = taskSchema.parse({
     id,
     actor: "human",
     kind: input.kind ?? "common",
@@ -166,46 +166,46 @@ function create(request: FakeRequest, store: FakeStore): FakeResult {
     revision: 1,
     artifacts: [],
   });
-  table(store).set(id, event);
-  relinkSequence(store, event, [], []);
-  return { status: 201, body: createdEventSchema.parse({ taskId: id }) };
+  table(store).set(id, task);
+  relinkSequence(store, task, [], []);
+  return { status: 201, body: createdTaskSchema.parse({ taskId: id }) };
 }
 
 function read(request: FakeRequest, store: FakeStore): FakeResult {
-  const event = table(store).get(request.params.taskId ?? "");
-  if (!event) return { status: 404 };
+  const task = table(store).get(request.params.taskId ?? "");
+  if (!task) return { status: 404 };
   // Os vínculos vivem no artefato (área de artefatos): o detalhe os monta aqui, na ordem da tabela.
-  return { status: 200, body: { ...event, artifacts: artifactsOfEvent(store, event.id) } };
+  return { status: 200, body: { ...task, artifacts: artifactsOfTask(store, task.id) } };
 }
 
 function update(request: FakeRequest, store: FakeStore): FakeResult {
-  const event = table(store).get(request.params.taskId ?? "");
-  if (!event) return { status: 404 };
+  const task = table(store).get(request.params.taskId ?? "");
+  if (!task) return { status: 404 };
   const input = request.body as Record<string, unknown> & { expectedRevision: number };
-  if (input.expectedRevision !== event.revision) return { status: 409 };
-  // A sequência é informativa, mas só liga eventos que existem; o evento não se segue a si mesmo (422).
+  if (input.expectedRevision !== task.revision) return { status: 409 };
+  // A sequência é informativa, mas só liga tarefas que existem; a tarefa não se segue a si mesmo (422).
   const sequenceIds = [...stringList(input.previousTaskIds), ...stringList(input.nextTaskIds)];
-  if (sequenceIds.includes(event.id)) return { status: 422 };
+  if (sequenceIds.includes(task.id)) return { status: 422 };
   if (!allExist(store, sequenceIds)) return { status: 404 };
 
   // A lista de artefatos é a completa, na ordem enviada: ligar por `id` e criar cópia de alimento (`copyOf`) são
-  // modelados. Criar ou editar um artefato novo dentro do evento a API faz, mas a API falsa ainda não (400).
+  // modelados. Criar ou editar um artefato novo dentro da tarefa a API faz, mas a API falsa ainda não (400).
   if (Array.isArray(input.artifacts)) {
     const entries = input.artifacts as { id?: string; relation?: ArtifactLink["relation"]; copyOf?: string }[];
     if (entries.some((entry) => entry.id === undefined && entry.copyOf === undefined)) return { status: 400 };
-    if (!relinkEventArtifacts(store, event.id, entries as EventArtifactEntry[])) return { status: 404 };
+    if (!relinkTaskArtifacts(store, task.id, entries as TaskArtifactEntry[])) return { status: 404 };
   }
 
-  const next: Record<string, unknown> = { ...event };
+  const next: Record<string, unknown> = { ...task };
   for (const key of EDITABLE_KEYS) {
     if (!(key in input)) continue;
     const value = input[key];
     if (value === null) delete next[key];
     else next[key] = value;
   }
-  next.revision = event.revision + 1;
-  table(store).set(event.id, taskSchema.parse(next));
-  relinkSequence(store, event, event.previousTaskIds, event.nextTaskIds);
+  next.revision = task.revision + 1;
+  table(store).set(task.id, taskSchema.parse(next));
+  relinkSequence(store, task, task.previousTaskIds, task.nextTaskIds);
   return { status: 204 };
 }
 
@@ -218,13 +218,13 @@ function allExist(store: FakeStore, ids: string[]): boolean {
 }
 
 /**
- * A sequência tem dois lados: este evento guarda os antecessores (`previousTaskIds`) e os sucessores
- * (`nextTaskIds`), e cada evento relacionado guarda este no lado oposto. Quem entra ou sai da lista é religado
- * no outro lado; ninguém além do evento do PATCH tem a revisão mexida, como na API real.
+ * A sequência tem dois lados: esta tarefa guarda os antecessores (`previousTaskIds`) e os sucessores
+ * (`nextTaskIds`), e cada tarefa relacionada guarda esta no lado oposto. Quem entra ou sai da lista é religado
+ * no outro lado; ninguém além da tarefa do PATCH tem a revisão mexida, como na API real.
  * `oldPrevious`/`oldNext` são as listas de antes do PATCH (vazias na criação); o lado que não veio no corpo não muda e não se religa.
  */
-function relinkSequence(store: FakeStore, event: StoredEvent, oldPrevious: string[], oldNext: string[]) {
-  const stored = table(store).get(event.id) ?? event;
+function relinkSequence(store: FakeStore, task: StoredTask, oldPrevious: string[], oldNext: string[]) {
+  const stored = table(store).get(task.id) ?? task;
   syncSide(store, stored.id, oldPrevious, stored.previousTaskIds, "nextTaskIds");
   syncSide(store, stored.id, oldNext, stored.nextTaskIds, "previousTaskIds");
 }
@@ -234,11 +234,11 @@ function syncSide(store: FakeStore, selfId: string, before: string[], after: str
   for (const id of after) if (!before.includes(id)) setSequenceLink(store, id, otherField, selfId, true);
 }
 
-function setSequenceLink(store: FakeStore, eventId: string, field: "previousTaskIds" | "nextTaskIds", otherId: string, linked: boolean) {
-  const other = table(store).get(eventId);
+function setSequenceLink(store: FakeStore, taskId: string, field: "previousTaskIds" | "nextTaskIds", otherId: string, linked: boolean) {
+  const other = table(store).get(taskId);
   if (!other) return;
   const others = other[field].filter((id) => id !== otherId);
-  table(store).set(eventId, { ...other, [field]: linked ? [...others, otherId] : others });
+  table(store).set(taskId, { ...other, [field]: linked ? [...others, otherId] : others });
 }
 
 function remove(request: FakeRequest, store: FakeStore): FakeResult {
@@ -251,7 +251,7 @@ function suggestTags(request: FakeRequest, store: FakeStore): FakeResult {
   const prefix = (request.query.get("query") ?? "").toLocaleLowerCase("pt-BR");
   const limit = Math.min(Number(request.query.get("limit") ?? 10), 100);
   const names = new Set<string>();
-  for (const event of table(store).values()) for (const tag of event.tags) names.add(tag);
+  for (const task of table(store).values()) for (const tag of task.tags) names.add(tag);
   const suggestions = [...names]
     .filter((name) => name.toLocaleLowerCase("pt-BR").startsWith(prefix))
     .sort((a, b) => a.localeCompare(b, "pt-BR"))
@@ -277,12 +277,12 @@ function searchPlaces(request: FakeRequest): FakeResult {
   };
 }
 
-export const eventsArea: FakeArea = {
-  name: "eventos",
+export const tasksArea: FakeArea = {
+  name: "tarefas",
   routes: [
     { method: "GET", path: "/api/tasks", output: agendaPageSchema, handle: agenda },
     { method: "GET", path: "/api/tasks/tracked", output: z.array(taskCardSchema), handle: tracked },
-    { method: "POST", path: "/api/tasks", input: createTaskInputSchema, output: createdEventSchema, idempotent: true, handle: create },
+    { method: "POST", path: "/api/tasks", input: createTaskInputSchema, output: createdTaskSchema, idempotent: true, handle: create },
     { method: "GET", path: "/api/tasks/:taskId", output: taskSchema, handle: read },
     { method: "PATCH", path: "/api/tasks/:taskId", input: updateTaskInputSchema.omit({ taskId: true }), handle: update },
     { method: "DELETE", path: "/api/tasks/:taskId", handle: remove },

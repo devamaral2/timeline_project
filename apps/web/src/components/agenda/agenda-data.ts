@@ -3,7 +3,7 @@ import { taskDayKeysOf, formatTime } from "@repo/timeline";
 import { cardDurationLabel } from "@/lib/tasks/card-text";
 import type { ExampleTask } from "./agenda-examples";
 
-/** Um cartão que tem horário e entra na grade: evento longo e passo ficam de fora mesmo quando a resposta os traz. */
+/** Um cartão que tem horário e entra na grade: tarefa longa e passo ficam de fora mesmo quando a resposta os traz. */
 export type AgendaCard = TaskCardDto & { startedAt: string };
 
 export function isAgendaCard(card: TaskCardDto): card is AgendaCard {
@@ -35,7 +35,7 @@ export function agendaTaskFromCard(card: AgendaCard): ExampleTask {
   };
 }
 
-/** Agrupa e ordena os cartões por horário; o evento que atravessa a meia-noite aparece no dia em que começou e no dia em que termina. */
+/** Agrupa e ordena os cartões por horário; a tarefa que atravessa a meia-noite aparece no dia em que começou e no dia em que termina. */
 export function agendaTasksByDay(cards: readonly TaskCardDto[]): Record<string, ExampleTask[]> {
   const byDay: Record<string, ExampleTask[]> = {};
   const seen = new Set<string>();

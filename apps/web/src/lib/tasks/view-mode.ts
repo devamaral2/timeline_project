@@ -2,9 +2,9 @@ import { useSyncExternalStore } from "react";
 
 /**
  * Modo de visualização das listas (agenda e lista de tarefas). Três modos fixos:
- * os seus eventos, os eventos dos agentes e todos. O modo em uso vai como filtro
+ * as suas tarefas, as tarefas dos agentes e todos. O modo em uso vai como filtro
  * de executor (`actor`) nas consultas e fica guardado no navegador. Sem escolha
- * guardada, ou com o armazenamento bloqueado, vale "Todos os eventos".
+ * guardada, ou com o armazenamento bloqueado, vale "Todas as tarefas".
  */
 
 export type ViewModeId = "human" | "agent" | "all";
@@ -19,14 +19,14 @@ export interface ViewMode {
 }
 
 export const VIEW_MODES: readonly ViewMode[] = [
-  { id: "human", label: "Todos os seus eventos", actor: "human", colorVar: "--mode-human" },
-  { id: "agent", label: "Todos os eventos de agentes", actor: "agent", colorVar: "--mode-agent" },
-  { id: "all", label: "Todos os eventos", actor: undefined, colorVar: "--mode-all" },
+  { id: "human", label: "Todas as suas tarefas", actor: "human", colorVar: "--mode-human" },
+  { id: "agent", label: "Todas as tarefas de agentes", actor: "agent", colorVar: "--mode-agent" },
+  { id: "all", label: "Todas as tarefas", actor: undefined, colorVar: "--mode-all" },
 ];
 
 export const DEFAULT_VIEW_MODE_ID: ViewModeId = "all";
 export const VIEW_MODE_STORAGE_KEY = "braid-view-mode";
-/** Evento da mesma aba: o navegador não avisa a própria aba quando o armazenamento muda. */
+/** Aviso da mesma aba: o navegador não avisa a própria aba quando o armazenamento muda. */
 const VIEW_MODE_CHANGE_EVENT = "braid-view-mode-change";
 
 /** O modo com este id; qualquer outro valor (inclusive `null`) cai no padrão. */

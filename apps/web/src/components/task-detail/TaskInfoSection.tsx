@@ -12,7 +12,7 @@ import styles from "./task-detail.module.css";
  * A seção "Informações" da leitura: início, fim planejado com a duração,
  * tarefa persistente, recorrência, lembretes, tags e descrição, em texto.
  * O local abre no Google Maps. Horário padrão, "Gerado por" e Registro não entram: o contrato
- * do evento não traz esses dados (ver a tabela de lacunas da spec).
+ * da tarefa não traz esses dados (ver a tabela de lacunas da spec).
  */
 export function TaskInfoSection({ task }: { task: TaskDto }) {
   const longRunning = task.longRunning;
@@ -57,7 +57,7 @@ export function TaskInfoSection({ task }: { task: TaskDto }) {
           <DetailFact label="Lembrar antes de"><Reminders labels={reminders} /></DetailFact>
         ) : null}
         {task.tags.length ? (
-          <DetailFact label="Tags"><TagPills tags={task.tags} label="Tags do evento" /></DetailFact>
+          <DetailFact label="Tags"><TagPills tags={task.tags} label="Tags da tarefa" /></DetailFact>
         ) : null}
       </DetailFacts>
       {task.description ? (

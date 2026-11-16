@@ -27,13 +27,13 @@ import type { RecurrenceState } from "./use-recurrence-draft";
 import styles from "./task-edit-recurrence.module.css";
 
 interface TaskEditRecurrenceSectionProps {
-  /** O evento lido; `null` na criação. */
+  /** A tarefa lida; `null` na criação. */
   task: TaskDto | null;
   /** Início e fim planejado do formulário: a criação tira deles a hora, a duração e o início da regra. */
   draft: TaskDraft;
   recurrence: RecurrenceState;
   errors: RecurrenceErrors;
-  /** Chamado depois de apagar a série: a tela relê o evento e a agenda se atualiza. */
+  /** Chamado depois de apagar a série: a tela relê a tarefa e a agenda se atualiza. */
   onSeriesDeleted: () => void;
 }
 
@@ -59,10 +59,10 @@ const MONTHS = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "jul
 
 /**
  * A linha "Recorrência" de Informações. Três casos: na criação, a linha permite definir a regra
- * (Salvar cria a série em vez do evento); num evento avulso, permite o mesmo (Salvar grava o evento
+ * (Salvar cria a série em vez da tarefa); numa tarefa avulso, permite o mesmo (Salvar grava a tarefa
  * e cria a série, que começa no dia seguinte); numa ocorrência, mostra a regra, desde quando vale, se tem fim e se a
  * ocorrência segue a série, deixa trocar a regra e apagar a série. A regra não
- * entra no corpo do evento: o Salvar da tela a manda como chamada própria.
+ * entra no corpo da tarefa: o Salvar da tela a manda como chamada própria.
  */
 export function TaskEditRecurrenceSection({ task, draft, recurrence, errors, onSeriesDeleted }: TaskEditRecurrenceSectionProps) {
   const [open, setOpen] = useState(false);
@@ -71,8 +71,8 @@ export function TaskEditRecurrenceSection({ task, draft, recurrence, errors, onS
   const [deleteFailed, setDeleteFailed] = useState(false);
   const occurrence = task?.recurrence;
 
-  // Sem série (a criação, ou um evento avulso), a linha deixa definir a regra. No evento avulso a série nasce no dia
-  // seguinte ao dele: o evento que já existe fica como está.
+  // Sem série (a criação, ou uma tarefa avulso), a linha deixa definir a regra. Na tarefa avulso a série nasce no dia
+  // seguinte ao dele: a tarefa que já existe fica como está.
   if (!task || !occurrence) {
     const schedule = task ? scheduleAfterTask(draft) : draft;
     return (
@@ -104,7 +104,7 @@ export function TaskEditRecurrenceSection({ task, draft, recurrence, errors, onS
                   <RuleEditor draft={recurrence.draft} errors={errors} onChange={(patch) => recurrence.setDraft((current) => (current ? { ...current, ...patch } : current))} />
                   <p className={edit.hint}>
                     {task
-                      ? "Este evento fica como está; a série começa no dia seguinte, com a hora e a duração dele."
+                      ? "Esta tarefa fica como está; a série começa no dia seguinte, com a hora e a duração dela."
                       : "A data de início, a hora e a duração vêm do formulário."}
                   </p>
                   <div className={styles.actions}>

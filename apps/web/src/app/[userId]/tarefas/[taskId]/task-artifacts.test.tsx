@@ -3,7 +3,7 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import type { TaskDto } from "@repo/contracts";
 import { type FakeApi, createFakeApi } from "@/test/fake-api";
 import { artifactFixture, artifactsArea } from "@/test/fake-api/artifacts";
-import { eventFixture, eventsArea } from "@/test/fake-api/events";
+import { taskFixture, tasksArea } from "@/test/fake-api/tasks";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push, back: vi.fn(), replace: vi.fn() }) }));
@@ -19,7 +19,7 @@ const { default: TaskPage } = await import("./page");
 let api: FakeApi;
 
 function install(tasks: TaskDto[], artifacts: ReturnType<typeof artifactFixture>[]) {
-  api = createFakeApi({ areas: [eventsArea, artifactsArea], seed: { events: tasks, artifacts } });
+  api = createFakeApi({ areas: [tasksArea, artifactsArea], seed: { tasks: tasks, artifacts } });
   net.authedFetch.mockImplementation(api.authedFetch);
 }
 
@@ -34,30 +34,30 @@ afterEach(() => {
 });
 
 function renderPage() {
-  return render(<TaskPage params={Promise.resolve({ userId: "user-1", eventId: "ev-1" })} />);
+  return render(<TaskPage params={Promise.resolve({ userId: "user-1", taskId: "ev-1" })} />);
 }
 
 async function loaded() {
   await waitFor(() => expect(screen.queryByText(/Carregando/)).not.toBeInTheDocument());
 }
 
-const TREINO = eventFixture({ id: "ev-1", name: "Treino de força", kind: "training", status: "doing", startedAt: "2026-11-14T18:30:00-03:00" });
+const TREINO = taskFixture({ id: "ev-1", name: "Treino de força", kind: "training", status: "doing", startedAt: "2026-11-14T18:30:00-03:00" });
 
 test("a seção Artefatos mostra a contagem, a posição, o tipo, de quem é e a relação de cada um", async () => {
   install(
     [TREINO],
     [
-      // A ordem da seção é a ordem em que os artefatos foram semeados, como no evento da API.
+      // A ordem da seção é a ordem em que os artefatos foram semeados, como na tarefa da API.
       artifactFixture({
         id: "art-global",
         name: "Musculação",
         type: "workout",
         global: true,
         data: { code: "weightlifting", category: "strength", active: true },
-        links: [{ eventId: "ev-1", relation: "uses" }],
+        links: [{ taskId: "ev-1", relation: "uses" }],
       }),
-      artifactFixture({ id: "art-own", name: "Ficha A · peito e tríceps", links: [{ eventId: "ev-1", relation: "uses" }] }),
-      artifactFixture({ id: "art-created", name: "Registro do treino de hoje", type: "training", data: { workouts: [], caloriesBurned: 0 }, links: [{ eventId: "ev-1", relation: "creates" }] }),
+      artifactFixture({ id: "art-own", name: "Ficha A · peito e tríceps", links: [{ taskId: "ev-1", relation: "uses" }] }),
+      artifactFixture({ id: "art-created", name: "Registro do treino de hoje", type: "training", data: { workouts: [], caloriesBurned: 0 }, links: [{ taskId: "ev-1", relation: "creates" }] }),
     ],
   );
   renderPage();
@@ -84,7 +84,7 @@ test("a seção Artefatos mostra a contagem, a posição, o tipo, de quem é e a
 });
 
 test("tocar num artefato abre o detalhe dele", async () => {
-  install([TREINO], [artifactFixture({ id: "art-own", name: "Ficha A", links: [{ eventId: "ev-1", relation: "uses" }] })]);
+  install([TREINO], [artifactFixture({ id: "art-own", name: "Ficha A", links: [{ taskId: "ev-1", relation: "uses" }] })]);
   renderPage();
   await loaded();
 
@@ -92,8 +92,8 @@ test("tocar num artefato abre o detalhe dele", async () => {
   expect(within(section).getByRole("link", { name: /Ficha A/ })).toHaveAttribute("href", "/user-1/notas/art-own");
 });
 
-test("evento sem artefatos não mostra a seção", async () => {
-  install([TREINO], [artifactFixture({ id: "art-other", name: "De outro evento", links: [{ eventId: "ev-2", relation: "uses" }] })]);
+test("tarefa sem artefatos não mostra a seção", async () => {
+  install([TREINO], [artifactFixture({ id: "art-other", name: "De outra tarefa", links: [{ taskId: "ev-2", relation: "uses" }] })]);
   renderPage();
   await loaded();
 
@@ -119,11 +119,11 @@ function foodFixture(id: string, name: string, kcal: number, overrides: Partial<
 
 test("refeição mostra o total de calorias: a soma dos alimentos ligados, cópias incluídas", async () => {
   install(
-    [eventFixture({ id: "ev-1", name: "Almoço", kind: "meal", status: "doing", startedAt: "2026-11-14T12:00:00-03:00" })],
+    [taskFixture({ id: "ev-1", name: "Almoço", kind: "meal", status: "doing", startedAt: "2026-11-14T12:00:00-03:00" })],
     [
-      foodFixture("food-arroz", "Arroz", 200, { links: [{ eventId: "ev-1", relation: "uses" }] }),
-      foodFixture("copy-frango", "Frango", 350.4, { derived: true, links: [{ eventId: "ev-1", relation: "uses" }] }),
-      artifactFixture({ id: "art-nota", name: "Observação", links: [{ eventId: "ev-1", relation: "uses" }] }),
+      foodFixture("food-arroz", "Arroz", 200, { links: [{ taskId: "ev-1", relation: "uses" }] }),
+      foodFixture("copy-frango", "Frango", 350.4, { derived: true, links: [{ taskId: "ev-1", relation: "uses" }] }),
+      artifactFixture({ id: "art-nota", name: "Observação", links: [{ taskId: "ev-1", relation: "uses" }] }),
     ],
   );
   renderPage();
@@ -136,8 +136,8 @@ test("refeição mostra o total de calorias: a soma dos alimentos ligados, cópi
 
 test("refeição sem alimento ligado mostra zero kcal", async () => {
   install(
-    [eventFixture({ id: "ev-1", name: "Almoço", kind: "meal", status: "doing", startedAt: "2026-11-14T12:00:00-03:00" })],
-    [artifactFixture({ id: "art-nota", name: "Observação", links: [{ eventId: "ev-1", relation: "uses" }] })],
+    [taskFixture({ id: "ev-1", name: "Almoço", kind: "meal", status: "doing", startedAt: "2026-11-14T12:00:00-03:00" })],
+    [artifactFixture({ id: "art-nota", name: "Observação", links: [{ taskId: "ev-1", relation: "uses" }] })],
   );
   renderPage();
   await loaded();
@@ -147,7 +147,7 @@ test("refeição sem alimento ligado mostra zero kcal", async () => {
 });
 
 test("treino não mostra total de calorias", async () => {
-  install([TREINO], [foodFixture("food-arroz", "Arroz", 200, { links: [{ eventId: "ev-1", relation: "uses" }] })]);
+  install([TREINO], [foodFixture("food-arroz", "Arroz", 200, { links: [{ taskId: "ev-1", relation: "uses" }] })]);
   renderPage();
   await loaded();
 

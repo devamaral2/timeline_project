@@ -6,9 +6,9 @@ export default function LunchMockup() {
   return (
     <main id="conteudo" className={styles.detailMain}>
       <div className={styles.detailNavigation}>
-        <Link href="/mockups/eventos" className={styles.backLink} aria-label="Voltar à agenda"><ArrowLeft aria-hidden /><span>Agenda</span></Link>
-        <Link href="/mockups/eventos" className={styles.detailBrand} aria-label="Agente pessoal — agenda"><span className={styles.wordmark}>Agente pessoal</span></Link>
-        <button type="button" disabled className={styles.iconButton} aria-label="Mais opções do evento"><MoreHorizontal aria-hidden /></button>
+        <Link href="/mockups/tarefas" className={styles.backLink} aria-label="Voltar à agenda"><ArrowLeft aria-hidden /><span>Agenda</span></Link>
+        <Link href="/mockups/tarefas" className={styles.detailBrand} aria-label="Agente pessoal — agenda"><span className={styles.wordmark}>Agente pessoal</span></Link>
+        <button type="button" disabled className={styles.iconButton} aria-label="Mais opções da tarefa"><MoreHorizontal aria-hidden /></button>
       </div>
 
       <header className={styles.detailHeading} data-type="meal">
@@ -22,7 +22,7 @@ export default function LunchMockup() {
         <div className={styles.detailDurationTrack} aria-hidden><span /></div>
       </header>
 
-      <section className={styles.detailInfo} aria-label="Informações do evento">
+      <section className={styles.detailInfo} aria-label="Informações da tarefa">
         <div><MapPin aria-hidden /><div><h2>Local</h2><p>Casa</p></div></div>
         <div><Utensils aria-hidden /><div><h2>Refeição</h2><p>Arroz integral, frango grelhado, feijão e salada.</p></div></div>
         <div><FileText aria-hidden /><div><h2>Observações</h2><p>Comer com calma e aproveitar a pausa.</p></div></div>
@@ -44,7 +44,7 @@ export default function LunchMockup() {
 
       <div className={styles.detailFooter}>
         <label className={styles.missedCheckbox}><input type="checkbox" disabled />Não realizado</label>
-        <button type="button" disabled className={styles.editButton}><Pencil aria-hidden />Editar evento</button>
+        <button type="button" disabled className={styles.editButton}><Pencil aria-hidden />Editar tarefa</button>
       </div>
       <p className={styles.detailPrototypeNote}>Estudo visual · dados de exemplo</p>
     </main>

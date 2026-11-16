@@ -1,7 +1,7 @@
 /**
  * A moldura dos modais — o mesmo painel em todos eles.
  *
- * Os quatro dialogos (novo evento, detalhes, edicao, exclusao) repetiam a
+ * Os quatro dialogos (nova tarefa, detalhes, edicao, exclusao) repetiam a
  * mesma sequencia de classes; qualquer ajuste no acabamento tinha que ser
  * feito quatro vezes, e um deles sempre ficava para tras.
  */

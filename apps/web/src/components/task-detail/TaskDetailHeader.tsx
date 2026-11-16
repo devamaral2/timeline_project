@@ -20,12 +20,12 @@ interface TaskDetailHeaderProps {
 }
 
 /**
- * O topo do evento: o código do tipo, o título, e o status e a prioridade.
- * Evento de pessoa troca os dois aqui, sem entrar em edição. Evento de agente
+ * O topo da tarefa: o código do tipo, o título, e o status e a prioridade.
+ * Tarefa de pessoa troca os dois aqui, sem entrar em edição. Tarefa de agente
  * só mostra o status, solto na linha, com o robô na ponta direita; não mostra
  * prioridade: quem executa é o agente, e a API recusa a edição dele. O status
  * fica no começo da linha e a prioridade na ponta direita, sem a moldura da
- * pílula. Evento "Só agenda" (sem status) não mostra nenhum dos dois: é só um
+ * pílula. Tarefa "Só agenda" (sem status) não mostra nenhum dos dois: é só um
  * compromisso; para virar tarefa, o status entra pela edição.
  */
 export function TaskDetailHeader({ task, busy, onStatusChange, onPriorityChange }: TaskDetailHeaderProps) {
@@ -63,7 +63,7 @@ function HumanStatus({ task, busy, onChange }: { task: TaskDto; busy: boolean; o
     <TaskChoice<HumanTaskStatus>
       value={status}
       ariaLabel={`Status: ${label}. Trocar status de ${task.name}`}
-      listLabel="Status do evento"
+      listLabel="Status da tarefa"
       disabled={busy}
       options={humanStatusOptions(task).map((value) => ({
         value,
@@ -87,7 +87,7 @@ function PriorityChoice({ task, busy, onChange }: { task: TaskDto; busy: boolean
     <TaskChoice<TaskPriority>
       value={task.priority}
       ariaLabel={`Prioridade: ${label}. Trocar prioridade de ${task.name}`}
-      listLabel="Prioridade do evento"
+      listLabel="Prioridade da tarefa"
       disabled={busy}
       options={PRIORITY_ORDER.map((value) => ({ value, label: taskPriorityLabels[value], icon: <TaskPriorityMark priority={value} /> }))}
       trigger={

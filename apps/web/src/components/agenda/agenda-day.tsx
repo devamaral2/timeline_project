@@ -26,12 +26,12 @@ function DurationFigure({ minutes }: { minutes: number }) {
   );
 }
 
-/** Eventos e tempo livre na ordem do relógio; o tempo livre nunca vem da API. */
+/** Tarefas e tempo livre na ordem do relógio; o tempo livre nunca vem da API. */
 type AgendaRow =
   | { kind: "task"; task: ExampleTask; index: number; startMs: number }
   | { kind: "free"; slot: FreeSlot };
 
-/** O tempo livre é só de pessoa: um evento do agente não divide nem encurta uma janela. A prévia sem cartão conta como de pessoa. */
+/** O tempo livre é só de pessoa: uma tarefa do agente não divide nem encurta uma janela. A prévia sem cartão conta como de pessoa. */
 function agendaRowsOf(tasks: readonly ExampleTask[], dayKey: string, showFreeTime: boolean): AgendaRow[] {
   const spans = tasks.map((task) => spanForExample(task, dayKey));
   const personSpans = tasks.filter((task) => task.card?.actor !== "agent").map((task) => spanForExample(task, dayKey));
@@ -76,7 +76,7 @@ export function AgendaDay({ dayKey, now, trackings, missedTasks, onSelectTask, o
   missedTasks: Record<string, boolean>;
   onSelectTask: (selected: SelectedTask) => void;
   onPlanFreeWindow?: (window: FreeWindow) => void;
-  /** Toque no glifo de um evento de pessoa (a tela decide o que ele abre). */
+  /** Toque no glifo de uma tarefa de pessoa (a tela decide o que ele abre). */
   onStatusClick?: (card: TaskCardDto, anchor: HTMLElement) => void;
   tasks?: ExampleTask[];
   userId?: string;
@@ -88,7 +88,7 @@ export function AgendaDay({ dayKey, now, trackings, missedTasks, onSelectTask, o
   loading?: boolean;
   /** O dia em foco: só as linhas dele deslizam quando a lista muda. */
   selected?: boolean;
-  /** Eventos que acabaram de aparecer numa recarga; a linha deles chega com o banho. */
+  /** Tarefas que acabaram de aparecer numa recarga; a linha deles chega com o banho. */
   freshIds?: ReadonlySet<string>;
 }) {
   const tasks = suppliedTasks ?? exampleTasksOn(dayKey);
@@ -99,14 +99,14 @@ export function AgendaDay({ dayKey, now, trackings, missedTasks, onSelectTask, o
     <section className={styles.dayGroup} data-agenda-day={dayKey} data-selected={selected || undefined} aria-label={mediumDate(dayKey)}>
       {showHeading ? <div className={styles.dayHeading}>
         <h2>{relativeDayLabel(dayKey, todayKey)}<span>{shortDate(dayKey).toLowerCase()}</span></h2>
-        <span>{tasks.length} {tasks.length === 1 ? "evento" : "eventos"}</span>
+        <span>{tasks.length} {tasks.length === 1 ? "tarefa" : "tarefas"}</span>
       </div> : null}
       {tasks.length === 0 && loading ? <ListSkeleton /> : tasks.length === 0 ? <div className={styles.freeDay}><p>Um dia livre, do seu jeito.</p><span>Sua agenda está aberta para o que faz bem a você.</span></div> : (
         <ol className={styles.list}>
           {rows.map((row) => {
             if (row.kind === "free") return <FreeTimeRow key={`free-${row.slot.startMs}`} slot={row.slot} dayKey={dayKey} now={now} onPlan={onPlanFreeWindow} />;
             const { task, index } = row;
-            // Evento da API: a linha única desenha o cartão do contrato; a prévia sem usuário segue com o desenho de exemplo.
+            // Tarefa da API: a linha única desenha o cartão do contrato; a prévia sem usuário segue com o desenho de exemplo.
             if (userId && task.card) return <TaskRow key={task.card.id} card={task.card} userId={userId} now={new Date(now)} onStatusClick={onStatusClick} />;
             const { Icon, label } = visualForItemType(task.type);
             const tracking = task.tracking ? trackings[task.tracking.id] ?? task.tracking : undefined;
@@ -118,7 +118,7 @@ export function AgendaDay({ dayKey, now, trackings, missedTasks, onSelectTask, o
                 <article className={styles.row} data-type={task.type} data-time-position={timing.position} data-missed={missed || undefined}>
                   <span className={styles.tile}><Icon strokeWidth={ICON_STROKE_WIDTH} aria-label={label} /></span>
                   <div className={styles.rowText}>
-                    <h3>{task.href || userId ? <Link href={task.href ?? `/${userId}/eventos/${task.id}`} className={styles.rowLink}>{task.name}</Link> : <button type="button" className={styles.rowTitleButton} onClick={() => onSelectTask({ task, dayKey })}>{task.name}</button>}</h3>
+                    <h3>{task.href || userId ? <Link href={task.href ?? `/${userId}/tarefas/${task.id}`} className={styles.rowLink}>{task.name}</Link> : <button type="button" className={styles.rowTitleButton} onClick={() => onSelectTask({ task, dayKey })}>{task.name}</button>}</h3>
                     <p className={styles.rowMeta}>
                       <span>{task.time}</span>
                       {tags.length > 0 ? <><i aria-hidden>·</i>{tags.map((tag) => <span key={tag} style={tagAccentStyle(tag)}>#{tag}</span>)}</> : null}

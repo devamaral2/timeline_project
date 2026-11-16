@@ -46,7 +46,7 @@ describe("troca de status", () => {
     expect(patch).not.toHaveProperty("finishedAt");
   });
 
-  test("o evento longo não oferece não realizado", () => {
+  test("a tarefa longa não oferece não realizado", () => {
     expect(humanStatusOptions({ longRunning: false })).toContain("missed");
     expect(humanStatusOptions({ longRunning: true })).not.toContain("missed");
   });

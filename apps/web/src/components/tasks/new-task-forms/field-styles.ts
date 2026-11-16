@@ -33,7 +33,7 @@ export const inlineLinkClass =
 
 /**
  * `type="number"` valida o valor contra `step` (1 por padrao), entao qualquer
- * decimal — ate os que ja vieram salvos no evento — invalida o campo e trava o
+ * decimal — ate os que ja vieram salvos na tarefa — invalida o campo e trava o
  * submit do form. `any` desliga essa checagem e mantem o teclado numerico.
  */
 export const anyDecimalStep = "any";

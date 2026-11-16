@@ -2,7 +2,7 @@ import { act, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import type { TaskDto } from "@repo/contracts";
 import { createFakeApi } from "@/test/fake-api";
-import { eventFixture, eventsArea } from "@/test/fake-api/events";
+import { taskFixture, tasksArea } from "@/test/fake-api/tasks";
 import { writeViewMode } from "@/lib/tasks/view-mode";
 
 const push = vi.fn();
@@ -18,8 +18,8 @@ vi.mock("@/lib/api/authed-fetch", async (original) => ({
 const { TaskListScreen } = await import("./TaskListScreen");
 
 const tasks: TaskDto[] = [
-  eventFixture({ id: "luz", name: "Pagar conta de luz", status: "todo", startedAt: "2026-09-13T00:00:00-03:00" }),
-  eventFixture({ id: "pesquisa", name: "Pesquisar voos", actor: "agent", kind: "request", status: "running" }),
+  taskFixture({ id: "luz", name: "Pagar conta de luz", status: "todo", startedAt: "2026-09-13T00:00:00-03:00" }),
+  taskFixture({ id: "pesquisa", name: "Pesquisar voos", actor: "agent", kind: "request", status: "running" }),
 ];
 
 beforeEach(() => {
@@ -35,7 +35,7 @@ afterEach(() => {
 });
 
 function serve() {
-  const api = createFakeApi({ areas: [eventsArea], seed: { events: tasks } });
+  const api = createFakeApi({ areas: [tasksArea], seed: { tasks: tasks } });
   net.authedFetch.mockImplementation(api.authedFetch);
   return api;
 }
@@ -48,7 +48,7 @@ function lastTrackedQuery(api: ReturnType<typeof serve>): Record<string, string>
   return last.query;
 }
 
-test("sem escolha guardada, a lista pede todos os eventos, sem executor", async () => {
+test("sem escolha guardada, a lista pede todas as tarefas, sem executor", async () => {
   const api = serve();
   render(<TaskListScreen userId="user-1" />);
 
@@ -56,7 +56,7 @@ test("sem escolha guardada, a lista pede todos os eventos, sem executor", async 
   expect(lastTrackedQuery(api)).not.toHaveProperty("actor");
 });
 
-test("o modo de pessoa vai como executor humano e esconde os eventos de agente", async () => {
+test("o modo de pessoa vai como executor humano e esconde as tarefas de agente", async () => {
   writeViewMode("human");
   const api = serve();
   render(<TaskListScreen userId="user-1" />);

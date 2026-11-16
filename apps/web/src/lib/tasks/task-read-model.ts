@@ -1,10 +1,10 @@
 import type { TaskArtifactDto, TaskDto, TaskPriority, TaskRecurrenceDto, HumanTaskStatus } from "@repo/contracts";
 import { dayKeyOf, formatTime, shortDate, weekday, zonedDayStart } from "@repo/timeline";
-import type { EditEventInput } from "@/lib/api/events";
+import type { EditTaskInput } from "@/lib/api/tasks";
 import { recurrenceRuleLabel } from "@/lib/tasks/card-text";
 
 /**
- * O que a leitura do evento de pessoa mostra e o que a troca de status e de
+ * O que a leitura da tarefa de pessoa mostra e o que a troca de status e de
  * prioridade manda à API. Funções puras: a tela passa o `now` e os testes
  * fixam o relógio.
  */
@@ -12,7 +12,7 @@ import { recurrenceRuleLabel } from "@/lib/tasks/card-text";
 /** A ordem dos status no seletor, como no quadro Status do canvas. */
 const HUMAN_STATUS_ORDER: readonly HumanTaskStatus[] = ["todo", "toDefine", "doing", "inHold", "done", "cancel", "missed"];
 
-/** Os status que o seletor oferece. "Não realizado" é marca do evento comum: o evento longo nunca a recebe. */
+/** Os status que o seletor oferece. "Não realizado" é marca da tarefa comum: a tarefa longa nunca a recebe. */
 export function humanStatusOptions(task: Pick<TaskDto, "longRunning">): HumanTaskStatus[] {
   return HUMAN_STATUS_ORDER.filter((status) => !(task.longRunning && status === "missed"));
 }
@@ -22,14 +22,14 @@ export function humanStatusOptions(task: Pick<TaskDto, "longRunning">): HumanTas
  * atual, e tirar de `done` envia `finishedAt` nulo: a API não grava a conclusão
  * sozinha (ver api-rotas). A revisão é a que a tela leu.
  */
-export function statusPatch(task: Pick<TaskDto, "revision" | "status">, status: HumanTaskStatus | null, now: Date): EditEventInput {
-  const patch: EditEventInput = { expectedRevision: task.revision, status };
+export function statusPatch(task: Pick<TaskDto, "revision" | "status">, status: HumanTaskStatus | null, now: Date): EditTaskInput {
+  const patch: EditTaskInput = { expectedRevision: task.revision, status };
   if (status === "done") patch.finishedAt = now.toISOString();
   else if (task.status === "done") patch.finishedAt = null;
   return patch;
 }
 
-export function priorityPatch(task: Pick<TaskDto, "revision">, priority: TaskPriority): EditEventInput {
+export function priorityPatch(task: Pick<TaskDto, "revision">, priority: TaskPriority): EditTaskInput {
   return { expectedRevision: task.revision, priority };
 }
 
@@ -63,7 +63,7 @@ export function recurrenceLines(recurrence: TaskRecurrenceDto): { rule: string; 
 }
 
 /**
- * O total de calorias da refeição: a soma de `totals.totalCaloriesKcal` dos alimentos ligados ao evento, cópias
+ * O total de calorias da refeição: a soma de `totals.totalCaloriesKcal` dos alimentos ligados à tarefa, cópias
  * incluídas. O que não é alimento não entra; sem alimento, zero.
  */
 export function mealCaloriesKcal(links: readonly TaskArtifactDto[]): number {

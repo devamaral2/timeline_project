@@ -2,7 +2,7 @@ import { zonedDayStart } from "@repo/timeline";
 import type { ExampleTask } from "./agenda-examples";
 import type { TimeSpan } from "./free-time";
 
-/** Início e fim do evento no relógio; `endMs` nulo é um evento ainda sem fim. */
+/** Início e fim da tarefa no relógio; `endMs` nulo é uma tarefa ainda sem fim. */
 export function spanForExample(task: ExampleTask, dayKey: string): TimeSpan & { startLabel: string } {
   const startLabel = task.time.split(" — ")[0];
   const [hours, minutes] = startLabel.split(":").map(Number);

@@ -22,7 +22,7 @@ function artifact(id: string): ArtifactDto {
 }
 
 describe("draftArtifactsFromTask", () => {
-  it("lê os artefatos do evento na ordem da API, com a relação de cada um", () => {
+  it("lê os artefatos da tarefa na ordem da API, com a relação de cada uma", () => {
     const links = [
       { relation: "uses", fromRecurrence: false, artifact: { ...artifact("a"), global: true, type: "workout" } },
       { relation: "creates", fromRecurrence: false, artifact: artifact("b") },
@@ -66,7 +66,7 @@ describe("moveDraftArtifact", () => {
     expect(moveDraftArtifact(list, "b", 1)).toEqual(list);
   });
 
-  it("o que o evento criou não se mexe, e os de posição pulam por cima dele", () => {
+  it("o que a tarefa criou não se mexe, e os de posição pulam por cima dela", () => {
     const list = [draft("a"), draft("created", "creates"), draft("b")];
 
     expect(moveDraftArtifact(list, "b", -1).map((item) => item.id)).toEqual(["b", "created", "a"]);
@@ -75,7 +75,7 @@ describe("moveDraftArtifact", () => {
 });
 
 describe("draftArtifactPositions", () => {
-  it("numera os de posição em ordem e deixa null o que o evento criou", () => {
+  it("numera os de posição em ordem e deixa null o que a tarefa criou", () => {
     expect(draftArtifactPositions([draft("a"), draft("c", "creates"), draft("b")])).toEqual([1, null, 2]);
   });
 });
@@ -115,7 +115,7 @@ describe("artifactLinkInputs e sameArtifactLinks", () => {
     expect(artifactLinkInputs(setCopyQuantity(addFoodCopy([], food, "row-1"), "row-1", "   "))).toEqual([{ copyOf: "food-1" }]);
   });
 
-  it("uma cópia que já está no evento vai como id e relação, como qualquer artefato ligado", () => {
+  it("uma cópia que já está na tarefa vai como id e relação, como qualquer artefato ligado", () => {
     const existing = { ...draft("copy-9"), type: "food" as const, quantity: "1 porção" };
     expect(artifactLinkInputs([existing])).toEqual([{ id: "copy-9", relation: "uses" }]);
   });

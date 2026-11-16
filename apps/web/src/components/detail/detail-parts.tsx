@@ -14,7 +14,7 @@ export const detailIcon = { "aria-hidden": true, strokeWidth: ICON_STROKE_WIDTH 
 /**
  * O molde de duas colunas do registro aberto: `lead` é o resumo (voltar, data,
  * título, situação, fatos, ações) e `children`, o conteúdo, que fecha com o
- * campo do Hermes. `type` pinta o tipo do evento. No celular vira uma coluna e
+ * campo do Hermes. `type` pinta o tipo da tarefa. No celular vira uma coluna e
  * o shell esconde o cabeçalho e a barra inferior (`data-detail`). `edit` é o
  * modo de edição: o pé da tela é o rodapé de Descartar e Salvar, não o campo do Hermes.
  */
@@ -66,7 +66,7 @@ export function DetailActions({ children }: { children: ReactNode }) {
   return <div className={styles.actions}>{children}</div>;
 }
 
-/** `pressed` faz da pílula uma chave liga/desliga (o "Não realizado" do evento). */
+/** `pressed` faz da pílula uma chave liga/desliga (o "Não realizado" da tarefa). */
 export function ActionPill({ icon, danger = false, disabled = false, pressed, title, onClick, children }: {
   icon: ReactNode; danger?: boolean; disabled?: boolean; pressed?: boolean; title?: string; onClick: () => void; children: ReactNode;
 }) {
@@ -90,9 +90,9 @@ export function TimeRange({ start, end, minutes, note }: { start?: string | null
 }
 
 /**
- * De onde o registro vem (o evento ou a tarefa de uma nota): o quadrado com o
- * ícone, "Evento · hoje, 09:00 — 10:30" e o nome, com a seta. `live` marca o
- * evento em andamento com a borda e o ponto da marca.
+ * De onde o registro vem (a tarefa ou a tarefa de uma nota): o quadrado com o
+ * ícone, "Tarefa · hoje, 09:00 — 10:30" e o nome, com a seta. `live` marca o
+ * tarefa em andamento com a borda e o ponto da marca.
  */
 export function OriginLink({ href, icon, type, live = false, meta, title }: { href: string; icon: ReactNode; type?: string; live?: boolean; meta: string; title: string }) {
   return (
@@ -109,7 +109,7 @@ export function LinkList({ children }: { children: ReactNode }) {
   return <ul className={styles.cardList}>{children}</ul>;
 }
 
-/** O contêiner de toda tela de detalhe. `type` pinta o tipo do evento (rotina, refeição, treino, sono). */
+/** O contêiner de toda tela de detalhe. `type` pinta o tipo da tarefa (rotina, refeição, treino, sono). */
 export function DetailScreen({ type, children }: { type?: string; children: ReactNode }) {
   return <div className={styles.screen} data-type={type}>{children}</div>;
 }
@@ -179,7 +179,7 @@ export function DetailHead({ children }: { children: ReactNode }) {
   return <header className={styles.head}>{children}</header>;
 }
 
-/** A linha do tipo: ícone e nome na cor do tipo, com algo à direita (a situação do evento). */
+/** A linha do tipo: ícone e nome na cor do tipo, com algo à direita (a situação da tarefa). */
 export function KindRow({ icon, label, trailing }: { icon: ReactNode; label: string; trailing?: ReactNode }) {
   return <div className={styles.kindRow}><span className={styles.kind}>{icon}{label}</span>{trailing}</div>;
 }

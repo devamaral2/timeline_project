@@ -5,7 +5,7 @@ import type { ArtifactType, RequestEditEntityType } from "@repo/contracts";
  * As chaves são o conjunto que `POST /api/requests/edit` aceita.
  */
 export const EDIT_TARGET_LABELS: Record<RequestEditEntityType, string> = {
-  task: "este evento",
+  task: "esta tarefa",
   artifact: "esta nota",
   food_artifact: "esta refeição",
   sleep_artifact: "esta nota de sono",

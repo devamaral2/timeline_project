@@ -18,7 +18,7 @@ vi.mock("@/components/hub/agent-chat-panel", () => ({
   AgentChatPanel: ({ onClose }: { onClose: () => void }) => (
     <>
       <span data-hermes-mark />
-      <button type="button" onClick={onClose}>Evento criado</button>
+      <button type="button" onClick={onClose}>Tarefa criada</button>
     </>
   ),
   agentEntityHref: () => "#",
@@ -59,8 +59,8 @@ test("abrir um registro pelo chat fecha o painel, mesmo com o detalhe chegando n
   expect(panel().open).toBe(true);
 
   // Tocar na linha do registro: o painel começa a fechar e a rota muda para o detalhe.
-  fireEvent.click(screen.getByRole("button", { name: "Evento criado", hidden: true }));
-  nav.pathname = "/user-1/eventos/evento-1";
+  fireEvent.click(screen.getByRole("button", { name: "Tarefa criada", hidden: true }));
+  nav.pathname = "/user-1/tarefas/tarefa-1";
   rerender(<MobileNavigation userId="user-1" />);
   // O campo do Hermes do detalhe avisa que chegou, antes de o voo de volta terminar.
   const dock = document.createElement("div");
@@ -70,5 +70,5 @@ test("abrir um registro pelo chat fecha o painel, mesmo com o detalhe chegando n
   dock.remove();
 
   expect(panel().open).toBe(false);
-  expect(screen.queryByRole("button", { name: "Evento criado", hidden: true })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Tarefa criada", hidden: true })).not.toBeInTheDocument();
 });

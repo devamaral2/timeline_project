@@ -8,7 +8,7 @@ import type { HumanTaskKind, NotificationOffsetMinutes } from "@repo/contracts";
 export const ICON_STROKE_WIDTH = 1.75;
 
 /**
- * Como um tipo de evento se apresenta no cartao: o glifo do board da identidade
+ * Como um tipo de tarefa se apresenta no cartao: o glifo do board da identidade
  * e o rotulo em portugues. O tipo nao tem cor — so o icone o distingue.
  */
 export interface ItemTypeVisual {
@@ -26,18 +26,18 @@ const knownVisuals: Record<HumanTaskKind, ItemTypeVisual> = {
 /**
  * O tipo que este frontend ainda nao conhece.
  *
- * As naturezas de evento do backend crescem sem pedir licenca ao web: uma nova
+ * As naturezas de tarefa do backend crescem sem pedir licenca ao web: uma nova
  * chega pela rede antes de existir codigo aqui. Ele entra com o icone
  * generico e o rotulo generico — o cartao continua legivel, e a timeline nao cai por causa
  * de um `undefined` num mapa.
  */
 const unknownVisual: ItemTypeVisual = {
   Icon: CircleDashed,
-  label: "Evento",
+  label: "Tarefa",
 };
 
 /**
- * O visual da natureza do evento (`kind`) — e so ela. As notes de um evento
+ * O visual da natureza da tarefa (`kind`) — e so ela. As notes de uma tarefa
  * aparecem no detalhe; mudar o icone ou a cor do cartao por causa delas trocaria
  * a resposta a pergunta "o que e isto?".
  */
@@ -51,8 +51,8 @@ export const creatableItemTypes: HumanTaskKind[] = ["common", "meal", "training"
 /**
  * O unico rotulo de situacao que sobrou.
  *
- * O evento nao tem ciclo de vida: tem uma anotacao, que o usuario liga para
- * registrar o que perdeu. Nao existe o oposto dela — um evento sem a marca nao
+ * A tarefa nao tem ciclo de vida: tem uma anotacao, que o usuario liga para
+ * registrar o que perdeu. Nao existe o oposto dela — uma tarefa sem a marca nao
  * ganha selo nenhum, porque "nao anotado" nao e uma situacao a mostrar.
  */
 export const missedLabel = "Não realizado";

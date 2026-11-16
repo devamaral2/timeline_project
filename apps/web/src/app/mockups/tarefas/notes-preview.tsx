@@ -6,7 +6,7 @@ import { tagColorStyle } from "@/lib/tags/tag-color";
 import { noteExamples, type NotePreview } from "./notes-examples";
 import styles from "./notes.module.css";
 
-const filters = ["Todas", "Eventos", "Tarefas", "Soltas"];
+const filters = ["Todas", "Tarefas", "Soltas"];
 const groups = ["Hoje", "Ontem", "Esta semana"];
 
 function SourceIcon({ source }: { source: string }) {
@@ -40,7 +40,7 @@ export function NotesPreview() {
   const [source, setSource] = useState("Nota solta");
   const [notes, setNotes] = useState(noteExamples);
   const searchRef = useRef<HTMLInputElement>(null);
-  const visible = notes.filter(note => (filter === "Todas" || (filter === "Eventos" && note.source.startsWith("Evento")) || (filter === "Tarefas" && note.source.startsWith("Tarefa")) || (filter === "Soltas" && note.source === "Nota solta")) && `${note.title} ${note.body} ${note.tags.join(" ")}`.toLocaleLowerCase("pt-BR").includes(query.toLocaleLowerCase("pt-BR")));
+  const visible = notes.filter(note => (filter === "Todas" || (filter === "Tarefas" && note.source.startsWith("Tarefa")) || (filter === "Soltas" && note.source === "Nota solta")) && `${note.title} ${note.body} ${note.tags.join(" ")}`.toLocaleLowerCase("pt-BR").includes(query.toLocaleLowerCase("pt-BR")));
 
   useEffect(() => {
     if (searching) searchRef.current?.focus();
@@ -58,7 +58,7 @@ export function NotesPreview() {
       <h1>Nota</h1>
       <textarea aria-label="Conteúdo da nota" placeholder={"Fim de semana\n\nSuas anotações…"} value={content} onChange={event => setContent(event.target.value)} required />
       <p>A primeira linha vira o título.</p>
-      <label>Ligada a<select value={source} onChange={event => setSource(event.target.value)}><option value="Nota solta">Evento ou tarefa · opcional</option>{noteExamples.filter(note => note.source !== "Nota solta").map(note => <option key={note.id}>{note.source}</option>)}</select></label>
+      <label>Ligada a<select value={source} onChange={event => setSource(event.target.value)}><option value="Nota solta">Tarefa · opcional</option>{noteExamples.filter(note => note.source !== "Nota solta").map(note => <option key={note.id}>{note.source}</option>)}</select></label>
       <label>Tags<input placeholder="#pessoal" value={tagInput} onChange={event => setTagInput(event.target.value)} /></label>
       <button className={styles.primary} type="submit" disabled={!content.trim()}>Criar nota</button>
       <p role="status">Prévia · rascunho apenas nesta sessão</p>

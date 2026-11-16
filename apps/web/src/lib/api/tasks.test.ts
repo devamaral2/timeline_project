@@ -1,17 +1,17 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { createFakeApi, type FakeApi } from "@/test/fake-api";
-import { eventFixture, eventsArea } from "@/test/fake-api/events";
+import { taskFixture, tasksArea } from "@/test/fake-api/tasks";
 import { ApiRequestError } from "./client-request";
 import {
-  createEvent,
-  deleteEvent,
-  getEvent,
+  createTask,
+  deleteTask,
+  getTask,
   listAgenda,
-  listTrackedEvents,
+  listTrackedTasks,
   newIdempotencyKey,
   suggestTags,
-  updateEvent,
-} from "./events";
+  updateTask,
+} from "./tasks";
 
 // A tela troca o authedFetch pela API falsa: a costura que os testes de tela usam.
 const net = vi.hoisted(() => ({ authedFetch: vi.fn() }));
@@ -23,7 +23,7 @@ vi.mock("@/lib/api/authed-fetch", async (original) => ({
 let api: FakeApi;
 
 function install(seed: Parameters<typeof createFakeApi>[0]["seed"] = {}, pageSize?: number) {
-  api = createFakeApi({ areas: [eventsArea], seed, pageSize });
+  api = createFakeApi({ areas: [tasksArea], seed, pageSize });
   net.authedFetch.mockImplementation(api.authedFetch);
 }
 
@@ -36,12 +36,12 @@ describe("agenda", () => {
   test("segue o nextCursor até a janela acabar e devolve uma lista só, em ordem de início", async () => {
     install(
       {
-        events: [
-          eventFixture({ id: "ev-3", startedAt: `${MORNING}11:00:00-03:00` }),
-          eventFixture({ id: "ev-1", startedAt: `${MORNING}08:00:00-03:00` }),
-          eventFixture({ id: "ev-2", startedAt: `${MORNING}09:00:00-03:00` }),
-          eventFixture({ id: "ev-4", startedAt: `${MORNING}12:00:00-03:00` }),
-          eventFixture({ id: "ev-5", startedAt: `${MORNING}13:00:00-03:00` }),
+        tasks: [
+          taskFixture({ id: "ev-3", startedAt: `${MORNING}11:00:00-03:00` }),
+          taskFixture({ id: "ev-1", startedAt: `${MORNING}08:00:00-03:00` }),
+          taskFixture({ id: "ev-2", startedAt: `${MORNING}09:00:00-03:00` }),
+          taskFixture({ id: "ev-4", startedAt: `${MORNING}12:00:00-03:00` }),
+          taskFixture({ id: "ev-5", startedAt: `${MORNING}13:00:00-03:00` }),
         ],
       },
       2,
@@ -65,12 +65,12 @@ describe("agenda", () => {
     expect(api.calls[0].query).not.toHaveProperty("cursor");
   });
 
-  test("não traz evento longo nem evento sem horário", async () => {
+  test("não traz tarefa longa nem tarefa sem horário", async () => {
     install({
-      events: [
-        eventFixture({ id: "ev-1", startedAt: `${MORNING}08:00:00-03:00` }),
-        eventFixture({ id: "ev-longo", longRunning: true, status: "doing", startedAt: `${MORNING}09:00:00-03:00` }),
-        eventFixture({ id: "ev-sem-hora" }),
+      tasks: [
+        taskFixture({ id: "ev-1", startedAt: `${MORNING}08:00:00-03:00` }),
+        taskFixture({ id: "ev-longo", longRunning: true, status: "doing", startedAt: `${MORNING}09:00:00-03:00` }),
+        taskFixture({ id: "ev-sem-hora" }),
       ],
     });
 
@@ -81,14 +81,14 @@ describe("agenda", () => {
 describe("lista de tarefas", () => {
   test("manda status e prioridade como valores separados por vírgula", async () => {
     install({
-      events: [
-        eventFixture({ id: "ev-1", status: "todo", priority: "urgent" }),
-        eventFixture({ id: "ev-2", status: "done", priority: "urgent" }),
-        eventFixture({ id: "ev-3", status: "doing", priority: "low" }),
+      tasks: [
+        taskFixture({ id: "ev-1", status: "todo", priority: "urgent" }),
+        taskFixture({ id: "ev-2", status: "done", priority: "urgent" }),
+        taskFixture({ id: "ev-3", status: "doing", priority: "low" }),
       ],
     });
 
-    const tasks = await listTrackedEvents({ status: ["todo", "doing"], priority: ["urgent", "high"] });
+    const tasks = await listTrackedTasks({ status: ["todo", "doing"], priority: ["urgent", "high"] });
 
     expect(api.calls[0]).toMatchObject({
       pathname: "/api/tasks/tracked",
@@ -98,50 +98,50 @@ describe("lista de tarefas", () => {
   });
 
   test("manda longRunning, tag, q e ator quando a tela os passa", async () => {
-    await listTrackedEvents({ actor: "human", tag: "casa", q: "lixo", longRunning: false });
+    await listTrackedTasks({ actor: "human", tag: "casa", q: "lixo", longRunning: false });
 
     expect(api.calls[0].query).toEqual({ actor: "human", tag: "casa", q: "lixo", longRunning: "false" });
   });
 });
 
 describe("criação", () => {
-  test("envia a chave de idempotência e devolve o id do evento criado", async () => {
+  test("envia a chave de idempotência e devolve o id da tarefa criada", async () => {
     const key = newIdempotencyKey();
 
-    const eventId = await createEvent({ name: "Caminhada", tags: ["saude"] }, { idempotencyKey: key });
+    const taskId = await createTask({ name: "Caminhada", tags: ["saude"] }, { idempotencyKey: key });
 
-    expect(eventId).toBe("ev-1");
+    expect(taskId).toBe("ev-1");
     expect(api.calls[0]).toMatchObject({
       method: "POST",
       pathname: "/api/tasks",
       idempotencyKey: key,
       body: { name: "Caminhada", tags: ["saude"] },
     });
-    expect(api.store.table<{ name: string }>("events").get("ev-1")?.name).toBe("Caminhada");
+    expect(api.store.table<{ name: string }>("tasks").get("ev-1")?.name).toBe("Caminhada");
   });
 
-  test("repetir a mesma chave não cria outro evento", async () => {
+  test("repetir a mesma chave não cria outra tarefa", async () => {
     const key = newIdempotencyKey();
 
-    const first = await createEvent({ name: "Caminhada" }, { idempotencyKey: key });
-    const second = await createEvent({ name: "Caminhada" }, { idempotencyKey: key });
+    const first = await createTask({ name: "Caminhada" }, { idempotencyKey: key });
+    const second = await createTask({ name: "Caminhada" }, { idempotencyKey: key });
 
     expect(second).toBe(first);
-    expect(api.store.table("events").size).toBe(1);
+    expect(api.store.table("tasks").size).toBe(1);
   });
 
   test("a mesma chave com outro corpo vira entrada inválida na tela", async () => {
     const key = newIdempotencyKey();
-    await createEvent({ name: "Caminhada" }, { idempotencyKey: key });
+    await createTask({ name: "Caminhada" }, { idempotencyKey: key });
 
-    const error = await createEvent({ name: "Corrida" }, { idempotencyKey: key }).catch((e: unknown) => e);
+    const error = await createTask({ name: "Corrida" }, { idempotencyKey: key }).catch((e: unknown) => e);
 
     expect(error).toBeInstanceOf(ApiRequestError);
     expect(error).toMatchObject({ kind: "invalid_input", status: 422 });
   });
 
   test("um corpo fora do contrato derruba o teste, não vira erro de tela", async () => {
-    const error = await createEvent(
+    const error = await createTask(
       { name: "Caminhada", status: "inventado" as never },
       { idempotencyKey: newIdempotencyKey() },
     ).catch((e: unknown) => e);
@@ -153,17 +153,17 @@ describe("criação", () => {
 });
 
 describe("leitura, edição e remoção", () => {
-  test("lê um evento; um id que não existe vira não encontrado", async () => {
-    install({ events: [eventFixture({ id: "ev-1", name: "Caminhada" })] });
+  test("lê uma tarefa; um id que não existe vira não encontrado", async () => {
+    install({ tasks: [taskFixture({ id: "ev-1", name: "Caminhada" })] });
 
-    expect((await getEvent("ev-1")).name).toBe("Caminhada");
-    await expect(getEvent("ev-404")).rejects.toMatchObject({ kind: "not_found", status: 404 });
+    expect((await getTask("ev-1")).name).toBe("Caminhada");
+    await expect(getTask("ev-404")).rejects.toMatchObject({ kind: "not_found", status: 404 });
   });
 
-  test("edita com a revisão lida, sem mandar o eventId no corpo, e sobe a revisão", async () => {
-    install({ events: [eventFixture({ id: "ev-1", status: "todo", revision: 4 })] });
+  test("edita com a revisão lida, sem mandar o taskId no corpo, e sobe a revisão", async () => {
+    install({ tasks: [taskFixture({ id: "ev-1", status: "todo", revision: 4 })] });
 
-    await updateEvent("ev-1", { expectedRevision: 4, status: "done" });
+    await updateTask("ev-1", { expectedRevision: 4, status: "done" });
 
     expect(api.calls[0]).toMatchObject({
       method: "PATCH",
@@ -171,56 +171,56 @@ describe("leitura, edição e remoção", () => {
       body: { expectedRevision: 4, status: "done" },
     });
     expect(api.calls[0].body).not.toHaveProperty("taskId");
-    expect(api.store.table<{ revision: number }>("events").get("ev-1")?.revision).toBe(5);
+    expect(api.store.table<{ revision: number }>("tasks").get("ev-1")?.revision).toBe(5);
   });
 
   test("null apaga um campo", async () => {
-    install({ events: [eventFixture({ id: "ev-1", status: "todo" })] });
+    install({ tasks: [taskFixture({ id: "ev-1", status: "todo" })] });
 
-    await updateEvent("ev-1", { expectedRevision: 1, status: null });
+    await updateTask("ev-1", { expectedRevision: 1, status: null });
 
-    expect(api.store.table<{ status?: string }>("events").get("ev-1")?.status).toBeUndefined();
+    expect(api.store.table<{ status?: string }>("tasks").get("ev-1")?.status).toBeUndefined();
   });
 
   test("uma edição com revisão antiga vira revisão desatualizada", async () => {
-    install({ events: [eventFixture({ id: "ev-1", revision: 2 })] });
+    install({ tasks: [taskFixture({ id: "ev-1", revision: 2 })] });
 
-    await expect(updateEvent("ev-1", { expectedRevision: 1, name: "Nova" })).rejects.toMatchObject({
+    await expect(updateTask("ev-1", { expectedRevision: 1, name: "Nova" })).rejects.toMatchObject({
       kind: "stale_revision",
       status: 409,
     });
   });
 
-  test("apagar responde 204 e não quebra; depois o evento não existe", async () => {
-    install({ events: [eventFixture({ id: "ev-1" })] });
+  test("apagar responde 204 e não quebra; depois a tarefa não existe", async () => {
+    install({ tasks: [taskFixture({ id: "ev-1" })] });
 
-    await expect(deleteEvent("ev-1")).resolves.toBeUndefined();
-    await expect(getEvent("ev-1")).rejects.toMatchObject({ kind: "not_found" });
+    await expect(deleteTask("ev-1")).resolves.toBeUndefined();
+    await expect(getTask("ev-1")).rejects.toMatchObject({ kind: "not_found" });
   });
 
   test("sem permissão vira forbidden; 5xx segue como erro original", async () => {
-    install({ events: [eventFixture({ id: "ev-1" })] });
+    install({ tasks: [taskFixture({ id: "ev-1" })] });
     api.failNext("PATCH", "/api/tasks/ev-1", 403);
     api.failNext("DELETE", "/api/tasks/ev-1", 503);
 
-    await expect(updateEvent("ev-1", { expectedRevision: 1, name: "x" })).rejects.toMatchObject({ kind: "forbidden" });
-    await expect(deleteEvent("ev-1")).rejects.toMatchObject({ kind: "unavailable", status: 503 });
+    await expect(updateTask("ev-1", { expectedRevision: 1, name: "x" })).rejects.toMatchObject({ kind: "forbidden" });
+    await expect(deleteTask("ev-1")).rejects.toMatchObject({ kind: "unavailable", status: 503 });
   });
 
   test("entrada inválida do servidor (400) vira invalid_input", async () => {
-    install({ events: [eventFixture({ id: "ev-1" })] });
+    install({ tasks: [taskFixture({ id: "ev-1" })] });
     api.failNext("PATCH", "/api/tasks/ev-1", 400);
 
-    await expect(updateEvent("ev-1", { expectedRevision: 1, name: "x" })).rejects.toMatchObject({ kind: "invalid_input" });
+    await expect(updateTask("ev-1", { expectedRevision: 1, name: "x" })).rejects.toMatchObject({ kind: "invalid_input" });
   });
 });
 
 describe("tags", () => {
   test("sugere tags pelo começo do texto", async () => {
     install({
-      events: [
-        eventFixture({ id: "ev-1", tags: ["saude", "casa"] }),
-        eventFixture({ id: "ev-2", tags: ["sala"] }),
+      tasks: [
+        taskFixture({ id: "ev-1", tags: ["saude", "casa"] }),
+        taskFixture({ id: "ev-2", tags: ["sala"] }),
       ],
     });
 

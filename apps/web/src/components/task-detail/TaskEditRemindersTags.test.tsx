@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TaskDto } from "@repo/contracts";
 import { type FakeApi, createFakeApi } from "@/test/fake-api";
 import { setField } from "@/components/edit/edit-test-helpers";
-import { eventFixture, eventsArea } from "@/test/fake-api/events";
+import { taskFixture, tasksArea } from "@/test/fake-api/tasks";
 
 const replace = vi.fn();
 const push = vi.fn();
@@ -17,11 +17,11 @@ vi.mock("@/lib/api/authed-fetch", async (original) => ({
 
 const { TaskEditRoute } = await import("./TaskEditRoute");
 
-const DETAIL_PATH = "/user-1/eventos/ev-1";
+const DETAIL_PATH = "/user-1/tarefas/ev-1";
 
 /** Um treino de hoje, em curso, com lembretes e tags de partida. Revisão 3. */
 function training(overrides: Partial<TaskDto> = {}): TaskDto {
-  return eventFixture({
+  return taskFixture({
     id: "ev-1",
     name: "Treino de força",
     kind: "training",
@@ -37,7 +37,7 @@ function training(overrides: Partial<TaskDto> = {}): TaskDto {
 let api: FakeApi;
 
 function install(tasks: TaskDto[]) {
-  api = createFakeApi({ areas: [eventsArea], seed: { events: tasks } });
+  api = createFakeApi({ areas: [tasksArea], seed: { tasks: tasks } });
   net.authedFetch.mockImplementation(api.authedFetch);
 }
 
@@ -76,7 +76,7 @@ describe("Lembrar antes de", () => {
   it("cada lembrete é um cartão com remover, em ordem crescente", async () => {
     install([training({ notifyOffsetsMinutes: [1440, 30] })]);
     renderRoute();
-    await screen.findByRole("heading", { level: 1, name: "Editar evento" });
+    await screen.findByRole("heading", { level: 1, name: "Editar tarefa" });
 
     const list = screen.getByRole("list", { name: "Lembretes" });
     expect(within(list).getAllByRole("button").map((button) => button.textContent)).toEqual(["30 min", "1 dia"]);
@@ -86,7 +86,7 @@ describe("Lembrar antes de", () => {
   it("remover um lembrete manda a lista sem ele, no mesmo Salvar", async () => {
     install([training({ notifyOffsetsMinutes: [30, 1440] })]);
     renderRoute();
-    await screen.findByRole("heading", { level: 1, name: "Editar evento" });
+    await screen.findByRole("heading", { level: 1, name: "Editar tarefa" });
 
     fireEvent.click(screen.getByRole("button", { name: "Remover lembrete de 30 min antes" }));
     expect(screen.queryByRole("button", { name: "Remover lembrete de 30 min antes" })).not.toBeInTheDocument();
@@ -100,7 +100,7 @@ describe("Lembrar antes de", () => {
   it("adiciona um lembrete em dias e o manda no Salvar", async () => {
     install([training({ notifyOffsetsMinutes: [30] })]);
     renderRoute();
-    await screen.findByRole("heading", { level: 1, name: "Editar evento" });
+    await screen.findByRole("heading", { level: 1, name: "Editar tarefa" });
 
     addReminder("2", "dias");
     expect(screen.getByRole("button", { name: "Remover lembrete de 2 dias antes" })).toBeInTheDocument();
@@ -113,7 +113,7 @@ describe("Lembrar antes de", () => {
   it("aceita de 1 minuto a 30 dias: 31 dias é recusado no campo, sem entrar na lista", async () => {
     install([training()]);
     renderRoute();
-    await screen.findByRole("heading", { level: 1, name: "Editar evento" });
+    await screen.findByRole("heading", { level: 1, name: "Editar tarefa" });
 
     addReminder("31", "dias");
 
@@ -125,7 +125,7 @@ describe("Lembrar antes de", () => {
   it("um minuto é o menor lembrete aceito", async () => {
     install([training()]);
     renderRoute();
-    await screen.findByRole("heading", { level: 1, name: "Editar evento" });
+    await screen.findByRole("heading", { level: 1, name: "Editar tarefa" });
 
     addReminder("0", "minutos");
     expect(await screen.findByText("Use de 1 minuto a 30 dias.")).toBeInTheDocument();
@@ -140,10 +140,10 @@ describe("Tags", () => {
   it("sugere tags pelo começo do nome, vindas da API", async () => {
     install([
       training({ tags: ["saúde"] }),
-      eventFixture({ id: "ev-2", name: "Caminhada", tags: ["pessoal", "foco"] }),
+      taskFixture({ id: "ev-2", name: "Caminhada", tags: ["pessoal", "foco"] }),
     ]);
     renderRoute();
-    await screen.findByRole("heading", { level: 1, name: "Editar evento" });
+    await screen.findByRole("heading", { level: 1, name: "Editar tarefa" });
 
     fireEvent.change(screen.getByLabelText("Nova tag"), { target: { value: "pe" } });
 
@@ -154,10 +154,10 @@ describe("Tags", () => {
   it("escolher uma sugestão põe a tag na lista e manda o conjunto no Salvar", async () => {
     install([
       training({ tags: ["saúde"] }),
-      eventFixture({ id: "ev-2", name: "Caminhada", tags: ["pessoal"] }),
+      taskFixture({ id: "ev-2", name: "Caminhada", tags: ["pessoal"] }),
     ]);
     renderRoute();
-    await screen.findByRole("heading", { level: 1, name: "Editar evento" });
+    await screen.findByRole("heading", { level: 1, name: "Editar tarefa" });
 
     fireEvent.change(screen.getByLabelText("Nova tag"), { target: { value: "pe" } });
     fireEvent.click(await screen.findByRole("button", { name: "#pessoal" }));
@@ -173,7 +173,7 @@ describe("Tags", () => {
   it("a tag digitada é gravada em minúsculas e sem espaços nas pontas", async () => {
     install([training()]);
     renderRoute();
-    await screen.findByRole("heading", { level: 1, name: "Editar evento" });
+    await screen.findByRole("heading", { level: 1, name: "Editar tarefa" });
 
     fireEvent.change(screen.getByLabelText("Nova tag"), { target: { value: "  Foco " } });
     fireEvent.keyDown(screen.getByLabelText("Nova tag"), { key: "Enter" });
@@ -188,7 +188,7 @@ describe("Tags", () => {
   it("remover uma tag manda a lista sem ela", async () => {
     install([training({ tags: ["saúde", "pessoal"] })]);
     renderRoute();
-    await screen.findByRole("heading", { level: 1, name: "Editar evento" });
+    await screen.findByRole("heading", { level: 1, name: "Editar tarefa" });
 
     fireEvent.click(screen.getByRole("button", { name: "Remover tag saúde" }));
     save();
@@ -200,7 +200,7 @@ describe("Tags", () => {
   it("sem nada digitado e sem mudança, Salvar não envia nada", async () => {
     install([training({ tags: ["foco"], notifyOffsetsMinutes: [30] })]);
     renderRoute();
-    await screen.findByRole("heading", { level: 1, name: "Editar evento" });
+    await screen.findByRole("heading", { level: 1, name: "Editar tarefa" });
 
     save();
 

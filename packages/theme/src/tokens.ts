@@ -60,9 +60,9 @@ export interface ColorTokens {
   strandDestaque: string;
   strandTinta: string;
   /**
-   * Cores por tipo de item do evento — o mesmo vocabulario do dominio.
+   * Cores por tipo de item da tarefa — o mesmo vocabulario do dominio.
    *
-   * `meal` chamava-se `food` enquanto o evento tinha um tipo so. O valor e o
+   * `meal` chamava-se `food` enquanto a tarefa tinha um tipo so. O valor e o
    * mesmo ambar de sempre; o nome mudou porque o conceito pintado aqui e a
    * refeicao (`MealItem`), e `food` continua existindo como entidade de
    * catalogo — o alimento dentro dela.

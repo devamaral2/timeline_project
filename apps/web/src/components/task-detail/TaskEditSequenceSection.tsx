@@ -8,24 +8,24 @@ import { EntityPickerDialog } from "@/components/edit/EntityPickerDialog";
 import { TaskChoiceView, searchTrackedTasks } from "@/components/edit/task-choice";
 import { TaskKindMark } from "@/components/tasks/task-kind-mark";
 import { TaskStatusGlyph } from "@/components/tasks/task-status-glyph";
-import { getEvent } from "@/lib/api/events";
+import { getTask } from "@/lib/api/tasks";
 import { cardWhenLabel } from "@/lib/tasks/card-text";
 import { useNow } from "@/lib/tasks/use-now";
 import type { TaskDraft, TaskDraftField } from "./task-draft";
 
 interface TaskEditSequenceSectionProps {
-  /** O evento aberto: não aparece na busca. */
+  /** A tarefa aberta: não aparece na busca. */
   taskId: string;
   draft: TaskDraft;
   onChange: <K extends TaskDraftField>(field: K, value: TaskDraft[K]) => void;
 }
 
 /**
- * "Sequência" na edição, nos dois lados: "Segue-se de" (os eventos que vêm antes
+ * "Sequência" na edição, nos dois lados: "Segue-se de" (as tarefas que vêm antes
  * deste) e "Da sequência a" (os que se seguem a este). Cada lista tem um "+" que
- * abre o modal de seleção, com a busca por nome na lista de tarefas (eventos de
- * pessoa e de agente); o evento aberto fica de fora. O rascunho guarda só os ids; nome, tipo e quando
- * de cada um vêm de `getEvent`, ou do próprio resultado da busca quando a pessoa
+ * abre o modal de seleção, com a busca por nome na lista de tarefas (tarefas de
+ * pessoa e de agente); a tarefa aberta fica de fora. O rascunho guarda só os ids; nome, tipo e quando
+ * de cada um vêm de `getTask`, ou do próprio resultado da busca quando a pessoa
  * escolheu agora. Remover só tira o id do rascunho: a gravação fica para o Salvar.
  */
 export function TaskEditSequenceSection({ taskId, draft, onChange }: TaskEditSequenceSectionProps) {
@@ -40,7 +40,7 @@ export function TaskEditSequenceSection({ taskId, draft, onChange }: TaskEditSeq
     if (!missingKey) return;
     let stale = false;
     for (const id of missingKey.split(",")) {
-      getEvent(id)
+      getTask(id)
         .then((task) => {
           if (!stale) setCards((current) => ({ ...current, [id]: task }));
         })
@@ -64,12 +64,12 @@ export function TaskEditSequenceSection({ taskId, draft, onChange }: TaskEditSeq
 
   return (
     <DetailSection title="Sequência" labelId="task-edit-sequence">
-      {loadFailed ? <DetailMessage alert>Alguns eventos da sequência não carregaram.</DetailMessage> : null}
+      {loadFailed ? <DetailMessage alert>Algumas tarefas da sequência não carregaram.</DetailMessage> : null}
       <SequencePicker
         id="previous"
         heading="Segue-se de"
-        addLabel="Adicionar evento de que este se segue"
-        searchLabel="Buscar evento de que este se segue"
+        addLabel="Adicionar tarefa de que esta se segue"
+        searchLabel="Buscar tarefa de que esta se segue"
         removeLabel={(name) => `Deixar de se seguir de “${name}”`}
         ids={draft.previousTaskIds}
         taskId={taskId}
@@ -82,8 +82,8 @@ export function TaskEditSequenceSection({ taskId, draft, onChange }: TaskEditSeq
       <SequencePicker
         id="next"
         heading="Da sequência a"
-        addLabel="Adicionar evento da sequência"
-        searchLabel="Buscar evento da sequência"
+        addLabel="Adicionar tarefa da sequência"
+        searchLabel="Buscar tarefa da sequência"
         removeLabel={(name) => `Remover “${name}” da sequência`}
         ids={draft.nextTaskIds}
         taskId={taskId}
@@ -113,7 +113,7 @@ interface SequencePickerProps {
   onDrop: (id: string) => void;
 }
 
-/** Uma lista da sequência com o seu "+": o modal de seleção abre com a busca de eventos. */
+/** Uma lista da sequência com o seu "+": o modal de seleção abre com a busca de tarefas. */
 function SequencePicker({ id, heading, addLabel, searchLabel, removeLabel, ids, taskId, cards, loadFailed, now, onPick, onDrop }: SequencePickerProps) {
   const headingId = `task-edit-sequence-${id}`;
   const [picking, setPicking] = useState(false);
@@ -125,7 +125,7 @@ function SequencePicker({ id, heading, addLabel, searchLabel, removeLabel, ids, 
         <ul className={edit.list}>
           {ids.map((linkedId) => {
             const card = cards[linkedId];
-            const name = card ? card.name : loadFailed ? "Evento indisponível" : "Carregando…";
+            const name = card ? card.name : loadFailed ? "Tarefa indisponível" : "Carregando…";
             return (
               <li key={linkedId} className={edit.item}>
                 <span className={edit.itemLead}>{card ? <SequenceGlyph card={card} /> : null}</span>
@@ -138,7 +138,7 @@ function SequencePicker({ id, heading, addLabel, searchLabel, removeLabel, ids, 
                     </span>
                   ) : null}
                 </div>
-                <RemoveButton label={removeLabel(card ? card.name : "evento")} onClick={() => onDrop(linkedId)} />
+                <RemoveButton label={removeLabel(card ? card.name : "tarefa")} onClick={() => onDrop(linkedId)} />
               </li>
             );
           })}
@@ -146,7 +146,7 @@ function SequencePicker({ id, heading, addLabel, searchLabel, removeLabel, ids, 
       ) : null}
       <div className={edit.addRow}>
         <AddButton label={addLabel} onClick={() => setPicking(true)} />
-        {ids.length === 0 ? <p className={edit.empty}>nenhum evento</p> : null}
+        {ids.length === 0 ? <p className={edit.empty}>nenhuma tarefa</p> : null}
       </div>
       {picking ? (
         <EntityPickerDialog<TaskCardDto>
@@ -156,18 +156,18 @@ function SequencePicker({ id, heading, addLabel, searchLabel, removeLabel, ids, 
           keyOf={(card) => card.id}
           nameOf={(card) => card.name}
           renderItem={(card) => <TaskChoiceView card={card} now={now} />}
-          // O evento aberto e quem já está na lista não são oferecidos de novo.
+          // A tarefa aberta e quem já está na lista não são oferecidos de novo.
           exclude={(card) => card.id === taskId || ids.includes(card.id)}
           onPick={onPick}
           onClose={() => setPicking(false)}
-          failedMessage="Não foi possível buscar eventos. Tente de novo."
+          failedMessage="Não foi possível buscar tarefas. Tente de novo."
         />
       ) : null}
     </div>
   );
 }
 
-/** O glifo só mostra o status: escolher um evento da sequência não muda o status do evento daqui. */
+/** O glifo só mostra o status: escolher uma tarefa da sequência não muda o status da tarefa daqui. */
 function SequenceGlyph({ card }: { card: TaskCardDto }) {
   if (card.actor === "agent") {
     return <TaskStatusGlyph actor="agent" status={card.status as AgentTaskStatus} size={22} />;

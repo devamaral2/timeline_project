@@ -5,10 +5,10 @@ import { expect, test, vi } from "vitest";
 import { ProcessBox } from "./process-box";
 
 const base: RequestDto = {
-  id: "01HZY0000000000000000000AA", kind: "request", route: "steps", status: "running", title: "Criar dois eventos",
+  id: "01HZY0000000000000000000AA", kind: "request", route: "steps", status: "running", title: "Criar duas tarefas",
   createdAt: "2026-11-14T12:00:00.000Z", updatedAt: "2026-11-14T12:00:01.000Z",
   steps: [
-    { id: "1", agent: "event-create", label: "Criando eventos", status: "done" },
+    { id: "1", agent: "task-create", label: "Criando tarefas", status: "done" },
     { id: "2", agent: "note-create", label: "Criando notas", status: "failed", errorCode: "internal" },
     { id: "3", agent: "task-create", label: "Criando tarefas", status: "running" },
     { id: "4", agent: "task-edit", label: "Editando tarefas", status: "queued" },
@@ -21,7 +21,7 @@ test("titulo e passos com o estado de cada um, dito tambem para leitores de tela
   expect(screen.getByText("Realizando processos:")).toBeTruthy();
   const steps = within(screen.getByRole("list", { name: "Passos do processo" })).getAllByRole("listitem");
   expect(steps.map((step) => step.textContent)).toEqual([
-    "Criando eventosconcluído", "Criando notasfalhou", "Criando tarefasem andamento", "Editando tarefasaguardando",
+    "Criando tarefasconcluído", "Criando notasfalhou", "Criando tarefasem andamento", "Editando tarefasaguardando",
   ]);
   expect(steps.map((step) => step.getAttribute("data-status"))).toEqual(["succeeded", "failed", "running", "pending"]);
 });
@@ -34,8 +34,8 @@ test("um passo cancelado diz cancelado", () => {
 
 test("a resposta aparece so quando o pedido termina bem", () => {
   const { rerender } = render(<ProcessBox request={base} />);
-  rerender(<ProcessBox request={{ ...base, status: "done", message: "Criei o evento e a tarefa." }} />);
-  expect(screen.getByText("Criei o evento e a tarefa.")).toBeTruthy();
+  rerender(<ProcessBox request={{ ...base, status: "done", message: "Criei duas tarefas." }} />);
+  expect(screen.getByText("Criei duas tarefas.")).toBeTruthy();
 });
 
 test("antes do primeiro estado da API, mostra o titulo e que o pedido esta sendo entendido", () => {
@@ -79,7 +79,7 @@ test("cada registro criado ou alterado vira uma linha de prévia, com link quand
   />);
   const rows = within(screen.getByRole("list", { name: "Registros desta resposta" })).getAllByRole("listitem");
   // Duas linhas por registro: o que aconteceu em cima, o nome embaixo. Artefato aparece como nota.
-  expect(rows.map((row) => row.textContent)).toEqual(["Evento criadoComprar faixa elástica", "Nota alteradaTreino de mobilidade"]);
+  expect(rows.map((row) => row.textContent)).toEqual(["Tarefa criadaComprar faixa elástica", "Nota alteradaTreino de mobilidade"]);
   expect(within(rows[0]).getByRole("link").getAttribute("href")).toBe("/u/task/e1");
 });
 

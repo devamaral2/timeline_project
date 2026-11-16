@@ -10,7 +10,7 @@ import { DeleteTaskDialog } from "@/components/tasks/DeleteTaskDialog";
 import { visualForItemType } from "@/components/tasks/task-visuals";
 import { useMotionRouter } from "@/components/shell/navigation-motion";
 import { ApiRequestError } from "@/lib/api/client-request";
-import { type EditEventInput, updateEvent } from "@/lib/api/events";
+import { type EditTaskInput, updateTask } from "@/lib/api/tasks";
 import { momentLabel, priorityPatch, statusPatch } from "@/lib/tasks/task-read-model";
 import { TaskArtifactsSection } from "./TaskArtifactsSection";
 import { TaskDetailHeader } from "./TaskDetailHeader";
@@ -22,14 +22,14 @@ import styles from "./task-detail.module.css";
 interface TaskDetailViewProps {
   userId: string;
   task: TaskDto;
-  /** Relê o evento depois de uma troca. Não lança: a falha fica com a tela que o carregou. */
+  /** Relê a tarefa depois de uma troca. Não lança: a falha fica com a tela que o carregou. */
   onChanged: () => Promise<void>;
 }
 
-const STALE_MESSAGE = "Este evento mudou em outro lugar. Carregamos a versão atual; confira e tente de novo.";
+const STALE_MESSAGE = "Esta tarefa mudou em outro lugar. Carregamos a versão atual; confira e tente de novo.";
 
 /**
- * O detalhe de evento em modo de leitura, a rota única para agenda e lista de
+ * O detalhe de tarefa em modo de leitura, a rota única para agenda e lista de
  * tarefas. A tela é uma coluna de seções separadas: o topo (este arquivo e
  * `TaskDetailHeader`), as Informações (`TaskInfoSection`), e as seções de
  * relação: Sequência (`TaskSequenceSection`) Artefatos (`TaskArtifactsSection`) e Pedidos (`TaskRequestsSection`: criado e atualizado por). "Excluir" fica no menu "Mais ações" do
@@ -40,17 +40,17 @@ export function TaskDetailView({ userId, task, onChanged }: TaskDetailViewProps)
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const editHref = `/${userId}/eventos/${task.id}/editar`;
+  const editHref = `/${userId}/tarefas/${task.id}/editar`;
   const visual = visualForItemType(task.kind);
   const TypeIcon = visual.Icon;
 
-  /** Manda a troca com a revisão lida. Revisão velha: relê o evento e avisa, sem gravar nada. */
-  async function change(patch: EditEventInput, failure: string) {
+  /** Manda a troca com a revisão lida. Revisão velha: relê a tarefa e avisa, sem gravar nada. */
+  async function change(patch: EditTaskInput, failure: string) {
     if (saving) return;
     setSaving(true);
     setError(null);
     try {
-      await updateEvent(task.id, patch);
+      await updateTask(task.id, patch);
       window.dispatchEvent(new Event(agendaRefreshEvent));
       await onChanged();
     } catch (cause) {
@@ -74,7 +74,7 @@ export function TaskDetailView({ userId, task, onChanged }: TaskDetailViewProps)
     <>
       <nav className={styles.topbar} aria-label="Navegação do registro">
         <BackLink href={`/${userId}`} label="Voltar para a Agenda" />
-        <span className={styles.topbarTitle}>Evento</span>
+        <span className={styles.topbarTitle}>Tarefa</span>
         <div className={styles.topbarActions}>
           <DetailMenu label="Mais ações">
             {(close) => (
@@ -91,7 +91,7 @@ export function TaskDetailView({ userId, task, onChanged }: TaskDetailViewProps)
   );
 
   return (
-    <DetailFrame type={task.kind} leadLabel="Resumo do evento" bodyLabel="Conteúdo do evento" lead={lead}>
+    <DetailFrame type={task.kind} leadLabel="Resumo da tarefa" bodyLabel="Conteúdo da tarefa" lead={lead}>
       <TaskInfoSection task={task} />
       <TaskSequenceSection userId={userId} task={task} />
       <TaskArtifactsSection userId={userId} task={task} />
@@ -107,7 +107,7 @@ export function TaskDetailView({ userId, task, onChanged }: TaskDetailViewProps)
         }}
         context={{
           icon: <TypeIcon aria-hidden />,
-          meta: task.startedAt ? `Evento · ${momentLabel(task.startedAt)}` : "Evento",
+          meta: task.startedAt ? `Tarefa · ${momentLabel(task.startedAt)}` : "Tarefa",
           title: task.name,
         }}
       />

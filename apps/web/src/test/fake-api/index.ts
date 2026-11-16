@@ -2,7 +2,7 @@ import type { ZodType } from "zod";
 import { ApiError } from "@/lib/api/authed-fetch";
 
 /**
- * API falsa em memória, no lugar do `authedFetch`. Cada área (eventos,
+ * API falsa em memória, no lugar do `authedFetch`. Cada área (tarefas,
  * artefatos, …) é um arquivo em `./` com as suas rotas; a tela monta só as
  * áreas de que precisa. Não há lista central de áreas: criar uma área não
  * mexe em nenhum arquivo que outra área usa.
@@ -50,7 +50,7 @@ export interface FakeArea {
 }
 
 export interface FakeStore {
-  /** Uma coleção por nome, criada na primeira vez. Ex.: `store.table<EventDto>("events")`. */
+  /** Uma coleção por nome, criada na primeira vez. Ex.: `store.table<TaskDto>("tasks")`. */
   table<T>(name: string): Map<string, T>;
   /** `ev-1`, `ev-2`, … por prefixo. */
   nextId(prefix: string): string;
@@ -68,7 +68,7 @@ export interface FakeCall {
 
 export interface FakeApiOptions {
   areas: FakeArea[];
-  /** Linhas iniciais por coleção, pelo `id`. Ex.: `{ events: [eventFixture({ id: "ev-1" })] }`. */
+  /** Linhas iniciais por coleção, pelo `id`. Ex.: `{ tasks: [taskFixture({ id: "ev-1" })] }`. */
   seed?: Record<string, readonly { id: string }[]>;
   /** Quantos itens a agenda devolve por página. Padrão 50, como a API. */
   pageSize?: number;

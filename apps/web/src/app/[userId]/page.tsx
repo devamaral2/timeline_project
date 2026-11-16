@@ -19,7 +19,7 @@ export async function generateMetadata({
 }
 
 /*
- * A agenda carrega os eventos no cliente.
+ * A agenda carrega as tarefas no cliente.
  *
  * A leitura exige a sessao, e quem sabe renova-la quando o access token de 15
  * minutos expira e o cliente (`authedFetch`). O que sobra para o servidor e o unico

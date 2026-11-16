@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TaskDto, RecurrenceDto } from "@repo/contracts";
 import { type FakeApi, createFakeApi } from "@/test/fake-api";
 import { fieldValue, setField } from "@/components/edit/edit-test-helpers";
-import { eventFixture, eventsArea } from "@/test/fake-api/events";
+import { taskFixture, tasksArea } from "@/test/fake-api/tasks";
 import { recurrenceFixture, recurrencesArea } from "@/test/fake-api/recurrences";
 
 const replace = vi.fn();
@@ -24,7 +24,7 @@ vi.mock("@/lib/api/authed-fetch", async (original) => ({
 const { TaskCreateRoute } = await import("./TaskCreateRoute");
 const { TaskEditRoute } = await import("./TaskEditRoute");
 
-const DETAIL_PATH = "/user-1/eventos/ev-1";
+const DETAIL_PATH = "/user-1/tarefas/ev-1";
 const REFUSED = "A API recusou alguma entrada. Confira os campos e tente de novo.";
 const START_TIME = "Informe a hora: a série se repete nesse horário.";
 const PILL = "Recorrência: Seg, qua e sex, 18:30. Trocar";
@@ -45,7 +45,7 @@ const RULE = {
 let api: FakeApi;
 
 function install(tasks: TaskDto[], recurrences: RecurrenceDto[] = []) {
-  api = createFakeApi({ areas: [eventsArea, recurrencesArea], seed: { events: tasks, recurrences } });
+  api = createFakeApi({ areas: [tasksArea, recurrencesArea], seed: { tasks: tasks, recurrences } });
   net.authedFetch.mockImplementation(api.authedFetch);
 }
 
@@ -59,9 +59,9 @@ function series(overrides: Partial<RecurrenceDto> = {}): RecurrenceDto {
   });
 }
 
-/** Uma ocorrência da série: o evento leva a regra e o id da série. */
+/** Uma ocorrência da série: a tarefa leva a regra e o id da série. */
 function occurrence(overrides: Partial<TaskDto> = {}): TaskDto {
-  return eventFixture({
+  return taskFixture({
     id: "ev-1",
     name: "Treino de força",
     kind: "training",
@@ -99,7 +99,7 @@ afterEach(() => {
 });
 
 describe("recorrência na criação", () => {
-  it("com a regra definida, Salvar cria a série com o modelo do formulário, e não um evento", async () => {
+  it("com a regra definida, Salvar cria a série com o modelo do formulário, e não uma tarefa", async () => {
     install([]);
     render(<TaskCreateRoute userId="user-1" />);
 
@@ -143,8 +143,8 @@ describe("recorrência na criação", () => {
 });
 
 describe("recorrência na edição", () => {
-  it("num evento avulso, a linha diz que não se repete e oferece definir a regra", async () => {
-    install([eventFixture({ id: "ev-1", name: "Comprar pão", startedAt: "2026-11-14T18:30:00-03:00", revision: 1 })]);
+  it("numa tarefa avulso, a linha diz que não se repete e oferece definir a regra", async () => {
+    install([taskFixture({ id: "ev-1", name: "Comprar pão", startedAt: "2026-11-14T18:30:00-03:00", revision: 1 })]);
     renderEdit();
 
     await screen.findByDisplayValue("Comprar pão");
@@ -153,8 +153,8 @@ describe("recorrência na edição", () => {
     expect(screen.getByRole("button", { name: "Definir a regra" })).toBeInTheDocument();
   });
 
-  it("num evento avulso, definir a regra e Salvar grava o evento e cria a série a partir do dia seguinte", async () => {
-    install([eventFixture({
+  it("numa tarefa avulso, definir a regra e Salvar grava a tarefa e cria a série a partir do dia seguinte", async () => {
+    install([taskFixture({
       id: "ev-1",
       name: "Comprar pão",
       startedAt: "2026-11-14T18:30:00-03:00",
@@ -166,14 +166,14 @@ describe("recorrência na edição", () => {
     await screen.findByDisplayValue("Comprar pão");
     fireEvent.click(screen.getByRole("button", { name: "Definir a regra" }));
     console.log("DBG", screen.getByText("Recorrência").parentElement?.textContent);
-    expect(screen.getByText(/Este evento fica como está/)).toBeInTheDocument();
+    expect(screen.getByText(/Esta tarefa fica como está/)).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Título"), { target: { value: "Comprar pão francês" } });
     save();
 
     await waitFor(() => expect(replace).toHaveBeenCalledWith(DETAIL_PATH));
     expect(writes()).toEqual(["POST /api/recurrences", "PATCH /api/tasks/ev-1"]);
     const create = api.calls.find((call) => call.method === "POST");
-    // 14 de novembro de 2026 é sábado (bit 6): a série começa no domingo 15, e o evento de hoje não ganha uma cópia.
+    // 14 de novembro de 2026 é sábado (bit 6): a série começa no domingo 15, e a tarefa de hoje não ganha uma cópia.
     expect(create?.body).toMatchObject({
       frequency: "weekly",
       interval: 1,
@@ -185,8 +185,8 @@ describe("recorrência na edição", () => {
     });
   });
 
-  it("num evento avulso, a regra sem data de início não sai: a tela pede a data", async () => {
-    install([eventFixture({ id: "ev-1", name: "Comprar pão", revision: 1 })]);
+  it("numa tarefa avulso, a regra sem data de início não sai: a tela pede a data", async () => {
+    install([taskFixture({ id: "ev-1", name: "Comprar pão", revision: 1 })]);
     renderEdit();
 
     await screen.findByDisplayValue("Comprar pão");
@@ -207,7 +207,7 @@ describe("recorrência na edição", () => {
     save();
 
     await waitFor(() => expect(replace).toHaveBeenCalledWith(DETAIL_PATH));
-    // Só a série sai: o evento não mudou, então o PATCH do evento não vai.
+    // Só a série sai: a tarefa não mudou, então o PATCH da tarefa não vai.
     expect(writes()).toEqual(["PATCH /api/recurrences/rec-1"]);
     expect(api.calls.find((call) => call.method === "PATCH")?.body).toEqual({ expectedRevision: 1, interval: 2 });
     const after = (await api.authedFetch("/api/recurrences/rec-1")) as RecurrenceDto;

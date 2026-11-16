@@ -17,7 +17,7 @@ test("the list never offers the old load-more buttons", () => {
   fireEvent.wheel(window, { deltaY: 40 });
   fireEvent.wheel(window, { deltaY: -40 });
 
-  expect(screen.queryByRole("button", { name: /ver eventos/i })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /ver tarefas/i })).not.toBeInTheDocument();
 });
 
 function chooseMode(name: string) {
@@ -29,7 +29,7 @@ test("day mode keeps the week selector and the day summary, with today's date as
   expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
   expect(document.querySelector('button[aria-current="date"]')).not.toBeNull();
   expect(document.querySelector('[data-agenda-day] h2')).toBeNull();
-  expect(screen.getByText("5 eventos · 3 h 50 planejadas")).toBeInTheDocument();
+  expect(screen.getByText("5 tarefas · 3 h 50 planejadas")).toBeInTheDocument();
 });
 
 test("the sequence mode hides the week and extends at the edge", () => {
@@ -88,8 +88,8 @@ test("the month card moves between months and jumps back to today", () => {
 
 test("the day summary adds up the planned time", () => {
   const task = (minutes: number) => ({ name: "x", type: "common", time: "", minutes, duration: "" });
-  expect(daySummary([])).toBe("Nenhum evento");
-  expect(daySummary([task(45)])).toBe("1 evento · 45 min planejados");
-  expect(daySummary([task(60)])).toBe("1 evento · 1 h planejada");
-  expect(daySummary([task(60), task(65)])).toBe("2 eventos · 2 h 05 planejadas");
+  expect(daySummary([])).toBe("Nenhuma tarefa");
+  expect(daySummary([task(45)])).toBe("1 tarefa · 45 min planejados");
+  expect(daySummary([task(60)])).toBe("1 tarefa · 1 h planejada");
+  expect(daySummary([task(60), task(65)])).toBe("2 tarefas · 2 h 05 planejadas");
 });

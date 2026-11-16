@@ -1,6 +1,6 @@
 import { beforeEach, expect, test, vi } from "vitest";
 import { createFakeApi } from "@/test/fake-api";
-import { eventFixture, eventsArea } from "@/test/fake-api/events";
+import { taskFixture, tasksArea } from "@/test/fake-api/tasks";
 
 const net = vi.hoisted(() => ({ authedFetch: vi.fn() }));
 
@@ -20,15 +20,15 @@ beforeEach(() => {
 
 function installApi() {
   const api = createFakeApi({
-    areas: [eventsArea],
+    areas: [tasksArea],
     seed: {
-      events: [
+      tasks: [
         // So na agenda: sem status, nao acompanhado.
-        eventFixture({ id: "agenda-only", name: "Almoço", kind: "meal", status: undefined, startedAt: at(30), notifyOffsetsMinutes: [60] }),
+        taskFixture({ id: "agenda-only", name: "Almoço", kind: "meal", status: undefined, startedAt: at(30), notifyOffsetsMinutes: [60] }),
         // Nas duas listas: agenda (tem horario, nao e longo) e acompanhado (tem status).
-        eventFixture({ id: "both", name: "Revisar proposta", status: "todo", startedAt: at(60), notifyOffsetsMinutes: [15] }),
-        // So na lista de acompanhados: evento longo, o aviso conta do prazo.
-        eventFixture({ id: "long", name: "Entrega longa", status: "doing", longRunning: true, startedAt: at(-300), estimatedFinishAt: at(2 * 24 * 60), notifyOffsetsMinutes: [60] }),
+        taskFixture({ id: "both", name: "Revisar proposta", status: "todo", startedAt: at(60), notifyOffsetsMinutes: [15] }),
+        // So na lista de acompanhados: tarefa longa, o aviso conta do prazo.
+        taskFixture({ id: "long", name: "Entrega longa", status: "doing", longRunning: true, startedAt: at(-300), estimatedFinishAt: at(2 * 24 * 60), notifyOffsetsMinutes: [60] }),
       ],
     },
   });

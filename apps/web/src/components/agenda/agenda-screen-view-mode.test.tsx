@@ -2,7 +2,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import type { TaskDto } from "@repo/contracts";
 import { createFakeApi } from "@/test/fake-api";
-import { eventFixture, eventsArea } from "@/test/fake-api/events";
+import { taskFixture, tasksArea } from "@/test/fake-api/tasks";
 import { writeViewMode } from "@/lib/tasks/view-mode";
 
 const net = vi.hoisted(() => ({ authedFetch: vi.fn() }));
@@ -22,8 +22,8 @@ const { AgendaScreen } = await import("./agenda-screen");
 const TODAY = "2026-09-14";
 
 const tasks: TaskDto[] = [
-  eventFixture({ id: "ev-1", name: "Revisar proposta", kind: "common", status: "todo", startedAt: "2026-09-14T09:00:00-03:00", estimatedFinishAt: "2026-09-14T10:30:00-03:00" }),
-  eventFixture({ id: "ev-3", name: "Pesquisar voos para novembro", actor: "agent", kind: "request", status: "running", startedAt: "2026-09-14T09:48:00-03:00" }),
+  taskFixture({ id: "ev-1", name: "Revisar proposta", kind: "common", status: "todo", startedAt: "2026-09-14T09:00:00-03:00", estimatedFinishAt: "2026-09-14T10:30:00-03:00" }),
+  taskFixture({ id: "ev-3", name: "Pesquisar voos para novembro", actor: "agent", kind: "request", status: "running", startedAt: "2026-09-14T09:48:00-03:00" }),
 ];
 
 function dayOf(dayKey: string): HTMLElement {
@@ -44,7 +44,7 @@ afterEach(() => {
 });
 
 function serve() {
-  const api = createFakeApi({ areas: [eventsArea], seed: { events: tasks } });
+  const api = createFakeApi({ areas: [tasksArea], seed: { tasks: tasks } });
   net.authedFetch.mockImplementation(api.authedFetch);
   return api;
 }
@@ -56,7 +56,7 @@ function lastAgendaQuery(api: ReturnType<typeof serve>): Record<string, string> 
   return last.query;
 }
 
-test("sem escolha guardada, a agenda pede todos os eventos, sem executor", async () => {
+test("sem escolha guardada, a agenda pede todas as tarefas, sem executor", async () => {
   const api = serve();
   render(<AgendaScreen userId="user-1" todayKey={TODAY} />);
 
@@ -64,7 +64,7 @@ test("sem escolha guardada, a agenda pede todos os eventos, sem executor", async
   expect(lastAgendaQuery(api)).not.toHaveProperty("actor");
 });
 
-test("o modo de agentes vai como executor agente e tira os eventos de pessoa da agenda", async () => {
+test("o modo de agentes vai como executor agente e tira as tarefas de pessoa da agenda", async () => {
   writeViewMode("agent");
   const api = serve();
   render(<AgendaScreen userId="user-1" todayKey={TODAY} />);

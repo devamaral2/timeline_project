@@ -26,9 +26,9 @@ interface TaskEditArtifactsSectionProps {
 }
 
 /**
- * "Artefatos" na edição: a lista do evento, na ordem da tela. Cada linha tem a posição, o nome, o tipo, de quem é
+ * "Artefatos" na edição: a lista da tarefa, na ordem da tela. Cada linha tem a posição, o nome, o tipo, de quem é
  * e a relação, e os botões Subir, Descer e Remover (por teclado e por toque; não há arrastar). O "+" abre o modal
- * de seleção, e o que ele oferece depende do tipo do evento: numa refeição, os alimentos (do catálogo global e os
+ * de seleção, e o que ele oferece depende do tipo da tarefa: numa refeição, os alimentos (do catálogo global e os
  * seus), que entram como cópia com quantidade; num treino, os exercícios do catálogo global, por referência; nos
  * outros tipos, os seus artefatos, com a relação `uses`. Nada vai à API aqui: a lista segue no rascunho até o Salvar.
  */
@@ -83,7 +83,7 @@ interface LinkPickerProps {
   onChange: TaskEditArtifactsSectionProps["onChange"];
 }
 
-/** O que o "+" oferece, conforme o tipo do evento. Cada fonte tem o seu jeito de entrar na lista. */
+/** O que o "+" oferece, conforme o tipo da tarefa. Cada fonte tem o seu jeito de entrar na lista. */
 const SOURCES = {
   meal: {
     title: "Alimentos",

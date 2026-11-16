@@ -3,7 +3,7 @@ import { beforeEach, expect, test, vi } from "vitest";
 import { type FakeApi, createFakeApi } from "@/test/fake-api";
 import { type StoredArtifact, artifactFixture, artifactsArea } from "@/test/fake-api/artifacts";
 import { setField } from "@/components/edit/edit-test-helpers";
-import { eventFixture, eventsArea } from "@/test/fake-api/events";
+import { taskFixture, tasksArea } from "@/test/fake-api/tasks";
 
 const replace = vi.fn();
 const push = vi.fn();
@@ -24,7 +24,7 @@ const { EditNoteRoute, NewNoteRoute } = await import("./NewItemRoutes");
 let api: FakeApi;
 
 function install(seed: Parameters<typeof createFakeApi>[0]["seed"] = {}) {
-  api = createFakeApi({ areas: [artifactsArea, eventsArea], seed });
+  api = createFakeApi({ areas: [artifactsArea, tasksArea], seed });
   net.authedFetch.mockImplementation(api.authedFetch);
 }
 
@@ -45,9 +45,9 @@ function save() {
   fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
 }
 
-/** Liga um evento pelo "+": abre o modal de seleção e escolhe pelo nome. */
+/** Liga uma tarefa pelo "+": abre o modal de seleção e escolhe pelo nome. */
 async function linkTask(name: string) {
-  fireEvent.click(screen.getByRole("button", { name: "Adicionar evento" }));
+  fireEvent.click(screen.getByRole("button", { name: "Adicionar tarefa" }));
   fireEvent.click(await screen.findByRole("button", { name: `Escolher “${name}”` }));
 }
 
@@ -163,22 +163,22 @@ test("revisão desatualizada avisa, mantém o texto digitado e a próxima tentat
   expect(patches[1].body).toMatchObject({ data: { body: "Meu texto" } });
 });
 
-const DINNER = eventFixture({ id: "ev-1", name: "Jantar leve", kind: "meal", startedAt: "2026-11-14T20:00:00-03:00" });
-const GYM = eventFixture({ id: "ev-2", name: "Treino de peito", kind: "training", startedAt: "2026-11-15T07:00:00-03:00" });
+const DINNER = taskFixture({ id: "ev-1", name: "Jantar leve", kind: "meal", startedAt: "2026-11-14T20:00:00-03:00" });
+const GYM = taskFixture({ id: "ev-2", name: "Treino de peito", kind: "training", startedAt: "2026-11-15T07:00:00-03:00" });
 
-test("o + de Eventos abre o modal de seleção, e a nota criada já nasce ligada ao evento escolhido", async () => {
-  install({ events: [DINNER, GYM] });
+test("o + de Tarefas abre o modal de seleção, e a nota criada já nasce ligada à tarefa escolhida", async () => {
+  install({ tasks: [DINNER, GYM] });
   render(<NewNoteRoute userId="user-1" />);
 
   fireEvent.change(screen.getByLabelText("Conteúdo da nota"), { target: { value: "Receita do jantar" } });
-  fireEvent.click(screen.getByRole("button", { name: "Adicionar evento" }));
-  expect(screen.getByRole("dialog", { name: "Eventos" })).toBeInTheDocument();
-  fireEvent.change(screen.getByRole("searchbox", { name: "Buscar evento para ligar" }), { target: { value: "Jantar" } });
+  fireEvent.click(screen.getByRole("button", { name: "Adicionar tarefa" }));
+  expect(screen.getByRole("dialog", { name: "Tarefas" })).toBeInTheDocument();
+  fireEvent.change(screen.getByRole("searchbox", { name: "Buscar tarefa para ligar" }), { target: { value: "Jantar" } });
   fireEvent.click(await screen.findByRole("button", { name: "Escolher “Jantar leve”" }));
 
-  // Escolher fecha o modal e põe o evento na lista do formulário.
+  // Escolher fecha o modal e põe a tarefa na lista do formulário.
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-  expect(within(screen.getByRole("list", { name: "Eventos ligados" })).getByText("Jantar leve")).toBeInTheDocument();
+  expect(within(screen.getByRole("list", { name: "Tarefas ligadas" })).getByText("Jantar leve")).toBeInTheDocument();
   save();
 
   await waitFor(() => expect(replace).toHaveBeenCalledWith(expect.stringMatching(/^\/user-1\/notas\/.+/)));
@@ -186,34 +186,34 @@ test("o + de Eventos abre o modal de seleção, e a nota criada já nasce ligada
 });
 
 test("quem já está na lista não é oferecido de novo no modal", async () => {
-  install({ events: [DINNER, GYM] });
+  install({ tasks: [DINNER, GYM] });
   render(<NewNoteRoute userId="user-1" />);
 
   await linkTask("Jantar leve");
-  fireEvent.click(screen.getByRole("button", { name: "Adicionar evento" }));
+  fireEvent.click(screen.getByRole("button", { name: "Adicionar tarefa" }));
 
   expect(await screen.findByRole("button", { name: "Escolher “Treino de peito”" })).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Escolher “Jantar leve”" })).not.toBeInTheDocument();
 });
 
-test("editar mostra os eventos ligados; ligar outro e desligar um manda a lista de eventos que fica", async () => {
-  install({ events: [DINNER, GYM], artifacts: [artifactFixture({ ...NOTE, revision: 2, links: [{ eventId: "ev-1", relation: "uses" }] })] });
+test("editar mostra as tarefas ligadas; ligar outra e desligar uma manda a lista de tarefas que fica", async () => {
+  install({ tasks: [DINNER, GYM], artifacts: [artifactFixture({ ...NOTE, revision: 2, links: [{ taskId: "ev-1", relation: "uses" }] })] });
   render(<EditNoteRoute userId="user-1" noteId="art-1" />);
 
   expect(await screen.findByRole("heading", { level: 1, name: "Editar artefato" })).toBeInTheDocument();
-  const linked = screen.getByRole("list", { name: "Eventos ligados" });
+  const linked = screen.getByRole("list", { name: "Tarefas ligadas" });
   expect(within(linked).getByText("Jantar leve")).toBeInTheDocument();
 
   await linkTask("Treino de peito");
-  fireEvent.click(screen.getByRole("button", { name: "Desligar do evento “Jantar leve”" }));
+  fireEvent.click(screen.getByRole("button", { name: "Desligar da tarefa “Jantar leve”" }));
   save();
 
   await waitFor(() => expect(replace).toHaveBeenCalledWith("/user-1/notas/art-1"));
   expect(api.calls.find((call) => call.method === "PATCH")?.body).toMatchObject({ expectedRevision: 2, taskIds: ["ev-2"] });
 });
 
-test("sem mexer nos eventos, a edição não manda a lista de eventos", async () => {
-  install({ events: [DINNER], artifacts: [artifactFixture({ ...NOTE, links: [{ eventId: "ev-1", relation: "uses" }] })] });
+test("sem mexer nas tarefas, a edição não manda a lista de tarefas", async () => {
+  install({ tasks: [DINNER], artifacts: [artifactFixture({ ...NOTE, links: [{ taskId: "ev-1", relation: "uses" }] })] });
   render(<EditNoteRoute userId="user-1" noteId="art-1" />);
 
   fireEvent.change(await screen.findByLabelText("Conteúdo da nota"), { target: { value: "Outro texto" } });

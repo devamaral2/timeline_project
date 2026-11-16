@@ -5,7 +5,7 @@ import { beforeEach, expect, test, vi } from "vitest";
 import { agentFilesRoutes, listAgentFiles, listAgentFileBackups, readAgentFileText, requestAgentFileEdit, restoreAgentFileBackup } from "./agent-files";
 import { createArtifact, deleteArtifact, editArtifact, getArtifact, listArtifacts, artifactsRoutes } from "./artifacts";
 import { placesRoutes, searchPlaces } from "./places";
-import { createEvent, deleteEvent, eventsRoutes, getEvent, listAgenda, listTrackedEvents, suggestTags, updateEvent } from "./events";
+import { createTask, deleteTask, tasksRoutes, getTask, listAgenda, listTrackedTasks, suggestTags, updateTask } from "./tasks";
 import { cancelRequest, getRequest, listRequests, requestsRoutes, sendHermesMessage, startEditRequest, startRequest, startVoiceRequest } from "./requests";
 import { createRecurrence, deleteRecurrence, editRecurrence, getRecurrence, listRecurrences, recurrencesRoutes } from "./recurrences";
 
@@ -32,7 +32,7 @@ const concrete = (route: string): string => route.replace(/\{[^}]+\}/g, "ID");
 const declaredRoutes: string[] = [
   ...Object.values(agentFilesRoutes),
   ...Object.values(artifactsRoutes),
-  ...Object.values(eventsRoutes),
+  ...Object.values(tasksRoutes),
   ...Object.values(placesRoutes),
   ...Object.values(recurrencesRoutes),
   ...Object.values(requestsRoutes),
@@ -101,13 +101,13 @@ function casesOf<R extends Record<string, string>>(
 }
 
 const cases: Case[] = [
-  ...casesOf("eventos", eventsRoutes, {
+  ...casesOf("tarefas", tasksRoutes, {
     listAgenda: () => listAgenda({ from: "2026-09-14T00:00:00-03:00", to: "2026-09-15T00:00:00-03:00" }),
-    listTrackedEvents: () => listTrackedEvents(),
-    createEvent: () => createEvent(anyBody(), { idempotencyKey: "k" }),
-    getEvent: () => getEvent("ID"),
-    updateEvent: () => updateEvent("ID", anyBody()),
-    deleteEvent: () => deleteEvent("ID"),
+    listTrackedTasks: () => listTrackedTasks(),
+    createTask: () => createTask(anyBody(), { idempotencyKey: "k" }),
+    getTask: () => getTask("ID"),
+    updateTask: () => updateTask("ID", anyBody()),
+    deleteTask: () => deleteTask("ID"),
     suggestTags: () => suggestTags("a"),
   }),
   ...casesOf("locais", placesRoutes, {

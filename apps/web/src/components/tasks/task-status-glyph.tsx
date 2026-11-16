@@ -35,7 +35,7 @@ export function taskStatusName(actor: TaskActor, status: HumanStatusOrNone | Age
 
 /**
  * O glifo do status: um circulo, e o que fica dentro diz qual. Nao tem moldura
- * nem fundo: a cor sai do `data-status` no CSS. Evento de pessoa sem status
+ * nem fundo: a cor sai do `data-status` no CSS. Tarefa de pessoa sem status
  * (`null`) e o ponto azul "Só agenda". Os status de agente usam o mesmo
  * contorno; o que muda e o nome, e o `running` ganha um ponto verde-agua.
  */

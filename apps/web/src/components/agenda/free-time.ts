@@ -1,6 +1,6 @@
 import { shiftDayKey, zonedDayStart } from "@repo/timeline";
 
-/** Quando um evento ocupa o relógio; `endMs` nulo é um evento sem hora de fim. */
+/** Quando uma tarefa ocupa o relógio; `endMs` nulo é uma tarefa sem hora de fim. */
 export interface TimeSpan {
   startMs: number;
   endMs: number | null;
@@ -9,7 +9,7 @@ export interface TimeSpan {
 /** A menor janela que entra na lista: abaixo de 15 minutos não é tempo livre que se planeje. */
 export const MIN_FREE_WINDOW_MINUTES = 15;
 
-/** Uma lacuna entre eventos do mesmo dia. Só existe na tela; nada disso é salvo. */
+/** Uma lacuna entre tarefas do mesmo dia. Só existe na tela; nada disso é salvo. */
 export interface FreeSlot {
   startMs: number;
   endMs: number;
@@ -20,13 +20,13 @@ export interface FreeSlot {
 }
 
 /**
- * Os intervalos livres de um dia: entre um evento e o seguinte e do fim do
- * último evento até a meia-noite. Nunca atravessam o dia — o que sobra depois
+ * Os intervalos livres de um dia: entre uma tarefa e o seguinte e do fim do
+ * última tarefa até a meia-noite. Nunca atravessam o dia — o que sobra depois
  * da meia-noite pertence ao dia seguinte — e não há lacuna antes do primeiro
- * evento.
+ * tarefa.
  *
- * Eventos sobrepostos contam como um bloco só (vale o fim mais tardio). Um
- * evento sem hora de fim não diz quando termina, então dali em diante não se
+ * Tarefas sobrepostas contam como um bloco só (vale o fim mais tardio). Um
+ * tarefa sem hora de fim não diz quando termina, então dali em diante não se
  * calcula tempo livre: seria chute.
  */
 export function freeTimeSlots(spans: readonly TimeSpan[], dayKey: string): FreeSlot[] {

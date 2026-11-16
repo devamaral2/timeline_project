@@ -25,11 +25,11 @@ const TYPE_ICONS: Record<ArtifactType, LucideIcon> = {
 };
 
 /**
- * A seção Artefatos do detalhe: os artefatos do evento, na ordem em que vieram
+ * A seção Artefatos do detalhe: os artefatos da tarefa, na ordem em que vieram
  * (`task.artifacts`, sem outra chamada). Cada linha mostra a posição, o nome, o
  * código do tipo, de quem é (“seu artefato” ou “catálogo global”) e a relação. O
- * que o evento criou (`creates`) não está na lista: sem posição, com “—”. Tocar
- * numa linha abre o detalhe do artefato. Evento sem artefato não mostra a seção.
+ * que a tarefa criou (`creates`) não está na lista: sem posição, com “—”. Tocar
+ * numa linha abre o detalhe do artefato. Tarefa sem artefato não mostra a seção.
  * Na refeição, o total de calorias são os alimentos ligados somados (cópias incluídas).
  */
 export function TaskArtifactsSection({ userId, task }: TaskArtifactsSectionProps) {
@@ -53,7 +53,7 @@ export function TaskArtifactsSection({ userId, task }: TaskArtifactsSectionProps
   );
 }
 
-/** 1, 2, … para os artefatos da lista; `null` para o que o evento criou. */
+/** 1, 2, … para os artefatos da lista; `null` para o que a tarefa criou. */
 function artifactPositions(artifacts: readonly TaskArtifactDto[]): (number | null)[] {
   let next = 0;
   return artifacts.map((link) => (link.relation === "creates" ? null : ++next));

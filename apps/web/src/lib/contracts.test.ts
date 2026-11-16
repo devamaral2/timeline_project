@@ -21,7 +21,7 @@ const card: TaskCardDto = {
   revision: 1,
 };
 
-test("um cartao de evento de exemplo passa no esquema do contrato compartilhado", () => {
+test("um cartao de tarefa de exemplo passa no esquema do contrato compartilhado", () => {
   expect(taskCardSchema.parse(card)).toEqual(card);
 });
 

@@ -49,7 +49,7 @@ test("junta os dois executores nos seis grupos, na ordem do canvas, e tira os gr
   ]);
 });
 
-test("sem nenhum evento em um grupo, o grupo não aparece", () => {
+test("sem nenhuma tarefa em um grupo, o grupo não aparece", () => {
   const groups = groupTrackedTasks([card({ id: "luz", status: "todo" })]);
 
   expect(groups.map((group) => group.title)).toEqual(["A fazer"]);
@@ -75,7 +75,7 @@ test("a sequência não esconde ninguém: todo cartão com status vira linha, te
   expect(shown).toEqual(["proposta", "rascunho", "ler"]);
 });
 
-test("evento sem status (de referência) não entra em nenhum grupo", () => {
+test("tarefa sem status (de referência) não entra em nenhum grupo", () => {
   const groups = groupTrackedTasks([card({ id: "consulta", status: undefined, startedAt: "2026-09-15T10:00:00-03:00" })]);
 
   expect(groups).toEqual([]);

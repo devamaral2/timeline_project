@@ -25,7 +25,7 @@ const KIND_OPTIONS: { value: CreateKind; label: string }[] = [
   { value: "food", label: "Alimento" },
 ];
 
-/** Um evento ligado ao artefato, com o que a linha mostra. `relation` só existe na ligação que já estava gravada. */
+/** Uma tarefa ligada ao artefato, com o que a linha mostra. `relation` só existe na ligação que já estava gravada. */
 interface LinkedTask {
   taskId: string;
   name: string;
@@ -47,7 +47,7 @@ interface ArtifactEditViewProps {
 
 const STALE_MESSAGE = "Esta nota mudou em outro lugar. Atualizamos a revisão; o que você digitou continua aqui. Confira e salve de novo.";
 
-/** Só os eventos de pessoa entram na lista: os pedidos ao agente que tocaram o artefato não se editam por aqui. */
+/** Só as tarefas de pessoa entram na lista: os pedidos ao agente que tocaram o artefato não se editam por aqui. */
 function linkedTasksOf(artifact: ArtifactDto | undefined): LinkedTask[] {
   return (artifact?.tasks ?? [])
     .filter((link) => link.actor === "human")
@@ -56,9 +56,9 @@ function linkedTasksOf(artifact: ArtifactDto | undefined): LinkedTask[] {
 
 /**
  * O formulário do artefato, na criação e na edição da nota de texto, no desenho do quadro "Detalhe · edição": o
- * topo só com o rótulo, o resumo (tipo e nome), as seções (conteúdo, tags e eventos) e o rodapé de Descartar e
+ * topo só com o rótulo, o resumo (tipo e nome), as seções (conteúdo, tags e tarefas) e o rodapé de Descartar e
  * Salvar. Na criação o tipo troca entre nota e alimento; o alimento vai só com o texto do que foi comido, e os
- * nutrientes são calculados depois, pelo agente. Os eventos entram pelo "+", que abre o modal de seleção. A
+ * nutrientes são calculados depois, pelo agente. As tarefas entram pelo "+", que abre o modal de seleção. A
  * criação leva uma chave de idempotência guardada enquanto o formulário estiver aberto; a edição manda a
  * revisão lida e o conteúdo inteiro.
  */
@@ -111,7 +111,7 @@ export function ArtifactEditView({ existing, initialName, onSaved, onLeave }: Ar
     setSaving(true);
     setError(null);
     const title = name.trim() || undefined;
-    // Os eventos só vão no corpo quando a pessoa escolheu algum (criação) ou mexeu na lista (edição).
+    // As tarefas só vão no corpo quando a pessoa escolheu algum (criação) ou mexeu na lista (edição).
     const links = tasksChanged ? { taskIds } : {};
 
     if (existing) {
@@ -233,9 +233,9 @@ export function ArtifactEditView({ existing, initialName, onSaved, onLeave }: Ar
           </>
         )}
 
-        <DetailSection title="Eventos" labelId="artifact-edit-events" count={tasks.length > 0 ? tasks.length : undefined}>
+        <DetailSection title="Tarefas" labelId="artifact-edit-tasks" count={tasks.length > 0 ? tasks.length : undefined}>
           {tasks.length > 0 ? (
-            <ul className={edit.list} aria-label="Eventos ligados">
+            <ul className={edit.list} aria-label="Tarefas ligadas">
               {tasks.map((item) => (
                 <li key={item.taskId} className={edit.item}>
                   <div className={edit.itemBody}>
@@ -247,7 +247,7 @@ export function ArtifactEditView({ existing, initialName, onSaved, onLeave }: Ar
                   </div>
                   {item.relation ? <span className={edit.itemTrail}>{item.relation}</span> : null}
                   <RemoveButton
-                    label={`Desligar do evento “${item.name}”`}
+                    label={`Desligar da tarefa “${item.name}”`}
                     onClick={() => setTasks((current) => current.filter((other) => other.taskId !== item.taskId))}
                   />
                 </li>
@@ -255,8 +255,8 @@ export function ArtifactEditView({ existing, initialName, onSaved, onLeave }: Ar
             </ul>
           ) : null}
           <div className={edit.addRow}>
-            <AddButton label="Adicionar evento" onClick={() => setPicking(true)} />
-            {tasks.length === 0 ? <p className={edit.empty}>nenhum evento</p> : null}
+            <AddButton label="Adicionar tarefa" onClick={() => setPicking(true)} />
+            {tasks.length === 0 ? <p className={edit.empty}>nenhuma tarefa</p> : null}
           </div>
         </DetailSection>
 
@@ -266,8 +266,8 @@ export function ArtifactEditView({ existing, initialName, onSaved, onLeave }: Ar
 
       {picking ? (
         <EntityPickerDialog<TaskCardDto>
-          title="Eventos"
-          searchLabel="Buscar evento para ligar"
+          title="Tarefas"
+          searchLabel="Buscar tarefa para ligar"
           search={searchHumanTasks}
           keyOf={(card) => card.id}
           nameOf={(card) => card.name}
@@ -275,7 +275,7 @@ export function ArtifactEditView({ existing, initialName, onSaved, onLeave }: Ar
           exclude={(card) => taskIds.includes(card.id)}
           onPick={link}
           onClose={() => setPicking(false)}
-          failedMessage="Não foi possível buscar eventos. Tente de novo."
+          failedMessage="Não foi possível buscar tarefas. Tente de novo."
         />
       ) : null}
     </DetailFrame>

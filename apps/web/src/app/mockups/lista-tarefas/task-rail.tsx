@@ -69,7 +69,7 @@ export function TaskRail() {
         {items.length === 0 ? (
           <p className={styles.empty}>Um dia livre, do seu jeito.</p>
         ) : (
-          <ol className={styles.rail} aria-label={`Eventos de ${day.label.toLowerCase()}`}>
+          <ol className={styles.rail} aria-label={`Tarefas de ${day.label.toLowerCase()}`}>
             {items.map((item) =>
               item.kind === "free" ? (
                 <FreeRow key={`free-${item.start}`} gap={item} />

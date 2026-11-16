@@ -9,7 +9,7 @@ import { visualForItemType } from "@/components/tasks/task-visuals";
 import { humanStatusOptions } from "@/lib/tasks/task-read-model";
 import type { TaskDraft, TaskDraftErrors, TaskDraftField } from "./task-draft";
 
-/** Os tipos de evento de pessoa, na ordem do quadro Tipos. */
+/** Os tipos de tarefa de pessoa, na ordem do quadro Tipos. */
 const KINDS: HumanTaskKind[] = ["common", "meal", "sleep", "training"];
 /** A prioridade da mais alta para a mais baixa, como no seletor da leitura. */
 const PRIORITY_ORDER: TaskPriority[] = ["urgent", "high", "medium", "low"];
@@ -26,7 +26,7 @@ interface TaskEditHeaderFieldsProps {
  * O resumo do formulário, como no quadro "Detalhe · edição": a pílula do tipo
  * (ícone e código em mono), o título como campo na serifa, e a linha com o
  * status (glifo, nome e código) e a prioridade (barras e nome). O status
- * "Sem status" vale só para evento que não é longo (o longo sempre tem status).
+ * "Sem status" vale só para tarefa que não é longo (o longo sempre tem status).
  * O que vale é o rascunho: a tarefa persistente ligada agora já muda as opções.
  */
 export function TaskEditHeaderFields({ draft, errors, onChange }: TaskEditHeaderFieldsProps) {
@@ -54,7 +54,7 @@ export function TaskEditHeaderFields({ draft, errors, onChange }: TaskEditHeader
         id="task-name"
         type="text"
         aria-label="Título"
-        placeholder="Título do evento"
+        placeholder="Título da tarefa"
         autoComplete="off"
         className={edit.titleInput}
         value={draft.name}

@@ -11,16 +11,16 @@ import type {
 import { apiRequest, newIdempotencyKey } from "./client-request";
 
 /** Edição: a rota leva o `taskId`, então o corpo não o repete. `expectedRevision` vem da tarefa lida. */
-export type EditEventInput = Omit<UpdateTaskInput, "taskId">;
+export type EditTaskInput = Omit<UpdateTaskInput, "taskId">;
 
 /** Rota que cada função desta área chama, no formato do catálogo da API. `route-coverage.test.ts` confere. */
-export const eventsRoutes = {
+export const tasksRoutes = {
   listAgenda: "GET /api/tasks",
-  listTrackedEvents: "GET /api/tasks/tracked",
-  createEvent: "POST /api/tasks",
-  getEvent: "GET /api/tasks/{taskId}",
-  updateEvent: "PATCH /api/tasks/{taskId}",
-  deleteEvent: "DELETE /api/tasks/{taskId}",
+  listTrackedTasks: "GET /api/tasks/tracked",
+  createTask: "POST /api/tasks",
+  getTask: "GET /api/tasks/{taskId}",
+  updateTask: "PATCH /api/tasks/{taskId}",
+  deleteTask: "DELETE /api/tasks/{taskId}",
   suggestTags: "GET /api/tags",
 } as const;
 
@@ -57,7 +57,7 @@ export async function listAgenda(window: AgendaWindow): Promise<TaskCardDto[]> {
   return items;
 }
 
-export function listTrackedEvents(filters: TrackedFilters = {}): Promise<TaskCardDto[]> {
+export function listTrackedTasks(filters: TrackedFilters = {}): Promise<TaskCardDto[]> {
   return apiRequest<TaskCardDto[]>("GET", "/api/tasks/tracked", {
     query: {
       actor: filters.actor,
@@ -73,8 +73,8 @@ export function listTrackedEvents(filters: TrackedFilters = {}): Promise<TaskCar
   });
 }
 
-/** Devolve o id do evento criado. Quem cria passa a chave de `newIdempotencyKey`, estável no formulário. */
-export async function createEvent(
+/** Devolve o id da tarefa criada. Quem cria passa a chave de `newIdempotencyKey`, estável no formulário. */
+export async function createTask(
   input: CreateTaskInput,
   options: { idempotencyKey: string },
 ): Promise<string> {
@@ -85,15 +85,15 @@ export async function createEvent(
   return created.taskId;
 }
 
-export function getEvent(taskId: string): Promise<TaskDto> {
+export function getTask(taskId: string): Promise<TaskDto> {
   return apiRequest<TaskDto>("GET", `/api/tasks/${encodeURIComponent(taskId)}`);
 }
 
-export function updateEvent(taskId: string, input: EditEventInput): Promise<void> {
+export function updateTask(taskId: string, input: EditTaskInput): Promise<void> {
   return apiRequest<void>("PATCH", `/api/tasks/${encodeURIComponent(taskId)}`, { body: input });
 }
 
-export function deleteEvent(taskId: string): Promise<void> {
+export function deleteTask(taskId: string): Promise<void> {
   return apiRequest<void>("DELETE", `/api/tasks/${encodeURIComponent(taskId)}`);
 }
 

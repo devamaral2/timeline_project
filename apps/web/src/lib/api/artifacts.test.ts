@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { createFakeApi, type FakeApi } from "@/test/fake-api";
 import { artifactFixture, artifactsArea } from "@/test/fake-api/artifacts";
-import { eventFixture, eventsArea } from "@/test/fake-api/events";
+import { taskFixture, tasksArea } from "@/test/fake-api/tasks";
 import { ApiRequestError } from "./client-request";
 import {
   createArtifact,
@@ -24,7 +24,7 @@ type Seed = Parameters<typeof createFakeApi>[0]["seed"];
 let api: FakeApi;
 
 function install(seed: Seed = {}) {
-  api = createFakeApi({ areas: [artifactsArea, eventsArea], seed });
+  api = createFakeApi({ areas: [artifactsArea, tasksArea], seed });
   net.authedFetch.mockImplementation(api.authedFetch);
 }
 
@@ -54,11 +54,11 @@ describe("lista", () => {
     expect(api.calls[0]).toMatchObject({ method: "GET", pathname: "/api/artifacts" });
   });
 
-  test("manda tipo, tag, q e evento na consulta, e filtra por eles", async () => {
+  test("manda tipo, tag, q e tarefa na consulta, e filtra por eles", async () => {
     install({
-      events: [eventFixture({ id: "ev-1", name: "Almoço" })],
+      tasks: [taskFixture({ id: "ev-1", name: "Almoço" })],
       artifacts: [
-        artifactFixture({ id: "art-texto", name: "Lista", tags: ["casa"], data: { body: "Comprar leite" }, links: [{ eventId: "ev-1", relation: "uses" }] }),
+        artifactFixture({ id: "art-texto", name: "Lista", tags: ["casa"], data: { body: "Comprar leite" }, links: [{ taskId: "ev-1", relation: "uses" }] }),
         artifactFixture({ id: "art-outro", name: "Lista de treino", tags: ["casa"], data: { body: "Supino" } }),
         artifactFixture({ id: "art-sono", name: "Sono", type: "sleep", data: { trackedSleepTime: 7, score: 80 }, tags: ["casa"] }),
       ],
@@ -70,7 +70,7 @@ describe("lista", () => {
     expect(found.map((artifact) => artifact.id)).toEqual(["art-texto"]);
   });
 
-  test("scope=global com tipo devolve só os globais daquele tipo, por nome, sem eventos", async () => {
+  test("scope=global com tipo devolve só os globais daquele tipo, por nome, sem tarefas", async () => {
     install({
       artifacts: [
         artifactFixture({ id: "art-feijao", name: "Feijão", type: "food", data: FOOD, global: true }),
@@ -93,11 +93,11 @@ describe("lista", () => {
 });
 
 describe("leitura", () => {
-  test("traz os eventos em que o artefato aparece, com a relação de cada um", async () => {
+  test("traz as tarefas em que o artefato aparece, com a relação de cada uma", async () => {
     install({
-      events: [eventFixture({ id: "ev-1", name: "Almoço de domingo", kind: "meal", startedAt: "2026-09-13T12:00:00-03:00" })],
+      tasks: [taskFixture({ id: "ev-1", name: "Almoço de domingo", kind: "meal", startedAt: "2026-09-13T12:00:00-03:00" })],
       artifacts: [
-        artifactFixture({ id: "art-1", name: "Almoço", type: "food", data: FOOD, links: [{ eventId: "ev-1", relation: "uses" }] }),
+        artifactFixture({ id: "art-1", name: "Almoço", type: "food", data: FOOD, links: [{ taskId: "ev-1", relation: "uses" }] }),
       ],
     });
 
@@ -162,8 +162,8 @@ describe("criação", () => {
     });
   });
 
-  test("aparecer num evento ao criar liga o artefato a ele e revisa o evento", async () => {
-    install({ events: [eventFixture({ id: "ev-1", name: "Almoço", revision: 1 })] });
+  test("aparecer numa tarefa ao criar liga o artefato a ela e revisa a tarefa", async () => {
+    install({ tasks: [taskFixture({ id: "ev-1", name: "Almoço", revision: 1 })] });
 
     const artifactId = await createArtifact(
       { type: "food", data: { inputText: "Arroz" }, taskIds: ["ev-1"] },
@@ -171,10 +171,10 @@ describe("criação", () => {
     );
 
     expect((await getArtifact(artifactId)).tasks).toEqual([expect.objectContaining({ taskId: "ev-1", relation: "creates" })]);
-    expect(api.store.table<{ revision: number }>("events").get("ev-1")?.revision).toBe(2);
+    expect(api.store.table<{ revision: number }>("tasks").get("ev-1")?.revision).toBe(2);
   });
 
-  test("evento citado que não existe é não encontrado, e nada é criado", async () => {
+  test("tarefa citada que não existe é não encontrado, e nada é criado", async () => {
     await expect(
       createArtifact({ type: "text", data: { body: "Nota" }, taskIds: ["ev-404"] }, { idempotencyKey: newIdempotencyKey() }),
     ).rejects.toMatchObject({ kind: "not_found" });
@@ -212,19 +212,19 @@ describe("edição", () => {
     expect(await getArtifact("art-1")).toMatchObject({ name: "Primeira", revision: 2 });
   });
 
-  test("trocar os eventos mantém quem fica, tira quem sai e revisa só os eventos tocados", async () => {
+  test("trocar as tarefas mantém quem fica, tira quem sai e revisa só as tarefas tocadas", async () => {
     install({
-      events: [eventFixture({ id: "ev-1", name: "Almoço" }), eventFixture({ id: "ev-2", name: "Jantar" })],
+      tasks: [taskFixture({ id: "ev-1", name: "Almoço" }), taskFixture({ id: "ev-2", name: "Jantar" })],
       artifacts: [
-        artifactFixture({ id: "art-1", name: "Arroz", type: "text", links: [{ eventId: "ev-1", relation: "creates" }] }),
+        artifactFixture({ id: "art-1", name: "Arroz", type: "text", links: [{ taskId: "ev-1", relation: "creates" }] }),
       ],
     });
 
     await editArtifact("art-1", { expectedRevision: 1, taskIds: ["ev-2"] });
 
     expect((await getArtifact("art-1")).tasks).toEqual([expect.objectContaining({ taskId: "ev-2", relation: "uses" })]);
-    expect(api.store.table<{ revision: number }>("events").get("ev-1")?.revision).toBe(2);
-    expect(api.store.table<{ revision: number }>("events").get("ev-2")?.revision).toBe(2);
+    expect(api.store.table<{ revision: number }>("tasks").get("ev-1")?.revision).toBe(2);
+    expect(api.store.table<{ revision: number }>("tasks").get("ev-2")?.revision).toBe(2);
   });
 });
 

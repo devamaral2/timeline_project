@@ -54,7 +54,7 @@ class FakeSpeechRecognition {
 
 /** Grava uma frase completa: aperta o botao, fala e aperta de novo para parar. */
 function speak(transcript: string): void {
-  fireEvent.click(screen.getByRole("button", { name: "Gravar evento por voz" }));
+  fireEvent.click(screen.getByRole("button", { name: "Gravar tarefa por voz" }));
   const recognition = FakeSpeechRecognition.instances.at(-1);
   act(() => recognition?.emitFinal(transcript));
   fireEvent.click(screen.getByRole("button", { name: "Parar gravação" }));
@@ -100,7 +100,7 @@ test("shows the pending chip while the agent works", async () => {
 
   speak("almocei arroz e feijao");
 
-  expect(await screen.findByText("Criando evento...")).toBeInTheDocument();
+  expect(await screen.findByText("Criando tarefa...")).toBeInTheDocument();
 });
 
 test("never keeps two creations in flight at the same time", async () => {
@@ -111,8 +111,8 @@ test("never keeps two creations in flight at the same time", async () => {
   await waitFor(() => expect(voicePosts()).toHaveLength(1));
   speak("comecei a estudar ingles");
 
-  // O segundo pedido só segue depois que o primeiro termina: dois eventos em paralelo se fechariam na ordem errada.
-  expect(await screen.findByText("Criando 2 eventos...")).toBeInTheDocument();
+  // O segundo pedido só segue depois que o primeiro termina: duas tarefas em paralelo se fechariam na ordem errada.
+  expect(await screen.findByText("Criando 2 tarefas...")).toBeInTheDocument();
   expect(voicePosts()).toHaveLength(1);
 
   advanceRequest(api, lastRequestId(), { status: "done", entities: [createdTask] });
@@ -125,9 +125,9 @@ test("shows the failure message of a voice request that fails, and retries with 
 
   speak("comecei a estudar ingles");
   await waitFor(() => expect(voicePosts()).toHaveLength(1));
-  advanceRequest(api, lastRequestId(), { status: "failed", errorCode: "internal", message: "Não consegui criar o evento: a fala ficou vaga." });
+  advanceRequest(api, lastRequestId(), { status: "failed", errorCode: "internal", message: "Não consegui criar a tarefa: a fala ficou vaga." });
 
-  expect(await screen.findByText("Não consegui criar o evento: a fala ficou vaga.", {}, { timeout: 4000 })).toBeInTheDocument();
+  expect(await screen.findByText("Não consegui criar a tarefa: a fala ficou vaga.", {}, { timeout: 4000 })).toBeInTheDocument();
   expect(onCreated).not.toHaveBeenCalled();
 
   fireEvent.click(screen.getByRole("button", { name: "Tentar de novo" }));
@@ -169,7 +169,7 @@ test("reload recovers the open voice request without submitting it again", async
   const onCreated = vi.fn();
   render(<VoiceTaskButton onCreated={onCreated} />);
 
-  expect(await screen.findByText("Criando evento...")).toBeInTheDocument();
+  expect(await screen.findByText("Criando tarefa...")).toBeInTheDocument();
   advanceRequest(api, open.id, { status: "done", entities: [createdTask] });
 
   await waitFor(() => expect(onCreated).toHaveBeenCalledWith(createdTask), { timeout: 4000 });
@@ -181,7 +181,7 @@ test("explicit voice cancel targets the accepted request, not another submission
   speak("almocei arroz");
   await waitFor(() => expect(requests().size).toBe(1));
 
-  fireEvent.click(screen.getByRole("button", { name: "Cancelar evento por voz" }));
+  fireEvent.click(screen.getByRole("button", { name: "Cancelar tarefa por voz" }));
 
   expect(await screen.findByText("Pedido cancelado.", {}, { timeout: 4000 })).toBeInTheDocument();
   expect(api.calls.filter((call) => call.method === "POST" && call.pathname === `/api/requests/${lastRequestId()}/cancel`)).toHaveLength(1);

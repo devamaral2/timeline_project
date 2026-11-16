@@ -16,13 +16,13 @@ import { z } from "zod";
 import type { FakeArea, FakeRequest, FakeResult, FakeStore } from ".";
 
 /**
- * Área de artefatos: lista, leitura, criação, edição e remoção. Os eventos que
- * citam um artefato são lidos da tabela de eventos (área de eventos); a tabela
- * tem o mesmo nome que `EVENTS` em `./events`, sem importá-la para não mexer nela.
+ * Área de artefatos: lista, leitura, criação, edição e remoção. As tarefas que
+ * citam um artefato são lidas da tabela de tarefas (área de tarefas); a tabela
+ * tem o mesmo nome que `TASKS` em `./tasks`, sem importá-la para não mexer nela.
  */
 
 const ARTIFACTS = "artifacts";
-const EVENTS = "events";
+const TASKS = "tasks";
 const ARTIFACT_TYPES: readonly ArtifactType[] = ["text", "food", "sleep", "training", "workout", "skill", "agent", "router"];
 /** Arquivos do agente e roteador: a API não edita nem apaga por aqui (400). */
 const FOLLOWS_FILES: ReadonlySet<ArtifactType> = new Set(["skill", "agent", "router"]);
@@ -36,13 +36,13 @@ const createdArtifactSchema = createArtifactResponseSchema;
 const numeric = new Intl.Collator("en", { numeric: true });
 
 export interface ArtifactLink {
-  eventId: string;
+  taskId: string;
   relation: ArtifactTaskLinkDto["relation"];
-  /** A posição na lista do evento (a ordem enviada no `PATCH` do evento). Sem ela, vale a ordem da tabela. */
+  /** A posição na lista da tarefa (a ordem enviada no `PATCH` da tarefa). Sem ela, vale a ordem da tabela. */
   position?: number;
 }
 
-/** Como o artefato fica guardado: o que a leitura devolve, mais as relações com os eventos. */
+/** Como o artefato fica guardado: o que a leitura devolve, mais as relações com as tarefas. */
 export interface StoredArtifact {
   id: string;
   name: string;
@@ -59,7 +59,7 @@ export interface StoredArtifact {
   deleted: boolean;
 }
 
-/** Um artefato para o seed. Sem `data`, é um texto vazio; `links` diz em quais eventos ele aparece. */
+/** Um artefato para o seed. Sem `data`, é um texto vazio; `links` diz em quais tarefas ele aparece. */
 export function artifactFixture(overrides: Partial<StoredArtifact> & { id: string }): StoredArtifact {
   return {
     type: "text",
@@ -82,8 +82,8 @@ function table(store: FakeStore) {
   return store.table<StoredArtifact>(ARTIFACTS);
 }
 
-function events(store: FakeStore) {
-  return store.table<TaskDto>(EVENTS);
+function tasksTable(store: FakeStore) {
+  return store.table<TaskDto>(TASKS);
 }
 
 function visibleOne(store: FakeStore, id: string): StoredArtifact | undefined {
@@ -99,27 +99,27 @@ function unique(ids: readonly string[] | undefined): string[] {
   return [...new Set(ids ?? [])];
 }
 
-/** Os eventos em que o artefato aparece; um evento que não existe mais não entra. Global não tem evento. */
+/** As tarefas em que o artefato aparece; uma tarefa que não existe mais não entra. Global não tem tarefa. */
 function linksOf(artifact: StoredArtifact, store: FakeStore): ArtifactTaskLinkDto[] {
   if (artifact.global) return [];
   const result: ArtifactTaskLinkDto[] = [];
   for (const link of artifact.links) {
-    const event = events(store).get(link.eventId);
-    if (!event) continue;
+    const task = tasksTable(store).get(link.taskId);
+    if (!task) continue;
     result.push({
-      taskId: event.id,
+      taskId: task.id,
       relation: link.relation,
-      name: event.name,
-      actor: event.actor,
-      kind: event.kind,
-      startedAt: event.startedAt,
-      estimatedFinishAt: event.estimatedFinishAt,
+      name: task.name,
+      actor: task.actor,
+      kind: task.kind,
+      startedAt: task.startedAt,
+      estimatedFinishAt: task.estimatedFinishAt,
     });
   }
   return result;
 }
 
-/** Sem `store`, é o artefato como vem dentro de um evento: sem `events`, que só as listas de artefatos trazem. */
+/** Sem `store`, é o artefato como vem dentro de uma tarefa: sem `tasks`, que só as listas de artefatos trazem. */
 function toDto(artifact: StoredArtifact, store?: FakeStore): ArtifactDto {
   const dto = {
     id: artifact.id,
@@ -138,15 +138,15 @@ function toDto(artifact: StoredArtifact, store?: FakeStore): ArtifactDto {
 }
 
 /**
- * Os artefatos ligados a um evento, na ordem da tabela (a ordem em que foram semeados ou criados). É o que
+ * Os artefatos ligados a uma tarefa, na ordem da tabela (a ordem em que foram semeados ou criados). É o que
  * `GET /api/tasks/{id}` embute em `artifacts`: cada um com a relação do vínculo e o artefato inteiro, globais
  * e cópias derivadas incluídos, e sem os apagados.
  */
-export function artifactsOfEvent(store: FakeStore, eventId: string): TaskArtifactDto[] {
+export function artifactsOfTask(store: FakeStore, taskId: string): TaskArtifactDto[] {
   const found: { link: ArtifactLink; artifact: StoredArtifact }[] = [];
   for (const artifact of table(store).values()) {
     if (artifact.deleted) continue;
-    const link = artifact.links.find((item) => item.eventId === eventId);
+    const link = artifact.links.find((item) => item.taskId === taskId);
     if (link) found.push({ link, artifact });
   }
   // `Array.prototype.sort` é estável: sem posição, a ordem da tabela é a que fica.
@@ -155,8 +155,8 @@ export function artifactsOfEvent(store: FakeStore, eventId: string): TaskArtifac
   return found.map(({ link, artifact }) => ({ relation: link.relation, fromRecurrence: false, artifact: toDto(artifact) }));
 }
 
-/** Uma entrada da lista de artefatos do `PATCH` do evento: um artefato ligado, ou uma cópia nova de um alimento. */
-export type EventArtifactEntry = { id: string; relation?: ArtifactLink["relation"] } | { copyOf: string; quantity?: string };
+/** Uma entrada da lista de artefatos do `PATCH` da tarefa: um artefato ligado, ou uma cópia nova de um alimento. */
+export type TaskArtifactEntry = { id: string; relation?: ArtifactLink["relation"] } | { copyOf: string; quantity?: string };
 
 /**
  * A cópia nova de um alimento, como a API a faz: um artefato derivado, com o conteúdo do original e a quantidade
@@ -183,13 +183,13 @@ function copyFood(store: FakeStore, original: StoredArtifact, quantity: string |
 }
 
 /**
- * A lista completa de artefatos de um evento, como o `PATCH` do evento a manda: a ordem da lista vira a posição
+ * A lista completa de artefatos de uma tarefa, como o `PATCH` da tarefa a manda: a ordem da lista vira a posição
  * do vínculo, quem sai da lista perde o vínculo (o artefato continua), e a relação vem da entrada ou, se ela não
  * traz, do vínculo que já existia (ou `uses` para um artefato novo na lista). Uma cópia de alimento (`copyOf`) cria
  * a cópia derivada e a liga com `uses`. `false` quando algum artefato ou alimento não existe, ou quando `copyOf` não
  * aponta para um alimento; nada é gravado nesse caso.
  */
-export function relinkEventArtifacts(store: FakeStore, eventId: string, entries: readonly EventArtifactEntry[]): boolean {
+export function relinkTaskArtifacts(store: FakeStore, taskId: string, entries: readonly TaskArtifactEntry[]): boolean {
   for (const entry of entries) {
     if ("copyOf" in entry) {
       if (visibleOne(store, entry.copyOf)?.type !== "food") return false;
@@ -209,13 +209,13 @@ export function relinkEventArtifacts(store: FakeStore, eventId: string, entries:
   const ids = resolved.map((entry) => entry.id);
 
   for (const artifact of [...table(store).values()]) {
-    const current = artifact.links.find((link) => link.eventId === eventId);
+    const current = artifact.links.find((link) => link.taskId === taskId);
     const index = ids.indexOf(artifact.id);
     if (!current && index === -1) continue;
-    const others = artifact.links.filter((link) => link.eventId !== eventId);
+    const others = artifact.links.filter((link) => link.taskId !== taskId);
     const links = index === -1
       ? others
-      : [...others, { eventId, relation: resolved[index]?.relation ?? current?.relation ?? "uses", position: index }];
+      : [...others, { taskId, relation: resolved[index]?.relation ?? current?.relation ?? "uses", position: index }];
     table(store).set(artifact.id, { ...artifact, links });
   }
   return true;
@@ -239,11 +239,11 @@ function byName(a: StoredArtifact, b: StoredArtifact): number {
   return a.name.localeCompare(b.name, "pt-BR") || numeric.compare(a.id, b.id);
 }
 
-/** Os eventos tocados por uma mudança de artefato ganham uma revisão, como na API. */
-function reviseEvents(store: FakeStore, eventIds: readonly string[]): void {
-  for (const id of eventIds) {
-    const event = events(store).get(id);
-    if (event) events(store).set(id, { ...event, revision: event.revision + 1 });
+/** As tarefas tocadas por uma mudança de artefato ganham uma revisão, como na API. */
+function reviseTasks(store: FakeStore, taskIds: readonly string[]): void {
+  for (const id of taskIds) {
+    const task = tasksTable(store).get(id);
+    if (task) tasksTable(store).set(id, { ...task, revision: task.revision + 1 });
   }
 }
 
@@ -259,7 +259,7 @@ function list(request: FakeRequest, store: FakeStore): FakeResult {
 
   const tag = request.query.get("tag") ?? undefined;
   const q = request.query.get("q")?.toLocaleLowerCase("pt-BR");
-  const eventId = request.query.get("taskId") ?? undefined;
+  const taskId = request.query.get("taskId") ?? undefined;
 
   // Sem `scope`, a lista é do usuário (globais não têm dono); com `scope=global`, são os globais.
   let found = [...table(store).values()]
@@ -268,7 +268,7 @@ function list(request: FakeRequest, store: FakeStore): FakeResult {
     .filter((artifact) => !type || artifact.type === type)
     .filter((artifact) => !tag || artifact.tags.includes(tag))
     .filter((artifact) => !q || matchesText(artifact, q))
-    .filter((artifact) => !eventId || artifact.links.some((link) => link.eventId === eventId))
+    .filter((artifact) => !taskId || artifact.links.some((link) => link.taskId === taskId))
     .sort(scope === "global" ? byName : byUpdatedDesc);
   if (limit !== undefined) found = found.slice(0, limit);
 
@@ -296,8 +296,8 @@ function initialData(input: CreateArtifactRequest): unknown {
 
 function create(request: FakeRequest, store: FakeStore): FakeResult {
   const input = request.body as CreateArtifactRequest;
-  const eventIds = unique(input.taskIds);
-  if (eventIds.some((id) => !events(store).has(id))) return { status: 404 };
+  const taskIds = unique(input.taskIds);
+  if (taskIds.some((id) => !tasksTable(store).has(id))) return { status: 404 };
 
   const type: ArtifactType = input.type ?? "text";
   const id = store.nextId("art");
@@ -314,10 +314,10 @@ function create(request: FakeRequest, store: FakeStore): FakeResult {
     revision: 1,
     createdAt: now,
     updatedAt: now,
-    links: eventIds.map((eventId) => ({ eventId, relation: "creates" })),
+    links: taskIds.map((taskId) => ({ taskId, relation: "creates" })),
     deleted: false,
   });
-  reviseEvents(store, eventIds);
+  reviseTasks(store, taskIds);
   return { status: 201, body: createdArtifactSchema.parse({ artifactId: id }) };
 }
 
@@ -344,14 +344,14 @@ function update(request: FakeRequest, store: FakeStore): FakeResult {
   if (input.expectedRevision !== current.revision) return { status: 409 };
 
   const desired = input.taskIds === undefined ? undefined : unique(input.taskIds);
-  if (desired?.some((id) => !events(store).has(id))) return { status: 404 };
+  if (desired?.some((id) => !tasksTable(store).has(id))) return { status: 404 };
 
-  const currentIds = current.links.map((link) => link.eventId);
+  const currentIds = current.links.map((link) => link.taskId);
   const links: ArtifactLink[] =
     desired === undefined
       ? current.links
-      : desired.map((eventId) => current.links.find((link) => link.eventId === eventId) ?? { eventId, relation: "uses" });
-  // Só entrar ou sair da lista revisa o evento; quem fica não muda.
+      : desired.map((taskId) => current.links.find((link) => link.taskId === taskId) ?? { taskId, relation: "uses" });
+  // Só entrar ou sair da lista revisa a tarefa; quem fica não muda.
   const touched =
     desired === undefined
       ? []
@@ -367,11 +367,11 @@ function update(request: FakeRequest, store: FakeStore): FakeResult {
     updatedAt: new Date().toISOString(),
     links,
   });
-  reviseEvents(store, touched);
+  reviseTasks(store, touched);
   return { status: 204 };
 }
 
-/** Remoção é "soft": o artefato some das leituras e as relações com os eventos ficam. */
+/** Remoção é "soft": o artefato some das leituras e as relações com as tarefas ficam. */
 function remove(request: FakeRequest, store: FakeStore): FakeResult {
   const current = visibleOne(store, request.params.artifactId ?? "");
   if (!current) return { status: 404 };

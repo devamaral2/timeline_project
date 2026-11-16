@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TaskDto } from "@repo/contracts";
 import { fieldValue, getField, setField } from "@/components/edit/edit-test-helpers";
 import { type FakeApi, createFakeApi } from "@/test/fake-api";
-import { eventsArea } from "@/test/fake-api/events";
+import { tasksArea } from "@/test/fake-api/tasks";
 
 const replace = vi.fn();
 const push = vi.fn();
@@ -25,7 +25,7 @@ const { TaskCreateRoute } = await import("./TaskCreateRoute");
 let api: FakeApi;
 
 function install() {
-  api = createFakeApi({ areas: [eventsArea], seed: { events: [] } });
+  api = createFakeApi({ areas: [tasksArea], seed: { tasks: [] } });
   net.authedFetch.mockImplementation(api.authedFetch);
 }
 
@@ -38,7 +38,7 @@ function posts() {
 }
 
 function created(): TaskDto[] {
-  return [...api.store.table<TaskDto>("events").values()];
+  return [...api.store.table<TaskDto>("tasks").values()];
 }
 
 /** Os campos mudam pelo rótulo visível, como a pessoa os acha. */
@@ -75,10 +75,10 @@ afterEach(() => {
 });
 
 describe("formulário vazio", () => {
-  it("abre com o cabeçalho Novo evento, todos os campos vazios e sem status", async () => {
+  it("abre com o cabeçalho Nova tarefa, todos os campos vazios e sem status", async () => {
     renderRoute();
 
-    expect(await screen.findByRole("heading", { level: 1, name: "Novo evento" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: "Nova tarefa" })).toBeInTheDocument();
     expect(field("Título")).toHaveValue("");
     expect(fieldValue("Tipo")).toBe("common");
     expect(fieldValue("Status")).toBe("");
@@ -88,19 +88,19 @@ describe("formulário vazio", () => {
     expect(screen.getAllByRole("button").map((button) => button.textContent)).toEqual(["Descartar", "Salvar"]);
   });
 
-  it("?nome= põe o título, vindo de /evento comprar pão", async () => {
+  it("?nome= põe o título, vindo de /tarefa comprar pão", async () => {
     route.search = "nome=Comprar%20p%C3%A3o";
     renderRoute();
 
-    expect(await screen.findByRole("heading", { level: 1, name: "Novo evento" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: "Nova tarefa" })).toBeInTheDocument();
     expect(field("Título")).toHaveValue("Comprar pão");
   });
 });
 
 describe("Salvar", () => {
-  it("sem status, cria um evento de referência com o corpo preenchido e volta para a tela de onde veio", async () => {
+  it("sem status, cria uma tarefa de referência com o corpo preenchido e volta para a tela de onde veio", async () => {
     renderRoute();
-    await screen.findByRole("heading", { level: 1, name: "Novo evento" });
+    await screen.findByRole("heading", { level: 1, name: "Nova tarefa" });
 
     type("Título", "Dentista");
     save();
@@ -115,7 +115,7 @@ describe("Salvar", () => {
 
   it("com tipo, status e início, manda o que a pessoa escolheu, com o início no fuso da timeline", async () => {
     renderRoute();
-    await screen.findByRole("heading", { level: 1, name: "Novo evento" });
+    await screen.findByRole("heading", { level: 1, name: "Nova tarefa" });
 
     type("Título", "Treino de força");
     type("Tipo", "training");
@@ -130,9 +130,9 @@ describe("Salvar", () => {
     });
   });
 
-  it("um toque repetido em Salvar não cria dois eventos", async () => {
+  it("um toque repetido em Salvar não cria duas tarefas", async () => {
     renderRoute();
-    await screen.findByRole("heading", { level: 1, name: "Novo evento" });
+    await screen.findByRole("heading", { level: 1, name: "Nova tarefa" });
 
     type("Título", "Dentista");
     save();
@@ -146,12 +146,12 @@ describe("Salvar", () => {
 
   it("sem título não envia: o campo avisa e a tela continua aberta", async () => {
     renderRoute();
-    await screen.findByRole("heading", { level: 1, name: "Novo evento" });
+    await screen.findByRole("heading", { level: 1, name: "Nova tarefa" });
 
     type("Título", "  ");
     save();
 
-    expect(await screen.findByText("Dê um título ao evento.")).toBeInTheDocument();
+    expect(await screen.findByText("Dê um título à tarefa.")).toBeInTheDocument();
     expect(posts()).toHaveLength(0);
     expect(back).not.toHaveBeenCalled();
   });
@@ -159,7 +159,7 @@ describe("Salvar", () => {
   it("a API recusa a entrada: a mensagem aparece e o que foi digitado fica", async () => {
     api.failNext("POST", "/api/tasks", 400);
     renderRoute();
-    await screen.findByRole("heading", { level: 1, name: "Novo evento" });
+    await screen.findByRole("heading", { level: 1, name: "Nova tarefa" });
 
     type("Título", "Dentista");
     save();
@@ -172,12 +172,12 @@ describe("Salvar", () => {
   it("uma falha que não é de entrada mostra a mensagem de criar", async () => {
     api.failNext("POST", "/api/tasks", 500);
     renderRoute();
-    await screen.findByRole("heading", { level: 1, name: "Novo evento" });
+    await screen.findByRole("heading", { level: 1, name: "Nova tarefa" });
 
     type("Título", "Dentista");
     save();
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível criar o evento. Tente novamente.");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível criar a tarefa. Tente novamente.");
     expect(back).not.toHaveBeenCalled();
   });
 });
@@ -185,7 +185,7 @@ describe("Salvar", () => {
 describe("Descartar", () => {
   it("volta sem criar nada", async () => {
     renderRoute();
-    await screen.findByRole("heading", { level: 1, name: "Novo evento" });
+    await screen.findByRole("heading", { level: 1, name: "Nova tarefa" });
 
     type("Título", "Dentista");
     fireEvent.click(screen.getByRole("button", { name: "Descartar" }));
@@ -197,7 +197,7 @@ describe("Descartar", () => {
   it("sem histórico (a rota aberta direto), vai para a agenda", async () => {
     setHistoryLength(1);
     renderRoute();
-    await screen.findByRole("heading", { level: 1, name: "Novo evento" });
+    await screen.findByRole("heading", { level: 1, name: "Nova tarefa" });
 
     fireEvent.click(screen.getByRole("button", { name: "Descartar" }));
 

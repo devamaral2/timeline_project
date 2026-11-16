@@ -14,7 +14,7 @@ import {
   startVoiceRequest,
 } from "./requests";
 
-// A tela troca o authedFetch pela API falsa: a mesma costura dos testes de eventos.
+// A tela troca o authedFetch pela API falsa: a mesma costura dos testes de tarefas.
 const net = vi.hoisted(() => ({ authedFetch: vi.fn() }));
 vi.mock("@/lib/api/authed-fetch", async (original) => ({
   ...(await original<typeof import("@/lib/api/authed-fetch")>()),
@@ -120,7 +120,7 @@ describe("edição da entidade aberta e voz", () => {
     expect(await getRequest(requestId)).toMatchObject({ id: requestId, status: "queued" });
   });
 
-  test("o pedido de voz devolve o id; o evento criado aparece nas entidades quando o pedido termina", async () => {
+  test("o pedido de voz devolve o id; a tarefa criada aparece nas entidades quando o pedido termina", async () => {
     const requestId = await startVoiceRequest({ transcript: "Dentista amanhã às 10", clientMessageId: "voz-1" });
     advanceRequest(api, requestId, {
       status: "done",
