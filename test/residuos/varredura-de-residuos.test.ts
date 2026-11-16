@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ARQUIVOS_COM_OUTRO_EVENTO, EXCECOES, EXCECOES_DE_LINHA, linhaTemResiduo, varrer } from "./varredura";
+import { ARQUIVOS_COM_OUTRO_EVENTO, EXCECOES, EXCECOES_DE_LINHA, RAIZES, contextoDeEventoDeDom, linhaTemResiduo, varrer } from "./varredura";
 
 describe("varredura de residuos de evento", () => {
   it("nao deixa nenhum residuo fora da lista de excecoes", () => {
@@ -35,19 +35,37 @@ describe("varredura de residuos de evento", () => {
       "function onKey(event: KeyboardEvent) {}",
       "onClick={(event) => open(event)}",
       "event.preventDefault();",
+      "const tecla = event.key;",
       "return new Response(body, { headers: { 'content-type': 'text/event-stream' } });",
       "fireEvent.click(botao); await userEvent.type(campo, 'a')",
       "const evitar = preventDefault",
       "pointer-events: none;",
     ]) {
-      expect(linhaTemResiduo(linha), linha).toBe(false);
+      expect(linhaTemResiduo(linha, true), linha).toBe(false);
+    }
+  });
+
+  it("so libera `event.type`, `event.data` e afins em arquivo com handler ou listener de DOM", () => {
+    const dominio = ["const tipo = event.type;", "return event.data;", "if (event.error) throw event.error;"];
+    for (const linha of dominio) expect(linhaTemResiduo(linha, false), linha).toBe(true);
+    for (const linha of dominio) expect(linhaTemResiduo(linha, true), linha).toBe(false);
+
+    expect(contextoDeEventoDeDom("function onKey(event: KeyboardEvent) {}")).toBe(true);
+    expect(contextoDeEventoDeDom("window.addEventListener('keydown', fn);")).toBe(true);
+    expect(contextoDeEventoDeDom("onClick={(event) => open(event)}")).toBe(true);
+    expect(contextoDeEventoDeDom("const tipo = event.type;")).toBe(false);
+  });
+
+  it("varre tambem scripts, infra, ambiente da raiz e runbooks", () => {
+    for (const raiz of ["scripts", "infra", ".env.example", "env.tmpl", "docs/runbook", ".agents/docs"]) {
+      expect(RAIZES, raiz).toContain(raiz);
     }
   });
 
   it("mantem a lista de excecoes curta e com motivo", () => {
     for (const e of [...EXCECOES, ...EXCECOES_DE_LINHA, ...ARQUIVOS_COM_OUTRO_EVENTO]) expect(e.motivo.length).toBeGreaterThan(10);
-    // Teto: 12 palavras/linhas excetuadas e 6 grupos de arquivos (Auth, Hermes, licencas, migrations, testes do nome antigo).
+    // Teto: 12 palavras/linhas excetuadas e 7 grupos de arquivos (Auth, Hermes, licencas, migrations, historico do pipeline antigo, testes do nome antigo).
     expect(EXCECOES.length + EXCECOES_DE_LINHA.length).toBeLessThanOrEqual(12);
-    expect(ARQUIVOS_COM_OUTRO_EVENTO.length).toBeLessThanOrEqual(6);
+    expect(ARQUIVOS_COM_OUTRO_EVENTO.length).toBeLessThanOrEqual(7);
   });
 });

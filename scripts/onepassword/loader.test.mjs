@@ -139,15 +139,15 @@ test("points API and Auth at per-worktree databases on the shared Postgres", () 
     { POSTGRES_USER: "timeline", POSTGRES_PASSWORD: "password", POSTGRES_DB: "timeline", AUTH_PORT: "3102", WEB_PORT: "3100" },
     {
       POSTGRES_HOST_PORT: "54391",
-      POSTGRES_DB: "refactory_events",
-      AUTH_POSTGRES_DB: "refactory_events_auth",
-      AUTH_WEB_APP_URL: "http://refactory-events.braid.local:8080",
+      POSTGRES_DB: "refactory_tasks",
+      AUTH_POSTGRES_DB: "refactory_tasks_auth",
+      AUTH_WEB_APP_URL: "http://refactory-tasks.braid.local:8080",
     },
   );
 
-  assert.equal(environment.DATABASE_URL, "postgresql://timeline:password@127.0.0.1:54391/refactory_events");
-  assert.equal(environment.AUTH_DATABASE_URL, "postgresql://timeline:password@127.0.0.1:54391/refactory_events_auth");
-  assert.equal(environment.AUTH_WEB_APP_URL, "http://refactory-events.braid.local:8080");
+  assert.equal(environment.DATABASE_URL, "postgresql://timeline:password@127.0.0.1:54391/refactory_tasks");
+  assert.equal(environment.AUTH_DATABASE_URL, "postgresql://timeline:password@127.0.0.1:54391/refactory_tasks_auth");
+  assert.equal(environment.AUTH_WEB_APP_URL, "http://refactory-tasks.braid.local:8080");
 });
 
 test("reports Environment API failures without starting the application", async () => {

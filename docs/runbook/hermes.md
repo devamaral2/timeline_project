@@ -129,8 +129,8 @@ locais: `docker volume rm braid-hermes_hermes-data` (irreversível).
 ### 1.1 Conectar o Hermes ao MCP (local)
 
 O MCP (`apps/mcp`) é o único caminho do Hermes até a sua agenda: cria, lê e edita
-eventos (com status, o evento é o que a tela chama de tarefa), artefatos de texto
-(as notas) e recorrências, sempre como o `MCP_OWNER_USER_ID`, e não
+tarefas (com status, nasce uma tarefa acompanhada), artefatos de texto
+e tarefas recorrentes, sempre como o `MCP_OWNER_USER_ID`, e não
 apaga nada. Toda edição exige a `revision` lida antes (`get_*`).
 
 O MCP sobe junto com o resto: `pnpm dev` (web, API, auth e MCP) e `pnpm worktree:new`
@@ -461,8 +461,8 @@ printf '%s' "$KEY" | kubectl -n braid exec -i deploy/api -- node -e '
   });'
 ```
 
-Esperado: as duas respostas trazem o mesmo `eventId`, e a agenda mostra **um**
-evento "teste do hermes". Apague-o pelo app depois. Se o Hermes responder sem usar a
+Esperado: as duas respostas trazem o mesmo `id`, e a agenda mostra **uma**
+tarefa "teste do hermes". Apague-o pelo app depois. Se o Hermes responder sem usar a
 ferramenta, veja os logs do MCP (`kubectl -n braid logs deploy/mcp`).
 
 ## 3. Operação

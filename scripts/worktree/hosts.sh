@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Mantem <slug>.braid.local -> 127.0.0.1 no /etc/hosts para todas as worktrees
-# (main.braid.local, refactory-events.braid.local, ...), via o helper root
+# (main.braid.local, refactory-tasks.braid.local, ...), via o helper root
 # instalado por hosts-install.sh. Os dominios chegam ao Caddy (porta 8080).
 #
 # Uso: hosts.sh sync           # reescreve o bloco com as worktrees atuais

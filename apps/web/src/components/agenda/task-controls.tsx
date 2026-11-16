@@ -1,7 +1,7 @@
 import { Check, Circle, CircleCheck, CircleDashed, CircleSlash, Clock3, Link2, X } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { mediumDate } from "@repo/timeline";
-import type { ExampleTask, ExamplePriority, ExampleStatus, ExampleTracking } from "./agenda-examples";
+import type { ExampleTask, ExamplePriority, ExampleStatus, ExampleTrackedTask } from "./agenda-examples";
 import styles from "@/components/shell/shell.module.css";
 
 export const statusView = {
@@ -44,11 +44,11 @@ export function TaskPriorityIcon({ priority, decorative = false }: { priority: E
 
 export interface SelectedTask { task: ExampleTask; dayKey: string }
 
-export function TrackingDialog({ selected, tracking, missed, onTrackingChange, onMissedChange, onClose }: {
+export function TrackedTaskDialog({ selected, tracking, missed, onTrackingChange, onMissedChange, onClose }: {
   selected: SelectedTask | null;
-  tracking?: ExampleTracking;
+  tracking?: ExampleTrackedTask;
   missed: boolean;
-  onTrackingChange: (tracking: ExampleTracking) => void;
+  onTrackingChange: (tracking: ExampleTrackedTask) => void;
   onMissedChange: (missed: boolean) => void;
   onClose: () => void;
 }) {

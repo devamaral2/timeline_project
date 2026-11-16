@@ -20,14 +20,14 @@ test("does not retain the old feature aggregators or artificial HTTP areas", () 
   expect(existsSync(join(src, "http/request-identity"))).toBe(true);
 });
 
-test("has one folder per operation on tasks, artifacts and recurrences, and none left for notes or interruptions", () => {
+test("has one folder per operation on tasks, artifacts and recurrences, and none left for events, notes or interruptions", () => {
   const folders = readdirSync(features, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name);
 
-  // Nota e interrupcao deixaram de ser entidades (ADR 0011): o que era delas e de tarefa e de artefato.
+  // Evento (agora tarefa), nota e interrupcao sairam do vocabulario (ADR 0011): o que era delas e de tarefa e de artefato.
   const retired = folders.filter(
-    (name) => /-(note|notes|interruption|interruptions)(-|$)/.test(name),
+    (name) => /-(event|events|note|notes|interruption|interruptions)(-|$)/.test(name),
   );
   expect(retired).toEqual([]);
 

@@ -65,7 +65,7 @@ describe("fila de finalizacao", () => {
     expect(food?.links).toEqual([link]);
     expect(meal?.links).toEqual([link]);
 
-    // Quem e editado e a tarefa: ele passa a criar o artefato que o pedido fez para ele.
+    // Quem e editado e a tarefa: ela passa a criar o artefato que o pedido fez para ele.
     const stored = await ctx.taskRepository.findById(meal?.id as string);
     expect(stored?.artifactLinks).toEqual([{ artifactId: food?.id, relation: "creates", fromRecurrence: false }]);
     const swim = entities.find((entity) => entity.summary.name === "Nadar na praia");

@@ -44,10 +44,10 @@ export function longestDurationOf(tasks: readonly AgendaTaskCard[]): number {
 }
 
 /**
- * Largura da barra de duracao, de 0 a 1, comparada ao tarefa mais longa do
+ * Largura da barra de duracao, de 0 a 1, comparada a tarefa mais longa do
  * mesmo dia — a referencia e o dia porque e o que esta na tela junto.
  *
- * Devolve `null` para a tarefa em andamento: ele ainda nao tem duracao, e
+ * Devolve `null` para a tarefa em andamento: ela ainda nao tem duracao, e
  * desenhar uma barra qualquer seria inventar um numero.
  */
 export function durationRatioOf(
@@ -86,7 +86,7 @@ export function formatStopwatch(totalSeconds: number): string {
 
 /**
  * O cronometro de uma tarefa em andamento, ou `null` quando ele ja terminou ou
- * ainda nem comecou -- um tarefa futura ficaria travado em `0:00`, o que le
+ * ainda nem comecou -- uma tarefa futura ficaria travada em `0:00`, o que le
  * como quebrado e nao como "ainda nao".
  */
 export function stopwatchOf(task: AgendaTaskCard, now: Date = new Date()): string | null {

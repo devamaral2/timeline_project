@@ -16,7 +16,10 @@ export const RAIZ_DO_REPOSITORIO = resolve(
   "../..",
 );
 
-/** Pastas varridas (apps/mobile e docs ficam de fora de proposito). */
+/**
+ * Pastas e arquivos varridos. `apps/mobile` e `scripts/mobile/` ficam de fora ate o Android
+ * trocar de nome; `docs/` fora dos runbooks e `ops/` tambem (ver `CAMINHOS_IGNORADOS`).
+ */
 export const RAIZES = [
   "apps/web",
   "apps/api",
@@ -25,10 +28,22 @@ export const RAIZES = [
   "packages/contracts",
   "packages/timeline",
   "packages/theme",
+  "scripts",
+  "infra",
+  ".env.example",
+  "env.tmpl",
+  "docs/runbook",
+  ".agents/docs",
 ];
 
 /** Historico que nao se edita: migrations ja aplicadas (SQL e snapshots do drizzle). */
-const CAMINHOS_IGNORADOS = [/^apps\/api\/drizzle\//, /^apps\/auth\/drizzle\//];
+const CAMINHOS_IGNORADOS = [
+  /^apps\/api\/drizzle\//,
+  /^apps\/auth\/drizzle\//,
+  // Android: o app so troca de nome no seu proprio ticket (paridade web/mobile).
+  /^scripts\/mobile\//,
+  /^docs\/runbook\/mobile-(rewrite|local-development)\.md$/,
+];
 
 /**
  * Arquivos cujo conteudo inteiro fala de outra coisa chamada "evento". O nome
@@ -52,13 +67,17 @@ export const ARQUIVOS_COM_OUTRO_EVENTO: { motivo: string; arquivo: RegExp }[] = 
     arquivo: /^apps\/api\/src\/infrastructure\/persistence\/integration\/(task-rename|agent-data)-migration\.integration\.test\.ts$/,
   },
   {
+    motivo: "registro historico do pipeline de IA que saiu (ADRs 001 a 003, plano, estado e SQL do contexto do dia, `agent/fast`, `ai_processes`): descreve o que existiu, com os nomes da epoca",
+    arquivo: /^\.agents\/docs\/ai-dialog\/(adr-00[123]-[\w-]+\.md|refactor-plan\.md|implementation-status\.md|day-context\.sql|turn-trace-queries\.sql)$/,
+  },
+  {
     motivo: "testes que provam que o nome antigo deixou de valer (campo, permissao, rota recusados): citam o nome antigo de proposito",
-    arquivo: /^(apps\/api\/src\/api-core\/http-input-validation|apps\/auth\/src\/db\/migrations\.integration|apps\/auth\/src\/domain\/rbac\/permissions|packages\/contracts\/src\/schemas)\.test\.ts$/,
+    arquivo: /^(apps\/api\/src\/api-core\/http-input-validation|apps\/api\/src\/architecture\/feature-organization\.architecture|apps\/auth\/src\/db\/migrations\.integration|apps\/auth\/src\/domain\/rbac\/permissions|packages\/contracts\/src\/schemas)\.test\.ts$/,
   },
 ];
 
 const EXTENSOES_DE_TEXTO =
-  /\.(ts|tsx|js|jsx|mjs|cjs|css|scss|md|mdx|json|sql|ya?ml|html|txt|sh|toml)$/i;
+  /(\.(ts|tsx|js|jsx|mjs|cjs|css|scss|md|mdx|json|sql|ya?ml|html|txt|sh|toml|example|tmpl)|(^|\/)\.env)$/i;
 const ARQUIVOS_IGNORADOS = /(^|\/)(pnpm-lock\.yaml|next-env\.d\.ts|tsconfig\.tsbuildinfo)$/;
 const TAMANHO_MAXIMO = 1_000_000;
 
@@ -68,8 +87,8 @@ const TAMANHO_MAXIMO = 1_000_000;
  */
 export const EXCECOES: { motivo: string; palavra: RegExp }[] = [
   {
-    motivo: 'verbo ingles "prevent"/"eventually", que so contem as letras',
-    palavra: /prevent|eventual/i,
+    motivo: 'palavras comuns que so contem as letras: "prevent", "eventually", "eventual"/"eventuais"',
+    palavra: /prevent|eventua(l|is)/i,
   },
   {
     motivo: "eventos de DOM e de teclado (tipos, ouvintes, dispatch) e utilitarios de teste deles",
@@ -98,9 +117,11 @@ export const EXCECOES: { motivo: string; palavra: RegExp }[] = [
  * Excecoes que dependem da linha: a palavra so e liberada quando a linha tem o
  * formato indicado. `palavras` diz quais palavras da linha ela libera.
  */
-export const EXCECOES_DE_LINHA: { motivo: string; linha: RegExp; palavras: RegExp }[] = [
+export const EXCECOES_DE_LINHA: { motivo: string; linha: RegExp; palavras: RegExp; exigeContextoDeDom?: boolean }[] = [
   {
     motivo: "parametro `event` de handler de DOM: uso de propriedades e metodos do evento do navegador",
+    // Vale so em arquivo com handler ou listener de DOM (`contextoDeEventoDeDom`).
+    exigeContextoDeDom: true,
     linha:
       /\bevent\??\.(target|currentTarget|key|code|preventDefault|stopPropagation|stopImmediatePropagation|nativeEvent|clipboardData|dataTransfer|metaKey|ctrlKey|shiftKey|altKey|button|buttons|touches|changedTouches|detail|clientX|clientY|pageX|pageY|pointerId|pointerType|isComposing|repeat|persisted|matches|type|data|deltaY|deltaX|relatedTarget|submitter|isTrusted|defaultPrevented|results|resultIndex|error)\b/,
     palavras: /^event$/,
@@ -121,9 +142,9 @@ export const EXCECOES_DE_LINHA: { motivo: string; linha: RegExp; palavras: RegEx
     palavras: /^(Event|CustomEvent)$/,
   },
   {
-    motivo: "campo `event` dos eventos do stream do Hermes e do protocolo Server-Sent Events (`tool.started`, `run.failed`)",
-    linha: /(^|[^\w])"?event"?:\s*(["'`][a-z]+\.[a-z_]+["'`]|\$\{)/,
-    palavras: /^event$/,
+    motivo: "eventos de protocolos externos: campo `event` do stream do Hermes (`tool.started`, `run.failed`), a rota `/v1/runs/{id}/events` e os `events` do Kubernetes (`kubectl get events`)",
+    linha: /(^|[^\w])"?event"?:\s*(["'`][a-z]+\.[a-z_]+["'`]|\$\{)|\/v1\/runs\/\S*\/events|kubectl\b.*\bget events\b|\bEvents do pod\b/,
+    palavras: /^(event|events|Events)$/,
   },
   {
     motivo: "constante de teste da rota antiga: o teste prova que `/api/events` deixou de existir (404 na API, recusa no gateway)",
@@ -150,11 +171,23 @@ export function palavraExcetuada(palavra: string): boolean {
   return EXCECOES.some((e) => e.palavra.test(palavra));
 }
 
-/** Verdadeiro se a linha tem "event" como nome da entidade. */
-export function linhaTemResiduo(linha: string): boolean {
+/**
+ * O arquivo declara um handler ou listener de evento de DOM (parametro `event` de handler,
+ * `addEventListener`, `onXxx={(event) => ...}`, anotacao `event: KeyboardEvent`)? Sem isso,
+ * `event.type`, `event.data` e afins sao o nome da entidade, nao o evento do navegador.
+ */
+export function contextoDeEventoDeDom(texto: string): boolean {
+  return /\(\s*event\s*[:,)?]|\bevent\s*=>|\(event as \w*Event\b|addEventListener|\bon[A-Z]\w*=\{\(?event\b|\.on[a-z]+\s*=\s*\(event\)|\bevent\??:\s*(React\.)?\w*Event\b/.test(texto);
+}
+
+/**
+ * Verdadeiro se a linha tem "event" como nome da entidade. `contextoDeDom` diz se o arquivo
+ * tem handler de DOM; sem ele, a excecao de `event.<propriedade>` nao vale.
+ */
+export function linhaTemResiduo(linha: string, contextoDeDom = false): boolean {
   const palavras = palavrasComEvent(linha);
   if (palavras.length === 0) return false;
-  const porLinha = EXCECOES_DE_LINHA.filter((e) => e.linha.test(linha));
+  const porLinha = EXCECOES_DE_LINHA.filter((e) => e.linha.test(linha) && (!e.exigeContextoDeDom || contextoDeDom));
   return palavras.some((palavra) => {
     if (palavraExcetuada(palavra)) return false;
     if (porLinha.some((e) => e.palavras.test(palavra))) return false;
@@ -205,9 +238,10 @@ export function varrer(raiz: string = RAIZ_DO_REPOSITORIO): Residuo[] {
 
     if (!EXTENSOES_DE_TEXTO.test(arquivo) || tamanho > TAMANHO_MAXIMO) continue;
     if (ARQUIVOS_COM_OUTRO_EVENTO.some((e) => e.arquivo.test(arquivo))) continue;
-    const linhas = readFileSync(absoluto, "utf8").split("\n");
-    linhas.forEach((linha, i) => {
-      if (linhaTemResiduo(linha)) {
+    const conteudo = readFileSync(absoluto, "utf8");
+    const contextoDeDom = contextoDeEventoDeDom(conteudo);
+    conteudo.split("\n").forEach((linha, i) => {
+      if (linhaTemResiduo(linha, contextoDeDom)) {
         residuos.push({ arquivo, linha: i + 1, texto: linha.trim() });
       }
     });

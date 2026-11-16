@@ -6,8 +6,8 @@ export type NotificationSource = Pick<
   "id" | "name" | "status" | "longRunning" | "startedAt" | "estimatedFinishAt" | "notifyOffsetsMinutes"
 >;
 
-/** Acompanhado (`task`) e o que tem status ou e longo; o resto e so agenda (`task`). Mesmo criterio da API. */
-export type NotificationKind = "agenda" | "task";
+/** Tarefa acompanhada (`tracked`) e a que tem status ou e longa; o resto e tarefa de referencia (`reference`). Mesmo criterio da API. */
+export type NotificationKind = "tracked" | "reference";
 
 export interface DueNotification {
   key: string;
@@ -27,8 +27,13 @@ export const CATCH_UP_WINDOW_MS = 60 * 60_000;
 /** Quanto tempo uma chave disparada fica guardada depois do instante de referencia do item. */
 const FIRED_RETENTION_MS = 24 * 60 * 60_000;
 
+/** Todo aviso abre a tela da tarefa, acompanhada ou de referencia. */
+export function notificationHrefOf(userId: string, item: { kind: NotificationKind; sourceId: string }): string {
+  return `/${userId}/tarefas/${item.sourceId}`;
+}
+
 export function kindOf(source: NotificationSource): NotificationKind {
-  return source.status !== undefined || source.longRunning ? "task" : "agenda";
+  return source.status !== undefined || source.longRunning ? "tracked" : "reference";
 }
 
 /**

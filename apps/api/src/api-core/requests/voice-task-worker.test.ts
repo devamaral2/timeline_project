@@ -24,7 +24,7 @@ function setup(command: Partial<ParsedTaskCommand> | Error = {}) {
   return { kit, store, request, calls, worker, said };
 }
 
-test("a fala vira uma tarefa de pessoa, com a frase na descricao, e o pedido termina apontando para ele", async () => {
+test("a fala vira uma tarefa de pessoa, com a frase na descricao, e o pedido termina apontando para ela", async () => {
   const { kit, store, calls, worker } = setup();
 
   await worker.run("v1");

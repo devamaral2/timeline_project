@@ -4,7 +4,7 @@ import type { Task } from "../entities/task.entity";
 /**
  * Cada tarefa e gravada por si, com o inicio e o fim que o usuario disse: no
  * passado, agora ou no futuro. As relacoes que saem da tarefa (artefatos,
- * subtarefas, bloqueios) sao gravadas com ele.
+ * subtarefas, bloqueios) sao gravadas com ela.
  */
 export interface TaskRepository {
   /** `artifacts`: os artefatos que nascem com a tarefa, gravados antes e na mesma transacao dela. */

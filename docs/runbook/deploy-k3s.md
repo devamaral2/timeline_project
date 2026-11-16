@@ -1171,8 +1171,8 @@ O DNS público deve apontar para a borda Cloudflare, não diretamente para a VPS
 
 **Navegador:**
 
-1. Abra `https://timeline.SEUDOMINIO`, faça login Google e crie um evento de
-este. Recarregue a página: ele precisa continuar lá. Isso verifica
+1. Abra `https://timeline.SEUDOMINIO`, faça login Google e crie uma tarefa de
+este. Recarregue a página: ela precisa continuar lá. Isso verifica
 avegador → Cloudflare → Traefik → web → API → banco.
 2. Em janela anônima, abra `https://grafana.SEUDOMINIO`. Deve pedir o código
 o Access **antes** do login Grafana. Use `admin` e a `GRAFANA_PASSWORD`

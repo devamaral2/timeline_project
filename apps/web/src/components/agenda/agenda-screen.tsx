@@ -26,10 +26,10 @@ import { useSessionState } from "@/lib/session/use-session";
 import { AgendaDay } from "./agenda-day";
 import { AgendaOptions, type AgendaViewMode } from "./agenda-options";
 import { agendaTasksByDay } from "./agenda-data";
-import { EXAMPLE_NOW, EXAMPLE_TODAY, type ExampleTask, type ExampleTracking, exampleTasksOn } from "./agenda-examples";
+import { EXAMPLE_NOW, EXAMPLE_TODAY, type ExampleTask, type ExampleTrackedTask, exampleTasksOn } from "./agenda-examples";
 import { agendaRefreshEvent } from "./agenda-refresh";
 import { type AgendaScrollBoundary, agendaScrollBoundaryFromAttempt } from "./agenda-scroll-boundary";
-import { TrackingDialog, type SelectedTask } from "./task-controls";
+import { TrackedTaskDialog, type SelectedTask } from "./task-controls";
 import styles from "./agenda.module.css";
 
 type ViewMode = AgendaViewMode;
@@ -80,7 +80,7 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
   const now = userId
     ? (realNow?.getTime() ?? Date.now())
     : EXAMPLE_NOW + (realNow ? Math.max(0, realNow.getTime() - clockStartedAt) : 0);
-  const [trackings, setTrackings] = useState<Record<string, ExampleTracking>>({});
+  const [trackings, setTrackings] = useState<Record<string, ExampleTrackedTask>>({});
   const [missedTasks, setMissedTasks] = useState<Record<string, boolean>>({});
   const [tasksByDay, setTasksByDay] = useState<Record<string, ExampleTask[]>>({});
   const [loadState, setLoadState] = useState<"idle" | "loading" | "failed">("idle");
@@ -473,7 +473,7 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
           onClose={() => setStatusCard(null)}
         />
       ) : null}
-      <TrackingDialog
+      <TrackedTaskDialog
         selected={selectedTask}
         tracking={selectedTask?.task.tracking ? trackings[selectedTask.task.tracking.id] ?? selectedTask.task.tracking : undefined}
         missed={selectedTask ? missedTasks[`${selectedTask.dayKey}:${selectedTask.task.id ?? selectedTask.task.name}`] ?? selectedTask.task.missed ?? false : false}

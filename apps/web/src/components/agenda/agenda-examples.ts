@@ -7,7 +7,7 @@ export const EXAMPLE_NOW = Date.parse(`${EXAMPLE_TODAY}T09:35:00-03:00`);
 // Os estados e as prioridades da prévia são os do cartão do contrato; a prévia só usa um subconjunto deles.
 export type ExampleStatus = Extract<NonNullable<TaskCardDto["status"]>, "todo" | "inHold" | "doing" | "done" | "cancel">;
 export type ExamplePriority = Extract<TaskCardDto["priority"], "urgent" | "medium" | "low">;
-export interface ExampleTracking {
+export interface ExampleTrackedTask {
   id: string;
   status: ExampleStatus;
   priority: ExamplePriority;
@@ -25,7 +25,7 @@ export interface ExampleTask {
   tags?: string[];
   tag?: string;
   href?: string;
-  tracking?: ExampleTracking;
+  tracking?: ExampleTrackedTask;
   missed?: boolean;
   /** Sem horário de término registrado, como o contador do app principal. */
   running?: boolean;

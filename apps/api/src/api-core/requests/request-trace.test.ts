@@ -100,7 +100,7 @@ describe("toRequestTrace", () => {
         { label: "Quantidade esperada", value: "um" },
         { label: "Tempo do agente", value: "1,1 s" },
       ],
-      sections: [{ title: "Registros", text: "Tarefa criado · Almoço" }],
+      sections: [{ title: "Registros", text: "Tarefa criada · Almoço" }],
     });
     expect(trace.entries[3]).toMatchObject({ id: "s2", status: "running", fields: [{ label: "Quantidade esperada", value: "vários" }] });
     expect(trace.entries[3]?.durationMs).toBeUndefined();

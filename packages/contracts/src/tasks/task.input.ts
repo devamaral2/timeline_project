@@ -46,7 +46,7 @@ interface TaskFields {
 export interface CreateTaskInput extends TaskFields {
   /** A natureza da tarefa. Ausente e rotina. */
   kind?: HumanTaskKind;
-  /** Ausente, a tarefa nasce de referencia: so marca um horario. O tarefa longa nasce `todo`. */
+  /** Ausente, a tarefa nasce de referencia: so marca um horario. A tarefa longa nasce `todo`. */
   status?: HumanTaskStatus;
   /** Inicio planejado, em ISO-8601. Ausente na tarefa de referencia significa agora. */
   startedAt?: string;

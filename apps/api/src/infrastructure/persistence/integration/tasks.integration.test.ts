@@ -457,7 +457,7 @@ describe("PostgresTaskRepository", () => {
       await expect(tasks.update(task.revise({ name: "Tarde demais" }), USER, 1)).rejects.toThrow(TaskNotFoundError);
     });
 
-    test("tarefa de agente nao e editada nem apagado pelo repositorio", async () => {
+    test("tarefa de agente nao e editada nem apagada pelo repositorio", async () => {
       const request = await saved(agentTask(USER, "Pedido"));
       // O dominio ja recusa `revise` numa tarefa de agente; aqui a linha e montada a mao para chegar ao repositorio.
       const forged = Task.rehydrate({

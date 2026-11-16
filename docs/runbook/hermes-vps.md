@@ -432,7 +432,7 @@ kubectl -n braid get secret hermes-env -o jsonpath='{.data.API_SERVER_KEY}' | ba
     });'
 ```
 
-Esperado: as duas respostas com o mesmo id e **um** evento "teste do hermes" na
+Esperado: as duas respostas com o mesmo id e **uma** tarefa "teste do hermes" na
 agenda. Apague-o pelo app. Se o Hermes responder sem usar a ferramenta, veja
 `kubectl -n braid logs deploy/mcp --tail=50`.
 

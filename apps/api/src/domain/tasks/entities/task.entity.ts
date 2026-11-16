@@ -35,7 +35,7 @@ export interface TaskCreateProps {
   /** Quem executa. Ausente e uma pessoa. */
   actor?: Actor;
   kind?: TaskKind;
-  /** Ausente numa tarefa de pessoa, ele e de referencia: so marca um horario. */
+  /** Ausente numa tarefa de pessoa, ela e de referencia: so marca um horario. */
   status?: TaskStatus;
   priority?: TaskPriority;
   name: string;
@@ -322,7 +322,7 @@ export class Task {
 
   /**
    * Toda revisao e uma edicao do usuario, e por isso destaca a ocorrencia da
-   * serie. So tarefas de pessoa sao revisadas: os de agente mudam pelo proprio
+   * serie. So tarefas de pessoa sao revisadas: as de agente mudam pelo proprio
    * agente.
    */
   revise(changes: TaskReviseChanges): Task {

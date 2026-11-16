@@ -31,7 +31,7 @@ export interface TaskCardDto {
   location: string;
   /** Inicio planejado. A meia-noite local significa "o dia, sem hora". */
   startedAt?: string;
-  /** Fim planejado: o fim do bloco ou, no tarefa longa, o prazo. */
+  /** Fim planejado: o fim do bloco ou, na tarefa longa, o prazo. */
   estimatedFinishAt?: string;
   /** Conclusao real. */
   finishedAt?: string;

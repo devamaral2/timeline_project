@@ -6,6 +6,7 @@ import { notificationOffsetLabel } from "@/components/tasks/task-visuals";
 import { useNow } from "@/lib/tasks/use-now";
 import {
   notificationFeedOf,
+  notificationHrefOf,
   readReadKeys,
   writeReadKeys,
   type DueNotification,
@@ -24,10 +25,6 @@ function browserPermission(): NotificationPermission | "unsupported" {
   return typeof Notification === "undefined" ? "unsupported" : Notification.permission;
 }
 
-function hrefOf(userId: string, item: { kind: "agenda" | "task"; sourceId: string }): string | undefined {
-  return item.kind === "agenda" ? `/${userId}/tarefas/${item.sourceId}` : undefined;
-}
-
 function showBrowserNotification(userId: string, notification: DueNotification) {
   if (browserPermission() !== "granted") return;
   try {
@@ -35,7 +32,7 @@ function showBrowserNotification(userId: string, notification: DueNotification) 
       body: `Tarefa · ${notificationOffsetLabel(notification.offsetMinutes)}`,
       tag: notification.key,
     });
-    const href = hrefOf(userId, notification);
+    const href = notificationHrefOf(userId, notification);
     instance.onclick = () => {
       window.focus();
       if (href) window.location.assign(href);
@@ -144,7 +141,7 @@ export function NotificationFeed({ userId, state }: { userId: string; state: Not
               <NotificationRow
                 key={item.key}
                 item={item}
-                href={hrefOf(userId, item)}
+                href={notificationHrefOf(userId, item)}
                 caption={relativeAgo(nowMinute ?? 0, item.triggerAtMs)}
                 unread={!(item.key in readKeys)}
                 onOpen={() => markRead([item])}
@@ -162,7 +159,7 @@ export function NotificationFeed({ userId, state }: { userId: string; state: Not
               <NotificationRow
                 key={item.key}
                 item={item}
-                href={hrefOf(userId, item)}
+                href={notificationHrefOf(userId, item)}
                 caption={upcomingAt(nowMinute ?? 0, item.triggerAtMs)}
                 unread={false}
               />
@@ -266,7 +263,7 @@ export function NotificationBell({ userId }: { userId: string }) {
             </div>
           ) : null}
           {due.map((notification) => {
-            const href = hrefOf(userId, notification);
+            const href = notificationHrefOf(userId, notification);
             const label = `${notification.name} — ${notificationOffsetLabel(notification.offsetMinutes)}`;
             return (
               <div key={notification.key} className={styles.notificationToast}>

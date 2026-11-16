@@ -9,7 +9,7 @@ import type { FreeWindow } from "@/components/hub/hub-open";
 import { ListSkeleton } from "@/components/ui/list-skeleton";
 import { vtName } from "@/lib/motion/view-transition";
 import { tagAccentStyle } from "@/lib/tags/tag-color";
-import { EXAMPLE_TODAY, type ExampleTask, type ExampleTracking, exampleTasksOn } from "./agenda-examples";
+import { EXAMPLE_TODAY, type ExampleTask, type ExampleTrackedTask, exampleTasksOn } from "./agenda-examples";
 import { spanForExample, timingForExample } from "./agenda-timing";
 import { type FreeSlot, freeTimeSlots, freeWindowGrade, MIN_FREE_WINDOW_MINUTES } from "./free-time";
 import styles from "./agenda.module.css";
@@ -72,7 +72,7 @@ function FreeTimeRow({ slot, dayKey, now, onPlan }: { slot: FreeSlot; dayKey: st
 export function AgendaDay({ dayKey, now, trackings, missedTasks, onSelectTask, onPlanFreeWindow, onStatusClick, tasks: suppliedTasks, userId, todayKey = EXAMPLE_TODAY, hideWhenEmpty = false, showHeading = true, showFreeTime = true, loading = false, selected = false, freshIds }: {
   dayKey: string;
   now: number;
-  trackings: Record<string, ExampleTracking>;
+  trackings: Record<string, ExampleTrackedTask>;
   missedTasks: Record<string, boolean>;
   onSelectTask: (selected: SelectedTask) => void;
   onPlanFreeWindow?: (window: FreeWindow) => void;

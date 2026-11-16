@@ -11,8 +11,8 @@ API migration (`apps/api/drizzle/0000_initial.sql`), so every environment and
 every worktree gets its own queue with its own database, and dropping the
 database drops the queue.
 
-The job is disposable. The source of truth is the event the job points to
-(`jobs.event_id`: the request or the step it executes) and that event's
+The job is disposable. The source of truth is the task the job points to
+(`jobs.task_id`: the request or the step it executes) and that task's
 entries. A job has no result column; `progress` is a passing snapshot that is
 cleared when the job ends.
 
@@ -30,7 +30,7 @@ All optional; the API validates them at boot (`apps/api/src/config/env.ts`).
 ## How a job moves
 
 1. **Enqueue.** A row is inserted with status `queued`, normally in the same
-   transaction that writes the event (`enqueueJobInTransaction`). `dedupe_key`
+   transaction that writes the task (`enqueueJobInTransaction`). `dedupe_key`
    is unique per user and kind: enqueueing again with the same key returns the
    job that already exists.
 2. **Claim.** Every `AI_JOBS_POLL_MS` the worker takes up to its free slots of
@@ -59,8 +59,8 @@ All optional; the API validates them at boot (`apps/api/src/config/env.ts`).
    ahead, each `running` job whose `lease_until` has passed, with `error`
    set to `Worker lease expired`. The next claim counts as a new attempt; a
    job claimed beyond `AI_JOBS_MAX_ATTEMPTS` fails without calling the handler.
-8. **Failure reaches the event first.** When a job fails for good, the failure
-   handler registered for its kind (if there is one) marks the event as
+8. **Failure reaches the task first.** When a job fails for good, the failure
+   handler registered for its kind (if there is one) marks the task as
    `failed` before the job row becomes `failed`. If that write does not go
    through, the job keeps its lease, comes back by step 7 and only the failure
    is retried, not the provider call.
@@ -75,13 +75,13 @@ message, which may carry credentials or user data.
 ## Cancelling
 
 The user cancels a request with `POST /api/requests/:requestId/cancel`. The
-live jobs of the request's events (`queued` or `running`, same owner) become
+live jobs of the request's tasks (`queued` or `running`, same owner) become
 `cancelled` and the handlers running in that API instance are aborted at once.
 A handler running in another instance stops at its next heartbeat, and its
 guarded completion (step 5) fails, so a cancelled job never commits domain
 changes. A commit that won the race against the cancellation stays committed.
 
-Deleting an event deletes its jobs (`event_id` is `ON DELETE CASCADE`).
+Deleting a task deletes its jobs (`task_id` is `ON DELETE CASCADE`).
 
 ## Shutdown and outages
 
@@ -109,7 +109,7 @@ ORDER BY status, kind;
 Queued jobs, and whether each is ready or waiting for a retry:
 
 ```sql
-SELECT id, kind, event_id, attempts, error, available_at,
+SELECT id, kind, task_id, attempts, error, available_at,
        available_at <= now() AS ready, concurrency_key, created_at
 FROM jobs
 WHERE status = 'queued'
@@ -136,7 +136,7 @@ HAVING count(*) > 1;
 Running jobs and their leases:
 
 ```sql
-SELECT id, kind, event_id, attempts, lease_until,
+SELECT id, kind, task_id, attempts, lease_until,
        lease_until <= clock_timestamp() AS lease_expired, progress, updated_at
 FROM jobs
 WHERE status = 'running'
@@ -149,22 +149,22 @@ the first pass of any live API instance returns it to the queue.
 Jobs that failed (kept for 7 days):
 
 ```sql
-SELECT id, kind, event_id, attempts, error, updated_at
+SELECT id, kind, task_id, attempts, error, updated_at
 FROM jobs
 WHERE status = 'failed'
 ORDER BY updated_at DESC
 LIMIT 50;
 ```
 
-Every job of one request (the request event and its steps):
+Every job of one request (the request task and its steps):
 
 ```sql
 SELECT j.id, j.kind, j.status, j.attempts, j.error, j.available_at, j.lease_until
 FROM jobs j
-WHERE j.event_id = '<requestId>'
-   OR j.event_id IN (
-     SELECT to_event_id FROM event_event_relation
-     WHERE from_event_id = '<requestId>' AND relation = 'step')
+WHERE j.task_id = '<requestId>'
+   OR j.task_id IN (
+     SELECT to_task_id FROM task_task_relation
+     WHERE from_task_id = '<requestId>' AND relation = 'step')
 ORDER BY j.created_at, j.id;
 ```
 
@@ -174,16 +174,16 @@ ORDER BY j.created_at, j.id;
   for `Job queue unavailable` in its log. Raise `AI_JOBS_CONCURRENCY` only if
   the running jobs are healthy and the provider is not rate limiting.
 - **Jobs keep returning with `Worker lease expired`.** The API process is dying
-  or restarting mid-job, or a handler blocks the event loop for longer than
+  or restarting mid-job, or a handler blocks the Node.js loop for longer than
   the lease. Look at the API restarts before raising `AI_JOBS_LEASE_MS`.
 - **Many jobs `failed` with `unavailable`.** The provider (OpenRouter, Hermes)
   was down or refused the call for all attempts. Fix the cause; failed and
-  cancelled jobs do not restart by themselves, and the event already shows the
+  cancelled jobs do not restart by themselves, and the task already shows the
   failure to the user, who sends the request again.
 - **A retry is waiting and you do not want to wait.** `UPDATE jobs SET
   available_at = now() WHERE id = '<id>' AND status = 'queued';` is safe.
 - **Do not** set a `failed` or `cancelled` job back to `queued` by hand (its
-  event was already closed as failed or cancelled), and do not delete `running`
+  task was already closed as failed or cancelled), and do not delete `running`
   rows: let the lease expire or cancel the request through the API.
 
 Payloads and progress contain user data: the database access rules, backups and

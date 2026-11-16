@@ -20,7 +20,7 @@ const candidate = (kind: EditCandidate["kind"], id: string, name: string): EditC
 const updated = async (ctx: ReturnType<typeof setupRequest>) => ctx.store.entities("r1");
 
 describe("passo de editar tarefas", () => {
-  test("'parei de trabalhar' altera so o fim planejado da tarefa escolhido pelo JEV, num commit proprio", async () => {
+  test("'parei de trabalhar' altera so o fim planejado da tarefa escolhida pelo JEV, num commit proprio", async () => {
     const ctx = setupRequest("parei de trabalhar");
     const task = await seedTask(ctx);
     const payload = await addStep(ctx, "s1", "task-edit", "one", { candidates: [candidate("task", task.id, "Trabalhar")] });

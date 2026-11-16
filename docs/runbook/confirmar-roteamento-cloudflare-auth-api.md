@@ -844,7 +844,7 @@ Depois dos testes sem token:
 2. Faça login com um usuário válido.
 3. Abra as ferramentas de desenvolvedor do navegador.
 4. Selecione a aba **Network**.
-5. Crie ou consulte um evento.
+5. Crie ou consulte uma tarefa.
 6. Localize a chamada `/api/...`.
 7. Confirme que ela não recebeu redirect para `auth.SEUDOMINIO`.
 8. Confirme que a operação terminou com status `2xx`.

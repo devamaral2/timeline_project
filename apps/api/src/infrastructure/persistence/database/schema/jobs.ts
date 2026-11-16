@@ -10,7 +10,7 @@ import { JOB_STATUSES, sqlList } from "./sets";
  * volta para a fila. Nao ha tabela de saida nem RabbitMQ.
  *
  * O job e descartavel: a fonte de verdade e a tarefa. `progress` e um retrato
- * passageiro; o resultado mora na tarefa e nas entradas dele, por isso nao ha
+ * passageiro; o resultado mora na tarefa e nas entradas dela, por isso nao ha
  * coluna `result`. Todo job de IA aponta para a tarefa do passo que executa.
  */
 export const jobs = pgTable(

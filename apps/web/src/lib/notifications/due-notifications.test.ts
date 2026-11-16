@@ -2,6 +2,7 @@ import { expect, test } from "vitest";
 import {
   dueNotificationsOf,
   notificationFeedOf,
+  notificationHrefOf,
   notificationKeyOf,
   type NotificationSource,
 } from "./due-notifications";
@@ -30,7 +31,7 @@ test("fires once the trigger is crossed and the item has not started", () => {
   const result = dueNotificationsOf([item], NOW, new Set());
 
   expect(result.due).toEqual([
-    { key: notificationKeyOf(item, 5), kind: "agenda", sourceId: "task-1", name: "Corrida", offsetMinutes: 5 },
+    { key: notificationKeyOf(item, 5), kind: "reference", sourceId: "task-1", name: "Corrida", offsetMinutes: 5 },
   ]);
   expect(result.settled).toHaveLength(1);
 });
@@ -86,11 +87,11 @@ test("an item without a start never warns", () => {
   expect(dueNotificationsOf([undated], NOW, new Set())).toEqual({ due: [], settled: [] });
 });
 
-test("a tracked item (with status) is a task in the notification", () => {
+test("a tracked item (with status) is a tracked task in the notification", () => {
   const tracked = source(3, { status: "todo" });
   const result = dueNotificationsOf([tracked], NOW, new Set());
 
-  expect(result.due.map((item) => item.kind)).toEqual(["task"]);
+  expect(result.due.map((item) => item.kind)).toEqual(["tracked"]);
 });
 
 test("the feed lists recent notifications newest first and the next upcoming ones", () => {
@@ -106,5 +107,10 @@ test("the feed lists recent notifications newest first and the next upcoming one
 
   expect(feed.recent.map((item) => item.name)).toEqual(["A", "B"]);
   expect(feed.upcoming.map((item) => item.name)).toEqual(["D", "C"]);
-  expect(feed.upcoming[0]?.kind).toBe("task");
+  expect(feed.upcoming[0]?.kind).toBe("tracked");
+});
+
+test("both kinds open the task screen, so a tracked task has an address too", () => {
+  expect(notificationHrefOf("u1", { kind: "reference", sourceId: "t1" })).toBe("/u1/tarefas/t1");
+  expect(notificationHrefOf("u1", { kind: "tracked", sourceId: "t2" })).toBe("/u1/tarefas/t2");
 });

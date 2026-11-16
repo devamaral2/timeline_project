@@ -18,8 +18,11 @@ const FALLBACK_REASONS: Record<string, string> = {
   forced: "pedido direto, pelo prefixo fallback:",
 };
 
-const ENTITY_KINDS: Record<RequestEntityRecord["kind"], string> = { task: "Tarefa", artifact: "Artefato" };
-const OPERATIONS: Record<RequestEntityRecord["operation"], string> = { create: "criado", update: "alterado", delete: "apagado" };
+/** O rotulo de cada registro, no genero da entidade: "Tarefa criada", "Artefato criado". */
+const ENTITY_LABELS: Record<RequestEntityRecord["kind"], Record<RequestEntityRecord["operation"], string>> = {
+  task: { create: "Tarefa criada", update: "Tarefa alterada", delete: "Tarefa apagada" },
+  artifact: { create: "Artefato criado", update: "Artefato alterado", delete: "Artefato apagado" },
+};
 const CLOSED = new Set<RequestRecord["status"]>(["done", "failed", "cancel"]);
 
 function clip(text: string, max = MAX_TEXT): string {
@@ -145,7 +148,7 @@ function stepEntry(step: StepRecord, entities: readonly RequestEntityRecord[]): 
   if (own.length > 0) {
     sections.push({
       title: "Registros",
-      text: own.map((entity) => `${ENTITY_KINDS[entity.kind]} ${OPERATIONS[entity.operation]} · ${entity.summary.name}`).join("\n"),
+      text: own.map((entity) => `${ENTITY_LABELS[entity.kind][entity.operation]} · ${entity.summary.name}`).join("\n"),
     });
   }
   if (step.result) {
