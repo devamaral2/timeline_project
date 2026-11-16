@@ -1,16 +1,33 @@
 import { BadRequestException } from "@nestjs/common";
-import { createTaskInputSchema, updateTaskInputSchema } from "@repo/contracts/schemas";
+import {
+  createArtifactRequestSchema,
+  createTaskInputSchema,
+  updateArtifactRequestSchema,
+  updateTaskInputSchema,
+} from "@repo/contracts/schemas";
+import type { ZodType } from "zod";
 import { HUMAN_KINDS, HUMAN_STATUSES, PRIORITIES, isNotificationOffsetMinutes } from "../domain";
 import { decodeAgendaCursor } from "../infrastructure/persistence";
 
 /** Os tipos de artefato que o usuario cria e edita. Os demais sao do servidor. */
 const EDITABLE_ARTIFACT_TYPES = ["text", "food", "sleep", "training"];
 
+/**
+ * Os campos de um esquema do contrato: as chaves do objeto ou, numa uniao de
+ * objetos (artefato com `type`), a uniao das chaves de cada variante.
+ */
+export function bodyFieldsOf(schema: ZodType): Set<string> {
+  const { shape, options } = schema as unknown as { shape?: Record<string, unknown>; options?: ZodType[] };
+  if (shape) return new Set(Object.keys(shape));
+  if (options) return new Set(options.flatMap((option) => [...bodyFieldsOf(option)]));
+  throw new Error("A body schema must be an object or a union of objects");
+}
+
 /** Os campos que cada corpo conhece: os dos esquemas do contrato. Qualquer outro, inclusive nome antigo, e recusado. */
-const CREATE_TASK_FIELDS = new Set(Object.keys(createTaskInputSchema.shape));
-const UPDATE_TASK_FIELDS = new Set(Object.keys(updateTaskInputSchema.shape));
-const CREATE_ARTIFACT_FIELDS = new Set(["type", "data", "name", "tags", "taskIds"]);
-const UPDATE_ARTIFACT_FIELDS = new Set([...CREATE_ARTIFACT_FIELDS, "expectedRevision", "schemaVersion"]);
+const CREATE_TASK_FIELDS = bodyFieldsOf(createTaskInputSchema);
+const UPDATE_TASK_FIELDS = bodyFieldsOf(updateTaskInputSchema);
+const CREATE_ARTIFACT_FIELDS = bodyFieldsOf(createArtifactRequestSchema);
+const UPDATE_ARTIFACT_FIELDS = bodyFieldsOf(updateArtifactRequestSchema);
 
 function assertKnownFields(body: unknown, known: ReadonlySet<string>): void {
   if (typeof body !== "object" || body === null) return;

@@ -2,11 +2,18 @@ import { BadRequestException } from "@nestjs/common";
 import { describe, expect, test } from "vitest";
 import { encodeAgendaCursor } from "../infrastructure/persistence/tasks/queries/agenda-cursor";
 import {
+  createArtifactRequestSchema,
+  createTaskInputSchema,
+  updateArtifactRequestSchema,
+  updateTaskInputSchema,
+} from "@repo/contracts/schemas";
+import {
   assertAgendaCursor,
   assertArtifactRequest,
   assertTaskFields,
   assertExpectedRevision,
   assertRecurrenceTemplate,
+  bodyFieldsOf,
   parseLimit,
 } from "./http-input-validation";
 import { normalizeSearch, parseEnum, parseEnumList, parseInstant } from "./list-filters";
@@ -235,5 +242,28 @@ describe("list filters", () => {
     expect(normalizeSearch("  Pagar ALUGUEL ")).toBe("pagar aluguel");
     expect(normalizeSearch("   ")).toBeUndefined();
     expect(normalizeSearch(undefined)).toBeUndefined();
+  });
+});
+
+describe("the fields each body knows come from the contract schemas", () => {
+  test("a schema, or a union of schemas, gives the union of its keys", () => {
+    expect([...bodyFieldsOf(createArtifactRequestSchema)].sort()).toEqual(["data", "name", "tags", "taskIds", "type"]);
+    expect([...bodyFieldsOf(updateArtifactRequestSchema)].sort()).toEqual([
+      "data", "expectedRevision", "name", "schemaVersion", "tags", "taskIds", "type",
+    ]);
+    expect(bodyFieldsOf(createTaskInputSchema).has("previousTaskIds")).toBe(true);
+    expect(bodyFieldsOf(updateTaskInputSchema).has("expectedRevision")).toBe(true);
+  });
+
+  test("a field only an artifact variant has is accepted, one no schema has is refused", () => {
+    // `schemaVersion` so existe nas variantes de edicao com `type`; `taskIds` nas duas.
+    expect(() => assertArtifactRequest({ type: "text", data: { body: "x" }, schemaVersion: 2 }, false)).not.toThrow();
+    expect(() => assertArtifactRequest({ type: "text", data: { body: "x" }, schemaVersion: 2 }, true)).toThrow("Invalid field schemaVersion");
+    expect(() => assertArtifactRequest({ data: { body: "x" }, global: true }, true)).toThrow("Invalid field global");
+  });
+
+  test("the PATCH of an artifact needs nothing besides what the body carries: the id comes in the path", () => {
+    expect(() => assertArtifactRequest({ name: "Novo nome" } as never, false)).not.toThrow();
+    expect(() => assertArtifactRequest({ expectedRevision: 3, tags: [] } as never, false)).not.toThrow();
   });
 });

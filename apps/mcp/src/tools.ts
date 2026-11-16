@@ -7,7 +7,7 @@ const WEEKDAY_CODES = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const
 
 // Os conjuntos fechados da API (packages/contracts/src/tasks/task-types.ts). O
 // MCP nao depende do pacote de contratos; a API valida de novo e o erro volta ao modelo.
-const HUMAN_KINDS = ["routine", "meal", "sleep", "training"] as const;
+const HUMAN_KINDS = ["common", "meal", "sleep", "training"] as const;
 const REQUEST_KINDS = ["request", "search_request", "build_request", "inquiry_request", "review_request", "cron"] as const;
 const HUMAN_STATUSES = ["todo", "toDefine", "doing", "inHold", "done", "cancel", "missed"] as const;
 const AGENT_ONLY_STATUSES = ["queued", "running", "waiting", "failed"] as const;
@@ -25,7 +25,7 @@ const instant = z.string().datetime({ offset: true }).describe("ISO-8601 date-ti
 const tags = z.array(z.string().min(1)).max(20).optional();
 const actor = z.enum(["human", "agent"]).optional().describe("Who carries the task out. Omit for both.");
 
-const humanKind = z.enum(HUMAN_KINDS).optional().describe("Omit for a routine task.");
+const humanKind = z.enum(HUMAN_KINDS).optional().describe("Omit for a common task.");
 const humanStatus = z.enum(HUMAN_STATUSES);
 const priority = z.enum(PRIORITIES).optional().describe("Omit for medium.");
 

@@ -27,6 +27,15 @@ export default defineWorkspace([
     },
   },
   {
+    resolve: { alias: packageAliases },
+    test: {
+      name: "corpos",
+      root: ".",
+      environment: "node",
+      include: ["test/corpos/**/*.test.ts"],
+    },
+  },
+  {
     resolve: { alias: { ...packageAliases, "@": resolve("./apps/web/src") } },
     test: {
       name: "web",
