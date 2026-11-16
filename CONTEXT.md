@@ -41,7 +41,7 @@ Agente que decide, a partir de um pedido, para qual agente ele segue.
 _Avoid_: roteador, classificador
 
 **Agente de entidade**:
-Agente que cria ou edita uma entidade da agenda: evento, artefato ou evento recorrente.
+Agente que cria ou edita uma entidade da agenda: tarefa, artefato ou tarefa recorrente.
 _Avoid_: especialista, skill
 
 **Agente de consulta**:
@@ -50,40 +50,40 @@ _Avoid_: leitor, query
 
 ### Agenda
 
-**Evento**:
-Algo que uma pessoa ou um agente faz ou vai fazer. É a única entidade de ação: o que antes era tarefa passa a ser um evento. Pode ter o status acompanhado ou servir só de referência na agenda.
-_Avoid_: tarefa (como entidade separada), item, atividade
+**Tarefa**:
+Algo que uma pessoa ou um agente faz ou vai fazer. É a única entidade de ação. Pode ter o status acompanhado ou servir só de referência na agenda. A tela Tarefas lista as tarefas acompanhadas por status.
+_Avoid_: evento, item, atividade
 
-**Evento de referência**:
-Evento sem status, que só marca um horário na agenda. Continua editável e pode passar a ter o status acompanhado a qualquer momento.
-_Avoid_: evento stateless, agendado, evento azul
+**Tarefa de referência**:
+Tarefa sem status, que só marca um horário na agenda. Continua editável e pode passar a ter o status acompanhado a qualquer momento.
+_Avoid_: tarefa stateless, agendado, tarefa azul
 
-**Evento longo**:
-Evento de pessoa, sempre com status, que fica fora da agenda, como um projeto. Pode ter início real e prazo, mas nenhuma data o coloca na agenda. O trabalho nele aparece na agenda como subtarefas com horário. Não se repete e não vira perdido: com o prazo vencido, fica atrasado. Todo evento que duraria mais de 31 dias é um evento longo.
+**Tarefa longa**:
+Tarefa de pessoa, sempre com status, que fica fora da agenda, como um projeto. Pode ter início real e prazo, mas nenhuma data a coloca na agenda. O trabalho nela aparece na agenda como tarefas com horário, ligadas por sequência. Não se repete e não vira perdida: com o prazo vencido, fica atrasada. Toda tarefa que duraria mais de 31 dias é uma tarefa longa.
 _Avoid_: projeto, épico, registro longo, tarefa sem data
 
 **Agenda**:
-A grade de horários. Mostra os eventos de pessoa e de agente que têm início e não são longos, juntos ou cada executor em separado. Passos não aparecem nela.
+A grade de horários. Mostra as tarefas de pessoa e de agente que têm início e não são longas, juntas ou cada executor em separado. Passos não aparecem nela.
 _Avoid_: calendário, timeline, linha do tempo
 
 **Fim planejado**:
-Quando o evento deve terminar: o fim do bloco na agenda ou, num evento longo, o prazo. É diferente da conclusão, que é o momento em que o evento de fato terminou.
+Quando a tarefa deve terminar: o fim do bloco na agenda ou, numa tarefa longa, o prazo. É diferente da conclusão, que é o momento em que a tarefa de fato terminou.
 _Avoid_: fim, data final, término
 
 **Executor**:
-Quem realiza o evento: uma pessoa ou um agente. Cada um tem o seu próprio conjunto de status, e um evento de agente sempre tem status.
+Quem realiza a tarefa: uma pessoa ou um agente. Cada um tem o seu próprio conjunto de status, e uma tarefa de agente sempre tem status.
 _Avoid_: bot, responsável, dono
 
 **Artefato**:
-Objeto que guarda conteúdo e não é um fluxo: não tem status, horário nem executor. É editável. Quem registra que ele foi criado, alterado ou usado é um evento. Substitui a nota.
+Objeto que guarda conteúdo e não é um fluxo: não tem status, horário nem executor. É editável. Quem registra que ele foi criado, alterado ou usado é uma tarefa. Substitui a nota.
 _Avoid_: nota (como entidade; fica só como rótulo de tela do artefato de texto), anexo, documento
 
 **Relação**:
-Ligação com sentido entre eventos e artefatos. Vai de quem produz para o que foi produzido: o evento de origem cria o artefato ou gera o evento de destino. Entre evento e artefato, parte sempre do evento, que cria, altera, usa ou apaga o artefato.
+Ligação com sentido entre tarefas e artefatos. Vai de quem produz para o que foi produzido: a tarefa de origem cria o artefato ou gera a tarefa de destino. Entre tarefa e artefato, parte sempre da tarefa, que cria, altera, usa ou apaga o artefato.
 _Avoid_: vínculo, link, pai e filho
 
 **Alimento**:
-Artefato com calorias e receita. Não se distingue alimento de refeição. O que foi comido num evento é um alimento próprio daquele evento, copiado do original com a quantidade, para que editar o original não mude o passado. A cópia é marcada como derivada e não aparece na lista de alimentos.
+Artefato com calorias e receita. Não se distingue alimento de refeição. O que foi comido numa tarefa é um alimento próprio daquela tarefa, copiado do original com a quantidade, para que editar o original não mude o passado. A cópia é marcada como derivada e não aparece na lista de alimentos.
 _Avoid_: refeição pronta, item do catálogo, nota de refeição
 
 **Artefato global**:
@@ -91,7 +91,7 @@ Artefato sem dono, que todos leem e ninguém edita pelo app. Só existe para ali
 _Avoid_: catálogo, item de sistema
 
 **Pedido**:
-Evento executado por um agente a partir de algo que o usuário pediu, ainda sem classificação.
+Tarefa executada por um agente a partir de algo que o usuário pediu, ainda sem classificação.
 _Avoid_: prompt, comando, tarefa do agente
 
 **Pedido de pesquisa**:
@@ -111,11 +111,11 @@ Pedido para o agente revisar algo que já foi produzido.
 _Avoid_: checagem, auditoria
 
 **Execução agendada**:
-Evento de agente que roda sozinho num horário definido, sem um pedido do usuário naquele momento. Na tela, o tipo aparece escrito como `cron`.
+Tarefa de agente que roda sozinha num horário definido, sem um pedido do usuário naquele momento. Na tela, o tipo aparece escrito como `cron`.
 _Avoid_: cron (como nome do conceito), automação, rotina do agente
 
 **Passo**:
-Evento de agente em que um pedido se desdobra, executado por um agente interno. É uma subtarefa do pedido e não aparece na lista de pedidos do usuário nem na agenda.
+Tarefa de agente em que um pedido se desdobra, executada por um agente interno. Liga-se ao pedido pela relação de passo e não aparece na lista de pedidos do usuário nem na agenda.
 _Avoid_: etapa, step do processo, processo
 
 **Sessão**:
@@ -123,16 +123,12 @@ O primeiro pedido e todos os pedidos que continuam a mesma conversa. Não é uma
 _Avoid_: conversa (como entidade), thread, chat
 
 **Entrada**:
-Registro acrescentado a um evento e nunca alterado: mensagem, pensamento, trace, resultado ou insumo de um passo. O texto do usuário só aparece em mensagens, pensamentos e insumos.
+Registro acrescentado a uma tarefa e nunca alterado: mensagem, pensamento, trace, resultado ou insumo de um passo. O texto do usuário só aparece em mensagens, pensamentos e insumos.
 _Avoid_: log, histórico, trace (como termo geral)
 
-**Subtarefa**:
-Evento em que um evento maior se desdobra. É uma relação, então pode pertencer a mais de um evento maior, e apagar o maior não apaga a subtarefa.
-_Avoid_: filho, tarefa filha
-
-**Bloqueio**:
-Relação em que concluir um evento libera outro.
-_Avoid_: dependência, pré-requisito
+**Sequência entre tarefas**:
+Relação informativa em que uma tarefa vem depois de outra, e as duas podem ser de pessoa ou de agente. Não segura a seguinte em espera nem muda status.
+_Avoid_: subtarefa, bloqueio, dependência, pré-requisito
 
 ### Marca
 

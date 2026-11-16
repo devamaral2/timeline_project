@@ -34,9 +34,9 @@ Skills: `db-migrations`, `e2e-tests`, `frontend-design`, `grill-me`,
 
 # Repository Guide
 
-- `apps/web`: browser interface for the timeline and event management.
+- `apps/web`: browser interface for the timeline and task management.
 - `apps/mobile`: Android native app (Kotlin + Compose) that mirrors the web experience.
-- `apps/api`: business use cases and the HTTP API for events, artifacts, recurrences, and AI requests.
+- `apps/api`: business use cases and the HTTP API for tasks, artifacts, recurrences, and AI requests.
 - `apps/auth`: identity gateway handling sign-in, sessions, access, and roles.
 - `packages/contracts`: shared data contracts and types.
 - `packages/timeline`: shared date windows, grouping, and timeline calculations.

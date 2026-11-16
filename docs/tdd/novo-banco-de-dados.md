@@ -5,6 +5,8 @@ date: 2026-11-14
 
 # TDD: Novo banco de dados da agenda
 
+> Nota: a entidade única descrita aqui passou a se chamar **tarefa** ([ADR 0015](../adr/0015-tarefa-como-nome-da-entidade-unica.md)). O texto mantém "evento" como histórico; o modelo não mudou.
+
 ## Contexto e objetivo
 
 O banco passa de 28 para 13 tabelas, em torno de duas entidades: evento e artefato. As decisões e os motivos estão

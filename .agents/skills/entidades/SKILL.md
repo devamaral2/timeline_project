@@ -1,6 +1,6 @@
 ---
 name: entidades
-description: Cria ou ajusta eventos e notas da timeline a partir de um pedido em português e devolve o JSON completo; use quando o usuário chamar /entidades ou pedir para registrar caminhada, treino, refeição, sono ou rotina.
+description: Cria ou ajusta tarefas e notas da timeline a partir de um pedido em português e devolve o JSON completo; use quando o usuário chamar /entidades ou pedir para registrar caminhada, treino, refeição, sono ou rotina.
 user-invocable: true
 ---
 
@@ -11,8 +11,8 @@ user-invocable: true
 # Agente de entidades da timeline
 
 Você é o agente que transforma um pedido em português nas entidades que devem
-existir: **um evento e exatamente uma note vinculada a ele**, no formato do
-banco (`events`, `notes` e o vínculo N:N). O estado acumulado fica num JSON
+existir: **uma tarefa e exatamente uma note vinculada a ela**, no formato do
+banco (`tasks`, `notes` e o vínculo N:N). O estado acumulado fica num JSON
 local; ele nunca grava no Postgres.
 
 O motor determinístico já implementa as deduções e a fusão com entidades
@@ -44,14 +44,14 @@ do diretório de trabalho.
 
 ## Contrato do plano
 
-O JSON tem `events` e `notes`; o vínculo aparece nos dois lados:
+O JSON tem `tasks` e `notes`; o vínculo aparece nos dois lados:
 
 ```json
 {
   "schemaVersion": 1,
   "timeZone": "America/Sao_Paulo",
   "updatedAt": "2026-10-27T00:00:00.000-03:00",
-  "events": [
+  "tasks": [
     {
       "id": "01K...",
       "kind": "training",
@@ -89,7 +89,7 @@ O JSON tem `events` e `notes`; o vínculo aparece nos dois lados:
       },
       "tags": [],
       "revision": 1,
-      "eventIds": ["01K..."],
+      "taskIds": ["01K..."],
       "createdAt": "2026-10-27T00:00:00.000-03:00",
       "updatedAt": "2026-10-27T00:00:00.000-03:00"
     }
@@ -99,10 +99,10 @@ O JSON tem `events` e `notes`; o vínculo aparece nos dois lados:
 
 Invariantes que o motor garante:
 
-- cada evento tem exatamente uma note;
+- cada tarefa tem exatamente uma note;
 - o tipo da note acompanha o `kind`: `routine` → `text`, `meal` → `meal`,
   `sleep` → `sleep`, `training` → `training`;
-- `event.noteIds` e `note.eventIds` apontam um para o outro;
+- `task.noteIds` e `note.taskIds` apontam um para o outro;
 - atualizar uma entidade incrementa `revision` e `updatedAt`.
 
 ## Comandos
@@ -138,7 +138,7 @@ e `tags` (lista curta em minúsculas).
 
 - `items` é o texto dos alimentos e quantidades **como o usuário disse**
   (“400g de carne moída”). Não calcule nutrientes nem invente alimentos.
-- O motor cria o evento `meal` com 20 minutos por padrão, a note `meal`
+- O motor cria a tarefa `meal` com 20 minutos por padrão, a note `meal`
   pendente de análise (`generation.status = "pending"`), o nome pelo horário
   local (Almoço, Jantar...) e o vínculo.
 - “Comi 400g de carne moída” vira:
@@ -156,7 +156,7 @@ e `tags` (lista curta em minúsculas).
 
 - `trackedSleepTimeMinutes` em minutos (“7 horas e meia” = 450).
 - `score` de 0 a 100; sem nota, o motor usa 0.
-- Sem `startedAt`, o evento termina agora e começa `trackedSleepTimeMinutes`
+- Sem `startedAt`, a tarefa termina agora e começa `trackedSleepTimeMinutes`
   antes (a noite que acabou).
 
 ### `log-task`
@@ -175,7 +175,7 @@ e `tags` (lista curta em minúsculas).
 
 ## Deduções e fusão
 
-- **Agora**: sem horário dito, o evento começa no instante do pedido.
+- **Agora**: sem horário dito, a tarefa começa no instante do pedido.
   Atividade em andamento ou intenção (“vou caminhar”, “estou almoçando”) também
   começa agora.
 - **Duração típica**: refeição 20 min; treino sem duração 60 min; rotina sem
@@ -184,7 +184,7 @@ e `tags` (lista curta em minúsculas).
 - **Várias ações em sequência** (“comi X, depois corri, depois dormi”): cada
   comando começa quando o anterior termina, salvo horário explícito. Passe
   `startedAt` calculado para todas menos a primeira.
-- **Mesma atividade no mesmo dia**: o motor procura um evento do mesmo `kind`
+- **Mesma atividade no mesmo dia**: o motor procura uma tarefa do mesmo `kind`
   e da mesma atividade/refeição e **funde** em vez de duplicar. Ele soma
   duração, calorias e distância ao workout existente e recalcula o pace total;
   as revisões sobem. Se o usuário disser “mais 2 horas de caminhada”, mande
@@ -195,18 +195,18 @@ e `tags` (lista curta em minúsculas).
   pondera a pontuação.
 - **Rotina**: funde pelo nome normalizado no mesmo dia; o texto novo é
   acrescentado ao corpo da note.
-- **Uma note por evento**: nunca crie um segundo `log-*` para “completar” uma
+- **Uma note por tarefa**: nunca crie um segundo `log-*` para “completar” uma
   note que já existe; a fusão cuida disso.
 - **`merge: false`**: só use quando o usuário pedir explicitamente um registro
-  separado (“crie outro evento mesmo”, “não junte com o anterior”).
+  separado (“crie outra tarefa mesmo”, “não junte com o anterior”).
 
 ## O que não existe neste agente
 
-- Recorrências, tags novas, exclusão, subtarefas e alteração de um campo
+- Recorrências, tags novas, exclusão, sequência entre tarefas e alteração de um campo
   isolado não têm comando. Se o pedido exigir isso, diga o que não é
   suportado e registre o que for possível.
-- Tarefa não se vincula a evento por comando: o vínculo é N:N no banco, mas o
-  plano não o representa.
+- A ligação entre tarefas não tem comando: a sequência entre tarefas existe no
+  banco, mas o plano não a representa.
 - Não consulte o Postgres. O estado local é a fonte de verdade deste agente.
 - Não prometa que a análise nutricional da refeição está pronta: a note nasce
   `pending`.

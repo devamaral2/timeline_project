@@ -5,6 +5,8 @@ date: 2026-11-14
 
 # Spec: o web sobre a API do banco novo
 
+> Nota: a entidade única descrita aqui passou a se chamar **tarefa** ([ADR 0015](../adr/0015-tarefa-como-nome-da-entidade-unica.md)). O texto mantém "evento" como histórico; o modelo não mudou.
+
 Referências: [TDD do banco novo](../tdd/novo-banco-de-dados.md), ADRs
 [0005](../adr/0005-skills-e-agentes-do-hermes-como-arquivos.md),
 [0006](../adr/0006-edicao-por-alvo-pela-rota-por-processo.md),
