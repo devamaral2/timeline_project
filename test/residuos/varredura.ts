@@ -64,7 +64,7 @@ export const ARQUIVOS_COM_OUTRO_EVENTO: { motivo: string; arquivo: RegExp }[] = 
   },
   {
     motivo: "testes das migrations que renomeiam o banco e os dados do agente: gravam dados com os nomes antigos de proposito, para provar que a migration os troca",
-    arquivo: /^apps\/api\/src\/infrastructure\/persistence\/integration\/(task-rename|agent-data)-migration\.integration\.test\.ts$/,
+    arquivo: /^apps\/api\/src\/infrastructure\/persistence\/integration\/(task-rename(-nested)?|agent-data)-migration\.integration\.test\.ts$/,
   },
   {
     motivo: "registro historico do pipeline de IA que saiu (ADRs 001 a 003, plano, estado e SQL do contexto do dia, `agent/fast`, `ai_processes`): descreve o que existiu, com os nomes da epoca",
