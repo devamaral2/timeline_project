@@ -102,24 +102,14 @@ export const EXCECOES_DE_LINHA: { motivo: string; linha: RegExp; palavras: RegEx
     palavras: /^event$/,
   },
   {
-    motivo: "parametro `event` de handler de DOM: anotacao com tipo de evento do navegador",
-    linha: /\bevent\??:\s*(React\.)?\w*Event\b|\(event as \w*Event\b/,
+    motivo: "parametro `event` de handler de DOM (anotacao com tipo do navegador, cast, `onresult = (event) =>`) e interface que estende `Event`",
+    linha: /\bevent\??:\s*(React\.)?\w*Event\b|\(event as \w*Event\b|\.on[a-z]+\s*=\s*\(event\)\s*=>|\bextends\s+Event\b/,
     palavras: /^(event|Event)$/,
   },
   {
     motivo: "parametro `event` de handler de DOM: arrow function de `onXxx={...}`",
     linha: /\bon[A-Z]\w*=\{\(?event\)?\s*=>/,
     palavras: /^event$/,
-  },
-  {
-    motivo: "parametro `event` de handler de DOM: `recognition.onresult = (event) =>`",
-    linha: /\.on[a-z]+\s*=\s*\(event\)\s*=>/,
-    palavras: /^event$/,
-  },
-  {
-    motivo: "interface do navegador que estende `Event`",
-    linha: /\bextends\s+Event\b/,
-    palavras: /^Event$/,
   },
   {
     motivo: "`new Event(...)` e `new CustomEvent(...)`: criam eventos de DOM",

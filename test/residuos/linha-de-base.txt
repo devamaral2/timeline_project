@@ -4273,6 +4273,34 @@ apps/api/src/infrastructure/persistence/agent-sql/rewrite-agent-sql.test.ts	test
 apps/api/src/infrastructure/persistence/agent-sql/validate-agent-sql.test.ts	["quoted uppercase name", 'SELECT * FROM "Events"'],
 
 == web, código ==
+apps/web/src/app/[userId]/eventos/[eventId]/page.tsx	import { getEvent } from "@/lib/api/events";
+apps/web/src/components/agenda/agenda-screen.tsx	import { listAgenda, updateEvent } from "@/lib/api/events";
+apps/web/src/components/edit/EditTagSection.tsx	import { suggestTags } from "@/lib/api/events";
+apps/web/src/components/edit/task-choice.tsx	import { listAgenda, listTrackedEvents } from "@/lib/api/events";
+apps/web/src/components/task-detail/TaskDetailView.tsx	import { type EditEventInput, updateEvent } from "@/lib/api/events";
+apps/web/src/components/task-detail/TaskEditRoute.tsx	import { getEvent } from "@/lib/api/events";
+apps/web/src/components/task-detail/TaskEditSequenceSection.tsx	import { getEvent } from "@/lib/api/events";
+apps/web/src/components/task-detail/TaskEditView.tsx	import { createEvent, newIdempotencyKey, updateEvent } from "@/lib/api/events";
+apps/web/src/components/task-detail/TaskSequenceSection.tsx	import { getEvent } from "@/lib/api/events";
+apps/web/src/components/task-detail/task-draft.ts	import type { EditEventInput } from "@/lib/api/events";
+apps/web/src/components/tasks/DeleteTaskDialog.tsx	import { deleteEvent } from "@/lib/api/events";
+apps/web/src/components/tasks/new-task-forms/TagInput.tsx	import { suggestTags } from "@/lib/api/events";
+apps/web/src/components/task-list/TaskListScreen.tsx	import { listTrackedEvents, updateEvent } from "@/lib/api/events";
+apps/web/src/lib/tasks/task-read-model.ts	import type { EditEventInput } from "@/lib/api/events";
+apps/web/src/lib/tasks/task-filters.ts	import type { TrackedFilters } from "@/lib/api/events";
+apps/web/src/lib/notifications/load-notification-sources.ts	import { listAgenda, listTrackedEvents } from "@/lib/api/events";
+apps/web/src/lib/api/events.ts	deleteEvent: "DELETE /api/tasks/{taskId}",
+apps/web/src/lib/api/events.ts	export function getEvent(taskId: string): Promise<TaskDto> {
+apps/web/src/lib/api/events.ts	export function updateEvent(taskId: string, input: EditEventInput): Promise<void> {
+apps/web/src/lib/api/events.ts	export function deleteEvent(taskId: string): Promise<void> {
+apps/web/src/test/fake-api/event-artifacts.test.ts	const event = (await api.authedFetch("/api/tasks/ev-1")) as TaskDto;
+apps/web/src/test/fake-api/event-artifacts.test.ts	const event = (await api.authedFetch("/api/tasks/ev-1")) as TaskDto;
+apps/web/src/test/fake-api/event-artifacts.test.ts	const event = (await api.authedFetch("/api/tasks/ev-1")) as TaskDto;
+apps/web/src/test/fake-api/event-artifacts.test.ts	const event = (await api.authedFetch("/api/tasks/ev-1")) as TaskDto;
+apps/web/src/test/fake-api/event-artifacts.test.ts	const event = (await api.authedFetch("/api/tasks/ev-1")) as TaskDto;
+apps/web/src/test/fake-api/event-artifacts.test.ts	const event = (await api.authedFetch("/api/tasks/ev-1")) as TaskDto;
+apps/web/src/test/fake-api/event-artifacts.test.ts	const event = (await api.authedFetch("/api/tasks/ev-1")) as TaskDto;
+apps/web/src/test/fake-api/event-artifacts.test.ts	const event = (await api.authedFetch("/api/tasks/ev-1")) as TaskDto;
 apps/web/src/app/[userId]/eventos/[eventId]/agent-task.test.tsx	import { eventFixture, eventsArea } from "@/test/fake-api/events";
 apps/web/src/app/[userId]/eventos/[eventId]/agent-task.test.tsx	return eventFixture({
 apps/web/src/app/[userId]/eventos/[eventId]/agent-task.test.tsx	api = createFakeApi({ areas: [eventsArea, requestsArea()], seed: { events: tasks, requests } });
@@ -5348,7 +5376,6 @@ apps/web/src/components/task-list/TaskListScreen.test.tsx	/** Liga a tela à API
 apps/web/src/components/task-list/TaskListScreen.test.tsx	test("agrupa pessoa e agente nos grupos do canvas, com a contagem e a linha de cada evento", async () => {
 apps/web/src/components/task-list/TaskListScreen.test.tsx	expect(luz).toHaveAttribute("href", "/user-1/eventos/luz");
 apps/web/src/components/task-list/TaskListScreen.test.tsx	test("a sequência não esconde linhas: o evento que se segue a outro da lista aparece, sem fração nem “Espera por”", async () => {
-apps/web/src/components/task-list/TaskListScreen.test.tsx	test("a lista pede a rota de eventos com status, sem o contrato antigo", async () => {
 apps/web/src/components/task-list/TaskListScreen.test.tsx	test("convida a criar o primeiro evento quando não há nenhum evento com status, e leva ao formulário de evento", async () => {
 apps/web/src/components/task-list/TaskListScreen.test.tsx	fireEvent.click(screen.getByRole("button", { name: "Novo evento" }));
 apps/web/src/components/task-list/TaskListScreen.test.tsx	expect(push).toHaveBeenCalledWith("/user-1/eventos/novo");
