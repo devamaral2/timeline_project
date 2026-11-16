@@ -7,9 +7,9 @@ import { CreateEventModule } from "./features/create-event/create-event.module";
 import { GetEventModule } from "./features/get-event/get-event.module";
 import { ListAgendaEventsModule } from "./features/list-agenda-events/list-agenda-events.module";
 import { ListTrackedEventsModule } from "./features/list-tracked-events/list-tracked-events.module";
-import { ListSubtasksModule } from "./features/list-subtasks/list-subtasks.controller";
 import { UpdateEventModule } from "./features/update-event/update-event.controller";
 import { DeleteEventModule } from "./features/delete-event/delete-event.controller";
+import { SearchPlacesModule } from "./features/search-places/search-places.controller";
 import { SuggestTagsModule } from "./features/suggest-tags/suggest-tags.controller";
 import { ListArtifactsModule } from "./features/list-artifacts/list-artifacts.controller";
 import { CreateArtifactModule } from "./features/create-artifact/create-artifact.controller";
@@ -42,11 +42,11 @@ import { RequestAgentFileEditModule } from "./features/request-agent-file-edit/r
     ListTrackedEventsModule,
     ListAgendaEventsModule,
     CreateEventModule,
-    ListSubtasksModule,
     GetEventModule,
     UpdateEventModule,
     DeleteEventModule,
     SuggestTagsModule,
+    SearchPlacesModule,
     ListArtifactsModule,
     CreateArtifactModule,
     GetArtifactModule,

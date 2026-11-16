@@ -36,6 +36,7 @@ export interface RawEventCommand {
   startOffsetMinutes: number | null;
   durationMinutes: number | null;
   endTimeOfDay: string;
+  placeName: string;
 }
 
 const eventCommandSchema = {
@@ -58,9 +59,10 @@ const eventCommandSchema = {
       "startOffsetMinutes",
       "durationMinutes",
       "endTimeOfDay",
+      "placeName",
     ],
     properties: {
-      type: { type: "string", enum: ["routine", "food", "training", "sleep"] },
+      type: { type: "string", enum: ["common", "food", "training", "sleep"] },
       routineName: { type: "string" },
       foodInputText: { type: "string" },
       sleepHours: { type: ["number", "null"] },
@@ -76,6 +78,7 @@ const eventCommandSchema = {
       startOffsetMinutes: { type: ["number", "null"] },
       durationMinutes: { type: ["number", "null"] },
       endTimeOfDay: { type: "string" },
+      placeName: { type: "string" },
     },
   },
 } as const;
@@ -158,9 +161,11 @@ export class OpenRouterEventCommandParsingGateway implements EventCommandParsing
       schedule,
     });
 
+    const place = raw.placeName?.trim();
     return {
       input: parsedInput,
       schedule,
+      ...(place ? { place } : {}),
       modelProvider: "openrouter",
       modelName: this.modelName,
     };
@@ -207,7 +212,7 @@ export function toCreateEventInput(
     default:
       return {
         name: raw.routineName?.trim() || fallbackName,
-        kind: "routine",
+        kind: "common",
         tags: [],
       };
   }

@@ -20,7 +20,7 @@ outra. `scripts/worktree/` resolve isso: cada worktree ganha seu proprio
 `.env.local` com portas livres calculadas na hora, bases proprias para a API
 (`<worktree>`) e para o Auth (`<worktree>_auth`) dentro do Postgres
 compartilhado (porta 54391) e o dominio `<worktree>.braid.local` (Caddy,
-porta 8080). A fila de jobs de IA e a tabela `jobs` da base da API, entao ja
+HTTPS na porta 8443). A fila de jobs de IA e a tabela `jobs` da base da API, entao ja
 nasce isolada por worktree.
 
 ## Passo a passo

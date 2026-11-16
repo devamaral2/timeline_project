@@ -182,12 +182,6 @@
   --macro-protein: var(--routine);
   --macro-carbs: var(--meal);
   --macro-fat: oklch(var(--tag-lightness) var(--tag-chroma) 340);
-  /* As notas do Hermes, cada tipo com a sua cor na folha: a skill num rosa da
-     mesma luminosidade e croma das tags (troca de tema junto com elas), o
-     agente no verde-agua do proprio Hermes e o roteador no azul de `--routine`. */
-  --note-skill: oklch(var(--tag-lightness) var(--tag-chroma) 350);
-  --note-agent: var(--brand-accent);
-  --note-router: var(--routine);
   --faint: var(--muted-foreground);
   --hairline: oklch(0.82 0.016 218); /* divisores: mais firmes que --border para ler sobre o fundo Névoa */
   --on-primary-muted: color-mix(in oklab, var(--primary-foreground) 70%, var(--primary));
@@ -265,6 +259,23 @@
   :focus-visible {
     outline: 2px solid var(--color-ring);
     outline-offset: 2px;
+  }
+
+  /* Campo de digitar em foco: um único fio de 1 px na cor da marca, por cima
+     da borda e no formato do campo, e o cursor na mesma cor. Sem anel por
+     fora. Caixa de marcar, opção e botão seguem com o anel acima. O campo
+     cuja moldura é o elemento em volta (pílula com ícone) zera este contorno
+     e pinta a borda da moldura em `:focus-within`. */
+  input:not([type="checkbox"], [type="radio"], [type="range"], [type="button"], [type="submit"], [type="reset"], [type="file"], [type="color"], [type="image"]):focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: 1px solid var(--color-brand);
+    outline-offset: -1px;
+    caret-color: var(--color-brand-accent);
+  }
+
+  :is(input, textarea, select)[aria-invalid="true"]:focus-visible {
+    outline-color: var(--color-destructive);
   }
 }
 

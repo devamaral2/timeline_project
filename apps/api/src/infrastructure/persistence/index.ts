@@ -5,6 +5,7 @@ export * from "./events/repositories/postgres-event.repository";
 export * from "./events/repositories/postgres-tag.repository";
 export * from "./events/queries/agenda-cursor";
 export * from "./events/queries/postgres-event-card.query";
+export * from "./events/queries/postgres-event-request-link.query";
 export * from "./artifacts/mappers/artifact-row.mapper";
 export * from "./artifacts/repositories/postgres-artifact.repository";
 export * from "./artifacts/queries/postgres-artifact-event-link.query";

@@ -5,19 +5,19 @@ import { expect, test } from "vitest";
 const card: EventCardDto = {
   id: "event-1",
   actor: "human",
-  kind: "routine",
+  kind: "common",
   status: "todo",
   priority: "medium",
   name: "Caminhada",
   description: "",
+  location: "",
   startedAt: "2026-11-14T08:00:00-03:00",
   estimatedFinishAt: "2026-11-14T08:30:00-03:00",
   longRunning: false,
   notifyOffsetsMinutes: [10],
   tags: ["saude"],
   artifactTypes: ["training"],
-  parentEventIds: [],
-  blockedByEventIds: [],
+  previousEventIds: [],
   revision: 1,
 };
 

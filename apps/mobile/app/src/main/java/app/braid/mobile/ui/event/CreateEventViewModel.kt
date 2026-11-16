@@ -29,7 +29,7 @@ enum class NewEventType(
     /** A natureza (`kind`) que o evento nasce com. */
     val kind: String,
 ) {
-    Routine("Rotina", "routine"),
+    Routine("Padrão", "common"),
     Meal("Refeição", "meal"),
     Sleep("Sono", "sleep"),
     Training("Treino", "training"),

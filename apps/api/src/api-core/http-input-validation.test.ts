@@ -26,10 +26,8 @@ describe("assertEventFields", () => {
         notifyOffsetsMinutes: [5, 1440],
         longRunning: false,
         tags: ["a"],
-        subtaskEventIds: [],
-        blocksEventIds: ["e1"],
-        parentEventIds: ["e2"],
-        blockedByEventIds: ["e3"],
+        previousEventIds: ["e1"],
+        nextEventIds: ["e2", "e3"],
         artifactIds: ["a1"],
         artifacts: [{ data: { body: "nota" } }],
         startedAt: "2026-08-17T15:00:00.000Z",
@@ -40,7 +38,7 @@ describe("assertEventFields", () => {
   });
 
   test("only accepts the kinds and statuses of a human event", () => {
-    for (const kind of ["routine", "meal", "sleep", "training"]) expect(creating({ kind })).not.toThrow();
+    for (const kind of ["common", "meal", "sleep", "training"]) expect(creating({ kind })).not.toThrow();
     for (const status of ["todo", "toDefine", "doing", "inHold", "done", "cancel", "missed"]) {
       expect(creating({ status })).not.toThrow();
     }
@@ -85,7 +83,7 @@ describe("assertEventFields", () => {
   });
 
   test("every list of ids and the tags are lists of text", () => {
-    for (const field of ["tags", "subtaskEventIds", "blocksEventIds", "parentEventIds", "blockedByEventIds", "artifactIds"]) {
+    for (const field of ["tags", "previousEventIds", "nextEventIds", "artifactIds"]) {
       expect(creating({ [field]: "a" }), field).toThrow(`Invalid ${field}`);
       expect(creating({ [field]: ["a", 1] }), field).toThrow(`Invalid ${field}`);
       expect(editing({ [field]: null }), field).toThrow(`Invalid ${field}`);
@@ -99,6 +97,7 @@ describe("assertEventFields", () => {
 
   test("does not know the old fields: they are simply not validated here", () => {
     expect(creating({ missed: "yes", interruptions: 3, notes: "x" })).not.toThrow();
+    expect(creating({ subtaskEventIds: "x", blocksEventIds: 1, parentEventIds: {}, blockedByEventIds: null })).not.toThrow();
   });
 });
 

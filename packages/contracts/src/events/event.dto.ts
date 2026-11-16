@@ -27,6 +27,8 @@ export interface EventCardDto {
   priority: EventPriority;
   name: string;
   description: string;
+  /** Onde acontece, como o texto que o Google Maps entende; vazio sem local. So eventos de pessoa tem. */
+  location: string;
   /** Inicio planejado. A meia-noite local significa "o dia, sem hora". */
   startedAt?: string;
   /** Fim planejado: o fim do bloco ou, no evento longo, o prazo. */
@@ -39,10 +41,8 @@ export interface EventCardDto {
   tags: string[];
   /** Os tipos dos artefatos do evento, na ordem em que aparecem. */
   artifactTypes: ArtifactType[];
-  /** Os eventos maiores de que este e subtarefa. */
-  parentEventIds: string[];
-  /** Os eventos que precisam terminar antes deste. */
-  blockedByEventIds: string[];
+  /** Os eventos de que este se segue ("segue-se de"): os que vem antes dele na sequencia. */
+  previousEventIds: string[];
   recurrence?: EventRecurrenceDto;
   /** Para o `PATCH` direto da lista (`expectedRevision`), sem ler o detalhe antes. */
   revision: number;
@@ -55,13 +55,28 @@ export interface EventArtifactDto {
   artifact: ArtifactDto;
 }
 
+/**
+ * Um pedido ao agente que criou ou alterou o evento ("criado por", "atualizado
+ * por"). A lista tem uma linha por relacao: o evento criado por um pedido e
+ * alterado depois por outro traz as duas.
+ */
+export interface EventRequestDto {
+  /** O evento do pedido: a tela de detalhe dele abre por este id. */
+  id: string;
+  /** O inicio do que o usuario pediu. */
+  name: string;
+  relation: "generates" | "updates";
+  /** Quando o pedido gravou a mudanca (ISO 8601). */
+  at: string;
+}
+
 export interface EventDto extends EventCardDto {
   /** Os artefatos do evento, na ordem em que aparecem. */
   artifacts: EventArtifactDto[];
-  /** Os eventos em que este se desdobra. */
-  subtaskEventIds: string[];
-  /** Os eventos que so sao liberados quando este termina. */
-  blocksEventIds: string[];
+  /** Os eventos que se seguem a este ("da sequencia a"). */
+  nextEventIds: string[];
+  /** Os pedidos que criaram e alteraram o evento, do mais antigo ao mais novo. So o detalhe traz. */
+  requests: EventRequestDto[];
 }
 
 export interface AgendaPageDto {

@@ -8,6 +8,34 @@
       "when": 1794633855579,
       "tag": "0000_initial",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1794775078235,
+      "tag": "0001_sequencia_entre_eventos",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794861478235,
+      "tag": "0002_local_do_evento",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1794947878235,
+      "tag": "0003_tipo_padrao_do_evento",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1795034278235,
+      "tag": "0004_tipo_comum_do_evento",
+      "breakpoints": true
     }
   ]
 }

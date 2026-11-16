@@ -14,7 +14,7 @@ class FreeTimeTest {
         end: String?,
     ) = TimelineEventCardDto(
         id = id,
-        kind = "routine",
+        kind = "common",
         noteTypes = emptyList(),
         missed = false,
         name = id,

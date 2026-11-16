@@ -43,15 +43,13 @@ describe("what the tracked list shows", () => {
     expect(ids).toEqual(["starts-early", "deadline", "starts-late", "undated-a", "undated-b"]);
   });
 
-  test("returns cards with the status, the dates as stored and the incoming relations", async () => {
-    const useCase = new ListTrackedEventsUseCase(
-      new InMemoryEventCardQuery(
-        new InMemoryEventDatabase([
-          event("project", { longRunning: true, subtaskIds: ["review"] }),
-          event("review", { status: "inHold", priority: "urgent", estimatedFinishAt: at("2026-08-18T12:00:00.000Z"), tags: ["casa"] }),
-        ]),
-      ),
-    );
+  test("returns cards with the status, the dates as stored and the events they follow", async () => {
+    const database = new InMemoryEventDatabase([
+      event("project", { longRunning: true }),
+      event("review", { status: "inHold", priority: "urgent", estimatedFinishAt: at("2026-08-18T12:00:00.000Z"), tags: ["casa"] }),
+    ]);
+    database.edges.push({ fromId: "project", toId: "review" });
+    const useCase = new ListTrackedEventsUseCase(new InMemoryEventCardQuery(database));
 
     const cards = await useCase.execute(undefined, actor);
 
@@ -60,12 +58,13 @@ describe("what the tracked list shows", () => {
       priority: "urgent",
       estimatedFinishAt: "2026-08-18T12:00:00.000Z",
       tags: ["casa"],
-      parentEventIds: ["project"],
+      previousEventIds: ["project"],
       longRunning: false,
       revision: 1,
     });
     expect(cards.find((card) => card.id === "review")).not.toHaveProperty("missed");
-    expect(cards.find((card) => card.id === "project")).not.toHaveProperty("subtaskEventIds");
+    expect(cards.find((card) => card.id === "project")).toMatchObject({ previousEventIds: [] });
+    expect(cards.find((card) => card.id === "project")).not.toHaveProperty("nextEventIds");
   });
 });
 

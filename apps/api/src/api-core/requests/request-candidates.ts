@@ -28,7 +28,7 @@ export interface CandidateQuery {
 /** Uma linha por candidato, para o JEV casar com o pedido. */
 export function describeCandidate(candidate: EditCandidate): string {
   const label = candidate.kind === "event"
-    ? `evento (${candidate.eventKind ?? "routine"}${candidate.status ? `, ${candidate.status}` : ""})`
+    ? `evento (${candidate.eventKind ?? "common"}${candidate.status ? `, ${candidate.status}` : ""})`
     : candidate.kind === "recurrence" ? "série de eventos recorrentes"
       : `artefato (${candidate.artifactType ?? "text"})`;
   return [

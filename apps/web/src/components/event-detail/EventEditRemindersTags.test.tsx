@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { EventDto } from "@repo/contracts";
 import { type FakeApi, createFakeApi } from "@/test/fake-api";
+import { setField } from "@/components/edit/edit-test-helpers";
 import { eventFixture, eventsArea } from "@/test/fake-api/events";
 
 const replace = vi.fn();
@@ -56,7 +57,7 @@ function save() {
 function addReminder(amount: string, unit: "minutos" | "dias") {
   fireEvent.click(screen.getByRole("button", { name: "Adicionar lembrete" }));
   fireEvent.change(screen.getByLabelText("Quantidade do lembrete"), { target: { value: amount } });
-  fireEvent.change(screen.getByLabelText("Unidade do lembrete"), { target: { value: unit === "dias" ? "days" : "minutes" } });
+  setField("Unidade do lembrete", unit === "dias" ? "days" : "minutes");
   fireEvent.click(screen.getByRole("button", { name: "Adicionar" }));
 }
 

@@ -52,8 +52,6 @@ export interface EventCardQuery {
   agenda(params: AgendaQueryParams): Promise<AgendaPage>;
   /** Uma serie aparece uma vez so, pela proxima ocorrencia em aberto. */
   tracked(params: TrackedQueryParams): Promise<EventCard[]>;
-  /** Os eventos em que `parentEventId` se desdobra. */
-  subtasks(params: { userId: string; parentEventId: string }): Promise<EventCard[]>;
   /** Os cartoes dos eventos vivos entre os ids, na ordem dos ids. */
   cardsOf(eventIds: readonly string[]): Promise<EventCard[]>;
 }

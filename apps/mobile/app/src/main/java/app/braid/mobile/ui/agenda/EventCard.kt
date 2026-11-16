@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.AccessTime
+import androidx.compose.material.icons.outlined.EventAvailable
 import androidx.compose.material.icons.outlined.Bedtime
 import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material.icons.outlined.FitnessCenter
@@ -48,7 +48,6 @@ import app.braid.mobile.domain.timeline.EventPosition
 import app.braid.mobile.domain.timeline.durationPartsOf
 import app.braid.mobile.domain.timeline.eventPositionOf
 import app.braid.mobile.domain.timeline.formatTime
-import app.braid.mobile.ui.event.eventDetailPalette
 import java.time.Instant
 
 private data class EventVisual(
@@ -57,15 +56,16 @@ private data class EventVisual(
     val color: Color,
 )
 
+/** O tipo não tem cor própria: só o ícone o distingue, no tom apagado das legendas. */
 @Composable
 private fun visualFor(type: String): EventVisual {
-    val palette = eventDetailPalette()
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
     return when (type) {
-        "meal" -> EventVisual(Icons.Outlined.Restaurant, "Refeição", palette.meal)
-        "training" -> EventVisual(Icons.Outlined.FitnessCenter, "Treino", palette.training)
-        "sleep" -> EventVisual(Icons.Outlined.Bedtime, "Sono", palette.sleep)
-        "routine" -> EventVisual(Icons.Outlined.AccessTime, "Rotina", palette.routine)
-        else -> EventVisual(Icons.Outlined.Circle, "Evento", MaterialTheme.colorScheme.onSurfaceVariant)
+        "meal" -> EventVisual(Icons.Outlined.Restaurant, "Refeição", muted)
+        "training" -> EventVisual(Icons.Outlined.FitnessCenter, "Treino", muted)
+        "sleep" -> EventVisual(Icons.Outlined.Bedtime, "Sono", muted)
+        "common" -> EventVisual(Icons.Outlined.EventAvailable, "Padrão", muted)
+        else -> EventVisual(Icons.Outlined.Circle, "Evento", muted)
     }
 }
 

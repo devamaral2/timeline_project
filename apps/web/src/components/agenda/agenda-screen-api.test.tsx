@@ -23,12 +23,12 @@ const { AgendaScreen } = await import("./agenda-screen");
 const TODAY = "2026-09-14";
 
 const events = [
-  eventFixture({ id: "ev-1", name: "Revisar proposta", kind: "routine", status: "todo", priority: "medium", tags: ["trabalho"], startedAt: "2026-09-14T09:00:00-03:00", estimatedFinishAt: "2026-09-14T10:30:00-03:00" }),
+  eventFixture({ id: "ev-1", name: "Revisar proposta", kind: "common", status: "todo", priority: "medium", tags: ["trabalho"], startedAt: "2026-09-14T09:00:00-03:00", estimatedFinishAt: "2026-09-14T10:30:00-03:00" }),
   eventFixture({ id: "ev-2", name: "Almoço no escritório", kind: "meal", status: undefined, startedAt: "2026-09-14T12:30:00-03:00", estimatedFinishAt: "2026-09-14T13:30:00-03:00" }),
   eventFixture({ id: "ev-3", name: "Pesquisar voos para novembro", actor: "agent", kind: "request", status: "running", startedAt: "2026-09-14T09:48:00-03:00" }),
   eventFixture({ id: "ev-4", name: "Café da manhã", kind: "meal", status: "missed", startedAt: "2026-09-14T07:30:00-03:00", estimatedFinishAt: "2026-09-14T08:00:00-03:00" }),
-  eventFixture({ id: "ev-5", name: "Plantão", kind: "routine", status: "doing", startedAt: "2026-09-13T22:00:00-03:00", estimatedFinishAt: "2026-09-14T06:00:00-03:00" }),
-  eventFixture({ id: "ev-6", name: "Entrega longa", kind: "routine", status: "doing", longRunning: true, startedAt: "2026-09-14T08:00:00-03:00", estimatedFinishAt: "2026-09-30T18:00:00-03:00" }),
+  eventFixture({ id: "ev-5", name: "Plantão", kind: "common", status: "doing", startedAt: "2026-09-13T22:00:00-03:00", estimatedFinishAt: "2026-09-14T06:00:00-03:00" }),
+  eventFixture({ id: "ev-6", name: "Entrega longa", kind: "common", status: "doing", longRunning: true, startedAt: "2026-09-14T08:00:00-03:00", estimatedFinishAt: "2026-09-30T18:00:00-03:00" }),
 ];
 
 function dayOf(dayKey: string): HTMLElement {
@@ -149,7 +149,7 @@ test("a failed load shows the error alert", async () => {
 
 test("free time counts only person events: an agent event inside a free window does not split it", async () => {
   installApi([
-    eventFixture({ id: "ev-a", name: "Revisar proposta", kind: "routine", status: "todo", startedAt: "2026-09-14T09:00:00-03:00", estimatedFinishAt: "2026-09-14T10:30:00-03:00" }),
+    eventFixture({ id: "ev-a", name: "Revisar proposta", kind: "common", status: "todo", startedAt: "2026-09-14T09:00:00-03:00", estimatedFinishAt: "2026-09-14T10:30:00-03:00" }),
     eventFixture({ id: "ev-g", name: "Agente compila o briefing", actor: "agent", kind: "request", status: "running", startedAt: "2026-09-14T11:00:00-03:00", estimatedFinishAt: "2026-09-14T11:30:00-03:00" }),
     eventFixture({ id: "ev-b", name: "Almoço no escritório", kind: "meal", status: undefined, startedAt: "2026-09-14T12:30:00-03:00", estimatedFinishAt: "2026-09-14T13:30:00-03:00" }),
   ]);

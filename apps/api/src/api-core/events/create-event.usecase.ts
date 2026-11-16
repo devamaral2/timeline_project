@@ -1,5 +1,5 @@
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
-import type { ArtifactRepository, EntityBatch, EntityBatchWriter, EventRepository } from "../../domain/ports";
+import type { ArtifactRepository, EntityBatch, EntityBatchWriter, EventRepository, SequenceChange } from "../../domain/ports";
 import type { CreateEventArtifactInput, CreateEventInput } from "@repo/contracts";
 import {
   ArtifactNotFoundError,
@@ -14,8 +14,9 @@ import {
   type HumanEventKind,
   type HumanEventStatus,
 } from "../../domain";
+import type { PlaceReverseGateway } from "../../infrastructure/places/photon-place-search.gateway";
 import type { ArtifactBuilder } from "../artifacts/services/artifact-builder.service";
-import { planIncomingRelations, type OriginUpdate } from "./services/event-origins";
+import { planSequence } from "./services/event-sequence";
 import type { ResolvedEventSchedule } from "./services/event-schedule.service";
 import { getMealEventName } from "./services/meal-event-name.service";
 
@@ -28,8 +29,8 @@ export interface PreparedEvent {
   artifacts: Artifact[];
   /** De qual original saiu cada copia de alimento. */
   derivations: { originalId: string; copyId: string }[];
-  /** Os eventos maiores e os bloqueadores, revisados para apontar para este. */
-  origins: OriginUpdate[];
+  /** A ordem do evento: de quais ele se segue e quais se seguem a ele. Ninguem e revisado por isso. */
+  sequence: SequenceChange[];
 }
 
 /**
@@ -68,10 +69,8 @@ export function toEntityBatch(prepared: PreparedEvent): EntityBatch {
     userId: prepared.event.userId,
     artifacts: prepared.artifacts.map((entity) => ({ op: "create", entity })),
     derivations: prepared.derivations,
-    events: [
-      { op: "create", entity: prepared.event },
-      ...prepared.origins.map((origin) => ({ op: "update" as const, entity: origin.event, expectedRevision: origin.expectedRevision })),
-    ],
+    events: [{ op: "create", entity: prepared.event }],
+    sequence: prepared.sequence,
   };
 }
 
@@ -82,6 +81,7 @@ export class CreateEventUseCase {
     private readonly artifactBuilder: ArtifactBuilder,
     private readonly batchWriter: EntityBatchWriter,
     private readonly clock: () => Date = () => new Date(),
+    private readonly placeReverse?: PlaceReverseGateway,
   ) {}
 
   async execute(
@@ -94,7 +94,7 @@ export class CreateEventUseCase {
     return { eventId: prepared.event.id };
   }
 
-  /** Grava o que `prepare` montou: os artefatos novos, o evento e os eventos de origem, numa transacao so. */
+  /** Grava o que `prepare` montou: os artefatos novos, o evento e a ordem dele, numa transacao so. */
   async save(prepared: PreparedEvent): Promise<void> {
     await this.batchWriter.commit(toEntityBatch(prepared));
   }
@@ -170,6 +170,7 @@ export class CreateEventUseCase {
       priority: input.priority,
       name: input.name ?? deriveName(kind, at, created),
       description: input.description ?? "",
+      location: input.location ?? (await this.locate(input.coordinates)),
       startedAt,
       estimatedFinishAt,
       finishedAt: parseInstant(input.finishedAt),
@@ -177,18 +178,22 @@ export class CreateEventUseCase {
       tags: input.tags ?? [],
       longRunning: input.longRunning,
       artifactLinks: links,
-      subtaskIds: input.subtaskEventIds,
-      blocksIds: input.blocksEventIds,
     });
 
-    const origins = await planIncomingRelations(
+    const sequence = await planSequence(
       event.id,
-      { parentIds: [], blockedByIds: [] },
-      { parentIds: input.parentEventIds ?? [], blockedByIds: input.blockedByEventIds ?? [] },
+      { previousIds: [], nextIds: [] },
+      { previousIds: input.previousEventIds ?? [], nextIds: input.nextEventIds ?? [] },
       this.eventRepository,
       actor.userId,
     );
-    return { event, artifacts: created, derivations, origins };
+    return { event, artifacts: created, derivations, sequence };
+  }
+
+  /** O endereco de onde a pessoa esta; sem coordenadas, sem servico ou sem resposta, o evento fica sem local. */
+  private async locate(point: CreateEventInput["coordinates"]): Promise<string | undefined> {
+    if (!point || !this.placeReverse) return undefined;
+    return (await this.placeReverse.reverse(point))?.label;
   }
 
   /** Um artefato que ja existe so entra no evento se for do usuario ou global. */

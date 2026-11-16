@@ -25,11 +25,11 @@ export const eventCreateOutput = z.object({
     startedAt: instant,
     estimatedFinishAt: instant,
     description: z.string().nullable(),
+    /** O lugar que o usuario disse, como ele disse: o servidor procura no mapa o endereco de um lugar que existe. */
+    location: z.string().nullable().default(null),
     tags,
-    /** O evento maior, desta mesma lista, de que este e uma parte. */
-    subtaskOf: position.nullable().default(null),
-    /** Os eventos desta mesma lista que precisam terminar antes deste. */
-    blockedBy: z.array(position).default([]),
+    /** Os eventos desta mesma lista de que este se segue: os que vem antes dele na sequencia. */
+    followsFrom: z.array(position).default([]),
   })),
 });
 
@@ -55,6 +55,8 @@ export const eventEditOutput = z.object({
     estimatedFinishAt: instant,
     finishedAt: instant,
     description: z.string().nullable(),
+    /** O lugar novo, como o usuario disse (o servidor procura o endereco no mapa); `""` tira o local do evento. */
+    location: z.string().nullable().default(null),
     tags: z.array(z.string()).nullable(),
   })),
   query: lookup,
@@ -157,6 +159,8 @@ export const recurringEventCreateOutput = z.object({
     status: status.nullable(),
     priority: priority.nullable(),
     description: z.string().nullable(),
+    /** O lugar que o usuario disse, como ele disse: o servidor procura no mapa o endereco de um lugar que existe. */
+    location: z.string().nullable().default(null),
     tags,
     ...cadence,
   })),
@@ -167,6 +171,8 @@ export const recurringEventEditOutput = z.object({
     id: z.string().min(1),
     name: z.string().min(1).nullable(),
     description: z.string().nullable(),
+    /** O lugar novo, como o usuario disse (o servidor procura o endereco no mapa); `""` tira o local da serie. */
+    location: z.string().nullable().default(null),
     priority: priority.nullable(),
     tags: z.array(z.string()).nullable(),
     ...cadenceChanges,

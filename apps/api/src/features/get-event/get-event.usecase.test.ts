@@ -4,6 +4,7 @@ import { databaseOf, eventWith } from "../../api-core/events/testing/event-fixtu
 import { InMemoryArtifactRepository } from "../../api-core/artifacts/testing/in-memory-artifact.repository";
 import { InMemoryEventDatabase } from "../../api-core/events/testing/in-memory-event-database";
 import { InMemoryEventRepository } from "../../api-core/events/testing/in-memory-event.repository";
+import { InMemoryEventRequestLinkQuery } from "../../api-core/events/testing/in-memory-event-request-link.query";
 import { InMemoryRecurrenceRepository } from "../../api-core/recurrences/testing/in-memory-recurrence.repository";
 import { GetEventUseCase } from "./get-event.usecase";
 
@@ -12,12 +13,14 @@ const startedAt = new Date("2026-08-16T18:00:00.000Z");
 
 function setup(database: InMemoryEventDatabase) {
   const recurrences = new InMemoryRecurrenceRepository(database);
+  const requestLinks = new InMemoryEventRequestLinkQuery();
   const useCase = new GetEventUseCase(
     new InMemoryEventRepository(database),
     new InMemoryArtifactRepository(database.artifacts),
     recurrences,
+    requestLinks,
   );
-  return { useCase, recurrences };
+  return { useCase, recurrences, requestLinks };
 }
 
 test("returns the event with its kind, artifacts and revision for the owner", async () => {
@@ -53,10 +56,8 @@ test("returns the event with its kind, artifacts and revision for the owner", as
         },
       },
     ],
-    subtaskEventIds: [],
-    blocksEventIds: [],
-    parentEventIds: [],
-    blockedByEventIds: [],
+    previousEventIds: [],
+    nextEventIds: [],
   });
   expect(result).not.toHaveProperty("status");
   expect(result).not.toHaveProperty("notes");
@@ -94,20 +95,34 @@ test("returns the artifacts in the order of the links, and hides a deleted one",
   expect(result?.artifactTypes).toEqual(["text", "text"]);
 });
 
-test("returns the relations in both directions: the ones the event owns and the ones that arrive at it", async () => {
-  const child = Event.create({ id: "child", userId: actor.userId, name: "Pintar", status: "todo", blocksIds: ["later"] });
-  const later = Event.create({ id: "later", userId: actor.userId, name: "Mobiliar", status: "todo" });
-  const parent = Event.create({ id: "parent", userId: actor.userId, name: "Reforma", longRunning: true, subtaskIds: ["child"] });
-  const { useCase } = setup(new InMemoryEventDatabase([child, later, parent]));
+test("returns the sequence in both directions: the events it follows and the ones that follow it", async () => {
+  const first = Event.create({ id: "first", userId: actor.userId, name: "Pintar", status: "todo" });
+  const middle = Event.create({ id: "middle", userId: actor.userId, name: "Mobiliar", status: "todo" });
+  const last = Event.create({ id: "last", userId: actor.userId, name: "Inaugurar", status: "todo" });
+  const database = new InMemoryEventDatabase([first, middle, last]);
+  database.edges.push({ fromId: "first", toId: "middle" }, { fromId: "middle", toId: "last" });
+  const { useCase } = setup(database);
 
-  const detail = await useCase.execute({ eventId: "child" }, actor);
-  const blocked = await useCase.execute({ eventId: "later" }, actor);
-  const project = await useCase.execute({ eventId: "parent" }, actor);
+  const start = await useCase.execute({ eventId: "first" }, actor);
+  const center = await useCase.execute({ eventId: "middle" }, actor);
+  const end = await useCase.execute({ eventId: "last" }, actor);
 
-  expect(detail).toMatchObject({ status: "todo", parentEventIds: ["parent"], blocksEventIds: ["later"], subtaskEventIds: [] });
-  expect(blocked?.blockedByEventIds).toEqual(["child"]);
-  expect(project).toMatchObject({ longRunning: true, status: "todo", subtaskEventIds: ["child"], parentEventIds: [] });
-  expect(project?.startedAt).toBeUndefined();
+  expect(start).toMatchObject({ previousEventIds: [], nextEventIds: ["middle"] });
+  expect(center).toMatchObject({ status: "todo", previousEventIds: ["first"], nextEventIds: ["last"] });
+  expect(end).toMatchObject({ previousEventIds: ["middle"], nextEventIds: [] });
+  expect(center).not.toHaveProperty("subtaskEventIds");
+  expect(center).not.toHaveProperty("blockedByEventIds");
+});
+
+test("an agent event appears in the sequence of a human event, and the other way around", async () => {
+  const request = Event.create({ id: "request", userId: actor.userId, actor: "agent", kind: "request", status: "running", name: "Pedido" });
+  const human = Event.create({ id: "human", userId: actor.userId, name: "Revisar", status: "todo" });
+  const database = new InMemoryEventDatabase([request, human]);
+  database.edges.push({ fromId: "request", toId: "human" });
+  const { useCase } = setup(database);
+
+  expect((await useCase.execute({ eventId: "human" }, actor))?.previousEventIds).toEqual(["request"]);
+  expect((await useCase.execute({ eventId: "request" }, actor))?.nextEventIds).toEqual(["human"]);
 });
 
 test("an occurrence comes with the rule of its series", async () => {
@@ -139,4 +154,25 @@ test("an occurrence whose series is gone comes without it", async () => {
   const { useCase } = setup(new InMemoryEventDatabase([occurrence]));
 
   expect(await useCase.execute({ eventId: "event-1" }, actor)).not.toHaveProperty("recurrence");
+});
+
+test("returns the requests that created and updated the event, oldest first", async () => {
+  const fixture = eventWith({ id: "event-1", userId: actor.userId, name: "Almoço", startedAt }, []);
+  const { useCase, requestLinks } = setup(databaseOf([fixture]));
+  requestLinks
+    .link("event-1", { requestId: "req-2", relation: "updates", name: "mude o almoço para 13h", at: new Date("2026-08-16T12:00:00.000Z") })
+    .link("event-1", { requestId: "req-1", relation: "generates", name: "crie um almoço", at: new Date("2026-08-16T10:00:00.000Z") });
+
+  const result = await useCase.execute({ eventId: "event-1" }, actor);
+
+  expect(result?.requests).toEqual([
+    { id: "req-1", name: "crie um almoço", relation: "generates", at: "2026-08-16T10:00:00.000Z" },
+    { id: "req-2", name: "mude o almoço para 13h", relation: "updates", at: "2026-08-16T12:00:00.000Z" },
+  ]);
+});
+
+test("an event nobody asked the agent about has no requests", async () => {
+  const fixture = eventWith({ id: "event-1", userId: actor.userId, name: "Sono", startedAt }, []);
+
+  expect((await setup(databaseOf([fixture])).useCase.execute({ eventId: "event-1" }, actor))?.requests).toEqual([]);
 });

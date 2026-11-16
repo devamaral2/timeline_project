@@ -4,6 +4,7 @@ import {
   EventNotFoundError,
   EventOwnershipError,
   EventRevisionConflictError,
+  SEQUENCE_RELATION,
   type ArtifactLink,
   type ArtifactWrites,
 } from "../../../../domain";
@@ -17,7 +18,6 @@ import type { Db, Tx } from "../../shared/tx";
 import { upsertTagIds } from "../../shared/upsert-tag-ids";
 import { mapEventRow, type EventRow, type EventRowParts } from "../mappers/event-row.mapper";
 import {
-  HUMAN_EVENT_RELATIONS,
   assertEventReferences,
   deleteEventRelations,
   insertEventRelations,
@@ -53,6 +53,7 @@ export async function insertEventAggregate(tx: Tx, event: Event, artifacts?: Art
       priority: event.priority,
       name: event.name,
       description: event.description,
+      location: event.location,
       startedAt: event.startedAt ?? null,
       estimatedFinishAt: event.estimatedFinishAt ?? null,
       finishedAt: event.finishedAt ?? null,
@@ -92,6 +93,7 @@ export async function updateEventAggregate(
         priority = ${event.priority},
         name = ${event.name},
         description = ${event.description},
+        location = ${event.location},
         started_at = ${event.startedAt ?? null},
         estimated_finish_at = ${event.estimatedFinishAt ?? null},
         finished_at = ${event.finishedAt ?? null},
@@ -164,17 +166,15 @@ export async function softDeleteEvent(tx: Tx, eventId: string, actorUserId: stri
 interface MutableEventParts extends EventRowParts {
   tags: string[];
   artifactLinks: ArtifactLink[];
-  subtaskIds: string[];
-  blocksIds: string[];
-  parentIds: string[];
-  blockedByIds: string[];
+  nextIds: string[];
+  previousIds: string[];
 }
 
 /** O que completa cada evento, lido das outras tabelas em poucas consultas, para qualquer quantidade de eventos. */
 export async function loadEventParts(db: Db | Tx, eventIds: readonly string[]): Promise<Map<string, EventRowParts>> {
   const parts = new Map<string, MutableEventParts>();
   for (const id of eventIds) {
-    parts.set(id, { tags: [], artifactLinks: [], subtaskIds: [], blocksIds: [], parentIds: [], blockedByIds: [] });
+    parts.set(id, { tags: [], artifactLinks: [], nextIds: [], previousIds: [] });
   }
   if (eventIds.length === 0) return parts;
   const ids = [...eventIds];
@@ -201,14 +201,13 @@ export async function loadEventParts(db: Db | Tx, eventIds: readonly string[]): 
       .select({
         eventId: schema.eventEventRelation.fromEventId,
         otherId: schema.eventEventRelation.toEventId,
-        relation: schema.eventEventRelation.relation,
       })
       .from(schema.eventEventRelation)
       .innerJoin(schema.events, eq(schema.eventEventRelation.toEventId, schema.events.id))
       .where(
         and(
           inArray(schema.eventEventRelation.fromEventId, ids),
-          inArray(schema.eventEventRelation.relation, [...HUMAN_EVENT_RELATIONS]),
+          eq(schema.eventEventRelation.relation, SEQUENCE_RELATION),
           isNull(schema.events.deletedAt),
         ),
       )
@@ -217,14 +216,13 @@ export async function loadEventParts(db: Db | Tx, eventIds: readonly string[]): 
       .select({
         eventId: schema.eventEventRelation.toEventId,
         otherId: schema.eventEventRelation.fromEventId,
-        relation: schema.eventEventRelation.relation,
       })
       .from(schema.eventEventRelation)
       .innerJoin(schema.events, eq(schema.eventEventRelation.fromEventId, schema.events.id))
       .where(
         and(
           inArray(schema.eventEventRelation.toEventId, ids),
-          inArray(schema.eventEventRelation.relation, [...HUMAN_EVENT_RELATIONS]),
+          eq(schema.eventEventRelation.relation, SEQUENCE_RELATION),
           isNull(schema.events.deletedAt),
         ),
       )
@@ -237,14 +235,10 @@ export async function loadEventParts(db: Db | Tx, eventIds: readonly string[]): 
     parts.get(row.eventId)?.artifactLinks.push(link);
   }
   for (const row of outgoing) {
-    const bucket = parts.get(row.eventId);
-    if (row.relation === "subtask") bucket?.subtaskIds.push(row.otherId);
-    else bucket?.blocksIds.push(row.otherId);
+    parts.get(row.eventId)?.nextIds.push(row.otherId);
   }
   for (const row of incoming) {
-    const bucket = parts.get(row.eventId);
-    if (row.relation === "subtask") bucket?.parentIds.push(row.otherId);
-    else bucket?.blockedByIds.push(row.otherId);
+    parts.get(row.eventId)?.previousIds.push(row.otherId);
   }
   return parts;
 }

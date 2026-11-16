@@ -45,7 +45,14 @@ export function EventEditRoute({ userId, eventId }: { userId: string; eventId: s
     }
   }, [eventId]);
 
-  const leave = () => router.replace(`/${userId}/eventos/${eventId}`);
+  const detailPath = `/${userId}/eventos/${eventId}`;
+  const leave = () => router.replace(detailPath);
+
+  // Salvar volta para a leitura: a tela dela já vem carregada quando a pessoa toca.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `router` é recriado a cada render; só o caminho importa.
+  useEffect(() => {
+    router.prefetch(detailPath);
+  }, [detailPath]);
 
   function frame(children: ReactNode) {
     return (

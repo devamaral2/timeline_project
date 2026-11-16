@@ -12,6 +12,7 @@ interface ExampleAnswer {
   startOffsetMinutes: number | null;
   durationMinutes: number | null;
   endTimeOfDay: string;
+  placeName: string;
 }
 
 /** Cada exemplo mostra o objeto inteiro: o schema exige todas as chaves em toda resposta. */
@@ -19,7 +20,7 @@ function example(frase: string, answer: Partial<ExampleAnswer>): string {
   return JSON.stringify({
     frase,
     resposta: {
-      type: "routine",
+      type: "common",
       routineName: "",
       foodInputText: "",
       sleepHours: null,
@@ -32,6 +33,7 @@ function example(frase: string, answer: Partial<ExampleAnswer>): string {
       startOffsetMinutes: null,
       durationMinutes: null,
       endTimeOfDay: "",
+      placeName: "",
       ...answer,
     } satisfies ExampleAnswer,
   });
@@ -41,14 +43,14 @@ export class EventCommandPromptBuilderService {
   build(transcript: string): string {
     return [
       "Voce classifica uma frase falada por um usuario de um app de rotina e responde apenas com JSON valido.",
-      "Escolha o tipo do evento entre 'routine', 'food', 'training' e 'sleep' seguindo estas regras:",
+      "Escolha o tipo do evento entre 'common', 'food', 'training' e 'sleep' seguindo estas regras:",
       [
         "- 'sleep': a frase fala de dormir, acordar, soneca ou qualidade do sono.",
         "- 'food': a frase fala de comer ou beber alguma coisa especifica.",
         "- 'training': a frase fala de exercicio fisico, academia, corrida, esteira ou musculacao.",
-        "- 'routine': qualquer outra atividade do dia.",
+        "- 'common': qualquer outra atividade do dia.",
       ].join("\n"),
-      "'routine' e o padrao. Na duvida entre 'routine' e outro tipo, escolha 'routine'.",
+      "'common' e o padrao. Na duvida entre 'common' e outro tipo, escolha 'common'.",
       "Preencha somente os campos do tipo escolhido. Use null nos campos numericos nao informados e string vazia nos campos de texto nao usados. Nunca invente numeros que a frase nao disse.",
       [
         "Significado dos campos:",
@@ -60,6 +62,7 @@ export class EventCommandPromptBuilderService {
         "- workoutDurationMinutes: duracao do treino em minutos.",
         "- workoutCalories: calorias gastas no treino em kcal.",
         "- workoutDistanceKm: distancia percorrida em quilometros.",
+        "- placeName: o lugar onde o evento acontece, so quando a frase diz o NOME de um estabelecimento ou um endereco ('clinica saude emocional', 'shopping del rey', 'rua da bahia 1148'). Copie como foi dito, sem 'na', 'no', 'ao'. String vazia para lugar generico ('a padaria', 'a academia', 'casa', 'o trabalho') ou quando a frase nao cita lugar.",
       ].join("\n"),
       [
         "Voce nao sabe que horas sao. Nunca escreva datas: descreva a janela do evento so com os campos abaixo.",
@@ -72,7 +75,7 @@ export class EventCommandPromptBuilderService {
         "Em eventos de sono com duracao conhecida, preencha sleepHours e durationMinutes com o mesmo tempo.",
       ].join("\n"),
       "Exemplos:",
-      example("comecei a estudar ingles", { type: "routine", routineName: "Estudar ingles" }),
+      example("comecei a estudar ingles", { type: "common", routineName: "Estudar ingles" }),
       example("almocei arroz, feijao e frango grelhado", {
         type: "food",
         foodInputText: "arroz, feijao e frango grelhado",
@@ -100,17 +103,22 @@ export class EventCommandPromptBuilderService {
         durationMinutes: 30,
       }),
       example("comecei a trabalhar as nove e parei ao meio dia", {
-        type: "routine",
+        type: "common",
         routineName: "Trabalhar",
         startTimeOfDay: "09:00",
         endTimeOfDay: "12:00",
       }),
       example("acordei faz vinte minutos", {
-        type: "routine",
+        type: "common",
         routineName: "Acordar",
         startOffsetMinutes: -20,
       }),
-      example("fui na padaria", { type: "routine", routineName: "Ir na padaria" }),
+      example("fui na padaria", { type: "common", routineName: "Ir na padaria" }),
+      example("quero ir a clinica saude emocional", {
+        type: "common",
+        routineName: "Ir a clinica",
+        placeName: "clinica saude emocional",
+      }),
       `Frase do usuario: ${transcript}`,
     ].join("\n\n");
   }

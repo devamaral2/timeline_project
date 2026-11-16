@@ -8,10 +8,8 @@ export type EventRow = typeof schema.events.$inferSelect;
 export interface EventRowParts {
   tags?: readonly string[];
   artifactLinks?: readonly ArtifactLink[];
-  subtaskIds?: readonly string[];
-  blocksIds?: readonly string[];
-  parentIds?: readonly string[];
-  blockedByIds?: readonly string[];
+  nextIds?: readonly string[];
+  previousIds?: readonly string[];
 }
 
 export function mapEventRow(row: EventRow, parts: EventRowParts = {}): Event {
@@ -24,6 +22,7 @@ export function mapEventRow(row: EventRow, parts: EventRowParts = {}): Event {
     priority: row.priority,
     name: row.name,
     description: row.description,
+    location: row.location,
     startedAt: row.startedAt ?? undefined,
     estimatedFinishAt: row.estimatedFinishAt ?? undefined,
     finishedAt: row.finishedAt ?? undefined,
@@ -32,10 +31,8 @@ export function mapEventRow(row: EventRow, parts: EventRowParts = {}): Event {
     longRunning: row.longRunning,
     data: (row.data ?? {}) as Record<string, unknown>,
     artifactLinks: [...(parts.artifactLinks ?? [])],
-    subtaskIds: [...(parts.subtaskIds ?? [])],
-    blocksIds: [...(parts.blocksIds ?? [])],
-    parentIds: [...(parts.parentIds ?? [])],
-    blockedByIds: [...(parts.blockedByIds ?? [])],
+    nextIds: [...(parts.nextIds ?? [])],
+    previousIds: [...(parts.previousIds ?? [])],
     occurrence: occurrenceLinkOf(row),
     revision: row.revision,
   });

@@ -78,7 +78,7 @@ class VoiceEventQueueViewModelTest {
                 failuresBeforeSuccess -= 1
                 return EventResult.Failure(EventRepositoryError(EventErrorKind.Unavailable))
             }
-            return EventResult.Success(VoiceEventResponseDto("event-1", "routine"))
+            return EventResult.Success(VoiceEventResponseDto("event-1", "common"))
         }
     }
 }

@@ -15,7 +15,7 @@
 .field > span { font-family: var(--font-mono); font-size: var(--font-size-xs); line-height: 16px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted-foreground); }
 .field > input { width: 100%; height: var(--control-lg); padding: 0 18px; border: 1px solid var(--border); border-radius: 18px; background: transparent; color: var(--foreground); font: inherit; font-size: var(--font-size-md); transition: border-color var(--duration-fast); }
 .field > input:hover { border-color: var(--input); }
-.field > input:focus-visible { border-color: var(--ring); outline: 2px solid var(--ring); outline-offset: 1px; }
+.field > input:focus-visible { border-color: var(--brand); outline: 0; }
 .error { margin: 0; font-size: 13px; line-height: 20px; color: var(--destructive); }
 .submit { width: 100%; height: var(--control-lg); margin-top: 8px; padding: 0; border: 0; border-radius: 999px; background: var(--primary); color: var(--primary-foreground); font: inherit; font-size: var(--font-size-md); font-weight: 600; cursor: pointer; transition: opacity var(--duration-fast), filter var(--duration-fast); }
 .submit:hover:not(:disabled) { filter: brightness(1.06); }

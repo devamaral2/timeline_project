@@ -141,20 +141,20 @@ describe("window", () => {
 describe("filters", () => {
   const events = [
     event("meal", "2026-08-17T15:00:00.000Z", { kind: "meal", tags: ["casa"] }),
-    event("routine", "2026-08-17T14:00:00.000Z", { tags: ["trabalho", "casa"] }),
+    event("common", "2026-08-17T14:00:00.000Z", { tags: ["trabalho", "casa"] }),
     event("request", "2026-08-17T13:00:00.000Z", { actor: "agent", kind: "search_request", status: "done" }),
   ];
 
   test("by executor: people and agents together, or each one alone", async () => {
-    expect(idsOf(await useCaseOf(events).execute({}, actor))).toEqual(["meal", "routine", "request"]);
-    expect(idsOf(await useCaseOf(events).execute({ actor: "human" }, actor))).toEqual(["meal", "routine"]);
+    expect(idsOf(await useCaseOf(events).execute({}, actor))).toEqual(["meal", "common", "request"]);
+    expect(idsOf(await useCaseOf(events).execute({ actor: "human" }, actor))).toEqual(["meal", "common"]);
     expect(idsOf(await useCaseOf(events).execute({ actor: "agent" }, actor))).toEqual(["request"]);
   });
 
   test("by kind and by tag", async () => {
     expect(idsOf(await useCaseOf(events).execute({ kind: "meal" }, actor))).toEqual(["meal"]);
     expect(idsOf(await useCaseOf(events).execute({ kind: "search_request" }, actor))).toEqual(["request"]);
-    expect(idsOf(await useCaseOf(events).execute({ tag: "casa" }, actor))).toEqual(["meal", "routine"]);
+    expect(idsOf(await useCaseOf(events).execute({ tag: "casa" }, actor))).toEqual(["meal", "common"]);
     expect(idsOf(await useCaseOf(events).execute({ tag: "trabalho", kind: "meal" }, actor))).toEqual([]);
   });
 });

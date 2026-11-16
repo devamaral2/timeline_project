@@ -64,7 +64,7 @@ describe("what is generated", () => {
     const first = on(database, "2026-09-15");
     expect(first).toMatchObject({
       userId: "auth-user-1",
-      kind: "routine",
+      kind: "common",
       name: "Correr",
       tags: ["saude"],
       revision: 1,
@@ -284,15 +284,15 @@ describe("artifacts of the template", () => {
   });
 });
 
-describe("parent events of the template", () => {
+describe("previous events of the template", () => {
   const project = () => Event.create({ id: "project", userId: actor.userId, name: "Projeto", longRunning: true });
   const sessions: CreateRecurrenceInput = {
     ...dailyRun,
     endsOn: "2026-09-17",
-    template: { name: "Sessão", status: "todo", parentEventIds: ["project"] },
+    template: { name: "Sessão", status: "todo", previousEventIds: ["project"] },
   };
 
-  test("each occurrence is born a subtask of the parents, without counting as an edit of them", async () => {
+  test("each occurrence is born following the previous events, without counting as an edit of them", async () => {
     const { create, materializer, database, recurrences, eventRepository } = setup({ events: [project()] });
     await create(sessions);
     const materialize = vi.spyOn(recurrences, "materialize");
@@ -304,15 +304,16 @@ describe("parent events of the template", () => {
     const parent = await eventRepository.findById("project");
     const occurrences = database.events.filter((event) => event.occurrence);
     expect(occurrences).toHaveLength(3);
-    expect(parent?.subtaskIds).toEqual(occurrences.map((event) => event.id));
+    expect(parent?.nextIds).toEqual(occurrences.map((event) => event.id));
     expect(parent?.revision).toBe(1);
-    expect((await eventRepository.findById(occurrences[0]?.id as string))?.parentIds).toEqual(["project"]);
-
-    const subtasks = await new InMemoryEventCardQuery(database).subtasks({ userId: actor.userId, parentEventId: "project" });
-    expect(subtasks.map((card) => card.event.occurrence?.occurrenceOn)).toEqual(["2026-09-15", "2026-09-16", "2026-09-17"]);
+    expect(database.edges).toEqual(occurrences.map((event) => ({ fromId: "project", toId: event.id })));
+    const first = await eventRepository.findById(occurrences[0]?.id as string);
+    expect(first?.previousIds).toEqual(["project"]);
+    expect(first?.nextIds).toEqual([]);
+    expect(occurrences.map((event) => event.occurrence?.occurrenceOn)).toEqual(["2026-09-15", "2026-09-16", "2026-09-17"]);
   });
 
-  test("a series without parents passes none", async () => {
+  test("a series without previous events passes none", async () => {
     const { create, materializer, recurrences } = setup();
     await create(dailyRun);
     const materialize = vi.spyOn(recurrences, "materialize");
@@ -322,7 +323,7 @@ describe("parent events of the template", () => {
     expect(materialize.mock.calls[0]?.[2]).toEqual([]);
   });
 
-  test("a parent that was deleted stops the series from generating, without breaking the read", async () => {
+  test("a previous event that was deleted stops the series from generating, without breaking the read", async () => {
     const { create, materializer, database, recurrences, eventRepository } = setup({ events: [project()] });
     const series = await create(sessions);
     await eventRepository.delete("project", actor.userId);

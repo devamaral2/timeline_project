@@ -15,20 +15,17 @@ import type { LinkRecord, RequestEntityRecord, RequestRecord, RequestStore, Step
 
 const LINK_ATTEMPTS = 3;
 
-/** Dois artefatos nao se ligam: quem recebe a relacao e sempre um evento. */
+/** So um artefato e um evento se ligam: dois artefatos nao, e a ordem entre dois eventos nao e decidida aqui. */
 export function linkable(a: { kind: EntityKind }, b: { kind: EntityKind }): boolean {
-  return a.kind === "event" || b.kind === "event";
+  return a.kind !== b.kind;
 }
 
-/**
- * Quem pertence a quem. O artefato pertence ao evento; entre dois eventos, `entity` (a que acabou de ser
- * concluida) e a parte e `chosen` e o evento maior.
- */
+/** Quem pertence a quem: o artefato pertence ao evento. */
 export function orient<A extends { kind: EntityKind }, B extends { kind: EntityKind }>(
   entity: A,
   chosen: B,
 ): { from: A | B; to: A | B } {
-  return entity.kind === "event" && chosen.kind === "artifact" ? { from: chosen, to: entity } : { from: entity, to: chosen };
+  return entity.kind === "event" ? { from: chosen, to: entity } : { from: entity, to: chosen };
 }
 
 function alreadyLinked(a: RequestEntityRecord, b: RequestEntityRecord): boolean {
@@ -39,7 +36,7 @@ function alreadyLinked(a: RequestEntityRecord, b: RequestEntityRecord): boolean 
 
 function describe(entity: RequestEntityRecord): string {
   const { summary } = entity;
-  const label = entity.kind === "event" ? `evento (${summary.eventKind ?? "routine"})` : `artefato (${summary.artifactType ?? "text"})`;
+  const label = entity.kind === "event" ? `evento (${summary.eventKind ?? "common"})` : `artefato (${summary.artifactType ?? "text"})`;
   return [
     `${label}: ${summary.name}`,
     summary.startedAt ? `início ${summary.startedAt}` : undefined,
@@ -141,7 +138,7 @@ export class RequestFinalizer {
 
   /**
    * A relacao pertence ao evento: o artefato passa a aparecer nele (criado pelo pedido, o evento o cria; ja
-   * existente, o evento o usa), e a parte vira subtarefa do evento maior.
+   * existente, o evento o usa).
    */
   private async applyLink(
     request: RequestRecord,
@@ -153,9 +150,7 @@ export class RequestFinalizer {
     const session = new AgentChangeSession(
       request.userId, this.deps.repositories, this.deps.createEvent, () => request.createdAt,
     );
-    const staged = from.kind === "artifact"
-      ? await session.linkArtifact(from.id, to.id, from.operation === "create" ? "creates" : "uses")
-      : await session.relateEvents(to.id, from.id, "subtask");
+    const staged = await session.linkArtifact(from.id, to.id, from.operation === "create" ? "creates" : "uses");
     if (!staged.ok) throw new Error(staged.error);
     // Esta finalizacao pode gravar varias vezes (uma por entidade) ou nenhuma: quem conclui o job e a fila,
     // nao o primeiro commit. Fora do contexto do job, o escritor nao o conclui.

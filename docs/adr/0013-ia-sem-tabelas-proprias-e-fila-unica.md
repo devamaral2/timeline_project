@@ -19,8 +19,9 @@ evento. A tela do chat com a IA não muda: o que muda é onde pedidos, passos, m
 ## Decisão
 
 1. **O pedido é um evento de agente.** A mensagem do usuário é a primeira entrada dele e a resposta final é a última.
-2. **O passo é um evento de agente do tipo `step`**, ligado ao pedido pela relação `subtask`
-   ([ADR 0012](./0012-relacoes-em-tres-tabelas-no-sentido-de-quem-produz.md)). O nome do agente interno fica em
+2. **O passo é um evento de agente do tipo `step`**, ligado ao pedido pela relação `step`
+   ([ADR 0012](./0012-relacoes-em-tres-tabelas-no-sentido-de-quem-produz.md) e
+   [ADR 0014](./0014-sequencia-entre-eventos-no-lugar-de-subtarefa-e-bloqueio.md)). O nome do agente interno fica em
    `data`. Passos não aparecem na lista de pedidos nem na agenda.
 3. **`event_entries` guarda tudo o que se acrescenta a um evento**: `message`, `thought`, `trace`, `result` e `input`.
    A entrada nunca é alterada e não incrementa a `revision` do evento. O id é um ULID e dá a ordem. O texto do usuário

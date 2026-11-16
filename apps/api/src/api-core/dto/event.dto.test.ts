@@ -26,17 +26,18 @@ function artifact(id: string, body = id): Artifact {
 
 describe("toEventCardDto", () => {
   test("maps a reference event as it is stored, without a status", () => {
-    const event = Event.create({ id: "event-1", userId, name: "Reunião", description: "Semanal", startedAt, tags: ["trabalho"] });
+    const event = Event.create({ id: "event-1", userId, name: "Reunião", description: "Semanal", location: "Sala 3, Av. Paulista, São Paulo", startedAt, tags: ["trabalho"] });
 
     const card = toEventCardDto({ event, artifactTypes: ["text", "food"] });
 
     expect(card).toEqual({
       id: "event-1",
       actor: "human",
-      kind: "routine",
+      kind: "common",
       priority: "medium",
       name: "Reunião",
       description: "Semanal",
+      location: "Sala 3, Av. Paulista, São Paulo",
       startedAt: "2026-08-17T15:00:00.000Z",
       estimatedFinishAt: "2026-08-17T16:00:00.000Z",
       finishedAt: undefined,
@@ -44,8 +45,7 @@ describe("toEventCardDto", () => {
       notifyOffsetsMinutes: [5],
       tags: ["trabalho"],
       artifactTypes: ["text", "food"],
-      parentEventIds: [],
-      blockedByEventIds: [],
+      previousEventIds: [],
       revision: 1,
     });
     expect(card).not.toHaveProperty("status");
@@ -53,19 +53,18 @@ describe("toEventCardDto", () => {
     expect(card).not.toHaveProperty("missed");
   });
 
-  test("maps a tracked event without dates, with its status and incoming relations", () => {
+  test("maps a tracked event without dates, with its status and the events it follows", () => {
     const event = Event.rehydrate({
       id: "event-1",
       userId,
       actor: "human",
-      kind: "routine",
+      kind: "common",
       status: "inHold",
       priority: "urgent",
       name: "Projeto",
       longRunning: true,
       finishedAt: startedAt,
-      parentIds: ["p1"],
-      blockedByIds: ["b1", "b2"],
+      previousIds: ["p1", "p2"],
       revision: 4,
     });
 
@@ -76,8 +75,7 @@ describe("toEventCardDto", () => {
       priority: "urgent",
       longRunning: true,
       finishedAt: "2026-08-17T15:00:00.000Z",
-      parentEventIds: ["p1"],
-      blockedByEventIds: ["b1", "b2"],
+      previousEventIds: ["p1", "p2"],
       notifyOffsetsMinutes: [],
       revision: 4,
     });
@@ -113,22 +111,24 @@ describe("toEventCardDto", () => {
 
   test("the lists of the dto are copies of the lists of the event", () => {
     const event = Event.rehydrate({
-      id: "event-1", userId, actor: "human", kind: "routine", name: "x", startedAt, parentIds: ["p1"], notifyOffsetsMinutes: [5], revision: 1,
+      id: "event-1", userId, actor: "human", kind: "common", name: "x", startedAt, previousIds: ["p1"], notifyOffsetsMinutes: [5], revision: 1,
     });
 
     const card = toEventCardDto({ event, artifactTypes: [] });
-    card.parentEventIds.push("p2");
+    card.previousEventIds.push("p2");
     card.notifyOffsetsMinutes.push(10);
 
-    expect(event.parentIds).toEqual(["p1"]);
+    expect(event.previousIds).toEqual(["p1"]);
     expect(event.notifyOffsetsMinutes).toEqual([5]);
   });
 });
 
 describe("toEventDto", () => {
-  const linked = Event.create({
+  const linked = Event.rehydrate({
     id: "event-1",
     userId,
+    actor: "human",
+    kind: "common",
     name: "Reunião",
     startedAt,
     artifactLinks: [
@@ -136,8 +136,9 @@ describe("toEventDto", () => {
       { artifactId: "gone", relation: "creates", fromRecurrence: false },
       { artifactId: "a", relation: "creates", fromRecurrence: false },
     ],
-    subtaskIds: ["s1", "s2"],
-    blocksIds: ["x1"],
+    previousIds: ["p1"],
+    nextIds: ["s1", "s2"],
+    revision: 1,
   });
 
   test("returns the artifacts in the order of the links, whatever the order they were loaded in", () => {
@@ -175,10 +176,10 @@ describe("toEventDto", () => {
     });
   });
 
-  test("adds the outgoing relations to the card fields", () => {
+  test("adds the events that follow it to the card fields", () => {
     const dto = toEventDto(linked);
 
-    expect(dto).toMatchObject({ id: "event-1", name: "Reunião", subtaskEventIds: ["s1", "s2"], blocksEventIds: ["x1"], revision: 1 });
+    expect(dto).toMatchObject({ id: "event-1", name: "Reunião", previousEventIds: ["p1"], nextEventIds: ["s1", "s2"], revision: 1 });
     expect(dto.artifacts).toEqual([]);
     expect(dto.artifactTypes).toEqual([]);
     expect(dto).not.toHaveProperty("recurrence");
@@ -194,8 +195,8 @@ describe("toEventDto", () => {
 describe("toArtifactDto", () => {
   test("lists the events the artifact appears in when they are given, even if none", () => {
     const withEvents = toArtifactDto(artifact("a"), [
-      { eventId: "e1", relation: "creates", name: "Reunião", actor: "human", kind: "routine", startedAt, estimatedFinishAt: startedAt },
-      { eventId: "e2", relation: "uses", name: "Projeto", actor: "human", kind: "routine" },
+      { eventId: "e1", relation: "creates", name: "Reunião", actor: "human", kind: "common", startedAt, estimatedFinishAt: startedAt },
+      { eventId: "e2", relation: "uses", name: "Projeto", actor: "human", kind: "common" },
     ]);
 
     expect(withEvents.events).toEqual([
@@ -204,11 +205,11 @@ describe("toArtifactDto", () => {
         relation: "creates",
         name: "Reunião",
         actor: "human",
-        kind: "routine",
+        kind: "common",
         startedAt: "2026-08-17T15:00:00.000Z",
         estimatedFinishAt: "2026-08-17T15:00:00.000Z",
       },
-      { eventId: "e2", relation: "uses", name: "Projeto", actor: "human", kind: "routine" },
+      { eventId: "e2", relation: "uses", name: "Projeto", actor: "human", kind: "common" },
     ]);
     expect(toArtifactDto(artifact("a"), []).events).toEqual([]);
     expect(toArtifactDto(artifact("a"))).not.toHaveProperty("events");

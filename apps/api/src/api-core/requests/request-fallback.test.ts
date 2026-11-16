@@ -49,7 +49,7 @@ describe("fila de fallback", () => {
     ctx.gateway.outputs.set("fallback", { reply: null, invoke: [{ agent: "event-create", instruction: "Criar o evento do almoço" }] });
     await fallback.run(payload);
     ctx.gateway.outputs.set("event_create", { events: [
-      { name: "Almoço", kind: "meal", status: null, priority: null, longRunning: false, startedAt: null, estimatedFinishAt: null, description: null, tags: [], subtaskOf: null, blockedBy: [] },
+      { name: "Almoço", kind: "meal", status: null, priority: null, longRunning: false, startedAt: null, estimatedFinishAt: null, description: null, tags: [], followsFrom: [] },
     ] });
 
     await ctx.worker.run("event-create", { requestId: "r1", stepId: ctx.store.stepRecords[1]?.id as string });
@@ -270,7 +270,7 @@ describe("laco do fallback (comando fallback:)", () => {
     ctx.gateway.outputs.set("fallback", { reply: null, invoke: [{ agent: "event-create", instruction: "Criar o almoço" }] });
     await fallback.run(payload);
     ctx.gateway.outputs.set("event_create", { events: [
-      { name: "Almoço", kind: "meal", status: null, priority: null, longRunning: false, startedAt: null, estimatedFinishAt: null, description: null, tags: [], subtaskOf: null, blockedBy: [] },
+      { name: "Almoço", kind: "meal", status: null, priority: null, longRunning: false, startedAt: null, estimatedFinishAt: null, description: null, tags: [], followsFrom: [] },
     ] });
     const step = { requestId: "r1", stepId: ctx.store.stepRecords[1]?.id as string };
     await ctx.worker.run("event-create", step);

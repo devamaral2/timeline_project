@@ -35,11 +35,6 @@
   min-width: 0;
   color: var(--muted-foreground);
 }
-.kindMark[data-kind="meal"] .kindIcon { color: var(--meal); }
-.kindMark[data-kind="sleep"] .kindIcon { color: var(--sleep); }
-.kindMark[data-kind="training"] .kindIcon { color: var(--training); }
-.kindMark[data-kind="routine"] .kindIcon { color: var(--muted-foreground); }
-.kindMark[data-actor="agent"] .kindIcon { color: var(--brand); }
 .kindIcon { flex: none; }
 .code {
   font-family: var(--font-mono);
@@ -58,3 +53,13 @@
 .priorityMark[data-priority="high"] { color: var(--priority-high); }
 .priorityMark[data-priority="medium"] { color: var(--priority-medium); }
 .priorityMark[data-priority="low"] { color: var(--priority-low); }
+
+/* A escolha de status aberta pelo glifo de uma linha: a lista de `EventChoiceList`
+   num cartão fixo. Esta é a posição de reserva, no pé da tela; com o glifo de
+   âncora o componente a troca pela posição sob o glifo, sem passar desta base. */
+.statusPicker { --picker-bottom: 24px; position: fixed; inset: auto 16px var(--picker-bottom); width: fit-content; max-width: calc(100vw - 32px); margin-inline: auto; z-index: var(--z-popover); }
+.statusPicker [role="listbox"] { position: static; max-height: calc(100dvh - var(--picker-bottom) - 24px); overflow-y: auto; overscroll-behavior: contain; }
+/* No celular o cartão fica acima da barra inferior (98px, como o aviso da lista), nunca atrás dela. */
+@media (max-width: 720px) {
+  .statusPicker { --picker-bottom: calc(98px + env(safe-area-inset-bottom, 0px)); }
+}

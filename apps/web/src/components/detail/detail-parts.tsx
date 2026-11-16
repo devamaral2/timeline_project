@@ -15,11 +15,12 @@ export const detailIcon = { "aria-hidden": true, strokeWidth: ICON_STROKE_WIDTH 
  * O molde de duas colunas do registro aberto: `lead` é o resumo (voltar, data,
  * título, situação, fatos, ações) e `children`, o conteúdo, que fecha com o
  * campo do Hermes. `type` pinta o tipo do evento. No celular vira uma coluna e
- * o shell esconde o cabeçalho e a barra inferior (`data-detail`).
+ * o shell esconde o cabeçalho e a barra inferior (`data-detail`). `edit` é o
+ * modo de edição: o pé da tela é o rodapé de Descartar e Salvar, não o campo do Hermes.
  */
-export function DetailFrame({ type, leadLabel, bodyLabel, lead, children }: { type?: string; leadLabel: string; bodyLabel: string; lead: ReactNode; children: ReactNode }) {
+export function DetailFrame({ type, edit = false, leadLabel, bodyLabel, lead, children }: { type?: string; edit?: boolean; leadLabel: string; bodyLabel: string; lead: ReactNode; children: ReactNode }) {
   return (
-    <main id="conteudo" className={`${page.frame} ${styles.frame}`} data-detail data-type={type}>
+    <main id="conteudo" className={`${page.frame} ${styles.frame}`} data-detail data-edit={edit || undefined} data-type={type}>
       <section className={`${page.lead} ${styles.lead}`} aria-label={leadLabel}>{lead}</section>
       <section className={`${page.body} ${styles.body}`} aria-label={bodyLabel}>{children}</section>
     </main>
@@ -27,8 +28,14 @@ export function DetailFrame({ type, leadLabel, bodyLabel, lead, children }: { ty
 }
 
 /** O topo do resumo: voltar e, só no celular, o menu "mais ações" (no desktop as ações são pílulas). */
-export function DetailNav({ label, back, children }: { label: string; back: ReactNode; children?: ReactNode }) {
-  return <nav className={styles.nav} aria-label={label}>{back}{children ? <div className={styles.navMenu}>{children}</div> : null}</nav>;
+export function DetailNav({ label, back, title, children }: { label: string; back: ReactNode; title?: string; children?: ReactNode }) {
+  return (
+    <nav className={styles.nav} data-titled={title ? true : undefined} aria-label={label}>
+      {back}
+      {title ? <span className={styles.navTitle}>{title}</span> : null}
+      {children ? <div className={styles.navMenu}>{children}</div> : null}
+    </nav>
+  );
 }
 
 /** A legenda em mono (a data, "Atualizada hoje, 09:20") e o título serifado do registro. */
@@ -117,8 +124,9 @@ export function DetailTopBar({ label, back, children }: { label: string; back: R
   return <nav className={styles.topbar} aria-label={label}>{back}{children}</nav>;
 }
 
-export function BackLink({ href, children }: { href: string; children: ReactNode }) {
-  return <Link href={href} className={styles.back}><ArrowLeft {...detailIcon} />{children}</Link>;
+/** Voltar: com `children`, a seta e o nome do destino; só com `label`, a seta sozinha e o nome para o leitor de tela. */
+export function BackLink({ href, label, children }: { href: string; label?: string; children?: ReactNode }) {
+  return <Link href={href} className={styles.back} aria-label={label}><ArrowLeft {...detailIcon} />{children}</Link>;
 }
 
 export function BackButton({ onClick, children }: { onClick: () => void; children: ReactNode }) {
@@ -320,7 +328,7 @@ export function DetailOrigin({ origin, id }: { origin?: DetailOriginData; id: st
 }
 
 
-/** Uma lista de linhas dentro de um cartão (depende de, subtarefas, libera). */
+/** Uma lista de linhas dentro de um cartão (relações, itens ligados). */
 export function RowCard({ children }: { children: ReactNode }) {
   return <ul className={styles.card}>{children}</ul>;
 }

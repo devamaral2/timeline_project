@@ -7,7 +7,6 @@ import {
   deleteEvent,
   getEvent,
   listAgenda,
-  listSubtasks,
   listTrackedEvents,
   newIdempotencyKey,
   suggestTags,
@@ -216,21 +215,7 @@ describe("leitura, edição e remoção", () => {
   });
 });
 
-describe("subtarefas e tags", () => {
-  test("lista as subtarefas de um evento", async () => {
-    install({
-      events: [
-        eventFixture({ id: "pai", subtaskEventIds: ["filho-1", "filho-2"] }),
-        eventFixture({ id: "filho-1", name: "Comprar pão" }),
-        eventFixture({ id: "filho-2", name: "Pagar conta" }),
-      ],
-    });
-
-    const children = await listSubtasks("pai");
-
-    expect(children.map((child) => child.name)).toEqual(["Comprar pão", "Pagar conta"]);
-  });
-
+describe("tags", () => {
   test("sugere tags pelo começo do texto", async () => {
     install({
       events: [

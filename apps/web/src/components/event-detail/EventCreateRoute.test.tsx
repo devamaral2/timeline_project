@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { EventDto } from "@repo/contracts";
+import { fieldValue, getField, setField } from "@/components/edit/edit-test-helpers";
 import { type FakeApi, createFakeApi } from "@/test/fake-api";
 import { eventsArea } from "@/test/fake-api/events";
 
@@ -42,11 +43,11 @@ function created(): EventDto[] {
 
 /** Os campos mudam pelo rótulo visível, como a pessoa os acha. */
 function field(label: string): HTMLElement {
-  return screen.getByLabelText(label);
+  return getField(label);
 }
 
 function type(label: string, value: string) {
-  fireEvent.change(field(label), { target: { value } });
+  setField(label, value);
 }
 
 function save() {
@@ -79,10 +80,10 @@ describe("formulário vazio", () => {
 
     expect(await screen.findByRole("heading", { level: 1, name: "Novo evento" })).toBeInTheDocument();
     expect(field("Título")).toHaveValue("");
-    expect(field("Tipo")).toHaveValue("routine");
-    expect(field("Status")).toHaveValue("");
-    expect(field("Prioridade")).toHaveValue("medium");
-    expect(field("Data de início")).toHaveValue("");
+    expect(fieldValue("Tipo")).toBe("common");
+    expect(fieldValue("Status")).toBe("");
+    expect(fieldValue("Prioridade")).toBe("medium");
+    expect(fieldValue("Data de início")).toBe("");
     expect(field("Descrição")).toHaveValue("");
     expect(screen.getAllByRole("button").map((button) => button.textContent)).toEqual(["Descartar", "Salvar"]);
   });
@@ -106,7 +107,7 @@ describe("Salvar", () => {
 
     await waitFor(() => expect(back).toHaveBeenCalled());
     expect(posts()).toHaveLength(1);
-    expect(posts()[0]?.body).toEqual({ kind: "routine", name: "Dentista", description: "", priority: "medium" });
+    expect(posts()[0]?.body).toEqual({ kind: "common", name: "Dentista", description: "", priority: "medium" });
     expect(created()).toHaveLength(1);
     expect(created()[0]).toMatchObject({ name: "Dentista", actor: "human" });
     expect(created()[0]?.status).toBeUndefined();
@@ -135,7 +136,8 @@ describe("Salvar", () => {
 
     type("Título", "Dentista");
     save();
-    save();
+    // O botão passa a dizer "Salvando…" e fica travado: o segundo toque não manda outra requisição.
+    fireEvent.click(screen.getByRole("button", { name: "Salvando…" }));
 
     await waitFor(() => expect(back).toHaveBeenCalled());
     expect(posts()).toHaveLength(1);

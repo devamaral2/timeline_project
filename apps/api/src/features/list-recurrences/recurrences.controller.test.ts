@@ -37,7 +37,7 @@ const body = {
   timeOfDay: "18:30",
   timeZone: "America/Sao_Paulo",
   startsOn: "2026-09-14",
-  template: { name: "Academia", kind: "routine" as const },
+  template: { name: "Academia", kind: "common" as const },
 };
 
 test("POST creates a series and GET returns it with the stored template", async () => {
@@ -47,7 +47,7 @@ test("POST creates a series and GET returns it with the stored template", async 
   const stored = await detail.execute(recurrenceId, actor);
 
   expect(stored).toMatchObject({ id: recurrenceId, frequency: "weekly", byWeekday: 0b0101010, revision: 1 });
-  expect(stored.template).toMatchObject({ name: "Academia", kind: "routine", priority: "medium", artifactIds: [] });
+  expect(stored.template).toMatchObject({ name: "Academia", kind: "common", priority: "medium", artifactIds: [] });
   expect(stored).not.toHaveProperty("target");
   expect(await list.execute(actor)).toEqual([stored]);
 });

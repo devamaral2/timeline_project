@@ -77,7 +77,7 @@ export function AgendaDay({ dayKey, now, tasks, missedEvents, onSelectEvent, onP
   onSelectEvent: (selected: SelectedEvent) => void;
   onPlanFreeWindow?: (window: FreeWindow) => void;
   /** Toque no glifo de um evento de pessoa (a tela decide o que ele abre). */
-  onStatusClick?: (card: EventCardDto) => void;
+  onStatusClick?: (card: EventCardDto, anchor: HTMLElement) => void;
   events?: ExampleEvent[];
   userId?: string;
   todayKey?: string;

@@ -13,6 +13,7 @@ import { PostgresRecurrenceRepository } from "../recurrences/repositories/postgr
 import {
   OTHER_USER,
   USER,
+  agentEvent,
   countRows,
   dailyRecurrence,
   dailyRule,
@@ -200,29 +201,61 @@ describe("PostgresRecurrenceRepository", () => {
       expect((await found(recurrence.id)).materializedThrough).toBeUndefined();
     });
 
-    test("parentIds liga cada ocorrencia como subtarefa, sem editar o evento maior", async () => {
+    test("previousIds liga cada ocorrencia ao antecessor, sem editar o antecessor", async () => {
       const recurrence = await saved();
-      const parent = trackedEvent(USER, "Projeto");
-      await events.save(parent);
+      const previous = trackedEvent(USER, "Projeto");
+      await events.save(previous);
       const occurrences = DAYS.slice(0, 2).map((day) => occurrenceOf(recurrence, day));
 
-      await recurrences.materialize(recurrence.materializedUntil(DAYS[1]), occurrences, [parent.id]);
+      await recurrences.materialize(recurrence.materializedUntil(DAYS[1]), occurrences, [previous.id]);
 
-      const readParent = await events.findById(parent.id);
-      expect([...(readParent?.subtaskIds ?? [])].sort()).toEqual(occurrences.map((event) => event.id).sort());
-      expect(readParent?.revision).toBe(1);
-      expect((await events.findById(occurrences[0].id))?.parentIds).toEqual([parent.id]);
+      const readPrevious = await events.findById(previous.id);
+      expect([...(readPrevious?.nextIds ?? [])].sort()).toEqual(occurrences.map((event) => event.id).sort());
+      expect(readPrevious?.revision).toBe(1);
+      expect((await events.findById(occurrences[0].id))?.previousIds).toEqual([previous.id]);
 
       // A segunda leitura nao repete a relacao das ocorrencias que ja existem.
       await recurrences.materialize(
         recurrence.materializedUntil(DAYS[2]),
         DAYS.slice(0, 3).map((day) => occurrenceOf(recurrence, day)),
-        [parent.id],
+        [previous.id],
       );
-      expect(await countRows(ctx.pool, "event_event_relation", "relation = 'subtask'")).toBe(3);
+      expect(await countRows(ctx.pool, "event_event_relation", "relation = 'precedes'")).toBe(3);
     });
 
-    test("com o evento maior apagado, ou de outro usuario, o lote nao insere nada", async () => {
+    test("a ocorrencia segue varios antecessores, inclusive um evento de agente", async () => {
+      const recurrence = await saved();
+      const person = trackedEvent(USER, "Projeto");
+      const agent = agentEvent(USER, "Pedido", { kind: "build_request" });
+      for (const event of [person, agent]) await events.save(event);
+      const occurrence = occurrenceOf(recurrence, DAYS[0]);
+
+      await recurrences.materialize(recurrence.materializedUntil(DAYS[0]), [occurrence], [person.id, agent.id]);
+
+      expect([...((await events.findById(occurrence.id))?.previousIds ?? [])].sort()).toEqual([person.id, agent.id].sort());
+      expect((await events.findById(agent.id))?.revision).toBe(1);
+    });
+
+    test("ao regerar a serie, a ocorrencia apagada leva a aresta e o antecessor fica sem ela", async () => {
+      const recurrence = await saved();
+      const previous = trackedEvent(USER, "Projeto");
+      await events.save(previous);
+      await recurrences.materialize(
+        recurrence.materializedUntil(DAYS[2]),
+        DAYS.slice(0, 3).map((day) => occurrenceOf(recurrence, day)),
+        [previous.id],
+      );
+      expect(await countRows(ctx.pool, "event_event_relation", "relation = 'precedes'")).toBe(3);
+
+      await recurrences.update(recurrence.revise({ rule: { timeOfDay: "19:00" } }), USER, 1, DAYS[1]);
+
+      // So a primeira ocorrencia (antes de fromDay) sobrevive, com a aresta dela.
+      expect(await countRows(ctx.pool, "events", "recurrence_id IS NOT NULL")).toBe(1);
+      expect(await countRows(ctx.pool, "event_event_relation", "relation = 'precedes'")).toBe(1);
+      expect((await events.findById(previous.id))?.nextIds).toHaveLength(1);
+    });
+
+    test("com o antecessor apagado, ou de outro usuario, o lote nao insere nada", async () => {
       const recurrence = await saved();
       const removed = trackedEvent(USER, "Projeto apagado");
       const foreign = trackedEvent(OTHER_USER, "Projeto do outro");
@@ -230,8 +263,8 @@ describe("PostgresRecurrenceRepository", () => {
       for (const event of [removed, foreign, alive]) await events.save(event);
       await events.delete(removed.id, USER);
 
-      for (const parents of [[removed.id], [foreign.id], [alive.id, removed.id]]) {
-        await recurrences.materialize(recurrence.materializedUntil(DAYS[1]), [occurrenceOf(recurrence, DAYS[0])], parents);
+      for (const previousIds of [[removed.id], [foreign.id], [alive.id, removed.id]]) {
+        await recurrences.materialize(recurrence.materializedUntil(DAYS[1]), [occurrenceOf(recurrence, DAYS[0])], previousIds);
       }
 
       expect(await countRows(ctx.pool, "events", "recurrence_id IS NOT NULL")).toBe(0);
@@ -246,13 +279,13 @@ describe("PostgresRecurrenceRepository", () => {
 
       const revised = recurrence.revise({
         rule: { frequency: "weekly", byWeekday: 0b0000010, timeOfDay: "19:00", durationMinutes: 30 },
-        template: { name: "Serie nova", kind: "routine" },
+        template: { name: "Serie nova", kind: "common" },
       });
       await recurrences.update(revised, USER, 1, "2026-11-20");
 
       const read = await found(recurrence.id);
       expect(read.rule).toEqual(revised.rule);
-      expect(read.template).toEqual({ name: "Serie nova", kind: "routine" });
+      expect(read.template).toEqual({ name: "Serie nova", kind: "common" });
       expect(read).toMatchObject({ revision: 2, materializedThrough: undefined });
     });
 

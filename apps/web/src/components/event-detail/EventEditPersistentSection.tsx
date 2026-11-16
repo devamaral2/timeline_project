@@ -1,8 +1,7 @@
 "use client";
 
-import { DetailSection } from "@/components/detail/detail-parts";
+import { EditRow, editStyles as edit } from "@/components/edit/edit-parts";
 import type { EventDraft, EventDraftField } from "./event-draft";
-import styles from "./event-edit-persistent.module.css";
 
 interface EventEditPersistentSectionProps {
   draft: EventDraft;
@@ -15,27 +14,29 @@ const CHOICES: { value: boolean; label: string }[] = [
 ];
 
 /**
- * "Tarefa persistente": Não e Sim num controle só, como no quadro "Evento-pessoa".
- * Sim faz do evento um evento longo: a previsão de entrega passa a ser o prazo, a
- * recorrência some e o status é obrigatório. As recusas são de `validateEventDraft`,
- * na hora de salvar; esta seção só troca o campo.
+ * A linha "Tarefa persistente" de Informações: Não e Sim num controle só, como no
+ * quadro "Detalhe · edição". Sim faz do evento um evento longo: a previsão de
+ * entrega passa a ser o prazo, a recorrência some e o status é obrigatório. As
+ * recusas são de `validateEventDraft`, na hora de salvar; a linha só troca o campo.
  */
 export function EventEditPersistentSection({ draft, onChange }: EventEditPersistentSectionProps) {
   return (
-    <DetailSection title="Tarefa persistente" labelId="event-edit-persistent">
-      <div role="group" aria-label="Tarefa persistente" className={styles.choice}>
-        {CHOICES.map((choice) => (
-          <button
-            key={choice.label}
-            type="button"
-            aria-pressed={draft.longRunning === choice.value}
-            className={styles.option}
-            onClick={() => onChange("longRunning", choice.value)}
-          >
-            {choice.label}
-          </button>
-        ))}
+    <EditRow label="Tarefa persistente">
+      <div className={edit.rowControls}>
+        <div role="group" aria-label="Tarefa persistente" className={edit.segmented}>
+          {CHOICES.map((choice) => (
+            <button
+              key={choice.label}
+              type="button"
+              aria-pressed={draft.longRunning === choice.value}
+              className={edit.segment}
+              onClick={() => onChange("longRunning", choice.value)}
+            >
+              {choice.label}
+            </button>
+          ))}
+        </div>
       </div>
-    </DetailSection>
+    </EditRow>
   );
 }

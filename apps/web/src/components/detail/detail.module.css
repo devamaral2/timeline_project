@@ -8,11 +8,7 @@
 /* O molde de duas colunas do registro aberto (tarefa, nota, evento): a esquerda
    resume (voltar, data em mono, titulo serifado, situacao, fatos e acoes) e a
    direita leva o conteudo em secoes, fechando com o campo do Hermes. */
-.frame { --detail-color: var(--cyan); overflow-wrap: anywhere; }
-.frame[data-type="routine"] { --detail-color: var(--routine); }
-.frame[data-type="meal"] { --detail-color: var(--meal); }
-.frame[data-type="training"] { --detail-color: var(--training); }
-.frame[data-type="sleep"] { --detail-color: var(--sleep); }
+.frame { overflow-wrap: anywhere; }
 .lead { gap: 28px; }
 .body { gap: 36px; }
 @media (min-width: 1100px) {
@@ -20,6 +16,11 @@
 }
 .nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .navMenu { display: none; }
+/* Com o título no centro (o detalhe da nota), a mesma barra do detalhe de evento. */
+.nav[data-titled] { display: grid; grid-template-columns: 1fr auto 1fr; min-height: 44px; }
+.nav[data-titled] .back { justify-self: start; }
+.nav[data-titled] .navMenu { justify-self: end; }
+.navTitle { font-family: var(--font-mono); font-size: var(--font-size-xs); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
 .heading { display: flex; flex-direction: column; gap: 14px; }
 .display { composes: display from "../ui/page.module.css"; }
 .display[data-done="true"] { color: var(--muted); text-decoration: line-through; text-decoration-thickness: 1px; }
@@ -52,7 +53,7 @@
 
 /* De onde o registro vem: o quadrado do tipo, duas linhas e a seta. */
 .originLink { display: flex; align-items: center; gap: 14px; min-height: 60px; color: var(--ink); }
-.originTile { position: relative; flex: none; display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 13px; color: var(--event-color, var(--muted)); }
+.originTile { position: relative; flex: none; display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 13px; color: var(--muted); }
 .originTile svg { width: 20px; height: 20px; }
 .originTile[data-live="true"] { border-color: var(--brand); }
 .originTile[data-live="true"]::after { content: ""; position: absolute; top: -5px; right: -5px; width: 12px; height: 12px; border: 2px solid var(--background); border-radius: 50%; background: var(--brand); }
@@ -65,7 +66,6 @@
 /* Molde antigo, de uma coluna so: as telas que ainda nao foram para as duas
    colunas seguem aqui. */
 .screen {
-  --detail-color: var(--cyan);
   /* width: 100% — no detalhe com a barra do Hermes o <main> vira coluna flex, e sem largura
      explícita a coluna encolhe até o texto e fica centralizada, longe das bordas. */
   width: 100%;
@@ -77,10 +77,6 @@
   gap: 28px;
   overflow-wrap: anywhere;
 }
-.screen[data-type="routine"] { --detail-color: var(--routine); }
-.screen[data-type="meal"] { --detail-color: var(--meal); }
-.screen[data-type="training"] { --detail-color: var(--training); }
-.screen[data-type="sleep"] { --detail-color: var(--sleep); }
 
 .message { margin: 0; padding: 28px 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
 
@@ -105,7 +101,7 @@
 /* Cabeçalho */
 .head { display: flex; flex-direction: column; gap: 12px; }
 .kindRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 22px; }
-.kind { display: inline-flex; align-items: center; gap: 8px; color: var(--detail-color); font-size: 14px; font-weight: 500; }
+.kind { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 14px; font-weight: 500; }
 .kind svg { width: 18px; height: 18px; }
 .title { margin: 0; font-family: var(--font-display); font-size: 34px; font-weight: 400; line-height: 1.1; letter-spacing: -.01em; text-wrap: balance; }
 .title[data-done="true"] { color: var(--muted); text-decoration: line-through; text-decoration-thickness: 1px; }
@@ -148,10 +144,9 @@
 .cardList { margin: 0; padding: 0; list-style: none; }
 .cardList > li { border-bottom: 1px solid var(--hairline); }
 .linkRow { display: grid; grid-template-columns: 20px minmax(0, 1fr) 16px; gap: 14px; align-items: center; width: 100%; min-height: 56px; padding: 8px 0; border: 0; background: transparent; color: var(--ink); text-align: left; cursor: pointer; }
-.linkRow > svg:first-child { width: 20px; height: 20px; color: var(--link-color, var(--muted)); }
+.linkRow > svg:first-child { width: 20px; height: 20px; color: var(--muted); }
 .linkRow > svg:last-child { width: 16px; height: 16px; stroke-width: 2; color: var(--faint); }
 .linkRow:hover .linkTitle, .linkMain:hover .linkTitle { text-decoration: underline; text-underline-offset: 4px; }
-.linkRow[data-kind="event"] { --link-color: var(--routine); }
 /* A nota vinculada entra como folha compacta (32), mais larga que o ícone solto. */
 .linkRow[data-kind="note"] { grid-template-columns: 32px minmax(0, 1fr) 16px; }
 .linkText { display: flex; flex-direction: column; min-width: 0; }
@@ -168,30 +163,9 @@
 .statusMenuBig { left: 0; right: auto; min-width: 220px; transform-origin: top left; }
 .linkRow[data-readonly="true"] { cursor: default; }
 
-/* Subtarefas e listas de conferência */
-.checks { display: flex; flex-direction: column; }
+/* Listas de linhas */
 .card { margin: 0; padding: 0; list-style: none; }
 .card > li { border-bottom: 1px solid var(--hairline); }
-.card > li:last-child:has(.addSubtask, .subtaskForm) { border-bottom: 0; }
-.subtask { display: flex; align-items: center; gap: 3px; min-height: 56px; }
-.check { flex: none; display: grid; place-items: center; width: 44px; height: 44px; margin: 0 0 0 -11px; }
-.check svg { width: 22px; height: 22px; }
-.check[data-status="done"] circle { fill: currentColor; }
-.check[data-status="done"] path { stroke: var(--background); }
-.subtaskName { flex: 1; min-width: 0; color: var(--ink); font-size: 15px; font-weight: 500; line-height: 22px; }
-.subtaskName[data-done="true"] { color: var(--faint); text-decoration: line-through; }
-.addSubtask { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 56px; padding: 0 0 0 1px; border: 0; background: transparent; color: var(--muted); font-size: 15px; font-weight: 500; text-align: left; cursor: pointer; }
-.addSubtask:hover { color: var(--ink); }
-.addSubtask > span { display: grid; place-items: center; }
-.addSubtask svg { width: 20px; height: 20px; }
-.subtaskForm { display: flex; align-items: center; gap: 8px; min-height: 56px; }
-.subtaskForm input { flex: 1; min-width: 0; height: 44px; border: 0; border-bottom: 1px solid var(--input); background: transparent; color: var(--ink); font: inherit; font-size: 15px; outline: none; }
-.subtaskForm input:focus { border-bottom-color: var(--ink); }
-/* O anel global de foco (.shell :focus-visible) venceria o outline: none acima; aqui o foco é a linha de baixo. */
-.subtaskForm input:focus-visible { outline: 0; }
-.subtaskForm button { height: 44px; padding: 0 12px; border: 0; border-radius: 22px; background: transparent; color: var(--ink); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
-.subtaskForm button[type="button"] { color: var(--muted); font-weight: 500; }
-.subtaskForm button:disabled { opacity: .5; cursor: not-allowed; }
 .relation { display: flex; align-items: center; gap: 14px; min-height: 56px; color: var(--ink); }
 .relation:hover .relationName { text-decoration: underline; text-underline-offset: 4px; }
 .relationIcon { flex: none; display: grid; place-items: center; }
@@ -246,6 +220,9 @@
   /* Duas colunas viram uma: o topo ganha o menu "mais acoes" no lugar das
      pilulas, e o conteudo deixa a folga do campo do Hermes preso ao pe. */
   .frame { row-gap: 22px; padding-top: 6px; padding-bottom: calc(260px + env(safe-area-inset-bottom)); }
+  /* Na edição não há o campo do Hermes: o rodapé de Descartar e Salvar fecha a tela. */
+  .frame[data-edit] { min-height: 100dvh; padding-bottom: 0; }
+  .frame[data-edit] .body { flex: 1; }
   .lead { gap: 22px; }
   .body { gap: 22px; }
   .nav { margin-right: -12px; }

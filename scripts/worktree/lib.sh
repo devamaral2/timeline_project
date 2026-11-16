@@ -90,3 +90,8 @@ find_unreserved_port() {
     esac
   done
 }
+
+# Certificado raiz da CA local do Caddy (a que assina https://<slug>.braid.local).
+caddy_root_cert() {
+  printf '%s' "${XDG_DATA_HOME:-$HOME/.local/share}/caddy/pki/authorities/local/root.crt"
+}

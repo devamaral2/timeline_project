@@ -1,19 +1,28 @@
 "use client";
 
-import { Bot, ChevronLeft, Layers, type LucideIcon, Search, Settings, User } from "lucide-react";
+import { Bot, ChevronLeft, Layers, type LucideIcon, Search, User } from "lucide-react";
 import { type CSSProperties, useEffect, useRef, useState } from "react";
-import { type ViewModeId, useViewMode, writeViewMode } from "@/lib/events/view-mode";
+import { useViewMode, type ViewModeId, writeViewMode } from "@/lib/events/view-mode";
 import { type SectionId, useSectionMenu } from "@/lib/navigation/section-menu";
 import styles from "./section-menu.module.css";
 
 /** De quem são os eventos: três listas como as outras, cada uma com o ponto da cor do seu modo. */
 const MODE_LISTS: { id: ViewModeId; name: string; desc: string; notesDesc: string; Icon: LucideIcon }[] = [
   { id: "all", name: "Todos", desc: "você e agentes", notesDesc: "você e agentes", Icon: Layers },
-  { id: "human", name: "Você", desc: "só os seus eventos", notesDesc: "só as suas notas", Icon: User },
-  { id: "agent", name: "Agentes", desc: "só eventos de agentes", notesDesc: "só notas de agentes", Icon: Bot },
+  { id: "human", name: "Você", desc: "só os seus eventos", notesDesc: "só os seus artefatos", Icon: User },
+  { id: "agent", name: "Agentes", desc: "só eventos de agentes", notesDesc: "só artefatos de agentes", Icon: Bot },
 ];
 
 /** A ordem da cascata: o que está mais perto do polegar sobe primeiro. */
+function TwoLineSliders() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M3 8h7M14 8h7M14 6v4" />
+      <path d="M3 16h7M14 16h7M10 14v4" />
+    </svg>
+  );
+}
+
 const step = (value: number) => ({ "--s": value }) as CSSProperties;
 
 /**
@@ -23,7 +32,7 @@ const step = (value: number) => ({ "--s": value }) as CSSProperties;
  * Agentes); o resto vem da tela (`lib/navigation/section-menu.ts`). Escolher
  * uma lista fecha o menu; a engrenagem troca o corpo pela configuração.
  */
-export function SectionMenu({ id, section, title, open, onClose }: { id: string; section: SectionId; title: string; open: boolean; onClose: () => void }) {
+export function SectionMenu({ id, section, title, open, onClose, structuredSettings = false }: { id: string; section: SectionId; title: string; open: boolean; onClose: () => void; structuredSettings?: boolean }) {
   const model = useSectionMenu(section);
   const viewMode = useViewMode();
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -52,37 +61,55 @@ export function SectionMenu({ id, section, title, open, onClose }: { id: string;
   const cascade = () => step(Math.max(1, 5 - index++));
 
   return (
-    <section id={id} className={styles.menu} data-open={open ? "" : undefined} aria-label={`Opções de ${lower}`} aria-hidden={!open}>
+    <section id={id} className={styles.menu} data-open={open ? "" : undefined} data-structured-settings={structuredSettings ? "" : undefined} aria-label={`Opções de ${lower}`} aria-hidden={!open}>
       <div className={styles.inner}>
         <div className={styles.pad}>
           <div className={`${styles.head} ${styles.st}`} style={step(7)}>
-            {settingsOpen ? (
+            {settingsOpen && structuredSettings ? (
+              <>
+                <button type="button" className={styles.back} aria-label="Voltar para as listas" onClick={() => setSettingsOpen(false)}><ChevronLeft aria-hidden /></button>
+                <h2 className={styles.settingsTitle}>Configurar {lower}</h2>
+              </>
+            ) : settingsOpen ? (
               <button type="button" className={styles.back} onClick={() => setSettingsOpen(false)}><ChevronLeft aria-hidden />Configurar {lower}</button>
             ) : (
               <h2 className={styles.title}>{title}{model?.count !== undefined ? <span>{model.count}</span> : null}</h2>
             )}
             {settings.length > 0 ? (
-              <button type="button" className={styles.gear} aria-pressed={settingsOpen} aria-label={settingsOpen ? "Fechar configuração" : `Configurar ${lower}`} onClick={() => setSettingsOpen((current) => !current)}><Settings aria-hidden /></button>
+              <button type="button" className={styles.gear} aria-pressed={settingsOpen} aria-label={settingsOpen ? "Fechar configuração" : `Configurar ${lower}`} onClick={() => setSettingsOpen((current) => !current)}><TwoLineSliders /></button>
             ) : null}
           </div>
 
           {settingsOpen ? (
-            <div className={styles.pane} key="settings">
-              {settings.map((setting) => setting.kind === "switch" ? (
-                <button key={setting.label} type="button" role="switch" aria-checked={setting.on} className={styles.option} onClick={setting.onToggle}>
-                  <span className={styles.optionText}>{setting.label}{setting.hint ? <small>{setting.hint}</small> : null}</span>
-                  <span className={styles.switch} aria-hidden><i /></span>
-                </button>
-              ) : (
-                <div key={setting.label}>
-                  <p className={styles.label}>{setting.label}</p>
-                  <fieldset className={setting.kind === "segment" ? styles.segment : styles.toggles} aria-label={setting.label}>
-                    {setting.options.map((choice) => (
-                      <button key={choice.label} type="button" aria-pressed={choice.selected} onClick={choice.onPick}>{choice.label}</button>
-                    ))}
-                  </fieldset>
-                </div>
-              ))}
+            <div className={`${styles.pane} ${styles.settingsPane}`} key="settings">
+              {settings.map((setting) => {
+                if (setting.kind === "switch") {
+                  return structuredSettings ? (
+                    <div key={setting.label} className={styles.switchSetting}>
+                      <p className={styles.label}>{setting.label}</p>
+                      <button type="button" role="switch" aria-label={setting.label} aria-checked={setting.on} className={styles.switchOption} onClick={setting.onToggle}>
+                        <span className={styles.switch} aria-hidden><i /></span>
+                        {setting.hint ? <span className={styles.optionText}><small>{setting.hint}</small></span> : null}
+                      </button>
+                    </div>
+                  ) : (
+                    <button key={setting.label} type="button" role="switch" aria-checked={setting.on} className={styles.option} onClick={setting.onToggle}>
+                      <span className={styles.optionText}>{setting.label}{setting.hint ? <small>{setting.hint}</small> : null}</span>
+                      <span className={styles.switch} aria-hidden><i /></span>
+                    </button>
+                  );
+                }
+                return (
+                  <div key={setting.label}>
+                    <p className={styles.label}>{setting.label}</p>
+                    <fieldset className={setting.kind === "segment" ? styles.segment : styles.toggles} aria-label={setting.label}>
+                      {setting.options.map((choice) => (
+                        <button key={choice.label} type="button" aria-pressed={choice.selected} onClick={choice.onPick}>{choice.label}</button>
+                      ))}
+                    </fieldset>
+                  </div>
+                );
+              })}
               {model?.filtered && model.onClear ? <button type="button" className={styles.clear} onClick={model.onClear}>Limpar filtros</button> : null}
             </div>
           ) : (

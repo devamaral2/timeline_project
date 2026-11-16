@@ -59,7 +59,7 @@
       "events": [
         {
           "id": "event-note",
-          "kind": "routine",
+          "kind": "common",
           "noteTypes": [],
           "missed": true,
           "name": "Leitura",
@@ -105,7 +105,7 @@
       },
       {
         "id": "event-note",
-        "kind": "routine",
+        "kind": "common",
         "noteTypes": [],
         "missed": true,
         "name": "Leitura",

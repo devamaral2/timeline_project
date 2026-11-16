@@ -47,7 +47,7 @@ const dailyRun: CreateRecurrenceInput = {
   durationMinutes: 30,
   timeZone: "America/Sao_Paulo",
   startsOn: "2026-09-01",
-  template: { name: "Correr", tags: ["saude"], kind: "routine" },
+  template: { name: "Correr", tags: ["saude"], kind: "common" },
 };
 
 function daysOf(database: InMemoryEventDatabase) {
@@ -73,14 +73,14 @@ describe("creating a series", () => {
       timeZone: "America/Sao_Paulo",
       startsOn: "2026-09-01",
       template: {
-        kind: "routine",
+        kind: "common",
         name: "Correr",
         description: "",
         tags: ["saude"],
         priority: "medium",
         notifyOffsetsMinutes: [5],
         artifactIds: [],
-        parentEventIds: [],
+        previousEventIds: [],
       },
       revision: 1,
     });
@@ -120,7 +120,7 @@ describe("creating a series", () => {
       create.execute({ ...dailyRun, frequency: "monthly", byMonthDay: 31, startsOn: "2026-04-01", endsOn: "2026-04-30" }, actor),
     ).rejects.toThrow(RecurrenceValidationError);
     await expect(
-      create.execute({ ...dailyRun, template: { name: "Filha", artifacts: [{ data: { body: "nota" } }], parentEventIds: ["missing"] } }, actor),
+      create.execute({ ...dailyRun, template: { name: "Filha", artifacts: [{ data: { body: "nota" } }], previousEventIds: ["missing"] } }, actor),
     ).rejects.toThrow(EventNotFoundError);
     await expect(create.execute({ ...dailyRun, template: {} }, actor)).rejects.toThrow("Event requires a name");
     expect(recurrences.recurrences).toEqual([]);
@@ -364,11 +364,11 @@ describe("ownership", () => {
     expect((await recurrences.findById(recurrenceId))?.revision).toBe(1);
   });
 
-  test("the parents of a series template must belong to who creates it", async () => {
+  test("the previous events of a series template must belong to who creates it", async () => {
     const theirs = Event.create({ id: "theirs", userId: intruder.userId, name: "Projeto deles", longRunning: true });
     const { create } = setup({ now }, { events: [theirs] });
 
-    await expect(create.execute({ ...dailyRun, template: { name: "Sessão", parentEventIds: ["theirs"] } }, actor)).rejects.toThrow(
+    await expect(create.execute({ ...dailyRun, template: { name: "Sessão", previousEventIds: ["theirs"] } }, actor)).rejects.toThrow(
       "Only the event owner can modify it",
     );
   });

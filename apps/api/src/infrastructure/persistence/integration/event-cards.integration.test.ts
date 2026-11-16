@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "vitest";
 import { Artifact, Event, type ArtifactLink, type EventCreateProps } from "../../../domain";
 import type { AgendaQueryParams, EventCard, TrackedQueryParams } from "../../../domain/ports";
+import { PostgresEntityBatchWriter } from "../agent-batch/postgres-entity-batch-writer";
 import { PostgresArtifactRepository } from "../artifacts/repositories/postgres-artifact.repository";
 import { PostgresEventCardQuery } from "../events/queries/postgres-event-card.query";
 import { PostgresEventRepository } from "../events/repositories/postgres-event.repository";
@@ -299,22 +300,38 @@ describe("PostgresEventCardQuery", () => {
     });
   });
 
-  describe("subtarefas", () => {
-    test("traz os cartoes dos eventos em que o evento se desdobra, sem os apagados", async () => {
-      const [one, two, removed] = [await tracked("Um"), await tracked("Dois"), await tracked("Apagado")];
-      const parent = await tracked("Pai", { subtaskIds: [one.id, two.id, removed.id], blocksIds: [one.id] });
-      await tracked("Sem relacao");
-      await events.delete(removed.id, USER);
-
-      const found = await cards.subtasks({ userId: USER, parentEventId: parent.id });
-
-      expect(idsOf(found).sort()).toEqual([one.id, two.id].sort());
-      expect(found.find((card) => card.event.id === one.id)?.event).toMatchObject({
-        parentIds: [parent.id],
-        blockedByIds: [parent.id],
+  describe("sequencia", () => {
+    test("o evento do cartao traz previousIds e nextIds, sem os eventos apagados", async () => {
+      const [before, middle, after, removed, removedNext] = [
+        await tracked("Antes"),
+        await tracked("Meio"),
+        await tracked("Depois"),
+        await tracked("Apagado antes"),
+        await tracked("Apagado depois"),
+      ];
+      await new PostgresEntityBatchWriter(ctx.db).commit({
+        userId: USER,
+        events: [],
+        artifacts: [],
+        sequence: [
+          { op: "add", fromId: before.id, toId: middle.id },
+          { op: "add", fromId: middle.id, toId: after.id },
+          { op: "add", fromId: removed.id, toId: middle.id },
+          { op: "add", fromId: middle.id, toId: removedNext.id },
+        ],
       });
-      expect(await cards.subtasks({ userId: OTHER_USER, parentEventId: parent.id })).toEqual([]);
-      expect(await cards.subtasks({ userId: USER, parentEventId: one.id })).toEqual([]);
+      await events.delete(removed.id, USER);
+      await events.delete(removedNext.id, USER);
+
+      const found = await cards.cardsOf([before.id, middle.id, after.id]);
+
+      expect(found.find((card) => card.event.id === middle.id)?.event).toMatchObject({
+        previousIds: [before.id],
+        nextIds: [after.id],
+        revision: 1,
+      });
+      expect(found.find((card) => card.event.id === before.id)?.event).toMatchObject({ previousIds: [], nextIds: [middle.id] });
+      expect(found.find((card) => card.event.id === after.id)?.event).toMatchObject({ previousIds: [middle.id], nextIds: [] });
     });
   });
 

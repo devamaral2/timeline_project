@@ -131,7 +131,7 @@ describe("despacho pelo JEV de entrada", () => {
 
 describe("candidatos de edicao escolhidos pelo JEV", () => {
   const shortlist: EditCandidate[] = [
-    { kind: "event", id: "e1", name: "Reunião", eventKind: "routine" },
+    { kind: "event", id: "e1", name: "Reunião", eventKind: "common" },
     { kind: "event", id: "e2", name: "Almoço", eventKind: "meal" },
     { kind: "artifact", id: "a1", name: "Lista de compras", artifactType: "text" },
     { kind: "artifact", id: "a2", name: "Ideia", artifactType: "text" },

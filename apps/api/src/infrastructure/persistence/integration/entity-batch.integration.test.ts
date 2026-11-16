@@ -16,6 +16,7 @@ import type { Tx } from "../shared/tx";
 import {
   OTHER_USER,
   USER,
+  agentEvent,
   countRows,
   dailyRecurrence,
   foodArtifact,
@@ -77,14 +78,16 @@ describe("PostgresEntityBatchWriter", () => {
             { op: "update", entity: existing.revise({ data: { body: "versao final" } }), expectedRevision: 1 },
           ],
           events: [
-            { op: "update", entity: origin.revise({ name: "Semana planejada", subtaskIds: [created.id] }), expectedRevision: 1 },
+            { op: "update", entity: origin.revise({ name: "Semana planejada" }), expectedRevision: 1 },
             { op: "create", entity: created },
           ],
+          sequence: [{ op: "add", fromId: origin.id, toId: created.id }],
         }),
       );
 
       expect(result).toEqual({});
-      expect(await events.findById(origin.id)).toMatchObject({ name: "Semana planejada", revision: 2, subtaskIds: [created.id] });
+      expect(await events.findById(origin.id)).toMatchObject({ name: "Semana planejada", revision: 2, nextIds: [created.id] });
+      expect(await events.findById(created.id)).toMatchObject({ previousIds: [origin.id], revision: 1 });
       expect((await events.findById(created.id))?.artifactLinks).toEqual([link(note.id, "creates"), link(existing.id)]);
       expect(await artifacts.findById(note.id)).not.toBeNull();
       expect(await artifacts.findById(existing.id)).toMatchObject({ data: { body: "versao final" }, revision: 2 });
@@ -155,64 +158,22 @@ describe("PostgresEntityBatchWriter", () => {
       expect(await artifacts.findById(foreignNote.id)).not.toBeNull();
     });
 
-    test("um alvo de relacao que sumiu entre preparar e gravar recusa o lote", async () => {
-      const removed = await saved(trackedEvent(USER, "Apagado no meio do caminho"));
-      await events.delete(removed.id, USER);
+    test("um alvo de artefato que sumiu entre preparar e gravar recusa o lote", async () => {
+      const removed = textArtifact(USER, "apagado no meio do caminho");
+      await artifacts.save(removed);
+      await artifacts.delete(removed.id, USER);
       const note = textArtifact(USER, "nasceria com o lote");
 
       await expect(
         writer.commit(
           batchOf({
             artifacts: [{ op: "create", entity: note }],
-            events: [{ op: "create", entity: trackedEvent(USER, "Novo", { subtaskIds: [removed.id] }) }],
+            events: [{ op: "create", entity: trackedEvent(USER, "Novo", { artifactLinks: [link(removed.id)] }) }],
           }),
         ),
-      ).rejects.toThrow(EntityBatchConflictError);
+      ).rejects.toThrow(/Related artifacts not found/);
 
       expect(await artifacts.findById(note.id)).toBeNull();
-    });
-
-    test("uma relacao que fecharia ciclo recusa o lote como erro de validacao", async () => {
-      const child = await saved(trackedEvent(USER, "Filho"));
-      const parent = await saved(trackedEvent(USER, "Pai", { subtaskIds: [child.id] }));
-      const note = textArtifact(USER, "nasceria com o lote");
-
-      await expect(
-        writer.commit(
-          batchOf({
-            artifacts: [{ op: "create", entity: note }],
-            events: [{ op: "update", entity: child.revise({ subtaskIds: [parent.id] }), expectedRevision: 1 }],
-          }),
-        ),
-      ).rejects.toThrow(EventValidationError);
-
-      expect(await artifacts.findById(note.id)).toBeNull();
-      expect((await events.findById(child.id))?.revision).toBe(1);
-    });
-
-    test("eventos novos que apontam um para o outro entram na ordem da dependencia", async () => {
-      const leaf = trackedEvent(USER, "Comprar tinta");
-      const middle = trackedEvent(USER, "Pintar a sala", { blocksIds: [leaf.id] });
-      const root = trackedEvent(USER, "Reforma", { subtaskIds: [middle.id, leaf.id] });
-
-      // A raiz vem primeiro no lote: gravada nessa ordem, apontaria para eventos que ainda nao existem.
-      await writer.commit(batchOf({ events: [root, middle, leaf].map((entity) => ({ op: "create" as const, entity })) }));
-
-      expect([...((await events.findById(root.id))?.subtaskIds ?? [])].sort()).toEqual([middle.id, leaf.id].sort());
-      expect((await events.findById(middle.id))?.blocksIds).toEqual([leaf.id]);
-      expect(await events.findById(leaf.id)).toMatchObject({ parentIds: [root.id], blockedByIds: [middle.id] });
-    });
-
-    test("eventos novos que fecham ciclo entre si recusam o lote", async () => {
-      const [idA, idB] = [ulid(), ulid()];
-      const a = trackedEvent(USER, "A", { id: idA, subtaskIds: [idB] });
-      const b = trackedEvent(USER, "B", { id: idB, subtaskIds: [idA] });
-
-      await expect(
-        writer.commit(batchOf({ events: [a, b].map((entity) => ({ op: "create" as const, entity })) })),
-      ).rejects.toThrow();
-
-      expect(await countRows(ctx.pool, "events")).toBe(0);
     });
 
     test("derivations registra de qual original saiu cada copia, sem editar nenhum dos dois", async () => {
@@ -236,6 +197,184 @@ describe("PostgresEntityBatchWriter", () => {
       expect(await artifacts.findById(copy.id)).toMatchObject({ derived: true, revision: 1, data: { quantity: "2 fatias" } });
       // A copia e do evento: nao aparece na lista de artefatos do usuario.
       expect((await artifacts.listByUserId(USER)).map((artifact) => artifact.id)).toEqual([original.id]);
+    });
+  });
+
+  describe("sequencia entre eventos", () => {
+    const sequence = (...pairs: Array<[string, string]>): EntityBatch["sequence"] =>
+      pairs.map(([fromId, toId]) => ({ op: "add" as const, fromId, toId }));
+    const edges = () =>
+      selectRows(ctx.pool, "SELECT from_event_id, to_event_id, relation FROM event_event_relation ORDER BY relation, from_event_id");
+
+    test("add grava a aresta precedes, lida nos dois lados, sem revisar nenhum dos eventos", async () => {
+      const a = await saved(trackedEvent(USER, "Escolher a cor"));
+      const b = await saved(trackedEvent(USER, "Comprar tinta"));
+
+      await writer.commit(batchOf({ sequence: sequence([a.id, b.id]) }));
+
+      expect(await edges()).toEqual([{ from_event_id: a.id, to_event_id: b.id, relation: "precedes" }]);
+      expect(await events.findById(a.id)).toMatchObject({ previousIds: [], nextIds: [b.id], revision: 1 });
+      expect(await events.findById(b.id)).toMatchObject({ previousIds: [a.id], nextIds: [], revision: 1 });
+    });
+
+    test("repetir a aresta, no mesmo lote ou em outro, nao duplica", async () => {
+      const a = await saved(trackedEvent(USER, "A"));
+      const b = await saved(trackedEvent(USER, "B"));
+
+      await writer.commit(batchOf({ sequence: sequence([a.id, b.id], [a.id, b.id]) }));
+      await writer.commit(batchOf({ sequence: sequence([a.id, b.id]) }));
+
+      expect(await countRows(ctx.pool, "event_event_relation", "relation = 'precedes'")).toBe(1);
+      expect((await events.findById(b.id))?.previousIds).toEqual([a.id]);
+    });
+
+    test("remove tira so a aresta pedida, e remover o que nao existe nao e erro", async () => {
+      const [a, b, c] = [await saved(trackedEvent(USER, "A")), await saved(trackedEvent(USER, "B")), await saved(trackedEvent(USER, "C"))];
+      await writer.commit(batchOf({ sequence: sequence([a.id, b.id], [a.id, c.id]) }));
+
+      await writer.commit(
+        batchOf({
+          sequence: [
+            { op: "remove", fromId: a.id, toId: b.id },
+            { op: "remove", fromId: b.id, toId: c.id },
+          ],
+        }),
+      );
+
+      expect(await edges()).toEqual([{ from_event_id: a.id, to_event_id: c.id, relation: "precedes" }]);
+      expect((await events.findById(b.id))?.previousIds).toEqual([]);
+      expect((await events.findById(b.id))?.revision).toBe(1);
+    });
+
+    test("remover e acrescentar a mesma aresta no lote deixa a aresta no fim", async () => {
+      const a = await saved(trackedEvent(USER, "A"));
+      const b = await saved(trackedEvent(USER, "B"));
+      await writer.commit(batchOf({ sequence: sequence([a.id, b.id]) }));
+
+      await writer.commit(batchOf({ sequence: [{ op: "remove", fromId: a.id, toId: b.id }, { op: "add", fromId: a.id, toId: b.id }] }));
+
+      expect(await countRows(ctx.pool, "event_event_relation", "relation = 'precedes'")).toBe(1);
+    });
+
+    test("uma ponta pode ser evento novo do mesmo lote, mesmo listado depois da aresta", async () => {
+      const existing = await saved(trackedEvent(USER, "Ja existe"));
+      const fresh = trackedEvent(USER, "Nasce com o lote");
+      const freshToo = trackedEvent(USER, "Tambem nasce");
+
+      await writer.commit(
+        batchOf({
+          events: [fresh, freshToo].map((entity) => ({ op: "create" as const, entity })),
+          sequence: sequence([existing.id, fresh.id], [fresh.id, freshToo.id]),
+        }),
+      );
+
+      expect(await events.findById(fresh.id)).toMatchObject({ previousIds: [existing.id], nextIds: [freshToo.id] });
+      expect((await events.findById(existing.id))?.nextIds).toEqual([fresh.id]);
+    });
+
+    test("uma ponta pode ser evento de agente", async () => {
+      const request = await saved(agentEvent(USER, "Montar o cardapio", { kind: "build_request" }));
+      const person = await saved(trackedEvent(USER, "Fazer as compras"));
+
+      await writer.commit(batchOf({ sequence: sequence([request.id, person.id]) }));
+
+      expect(await events.findById(request.id)).toMatchObject({ nextIds: [person.id], revision: 1 });
+      expect((await events.findById(person.id))?.previousIds).toEqual([request.id]);
+    });
+
+    test("a sequencia nao revisa o evento editado no mesmo lote alem da propria edicao", async () => {
+      const a = await saved(trackedEvent(USER, "A"));
+      const b = await saved(trackedEvent(USER, "B"));
+
+      await writer.commit(
+        batchOf({
+          events: [{ op: "update", entity: a.revise({ name: "A editado" }), expectedRevision: 1 }],
+          sequence: sequence([a.id, b.id]),
+        }),
+      );
+
+      expect(await events.findById(a.id)).toMatchObject({ name: "A editado", revision: 2, nextIds: [b.id] });
+      expect((await events.findById(b.id))?.revision).toBe(1);
+    });
+
+    test("ciclo direto, por um terceiro ou do evento consigo mesmo recusa o lote", async () => {
+      const [a, b, c] = [await saved(trackedEvent(USER, "A")), await saved(trackedEvent(USER, "B")), await saved(trackedEvent(USER, "C"))];
+      await writer.commit(batchOf({ sequence: sequence([a.id, b.id], [b.id, c.id]) }));
+
+      for (const [what, pair] of [
+        ["direto", [b.id, a.id]],
+        ["por um terceiro", [c.id, a.id]],
+      ] as const) {
+        const note = textArtifact(USER, "nasceria com o lote");
+        await expect(
+          writer.commit(batchOf({ artifacts: [{ op: "create", entity: note }], sequence: sequence([...pair]) })),
+          what,
+        ).rejects.toThrow(/Events cannot follow each other in a cycle/);
+        expect(await artifacts.findById(note.id), what).toBeNull();
+      }
+      await expect(writer.commit(batchOf({ sequence: sequence([a.id, a.id]) }))).rejects.toThrow();
+
+      expect(await countRows(ctx.pool, "event_event_relation", "relation = 'precedes'")).toBe(2);
+    });
+
+    test("eventos novos que fecham ciclo entre si recusam o lote inteiro", async () => {
+      const [a, b] = [trackedEvent(USER, "A", { id: ulid() }), trackedEvent(USER, "B", { id: ulid() })];
+
+      await expect(
+        writer.commit(
+          batchOf({
+            events: [a, b].map((entity) => ({ op: "create" as const, entity })),
+            sequence: sequence([a.id, b.id], [b.id, a.id]),
+          }),
+        ),
+      ).rejects.toThrow(EventValidationError);
+
+      expect(await countRows(ctx.pool, "events")).toBe(0);
+    });
+
+    test("ponta de outro usuario, apagada ou inexistente recusa o lote como conflito", async () => {
+      const mine = await saved(trackedEvent(USER, "Meu"));
+      const foreign = await saved(trackedEvent(OTHER_USER, "Do outro"));
+      const removed = await saved(trackedEvent(USER, "Apagado"));
+      await events.delete(removed.id, USER);
+
+      const targets: Array<[string, [string, string]]> = [
+        ["sucessor de outro usuario", [mine.id, foreign.id]],
+        ["antecessor de outro usuario", [foreign.id, mine.id]],
+        ["sucessor apagado", [mine.id, removed.id]],
+        ["antecessor apagado", [removed.id, mine.id]],
+        ["inexistente", [mine.id, ulid()]],
+      ];
+      for (const [what, pair] of targets) {
+        const note = textArtifact(USER, "nasceria com o lote");
+        const created = trackedEvent(USER, "Nasceria com o lote");
+
+        await expect(
+          writer.commit(
+            batchOf({
+              artifacts: [{ op: "create", entity: note }],
+              events: [{ op: "create", entity: created }],
+              sequence: sequence(pair),
+            }),
+          ),
+          what,
+        ).rejects.toThrow(EntityBatchConflictError);
+
+        expect(await artifacts.findById(note.id), what).toBeNull();
+        expect(await events.findById(created.id), what).toBeNull();
+      }
+      expect(await countRows(ctx.pool, "event_event_relation")).toBe(0);
+    });
+
+    test("o evento apagado no lote some das listas, mas a aresta continua no banco", async () => {
+      const a = await saved(trackedEvent(USER, "A"));
+      const b = await saved(trackedEvent(USER, "B"));
+      await writer.commit(batchOf({ sequence: sequence([a.id, b.id]) }));
+
+      await writer.commit(batchOf({ events: [{ op: "delete", id: a.id, expectedRevision: 1 }] }));
+
+      expect((await events.findById(b.id))?.previousIds).toEqual([]);
+      expect(await countRows(ctx.pool, "event_event_relation", "relation = 'precedes'")).toBe(1);
     });
   });
 
@@ -340,7 +479,7 @@ describe("PostgresEntityBatchWriter", () => {
 
     test("a serie editada libera os dias de fromDay em diante para a primeira ocorrencia nova", async () => {
       const { recurrence, occurrences } = await seriesWithOccurrences();
-      const revised = recurrence.revise({ rule: { timeOfDay: "19:00" }, template: { name: "Serie nova", kind: "routine" } });
+      const revised = recurrence.revise({ rule: { timeOfDay: "19:00" }, template: { name: "Serie nova", kind: "common" } });
       const replacement = occurrenceOf(revised, DAYS[1]);
 
       await writer.commit(

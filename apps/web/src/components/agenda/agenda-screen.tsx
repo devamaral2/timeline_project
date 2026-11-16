@@ -7,6 +7,7 @@ import {
 import type { EventCardDto, HumanEventStatus } from "@repo/contracts";
 import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { EventStatusPicker } from "@/components/events/event-status-picker";
 import { WeekStrip } from "@/components/events/WeekStrip";
 import { requestHubOpen } from "@/components/hub/hub-events";
 import page from "@/components/ui/page.module.css";
@@ -23,7 +24,6 @@ import { useViewMode } from "@/lib/events/view-mode";
 import { usePublishSectionMenu } from "@/lib/navigation/section-menu";
 import { useSessionState } from "@/lib/session/use-session";
 import { AgendaDay } from "./agenda-day";
-import { AgendaStatusPicker } from "./agenda-status-picker";
 import { AgendaOptions, type AgendaViewMode } from "./agenda-options";
 import { agendaEventsByDay } from "./agenda-data";
 import { EXAMPLE_NOW, EXAMPLE_TODAY, type ExampleEvent, type ExampleTask, exampleEventsOn } from "./agenda-examples";
@@ -98,6 +98,7 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
   const [selectedEvent, setSelectedEvent] = useState<SelectedEvent | null>(null);
   // O evento de referência cujo ponto azul foi tocado, e o aviso da última troca que falhou.
   const [statusCard, setStatusCard] = useState<EventCardDto | null>(null);
+  const [statusAnchor, setStatusAnchor] = useState<HTMLElement | null>(null);
   const [statusNote, setStatusNote] = useState<string | null>(null);
   const [mode, setMode] = useState<ViewMode>("day");
   const [showFreeTime, setShowFreeTime] = useState(true);
@@ -133,8 +134,10 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
   }, []);
 
   /** Só evento de referência (sem status) abre a escolha; o de pessoa com status segue sem ação aqui. */
-  function openStatusPicker(card: EventCardDto) {
-    if (card.status === undefined) setStatusCard(card);
+  function openStatusPicker(card: EventCardDto, anchor: HTMLElement) {
+    if (card.status !== undefined) return;
+    setStatusAnchor(anchor);
+    setStatusCard(card);
   }
 
   /** Grava o status com a revisão que a agenda leu. Revisão velha avisa e recarrega; o recarregamento traz a linha nova. */
@@ -362,7 +365,7 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
         { label: "Por dia", selected: mode === "day", onPick: () => changeMode("day") },
         { label: "Em sequência", selected: mode === "list", onPick: () => changeMode("list") },
       ] },
-      { kind: "switch", label: "Tempo livre", hint: "Janelas de 15 min ou mais entre os eventos", on: showFreeTime, onToggle: () => changeShowFreeTime(!showFreeTime) },
+      { kind: "switch", label: "Tempo livre", on: showFreeTime, onToggle: () => changeShowFreeTime(!showFreeTime) },
     ],
     filtered: search.trim() !== "",
     onClear: () => setSearch(""),
@@ -463,8 +466,9 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
         {!userId ? <p className={styles.note}>Dados de exemplo · relógio ilustrativo às 09:35</p> : null}
       </section>
       {statusCard ? (
-        <AgendaStatusPicker
+        <EventStatusPicker
           card={statusCard}
+          anchor={statusAnchor}
           onPick={(status) => void changeReferenceStatus(statusCard, status)}
           onClose={() => setStatusCard(null)}
         />

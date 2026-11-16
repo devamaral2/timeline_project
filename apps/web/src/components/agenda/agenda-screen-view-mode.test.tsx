@@ -22,7 +22,7 @@ const { AgendaScreen } = await import("./agenda-screen");
 const TODAY = "2026-09-14";
 
 const events: EventDto[] = [
-  eventFixture({ id: "ev-1", name: "Revisar proposta", kind: "routine", status: "todo", startedAt: "2026-09-14T09:00:00-03:00", estimatedFinishAt: "2026-09-14T10:30:00-03:00" }),
+  eventFixture({ id: "ev-1", name: "Revisar proposta", kind: "common", status: "todo", startedAt: "2026-09-14T09:00:00-03:00", estimatedFinishAt: "2026-09-14T10:30:00-03:00" }),
   eventFixture({ id: "ev-3", name: "Pesquisar voos para novembro", actor: "agent", kind: "request", status: "running", startedAt: "2026-09-14T09:48:00-03:00" }),
 ];
 

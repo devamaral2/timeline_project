@@ -18,7 +18,7 @@ import type { InMemoryEventDatabase } from "../../events/testing/in-memory-event
  */
 function rewrite(
   event: Event,
-  changes: { subtaskIds?: string[]; artifactLinks?: ArtifactLink[]; occurrence?: OccurrenceLink | undefined },
+  changes: { artifactLinks?: ArtifactLink[]; occurrence?: OccurrenceLink | undefined },
 ): Event {
   return Event.rehydrate({
     id: event.id,
@@ -29,6 +29,7 @@ function rewrite(
     priority: event.priority,
     name: event.name,
     description: event.description,
+    location: event.location,
     startedAt: event.startedAt,
     estimatedFinishAt: event.estimatedFinishAt,
     finishedAt: event.finishedAt,
@@ -37,8 +38,6 @@ function rewrite(
     longRunning: event.longRunning,
     data: { ...event.data },
     artifactLinks: changes.artifactLinks ?? [...event.artifactLinks],
-    subtaskIds: changes.subtaskIds ?? [...event.subtaskIds],
-    blocksIds: [...event.blocksIds],
     occurrence: "occurrence" in changes ? changes.occurrence : event.occurrence,
     revision: event.revision,
   });
@@ -143,19 +142,19 @@ export class InMemoryRecurrenceRepository implements RecurrenceRepository {
     this.exceptions.set(recurrenceId, days);
   }
 
-  async materialize(recurrence: Recurrence, occurrences: Event[], parentIds: readonly string[] = []): Promise<void> {
+  async materialize(recurrence: Recurrence, occurrences: Event[], previousIds: readonly string[] = []): Promise<void> {
     const index = this.recurrences.findIndex((stored) => stored.id === recurrence.id);
     // A regra mudou no meio do caminho: estas ocorrencias sao da regra velha, e nada e gravado.
     if (index === -1 || (this.recurrences[index] as Recurrence).revision !== recurrence.revision) {
       throw new RecurrenceRevisionConflictError(`Recurrence ${recurrence.id} changed while materializing`);
     }
 
-    // Um evento maior que sumiu nao pode ganhar subtarefa: a serie avanca sem gerar nada.
-    const parents = [...new Set(parentIds)].filter((parentId) =>
-      this.events.events.some((event) => event.id === parentId && event.userId === recurrence.userId),
+    // Um antecessor que sumiu nao pode ganhar sucessor: a serie avanca sem gerar nada.
+    const previous = [...new Set(previousIds)].filter((previousId) =>
+      this.events.events.some((event) => event.id === previousId && event.userId === recurrence.userId),
     );
     const inserted: string[] = [];
-    for (const occurrence of parents.length < new Set(parentIds).size ? [] : occurrences) {
+    for (const occurrence of previous.length < new Set(previousIds).size ? [] : occurrences) {
       const day = occurrence.occurrence?.occurrenceOn;
       // O indice unico do Postgres: um dia da serie existe uma vez so.
       const taken = this.events.events.some(
@@ -166,12 +165,8 @@ export class InMemoryRecurrenceRepository implements RecurrenceRepository {
       inserted.push(occurrence.id);
     }
 
-    // A relacao faz parte da criacao da ocorrencia: nao conta como edicao do evento maior.
-    if (inserted.length > 0 && parents.length > 0) {
-      this.events.events = this.events.events.map((event) =>
-        parents.includes(event.id) ? rewrite(event, { subtaskIds: [...event.subtaskIds, ...inserted] }) : event,
-      );
-    }
+    // A relacao faz parte da criacao da ocorrencia: nao conta como edicao do antecessor.
+    for (const fromId of previous) for (const toId of inserted) this.events.edges.push({ fromId, toId });
     this.recurrences[index] = recurrence;
   }
 

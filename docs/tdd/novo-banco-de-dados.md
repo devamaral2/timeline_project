@@ -51,7 +51,6 @@ A migration inicial tem duas edições à mão, que precisam ser refeitas se ela
 | `GET /api/events` | Janela da agenda, em páginas; filtros `from`, `to`, `actor`, `kind`, `tag` |
 | `GET /api/events/tracked` | Lista de tarefas; filtros `status`, `priority`, `actor`, `tag`, `q`, `from`, `to`, `longRunning` |
 | `POST /api/events`, `GET`, `PATCH` e `DELETE /api/events/:eventId` | Criar, ler, editar e apagar um evento de pessoa |
-| `GET /api/events/:eventId/subtasks` | Os eventos em que um evento se desdobra |
 | `GET` e `POST /api/artifacts`, `GET`, `PATCH` e `DELETE /api/artifacts/:artifactId` | Artefatos; `scope=global` lista os globais de um tipo |
 | `GET` e `POST /api/recurrences`, `GET`, `PATCH` e `DELETE /api/recurrences/:recurrenceId` | Séries |
 | `GET /api/tags` | Sugestão de tags por prefixo |
@@ -244,7 +243,7 @@ O sentido é de quem produz para o que foi produzido.
 create table event_event_relation (
   from_event_id char(26) not null references events (id) on delete cascade,
   to_event_id   char(26) not null references events (id) on delete cascade,
-  relation      text not null,   -- generates | updates | deletes | subtask | blocks | follow_up
+  relation      text not null,   -- generates | updates | deletes | step | precedes | follow_up
   created_at    timestamptz not null default now(),
   primary key (from_event_id, relation, to_event_id),
   check (from_event_id <> to_event_id)
@@ -382,11 +381,11 @@ para a limpeza. Passa a guardar também o reenvio da mesma mensagem à IA, que h
 | Série na lista de tarefas | a primeira ocorrência em aberto de cada série do usuário | `recurrences_user_idx`, `events_recurrence_occurrence_unique` |
 | Lista de pedidos | eventos de agente sem passos, por id decrescente | `events_requests_idx` |
 | Busca por nome e agente de consulta | todos os eventos vivos de pessoa do usuário | `events_user_live_idx` |
-| Um pedido com passos | relação `subtask` a partir do pedido | chave primária de `event_event_relation` |
+| Um pedido com passos | relação `step` a partir do pedido | chave primária de `event_event_relation` |
 | Entradas de um pedido ou passo | por `event_id`, em ordem de id; incremental com `id > último` | `event_entries_event_idx` |
 | O que um passo tocou | relações a partir do passo | chaves primárias das duas relações |
 | Sessão inteira | `follow_up` a partir do primeiro pedido | chave primária de `event_event_relation` |
-| Subtarefas e bloqueios, nos dois sentidos | por origem ou por destino; em profundidade, consulta recursiva | chave primária e `event_event_reverse_idx` |
+| Sequência ("segue-se de" e "da sequência a") | por origem ou por destino; em profundidade, consulta recursiva | chave primária e `event_event_reverse_idx` |
 | Em quais eventos um artefato aparece | por `artifact_id` | `event_artifact_reverse_idx` |
 | Lista de artefatos por tipo | por `updated_at` decrescente, sem cópias | `artifacts_user_type_recent_idx` |
 | Catálogo global de alimentos e exercícios | por tipo e nome | `artifacts_global_idx` |
@@ -427,20 +426,20 @@ horário. Na agenda, cada ocorrência aparece no seu dia.
 
 ## Regras que ficam no código
 
-- **Revisão ao mexer numa relação.** Criar, remover ou reordenar uma relação conta como editar o evento de origem,
+- **Revisão ao mexer numa relação.** Criar, remover ou reordenar uma relação com artefato conta como editar o evento de origem,
   quando ele é de pessoa: a escrita exige a `revision` esperada dele, incrementa-a e, se ele for ocorrência de uma
   série, destaca-o da série. O destino nunca é tocado. Relações que partem de evento de agente e a relação `derives`
-  não incrementam nada, e as relações que a série cria ao gerar uma ocorrência fazem parte da criação dela.
+  não incrementam nada, e as relações que a série cria ao gerar uma ocorrência fazem parte da criação dela. A sequência `precedes` também não revisa ninguém.
 - **Dono das pontas.** As duas pontas de uma relação pertencem ao mesmo usuário, ou a ponta é um artefato global.
-- **Ciclos.** `subtask` e `blocks` não podem fechar ciclo. A conferência usa consulta recursiva, sob a trava por
+- **Ciclos.** `precedes` não pode fechar ciclo. A conferência usa consulta recursiva, sob a trava por
   usuário que já existe.
-- **Liberação por bloqueio.** Ao concluir um bloqueador, travar o evento bloqueado antes de decidir.
+- **Sequência informativa.** `precedes` não segura nem libera ninguém e não revisa nenhum dos dois eventos ([ADR 0014](../adr/0014-sequencia-entre-eventos-no-lugar-de-subtarefa-e-bloqueio.md)).
 - **Forma do grafo de IA.** Um passo tem exatamente um pedido, e `follow_up` só liga pedidos.
 - **Job de IA.** Todo job de IA tem `event_id`. O conjunto de tipos de job de IA é do código.
 - **"Agendada" e "atrasado"** são calculados na tela. `missed` é marca manual.
 - **Dia sem horário.** Um evento que tem dia mas não tem hora grava `started_at` à meia-noite local. É a convenção
   que as tarefas já usam hoje; um evento que começa de fato à meia-noite não se distingue dele.
-- **Esquema do agente de consulta.** Filtra `actor = 'human'` e expõe subtarefas, bloqueios e artefatos do evento como
+- **Esquema do agente de consulta.** Filtra `actor = 'human'` e expõe a sequência (`event_sequence`) e os artefatos do evento como
   visões nomeadas, não como o grafo de relações.
 - **Ordem das entradas.** O ULID é gerado de forma monotônica dentro de um processo.
 

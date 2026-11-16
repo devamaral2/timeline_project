@@ -5,6 +5,7 @@ import {
   jsonSchemaOf, type ReasoningEffort, type StructuredCompletionGateway,
 } from "../agent/gateways/structured-completion.gateway";
 import { formatNow, isoNow, TIME_ZONE } from "../agent/time";
+import type { TokenUsage } from "../agent/gateways/structured-completion.gateway";
 import type { EditCandidate } from "./request-candidates";
 import { loadAgentDefinition, renderAgentPrompt } from "./request-config";
 import type { EditTarget, RequestStore } from "./request-store";
@@ -32,7 +33,7 @@ export interface RequestAgentRunnerOptions {
   /** Esforco de raciocinio das chamadas que pedem para pensar (`think`). Sem valor, nenhuma pensa. */
   reasoning?: ReasoningEffort;
   /** Onde o raciocinio de cada chamada fica guardado. */
-  thoughts?: Pick<RequestStore, "recordThought">;
+  thoughts?: Pick<RequestStore, "recordThought" | "recordUsage">;
   clock?: () => Date;
 }
 
@@ -54,7 +55,7 @@ export class RequestAgentRunner {
     const definition = loadAgentDefinition(input.agent);
     const effort = input.think ? this.options.reasoning : undefined;
     const budget = effort ? REASONING_BUDGET : 1;
-    const { value, modelName, reasoning } = await this.gateway.complete({
+    const { value, modelName, reasoning, usage } = await this.gateway.complete({
       system: renderAgentPrompt(definition, {
         now: formatNow(input.now),
         nowIso: isoNow(input.now),
@@ -68,10 +69,20 @@ export class RequestAgentRunner {
       ...(effort ? { reasoning: effort } : {}),
       signal: input.signal,
     });
+    if (usage && input.stepId) await this.keepUsage(input.stepId, usage);
     if (reasoning && input.stepId) await this.keepThought(input.stepId, reasoning, modelName);
     const parsed = input.schema.safeParse(value);
     if (!parsed.success) throw new FastStageError("invalid");
     return { value: parsed.data, modelName, ...(reasoning ? { reasoning } : {}) };
+  }
+
+  /** Os tokens sao so para conferencia: se nao der para guardar, o passo segue. */
+  private async keepUsage(stepId: string, usage: TokenUsage): Promise<void> {
+    try {
+      await this.options.thoughts?.recordUsage(stepId, usage);
+    } catch (error) {
+      console.error(`[requests] tokens do passo ${stepId} nao foram guardados`, error);
+    }
   }
 
   /** O raciocinio e so para conferencia: se nao der para guardar, o passo segue. */

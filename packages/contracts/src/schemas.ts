@@ -6,7 +6,7 @@ import { z } from "zod";
  * o dominio, nao estes esquemas.
  */
 const eventActorSchema = z.enum(["human", "agent"]);
-const humanEventKindSchema = z.enum(["routine", "meal", "sleep", "training"]);
+const humanEventKindSchema = z.enum(["common", "meal", "sleep", "training"]);
 const agentRequestKindSchema = z.enum(["request", "search_request", "build_request", "inquiry_request", "review_request", "cron"]);
 const eventKindSchema = z.enum([...humanEventKindSchema.options, ...agentRequestKindSchema.options, "step"]);
 const humanEventStatusSchema = z.enum(["todo", "toDefine", "doing", "inHold", "done", "cancel", "missed"]);
@@ -184,33 +184,40 @@ const eventRecurrenceSchema = z.object({
 
 const eventCardShape = {
   id: z.string(), actor: eventActorSchema, kind: eventKindSchema, status: eventStatusSchema.optional(), priority: eventPrioritySchema,
-  name: z.string(), description: z.string(), startedAt: z.string().optional(), estimatedFinishAt: z.string().optional(),
+  name: z.string(), description: z.string(), location: z.string(), startedAt: z.string().optional(), estimatedFinishAt: z.string().optional(),
   finishedAt: z.string().optional(), longRunning: z.boolean(), notifyOffsetsMinutes: notificationOffsetsSchema,
-  tags: z.array(z.string()), artifactTypes: z.array(artifactTypeSchema), parentEventIds: z.array(z.string()),
-  blockedByEventIds: z.array(z.string()), recurrence: eventRecurrenceSchema.optional(), revision: z.number().int(),
+  tags: z.array(z.string()), artifactTypes: z.array(artifactTypeSchema), previousEventIds: z.array(z.string()), recurrence: eventRecurrenceSchema.optional(), revision: z.number().int(),
 };
 
 export const eventCardSchema = z.object(eventCardShape).strict();
 
 export const agendaPageSchema = z.object({ items: z.array(eventCardSchema), nextCursor: z.string().optional() }).strict();
 
+const eventRequestSchema = z.object({
+  id: z.string(), name: z.string(), relation: z.enum(["generates", "updates"]), at: z.string(),
+}).strict();
+
 export const eventSchema = z.object({
   ...eventCardShape,
   artifacts: z.array(z.object({ relation: eventArtifactRelationSchema, fromRecurrence: z.boolean(), artifact: artifactSchema }).strict()),
-  subtaskEventIds: z.array(z.string()), blocksEventIds: z.array(z.string()),
+  nextEventIds: z.array(z.string()),
+  requests: z.array(eventRequestSchema),
 }).strict();
 
 const eventFieldsShape = {
-  name: z.string().optional(), description: z.string().optional(), priority: eventPrioritySchema.optional(),
+  name: z.string().optional(), description: z.string().optional(), location: z.string().max(300).optional(),
+  priority: eventPrioritySchema.optional(),
   notifyOffsetsMinutes: notificationOffsetsSchema.optional(), tags: z.array(z.string()).optional(), longRunning: z.boolean().optional(),
-  subtaskEventIds: z.array(z.string()).optional(), blocksEventIds: z.array(z.string()).optional(),
-  parentEventIds: z.array(z.string()).optional(), blockedByEventIds: z.array(z.string()).optional(),
+  previousEventIds: z.array(z.string()).optional(), nextEventIds: z.array(z.string()).optional(),
 };
+
+export const geoPointSchema = z.object({ latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180) }).strict();
 
 export const createEventInputSchema = z.object({
   ...eventFieldsShape, kind: humanEventKindSchema.optional(), status: humanEventStatusSchema.optional(),
   startedAt: z.string().optional(), estimatedFinishAt: z.string().optional(), finishedAt: z.string().optional(),
   artifacts: z.array(createEventArtifactSchema).optional(), artifactIds: z.array(z.string()).optional(),
+  coordinates: geoPointSchema.optional(),
 }).strict();
 
 export const updateEventInputSchema = z.object({
@@ -237,6 +244,8 @@ export const updateArtifactRequestSchema = z.union([
 
 export const tagSuggestionSchema = z.object({ id: z.string(), name: z.string() }).strict();
 
+export const placeSuggestionSchema = z.object({ name: z.string(), address: z.string(), label: z.string() }).strict();
+
 export const recurrenceSchema = z.object({
   ...recurrenceRuleShape, id: z.string(), template: z.record(z.string(), z.unknown()), revision: z.number().int(),
 }).strict();
@@ -244,7 +253,7 @@ export const recurrenceSchema = z.object({
 /** O que cada ocorrencia copia: o evento sem a janela, que vem da regra. */
 const recurrenceTemplateSchema = createEventInputSchema.omit({
   startedAt: true, estimatedFinishAt: true, finishedAt: true, longRunning: true,
-  subtaskEventIds: true, blocksEventIds: true, blockedByEventIds: true,
+  nextEventIds: true, coordinates: true,
 });
 
 /** `POST /api/recurrences`: a regra e o que cada ocorrencia copia. */
@@ -323,6 +332,7 @@ export const contractSchemas = {
   createArtifactResponse: createArtifactResponseSchema,
   updateArtifactRequest: updateArtifactRequestSchema,
   tagSuggestion: tagSuggestionSchema,
+  placeSuggestion: placeSuggestionSchema,
   recurrence: recurrenceSchema,
   createRecurrenceInput: createRecurrenceInputSchema,
   updateRecurrenceInput: updateRecurrenceInputSchema,

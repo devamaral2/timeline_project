@@ -6,15 +6,15 @@ import { buildCreateEventInput, buildEventPatch, draftFromEvent, emptyEventDraft
 describe("emptyEventDraft e buildCreateEventInput", () => {
   it("o rascunho vazio é uma rotina sem status, com o nome do comando", () => {
     expect(emptyEventDraft("comprar pão")).toEqual({
-      kind: "routine", name: "comprar pão", status: null, priority: "medium",
-      startDate: "", startTime: "", endDate: "", endTime: "", description: "", reminders: [], tags: [], longRunning: false,
-      blockedByEventIds: [], blocksEventIds: [], artifacts: [],
+      kind: "common", name: "comprar pão", status: null, priority: "medium",
+      startDate: "", startTime: "", endDate: "", endTime: "", description: "", location: "", reminders: [], tags: [], longRunning: false,
+      previousEventIds: [], nextEventIds: [], artifacts: [],
     });
   });
 
   it("sem status e sem data, o corpo é só o que foi preenchido: a API põe agora e estima o fim", () => {
     expect(buildCreateEventInput({ ...emptyEventDraft(), name: "  Dentista  " }, NOW)).toEqual({
-      kind: "routine", name: "Dentista", description: "", priority: "medium",
+      kind: "common", name: "Dentista", description: "", priority: "medium",
     });
   });
 
@@ -26,6 +26,13 @@ describe("emptyEventDraft e buildCreateEventInput", () => {
     expect(body).toEqual({
       kind: "training", name: "Treino", description: "", priority: "medium", status: "todo",
       startedAt: "2026-11-14T21:30:00.000Z", estimatedFinishAt: "2026-11-14T22:20:00.000Z",
+    });
+  });
+
+  it("o local só entra no corpo da criação quando foi preenchido, sem espaços nas pontas", () => {
+    expect(buildCreateEventInput(emptyEventDraft("Dentista"), NOW)).not.toHaveProperty("location");
+    expect(buildCreateEventInput({ ...emptyEventDraft("Dentista"), location: "  Clínica Sorriso, São Paulo " }, NOW)).toMatchObject({
+      location: "Clínica Sorriso, São Paulo",
     });
   });
 
@@ -75,10 +82,10 @@ describe("draftFromEvent", () => {
     expect(draft).toMatchObject({ startDate: "2026-11-15", startTime: "" });
   });
 
-  it("lê os bloqueios nos dois sentidos", () => {
-    const draft = draftFromEvent(training({ blockedByEventIds: ["ev-2"], blocksEventIds: ["ev-3"] }));
+  it("lê a sequência nos dois lados", () => {
+    const draft = draftFromEvent(training({ previousEventIds: ["ev-2"], nextEventIds: ["ev-3"] }));
 
-    expect(draft).toMatchObject({ blockedByEventIds: ["ev-2"], blocksEventIds: ["ev-3"] });
+    expect(draft).toMatchObject({ previousEventIds: ["ev-2"], nextEventIds: ["ev-3"] });
   });
 
   it("um evento de referência sem data e sem status tem os campos vazios e o status nulo", () => {
@@ -203,13 +210,17 @@ describe("buildEventPatch", () => {
     expect(buildEventPatch(event, draftFromEvent(event), NOW)).toBeNull();
   });
 
-  it("bloqueios: manda a lista completa de cada sentido, e só quando ela mudou", () => {
-    const event = training({ blockedByEventIds: ["ev-2"], blocksEventIds: [] });
+  it("sequência: manda a lista completa de cada lado, e só quando ela mudou", () => {
+    const event = training({ previousEventIds: ["ev-2"], nextEventIds: [] });
 
-    expect(buildEventPatch(event, { ...draftFromEvent(event), blockedByEventIds: ["ev-2", "ev-3"], blocksEventIds: ["ev-4"] }, NOW)).toEqual({
+    expect(buildEventPatch(event, { ...draftFromEvent(event), previousEventIds: ["ev-2", "ev-3"], nextEventIds: ["ev-4"] }, NOW)).toEqual({
       expectedRevision: 3,
-      blockedByEventIds: ["ev-2", "ev-3"],
-      blocksEventIds: ["ev-4"],
+      previousEventIds: ["ev-2", "ev-3"],
+      nextEventIds: ["ev-4"],
+    });
+    expect(buildEventPatch(event, { ...draftFromEvent(event), nextEventIds: ["ev-4"] }, NOW)).toEqual({
+      expectedRevision: 3,
+      nextEventIds: ["ev-4"],
     });
     expect(buildEventPatch(event, draftFromEvent(event), NOW)).toBeNull();
   });

@@ -73,14 +73,6 @@ export function cardDurationLabel(card: EventCardDto): string | null {
   return rest ? `${hours}h${String(rest).padStart(2, "0")}` : `${hours}h`;
 }
 
-/** "Espera por 1 evento" ou "Espera por 2 eventos", pela contagem de bloqueadores de um evento em espera. */
-export function cardBlockedLabel(card: EventCardDto): string | null {
-  if (card.status !== "inHold") return null;
-  const count = card.blockedByEventIds.length;
-  if (count === 0) return null;
-  return `Espera por ${count} ${count === 1 ? "evento" : "eventos"}`;
-}
-
 /** A regra da serie em texto: "Todo dia, 18:00", "Seg, qua e sex, 18:30". */
 export function recurrenceRuleLabel(rule: RecurrenceRule): string {
   return capitalize(`${ruleDaysLabel(rule)}, ${rule.timeOfDay}`);

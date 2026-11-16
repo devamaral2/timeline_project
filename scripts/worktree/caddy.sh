@@ -4,8 +4,13 @@
 # .env.local de cada uma).
 # Sempre escreve na raiz da principal, mesmo quando chamado de uma secundaria.
 #
+# O alias <nome>.braid.local sai em HTTPS (CADDY_HTTPS_PORT, 8443) com a CA local
+# do Caddy, e tambem em HTTP (CADDY_PORT, 8080). Os *.localhost ficam so em HTTP:
+# o navegador ja os trata como origem segura.
+#
 # Uso: bash scripts/worktree/caddy.sh sync     # regenera e recarrega o Caddy
 #      bash scripts/worktree/caddy.sh status   # mostra quais portas respondem
+#      bash scripts/worktree/caddy.sh trust    # confia na CA local (uma vez por maquina)
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -13,6 +18,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/lib.sh"
 
 CADDY_PORT="${CADDY_PORT:-8080}"
+CADDY_HTTPS_PORT="${CADDY_HTTPS_PORT:-8443}"
 MAIN_ROOT="$(main_worktree_root)"
 TEMPLATE="$MAIN_ROOT/Caddyfile.tmpl"
 OUTPUT="$MAIN_ROOT/Caddyfile"
@@ -93,6 +99,7 @@ render_sites() {
     fi
     printf '# %s (%s)\n' "$slug" "$path"
     # Alias curto do app: <slug>.braid.local (resolvido via /etc/hosts por hosts.sh).
+    printf 'https://%s.braid.local:%s {\n\ttls internal\n\treverse_proxy 127.0.0.1:%s\n}\n' "$slug" "$CADDY_HTTPS_PORT" "$web"
     printf 'http://%s.braid.local:%s {\n\treverse_proxy 127.0.0.1:%s\n}\n' "$slug" "$CADDY_PORT" "$web"
     for svc in web api auth; do
       case "$svc" in web) port="$web" ;; api) port="$api" ;; auth) port="$auth" ;; esac
@@ -151,12 +158,30 @@ cmd_status() {
   while IFS='|' read -r slug path web api auth pg state; do
     printf '%-22s %-12s %-12s %-12s %s\n' "$slug" \
       "$(port_state "$web")" "$(port_state "$api")" "$(port_state "$auth")" \
-      "$([ "$state" = "nao-provisionada" ] && echo "(nao provisionada)" || echo "http://${slug}.braid.local:${CADDY_PORT}")"
+      "$([ "$state" = "nao-provisionada" ] && echo "(nao provisionada)" || echo "https://${slug}.braid.local:${CADDY_HTTPS_PORT}")"
   done <<<"$(list_worktrees)"
+  ca_trusted || printf '\nA CA local do Caddy ainda nao e confiavel nesta maquina: rode `pnpm caddy:trust`.\n'
+}
+
+# O sistema confia na CA local? Sem isso o navegador mostra aviso de certificado no <nome>.braid.local.
+ca_trusted() {
+  local root
+  root="$(caddy_root_cert)"
+  [ -f "$root" ] && command -v openssl >/dev/null 2>&1 && openssl verify "$root" >/dev/null 2>&1
+}
+
+# Instala a CA local do Caddy no sistema e nos navegadores (pede sudo). Uma vez por maquina.
+cmd_trust() {
+  command -v caddy >/dev/null 2>&1 || { echo "caddy nao esta instalado." >&2; exit 1; }
+  curl -fsS -o /dev/null --max-time 2 http://localhost:2019/config/ \
+    || { echo "Caddy nao esta rodando (admin :2019); suba com 'systemctl --user start timeline-caddy'." >&2; exit 1; }
+  caddy trust --address localhost:2019
+  echo "CA local instalada. Reinicie o navegador para ele passar a confiar em https://<nome>.braid.local:${CADDY_HTTPS_PORT}."
 }
 
 case "${1:-}" in
   sync) cmd_sync ;;
   status) cmd_status ;;
-  *) echo "Uso: $0 sync|status" >&2; exit 1 ;;
+  trust) cmd_trust ;;
+  *) echo "Uso: $0 sync|status|trust" >&2; exit 1 ;;
 esac

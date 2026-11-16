@@ -5,6 +5,7 @@ import type {
   EntityBatchWriter,
   EventCardQuery,
   EventRepository,
+  EventRequestLinkQuery,
   IdempotencyStore,
   RecurrenceRepository,
   ScopedSqlQuery,
@@ -18,6 +19,7 @@ import { PostgresWorkoutCatalog } from "./artifacts/postgres-workout.catalog";
 import { PostgresArtifactEventLinkQuery } from "./artifacts/queries/postgres-artifact-event-link.query";
 import { PostgresArtifactRepository } from "./artifacts/repositories/postgres-artifact.repository";
 import { PostgresEventCardQuery } from "./events/queries/postgres-event-card.query";
+import { PostgresEventRequestLinkQuery } from "./events/queries/postgres-event-request-link.query";
 import { PostgresEventRepository } from "./events/repositories/postgres-event.repository";
 import { PostgresTagRepository } from "./events/repositories/postgres-tag.repository";
 import { PostgresIdempotencyStore } from "./idempotency/postgres-idempotency.store";
@@ -34,6 +36,7 @@ import { PostgresRecurrenceRepository } from "./recurrences/repositories/postgre
 export const DATABASE = "DATABASE";
 export const EVENT_REPOSITORY = "EVENT_REPOSITORY";
 export const EVENT_CARD_QUERY = "EVENT_CARD_QUERY";
+export const EVENT_REQUEST_LINK_QUERY = "EVENT_REQUEST_LINK_QUERY";
 export const TAG_REPOSITORY = "TAG_REPOSITORY";
 export const ARTIFACT_REPOSITORY = "ARTIFACT_REPOSITORY";
 export const ARTIFACT_EVENT_LINK_QUERY = "ARTIFACT_EVENT_LINK_QUERY";
@@ -64,6 +67,11 @@ function requireDatabaseUrl(): string {
       provide: EVENT_CARD_QUERY,
       inject: [DATABASE],
       useFactory: (database: PostgresDatabase): EventCardQuery => new PostgresEventCardQuery(database.db),
+    },
+    {
+      provide: EVENT_REQUEST_LINK_QUERY,
+      inject: [DATABASE],
+      useFactory: (database: PostgresDatabase): EventRequestLinkQuery => new PostgresEventRequestLinkQuery(database.db),
     },
     {
       provide: TAG_REPOSITORY,
@@ -112,6 +120,7 @@ function requireDatabaseUrl(): string {
     DATABASE,
     EVENT_REPOSITORY,
     EVENT_CARD_QUERY,
+    EVENT_REQUEST_LINK_QUERY,
     TAG_REPOSITORY,
     ARTIFACT_REPOSITORY,
     ARTIFACT_EVENT_LINK_QUERY,

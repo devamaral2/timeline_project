@@ -1,8 +1,7 @@
 import type { EventDto, RequestDto } from "@repo/contracts";
+import { Bot } from "lucide-react";
 import { EventKindMark } from "@/components/events/event-kind-mark";
-import { EventPriorityMark, eventPriorityLabels } from "@/components/events/event-priority-mark";
 import { EventStatusGlyph, eventStatusName } from "@/components/events/event-status-glyph";
-import { stepProgress, stepProgressLabel } from "@/lib/events/agent-request-model";
 import styles from "./event-detail.module.css";
 
 interface AgentEventHeaderProps {
@@ -11,8 +10,10 @@ interface AgentEventHeaderProps {
 }
 
 /**
- * O topo do evento de agente: o código do tipo, o título, o status do agente, a prioridade (só leitura) e
- * "N de M passos". Não há lápis nem troca de status: quem executa é o agente.
+ * O topo do evento de agente: o código do tipo, o título e o status do agente,
+ * solto na linha (sem pílula), com o robô na ponta direita como assinatura, igual
+ * à linha da agenda. Prioridade e "N de M passos" não aparecem aqui (os passos
+ * têm a sua seção). Não há lápis nem troca de status: quem executa é o agente.
  */
 export function AgentEventHeader({ event, request }: AgentEventHeaderProps) {
   return (
@@ -20,15 +21,11 @@ export function AgentEventHeader({ event, request }: AgentEventHeaderProps) {
       <EventKindMark kind={event.kind} />
       <h1 className={styles.title}>{event.name}</h1>
       <div className={styles.chips}>
-        <span className={styles.chip}>
+        <span className={styles.agentStatus}>
           <span aria-hidden className={styles.glyph}><EventStatusGlyph actor="agent" status={request.status} size={16} /></span>
           {eventStatusName("agent", request.status)}
         </span>
-        <span className={styles.chip}>
-          <span aria-hidden className={styles.glyph}><EventPriorityMark priority={event.priority} /></span>
-          {eventPriorityLabels[event.priority]}
-        </span>
-        <span className={styles.chip}>{stepProgressLabel(stepProgress(request.steps))}</span>
+        <Bot className={styles.agentMark} size={20} strokeWidth={1.9} aria-hidden="true" data-agent-mark />
       </div>
     </header>
   );

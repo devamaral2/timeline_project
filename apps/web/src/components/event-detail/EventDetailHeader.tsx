@@ -1,5 +1,6 @@
 "use client";
 
+import { Bot } from "lucide-react";
 import type { AgentEventStatus, EventDto, EventPriority, HumanEventStatus } from "@repo/contracts";
 import { EventKindMark } from "@/components/events/event-kind-mark";
 import { EventPriorityMark, eventPriorityLabels } from "@/components/events/event-priority-mark";
@@ -21,31 +22,36 @@ interface EventDetailHeaderProps {
 /**
  * O topo do evento: o código do tipo, o título, e o status e a prioridade.
  * Evento de pessoa troca os dois aqui, sem entrar em edição. Evento de agente
- * só mostra: quem executa é o agente, e a API recusa a edição dele.
+ * só mostra o status, solto na linha, com o robô na ponta direita; não mostra
+ * prioridade: quem executa é o agente, e a API recusa a edição dele. O status
+ * fica no começo da linha e a prioridade na ponta direita, sem a moldura da
+ * pílula. Evento "Só agenda" (sem status) não mostra nenhum dos dois: é só um
+ * compromisso; para virar tarefa, o status entra pela edição.
  */
 export function EventDetailHeader({ event, busy, onStatusChange, onPriorityChange }: EventDetailHeaderProps) {
   return (
     <header className={styles.header}>
       <EventKindMark kind={event.kind} />
       <h1 className={styles.title}>{event.name}</h1>
+      {event.status == null ? null : (
       <div className={styles.chips}>
         {event.actor === "human" ? (
           <HumanStatus event={event} busy={busy} onChange={onStatusChange} />
-        ) : event.status ? (
-          <span className={styles.chip}>
+        ) : (
+          <span className={styles.agentStatus}>
             <span aria-hidden className={styles.glyph}><EventStatusGlyph actor="agent" status={event.status as AgentEventStatus} size={16} /></span>
             {eventStatusName("agent", event.status as AgentEventStatus)}
           </span>
-        ) : null}
+        )}
         {event.actor === "human" ? (
-          <PriorityChoice event={event} busy={busy} onChange={onPriorityChange} />
+          <div className={styles.priority}>
+            <PriorityChoice event={event} busy={busy} onChange={onPriorityChange} />
+          </div>
         ) : (
-          <span className={styles.chip}>
-            <span aria-hidden className={styles.glyph}><EventPriorityMark priority={event.priority} /></span>
-            {eventPriorityLabels[event.priority]}
-          </span>
+          <Bot className={styles.agentMark} size={20} strokeWidth={1.9} aria-hidden="true" data-agent-mark />
         )}
       </div>
+      )}
     </header>
   );
 }

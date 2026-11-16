@@ -4,6 +4,7 @@ import { Artifact, Event } from "../../../domain";
 import { toRequestDto } from "../../../api-core/requests/request-view";
 import { PostgresEntityBatchWriter } from "../agent-batch/postgres-entity-batch-writer";
 import { PostgresDatabase } from "../database/postgres-database";
+import { PostgresEventRequestLinkQuery } from "../events/queries/postgres-event-request-link.query";
 import { createPostgresTestContext, type PostgresTestContext } from "../testing/postgres-test-context";
 import { PostgresCandidateQuery } from "./postgres-candidate.query";
 import { PostgresRequestStore } from "./postgres-request.store";
@@ -77,7 +78,7 @@ describe("PostgresRequestStore", () => {
     expect(other.created).toBe(true);
   });
 
-  test("os passos sao eventos `step` ligados ao pedido por `subtask`, com o insumo numa entrada e um job por passo", async () => {
+  test("os passos sao eventos `step` ligados ao pedido por `step`, com o insumo numa entrada e um job por passo", async () => {
     const { requestId } = await start();
     const [first, second, loop] = [newOrderedId(), newOrderedId(), newOrderedId()];
     const dispatch = {
@@ -99,7 +100,7 @@ describe("PostgresRequestStore", () => {
       { kind: "step", status: "queued", name: "Analisando o pedido", data: { agent: "fallback", expected: "one", round: 2 } },
     ]);
     expect(await rows("SELECT to_event_id, relation FROM event_event_relation WHERE from_event_id = $1 ORDER BY to_event_id", [requestId]))
-      .toEqual([first, second, loop].map((id) => ({ to_event_id: id, relation: "subtask" })));
+      .toEqual([first, second, loop].map((id) => ({ to_event_id: id, relation: "step" })));
     expect((await jobs()).slice(1)).toMatchObject([
       { kind: "request-step", event_id: first, payload: { requestId, stepId: first } },
       { kind: "request-step", event_id: second },
@@ -192,6 +193,12 @@ describe("PostgresRequestStore", () => {
 
     expect(await rows("SELECT to_event_id, relation FROM event_event_relation WHERE from_event_id = $1 ORDER BY relation", [createStep]))
       .toEqual([{ to_event_id: gone.id, relation: "deletes" }, { to_event_id: meal.id, relation: "generates" }]);
+    // O evento tambem aponta para o pedido que o criou ou o apagou, alem do passo.
+    expect(await rows("SELECT to_event_id, relation FROM event_event_relation WHERE from_event_id = $1 AND relation <> 'step' ORDER BY relation", [requestId]))
+      .toEqual([{ to_event_id: gone.id, relation: "deletes" }, { to_event_id: meal.id, relation: "generates" }]);
+    // O detalhe do evento le o pedido, nunca o passo.
+    expect(await new PostgresEventRequestLinkQuery(ctx.db).linksOf(meal.id))
+      .toMatchObject([{ requestId, relation: "generates", name: "almocei arroz e feijão" }]);
     expect(await rows("SELECT event_id, artifact_id, relation, position FROM event_artifact_relation ORDER BY relation, artifact_id")).toEqual([
       { event_id: createStep, artifact_id: food.id, relation: "creates", position: null },
       { event_id: editStep, artifact_id: food.id, relation: "deletes", position: null },

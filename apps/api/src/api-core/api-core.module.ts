@@ -1,3 +1,4 @@
+import { PLACE_REVERSE_GATEWAY, PhotonPlaceReverseGateway, type PlaceReverseGateway } from "../infrastructure/places/photon-place-search.gateway";
 import { DynamicModule, Module } from "@nestjs/common";
 import {
   ARTIFACT_REPOSITORY,
@@ -51,11 +52,13 @@ export class ApiCoreModule {
         },
         {
           provide: CreateEventUseCase,
-          inject: [EVENT_REPOSITORY, ARTIFACT_REPOSITORY, ArtifactBuilder, ENTITY_BATCH_WRITER],
+          inject: [EVENT_REPOSITORY, ARTIFACT_REPOSITORY, ArtifactBuilder, ENTITY_BATCH_WRITER, PLACE_REVERSE_GATEWAY],
           useFactory: (
             events: EventRepository, artifacts: ArtifactRepository, builder: ArtifactBuilder, writer: EntityBatchWriter,
-          ) => new CreateEventUseCase(events, artifacts, builder, writer, requestClock),
+            placeReverse: PlaceReverseGateway,
+          ) => new CreateEventUseCase(events, artifacts, builder, writer, requestClock, placeReverse),
         },
+        { provide: PLACE_REVERSE_GATEWAY, useFactory: () => new PhotonPlaceReverseGateway() },
         ...REQUEST_PROVIDERS,
       ],
       exports: [

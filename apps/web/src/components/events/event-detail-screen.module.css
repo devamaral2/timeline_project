@@ -91,7 +91,7 @@
   letter-spacing: .2px;
 }
 
-.type svg { width: 15px; height: 15px; color: var(--event-color, var(--cyan)); }
+.type svg { width: 15px; height: 15px; color: var(--muted); }
 
 .titleRow {
   display: flex;

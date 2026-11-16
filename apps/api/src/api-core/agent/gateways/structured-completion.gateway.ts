@@ -27,6 +27,14 @@ export interface StructuredCompletionResult {
   modelName: string;
   /** O que o modelo pensou antes de responder. Ausente quando nao foi pedido ou o modelo nao o expoe. */
   reasoning?: string;
+  /** Os tokens que a chamada gastou, quando o provedor os informa. */
+  usage?: TokenUsage;
+}
+
+/** Tokens gastos numa ou mais chamadas ao modelo. */
+export interface TokenUsage {
+  input: number;
+  output: number;
 }
 
 /** Uma chamada ao modelo com saida estruturada e sem ferramentas: o oposto do loop do agente. */
@@ -55,6 +63,14 @@ interface CompletionMessage {
 
 interface CompletionPayload {
   choices?: Array<{ message?: CompletionMessage }>;
+  usage?: { prompt_tokens?: unknown; completion_tokens?: unknown };
+}
+
+function usageOf(payload: CompletionPayload): TokenUsage | undefined {
+  const input = payload.usage?.prompt_tokens;
+  const output = payload.usage?.completion_tokens;
+  if (typeof input !== "number" && typeof output !== "number") return undefined;
+  return { input: typeof input === "number" ? input : 0, output: typeof output === "number" ? output : 0 };
 }
 
 /** O raciocinio como texto: o campo pronto ou, na falta dele, os blocos legiveis. */
@@ -139,7 +155,11 @@ export class OpenRouterStructuredCompletionGateway implements StructuredCompleti
       const message = payload.choices?.[0]?.message;
       if (!message?.content) throw new Error("empty content");
       const reasoning = input.reasoning ? reasoningOf(message) : undefined;
-      return { ok: true, result: { value: JSON.parse(message.content), modelName, ...(reasoning ? { reasoning } : {}) } };
+      const usage = usageOf(payload);
+      return {
+        ok: true,
+        result: { value: JSON.parse(message.content), modelName, ...(reasoning ? { reasoning } : {}), ...(usage ? { usage } : {}) },
+      };
     } catch {
       if (input.signal?.aborted) throw new AgentRunCancelledError();
       return failure(timeout.aborted ? "timeout" : "invalid");

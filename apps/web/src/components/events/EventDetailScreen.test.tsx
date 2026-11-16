@@ -17,7 +17,7 @@ function eventAt(overrides: Partial<PreviewEvent> = {}): PreviewEvent {
     notifyOffsetsMinutes: [],
     interruptions: [],
     revision: 3,
-    kind: "routine",
+    kind: "common",
     notes: [],
     ...overrides,
   };
@@ -48,7 +48,7 @@ test("mostra a composição da tela: tipo, nome, data, horário e as seções", 
   render(<EventDetailScreen event={eventAt()} backHref="/alguem" />);
 
   expect(screen.getByRole("heading", { level: 1, name: "Reunião de planejamento" })).toBeInTheDocument();
-  expect(screen.getByText("Rotina")).toBeInTheDocument();
+  expect(screen.getByText("Padrão")).toBeInTheDocument();
   expect(screen.getByText("15 abr 2026")).toBeInTheDocument();
   expect(screen.getByText("10:00")).toBeInTheDocument();
   expect(screen.getByText("11:00")).toBeInTheDocument();

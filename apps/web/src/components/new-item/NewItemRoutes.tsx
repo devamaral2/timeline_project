@@ -1,43 +1,38 @@
 "use client";
 
-import { ArrowLeft } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { useMotionRouter } from "@/components/shell/navigation-motion";
-import { type ComponentType, type ReactNode, useEffect, useState } from "react";
-import { type NewItemFormProps, NewNoteForm } from "./new-item-forms";
+import { type ReactNode, useEffect, useState } from "react";
 import type { ArtifactDto } from "@repo/contracts";
+import { ArtifactEditView } from "@/components/artifact-edit/ArtifactEditView";
+import { BackButton, DetailFrame, DetailMessage, DetailNav } from "@/components/detail/detail-parts";
+import { useMotionRouter } from "@/components/shell/navigation-motion";
 import { getArtifact } from "@/lib/api/artifacts";
-import styles from "@/components/shell/shell.module.css";
 
 /**
- * A rota de criação de nota (`/notas/nova`): o mesmo formulário do menu "Buscar e
- * criar", em tela cheia. Salvar abre a nota criada; a seta volta à lista. `?nome=`
- * preenche o título. A criação de evento tem a sua rota (`/eventos/novo`).
+ * A criação de artefato, na rota `/notas/nova`: o formulário da edição, vazio (nota de texto ou alimento).
+ * `?nome=` põe o nome. Salvar abre o artefato criado; Descartar volta à lista.
  */
-function NewItemRoute({ userId, title, listPath, Form }: { userId: string; title: string; listPath: string; Form: ComponentType<NewItemFormProps> }): ReactNode {
+export function NewNoteRoute({ userId }: { userId: string }): ReactNode {
   const router = useMotionRouter();
   const initialName = useSearchParams().get("nome") ?? undefined;
   return (
-    <main id="conteudo" className={styles.newEventPage}>
-      <div className={styles.pickerHeader}>
-        <button type="button" className={styles.pickerBack} onClick={() => router.replace(`/${userId}${listPath}`)} aria-label="Cancelar"><ArrowLeft aria-hidden /></button>
-        <h1>{title}</h1>
-      </div>
-      <Form initialName={initialName} onCreated={path => router.replace(`/${userId}${path}`)} />
-    </main>
+    <ArtifactEditView
+      initialName={initialName}
+      onSaved={(artifactId) => router.replace(`/${userId}/notas/${artifactId}`)}
+      onLeave={() => router.replace(`/${userId}/notas`)}
+    />
   );
 }
 
-export const NewNoteRoute = ({ userId }: { userId: string }) => <NewItemRoute userId={userId} title="Nova nota" listPath="/notas" Form={NewNoteForm} />;
-
 /**
- * A edição da nota de texto (`/notas/:id/editar`): carrega o artefato e monta o formulário de criar com ele.
- * Só a nota de texto se edita aqui; os outros tipos e o catálogo global voltam ao detalhe.
+ * A edição da nota de texto, na rota `/notas/:id/editar`: carrega o artefato e monta o formulário com ele.
+ * Só a nota de texto própria se edita aqui; os outros tipos e o catálogo global ficam na leitura.
  */
 export function EditNoteRoute({ userId, noteId }: { userId: string; noteId: string }): ReactNode {
   const router = useMotionRouter();
   const [note, setNote] = useState<ArtifactDto | null>(null);
   const [failed, setFailed] = useState(false);
+
   useEffect(() => {
     let cancelled = false;
     void getArtifact(noteId).then(
@@ -46,17 +41,24 @@ export function EditNoteRoute({ userId, noteId }: { userId: string; noteId: stri
     );
     return () => { cancelled = true; };
   }, [noteId]);
+
   const back = () => router.replace(`/${userId}/notas/${noteId}`);
-  return (
-    <main id="conteudo" className={styles.newEventPage}>
-      <div className={styles.pickerHeader}>
-        <button type="button" className={styles.pickerBack} onClick={back} aria-label="Cancelar"><ArrowLeft aria-hidden /></button>
-        <h1>Editar nota</h1>
-      </div>
-      {failed ? <p role="alert">Não foi possível carregar a nota. Tente novamente.</p>
-        : !note ? <p role="status">Carregando…</p>
-        : note.type !== "text" || note.global ? <p role="alert">Esta nota não se edita aqui.</p>
-        : <NewNoteForm existing={note} onCreated={path => router.replace(`/${userId}${path}`)} />}
-    </main>
-  );
+
+  function frame(children: ReactNode) {
+    return (
+      <DetailFrame
+        leadLabel="Resumo do artefato"
+        bodyLabel="Conteúdo do artefato"
+        lead={<DetailNav label="Navegação do registro" back={<BackButton onClick={back}>Voltar</BackButton>} />}
+      >
+        {children}
+      </DetailFrame>
+    );
+  }
+
+  if (failed) return frame(<DetailMessage alert>Não foi possível carregar o artefato. Tente novamente.</DetailMessage>);
+  if (!note) return frame(<DetailMessage>Carregando artefato…</DetailMessage>);
+  if (note.type !== "text" || note.global) return frame(<DetailMessage alert>Este artefato não se edita aqui.</DetailMessage>);
+
+  return <ArtifactEditView existing={note} onSaved={back} onLeave={back} />;
 }

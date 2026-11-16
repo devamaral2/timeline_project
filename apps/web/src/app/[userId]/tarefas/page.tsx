@@ -3,7 +3,7 @@ import { TasksScreen } from "@/components/tasks/TasksScreen";
 
 export const metadata: Metadata = {
   title: "Tarefas — Agente pessoal",
-  description: "Suas tarefas por status, com prazo, prioridade e subtarefas.",
+  description: "Suas tarefas por status, com prazo e prioridade.",
 };
 
 /** As tarefas carregam no cliente: a leitura exige a sessão, que só o navegador sabe renovar. */

@@ -67,17 +67,78 @@ test("the event, the edited and the new artifacts are written in one batch", asy
   expect(saved?.revision).toBe(2);
 });
 
-test("changing the parents edits the origin events in the same batch, and only them", async () => {
-  const oldParent = Event.create({ id: "old", userId: actor.userId, name: "Antigo", status: "todo", subtaskIds: ["event-1"] });
-  const newParent = Event.create({ id: "new", userId: actor.userId, name: "Novo", status: "todo" });
-  const { useCase, eventRepository, batchWriter } = setup({ events: [meeting(), oldParent, newParent] });
+test("changing the sequence writes the edges in the same batch and revises only the edited event", async () => {
+  const oldBefore = Event.create({ id: "old", userId: actor.userId, name: "Antigo", status: "todo" });
+  const newBefore = Event.create({ id: "new", userId: actor.userId, name: "Novo", status: "todo" });
+  const after = Event.create({ id: "after", userId: actor.userId, name: "Depois", status: "todo" });
+  const { useCase, eventRepository, batchWriter, database } = setup({ events: [meeting(), oldBefore, newBefore, after] });
+  database.edges.push({ fromId: "old", toId: "event-1" });
 
-  await useCase.execute({ eventId: "event-1", expectedRevision: 1, parentEventIds: ["new"] }, actor);
+  await useCase.execute({ eventId: "event-1", expectedRevision: 1, previousEventIds: ["new"], nextEventIds: ["after"] }, actor);
 
   expect(batchWriter.commits).toHaveLength(1);
-  expect(await eventRepository.findById("old")).toMatchObject({ subtaskIds: [], revision: 2 });
-  expect(await eventRepository.findById("new")).toMatchObject({ subtaskIds: ["event-1"], revision: 2 });
-  expect(await eventRepository.findById("event-1")).toMatchObject({ parentIds: ["new"], revision: 2 });
+  expect(batchWriter.commits[0]?.events.map((change) => change.op)).toEqual(["update"]);
+  expect(batchWriter.commits[0]?.sequence).toEqual([
+    { op: "add", fromId: "new", toId: "event-1" },
+    { op: "remove", fromId: "old", toId: "event-1" },
+    { op: "add", fromId: "event-1", toId: "after" },
+  ]);
+  expect(await eventRepository.findById("event-1")).toMatchObject({ previousIds: ["new"], nextIds: ["after"], revision: 2 });
+  expect(await eventRepository.findById("old")).toMatchObject({ nextIds: [], revision: 1 });
+  expect(await eventRepository.findById("new")).toMatchObject({ nextIds: ["event-1"], revision: 1 });
+  expect(await eventRepository.findById("after")).toMatchObject({ previousIds: ["event-1"], revision: 1 });
+});
+
+test("an update without the lists keeps the sequence as it is", async () => {
+  const before = Event.create({ id: "before", userId: actor.userId, name: "Antes", status: "todo" });
+  const { useCase, eventRepository, batchWriter, database } = setup({ events: [meeting(), before] });
+  database.edges.push({ fromId: "before", toId: "event-1" });
+
+  await useCase.execute({ eventId: "event-1", expectedRevision: 1, name: "Outro nome" }, actor);
+
+  expect(batchWriter.commits[0]?.sequence).toEqual([]);
+  expect(await eventRepository.findById("event-1")).toMatchObject({ previousIds: ["before"], name: "Outro nome", revision: 2 });
+});
+
+test("repeating the same sequence is not a change of the sequence", async () => {
+  const before = Event.create({ id: "before", userId: actor.userId, name: "Antes", status: "todo" });
+  const { useCase, batchWriter, database } = setup({ events: [meeting(), before] });
+  database.edges.push({ fromId: "before", toId: "event-1" });
+
+  await useCase.execute({ eventId: "event-1", expectedRevision: 1, previousEventIds: ["before"] }, actor);
+
+  expect(batchWriter.commits[0]?.sequence).toEqual([]);
+  expect(database.edges).toEqual([{ fromId: "before", toId: "event-1" }]);
+});
+
+test("an agent event can come before or after a human event, and is not revised", async () => {
+  const request = Event.create({ id: "request", userId: actor.userId, actor: "agent", kind: "request", status: "running", name: "Pedido" });
+  const { useCase, eventRepository, database } = setup({ events: [meeting(), request] });
+
+  await useCase.execute({ eventId: "event-1", expectedRevision: 1, previousEventIds: ["request"] }, actor);
+  await useCase.execute({ eventId: "event-1", expectedRevision: 2, previousEventIds: [], nextEventIds: ["request"] }, actor);
+
+  expect(database.edges).toEqual([{ fromId: "event-1", toId: "request" }]);
+  expect(await eventRepository.findById("request")).toMatchObject({ previousIds: ["event-1"], revision: 1 });
+});
+
+test("refuses a sequence that closes a cycle, and the event is not revised", async () => {
+  const other = Event.create({ id: "other", userId: actor.userId, name: "Outro", status: "todo" });
+  const { useCase, database } = setup({ events: [meeting(), other] });
+  database.edges.push({ fromId: "event-1", toId: "other" });
+
+  await expect(
+    useCase.execute({ eventId: "event-1", expectedRevision: 1, previousEventIds: ["other"] }, actor),
+  ).rejects.toThrow("Events cannot follow each other in a cycle");
+});
+
+test("refuses an event that follows itself", async () => {
+  const { useCase, batchWriter } = setup({ events: [meeting()] });
+
+  await expect(
+    useCase.execute({ eventId: "event-1", expectedRevision: 1, nextEventIds: ["event-1"] }, actor),
+  ).rejects.toThrow("An event cannot follow itself");
+  expect(batchWriter.commits).toEqual([]);
 });
 
 test("editing an occurrence detaches it from its series", async () => {
@@ -106,7 +167,7 @@ test("rejects an event that belongs to another user, before looking at the revis
 });
 
 test("rejects a stale revision before preparing or writing anything", async () => {
-  const stored = Event.rehydrate({ id: "event-1", userId: actor.userId, actor: "human", kind: "routine", name: "Reunião", startedAt, revision: 3 });
+  const stored = Event.rehydrate({ id: "event-1", userId: actor.userId, actor: "human", kind: "common", name: "Reunião", startedAt, revision: 3 });
   const { useCase, database, batchWriter } = setup({ events: [stored] });
 
   await expect(
@@ -125,7 +186,7 @@ test("writes nothing when the change is invalid", async () => {
 
   await expect(
     useCase.execute(
-      { eventId: "event-1", expectedRevision: 1, artifacts: [{ type: "text", data: { body: "nova" } }], parentEventIds: ["missing"] },
+      { eventId: "event-1", expectedRevision: 1, artifacts: [{ type: "text", data: { body: "nova" } }], previousEventIds: ["missing"] },
       actor,
     ),
   ).rejects.toThrow(EventNotFoundError);
@@ -134,24 +195,24 @@ test("writes nothing when the change is invalid", async () => {
   expect(batchWriter.commits).toEqual([]);
 });
 
-test("writes nothing when an origin event changed while the edit was being prepared", async () => {
-  const parent = Event.create({ id: "parent", userId: actor.userId, name: "Projeto", status: "todo" });
-  const kit = setup({ events: [meeting(), parent] });
+test("writes nothing, not even the sequence, when the edited event changed while it was being prepared", async () => {
+  const before = Event.create({ id: "before", userId: actor.userId, name: "Antes", status: "todo" });
+  const kit = setup({ events: [meeting(), before] });
   const findByIds = kit.eventRepository.findByIds.bind(kit.eventRepository);
-  // Outra aba edita o evento maior logo depois de ele ser lido.
+  // Outra aba edita o proprio evento logo depois de a ponta nova ser lida.
   kit.eventRepository.findByIds = async (ids) => {
     const found = await findByIds(ids);
-    const [origin] = found;
-    if (origin) await kit.eventRepository.update(origin.revise({ name: "Editado em outra aba" }), actor.userId, origin.revision);
+    const current = (await kit.eventRepository.findById("event-1")) as Event;
+    await kit.eventRepository.update(current.revise({ name: "Editado em outra aba" }), actor.userId, current.revision);
     return found;
   };
 
   await expect(
-    kit.useCase.execute({ eventId: "event-1", expectedRevision: 1, name: "Nova", parentEventIds: ["parent"] }, actor),
+    kit.useCase.execute({ eventId: "event-1", expectedRevision: 1, name: "Nova", previousEventIds: ["before"] }, actor),
   ).rejects.toThrow(EntityBatchConflictError);
 
-  expect(kit.database.events.find((event) => event.id === "event-1")).toMatchObject({ name: "Reunião", revision: 1 });
-  expect(kit.database.events.find((event) => event.id === "parent")?.subtaskIds).toEqual([]);
+  expect(kit.database.events.find((event) => event.id === "event-1")).toMatchObject({ name: "Editado em outra aba", revision: 2 });
+  expect(kit.database.edges).toEqual([]);
 });
 
 test("an agent event cannot be edited", async () => {

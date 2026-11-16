@@ -34,7 +34,8 @@
 .shell button:disabled { opacity: 1; }
 .shell a { text-decoration: none; }
 .shell svg { flex-shrink: 0; width: 20px; height: 20px; stroke-width: 1.65; }
-.shell :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+/* Os campos de digitar ficam de fora: o foco deles é o fio de 1 px do globals.css. */
+.shell :focus-visible:not(input, textarea, select) { outline: 2px solid var(--ring); outline-offset: 2px; }
 .skipLink { position: fixed; top: -80px; left: 20px; padding: 12px 20px; background: var(--card); z-index: 50; }
 .skipLink:focus { top: 12px; }
 
@@ -119,11 +120,7 @@
    cartao inteiro levava o texto secundario abaixo de 3:1. */
 .event[data-missed="true"] h3, .event[data-missed="true"] .eventDuration { color: var(--muted); }
 .event:not([data-time-position="past"]):has(.eventLink):hover { border-color: color-mix(in oklab, var(--brand) 40%, transparent); }
-.event .typeIcon { grid-column: 1; grid-row: 1 / 3; align-self: start; margin-top: 2px; width: 22px; height: 22px; color: var(--event-color); }
-.shell [data-type="routine"] { --event-color: var(--routine); }
-.shell [data-type="training"] { --event-color: var(--training); }
-.shell [data-type="meal"] { --event-color: var(--meal); }
-.shell [data-type="sleep"] { --event-color: var(--sleep); }
+.event .typeIcon { grid-column: 1; grid-row: 1 / 3; align-self: start; margin-top: 2px; width: 22px; height: 22px; color: var(--muted); }
 .event h3 { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; font-weight: 600; line-height: 1.4; letter-spacing: 0; color: var(--card-foreground); }
 .event h3 > a, .event h3 > button { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 .eventDuration { grid-column: 3; grid-row: 1 / 3; justify-self: end; align-self: center; display: inline-flex; align-items: baseline; justify-content: flex-end; gap: 3px; color: var(--card-foreground); font-family: var(--font-display); font-size: 22px; line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -142,8 +139,8 @@
 .weekday { color: var(--muted); font-size: 12px; margin-bottom: 4px; }
 .bottomNav, .bottomFade, .navScrim { display: none; }
 /* O circulo que voa entre a barra inferior e o icone de status do campo. */
-.hermesFlyer { position: fixed; z-index: 21; display: grid; place-items: center; border-radius: 50%; background: var(--brand); color: var(--background); pointer-events: none; visibility: hidden; will-change: transform; }
-.hermesFlyer svg { width: 58%; height: 58%; }
+.hermesFlyer { position: fixed; z-index: 21; display: grid; place-items: center; pointer-events: none; visibility: hidden; will-change: transform; }
+.flyerBot { font-size: 52px; }
 .sectionMenu { display: none; }
 
 /* Ações compactas da agenda. */
@@ -170,11 +167,8 @@
 .backLink { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--muted); }
 .backLink:hover { color: var(--brand-accent); }
 .backLink svg { width: 18px; height: 18px; }
-.detailType { display: inline-flex; align-items: center; gap: 8px; color: var(--meal); background: color-mix(in oklab, var(--meal) 12%, transparent); border-radius: 20px; padding: 7px 13px; font-size: 12px; }
+.detailType { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); background: var(--soft, var(--secondary)); border-radius: 20px; padding: 7px 13px; font-size: 12px; }
 .detailType svg { width: 16px; height: 16px; }
-.detailHeading[data-type="routine"] .detailType { color: var(--routine); background: color-mix(in oklab, var(--routine) 12%, transparent); }
-.detailHeading[data-type="training"] .detailType { color: var(--training); background: color-mix(in oklab, var(--training) 12%, transparent); }
-.detailHeading[data-type="sleep"] .detailType { color: var(--sleep); background: color-mix(in oklab, var(--sleep) 12%, transparent); }
 .detailHeading h1 { font-size: 32px; font-weight: 500; line-height: 1.2; letter-spacing: -.02em; margin-top: 12px; }
 .detailHeading > p { margin-top: 9px; font-size: 13px; color: var(--muted); }
 .detailMeta { display: flex; flex-wrap: wrap; gap: 26px; margin-top: 26px; color: var(--muted); font-size: 12px; }
@@ -266,7 +260,7 @@
 .entityHeading h3 { margin: 0; font-size: 20px; font-weight: 500; }
 .entityHeading p { margin: 3px 0 0; font-size: 12px; color: var(--muted); }
 .entityNameInput { width: 100%; min-width: 0; height: 48px; padding: 0 !important; border: 0 !important; border-radius: 8px !important; background: transparent !important; box-shadow: none !important; color: var(--ink); font-family: var(--font-display); font-size: 30px !important; letter-spacing: -.01em; }
-.entityNameInput:focus-visible { outline: 2px solid var(--ring) !important; outline-offset: 4px; }
+.entityNameInput:focus-visible { outline: 1px solid var(--brand) !important; outline-offset: 4px; }
 .entityEventHeading { display: grid; }
 .entityEventTypeName { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .entityEventTitleRow { display: flex; align-items: center; gap: 14px; min-width: 0; }
@@ -276,13 +270,10 @@
 .entityTypeButton[aria-expanded="true"] > svg:last-child { transform: rotate(180deg); }
 .entityTypeButton:focus-visible { outline: 0; }
 .entityTypeButton:focus-visible .entityTypeIcon { box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--ring); }
-.entityTypeIcon { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 13px; background: transparent; color: var(--routine); flex-shrink: 0; }
+.entityTypeIcon { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 13px; background: transparent; color: var(--muted); flex-shrink: 0; }
 .entityTypeIcon svg { width: 20px; height: 20px; }
-.entityTypeIcon[data-event-type="meal"] { color: var(--meal); }
-.entityTypeIcon[data-event-type="training"] { color: var(--training); }
-.entityTypeIcon[data-event-type="sleep"] { color: var(--sleep); }
 .entityEventNameInput { flex: 1; width: 100%; min-width: 0; height: 48px; padding: 0 !important; border: 0 !important; border-radius: 8px !important; background: transparent !important; box-shadow: none !important; color: var(--ink); font-family: var(--font-display); font-size: 30px !important; letter-spacing: -.01em; }
-.entityEventNameInput:focus-visible { outline: 2px solid var(--ring) !important; outline-offset: 4px; }
+.entityEventNameInput:focus-visible { outline: 1px solid var(--brand) !important; outline-offset: 4px; }
 .pickerView { display: flex; flex-direction: column; min-height: 280px; padding: 8px 0 2px; }
 .pickerHeader { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
 .pickerBack { display: grid; place-items: center; width: 44px; height: 44px; margin-left: -12px; flex-shrink: 0; color: var(--muted); border-radius: 50%; cursor: pointer; }
@@ -307,7 +298,7 @@
 .eventDateTimeLabel { flex: 1; color: var(--muted); font-size: 14px; line-height: 20px; }
 .eventDateControl { position: relative; display: flex; align-items: center; width: 150px; height: 44px; padding: 0 4px 0 14px; border: 1px solid var(--line); border-radius: 999px; }
 .eventDateControl input, .eventTimeInput { width: 100%; min-width: 0; padding: 0 !important; border: 0 !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important; color: var(--ink); font: inherit; font-size: 14px !important; font-weight: 500; }
-.eventDateControl:focus-within, .eventTimeInput:focus-visible { border-color: var(--ring) !important; }
+.eventDateControl:focus-within, .shell .eventTimeInput:focus-visible { border-color: var(--brand) !important; }
 .eventDateControl input:focus-visible, .eventTimeInput:focus-visible { outline: 0; }
 .eventDateControl button { display: grid; place-items: center; width: 36px; height: 36px; flex-shrink: 0; border-radius: 50%; color: var(--muted); cursor: pointer; }
 .eventDateControl button:hover, .eventDateControl button[aria-expanded="true"] { color: var(--ink); }
@@ -327,7 +318,7 @@
 .eventDateGrid button[aria-pressed="true"] { background: var(--primary); color: var(--primary-foreground); font-weight: 600; }
 .entityForm label { display: grid; min-width: 0; gap: 10px; font-family: var(--font-mono); font-size: 12px; line-height: 16px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
 .entityForm label input, .entityForm select, .entityForm textarea { width: 100%; min-width: 0; padding: 14px 16px; border: 1px solid var(--line); border-radius: 18px; background: transparent; box-shadow: none; color: var(--ink); font-family: var(--font-sans); font-size: 15px; line-height: 22px; letter-spacing: 0; text-transform: none; transition: border-color 140ms; }
-.entityForm label input:focus-visible, .entityForm select:focus-visible, .entityForm textarea:focus-visible, .quickCreate input:focus-visible, .quickCreate select:focus-visible { outline: 2px solid var(--ring); outline-offset: 1px; border-color: var(--ring); }
+.entityForm label input:focus-visible, .entityForm select:focus-visible, .entityForm textarea:focus-visible, .quickCreate input:focus-visible, .quickCreate select:focus-visible { outline: 0; border-color: var(--brand); }
 .entityForm .entityControl { min-height: 56px; }
 .entityForm textarea.entityControl { min-height: 96px; resize: vertical; }
 .entityForm textarea { resize: vertical; min-height: 96px; }
@@ -354,7 +345,7 @@
 .entityChips button[aria-pressed="true"] { border-color: var(--primary); background: var(--primary); color: var(--primary-foreground); }
 .offsetAdd { display: flex; gap: 8px; }
 .offsetAdd input { flex: 1; min-width: 0; height: 44px; padding: 0 16px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--ink); font: inherit; font-size: 14px; }
-.offsetAdd input:focus-visible { outline: 2px solid var(--ring); outline-offset: 1px; border-color: var(--ring); }
+.offsetAdd input:focus-visible { outline: 0; border-color: var(--brand); }
 .offsetAdd button { display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0 16px 0 12px; border: 1px dashed var(--input); border-radius: 999px; color: var(--muted); font-size: 14px; font-weight: 500; cursor: pointer; }
 .offsetAdd button:hover { border-style: solid; color: var(--ink); }
 .offsetAdd svg { width: 16px; height: 16px; }
@@ -386,41 +377,49 @@
   .filters button { padding: 7px 17px; font-size: 12px; }
   .toolbar > .iconButton { width: 30px; }
   .dayGroup + .dayGroup { margin-top: 30px; }
-  /* A barra inferior flutua: uma pilula com as tres telas e, na ponta, o
-     circulo do Hermes. A tela atual abre com o nome, preenchida em `--primary`;
-     atras da barra o conteudo se apaga no chao. */
+  /* A barra inferior flutua em duas pecas: a dock com as tres telas e, separado
+     por um respiro de 10 px, o circulo do chat (66 px, a altura da dock). Atras
+     da barra o conteudo se apaga no chao. */
   .bottomFade { display: block; position: fixed; z-index: 19; left: 0; right: 0; bottom: 0; height: calc(140px + env(safe-area-inset-bottom)); background: linear-gradient(to bottom, transparent, var(--background) 58%); pointer-events: none; }
-  .bottomNav { display: block; position: fixed; z-index: 20; left: 16px; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); border: 1px solid var(--line); border-radius: 33px; background: var(--card); --nav-pill: var(--primary); --nav-pill-ink: var(--primary-foreground); transition: border-radius 300ms cubic-bezier(.5,0,.2,1) 50ms, box-shadow 300ms; }
-  /* Com o menu de opcoes aberto a barra cresce para cima (`section-menu.tsx`) e passa a flutuar. */
-  .bottomNav[data-menu-open] { border-radius: 30px; box-shadow: var(--shadow-float); transition: border-radius 500ms cubic-bezier(.22,1,.36,1), box-shadow 400ms; }
+  .bottomNav { display: block; position: fixed; z-index: 20; left: 16px; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); --nav-pill: var(--primary); --nav-pill-ink: var(--primary-foreground); }
+  .navDock { margin-right: 76px; border: 1px solid var(--line); border-radius: 33px; background: var(--card); transition: margin-right 300ms cubic-bezier(.5,0,.2,1) 50ms, border-radius 300ms cubic-bezier(.5,0,.2,1) 50ms, box-shadow 300ms; }
+  /* Com o menu de opcoes aberto a dock cresce para cima (`section-menu.tsx`),
+     passa a flutuar e avanca por baixo do circulo do chat, para o menu ter a
+     largura toda. As abas nao saem do lugar: o que a dock ganha a direita, elas
+     devolvem em margem, no mesmo tempo e na mesma curva. */
+  .bottomNav[data-menu-open] .navDock { margin-right: 0; border-radius: 30px; box-shadow: var(--shadow-float); transition: margin-right 500ms cubic-bezier(.22,1,.36,1), border-radius 500ms cubic-bezier(.22,1,.36,1), box-shadow 400ms; }
   .navScrim { display: block; position: fixed; z-index: 19; inset: 0; width: 100%; height: 100%; padding: 0; border: 0; background: var(--scrim); opacity: 0; pointer-events: none; cursor: default; transition: opacity 220ms ease-in; }
   .navScrim[data-open] { opacity: 1; pointer-events: auto; transition: opacity 340ms ease-out; }
-  .navTabs { position: relative; display: flex; align-items: center; gap: 4px; padding: 6px; }
+  .navTabs { position: relative; display: flex; align-items: center; gap: 4px; padding: 6px; transition: margin-right 300ms cubic-bezier(.5,0,.2,1) 50ms; }
+  .bottomNav[data-menu-open] .navTabs { margin-right: 76px; transition: margin-right 500ms cubic-bezier(.22,1,.36,1); }
   /* A pilula da tela atual e uma so e desliza ate a secao escolhida
-     (`--nav-index`, 0 a 2). As tres secoes sao iguais e dividem o que sobra do
-     circulo do Hermes (52) e dos respiros (76 ao todo). Ao trocar, a borda do
-     lado do destino sai na frente (`data-dir`) e a pilula estica ate la. */
-  .navTabs::before { content: ""; position: absolute; top: 6px; bottom: 6px; left: calc(6px + var(--nav-index, 1) * ((100% - 76px) / 3 + 4px)); right: calc(62px + (2 - var(--nav-index, 1)) * ((100% - 76px) / 3 + 4px)); border-radius: 26px; background: var(--nav-pill); transition: left 420ms var(--ease-out), right 420ms var(--ease-out), background-color 300ms, opacity 200ms; }
+     (`--nav-index`, 0 a 2). As tres secoes sao iguais e dividem a dock menos os
+     respiros (20 ao todo). Ao trocar, a borda do lado do destino sai na frente
+     (`data-dir`) e a pilula estica ate la. */
+  .navTabs::before { content: ""; position: absolute; top: 6px; bottom: 6px; left: calc(6px + var(--nav-index, 1) * ((100% - 20px) / 3 + 4px)); right: calc(6px + (2 - var(--nav-index, 1)) * ((100% - 20px) / 3 + 4px)); border-radius: 26px; background: var(--nav-pill); transition: left 420ms var(--ease-out), right 420ms var(--ease-out), background-color 300ms, opacity 200ms; }
   .bottomNav[data-dir="r"] .navTabs::before { transition: right 260ms var(--ease-out), left 460ms var(--ease-out), background-color 300ms, opacity 200ms; }
   .bottomNav[data-dir="l"] .navTabs::before { transition: left 260ms var(--ease-out), right 460ms var(--ease-out), background-color 300ms, opacity 200ms; }
   /* So icones: o nome de cada tela fica no `aria-label`. */
   .navTabs > button, .navTabs > a { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; min-width: 0; height: 52px; border-radius: 26px; color: var(--muted); cursor: pointer; transition: color 250ms; }
   .navTabs > [aria-current="page"] { color: var(--nav-pill-ink); }
-  .navTabs svg { width: 24px; height: 24px; stroke-width: 1.75; }
-  .navTabs > :not(.commandButton) > svg { transform: scale(.9); transition: transform 500ms cubic-bezier(.34,1.56,.64,1); }
+  .navTabs > a > svg, .navTabs > button > svg { width: 24px; height: 24px; stroke-width: 1.75; }
+  .navTabs > * > svg { transform: scale(.9); transition: transform 500ms cubic-bezier(.34,1.56,.64,1); }
   .navTabs > [aria-current="page"] > svg { transform: none; }
-  .navTabs > :not(.commandButton):active > svg { transform: scale(.8); transition-duration: 100ms; }
+  .navTabs > :active > svg { transform: scale(.8); transition-duration: 100ms; }
   .bottomNav[data-menu-open] .navTabs > [aria-current="page"] > svg { transform: scale(.9); }
-  /* As setinhas ao lado do icone da tela atual avisam que tocar de novo abre o menu. */
-  .navHint { display: flex; width: 0; margin-left: 0; overflow: hidden; opacity: 0; transition: width 300ms var(--ease-out), margin-left 300ms var(--ease-out), opacity 200ms; }
-  .navTabs .navHint svg { width: 12px; height: 12px; stroke-width: 2.2; }
-  .navTabs > [aria-current="page"] .navHint { width: 12px; margin-left: 4px; opacity: .6; }
-  .bottomNav[data-menu-open] .navTabs > [aria-current="page"] .navHint { opacity: 1; }
   /* O ponto: ha busca ou filtro ativo na tela atual. */
   .navDot { position: absolute; top: 9px; left: calc(50% + 1px); width: 7px; height: 7px; border-radius: 50%; background: var(--brand-accent); box-shadow: 0 0 0 2px var(--nav-pill); transform: scale(0); transition: transform 350ms cubic-bezier(.34,1.56,.64,1); }
   .navTabs > [aria-current="page"] .navDot[data-on] { transform: none; }
-  .navTabs > .commandButton { flex: none; width: 52px; height: 52px; border-radius: 50%; background: var(--brand); color: var(--background); }
-  .navTabs > .commandButton svg { width: 30px; height: 30px; }
+  /* O circulo do chat: um aro da cor da dock em volta do robo. Com o menu
+     aberto a dock passa por baixo dele e o aro some. */
+  .commandButton { position: absolute; z-index: 1; right: 0; bottom: 0; display: grid; place-items: center; width: 66px; height: 66px; padding: 0; border: 1px solid var(--line); border-radius: 50%; background: var(--card); cursor: pointer; transition: border-color 300ms, background-color 300ms; }
+  .bottomNav[data-menu-open] .commandButton { border-color: transparent; background: transparent; }
+  .commandCore { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; color: var(--ink); transition: transform 200ms var(--ease-out); }
+  .commandButton:active .commandCore { transform: scale(.92); }
+  .commandCore > svg { width: 24px; height: 24px; stroke-width: 1.75; }
+  /* O círculo de 52 px do robô vem do componente, pelo `font-size`
+     (`hermes-bot.tsx`). */
+  .commandBot { font-size: 52px; }
   /* A cor do modo de visualização pinta a pílula da aba atual, nas três telas
      (`data-list-mode` vem do `useViewMode`). As cores e as
      tintas do texto são tokens do web (`globals.css`). */
@@ -447,7 +446,7 @@
 .manualPanel > .hubSearch:last-child { margin-top: 16px; }
 .sectionMenuHeading, .sheetHandle { flex-shrink: 0; }
 .hubSearch { display: flex; align-items: center; gap: 10px; border: 1px solid var(--control-border); padding: 8px 10px 8px 14px; border-radius: 14px; background: var(--control-bg); box-shadow: var(--control-shadow); transition: border-color 140ms, box-shadow 140ms; }
-.hubSearch:focus-within { border-color: var(--cyan); box-shadow: 0 0 0 1px var(--cyan); }
+.hubSearch:focus-within { border-color: var(--brand); }
 .hubSearch input { width: 100%; min-width: 0; border: 0; background: transparent; padding: 8px 0; font: inherit; font-size: 16px; color: var(--ink); }
 .hubSearch input:focus-visible { outline: 0; }
 
@@ -637,23 +636,21 @@ a.chatEntityRow:hover .chatEntityName { text-decoration: underline; text-underli
   .sectionMenu[data-hub-view="chat"] .assistantWelcome h2 { font-size: 38px; line-height: 42px; }
   .shell:has(.sectionMenu[open]) .bottomFade { display: none; }
   .bottomNav[data-hub-open] .navTabs > a, .bottomNav[data-hub-open] .navTabs > button { border: 1px solid transparent; }
-  .bottomNav[data-hub-open] .navHint, .bottomNav[data-hub-open] .navDot { display: none; }
+  .bottomNav[data-hub-open] .navDot { display: none; }
   /* Com o chat aberto nenhuma secao e preenchida: a pilula se apaga e a de onde se veio fica so contornada. */
   .bottomNav[data-hub-open] .navTabs::before { opacity: 0; }
   .bottomNav[data-hub-open] .navTabs > [aria-current="page"] { border-color: var(--input); color: var(--ink); }
   .bottomNav[data-hub-open] .navTabs svg { width: 20px; height: 20px; }
-  /* Com o chat aberto, o lugar do botao do Hermes e do X que fecha o painel. */
-  .navTabs > .commandButton[data-close] { flex: none; width: 52px; padding: 0; border: 0; background: var(--muted); color: var(--background); }
-  .navTabs > .commandButton[data-close] svg { width: 24px; height: 24px; }
+  /* Com o chat aberto, o lugar do robo e do X que fecha o painel (`.commandCore`), dentro do mesmo aro. */
 
   /* O voo do botao do Hermes (`hermes-flight.ts`): o circulo sai da barra e
      pousa como o icone de status do campo, que so aparece no pouso; o painel
      entra por baixo dele e o X surge no lugar que o botao deixou. Na volta, o
      painel se apaga, o X some e o circulo retorna para a barra. */
-  .bottomNav[data-flight] .navTabs > a, .bottomNav[data-flight] .navTabs > button:not(.commandButton) { transition: background-color 200ms, color 200ms, border-color 200ms; }
-  .bottomNav[data-flight="out"] .navTabs > a, .bottomNav[data-flight="out"] .navTabs > button:not(.commandButton) { transition-duration: 100ms; }
-  .bottomNav[data-flight="out"] .navTabs > .commandButton { animation: closeEnter 120ms 70ms cubic-bezier(.2,.7,.2,1) backwards; }
-  .bottomNav[data-flight="back"] .navTabs > .commandButton { animation: flightAway 200ms forwards; }
+  .bottomNav[data-flight] .navTabs > a, .bottomNav[data-flight] .navTabs > button { transition: background-color 200ms, color 200ms, border-color 200ms; }
+  .bottomNav[data-flight="out"] .navTabs > a, .bottomNav[data-flight="out"] .navTabs > button { transition-duration: 100ms; }
+  .bottomNav[data-flight="out"] .commandCore { animation: closeEnter 120ms 70ms cubic-bezier(.2,.7,.2,1) backwards; }
+  .bottomNav[data-flight="back"] .commandCore { animation: flightAway 200ms forwards; }
   .sectionMenu.sectionMenu[data-hub-view][data-flight="out"] { animation: flightCome 137ms 73ms backwards; }
   .sectionMenu.sectionMenu[data-hub-view][data-flight="back"] { animation: flightAway 234ms forwards; }
   .sectionMenu[data-flight] .chatField [data-hermes-mark] { visibility: hidden; }
@@ -662,7 +659,7 @@ a.chatEntityRow:hover .chatEntityName { text-decoration: underline; text-underli
      registro; ao sair, ela volta e o botao pousa de novo na ponta. */
   .bottomNav[data-flight="dock"] { animation: flightAway 126ms forwards; pointer-events: none; }
   .bottomNav[data-flight="undock"] { animation: flightCome 216ms 144ms backwards; }
-  .bottomNav[data-flight="dock"] .navTabs > .commandButton, .bottomNav[data-flight="undock"] .navTabs > .commandButton { visibility: hidden; }
+  .bottomNav[data-flight="dock"] .commandCore, .bottomNav[data-flight="undock"] .commandCore { visibility: hidden; }
 
   .shell:has(:is(.detailMain, [data-detail])) .header, .shell:has(:is(.detailMain, [data-detail])) .bottomNav:not([data-flight="dock"]), .shell:has(:is(.detailMain, [data-detail])) .bottomFade { display: none; }
   .detailMain { padding: 20px 25px 36px; }
@@ -758,7 +755,7 @@ a.chatEntityRow:hover .chatEntityName { text-decoration: underline; text-underli
 
 @keyframes flightCome { from { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
-  .bottomNav, .navScrim, .navTabs::before, .navTabs > * > svg, .navHint, .navDot { transition-duration: .01ms !important; transition-delay: 0s !important; }
+  .bottomNav, .navScrim, .navTabs::before, .navTabs > * > svg, .navDot { transition-duration: .01ms !important; transition-delay: 0s !important; }
 }
 @keyframes flightAway { to { opacity: 0; } }
 @keyframes flightRise { from { transform: translateY(14px); } }

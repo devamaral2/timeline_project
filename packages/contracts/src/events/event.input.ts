@@ -1,4 +1,5 @@
 import type { ArtifactDataInput, CreateArtifactInput } from "../artifacts/artifact.input";
+import type { GeoPointInput } from "./place-suggestion.dto";
 import type { EventArtifactRelation, EventPriority, HumanEventKind, HumanEventStatus } from "./event-types";
 import type { NotificationOffsetMinutes } from "./notification-offset-minutes";
 
@@ -29,22 +30,17 @@ export type UpdateEventArtifactInput =
 interface EventFields {
   name?: string;
   description?: string;
+  /** Onde acontece; vazio apaga. Evento de pessoa apenas. */
+  location?: string;
   priority?: EventPriority;
   notifyOffsetsMinutes?: NotificationOffsetMinutes[];
   tags?: string[];
   /** Evento longo: fica fora da agenda, tem sempre status e nao se repete. */
   longRunning?: boolean;
-  /** Os eventos em que este se desdobra: a lista completa. */
-  subtaskEventIds?: string[];
-  /** Os eventos que este libera ao terminar: a lista completa. */
-  blocksEventIds?: string[];
-  /**
-   * Os eventos maiores de que este e subtarefa: a lista completa. A relacao
-   * pertence ao evento maior, entao entrar ou sair daqui conta como edita-lo.
-   */
-  parentEventIds?: string[];
-  /** Os eventos que precisam terminar antes deste: a lista completa. Conta como editar cada um deles. */
-  blockedByEventIds?: string[];
+  /** Os eventos de que este se segue ("segue-se de"): a lista completa. Qualquer evento, de pessoa ou de agente. */
+  previousEventIds?: string[];
+  /** Os eventos que se seguem a este ("da sequencia a"): a lista completa. Nenhum evento e revisado por isso. */
+  nextEventIds?: string[];
 }
 
 export interface CreateEventInput extends EventFields {
@@ -58,6 +54,11 @@ export interface CreateEventInput extends EventFields {
   estimatedFinishAt?: string;
   /** Conclusao real. */
   finishedAt?: string;
+  /**
+   * Onde a pessoa esta ao criar. Sem `location`, a API usa o endereco destas coordenadas como local. Nao e
+   * guardado no evento.
+   */
+  coordinates?: GeoPointInput;
   /** Artefatos novos, criados junto com o evento, na ordem em que aparecem. */
   artifacts?: CreateEventArtifactInput[];
   /** Artefatos que ja existem e passam a aparecer no evento, depois dos novos. */

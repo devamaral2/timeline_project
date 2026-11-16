@@ -86,7 +86,7 @@ function requestReads() {
   return api.calls.filter((call) => call.method === "GET" && call.pathname === `/api/requests/${ID}`).length;
 }
 
-test("um evento de agente abre na forma do agente: tipo, título, status e passos feitos, sem editar", async () => {
+test("um evento de agente abre na forma do agente: tipo, título, status e o robô, sem prioridade, contagem de passos nem editar", async () => {
   install([agentEvent()], [agentRequest()]);
   renderPage();
   await loaded();
@@ -95,7 +95,9 @@ test("um evento de agente abre na forma do agente: tipo, título, status e passo
   expect(within(top).getByRole("heading", { level: 1, name: "Pesquisar voos para novembro" })).toBeInTheDocument();
   expect(within(top).getByText("request")).toBeInTheDocument();
   expect(within(top).getByText("Agente, executando")).toBeInTheDocument();
-  expect(within(top).getByText("2 de 4 passos")).toBeInTheDocument();
+  expect(top.querySelector("[data-agent-mark]")).not.toBeNull();
+  expect(within(top).queryByText("2 de 4 passos")).not.toBeInTheDocument();
+  expect(within(top).queryByText("Média")).not.toBeInTheDocument();
   expect(screen.queryByRole("link", { name: "Editar evento" })).not.toBeInTheDocument();
   expect(screen.queryByRole("button", { name: /Trocar status/ })).not.toBeInTheDocument();
 });
@@ -112,6 +114,20 @@ test("Informações mostra o início com o tempo decorrido e 'ainda não conclu�
   expect(within(info).getByText("ainda não concluído")).toBeInTheDocument();
   expect(screen.queryByText("Fim estimado")).not.toBeInTheDocument();
   expect(screen.queryByText("Job")).not.toBeInTheDocument();
+});
+
+test("o evento de agente mostra a Sequência, somente leitura, com as pontas de pessoa e de agente", async () => {
+  const review = eventFixture({ id: "rev-1", name: "Revisar o erro", status: "todo", startedAt: "2026-11-14T10:00:00-03:00", previousEventIds: [ID] });
+  const fix = eventFixture({ id: "fix-1", actor: "agent", kind: "request", status: "queued", name: "Aplicar o conserto", startedAt: "2026-11-14T09:50:00-03:00" });
+  install([agentEvent({ previousEventIds: ["rev-0"], nextEventIds: ["rev-1"] }), eventFixture({ id: "rev-0", name: "Alerta do monitor", status: "done" }), review, fix], [agentRequest()]);
+  renderPage();
+  await loaded();
+
+  const section = await screen.findByRole("region", { name: "Sequência" });
+  expect(within(section).getByRole("link", { name: /Alerta do monitor/ })).toHaveAttribute("href", "/user-1/eventos/rev-0");
+  expect(within(section).getByRole("link", { name: /Revisar o erro/ })).toHaveAttribute("href", "/user-1/eventos/rev-1");
+  expect(within(section).queryByRole("button")).not.toBeInTheDocument();
+  expect(screen.queryByText(/Espera por/)).not.toBeInTheDocument();
 });
 
 test("Passos lista cada passo com o agente interno e o status, e nenhum é um link", async () => {
@@ -157,7 +173,6 @@ test("com o pedido em aberto, a tela relê o pedido e o evento até o estado fin
 
   const top = screen.getByRole("region", { name: "Resumo do evento" });
   expect(await within(top).findByText("Agente, feito")).toBeInTheDocument();
-  expect(within(top).getByText("4 de 4 passos")).toBeInTheDocument();
   const info = screen.getByRole("region", { name: "Informações" });
   expect(within(info).getByText(/09:58/)).toBeInTheDocument();
   expect(within(info).queryByText("ainda não concluído")).not.toBeInTheDocument();

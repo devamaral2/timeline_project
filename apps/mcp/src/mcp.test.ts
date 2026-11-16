@@ -82,6 +82,7 @@ describe("MCP over HTTP", () => {
       "list_recurrences",
       "list_timeline_events",
       "list_tracked_events",
+      "search_places",
       "update_artifact",
       "update_event",
       "update_recurrence",
@@ -299,6 +300,19 @@ describe("MCP over HTTP", () => {
     const url = new URL(fetchApi.mock.calls[0]?.[0] as string);
     expect(url.pathname).toBe("/api/events");
     expect(Object.fromEntries(url.searchParams)).toEqual({ kind: "meal", actor: "human", cursor: "abc", limit: "10" });
+    await client.close();
+  });
+
+  test("search_places asks the API for the places matching the text", async () => {
+    fetchApi.mockResolvedValue(new Response('[{"name":"Padaria","address":"Campinas","label":"Padaria, Campinas"}]', { status: 200 }));
+    const client = await connect();
+
+    const result = await client.callTool({ name: "search_places", arguments: { query: "padaria campinas" } });
+
+    const url = new URL(fetchApi.mock.calls[0]?.[0] as string);
+    expect(url.pathname).toBe("/api/places");
+    expect(Object.fromEntries(url.searchParams)).toEqual({ query: "padaria campinas", limit: "6" });
+    expect(result.content).toEqual([{ type: "text", text: '[{"name":"Padaria","address":"Campinas","label":"Padaria, Campinas"}]' }]);
     await client.close();
   });
 

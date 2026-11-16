@@ -21,7 +21,6 @@ export const eventsRoutes = {
   getEvent: "GET /api/events/{eventId}",
   updateEvent: "PATCH /api/events/{eventId}",
   deleteEvent: "DELETE /api/events/{eventId}",
-  listSubtasks: "GET /api/events/{eventId}/subtasks",
   suggestTags: "GET /api/tags",
 } as const;
 
@@ -96,10 +95,6 @@ export function updateEvent(eventId: string, input: EditEventInput): Promise<voi
 
 export function deleteEvent(eventId: string): Promise<void> {
   return apiRequest<void>("DELETE", `/api/events/${encodeURIComponent(eventId)}`);
-}
-
-export function listSubtasks(eventId: string): Promise<EventCardDto[]> {
-  return apiRequest<EventCardDto[]>("GET", `/api/events/${encodeURIComponent(eventId)}/subtasks`);
 }
 
 export function suggestTags(query: string, limit?: number): Promise<TagSuggestionDto[]> {

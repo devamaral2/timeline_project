@@ -87,7 +87,10 @@ function cadenceOf(series: SeriesFields): Cadence {
   };
 }
 
-/** Uma serie nova. O template nao traz artefatos: quem cria artefatos e outro agente. */
+/**
+ * Uma serie nova. O template nao traz artefatos: quem cria artefatos e outro agente. `location` ja chega como o
+ * endereco achado no mapa (ou o lugar como foi dito), e cada ocorrencia o copia.
+ */
 export function seriesInput(
   series: RecurringEventCreateOutput["series"][number], today: string, timeZone: string,
 ): CreateRecurrenceInput {
@@ -96,6 +99,7 @@ export function seriesInput(
     ...(series.status ? { status: series.status } : {}),
     ...(series.priority ? { priority: series.priority } : {}),
     ...(series.description ? { description: series.description } : {}),
+    ...(series.location?.trim() ? { location: series.location.trim() } : {}),
     ...(series.tags.length ? { tags: series.tags } : {}),
   };
   return { ...buildRule(cadenceOf(series), today, timeZone), template };
@@ -115,7 +119,7 @@ type SeriesEdit = RecurringEventEditOutput["edits"][number];
 /** O que a edicao muda, ou nada: edicao sem campo novo nao e um pedido. */
 export function changesNothing(edit: SeriesEdit): boolean {
   const { id: _id, ...fields } = edit;
-  return Object.values(fields).every((value) => value === null);
+  return Object.values(fields).every((value) => value === null || value === undefined);
 }
 
 /**
@@ -143,7 +147,12 @@ export function planSeriesEdit(current: Recurrence, edit: SeriesEdit, timeZone: 
     ...buildRule(merged, current.rule.startsOn, timeZone),
   };
 
-  if (edit.name === null && edit.description === null && edit.tags === null && edit.priority === null) return { rule };
+  // `location` ausente vale como "nao muda"; texto vazio tira o local da serie.
+  const location = edit.location ?? undefined;
+  if (
+    edit.name === null && edit.description === null && edit.tags === null && edit.priority === null &&
+    location === undefined
+  ) return { rule };
 
   const stored = storedTemplateOf(current);
   return {
@@ -155,10 +164,11 @@ export function planSeriesEdit(current: Recurrence, edit: SeriesEdit, timeZone: 
       ...(stored.status ? { status: stored.status } : {}),
       name: edit.name ?? stored.name,
       description: edit.description ?? stored.description,
+      location: location ?? stored.location,
       tags: edit.tags ?? stored.tags,
       priority: edit.priority ?? stored.priority,
       notifyOffsetsMinutes: stored.notifyOffsetsMinutes as RecurrenceTemplate["notifyOffsetsMinutes"],
-      parentEventIds: stored.parentEventIds,
+      previousEventIds: stored.previousEventIds,
     },
   };
 }

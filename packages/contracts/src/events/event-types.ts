@@ -1,7 +1,7 @@
 /** Quem executa o evento. */
 export type EventActor = "human" | "agent";
 
-export type HumanEventKind = "routine" | "meal" | "sleep" | "training";
+export type HumanEventKind = "common" | "meal" | "sleep" | "training";
 
 /** Um pedido do usuario ao agente, ou uma execucao agendada (`cron`). */
 export type AgentRequestKind =

@@ -6,6 +6,7 @@ import type {
   EntityBatchWriter,
   EventRepository,
   RecurrenceRepository,
+  SequenceChange,
   StagedChange,
 } from "../../../domain/ports";
 
@@ -27,6 +28,8 @@ export class InMemoryEntityBatchWriter implements EntityBatchWriter {
   constructor(
     private readonly repositories: {
       events: EventRepository;
+      /** O banco em memoria, onde a sequencia entre eventos fica registrada. */
+      sequence?: { apply(userId: string, changes: readonly SequenceChange[]): void };
       artifacts: ArtifactRepository;
       recurrences?: RecurrenceRepository;
     },
@@ -52,6 +55,7 @@ export class InMemoryEntityBatchWriter implements EntityBatchWriter {
       }
     }
     await this.apply(this.repositories.events, batch.userId, batch.events);
+    this.repositories.sequence?.apply(batch.userId, batch.sequence ?? []);
     await batch.afterWrite?.(undefined);
     this.commits.push(batch);
 

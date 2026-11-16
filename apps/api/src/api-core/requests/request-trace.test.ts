@@ -131,6 +131,21 @@ describe("toRequestTrace", () => {
     expect(trace.fields).toContainEqual({ label: "Agentes", value: "2" });
   });
 
+  test("the tokens each agent spent show on its step and add up in the totals", () => {
+    const trace = toRequestTrace(
+      request({ dispatch }),
+      steps.map((step) => (step.id === "s1" ? { ...step, usage: { input: 1200, output: 300 } } : step.id === "s2" ? { ...step, usage: { input: 800, output: 200 } } : step)),
+      entities,
+    );
+
+    expect(trace.entries.find((entry) => entry.id === "s1")?.fields).toContainEqual({ label: "Tokens no total", value: "1.500" });
+    expect(trace.fields).toEqual(expect.arrayContaining([
+      { label: "Tokens de entrada", value: "2.000" },
+      { label: "Tokens de saída", value: "500" },
+      { label: "Tokens no total", value: "2.500" },
+    ]));
+  });
+
   test("a fallback routing explains why; an edit request without dispatch has no routing entry", () => {
     const fallback = toRequestTrace(
       request({ dispatch: { answers: {}, uncertain: [], unsupported: [], fallbackReason: "no_step" } satisfies DispatchRecord }),

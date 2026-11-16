@@ -1,3 +1,4 @@
+import type { TokenUsage } from "../../agent/gateways/structured-completion.gateway";
 import type { RequestQueryResult } from "@repo/contracts";
 import type { Artifact, Event } from "../../../domain";
 import { newOrderedId } from "../../../infrastructure/persistence/requests/request-rows";
@@ -166,6 +167,11 @@ export class InMemoryRequestStore implements RequestStore {
   async recordThought(stepId: string, thought: StepThought): Promise<void> {
     const step = this.stepRecords.find((candidate) => candidate.id === stepId);
     if (step) step.thoughts = [...(step.thoughts ?? []), thought];
+  }
+
+  async recordUsage(stepId: string, usage: TokenUsage): Promise<void> {
+    const step = this.stepRecords.find((candidate) => candidate.id === stepId);
+    if (step) step.usage = { input: (step.usage?.input ?? 0) + usage.input, output: (step.usage?.output ?? 0) + usage.output };
   }
 
   async recordStepSuccess(_tx: unknown, input: {

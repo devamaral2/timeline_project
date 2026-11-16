@@ -9,6 +9,7 @@ import {
   eventSchema,
   recurrenceSchema,
   requestSchema,
+  placeSuggestionSchema,
   tagSuggestionSchema,
   updateArtifactRequestSchema,
   updateEventInputSchema,
@@ -44,6 +45,7 @@ export const documentedSchemas = {
   UpdateEventInput: updateEventInputSchema.omit({ eventId: true }),
   CreatedEvent: z.object({ eventId: z.string() }),
   TagSuggestion: tagSuggestionSchema,
+  PlaceSuggestion: placeSuggestionSchema,
   Artifact: artifactSchema,
   CreateArtifactRequest: createArtifactRequestSchema,
   CreatedArtifact: createArtifactResponseSchema,
@@ -73,6 +75,7 @@ export type SchemaName = keyof typeof documentedSchemas;
 export const documentedTags = [
   { name: "Eventos", description: "A agenda, a lista de tarefas e cada evento de pessoa." },
   { name: "Tags", description: "Sugestão de tags já usadas." },
+  { name: "Locais", description: "Busca de locais para o campo de local do evento." },
   { name: "Artefatos", description: "O conteúdo que os eventos criam e usam: texto, alimento, sono e treino." },
   { name: "Séries", description: "Regras de repetição e o que cada ocorrência copia." },
   { name: "Pedidos ao agente", description: "Abrir, acompanhar e cancelar pedidos em texto ou fala." },
@@ -83,7 +86,7 @@ type TagName = (typeof documentedTags)[number]["name"];
 
 export interface QueryDoc {
   description: string;
-  type?: "string" | "integer" | "boolean";
+  type?: "string" | "integer" | "number" | "boolean";
   format?: "date-time";
   enum?: readonly string[];
   minimum?: number;
@@ -185,12 +188,6 @@ export const documentedOperations: Record<string, OperationDoc> = {
     success: { status: 204, description: "O evento foi apagado." },
     errors: { 404: "Evento não encontrado." },
   },
-  "GET /api/events/{eventId}/subtasks": {
-    tag: "Eventos",
-    summary: "Lista as subtarefas de um evento",
-    success: { status: 200, description: "Os eventos em que este se desdobra.", schema: "EventCard", list: true },
-    errors: { 404: "Evento não encontrado." },
-  },
 
   "GET /api/tags": {
     tag: "Tags",
@@ -200,6 +197,19 @@ export const documentedOperations: Record<string, OperationDoc> = {
       limit: { description: "Quantas sugestões no máximo.", type: "integer", minimum: 1, default: 10 },
     },
     success: { status: 200, description: "As tags que começam com o texto.", schema: "TagSuggestion", list: true },
+  },
+
+  "GET /api/places": {
+    tag: "Locais",
+    summary: "Busca locais por texto",
+    description: "Procura endereços e lugares (OpenStreetMap). Com `lat` e `lon` (onde a pessoa está), os locais mais perto vêm primeiro. Com menos de 3 letras ou com o serviço de mapas fora do ar, devolve lista vazia.",
+    query: {
+      query: { description: "O que o usuário digitou: nome do lugar ou endereço." },
+      limit: limit(10, 6),
+      lat: { description: "Latitude de onde a pessoa está. Só vale junto de `lon`.", type: "number", minimum: -90, maximum: 90 },
+      lon: { description: "Longitude de onde a pessoa está. Só vale junto de `lat`.", type: "number", minimum: -180, maximum: 180 },
+    },
+    success: { status: 200, description: "Os locais encontrados.", schema: "PlaceSuggestion", list: true },
   },
 
   "GET /api/artifacts": {

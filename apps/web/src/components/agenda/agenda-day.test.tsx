@@ -51,7 +51,7 @@ test("empty days can be omitted from the continuous list", () => {
 
 test("an event is running inside its window, past afterwards and upcoming before", () => {
   render(<AgendaDay {...props} events={[
-    { name: "Reunião longa", type: "routine", time: "09:00 — 11:00", minutes: 120, duration: "2 h", startedAt: "2026-09-14T09:00:00-03:00", finishedAt: "2026-09-14T11:00:00-03:00" },
+    { name: "Reunião longa", type: "common", time: "09:00 — 11:00", minutes: 120, duration: "2 h", startedAt: "2026-09-14T09:00:00-03:00", finishedAt: "2026-09-14T11:00:00-03:00" },
     { name: "Mais cedo", type: "meal", time: "07:00 — 07:30", minutes: 30, duration: "30 min", startedAt: "2026-09-14T07:00:00-03:00", finishedAt: "2026-09-14T07:30:00-03:00" },
     { name: "Mais tarde", type: "meal", time: "12:00 — 12:30", minutes: 30, duration: "30 min", startedAt: "2026-09-14T12:00:00-03:00", finishedAt: "2026-09-14T12:30:00-03:00" },
   ]} />);
@@ -87,8 +87,8 @@ test("free windows fill the gaps between events and until midnight, with their d
 
 test("free windows keep the chronological order and know which one is happening now", () => {
   render(<AgendaDay {...props} now={new Date("2026-09-14T15:00:00-03:00").getTime()} events={[
-    { name: "Manhã", type: "routine", time: "08:00 — 09:00", minutes: 60, duration: "1 h", startedAt: "2026-09-14T08:00:00-03:00", finishedAt: "2026-09-14T09:00:00-03:00" },
-    { name: "Noite", type: "routine", time: "20:00 — 21:00", minutes: 60, duration: "1 h", startedAt: "2026-09-14T20:00:00-03:00", finishedAt: "2026-09-14T21:00:00-03:00" },
+    { name: "Manhã", type: "common", time: "08:00 — 09:00", minutes: 60, duration: "1 h", startedAt: "2026-09-14T08:00:00-03:00", finishedAt: "2026-09-14T09:00:00-03:00" },
+    { name: "Noite", type: "common", time: "20:00 — 21:00", minutes: 60, duration: "1 h", startedAt: "2026-09-14T20:00:00-03:00", finishedAt: "2026-09-14T21:00:00-03:00" },
   ]} />);
 
   const items = screen.getAllByRole("listitem").map((item) => item.textContent ?? "");
@@ -102,8 +102,8 @@ test("free windows keep the chronological order and know which one is happening 
 
 test("a gap shorter than 15 minutes is not a free window, and the switch hides them all", () => {
   const events = [
-    { name: "Primeiro", type: "routine", time: "08:00 — 09:00", minutes: 60, duration: "1 h", startedAt: "2026-09-15T08:00:00-03:00", finishedAt: "2026-09-15T09:00:00-03:00" },
-    { name: "Segundo", type: "routine", time: "09:10 — 10:00", minutes: 50, duration: "50 min", startedAt: "2026-09-15T09:10:00-03:00", finishedAt: "2026-09-15T10:00:00-03:00" },
+    { name: "Primeiro", type: "common", time: "08:00 — 09:00", minutes: 60, duration: "1 h", startedAt: "2026-09-15T08:00:00-03:00", finishedAt: "2026-09-15T09:00:00-03:00" },
+    { name: "Segundo", type: "common", time: "09:10 — 10:00", minutes: 50, duration: "50 min", startedAt: "2026-09-15T09:10:00-03:00", finishedAt: "2026-09-15T10:00:00-03:00" },
   ];
   const { rerender } = render(<AgendaDay {...props} dayKey="2026-09-15" events={events} />);
   expect(slotsOf()).toHaveLength(1);

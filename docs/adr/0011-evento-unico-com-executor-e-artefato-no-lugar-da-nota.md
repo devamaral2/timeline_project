@@ -23,7 +23,7 @@ isso produz ou usa.
 2. **Executor.** A coluna `actor` (`human` ou `agent`) diz quem realiza o evento. Não há `agent_id`: o banco não
    aponta para qual agente, só distingue pessoa de agente.
 3. **Tipo e status dependem do executor**, e o banco impõe isso por check.
-   - Pessoa: tipos `routine`, `meal`, `sleep`, `training`; status `todo`, `toDefine`, `doing`, `inHold`, `done`,
+   - Pessoa: tipos `common`, `meal`, `sleep`, `training`; status `todo`, `toDefine`, `doing`, `inHold`, `done`,
      `cancel`, `missed`.
    - Agente: tipos `request`, `search_request`, `build_request`, `inquiry_request`, `review_request`, `cron`, `step`;
      status `queued`, `running`, `waiting`, `done`, `failed`, `cancel`.
@@ -35,8 +35,8 @@ isso produz ou usa.
    início é o real e pode acontecer depois do prazo.
 6. **Evento longo.** `long_running` marca o evento de pessoa que fica fora da agenda, como um projeto. Exige status e
    não aceita recorrência. As datas dele são início real, prazo e conclusão, e nenhuma o coloca na agenda. As sessões
-   de trabalho são eventos normais, ligados a ele como subtarefas
-   ([ADR 0012](./0012-relacoes-em-tres-tabelas-no-sentido-de-quem-produz.md)). Um evento que não é longo dura no
+   de trabalho são eventos normais, ligados a ele na sequência de eventos
+   ([ADR 0014](./0014-sequencia-entre-eventos-no-lugar-de-subtarefa-e-bloqueio.md)). Um evento que não é longo dura no
    máximo 31 dias, por check.
 7. **Artefato.** Os tipos são `text`, `food`, `sleep`, `training`, `workout`, `skill`, `agent` e `router`. Alimento e
    refeição são um tipo só (`food`, com calorias e receita). Um artefato sem dono é global: todos leem, ninguém edita

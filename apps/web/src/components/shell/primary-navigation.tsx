@@ -22,7 +22,7 @@ export function PrimaryNavigation({ userId }: { userId?: string }) {
         Tarefas
       </Link>
       <Link href={notesHref} className={onNotes ? styles.navActive : undefined} aria-current={onNotes ? "page" : undefined}>
-        Notas
+        Artefatos
       </Link>
     </nav>
   );

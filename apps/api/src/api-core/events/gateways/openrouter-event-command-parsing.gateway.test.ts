@@ -12,7 +12,7 @@ afterEach(() => {
 
 function aRawCommand(overrides: Partial<RawEventCommand> = {}): Partial<RawEventCommand> {
   return {
-    type: "routine",
+    type: "common",
     routineName: "",
     foodInputText: "",
     sleepHours: null,
@@ -36,7 +36,7 @@ test("requests the strict event_command schema and returns the parsed input", as
       choices: [
         {
           message: {
-            content: JSON.stringify(aRawCommand({ type: "routine", routineName: "Estudar ingles" })),
+            content: JSON.stringify(aRawCommand({ type: "common", routineName: "Estudar ingles" })),
           },
         },
       ],
@@ -50,7 +50,7 @@ test("requests the strict event_command schema and returns the parsed input", as
   const result = await gateway.parseCommand({ text: "comecei a estudar ingles" });
 
   expect(result).toEqual({
-    input: { name: "Estudar ingles", kind: "routine", tags: [] },
+    input: { name: "Estudar ingles", kind: "common", tags: [] },
     schedule: {
       startTimeOfDay: undefined,
       startOffsetMinutes: undefined,
@@ -102,15 +102,15 @@ test("never logs the api key", async () => {
 });
 
 test("falls back to the transcript when the model leaves the routine name empty", () => {
-  const input = toCreateEventInput(aRawCommand({ type: "routine", routineName: "  " }), "  fui correr no parque  ");
+  const input = toCreateEventInput(aRawCommand({ type: "common", routineName: "  " }), "  fui correr no parque  ");
 
-  expect(input).toEqual({ name: "fui correr no parque", kind: "routine", tags: [] });
+  expect(input).toEqual({ name: "fui correr no parque", kind: "common", tags: [] });
 });
 
 test("falls back to routine when the model returns an unknown type", () => {
   const input = toCreateEventInput(aRawCommand({ type: "meditation" }), "meditei 10 minutos");
 
-  expect(input).toEqual({ name: "meditei 10 minutos", kind: "routine", tags: [] });
+  expect(input).toEqual({ name: "meditei 10 minutos", kind: "common", tags: [] });
 });
 
 test("reads sleep values above 24 as minutes", () => {

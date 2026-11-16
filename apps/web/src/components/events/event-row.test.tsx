@@ -9,39 +9,37 @@ function cardOf(overrides: Partial<EventCardDto>): EventCardDto {
   return {
     id: "ev-1",
     actor: "human",
-    kind: "routine",
+    kind: "common",
     priority: "medium",
     name: "Revisar proposta",
     description: "",
+    location: "",
     longRunning: false,
     notifyOffsetsMinutes: [],
     tags: [],
     artifactTypes: [],
-    parentEventIds: [],
-    blockedByEventIds: [],
+    previousEventIds: [],
     revision: 1,
     ...overrides,
   };
 }
 
 describe("EventRow", () => {
-  it("mostra o glifo, o título, o tipo, o quando, a fração, as tags e a duração de um evento de pessoa", () => {
+  it("mostra o glifo, o título, o tipo, o quando, as tags e a duração de um evento de pessoa", () => {
     const card = cardOf({
       status: "todo",
-      kind: "routine",
+      kind: "common",
       startedAt: "2026-09-14T09:00:00-03:00",
       estimatedFinishAt: "2026-09-14T10:30:00-03:00",
       tags: ["trabalho"],
     });
 
-    render(<EventRow card={card} userId="user-1" now={NOW} subtasks={{ done: 1, total: 3 }} />);
+    render(<EventRow card={card} userId="user-1" now={NOW} />);
 
     expect(screen.getByRole("button", { name: "A fazer. Mudar status de “Revisar proposta”" })).toBeInTheDocument();
     expect(screen.getByText("Revisar proposta")).toBeInTheDocument();
-    expect(screen.getByText("routine")).toBeInTheDocument();
+    expect(screen.getByText("common")).toBeInTheDocument();
     expect(screen.getByText("Hoje, 09:00")).toBeInTheDocument();
-    expect(screen.getByText("1/3")).toBeInTheDocument();
-    expect(screen.getByText("1 de 3 partes feitas")).toBeInTheDocument();
     expect(screen.getByText("#trabalho")).toBeInTheDocument();
     expect(screen.getByText("1h30")).toBeInTheDocument();
   });
@@ -87,17 +85,19 @@ describe("EventRow", () => {
     expect(container.querySelector("[data-agent-mark]")).toBeInTheDocument();
   });
 
-  it("mostra a espera no lugar do quando quando o evento em espera tem bloqueadores", () => {
+  it("a sequência não muda a linha: evento em espera que se segue a outro mostra só o quando", () => {
     const card = cardOf({
       status: "inHold",
-      kind: "routine",
+      kind: "common",
       name: "Renovar passaporte",
-      blockedByEventIds: ["ev-9"],
+      startedAt: "2026-09-14T09:00:00-03:00",
+      previousEventIds: ["ev-9"],
     });
 
     render(<EventRow card={card} userId="user-1" now={NOW} />);
 
-    expect(screen.getByText("Espera por 1 evento")).toBeInTheDocument();
+    expect(screen.getByText("Hoje, 09:00")).toBeInTheDocument();
+    expect(screen.queryByText(/Espera por/)).not.toBeInTheDocument();
   });
 
   it("marca o quando de um a fazer já passado como atrasado", () => {
@@ -109,12 +109,6 @@ describe("EventRow", () => {
     expect(when).toHaveAttribute("data-overdue", "true");
   });
 
-  it("não mostra fração quando a tela não informa subtarefas", () => {
-    render(<EventRow card={cardOf({ status: "todo" })} userId="user-1" now={NOW} />);
-
-    expect(screen.queryByText(/partes feitas/)).not.toBeInTheDocument();
-  });
-
   it("chama onStatusClick com o cartão ao tocar no glifo de evento de pessoa", () => {
     const onStatusClick = vi.fn();
     const card = cardOf({ status: "todo" });
@@ -123,7 +117,7 @@ describe("EventRow", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Mudar status de “Revisar proposta”/ }));
 
-    expect(onStatusClick).toHaveBeenCalledWith(card);
+    expect(onStatusClick).toHaveBeenCalledWith(card, expect.any(HTMLElement));
   });
 
   it("leva ao detalhe do evento ao tocar no resto da linha", () => {

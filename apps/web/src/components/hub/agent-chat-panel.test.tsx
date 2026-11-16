@@ -242,21 +242,20 @@ test("typing a slash lists the commands and Enter runs the highlighted one, noth
   fireEvent.change(textbox, { target: { value: "/" } });
   const commands = screen.getByRole("list", { name: "Comandos" });
   expect(within(commands).getAllByRole("button").map((button) => button.textContent)).toEqual([
-    "Criar tarefaNome, status, prioridade e dia/tarefa",
-    "Criar eventoTipo, início e término/evento",
+    "Criar eventoTipo, status, início e término/evento",
     "Criar notaA primeira linha vira o título/nota",
-    "PesquisarEventos, tarefas e notas/buscar",
+    "PesquisarEventos, tarefas e artefatos/buscar",
     "NotificaçõesAvisos recentes e próximos/notificacoes",
     "ConfiguraçõesTema e conta/configuracoes",
   ]);
 
   fireEvent.keyDown(textbox, { key: "ArrowDown" });
-  expect(within(commands).getByRole("button", { name: /Criar evento/ })).toHaveAttribute("aria-current", "true");
+  expect(within(commands).getByRole("button", { name: /Criar nota/ })).toHaveAttribute("aria-current", "true");
 
-  fireEvent.change(textbox, { target: { value: "/tarefa comprar pão" } });
+  fireEvent.change(textbox, { target: { value: "/evento comprar pão" } });
   fireEvent.submit(textbox.closest("form") as HTMLFormElement);
 
-  expect(onCommand).toHaveBeenCalledWith("task", "comprar pão");
+  expect(onCommand).toHaveBeenCalledWith("event", "comprar pão");
   expect(requestPosts()).toHaveLength(0);
   expect(textbox).toHaveValue("");
 });

@@ -164,7 +164,7 @@ FROM jobs j
 WHERE j.event_id = '<requestId>'
    OR j.event_id IN (
      SELECT to_event_id FROM event_event_relation
-     WHERE from_event_id = '<requestId>' AND relation = 'subtask')
+     WHERE from_event_id = '<requestId>' AND relation = 'step')
 ORDER BY j.created_at, j.id;
 ```
 

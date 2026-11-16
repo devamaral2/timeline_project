@@ -50,6 +50,8 @@ export const events = pgTable(
     priority: text("priority", { enum: PRIORITIES }).notNull().default("medium"),
     name: text("name").notNull(),
     description: text("description").notNull().default(""),
+    // Onde o evento acontece, em texto que o Google Maps entende. So evento de pessoa.
+    location: text("location").notNull().default(""),
     startedAt: timestamp("started_at", { withTimezone: true }),
     estimatedFinishAt: timestamp("estimated_finish_at", { withTimezone: true }),
     finishedAt: timestamp("finished_at", { withTimezone: true }),
@@ -138,6 +140,8 @@ export const events = pgTable(
       "events_notify_offsets_valid",
       sql`1 <= ALL(${table.notifyOffsetsMinutes}) AND 43200 >= ALL(${table.notifyOffsetsMinutes})`,
     ),
+    check("events_location_human", sql`${table.location} = '' OR ${table.actor} = 'human'`),
+    check("events_location_length", sql`char_length(${table.location}) <= 300`),
     check("events_data_object", sql`jsonb_typeof(${table.data}) = 'object'`),
   ],
 );

@@ -5,7 +5,6 @@ import {
   Bell,
   CalendarDays,
   FileText,
-  ListChecks,
   Maximize2,
   Minimize2,
   Plus,
@@ -102,7 +101,7 @@ interface AgentChatPanelProps extends ReturnType<typeof useAgendaChat> {
   /** Tela inteira em vez do painel; quem decide o tamanho e o `MobileNavigation`. */
   expanded?: boolean;
   onToggleExpanded?: () => void;
-  /** Um comando da barra "/" (`/tarefa`, `/buscar`…) com o texto que veio depois dele. */
+  /** Um comando da barra "/" (`/evento`, `/buscar`…) com o texto que veio depois dele. */
   onCommand?: (command: HubCommandId, argument: string) => void;
   /** Fecha o painel; tambem e chamado ao abrir um registro da resposta. */
   onClose?: () => void;
@@ -120,8 +119,7 @@ interface AgentChatPanelProps extends ReturnType<typeof useAgendaChat> {
   listenOnOpen?: boolean;
 }
 
-const COMMAND_ICONS: Record<HubCommandId, typeof ListChecks> = {
-  task: ListChecks,
+const COMMAND_ICONS: Record<HubCommandId, typeof CalendarDays> = {
   event: CalendarDays,
   note: FileText,
   search: Search,
@@ -184,6 +182,24 @@ export function AgentChatPanel({
   // O microfone que abriu sozinho nao reclama: silencio ou permissao negada so
   // viram aviso quando foi a pessoa quem tocou na onda.
   const [quietVoice, setQuietVoice] = useState(listensOnOpen);
+  // A sessão pode chegar depois de o painel abrir: o `autoStart` do hook só vale
+  // no primeiro render, então a primeira vez que já dá para ouvir liga o
+  // microfone (uma vez por abertura; parar na onda não o religa).
+  const autoListenRef = useRef(false);
+  // A primeira tecla é da pessoa: a partir dela o microfone não liga mais
+  // sozinho (nem quando a sessão chega depois de o painel abrir).
+  const userTypedRef = useRef(false);
+  useEffect(() => {
+    if (autoListenRef.current) return;
+    if (userTypedRef.current) {
+      autoListenRef.current = true;
+      return;
+    }
+    if (!listenOnOpen || !chat.ready || chat.pending) return;
+    autoListenRef.current = true;
+    setQuietVoice(true);
+    start();
+  }, [listenOnOpen, chat.ready, chat.pending, start]);
 
   const lastMessageId = chat.messages.at(-1)?.id;
   const progressLabel = chat.pending?.label;
@@ -256,6 +272,14 @@ export function AgentChatPanel({
   };
 
   function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    // A primeira tecla é da pessoa: o microfone para e o que já foi ouvido vira
+    // texto, para a tecla chegar ao campo em vez de se perder com a fala.
+    userTypedRef.current = true;
+    if (listening) {
+      updatePrompt((heard ? `${prompt ? `${prompt} ` : ""}${heard}` : prompt).slice(0, 4000));
+      cancel();
+      setVoiceLoop(false);
+    }
     if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
       event.preventDefault();
       submit();
@@ -415,6 +439,7 @@ export function AgentChatPanel({
               onChange={(event) => {
                 // Quem digita assume o campo: a primeira tecla desliga o microfone
                 // e o que ja estava escrito (ouvido ou nao) fica como texto.
+                userTypedRef.current = true;
                 if (listening) cancel();
                 setVoiceLoop(false);
                 updatePrompt(event.target.value.slice(0, 4000));

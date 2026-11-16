@@ -1,7 +1,7 @@
 import { Bot } from "lucide-react";
 import Link from "next/link";
 import type { AgentEventStatus, EventCardDto, HumanEventStatus } from "@repo/contracts";
-import { cardBlockedLabel, cardDurationLabel, cardIsOverdue, cardWhenLabel } from "@/lib/events/card-text";
+import { cardDurationLabel, cardIsOverdue, cardWhenLabel } from "@/lib/events/card-text";
 import { EventKindMark } from "./event-kind-mark";
 import { EventStatusGlyph, eventStatusName } from "./event-status-glyph";
 import styles from "./event-row.module.css";
@@ -15,22 +15,20 @@ export interface EventRowProps {
   now: Date;
   /** A lista pede a regra da serie no lugar do horario, quando a ocorrencia tem uma. */
   ruleInPlaceOfTime?: boolean;
-  /** Fracao de subtarefas ("1/3"), quando a tela a calcula com os eventos filhos. */
-  subtasks?: { done: number; total: number };
-  /** Toque no glifo de um evento de pessoa (concluir ou reabrir fica com a tela). */
-  onStatusClick?: (card: EventCardDto) => void;
+  /** Toque no glifo de um evento de pessoa (a tela abre a escolha de status). */
+  onStatusClick?: (card: EventCardDto, anchor: HTMLElement) => void;
 }
 
 /**
  * A linha única das listas: glifo de status, título, uma linha com o tipo, o
- * "quando", a fração e as tags, e a duração à direita. Pessoa e agente usam a
+ * "quando" e as tags, e a duração à direita. Pessoa e agente usam a
  * mesma grade; o evento de agente fecha a linha com o robô, a sua assinatura.
  * O glifo de pessoa é um botão; o de agente não muda status.
  */
-export function EventRow({ card, userId, now, ruleInPlaceOfTime, subtasks, onStatusClick }: EventRowProps) {
+export function EventRow({ card, userId, now, ruleInPlaceOfTime, onStatusClick }: EventRowProps) {
   const isAgent = card.actor === "agent";
   const overdue = !isAgent && cardIsOverdue(card, now);
-  const when = (!isAgent && cardBlockedLabel(card)) || cardWhenLabel(card, now, { ruleInPlaceOfTime });
+  const when = cardWhenLabel(card, now, { ruleInPlaceOfTime });
   const duration = cardDurationLabel(card);
   // O contrato garante que o status e de agente quando o ator e agente, e de pessoa (ou ausente) no outro caso.
   const agentStatus = card.status as AgentEventStatus;
@@ -50,7 +48,7 @@ export function EventRow({ card, userId, now, ruleInPlaceOfTime, subtasks, onSta
           type="button"
           className={styles.glyphButton}
           aria-label={`${eventStatusName("human", humanStatus)}. Mudar status de “${card.name}”`}
-          onClick={() => onStatusClick?.(card)}
+          onClick={(event) => onStatusClick?.(card, event.currentTarget)}
         >
           {glyph}
         </button>
@@ -63,14 +61,6 @@ export function EventRow({ card, userId, now, ruleInPlaceOfTime, subtasks, onSta
             <span className={styles.when} data-overdue={overdue ? "true" : "false"}>
               {when}
             </span>
-            {subtasks && subtasks.total > 0 ? (
-              <>
-                <span className={styles.fraction} aria-hidden="true">
-                  {`${subtasks.done}/${subtasks.total}`}
-                </span>
-                <span className={styles.visuallyHidden}>{`${subtasks.done} de ${subtasks.total} partes feitas`}</span>
-              </>
-            ) : null}
             {card.tags.map((tag) => (
               <span key={tag} className={styles.tag}>
                 #{tag}

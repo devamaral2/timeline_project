@@ -30,6 +30,8 @@ import { ArtifactBuilder } from "../artifacts/services/artifact-builder.service"
 import { CreateEventUseCase } from "../events/create-event.usecase";
 import { OpenRouterEventCommandParsingGateway } from "../events/gateways/openrouter-event-command-parsing.gateway";
 import { OpenRouterFoodParsingGateway } from "../events/gateways/openrouter-food-parsing.gateway";
+import { PlaceResolver } from "../events/services/place-resolver.service";
+import { PhotonPlaceSearchGateway } from "../../infrastructure/places/photon-place-search.gateway";
 import { HermesTurnWorker } from "./hermes-turn-worker";
 import { JevClient } from "./jev.client";
 import { RouterArtifactsReconciler } from "./jev-router-artifacts";
@@ -101,7 +103,9 @@ export const REQUEST_PROVIDERS: Provider[] = [
       );
       const jev = new JevClient();
       const repositories = { events, artifacts, recurrences };
-      const deps = { store, runner, batchWriter, repositories, createEvent };
+      // O lugar que a IA tira do pedido passa pela mesma busca de mapas do formulario.
+      const places = new PlaceResolver(new PhotonPlaceSearchGateway());
+      const deps = { store, runner, batchWriter, repositories, createEvent, places };
       return new RequestOperations(jobs, store, {
         dispatcher: new RequestDispatcher(store, jev, new PostgresCandidateQuery(database)),
         create: new RequestCreateWorker(deps),
@@ -114,7 +118,7 @@ export const REQUEST_PROVIDERS: Provider[] = [
         }),
         targetEdit: new RequestTargetEditWorker({ ...deps, foodParsing, artifactBuilder, files }),
         hermes: new HermesTurnWorker(store, new HermesClient({ url: env.HERMES_URL, apiKey: env.HERMES_API_KEY })),
-        voice: new VoiceEventWorker({ store, parsing: commandParsing, createEvent, batchWriter }),
+        voice: new VoiceEventWorker({ store, parsing: commandParsing, createEvent, batchWriter, places }),
         food,
       });
     },

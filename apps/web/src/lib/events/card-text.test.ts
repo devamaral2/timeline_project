@@ -1,7 +1,6 @@
 import type { EventCardDto } from "@repo/contracts";
 import { describe, expect, it } from "vitest";
 import {
-  cardBlockedLabel,
   cardDurationLabel,
   cardIsOverdue,
   cardWhenLabel,
@@ -15,17 +14,17 @@ function card(overrides: Partial<EventCardDto> = {}): EventCardDto {
   return {
     id: "ev-1",
     actor: "human",
-    kind: "routine",
+    kind: "common",
     status: "todo",
     priority: "medium",
     name: "Revisar proposta",
     description: "",
+    location: "",
     longRunning: false,
     notifyOffsetsMinutes: [],
     tags: [],
     artifactTypes: [],
-    parentEventIds: [],
-    blockedByEventIds: [],
+    previousEventIds: [],
     revision: 1,
     ...overrides,
   };
@@ -189,18 +188,6 @@ describe("cardDurationLabel", () => {
     expect(
       cardDurationLabel(card({ longRunning: true, startedAt: "2026-11-14T09:00:00-03:00", estimatedFinishAt: "2026-11-30T00:00:00-03:00" })),
     ).toBeNull();
-  });
-});
-
-describe("cardBlockedLabel", () => {
-  it("um evento em espera mostra a contagem de bloqueadores", () => {
-    expect(cardBlockedLabel(card({ status: "inHold", blockedByEventIds: ["a"] }))).toBe("Espera por 1 evento");
-    expect(cardBlockedLabel(card({ status: "inHold", blockedByEventIds: ["a", "b"] }))).toBe("Espera por 2 eventos");
-  });
-
-  it("sem bloqueio ou fora de espera, nao ha texto", () => {
-    expect(cardBlockedLabel(card({ status: "inHold" }))).toBeNull();
-    expect(cardBlockedLabel(card({ status: "todo", blockedByEventIds: ["a"] }))).toBeNull();
   });
 });
 

@@ -27,6 +27,7 @@ Responda SOMENTE com JSON neste formato, sem texto fora dele:
       "status": null,
       "priority": null,
       "description": null,
+      "location": null,
       "tags": [],
       "frequency": "weekly",
       "interval": null,
@@ -42,9 +43,10 @@ Responda SOMENTE com JSON neste formato, sem texto fora dele:
 }
 ```
 
-- `kind`: `meal` (comida), `training` (exercício), `sleep` (sono) ou `routine` (todo o resto, inclusive algo a fazer). `name`: nome curto; algo a fazer fica no imperativo ("Pagar o aluguel"); para refeição, só o nome da refeição, nunca alimentos.
+- `kind`: `meal` (comida), `training` (exercício), `sleep` (sono) ou `common` (todo o resto, inclusive algo a fazer). `name`: nome curto; algo a fazer fica no imperativo ("Pagar o aluguel"); para refeição, só o nome da refeição, nunca alimentos.
 - `status`: `null` quando cada ocorrência só marca um horário na agenda; `todo` quando cada ocorrência é algo a fazer que o usuário quer acompanhar.
 - `priority`: `urgent`, `high`, `medium` ou `low`; `null` se não foi dita.
+- `location`: o lugar onde a série acontece. Só quando o usuário diz o NOME de um estabelecimento ou um endereço ("terapia na Saúde Emocional", "Shopping Del Rey", "Rua da Bahia 1148"); copie como ele disse, sem "na", "no", "ao", e junte a cidade ou o bairro se ele disse. O servidor procura esse lugar no mapa, perto de onde o usuário está, e grava o endereço que existe; NUNCA invente rua, número ou cidade. `null` quando o pedido não cita lugar ou cita um lugar genérico ("a academia", "casa", "o trabalho").
 - `frequency`: `daily`, `weekly`, `monthly` ou `yearly`. "A cada 2 semanas" = `weekly` com `interval` 2. "Dias úteis" = `weekly` com `weekdays` `["mon","tue","wed","thu","fri"]`.
 - `weekdays` (`sun`..`sat`): só com `weekly`. `monthDay` (1 a 31): só com `monthly` ou `yearly`. `month` (1 a 12): só com `yearly`.
 - `timeOfDay`: `HH:MM` no fuso {{timeZone}}. `durationMinutes`: em minutos; em algo a fazer, vira o prazo de cada ocorrência. `startsOn` e `endsOn`: `AAAA-MM-DD`.

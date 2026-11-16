@@ -8,6 +8,7 @@ import {
 import type {
   ArtifactRepository,
   EntityBatch,
+  SequenceChange,
   EventRepository,
   RecurrenceChange,
   RecurrenceRepository,
@@ -72,14 +73,15 @@ export class StagingError extends Error {}
  * As mudancas que o agente prepara num passo. Nada e gravado aqui: cada mudanca e validada contra o banco e
  * contra as anteriores, e o lote inteiro vai para o `EntityBatchWriter` so no fim.
  *
- * O usuario vem do pedido ja autorizado; nenhum agente o recebe. As relacoes pertencem ao evento de origem:
- * ligar um artefato a um evento, ou um evento a outro, edita o evento de onde a relacao parte.
+ * O usuario vem do pedido ja autorizado; nenhum agente o recebe. Ligar um artefato a um evento edita o evento;
+ * pôr um evento na sequencia de outro nao edita nenhum dos dois.
  */
 export class AgentChangeSession {
   private readonly events = new Map<string, Staged<Event>>();
   private readonly artifacts = new Map<string, Staged<Artifact>>();
   private readonly recurrences = new Map<string, StagedSeries>();
   private readonly derivations: { originalId: string; copyId: string }[] = [];
+  private readonly sequence: SequenceChange[] = [];
 
   constructor(
     readonly userId: string,
@@ -144,18 +146,9 @@ export class AgentChangeSession {
   createEvent(input: CreateEventInput, options?: PrepareEventOptions): Promise<StageResult> {
     return this.attempt(async () => {
       const prepared = await this.createEventUseCase.prepare(input, { userId: this.userId }, undefined, options);
-      for (const origin of prepared.origins) {
-        if (this.events.has(origin.event.id)) {
-          throw new StagingError(`O evento ${origin.event.id} já foi alterado neste pedido.`);
-        }
-      }
       this.stageTemplateArtifacts(prepared.artifacts, prepared.derivations);
       this.events.set(prepared.event.id, { change: { op: "create", entity: prepared.event } });
-      for (const origin of prepared.origins) {
-        this.events.set(origin.event.id, {
-          change: { op: "update", entity: origin.event, expectedRevision: origin.expectedRevision },
-        });
-      }
+      this.stageSequence(prepared.sequence);
       return { ok: true, kind: "event", op: "create", id: prepared.event.id };
     });
   }
@@ -172,20 +165,16 @@ export class AgentChangeSession {
   }
 
   /**
-   * Faz `targetId` ser subtarefa de `originId`, ou ser liberado quando `originId` terminar. A relacao pertence
-   * ao evento de origem: e ele que e revisado. Relacionar de novo quem ja esta relacionado nao faz nada.
+   * Faz `nextId` seguir-se de `previousId`. Nenhum dos dois e revisado, e qualquer um pode ser evento de agente.
+   * O resultado e o evento que ganhou o antecessor. Repetir uma ligacao nao faz nada.
    */
-  relateEvents(originId: string, targetId: string, relation: "subtask" | "blocks"): Promise<StageResult> {
+  sequenceEvents(previousId: string, nextId: string): Promise<StageResult> {
     return this.attempt(async () => {
-      if (originId === targetId) throw new StagingError("Um evento não se relaciona com ele mesmo.");
-      await this.assertEventExists(targetId);
-      const op = await this.reviseTarget(this.events, originId, (key) => this.findEvent(key), (origin) => {
-        const current = relation === "subtask" ? origin.subtaskIds : origin.blocksIds;
-        if (current.includes(targetId)) return origin;
-        const next = [...current, targetId];
-        return origin.revise(relation === "subtask" ? { subtaskIds: next } : { blocksIds: next });
-      });
-      return { ok: true, kind: "event", op, id: originId };
+      if (previousId === nextId) throw new StagingError("Um evento não se segue a ele mesmo.");
+      await this.assertSequenceEnd(previousId);
+      await this.assertSequenceEnd(nextId);
+      this.stageSequence([{ op: "add", fromId: previousId, toId: nextId }]);
+      return { ok: true, kind: "event", op: "update", id: nextId };
     });
   }
 
@@ -253,6 +242,7 @@ export class AgentChangeSession {
       events: changes(this.events),
       artifacts: changes(this.artifacts),
       derivations: [...this.derivations],
+      sequence: [...this.sequence],
       recurrences: series.filter((staged) => staged.op === "create").map((staged) => staged.recurrence),
       recurrenceChanges: series.flatMap((staged): RecurrenceChange[] =>
         staged.op === "update"
@@ -295,13 +285,23 @@ export class AgentChangeSession {
     return expandOccurrences(recurrence.rule, from, firstSearchLimit(from))[0];
   }
 
-  /** A ocorrencia nasce subtarefa dos eventos maiores do template, como as que a serie gera depois. */
+  /** A ocorrencia nasce se seguindo dos eventos do template, como as que a serie gera depois. */
   private async stageOccurrence(recurrence: Recurrence, day: string): Promise<void> {
     const occurrence = buildOccurrence(recurrence, day);
     this.events.set(occurrence.id, { change: { op: "create", entity: occurrence } });
-    for (const parentId of storedTemplateOf(recurrence).parentEventIds) {
-      const related = await this.relateEvents(parentId, occurrence.id, "subtask");
+    for (const previousId of storedTemplateOf(recurrence).previousEventIds ?? []) {
+      const related = await this.sequenceEvents(previousId, occurrence.id);
       if (!related.ok) throw new StagingError(related.error);
+    }
+  }
+
+  /** As arestas entram uma vez so: o agente pode repetir a ligacao sem que o lote a grave duas vezes. */
+  private stageSequence(changes: readonly SequenceChange[]): void {
+    for (const change of changes) {
+      const repeated = this.sequence.some(
+        (staged) => staged.op === change.op && staged.fromId === change.fromId && staged.toId === change.toId,
+      );
+      if (!repeated) this.sequence.push(change);
     }
   }
 
@@ -331,9 +331,10 @@ export class AgentChangeSession {
     return event?.actor === "human" ? event : null;
   }
 
-  private async assertEventExists(id: string): Promise<void> {
+  /** Uma ponta da sequencia: criada neste pedido ou do usuario, de pessoa ou de agente. */
+  private async assertSequenceEnd(id: string): Promise<void> {
     if (this.events.has(id)) return;
-    const found = await this.findEvent(id);
+    const found = await this.repositories.events.findById(id);
     if (!found || found.userId !== this.userId) throw new StagingError(`Não encontrei o evento ${id}.`);
   }
 

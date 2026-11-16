@@ -68,7 +68,7 @@ export function dailyRule(startsOn: string, overrides: Partial<RecurrenceRule> =
 }
 
 export function dailyRecurrence(userId: string, startsOn: string, template: Record<string, unknown> = {}): Recurrence {
-  return Recurrence.create({ userId, rule: dailyRule(startsOn), template: { name: "Serie", kind: "routine", ...template } });
+  return Recurrence.create({ userId, rule: dailyRule(startsOn), template: { name: "Serie", kind: "common", ...template } });
 }
 
 /** A ocorrencia de um dia da serie, as 18:00 de Sao Paulo, montada como a materializacao monta. */

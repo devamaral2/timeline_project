@@ -7,7 +7,7 @@ import { addStep, confident, result, scriptedJev, setupRequest } from "./testing
 const iso = (hour: number) => `2026-10-25T${String(hour).padStart(2, "0")}:00:00-03:00`;
 const evt = (name: string, kind: string, hour: number, over: Record<string, unknown> = {}) => ({
   name, kind, status: null, priority: null, longRunning: false, startedAt: iso(hour), estimatedFinishAt: null,
-  description: null, tags: [], subtaskOf: null, blockedBy: [], ...over,
+  description: null, tags: [], followsFrom: [], ...over,
 });
 
 /** O exemplo-guia ate os passos concluidos: tres eventos e um alimento, cada um no seu passo. */
@@ -16,7 +16,7 @@ async function guideExample() {
   const events = await addStep(ctx, "s-events", "event-create", "many");
   const artifacts = await addStep(ctx, "s-artifacts", "artifact-create");
   ctx.gateway.outputs.set("event_create", { events: [
-    evt("Refeição", "meal", 12), evt("Nadar na praia", "training", 13), evt("Voltar para casa", "routine", 15),
+    evt("Refeição", "meal", 12), evt("Nadar na praia", "training", 13), evt("Voltar para casa", "common", 15),
   ] });
   ctx.gateway.outputs.set("artifact_create", { artifacts: [
     { type: "food", name: "Arroz e feijão", content: "300g de arroz, 200g de feijão" },
@@ -98,24 +98,25 @@ describe("fila de finalizacao", () => {
     expect((await ctx.eventRepository.findById(meal?.id as string))?.artifactLinks.map((link) => link.artifactId)).toEqual([food?.id]);
   });
 
-  test("um evento que e parte de outro vira subtarefa dele: quem e editado e o evento maior", async () => {
+  test("dois eventos nao se ligam: a ordem entre eles nao e decidida na finalizacao, e nenhum e revisado", async () => {
     const ctx = setupRequest("organizar a festa e comprar o bolo");
     const first = await addStep(ctx, "s1", "event-create");
     const second = await addStep(ctx, "s2", "event-create");
-    ctx.gateway.outputs.set("event_create", { events: [evt("Organizar a festa", "routine", 10, { status: "todo" })] });
+    ctx.gateway.outputs.set("event_create", { events: [evt("Organizar a festa", "common", 10, { status: "todo" })] });
     await ctx.worker.run("event-create", first);
     await ctx.finalizer(scriptedJev(() => result({})).client).run(first);
-    ctx.gateway.outputs.set("event_create", { events: [evt("Comprar o bolo", "routine", 11, { status: "todo" })] });
+    ctx.gateway.outputs.set("event_create", { events: [evt("Comprar o bolo", "common", 11, { status: "todo" })] });
     await ctx.worker.run("event-create", second);
 
-    await ctx.finalizer(scriptedJev(() => result({ link: confident("c1") })).client).run(second);
+    const jev = scriptedJev(() => result({ link: confident("c1") }));
+    await ctx.finalizer(jev.client).run(second);
 
+    // Sem candidato ligavel (so ha outro evento), o JEV nem e consultado.
+    expect(jev.ask).not.toHaveBeenCalled();
     const [party, cake] = ctx.database.events;
-    expect(party?.subtaskIds).toEqual([cake?.id]);
-    expect(cake?.revision).toBe(1);
-    expect((await entitiesOf(ctx)).find((entity) => entity.id === cake?.id)?.links).toEqual([
-      { from: { kind: "event", id: cake?.id }, to: { kind: "event", id: party?.id } },
-    ]);
+    expect(ctx.database.edges).toEqual([]);
+    expect([party?.revision, cake?.revision]).toEqual([1, 1]);
+    expect((await entitiesOf(ctx)).find((entity) => entity.id === cake?.id)).toMatchObject({ finalized: true, links: [] });
   });
 
   test("resposta incerta ou JEV fora do ar: entidade finalizada sem ligacao, nada some", async () => {
@@ -238,14 +239,15 @@ describe("series na finalizacao", () => {
 });
 
 describe("sentido da ligacao", () => {
-  test("o artefato pertence ao evento; entre eventos, o que acabou de chegar e a parte; dois artefatos nao se ligam", () => {
+  test("o artefato pertence ao evento; so um artefato e um evento se ligam, nunca dois do mesmo tipo", () => {
     const artifact = { kind: "artifact" as const };
     const event = { kind: "event" as const };
-    const larger = { kind: "event" as const };
+    const other = { kind: "event" as const };
     expect(orient(event, artifact)).toEqual({ from: artifact, to: event });
     expect(orient(artifact, event)).toEqual({ from: artifact, to: event });
-    expect(orient(event, larger)).toEqual({ from: event, to: larger });
+    expect(linkable(artifact, event)).toBe(true);
+    expect(linkable(event, artifact)).toBe(true);
     expect(linkable(artifact, artifact)).toBe(false);
-    expect(linkable(event, larger)).toBe(true);
+    expect(linkable(event, other)).toBe(false);
   });
 });

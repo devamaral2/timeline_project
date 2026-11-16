@@ -7,6 +7,7 @@
 #   cp infra/caddy/timeline-caddy.service ~/.config/systemd/user/
 #   pnpm caddy:sync
 #   systemctl --user enable --now timeline-caddy
+#   pnpm caddy:trust   # confia na CA local: https://<nome>.braid.local:8443 sem aviso
 [Unit]
 Description=Caddy local (dominios *.localhost das worktrees do timeline)
 

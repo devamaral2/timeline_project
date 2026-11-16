@@ -8,6 +8,7 @@ import {
   EventValidationError,
   type ArtifactLink,
 } from "../../../domain";
+import { PostgresEntityBatchWriter } from "../agent-batch/postgres-entity-batch-writer";
 import { PostgresArtifactRepository } from "../artifacts/repositories/postgres-artifact.repository";
 import { PostgresEventRepository } from "../events/repositories/postgres-event.repository";
 import { PostgresTagRepository } from "../events/repositories/postgres-tag.repository";
@@ -36,12 +37,14 @@ describe("PostgresEventRepository", () => {
   let events: PostgresEventRepository;
   let artifacts: PostgresArtifactRepository;
   let recurrences: PostgresRecurrenceRepository;
+  let writer: PostgresEntityBatchWriter;
 
   beforeAll(async () => {
     ctx = await createPostgresTestContext();
     events = new PostgresEventRepository(ctx.db);
     artifacts = new PostgresArtifactRepository(ctx.db);
     recurrences = new PostgresRecurrenceRepository(ctx.db);
+    writer = new PostgresEntityBatchWriter(ctx.db);
   }, 60000);
 
   beforeEach(async () => {
@@ -55,6 +58,16 @@ describe("PostgresEventRepository", () => {
   async function saved(event: Event): Promise<Event> {
     await events.save(event);
     return event;
+  }
+
+  /** A sequencia so entra pelo lote: cada par e `[antecessor, sucessor]`. */
+  async function follow(...pairs: Array<[string, string]>): Promise<void> {
+    await writer.commit({
+      userId: USER,
+      events: [],
+      artifacts: [],
+      sequence: pairs.map(([fromId, toId]) => ({ op: "add" as const, fromId, toId })),
+    });
   }
 
   async function found(eventId: string): Promise<Event> {
@@ -286,129 +299,87 @@ describe("PostgresEventRepository", () => {
     });
   });
 
-  describe("subtarefas e bloqueios", () => {
-    test("quem sai do evento volta em subtaskIds e blocksIds; quem chega, em parentIds e blockedByIds", async () => {
-      const first = await saved(trackedEvent(USER, "Comprar tinta"));
-      const second = await saved(trackedEvent(USER, "Pintar a sala"));
-      const parent = await saved(trackedEvent(USER, "Reforma", { subtaskIds: [first.id, second.id] }));
-      const blocker = await saved(trackedEvent(USER, "Escolher a cor", { blocksIds: [first.id] }));
+  describe("sequencia entre eventos", () => {
+    test("quem sai da aresta volta em nextIds; quem chega, em previousIds, e nenhum e revisado", async () => {
+      const first = await saved(trackedEvent(USER, "Escolher a cor"));
+      const second = await saved(trackedEvent(USER, "Comprar tinta"));
+      const third = await saved(trackedEvent(USER, "Pintar a sala"));
+      await follow([first.id, second.id], [second.id, third.id]);
 
-      const readParent = await found(parent.id);
-      expect([...readParent.subtaskIds].sort()).toEqual([first.id, second.id].sort());
-      expect(readParent.parentIds).toEqual([]);
-      expect((await found(blocker.id)).blocksIds).toEqual([first.id]);
-
-      const readFirst = await found(first.id);
-      expect(readFirst.parentIds).toEqual([parent.id]);
-      expect(readFirst.blockedByIds).toEqual([blocker.id]);
-      expect(readFirst.subtaskIds).toEqual([]);
-      // A relacao pertence a origem: o destino nao e editado.
-      expect(readFirst.revision).toBe(1);
-      expect((await found(second.id)).blockedByIds).toEqual([]);
+      expect(await found(first.id)).toMatchObject({ previousIds: [], nextIds: [second.id], revision: 1 });
+      expect(await found(second.id)).toMatchObject({ previousIds: [first.id], nextIds: [third.id], revision: 1 });
+      expect(await found(third.id)).toMatchObject({ previousIds: [second.id], nextIds: [], revision: 1 });
+      expect(await selectRows(ctx.pool, "SELECT relation FROM event_event_relation")).toEqual([
+        { relation: "precedes" },
+        { relation: "precedes" },
+      ]);
     });
 
-    test("um evento pode ser subtarefa de mais de um", async () => {
+    test("um evento pode ter varios antecessores e varios sucessores", async () => {
+      const one = await saved(trackedEvent(USER, "Reforma"));
+      const two = await saved(trackedEvent(USER, "Compras do mes"));
       const shared = await saved(trackedEvent(USER, "Comprar tinta"));
-      const one = await saved(trackedEvent(USER, "Reforma", { subtaskIds: [shared.id] }));
-      const two = await saved(trackedEvent(USER, "Compras do mes", { subtaskIds: [shared.id] }));
+      const after = await saved(trackedEvent(USER, "Pintar"));
+      const other = await saved(trackedEvent(USER, "Limpar"));
+      await follow([one.id, shared.id], [two.id, shared.id], [shared.id, after.id], [shared.id, other.id]);
 
-      expect([...(await found(shared.id)).parentIds].sort()).toEqual([one.id, two.id].sort());
+      const read = await found(shared.id);
+      expect([...read.previousIds].sort()).toEqual([one.id, two.id].sort());
+      expect([...read.nextIds].sort()).toEqual([after.id, other.id].sort());
     });
 
-    test("editar troca as relacoes que saem do evento e preserva as que chegam", async () => {
-      const [a, b] = [await saved(trackedEvent(USER, "A")), await saved(trackedEvent(USER, "B"))];
-      const middle = await saved(trackedEvent(USER, "Meio", { subtaskIds: [a.id] }));
-      const top = await saved(trackedEvent(USER, "Topo", { subtaskIds: [middle.id] }));
+    test("uma ponta pode ser evento de agente, nos dois sentidos", async () => {
+      const request = await saved(agentEvent(USER, "Montar o cardapio", { kind: "build_request" }));
+      const person = await saved(trackedEvent(USER, "Fazer as compras"));
+      const reply = await saved(agentEvent(USER, "Conferir a despensa", { kind: "build_request" }));
+      await follow([request.id, person.id], [person.id, reply.id]);
 
-      await events.update(middle.revise({ subtaskIds: [b.id], blocksIds: [a.id] }), USER, 1);
-
-      const read = await found(middle.id);
-      expect(read.subtaskIds).toEqual([b.id]);
-      expect(read.blocksIds).toEqual([a.id]);
-      expect(read.parentIds).toEqual([top.id]);
-      expect((await found(a.id)).parentIds).toEqual([]);
+      expect(await found(request.id)).toMatchObject({ actor: "agent", nextIds: [person.id], revision: 1 });
+      expect(await found(person.id)).toMatchObject({ previousIds: [request.id], nextIds: [reply.id] });
+      expect((await found(reply.id)).previousIds).toEqual([person.id]);
     });
 
-    test("subtarefa nao fecha ciclo direto", async () => {
-      const child = await saved(trackedEvent(USER, "Filho"));
-      await saved(trackedEvent(USER, "Pai", { subtaskIds: [child.id] }));
-      const parentId = (await found(child.id)).parentIds[0] as string;
+    test("gravar ou editar um evento nao escreve nem apaga arestas da sequencia", async () => {
+      const first = await saved(trackedEvent(USER, "Primeiro"));
+      const second = await saved(trackedEvent(USER, "Segundo"));
+      await follow([first.id, second.id]);
 
-      await expect(events.update(child.revise({ subtaskIds: [parentId] }), USER, 1)).rejects.toThrow(
-        /A subtask cannot contain the event it belongs to/,
-      );
+      await events.update(second.revise({ name: "Segundo, editado", tags: ["casa"] }), USER, 1);
+      await events.update(first.revise({ name: "Primeiro, editado" }), USER, 1);
 
-      // A edicao volta inteira: nem a relacao, nem a revisao.
-      const read = await found(child.id);
-      expect(read.subtaskIds).toEqual([]);
-      expect(read.revision).toBe(1);
+      expect(await found(first.id)).toMatchObject({ name: "Primeiro, editado", nextIds: [second.id], revision: 2 });
+      expect(await found(second.id)).toMatchObject({ name: "Segundo, editado", previousIds: [first.id], revision: 2 });
+      expect(await countRows(ctx.pool, "event_event_relation", "relation = 'precedes'")).toBe(1);
     });
 
-    test("subtarefa nao fecha ciclo passando por um terceiro evento", async () => {
-      const c = await saved(trackedEvent(USER, "C"));
-      const b = await saved(trackedEvent(USER, "B", { subtaskIds: [c.id] }));
-      const a = await saved(trackedEvent(USER, "A", { subtaskIds: [b.id] }));
-
-      await expect(events.update(c.revise({ subtaskIds: [a.id] }), USER, 1)).rejects.toThrow(EventValidationError);
-
-      expect(await countRows(ctx.pool, "event_event_relation")).toBe(2);
-    });
-
-    test("bloqueio nao fecha ciclo, direto ou por um terceiro", async () => {
-      const c = await saved(trackedEvent(USER, "C"));
-      const b = await saved(trackedEvent(USER, "B", { blocksIds: [c.id] }));
-      const a = await saved(trackedEvent(USER, "A", { blocksIds: [b.id] }));
-
-      await expect(events.update(b.revise({ blocksIds: [c.id, a.id] }), USER, 1)).rejects.toThrow(
-        /Events cannot block each other in a cycle/,
-      );
-      await expect(events.update(c.revise({ blocksIds: [a.id] }), USER, 1)).rejects.toThrow(
-        /Events cannot block each other in a cycle/,
-      );
-
-      expect((await found(c.id)).blocksIds).toEqual([]);
-    });
-
-    test("subtarefa e bloqueio sao grafos separados: um nao fecha o ciclo do outro", async () => {
-      const child = await saved(trackedEvent(USER, "Filho"));
-      const parent = await saved(trackedEvent(USER, "Pai", { subtaskIds: [child.id] }));
-
-      await events.update(child.revise({ blocksIds: [parent.id] }), USER, 1);
-
-      expect((await found(parent.id)).blockedByIds).toEqual([child.id]);
-    });
-
-    test("o evento apagado some das relacoes de quem aponta para ele e de quem ele aponta", async () => {
-      const child = await saved(trackedEvent(USER, "Filho"));
+    test("o evento apagado some das listas de quem aponta para ele e de quem ele aponta", async () => {
+      const before = await saved(trackedEvent(USER, "Antes"));
+      const middle = await saved(trackedEvent(USER, "Meio"));
+      const after = await saved(trackedEvent(USER, "Depois"));
       const sibling = await saved(trackedEvent(USER, "Irmao"));
-      const parent = await saved(trackedEvent(USER, "Pai", { subtaskIds: [child.id, sibling.id] }));
+      await follow([before.id, middle.id], [middle.id, after.id], [before.id, sibling.id]);
 
-      await events.delete(child.id, USER);
-      expect((await found(parent.id)).subtaskIds).toEqual([sibling.id]);
+      await events.delete(middle.id, USER);
+      expect((await found(before.id)).nextIds).toEqual([sibling.id]);
+      expect((await found(after.id)).previousIds).toEqual([]);
 
-      await events.delete(parent.id, USER);
-      expect((await found(sibling.id)).parentIds).toEqual([]);
+      await events.delete(before.id, USER);
+      expect((await found(sibling.id)).previousIds).toEqual([]);
+    });
+
+    test("findByIds traz previousIds e nextIds de varios eventos de uma vez", async () => {
+      const first = await saved(trackedEvent(USER, "Primeiro"));
+      const second = await saved(trackedEvent(USER, "Segundo"));
+      await follow([first.id, second.id]);
+
+      const read = await events.findByIds([first.id, second.id]);
+
+      expect(read.find((event) => event.id === first.id)?.nextIds).toEqual([second.id]);
+      expect(read.find((event) => event.id === second.id)?.previousIds).toEqual([first.id]);
     });
   });
 
   describe("dono das pontas", () => {
-    test("recusa relacao com evento de outro usuario ou apagado", async () => {
-      const foreign = await saved(trackedEvent(OTHER_USER, "Do outro"));
-      const removed = await saved(trackedEvent(USER, "Apagado"));
-      await events.delete(removed.id, USER);
-
-      for (const props of [
-        { subtaskIds: [foreign.id] },
-        { blocksIds: [foreign.id] },
-        { subtaskIds: [removed.id] },
-        { blocksIds: [removed.id] },
-      ]) {
-        const event = trackedEvent(USER, "Novo", props);
-        await expect(events.save(event)).rejects.toThrow(/Related events not found/);
-        expect(await events.findById(event.id)).toBeNull();
-      }
-    });
-
     test("recusa relacao com artefato de outro usuario ou apagado, tambem na edicao", async () => {
       const foreign = textArtifact(OTHER_USER, "do outro");
       const removed = textArtifact(USER, "apagado");

@@ -20,7 +20,7 @@ vi.mock("@/components/hub/agent-chat-panel", () => ({
     </div>
   ),
   agentEntityHref: () => "#",
-  useAgendaChat: () => ({ chat: { startNewConversation: () => {} }, signedOut: true }),
+  useAgendaChat: () => ({ chat: { ready: true, startNewConversation: () => {} }, signedOut: true }),
 }));
 
 beforeAll(() => {

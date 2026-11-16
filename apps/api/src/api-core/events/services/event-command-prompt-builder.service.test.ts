@@ -14,7 +14,7 @@ test("describes every field of the flat command contract", () => {
 test("anchors routine as the default classification", () => {
   const prompt = new EventCommandPromptBuilderService().build("fui na padaria");
 
-  expect(prompt).toContain("'routine' e o padrao");
+  expect(prompt).toContain("'common' e o padrao");
   expect(prompt).toContain("horas dormidas em formato decimal");
 });
 

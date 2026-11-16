@@ -133,7 +133,7 @@ fun EditEventScreen(
                                 onCancel = onBack,
                                 onSave = viewModel::save,
                             )
-                        "routine" ->
+                        "common" ->
                             RoutineEditContent(
                                 event = event,
                                 modifier = Modifier.padding(paddingValues),

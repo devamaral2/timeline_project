@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { EventDto } from "@repo/contracts";
+import { fieldValue, getField, setField } from "@/components/edit/edit-test-helpers";
 import { type FakeApi, createFakeApi } from "@/test/fake-api";
 import { eventFixture, eventsArea } from "@/test/fake-api/events";
 
@@ -52,11 +53,11 @@ function patches() {
 
 /** Os campos mudam pelo rótulo visível, como a pessoa os acha. */
 function field(label: string): HTMLElement {
-  return screen.getByLabelText(label);
+  return getField(label);
 }
 
 function type(label: string, value: string) {
-  fireEvent.change(field(label), { target: { value } });
+  setField(label, value);
 }
 
 function save() {
@@ -80,14 +81,14 @@ describe("modo de edição", () => {
     renderRoute();
 
     expect(await screen.findByRole("heading", { level: 1, name: "Editar evento" })).toBeInTheDocument();
-    expect(field("Tipo")).toHaveValue("training");
+    expect(fieldValue("Tipo")).toBe("training");
     expect(field("Título")).toHaveValue(NAME);
-    expect(field("Status")).toHaveValue("doing");
-    expect(field("Prioridade")).toHaveValue("medium");
-    expect(field("Data de início")).toHaveValue("2026-11-14");
-    expect(field("Hora de início")).toHaveValue("18:30");
-    expect(field("Data de término")).toHaveValue("2026-11-14");
-    expect(field("Hora de término")).toHaveValue("19:20");
+    expect(fieldValue("Status")).toBe("doing");
+    expect(fieldValue("Prioridade")).toBe("medium");
+    expect(fieldValue("Data de início")).toBe("2026-11-14");
+    expect(fieldValue("Hora de início")).toBe("18:30");
+    expect(fieldValue("Data de término")).toBe("2026-11-14");
+    expect(fieldValue("Hora de término")).toBe("19:20");
     expect(field("Descrição")).toHaveValue("Foco em peito e tríceps.");
     // O rodapé tem só Descartar e Salvar; as seções de lembretes e tags têm os seus próprios botões.
     const footer = screen.getByRole("button", { name: "Descartar" }).parentElement as HTMLElement;
@@ -100,11 +101,15 @@ describe("modo de edição", () => {
     renderRoute();
     await screen.findByRole("heading", { level: 1, name: "Editar evento" });
 
-    expect(within(field("Tipo")).getAllByRole("option").map((option) => option.textContent)).toEqual([
-      "Rotina", "Refeição", "Sono", "Treino",
+    fireEvent.click(field("Tipo"));
+    expect(within(screen.getByRole("listbox", { name: "Tipo" })).getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "Padrão", "Refeição", "Sono", "Treino",
     ]);
-    expect(within(field("Status")).getByRole("option", { name: "Sem status" })).toBeInTheDocument();
-    expect(within(field("Status")).getByRole("option", { name: "Não realizado" })).toBeInTheDocument();
+    fireEvent.click(field("Tipo"));
+    fireEvent.click(field("Status"));
+    const statuses = within(screen.getByRole("listbox", { name: "Status" }));
+    expect(statuses.getByRole("option", { name: "Sem status" })).toBeInTheDocument();
+    expect(statuses.getByRole("option", { name: "Não realizado" })).toBeInTheDocument();
   });
 });
 
@@ -265,7 +270,7 @@ describe("revisão desatualizada", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Este evento mudou em outro lugar.");
     expect(field("Título")).toHaveValue("Meu título");
     // O campo que a pessoa não mexeu mostra a versão nova.
-    expect(field("Prioridade")).toHaveValue("high");
+    expect(fieldValue("Prioridade")).toBe("high");
     expect(replace).not.toHaveBeenCalled();
   });
 
@@ -343,7 +348,7 @@ describe("tarefa persistente", () => {
 
     fireEvent.click(persistentChoice(SIM));
 
-    expect(field("Data da previsão de entrega")).toHaveValue("2026-11-14");
+    expect(fieldValue("Data da previsão de entrega")).toBe("2026-11-14");
     expect(screen.queryByLabelText("Data de término")).not.toBeInTheDocument();
     save();
 
@@ -358,7 +363,7 @@ describe("tarefa persistente", () => {
 
     fireEvent.click(persistentChoice(NAO));
 
-    expect(field("Data de término")).toHaveValue("2026-11-14");
+    expect(fieldValue("Data de término")).toBe("2026-11-14");
     save();
 
     await waitFor(() => expect(replace).toHaveBeenCalledWith(DETAIL_PATH));

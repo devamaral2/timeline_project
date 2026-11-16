@@ -73,8 +73,8 @@ export function sleepAgendaOfArtifact(events: readonly ArtifactEventLinkDto[]): 
   };
 }
 
-/** "3 notas": a legenda no topo da lista. */
+/** "3 artefatos": a legenda no topo da lista. */
 export function artifactCountLabel(count: number): string {
-  if (count === 0) return "Nenhuma nota";
-  return count === 1 ? "1 nota" : `${count} notas`;
+  if (count === 0) return "Nenhum artefato";
+  return count === 1 ? "1 artefato" : `${count} artefatos`;
 }

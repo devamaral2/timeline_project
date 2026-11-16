@@ -111,18 +111,6 @@ export class PostgresEventCardQuery implements EventCardQuery {
     return this.cardsOf(result.rows.map((row) => row.id));
   }
 
-  async subtasks(params: { userId: string; parentEventId: string }): Promise<EventCard[]> {
-    const result = await this.db.execute<{ id: string }>(sql`
-      SELECT e.id
-      FROM event_event_relation r
-      JOIN events e ON e.id = r.to_event_id
-      WHERE r.from_event_id = ${params.parentEventId} AND r.relation = 'subtask'
-        AND e.user_id = ${params.userId} AND e.deleted_at IS NULL
-      ORDER BY r.created_at, e.id
-    `);
-    return this.cardsOf(result.rows.map((row) => row.id));
-  }
-
   async cardsOf(eventIds: readonly string[]): Promise<EventCard[]> {
     if (eventIds.length === 0) return [];
     const ids = [...eventIds];

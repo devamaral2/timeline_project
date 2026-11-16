@@ -2,9 +2,10 @@
 
 import { ChevronDown, Hash, ListChecks } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { EventCardDto, EventPriority, EventStatus, HumanEventStatus } from "@repo/contracts";
+import type { EventCardDto, EventPriority, HumanEventStatus } from "@repo/contracts";
 import { agendaRefreshEvent } from "@/components/agenda/agenda-refresh";
 import { EventRow } from "@/components/events/event-row";
+import { EventStatusPicker } from "@/components/events/event-status-picker";
 import { ListSkeleton } from "@/components/ui/list-skeleton";
 import page from "@/components/ui/page.module.css";
 import { ApiRequestError } from "@/lib/api/client-request";
@@ -21,7 +22,6 @@ import {
   groupTrackedEvents,
   oneRowPerSeries,
   showsSeriesRule,
-  subtaskProgress,
   type TaskGroupKey,
 } from "@/lib/events/task-groups";
 import { useMotionRouter } from "@/components/shell/navigation-motion";
@@ -30,14 +30,6 @@ import styles from "./tasks.module.css";
 
 function toggleIn<T>(list: readonly T[], value: T): T[] {
   return list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
-}
-
-/** Estados de pessoa que o glifo reabre: feito, cancelado e não realizado. */
-const CLOSED_STATUSES: ReadonlySet<EventStatus> = new Set<EventStatus>(["done", "cancel", "missed"]);
-
-/** Concluir ou reabrir pelo glifo: o que está em aberto vai a `done`; o fechado volta a `todo`. */
-function toggledStatus(card: EventCardDto): HumanEventStatus {
-  return card.status !== undefined && CLOSED_STATUSES.has(card.status) ? "todo" : "done";
 }
 
 const STALE_MESSAGE = "Esta tarefa mudou em outro lugar. Carregamos a lista atual; confira e tente de novo.";
@@ -54,7 +46,8 @@ function openTasksLabel(open: number): string {
 /**
  * A lista de tarefas: os eventos com status (de pessoa e de agente) da rota
  * `tracked`, nos grupos do canvas. Feitas e Encerradas vêm recolhidos. Cada
- * linha é a `EventRow`. Tag, prioridade e texto são parâmetros da consulta: a
+ * linha é a `EventRow`; o glifo de um evento de pessoa abre a escolha dos
+ * status, e a linha muda de grupo com o status escolhido. Tag, prioridade e texto são parâmetros da consulta: a
  * tela não filtra na mão. As opções de tag vêm da lista sem filtro. No celular os
  * filtros moram no menu de opções da barra inferior (tocar na aba Tarefas já
  * selecionada): cada tag é uma lista, a prioridade fica na engrenagem. Recarregar
@@ -68,6 +61,9 @@ export function TasksScreen({ userId }: { userId: string }) {
   const [expanded, setExpanded] = useState<TaskGroupKey[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  /** A tarefa cujo glifo foi tocado: a escolha de status fica aberta para ela. */
+  const [statusCard, setStatusCard] = useState<EventCardDto | null>(null);
+  const [statusAnchor, setStatusAnchor] = useState<HTMLElement | null>(null);
   const [tag, setTag] = useState<string | null>(null);
   const [priorities, setPriorities] = useState<EventPriority[]>([]);
   const [typed, setTyped] = useState("");
@@ -125,16 +121,24 @@ export function TasksScreen({ userId }: { userId: string }) {
     setQuery("");
   }
 
+  /** O glifo de um evento de pessoa abre a escolha de status. Evento de agente não muda status. */
+  function openStatusPicker(card: EventCardDto, anchor: HTMLElement) {
+    if (saving || card.actor !== "human") return;
+    setStatusAnchor(anchor);
+    setStatusCard(card);
+  }
+
   /**
-   * Troca o status pelo glifo de um evento de pessoa. Manda a revisão lida;
-   * revisão velha relê a lista e avisa. Evento de agente não muda status.
+   * Grava o status escolhido com a revisão lida; revisão velha relê a lista e
+   * avisa. Escolher o status que a tarefa já tem só fecha a escolha.
    */
-  async function toggleStatus(card: EventCardDto) {
-    if (saving || card.actor !== "human" || card.status === undefined) return;
+  async function changeStatus(card: EventCardDto, status: HumanEventStatus) {
+    setStatusCard(null);
+    if (saving || status === card.status) return;
     setSaving(true);
     setNotice(null);
     try {
-      await updateEvent(card.id, statusPatch(card, toggledStatus(card), new Date()));
+      await updateEvent(card.id, statusPatch(card, status, new Date()));
       window.dispatchEvent(new Event(agendaRefreshEvent));
       await refresh();
     } catch (cause) {
@@ -149,7 +153,7 @@ export function TasksScreen({ userId }: { userId: string }) {
     }
   }
 
-  // Uma série aparece uma vez; a fração de subtarefas conta só as linhas da lista.
+  // Uma série aparece uma vez; todo cartão com status é uma linha.
   const rows = useMemo(() => oneRowPerSeries(cards ?? []), [cards]);
   const groups = useMemo(() => groupTrackedEvents(rows), [rows]);
   const open = groups
@@ -256,8 +260,7 @@ export function TasksScreen({ userId }: { userId: string }) {
                           userId={userId}
                           now={now}
                           ruleInPlaceOfTime={showsSeriesRule(card)}
-                          subtasks={subtaskProgress(rows, card.id)}
-                          onStatusClick={(target) => void toggleStatus(target)}
+                          onStatusClick={openStatusPicker}
                         />
                       ))}
                     </ul>
@@ -268,6 +271,14 @@ export function TasksScreen({ userId }: { userId: string }) {
           </div>
         )}
       </section>
+      {statusCard ? (
+        <EventStatusPicker
+          card={statusCard}
+          anchor={statusAnchor}
+          onPick={(status) => void changeStatus(statusCard, status)}
+          onClose={() => setStatusCard(null)}
+        />
+      ) : null}
     </main>
   );
 }

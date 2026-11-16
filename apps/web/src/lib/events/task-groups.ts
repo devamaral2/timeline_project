@@ -41,17 +41,14 @@ const GROUPS: readonly Omit<TaskGroup, "cards">[] = [
 ];
 
 /**
- * Agrupa os cartões da lista. Uma subtarefa cujo pai também está na lista não
- * vira linha própria (o pai a representa). Cartão sem status (de referência)
- * fica de fora. Grupo vazio não é devolvido.
+ * Agrupa os cartões da lista: todo cartão com status vira uma linha, sem
+ * hierarquia (a sequência entre eventos não muda a lista). Cartão sem status
+ * (de referência) fica de fora. Grupo vazio não é devolvido.
  */
 export function groupTrackedEvents(cards: readonly EventCardDto[]): TaskGroup[] {
-  const listed = new Set(cards.map((card) => card.id));
-  const rows = cards.filter((card) => !card.parentEventIds.some((parent) => listed.has(parent)));
-
   return GROUPS.map((group) => ({
     ...group,
-    cards: rows.filter((card) => card.status !== undefined && groupOfStatus[card.status] === group.key),
+    cards: cards.filter((card) => card.status !== undefined && groupOfStatus[card.status] === group.key),
   })).filter((group) => group.cards.length > 0);
 }
 
@@ -90,21 +87,4 @@ function isPreferredOccurrence(candidate: EventCardDto, current: EventCardDto): 
   const currentOpen = current.status !== undefined && OPEN_STATUSES.has(current.status);
   if (candidateOpen !== currentOpen) return candidateOpen;
   return (candidate.recurrence?.occurrenceOn ?? "") < (current.recurrence?.occurrenceOn ?? "");
-}
-
-export interface SubtaskProgress {
-  /** Subtarefas feitas (status `done`). */
-  done: number;
-  /** Todas as subtarefas da lista que apontam para o evento como pai. */
-  total: number;
-}
-
-/**
- * A fração "1/3" de um evento: conta os cartões da lista cujo pai é o evento.
- * Sem subtarefas na lista, não há fração (devolve `undefined`).
- */
-export function subtaskProgress(cards: readonly EventCardDto[], parentId: string): SubtaskProgress | undefined {
-  const children = cards.filter((card) => card.parentEventIds.includes(parentId));
-  if (children.length === 0) return undefined;
-  return { done: children.filter((child) => child.status === "done").length, total: children.length };
 }

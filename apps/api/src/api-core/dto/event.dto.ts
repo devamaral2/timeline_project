@@ -1,5 +1,5 @@
 import type { Artifact, Event, Recurrence } from "../../domain";
-import type { EventCard } from "../../domain/ports";
+import type { EventCard, EventRequestLink } from "../../domain/ports";
 import type { ArtifactType, EventCardDto, EventDto, EventRecurrenceDto } from "@repo/contracts";
 import { toArtifactDto } from "./artifact.dto";
 
@@ -24,6 +24,7 @@ export function toEventCardDto({ event, artifactTypes, recurrence }: EventCard):
     priority: event.priority,
     name: event.name,
     description: event.description,
+    location: event.location,
     startedAt: event.startedAt?.toISOString(),
     estimatedFinishAt: event.estimatedFinishAt?.toISOString(),
     finishedAt: event.finishedAt?.toISOString(),
@@ -31,8 +32,7 @@ export function toEventCardDto({ event, artifactTypes, recurrence }: EventCard):
     notifyOffsetsMinutes: [...event.notifyOffsetsMinutes],
     tags: event.tags,
     artifactTypes: artifactTypes as ArtifactType[],
-    parentEventIds: [...event.parentIds],
-    blockedByEventIds: [...event.blockedByIds],
+    previousEventIds: [...event.previousIds],
     ...(series ? { recurrence: series } : {}),
     revision: event.revision,
   };
@@ -42,7 +42,12 @@ export function toEventCardDto({ event, artifactTypes, recurrence }: EventCard):
  * `artifacts` sao os artefatos do evento em qualquer ordem: a ordem e a das
  * relacoes (`event.artifactLinks`), e um artefato apagado simplesmente nao aparece.
  */
-export function toEventDto(event: Event, artifacts: readonly Artifact[] = [], recurrence?: Recurrence): EventDto {
+export function toEventDto(
+  event: Event,
+  artifacts: readonly Artifact[] = [],
+  recurrence?: Recurrence,
+  requests: readonly EventRequestLink[] = [],
+): EventDto {
   const byId = new Map(artifacts.map((artifact) => [artifact.id, artifact]));
   const linked = event.artifactLinks.flatMap((link) => {
     const artifact = byId.get(link.artifactId);
@@ -55,7 +60,12 @@ export function toEventDto(event: Event, artifacts: readonly Artifact[] = [], re
       fromRecurrence: link.fromRecurrence,
       artifact: toArtifactDto(artifact),
     })),
-    subtaskEventIds: [...event.subtaskIds],
-    blocksEventIds: [...event.blocksIds],
+    nextEventIds: [...event.nextIds],
+    requests: requests.map((link) => ({
+      id: link.requestId,
+      name: link.name,
+      relation: link.relation,
+      at: link.at.toISOString(),
+    })),
   };
 }

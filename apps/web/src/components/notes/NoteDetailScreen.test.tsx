@@ -70,13 +70,14 @@ test("mostra título, tipo, tags, o registro e o texto de uma nota própria", as
 
   expect(await screen.findByRole("heading", { level: 1, name: "Ideias para a proposta" })).toBeInTheDocument();
   expect(screen.getByText("Nota")).toBeInTheDocument();
+  expect(screen.getByText("Artefato")).toBeInTheDocument();
   expect(screen.getByText("#trabalho")).toBeInTheDocument();
   expect(screen.getByText("Começar pelo problema do cliente.")).toBeInTheDocument();
   expect(screen.getByRole("heading", { level: 2, name: "Pontos para a reunião" })).toBeInTheDocument();
   const registro = screen.getByRole("region", { name: "Registro" });
   expect(within(registro).getByText("12 set., 09:00")).toBeInTheDocument();
   expect(within(registro).getByText("ontem, 21:12")).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "Notas" })).toHaveAttribute("href", "/user-1/notas");
+  expect(screen.getByRole("link", { name: "Voltar para Artefatos" })).toHaveAttribute("href", "/user-1/notas");
   expect(api.calls.at(-1)).toMatchObject({ method: "GET", pathname: "/api/artifacts/art-1" });
 });
 
@@ -106,11 +107,12 @@ test("lista os eventos em que o artefato aparece, com a relação, e cada um abr
   expect(within(eventos).getByRole("link", { name: /Almoço/ })).toHaveTextContent("creates");
 });
 
-test("um artefato sem evento diz que não aparece em nenhum", async () => {
+test("um artefato sem evento não mostra a seção Eventos", async () => {
   install({ artifacts: [artifactFixture({ id: "art-1", name: "Rascunho" })] });
   renderArtifact("art-1");
 
-  expect(await screen.findByText("Não aparece em nenhum evento.")).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { level: 1, name: "Rascunho" })).toBeInTheDocument();
+  expect(screen.queryByRole("region", { name: "Eventos" })).not.toBeInTheDocument();
 });
 
 test("um artefato global mostra o catálogo global, o conteúdo do tipo e nenhuma ação de editar ou apagar", async () => {

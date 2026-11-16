@@ -38,9 +38,9 @@ export interface RecurrenceRepository {
   /**
    * Insere as ocorrencias ja montadas e avanca a marca d'agua, tudo numa
    * transacao so. Uma ocorrencia de um dia que ja existe e ignorada: duas
-   * leituras ao mesmo tempo nao duplicam nada. `parentIds` sao os eventos
-   * maiores de que cada ocorrencia nasce subtarefa; a relacao faz parte da
-   * criacao da ocorrencia e nao conta como edicao deles.
+   * leituras ao mesmo tempo nao duplicam nada. `previousIds` sao os eventos
+   * de que cada ocorrencia nasce se seguindo; a relacao faz parte da criacao
+   * da ocorrencia e nao conta como edicao deles.
    */
-  materialize(recurrence: Recurrence, occurrences: Event[], parentIds?: readonly string[]): Promise<void>;
+  materialize(recurrence: Recurrence, occurrences: Event[], previousIds?: readonly string[]): Promise<void>;
 }

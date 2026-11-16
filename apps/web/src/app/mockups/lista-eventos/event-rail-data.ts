@@ -3,7 +3,7 @@
  * dias e os eventos são fixos para que a tela seja a mesma a cada abertura.
  */
 
-export type RailEventType = "training" | "meal" | "routine" | "sleep";
+export type RailEventType = "training" | "meal" | "common" | "sleep";
 export type RailDayRelation = "past" | "today" | "future";
 export type RailStatus = "done" | "running" | "upcoming" | "missed";
 
@@ -64,7 +64,7 @@ export const RAIL_DAYS: RailDay[] = [
     events: [
       { id: "h-1", name: "Treino de força", type: "training", start: 420, end: 480, tags: ["saúde"] },
       { id: "h-2", name: "Café da manhã", type: "meal", start: 495, end: 525, tags: [], missed: true },
-      { id: "h-3", name: "Revisar proposta", type: "routine", start: 540, end: 630, tags: ["trabalho"] },
+      { id: "h-3", name: "Revisar proposta", type: "common", start: 540, end: 630, tags: ["trabalho"] },
       { id: "h-4", name: "Almoço", type: "meal", start: 750, end: 780, tags: [] },
       { id: "h-5", name: "Descanso da tarde", type: "sleep", start: 840, end: 860, tags: [] },
     ],
@@ -76,8 +76,8 @@ export const RAIL_DAYS: RailDay[] = [
     relation: "future",
     events: [
       { id: "a-1", name: "Treino de força", type: "training", start: 420, end: 480, tags: ["saúde"] },
-      { id: "a-2", name: "Reunião de planejamento", type: "routine", start: 600, end: 660, tags: ["trabalho"] },
-      { id: "a-3", name: "Leitura", type: "routine", start: 1260, end: 1290, tags: ["pessoal"] },
+      { id: "a-2", name: "Reunião de planejamento", type: "common", start: 600, end: 660, tags: ["trabalho"] },
+      { id: "a-3", name: "Leitura", type: "common", start: 1260, end: 1290, tags: ["pessoal"] },
     ],
   },
 ];

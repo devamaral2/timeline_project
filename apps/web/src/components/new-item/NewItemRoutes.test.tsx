@@ -1,8 +1,9 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, expect, test, vi } from "vitest";
 import { type FakeApi, createFakeApi } from "@/test/fake-api";
 import { type StoredArtifact, artifactFixture, artifactsArea } from "@/test/fake-api/artifacts";
-import { eventsArea } from "@/test/fake-api/events";
+import { setField } from "@/components/edit/edit-test-helpers";
+import { eventFixture, eventsArea } from "@/test/fake-api/events";
 
 const replace = vi.fn();
 const push = vi.fn();
@@ -35,6 +36,21 @@ const NOTE = artifactFixture({
   revision: 2,
 });
 
+/** A criação escolhe entre nota e alimento no seletor de tipo. */
+function chooseFood() {
+  setField("Tipo", "food");
+}
+
+function save() {
+  fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
+}
+
+/** Liga um evento pelo "+": abre o modal de seleção e escolhe pelo nome. */
+async function linkEvent(name: string) {
+  fireEvent.click(screen.getByRole("button", { name: "Adicionar evento" }));
+  fireEvent.click(await screen.findByRole("button", { name: `Escolher “${name}”` }));
+}
+
 beforeEach(() => {
   net.authedFetch.mockReset();
   replace.mockReset();
@@ -45,9 +61,10 @@ test("criar nota envia um artefato de texto com o nome e o conteúdo", async () 
   install();
   render(<NewNoteRoute userId="user-1" />);
 
-  fireEvent.change(screen.getByLabelText("Nome da nota"), { target: { value: "Ideias" } });
+  expect(screen.getByRole("heading", { level: 1, name: "Novo artefato" })).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText("Nome do artefato"), { target: { value: "Ideias" } });
   fireEvent.change(screen.getByLabelText("Conteúdo da nota"), { target: { value: "Ideias\nPrimeiro ponto" } });
-  fireEvent.click(screen.getByRole("button", { name: "Criar nota" }));
+  save();
 
   await waitFor(() => expect(replace).toHaveBeenCalledWith(expect.stringMatching(/^\/user-1\/notas\/.+/)));
   const post = api.calls.find((call) => call.method === "POST");
@@ -63,11 +80,12 @@ test("criar alimento envia só o texto do que foi comido e abre o alimento, que 
   install();
   render(<NewNoteRoute userId="user-1" />);
 
-  fireEvent.click(screen.getByRole("button", { name: "Alimento" }));
-  // O formulário de nota some: só o campo do que foi comido e o botão de alimento ficam.
+  chooseFood();
+  // O formulário de nota some: fica só o campo do que foi comido, sem nome e sem tags.
   expect(screen.queryByLabelText("Conteúdo da nota")).not.toBeInTheDocument();
+  expect(screen.queryByLabelText("Nome do artefato")).not.toBeInTheDocument();
   fireEvent.change(screen.getByLabelText("O que você comeu"), { target: { value: "  Arroz, feijão e salada  " } });
-  fireEvent.click(screen.getByRole("button", { name: "Criar alimento" }));
+  save();
 
   await waitFor(() => expect(replace).toHaveBeenCalledWith(expect.stringMatching(/^\/user-1\/notas\/.+/)));
   const post = api.calls.find((call) => call.method === "POST");
@@ -82,8 +100,8 @@ test("alimento sem texto não envia nada e pede o que foi comido", async () => {
   install();
   render(<NewNoteRoute userId="user-1" />);
 
-  fireEvent.click(screen.getByRole("button", { name: "Alimento" }));
-  fireEvent.click(screen.getByRole("button", { name: "Criar alimento" }));
+  chooseFood();
+  save();
 
   expect(await screen.findByRole("alert")).toHaveTextContent("Escreva o que você comeu.");
   expect(api.calls.some((call) => call.method === "POST")).toBe(false);
@@ -95,10 +113,10 @@ test("tentar salvar de novo depois de uma falha reenvia a mesma chave e não cri
   render(<NewNoteRoute userId="user-1" />);
 
   fireEvent.change(screen.getByLabelText("Conteúdo da nota"), { target: { value: "Uma ideia" } });
-  fireEvent.click(screen.getByRole("button", { name: "Criar nota" }));
+  save();
   expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível criar a nota.");
 
-  fireEvent.click(screen.getByRole("button", { name: "Criar nota" }));
+  save();
   await waitFor(() => expect(replace).toHaveBeenCalled());
 
   const posts = api.calls.filter((call) => call.method === "POST");
@@ -112,7 +130,7 @@ test("editar envia a revisão lida, o conteúdo inteiro e as tags", async () => 
   render(<EditNoteRoute userId="user-1" noteId="art-1" />);
 
   fireEvent.change(await screen.findByLabelText("Conteúdo da nota"), { target: { value: "Ideias\nSegundo ponto" } });
-  fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
+  save();
 
   await waitFor(() => expect(replace).toHaveBeenCalledWith("/user-1/notas/art-1"));
   const patch = api.calls.find((call) => call.method === "PATCH");
@@ -132,15 +150,97 @@ test("revisão desatualizada avisa, mantém o texto digitado e a próxima tentat
   if (stored) stored.revision = 3;
 
   fireEvent.change(body, { target: { value: "Meu texto" } });
-  fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
+  save();
 
   expect(await screen.findByRole("alert")).toHaveTextContent("Esta nota mudou em outro lugar");
   expect(screen.getByLabelText("Conteúdo da nota")).toHaveValue("Meu texto");
   expect(replace).not.toHaveBeenCalled();
 
-  fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
+  save();
   await waitFor(() => expect(replace).toHaveBeenCalledWith("/user-1/notas/art-1"));
   const patches = api.calls.filter((call) => call.method === "PATCH");
   expect(patches.map((call) => (call.body as { expectedRevision: number }).expectedRevision)).toEqual([2, 3]);
   expect(patches[1].body).toMatchObject({ data: { body: "Meu texto" } });
+});
+
+const DINNER = eventFixture({ id: "ev-1", name: "Jantar leve", kind: "meal", startedAt: "2026-11-14T20:00:00-03:00" });
+const GYM = eventFixture({ id: "ev-2", name: "Treino de peito", kind: "training", startedAt: "2026-11-15T07:00:00-03:00" });
+
+test("o + de Eventos abre o modal de seleção, e a nota criada já nasce ligada ao evento escolhido", async () => {
+  install({ events: [DINNER, GYM] });
+  render(<NewNoteRoute userId="user-1" />);
+
+  fireEvent.change(screen.getByLabelText("Conteúdo da nota"), { target: { value: "Receita do jantar" } });
+  fireEvent.click(screen.getByRole("button", { name: "Adicionar evento" }));
+  expect(screen.getByRole("dialog", { name: "Eventos" })).toBeInTheDocument();
+  fireEvent.change(screen.getByRole("searchbox", { name: "Buscar evento para ligar" }), { target: { value: "Jantar" } });
+  fireEvent.click(await screen.findByRole("button", { name: "Escolher “Jantar leve”" }));
+
+  // Escolher fecha o modal e põe o evento na lista do formulário.
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  expect(within(screen.getByRole("list", { name: "Eventos ligados" })).getByText("Jantar leve")).toBeInTheDocument();
+  save();
+
+  await waitFor(() => expect(replace).toHaveBeenCalledWith(expect.stringMatching(/^\/user-1\/notas\/.+/)));
+  expect(api.calls.find((call) => call.method === "POST")?.body).toMatchObject({ type: "text", eventIds: ["ev-1"] });
+});
+
+test("quem já está na lista não é oferecido de novo no modal", async () => {
+  install({ events: [DINNER, GYM] });
+  render(<NewNoteRoute userId="user-1" />);
+
+  await linkEvent("Jantar leve");
+  fireEvent.click(screen.getByRole("button", { name: "Adicionar evento" }));
+
+  expect(await screen.findByRole("button", { name: "Escolher “Treino de peito”" })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Escolher “Jantar leve”" })).not.toBeInTheDocument();
+});
+
+test("editar mostra os eventos ligados; ligar outro e desligar um manda a lista de eventos que fica", async () => {
+  install({ events: [DINNER, GYM], artifacts: [artifactFixture({ ...NOTE, revision: 2, links: [{ eventId: "ev-1", relation: "uses" }] })] });
+  render(<EditNoteRoute userId="user-1" noteId="art-1" />);
+
+  expect(await screen.findByRole("heading", { level: 1, name: "Editar artefato" })).toBeInTheDocument();
+  const linked = screen.getByRole("list", { name: "Eventos ligados" });
+  expect(within(linked).getByText("Jantar leve")).toBeInTheDocument();
+
+  await linkEvent("Treino de peito");
+  fireEvent.click(screen.getByRole("button", { name: "Desligar do evento “Jantar leve”" }));
+  save();
+
+  await waitFor(() => expect(replace).toHaveBeenCalledWith("/user-1/notas/art-1"));
+  expect(api.calls.find((call) => call.method === "PATCH")?.body).toMatchObject({ expectedRevision: 2, eventIds: ["ev-2"] });
+});
+
+test("sem mexer nos eventos, a edição não manda a lista de eventos", async () => {
+  install({ events: [DINNER], artifacts: [artifactFixture({ ...NOTE, links: [{ eventId: "ev-1", relation: "uses" }] })] });
+  render(<EditNoteRoute userId="user-1" noteId="art-1" />);
+
+  fireEvent.change(await screen.findByLabelText("Conteúdo da nota"), { target: { value: "Outro texto" } });
+  save();
+
+  await waitFor(() => expect(replace).toHaveBeenCalledWith("/user-1/notas/art-1"));
+  expect(api.calls.find((call) => call.method === "PATCH")?.body).not.toHaveProperty("eventIds");
+});
+
+test("Descartar volta para a lista na criação e para a leitura na edição, sem gravar nada", async () => {
+  install({ artifacts: [NOTE] });
+  const created = render(<NewNoteRoute userId="user-1" />);
+  fireEvent.click(screen.getByRole("button", { name: "Descartar" }));
+  expect(replace).toHaveBeenLastCalledWith("/user-1/notas");
+  created.unmount();
+
+  render(<EditNoteRoute userId="user-1" noteId="art-1" />);
+  fireEvent.click(await screen.findByRole("button", { name: "Descartar" }));
+  expect(replace).toHaveBeenLastCalledWith("/user-1/notas/art-1");
+  expect(api.calls.some((call) => call.method !== "GET")).toBe(false);
+});
+
+test("um artefato que não é nota de texto própria não se edita aqui", async () => {
+  // Uma nota do catálogo global: só se lê.
+  install({ artifacts: [artifactFixture({ id: "art-9", name: "Guia", global: true, data: { body: "Guia" } })] });
+  render(<EditNoteRoute userId="user-1" noteId="art-9" />);
+
+  expect(await screen.findByRole("alert")).toHaveTextContent("Este artefato não se edita aqui.");
+  expect(screen.queryByRole("button", { name: "Salvar" })).not.toBeInTheDocument();
 });

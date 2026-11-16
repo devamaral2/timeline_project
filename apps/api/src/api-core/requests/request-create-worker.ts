@@ -1,8 +1,10 @@
+import type { GeoPointInput } from "@repo/contracts";
 import type { ArtifactRepository, EntityBatchWriter, EventRepository, RecurrenceRepository } from "../../domain/ports";
 import { AgentRunCancelledError } from "../agent/errors/agent.errors";
 import { AgentChangeSession } from "../agent/services/agent-change-session";
 import { TIME_ZONE } from "../agent/time";
 import type { CreateEventUseCase } from "../events/create-event.usecase";
+import type { PlaceResolver } from "../events/services/place-resolver.service";
 import {
   artifactCreateOutput, eventCreateOutput, recurringEventCreateOutput,
   type ArtifactCreateOutput, type EventCreateOutput, type RecurringEventCreateOutput,
@@ -32,6 +34,8 @@ export class RequestCreateWorker {
       batchWriter: EntityBatchWriter;
       repositories: StepRepositories;
       createEvent: CreateEventUseCase;
+      /** Troca o lugar dito pelo endereco de um lugar que existe. Sem ele, o local fica como foi dito. */
+      places?: Pick<PlaceResolver, "resolve">;
     },
   ) {}
 
@@ -66,7 +70,7 @@ export class RequestCreateWorker {
     switch (agent) {
       case "event-create": {
         const { value } = await this.deps.runner.run({ ...base, schema: eventCreateOutput });
-        return this.stageEvents(session, value);
+        return this.stageEvents(session, value, request.context?.coordinates);
       }
       case "artifact-create": {
         const { value } = await this.deps.runner.run({ ...base, schema: artifactCreateOutput });
@@ -74,21 +78,26 @@ export class RequestCreateWorker {
       }
       case "recurring-event-create": {
         const { value } = await this.deps.runner.run({ ...base, schema: recurringEventCreateOutput });
-        return this.stageSeries(session, value);
+        return this.stageSeries(session, value, request.context?.coordinates);
       }
     }
   }
 
   /**
    * Cada serie nova entra com a primeira ocorrencia no mesmo lote (e uma linha de verdade, que o pedido
-   * mostra). O template nao traz artefatos, nem o alimento de uma refeicao.
+   * mostra). O template nao traz artefatos, nem o alimento de uma refeicao. O lugar dito e procurado no mapa
+   * perto de onde a pessoa esta, e toda ocorrencia nasce com ele.
    */
-  private async stageSeries(session: AgentChangeSession, output: RecurringEventCreateOutput): Promise<NewEntity[]> {
+  private async stageSeries(
+    session: AgentChangeSession, output: RecurringEventCreateOutput, coordinates?: GeoPointInput,
+  ): Promise<NewEntity[]> {
     const today = session.todayIn(TIME_ZONE);
     for (const series of output.series) {
+      const said = series.location?.trim();
+      const location = said ? await (this.deps.places?.resolve(said, coordinates) ?? said) : null;
       let input: ReturnType<typeof seriesInput>;
       try {
-        input = seriesInput(series, today, TIME_ZONE);
+        input = seriesInput({ ...series, location }, today, TIME_ZONE);
       } catch (error) {
         if (error instanceof RuleError) throw new StepFailure("rejected");
         throw error;
@@ -101,10 +110,17 @@ export class RequestCreateWorker {
       .map((item): NewEntity => ({ ...item, operation: "create" }));
   }
 
-  /** O alimento de uma refeicao nao nasce aqui: quem cria artefatos e outro passo, e a finalizacao os liga. */
-  private async stageEvents(session: AgentChangeSession, output: EventCreateOutput): Promise<NewEntity[]> {
+  /**
+   * O alimento de uma refeicao nao nasce aqui: quem cria artefatos e outro passo, e a finalizacao os liga. O lugar
+   * dito e procurado no mapa perto de onde a pessoa esta; sem lugar dito, vale o endereco de onde ela esta.
+   */
+  private async stageEvents(
+    session: AgentChangeSession, output: EventCreateOutput, coordinates?: GeoPointInput,
+  ): Promise<NewEntity[]> {
     const ids: string[] = [];
     for (const item of output.events) {
+      const said = item.location?.trim();
+      const location = said ? await (this.deps.places?.resolve(said, coordinates) ?? said) : undefined;
       const result = await session.createEvent({
         name: item.name,
         kind: item.kind,
@@ -115,22 +131,22 @@ export class RequestCreateWorker {
         estimatedFinishAt: validInstant(item.estimatedFinishAt),
         description: item.description ?? undefined,
         tags: item.tags,
+        ...(location ? { location } : {}),
+        ...(coordinates ? { coordinates } : {}),
       }, { derivedArtifacts: false });
       if (!result.ok) throw new StepFailure("rejected");
       ids.push(result.id);
     }
 
-    // As relacoes entre os eventos da propria lista: a posicao que o agente deu vira o id recem-criado.
-    const relate = async (originIndex: number, targetIndex: number, relation: "subtask" | "blocks") => {
-      const origin = ids[originIndex];
-      const target = ids[targetIndex];
-      if (!origin || !target || origin === target) throw new StepFailure("rejected");
-      const result = await session.relateEvents(origin, target, relation);
-      if (!result.ok) throw new StepFailure("rejected");
-    };
+    // A sequencia entre os eventos da propria lista: a posicao que o agente deu vira o id recem-criado.
     for (const [index, item] of output.events.entries()) {
-      if (item.subtaskOf !== null) await relate(item.subtaskOf, index, "subtask");
-      for (const blocker of item.blockedBy) await relate(blocker, index, "blocks");
+      for (const previousIndex of item.followsFrom) {
+        const previous = ids[previousIndex];
+        const next = ids[index];
+        if (!previous || !next || previous === next) throw new StepFailure("rejected");
+        const result = await session.sequenceEvents(previous, next);
+        if (!result.ok) throw new StepFailure("rejected");
+      }
     }
     return ids.map((id): NewEntity => ({ kind: "event", id, operation: "create" }));
   }

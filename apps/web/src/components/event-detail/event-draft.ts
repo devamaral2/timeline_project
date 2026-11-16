@@ -26,16 +26,18 @@ export interface EventDraft {
   endDate: string;
   endTime: string;
   description: string;
+  /** Onde acontece; vazio é sem local. */
+  location: string;
   /** Minutos antes do evento, em ordem crescente (`notifyOffsetsMinutes`). */
   reminders: number[];
   /** Tags já normalizadas (minúsculas, sem espaços nas pontas). */
   tags: string[];
   /** A tarefa persistente: o evento longo, que não é um bloco de tempo e tem a previsão de entrega como prazo. */
   longRunning: boolean;
-  /** Os eventos que bloqueiam este (ids, na ordem da API). */
-  blockedByEventIds: string[];
-  /** Os eventos que este bloqueia (ids). */
-  blocksEventIds: string[];
+  /** A sequência, lado "Segue-se de": os eventos que vêm antes deste (ids, na ordem da API). */
+  previousEventIds: string[];
+  /** A sequência, lado "Da sequência a": os eventos que se seguem a este (ids). */
+  nextEventIds: string[];
   /**
    * Os artefatos ligados, na ordem da lista: é a ordem enviada. O que o evento criou (`creates`) segue na lista sem
    * posição. Guarda nome e tipo para a lista mostrar sem outra chamada.
@@ -62,11 +64,12 @@ const FIELD_SET: Record<EventDraftField, true> = {
   endDate: true,
   endTime: true,
   description: true,
+  location: true,
   reminders: true,
   tags: true,
   longRunning: true,
-  blockedByEventIds: true,
-  blocksEventIds: true,
+  previousEventIds: true,
+  nextEventIds: true,
   artifacts: true,
 };
 export const EVENT_DRAFT_FIELDS = Object.keys(FIELD_SET) as EventDraftField[];
@@ -86,11 +89,12 @@ export function draftFromEvent(event: EventDto): EventDraft {
     endDate: end.date,
     endTime: end.time,
     description: event.description,
+    location: event.location,
     reminders: sortReminders(event.notifyOffsetsMinutes),
     tags: [...event.tags],
     longRunning: event.longRunning,
-    blockedByEventIds: [...event.blockedByEventIds],
-    blocksEventIds: [...event.blocksEventIds],
+    previousEventIds: [...event.previousEventIds],
+    nextEventIds: [...event.nextEventIds],
     artifacts: draftArtifactsFromEvent(event.artifacts),
   };
 }
@@ -98,7 +102,7 @@ export function draftFromEvent(event: EventDto): EventDraft {
 /** O rascunho da criação: tudo vazio e sem status, o evento de referência. `name` vem de `/evento comprar pão`. */
 export function emptyEventDraft(name = ""): EventDraft {
   return {
-    kind: "routine",
+    kind: "common",
     name,
     status: null,
     priority: "medium",
@@ -107,11 +111,12 @@ export function emptyEventDraft(name = ""): EventDraft {
     endDate: "",
     endTime: "",
     description: "",
+    location: "",
     reminders: [],
     tags: [],
     longRunning: false,
-    blockedByEventIds: [],
-    blocksEventIds: [],
+    previousEventIds: [],
+    nextEventIds: [],
     artifacts: [],
   };
 }
@@ -136,6 +141,9 @@ export function buildCreateEventInput(draft: EventDraft, now: Date): CreateEvent
   if (startedAt) input.startedAt = startedAt;
   const estimatedFinishAt = instantFromDraft(draft.endDate, draft.endTime);
   if (estimatedFinishAt) input.estimatedFinishAt = estimatedFinishAt;
+  if (draft.location.trim()) input.location = draft.location.trim();
+  if (draft.reminders.length) input.notifyOffsetsMinutes = draft.reminders;
+  if (draft.tags.length) input.tags = draft.tags;
   return input;
 }
 
@@ -163,6 +171,7 @@ export function buildEventPatch(event: EventDto, draft: EventDraft, now: Date): 
   if (draft.kind !== base.kind) patch.kind = draft.kind;
   if (draft.name.trim() !== base.name.trim()) patch.name = draft.name.trim();
   if (draft.description !== base.description) patch.description = draft.description;
+  if (draft.location.trim() !== base.location.trim()) patch.location = draft.location.trim();
   if (draft.priority !== base.priority) patch.priority = draft.priority;
   if (draft.status !== base.status) Object.assign(patch, statusPatch(event, draft.status, now));
   if (draft.startDate !== base.startDate || draft.startTime !== base.startTime) {
@@ -174,8 +183,8 @@ export function buildEventPatch(event: EventDto, draft: EventDraft, now: Date): 
   if (!sameList(draft.reminders, base.reminders)) patch.notifyOffsetsMinutes = draft.reminders;
   if (!sameList(draft.tags, base.tags)) patch.tags = draft.tags;
   if (draft.longRunning !== base.longRunning) patch.longRunning = draft.longRunning;
-  if (!sameList(draft.blockedByEventIds, base.blockedByEventIds)) patch.blockedByEventIds = draft.blockedByEventIds;
-  if (!sameList(draft.blocksEventIds, base.blocksEventIds)) patch.blocksEventIds = draft.blocksEventIds;
+  if (!sameList(draft.previousEventIds, base.previousEventIds)) patch.previousEventIds = draft.previousEventIds;
+  if (!sameList(draft.nextEventIds, base.nextEventIds)) patch.nextEventIds = draft.nextEventIds;
   if (!sameArtifactLinks(draft.artifacts, base.artifacts)) patch.artifacts = artifactLinkInputs(draft.artifacts);
   return Object.keys(patch).length > 1 ? patch : null;
 }
@@ -188,6 +197,7 @@ export function buildEventPatch(event: EventDto, draft: EventDraft, now: Date): 
 export function validateEventDraft(draft: EventDraft): EventDraftErrors {
   const errors: EventDraftErrors = {};
   if (!draft.name.trim()) errors.name = "Dê um título ao evento.";
+  if (draft.location.length > 300) errors.location = "O local tem no máximo 300 caracteres.";
   if (draft.startTime && !draft.startDate) errors.startTime = "Informe a data para marcar a hora.";
   if (draft.endTime && !draft.endDate) errors.endTime = "Informe a data para marcar a hora.";
   const start = instantFromDraft(draft.startDate, draft.startTime);

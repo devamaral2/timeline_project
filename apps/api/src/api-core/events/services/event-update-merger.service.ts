@@ -7,18 +7,18 @@ import {
   type ArtifactWrites,
   type Event,
 } from "../../../domain";
-import type { ArtifactRepository, EntityBatch, EventRepository } from "../../../domain/ports";
+import type { ArtifactRepository, EntityBatch, EventRepository, SequenceChange } from "../../../domain/ports";
 import type { UpdateEventArtifactInput, UpdateEventInput } from "@repo/contracts";
 import type { ArtifactBuilder, ArtifactContentInput } from "../../artifacts/services/artifact-builder.service";
 import { isHumanEventKind, isHumanEventStatus } from "../create-event.usecase";
-import { planIncomingRelations, type OriginUpdate } from "./event-origins";
+import { planSequence } from "./event-sequence";
 
 /** O evento revisado e o que precisa ser gravado junto com ele. */
 export interface MergedEventUpdate {
   event: Event;
   artifacts: Required<ArtifactWrites>;
-  /** Os eventos maiores e os bloqueadores que ganharam ou perderam este evento. */
-  origins: OriginUpdate[];
+  /** As arestas da ordem que mudaram. Nenhum evento e revisado por isso. */
+  sequence: SequenceChange[];
 }
 
 export interface EventUpdateDeps {
@@ -44,10 +44,8 @@ export function toUpdateBatch(merged: MergedEventUpdate, expectedRevision: numbe
       })),
     ],
     derivations: merged.artifacts.derivations,
-    events: [
-      { op: "update", entity: merged.event, expectedRevision },
-      ...merged.origins.map((origin) => ({ op: "update" as const, entity: origin.event, expectedRevision: origin.expectedRevision })),
-    ],
+    events: [{ op: "update", entity: merged.event, expectedRevision }],
+    sequence: merged.sequence,
   };
 }
 
@@ -97,6 +95,7 @@ export async function mergeEventUpdate(
     priority: input.priority,
     name: input.name,
     description: input.description,
+    location: input.location,
     startedAt,
     estimatedFinishAt: instantChange(input.estimatedFinishAt),
     finishedAt: instantChange(input.finishedAt),
@@ -104,18 +103,16 @@ export async function mergeEventUpdate(
     tags: input.tags,
     longRunning: input.longRunning,
     artifactLinks: merged.links,
-    subtaskIds: input.subtaskEventIds,
-    blocksIds: input.blocksEventIds,
   });
 
-  const origins = await planIncomingRelations(
+  const sequence = await planSequence(
     existingEvent.id,
-    { parentIds: existingEvent.parentIds, blockedByIds: existingEvent.blockedByIds },
-    { parentIds: input.parentEventIds, blockedByIds: input.blockedByEventIds },
+    { previousIds: existingEvent.previousIds, nextIds: existingEvent.nextIds },
+    { previousIds: input.previousEventIds, nextIds: input.nextEventIds },
     deps.eventRepository,
     existingEvent.userId,
   );
-  return { event, artifacts: merged.writes, origins };
+  return { event, artifacts: merged.writes, sequence };
 }
 
 /**

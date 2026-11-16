@@ -245,6 +245,10 @@ são jobs na fila única do Postgres ([ai-jobs.md](./ai-jobs.md)); não há brok
 
 ## 2. VPS (k3s)
 
+> **Para instalar do zero, siga [hermes-vps.md](./hermes-vps.md).** Ele traz a
+> ordem completa e corrige três pontos desta seção: a imagem não tem `vi` nem
+> `wget`, e o `hermes setup` roda num pod à parte, antes do gateway.
+
 Pré-requisitos: o [deploy k3s](./deploy-k3s.md) concluído, esta mudança já em
 `main` e implantada (a imagem `braid-api:<sha>` precisa conhecer o escopo
 `hermes-runtime`), e `HERMES_API_KEY` presente no Environment de produção.

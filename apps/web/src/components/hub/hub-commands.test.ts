@@ -2,9 +2,14 @@ import { expect, test } from "vitest";
 import { isStopSpeech, parseCommand } from "./hub-commands";
 
 test("a slash alone offers every command; the typed prefix narrows them", () => {
-  expect(parseCommand("/")?.matches.map((command) => command.slug)).toEqual(["tarefa", "evento", "nota", "buscar", "notificacoes", "configuracoes"]);
+  expect(parseCommand("/")?.matches.map((command) => command.slug)).toEqual(["evento", "nota", "buscar", "notificacoes", "configuracoes"]);
   expect(parseCommand("/ev")?.matches.map((command) => command.slug)).toEqual(["evento"]);
   expect(parseCommand("/pesq")?.matches.map((command) => command.slug)).toEqual(["buscar"]);
+});
+
+test("there is no task shortcut: an event with a status is the task", () => {
+  expect(parseCommand("/tarefa")).toBeNull();
+  expect(parseCommand("/tarefa comprar pão")).toBeNull();
 });
 
 test("the text after a known command is its argument", () => {

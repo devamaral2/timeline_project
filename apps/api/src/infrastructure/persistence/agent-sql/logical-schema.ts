@@ -8,7 +8,7 @@
  *
  * So entram os eventos de pessoa e os artefatos: os pedidos ao agente, os
  * passos e as entradas deles ficam de fora. As relacoes aparecem como visoes
- * com nome (`event_subtasks`, `event_blocks`, `event_artifacts`), e nao como o
+ * com nome (`event_sequence`, `event_artifacts`), e nao como o
  * grafo de relacoes.
  */
 interface LogicalColumn {
@@ -53,7 +53,8 @@ const TABLES: readonly LogicalTable[] = [
       { name: "id", expr: "e.id", type: "text" },
       { name: "name", expr: "e.name", type: "text" },
       { name: "description", expr: "e.description", type: "text" },
-      { name: "kind", expr: "e.kind", type: "text", description: "routine | meal | sleep | training" },
+      { name: "location", expr: "e.location", type: "text", description: "onde o evento acontece; vazio se nao tem" },
+      { name: "kind", expr: "e.kind", type: "text", description: "default | meal | sleep | training" },
       {
         name: "status", expr: "e.status", type: "text",
         description: "nulo = evento de referencia, que so marca um horario; senao todo | toDefine | doing | inHold | done | cancel | missed (nao realizado)",
@@ -80,23 +81,13 @@ const TABLES: readonly LogicalTable[] = [
     ],
   },
   {
-    name: "event_subtasks",
-    description: "Subtarefas: subtask_event_id e um evento em que parent_event_id se desdobra. Um evento pode ser subtarefa de mais de um.",
+    name: "event_sequence",
+    description: "Sequencia entre eventos: next_event_id se segue de previous_event_id (previous vem antes). Um evento pode ter varios antecessores e varios sucessores.",
     from: "public.event_event_relation r JOIN public.events p ON p.id = r.from_event_id JOIN public.events c ON c.id = r.to_event_id",
-    where: `r.relation = 'subtask' AND ${VISIBLE_EVENT("p")} AND ${VISIBLE_EVENT("c")}`,
+    where: `r.relation = 'precedes' AND ${VISIBLE_EVENT("p")} AND ${VISIBLE_EVENT("c")}`,
     columns: [
-      { name: "parent_event_id", expr: "r.from_event_id", type: "text" },
-      { name: "subtask_event_id", expr: "r.to_event_id", type: "text" },
-    ],
-  },
-  {
-    name: "event_blocks",
-    description: "Bloqueios: blocked_event_id so e liberado quando blocker_event_id termina.",
-    from: "public.event_event_relation r JOIN public.events p ON p.id = r.from_event_id JOIN public.events c ON c.id = r.to_event_id",
-    where: `r.relation = 'blocks' AND ${VISIBLE_EVENT("p")} AND ${VISIBLE_EVENT("c")}`,
-    columns: [
-      { name: "blocker_event_id", expr: "r.from_event_id", type: "text" },
-      { name: "blocked_event_id", expr: "r.to_event_id", type: "text" },
+      { name: "previous_event_id", expr: "r.from_event_id", type: "text" },
+      { name: "next_event_id", expr: "r.to_event_id", type: "text" },
     ],
   },
   {
@@ -130,7 +121,7 @@ const TABLES: readonly LogicalTable[] = [
     columns: [
       { name: "id", expr: "r.id", type: "text" },
       { name: "name", expr: "r.template->>'name'", type: "text", description: "nome que cada ocorrencia copia" },
-      { name: "kind", expr: "r.template->>'kind'", type: "text", description: "routine | meal | sleep | training" },
+      { name: "kind", expr: "r.template->>'kind'", type: "text", description: "default | meal | sleep | training" },
       { name: "status", expr: "r.template->>'status'", type: "text", description: "status com que cada ocorrencia nasce; nulo = de referencia" },
       { name: "freq", expr: "r.freq", type: "text", description: "daily | weekly | monthly | yearly" },
       { name: "interval_count", expr: "r.interval_count", type: "integer", description: "a cada N periodos" },

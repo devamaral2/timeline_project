@@ -47,7 +47,7 @@ describe("EventStatusGlyph", () => {
 });
 
 describe("EventKindMark", () => {
-  const humanKinds: EventKind[] = ["routine", "meal", "sleep", "training"];
+  const humanKinds: EventKind[] = ["common", "meal", "sleep", "training"];
   const agentKinds: EventKind[] = [
     "request",
     "search_request",

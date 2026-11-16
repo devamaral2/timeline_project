@@ -46,11 +46,11 @@ describe("PostgresScopedSqlQuery", () => {
   async function seed(pool: Pool): Promise<void> {
     await pool.query(`
       INSERT INTO events (id, user_id, actor, kind, status, name, started_at) VALUES
-        ('${B_EVENT}', 'user-b', 'human', 'routine', NULL, 'Segredo do B', '2026-09-15T12:00:00Z'),
-        ('${B_TRACKED}', 'user-b', 'human', 'routine', 'todo', 'Tarefa do B', NULL),
+        ('${B_EVENT}', 'user-b', 'human', 'common', NULL, 'Segredo do B', '2026-09-15T12:00:00Z'),
+        ('${B_TRACKED}', 'user-b', 'human', 'common', 'todo', 'Tarefa do B', NULL),
         ('${A_TRAINING}', 'user-a', 'human', 'training', NULL, 'Treino', '2026-09-15T12:00:00Z'),
-        ('${A_DELETED}', 'user-a', 'human', 'routine', NULL, 'Apagado', '2026-09-15T13:00:00Z'),
-        ('${A_TRACKED}', 'user-a', 'human', 'routine', 'todo', 'Tarefa do A', NULL),
+        ('${A_DELETED}', 'user-a', 'human', 'common', NULL, 'Apagado', '2026-09-15T13:00:00Z'),
+        ('${A_TRACKED}', 'user-a', 'human', 'common', 'todo', 'Tarefa do A', NULL),
         ('${A_REQUEST}', 'user-a', 'agent', 'request', 'done', 'Pedido do A', '2026-09-15T14:00:00Z'),
         ('${A_STEP}', 'user-a', 'agent', 'step', 'done', 'Passo do A', '2026-09-15T14:00:01Z');
       UPDATE events SET deleted_at = now() WHERE id = '${A_DELETED}';
@@ -83,15 +83,18 @@ describe("PostgresScopedSqlQuery", () => {
         ('${A_TRACKED}', '${A_SKILL}', 'uses', 0);
 
       INSERT INTO event_event_relation (from_event_id, to_event_id, relation) VALUES
-        ('${A_TRACKED}', '${A_TRAINING}', 'subtask'),
-        ('${A_TRACKED}', '${A_DELETED}', 'subtask'),
-        ('${A_REQUEST}', '${A_STEP}', 'subtask'),
+        ('${A_TRACKED}', '${A_TRAINING}', 'precedes'),
+        ('${A_TRACKED}', '${A_DELETED}', 'precedes'),
+        ('${A_DELETED}', '${A_TRAINING}', 'precedes'),
+        ('${A_REQUEST}', '${A_STEP}', 'step'),
         ('${A_STEP}', '${A_TRAINING}', 'generates'),
+        -- agente nos dois sentidos: fora da sequencia das pessoas
+        ('${A_REQUEST}', '${A_TRACKED}', 'precedes'),
+        ('${A_TRAINING}', '${A_STEP}', 'precedes'),
         -- cruza usuarios: nao aparece para nenhum dos dois
-        ('${B_TRACKED}', '${A_TRAINING}', 'subtask'),
-        ('${A_TRAINING}', '${A_TRACKED}', 'blocks'),
-        ('${A_REQUEST}', '${A_TRACKED}', 'blocks'),
-        ('${B_EVENT}', '${B_TRACKED}', 'blocks');
+        ('${B_TRACKED}', '${A_TRAINING}', 'precedes'),
+        ('${A_TRAINING}', '${B_TRACKED}', 'precedes'),
+        ('${B_EVENT}', '${B_TRACKED}', 'precedes');
 
       INSERT INTO tags (id, user_id, name) VALUES
         ('${id("TB", 1)}', 'user-b', 'segredo'),
@@ -117,7 +120,7 @@ describe("PostgresScopedSqlQuery", () => {
 
   test("events mostra so os eventos vivos de pessoa do proprio usuario", async () => {
     expect(await rows("SELECT name, kind, status FROM events ORDER BY name")).toEqual([
-      ["Tarefa do A", "routine", "todo"],
+      ["Tarefa do A", "common", "todo"],
       ["Treino", "training", null],
     ]);
     expect(await rows("SELECT name FROM events ORDER BY name", "user-b")).toEqual([["Segredo do B"], ["Tarefa do B"]]);
@@ -156,11 +159,11 @@ describe("PostgresScopedSqlQuery", () => {
     expect(await rows(`SELECT name FROM artifacts WHERE id = '${A_TEXT}'`)).toEqual([["nota do A"]]);
   });
 
-  test("event_subtasks e event_blocks so ligam eventos vivos de pessoa do mesmo usuario", async () => {
-    expect(await rows("SELECT parent_event_id, subtask_event_id FROM event_subtasks")).toEqual([[A_TRACKED, A_TRAINING]]);
-    expect(await rows("SELECT parent_event_id, subtask_event_id FROM event_subtasks", "user-b")).toEqual([]);
-    expect(await rows("SELECT blocker_event_id, blocked_event_id FROM event_blocks")).toEqual([[A_TRAINING, A_TRACKED]]);
-    expect(await rows("SELECT blocker_event_id, blocked_event_id FROM event_blocks", "user-b")).toEqual([[B_EVENT, B_TRACKED]]);
+  test("event_sequence so liga eventos vivos de pessoa do mesmo usuario, e nao expoe as tabelas antigas", async () => {
+    expect(await rows("SELECT previous_event_id, next_event_id FROM event_sequence")).toEqual([[A_TRACKED, A_TRAINING]]);
+    expect(await rows("SELECT previous_event_id, next_event_id FROM event_sequence", "user-b")).toEqual([[B_EVENT, B_TRACKED]]);
+    await expect(rows("SELECT * FROM event_subtasks")).rejects.toThrow();
+    await expect(rows("SELECT * FROM event_blocks")).rejects.toThrow();
   });
 
   test("event_tags e artifact_tags seguem a visibilidade do dono da tag", async () => {
@@ -172,7 +175,7 @@ describe("PostgresScopedSqlQuery", () => {
   test("recurrences mostra so as series do proprio usuario, sem o template cru", async () => {
     await ctx.pool.query(`
       INSERT INTO recurrences (id, user_id, freq, interval_count, byweekday, time_of_day, duration_minutes, starts_on, template) VALUES
-        ('${id("RB", 1)}', 'user-b', 'daily', 1, NULL, '06:00', NULL, '2026-09-01', '{"name": "Segredo do B", "kind": "routine"}'),
+        ('${id("RB", 1)}', 'user-b', 'daily', 1, NULL, '06:00', NULL, '2026-09-01', '{"name": "Segredo do B", "kind": "common"}'),
         ('${id("RA", 1)}', 'user-a', 'weekly', 1, 10, '07:00', 60, '2026-09-01',
           '{"name": "Corrida", "kind": "training", "status": "todo", "artifactIds": ["so o servidor ve"]}');
       UPDATE events SET recurrence_id = '${id("RA", 1)}', occurrence_on = '2026-09-15' WHERE id = '${A_TRAINING}';
@@ -317,7 +320,7 @@ describe("PostgresScopedSqlQuery", () => {
     try {
       await pool.query(`
         INSERT INTO events (id, user_id, actor, kind, name, started_at)
-        SELECT lpad(n::text, 26, 'Z'), 'user-a', 'human', 'routine', 'massa', now() FROM generate_series(1, 3000) AS n
+        SELECT lpad(n::text, 26, 'Z'), 'user-a', 'human', 'common', 'massa', now() FROM generate_series(1, 3000) AS n
       `);
       const slow = new PostgresScopedSqlQuery(pool, {
         rowCap: 10,
@@ -344,7 +347,7 @@ describe("PostgresScopedSqlQuery", () => {
   test("a descricao do esquema para o prompt lista so as tabelas do escopo", () => {
     const description = query.describeSchema();
 
-    for (const table of ["events", "event_subtasks", "event_blocks", "event_artifacts", "event_tags", "recurrences", "artifacts", "artifact_tags"]) {
+    for (const table of ["events", "event_sequence", "event_artifacts", "event_tags", "recurrences", "artifacts", "artifact_tags"]) {
       expect(description).toContain(`${table}:`);
     }
     expect(description).not.toMatch(/event_entries|jobs|user_id|event_event_relation/);

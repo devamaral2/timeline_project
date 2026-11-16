@@ -20,6 +20,7 @@ import {
   softDeleteArtifact,
   updateArtifactAggregate,
 } from "../artifacts/repositories/postgres-artifact.repository";
+import { applySequenceChanges } from "../events/repositories/event-relations";
 import {
   insertEventAggregate,
   softDeleteEvent,
@@ -68,8 +69,7 @@ export class PostgresEntityBatchWriter implements EntityBatchWriter {
       }
 
       try {
-        // Um evento novo pode apontar para outro do mesmo lote: os que ninguem aponta entram por ultimo.
-        for (const event of creationOrder(created(batch.events))) {
+        for (const event of created(batch.events)) {
           if (!(await insertEventAggregate(tx, event))) {
             throw new EntityBatchConflictError(`Evento ${event.id} já existe`);
           }
@@ -79,6 +79,8 @@ export class PostgresEntityBatchWriter implements EntityBatchWriter {
             await updateEventAggregate(tx, change.entity, batch.userId, change.expectedRevision);
           }
         }
+        // Depois de todos os eventos: uma ponta da sequencia pode ser um evento novo do lote.
+        await applySequenceChanges(tx, batch.userId, batch.sequence ?? []);
       } catch (error) {
         // Um alvo de relacao que sumiu entre preparar e gravar: o lote inteiro volta.
         if (error instanceof EventValidationError && /not found/.test(error.message)) {
@@ -159,24 +161,4 @@ async function lockTargets<T extends { id: string }>(
       throw new EntityBatchConflictError(`${table}: ${id} foi alterado por outra requisição`);
     }
   }
-}
-
-/** Um evento novo que aponta para outro evento novo do lote entra depois dele (chave estrangeira). */
-function creationOrder<T extends { id: string; subtaskIds: readonly string[]; blocksIds: readonly string[] }>(
-  events: readonly T[],
-): T[] {
-  const pending = new Map(events.map((event) => [event.id, event]));
-  const ordered: T[] = [];
-  while (pending.size > 0) {
-    const ready = [...pending.values()].filter((event) =>
-      [...event.subtaskIds, ...event.blocksIds].every((id) => !pending.has(id)),
-    );
-    // Um ciclo entre eventos novos: entram como estao e o lote e recusado, porque o primeiro aponta para um que ainda nao existe.
-    const batch = ready.length > 0 ? ready : [...pending.values()];
-    for (const event of batch) {
-      ordered.push(event);
-      pending.delete(event.id);
-    }
-  }
-  return ordered;
 }

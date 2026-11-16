@@ -39,10 +39,24 @@ export function assertEventFields(body: Record<string, unknown>, editing: boolea
   ) {
     throw new BadRequestException("Invalid notifyOffsetsMinutes");
   }
+  if (body?.location !== undefined && (typeof body.location !== "string" || body.location.length > 300)) {
+    throw new BadRequestException("Invalid location");
+  }
+  const point = body?.coordinates as { latitude?: unknown; longitude?: unknown } | undefined;
+  if (
+    point !== undefined &&
+    !(
+      typeof point === "object" && point !== null &&
+      typeof point.latitude === "number" && point.latitude >= -90 && point.latitude <= 90 &&
+      typeof point.longitude === "number" && point.longitude >= -180 && point.longitude <= 180
+    )
+  ) {
+    throw new BadRequestException("Invalid coordinates");
+  }
   if (body?.longRunning !== undefined && typeof body.longRunning !== "boolean") {
     throw new BadRequestException("Invalid longRunning");
   }
-  for (const field of ["tags", "subtaskEventIds", "blocksEventIds", "parentEventIds", "blockedByEventIds", "artifactIds"]) {
+  for (const field of ["tags", "previousEventIds", "nextEventIds", "artifactIds"]) {
     if (body?.[field] !== undefined && !isStringList(body[field])) throw new BadRequestException(`Invalid ${field}`);
   }
   if (body?.artifacts !== undefined && !Array.isArray(body.artifacts)) throw new BadRequestException("Invalid artifacts");

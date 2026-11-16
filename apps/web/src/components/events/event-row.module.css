@@ -87,12 +87,6 @@
   color: var(--destructive);
 }
 
-.fraction {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  line-height: 16px;
-}
-
 .tag {
   color: var(--muted-foreground);
   white-space: nowrap;
@@ -112,16 +106,4 @@
   flex: none;
   margin-top: 2px;
   color: var(--brand-accent);
-}
-
-.visuallyHidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
 }

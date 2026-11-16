@@ -14,7 +14,7 @@
 .dismiss svg { width: 16px; height: 16px; }
 
 .form { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 6px; border: 1px solid var(--line); border-radius: 28px; background: var(--card); transition: border-color var(--duration-fast); }
-.form:focus-within { border-color: var(--input); }
+.form:has(.input:focus) { border-color: var(--brand); }
 .context { display: flex; align-items: center; gap: 8px; min-height: 52px; padding: 5px 16px 5px 6px; border: 1px solid var(--line); border-radius: 22px; }
 .contextIcon { flex: none; display: grid; place-items: center; width: 40px; height: 40px; color: var(--muted); }
 .contextIcon svg { width: 20px; height: 20px; stroke-width: 1.75; }

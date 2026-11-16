@@ -5,6 +5,9 @@ date: 2026-11-14
 
 # Relações em três tabelas, no sentido de quem produz o quê
 
+> Parcialmente substituída pela [ADR 0014](./0014-sequencia-entre-eventos-no-lugar-de-subtarefa-e-bloqueio.md):
+> `subtask` e `blocks` viraram a relação `precedes`, e a sequência não revisa nenhum evento.
+
 ## Contexto
 
 Hoje cada par de entidades tem a sua tabela de ligação (`event_tasks`, `event_notes`, `task_notes`,

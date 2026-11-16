@@ -11,6 +11,7 @@ import { AgentProducedSection } from "./AgentProducedSection";
 import { AgentRecordSection } from "./AgentRecordSection";
 import { AgentSessionSection } from "./AgentSessionSection";
 import { AgentStepsSection } from "./AgentStepsSection";
+import { EventSequenceSection } from "./EventSequenceSection";
 import { useAgentRequest } from "./use-agent-request";
 import styles from "./event-detail.module.css";
 
@@ -33,7 +34,7 @@ export function AgentEventDetailView({ userId, event, onChanged }: AgentEventDet
   const lead = (
     <>
       <nav className={styles.topbar} aria-label="Navegação do registro">
-        <BackLink href={`/${userId}/tarefas`}>Voltar para Lista de tarefas</BackLink>
+        <BackLink href={`/${userId}/tarefas`} label="Voltar para Lista de tarefas" />
         <span className={styles.topbarTitle}>Evento</span>
         <div className={styles.topbarActions} />
       </nav>
@@ -46,6 +47,7 @@ export function AgentEventDetailView({ userId, event, onChanged }: AgentEventDet
       {request ? (
         <>
           <AgentInfoSection event={event} />
+          <EventSequenceSection userId={userId} event={event} />
           <AgentEntriesSection entries={request.trace?.entries ?? []} />
           <AgentStepsSection steps={request.steps} />
           <AgentProducedSection userId={userId} entities={request.entities} />

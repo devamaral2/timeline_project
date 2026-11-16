@@ -165,6 +165,7 @@ export class RequestOperations implements OnModuleInit {
     const { requestId } = await this.store.start({
       userId: actor.userId, route: "voice", text: input.transcript,
       clientMessageId: input.clientMessageId, job: REQUEST_JOBS.voice,
+      ...(input.coordinates ? { context: { screen: "voice", coordinates: input.coordinates } } : {}),
     });
     return requestId;
   }

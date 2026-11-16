@@ -15,11 +15,13 @@ function setup(command: Partial<ParsedEventCommand> | Error = {}) {
     parseCommand: async ({ text }) => {
       calls.push(text);
       if (command instanceof Error) throw command;
-      return { input: { name: "Estudar", kind: "routine", tags: [] }, schedule: {}, modelProvider: "stub", modelName: "stub", ...command };
+      return { input: { name: "Estudar", kind: "common", tags: [] }, schedule: {}, modelProvider: "stub", modelName: "stub", ...command };
     },
   };
-  const worker = new VoiceEventWorker({ store, parsing, createEvent: kit.createEvent, batchWriter: kit.batchWriter });
-  return { kit, store, request, calls, worker };
+  const said: string[] = [];
+  const places = { resolve: async (text: string) => { said.push(text); return `${text}, Rua Um 10, Belo Horizonte`; } };
+  const worker = new VoiceEventWorker({ store, parsing, createEvent: kit.createEvent, batchWriter: kit.batchWriter, places });
+  return { kit, store, request, calls, worker, said };
 }
 
 test("a fala vira um evento de pessoa, com a frase na descricao, e o pedido termina apontando para ele", async () => {
@@ -42,6 +44,18 @@ test("a janela dita na fala e resolvida a partir do instante em que o pedido foi
   expect(kit.database.events[0]).toMatchObject({
     startedAt: new Date("2026-10-25T14:40:00Z"), estimatedFinishAt: new Date("2026-10-25T15:40:00Z"),
   });
+});
+
+test("o lugar citado na fala vira o endereco achado no mapa; sem lugar citado, o mapa nao e consultado", async () => {
+  const located = setup({ place: "clinica saude emocional" });
+  await located.worker.run("v1");
+  expect(located.said).toEqual(["clinica saude emocional"]);
+  expect(located.kit.database.events[0]?.location).toBe("clinica saude emocional, Rua Um 10, Belo Horizonte");
+
+  const plain = setup();
+  await plain.worker.run("v1");
+  expect(plain.said).toEqual([]);
+  expect(plain.kit.database.events[0]?.location).toBe("");
 });
 
 test("refeicao falada: o evento nasce com o alimento a espera dos nutrientes", async () => {

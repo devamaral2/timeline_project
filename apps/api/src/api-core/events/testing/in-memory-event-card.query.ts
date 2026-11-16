@@ -100,15 +100,6 @@ export class InMemoryEventCardQuery implements EventCardQuery {
     return this.cardsOf(rows.map((event) => event.id));
   }
 
-  async subtasks(params: { userId: string; parentEventId: string }): Promise<EventCard[]> {
-    const parent = this.database.events.find((event) => event.id === params.parentEventId);
-    if (!parent) return [];
-    const owned = parent.subtaskIds.filter((id) =>
-      this.database.events.some((event) => event.id === id && event.userId === params.userId),
-    );
-    return this.cardsOf(owned);
-  }
-
   async cardsOf(eventIds: readonly string[]): Promise<EventCard[]> {
     const cards: EventCard[] = [];
     for (const id of eventIds) {

@@ -32,6 +32,13 @@ const priority = z.enum(PRIORITIES).optional().describe("Omit for medium.");
 const eventShape = {
   name: z.string().min(1),
   description: z.string().optional(),
+  location: z
+    .string()
+    .max(300)
+    .optional()
+    .describe(
+      "Where the event happens. When the owner names a venue or an address, call search_places first and pass the 'label' of the matching place, so the address is one that exists. Never make up a street, number or city: with no match, pass the place as the owner said it. An empty string on update removes the location.",
+    ),
   kind: humanKind,
   status: humanStatus
     .optional()
@@ -186,6 +193,20 @@ export function registerTools(server: McpServer, api: ApiClient): void {
   );
 
   server.registerTool(
+    "search_places",
+    {
+      description:
+        "Search the map for venues and addresses matching a text (e.g. 'Hospital Mater Dei Belo Horizonte'). Each result's 'label' is the full address to store in an event's 'location'. Add the city or neighbourhood to the text when the owner said it. An empty list means the map does not know the place.",
+      inputSchema: {
+        query: z.string().min(3).max(200).describe("Name of the venue or the address, as the owner said it."),
+        limit: z.number().int().min(1).max(10).default(6),
+      },
+      annotations: { readOnlyHint: true, openWorldHint: true },
+    },
+    (query) => guarded(() => api.get("/api/places", query)),
+  );
+
+  server.registerTool(
     "list_tracked_events",
     {
       description:
@@ -269,7 +290,7 @@ function registerReadAndEditTools(server: McpServer, api: ApiClient): void {
     "update_event",
     {
       description:
-        "Edit fields of an event. Send only the fields to change. Its artifacts and its relations to other events (subtasks, blockers) are left untouched.",
+        "Edit fields of an event. Send only the fields to change. Its artifacts and its sequence (previous and next events) are left untouched.",
       inputSchema: { eventId: id("event"), expectedRevision: revision, ...eventPatchShape },
       annotations: EDIT,
     },

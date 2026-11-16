@@ -12,7 +12,7 @@ import kotlinx.serialization.json.JsonObject
 @Serializable
 data class TimelineEventCardDto(
     val id: String,
-    /** A natureza do evento (routine, meal, sleep, training); decide o visual do cartão. */
+    /** A natureza do evento (default, meal, sleep, training); decide o visual do cartão. */
     val kind: String,
     /** Os tipos das notes do evento, na ordem em que aparecem. */
     val noteTypes: List<String>,

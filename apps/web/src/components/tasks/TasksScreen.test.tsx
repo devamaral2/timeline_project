@@ -89,15 +89,19 @@ test("Feitas e Encerradas vêm recolhidas e abrem ao toque", async () => {
   expect(screen.getByRole("link", { name: /Renovar assinatura/ })).toBeInTheDocument();
 });
 
-test("a subtarefa cujo pai está na lista não aparece como linha própria", async () => {
+test("a sequência não esconde linhas: o evento que se segue a outro da lista aparece, sem fração nem “Espera por”", async () => {
   serve([
-    eventFixture({ id: "proposta", name: "Revisar proposta", status: "doing" }),
-    eventFixture({ id: "ler", name: "Ler a proposta", status: "todo", parentEventIds: ["proposta"] }),
+    eventFixture({ id: "proposta", name: "Revisar proposta", status: "doing", nextEventIds: ["ler"] }),
+    eventFixture({ id: "ler", name: "Ler a proposta", status: "todo", previousEventIds: ["proposta"] }),
+    eventFixture({ id: "pneu", name: "Trocar o pneu", status: "inHold", previousEventIds: ["proposta"] }),
   ]);
   render(<TasksScreen userId="user-1" />);
 
   await screen.findByRole("link", { name: /Revisar proposta/ });
-  expect(screen.queryByRole("link", { name: /Ler a proposta/ })).not.toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /Ler a proposta/ })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /Trocar o pneu/ })).toBeInTheDocument();
+  expect(screen.queryByText(/\d\/\d/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/Espera por/)).not.toBeInTheDocument();
 });
 
 test("a lista pede a rota de eventos com status, sem o contrato antigo", async () => {
@@ -143,42 +147,64 @@ test("uma série aparece uma vez, pela ocorrência em aberto mais próxima, com 
   expect(within(screen.getByRole("region", { name: /A fazer/ })).getByText("Todo dia, 18:00")).toBeInTheDocument();
 });
 
-test("um evento com subtarefas mostra quantas já foram feitas; sem subtarefas não mostra fração", async () => {
-  serve([
-    eventFixture({ id: "proposta", name: "Revisar proposta", status: "doing" }),
-    eventFixture({ id: "ler", name: "Ler a proposta", status: "done", parentEventIds: ["proposta"] }),
-    eventFixture({ id: "rascunho", name: "Escrever rascunho", status: "todo", parentEventIds: ["proposta"] }),
-    eventFixture({ id: "enviar", name: "Enviar proposta", status: "todo", parentEventIds: ["proposta"] }),
-    eventFixture({ id: "luz", name: "Pagar conta de luz", status: "todo" }),
-  ]);
-  render(<TasksScreen userId="user-1" />);
-
-  const proposta = (await screen.findByRole("link", { name: /Revisar proposta/ })).closest("li") as HTMLElement;
-  expect(within(proposta).getByText("1/3")).toBeInTheDocument();
-  expect(within(proposta).getByText("1 de 3 partes feitas")).toBeInTheDocument();
-
-  const luz = screen.getByRole("link", { name: /Pagar conta de luz/ }).closest("li") as HTMLElement;
-  expect(within(luz).queryByText(/\d\/\d/)).not.toBeInTheDocument();
-});
-
-test("um evento em espera com bloqueios diz por quantos eventos espera", async () => {
-  serve([
-    eventFixture({ id: "pneu", name: "Trocar o pneu", status: "inHold", blockedByEventIds: ["orcamento", "agenda"] }),
-  ]);
-  render(<TasksScreen userId="user-1" />);
-
-  const pneu = (await screen.findByRole("link", { name: /Trocar o pneu/ })).closest("li") as HTMLElement;
-  expect(within(pneu).getByText("Espera por 2 eventos")).toBeInTheDocument();
-});
-
 const glyphOf = (name: string) => new RegExp(`Mudar status de “${name}”`);
 
-test("tocar no glifo de um evento em aberto envia a conclusão com a revisão lida e a linha vai para Feitas", async () => {
+test("tocar no glifo abre a escolha dos sete status, com o atual marcado, e não grava nada", async () => {
   const api = serve([eventFixture({ id: "luz", name: "Pagar conta de luz", status: "todo", revision: 3 })]);
   render(<TasksScreen userId="user-1" />);
 
   const row = (await screen.findByRole("link", { name: /Pagar conta de luz/ })).closest("li") as HTMLElement;
   fireEvent.click(within(row).getByRole("button", { name: glyphOf("Pagar conta de luz") }));
+
+  const list = within(screen.getByRole("dialog", { name: "Status de “Pagar conta de luz”" })).getByRole("listbox", { name: "Status do evento" });
+  expect(within(list).getAllByRole("option").map((option) => option.textContent)).toEqual([
+    "A fazer", "Sem data", "Em curso", "Em espera", "Feito", "Cancelado", "Não realizado",
+  ]);
+  expect(within(list).getByRole("option", { name: "A fazer" })).toHaveAttribute("aria-selected", "true");
+  expect(within(list).getAllByRole("option", { selected: true })).toHaveLength(1);
+  expect(api.calls.some((call) => call.method === "PATCH")).toBe(false);
+});
+
+test("escolher o status que a tarefa já tem, ou fechar com Esc, não grava nada", async () => {
+  const api = serve([eventFixture({ id: "luz", name: "Pagar conta de luz", status: "todo", revision: 3 })]);
+  render(<TasksScreen userId="user-1" />);
+
+  fireEvent.click(await screen.findByRole("button", { name: glyphOf("Pagar conta de luz") }));
+  fireEvent.click(screen.getByRole("option", { name: "A fazer" }));
+  expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: glyphOf("Pagar conta de luz") }));
+  fireEvent.keyDown(document, { key: "Escape" });
+  expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+
+  expect(api.calls.some((call) => call.method === "PATCH")).toBe(false);
+});
+
+test("escolher um status em aberto grava com a revisão lida e a linha muda de grupo", async () => {
+  const api = serve([eventFixture({ id: "luz", name: "Pagar conta de luz", status: "todo", revision: 3 })]);
+  render(<TasksScreen userId="user-1" />);
+
+  fireEvent.click(await screen.findByRole("button", { name: glyphOf("Pagar conta de luz") }));
+  fireEvent.click(screen.getByRole("option", { name: "Em espera" }));
+
+  await waitFor(() => expect(api.calls.some((call) => call.method === "PATCH")).toBe(true));
+  expect(api.calls.find((call) => call.method === "PATCH")).toMatchObject({
+    pathname: "/api/events/luz",
+    body: { expectedRevision: 3, status: "inHold" },
+  });
+  expect(api.calls.find((call) => call.method === "PATCH")?.body).not.toHaveProperty("finishedAt");
+  await waitFor(() => expect(within(screen.getByRole("region", { name: /Em espera/ })).getByRole("link", { name: /Pagar conta de luz/ })).toBeInTheDocument());
+  expect(screen.queryByRole("region", { name: /A fazer/ })).not.toBeInTheDocument();
+  expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+});
+
+test("escolher Feito envia a conclusão com a revisão lida e a linha vai para Feitas", async () => {
+  const api = serve([eventFixture({ id: "luz", name: "Pagar conta de luz", status: "todo", revision: 3 })]);
+  render(<TasksScreen userId="user-1" />);
+
+  const row = (await screen.findByRole("link", { name: /Pagar conta de luz/ })).closest("li") as HTMLElement;
+  fireEvent.click(within(row).getByRole("button", { name: glyphOf("Pagar conta de luz") }));
+  fireEvent.click(screen.getByRole("option", { name: "Feito" }));
 
   await waitFor(() => expect(api.calls.some((call) => call.method === "PATCH")).toBe(true));
   const patch = api.calls.find((call) => call.method === "PATCH");
@@ -192,7 +218,7 @@ test("tocar no glifo de um evento em aberto envia a conclusão com a revisão li
   expect(within(screen.getByRole("region", { name: /Feitas/ })).getByRole("link", { name: /Pagar conta de luz/ })).toBeInTheDocument();
 });
 
-test("tocar no glifo de um evento encerrado reabre para a fazer e limpa a conclusão", async () => {
+test("tirar um evento de Feito limpa a conclusão; reabrir um cancelado só troca o status", async () => {
   const api = serve([
     eventFixture({ id: "relatorio", name: "Enviar relatório", status: "done", revision: 4, finishedAt: "2026-09-13T15:00:00-03:00" }),
     eventFixture({ id: "assinatura", name: "Renovar assinatura", status: "cancel", revision: 2 }),
@@ -201,6 +227,7 @@ test("tocar no glifo de um evento encerrado reabre para a fazer e limpa a conclu
 
   fireEvent.click(await screen.findByRole("button", { name: /Feitas/ }));
   fireEvent.click(screen.getByRole("button", { name: glyphOf("Enviar relatório") }));
+  fireEvent.click(screen.getByRole("option", { name: "A fazer" }));
 
   await waitFor(() => expect(api.calls.some((call) => call.method === "PATCH")).toBe(true));
   expect(api.calls.find((call) => call.method === "PATCH")?.body).toEqual({ expectedRevision: 4, status: "todo", finishedAt: null });
@@ -208,8 +235,9 @@ test("tocar no glifo de um evento encerrado reabre para a fazer e limpa a conclu
 
   fireEvent.click(screen.getByRole("button", { name: /Encerradas/ }));
   fireEvent.click(screen.getByRole("button", { name: glyphOf("Renovar assinatura") }));
+  fireEvent.click(screen.getByRole("option", { name: "Em curso" }));
   await waitFor(() => expect(api.calls.filter((call) => call.method === "PATCH")).toHaveLength(2));
-  expect(api.calls.filter((call) => call.method === "PATCH")[1]?.body).toEqual({ expectedRevision: 2, status: "todo" });
+  expect(api.calls.filter((call) => call.method === "PATCH")[1]?.body).toEqual({ expectedRevision: 2, status: "doing" });
 });
 
 test("o glifo de um evento de agente não aparece como botão e não muda status", async () => {
@@ -231,6 +259,7 @@ test("revisão desatualizada: a tela avisa, relê a lista e não grava nada", as
   events.set("luz", { ...(events.get("luz") as EventDto), revision: 2 });
 
   fireEvent.click(within(row).getByRole("button", { name: glyphOf("Pagar conta de luz") }));
+  fireEvent.click(screen.getByRole("option", { name: "Feito" }));
 
   expect(await screen.findByRole("alert")).toHaveTextContent("Esta tarefa mudou em outro lugar");
   expect(api.calls.filter((call) => call.method === "PATCH")).toHaveLength(1);

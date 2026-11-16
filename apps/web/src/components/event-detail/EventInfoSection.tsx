@@ -1,15 +1,17 @@
 "use client";
 
 import type { EventDto } from "@repo/contracts";
+import { MapPin } from "lucide-react";
 import { DetailFact, DetailFacts, DetailSection, Prose, Reminders, TagPills } from "@/components/detail/detail-parts";
 import { cardDurationLabel } from "@/lib/events/card-text";
+import { mapsUrl } from "@/lib/events/maps-link";
 import { momentLabel, recurrenceLines, reminderLabel } from "@/lib/events/event-read-model";
 import styles from "./event-detail.module.css";
 
 /**
  * A seção "Informações" da leitura: início, fim planejado com a duração,
  * tarefa persistente, recorrência, lembretes, tags e descrição, em texto.
- * Localização, horário padrão, "Gerado por" e Registro não entram: o contrato
+ * O local abre no Google Maps. Horário padrão, "Gerado por" e Registro não entram: o contrato
  * do evento não traz esses dados (ver a tabela de lacunas da spec).
  */
 export function EventInfoSection({ event }: { event: EventDto }) {
@@ -28,13 +30,27 @@ export function EventInfoSection({ event }: { event: EventDto }) {
           <span className={styles.value}>{event.estimatedFinishAt ? momentLabel(event.estimatedFinishAt) : "sem data"}</span>
           {duration ? <span className={styles.duration}>{duration}</span> : null}
         </DetailFact>
-        <DetailFact label="Tarefa persistente">{longRunning ? "Sim" : "Não"}</DetailFact>
+        {longRunning ? (
+          <DetailFact label="Tarefa persistente">
+            {/* O ponto verde basta: só a tarefa persistente chega aqui. */}
+            <span className={styles.persistent} role="img" aria-label="Sim" />
+          </DetailFact>
+        ) : null}
         {recurrence ? (
           <DetailFact label="Recorrência">
             <span className={styles.stack}>
               <span className={styles.value}>{recurrence.rule}</span>
               <span className={styles.sub}>{recurrence.detail}</span>
             </span>
+          </DetailFact>
+        ) : null}
+        {event.location ? (
+          <DetailFact label="Local">
+            <a className={styles.mapsLink} href={mapsUrl(event.location)} target="_blank" rel="noopener noreferrer">
+              <MapPin className={styles.mapsIcon} aria-hidden />
+              <span>{event.location}</span>
+              <span className={styles.srOnly}> (abre no Google Maps)</span>
+            </a>
           </DetailFact>
         ) : null}
         {reminders.length ? (

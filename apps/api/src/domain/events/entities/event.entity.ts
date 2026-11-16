@@ -21,7 +21,8 @@ import { EventId } from "../value-objects/event-id";
 import { EventValidationError } from "../errors/event.errors";
 import { detachOccurrence, type OccurrenceLink } from "../../recurrences/types/occurrence-link";
 
-export const DEFAULT_EVENT_KIND: EventKind = "routine";
+export const MAX_EVENT_LOCATION_LENGTH = 300;
+export const DEFAULT_EVENT_KIND: EventKind = "common";
 export const DEFAULT_EVENT_PRIORITY: EventPriority = "medium";
 
 /** O bloco de um evento na agenda dura no maximo isto; acima disso, e um evento longo. */
@@ -39,6 +40,8 @@ export interface EventCreateProps {
   priority?: EventPriority;
   name: string;
   description?: string;
+  /** Onde acontece, em texto livre que o Google Maps entende. So evento de pessoa tem. */
+  location?: string;
   /** Inicio planejado. */
   startedAt?: Date;
   /** Fim planejado: o fim do bloco ou, no evento longo, o prazo. */
@@ -52,10 +55,6 @@ export interface EventCreateProps {
   data?: Record<string, unknown>;
   /** Os artefatos do evento, na ordem em que aparecem. */
   artifactLinks?: ArtifactLink[];
-  /** Os eventos em que este se desdobra. */
-  subtaskIds?: string[];
-  /** Os eventos que so sao liberados quando este termina. */
-  blocksIds?: string[];
   occurrence?: OccurrenceLink;
 }
 
@@ -63,10 +62,10 @@ export interface EventRehydrateProps extends EventCreateProps {
   actor: Actor;
   kind: EventKind;
   revision: number;
-  /** Os eventos maiores de que este e subtarefa. A relacao pertence a eles: aqui e so leitura. */
-  parentIds?: string[];
-  /** Os eventos que precisam terminar antes deste. A relacao pertence a eles: aqui e so leitura. */
-  blockedByIds?: string[];
+  /** Os eventos de que este se segue ("segue-se de"). A sequencia nao e campo do evento: aqui e so leitura. */
+  previousIds?: string[];
+  /** Os eventos que se seguem a este ("da sequencia a"). Idem: so leitura. */
+  nextIds?: string[];
 }
 
 /** `null` apaga o campo. Sem status, o evento volta a ser de referencia. */
@@ -76,6 +75,7 @@ export interface EventReviseChanges {
   priority?: EventPriority;
   name?: string;
   description?: string;
+  location?: string;
   startedAt?: Date | null;
   estimatedFinishAt?: Date | null;
   finishedAt?: Date | null;
@@ -83,8 +83,6 @@ export interface EventReviseChanges {
   tags?: string[];
   longRunning?: boolean;
   artifactLinks?: ArtifactLink[];
-  subtaskIds?: string[];
-  blocksIds?: string[];
 }
 
 interface EventBuildProps {
@@ -96,6 +94,7 @@ interface EventBuildProps {
   priority: EventPriority;
   name: string;
   description: string;
+  location: string;
   startedAt: Date | undefined;
   estimatedFinishAt: Date | undefined;
   finishedAt: Date | undefined;
@@ -104,10 +103,8 @@ interface EventBuildProps {
   longRunning: boolean;
   data: Record<string, unknown>;
   artifactLinks: ArtifactLink[];
-  subtaskIds: string[];
-  blocksIds: string[];
-  parentIds: string[];
-  blockedByIds: string[];
+  previousIds: string[];
+  nextIds: string[];
   occurrence: OccurrenceLink | undefined;
   revision: number;
 }
@@ -125,9 +122,9 @@ function unique(ids: readonly string[]): string[] {
  * acao: com status, o evento e acompanhado (o que antes era uma tarefa); sem
  * status, so marca um horario na agenda.
  *
- * As relacoes pertencem ao evento de origem. Este agregado guarda as que saem
- * dele (artefatos, subtarefas e bloqueios) e so le as que chegam (`parentIds`,
- * `blockedByIds`).
+ * Este agregado guarda os artefatos do evento. A ordem entre eventos (a
+ * relacao `precedes`) nao e campo de nenhum deles: o agregado so a le, em
+ * `previousIds` e `nextIds`, e quem a muda e o lote, sem revisar ninguem.
  */
 export class Event {
   readonly id: string;
@@ -138,6 +135,7 @@ export class Event {
   readonly priority: EventPriority;
   readonly name: string;
   readonly description: string;
+  readonly location: string;
   readonly startedAt: Date | undefined;
   readonly estimatedFinishAt: Date | undefined;
   readonly finishedAt: Date | undefined;
@@ -146,10 +144,10 @@ export class Event {
   readonly longRunning: boolean;
   readonly data: Readonly<Record<string, unknown>>;
   readonly artifactLinks: readonly ArtifactLink[];
-  readonly subtaskIds: readonly string[];
-  readonly blocksIds: readonly string[];
-  readonly parentIds: readonly string[];
-  readonly blockedByIds: readonly string[];
+  /** Os eventos de que este se segue. */
+  readonly previousIds: readonly string[];
+  /** Os eventos que se seguem a este. */
+  readonly nextIds: readonly string[];
   /** Presente quando o evento e uma ocorrencia de uma serie. */
   readonly occurrence: OccurrenceLink | undefined;
   readonly revision: number;
@@ -163,6 +161,7 @@ export class Event {
     this.priority = props.priority;
     this.name = props.name;
     this.description = props.description;
+    this.location = props.location;
     this.startedAt = props.startedAt;
     this.estimatedFinishAt = props.estimatedFinishAt;
     this.finishedAt = props.finishedAt;
@@ -171,10 +170,8 @@ export class Event {
     this.longRunning = props.longRunning;
     this.data = props.data;
     this.artifactLinks = props.artifactLinks;
-    this.subtaskIds = props.subtaskIds;
-    this.blocksIds = props.blocksIds;
-    this.parentIds = props.parentIds;
-    this.blockedByIds = props.blockedByIds;
+    this.previousIds = props.previousIds;
+    this.nextIds = props.nextIds;
     this.occurrence = props.occurrence;
     this.revision = props.revision;
   }
@@ -207,6 +204,13 @@ export class Event {
       }
     }
 
+    if (props.location.length > MAX_EVENT_LOCATION_LENGTH) {
+      throw new EventValidationError(`Event location is longer than ${MAX_EVENT_LOCATION_LENGTH} characters`);
+    }
+    if (props.actor !== "human" && props.location !== "") {
+      throw new EventValidationError("Only a human event has a location");
+    }
+
     if (props.longRunning) {
       if (props.actor !== "human") throw new EventValidationError("Only a human event can be long-running");
       if (props.status === undefined) throw new EventValidationError("A long-running event always has a status");
@@ -231,8 +235,9 @@ export class Event {
     if (!props.notifyOffsetsMinutes.every(isNotificationOffsetMinutes)) {
       throw new EventValidationError("Invalid notification offset");
     }
-    if (props.subtaskIds.includes(props.id)) throw new EventValidationError("Event cannot be its own subtask");
-    if (props.blocksIds.includes(props.id)) throw new EventValidationError("Event cannot block itself");
+    if (props.previousIds.includes(props.id) || props.nextIds.includes(props.id)) {
+      throw new EventValidationError("Event cannot follow itself");
+    }
     if (typeof props.data !== "object" || props.data === null || Array.isArray(props.data)) {
       throw new EventValidationError("Event data must be an object");
     }
@@ -242,10 +247,8 @@ export class Event {
       tags: TagList.create(props.tags),
       notifyOffsetsMinutes: Array.from(new Set(props.notifyOffsetsMinutes)),
       artifactLinks: normalizeArtifactLinks(props.artifactLinks),
-      subtaskIds: unique(props.subtaskIds),
-      blocksIds: unique(props.blocksIds),
-      parentIds: unique(props.parentIds),
-      blockedByIds: unique(props.blockedByIds),
+      previousIds: unique(props.previousIds),
+      nextIds: unique(props.nextIds),
     });
   }
 
@@ -274,6 +277,7 @@ export class Event {
       priority: props.priority ?? DEFAULT_EVENT_PRIORITY,
       name: props.name,
       description: props.description ?? "",
+      location: props.location?.trim() ?? "",
       startedAt: props.startedAt,
       estimatedFinishAt,
       finishedAt: props.finishedAt,
@@ -282,10 +286,8 @@ export class Event {
       longRunning,
       data: props.data ?? {},
       artifactLinks: props.artifactLinks ?? [],
-      subtaskIds: props.subtaskIds ?? [],
-      blocksIds: props.blocksIds ?? [],
-      parentIds: [],
-      blockedByIds: [],
+      previousIds: [],
+      nextIds: [],
       occurrence: props.occurrence,
       revision: 1,
     });
@@ -302,6 +304,7 @@ export class Event {
       priority: props.priority ?? DEFAULT_EVENT_PRIORITY,
       name: props.name,
       description: props.description ?? "",
+      location: props.location?.trim() ?? "",
       startedAt: props.startedAt,
       estimatedFinishAt: props.estimatedFinishAt,
       finishedAt: props.finishedAt,
@@ -310,10 +313,8 @@ export class Event {
       longRunning: props.longRunning ?? false,
       data: props.data ?? {},
       artifactLinks: props.artifactLinks ?? [],
-      subtaskIds: props.subtaskIds ?? [],
-      blocksIds: props.blocksIds ?? [],
-      parentIds: props.parentIds ?? [],
-      blockedByIds: props.blockedByIds ?? [],
+      previousIds: props.previousIds ?? [],
+      nextIds: props.nextIds ?? [],
       occurrence: props.occurrence,
       revision: props.revision,
     });
@@ -321,8 +322,8 @@ export class Event {
 
   /**
    * Toda revisao e uma edicao do usuario, e por isso destaca a ocorrencia da
-   * serie. Mexer numa relacao que sai do evento tambem e uma revisao dele. So
-   * eventos de pessoa sao revisados: os de agente mudam pelo proprio agente.
+   * serie. So eventos de pessoa sao revisados: os de agente mudam pelo proprio
+   * agente.
    */
   revise(changes: EventReviseChanges): Event {
     if (this.actor !== "human") throw new EventValidationError("An agent event cannot be edited");
@@ -338,6 +339,7 @@ export class Event {
       priority: changes.priority ?? this.priority,
       name: changes.name ?? this.name,
       description: changes.description ?? this.description,
+      location: changes.location === undefined ? this.location : changes.location.trim(),
       startedAt: pick(changes.startedAt, this.startedAt),
       estimatedFinishAt: pick(changes.estimatedFinishAt, this.estimatedFinishAt),
       finishedAt: pick(changes.finishedAt, this.finishedAt),
@@ -346,10 +348,8 @@ export class Event {
       longRunning: changes.longRunning ?? this.longRunning,
       data: { ...this.data },
       artifactLinks: changes.artifactLinks ?? [...this.artifactLinks],
-      subtaskIds: changes.subtaskIds ?? [...this.subtaskIds],
-      blocksIds: changes.blocksIds ?? [...this.blocksIds],
-      parentIds: [...this.parentIds],
-      blockedByIds: [...this.blockedByIds],
+      previousIds: [...this.previousIds],
+      nextIds: [...this.nextIds],
       occurrence: detachOccurrence(this.occurrence),
       revision: this.revision + 1,
     });

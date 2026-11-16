@@ -48,9 +48,10 @@ Toda criação de worktree DEVE seguir esse comando e não pode pular nenhum pas
 (`scripts/worktree/provision-env.sh`): alias `<worktree>.braid.local` (Caddy +
 `/etc/hosts`), `node_modules` íntegros, bases `<worktree>` e `<worktree>_auth` no
 Postgres compartilhado (porta 54391), migrations, usuário `admin@admin.com`
-(senha `ADMIN_PASSWORD`) e servidores de dev no ar. Ao final, informe o link `http://<worktree>.braid.local:8080`.
-Remova com `pnpm worktree:teardown <caminho>`. Pré-requisito único por máquina:
-`sudo bash scripts/worktree/hosts-install.sh`.
+(senha `ADMIN_PASSWORD`) e servidores de dev no ar. Ao final, informe o link `https://<worktree>.braid.local:8443`.
+Remova com `pnpm worktree:teardown <caminho>`. Pré-requisitos únicos por máquina:
+`sudo bash scripts/worktree/hosts-install.sh` e `pnpm caddy:trust` (confia na CA local do
+Caddy; o alias sai em HTTPS porque o navegador só libera geolocalização em origem segura).
 Run development commands from the root, not from an individual app directory.
 
 ## Paridade web ↔ mobile
@@ -1076,7 +1077,7 @@ outra. `scripts/worktree/` resolve isso: cada worktree ganha seu proprio
 `.env.local` com portas livres calculadas na hora, bases proprias para a API
 (`<worktree>`) e para o Auth (`<worktree>_auth`) dentro do Postgres
 compartilhado (porta 54391) e o dominio `<worktree>.braid.local` (Caddy,
-porta 8080). A fila de jobs de IA e a tabela `jobs` da base da API, entao ja
+HTTPS na porta 8443). A fila de jobs de IA e a tabela `jobs` da base da API, entao ja
 nasce isolada por worktree.
 
 ## Passo a passo

@@ -40,6 +40,33 @@ describe("passo de editar eventos", () => {
     expect(ctx.gateway.calls[0]?.user).toContain(event.id);
   });
 
+  test("mudar o local: o lugar dito vira o endereco achado no mapa; texto vazio tira o local", async () => {
+    const ctx = setupRequest("a consulta vai ser no Hospital Mater Dei");
+    const here = { latitude: -19.92, longitude: -43.94 };
+    ctx.request.context = { screen: "chat", coordinates: here };
+    ctx.places.addresses.set("Hospital Mater Dei", "Hospital Mater Dei Santo Agostinho, Rua Gonçalves Dias 3155, Belo Horizonte");
+    const event = await seedEvent(ctx, "Consulta", { location: "Consultório antigo" });
+    const payload = await addStep(ctx, "s1", "event-edit", "one", { candidates: [candidate("event", event.id, "Consulta")] });
+    ctx.gateway.outputs.set("event_edit", { edits: [{ ...noEvent, id: event.id, location: "Hospital Mater Dei" }], query: null });
+
+    await ctx.editWorker.run("event-edit", payload);
+
+    expect(ctx.places.calls).toEqual([{ said: "Hospital Mater Dei", near: here }]);
+    expect((await ctx.eventRepository.findById(event.id))?.location).toBe(
+      "Hospital Mater Dei Santo Agostinho, Rua Gonçalves Dias 3155, Belo Horizonte",
+    );
+
+    const clearing = setupRequest("tira o local da consulta");
+    const located = await seedEvent(clearing, "Consulta", { location: "Consultório antigo" });
+    const clear = await addStep(clearing, "s1", "event-edit", "one", { candidates: [candidate("event", located.id, "Consulta")] });
+    clearing.gateway.outputs.set("event_edit", { edits: [{ ...noEvent, id: located.id, location: "" }], query: null });
+
+    await clearing.editWorker.run("event-edit", clear);
+
+    expect(clearing.places.calls).toEqual([]);
+    expect((await clearing.eventRepository.findById(located.id))?.location).toBe("");
+  });
+
   test("concluir um evento acompanhado: status e conclusao real", async () => {
     const ctx = setupRequest("já paguei o aluguel");
     const event = await seedEvent(ctx, "Pagar o aluguel", { status: "todo", startedAt: undefined });

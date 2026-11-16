@@ -16,6 +16,16 @@ export type RecurrenceChange =
   | { op: "update"; recurrence: Recurrence; expectedRevision: number; fromDay: string }
   | { op: "delete"; id: string; fromDay: string };
 
+/**
+ * Uma aresta da sequencia entre eventos: `fromId` vem antes de `toId` (o
+ * segundo "segue-se de" o primeiro). Nenhum dos dois eventos e revisado.
+ */
+export interface SequenceChange {
+  op: "add" | "remove";
+  fromId: string;
+  toId: string;
+}
+
 export interface EntityBatch {
   userId: string;
   events: StagedChange<Event>[];
@@ -23,6 +33,11 @@ export interface EntityBatch {
   artifacts: StagedChange<Artifact>[];
   /** De qual original saiu cada copia nova do lote. */
   derivations?: readonly { originalId: string; copyId: string }[];
+  /**
+   * A sequencia entre eventos. Entra depois de todos os eventos do lote, para
+   * que uma ponta possa ser um evento novo do mesmo lote.
+   */
+  sequence?: readonly SequenceChange[];
   /**
    * Series novas. A serie e gravada antes das ocorrencias que o lote tambem
    * traz (a primeira, que o agente ja mostra na resposta); as demais saem da

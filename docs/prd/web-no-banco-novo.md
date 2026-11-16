@@ -63,9 +63,8 @@ Ao fim, o web não chama mais nenhuma rota antiga, e nenhuma rota da API fica se
    acompanhar projetos que não cabem num dia.
 9. Como usuário, quero que uma série apareça uma vez só na lista, pela próxima ocorrência em aberto e com a regra no
    lugar do horário, para não ver a mesma tarefa repetida.
-10. Como usuário, quero ver quantas subtarefas de um evento já foram feitas ("1/3"), para medir o avanço.
-11. Como usuário, quero ver que um evento em espera aguarda outros ("Espera por 1 evento"), para entender por que
-    está parado.
+10. ~~Fração de subtarefas ("1/3").~~ Removida: não há mais subtarefa ([ADR 0014](../adr/0014-sequencia-entre-eventos-no-lugar-de-subtarefa-e-bloqueio.md)).
+11. ~~"Espera por 1 evento".~~ Removida: a sequência é só informativa ([ADR 0014](../adr/0014-sequencia-entre-eventos-no-lugar-de-subtarefa-e-bloqueio.md)).
 12. Como usuário, quero ver as tags e a duração planejada na linha, para decidir o que cabe no meu tempo.
 13. Como usuário, quero concluir e reabrir um evento pelo glifo de status, sem abrir o detalhe, para marcar rápido.
 14. Como usuário, quero que o glifo de status nunca fique dentro de uma moldura, para a lista ficar leve.
@@ -105,10 +104,9 @@ Ao fim, o web não chama mais nenhuma rota antiga, e nenhuma rota da API fica se
     lembretes e tags em texto simples, para ler o evento de uma vez.
 31. Como usuário, quero ver os lembretes como "Lembrar antes de" com cartões pequenos ("30 min", "1 dia"), para saber
     quando serei avisado.
-32. Como usuário, quero ver as subtarefas com o status de cada uma e mudar esse status na própria lista, para tocar
-    o trabalho sem sair do evento.
-33. Como usuário, quero ver os bloqueios nos dois sentidos (bloqueado por, bloqueia), para entender a ordem das
-    coisas.
+32. ~~Subtarefas no detalhe, com status.~~ Removida ([ADR 0014](../adr/0014-sequencia-entre-eventos-no-lugar-de-subtarefa-e-bloqueio.md)).
+33. Como usuário, quero ver a sequência do evento nos dois sentidos ("Segue-se de" e "Da sequência a"), com eventos de
+    pessoa e de agente, para entender o que veio antes e o que vem depois.
 34. Como usuário, quero ver os artefatos do evento na ordem da lista, com o tipo, de quem são (seu ou catálogo
     global) e a relação (`uses`, `creates`), para saber o que o evento usa e o que ele produziu.
 35. Como usuário, quero ver por qual pedido o evento foi gerado, quando houver, para chegar à origem.
@@ -122,7 +120,7 @@ Ao fim, o web não chama mais nenhuma rota antiga, e nenhuma rota da API fica se
 
 39. Como usuário, quero um modo de edição em que cada campo é um campo de entrada, para corrigir qualquer coisa.
 40. Como usuário, quero só Descartar e Salvar no rodapé da edição, para a saída ser clara.
-41. Como usuário, quero trocar o tipo entre `routine`, `meal`, `sleep` e `training`, para classificar o evento.
+41. Como usuário, quero trocar o tipo entre `common`, `meal`, `sleep` e `training`, para classificar o evento.
 42. Como usuário, quero definir início e fim planejado com data e hora, ou deixar o evento sem data, para planejar
     do meu jeito.
 43. Como usuário, quero marcar um evento como tarefa persistente e dar a ele um prazo, para tratá-lo como evento
@@ -130,8 +128,9 @@ Ao fim, o web não chama mais nenhuma rota antiga, e nenhuma rota da API fica se
 44. Como usuário, quero criar, alterar e encerrar a recorrência de um evento, e saber se a ocorrência aberta segue a
     série ou foi destacada dela, para controlar o que se repete.
 45. Como usuário, quero adicionar e remover lembretes e tags, com sugestão de tags enquanto digito, para organizar.
-46. Como usuário, quero criar, renomear e remover subtarefas na edição, para desdobrar o evento.
-47. Como usuário, quero buscar outro evento para marcar um bloqueio, nos dois sentidos, para encadear tarefas.
+46. ~~Criar, renomear e remover subtarefas na edição.~~ Removida ([ADR 0014](../adr/0014-sequencia-entre-eventos-no-lugar-de-subtarefa-e-bloqueio.md)).
+47. Como usuário, quero buscar outro evento, de pessoa ou de agente, para pôr na minha sequência nos dois sentidos, para
+    encadear o que acontece (por exemplo, a revisão de um erro e o conserto que o agente faz depois).
 48. Como usuário, quero buscar um artefato para ligar ao evento, reordenar a lista e remover uma ligação, para
     montar o que o evento usa.
 49. Como usuário, quero adicionar a uma refeição um alimento do catálogo global ou dos meus, com a quantidade, para
@@ -260,7 +259,6 @@ Ao fim, o web não chama mais nenhuma rota antiga, e nenhuma rota da API fica se
 | Agenda de uma janela | `GET /api/events` com `from`, `to`, `actor`, `tag`, `cursor` |
 | Lista de tarefas | `GET /api/events/tracked` com `actor`, `status`, `priority`, `tag`, `q`, `longRunning` |
 | Criar, ler, editar e apagar evento | `POST /api/events`, `GET`, `PATCH` e `DELETE /api/events/{eventId}` |
-| Subtarefas do detalhe | `GET /api/events/{eventId}/subtasks` |
 | Sugestão de tags | `GET /api/tags` |
 | Lista de artefatos, catálogo global e artefatos de um evento | `GET /api/artifacts` com `type`, `scope`, `tag`, `q`, `eventId` |
 | Criar, ler, editar e apagar artefato | `POST /api/artifacts`, `GET`, `PATCH` e `DELETE /api/artifacts/{artifactId}` |
@@ -310,7 +308,6 @@ De onde cada chamada antiga vai:
 
 - Uma série aparece uma vez: se vier mais de uma ocorrência em aberto da mesma série, a tela fica com a mais próxima
   e mostra a regra no lugar do horário.
-- A fração de subtarefas ("1/3") é calculada na tela, com os eventos da lista que apontam para o evento como pai.
 - O toque no glifo de um evento de pessoa conclui ou reabre, como hoje. Reabrir leva a `todo`. O glifo de um evento
   de agente não muda status.
 - Enquanto houver na lista um evento de agente na fila, executando ou aguardando, a lista se recarrega em intervalo,
@@ -338,8 +335,8 @@ De onde cada chamada antiga vai:
   ou sem status. Nota continua como opção e cria um artefato de texto.
 - Salvar envia só os campos que mudaram, com a revisão lida. Diante de revisão desatualizada, a tela avisa, recarrega
   o evento e mantém o que o usuário digitou para ele conferir.
-- Subtarefas, bloqueios e artefatos são editados como listas dentro do formulário e vão na mesma edição do evento. A
-  ordem dos artefatos é a ordem da lista.
+- A sequência (`previousEventIds` e `nextEventIds`) e os artefatos são editados como listas dentro do formulário e vão
+  na mesma edição do evento. A sequência não revisa os outros eventos. A ordem dos artefatos é a ordem da lista.
 - O alimento ligado a uma refeição entra como cópia do original, com a quantidade. O exercício ligado a um treino é
   o artefato global, por referência.
 - A recorrência é criada, alterada e apagada pelas rotas de série. A série nasce no formulário de criação: com a
@@ -500,5 +497,3 @@ Pontos de atenção para quem implementa:
 - O status "agendado" não existe mais: um a fazer com horário é mostrado com o horário.
 - Um dia sem horário é o início à meia-noite local, e não se distingue de um evento que começa de fato à meia-noite.
 - O detalhe de um pedido responde pelo mesmo id do evento de agente.
-- A fração de subtarefas depende de as subtarefas estarem na lista carregada. Na agenda, uma subtarefa fora da janela
-  não entra na conta; se isso incomodar, o cartão de evento precisa trazer a contagem.

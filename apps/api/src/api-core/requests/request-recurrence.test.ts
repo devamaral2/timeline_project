@@ -10,7 +10,7 @@ const series = (over: Record<string, unknown> = {}) => ({
   name: "Corrida", kind: "training", status: null, priority: null, description: null, tags: [], frequency: "weekly",
   ...cadence, weekdays: ["mon"], timeOfDay: "07:00", ...over,
 });
-const noEdit = { id: "", name: null, description: null, priority: null, tags: null, frequency: null, ...cadence };
+const noEdit = { id: "", name: null, description: null, location: null, priority: null, tags: null, frequency: null, ...cadence };
 
 describe("regra da serie a partir do que o agente escreveu", () => {
   test("padroes do servidor: intervalo 1, dia da semana e do mes de inicio, 09:00", () => {
@@ -36,7 +36,7 @@ describe("regra da serie a partir do que o agente escreveu", () => {
 
   test("o template leva o status e a prioridade so quando foram ditos; hora nao dita vira 09:00", () => {
     const input = seriesInput(
-      { ...series({ name: "Pagar o aluguel", kind: "routine", status: "todo", priority: "high", frequency: "monthly", weekdays: null, monthDay: 5, timeOfDay: null }) } as never,
+      { ...series({ name: "Pagar o aluguel", kind: "common", status: "todo", priority: "high", frequency: "monthly", weekdays: null, monthDay: 5, timeOfDay: null }) } as never,
       "2026-10-26", "America/Sao_Paulo",
     );
     expect(input).toMatchObject({ timeOfDay: "09:00", byMonthDay: 5, template: { name: "Pagar o aluguel", status: "todo", priority: "high" } });
@@ -74,7 +74,7 @@ describe("passo de editar series", () => {
 
   const stored = (kind: string, name: string, extra: Record<string, unknown> = {}) => Recurrence.create({
     userId: "user-1", rule: buildRule({ frequency: "weekly", weekdays: ["mon"], timeOfDay: "07:00" }, "2026-10-26", "America/Sao_Paulo"),
-    template: { kind, name, description: "", tags: [], priority: "medium", notifyOffsetsMinutes: [], artifactIds: [], parentEventIds: [], ...extra },
+    template: { kind, name, description: "", tags: [], priority: "medium", notifyOffsetsMinutes: [], artifactIds: [], previousEventIds: [], ...extra },
   });
 
   test("trocar a frequencia descarta os dias da semana da anterior", () => {
@@ -84,13 +84,24 @@ describe("passo de editar series", () => {
     expect(revision.template).toBeUndefined();
   });
 
-  test("renomear a serie troca o template e mantem os artefatos, o status e os eventos maiores dela", () => {
-    const current = stored("meal", "Almoço", { status: "todo", artifactIds: ["a1"], parentEventIds: ["e1"] });
+  test("renomear a serie troca o template e mantem os artefatos, o status e os eventos de que ela se segue", () => {
+    const current = stored("meal", "Almoço", { status: "todo", artifactIds: ["a1"], previousEventIds: ["e1"] });
     const revision = planSeriesEdit(current, { ...noEdit, id: current.id, name: "Almoço fixo", priority: "high" }, "America/Sao_Paulo");
     expect(revision).toMatchObject({
-      keepArtifacts: true, template: { kind: "meal", name: "Almoço fixo", status: "todo", priority: "high", parentEventIds: ["e1"] },
+      keepArtifacts: true, template: { kind: "meal", name: "Almoço fixo", status: "todo", priority: "high", previousEventIds: ["e1"] },
     });
     expect(revision.template).not.toHaveProperty("artifactIds");
+  });
+
+  test("o local da serie: renomear o mantem, um lugar novo o troca e texto vazio o tira", () => {
+    const current = stored("common", "Terapia", { location: "Consultório antigo" });
+    const edit = (changes: Record<string, unknown>) =>
+      planSeriesEdit(current, { ...noEdit, id: current.id, ...changes }, "America/Sao_Paulo").template;
+
+    expect(edit({ name: "Terapia semanal" })).toMatchObject({ name: "Terapia semanal", location: "Consultório antigo" });
+    expect(edit({ location: "Clínica Saúde Emocional, Rua Um 10" })).toMatchObject({ name: "Terapia", location: "Clínica Saúde Emocional, Rua Um 10" });
+    expect(edit({ location: "" })).toMatchObject({ location: "" });
+    expect(changesNothing({ ...noEdit, id: current.id, location: "" })).toBe(false);
   });
 
   test("edicao sem campo novo e reconhecida", () => {

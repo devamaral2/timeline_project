@@ -20,7 +20,9 @@ function isNotFound(error: unknown): boolean {
 export function useRecurrenceDraft(recurrenceId: string | null) {
   const [series, setSeries] = useState<RecurrenceDto | null>(null);
   const [loadState, setLoadState] = useState<RecurrenceLoadState>("idle");
-  const [draft, setDraft] = useState<RecurrenceDraft | null>(null);
+  const [draft, setDraft0] = useState<RecurrenceDraft | null>(null);
+  const setDraft: typeof setDraft0 = (v) => { console.log("SETDRAFT", typeof v === "function" ? "fn" : JSON.stringify(v), new Error().stack?.split("\n").slice(2,4).join("|")); setDraft0(v); };
+  console.log("HOOK", JSON.stringify(draft), recurrenceId);
 
   useEffect(() => {
     if (recurrenceId === null) {

@@ -26,7 +26,7 @@ const DETAIL_PATH = "/user-1/eventos/ev-1";
 const EVENT = eventFixture({
   id: "ev-1",
   name: "Treino de força",
-  kind: "routine",
+  kind: "common",
   status: "doing",
   startedAt: "2026-11-14T18:30:00-03:00",
   estimatedFinishAt: "2026-11-14T19:20:00-03:00",
@@ -62,6 +62,19 @@ function save() {
 
 async function loaded() {
   await screen.findByRole("heading", { level: 1, name: "Editar evento" });
+}
+
+/** O "+" da lista, pelo nome da busca do modal que ele abre (depende do tipo do evento). */
+const ADD_BUTTONS: Record<string, string> = {
+  "Buscar artefato para ligar": "Adicionar artefato",
+  "Buscar alimento para a refeição": "Adicionar alimento à refeição",
+  "Buscar exercício para o treino": "Adicionar exercício ao treino",
+};
+
+/** A busca do modal de seleção: abre pelo "+" (escolher um item fecha o modal) e digita o texto. */
+function search(label: string, text: string) {
+  if (!screen.queryByRole("dialog")) fireEvent.click(screen.getByRole("button", { name: ADD_BUTTONS[label] }));
+  fireEvent.change(screen.getByRole("searchbox", { name: label }), { target: { value: text } });
 }
 
 function linked() {
@@ -102,7 +115,7 @@ describe("artefatos na edição", () => {
     renderRoute();
     await loaded();
 
-    fireEvent.change(screen.getByRole("searchbox", { name: "Buscar artefato para ligar" }), { target: { value: "Caminhada" } });
+    search("Buscar artefato para ligar", "Caminhada");
     fireEvent.click(await screen.findByRole("button", { name: "Escolher “Caminhada no parque”" }));
     expect(linkedNames()).toEqual(["Ficha A", "Ficha B", "Registro do treino", "Caminhada no parque"]);
     save();
@@ -129,7 +142,7 @@ describe("artefatos na edição", () => {
     renderRoute();
     await loaded();
 
-    fireEvent.change(screen.getByRole("searchbox", { name: "Buscar artefato para ligar" }), { target: { value: "Ficha" } });
+    search("Buscar artefato para ligar", "Ficha");
     await waitFor(() => expect(api.calls.some((call) => call.pathname === "/api/artifacts" && call.query.q === "Ficha")).toBe(true));
     expect(screen.queryByRole("button", { name: "Escolher “Ficha A”" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Escolher “Ficha B”" })).not.toBeInTheDocument();
@@ -187,7 +200,7 @@ describe("artefatos na edição", () => {
     renderRoute();
     await loaded();
 
-    fireEvent.change(screen.getByRole("searchbox", { name: "Buscar artefato para ligar" }), { target: { value: "Caminhada" } });
+    search("Buscar artefato para ligar", "Caminhada");
     fireEvent.click(await screen.findByRole("button", { name: "Escolher “Caminhada no parque”" }));
     fireEvent.click(screen.getByRole("button", { name: "Subir “Caminhada no parque”" }));
     fireEvent.click(screen.getByRole("button", { name: "Remover artefato “Ficha A”" }));
@@ -245,12 +258,15 @@ describe("refeição: alimento do catálogo global ou dos seus, como cópia com 
     renderRoute();
     await loaded();
 
-    fireEvent.change(screen.getByRole("searchbox", { name: "Buscar alimento para a refeição" }), { target: { value: "Arroz" } });
+    search("Buscar alimento para a refeição", "Arroz");
     expect(await screen.findByRole("button", { name: "Escolher “Arroz cozido”" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Escolher “Arroz integral da casa”" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Escolher “Arroz de uma nota”" })).not.toBeInTheDocument();
-    const queries = api.calls.filter((call) => call.pathname === "/api/artifacts").map((call) => call.query);
-    expect(queries).toEqual(expect.arrayContaining([expect.objectContaining({ type: "food", scope: "global", q: "Arroz" }), expect.objectContaining({ type: "food", q: "Arroz" })]));
+    // O modal abre já com os primeiros alimentos; a consulta com o texto sai depois da pausa de digitação.
+    const queries = () => api.calls.filter((call) => call.pathname === "/api/artifacts").map((call) => call.query);
+    await waitFor(() =>
+      expect(queries()).toEqual(expect.arrayContaining([expect.objectContaining({ type: "food", scope: "global", q: "Arroz" }), expect.objectContaining({ type: "food", q: "Arroz" })])),
+    );
   });
 
   it("o alimento escolhido entra com a quantidade informada e Salvar manda copyOf e quantity", async () => {
@@ -258,7 +274,7 @@ describe("refeição: alimento do catálogo global ou dos seus, como cópia com 
     renderRoute();
     await loaded();
 
-    fireEvent.change(screen.getByRole("searchbox", { name: "Buscar alimento para a refeição" }), { target: { value: "Arroz cozido" } });
+    search("Buscar alimento para a refeição", "Arroz cozido");
     fireEvent.click(await screen.findByRole("button", { name: "Escolher “Arroz cozido”" }));
     fireEvent.change(screen.getByRole("textbox", { name: "Quantidade de “Arroz cozido”" }), { target: { value: " 150 g " } });
     save();
@@ -276,9 +292,9 @@ describe("refeição: alimento do catálogo global ou dos seus, como cópia com 
     renderRoute();
     await loaded();
 
-    fireEvent.change(screen.getByRole("searchbox", { name: "Buscar alimento para a refeição" }), { target: { value: "Arroz integral" } });
+    search("Buscar alimento para a refeição", "Arroz integral");
     fireEvent.click(await screen.findByRole("button", { name: "Escolher “Arroz integral da casa”" }));
-    fireEvent.change(screen.getByRole("searchbox", { name: "Buscar alimento para a refeição" }), { target: { value: "Arroz integral" } });
+    search("Buscar alimento para a refeição", "Arroz integral");
     fireEvent.click(await screen.findByRole("button", { name: "Escolher “Arroz integral da casa”" }));
     fireEvent.change(screen.getAllByRole("textbox", { name: "Quantidade de “Arroz integral da casa”" })[1] as HTMLElement, { target: { value: "2" } });
     save();
@@ -292,7 +308,7 @@ describe("refeição: alimento do catálogo global ou dos seus, como cópia com 
     renderRoute();
     await loaded();
 
-    fireEvent.change(screen.getByRole("searchbox", { name: "Buscar alimento para a refeição" }), { target: { value: "Arroz integral" } });
+    search("Buscar alimento para a refeição", "Arroz integral");
     fireEvent.click(await screen.findByRole("button", { name: "Escolher “Arroz integral da casa”" }));
     save();
     await waitFor(() => expect(replace).toHaveBeenCalledWith(DETAIL_PATH));
@@ -318,11 +334,13 @@ describe("treino: exercício do catálogo global, por referência, na ordem da l
     renderRoute();
     await loaded();
 
-    fireEvent.change(screen.getByRole("searchbox", { name: "Buscar exercício para o treino" }), { target: { value: "reto" } });
+    search("Buscar exercício para o treino", "reto");
     expect(await screen.findByRole("button", { name: "Escolher “Supino reto”" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Escolher “Ficha de costas”" })).not.toBeInTheDocument();
-    const queries = api.calls.filter((call) => call.pathname === "/api/artifacts").map((call) => call.query);
-    expect(queries).toContainEqual(expect.objectContaining({ type: "workout", scope: "global", q: "reto" }));
+    // O modal abre já com os primeiros exercícios; a consulta com o texto sai depois da pausa de digitação.
+    const queries = () => api.calls.filter((call) => call.pathname === "/api/artifacts").map((call) => call.query);
+    await waitFor(() => expect(queries()).toContainEqual(expect.objectContaining({ type: "workout", scope: "global", q: "reto" })));
+    expect(screen.queryByRole("button", { name: "Escolher “Ficha de costas”" })).not.toBeInTheDocument();
   });
 
   it("o exercício entra por referência, no fim da lista, e Salvar manda id e relação na ordem", async () => {
@@ -330,9 +348,9 @@ describe("treino: exercício do catálogo global, por referência, na ordem da l
     renderRoute();
     await loaded();
 
-    fireEvent.change(screen.getByRole("searchbox", { name: "Buscar exercício para o treino" }), { target: { value: "Supino" } });
+    search("Buscar exercício para o treino", "Supino");
     fireEvent.click(await screen.findByRole("button", { name: "Escolher “Supino reto”" }));
-    fireEvent.change(screen.getByRole("searchbox", { name: "Buscar exercício para o treino" }), { target: { value: "Remada" } });
+    search("Buscar exercício para o treino", "Remada");
     fireEvent.click(await screen.findByRole("button", { name: "Escolher “Remada curvada”" }));
     expect(linkedNames()).toEqual(["Supino reto", "Remada curvada"]);
     save();
@@ -350,7 +368,7 @@ describe("treino: exercício do catálogo global, por referência, na ordem da l
     renderRoute();
     await loaded();
 
-    fireEvent.change(screen.getByRole("searchbox", { name: "Buscar exercício para o treino" }), { target: { value: "Supino" } });
+    search("Buscar exercício para o treino", "Supino");
     await waitFor(() => expect(api.calls.some((call) => call.pathname === "/api/artifacts" && call.query.q === "Supino")).toBe(true));
     expect(screen.queryByRole("button", { name: "Escolher “Supino reto”" })).not.toBeInTheDocument();
   });

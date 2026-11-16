@@ -1,3 +1,4 @@
+import type { GeoPointInput } from "@repo/contracts";
 import { vi } from "vitest";
 import type { ScopedSqlOutcome } from "../../../domain/ports";
 import { AgentFileNotFoundError } from "../../agent/config/agent-files.service";
@@ -74,6 +75,17 @@ export class ScriptedFoodParsing implements FoodParsingGateway {
   }
 }
 
+/** Um mapa falso: troca o lugar dito pelo endereco combinado (ou devolve o que foi dito) e guarda o que recebeu. */
+export class ScriptedPlaces {
+  readonly calls: Array<{ said: string; near?: GeoPointInput }> = [];
+  readonly addresses = new Map<string, string>();
+
+  async resolve(said: string, near?: GeoPointInput): Promise<string> {
+    this.calls.push({ said, ...(near ? { near } : {}) });
+    return this.addresses.get(said) ?? said;
+  }
+}
+
 /** Os arquivos de skills e agentes em memoria: `write` guarda o texto e lembra o que foi escrito. */
 export class FakeAgentFiles {
   readonly written: Array<{ path: string; text: string }> = [];
@@ -98,7 +110,7 @@ export function setupRequest(prompt = "pedido", sqlOutcome?: ScopedSqlOutcome) {
   const artifactRepository = new InMemoryArtifactRepository(database.artifacts);
   const recurrences = new InMemoryRecurrenceRepository(database);
   const artifactBuilder = new ArtifactBuilder(new InMemoryWorkoutCatalog());
-  const repositories = { events: eventRepository, artifacts: artifactRepository, recurrences };
+  const repositories = { events: eventRepository, sequence: database, artifacts: artifactRepository, recurrences };
   const batchWriter = new InMemoryEntityBatchWriter(repositories, database.derivations);
   const createEvent = new CreateEventUseCase(eventRepository, artifactRepository, artifactBuilder, batchWriter, () => NOW);
   const kit = { database, eventRepository, artifactRepository, artifactBuilder, batchWriter, createEvent };
@@ -109,9 +121,10 @@ export function setupRequest(prompt = "pedido", sqlOutcome?: ScopedSqlOutcome) {
   const sql = new StubScopedSqlQuery(sqlOutcome);
   const foodParsing = new ScriptedFoodParsing();
   const files = new FakeAgentFiles();
-  const deps = { store, runner, batchWriter: kit.batchWriter, repositories, createEvent: kit.createEvent };
+  const places = new ScriptedPlaces();
+  const deps = { store, runner, batchWriter: kit.batchWriter, repositories, createEvent: kit.createEvent, places };
   return {
-    ...kit, recurrences, repositories, store, gateway, runner, request, sql, foodParsing, files,
+    ...kit, recurrences, repositories, store, gateway, runner, request, sql, foodParsing, files, places,
     worker: new RequestCreateWorker(deps),
     editWorker: new RequestEditWorker({ ...deps, sql }),
     queryWorker: new RequestQueryWorker({ store, runner, sql }),

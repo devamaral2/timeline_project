@@ -1,13 +1,7 @@
 /* A folha da nota: a caixa tem o lado do quadrado do evento (44) para o texto
    da linha não mudar de lugar; a folha, mais estreita, fica centrada nela. */
-.sheet { position: relative; flex: none; display: block; width: 44px; height: 44px; color: var(--note-color, var(--muted-foreground)); }
+.sheet { position: relative; flex: none; display: block; width: 44px; height: 44px; color: var(--muted-foreground); }
 .sheet[data-size="cite"] { width: 32px; height: 32px; }
-.sheet[data-note-type="meal"] { --note-color: var(--meal); }
-.sheet[data-note-type="training"] { --note-color: var(--training); }
-.sheet[data-note-type="sleep"] { --note-color: var(--sleep); }
-.sheet[data-note-type="skill"] { --note-color: var(--note-skill); }
-.sheet[data-note-type="agent"] { --note-color: var(--note-agent); }
-.sheet[data-note-type="router"] { --note-color: var(--note-router); }
 
 /* O contorno e o ícone são filhos diretos com dois seletores de classe: dentro
    do shell, `.shell svg` fixa todo svg em 20px com traço de 1,65 e ganharia de

@@ -4,12 +4,12 @@ import type { RecurrenceRule } from "./recurrence-rule";
 /**
  * O que cada ocorrencia copia. A janela vem da regra, nunca daqui. So eventos
  * de pessoa se repetem, e um evento longo nao se repete. `artifactIds` sao os
- * mesmos artefatos em todas as ocorrencias; `parentEventIds`, os eventos
- * maiores de que cada ocorrencia nasce subtarefa.
+ * mesmos artefatos em todas as ocorrencias; `previousEventIds`, os eventos
+ * de que cada ocorrencia nasce se seguindo.
  */
 export type RecurrenceTemplate = Omit<
   CreateEventInput,
-  "startedAt" | "estimatedFinishAt" | "finishedAt" | "longRunning" | "subtaskEventIds" | "blocksEventIds" | "blockedByEventIds"
+  "startedAt" | "estimatedFinishAt" | "finishedAt" | "longRunning" | "nextEventIds"
 >;
 
 export type CreateRecurrenceInput = RecurrenceRule & { template: RecurrenceTemplate };

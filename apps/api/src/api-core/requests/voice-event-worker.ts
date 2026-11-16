@@ -3,6 +3,7 @@ import type { EntityBatchWriter } from "../../domain/ports";
 import { EVENT_TIME_ZONE, toEntityBatch, type CreateEventUseCase } from "../events/create-event.usecase";
 import type { EventCommandParsingGateway } from "../events/gateways/event-command-parsing.gateway";
 import { resolveEventSchedule } from "../events/services/event-schedule.service";
+import type { PlaceResolver } from "../events/services/place-resolver.service";
 import type { RequestStore } from "./request-store";
 
 export const MAX_TRANSCRIPT_LENGTH = 1000;
@@ -19,6 +20,8 @@ export class VoiceEventWorker {
       parsing: EventCommandParsingGateway;
       createEvent: Pick<CreateEventUseCase, "prepare">;
       batchWriter: EntityBatchWriter;
+      /** Troca o lugar dito pelo endereco de um lugar que existe. Sem ele, o local fica como foi dito. */
+      places?: Pick<PlaceResolver, "resolve">;
     },
   ) {}
 
@@ -29,8 +32,16 @@ export class VoiceEventWorker {
     await store.markRunning(request.id);
 
     const parsed = await this.deps.parsing.parseCommand({ text: request.prompt });
+    const coordinates = request.context?.coordinates;
+    // O lugar citado na fala e procurado no mapa perto de onde a pessoa esta; sem lugar citado, vale o endereco dela.
+    const said = parsed.place?.trim();
+    const location = said ? await (this.deps.places?.resolve(said, coordinates) ?? said) : undefined;
     // A frase falada sempre vira a descricao, para o usuario saber o que foi entendido ao editar.
-    const input: CreateEventInput = { ...parsed.input, description: request.prompt };
+    const input: CreateEventInput = {
+      ...parsed.input, description: request.prompt,
+      ...(location ? { location } : {}),
+      ...(coordinates ? { coordinates } : {}),
+    };
     const schedule = resolveEventSchedule(parsed.schedule, request.createdAt, EVENT_TIME_ZONE);
     const prepared = await this.deps.createEvent.prepare(input, { userId: request.userId }, schedule);
     await this.deps.batchWriter.commit({

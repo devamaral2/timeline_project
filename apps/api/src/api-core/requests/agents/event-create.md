@@ -31,25 +31,25 @@ Responda SOMENTE com JSON neste formato, sem texto fora dele:
       "startedAt": "2026-10-25T12:00:00-03:00",
       "estimatedFinishAt": null,
       "description": null,
+      "location": null,
       "tags": [],
-      "subtaskOf": null,
-      "blockedBy": []
+      "followsFrom": []
     }
   ]
 }
 ```
 
 - `name`: nome curto do evento, em português. Algo a fazer fica no imperativo ("Pagar o aluguel"). Para refeição, só o nome da refeição ("Almoço", "Café da manhã", "Refeição"); NUNCA liste alimentos nem quantidades no evento.
-- `kind`: `meal` (comida, bebida), `training` (exercício, treino, esporte, nadar, correr), `sleep` (sono, cochilo) ou `routine` (todo o resto: trabalho, estudo, reunião, deslocamento, lazer, algo a fazer).
+- `kind`: `meal` (comida, bebida), `training` (exercício, treino, esporte, nadar, correr), `sleep` (sono, cochilo) ou `common` (padrão: todo o resto: trabalho, estudo, reunião, deslocamento, lazer, algo a fazer).
 - `status`: `null` para o evento que só marca um horário na agenda (um relato, um compromisso). Para algo a fazer que o usuário quer acompanhar: `todo` (a fazer), `toDefine` (ainda sem data), `doing` (em andamento), `inHold` (esperando por algo), `done` (já feito) ou `cancel`. Na dúvida entre os dois casos: tem horário e é um relato ou compromisso, `null`; é uma pendência, `todo`.
 - `priority`: `urgent`, `high`, `medium` ou `low`; `null` se o usuário não disse.
 - `longRunning`: `true` só para algo longo como um projeto, que dura semanas ou meses e fica fora da agenda ("escrever o TCC até dezembro"); sempre com `status`. Nos demais, `false`.
 - `startedAt`: início, em ISO-8601 com fuso -03:00, calculado a partir de `Agora`. `null` quando o pedido não diz.
 - `estimatedFinishAt`: fim planejado, em ISO-8601 com fuso -03:00: o fim do horário na agenda ou, em algo a fazer, o prazo. `null` quando o pedido não diz.
 - `description`: só se o usuário disse algo a registrar além do nome; senão `null`.
+- `location`: o lugar onde o evento acontece. Só quando o usuário diz o NOME de um estabelecimento ou um endereço ("clínica Saúde Emocional", "Shopping Del Rey", "Rua da Bahia 1148"); copie como ele disse, sem "na", "no", "ao", e junte a cidade ou o bairro se ele disse ("Hospital Mater Dei Betim"). O servidor procura esse lugar no mapa, perto de onde o usuário está, e grava o endereço que existe; NUNCA invente rua, número ou cidade. `null` quando o pedido não cita lugar ou cita um lugar genérico ("a padaria", "a academia", "casa", "o trabalho"): o servidor usa o endereço de onde o usuário está.
 - `tags`: lista vazia, a menos que o usuário peça etiquetas.
-- `subtaskOf`: a posição (a partir de 0) de OUTRO evento desta mesma lista de que este é uma parte ("organizar a festa: comprar o bolo e convidar o pessoal" são três eventos; os dois últimos têm `subtaskOf` 0). `null` quando não é parte de nenhum.
-- `blockedBy`: as posições dos eventos desta mesma lista que precisam terminar antes deste ("depois de comprar a tinta, pintar o quarto"). Vazia quando não há.
+- `followsFrom`: as posições (a partir de 0) dos OUTROS eventos desta mesma lista de que este se segue, os que vêm antes dele na sequência ("depois de comprar a tinta, pintar o quarto": o segundo evento tem `followsFrom` [0]). Vazia quando o pedido não diz que um vem depois de outro.
 
 # Regras
 

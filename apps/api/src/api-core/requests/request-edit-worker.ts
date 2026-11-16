@@ -1,9 +1,11 @@
+import type { GeoPointInput } from "@repo/contracts";
 import type { z } from "zod";
 import type { EntityBatchWriter, ScopedSqlQuery } from "../../domain/ports";
 import { AgentRunCancelledError } from "../agent/errors/agent.errors";
 import { AgentChangeSession } from "../agent/services/agent-change-session";
 import { TIME_ZONE } from "../agent/time";
 import type { CreateEventUseCase } from "../events/create-event.usecase";
+import type { PlaceResolver } from "../events/services/place-resolver.service";
 import {
   artifactEditOutput, eventEditOutput, recurringEventEditOutput,
   type ArtifactEditOutput, type EventEditOutput, type RecurringEventEditOutput,
@@ -45,6 +47,8 @@ export class RequestEditWorker {
       repositories: StepRepositories;
       createEvent: CreateEventUseCase;
       sql: ScopedSqlQuery;
+      /** Troca o lugar dito pelo endereco de um lugar que existe. Sem ele, o local fica como foi dito. */
+      places?: Pick<PlaceResolver, "resolve">;
     },
   ) {}
 
@@ -57,13 +61,17 @@ export class RequestEditWorker {
       const started = performance.now();
       switch (agent) {
         case "event-edit":
-          await this.applyEvents(session, await this.gather(agent, eventEditOutput, request, step, signal));
+          await this.applyEvents(
+            session, await this.gather(agent, eventEditOutput, request, step, signal), request.context?.coordinates,
+          );
           break;
         case "artifact-edit":
           await this.applyArtifacts(session, await this.gather(agent, artifactEditOutput, request, step, signal));
           break;
         case "recurring-event-edit":
-          await this.applySeries(session, await this.gather(agent, recurringEventEditOutput, request, step, signal));
+          await this.applySeries(
+            session, await this.gather(agent, recurringEventEditOutput, request, step, signal), request.context?.coordinates,
+          );
           break;
       }
       timings.total = Math.round(performance.now() - started);
@@ -107,12 +115,18 @@ export class RequestEditWorker {
     return value.edits;
   }
 
-  private async applyEvents(session: AgentChangeSession, edits: EventEditOutput["edits"]): Promise<void> {
+  /** O lugar novo e procurado no mapa perto de onde a pessoa esta; `""` tira o local. */
+  private async applyEvents(
+    session: AgentChangeSession, edits: EventEditOutput["edits"], coordinates?: GeoPointInput,
+  ): Promise<void> {
     for (const edit of edits) {
+      const said = edit.location?.trim();
+      const location = said ? await (this.deps.places?.resolve(said, coordinates) ?? said) : said;
       const changes = {
         name: edit.name ?? undefined, kind: edit.kind ?? undefined, status: edit.status ?? undefined,
         priority: edit.priority ?? undefined, description: edit.description ?? undefined, tags: edit.tags ?? undefined,
         startedAt: date(edit.startedAt), estimatedFinishAt: date(edit.estimatedFinishAt), finishedAt: date(edit.finishedAt),
+        location,
       };
       if (Object.values(changes).every((value) => value === undefined)) continue;
       const result = await session.reviseEvent(edit.id, (current) => current.revise(changes));
@@ -131,11 +145,16 @@ export class RequestEditWorker {
 
   /**
    * A serie e alterada de hoje em diante: as ocorrencias futuras que ninguem mexeu a mao saem e a primeira da
-   * regra nova entra neste lote. O template nunca traz artefatos novos; os da serie ficam.
+   * regra nova entra neste lote. O template nunca traz artefatos novos; os da serie ficam. O lugar novo e
+   * procurado no mapa perto de onde a pessoa esta; `""` tira o local.
    */
-  private async applySeries(session: AgentChangeSession, edits: RecurringEventEditOutput["edits"]): Promise<void> {
-    for (const edit of edits) {
-      if (changesNothing(edit)) continue;
+  private async applySeries(
+    session: AgentChangeSession, edits: RecurringEventEditOutput["edits"], coordinates?: GeoPointInput,
+  ): Promise<void> {
+    for (const asked of edits) {
+      if (changesNothing(asked)) continue;
+      const said = asked.location?.trim();
+      const edit = said ? { ...asked, location: await (this.deps.places?.resolve(said, coordinates) ?? said) } : asked;
       const result = await session.updateRecurrence(
         edit.id,
         (current) => {

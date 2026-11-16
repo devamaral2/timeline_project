@@ -27,6 +27,7 @@ Responda SOMENTE com JSON neste formato, sem texto fora dele:
       "id": "01ARZ3NDEKTSV4RRFFQ69G5FAV",
       "name": null,
       "description": null,
+      "location": null,
       "priority": null,
       "tags": null,
       "frequency": null,
@@ -46,6 +47,7 @@ Responda SOMENTE com JSON neste formato, sem texto fora dele:
 
 - `id`: SEMPRE o `id` de um candidato ou de uma linha do `Resultado da consulta`. Nunca invente ids.
 - Cada campo é o NOVO valor; `null` significa "não muda". `weekdays` usa `sun`..`sat` e substitui os dias atuais. Datas `AAAA-MM-DD`; `timeOfDay` `HH:MM`. `priority`: `urgent`, `high`, `medium` ou `low`.
+- `location`: o NOVO lugar onde a série acontece, quando o usuário pede para mudar o local. Só quando o usuário diz o NOME de um estabelecimento ou um endereço ("terapia na Saúde Emocional", "Shopping Del Rey", "Rua da Bahia 1148"); copie como ele disse, sem "na", "no", "ao", e junte a cidade ou o bairro se ele disse. O servidor procura esse lugar no mapa, perto de onde o usuário está, e grava o endereço que existe; NUNCA invente rua, número ou cidade. `""` (texto vazio) quando ele pede para tirar o local; `null` quando o pedido não fala de lugar.
 
 # Regras
 

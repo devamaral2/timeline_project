@@ -1,5 +1,6 @@
 import { and, asc, eq, gte, isNull, lt, or, sql } from "drizzle-orm";
 import {
+  SEQUENCE_RELATION,
   RecurrenceNotFoundError,
   RecurrenceOwnershipError,
   RecurrenceRevisionConflictError,
@@ -187,23 +188,23 @@ export class PostgresRecurrenceRepository implements RecurrenceRepository {
       .onConflictDoNothing();
   }
 
-  async materialize(recurrence: Recurrence, occurrences: Event[], parentIds: readonly string[] = []): Promise<void> {
+  async materialize(recurrence: Recurrence, occurrences: Event[], previousIds: readonly string[] = []): Promise<void> {
     await this.db.transaction(async (tx) => {
       // Duas abas lendo a agenda ao mesmo tempo esperam uma pela outra; o
       // indice unico por dia continua sendo a garantia, isto so poupa trabalho.
       await lockUser(tx, recurrence.userId);
 
-      // Com o soft delete o evento maior continua na tabela e a chave estrangeira aceitaria a
-      // subtarefa, que ficaria visivel sob um pai escondido.
-      const parents = await liveParents(tx, recurrence.userId, parentIds);
-      if (parents.length < parentIds.length) occurrences = [];
+      // Com o soft delete o antecessor continua na tabela e a chave estrangeira aceitaria a
+      // ocorrencia, que ficaria visivel seguindo um evento escondido.
+      const previous = await liveEvents(tx, recurrence.userId, previousIds);
+      if (previous.length < previousIds.length) occurrences = [];
 
       for (const occurrence of occurrences) {
         if (!(await insertEventAggregate(tx, occurrence))) continue;
-        if (parents.length === 0) continue;
-        // A relacao faz parte da criacao da ocorrencia: nao conta como edicao do evento maior.
+        if (previous.length === 0) continue;
+        // A relacao faz parte da criacao da ocorrencia: nao conta como edicao do antecessor.
         await tx.insert(schema.eventEventRelation).values(
-          parents.map((fromEventId) => ({ fromEventId, toEventId: occurrence.id, relation: "subtask" as const })),
+          previous.map((fromEventId) => ({ fromEventId, toEventId: occurrence.id, relation: SEQUENCE_RELATION })),
         );
       }
 
@@ -230,11 +231,11 @@ async function assertOwned(tx: Tx, recurrenceId: string, actorUserId: string): P
   if (existing.userId !== actorUserId) throw errors.ownership();
 }
 
-async function liveParents(tx: Tx, userId: string, parentIds: readonly string[]): Promise<string[]> {
-  if (parentIds.length === 0) return [];
+async function liveEvents(tx: Tx, userId: string, ids: readonly string[]): Promise<string[]> {
+  if (ids.length === 0) return [];
   const found = await tx.execute<{ id: string }>(sql`
     SELECT id FROM events
-    WHERE id IN ${[...parentIds]} AND user_id = ${userId} AND deleted_at IS NULL
+    WHERE id IN ${[...ids]} AND user_id = ${userId} AND deleted_at IS NULL
   `);
   return found.rows.map((row) => row.id);
 }

@@ -52,6 +52,8 @@ export function useMotionRouter() {
       push: (href: string) => startNavigationTransition(kindTo(href), () => router.push(href)),
       replace: (href: string) => startNavigationTransition(kindTo(href), () => router.replace(href)),
       back: () => startNavigationTransition("close", () => router.back()),
+      /** Carrega a tela de destino antes de precisar dela, para a troca não esperar por ela. */
+      prefetch: (href: string) => router.prefetch?.(href),
     };
   }, [router]);
 }

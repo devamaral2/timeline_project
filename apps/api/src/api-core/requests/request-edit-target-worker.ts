@@ -64,7 +64,7 @@ export class RequestEditTargetWorker {
       if (!event || event.userId !== userId || event.actor !== "human") return { failure: "not_found" };
       return { snapshot: {
         name: event.name, kind: event.kind, status: event.status ?? null, priority: event.priority,
-        description: event.description, tags: event.tags, longRunning: event.longRunning,
+        description: event.description, location: event.location, tags: event.tags, longRunning: event.longRunning,
         startedAt: iso(event.startedAt), estimatedFinishAt: iso(event.estimatedFinishAt), finishedAt: iso(event.finishedAt),
       } };
     }

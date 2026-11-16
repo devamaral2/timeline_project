@@ -1,7 +1,7 @@
 package app.braid.mobile.ui.notes
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.AccessTime
+import androidx.compose.material.icons.outlined.EventAvailable
 import androidx.compose.material.icons.outlined.Bedtime
 import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material.icons.outlined.FitnessCenter
@@ -30,7 +30,7 @@ internal fun noteOriginVisual(note: NoteDto): NoteOriginVisual {
         "meal" -> NoteOriginVisual(Icons.Outlined.Restaurant, palette.meal)
         "training" -> NoteOriginVisual(Icons.Outlined.FitnessCenter, palette.training)
         "sleep" -> NoteOriginVisual(Icons.Outlined.Bedtime, palette.sleep)
-        "routine" -> NoteOriginVisual(Icons.Outlined.AccessTime, palette.routine)
+        "common" -> NoteOriginVisual(Icons.Outlined.EventAvailable, palette.routine)
         else -> NoteOriginVisual(Icons.Outlined.Circle, MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { currentCoordinates } from "@/lib/geolocation/current-coordinates";
 import type { AgentEventStatus, AgentTraceDto, RequestDto, RequestScreenContext } from "@repo/contracts";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "@/lib/api/authed-fetch";
@@ -343,10 +344,11 @@ export function useAgentChat({
       if (!userId) return;
       let requestId: string;
       try {
+        const coordinates = await currentCoordinates();
         requestId = await startRequest({
           userId,
           text,
-          ...(context ? { context } : {}),
+          ...(context || coordinates ? { context: { screen: "chat", ...context, ...(coordinates ? { coordinates } : {}) } } : {}),
           ...(sessionRef.current ? { sessionId: sessionRef.current } : {}),
           clientMessageId: id,
         });

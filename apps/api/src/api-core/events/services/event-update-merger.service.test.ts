@@ -49,7 +49,7 @@ describe("fields", () => {
   test("changes what was sent, keeps the rest and bumps the revision", async () => {
     const { merge } = setup([meeting()]);
 
-    const { event, artifacts, origins } = await merge("event-1", {
+    const { event, artifacts, sequence } = await merge("event-1", {
       name: "Retrospectiva",
       priority: "high",
       tags: ["Time"],
@@ -64,7 +64,7 @@ describe("fields", () => {
       id: "event-1",
       name: "Retrospectiva",
       description: "Semanal",
-      kind: "routine",
+      kind: "common",
       priority: "high",
       tags: ["time"],
       notifyOffsetsMinutes: [30],
@@ -75,7 +75,7 @@ describe("fields", () => {
     expect(event.estimatedFinishAt?.toISOString()).toBe("2026-08-18T16:30:00.000Z");
     expect(event.finishedAt?.toISOString()).toBe("2026-08-18T16:10:00.000Z");
     expect(artifacts).toEqual({ created: [], updated: [], derivations: [] });
-    expect(origins).toEqual([]);
+    expect(sequence).toEqual([]);
   });
 
   test("an empty change is still a revision of the event", async () => {
@@ -124,18 +124,6 @@ describe("fields", () => {
     await expect(merge("event-1", { finishedAt: "x" })).rejects.toThrow(EventValidationError);
     await expect(merge("event-1", { kind: "step" as never })).rejects.toThrow("Unknown event kind: step");
     await expect(merge("event-1", { status: "running" as never })).rejects.toThrow("Unknown event status: running");
-  });
-
-  test("replaces the lists of subtasks and blocked events", async () => {
-    const fixture = eventWith({ id: "event-1", userId, name: "Reforma", status: "todo", subtaskIds: ["s1"], blocksIds: ["b1"] });
-    const others = ["s1", "s2", "b1"].map((id) => Event.create({ id, userId, name: id, status: "todo" }));
-    const { merge } = setup([fixture], { events: others });
-
-    const { event, origins } = await merge("event-1", { subtaskEventIds: ["s2"], blocksEventIds: [] });
-
-    expect(event.subtaskIds).toEqual(["s2"]);
-    expect(event.blocksIds).toEqual([]);
-    expect(origins).toEqual([]);
   });
 
   test("turns a tracked event into a long-running one", async () => {
@@ -463,102 +451,131 @@ describe("a meal event always has a food", () => {
     const meal = eventWith({ id: "event-1", userId, name: "Almoço", startedAt, kind: "meal" });
     const { merge } = setup([meal]);
 
-    const { event, artifacts } = await merge("event-1", { kind: "routine" });
+    const { event, artifacts } = await merge("event-1", { kind: "common" });
 
-    expect(event.kind).toBe("routine");
+    expect(event.kind).toBe("common");
     expect(artifacts.created).toEqual([]);
   });
 });
 
-describe("incoming relations (parents and blockers)", () => {
-  function family() {
+describe("sequence (what the event follows and what follows it)", () => {
+  // p1 -> child -> n1, p2 -> child -> n2, p3 solto.
+  function chain() {
     const child = eventWith({ id: "child", userId, name: "Pintar", status: "todo" });
-    const origin = (id: string, relations: { subtaskIds?: string[]; blocksIds?: string[] } = {}) =>
-      Event.create({ id, userId, name: id, status: "todo", ...relations });
-    return setup([child], {
-      events: [
-        origin("p1", { subtaskIds: ["child"] }),
-        origin("p2", { subtaskIds: ["child", "p3"] }),
-        origin("p3"),
-        origin("b1", { blocksIds: ["child"] }),
-        origin("b2"),
-      ],
-    });
+    const other = (id: string) => Event.create({ id, userId, name: id, status: "todo" });
+    const kit = setup([child], { events: ["p1", "p2", "p3", "n1", "n2", "n3"].map(other) });
+    kit.database.edges.push(
+      { fromId: "p1", toId: "child" },
+      { fromId: "p2", toId: "child" },
+      { fromId: "child", toId: "n1" },
+      { fromId: "child", toId: "n2" },
+    );
+    return kit;
   }
 
-  test("absent, no origin event is touched", async () => {
-    const { merge } = family();
+  test("reads the sequence of the event from the database", async () => {
+    const { merge } = chain();
 
-    const { event, origins } = await merge("child", { name: "Pintar a sala" });
+    const { event } = await merge("child", { name: "Pintar a sala" });
 
-    expect(origins).toEqual([]);
-    expect(event.parentIds).toEqual(["p1", "p2"]);
-    expect(event.blockedByIds).toEqual(["b1"]);
+    expect(event.previousIds).toEqual(["p1", "p2"]);
+    expect(event.nextIds).toEqual(["n1", "n2"]);
   });
 
-  test("sending the same lists touches no origin event", async () => {
-    const { merge } = family();
+  test("absent, the sequence does not change", async () => {
+    const { merge } = chain();
 
-    const { origins } = await merge("child", { parentEventIds: ["p2", "p1"], blockedByEventIds: ["b1"] });
+    const { sequence } = await merge("child", { name: "Pintar a sala" });
 
-    expect(origins).toEqual([]);
+    expect(sequence).toEqual([]);
   });
 
-  test("edits only the origins that gained or lost the event", async () => {
-    const { merge } = family();
+  test("sending the same lists changes nothing", async () => {
+    const { merge } = chain();
 
-    const { origins } = await merge("child", { parentEventIds: ["p2", "p3"], blockedByEventIds: ["b2"] });
+    const { sequence } = await merge("child", { previousEventIds: ["p2", "p1"], nextEventIds: ["n1", "n2"] });
 
-    const byId = new Map(origins.map((origin) => [origin.event.id, origin]));
-    expect([...byId.keys()].sort()).toEqual(["b1", "b2", "p1", "p3"]);
-    expect(byId.get("p3")?.event.subtaskIds).toEqual(["child"]);
-    expect(byId.get("p1")?.event.subtaskIds).toEqual([]);
-    expect(byId.get("b2")?.event.blocksIds).toEqual(["child"]);
-    expect(byId.get("b1")?.event.blocksIds).toEqual([]);
-    for (const origin of origins) {
-      expect(origin.expectedRevision).toBe(1);
-      expect(origin.event.revision).toBe(2);
-    }
+    expect(sequence).toEqual([]);
   });
 
-  test("an empty list removes the event from every origin, keeping their other relations", async () => {
-    const { merge } = family();
+  test("plans only the edges that were gained or lost, on either side", async () => {
+    const { merge } = chain();
 
-    const { origins } = await merge("child", { parentEventIds: [] });
+    const { sequence } = await merge("child", { previousEventIds: ["p2", "p3"], nextEventIds: ["n2", "n3"] });
 
-    expect(origins.map((origin) => [origin.event.id, origin.event.subtaskIds])).toEqual([
-      ["p1", []],
-      ["p2", ["p3"]],
+    expect(sequence).toEqual(
+      expect.arrayContaining([
+        { op: "add", fromId: "p3", toId: "child" },
+        { op: "remove", fromId: "p1", toId: "child" },
+        { op: "add", fromId: "child", toId: "n3" },
+        { op: "remove", fromId: "child", toId: "n1" },
+      ]),
+    );
+    expect(sequence).toHaveLength(4);
+  });
+
+  test("an empty list removes every edge of that side and leaves the other side alone", async () => {
+    const { merge } = chain();
+
+    const { sequence } = await merge("child", { previousEventIds: [] });
+
+    expect(sequence).toEqual([
+      { op: "remove", fromId: "p1", toId: "child" },
+      { op: "remove", fromId: "p2", toId: "child" },
     ]);
   });
 
-  test("the edited event itself only reads the relations that arrive at it", async () => {
-    const kit = family();
+  test("changing the sequence revises only the edited event, never the ends", async () => {
+    const kit = chain();
 
-    const merged = await kit.merge("child", { parentEventIds: ["p3"], blockedByEventIds: [] });
+    const merged = await kit.merge("child", { previousEventIds: ["p3"], nextEventIds: [] });
     await kit.batchWriter.commit(toUpdateBatch(merged, 1));
 
     const child = await kit.eventRepository.findById("child");
-    expect(child?.parentIds).toEqual(["p3"]);
-    expect(child?.blockedByIds).toEqual([]);
+    expect(child?.previousIds).toEqual(["p3"]);
+    expect(child?.nextIds).toEqual([]);
     expect(child?.revision).toBe(2);
-    expect((await kit.eventRepository.findById("p2"))?.revision).toBe(2);
-    expect((await kit.eventRepository.findById("b2"))?.revision).toBe(1);
+    for (const id of ["p1", "p2", "p3", "n1", "n2"]) {
+      expect((await kit.eventRepository.findById(id))?.revision).toBe(1);
+    }
+    expect((await kit.eventRepository.findById("p3"))?.nextIds).toEqual(["child"]);
+    expect((await kit.eventRepository.findById("p1"))?.nextIds).toEqual([]);
   });
 
-  test("refuses an origin that does not exist, belongs to someone else or is the event itself", async () => {
+  test("an agent event can be on either end", async () => {
+    const child = eventWith({ id: "child", userId, name: "Pintar", status: "todo" });
+    const request = Event.create({ id: "request-1", userId, actor: "agent", kind: "request", status: "queued", name: "Pedido" });
+    const { merge } = setup([child], { events: [request] });
+
+    const before = await merge("child", { previousEventIds: ["request-1"] });
+    const after = await merge("child", { nextEventIds: ["request-1"] });
+
+    expect(before.sequence).toEqual([{ op: "add", fromId: "request-1", toId: "child" }]);
+    expect(after.sequence).toEqual([{ op: "add", fromId: "child", toId: "request-1" }]);
+  });
+
+  test("refuses an end that does not exist, belongs to someone else or is the event itself", async () => {
     const child = eventWith({ id: "child", userId, name: "Pintar", status: "todo" });
     const theirs = Event.create({ id: "theirs", userId: "someone-else", name: "Deles", status: "todo" });
     const { merge } = setup([child], { events: [theirs] });
 
-    await expect(merge("child", { parentEventIds: ["missing"] })).rejects.toThrow(EventNotFoundError);
-    await expect(merge("child", { blockedByEventIds: ["theirs"] })).rejects.toThrow(EventOwnershipError);
-    await expect(merge("child", { parentEventIds: ["child"] })).rejects.toThrow("An event cannot be related to itself");
+    await expect(merge("child", { previousEventIds: ["missing"] })).rejects.toThrow(EventNotFoundError);
+    await expect(merge("child", { nextEventIds: ["theirs"] })).rejects.toThrow(EventOwnershipError);
+    await expect(merge("child", { previousEventIds: ["child"] })).rejects.toThrow("An event cannot follow itself");
+    await expect(merge("child", { nextEventIds: ["child"] })).rejects.toThrow(EventValidationError);
+  });
+
+  test("refuses a change that closes a cycle when it is written", async () => {
+    const kit = chain();
+    // child -> n1 ja existe: n1 nao pode ser antecessor de child.
+    const merged = await kit.merge("child", { previousEventIds: ["p1", "p2", "n1"] });
+
+    expect(() => kit.database.apply(userId, merged.sequence)).toThrow("Events cannot follow each other in a cycle");
   });
 });
 
 describe("toUpdateBatch", () => {
-  test("carries the event at the expected revision, the artifacts and the origins", async () => {
+  test("carries the event at the expected revision, the artifacts and the sequence, without other events", async () => {
     const original = Artifact.create({ id: "food-1", userId, type: "food", name: "Arroz", data: foodData });
     const parent = Event.create({ id: "parent", userId, name: "Projeto", status: "todo" });
     const kit = setup([meeting([{ id: "note-1", type: "text", data: { body: "pauta" } }])], {
@@ -567,7 +584,7 @@ describe("toUpdateBatch", () => {
     });
     const merged = await kit.merge("event-1", {
       artifacts: [{ id: "note-1", name: "Pauta" }, { copyOf: "food-1" }],
-      parentEventIds: ["parent"],
+      previousEventIds: ["parent"],
     });
 
     const batch = toUpdateBatch(merged, 1);
@@ -578,9 +595,7 @@ describe("toUpdateBatch", () => {
       { op: "update", entity: merged.artifacts.updated[0]?.artifact, expectedRevision: 1 },
     ]);
     expect(batch.derivations).toEqual([{ originalId: "food-1", copyId: merged.artifacts.created[0]?.id }]);
-    expect(batch.events).toEqual([
-      { op: "update", entity: merged.event, expectedRevision: 1 },
-      { op: "update", entity: merged.origins[0]?.event, expectedRevision: 1 },
-    ]);
+    expect(batch.events).toEqual([{ op: "update", entity: merged.event, expectedRevision: 1 }]);
+    expect(batch.sequence).toEqual([{ op: "add", fromId: "parent", toId: "event-1" }]);
   });
 });

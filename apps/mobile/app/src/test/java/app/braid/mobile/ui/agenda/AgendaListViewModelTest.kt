@@ -179,7 +179,7 @@ private fun event(
     startedAt: String,
 ) = TimelineEventCardDto(
     id = id,
-    kind = "routine",
+    kind = "common",
     noteTypes = emptyList(),
     missed = false,
     name = id,

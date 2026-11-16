@@ -12,7 +12,7 @@ function props(overrides: Partial<EventCreateProps> = {}): EventCreateProps {
 }
 
 function stored(overrides: Partial<EventRehydrateProps> = {}): EventRehydrateProps {
-  return { id: "event-1", userId: "user-1", actor: "human", kind: "routine", name: "Planejamento", startedAt, revision: 3, ...overrides };
+  return { id: "event-1", userId: "user-1", actor: "human", kind: "common", name: "Planejamento", startedAt, revision: 3, ...overrides };
 }
 
 const link = (artifactId: string, overrides: Partial<ArtifactLink> = {}): ArtifactLink => ({
@@ -28,7 +28,7 @@ describe("Event.create", () => {
 
     expect(event.id).toMatch(/^[0-9A-Z]{26}$/);
     expect(event.actor).toBe("human");
-    expect(event.kind).toBe("routine");
+    expect(event.kind).toBe("common");
     expect(event.priority).toBe("medium");
     expect(event.description).toBe("");
     expect(event.revision).toBe(1);
@@ -36,16 +36,16 @@ describe("Event.create", () => {
     expect(event.longRunning).toBe(false);
     expect(event.data).toEqual({});
     expect(event.artifactLinks).toEqual([]);
-    expect(event.subtaskIds).toEqual([]);
-    expect(event.blocksIds).toEqual([]);
+    expect(event.previousIds).toEqual([]);
+    expect(event.nextIds).toEqual([]);
     expect(event.occurrence).toBeUndefined();
   });
 
-  test("a new event never starts with incoming relations: they belong to the origin events", () => {
-    const event = Event.create(props());
+  test("a new event never starts in a sequence: the sequence is not a field of the event", () => {
+    const event = Event.create(props({ previousIds: ["p1"], nextIds: ["n1"] } as never));
 
-    expect(event.parentIds).toEqual([]);
-    expect(event.blockedByIds).toEqual([]);
+    expect(event.previousIds).toEqual([]);
+    expect(event.nextIds).toEqual([]);
   });
 
   describe("reference event (no status)", () => {
@@ -55,12 +55,12 @@ describe("Event.create", () => {
     });
 
     test("gets the typical duration of its kind when no planned finish was given", () => {
-      const minutes = (kind: "routine" | "meal" | "sleep" | "training") => {
+      const minutes = (kind: "common" | "meal" | "sleep" | "training") => {
         const event = Event.create(props({ kind }));
         return ((event.estimatedFinishAt as Date).getTime() - startedAt.getTime()) / MINUTE;
       };
 
-      expect(minutes("routine")).toBe(60);
+      expect(minutes("common")).toBe(60);
       expect(minutes("meal")).toBe(20);
       expect(minutes("sleep")).toBe(7 * 60);
       expect(minutes("training")).toBe(90);
@@ -118,7 +118,7 @@ describe("Event.create", () => {
 
   describe("kinds and statuses per actor", () => {
     test("a human event accepts every human kind and status", () => {
-      for (const kind of ["routine", "meal", "sleep", "training"] as const) {
+      for (const kind of ["common", "meal", "sleep", "training"] as const) {
         expect(Event.create(props({ kind })).kind).toBe(kind);
       }
       for (const status of ["todo", "toDefine", "doing", "inHold", "done", "cancel", "missed"] as const) {
@@ -153,7 +153,7 @@ describe("Event.create", () => {
 
     test("an agent event rejects the human kinds, including the default one", () => {
       expect(() => Event.create(props({ actor: "agent", status: "queued" }))).toThrow(
-        "Invalid kind for an agent event: routine",
+        "Invalid kind for an agent event: default",
       );
       expect(() => Event.create(props({ actor: "agent", kind: "meal", status: "queued" }))).toThrow(EventValidationError);
     });
@@ -263,18 +263,11 @@ describe("Event.create", () => {
       );
     });
 
-    test("removes repeated subtasks and blocked events", () => {
-      const event = Event.create(props({ subtaskIds: ["s1", "s2", "s1"], blocksIds: ["b1", "b1"] }));
-
-      expect(event.subtaskIds).toEqual(["s1", "s2"]);
-      expect(event.blocksIds).toEqual(["b1"]);
-    });
-
-    test("rejects an event that is its own subtask or that blocks itself", () => {
-      expect(() => Event.create(props({ id: "event-1", subtaskIds: ["event-1"] }))).toThrow(
-        "Event cannot be its own subtask",
+    test("rejects an event that appears in its own sequence", () => {
+      expect(() => Event.rehydrate(stored({ id: "event-1", previousIds: ["event-1"] }))).toThrow(
+        "Event cannot follow itself",
       );
-      expect(() => Event.create(props({ id: "event-1", blocksIds: ["event-1"] }))).toThrow("Event cannot block itself");
+      expect(() => Event.rehydrate(stored({ id: "event-1", nextIds: ["event-1"] }))).toThrow("Event cannot follow itself");
     });
   });
 
@@ -312,11 +305,18 @@ describe("Event.rehydrate", () => {
     expect(() => Event.rehydrate(stored({ longRunning: true }))).toThrow("A long-running event always has a status");
   });
 
-  test("reads the incoming relations, without repeats", () => {
-    const event = Event.rehydrate(stored({ parentIds: ["p1", "p1", "p2"], blockedByIds: ["b1"] }));
+  test("reads the sequence, without repeats: the events it follows and the ones that follow it", () => {
+    const event = Event.rehydrate(stored({ previousIds: ["p1", "p1", "p2"], nextIds: ["n1", "n1"] }));
 
-    expect(event.parentIds).toEqual(["p1", "p2"]);
-    expect(event.blockedByIds).toEqual(["b1"]);
+    expect(event.previousIds).toEqual(["p1", "p2"]);
+    expect(event.nextIds).toEqual(["n1"]);
+  });
+
+  test("a stored event without a sequence has empty lists", () => {
+    const event = Event.rehydrate(stored());
+
+    expect(event.previousIds).toEqual([]);
+    expect(event.nextIds).toEqual([]);
   });
 
   test("still enforces the invariants on what comes from storage", () => {
@@ -365,8 +365,6 @@ describe("Event.revise", () => {
       notifyOffsetsMinutes: [15],
       tags: ["Time"],
       artifactLinks: [link("a1")],
-      subtaskIds: ["s1"],
-      blocksIds: ["b1"],
     });
 
     expect(revised).toMatchObject({
@@ -379,8 +377,8 @@ describe("Event.revise", () => {
       notifyOffsetsMinutes: [15],
       tags: ["time"],
       artifactLinks: [link("a1")],
-      subtaskIds: ["s1"],
-      blocksIds: ["b1"],
+      previousIds: [],
+      nextIds: [],
     });
   });
 
@@ -433,23 +431,20 @@ describe("Event.revise", () => {
     expect(revised.finishedAt).toEqual(startedAt);
   });
 
-  test("replaces the whole list of a relation, and an empty list empties it", () => {
-    const event = Event.create(props({ artifactLinks: [link("a1"), link("a2")], subtaskIds: ["s1"], blocksIds: ["b1"] }));
+  test("replaces the whole list of artifact links, and an empty list empties it", () => {
+    const event = Event.create(props({ artifactLinks: [link("a1"), link("a2")] }));
 
-    const revised = event.revise({ artifactLinks: [link("a2")], subtaskIds: [], blocksIds: [] });
-
-    expect(revised.artifactLinks).toEqual([link("a2")]);
-    expect(revised.subtaskIds).toEqual([]);
-    expect(revised.blocksIds).toEqual([]);
+    expect(event.revise({ artifactLinks: [link("a2")] }).artifactLinks).toEqual([link("a2")]);
+    expect(event.revise({ artifactLinks: [] }).artifactLinks).toEqual([]);
   });
 
-  test("keeps the incoming relations as they were read", () => {
-    const event = Event.rehydrate(stored({ parentIds: ["p1"], blockedByIds: ["b1"] }));
+  test("keeps the sequence as it was read: revising never changes it", () => {
+    const event = Event.rehydrate(stored({ previousIds: ["p1"], nextIds: ["n1"] }));
 
-    const revised = event.revise({ name: "Outro nome" });
+    const revised = event.revise({ name: "Outro nome", previousIds: ["x"], nextIds: [] } as never);
 
-    expect(revised.parentIds).toEqual(["p1"]);
-    expect(revised.blockedByIds).toEqual(["b1"]);
+    expect(revised.previousIds).toEqual(["p1"]);
+    expect(revised.nextIds).toEqual(["n1"]);
   });
 
   test("detaches the occurrence from its series, whatever was edited", () => {
@@ -457,7 +452,7 @@ describe("Event.revise", () => {
     const event = Event.create(props({ occurrence }));
 
     expect(event.revise({ description: "editada" }).occurrence).toEqual({ ...occurrence, detached: true });
-    expect(event.revise({ subtaskIds: ["s1"] }).occurrence?.detached).toBe(true);
+    expect(event.revise({ name: "Outro" }).occurrence?.detached).toBe(true);
     expect(event.occurrence?.detached).toBe(false);
   });
 
@@ -477,8 +472,6 @@ describe("Event.revise", () => {
     expect(() => event.revise({ status: "queued" as never })).toThrow("Invalid status for a human event: queued");
     expect(() => event.revise({ kind: "step" })).toThrow(EventValidationError);
     expect(() => event.revise({ estimatedFinishAt: new Date(startedAt.getTime() - 1) })).toThrow(EventValidationError);
-    expect(() => event.revise({ subtaskIds: [event.id] })).toThrow("Event cannot be its own subtask");
-    expect(() => event.revise({ blocksIds: [event.id] })).toThrow("Event cannot block itself");
     expect(() => event.revise({ artifactLinks: [link("a1"), link("a1")] })).toThrow("Duplicate artifact link: a1");
   });
 
@@ -499,5 +492,27 @@ describe("Event.revise", () => {
     const event = Event.create(props({ status: "todo", occurrence }));
 
     expect(() => event.revise({ longRunning: true })).toThrow("A long-running event does not repeat");
+  });
+});
+
+describe("Event location", () => {
+  test("starts empty, is trimmed, and is kept by rehydrate", () => {
+    expect(Event.create(props()).location).toBe("");
+    expect(Event.create(props({ location: "  Parque Ibirapuera, São Paulo " })).location).toBe("Parque Ibirapuera, São Paulo");
+    expect(Event.rehydrate(stored({ location: "Casa" })).location).toBe("Casa");
+  });
+
+  test("revise changes it, clears it with an empty text, and keeps it when absent", () => {
+    const event = Event.create(props({ location: "Casa" }));
+    expect(event.revise({ location: "Escritório" }).location).toBe("Escritório");
+    expect(event.revise({ location: "" }).location).toBe("");
+    expect(event.revise({ name: "Outro" }).location).toBe("Casa");
+  });
+
+  test("refuses a location longer than 300 characters and one on an agent event", () => {
+    expect(() => Event.create(props({ location: "a".repeat(301) }))).toThrow(EventValidationError);
+    expect(() => Event.rehydrate(stored({ actor: "agent", kind: "request", status: "running", location: "Casa" }))).toThrow(
+      EventValidationError,
+    );
   });
 });

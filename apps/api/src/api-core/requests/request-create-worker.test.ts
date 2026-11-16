@@ -5,8 +5,8 @@ import { addStep, setupRequest } from "./testing/request-test-kit";
 const iso = (hour: number, minute = 0) => `2026-10-25T${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00-03:00`;
 
 const event = (over: Record<string, unknown> = {}) => ({
-  name: "Evento", kind: "routine", status: null, priority: null, longRunning: false, startedAt: null,
-  estimatedFinishAt: null, description: null, tags: [], subtaskOf: null, blockedBy: [], ...over,
+  name: "Evento", kind: "common", status: null, priority: null, longRunning: false, startedAt: null,
+  estimatedFinishAt: null, description: null, tags: [], followsFrom: [], ...over,
 });
 
 const finalizeJobs = (ctx: ReturnType<typeof setupRequest>) => ctx.store.jobs.filter((job) => job.kind === "request-finalize");
@@ -68,33 +68,124 @@ describe("passo de criar eventos", () => {
     expect(reference?.isReference).toBe(true);
   });
 
-  test("as partes e os bloqueios declarados entre eventos da mesma lista viram relacoes do evento de origem", async () => {
-    const ctx = setupRequest();
+  test("o lugar dito vira o endereco achado no mapa, procurado perto de onde a pessoa esta", async () => {
+    const ctx = setupRequest("Quero ir à clínica Saúde Emocional amanhã às 10h");
+    const here = { latitude: -19.92, longitude: -43.94 };
+    ctx.request.context = { screen: "chat", coordinates: here };
+    ctx.places.addresses.set("clínica Saúde Emocional", "Clínica Saúde Emocional, Rua dos Timbiras 100, Belo Horizonte");
     const payload = await addStep(ctx, "s1", "event-create", "many");
     ctx.gateway.outputs.set("event_create", { events: [
-      event({ name: "Organizar a festa", status: "todo" }),
-      event({ name: "Comprar o bolo", status: "todo", subtaskOf: 0 }),
-      event({ name: "Servir o bolo", status: "todo", subtaskOf: 0, blockedBy: [1] }),
+      event({ name: "Ir à clínica", location: "clínica Saúde Emocional" }),
+      event({ name: "Almoço", kind: "meal" }),
     ] });
 
     await ctx.worker.run("event-create", payload);
 
-    const byName = (name: string) => ctx.database.events.find((candidate) => candidate.name === name);
-    const [party, cake, serve] = [byName("Organizar a festa"), byName("Comprar o bolo"), byName("Servir o bolo")];
-    expect(party?.subtaskIds).toEqual([cake?.id, serve?.id]);
-    expect(cake?.blocksIds).toEqual([serve?.id]);
+    expect(ctx.places.calls).toEqual([{ said: "clínica Saúde Emocional", near: here }]);
+    const [clinic, lunch] = ctx.database.events;
+    expect(clinic?.location).toBe("Clínica Saúde Emocional, Rua dos Timbiras 100, Belo Horizonte");
+    // Sem lugar dito, nada e procurado no mapa.
+    expect(lunch?.location).toBe("");
+  });
+
+  test("lugar que o mapa nao conhece fica como o usuario disse", async () => {
+    const ctx = setupRequest("Jantar na casa da tia Lúcia");
+    const payload = await addStep(ctx, "s1", "event-create");
+    ctx.gateway.outputs.set("event_create", { events: [event({ name: "Jantar", kind: "meal", location: "casa da tia Lúcia" })] });
+
+    await ctx.worker.run("event-create", payload);
+
+    expect(ctx.database.events[0]?.location).toBe("casa da tia Lúcia");
+  });
+
+  test("a ordem declarada entre eventos da mesma lista vira sequencia no lote, sem revisar nenhum evento", async () => {
+    const ctx = setupRequest();
+    const payload = await addStep(ctx, "s1", "event-create", "many");
+    ctx.gateway.outputs.set("event_create", { events: [
+      event({ name: "Organizar a festa", status: "todo" }),
+      event({ name: "Comprar o bolo", status: "todo", followsFrom: [0] }),
+      event({ name: "Servir o bolo", status: "todo", followsFrom: [0, 1] }),
+    ] });
+
+    await ctx.worker.run("event-create", payload);
+
+    const byName = async (name: string) => {
+      const created = ctx.database.events.find((candidate) => candidate.name === name);
+      return ctx.eventRepository.findById(created?.id as string);
+    };
+    const [party, cake, serve] = [await byName("Organizar a festa"), await byName("Comprar o bolo"), await byName("Servir o bolo")];
+    // Quem se segue de quem e lido das arestas; todos nascem na revisao 1.
+    expect(cake?.previousIds).toEqual([party?.id]);
+    expect(serve?.previousIds).toEqual([party?.id, cake?.id]);
+    expect(party?.nextIds).toEqual([cake?.id, serve?.id]);
+    expect(cake?.nextIds).toEqual([serve?.id]);
+    expect([party, cake, serve].map((candidate) => candidate?.revision)).toEqual([1, 1, 1]);
     expect(ctx.batchWriter.commits[0]?.events.map((change) => change.op)).toEqual(["create", "create", "create"]);
+    expect(ctx.batchWriter.commits[0]?.sequence).toEqual([
+      { op: "add", fromId: party?.id, toId: cake?.id },
+      { op: "add", fromId: party?.id, toId: serve?.id },
+      { op: "add", fromId: cake?.id, toId: serve?.id },
+    ]);
+  });
+
+  test("a mesma posicao repetida em followsFrom grava uma aresta so", async () => {
+    const ctx = setupRequest();
+    const payload = await addStep(ctx, "s1", "event-create", "many");
+    ctx.gateway.outputs.set("event_create", { events: [
+      event({ name: "Antes", status: "todo" }),
+      event({ name: "Depois", status: "todo", followsFrom: [0, 0] }),
+    ] });
+
+    await ctx.worker.run("event-create", payload);
+
+    expect(ctx.database.edges).toHaveLength(1);
+    expect(ctx.batchWriter.commits[0]?.sequence).toHaveLength(1);
+  });
+
+  test("uma lista sem followsFrom nao grava sequencia", async () => {
+    const ctx = setupRequest();
+    const payload = await addStep(ctx, "s1", "event-create", "many");
+    ctx.gateway.outputs.set("event_create", { events: [event({ status: "todo" }), event({ status: "todo" })] });
+
+    await ctx.worker.run("event-create", payload);
+
+    expect(ctx.database.edges).toEqual([]);
+    expect(ctx.batchWriter.commits[0]?.sequence ?? []).toEqual([]);
   });
 
   test("uma posicao que nao existe na lista derruba o passo, sem gravar nada", async () => {
     const ctx = setupRequest();
     const payload = await addStep(ctx, "s1", "event-create");
-    ctx.gateway.outputs.set("event_create", { events: [event({ status: "todo", subtaskOf: 3 })] });
+    ctx.gateway.outputs.set("event_create", { events: [event({ status: "todo", followsFrom: [3] })] });
 
     await ctx.worker.run("event-create", payload);
 
     expect(ctx.batchWriter.commits).toHaveLength(0);
     expect(ctx.store.stepRecords[0]).toMatchObject({ status: "failed", errorCode: "rejected" });
+  });
+
+  test("um evento que se segue dele mesmo derruba o passo, sem gravar nada", async () => {
+    const ctx = setupRequest();
+    const payload = await addStep(ctx, "s1", "event-create");
+    ctx.gateway.outputs.set("event_create", { events: [event({ status: "todo", followsFrom: [0] })] });
+
+    await ctx.worker.run("event-create", payload);
+
+    expect(ctx.batchWriter.commits).toHaveLength(0);
+    expect(ctx.store.stepRecords[0]).toMatchObject({ status: "failed", errorCode: "rejected" });
+  });
+
+  test("dois eventos que se seguem um ao outro formam ciclo e derrubam o passo", async () => {
+    const ctx = setupRequest();
+    const payload = await addStep(ctx, "s1", "event-create", "many");
+    ctx.gateway.outputs.set("event_create", { events: [
+      event({ name: "A", status: "todo", followsFrom: [1] }),
+      event({ name: "B", status: "todo", followsFrom: [0] }),
+    ] });
+
+    await ctx.worker.run("event-create", payload);
+
+    expect(ctx.store.stepRecords[0]).toMatchObject({ status: "failed" });
   });
 
   test("horario invalido do modelo cai no padrao em vez de derrubar o passo", async () => {
@@ -160,11 +251,27 @@ describe("passo de criar series", () => {
     expect(entity).toMatchObject({ kind: "event", operation: "create", summary: { name: "Corrida", series: true } });
   });
 
+  test("o lugar dito na serie vira o endereco achado no mapa, e a ocorrencia nasce com ele", async () => {
+    const ctx = setupRequest("tenho terapia na saude emocional quarta 13 horas");
+    const here = { latitude: -19.92, longitude: -43.94 };
+    ctx.request.context = { screen: "chat", coordinates: here };
+    ctx.places.addresses.set("saude emocional", "Clínica Saúde Emocional, Rua dos Timbiras 100, Belo Horizonte");
+    const payload = await addStep(ctx, "s1", "recurring-event-create");
+    ctx.gateway.outputs.set("recurring_event_create", { series: [series({
+      name: "Terapia", kind: "common", frequency: "weekly", weekdays: ["wed"], timeOfDay: "13:00", location: "saude emocional",
+    })] });
+
+    await ctx.worker.run("recurring-event-create", payload);
+
+    expect(ctx.places.calls).toEqual([{ said: "saude emocional", near: here }]);
+    expect(ctx.database.events[0]?.location).toBe("Clínica Saúde Emocional, Rua dos Timbiras 100, Belo Horizonte");
+  });
+
   test("a serie de algo a fazer gera ocorrencias acompanhadas", async () => {
     const ctx = setupRequest();
     const payload = await addStep(ctx, "s1", "recurring-event-create");
     ctx.gateway.outputs.set("recurring_event_create", { series: [
-      series({ name: "Pagar o aluguel", kind: "routine", status: "todo", priority: "high", frequency: "monthly", monthDay: 5, timeOfDay: null, durationMinutes: null }),
+      series({ name: "Pagar o aluguel", kind: "common", status: "todo", priority: "high", frequency: "monthly", monthDay: 5, timeOfDay: null, durationMinutes: null }),
     ] });
 
     await ctx.worker.run("recurring-event-create", payload);

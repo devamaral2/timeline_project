@@ -24,13 +24,15 @@ export interface StoredTemplate {
   status?: HumanEventStatus;
   name: string;
   description: string;
+  /** Onde cada ocorrencia acontece. */
+  location: string;
   tags: string[];
   priority: EventPriority;
   notifyOffsetsMinutes: number[];
   /** Os mesmos artefatos em todas as ocorrencias, na ordem; cada uma ganha a propria relacao com eles. */
   artifactIds: string[];
   /** Os eventos maiores de que cada ocorrencia nasce subtarefa. */
-  parentEventIds: string[];
+  previousEventIds: string[];
 }
 
 export interface PreparedTemplate {
@@ -58,15 +60,16 @@ export function sampleDayOf(rule: RecurrenceRule): string {
 export function storedTemplateOf(recurrence: Recurrence): StoredTemplate {
   const template = recurrence.template as Partial<StoredTemplate>;
   return {
-    kind: template.kind ?? "routine",
+    kind: template.kind ?? "common",
     status: template.status,
     name: template.name ?? "",
     description: template.description ?? "",
+    location: template.location ?? "",
     tags: template.tags ?? [],
     priority: template.priority ?? "medium",
     notifyOffsetsMinutes: template.notifyOffsetsMinutes ?? [],
     artifactIds: template.artifactIds ?? [],
-    parentEventIds: template.parentEventIds ?? [],
+    previousEventIds: template.previousEventIds ?? [],
   };
 }
 
@@ -85,9 +88,9 @@ export async function prepareTemplate(
   if (typeof template !== "object" || template === null) {
     throw new RecurrenceValidationError("A recurrence template must be an object");
   }
-  // Os eventos maiores ficam fora do ensaio: virar subtarefa deles so acontece quando a ocorrencia nasce.
-  const { parentEventIds = [], ...eventInput } = template;
-  await assertOwnedEvents(deps.events, parentEventIds, actor);
+  // Os antecessores ficam fora do ensaio: seguir-se deles so acontece quando a ocorrencia nasce.
+  const { previousEventIds = [], ...eventInput } = template;
+  await assertOwnedEvents(deps.events, previousEventIds, actor);
 
   const { event, artifacts, derivations } = await deps.createEvent.prepare(
     eventInput,
@@ -101,11 +104,12 @@ export async function prepareTemplate(
       ...(event.status ? { status: event.status as HumanEventStatus } : {}),
       name: event.name,
       description: event.description,
+      location: event.location,
       tags: [...event.tags],
       priority: event.priority,
       notifyOffsetsMinutes: [...event.notifyOffsetsMinutes],
       artifactIds: event.artifactLinks.map((link) => link.artifactId),
-      parentEventIds: [...new Set(parentEventIds)],
+      previousEventIds: [...new Set(previousEventIds)],
     },
     artifacts,
     derivations,
@@ -140,6 +144,7 @@ export function buildOccurrence(recurrence: Recurrence, dayKey: string, liveArti
     status: template.status,
     name: template.name,
     description: template.description,
+    location: template.location,
     startedAt: window.startedAt,
     estimatedFinishAt: window.estimatedFinishAt,
     tags: template.tags,

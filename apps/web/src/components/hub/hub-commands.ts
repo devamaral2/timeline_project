@@ -1,6 +1,6 @@
 
 /** O que a barra "/" do chat abre: os formularios de criar e a pesquisa. */
-export type HubCommandId = "task" | "event" | "note" | "search" | "notifications" | "settings";
+export type HubCommandId = "event" | "note" | "search" | "notifications" | "settings";
 
 export interface HubCommand {
   id: HubCommandId;
@@ -10,10 +10,10 @@ export interface HubCommand {
 }
 
 export const HUB_COMMANDS: readonly HubCommand[] = [
-  { id: "task", slug: "tarefa", label: "Criar tarefa", hint: "Nome, status, prioridade e dia" },
-  { id: "event", slug: "evento", label: "Criar evento", hint: "Tipo, início e término" },
+  // Não há atalho de tarefa: o evento com status já é a tarefa.
+  { id: "event", slug: "evento", label: "Criar evento", hint: "Tipo, status, início e término" },
   { id: "note", slug: "nota", label: "Criar nota", hint: "A primeira linha vira o título" },
-  { id: "search", slug: "buscar", label: "Pesquisar", hint: "Eventos, tarefas e notas" },
+  { id: "search", slug: "buscar", label: "Pesquisar", hint: "Eventos, tarefas e artefatos" },
   { id: "notifications", slug: "notificacoes", label: "Notificações", hint: "Avisos recentes e próximos" },
   { id: "settings", slug: "configuracoes", label: "Configurações", hint: "Tema e conta" },
 ];
@@ -23,7 +23,7 @@ const fold = (text: string) => text.normalize("NFD").replace(/\p{Diacritic}/gu, 
 export interface CommandQuery {
   /** Os comandos que ainda casam com o que foi digitado depois da barra. */
   matches: HubCommand[];
-  /** O texto depois do comando (`/tarefa comprar pão` → `comprar pão`). */
+  /** O texto depois do comando (`/evento comprar pão` → `comprar pão`). */
   argument: string;
 }
 

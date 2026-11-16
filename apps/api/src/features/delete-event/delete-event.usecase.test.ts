@@ -21,29 +21,42 @@ test("deletes the event of its owner", async () => {
   expect(database.events).toEqual([]);
 });
 
-test("deleting the larger event keeps its subtasks, which lose only the relation", async () => {
-  const parent = Event.create({ id: "parent", userId: actor.userId, name: "Reforma", longRunning: true, subtaskIds: ["child"] });
-  const child = Event.create({ id: "child", userId: actor.userId, name: "Pintar", status: "todo" });
-  const { repository, useCase } = setup([parent, child]);
+test("deleting an event that others follow keeps them, which lose only the sequence edge", async () => {
+  const first = Event.create({ id: "first", userId: actor.userId, name: "Reforma", status: "todo" });
+  const second = Event.create({ id: "second", userId: actor.userId, name: "Pintar", status: "todo" });
+  const { database, repository, useCase } = setup([first, second]);
+  database.edges.push({ fromId: "first", toId: "second" });
 
-  await useCase.execute({ eventId: "parent" }, actor);
+  await useCase.execute({ eventId: "first" }, actor);
 
-  const remaining = await repository.findById("child");
+  const remaining = await repository.findById("second");
   expect(remaining?.name).toBe("Pintar");
-  expect(remaining?.parentIds).toEqual([]);
+  expect(remaining?.previousIds).toEqual([]);
   expect(remaining?.revision).toBe(1);
 });
 
-test("deleting a subtask removes it from the larger event without revising it", async () => {
-  const parent = Event.create({ id: "parent", userId: actor.userId, name: "Reforma", longRunning: true, subtaskIds: ["child"] });
-  const child = Event.create({ id: "child", userId: actor.userId, name: "Pintar", status: "todo" });
-  const { repository, useCase } = setup([parent, child]);
+test("deleting an event that follows another leaves the first without revising it", async () => {
+  const first = Event.create({ id: "first", userId: actor.userId, name: "Reforma", status: "todo" });
+  const second = Event.create({ id: "second", userId: actor.userId, name: "Pintar", status: "todo" });
+  const { database, repository, useCase } = setup([first, second]);
+  database.edges.push({ fromId: "first", toId: "second" });
 
-  await useCase.execute({ eventId: "child" }, actor);
+  await useCase.execute({ eventId: "second" }, actor);
 
-  const remaining = await repository.findById("parent");
-  expect(remaining?.subtaskIds).toEqual([]);
+  const remaining = await repository.findById("first");
+  expect(remaining?.nextIds).toEqual([]);
   expect(remaining?.revision).toBe(1);
+});
+
+test("deleting an event in the middle of a sequence keeps both ends, neither revised", async () => {
+  const events = ["a", "b", "c"].map((id) => Event.create({ id, userId: actor.userId, name: id, status: "todo" }));
+  const { database, repository, useCase } = setup(events);
+  database.edges.push({ fromId: "a", toId: "b" }, { fromId: "b", toId: "c" });
+
+  await useCase.execute({ eventId: "b" }, actor);
+
+  expect(await repository.findById("a")).toMatchObject({ nextIds: [], revision: 1 });
+  expect(await repository.findById("c")).toMatchObject({ previousIds: [], revision: 1 });
 });
 
 test("refuses an event that does not exist or belongs to someone else", async () => {

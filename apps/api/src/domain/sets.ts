@@ -7,7 +7,7 @@
 /** Quem executa o evento. */
 export const ACTORS = ["human", "agent"] as const;
 
-export const HUMAN_KINDS = ["routine", "meal", "sleep", "training"] as const;
+export const HUMAN_KINDS = ["common", "meal", "sleep", "training"] as const;
 export const AGENT_KINDS = [
   "request",
   "search_request",
@@ -36,7 +36,9 @@ export const ARTIFACT_TYPES = ["text", "food", "sleep", "training", "workout", "
 /** Os unicos tipos que podem nao ter dono. */
 export const GLOBAL_ARTIFACT_TYPES = ["food", "workout"] as const;
 
-export const EVENT_EVENT_RELATIONS = ["generates", "updates", "deletes", "subtask", "blocks", "follow_up"] as const;
+export const EVENT_EVENT_RELATIONS = ["generates", "updates", "deletes", "step", "precedes", "follow_up"] as const;
+/** A ordem entre eventos: do antecessor ("segue-se de") para o sucessor ("da sequencia a"). */
+export const SEQUENCE_RELATION = "precedes" as const satisfies (typeof EVENT_EVENT_RELATIONS)[number];
 export const EVENT_ARTIFACT_RELATIONS = ["creates", "updates", "uses", "deletes"] as const;
 export const ARTIFACT_ARTIFACT_RELATIONS = ["derives"] as const;
 

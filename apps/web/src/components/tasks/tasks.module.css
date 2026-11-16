@@ -98,9 +98,6 @@
 .meta svg { width: 14px; height: 14px; }
 .whenLate { font-weight: 600; color: var(--destructive); }
 .whenToday { font-weight: 600; color: var(--ink); }
-.progress { gap: 6px; }
-.progressBar { display: block; width: 40px; height: 3px; overflow: hidden; border-radius: 2px; background: var(--line); }
-.progressBar > i { display: block; height: 100%; background: var(--brand); }
 
 /* O lado direito: o dia na serifa e a prioridade. So a urgente ganha cor. */
 .side { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
@@ -127,7 +124,7 @@
 @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .toast { animation: none; } .groupToggle svg { transition: none; } }
 
-/* Compartilhado com o detalhe: o círculo de status, a prioridade e o botão do círculo das subtarefas. */
+/* Compartilhado com o detalhe: o círculo de status, a prioridade e e o botão do círculo. */
 .statusIcon { width: 18px; height: 18px; flex-shrink: 0; }
 .priority { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
 .priority[data-priority="urgent"] { color: var(--priority-urgent); font-weight: 600; }

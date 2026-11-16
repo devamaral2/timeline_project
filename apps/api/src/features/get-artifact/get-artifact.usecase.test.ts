@@ -56,13 +56,13 @@ test("returns the artifact of the actor with the events it appears in, oldest fi
       relation: "creates",
       name: "first",
       actor: "human",
-      kind: "routine",
+      kind: "common",
       startedAt: "2026-08-17T15:00:00.000Z",
       estimatedFinishAt: "2026-08-17T16:00:00.000Z",
     },
-    { eventId: "later", relation: "uses", name: "later", actor: "human", kind: "routine", startedAt: "2026-08-18T15:00:00.000Z" },
+    { eventId: "later", relation: "uses", name: "later", actor: "human", kind: "common", startedAt: "2026-08-18T15:00:00.000Z" },
     { eventId: "request", relation: "updates", name: "request", actor: "agent", kind: "request", startedAt: "2026-08-19T15:00:00.000Z" },
-    { eventId: "undated", relation: "uses", name: "undated", actor: "human", kind: "routine" },
+    { eventId: "undated", relation: "uses", name: "undated", actor: "human", kind: "common" },
   ]);
 });
 

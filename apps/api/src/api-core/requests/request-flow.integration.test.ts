@@ -57,7 +57,7 @@ const TODAY = new Date().toISOString().slice(0, 10);
 const iso = (hour: number) => `${TODAY}T${String(hour).padStart(2, "0")}:00:00-03:00`;
 const event = (name: string, kind: string, hour: number, over: Record<string, unknown> = {}) => ({
   name, kind, status: null, priority: null, longRunning: false, startedAt: iso(hour), estimatedFinishAt: null,
-  description: null, tags: [], subtaskOf: null, blockedBy: [], ...over,
+  description: null, tags: [], followsFrom: [], ...over,
 });
 const noEvent = {
   name: null, kind: null, status: null, priority: null, startedAt: null, estimatedFinishAt: null, finishedAt: null,
@@ -135,7 +135,7 @@ beforeEach(async () => {
     recipe: { source: "model", ingredients: [{ name: "arroz", quantity: "300 g" }], steps: ["Cozinhe."] },
     modelProvider: "stub", modelName: "stub",
   };
-  command = { input: { name: "Estudar", kind: "routine", tags: [] }, schedule: {}, modelProvider: "stub", modelName: "stub" };
+  command = { input: { name: "Estudar", kind: "common", tags: [] }, schedule: {}, modelProvider: "stub", modelName: "stub" };
   hermesReply = async () => { throw new HermesRequestError("sem resposta combinada"); };
 });
 
@@ -213,7 +213,7 @@ test("o exemplo-guia: eventos e alimento criados em passos proprios, ligados na 
 
 test("edicao: o JEV escolhe o candidato, o agente muda so ele; uma continuacao aponta para o primeiro pedido", async () => {
   dispatch = { event_create: confident("one") };
-  gateway.outputs.set("event_create", { events: [event("Reunião", "routine", 12)] });
+  gateway.outputs.set("event_create", { events: [event("Reunião", "common", 12)] });
   const first = await operations.start({ userId: "user-1", text: "reunião ao meio-dia" }, actor);
   await drain();
   const [meeting] = (await operations.view(first, actor)).entities;
@@ -239,7 +239,7 @@ test("edicao: o JEV escolhe o candidato, o agente muda so ele; uma continuacao a
 
 test("consulta: as linhas ficam no passo e so enxergam os eventos de pessoa do usuario", async () => {
   dispatch = { event_create: confident("one") };
-  gateway.outputs.set("event_create", { events: [event("Reunião", "routine", 12)] });
+  gateway.outputs.set("event_create", { events: [event("Reunião", "common", 12)] });
   await operations.start({ userId: "user-1", text: "reunião ao meio-dia" }, actor);
   await drain();
 

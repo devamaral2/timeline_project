@@ -16,14 +16,14 @@ const rule = {
   startsOn: "2026-09-01",
 };
 const template = {
-  kind: "routine",
+  kind: "common",
   name: "Correr",
   description: "",
   tags: ["saude"],
   priority: "medium",
   notifyOffsetsMinutes: [5],
   artifactIds: ["series-note"],
-  parentEventIds: [],
+  previousEventIds: [],
 };
 
 function existing(overrides: { materializedThrough?: string; startsOn?: string } = {}): Recurrence {
@@ -151,15 +151,16 @@ describe("template", () => {
     const { recurrence, artifacts } = await revise(existing(), { rule: {}, template: { name: "Nadar", status: "todo" } });
 
     expect(recurrence.template).toEqual({
-      kind: "routine",
+      kind: "common",
       status: "todo",
       name: "Nadar",
       description: "",
+      location: "",
       tags: [],
       priority: "medium",
       notifyOffsetsMinutes: [],
       artifactIds: [],
-      parentEventIds: [],
+      previousEventIds: [],
     });
     expect(artifacts).toEqual([]);
   });
@@ -225,16 +226,16 @@ describe("template", () => {
     expect(artifacts).toEqual([]);
   });
 
-  test("the parents of the new template must exist, and are stored without being edited", async () => {
+  test("the previous events of the new template must exist, and are stored without being edited", async () => {
     const project = Event.create({ id: "project", userId: actor.userId, name: "Projeto", longRunning: true });
     const kit = setup({ events: [project] });
 
-    const { recurrence } = await kit.revise(existing(), { rule: {}, template: { name: "Sessão", parentEventIds: ["project"] } });
+    const { recurrence } = await kit.revise(existing(), { rule: {}, template: { name: "Sessão", previousEventIds: ["project"] } });
 
-    expect(recurrence.template.parentEventIds).toEqual(["project"]);
+    expect(recurrence.template.previousEventIds).toEqual(["project"]);
     expect(kit.database.events[0]?.revision).toBe(1);
     await expect(
-      kit.revise(existing(), { rule: {}, template: { name: "Sessão", parentEventIds: ["missing"] } }),
+      kit.revise(existing(), { rule: {}, template: { name: "Sessão", previousEventIds: ["missing"] } }),
     ).rejects.toThrow(EventNotFoundError);
   });
 

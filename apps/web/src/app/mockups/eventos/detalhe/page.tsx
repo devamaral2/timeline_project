@@ -29,7 +29,7 @@ const exampleEvent: PreviewEvent = {
   notifyOffsetsMinutes: [15],
   interruptions: [],
   revision: 1,
-  kind: "routine",
+  kind: "common",
   notes: [],
   taskIds: ["mockup-tarefa-1", "mockup-tarefa-2"],
 };

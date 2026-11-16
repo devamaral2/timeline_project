@@ -31,7 +31,7 @@ export interface EntityRef {
   id: string;
 }
 
-/** Uma ligacao que a finalizacao aplicou: `from` pertence a `to` (o artefato ao evento, a subtarefa ao evento maior). */
+/** Uma ligacao que a finalizacao aplicou: `from` pertence a `to` (o artefato ao evento). */
 export interface LinkRecord {
   from: EntityRef;
   to: EntityRef;
@@ -127,6 +127,8 @@ export interface StepThought {
   model?: string;
 }
 
+import type { TokenUsage } from "../agent/gateways/structured-completion.gateway";
+
 export interface StepRecord {
   id: string;
   requestId: string;
@@ -144,6 +146,8 @@ export interface StepRecord {
   timings?: Record<string, number>;
   /** Um por chamada ao modelo que trouxe raciocinio, na ordem em que voltaram. */
   thoughts?: StepThought[];
+  /** A soma dos tokens de todas as chamadas ao modelo do passo. */
+  usage?: TokenUsage;
 }
 
 /** Um evento ou artefato que o pedido tocou: a relacao que parte do passo (ou do proprio pedido, na voz). */
@@ -210,6 +214,8 @@ export interface RequestStore {
   markStepRunning(stepId: string): Promise<void>;
   /** Acrescenta ao passo o que o modelo pensou numa chamada. Vale assim que a chamada volta, com o passo em curso. */
   recordThought(stepId: string, thought: StepThought): Promise<void>;
+  /** Soma ao passo os tokens de uma chamada ao modelo. */
+  recordUsage(stepId: string, usage: TokenUsage): Promise<void>;
   recordStepSuccess(tx: unknown, input: {
     requestId: string;
     stepId: string;

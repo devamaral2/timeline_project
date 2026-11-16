@@ -62,8 +62,8 @@ export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: s
     setArtifact(await getArtifact(noteId));
   });
 
-  const frame = { leadLabel: "Resumo da nota", bodyLabel: "Conteúdo da nota" };
-  const backOnly = <DetailNav label="Navegação do registro" back={<BackLink href={listHref}>Notas</BackLink>} />;
+  const frame = { leadLabel: "Resumo do artefato", bodyLabel: "Conteúdo do artefato" };
+  const backOnly = <DetailNav label="Navegação do registro" back={<BackLink href={listHref} label="Voltar para Artefatos" />} title="Artefato" />;
   if (state === "missing") {
     return <DetailFrame {...frame} lead={backOnly}><DetailMessage alert>Artefato não encontrado.</DetailMessage></DetailFrame>;
   }
@@ -120,7 +120,7 @@ export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: s
       {...frame}
       lead={
         <>
-          <DetailNav label="Navegação do registro" back={<BackLink href={listHref}>Notas</BackLink>}>{menu}</DetailNav>
+          <DetailNav label="Navegação do registro" back={<BackLink href={listHref} label="Voltar para Artefatos" />} title="Artefato">{menu}</DetailNav>
 
           <DetailHeading eyebrow={artifactTypeLabel(artifact.type)}>{artifact.name}</DetailHeading>
 
@@ -137,11 +137,12 @@ export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: s
     >
       <ArtifactContent artifact={artifact} />
 
-      {artifact.global ? null : (
+      {/* Sem evento (ou artefato global), a seção some: só aparece quando há o que mostrar. */}
+      {!artifact.global && events.length ? (
         <DetailSection title="Eventos" labelId="nt-events" count={events.length > 1 ? events.length : undefined}>
-          {events.length ? <LinkList>{events.map(eventRow)}</LinkList> : <DetailMessage>Não aparece em nenhum evento.</DetailMessage>}
+          <LinkList>{events.map(eventRow)}</LinkList>
         </DetailSection>
-      )}
+      ) : null}
 
       {dates ? (
         <DetailSection title="Registro" labelId="nt-registro">

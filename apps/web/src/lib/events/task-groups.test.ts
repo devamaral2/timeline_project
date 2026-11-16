@@ -1,23 +1,23 @@
 import type { EventCardDto } from "@repo/contracts";
 import { eventCardSchema } from "@repo/contracts/schemas";
 import { expect, test } from "vitest";
-import { groupTrackedEvents, oneRowPerSeries, showsSeriesRule, subtaskProgress } from "./task-groups";
+import { groupTrackedEvents, oneRowPerSeries, showsSeriesRule } from "./task-groups";
 
 /** Um cartão válido do contrato: o que o teste não diz fica com o padrão de uma tarefa de pessoa. */
 function card(overrides: { id: string } & Record<string, unknown>): EventCardDto {
   return eventCardSchema.parse({
     actor: "human",
-    kind: "routine",
+    kind: "common",
     status: "todo",
     priority: "medium",
     name: overrides.id,
     description: "",
+    location: "",
     longRunning: false,
     notifyOffsetsMinutes: [],
     tags: [],
     artifactTypes: [],
-    parentEventIds: [],
-    blockedByEventIds: [],
+    previousEventIds: [],
     revision: 1,
     ...overrides,
   });
@@ -64,15 +64,15 @@ test("mantém a ordem recebida dentro de cada grupo", () => {
   expect(groups[0].cards.map((c) => c.id)).toEqual(["depois", "antes"]);
 });
 
-test("a subtarefa cujo pai está na lista não vira linha própria; com o pai fora da lista, aparece", () => {
+test("a sequência não esconde ninguém: todo cartão com status vira linha, tenha antecessor na lista ou não", () => {
   const groups = groupTrackedEvents([
     card({ id: "proposta", status: "todo" }),
-    card({ id: "ler", status: "done", parentEventIds: ["proposta"] }),
-    card({ id: "rascunho", status: "todo", parentEventIds: ["sumiu"] }),
+    card({ id: "ler", status: "done", previousEventIds: ["proposta"] }),
+    card({ id: "rascunho", status: "todo", previousEventIds: ["sumiu"] }),
   ]);
 
   const shown = groups.flatMap((group) => group.cards.map((c) => c.id));
-  expect(shown).toEqual(["proposta", "rascunho"]);
+  expect(shown).toEqual(["proposta", "rascunho", "ler"]);
 });
 
 test("evento sem status (de referência) não entra em nenhum grupo", () => {
@@ -130,20 +130,4 @@ test("a regra da série só substitui o horário de uma ocorrência que segue a 
   expect(showsSeriesRule(occurrence("dia-14", "2026-09-14"))).toBe(true);
   expect(showsSeriesRule(occurrence("editada", "2026-09-14", { recurrence: { id: "serie-1", occurrenceOn: "2026-09-14", detached: true, rule: serieRule } }))).toBe(false);
   expect(showsSeriesRule(card({ id: "avulsa" }))).toBe(false);
-});
-
-test("a fração de subtarefas conta as filhas da lista: feitas sobre total", () => {
-  const cards = [
-    card({ id: "proposta", status: "doing" }),
-    card({ id: "ler", status: "done", parentEventIds: ["proposta"] }),
-    card({ id: "rascunho", status: "todo", parentEventIds: ["proposta"] }),
-    card({ id: "enviar", status: "toDefine", parentEventIds: ["proposta"] }),
-    card({ id: "outra", status: "done" }),
-  ];
-
-  expect(subtaskProgress(cards, "proposta")).toEqual({ done: 1, total: 3 });
-});
-
-test("um evento sem subtarefas na lista não tem fração", () => {
-  expect(subtaskProgress([card({ id: "luz", status: "todo" })], "luz")).toBeUndefined();
 });

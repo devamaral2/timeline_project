@@ -4,7 +4,8 @@ import { fileURLToPath } from "node:url";
 import { beforeEach, expect, test, vi } from "vitest";
 import { agentFilesRoutes, listAgentFiles, listAgentFileBackups, readAgentFileText, requestAgentFileEdit, restoreAgentFileBackup } from "./agent-files";
 import { createArtifact, deleteArtifact, editArtifact, getArtifact, listArtifacts, artifactsRoutes } from "./artifacts";
-import { createEvent, deleteEvent, eventsRoutes, getEvent, listAgenda, listSubtasks, listTrackedEvents, suggestTags, updateEvent } from "./events";
+import { placesRoutes, searchPlaces } from "./places";
+import { createEvent, deleteEvent, eventsRoutes, getEvent, listAgenda, listTrackedEvents, suggestTags, updateEvent } from "./events";
 import { cancelRequest, getRequest, listRequests, requestsRoutes, sendHermesMessage, startEditRequest, startRequest, startVoiceRequest } from "./requests";
 import { createRecurrence, deleteRecurrence, editRecurrence, getRecurrence, listRecurrences, recurrencesRoutes } from "./recurrences";
 
@@ -32,6 +33,7 @@ const declaredRoutes: string[] = [
   ...Object.values(agentFilesRoutes),
   ...Object.values(artifactsRoutes),
   ...Object.values(eventsRoutes),
+  ...Object.values(placesRoutes),
   ...Object.values(recurrencesRoutes),
   ...Object.values(requestsRoutes),
 ];
@@ -106,8 +108,10 @@ const cases: Case[] = [
     getEvent: () => getEvent("ID"),
     updateEvent: () => updateEvent("ID", anyBody()),
     deleteEvent: () => deleteEvent("ID"),
-    listSubtasks: () => listSubtasks("ID"),
     suggestTags: () => suggestTags("a"),
+  }),
+  ...casesOf("locais", placesRoutes, {
+    searchPlaces: () => searchPlaces("av paulista"),
   }),
   ...casesOf("artefatos", artifactsRoutes, {
     listArtifacts: () => listArtifacts(),

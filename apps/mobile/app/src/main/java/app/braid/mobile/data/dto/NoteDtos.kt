@@ -12,7 +12,7 @@ data class NoteLinkDto(
     val kind: String,
     val id: String,
     val name: String,
-    /** A natureza do evento (routine, meal, training, sleep...); só para `kind = "event"`. */
+    /** A natureza do evento (default, meal, training, sleep...); só para `kind = "event"`. */
     val eventKind: String? = null,
     val at: String? = null,
     val endsAt: String? = null,

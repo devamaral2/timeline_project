@@ -30,7 +30,7 @@ describe("banco novo: checks, restricoes e indices", () => {
 
   async function event(overrides: Row = {}): Promise<string> {
     const id = (overrides.id as string | undefined) ?? ulid();
-    await insert("events", { id, user_id: "user-1", actor: "human", kind: "routine", name: "Evento", ...overrides });
+    await insert("events", { id, user_id: "user-1", actor: "human", kind: "common", name: "Evento", ...overrides });
     return id;
   }
 
@@ -83,7 +83,7 @@ describe("banco novo: checks, restricoes e indices", () => {
 
   describe("events: tipo e status conforme o executor", () => {
     test("pessoa aceita os tipos de pessoa e recusa tipo de agente", async () => {
-      for (const kind of ["routine", "meal", "sleep", "training"]) await event({ kind });
+      for (const kind of ["common", "meal", "sleep", "training"]) await event({ kind });
 
       await expect(event({ kind: "request" })).rejects.toThrow(/events_kind_matches_actor/);
       await expect(event({ kind: "step" })).rejects.toThrow(/events_kind_matches_actor/);
@@ -303,28 +303,40 @@ describe("banco novo: checks, restricoes e indices", () => {
     const relate = (from: string, to: string, relation: string) =>
       insert("event_event_relation", { from_event_id: from, to_event_id: to, relation });
 
-    test("um evento pode ser subtarefa de mais de um evento maior", async () => {
-      const [projectA, projectB, session] = [await event(), await event(), await event()];
+    test("um evento pode seguir mais de um antecessor e anteceder mais de um sucessor", async () => {
+      const [first, second, shared, after] = [await event(), await event(), await event(), await event()];
 
-      await relate(projectA, session, "subtask");
-      await relate(projectB, session, "subtask");
+      await relate(first, shared, "precedes");
+      await relate(second, shared, "precedes");
+      await relate(shared, after, "precedes");
 
-      expect(await count("event_event_relation")).toBe(2);
+      expect(await count("event_event_relation")).toBe(3);
     });
 
     test("o mesmo par pode ter relacoes de tipos diferentes, mas nao a mesma duas vezes", async () => {
       const [a, b] = [await event(), await event()];
-      await relate(a, b, "subtask");
-      await relate(a, b, "blocks");
+      await relate(a, b, "precedes");
+      await relate(a, b, "follow_up");
 
-      await expect(relate(a, b, "subtask")).rejects.toThrow(/event_event_relation_.*_pk/);
+      await expect(relate(a, b, "precedes")).rejects.toThrow(/event_event_relation_.*_pk/);
     });
 
     test("um evento nao se relaciona consigo mesmo, e o tipo e do conjunto", async () => {
       const [a, b] = [await event(), await event()];
 
-      await expect(relate(a, a, "blocks")).rejects.toThrow(/event_event_not_self/);
+      await expect(relate(a, a, "precedes")).rejects.toThrow(/event_event_not_self/);
       await expect(relate(a, b, "parent")).rejects.toThrow(/event_event_relation_valid/);
+    });
+
+    test("os tipos antigos subtask e blocks nao existem mais", async () => {
+      const [a, b] = [await event(), await event()];
+
+      await expect(relate(a, b, "subtask")).rejects.toThrow(/event_event_relation_valid/);
+      await expect(relate(a, b, "blocks")).rejects.toThrow(/event_event_relation_valid/);
+      for (const relation of ["generates", "updates", "deletes", "step", "precedes", "follow_up"]) {
+        await relate(a, b, relation);
+      }
+      expect(await count("event_event_relation")).toBe(6);
     });
 
     test("cada continuacao tem um so primeiro pedido", async () => {
@@ -336,7 +348,7 @@ describe("banco novo: checks, restricoes e indices", () => {
 
     test("apagar fisicamente uma ponta leva a relacao, e nao a outra ponta", async () => {
       const [project, session] = [await event(), await event()];
-      await relate(project, session, "subtask");
+      await relate(project, session, "precedes");
 
       await ctx.pool.query("DELETE FROM events WHERE id = $1", [project]);
 
@@ -567,7 +579,7 @@ describe("banco novo: checks, restricoes e indices", () => {
     test("relacoes para um evento, por tipo", async () => {
       const plan = await planOf(`
         SELECT from_event_id FROM event_event_relation
-        WHERE to_event_id = '01JCZ0000000000000000000AA' AND relation = 'blocks'`);
+        WHERE to_event_id = '01JCZ0000000000000000000AA' AND relation = 'precedes'`);
 
       expect(plan).toContain("event_event_reverse_idx");
     });

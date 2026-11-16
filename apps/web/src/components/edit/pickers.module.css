@@ -1,0 +1,52 @@
+/*
+ * O calendário e as colunas de hora que abrem sob os campos de data e de hora. Vivem dentro do painel flutuante
+ * (`popover.module.css`), montado fora do shell: os apelidos de token e o anel de foco vêm de lá.
+ * Os botões respondem ao ponteiro (fundo no hover, afunda no toque) e nada se mexe por conta própria.
+ */
+
+.calendar { display: flex; flex-direction: column; gap: 6px; width: 308px; max-width: 100%; padding: 12px 12px 6px; }
+.head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.title { flex: 1; text-align: center; font-size: 15px; font-weight: 600; line-height: 20px; text-transform: capitalize; }
+.step {
+  flex: none; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: transparent;
+  color: var(--muted); cursor: pointer; transition: background var(--duration-fast), color var(--duration-fast), transform var(--duration-fast) var(--ease-out);
+}
+.step:hover { background: var(--soft); color: var(--ink); }
+.step:active { transform: scale(.92); }
+.step .stepIcon { width: 18px; height: 18px; stroke-width: 2; }
+
+.grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.weekday { display: grid; place-items: center; height: 28px; font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--faint); }
+.day {
+  position: relative; display: grid; place-items: center; aspect-ratio: 1; min-height: 40px; padding: 0; border: 0; border-radius: 50%; background: transparent;
+  color: var(--ink); font: inherit; font-size: 15px; font-variant-numeric: tabular-nums; cursor: pointer;
+  transition: background var(--duration-fast), transform var(--duration-fast) var(--ease-out);
+}
+.day:hover { background: var(--soft); }
+.day:active { transform: scale(.92); }
+/* Hoje é um aro, o dia escolhido é cheio: dá para ver os dois ao mesmo tempo. */
+.day[data-today] { box-shadow: inset 0 0 0 1.5px var(--brand); }
+.day[aria-pressed="true"] { background: var(--primary); color: var(--primary-foreground); font-weight: 600; }
+.day[aria-pressed="true"]:hover { filter: brightness(1.08); }
+.day:focus-visible { outline-offset: 1px; }
+
+.foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 4px; border-top: 1px solid var(--hairline); }
+
+.time { display: flex; flex-direction: column; gap: 4px; padding: 10px 6px 6px; }
+.columns { display: flex; gap: 6px; }
+.column { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.columnLabel { padding: 0 14px; font-family: var(--font-mono); font-size: var(--font-size-xs); letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
+.wheel { width: 96px; height: 236px; font-variant-numeric: tabular-nums; }
+.time .foot { padding: 6px 6px 0; }
+
+@media (max-width: 720px) {
+  .calendar { width: 100%; padding: 8px 16px 12px; }
+  .day { min-height: 44px; }
+  .columns { justify-content: center; }
+  .column { flex: 1; }
+  .wheel { width: 100%; height: 260px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .step, .day { transition: none; }
+}

@@ -4,6 +4,7 @@ import {
   createEventInputSchema,
   eventCardSchema,
   eventSchema,
+  placeSuggestionSchema,
   tagSuggestionSchema,
   updateEventInputSchema,
 } from "@repo/contracts/schemas";
@@ -11,18 +12,18 @@ import { z } from "zod";
 import type { FakeArea, FakeRequest, FakeResult, FakeStore } from ".";
 import { type ArtifactLink, type EventArtifactEntry, artifactsOfEvent, relinkEventArtifacts } from "./artifacts";
 
-/** Área de eventos: agenda, lista de tarefas, evento, subtarefas e tags. */
+/** Área de eventos: agenda, lista de tarefas, evento, sequência e tags. */
 
 const EVENTS = "events";
 const CARD_KEYS = [
-  "id", "actor", "kind", "status", "priority", "name", "description", "startedAt", "estimatedFinishAt",
-  "finishedAt", "longRunning", "notifyOffsetsMinutes", "tags", "artifactTypes", "parentEventIds",
-  "blockedByEventIds", "recurrence", "revision",
+  "id", "actor", "kind", "status", "priority", "name", "description", "location", "startedAt", "estimatedFinishAt",
+  "finishedAt", "longRunning", "notifyOffsetsMinutes", "tags", "artifactTypes", "previousEventIds",
+  "recurrence", "revision",
 ] as const;
 /** Campos que a edição aceita e que o fake aplica; `artifacts` não está aqui porque os vínculos vivem no artefato. */
 const EDITABLE_KEYS = [
-  "name", "description", "priority", "notifyOffsetsMinutes", "tags", "longRunning", "subtaskEventIds",
-  "blocksEventIds", "parentEventIds", "blockedByEventIds", "kind", "status", "startedAt", "estimatedFinishAt", "finishedAt",
+  "name", "description", "location", "priority", "notifyOffsetsMinutes", "tags", "longRunning", "previousEventIds",
+  "nextEventIds", "kind", "status", "startedAt", "estimatedFinishAt", "finishedAt",
 ] as const;
 
 const createdEventSchema = z.object({ eventId: z.string() }).strict();
@@ -31,21 +32,21 @@ const createdEventSchema = z.object({ eventId: z.string() }).strict();
 export function eventFixture(overrides: Partial<EventDto> & { id: string }): EventDto {
   return eventSchema.parse({
     actor: "human",
-    kind: "routine",
+    kind: "common",
     status: "todo",
     priority: "medium",
     name: "Evento",
     description: "",
+    location: "",
     longRunning: false,
     notifyOffsetsMinutes: [],
     tags: [],
     artifactTypes: [],
-    parentEventIds: [],
-    blockedByEventIds: [],
+    previousEventIds: [],
+    nextEventIds: [],
+    requests: [],
     revision: 1,
     artifacts: [],
-    subtaskEventIds: [],
-    blocksEventIds: [],
     ...overrides,
   });
 }
@@ -140,17 +141,18 @@ function tracked(request: FakeRequest, store: FakeStore): FakeResult {
 
 function create(request: FakeRequest, store: FakeStore): FakeResult {
   const input = request.body as CreateEventInput;
-  const parents = (input.parentEventIds ?? []).map((parentId) => table(store).get(parentId));
-  if (parents.some((parent) => parent === undefined)) return { status: 404 };
+  // Ids de sequência que não existem a API recusa (404), antes de criar qualquer coisa.
+  if (!allExist(store, [...(input.previousEventIds ?? []), ...(input.nextEventIds ?? [])])) return { status: 404 };
   const id = store.nextId("ev");
   const event: StoredEvent = eventSchema.parse({
     id,
     actor: "human",
-    kind: input.kind ?? "routine",
+    kind: input.kind ?? "common",
     status: input.status ?? (input.longRunning ? "todo" : undefined),
     priority: input.priority ?? "medium",
     name: input.name ?? "",
     description: input.description ?? "",
+    location: input.location ?? "",
     startedAt: input.startedAt,
     estimatedFinishAt: input.estimatedFinishAt,
     finishedAt: input.finishedAt,
@@ -158,19 +160,14 @@ function create(request: FakeRequest, store: FakeStore): FakeResult {
     notifyOffsetsMinutes: input.notifyOffsetsMinutes ?? [],
     tags: input.tags ?? [],
     artifactTypes: [],
-    parentEventIds: input.parentEventIds ?? [],
-    blockedByEventIds: input.blockedByEventIds ?? [],
+    previousEventIds: input.previousEventIds ?? [],
+    nextEventIds: input.nextEventIds ?? [],
+    requests: [],
     revision: 1,
     artifacts: [],
-    subtaskEventIds: input.subtaskEventIds ?? [],
-    blocksEventIds: input.blocksEventIds ?? [],
   });
   table(store).set(id, event);
-  // A subtarefa criada com `parentEventIds` entra na lista do pai, e a revisão dele sobe, como na API real.
-  for (const parent of parents) {
-    if (!parent) continue;
-    table(store).set(parent.id, eventSchema.parse({ ...parent, subtaskEventIds: [...parent.subtaskEventIds, id], revision: parent.revision + 1 }));
-  }
+  relinkSequence(store, event, [], []);
   return { status: 201, body: createdEventSchema.parse({ eventId: id }) };
 }
 
@@ -186,6 +183,11 @@ function update(request: FakeRequest, store: FakeStore): FakeResult {
   if (!event) return { status: 404 };
   const input = request.body as Record<string, unknown> & { expectedRevision: number };
   if (input.expectedRevision !== event.revision) return { status: 409 };
+  // A sequência é informativa, mas só liga eventos que existem; o evento não se segue a si mesmo (422).
+  const sequenceIds = [...stringList(input.previousEventIds), ...stringList(input.nextEventIds)];
+  if (sequenceIds.includes(event.id)) return { status: 422 };
+  if (!allExist(store, sequenceIds)) return { status: 404 };
+
   // A lista de artefatos é a completa, na ordem enviada: ligar por `id` e criar cópia de alimento (`copyOf`) são
   // modelados. Criar ou editar um artefato novo dentro do evento a API faz, mas a API falsa ainda não (400).
   if (Array.isArray(input.artifacts)) {
@@ -203,76 +205,46 @@ function update(request: FakeRequest, store: FakeStore): FakeResult {
   }
   next.revision = event.revision + 1;
   table(store).set(event.id, eventSchema.parse(next));
-  if (Array.isArray(input.subtaskEventIds)) relinkSubtasks(store, event, input.subtaskEventIds as string[]);
-  if (Array.isArray(input.blockedByEventIds)) relinkBlockers(store, event, input.blockedByEventIds as string[]);
-  if (Array.isArray(input.blocksEventIds)) relinkBlocked(store, event, input.blocksEventIds as string[]);
+  relinkSequence(store, event, event.previousEventIds, event.nextEventIds);
   return { status: 204 };
 }
 
+function stringList(value: unknown): string[] {
+  return Array.isArray(value) ? (value as string[]) : [];
+}
+
+function allExist(store: FakeStore, ids: string[]): boolean {
+  return ids.every((id) => table(store).has(id));
+}
+
 /**
- * Quem bloqueia é a origem da relação, como na API real: entrar ou sair dela revisa o bloqueador (sobe a revisão
- * e ganha este evento em `blocksEventIds`). Este evento não tem a sua revisão mexida por isso: o PATCH dele já a sobe.
+ * A sequência tem dois lados: este evento guarda os antecessores (`previousEventIds`) e os sucessores
+ * (`nextEventIds`), e cada evento relacionado guarda este no lado oposto. Quem entra ou sai da lista é religado
+ * no outro lado; ninguém além do evento do PATCH tem a revisão mexida, como na API real.
+ * `oldPrevious`/`oldNext` são as listas de antes do PATCH (vazias na criação); o lado que não veio no corpo não muda e não se religa.
  */
-function relinkBlockers(store: FakeStore, target: StoredEvent, nextIds: string[]) {
-  const before = new Set(target.blockedByEventIds);
-  const after = new Set(nextIds);
-  for (const id of before) if (!after.has(id)) setBlockLink(store, id, "blocksEventIds", target.id, false, true);
-  for (const id of after) if (!before.has(id)) setBlockLink(store, id, "blocksEventIds", target.id, true, true);
+function relinkSequence(store: FakeStore, event: StoredEvent, oldPrevious: string[], oldNext: string[]) {
+  const stored = table(store).get(event.id) ?? event;
+  syncSide(store, stored.id, oldPrevious, stored.previousEventIds, "nextEventIds");
+  syncSide(store, stored.id, oldNext, stored.nextEventIds, "previousEventIds");
 }
 
-/** Este evento é a origem de "Bloqueia": o evento bloqueado não é revisado, só passa a listar este como bloqueador. */
-function relinkBlocked(store: FakeStore, source: StoredEvent, nextIds: string[]) {
-  const before = new Set(source.blocksEventIds);
-  const after = new Set(nextIds);
-  for (const id of before) if (!after.has(id)) setBlockLink(store, id, "blockedByEventIds", source.id, false, false);
-  for (const id of after) if (!before.has(id)) setBlockLink(store, id, "blockedByEventIds", source.id, true, false);
+function syncSide(store: FakeStore, selfId: string, before: string[], after: string[], otherField: "previousEventIds" | "nextEventIds") {
+  for (const id of before) if (!after.includes(id)) setSequenceLink(store, id, otherField, selfId, false);
+  for (const id of after) if (!before.includes(id)) setSequenceLink(store, id, otherField, selfId, true);
 }
 
-function setBlockLink(
-  store: FakeStore,
-  eventId: string,
-  field: "blockedByEventIds" | "blocksEventIds",
-  otherId: string,
-  linked: boolean,
-  revise: boolean,
-) {
+function setSequenceLink(store: FakeStore, eventId: string, field: "previousEventIds" | "nextEventIds", otherId: string, linked: boolean) {
   const other = table(store).get(eventId);
   if (!other) return;
   const others = other[field].filter((id) => id !== otherId);
-  const next = { ...other, [field]: linked ? [...others, otherId] : others };
-  table(store).set(eventId, revise ? { ...next, revision: other.revision + 1 } : next);
-}
-
-/** A relação de subtarefa tem dois lados: o pai guarda os filhos, e cada filho guarda o pai em `parentEventIds`. */
-function relinkSubtasks(store: FakeStore, parent: StoredEvent, nextIds: string[]) {
-  const before = new Set(parent.subtaskEventIds);
-  const after = new Set(nextIds);
-  for (const id of before) if (!after.has(id)) setParentLink(store, id, parent.id, false);
-  for (const id of after) if (!before.has(id)) setParentLink(store, id, parent.id, true);
-}
-
-/** Tirar a ligação não apaga o filho: só o `parentEventIds` dele muda. */
-function setParentLink(store: FakeStore, childId: string, parentId: string, linked: boolean) {
-  const child = table(store).get(childId);
-  if (!child) return;
-  const others = child.parentEventIds.filter((id) => id !== parentId);
-  table(store).set(childId, { ...child, parentEventIds: linked ? [...others, parentId] : others });
+  table(store).set(eventId, { ...other, [field]: linked ? [...others, otherId] : others });
 }
 
 function remove(request: FakeRequest, store: FakeStore): FakeResult {
   const id = request.params.eventId ?? "";
   if (!table(store).delete(id)) return { status: 404 };
   return { status: 204 };
-}
-
-function subtasks(request: FakeRequest, store: FakeStore): FakeResult {
-  const event = table(store).get(request.params.eventId ?? "");
-  if (!event) return { status: 404 };
-  const cards = event.subtaskEventIds
-    .map((id) => table(store).get(id))
-    .filter((child): child is StoredEvent => child !== undefined)
-    .map(toCard);
-  return { status: 200, body: cards };
 }
 
 function suggestTags(request: FakeRequest, store: FakeStore): FakeResult {
@@ -288,6 +260,23 @@ function suggestTags(request: FakeRequest, store: FakeStore): FakeResult {
   return { status: 200, body: suggestions };
 }
 
+/** Com a posicao da pessoa (`lat` e `lon`), o local perto dela vem primeiro, como na API. */
+function searchPlaces(request: FakeRequest): FakeResult {
+  const query = (request.query.get("query") ?? "").trim();
+  if (query.length < 3) return { status: 200, body: [] };
+  const nearby = request.query.get("lat") && request.query.get("lon")
+    ? [{ name: `${query} Perto`, address: "a 1 km de você", label: `${query} Perto, a 1 km de você` }]
+    : [];
+  return {
+    status: 200,
+    body: [
+      ...nearby,
+      { name: query, address: "São Paulo, SP, Brasil", label: `${query}, São Paulo, SP, Brasil` },
+      { name: `${query} Centro`, address: "Rio de Janeiro, RJ, Brasil", label: `${query} Centro, Rio de Janeiro, RJ, Brasil` },
+    ],
+  };
+}
+
 export const eventsArea: FakeArea = {
   name: "eventos",
   routes: [
@@ -297,7 +286,7 @@ export const eventsArea: FakeArea = {
     { method: "GET", path: "/api/events/:eventId", output: eventSchema, handle: read },
     { method: "PATCH", path: "/api/events/:eventId", input: updateEventInputSchema.omit({ eventId: true }), handle: update },
     { method: "DELETE", path: "/api/events/:eventId", handle: remove },
-    { method: "GET", path: "/api/events/:eventId/subtasks", output: z.array(eventCardSchema), handle: subtasks },
     { method: "GET", path: "/api/tags", output: z.array(tagSuggestionSchema), handle: suggestTags },
+    { method: "GET", path: "/api/places", output: z.array(placeSuggestionSchema), handle: searchPlaces },
   ],
 };

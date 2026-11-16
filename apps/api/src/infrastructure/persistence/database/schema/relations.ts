@@ -20,9 +20,11 @@ import { ARTIFACT_ARTIFACT_RELATIONS, EVENT_ARTIFACT_RELATIONS, EVENT_EVENT_RELA
  * Relacoes com sentido (ADR 0012): de quem produz para o que foi produzido.
  * Uma tabela por par de entidades, cada uma com o seu conjunto de tipos.
  *
- * Nao existe `parent_id`: subtarefa e a relacao `subtask`, bloqueio e `blocks`
- * e a sessao de conversa e a estrela `follow_up` do primeiro pedido para cada
- * continuacao. Ciclos e o dono das duas pontas sao conferidos na escrita.
+ * Nao existe `parent_id`: a ordem entre eventos e a relacao `precedes`, do
+ * antecessor para o sucessor ("segue-se de" e "da sequencia a" sao os dois
+ * lados dela), e a sessao de conversa e a estrela `follow_up` do primeiro
+ * pedido para cada continuacao. Ciclos e o dono das duas pontas sao
+ * conferidos na escrita.
  */
 export const eventEventRelation = pgTable(
   "event_event_relation",

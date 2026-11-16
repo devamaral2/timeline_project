@@ -35,6 +35,7 @@
     "worktree:provision": "node scripts/onepassword/exec.mjs bash scripts/worktree/provision-env.sh",
     "caddy:sync": "bash scripts/worktree/caddy.sh sync",
     "caddy:status": "bash scripts/worktree/caddy.sh status",
+    "caddy:trust": "bash scripts/worktree/caddy.sh trust",
     "worktree:hosts": "bash scripts/worktree/hosts.sh sync",
     "hermes:up": "cross-env ONEPASSWORD_SCOPE=hermes-runtime node scripts/onepassword/exec.mjs docker compose -f infra/docker-compose.hermes.yml up -d",
     "hermes:update": "cross-env ONEPASSWORD_SCOPE=hermes-runtime node scripts/onepassword/exec.mjs sh -c \"docker compose -f infra/docker-compose.hermes.yml pull && docker compose -f infra/docker-compose.hermes.yml up -d\"",

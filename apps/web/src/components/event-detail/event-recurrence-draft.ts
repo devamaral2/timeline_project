@@ -1,4 +1,5 @@
 import type { CreateRecurrenceInput, RecurrenceDto, RecurrenceRule } from "@repo/contracts";
+import { shiftDayKey } from "@repo/timeline";
 import type { EditRecurrenceInput } from "@/lib/api/recurrences";
 import { type EventDraft, instantFromDraft } from "./event-draft";
 
@@ -119,6 +120,17 @@ export function validateSeriesEdit(series: RecurrenceDto, draft: RecurrenceDraft
   const errors = validateRecurrenceDraft(draft, series.startsOn);
   if (!draft.endsOn && series.endsOn) errors.endsOn = END_CANNOT_CLEAR_MESSAGE;
   return errors;
+}
+
+/**
+ * O início da série quando ela nasce de um evento que já existe: o evento fica como está e é a primeira data, então a
+ * série começa no dia seguinte (senão o dia dele ganharia uma segunda ocorrência). Sem data, nada muda: a validação
+ * pede a data.
+ */
+export function scheduleAfterEvent<T extends RecurrenceSchedule>(form: T): T {
+  if (!form.startDate) return form;
+  // O fim anda junto com o início: a duração da série é a do evento, e não pode sair negativa.
+  return { ...form, startDate: shiftDayKey(form.startDate, 1), ...(form.endDate ? { endDate: shiftDayKey(form.endDate, 1) } : {}) };
 }
 
 /** A duração do bloco do formulário, em minutos; sem fim, ou sem ser depois do início, não há duração. */

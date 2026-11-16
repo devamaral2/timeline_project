@@ -108,6 +108,16 @@ function routingEntry(request: RequestRecord, steps: readonly StepRecord[]): Age
   };
 }
 
+function usageFields(usage: { input: number; output: number } | undefined): AgentTraceField[] {
+  if (!usage || usage.input + usage.output === 0) return [];
+  const count = (value: number) => value.toLocaleString("pt-BR");
+  return [
+    { label: "Tokens de entrada", value: count(usage.input) },
+    { label: "Tokens de saída", value: count(usage.output) },
+    { label: "Tokens no total", value: count(usage.input + usage.output) },
+  ];
+}
+
 function stepEntry(step: StepRecord, entities: readonly RequestEntityRecord[]): AgentTraceEntryDto {
   const own = entities.filter((entity) => entity.stepId === step.id);
   const durationMs = elapsed(step.startedAt, step.finishedAt) ?? step.timings?.total;
@@ -118,6 +128,8 @@ function stepEntry(step: StepRecord, entities: readonly RequestEntityRecord[]): 
   for (const [name, value] of Object.entries(step.timings ?? {})) {
     fields.push({ label: name === "total" ? "Tempo do agente" : `Tempo · ${name}`, value: formatDuration(value) });
   }
+
+  fields.push(...usageFields(step.usage));
 
   const sections: AgentTraceSection[] = [];
   if (step.input?.instruction) sections.push({ title: "Foco dado pelo orquestrador", text: clip(step.input.instruction) });
@@ -254,6 +266,10 @@ export function toRequestTrace(
   if (request.dispatch?.model) fields.push({ label: "Roteador", value: request.dispatch.model });
   fields.push({ label: "Agentes", value: String(steps.length) });
   fields.push({ label: "Registros", value: String(entities.length) });
+  fields.push(...usageFields(steps.reduce(
+    (sum, step) => ({ input: sum.input + (step.usage?.input ?? 0), output: sum.output + (step.usage?.output ?? 0) }),
+    { input: 0, output: 0 },
+  )));
   return {
     route: "steps",
     status: request.status === "done" ? "done" : CLOSED.has(request.status) ? "failed" : "running",

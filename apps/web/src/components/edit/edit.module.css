@@ -1,0 +1,191 @@
+/*
+ * As peças do modo de edição (quadro "Detalhe · edição" do canvas): o topo só
+ * com o rótulo, o título como campo, as linhas de rótulo e controle, as pílulas
+ * de 48 px, os chips de 44 px, o "+" redondo e o rodapé de Descartar e Salvar.
+ * Evento e artefato usam as mesmas. Cor só por token, para o tema trocar junto.
+ *
+ * `.shell svg` (0,1,1) fixa todo svg em 20 px: os tamanhos daqui usam dois
+ * níveis de classe para valer.
+ */
+
+/* O topo: só o rótulo em mono, centrado, com um fio embaixo. */
+.bar { display: grid; place-items: center; min-height: 64px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+.barTitle { margin: 0; font-family: var(--font-mono); font-size: var(--font-size-xs); font-weight: 400; line-height: 16px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+
+/* O resumo: tipo, título e, no evento, status e prioridade. */
+.summary { display: flex; flex-direction: column; align-items: stretch; }
+.summaryRow { display: flex; }
+.titleInput {
+  display: block; width: 100%; min-width: 0; height: 60px; margin-top: 10px; padding: 0 14px;
+  border: 1px solid var(--input); border-radius: 18px; background: transparent; color: var(--ink);
+  font-family: var(--font-display); font-size: 30px; font-weight: 500; letter-spacing: -.01em;
+}
+.titleInput::placeholder { color: var(--faint); opacity: 1; }
+.titleInput[aria-invalid="true"] { border-color: var(--destructive); }
+.choices { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; }
+
+/* A escolha desenhada: o botão abre a lista do tema (`popover.module.css`), e o teclado e o leitor de tela falam com ele. */
+.select {
+  position: relative; display: inline-flex; align-items: center; gap: 8px; min-width: 0; min-height: 44px; margin: 0; padding: 0;
+  border: 0; border-radius: 22px; background: transparent; color: var(--ink); font: inherit; text-align: left; cursor: pointer;
+  transition: background var(--duration-fast), border-color var(--duration-fast), transform var(--duration-fast) var(--ease-out);
+}
+.select:active { transform: scale(.98); }
+.select[aria-expanded="true"] { border-color: var(--color-ring); }
+.select[data-pill] { height: 44px; padding: 0 12px; border: 1px solid var(--input); }
+.select[data-pill]:hover, .select[data-control]:hover { border-color: var(--muted); }
+/* A pílula que ocupa o campo (frequência, mês, unidade do lembrete): o nome da opção e a seta na ponta. */
+.select[data-control] { flex: 1; width: 100%; height: 48px; padding: 0 14px; border: 1px solid var(--input); border-radius: 24px; font-size: 15px; line-height: 20px; }
+.select[data-control] .caret { margin-left: auto; }
+.select[data-invalid] { color: var(--destructive); }
+.select .caret { flex: none; width: 16px; height: 16px; stroke-width: 2; color: var(--muted); transition: transform var(--duration-fast) var(--ease-out); }
+.select[aria-expanded="true"] .caret { transform: rotate(180deg); }
+
+/* Texto só para o leitor de tela: o nome do campo e o valor que o desenho mostra. */
+.srOnly { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+
+/* Status: o glifo grande, o nome na cor dele e o código em mono embaixo. */
+.statusGlyph { flex: none; display: grid; place-items: center; width: 44px; height: 44px; margin-left: -8px; }
+.select .statusGlyph svg { width: 28px; height: 28px; stroke-width: 1.75; }
+.statusText { display: flex; flex-direction: column; gap: 1px; min-width: 0; margin-left: -2px; }
+.statusName { display: flex; align-items: center; gap: 4px; font-size: 16px; font-weight: 600; line-height: 22px; }
+.statusCode { font-family: var(--font-mono); font-size: var(--font-size-xs); line-height: 16px; color: var(--faint); }
+.priorityName { display: flex; align-items: center; gap: 4px; font-size: 14px; font-weight: 600; line-height: 20px; }
+.priorityBox { flex: none; display: grid; place-items: center; }
+.select .priorityBox svg { width: 20px; height: 16px; stroke-width: 2.5; }
+.kindBox { display: inline-flex; align-items: center; }
+.select .kindBox svg { width: 16px; height: 16px; stroke-width: 2; }
+/* A cor do nome acompanha a do glifo (os mesmos tokens de `event-glyphs`). */
+.tone[data-tone="doing"], .tone[data-tone="inHold"] { color: var(--warning); }
+.tone[data-tone="done"] { color: var(--success); }
+.tone[data-tone="reference"] { color: var(--routine); }
+.tone[data-tone="urgent"] { color: var(--priority-urgent); }
+.tone[data-tone="high"] { color: var(--priority-high); }
+.tone[data-tone="medium"] { color: var(--priority-medium); }
+.tone[data-tone="low"] { color: var(--priority-low); }
+
+/* O formulário e as linhas de "Informações": rótulo de 96 px e o controle. */
+/* O formulário ocupa a altura que sobra, para o rodapé ficar no pé mesmo com poucos campos. */
+.form { flex: 1; display: flex; flex-direction: column; gap: 20px; }
+.rows { display: flex; flex-direction: column; }
+.row { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--hairline); }
+.row:last-child { border-bottom: 0; }
+.rowLabel { flex: none; display: flex; align-items: center; width: 96px; min-height: 48px; font-size: 14px; line-height: 20px; color: var(--muted); }
+.rowBody { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.rowControls { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.hint { margin: 0; padding-left: 14px; font-size: var(--font-size-xs); line-height: 18px; color: var(--faint); }
+.mono { font-family: var(--font-mono); }
+.error { margin: 0; padding-left: 14px; font-size: 13px; line-height: 18px; color: var(--destructive); }
+.plain { display: flex; align-items: center; min-height: 48px; margin: 0; padding-left: 14px; font-size: 15px; line-height: 20px; color: var(--ink); }
+
+/* A pílula de 48 px: campo de texto, data, hora, número, seletor ou botão. */
+.control {
+  flex: 1; width: 100%; min-width: 0; height: 48px; padding: 0 14px; border: 1px solid var(--input); border-radius: 24px;
+  background: transparent; color: var(--ink); font: inherit; font-size: 15px; line-height: 20px; font-variant-numeric: tabular-nums;
+}
+.control::placeholder { color: var(--faint); opacity: 1; }
+.control[aria-invalid="true"] { border-color: var(--destructive); }
+/* A data ocupa o que sobra da linha e a hora tem a largura de "18:30"; juntas cabem em 320 px. */
+.control.date { flex: 1 1 140px; padding: 0 12px; }
+.rowControls:has(> .date) { flex-wrap: wrap; }
+.control.time { flex: none; width: auto; min-width: 100px; padding: 0 12px; }
+.control.amount { flex: none; width: 96px; }
+button.control { display: flex; align-items: center; gap: 8px; text-align: left; cursor: pointer; transition: border-color var(--duration-fast), transform var(--duration-fast) var(--ease-out); }
+button.control:hover { border-color: var(--muted); }
+button.control:active { transform: scale(.99); }
+button.control[aria-expanded="true"] { border-color: var(--color-ring); }
+.controlText { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.controlText[data-empty] { color: var(--faint); }
+.control .plusIcon { flex: none; width: 18px; height: 18px; stroke-width: 1.75; color: var(--brand); }
+.control .icon, .field .icon { flex: none; width: 18px; height: 18px; stroke-width: 1.75; color: var(--muted); }
+
+/* Um campo com ícone na frente: a moldura é a pílula e o <input> fica sem borda. */
+.field { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; height: 48px; padding: 0 12px; border: 1px solid var(--input); border-radius: 24px; transition: border-color var(--duration-fast); }
+.field input { flex: 1; min-width: 0; height: 46px; padding: 0; border: 0; background: transparent; color: var(--ink); font: inherit; font-size: 15px; line-height: 20px; }
+.field input::placeholder { color: var(--faint); opacity: 1; }
+.field input:focus-visible { outline: 0; }
+.field:focus-within { border-color: var(--brand); }
+.field:focus-within .icon { color: var(--brand-accent); }
+.field[data-chip] { min-width: 112px; height: 44px; border-radius: 22px; }
+.field[data-chip] input { height: 42px; }
+.field .plus { flex: none; width: 16px; height: 16px; stroke-width: 1.75; color: var(--brand); }
+
+/* O texto longo. */
+.textarea { display: block; width: 100%; min-height: 120px; padding: 12px 14px; border: 1px solid var(--input); border-radius: 18px; background: transparent; color: var(--ink); font: inherit; font-size: 15px; line-height: 24px; resize: vertical; }
+.textarea::placeholder { color: var(--faint); opacity: 1; }
+
+/* Duas escolhas num controle só (Não | Sim). */
+.segmented { flex: 1; display: flex; height: 48px; margin: 0; padding: 0; border: 1px solid var(--input); border-radius: 24px; }
+.segment { flex: 1; height: 46px; padding: 0; border: 0; border-radius: 23px; background: transparent; color: var(--muted); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
+.segment[aria-pressed="true"] { background: var(--secondary); color: var(--ink); }
+
+/* Chips de 44 px (lembretes, tags) e o "+" redondo que acrescenta. */
+.chips { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; margin: 0; padding: 0; list-style: none; }
+.chip { display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0 10px 0 14px; border: 1px solid var(--input); border-radius: 22px; background: transparent; color: var(--ink); font: inherit; font-size: 15px; font-variant-numeric: tabular-nums; cursor: pointer; }
+.chip .chipIcon { flex: none; width: 14px; height: 14px; stroke-width: 1.75; color: var(--faint); }
+.add { flex: none; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid var(--input); border-radius: 50%; background: transparent; color: var(--brand); cursor: pointer; transition: border-color var(--duration-fast), transform var(--duration-fast) var(--ease-out); }
+.add:hover { border-color: var(--brand); }
+.add:active { transform: scale(.94); }
+.add .addIcon { width: 18px; height: 18px; stroke-width: 1.75; }
+.addRow { display: flex; align-items: center; gap: 12px; min-height: 44px; }
+.list + .addRow { margin-top: 10px; }
+.empty { margin: 0; font-size: 14px; line-height: 20px; color: var(--faint); }
+.sectionBody { display: flex; flex-direction: column; gap: 10px; padding-top: 4px; }
+
+/* Uma ação em texto dentro de uma linha (Adicionar, Cancelar, Apagar a série). */
+.textAction { min-height: 44px; padding: 0 14px; border: 0; border-radius: 22px; background: transparent; color: var(--muted); font: inherit; font-size: 14px; font-weight: 500; cursor: pointer; }
+.textAction:hover { background: var(--soft); color: var(--ink); }
+.textAction[data-strong] { color: var(--ink); font-weight: 600; }
+.textAction[data-danger] { color: var(--destructive); font-weight: 600; }
+.textAction:disabled { opacity: .6; cursor: default; }
+
+/* O "x" que tira um item de uma lista. */
+.remove { flex: none; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--faint); cursor: pointer; }
+.remove:hover { background: var(--soft); color: var(--ink); }
+.remove:disabled { opacity: .35; cursor: default; }
+.remove .removeIcon { width: 16px; height: 16px; stroke-width: 1.75; }
+
+/* Sugestões de tag. */
+.suggestions { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.suggestion { height: 36px; padding: 0 12px; border: 1px solid var(--input); border-radius: 18px; background: var(--card); color: var(--ink); font: inherit; font-size: 14px; cursor: pointer; }
+.suggestion[data-highlighted="true"] { border-color: var(--color-ring); }
+
+/* Uma linha de item ligado (sequência, artefato, evento do artefato): o glifo, o
+   nome com a linha de detalhe, o que vai na ponta e o "x". */
+.list { list-style: none; margin: 0; padding: 0; }
+.item { display: flex; align-items: flex-start; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--hairline); }
+.itemLead { flex: none; display: grid; place-items: center; min-width: 22px; height: 44px; font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--faint); }
+.itemBody { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; padding: 0; color: var(--ink); }
+.itemName { font-size: 15px; font-weight: 600; line-height: 24px; overflow-wrap: anywhere; }
+.itemMeta { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 12px; font-size: 13px; line-height: 20px; color: var(--muted); }
+.itemMeta .faint { color: var(--faint); }
+.itemCode { font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--muted); }
+.itemTrail { flex: none; padding-top: 10px; font-family: var(--font-mono); font-size: var(--font-size-xs); line-height: 24px; color: var(--muted); }
+.item .remove { margin-right: -11px; }
+.groupLabel { margin: 0; padding: 14px 0 4px; font-family: var(--font-mono); font-size: var(--font-size-xs); font-weight: 400; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
+
+/* O rodapé: Descartar e Salvar, presos ao pé da tela. */
+.footer { position: sticky; bottom: 0; z-index: var(--z-sticky); display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: auto; padding: 14px 0 20px; border-top: 1px solid var(--line); background: var(--background); }
+.footerButton { display: flex; align-items: center; justify-content: center; gap: 8px; min-width: 168px; height: 52px; padding: 0 24px; border: 1px solid var(--input); border-radius: 26px; background: transparent; color: var(--ink); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; transition: filter var(--duration-fast), transform var(--duration-fast) var(--ease-out); }
+.footerButton:active { transform: scale(.97); }
+.footerButton[data-primary] { border-color: transparent; background: var(--primary); color: var(--primary-foreground); }
+.footerButton[data-primary]:hover { filter: brightness(1.08); }
+.footerButton:disabled { opacity: .6; cursor: not-allowed; }
+.footerButton .footerIcon { width: 20px; height: 20px; stroke-width: 2; }
+
+@media (max-width: 720px) {
+  /* No celular o topo e o rodapé vão de borda a borda (a coluna tem 20 px de margem). */
+  .bar { margin: -6px -20px 0; }
+  .footer { margin-inline: -20px; padding: 14px 16px calc(20px + env(safe-area-inset-bottom)); }
+  .footerButton { flex: 1; min-width: 0; padding: 0 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .add, .footerButton, .select, .select .caret, button.control { transition: none; }
+}
+
+/* Sugestões de local: endereços longos, uma por linha. */
+.placeList { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.place { display: block; width: 100%; min-height: 44px; padding: 10px 14px; border: 1px solid var(--input); border-radius: 18px; background: var(--card); color: var(--ink); font: inherit; font-size: 14px; line-height: 20px; text-align: left; cursor: pointer; overflow-wrap: anywhere; }
+.place:hover, .place[data-highlighted="true"] { border-color: var(--color-ring); }
+a.textAction { display: inline-flex; align-items: center; align-self: flex-start; text-decoration: none; }

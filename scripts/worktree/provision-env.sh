@@ -3,7 +3,7 @@
 #
 # Passos (nenhum e opcional):
 #   1. .env.local com portas livres e nomes proprios (bases, dominio)
-#   2. alias <slug>.braid.local: /etc/hosts + Caddy
+#   2. alias <slug>.braid.local: /etc/hosts + Caddy (HTTPS na 8443, CA local do Caddy)
 #   3. node_modules integros (pnpm install reaplicado + binarios conferidos)
 #   4. bases <slug> e <slug>_auth DENTRO do Postgres compartilhado (porta 54391)
 #   5. migrations da API e do Auth
@@ -24,7 +24,7 @@ source "$SCRIPT_DIR/lib.sh"
 
 cd "$(worktree_root)"
 ENV_FILE=".env.local"
-CADDY_PORT="${CADDY_PORT:-8080}"
+CADDY_HTTPS_PORT="${CADDY_HTTPS_PORT:-8443}"
 # Mesmo e-mail fixo do `create-admin` (apps/auth) e da worktree principal.
 ADMIN_EMAIL="admin@admin.com"
 
@@ -48,7 +48,8 @@ SLUG="$(worktree_slug)"
 DB_NAME="$(db_name_for_slug "$SLUG")"
 AUTH_DB_NAME="${DB_NAME}_auth"
 HOST="${SLUG}.braid.local"
-APP_URL="http://${HOST}:${CADDY_PORT}"
+# HTTPS: fora de `localhost` o navegador so libera geolocalizacao e afins em origem segura.
+APP_URL="https://${HOST}:${CADDY_HTTPS_PORT}"
 
 step() { printf '\n[%s/8] %s\n' "$1" "$2"; }
 
@@ -179,7 +180,8 @@ case "$API_CODE" in
 esac
 echo "API em 127.0.0.1:${API_PORT}: HTTP ${API_CODE}."
 LOGIN_CODE="$(node -e 'process.stdout.write(JSON.stringify({email:process.argv[1],password:process.env.ADMIN_PASSWORD}))' "$ADMIN_EMAIL" \
-  | curl -sS -o /dev/null -w '%{http_code}' --max-time 30 --resolve "${HOST}:${CADDY_PORT}:127.0.0.1" \
+  | curl -sS -o /dev/null -w '%{http_code}' --max-time 30 --resolve "${HOST}:${CADDY_HTTPS_PORT}:127.0.0.1" \
+      --cacert "$(caddy_root_cert)" \
       -H 'content-type: application/json' -d @- "${APP_URL}/api/session/login")"
 if [ "$LOGIN_CODE" != "200" ]; then
   echo "Login de ${ADMIN_EMAIL} em ${APP_URL} devolveu HTTP ${LOGIN_CODE} (esperado 200)." >&2
@@ -192,6 +194,7 @@ cat <<SUMMARY
 Worktree '$SLUG' pronta e rodando.
   mudar de pasta: cd $(pwd)   (rode os proximos comandos de dentro da worktree)
   link:      ${APP_URL}
+             (aviso de certificado no navegador? rode uma vez: pnpm caddy:trust)
   login:     ${ADMIN_EMAIL} (senha: ADMIN_PASSWORD do 1Password)
   web/api/auth: ${WEB_PORT} / ${API_PORT} / ${AUTH_PORT}
   bases:     ${DB_NAME}, ${AUTH_DB_NAME} (${PG_CONTAINER}, porta ${SHARED_PG_PORT})

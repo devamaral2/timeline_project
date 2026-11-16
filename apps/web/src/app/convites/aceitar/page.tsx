@@ -184,7 +184,7 @@ function PasswordInput({ label, value, onChange }: { label: string; value: strin
         autoComplete="new-password"
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-10 rounded-lg border border-input bg-card/40 px-3 text-sm text-foreground transition-colors focus:border-ring"
+        className="h-10 rounded-lg border border-input bg-card/40 px-3 text-sm text-foreground transition-colors focus:border-brand"
       />
     </label>
   );

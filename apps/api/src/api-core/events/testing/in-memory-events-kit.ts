@@ -1,3 +1,4 @@
+import type { PlaceReverseGateway } from "../../../infrastructure/places/photon-place-search.gateway";
 import type { Artifact, Event } from "../../../domain";
 import type { RecurrenceRepository, WorkoutCatalog } from "../../../domain/ports";
 import { InMemoryArtifactRepository } from "../../artifacts/testing/in-memory-artifact.repository";
@@ -14,6 +15,7 @@ export interface EventsKitOptions {
   workoutCatalog?: WorkoutCatalog;
   recurrences?: RecurrenceRepository;
   clock?: () => Date;
+  placeReverse?: PlaceReverseGateway;
 }
 
 /**
@@ -27,9 +29,9 @@ export function createEventsKit(options: EventsKitOptions = {}) {
   const artifactRepository = new InMemoryArtifactRepository(database.artifacts);
   const artifactBuilder = new ArtifactBuilder(options.workoutCatalog ?? new InMemoryWorkoutCatalog());
   const batchWriter = new InMemoryEntityBatchWriter(
-    { events: eventRepository, artifacts: artifactRepository, recurrences: options.recurrences },
+    { events: eventRepository, sequence: database, artifacts: artifactRepository, recurrences: options.recurrences },
     database.derivations,
   );
-  const createEvent = new CreateEventUseCase(eventRepository, artifactRepository, artifactBuilder, batchWriter, options.clock);
+  const createEvent = new CreateEventUseCase(eventRepository, artifactRepository, artifactBuilder, batchWriter, options.clock, options.placeReverse);
   return { database, eventRepository, artifactRepository, artifactBuilder, batchWriter, createEvent };
 }

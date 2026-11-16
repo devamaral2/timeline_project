@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { EventDto, RecurrenceDto } from "@repo/contracts";
 import { type FakeApi, createFakeApi } from "@/test/fake-api";
+import { fieldValue, setField } from "@/components/edit/edit-test-helpers";
 import { eventFixture, eventsArea } from "@/test/fake-api/events";
 import { recurrenceFixture, recurrencesArea } from "@/test/fake-api/recurrences";
 
@@ -103,10 +104,10 @@ describe("recorrência na criação", () => {
     render(<EventCreateRoute userId="user-1" />);
 
     fireEvent.change(screen.getByLabelText("Título"), { target: { value: "Corrida" } });
-    fireEvent.change(screen.getByLabelText("Data de início"), { target: { value: "2026-11-16" } });
-    fireEvent.change(screen.getByLabelText("Hora de início"), { target: { value: "18:30" } });
-    fireEvent.change(screen.getByLabelText("Data de término"), { target: { value: "2026-11-16" } });
-    fireEvent.change(screen.getByLabelText("Hora de término"), { target: { value: "19:20" } });
+    setField("Data de início", "2026-11-16");
+    setField("Hora de início", "18:30");
+    setField("Data de término", "2026-11-16");
+    setField("Hora de término", "19:20");
     fireEvent.click(screen.getByRole("button", { name: "Definir a regra" }));
     save();
 
@@ -122,7 +123,7 @@ describe("recorrência na criação", () => {
       durationMinutes: 50,
       timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       startsOn: "2026-11-16",
-      template: { kind: "routine", name: "Corrida", description: "", priority: "medium" },
+      template: { kind: "common", name: "Corrida", description: "", priority: "medium" },
     });
     expect(api.store.table<RecurrenceDto>("recurrences").size).toBe(1);
   });
@@ -132,7 +133,7 @@ describe("recorrência na criação", () => {
     render(<EventCreateRoute userId="user-1" />);
 
     fireEvent.change(screen.getByLabelText("Título"), { target: { value: "Corrida" } });
-    fireEvent.change(screen.getByLabelText("Data de início"), { target: { value: "2026-11-16" } });
+    setField("Data de início", "2026-11-16");
     fireEvent.click(screen.getByRole("button", { name: "Definir a regra" }));
     save();
 
@@ -142,14 +143,58 @@ describe("recorrência na criação", () => {
 });
 
 describe("recorrência na edição", () => {
-  it("num evento avulso, a linha diz que não se repete e não oferece série", async () => {
+  it("num evento avulso, a linha diz que não se repete e oferece definir a regra", async () => {
     install([eventFixture({ id: "ev-1", name: "Comprar pão", startedAt: "2026-11-14T18:30:00-03:00", revision: 1 })]);
     renderEdit();
 
     await screen.findByDisplayValue("Comprar pão");
     expect(screen.getByText("Não se repete")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Recorrência:/ })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Definir a regra" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Definir a regra" })).toBeInTheDocument();
+  });
+
+  it("num evento avulso, definir a regra e Salvar grava o evento e cria a série a partir do dia seguinte", async () => {
+    install([eventFixture({
+      id: "ev-1",
+      name: "Comprar pão",
+      startedAt: "2026-11-14T18:30:00-03:00",
+      estimatedFinishAt: "2026-11-14T19:20:00-03:00",
+      revision: 1,
+    })]);
+    renderEdit();
+
+    await screen.findByDisplayValue("Comprar pão");
+    fireEvent.click(screen.getByRole("button", { name: "Definir a regra" }));
+    console.log("DBG", screen.getByText("Recorrência").parentElement?.textContent);
+    expect(screen.getByText(/Este evento fica como está/)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Título"), { target: { value: "Comprar pão francês" } });
+    save();
+
+    await waitFor(() => expect(replace).toHaveBeenCalledWith(DETAIL_PATH));
+    expect(writes()).toEqual(["POST /api/recurrences", "PATCH /api/events/ev-1"]);
+    const create = api.calls.find((call) => call.method === "POST");
+    // 14 de novembro de 2026 é sábado (bit 6): a série começa no domingo 15, e o evento de hoje não ganha uma cópia.
+    expect(create?.body).toMatchObject({
+      frequency: "weekly",
+      interval: 1,
+      byWeekday: 64,
+      timeOfDay: "18:30",
+      durationMinutes: 50,
+      startsOn: "2026-11-15",
+      template: { name: "Comprar pão francês" },
+    });
+  });
+
+  it("num evento avulso, a regra sem data de início não sai: a tela pede a data", async () => {
+    install([eventFixture({ id: "ev-1", name: "Comprar pão", revision: 1 })]);
+    renderEdit();
+
+    await screen.findByDisplayValue("Comprar pão");
+    fireEvent.click(screen.getByRole("button", { name: "Definir a regra" }));
+    save();
+
+    expect(await screen.findByText("Informe a data de início: a série começa nela.")).toBeInTheDocument();
+    expect(writes()).toEqual([]);
   });
 
   it("numa ocorrência, a linha mostra a regra e a série; Trocar e Salvar mandam só a regra que mudou, com a revisão da série", async () => {
@@ -175,12 +220,12 @@ describe("recorrência na edição", () => {
     renderEdit();
 
     fireEvent.click(await screen.findByRole("button", { name: PILL }));
-    fireEvent.change(screen.getByLabelText("Frequência"), { target: { value: "monthly" } });
+    setField("Frequência", "monthly");
     save();
 
     expect(await screen.findByText(REFUSED)).toBeInTheDocument();
     expect(replace).not.toHaveBeenCalled();
-    expect(screen.getByLabelText("Frequência")).toHaveValue("monthly");
+    expect(fieldValue("Frequência")).toBe("monthly");
   });
 
   it("apagar a série pede confirmação antes do DELETE, e depois a linha diz que ela já não existe", async () => {
@@ -202,9 +247,9 @@ describe("recorrência na edição", () => {
     renderEdit();
 
     await screen.findByRole("button", { name: PILL });
-    expect(screen.getByRole("heading", { name: "Recorrência" })).toBeInTheDocument();
+    expect(screen.getByText("Recorrência")).toBeInTheDocument();
     fireEvent.click(within(screen.getByRole("group", { name: "Tarefa persistente" })).getByRole("button", { name: "Sim" }));
 
-    expect(screen.queryByRole("heading", { name: "Recorrência" })).toBeNull();
+    expect(screen.queryByText("Recorrência")).toBeNull();
   });
 });

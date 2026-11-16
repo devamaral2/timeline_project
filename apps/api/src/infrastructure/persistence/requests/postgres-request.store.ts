@@ -1,3 +1,4 @@
+import type { TokenUsage } from "../../../api-core/agent/gateways/structured-completion.gateway";
 import { createHash } from "node:crypto";
 import { sql, type SQL } from "drizzle-orm";
 import type {
@@ -160,18 +161,19 @@ export class PostgresRequestStore implements RequestStore {
     const { rows } = await this.database.pool.query<Row>(
       `SELECT s.id, s.status, s.name, s.data, s.started_at, s.finished_at
        FROM event_event_relation r JOIN events s ON s.id = r.to_event_id
-       WHERE r.from_event_id = $1 AND r.relation = 'subtask' AND s.kind = 'step'
+       WHERE r.from_event_id = $1 AND r.relation = 'step' AND s.kind = 'step'
        ORDER BY s.id`, [requestId]);
     const entries = await this.entriesOf(rows.map((row) => String(row.id)));
     return rows.map((row) => toStepRecord(requestId, row, entries.get(String(row.id)) ?? []));
   }
 
   async entities(requestId: string): Promise<RequestEntityRecord[]> {
-    // As relacoes partem dos passos; na voz e no alimento, do proprio pedido.
+    // As relacoes partem dos passos; na voz e no alimento, do proprio pedido. O evento que um passo tocou tambem
+    // ganha a relacao do pedido: com o mesmo instante, o passo vem antes e vale (`step DESC`).
     const sources = `WITH sources AS (
       SELECT $1::char(26) AS id, false AS step
       UNION ALL
-      SELECT to_event_id, true FROM event_event_relation WHERE from_event_id = $1 AND relation = 'subtask')`;
+      SELECT to_event_id, true FROM event_event_relation WHERE from_event_id = $1 AND relation = 'step')`;
     const [touched, finalized] = await Promise.all([
       this.database.pool.query<Row>(
         `${sources}
@@ -187,7 +189,7 @@ export class PostgresRequestStore implements RequestStore {
          FROM sources
          JOIN event_artifact_relation r ON r.event_id = sources.id
          JOIN artifacts a ON a.id = r.artifact_id
-         ORDER BY created_at, source_id, id`, [requestId]),
+         ORDER BY created_at, step DESC, source_id, id`, [requestId]),
       this.database.pool.query<{ data: { entity: { kind: string; id: string }; links: LinkRecord[] } }>(
         `${sources}
          SELECT n.data FROM sources JOIN event_entries n ON n.event_id = sources.id
@@ -268,7 +270,7 @@ export class PostgresRequestStore implements RequestStore {
       if (!userId) return;
       const rounds = await tx.execute<{ total: number }>(sql`
         SELECT count(*)::int AS total FROM event_event_relation r JOIN events s ON s.id = r.to_event_id
-        WHERE r.from_event_id = ${requestId} AND r.relation = 'subtask' AND s.data->>'agent' = 'fallback'`);
+        WHERE r.from_event_id = ${requestId} AND r.relation = 'step' AND s.data->>'agent' = 'fallback'`);
       if (Number(rounds.rows[0]?.total ?? 0) !== (step.input?.round ?? 1) - 1) return;
       await this.insertSteps(tx, requestId, userId, [step]);
     });
@@ -292,7 +294,7 @@ export class PostgresRequestStore implements RequestStore {
       });
       await tx.execute(sql`
         INSERT INTO event_event_relation (from_event_id, to_event_id, relation)
-        VALUES (${requestId}, ${step.id}, 'subtask')`);
+        VALUES (${requestId}, ${step.id}, 'step')`);
       // O insumo e onde o texto do usuario pode aparecer num passo: o foco, os candidatos, o retrato do alvo.
       const { instruction, ...rest } = input;
       if (instruction !== undefined || Object.keys(rest).length > 0) {
@@ -318,6 +320,10 @@ export class PostgresRequestStore implements RequestStore {
     });
   }
 
+  async recordUsage(stepId: string, usage: TokenUsage): Promise<void> {
+    await this.append(this.db, stepId, { kind: "trace", data: { stage: "usage", input: usage.input, output: usage.output } });
+  }
+
   async recordStepSuccess(tx: unknown, input: {
     requestId: string;
     stepId: string;
@@ -330,9 +336,12 @@ export class PostgresRequestStore implements RequestStore {
       if (!userId) throw new Error("Step is no longer open");
       for (const entity of input.entities) {
         if (entity.kind === "event") {
+          // O passo e o pedido apontam para o evento: o evento mostra o pedido ("criado por", "atualizado
+          // por") sem descer pelos passos, e cada pedido que o altera deixa a sua propria relacao.
           await run.execute(sql`
             INSERT INTO event_event_relation (from_event_id, to_event_id, relation)
-            VALUES (${input.stepId}, ${entity.id}, ${EVENT_RELATION[entity.operation]})
+            VALUES (${input.stepId}, ${entity.id}, ${EVENT_RELATION[entity.operation]}),
+                   (${input.requestId}, ${entity.id}, ${EVENT_RELATION[entity.operation]})
             ON CONFLICT (from_event_id, relation, to_event_id) DO NOTHING`);
         } else {
           await run.execute(sql`
@@ -466,10 +475,10 @@ export class PostgresRequestStore implements RequestStore {
       await tx.execute(sql`
         UPDATE events s SET status = 'cancel', finished_at = now(), updated_at = now()
         FROM event_event_relation r
-        WHERE r.from_event_id = ${requestId} AND r.relation = 'subtask' AND r.to_event_id = s.id
+        WHERE r.from_event_id = ${requestId} AND r.relation = 'step' AND r.to_event_id = s.id
           AND s.kind = 'step' AND s.status IN ('queued', 'running')`);
       const steps = await tx.execute<{ id: string }>(sql`
-        SELECT to_event_id AS id FROM event_event_relation WHERE from_event_id = ${requestId} AND relation = 'subtask'`);
+        SELECT to_event_id AS id FROM event_event_relation WHERE from_event_id = ${requestId} AND relation = 'step'`);
       return [requestId, ...steps.rows.map((row) => row.id)];
     });
   }
@@ -564,6 +573,10 @@ function toStepRecord(requestId: string, row: Row, entries: readonly EntryRow[])
   const thoughts = entries.filter((entry) => entry.kind === "thought").map((entry): StepThought => ({
     text: entry.content ?? "", at: String(entry.data.at ?? ""), ...(entry.data.model ? { model: String(entry.data.model) } : {}),
   }));
+  const usages = entries.filter((entry) => entry.kind === "trace" && entry.data.stage === "usage");
+  const usage: TokenUsage | undefined = usages.length > 0
+    ? { input: usages.reduce((sum, entry) => sum + Number(entry.data.input ?? 0), 0), output: usages.reduce((sum, entry) => sum + Number(entry.data.output ?? 0), 0) }
+    : undefined;
   const timings = entries.filter((entry) => entry.kind === "trace" && entry.data.timings).at(-1)?.data.timings as Record<string, number> | undefined;
   const query = entries.find((entry) => entry.kind === "result" && entry.data.type === "query")?.data as
     | (RequestQueryResult & { type?: string })
@@ -582,5 +595,6 @@ function toStepRecord(requestId: string, row: Row, entries: readonly EntryRow[])
     ...(row.finished_at ? { finishedAt: date(row.finished_at) } : {}),
     ...(timings ? { timings } : {}),
     ...(thoughts.length > 0 ? { thoughts } : {}),
+    ...(usage ? { usage } : {}),
   };
 }

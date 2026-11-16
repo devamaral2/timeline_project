@@ -68,8 +68,18 @@ test("o topo mostra o código do tipo, o título, o status e a prioridade", asyn
   expect(screen.getByText("training")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: `Status: Em curso. Trocar status de ${NAME}` })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: `Prioridade: Média. Trocar prioridade de ${NAME}` })).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "Agenda" })).toHaveAttribute("href", "/user-1");
-  expect(screen.getByRole("link", { name: "Editar evento" })).toHaveAttribute("href", "/user-1/eventos/ev-1/editar");
+  expect(screen.getByRole("link", { name: "Voltar para a Agenda" })).toHaveAttribute("href", "/user-1");
+  expect(screen.queryByRole("link", { name: "Editar evento" })).not.toBeInTheDocument();
+});
+
+test("evento Só agenda (sem status) não mostra status nem prioridade no topo", async () => {
+  install([training({ status: undefined })]);
+  renderPage();
+
+  expect(await screen.findByRole("heading", { level: 1, name: NAME })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /Trocar status/ })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /Trocar prioridade/ })).not.toBeInTheDocument();
+  expect(screen.queryByText("Só agenda")).not.toBeInTheDocument();
 });
 
 test("a seção Informações mostra início, término com a duração, tags, lembretes e descrição em texto", async () => {
@@ -81,12 +91,23 @@ test("a seção Informações mostra início, término com a duração, tags, le
   expect(within(info).getByText("Término")).toBeInTheDocument();
   expect(within(info).getByText("Sáb, 14 nov · 19:20")).toBeInTheDocument();
   expect(within(info).getByText("50 min")).toBeInTheDocument();
-  expect(within(info).getByText("Não")).toBeInTheDocument();
+  expect(within(info).queryByText("Tarefa persistente")).not.toBeInTheDocument();
+  expect(within(info).queryByText("Não")).not.toBeInTheDocument();
   expect(within(info).getByRole("list", { name: "Lembretes" })).toHaveTextContent(/30 min1 dia/);
   expect(within(info).getByText("#saúde")).toBeInTheDocument();
   expect(within(info).getByText("Foco em peito e tríceps.")).toBeInTheDocument();
   expect(screen.queryByText("Localização")).not.toBeInTheDocument();
   expect(screen.queryByText("Gerado por")).not.toBeInTheDocument();
+});
+
+test("a tarefa persistente aparece com um ponto no lugar do “Sim”", async () => {
+  install([training({ longRunning: true })]);
+  renderPage();
+
+  const info = await screen.findByRole("region", { name: "Informações" });
+  expect(within(info).getByText("Tarefa persistente")).toBeInTheDocument();
+  expect(within(info).getByRole("img", { name: "Sim" })).toBeInTheDocument();
+  expect(within(info).queryByText("Não")).not.toBeInTheDocument();
 });
 
 test("o evento longo mostra a previsão de entrega, sem término nem início", async () => {
@@ -98,7 +119,7 @@ test("o evento longo mostra a previsão de entrega, sem término nem início", a
   expect(within(info).getByText("Sex, 20 nov")).toBeInTheDocument();
   expect(within(info).queryByText("Término")).not.toBeInTheDocument();
   expect(within(info).queryByText("Início")).not.toBeInTheDocument();
-  expect(within(info).getByText("Sim")).toBeInTheDocument();
+  expect(within(info).getByRole("img", { name: "Sim" })).toBeInTheDocument();
 });
 
 test("a ocorrência de uma série mostra a regra e que ela segue a série", async () => {
@@ -177,7 +198,7 @@ test("revisão velha: relê o evento e avisa, sem gravar a troca", async () => {
   expect(await screen.findByRole("button", { name: `Prioridade: Alta. Trocar prioridade de ${NAME}` })).toBeInTheDocument();
 });
 
-test("evento de agente: status e prioridade só aparecem, sem seletor", async () => {
+test("evento de agente: só o status aparece, sem prioridade nem seletor", async () => {
   // O evento de agente abre na forma do agente (ticket 45), que lê o pedido de mesmo id.
   api = createFakeApi({
     areas: [eventsArea, requestsArea()],
@@ -191,6 +212,7 @@ test("evento de agente: status e prioridade só aparecem, sem seletor", async ()
 
   expect(await screen.findByRole("heading", { level: 1, name: "Pesquisar voos" })).toBeInTheDocument();
   expect(screen.getByText("Agente, executando")).toBeInTheDocument();
+  expect(screen.queryByText("Média")).not.toBeInTheDocument();
   expect(screen.queryByRole("button", { name: /Trocar/ })).not.toBeInTheDocument();
 });
 

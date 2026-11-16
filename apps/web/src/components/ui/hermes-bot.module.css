@@ -1,0 +1,111 @@
+/*
+ * O robô do Hermes e os seus cinco estados. O tamanho vem de quem usa
+ * (`font-size`); o desenho ocupa 58% do círculo. Os tempos são os do app:
+ * 150 ms rápido, 240 ms lento e a curva de saída (.2,.8,.2,1).
+ */
+.bot {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 1em;
+  height: 1em;
+  border-radius: 50%;
+  background: var(--brand);
+  color: var(--background);
+  box-shadow: 0 0 0 0 color-mix(in oklab, var(--brand) 0%, transparent);
+  transition: background-color var(--duration-fast) linear, box-shadow var(--duration-slow) var(--ease-out);
+}
+.bot svg { width: 58%; height: 58%; overflow: visible; }
+.bot [data-p] { transform-box: fill-box; transform-origin: center; transition: transform var(--duration-slow) var(--ease-out), opacity 120ms linear; }
+.bot [data-p="all"] { transform-box: view-box; transform-origin: 50% 50%; }
+
+/* Fora do repouso o robô some e só o símbolo do estado fica. */
+.bot:not([data-state="idle"]) [data-p="shell"] { opacity: 0; transform: scale(.82); }
+.bot:not([data-state="idle"]) [data-p="ant"] { opacity: 0; transform: translateY(6px); }
+.bot:not([data-state="idle"]) [data-p="earL"] { opacity: 0; transform: translate(2.4px, -1.5px); }
+.bot:not([data-state="idle"]) [data-p="earR"] { opacity: 0; transform: translate(-2.4px, -1.5px); }
+.bot:not([data-state="idle"]) [data-p="eyeL"] { opacity: 0; transform: translate(-1.5px, -1.5px); }
+.bot:not([data-state="idle"]) [data-p="eyeR"] { opacity: 0; transform: translate(1.5px, -1.5px); }
+
+/* Parado: os olhos piscam de vez em quando. */
+.bot[data-state="idle"] [data-p="eyeL"], .bot[data-state="idle"] [data-p="eyeR"] { animation: botBlink 4800ms ease-in-out 1400ms infinite; }
+
+/* Ouvindo: a onda pulsa e um halo sai do círculo. */
+.bot[data-state="listening"] { box-shadow: 0 0 0 .17em color-mix(in oklab, var(--brand) 30%, transparent); }
+
+/* Erro: o disco muda de cor. */
+.bot[data-state="error"] { background: var(--destructive); color: var(--destructive-foreground); }
+
+/* Concluiu: o ✓ se desenha e o círculo dá um pulo. */
+.bot [data-p="check"] { stroke-dasharray: 24; stroke-dashoffset: 24; opacity: 0; transition: stroke-dashoffset 150ms linear, opacity 150ms linear; }
+.bot[data-state="done"] [data-p="check"] { stroke-dashoffset: 0; opacity: 1; transition: stroke-dashoffset 300ms var(--ease-out) 110ms, opacity 60ms linear 110ms; }
+.bot[data-state="done"] [data-p="all"] { animation: botPop 460ms var(--ease-out) 170ms; }
+
+/* Erro: o ponto do meio cresce e vira a exclamação, que balança. */
+.bot [data-p="ex"] { opacity: 0; transform: translateY(3.5px) scaleY(.28); }
+.bot [data-p="pt"] { opacity: 0; transform: translateY(-9.4px); }
+.bot[data-state="error"] [data-p="ex"] { opacity: 1; transform: none; transition-delay: 60ms; }
+.bot[data-state="error"] [data-p="pt"] { opacity: 1; transform: none; transition: transform 380ms cubic-bezier(.3, 1.6, .5, 1) 150ms, opacity 120ms linear 150ms; }
+.bot[data-state="error"] [data-p="all"] { animation: botShake 380ms linear 80ms; }
+
+/* Ouvindo: as cinco barras viram a onda. */
+.bot [data-p="w1"] { opacity: 0; transform: translate(-2.4px, 1.5px) scaleY(.75); }
+.bot[data-state="listening"] [data-p="w1"] { opacity: 1; transform: none; animation: botWave 900ms ease-in-out 260ms infinite; }
+.bot[data-state="thinking"] [data-p="w1"] { transform: scaleY(.52); }
+.bot[data-state="done"] [data-p="w1"], .bot[data-state="error"] [data-p="w1"] { transform: translateX(11px) scaleY(.1); }
+.bot [data-p="d1"] { opacity: 0; transform: translate(-2.4px, 1.5px); }
+.bot[data-state="listening"] [data-p="d1"] { transform: none; }
+.bot[data-state="thinking"] [data-p="d1"] { opacity: .35; transform: none; animation: botDot 1200ms ease-in-out 280ms infinite; }
+.bot[data-state="done"] [data-p="d1"], .bot[data-state="error"] [data-p="d1"] { transform: translateX(11px) scale(.3); }
+
+.bot [data-p="w2"] { opacity: 0; transform: translate(1.5px, 1.5px) scaleY(.26); }
+.bot[data-state="listening"] [data-p="w2"] { opacity: 1; transform: none; animation: botWave 900ms ease-in-out 370ms infinite; }
+.bot[data-state="thinking"] [data-p="w2"] { transform: scaleY(.26); }
+.bot[data-state="done"] [data-p="w2"], .bot[data-state="error"] [data-p="w2"] { transform: translateX(5.5px) scaleY(.1); }
+.bot [data-p="d2"] { opacity: 0; transform: translate(1.5px, 1.5px); }
+.bot[data-state="listening"] [data-p="d2"] { transform: none; }
+.bot[data-state="thinking"] [data-p="d2"] { opacity: .35; transform: none; animation: botDot 1200ms ease-in-out 430ms infinite; }
+.bot[data-state="done"] [data-p="d2"], .bot[data-state="error"] [data-p="d2"] { transform: translateX(5.5px) scale(.3); }
+
+.bot [data-p="w3"] { opacity: 0; transform: translateY(-10px) scaleY(.29); }
+.bot[data-state="listening"] [data-p="w3"] { opacity: 1; transform: none; animation: botWave 900ms ease-in-out 480ms infinite; }
+.bot[data-state="thinking"] [data-p="w3"] { transform: scaleY(.175); }
+.bot[data-state="done"] [data-p="w3"], .bot[data-state="error"] [data-p="w3"] { transform: scaleY(.1); }
+.bot [data-p="d3"] { opacity: 0; transform: translateY(-11.4px); }
+.bot[data-state="listening"] [data-p="d3"] { transform: none; }
+.bot[data-state="thinking"] [data-p="d3"] { opacity: .35; transform: none; animation: botDot 1200ms ease-in-out 580ms infinite; }
+.bot[data-state="done"] [data-p="d3"], .bot[data-state="error"] [data-p="d3"] { transform: scale(.3); }
+
+.bot [data-p="w4"] { opacity: 0; transform: translate(-1.5px, 1.5px) scaleY(.3); }
+.bot[data-state="listening"] [data-p="w4"] { opacity: 1; transform: none; animation: botWave 900ms ease-in-out 590ms infinite; }
+.bot[data-state="thinking"] [data-p="w4"] { transform: scaleY(.3); }
+.bot[data-state="done"] [data-p="w4"], .bot[data-state="error"] [data-p="w4"] { transform: translateX(-5.5px) scaleY(.1); }
+.bot [data-p="d4"] { opacity: 0; transform: translate(-1.5px, 1.5px); }
+.bot[data-state="listening"] [data-p="d4"] { transform: none; }
+.bot[data-state="thinking"] [data-p="d4"] { opacity: .35; transform: none; animation: botDot 1200ms ease-in-out 730ms infinite; }
+.bot[data-state="done"] [data-p="d4"], .bot[data-state="error"] [data-p="d4"] { transform: translateX(-5.5px) scale(.3); }
+
+.bot [data-p="w5"] { opacity: 0; transform: translate(2.4px, 1.5px) scaleY(.75); }
+.bot[data-state="listening"] [data-p="w5"] { opacity: 1; transform: none; animation: botWave 900ms ease-in-out 700ms infinite; }
+.bot[data-state="thinking"] [data-p="w5"] { transform: scaleY(.52); }
+.bot[data-state="done"] [data-p="w5"], .bot[data-state="error"] [data-p="w5"] { transform: translateX(-11px) scaleY(.1); }
+.bot [data-p="d5"] { opacity: 0; transform: translate(2.4px, 1.5px); }
+.bot[data-state="listening"] [data-p="d5"] { transform: none; }
+.bot[data-state="thinking"] [data-p="d5"] { opacity: .35; transform: none; animation: botDot 1200ms ease-in-out 880ms infinite; }
+.bot[data-state="done"] [data-p="d5"], .bot[data-state="error"] [data-p="d5"] { transform: translateX(-11px) scale(.3); }
+
+@keyframes botBlink { 0%, 93%, 100% { transform: none; } 96.5% { transform: scaleY(.12); } }
+@keyframes botWave { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(.5); } }
+@keyframes botDot { 0%, 60%, 100% { opacity: .35; } 30% { opacity: 1; } }
+@keyframes botPop { 0%, 100% { transform: scale(1); } 40% { transform: scale(1.14); } }
+@keyframes botShake { 0%, 100% { transform: translateX(0); } 18% { transform: translateX(-2px); } 38% { transform: translateX(2px); } 58% { transform: translateX(-1.4px); } 78% { transform: translateX(1px); } }
+
+/* Com movimento reduzido só troca a pose, sem laço nem salto. */
+@media (prefers-reduced-motion: reduce) {
+  .bot, .bot [data-p] { animation: none !important; transition-duration: 150ms !important; transition-delay: 0ms !important; }
+  .bot[data-state="thinking"] [data-p="d1"],
+  .bot[data-state="thinking"] [data-p="d2"],
+  .bot[data-state="thinking"] [data-p="d3"],
+  .bot[data-state="thinking"] [data-p="d4"],
+  .bot[data-state="thinking"] [data-p="d5"] { opacity: 1; }
+}

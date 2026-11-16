@@ -1,7 +1,6 @@
 "use client";
 
 import { Pencil, Trash2 } from "lucide-react";
-import Link from "next/link";
 import { useState } from "react";
 import type { EventDto, EventPriority, HumanEventStatus } from "@repo/contracts";
 import { agendaRefreshEvent } from "@/components/agenda/agenda-refresh";
@@ -14,10 +13,10 @@ import { ApiRequestError } from "@/lib/api/client-request";
 import { type EditEventInput, updateEvent } from "@/lib/api/events";
 import { momentLabel, priorityPatch, statusPatch } from "@/lib/events/event-read-model";
 import { EventArtifactsSection } from "./EventArtifactsSection";
-import { EventBlocksSection } from "./EventBlocksSection";
 import { EventDetailHeader } from "./EventDetailHeader";
 import { EventInfoSection } from "./EventInfoSection";
-import { EventSubtasksSection } from "./EventSubtasksSection";
+import { EventRequestsSection } from "./EventRequestsSection";
+import { EventSequenceSection } from "./EventSequenceSection";
 import styles from "./event-detail.module.css";
 
 interface EventDetailViewProps {
@@ -33,8 +32,7 @@ const STALE_MESSAGE = "Este evento mudou em outro lugar. Carregamos a versão at
  * O detalhe de evento em modo de leitura, a rota única para agenda e lista de
  * tarefas. A tela é uma coluna de seções separadas: o topo (este arquivo e
  * `EventDetailHeader`), as Informações (`EventInfoSection`), e as seções de
- * relação: Subtarefas (`EventSubtasksSection`), Bloqueios (`EventBlocksSection`)
- * e Artefatos (`EventArtifactsSection`). "Excluir" fica no menu "Mais ações" do
+ * relação: Sequência (`EventSequenceSection`) Artefatos (`EventArtifactsSection`) e Pedidos (`EventRequestsSection`: criado e atualizado por). "Excluir" fica no menu "Mais ações" do
  * topo, ao lado de "Editar" (ticket 23).
  */
 export function EventDetailView({ userId, event, onChanged }: EventDetailViewProps) {
@@ -75,12 +73,9 @@ export function EventDetailView({ userId, event, onChanged }: EventDetailViewPro
   const lead = (
     <>
       <nav className={styles.topbar} aria-label="Navegação do registro">
-        <BackLink href={`/${userId}`}>Agenda</BackLink>
+        <BackLink href={`/${userId}`} label="Voltar para a Agenda" />
         <span className={styles.topbarTitle}>Evento</span>
         <div className={styles.topbarActions}>
-          <Link href={editHref} className={styles.editLink} aria-label="Editar evento">
-            <Pencil {...detailIcon} />
-          </Link>
           <DetailMenu label="Mais ações">
             {(close) => (
               <>
@@ -98,9 +93,9 @@ export function EventDetailView({ userId, event, onChanged }: EventDetailViewPro
   return (
     <DetailFrame type={event.kind} leadLabel="Resumo do evento" bodyLabel="Conteúdo do evento" lead={lead}>
       <EventInfoSection event={event} />
-      <EventSubtasksSection userId={userId} event={event} />
-      <EventBlocksSection userId={userId} event={event} />
+      <EventSequenceSection userId={userId} event={event} />
       <EventArtifactsSection userId={userId} event={event} />
+      <EventRequestsSection userId={userId} event={event} />
       {error ? <DetailMessage alert>{error}</DetailMessage> : null}
       <EntityAiEditBar
         userId={userId}

@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.AccessTime
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Bedtime
 import androidx.compose.material.icons.outlined.CalendarMonth
@@ -502,13 +501,12 @@ private fun DetailMessage(
 
 @Composable
 private fun detailVisual(type: String?): DetailVisual {
-    val palette = eventDetailPalette()
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     return when (type) {
-        "meal" -> DetailVisual(Icons.Outlined.Restaurant, "Refeição", palette.meal)
-        "training" -> DetailVisual(Icons.Outlined.FitnessCenter, "Treino", palette.training)
-        "sleep" -> DetailVisual(Icons.Outlined.Bedtime, "Sono", palette.sleep)
-        "routine" -> DetailVisual(Icons.Outlined.AccessTime, "Rotina", palette.routine)
+        "meal" -> DetailVisual(Icons.Outlined.Restaurant, "Refeição", muted)
+        "training" -> DetailVisual(Icons.Outlined.FitnessCenter, "Treino", muted)
+        "sleep" -> DetailVisual(Icons.Outlined.Bedtime, "Sono", muted)
+        "common" -> DetailVisual(Icons.Outlined.EventAvailable, "Padrão", muted)
         else -> DetailVisual(Icons.Outlined.Circle, "Evento", muted)
     }
 }
