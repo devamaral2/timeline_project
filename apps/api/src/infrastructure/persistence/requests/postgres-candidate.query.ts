@@ -27,14 +27,14 @@ export class PostgresCandidateQuery implements CandidateQuery {
   async shortlist(input: { userId: string; now: Date; kinds: readonly CandidateKind[] }): Promise<EditCandidate[]> {
     const wanted = new Set(input.kinds);
     const found: EditCandidate[][] = await Promise.all([
-      wanted.has("task") ? this.events(input.userId, input.now) : [],
+      wanted.has("task") ? this.tasks(input.userId, input.now) : [],
       wanted.has("artifact") ? this.artifacts(input.userId) : [],
       wanted.has("recurrence") ? this.series(input.userId) : [],
     ]);
     return found.flat();
   }
 
-  private async events(userId: string, now: Date): Promise<EditCandidate[]> {
+  private async tasks(userId: string, now: Date): Promise<EditCandidate[]> {
     const today = dayKeyOf(now);
     const dayStart = (offsetDays: number) =>
       new Date(`${dayKeyOf(new Date(new Date(`${today}T00:00:00${LOCAL_OFFSET}`).getTime() + offsetDays * DAY_MS))}T00:00:00${LOCAL_OFFSET}`);

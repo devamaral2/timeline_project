@@ -48,7 +48,7 @@ describe("passo de criar tarefas", () => {
     expect(ctx.gateway.calls).toHaveLength(1);
     const call = ctx.gateway.calls[0];
     expect(call?.user).toContain("Almocei agora");
-    expect(Object.keys((call?.schema.properties ?? {}) as object)).toEqual(["events"]);
+    expect(Object.keys((call?.schema.properties ?? {}) as object)).toEqual(["tasks"]);
     expect(JSON.stringify(call?.schema)).not.toMatch(/clarification|question/i);
   });
 

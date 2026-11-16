@@ -295,7 +295,7 @@ describe("PostgresRequestStore", () => {
       fields: [{ label: "Modelo", value: "m" }],
       entries: [
         { id: "request", kind: "request", label: "Pedido", status: "done", summary: "crie uma tarefa" },
-        { id: "t1", kind: "tool", label: "Criou uma tarefa", source: "mcp_braid_create_event", status: "done", sections: [{ title: "Entrada", text: "almoço", code: true }] },
+        { id: "t1", kind: "tool", label: "Criou uma tarefa", source: "mcp_braid_create_task", status: "done", sections: [{ title: "Entrada", text: "almoço", code: true }] },
         { id: "answer", kind: "answer", label: "Respondeu", status: "done" },
       ],
     };
@@ -313,7 +313,7 @@ describe("PostgresRequestStore", () => {
     expect(request?.answerThought).toBeUndefined();
     if (!request) throw new Error("request not found");
     expect(toRequestDto(request, [], [])).toMatchObject({
-      message: "Feito.", trace, steps: [{ id: "t1", agent: "mcp_braid_create_event", label: "Criou uma tarefa", status: "done" }],
+      message: "Feito.", trace, steps: [{ id: "t1", agent: "mcp_braid_create_task", label: "Criou uma tarefa", status: "done" }],
     });
   });
 

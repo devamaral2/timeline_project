@@ -4,7 +4,7 @@ import { toolLabel } from "./hermes-tool-labels";
 describe("toolLabel", () => {
   test("as ferramentas do MCP da agenda ficam em portugues", () => {
     expect(toolLabel("mcp_braid_create_artifact")).toBe("Criou um artefato");
-    expect(toolLabel("mcp_braid_update_event")).toBe("Editou uma tarefa");
+    expect(toolLabel("mcp_braid_update_task")).toBe("Editou uma tarefa");
     expect(toolLabel("mcp_braid_list_tracked_tasks")).toBe("Listou as tarefas acompanhadas");
   });
 

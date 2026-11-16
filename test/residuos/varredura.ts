@@ -44,8 +44,8 @@ export const ARQUIVOS_COM_OUTRO_EVENTO: { motivo: string; arquivo: RegExp }[] = 
     arquivo: /^apps\/api\/src\/infrastructure\/hermes\/(hermes-trace|hermes\.client)[\w.-]*\.ts$/,
   },
   {
-    motivo: "teste da migration que renomeia o banco: grava dados com os nomes antigos de proposito, para provar que a migration os troca",
-    arquivo: /^apps\/api\/src\/infrastructure\/persistence\/integration\/task-rename-migration\.integration\.test\.ts$/,
+    motivo: "testes das migrations que renomeiam o banco e os dados do agente: gravam dados com os nomes antigos de proposito, para provar que a migration os troca",
+    arquivo: /^apps\/api\/src\/infrastructure\/persistence\/integration\/(task-rename|agent-data)-migration\.integration\.test\.ts$/,
   },
 ];
 

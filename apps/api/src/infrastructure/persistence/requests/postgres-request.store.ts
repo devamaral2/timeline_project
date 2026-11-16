@@ -500,7 +500,7 @@ export class PostgresRequestStore implements RequestStore {
     const byTask = new Map<string, EntryRow[]>();
     if (taskIds.length === 0) return byTask;
     const { rows } = await this.database.pool.query<EntryRow>(
-      `SELECT id, task_id AS "eventId", kind, role, content, data FROM task_entries
+      `SELECT id, task_id AS "taskId", kind, role, content, data FROM task_entries
        WHERE task_id = ANY($1::char(26)[]) ORDER BY id`, [taskIds]);
     for (const row of rows) byTask.set(row.taskId, [...(byTask.get(row.taskId) ?? []), row]);
     return byTask;

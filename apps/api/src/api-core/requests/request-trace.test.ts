@@ -123,7 +123,7 @@ describe("toRequestTrace", () => {
       summary: "O pedido fala de um almoço ao meio-dia.", startedAt: at,
       fields: [{ label: "Agente", value: "Criando tarefas" }, { label: "Modelo", value: "modelo-x" }],
       sections: [{ title: "Raciocínio", text: "O pedido fala de um almoço ao meio-dia.\nCrio uma tarefa só." }],
-      raw: { stepId: "s1", agent: "task-create", at, model: "modelo-x", chars: 58 },
+      raw: { stepId: "s1", agent: "task-create", at, model: "modelo-x", chars: 59 },
     });
     expect(trace.entries[4]?.fields).toEqual([{ label: "Agente", value: "Criando tarefas" }]);
     expect(trace.entries[2]?.raw).toMatchObject({ thoughts: 2 });

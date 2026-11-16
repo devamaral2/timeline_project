@@ -49,9 +49,6 @@ apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	a
 apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	await expect(events.update(event.revise({ name: "Edicao atrasada" }), USER, 1)).rejects.toThrow(
 apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	await expect(events.update(event.revise({ name: "Invadido" }), OTHER_USER, 1)).rejects.toThrow(EventOwnershipError);
 apps/api/src/infrastructure/persistence/integration/events.integration.test.ts	await expect(events.update(event.revise({ name: "Tarde demais" }), USER, 1)).rejects.toThrow(EventNotFoundError);
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	model: "jev-test", latencyMs: 12, answers: { event_create: { choice: "one", confidence: 0.99, probability: 0.98 } },
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	{ id: "t1", kind: "tool", label: "Criou um evento", source: "mcp_braid_create_event", status: "done", sections: [{ title: "Entrada", text: "almoço", code: true }] },
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	message: "Feito.", trace, steps: [{ id: "t1", agent: "mcp_braid_create_event", label: "Criou um evento", status: "done" }],
 
 == auth ==
 apps/auth/src/auth-core/persistence/postgres-session.repository.ts	* Minha decisao ao herdar este arquivo: o evento de auditoria e montado
@@ -2303,9 +2300,7 @@ apps/api/src/features/list-tracked-events/list-tracked-events.usecase.ts	return 
 apps/api/src/features/start-edit-request/start-edit-request.controller.test.ts	const body = { userId: "owner-1", text: "mude para 19h", entityType: "event", entityId: "01H0EVENT" };
 apps/api/src/features/start-hermes-request/start-hermes-request.controller.test.ts	await expect(controller.start({ userId: "owner-1", text: "  crie um evento  ", sessionId, clientMessageId: "m1" }, actor))
 apps/api/src/features/start-hermes-request/start-hermes-request.controller.test.ts	expect(startHermes).toHaveBeenCalledWith({ userId: "owner-1", text: "crie um evento", sessionId, clientMessageId: "m1" }, actor);
-apps/api/src/features/start-voice-request/start-voice-request.controller.test.ts	import { MAX_TRANSCRIPT_LENGTH } from "../../api-core/requests/voice-event-worker";
 apps/api/src/features/start-voice-request/start-voice-request.controller.test.ts	test("exige a identidade do gateway e responde 202: nao ha mais rota de voz que espera o evento", () => {
-apps/api/src/features/start-voice-request/start-voice-request.controller.ts	import { MAX_TRANSCRIPT_LENGTH } from "../../api-core/requests/voice-event-worker";
 apps/api/src/features/start-voice-request/start-voice-request.controller.ts	* `POST /api/requests/voice`: a fala vira um pedido, e o pedido gera o evento. O evento criado aparece em
 apps/api/src/features/suggest-tags/tags.controller.test.ts	import { Event } from "../../domain";
 apps/api/src/features/suggest-tags/tags.controller.test.ts	import { InMemoryEventDatabase } from "../../api-core/events/testing/in-memory-event-database";
@@ -2511,46 +2506,19 @@ apps/api/src/features/update-recurrence/update-recurrence.usecase.ts	import type
 apps/api/src/features/update-recurrence/update-recurrence.usecase.ts	private readonly createEvent: Pick<CreateEventUseCase, "prepare">,
 apps/api/src/features/update-recurrence/update-recurrence.usecase.ts	private readonly events: Pick<EventRepository, "findByIds">,
 apps/api/src/features/update-recurrence/update-recurrence.usecase.ts	{ createEvent: this.createEvent, events: this.events },
-apps/api/src/infrastructure/jobs/job-context.ts	eventId?: string;
 apps/api/src/infrastructure/jobs/job-context.ts	* nao faz nada. O job nao guarda resultado: ele mora no evento e nas entradas.
-apps/api/src/infrastructure/jobs/job-context.ts	VALUES (${ulid()}, ${input.kind}, ${input.userId}, ${input.actorId}, ${input.eventId ?? null},
 apps/api/src/infrastructure/jobs/jobs.integration.test.ts	import { PostgresEventRepository } from "../persistence/events/repositories/postgres-event.repository";
 apps/api/src/infrastructure/jobs/jobs.integration.test.ts	import { OTHER_USER, USER, agentEvent, countRows, selectRows } from "../persistence/testing/fixtures";
 apps/api/src/infrastructure/jobs/jobs.integration.test.ts	let events: PostgresEventRepository;
 apps/api/src/infrastructure/jobs/jobs.integration.test.ts	events = new PostgresEventRepository(ctx.db);
-apps/api/src/infrastructure/jobs/jobs.integration.test.ts	async function requestEvent(name: string): Promise<string> {
 apps/api/src/infrastructure/jobs/jobs.integration.test.ts	const event = agentEvent(USER, name);
 apps/api/src/infrastructure/jobs/jobs.integration.test.ts	await events.save(event);
 apps/api/src/infrastructure/jobs/jobs.integration.test.ts	return event.id;
-apps/api/src/infrastructure/jobs/jobs.integration.test.ts	const eventId = await requestEvent("Pedido");
-apps/api/src/infrastructure/jobs/jobs.integration.test.ts	const id = await service.enqueue({ kind: "work", userId: USER, actorId: "admin-1", eventId, payload: { artifactId: "a-1" } });
-apps/api/src/infrastructure/jobs/jobs.integration.test.ts	expect(seen[0].context).toMatchObject({ jobId: id, userId: USER, actorId: "admin-1", eventId, attempt: 1 });
-apps/api/src/infrastructure/jobs/jobs.integration.test.ts	const eventId = await requestEvent("Pedido");
-apps/api/src/infrastructure/jobs/jobs.integration.test.ts	during = await service.progressOfEvent(eventId);
-apps/api/src/infrastructure/jobs/jobs.integration.test.ts	const succeeded = await enqueue({ eventId });
-apps/api/src/infrastructure/jobs/jobs.integration.test.ts	expect(await service.progressOfEvent(eventId)).toBeUndefined();
-apps/api/src/infrastructure/jobs/jobs.integration.test.ts	const retried = await enqueue({ eventId, payload: { fail: true } });
 apps/api/src/infrastructure/jobs/jobs.integration.test.ts	// O job que espera o retry e o job vivo do evento, mas sem progresso.
-apps/api/src/infrastructure/jobs/jobs.integration.test.ts	expect(await service.progressOfEvent(eventId)).toBeUndefined();
 apps/api/src/infrastructure/jobs/jobs.integration.test.ts	test("cancelOfEvents cancela os jobs vivos dos eventos e aborta o handler em curso", async () => {
-apps/api/src/infrastructure/jobs/jobs.integration.test.ts	const [runningEvent, queuedEvent, untouchedEvent] = [
-apps/api/src/infrastructure/jobs/jobs.integration.test.ts	await requestEvent("Rodando"),
-apps/api/src/infrastructure/jobs/jobs.integration.test.ts	await requestEvent("Na fila"),
-apps/api/src/infrastructure/jobs/jobs.integration.test.ts	await requestEvent("Outro pedido"),
-apps/api/src/infrastructure/jobs/jobs.integration.test.ts	const running = await enqueue({ eventId: runningEvent });
-apps/api/src/infrastructure/jobs/jobs.integration.test.ts	const queued = await enqueue({ eventId: queuedEvent });
-apps/api/src/infrastructure/jobs/jobs.integration.test.ts	const untouched = await enqueue({ eventId: untouchedEvent });
-apps/api/src/infrastructure/jobs/jobs.integration.test.ts	await service.cancelOfEvents([runningEvent, queuedEvent], OTHER_USER);
-apps/api/src/infrastructure/jobs/jobs.integration.test.ts	await service.cancelOfEvents([runningEvent, queuedEvent], USER);
-apps/api/src/infrastructure/jobs/jobs.service.ts	eventId?: string;
 apps/api/src/infrastructure/jobs/jobs.service.ts	/** Roda quando o job falha de vez: e onde o evento do job vira `failed`. */
 apps/api/src/infrastructure/jobs/jobs.service.ts	/** Cancela os jobs vivos dos eventos e aborta os que este worker esta rodando. */
-apps/api/src/infrastructure/jobs/jobs.service.ts	async cancelOfEvents(eventIds: readonly string[], userId: string): Promise<void> {
-apps/api/src/infrastructure/jobs/jobs.service.ts	for (const id of await this.store.cancelOfEvents(eventIds, userId)) this.active.get(id)?.abort();
 apps/api/src/infrastructure/jobs/jobs.service.ts	/** O progresso passageiro do job vivo de um evento, se houver. */
-apps/api/src/infrastructure/jobs/jobs.service.ts	async progressOfEvent(eventId: string): Promise<unknown> {
-apps/api/src/infrastructure/jobs/jobs.service.ts	return (await this.store.activeOfEvent(eventId))?.progress ?? undefined;
-apps/api/src/infrastructure/jobs/jobs.service.ts	jobId: job.id, userId: job.userId, actorId: job.actorId, eventId: job.eventId ?? undefined,
 apps/api/src/infrastructure/jobs/jobs.service.ts	// O evento do job ainda nao sabe que falhou: nunca marcar o job como terminal antes disso.
 apps/api/src/infrastructure/persistence/agent-batch/postgres-entity-batch-writer.ts	EventValidationError,
 apps/api/src/infrastructure/persistence/agent-batch/postgres-entity-batch-writer.ts	import { applySequenceChanges } from "../events/repositories/event-relations";
@@ -2577,15 +2545,10 @@ apps/api/src/infrastructure/persistence/artifacts/queries/postgres-artifact-even
 apps/api/src/infrastructure/persistence/artifacts/queries/postgres-artifact-event-link.query.ts	const links = new Map<string, ArtifactEventLink[]>();
 apps/api/src/infrastructure/persistence/artifacts/queries/postgres-artifact-event-link.query.ts	const link: ArtifactEventLink = {
 apps/api/src/infrastructure/persistence/artifacts/queries/postgres-artifact-event-link.query.ts	eventId: row.task_id,
-apps/api/src/infrastructure/persistence/artifacts/repositories/food-generation.ts	import { appendEntry, insertAgentEvent } from "../../requests/request-rows";
-apps/api/src/infrastructure/persistence/artifacts/repositories/food-generation.ts	await insertAgentEvent(tx, {
 apps/api/src/infrastructure/persistence/artifacts/repositories/food-generation.ts	await tx.insert(schema.eventArtifactRelation).values({
-apps/api/src/infrastructure/persistence/artifacts/repositories/food-generation.ts	eventId: requestId,
-apps/api/src/infrastructure/persistence/artifacts/repositories/food-generation.ts	eventId: requestId,
 apps/api/src/infrastructure/persistence/artifacts/repositories/food-generation.ts	eventId: requestId,
 apps/api/src/infrastructure/persistence/artifacts/repositories/postgres-artifact.repository.ts	* Grava os artefatos que viajam com um evento ou uma serie. Vem antes das
 apps/api/src/infrastructure/persistence/artifacts/repositories/postgres-artifact.repository.ts	* Apagar um evento nao apaga os artefatos dele; so solta a relacao.
-apps/api/src/infrastructure/persistence/artifacts/repositories/postgres-artifact.repository.ts	eventId: request.id,
 apps/api/src/infrastructure/persistence/database/schema/artifacts.ts	* `derived` marca a copia de outro artefato (o alimento comido num evento), para
 apps/api/src/infrastructure/persistence/database/schema/events.ts	[nome de arquivo]
 apps/api/src/infrastructure/persistence/database/schema/events.ts	EVENT_KINDS,
@@ -2905,7 +2868,6 @@ apps/api/src/infrastructure/persistence/integration/artifacts.integration.test.t
 apps/api/src/infrastructure/persistence/integration/artifacts.integration.test.ts	expect(found.get(other.id)?.map((entry) => entry.eventId)).toEqual([late.id]);
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	import { EntityBatchConflictError, EventValidationError, type ArtifactLink, type Event } from "../../../domain";
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	import { PostgresEventRepository } from "../events/repositories/postgres-event.repository";
-apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	import { insertAgentEvent } from "../requests/request-rows";
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	agentEvent,
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	trackedEvent,
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	let events: PostgresEventRepository;
@@ -2990,7 +2952,6 @@ apps/api/src/infrastructure/persistence/integration/entity-batch.integration.tes
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	const b = await saved(trackedEvent(USER, "B"));
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	expect((await events.findById(b.id))?.previousIds).toEqual([]);
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	const created = trackedEvent(USER, "Criado pelo passo");
-apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	await insertAgentEvent(tx, { id: stepId, userId: USER, kind: "step", status: "done", name: "Passo", data: {} });
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	await tx.insert(schema.eventEventRelation).values({ fromEventId: stepId, toEventId: created.id, relation: "generates" });
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	const origin = await saved(trackedEvent(USER, "Origem"));
 apps/api/src/infrastructure/persistence/integration/entity-batch.integration.test.ts	{ op: "create", entity: trackedEvent(USER, "Nasceria com o lote") },
@@ -3274,16 +3235,9 @@ apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	t
 apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	test("entradas de um evento, em ordem e a partir da ultima lida", async () => {
 apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	test("relacoes para um evento, por tipo", async () => {
 apps/api/src/infrastructure/persistence/integration/schema.integration.test.ts	test("em quais eventos um artefato aparece", async () => {
-apps/api/src/infrastructure/persistence/jobs/postgres-job.store.ts	eventId: string | null;
-apps/api/src/infrastructure/persistence/jobs/postgres-job.store.ts	${table}.task_id AS "eventId", ${table}.payload, ${table}.status, ${table}.progress, ${table}.error,
 apps/api/src/infrastructure/persistence/jobs/postgres-job.store.ts	* descartavel; a fonte de verdade e o evento.
 apps/api/src/infrastructure/persistence/jobs/postgres-job.store.ts	/** O job vivo de um evento, se houver: e dele que sai o progresso passageiro. */
-apps/api/src/infrastructure/persistence/jobs/postgres-job.store.ts	async activeOfEvent(eventId: string): Promise<Job | undefined> {
-apps/api/src/infrastructure/persistence/jobs/postgres-job.store.ts	ORDER BY created_at DESC, id DESC LIMIT 1`, [eventId])).rows[0];
 apps/api/src/infrastructure/persistence/jobs/postgres-job.store.ts	/** Cancela os jobs vivos dos eventos; devolve os ids, para o worker abortar os que estao rodando. */
-apps/api/src/infrastructure/persistence/jobs/postgres-job.store.ts	async cancelOfEvents(eventIds: readonly string[], userId: string): Promise<string[]> {
-apps/api/src/infrastructure/persistence/jobs/postgres-job.store.ts	if (eventIds.length === 0) return [];
-apps/api/src/infrastructure/persistence/jobs/postgres-job.store.ts	[eventIds, userId]);
 apps/api/src/infrastructure/persistence/persistence.module.ts	ArtifactEventLinkQuery,
 apps/api/src/infrastructure/persistence/persistence.module.ts	EventCardQuery,
 apps/api/src/infrastructure/persistence/persistence.module.ts	EventRepository,
@@ -3334,125 +3288,33 @@ apps/api/src/infrastructure/persistence/recurrences/repositories/postgres-recurr
 apps/api/src/infrastructure/persistence/recurrences/repositories/postgres-recurrence.repository.ts	eq(schema.events.recurrenceId, recurrenceId),
 apps/api/src/infrastructure/persistence/recurrences/repositories/postgres-recurrence.repository.ts	gte(schema.events.occurrenceOn, fromDay),
 apps/api/src/infrastructure/persistence/recurrences/repositories/postgres-recurrence.repository.ts	eq(schema.events.recurrenceDetached, false),
-apps/api/src/infrastructure/persistence/requests/postgres-candidate.query.ts	* A lista curta do que um pedido de edicao pode estar alterando: eventos de pessoa de ontem, hoje e amanha, os
-apps/api/src/infrastructure/persistence/requests/postgres-candidate.query.ts	wanted.has("event") ? this.events(input.userId, input.now) : [],
-apps/api/src/infrastructure/persistence/requests/postgres-candidate.query.ts	private async events(userId: string, now: Date): Promise<EditCandidate[]> {
-apps/api/src/infrastructure/persistence/requests/postgres-candidate.query.ts	kind: "event", id, name: String(row.name), eventKind: String(row.kind),
-apps/api/src/infrastructure/persistence/requests/postgres-candidate.query.ts	/** So o conteudo do usuario: os arquivos do agente, os exercicios globais e as copias feitas para um evento ficam de fora. */
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	import { Artifact, Event } from "../../../domain";
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	import { PostgresEventRequestLinkQuery } from "../events/queries/postgres-event-request-link.query";
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	test("o pedido e um evento de agente com a mensagem do usuario como primeira entrada e o job que o executa", async () => {
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	const [event] = await rows("SELECT actor, kind, status, name, data, started_at, finished_at FROM tasks WHERE id = $1", [requestId]);
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	expect(event).toMatchObject({
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	expect(String(event?.name).length).toBeLessThanOrEqual(80);
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	expect(event?.started_at).toBeInstanceOf(Date);
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	test("os passos sao eventos `step` ligados ao pedido por `step`, com o insumo numa entrada e um job por passo", async () => {
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	{ id: first, agent: "event-create", expected: "many" },
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	id: second, agent: "event-edit", expected: "one",
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	input: { instruction: "Concluir o aluguel", candidates: [{ kind: "event", id: "e1", name: "Pagar o aluguel" }] },
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	{ kind: "step", status: "queued", name: "Criando eventos", data: { agent: "event-create", expected: "many" } },
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	{ kind: "step", status: "queued", name: "Editando eventos", data: { agent: "event-edit", expected: "one" } },
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	["event-create", "Criando eventos", "many", "queued"],
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	["event-edit", "Editando eventos", "one", "queued"],
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	expect(steps[1]?.input).toEqual({ instruction: "Concluir o aluguel", candidates: [{ kind: "event", id: "e1", name: "Pagar o aluguel" }] });
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	test("as entradas de um passo ficam na ordem em que foram acrescentadas e nao mexem na revisao do evento", async () => {
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	await store.recordThought(stepId, { text: "Preciso dos eventos de hoje.", at: "2026-10-25T15:00:01.000Z", model: "m" });
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	{ text: "Preciso dos eventos de hoje.", at: "2026-10-25T15:00:01.000Z", model: "m" },
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	{ id: createStep, agent: "event-create", expected: "one" }, { id: editStep, agent: "artifact-edit", expected: "one" },
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	const meal = Event.create({ userId: USER, kind: "meal", name: "Almoço", startedAt: new Date("2026-10-25T15:00:00Z") });
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	const gone = Event.create({ userId: USER, name: "Sumiu", startedAt: new Date("2026-10-25T10:00:00Z") });
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	{ kind: "event", id: meal.id, operation: "create" }, { kind: "event", id: gone.id, operation: "delete" },
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	// O evento tambem aponta para o pedido que o criou ou o apagou, alem do passo.
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	// O detalhe do evento le o pedido, nunca o passo.
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	expect(await new PostgresEventRequestLinkQuery(ctx.db).linksOf(meal.id))
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	// Relacoes que partem de um evento de agente nao contam como edicao de ninguem.
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	["event", "Almoço", "create", createStep, false],
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	["event", "Sumiu", "delete", createStep, false],
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	expect(entities.find((entity) => entity.id === meal.id)?.summary).toMatchObject({ eventKind: "meal", startedAt: "2026-10-25T15:00:00.000Z" });
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	const link = { from: { kind: "artifact" as const, id: food.id }, to: { kind: "event" as const, id: meal.id } };
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	await store.markFinalized(undefined, { kind: "event", id: gone.id, stepId: createStep }, []);
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	{ data: { type: "finalized", entity: { kind: "event", id: gone.id }, links: [] } },
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	await store.beginSteps(requestId, [{ id: stepId, agent: "event-create", expected: "one" }]);
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	const event = Event.create({ userId: USER, name: "Almoço", startedAt: new Date() });
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	userId: USER, tasks: [{ op: "create", entity: event }], artifacts: [],
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	afterWrite: (tx) => store.recordStepSuccess(tx, { requestId, stepId, entities: [{ kind: "event", id: event.id, operation: "create" }], timings: {} }),
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	expect(await rows("SELECT id FROM tasks WHERE id = $1", [event.id])).toEqual([]);
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	await store.beginSteps(requestId, [{ id: stepId, agent: "event-create", expected: "one" }]);
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	failedSteps: [{ agent: "artifact-create", errorCode: "internal" }], message: "Criei o evento, mas não o alimento.",
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	{ kind: "message", role: "agent", content: "Criei o evento, mas não o alimento." },
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	status: "done", answer: "Criei o evento, mas não o alimento.", answerThought: "O passo de artefatos falhou.",
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	const { requestId } = await start("crie um evento", { route: "hermes", job: "hermes-turn" });
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	{ id: "request", kind: "request", label: "Pedido", status: "done", summary: "crie um evento" },
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	test("cancelar marca o pedido e os passos abertos, devolve os eventos cujos jobs parar e so vale uma vez", async () => {
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	await store.beginSteps(requestId, [{ id: open, agent: "event-create", expected: "one" }, { id: done, agent: "query", expected: "one" }]);
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	test("a voz: o pedido gera o evento de pessoa e termina na transacao dele", async () => {
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	const { requestId } = await start("comecei a estudar", { route: "voice", job: "voice-event" });
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	const event = Event.create({ userId: USER, name: "Estudar", startedAt: new Date("2026-10-25T15:00:00Z") });
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	userId: USER, tasks: [{ op: "create", entity: event }], artifacts: [],
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	afterWrite: (tx) => store.completeVoice(tx, { requestId, eventId: event.id }),
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	.toEqual([{ to_task_id: event.id, relation: "generates" }]);
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	{ kind: "event", id: event.id, operation: "create", stepId: requestId, finalized: true, summary: { name: "Estudar" } },
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	.toEqual({ kind: "result", data: { type: "voice", eventId: event.id } });
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	test("a lista traz os pedidos do usuario do mais novo para o mais antigo, e nunca um passo ou um evento de pessoa", async () => {
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	await store.beginSteps(first.requestId, [{ id: newOrderedId(), agent: "event-create", expected: "one" }]);
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	tasks: [{ op: "create", entity: Event.create({ userId: USER, name: "Reunião", startedAt: new Date() }) }],
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	test("candidatos de edicao: so eventos de pessoa, artefatos de conteudo do usuario e series", async () => {
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	const today = Event.create({ userId: USER, name: "Reunião", startedAt: now });
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	const tracked = Event.create({ userId: USER, name: "Pagar o aluguel", status: "todo" });
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	const done = Event.create({ userId: USER, name: "Já feito", status: "done" });
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	const far = Event.create({ userId: USER, name: "Mês passado", startedAt: new Date("2026-09-01T15:00:00Z") });
 apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	const foreign = Event.create({ userId: "user-2", name: "De outro", startedAt: now });
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	const candidates = await new PostgresCandidateQuery(new PostgresDatabase(ctx.pool)).shortlist({ userId: USER, now, kinds: ["event", "artifact", "recurrence"] });
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	["artifact", "Ideia"], ["event", "Pagar o aluguel"], ["event", "Reunião"],
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	import { insertAgentEvent, newOrderedId } from "./request-rows";
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	eventId: string;
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	const EVENT_RELATION = { create: "generates", update: "updates", delete: "deletes" } as const;
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	* O pedido e os passos como eventos de agente (ADR 0013). O que se acrescenta a eles sao entradas, o que um
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	await insertAgentEvent(tx, {
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	kind: input.job, userId: input.userId, actorId: input.userId, eventId: requestId,
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	// As relacoes partem dos passos; na voz e no alimento, do proprio pedido. O evento que um passo tocou tambem
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	SELECT sources.id AS source_id, sources.step, 'event' AS kind, e.id, r.relation, e.name, e.kind AS task_kind,
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	const summary: EntitySummary = kind === "event"
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	name: String(row.name), eventKind: String(row.task_kind),
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	await insertAgentEvent(tx, {
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	kind: jobKindOf(step.agent), userId, actorId: userId, eventId: step.id,
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	if (entity.kind === "event") {
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	// O passo e o pedido apontam para o evento: o evento mostra o pedido ("criado por", "atualizado
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	VALUES (${input.stepId}, ${entity.id}, ${EVENT_RELATION[entity.operation]}),
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	(${input.requestId}, ${entity.id}, ${EVENT_RELATION[entity.operation]})
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	kind: REQUEST_JOBS.finalize, userId, actorId: userId, eventId: stepId,
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	async completeVoice(tx: unknown, input: { requestId: string; eventId: string }): Promise<void> {
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	VALUES (${input.requestId}, ${input.eventId}, 'generates')`);
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	await this.append(run, input.requestId, { kind: "result", data: { type: "voice", eventId: input.eventId } });
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	// O pedido foi cancelado enquanto o modelo trabalhava: o erro desfaz o evento.
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	/** Acrescenta uma entrada ao evento, com o dono dele. Entradas nunca mudam e nao contam como revisao. */
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	eventId: string,
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	FROM tasks e WHERE e.id = ${eventId}`);
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	private async entriesOf(eventIds: readonly string[]): Promise<Map<string, EntryRow[]>> {
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	const byEvent = new Map<string, EntryRow[]>();
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	if (eventIds.length === 0) return byEvent;
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	`SELECT id, task_id AS "eventId", kind, role, content, data FROM task_entries
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	WHERE task_id = ANY($1::char(26)[]) ORDER BY id`, [eventIds]);
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	for (const row of rows) byEvent.set(row.eventId, [...(byEvent.get(row.eventId) ?? []), row]);
-apps/api/src/infrastructure/persistence/requests/postgres-request.store.ts	return byEvent;
 apps/api/src/infrastructure/persistence/requests/request-rows.ts	import type { AgentEventKind, AgentEventStatus, EntryKind, EntryRole } from "../../../domain";
-apps/api/src/infrastructure/persistence/requests/request-rows.ts	* Monotonico: as entradas de um evento e os passos de um pedido ordenam por id
 apps/api/src/infrastructure/persistence/requests/request-rows.ts	/** Por onde o pedido anda; fica em `events.data.route`. */
-apps/api/src/infrastructure/persistence/requests/request-rows.ts	export interface NewAgentEvent {
 apps/api/src/infrastructure/persistence/requests/request-rows.ts	kind: AgentEventKind;
 apps/api/src/infrastructure/persistence/requests/request-rows.ts	status: AgentEventStatus;
-apps/api/src/infrastructure/persistence/requests/request-rows.ts	/** Um pedido ou um passo: evento de agente. Comeca agora; a conclusao vem quando ele termina. */
-apps/api/src/infrastructure/persistence/requests/request-rows.ts	export async function insertAgentEvent(tx: Tx, event: NewAgentEvent): Promise<void> {
 apps/api/src/infrastructure/persistence/requests/request-rows.ts	await tx.insert(schema.events).values({
-apps/api/src/infrastructure/persistence/requests/request-rows.ts	id: event.id,
-apps/api/src/infrastructure/persistence/requests/request-rows.ts	userId: event.userId,
-apps/api/src/infrastructure/persistence/requests/request-rows.ts	kind: event.kind,
-apps/api/src/infrastructure/persistence/requests/request-rows.ts	status: event.status,
-apps/api/src/infrastructure/persistence/requests/request-rows.ts	name: event.name,
-apps/api/src/infrastructure/persistence/requests/request-rows.ts	eventId: string;
-apps/api/src/infrastructure/persistence/requests/request-rows.ts	/** Acrescenta uma entrada ao evento. Entradas nunca mudam, e nao contam como revisao do evento. */
 apps/api/src/infrastructure/persistence/requests/request-rows.ts	await tx.insert(schema.eventEntries).values({
-apps/api/src/infrastructure/persistence/requests/request-rows.ts	eventId: entry.eventId,
 apps/api/src/infrastructure/persistence/shared/upsert-tag-ids.ts	/** Tag e uma so por usuario e nome, seja de evento ou de artefato. */
 apps/api/src/infrastructure/persistence/testing/fixtures.ts	import { Artifact, Event, Recurrence, type EventCreateProps, type FoodData, type RecurrenceRule } from "../../../domain";
 apps/api/src/infrastructure/persistence/testing/fixtures.ts	/** Evento de referencia de pessoa: so marca um horario. */
@@ -3465,6 +3327,11 @@ apps/api/src/infrastructure/persistence/testing/fixtures.ts	export function agen
 apps/api/src/infrastructure/persistence/testing/fixtures.ts	return Event.create({
 apps/api/src/infrastructure/persistence/testing/fixtures.ts	export function occurrenceOf(recurrence: Recurrence, day: string, props: Partial<EventCreateProps> = {}): Event {
 apps/api/src/infrastructure/persistence/testing/fixtures.ts	return Event.create({
+apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	afterWrite: (tx) => store.recordStepSuccess(tx, { requestId, stepId, entities: [{ kind: "task", id: event.id, operation: "create" }], timings: {} }),
+apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	afterWrite: (tx) => store.completeVoice(tx, { requestId, taskId: event.id }),
+apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	{ kind: "task", id: event.id, operation: "create", stepId: requestId, finalized: true, summary: { name: "Estudar" } },
+apps/api/src/infrastructure/persistence/requests/postgres-request.store.integration.test.ts	.toEqual({ kind: "result", data: { type: "voice", taskId: event.id } });
+apps/api/src/infrastructure/persistence/requests/request-rows.ts	eventId: entry.taskId,
 
 == agentes ==
 apps/api/src/api-core/agent/services/agent-change-session.test.ts	import { Event } from "../../../domain";
@@ -3476,23 +3343,12 @@ apps/api/src/api-core/agent/services/agent-change-session.test.ts	const kit = cr
 apps/api/src/api-core/agent/services/agent-change-session.test.ts	{ events: kit.eventRepository, artifacts: kit.artifactRepository },
 apps/api/src/api-core/agent/services/agent-change-session.test.ts	describe("sequenceEvents", () => {
 apps/api/src/api-core/agent/services/agent-change-session.test.ts	test("puts the next event after the previous one, revising neither, and answers with the event that gained a predecessor", async () => {
-apps/api/src/api-core/agent/services/agent-change-session.test.ts	const result = await session.sequenceEvents("a", "b");
-apps/api/src/api-core/agent/services/agent-change-session.test.ts	expect(result).toEqual({ ok: true, kind: "event", op: "update", id: "b" });
 apps/api/src/api-core/agent/services/agent-change-session.test.ts	test("an agent event can be on either end of the sequence", async () => {
 apps/api/src/api-core/agent/services/agent-change-session.test.ts	const request = Event.create({ id: "request", userId, actor: "agent", kind: "request", status: "running", name: "Pedido" });
-apps/api/src/api-core/agent/services/agent-change-session.test.ts	expect(await session.sequenceEvents("request", "a")).toMatchObject({ ok: true });
-apps/api/src/api-core/agent/services/agent-change-session.test.ts	expect(await session.sequenceEvents("a", "request")).toMatchObject({ ok: true });
-apps/api/src/api-core/agent/services/agent-change-session.test.ts	await session.sequenceEvents("a", "b");
-apps/api/src/api-core/agent/services/agent-change-session.test.ts	const again = await session.sequenceEvents("a", "b");
 apps/api/src/api-core/agent/services/agent-change-session.test.ts	test("an event created in this session can be an end before it exists in the database", async () => {
-apps/api/src/api-core/agent/services/agent-change-session.test.ts	expect(await session.sequenceEvents("a", created.id)).toMatchObject({ ok: true, id: created.id });
 apps/api/src/api-core/agent/services/agent-change-session.test.ts	test("refuses an event that follows itself, one that does not exist and one that belongs to someone else", async () => {
 apps/api/src/api-core/agent/services/agent-change-session.test.ts	const theirs = Event.create({ id: "theirs", userId: "someone-else", name: "Deles", status: "todo" });
-apps/api/src/api-core/agent/services/agent-change-session.test.ts	expect(await session.sequenceEvents("a", "a")).toMatchObject({ ok: false });
-apps/api/src/api-core/agent/services/agent-change-session.test.ts	expect(await session.sequenceEvents("a", "missing")).toMatchObject({ ok: false });
-apps/api/src/api-core/agent/services/agent-change-session.test.ts	expect(await session.sequenceEvents("theirs", "a")).toMatchObject({ ok: false });
 apps/api/src/api-core/agent/services/agent-change-session.test.ts	const { session, batchWriter, eventRepository } = setup(human("a"), human("b"));
-apps/api/src/api-core/agent/services/agent-change-session.test.ts	await session.sequenceEvents("a", "b");
 apps/api/src/api-core/agent/services/agent-change-session.test.ts	expect((await eventRepository.findById("b"))?.previousIds).toEqual(["a"]);
 apps/api/src/api-core/agent/services/agent-change-session.test.ts	expect((await eventRepository.findById("a"))?.nextIds).toEqual(["b"]);
 apps/api/src/api-core/agent/services/agent-change-session.test.ts	expect((await eventRepository.findById("a"))?.revision).toBe(1);
@@ -3501,371 +3357,59 @@ apps/api/src/api-core/agent/services/agent-change-session.ts	type Event,
 apps/api/src/api-core/agent/services/agent-change-session.ts	type EventArtifactRelationKind,
 apps/api/src/api-core/agent/services/agent-change-session.ts	EventRepository,
 apps/api/src/api-core/agent/services/agent-change-session.ts	import type { CreateEventUseCase, PrepareEventOptions } from "../../events/create-event.usecase";
-apps/api/src/api-core/agent/services/agent-change-session.ts	export type EntityKind = "event" | "artifact";
-apps/api/src/api-core/agent/services/agent-change-session.ts	* O usuario vem do pedido ja autorizado; nenhum agente o recebe. Ligar um artefato a um evento edita o evento;
-apps/api/src/api-core/agent/services/agent-change-session.ts	* pôr um evento na sequencia de outro nao edita nenhum dos dois.
 apps/api/src/api-core/agent/services/agent-change-session.ts	private readonly events = new Map<string, Staged<Event>>();
 apps/api/src/api-core/agent/services/agent-change-session.ts	events: Pick<EventRepository, "findById" | "findByIds">;
 apps/api/src/api-core/agent/services/agent-change-session.ts	private readonly createEventUseCase: Pick<CreateEventUseCase, "prepare" | "buildArtifact">,
 apps/api/src/api-core/agent/services/agent-change-session.ts	* Uma serie nova. A primeira ocorrencia entra no mesmo lote: e uma linha de verdade em `events`, entao o
 apps/api/src/api-core/agent/services/agent-change-session.ts	createRecurrence(input: CreateRecurrenceInput, options?: PrepareEventOptions): Promise<StageResult> {
 apps/api/src/api-core/agent/services/agent-change-session.ts	options?: PrepareEventOptions,
-apps/api/src/api-core/agent/services/agent-change-session.ts	/** Os artefatos novos do evento entram no mesmo lote, antes dele (a relacao aponta para eles). */
 apps/api/src/api-core/agent/services/agent-change-session.ts	createEvent(input: CreateTaskInput, options?: PrepareEventOptions): Promise<StageResult> {
 apps/api/src/api-core/agent/services/agent-change-session.ts	const prepared = await this.createEventUseCase.prepare(input, { userId: this.userId }, undefined, options);
 apps/api/src/api-core/agent/services/agent-change-session.ts	this.events.set(prepared.event.id, { change: { op: "create", entity: prepared.event } });
-apps/api/src/api-core/agent/services/agent-change-session.ts	return { ok: true, kind: "event", op: "create", id: prepared.event.id };
-apps/api/src/api-core/agent/services/agent-change-session.ts	* `revise` recebe o evento atual (o do banco ou o ja preparado neste pedido) e devolve a versao nova. O criado
-apps/api/src/api-core/agent/services/agent-change-session.ts	reviseEvent(id: string, revise: (current: Event) => Event): Promise<StageResult> {
-apps/api/src/api-core/agent/services/agent-change-session.ts	const op = await this.reviseTarget(this.events, id, (key) => this.findEvent(key), revise);
-apps/api/src/api-core/agent/services/agent-change-session.ts	return { ok: true, kind: "event", op, id };
-apps/api/src/api-core/agent/services/agent-change-session.ts	* Faz `nextId` seguir-se de `previousId`. Nenhum dos dois e revisado, e qualquer um pode ser evento de agente.
-apps/api/src/api-core/agent/services/agent-change-session.ts	* O resultado e o evento que ganhou o antecessor. Repetir uma ligacao nao faz nada.
-apps/api/src/api-core/agent/services/agent-change-session.ts	sequenceEvents(previousId: string, nextId: string): Promise<StageResult> {
-apps/api/src/api-core/agent/services/agent-change-session.ts	if (previousId === nextId) throw new StagingError("Um evento não se segue a ele mesmo.");
-apps/api/src/api-core/agent/services/agent-change-session.ts	return { ok: true, kind: "event", op: "update", id: nextId };
-apps/api/src/api-core/agent/services/agent-change-session.ts	/** O artefato passa a aparecer no evento, depois dos que ja estavam. Quem e editado e o evento. */
-apps/api/src/api-core/agent/services/agent-change-session.ts	linkArtifact(artifactId: string, eventId: string, relation: EventArtifactRelationKind): Promise<StageResult> {
-apps/api/src/api-core/agent/services/agent-change-session.ts	const op = await this.reviseTarget(this.events, eventId, (key) => this.findEvent(key), (event) =>
 apps/api/src/api-core/agent/services/agent-change-session.ts	event.artifactLinks.some((link) => link.artifactId === artifactId)
 apps/api/src/api-core/agent/services/agent-change-session.ts	? event
 apps/api/src/api-core/agent/services/agent-change-session.ts	: event.revise({ artifactLinks: [...event.artifactLinks, { artifactId, relation, fromRecurrence: false }] }),
-apps/api/src/api-core/agent/services/agent-change-session.ts	return { ok: true, kind: "event", op, id: eventId };
-apps/api/src/api-core/agent/services/agent-change-session.ts	/** Monta como a criacao de evento montaria: alimento pendente, treino pelos exercicios globais. */
 apps/api/src/api-core/agent/services/agent-change-session.ts	return this.createEventUseCase.buildArtifact(input, { userId: this.userId }, at);
-apps/api/src/api-core/agent/services/agent-change-session.ts	/** Revisa um artefato que ja existe (ou criado neste pedido), sem mexer nos eventos em que ele aparece. */
 apps/api/src/api-core/agent/services/agent-change-session.ts	tasks: changes(this.events),
-apps/api/src/api-core/agent/services/agent-change-session.ts	collect("event", this.events);
 apps/api/src/api-core/agent/services/agent-change-session.ts	return { createEvent: this.createEventUseCase, events: this.repositories.events };
-apps/api/src/api-core/agent/services/agent-change-session.ts	/** A ocorrencia nasce se seguindo dos eventos do template, como as que a serie gera depois. */
 apps/api/src/api-core/agent/services/agent-change-session.ts	this.events.set(occurrence.id, { change: { op: "create", entity: occurrence } });
-apps/api/src/api-core/agent/services/agent-change-session.ts	const related = await this.sequenceEvents(previousId, occurrence.id);
 apps/api/src/api-core/agent/services/agent-change-session.ts	const touched = [...this.events.values()].some((entry) => entry.before?.occurrence?.recurrenceId === id);
-apps/api/src/api-core/agent/services/agent-change-session.ts	/** So eventos de pessoa: os pedidos e os passos do agente nao sao alvo de edicao. */
-apps/api/src/api-core/agent/services/agent-change-session.ts	private async findEvent(id: string): Promise<Event | null> {
 apps/api/src/api-core/agent/services/agent-change-session.ts	const event = await this.repositories.events.findById(id);
 apps/api/src/api-core/agent/services/agent-change-session.ts	return event?.actor === "human" ? event : null;
 apps/api/src/api-core/agent/services/agent-change-session.ts	if (this.events.has(id)) return;
 apps/api/src/api-core/agent/services/agent-change-session.ts	const found = await this.repositories.events.findById(id);
-apps/api/src/api-core/agent/services/agent-change-session.ts	if (!found || found.userId !== this.userId) throw new StagingError(`Não encontrei o evento ${id}.`);
-apps/api/src/api-core/agent/testing/stub-scoped-sql-query.ts	return "events: Eventos do usuario.";
-apps/api/src/api-core/events/gateways/event-command-parsing.gateway.ts	[nome de arquivo]
-apps/api/src/api-core/events/gateways/event-command-parsing.gateway.ts	import type { ParsedEventSchedule } from "../services/event-schedule.service";
-apps/api/src/api-core/events/gateways/event-command-parsing.gateway.ts	export interface ParsedEventCommand {
-apps/api/src/api-core/events/gateways/event-command-parsing.gateway.ts	schedule: ParsedEventSchedule;
-apps/api/src/api-core/events/gateways/event-command-parsing.gateway.ts	/** O lugar que a frase citou, como foi dito. Quem cria o evento procura o endereco no mapa. */
-apps/api/src/api-core/events/gateways/event-command-parsing.gateway.ts	export interface EventCommandParsingGateway {
-apps/api/src/api-core/events/gateways/event-command-parsing.gateway.ts	parseCommand(input: { text: string }): Promise<ParsedEventCommand>;
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.test.ts	[nome de arquivo]
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.test.ts	OpenRouterEventCommandParsingGateway,
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.test.ts	toCreateEventInput,
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.test.ts	toEventSchedule,
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.test.ts	type RawEventCommand,
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.test.ts	} from "./openrouter-event-command-parsing.gateway";
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.test.ts	function aRawCommand(overrides: Partial<RawEventCommand> = {}): Partial<RawEventCommand> {
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.test.ts	test("requests the strict event_command schema and returns the parsed input", async () => {
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.test.ts	const gateway = new OpenRouterEventCommandParsingGateway("test-api-key", "x-ai/grok-4.5", {
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.test.ts	json_schema: expect.objectContaining({ name: "event_command", strict: true }),
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.test.ts	const gateway = new OpenRouterEventCommandParsingGateway("super-secret-key", "model", {
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.test.ts	const input = toCreateEventInput(aRawCommand({ type: "common", routineName: "  " }), "  fui correr no parque  ");
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.test.ts	const input = toCreateEventInput(aRawCommand({ type: "meditation" }), "meditei 10 minutos");
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.test.ts	const input = toCreateEventInput(
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.test.ts	const input = toCreateEventInput(
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.test.ts	const input = toCreateEventInput(
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.test.ts	const input = toCreateEventInput(
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.test.ts	const input = toCreateEventInput(
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.test.ts	const input = toCreateEventInput(aRawCommand({ type: "training" }), "fui pra academia");
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.test.ts	const schedule = toEventSchedule(
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.test.ts	const schedule = toEventSchedule(aRawCommand({ startTimeOfDay: "  ", endTimeOfDay: "" }));
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.test.ts	const input = toCreateEventInput(
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.ts	[nome de arquivo]
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.ts	EventCommandParsingGateway,
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.ts	ParsedEventCommand,
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.ts	} from "./event-command-parsing.gateway";
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.ts	import { EventCommandPromptBuilderService } from "../services/event-command-prompt-builder.service";
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.ts	import type { ParsedEventSchedule } from "../services/event-schedule.service";
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.ts	export interface RawEventCommand {
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.ts	const eventCommandSchema = {
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.ts	name: "event_command",
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.ts	export class OpenRouterEventCommandParsingGateway implements EventCommandParsingGateway {
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.ts	private readonly promptBuilder: EventCommandPromptBuilderService = new EventCommandPromptBuilderService(),
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.ts	async parseCommand(input: { text: string }): Promise<ParsedEventCommand> {
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.ts	console.log("[OpenRouterEventCommandParsingGateway] parseCommand called", {
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.ts	console.error("[OpenRouterEventCommandParsingGateway] OPENROUTER_API_KEY is missing");
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.ts	console.error("[OpenRouterEventCommandParsingGateway] OPENROUTER_MODEL is missing");
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.ts	json_schema: eventCommandSchema,
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.ts	console.error("[OpenRouterEventCommandParsingGateway] OpenRouter request failed", {
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.ts	console.error("[OpenRouterEventCommandParsingGateway] response did not include command JSON", {
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.ts	let raw: Partial<RawEventCommand>;
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.ts	raw = JSON.parse(content) as Partial<RawEventCommand>;
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.ts	console.error("[OpenRouterEventCommandParsingGateway] failed to JSON.parse content", {
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.ts	const parsedInput = toCreateEventInput(raw, input.text);
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.ts	const schedule = toEventSchedule(raw);
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.ts	console.log("[OpenRouterEventCommandParsingGateway] parseCommand succeeded", {
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.ts	* Traduz a resposta plana do modelo para o `CreateEventInput` do dominio.
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.ts	* Nunca lanca: uma classificacao errada vira um evento de rotina que o usuario edita depois.
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.ts	export function toCreateEventInput(
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.ts	raw: Partial<RawEventCommand>,
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.ts	* Extrai a janela do evento. Os limites e a virada de dia ficam com `resolveEventSchedule`:
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.ts	export function toEventSchedule(raw: Partial<RawEventCommand>): ParsedEventSchedule {
-apps/api/src/api-core/events/gateways/openrouter-event-command-parsing.gateway.ts	function toWorkouts(raw: Partial<RawEventCommand>): WorkoutInput[] {
-apps/api/src/api-core/events/services/event-command-prompt-builder.service.test.ts	[nome de arquivo]
-apps/api/src/api-core/events/services/event-command-prompt-builder.service.test.ts	import { EventCommandPromptBuilderService } from "./event-command-prompt-builder.service";
-apps/api/src/api-core/events/services/event-command-prompt-builder.service.test.ts	const prompt = new EventCommandPromptBuilderService().build("dormi sete horas");
-apps/api/src/api-core/events/services/event-command-prompt-builder.service.test.ts	const prompt = new EventCommandPromptBuilderService().build("fui na padaria");
-apps/api/src/api-core/events/services/event-command-prompt-builder.service.test.ts	const prompt = new EventCommandPromptBuilderService().build("vou dormir agora");
-apps/api/src/api-core/events/services/event-command-prompt-builder.service.ts	[nome de arquivo]
-apps/api/src/api-core/events/services/event-command-prompt-builder.service.ts	export class EventCommandPromptBuilderService {
-apps/api/src/api-core/events/services/event-command-prompt-builder.service.ts	"Escolha o tipo do evento entre 'common', 'food', 'training' e 'sleep' seguindo estas regras:",
-apps/api/src/api-core/events/services/event-command-prompt-builder.service.ts	"- routineName: nome curto em portugues para o evento de rotina, ate 40 caracteres.",
-apps/api/src/api-core/events/services/event-command-prompt-builder.service.ts	"- placeName: o lugar onde o evento acontece, so quando a frase diz o NOME de um estabelecimento ou um endereco ('clinica saude emocional', 'shopping del rey', 'rua da bahia 1148'). Copie como foi dito, sem 'na', 'no', 'ao'. String vazia para lugar generico ('a padaria', 'a academia', 'casa', 'o trabalho') ou quando a frase nao cita lugar.",
-apps/api/src/api-core/events/services/event-command-prompt-builder.service.ts	"Voce nao sabe que horas sao. Nunca escreva datas: descreva a janela do evento so com os campos abaixo.",
-apps/api/src/api-core/events/services/event-command-prompt-builder.service.ts	"- startOffsetMinutes: quantos minutos ATRAS o evento comecou, sempre negativo. Use null quando o evento comeca agora.",
-apps/api/src/api-core/events/services/event-command-prompt-builder.service.ts	"- startTimeOfDay: hora do relogio em que o evento comecou, no formato HH:MM de 24 horas. Use quando a frase disser a hora do inicio, por exemplo 'dormi as 23 horas'. String vazia quando nao souber.",
-apps/api/src/api-core/events/services/event-command-prompt-builder.service.ts	"- durationMinutes: quanto o evento dura ou durou, em minutos. Use para 'por 6 horas', 'volto em 6 horas', 'durante 40 minutos'.",
-apps/api/src/api-core/events/services/event-command-prompt-builder.service.ts	"- endTimeOfDay: hora do relogio em que o evento termina, no formato HH:MM de 24 horas. Use para 'ate as 6 da manha'. String vazia quando nao souber.",
-apps/api/src/api-core/events/services/event-command-prompt-builder.service.ts	"Se a frase nao disser nada sobre o fim, deixe durationMinutes null e endTimeOfDay vazio: o evento fica em aberto.",
-apps/api/src/api-core/events/services/event-command-prompt-builder.service.ts	"Em eventos de sono com duracao conhecida, preencha sleepHours e durationMinutes com o mesmo tempo.",
-apps/api/src/api-core/requests/agents/artifact-create.md	Você é o agente que CRIA ARTEFATOS: os objetos que guardam conteúdo, como um texto livre ou um alimento (o que foi comido ou bebido). Sua única tarefa é ler o pedido do usuário e devolver os artefatos novos que ele descreve. Você não cria eventos, não consulta nada, não altera artefatos existentes e não liga artefatos a eventos: a ligação é feita depois por outra etapa.
-apps/api/src/api-core/requests/agents/artifact-create.md	1. Uma refeição descrita num pedido gera UM artefato `food` com todos os alimentos dela. O evento da refeição é criado por outro agente: não o descreva aqui.
-apps/api/src/api-core/requests/agents/artifact-edit.md	Você é o agente que ALTERA ARTEFATOS JÁ EXISTENTES: os objetos que guardam conteúdo, como um texto livre. Sua única tarefa é ler o pedido do usuário e dizer, para cada artefato existente que ele quer alterar, o que muda (título, texto, etiquetas). Você não cria artefatos nem eventos, e não apaga nada.
-apps/api/src/api-core/requests/agents/event-create.md	[nome de arquivo]
-apps/api/src/api-core/requests/agents/event-create.md	name: event-create
-apps/api/src/api-core/requests/agents/event-create.md	Você é o agente que CRIA EVENTOS numa agenda pessoal. Evento é tudo o que a pessoa faz ou vai fazer: um horário na agenda ("almocei", "reunião às 15h") ou algo a fazer que ela quer acompanhar ("preciso pagar o aluguel", "lembrar de ligar para o dentista"). Sua única tarefa é ler o pedido do usuário e devolver os eventos novos que ele descreve. Você não cria artefatos (alimentos, textos) nem recorrências, não consulta nada e não altera eventos existentes: outros agentes cuidam disso.
-apps/api/src/api-core/requests/agents/event-create.md	- A dica `quantidade`: `one` (um evento) ou `many` (vários). É uma dica, não uma ordem: crie exatamente os eventos que o pedido descreve.
-apps/api/src/api-core/requests/agents/event-create.md	"events": [
-apps/api/src/api-core/requests/agents/event-create.md	- `name`: nome curto do evento, em português. Algo a fazer fica no imperativo ("Pagar o aluguel"). Para refeição, só o nome da refeição ("Almoço", "Café da manhã", "Refeição"); NUNCA liste alimentos nem quantidades no evento.
-apps/api/src/api-core/requests/agents/event-create.md	- `status`: `null` para o evento que só marca um horário na agenda (um relato, um compromisso). Para algo a fazer que o usuário quer acompanhar: `todo` (a fazer), `toDefine` (ainda sem data), `doing` (em andamento), `inHold` (esperando por algo), `done` (já feito) ou `cancel`. Na dúvida entre os dois casos: tem horário e é um relato ou compromisso, `null`; é uma pendência, `todo`.
-apps/api/src/api-core/requests/agents/event-create.md	- `location`: o lugar onde o evento acontece. Só quando o usuário diz o NOME de um estabelecimento ou um endereço ("clínica Saúde Emocional", "Shopping Del Rey", "Rua da Bahia 1148"); copie como ele disse, sem "na", "no", "ao", e junte a cidade ou o bairro se ele disse ("Hospital Mater Dei Betim"). O servidor procura esse lugar no mapa, perto de onde o usuário está, e grava o endereço que existe; NUNCA invente rua, número ou cidade. `null` quando o pedido não cita lugar ou cita um lugar genérico ("a padaria", "a academia", "casa", "o trabalho"): o servidor usa o endereço de onde o usuário está.
-apps/api/src/api-core/requests/agents/event-create.md	- `followsFrom`: as posições (a partir de 0) dos OUTROS eventos desta mesma lista de que este se segue, os que vêm antes dele na sequência ("depois de comprar a tinta, pintar o quarto": o segundo evento tem `followsFrom` [0]). Vazia quando o pedido não diz que um vem depois de outro.
-apps/api/src/api-core/requests/agents/event-create.md	1. Um evento por atividade ou por coisa a fazer. "Comendo arroz e feijão, depois vou nadar e voltar para casa" são três eventos.
-apps/api/src/api-core/requests/agents/event-create.md	6. Se o pedido não descreve nenhum evento novo, devolva `{"events": []}`.
-apps/api/src/api-core/requests/agents/event-create.md	7. Não ajuste horários para evitar sobreposição com outros eventos: sobreposição é permitida.
-apps/api/src/api-core/requests/agents/event-edit.md	[nome de arquivo]
-apps/api/src/api-core/requests/agents/event-edit.md	name: event-edit
-apps/api/src/api-core/requests/agents/event-edit.md	Você é o agente que ALTERA EVENTOS JÁ EXISTENTES numa agenda pessoal: os que só marcam um horário e os que o usuário acompanha como algo a fazer (com `status`). Sua única tarefa é ler o pedido do usuário e dizer, para cada evento existente que ele quer alterar, o que muda (horário, prazo, concluir, prioridade, nome, status, local). Você não cria eventos nem artefatos, e não apaga nada.
-apps/api/src/api-core/requests/agents/event-edit.md	- `Candidatos`: os eventos que o servidor acha que o pedido altera, em JSON, com `id`. Os que têm `status` são acompanhados. Podem estar vazios.
-apps/api/src/api-core/requests/agents/event-edit.md	- Opcionalmente `Alvo` (JSON): o evento que o usuário tem aberto na tela, com os campos atuais. Quando existe, o pedido é sobre ELE e só ele.
-apps/api/src/api-core/requests/agents/event-edit.md	- `location`: o NOVO lugar onde o evento acontece, quando o usuário pede para mudar o local. Só quando o usuário diz o NOME de um estabelecimento ou um endereço ("clínica Saúde Emocional", "Shopping Del Rey", "Rua da Bahia 1148"); copie como ele disse, sem "na", "no", "ao", e junte a cidade ou o bairro se ele disse ("Hospital Mater Dei Betim"). O servidor procura esse lugar no mapa, perto de onde o usuário está, e grava o endereço que existe; NUNCA invente rua, número ou cidade. `""` (texto vazio) quando ele pede para tirar o local; `null` quando o pedido não fala de lugar.
-apps/api/src/api-core/requests/agents/event-edit.md	1. "Parei de trabalhar", "terminei a reunião", "cheguei da academia", sobre um evento SEM `status` que está em andamento: `estimatedFinishAt` = `Agora` (ou o horário dito).
-apps/api/src/api-core/requests/agents/event-edit.md	2. "Terminei", "concluí", "já fiz", sobre um evento COM `status`: `status` = `done` e `finishedAt` = `Agora` (ou o horário dito).
-apps/api/src/api-core/requests/agents/event-edit.md	3. Se nenhum candidato for o evento do pedido, devolva `"edits": []` e peça UMA consulta em `"query": {"sql": "SELECT ..."}`: um único SELECT de leitura sobre `events` que traga `id`, `name`, `status`, `started_at` e `estimated_finish_at` dos eventos prováveis. Só use `query` quando os `Candidatos` não bastam e ainda não há `Resultado da consulta`.
-apps/api/src/api-core/requests/agents/event-edit.md	4. Com `Resultado da consulta` na entrada, NUNCA peça outra consulta (`"query": null`): escolha o evento dali, ou devolva `"edits": []` se nenhum serve.
-apps/api/src/api-core/requests/agents/event-edit.md	5. Altere só o que o usuário pediu. NUNCA faça perguntas nem peça esclarecimento. Não ajuste outros eventos para evitar sobreposição: sobreposição é permitida.
-apps/api/src/api-core/requests/agents/failure-explainer.md	{ "message": "Não consegui editar o evento: não encontrei nenhum evento parecido com o que você descreveu." }
-apps/api/src/api-core/requests/agents/fallback-loop.md	{ "agent": "query", "instruction": "Listar os eventos em aberto com a tag casa" }
-apps/api/src/api-core/requests/agents/fallback-loop.md	- `event-create`: criar eventos, inclusive algo a fazer que o usuário quer acompanhar.
-apps/api/src/api-core/requests/agents/fallback-loop.md	- `event-edit`, `artifact-edit`: alterar eventos e artefatos que já existem.
-apps/api/src/api-core/requests/agents/fallback-loop.md	- `recurring-event-create`: criar eventos que se repetem.
-apps/api/src/api-core/requests/agents/fallback-loop.md	- `recurring-event-edit`: alterar a regra ou o modelo de uma série existente.
-apps/api/src/api-core/requests/agents/fallback.md	Você recebe os pedidos que o despacho não encaixou em nenhuma operação sobre a agenda: eventos, artefatos e séries. Há dois casos: (1) o pedido não tem relação com esses dados (conversa, pergunta geral): você responde; (2) o pedido pede ações que os especialistas fazem, mas não foi reconhecido: você chama os especialistas certos.
-apps/api/src/api-core/requests/agents/fallback.md	{ "agent": "event-create", "instruction": "Criar o evento do almoço de hoje" },
-apps/api/src/api-core/requests/agents/fallback.md	{ "agent": "event-edit", "instruction": "Concluir o evento de pagar o aluguel" }
-apps/api/src/api-core/requests/agents/fallback.md	- `event-create`: criar eventos, inclusive algo a fazer que o usuário quer acompanhar.
-apps/api/src/api-core/requests/agents/fallback.md	- `event-edit`, `artifact-edit`: alterar eventos e artefatos que já existem.
-apps/api/src/api-core/requests/agents/fallback.md	- `recurring-event-create`: criar eventos que se repetem.
-apps/api/src/api-core/requests/agents/fallback.md	- `recurring-event-edit`: alterar a regra ou o modelo de uma série existente.
-apps/api/src/api-core/requests/agents/recurring-event-create.md	[nome de arquivo]
-apps/api/src/api-core/requests/agents/recurring-event-create.md	name: recurring-event-create
-apps/api/src/api-core/requests/agents/recurring-event-create.md	Você é o agente que CRIA SÉRIES DE EVENTOS RECORRENTES numa agenda pessoal: atividades que se repetem ("corrida toda segunda às 7h", "reunião todo dia útil às 10h") e coisas a fazer que se repetem ("pagar o aluguel todo dia 5", "regar as plantas toda semana"). Sua única tarefa é ler o pedido do usuário e devolver as séries novas que ele descreve. Você não cria eventos avulsos nem artefatos (nem o alimento de uma refeição), não consulta nada e não altera séries existentes.
-apps/api/src/api-core/requests/agents/recurring-event-edit.md	[nome de arquivo]
-apps/api/src/api-core/requests/agents/recurring-event-edit.md	name: recurring-event-edit
-apps/api/src/api-core/requests/agents/recurring-event-edit.md	Você é o agente que ALTERA SÉRIES DE EVENTOS RECORRENTES JÁ EXISTENTES: a regra ou o modelo da série inteira, de hoje em diante ("mude a corrida de segunda para as 8h", "agora é toda terça", "o aluguel passa a vencer no dia 10"). Você não altera uma ocorrência isolada, não cria séries e não apaga nada.
-apps/api/src/api-core/requests/hermes-turn-worker.test.ts	{ id: "c1", kind: "tool", label: "Criou um evento", source: "mcp_braid_create_event", status: toolStatus },
-apps/api/src/api-core/requests/hermes-turn-worker.test.ts	const request = store.seed({ id: "01NEXT", prompt: "crie um evento", route: "hermes", status: "queued", sessionId: first.id });
-apps/api/src/api-core/requests/hermes-turn-worker.test.ts	expect(hermes?.chat).toHaveBeenCalledWith(expect.objectContaining({ text: "crie um evento", sessionId: "braid-user-1-01FIRST" }));
-apps/api/src/api-core/requests/hermes-turn-worker.test.ts	{ id: "c1", agent: "mcp_braid_create_event", label: "Criou um evento", status: "done" },
-apps/api/src/api-core/requests/jev-router-artifacts.test.ts	expect(specs[0]?.body).toContain("### `event_create`");
-apps/api/src/api-core/requests/jev/candidates.json	"instructions": "O pedido do usuário quer ALTERAR a entidade descrita abaixo, que já existe? Responda 'edit' só se o pedido se refere a ela (nome, assunto, horário, conteúdo). Relatos como 'parei de trabalhar', 'terminei a reunião' ou 'já paguei o aluguel' alteram o evento correspondente. Na dúvida, 'keep'.",
-apps/api/src/api-core/requests/jev/dispatch.json	"event_create": {
-apps/api/src/api-core/requests/jev/dispatch.json	"instructions": "Quantos EVENTOS NOVOS o pedido quer criar? Evento é tudo o que a pessoa faz ou vai fazer. Relatos de atividades realizadas, em andamento ou planejadas ('almocei', 'comendo arroz', 'vou nadar', 'volto para casa para ver um filme', 'dormi às 23h') são eventos novos, um por atividade. Algo a fazer, com ou sem prazo ('preciso pagar o aluguel', 'lembrar de ligar para o dentista'), também é um evento novo. Recorrências ('toda segunda', 'todo dia') não contam aqui. Artefatos não contam.",
-apps/api/src/api-core/requests/jev/dispatch.json	"none": "Nenhum evento novo.",
-apps/api/src/api-core/requests/jev/dispatch.json	"one": "Exatamente um evento novo.",
-apps/api/src/api-core/requests/jev/dispatch.json	"many": "Dois ou mais eventos novos."
-apps/api/src/api-core/requests/jev/dispatch.json	"event_edit": {
-apps/api/src/api-core/requests/jev/dispatch.json	"instructions": "Quantos EVENTOS JÁ EXISTENTES o pedido quer alterar (horário, prazo, concluir, prioridade, nome, status)? 'Parei de trabalhar', 'terminei a reunião', 'mude o jantar para as 21h', 'já paguei o aluguel' alteram eventos existentes. Recorrências não contam aqui.",
-apps/api/src/api-core/requests/jev/dispatch.json	"none": "Nenhum evento existente é alterado.",
-apps/api/src/api-core/requests/jev/dispatch.json	"one": "Exatamente um evento existente é alterado.",
-apps/api/src/api-core/requests/jev/dispatch.json	"many": "Dois ou mais eventos existentes são alterados."
-apps/api/src/api-core/requests/jev/dispatch.json	"instructions": "Quantos ARTEFATOS NOVOS o pedido quer criar? Um artefato guarda conteúdo: o que foi comido (alimentos e quantidades de uma refeição), uma observação, uma ideia ou uma lista em texto. Detalhes de alimentos e quantidades ('300g de arroz com 200g de feijão') pedem um artefato de alimento; o evento da refeição, à parte, é um evento novo.",
-apps/api/src/api-core/requests/jev/dispatch.json	"recurring_event_create": {
-apps/api/src/api-core/requests/jev/dispatch.json	"instructions": "Quantos EVENTOS RECORRENTES NOVOS o pedido quer criar? Atividades ou coisas a fazer que se repetem ('corrida toda segunda às 7h', 'reunião todo dia útil às 10h', 'pagar o aluguel todo dia 5', 'regar as plantas toda semana').",
-apps/api/src/api-core/requests/jev/dispatch.json	"none": "Nenhum evento recorrente novo.",
-apps/api/src/api-core/requests/jev/dispatch.json	"one": "Exatamente um evento recorrente novo.",
-apps/api/src/api-core/requests/jev/dispatch.json	"many": "Dois ou mais eventos recorrentes novos."
-apps/api/src/api-core/requests/jev/dispatch.json	"recurring_event_edit": {
-apps/api/src/api-core/requests/jev/dispatch.json	"instructions": "Quantas SÉRIES de EVENTOS RECORRENTES já existentes o pedido quer alterar (a regra ou o modelo da série inteira: 'mude a corrida de segunda para as 8h', 'agora é toda terça')? Alterar apenas UMA ocorrência isolada ('hoje a corrida foi às 8h') é uma edição de evento comum (event_edit), não de série.",
-apps/api/src/api-core/requests/jev/dispatch.json	"none": "Nenhum evento recorrente existente é alterado.",
-apps/api/src/api-core/requests/jev/dispatch.json	"one": "Exatamente um evento recorrente existente é alterado.",
-apps/api/src/api-core/requests/jev/dispatch.json	"many": "Dois ou mais eventos recorrentes existentes são alterados."
-apps/api/src/api-core/requests/jev/link.json	"instructions": "A entidade abaixo foi criada a partir do pedido do usuário. Alguma das outras entidades do mesmo pedido é aquela a que ela pertence e a que deve ficar ligada? Um alimento pertence ao evento da refeição que descreve (os alimentos e quantidades batem com o que foi comido); um artefato de texto pertence ao evento de que trata; um evento pertence ao evento maior de que é uma parte. Na dúvida, não ligue.",
-apps/api/src/api-core/requests/request-agent-schemas.ts	export const eventCreateOutput = z.object({
-apps/api/src/api-core/requests/request-agent-schemas.ts	events: z.array(z.object({
-apps/api/src/api-core/requests/request-agent-schemas.ts	/** `null` e o evento de referencia, que so marca um horario. */
-apps/api/src/api-core/requests/request-agent-schemas.ts	/** Os eventos desta mesma lista de que este se segue: os que vem antes dele na sequencia. */
-apps/api/src/api-core/requests/request-agent-schemas.ts	export const eventEditOutput = z.object({
-apps/api/src/api-core/requests/request-agent-schemas.ts	/** O lugar novo, como o usuario disse (o servidor procura o endereco no mapa); `""` tira o local do evento. */
-apps/api/src/api-core/requests/request-agent-schemas.ts	export const recurringEventCreateOutput = z.object({
-apps/api/src/api-core/requests/request-agent-schemas.ts	export const recurringEventEditOutput = z.object({
-apps/api/src/api-core/requests/request-agent-schemas.ts	"event-create", "artifact-create", "event-edit", "artifact-edit",
-apps/api/src/api-core/requests/request-agent-schemas.ts	"recurring-event-create", "recurring-event-edit", "query",
-apps/api/src/api-core/requests/request-agent-schemas.ts	export type EventCreateOutput = z.infer<typeof eventCreateOutput>;
-apps/api/src/api-core/requests/request-agent-schemas.ts	export type RecurringEventCreateOutput = z.infer<typeof recurringEventCreateOutput>;
-apps/api/src/api-core/requests/request-agent-schemas.ts	export type RecurringEventEditOutput = z.infer<typeof recurringEventEditOutput>;
-apps/api/src/api-core/requests/request-agent-schemas.ts	export type EventEditOutput = z.infer<typeof eventEditOutput>;
-apps/api/src/api-core/requests/request-candidates.ts	eventKind?: string;
-apps/api/src/api-core/requests/request-candidates.ts	/** Presente no evento acompanhado; ausente no que so marca um horario. */
-apps/api/src/api-core/requests/request-candidates.ts	const label = candidate.kind === "event"
-apps/api/src/api-core/requests/request-candidates.ts	? `evento (${candidate.eventKind ?? "common"}${candidate.status ? `, ${candidate.status}` : ""})`
-apps/api/src/api-core/requests/request-candidates.ts	: candidate.kind === "recurrence" ? "série de eventos recorrentes"
-apps/api/src/api-core/requests/request-config.test.ts	for (const agent of ["event-create", "artifact-create", "recurring-event-create"]) {
-apps/api/src/api-core/requests/request-config.test.ts	expect(loadAgentDefinition("event-create").template).toMatch(/não cria artefatos/);
-apps/api/src/api-core/requests/request-config.test.ts	"event_create", "event_edit", "artifact_create", "artifact_edit", "recurring_event_create", "recurring_event_edit", "query",
-apps/api/src/api-core/requests/request-config.test.ts	expect(stepLabel("event-create")).toBe("Criando eventos");
 apps/api/src/api-core/requests/request-create-worker.test.ts	const event = (over: Record<string, unknown> = {}) => ({
-apps/api/src/api-core/requests/request-create-worker.test.ts	name: "Evento", kind: "common", status: null, priority: null, longRunning: false, startedAt: null,
-apps/api/src/api-core/requests/request-create-worker.test.ts	describe("passo de criar eventos", () => {
-apps/api/src/api-core/requests/request-create-worker.test.ts	test("o exemplo-guia vira tres eventos, sem nenhum artefato, num commit proprio", async () => {
-apps/api/src/api-core/requests/request-create-worker.test.ts	const payload = await addStep(ctx, "s1", "event-create", "many");
-apps/api/src/api-core/requests/request-create-worker.test.ts	ctx.gateway.outputs.set("event_create", { events: [
 apps/api/src/api-core/requests/request-create-worker.test.ts	event({ name: "Refeição", kind: "meal", startedAt: iso(12) }),
 apps/api/src/api-core/requests/request-create-worker.test.ts	event({ name: "Nadar na praia", kind: "training", startedAt: iso(12, 30), estimatedFinishAt: iso(13, 30) }),
 apps/api/src/api-core/requests/request-create-worker.test.ts	event({ name: "Voltar para casa e ver o filme", startedAt: iso(15, 30) }),
-apps/api/src/api-core/requests/request-create-worker.test.ts	await ctx.worker.run("event-create", payload);
-apps/api/src/api-core/requests/request-create-worker.test.ts	// O agente de criacao de evento nunca cria artefatos: nem o alimento que a refeicao implicaria.
-apps/api/src/api-core/requests/request-create-worker.test.ts	["event", "create", "Refeição"], ["event", "create", "Nadar na praia"], ["event", "create", "Voltar para casa e ver o filme"],
-apps/api/src/api-core/requests/request-create-worker.test.ts	const payload = await addStep(ctx, "s1", "event-create");
-apps/api/src/api-core/requests/request-create-worker.test.ts	ctx.gateway.outputs.set("event_create", { events: [event({ name: "Almoço", kind: "meal" })] });
-apps/api/src/api-core/requests/request-create-worker.test.ts	await ctx.worker.run("event-create", payload);
-apps/api/src/api-core/requests/request-create-worker.test.ts	expect(Object.keys((call?.schema.properties ?? {}) as object)).toEqual(["events"]);
-apps/api/src/api-core/requests/request-create-worker.test.ts	test("algo a fazer e um evento com status, sem data; o que so marca um horario nasce de referencia", async () => {
-apps/api/src/api-core/requests/request-create-worker.test.ts	const payload = await addStep(ctx, "s1", "event-create", "many");
-apps/api/src/api-core/requests/request-create-worker.test.ts	ctx.gateway.outputs.set("event_create", { events: [
 apps/api/src/api-core/requests/request-create-worker.test.ts	event({ name: "Pagar o aluguel", status: "todo", priority: "high" }),
 apps/api/src/api-core/requests/request-create-worker.test.ts	event({ name: "Reunião", startedAt: iso(15), estimatedFinishAt: iso(16) }),
-apps/api/src/api-core/requests/request-create-worker.test.ts	await ctx.worker.run("event-create", payload);
 apps/api/src/api-core/requests/request-create-worker.test.ts	const [tracked, reference] = ctx.database.events;
-apps/api/src/api-core/requests/request-create-worker.test.ts	const payload = await addStep(ctx, "s1", "event-create", "many");
-apps/api/src/api-core/requests/request-create-worker.test.ts	ctx.gateway.outputs.set("event_create", { events: [
 apps/api/src/api-core/requests/request-create-worker.test.ts	event({ name: "Ir à clínica", location: "clínica Saúde Emocional" }),
 apps/api/src/api-core/requests/request-create-worker.test.ts	event({ name: "Almoço", kind: "meal" }),
-apps/api/src/api-core/requests/request-create-worker.test.ts	await ctx.worker.run("event-create", payload);
 apps/api/src/api-core/requests/request-create-worker.test.ts	const [clinic, lunch] = ctx.database.events;
-apps/api/src/api-core/requests/request-create-worker.test.ts	const payload = await addStep(ctx, "s1", "event-create");
-apps/api/src/api-core/requests/request-create-worker.test.ts	ctx.gateway.outputs.set("event_create", { events: [event({ name: "Jantar", kind: "meal", location: "casa da tia Lúcia" })] });
-apps/api/src/api-core/requests/request-create-worker.test.ts	await ctx.worker.run("event-create", payload);
 apps/api/src/api-core/requests/request-create-worker.test.ts	expect(ctx.database.events[0]?.location).toBe("casa da tia Lúcia");
-apps/api/src/api-core/requests/request-create-worker.test.ts	test("a ordem declarada entre eventos da mesma lista vira sequencia no lote, sem revisar nenhum evento", async () => {
-apps/api/src/api-core/requests/request-create-worker.test.ts	const payload = await addStep(ctx, "s1", "event-create", "many");
-apps/api/src/api-core/requests/request-create-worker.test.ts	ctx.gateway.outputs.set("event_create", { events: [
 apps/api/src/api-core/requests/request-create-worker.test.ts	event({ name: "Organizar a festa", status: "todo" }),
 apps/api/src/api-core/requests/request-create-worker.test.ts	event({ name: "Comprar o bolo", status: "todo", followsFrom: [0] }),
 apps/api/src/api-core/requests/request-create-worker.test.ts	event({ name: "Servir o bolo", status: "todo", followsFrom: [0, 1] }),
-apps/api/src/api-core/requests/request-create-worker.test.ts	await ctx.worker.run("event-create", payload);
 apps/api/src/api-core/requests/request-create-worker.test.ts	const created = ctx.database.events.find((candidate) => candidate.name === name);
 apps/api/src/api-core/requests/request-create-worker.test.ts	return ctx.eventRepository.findById(created?.id as string);
-apps/api/src/api-core/requests/request-create-worker.test.ts	const payload = await addStep(ctx, "s1", "event-create", "many");
-apps/api/src/api-core/requests/request-create-worker.test.ts	ctx.gateway.outputs.set("event_create", { events: [
 apps/api/src/api-core/requests/request-create-worker.test.ts	event({ name: "Antes", status: "todo" }),
 apps/api/src/api-core/requests/request-create-worker.test.ts	event({ name: "Depois", status: "todo", followsFrom: [0, 0] }),
-apps/api/src/api-core/requests/request-create-worker.test.ts	await ctx.worker.run("event-create", payload);
-apps/api/src/api-core/requests/request-create-worker.test.ts	const payload = await addStep(ctx, "s1", "event-create", "many");
-apps/api/src/api-core/requests/request-create-worker.test.ts	ctx.gateway.outputs.set("event_create", { events: [event({ status: "todo" }), event({ status: "todo" })] });
-apps/api/src/api-core/requests/request-create-worker.test.ts	await ctx.worker.run("event-create", payload);
-apps/api/src/api-core/requests/request-create-worker.test.ts	const payload = await addStep(ctx, "s1", "event-create");
-apps/api/src/api-core/requests/request-create-worker.test.ts	ctx.gateway.outputs.set("event_create", { events: [event({ status: "todo", followsFrom: [3] })] });
-apps/api/src/api-core/requests/request-create-worker.test.ts	await ctx.worker.run("event-create", payload);
-apps/api/src/api-core/requests/request-create-worker.test.ts	test("um evento que se segue dele mesmo derruba o passo, sem gravar nada", async () => {
-apps/api/src/api-core/requests/request-create-worker.test.ts	const payload = await addStep(ctx, "s1", "event-create");
-apps/api/src/api-core/requests/request-create-worker.test.ts	ctx.gateway.outputs.set("event_create", { events: [event({ status: "todo", followsFrom: [0] })] });
-apps/api/src/api-core/requests/request-create-worker.test.ts	await ctx.worker.run("event-create", payload);
-apps/api/src/api-core/requests/request-create-worker.test.ts	test("dois eventos que se seguem um ao outro formam ciclo e derrubam o passo", async () => {
-apps/api/src/api-core/requests/request-create-worker.test.ts	const payload = await addStep(ctx, "s1", "event-create", "many");
-apps/api/src/api-core/requests/request-create-worker.test.ts	ctx.gateway.outputs.set("event_create", { events: [
 apps/api/src/api-core/requests/request-create-worker.test.ts	event({ name: "A", status: "todo", followsFrom: [1] }),
 apps/api/src/api-core/requests/request-create-worker.test.ts	event({ name: "B", status: "todo", followsFrom: [0] }),
-apps/api/src/api-core/requests/request-create-worker.test.ts	await ctx.worker.run("event-create", payload);
-apps/api/src/api-core/requests/request-create-worker.test.ts	const payload = await addStep(ctx, "s1", "event-create");
-apps/api/src/api-core/requests/request-create-worker.test.ts	ctx.gateway.outputs.set("event_create", { events: [event({ startedAt: "amanhã cedo", estimatedFinishAt: "x" })] });
-apps/api/src/api-core/requests/request-create-worker.test.ts	await ctx.worker.run("event-create", payload);
-apps/api/src/api-core/requests/request-create-worker.test.ts	// Evento de referencia sem inicio dito comeca no instante do pedido.
 apps/api/src/api-core/requests/request-create-worker.test.ts	expect(ctx.database.events[0]?.startedAt).toEqual(ctx.request.createdAt);
-apps/api/src/api-core/requests/request-create-worker.test.ts	test("o alimento e gravado pendente mesmo sem evento: a finalizacao o liga depois", async () => {
-apps/api/src/api-core/requests/request-create-worker.test.ts	const payload = await addStep(ctx, "s1", "recurring-event-create");
-apps/api/src/api-core/requests/request-create-worker.test.ts	ctx.gateway.outputs.set("recurring_event_create", { series: [series()] });
-apps/api/src/api-core/requests/request-create-worker.test.ts	await ctx.worker.run("recurring-event-create", payload);
-apps/api/src/api-core/requests/request-create-worker.test.ts	expect(entity).toMatchObject({ kind: "event", operation: "create", summary: { name: "Corrida", series: true } });
-apps/api/src/api-core/requests/request-create-worker.test.ts	const payload = await addStep(ctx, "s1", "recurring-event-create");
-apps/api/src/api-core/requests/request-create-worker.test.ts	ctx.gateway.outputs.set("recurring_event_create", { series: [series({
-apps/api/src/api-core/requests/request-create-worker.test.ts	await ctx.worker.run("recurring-event-create", payload);
 apps/api/src/api-core/requests/request-create-worker.test.ts	expect(ctx.database.events[0]?.location).toBe("Clínica Saúde Emocional, Rua dos Timbiras 100, Belo Horizonte");
-apps/api/src/api-core/requests/request-create-worker.test.ts	const payload = await addStep(ctx, "s1", "recurring-event-create");
-apps/api/src/api-core/requests/request-create-worker.test.ts	ctx.gateway.outputs.set("recurring_event_create", { series: [
-apps/api/src/api-core/requests/request-create-worker.test.ts	await ctx.worker.run("recurring-event-create", payload);
 apps/api/src/api-core/requests/request-create-worker.test.ts	expect(ctx.database.events[0]).toMatchObject({ status: "todo", priority: "high" });
-apps/api/src/api-core/requests/request-create-worker.test.ts	const payload = await addStep(ctx, "s1", "recurring-event-create");
-apps/api/src/api-core/requests/request-create-worker.test.ts	ctx.gateway.outputs.set("recurring_event_create", { series: [series({ weekdays: ["mon"] })] });
-apps/api/src/api-core/requests/request-create-worker.test.ts	await ctx.worker.run("recurring-event-create", payload);
-apps/api/src/api-core/requests/request-create-worker.test.ts	const payload = await addStep(ctx, "s1", "event-create");
-apps/api/src/api-core/requests/request-create-worker.test.ts	await ctx.worker.run("event-create", payload);
-apps/api/src/api-core/requests/request-create-worker.test.ts	const payload = await addStep(ctx, "s1", "event-create");
-apps/api/src/api-core/requests/request-create-worker.test.ts	ctx.gateway.outputs.set("event_create", { events: [] });
-apps/api/src/api-core/requests/request-create-worker.test.ts	await ctx.worker.run("event-create", payload);
-apps/api/src/api-core/requests/request-create-worker.test.ts	const payload = await addStep(ctx, "s1", "event-create");
-apps/api/src/api-core/requests/request-create-worker.test.ts	ctx.gateway.outputs.set("event_create", { events: [event()] });
-apps/api/src/api-core/requests/request-create-worker.test.ts	await ctx.worker.run("event-create", payload);
-apps/api/src/api-core/requests/request-create-worker.test.ts	await ctx.worker.run("event-create", payload);
-apps/api/src/api-core/requests/request-create-worker.test.ts	const second = await addStep(ctx, "s2", "event-create");
-apps/api/src/api-core/requests/request-create-worker.test.ts	await ctx.worker.run("event-create", second);
 apps/api/src/api-core/requests/request-create-worker.ts	import type { ArtifactRepository, EntityBatchWriter, EventRepository, RecurrenceRepository } from "../../domain/ports";
 apps/api/src/api-core/requests/request-create-worker.ts	import type { CreateEventUseCase } from "../events/create-event.usecase";
 apps/api/src/api-core/requests/request-create-worker.ts	import type { PlaceResolver } from "../events/services/place-resolver.service";
-apps/api/src/api-core/requests/request-create-worker.ts	artifactCreateOutput, eventCreateOutput, recurringEventCreateOutput,
-apps/api/src/api-core/requests/request-create-worker.ts	type ArtifactCreateOutput, type EventCreateOutput, type RecurringEventCreateOutput,
 apps/api/src/api-core/requests/request-create-worker.ts	events: EventRepository;
 apps/api/src/api-core/requests/request-create-worker.ts	createEvent: CreateEventUseCase;
-apps/api/src/api-core/requests/request-create-worker.ts	case "event-create": {
-apps/api/src/api-core/requests/request-create-worker.ts	const { value } = await this.deps.runner.run({ ...base, schema: eventCreateOutput });
-apps/api/src/api-core/requests/request-create-worker.ts	return this.stageEvents(session, value, request.context?.coordinates);
-apps/api/src/api-core/requests/request-create-worker.ts	case "recurring-event-create": {
-apps/api/src/api-core/requests/request-create-worker.ts	const { value } = await this.deps.runner.run({ ...base, schema: recurringEventCreateOutput });
-apps/api/src/api-core/requests/request-create-worker.ts	session: AgentChangeSession, output: RecurringEventCreateOutput, coordinates?: GeoPointInput,
-apps/api/src/api-core/requests/request-create-worker.ts	.filter((item) => item.kind === "event")
-apps/api/src/api-core/requests/request-create-worker.ts	private async stageEvents(
-apps/api/src/api-core/requests/request-create-worker.ts	session: AgentChangeSession, output: EventCreateOutput, coordinates?: GeoPointInput,
-apps/api/src/api-core/requests/request-create-worker.ts	for (const item of output.events) {
-apps/api/src/api-core/requests/request-create-worker.ts	// A sequencia entre os eventos da propria lista: a posicao que o agente deu vira o id recem-criado.
-apps/api/src/api-core/requests/request-create-worker.ts	for (const [index, item] of output.events.entries()) {
-apps/api/src/api-core/requests/request-create-worker.ts	const result = await session.sequenceEvents(previous, next);
-apps/api/src/api-core/requests/request-create-worker.ts	return ids.map((id): NewEntity => ({ kind: "event", id, operation: "create" }));
-apps/api/src/api-core/requests/request-dispatcher.test.ts	test("o exemplo-guia aciona a fila de eventos (vários) e a de artefatos (uma), de uma vez", async () => {
-apps/api/src/api-core/requests/request-dispatcher.test.ts	event_create: confident("many"), artifact_create: confident("one"),
-apps/api/src/api-core/requests/request-dispatcher.test.ts	["event-create", "many"], ["artifact-create", "one"],
-apps/api/src/api-core/requests/request-dispatcher.test.ts	recurring_event_create: confident("many"), recurring_event_edit: confident("one"),
-apps/api/src/api-core/requests/request-dispatcher.test.ts	"recurring-event-create", "recurring-event-edit",
-apps/api/src/api-core/requests/request-dispatcher.test.ts	event_create: confident("one"), artifact_create: confident("one", 0.9),
-apps/api/src/api-core/requests/request-dispatcher.test.ts	const { store, dispatcher, jev } = setup(() => answers({ event_create: confident("one") }));
-apps/api/src/api-core/requests/request-dispatcher.test.ts	const { store, dispatcher, jev } = setup(() => answers({ event_create: confident("one") }));
-apps/api/src/api-core/requests/request-dispatcher.test.ts	{ kind: "event", id: "e1", name: "Reunião", eventKind: "common" },
-apps/api/src/api-core/requests/request-dispatcher.test.ts	{ kind: "event", id: "e2", name: "Almoço", eventKind: "meal" },
-apps/api/src/api-core/requests/request-dispatcher.test.ts	return answers({ event_edit: confident("one"), artifact_edit: confident("one") });
-apps/api/src/api-core/requests/request-dispatcher.test.ts	expect(calls).toEqual([["event", "artifact"]]);
-apps/api/src/api-core/requests/request-dispatcher.test.ts	["event-edit", ["e1"]], ["artifact-edit", ["a1"]],
-apps/api/src/api-core/requests/request-dispatcher.test.ts	jev.ask.mockImplementation(async () => answers({ event_create: confident("one") }));
-apps/api/src/api-core/requests/request-dispatcher.test.ts	expect(store.stepRecords.map((step) => step.agent)).toEqual(["event-create"]);
-apps/api/src/api-core/requests/request-dispatcher.test.ts	const jev = scriptedJev((questions) => ("c1" in questions ? new JevUnavailableError("provider") : answers({ event_edit: confident("one") })));
-apps/api/src/api-core/requests/request-dispatcher.test.ts	expect(store.stepRecords).toMatchObject([{ agent: "event-edit" }]);
-apps/api/src/api-core/requests/request-dispatcher.test.ts	: answers({ recurring_event_edit: confident("many") })));
-apps/api/src/api-core/requests/request-dispatcher.test.ts	["recurring-event-edit", ["s1", "s2"]],
-apps/api/src/api-core/requests/request-dispatcher.test.ts	const jev = scriptedJev(() => answers({ event_edit: confident("one") }));
-apps/api/src/api-core/requests/request-dispatcher.test.ts	expect(store.stepRecords.map((step) => step.agent)).toEqual(["event-edit"]);
 apps/api/src/api-core/requests/request-edit-target-worker.test.ts	import { Artifact, Event } from "../../domain";
-apps/api/src/api-core/requests/request-edit-target-worker.test.ts	task: "event-edit", artifact: "artifact-edit", food_artifact: "food-edit", sleep_artifact: "sleep-edit",
-apps/api/src/api-core/requests/request-edit-target-worker.test.ts	test("evento: cria um passo event-edit com o retrato completo do alvo", async () => {
 apps/api/src/api-core/requests/request-edit-target-worker.test.ts	const event = Event.create({
 apps/api/src/api-core/requests/request-edit-target-worker.test.ts	const ctx = queued("task", event.id);
 apps/api/src/api-core/requests/request-edit-target-worker.test.ts	await ctx.eventRepository.save(event);
-apps/api/src/api-core/requests/request-edit-target-worker.test.ts	agent: "event-edit", status: "queued",
 apps/api/src/api-core/requests/request-edit-target-worker.test.ts	input: { target: { entityType: "task", id: event.id, snapshot: { name: "Reunião", description: "pauta", tags: ["trabalho"], status: null } } },
 apps/api/src/api-core/requests/request-edit-target-worker.ts	import type { ArtifactRepository, EventRepository } from "../../domain/ports";
 apps/api/src/api-core/requests/request-edit-target-worker.ts	repositories: { events: Pick<EventRepository, "findById">; artifacts: Pick<ArtifactRepository, "findById"> };
@@ -3876,433 +3420,192 @@ apps/api/src/api-core/requests/request-edit-target-worker.ts	name: event.name, k
 apps/api/src/api-core/requests/request-edit-target-worker.ts	description: event.description, location: event.location, tags: event.tags, longRunning: event.longRunning,
 apps/api/src/api-core/requests/request-edit-target-worker.ts	startedAt: iso(event.startedAt), estimatedFinishAt: iso(event.estimatedFinishAt), finishedAt: iso(event.finishedAt),
 apps/api/src/api-core/requests/request-edit-worker.test.ts	import { Artifact, Event } from "../../domain";
-apps/api/src/api-core/requests/request-edit-worker.test.ts	const noEvent = {
-apps/api/src/api-core/requests/request-edit-worker.test.ts	async function seedEvent(ctx: ReturnType<typeof setupRequest>, name = "Trabalhar", extra: Partial<Parameters<typeof Event.create>[0]> = {}) {
 apps/api/src/api-core/requests/request-edit-worker.test.ts	const event = Event.create({ userId: "user-1", name, startedAt: new Date("2026-10-25T12:00:00Z"), ...extra });
 apps/api/src/api-core/requests/request-edit-worker.test.ts	await ctx.eventRepository.save(event);
 apps/api/src/api-core/requests/request-edit-worker.test.ts	return event;
-apps/api/src/api-core/requests/request-edit-worker.test.ts	describe("passo de editar eventos", () => {
-apps/api/src/api-core/requests/request-edit-worker.test.ts	test("'parei de trabalhar' altera so o fim planejado do evento escolhido pelo JEV, num commit proprio", async () => {
-apps/api/src/api-core/requests/request-edit-worker.test.ts	const event = await seedEvent(ctx);
-apps/api/src/api-core/requests/request-edit-worker.test.ts	const payload = await addStep(ctx, "s1", "event-edit", "one", { candidates: [candidate("event", event.id, "Trabalhar")] });
-apps/api/src/api-core/requests/request-edit-worker.test.ts	ctx.gateway.outputs.set("event_edit", { edits: [{ ...noEvent, id: event.id, estimatedFinishAt: iso(18) }], query: null });
-apps/api/src/api-core/requests/request-edit-worker.test.ts	await ctx.editWorker.run("event-edit", payload);
 apps/api/src/api-core/requests/request-edit-worker.test.ts	const stored = await ctx.eventRepository.findById(event.id);
 apps/api/src/api-core/requests/request-edit-worker.test.ts	expect(stored?.revision).toBe(event.revision + 1);
-apps/api/src/api-core/requests/request-edit-worker.test.ts	expect(await updated(ctx)).toMatchObject([{ kind: "event", id: event.id, operation: "update", summary: { name: "Trabalhar" } }]);
 apps/api/src/api-core/requests/request-edit-worker.test.ts	expect(ctx.gateway.calls[0]?.user).toContain(event.id);
-apps/api/src/api-core/requests/request-edit-worker.test.ts	const event = await seedEvent(ctx, "Consulta", { location: "Consultório antigo" });
-apps/api/src/api-core/requests/request-edit-worker.test.ts	const payload = await addStep(ctx, "s1", "event-edit", "one", { candidates: [candidate("event", event.id, "Consulta")] });
-apps/api/src/api-core/requests/request-edit-worker.test.ts	ctx.gateway.outputs.set("event_edit", { edits: [{ ...noEvent, id: event.id, location: "Hospital Mater Dei" }], query: null });
-apps/api/src/api-core/requests/request-edit-worker.test.ts	await ctx.editWorker.run("event-edit", payload);
 apps/api/src/api-core/requests/request-edit-worker.test.ts	expect((await ctx.eventRepository.findById(event.id))?.location).toBe(
-apps/api/src/api-core/requests/request-edit-worker.test.ts	const located = await seedEvent(clearing, "Consulta", { location: "Consultório antigo" });
-apps/api/src/api-core/requests/request-edit-worker.test.ts	const clear = await addStep(clearing, "s1", "event-edit", "one", { candidates: [candidate("event", located.id, "Consulta")] });
-apps/api/src/api-core/requests/request-edit-worker.test.ts	clearing.gateway.outputs.set("event_edit", { edits: [{ ...noEvent, id: located.id, location: "" }], query: null });
-apps/api/src/api-core/requests/request-edit-worker.test.ts	await clearing.editWorker.run("event-edit", clear);
 apps/api/src/api-core/requests/request-edit-worker.test.ts	expect((await clearing.eventRepository.findById(located.id))?.location).toBe("");
-apps/api/src/api-core/requests/request-edit-worker.test.ts	test("concluir um evento acompanhado: status e conclusao real", async () => {
-apps/api/src/api-core/requests/request-edit-worker.test.ts	const event = await seedEvent(ctx, "Pagar o aluguel", { status: "todo", startedAt: undefined });
-apps/api/src/api-core/requests/request-edit-worker.test.ts	const payload = await addStep(ctx, "s1", "event-edit", "one", { candidates: [candidate("event", event.id, "Pagar o aluguel")] });
-apps/api/src/api-core/requests/request-edit-worker.test.ts	ctx.gateway.outputs.set("event_edit", { edits: [{ ...noEvent, id: event.id, status: "done", finishedAt: iso(10) }], query: null });
-apps/api/src/api-core/requests/request-edit-worker.test.ts	await ctx.editWorker.run("event-edit", payload);
 apps/api/src/api-core/requests/request-edit-worker.test.ts	expect(await ctx.eventRepository.findById(event.id)).toMatchObject({ status: "done", finishedAt: new Date(iso(10)) });
-apps/api/src/api-core/requests/request-edit-worker.test.ts	test("tres eventos no mesmo passo, um commit; os demais nao sao tocados", async () => {
-apps/api/src/api-core/requests/request-edit-worker.test.ts	const events = [await seedEvent(ctx, "A", { status: "todo" }), await seedEvent(ctx, "B", { status: "todo" }), await seedEvent(ctx, "C", { status: "todo" })];
-apps/api/src/api-core/requests/request-edit-worker.test.ts	const other = await seedEvent(ctx, "Almoço");
-apps/api/src/api-core/requests/request-edit-worker.test.ts	const payload = await addStep(ctx, "s1", "event-edit", "many", { candidates: events.map((event) => candidate("event", event.id, event.name)) });
-apps/api/src/api-core/requests/request-edit-worker.test.ts	ctx.gateway.outputs.set("event_edit", { edits: events.map((event) => ({ ...noEvent, id: event.id, priority: "high" })), query: null });
-apps/api/src/api-core/requests/request-edit-worker.test.ts	await ctx.editWorker.run("event-edit", payload);
 apps/api/src/api-core/requests/request-edit-worker.test.ts	expect((await ctx.eventRepository.findById(other.id))?.revision).toBe(other.revision);
-apps/api/src/api-core/requests/request-edit-worker.test.ts	const real = await seedEvent(ctx, "Reunião");
-apps/api/src/api-core/requests/request-edit-worker.test.ts	const payload = await addStep(ctx, "s1", "event-edit", "one", { candidates: [] });
-apps/api/src/api-core/requests/request-edit-worker.test.ts	: { modelName: "stub", value: { edits: [{ ...noEvent, id: real.id, estimatedFinishAt: iso(11) }], query: null } };
-apps/api/src/api-core/requests/request-edit-worker.test.ts	await ctx.editWorker.run("event-edit", payload);
-apps/api/src/api-core/requests/request-edit-worker.test.ts	const payload = await addStep(ctx, "s1", "event-edit", "one", { candidates: [] });
-apps/api/src/api-core/requests/request-edit-worker.test.ts	await ctx.editWorker.run("event-edit", payload);
-apps/api/src/api-core/requests/request-edit-worker.test.ts	const event = await seedEvent(ctx);
-apps/api/src/api-core/requests/request-edit-worker.test.ts	const payload = await addStep(ctx, "s1", "event-edit", "one", { candidates: [] });
-apps/api/src/api-core/requests/request-edit-worker.test.ts	ctx.gateway.outputs.set("event_edit", { edits: [{ ...noEvent, id: event.id, name: "Outro" }], query: null });
-apps/api/src/api-core/requests/request-edit-worker.test.ts	await ctx.editWorker.run("event-edit", payload);
 apps/api/src/api-core/requests/request-edit-worker.test.ts	const agentEvent = Event.create({ userId: "user-1", actor: "agent", kind: "request", status: "done", name: "pedido antigo" });
 apps/api/src/api-core/requests/request-edit-worker.test.ts	await ctx.eventRepository.save(agentEvent);
-apps/api/src/api-core/requests/request-edit-worker.test.ts	const payload = await addStep(ctx, "s1", "event-edit", "one", { candidates: [candidate("event", agentEvent.id, "pedido antigo")] });
-apps/api/src/api-core/requests/request-edit-worker.test.ts	ctx.gateway.outputs.set("event_edit", { edits: [{ ...noEvent, id: agentEvent.id, name: "Outro" }], query: null });
-apps/api/src/api-core/requests/request-edit-worker.test.ts	await ctx.editWorker.run("event-edit", payload);
-apps/api/src/api-core/requests/request-edit-worker.test.ts	const payload = await addStep(ctx, "s1", "event-edit", "one", { candidates: [] });
-apps/api/src/api-core/requests/request-edit-worker.test.ts	ctx.gateway.outputs.set("event_edit", { edits: [], query: { sql: "DELETE FROM events" } });
-apps/api/src/api-core/requests/request-edit-worker.test.ts	await ctx.editWorker.run("event-edit", payload);
-apps/api/src/api-core/requests/request-edit-worker.test.ts	const event = await seedEvent(ctx);
-apps/api/src/api-core/requests/request-edit-worker.test.ts	const payload = await addStep(ctx, "s1", "event-edit", "one", { candidates: [candidate("event", event.id, "Trabalhar")] });
-apps/api/src/api-core/requests/request-edit-worker.test.ts	ctx.gateway.outputs.set("event_edit", { edits: [{ ...noEvent, id: event.id }], query: null });
-apps/api/src/api-core/requests/request-edit-worker.test.ts	await ctx.editWorker.run("event-edit", payload);
-apps/api/src/api-core/requests/request-edit-worker.test.ts	const payload = await addStep(ctx, "s1", "event-edit", "one", { candidates: [] });
-apps/api/src/api-core/requests/request-edit-worker.test.ts	await ctx.editWorker.run("event-edit", payload);
 apps/api/src/api-core/requests/request-edit-worker.ts	import type { CreateEventUseCase } from "../events/create-event.usecase";
 apps/api/src/api-core/requests/request-edit-worker.ts	import type { PlaceResolver } from "../events/services/place-resolver.service";
-apps/api/src/api-core/requests/request-edit-worker.ts	artifactEditOutput, eventEditOutput, recurringEventEditOutput,
-apps/api/src/api-core/requests/request-edit-worker.ts	type ArtifactEditOutput, type EventEditOutput, type RecurringEventEditOutput,
 apps/api/src/api-core/requests/request-edit-worker.ts	createEvent: CreateEventUseCase;
-apps/api/src/api-core/requests/request-edit-worker.ts	case "event-edit":
-apps/api/src/api-core/requests/request-edit-worker.ts	await this.applyEvents(
-apps/api/src/api-core/requests/request-edit-worker.ts	session, await this.gather(agent, eventEditOutput, request, step, signal), request.context?.coordinates,
-apps/api/src/api-core/requests/request-edit-worker.ts	case "recurring-event-edit":
-apps/api/src/api-core/requests/request-edit-worker.ts	session, await this.gather(agent, recurringEventEditOutput, request, step, signal), request.context?.coordinates,
-apps/api/src/api-core/requests/request-edit-worker.ts	const entities = this.entitiesOf(session, agent === "recurring-event-edit");
-apps/api/src/api-core/requests/request-edit-worker.ts	private async applyEvents(
-apps/api/src/api-core/requests/request-edit-worker.ts	session: AgentChangeSession, edits: EventEditOutput["edits"], coordinates?: GeoPointInput,
-apps/api/src/api-core/requests/request-edit-worker.ts	const result = await session.reviseEvent(edit.id, (current) => current.revise(changes));
-apps/api/src/api-core/requests/request-edit-worker.ts	session: AgentChangeSession, edits: RecurringEventEditOutput["edits"], coordinates?: GeoPointInput,
-apps/api/src/api-core/requests/request-edit-worker.ts	const touched = series ? [...created, ...updated].filter((item) => item.kind === "event") : updated;
-apps/api/src/api-core/requests/request-fallback.test.ts	{ agent: "event-create", instruction: "Criar o evento do almoço" },
-apps/api/src/api-core/requests/request-fallback.test.ts	{ agent: "event-edit", instruction: "Concluir o evento do aluguel" },
-apps/api/src/api-core/requests/request-fallback.test.ts	["event-create", "queued", "Criar o evento do almoço"],
-apps/api/src/api-core/requests/request-fallback.test.ts	["event-edit", "queued", "Concluir o evento do aluguel"],
-apps/api/src/api-core/requests/request-fallback.test.ts	ctx.gateway.outputs.set("fallback", { reply: null, invoke: [{ agent: "event-create", instruction: "Criar o evento do almoço" }] });
-apps/api/src/api-core/requests/request-fallback.test.ts	ctx.gateway.outputs.set("event_create", { events: [
-apps/api/src/api-core/requests/request-fallback.test.ts	await ctx.worker.run("event-create", { requestId: "r1", stepId: ctx.store.stepRecords[1]?.id as string });
-apps/api/src/api-core/requests/request-fallback.test.ts	expect(call?.user).toContain("Foco (dado pelo orquestrador): Criar o evento do almoço");
-apps/api/src/api-core/requests/request-fallback.test.ts	ctx.gateway.outputs.set("fallback", { reply: null, invoke: Array.from({ length: 9 }, () => ({ agent: "event-create", instruction: "x" })) });
-apps/api/src/api-core/requests/request-fallback.test.ts	expect(ctx.store.stepRecords.filter((step) => step.agent === "event-create")).toHaveLength(6);
-apps/api/src/api-core/requests/request-fallback.test.ts	await addStep(ctx, "s1", "event-create");
-apps/api/src/api-core/requests/request-fallback.test.ts	["Criando eventos", "done"], ["Criando artefatos", "failed"],
-apps/api/src/api-core/requests/request-fallback.test.ts	await addStep(ctx, "s1", "event-create");
-apps/api/src/api-core/requests/request-fallback.test.ts	const { ctx, fallback, stepOf, loopCalls } = await loopStep("conclua os eventos da casa", {
-apps/api/src/api-core/requests/request-fallback.test.ts	ctx.gateway.outputs.set("fallback_loop", { reply: null, invoke: [{ agent: "query", instruction: "Listar os eventos da casa" }] });
-apps/api/src/api-core/requests/request-fallback.test.ts	ctx.gateway.outputs.set("fallback_loop", { reply: "Há um evento da casa: lavar a louça.", invoke: null });
-apps/api/src/api-core/requests/request-fallback.test.ts	agent: "query", instruction: "Listar os eventos da casa", status: "done",
-apps/api/src/api-core/requests/request-fallback.test.ts	status: "done", answer: "Há um evento da casa: lavar a louça.", failedSteps: [],
-apps/api/src/api-core/requests/request-fallback.test.ts	const { ctx, stepOf, loopCalls } = await loopStep("quantos eventos tenho?", {
-apps/api/src/api-core/requests/request-fallback.test.ts	ctx.gateway.outputs.set("fallback_loop", { reply: null, invoke: [{ agent: "query", instruction: "Contar os eventos" }] });
-apps/api/src/api-core/requests/request-fallback.test.ts	ctx.gateway.outputs.set("fallback_loop", { reply: null, invoke: [{ agent: "event-create", instruction: "Criar o almoço" }] });
-apps/api/src/api-core/requests/request-fallback.test.ts	await ctx.worker.run("event-create", stepOf("event-create"));
-apps/api/src/api-core/requests/request-fallback.test.ts	await ctx.finalizer(quiet().client).run(stepOf("event-create"));
-apps/api/src/api-core/requests/request-fallback.test.ts	failedSteps: [{ agent: "event-create", errorCode: "agent_timeout" }],
-apps/api/src/api-core/requests/request-fallback.test.ts	ctx.gateway.outputs.set("fallback_loop", { reply: "Parei por aqui.", invoke: [{ agent: "event-create", instruction: "x" }] });
-apps/api/src/api-core/requests/request-fallback.test.ts	{ agent: "event-create", instruction: "a" }, { agent: "artifact-create", instruction: "b" },
-apps/api/src/api-core/requests/request-fallback.test.ts	await ctx.worker.run("event-create", stepOf("event-create"));
-apps/api/src/api-core/requests/request-fallback.test.ts	await finalizer.run(stepOf("event-create"));
-apps/api/src/api-core/requests/request-fallback.test.ts	ctx.gateway.outputs.set("fallback", { reply: null, invoke: [{ agent: "event-create", instruction: "Criar o almoço" }] });
-apps/api/src/api-core/requests/request-fallback.test.ts	ctx.gateway.outputs.set("event_create", { events: [
-apps/api/src/api-core/requests/request-fallback.test.ts	await ctx.worker.run("event-create", step);
-apps/api/src/api-core/requests/request-fallback.test.ts	expect(ctx.store.stepRecords.map((record) => record.agent)).toEqual(["fallback", "event-create"]);
-apps/api/src/api-core/requests/request-fallback.test.ts	expect(ctx.gateway.calls.map((call) => call.schemaName)).toEqual(["fallback", "event_create"]);
-apps/api/src/api-core/requests/request-finalizer.test.ts	/** O exemplo-guia ate os passos concluidos: tres eventos e um alimento, cada um no seu passo. */
-apps/api/src/api-core/requests/request-finalizer.test.ts	const events = await addStep(ctx, "s-events", "event-create", "many");
-apps/api/src/api-core/requests/request-finalizer.test.ts	ctx.gateway.outputs.set("event_create", { events: [
 apps/api/src/api-core/requests/request-finalizer.test.ts	return { ctx, events, artifacts };
-apps/api/src/api-core/requests/request-finalizer.test.ts	test("eventos concluidos primeiro: o JEV nao liga nenhum e o pedido segue aberto", async () => {
 apps/api/src/api-core/requests/request-finalizer.test.ts	const { ctx, events } = await guideExample();
-apps/api/src/api-core/requests/request-finalizer.test.ts	await ctx.worker.run("event-create", events);
 apps/api/src/api-core/requests/request-finalizer.test.ts	await ctx.finalizer(jev.client).run(events);
-apps/api/src/api-core/requests/request-finalizer.test.ts	test("o alimento concluido e ligado ao evento da refeicao e o pedido fecha", async () => {
 apps/api/src/api-core/requests/request-finalizer.test.ts	const { ctx, events, artifacts } = await guideExample();
-apps/api/src/api-core/requests/request-finalizer.test.ts	await ctx.worker.run("event-create", events);
 apps/api/src/api-core/requests/request-finalizer.test.ts	await ctx.finalizer(scriptedJev(() => result({ link: confident("none") })).client).run(events);
-apps/api/src/api-core/requests/request-finalizer.test.ts	// O JEV viu o pedido, o alimento e os tres eventos (e "nenhum").
-apps/api/src/api-core/requests/request-finalizer.test.ts	const link = { from: { kind: "artifact", id: food?.id }, to: { kind: "event", id: meal?.id } };
-apps/api/src/api-core/requests/request-finalizer.test.ts	// Quem e editado e o evento: ele passa a criar o artefato que o pedido fez para ele.
 apps/api/src/api-core/requests/request-finalizer.test.ts	const stored = await ctx.eventRepository.findById(meal?.id as string);
 apps/api/src/api-core/requests/request-finalizer.test.ts	expect((await ctx.eventRepository.findById(swim?.id as string))?.artifactLinks).toEqual([]);
-apps/api/src/api-core/requests/request-finalizer.test.ts	test("a ordem de termino nao importa: alimento primeiro, evento depois, e a ligacao acontece quando o evento chega", async () => {
 apps/api/src/api-core/requests/request-finalizer.test.ts	const { ctx, events, artifacts } = await guideExample();
-apps/api/src/api-core/requests/request-finalizer.test.ts	await ctx.worker.run("event-create", events);
-apps/api/src/api-core/requests/request-finalizer.test.ts	// Cada evento que chega e comparado com o alimento (e com os outros eventos); so a refeicao fica com ele.
 apps/api/src/api-core/requests/request-finalizer.test.ts	await ctx.finalizer(jev.client).run(events);
-apps/api/src/api-core/requests/request-finalizer.test.ts	expect(meal?.links).toEqual([{ from: { kind: "artifact", id: food?.id }, to: { kind: "event", id: meal?.id } }]);
 apps/api/src/api-core/requests/request-finalizer.test.ts	expect((await ctx.eventRepository.findById(meal?.id as string))?.artifactLinks.map((link) => link.artifactId)).toEqual([food?.id]);
-apps/api/src/api-core/requests/request-finalizer.test.ts	test("dois eventos nao se ligam: a ordem entre eles nao e decidida na finalizacao, e nenhum e revisado", async () => {
-apps/api/src/api-core/requests/request-finalizer.test.ts	const first = await addStep(ctx, "s1", "event-create");
-apps/api/src/api-core/requests/request-finalizer.test.ts	const second = await addStep(ctx, "s2", "event-create");
-apps/api/src/api-core/requests/request-finalizer.test.ts	ctx.gateway.outputs.set("event_create", { events: [evt("Organizar a festa", "common", 10, { status: "todo" })] });
-apps/api/src/api-core/requests/request-finalizer.test.ts	await ctx.worker.run("event-create", first);
-apps/api/src/api-core/requests/request-finalizer.test.ts	ctx.gateway.outputs.set("event_create", { events: [evt("Comprar o bolo", "common", 11, { status: "todo" })] });
-apps/api/src/api-core/requests/request-finalizer.test.ts	await ctx.worker.run("event-create", second);
-apps/api/src/api-core/requests/request-finalizer.test.ts	// Sem candidato ligavel (so ha outro evento), o JEV nem e consultado.
 apps/api/src/api-core/requests/request-finalizer.test.ts	const [party, cake] = ctx.database.events;
 apps/api/src/api-core/requests/request-finalizer.test.ts	const { ctx, events, artifacts } = await guideExample();
-apps/api/src/api-core/requests/request-finalizer.test.ts	await ctx.worker.run("event-create", events);
 apps/api/src/api-core/requests/request-finalizer.test.ts	const { ctx, events, artifacts } = await guideExample();
-apps/api/src/api-core/requests/request-finalizer.test.ts	await ctx.worker.run("event-create", events);
 apps/api/src/api-core/requests/request-finalizer.test.ts	await ctx.finalizer(jev.client).run(events);
-apps/api/src/api-core/requests/request-finalizer.test.ts	const events = await addStep(ctx, "s1", "event-create");
-apps/api/src/api-core/requests/request-finalizer.test.ts	await ctx.worker.run("event-create", events);
 apps/api/src/api-core/requests/request-finalizer.test.ts	await ctx.finalizer(scriptedJev(() => result({})).client).run(events);
 apps/api/src/api-core/requests/request-finalizer.test.ts	const { ctx, events } = await guideExample();
-apps/api/src/api-core/requests/request-finalizer.test.ts	await ctx.worker.run("event-create", events);
 apps/api/src/api-core/requests/request-finalizer.test.ts	await ctx.finalizer(jev.client).run(events);
 apps/api/src/api-core/requests/request-finalizer.test.ts	const { ctx, events, artifacts } = await guideExample();
-apps/api/src/api-core/requests/request-finalizer.test.ts	await ctx.worker.run("event-create", events);
 apps/api/src/api-core/requests/request-finalizer.test.ts	await ctx.finalizer(jev.client).run(events);
-apps/api/src/api-core/requests/request-finalizer.test.ts	const { ctx, finalize } = await withFailedArtifacts("Criei os eventos, mas não consegui criar o alimento.");
-apps/api/src/api-core/requests/request-finalizer.test.ts	expect(call?.user).toContain("Criando eventos");
-apps/api/src/api-core/requests/request-finalizer.test.ts	expect(request).toMatchObject({ status: "done", answer: "Criei os eventos, mas não consegui criar o alimento." });
-apps/api/src/api-core/requests/request-finalizer.test.ts	expect(toRequestDto(request, ctx.store.stepRecords, []).message).toBe("Criei os eventos, mas não consegui criar o alimento.");
 apps/api/src/api-core/requests/request-finalizer.test.ts	const { ctx, events, artifacts } = await guideExample();
-apps/api/src/api-core/requests/request-finalizer.test.ts	await ctx.worker.run("event-create", events);
 apps/api/src/api-core/requests/request-finalizer.test.ts	await ctx.finalizer(jev.client).run(events);
-apps/api/src/api-core/requests/request-finalizer.test.ts	const series = await addStep(ctx, "s-series", "recurring-event-create");
-apps/api/src/api-core/requests/request-finalizer.test.ts	ctx.gateway.outputs.set("recurring_event_create", { series: [{
-apps/api/src/api-core/requests/request-finalizer.test.ts	await ctx.worker.run("recurring-event-create", series);
-apps/api/src/api-core/requests/request-finalizer.test.ts	test("o artefato pertence ao evento; so um artefato e um evento se ligam, nunca dois do mesmo tipo", () => {
-apps/api/src/api-core/requests/request-finalizer.test.ts	const event = { kind: "event" as const };
-apps/api/src/api-core/requests/request-finalizer.test.ts	const other = { kind: "event" as const };
 apps/api/src/api-core/requests/request-finalizer.test.ts	expect(orient(event, artifact)).toEqual({ from: artifact, to: event });
 apps/api/src/api-core/requests/request-finalizer.test.ts	expect(orient(artifact, event)).toEqual({ from: artifact, to: event });
 apps/api/src/api-core/requests/request-finalizer.test.ts	expect(linkable(artifact, event)).toBe(true);
 apps/api/src/api-core/requests/request-finalizer.test.ts	expect(linkable(event, artifact)).toBe(true);
 apps/api/src/api-core/requests/request-finalizer.test.ts	expect(linkable(event, other)).toBe(false);
 apps/api/src/api-core/requests/request-finalizer.ts	import type { CreateEventUseCase } from "../events/create-event.usecase";
-apps/api/src/api-core/requests/request-finalizer.ts	/** So um artefato e um evento se ligam: dois artefatos nao, e a ordem entre dois eventos nao e decidida aqui. */
-apps/api/src/api-core/requests/request-finalizer.ts	/** Quem pertence a quem: o artefato pertence ao evento. */
-apps/api/src/api-core/requests/request-finalizer.ts	return entity.kind === "event" ? { from: chosen, to: entity } : { from: entity, to: chosen };
-apps/api/src/api-core/requests/request-finalizer.ts	const label = entity.kind === "event" ? `evento (${summary.eventKind ?? "common"})` : `artefato (${summary.artifactType ?? "text"})`;
 apps/api/src/api-core/requests/request-finalizer.ts	createEvent: CreateEventUseCase;
-apps/api/src/api-core/requests/request-finalizer.ts	* A relacao pertence ao evento: o artefato passa a aparecer nele (criado pelo pedido, o evento o cria; ja
-apps/api/src/api-core/requests/request-finalizer.ts	* existente, o evento o usa).
 apps/api/src/api-core/requests/request-flow.integration.test.ts	import { PostgresEventRepository } from "../../infrastructure/persistence/events/repositories/postgres-event.repository";
 apps/api/src/api-core/requests/request-flow.integration.test.ts	import { CreateEventUseCase } from "../events/create-event.usecase";
-apps/api/src/api-core/requests/request-flow.integration.test.ts	import type { ParsedEventCommand } from "../events/gateways/event-command-parsing.gateway";
-apps/api/src/api-core/requests/request-flow.integration.test.ts	import { VoiceEventWorker } from "./voice-event-worker";
 apps/api/src/api-core/requests/request-flow.integration.test.ts	let events: PostgresEventRepository;
-apps/api/src/api-core/requests/request-flow.integration.test.ts	let command: ParsedEventCommand;
-apps/api/src/api-core/requests/request-flow.integration.test.ts	// Hoje: os candidatos de edicao sao os eventos de ontem, hoje e amanha.
 apps/api/src/api-core/requests/request-flow.integration.test.ts	const event = (name: string, kind: string, hour: number, over: Record<string, unknown> = {}) => ({
-apps/api/src/api-core/requests/request-flow.integration.test.ts	const noEvent = {
 apps/api/src/api-core/requests/request-flow.integration.test.ts	events = new PostgresEventRepository(ctx.db);
 apps/api/src/api-core/requests/request-flow.integration.test.ts	const repositories = { events, artifacts, recurrences: new PostgresRecurrenceRepository(ctx.db) };
 apps/api/src/api-core/requests/request-flow.integration.test.ts	const createEvent = new CreateEventUseCase(events, artifacts, artifactBuilder, batchWriter);
-apps/api/src/api-core/requests/request-flow.integration.test.ts	// So o alimento e a refeicao pertencem um ao outro; os outros eventos ficam soltos.
-apps/api/src/api-core/requests/request-flow.integration.test.ts	voice: new VoiceEventWorker({
-apps/api/src/api-core/requests/request-flow.integration.test.ts	test("o exemplo-guia: eventos e alimento criados em passos proprios, ligados na finalizacao, nutrientes calculados depois", async () => {
-apps/api/src/api-core/requests/request-flow.integration.test.ts	dispatch = { event_create: confident("many"), artifact_create: confident("one") };
-apps/api/src/api-core/requests/request-flow.integration.test.ts	gateway.outputs.set("event_create", { events: [event("Refeição", "meal", 12), event("Nadar na praia", "training", 13)] });
-apps/api/src/api-core/requests/request-flow.integration.test.ts	["event-create", "Criando eventos", "done"], ["artifact-create", "Criando artefatos", "done"],
-apps/api/src/api-core/requests/request-flow.integration.test.ts	// O evento da refeicao passou a criar o alimento; o outro evento nao foi tocado.
 apps/api/src/api-core/requests/request-flow.integration.test.ts	const stored = await events.findById(meal?.id as string);
 apps/api/src/api-core/requests/request-flow.integration.test.ts	expect((await events.findById(swim?.id as string))?.revision).toBe(1);
-apps/api/src/api-core/requests/request-flow.integration.test.ts	// Os pedidos e os passos nao aparecem na consulta do agente nem como evento de pessoa.
-apps/api/src/api-core/requests/request-flow.integration.test.ts	dispatch = { event_create: confident("one") };
-apps/api/src/api-core/requests/request-flow.integration.test.ts	gateway.outputs.set("event_create", { events: [event("Reunião", "common", 12)] });
-apps/api/src/api-core/requests/request-flow.integration.test.ts	dispatch = { event_edit: confident("one") };
-apps/api/src/api-core/requests/request-flow.integration.test.ts	gateway.outputs.set("event_edit", { edits: [{ ...noEvent, id: meeting?.id, estimatedFinishAt: iso(14) }], query: null });
-apps/api/src/api-core/requests/request-flow.integration.test.ts	steps: [{ agent: "event-edit", status: "done" }],
 apps/api/src/api-core/requests/request-flow.integration.test.ts	expect(await events.findById(meeting?.id as string)).toMatchObject({ estimatedFinishAt: new Date(iso(14)), revision: 2 });
-apps/api/src/api-core/requests/request-flow.integration.test.ts	test("consulta: as linhas ficam no passo e so enxergam os eventos de pessoa do usuario", async () => {
-apps/api/src/api-core/requests/request-flow.integration.test.ts	dispatch = { event_create: confident("one") };
-apps/api/src/api-core/requests/request-flow.integration.test.ts	gateway.outputs.set("event_create", { events: [event("Reunião", "common", 12)] });
-apps/api/src/api-core/requests/request-flow.integration.test.ts	gateway.outputs.set("fallback_loop", { reply: null, invoke: [{ agent: "event-create", instruction: "Criar o almoço" }] });
-apps/api/src/api-core/requests/request-flow.integration.test.ts	gateway.reasonings.set("fallback_loop", "O pedido pede um evento.");
-apps/api/src/api-core/requests/request-flow.integration.test.ts	gateway.outputs.set("event_create", { events: [event("Almoço", "meal", 12)] });
-apps/api/src/api-core/requests/request-flow.integration.test.ts	["fallback", "done"], ["event-create", "done"], ["fallback", "done"],
-apps/api/src/api-core/requests/request-flow.integration.test.ts	expect(second).toContain('"records":[{"kind":"event","operation":"create","name":"Almoço"');
-apps/api/src/api-core/requests/request-flow.integration.test.ts	expect(view.trace?.entries.filter((entry) => entry.kind === "thought").map((entry) => entry.summary)).toContain("O pedido pede um evento.");
-apps/api/src/api-core/requests/request-flow.integration.test.ts	dispatch = { event_create: confident("one"), artifact_create: confident("one") };
-apps/api/src/api-core/requests/request-flow.integration.test.ts	gateway.outputs.set("event_create", { events: [event("Refeição", "meal", 12)] });
-apps/api/src/api-core/requests/request-flow.integration.test.ts	gateway.outputs.set("failure_explainer", { message: "Criei o evento, mas não consegui criar o alimento." });
-apps/api/src/api-core/requests/request-flow.integration.test.ts	expect(view).toMatchObject({ status: "done", message: "Criei o evento, mas não consegui criar o alimento." });
-apps/api/src/api-core/requests/request-flow.integration.test.ts	["event-create", "done", undefined], ["artifact-create", "failed", "internal"],
-apps/api/src/api-core/requests/request-flow.integration.test.ts	dispatch = { event_create: confident("one") };
-apps/api/src/api-core/requests/request-flow.integration.test.ts	expect(view.steps).toMatchObject([{ agent: "event-create", status: "failed", errorCode: "unavailable" }]);
-apps/api/src/api-core/requests/request-flow.integration.test.ts	expect(view).toMatchObject({ status: "failed", message: "Não consegui concluir: criando eventos." });
-apps/api/src/api-core/requests/request-flow.integration.test.ts	test("voz: o pedido gera o evento de pessoa; reenviar a mesma fala nao cria outro", async () => {
-apps/api/src/api-core/requests/request-flow.integration.test.ts	expect(await drain()).toEqual(["voice-event"]);
 apps/api/src/api-core/requests/request-flow.integration.test.ts	const created = await events.findById(view.entities[0]?.id as string);
-apps/api/src/api-core/requests/request-flow.integration.test.ts	test("voz: o modelo falha de vez e o pedido termina como falha, sem evento", async () => {
-apps/api/src/api-core/requests/request-flow.integration.test.ts	entries: [{ id: "t1", kind: "tool", label: "Listou a agenda", source: "mcp_braid_list_timeline_events", status: "running" }],
-apps/api/src/api-core/requests/request-flow.integration.test.ts	status: "running", trace: live, steps: [{ id: "t1", agent: "mcp_braid_list_timeline_events", status: "running" }],
-apps/api/src/api-core/requests/request-flow.integration.test.ts	dispatch = { event_create: confident("one"), query: confident("yes") };
-apps/api/src/api-core/requests/request-flow.integration.test.ts	gateway.outputs.set("event_create", { events: [event("Almoço", "meal", 12)] });
-apps/api/src/api-core/requests/request-flow.integration.test.ts	dispatch = { event_create: confident("one") };
-apps/api/src/api-core/requests/request-jobs.module.test.ts	"request-finalize", "request-step", "voice-event",
-apps/api/src/api-core/requests/request-operations.test.ts	cancelOfEvents: vi.fn(async () => {}),
-apps/api/src/api-core/requests/request-operations.test.ts	progressOfEvent: vi.fn(async (): Promise<unknown> => undefined),
-apps/api/src/api-core/requests/request-operations.test.ts	"request-finalize", "request-step", "voice-event",
-apps/api/src/api-core/requests/request-operations.test.ts	{ id: "s1", agent: "event-create", expected: "one" }, { id: "s2", agent: "artifact-edit", expected: "one" },
-apps/api/src/api-core/requests/request-operations.test.ts	expect(workers.create.run).toHaveBeenCalledWith("event-create", { requestId: "r1", stepId: "s1" }, context.signal);
-apps/api/src/api-core/requests/request-operations.test.ts	await store.beginSteps("r1", [{ id: "s1", agent: "event-create", expected: "one" }]);
-apps/api/src/api-core/requests/request-operations.test.ts	test.each(["request-dispatch", "request-edit-target", "request-finalize", "hermes-turn", "voice-event"])(
-apps/api/src/api-core/requests/request-operations.test.ts	await handlers.get("food-generation")?.run(payload, { ...context, eventId: "b1" });
 apps/api/src/api-core/requests/request-operations.test.ts	const id = await operations.startEdit({ userId: "user-1", text: "mude para 19h", entityType: "task", entityId: "01H0EVENT" }, actor);
 apps/api/src/api-core/requests/request-operations.test.ts	target: { entityType: "task", entityId: "01H0EVENT" }, context: { screen: "detail", entityId: "01H0EVENT" },
-apps/api/src/api-core/requests/request-operations.test.ts	const hermes = await operations.startHermes({ userId: "user-1", text: "crie um evento", clientMessageId: "m1" }, actor);
-apps/api/src/api-core/requests/request-operations.test.ts	expect(hermes).toMatchObject({ route: "hermes", status: "queued", text: "crie um evento", steps: [], entities: [] });
-apps/api/src/api-core/requests/request-operations.test.ts	expect(store.jobs.map((job) => job.kind)).toEqual(["hermes-turn", "voice-event"]);
-apps/api/src/api-core/requests/request-operations.test.ts	jobs.progressOfEvent.mockResolvedValue({ trace: live });
-apps/api/src/api-core/requests/request-operations.test.ts	expect(jobs.progressOfEvent).toHaveBeenCalledWith("h1");
-apps/api/src/api-core/requests/request-operations.test.ts	jobs.progressOfEvent.mockClear();
-apps/api/src/api-core/requests/request-operations.test.ts	expect(jobs.progressOfEvent).not.toHaveBeenCalled();
-apps/api/src/api-core/requests/request-operations.test.ts	await store.beginSteps("r1", [{ id: "s1", agent: "event-create", expected: "one" }, { id: "s2", agent: "query", expected: "one" }]);
-apps/api/src/api-core/requests/request-operations.test.ts	expect(jobs.cancelOfEvents).toHaveBeenCalledWith(["r1", "s1", "s2"], "user-1");
-apps/api/src/api-core/requests/request-operations.test.ts	expect(jobs.cancelOfEvents).toHaveBeenLastCalledWith([], "user-1");
-apps/api/src/api-core/requests/request-operations.test.ts	expect(jobs.cancelOfEvents).not.toHaveBeenCalled();
-apps/api/src/api-core/requests/request-operations.ts	import type { VoiceEventWorker } from "./voice-event-worker";
-apps/api/src/api-core/requests/request-operations.ts	voice: VoiceEventWorker;
-apps/api/src/api-core/requests/request-operations.ts	private readonly jobs: Pick<JobsService, "register" | "cancelOfEvents" | "progressOfEvent">,
-apps/api/src/api-core/requests/request-operations.ts	if (context.eventId) await this.store.markRunning(context.eventId);
-apps/api/src/api-core/requests/request-operations.ts	/** `POST /api/requests/voice`: a fala vira um pedido, e o pedido gera o evento. */
-apps/api/src/api-core/requests/request-operations.ts	const eventIds = await this.store.cancel(request.id);
-apps/api/src/api-core/requests/request-operations.ts	await this.jobs.cancelOfEvents(eventIds, request.userId);
-apps/api/src/api-core/requests/request-operations.ts	live ? this.jobs.progressOfEvent(request.id) : undefined,
 apps/api/src/api-core/requests/request-providers.ts	EventRepository,
 apps/api/src/api-core/requests/request-providers.ts	EVENT_REPOSITORY,
 apps/api/src/api-core/requests/request-providers.ts	import { CreateEventUseCase } from "../events/create-event.usecase";
-apps/api/src/api-core/requests/request-providers.ts	import { OpenRouterEventCommandParsingGateway } from "../events/gateways/openrouter-event-command-parsing.gateway";
 apps/api/src/api-core/requests/request-providers.ts	import { OpenRouterFoodParsingGateway } from "../events/gateways/openrouter-food-parsing.gateway";
 apps/api/src/api-core/requests/request-providers.ts	import { PlaceResolver } from "../events/services/place-resolver.service";
-apps/api/src/api-core/requests/request-providers.ts	import { VoiceEventWorker } from "./voice-event-worker";
-apps/api/src/api-core/requests/request-providers.ts	{ provide: OpenRouterEventCommandParsingGateway, useFactory: () => new OpenRouterEventCommandParsingGateway() },
 apps/api/src/api-core/requests/request-providers.ts	JobsService, PostgresRequestStore, ENTITY_BATCH_WRITER, EVENT_REPOSITORY, ARTIFACT_REPOSITORY,
 apps/api/src/api-core/requests/request-providers.ts	RECURRENCE_REPOSITORY, CreateEventUseCase, SCOPED_SQL_QUERY, DATABASE, OpenRouterFoodParsingGateway,
-apps/api/src/api-core/requests/request-providers.ts	OpenRouterEventCommandParsingGateway, ArtifactBuilder, AgentFilesService, GenerateFoodUseCase,
 apps/api/src/api-core/requests/request-providers.ts	jobs: JobsService, store: PostgresRequestStore, batchWriter: EntityBatchWriter, events: EventRepository,
 apps/api/src/api-core/requests/request-providers.ts	artifacts: ArtifactRepository, recurrences: RecurrenceRepository, createEvent: CreateEventUseCase,
-apps/api/src/api-core/requests/request-providers.ts	commandParsing: OpenRouterEventCommandParsingGateway, artifactBuilder: ArtifactBuilder, files: AgentFilesService,
 apps/api/src/api-core/requests/request-providers.ts	const repositories = { events, artifacts, recurrences };
-apps/api/src/api-core/requests/request-providers.ts	voice: new VoiceEventWorker({ store, parsing: commandParsing, createEvent, batchWriter, places }),
-apps/api/src/api-core/requests/request-recurrence.test.ts	const payload = await addStep(ctx, "seed", "recurring-event-create");
-apps/api/src/api-core/requests/request-recurrence.test.ts	ctx.gateway.outputs.set("recurring_event_create", { series: [series()] });
-apps/api/src/api-core/requests/request-recurrence.test.ts	await ctx.worker.run("recurring-event-create", payload);
-apps/api/src/api-core/requests/request-recurrence.test.ts	const payload = await addStep(ctx, "s2", "recurring-event-edit", "one", {
-apps/api/src/api-core/requests/request-recurrence.test.ts	ctx.gateway.outputs.set("recurring_event_edit", { edits: [{ ...noEdit, id: created.id, timeOfDay: "08:00" }], query: null });
-apps/api/src/api-core/requests/request-recurrence.test.ts	await ctx.editWorker.run("recurring-event-edit", payload);
-apps/api/src/api-core/requests/request-recurrence.test.ts	expect(shown).toMatchObject([{ kind: "event", operation: "update", summary: { series: true } }]);
-apps/api/src/api-core/requests/request-recurrence.test.ts	test("renomear a serie troca o template e mantem os artefatos, o status e os eventos de que ela se segue", () => {
-apps/api/src/api-core/requests/request-recurrence.test.ts	const payload = await addStep(ctx, "s1", "recurring-event-edit", "one", {
-apps/api/src/api-core/requests/request-recurrence.test.ts	ctx.gateway.outputs.set("recurring_event_edit", { edits: [{ ...noEdit, id: "01ARZ3NDEKTSV4RRFFQ69G5FAV", timeOfDay: "08:00" }], query: null });
-apps/api/src/api-core/requests/request-recurrence.test.ts	await ctx.editWorker.run("recurring-event-edit", payload);
-apps/api/src/api-core/requests/request-recurrence.ts	import type { RecurringEventCreateOutput, RecurringEventEditOutput } from "./request-agent-schemas";
-apps/api/src/api-core/requests/request-recurrence.ts	series: RecurringEventCreateOutput["series"][number], today: string, timeZone: string,
-apps/api/src/api-core/requests/request-recurrence.ts	type SeriesEdit = RecurringEventEditOutput["edits"][number];
-apps/api/src/api-core/requests/request-steps.ts	export const ENTITY_CREATE_AGENTS = ["event-create", "artifact-create"] as const;
-apps/api/src/api-core/requests/request-steps.ts	export const SERIES_CREATE_AGENTS = ["recurring-event-create"] as const;
-apps/api/src/api-core/requests/request-steps.ts	export const ENTITY_EDIT_AGENTS = ["event-edit", "artifact-edit"] as const;
-apps/api/src/api-core/requests/request-steps.ts	export const SERIES_EDIT_AGENTS = ["recurring-event-edit"] as const;
-apps/api/src/api-core/requests/request-steps.ts	voice: "voice-event",
-apps/api/src/api-core/requests/request-steps.ts	export type EntityKind = "event" | "artifact";
-apps/api/src/api-core/requests/request-steps.ts	event_create: "event-create",
-apps/api/src/api-core/requests/request-steps.ts	event_edit: "event-edit",
-apps/api/src/api-core/requests/request-steps.ts	recurring_event_create: "recurring-event-create",
-apps/api/src/api-core/requests/request-steps.ts	recurring_event_edit: "recurring-event-edit",
-apps/api/src/api-core/requests/request-steps.ts	"event-edit": "event",
-apps/api/src/api-core/requests/request-steps.ts	"recurring-event-edit": "recurrence",
-apps/api/src/api-core/requests/request-steps.ts	task: "event-edit",
-apps/api/src/api-core/requests/request-store.ts	eventKind?: string;
-apps/api/src/api-core/requests/request-store.ts	/** Uma ligacao que a finalizacao aplicou: `from` pertence a `to` (o artefato ao evento). */
-apps/api/src/api-core/requests/request-store.ts	/** O nome do evento: o inicio do que o usuario pediu. */
-apps/api/src/api-core/requests/request-store.ts	/** Um evento ou artefato que o pedido tocou: a relacao que parte do passo (ou do proprio pedido, na voz). */
-apps/api/src/api-core/requests/request-store.ts	/** O evento de agente de onde a relacao parte. */
-apps/api/src/api-core/requests/request-store.ts	* Persistencia do pedido (ADR 0013): o pedido e cada passo sao eventos de agente, o que se acrescenta a eles sao
-apps/api/src/api-core/requests/request-store.ts	/** A fala virou um evento de pessoa: a relacao do pedido com ele e o pedido concluido, na transacao do evento. */
-apps/api/src/api-core/requests/request-store.ts	completeVoice(tx: unknown, input: { requestId: string; eventId: string }): Promise<void>;
-apps/api/src/api-core/requests/request-store.ts	* Cancela o pedido e os passos que nao terminaram. Devolve os eventos cujos jobs vivos precisam ser
 apps/api/src/api-core/requests/request-target-edit-worker.test.ts	import { Artifact, Event, type FoodData, type TrainingData } from "../../domain";
-apps/api/src/api-core/requests/request-target-edit-worker.test.ts	describe("event-edit e artifact-edit com alvo (sem JEV e sem consulta)", () => {
-apps/api/src/api-core/requests/request-target-edit-worker.test.ts	const noEvent = {
-apps/api/src/api-core/requests/request-target-edit-worker.test.ts	test("evento: so o alvo, uma chamada ao agente, mesmo que ele peca consulta", async () => {
 apps/api/src/api-core/requests/request-target-edit-worker.test.ts	const event = Event.create({ userId: "user-1", name: "Reunião", startedAt: new Date("2026-10-25T12:00:00Z") });
 apps/api/src/api-core/requests/request-target-edit-worker.test.ts	await ctx.eventRepository.save(event);
-apps/api/src/api-core/requests/request-target-edit-worker.test.ts	ctx.gateway.outputs.set("event_edit", { edits: [{ ...noEvent, id: event.id, estimatedFinishAt: "2026-10-25T18:00:00-03:00" }], query: { sql: "SELECT 1" } });
-apps/api/src/api-core/requests/request-target-edit-worker.test.ts	await ctx.editWorker.run("event-edit", await stepFor(ctx, "event-edit", { entityType: "task", id: event.id, snapshot: { name: "Reunião" } }));
 apps/api/src/api-core/requests/request-target-edit-worker.test.ts	expect((await ctx.eventRepository.findById(event.id))?.estimatedFinishAt?.toISOString()).toBe("2026-10-25T21:00:00.000Z");
-apps/api/src/api-core/requests/request-target-edit-worker.test.ts	test("evento: id diferente do alvo falha com target_unknown", async () => {
-apps/api/src/api-core/requests/request-target-edit-worker.test.ts	ctx.gateway.outputs.set("event_edit", { edits: [{ ...noEvent, id: "outro", name: "x" }], query: null });
-apps/api/src/api-core/requests/request-target-edit-worker.test.ts	await ctx.editWorker.run("event-edit", await stepFor(ctx, "event-edit", { entityType: "task", id: "alvo", snapshot: {} }));
 apps/api/src/api-core/requests/request-target-edit-worker.ts	ArtifactValidationError, EventValidationError, type Artifact, type FoodData, type SleepData, type TrainingData,
 apps/api/src/api-core/requests/request-target-edit-worker.ts	import type { CreateEventUseCase } from "../events/create-event.usecase";
 apps/api/src/api-core/requests/request-target-edit-worker.ts	import type { FoodParsingGateway } from "../events/gateways/food-parsing.gateway";
 apps/api/src/api-core/requests/request-target-edit-worker.ts	import { FoodTotalsService } from "../events/services/food-totals.service";
 apps/api/src/api-core/requests/request-target-edit-worker.ts	if (error instanceof ArtifactValidationError || error instanceof EventValidationError || error instanceof InvalidInputError) {
 apps/api/src/api-core/requests/request-target-edit-worker.ts	createEvent: CreateEventUseCase;
-apps/api/src/api-core/requests/request-trace.test.ts	event_create: { choice: "one", confidence: 0.98, probability: 0.97 },
-apps/api/src/api-core/requests/request-trace.test.ts	event_edit: { choice: "none", confidence: 0.99, probability: 0.99 },
-apps/api/src/api-core/requests/request-trace.test.ts	id: "s1", agent: "event-create", expected: "one", status: "done",
-apps/api/src/api-core/requests/request-trace.test.ts	requestId: "r1", kind: "event", id: "e1", stepId: "s1", operation: "create",
-apps/api/src/api-core/requests/request-trace.test.ts	summary: "Aciona: Criando eventos, Criando artefatos", raw: dispatch,
-apps/api/src/api-core/requests/request-trace.test.ts	"event_create: one · confiança 98% · probabilidade 97% · aciona um agente",
-apps/api/src/api-core/requests/request-trace.test.ts	"event_edit: none · confiança 99% · probabilidade 99% · ignorada",
-apps/api/src/api-core/requests/request-trace.test.ts	id: "s1", kind: "agent", label: "Criando eventos", source: "event-create", status: "done",
-apps/api/src/api-core/requests/request-trace.test.ts	sections: [{ title: "Registros", text: "Evento criado · Almoço" }],
-apps/api/src/api-core/requests/request-trace.test.ts	{ text: "O pedido fala de um almoço ao meio-dia.\nCrio um evento só.", at, model: "modelo-x" },
-apps/api/src/api-core/requests/request-trace.test.ts	id: "s1-thought-1", kind: "thought", label: "Pensou", source: "event-create", status: "done",
-apps/api/src/api-core/requests/request-trace.test.ts	fields: [{ label: "Agente", value: "Criando eventos" }, { label: "Modelo", value: "modelo-x" }],
-apps/api/src/api-core/requests/request-trace.test.ts	sections: [{ title: "Raciocínio", text: "O pedido fala de um almoço ao meio-dia.\nCrio um evento só." }],
-apps/api/src/api-core/requests/request-trace.test.ts	raw: { stepId: "s1", agent: "event-create", at, model: "modelo-x", chars: 58 },
-apps/api/src/api-core/requests/request-trace.test.ts	expect(trace.entries[4]?.fields).toEqual([{ label: "Agente", value: "Criando eventos" }]);
-apps/api/src/api-core/requests/request-trace.test.ts	[step({ id: "s1", agent: "event-create", expected: "one", status: "cancel" })], [],
-apps/api/src/api-core/requests/request-trace.ts	const ENTITY_KINDS: Record<RequestEntityRecord["kind"], string> = { event: "Evento", artifact: "Artefato" };
 apps/api/src/api-core/requests/testing/in-memory-request-store.ts	import type { Artifact, Event } from "../../../domain";
-apps/api/src/api-core/requests/testing/in-memory-request-store.ts	* resumo de cada entidade tocada e lido de `entities`, o mesmo banco em memoria dos testes de eventos.
 apps/api/src/api-core/requests/testing/in-memory-request-store.ts	private readonly entitySource: { events: Event[]; artifacts: Artifact[] } = { events: [], artifacts: [] },
-apps/api/src/api-core/requests/testing/in-memory-request-store.ts	if (entity.kind === "event") {
 apps/api/src/api-core/requests/testing/in-memory-request-store.ts	const event = this.entitySource.events.find((candidate) => candidate.id === entity.id);
 apps/api/src/api-core/requests/testing/in-memory-request-store.ts	if (!event) return { name: "" };
-apps/api/src/api-core/requests/testing/in-memory-request-store.ts	name: event.name, eventKind: event.kind,
 apps/api/src/api-core/requests/testing/in-memory-request-store.ts	...(event.startedAt ? { startedAt: event.startedAt.toISOString() } : {}),
 apps/api/src/api-core/requests/testing/in-memory-request-store.ts	...(event.estimatedFinishAt ? { estimatedFinishAt: event.estimatedFinishAt.toISOString() } : {}),
 apps/api/src/api-core/requests/testing/in-memory-request-store.ts	...(event.occurrence && !event.occurrence.detached ? { series: true } : {}),
-apps/api/src/api-core/requests/testing/in-memory-request-store.ts	async completeVoice(_tx: unknown, input: { requestId: string; eventId: string }): Promise<void> {
-apps/api/src/api-core/requests/testing/in-memory-request-store.ts	this.touched.push({ kind: "event", id: input.eventId, operation: "create", requestId: input.requestId, stepId: input.requestId });
 apps/api/src/api-core/requests/testing/request-test-kit.ts	import type { FoodParsingGateway } from "../../events/gateways/food-parsing.gateway";
 apps/api/src/api-core/requests/testing/request-test-kit.ts	import { InMemoryEventDatabase } from "../../events/testing/in-memory-event-database";
 apps/api/src/api-core/requests/testing/request-test-kit.ts	import { InMemoryEntityBatchWriter } from "../../events/testing/in-memory-entity-batch-writer";
 apps/api/src/api-core/requests/testing/request-test-kit.ts	import { InMemoryEventRepository } from "../../events/testing/in-memory-event.repository";
 apps/api/src/api-core/requests/testing/request-test-kit.ts	import { InMemoryWorkoutCatalog } from "../../events/testing/in-memory-workout.catalog";
 apps/api/src/api-core/requests/testing/request-test-kit.ts	import { CreateEventUseCase } from "../../events/create-event.usecase";
-apps/api/src/api-core/requests/testing/request-test-kit.ts	// O mesmo banco em memoria para eventos, artefatos e series: a serie gera ocorrencias de verdade nele.
 apps/api/src/api-core/requests/testing/request-test-kit.ts	const database = new InMemoryEventDatabase();
 apps/api/src/api-core/requests/testing/request-test-kit.ts	const eventRepository = new InMemoryEventRepository(database);
 apps/api/src/api-core/requests/testing/request-test-kit.ts	const repositories = { events: eventRepository, sequence: database, artifacts: artifactRepository, recurrences };
 apps/api/src/api-core/requests/testing/request-test-kit.ts	const createEvent = new CreateEventUseCase(eventRepository, artifactRepository, artifactBuilder, batchWriter, () => NOW);
 apps/api/src/api-core/requests/testing/request-test-kit.ts	const kit = { database, eventRepository, artifactRepository, artifactBuilder, batchWriter, createEvent };
-apps/api/src/api-core/requests/ui.json	"event-create": "Criando eventos",
-apps/api/src/api-core/requests/ui.json	"event-edit": "Editando eventos",
-apps/api/src/api-core/requests/ui.json	"recurring-event-create": "Criando eventos recorrentes",
-apps/api/src/api-core/requests/ui.json	"recurring-event-edit": "Editando eventos recorrentes",
-apps/api/src/api-core/requests/voice-event-worker.test.ts	[nome de arquivo]
-apps/api/src/api-core/requests/voice-event-worker.test.ts	import type { EventCommandParsingGateway, ParsedEventCommand } from "../events/gateways/event-command-parsing.gateway";
-apps/api/src/api-core/requests/voice-event-worker.test.ts	import { createEventsKit } from "../events/testing/in-memory-events-kit";
-apps/api/src/api-core/requests/voice-event-worker.test.ts	import { VoiceEventWorker } from "./voice-event-worker";
-apps/api/src/api-core/requests/voice-event-worker.test.ts	function setup(command: Partial<ParsedEventCommand> | Error = {}) {
-apps/api/src/api-core/requests/voice-event-worker.test.ts	const kit = createEventsKit({ clock: () => ACCEPTED });
-apps/api/src/api-core/requests/voice-event-worker.test.ts	const parsing: EventCommandParsingGateway = {
-apps/api/src/api-core/requests/voice-event-worker.test.ts	const worker = new VoiceEventWorker({ store, parsing, createEvent: kit.createEvent, batchWriter: kit.batchWriter, places });
-apps/api/src/api-core/requests/voice-event-worker.test.ts	test("a fala vira um evento de pessoa, com a frase na descricao, e o pedido termina apontando para ele", async () => {
-apps/api/src/api-core/requests/voice-event-worker.test.ts	const [event] = kit.database.events;
-apps/api/src/api-core/requests/voice-event-worker.test.ts	expect(event).toMatchObject({ actor: "human", userId: "user-1", name: "Estudar", description: "comecei a estudar", startedAt: ACCEPTED });
-apps/api/src/api-core/requests/voice-event-worker.test.ts	expect(await store.entities("v1")).toMatchObject([{ kind: "event", id: event?.id, operation: "create", stepId: "v1", finalized: true }]);
-apps/api/src/api-core/requests/voice-event-worker.test.ts	// Uma transacao so: o evento e o fim do pedido saem do mesmo lote.
-apps/api/src/api-core/requests/voice-event-worker.test.ts	expect(kit.database.events[0]).toMatchObject({
-apps/api/src/api-core/requests/voice-event-worker.test.ts	expect(located.kit.database.events[0]?.location).toBe("clinica saude emocional, Rua Um 10, Belo Horizonte");
-apps/api/src/api-core/requests/voice-event-worker.test.ts	expect(plain.kit.database.events[0]?.location).toBe("");
-apps/api/src/api-core/requests/voice-event-worker.test.ts	test("refeicao falada: o evento nasce com o alimento a espera dos nutrientes", async () => {
-apps/api/src/api-core/requests/voice-event-worker.test.ts	const [event] = kit.database.events;
-apps/api/src/api-core/requests/voice-event-worker.test.ts	expect(event?.kind).toBe("meal");
-apps/api/src/api-core/requests/voice-event-worker.test.ts	expect(kit.database.artifactsOf(event as never)).toMatchObject([{ type: "food", data: { description: "arroz e feijão", generation: { status: "pending" } } }]);
-apps/api/src/api-core/requests/voice-event-worker.test.ts	expect(kit.database.events).toHaveLength(0);
-apps/api/src/api-core/requests/voice-event-worker.test.ts	test("pedido cancelado nao chama o modelo; cancelado no meio, o evento nao e gravado", async () => {
-apps/api/src/api-core/requests/voice-event-worker.ts	[nome de arquivo]
-apps/api/src/api-core/requests/voice-event-worker.ts	import { EVENT_TIME_ZONE, toEntityBatch, type CreateEventUseCase } from "../events/create-event.usecase";
-apps/api/src/api-core/requests/voice-event-worker.ts	import type { EventCommandParsingGateway } from "../events/gateways/event-command-parsing.gateway";
-apps/api/src/api-core/requests/voice-event-worker.ts	import { resolveEventSchedule } from "../events/services/event-schedule.service";
-apps/api/src/api-core/requests/voice-event-worker.ts	import type { PlaceResolver } from "../events/services/place-resolver.service";
-apps/api/src/api-core/requests/voice-event-worker.ts	* A fala vira um evento de pessoa (ADR 0013): o modelo classifica a frase, o servidor resolve a janela e grava o
-apps/api/src/api-core/requests/voice-event-worker.ts	* evento. Na mesma transacao o pedido ganha a relacao com o evento que gerou e termina. "Agora" e o instante em
-apps/api/src/api-core/requests/voice-event-worker.ts	* que o pedido foi aceito: a espera na fila nao muda o horario do evento.
-apps/api/src/api-core/requests/voice-event-worker.ts	export class VoiceEventWorker {
-apps/api/src/api-core/requests/voice-event-worker.ts	parsing: EventCommandParsingGateway;
-apps/api/src/api-core/requests/voice-event-worker.ts	createEvent: Pick<CreateEventUseCase, "prepare">;
-apps/api/src/api-core/requests/voice-event-worker.ts	const schedule = resolveEventSchedule(parsed.schedule, request.createdAt, EVENT_TIME_ZONE);
-apps/api/src/api-core/requests/voice-event-worker.ts	afterWrite: (tx) => store.completeVoice(tx, { requestId: request.id, eventId: prepared.event.id }),
-apps/api/src/infrastructure/hermes/hermes-tool-labels.test.ts	expect(toolLabel("mcp_braid_update_event")).toBe("Editou um evento");
-apps/api/src/infrastructure/hermes/hermes-tool-labels.test.ts	expect(toolLabel("mcp_braid_list_tracked_events")).toBe("Listou os eventos acompanhados");
-apps/api/src/infrastructure/hermes/hermes-tool-labels.ts	create_event: "Criou um evento",
-apps/api/src/infrastructure/hermes/hermes-tool-labels.ts	update_event: "Editou um evento",
-apps/api/src/infrastructure/hermes/hermes-tool-labels.ts	get_event: "Leu um evento",
-apps/api/src/infrastructure/hermes/hermes-tool-labels.ts	list_timeline_events: "Listou a agenda",
-apps/api/src/infrastructure/hermes/hermes-tool-labels.ts	list_tracked_events: "Listou os eventos acompanhados",
-apps/api/src/infrastructure/persistence/agent-sql/rewrite-agent-sql.test.ts	test("so eventos de pessoa entram: nenhum CTE de evento deixa passar um pedido ao agente", () => {
-apps/api/src/infrastructure/persistence/agent-sql/validate-agent-sql.test.ts	["quoted uppercase name", 'SELECT * FROM "Events"'],
+apps/api/src/api-core/agent/services/agent-change-session.ts	return { ok: true, kind: "task", op: "create", id: prepared.event.id };
+apps/api/src/api-core/agent/services/agent-change-session.ts	reviseTask(id: string, revise: (current: Event) => Event): Promise<StageResult> {
+apps/api/src/api-core/agent/services/agent-change-session.ts	const op = await this.reviseTarget(this.events, id, (key) => this.findTask(key), revise);
+apps/api/src/api-core/agent/services/agent-change-session.ts	linkArtifact(artifactId: string, taskId: string, relation: EventArtifactRelationKind): Promise<StageResult> {
+apps/api/src/api-core/agent/services/agent-change-session.ts	const op = await this.reviseTarget(this.events, taskId, (key) => this.findTask(key), (event) =>
+apps/api/src/api-core/agent/services/agent-change-session.ts	collect("task", this.events);
+apps/api/src/api-core/agent/services/agent-change-session.ts	private async findTask(id: string): Promise<Event | null> {
+apps/api/src/api-core/events/gateways/openrouter-task-command-parsing.gateway.ts	import type { ParsedEventSchedule } from "../services/event-schedule.service";
+apps/api/src/api-core/events/gateways/openrouter-task-command-parsing.gateway.ts	console.log("[OpenRouterEventCommandParsingGateway] parseCommand called", {
+apps/api/src/api-core/events/gateways/openrouter-task-command-parsing.gateway.ts	console.error("[OpenRouterEventCommandParsingGateway] OPENROUTER_API_KEY is missing");
+apps/api/src/api-core/events/gateways/openrouter-task-command-parsing.gateway.ts	console.error("[OpenRouterEventCommandParsingGateway] OPENROUTER_MODEL is missing");
+apps/api/src/api-core/events/gateways/openrouter-task-command-parsing.gateway.ts	console.error("[OpenRouterEventCommandParsingGateway] OpenRouter request failed", {
+apps/api/src/api-core/events/gateways/openrouter-task-command-parsing.gateway.ts	console.error("[OpenRouterEventCommandParsingGateway] response did not include command JSON", {
+apps/api/src/api-core/events/gateways/openrouter-task-command-parsing.gateway.ts	console.error("[OpenRouterEventCommandParsingGateway] failed to JSON.parse content", {
+apps/api/src/api-core/events/gateways/openrouter-task-command-parsing.gateway.ts	console.log("[OpenRouterEventCommandParsingGateway] parseCommand succeeded", {
+apps/api/src/api-core/events/gateways/openrouter-task-command-parsing.gateway.ts	* Traduz a resposta plana do modelo para o `CreateEventInput` do dominio.
+apps/api/src/api-core/events/gateways/openrouter-task-command-parsing.gateway.ts	* Extrai a janela da tarefa. Os limites e a virada de dia ficam com `resolveEventSchedule`:
+apps/api/src/api-core/events/gateways/openrouter-task-command-parsing.gateway.ts	export function toTaskSchedule(raw: Partial<RawTaskCommand>): ParsedEventSchedule {
+apps/api/src/api-core/events/gateways/task-command-parsing.gateway.ts	import type { ParsedEventSchedule } from "../services/event-schedule.service";
+apps/api/src/api-core/events/gateways/task-command-parsing.gateway.ts	schedule: ParsedEventSchedule;
+apps/api/src/api-core/requests/request-create-worker.test.ts	ctx.gateway.outputs.set("task_create", { tasks: [event({ name: "Almoço", kind: "meal" })] });
+apps/api/src/api-core/requests/request-create-worker.test.ts	ctx.gateway.outputs.set("task_create", { tasks: [event({ name: "Jantar", kind: "meal", location: "casa da tia Lúcia" })] });
+apps/api/src/api-core/requests/request-create-worker.test.ts	ctx.gateway.outputs.set("task_create", { tasks: [event({ status: "todo" }), event({ status: "todo" })] });
+apps/api/src/api-core/requests/request-create-worker.test.ts	ctx.gateway.outputs.set("task_create", { tasks: [event({ status: "todo", followsFrom: [3] })] });
+apps/api/src/api-core/requests/request-create-worker.test.ts	ctx.gateway.outputs.set("task_create", { tasks: [event({ status: "todo", followsFrom: [0] })] });
+apps/api/src/api-core/requests/request-create-worker.test.ts	ctx.gateway.outputs.set("task_create", { tasks: [event({ startedAt: "amanhã cedo", estimatedFinishAt: "x" })] });
+apps/api/src/api-core/requests/request-create-worker.test.ts	ctx.gateway.outputs.set("task_create", { tasks: [event()] });
+apps/api/src/api-core/requests/request-edit-worker.test.ts	async function seedTask(ctx: ReturnType<typeof setupRequest>, name = "Trabalhar", extra: Partial<Parameters<typeof Event.create>[0]> = {}) {
+apps/api/src/api-core/requests/request-edit-worker.test.ts	const event = await seedTask(ctx);
+apps/api/src/api-core/requests/request-edit-worker.test.ts	const payload = await addStep(ctx, "s1", "task-edit", "one", { candidates: [candidate("task", event.id, "Trabalhar")] });
+apps/api/src/api-core/requests/request-edit-worker.test.ts	ctx.gateway.outputs.set("task_edit", { edits: [{ ...noTask, id: event.id, estimatedFinishAt: iso(18) }], query: null });
+apps/api/src/api-core/requests/request-edit-worker.test.ts	expect(await updated(ctx)).toMatchObject([{ kind: "task", id: event.id, operation: "update", summary: { name: "Trabalhar" } }]);
+apps/api/src/api-core/requests/request-edit-worker.test.ts	const event = await seedTask(ctx, "Consulta", { location: "Consultório antigo" });
+apps/api/src/api-core/requests/request-edit-worker.test.ts	const payload = await addStep(ctx, "s1", "task-edit", "one", { candidates: [candidate("task", event.id, "Consulta")] });
+apps/api/src/api-core/requests/request-edit-worker.test.ts	ctx.gateway.outputs.set("task_edit", { edits: [{ ...noTask, id: event.id, location: "Hospital Mater Dei" }], query: null });
+apps/api/src/api-core/requests/request-edit-worker.test.ts	const event = await seedTask(ctx, "Pagar o aluguel", { status: "todo", startedAt: undefined });
+apps/api/src/api-core/requests/request-edit-worker.test.ts	const payload = await addStep(ctx, "s1", "task-edit", "one", { candidates: [candidate("task", event.id, "Pagar o aluguel")] });
+apps/api/src/api-core/requests/request-edit-worker.test.ts	ctx.gateway.outputs.set("task_edit", { edits: [{ ...noTask, id: event.id, status: "done", finishedAt: iso(10) }], query: null });
+apps/api/src/api-core/requests/request-edit-worker.test.ts	const events = [await seedTask(ctx, "A", { status: "todo" }), await seedTask(ctx, "B", { status: "todo" }), await seedTask(ctx, "C", { status: "todo" })];
+apps/api/src/api-core/requests/request-edit-worker.test.ts	const payload = await addStep(ctx, "s1", "task-edit", "many", { candidates: events.map((event) => candidate("task", event.id, event.name)) });
+apps/api/src/api-core/requests/request-edit-worker.test.ts	ctx.gateway.outputs.set("task_edit", { edits: events.map((event) => ({ ...noTask, id: event.id, priority: "high" })), query: null });
+apps/api/src/api-core/requests/request-edit-worker.test.ts	const event = await seedTask(ctx);
+apps/api/src/api-core/requests/request-edit-worker.test.ts	ctx.gateway.outputs.set("task_edit", { edits: [{ ...noTask, id: event.id, name: "Outro" }], query: null });
+apps/api/src/api-core/requests/request-edit-worker.test.ts	const payload = await addStep(ctx, "s1", "task-edit", "one", { candidates: [candidate("task", agentEvent.id, "pedido antigo")] });
+apps/api/src/api-core/requests/request-edit-worker.test.ts	ctx.gateway.outputs.set("task_edit", { edits: [{ ...noTask, id: agentEvent.id, name: "Outro" }], query: null });
+apps/api/src/api-core/requests/request-edit-worker.test.ts	ctx.gateway.outputs.set("task_edit", { edits: [], query: { sql: "DELETE FROM events" } });
+apps/api/src/api-core/requests/request-edit-worker.test.ts	const event = await seedTask(ctx);
+apps/api/src/api-core/requests/request-edit-worker.test.ts	const payload = await addStep(ctx, "s1", "task-edit", "one", { candidates: [candidate("task", event.id, "Trabalhar")] });
+apps/api/src/api-core/requests/request-edit-worker.test.ts	ctx.gateway.outputs.set("task_edit", { edits: [{ ...noTask, id: event.id }], query: null });
+apps/api/src/api-core/requests/request-finalizer.test.ts	const events = await addStep(ctx, "s-events", "task-create", "many");
+apps/api/src/api-core/requests/request-finalizer.test.ts	await ctx.worker.run("task-create", events);
+apps/api/src/api-core/requests/request-finalizer.test.ts	await ctx.worker.run("task-create", events);
+apps/api/src/api-core/requests/request-finalizer.test.ts	await ctx.worker.run("task-create", events);
+apps/api/src/api-core/requests/request-finalizer.test.ts	await ctx.worker.run("task-create", events);
+apps/api/src/api-core/requests/request-finalizer.test.ts	await ctx.worker.run("task-create", events);
+apps/api/src/api-core/requests/request-finalizer.test.ts	const events = await addStep(ctx, "s1", "task-create");
+apps/api/src/api-core/requests/request-finalizer.test.ts	await ctx.worker.run("task-create", events);
+apps/api/src/api-core/requests/request-finalizer.test.ts	await ctx.worker.run("task-create", events);
+apps/api/src/api-core/requests/request-finalizer.test.ts	await ctx.worker.run("task-create", events);
+apps/api/src/api-core/requests/request-finalizer.test.ts	await ctx.worker.run("task-create", events);
+apps/api/src/api-core/requests/request-finalizer.test.ts	const event = { kind: "task" as const };
+apps/api/src/api-core/requests/request-flow.integration.test.ts	import type { ParsedTaskCommand } from "../events/gateways/task-command-parsing.gateway";
+apps/api/src/api-core/requests/request-flow.integration.test.ts	gateway.outputs.set("task_create", { tasks: [event("Refeição", "meal", 12), event("Nadar na praia", "training", 13)] });
+apps/api/src/api-core/requests/request-flow.integration.test.ts	gateway.outputs.set("task_create", { tasks: [event("Reunião", "common", 12)] });
+apps/api/src/api-core/requests/request-flow.integration.test.ts	gateway.outputs.set("task_create", { tasks: [event("Reunião", "common", 12)] });
+apps/api/src/api-core/requests/request-flow.integration.test.ts	gateway.outputs.set("task_create", { tasks: [event("Almoço", "meal", 12)] });
+apps/api/src/api-core/requests/request-flow.integration.test.ts	gateway.outputs.set("task_create", { tasks: [event("Refeição", "meal", 12)] });
+apps/api/src/api-core/requests/request-flow.integration.test.ts	gateway.outputs.set("task_create", { tasks: [event("Almoço", "meal", 12)] });
+apps/api/src/api-core/requests/request-providers.ts	import { OpenRouterTaskCommandParsingGateway } from "../events/gateways/openrouter-task-command-parsing.gateway";
+apps/api/src/api-core/requests/request-target-edit-worker.test.ts	ctx.gateway.outputs.set("task_edit", { edits: [{ ...noTask, id: event.id, estimatedFinishAt: "2026-10-25T18:00:00-03:00" }], query: { sql: "SELECT 1" } });
+apps/api/src/api-core/requests/request-target-edit-worker.test.ts	await ctx.editWorker.run("task-edit", await stepFor(ctx, "task-edit", { entityType: "task", id: event.id, snapshot: { name: "Reunião" } }));
+apps/api/src/api-core/requests/testing/in-memory-request-store.ts	name: event.name, taskKind: event.kind,
+apps/api/src/api-core/requests/voice-task-worker.test.ts	import type { TaskCommandParsingGateway, ParsedTaskCommand } from "../events/gateways/task-command-parsing.gateway";
+apps/api/src/api-core/requests/voice-task-worker.test.ts	import { createEventsKit } from "../events/testing/in-memory-events-kit";
+apps/api/src/api-core/requests/voice-task-worker.test.ts	const kit = createEventsKit({ clock: () => ACCEPTED });
+apps/api/src/api-core/requests/voice-task-worker.test.ts	const [event] = kit.database.events;
+apps/api/src/api-core/requests/voice-task-worker.test.ts	expect(event).toMatchObject({ actor: "human", userId: "user-1", name: "Estudar", description: "comecei a estudar", startedAt: ACCEPTED });
+apps/api/src/api-core/requests/voice-task-worker.test.ts	expect(await store.entities("v1")).toMatchObject([{ kind: "task", id: event?.id, operation: "create", stepId: "v1", finalized: true }]);
+apps/api/src/api-core/requests/voice-task-worker.test.ts	expect(kit.database.events[0]).toMatchObject({
+apps/api/src/api-core/requests/voice-task-worker.test.ts	expect(located.kit.database.events[0]?.location).toBe("clinica saude emocional, Rua Um 10, Belo Horizonte");
+apps/api/src/api-core/requests/voice-task-worker.test.ts	expect(plain.kit.database.events[0]?.location).toBe("");
+apps/api/src/api-core/requests/voice-task-worker.test.ts	const [event] = kit.database.events;
+apps/api/src/api-core/requests/voice-task-worker.test.ts	expect(event?.kind).toBe("meal");
+apps/api/src/api-core/requests/voice-task-worker.test.ts	expect(kit.database.artifactsOf(event as never)).toMatchObject([{ type: "food", data: { description: "arroz e feijão", generation: { status: "pending" } } }]);
+apps/api/src/api-core/requests/voice-task-worker.test.ts	expect(kit.database.events).toHaveLength(0);
+apps/api/src/api-core/requests/voice-task-worker.ts	import { EVENT_TIME_ZONE, toEntityBatch, type CreateEventUseCase } from "../events/create-event.usecase";
+apps/api/src/api-core/requests/voice-task-worker.ts	import type { TaskCommandParsingGateway } from "../events/gateways/task-command-parsing.gateway";
+apps/api/src/api-core/requests/voice-task-worker.ts	import { resolveEventSchedule } from "../events/services/event-schedule.service";
+apps/api/src/api-core/requests/voice-task-worker.ts	import type { PlaceResolver } from "../events/services/place-resolver.service";
+apps/api/src/api-core/requests/voice-task-worker.ts	createEvent: Pick<CreateEventUseCase, "prepare">;
+apps/api/src/api-core/requests/voice-task-worker.ts	const schedule = resolveEventSchedule(parsed.schedule, request.createdAt, EVENT_TIME_ZONE);
+apps/api/src/api-core/requests/voice-task-worker.ts	afterWrite: (tx) => store.completeVoice(tx, { requestId: request.id, taskId: prepared.event.id }),
 
 == web, código ==
 apps/web/src/app/[userId]/eventos/[eventId]/agent-event.test.tsx	[nome de arquivo]

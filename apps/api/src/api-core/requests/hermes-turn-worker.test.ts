@@ -10,7 +10,7 @@ const trace = (status: AgentTraceDto["status"], toolStatus: "running" | "done" |
   route: "hermes", status, fields: [{ label: "Modelo", value: "m" }],
   entries: [
     { id: "request", kind: "request", label: "Pedido", status: "done" },
-    { id: "c1", kind: "tool", label: "Criou uma tarefa", source: "mcp_braid_create_event", status: toolStatus },
+    { id: "c1", kind: "tool", label: "Criou uma tarefa", source: "mcp_braid_create_task", status: toolStatus },
   ],
 });
 
@@ -37,7 +37,7 @@ test("a mensagem vai na sessao do primeiro pedido; a resposta e o rastro ficam n
   expect(store.require("01NEXT")).toMatchObject({ status: "done", answer: "Feito.", trace: trace("done") });
   // Sem passos gravados: a lista do chat sai do rastro.
   expect(toRequestDto(store.require("01NEXT"), [], []).steps).toEqual([
-    { id: "c1", agent: "mcp_braid_create_event", label: "Criou uma tarefa", status: "done" },
+    { id: "c1", agent: "mcp_braid_create_task", label: "Criou uma tarefa", status: "done" },
   ]);
 });
 

@@ -24,15 +24,15 @@ export interface NewAgentTask {
 }
 
 /** Um pedido ou um passo: tarefa de agente. Comeca agora; a conclusao vem quando ele termina. */
-export async function insertAgentTask(tx: Tx, event: NewAgentTask): Promise<void> {
+export async function insertAgentTask(tx: Tx, task: NewAgentTask): Promise<void> {
   await tx.insert(schema.events).values({
-    id: event.id,
-    userId: event.userId,
+    id: task.id,
+    userId: task.userId,
     actor: "agent",
-    kind: event.kind,
-    status: event.status,
-    name: event.name,
-    data: event.data,
+    kind: task.kind,
+    status: task.status,
+    name: task.name,
+    data: task.data,
     startedAt: sql`now()`,
   });
 }

@@ -20,7 +20,7 @@ export interface Job {
 /** As colunas de `jobs` na forma de `Job`; `table` qualifica quando a consulta junta outra relacao. */
 function projectionOf(table = "jobs"): string {
   return `${table}.id, ${table}.kind, ${table}.user_id AS "userId", ${table}.actor_id AS "actorId",
-    ${table}.task_id AS "eventId", ${table}.payload, ${table}.status, ${table}.progress, ${table}.error,
+    ${table}.task_id AS "taskId", ${table}.payload, ${table}.status, ${table}.progress, ${table}.error,
     ${table}.attempts, ${table}.lease_token AS "leaseToken", ${table}.created_at AS "createdAt",
     ${table}.updated_at AS "updatedAt"`;
 }

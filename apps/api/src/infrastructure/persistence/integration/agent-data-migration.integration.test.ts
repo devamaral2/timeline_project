@@ -51,7 +51,7 @@ describe("migration que reescreve os dados dos pedidos do agente, sobre um banco
     await entry(ids.finalized, "result", { type: "finalized", entity: { kind: "event", id: "a" }, links: [{ from: { kind: "artifact", id: "b" }, to: { kind: "event", id: "a" } }] });
     await entry(ids.voice, "result", { type: "voice", eventId: "a" });
     await entry(ids.input, "input", { candidates: [{ kind: "event", id: "a", name: "Pagar", eventKind: "common" }] });
-    await entry(ids.trace, "thought", { trace: { source: "mcp_braid_create_event" } });
+    await entry(ids.trace, "thought", { trace: { source: "mcp_braid_create_task" } });
     await applyMigration(pool, MIGRATION);
   }, 60000);
 
