@@ -48,7 +48,7 @@ describe("resolveEffectivePermissions", () => {
       directPermissions: [],
     });
 
-    expect(result).toEqual({ permissions: ["task:create", "task:read", "tag:read"], denies: [] });
+    expect(result).toEqual({ permissions: ["tag:read", "task:create", "task:read"], denies: [] });
   });
 
   it("nega acao coberta por deny especifico mesmo para superadmin", () => {

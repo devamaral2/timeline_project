@@ -51,7 +51,7 @@ describe("policyFor", () => {
 
   it("keeps the access resources in step with the policy", () => {
     expect(ACCESS_RESOURCES).toContain("artifact");
-    expect(ACCESS_RESOURCES).not.toContain("task");
+    expect(ACCESS_RESOURCES).toEqual(["task", "tag", "artifact", "recurrence", "agent"]);
     expect(ACCESS_RESOURCES).not.toContain("note");
   });
 });
