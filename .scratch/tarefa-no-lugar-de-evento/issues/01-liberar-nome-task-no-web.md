@@ -4,12 +4,12 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Leia antes:** o [README](README.md). Spec: "Web" (o item sobre os tipos `Task*` locais) e a história 42.
 
-- [ ] Nenhum tipo, interface ou constante do web se chama `Task…`, `task…Statuses` ou `task…Priorities` com sentido de status ou prioridade da entidade; os valores vêm do pacote de contratos.
-- [ ] Os rótulos de tela de status e prioridade ficam num mapa de visualização com nome que não começa por `Task` nem por `Event`.
-- [ ] Os exemplos da lista e da agenda usam o tipo do cartão do contrato, não um tipo de exemplo próprio.
-- [ ] A tela Tarefas e a agenda mostram exatamente o que mostravam: os testes de tela existentes passam sem mudar o que conferem.
-- [ ] `pnpm run test:unit` e `pnpm run typecheck` verdes.
+- [x] Nenhum tipo, interface ou constante do web se chama `Task…`, `task…Statuses` ou `task…Priorities` com sentido de status ou prioridade da entidade; os valores vêm do pacote de contratos.
+- [x] Os rótulos de tela de status e prioridade ficam num mapa de visualização com nome que não começa por `Task` nem por `Event`.
+- [x] Os exemplos da lista e da agenda usam o tipo do cartão do contrato, não um tipo de exemplo próprio.
+- [x] A tela Tarefas e a agenda mostram exatamente o que mostravam: os testes de tela existentes passam sem mudar o que conferem.
+- [x] `pnpm run test:unit` e `pnpm run typecheck` verdes.

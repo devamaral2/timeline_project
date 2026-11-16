@@ -2,7 +2,7 @@
 
 import {
   ArrowLeft, Bell, Check, Circle, CircleCheck, CircleDashed, CirclePause, CircleSlash,
-  Clock3, Flag, MoreVertical, Pencil, Trash2, type LucideIcon,
+  Flag, MoreVertical, Pencil, Trash2, type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -10,7 +10,7 @@ import {
   compactDate, dayKeyOf, elapsedSecondsOf, formatStopwatch,
   formatTime, longDate, type EventPosition,
 } from "@repo/timeline";
-import type { FoodRecipe, SleepData, TextData, TrainingData } from "@repo/contracts";
+import type { EventCardDto, EventPriority, FoodRecipe, SleepData, TextData, TrainingData } from "@repo/contracts";
 import { positionOf } from "@/lib/events/event-window";
 import { useNow } from "@/lib/events/use-now";
 import { ICON_STROKE_WIDTH, missedLabel, notificationOffsetLabel, visualForItemType } from "./event-visuals";
@@ -24,8 +24,7 @@ import styles from "./event-detail-screen.module.css";
  * a tela real lê o evento com `getEvent` (ver `@repo/contracts`).
  */
 export type PreviewPriority = "urgent" | "normal" | "flexible";
-export type PreviewTaskPriority = "urgent" | "high" | "medium" | "low";
-export type PreviewTaskStatus = "todo" | "scheduled" | "toDefine" | "inHold" | "done" | "cancel";
+type PreviewStatus = Extract<NonNullable<EventCardDto["status"]>, "todo" | "toDefine" | "inHold" | "done" | "cancel">;
 
 const previewPriorityLabels: Record<PreviewPriority, string> = {
   urgent: "Urgente",
@@ -37,8 +36,8 @@ export interface PreviewTask {
   id: string;
   name: string;
   description: string;
-  status: PreviewTaskStatus;
-  priority: PreviewTaskPriority;
+  status: PreviewStatus;
+  priority: EventPriority;
   notifyOffsetsMinutes: number[];
   tags: string[];
   dependsOnTaskIds: string[];
@@ -184,7 +183,7 @@ export function EventDetailScreen({ event, tasks = [], backHref, actions, action
         {tasks.length ? (
           <ul className={styles.tasks}>
             {tasks.map((task) => {
-              const { Icon, label } = taskStatusVisuals[task.status] ?? taskStatusVisuals.todo;
+              const { Icon, label } = statusView[task.status] ?? statusView.todo;
               return (
                 <li key={task.id} data-done={task.status === "done"}>
                   <Icon role="img" aria-label={label} />
@@ -346,9 +345,8 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   return <section className={styles.section}><h2>{title}</h2>{children}</section>;
 }
 
-const taskStatusVisuals: Record<PreviewTaskStatus, { Icon: LucideIcon; label: string }> = {
+const statusView: Record<PreviewStatus, { Icon: LucideIcon; label: string }> = {
   todo: { Icon: Circle, label: "A fazer" },
-  scheduled: { Icon: Clock3, label: "Agendada" },
   toDefine: { Icon: CircleDashed, label: "A definir" },
   inHold: { Icon: CirclePause, label: "Em espera" },
   done: { Icon: CircleCheck, label: "Concluída" },

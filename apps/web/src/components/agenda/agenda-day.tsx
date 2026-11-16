@@ -14,7 +14,7 @@ import { spanForExample, timingForExample } from "./agenda-timing";
 import { type FreeSlot, freeTimeSlots, freeWindowGrade, MIN_FREE_WINDOW_MINUTES } from "./free-time";
 import styles from "./agenda.module.css";
 import shell from "@/components/shell/shell.module.css";
-import { type SelectedEvent, TaskPriorityIcon, TaskStatusIcon, taskStatuses } from "./task-controls";
+import { type SelectedEvent, TaskPriorityIcon, TaskStatusIcon, statusView } from "./task-controls";
 
 /** Horas e minutos em destaque na serifa, com a unidade pequena ao lado. */
 function DurationFigure({ minutes }: { minutes: number }) {
@@ -129,7 +129,7 @@ export function AgendaDay({ dayKey, now, tasks, missedEvents, onSelectEvent, onP
                     {event.minutes > 0 ? <p className={styles.duration} title={`${timing.position === "past" ? "Duração" : "Duração prevista"}: ${event.duration}`}><DurationFigure minutes={event.minutes} /></p> : null}
                     {task ? <fieldset className={styles.taskRef} aria-label={`Tarefa vinculada ${task.id}`}>
                       <span>{task.id}</span>
-                      <button type="button" className={shell.taskStatusButton} aria-label={`Tarefa de ${event.name}: ${taskStatuses[task.status].label}`} aria-haspopup="dialog" title={`Tarefa ${task.id} · ${taskStatuses[task.status].label}`} onClick={() => onSelectEvent({ event, dayKey })}><TaskStatusIcon status={task.status} /></button>
+                      <button type="button" className={shell.taskStatusButton} aria-label={`Tarefa de ${event.name}: ${statusView[task.status].label}`} aria-haspopup="dialog" title={`Tarefa ${task.id} · ${statusView[task.status].label}`} onClick={() => onSelectEvent({ event, dayKey })}><TaskStatusIcon status={task.status} /></button>
                       <TaskPriorityIcon priority={task.priority} />
                     </fieldset> : null}
                   </div>

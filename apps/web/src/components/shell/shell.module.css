@@ -204,15 +204,15 @@
 .taskPriority { display: inline-flex; align-items: center; color: var(--priority-low); }
 .taskPriority svg { width: 14px; height: 14px; }
 .taskPriority[data-priority="urgent"] { color: var(--priority-urgent); }
-.taskPriority[data-priority="flexible"] { opacity: .55; }
+.taskPriority[data-priority="low"] { opacity: .55; }
 .taskStatusButton { position: relative; display: grid; place-items: center; width: 24px; height: 24px; margin: -2px 0; border-radius: 50%; cursor: pointer; }
 .taskStatusButton::after { content: ""; position: absolute; inset: -10px; }
 .taskStatusButton:hover { background: var(--soft); }
 .taskStatusIcon[data-status="todo"] { color: var(--status-todo); }
-.taskStatusIcon[data-status="scheduled"] { color: var(--status-scheduled); }
-.taskStatusIcon[data-status="inProgress"] { color: var(--status-hold); fill: color-mix(in oklab, var(--status-hold) 14%, transparent); }
-.taskStatusIcon[data-status="completed"] { color: var(--status-done); fill: color-mix(in oklab, var(--status-done) 14%, transparent); }
-.taskStatusIcon[data-status="canceled"] { color: var(--status-cancel); }
+.taskStatusIcon[data-status="inHold"] { color: var(--status-scheduled); }
+.taskStatusIcon[data-status="doing"] { color: var(--status-hold); fill: color-mix(in oklab, var(--status-hold) 14%, transparent); }
+.taskStatusIcon[data-status="done"] { color: var(--status-done); fill: color-mix(in oklab, var(--status-done) 14%, transparent); }
+.taskStatusIcon[data-status="cancel"] { color: var(--status-cancel); }
 .taskDialog { position: fixed; inset: 0; margin: auto; padding: 0; width: min(440px, calc(100% - 32px)); max-height: calc(100dvh - 40px); overflow-y: auto; border: 1px solid var(--line); border-radius: 22px; background: var(--card); color: var(--ink); box-shadow: var(--shadow-float); }
 .taskDialog::backdrop { background: var(--scrim); }
 :global(body):has(.taskDialog[open]) { overflow: hidden; }

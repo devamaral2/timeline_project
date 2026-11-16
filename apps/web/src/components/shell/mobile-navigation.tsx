@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent, type RefObject, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { creatableItemTypes, ICON_STROKE_WIDTH, visualForItemType } from "@/components/events/event-visuals";
 import { AgentChatPanel, agentEntityHref, useAgendaChat } from "@/components/hub/agent-chat-panel";
-import { EXAMPLE_TODAY, exampleEventsOn, type TaskStatus } from "@/components/agenda/agenda-examples";
+import { EXAMPLE_TODAY, exampleEventsOn, type ExampleStatus } from "@/components/agenda/agenda-examples";
 import { CalendarPicker, type DateField, EventScheduleFields } from "@/components/new-item/event-schedule-fields";
 import { NotificationFeed, useNotificationFeed } from "./notification-bell";
 import { type Box, boxOf, canFly, FLIGHT_BACK_MS, FLIGHT_OUT_MS, flightKeyframes, type HermesDockDetail, hermesDockEvent, hermesMarkIn } from "@/components/ui/hermes-flight";
@@ -19,7 +19,7 @@ import { dayKeyOf } from "@repo/timeline";
 import { useViewMode } from "@/lib/events/view-mode";
 import { type SectionId, useSectionMenu } from "@/lib/navigation/section-menu";
 import { SectionMenu } from "./section-menu";
-import { TaskStatusIcon, taskStatuses } from "@/components/agenda/task-controls";
+import { TaskStatusIcon, statusView } from "@/components/agenda/task-controls";
 
 type Kind = "Evento" | "Tarefa" | "Nota";
 type Picker = "eventType" | "status" | "priority" | DateField;
@@ -151,7 +151,7 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
   const draft = drafts[draftKey] ?? {};
   const eventVisual = visualForItemType(eventType);
   const selectedPriority = draft.priority && draft.priority in draftPriorities ? draft.priority as DraftPriority : "medium";
-  const selectedStatus = draft.status && draft.status in taskStatuses ? draft.status as TaskStatus : "todo";
+  const selectedStatus = draft.status && draft.status in statusView ? draft.status as ExampleStatus : "todo";
   function updateDraft(field: string, value: string) {
     setDrafts(current => ({ ...current, [draftKey]: { ...current[draftKey], [field]: value } }));
   }
@@ -448,9 +448,9 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
                 {type === eventType ? <Check aria-hidden /> : null}
               </button>;
             })}
-            {activePicker === "status" && (Object.keys(taskStatuses) as TaskStatus[]).map(status => <button type="button" role="option" aria-selected={status === selectedStatus} key={status} className={styles.pickerOption} onClick={() => { updateDraft("status", status); setActivePicker(null); }}>
+            {activePicker === "status" && (Object.keys(statusView) as ExampleStatus[]).map(status => <button type="button" role="option" aria-selected={status === selectedStatus} key={status} className={styles.pickerOption} onClick={() => { updateDraft("status", status); setActivePicker(null); }}>
               <TaskStatusIcon status={status} />
-              <span>{taskStatuses[status].label}</span>
+              <span>{statusView[status].label}</span>
               {status === selectedStatus ? <Check aria-hidden /> : null}
             </button>)}
             {activePicker === "priority" && draftPriorityOrder.map(priority => <button type="button" role="option" aria-selected={priority === selectedPriority} key={priority} className={styles.pickerOption} onClick={() => { updateDraft("priority", priority); setActivePicker(null); }}>
@@ -477,9 +477,9 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
             {kind === "Tarefa" && <div className={styles.entitySelectors}>
               <fieldset className={styles.entitySelect}>
                 <span className={styles.entitySelectLabel}>Status</span>
-                <button type="button" className={styles.entitySelectButton} aria-label={`Status: ${taskStatuses[selectedStatus].label}`} aria-haspopup="dialog" aria-expanded={activePicker === "status"} onClick={() => setActivePicker("status")}>
+                <button type="button" className={styles.entitySelectButton} aria-label={`Status: ${statusView[selectedStatus].label}`} aria-haspopup="dialog" aria-expanded={activePicker === "status"} onClick={() => setActivePicker("status")}>
                   <TaskStatusIcon status={selectedStatus} />
-                  <span>{taskStatuses[selectedStatus].label}</span>
+                  <span>{statusView[selectedStatus].label}</span>
                   <ChevronDown aria-hidden />
                 </button>
               </fieldset>

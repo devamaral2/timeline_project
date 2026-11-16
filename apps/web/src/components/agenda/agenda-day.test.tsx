@@ -15,7 +15,7 @@ test("an event in its window shows start and end times, not a running timer", ()
 
 test("task status and the event annotation do not change the card timing", () => {
   render(<AgendaDay {...props}
-    tasks={{ "BRD-25": { id: "BRD-25", status: "completed", priority: "flexible" } }}
+    tasks={{ "BRD-25": { id: "BRD-25", status: "done", priority: "low" } }}
     missedEvents={{ [`${EXAMPLE_TODAY}:Revisar proposta`]: true }}
   />);
 

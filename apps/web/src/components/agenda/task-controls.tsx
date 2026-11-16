@@ -1,34 +1,34 @@
 import { Check, Circle, CircleCheck, CircleDashed, CircleSlash, Clock3, Link2, X } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { mediumDate } from "@repo/timeline";
-import type { ExampleEvent, ExampleTask, TaskPriority, TaskStatus } from "./agenda-examples";
+import type { ExampleEvent, ExamplePriority, ExampleStatus, ExampleTask } from "./agenda-examples";
 import styles from "@/components/shell/shell.module.css";
 
-export const taskStatuses = {
+export const statusView = {
   todo: { label: "A fazer", Icon: Circle },
-  scheduled: { label: "Agendada", Icon: CircleDashed },
-  inProgress: { label: "Em andamento", Icon: Clock3 },
-  completed: { label: "Concluída", Icon: CircleCheck },
-  canceled: { label: "Cancelada", Icon: CircleSlash },
-} satisfies Record<TaskStatus, { label: string; Icon: typeof Circle }>;
+  inHold: { label: "Agendada", Icon: CircleDashed },
+  doing: { label: "Em andamento", Icon: Clock3 },
+  done: { label: "Concluída", Icon: CircleCheck },
+  cancel: { label: "Cancelada", Icon: CircleSlash },
+} satisfies Record<ExampleStatus, { label: string; Icon: typeof Circle }>;
 
-export const taskPriorities: Record<TaskPriority, string> = { urgent: "Urgente", normal: "Normal", flexible: "Flexível" };
+export const priorityView: Record<ExamplePriority, string> = { urgent: "Urgente", medium: "Normal", low: "Flexível" };
 
-export function TaskStatusIcon({ status }: { status: TaskStatus }) {
-  if (status === "inProgress") return (
+export function TaskStatusIcon({ status }: { status: ExampleStatus }) {
+  if (status === "doing") return (
     <svg viewBox="0 0 24 24" className={styles.taskStatusIcon} data-status={status} fill="none" stroke="currentColor" aria-hidden>
       <circle cx="12" cy="12" r="9" /><path d="M12 6a6 6 0 0 1 0 12Z" fill="currentColor" stroke="none" />
     </svg>
   );
-  const { Icon } = taskStatuses[status];
+  const { Icon } = statusView[status];
   return <Icon aria-hidden className={styles.taskStatusIcon} data-status={status} />;
 }
 
-export function TaskPriorityIcon({ priority, decorative = false }: { priority: TaskPriority; decorative?: boolean }) {
+export function TaskPriorityIcon({ priority, decorative = false }: { priority: ExamplePriority; decorative?: boolean }) {
   const icon = (
     <svg viewBox="0 0 16 16" fill="none" aria-hidden>
       <path d="M3 12V9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-      <path d="M8 12V6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" opacity={priority === "flexible" ? .25 : 1} />
+      <path d="M8 12V6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" opacity={priority === "low" ? .25 : 1} />
       <path d="M13 12V3" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" opacity={priority === "urgent" ? 1 : .25} />
     </svg>
   );
@@ -36,7 +36,7 @@ export function TaskPriorityIcon({ priority, decorative = false }: { priority: T
   if (decorative) return <span className={styles.taskPriority} data-priority={priority} aria-hidden>{icon}</span>;
 
   return (
-    <span className={styles.taskPriority} data-priority={priority} role="img" aria-label={`Prioridade da tarefa: ${taskPriorities[priority]}`} title={`Prioridade da tarefa: ${taskPriorities[priority]}`}>
+    <span className={styles.taskPriority} data-priority={priority} role="img" aria-label={`Prioridade da tarefa: ${priorityView[priority]}`} title={`Prioridade da tarefa: ${priorityView[priority]}`}>
       {icon}
     </span>
   );
@@ -71,20 +71,20 @@ export function EventTaskDialog({ selected, task, missed, onTaskChange, onMissed
         {task ? <>
           <fieldset className={styles.statusOptions}>
             <legend>Status da tarefa</legend>
-            {(Object.keys(taskStatuses) as TaskStatus[]).map((status) => (
+            {(Object.keys(statusView) as ExampleStatus[]).map((status) => (
               <label key={status} data-selected={status === task.status}>
                 <input type="radio" name="task-status" value={status} checked={status === task.status} onChange={() => onTaskChange({ ...task, status })} />
-                <TaskStatusIcon status={status} /><span>{taskStatuses[status].label}</span>
+                <TaskStatusIcon status={status} /><span>{statusView[status].label}</span>
                 {status === task.status ? <Check aria-hidden className={styles.selectedCheck} /> : null}
               </label>
             ))}
           </fieldset>
           <fieldset className={styles.priorityOptions}>
             <legend>Prioridade da tarefa</legend>
-            {(Object.keys(taskPriorities) as TaskPriority[]).map((priority) => (
+            {(Object.keys(priorityView) as ExamplePriority[]).map((priority) => (
               <label key={priority} data-selected={priority === task.priority}>
-                <input type="radio" name="task-priority" aria-label={taskPriorities[priority]} value={priority} checked={priority === task.priority} onChange={() => onTaskChange({ ...task, priority })} />
-                <TaskPriorityIcon priority={priority} />{taskPriorities[priority]}
+                <input type="radio" name="task-priority" aria-label={priorityView[priority]} value={priority} checked={priority === task.priority} onChange={() => onTaskChange({ ...task, priority })} />
+                <TaskPriorityIcon priority={priority} />{priorityView[priority]}
               </label>
             ))}
           </fieldset>
