@@ -43,9 +43,8 @@ test("reads the agenda window and the tracked list, and an event in both lists c
 
   expect(sources.map((source) => source.id).sort()).toEqual(["agenda-only", "both", "long"]);
   const paths = api.calls.map((call) => call.pathname);
-  expect(paths).toContain("/api/events");
-  expect(paths).toContain("/api/events/tracked");
-  expect(paths).not.toContain("/api/tasks");
+  expect(paths).toContain("/api/tasks");
+  expect(paths).toContain("/api/tasks/tracked");
 });
 
 test("the long-running event arrives with its deadline, so the notification can count from it", async () => {
@@ -61,7 +60,7 @@ test("the long-running event arrives with its deadline, so the notification can 
 
 test("a failed list drops only its own events; the other list still warns", async () => {
   const api = installApi();
-  api.failNext("GET", "/api/events/tracked", 500);
+  api.failNext("GET", "/api/tasks/tracked", 500);
 
   const sources = await loadNotificationSources(NOW);
 

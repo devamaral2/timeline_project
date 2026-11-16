@@ -56,288 +56,13 @@ apps/auth/src/auth-core/persistence/postgres-session.repository.ts	* o evento ce
 apps/auth/src/cleanup/cleanup-auth-data.ts	const events: AuditEventInput[] = retired.rows.map((key) => audit('key.retired', key.kid, now, input.context, {}));
 apps/auth/src/cleanup/cleanup-auth-data.ts	events.push(audit('cleanup.completed', null, now, input.context, {
 apps/auth/src/cleanup/cleanup-auth-data.ts	await insertAuditEvents(tx, events);
-apps/auth/src/http/api-proxy/api-gateway.controller.test.ts	const { authorized, received } = await forward("GET", "/api/artifacts?eventId=event-1", undefined);
-apps/auth/src/http/api-proxy/api-gateway.controller.test.ts	expect(received[0]).toMatchObject({ method: "GET", path: "/api/artifacts?eventId=event-1" });
 apps/auth/src/testing/create-test-app.ts	// O logger do filtro guarda o evento em memoria em vez de imprimir: o Logger
 apps/auth/src/testing/in-memory-audit-log.ts	export class InMemoryAuditLog implements AuditLog { readonly events: AuditEventInput[] = []; async record(event: AuditEventInput): Promise<void> { assertSafeAuditEvent(event); this.events.push(event); } }
 
-== rotas ==
-apps/api/src/common/openapi-operations.ts	import { ACTORS, ARTIFACT_TYPES, EVENT_KINDS, EVENT_STATUSES, PRIORITIES } from "../domain";
-apps/api/src/common/openapi-operations.ts	EventCard: taskCardSchema,
-apps/api/src/common/openapi-operations.ts	Event: taskSchema,
-apps/api/src/common/openapi-operations.ts	CreateEventInput: createTaskInputSchema,
-apps/api/src/common/openapi-operations.ts	UpdateEventInput: updateTaskInputSchema.omit({ taskId: true }),
-apps/api/src/common/openapi-operations.ts	CreatedEvent: z.object({ taskId: z.string() }),
-apps/api/src/common/openapi-operations.ts	{ name: "Eventos", description: "A agenda, a lista de tarefas e cada evento de pessoa." },
-apps/api/src/common/openapi-operations.ts	{ name: "Locais", description: "Busca de locais para o campo de local do evento." },
-apps/api/src/common/openapi-operations.ts	{ name: "Artefatos", description: "O conteúdo que os eventos criam e usam: texto, alimento, sono e treino." },
-apps/api/src/common/openapi-operations.ts	"GET /api/events": {
-apps/api/src/common/openapi-operations.ts	tag: "Eventos",
-apps/api/src/common/openapi-operations.ts	description: "Os eventos de uma janela de tempo. Passe o `nextCursor` da resposta em `cursor` para a página seguinte.",
-apps/api/src/common/openapi-operations.ts	actor: { description: "De quem é o evento.", enum: ACTORS },
-apps/api/src/common/openapi-operations.ts	kind: { description: "Só eventos deste tipo.", enum: EVENT_KINDS.filter((kind) => kind !== "step") },
-apps/api/src/common/openapi-operations.ts	"GET /api/events/tracked": {
-apps/api/src/common/openapi-operations.ts	tag: "Eventos",
-apps/api/src/common/openapi-operations.ts	description: "Os eventos acompanhados por status, com ou sem data. `status` e `priority` aceitam vários valores separados por vírgula.",
-apps/api/src/common/openapi-operations.ts	actor: { description: "De quem é o evento.", enum: ACTORS },
-apps/api/src/common/openapi-operations.ts	status: { description: `Um ou mais status, separados por vírgula: ${EVENT_STATUSES.join(", ")}.` },
-apps/api/src/common/openapi-operations.ts	from: instant("Só eventos a partir deste instante."),
-apps/api/src/common/openapi-operations.ts	to: instant("Só eventos até este instante."),
-apps/api/src/common/openapi-operations.ts	longRunning: { description: "`true` para só os eventos longos, `false` para só os demais.", type: "boolean" },
-apps/api/src/common/openapi-operations.ts	success: { status: 200, description: "As tarefas que passam nos filtros.", schema: "EventCard", list: true },
-apps/api/src/common/openapi-operations.ts	"POST /api/events": {
-apps/api/src/common/openapi-operations.ts	tag: "Eventos",
-apps/api/src/common/openapi-operations.ts	summary: "Cria um evento",
-apps/api/src/common/openapi-operations.ts	description: "Cria um evento de pessoa, com os artefatos novos ou já existentes que ele carrega.",
-apps/api/src/common/openapi-operations.ts	body: "CreateEventInput",
-apps/api/src/common/openapi-operations.ts	success: { status: 201, description: "O evento foi criado.", schema: "CreatedEvent" },
-apps/api/src/common/openapi-operations.ts	"GET /api/events/{eventId}": {
-apps/api/src/common/openapi-operations.ts	tag: "Eventos",
-apps/api/src/common/openapi-operations.ts	summary: "Lê um evento",
-apps/api/src/common/openapi-operations.ts	success: { status: 200, description: "O evento, com os artefatos e as relações.", schema: "Event" },
-apps/api/src/common/openapi-operations.ts	errors: { 404: "Evento não encontrado." },
-apps/api/src/common/openapi-operations.ts	"PATCH /api/events/{eventId}": {
-apps/api/src/common/openapi-operations.ts	tag: "Eventos",
-apps/api/src/common/openapi-operations.ts	summary: "Edita um evento",
-apps/api/src/common/openapi-operations.ts	description: "Envie só os campos que mudam, mais o `expectedRevision` lido do evento. `null` em `status` ou numa data apaga o valor.",
-apps/api/src/common/openapi-operations.ts	body: "UpdateEventInput",
-apps/api/src/common/openapi-operations.ts	success: { status: 204, description: "O evento foi editado." },
-apps/api/src/common/openapi-operations.ts	errors: { 400: invalid, 404: "Evento não encontrado.", 409: stale },
-apps/api/src/common/openapi-operations.ts	"DELETE /api/events/{eventId}": {
-apps/api/src/common/openapi-operations.ts	tag: "Eventos",
-apps/api/src/common/openapi-operations.ts	summary: "Apaga um evento",
-apps/api/src/common/openapi-operations.ts	success: { status: 204, description: "O evento foi apagado." },
-apps/api/src/common/openapi-operations.ts	errors: { 404: "Evento não encontrado." },
-apps/api/src/common/openapi-operations.ts	eventId: { description: "Só os artefatos que aparecem neste evento." },
-apps/api/src/common/openapi-operations.ts	success: { status: 200, description: "O artefato, com os eventos em que aparece.", schema: "Artifact" },
-apps/api/src/common/openapi-operations.ts	description: "A regra diz quando cada ocorrência acontece; `template` é o evento que cada uma copia, sem a janela.",
-apps/api/src/common/openapi-operations.ts	description: "O agente desdobra o pedido em passos que criam ou alteram eventos e artefatos. A resposta chega antes de o trabalho terminar: acompanhe em `GET /api/requests/{requestId}`.",
-apps/api/src/common/openapi-operations.ts	summary: "Transforma uma fala em evento",
-apps/api/src/common/openapi-operations.ts	description: "O evento criado aparece em `entities` de `GET /api/requests/{requestId}`.",
-apps/api/src/common/openapi.test.ts	"/api/events": {
-apps/api/src/common/openapi.test.ts	tags: ["ListAgendaEvents"],
-apps/api/src/common/openapi.test.ts	"/api/events/{eventId}": {
-apps/api/src/common/openapi.test.ts	tags: ["UpdateEvent"],
-apps/api/src/common/openapi.test.ts	parameters: [{ name: "eventId", in: "path", required: true, schema: { type: "string" } }],
-apps/api/src/common/openapi.test.ts	const list = document.paths["/api/events"].get;
-apps/api/src/common/openapi.test.ts	expect(list.tags).toEqual(["Eventos"]);
-apps/api/src/common/openapi.test.ts	const create = document.paths["/api/events"].post;
-apps/api/src/common/openapi.test.ts	expect(create.requestBody).toEqual({ required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/CreateEventInput" } } } });
-apps/api/src/common/openapi.test.ts	const update = document.paths["/api/events/{eventId}"].patch;
-apps/api/src/common/openapi.test.ts	expect(update.parameters.map((parameter) => `${parameter.in}:${parameter.name}`)).toEqual(["path:eventId"]);
-apps/api/src/common/openapi.test.ts	expect(document.components.schemas.UpdateEventInput.properties).not.toHaveProperty("eventId");
-apps/api/src/common/openapi.test.ts	expect(document.components.schemas.UpdateEventInput.required).toEqual(["expectedRevision"]);
-apps/api/src/common/openapi.ts	.setDescription("Backend de eventos, artefatos, séries e pedidos ao agente. Só o gateway Auth chega aqui, com os dois headers abaixo.")
-apps/api/src/domain/idempotency/ports/idempotency-store.ts	/** Rota protegida (`/api/events`): a mesma chave em rotas diferentes e independente. */
-apps/api/src/features/create-event/create-event.controller.ts	@Controller("api/events")
-apps/api/src/features/delete-event/delete-event.controller.ts	@Controller("api/events")
-apps/api/src/features/delete-event/delete-event.controller.ts	@Delete(":eventId")
-apps/api/src/features/get-event/get-event.controller.ts	@Controller("api/events")
-apps/api/src/features/get-event/get-event.controller.ts	@Get(":eventId")
-apps/api/src/features/list-agenda-events/list-agenda-events.controller.ts	@Controller("api/events")
-apps/api/src/features/list-tracked-events/list-tracked-events.controller.ts	@Controller("api/events")
-apps/api/src/features/update-event/update-event.controller.ts	@Controller("api/events")
-apps/api/src/features/update-event/update-event.controller.ts	@Patch(":eventId")
-apps/api/src/http/idempotency/idempotency.interceptor.ts	"/api/events",
-apps/web/src/app/[userId]/eventos/[eventId]/event-delete.test.tsx	expect(deletes()).toEqual([expect.objectContaining({ pathname: "/api/events/ev-1" })]);
-apps/web/src/app/[userId]/eventos/[eventId]/event-delete.test.tsx	api.failNext("DELETE", "/api/events/ev-1", 503);
-apps/web/src/app/[userId]/eventos/[eventId]/page.test.tsx	api.failNext("PATCH", "/api/events/ev-1", 500);
-apps/web/src/app/[userId]/eventos/[eventId]/page.tsx	import { getEvent } from "@/lib/api/events";
-apps/web/src/components/agenda/agenda-screen-api.test.tsx	expect(api.calls.filter((call) => call.pathname === "/api/events")).toHaveLength(3);
-apps/web/src/components/agenda/agenda-screen-api.test.tsx	api.failNext("GET", "/api/events", 500);
-apps/web/src/components/agenda/agenda-screen-api.test.tsx	pathname: "/api/events/ev-2",
-apps/web/src/components/agenda/agenda-screen-api.test.tsx	const agendaReads = () => api.calls.filter((call) => call.method === "GET" && call.pathname === "/api/events").length;
-apps/web/src/components/agenda/agenda-screen-api.test.tsx	api.failNext("PATCH", "/api/events/ev-2", 409);
-apps/web/src/components/agenda/agenda-screen-api.test.tsx	api.failNext("PATCH", "/api/events/ev-2", 500);
-apps/web/src/components/agenda/agenda-screen-api.test.tsx	return () => api.calls.filter((call) => call.method === "GET" && call.pathname === "/api/events").length;
-apps/web/src/components/agenda/agenda-screen-api.test.tsx	api.failNext("GET", "/api/events", 500);
-apps/web/src/components/agenda/agenda-screen-view-mode.test.tsx	const last = api.calls.filter((call) => call.pathname === "/api/events").at(-1);
-apps/web/src/components/agenda/agenda-screen.tsx	import { listAgenda, updateEvent } from "@/lib/api/events";
-apps/web/src/components/edit/EditTagSection.tsx	import { suggestTags } from "@/lib/api/events";
-apps/web/src/components/edit/event-choice.tsx	import { listAgenda, listTrackedEvents } from "@/lib/api/events";
-apps/web/src/components/event-detail/EventCreateRoute.test.tsx	api.failNext("POST", "/api/events", 400);
-apps/web/src/components/event-detail/EventCreateRoute.test.tsx	api.failNext("POST", "/api/events", 500);
-apps/web/src/components/event-detail/EventDetailView.tsx	import { type EditEventInput, updateEvent } from "@/lib/api/events";
-apps/web/src/components/event-detail/EventEditArtifacts.test.tsx	pathname: "/api/events/ev-1",
-apps/web/src/components/event-detail/EventEditArtifacts.test.tsx	const event = (await api.authedFetch("/api/events/ev-1")) as TaskDto;
-apps/web/src/components/event-detail/EventEditArtifacts.test.tsx	const event = (await api.authedFetch("/api/events/ev-1")) as TaskDto;
-apps/web/src/components/event-detail/EventEditArtifacts.test.tsx	const event = (await api.authedFetch("/api/events/ev-1")) as TaskDto;
-apps/web/src/components/event-detail/EventEditRecurrence.test.tsx	expect(writes()).toEqual(["POST /api/recurrences", "PATCH /api/events/ev-1"]);
-apps/web/src/components/event-detail/EventEditRoute.test.tsx	api.failNext("PATCH", "/api/events/ev-1", 400);
-apps/web/src/components/event-detail/EventEditRoute.test.tsx	api.failNext("PATCH", "/api/events/ev-1", 500);
-apps/web/src/components/event-detail/EventEditRoute.tsx	import { getEvent } from "@/lib/api/events";
-apps/web/src/components/event-detail/EventEditSequence.test.tsx	const lookup = api.calls.find((call) => call.pathname === "/api/events/tracked");
-apps/web/src/components/event-detail/EventEditSequence.test.tsx	pathname: "/api/events/ev-1",
-apps/web/src/components/event-detail/EventEditSequence.test.tsx	const before = (await api.authedFetch("/api/events/ev-3")) as TaskDto;
-apps/web/src/components/event-detail/EventEditSequence.test.tsx	expect.objectContaining({ pathname: "/api/events/ev-1", body: { expectedRevision: 3, nextTaskIds: ["ev-2"] } }),
-apps/web/src/components/event-detail/EventEditSequence.test.tsx	const successor = (await api.authedFetch("/api/events/ev-2")) as TaskDto;
-apps/web/src/components/event-detail/EventEditSequence.test.tsx	expect.objectContaining({ pathname: "/api/events/ev-1", body: { expectedRevision: 3, previousTaskIds: ["ag-1"] } }),
-apps/web/src/components/event-detail/EventEditSequence.test.tsx	pathname: "/api/events/ev-1",
-apps/web/src/components/event-detail/EventEditSequence.test.tsx	expect.objectContaining({ pathname: "/api/events/ev-1", body: { expectedRevision: 3, previousTaskIds: [] } }),
-apps/web/src/components/event-detail/EventEditSequence.test.tsx	const other3 = (await api.authedFetch("/api/events/ev-3")) as TaskDto;
-apps/web/src/components/event-detail/EventEditSequence.test.tsx	expect.objectContaining({ pathname: "/api/events/ev-1", body: { expectedRevision: 3, nextTaskIds: ["ev-3"] } }),
-apps/web/src/components/event-detail/EventEditSequence.test.tsx	api.failNext("PATCH", "/api/events/ev-1", 400);
-apps/web/src/components/event-detail/EventEditSequenceSection.tsx	import { getEvent } from "@/lib/api/events";
-apps/web/src/components/event-detail/EventEditView.tsx	import { createEvent, newIdempotencyKey, updateEvent } from "@/lib/api/events";
-apps/web/src/components/event-detail/EventSequenceSection.tsx	import { getEvent } from "@/lib/api/events";
-apps/web/src/components/event-detail/event-draft.ts	import type { EditEventInput } from "@/lib/api/events";
-apps/web/src/components/events/DeleteEventDialog.tsx	import { deleteEvent } from "@/lib/api/events";
-apps/web/src/components/events/new-event-forms/TagInput.tsx	import { suggestTags } from "@/lib/api/events";
-apps/web/src/components/tasks/TasksScreen-view-mode.test.tsx	const calls = api.calls.filter((call) => call.pathname === "/api/events/tracked");
-apps/web/src/components/tasks/TasksScreen.test.tsx	expect(api.calls.map((call) => call.pathname)).toContain("/api/events/tracked");
-apps/web/src/components/tasks/TasksScreen.test.tsx	api.failNext("GET", "/api/events/tracked", 503);
-apps/web/src/components/tasks/TasksScreen.test.tsx	pathname: "/api/events/luz",
-apps/web/src/components/tasks/TasksScreen.test.tsx	expect(patch?.pathname).toBe("/api/events/luz");
-apps/web/src/components/tasks/TasksScreen.test.tsx	const tracked = api.calls.filter((call) => call.pathname === "/api/events/tracked");
-apps/web/src/components/tasks/TasksScreen.test.tsx	return () => api.calls.filter((call) => call.pathname === "/api/events/tracked").length;
-apps/web/src/components/tasks/TasksScreen.test.tsx	api.failNext("GET", "/api/events/tracked", 503);
-apps/web/src/components/tasks/TasksScreen.tsx	import { listTrackedEvents, updateEvent } from "@/lib/api/events";
-apps/web/src/lib/api/authed-fetch.test.ts	await authedFetch("/api/events/event-1", {
-apps/web/src/lib/api/authed-fetch.test.ts	"/api/events/event-1",
-apps/web/src/lib/api/authed-fetch.test.ts	const error = await authedFetch("/api/events").catch((thrown) => thrown);
-apps/web/src/lib/api/authed-fetch.test.ts	await expect(authedFetch("/api/events/event-1", { method: "DELETE" })).resolves.toBeUndefined();
-apps/web/src/lib/api/events.test.ts	pathname: "/api/events",
-apps/web/src/lib/api/events.test.ts	pathname: "/api/events/tracked",
-apps/web/src/lib/api/events.test.ts	pathname: "/api/events",
-apps/web/src/lib/api/events.test.ts	pathname: "/api/events/ev-1",
-apps/web/src/lib/api/events.test.ts	api.failNext("PATCH", "/api/events/ev-1", 403);
-apps/web/src/lib/api/events.test.ts	api.failNext("DELETE", "/api/events/ev-1", 503);
-apps/web/src/lib/api/events.test.ts	api.failNext("PATCH", "/api/events/ev-1", 400);
-apps/web/src/lib/api/events.ts	listAgenda: "GET /api/events",
-apps/web/src/lib/api/events.ts	listTrackedEvents: "GET /api/events/tracked",
-apps/web/src/lib/api/events.ts	createEvent: "POST /api/events",
-apps/web/src/lib/api/events.ts	getEvent: "GET /api/events/{eventId}",
-apps/web/src/lib/api/events.ts	updateEvent: "PATCH /api/events/{eventId}",
-apps/web/src/lib/api/events.ts	deleteEvent: "DELETE /api/events/{eventId}",
-apps/web/src/lib/api/events.ts	const page = await apiRequest<AgendaPageDto>("GET", "/api/events", {
-apps/web/src/lib/api/events.ts	return apiRequest<TaskCardDto[]>("GET", "/api/events/tracked", {
-apps/web/src/lib/api/events.ts	const created = await apiRequest<{ taskId: string }>("POST", "/api/events", {
-apps/web/src/lib/api/events.ts	return apiRequest<TaskDto>("GET", `/api/events/${encodeURIComponent(eventId)}`);
-apps/web/src/lib/api/events.ts	return apiRequest<void>("PATCH", `/api/events/${encodeURIComponent(eventId)}`, { body: input });
-apps/web/src/lib/api/events.ts	return apiRequest<void>("DELETE", `/api/events/${encodeURIComponent(eventId)}`);
-apps/web/src/lib/events/event-read-model.ts	import type { EditEventInput } from "@/lib/api/events";
-apps/web/src/lib/events/task-filters.ts	import type { TrackedFilters } from "@/lib/api/events";
-apps/web/src/lib/notifications/load-notification-sources.test.ts	expect(paths).toContain("/api/events");
-apps/web/src/lib/notifications/load-notification-sources.test.ts	expect(paths).toContain("/api/events/tracked");
-apps/web/src/lib/notifications/load-notification-sources.test.ts	api.failNext("GET", "/api/events/tracked", 500);
-apps/web/src/lib/notifications/load-notification-sources.ts	import { listAgenda, listTrackedEvents } from "@/lib/api/events";
-apps/web/src/proxy.test.ts	const request = new NextRequest("http://web.test/api/events", { headers: { cookie: "braid_access=access-1" } });
-apps/web/src/proxy.test.ts	const request = new NextRequest("http://web.test/api/events", { headers: { authorization: "Bearer forged" } });
-apps/web/src/test/fake-api/artifacts.ts	* `GET /api/events/{id}` embute em `artifacts`: cada um com a relação do vínculo e o artefato inteiro, globais
-apps/web/src/test/fake-api/event-artifacts.test.ts	const event = (await api.authedFetch("/api/events/ev-1")) as TaskDto;
-apps/web/src/test/fake-api/event-artifacts.test.ts	const event = (await api.authedFetch("/api/events/ev-1")) as TaskDto;
-apps/web/src/test/fake-api/event-artifacts.test.ts	return api.authedFetch("/api/events/ev-1", { method: "PATCH", body: JSON.stringify(body) });
-apps/web/src/test/fake-api/event-artifacts.test.ts	const event = (await api.authedFetch("/api/events/ev-1")) as TaskDto;
-apps/web/src/test/fake-api/event-artifacts.test.ts	const event = (await api.authedFetch("/api/events/ev-1")) as TaskDto;
-apps/web/src/test/fake-api/event-artifacts.test.ts	const event = (await api.authedFetch("/api/events/ev-1")) as TaskDto;
-apps/web/src/test/fake-api/event-artifacts.test.ts	const event = (await api.authedFetch("/api/events/ev-1")) as TaskDto;
-apps/web/src/test/fake-api/event-artifacts.test.ts	const copyId = ((await api.authedFetch("/api/events/ev-1")) as TaskDto).artifacts[0]?.artifact.id ?? "";
-apps/web/src/test/fake-api/event-artifacts.test.ts	const event = (await api.authedFetch("/api/events/ev-1")) as TaskDto;
-apps/web/src/test/fake-api/event-artifacts.test.ts	const event = (await api.authedFetch("/api/events/ev-1")) as TaskDto;
-apps/web/src/test/fake-api/events.ts	{ method: "GET", path: "/api/events", output: agendaPageSchema, handle: agenda },
-apps/web/src/test/fake-api/events.ts	{ method: "GET", path: "/api/events/tracked", output: z.array(taskCardSchema), handle: tracked },
-apps/web/src/test/fake-api/events.ts	{ method: "POST", path: "/api/events", input: createTaskInputSchema, output: createdEventSchema, idempotent: true, handle: create },
-apps/web/src/test/fake-api/events.ts	{ method: "GET", path: "/api/events/:eventId", output: taskSchema, handle: read },
-apps/web/src/test/fake-api/events.ts	{ method: "PATCH", path: "/api/events/:eventId", input: updateTaskInputSchema.omit({ taskId: true }), handle: update },
-apps/web/src/test/fake-api/events.ts	{ method: "DELETE", path: "/api/events/:eventId", handle: remove },
-apps/web/src/test/fake-api/fake-api.test.ts	api.authedFetch("/api/events", {
-apps/web/src/test/fake-api/fake-api.test.ts	await expect(api.authedFetch("/api/events/ev-1")).rejects.toThrow(/Fora do contrato em GET \/api\/events\/:eventId; resposta devolvida/);
-apps/web/src/test/fake-api/fake-api.test.ts	api.authedFetch("/api/events", {
-apps/web/src/test/fake-api/fake-api.test.ts	api.authedFetch("/api/events", {
-apps/web/src/test/fake-api/fake-api.test.ts	api.authedFetch("/api/events/ev-1", {
-apps/web/src/test/fake-api/fake-api.test.ts	api.failNext("DELETE", "/api/events/ev-1", 403);
-apps/web/src/test/fake-api/fake-api.test.ts	await expect(api.authedFetch("/api/events/ev-1", { method: "DELETE" })).rejects.toMatchObject({ status: 403 });
-apps/web/src/test/fake-api/fake-api.test.ts	await expect(api.authedFetch("/api/events/ev-1", { method: "DELETE" })).resolves.toBeUndefined();
-apps/web/src/test/fake-api/index.ts	/** Padrão com parâmetros: `/api/events/:eventId`. */
-
-== gateway ==
-apps/auth/src/http/api-proxy/api-gateway.controller.test.ts	["/api/events", "task"],
-apps/auth/src/http/api-proxy/api-gateway.controller.ts	const resource = path.startsWith("/api/events") ? "task"
-apps/auth/src/http/feature-routing.test.ts	it.each(['/auth/logout-all', '/auth/me', '/api/events'])('routes protected endpoint %s through auth guards', async (path) => {
-
-== mcp ==
-apps/mcp/src/mcp.test.ts	"create_event",
-apps/mcp/src/mcp.test.ts	"get_event",
-apps/mcp/src/mcp.test.ts	"list_timeline_events",
-apps/mcp/src/mcp.test.ts	"list_tracked_events",
-apps/mcp/src/mcp.test.ts	"update_event",
-apps/mcp/src/mcp.test.ts	test("create_event posts as the owner with the idempotency key and without it in the body", async () => {
-apps/mcp/src/mcp.test.ts	fetchApi.mockResolvedValue(new Response(JSON.stringify({ taskId: "event-1" }), { status: 201 }));
-apps/mcp/src/mcp.test.ts	name: "create_event",
-apps/mcp/src/mcp.test.ts	expect(result.content).toEqual([{ type: "text", text: '{"taskId":"event-1"}' }]);
-apps/mcp/src/mcp.test.ts	expect(url).toBe("http://api.test:3001/api/events");
-apps/mcp/src/mcp.test.ts	test("create_event with a status creates a tracked event, and refuses a status the API does not have", async () => {
-apps/mcp/src/mcp.test.ts	fetchApi.mockResolvedValue(new Response(JSON.stringify({ taskId: "event-2" }), { status: 201 }));
-apps/mcp/src/mcp.test.ts	name: "create_event",
-apps/mcp/src/mcp.test.ts	name: "create_event",
-apps/mcp/src/mcp.test.ts	expect(url).toBe("http://api.test:3001/api/events");
-apps/mcp/src/mcp.test.ts	test("create_artifact sends a text artifact that appears in the given events", async () => {
-apps/mcp/src/mcp.test.ts	test("create_recurrence turns weekday names into the Sunday-first bitmask and puts the event fields in the template", async () => {
-apps/mcp/src/mcp.test.ts	test("update_event patches only the given fields and reports ok on the empty 204", async () => {
-apps/mcp/src/mcp.test.ts	name: "update_event",
-apps/mcp/src/mcp.test.ts	arguments: { eventId: "e 1", expectedRevision: 3, name: "Novo nome" },
-apps/mcp/src/mcp.test.ts	expect(url).toBe("http://api.test:3001/api/events/e%201");
-apps/mcp/src/mcp.test.ts	test("update_event changes the status and clears a date with null", async () => {
-apps/mcp/src/mcp.test.ts	name: "update_event",
-apps/mcp/src/mcp.test.ts	arguments: { eventId: "e1", expectedRevision: 2, status: "done", finishedAt: "2026-11-14T10:00:00-03:00", estimatedFinishAt: null },
-apps/mcp/src/mcp.test.ts	test("get_event reads one entity and a stale revision comes back as a tool error", async () => {
-apps/mcp/src/mcp.test.ts	const read = await client.callTool({ name: "get_event", arguments: { id: "t1" } });
-apps/mcp/src/mcp.test.ts	const stale = await client.callTool({ name: "update_event", arguments: { eventId: "t1", expectedRevision: 3, name: "x" } });
-apps/mcp/src/mcp.test.ts	expect(fetchApi.mock.calls[0]?.[0]).toBe("http://api.test:3001/api/events/t1");
-apps/mcp/src/mcp.test.ts	test("list_timeline_events forwards the filters as a query string", async () => {
-apps/mcp/src/mcp.test.ts	await client.callTool({ name: "list_timeline_events", arguments: { tag: "saude", limit: 5 } });
-apps/mcp/src/mcp.test.ts	expect(url).toBe("http://api.test:3001/api/events?tag=saude&limit=5");
-apps/mcp/src/mcp.test.ts	test("list_timeline_events forwards the kind, the actor and the cursor", async () => {
-apps/mcp/src/mcp.test.ts	await client.callTool({ name: "list_timeline_events", arguments: { kind: "meal", actor: "human", cursor: "abc", limit: 10 } });
-apps/mcp/src/mcp.test.ts	expect(url.pathname).toBe("/api/events");
-apps/mcp/src/mcp.test.ts	test("list_tracked_events sends list filters as comma-separated query values", async () => {
-apps/mcp/src/mcp.test.ts	name: "list_tracked_events",
-apps/mcp/src/mcp.test.ts	expect(url.pathname).toBe("/api/events/tracked");
-apps/mcp/src/mcp.test.ts	test("list_tracked_events refuses an unknown status before calling the API", async () => {
-apps/mcp/src/mcp.test.ts	const result = await client.callTool({ name: "list_tracked_events", arguments: { status: ["nope"] } });
-apps/mcp/src/mcp.test.ts	await client.callTool({ name: "list_artifacts", arguments: { type: "text", q: "tinta", eventId: "e1" } });
-apps/mcp/src/mcp.test.ts	expect(Object.fromEntries(artifacts?.searchParams ?? [])).toEqual({ type: "text", q: "tinta", eventId: "e1" });
-apps/mcp/src/tools.ts	// Os conjuntos fechados da API (packages/contracts/src/events/event-types.ts). O
-apps/mcp/src/tools.ts	const actor = z.enum(["human", "agent"]).optional().describe("Who carries the event out. Omit for both.");
-apps/mcp/src/tools.ts	const humanKind = z.enum(HUMAN_KINDS).optional().describe("Omit for a routine event.");
-apps/mcp/src/tools.ts	const eventShape = {
-apps/mcp/src/tools.ts	"Where the event happens. When the owner names a venue or an address, call search_places first and pass the 'label' of the matching place, so the address is one that exists. Never make up a street, number or city: with no match, pass the place as the owner said it. An empty string on update removes the location.",
-apps/mcp/src/tools.ts	"Omit for a plain agenda event that only marks a time. Set it (usually 'todo') for something to be done: the event is then tracked and shows up in list_tracked_events.",
-apps/mcp/src/tools.ts	startedAt: instant.optional().describe("Planned start. Omit on a plain agenda event for now."),
-apps/mcp/src/tools.ts	estimatedFinishAt: instant.optional().describe("Planned end, or the deadline of a long-running event."),
-apps/mcp/src/tools.ts	.describe("Long-running event: stays out of the agenda, always has a status and never repeats."),
-apps/mcp/src/tools.ts	/** Na edicao, `null` apaga o campo: sem status o evento volta a so marcar um horario. */
-apps/mcp/src/tools.ts	const eventPatchShape = {
-apps/mcp/src/tools.ts	...partial(eventShape),
-apps/mcp/src/tools.ts	status: humanStatus.nullable().optional().describe("null removes the status: the event goes back to only marking a time."),
-apps/mcp/src/tools.ts	/** O que cada ocorrencia copia. Uma serie so gera eventos de pessoa, e nunca um evento longo. */
-apps/mcp/src/tools.ts	.describe("Omit for plain agenda occurrences. Set it (usually 'todo') so every occurrence is a tracked event."),
-apps/mcp/src/tools.ts	"create_event",
-apps/mcp/src/tools.ts	"Create an event for the owner. Without 'status' it is a plain agenda event; with 'status' it is something to be done (a to-do), tracked until it is finished.",
-apps/mcp/src/tools.ts	inputSchema: { ...eventShape, idempotencyKey },
-apps/mcp/src/tools.ts	({ idempotencyKey: key, ...event }) => guarded(() => api.post("/api/events", event, key)),
-apps/mcp/src/tools.ts	"Create a free-text artifact (the app shows it as a note), optionally appearing in existing events (use list_timeline_events / list_tracked_events for ids).",
-apps/mcp/src/tools.ts	"Create a recurring series of events. Each occurrence copies the name, description, kind, status, tags and priority.",
-apps/mcp/src/tools.ts	"list_timeline_events",
-apps/mcp/src/tools.ts	"List the owner's agenda: events with a start in a time window, newest first, without the long-running ones. Use it to check what already exists before creating. When the result has 'nextCursor', pass it as 'cursor' to get the following page.",
-apps/mcp/src/tools.ts	kind: z.enum([...HUMAN_KINDS, ...REQUEST_KINDS]).optional().describe("Only events of this kind."),
-apps/mcp/src/tools.ts	(query) => guarded(() => api.get("/api/events", query)),
-apps/mcp/src/tools.ts	"Search the map for venues and addresses matching a text (e.g. 'Hospital Mater Dei Belo Horizonte'). Each result's 'label' is the full address to store in an event's 'location'. Add the city or neighbourhood to the text when the owner said it. An empty list means the map does not know the place.",
-apps/mcp/src/tools.ts	"list_tracked_events",
-apps/mcp/src/tools.ts	"List the owner's tracked events: the ones with a status (to-dos and requests to the agent), long-running ones included; a recurring series appears once, by its next open occurrence. All of them unless filtered; filters combine with AND. 'from'/'to' compare against the planned start, or the planned end when there is no start; events with neither date never match a window.",
-apps/mcp/src/tools.ts	q: z.string().optional().describe("Text to find in the event name, ignoring case."),
-apps/mcp/src/tools.ts	longRunning: z.boolean().optional().describe("true for only the long-running events, false for only the others."),
-apps/mcp/src/tools.ts	api.get("/api/events/tracked", {
-apps/mcp/src/tools.ts	"List the owner's artifacts (free text, food, sleep, training), all of them unless filtered. Filters combine with AND. Use eventId to find the artifacts of one event.",
-apps/mcp/src/tools.ts	eventId: z.string().min(1).optional().describe("Only artifacts that appear in this event."),
-apps/mcp/src/tools.ts	["get_event", "event", "events"],
-apps/mcp/src/tools.ts	"update_event",
-apps/mcp/src/tools.ts	"Edit fields of an event. Send only the fields to change. Its artifacts and its sequence (previous and next events) are left untouched.",
-apps/mcp/src/tools.ts	inputSchema: { eventId: id("event"), expectedRevision: revision, ...eventPatchShape },
-apps/mcp/src/tools.ts	({ eventId, ...patch }) => guarded(() => api.patch(`/api/events/${encodeURIComponent(eventId)}`, patch)),
-apps/mcp/src/tools.ts	"Edit a free-text artifact. Send only what changes; 'body' replaces the whole text. The events it appears in are left untouched.",
-
 == api ==
+apps/api/src/common/openapi-operations.ts	import { ACTORS, ARTIFACT_TYPES, EVENT_KINDS, EVENT_STATUSES, PRIORITIES } from "../domain";
+apps/api/src/common/openapi-operations.ts	kind: { description: "Só tarefas deste tipo.", enum: EVENT_KINDS.filter((kind) => kind !== "step") },
+apps/api/src/common/openapi-operations.ts	status: { description: `Um ou mais status, separados por vírgula: ${EVENT_STATUSES.join(", ")}.` },
 apps/api/src/api-core/api-core.module.ts	EVENT_REPOSITORY,
 apps/api/src/api-core/api-core.module.ts	EventRepository,
 apps/api/src/api-core/api-core.module.ts	import { CreateEventUseCase } from "./events/create-event.usecase";
@@ -1921,8 +1646,7 @@ apps/api/src/features/delete-event/delete-event.controller.ts	import type { Even
 apps/api/src/features/delete-event/delete-event.controller.ts	import { DeleteEventUseCase } from "./delete-event.usecase";
 apps/api/src/features/delete-event/delete-event.controller.ts	export class DeleteEventController {
 apps/api/src/features/delete-event/delete-event.controller.ts	constructor(@Inject(DeleteEventUseCase) private readonly deleteEvent: DeleteEventUseCase) {}
-apps/api/src/features/delete-event/delete-event.controller.ts	async execute(@Param("eventId") eventId: string, @CurrentUser() actor: AuthenticatedUser): Promise<void> {
-apps/api/src/features/delete-event/delete-event.controller.ts	await this.deleteEvent.execute({ eventId }, actor);
+apps/api/src/features/delete-event/delete-event.controller.ts	await this.deleteEvent.execute({ eventId: taskId }, actor);
 apps/api/src/features/delete-event/delete-event.controller.ts	controllers: [DeleteEventController],
 apps/api/src/features/delete-event/delete-event.controller.ts	provide: DeleteEventUseCase,
 apps/api/src/features/delete-event/delete-event.controller.ts	inject: [EVENT_REPOSITORY],
@@ -1991,8 +1715,7 @@ apps/api/src/features/get-event/get-event.controller.ts	[nome de arquivo]
 apps/api/src/features/get-event/get-event.controller.ts	import { GetEventUseCase } from "./get-event.usecase";
 apps/api/src/features/get-event/get-event.controller.ts	export class GetEventController {
 apps/api/src/features/get-event/get-event.controller.ts	constructor(@Inject(GetEventUseCase) private readonly getEvent: GetEventUseCase) {}
-apps/api/src/features/get-event/get-event.controller.ts	async execute(@Param("eventId") eventId: string, @CurrentUser() actor: AuthenticatedUser): Promise<TaskDto> {
-apps/api/src/features/get-event/get-event.controller.ts	const event = await this.getEvent.execute({ eventId }, actor);
+apps/api/src/features/get-event/get-event.controller.ts	const event = await this.getEvent.execute({ eventId: taskId }, actor);
 apps/api/src/features/get-event/get-event.controller.ts	if (!event) throw new NotFoundException("Event not found");
 apps/api/src/features/get-event/get-event.controller.ts	return event;
 apps/api/src/features/get-event/get-event.module.ts	[nome de arquivo]
@@ -2173,8 +1896,7 @@ apps/api/src/features/list-agenda-events/list-agenda-events.usecase.ts	const pag
 apps/api/src/features/list-agenda-events/list-agenda-events.usecase.ts	return { items: page.items.map(toEventCardDto), ...(page.nextCursor ? { nextCursor: page.nextCursor } : {}) };
 apps/api/src/features/list-artifacts/list-artifacts.controller.ts	import { ARTIFACT_EVENT_LINK_QUERY, ARTIFACT_REPOSITORY } from "../../infrastructure/persistence";
 apps/api/src/features/list-artifacts/list-artifacts.controller.ts	import type { ArtifactEventLinkQuery, ArtifactRepository } from "../../domain/ports";
-apps/api/src/features/list-artifacts/list-artifacts.controller.ts	@Query("eventId") eventId?: string,
-apps/api/src/features/list-artifacts/list-artifacts.controller.ts	eventId: eventId || undefined,
+apps/api/src/features/list-artifacts/list-artifacts.controller.ts	eventId: taskId || undefined,
 apps/api/src/features/list-artifacts/list-artifacts.controller.ts	inject: [ARTIFACT_REPOSITORY, ARTIFACT_EVENT_LINK_QUERY],
 apps/api/src/features/list-artifacts/list-artifacts.controller.ts	useFactory: (artifacts: ArtifactRepository, links: ArtifactEventLinkQuery) => new ListArtifactsUseCase(artifacts, links),
 apps/api/src/features/list-artifacts/list-artifacts.usecase.test.ts	import { Artifact, Event } from "../../domain";
@@ -2371,9 +2093,8 @@ apps/api/src/features/update-event/update-event.controller.ts	import { assertEve
 apps/api/src/features/update-event/update-event.controller.ts	import { UpdateEventUseCase } from "./update-event.usecase";
 apps/api/src/features/update-event/update-event.controller.ts	export class UpdateEventController {
 apps/api/src/features/update-event/update-event.controller.ts	constructor(@Inject(UpdateEventUseCase) private readonly updateEvent: UpdateEventUseCase) {}
-apps/api/src/features/update-event/update-event.controller.ts	@Param("eventId") eventId: string,
+apps/api/src/features/update-event/update-event.controller.ts	await this.updateEvent.execute({ ...body, taskId }, actor);
 apps/api/src/features/update-event/update-event.controller.ts	assertEventFields(body as unknown as Record<string, unknown>, true);
-apps/api/src/features/update-event/update-event.controller.ts	await this.updateEvent.execute({ ...body, taskId: eventId }, actor);
 apps/api/src/features/update-event/update-event.controller.ts	controllers: [UpdateEventController],
 apps/api/src/features/update-event/update-event.controller.ts	provide: UpdateEventUseCase,
 apps/api/src/features/update-event/update-event.controller.ts	inject: [EVENT_REPOSITORY, ARTIFACT_REPOSITORY, ArtifactBuilder, ENTITY_BATCH_WRITER],
@@ -3608,6 +3329,37 @@ apps/api/src/api-core/requests/voice-task-worker.ts	const schedule = resolveEven
 apps/api/src/api-core/requests/voice-task-worker.ts	afterWrite: (tx) => store.completeVoice(tx, { requestId: request.id, taskId: prepared.event.id }),
 
 == web, código ==
+apps/web/src/app/[userId]/eventos/[eventId]/page.tsx	import { getEvent } from "@/lib/api/events";
+apps/web/src/components/agenda/agenda-screen.tsx	import { listAgenda, updateEvent } from "@/lib/api/events";
+apps/web/src/components/edit/EditTagSection.tsx	import { suggestTags } from "@/lib/api/events";
+apps/web/src/components/edit/event-choice.tsx	import { listAgenda, listTrackedEvents } from "@/lib/api/events";
+apps/web/src/components/event-detail/EventDetailView.tsx	import { type EditEventInput, updateEvent } from "@/lib/api/events";
+apps/web/src/components/event-detail/EventEditRoute.tsx	import { getEvent } from "@/lib/api/events";
+apps/web/src/components/event-detail/EventEditSequenceSection.tsx	import { getEvent } from "@/lib/api/events";
+apps/web/src/components/event-detail/EventEditView.tsx	import { createEvent, newIdempotencyKey, updateEvent } from "@/lib/api/events";
+apps/web/src/components/event-detail/EventSequenceSection.tsx	import { getEvent } from "@/lib/api/events";
+apps/web/src/components/event-detail/event-draft.ts	import type { EditEventInput } from "@/lib/api/events";
+apps/web/src/components/events/DeleteEventDialog.tsx	import { deleteEvent } from "@/lib/api/events";
+apps/web/src/components/events/new-event-forms/TagInput.tsx	import { suggestTags } from "@/lib/api/events";
+apps/web/src/components/tasks/TasksScreen.tsx	import { listTrackedEvents, updateEvent } from "@/lib/api/events";
+apps/web/src/lib/events/event-read-model.ts	import type { EditEventInput } from "@/lib/api/events";
+apps/web/src/lib/events/task-filters.ts	import type { TrackedFilters } from "@/lib/api/events";
+apps/web/src/lib/notifications/load-notification-sources.ts	import { listAgenda, listTrackedEvents } from "@/lib/api/events";
+apps/web/src/components/event-detail/EventEditArtifacts.test.tsx	const event = (await api.authedFetch("/api/tasks/ev-1")) as TaskDto;
+apps/web/src/components/event-detail/EventEditArtifacts.test.tsx	const event = (await api.authedFetch("/api/tasks/ev-1")) as TaskDto;
+apps/web/src/components/event-detail/EventEditArtifacts.test.tsx	const event = (await api.authedFetch("/api/tasks/ev-1")) as TaskDto;
+apps/web/src/lib/api/events.ts	deleteEvent: "DELETE /api/tasks/{taskId}",
+apps/web/src/lib/api/events.ts	export function getEvent(taskId: string): Promise<TaskDto> {
+apps/web/src/lib/api/events.ts	export function updateEvent(taskId: string, input: EditEventInput): Promise<void> {
+apps/web/src/lib/api/events.ts	export function deleteEvent(taskId: string): Promise<void> {
+apps/web/src/test/fake-api/event-artifacts.test.ts	const event = (await api.authedFetch("/api/tasks/ev-1")) as TaskDto;
+apps/web/src/test/fake-api/event-artifacts.test.ts	const event = (await api.authedFetch("/api/tasks/ev-1")) as TaskDto;
+apps/web/src/test/fake-api/event-artifacts.test.ts	const event = (await api.authedFetch("/api/tasks/ev-1")) as TaskDto;
+apps/web/src/test/fake-api/event-artifacts.test.ts	const event = (await api.authedFetch("/api/tasks/ev-1")) as TaskDto;
+apps/web/src/test/fake-api/event-artifacts.test.ts	const event = (await api.authedFetch("/api/tasks/ev-1")) as TaskDto;
+apps/web/src/test/fake-api/event-artifacts.test.ts	const event = (await api.authedFetch("/api/tasks/ev-1")) as TaskDto;
+apps/web/src/test/fake-api/event-artifacts.test.ts	const event = (await api.authedFetch("/api/tasks/ev-1")) as TaskDto;
+apps/web/src/test/fake-api/event-artifacts.test.ts	const event = (await api.authedFetch("/api/tasks/ev-1")) as TaskDto;
 apps/web/src/app/[userId]/eventos/[eventId]/agent-event.test.tsx	[nome de arquivo]
 apps/web/src/app/[userId]/eventos/[eventId]/agent-event.test.tsx	import { eventFixture, eventsArea } from "@/test/fake-api/events";
 apps/web/src/app/[userId]/eventos/[eventId]/agent-event.test.tsx	const { default: EventPage } = await import("./page");
@@ -5019,8 +4771,6 @@ apps/web/src/lib/api/artifacts.test.ts	import { eventFixture, eventsArea } from 
 apps/web/src/lib/api/artifacts.test.ts	api = createFakeApi({ areas: [artifactsArea, eventsArea], seed });
 apps/web/src/lib/api/artifacts.test.ts	events: [eventFixture({ id: "ev-1", name: "Almoço" })],
 apps/web/src/lib/api/artifacts.test.ts	artifactFixture({ id: "art-texto", name: "Lista", tags: ["casa"], data: { body: "Comprar leite" }, links: [{ eventId: "ev-1", relation: "uses" }] }),
-apps/web/src/lib/api/artifacts.test.ts	const found = await listArtifacts({ type: "text", tag: "casa", q: "leite", eventId: "ev-1" });
-apps/web/src/lib/api/artifacts.test.ts	expect(api.calls[0].query).toEqual({ type: "text", tag: "casa", q: "leite", eventId: "ev-1" });
 apps/web/src/lib/api/artifacts.test.ts	events: [eventFixture({ id: "ev-1", name: "Almoço de domingo", kind: "meal", startedAt: "2026-09-13T12:00:00-03:00" })],
 apps/web/src/lib/api/artifacts.test.ts	artifactFixture({ id: "art-1", name: "Almoço", type: "food", data: FOOD, links: [{ eventId: "ev-1", relation: "uses" }] }),
 apps/web/src/lib/api/artifacts.test.ts	install({ events: [eventFixture({ id: "ev-1", name: "Almoço", revision: 1 })] });
@@ -5029,8 +4779,6 @@ apps/web/src/lib/api/artifacts.test.ts	events: [eventFixture({ id: "ev-1", name:
 apps/web/src/lib/api/artifacts.test.ts	artifactFixture({ id: "art-1", name: "Arroz", type: "text", links: [{ eventId: "ev-1", relation: "creates" }] }),
 apps/web/src/lib/api/artifacts.test.ts	expect(api.store.table<{ revision: number }>("events").get("ev-1")?.revision).toBe(2);
 apps/web/src/lib/api/artifacts.test.ts	expect(api.store.table<{ revision: number }>("events").get("ev-2")?.revision).toBe(2);
-apps/web/src/lib/api/artifacts.ts	eventId?: string;
-apps/web/src/lib/api/artifacts.ts	eventId: filters.eventId,
 apps/web/src/lib/api/events.test.ts	[nome de arquivo]
 apps/web/src/lib/api/events.test.ts	import { eventFixture, eventsArea } from "@/test/fake-api/events";
 apps/web/src/lib/api/events.test.ts	deleteEvent,
@@ -5086,12 +4834,11 @@ apps/web/src/lib/api/events.ts	[nome de arquivo]
 apps/web/src/lib/api/events.ts	export type EditEventInput = Omit<UpdateTaskInput, "taskId">;
 apps/web/src/lib/api/events.ts	export const eventsRoutes = {
 apps/web/src/lib/api/events.ts	export function listTrackedEvents(filters: TrackedFilters = {}): Promise<TaskCardDto[]> {
-apps/web/src/lib/api/events.ts	export function getEvent(eventId: string): Promise<TaskDto> {
-apps/web/src/lib/api/events.ts	export function updateEvent(eventId: string, input: EditEventInput): Promise<void> {
-apps/web/src/lib/api/events.ts	export function deleteEvent(eventId: string): Promise<void> {
+apps/web/src/lib/api/events.ts	listTrackedEvents: "GET /api/tasks/tracked",
+apps/web/src/lib/api/events.ts	getEvent: "GET /api/tasks/{taskId}",
+apps/web/src/lib/api/events.ts	updateEvent: "PATCH /api/tasks/{taskId}",
 apps/web/src/lib/api/route-coverage.test.ts	import { createEvent, deleteEvent, eventsRoutes, getEvent, listAgenda, listTrackedEvents, suggestTags, updateEvent } from "./events";
 apps/web/src/lib/api/route-coverage.test.ts	...Object.values(eventsRoutes),
-apps/web/src/lib/api/route-coverage.test.ts	eventId: "ID",
 apps/web/src/lib/api/route-coverage.test.ts	listTrackedEvents: () => listTrackedEvents(),
 apps/web/src/lib/api/route-coverage.test.ts	getEvent: () => getEvent("ID"),
 apps/web/src/lib/api/route-coverage.test.ts	updateEvent: () => updateEvent("ID", anyBody()),
@@ -5216,7 +4963,7 @@ apps/web/src/test/fake-api/artifacts.ts	function reviseEvents(store: FakeStore, 
 apps/web/src/test/fake-api/artifacts.ts	for (const id of eventIds) {
 apps/web/src/test/fake-api/artifacts.ts	const event = events(store).get(id);
 apps/web/src/test/fake-api/artifacts.ts	if (event) events(store).set(id, { ...event, revision: event.revision + 1 });
-apps/web/src/test/fake-api/artifacts.ts	const eventId = request.query.get("eventId") ?? undefined;
+apps/web/src/test/fake-api/artifacts.ts	const eventId = request.query.get("taskId") ?? undefined;
 apps/web/src/test/fake-api/artifacts.ts	.filter((artifact) => !eventId || artifact.links.some((link) => link.eventId === eventId))
 apps/web/src/test/fake-api/artifacts.ts	const eventIds = unique(input.taskIds);
 apps/web/src/test/fake-api/artifacts.ts	if (eventIds.some((id) => !events(store).has(id))) return { status: 404 };
@@ -5317,10 +5064,10 @@ apps/web/src/test/fake-api/events.ts	const event: StoredEvent = taskSchema.parse
 apps/web/src/test/fake-api/events.ts	table(store).set(id, event);
 apps/web/src/test/fake-api/events.ts	relinkSequence(store, event, [], []);
 apps/web/src/test/fake-api/events.ts	return { status: 201, body: createdEventSchema.parse({ taskId: id }) };
-apps/web/src/test/fake-api/events.ts	const event = table(store).get(request.params.eventId ?? "");
+apps/web/src/test/fake-api/events.ts	const event = table(store).get(request.params.taskId ?? "");
 apps/web/src/test/fake-api/events.ts	if (!event) return { status: 404 };
 apps/web/src/test/fake-api/events.ts	return { status: 200, body: { ...event, artifacts: artifactsOfEvent(store, event.id) } };
-apps/web/src/test/fake-api/events.ts	const event = table(store).get(request.params.eventId ?? "");
+apps/web/src/test/fake-api/events.ts	const event = table(store).get(request.params.taskId ?? "");
 apps/web/src/test/fake-api/events.ts	if (!event) return { status: 404 };
 apps/web/src/test/fake-api/events.ts	if (input.expectedRevision !== event.revision) return { status: 409 };
 apps/web/src/test/fake-api/events.ts	if (sequenceIds.includes(event.id)) return { status: 422 };
@@ -5334,12 +5081,12 @@ apps/web/src/test/fake-api/events.ts	const stored = table(store).get(event.id) ?
 apps/web/src/test/fake-api/events.ts	function setSequenceLink(store: FakeStore, eventId: string, field: "previousTaskIds" | "nextTaskIds", otherId: string, linked: boolean) {
 apps/web/src/test/fake-api/events.ts	const other = table(store).get(eventId);
 apps/web/src/test/fake-api/events.ts	table(store).set(eventId, { ...other, [field]: linked ? [...others, otherId] : others });
-apps/web/src/test/fake-api/events.ts	const id = request.params.eventId ?? "";
+apps/web/src/test/fake-api/events.ts	{ method: "POST", path: "/api/tasks", input: createTaskInputSchema, output: createdEventSchema, idempotent: true, handle: create },
 apps/web/src/test/fake-api/events.ts	for (const event of table(store).values()) for (const tag of event.tags) names.add(tag);
 apps/web/src/test/fake-api/events.ts	export const eventsArea: FakeArea = {
 apps/web/src/test/fake-api/fake-api.test.ts	import { eventFixture, eventsArea } from "./events";
 apps/web/src/test/fake-api/fake-api.test.ts	const api = createFakeApi({ areas: [eventsArea] });
-apps/web/src/test/fake-api/fake-api.test.ts	).rejects.toThrow(/Fora do contrato em POST \/api\/events; corpo recebido/);
+apps/web/src/test/fake-api/fake-api.test.ts	const api = createFakeApi({ areas: [eventsArea] });
 apps/web/src/test/fake-api/fake-api.test.ts	const withExtraField = { ...eventFixture({ id: "ev-1" }), campoInventado: true };
 apps/web/src/test/fake-api/fake-api.test.ts	const api = createFakeApi({ areas: [eventsArea], seed: { events: [withExtraField] } });
 apps/web/src/test/fake-api/fake-api.test.ts	const api = createFakeApi({ areas: [eventsArea] });
@@ -6001,7 +5748,6 @@ apps/web/src/components/tasks/TasksScreen.test.tsx	/** Liga a tela à API falsa 
 apps/web/src/components/tasks/TasksScreen.test.tsx	test("agrupa pessoa e agente nos grupos do canvas, com a contagem e a linha de cada evento", async () => {
 apps/web/src/components/tasks/TasksScreen.test.tsx	expect(luz).toHaveAttribute("href", "/user-1/eventos/luz");
 apps/web/src/components/tasks/TasksScreen.test.tsx	test("a sequência não esconde linhas: o evento que se segue a outro da lista aparece, sem fração nem “Espera por”", async () => {
-apps/web/src/components/tasks/TasksScreen.test.tsx	test("a lista pede a rota de eventos com status, sem o contrato antigo", async () => {
 apps/web/src/components/tasks/TasksScreen.test.tsx	test("convida a criar o primeiro evento quando não há nenhum evento com status, e leva ao formulário de evento", async () => {
 apps/web/src/components/tasks/TasksScreen.test.tsx	fireEvent.click(screen.getByRole("button", { name: "Novo evento" }));
 apps/web/src/components/tasks/TasksScreen.test.tsx	expect(push).toHaveBeenCalledWith("/user-1/eventos/novo");
@@ -6032,14 +5778,12 @@ apps/web/src/lib/api/artifacts.test.ts	test("traz os eventos em que o artefato a
 apps/web/src/lib/api/artifacts.test.ts	test("aparecer num evento ao criar liga o artefato a ele e revisa o evento", async () => {
 apps/web/src/lib/api/artifacts.test.ts	test("evento citado que não existe é não encontrado, e nada é criado", async () => {
 apps/web/src/lib/api/artifacts.test.ts	test("trocar os eventos mantém quem fica, tira quem sai e revisa só os eventos tocados", async () => {
-apps/web/src/lib/api/artifacts.ts	/** Só os artefatos que aparecem nesse evento. */
 apps/web/src/lib/api/client-request.ts	* Cada área (eventos, artefatos, …) chama `apiRequest` e não conhece HTTP.
 apps/web/src/lib/api/events.test.ts	test("não traz evento longo nem evento sem horário", async () => {
 apps/web/src/lib/api/events.test.ts	test("envia a chave de idempotência e devolve o id do evento criado", async () => {
 apps/web/src/lib/api/events.test.ts	test("repetir a mesma chave não cria outro evento", async () => {
 apps/web/src/lib/api/events.test.ts	test("lê um evento; um id que não existe vira não encontrado", async () => {
 apps/web/src/lib/api/events.test.ts	test("apagar responde 204 e não quebra; depois o evento não existe", async () => {
-apps/web/src/lib/api/events.ts	/** Edição: a rota leva o `eventId`, então o corpo não o repete. `expectedRevision` vem do evento lido. */
 apps/web/src/lib/api/events.ts	/** Devolve o id do evento criado. Quem cria passa a chave de `newIdempotencyKey`, estável no formulário. */
 apps/web/src/lib/api/requests.test.ts	// A tela troca o authedFetch pela API falsa: a mesma costura dos testes de eventos.
 apps/web/src/lib/api/requests.test.ts	test("o pedido de voz devolve o id; o evento criado aparece nas entidades quando o pedido termina", async () => {

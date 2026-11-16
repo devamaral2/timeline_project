@@ -10,17 +10,17 @@ import type {
 } from "@repo/contracts";
 import { apiRequest, newIdempotencyKey } from "./client-request";
 
-/** Edição: a rota leva o `eventId`, então o corpo não o repete. `expectedRevision` vem do evento lido. */
+/** Edição: a rota leva o `taskId`, então o corpo não o repete. `expectedRevision` vem da tarefa lida. */
 export type EditEventInput = Omit<UpdateTaskInput, "taskId">;
 
 /** Rota que cada função desta área chama, no formato do catálogo da API. `route-coverage.test.ts` confere. */
 export const eventsRoutes = {
-  listAgenda: "GET /api/events",
-  listTrackedEvents: "GET /api/events/tracked",
-  createEvent: "POST /api/events",
-  getEvent: "GET /api/events/{eventId}",
-  updateEvent: "PATCH /api/events/{eventId}",
-  deleteEvent: "DELETE /api/events/{eventId}",
+  listAgenda: "GET /api/tasks",
+  listTrackedEvents: "GET /api/tasks/tracked",
+  createEvent: "POST /api/tasks",
+  getEvent: "GET /api/tasks/{taskId}",
+  updateEvent: "PATCH /api/tasks/{taskId}",
+  deleteEvent: "DELETE /api/tasks/{taskId}",
   suggestTags: "GET /api/tags",
 } as const;
 
@@ -48,7 +48,7 @@ export async function listAgenda(window: AgendaWindow): Promise<TaskCardDto[]> {
   const items: TaskCardDto[] = [];
   let cursor: string | undefined;
   do {
-    const page = await apiRequest<AgendaPageDto>("GET", "/api/events", {
+    const page = await apiRequest<AgendaPageDto>("GET", "/api/tasks", {
       query: { from: window.from, to: window.to, actor: window.actor, tag: window.tag, cursor },
     });
     items.push(...page.items);
@@ -58,7 +58,7 @@ export async function listAgenda(window: AgendaWindow): Promise<TaskCardDto[]> {
 }
 
 export function listTrackedEvents(filters: TrackedFilters = {}): Promise<TaskCardDto[]> {
-  return apiRequest<TaskCardDto[]>("GET", "/api/events/tracked", {
+  return apiRequest<TaskCardDto[]>("GET", "/api/tasks/tracked", {
     query: {
       actor: filters.actor,
       status: filters.status,
@@ -78,23 +78,23 @@ export async function createEvent(
   input: CreateTaskInput,
   options: { idempotencyKey: string },
 ): Promise<string> {
-  const created = await apiRequest<{ taskId: string }>("POST", "/api/events", {
+  const created = await apiRequest<{ taskId: string }>("POST", "/api/tasks", {
     body: input,
     idempotencyKey: options.idempotencyKey,
   });
   return created.taskId;
 }
 
-export function getEvent(eventId: string): Promise<TaskDto> {
-  return apiRequest<TaskDto>("GET", `/api/events/${encodeURIComponent(eventId)}`);
+export function getEvent(taskId: string): Promise<TaskDto> {
+  return apiRequest<TaskDto>("GET", `/api/tasks/${encodeURIComponent(taskId)}`);
 }
 
-export function updateEvent(eventId: string, input: EditEventInput): Promise<void> {
-  return apiRequest<void>("PATCH", `/api/events/${encodeURIComponent(eventId)}`, { body: input });
+export function updateEvent(taskId: string, input: EditEventInput): Promise<void> {
+  return apiRequest<void>("PATCH", `/api/tasks/${encodeURIComponent(taskId)}`, { body: input });
 }
 
-export function deleteEvent(eventId: string): Promise<void> {
-  return apiRequest<void>("DELETE", `/api/events/${encodeURIComponent(eventId)}`);
+export function deleteEvent(taskId: string): Promise<void> {
+  return apiRequest<void>("DELETE", `/api/tasks/${encodeURIComponent(taskId)}`);
 }
 
 export function suggestTags(query: string, limit?: number): Promise<TagSuggestionDto[]> {

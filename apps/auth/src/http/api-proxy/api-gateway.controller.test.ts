@@ -6,9 +6,12 @@ import type { AuthenticatedActor } from "../../domain/users/user";
 import { startFakeHttpServer, type FakeHttpServer } from "../../testing/fake-http-server";
 import { ApiGatewayController, policyFor } from "./api-gateway.controller";
 
+const ROTA_ANTIGA = "/api/events"; // a rota antiga: o gateway deve recusá-la
+
 describe("policyFor", () => {
   it.each([
-    ["/api/events", "task"],
+    ["/api/tasks", "task"],
+    ["/api/tasks/task-1", "task"],
     ["/api/tags", "tag"],
     ["/api/artifacts", "artifact"],
     ["/api/artifacts/artifact-1", "artifact"],
@@ -37,9 +40,10 @@ describe("policyFor", () => {
     expect(policyFor(method, "/api/requests")).toEqual({ resource: "agent", action });
   });
 
-  it("refuses the removed task and note routes", () => {
-    expect(() => policyFor("GET", "/api/tasks")).toThrow("No gateway policy for /api/tasks");
-    expect(() => policyFor("POST", "/api/tasks")).toThrow("No gateway policy for /api/tasks");
+  it("refuses the removed old task and note routes", () => {
+    expect(() => policyFor("GET", ROTA_ANTIGA)).toThrow(`No gateway policy for ${ROTA_ANTIGA}`);
+    expect(() => policyFor("POST", ROTA_ANTIGA)).toThrow(`No gateway policy for ${ROTA_ANTIGA}`);
+    expect(() => policyFor("GET", `${ROTA_ANTIGA}/task-1`)).toThrow(`No gateway policy for ${ROTA_ANTIGA}/task-1`);
     expect(() => policyFor("GET", "/api/notes")).toThrow("No gateway policy for /api/notes");
     expect(() => policyFor("GET", "/api/notes/note-1")).toThrow("No gateway policy for /api/notes/note-1");
   });
@@ -104,10 +108,10 @@ describe("ApiGatewayController forwarding", () => {
   });
 
   it("keeps the query string when proxying GET /api/artifacts", async () => {
-    const { authorized, received } = await forward("GET", "/api/artifacts?eventId=event-1", undefined);
+    const { authorized, received } = await forward("GET", "/api/artifacts?taskId=task-1", undefined);
 
     expect(authorized[0]).toMatchObject({ resource: "artifact", action: "read" });
-    expect(received[0]).toMatchObject({ method: "GET", path: "/api/artifacts?eventId=event-1" });
+    expect(received[0]).toMatchObject({ method: "GET", path: "/api/artifacts?taskId=task-1" });
   });
 
   it("authorizes POST /api/requests as the agent execute action and checks the body userId", async () => {

@@ -171,7 +171,7 @@ describe("recorrência na edição", () => {
     save();
 
     await waitFor(() => expect(replace).toHaveBeenCalledWith(DETAIL_PATH));
-    expect(writes()).toEqual(["POST /api/recurrences", "PATCH /api/events/ev-1"]);
+    expect(writes()).toEqual(["POST /api/recurrences", "PATCH /api/tasks/ev-1"]);
     const create = api.calls.find((call) => call.method === "POST");
     // 14 de novembro de 2026 é sábado (bit 6): a série começa no domingo 15, e o evento de hoje não ganha uma cópia.
     expect(create?.body).toMatchObject({

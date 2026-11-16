@@ -23,7 +23,7 @@ export class ListArtifactsController {
     @Query("scope") scope?: string,
     @Query("tag") tag?: string,
     @Query("q") q?: string,
-    @Query("eventId") eventId?: string,
+    @Query("taskId") taskId?: string,
     @Query("limit") limit?: string,
   ): Promise<ArtifactDto[]> {
     const artifactType = parseEnum<ArtifactType>("type", type, ARTIFACT_TYPES);
@@ -35,7 +35,7 @@ export class ListArtifactsController {
         scope: artifactScope,
         tag: tag?.trim().toLowerCase() || undefined,
         q: normalizeSearch(q),
-        eventId: eventId || undefined,
+        eventId: taskId || undefined,
         limit: parseLimit(limit),
       },
       actor,

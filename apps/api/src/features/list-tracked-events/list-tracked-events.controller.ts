@@ -14,7 +14,7 @@ function parseBoolean(name: string, raw: string | undefined): boolean | undefine
   return raw === "true";
 }
 
-@Controller("api/events")
+@Controller("api/tasks")
 export class ListTrackedEventsController {
   constructor(@Inject(ListTrackedEventsUseCase) private readonly listTrackedEvents: ListTrackedEventsUseCase) {}
 

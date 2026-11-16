@@ -328,11 +328,11 @@ source /opt/braid/release.env
 git -C /opt/braid/src rev-parse HEAD
 printf 'Release publicada: %s\n' "$SHA"
 curl -fsS -o /dev/null -w 'web=%{http_code}\n' "https://timeline.$DOMAIN"
-curl -sS -o /dev/null -w 'api=%{http_code}\n' "https://api.$DOMAIN/api/events"
+curl -sS -o /dev/null -w 'api=%{http_code}\n' "https://api.$DOMAIN/api/tasks"
 ```
 
 O check do SDK imprime nomes das variáveis resolvidas, não seus valores.
-Espere Web 200 e `/api/events` 401 sem sessão. Teste login e leitura/gravação
+Espere Web 200 e `/api/tasks` 401 sem sessão. Teste login e leitura/gravação
 de um evento pelo navegador. Agora atualize o manifesto do Ingress público
 `api` para o Service `auth`, porta `3002`, e aplique-o. Confira com
 `kubectl -n braid get ingress api -o yaml` que a rota ativa aponta para Auth;

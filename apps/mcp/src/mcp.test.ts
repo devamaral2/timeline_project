@@ -73,19 +73,19 @@ describe("MCP over HTTP", () => {
 
     expect(tools.map((tool) => tool.name).sort()).toEqual([
       "create_artifact",
-      "create_event",
       "create_recurrence",
+      "create_task",
       "get_artifact",
-      "get_event",
       "get_recurrence",
+      "get_task",
+      "list_agenda_tasks",
       "list_artifacts",
       "list_recurrences",
-      "list_timeline_events",
-      "list_tracked_events",
+      "list_tracked_tasks",
       "search_places",
       "update_artifact",
-      "update_event",
       "update_recurrence",
+      "update_task",
     ]);
     for (const tool of tools) {
       expect(Object.keys(tool.inputSchema.properties ?? {})).not.toContain("userId");
@@ -95,19 +95,19 @@ describe("MCP over HTTP", () => {
     await client.close();
   });
 
-  test("create_event posts as the owner with the idempotency key and without it in the body", async () => {
-    fetchApi.mockResolvedValue(new Response(JSON.stringify({ taskId: "event-1" }), { status: 201 }));
+  test("create_task posts as the owner with the idempotency key and without it in the body", async () => {
+    fetchApi.mockResolvedValue(new Response(JSON.stringify({ taskId: "task-1" }), { status: 201 }));
     const client = await connect();
 
     const result = await client.callTool({
-      name: "create_event",
+      name: "create_task",
       arguments: { name: "Resumo", idempotencyKey: "resumo:2026-11-03", priority: "medium" },
     });
 
     expect(result.isError).toBeFalsy();
-    expect(result.content).toEqual([{ type: "text", text: '{"taskId":"event-1"}' }]);
+    expect(result.content).toEqual([{ type: "text", text: '{"taskId":"task-1"}' }]);
     const [url, init] = fetchApi.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("http://api.test:3001/api/events");
+    expect(url).toBe("http://api.test:3001/api/tasks");
     expect(init.headers).toMatchObject({
       "x-auth-gateway-key": env.AUTH_INTERNAL_SERVICE_KEY,
       "x-auth-user-id": "owner-1",
@@ -117,12 +117,12 @@ describe("MCP over HTTP", () => {
     await client.close();
   });
 
-  test("create_event with a status creates a tracked event, and refuses a status the API does not have", async () => {
-    fetchApi.mockResolvedValue(new Response(JSON.stringify({ taskId: "event-2" }), { status: 201 }));
+  test("create_task with a status creates a tracked task, and refuses a status the API does not have", async () => {
+    fetchApi.mockResolvedValue(new Response(JSON.stringify({ taskId: "task-2" }), { status: 201 }));
     const client = await connect();
 
     await client.callTool({
-      name: "create_event",
+      name: "create_task",
       arguments: {
         name: "Pagar a conta",
         status: "todo",
@@ -133,13 +133,13 @@ describe("MCP over HTTP", () => {
       },
     });
     const refused = await client.callTool({
-      name: "create_event",
+      name: "create_task",
       arguments: { name: "x", status: "scheduled", idempotencyKey: "k2" },
     });
 
     expect(fetchApi).toHaveBeenCalledTimes(1);
     const [url, init] = fetchApi.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("http://api.test:3001/api/events");
+    expect(url).toBe("http://api.test:3001/api/tasks");
     expect(JSON.parse(init.body as string)).toEqual({
       name: "Pagar a conta",
       status: "todo",
@@ -151,7 +151,7 @@ describe("MCP over HTTP", () => {
     await client.close();
   });
 
-  test("create_artifact sends a text artifact that appears in the given events", async () => {
+  test("create_artifact sends a text artifact that appears in the given tasks", async () => {
     fetchApi.mockResolvedValue(new Response(JSON.stringify({ artifactId: "artifact-1" }), { status: 201 }));
     const client = await connect();
 
@@ -167,7 +167,7 @@ describe("MCP over HTTP", () => {
     await client.close();
   });
 
-  test("create_recurrence turns weekday names into the Sunday-first bitmask and puts the event fields in the template", async () => {
+  test("create_recurrence turns weekday names into the Sunday-first bitmask and puts the task fields in the template", async () => {
     fetchApi.mockResolvedValue(new Response(JSON.stringify({ recurrenceId: "r1" }), { status: 201 }));
     const client = await connect();
 
@@ -199,32 +199,32 @@ describe("MCP over HTTP", () => {
     await client.close();
   });
 
-  test("update_event patches only the given fields and reports ok on the empty 204", async () => {
+  test("update_task patches only the given fields and reports ok on the empty 204", async () => {
     fetchApi.mockResolvedValue(new Response(null, { status: 204 }));
     const client = await connect();
 
     const result = await client.callTool({
-      name: "update_event",
-      arguments: { eventId: "e 1", expectedRevision: 3, name: "Novo nome" },
+      name: "update_task",
+      arguments: { taskId: "e 1", expectedRevision: 3, name: "Novo nome" },
     });
 
     expect(result.isError).toBeFalsy();
     expect(result.content).toEqual([{ type: "text", text: '{"ok":true}' }]);
     const [url, init] = fetchApi.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("http://api.test:3001/api/events/e%201");
+    expect(url).toBe("http://api.test:3001/api/tasks/e%201");
     expect(init.method).toBe("PATCH");
     expect(JSON.parse(init.body as string)).toEqual({ expectedRevision: 3, name: "Novo nome" });
     expect((init.headers as Record<string, string>)["idempotency-key"]).toBeUndefined();
     await client.close();
   });
 
-  test("update_event changes the status and clears a date with null", async () => {
+  test("update_task changes the status and clears a date with null", async () => {
     fetchApi.mockResolvedValue(new Response(null, { status: 204 }));
     const client = await connect();
 
     await client.callTool({
-      name: "update_event",
-      arguments: { eventId: "e1", expectedRevision: 2, status: "done", finishedAt: "2026-11-14T10:00:00-03:00", estimatedFinishAt: null },
+      name: "update_task",
+      arguments: { taskId: "e1", expectedRevision: 2, status: "done", finishedAt: "2026-11-14T10:00:00-03:00", estimatedFinishAt: null },
     });
 
     const [, init] = fetchApi.mock.calls[0] as [string, RequestInit];
@@ -264,41 +264,41 @@ describe("MCP over HTTP", () => {
     await client.close();
   });
 
-  test("get_event reads one entity and a stale revision comes back as a tool error", async () => {
+  test("get_task reads one entity and a stale revision comes back as a tool error", async () => {
     fetchApi.mockResolvedValueOnce(new Response(JSON.stringify({ id: "t1", revision: 4 }), { status: 200 }));
     fetchApi.mockResolvedValueOnce(new Response(JSON.stringify({ message: "Revision conflict" }), { status: 409 }));
     const client = await connect();
 
-    const read = await client.callTool({ name: "get_event", arguments: { id: "t1" } });
-    const stale = await client.callTool({ name: "update_event", arguments: { eventId: "t1", expectedRevision: 3, name: "x" } });
+    const read = await client.callTool({ name: "get_task", arguments: { id: "t1" } });
+    const stale = await client.callTool({ name: "update_task", arguments: { taskId: "t1", expectedRevision: 3, name: "x" } });
 
     expect(read.content).toEqual([{ type: "text", text: '{"id":"t1","revision":4}' }]);
-    expect(fetchApi.mock.calls[0]?.[0]).toBe("http://api.test:3001/api/events/t1");
+    expect(fetchApi.mock.calls[0]?.[0]).toBe("http://api.test:3001/api/tasks/t1");
     expect(stale.isError).toBe(true);
     expect(JSON.stringify(stale.content)).toContain("API 409: Revision conflict");
     await client.close();
   });
 
-  test("list_timeline_events forwards the filters as a query string", async () => {
+  test("list_agenda_tasks forwards the filters as a query string", async () => {
     fetchApi.mockResolvedValue(new Response(JSON.stringify({ items: [] }), { status: 200 }));
     const client = await connect();
 
-    await client.callTool({ name: "list_timeline_events", arguments: { tag: "saude", limit: 5 } });
+    await client.callTool({ name: "list_agenda_tasks", arguments: { tag: "saude", limit: 5 } });
 
     const [url, init] = fetchApi.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("http://api.test:3001/api/events?tag=saude&limit=5");
+    expect(url).toBe("http://api.test:3001/api/tasks?tag=saude&limit=5");
     expect(init.method).toBe("GET");
     await client.close();
   });
 
-  test("list_timeline_events forwards the kind, the actor and the cursor", async () => {
+  test("list_agenda_tasks forwards the kind, the actor and the cursor", async () => {
     fetchApi.mockResolvedValue(new Response(JSON.stringify({ items: [] }), { status: 200 }));
     const client = await connect();
 
-    await client.callTool({ name: "list_timeline_events", arguments: { kind: "meal", actor: "human", cursor: "abc", limit: 10 } });
+    await client.callTool({ name: "list_agenda_tasks", arguments: { kind: "meal", actor: "human", cursor: "abc", limit: 10 } });
 
     const url = new URL(fetchApi.mock.calls[0]?.[0] as string);
-    expect(url.pathname).toBe("/api/events");
+    expect(url.pathname).toBe("/api/tasks");
     expect(Object.fromEntries(url.searchParams)).toEqual({ kind: "meal", actor: "human", cursor: "abc", limit: "10" });
     await client.close();
   });
@@ -316,12 +316,12 @@ describe("MCP over HTTP", () => {
     await client.close();
   });
 
-  test("list_tracked_events sends list filters as comma-separated query values", async () => {
+  test("list_tracked_tasks sends list filters as comma-separated query values", async () => {
     fetchApi.mockResolvedValue(new Response("[]", { status: 200 }));
     const client = await connect();
 
     await client.callTool({
-      name: "list_tracked_events",
+      name: "list_tracked_tasks",
       arguments: {
         status: ["todo", "doing"],
         priority: ["urgent"],
@@ -334,7 +334,7 @@ describe("MCP over HTTP", () => {
     });
 
     const url = new URL(fetchApi.mock.calls[0]?.[0] as string);
-    expect(url.pathname).toBe("/api/events/tracked");
+    expect(url.pathname).toBe("/api/tasks/tracked");
     expect(Object.fromEntries(url.searchParams)).toEqual({
       status: "todo,doing",
       priority: "urgent",
@@ -347,10 +347,10 @@ describe("MCP over HTTP", () => {
     await client.close();
   });
 
-  test("list_tracked_events refuses an unknown status before calling the API", async () => {
+  test("list_tracked_tasks refuses an unknown status before calling the API", async () => {
     const client = await connect();
 
-    const result = await client.callTool({ name: "list_tracked_events", arguments: { status: ["nope"] } });
+    const result = await client.callTool({ name: "list_tracked_tasks", arguments: { status: ["nope"] } });
 
     expect(result.isError).toBe(true);
     expect(fetchApi).not.toHaveBeenCalled();
@@ -361,12 +361,12 @@ describe("MCP over HTTP", () => {
     fetchApi.mockImplementation(async () => new Response("[]", { status: 200 }));
     const client = await connect();
 
-    await client.callTool({ name: "list_artifacts", arguments: { type: "text", q: "tinta", eventId: "e1" } });
+    await client.callTool({ name: "list_artifacts", arguments: { type: "text", q: "tinta", taskId: "e1" } });
     await client.callTool({ name: "list_recurrences", arguments: {} });
 
     const [artifacts, series] = fetchApi.mock.calls.map(([url]) => new URL(url as string));
     expect(artifacts?.pathname).toBe("/api/artifacts");
-    expect(Object.fromEntries(artifacts?.searchParams ?? [])).toEqual({ type: "text", q: "tinta", eventId: "e1" });
+    expect(Object.fromEntries(artifacts?.searchParams ?? [])).toEqual({ type: "text", q: "tinta", taskId: "e1" });
     expect(series?.pathname).toBe("/api/recurrences");
     expect(series?.search).toBe("");
     await client.close();

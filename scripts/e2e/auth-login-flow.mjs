@@ -46,7 +46,7 @@ if (!EMAIL || !PASSWORD) {
 const today = new Date();
 const from = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
 const to = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1, 0, 0, 0, -1).toISOString();
-const DAY = `/api/events?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+const DAY = `/api/tasks?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
 
 let failures = 0;
 function check(label, actual, expected) {
@@ -85,7 +85,7 @@ async function webFlow() {
   console.log(`\n# web (${WEB})`);
   const tab = browser();
   check("GET /api/session sem sessao", (await tab.fetch("/api/session")).status, 401);
-  check("GET /api/events sem sessao", (await tab.fetch(DAY)).status, 401);
+  check("GET /api/tasks sem sessao", (await tab.fetch(DAY)).status, 401);
 
   const login = await tab.fetch("/api/session/login", json({ email: EMAIL, password: PASSWORD }));
   check("POST /api/session/login", login.status, 200);
@@ -96,7 +96,7 @@ async function webFlow() {
   check("refresh restrito a /api/session", /braid_refresh=[^;]+;.*Path=\/api\/session/i.test(cookies), true);
 
   check("GET /api/session com cookie", (await tab.fetch("/api/session")).status, 200);
-  check("GET /api/events pelo proxy", (await tab.fetch(DAY)).status, 200);
+  check("GET /api/tasks pelo proxy", (await tab.fetch(DAY)).status, 200);
   check(
     "Authorization forjado nao substitui o cookie",
     (await tab.fetch(DAY, { headers: { authorization: "Bearer forged" } })).status,
@@ -107,7 +107,7 @@ async function webFlow() {
   const before = new Map(tab.jar);
   check("POST /api/session/refresh", (await tab.fetch("/api/session/refresh", { method: "POST" })).status, 204);
   check("refresh rotacionou o token", tab.jar.get("braid_refresh") !== before.get("braid_refresh"), true);
-  check("GET /api/events depois do refresh", (await tab.fetch(DAY)).status, 200);
+  check("GET /api/tasks depois do refresh", (await tab.fetch(DAY)).status, 200);
 
   const replay = browser();
   for (const [name, value] of before) replay.jar.set(name, value);

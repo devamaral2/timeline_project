@@ -172,14 +172,14 @@ function create(request: FakeRequest, store: FakeStore): FakeResult {
 }
 
 function read(request: FakeRequest, store: FakeStore): FakeResult {
-  const event = table(store).get(request.params.eventId ?? "");
+  const event = table(store).get(request.params.taskId ?? "");
   if (!event) return { status: 404 };
   // Os vínculos vivem no artefato (área de artefatos): o detalhe os monta aqui, na ordem da tabela.
   return { status: 200, body: { ...event, artifacts: artifactsOfEvent(store, event.id) } };
 }
 
 function update(request: FakeRequest, store: FakeStore): FakeResult {
-  const event = table(store).get(request.params.eventId ?? "");
+  const event = table(store).get(request.params.taskId ?? "");
   if (!event) return { status: 404 };
   const input = request.body as Record<string, unknown> & { expectedRevision: number };
   if (input.expectedRevision !== event.revision) return { status: 409 };
@@ -242,7 +242,7 @@ function setSequenceLink(store: FakeStore, eventId: string, field: "previousTask
 }
 
 function remove(request: FakeRequest, store: FakeStore): FakeResult {
-  const id = request.params.eventId ?? "";
+  const id = request.params.taskId ?? "";
   if (!table(store).delete(id)) return { status: 404 };
   return { status: 204 };
 }
@@ -280,12 +280,12 @@ function searchPlaces(request: FakeRequest): FakeResult {
 export const eventsArea: FakeArea = {
   name: "eventos",
   routes: [
-    { method: "GET", path: "/api/events", output: agendaPageSchema, handle: agenda },
-    { method: "GET", path: "/api/events/tracked", output: z.array(taskCardSchema), handle: tracked },
-    { method: "POST", path: "/api/events", input: createTaskInputSchema, output: createdEventSchema, idempotent: true, handle: create },
-    { method: "GET", path: "/api/events/:eventId", output: taskSchema, handle: read },
-    { method: "PATCH", path: "/api/events/:eventId", input: updateTaskInputSchema.omit({ taskId: true }), handle: update },
-    { method: "DELETE", path: "/api/events/:eventId", handle: remove },
+    { method: "GET", path: "/api/tasks", output: agendaPageSchema, handle: agenda },
+    { method: "GET", path: "/api/tasks/tracked", output: z.array(taskCardSchema), handle: tracked },
+    { method: "POST", path: "/api/tasks", input: createTaskInputSchema, output: createdEventSchema, idempotent: true, handle: create },
+    { method: "GET", path: "/api/tasks/:taskId", output: taskSchema, handle: read },
+    { method: "PATCH", path: "/api/tasks/:taskId", input: updateTaskInputSchema.omit({ taskId: true }), handle: update },
+    { method: "DELETE", path: "/api/tasks/:taskId", handle: remove },
     { method: "GET", path: "/api/tags", output: z.array(tagSuggestionSchema), handle: suggestTags },
     { method: "GET", path: "/api/places", output: z.array(placeSuggestionSchema), handle: searchPlaces },
   ],

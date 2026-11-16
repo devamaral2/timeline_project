@@ -294,7 +294,7 @@ describe("revisão desatualizada", () => {
 describe("entrada recusada pela API", () => {
   it("aparece como mensagem no formulário, sem perder o que foi digitado", async () => {
     install([training()]);
-    api.failNext("PATCH", "/api/events/ev-1", 400);
+    api.failNext("PATCH", "/api/tasks/ev-1", 400);
     renderRoute();
     await screen.findByRole("heading", { level: 1, name: "Editar evento" });
 
@@ -308,7 +308,7 @@ describe("entrada recusada pela API", () => {
 
   it("falha que não é de entrada mostra a mensagem geral", async () => {
     install([training()]);
-    api.failNext("PATCH", "/api/events/ev-1", 500);
+    api.failNext("PATCH", "/api/tasks/ev-1", 500);
     renderRoute();
     await screen.findByRole("heading", { level: 1, name: "Editar evento" });
 

@@ -51,7 +51,7 @@ function serve() {
 
 /** Os parâmetros da última leitura da agenda. */
 function lastAgendaQuery(api: ReturnType<typeof serve>): Record<string, string> {
-  const last = api.calls.filter((call) => call.pathname === "/api/events").at(-1);
+  const last = api.calls.filter((call) => call.pathname === "/api/tasks").at(-1);
   if (!last) throw new Error("A agenda não leu a API");
   return last.query;
 }

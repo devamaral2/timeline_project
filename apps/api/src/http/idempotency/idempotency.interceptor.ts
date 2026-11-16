@@ -17,7 +17,7 @@ import type { GatewayRequest } from "../request-identity/gateway-identity.guard"
 
 /** Rotas de criacao que aceitam `Idempotency-Key`. Nas demais o header e ignorado. */
 export const IDEMPOTENT_ROUTES: ReadonlySet<string> = new Set([
-  "/api/events",
+  "/api/tasks",
   "/api/artifacts",
   "/api/recurrences",
 ]);

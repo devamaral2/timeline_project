@@ -658,7 +658,7 @@ API está chegando ao Auth.
 Teste uma rota protegida:
 
 ```bash
-curl -sS -o /dev/null -w 'status=%{http_code}\n' -H "Host: api.$DOMAIN" "http://$TRAEFIK_IP/api/events"
+curl -sS -o /dev/null -w 'status=%{http_code}\n' -H "Host: api.$DOMAIN" "http://$TRAEFIK_IP/api/tasks"
 ```
 
 Resultado esperado sem token:
@@ -699,7 +699,7 @@ true
 Faça uma chamada diretamente ao Service da API, sem a chave interna:
 
 ```bash
-kubectl -n braid exec deployment/auth -- node -e 'fetch("http://api:3001/api/events").then(r=>console.log(r.status)).catch(e=>{console.error(e);process.exit(1)})'
+kubectl -n braid exec deployment/auth -- node -e 'fetch("http://api:3001/api/tasks").then(r=>console.log(r.status)).catch(e=>{console.error(e);process.exit(1)})'
 ```
 
 Resultado esperado:
@@ -808,7 +808,7 @@ computador → Cloudflare → Tunnel → cloudflared → Traefik → Auth
 ### 12.2. Provar que a API exige autenticação
 
 ```bash
-curl -sS -D - -o /dev/null "https://api.$DOMAIN/api/events"
+curl -sS -D - -o /dev/null "https://api.$DOMAIN/api/tasks"
 ```
 
 Resultado esperado sem token:
@@ -872,7 +872,7 @@ kubectl -n braid logs deployment/auth --follow --tail=50
 No computador local, repita:
 
 ```bash
-curl -sS -o /dev/null -w '%{http_code}\n' "https://api.$DOMAIN/api/events"
+curl -sS -o /dev/null -w '%{http_code}\n' "https://api.$DOMAIN/api/tasks"
 ```
 
 Pressione `Ctrl+C` nos terminais de logs depois do teste. Não deixe sessões de
@@ -887,8 +887,8 @@ Ingress e o teste de `/health/ready` continuam sendo a evidência principal.
 | Resultado                               | Significado provável                         | Ação                                              |
 | --------------------------------------- | -------------------------------------------- | ------------------------------------------------- |
 | `api/health/ready` retorna 200          | `api.SEUDOMINIO` chegou ao Auth              | Continue os testes                                |
-| `/api/events` retorna 401 sem token     | Auth protegeu a rota                         | Resultado correto                                 |
-| `/api/events` retorna 200 sem token     | Falha crítica de autenticação ou cache       | Pare e examine Auth, Cloudflare e cache           |
+| `/api/tasks` retorna 401 sem token     | Auth protegeu a rota                         | Resultado correto                                 |
+| `/api/tasks` retorna 200 sem token     | Falha crítica de autenticação ou cache       | Pare e examine Auth, Cloudflare e cache           |
 | Resposta 301/302 para `auth.SEUDOMINIO` | Existe redirect indevido                     | Revise Redirect Rules e Traefik                   |
 | Resposta 302 para Cloudflare Access     | Access cobre API/Auth                        | Remova ou restrinja a aplicação Access            |
 | Cloudflare 1033                         | Tunnel sem conector saudável                 | Verifique deployment e logs do cloudflared        |
@@ -910,7 +910,7 @@ de infraestrutura:
 4. saída de `kubectl -n braid get svc api auth web -o wide`;
 5. saída da tabela de Ingress gerada com `jq`;
 6. status de `api/health/ready`;
-7. status de `api/api/events` sem token;
+7. status de `api/api/tasks` sem token;
 8. resultado dos testes externos das portas 80, 443, 3001 e 3002;
 9. confirmação de que Cache Rule e WebSockets estão configurados;
 10. confirmação de que Cloudflare Access não intercepta API/Auth.
@@ -945,7 +945,7 @@ Marque cada item somente depois de verificá-lo:
 - [ ] Ingress `auth.SEUDOMINIO` aponta para `auth:3002`.
 - [ ] Nenhum Ingress público aponta para `api:3001`.
 - [ ] `api.SEUDOMINIO/health/ready` retorna 200.
-- [ ] `api.SEUDOMINIO/api/events` sem token retorna 401.
+- [ ] `api.SEUDOMINIO/api/tasks` sem token retorna 401.
 - [ ] Acesso direto interno a `api:3001` sem gateway retorna 401.
 - [ ] Portas públicas 80, 443, 3001 e 3002 da VPS estão fechadas.
 - [ ] Login e uma operação real autenticada funcionam.

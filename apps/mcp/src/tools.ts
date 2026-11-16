@@ -5,7 +5,7 @@ import { type ApiClient, ApiError } from "./api-client";
 
 const WEEKDAY_CODES = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
 
-// Os conjuntos fechados da API (packages/contracts/src/events/event-types.ts). O
+// Os conjuntos fechados da API (packages/contracts/src/tasks/task-types.ts). O
 // MCP nao depende do pacote de contratos; a API valida de novo e o erro volta ao modelo.
 const HUMAN_KINDS = ["routine", "meal", "sleep", "training"] as const;
 const REQUEST_KINDS = ["request", "search_request", "build_request", "inquiry_request", "review_request", "cron"] as const;
@@ -23,13 +23,13 @@ const idempotencyKey = z
   );
 const instant = z.string().datetime({ offset: true }).describe("ISO-8601 date-time with offset, e.g. 2026-11-03T07:00:00-03:00");
 const tags = z.array(z.string().min(1)).max(20).optional();
-const actor = z.enum(["human", "agent"]).optional().describe("Who carries the event out. Omit for both.");
+const actor = z.enum(["human", "agent"]).optional().describe("Who carries the task out. Omit for both.");
 
-const humanKind = z.enum(HUMAN_KINDS).optional().describe("Omit for a routine event.");
+const humanKind = z.enum(HUMAN_KINDS).optional().describe("Omit for a routine task.");
 const humanStatus = z.enum(HUMAN_STATUSES);
 const priority = z.enum(PRIORITIES).optional().describe("Omit for medium.");
 
-const eventShape = {
+const taskShape = {
   name: z.string().min(1),
   description: z.string().optional(),
   location: z
@@ -37,29 +37,29 @@ const eventShape = {
     .max(300)
     .optional()
     .describe(
-      "Where the event happens. When the owner names a venue or an address, call search_places first and pass the 'label' of the matching place, so the address is one that exists. Never make up a street, number or city: with no match, pass the place as the owner said it. An empty string on update removes the location.",
+      "Where the task happens. When the owner names a venue or an address, call search_places first and pass the 'label' of the matching place, so the address is one that exists. Never make up a street, number or city: with no match, pass the place as the owner said it. An empty string on update removes the location.",
     ),
   kind: humanKind,
   status: humanStatus
     .optional()
     .describe(
-      "Omit for a plain agenda event that only marks a time. Set it (usually 'todo') for something to be done: the event is then tracked and shows up in list_tracked_events.",
+      "Omit for a plain agenda task that only marks a time. Set it (usually 'todo') for something to be done: the task is then tracked and shows up in list_tracked_tasks.",
     ),
   priority,
-  startedAt: instant.optional().describe("Planned start. Omit on a plain agenda event for now."),
-  estimatedFinishAt: instant.optional().describe("Planned end, or the deadline of a long-running event."),
+  startedAt: instant.optional().describe("Planned start. Omit on a plain agenda task for now."),
+  estimatedFinishAt: instant.optional().describe("Planned end, or the deadline of a long-running task."),
   finishedAt: instant.optional().describe("When it was actually finished."),
   longRunning: z
     .boolean()
     .optional()
-    .describe("Long-running event: stays out of the agenda, always has a status and never repeats."),
+    .describe("Long-running task: stays out of the agenda, always has a status and never repeats."),
   tags,
 };
 
-/** Na edicao, `null` apaga o campo: sem status o evento volta a so marcar um horario. */
-const eventPatchShape = {
-  ...partial(eventShape),
-  status: humanStatus.nullable().optional().describe("null removes the status: the event goes back to only marking a time."),
+/** Na edicao, `null` apaga o campo: sem status a tarefa volta a so marcar um horario. */
+const taskPatchShape = {
+  ...partial(taskShape),
+  status: humanStatus.nullable().optional().describe("null removes the status: the task goes back to only marking a time."),
   startedAt: instant.nullable().optional().describe("Planned start; null clears it."),
   estimatedFinishAt: instant.nullable().optional().describe("Planned end or deadline; null clears it."),
   finishedAt: instant.nullable().optional().describe("Actual finish; null clears it."),
@@ -78,14 +78,14 @@ const ruleShape = {
   endsOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
 };
 
-/** O que cada ocorrencia copia. Uma serie so gera eventos de pessoa, e nunca um evento longo. */
+/** O que cada ocorrencia copia. Uma serie so gera tarefas de pessoa, e nunca uma tarefa longa. */
 const templateShape = {
   name: z.string().min(1),
   description: z.string().optional(),
   kind: humanKind,
   status: humanStatus
     .optional()
-    .describe("Omit for plain agenda occurrences. Set it (usually 'todo') so every occurrence is a tracked event."),
+    .describe("Omit for plain agenda occurrences. Set it (usually 'todo') so every occurrence is a tracked task."),
   tags,
   priority,
 };
@@ -120,21 +120,21 @@ function weekdayMask(weekdays: readonly (typeof WEEKDAY_CODES)[number][]): numbe
 
 export function registerTools(server: McpServer, api: ApiClient): void {
   server.registerTool(
-    "create_event",
+    "create_task",
     {
       description:
-        "Create an event for the owner. Without 'status' it is a plain agenda event; with 'status' it is something to be done (a to-do), tracked until it is finished.",
-      inputSchema: { ...eventShape, idempotencyKey },
+        "Create a task for the owner. Without 'status' it is a plain agenda task; with 'status' it is something to be done (a to-do), tracked until it is finished.",
+      inputSchema: { ...taskShape, idempotencyKey },
       annotations: CREATE_ONLY,
     },
-    ({ idempotencyKey: key, ...event }) => guarded(() => api.post("/api/events", event, key)),
+    ({ idempotencyKey: key, ...task }) => guarded(() => api.post("/api/tasks", task, key)),
   );
 
   server.registerTool(
     "create_artifact",
     {
       description:
-        "Create a free-text artifact (the app shows it as a note), optionally appearing in existing events (use list_timeline_events / list_tracked_events for ids).",
+        "Create a free-text artifact (the app shows it as a note), optionally appearing in existing tasks (use list_agenda_tasks / list_tracked_tasks for ids).",
       inputSchema: {
         name: z.string().min(1).optional(),
         body: z.string().min(1),
@@ -152,7 +152,7 @@ export function registerTools(server: McpServer, api: ApiClient): void {
     "create_recurrence",
     {
       description:
-        "Create a recurring series of events. Each occurrence copies the name, description, kind, status, tags and priority.",
+        "Create a recurring series of tasks. Each occurrence copies the name, description, kind, status, tags and priority.",
       inputSchema: { ...templateShape, ...ruleShape, idempotencyKey },
       annotations: CREATE_ONLY,
     },
@@ -174,29 +174,29 @@ export function registerTools(server: McpServer, api: ApiClient): void {
   );
 
   server.registerTool(
-    "list_timeline_events",
+    "list_agenda_tasks",
     {
       description:
-        "List the owner's agenda: events with a start in a time window, newest first, without the long-running ones. Use it to check what already exists before creating. When the result has 'nextCursor', pass it as 'cursor' to get the following page.",
+        "List the owner's agenda: tasks with a start in a time window, newest first, without the long-running ones. Use it to check what already exists before creating. When the result has 'nextCursor', pass it as 'cursor' to get the following page.",
       inputSchema: {
         from: instant.optional(),
         to: instant.optional(),
         actor,
-        kind: z.enum([...HUMAN_KINDS, ...REQUEST_KINDS]).optional().describe("Only events of this kind."),
+        kind: z.enum([...HUMAN_KINDS, ...REQUEST_KINDS]).optional().describe("Only tasks of this kind."),
         tag: z.string().optional(),
         cursor: z.string().optional().describe("The 'nextCursor' returned by the previous page."),
         limit: z.number().int().min(1).max(100).default(20),
       },
       annotations: READ_ONLY,
     },
-    (query) => guarded(() => api.get("/api/events", query)),
+    (query) => guarded(() => api.get("/api/tasks", query)),
   );
 
   server.registerTool(
     "search_places",
     {
       description:
-        "Search the map for venues and addresses matching a text (e.g. 'Hospital Mater Dei Belo Horizonte'). Each result's 'label' is the full address to store in an event's 'location'. Add the city or neighbourhood to the text when the owner said it. An empty list means the map does not know the place.",
+        "Search the map for venues and addresses matching a text (e.g. 'Hospital Mater Dei Belo Horizonte'). Each result's 'label' is the full address to store in a task's 'location'. Add the city or neighbourhood to the text when the owner said it. An empty list means the map does not know the place.",
       inputSchema: {
         query: z.string().min(3).max(200).describe("Name of the venue or the address, as the owner said it."),
         limit: z.number().int().min(1).max(10).default(6),
@@ -207,26 +207,26 @@ export function registerTools(server: McpServer, api: ApiClient): void {
   );
 
   server.registerTool(
-    "list_tracked_events",
+    "list_tracked_tasks",
     {
       description:
-        "List the owner's tracked events: the ones with a status (to-dos and requests to the agent), long-running ones included; a recurring series appears once, by its next open occurrence. All of them unless filtered; filters combine with AND. 'from'/'to' compare against the planned start, or the planned end when there is no start; events with neither date never match a window.",
+        "List the owner's tracked tasks: the ones with a status (to-dos and requests to the agent), long-running ones included; a recurring series appears once, by its next open occurrence. All of them unless filtered; filters combine with AND. 'from'/'to' compare against the planned start, or the planned end when there is no start; tasks with neither date never match a window.",
       inputSchema: {
         status: z.array(z.enum([...HUMAN_STATUSES, ...AGENT_ONLY_STATUSES])).min(1).optional().describe("Match any of these statuses."),
         priority: z.array(z.enum(PRIORITIES)).min(1).optional().describe("Match any of these priorities."),
         actor,
         tag: z.string().optional().describe("Exact tag, ignoring case."),
-        q: z.string().optional().describe("Text to find in the event name, ignoring case."),
+        q: z.string().optional().describe("Text to find in the task name, ignoring case."),
         from: instant.optional(),
         to: instant.optional(),
-        longRunning: z.boolean().optional().describe("true for only the long-running events, false for only the others."),
+        longRunning: z.boolean().optional().describe("true for only the long-running tasks, false for only the others."),
         limit: z.number().int().min(1).max(100).optional(),
       },
       annotations: READ_ONLY,
     },
     ({ status, priority: priorities, longRunning, ...query }) =>
       guarded(() =>
-        api.get("/api/events/tracked", {
+        api.get("/api/tasks/tracked", {
           ...query,
           status: status?.join(","),
           priority: priorities?.join(","),
@@ -239,12 +239,12 @@ export function registerTools(server: McpServer, api: ApiClient): void {
     "list_artifacts",
     {
       description:
-        "List the owner's artifacts (free text, food, sleep, training), all of them unless filtered. Filters combine with AND. Use eventId to find the artifacts of one event.",
+        "List the owner's artifacts (free text, food, sleep, training), all of them unless filtered. Filters combine with AND. Use taskId to find the artifacts of one task.",
       inputSchema: {
         type: z.enum(ARTIFACT_TYPES).optional(),
         tag: z.string().optional().describe("Exact tag, ignoring case."),
         q: z.string().optional().describe("Text to find in the artifact name or, for free text, its body, ignoring case."),
-        eventId: z.string().min(1).optional().describe("Only artifacts that appear in this event."),
+        taskId: z.string().min(1).optional().describe("Only artifacts that appear in this task."),
         limit: z.number().int().min(1).max(100).optional(),
       },
       annotations: READ_ONLY,
@@ -270,7 +270,7 @@ const id = (what: string) => z.string().min(1).describe(`Id of the ${what}.`);
 /** Ler uma entidade devolve a `revision` que a edicao exige; sem exclusao em nenhuma ferramenta. */
 function registerReadAndEditTools(server: McpServer, api: ApiClient): void {
   const getters = [
-    ["get_event", "event", "events"],
+    ["get_task", "task", "tasks"],
     ["get_artifact", "artifact", "artifacts"],
     ["get_recurrence", "recurrence", "recurrences"],
   ] as const;
@@ -287,21 +287,21 @@ function registerReadAndEditTools(server: McpServer, api: ApiClient): void {
   }
 
   server.registerTool(
-    "update_event",
+    "update_task",
     {
       description:
-        "Edit fields of an event. Send only the fields to change. Its artifacts and its sequence (previous and next events) are left untouched.",
-      inputSchema: { eventId: id("event"), expectedRevision: revision, ...eventPatchShape },
+        "Edit fields of a task. Send only the fields to change. Its artifacts and its sequence (previous and next tasks) are left untouched.",
+      inputSchema: { taskId: id("task"), expectedRevision: revision, ...taskPatchShape },
       annotations: EDIT,
     },
-    ({ eventId, ...patch }) => guarded(() => api.patch(`/api/events/${encodeURIComponent(eventId)}`, patch)),
+    ({ taskId, ...patch }) => guarded(() => api.patch(`/api/tasks/${encodeURIComponent(taskId)}`, patch)),
   );
 
   server.registerTool(
     "update_artifact",
     {
       description:
-        "Edit a free-text artifact. Send only what changes; 'body' replaces the whole text. The events it appears in are left untouched.",
+        "Edit a free-text artifact. Send only what changes; 'body' replaces the whole text. The tasks it appears in are left untouched.",
       inputSchema: {
         artifactId: id("artifact"),
         expectedRevision: revision,

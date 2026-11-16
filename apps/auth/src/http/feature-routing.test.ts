@@ -28,7 +28,7 @@ describe('auth feature routing', () => {
     expect(response.status).not.toBe(404);
   });
 
-  it.each(['/auth/logout-all', '/auth/me', '/api/events'])('routes protected endpoint %s through auth guards', async (path) => {
+  it.each(['/auth/logout-all', '/auth/me', '/api/tasks'])('routes protected endpoint %s through auth guards', async (path) => {
     const response = await fetch(`${testApp.url}${path}`, { method: path === '/auth/me' ? 'GET' : 'POST' });
     expect(response.status).toBe(401);
   });

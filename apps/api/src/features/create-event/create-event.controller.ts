@@ -6,7 +6,7 @@ import { CurrentUser } from "../../http/request-identity/current-user.decorator"
 import { GatewayIdentityGuard } from "../../http/request-identity/gateway-identity.guard";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
 
-@Controller("api/events")
+@Controller("api/tasks")
 export class CreateEventController {
   constructor(@Inject(CreateEventUseCase) private readonly createEvent: CreateEventUseCase) {}
 

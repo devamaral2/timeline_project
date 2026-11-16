@@ -59,7 +59,7 @@ describe("agenda", () => {
 
     expect(api.calls[0]).toMatchObject({
       method: "GET",
-      pathname: "/api/events",
+      pathname: "/api/tasks",
       query: { from: window.from, to: window.to, actor: "human", tag: "saude" },
     });
     expect(api.calls[0].query).not.toHaveProperty("cursor");
@@ -91,7 +91,7 @@ describe("lista de tarefas", () => {
     const tasks = await listTrackedEvents({ status: ["todo", "doing"], priority: ["urgent", "high"] });
 
     expect(api.calls[0]).toMatchObject({
-      pathname: "/api/events/tracked",
+      pathname: "/api/tasks/tracked",
       query: { status: "todo,doing", priority: "urgent,high" },
     });
     expect(tasks.map((task) => task.id)).toEqual(["ev-1"]);
@@ -113,7 +113,7 @@ describe("criação", () => {
     expect(eventId).toBe("ev-1");
     expect(api.calls[0]).toMatchObject({
       method: "POST",
-      pathname: "/api/events",
+      pathname: "/api/tasks",
       idempotencyKey: key,
       body: { name: "Caminhada", tags: ["saude"] },
     });
@@ -167,7 +167,7 @@ describe("leitura, edição e remoção", () => {
 
     expect(api.calls[0]).toMatchObject({
       method: "PATCH",
-      pathname: "/api/events/ev-1",
+      pathname: "/api/tasks/ev-1",
       body: { expectedRevision: 4, status: "done" },
     });
     expect(api.calls[0].body).not.toHaveProperty("taskId");
@@ -200,8 +200,8 @@ describe("leitura, edição e remoção", () => {
 
   test("sem permissão vira forbidden; 5xx segue como erro original", async () => {
     install({ events: [eventFixture({ id: "ev-1" })] });
-    api.failNext("PATCH", "/api/events/ev-1", 403);
-    api.failNext("DELETE", "/api/events/ev-1", 503);
+    api.failNext("PATCH", "/api/tasks/ev-1", 403);
+    api.failNext("DELETE", "/api/tasks/ev-1", 503);
 
     await expect(updateEvent("ev-1", { expectedRevision: 1, name: "x" })).rejects.toMatchObject({ kind: "forbidden" });
     await expect(deleteEvent("ev-1")).rejects.toMatchObject({ kind: "unavailable", status: 503 });
@@ -209,7 +209,7 @@ describe("leitura, edição e remoção", () => {
 
   test("entrada inválida do servidor (400) vira invalid_input", async () => {
     install({ events: [eventFixture({ id: "ev-1" })] });
-    api.failNext("PATCH", "/api/events/ev-1", 400);
+    api.failNext("PATCH", "/api/tasks/ev-1", 400);
 
     await expect(updateEvent("ev-1", { expectedRevision: 1, name: "x" })).rejects.toMatchObject({ kind: "invalid_input" });
   });

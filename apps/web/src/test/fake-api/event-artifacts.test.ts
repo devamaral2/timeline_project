@@ -21,7 +21,7 @@ test("GET do evento monta artifacts com os vínculos dele, na ordem em que foram
     },
   });
 
-  const event = (await api.authedFetch("/api/events/ev-1")) as TaskDto;
+  const event = (await api.authedFetch("/api/tasks/ev-1")) as TaskDto;
 
   expect(event.artifacts.map((link) => [link.artifact.name, link.relation])).toEqual([
     ["Musculação", "uses"],
@@ -43,14 +43,14 @@ test("um evento sem vínculo de artefato devolve artifacts vazio", async () => {
     },
   });
 
-  const event = (await api.authedFetch("/api/events/ev-1")) as TaskDto;
+  const event = (await api.authedFetch("/api/tasks/ev-1")) as TaskDto;
 
   expect(event.artifacts).toEqual([]);
 });
 
 /** A edição manda a lista inteira de artefatos, na ordem da tela: o evento devolve essa mesma ordem. */
 function patchEvent(api: { authedFetch: (path: string, init?: RequestInit) => Promise<unknown> }, body: unknown) {
-  return api.authedFetch("/api/events/ev-1", { method: "PATCH", body: JSON.stringify(body) });
+  return api.authedFetch("/api/tasks/ev-1", { method: "PATCH", body: JSON.stringify(body) });
 }
 
 test("PATCH com artifacts devolve a lista no GET do evento, na ordem enviada; quem sai perde só o vínculo", async () => {
@@ -76,7 +76,7 @@ test("PATCH com artifacts devolve a lista no GET do evento, na ordem enviada; qu
     ],
   });
 
-  const event = (await api.authedFetch("/api/events/ev-1")) as TaskDto;
+  const event = (await api.authedFetch("/api/tasks/ev-1")) as TaskDto;
   expect(event.revision).toBe(5);
   expect(event.artifacts.map((link) => [link.artifact.name, link.relation])).toEqual([
     ["Esteira", "uses"],
@@ -99,7 +99,7 @@ test("PATCH com artifacts que cita um artefato inexistente responde 404 e não g
 
   await expect(patchEvent(api, { expectedRevision: 1, artifacts: [{ id: "nao-existe", relation: "uses" }] })).rejects.toMatchObject({ status: 404 });
 
-  const event = (await api.authedFetch("/api/events/ev-1")) as TaskDto;
+  const event = (await api.authedFetch("/api/tasks/ev-1")) as TaskDto;
   expect(event.revision).toBe(1);
   expect(event.artifacts.map((link) => link.artifact.name)).toEqual(["Ficha A"]);
 });
@@ -122,7 +122,7 @@ test("PATCH com uma cópia de alimento cria a cópia derivada com a quantidade, 
 
   await patchEvent(api, { expectedRevision: 2, artifacts: [{ copyOf: "food-arroz", quantity: "150 g" }] });
 
-  const event = (await api.authedFetch("/api/events/ev-1")) as TaskDto;
+  const event = (await api.authedFetch("/api/tasks/ev-1")) as TaskDto;
   expect(event.artifacts).toHaveLength(1);
   const [link] = event.artifacts;
   expect(link?.relation).toBe("uses");
@@ -162,7 +162,7 @@ test("editar o original depois não muda a cópia que já está na refeição", 
     body: JSON.stringify({ expectedRevision: 1, type: "food", data: { ...FOOD, totals: { ...FOOD.totals, totalCaloriesKcal: 999 } } }),
   });
 
-  const event = (await api.authedFetch("/api/events/ev-1")) as TaskDto;
+  const event = (await api.authedFetch("/api/tasks/ev-1")) as TaskDto;
   expect(event.artifacts[0]?.artifact.data).toMatchObject({ quantity: "2", totals: { totalCaloriesKcal: 200 } });
 });
 
@@ -176,10 +176,10 @@ test("uma cópia que já está no evento vai como id e continua ligada, sem cria
   });
 
   await patchEvent(api, { expectedRevision: 1, artifacts: [{ copyOf: "food-arroz", quantity: "1" }] });
-  const copyId = ((await api.authedFetch("/api/events/ev-1")) as TaskDto).artifacts[0]?.artifact.id ?? "";
+  const copyId = ((await api.authedFetch("/api/tasks/ev-1")) as TaskDto).artifacts[0]?.artifact.id ?? "";
   await patchEvent(api, { expectedRevision: 2, artifacts: [{ id: copyId, relation: "uses" }] });
 
-  const event = (await api.authedFetch("/api/events/ev-1")) as TaskDto;
+  const event = (await api.authedFetch("/api/tasks/ev-1")) as TaskDto;
   expect(event.artifacts.map((link) => link.artifact.id)).toEqual([copyId]);
 });
 
@@ -196,7 +196,7 @@ test("PATCH com cópia de um alimento que não existe responde 404 e não grava 
     patchEvent(api, { expectedRevision: 1, artifacts: [{ copyOf: "food-arroz", quantity: "1" }, { copyOf: "nao-existe", quantity: "1" }] }),
   ).rejects.toMatchObject({ status: 404 });
 
-  const event = (await api.authedFetch("/api/events/ev-1")) as TaskDto;
+  const event = (await api.authedFetch("/api/tasks/ev-1")) as TaskDto;
   expect(event.revision).toBe(1);
   expect(event.artifacts).toEqual([]);
   expect((await api.authedFetch("/api/artifacts?type=food&scope=global")) as unknown[]).toHaveLength(1);

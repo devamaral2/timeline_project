@@ -104,18 +104,18 @@ test("a sequência não esconde linhas: o evento que se segue a outro da lista a
   expect(screen.queryByText(/Espera por/)).not.toBeInTheDocument();
 });
 
-test("a lista pede a rota de eventos com status, sem o contrato antigo", async () => {
+test("a lista pede as tarefas acompanhadas, e não a agenda", async () => {
   const api = serve(events);
   render(<TasksScreen userId="user-1" />);
   await screen.findByRole("link", { name: /Pagar conta de luz/ });
 
-  expect(api.calls.map((call) => call.pathname)).toContain("/api/events/tracked");
+  expect(api.calls.map((call) => call.pathname)).toContain("/api/tasks/tracked");
   expect(api.calls.map((call) => call.pathname)).not.toContain("/api/tasks");
 });
 
 test("avisa quando a lista falha e recarrega ao tentar de novo", async () => {
   const api = serve(events);
-  api.failNext("GET", "/api/events/tracked", 503);
+  api.failNext("GET", "/api/tasks/tracked", 503);
   render(<TasksScreen userId="user-1" />);
 
   expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível carregar as tarefas.");
@@ -189,7 +189,7 @@ test("escolher um status em aberto grava com a revisão lida e a linha muda de g
 
   await waitFor(() => expect(api.calls.some((call) => call.method === "PATCH")).toBe(true));
   expect(api.calls.find((call) => call.method === "PATCH")).toMatchObject({
-    pathname: "/api/events/luz",
+    pathname: "/api/tasks/luz",
     body: { expectedRevision: 3, status: "inHold" },
   });
   expect(api.calls.find((call) => call.method === "PATCH")?.body).not.toHaveProperty("finishedAt");
@@ -208,7 +208,7 @@ test("escolher Feito envia a conclusão com a revisão lida e a linha vai para F
 
   await waitFor(() => expect(api.calls.some((call) => call.method === "PATCH")).toBe(true));
   const patch = api.calls.find((call) => call.method === "PATCH");
-  expect(patch?.pathname).toBe("/api/events/luz");
+  expect(patch?.pathname).toBe("/api/tasks/luz");
   // O relógio falso avança sozinho: confere o instante pelo começo (13:00 UTC = 10:00 em São Paulo).
   expect(patch?.body).toMatchObject({ expectedRevision: 3, status: "done" });
   expect((patch?.body as { finishedAt: string }).finishedAt).toMatch(/^2026-09-14T13:00:00/);
@@ -269,7 +269,7 @@ test("revisão desatualizada: a tela avisa, relê a lista e não grava nada", as
 
 /** Os parâmetros da última consulta à lista de tarefas, como saíram na rede. */
 function lastTrackedQuery(api: ReturnType<typeof serve>): Record<string, string> {
-  const tracked = api.calls.filter((call) => call.pathname === "/api/events/tracked");
+  const tracked = api.calls.filter((call) => call.pathname === "/api/tasks/tracked");
   return tracked[tracked.length - 1]?.query ?? {};
 }
 
@@ -354,7 +354,7 @@ test("com filtro ativo e nada encontrado, diz que nenhum evento passou no filtro
 
 /** Quantas leituras da lista de tarefas saíram para a rede até agora. */
 function trackedReads(api: ReturnType<typeof serve>) {
-  return () => api.calls.filter((call) => call.pathname === "/api/events/tracked").length;
+  return () => api.calls.filter((call) => call.pathname === "/api/tasks/tracked").length;
 }
 
 test("com evento de agente em aberto, a lista se relê sozinha e a linha vai para Feitas", async () => {
@@ -388,7 +388,7 @@ test("uma releitura que falha mantém a lista na tela, sem o aviso de erro", asy
   render(<TasksScreen userId="user-1" />);
   await screen.findByRole("link", { name: /Pesquisar voos/ });
 
-  api.failNext("GET", "/api/events/tracked", 503);
+  api.failNext("GET", "/api/tasks/tracked", 503);
   await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
 
   expect(screen.queryByRole("alert")).not.toBeInTheDocument();

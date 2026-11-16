@@ -64,9 +64,9 @@ describe("lista", () => {
       ],
     });
 
-    const found = await listArtifacts({ type: "text", tag: "casa", q: "leite", eventId: "ev-1" });
+    const found = await listArtifacts({ type: "text", tag: "casa", q: "leite", taskId: "ev-1" });
 
-    expect(api.calls[0].query).toEqual({ type: "text", tag: "casa", q: "leite", eventId: "ev-1" });
+    expect(api.calls[0].query).toEqual({ type: "text", tag: "casa", q: "leite", taskId: "ev-1" });
     expect(found.map((artifact) => artifact.id)).toEqual(["art-texto"]);
   });
 

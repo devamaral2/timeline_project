@@ -6,6 +6,7 @@ import { AppModule } from "../app.module";
 import { describeOperations } from "./openapi";
 import { documentedOperations, documentedSchemas, documentedTags } from "./openapi-operations";
 
+const ROTA_ANTIGA = "/api/events"; // a rota antiga: o catálogo não pode tê-la
 type ModuleLike = (new (...args: never[]) => unknown) | { module: ModuleLike; imports?: ModuleLike[]; controllers?: ControllerClass[] };
 type ControllerClass = new (...args: never[]) => unknown;
 
@@ -62,18 +63,18 @@ function generated(): OpenAPIObject {
     openapi: "3.0.0",
     info: { title: "Braid API", version: "1.0.0" },
     paths: {
-      "/api/events": {
+      "/api/tasks": {
         get: {
-          tags: ["ListAgendaEvents"],
+          tags: ["ListAgendaTasks"],
           parameters: [{ name: "from", in: "query", required: true, schema: { type: "string" } }],
           responses: { "200": { description: "" } },
         },
-        post: { tags: ["CreateEvent"], parameters: [], responses: { "201": { description: "" } } },
+        post: { tags: ["CreateTask"], parameters: [], responses: { "201": { description: "" } } },
       },
-      "/api/events/{eventId}": {
+      "/api/tasks/{taskId}": {
         patch: {
-          tags: ["UpdateEvent"],
-          parameters: [{ name: "eventId", in: "path", required: true, schema: { type: "string" } }],
+          tags: ["UpdateTask"],
+          parameters: [{ name: "taskId", in: "path", required: true, schema: { type: "string" } }],
           responses: { "204": { description: "" } },
         },
       },
@@ -92,8 +93,8 @@ test("o documento ganha grupo, resumo, filtros opcionais, corpo e resposta", () 
     }>>;
   };
 
-  const list = document.paths["/api/events"].get;
-  expect(list.tags).toEqual(["Eventos"]);
+  const list = document.paths["/api/tasks"].get;
+  expect(list.tags).toEqual(["Tarefas"]);
   expect(list.summary).toBe("Lista a agenda, em páginas");
   expect(list.parameters.map((parameter) => parameter.name)).toEqual(["from", "to", "actor", "kind", "tag", "cursor", "limit"]);
   expect(list.parameters.every((parameter) => !parameter.required)).toBe(true);
@@ -101,20 +102,24 @@ test("o documento ganha grupo, resumo, filtros opcionais, corpo e resposta", () 
   expect(list.responses["200"].content).toEqual({ "application/json": { schema: { $ref: "#/components/schemas/AgendaPage" } } });
   expect(Object.keys(list.responses)).toEqual(expect.arrayContaining(["200", "400", "401", "403"]));
 
-  const create = document.paths["/api/events"].post;
-  expect(create.requestBody).toEqual({ required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/CreateEventInput" } } } });
+  const create = document.paths["/api/tasks"].post;
+  expect(create.requestBody).toEqual({ required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/CreateTaskInput" } } } });
   expect(create.parameters.map((parameter) => `${parameter.in}:${parameter.name}`)).toEqual(["header:Idempotency-Key"]);
 
-  const update = document.paths["/api/events/{eventId}"].patch;
-  expect(update.parameters.map((parameter) => `${parameter.in}:${parameter.name}`)).toEqual(["path:eventId"]);
+  const update = document.paths["/api/tasks/{taskId}"].patch;
+  expect(update.parameters.map((parameter) => `${parameter.in}:${parameter.name}`)).toEqual(["path:taskId"]);
   expect(update.responses["204"].content).toBeUndefined();
   expect(Object.keys(update.responses)).toEqual(expect.arrayContaining(["404", "409"]));
 
   expect(document.tags.map((tag) => tag.name)).toEqual(documentedTags.map((tag) => tag.name));
   expect(Object.keys(document.components.schemas).sort()).toEqual(Object.keys(documentedSchemas).sort());
   // O id vem do caminho, nao do corpo.
-  expect(document.components.schemas.UpdateEventInput.properties).not.toHaveProperty("eventId");
-  expect(document.components.schemas.UpdateEventInput.required).toEqual(["expectedRevision"]);
+  expect(document.components.schemas.UpdateTaskInput.properties).not.toHaveProperty("taskId");
+  expect(document.components.schemas.UpdateTaskInput.required).toEqual(["expectedRevision"]);
+
+  // A rota antiga não existe: nem no catálogo, nem no documento.
+  expect(Object.keys(documentedOperations).filter((route) => route.includes(ROTA_ANTIGA))).toEqual([]);
+  expect(Object.keys(document.paths).filter((path) => path.startsWith(ROTA_ANTIGA))).toEqual([]);
 
   expect(document.paths["/fora/do/catalogo"].get.tags).toEqual(["Outro"]);
 });

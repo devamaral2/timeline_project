@@ -139,7 +139,7 @@ function toDto(artifact: StoredArtifact, store?: FakeStore): ArtifactDto {
 
 /**
  * Os artefatos ligados a um evento, na ordem da tabela (a ordem em que foram semeados ou criados). É o que
- * `GET /api/events/{id}` embute em `artifacts`: cada um com a relação do vínculo e o artefato inteiro, globais
+ * `GET /api/tasks/{id}` embute em `artifacts`: cada um com a relação do vínculo e o artefato inteiro, globais
  * e cópias derivadas incluídos, e sem os apagados.
  */
 export function artifactsOfEvent(store: FakeStore, eventId: string): TaskArtifactDto[] {
@@ -259,7 +259,7 @@ function list(request: FakeRequest, store: FakeStore): FakeResult {
 
   const tag = request.query.get("tag") ?? undefined;
   const q = request.query.get("q")?.toLocaleLowerCase("pt-BR");
-  const eventId = request.query.get("eventId") ?? undefined;
+  const eventId = request.query.get("taskId") ?? undefined;
 
   // Sem `scope`, a lista é do usuário (globais não têm dono); com `scope=global`, são os globais.
   let found = [...table(store).values()]

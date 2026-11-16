@@ -20,8 +20,8 @@ export interface ArtifactFilters {
   scope?: "global";
   tag?: string;
   q?: string;
-  /** Só os artefatos que aparecem nesse evento. */
-  eventId?: string;
+  /** Só os artefatos que aparecem nessa tarefa. */
+  taskId?: string;
   limit?: number;
 }
 
@@ -33,7 +33,7 @@ export function listArtifacts(filters: ArtifactFilters = {}): Promise<ArtifactDt
       scope: filters.scope,
       tag: filters.tag,
       q: filters.q,
-      eventId: filters.eventId,
+      taskId: filters.taskId,
       limit: filters.limit,
     },
   });

@@ -63,7 +63,7 @@ test("the agenda reads the window through the API client and follows every page"
   render(<AgendaScreen userId="user-1" todayKey={TODAY} />);
 
   await waitFor(() => expect(within(dayOf(TODAY)).getAllByRole("link")).toHaveLength(5));
-  expect(api.calls.filter((call) => call.pathname === "/api/events")).toHaveLength(3);
+  expect(api.calls.filter((call) => call.pathname === "/api/tasks")).toHaveLength(3);
   expect(eventHrefsOn(TODAY)).toEqual([
     "/user-1/eventos/ev-5",
     "/user-1/eventos/ev-4",
@@ -141,7 +141,7 @@ test("the loading note shows while the window loads and goes away after it", asy
 
 test("a failed load shows the error alert", async () => {
   const api = installApi();
-  api.failNext("GET", "/api/events", 500);
+  api.failNext("GET", "/api/tasks", 500);
   render(<AgendaScreen userId="user-1" todayKey={TODAY} />);
 
   expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível carregar a agenda. Tente novamente.");
@@ -188,7 +188,7 @@ test("choosing a status sends the edit with the revision read, and the row shows
 
   await waitFor(() => expect(api.calls.filter((call) => call.method === "PATCH")).toHaveLength(1));
   expect(api.calls.find((call) => call.method === "PATCH")).toMatchObject({
-    pathname: "/api/events/ev-2",
+    pathname: "/api/tasks/ev-2",
     body: { expectedRevision: 1, status: "done", finishedAt: expect.stringMatching(/^2026-09-14T13:00:00\.\d{3}Z$/) },
   });
   await waitFor(() => expect(within(dayOf(TODAY)).getByRole("button", { name: "Feito. Mudar status de “Almoço no escritório”" })).toBeInTheDocument());
@@ -199,10 +199,10 @@ test("a stale revision warns and reloads the agenda", async () => {
   const api = installApi();
   render(<AgendaScreen userId="user-1" todayKey={TODAY} />);
   await waitFor(() => expect(within(dayOf(TODAY)).getAllByRole("link")).toHaveLength(5));
-  const agendaReads = () => api.calls.filter((call) => call.method === "GET" && call.pathname === "/api/events").length;
+  const agendaReads = () => api.calls.filter((call) => call.method === "GET" && call.pathname === "/api/tasks").length;
   const readsBefore = agendaReads();
 
-  api.failNext("PATCH", "/api/events/ev-2", 409);
+  api.failNext("PATCH", "/api/tasks/ev-2", 409);
   fireEvent.click(within(dayOf(TODAY)).getByRole("button", { name: "Só agenda. Mudar status de “Almoço no escritório”" }));
   fireEvent.click(screen.getByRole("option", { name: "Em curso" }));
 
@@ -217,7 +217,7 @@ test("a refused status change shows the retry message and keeps the row as it wa
   render(<AgendaScreen userId="user-1" todayKey={TODAY} />);
   await waitFor(() => expect(within(dayOf(TODAY)).getAllByRole("link")).toHaveLength(5));
 
-  api.failNext("PATCH", "/api/events/ev-2", 500);
+  api.failNext("PATCH", "/api/tasks/ev-2", 500);
   fireEvent.click(within(dayOf(TODAY)).getByRole("button", { name: "Só agenda. Mudar status de “Almoço no escritório”" }));
   fireEvent.click(screen.getByRole("option", { name: "Em curso" }));
 
@@ -227,7 +227,7 @@ test("a refused status change shows the retry message and keeps the row as it wa
 
 /** Quantas leituras da agenda saíram para a rede até agora. */
 function agendaReads(api: ReturnType<typeof installApi>) {
-  return () => api.calls.filter((call) => call.method === "GET" && call.pathname === "/api/events").length;
+  return () => api.calls.filter((call) => call.method === "GET" && call.pathname === "/api/tasks").length;
 }
 
 test("com evento de agente em aberto, a agenda se relê sozinha e a linha vira 'Agente, feito'", async () => {
@@ -281,7 +281,7 @@ test("uma releitura que falha mantém a agenda na tela, sem o aviso de erro", as
   render(<AgendaScreen userId="user-1" todayKey={TODAY} />);
   await waitFor(() => expect(within(dayOf(TODAY)).getAllByRole("link")).toHaveLength(5));
 
-  api.failNext("GET", "/api/events", 500);
+  api.failNext("GET", "/api/tasks", 500);
   await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
 
   expect(screen.queryByRole("alert")).not.toBeInTheDocument();

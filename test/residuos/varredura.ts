@@ -117,6 +117,11 @@ export const EXCECOES_DE_LINHA: { motivo: string; linha: RegExp; palavras: RegEx
     linha: /(^|[^\w])"?event"?:\s*(["'`][a-z]+\.[a-z_]+["'`]|\$\{)/,
     palavras: /^event$/,
   },
+  {
+    motivo: "constante de teste da rota antiga: o teste prova que `/api/events` deixou de existir (404 na API, recusa no gateway)",
+    linha: /^\s*(export )?const ROTA_ANTIGA = "\/api\/events";/,
+    palavras: /^events$/,
+  },
 ];
 
 export type Residuo = {
@@ -221,10 +226,11 @@ export const AREAS = [
 ] as const;
 export type Area = (typeof AREAS)[number];
 
-const CAMINHO_DA_API_ANTIGA = /\/api\/events/;
+/** A rota antiga `/api/events` (nao o modulo `lib/api/events` do web, que e codigo interno do ticket 10). */
+const CAMINHO_DA_API_ANTIGA = /(?<!lib)\/api\/events/;
 const DECORADOR_DE_ROTA = /@(Controller|Get|Post|Put|Patch|Delete|ApiTags|ApiOperation|ApiParam|ApiResponse|ApiBody)\(/;
 const ARQUIVO_DE_ROTA_DA_API =
-  /^apps\/api\/src\/(http\/|common\/openapi)/;
+  /^apps\/api\/src\/http\//;
 const ARQUIVO_DE_AGENTE =
   /^apps\/api\/src\/(api-core\/(requests|agent)\/|api-core\/events\/gateways\/|infrastructure\/(hermes|persistence\/agent-sql)\/)|prompt-builder|command-parsing|voice-event/;
 const PERSISTENCIA_DA_API =

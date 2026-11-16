@@ -10,21 +10,21 @@ import { GatewayIdentityGuard } from "../../http/request-identity/gateway-identi
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
 import { UpdateEventUseCase } from "./update-event.usecase";
 
-@Controller("api/events")
+@Controller("api/tasks")
 export class UpdateEventController {
   constructor(@Inject(UpdateEventUseCase) private readonly updateEvent: UpdateEventUseCase) {}
 
-  @Patch(":eventId")
+  @Patch(":taskId")
   @UseGuards(GatewayIdentityGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   async execute(
-    @Param("eventId") eventId: string,
+    @Param("taskId") taskId: string,
     @Body() body: UpdateTaskInput,
     @CurrentUser() actor: AuthenticatedUser,
   ): Promise<void> {
     assertEventFields(body as unknown as Record<string, unknown>, true);
     assertExpectedRevision(body);
-    await this.updateEvent.execute({ ...body, taskId: eventId }, actor);
+    await this.updateEvent.execute({ ...body, taskId }, actor);
   }
 }
 

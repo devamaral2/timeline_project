@@ -38,12 +38,12 @@ const agentFileSchema = z.object({
 
 /** Os formatos nomeados do documento (`components.schemas`). */
 export const documentedSchemas = {
-  EventCard: taskCardSchema,
+  TaskCard: taskCardSchema,
   AgendaPage: agendaPageSchema,
-  Event: taskSchema,
-  CreateEventInput: createTaskInputSchema,
-  UpdateEventInput: updateTaskInputSchema.omit({ taskId: true }),
-  CreatedEvent: z.object({ taskId: z.string() }),
+  Task: taskSchema,
+  CreateTaskInput: createTaskInputSchema,
+  UpdateTaskInput: updateTaskInputSchema.omit({ taskId: true }),
+  CreatedTask: z.object({ taskId: z.string() }),
   TagSuggestion: tagSuggestionSchema,
   PlaceSuggestion: placeSuggestionSchema,
   Artifact: artifactSchema,
@@ -73,10 +73,10 @@ export const documentedSchemas = {
 export type SchemaName = keyof typeof documentedSchemas;
 
 export const documentedTags = [
-  { name: "Eventos", description: "A agenda, a lista de tarefas e cada evento de pessoa." },
+  { name: "Tarefas", description: "A agenda, a lista de tarefas e cada tarefa de pessoa." },
   { name: "Tags", description: "Sugestão de tags já usadas." },
-  { name: "Locais", description: "Busca de locais para o campo de local do evento." },
-  { name: "Artefatos", description: "O conteúdo que os eventos criam e usam: texto, alimento, sono e treino." },
+  { name: "Locais", description: "Busca de locais para o campo de local da tarefa." },
+  { name: "Artefatos", description: "O conteúdo que as tarefas criam e usam: texto, alimento, sono e treino." },
   { name: "Séries", description: "Regras de repetição e o que cada ocorrência copia." },
   { name: "Pedidos ao agente", description: "Abrir, acompanhar e cancelar pedidos em texto ou fala." },
   { name: "Configuração do agente", description: "Skills e agentes do Hermes como arquivos (ADR 0005). Só o dono acessa." },
@@ -125,15 +125,15 @@ const ownerOnly = "Só o dono acessa (`AGENT_CONFIG_OWNER_USER_ID`); os demais r
 
 /** Uma entrada por rota, na forma `METODO /caminho` do documento OpenAPI. */
 export const documentedOperations: Record<string, OperationDoc> = {
-  "GET /api/events": {
-    tag: "Eventos",
+  "GET /api/tasks": {
+    tag: "Tarefas",
     summary: "Lista a agenda, em páginas",
-    description: "Os eventos de uma janela de tempo. Passe o `nextCursor` da resposta em `cursor` para a página seguinte.",
+    description: "As tarefas de uma janela de tempo. Passe o `nextCursor` da resposta em `cursor` para a página seguinte.",
     query: {
       from: instant("Início da janela."),
       to: instant("Fim da janela."),
-      actor: { description: "De quem é o evento.", enum: ACTORS },
-      kind: { description: "Só eventos deste tipo.", enum: EVENT_KINDS.filter((kind) => kind !== "step") },
+      actor: { description: "De quem é a tarefa.", enum: ACTORS },
+      kind: { description: "Só tarefas deste tipo.", enum: EVENT_KINDS.filter((kind) => kind !== "step") },
       tag,
       cursor: { description: "O `nextCursor` da página anterior." },
       limit: limit(100, 50),
@@ -141,52 +141,52 @@ export const documentedOperations: Record<string, OperationDoc> = {
     success: { status: 200, description: "Uma página da agenda.", schema: "AgendaPage" },
     errors: { 400: invalid },
   },
-  "GET /api/events/tracked": {
-    tag: "Eventos",
+  "GET /api/tasks/tracked": {
+    tag: "Tarefas",
     summary: "Lista as tarefas",
-    description: "Os eventos acompanhados por status, com ou sem data. `status` e `priority` aceitam vários valores separados por vírgula.",
+    description: "As tarefas acompanhadas por status, com ou sem data. `status` e `priority` aceitam vários valores separados por vírgula.",
     query: {
-      actor: { description: "De quem é o evento.", enum: ACTORS },
+      actor: { description: "De quem é a tarefa.", enum: ACTORS },
       status: { description: `Um ou mais status, separados por vírgula: ${EVENT_STATUSES.join(", ")}.` },
       priority: { description: `Uma ou mais prioridades, separadas por vírgula: ${PRIORITIES.join(", ")}.` },
       tag,
       q: search,
-      from: instant("Só eventos a partir deste instante."),
-      to: instant("Só eventos até este instante."),
-      longRunning: { description: "`true` para só os eventos longos, `false` para só os demais.", type: "boolean" },
+      from: instant("Só tarefas a partir deste instante."),
+      to: instant("Só tarefas até este instante."),
+      longRunning: { description: "`true` para só as tarefas longas, `false` para só os demais.", type: "boolean" },
       limit: limit(100),
     },
-    success: { status: 200, description: "As tarefas que passam nos filtros.", schema: "EventCard", list: true },
+    success: { status: 200, description: "As tarefas que passam nos filtros.", schema: "TaskCard", list: true },
     errors: { 400: invalid },
   },
-  "POST /api/events": {
-    tag: "Eventos",
-    summary: "Cria um evento",
-    description: "Cria um evento de pessoa, com os artefatos novos ou já existentes que ele carrega.",
-    body: "CreateEventInput",
-    success: { status: 201, description: "O evento foi criado.", schema: "CreatedEvent" },
+  "POST /api/tasks": {
+    tag: "Tarefas",
+    summary: "Cria uma tarefa",
+    description: "Cria uma tarefa de pessoa, com os artefatos novos ou já existentes que ela carrega.",
+    body: "CreateTaskInput",
+    success: { status: 201, description: "A tarefa foi criada.", schema: "CreatedTask" },
     errors: { 400: invalid, 409: idempotencyClash, 422: idempotencyReuse },
     idempotent: true,
   },
-  "GET /api/events/{eventId}": {
-    tag: "Eventos",
-    summary: "Lê um evento",
-    success: { status: 200, description: "O evento, com os artefatos e as relações.", schema: "Event" },
-    errors: { 404: "Evento não encontrado." },
+  "GET /api/tasks/{taskId}": {
+    tag: "Tarefas",
+    summary: "Lê uma tarefa",
+    success: { status: 200, description: "A tarefa, com os artefatos e as relações.", schema: "Task" },
+    errors: { 404: "Tarefa não encontrada." },
   },
-  "PATCH /api/events/{eventId}": {
-    tag: "Eventos",
-    summary: "Edita um evento",
-    description: "Envie só os campos que mudam, mais o `expectedRevision` lido do evento. `null` em `status` ou numa data apaga o valor.",
-    body: "UpdateEventInput",
-    success: { status: 204, description: "O evento foi editado." },
-    errors: { 400: invalid, 404: "Evento não encontrado.", 409: stale },
+  "PATCH /api/tasks/{taskId}": {
+    tag: "Tarefas",
+    summary: "Edita uma tarefa",
+    description: "Envie só os campos que mudam, mais o `expectedRevision` lida da tarefa. `null` em `status` ou numa data apaga o valor.",
+    body: "UpdateTaskInput",
+    success: { status: 204, description: "A tarefa foi editada." },
+    errors: { 400: invalid, 404: "Tarefa não encontrada.", 409: stale },
   },
-  "DELETE /api/events/{eventId}": {
-    tag: "Eventos",
-    summary: "Apaga um evento",
-    success: { status: 204, description: "O evento foi apagado." },
-    errors: { 404: "Evento não encontrado." },
+  "DELETE /api/tasks/{taskId}": {
+    tag: "Tarefas",
+    summary: "Apaga uma tarefa",
+    success: { status: 204, description: "A tarefa foi apagada." },
+    errors: { 404: "Tarefa não encontrada." },
   },
 
   "GET /api/tags": {
@@ -221,7 +221,7 @@ export const documentedOperations: Record<string, OperationDoc> = {
       scope: { description: "`global` lista os artefatos globais; exige `type`.", enum: ["global"] },
       tag,
       q: search,
-      eventId: { description: "Só os artefatos que aparecem neste evento." },
+      taskId: { description: "Só os artefatos que aparecem nesta tarefa." },
       limit: limit(100),
     },
     success: { status: 200, description: "Os artefatos que passam nos filtros.", schema: "Artifact", list: true },
@@ -239,7 +239,7 @@ export const documentedOperations: Record<string, OperationDoc> = {
   "GET /api/artifacts/{artifactId}": {
     tag: "Artefatos",
     summary: "Lê um artefato",
-    success: { status: 200, description: "O artefato, com os eventos em que aparece.", schema: "Artifact" },
+    success: { status: 200, description: "O artefato, com as tarefas em que aparece.", schema: "Artifact" },
     errors: { 404: "Artefato não encontrado." },
   },
   "PATCH /api/artifacts/{artifactId}": {
@@ -265,7 +265,7 @@ export const documentedOperations: Record<string, OperationDoc> = {
   "POST /api/recurrences": {
     tag: "Séries",
     summary: "Cria uma série",
-    description: "A regra diz quando cada ocorrência acontece; `template` é o evento que cada uma copia, sem a janela.",
+    description: "A regra diz quando cada ocorrência acontece; `template` é a tarefa que cada uma copia, sem a janela.",
     body: "CreateRecurrenceInput",
     success: { status: 201, description: "A série foi criada.", schema: "CreatedRecurrence" },
     errors: { 400: invalid, 409: idempotencyClash, 422: idempotencyReuse },
@@ -295,7 +295,7 @@ export const documentedOperations: Record<string, OperationDoc> = {
   "POST /api/requests": {
     tag: "Pedidos ao agente",
     summary: "Abre um pedido em texto",
-    description: "O agente desdobra o pedido em passos que criam ou alteram eventos e artefatos. A resposta chega antes de o trabalho terminar: acompanhe em `GET /api/requests/{requestId}`.",
+    description: "O agente desdobra o pedido em passos que criam ou alteram tarefas e artefatos. A resposta chega antes de o trabalho terminar: acompanhe em `GET /api/requests/{requestId}`.",
     body: "StartRequestInput",
     success: { status: 202, description: "O pedido foi aceito.", schema: "StartedRequest" },
     errors: { 400: invalid, 404: "`sessionId` não é um pedido deste usuário." },
@@ -318,8 +318,8 @@ export const documentedOperations: Record<string, OperationDoc> = {
   },
   "POST /api/requests/voice": {
     tag: "Pedidos ao agente",
-    summary: "Transforma uma fala em evento",
-    description: "O evento criado aparece em `entities` de `GET /api/requests/{requestId}`.",
+    summary: "Transforma uma fala em tarefa",
+    description: "A tarefa criada aparece em `entities` de `GET /api/requests/{requestId}`.",
     body: "StartVoiceRequestInput",
     success: { status: 202, description: "O pedido foi aceito.", schema: "StartedRequest" },
     errors: { 400: invalid },

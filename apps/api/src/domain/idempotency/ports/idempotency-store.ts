@@ -11,7 +11,7 @@ export type IdempotencyClaim =
 
 export interface IdempotencyKeyRef {
   userId: string;
-  /** Rota protegida (`/api/events`): a mesma chave em rotas diferentes e independente. */
+  /** Rota protegida (`/api/tasks`): a mesma chave em rotas diferentes e independente. */
   scope: string;
   key: string;
 }

@@ -176,7 +176,7 @@ test("trocar a prioridade manda a revisão lida e mostra a prioridade nova", asy
 
 test("a falha na troca devolve o status e avisa", async () => {
   install([training()]);
-  api.failNext("PATCH", "/api/events/ev-1", 500);
+  api.failNext("PATCH", "/api/tasks/ev-1", 500);
   renderPage();
   fireEvent.click(await screen.findByRole("button", { name: `Status: Em curso. Trocar status de ${NAME}` }));
   fireEvent.click(within(screen.getByRole("listbox", { name: "Status do evento" })).getByRole("option", { name: "Feito" }));

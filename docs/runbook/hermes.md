@@ -179,17 +179,17 @@ mcp_servers:
       Authorization: "Bearer ${MCP_TOKEN}"
     tools:
       include:
-        - create_event
+        - create_task
         - create_artifact
         - create_recurrence
-        - list_timeline_events
-        - list_tracked_events
+        - list_agenda_tasks
+        - list_tracked_tasks
         - list_artifacts
         - list_recurrences
-        - get_event
+        - get_task
         - get_artifact
         - get_recurrence
-        - update_event
+        - update_task
         - update_artifact
         - update_recurrence
 ```
@@ -413,17 +413,17 @@ mcp_servers:
       Authorization: "Bearer ${MCP_TOKEN}"
     tools:
       include:
-        - create_event
+        - create_task
         - create_artifact
         - create_recurrence
-        - list_timeline_events
-        - list_tracked_events
+        - list_agenda_tasks
+        - list_tracked_tasks
         - list_artifacts
         - list_recurrences
-        - get_event
+        - get_task
         - get_artifact
         - get_recurrence
-        - update_event
+        - update_task
         - update_artifact
         - update_recurrence
 ```
@@ -454,7 +454,7 @@ printf '%s' "$KEY" | kubectl -n braid exec -i deploy/api -- node -e '
       method: "POST",
       headers: { authorization: "Bearer " + key, "content-type": "application/json" },
       body: JSON.stringify({ model: "hermes-agent", messages: [{ role: "user", content:
-        "Use a ferramenta create_event para criar um evento com o nome \"teste do hermes\" e idempotencyKey \"teste-hermes-1\". Responda só com o id." }] }),
+        "Use a ferramenta create_task para criar uma tarefa com o nome \"teste do hermes\" e idempotencyKey \"teste-hermes-1\". Responda só com o id." }] }),
     }).then(r => r.json());
     console.log(JSON.stringify(await ask()).slice(0, 400));
     console.log(JSON.stringify(await ask()).slice(0, 400));

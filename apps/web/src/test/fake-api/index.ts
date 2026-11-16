@@ -33,7 +33,7 @@ export interface FakeResult {
 
 export interface FakeRoute {
   method: FakeMethod;
-  /** Padrão com parâmetros: `/api/events/:eventId`. */
+  /** Padrão com parâmetros: `/api/tasks/:taskId`. */
   path: string;
   /** Esquema do corpo recebido. Sem ele, a rota não aceita corpo. */
   input?: ZodType;

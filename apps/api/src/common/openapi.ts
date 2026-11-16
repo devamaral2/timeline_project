@@ -98,7 +98,7 @@ export function configureApiDocumentation(app: INestApplication): void {
   // A API nao aceita bearer: quem chama e o gateway Auth, que encaminha a chave interna e o usuario ja validado.
   const config = new DocumentBuilder()
     .setTitle("Braid API")
-    .setDescription("Backend de eventos, artefatos, séries e pedidos ao agente. Só o gateway Auth chega aqui, com os dois headers abaixo.")
+    .setDescription("Backend de tarefas, artefatos, séries e pedidos ao agente. Só o gateway Auth chega aqui, com os dois headers abaixo.")
     .addApiKey({ type: "apiKey", in: "header", name: "x-auth-gateway-key" }, "gateway-key")
     .addApiKey({ type: "apiKey", in: "header", name: "x-auth-user-id" }, "user-id")
     .addSecurityRequirements({ "gateway-key": [], "user-id": [] })

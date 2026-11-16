@@ -11,7 +11,7 @@ import { ListAgendaEventsUseCase } from "./list-agenda-events.usecase";
 /** Os passos nunca aparecem na agenda, entao nao sao um filtro. */
 const AGENDA_KINDS = EVENT_KINDS.filter((kind) => kind !== "step");
 
-@Controller("api/events")
+@Controller("api/tasks")
 export class ListAgendaEventsController {
   constructor(@Inject(ListAgendaEventsUseCase) private readonly listAgendaEvents: ListAgendaEventsUseCase) {}
 

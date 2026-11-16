@@ -81,7 +81,7 @@ test("confirmar apaga o evento pela API e volta para a tela de onde o usuário v
   fireEvent.click(within(dialog).getByRole("button", { name: "Excluir" }));
 
   await waitFor(() => expect(back).toHaveBeenCalledTimes(1));
-  expect(deletes()).toEqual([expect.objectContaining({ pathname: "/api/events/ev-1" })]);
+  expect(deletes()).toEqual([expect.objectContaining({ pathname: "/api/tasks/ev-1" })]);
   expect(api.store.table("events").has("ev-1")).toBe(false);
   expect(push).not.toHaveBeenCalled();
   expect(replace).not.toHaveBeenCalled();
@@ -108,7 +108,7 @@ test("falha ao apagar mantém o evento aberto e avisa, sem voltar", async () => 
   renderPage();
 
   const dialog = await openDeleteDialog();
-  api.failNext("DELETE", "/api/events/ev-1", 503);
+  api.failNext("DELETE", "/api/tasks/ev-1", 503);
   fireEvent.click(within(dialog).getByRole("button", { name: "Excluir" }));
 
   expect(await within(dialog).findByRole("alert")).toHaveTextContent("Não foi possível excluir o evento");

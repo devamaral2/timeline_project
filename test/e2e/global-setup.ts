@@ -119,7 +119,7 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     const preload = resolve(__dirname, "external-mocks.mjs");
     const api = start([process.execPath, "--import", preload, resolve(root, "apps/api/dist/main.js")], env);
     processes.push(api.child);
-    await ready(`${apiUrl}/api/events`, api);
+    await ready(`${apiUrl}/api/tasks`, api);
     const auth = start([process.execPath, "--import", preload, resolve(root, "apps/auth/dist/main.js")], env);
     processes.push(auth.child);
     await ready(`${authUrl}/health/ready`, auth);

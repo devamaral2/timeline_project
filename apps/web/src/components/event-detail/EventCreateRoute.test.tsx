@@ -157,7 +157,7 @@ describe("Salvar", () => {
   });
 
   it("a API recusa a entrada: a mensagem aparece e o que foi digitado fica", async () => {
-    api.failNext("POST", "/api/events", 400);
+    api.failNext("POST", "/api/tasks", 400);
     renderRoute();
     await screen.findByRole("heading", { level: 1, name: "Novo evento" });
 
@@ -170,7 +170,7 @@ describe("Salvar", () => {
   });
 
   it("uma falha que não é de entrada mostra a mensagem de criar", async () => {
-    api.failNext("POST", "/api/events", 500);
+    api.failNext("POST", "/api/tasks", 500);
     renderRoute();
     await screen.findByRole("heading", { level: 1, name: "Novo evento" });
 

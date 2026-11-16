@@ -123,7 +123,7 @@ describe("artefatos na edição", () => {
     await waitFor(() => expect(replace).toHaveBeenCalledWith(DETAIL_PATH));
     expect(patches()).toEqual([
       expect.objectContaining({
-        pathname: "/api/events/ev-1",
+        pathname: "/api/tasks/ev-1",
         body: {
           expectedRevision: 3,
           artifacts: [
@@ -172,7 +172,7 @@ describe("artefatos na edição", () => {
         },
       }),
     ]);
-    const event = (await api.authedFetch("/api/events/ev-1")) as TaskDto;
+    const event = (await api.authedFetch("/api/tasks/ev-1")) as TaskDto;
     expect(event.artifacts.map((link) => link.artifact.name)).toEqual(["Ficha B", "Ficha A", "Registro do treino"]);
   });
 
@@ -281,7 +281,7 @@ describe("refeição: alimento do catálogo global ou dos seus, como cópia com 
 
     await waitFor(() => expect(replace).toHaveBeenCalledWith(DETAIL_PATH));
     expect(patches()).toEqual([expect.objectContaining({ body: { expectedRevision: 3, artifacts: [{ copyOf: "food-global", quantity: "150 g" }] } })]);
-    const event = (await api.authedFetch("/api/events/ev-1")) as TaskDto;
+    const event = (await api.authedFetch("/api/tasks/ev-1")) as TaskDto;
     expect(event.artifacts).toEqual([
       expect.objectContaining({ relation: "uses", artifact: expect.objectContaining({ name: "Arroz cozido", derived: true, data: expect.objectContaining({ quantity: "150 g" }) }) }),
     ]);
@@ -317,7 +317,7 @@ describe("refeição: alimento do catálogo global ou dos seus, como cópia com 
       method: "PATCH",
       body: JSON.stringify({ expectedRevision: 1, type: "food", data: { ...FOOD, totals: { ...FOOD.totals, totalCaloriesKcal: 999 } } }),
     });
-    const event = (await api.authedFetch("/api/events/ev-1")) as TaskDto;
+    const event = (await api.authedFetch("/api/tasks/ev-1")) as TaskDto;
     expect(event.artifacts[0]?.artifact.data).toMatchObject({ totals: { totalCaloriesKcal: 200 } });
   });
 });

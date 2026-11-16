@@ -995,7 +995,7 @@ TRAEFIK_IP=$(kubectl -n kube-system get svc traefik -o jsonpath='{.spec.clusterI
 curl -fsS -o /dev/null -w 'web=%{http_code}\n' -H "Host: timeline.$DOMAIN" "http://$TRAEFIK_IP"
 curl -fsS -H "Host: auth.$DOMAIN" "http://$TRAEFIK_IP/health/ready"
 curl -fsS -H "Host: auth.$DOMAIN" "http://$TRAEFIK_IP/.well-known/jwks.json" | jq -e '.keys | length > 0'
-curl -sS -o /dev/null -w 'api=%{http_code}\n' -H "Host: api.$DOMAIN" "http://$TRAEFIK_IP/api/events"
+curl -sS -o /dev/null -w 'api=%{http_code}\n' -H "Host: api.$DOMAIN" "http://$TRAEFIK_IP/api/tasks"
 ```
 
 Esperado: web 200, readiness do auth saudável, `true` para existência de chave
@@ -1162,7 +1162,7 @@ kubectl top nodes
 kubectl top pods -A
 dig +short "timeline.$DOMAIN"
 curl -fsS -o /dev/null -w '%{http_code}\n' "https://timeline.$DOMAIN"
-curl -sS -o /dev/null -w '%{http_code}\n' "https://api.$DOMAIN/api/events"
+curl -sS -o /dev/null -w '%{http_code}\n' "https://api.$DOMAIN/api/tasks"
 ```
 
 Esperado: pods prontos (Jobs de instalação podem aparecer `Completed`), volumes

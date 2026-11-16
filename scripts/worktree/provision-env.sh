@@ -174,7 +174,7 @@ bash "$SCRIPT_DIR/start-dev.sh"
 step 8 "Verificacao final: API, login (via Caddy) e link"
 # start-dev so confere a porta aberta; aqui a API precisa responder HTTP de fato
 # (sem sessao ela devolve 401, o que ja prova que subiu e validou o ambiente).
-API_CODE="$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 "http://127.0.0.1:${API_PORT}/api/events" || true)"
+API_CODE="$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 "http://127.0.0.1:${API_PORT}/api/tasks" || true)"
 case "$API_CODE" in
   000|5??) echo "API em 127.0.0.1:${API_PORT} devolveu HTTP ${API_CODE}. Veja .agents/runtime/dev.log." >&2; exit 1 ;;
 esac

@@ -42,7 +42,7 @@ function serve() {
 
 /** Os parâmetros da última leitura da lista de tarefas. */
 function lastTrackedQuery(api: ReturnType<typeof serve>): Record<string, string> {
-  const calls = api.calls.filter((call) => call.pathname === "/api/events/tracked");
+  const calls = api.calls.filter((call) => call.pathname === "/api/tasks/tracked");
   const last = calls.at(-1);
   if (!last) throw new Error("A lista de tarefas não leu a API");
   return last.query;

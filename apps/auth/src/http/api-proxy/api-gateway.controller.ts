@@ -75,7 +75,7 @@ export function policyFor(method: string, path: string): {
   resource: "task" | "tag" | "artifact" | "recurrence" | "agent";
   action: "read" | "create" | "update" | "delete" | "execute";
 } {
-  const resource = path.startsWith("/api/events") ? "task"
+  const resource = path.startsWith("/api/tasks") ? "task"
     : path.startsWith("/api/tags") ? "tag"
     : path.startsWith("/api/artifacts") ? "artifact"
     : path.startsWith("/api/recurrences") ? "recurrence"

@@ -7,15 +7,15 @@ import { GatewayIdentityGuard } from "../../http/request-identity/gateway-identi
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
 import { DeleteEventUseCase } from "./delete-event.usecase";
 
-@Controller("api/events")
+@Controller("api/tasks")
 export class DeleteEventController {
   constructor(@Inject(DeleteEventUseCase) private readonly deleteEvent: DeleteEventUseCase) {}
 
-  @Delete(":eventId")
+  @Delete(":taskId")
   @UseGuards(GatewayIdentityGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
-  async execute(@Param("eventId") eventId: string, @CurrentUser() actor: AuthenticatedUser): Promise<void> {
-    await this.deleteEvent.execute({ eventId }, actor);
+  async execute(@Param("taskId") taskId: string, @CurrentUser() actor: AuthenticatedUser): Promise<void> {
+    await this.deleteEvent.execute({ eventId: taskId }, actor);
   }
 }
 

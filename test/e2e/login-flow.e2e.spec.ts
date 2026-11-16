@@ -13,7 +13,7 @@ test("login in the frontend establishes an Auth session and reaches the API", as
   await page.getByRole("button", { name: "Entrar" }).click();
   await expect(page).toHaveURL(new RegExp(`/${user.id}$`));
   const response = await page.evaluate(async () => {
-    const result = await fetch("/api/events", { credentials: "same-origin" });
+    const result = await fetch("/api/tasks", { credentials: "same-origin" });
     return { status: result.status, body: await result.json() };
   });
   expect(response.status).toBe(200);

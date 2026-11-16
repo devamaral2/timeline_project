@@ -167,7 +167,7 @@ describe("sequência na edição", () => {
     search(PREVIOUS_SEARCH, "Monitorar");
 
     expect(await screen.findByRole("button", { name: "Escolher “Monitorar a aplicação”" })).toBeInTheDocument();
-    const lookup = api.calls.find((call) => call.pathname === "/api/events/tracked");
+    const lookup = api.calls.find((call) => call.pathname === "/api/tasks/tracked");
     expect(lookup?.query).not.toHaveProperty("actor");
   });
 
@@ -185,12 +185,12 @@ describe("sequência na edição", () => {
     await waitFor(() => expect(replace).toHaveBeenCalledWith(DETAIL_PATH));
     expect(patches()).toEqual([
       expect.objectContaining({
-        pathname: "/api/events/ev-1",
+        pathname: "/api/tasks/ev-1",
         body: { expectedRevision: 3, name: "Treino de costas", previousTaskIds: ["ev-3"] },
       }),
     ]);
     // A API liga o outro lado, mas só o evento do PATCH sobe a revisão.
-    const before = (await api.authedFetch("/api/events/ev-3")) as TaskDto;
+    const before = (await api.authedFetch("/api/tasks/ev-3")) as TaskDto;
     expect(before.revision).toBe(1);
     expect(before.nextTaskIds).toEqual(["ev-1"]);
   });
@@ -207,9 +207,9 @@ describe("sequência na edição", () => {
 
     await waitFor(() => expect(replace).toHaveBeenCalledWith(DETAIL_PATH));
     expect(patches()).toEqual([
-      expect.objectContaining({ pathname: "/api/events/ev-1", body: { expectedRevision: 3, nextTaskIds: ["ev-2"] } }),
+      expect.objectContaining({ pathname: "/api/tasks/ev-1", body: { expectedRevision: 3, nextTaskIds: ["ev-2"] } }),
     ]);
-    const successor = (await api.authedFetch("/api/events/ev-2")) as TaskDto;
+    const successor = (await api.authedFetch("/api/tasks/ev-2")) as TaskDto;
     expect(successor.revision).toBe(1);
     expect(successor.previousTaskIds).toEqual(["ev-1"]);
   });
@@ -227,7 +227,7 @@ describe("sequência na edição", () => {
 
     await waitFor(() => expect(replace).toHaveBeenCalledWith(DETAIL_PATH));
     expect(patches()).toEqual([
-      expect.objectContaining({ pathname: "/api/events/ev-1", body: { expectedRevision: 3, previousTaskIds: ["ag-1"] } }),
+      expect.objectContaining({ pathname: "/api/tasks/ev-1", body: { expectedRevision: 3, previousTaskIds: ["ag-1"] } }),
     ]);
   });
 
@@ -245,7 +245,7 @@ describe("sequência na edição", () => {
     await waitFor(() => expect(replace).toHaveBeenCalledWith(DETAIL_PATH));
     expect(patches()).toEqual([
       expect.objectContaining({
-        pathname: "/api/events/ev-1",
+        pathname: "/api/tasks/ev-1",
         body: { expectedRevision: 3, previousTaskIds: ["ag-1"], nextTaskIds: ["ev-3"] },
       }),
     ]);
@@ -266,9 +266,9 @@ describe("sequência na edição", () => {
 
     await waitFor(() => expect(replace).toHaveBeenCalledWith(DETAIL_PATH));
     expect(patches()).toEqual([
-      expect.objectContaining({ pathname: "/api/events/ev-1", body: { expectedRevision: 3, previousTaskIds: [] } }),
+      expect.objectContaining({ pathname: "/api/tasks/ev-1", body: { expectedRevision: 3, previousTaskIds: [] } }),
     ]);
-    const other3 = (await api.authedFetch("/api/events/ev-3")) as TaskDto;
+    const other3 = (await api.authedFetch("/api/tasks/ev-3")) as TaskDto;
     expect(other3.nextTaskIds).toEqual([]);
     expect(other3.revision).toBe(1);
   });
@@ -288,13 +288,13 @@ describe("sequência na edição", () => {
 
     await waitFor(() => expect(replace).toHaveBeenCalledWith(DETAIL_PATH));
     expect(patches()).toEqual([
-      expect.objectContaining({ pathname: "/api/events/ev-1", body: { expectedRevision: 3, nextTaskIds: ["ev-3"] } }),
+      expect.objectContaining({ pathname: "/api/tasks/ev-1", body: { expectedRevision: 3, nextTaskIds: ["ev-3"] } }),
     ]);
   });
 
   it("uma recusa da API mostra a mensagem, mantém o formulário e o evento escolhido", async () => {
     install();
-    api.failNext("PATCH", "/api/events/ev-1", 400);
+    api.failNext("PATCH", "/api/tasks/ev-1", 400);
     renderRoute();
     await loaded();
 
