@@ -3,7 +3,7 @@ import { taskCardSchema } from "@repo/contracts/schemas";
 import { expect, test } from "vitest";
 
 const card: TaskCardDto = {
-  id: "event-1",
+  id: "task-1",
   actor: "human",
   kind: "common",
   status: "todo",

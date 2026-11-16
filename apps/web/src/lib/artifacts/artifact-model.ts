@@ -1,5 +1,5 @@
 import type { ArtifactTaskLinkDto, ArtifactType } from "@repo/contracts";
-import { dateLineOf, minutesBetween } from "@/lib/events/event-detail-format";
+import { dateLineOf, minutesBetween } from "@/lib/tasks/task-detail-format";
 
 /**
  * O que a lista de Notas decide a partir dos artefatos: o rótulo de cada tipo,
@@ -64,12 +64,12 @@ export function artifactTagsByUse(artifacts: readonly { tags: readonly string[] 
  * Uma nota de sono vive na noite do evento a que pertence: o título é o dia (ou os dois dias) dele e, com fim
  * planejado, quanto durou na agenda. Sem evento com início, a nota é só a nota.
  */
-export function sleepAgendaOfArtifact(events: readonly ArtifactTaskLinkDto[]): { title: string; agendaMinutes: number | null } | null {
-  const event = events.find((link) => link.startedAt);
-  if (!event?.startedAt) return null;
+export function sleepAgendaOfArtifact(tasks: readonly ArtifactTaskLinkDto[]): { title: string; agendaMinutes: number | null } | null {
+  const task = tasks.find((link) => link.startedAt);
+  if (!task?.startedAt) return null;
   return {
-    title: dateLineOf(event.startedAt, event.estimatedFinishAt),
-    agendaMinutes: event.estimatedFinishAt ? minutesBetween(event.startedAt, event.estimatedFinishAt) : null,
+    title: dateLineOf(task.startedAt, task.estimatedFinishAt),
+    agendaMinutes: task.estimatedFinishAt ? minutesBetween(task.startedAt, task.estimatedFinishAt) : null,
   };
 }
 

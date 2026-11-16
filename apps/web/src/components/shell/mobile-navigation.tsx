@@ -3,42 +3,42 @@
 import { ArrowLeft, CalendarDays, Check, ChevronDown, FileText, Plus, Search, SquareCheck, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent, type RefObject, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
-import { creatableItemTypes, ICON_STROKE_WIDTH, visualForItemType } from "@/components/events/event-visuals";
+import { type CSSProperties, type KeyboardEvent as KeyDownArgs, type MouseEvent as ClickArgs, type RefObject, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { creatableItemTypes, ICON_STROKE_WIDTH, visualForItemType } from "@/components/tasks/task-visuals";
 import { AgentChatPanel, agentEntityHref, useAgendaChat } from "@/components/hub/agent-chat-panel";
-import { EXAMPLE_TODAY, exampleEventsOn, type ExampleStatus } from "@/components/agenda/agenda-examples";
-import { CalendarPicker, type DateField, EventScheduleFields } from "@/components/new-item/event-schedule-fields";
+import { EXAMPLE_TODAY, exampleTasksOn, type ExampleStatus } from "@/components/agenda/agenda-examples";
+import { CalendarPicker, type DateField, TaskScheduleFields } from "@/components/new-item/task-schedule-fields";
 import { NotificationFeed, useNotificationFeed } from "./notification-bell";
 import { type Box, boxOf, canFly, FLIGHT_BACK_MS, FLIGHT_OUT_MS, flightKeyframes, type HermesDockDetail, hermesDockEvent, hermesMarkIn } from "@/components/ui/hermes-flight";
 import { HermesBot, useHermesBotState } from "@/components/ui/hermes-bot";
 import { SettingsView } from "./settings-view";
 import styles from "./shell.module.css";
 import type { HubCommandId } from "@/components/hub/hub-commands";
-import { type FreeWindow, type HubOpenDetail, hubOpenEvent } from "@/components/hub/hub-events";
+import { type FreeWindow, type HubOpenDetail, hubOpenEvent } from "@/components/hub/hub-open";
 import { dayKeyOf } from "@repo/timeline";
-import { useViewMode } from "@/lib/events/view-mode";
+import { useViewMode } from "@/lib/tasks/view-mode";
 import { type SectionId, useSectionMenu } from "@/lib/navigation/section-menu";
 import { SectionMenu } from "./section-menu";
 import { TaskStatusIcon, statusView } from "@/components/agenda/task-controls";
 
 type Kind = "Evento" | "Tarefa" | "Nota";
-type Picker = "eventType" | "status" | "priority" | DateField;
-const pickerTitles: Record<Picker, string> = { eventType: "Tipo de evento", status: "Status", priority: "Prioridade", startDate: "Início", endDate: "Término" };
+type Picker = "taskType" | "status" | "priority" | DateField;
+const pickerTitles: Record<Picker, string> = { taskType: "Tipo de evento", status: "Status", priority: "Prioridade", startDate: "Início", endDate: "Término" };
 type Category = "Rotina" | "Alimentação" | "Exercício";
 type DraftPriority = "low" | "medium" | "high" | "urgent";
-type EventType = (typeof creatableItemTypes)[number];
+type TaskType = (typeof creatableItemTypes)[number];
 type Entry = { id: string; title: string; kind: Kind; category?: Category; draft?: Record<string, string> };
 const draftPriorities: Record<DraftPriority, string> = { low: "Baixa", medium: "Média", high: "Alta", urgent: "Urgente" };
 const draftPriorityOrder: DraftPriority[] = ["urgent", "high", "medium", "low"];
-const eventDetailCopy: Record<EventType, { label: string; placeholder: string }> = {
+const taskDetailCopy: Record<TaskType, { label: string; placeholder: string }> = {
   common: { label: "Detalhes", placeholder: "Acrescente o que for importante…" },
   meal: { label: "Alimentos e preparo", placeholder: "Ingredientes, quantidades ou modo de preparo…" },
   training: { label: "Treino e objetivo", placeholder: "Exercícios, séries ou objetivo do treino…" },
   sleep: { label: "Observações do sono", placeholder: "Acrescente algo importante sobre este período…" },
 };
 const initialEntries: Entry[] = [
-  ...exampleEventsOn(EXAMPLE_TODAY).map((event, index) => ({ id: `event-${index}`, title: event.name, kind: "Evento" as const })),
-  ...exampleEventsOn(EXAMPLE_TODAY).flatMap(event => event.task ? [{ id: event.task.id, title: event.name, kind: "Tarefa" as const }] : []),
+  ...exampleTasksOn(EXAMPLE_TODAY).map((task, index) => ({ id: `event-${index}`, title: task.name, kind: "Evento" as const })),
+  ...exampleTasksOn(EXAMPLE_TODAY).flatMap(task => task.tracking ? [{ id: task.tracking.id, title: task.name, kind: "Tarefa" as const }] : []),
   { id: "note-1", title: "Ideias para a proposta", kind: "Nota" },
 ];
 const icons = { Evento: CalendarDays, Tarefa: SquareCheck, Nota: FileText };
@@ -127,7 +127,7 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState<Kind>("Tarefa");
   const [category, setCategory] = useState<Category>("Rotina");
-  const [eventType, setEventType] = useState<EventType>("common");
+  const [taskType, setTaskType] = useState<TaskType>("common");
   const [creating, setCreating] = useState(false);
   const [title, setTitle] = useState("");
   const [entries, setEntries] = useState(initialEntries);
@@ -147,9 +147,9 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
   const leftMarkRef = useRef<{ mark: Box; at: number } | null>(null);
   const dialogId = useId();
   const titleId = useId();
-  const draftKey = kind === "Evento" ? `${kind}:${eventType}` : `${kind}:${category}`;
+  const draftKey = kind === "Evento" ? `${kind}:${taskType}` : `${kind}:${category}`;
   const draft = drafts[draftKey] ?? {};
-  const eventVisual = visualForItemType(eventType);
+  const taskVisual = visualForItemType(taskType);
   const selectedPriority = draft.priority && draft.priority in draftPriorities ? draft.priority as DraftPriority : "medium";
   const selectedStatus = draft.status && draft.status in statusView ? draft.status as ExampleStatus : "todo";
   function updateDraft(field: string, value: string) {
@@ -170,16 +170,16 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
     }
     // Logado, criar é uma rota: `/evento` abre o formulário de evento e `/nota`, o de artefato, já com o nome.
     if (userId) {
-      openCreation(command === "event" ? "eventos/novo" : "notas/nova", argument);
+      openCreation(command === "task" ? "eventos/novo" : "notas/nova", argument);
       return;
     }
-    const next: Kind = command === "event" ? "Evento" : "Nota";
+    const next: Kind = command === "task" ? "Evento" : "Nota";
     setFormPicker(false);
     setKind(next);
     setCategory("Rotina");
     // `/evento comprar pão` ja chega com o nome preenchido.
     if (argument) {
-      const key = next === "Evento" ? `${next}:${eventType}` : `${next}:Rotina`;
+      const key = next === "Evento" ? `${next}:${taskType}` : `${next}:Rotina`;
       setDrafts(current => ({ ...current, [key]: { ...current[key], title: argument } }));
     }
     setHubView("create");
@@ -238,23 +238,23 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
 
   // Tocar na aba selecionada abre ou fecha o menu de opções e não navega; numa aba não selecionada, só navega.
   // Com o chat aberto, o toque só o fecha.
-  function tabClick(event: ReactMouseEvent<HTMLAnchorElement>, selected: boolean) {
+  function tabClick(click: ClickArgs<HTMLAnchorElement>, selected: boolean) {
     const chatOpen = panel !== null;
     closePanel();
     if (!selected) {
       setMenuOpen(false);
       return;
     }
-    event.preventDefault();
+    click.preventDefault();
     if (chatOpen) return;
-    menuTabRef.current = event.currentTarget;
+    menuTabRef.current = click.currentTarget;
     setMenuOpen(current => !current);
   }
 
   // Esc fecha o menu e devolve o foco à aba que o abriu.
-  function onNavKeyDown(event: ReactKeyboardEvent<HTMLElement>) {
-    if (event.key !== "Escape" || !menuOpen) return;
-    event.preventDefault();
+  function onNavKeyDown(press: KeyDownArgs<HTMLElement>) {
+    if (press.key !== "Escape" || !menuOpen) return;
+    press.preventDefault();
     setMenuOpen(false);
     menuTabRef.current?.focus();
   }
@@ -440,12 +440,12 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
           {activePicker === "startDate" || activePicker === "endDate" ? <div className={styles.pickerOptions}>
             <CalendarPicker value={draft[activePicker] ?? EXAMPLE_TODAY} onChange={value => updateDraft(activePicker, value)} onClose={() => setActivePicker(null)} />
           </div> : <div className={styles.pickerOptions} role="listbox" aria-label={pickerTitles[activePicker]}>
-            {activePicker === "eventType" && creatableItemTypes.map(type => {
+            {activePicker === "taskType" && creatableItemTypes.map(type => {
               const visual = visualForItemType(type);
-              return <button type="button" role="option" aria-selected={type === eventType} key={type} className={styles.pickerOption} onClick={() => { setEventType(type); setActivePicker(null); }}>
-                <span className={styles.entityTypeIcon} data-event-type={type}><visual.Icon aria-hidden strokeWidth={ICON_STROKE_WIDTH} /></span>
+              return <button type="button" role="option" aria-selected={type === taskType} key={type} className={styles.pickerOption} onClick={() => { setTaskType(type); setActivePicker(null); }}>
+                <span className={styles.entityTypeIcon} data-task-type={type}><visual.Icon aria-hidden strokeWidth={ICON_STROKE_WIDTH} /></span>
                 <span>{visual.label}</span>
-                {type === eventType ? <Check aria-hidden /> : null}
+                {type === taskType ? <Check aria-hidden /> : null}
               </button>;
             })}
             {activePicker === "status" && (Object.keys(statusView) as ExampleStatus[]).map(status => <button type="button" role="option" aria-selected={status === selectedStatus} key={status} className={styles.pickerOption} onClick={() => { updateDraft("status", status); setActivePicker(null); }}>
@@ -462,16 +462,16 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
         </div> : panel === "hub" && hubView === "notifications" ? (userId ? <NotificationsView userId={userId} /> : <p className={styles.notificationEmpty}>Entre na sua conta para ver os avisos.</p>)
           : panel === "hub" && hubView === "settings" ? <SettingsView darkMode={darkMode} onThemeToggle={onThemeToggle} onSignedOut={() => { closePanel(); router.replace("/"); }} />
           : panel === "hub" && hubView === "create" ? <div className={styles.entityForm}>
-            {kind === "Evento" ? <div className={styles.entityEventHeading}>
-              <span className={styles.entityEventTypeName}>{eventVisual.label}</span>
-              <div className={styles.entityEventTitleRow}>
+            {kind === "Evento" ? <div className={styles.entityTaskHeading}>
+              <span className={styles.entityTaskTypeName}>{taskVisual.label}</span>
+              <div className={styles.entityTaskTitleRow}>
                 <fieldset className={styles.entityTypeSelect}>
-                  <button type="button" className={styles.entityTypeButton} aria-label={`Tipo do evento: ${eventVisual.label}`} aria-haspopup="dialog" aria-expanded={activePicker === "eventType"} onClick={() => setActivePicker("eventType")}>
-                    <span className={styles.entityTypeIcon} data-event-type={eventType}><eventVisual.Icon aria-hidden strokeWidth={ICON_STROKE_WIDTH} /></span>
+                  <button type="button" className={styles.entityTypeButton} aria-label={`Tipo do evento: ${taskVisual.label}`} aria-haspopup="dialog" aria-expanded={activePicker === "taskType"} onClick={() => setActivePicker("taskType")}>
+                    <span className={styles.entityTypeIcon} data-task-type={taskType}><taskVisual.Icon aria-hidden strokeWidth={ICON_STROKE_WIDTH} /></span>
                     <ChevronDown aria-hidden />
                   </button>
                 </fieldset>
-                <input className={styles.entityEventNameInput} aria-label="Nome do evento" value={draft.title ?? ""} onChange={event => updateDraft("title", event.target.value)} placeholder="Nome do evento" />
+                <input className={styles.entityTaskNameInput} aria-label="Nome do evento" value={draft.title ?? ""} onChange={event => updateDraft("title", event.target.value)} placeholder="Nome do evento" />
               </div>
             </div> : <div className={styles.entityHeading}><span>{(() => { const Icon = icons[kind]; return <Icon aria-hidden />; })()}</span><div><input className={styles.entityNameInput} aria-label={`Nome da ${kind.toLocaleLowerCase("pt-BR")}`} value={draft.title ?? ""} onChange={event => updateDraft("title", event.target.value)} placeholder={`Nome da ${kind.toLocaleLowerCase("pt-BR")}`} /><p>{category}</p></div></div>}
             {kind === "Tarefa" && <div className={styles.entitySelectors}>
@@ -493,8 +493,8 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
               </fieldset>
             </div>}
             {kind === "Evento" && <>
-              <EventScheduleFields
-                key={eventType}
+              <TaskScheduleFields
+                key={taskType}
                 startDate={draft.startDate ?? EXAMPLE_TODAY}
                 startTime={draft.startTime ?? "09:00"}
                 endDate={draft.endDate ?? EXAMPLE_TODAY}
@@ -503,20 +503,20 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
                 onChange={updateDraft}
                 onOpenCalendar={field => setActivePicker(field)}
               />
-              {eventType === "meal" ? <div className={styles.entityFields}>
+              {taskType === "meal" ? <div className={styles.entityFields}>
                 <label>Refeição<input value={draft.mealName ?? ""} onChange={event => updateDraft("mealName", event.target.value)} placeholder="Ex.: Café da manhã" /></label>
                 <label>Porção<input value={draft.portion ?? ""} onChange={event => updateDraft("portion", event.target.value)} placeholder="Ex.: 1 prato" /></label>
               </div> : null}
-              {eventType === "training" ? <div className={styles.entityFields}>
+              {taskType === "training" ? <div className={styles.entityFields}>
                 <label>Modalidade<select value={draft.workout ?? "free"} onChange={event => updateDraft("workout", event.target.value)}><option value="free">Livre</option><option value="walking">Caminhada</option><option value="running">Corrida</option><option value="treadmill">Esteira</option><option value="weightlifting">Musculação</option></select></label>
                 <label>Duração (min)<input type="number" min="0" inputMode="numeric" value={draft.duration ?? ""} onChange={event => updateDraft("duration", event.target.value)} placeholder="60" /></label>
               </div> : null}
-              {eventType === "sleep" ? <div className={styles.entityFields}>
+              {taskType === "sleep" ? <div className={styles.entityFields}>
                 <label>Tempo de sono (min)<input type="number" min="0" inputMode="numeric" value={draft.sleepMinutes ?? ""} onChange={event => updateDraft("sleepMinutes", event.target.value)} placeholder="480" /></label>
                 <label>Qualidade (0–100)<input type="number" min="0" max="100" inputMode="numeric" value={draft.sleepScore ?? ""} onChange={event => updateDraft("sleepScore", event.target.value)} placeholder="80" /></label>
               </div> : null}
             </>}
-            <label>{kind === "Evento" ? eventDetailCopy[eventType].label : kind === "Nota" ? "Conteúdo da nota" : category === "Alimentação" ? "Refeição e preparo" : category === "Exercício" ? "Treino e objetivo" : "Detalhes"}<textarea className={styles.entityControl} rows={2} value={draft.details ?? ""} onChange={event => updateDraft("details", event.target.value)} placeholder={kind === "Evento" ? eventDetailCopy[eventType].placeholder : kind === "Nota" ? `Suas anotações sobre ${category.toLocaleLowerCase("pt-BR")}…` : category === "Alimentação" ? "Ingredientes, porções ou modo de preparo…" : category === "Exercício" ? "Exercícios, séries ou duração…" : "Acrescente o que for importante…"} /></label>
+            <label>{kind === "Evento" ? taskDetailCopy[taskType].label : kind === "Nota" ? "Conteúdo da nota" : category === "Alimentação" ? "Refeição e preparo" : category === "Exercício" ? "Treino e objetivo" : "Detalhes"}<textarea className={styles.entityControl} rows={2} value={draft.details ?? ""} onChange={event => updateDraft("details", event.target.value)} placeholder={kind === "Evento" ? taskDetailCopy[taskType].placeholder : kind === "Nota" ? `Suas anotações sobre ${category.toLocaleLowerCase("pt-BR")}…` : category === "Alimentação" ? "Ingredientes, porções ou modo de preparo…" : category === "Exercício" ? "Exercícios, séries ou duração…" : "Acrescente o que for importante…"} /></label>
           </div> : <div className={styles.manualPanel}>
           {panel !== "hub" && <>
           <label className={styles.hubSearch}><Search aria-hidden /><input aria-label="Buscar eventos, tarefas e artefatos" value={query} onChange={event => setQuery(event.target.value)} placeholder={`Buscar ${panel === "Tarefa" ? "tarefas" : "notas"}`} /></label>

@@ -46,7 +46,7 @@ function save() {
 }
 
 /** Liga um evento pelo "+": abre o modal de seleção e escolhe pelo nome. */
-async function linkEvent(name: string) {
+async function linkTask(name: string) {
   fireEvent.click(screen.getByRole("button", { name: "Adicionar evento" }));
   fireEvent.click(await screen.findByRole("button", { name: `Escolher “${name}”` }));
 }
@@ -189,7 +189,7 @@ test("quem já está na lista não é oferecido de novo no modal", async () => {
   install({ events: [DINNER, GYM] });
   render(<NewNoteRoute userId="user-1" />);
 
-  await linkEvent("Jantar leve");
+  await linkTask("Jantar leve");
   fireEvent.click(screen.getByRole("button", { name: "Adicionar evento" }));
 
   expect(await screen.findByRole("button", { name: "Escolher “Treino de peito”" })).toBeInTheDocument();
@@ -204,7 +204,7 @@ test("editar mostra os eventos ligados; ligar outro e desligar um manda a lista 
   const linked = screen.getByRole("list", { name: "Eventos ligados" });
   expect(within(linked).getByText("Jantar leve")).toBeInTheDocument();
 
-  await linkEvent("Treino de peito");
+  await linkTask("Treino de peito");
   fireEvent.click(screen.getByRole("button", { name: "Desligar do evento “Jantar leve”" }));
   save();
 

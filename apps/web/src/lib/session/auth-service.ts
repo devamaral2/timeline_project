@@ -10,7 +10,7 @@ export interface SessionUser {
 
 export type AuthResult<T> = { ok: true; data: T } | { ok: false; status: number; retryAfter?: string | null };
 
-function logAuthFailure(event: {
+function logAuthFailure(failure: {
   path: string;
   url: string;
   status?: number;
@@ -19,7 +19,7 @@ function logAuthFailure(event: {
   error?: { name: string; message: string } | string;
 }): void {
   // Nunca registre init.body ou headers: login/refresh carregam credenciais.
-  console.error("[AuthServiceClient] request failed", event);
+  console.error("[AuthServiceClient] request failed", failure);
 }
 
 async function safeFailureCode(response: Response): Promise<string | undefined> {

@@ -2,7 +2,7 @@
 
 import { Bot, ChevronLeft, Layers, type LucideIcon, Search, User } from "lucide-react";
 import { type CSSProperties, useEffect, useRef, useState } from "react";
-import { useViewMode, type ViewModeId, writeViewMode } from "@/lib/events/view-mode";
+import { useViewMode, type ViewModeId, writeViewMode } from "@/lib/tasks/view-mode";
 import { type SectionId, useSectionMenu } from "@/lib/navigation/section-menu";
 import styles from "./section-menu.module.css";
 

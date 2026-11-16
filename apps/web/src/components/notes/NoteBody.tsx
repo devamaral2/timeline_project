@@ -2,9 +2,9 @@
 
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useState, type ReactNode } from "react";
-import { ICON_STROKE_WIDTH } from "@/components/events/event-visuals";
+import { ICON_STROKE_WIDTH } from "@/components/tasks/task-visuals";
 import type { FoodData, SleepData, TrainingData, WorkoutSnapshot } from "@repo/contracts";
-import { formatDecimal, formatMinutes, formatPace, groupSetsByExercise, pluralize } from "@/lib/events/event-detail-format";
+import { formatDecimal, formatMinutes, formatPace, groupSetsByExercise, pluralize } from "@/lib/tasks/task-detail-format";
 import { MarkdownView } from "./MarkdownView";
 import { MealRecipeView } from "./MealRecipeView";
 import { MealGenerationStatus } from "./MealGenerationStatus";

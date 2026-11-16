@@ -17,8 +17,8 @@ vi.mock("@/lib/speech/use-speech-recognition", () => ({
 }));
 
 // O acompanhamento do pedido relê a cada batida: o intervalo vai para 1 ms nos testes.
-vi.mock("@/lib/events/agent-request-model", async (original) => ({
-  ...(await original<typeof import("@/lib/events/agent-request-model")>()),
+vi.mock("@/lib/tasks/agent-request-model", async (original) => ({
+  ...(await original<typeof import("@/lib/tasks/agent-request-model")>()),
   AGENT_REQUEST_POLL_MS: 1,
 }));
 

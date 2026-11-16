@@ -150,7 +150,7 @@ test("keeps an earlier final when the browser appends a new one", () => {
   expect(onFinalTranscript).toHaveBeenCalledWith("vou lavar o carro  amanha");
 });
 
-test("does not create an event when nothing was heard", () => {
+test("does not create an task when nothing was heard", () => {
   const onFinalTranscript = vi.fn();
   const { result } = renderHook(() => useSpeechRecognition({ onFinalTranscript }));
 

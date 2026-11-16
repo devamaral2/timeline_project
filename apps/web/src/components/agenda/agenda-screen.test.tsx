@@ -87,9 +87,9 @@ test("the month card moves between months and jumps back to today", () => {
 });
 
 test("the day summary adds up the planned time", () => {
-  const event = (minutes: number) => ({ name: "x", type: "common", time: "", minutes, duration: "" });
+  const task = (minutes: number) => ({ name: "x", type: "common", time: "", minutes, duration: "" });
   expect(daySummary([])).toBe("Nenhum evento");
-  expect(daySummary([event(45)])).toBe("1 evento · 45 min planejados");
-  expect(daySummary([event(60)])).toBe("1 evento · 1 h planejada");
-  expect(daySummary([event(60), event(65)])).toBe("2 eventos · 2 h 05 planejadas");
+  expect(daySummary([task(45)])).toBe("1 evento · 45 min planejados");
+  expect(daySummary([task(60)])).toBe("1 evento · 1 h planejada");
+  expect(daySummary([task(60), task(65)])).toBe("2 eventos · 2 h 05 planejadas");
 });

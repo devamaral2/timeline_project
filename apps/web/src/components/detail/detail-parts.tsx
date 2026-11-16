@@ -3,7 +3,7 @@
 import { ArrowLeft, ChevronDown, ChevronRight, EllipsisVertical, Sparkles, Wrench } from "lucide-react";
 import Link from "next/link";
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import { ICON_STROKE_WIDTH } from "@/components/events/event-visuals";
+import { ICON_STROKE_WIDTH } from "@/components/tasks/task-visuals";
 import page from "@/components/ui/page.module.css";
 import { useChangeFlash } from "@/lib/motion/change-flash";
 import { tagAccentStyle } from "@/lib/tags/tag-color";
@@ -137,14 +137,14 @@ export function BackButton({ onClick, children }: { onClick: () => void; childre
 export function useDismiss(open: boolean, ref: React.RefObject<HTMLElement | null>, close: () => void) {
   useEffect(() => {
     if (!open) return;
-    function onEvent(event: Event) {
+    function onTask(event: Event) {
       if (event instanceof KeyboardEvent ? event.key === "Escape" : !ref.current?.contains(event.target as Node)) close();
     }
-    document.addEventListener("pointerdown", onEvent);
-    document.addEventListener("keydown", onEvent);
+    document.addEventListener("pointerdown", onTask);
+    document.addEventListener("keydown", onTask);
     return () => {
-      document.removeEventListener("pointerdown", onEvent);
-      document.removeEventListener("keydown", onEvent);
+      document.removeEventListener("pointerdown", onTask);
+      document.removeEventListener("keydown", onTask);
     };
   }, [open, ref, close]);
 }
@@ -257,7 +257,7 @@ export function LinkGroup({ id, title, count, children }: { id: string; title: s
 }
 
 /** Uma linha de vínculo: ícone do tipo, título, detalhe e a seta; sem `href` fica só como leitura. */
-export function LinkRow({ kind, icon, title, sub, href }: { kind: "note" | "event" | "task"; icon: ReactNode; title: string; sub: string; href?: string }) {
+export function LinkRow({ kind, icon, title, sub, href }: { kind: "note" | "task"; icon: ReactNode; title: string; sub: string; href?: string }) {
   const content = (
     <>
       {icon}

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { EventRail } from "./event-rail";
+import { TaskRail } from "./task-rail";
 
 export const metadata: Metadata = {
   title: "Lista de eventos — Agente pessoal · Mockup",
@@ -7,6 +7,6 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function EventListMockup() {
-  return <EventRail />;
+export default function TaskListMockup() {
+  return <TaskRail />;
 }

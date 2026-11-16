@@ -22,7 +22,7 @@ const { AgendaScreen } = await import("./agenda-screen");
 
 const TODAY = "2026-09-14";
 
-const events = [
+const tasks = [
   eventFixture({ id: "ev-1", name: "Revisar proposta", kind: "common", status: "todo", priority: "medium", tags: ["trabalho"], startedAt: "2026-09-14T09:00:00-03:00", estimatedFinishAt: "2026-09-14T10:30:00-03:00" }),
   eventFixture({ id: "ev-2", name: "Almoço no escritório", kind: "meal", status: undefined, startedAt: "2026-09-14T12:30:00-03:00", estimatedFinishAt: "2026-09-14T13:30:00-03:00" }),
   eventFixture({ id: "ev-3", name: "Pesquisar voos para novembro", actor: "agent", kind: "request", status: "running", startedAt: "2026-09-14T09:48:00-03:00" }),
@@ -38,7 +38,7 @@ function dayOf(dayKey: string): HTMLElement {
 }
 
 /** Os caminhos das linhas de evento do dia, na ordem em que aparecem (cada linha de evento é um link). */
-function eventHrefsOn(dayKey: string): string[] {
+function taskHrefsOn(dayKey: string): string[] {
   return within(dayOf(dayKey)).getAllByRole("link").map((link) => link.getAttribute("href") ?? "");
 }
 
@@ -52,19 +52,19 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-function installApi(seed = events, pageSize?: number) {
+function installApi(seed = tasks, pageSize?: number) {
   const api = createFakeApi({ areas: [eventsArea], seed: { events: seed }, pageSize });
   net.authedFetch.mockImplementation(api.authedFetch);
   return api;
 }
 
 test("the agenda reads the window through the API client and follows every page", async () => {
-  const api = installApi(events, 2);
+  const api = installApi(tasks, 2);
   render(<AgendaScreen userId="user-1" todayKey={TODAY} />);
 
   await waitFor(() => expect(within(dayOf(TODAY)).getAllByRole("link")).toHaveLength(5));
   expect(api.calls.filter((call) => call.pathname === "/api/tasks")).toHaveLength(3);
-  expect(eventHrefsOn(TODAY)).toEqual([
+  expect(taskHrefsOn(TODAY)).toEqual([
     "/user-1/eventos/ev-5",
     "/user-1/eventos/ev-4",
     "/user-1/eventos/ev-1",
@@ -73,7 +73,7 @@ test("the agenda reads the window through the API client and follows every page"
   ]);
 });
 
-test("each event is drawn as the single row: the agent card, the reference dot and the missed status", async () => {
+test("each task is drawn as the single row: the agent card, the reference dot and the missed status", async () => {
   installApi();
   render(<AgendaScreen userId="user-1" todayKey={TODAY} />);
   await waitFor(() => expect(within(dayOf(TODAY)).getAllByRole("link")).toHaveLength(5));
@@ -88,7 +88,7 @@ test("each event is drawn as the single row: the agent card, the reference dot a
   expect(today.getByText("1h30")).toBeInTheDocument();
 });
 
-test("an event that crosses midnight shows on the day it started and on the day it ends", async () => {
+test("an task that crosses midnight shows on the day it started and on the day it ends", async () => {
   installApi();
   render(<AgendaScreen userId="user-1" todayKey={TODAY} />);
   await waitFor(() => expect(within(dayOf(TODAY)).getAllByRole("link")).toHaveLength(5));
@@ -97,7 +97,7 @@ test("an event that crosses midnight shows on the day it started and on the day 
   expect(within(dayOf(TODAY)).getByRole("link", { name: /Plantão/ })).toBeInTheDocument();
 });
 
-test("long-running events and steps do not show in the agenda", async () => {
+test("long-running tasks and steps do not show in the agenda", async () => {
   installApi();
   render(<AgendaScreen userId="user-1" todayKey={TODAY} />);
   await waitFor(() => expect(within(dayOf(TODAY)).getAllByRole("link")).toHaveLength(5));
@@ -105,7 +105,7 @@ test("long-running events and steps do not show in the agenda", async () => {
   expect(screen.queryByRole("link", { name: /Entrega longa/ })).not.toBeInTheDocument();
 });
 
-test("the free windows between events stay, computed on the new data", async () => {
+test("the free windows between tasks stay, computed on the new data", async () => {
   installApi();
   render(<AgendaScreen userId="user-1" todayKey={TODAY} />);
   await waitFor(() => expect(within(dayOf(TODAY)).getAllByRole("link")).toHaveLength(5));
@@ -114,7 +114,7 @@ test("the free windows between events stay, computed on the new data", async () 
   expect(within(dayOf(TODAY)).getByRole("button", { name: "Planejar com o Hermes a janela livre das 13:30 às 24:00" })).toBeInTheDocument();
 });
 
-test("a day without events shows the empty state", async () => {
+test("a day without tasks shows the empty state", async () => {
   installApi();
   render(<AgendaScreen userId="user-1" todayKey={TODAY} />);
   await waitFor(() => expect(within(dayOf(TODAY)).getAllByRole("link")).toHaveLength(5));
@@ -147,7 +147,7 @@ test("a failed load shows the error alert", async () => {
   expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível carregar a agenda. Tente novamente.");
 });
 
-test("free time counts only person events: an agent event inside a free window does not split it", async () => {
+test("free time counts only person tasks: an agent task inside a free window does not split it", async () => {
   installApi([
     eventFixture({ id: "ev-a", name: "Revisar proposta", kind: "common", status: "todo", startedAt: "2026-09-14T09:00:00-03:00", estimatedFinishAt: "2026-09-14T10:30:00-03:00" }),
     eventFixture({ id: "ev-g", name: "Agente compila o briefing", actor: "agent", kind: "request", status: "running", startedAt: "2026-09-14T11:00:00-03:00", estimatedFinishAt: "2026-09-14T11:30:00-03:00" }),
@@ -165,7 +165,7 @@ test("free time counts only person events: an agent event inside a free window d
   expect(within(dayOf(TODAY)).getByTitle("Tempo livre: 120 min")).toBeInTheDocument();
 });
 
-test("tapping the dot of a reference event opens the seven person statuses", async () => {
+test("tapping the dot of a reference task opens the seven person statuses", async () => {
   installApi();
   render(<AgendaScreen userId="user-1" todayKey={TODAY} />);
   await waitFor(() => expect(within(dayOf(TODAY)).getAllByRole("link")).toHaveLength(5));
@@ -245,7 +245,7 @@ test("com evento de agente em aberto, a agenda se relê sozinha e a linha vira '
 });
 
 test("sem evento de agente em aberto, a agenda não se relê em intervalo", async () => {
-  const api = installApi(events.map((event) => (event.id === "ev-3" ? { ...event, status: "done" as const } : event)));
+  const api = installApi(tasks.map((task) => (task.id === "ev-3" ? { ...task, status: "done" as const } : task)));
   render(<AgendaScreen userId="user-1" todayKey={TODAY} />);
   await waitFor(() => expect(within(dayOf(TODAY)).getAllByRole("link")).toHaveLength(5));
   const reads = agendaReads(api);

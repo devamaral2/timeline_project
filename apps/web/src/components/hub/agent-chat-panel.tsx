@@ -26,7 +26,7 @@ import { useSessionState } from "@/lib/session/use-session";
 import { speechErrorMessage } from "@/lib/speech/speech-error-messages";
 import { useSpeechRecognition } from "@/lib/speech/use-speech-recognition";
 import { requestAgendaRefresh } from "@/components/agenda/agenda-refresh";
-import type { FreeWindow } from "./hub-events";
+import type { FreeWindow } from "./hub-open";
 import { AgentTrace } from "./agent-trace";
 import { HermesSteps } from "./hermes-steps";
 import { CHANGE_LABELS, EntityRows } from "./entity-rows";
@@ -45,7 +45,7 @@ export function entityChipText(entity: AgentChatEntityRef): string {
   return entity.label ? `${change} · ${entity.label}` : change;
 }
 
-const ENTITY_ROUTES: Record<AgentChatEntityRef["kind"], string> = { event: "eventos", task: "tarefas", note: "notas" };
+const ENTITY_ROUTES: Record<AgentChatEntityRef["kind"], string> = { task: "eventos", note: "notas" };
 
 /** A pagina do registro que a resposta tocou; o que foi apagado nao tem para onde ir. */
 export function agentEntityHref(userId: string, entity: AgentChatEntityRef): string | undefined {
@@ -120,7 +120,7 @@ interface AgentChatPanelProps extends ReturnType<typeof useAgendaChat> {
 }
 
 const COMMAND_ICONS: Record<HubCommandId, typeof CalendarDays> = {
-  event: CalendarDays,
+  task: CalendarDays,
   note: FileText,
   search: Search,
   notifications: Bell,

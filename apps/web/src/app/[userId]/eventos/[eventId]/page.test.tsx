@@ -14,7 +14,7 @@ vi.mock("@/lib/api/authed-fetch", async (original) => ({
   authedFetch: net.authedFetch,
 }));
 
-const { default: EventPage } = await import("./page");
+const { default: TaskPage } = await import("./page");
 
 const NAME = "Treino de força";
 
@@ -37,8 +37,8 @@ function training(overrides: Partial<TaskDto> = {}): TaskDto {
 
 let api: FakeApi;
 
-function install(events: TaskDto[]) {
-  api = createFakeApi({ areas: [eventsArea], seed: { events } });
+function install(tasks: TaskDto[]) {
+  api = createFakeApi({ areas: [eventsArea], seed: { events: tasks } });
   net.authedFetch.mockImplementation(api.authedFetch);
 }
 
@@ -53,7 +53,7 @@ afterEach(() => {
 });
 
 function renderPage() {
-  return render(<EventPage params={Promise.resolve({ userId: "user-1", eventId: "ev-1" })} />);
+  return render(<TaskPage params={Promise.resolve({ userId: "user-1", eventId: "ev-1" })} />);
 }
 
 function patches() {

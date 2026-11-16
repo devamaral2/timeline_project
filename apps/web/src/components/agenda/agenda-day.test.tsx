@@ -3,9 +3,9 @@ import { expect, test, vi } from "vitest";
 import { AgendaDay } from "./agenda-day";
 import { EXAMPLE_NOW, EXAMPLE_TODAY } from "./agenda-examples";
 
-const props = { dayKey: EXAMPLE_TODAY, now: EXAMPLE_NOW, tasks: {}, missedEvents: {}, onSelectEvent: vi.fn() };
+const props = { dayKey: EXAMPLE_TODAY, now: EXAMPLE_NOW, trackings: {}, missedTasks: {}, onSelectTask: vi.fn() };
 
-test("an event in its window shows start and end times, not a running timer", () => {
+test("an task in its window shows start and end times, not a running timer", () => {
   render(<AgendaDay {...props} />);
 
   expect(screen.queryByRole("timer")).not.toBeInTheDocument();
@@ -13,10 +13,10 @@ test("an event in its window shows start and end times, not a running timer", ()
   expect(screen.getByText("09:00 — 10:30")).toBeInTheDocument();
 });
 
-test("task status and the event annotation do not change the card timing", () => {
+test("task status and the task annotation do not change the card timing", () => {
   render(<AgendaDay {...props}
-    tasks={{ "BRD-25": { id: "BRD-25", status: "done", priority: "low" } }}
-    missedEvents={{ [`${EXAMPLE_TODAY}:Revisar proposta`]: true }}
+    trackings={{ "BRD-25": { id: "BRD-25", status: "done", priority: "low" } }}
+    missedTasks={{ [`${EXAMPLE_TODAY}:Revisar proposta`]: true }}
   />);
 
   const task = screen.getByRole("button", { name: "Tarefa de Revisar proposta: Concluída" });
@@ -41,16 +41,16 @@ test("future and past days neither start timers nor add missed annotations", () 
 });
 
 test("empty days can be omitted from the continuous list", () => {
-  const { rerender } = render(<AgendaDay {...props} events={[]} />);
+  const { rerender } = render(<AgendaDay {...props} tasks={[]} />);
   expect(screen.getByText("Um dia livre, do seu jeito.")).toBeInTheDocument();
 
-  rerender(<AgendaDay {...props} events={[]} hideWhenEmpty />);
+  rerender(<AgendaDay {...props} tasks={[]} hideWhenEmpty />);
   expect(screen.queryByRole("region")).not.toBeInTheDocument();
   expect(screen.queryByText("Um dia livre, do seu jeito.")).not.toBeInTheDocument();
 });
 
-test("an event is running inside its window, past afterwards and upcoming before", () => {
-  render(<AgendaDay {...props} events={[
+test("an task is running inside its window, past afterwards and upcoming before", () => {
+  render(<AgendaDay {...props} tasks={[
     { name: "Reunião longa", type: "common", time: "09:00 — 11:00", minutes: 120, duration: "2 h", startedAt: "2026-09-14T09:00:00-03:00", finishedAt: "2026-09-14T11:00:00-03:00" },
     { name: "Mais cedo", type: "meal", time: "07:00 — 07:30", minutes: 30, duration: "30 min", startedAt: "2026-09-14T07:00:00-03:00", finishedAt: "2026-09-14T07:30:00-03:00" },
     { name: "Mais tarde", type: "meal", time: "12:00 — 12:30", minutes: 30, duration: "30 min", startedAt: "2026-09-14T12:00:00-03:00", finishedAt: "2026-09-14T12:30:00-03:00" },
@@ -65,9 +65,9 @@ test("an event is running inside its window, past afterwards and upcoming before
 
 const slotsOf = () => Array.from(document.querySelectorAll<HTMLElement>("[data-free-time]"));
 
-test("free windows fill the gaps between events and until midnight, with their duration highlighted", () => {
+test("free windows fill the gaps between tasks and until midnight, with their duration highlighted", () => {
   const onPlanFreeWindow = vi.fn();
-  render(<AgendaDay {...props} dayKey="2026-09-15" onPlanFreeWindow={onPlanFreeWindow} events={[
+  render(<AgendaDay {...props} dayKey="2026-09-15" onPlanFreeWindow={onPlanFreeWindow} tasks={[
     { name: "Almoço", type: "meal", time: "13:00 — 14:00", minutes: 60, duration: "1 h", startedAt: "2026-09-15T13:00:00-03:00", finishedAt: "2026-09-15T14:00:00-03:00" },
     { name: "Jantar", type: "meal", time: "20:00 — 21:00", minutes: 60, duration: "1 h", startedAt: "2026-09-15T20:00:00-03:00", finishedAt: "2026-09-15T21:00:00-03:00" },
   ]} />);
@@ -86,7 +86,7 @@ test("free windows fill the gaps between events and until midnight, with their d
 });
 
 test("free windows keep the chronological order and know which one is happening now", () => {
-  render(<AgendaDay {...props} now={new Date("2026-09-14T15:00:00-03:00").getTime()} events={[
+  render(<AgendaDay {...props} now={new Date("2026-09-14T15:00:00-03:00").getTime()} tasks={[
     { name: "Manhã", type: "common", time: "08:00 — 09:00", minutes: 60, duration: "1 h", startedAt: "2026-09-14T08:00:00-03:00", finishedAt: "2026-09-14T09:00:00-03:00" },
     { name: "Noite", type: "common", time: "20:00 — 21:00", minutes: 60, duration: "1 h", startedAt: "2026-09-14T20:00:00-03:00", finishedAt: "2026-09-14T21:00:00-03:00" },
   ]} />);
@@ -101,19 +101,19 @@ test("free windows keep the chronological order and know which one is happening 
 });
 
 test("a gap shorter than 15 minutes is not a free window, and the switch hides them all", () => {
-  const events = [
+  const tasks = [
     { name: "Primeiro", type: "common", time: "08:00 — 09:00", minutes: 60, duration: "1 h", startedAt: "2026-09-15T08:00:00-03:00", finishedAt: "2026-09-15T09:00:00-03:00" },
     { name: "Segundo", type: "common", time: "09:10 — 10:00", minutes: 50, duration: "50 min", startedAt: "2026-09-15T09:10:00-03:00", finishedAt: "2026-09-15T10:00:00-03:00" },
   ];
-  const { rerender } = render(<AgendaDay {...props} dayKey="2026-09-15" events={events} />);
+  const { rerender } = render(<AgendaDay {...props} dayKey="2026-09-15" tasks={tasks} />);
   expect(slotsOf()).toHaveLength(1);
   expect(slotsOf()[0]).toHaveTextContent("10:00 — 24:00");
 
-  rerender(<AgendaDay {...props} dayKey="2026-09-15" events={events} showFreeTime={false} />);
+  rerender(<AgendaDay {...props} dayKey="2026-09-15" tasks={tasks} showFreeTime={false} />);
   expect(slotsOf()).toHaveLength(0);
 });
 
-test("an empty day and the event count do not get free windows", () => {
-  render(<AgendaDay {...props} events={[]} />);
+test("an empty day and the task count do not get free windows", () => {
+  render(<AgendaDay {...props} tasks={[]} />);
   expect(slotsOf()).toHaveLength(0);
 });

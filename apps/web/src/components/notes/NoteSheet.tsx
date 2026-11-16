@@ -1,5 +1,5 @@
 import { Bot, FileText, Route, Wrench, type LucideIcon } from "lucide-react";
-import { visualForItemType } from "@/components/events/event-visuals";
+import { visualForItemType } from "@/components/tasks/task-visuals";
 import styles from "./note-sheet.module.css";
 
 const HERMES_ICONS: Record<string, LucideIcon> = { skill: Wrench, agent: Bot, router: Route };

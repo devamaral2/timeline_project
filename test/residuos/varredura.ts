@@ -44,6 +44,10 @@ export const ARQUIVOS_COM_OUTRO_EVENTO: { motivo: string; arquivo: RegExp }[] = 
     arquivo: /^apps\/api\/src\/infrastructure\/hermes\/(hermes-trace|hermes\.client)[\w.-]*\.ts$/,
   },
   {
+    motivo: "licencas das fontes (texto em ingles: \"IN NO EVENT SHALL\")",
+    arquivo: /^apps\/web\/src\/fonts\//,
+  },
+  {
     motivo: "testes das migrations que renomeiam o banco e os dados do agente: gravam dados com os nomes antigos de proposito, para provar que a migration os troca",
     arquivo: /^apps\/api\/src\/infrastructure\/persistence\/integration\/(task-rename|agent-data)-migration\.integration\.test\.ts$/,
   },
@@ -74,7 +78,7 @@ export const EXCECOES: { motivo: string; palavra: RegExp }[] = [
   },
   {
     motivo: "nomes de eventos de DOM personalizados do app, disparados com window.dispatchEvent",
-    palavra: /^(agendaRefreshEvent|hubOpenEvent|hermesDockEvent)$/,
+    palavra: /^(agendaRefreshEvent|hubOpenEvent|hermesDockEvent|VIEW_MODE_CHANGE_EVENT)$/,
   },
   {
     motivo: "evento de auditoria e de log do Auth: registro de seguranca, nao a entidade",
@@ -94,18 +98,28 @@ export const EXCECOES_DE_LINHA: { motivo: string; linha: RegExp; palavras: RegEx
   {
     motivo: "parametro `event` de handler de DOM: uso de propriedades e metodos do evento do navegador",
     linha:
-      /\bevent\.(target|currentTarget|key|code|preventDefault|stopPropagation|stopImmediatePropagation|nativeEvent|clipboardData|dataTransfer|metaKey|ctrlKey|shiftKey|altKey|button|buttons|touches|changedTouches|detail|clientX|clientY|pageX|pageY|pointerId|pointerType|isComposing|repeat|persisted|matches|type|data|deltaY|deltaX|relatedTarget|submitter|isTrusted|defaultPrevented|results|resultIndex|error)\b/,
+      /\bevent\??\.(target|currentTarget|key|code|preventDefault|stopPropagation|stopImmediatePropagation|nativeEvent|clipboardData|dataTransfer|metaKey|ctrlKey|shiftKey|altKey|button|buttons|touches|changedTouches|detail|clientX|clientY|pageX|pageY|pointerId|pointerType|isComposing|repeat|persisted|matches|type|data|deltaY|deltaX|relatedTarget|submitter|isTrusted|defaultPrevented|results|resultIndex|error)\b/,
     palavras: /^event$/,
   },
   {
     motivo: "parametro `event` de handler de DOM: anotacao com tipo de evento do navegador",
-    linha: /\bevent\??:\s*(React\.)?\w*Event\b/,
-    palavras: /^event$/,
+    linha: /\bevent\??:\s*(React\.)?\w*Event\b|\(event as \w*Event\b/,
+    palavras: /^(event|Event)$/,
   },
   {
     motivo: "parametro `event` de handler de DOM: arrow function de `onXxx={...}`",
     linha: /\bon[A-Z]\w*=\{\(?event\)?\s*=>/,
     palavras: /^event$/,
+  },
+  {
+    motivo: "parametro `event` de handler de DOM: `recognition.onresult = (event) =>`",
+    linha: /\.on[a-z]+\s*=\s*\(event\)\s*=>/,
+    palavras: /^event$/,
+  },
+  {
+    motivo: "interface do navegador que estende `Event`",
+    linha: /\bextends\s+Event\b/,
+    palavras: /^Event$/,
   },
   {
     motivo: "`new Event(...)` e `new CustomEvent(...)`: criam eventos de DOM",

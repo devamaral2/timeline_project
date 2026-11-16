@@ -7,13 +7,13 @@ import {
   ActionPill, BackLink, DetailActions, DetailFact, DetailFacts, DetailFrame, DetailHeading, DetailMenu, DetailMessage, DetailNav, DetailSection, LinkList, LinkRow, MenuItem, TagPills, detailIcon,
 } from "@/components/detail/detail-parts";
 import { EntityAiEditBar } from "@/components/detail/EntityAiEditBar";
-import { visualForItemType } from "@/components/events/event-visuals";
+import { visualForItemType } from "@/components/tasks/task-visuals";
 import { useMotionRouter } from "@/components/shell/navigation-motion";
 import { getArtifact } from "@/lib/api/artifacts";
 import { ApiRequestError } from "@/lib/api/client-request";
 import { artifactTypeLabel, artifactVisualType } from "@/lib/artifacts/artifact-model";
 import { editEntityTypeOfArtifact } from "@/lib/entity-edit/entity-edit-target";
-import { useNow } from "@/lib/events/use-now";
+import { useNow } from "@/lib/tasks/use-now";
 import { pendingMealEditMessage } from "@/lib/notes/meal-generation";
 import { whenLabel } from "@/lib/notes/notes-model";
 import { usePendingMealRefresh } from "@/lib/notes/use-pending-meal-refresh";
@@ -74,7 +74,7 @@ export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: s
     return <DetailFrame {...frame} lead={backOnly}><DetailMessage>Carregando artefato…</DetailMessage></DetailFrame>;
   }
 
-  const events = artifact.tasks ?? [];
+  const tasks = artifact.tasks ?? [];
   const dates = now ? { created: whenLabel(artifact.createdAt, now), updated: whenLabel(artifact.updatedAt, now) } : null;
   const ownsText = artifact.type === "text" && !artifact.global;
   // Skill e agente têm o próprio campo, o pedido de edição do arquivo (`AgentFileEditBar`, dentro do conteúdo).
@@ -100,13 +100,13 @@ export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: s
   ) : null;
 
   /** Uma linha por evento: o ícone do tipo, o nome, a relação (código em mono) e quando o evento começa. */
-  function eventRow(link: ArtifactTaskLinkDto) {
+  function taskRow(link: ArtifactTaskLinkDto) {
     const { Icon } = visualForItemType(link.kind);
     const when = now && link.startedAt ? ` · ${whenLabel(link.startedAt, now)}` : "";
     return (
       <LinkRow
         key={link.taskId}
-        kind="event"
+        kind="task"
         icon={<Icon {...detailIcon} />}
         title={link.name}
         sub={`${link.relation}${when}`}
@@ -138,9 +138,9 @@ export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: s
       <ArtifactContent artifact={artifact} />
 
       {/* Sem evento (ou artefato global), a seção some: só aparece quando há o que mostrar. */}
-      {!artifact.global && events.length ? (
-        <DetailSection title="Eventos" labelId="nt-events" count={events.length > 1 ? events.length : undefined}>
-          <LinkList>{events.map(eventRow)}</LinkList>
+      {!artifact.global && tasks.length ? (
+        <DetailSection title="Eventos" labelId="nt-events" count={tasks.length > 1 ? tasks.length : undefined}>
+          <LinkList>{tasks.map(taskRow)}</LinkList>
         </DetailSection>
       ) : null}
 

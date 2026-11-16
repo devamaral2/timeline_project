@@ -4,7 +4,7 @@ import type { RequestDto, RequestEditEntityType } from "@repo/contracts";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { agentFailureText, startFailureCode } from "@/lib/agent-chat/use-agent-chat";
 import { getRequest, startEditRequest } from "@/lib/api/requests";
-import { AGENT_REQUEST_POLL_MS, isOpenRequest } from "@/lib/events/agent-request-model";
+import { AGENT_REQUEST_POLL_MS, isOpenRequest } from "@/lib/tasks/agent-request-model";
 
 export type EntityAiEditPhase = "idle" | "sending" | "running" | "done" | "failed";
 

@@ -6,8 +6,8 @@ export type NotificationSource = Pick<
   "id" | "name" | "status" | "longRunning" | "startedAt" | "estimatedFinishAt" | "notifyOffsetsMinutes"
 >;
 
-/** Acompanhado (`task`) e o que tem status ou e longo; o resto e so agenda (`event`). Mesmo criterio da API. */
-export type NotificationKind = "event" | "task";
+/** Acompanhado (`task`) e o que tem status ou e longo; o resto e so agenda (`task`). Mesmo criterio da API. */
+export type NotificationKind = "agenda" | "task";
 
 export interface DueNotification {
   key: string;
@@ -28,7 +28,7 @@ export const CATCH_UP_WINDOW_MS = 60 * 60_000;
 const FIRED_RETENTION_MS = 24 * 60 * 60_000;
 
 export function kindOf(source: NotificationSource): NotificationKind {
-  return source.status !== undefined || source.longRunning ? "task" : "event";
+  return source.status !== undefined || source.longRunning ? "task" : "agenda";
 }
 
 /**

@@ -43,7 +43,7 @@ async function ask(chat: Chat, text: string): Promise<string> {
   return ids().at(-1) as string;
 }
 
-const step = (id: string, label: string, status: AgentTaskStatus) => ({ id, agent: "event-create", label, status });
+const step = (id: string, label: string, status: AgentTaskStatus) => ({ id, agent: "task-create", label, status });
 
 test("a caixa de processo acompanha os passos ate o fim e a agenda atualiza uma vez", async () => {
   const { result, onEntitiesChanged } = setup();

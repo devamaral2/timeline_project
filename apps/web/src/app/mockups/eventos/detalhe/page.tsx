@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { EventDetailScreen, type PreviewEvent, type PreviewTask } from "@/components/events/EventDetailScreen";
+import { TaskDetailScreen, type PreviewTask, type PreviewLinkedTask } from "@/components/tasks/TaskDetailScreen";
 import styles from "@/components/shell/shell.module.css";
 
 export const metadata: Metadata = {
@@ -11,12 +11,12 @@ export const metadata: Metadata = {
 /*
  * O estudo visual da tela de detalhe.
  *
- * E a mesma `EventDetailScreen` da agenda de verdade, so que alimentada com
+ * E a mesma `TaskDetailScreen` da agenda de verdade, so que alimentada com
  * dados de exemplo e sem acoes — e por isso que ela serve de modelo: o que se
  * ajustar aqui ja esta ajustado la. As variacoes por tipo de evento nascem
  * nesta pagina antes de ir para a rota real.
  */
-const exampleEvent: PreviewEvent = {
+const exampleTask: PreviewTask = {
   id: "mockup-evento",
   name: "Reunião de planejamento",
   description:
@@ -34,7 +34,7 @@ const exampleEvent: PreviewEvent = {
   taskIds: ["mockup-tarefa-1", "mockup-tarefa-2"],
 };
 
-const exampleTasks: PreviewTask[] = [
+const exampleLinkedTasks: PreviewLinkedTask[] = [
   {
     id: "mockup-tarefa-1",
     name: "Revisar as decisões em aberto",
@@ -59,10 +59,10 @@ const exampleTasks: PreviewTask[] = [
   },
 ];
 
-export default function EventDetailMockup() {
+export default function TaskDetailMockup() {
   return (
     <main id="conteudo" className={styles.detailMain}>
-      <EventDetailScreen event={exampleEvent} tasks={exampleTasks} backHref="/mockups/eventos" />
+      <TaskDetailScreen task={exampleTask} linkedTasks={exampleLinkedTasks} backHref="/mockups/eventos" />
       <p className={styles.detailPrototypeNote}>Estudo visual · dados de exemplo</p>
     </main>
   );

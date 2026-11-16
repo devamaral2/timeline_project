@@ -55,7 +55,7 @@
 .select .priorityBox svg { width: 20px; height: 16px; stroke-width: 2.5; }
 .kindBox { display: inline-flex; align-items: center; }
 .select .kindBox svg { width: 16px; height: 16px; stroke-width: 2; }
-/* A cor do nome acompanha a do glifo (os mesmos tokens de `event-glyphs`). */
+/* A cor do nome acompanha a do glifo (os mesmos tokens de `task-glyphs`). */
 .tone[data-tone="doing"], .tone[data-tone="inHold"] { color: var(--warning); }
 .tone[data-tone="done"] { color: var(--success); }
 .tone[data-tone="reference"] { color: var(--routine); }

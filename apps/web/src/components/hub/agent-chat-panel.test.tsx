@@ -5,7 +5,7 @@ import type { AgentChatEntityRef } from "@/lib/agent-chat/use-agent-chat";
 import { type FakeApi, createFakeApi } from "@/test/fake-api";
 import { advanceRequest, requestFixture, requestsArea } from "@/test/fake-api/requests";
 import { AgentChatPanel, agentEntityHref, requestWithWindow, useAgendaChat } from "./agent-chat-panel";
-import type { FreeWindow } from "./hub-events";
+import type { FreeWindow } from "./hub-open";
 
 const { session, requestAgendaRefresh, net } = vi.hoisted(() => ({
   session: { user: { userId: "user-1", name: "Ana", email: null } as { userId: string } | null, ready: true },
@@ -186,9 +186,9 @@ test("a free window from the agenda is attached to the field and travels with th
 });
 
 test("a record's page lives under the user; a deleted record has none", () => {
-  expect(agentEntityHref("u1", { kind: "task", id: "01T", change: "created" })).toBe("/u1/tarefas/01T");
+  expect(agentEntityHref("u1", { kind: "task", id: "01T", change: "created" })).toBe("/u1/eventos/01T");
   expect(agentEntityHref("u1", { kind: "note", id: "01N", change: "updated" })).toBe("/u1/notas/01N");
-  expect(agentEntityHref("u1", { kind: "event", id: "01E", change: "deleted" })).toBeUndefined();
+  expect(agentEntityHref("u1", { kind: "task", id: "01E", change: "deleted" })).toBeUndefined();
 });
 
 test("a message that could not reach the API can be retried, with the same id: no second request", async () => {
@@ -255,7 +255,7 @@ test("typing a slash lists the commands and Enter runs the highlighted one, noth
   fireEvent.change(textbox, { target: { value: "/evento comprar pão" } });
   fireEvent.submit(textbox.closest("form") as HTMLFormElement);
 
-  expect(onCommand).toHaveBeenCalledWith("event", "comprar pão");
+  expect(onCommand).toHaveBeenCalledWith("task", "comprar pão");
   expect(requestPosts()).toHaveLength(0);
   expect(textbox).toHaveValue("");
 });

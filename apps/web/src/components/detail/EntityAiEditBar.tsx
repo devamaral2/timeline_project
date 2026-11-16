@@ -7,7 +7,7 @@ import { armChangeFlash } from "@/lib/motion/change-flash";
 import { useHermesDock } from "@/components/ui/hermes-flight";
 import { HermesGlyph } from "@/components/ui/hermes-glyph";
 import { HermesMark, type HermesState } from "@/components/ui/hermes-mark";
-import { runningStepLabel } from "@/lib/events/agent-request-model";
+import { runningStepLabel } from "@/lib/tasks/agent-request-model";
 import { EDIT_TARGET_LABELS } from "@/lib/entity-edit/entity-edit-target";
 import { useEntityAiEdit } from "@/lib/entity-edit/use-entity-ai-edit";
 import { useSpeechRecognition } from "@/lib/speech/use-speech-recognition";

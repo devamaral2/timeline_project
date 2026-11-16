@@ -7,7 +7,7 @@ test("a slash alone offers every command; the typed prefix narrows them", () => 
   expect(parseCommand("/pesq")?.matches.map((command) => command.slug)).toEqual(["buscar"]);
 });
 
-test("there is no task shortcut: an event with a status is the task", () => {
+test("there is no task shortcut: an task with a status is the task", () => {
   expect(parseCommand("/tarefa")).toBeNull();
   expect(parseCommand("/tarefa comprar pão")).toBeNull();
 });

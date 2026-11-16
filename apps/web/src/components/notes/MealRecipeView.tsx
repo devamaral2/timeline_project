@@ -1,5 +1,5 @@
 import type { FoodRecipe } from "@repo/contracts";
-import { formatMinutes, pluralize } from "@/lib/events/event-detail-format";
+import { formatMinutes, pluralize } from "@/lib/tasks/task-detail-format";
 import styles from "./meal-recipe.module.css";
 
 /** Chave estavel sem usar o indice: o texto, mais a ocorrencia dele (ingredientes e passos podem repetir). */

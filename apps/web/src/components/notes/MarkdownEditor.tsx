@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, type KeyboardEvent, type Ref } from "react";
 import { continueMarkdownList, toggleWrap, type TextEdit } from "@/lib/notes/markdown-editing";
 import { cn } from "@/lib/utils";
-import { fieldTextareaClass } from "@/components/events/new-event-forms/field-styles";
+import { fieldTextareaClass } from "@/components/tasks/new-task-forms/field-styles";
 import { MarkdownView } from "./MarkdownView";
 
 /** Como o editor mostra o texto: só a fonte, fonte e leitura lado a lado, ou só a leitura. */

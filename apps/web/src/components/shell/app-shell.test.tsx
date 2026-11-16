@@ -1,6 +1,6 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeAll, expect, test, vi } from "vitest";
-import { requestHubOpen } from "@/components/hub/hub-events";
+import { requestHubOpen } from "@/components/hub/hub-open";
 import { AppShell } from "./app-shell";
 
 vi.mock("next/navigation", () => ({

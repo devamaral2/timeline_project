@@ -4,40 +4,40 @@ import type { TaskDto } from "@repo/contracts";
 import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { useMotionRouter } from "@/components/shell/navigation-motion";
 import { BackButton, DetailFrame, DetailMessage, DetailNav } from "@/components/detail/detail-parts";
-import { AgentEventDetailView } from "@/components/event-detail/AgentEventDetailView";
-import { EventDetailView } from "@/components/event-detail/EventDetailView";
+import { AgentTaskDetailView } from "@/components/task-detail/AgentTaskDetailView";
+import { TaskDetailView } from "@/components/task-detail/TaskDetailView";
 import { ApiRequestError } from "@/lib/api/client-request";
 import { getEvent } from "@/lib/api/events";
 
 type LoadState = "loading" | "ready" | "missing" | "error";
 
 /** A única rota de detalhe de evento: a agenda e a lista de tarefas abrem aqui. */
-export default function EventPage({ params }: { params: Promise<{ userId: string; eventId: string }> }) {
+export default function TaskPage({ params }: { params: Promise<{ userId: string; eventId: string }> }) {
   const router = useMotionRouter();
   const [userId, setUserId] = useState<string | null>(null);
-  const [eventId, setEventId] = useState<string | null>(null);
-  const [event, setEvent] = useState<TaskDto | null>(null);
+  const [taskId, setTaskId] = useState<string | null>(null);
+  const [task, setTask] = useState<TaskDto | null>(null);
   const [state, setState] = useState<LoadState>("loading");
 
   useEffect(() => {
     let cancelled = false;
-    void params.then(({ userId: nextUserId, eventId: nextEventId }) => {
+    void params.then(({ userId: nextUserId, eventId: nextTaskId }) => {
       if (!cancelled) {
         setUserId(nextUserId);
-        setEventId(nextEventId);
+        setTaskId(nextTaskId);
       }
     });
     return () => { cancelled = true; };
   }, [params]);
 
   useEffect(() => {
-    if (!eventId) return;
+    if (!taskId) return;
     let cancelled = false;
     setState("loading");
-    getEvent(eventId).then(
+    getEvent(taskId).then(
       (loaded) => {
         if (cancelled) return;
-        setEvent(loaded);
+        setTask(loaded);
         setState("ready");
       },
       (error: unknown) => {
@@ -45,17 +45,17 @@ export default function EventPage({ params }: { params: Promise<{ userId: string
       },
     );
     return () => { cancelled = true; };
-  }, [eventId]);
+  }, [taskId]);
 
   /** Relê o evento depois de uma troca. Falha de leitura vira a tela de erro. */
   const reload = useCallback(async () => {
-    if (!eventId) return;
+    if (!taskId) return;
     try {
-      setEvent(await getEvent(eventId));
+      setTask(await getEvent(taskId));
     } catch (error) {
       setState(isMissing(error) ? "missing" : "error");
     }
-  }, [eventId]);
+  }, [taskId]);
 
   function frame(children: ReactNode) {
     return (
@@ -70,13 +70,13 @@ export default function EventPage({ params }: { params: Promise<{ userId: string
   }
 
   if (state === "missing") return frame(<DetailMessage alert>Evento não encontrado.</DetailMessage>);
-  if (state === "error" || (state === "ready" && !event)) {
+  if (state === "error" || (state === "ready" && !task)) {
     return frame(<DetailMessage alert>Não foi possível carregar o evento. Tente novamente.</DetailMessage>);
   }
-  if (state === "loading" || !event || !userId) return frame(<DetailMessage>Carregando evento…</DetailMessage>);
+  if (state === "loading" || !task || !userId) return frame(<DetailMessage>Carregando evento…</DetailMessage>);
 
-  if (event.actor === "agent") return <AgentEventDetailView userId={userId} event={event} onChanged={reload} />;
-  return <EventDetailView userId={userId} event={event} onChanged={reload} />;
+  if (task.actor === "agent") return <AgentTaskDetailView userId={userId} task={task} onChanged={reload} />;
+  return <TaskDetailView userId={userId} task={task} onChanged={reload} />;
 }
 
 /** O evento de outro usuário responde 403 e o inexistente 404: a tela diz só que não há evento. */

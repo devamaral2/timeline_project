@@ -1,7 +1,7 @@
 import { Check, Circle, CircleCheck, CircleDashed, CircleSlash, Clock3, Link2, X } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { mediumDate } from "@repo/timeline";
-import type { ExampleEvent, ExamplePriority, ExampleStatus, ExampleTask } from "./agenda-examples";
+import type { ExampleTask, ExamplePriority, ExampleStatus, ExampleTracking } from "./agenda-examples";
 import styles from "@/components/shell/shell.module.css";
 
 export const statusView = {
@@ -42,13 +42,13 @@ export function TaskPriorityIcon({ priority, decorative = false }: { priority: E
   );
 }
 
-export interface SelectedEvent { event: ExampleEvent; dayKey: string }
+export interface SelectedTask { task: ExampleTask; dayKey: string }
 
-export function EventTaskDialog({ selected, task, missed, onTaskChange, onMissedChange, onClose }: {
-  selected: SelectedEvent | null;
-  task?: ExampleTask;
+export function TrackingDialog({ selected, tracking, missed, onTrackingChange, onMissedChange, onClose }: {
+  selected: SelectedTask | null;
+  tracking?: ExampleTracking;
   missed: boolean;
-  onTaskChange: (task: ExampleTask) => void;
+  onTrackingChange: (tracking: ExampleTracking) => void;
   onMissedChange: (missed: boolean) => void;
   onClose: () => void;
 }) {
@@ -58,41 +58,41 @@ export function EventTaskDialog({ selected, task, missed, onTaskChange, onMissed
   }, [selected]);
 
   return (
-    <dialog ref={dialogRef} className={styles.taskDialog} aria-labelledby="event-task-title" onClose={onClose}
+    <dialog ref={dialogRef} className={styles.taskDialog} aria-labelledby="task-task-title" onClose={onClose}
       onPointerDown={(event) => {
         const bounds = event.currentTarget.getBoundingClientRect();
         if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) dialogRef.current?.close();
       }}>
       {selected ? <div className={styles.taskDialogContent}>
         <header className={styles.taskDialogHeading}>
-          <div><p>{task ? <><Link2 aria-hidden />Tarefa vinculada · {task.id}</> : "Na sua agenda"}</p><h2 id="event-task-title">{selected.event.name}</h2></div>
+          <div><p>{tracking ? <><Link2 aria-hidden />Tarefa vinculada · {tracking.id}</> : "Na sua agenda"}</p><h2 id="task-task-title">{selected.task.name}</h2></div>
           <button type="button" aria-label="Fechar detalhes" onClick={() => dialogRef.current?.close()}><X aria-hidden /></button>
         </header>
-        {task ? <>
+        {tracking ? <>
           <fieldset className={styles.statusOptions}>
             <legend>Status da tarefa</legend>
             {(Object.keys(statusView) as ExampleStatus[]).map((status) => (
-              <label key={status} data-selected={status === task.status}>
-                <input type="radio" name="task-status" value={status} checked={status === task.status} onChange={() => onTaskChange({ ...task, status })} />
+              <label key={status} data-selected={status === tracking.status}>
+                <input type="radio" name="task-status" value={status} checked={status === tracking.status} onChange={() => onTrackingChange({ ...tracking, status })} />
                 <TaskStatusIcon status={status} /><span>{statusView[status].label}</span>
-                {status === task.status ? <Check aria-hidden className={styles.selectedCheck} /> : null}
+                {status === tracking.status ? <Check aria-hidden className={styles.selectedCheck} /> : null}
               </label>
             ))}
           </fieldset>
           <fieldset className={styles.priorityOptions}>
             <legend>Prioridade da tarefa</legend>
             {(Object.keys(priorityView) as ExamplePriority[]).map((priority) => (
-              <label key={priority} data-selected={priority === task.priority}>
-                <input type="radio" name="task-priority" aria-label={priorityView[priority]} value={priority} checked={priority === task.priority} onChange={() => onTaskChange({ ...task, priority })} />
+              <label key={priority} data-selected={priority === tracking.priority}>
+                <input type="radio" name="task-priority" aria-label={priorityView[priority]} value={priority} checked={priority === tracking.priority} onChange={() => onTrackingChange({ ...tracking, priority })} />
                 <TaskPriorityIcon priority={priority} />{priorityView[priority]}
               </label>
             ))}
           </fieldset>
         </> : null}
-        <section className={styles.eventAnnotation} aria-label="Anotação do evento">
-          <h3>Este evento <span>{mediumDate(selected.dayKey)} · {selected.event.time}</span></h3>
+        <section className={styles.taskAnnotation} aria-label="Anotação do evento">
+          <h3>Este evento <span>{mediumDate(selected.dayKey)} · {selected.task.time}</span></h3>
           <label><input type="checkbox" checked={missed} onChange={(event) => onMissedChange(event.target.checked)} />Não realizado</label>
-          <p>{task ? "A marca vale para este horário. O status e a prioridade pertencem à tarefa." : "Uma anotação sua sobre este horário."}</p>
+          <p>{tracking ? "A marca vale para este horário. O status e a prioridade pertencem à tarefa." : "Uma anotação sua sobre este horário."}</p>
         </section>
         <p className={styles.taskDemoNote}>Experimente à vontade · alterações apenas nesta prévia</p>
       </div> : null}

@@ -6,14 +6,14 @@ import { DetailFrame, DetailMessage, DetailSection, detailStyles } from "@/compo
 import { AddButton, EditBar, EditCaret, EditFieldSection, EditFooter, EditSelect, RemoveButton, editStyles as edit } from "@/components/edit/edit-parts";
 import { EditTagSection } from "@/components/edit/EditTagSection";
 import { EntityPickerDialog } from "@/components/edit/EntityPickerDialog";
-import { EventChoiceView, searchHumanEvents } from "@/components/edit/event-choice";
-import { EventKindMark } from "@/components/events/event-kind-mark";
+import { TaskChoiceView, searchHumanTasks } from "@/components/edit/task-choice";
+import { TaskKindMark } from "@/components/tasks/task-kind-mark";
 import { MarkdownEditor, type MarkdownEditorMode } from "@/components/notes/MarkdownEditor";
 import { noteTypeIcon } from "@/components/notes/NoteSheet";
 import { createArtifact, editArtifact, getArtifact } from "@/lib/api/artifacts";
 import { ApiRequestError, newIdempotencyKey } from "@/lib/api/client-request";
 import { artifactVisualType } from "@/lib/artifacts/artifact-model";
-import { useNow } from "@/lib/events/use-now";
+import { useNow } from "@/lib/tasks/use-now";
 import { whenLabel } from "@/lib/notes/notes-model";
 import styles from "./artifact-edit.module.css";
 
@@ -26,8 +26,8 @@ const KIND_OPTIONS: { value: CreateKind; label: string }[] = [
 ];
 
 /** Um evento ligado ao artefato, com o que a linha mostra. `relation` só existe na ligação que já estava gravada. */
-interface LinkedEvent {
-  eventId: string;
+interface LinkedTask {
+  taskId: string;
   name: string;
   kind: TaskKind;
   startedAt?: string;
@@ -48,10 +48,10 @@ interface ArtifactEditViewProps {
 const STALE_MESSAGE = "Esta nota mudou em outro lugar. Atualizamos a revisão; o que você digitou continua aqui. Confira e salve de novo.";
 
 /** Só os eventos de pessoa entram na lista: os pedidos ao agente que tocaram o artefato não se editam por aqui. */
-function linkedEventsOf(artifact: ArtifactDto | undefined): LinkedEvent[] {
+function linkedTasksOf(artifact: ArtifactDto | undefined): LinkedTask[] {
   return (artifact?.tasks ?? [])
     .filter((link) => link.actor === "human")
-    .map((link) => ({ eventId: link.taskId, name: link.name, kind: link.kind, startedAt: link.startedAt, relation: link.relation }));
+    .map((link) => ({ taskId: link.taskId, name: link.name, kind: link.kind, startedAt: link.startedAt, relation: link.relation }));
 }
 
 /**
@@ -70,8 +70,8 @@ export function ArtifactEditView({ existing, initialName, onSaved, onLeave }: Ar
   const [content, setContent] = useState(existing?.type === "text" ? existing.data.body : "");
   const [foodText, setFoodText] = useState("");
   const [tags, setTags] = useState<string[]>(existing?.tags ?? []);
-  const [initialEvents] = useState(() => linkedEventsOf(existing));
-  const [events, setEvents] = useState<LinkedEvent[]>(initialEvents);
+  const [initialTasks] = useState(() => linkedTasksOf(existing));
+  const [tasks, setTasks] = useState<LinkedTask[]>(initialTasks);
   const [picking, setPicking] = useState(false);
   const [revision, setRevision] = useState(existing?.revision ?? 0);
   const [mode, setMode] = useState<MarkdownEditorMode>("write");
@@ -85,8 +85,8 @@ export function ArtifactEditView({ existing, initialName, onSaved, onLeave }: Ar
   const food = kind === "food" && !existing;
   const type = existing?.type ?? kind;
   const TypeIcon = noteTypeIcon(artifactVisualType(type));
-  const eventIds = events.map((link) => link.eventId);
-  const eventsChanged = eventIds.join(",") !== initialEvents.map((link) => link.eventId).join(",");
+  const taskIds = tasks.map((link) => link.taskId);
+  const tasksChanged = taskIds.join(",") !== initialTasks.map((link) => link.taskId).join(",");
 
   /** Revisão velha: lê a revisão atual para a próxima tentativa. O texto digitado fica como está. */
   async function refreshRevision(artifactId: string) {
@@ -112,7 +112,7 @@ export function ArtifactEditView({ existing, initialName, onSaved, onLeave }: Ar
     setError(null);
     const title = name.trim() || undefined;
     // Os eventos só vão no corpo quando a pessoa escolheu algum (criação) ou mexeu na lista (edição).
-    const links = eventsChanged ? { taskIds: eventIds } : {};
+    const links = tasksChanged ? { taskIds } : {};
 
     if (existing) {
       try {
@@ -140,7 +140,7 @@ export function ArtifactEditView({ existing, initialName, onSaved, onLeave }: Ar
   }
 
   function link(card: TaskCardDto) {
-    setEvents((current) => [...current, { eventId: card.id, name: card.name, kind: card.kind, startedAt: card.startedAt }]);
+    setTasks((current) => [...current, { taskId: card.id, name: card.name, kind: card.kind, startedAt: card.startedAt }]);
   }
 
   const typeMark = (
@@ -233,22 +233,22 @@ export function ArtifactEditView({ existing, initialName, onSaved, onLeave }: Ar
           </>
         )}
 
-        <DetailSection title="Eventos" labelId="artifact-edit-events" count={events.length > 0 ? events.length : undefined}>
-          {events.length > 0 ? (
+        <DetailSection title="Eventos" labelId="artifact-edit-events" count={tasks.length > 0 ? tasks.length : undefined}>
+          {tasks.length > 0 ? (
             <ul className={edit.list} aria-label="Eventos ligados">
-              {events.map((item) => (
-                <li key={item.eventId} className={edit.item}>
+              {tasks.map((item) => (
+                <li key={item.taskId} className={edit.item}>
                   <div className={edit.itemBody}>
                     <span className={edit.itemName}>{item.name}</span>
                     <span className={edit.itemMeta}>
-                      <EventKindMark kind={item.kind} />
+                      <TaskKindMark kind={item.kind} />
                       {now && item.startedAt ? <span>{whenLabel(item.startedAt, now)}</span> : null}
                     </span>
                   </div>
                   {item.relation ? <span className={edit.itemTrail}>{item.relation}</span> : null}
                   <RemoveButton
                     label={`Desligar do evento “${item.name}”`}
-                    onClick={() => setEvents((current) => current.filter((other) => other.eventId !== item.eventId))}
+                    onClick={() => setTasks((current) => current.filter((other) => other.taskId !== item.taskId))}
                   />
                 </li>
               ))}
@@ -256,7 +256,7 @@ export function ArtifactEditView({ existing, initialName, onSaved, onLeave }: Ar
           ) : null}
           <div className={edit.addRow}>
             <AddButton label="Adicionar evento" onClick={() => setPicking(true)} />
-            {events.length === 0 ? <p className={edit.empty}>nenhum evento</p> : null}
+            {tasks.length === 0 ? <p className={edit.empty}>nenhum evento</p> : null}
           </div>
         </DetailSection>
 
@@ -268,11 +268,11 @@ export function ArtifactEditView({ existing, initialName, onSaved, onLeave }: Ar
         <EntityPickerDialog<TaskCardDto>
           title="Eventos"
           searchLabel="Buscar evento para ligar"
-          search={searchHumanEvents}
+          search={searchHumanTasks}
           keyOf={(card) => card.id}
           nameOf={(card) => card.name}
-          renderItem={(card) => <EventChoiceView card={card} now={now} />}
-          exclude={(card) => eventIds.includes(card.id)}
+          renderItem={(card) => <TaskChoiceView card={card} now={now} />}
+          exclude={(card) => taskIds.includes(card.id)}
           onPick={link}
           onClose={() => setPicking(false)}
           failedMessage="Não foi possível buscar eventos. Tente de novo."

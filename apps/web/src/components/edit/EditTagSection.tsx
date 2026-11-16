@@ -3,7 +3,7 @@
 import { Plus, X } from "lucide-react";
 import { useEffect, useState, type KeyboardEvent } from "react";
 import { DetailSection } from "@/components/detail/detail-parts";
-import { addTag, normalizeTag, removeTag } from "@/components/event-detail/event-reminders-tags";
+import { addTag, normalizeTag, removeTag } from "@/components/task-detail/task-reminders-tags";
 import { suggestTags } from "@/lib/api/events";
 import { tagAccentStyle } from "@/lib/tags/tag-color";
 import styles from "./edit.module.css";

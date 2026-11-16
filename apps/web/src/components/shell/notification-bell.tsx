@@ -2,8 +2,8 @@
 
 import { Bell } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { notificationOffsetLabel } from "@/components/events/event-visuals";
-import { useNow } from "@/lib/events/use-now";
+import { notificationOffsetLabel } from "@/components/tasks/task-visuals";
+import { useNow } from "@/lib/tasks/use-now";
 import {
   notificationFeedOf,
   readReadKeys,
@@ -24,8 +24,8 @@ function browserPermission(): NotificationPermission | "unsupported" {
   return typeof Notification === "undefined" ? "unsupported" : Notification.permission;
 }
 
-function hrefOf(userId: string, item: { kind: "event" | "task"; sourceId: string }): string | undefined {
-  return item.kind === "event" ? `/${userId}/eventos/${item.sourceId}` : undefined;
+function hrefOf(userId: string, item: { kind: "agenda" | "task"; sourceId: string }): string | undefined {
+  return item.kind === "agenda" ? `/${userId}/eventos/${item.sourceId}` : undefined;
 }
 
 function showBrowserNotification(userId: string, notification: DueNotification) {

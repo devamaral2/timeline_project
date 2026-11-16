@@ -5,14 +5,12 @@ import type { AgentChatEntityRef } from "@/lib/agent-chat/use-agent-chat";
 import styles from "@/components/shell/shell.module.css";
 
 export const CHANGE_LABELS: Record<AgentChatEntityRef["kind"], Record<AgentChatEntityRef["change"], string>> = {
-  event: { created: "Evento criado", updated: "Evento alterado", deleted: "Evento apagado" },
-  task: { created: "Tarefa criada", updated: "Tarefa alterada", deleted: "Tarefa apagada" },
+  task: { created: "Evento criado", updated: "Evento alterado", deleted: "Evento apagado" },
   note: { created: "Nota criada", updated: "Nota alterada", deleted: "Nota apagada" },
 };
 
 const ENTITY_ICONS: Record<AgentChatEntityRef["kind"], typeof ListChecks> = {
-  event: CalendarDays,
-  task: ListChecks,
+  task: CalendarDays,
   note: FileText,
 };
 
@@ -23,7 +21,7 @@ const ENTITY_ICONS: Record<AgentChatEntityRef["kind"], typeof ListChecks> = {
 export function requestEntityRef(entity: RequestEntityDto): AgentChatEntityRef {
   const change = entity.operation === "create" ? "created" : entity.operation === "delete" ? "deleted" : "updated";
   return {
-    kind: entity.kind === "task" ? "event" : "note",
+    kind: entity.kind === "task" ? "task" : "note",
     id: entity.id,
     change,
     label: entity.name,

@@ -1,6 +1,6 @@
 
 /** O que a barra "/" do chat abre: os formularios de criar e a pesquisa. */
-export type HubCommandId = "event" | "note" | "search" | "notifications" | "settings";
+export type HubCommandId = "task" | "note" | "search" | "notifications" | "settings";
 
 export interface HubCommand {
   id: HubCommandId;
@@ -11,7 +11,7 @@ export interface HubCommand {
 
 export const HUB_COMMANDS: readonly HubCommand[] = [
   // Não há atalho de tarefa: o evento com status já é a tarefa.
-  { id: "event", slug: "evento", label: "Criar evento", hint: "Tipo, status, início e término" },
+  { id: "task", slug: "evento", label: "Criar evento", hint: "Tipo, status, início e término" },
   { id: "note", slug: "nota", label: "Criar nota", hint: "A primeira linha vira o título" },
   { id: "search", slug: "buscar", label: "Pesquisar", hint: "Eventos, tarefas e artefatos" },
   { id: "notifications", slug: "notificacoes", label: "Notificações", hint: "Avisos recentes e próximos" },

@@ -24,7 +24,7 @@ const sources: NotificationSource[] = [
   },
 ];
 
-vi.mock("@/lib/events/use-now", () => ({ useNow: () => NOW }));
+vi.mock("@/lib/tasks/use-now", () => ({ useNow: () => NOW }));
 vi.mock("@/lib/notifications/load-notification-sources", () => ({
   loadNotificationSources: vi.fn(async () => sources),
 }));

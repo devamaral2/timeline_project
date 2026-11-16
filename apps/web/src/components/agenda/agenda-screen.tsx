@@ -7,29 +7,29 @@ import {
 import type { TaskCardDto, HumanTaskStatus } from "@repo/contracts";
 import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { EventStatusPicker } from "@/components/events/event-status-picker";
-import { WeekStrip } from "@/components/events/WeekStrip";
-import { requestHubOpen } from "@/components/hub/hub-events";
+import { TaskStatusPicker } from "@/components/tasks/task-status-picker";
+import { WeekStrip } from "@/components/tasks/WeekStrip";
+import { requestHubOpen } from "@/components/hub/hub-open";
 import page from "@/components/ui/page.module.css";
 import { ApiRequestError } from "@/lib/api/client-request";
 import { listAgenda, updateEvent } from "@/lib/api/events";
-import { hasOpenAgentEvent } from "@/lib/events/agent-request-model";
-import { statusPatch } from "@/lib/events/event-read-model";
-import { useOpenAgentRefresh } from "@/lib/events/use-open-agent-refresh";
+import { hasOpenAgentTask } from "@/lib/tasks/agent-request-model";
+import { statusPatch } from "@/lib/tasks/task-read-model";
+import { useOpenAgentRefresh } from "@/lib/tasks/use-open-agent-refresh";
 import { slideIn } from "@/lib/motion/enter";
 import { reflow } from "@/lib/motion/view-transition";
 import { briefDate } from "@/lib/dates/day-labels";
-import { useNow } from "@/lib/events/use-now";
-import { useViewMode } from "@/lib/events/view-mode";
+import { useNow } from "@/lib/tasks/use-now";
+import { useViewMode } from "@/lib/tasks/view-mode";
 import { usePublishSectionMenu } from "@/lib/navigation/section-menu";
 import { useSessionState } from "@/lib/session/use-session";
 import { AgendaDay } from "./agenda-day";
 import { AgendaOptions, type AgendaViewMode } from "./agenda-options";
-import { agendaEventsByDay } from "./agenda-data";
-import { EXAMPLE_NOW, EXAMPLE_TODAY, type ExampleEvent, type ExampleTask, exampleEventsOn } from "./agenda-examples";
+import { agendaTasksByDay } from "./agenda-data";
+import { EXAMPLE_NOW, EXAMPLE_TODAY, type ExampleTask, type ExampleTracking, exampleTasksOn } from "./agenda-examples";
 import { agendaRefreshEvent } from "./agenda-refresh";
 import { type AgendaScrollBoundary, agendaScrollBoundaryFromAttempt } from "./agenda-scroll-boundary";
-import { EventTaskDialog, type SelectedEvent } from "./task-controls";
+import { TrackingDialog, type SelectedTask } from "./task-controls";
 import styles from "./agenda.module.css";
 
 type ViewMode = AgendaViewMode;
@@ -55,10 +55,10 @@ function monthName(dayKey: string, todayKey: string) {
 }
 
 /** "5 eventos · 3 h 50 planejadas": quanto do dia já tem dono. */
-export function daySummary(events: readonly ExampleEvent[]) {
-  if (events.length === 0) return "Nenhum evento";
-  const count = `${events.length} ${events.length === 1 ? "evento" : "eventos"}`;
-  const minutes = events.reduce((total, event) => total + event.minutes, 0);
+export function daySummary(tasks: readonly ExampleTask[]) {
+  if (tasks.length === 0) return "Nenhum evento";
+  const count = `${tasks.length} ${tasks.length === 1 ? "evento" : "eventos"}`;
+  const minutes = tasks.reduce((total, task) => total + task.minutes, 0);
   if (minutes === 0) return count;
   const hours = Math.floor(minutes / 60);
   const rest = minutes % 60;
@@ -80,9 +80,9 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
   const now = userId
     ? (realNow?.getTime() ?? Date.now())
     : EXAMPLE_NOW + (realNow ? Math.max(0, realNow.getTime() - clockStartedAt) : 0);
-  const [tasks, setTasks] = useState<Record<string, ExampleTask>>({});
-  const [missedEvents, setMissedEvents] = useState<Record<string, boolean>>({});
-  const [eventsByDay, setEventsByDay] = useState<Record<string, ExampleEvent[]>>({});
+  const [trackings, setTrackings] = useState<Record<string, ExampleTracking>>({});
+  const [missedTasks, setMissedTasks] = useState<Record<string, boolean>>({});
+  const [tasksByDay, setTasksByDay] = useState<Record<string, ExampleTask[]>>({});
   const [loadState, setLoadState] = useState<"idle" | "loading" | "failed">("idle");
   const [refreshVersion, setRefreshVersion] = useState(0);
   // O modo em uso filtra a agenda pelo executor; trocá-lo relê a janela.
@@ -90,12 +90,12 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
   // Com evento de agente em aberto na janela, a agenda se relê sozinha. A releitura é silenciosa: troca os dados
   // sem voltar ao estado de carregando, para a tela não piscar nem perder a rolagem.
   const silentReload = useRef(false);
-  const agentOpen = hasOpenAgentEvent(Object.values(eventsByDay).flat().flatMap((event) => (event.card ? [event.card] : [])));
+  const agentOpen = hasOpenAgentTask(Object.values(tasksByDay).flat().flatMap((task) => (task.card ? [task.card] : [])));
   useOpenAgentRefresh(Boolean(userId && user && ready && agentOpen), () => {
     silentReload.current = true;
     setRefreshVersion((version) => version + 1);
   });
-  const [selectedEvent, setSelectedEvent] = useState<SelectedEvent | null>(null);
+  const [selectedTask, setSelectedTask] = useState<SelectedTask | null>(null);
   // O evento de referência cujo ponto azul foi tocado, e o aviso da última troca que falhou.
   const [statusCard, setStatusCard] = useState<TaskCardDto | null>(null);
   const [statusAnchor, setStatusAnchor] = useState<HTMLElement | null>(null);
@@ -112,8 +112,8 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
   const [freshIds, setFreshIds] = useState<ReadonlySet<string>>(() => new Set());
   // O que já está na tela, para a recarga saber o que é novo; e o último dia
   // escolhido, para o seguinte entrar pelo lado certo.
-  const eventsRef = useRef(eventsByDay);
-  eventsRef.current = eventsByDay;
+  const tasksRef = useRef(tasksByDay);
+  tasksRef.current = tasksByDay;
   const shownDay = useRef(todayKey);
   const controlsRef = useRef<HTMLDivElement>(null);
   const daysRef = useRef<HTMLElement>(null);
@@ -182,7 +182,7 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
     silentReload.current = false;
     if (!silent) setLoadState("loading");
 
-    async function loadEvents() {
+    async function loadTasks() {
       try {
         const from = zonedDayStart(rangeStart).toISOString();
         const to = zonedDayEnd(rangeEnd).toISOString();
@@ -192,19 +192,19 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
         // Um evento que veio da noite anterior tambem tem chave fora da janela; esse dia
         // so e completo quando a propria janela dele carrega.
         // Todo dia da janela ganha a sua chave, mesmo vazio: é ela que diz que o dia já chegou.
-        const byDay = agendaEventsByDay(loaded);
-        const next: Record<string, ExampleEvent[]> = {};
+        const byDay = agendaTasksByDay(loaded);
+        const next: Record<string, ExampleTask[]> = {};
         for (let dayKey = rangeStart; dayKey <= rangeEnd; dayKey = shiftDayKey(dayKey, 1)) next[dayKey] = byDay[dayKey] ?? [];
         // Numa recarga, o evento que não estava no dia é novo (o Hermes acabou de criar).
-        const known = eventsRef.current;
-        const fresh = Object.entries(next).flatMap(([dayKey, events]) => {
+        const known = tasksRef.current;
+        const fresh = Object.entries(next).flatMap(([dayKey, tasks]) => {
           const before = known[dayKey];
           if (!before) return [];
-          const ids = new Set(before.map((event) => event.id));
-          return events.flatMap((event) => event.id && !ids.has(event.id) ? [event.id] : []);
+          const ids = new Set(before.map((task) => task.id));
+          return tasks.flatMap((task) => task.id && !ids.has(task.id) ? [task.id] : []);
         });
         const apply = () => {
-          setEventsByDay(current => ({ ...current, ...next }));
+          setTasksByDay(current => ({ ...current, ...next }));
           setLoadState("idle");
           if (fresh.length > 0) setFreshIds(new Set(fresh));
         };
@@ -215,7 +215,7 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
       }
     }
 
-    void loadEvents();
+    void loadTasks();
     return () => { cancelled = true; };
   }, [rangeEnd, rangeStart, ready, refreshVersion, user, userId, viewMode.actor]);
 
@@ -265,7 +265,7 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
     const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(fit);
     observer?.observe(current);
     return () => { observer?.disconnect(); strip.style.height = ""; };
-  }, [mode, selectedDay, eventsByDay, loadState]);
+  }, [mode, selectedDay, tasksByDay, loadState]);
 
   // No modo lista infinita, chegar à borda traz mais dias.
   useEffect(() => {
@@ -371,7 +371,7 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
     onClear: () => setSearch(""),
   });
   const needle = plain(search.trim());
-  const matching = (events: ExampleEvent[]) => (needle ? events.filter((event) => plain(event.name).includes(needle)) : events);
+  const matching = (tasks: ExampleTask[]) => (needle ? tasks.filter((task) => plain(task.name).includes(needle)) : tasks);
 
   if (userId && !ready) {
     return <main id="conteudo" className={page.frame}><p role="status" className={styles.status}>Carregando sua sessão…</p></main>;
@@ -380,7 +380,7 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
     return <main id="conteudo" className={page.frame}><p className={styles.status}>Entre na sua conta para ver sua agenda.</p></main>;
   }
 
-  const dayEvents = userId ? eventsByDay[selectedDay] ?? [] : exampleEventsOn(selectedDay);
+  const dayTasks = userId ? tasksByDay[selectedDay] ?? [] : exampleTasksOn(selectedDay);
   const options = { mode, onModeChange: changeMode, showFreeTime, onShowFreeTimeChange: changeShowFreeTime };
 
   return (
@@ -436,7 +436,7 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
             <button type="button" className={styles.modePill} aria-pressed={mode === "list"} onClick={() => changeMode("list")}>Em sequência</button>
             <AgendaOptions {...options} />
           </div>
-          {mode === "day" && loadState !== "loading" ? <p className={styles.summary}>{daySummary(dayEvents)}</p> : null}
+          {mode === "day" && loadState !== "loading" ? <p className={styles.summary}>{daySummary(dayTasks)}</p> : null}
         </div>
 
         <section
@@ -458,7 +458,7 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
             if (dayKey) setSelectedDay(dayKey);
           }}
         >
-          {pageDays.map((dayKey) => <AgendaDay key={dayKey} dayKey={dayKey} now={now} tasks={tasks} missedEvents={missedEvents} onSelectEvent={setSelectedEvent} onPlanFreeWindow={(freeWindow) => requestHubOpen({ freeWindow })} onStatusClick={openStatusPicker} events={userId ? matching(eventsByDay[dayKey] ?? []) : needle ? matching(exampleEventsOn(dayKey)) : undefined} userId={userId} todayKey={todayKey} hideWhenEmpty={mode === "list"} showHeading={mode === "list"} showFreeTime={showFreeTime && !needle} loading={Boolean(userId) && loadState === "loading" && !(dayKey in eventsByDay)} selected={mode === "day" && dayKey === selectedDay} freshIds={freshIds} />)}
+          {pageDays.map((dayKey) => <AgendaDay key={dayKey} dayKey={dayKey} now={now} trackings={trackings} missedTasks={missedTasks} onSelectTask={setSelectedTask} onPlanFreeWindow={(freeWindow) => requestHubOpen({ freeWindow })} onStatusClick={openStatusPicker} tasks={userId ? matching(tasksByDay[dayKey] ?? []) : needle ? matching(exampleTasksOn(dayKey)) : undefined} userId={userId} todayKey={todayKey} hideWhenEmpty={mode === "list"} showHeading={mode === "list"} showFreeTime={showFreeTime && !needle} loading={Boolean(userId) && loadState === "loading" && !(dayKey in tasksByDay)} selected={mode === "day" && dayKey === selectedDay} freshIds={freshIds} />)}
         </section>
         {userId && loadState === "loading" ? <p role="status" className={styles.note}>Carregando sua agenda…</p> : null}
         {userId && loadState === "failed" ? <p role="alert" className={styles.note}>Não foi possível carregar a agenda. Tente novamente.</p> : null}
@@ -466,20 +466,20 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
         {!userId ? <p className={styles.note}>Dados de exemplo · relógio ilustrativo às 09:35</p> : null}
       </section>
       {statusCard ? (
-        <EventStatusPicker
+        <TaskStatusPicker
           card={statusCard}
           anchor={statusAnchor}
           onPick={(status) => void changeReferenceStatus(statusCard, status)}
           onClose={() => setStatusCard(null)}
         />
       ) : null}
-      <EventTaskDialog
-        selected={selectedEvent}
-        task={selectedEvent?.event.task ? tasks[selectedEvent.event.task.id] ?? selectedEvent.event.task : undefined}
-        missed={selectedEvent ? missedEvents[`${selectedEvent.dayKey}:${selectedEvent.event.id ?? selectedEvent.event.name}`] ?? selectedEvent.event.missed ?? false : false}
-        onTaskChange={(task) => setTasks((current) => ({ ...current, [task.id]: task }))}
-        onMissedChange={(missed) => { if (selectedEvent) setMissedEvents((current) => ({ ...current, [`${selectedEvent.dayKey}:${selectedEvent.event.id ?? selectedEvent.event.name}`]: missed })); }}
-        onClose={() => setSelectedEvent(null)}
+      <TrackingDialog
+        selected={selectedTask}
+        tracking={selectedTask?.task.tracking ? trackings[selectedTask.task.tracking.id] ?? selectedTask.task.tracking : undefined}
+        missed={selectedTask ? missedTasks[`${selectedTask.dayKey}:${selectedTask.task.id ?? selectedTask.task.name}`] ?? selectedTask.task.missed ?? false : false}
+        onTrackingChange={(tracking) => setTrackings((current) => ({ ...current, [tracking.id]: tracking }))}
+        onMissedChange={(missed) => { if (selectedTask) setMissedTasks((current) => ({ ...current, [`${selectedTask.dayKey}:${selectedTask.task.id ?? selectedTask.task.name}`]: missed })); }}
+        onClose={() => setSelectedTask(null)}
       />
     </main>
   );

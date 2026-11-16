@@ -11,7 +11,7 @@ const minutes = (value: number) => value * 60_000;
 
 function source(startsInMinutes: number, overrides: Partial<NotificationSource> = {}): NotificationSource {
   return {
-    id: "event-1",
+    id: "task-1",
     name: "Corrida",
     longRunning: false,
     startedAt: new Date(NOW + minutes(startsInMinutes)).toISOString(),
@@ -30,7 +30,7 @@ test("fires once the trigger is crossed and the item has not started", () => {
   const result = dueNotificationsOf([item], NOW, new Set());
 
   expect(result.due).toEqual([
-    { key: notificationKeyOf(item, 5), kind: "event", sourceId: "event-1", name: "Corrida", offsetMinutes: 5 },
+    { key: notificationKeyOf(item, 5), kind: "agenda", sourceId: "task-1", name: "Corrida", offsetMinutes: 5 },
   ]);
   expect(result.settled).toHaveLength(1);
 });
@@ -55,11 +55,11 @@ test("settles silently when the item already started", () => {
   expect(result.settled).toHaveLength(1);
 });
 
-test("rescheduling an event creates a new key", () => {
+test("rescheduling an task creates a new key", () => {
   expect(notificationKeyOf(source(10), 5)).not.toBe(notificationKeyOf(source(20), 5));
 });
 
-test("a long-running event counts from its deadline, not from its start", () => {
+test("a long-running task counts from its deadline, not from its start", () => {
   const longRunning = source(-600, {
     longRunning: true,
     status: "doing",
@@ -71,7 +71,7 @@ test("a long-running event counts from its deadline, not from its start", () => 
   expect(result.due.map((item) => item.name)).toEqual(["Corrida"]);
 });
 
-test("a long-running event without a deadline never warns", () => {
+test("a long-running task without a deadline never warns", () => {
   const noDeadline = source(3, { longRunning: true, status: "doing", estimatedFinishAt: undefined });
   expect(dueNotificationsOf([noDeadline], NOW, new Set())).toEqual({ due: [], settled: [] });
 });

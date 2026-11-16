@@ -4,7 +4,7 @@ import type { ArtifactDto, ArtifactType } from "@repo/contracts";
 import { FileText } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ICON_STROKE_WIDTH } from "@/components/events/event-visuals";
+import { ICON_STROKE_WIDTH } from "@/components/tasks/task-visuals";
 import page from "@/components/ui/page.module.css";
 import { ListSkeleton } from "@/components/ui/list-skeleton";
 import { agendaRefreshEvent } from "@/components/agenda/agenda-refresh";
@@ -17,7 +17,7 @@ import {
   artifactTypesIn,
   artifactVisualType,
 } from "@/lib/artifacts/artifact-model";
-import { useViewMode } from "@/lib/events/view-mode";
+import { useViewMode } from "@/lib/tasks/view-mode";
 import { usePublishSectionMenu } from "@/lib/navigation/section-menu";
 import { tagAccentStyle } from "@/lib/tags/tag-color";
 import { NoteSheet, noteTypeIcon } from "./NoteSheet";

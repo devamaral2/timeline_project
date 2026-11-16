@@ -12,7 +12,7 @@ import { operationId } from "@/lib/api/operation-id";
 
 /** Um registro que a resposta tocou, como a conversa o mostra: o `kind` é o da tela (evento, tarefa ou nota). */
 export interface AgentChatEntityRef {
-  kind: "event" | "task" | "note";
+  kind: "task" | "note";
   id: string;
   change: "created" | "updated" | "deleted";
   label?: string;

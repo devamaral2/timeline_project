@@ -3,7 +3,7 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import type { TaskDto } from "@repo/contracts";
 import { createFakeApi } from "@/test/fake-api";
 import { eventFixture, eventsArea } from "@/test/fake-api/events";
-import { writeViewMode } from "@/lib/events/view-mode";
+import { writeViewMode } from "@/lib/tasks/view-mode";
 
 const net = vi.hoisted(() => ({ authedFetch: vi.fn() }));
 vi.mock("@/lib/api/authed-fetch", async (original) => ({
@@ -21,7 +21,7 @@ const { AgendaScreen } = await import("./agenda-screen");
 
 const TODAY = "2026-09-14";
 
-const events: TaskDto[] = [
+const tasks: TaskDto[] = [
   eventFixture({ id: "ev-1", name: "Revisar proposta", kind: "common", status: "todo", startedAt: "2026-09-14T09:00:00-03:00", estimatedFinishAt: "2026-09-14T10:30:00-03:00" }),
   eventFixture({ id: "ev-3", name: "Pesquisar voos para novembro", actor: "agent", kind: "request", status: "running", startedAt: "2026-09-14T09:48:00-03:00" }),
 ];
@@ -44,7 +44,7 @@ afterEach(() => {
 });
 
 function serve() {
-  const api = createFakeApi({ areas: [eventsArea], seed: { events } });
+  const api = createFakeApi({ areas: [eventsArea], seed: { events: tasks } });
   net.authedFetch.mockImplementation(api.authedFetch);
   return api;
 }

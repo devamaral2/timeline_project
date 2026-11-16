@@ -1,7 +1,7 @@
 import type { TaskCardDto } from "@repo/contracts";
 import { taskDayKeysOf, formatTime } from "@repo/timeline";
-import { cardDurationLabel } from "@/lib/events/card-text";
-import type { ExampleEvent } from "./agenda-examples";
+import { cardDurationLabel } from "@/lib/tasks/card-text";
+import type { ExampleTask } from "./agenda-examples";
 
 /** Um cartão que tem horário e entra na grade: evento longo e passo ficam de fora mesmo quando a resposta os traz. */
 export type AgendaCard = TaskCardDto & { startedAt: string };
@@ -16,7 +16,7 @@ export function isAgendaCard(card: TaskCardDto): card is AgendaCard {
  * (`estimatedFinishAt`): a conclusão real (`finishedAt`) não move a agenda. O
  * cartão vai junto, e é ele que a linha única desenha.
  */
-export function agendaEventFromCard(card: AgendaCard): ExampleEvent {
+export function agendaTaskFromCard(card: AgendaCard): ExampleTask {
   const started = new Date(card.startedAt).getTime();
   const planned = card.estimatedFinishAt ? new Date(card.estimatedFinishAt).getTime() : started;
   const minutes = Math.max(0, Math.round((planned - started) / 60_000));
@@ -36,21 +36,21 @@ export function agendaEventFromCard(card: AgendaCard): ExampleEvent {
 }
 
 /** Agrupa e ordena os cartões por horário; o evento que atravessa a meia-noite aparece no dia em que começou e no dia em que termina. */
-export function agendaEventsByDay(cards: readonly TaskCardDto[]): Record<string, ExampleEvent[]> {
-  const byDay: Record<string, ExampleEvent[]> = {};
+export function agendaTasksByDay(cards: readonly TaskCardDto[]): Record<string, ExampleTask[]> {
+  const byDay: Record<string, ExampleTask[]> = {};
   const seen = new Set<string>();
   for (const card of cards) {
     if (seen.has(card.id) || !isAgendaCard(card)) continue;
     seen.add(card.id);
-    const agendaEvent = agendaEventFromCard(card);
+    const agendaTask = agendaTaskFromCard(card);
     for (const dayKey of taskDayKeysOf(card.startedAt, card.estimatedFinishAt)) {
-      const dayEvents = byDay[dayKey] ?? [];
-      dayEvents.push(agendaEvent);
-      byDay[dayKey] = dayEvents;
+      const dayTasks = byDay[dayKey] ?? [];
+      dayTasks.push(agendaTask);
+      byDay[dayKey] = dayTasks;
     }
   }
-  for (const dayEvents of Object.values(byDay)) {
-    dayEvents.sort((left, right) => Date.parse(left.startedAt ?? "") - Date.parse(right.startedAt ?? "") || (left.id ?? "").localeCompare(right.id ?? ""));
+  for (const dayTasks of Object.values(byDay)) {
+    dayTasks.sort((left, right) => Date.parse(left.startedAt ?? "") - Date.parse(right.startedAt ?? "") || (left.id ?? "").localeCompare(right.id ?? ""));
   }
   return byDay;
 }

@@ -36,7 +36,7 @@ function installApi() {
   return api;
 }
 
-test("reads the agenda window and the tracked list, and an event in both lists comes once", async () => {
+test("reads the agenda window and the tracked list, and an task in both lists comes once", async () => {
   const api = installApi();
 
   const sources = await loadNotificationSources(NOW);
@@ -47,7 +47,7 @@ test("reads the agenda window and the tracked list, and an event in both lists c
   expect(paths).toContain("/api/tasks/tracked");
 });
 
-test("the long-running event arrives with its deadline, so the notification can count from it", async () => {
+test("the long-running task arrives with its deadline, so the notification can count from it", async () => {
   installApi();
 
   const sources = await loadNotificationSources(NOW);
@@ -58,7 +58,7 @@ test("the long-running event arrives with its deadline, so the notification can 
   });
 });
 
-test("a failed list drops only its own events; the other list still warns", async () => {
+test("a failed list drops only its own tasks; the other list still warns", async () => {
   const api = installApi();
   api.failNext("GET", "/api/tasks/tracked", 500);
 

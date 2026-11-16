@@ -11,7 +11,7 @@ import { agentFailureText, startFailureCode } from "@/lib/agent-chat/use-agent-c
 import { requestAgentFileEdit } from "@/lib/api/agent-files";
 import { operationId } from "@/lib/api/operation-id";
 import { HermesOffError, getRequest } from "@/lib/api/requests";
-import { AGENT_REQUEST_POLL_MS, isOpenRequest, runningStepLabel } from "@/lib/events/agent-request-model";
+import { AGENT_REQUEST_POLL_MS, isOpenRequest, runningStepLabel } from "@/lib/tasks/agent-request-model";
 import { useSpeechRecognition } from "@/lib/speech/use-speech-recognition";
 
 interface AgentFileEditBarProps {

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { TasksScreen } from "@/components/tasks/TasksScreen";
+import { TaskListScreen } from "@/components/task-list/TaskListScreen";
 
 export const metadata: Metadata = {
   title: "Tarefas — Agente pessoal",
@@ -9,5 +9,5 @@ export const metadata: Metadata = {
 /** As tarefas carregam no cliente: a leitura exige a sessão, que só o navegador sabe renovar. */
 export default async function TasksPage({ params }: { params: Promise<{ userId: string }> }) {
   const { userId } = await params;
-  return <TasksScreen userId={userId} />;
+  return <TaskListScreen userId={userId} />;
 }

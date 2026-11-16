@@ -80,7 +80,7 @@ test("cada registro criado ou alterado vira uma linha de prévia, com link quand
   const rows = within(screen.getByRole("list", { name: "Registros desta resposta" })).getAllByRole("listitem");
   // Duas linhas por registro: o que aconteceu em cima, o nome embaixo. Artefato aparece como nota.
   expect(rows.map((row) => row.textContent)).toEqual(["Evento criadoComprar faixa elástica", "Nota alteradaTreino de mobilidade"]);
-  expect(within(rows[0]).getByRole("link").getAttribute("href")).toBe("/u/event/e1");
+  expect(within(rows[0]).getByRole("link").getAttribute("href")).toBe("/u/task/e1");
 });
 
 test("sem entidades, nenhuma lista de prévias", () => {
