@@ -1,25 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { compararComALinhaDeBase, lerLinhaDeBase } from "./linha-de-base";
-import { EXCECOES, EXCECOES_DE_LINHA, linhaTemResiduo, varrer } from "./varredura";
+import { ARQUIVOS_COM_OUTRO_EVENTO, EXCECOES, EXCECOES_DE_LINHA, linhaTemResiduo, varrer } from "./varredura";
 
 describe("varredura de residuos de evento", () => {
-  it("nao deixa residuo novo fora da linha de base nem entrada que ja sumiu", () => {
-    const { novos, sumidos } = compararComALinhaDeBase(varrer(), lerLinhaDeBase());
-    const mensagens: string[] = [];
-    if (novos.length > 0) {
-      mensagens.push(
-        `Residuo(s) de "event"/"evento" fora da linha de base (${novos.length}). Troque pelo nome de tarefa:`,
-        ...novos.slice(0, 50).map((r) => `  ${r.arquivo}${r.linha ? `:${r.linha}` : ""}  [${r.area}]  ${r.texto.slice(0, 160)}`),
-        ...(novos.length > 50 ? [`  ... e mais ${novos.length - 50}`] : []),
-      );
-    }
-    if (sumidos.length > 0) {
-      mensagens.push(
-        `A linha de base so encolhe: ${sumidos.length} entrada(s) nao existem mais. Retire-as rodando \`pnpm run residuos:encolher\`:`,
-        ...sumidos.slice(0, 50).map((e) => `  ${e.arquivo}  [${e.area}]  ${e.texto.slice(0, 160)}`),
-        ...(sumidos.length > 50 ? [`  ... e mais ${sumidos.length - 50}`] : []),
-      );
-    }
+  it("nao deixa nenhum residuo fora da lista de excecoes", () => {
+    const residuos = varrer();
+    const mensagens =
+      residuos.length === 0
+        ? []
+        : [
+            `Residuo(s) de "event"/"evento" (${residuos.length}). Troque pelo nome de tarefa:`,
+            ...residuos.slice(0, 50).map((r) => `  ${r.arquivo}${r.linha ? `:${r.linha}` : ""}  ${r.texto.slice(0, 160)}`),
+            ...(residuos.length > 50 ? [`  ... e mais ${residuos.length - 50}`] : []),
+          ];
     expect(mensagens.join("\n")).toBe("");
   });
 
@@ -53,7 +45,9 @@ describe("varredura de residuos de evento", () => {
   });
 
   it("mantem a lista de excecoes curta e com motivo", () => {
-    for (const e of [...EXCECOES, ...EXCECOES_DE_LINHA]) expect(e.motivo.length).toBeGreaterThan(10);
+    for (const e of [...EXCECOES, ...EXCECOES_DE_LINHA, ...ARQUIVOS_COM_OUTRO_EVENTO]) expect(e.motivo.length).toBeGreaterThan(10);
+    // Teto: 12 palavras/linhas excetuadas e 6 grupos de arquivos (Auth, Hermes, licencas, migrations, testes do nome antigo).
     expect(EXCECOES.length + EXCECOES_DE_LINHA.length).toBeLessThanOrEqual(12);
+    expect(ARQUIVOS_COM_OUTRO_EVENTO.length).toBeLessThanOrEqual(6);
   });
 });

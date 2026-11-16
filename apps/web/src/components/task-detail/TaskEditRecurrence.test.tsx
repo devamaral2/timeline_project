@@ -165,7 +165,6 @@ describe("recorrência na edição", () => {
 
     await screen.findByDisplayValue("Comprar pão");
     fireEvent.click(screen.getByRole("button", { name: "Definir a regra" }));
-    console.log("DBG", screen.getByText("Recorrência").parentElement?.textContent);
     expect(screen.getByText(/Esta tarefa fica como está/)).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Título"), { target: { value: "Comprar pão francês" } });
     save();

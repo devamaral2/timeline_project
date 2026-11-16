@@ -19,6 +19,8 @@ falta o Android, que ainda não funciona contra esta API, e os testes de contrat
 (`pnpm --filter @repo/mobile run test`) seguem falhando até o porte dele. As linhas marcadas “Android pendente”
 descrevem o que o app ainda não acompanha.
 
+**Troca de nome (nov/2026): evento virou tarefa.** No banco novo a entidade única se chama tarefa (tarefa de pessoa, de agente, de referência, longa e recorrente; “sequência entre tarefas”; ver `docs/prd/tarefa-no-lugar-de-evento.md` e a ADR 0015). A API (`/api/tasks`, `/api/tasks/:taskId/...`), os contratos, a permissão `task:*` do Auth e o web (`/tarefas/...`, sem `/eventos/...`) já usam o nome novo; o Android ainda fala “evento” nos contratos, nas rotas e nos textos e troca o nome no seu porte para a API nova. Não há ajuste a fazer no app antes disso, e `scripts/mobile/generate-fixtures.ts` segue com os nomes antigos até esse porte.
+
 | Área | Funcionalidade | Web (referência) | Mobile | Observação |
 |---|---|---|---|---|
 | Sessão | Login | `components/auth/LoginForm.tsx` | ✅ | Gate e fluxo nativo implementados. **Redesenho “Braid — Lista de eventos” (web, nov/2026):** `app/page.tsx` + `components/auth/login.module.css`: a assinatura “Agente pessoal” grande na serifa (72 px no desktop, 48 no celular) com “Sua vida organizada. / Sua mente em equilíbrio.” de um lado e o formulário do outro (no celular, os dois no pé da tela); rótulos E-mail e Senha em mono caixa alta, campos de 56 px com raio 18 e contorno, e “Entrar” como pílula de 56 px preenchida em `--primary`. Saíram as pílulas de promessas (IA, Rápido, …). **Android pendente**: a tela de login do app ainda é a anterior. |

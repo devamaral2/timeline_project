@@ -50,8 +50,8 @@ it("applies every migration, is safe to repeat, and keeps audit_log append-only"
   }
 });
 
-// O nome antigo do recurso, montado aqui para a varredura de residuos nao o tratar como codigo vivo.
-const OLD = ["ev", "ent"].join("");
+// O nome antigo do recurso: este arquivo esta na lista de excecoes da varredura de residuos (test/residuos/varredura.ts).
+const OLD = "event";
 
 it("rewrites the old permission names to task:* and rejects them afterwards", async () => {
   const schema = `auth_test_task_permissions_${Date.now()}`;

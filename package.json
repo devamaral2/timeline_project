@@ -20,7 +20,6 @@
     "test:ai": "pnpm run --silent test:unit:ai",
     "test:unit": "vitest run --workspace vitest.workspace.ts",
     "test:unit:ai": "cross-env VITE_CJS_IGNORE_WARNING=true vitest run --workspace vitest.workspace.ts --config vitest.quiet.config.ts",
-    "residuos:encolher": "tsx test/residuos/encolher.ts",
     "test:integration": "vitest run --workspace vitest.integration.workspace.ts",
     "test:integration:ai": "cross-env VITE_CJS_IGNORE_WARNING=true vitest run --workspace vitest.integration.workspace.ts --config vitest.quiet.config.ts",
     "test:e2e": "playwright test --config test/e2e/playwright.config.ts",

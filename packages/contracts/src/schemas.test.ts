@@ -45,8 +45,8 @@ test("a training artifact accepts walking as a cardio workout", () => {
   expect(artifactSchema.parse(artifact)).toEqual(artifact);
 });
 
-// Os nomes antigos saem dos novos: o teste nao pode citar o nome que a varredura de residuos proibe.
-const VELHO = ["ev", "ent"].join("");
+// Nome antigo citado de proposito: este arquivo esta na lista de excecoes da varredura de residuos.
+const VELHO = "event";
 const nomeAntigo = (campo: string) => campo.replace("task", VELHO).replace("Task", VELHO[0].toUpperCase() + VELHO.slice(1));
 
 test.each(["previousTaskIds", "nextTaskIds"])("the task input schemas take %s and refuse its old name", (field) => {

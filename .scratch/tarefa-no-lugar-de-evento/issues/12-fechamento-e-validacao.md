@@ -4,7 +4,7 @@
 
 **Blocked by:** 02 (Glossário, ADR 0015 e instruções), 08 (Código interno da API com nome de tarefa), 09 (Agentes falam de tarefa), 11 (Telas e endereços de tarefa no web)
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Leia antes:** o [README](README.md). Spec: "Decisões de teste" (validação final) e "Fora de escopo" (Android). AGENTS.md (criação de worktree) e a skill `worktree-app-testing`.
 

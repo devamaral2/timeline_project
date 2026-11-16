@@ -37,7 +37,7 @@ const CAMINHOS_IGNORADOS = [/^apps\/api\/drizzle\//, /^apps\/auth\/drizzle\//];
 export const ARQUIVOS_COM_OUTRO_EVENTO: { motivo: string; arquivo: RegExp }[] = [
   {
     motivo: "evento de auditoria e de log do Auth: registro de seguranca, nao a entidade",
-    arquivo: /^apps\/auth\/src\/(audit\/|common\/logger\.ts$|features\/login-with-password\/postgres-login\.repository\.ts$)/,
+    arquivo: /^apps\/auth\/src\/(audit\/|common\/logger\.ts$|features\/login-with-password\/postgres-login\.repository\.ts$|auth-core\/persistence\/postgres-session\.repository\.ts$|cleanup\/cleanup-auth-data\.ts$|testing\/(create-test-app|in-memory-audit-log)\.ts$)/,
   },
   {
     motivo: "eventos do stream de execucao do Hermes (`GET /v1/runs/{id}/events`): protocolo do Hermes, nao a entidade",
@@ -50,6 +50,10 @@ export const ARQUIVOS_COM_OUTRO_EVENTO: { motivo: string; arquivo: RegExp }[] = 
   {
     motivo: "testes das migrations que renomeiam o banco e os dados do agente: gravam dados com os nomes antigos de proposito, para provar que a migration os troca",
     arquivo: /^apps\/api\/src\/infrastructure\/persistence\/integration\/(task-rename|agent-data)-migration\.integration\.test\.ts$/,
+  },
+  {
+    motivo: "testes que provam que o nome antigo deixou de valer (campo, permissao, rota recusados): citam o nome antigo de proposito",
+    arquivo: /^(apps\/api\/src\/api-core\/http-input-validation|apps\/auth\/src\/db\/migrations\.integration|apps\/auth\/src\/domain\/rbac\/permissions|packages\/contracts\/src\/schemas)\.test\.ts$/,
   },
 ];
 
@@ -209,80 +213,4 @@ export function varrer(raiz: string = RAIZ_DO_REPOSITORIO): Residuo[] {
     });
   }
   return residuos;
-}
-
-/**
- * Areas da linha de base, com nomes que casam com os tickets que as limpam.
- * A ordem aqui e a ordem das secoes no arquivo.
- */
-export const AREAS = [
-  "banco",
-  "auth",
-  "contratos",
-  "timeline",
-  "rotas",
-  "gateway",
-  "mcp",
-  "api",
-  "agentes",
-  "web, código",
-  "web, textos e rotas",
-] as const;
-export type Area = (typeof AREAS)[number];
-
-/** A rota antiga `/api/events` (nao o modulo `lib/api/events` do web, que e codigo interno do ticket 10). */
-const CAMINHO_DA_API_ANTIGA = /(?<!lib)\/api\/events/;
-const DECORADOR_DE_ROTA = /@(Controller|Get|Post|Put|Patch|Delete|ApiTags|ApiOperation|ApiParam|ApiResponse|ApiBody)\(/;
-const ARQUIVO_DE_ROTA_DA_API =
-  /^apps\/api\/src\/http\//;
-const ARQUIVO_DE_AGENTE =
-  /^apps\/api\/src\/(api-core\/(requests|agent)\/|api-core\/events\/gateways\/|infrastructure\/(hermes|persistence\/agent-sql)\/)|prompt-builder|command-parsing|voice-event/;
-const PERSISTENCIA_DA_API =
-  /^apps\/api\/src\/infrastructure\/(persistence|jobs)\//;
-
-/** Palavras da linha que tem "event" e nao sao excecao. */
-function palavrasResiduais(texto: string): string[] {
-  return palavrasComEvent(texto).filter((p) => !palavraExcetuada(p));
-}
-
-/** Nome fisico do banco: `event_id`, `from_event_id`, `events` em SQL ou `pgTable("events"`. */
-function ehNomeFisicoDoBanco(texto: string): boolean {
-  if (/\b(from|join|into|update|table|pgTable\()\s*\(?\s*"?events?\b/i.test(texto)) return true;
-  return palavrasResiduais(texto).some((p) => /^[a-z0-9]*(_[a-z0-9]+)*$/.test(p) && /(^|_)events?(_|$)/.test(p) && p.includes("_"));
-}
-
-/** Decide a area de um residuo. Caminhos de arquivo e pasta usam `linha: 0`. */
-export function areaDe(residuo: Residuo): Area {
-  const { arquivo, texto } = residuo;
-  const nomeDeCaminho = residuo.linha === 0;
-  if (arquivo.startsWith("apps/mcp/")) return "mcp";
-  if (arquivo.startsWith("packages/contracts/")) return "contratos";
-  if (arquivo.startsWith("packages/timeline/")) return "timeline";
-  if (arquivo.startsWith("packages/theme/")) return "web, textos e rotas";
-  if (!nomeDeCaminho && CAMINHO_DA_API_ANTIGA.test(texto)) {
-    return arquivo.startsWith("apps/auth/") ? "gateway" : "rotas";
-  }
-  if (arquivo.startsWith("apps/auth/")) return "auth";
-  if (arquivo.startsWith("apps/api/")) {
-    if (ARQUIVO_DE_ROTA_DA_API.test(arquivo)) return "rotas";
-    if (!nomeDeCaminho && DECORADOR_DE_ROTA.test(texto)) return "rotas";
-    if (ARQUIVO_DE_AGENTE.test(arquivo)) return "agentes";
-    if (!nomeDeCaminho && PERSISTENCIA_DA_API.test(arquivo) && ehNomeFisicoDoBanco(texto)) return "banco";
-    return "api";
-  }
-  // apps/web: palavra em portugues ("evento") ou segmento de rota do App Router = texto e rota.
-  if (nomeDeCaminho) {
-    const nome = arquivo.replace(/\/$/, "").split("/").pop() ?? "";
-    const ehPasta = arquivo.endsWith("/");
-    const rota = ehPasta && arquivo.startsWith("apps/web/src/app/");
-    return rota || /evento/i.test(nome) ? "web, textos e rotas" : "web, código";
-  }
-  return palavrasResiduais(texto).some((p) => /evento/i.test(p))
-    ? "web, textos e rotas"
-    : "web, código";
-}
-
-/** Chave de comparacao com a linha de base. */
-export function chaveDe(area: Area | string, arquivo: string, texto: string): string {
-  return `${area}\t${arquivo}\t${texto.replace(/\t/g, " ")}`;
 }

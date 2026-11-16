@@ -9,7 +9,7 @@ import {
 describe("permissions", () => {
   it("reconhece o formato recurso:acao", () => {
     expect(isPermission("task:read")).toBe(true);
-    expect(isPermission(["ev", "ent"].join("") + ":read")).toBe(false);
+    expect(isPermission("event" + ":read")).toBe(false);
     expect(isPermission(SUPER_ADMIN_PERMISSION)).toBe(true);
     expect(isPermission("task:publish")).toBe(false);
     expect(isPermission("timeline:read")).toBe(false);
