@@ -4,12 +4,12 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Leia antes:** o [README](README.md). Spec: "Decisões de teste", costura 6.
 
-- [ ] O teste cobre identificadores, nomes de arquivo e pasta, textos visíveis, prompts e instruções dos agentes, rotas e nomes no esquema do banco, em todas as áreas citadas.
-- [ ] A lista de exceções é explícita e curta, cada uma com motivo: eventos de DOM e de teclado, parâmetros `event` de handlers, `text/event-stream`, migrations já aplicadas e ADRs antigas.
-- [ ] A linha de base é um arquivo versionado, agrupado por área, que o teste lê; um resíduo novo fora dela faz o teste falhar com o arquivo e a linha.
-- [ ] Um resíduo da linha de base que não existe mais também faz o teste falhar, pedindo para tirá-lo da linha de base (a linha de base só encolhe).
-- [ ] O teste roda junto de `pnpm run test:unit` e passa no estado atual.
+- [x] O teste cobre identificadores, nomes de arquivo e pasta, textos visíveis, prompts e instruções dos agentes, rotas e nomes no esquema do banco, em todas as áreas citadas.
+- [x] A lista de exceções é explícita e curta, cada uma com motivo: eventos de DOM e de teclado, parâmetros `event` de handlers, `text/event-stream`, migrations já aplicadas e ADRs antigas.
+- [x] A linha de base é um arquivo versionado, agrupado por área, que o teste lê; um resíduo novo fora dela faz o teste falhar com o arquivo e a linha.
+- [x] Um resíduo da linha de base que não existe mais também faz o teste falhar, pedindo para tirá-lo da linha de base (a linha de base só encolhe).
+- [x] O teste roda junto de `pnpm run test:unit` e passa no estado atual.

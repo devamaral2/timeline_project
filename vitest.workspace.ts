@@ -19,6 +19,14 @@ const packageAliases = {
 
 export default defineWorkspace([
   {
+    test: {
+      name: "residuos",
+      root: ".",
+      environment: "node",
+      include: ["test/residuos/**/*.test.ts"],
+    },
+  },
+  {
     resolve: { alias: { ...packageAliases, "@": resolve("./apps/web/src") } },
     test: {
       name: "web",
