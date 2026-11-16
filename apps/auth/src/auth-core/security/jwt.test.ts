@@ -32,7 +32,7 @@ function claimsAt(
     jti: 'token-1',
     iat: issuedAt,
     exp: issuedAt + 900,
-    perms: ['event:read'],
+    perms: ['task:read'],
     denies: [],
     roles: ['member'],
     amr: ['pwd', 'otp'],

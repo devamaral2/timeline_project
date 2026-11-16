@@ -9,7 +9,7 @@ import type { AuthenticatedActor } from "../../domain/users/user";
  * Todo `/auth/admin` exige o super-admin **inteiro**: o `*:manage` literal e a
  * cobertura de todas as acoes do catalogo.
  *
- * Um token com `*:manage` mais um `deny event:delete` nao passa. Aceitar esse
+ * Um token com `*:manage` mais um `deny task:delete` nao passa. Aceitar esse
  * ator seria deixa-lo administrar um painel que ele nao consegue operar por
  * completo, e no estagio 1 nao ha permissao administrativa parcial -- nem
  * `user:manage` sozinho abre estas rotas.

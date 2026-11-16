@@ -7,14 +7,14 @@
  * inteiro, de qualquer dono. Essa e a linha que separa um usuario comum de um
  * admin, e ela mora aqui e nao espalhada por ifs.
  */
-export const RESOURCES = ["event", "tag", "user", "invite", "role", "grant"] as const;
+export const RESOURCES = ["task", "tag", "user", "invite", "role", "grant"] as const;
 export const ACTIONS = ["create", "read", "update", "delete", "manage"] as const;
 
 export type Resource = (typeof RESOURCES)[number];
 export type Action = (typeof ACTIONS)[number];
 export type Permission = `${Resource}:${Action}` | `*:manage`;
 
-/** Superadmin. Unica forma de curinga aceita — nao existe `*:read` nem `event:*`. */
+/** Superadmin. Unica forma de curinga aceita — nao existe `*:read` nem `task:*`. */
 export const SUPER_ADMIN_PERMISSION = "*:manage" satisfies Permission;
 
 /** As acoes que `manage` engloba. `manage` tambem engloba a si mesmo. */
@@ -39,7 +39,7 @@ export function isPermission(value: string): value is Permission {
 }
 
 /**
- * `event:manage` cobre `event:read`; `*:manage` cobre tudo. Comparar strings
+ * `task:manage` cobre `task:read`; `*:manage` cobre tudo. Comparar strings
  * cruas ignoraria as duas relacoes — e um admin cairia em 403 no proprio painel.
  */
 export function permissionSetCovers(

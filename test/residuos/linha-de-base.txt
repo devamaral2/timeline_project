@@ -56,62 +56,11 @@ apps/api/src/infrastructure/persistence/requests/postgres-request.store.integrat
 == auth ==
 apps/auth/src/auth-core/persistence/postgres-session.repository.ts	* Minha decisao ao herdar este arquivo: o evento de auditoria e montado
 apps/auth/src/auth-core/persistence/postgres-session.repository.ts	* o evento certo seria pedir para ele adivinhar o proprio resultado da
-apps/auth/src/auth-core/security/authorization.service.test.ts	const request = { userId: "user-1", sessionId: "session-1", resource: "event" as const, action: "update" as const };
-apps/auth/src/auth-core/security/authorization.service.test.ts	it("allows a member to update their own event but not someone else's", async () => {
-apps/auth/src/auth-core/security/authorization.service.test.ts	const authorize = subject(["member"], ["event:update"]);
-apps/auth/src/auth-core/security/authorization.service.test.ts	await expect(subject(["admin"], ["*:manage"], ["event:update"]).execute({ ...request, targetUserId: "user-2" })).rejects.toBeInstanceOf(AccessDeniedError);
-apps/auth/src/auth-core/security/authorization.service.test.ts	const viewer = subject(["viewer"], ["event:read"]);
-apps/auth/src/auth-core/security/authorization.service.test.ts	await expect(subject(["viewer"], ["event:update", "event:read"]).execute(request)).rejects.toBeInstanceOf(AccessDeniedError);
-apps/auth/src/auth-core/security/authorization.service.test.ts	await expect(subject(["member"], ["event:update"], [], false).execute(request)).rejects.toBeInstanceOf(AuthenticationFailedError);
-apps/auth/src/auth-core/security/authorization.service.ts	export const ACCESS_RESOURCES = ["event", "tag", "artifact", "recurrence", "agent"] as const;
-apps/auth/src/auth-core/security/authorization.service.ts	const canManageResource = (input.resource === "event" || input.resource === "tag") &&
-apps/auth/src/auth-core/security/authorization.service.ts	if (input.resource === "event" || input.resource === "tag") {
-apps/auth/src/auth-core/security/jwt.test.ts	perms: ['event:read'],
-apps/auth/src/auth-core/security/require-super-admin.guard.ts	* Um token com `*:manage` mais um `deny event:delete` nao passa. Aceitar esse
 apps/auth/src/cleanup/cleanup-auth-data.ts	const events: AuditEventInput[] = retired.rows.map((key) => audit('key.retired', key.kid, now, input.context, {}));
 apps/auth/src/cleanup/cleanup-auth-data.ts	events.push(audit('cleanup.completed', null, now, input.context, {
 apps/auth/src/cleanup/cleanup-auth-data.ts	await insertAuditEvents(tx, events);
-apps/auth/src/domain/rbac/effective-permissions.test.ts	rolePermissions: ["event:read", "event:create"],
-apps/auth/src/domain/rbac/effective-permissions.test.ts	directPermissions: [{ permission: "event:read", effect: "allow" }],
-apps/auth/src/domain/rbac/effective-permissions.test.ts	expect(result).toEqual({ permissions: ["event:create", "event:read"], denies: [] });
-apps/auth/src/domain/rbac/effective-permissions.test.ts	rolePermissions: ["event:read", "event:delete"],
-apps/auth/src/domain/rbac/effective-permissions.test.ts	directPermissions: [{ permission: "event:delete", effect: "deny" }],
-apps/auth/src/domain/rbac/effective-permissions.test.ts	permissions: ["event:delete", "event:read"],
-apps/auth/src/domain/rbac/effective-permissions.test.ts	denies: ["event:delete"],
-apps/auth/src/domain/rbac/effective-permissions.test.ts	rolePermissions: ["event:read", "timeline:hack" as never],
-apps/auth/src/domain/rbac/effective-permissions.test.ts	expect(result).toEqual({ permissions: ["event:read"], denies: [] });
-apps/auth/src/domain/rbac/effective-permissions.test.ts	rolePermissions: ["tag:read", "event:read", "event:create"],
-apps/auth/src/domain/rbac/effective-permissions.test.ts	expect(result).toEqual({ permissions: ["event:create", "event:read", "tag:read"], denies: [] });
-apps/auth/src/domain/rbac/effective-permissions.test.ts	directPermissions: [{ permission: "event:delete", effect: "deny" }],
-apps/auth/src/domain/rbac/effective-permissions.test.ts	expect(access).toEqual({ permissions: ["*:manage"], denies: ["event:delete"] });
-apps/auth/src/domain/rbac/effective-permissions.test.ts	expect(isAllowed(access, "event", "delete")).toBe(false);
-apps/auth/src/domain/rbac/effective-permissions.test.ts	expect(isAllowed(access, "event", "read")).toBe(true);
-apps/auth/src/domain/rbac/permissions.test.ts	expect(isPermission("event:read")).toBe(true);
-apps/auth/src/domain/rbac/permissions.test.ts	expect(isPermission("event:publish")).toBe(false);
-apps/auth/src/domain/rbac/permissions.test.ts	expect(isPermission("event")).toBe(false);
-apps/auth/src/domain/rbac/permissions.test.ts	expect(isPermission("event:read:extra")).toBe(false);
-apps/auth/src/domain/rbac/permissions.test.ts	expect(isPermission("event:*")).toBe(false);
-apps/auth/src/domain/rbac/permissions.test.ts	expect(permissionSetCovers(["event:manage"], "event", "read")).toBe(true);
-apps/auth/src/domain/rbac/permissions.test.ts	expect(permissionSetCovers(["event:manage"], "event", "delete")).toBe(true);
-apps/auth/src/domain/rbac/permissions.test.ts	expect(permissionSetCovers(["event:manage"], "tag", "read")).toBe(false);
-apps/auth/src/domain/rbac/permissions.test.ts	expect(permissionSetCovers([SUPER_ADMIN_PERMISSION], "event", "delete")).toBe(true);
-apps/auth/src/domain/rbac/permissions.test.ts	expect(permissionSetCovers(["event:read"], "event", "update")).toBe(false);
-apps/auth/src/domain/rbac/permissions.test.ts	expect(permissionSetCovers(["event:read"], "event", "manage")).toBe(false);
-apps/auth/src/domain/rbac/permissions.test.ts	expect(allPermissions()).toContain("event:read");
-apps/auth/src/domain/rbac/permissions.ts	export const RESOURCES = ["event", "tag", "user", "invite", "role", "grant"] as const;
-apps/auth/src/domain/rbac/permissions.ts	/** Superadmin. Unica forma de curinga aceita — nao existe `*:read` nem `event:*`. */
-apps/auth/src/domain/rbac/permissions.ts	* `event:manage` cobre `event:read`; `*:manage` cobre tudo. Comparar strings
-apps/auth/src/domain/rbac/system-roles.ts	description: "Dono da propria timeline: cria, edita e apaga os proprios eventos.",
-apps/auth/src/domain/rbac/system-roles.ts	"event:create",
-apps/auth/src/domain/rbac/system-roles.ts	"event:read",
-apps/auth/src/domain/rbac/system-roles.ts	"event:update",
-apps/auth/src/domain/rbac/system-roles.ts	"event:delete",
-apps/auth/src/domain/rbac/system-roles.ts	permissions: ["event:read", "tag:read"],
-apps/auth/src/features/refresh-token/usecases/refresh-token.usecase.test.ts	const access = { roleKeys: ["member"], permissions: ["event:read" as const], denies: [] };
 apps/auth/src/http/api-proxy/api-gateway.controller.test.ts	const { authorized, received } = await forward("GET", "/api/artifacts?eventId=event-1", undefined);
 apps/auth/src/http/api-proxy/api-gateway.controller.test.ts	expect(received[0]).toMatchObject({ method: "GET", path: "/api/artifacts?eventId=event-1" });
-apps/auth/src/http/api-proxy/api-gateway.controller.ts	resource: "event" | "tag" | "artifact" | "recurrence" | "agent";
-apps/auth/src/http/openapi.ts	const directPermissionsSchema = { type: "array", maxItems: 64, description: "Concessões ou negações diretas, sem duplicar uma permissão.", items: { type: "object", required: ["permission", "effect"], additionalProperties: false, properties: { permission: { type: "string", pattern: "^(?:\\*:manage|(?:event|tag|user|invite|role|grant):(?:create|read|update|delete|manage))$", description: "Permissão concreta no formato `recurso:ação` ou o superadmin `*:manage`." }, effect: { type: "string", enum: ["allow", "deny"] } } } } as const;
 apps/auth/src/testing/create-test-app.ts	// O logger do filtro guarda o evento em memoria em vez de imprimir: o Logger
 apps/auth/src/testing/in-memory-audit-log.ts	export class InMemoryAuditLog implements AuditLog { readonly events: AuditEventInput[] = []; async record(event: AuditEventInput): Promise<void> { assertSafeAuditEvent(event); this.events.push(event); } }
 
@@ -305,8 +254,8 @@ apps/web/src/test/fake-api/fake-api.test.ts	await expect(api.authedFetch("/api/e
 apps/web/src/test/fake-api/index.ts	/** Padrão com parâmetros: `/api/events/:eventId`. */
 
 == gateway ==
-apps/auth/src/http/api-proxy/api-gateway.controller.test.ts	["/api/events", "event"],
-apps/auth/src/http/api-proxy/api-gateway.controller.ts	const resource = path.startsWith("/api/events") ? "event"
+apps/auth/src/http/api-proxy/api-gateway.controller.test.ts	["/api/events", "task"],
+apps/auth/src/http/api-proxy/api-gateway.controller.ts	const resource = path.startsWith("/api/events") ? "task"
 apps/auth/src/http/feature-routing.test.ts	it.each(['/auth/logout-all', '/auth/me', '/api/events'])('routes protected endpoint %s through auth guards', async (path) => {
 
 == mcp ==

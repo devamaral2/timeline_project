@@ -24,12 +24,12 @@ export const SYSTEM_ROLES: readonly SystemRole[] = [
   {
     key: "member",
     name: "Membro",
-    description: "Dono da propria timeline: cria, edita e apaga os proprios eventos.",
+    description: "Dono da propria timeline: cria, edita e apaga as proprias tarefas.",
     permissions: [
-      "event:create",
-      "event:read",
-      "event:update",
-      "event:delete",
+      "task:create",
+      "task:read",
+      "task:update",
+      "task:delete",
       "tag:create",
       "tag:read",
     ],
@@ -38,7 +38,7 @@ export const SYSTEM_ROLES: readonly SystemRole[] = [
     key: "viewer",
     name: "Observador",
     description: "So le. Sem concessao explicita, enxerga apenas a propria timeline.",
-    permissions: ["event:read", "tag:read"],
+    permissions: ["task:read", "tag:read"],
   },
 ];
 

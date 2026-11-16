@@ -49,7 +49,7 @@ function repositoryReturning(
       endedAt: null,
       createdAt: NOW,
     };
-    const access = { roleKeys: ["member"], permissions: ["event:read" as const], denies: [] };
+    const access = { roleKeys: ["member"], permissions: ["task:read" as const], denies: [] };
     const { repository, lastCommand } = repositoryReturning({
       kind: "rotated",
       accessToken: "signed.access.token",

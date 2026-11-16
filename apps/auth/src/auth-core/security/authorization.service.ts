@@ -9,7 +9,7 @@ import { canSignIn } from "../../domain/users/user";
 import type { AuthenticatedActor } from "../../domain/users/user";
 import type { Permission } from "../../domain/rbac/permissions";
 
-export const ACCESS_RESOURCES = ["event", "tag", "artifact", "recurrence", "agent"] as const;
+export const ACCESS_RESOURCES = ["task", "tag", "artifact", "recurrence", "agent"] as const;
 export const ACCESS_ACTIONS = ["read", "create", "update", "delete", "execute"] as const;
 export type AccessResource = (typeof ACCESS_RESOURCES)[number];
 export type AccessAction = (typeof ACCESS_ACTIONS)[number];
@@ -64,12 +64,12 @@ export class AuthorizationService {
     const roleKeys = access.roleKeys;
     const isWriter = (roleKeys.includes("member") || roleKeys.includes("admin")) && !access.denies.includes("*:manage");
     const isReader = (isWriter || roleKeys.includes("viewer")) && !access.denies.includes("*:manage");
-    const canManageResource = (input.resource === "event" || input.resource === "tag") &&
+    const canManageResource = (input.resource === "task" || input.resource === "tag") &&
       isAllowed(access, input.resource, "manage");
 
     if (crossUser && !superAdmin && !canManageResource) throw new AccessDeniedError("target user not authorized");
 
-    if (input.resource === "event" || input.resource === "tag") {
+    if (input.resource === "task" || input.resource === "tag") {
       if ((input.action !== "read" && !isWriter) || input.action === "execute" || !isAllowed(access, input.resource, input.action)) {
         throw new AccessDeniedError("action not authorized");
       }

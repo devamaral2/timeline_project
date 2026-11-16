@@ -8,7 +8,7 @@ import { ApiGatewayController, policyFor } from "./api-gateway.controller";
 
 describe("policyFor", () => {
   it.each([
-    ["/api/events", "event"],
+    ["/api/events", "task"],
     ["/api/tags", "tag"],
     ["/api/artifacts", "artifact"],
     ["/api/artifacts/artifact-1", "artifact"],
