@@ -15,7 +15,7 @@ function event(startedAt: string, estimatedFinishAt: string | null): AgendaEvent
   return {
     id: `${startedAt}-${estimatedFinishAt}`,
     actor: "human",
-    kind: "routine",
+    kind: "common",
     priority: "medium",
     longRunning: false,
     artifactTypes: [],
@@ -23,6 +23,7 @@ function event(startedAt: string, estimatedFinishAt: string | null): AgendaEvent
     revision: 1,
     notifyOffsetsMinutes: [],
     name: "evento",
+    location: "",
     description: "",
     startedAt,
     estimatedFinishAt: estimatedFinishAt ?? undefined,

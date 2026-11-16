@@ -6,7 +6,7 @@ function anEvent(overrides: Partial<AgendaEventCard> = {}): AgendaEventCard {
   return {
     id: "event-1",
     actor: "human",
-    kind: "routine",
+    kind: "common",
     priority: "medium",
     longRunning: false,
     artifactTypes: [],
@@ -14,6 +14,7 @@ function anEvent(overrides: Partial<AgendaEventCard> = {}): AgendaEventCard {
     revision: 1,
     notifyOffsetsMinutes: [],
     name: "Bloco de trabalho",
+    location: "",
     description: "",
     startedAt: "2026-08-19T12:00:00.000Z",
     estimatedFinishAt: "2026-08-19T13:00:00.000Z",

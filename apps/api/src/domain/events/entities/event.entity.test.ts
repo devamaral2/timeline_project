@@ -153,7 +153,7 @@ describe("Event.create", () => {
 
     test("an agent event rejects the human kinds, including the default one", () => {
       expect(() => Event.create(props({ actor: "agent", status: "queued" }))).toThrow(
-        "Invalid kind for an agent event: default",
+        "Invalid kind for an agent event: common",
       );
       expect(() => Event.create(props({ actor: "agent", kind: "meal", status: "queued" }))).toThrow(EventValidationError);
     });

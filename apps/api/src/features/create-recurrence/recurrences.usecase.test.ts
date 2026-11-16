@@ -76,6 +76,7 @@ describe("creating a series", () => {
         kind: "common",
         name: "Correr",
         description: "",
+        location: "",
         tags: ["saude"],
         priority: "medium",
         notifyOffsetsMinutes: [5],
