@@ -257,9 +257,9 @@ describe("the fields each body knows come from the contract schemas", () => {
 
   test("a field only an artifact variant has is accepted, one no schema has is refused", () => {
     // `schemaVersion` so existe nas variantes de edicao com `type`; `taskIds` nas duas.
-    expect(() => assertArtifactRequest({ type: "text", data: { body: "x" }, schemaVersion: 2 }, false)).not.toThrow();
-    expect(() => assertArtifactRequest({ type: "text", data: { body: "x" }, schemaVersion: 2 }, true)).toThrow("Invalid field schemaVersion");
-    expect(() => assertArtifactRequest({ data: { body: "x" }, global: true }, true)).toThrow("Invalid field global");
+    expect(() => assertArtifactRequest({ type: "text", data: { body: "x" }, schemaVersion: 2 } as never, false)).not.toThrow();
+    expect(() => assertArtifactRequest({ type: "text", data: { body: "x" }, schemaVersion: 2 } as never, true)).toThrow("Invalid field schemaVersion");
+    expect(() => assertArtifactRequest({ data: { body: "x" }, global: true } as never, true)).toThrow("Invalid field global");
   });
 
   test("the PATCH of an artifact needs nothing besides what the body carries: the id comes in the path", () => {
