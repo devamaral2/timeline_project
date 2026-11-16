@@ -2322,7 +2322,7 @@ apps/api/src/domain/events/entities/event.entity.test.ts	expect(() => Event.crea
 apps/api/src/domain/events/entities/event.entity.test.ts	expect(() => Event.create(props({ actor: "agent", kind: "request", status: "missed" }))).toThrow(EventValidationError);
 apps/api/src/domain/events/entities/event.entity.test.ts	test("an agent event rejects the human kinds, including the default one", () => {
 apps/api/src/domain/events/entities/event.entity.test.ts	expect(() => Event.create(props({ actor: "agent", status: "queued" }))).toThrow(
-apps/api/src/domain/events/entities/event.entity.test.ts	"Invalid kind for an agent event: default",
+apps/api/src/domain/events/entities/event.entity.test.ts	"Invalid kind for an agent event: common",
 apps/api/src/domain/events/entities/event.entity.test.ts	expect(() => Event.create(props({ actor: "agent", kind: "meal", status: "queued" }))).toThrow(EventValidationError);
 apps/api/src/domain/events/entities/event.entity.test.ts	test("an agent event gets no default notification", () => {
 apps/api/src/domain/events/entities/event.entity.test.ts	expect(Event.create(props({ actor: "agent", kind: "request", status: "queued" })).notifyOffsetsMinutes).toEqual([]);
