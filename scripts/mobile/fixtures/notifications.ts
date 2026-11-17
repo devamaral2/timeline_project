@@ -9,6 +9,7 @@ import {
   CATCH_UP_WINDOW_MS,
   dueNotificationsOf,
   kindOf,
+  notificationFeedOf,
   notificationAnchorOf,
   notificationKeyOf,
 } from "../../../apps/web/src/lib/notifications/due-notifications";
@@ -83,6 +84,16 @@ const NOWS = [
   Date.parse("2026-10-30T12:00:00.000Z") - 43200 * MINUTE - 1,
 ].map((ms) => new Date(ms).toISOString());
 
+/** O feed do chat: os instantes acima mais os que mostram o que já começou, a borda das 24 h e o limite de cinco próximos. */
+const FEED_NOWS = [
+  ...NOWS,
+  MEETING + 30 * MINUTE,
+  MEETING + 24 * 60 * MINUTE,
+  MEETING + 24 * 60 * MINUTE + MINUTE,
+  Date.parse("2026-09-01T00:00:00.000Z"),
+  Date.parse("2026-09-18T12:00:00.000Z"),
+].map((now) => (typeof now === "string" ? now : new Date(now).toISOString()));
+
 const FIRED_VARIANTS: string[][] = [
   [],
   ["meeting:2026-09-14T18:00:00.000Z:30"],
@@ -110,6 +121,15 @@ export function notificationsFixtures(): Record<string, unknown> {
           ),
         NOWS.flatMap((now) => FIRED_VARIANTS.map((fired) => [reminderCards.map((card) => card.id), now, fired] as [string[], string, string[]])),
       ),
+      /** `args` = [ids das tarefas, instante (já no minuto, como o web o entrega)]; a saída é `{ recent, upcoming }`. */
+      feedOf: cases(
+        (ids: string[], now: string) =>
+          notificationFeedOf(
+            ids.map((id) => reminderCards.find((card) => card.id === id) as never),
+            Date.parse(now),
+          ),
+        FEED_NOWS.map((now) => [reminderCards.map((card) => card.id), now] as [string[], string]),
+      ),
       offsetLabel: cases(notificationOffsetLabel, [[1], [5], [30], [60], [90], [1440], [2880], [4320], [43200], [1441]]),
     },
     /** `GET /api/tasks` e `GET /api/tasks/tracked` com a tarefa `meeting` nas duas listas (a agenda vence) e uma só de cada lado. */
@@ -118,6 +138,9 @@ export function notificationsFixtures(): Record<string, unknown> {
     "notifications-agenda-rescheduled": agendaPageSchema.parse({
       items: [reminderCard({ ...reminderCards[0], startedAt: "2026-09-14T19:00:00.000Z", estimatedFinishAt: "2026-09-14T20:00:00.000Z", revision: 2 })],
     }),
+    /** Sem tarefa nenhuma nas duas listas: o feed vazio. */
+    "notifications-agenda-empty": agendaPageSchema.parse({ items: [] }),
+    "notifications-tracked-empty": [],
     "notifications-tracked": [reminderCards[0], reminderCards[1]].map((card) => taskCardSchema.parse(card)),
   };
 }
