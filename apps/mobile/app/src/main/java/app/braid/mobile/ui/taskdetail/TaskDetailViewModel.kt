@@ -92,6 +92,14 @@ class TaskDetailViewModel
 
         fun retry() = load()
 
+        /** Relê a tarefa sem trocar a tela por "Carregando": ao voltar da edição o detalhe mostra a versão nova. */
+        fun reload() {
+            if (mutableState.value !is TaskDetailUiState.Content) return
+            viewModelScope.launch {
+                if (readTask()) loadLinked()
+            }
+        }
+
         private fun load() {
             mutableState.value = TaskDetailUiState.Loading
             viewModelScope.launch {

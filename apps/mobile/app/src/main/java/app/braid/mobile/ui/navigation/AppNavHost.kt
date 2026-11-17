@@ -44,6 +44,7 @@ import app.braid.mobile.ui.shell.SectionMenuBody
 import app.braid.mobile.ui.shell.SectionMenuViewModel
 import app.braid.mobile.ui.shell.SectionMenus
 import app.braid.mobile.ui.taskdetail.TaskDetailPage
+import app.braid.mobile.ui.taskedit.TaskEditPage
 import app.braid.mobile.ui.tasks.TasksScreen
 
 @Composable
@@ -96,6 +97,11 @@ fun AppNavHost(
         remember(navController) {
             ChatCommandHandlers(
                 mapOf(
+                    // `/tarefa comprar pão` abre a criação com o título já preenchido; o chat fecha para mostrá-la.
+                    ChatCommand.Task to { argument ->
+                        chat.close()
+                        navController.navigate(TaskEditRoute(name = argument.ifBlank { null }))
+                    },
                     // `/nota ideias` abre a criação do documento já com o nome; o chat fecha para a tela aparecer.
                     ChatCommand.Document to { argument ->
                         chat.close()
@@ -139,10 +145,16 @@ fun AppNavHost(
                         onBack = { navController.popBackStack() },
                         onOpenTask = { navController.navigate(TaskDetailRoute(it)) },
                         onOpenArtifact = { navController.navigate(DocumentDetailRoute(it)) },
+                        onEdit = { navController.navigate(TaskEditRoute(taskId = it)) },
                     )
                 }
-                // "Nova tarefa" leva à criação quando o ticket 13 existir.
-                composable<TasksRoute> { TasksScreen(onNewTask = {}, onOpenTask = { navController.navigate(TaskDetailRoute(it)) }) }
+                composable<TaskEditRoute> { TaskEditPage(onLeave = { navController.popBackStack() }) }
+                composable<TasksRoute> {
+                    TasksScreen(
+                        onNewTask = { navController.navigate(TaskEditRoute()) },
+                        onOpenTask = { navController.navigate(TaskDetailRoute(it)) },
+                    )
+                }
                 composable<DocumentsRoute> { DocumentsScreen(onOpenDocument = { navController.navigate(DocumentDetailRoute(it)) }) }
                 composable<DocumentDetailRoute> {
                     DocumentDetailPage(

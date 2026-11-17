@@ -1,0 +1,40 @@
+[
+  {
+    "raw": "  Trabalho ",
+    "normalized": "trabalho",
+    "added": [
+      "casa",
+      "trabalho"
+    ]
+  },
+  {
+    "raw": "CASA",
+    "normalized": "casa",
+    "added": [
+      "casa"
+    ]
+  },
+  {
+    "raw": "   ",
+    "normalized": "",
+    "added": [
+      "casa"
+    ]
+  },
+  {
+    "raw": "saúde",
+    "normalized": "saúde",
+    "added": [
+      "casa",
+      "saúde"
+    ]
+  },
+  {
+    "raw": "Ação Rápida",
+    "normalized": "ação rápida",
+    "added": [
+      "casa",
+      "ação rápida"
+    ]
+  }
+]

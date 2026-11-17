@@ -1,0 +1,422 @@
+[
+  {
+    "name": "touched field stays, untouched follows",
+    "previous": {
+      "id": "task-1",
+      "actor": "human",
+      "kind": "common",
+      "status": "todo",
+      "priority": "high",
+      "name": "Reunião de planejamento",
+      "description": "Pauta do trimestre.",
+      "location": "Rua Augusta, 100 - São Paulo",
+      "startedAt": "2026-09-14T21:30:00.000Z",
+      "estimatedFinishAt": "2026-09-14T22:20:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [
+        1440,
+        30
+      ],
+      "tags": [
+        "trabalho",
+        "saúde"
+      ],
+      "artifactTypes": [],
+      "revision": 4,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z",
+      "artifacts": [],
+      "subtaskIds": [],
+      "requests": []
+    },
+    "next": {
+      "id": "task-1",
+      "actor": "human",
+      "kind": "common",
+      "status": "todo",
+      "priority": "urgent",
+      "name": "Reunião (renomeada)",
+      "description": "Pauta do trimestre.",
+      "location": "Novo endereço",
+      "startedAt": "2026-09-14T21:30:00.000Z",
+      "estimatedFinishAt": "2026-09-14T22:20:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [
+        60
+      ],
+      "tags": [
+        "trabalho",
+        "saúde"
+      ],
+      "artifactTypes": [],
+      "revision": 5,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z",
+      "artifacts": [],
+      "subtaskIds": [],
+      "requests": []
+    },
+    "draft": {
+      "kind": "common",
+      "name": "Meu título",
+      "status": "todo",
+      "priority": "high",
+      "startDate": "2026-09-14",
+      "startTime": "18:30",
+      "endDate": "2026-09-14",
+      "endTime": "19:20",
+      "description": "Pauta do trimestre.",
+      "location": "Rua Augusta, 100 - São Paulo",
+      "reminders": [
+        30,
+        1440
+      ],
+      "tags": [
+        "novo"
+      ],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "expected": {
+      "kind": "common",
+      "name": "Meu título",
+      "status": "todo",
+      "priority": "urgent",
+      "startDate": "2026-09-14",
+      "startTime": "18:30",
+      "endDate": "2026-09-14",
+      "endTime": "19:20",
+      "description": "Pauta do trimestre.",
+      "location": "Novo endereço",
+      "reminders": [
+        60
+      ],
+      "tags": [
+        "novo"
+      ],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    }
+  },
+  {
+    "name": "nothing touched takes everything",
+    "previous": {
+      "id": "task-1",
+      "actor": "human",
+      "kind": "common",
+      "status": "todo",
+      "priority": "high",
+      "name": "Reunião de planejamento",
+      "description": "Pauta do trimestre.",
+      "location": "Rua Augusta, 100 - São Paulo",
+      "startedAt": "2026-09-14T21:30:00.000Z",
+      "estimatedFinishAt": "2026-09-14T22:20:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [
+        1440,
+        30
+      ],
+      "tags": [
+        "trabalho",
+        "saúde"
+      ],
+      "artifactTypes": [],
+      "revision": 4,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z",
+      "artifacts": [],
+      "subtaskIds": [],
+      "requests": []
+    },
+    "next": {
+      "id": "task-1",
+      "actor": "human",
+      "kind": "common",
+      "status": "todo",
+      "priority": "urgent",
+      "name": "Reunião (renomeada)",
+      "description": "Pauta do trimestre.",
+      "location": "Novo endereço",
+      "startedAt": "2026-09-14T21:30:00.000Z",
+      "estimatedFinishAt": "2026-09-14T22:20:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [
+        60
+      ],
+      "tags": [
+        "trabalho",
+        "saúde"
+      ],
+      "artifactTypes": [],
+      "revision": 5,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z",
+      "artifacts": [],
+      "subtaskIds": [],
+      "requests": []
+    },
+    "draft": {
+      "kind": "common",
+      "name": "Reunião de planejamento",
+      "status": "todo",
+      "priority": "high",
+      "startDate": "2026-09-14",
+      "startTime": "18:30",
+      "endDate": "2026-09-14",
+      "endTime": "19:20",
+      "description": "Pauta do trimestre.",
+      "location": "Rua Augusta, 100 - São Paulo",
+      "reminders": [
+        30,
+        1440
+      ],
+      "tags": [
+        "trabalho",
+        "saúde"
+      ],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "expected": {
+      "kind": "common",
+      "name": "Reunião (renomeada)",
+      "status": "todo",
+      "priority": "urgent",
+      "startDate": "2026-09-14",
+      "startTime": "18:30",
+      "endDate": "2026-09-14",
+      "endTime": "19:20",
+      "description": "Pauta do trimestre.",
+      "location": "Novo endereço",
+      "reminders": [
+        60
+      ],
+      "tags": [
+        "trabalho",
+        "saúde"
+      ],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    }
+  },
+  {
+    "name": "same value typed as before follows the new one",
+    "previous": {
+      "id": "task-1",
+      "actor": "human",
+      "kind": "common",
+      "status": "todo",
+      "priority": "high",
+      "name": "Reunião de planejamento",
+      "description": "Pauta do trimestre.",
+      "location": "Rua Augusta, 100 - São Paulo",
+      "startedAt": "2026-09-14T21:30:00.000Z",
+      "estimatedFinishAt": "2026-09-14T22:20:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [
+        1440,
+        30
+      ],
+      "tags": [
+        "trabalho",
+        "saúde"
+      ],
+      "artifactTypes": [],
+      "revision": 4,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z",
+      "artifacts": [],
+      "subtaskIds": [],
+      "requests": []
+    },
+    "next": {
+      "id": "task-1",
+      "actor": "human",
+      "kind": "common",
+      "status": "todo",
+      "priority": "urgent",
+      "name": "Reunião (renomeada)",
+      "description": "Pauta do trimestre.",
+      "location": "Novo endereço",
+      "startedAt": "2026-09-14T21:30:00.000Z",
+      "estimatedFinishAt": "2026-09-14T22:20:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [
+        60
+      ],
+      "tags": [
+        "trabalho",
+        "saúde"
+      ],
+      "artifactTypes": [],
+      "revision": 5,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z",
+      "artifacts": [],
+      "subtaskIds": [],
+      "requests": []
+    },
+    "draft": {
+      "kind": "common",
+      "name": "Reunião de planejamento",
+      "status": "todo",
+      "priority": "high",
+      "startDate": "2026-09-14",
+      "startTime": "18:30",
+      "endDate": "2026-09-14",
+      "endTime": "19:20",
+      "description": "Pauta do trimestre.",
+      "location": "Rua Augusta, 100 - São Paulo",
+      "reminders": [
+        30,
+        1440
+      ],
+      "tags": [
+        "trabalho",
+        "saúde"
+      ],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "expected": {
+      "kind": "common",
+      "name": "Reunião (renomeada)",
+      "status": "todo",
+      "priority": "urgent",
+      "startDate": "2026-09-14",
+      "startTime": "18:30",
+      "endDate": "2026-09-14",
+      "endTime": "19:20",
+      "description": "Pauta do trimestre.",
+      "location": "Novo endereço",
+      "reminders": [
+        60
+      ],
+      "tags": [
+        "trabalho",
+        "saúde"
+      ],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    }
+  },
+  {
+    "name": "dates and status",
+    "previous": {
+      "id": "task-1",
+      "actor": "human",
+      "kind": "common",
+      "status": "todo",
+      "priority": "high",
+      "name": "Reunião de planejamento",
+      "description": "Pauta do trimestre.",
+      "location": "Rua Augusta, 100 - São Paulo",
+      "startedAt": "2026-09-14T21:30:00.000Z",
+      "estimatedFinishAt": "2026-09-14T22:20:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [
+        1440,
+        30
+      ],
+      "tags": [
+        "trabalho",
+        "saúde"
+      ],
+      "artifactTypes": [],
+      "revision": 4,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z",
+      "artifacts": [],
+      "subtaskIds": [],
+      "requests": []
+    },
+    "next": {
+      "id": "task-1",
+      "actor": "human",
+      "kind": "common",
+      "status": "doing",
+      "priority": "high",
+      "name": "Reunião de planejamento",
+      "description": "Pauta do trimestre.",
+      "location": "Rua Augusta, 100 - São Paulo",
+      "startedAt": "2026-09-15T12:00:00.000Z",
+      "estimatedFinishAt": "2026-09-14T22:20:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [
+        1440,
+        30
+      ],
+      "tags": [
+        "trabalho",
+        "saúde"
+      ],
+      "artifactTypes": [],
+      "revision": 5,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z",
+      "artifacts": [],
+      "subtaskIds": [],
+      "requests": []
+    },
+    "draft": {
+      "kind": "common",
+      "name": "Reunião de planejamento",
+      "status": "done",
+      "priority": "high",
+      "startDate": "2026-09-14",
+      "startTime": "18:30",
+      "endDate": "2026-09-14",
+      "endTime": "19:20",
+      "description": "Pauta do trimestre.",
+      "location": "Rua Augusta, 100 - São Paulo",
+      "reminders": [
+        30,
+        1440
+      ],
+      "tags": [
+        "trabalho",
+        "saúde"
+      ],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "expected": {
+      "kind": "common",
+      "name": "Reunião de planejamento",
+      "status": "done",
+      "priority": "high",
+      "startDate": "2026-09-15",
+      "startTime": "09:00",
+      "endDate": "2026-09-14",
+      "endTime": "19:20",
+      "description": "Pauta do trimestre.",
+      "location": "Rua Augusta, 100 - São Paulo",
+      "reminders": [
+        30,
+        1440
+      ],
+      "tags": [
+        "trabalho",
+        "saúde"
+      ],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    }
+  }
+]
