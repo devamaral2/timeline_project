@@ -59,9 +59,10 @@ private const val SMOOTH_SCROLL_MAX_DAYS = 7
 
 @Composable
 fun AgendaScreen(
-    viewModel: AgendaViewModel = hiltViewModel(),
+    onOpenTask: (String) -> Unit = {},
     /** O toque numa janela livre: o chat (ticket 12) abre uma conversa nova com ela anexada. */
     onPlanFreeWindow: (FreeWindow) -> Unit = {},
+    viewModel: AgendaViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     // O primeiro ON_RESUME é o de abrir a tela, e o ViewModel já leu a semana ao nascer.
@@ -77,6 +78,7 @@ fun AgendaScreen(
         onSelectDay = viewModel::selectDay,
         onRetry = viewModel::retry,
         onStatusClick = viewModel::openStatusPicker,
+        onOpenTask = onOpenTask,
         onVisibleDay = viewModel::showVisibleDay,
         onExtend = viewModel::extend,
         onPlanFreeWindow = onPlanFreeWindow,
@@ -127,6 +129,7 @@ fun AgendaContent(
     onSelectDay: (String) -> Unit,
     onRetry: () -> Unit,
     onStatusClick: (TaskCard) -> Unit,
+    onOpenTask: (String) -> Unit,
     onVisibleDay: (String) -> Unit,
     onExtend: (AgendaEdge) -> Unit,
     onPlanFreeWindow: (FreeWindow) -> Unit,
@@ -194,6 +197,7 @@ fun AgendaContent(
                     onSelectDay = onSelectDay,
                     onRetry = onRetry,
                     onStatusClick = onStatusClick,
+                    onOpenTask = onOpenTask,
                     onPlanFreeWindow = onPlanFreeWindow,
                     modifier = Modifier.fillMaxWidth().weight(1f),
                 )
@@ -204,6 +208,7 @@ fun AgendaContent(
                     onExtend = onExtend,
                     onRetry = onRetry,
                     onStatusClick = onStatusClick,
+                    onOpenTask = onOpenTask,
                     onPlanFreeWindow = onPlanFreeWindow,
                     modifier = Modifier.fillMaxWidth().weight(1f),
                 )
@@ -219,6 +224,7 @@ private fun DayPager(
     onSelectDay: (String) -> Unit,
     onRetry: () -> Unit,
     onStatusClick: (TaskCard) -> Unit,
+    onOpenTask: (String) -> Unit,
     onPlanFreeWindow: (FreeWindow) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -241,6 +247,7 @@ private fun DayPager(
                 now = state.now,
                 onRetry = onRetry,
                 onStatusClick = onStatusClick,
+                onOpenTask = onOpenTask,
                 onPlanFreeWindow = onPlanFreeWindow,
             )
         }

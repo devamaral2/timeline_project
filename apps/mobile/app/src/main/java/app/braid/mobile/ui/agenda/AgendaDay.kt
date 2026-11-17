@@ -53,13 +53,14 @@ fun AgendaDay(
     now: Instant,
     onRetry: () -> Unit,
     onStatusClick: (TaskCard) -> Unit,
+    onOpenTask: (String) -> Unit,
     onPlanFreeWindow: (FreeWindow) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier.fillMaxWidth()) {
         when {
             rows != null && rows.isEmpty() -> FreeDay()
-            rows != null -> AgendaRows(dayKey, rows, now, onStatusClick, onPlanFreeWindow)
+            rows != null -> AgendaRows(dayKey, rows, now, onStatusClick, onOpenTask, onPlanFreeWindow)
             load == AgendaLoad.Failed -> LoadFailed(onRetry)
             else -> LoadingDay()
         }
@@ -73,6 +74,7 @@ fun AgendaRows(
     rows: List<AgendaRow>,
     now: Instant,
     onStatusClick: (TaskCard) -> Unit,
+    onOpenTask: (String) -> Unit,
     onPlanFreeWindow: (FreeWindow) -> Unit,
 ) {
     HorizontalDivider(color = MaterialTheme.colorScheme.outline)
@@ -83,7 +85,12 @@ fun AgendaRows(
                 val card = row.card
                 // O web só abre a escolha pelo ponto azul da tarefa de referência; as outras linhas não reagem ao glifo aqui.
                 val opensPicker = card.actor == TaskActor.Human && card.status == null
-                TaskRow(card = card, now = now, onStatusClick = if (opensPicker) ({ onStatusClick(card) }) else null)
+                TaskRow(
+                    card = card,
+                    now = now,
+                    onClick = { onOpenTask(card.id) },
+                    onStatusClick = if (opensPicker) ({ onStatusClick(card) }) else null,
+                )
             }
             is AgendaRow.Free -> FreeTimeRow(row.slot, now) { onPlanFreeWindow(row.window(dayKey)) }
         }

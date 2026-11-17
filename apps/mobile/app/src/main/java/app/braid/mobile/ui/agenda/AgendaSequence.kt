@@ -65,6 +65,7 @@ fun AgendaSequence(
     onExtend: (AgendaEdge) -> Unit,
     onRetry: () -> Unit,
     onStatusClick: (TaskCard) -> Unit,
+    onOpenTask: (String) -> Unit,
     onPlanFreeWindow: (FreeWindow) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -96,7 +97,7 @@ fun AgendaSequence(
             val rows = state.rowsOn(dayKey).orEmpty()
             Column(Modifier.fillMaxWidth()) {
                 DayHeading(dayKey, state.todayKey, tasks = rows.count { it is AgendaRow.Task })
-                AgendaRows(dayKey, rows, state.now, onStatusClick, onPlanFreeWindow)
+                AgendaRows(dayKey, rows, state.now, onStatusClick, onOpenTask, onPlanFreeWindow)
             }
         }
         item(key = "status") {
