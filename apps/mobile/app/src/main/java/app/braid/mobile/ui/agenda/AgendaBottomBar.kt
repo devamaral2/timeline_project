@@ -29,6 +29,7 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.braid.mobile.core.designsystem.LucideIcons
+import app.braid.mobile.core.designsystem.NavIcons
 import app.braid.mobile.core.designsystem.braidBrand
 
 /**
@@ -138,8 +139,8 @@ private fun BottomBarButton(
 
 private fun BottomBarItem.vector(filled: Boolean): ImageVector =
     when (this) {
-        BottomBarItem.Tasks -> LucideIcons.listChecks(LucideIcons.NAV_STROKE)
-        BottomBarItem.Agenda -> LucideIcons.calendarDays(LucideIcons.NAV_STROKE)
-        BottomBarItem.Notes -> LucideIcons.fileText(LucideIcons.NAV_STROKE)
+        BottomBarItem.Tasks -> NavIcons.tasks()
+        BottomBarItem.Agenda -> NavIcons.agenda()
+        BottomBarItem.Notes -> NavIcons.documents()
         BottomBarItem.Search -> LucideIcons.messageSquare(LucideIcons.NAV_STROKE, filled = filled)
     }

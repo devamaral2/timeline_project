@@ -393,22 +393,27 @@
   .navTabs { position: relative; display: flex; align-items: center; gap: 4px; padding: 6px; transition: margin-right 300ms cubic-bezier(.5,0,.2,1) 50ms; }
   .bottomNav[data-menu-open] .navTabs { margin-right: 76px; transition: margin-right 500ms cubic-bezier(.22,1,.36,1); }
   /* A pilula da tela atual e uma so e desliza ate a secao escolhida
-     (`--nav-index`, 0 a 2). As tres secoes sao iguais e dividem a dock menos os
-     respiros (20 ao todo). Ao trocar, a borda do lado do destino sai na frente
-     (`data-dir`) e a pilula estica ate la. */
-  .navTabs::before { content: ""; position: absolute; top: 6px; bottom: 6px; left: calc(6px + var(--nav-index, 1) * ((100% - 20px) / 3 + 4px)); right: calc(6px + (2 - var(--nav-index, 1)) * ((100% - 20px) / 3 + 4px)); border-radius: 26px; background: var(--nav-pill); transition: left 420ms var(--ease-out), right 420ms var(--ease-out), background-color 300ms, opacity 200ms; }
+     (`--nav-index`, 0 a 2). A dock menos os respiros (20 ao todo) se divide em
+     3,8 partes: a aba atual leva 1,8 (ela mostra o titulo) e as outras uma cada.
+     Ao trocar, a borda do lado do destino sai na frente (`data-dir`) e a
+     pilula estica ate la. */
+  .navTabs::before { content: ""; position: absolute; top: 6px; bottom: 6px; left: calc(6px + var(--nav-index, 1) * ((100% - 20px) / 3.8 + 4px)); right: calc(6px + (2 - var(--nav-index, 1)) * ((100% - 20px) / 3.8 + 4px)); border-radius: 26px; background: var(--nav-pill); transition: left 420ms var(--ease-out), right 420ms var(--ease-out), background-color 300ms, opacity 200ms; }
   .bottomNav[data-dir="r"] .navTabs::before { transition: right 260ms var(--ease-out), left 460ms var(--ease-out), background-color 300ms, opacity 200ms; }
   .bottomNav[data-dir="l"] .navTabs::before { transition: left 260ms var(--ease-out), right 460ms var(--ease-out), background-color 300ms, opacity 200ms; }
-  /* So icones: o nome de cada tela fica no `aria-label`. */
-  .navTabs > button, .navTabs > a { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; min-width: 0; height: 52px; border-radius: 26px; color: var(--muted); cursor: pointer; transition: color 250ms; }
-  .navTabs > [aria-current="page"] { color: var(--nav-pill-ink); }
-  .navTabs > a > svg, .navTabs > button > svg { width: 24px; height: 24px; stroke-width: 1.75; }
-  .navTabs > * > svg { transform: scale(.9); transition: transform 500ms cubic-bezier(.34,1.56,.64,1); }
-  .navTabs > [aria-current="page"] > svg { transform: none; }
-  .navTabs > :active > svg { transform: scale(.8); transition-duration: 100ms; }
-  .bottomNav[data-menu-open] .navTabs > [aria-current="page"] > svg { transform: scale(.9); }
+  /* Icone em todas as abas; o titulo so na atual, que cresce para abrigá-lo. */
+  .navTabs > button, .navTabs > a { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; min-width: 0; height: 52px; border-radius: 26px; color: var(--muted); font-size: 14px; font-weight: 600; white-space: nowrap; cursor: pointer; transition: flex-grow 420ms var(--ease-out), color 250ms; }
+  .navTabs > [aria-current="page"] { flex-grow: 1.8; color: var(--nav-pill-ink); }
+  .navGlyph { position: relative; display: block; flex: none; width: 24px; height: 24px; }
+  .navTabs svg { display: block; width: 24px; height: 24px; stroke-width: 1.75; }
+  .navTabs .navGlyph > svg { transform: scale(.9); transition: transform 500ms cubic-bezier(.34,1.56,.64,1); }
+  .navTabs > [aria-current="page"] .navGlyph > svg { transform: none; }
+  .navTabs > :active .navGlyph > svg { transform: scale(.8); transition-duration: 100ms; }
+  .bottomNav[data-menu-open] .navTabs > [aria-current="page"] .navGlyph > svg { transform: scale(.9); }
+  /* O titulo: fechado nas outras abas, abre ao lado do icone na atual. */
+  .navLabel { display: block; max-width: 0; margin-left: 0; overflow: hidden; text-overflow: ellipsis; opacity: 0; transition: max-width 420ms var(--ease-out), margin-left 420ms var(--ease-out), opacity 200ms linear; }
+  .navTabs > [aria-current="page"] .navLabel { max-width: 96px; margin-left: 8px; opacity: 1; transition-delay: 0s, 0s, 110ms; }
   /* O ponto: ha busca ou filtro ativo na tela atual. */
-  .navDot { position: absolute; top: 9px; left: calc(50% + 1px); width: 7px; height: 7px; border-radius: 50%; background: var(--brand-accent); box-shadow: 0 0 0 2px var(--nav-pill); transform: scale(0); transition: transform 350ms cubic-bezier(.34,1.56,.64,1); }
+  .navDot { position: absolute; top: -5px; left: 13px; width: 7px; height: 7px; border-radius: 50%; background: var(--brand-accent); box-shadow: 0 0 0 2px var(--nav-pill); transform: scale(0); transition: transform 350ms cubic-bezier(.34,1.56,.64,1); }
   .navTabs > [aria-current="page"] .navDot[data-on] { transform: none; }
   /* O circulo do chat: um aro da cor da dock em volta do robo. Com o menu
      aberto a dock passa por baixo dele e o aro some. */
@@ -641,6 +646,7 @@ a.chatEntityRow:hover .chatEntityName { text-decoration: underline; text-underli
   .bottomNav[data-hub-open] .navTabs::before { opacity: 0; }
   .bottomNav[data-hub-open] .navTabs > [aria-current="page"] { border-color: var(--input); color: var(--ink); }
   .bottomNav[data-hub-open] .navTabs svg { width: 20px; height: 20px; }
+  .bottomNav[data-hub-open] .navTabs .navGlyph { width: 20px; height: 20px; }
   /* Com o chat aberto, o lugar do robo e do X que fecha o painel (`.commandCore`), dentro do mesmo aro. */
 
   /* O voo do botao do Hermes (`hermes-flight.ts`): o circulo sai da barra e
@@ -755,7 +761,7 @@ a.chatEntityRow:hover .chatEntityName { text-decoration: underline; text-underli
 
 @keyframes flightCome { from { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
-  .bottomNav, .navScrim, .navTabs::before, .navTabs > * > svg, .navDot { transition-duration: .01ms !important; transition-delay: 0s !important; }
+  .bottomNav, .navScrim, .navTabs::before, .navTabs svg, .navLabel, .navDot { transition-duration: .01ms !important; transition-delay: 0s !important; }
 }
 @keyframes flightAway { to { opacity: 0; } }
 @keyframes flightRise { from { transform: translateY(14px); } }

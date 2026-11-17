@@ -9,8 +9,8 @@ import styles from "./section-menu.module.css";
 /** De quem são as tarefas: três listas como as outras, cada uma com o ponto da cor do seu modo. */
 const MODE_LISTS: { id: ViewModeId; name: string; desc: string; notesDesc: string; Icon: LucideIcon }[] = [
   { id: "all", name: "Todos", desc: "você e agentes", notesDesc: "você e agentes", Icon: Layers },
-  { id: "human", name: "Você", desc: "só as suas tarefas", notesDesc: "só os seus artefatos", Icon: User },
-  { id: "agent", name: "Agentes", desc: "só tarefas de agentes", notesDesc: "só artefatos de agentes", Icon: Bot },
+  { id: "human", name: "Você", desc: "só as suas tarefas", notesDesc: "só os seus documentos", Icon: User },
+  { id: "agent", name: "Agentes", desc: "só tarefas de agentes", notesDesc: "só documentos de agentes", Icon: Bot },
 ];
 
 /** A ordem da cascata: o que está mais perto do polegar sobe primeiro. */

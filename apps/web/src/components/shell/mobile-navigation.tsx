@@ -1,9 +1,9 @@
 "use client";
 
-import { ArrowLeft, CalendarDays, Check, ChevronDown, FileText, Plus, Search, SquareCheck, X } from "lucide-react";
+import { ArrowLeft, CalendarDays, Check, ChevronDown, FileText, Plus, Search, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { type CSSProperties, type KeyboardEvent as KeyDownArgs, type MouseEvent as ClickArgs, type RefObject, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { type CSSProperties, type KeyboardEvent as KeyDownArgs, type MouseEvent as ClickArgs, type ReactNode, type RefObject, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { creatableItemTypes, ICON_STROKE_WIDTH, visualForItemType } from "@/components/tasks/task-visuals";
 import { AgentChatPanel, agentEntityHref, useAgendaChat } from "@/components/hub/agent-chat-panel";
 import { EXAMPLE_TODAY, exampleTasksOn, type ExampleStatus } from "@/components/agenda/agenda-examples";
@@ -11,6 +11,7 @@ import { CalendarPicker, type DateField, TaskScheduleFields } from "@/components
 import { NotificationFeed, useNotificationFeed } from "./notification-bell";
 import { type Box, boxOf, canFly, FLIGHT_BACK_MS, FLIGHT_OUT_MS, flightKeyframes, type HermesDockDetail, hermesDockEvent, hermesMarkIn } from "@/components/ui/hermes-flight";
 import { HermesBot, useHermesBotState } from "@/components/ui/hermes-bot";
+import { AgendaNavIcon, DocumentsNavIcon, TasksNavIcon } from "@/components/ui/nav-icons";
 import { SettingsView } from "./settings-view";
 import styles from "./shell.module.css";
 import type { HubCommandId } from "@/components/hub/hub-commands";
@@ -20,6 +21,11 @@ import { useViewMode } from "@/lib/tasks/view-mode";
 import { type SectionId, useSectionMenu } from "@/lib/navigation/section-menu";
 import { SectionMenu } from "./section-menu";
 import { TaskStatusIcon, statusView } from "@/components/agenda/task-controls";
+
+/** O rosto de uma aba: ícone (com o ponto de filtro ativo) e o título, que só aparece na aba atual. */
+function NavFace({ label, dot, children }: { label: string; dot?: boolean; children: ReactNode }) {
+  return <><span className={styles.navGlyph}>{children}<i className={styles.navDot} data-on={dot ? "" : undefined} aria-hidden /></span><span className={styles.navLabel} aria-hidden>{label}</span></>;
+}
 
 type Kind = "Tarefa" | "Nota";
 type Picker = "taskType" | "status" | "priority" | DateField;
@@ -96,7 +102,7 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
   const menuTabRef = useRef<HTMLElement | null>(null);
   const menuId = useId();
   const section: SectionId = onTasks ? "tasks" : onNotes ? "notes" : "agenda";
-  const sectionTitle = onTasks ? "Tarefas" : onNotes ? "Artefatos" : "Agenda";
+  const sectionTitle = onTasks ? "Tarefas" : onNotes ? "Documentos" : "Agenda";
   const sectionMenu = useSectionMenu(section);
   // De que lado a pílula sai na frente ao trocar de tela.
   const navIndex = onTasks ? 0 : onNotes ? 2 : 1;
@@ -396,15 +402,15 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
         <SectionMenu id={menuId} section={section} title={sectionTitle} open={menuOpen} onClose={() => setMenuOpen(false)} structuredSettings={Boolean(userId)} />
         <div className={styles.navTabs}>
           {tasksHref ? (
-            <Link href={tasksHref} aria-label="Tarefas" aria-current={onTasks ? "page" : undefined} aria-expanded={onTasks ? menuOpen : undefined} aria-controls={onTasks ? menuId : undefined} data-no-motion={onTasks ? "" : undefined} onClick={event => tabClick(event, onTasks)}><SquareCheck aria-hidden /><i className={styles.navDot} data-on={onTasks && sectionMenu?.filtered ? "" : undefined} aria-hidden /></Link>
+            <Link href={tasksHref} aria-label="Tarefas" aria-current={onTasks ? "page" : undefined} aria-expanded={onTasks ? menuOpen : undefined} aria-controls={onTasks ? menuId : undefined} data-no-motion={onTasks ? "" : undefined} onClick={event => tabClick(event, onTasks)}><NavFace label="Tarefas" dot={onTasks && sectionMenu?.filtered}><TasksNavIcon /></NavFace></Link>
           ) : (
-            <button type="button" aria-label="Tarefas" onClick={() => openPanel("Tarefa")} aria-haspopup="dialog" aria-expanded={panel === "Tarefa"} aria-controls={dialogId}><SquareCheck aria-hidden /></button>
+            <button type="button" aria-label="Tarefas" onClick={() => openPanel("Tarefa")} aria-haspopup="dialog" aria-expanded={panel === "Tarefa"} aria-controls={dialogId}><NavFace label="Tarefas"><TasksNavIcon /></NavFace></button>
           )}
-          <Link href={userId ? `/${userId}` : "/mockups/tarefas"} aria-label="Agenda" aria-current={onAgenda ? "page" : undefined} aria-expanded={onAgenda ? menuOpen : undefined} aria-controls={onAgenda ? menuId : undefined} data-no-motion={onAgenda ? "" : undefined} onClick={event => tabClick(event, onAgenda)}><CalendarDays aria-hidden /><i className={styles.navDot} data-on={onAgenda && sectionMenu?.filtered ? "" : undefined} aria-hidden /></Link>
+          <Link href={userId ? `/${userId}` : "/mockups/tarefas"} aria-label="Agenda" aria-current={onAgenda ? "page" : undefined} aria-expanded={onAgenda ? menuOpen : undefined} aria-controls={onAgenda ? menuId : undefined} data-no-motion={onAgenda ? "" : undefined} onClick={event => tabClick(event, onAgenda)}><NavFace label="Agenda" dot={onAgenda && sectionMenu?.filtered}><AgendaNavIcon /></NavFace></Link>
           {notesHref ? (
-            <Link href={notesHref} aria-label="Artefatos" aria-current={onNotes ? "page" : undefined} aria-expanded={onNotes ? menuOpen : undefined} aria-controls={onNotes ? menuId : undefined} data-no-motion={onNotes ? "" : undefined} onClick={event => tabClick(event, onNotes)}><FileText aria-hidden /><i className={styles.navDot} data-on={onNotes && sectionMenu?.filtered ? "" : undefined} aria-hidden /></Link>
+            <Link href={notesHref} aria-label="Documentos" aria-current={onNotes ? "page" : undefined} aria-expanded={onNotes ? menuOpen : undefined} aria-controls={onNotes ? menuId : undefined} data-no-motion={onNotes ? "" : undefined} onClick={event => tabClick(event, onNotes)}><NavFace label="Documentos" dot={onNotes && sectionMenu?.filtered}><DocumentsNavIcon /></NavFace></Link>
           ) : (
-            <button type="button" aria-label="Artefatos" onClick={() => openPanel("Nota")} aria-haspopup="dialog" aria-expanded={panel === "Nota"} aria-controls={dialogId}><FileText aria-hidden /></button>
+            <button type="button" aria-label="Documentos" onClick={() => openPanel("Nota")} aria-haspopup="dialog" aria-expanded={panel === "Nota"} aria-controls={dialogId}><NavFace label="Documentos"><DocumentsNavIcon /></NavFace></button>
           )}
         </div>
         </div>
@@ -429,7 +435,7 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
           <button type="button" className={styles.hubBack} onClick={backToChat} aria-label="Voltar para o chat"><ArrowLeft aria-hidden /></button>
           {hubView === "notifications" || hubView === "settings" ? null
             : hubView === "create" ? <fieldset className={styles.creationToggle} aria-label="Tipo de criação">{(["Tarefa", "Nota"] as Kind[]).map(value => { const Icon = icons[value]; return <button type="button" key={value} aria-pressed={kind === value} onClick={() => { if (userId) { openCreation(value === "Tarefa" ? "tarefas/nova" : "notas/nova", ""); return; } setKind(value); setActivePicker(null); setNotice(""); setFormPicker(false); }}><Icon aria-hidden /><span>{value}</span></button>; })}</fieldset>
-            : <label className={styles.hubSearch}><Search aria-hidden /><input aria-label="Pesquisar tarefas e artefatos" value={query} onChange={event => setQuery(event.target.value)} placeholder="Buscar tarefas e artefatos" autoFocus /></label>}
+            : <label className={styles.hubSearch}><Search aria-hidden /><input aria-label="Pesquisar tarefas e documentos" value={query} onChange={event => setQuery(event.target.value)} placeholder="Buscar tarefas e documentos" autoFocus /></label>}
         </div>}
         <div className={styles.hubContent}>
         {panel === "hub" && hubView === "create" && activePicker ? <div className={styles.pickerView}>
@@ -519,7 +525,7 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
             <label>{kind === "Tarefa" ? taskDetailCopy[taskType].label : kind === "Nota" ? "Conteúdo da nota" : category === "Alimentação" ? "Refeição e preparo" : category === "Exercício" ? "Treino e objetivo" : "Detalhes"}<textarea className={styles.entityControl} rows={2} value={draft.details ?? ""} onChange={event => updateDraft("details", event.target.value)} placeholder={kind === "Tarefa" ? taskDetailCopy[taskType].placeholder : kind === "Nota" ? `Suas anotações sobre ${category.toLocaleLowerCase("pt-BR")}…` : category === "Alimentação" ? "Ingredientes, porções ou modo de preparo…" : category === "Exercício" ? "Exercícios, séries ou duração…" : "Acrescente o que for importante…"} /></label>
           </div> : <div className={styles.manualPanel}>
           {panel !== "hub" && <>
-          <label className={styles.hubSearch}><Search aria-hidden /><input aria-label="Buscar tarefas e artefatos" value={query} onChange={event => setQuery(event.target.value)} placeholder={`Buscar ${panel === "Tarefa" ? "tarefas" : "notas"}`} /></label>
+          <label className={styles.hubSearch}><Search aria-hidden /><input aria-label="Buscar tarefas e documentos" value={query} onChange={event => setQuery(event.target.value)} placeholder={`Buscar ${panel === "Tarefa" ? "tarefas" : "notas"}`} /></label>
           <div className={styles.manualHeading}><h3>{query ? "Resultados" : "No seu espaço"}</h3><button type="button" onClick={() => { setCreating(!creating); setNotice(""); }}><Plus aria-hidden />Criar novo</button></div>
           {creating && <form className={styles.quickCreate} onSubmit={event => {
             event.preventDefault();

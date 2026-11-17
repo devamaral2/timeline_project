@@ -132,7 +132,8 @@ internal fun SectionLabel(text: String) {
 @Composable
 internal fun MealNote(data: MealItemDto) {
     val palette = eventDetailPalette()
-    if (data.description.isNotBlank()) {
+    // O texto digitado so aparece enquanto nao ha a lista de alimentos: com ela, repeti-lo seria redundante.
+    if (data.description.isNotBlank() && data.foodItems.isEmpty()) {
         Text(data.description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
     val generationStatus = data.generation?.status
