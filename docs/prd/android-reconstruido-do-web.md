@@ -347,7 +347,7 @@ apontada para essa API falsa; dispara as ações do usuário; e confere o `UiSta
 
 Há uma fronteira só para o comportamento das telas: a **rede**. Abaixo dela, um `MockWebServer` serve as fixtures;
 acima, tudo é código real do app. As únicas outras trocas são pelas fronteiras do sistema operacional, cada uma atrás
-de uma interface pequena: relógio, agendador de alarmes, reconhecimento de voz e armazenamento cifrado. Não há
+de uma interface pequena: relógio, agendador de alarmes, notificações do sistema, reconhecimento de voz e armazenamento cifrado. Não há
 repositórios falsos escritos à mão.
 
 A lógica portada à mão do TS é conferida no mesmo espírito: as funções Kotlin recebem as entradas das fixtures geradas
@@ -422,3 +422,6 @@ screenshot dos dois no PR.
 - Se o web mudar enquanto a reescrita anda, a mudança entra na fase que cobre aquela tela, ou numa linha pendente em
   `docs/mobile-parity.md` se a fase já passou. A regra de paridade do `AGENTS.md` vale desde o primeiro PR.
 - Compilar e testar o Kotlin exige JDK 17 ou mais novo e o Android SDK no ambiente.
+- Onde esta spec e o web divergem no detalhe, vale o web, e as divergências já levantadas estão listadas em "Onde o ticket e
+  o web divergem, vale o web" em `.scratch/android-reconstruido-do-web/issues/README.md` (inclusive a tela cheia do chat, as
+  fontes Figtree, Newsreader e JetBrains Mono no lugar de Manrope e Outfit, e a sessão que sobrevive a 5xx na renovação).

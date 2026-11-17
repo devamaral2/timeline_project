@@ -3,11 +3,9 @@ package app.braid.mobile.data.reminder
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringSetPreferencesKey
-import kotlinx.coroutines.flow.catch
+import app.braid.mobile.data.preferences.safeData
 import kotlinx.coroutines.flow.first
-import java.io.IOException
 import java.time.Instant
 
 /**
@@ -22,8 +20,8 @@ internal class AnchoredKeys(
 
     suspend fun read(): Map<String, Instant> {
         val entries =
-            store.data
-                .catch { failure -> if (failure is IOException) emit(emptyPreferences()) else throw failure }
+            store
+                .safeData()
                 .first()[key]
                 .orEmpty()
         return entries.mapNotNull(::decode).toMap()

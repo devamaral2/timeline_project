@@ -1,5 +1,6 @@
 package app.braid.mobile.domain.chat
 
+import app.braid.mobile.domain.markdown.MarkdownInline
 import java.util.Locale
 
 /*
@@ -51,36 +52,6 @@ fun shortUrl(href: String): String {
     return if (first.isNullOrEmpty()) "${parts[0]}…" else "${parts[0]}/$first…"
 }
 
-/** Um trecho de texto em linha, depois da leitura do markdown. */
-sealed interface Inline {
-    data class Text(
-        val value: String,
-    ) : Inline
-
-    data class Code(
-        val value: String,
-    ) : Inline
-
-    data class Strong(
-        val children: List<Inline>,
-    ) : Inline
-
-    data class Emphasis(
-        val children: List<Inline>,
-    ) : Inline
-
-    data class Strike(
-        val children: List<Inline>,
-    ) : Inline
-
-    data class Link(
-        val href: String,
-        val children: List<Inline>,
-    ) : Inline
-
-    data object LineBreak : Inline
-}
-
 /** Caminhos de arquivo (`/opt/data/token.json`) e constantes (`NOT_AUTHENTICATED`): viram código sem crase. */
 private val TECHNICAL = Regex("(?<![\\w/.:])/(?:[\\w.-]+/)+[\\w.-]*\\w|\\b[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+\\b")
 
@@ -90,23 +61,23 @@ private const val LEAD_WORDS = 4
 private const val LABEL_LENGTH = 40
 private val WHITESPACE = Regex("\\s+")
 
-private fun splitTechnical(value: String): List<Inline> {
-    val parts = mutableListOf<Inline>()
+private fun splitTechnical(value: String): List<MarkdownInline> {
+    val parts = mutableListOf<MarkdownInline>()
     var last = 0
     for (match in TECHNICAL.findAll(value)) {
-        if (match.range.first > last) parts += Inline.Text(value.substring(last, match.range.first))
-        parts += Inline.Code(match.value)
+        if (match.range.first > last) parts += MarkdownInline.Text(value.substring(last, match.range.first))
+        parts += MarkdownInline.Code(match.value)
         last = match.range.last + 1
     }
-    if (parts.isEmpty()) return listOf(Inline.Text(value))
-    if (last < value.length) parts += Inline.Text(value.substring(last))
+    if (parts.isEmpty()) return listOf(MarkdownInline.Text(value))
+    if (last < value.length) parts += MarkdownInline.Text(value.substring(last))
     return parts
 }
 
-private fun withLead(children: List<Inline>): List<Inline> {
-    val first = children.firstOrNull() as? Inline.Text ?: return children
-    if (first.value.isEmpty()) return children
-    val match = LEAD.find(first.value) ?: return children
+private fun withLead(children: List<MarkdownInline>): List<MarkdownInline> {
+    val first = children.firstOrNull() as? MarkdownInline.Text ?: return children
+    if (first.text.isEmpty()) return children
+    val match = LEAD.find(first.text) ?: return children
     if (match.groupValues[1]
             .trim()
             .split(WHITESPACE)
@@ -115,37 +86,37 @@ private fun withLead(children: List<Inline>): List<Inline> {
         return children
     }
     return listOf(
-        Inline.Strong(listOf(Inline.Text(match.value))),
-        Inline.Text(first.value.substring(match.value.length)),
+        MarkdownInline.Strong(listOf(MarkdownInline.Text(match.value))),
+        MarkdownInline.Text(first.text.substring(match.value.length)),
     ) + children.drop(1)
 }
 
 private fun splitTechnicalIn(
-    children: List<Inline>,
+    children: List<MarkdownInline>,
     inLink: Boolean,
-): List<Inline> =
+): List<MarkdownInline> =
     children.flatMap { child ->
         when (child) {
-            is Inline.Text -> if (inLink || child.value.isEmpty()) listOf(child) else splitTechnical(child.value)
-            is Inline.Strong -> listOf(Inline.Strong(splitTechnicalIn(child.children, inLink)))
-            is Inline.Emphasis -> listOf(Inline.Emphasis(splitTechnicalIn(child.children, inLink)))
-            is Inline.Strike -> listOf(Inline.Strike(splitTechnicalIn(child.children, inLink)))
-            is Inline.Link -> listOf(Inline.Link(child.href, splitTechnicalIn(child.children, true)))
-            is Inline.Code, Inline.LineBreak -> listOf(child)
+            is MarkdownInline.Text -> if (inLink || child.text.isEmpty()) listOf(child) else splitTechnical(child.text)
+            is MarkdownInline.Strong -> listOf(MarkdownInline.Strong(splitTechnicalIn(child.content, inLink)))
+            is MarkdownInline.Emphasis -> listOf(MarkdownInline.Emphasis(splitTechnicalIn(child.content, inLink)))
+            is MarkdownInline.Strike -> listOf(MarkdownInline.Strike(splitTechnicalIn(child.content, inLink)))
+            is MarkdownInline.Link -> listOf(MarkdownInline.Link(child.href, splitTechnicalIn(child.content, true)))
+            is MarkdownInline.Code, MarkdownInline.LineBreak -> listOf(child)
         }
     }
 
 /** O texto corrido de um trecho, sem marcação. */
-fun plainText(children: List<Inline>): String =
+fun plainText(children: List<MarkdownInline>): String =
     children.joinToString("") {
         when (it) {
-            is Inline.Text -> it.value
-            is Inline.Code -> it.value
-            is Inline.Strong -> plainText(it.children)
-            is Inline.Emphasis -> plainText(it.children)
-            is Inline.Strike -> plainText(it.children)
-            is Inline.Link -> plainText(it.children)
-            Inline.LineBreak -> "\n"
+            is MarkdownInline.Text -> it.text
+            is MarkdownInline.Code -> it.text
+            is MarkdownInline.Strong -> plainText(it.content)
+            is MarkdownInline.Emphasis -> plainText(it.content)
+            is MarkdownInline.Strike -> plainText(it.content)
+            is MarkdownInline.Link -> plainText(it.content)
+            MarkdownInline.LineBreak -> "\n"
         }
     }
 
@@ -157,14 +128,14 @@ sealed interface PolishedParagraph {
     ) : PolishedParagraph
 
     data class Body(
-        val children: List<Inline>,
+        val children: List<MarkdownInline>,
         val choices: List<String>,
     ) : PolishedParagraph
 }
 
 /** O que `remarkAnswer` faz num parágrafo: [nextIsList] diz se o bloco seguinte é uma lista. */
 fun polishParagraph(
-    children: List<Inline>,
+    children: List<MarkdownInline>,
     nextIsList: Boolean,
 ): PolishedParagraph {
     val text = plainText(children).trim()
@@ -175,4 +146,4 @@ fun polishParagraph(
 }
 
 /** Os termos técnicos de um trecho em linha viram código; é o que `remarkAnswer` faz em todo nó com filhos. */
-fun polishInline(children: List<Inline>): List<Inline> = splitTechnicalIn(children, inLink = false)
+fun polishInline(children: List<MarkdownInline>): List<MarkdownInline> = splitTechnicalIn(children, inLink = false)

@@ -69,6 +69,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.braid.mobile.core.designsystem.BraidDisplayFont
+import app.braid.mobile.core.designsystem.BraidIcons
 import app.braid.mobile.core.designsystem.BraidMonoFont
 import app.braid.mobile.core.designsystem.SvgIcon
 import app.braid.mobile.core.designsystem.SvgPart
@@ -78,13 +79,15 @@ import app.braid.mobile.domain.chat.ChatCommand
 import app.braid.mobile.domain.chat.end
 import app.braid.mobile.domain.chat.parseCommand
 import app.braid.mobile.domain.chat.start
+import app.braid.mobile.domain.request.PROMPT_MAX_LENGTH
+import app.braid.mobile.domain.request.appendTranscript
 import app.braid.mobile.domain.timeline.briefDate
+import app.braid.mobile.ui.agenda.freeDurationLabel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 
 /** Quanto a barra inferior (dock de 66dp com o respiro de baixo) ocupa: o chat termina logo acima dela. */
 private val DockReserve = 98.dp
-private const val MAX_PROMPT = 4000
 
 /**
  * O chat com o agente, que no celular ocupa a tela toda acima da barra inferior (como o web na largura mobile). Estado e
@@ -161,11 +164,11 @@ fun ChatScreen(
 ) {
     val scheme = MaterialTheme.colorScheme
     var prompt by rememberSaveable { mutableStateOf("") }
-    LaunchedEffect(promptEdits) { promptEdits.collect { prompt = it.take(MAX_PROMPT) } }
+    LaunchedEffect(promptEdits) { promptEdits.collect { prompt = it.take(PROMPT_MAX_LENGTH) } }
     LaunchedEffect(prompt) { onDraft(prompt) }
     // Enquanto o microfone está aberto o campo mostra o que já foi ouvido, depois do que estava escrito.
     val listening = state.voice.listening
-    val shown = if (listening && state.voice.heard.isNotEmpty()) joinHeard(prompt, state.voice.heard) else prompt
+    val shown = if (listening && state.voice.heard.isNotEmpty()) appendTranscript(prompt, state.voice.heard) else prompt
     val query = if (listening) null else parseCommand(prompt, commands.available)
     val matches = query?.matches.orEmpty()
     val density = LocalDensity.current
@@ -213,8 +216,8 @@ fun ChatScreen(
             state = state,
             prompt = shown,
             onPrompt = {
-                onTyped(it.take(MAX_PROMPT))
-                prompt = it.take(MAX_PROMPT)
+                onTyped(it.take(PROMPT_MAX_LENGTH))
+                prompt = it.take(PROMPT_MAX_LENGTH)
             },
             canSend = state.ready && state.pending == null && (shown.isNotBlank() || matches.isNotEmpty()),
             onSubmit = ::submit,
@@ -241,7 +244,7 @@ private fun ChatHeader(
                     .semantics { contentDescription = "Nova conversa" },
                 contentAlignment = Alignment.Center,
             ) {
-                SvgIcon(ChatIcons.plus, size = 20.dp, color = scheme.onSurfaceVariant, strokeWidth = 2f)
+                SvgIcon(BraidIcons.plus, size = 20.dp, color = scheme.onSurfaceVariant, strokeWidth = 2f)
             }
             Column(Modifier.weight(1f).padding(start = 4.dp)) {
                 Text(
@@ -377,8 +380,8 @@ private fun ChatHome(
 
 private fun commandIcon(command: ChatCommand): List<SvgPart> =
     when (command) {
-        ChatCommand.Task -> ChatIcons.calendarDays
-        ChatCommand.Document -> ChatIcons.fileText
+        ChatCommand.Task -> BraidIcons.calendarDays
+        ChatCommand.Document -> BraidIcons.fileText
         ChatCommand.Notifications -> ChatIcons.bell
         ChatCommand.Settings -> ChatIcons.settings
     }
@@ -605,7 +608,7 @@ private fun ChatField(
                     contentAlignment = Alignment.Center,
                 ) {
                     SvgIcon(
-                        ChatIcons.arrowUp,
+                        BraidIcons.arrowUp,
                         size = 20.dp,
                         color = if (canSend) scheme.onPrimary else scheme.outlineVariant,
                         strokeWidth = 2f,
@@ -641,7 +644,7 @@ private fun WindowChip(
         Box(
             Modifier.size(40.dp),
             contentAlignment = Alignment.Center,
-        ) { SvgIcon(ChatIcons.plus, size = 20.dp, color = brand, strokeWidth = 1.75f) }
+        ) { SvgIcon(BraidIcons.plus, size = 20.dp, color = brand, strokeWidth = 1.75f) }
         Column(Modifier.weight(1f)) {
             Text(
                 text = "Janela livre · ${if (window.dayKey == todayKey) "hoje" else briefDate(window.dayKey)}",
@@ -658,7 +661,7 @@ private fun WindowChip(
             )
         }
         Text(
-            text = durationShort(window.minutes),
+            text = freeDurationLabel(window.minutes),
             modifier = Modifier.padding(end = 4.dp),
             color = brand,
             fontFamily = BraidDisplayFont,
@@ -671,21 +674,9 @@ private fun WindowChip(
                 .clickable(role = Role.Button, onClick = onClear)
                 .semantics { contentDescription = "Tirar a janela livre do pedido" },
             contentAlignment = Alignment.Center,
-        ) { SvgIcon(ChatIcons.close, size = 20.dp, color = scheme.onSurfaceVariant, strokeWidth = 2f) }
+        ) { SvgIcon(BraidIcons.close, size = 20.dp, color = scheme.onSurfaceVariant, strokeWidth = 2f) }
     }
 }
-
-/** "2h 30min", "45min": a duração no chip da janela. */
-private fun durationShort(minutes: Int): String {
-    val hours = minutes / 60
-    val rest = minutes % 60
-    return listOfNotNull(if (hours > 0) "${hours}h" else null, if (rest > 0) "${rest}min" else null).joinToString(" ")
-}
-
-private fun joinHeard(
-    prompt: String,
-    heard: String,
-): String = (if (prompt.isNotEmpty()) "$prompt $heard" else heard).take(MAX_PROMPT)
 
 /** O botão que liga e desliga a transcrição: a onda do agente, apertada enquanto o microfone está aberto. */
 @Composable

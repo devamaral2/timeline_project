@@ -206,6 +206,11 @@ interface AgentRequestRepository {
     suspend fun cancel(id: String): AgentRequest
 }
 
+/** O Hermes está desligado nesta API (`AI_AUTOMATION`): a rota dele responde não encontrado. */
+class HermesOffException(
+    cause: Throwable? = null,
+) : Exception("O Hermes está desligado nesta API.", cause)
+
 class RequestNotFoundException(
     cause: Throwable? = null,
 ) : Exception("Pedido não encontrado.", cause)

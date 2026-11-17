@@ -20,7 +20,7 @@ Cada ticket cabe numa sessão: leia este arquivo, o ticket e o que ele manda ler
 - **Testes.** Uma fronteira só: o ViewModel da tela com a infraestrutura real (Retrofit, OkHttp, `Authenticator`,
   repositório, serialização) contra um `MockWebServer` que serve fixtures geradas dos schemas Zod. O teste confere o
   `UiState` e as requisições recebidas (método, caminho, query, corpo, `revision`, `Idempotency-Key`). Não escreva
-  repositórios falsos. Só relógio, alarmes, voz e armazenamento cifrado são trocados, cada um atrás de uma interface
+  repositórios falsos. Só relógio, alarmes, notificações do sistema, voz e armazenamento cifrado são trocados, cada um atrás de uma interface
   pequena. Toda lógica portada à mão do TS é conferida contra fixtures geradas pelas funções TS.
 - **Concorrência.** Toda criação manda `Idempotency-Key`; toda edição de tarefa de pessoa manda a `revision` lida, e o
   conflito relê a entidade e avisa. Concluir uma tarefa de pessoa envia `finishedAt` com o instante atual; sair de
@@ -52,6 +52,12 @@ na largura mobile. Nesses pontos, siga o web e ignore o critério contrário do 
 - **19:** permissão de microfone negada quando a escuta abriu sozinha ao abrir o chat não mostra aviso.
 - **21:** o tema é um interruptor claro/escuro, como no web, com o sistema decidindo até a primeira escolha.
 - **23:** o feed tem lido/não lido (marcar como lido e contador), como no web.
+- **12 (tela):** o chat abre em tela cheia, sem folha que se expande; a história 95 da spec ("folha que posso expandir")
+  vale só como "o chat cobre a tela de baixo e o voltar o fecha".
+- **01 e 21 (fontes):** as fontes são Figtree, Newsreader e JetBrains Mono, as que o web carrega; Manrope e Outfit, da
+  spec (história 116 e a decisão "Tema"), não são usadas.
+- **01 (sessão):** uma renovação que falha com 5xx ou por erro de rede (IO) mantém a sessão; só uma recusa 4xx do Auth
+  apaga os tokens e leva ao login, como o web.
 
 ## Ordem
 

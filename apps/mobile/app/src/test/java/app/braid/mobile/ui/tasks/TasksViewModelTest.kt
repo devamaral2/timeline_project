@@ -1,6 +1,5 @@
 package app.braid.mobile.ui.tasks
 
-import androidx.lifecycle.viewModelScope
 import app.braid.mobile.data.tasks.DefaultTaskRepository
 import app.braid.mobile.data.tasks.TasksApi
 import app.braid.mobile.domain.executor.ViewMode
@@ -15,9 +14,9 @@ import app.braid.mobile.support.TestBackend.Companion.fixture
 import app.braid.mobile.support.TestBackend.Companion.status
 import app.braid.mobile.support.TestGraph
 import app.braid.mobile.support.TestViewModes
+import app.braid.mobile.support.stopAndJoin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -70,9 +69,7 @@ class TasksViewModelTest {
 
     @After
     fun tearDown() {
-        // Uma leitura ainda em voo termina com o Main trocado, e não depois dele: o ViewModel não tem fim neste teste.
-        Thread.sleep(150)
-        created.forEach { it.viewModelScope.cancel() }
+        created.forEach { it.stopAndJoin() }
         viewModes.close()
         backend.close()
         Dispatchers.resetMain()
@@ -216,7 +213,13 @@ class TasksViewModelTest {
             awaitReads(5)
             val filtered = viewModel.state.first { it.query == "contrato" && it.cards?.size == 1 }
 
-            val url = lastRead()
+            // As leituras saem em sequência mas chegam ao servidor em qualquer ordem (cada uma abre a sua conexão): a que
+            // carrega a busca é a única com os três filtros, e o que ela manda vale, não qual chegou por último.
+            val url =
+                backend
+                    .requestsTo("GET", listPath)
+                    .map { it.requestUrl!! }
+                    .single { it.queryParameter("q") == "contrato" }
             assertEquals("trabalho", url.queryParameter("tag"))
             assertEquals("urgent,low", url.queryParameter("priority"))
             assertEquals("contrato", url.queryParameter("q"))

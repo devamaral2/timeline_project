@@ -1,6 +1,5 @@
 package app.braid.mobile.ui.tasks
 
-import androidx.lifecycle.viewModelScope
 import app.braid.mobile.data.tasks.DefaultTaskRepository
 import app.braid.mobile.data.tasks.TasksApi
 import app.braid.mobile.domain.executor.ViewMode
@@ -13,9 +12,9 @@ import app.braid.mobile.support.TestBackend
 import app.braid.mobile.support.TestBackend.Companion.fixture
 import app.braid.mobile.support.TestGraph
 import app.braid.mobile.support.TestViewModes
+import app.braid.mobile.support.stopAndJoin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -69,8 +68,7 @@ class TasksSubtasksViewModelTest {
 
     @After
     fun tearDown() {
-        Thread.sleep(150)
-        created.forEach { it.viewModelScope.cancel() }
+        created.forEach { it.stopAndJoin() }
         viewModes.close()
         backend.close()
         Dispatchers.resetMain()

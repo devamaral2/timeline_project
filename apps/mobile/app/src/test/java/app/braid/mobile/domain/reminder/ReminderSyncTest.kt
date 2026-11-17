@@ -1,5 +1,6 @@
 package app.braid.mobile.domain.reminder
 
+import app.braid.mobile.data.session.StoredSession
 import app.braid.mobile.data.tasks.DefaultTaskRepository
 import app.braid.mobile.data.tasks.TasksApi
 import app.braid.mobile.domain.session.SessionState
@@ -7,12 +8,13 @@ import app.braid.mobile.domain.session.SessionUser
 import app.braid.mobile.domain.task.TaskChanges
 import app.braid.mobile.support.FakeReminderAlarms
 import app.braid.mobile.support.FakeReminderNotifier
-import app.braid.mobile.support.InMemoryFiredKeys
+import app.braid.mobile.support.InMemorySessionStorage
 import app.braid.mobile.support.MutableClock
 import app.braid.mobile.support.TestBackend
 import app.braid.mobile.support.TestBackend.Companion.fixture
 import app.braid.mobile.support.TestBackend.Companion.status
 import app.braid.mobile.support.TestGraph
+import app.braid.mobile.support.TestReminderStores
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -26,7 +28,9 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import java.time.Instant
 
 /**
@@ -42,12 +46,19 @@ class ReminderSyncTest {
     private val clock = MutableClock(start)
     private val alarms = FakeReminderAlarms()
     private val notifier = FakeReminderNotifier()
-    private val fired = InMemoryFiredKeys()
+
+    @get:Rule
+    val folder = TemporaryFolder()
+
+    private lateinit var stores: TestReminderStores
+    private val fired get() = stores.fired
+    private val signedIn = StoredSession("access", "refresh", "user-1", "r@example.com", "Rafael")
     private lateinit var backend: TestBackend
     private lateinit var sync: ReminderSync
 
     @Before
     fun setUp() {
+        stores = TestReminderStores(folder.root.resolve("reminders.preferences_pb"))
         backend = TestBackend()
         backend.route("GET", "/api/tasks", fixture("notifications-agenda-page"))
         backend.route("GET", "/api/tasks/tracked", fixture("notifications-tracked"))
@@ -55,11 +66,30 @@ class ReminderSyncTest {
     }
 
     @After
-    fun tearDown() = backend.close()
+    fun tearDown() {
+        backend.close()
+        runBlocking { stores.close() }
+    }
 
-    private fun newSync(changes: TaskChanges = TaskChanges()): ReminderSync {
-        val api = TestGraph(backend).apis.create(TasksApi::class.java)
-        return ReminderSync(DefaultTaskRepository(api, changes), alarms, notifier, fired, clock)
+    /** Um [ReminderSync] sobre a mesma rede e os mesmos armazenamentos; [session] é o que o armazenamento cifrado guardou. */
+    private fun newSync(
+        changes: TaskChanges = TaskChanges(),
+        session: StoredSession? = signedIn,
+        maxScheduled: Int = MAX_SCHEDULED_ALARMS,
+    ): ReminderSync {
+        val graph = TestGraph(backend, InMemorySessionStorage(session))
+        val api = graph.apis.create(TasksApi::class.java)
+        return ReminderSync(
+            DefaultTaskRepository(api, changes),
+            alarms,
+            notifier,
+            fired,
+            stores.readKeys,
+            stores.schedule,
+            graph.sessionRepository,
+            clock,
+            maxScheduled,
+        )
     }
 
     private fun keyOf(
@@ -117,15 +147,7 @@ class ReminderSyncTest {
     @Test
     fun `only the nearest alarms are scheduled when there are too many`() =
         runBlocking {
-            val capped =
-                ReminderSync(
-                    DefaultTaskRepository(TestGraph(backend).apis.create(TasksApi::class.java)),
-                    alarms,
-                    notifier,
-                    fired,
-                    clock,
-                    maxScheduled = 2,
-                )
+            val capped = newSync(maxScheduled = 2)
 
             capped.refresh()
 
@@ -150,7 +172,7 @@ class ReminderSyncTest {
                     keyOf("meeting", meeting, 60),
                     keyOf("project", "2026-09-16T12:00:00.000Z", 2880),
                 ),
-                fired.stored.keys,
+                fired.read().keys,
             )
 
             // Ler de novo, ou reabrir o app, não mostra nada outra vez.
@@ -179,7 +201,7 @@ class ReminderSyncTest {
             sync.refresh()
 
             assertEquals(emptyList<Reminder>(), notifier.shown)
-            assertTrue(keyOf("meeting", meeting, 5) in fired.stored)
+            assertTrue(keyOf("meeting", meeting, 5) in fired.read())
         }
 
     @Test
@@ -198,7 +220,7 @@ class ReminderSyncTest {
             sync.fire(byOffset.getValue(keyOf("meeting", meeting, 5)))
 
             assertEquals(listOf(keyOf("meeting", meeting, 60)), notifier.shown.map { it.key })
-            assertTrue(keyOf("meeting", meeting, 5) in fired.stored)
+            assertTrue(keyOf("meeting", meeting, 5) in fired.read())
         }
 
     @Test
@@ -219,7 +241,7 @@ class ReminderSyncTest {
             clock.current = Instant.parse("2026-09-13T19:00:01.000Z")
             sync.fire(dayBefore)
             assertEquals(emptyList<Reminder>(), notifier.shown)
-            assertTrue(dayBefore.key in fired.stored)
+            assertTrue(dayBefore.key in fired.read())
 
             // Um minuto antes do fim da janela o mesmo aviso ainda aparece (chave nova, para não herdar o "já visto").
             val again = dayBefore.copy(key = "${dayBefore.key}-b")
@@ -305,18 +327,19 @@ class ReminderSyncTest {
     @Test
     fun `recording what settled forgets the keys whose task anchor is more than a day old`() =
         runBlocking {
-            fired.stored =
+            fired.write(
                 mapOf(
                     "old:2026-09-12T12:00:00.000Z:5" to Instant.parse("2026-09-12T12:00:00.000Z"),
                     "recent:2026-09-14T00:00:00.000Z:5" to Instant.parse("2026-09-14T00:00:00.000Z"),
-                )
+                ),
+            )
             clock.current = Instant.parse("2026-09-14T17:20:00.000Z")
 
             sync.refresh()
 
-            assertTrue("old:2026-09-12T12:00:00.000Z:5" !in fired.stored)
-            assertTrue("recent:2026-09-14T00:00:00.000Z:5" in fired.stored)
-            assertTrue(keyOf("meeting", meeting, 60) in fired.stored)
+            assertTrue("old:2026-09-12T12:00:00.000Z:5" !in fired.read())
+            assertTrue("recent:2026-09-14T00:00:00.000Z:5" in fired.read())
+            assertTrue(keyOf("meeting", meeting, 60) in fired.read())
         }
 
     @Test
@@ -368,12 +391,12 @@ class ReminderSyncTest {
         }
 
     @Test
-    fun `reading runs only while signed in and signing out cancels the alarms`() =
+    fun `reading runs only while signed in`() =
         runBlocking {
             val session = MutableStateFlow<SessionState>(SessionState.Unknown)
             val job =
                 CoroutineScope(Dispatchers.Default).launch {
-                    sync.runWhileSignedIn(session, ticks = MutableSharedFlow(), changes = MutableSharedFlow())
+                    sync.keepFreshWhileSignedIn(session, ticks = MutableSharedFlow(), changes = MutableSharedFlow())
                 }
             delay(100)
             assertEquals(0, backend.requestsTo("GET", "/api/tasks").size)
@@ -383,9 +406,139 @@ class ReminderSyncTest {
             withTimeout(5_000) { while (alarms.scheduled.size < 5) delay(10) }
 
             session.value = SessionState.SignedOut
-            withTimeout(5_000) { while (alarms.scheduled.isNotEmpty()) delay(10) }
-            assertTrue(fired.stored.isEmpty())
+            delay(200)
+            // A leitura parou; quem cancela os alarmes é `clearWhenSignedOut`, que não depende de a tela estar à vista.
+            assertEquals(5, alarms.scheduled.size)
             job.cancel()
+        }
+
+    @Test
+    fun `losing the session cancels the alarms and forgets what the device kept, with no screen running`() =
+        runBlocking {
+            sync.refresh()
+            stores.readKeys.write(mapOf("meeting:2026-09-14T18:00:00.000Z:60" to Instant.parse("2026-09-14T18:00:00Z")))
+            val session = MutableStateFlow<SessionState>(SessionState.Unknown)
+            val job = CoroutineScope(Dispatchers.Default).launch { sync.clearWhenSignedOut(session) }
+            delay(100)
+            assertEquals(5, alarms.scheduled.size)
+
+            session.value = SessionState.SignedIn(SessionUser("user-1", "Rafael", "r@example.com"))
+            delay(100)
+            assertEquals(5, alarms.scheduled.size)
+            session.value = SessionState.SignedOut
+
+            // A última coisa que `clear` apaga é o cronograma guardado.
+            withTimeout(5_000) { while (stores.schedule.read().isNotEmpty()) delay(10) }
+            assertTrue(alarms.scheduled.isEmpty())
+            assertTrue(fired.read().isEmpty())
+            assertTrue(stores.readKeys.read().isEmpty())
+            job.cancel()
+        }
+
+    @Test
+    fun `signing out also forgets the read keys and the saved schedule`() =
+        runBlocking {
+            sync.refresh()
+            stores.readKeys.write(mapOf("meeting:2026-09-14T18:00:00.000Z:60" to Instant.parse("2026-09-14T18:00:00Z")))
+
+            sync.clear()
+
+            assertTrue(stores.readKeys.read().isEmpty())
+            assertTrue(stores.schedule.read().isEmpty())
+        }
+
+    @Test
+    fun `an alarm that arrives with nobody signed in shows nothing and is dropped`() =
+        runBlocking {
+            sync.refresh()
+            val reminder =
+                alarms.scheduled.values
+                    .first()
+                    .reminder
+            val signedOut = newSync(session = null)
+
+            signedOut.fire(reminder)
+
+            assertEquals(emptyList<Reminder>(), notifier.shown)
+            assertTrue(reminder.key !in fired.read())
+            assertTrue(reminder.key !in alarms.scheduled)
+        }
+
+    @Test
+    fun `an alarm that wakes the app before the session was read still shows, because the stored session is read first`() =
+        runBlocking {
+            sync.refresh()
+            clock.current = Instant.parse("2026-09-14T17:00:30.000Z")
+            val reminder = alarms.scheduled.getValue(keyOf("meeting", meeting, 60)).reminder
+
+            // Processo novo: o estado da sessão ainda é "desconhecido".
+            newSync().fire(reminder)
+
+            assertEquals(listOf(reminder.key), notifier.shown.map { it.key })
+        }
+
+    @Test
+    fun `after a restart the saved schedule is scheduled again without the network`() =
+        runBlocking {
+            sync.refresh()
+            alarms.scheduled.clear() // o sistema apaga os alarmes ao reiniciar
+            backend.route("GET", "/api/tasks") { status(503) }
+            backend.route("GET", "/api/tasks/tracked") { status(503) }
+            val reads = backend.requestsTo("GET", "/api/tasks").size
+
+            newSync().rescheduleFromSaved()
+
+            assertEquals(5, alarms.scheduled.size)
+            assertTrue(alarms.scheduled.values.all { it.exact })
+            assertEquals(reads, backend.requestsTo("GET", "/api/tasks").size)
+        }
+
+    @Test
+    fun `a failed read leaves the saved schedule as it was`() =
+        runBlocking {
+            sync.refresh()
+            val saved = stores.schedule.read()
+            backend.route("GET", "/api/tasks") { status(503) }
+            backend.route("GET", "/api/tasks/tracked") { status(503) }
+
+            sync.refresh()
+
+            assertEquals(saved, stores.schedule.read())
+        }
+
+    @Test
+    fun `rescheduling after a long power-off shows what came due inside the hour once, and schedules only what is ahead`() =
+        runBlocking {
+            sync.refresh()
+            alarms.scheduled.clear()
+            // O aparelho voltou às 17:20Z: o aviso de 60 min (17:00Z) ainda vale; os de 30 e 5 min estão adiante.
+            clock.current = Instant.parse("2026-09-14T17:20:00.000Z")
+
+            val restarted = newSync()
+            restarted.rescheduleFromSaved()
+            restarted.rescheduleFromSaved()
+
+            assertEquals(listOf(keyOf("meeting", meeting, 60)), notifier.shown.map { it.key })
+            assertEquals(
+                setOf(
+                    keyOf("meeting", meeting, 30),
+                    keyOf("meeting", meeting, 5),
+                    keyOf("bill", "2026-09-15T13:00:00.000Z", 15),
+                    keyOf("project", "2026-09-16T12:00:00.000Z", 60),
+                ),
+                alarms.scheduled.keys,
+            )
+        }
+
+    @Test
+    fun `rescheduling with nobody signed in does nothing`() =
+        runBlocking {
+            sync.refresh()
+            alarms.scheduled.clear()
+
+            newSync(session = null).rescheduleFromSaved()
+
+            assertTrue(alarms.scheduled.isEmpty())
         }
 
     private suspend fun awaitAgendaReads(count: Int) =

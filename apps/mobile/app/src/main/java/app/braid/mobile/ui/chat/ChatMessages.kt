@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import app.braid.mobile.core.designsystem.BraidIcons
 import app.braid.mobile.core.designsystem.BraidMonoFont
 import app.braid.mobile.core.designsystem.SvgIcon
 import app.braid.mobile.core.designsystem.braidTokens
@@ -84,7 +85,7 @@ internal fun Spinner(
         animationSpec = infiniteRepeatable(tween(1000, easing = LinearEasing), RepeatMode.Restart),
         label = "spinnerAngle",
     )
-    SvgIcon(ChatIcons.spinner, size = size, color = color, strokeWidth = 2.2f, modifier = modifier.rotate(angle))
+    SvgIcon(BraidIcons.spinner, size = size, color = color, strokeWidth = 2.2f, modifier = modifier.rotate(angle))
 }
 
 /** A mensagem de quem escreve: um cartão com fio. */
@@ -177,7 +178,7 @@ internal fun EntityRows(
                     contentAlignment = Alignment.Center,
                 ) {
                     SvgIcon(
-                        if (entity.kind == EntityKind.Task) ChatIcons.calendarDays else ChatIcons.fileText,
+                        if (entity.kind == EntityKind.Task) BraidIcons.calendarDays else BraidIcons.fileText,
                         size = 20.dp,
                         color = scheme.onSurfaceVariant,
                         strokeWidth = 1.75f,
@@ -196,7 +197,7 @@ internal fun EntityRows(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-                if (open != null) SvgIcon(ChatIcons.chevronRight, size = 16.dp, color = scheme.outlineVariant, strokeWidth = 2f)
+                if (open != null) SvgIcon(BraidIcons.chevronRight, size = 16.dp, color = scheme.outlineVariant, strokeWidth = 2f)
             }
             Box(Modifier.fillMaxWidth().height(1.dp).background(scheme.outline))
         }
@@ -324,10 +325,10 @@ private fun StepRow(
     ) {
         Box(Modifier.size(14.dp), contentAlignment = Alignment.Center) {
             when (status) {
-                TaskStatus.Done -> SvgIcon(ChatIcons.check, size = 14.dp, color = tint, strokeWidth = 2.2f)
-                TaskStatus.Failed -> SvgIcon(ChatIcons.close, size = 14.dp, color = tint, strokeWidth = 2.2f)
+                TaskStatus.Done -> SvgIcon(BraidIcons.check, size = 14.dp, color = tint, strokeWidth = 2.2f)
+                TaskStatus.Failed -> SvgIcon(BraidIcons.close, size = 14.dp, color = tint, strokeWidth = 2.2f)
                 TaskStatus.Running -> Spinner(14.dp, tint)
-                else -> SvgIcon(ChatIcons.circle, size = 14.dp, color = tint, strokeWidth = 2.2f)
+                else -> SvgIcon(BraidIcons.circle, size = 14.dp, color = tint, strokeWidth = 2.2f)
             }
         }
         Text(text = label, color = scheme.onSurfaceVariant, fontFamily = BraidMonoFont, fontSize = 12.sp, lineHeight = 18.sp)
@@ -359,7 +360,7 @@ internal fun HermesSteps(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         SvgIcon(
-                            ChatIcons.chevronRight,
+                            BraidIcons.chevronRight,
                             size = 14.dp,
                             color = scheme.onSurfaceVariant,
                             strokeWidth = 2f,
@@ -402,8 +403,8 @@ internal fun HermesSteps(
                 ) {
                     Box(Modifier.size(14.dp), contentAlignment = Alignment.Center) {
                         when (step.status) {
-                            TraceStatus.Done -> SvgIcon(ChatIcons.check, size = 14.dp, color = tint, strokeWidth = 2.2f)
-                            TraceStatus.Failed -> SvgIcon(ChatIcons.close, size = 14.dp, color = tint, strokeWidth = 2.2f)
+                            TraceStatus.Done -> SvgIcon(BraidIcons.check, size = 14.dp, color = tint, strokeWidth = 2.2f)
+                            TraceStatus.Failed -> SvgIcon(BraidIcons.close, size = 14.dp, color = tint, strokeWidth = 2.2f)
                             else -> Spinner(14.dp, tint)
                         }
                     }

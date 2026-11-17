@@ -1,5 +1,9 @@
 package app.braid.mobile.domain.task
 
+import app.braid.mobile.domain.time.MINUTES_PER_HOUR
+import app.braid.mobile.domain.time.WEEKDAYS_SHORT
+import app.braid.mobile.domain.time.agoLabel
+import app.braid.mobile.domain.time.hoursAndMinutes
 import app.braid.mobile.domain.timeline.dayKeyOf
 import app.braid.mobile.domain.timeline.formatTime
 import app.braid.mobile.domain.timeline.relativeDayLabel
@@ -16,8 +20,6 @@ import java.util.Locale
  */
 
 private const val MINUTE_MS = 60_000L
-private const val MINUTES_IN_HOUR = 60
-private const val HOURS_IN_DAY = 24
 
 /** Status de pessoa que ainda pede ação. */
 private val OPEN_HUMAN_STATUSES = setOf(TaskStatus.Todo, TaskStatus.Doing, TaskStatus.InHold, TaskStatus.ToDefine)
@@ -64,10 +66,9 @@ fun cardDurationLabel(card: TaskCard): String? {
     if (isDayStart(startedAt)) return null
     val minutes = Math.round((finish.toEpochMilli() - startedAt.toEpochMilli()).toDouble() / MINUTE_MS)
     if (minutes <= 0) return null
-    if (minutes < MINUTES_IN_HOUR) return "$minutes min"
-    val hours = minutes / MINUTES_IN_HOUR
-    val rest = minutes % MINUTES_IN_HOUR
-    return if (rest != 0L) "${hours}h${rest.toString().padStart(2, '0')}" else "${hours}h"
+    if (minutes < MINUTES_PER_HOUR) return "$minutes min"
+    val (hours, rest) = hoursAndMinutes(minutes.toInt())
+    return if (rest != 0) "${hours}h${rest.toString().padStart(2, '0')}" else "${hours}h"
 }
 
 /** "há 12 min", "há 2 h", "há 3 dias"; menos de um minuto, "agora". */
@@ -76,15 +77,9 @@ fun elapsedLabel(
     now: Instant,
 ): String {
     val minutes = maxOf(0L, Math.floorDiv(now.toEpochMilli() - instant.toEpochMilli(), MINUTE_MS))
-    if (minutes < 1) return "agora"
-    if (minutes < MINUTES_IN_HOUR) return "há $minutes min"
-    val hours = minutes / MINUTES_IN_HOUR
-    if (hours < HOURS_IN_DAY) return "há $hours h"
-    val days = hours / HOURS_IN_DAY
-    return if (days == 1L) "há 1 dia" else "há $days dias"
+    return agoLabel(minutes, withDays = true)
 }
 
-private val WEEKDAY_NAMES = listOf("dom", "seg", "ter", "qua", "qui", "sex", "sáb")
 private val PORTUGUESE_BRAZIL = Locale.forLanguageTag("pt-BR")
 
 /** A regra da série em texto: "Todo dia, 18:00", "Seg, qua e sex, 18:30". */
@@ -109,7 +104,7 @@ private fun ruleDaysLabel(rule: RecurrenceRule): String {
 
 /** Os dias da máscara (bit 0 = domingo): "seg, qua e sex". */
 private fun weekdayList(mask: Int): String {
-    val names = WEEKDAY_NAMES.filterIndexed { index, _ -> mask and (1 shl index) != 0 }
+    val names = WEEKDAYS_SHORT.filterIndexed { index, _ -> mask and (1 shl index) != 0 }
     if (names.size <= 1) return names.firstOrNull().orEmpty()
     return "${names.dropLast(1).joinToString(", ")} e ${names.last()}"
 }

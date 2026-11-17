@@ -3,7 +3,6 @@ package app.braid.mobile.ui.settings
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
-import androidx.lifecycle.viewModelScope
 import app.braid.mobile.data.session.StoredSession
 import app.braid.mobile.data.settings.DataStoreThemeRepository
 import app.braid.mobile.data.tasks.DefaultTaskRepository
@@ -15,19 +14,20 @@ import app.braid.mobile.domain.settings.ThemeChoice
 import app.braid.mobile.domain.task.TaskChanges
 import app.braid.mobile.support.FakeReminderAlarms
 import app.braid.mobile.support.FakeReminderNotifier
-import app.braid.mobile.support.InMemoryFiredKeys
 import app.braid.mobile.support.InMemorySessionStorage
 import app.braid.mobile.support.MutableClock
 import app.braid.mobile.support.TestBackend
 import app.braid.mobile.support.TestBackend.Companion.fixture
 import app.braid.mobile.support.TestBackend.Companion.status
 import app.braid.mobile.support.TestGraph
+import app.braid.mobile.support.TestReminderStores
 import app.braid.mobile.support.closeAndJoin
+import app.braid.mobile.support.stopAndJoin
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -68,7 +68,7 @@ class SettingsViewModelTest {
         )
     private val clock = MutableClock(Instant.parse("2026-09-14T15:00:00.000Z"))
     private val alarms = FakeReminderAlarms()
-    private val fired = InMemoryFiredKeys()
+    private lateinit var stores: TestReminderStores
     private lateinit var backend: TestBackend
     private lateinit var graph: TestGraph
     private lateinit var sync: ReminderSync
@@ -82,14 +82,28 @@ class SettingsViewModelTest {
         backend.route("POST", "/auth/logout", status(204))
         graph = TestGraph(backend, InMemorySessionStorage(stored))
         val api = graph.apis.create(TasksApi::class.java)
-        sync = ReminderSync(DefaultTaskRepository(api, TaskChanges()), alarms, FakeReminderNotifier(), fired, clock)
+        stores = TestReminderStores(folder.root.resolve("reminders.preferences_pb"))
+        sync =
+            ReminderSync(
+                DefaultTaskRepository(api, TaskChanges()),
+                alarms,
+                FakeReminderNotifier(),
+                stores.fired,
+                stores.readKeys,
+                stores.schedule,
+                graph.sessionRepository,
+                clock,
+            )
     }
 
     @After
     fun tearDown() {
         backend.close()
         stopViewModels()
-        runBlocking { scopes.closeAndJoin() }
+        runBlocking {
+            scopes.closeAndJoin()
+            stores.close()
+        }
         Dispatchers.resetMain()
     }
 
@@ -107,7 +121,7 @@ class SettingsViewModelTest {
 
     /** O fim da tela: o `viewModelScope` para de ler o DataStore antes de o arquivo ser fechado e reaberto. */
     private fun stopViewModels() {
-        viewModels.forEach { it.viewModelScope.cancel() }
+        viewModels.forEach { it.stopAndJoin() }
         viewModels.clear()
         openStore = null
     }
@@ -173,7 +187,8 @@ class SettingsViewModelTest {
             graph.sessionRepository.restore()
             sync.refresh()
             assertTrue(alarms.scheduled.isNotEmpty())
-            fired.stored = mapOf("meeting:2026-09-14T18:00:00.000Z:60" to Instant.parse("2026-09-14T18:00:00Z"))
+            stores.fired.write(mapOf("meeting:2026-09-14T18:00:00.000Z:60" to Instant.parse("2026-09-14T18:00:00Z")))
+            stores.readKeys.write(mapOf("meeting:2026-09-14T18:00:00.000Z:1440" to Instant.parse("2026-09-14T18:00:00Z")))
             val viewModel = newViewModel()
 
             viewModel.signOut()
@@ -189,8 +204,11 @@ class SettingsViewModelTest {
             )
             assertNull(graph.storage.session)
             assertEquals(SessionState.SignedOut, graph.sessionRepository.state.value)
+            // Depois da sessão, o último a ser apagado é o cronograma guardado dos lembretes.
+            withTimeout(5_000) { while (stores.schedule.read().isNotEmpty()) delay(10) }
             assertTrue(alarms.scheduled.isEmpty())
-            assertEquals(emptyMap<String, Instant>(), fired.stored)
+            assertEquals(emptyMap<String, Instant>(), stores.fired.read())
+            assertEquals(emptyMap<String, Instant>(), stores.readKeys.read())
         }
 
     @Test
@@ -221,6 +239,8 @@ class SettingsViewModelTest {
 
             assertNull(graph.storage.session)
             assertEquals(SessionState.SignedOut, graph.sessionRepository.state.value)
+            // Depois da sessão, o último a ser apagado é o cronograma guardado dos lembretes.
+            withTimeout(5_000) { while (stores.schedule.read().isNotEmpty()) delay(10) }
             assertTrue(alarms.scheduled.isEmpty())
         }
 }

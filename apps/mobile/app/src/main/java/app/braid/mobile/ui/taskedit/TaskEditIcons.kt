@@ -3,7 +3,7 @@ package app.braid.mobile.ui.taskedit
 import app.braid.mobile.core.designsystem.SvgPart
 import app.braid.mobile.core.designsystem.svgCircle
 
-/** Os ícones do lucide-react que o formulário usa, na grade de 24 (`Pencil`, `Plus`, `X`, `Clock`). */
+/** Os ícones do lucide-react que o formulário usa, na grade de 24 (`Pencil`, `Clock`); `Plus` e `X` estão em `BraidIcons`. */
 object TaskEditIcons {
     val pencil =
         listOf(
@@ -12,10 +12,6 @@ object TaskEditIcons {
             ),
             SvgPart("m15 5 4 4"),
         )
-
-    val plus = listOf(SvgPart("M5 12h14"), SvgPart("M12 5v14"))
-
-    val x = listOf(SvgPart("M18 6 6 18"), SvgPart("m6 6 12 12"))
 
     val clock = listOf(SvgPart(svgCircle(12f, 12f, 10f)), SvgPart("M12 6v6l4 2"))
 }

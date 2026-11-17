@@ -143,7 +143,7 @@ Peças em `app/src/test/java/app/braid/mobile/support/`:
 O gerador de fixtures resolve `@repo/*` e `@/*` pelo `scripts/mobile/tsconfig.json`, então pode importar as funções do web
 e dos pacotes como elas são. O relógio do app é o `AppClock`.
 
-Só relógio, alarmes, voz e armazenamento cifrado são trocados, cada um atrás de
+Só relógio, alarmes, notificações do sistema, voz e armazenamento cifrado são trocados, cada um atrás de
 uma interface pequena. Toda lógica portada à mão do TS (`packages/timeline`,
 `hueForTag`, grupos da lista, tempo livre, lembretes) é testada com entradas e
 saídas de fixtures geradas pelas funções TS. Um contrato novo ou uma
@@ -165,7 +165,11 @@ pnpm dev:mobile                            # adb reverse + instala e abre no apa
 
 `ktlintFormat` (`cd apps/mobile && ./gradlew ktlintFormat`) corrige o estilo.
 Mudou `packages/contracts`, `packages/theme` ou `packages/timeline`? Rode o
-`test` do mobile: o gerador de fixtures e o teste de tema pegam a divergência.
+`test` do mobile: o gerador de fixtures regenera os JSON a partir do pacote e os
+testes comparam o Kotlin com eles. Para o tema, o `ThemeTokensFixtureTest` confere
+cada token de `packages/theme` (e o `--faint` escuro do `globals.css`) com o
+`Color.kt`; se ele falhar, rode `pnpm --filter @repo/mobile run generate:theme`.
+(`Color.kt` também é conferido pelo `theme --check` dos testes do `packages/theme`.)
 
 ## Paridade
 

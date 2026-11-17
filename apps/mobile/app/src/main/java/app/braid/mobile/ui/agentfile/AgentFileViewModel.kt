@@ -5,23 +5,30 @@ import androidx.lifecycle.viewModelScope
 import app.braid.mobile.domain.agentfile.AgentFileBackup
 import app.braid.mobile.domain.agentfile.AgentFileForbiddenException
 import app.braid.mobile.domain.agentfile.AgentFileRepository
-import app.braid.mobile.domain.agentfile.HermesOffException
 import app.braid.mobile.domain.artifact.AgentFileData
+import app.braid.mobile.domain.polling.POLL_FAILURES_LIMIT
+import app.braid.mobile.domain.polling.PollingLoop
 import app.braid.mobile.domain.request.AgentRequest
 import app.braid.mobile.domain.request.AgentRequestRepository
+import app.braid.mobile.domain.request.EDIT_LISTENING_TEXT
+import app.braid.mobile.domain.request.HermesOffException
+import app.braid.mobile.domain.request.PROMPT_MAX_LENGTH
 import app.braid.mobile.domain.request.agentFailureText
+import app.braid.mobile.domain.request.appendTranscript
 import app.braid.mobile.domain.request.isOpenRequest
 import app.braid.mobile.domain.request.runningStepLabel
+import app.braid.mobile.domain.speech.MicrophonePermission
+import app.braid.mobile.domain.speech.SpeechRecognizer
 import app.braid.mobile.domain.task.TaskStatus
-import app.braid.mobile.ui.agenda.AGENT_POLL_MS
+import app.braid.mobile.ui.aiedit.DraftDictation
 import app.braid.mobile.ui.aiedit.startFailureCode
+import app.braid.mobile.ui.chat.VoiceUiState
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -34,10 +41,6 @@ const val BACKUPS_FAILED_TEXT = "Não foi possível carregar os backups."
 const val RESTORE_FAILED_TEXT = "Não foi possível restaurar este backup. Tente novamente."
 const val EDIT_LOST_TEXT = "Perdi a conexão antes da resposta. Confira o arquivo antes de repetir."
 const val HERMES_OFF_TEXT = "O Hermes está desligado neste servidor."
-const val EDIT_DRAFT_MAX_LENGTH = 4000
-
-/** Falhas seguidas ao consultar o pedido antes de desistir de acompanhá-lo. */
-const val EDIT_POLL_FAILURES = 5
 
 /** O texto do arquivo: o dono o lê; quem não é recebe 403, o que não é erro para a tela. */
 sealed interface FileRead {
@@ -83,6 +86,8 @@ data class EditBar(
     val followed: AgentRequest? = null,
     /** Cinco leituras seguidas falharam: o campo deixou de acompanhar o pedido. */
     val lost: Boolean = false,
+    /** O microfone do campo: só dita; `available` falso esconde o botão. */
+    val voice: VoiceUiState = VoiceUiState(),
 ) {
     val open: Boolean get() = followed != null && isOpenRequest(followed.status)
     val finished: Boolean get() = followed != null && !open
@@ -109,6 +114,7 @@ data class EditBar(
     val statusText: String
         get() =
             when {
+                voice.listening -> EDIT_LISTENING_TEXT
                 sending -> "Enviando o pedido…"
                 lost -> "Não consegui acompanhar o pedido"
                 open -> followed?.progress ?: followed?.let { runningStepLabel(it.steps) } ?: "Entendendo o pedido…"
@@ -138,7 +144,7 @@ data class AgentFileUiState(
 
 /**
  * O arquivo de uma skill ou agente do Hermes (ADR 0005): lê o texto, os backups e restaura um deles, e pede ao Hermes
- * uma edição acompanhando o pedido a cada [AGENT_POLL_MS] (só com a tela à vista) até ele terminar, quando relê o texto.
+ * uma edição acompanhando o pedido a cada [app.braid.mobile.domain.polling.AGENT_POLL_MS] (só com a tela à vista) até ele terminar, quando relê o texto.
  */
 @HiltViewModel(assistedFactory = AgentFileViewModel.Factory::class)
 class AgentFileViewModel
@@ -147,6 +153,8 @@ class AgentFileViewModel
         @Assisted file: AgentFileData,
         private val files: AgentFileRepository,
         private val requests: AgentRequestRepository,
+        speech: SpeechRecognizer,
+        microphone: MicrophonePermission,
     ) : ViewModel() {
         @AssistedFactory
         interface Factory {
@@ -159,9 +167,18 @@ class AgentFileViewModel
         private var visible = false
         private var textJob: Job? = null
         private var backupsJob: Job? = null
-        private var pollJob: Job? = null
+        private val polling = PollingLoop(viewModelScope, readFirst = true)
         private var pollFailures = 0
         private var notifiedId: String? = null
+
+        private val dictation =
+            DraftDictation(
+                speech,
+                microphone,
+                viewModelScope,
+                onVoice = { voice -> updateEdit { if (it.voice == voice) it else it.copy(voice = voice) } },
+                onTranscript = { transcript -> updateEdit { it.copy(draft = appendTranscript(it.draft, transcript)) } },
+            )
 
         init {
             loadText()
@@ -170,6 +187,7 @@ class AgentFileViewModel
         /** A tela está à vista (resumida) ou não: o acompanhamento do pedido só anda com ela à vista. */
         fun setVisible(value: Boolean) {
             visible = value
+            if (!value) dictation.cancel()
             syncPolling()
         }
 
@@ -245,13 +263,14 @@ class AgentFileViewModel
             }
         }
 
-        fun onDraftChange(text: String) = updateEdit { it.copy(draft = text.take(EDIT_DRAFT_MAX_LENGTH)) }
+        fun onDraftChange(text: String) = updateEdit { it.copy(draft = text.take(PROMPT_MAX_LENGTH)) }
 
         /** Pede a edição ao Hermes e passa a acompanhar o pedido. Falha mantém o texto e avisa. */
         fun send() {
             val bar = mutableState.value.edit
             val message = bar.draft.trim()
             if (bar.busy || message.isEmpty() || bar.hermesOff) return
+            dictation.cancel()
             updateEdit { it.copy(sending = true, error = null, lost = false) }
             viewModelScope.launch {
                 try {
@@ -268,6 +287,17 @@ class AgentFileViewModel
                     updateEdit { it.copy(sending = false, error = agentFailureText(startFailureCode(failure))) }
                 }
             }
+        }
+
+        /** O botão do microfone: parado, liga; ouvindo, para e o que foi ouvido vai para o campo. */
+        fun toggleVoice() = dictation.toggle(blocked = mutableState.value.edit.busy || mutableState.value.edit.hermesOff)
+
+        /** A resposta do pedido de permissão do sistema: negada, diz por quê; concedida, liga a escuta. */
+        fun microphoneResult(granted: Boolean) = dictation.permissionResult(granted)
+
+        override fun onCleared() {
+            dictation.cancel()
+            super.onCleared()
         }
 
         /** "Fechar resultado": só quando o pedido terminou ou se perdeu. */
@@ -287,20 +317,7 @@ class AgentFileViewModel
         }
 
         private fun syncPolling() {
-            if (!visible || !following()) {
-                pollJob?.cancel()
-                pollJob = null
-                return
-            }
-            if (pollJob?.isActive == true) return
-            pollJob =
-                viewModelScope.launch {
-                    while (visible && following()) {
-                        readFollowed()
-                        if (!following()) break
-                        delay(AGENT_POLL_MS)
-                    }
-                }
+            polling.sync(active = { visible && following() }) { readFollowed() }
         }
 
         private fun following(): Boolean {
@@ -321,7 +338,7 @@ class AgentFileViewModel
                 throw cancelled
             } catch (failure: Exception) {
                 pollFailures += 1
-                if (pollFailures >= EDIT_POLL_FAILURES) updateEdit { it.copy(lost = true) }
+                if (pollFailures >= POLL_FAILURES_LIMIT) updateEdit { it.copy(lost = true) }
             }
         }
 

@@ -1,5 +1,8 @@
 package app.braid.mobile.data.tasks
 
+import app.braid.mobile.data.http.HTTP_CONFLICT
+import app.braid.mobile.data.http.HTTP_NOT_FOUND
+import app.braid.mobile.data.http.refusedInput
 import app.braid.mobile.domain.task.InvalidInputException
 import app.braid.mobile.domain.task.NewSeries
 import app.braid.mobile.domain.task.RecurrenceRepository
@@ -54,12 +57,5 @@ class DefaultRecurrenceRepository
         }
 
         private fun refused(failure: HttpException): InvalidInputException? =
-            if (failure.code() == HTTP_BAD_REQUEST || failure.code() == HTTP_UNPROCESSABLE) InvalidInputException(failure) else null
-
-        private companion object {
-            const val HTTP_BAD_REQUEST = 400
-            const val HTTP_NOT_FOUND = 404
-            const val HTTP_CONFLICT = 409
-            const val HTTP_UNPROCESSABLE = 422
-        }
+            if (refusedInput(failure.code())) InvalidInputException(failure) else null
     }

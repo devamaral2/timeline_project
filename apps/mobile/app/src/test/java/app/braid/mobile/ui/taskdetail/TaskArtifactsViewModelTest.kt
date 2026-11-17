@@ -13,6 +13,7 @@ import app.braid.mobile.support.TestBackend.Companion.status
 import app.braid.mobile.support.TestGraph
 import app.braid.mobile.support.serveArtifactChoices
 import app.braid.mobile.support.serveArtifactTasks
+import app.braid.mobile.support.stopAndJoin
 import app.braid.mobile.ui.picker.PickerSearchStatus
 import app.braid.mobile.ui.taskartifacts.ArtifactPicker
 import kotlinx.coroutines.Dispatchers
@@ -58,9 +59,11 @@ class TaskArtifactsViewModelTest {
         backend.serveArtifactChoices()
     }
 
+    private val created = mutableListOf<TaskDetailViewModel>()
+
     @After
     fun tearDown() {
-        Thread.sleep(100)
+        created.forEach { it.stopAndJoin() }
         backend.close()
         Dispatchers.resetMain()
     }
@@ -71,7 +74,7 @@ class TaskArtifactsViewModelTest {
             DefaultTaskDetailRepository(graph.apis.create(TaskDetailApi::class.java)),
             AppClock { now },
             DefaultArtifactRepository(graph.apis.create(ArtifactsApi::class.java)),
-        )
+        ).also(created::add)
 
     private suspend fun TaskDetailViewModel.content(): TaskDetailUiState.Content =
         state.first { it is TaskDetailUiState.Content } as TaskDetailUiState.Content

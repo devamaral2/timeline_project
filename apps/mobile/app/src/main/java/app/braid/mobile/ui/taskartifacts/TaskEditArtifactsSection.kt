@@ -43,7 +43,6 @@ import app.braid.mobile.domain.task.sameArtifactLinks
 import app.braid.mobile.ui.taskdetail.Section
 import app.braid.mobile.ui.taskedit.AddButton
 import app.braid.mobile.ui.taskedit.FormField
-import app.braid.mobile.ui.taskedit.TaskEditIcons
 
 /** O que a seção Documentos do formulário pede ao [app.braid.mobile.ui.taskedit.TaskEditViewModel]. */
 class ArtifactEditActions(
@@ -136,7 +135,7 @@ private fun EditRow(
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 if (item.relation != ArtifactRelation.Creates) {
                     StepButton(
-                        ArtifactIcons.chevronUp,
+                        BraidIcons.chevronUp,
                         "Subir “${item.name}”",
                         enabled = !sameArtifactLinks(moveDraftArtifact(list, item.id, -1), list),
                     ) {
@@ -150,7 +149,7 @@ private fun EditRow(
                         actions.move(item.id, 1)
                     }
                 }
-                StepButton(TaskEditIcons.x, "Remover documento “${item.name}”", enabled = true) { actions.remove(item.id) }
+                StepButton(BraidIcons.close, "Remover documento “${item.name}”", enabled = true) { actions.remove(item.id) }
             }
         }
     }

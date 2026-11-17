@@ -1,7 +1,6 @@
 package app.braid.mobile.ui.documents
 
 import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.viewModelScope
 import app.braid.mobile.data.artifacts.ArtifactsApi
 import app.braid.mobile.data.artifacts.DefaultArtifactRepository
 import app.braid.mobile.support.Fixtures
@@ -9,9 +8,9 @@ import app.braid.mobile.support.TestBackend
 import app.braid.mobile.support.TestBackend.Companion.fixture
 import app.braid.mobile.support.TestBackend.Companion.status
 import app.braid.mobile.support.TestGraph
+import app.braid.mobile.support.stopAndJoin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -47,7 +46,7 @@ class DocumentEditViewModelTest {
 
     @After
     fun tearDown() {
-        created.forEach { it.viewModelScope.cancel() }
+        created.forEach { it.stopAndJoin() }
         backend.close()
         Dispatchers.resetMain()
     }
@@ -182,6 +181,45 @@ class DocumentEditViewModelTest {
             assertEquals(3, keys.size)
             assertNotEquals(keys[0], keys[1])
             assertEquals(keys[0], keys[2])
+        }
+
+    @Test
+    fun `a body changed after a failed create gets a new idempotency key, and the same body keeps the old one`() =
+        runTest {
+            backend.route("POST", "/api/artifacts", status(500))
+            val viewModel = newViewModel()
+            viewModel.setBody("Primeiro texto")
+            viewModel.save()
+            viewModel.saved()
+
+            viewModel.save()
+            viewModel.saved()
+            viewModel.setBody("Texto corrigido")
+            viewModel.save()
+            viewModel.saved()
+
+            val keys = posts().map { it.getHeader("Idempotency-Key") }
+            assertEquals(3, keys.size)
+            assertEquals(keys[0], keys[1])
+            assertNotEquals(keys[1], keys[2])
+        }
+
+    @Test
+    fun `a meal changed after a failed create gets a new idempotency key too`() =
+        runTest {
+            backend.route("POST", "/api/artifacts", status(500))
+            val viewModel = newViewModel()
+            viewModel.selectKind(NewDocumentKind.Meal)
+            viewModel.setMeal("Arroz")
+            viewModel.save()
+            viewModel.saved()
+
+            viewModel.setMeal("Arroz com feijão")
+            viewModel.save()
+            viewModel.saved()
+
+            val keys = posts().map { it.getHeader("Idempotency-Key") }
+            assertNotEquals(keys[0], keys[1])
         }
 
     @Test

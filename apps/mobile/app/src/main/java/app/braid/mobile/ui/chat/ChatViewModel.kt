@@ -12,7 +12,6 @@ import app.braid.mobile.domain.chat.HERMES_DISABLED_TEXT
 import app.braid.mobile.domain.chat.HERMES_ENTER_TEXT
 import app.braid.mobile.domain.chat.HERMES_LEAVE_TEXT
 import app.braid.mobile.domain.chat.HERMES_PENDING_LABEL
-import app.braid.mobile.domain.chat.HermesOffException
 import app.braid.mobile.domain.chat.STEPS_PENDING_LABEL
 import app.braid.mobile.domain.chat.chatFailureText
 import app.braid.mobile.domain.chat.hermesStepsOf
@@ -20,7 +19,9 @@ import app.braid.mobile.domain.chat.parseChatCommand
 import app.braid.mobile.domain.chat.parseCommand
 import app.braid.mobile.domain.chat.requestWithWindow
 import app.braid.mobile.domain.request.AgentRequest
+import app.braid.mobile.domain.request.HermesOffException
 import app.braid.mobile.domain.request.RequestRoute
+import app.braid.mobile.domain.request.appendTranscript
 import app.braid.mobile.domain.request.isOpenRequest
 import app.braid.mobile.domain.session.SessionRepository
 import app.braid.mobile.domain.session.SessionState
@@ -45,6 +46,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
@@ -54,7 +56,6 @@ private const val BOT_ERROR_MS = 2_600L
 
 /** Quanto silêncio, depois de a pessoa falar, envia o que ela disse. */
 private const val SILENCE_SEND_MS = 1_800L
-private const val MAX_PROMPT = 4_000
 
 /**
  * A conversa com o agente. Vive acima da folha (o `ViewModel` é da atividade): fechar o chat ou trocar de tela não apaga a
@@ -81,6 +82,9 @@ class ChatViewModel
         val entitiesChanged: SharedFlow<Unit> = mutableEntitiesChanged.asSharedFlow()
 
         private var userId: String? = null
+
+        /** O app está à vista: em segundo plano o acompanhamento do pedido espera, como o das outras telas. */
+        private val visible = MutableStateFlow(true)
 
         /** O primeiro pedido da conversa: toda mensagem seguinte o manda como `sessionId`. */
         private var sessionId: String? = null
@@ -127,7 +131,7 @@ class ChatViewModel
                 recognizer = speech,
                 scope = viewModelScope,
                 silenceMs = SILENCE_SEND_MS,
-                onFinalTranscript = { transcript -> fillPrompt(joinSpoken(draft, transcript)) },
+                onFinalTranscript = { transcript -> fillPrompt(appendTranscript(draft, transcript)) },
                 onSilenceTranscript = ::sendSpoken,
             )
 
@@ -317,6 +321,11 @@ class ChatViewModel
 
         // region Acompanhar
 
+        /** O app está à vista (resumido) ou não; fora de vista o chat deixa de reler o pedido e retoma ao voltar. */
+        fun setVisible(value: Boolean) {
+            visible.value = value
+        }
+
         /**
          * Segue o pedido até o fim, a cada [ChatPolling.intervalMs]. O pedido já foi aceito pela API; se a consulta falhar, o
          * mesmo id (reenvio do "Tentar de novo") retoma o acompanhamento.
@@ -328,6 +337,8 @@ class ChatViewModel
             var elapsed = 0L
             var failures = 0
             while (id in following) {
+                visible.first { it }
+                if (id !in following) return
                 try {
                     val view = repository.request(requestId)
                     failures = 0
@@ -749,7 +760,7 @@ class ChatViewModel
                 voiceLoop = false
                 return
             }
-            val text = joinSpoken(draft, transcript)
+            val text = appendTranscript(draft, transcript)
             if (parseCommand(text) == null && sendWithWindow(text)) {
                 voiceLoop = true
                 fillPrompt("")
@@ -764,11 +775,6 @@ class ChatViewModel
             draft = text
             mutablePromptEdits.tryEmit(text)
         }
-
-        private fun joinSpoken(
-            current: String,
-            transcript: String,
-        ): String = (if (current.isNotEmpty()) "$current $transcript" else transcript).take(MAX_PROMPT)
 
         private fun refreshVoice() {
             val heard = dictation.state.value

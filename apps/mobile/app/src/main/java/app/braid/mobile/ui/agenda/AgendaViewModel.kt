@@ -7,6 +7,7 @@ import app.braid.mobile.domain.agenda.FreeTimeRepository
 import app.braid.mobile.domain.agenda.agendaRowsOf
 import app.braid.mobile.domain.executor.ViewMode
 import app.braid.mobile.domain.executor.ViewModeRepository
+import app.braid.mobile.domain.polling.PollingLoop
 import app.braid.mobile.domain.task.StaleRevisionException
 import app.braid.mobile.domain.task.TaskActor
 import app.braid.mobile.domain.task.TaskCard
@@ -26,7 +27,6 @@ import app.braid.mobile.domain.timeline.zonedDayStart
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -112,9 +112,6 @@ data class AgendaUiState(
     fun rowsOn(dayKey: String): List<AgendaRow>? = shownOn(dayKey)?.let { agendaRowsOf(it, dayKey, showFreeTime && !searching) }
 }
 
-/** De quanto em quanto tempo a agenda se relê enquanto há tarefa de agente em aberto. */
-const val AGENT_POLL_MS = 3_000L
-
 const val STALE_STATUS_NOTICE = "Esta tarefa mudou em outro lugar. Carregamos a versão atual; confira e tente de novo."
 const val FAILED_STATUS_NOTICE = "Não foi possível trocar o status. Tente novamente."
 
@@ -136,7 +133,7 @@ class AgendaViewModel
         private var freeTimeChosen = false
         private var generation = 0
         private var visible = false
-        private var pollJob: Job? = null
+        private val polling = PollingLoop(viewModelScope)
 
         init {
             // A escolha guardada chega antes da primeira leitura; trocá-la depois relê a semana com o novo executor.
@@ -268,25 +265,15 @@ class AgendaViewModel
         }
 
         /**
-         * Com tarefa de agente em aberto na janela à vista (a semana, ou a lista contínua), relê a janela a cada [AGENT_POLL_MS], sem o esqueleto
+         * Com tarefa de agente em aberto na janela à vista (a semana, ou a lista contínua), relê a janela a cada [app.braid.mobile.domain.polling.AGENT_POLL_MS], sem o esqueleto
          * e sem avisar de falha; para quando não sobra nenhuma ou a tela sai de vista. Uma leitura ainda em curso pula a batida.
          */
         private fun syncPolling() {
-            if (!visible || !hasOpenAgentTaskInWindow()) {
-                pollJob?.cancel()
-                pollJob = null
-                return
+            polling.sync(active = { visible && hasOpenAgentTaskInWindow() }) {
+                if (loadJob?.isActive == true) return@sync
+                load(silent = true)
+                loadJob?.join()
             }
-            if (pollJob?.isActive == true) return
-            pollJob =
-                viewModelScope.launch {
-                    while (visible && hasOpenAgentTaskInWindow()) {
-                        delay(AGENT_POLL_MS)
-                        if (loadJob?.isActive == true) continue
-                        load(silent = true)
-                        loadJob?.join()
-                    }
-                }
         }
 
         fun retry() = load(silent = false)

@@ -1,6 +1,5 @@
 package app.braid.mobile.ui.agenda
 
-import androidx.lifecycle.viewModelScope
 import app.braid.mobile.data.tasks.DefaultTaskRepository
 import app.braid.mobile.data.tasks.TasksApi
 import app.braid.mobile.domain.task.TaskActor
@@ -13,9 +12,9 @@ import app.braid.mobile.support.TestBackend.Companion.fixture
 import app.braid.mobile.support.TestBackend.Companion.status
 import app.braid.mobile.support.TestGraph
 import app.braid.mobile.support.TestViewModes
+import app.braid.mobile.support.stopAndJoin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -74,9 +73,7 @@ class AgendaStatusViewModelTest {
 
     @After
     fun tearDown() {
-        // Uma releitura ainda em voo termina com o Main trocado, e não depois dele: o ViewModel não tem fim neste teste.
-        Thread.sleep(150)
-        created.forEach { it.viewModelScope.cancel() }
+        created.forEach { it.stopAndJoin() }
         viewModes.close()
         backend.close()
         Dispatchers.resetMain()

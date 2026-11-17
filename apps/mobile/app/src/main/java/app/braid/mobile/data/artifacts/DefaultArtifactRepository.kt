@@ -1,5 +1,8 @@
 package app.braid.mobile.data.artifacts
 
+import app.braid.mobile.data.http.HTTP_CONFLICT
+import app.braid.mobile.data.http.HTTP_FORBIDDEN
+import app.braid.mobile.data.http.HTTP_NOT_FOUND
 import app.braid.mobile.domain.artifact.Artifact
 import app.braid.mobile.domain.artifact.ArtifactDraft
 import app.braid.mobile.domain.artifact.ArtifactFilters
@@ -83,10 +86,4 @@ class DefaultArtifactRepository
         override suspend fun delete(id: String) = api.delete(id)
 
         private fun List<String>.toJsonArray(): JsonArray = JsonArray(map { JsonPrimitive(it) })
-
-        private companion object {
-            const val HTTP_CONFLICT = 409
-            const val HTTP_NOT_FOUND = 404
-            const val HTTP_FORBIDDEN = 403
-        }
     }

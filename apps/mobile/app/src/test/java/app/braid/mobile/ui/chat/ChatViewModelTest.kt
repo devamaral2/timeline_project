@@ -1,6 +1,5 @@
 package app.braid.mobile.ui.chat
 
-import androidx.lifecycle.viewModelScope
 import app.braid.mobile.data.chat.DefaultChatRepository
 import app.braid.mobile.data.requests.RequestsApi
 import app.braid.mobile.data.session.StoredSession
@@ -14,6 +13,7 @@ import app.braid.mobile.support.TestBackend
 import app.braid.mobile.support.TestBackend.Companion.fixture
 import app.braid.mobile.support.TestBackend.Companion.status
 import app.braid.mobile.support.TestGraph
+import app.braid.mobile.support.stopAndJoin
 import app.cash.turbine.test
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -67,9 +67,7 @@ class ChatViewModelTest {
 
     @After
     fun tearDown() {
-        // Uma consulta ainda em voo termina com o Main trocado, e não depois dele.
-        Thread.sleep(150)
-        created.forEach { it.viewModelScope.cancel() }
+        created.forEach { it.stopAndJoin() }
         backend.close()
         Dispatchers.resetMain()
     }
@@ -329,6 +327,32 @@ class ChatViewModelTest {
             assertEquals("A conexão caiu antes da resposta. Se o pedido gravava algo, confira a agenda antes de reenviar.", error.text)
             val polls = backend.requestsTo("GET", firstPath).size
             assertTrue("$polls polls", polls in 4..6)
+        }
+
+    @Test
+    fun `the request is not read while the app is in the background, and reading resumes on return`() =
+        runTest {
+            serveAccepted()
+            backend.route("GET", firstPath, fixture("chat-request-running"))
+            val chat = newViewModel()
+            chat.send("oi")
+            awaitReads(1)
+
+            chat.setVisible(false)
+            withContext(Dispatchers.Default) { delay(200) } // uma leitura em voo ainda chega
+            val paused = backend.requestsTo("GET", firstPath).size
+            testScheduler.advanceTimeBy(60_000)
+            testScheduler.runCurrent()
+            withContext(Dispatchers.Default) { delay(200) }
+            assertEquals(paused, backend.requestsTo("GET", firstPath).size)
+
+            chat.setVisible(true)
+            awaitReads(paused + 1)
+        }
+
+    private suspend fun awaitReads(count: Int) =
+        withContext(Dispatchers.Default) {
+            withTimeout(5_000) { while (backend.requestsTo("GET", firstPath).size < count) delay(5) }
         }
 
     @Test

@@ -44,15 +44,15 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import app.braid.mobile.core.designsystem.BraidMonoFont
 import app.braid.mobile.core.designsystem.braidTokens
-import app.braid.mobile.domain.chat.Block
-import app.braid.mobile.domain.chat.Inline
 import app.braid.mobile.domain.chat.PolishedParagraph
 import app.braid.mobile.domain.chat.choiceLabel
-import app.braid.mobile.domain.chat.parseMarkdown
 import app.braid.mobile.domain.chat.plainText
 import app.braid.mobile.domain.chat.polishInline
 import app.braid.mobile.domain.chat.polishParagraph
 import app.braid.mobile.domain.chat.shortUrl
+import app.braid.mobile.domain.markdown.MarkdownBlock
+import app.braid.mobile.domain.markdown.MarkdownInline
+import app.braid.mobile.domain.markdown.parseMarkdown
 
 /**
  * A resposta do agente (canvas "Resposta do Hermes — formatação", opção A): o texto dele lido como markdown, com termos
@@ -74,18 +74,23 @@ fun ChatAnswer(
 
 @Composable
 private fun Blocks(
-    blocks: List<Block>,
+    blocks: List<MarkdownBlock>,
     onChoose: ((String) -> Unit)?,
 ) {
     blocks.forEachIndexed { index, block ->
         when (block) {
-            is Block.Paragraph -> Paragraph(block, nextIsList = blocks.getOrNull(index + 1) is Block.ListBlock, onChoose = onChoose)
-            is Block.Heading -> SectionLabel(plainText(block.children))
-            is Block.CodeBlock -> CodeBlock(block.text)
-            is Block.ListBlock -> ListBlock(block, onChoose)
-            is Block.Quote -> Quote(block, onChoose)
-            is Block.Table -> TableBlock(block)
-            Block.Rule -> Box(Modifier.fillMaxWidth().height(1.dp).background(MaterialTheme.colorScheme.outline))
+            is MarkdownBlock.Paragraph ->
+                Paragraph(
+                    block,
+                    nextIsList = blocks.getOrNull(index + 1) is MarkdownBlock.ListBlock,
+                    onChoose = onChoose,
+                )
+            is MarkdownBlock.Heading -> SectionLabel(plainText(block.content))
+            is MarkdownBlock.Code -> CodeBlock(block.text)
+            is MarkdownBlock.ListBlock -> ListBlock(block, onChoose)
+            is MarkdownBlock.Quote -> Quote(block, onChoose)
+            is MarkdownBlock.Table -> TableBlock(block)
+            MarkdownBlock.Rule -> Box(Modifier.fillMaxWidth().height(1.dp).background(MaterialTheme.colorScheme.outline))
         }
     }
 }
@@ -94,11 +99,11 @@ private val BodyStyle = TextStyle(fontSize = 15.sp, lineHeight = 24.sp)
 
 @Composable
 private fun Paragraph(
-    block: Block.Paragraph,
+    block: MarkdownBlock.Paragraph,
     nextIsList: Boolean,
     onChoose: ((String) -> Unit)?,
 ) {
-    when (val polished = remember(block, nextIsList) { polishParagraph(block.children, nextIsList) }) {
+    when (val polished = remember(block, nextIsList) { polishParagraph(block.content, nextIsList) }) {
         is PolishedParagraph.Label -> SectionLabel(polished.text)
         is PolishedParagraph.Body -> {
             Text(text = inlineText(polished.children), style = BodyStyle, color = MaterialTheme.colorScheme.onBackground)
@@ -177,7 +182,7 @@ private fun CodeBlock(text: String) {
 
 @Composable
 private fun Quote(
-    block: Block.Quote,
+    block: MarkdownBlock.Quote,
     onChoose: ((String) -> Unit)?,
 ) {
     val line = MaterialTheme.colorScheme.outline
@@ -190,7 +195,7 @@ private fun Quote(
 /** Passos numerados e marcadores, separados por fios; o aninhado recua. */
 @Composable
 private fun ListBlock(
-    block: Block.ListBlock,
+    block: MarkdownBlock.ListBlock,
     onChoose: ((String) -> Unit)?,
 ) {
     val scheme = MaterialTheme.colorScheme
@@ -237,7 +242,7 @@ private fun ListBlock(
 private val CellWidth = 112.dp
 
 @Composable
-private fun TableBlock(block: Block.Table) {
+private fun TableBlock(block: MarkdownBlock.Table) {
     val scheme = MaterialTheme.colorScheme
     Column(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
         Row {
@@ -272,7 +277,7 @@ private fun TableBlock(block: Block.Table) {
 
 /** O texto em linha como [AnnotatedString]: código em mono, endereços encurtados e links que abrem no navegador. */
 @Composable
-private fun inlineText(children: List<Inline>): AnnotatedString {
+private fun inlineText(children: List<MarkdownInline>): AnnotatedString {
     val scheme = MaterialTheme.colorScheme
     val link = SpanStyle(color = scheme.tertiary, textDecoration = TextDecoration.Underline)
     val code = SpanStyle(fontFamily = BraidMonoFont, fontSize = 12.5.sp, background = scheme.secondary)
@@ -282,29 +287,30 @@ private fun inlineText(children: List<Inline>): AnnotatedString {
 }
 
 private fun AnnotatedString.Builder.appendInline(
-    children: List<Inline>,
+    children: List<MarkdownInline>,
     link: SpanStyle,
     code: SpanStyle,
 ) {
     for (child in children) {
         when (child) {
-            is Inline.Text -> append(child.value)
-            is Inline.Code -> withStyle(code) { append(child.value) }
-            is Inline.Strong -> withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) { appendInline(child.children, link, code) }
-            is Inline.Emphasis -> withStyle(SpanStyle(fontStyle = FontStyle.Italic)) { appendInline(child.children, link, code) }
-            is Inline.Strike ->
+            is MarkdownInline.Text -> append(child.text)
+            is MarkdownInline.Code -> withStyle(code) { append(child.text) }
+            is MarkdownInline.Strong -> withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) { appendInline(child.content, link, code) }
+            is MarkdownInline.Emphasis -> withStyle(SpanStyle(fontStyle = FontStyle.Italic)) { appendInline(child.content, link, code) }
+            is MarkdownInline.Strike ->
                 withStyle(
                     SpanStyle(textDecoration = TextDecoration.LineThrough),
-                ) { appendInline(child.children, link, code) }
-            Inline.LineBreak -> append("\n")
-            is Inline.Link -> {
+                ) { appendInline(child.content, link, code) }
+            MarkdownInline.LineBreak -> append("\n")
+            is MarkdownInline.Link -> {
                 val bare =
-                    child.children.singleOrNull()?.let { it is Inline.Text && it.value.trimEnd('/') == child.href.trimEnd('/') } == true
+                    child.content.singleOrNull()?.let { it is MarkdownInline.Text && it.text.trimEnd('/') == child.href.trimEnd('/') } ==
+                        true
                 withLink(LinkAnnotation.Url(child.href, TextLinkStyles(link))) {
                     if (bare) {
                         withStyle(SpanStyle(fontFamily = BraidMonoFont, fontSize = 12.5.sp)) { append(shortUrl(child.href)) }
                     } else {
-                        appendInline(child.children, link, code)
+                        appendInline(child.content, link, code)
                     }
                 }
             }

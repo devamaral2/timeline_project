@@ -30,46 +30,47 @@ class VocabularyScanner(
                     .map { VocabularyViolation(file, index + 1, it) }
             }.toList()
 
-    /** Troca comentários e literais por espaços, mantendo as quebras de linha para a contagem. */
+    /** Troca comentários e literais por espaços, mantendo as quebras de linha para a contagem. Uma passada só. */
     private fun blankOutNonCode(source: String): String {
         val out = StringBuilder(source.length)
         var i = 0
         while (i < source.length) {
-            val rest = source.substring(i)
             val end =
                 when {
-                    rest.startsWith("//") -> rest.indexOf('\n').let { if (it < 0) rest.length else it }
-                    rest.startsWith("/*") -> rest.indexOf("*/").let { if (it < 0) rest.length else it + 2 }
-                    rest.startsWith("\"\"\"") -> rest.indexOf("\"\"\"", 3).let { if (it < 0) rest.length else it + 3 }
-                    rest.startsWith("\"") -> endOfQuoted(rest, '"')
-                    rest.startsWith("'") -> endOfQuoted(rest, '\'')
-                    else -> 0
+                    source.startsWith("//", i) -> source.indexOf('\n', i).let { if (it < 0) source.length else it }
+                    source.startsWith("/*", i) -> source.indexOf("*/", i).let { if (it < 0) source.length else it + 2 }
+                    source.startsWith("\"\"\"", i) -> source.indexOf("\"\"\"", i + 3).let { if (it < 0) source.length else it + 3 }
+                    source[i] == '"' -> endOfQuoted(source, i, '"')
+                    source[i] == '\'' -> endOfQuoted(source, i, '\'')
+                    else -> i
                 }
-            if (end == 0) {
+            if (end == i) {
                 out.append(source[i])
                 i++
             } else {
-                rest.substring(0, end).forEach { out.append(if (it == '\n') '\n' else ' ') }
-                i += end
+                for (j in i until end) out.append(if (source[j] == '\n') '\n' else ' ')
+                i = end
             }
         }
         return out.toString()
     }
 
+    /** Onde o literal que abre em [start] termina (exclusivo): na aspa que fecha, na quebra de linha ou no fim do texto. */
     private fun endOfQuoted(
-        rest: String,
+        source: String,
+        start: Int,
         quote: Char,
     ): Int {
-        var i = 1
-        while (i < rest.length) {
-            when (rest[i]) {
+        var i = start + 1
+        while (i < source.length) {
+            when (source[i]) {
                 '\\' -> i++
                 quote -> return i + 1
                 '\n' -> return i
             }
             i++
         }
-        return rest.length
+        return source.length
     }
 
     private fun words(identifier: String): List<String> =

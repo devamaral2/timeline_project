@@ -4,17 +4,15 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.emptyPreferences
+import app.braid.mobile.data.preferences.safeData
 import app.braid.mobile.domain.agenda.FreeTimeRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
-import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -31,8 +29,8 @@ class DataStoreFreeTimeRepository
         private val store: DataStore<Preferences>,
     ) : FreeTimeRepository {
         override val enabled: Flow<Boolean> =
-            store.data
-                .catch { failure -> if (failure is IOException) emit(emptyPreferences()) else throw failure }
+            store
+                .safeData()
                 .map { it[FREE_TIME] ?: true }
                 .distinctUntilChanged()
 

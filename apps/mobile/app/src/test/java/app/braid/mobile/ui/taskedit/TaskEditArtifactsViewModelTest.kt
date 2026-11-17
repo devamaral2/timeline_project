@@ -21,6 +21,7 @@ import app.braid.mobile.support.TestBackend
 import app.braid.mobile.support.TestGraph
 import app.braid.mobile.support.serveArtifactChoices
 import app.braid.mobile.support.serveArtifactTasks
+import app.braid.mobile.support.stopAndJoin
 import app.braid.mobile.ui.picker.PickerSearchStatus
 import app.braid.mobile.ui.taskartifacts.ArtifactPicker
 import kotlinx.coroutines.Dispatchers
@@ -65,9 +66,11 @@ class TaskEditArtifactsViewModelTest {
         backend.serveArtifactChoices()
     }
 
+    private val created = mutableListOf<TaskEditViewModel>()
+
     @After
     fun tearDown() {
-        Thread.sleep(100)
+        created.forEach { it.stopAndJoin() }
         backend.close()
         Dispatchers.resetMain()
     }
@@ -85,7 +88,7 @@ class TaskEditArtifactsViewModelTest {
             DefaultAgentRequestRepository(graph.apis.create(RequestsApi::class.java)),
             graph.sessionRepository,
             DefaultArtifactRepository(graph.apis.create(ArtifactsApi::class.java)),
-        )
+        ).also(created::add)
     }
 
     private suspend fun TaskEditViewModel.opened(): TaskEditViewModel {

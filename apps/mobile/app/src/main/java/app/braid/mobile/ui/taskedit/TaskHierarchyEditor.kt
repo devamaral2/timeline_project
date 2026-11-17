@@ -1,8 +1,12 @@
 package app.braid.mobile.ui.taskedit
 
+import app.braid.mobile.domain.polling.AGENT_POLL_MS
+import app.braid.mobile.domain.request.AgentRequest
 import app.braid.mobile.domain.request.AgentRequestRepository
 import app.braid.mobile.domain.request.EntityKind
+import app.braid.mobile.domain.request.RequestFollow
 import app.braid.mobile.domain.request.RequestOperation
+import app.braid.mobile.domain.request.followRequest
 import app.braid.mobile.domain.request.isOpenRequest
 import app.braid.mobile.domain.request.runningStepLabel
 import app.braid.mobile.domain.session.SessionRepository
@@ -24,7 +28,6 @@ import app.braid.mobile.domain.task.draftWithoutSubtask
 import app.braid.mobile.domain.task.pickerExclusions
 import app.braid.mobile.domain.task.topCreatedTasks
 import app.braid.mobile.domain.time.AppClock
-import app.braid.mobile.ui.agenda.AGENT_POLL_MS
 import app.braid.mobile.ui.picker.EntityPickerController
 import app.braid.mobile.ui.picker.EntityPickerState
 import kotlinx.coroutines.CancellationException
@@ -33,7 +36,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -200,12 +202,24 @@ class TaskHierarchyEditor(
             scope.launch {
                 try {
                     val id = requests.start(userId, text, null, UUID.randomUUID().toString())
-                    var request = requests.request(id)
-                    while (isOpenRequest(request.status)) {
-                        setFooter(PickerFooter.Asking(request.progress ?: runningStepLabel(request.steps)))
-                        delay(pollMillis)
-                        request = requests.request(id)
-                    }
+                    val outcome =
+                        followRequest(
+                            clock = clock,
+                            read = { requests.request(id) },
+                            onRead = { view ->
+                                if (view.isOpen) setFooter(PickerFooter.Asking(view.progress ?: runningStepLabel(view.steps)))
+                            },
+                            intervalMs = pollMillis,
+                            readFirst = true,
+                        )
+                    val request =
+                        when (outcome) {
+                            is RequestFollow.Closed -> outcome.request
+                            RequestFollow.Lost, RequestFollow.TimedOut -> {
+                                setFooter(PickerFooter.Failed(HERMES_ASK_FAILED))
+                                return@launch
+                            }
+                        }
                     if (request.status != TaskStatus.Done) {
                         setFooter(PickerFooter.Failed(request.message ?: HERMES_ASK_FAILED))
                         return@launch
@@ -257,3 +271,5 @@ class TaskHierarchyEditor(
 
     private fun setFooter(footer: PickerFooter) = mutableState.update { it.copy(picker = it.picker?.copy(footer = footer)) }
 }
+
+private val AgentRequest.isOpen: Boolean get() = isOpenRequest(status)

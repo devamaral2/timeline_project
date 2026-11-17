@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.braid.mobile.core.designsystem.BraidIcons
 import app.braid.mobile.core.designsystem.BraidMonoFont
 import app.braid.mobile.core.designsystem.BraidPill
 import app.braid.mobile.core.designsystem.SvgIcon
@@ -228,7 +229,7 @@ private fun EmptyList(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        SvgIcon(DocumentIcons.fileText, size = 32.dp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        SvgIcon(BraidIcons.fileText, size = 32.dp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(
             title,
             color = MaterialTheme.colorScheme.onBackground,

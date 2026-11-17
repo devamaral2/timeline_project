@@ -61,6 +61,7 @@ import app.braid.mobile.core.designsystem.SvgIcon
 import app.braid.mobile.core.designsystem.braidBrand
 import app.braid.mobile.core.designsystem.braidTokens
 import app.braid.mobile.domain.request.AgentRequest
+import app.braid.mobile.domain.request.EDIT_LISTENING_TEXT
 import app.braid.mobile.domain.request.EntityKind
 import app.braid.mobile.domain.request.PreviousRequest
 import app.braid.mobile.domain.request.RequestEntity
@@ -78,6 +79,9 @@ import app.braid.mobile.domain.task.TaskStatus
 import app.braid.mobile.domain.task.elapsedLabel
 import app.braid.mobile.domain.task.momentLabel
 import app.braid.mobile.domain.timeline.formatTime
+import app.braid.mobile.ui.aiedit.MicrophonePermissionEffect
+import app.braid.mobile.ui.chat.VoiceButton
+import app.braid.mobile.ui.chat.VoiceUiState
 import app.braid.mobile.ui.tasks.TaskKindMark
 import app.braid.mobile.ui.tasks.TaskStatusGlyph
 import app.braid.mobile.ui.tasks.taskStatusName
@@ -92,13 +96,17 @@ fun AgentTaskPage(
     viewModel: AgentTaskViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    // A releitura do pedido aberto só anda com a tela à vista.
+    val voice by viewModel.voice.collectAsStateWithLifecycle()
+    // A resposta do sistema volta ao ViewModel, que liga a escuta ou explica.
+    MicrophonePermissionEffect(voice.askPermission, viewModel::microphoneResult)
+    // A releitura do pedido aberto só anda com a tela à vista (e o microfone desliga fora dela).
     LifecycleResumeEffect(Unit) {
         viewModel.setVisible(true)
         onPauseOrDispose { viewModel.setVisible(false) }
     }
     AgentTaskScreen(
         state = state,
+        voice = voice,
         onBack = onBack,
         onRetry = viewModel::retry,
         onOpenTask = onOpenTask,
@@ -106,12 +114,14 @@ fun AgentTaskPage(
         onDraftChange = viewModel::onDraftChange,
         onSend = viewModel::send,
         onCancel = viewModel::cancel,
+        onToggleVoice = viewModel::toggleVoice,
     )
 }
 
 @Composable
 fun AgentTaskScreen(
     state: AgentTaskUiState,
+    voice: VoiceUiState,
     onBack: () -> Unit,
     onRetry: () -> Unit,
     onOpenTask: (String) -> Unit,
@@ -119,6 +129,7 @@ fun AgentTaskScreen(
     onDraftChange: (String) -> Unit,
     onSend: () -> Unit,
     onCancel: () -> Unit,
+    onToggleVoice: () -> Unit,
 ) {
     Column(
         Modifier
@@ -145,7 +156,7 @@ fun AgentTaskScreen(
             }
         }
         if (state is AgentTaskUiState.Content) {
-            RequestBar(state, onDraftChange, onSend, onCancel)
+            RequestBar(state, voice, onDraftChange, onSend, onCancel, onToggleVoice)
         }
     }
 }
@@ -350,7 +361,7 @@ private fun ProducedRow(
     ) {
         Box(Modifier.size(width = 20.dp, height = 24.dp), contentAlignment = Alignment.Center) {
             SvgIcon(
-                if (entity.kind == EntityKind.Task) DetailIcons.calendarDays else DetailIcons.fileText,
+                if (entity.kind == EntityKind.Task) BraidIcons.calendarDays else BraidIcons.fileText,
                 size = 18.dp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 strokeWidth = 1.75f,
@@ -446,9 +457,11 @@ private fun FailureSection(reason: String) {
 @Composable
 private fun RequestBar(
     content: AgentTaskUiState.Content,
+    voice: VoiceUiState,
     onDraftChange: (String) -> Unit,
     onSend: () -> Unit,
     onCancel: () -> Unit,
+    onToggleVoice: () -> Unit,
 ) {
     val composer = content.composer
     val tracked = content.tracked
@@ -464,6 +477,7 @@ private fun RequestBar(
     ) {
         composer.error?.let { Alert(it) }
         content.followFailure?.let { Alert(it) }
+        voice.notice?.let { Alert(it) }
         Row(
             Modifier.fillMaxWidth().defaultMinSize(minHeight = 28.dp).padding(start = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -477,7 +491,7 @@ private fun RequestBar(
             )
             Spacer(Modifier.width(12.dp))
             Text(
-                content.statusLine,
+                if (voice.listening) EDIT_LISTENING_TEXT else content.statusLine,
                 modifier = Modifier.weight(1f).semantics { liveRegion = LiveRegionMode.Polite },
                 color = if (tracked?.status == TaskStatus.Failed) scheme.error else scheme.onSurfaceVariant,
                 fontSize = 14.sp,
@@ -505,8 +519,10 @@ private fun RequestBar(
                 enabled = tracked != null && !composer.sending,
                 canSend = content.canSend,
                 sending = composer.sending,
-                onDraftChange,
-                onSend,
+                voice = voice,
+                onDraftChange = onDraftChange,
+                onSend = onSend,
+                onToggleVoice = onToggleVoice,
             )
         }
     }
@@ -535,7 +551,7 @@ private fun ContextCard(request: AgentRequest) {
     ) {
         Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
             SvgIcon(
-                DetailIcons.messageSquare,
+                BraidIcons.messageSquare,
                 size = 20.dp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 strokeWidth = 1.75f,
@@ -570,8 +586,10 @@ private fun DraftField(
     enabled: Boolean,
     canSend: Boolean,
     sending: Boolean,
+    voice: VoiceUiState,
     onDraftChange: (String) -> Unit,
     onSend: () -> Unit,
+    onToggleVoice: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
     val interaction = remember { MutableInteractionSource() }
@@ -611,6 +629,11 @@ private fun DraftField(
                 }
             },
         )
+        if (voice.available) {
+            Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+                VoiceButton(listening = voice.listening, enabled = enabled, onClick = onToggleVoice)
+            }
+        }
         Box(
             Modifier
                 .size(48.dp)
@@ -626,7 +649,7 @@ private fun DraftField(
             contentAlignment = Alignment.Center,
         ) {
             SvgIcon(
-                DetailIcons.arrowUp,
+                BraidIcons.arrowUp,
                 size = 20.dp,
                 color = if (ready) scheme.onPrimary else scheme.outline,
                 strokeWidth = 2f,

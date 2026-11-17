@@ -41,6 +41,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import app.braid.mobile.core.designsystem.BraidIcons
 import app.braid.mobile.core.designsystem.BraidMonoFont
 import app.braid.mobile.core.designsystem.SvgIcon
 import app.braid.mobile.core.designsystem.SvgPart
@@ -62,11 +63,11 @@ import java.time.format.DateTimeFormatter
 
 private val KindIcons: Map<TraceKind, List<SvgPart>> =
     mapOf(
-        TraceKind.Request to ChatIcons.traceRequest,
+        TraceKind.Request to BraidIcons.messageSquare,
         TraceKind.Routing to ChatIcons.traceRouting,
         TraceKind.Thought to ChatIcons.traceThought,
-        TraceKind.Agent to ChatIcons.traceAgent,
-        TraceKind.Tool to ChatIcons.traceTool,
+        TraceKind.Agent to BraidIcons.bot,
+        TraceKind.Tool to BraidIcons.wrench,
         TraceKind.Message to ChatIcons.traceMessage,
         TraceKind.Answer to ChatIcons.traceAnswer,
     )
@@ -295,7 +296,7 @@ private fun TraceEntryRow(
                 )
             }
             SvgIcon(
-                ChatIcons.chevronRight,
+                BraidIcons.chevronRight,
                 size = 16.dp,
                 color = scheme.outlineVariant,
                 strokeWidth = 2f,

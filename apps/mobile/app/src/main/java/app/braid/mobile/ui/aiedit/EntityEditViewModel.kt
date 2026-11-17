@@ -2,32 +2,31 @@ package app.braid.mobile.ui.aiedit
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.braid.mobile.domain.polling.AGENT_POLL_MS
 import app.braid.mobile.domain.request.AgentRequest
 import app.braid.mobile.domain.request.AgentRequestRepository
 import app.braid.mobile.domain.request.EDIT_LISTENING_TEXT
 import app.braid.mobile.domain.request.EDIT_LOST_TEXT
 import app.braid.mobile.domain.request.EDIT_TIMEOUT_TEXT
 import app.braid.mobile.domain.request.EditEntityType
+import app.braid.mobile.domain.request.PROMPT_MAX_LENGTH
+import app.braid.mobile.domain.request.RequestFollow
 import app.braid.mobile.domain.request.agentFailureText
-import app.braid.mobile.domain.request.isOpenRequest
+import app.braid.mobile.domain.request.appendTranscript
+import app.braid.mobile.domain.request.followRequest
 import app.braid.mobile.domain.request.runningStepLabel
 import app.braid.mobile.domain.session.SessionRepository
 import app.braid.mobile.domain.session.SessionState
 import app.braid.mobile.domain.speech.MicrophonePermission
-import app.braid.mobile.domain.speech.SpeechDictation
-import app.braid.mobile.domain.speech.SpeechError
 import app.braid.mobile.domain.speech.SpeechRecognizer
-import app.braid.mobile.domain.speech.speechErrorMessage
 import app.braid.mobile.domain.task.TaskStatus
 import app.braid.mobile.domain.time.AppClock
-import app.braid.mobile.ui.agenda.AGENT_POLL_MS
 import app.braid.mobile.ui.chat.VoiceUiState
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -37,15 +36,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.Duration
-
-const val ENTITY_EDIT_MAX_LENGTH = 4000
-
-/** O tempo que a barra espera o pedido terminar antes de desistir de acompanhá-lo. */
-const val ENTITY_EDIT_TIMEOUT_MS = 180_000L
-
-/** Falhas seguidas ao ler o pedido antes de desistir de acompanhá-lo. */
-const val ENTITY_EDIT_POLL_FAILURES = 5
 
 enum class EditPhase { Idle, Sending, Running, Done, Failed }
 
@@ -112,36 +102,22 @@ class EntityEditViewModel
 
         /** O acompanhamento só anda com a tela à vista. */
         private val visible = MutableStateFlow(true)
-        private var askingPermission = false
-        private var permissionNotice: String? = null
 
         private val dictation =
-            SpeechDictation(
-                recognizer = speech,
-                scope = viewModelScope,
-                onFinalTranscript = { transcript ->
-                    mutableState.update {
-                        it.copy(
-                            draft = (if (it.draft.isNotEmpty()) "${it.draft} $transcript" else transcript).take(MAX),
-                        )
-                    }
-                },
+            DraftDictation(
+                speech,
+                microphone,
+                viewModelScope,
+                onVoice = { voice -> mutableState.update { if (it.voice == voice) it else it.copy(voice = voice) } },
+                onTranscript = { transcript -> mutableState.update { it.copy(draft = appendTranscript(it.draft, transcript)) } },
             )
 
-        init {
-            viewModelScope.launch { dictation.state.collect { refreshVoice() } }
-        }
-
-        fun onDraftChange(text: String) = mutableState.update { it.copy(draft = text.take(MAX)) }
+        fun onDraftChange(text: String) = mutableState.update { it.copy(draft = text.take(PROMPT_MAX_LENGTH)) }
 
         /** A tela está à vista ou não; fora de vista o microfone desliga e o acompanhamento espera. */
         fun setVisible(value: Boolean) {
             visible.value = value
-            if (!value) {
-                dictation.cancel()
-                askingPermission = false
-                refreshVoice()
-            }
+            if (!value) dictation.cancel()
         }
 
         /** Envia o campo. Falha de envio devolve o texto ao campo. */
@@ -152,7 +128,6 @@ class EntityEditViewModel
             val userId = (session.state.value as? SessionState.SignedIn)?.user?.userId ?: return
             dictation.cancel()
             mutableState.update { it.copy(draft = "", phase = EditPhase.Sending, request = null, error = null) }
-            refreshVoice()
             viewModelScope.launch {
                 val id =
                     try {
@@ -177,33 +152,18 @@ class EntityEditViewModel
         }
 
         private suspend fun follow(id: String) {
-            val startedAt = clock.now()
-            var failures = 0
-            while (true) {
-                // Ao contrário da barra do arquivo, a primeira leitura só vem depois da primeira espera (como no web).
-                delay(AGENT_POLL_MS)
-                visible.first { it }
-                try {
-                    val view = requests.request(id)
-                    failures = 0
-                    mutableState.update { it.copy(request = view) }
-                    if (!isOpenRequest(view.status)) {
-                        finish(view)
-                        return
-                    }
-                } catch (cancelled: CancellationException) {
-                    throw cancelled
-                } catch (failure: Exception) {
-                    failures += 1
-                    if (failures >= ENTITY_EDIT_POLL_FAILURES) {
-                        fail(EDIT_LOST_TEXT)
-                        return
-                    }
-                }
-                if (Duration.between(startedAt, clock.now()).toMillis() > ENTITY_EDIT_TIMEOUT_MS) {
-                    fail(EDIT_TIMEOUT_TEXT)
-                    return
-                }
+            // Ao contrário da barra do arquivo, a primeira leitura só vem depois da primeira espera (como no web).
+            val outcome =
+                followRequest(
+                    clock = clock,
+                    read = { requests.request(id) },
+                    onRead = { view -> mutableState.update { it.copy(request = view) } },
+                    beforeRead = { visible.first { it } },
+                )
+            when (outcome) {
+                is RequestFollow.Closed -> finish(outcome.request)
+                RequestFollow.Lost -> fail(EDIT_LOST_TEXT)
+                RequestFollow.TimedOut -> fail(EDIT_TIMEOUT_TEXT)
             }
         }
 
@@ -219,46 +179,13 @@ class EntityEditViewModel
         private fun fail(text: String) = mutableState.update { it.copy(phase = EditPhase.Failed, error = text) }
 
         /** O botão do microfone: parado, liga; ouvindo, para e o que foi ouvido vai para o campo. */
-        fun toggleVoice() {
-            if (dictation.state.value.listening) {
-                dictation.stop()
-                return
-            }
-            if (!speech.available || mutableState.value.busy) return
-            permissionNotice = null
-            if (!microphone.isGranted()) {
-                askingPermission = true
-                refreshVoice()
-                return
-            }
-            dictation.start()
-        }
+        fun toggleVoice() = dictation.toggle(blocked = mutableState.value.busy)
 
         /** A resposta do pedido de permissão do sistema: negada, diz por quê; concedida, liga a escuta. */
-        fun microphoneResult(granted: Boolean) {
-            if (!askingPermission) return
-            askingPermission = false
-            if (!granted) {
-                permissionNotice = speechErrorMessage(SpeechError.NotAllowed)
-                refreshVoice()
-                return
-            }
-            dictation.start()
-        }
+        fun microphoneResult(granted: Boolean) = dictation.permissionResult(granted)
 
         override fun onCleared() {
             dictation.cancel()
             super.onCleared()
-        }
-
-        private fun refreshVoice() {
-            val heard = dictation.state.value
-            val notice = permissionNotice ?: heard.error?.let(::speechErrorMessage)
-            val voice = VoiceUiState(speech.available, heard.listening, heard.heard, notice, askingPermission)
-            mutableState.update { if (it.voice == voice) it else it.copy(voice = voice) }
-        }
-
-        private companion object {
-            const val MAX = ENTITY_EDIT_MAX_LENGTH
         }
     }

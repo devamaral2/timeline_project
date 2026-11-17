@@ -21,7 +21,7 @@ class DocumentTokens(
 /** O matiz das gorduras (`--macro-fat` do web): a luminosidade e o croma das tags, num rosa. */
 private const val FAT_HUE = 340.0
 
-private fun tokensFor(dark: Boolean): DocumentTokens {
+internal fun documentTokensFor(dark: Boolean): DocumentTokens {
     val lightness = if (dark) DarkTokens.tagLightness else LightTokens.tagLightness
     val chroma = if (dark) DarkTokens.tagChroma else LightTokens.tagChroma
     return DocumentTokens(
@@ -31,13 +31,13 @@ private fun tokensFor(dark: Boolean): DocumentTokens {
         protein = if (dark) DarkTokens.routine else LightTokens.routine,
         carbohydrates = if (dark) DarkTokens.meal else LightTokens.meal,
         fat = Color(0xFF000000.toInt() or oklchRgb(FAT_HUE, lightness, chroma)),
-        // No claro `--faint` é o `--muted-foreground`; no escuro tem valor próprio (#8388a8).
-        faint = if (dark) Color(0xFF8388A8) else LightTokens.mutedForeground,
+        // No claro `--faint` é o `--muted-foreground`; no escuro tem valor próprio, lido do `globals.css` pelo gerador.
+        faint = if (dark) DarkTokens.faint else LightTokens.faint,
     )
 }
 
 @Composable
 fun documentTokens(): DocumentTokens {
     val dark = LocalBraidDarkTheme.current
-    return remember(dark) { tokensFor(dark) }
+    return remember(dark) { documentTokensFor(dark) }
 }

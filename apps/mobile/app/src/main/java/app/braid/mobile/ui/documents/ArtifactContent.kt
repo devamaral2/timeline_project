@@ -69,6 +69,7 @@ import app.braid.mobile.domain.artifact.macroShares
 import app.braid.mobile.domain.artifact.markdownBodyOf
 import app.braid.mobile.domain.artifact.pluralize
 import app.braid.mobile.domain.artifact.sleepAgendaOfArtifact
+import app.braid.mobile.domain.time.MINUTES_PER_HOUR
 import app.braid.mobile.ui.agentfile.AgentFileSection
 import kotlin.math.floor
 import kotlin.math.roundToInt
@@ -199,8 +200,6 @@ private fun Metric(
         Text(durationText(minutes, muted), color = MaterialTheme.colorScheme.onBackground, lineHeight = 28.sp, maxLines = 1)
     }
 }
-
-private const val MINUTES_PER_HOUR = 60
 
 /** Horas e minutos com a unidade miúda: 7 h 02 min. */
 private fun durationText(

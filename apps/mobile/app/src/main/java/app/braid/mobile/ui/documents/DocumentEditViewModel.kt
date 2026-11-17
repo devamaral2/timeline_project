@@ -97,7 +97,11 @@ class DocumentEditViewModel
         val state: StateFlow<DocumentEditUiState> = mutableState.asStateFlow()
 
         // Uma chave por tipo: trocar de Nota para Alimento e voltar não reaproveita a chave de outro corpo.
-        private val idempotencyKeys = NewDocumentKind.entries.associateWith { UUID.randomUUID().toString() }
+        private val idempotencyKeys = NewDocumentKind.entries.associateWith { UUID.randomUUID().toString() }.toMutableMap()
+
+        // O último corpo enviado de cada tipo: corpo novo depois de uma falha pede chave nova, senão a API recusa a chave
+        // reaproveitada com outro corpo (422), como no formulário de tarefa.
+        private val lastBodies = mutableMapOf<NewDocumentKind, ArtifactDraft>()
         private var revision = 0
 
         // A guarda vale antes da próxima emissão do estado: dois toques seguidos não mandam duas requisições.
@@ -181,8 +185,8 @@ class DocumentEditViewModel
                                 artifacts.updateText(documentId, revision, content)
                                 documentId
                             }
-                            form.isMeal -> artifacts.create(ArtifactDraft.Meal(form.meal.trim()), key(NewDocumentKind.Meal))
-                            else -> artifacts.create(ArtifactDraft.Text(content), key(NewDocumentKind.Text))
+                            form.isMeal -> create(NewDocumentKind.Meal, ArtifactDraft.Meal(form.meal.trim()))
+                            else -> create(NewDocumentKind.Text, ArtifactDraft.Text(content))
                         }
                     edit { it.copy(saving = false, savedId = savedId) }
                 } catch (cancelled: CancellationException) {
@@ -202,7 +206,16 @@ class DocumentEditViewModel
             }
         }
 
-        private fun key(kind: NewDocumentKind): String = checkNotNull(idempotencyKeys[kind])
+        /** A mesma chave enquanto o corpo for o mesmo (tocar em Salvar de novo não cria outro documento); corpo novo, chave nova. */
+        private suspend fun create(
+            kind: NewDocumentKind,
+            draft: ArtifactDraft,
+        ): String {
+            val last = lastBodies[kind]
+            if (last != null && last != draft) idempotencyKeys[kind] = UUID.randomUUID().toString()
+            lastBodies[kind] = draft
+            return artifacts.create(draft, checkNotNull(idempotencyKeys[kind]))
+        }
 
         /** Revisão velha: lê a revisão atual para a próxima tentativa; o texto digitado fica como está. */
         private suspend fun refreshRevision() {

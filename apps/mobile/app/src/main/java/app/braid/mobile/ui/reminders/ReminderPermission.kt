@@ -3,10 +3,12 @@ package app.braid.mobile.ui.reminders
 import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -67,22 +69,76 @@ fun ReminderPermissionPrompt(
 
     val explain = !enabled && !dismissed && (asked == true || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU)
     if (explain) {
-        Surface(
-            modifier = modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp),
-            shape = MaterialTheme.shapes.medium,
-            color = MaterialTheme.colorScheme.surfaceVariant,
-            tonalElevation = 2.dp,
-        ) {
-            Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(
-                    REMINDER_PERMISSION_EXPLANATION,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
-                    TextButton(onClick = { dismissed = true }) { Text("Dispensar") }
-                    TextButton(onClick = { context.startActivity(notificationSettingsIntent(context)) }) { Text("Ativar") }
-                }
+        PromptBanner(
+            text = REMINDER_PERMISSION_EXPLANATION,
+            actionLabel = "Ativar",
+            onAction = { context.startActivity(notificationSettingsIntent(context)) },
+            onDismiss = { dismissed = true },
+            modifier = modifier,
+        )
+    }
+}
+
+/** O que a faixa diz a quem ainda não deu a permissão de alarme exato. */
+const val EXACT_ALARM_EXPLANATION =
+    "Para os lembretes tocarem na hora certa, permita alarmes e lembretes ao app. Sem isso eles podem atrasar um pouco."
+
+/**
+ * Convida a dar a permissão de alarme exato (Android 12+, que o sistema não pergunta num diálogo: ela fica numa tela das
+ * configurações). Só aparece quando há lembretes guardados e a permissão falta; sem ela os lembretes seguem inexatos.
+ */
+@Composable
+fun ExactAlarmPrompt(
+    modifier: Modifier = Modifier,
+    viewModel: ExactAlarmViewModel = hiltViewModel(),
+) {
+    val context = LocalContext.current
+    val explain by viewModel.explain.collectAsStateWithLifecycle()
+
+    // Voltar das configurações com a permissão dada some com a faixa.
+    LifecycleResumeEffect(Unit) {
+        viewModel.refresh()
+        onPauseOrDispose { }
+    }
+    if (explain && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        PromptBanner(
+            text = EXACT_ALARM_EXPLANATION,
+            actionLabel = "Permitir",
+            onAction = { context.startActivity(exactAlarmSettingsIntent(context)) },
+            onDismiss = viewModel::dismiss,
+            modifier = modifier,
+        )
+    }
+}
+
+/** As faixas de permissão dos lembretes, uma sobre a outra no topo. */
+@Composable
+fun ReminderPrompts(modifier: Modifier = Modifier) {
+    Column(modifier) {
+        ReminderPermissionPrompt()
+        ExactAlarmPrompt()
+    }
+}
+
+@Composable
+private fun PromptBanner(
+    text: String,
+    actionLabel: String,
+    onAction: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp),
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        tonalElevation = 2.dp,
+    ) {
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+            Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                TextButton(onClick = onDismiss) { Text("Dispensar") }
+                TextButton(onClick = onAction) { Text(actionLabel) }
             }
         }
     }
@@ -93,4 +149,9 @@ private fun notificationsEnabled(context: Context): Boolean = NotificationManage
 private fun notificationSettingsIntent(context: Context): Intent =
     Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
         .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
+@RequiresApi(Build.VERSION_CODES.S)
+private fun exactAlarmSettingsIntent(context: Context): Intent =
+    Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:${context.packageName}"))
         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

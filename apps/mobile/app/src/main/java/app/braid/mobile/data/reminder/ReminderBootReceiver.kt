@@ -33,7 +33,8 @@ class ReminderBootReceiver : BroadcastReceiver() {
         val pending = goAsync()
         CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
             try {
-                session.restore()
+                // Primeiro o que está guardado (sem rede, e lê a sessão guardada), depois, se der tempo, a releitura da fonte.
+                sync.rescheduleFromSaved()
                 if (session.state.value is SessionState.SignedIn) withTimeoutOrNull(BUDGET_MS) { sync.refresh() }
             } finally {
                 pending.finish()

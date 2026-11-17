@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavHostController
@@ -37,7 +38,7 @@ import app.braid.mobile.ui.documents.DocumentDetailPage
 import app.braid.mobile.ui.documents.DocumentEditPage
 import app.braid.mobile.ui.documents.DocumentsScreen
 import app.braid.mobile.ui.notifications.NotificationsScreen
-import app.braid.mobile.ui.reminders.ReminderPermissionPrompt
+import app.braid.mobile.ui.reminders.ReminderPrompts
 import app.braid.mobile.ui.settings.SettingsScreen
 import app.braid.mobile.ui.settings.SettingsViewModel
 import app.braid.mobile.ui.shell.BraidBottomBar
@@ -62,6 +63,11 @@ fun AppNavHost(
     val session by gate.state.collectAsStateWithLifecycle()
     val mode by sectionMenu.mode.collectAsStateWithLifecycle()
     val chatState by chat.state.collectAsStateWithLifecycle()
+    // Em segundo plano o chat deixa de reler o pedido em andamento e retoma ao voltar.
+    LifecycleResumeEffect(chat) {
+        chat.setVisible(true)
+        onPauseOrDispose { chat.setVisible(false) }
+    }
     val menus = remember { SectionMenus() }
     var menuOpen by rememberSaveable { mutableStateOf(false) }
     // "Configurações" do `/configuracoes`: abre dentro do painel do chat, como no web, e o voltar leva ao chat.
@@ -213,7 +219,7 @@ fun AppNavHost(
                 ChatOverlay(chat, commands, links)
                 if (settingsOpen) SettingsScreen(settings, onBack = { settingsOpen = false })
             }
-            if (session is SessionState.SignedIn) ReminderPermissionPrompt(Modifier.align(Alignment.TopCenter))
+            if (session is SessionState.SignedIn) ReminderPrompts(Modifier.align(Alignment.TopCenter))
             if (currentTab != null) {
                 if (menuOpen) {
                     // Tocar fora do menu o fecha; o scrim não pinta nada.

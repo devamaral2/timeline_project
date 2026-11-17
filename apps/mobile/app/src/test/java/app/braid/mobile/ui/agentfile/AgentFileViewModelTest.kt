@@ -1,18 +1,19 @@
 package app.braid.mobile.ui.agentfile
 
-import androidx.lifecycle.viewModelScope
 import app.braid.mobile.data.agentfiles.AgentFilesApi
 import app.braid.mobile.data.agentfiles.DefaultAgentFileRepository
 import app.braid.mobile.data.requests.DefaultAgentRequestRepository
 import app.braid.mobile.data.requests.RequestsApi
 import app.braid.mobile.domain.artifact.AgentFileData
+import app.braid.mobile.support.FakeMicrophone
+import app.braid.mobile.support.FakeSpeechRecognizer
 import app.braid.mobile.support.TestBackend
 import app.braid.mobile.support.TestBackend.Companion.fixture
 import app.braid.mobile.support.TestBackend.Companion.status
 import app.braid.mobile.support.TestGraph
+import app.braid.mobile.support.stopAndJoin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope
@@ -53,6 +54,8 @@ class AgentFileViewModelTest {
 
     private lateinit var backend: TestBackend
     private lateinit var graph: TestGraph
+    private val speech = FakeSpeechRecognizer()
+    private val microphone = FakeMicrophone()
     private val created = mutableListOf<AgentFileViewModel>()
 
     @Before
@@ -64,8 +67,7 @@ class AgentFileViewModelTest {
 
     @After
     fun tearDown() {
-        created.forEach { it.viewModelScope.cancel() }
-        Thread.sleep(100)
+        created.forEach { it.stopAndJoin() }
         backend.close()
         Dispatchers.resetMain()
     }
@@ -83,6 +85,8 @@ class AgentFileViewModelTest {
             AgentFileData(path, hash, missing, "Pesquisa na web"),
             DefaultAgentFileRepository(graph.apis.create(AgentFilesApi::class.java)),
             DefaultAgentRequestRepository(graph.apis.create(RequestsApi::class.java)),
+            speech,
+            microphone,
         ).also(created::add)
 
     private suspend fun AgentFileViewModel.ready(): AgentFileUiState =
@@ -565,5 +569,89 @@ class AgentFileViewModelTest {
             viewModel.send()
             settle()
             assertEquals(0, reads("POST", editPath))
+        }
+
+    @Test
+    fun `the microphone only dictates into the edit box, never sending`() =
+        runTest {
+            serveOwner()
+            val viewModel = newViewModel()
+            viewModel.ready()
+            viewModel.onDraftChange("Troque o título")
+
+            assertTrue(viewModel.state.value.edit.voice.available)
+            viewModel.toggleVoice()
+            assertTrue(speech.listening)
+            assertTrue(viewModel.state.value.edit.voice.listening)
+            assertEquals("Ouvindo…", viewModel.state.value.edit.statusText)
+
+            speech.hear("para Pesquisar" to true)
+            advanceTimeBy(60_000)
+            runCurrent()
+            assertTrue(speech.listening)
+            viewModel.toggleVoice()
+
+            assertFalse(speech.listening)
+            assertEquals("Troque o título para Pesquisar", viewModel.state.value.edit.draft)
+            settle()
+            assertEquals(0, reads("POST", editPath))
+        }
+
+    @Test
+    fun `without the microphone permission the system is asked and a refusal explains itself`() =
+        runTest {
+            serveOwner()
+            microphone.granted = false
+            val viewModel = newViewModel()
+            viewModel.ready()
+
+            viewModel.toggleVoice()
+            assertTrue(viewModel.state.value.edit.voice.askPermission)
+            assertFalse(speech.listening)
+
+            viewModel.microphoneResult(false)
+            assertEquals("Permita o acesso ao microfone para gravar.", viewModel.state.value.edit.voice.notice)
+            viewModel.toggleVoice()
+            viewModel.microphoneResult(true)
+            assertTrue(speech.listening)
+        }
+
+    @Test
+    fun `sending closes the microphone and keeps it off while the request is open`() =
+        runTest {
+            serveOwner()
+            backend.route("POST", editPath, fixture("agent-file-edit-accepted", code = 202))
+            servingInOrder("agent-file-edit-running")
+            val viewModel = newViewModel()
+            viewModel.ready()
+            viewModel.setVisible(true)
+
+            viewModel.toggleVoice()
+            speech.hear("mude" to true)
+            viewModel.onDraftChange("Mude")
+            viewModel.send()
+            assertFalse(speech.listening)
+            assertEquals(1, speech.cancels)
+
+            // Com o pedido aberto o microfone fica desligado, como a caixa.
+            viewModel.until { it.edit.followed != null }
+            viewModel.toggleVoice()
+            assertFalse(speech.listening)
+        }
+
+    @Test
+    fun `leaving the screen turns the microphone off without delivering what was heard`() =
+        runTest {
+            serveOwner()
+            val viewModel = newViewModel()
+            viewModel.ready()
+            viewModel.setVisible(true)
+            viewModel.toggleVoice()
+            speech.hear("não entregue" to true)
+
+            viewModel.setVisible(false)
+
+            assertFalse(speech.listening)
+            assertEquals("", viewModel.state.value.edit.draft)
         }
 }

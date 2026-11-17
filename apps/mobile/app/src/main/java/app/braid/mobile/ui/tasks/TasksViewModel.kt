@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.braid.mobile.domain.executor.ViewMode
 import app.braid.mobile.domain.executor.ViewModeRepository
+import app.braid.mobile.domain.polling.PollingLoop
 import app.braid.mobile.domain.task.StaleRevisionException
 import app.braid.mobile.domain.task.SubtaskTree
 import app.braid.mobile.domain.task.TaskActor
@@ -22,7 +23,6 @@ import app.braid.mobile.domain.task.statusPatch
 import app.braid.mobile.domain.task.tagCounts
 import app.braid.mobile.domain.task.tagsByUse
 import app.braid.mobile.domain.time.AppClock
-import app.braid.mobile.ui.agenda.AGENT_POLL_MS
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -105,7 +105,7 @@ class TasksViewModel
         /** Só a resposta da leitura mais recente entra na tela: um filtro trocado no meio não deixa lista velha. */
         private var latestRequest = 0
         private var searchJob: Job? = null
-        private var pollJob: Job? = null
+        private val polling = PollingLoop(viewModelScope)
         private var visible = false
 
         init {
@@ -223,23 +223,11 @@ class TasksViewModel
         }
 
         /**
-         * Com tarefa de agente em aberto na lista, relê a cada [AGENT_POLL_MS], sem o esqueleto e sem avisar de falha;
+         * Com tarefa de agente em aberto na lista, relê a cada [app.braid.mobile.domain.polling.AGENT_POLL_MS], sem o esqueleto e sem avisar de falha;
          * para quando não sobra nenhuma ou a tela sai de vista.
          */
         private fun syncPolling() {
-            if (!visible || !hasOpenAgentTask(mutableState.value.cards.orEmpty())) {
-                pollJob?.cancel()
-                pollJob = null
-                return
-            }
-            if (pollJob?.isActive == true) return
-            pollJob =
-                viewModelScope.launch {
-                    while (visible && hasOpenAgentTask(mutableState.value.cards.orEmpty())) {
-                        delay(AGENT_POLL_MS)
-                        refresh(quiet = true)
-                    }
-                }
+            polling.sync(active = { visible && hasOpenAgentTask(mutableState.value.cards.orEmpty()) }) { refresh(quiet = true) }
         }
 
         /**

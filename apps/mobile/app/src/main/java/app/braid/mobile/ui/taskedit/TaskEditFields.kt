@@ -597,7 +597,7 @@ internal fun RemovableChip(
     ) {
         Text(text, color = color, fontSize = 14.sp, lineHeight = 20.sp)
         SvgIcon(
-            TaskEditIcons.x,
+            BraidIcons.close,
             size = 14.dp,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.clearAndSetSemantics {},
@@ -621,7 +621,7 @@ internal fun AddButton(
         contentAlignment = Alignment.Center,
     ) {
         SvgIcon(
-            TaskEditIcons.plus,
+            BraidIcons.plus,
             size = 16.dp,
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.clearAndSetSemantics {},

@@ -1,7 +1,7 @@
 package app.braid.mobile.domain.agentfile
 
-import app.braid.mobile.domain.artifact.MONTHS_ABBREVIATED
 import app.braid.mobile.domain.artifact.formatDecimal
+import app.braid.mobile.domain.time.MONTHS_ABBREVIATED
 import app.braid.mobile.domain.timeline.dayKeyOf
 import app.braid.mobile.domain.timeline.formatTime
 import java.time.Instant

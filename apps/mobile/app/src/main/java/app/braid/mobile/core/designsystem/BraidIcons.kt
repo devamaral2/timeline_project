@@ -32,6 +32,55 @@ object BraidIcons {
     val chevronDown = listOf(SvgPart("m6 9 6 6 6-6"))
     val chevronLeft = listOf(SvgPart("m15 18-6-6 6-6"))
     val chevronRight = listOf(SvgPart("m9 18 6-6-6-6"))
+    val chevronUp = listOf(SvgPart("m18 15-6-6-6 6"))
+
+    val arrowLeft = listOf(SvgPart("m12 19-7-7 7-7"), SvgPart("M19 12H5"))
+    val arrowUp = listOf(SvgPart("m5 12 7-7 7 7"), SvgPart("M12 19V5"))
+
+    /** O `X` do lucide: fecha, remove, e marca o pedido que falhou. */
+    val close = listOf(SvgPart("M18 6 6 18"), SvgPart("m6 6 12 12"))
+    val plus = listOf(SvgPart("M5 12h14"), SvgPart("M12 5v14"))
+    val circle = listOf(SvgPart(svgCircle(12f, 12f, 10f)))
+
+    /** O `Loader` aberto do lucide: o pedido em andamento. */
+    val spinner = listOf(SvgPart("M21 12a9 9 0 1 1-6.219-8.56"))
+
+    /** O `MessageSquare` do lucide: o pedido, a mensagem. */
+    val messageSquare = listOf(SvgPart("M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"))
+
+    /** O `Wrench` do lucide: a ferramenta, o pedido de construir. */
+    val wrench =
+        listOf(
+            SvgPart(
+                "M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91" +
+                    "a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z",
+            ),
+        )
+
+    /** O `FileText` do lucide: o documento de texto, o arquivo. */
+    val fileText =
+        listOf(
+            SvgPart("M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"),
+            SvgPart("M14 2v4a2 2 0 0 0 2 2h4"),
+            SvgPart("M10 9H8"),
+            SvgPart("M16 13H8"),
+            SvgPart("M16 17H8"),
+        )
+
+    /** O `CalendarDays` do lucide. */
+    val calendarDays =
+        listOf(
+            SvgPart("M8 2v4"),
+            SvgPart("M16 2v4"),
+            SvgPart(svgRect(3f, 4f, 18f, 18f, 2f)),
+            SvgPart("M3 10h18"),
+            SvgPart("M8 14h.01"),
+            SvgPart("M12 14h.01"),
+            SvgPart("M16 14h.01"),
+            SvgPart("M8 18h.01"),
+            SvgPart("M12 18h.01"),
+            SvgPart("M16 18h.01"),
+        )
 
     /** O `Check` do lucide: marca a opção atual numa lista de escolha. */
     val check = listOf(SvgPart("M20 6 9 17l-5-5"))
@@ -92,15 +141,9 @@ object BraidIcons {
                     SvgPart("M20.5 9v6"),
                     SvgPart("M6.5 12h11"),
                 )
-            "request" -> listOf(SvgPart("M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"))
+            "request" -> messageSquare
             "search_request" -> listOf(SvgPart(svgCircle(11f, 11f, 8f)), SvgPart("m21 21-4.3-4.3"))
-            "build_request" ->
-                listOf(
-                    SvgPart(
-                        "M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91" +
-                            "a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z",
-                    ),
-                )
+            "build_request" -> wrench
             "inquiry_request" ->
                 listOf(
                     SvgPart(svgCircle(12f, 12f, 10f)),

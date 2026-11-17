@@ -1,6 +1,7 @@
 package app.braid.mobile.domain.chat
 
 import app.braid.mobile.domain.request.AgentRequest
+import app.braid.mobile.domain.request.HermesOffException
 
 /** Por que um pedido falhou ou não chegou; cada código tem o seu texto em [chatFailureText]. */
 enum class ChatFailureCode(
@@ -34,11 +35,6 @@ class ChatRequestException(
     val failure: ChatFailureCode,
     cause: Throwable? = null,
 ) : Exception("Pedido ao assistente falhou: ${failure.code}", cause)
-
-/** O Hermes está desligado nesta API (`AI_AUTOMATION`): a rota dele responde não encontrado. */
-class HermesOffException(
-    cause: Throwable? = null,
-) : Exception("O Hermes está desligado nesta API.", cause)
 
 interface ChatRepository {
     /** Abre o pedido em texto e devolve o id. O [clientMessageId] estável faz o reenvio devolver o mesmo pedido. */

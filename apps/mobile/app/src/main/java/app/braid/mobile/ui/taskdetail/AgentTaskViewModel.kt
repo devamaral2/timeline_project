@@ -3,29 +3,33 @@ package app.braid.mobile.ui.taskdetail
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.braid.mobile.domain.polling.PollingLoop
 import app.braid.mobile.domain.request.AgentRequest
 import app.braid.mobile.domain.request.AgentRequestRepository
 import app.braid.mobile.domain.request.FOOD_CANCEL_TEXT
 import app.braid.mobile.domain.request.FoodRequestCancelException
+import app.braid.mobile.domain.request.PROMPT_MAX_LENGTH
 import app.braid.mobile.domain.request.PreviousRequest
 import app.braid.mobile.domain.request.RequestNotFoundException
 import app.braid.mobile.domain.request.agentFailureText
+import app.braid.mobile.domain.request.appendTranscript
 import app.braid.mobile.domain.request.isOpenRequest
 import app.braid.mobile.domain.request.requestStatusLine
 import app.braid.mobile.domain.session.SessionRepository
 import app.braid.mobile.domain.session.SessionState
+import app.braid.mobile.domain.speech.MicrophonePermission
+import app.braid.mobile.domain.speech.SpeechRecognizer
 import app.braid.mobile.domain.task.TaskDetail
 import app.braid.mobile.domain.task.TaskDetailRepository
 import app.braid.mobile.domain.task.TaskNotFoundException
 import app.braid.mobile.domain.task.TaskStatus
 import app.braid.mobile.domain.time.AppClock
-import app.braid.mobile.ui.agenda.AGENT_POLL_MS
+import app.braid.mobile.ui.aiedit.DraftDictation
+import app.braid.mobile.ui.chat.VoiceUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -39,7 +43,6 @@ const val REQUEST_NOT_FOUND_TEXT = "Pedido não encontrado."
 const val REQUEST_LOAD_FAILED_TEXT = "Não foi possível carregar o pedido. Tente novamente."
 const val AGENT_TASK_NOT_FOUND_TEXT = "Tarefa não encontrada."
 const val AGENT_TASK_LOAD_FAILED_TEXT = "Não foi possível carregar a tarefa. Tente novamente."
-const val DRAFT_MAX_LENGTH = 4000
 
 /** O campo do rodapé: o texto, o envio e o cancelamento em voo e o pedido novo que a tela passou a acompanhar. */
 data class Composer(
@@ -92,7 +95,7 @@ sealed interface AgentTaskUiState {
 
 /**
  * O detalhe da tarefa de agente: lê a tarefa e o pedido com o mesmo id, a hierarquia e o pedido anterior da sessão;
- * continua a sessão com um pedido novo, cancela o pedido e se relê a cada [AGENT_POLL_MS] enquanto ele está aberto.
+ * continua a sessão com um pedido novo, cancela o pedido e se relê a cada [app.braid.mobile.domain.polling.AGENT_POLL_MS] enquanto ele está aberto.
  */
 @HiltViewModel
 class AgentTaskViewModel
@@ -103,12 +106,28 @@ class AgentTaskViewModel
         private val requests: AgentRequestRepository,
         private val session: SessionRepository,
         private val clock: AppClock,
+        speech: SpeechRecognizer,
+        microphone: MicrophonePermission,
     ) : ViewModel() {
         private val taskId: String = checkNotNull(savedState["taskId"]) { "O detalhe abre com o id da tarefa" }
         private val mutableState = MutableStateFlow<AgentTaskUiState>(AgentTaskUiState.Loading)
         val state: StateFlow<AgentTaskUiState> = mutableState.asStateFlow()
         private var visible = false
-        private var pollJob: Job? = null
+        private val polling = PollingLoop(viewModelScope)
+
+        private val mutableVoice = MutableStateFlow(VoiceUiState())
+
+        /** O microfone do campo do rodapé: só dita, nunca envia. */
+        val voice: StateFlow<VoiceUiState> = mutableVoice.asStateFlow()
+
+        private val dictation =
+            DraftDictation(
+                speech,
+                microphone,
+                viewModelScope,
+                onVoice = { mutableVoice.value = it },
+                onTranscript = { transcript -> updateComposer { it.copy(draft = appendTranscript(it.draft, transcript)) } },
+            )
 
         init {
             load()
@@ -175,10 +194,22 @@ class AgentTaskViewModel
         /** A tela está à vista (resumida) ou não: a releitura só anda com ela à vista. */
         fun setVisible(value: Boolean) {
             visible = value
+            if (!value) dictation.cancel()
             syncPolling()
         }
 
-        fun onDraftChange(text: String) = updateComposer { it.copy(draft = text.take(DRAFT_MAX_LENGTH)) }
+        fun onDraftChange(text: String) = updateComposer { it.copy(draft = text.take(PROMPT_MAX_LENGTH)) }
+
+        /** O botão do microfone: parado, liga; ouvindo, para e o que foi ouvido vai para o campo. */
+        fun toggleVoice() = dictation.toggle(blocked = current()?.composer?.sending == true)
+
+        /** A resposta do pedido de permissão do sistema: negada, diz por quê; concedida, liga a escuta. */
+        fun microphoneResult(granted: Boolean) = dictation.permissionResult(granted)
+
+        override fun onCleared() {
+            dictation.cancel()
+            super.onCleared()
+        }
 
         /** Abre um pedido novo na mesma sessão e passa a acompanhá-lo. Falha mantém o texto e avisa. */
         fun send() {
@@ -186,6 +217,7 @@ class AgentTaskViewModel
             val tracked = content.tracked
             val text = content.composer.draft.trim()
             if (tracked == null || !content.canSend || text.isEmpty()) return
+            dictation.cancel()
             updateComposer { it.copy(sending = true, error = null) }
             viewModelScope.launch {
                 try {
@@ -242,19 +274,7 @@ class AgentTaskViewModel
         }
 
         private fun syncPolling() {
-            if (!visible || !needsPolling()) {
-                pollJob?.cancel()
-                pollJob = null
-                return
-            }
-            if (pollJob?.isActive == true) return
-            pollJob =
-                viewModelScope.launch {
-                    while (visible && needsPolling()) {
-                        delay(AGENT_POLL_MS)
-                        tick()
-                    }
-                }
+            polling.sync(active = { visible && needsPolling() }) { tick() }
         }
 
         /**
