@@ -2,6 +2,7 @@ package app.braid.mobile.ui.aiedit
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.braid.mobile.domain.polling.AGENT_POLL_MS
 import app.braid.mobile.domain.request.AgentRequest
 import app.braid.mobile.domain.request.AgentRequestRepository
 import app.braid.mobile.domain.request.EDIT_LISTENING_TEXT
@@ -9,9 +10,10 @@ import app.braid.mobile.domain.request.EDIT_LOST_TEXT
 import app.braid.mobile.domain.request.EDIT_TIMEOUT_TEXT
 import app.braid.mobile.domain.request.EditEntityType
 import app.braid.mobile.domain.request.PROMPT_MAX_LENGTH
+import app.braid.mobile.domain.request.RequestFollow
 import app.braid.mobile.domain.request.agentFailureText
 import app.braid.mobile.domain.request.appendTranscript
-import app.braid.mobile.domain.request.isOpenRequest
+import app.braid.mobile.domain.request.followRequest
 import app.braid.mobile.domain.request.runningStepLabel
 import app.braid.mobile.domain.session.SessionRepository
 import app.braid.mobile.domain.session.SessionState
@@ -19,14 +21,12 @@ import app.braid.mobile.domain.speech.MicrophonePermission
 import app.braid.mobile.domain.speech.SpeechRecognizer
 import app.braid.mobile.domain.task.TaskStatus
 import app.braid.mobile.domain.time.AppClock
-import app.braid.mobile.ui.agenda.AGENT_POLL_MS
 import app.braid.mobile.ui.chat.VoiceUiState
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -36,13 +36,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.Duration
-
-/** O tempo que a barra espera o pedido terminar antes de desistir de acompanhá-lo. */
-const val ENTITY_EDIT_TIMEOUT_MS = 180_000L
-
-/** Falhas seguidas ao ler o pedido antes de desistir de acompanhá-lo. */
-const val ENTITY_EDIT_POLL_FAILURES = 5
 
 enum class EditPhase { Idle, Sending, Running, Done, Failed }
 
@@ -159,33 +152,18 @@ class EntityEditViewModel
         }
 
         private suspend fun follow(id: String) {
-            val startedAt = clock.now()
-            var failures = 0
-            while (true) {
-                // Ao contrário da barra do arquivo, a primeira leitura só vem depois da primeira espera (como no web).
-                delay(AGENT_POLL_MS)
-                visible.first { it }
-                try {
-                    val view = requests.request(id)
-                    failures = 0
-                    mutableState.update { it.copy(request = view) }
-                    if (!isOpenRequest(view.status)) {
-                        finish(view)
-                        return
-                    }
-                } catch (cancelled: CancellationException) {
-                    throw cancelled
-                } catch (failure: Exception) {
-                    failures += 1
-                    if (failures >= ENTITY_EDIT_POLL_FAILURES) {
-                        fail(EDIT_LOST_TEXT)
-                        return
-                    }
-                }
-                if (Duration.between(startedAt, clock.now()).toMillis() > ENTITY_EDIT_TIMEOUT_MS) {
-                    fail(EDIT_TIMEOUT_TEXT)
-                    return
-                }
+            // Ao contrário da barra do arquivo, a primeira leitura só vem depois da primeira espera (como no web).
+            val outcome =
+                followRequest(
+                    clock = clock,
+                    read = { requests.request(id) },
+                    onRead = { view -> mutableState.update { it.copy(request = view) } },
+                    beforeRead = { visible.first { it } },
+                )
+            when (outcome) {
+                is RequestFollow.Closed -> finish(outcome.request)
+                RequestFollow.Lost -> fail(EDIT_LOST_TEXT)
+                RequestFollow.TimedOut -> fail(EDIT_TIMEOUT_TEXT)
             }
         }
 

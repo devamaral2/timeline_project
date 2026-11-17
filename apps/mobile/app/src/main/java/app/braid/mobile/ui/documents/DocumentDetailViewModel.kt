@@ -9,13 +9,13 @@ import app.braid.mobile.domain.artifact.ArtifactRepository
 import app.braid.mobile.domain.artifact.ArtifactType
 import app.braid.mobile.domain.artifact.FoodData
 import app.braid.mobile.domain.artifact.FoodGeneration
+import app.braid.mobile.domain.polling.MEAL_POLL_MS
+import app.braid.mobile.domain.polling.PollingLoop
 import app.braid.mobile.domain.request.EditEntityType
 import app.braid.mobile.domain.request.editEntityTypeOfArtifact
 import app.braid.mobile.domain.time.AppClock
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,9 +23,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Instant
 import javax.inject.Inject
-
-/** De quanto em quanto tempo um alimento em cálculo é relido. */
-const val MEAL_POLL_MS = 1_500L
 
 const val DELETE_FAILED_MESSAGE = "Não foi possível excluir a nota. Tente novamente."
 
@@ -88,7 +85,7 @@ class DocumentDetailViewModel
         val state: StateFlow<DocumentDetailUiState> = mutableState.asStateFlow()
 
         private var visible = false
-        private var pollJob: Job? = null
+        private val polling = PollingLoop(viewModelScope, MEAL_POLL_MS)
 
         init {
             load()
@@ -166,25 +163,14 @@ class DocumentDetailViewModel
          * uma leitura que falha mantém a nota que está na tela. Sai de vista ou termina, para.
          */
         private fun syncPolling() {
-            if (!visible || !pending()) {
-                pollJob?.cancel()
-                pollJob = null
-                return
-            }
-            if (pollJob?.isActive == true) return
-            pollJob =
-                viewModelScope.launch {
-                    while (visible && pending()) {
-                        delay(MEAL_POLL_MS)
-                        try {
-                            mutableState.value = DocumentDetailUiState.Ready(artifacts.get(documentId), clock.now())
-                        } catch (cancelled: CancellationException) {
-                            throw cancelled
-                        } catch (failure: Exception) {
-                            // A falha de transporte mantém a nota visível.
-                        }
-                    }
-                    pollJob = null
+            polling.sync(active = { visible && pending() }) {
+                try {
+                    mutableState.value = DocumentDetailUiState.Ready(artifacts.get(documentId), clock.now())
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (failure: Exception) {
+                    // A falha de transporte mantém a nota visível.
                 }
+            }
         }
     }

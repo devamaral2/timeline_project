@@ -3,6 +3,7 @@ package app.braid.mobile.ui.taskdetail
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.braid.mobile.domain.polling.PollingLoop
 import app.braid.mobile.domain.request.AgentRequest
 import app.braid.mobile.domain.request.AgentRequestRepository
 import app.braid.mobile.domain.request.FOOD_CANCEL_TEXT
@@ -23,15 +24,12 @@ import app.braid.mobile.domain.task.TaskDetailRepository
 import app.braid.mobile.domain.task.TaskNotFoundException
 import app.braid.mobile.domain.task.TaskStatus
 import app.braid.mobile.domain.time.AppClock
-import app.braid.mobile.ui.agenda.AGENT_POLL_MS
 import app.braid.mobile.ui.aiedit.DraftDictation
 import app.braid.mobile.ui.chat.VoiceUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -97,7 +95,7 @@ sealed interface AgentTaskUiState {
 
 /**
  * O detalhe da tarefa de agente: lê a tarefa e o pedido com o mesmo id, a hierarquia e o pedido anterior da sessão;
- * continua a sessão com um pedido novo, cancela o pedido e se relê a cada [AGENT_POLL_MS] enquanto ele está aberto.
+ * continua a sessão com um pedido novo, cancela o pedido e se relê a cada [app.braid.mobile.domain.polling.AGENT_POLL_MS] enquanto ele está aberto.
  */
 @HiltViewModel
 class AgentTaskViewModel
@@ -115,7 +113,7 @@ class AgentTaskViewModel
         private val mutableState = MutableStateFlow<AgentTaskUiState>(AgentTaskUiState.Loading)
         val state: StateFlow<AgentTaskUiState> = mutableState.asStateFlow()
         private var visible = false
-        private var pollJob: Job? = null
+        private val polling = PollingLoop(viewModelScope)
 
         private val mutableVoice = MutableStateFlow(VoiceUiState())
 
@@ -276,19 +274,7 @@ class AgentTaskViewModel
         }
 
         private fun syncPolling() {
-            if (!visible || !needsPolling()) {
-                pollJob?.cancel()
-                pollJob = null
-                return
-            }
-            if (pollJob?.isActive == true) return
-            pollJob =
-                viewModelScope.launch {
-                    while (visible && needsPolling()) {
-                        delay(AGENT_POLL_MS)
-                        tick()
-                    }
-                }
+            polling.sync(active = { visible && needsPolling() }) { tick() }
         }
 
         /**

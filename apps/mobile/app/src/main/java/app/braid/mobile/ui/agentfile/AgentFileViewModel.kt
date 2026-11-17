@@ -6,6 +6,8 @@ import app.braid.mobile.domain.agentfile.AgentFileBackup
 import app.braid.mobile.domain.agentfile.AgentFileForbiddenException
 import app.braid.mobile.domain.agentfile.AgentFileRepository
 import app.braid.mobile.domain.artifact.AgentFileData
+import app.braid.mobile.domain.polling.POLL_FAILURES_LIMIT
+import app.braid.mobile.domain.polling.PollingLoop
 import app.braid.mobile.domain.request.AgentRequest
 import app.braid.mobile.domain.request.AgentRequestRepository
 import app.braid.mobile.domain.request.EDIT_LISTENING_TEXT
@@ -18,7 +20,6 @@ import app.braid.mobile.domain.request.runningStepLabel
 import app.braid.mobile.domain.speech.MicrophonePermission
 import app.braid.mobile.domain.speech.SpeechRecognizer
 import app.braid.mobile.domain.task.TaskStatus
-import app.braid.mobile.ui.agenda.AGENT_POLL_MS
 import app.braid.mobile.ui.aiedit.DraftDictation
 import app.braid.mobile.ui.aiedit.startFailureCode
 import app.braid.mobile.ui.chat.VoiceUiState
@@ -28,7 +29,6 @@ import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -41,9 +41,6 @@ const val BACKUPS_FAILED_TEXT = "Não foi possível carregar os backups."
 const val RESTORE_FAILED_TEXT = "Não foi possível restaurar este backup. Tente novamente."
 const val EDIT_LOST_TEXT = "Perdi a conexão antes da resposta. Confira o arquivo antes de repetir."
 const val HERMES_OFF_TEXT = "O Hermes está desligado neste servidor."
-
-/** Falhas seguidas ao consultar o pedido antes de desistir de acompanhá-lo. */
-const val EDIT_POLL_FAILURES = 5
 
 /** O texto do arquivo: o dono o lê; quem não é recebe 403, o que não é erro para a tela. */
 sealed interface FileRead {
@@ -147,7 +144,7 @@ data class AgentFileUiState(
 
 /**
  * O arquivo de uma skill ou agente do Hermes (ADR 0005): lê o texto, os backups e restaura um deles, e pede ao Hermes
- * uma edição acompanhando o pedido a cada [AGENT_POLL_MS] (só com a tela à vista) até ele terminar, quando relê o texto.
+ * uma edição acompanhando o pedido a cada [app.braid.mobile.domain.polling.AGENT_POLL_MS] (só com a tela à vista) até ele terminar, quando relê o texto.
  */
 @HiltViewModel(assistedFactory = AgentFileViewModel.Factory::class)
 class AgentFileViewModel
@@ -170,7 +167,7 @@ class AgentFileViewModel
         private var visible = false
         private var textJob: Job? = null
         private var backupsJob: Job? = null
-        private var pollJob: Job? = null
+        private val polling = PollingLoop(viewModelScope, readFirst = true)
         private var pollFailures = 0
         private var notifiedId: String? = null
 
@@ -320,20 +317,7 @@ class AgentFileViewModel
         }
 
         private fun syncPolling() {
-            if (!visible || !following()) {
-                pollJob?.cancel()
-                pollJob = null
-                return
-            }
-            if (pollJob?.isActive == true) return
-            pollJob =
-                viewModelScope.launch {
-                    while (visible && following()) {
-                        readFollowed()
-                        if (!following()) break
-                        delay(AGENT_POLL_MS)
-                    }
-                }
+            polling.sync(active = { visible && following() }) { readFollowed() }
         }
 
         private fun following(): Boolean {
@@ -354,7 +338,7 @@ class AgentFileViewModel
                 throw cancelled
             } catch (failure: Exception) {
                 pollFailures += 1
-                if (pollFailures >= EDIT_POLL_FAILURES) updateEdit { it.copy(lost = true) }
+                if (pollFailures >= POLL_FAILURES_LIMIT) updateEdit { it.copy(lost = true) }
             }
         }
 

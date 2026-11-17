@@ -59,6 +59,9 @@ class TaskHierarchyViewModelTest {
     private lateinit var backend: TestBackend
     private lateinit var graph: TestGraph
 
+    /** O relógio do app anda com o tempo virtual do teste, como a espera entre as leituras. */
+    private var testClock: () -> Instant = { now }
+
     @Before
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
@@ -92,7 +95,7 @@ class TaskHierarchyViewModelTest {
             DefaultTaskDetailRepository(detail),
             DefaultTaskEditRepository(graph.apis.create(TaskEditApi::class.java), detail),
             DefaultRecurrenceRepository(graph.apis.create(RecurrenceApi::class.java)),
-            AppClock { now },
+            AppClock { testClock() },
             DefaultTaskPickerRepository(graph.apis.create(TaskPickerApi::class.java)),
             DefaultAgentRequestRepository(graph.apis.create(RequestsApi::class.java)),
             graph.sessionRepository,
@@ -426,6 +429,63 @@ class TaskHierarchyViewModelTest {
             serveHermes("task-hierarchy-request-done-nothing-bare")
             viewModel.hierarchy.askHermes()
             viewModel.hierarchy.state.first { it.picker?.footer == PickerFooter.Failed(HERMES_NOTHING_CREATED) }
+        }
+
+    @Test
+    fun `a failed read of the request does not stop the wait`() =
+        runTest {
+            backend.route("POST", "/api/requests", fixture("task-hierarchy-request-accepted", 202))
+            backend.route(
+                "GET",
+                requestPath,
+                status(500),
+                fixture("task-hierarchy-request-running"),
+                status(503),
+                fixture("task-hierarchy-request-done"),
+            )
+            val viewModel = newViewModel().opened()
+            viewModel.hierarchy.open(HierarchySlot.Subtasks)
+            viewModel.picker()
+            viewModel.hierarchy.type("Preparar a mala")
+
+            viewModel.hierarchy.askHermes()
+            viewModel.hierarchy.state.first { it.picker == null }
+
+            assertEquals(4, backend.requestsTo("GET", requestPath).size)
+            assertEquals(listOf("task-sub-1", "task-sub-2", "task-h1", "task-h3"), viewModel.draft.subtaskIds)
+        }
+
+    @Test
+    fun `five failed reads in a row give up with the generic failure`() =
+        runTest {
+            backend.route("POST", "/api/requests", fixture("task-hierarchy-request-accepted", 202))
+            backend.route("GET", requestPath, status(500))
+            val viewModel = newViewModel().opened()
+            viewModel.hierarchy.open(HierarchySlot.Subtasks)
+            viewModel.picker()
+            viewModel.hierarchy.type("Preparar a mala")
+
+            viewModel.hierarchy.askHermes()
+
+            viewModel.hierarchy.state.first { it.picker?.footer == PickerFooter.Failed(HERMES_ASK_FAILED) }
+            assertEquals(5, backend.requestsTo("GET", requestPath).size)
+        }
+
+    @Test
+    fun `a request that never finishes is given up after 180 seconds`() =
+        runTest {
+            testClock = { now.plusMillis(testScheduler.currentTime) }
+            backend.route("POST", "/api/requests", fixture("task-hierarchy-request-accepted", 202))
+            backend.route("GET", requestPath, fixture("task-hierarchy-request-running"))
+            val viewModel = newViewModel().opened()
+            viewModel.hierarchy.open(HierarchySlot.Subtasks)
+            viewModel.picker()
+            viewModel.hierarchy.type("Preparar a mala")
+
+            viewModel.hierarchy.askHermes()
+
+            viewModel.hierarchy.state.first { it.picker?.footer == PickerFooter.Failed(HERMES_ASK_FAILED) }
+            assertTrue(testScheduler.currentTime in 180_000L..190_000L)
         }
 
     @Test
