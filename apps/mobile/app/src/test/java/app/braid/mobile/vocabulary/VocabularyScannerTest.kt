@@ -82,4 +82,14 @@ class VocabularyScannerTest {
         assertEquals(listOf("event", "MotionEvent"), scan(source).map { it.identifier })
         assertEquals(listOf("event"), scan(source, allowed = setOf("MotionEvent")).map { it.identifier })
     }
+
+    @Test(timeout = 10_000)
+    fun `a large file is scanned in linear time and still finds the violation at its end`() {
+        val filler = "val value = \"texto\" // comentário com nota e evento\n".repeat(20_000)
+
+        val found = scan(filler + "class EventRepository\n")
+
+        assertEquals(listOf("EventRepository"), found.map { it.identifier })
+        assertEquals(20_001, found.single().line)
+    }
 }
