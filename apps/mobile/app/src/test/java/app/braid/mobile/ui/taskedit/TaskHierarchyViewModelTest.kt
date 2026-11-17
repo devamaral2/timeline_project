@@ -21,6 +21,7 @@ import app.braid.mobile.support.TestBackend
 import app.braid.mobile.support.TestBackend.Companion.fixture
 import app.braid.mobile.support.TestBackend.Companion.status
 import app.braid.mobile.support.TestGraph
+import app.braid.mobile.support.stopAndJoin
 import app.braid.mobile.ui.picker.PickerSearchStatus
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
@@ -78,9 +79,11 @@ class TaskHierarchyViewModelTest {
         backend.route("GET", trackedPath, fixture("task-hierarchy-tracked"))
     }
 
+    private val created = mutableListOf<TaskEditViewModel>()
+
     @After
     fun tearDown() {
-        Thread.sleep(100)
+        created.forEach { it.stopAndJoin() }
         backend.close()
         Dispatchers.resetMain()
     }
@@ -100,7 +103,7 @@ class TaskHierarchyViewModelTest {
             DefaultAgentRequestRepository(graph.apis.create(RequestsApi::class.java)),
             graph.sessionRepository,
             DefaultArtifactRepository(graph.apis.create(ArtifactsApi::class.java)),
-        )
+        ).also(created::add)
     }
 
     private suspend fun TaskEditViewModel.opened(): TaskEditViewModel {

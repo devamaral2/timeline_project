@@ -4,6 +4,7 @@ import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import okhttp3.mockwebserver.RecordedRequest
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 
 /**
@@ -16,7 +17,9 @@ import java.util.concurrent.CopyOnWriteArrayList
  */
 class TestBackend : AutoCloseable {
     private val server = MockWebServer()
-    private val handlers = mutableMapOf<String, (RecordedRequest) -> MockResponse>()
+
+    // O servidor lê as rotas numa thread dele enquanto o teste as troca: o mapa precisa aguentar os dois.
+    private val handlers = ConcurrentHashMap<String, (RecordedRequest) -> MockResponse>()
     private val recorded = CopyOnWriteArrayList<RecordedRequest>()
 
     val url: String get() = server.url("/").toString()

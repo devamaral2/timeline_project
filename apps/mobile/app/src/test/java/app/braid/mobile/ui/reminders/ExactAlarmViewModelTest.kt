@@ -1,13 +1,12 @@
 package app.braid.mobile.ui.reminders
 
-import androidx.lifecycle.viewModelScope
 import app.braid.mobile.domain.reminder.Reminder
 import app.braid.mobile.domain.reminder.ReminderKind
 import app.braid.mobile.support.FakeReminderAlarms
 import app.braid.mobile.support.TestReminderStores
+import app.braid.mobile.support.stopAndJoin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -57,7 +56,7 @@ class ExactAlarmViewModelTest {
 
     @After
     fun tearDown() {
-        created.forEach { it.viewModelScope.cancel() }
+        created.forEach { it.stopAndJoin() }
         runBlocking { stores.close() }
         Dispatchers.resetMain()
     }

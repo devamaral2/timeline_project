@@ -1,7 +1,6 @@
 package app.braid.mobile.ui.documents
 
 import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.viewModelScope
 import app.braid.mobile.data.artifacts.ArtifactsApi
 import app.braid.mobile.data.artifacts.DefaultArtifactRepository
 import app.braid.mobile.support.Fixtures
@@ -9,9 +8,9 @@ import app.braid.mobile.support.TestBackend
 import app.braid.mobile.support.TestBackend.Companion.fixture
 import app.braid.mobile.support.TestBackend.Companion.status
 import app.braid.mobile.support.TestGraph
+import app.braid.mobile.support.stopAndJoin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -47,7 +46,7 @@ class DocumentEditViewModelTest {
 
     @After
     fun tearDown() {
-        created.forEach { it.viewModelScope.cancel() }
+        created.forEach { it.stopAndJoin() }
         backend.close()
         Dispatchers.resetMain()
     }

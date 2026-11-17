@@ -17,6 +17,7 @@ import app.braid.mobile.support.TestBackend
 import app.braid.mobile.support.TestBackend.Companion.fixture
 import app.braid.mobile.support.TestBackend.Companion.status
 import app.braid.mobile.support.TestGraph
+import app.braid.mobile.support.stopAndJoin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -63,9 +64,11 @@ class AgentTaskViewModelTest {
         graph.storage.session = StoredSession("access", "refresh", userId = "user-7", email = "a@b.c", name = "Ana")
     }
 
+    private val created = mutableListOf<AgentTaskViewModel>()
+
     @After
     fun tearDown() {
-        Thread.sleep(100)
+        created.forEach { it.stopAndJoin() }
         backend.close()
         Dispatchers.resetMain()
     }
@@ -86,7 +89,7 @@ class AgentTaskViewModelTest {
             AppClock { now },
             speech,
             microphone,
-        )
+        ).also(created::add)
     }
 
     private suspend fun AgentTaskViewModel.content(): AgentTaskUiState.Content =

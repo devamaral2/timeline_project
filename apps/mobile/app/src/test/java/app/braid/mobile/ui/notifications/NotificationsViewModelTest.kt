@@ -1,6 +1,5 @@
 package app.braid.mobile.ui.notifications
 
-import androidx.lifecycle.viewModelScope
 import app.braid.mobile.data.tasks.DefaultTaskRepository
 import app.braid.mobile.data.tasks.TasksApi
 import app.braid.mobile.domain.task.TaskChanges
@@ -10,9 +9,9 @@ import app.braid.mobile.support.TestBackend.Companion.fixture
 import app.braid.mobile.support.TestBackend.Companion.status
 import app.braid.mobile.support.TestGraph
 import app.braid.mobile.support.TestReminderStores
+import app.braid.mobile.support.stopAndJoin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -68,7 +67,7 @@ class NotificationsViewModelTest {
 
     @After
     fun tearDown() {
-        created.forEach { it.viewModelScope.cancel() }
+        created.forEach { it.stopAndJoin() }
         backend.close()
         runBlocking { stores.close() }
         Dispatchers.resetMain()

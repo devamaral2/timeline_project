@@ -23,6 +23,7 @@ import app.braid.mobile.support.TaskEditFixtures
 import app.braid.mobile.support.TestBackend
 import app.braid.mobile.support.TestBackend.Companion.status
 import app.braid.mobile.support.TestGraph
+import app.braid.mobile.support.stopAndJoin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -68,9 +69,11 @@ class TaskEditRecurrenceViewModelTest {
         graph = TestGraph(backend)
     }
 
+    private val created = mutableListOf<TaskEditViewModel>()
+
     @After
     fun tearDown() {
-        Thread.sleep(100)
+        created.forEach { it.stopAndJoin() }
         backend.close()
         Dispatchers.resetMain()
         TimeZone.setDefault(zone)
@@ -87,7 +90,7 @@ class TaskEditRecurrenceViewModelTest {
             DefaultAgentRequestRepository(graph.apis.create(RequestsApi::class.java)),
             graph.sessionRepository,
             DefaultArtifactRepository(graph.apis.create(ArtifactsApi::class.java)),
-        )
+        ).also(created::add)
 
     private suspend fun TaskEditViewModel.await(condition: (TaskEditUiState.Form) -> Boolean): TaskEditUiState.Form =
         state.first { it is TaskEditUiState.Form && condition(it) } as TaskEditUiState.Form

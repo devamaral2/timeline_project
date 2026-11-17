@@ -1,6 +1,5 @@
 package app.braid.mobile.ui.chat
 
-import androidx.lifecycle.viewModelScope
 import app.braid.mobile.data.chat.DefaultChatRepository
 import app.braid.mobile.data.requests.RequestsApi
 import app.braid.mobile.data.session.StoredSession
@@ -14,6 +13,7 @@ import app.braid.mobile.support.TestBackend
 import app.braid.mobile.support.TestBackend.Companion.fixture
 import app.braid.mobile.support.TestBackend.Companion.status
 import app.braid.mobile.support.TestGraph
+import app.braid.mobile.support.stopAndJoin
 import app.cash.turbine.test
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -67,9 +67,7 @@ class ChatViewModelTest {
 
     @After
     fun tearDown() {
-        // Uma consulta ainda em voo termina com o Main trocado, e não depois dele.
-        Thread.sleep(150)
-        created.forEach { it.viewModelScope.cancel() }
+        created.forEach { it.stopAndJoin() }
         backend.close()
         Dispatchers.resetMain()
     }

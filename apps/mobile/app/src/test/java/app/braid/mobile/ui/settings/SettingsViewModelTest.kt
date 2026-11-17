@@ -3,7 +3,6 @@ package app.braid.mobile.ui.settings
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
-import androidx.lifecycle.viewModelScope
 import app.braid.mobile.data.session.StoredSession
 import app.braid.mobile.data.settings.DataStoreThemeRepository
 import app.braid.mobile.data.tasks.DefaultTaskRepository
@@ -23,11 +22,11 @@ import app.braid.mobile.support.TestBackend.Companion.status
 import app.braid.mobile.support.TestGraph
 import app.braid.mobile.support.TestReminderStores
 import app.braid.mobile.support.closeAndJoin
+import app.braid.mobile.support.stopAndJoin
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -122,7 +121,7 @@ class SettingsViewModelTest {
 
     /** O fim da tela: o `viewModelScope` para de ler o DataStore antes de o arquivo ser fechado e reaberto. */
     private fun stopViewModels() {
-        viewModels.forEach { it.viewModelScope.cancel() }
+        viewModels.forEach { it.stopAndJoin() }
         viewModels.clear()
         openStore = null
     }
