@@ -24,6 +24,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import app.braid.mobile.domain.chat.ChatCommand
 import app.braid.mobile.domain.session.SessionState
 import app.braid.mobile.ui.agenda.AgendaScreen
 import app.braid.mobile.ui.auth.LoginScreen
@@ -35,6 +36,8 @@ import app.braid.mobile.ui.chat.LocalEntitiesChanged
 import app.braid.mobile.ui.documents.DocumentDetailPage
 import app.braid.mobile.ui.documents.DocumentsScreen
 import app.braid.mobile.ui.reminders.ReminderPermissionPrompt
+import app.braid.mobile.ui.settings.SettingsScreen
+import app.braid.mobile.ui.settings.SettingsViewModel
 import app.braid.mobile.ui.shell.BraidBottomBar
 import app.braid.mobile.ui.shell.LocalSectionMenus
 import app.braid.mobile.ui.shell.MainTab
@@ -51,12 +54,15 @@ fun AppNavHost(
     gate: SessionGateViewModel = hiltViewModel(),
     sectionMenu: SectionMenuViewModel = hiltViewModel(),
     chat: ChatViewModel = hiltViewModel(),
+    settings: SettingsViewModel = hiltViewModel(),
 ) {
     val session by gate.state.collectAsStateWithLifecycle()
     val mode by sectionMenu.mode.collectAsStateWithLifecycle()
     val chatState by chat.state.collectAsStateWithLifecycle()
     val menus = remember { SectionMenus() }
     var menuOpen by rememberSaveable { mutableStateOf(false) }
+    // "Configurações" do `/configuracoes`: abre dentro do painel do chat, como no web, e o voltar leva ao chat.
+    var settingsOpen by rememberSaveable { mutableStateOf(false) }
     val navController = rememberNavController()
     val destination = navController.currentBackStackEntryAsState().value?.destination
     val currentTab =
@@ -72,6 +78,9 @@ fun AppNavHost(
     BackHandler(enabled = menuOpen) { menuOpen = false }
     // O voltar do sistema fecha o chat antes do resto.
     BackHandler(enabled = chatState.open) { chat.close() }
+    BackHandler(enabled = chatState.open && settingsOpen) { settingsOpen = false }
+    // Fechar o chat (aba, voltar, sessão perdida) fecha também as configurações que estavam nele.
+    LaunchedEffect(chatState.open) { if (!chatState.open) settingsOpen = false }
 
     // A sessão manda: entrar abre a Agenda, e perdê-la (renovação recusada, sair) volta ao login.
     LaunchedEffect(session) {
@@ -90,7 +99,7 @@ fun AppNavHost(
 
     // Os comandos "/" do chat e os atalhos da tela inicial: cada ticket que entrega uma tela acrescenta a sua entrada
     // (`/tarefa` e `/nota`, `/notificacoes`, `/configuracoes`).
-    val commands = remember { ChatCommandHandlers() }
+    val commands = remember { ChatCommandHandlers(mapOf(ChatCommand.Settings to { _ -> settingsOpen = true })) }
     val links =
         remember(navController) {
             ChatEntityLinks(
@@ -138,7 +147,10 @@ fun AppNavHost(
                     )
                 }
             }
-            if (chatState.open) ChatOverlay(chat, commands, links)
+            if (chatState.open) {
+                ChatOverlay(chat, commands, links)
+                if (settingsOpen) SettingsScreen(settings, onBack = { settingsOpen = false })
+            }
             if (session is SessionState.SignedIn) ReminderPermissionPrompt(Modifier.align(Alignment.TopCenter))
             if (currentTab != null) {
                 if (menuOpen) {
