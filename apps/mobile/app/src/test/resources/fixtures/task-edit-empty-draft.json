@@ -1,0 +1,38 @@
+{
+  "empty": {
+    "kind": "common",
+    "name": "",
+    "status": null,
+    "priority": "medium",
+    "startDate": "",
+    "startTime": "",
+    "endDate": "",
+    "endTime": "",
+    "description": "",
+    "location": "",
+    "reminders": [],
+    "tags": [],
+    "longRunning": false,
+    "parentTaskId": null,
+    "subtaskIds": [],
+    "artifacts": []
+  },
+  "named": {
+    "kind": "common",
+    "name": "comprar pão",
+    "status": null,
+    "priority": "medium",
+    "startDate": "",
+    "startTime": "",
+    "endDate": "",
+    "endTime": "",
+    "description": "",
+    "location": "",
+    "reminders": [],
+    "tags": [],
+    "longRunning": false,
+    "parentTaskId": null,
+    "subtaskIds": [],
+    "artifacts": []
+  }
+}

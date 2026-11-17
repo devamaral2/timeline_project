@@ -110,6 +110,20 @@ class TaskDetailViewModelTest {
             .jsonObject
 
     @Test
+    fun `reload reads the task again, so the detail shows what the edit form saved`() =
+        runTest {
+            backend.route("GET", taskPath, fixture("task-detail-person"), fixture("task-detail-reloaded-doing"))
+            serveHierarchy()
+            val viewModel = newViewModel()
+            viewModel.content()
+
+            viewModel.reload()
+
+            assertEquals(TaskStatus.Doing, viewModel.contentWith(TaskStatus.Doing).task.status)
+            assertEquals(2, backend.requestsTo("GET", taskPath).size)
+        }
+
+    @Test
     fun `it reads the task and shows what the detail lists`() =
         runTest {
             backend.route("GET", taskPath, fixture("task-detail-person"))

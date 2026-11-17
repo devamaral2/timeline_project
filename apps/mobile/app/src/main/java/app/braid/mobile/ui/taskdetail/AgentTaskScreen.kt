@@ -126,7 +126,7 @@ fun AgentTaskScreen(
             .background(MaterialTheme.colorScheme.background)
             .windowInsetsPadding(WindowInsets.statusBars),
     ) {
-        TopBar(onBack = onBack, onDelete = null)
+        TopBar(onBack = onBack, onEdit = null, onDelete = null)
         Column(
             Modifier
                 .weight(1f)

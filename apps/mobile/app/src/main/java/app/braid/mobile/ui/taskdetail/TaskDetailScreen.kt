@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.braid.mobile.core.designsystem.BraidIcons
 import app.braid.mobile.core.designsystem.BraidMonoFont
@@ -80,6 +81,7 @@ import app.braid.mobile.domain.task.mapsGeoUri
 import app.braid.mobile.domain.task.mapsUrl
 import app.braid.mobile.domain.task.momentLabel
 import app.braid.mobile.domain.task.taskInfo
+import app.braid.mobile.ui.taskedit.TaskEditIcons
 import app.braid.mobile.ui.tasks.TaskKindMark
 import app.braid.mobile.ui.tasks.TaskPriorityMark
 import app.braid.mobile.ui.tasks.TaskPrioritySheet
@@ -93,6 +95,7 @@ fun TaskDetailPage(
     onBack: () -> Unit,
     onOpenTask: (String) -> Unit,
     onOpenArtifact: (String) -> Unit = {},
+    onEdit: (String) -> Unit = {},
     viewModel: TaskDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -103,9 +106,16 @@ fun TaskDetailPage(
     }
     val deleted = (state as? TaskDetailUiState.Content)?.deleted == true
     LaunchedEffect(deleted) { if (deleted) onBack() }
+    // Voltar do formulário de edição (ou de outra tela) relê a tarefa; o primeiro ON_RESUME é o de abrir a tela.
+    var resumedOnce by remember { mutableStateOf(false) }
+    LifecycleResumeEffect(Unit) {
+        if (resumedOnce) viewModel.reload() else resumedOnce = true
+        onPauseOrDispose {}
+    }
     TaskDetailScreen(
         state = state,
         onBack = onBack,
+        onEdit = { (state as? TaskDetailUiState.Content)?.task?.id?.let(onEdit) },
         onRetry = viewModel::retry,
         onOpenTask = onOpenTask,
         onChangeStatus = viewModel::changeStatus,
@@ -120,6 +130,7 @@ fun TaskDetailPage(
 fun TaskDetailScreen(
     state: TaskDetailUiState,
     onBack: () -> Unit,
+    onEdit: () -> Unit,
     onRetry: () -> Unit,
     onOpenTask: (String) -> Unit,
     onChangeStatus: (TaskStatus) -> Unit,
@@ -135,7 +146,7 @@ fun TaskDetailScreen(
             .background(MaterialTheme.colorScheme.background)
             .windowInsetsPadding(WindowInsets.statusBars),
     ) {
-        TopBar(onBack = onBack, onDelete = if (content != null) onAskDelete else null)
+        TopBar(onBack = onBack, onEdit = if (content != null) onEdit else null, onDelete = if (content != null) onAskDelete else null)
         Column(
             Modifier
                 .weight(1f)
@@ -163,6 +174,7 @@ fun TaskDetailScreen(
 @Composable
 internal fun TopBar(
     onBack: () -> Unit,
+    onEdit: (() -> Unit)?,
     onDelete: (() -> Unit)?,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
@@ -215,6 +227,22 @@ internal fun TopBar(
                     )
                 }
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    if (onEdit != null) {
+                        DropdownMenuItem(
+                            text = { Text("Editar", fontSize = 14.sp) },
+                            leadingIcon = {
+                                SvgIcon(
+                                    TaskEditIcons.pencil,
+                                    size = 18.dp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            },
+                            onClick = {
+                                menuOpen = false
+                                onEdit()
+                            },
+                        )
+                    }
                     DropdownMenuItem(
                         text = { Text("Excluir", color = MaterialTheme.colorScheme.error, fontSize = 14.sp) },
                         leadingIcon = { SvgIcon(DetailIcons.trash, size = 18.dp, color = MaterialTheme.colorScheme.error) },
@@ -561,7 +589,7 @@ private fun LocationLink(
 }
 
 /** Abre o local no mapa do Android; sem app que atenda o `geo:`, cai na mesma busca do Google Maps no navegador. */
-private fun openMap(
+internal fun openMap(
     context: Context,
     location: String,
 ) {
