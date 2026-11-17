@@ -1,12 +1,16 @@
 package app.braid.mobile.ui.taskedit
 
 import androidx.lifecycle.SavedStateHandle
+import app.braid.mobile.data.requests.DefaultAgentRequestRepository
+import app.braid.mobile.data.requests.RequestsApi
 import app.braid.mobile.data.tasks.DefaultRecurrenceRepository
 import app.braid.mobile.data.tasks.DefaultTaskDetailRepository
 import app.braid.mobile.data.tasks.DefaultTaskEditRepository
+import app.braid.mobile.data.tasks.DefaultTaskPickerRepository
 import app.braid.mobile.data.tasks.RecurrenceApi
 import app.braid.mobile.data.tasks.TaskDetailApi
 import app.braid.mobile.data.tasks.TaskEditApi
+import app.braid.mobile.data.tasks.TaskPickerApi
 import app.braid.mobile.domain.task.RecurrenceField
 import app.braid.mobile.domain.task.RecurrenceFrequency
 import app.braid.mobile.domain.task.START_DATE_MESSAGE
@@ -77,6 +81,9 @@ class TaskEditRecurrenceViewModelTest {
             DefaultTaskEditRepository(graph.apis.create(TaskEditApi::class.java), graph.apis.create(TaskDetailApi::class.java)),
             DefaultRecurrenceRepository(graph.apis.create(RecurrenceApi::class.java)),
             AppClock { now },
+            DefaultTaskPickerRepository(graph.apis.create(TaskPickerApi::class.java)),
+            DefaultAgentRequestRepository(graph.apis.create(RequestsApi::class.java)),
+            graph.sessionRepository,
         )
 
     private suspend fun TaskEditViewModel.await(condition: (TaskEditUiState.Form) -> Boolean): TaskEditUiState.Form =

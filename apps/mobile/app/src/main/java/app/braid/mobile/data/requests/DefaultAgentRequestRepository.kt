@@ -25,7 +25,7 @@ class DefaultAgentRequestRepository
         override suspend fun start(
             userId: String,
             text: String,
-            sessionId: String,
+            sessionId: String?,
             clientMessageId: String,
         ): String = api.start(StartRequestBody(userId, text, sessionId, clientMessageId)).requestId
 

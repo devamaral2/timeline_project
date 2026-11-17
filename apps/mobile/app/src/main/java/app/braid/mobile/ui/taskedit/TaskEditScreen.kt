@@ -83,6 +83,7 @@ fun TaskEditPage(
                 resetRecurrence = viewModel::resetRecurrence,
                 deleteSeries = viewModel::deleteSeries,
                 save = viewModel::save,
+                hierarchy = viewModel.hierarchy,
             ),
     )
 }
@@ -104,6 +105,8 @@ class TaskEditActions(
     val resetRecurrence: () -> Unit,
     val deleteSeries: () -> Unit,
     val save: () -> Unit,
+    /** A hierarquia (ticket 15): só a edição a mostra. */
+    val hierarchy: TaskHierarchyEditor? = null,
 )
 
 @Composable
@@ -207,6 +210,7 @@ private fun ColumnScope.FormBody(
         TagsSection(draft.tags, form.tagSuggestions, actions)
         DescriptionSection(draft.description) { value -> actions.update { it.copy(description = value) } }
         // A hierarquia (tarefa principal e subtarefas, ticket 15) e os documentos (ticket 16) entram aqui, só na edição.
+        if (!creating) actions.hierarchy?.let { HierarchySections(it, draft) }
         form.failure?.let { failure ->
             Text(
                 text = failure,

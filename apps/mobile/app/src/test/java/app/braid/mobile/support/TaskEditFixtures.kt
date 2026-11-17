@@ -42,6 +42,13 @@ object TaskEditFixtures {
             reminders = fields.getValue("reminders").jsonArray.map { it.jsonPrimitive.int },
             tags = fields.getValue("tags").jsonArray.map { it.jsonPrimitive.content },
             longRunning = fields.getValue("longRunning").jsonPrimitive.boolean,
+            parentTaskId =
+                fields
+                    .getValue("parentTaskId")
+                    .takeUnless { it is JsonNull }
+                    ?.jsonPrimitive
+                    ?.content,
+            subtaskIds = fields.getValue("subtaskIds").jsonArray.map { it.jsonPrimitive.content },
         )
     }
 

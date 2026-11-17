@@ -59,6 +59,21 @@ class TaskDraftFixturesTest {
     }
 
     @Test
+    fun `the patch carries the parent and the whole subtask list only when they changed, as the web builds it`() {
+        for (case in cases("task-hierarchy-patch-cases")) {
+            val name = case.getValue("name").jsonPrimitive.content
+            val now = Instant.parse(case.getValue("now").jsonPrimitive.content)
+            val patch = buildTaskPatch(TaskEditFixtures.detail(case.getValue("task")), draft(case.getValue("draft")), now)
+            val expected = case.getValue("patch")
+            if (expected is JsonNull) {
+                assertNull(name, patch)
+            } else {
+                assertEquals(name, expected.jsonObject, patch?.toBody())
+            }
+        }
+    }
+
+    @Test
     fun `validation refuses what the web refuses, with its words`() {
         for (case in cases("task-edit-validate-cases")) {
             val name = case.getValue("name").jsonPrimitive.content

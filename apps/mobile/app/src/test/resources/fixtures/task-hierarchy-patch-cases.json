@@ -1,0 +1,478 @@
+[
+  {
+    "name": "unchanged",
+    "task": {
+      "id": "task-open",
+      "actor": "human",
+      "kind": "common",
+      "status": "todo",
+      "priority": "medium",
+      "name": "Planejar a viagem",
+      "description": "",
+      "startedAt": "2026-09-20T12:00:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "parentTaskId": "task-parent",
+      "revision": 3,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z",
+      "artifacts": [],
+      "subtaskIds": [
+        "task-sub-1",
+        "task-sub-2"
+      ],
+      "requests": []
+    },
+    "draft": {
+      "kind": "common",
+      "name": "Planejar a viagem",
+      "status": "todo",
+      "priority": "medium",
+      "startDate": "2026-09-20",
+      "startTime": "09:00",
+      "endDate": "",
+      "endTime": "",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": "task-parent",
+      "subtaskIds": [
+        "task-sub-1",
+        "task-sub-2"
+      ],
+      "artifacts": []
+    },
+    "now": "2026-09-14T15:30:45.123Z",
+    "patch": null
+  },
+  {
+    "name": "parent removed",
+    "task": {
+      "id": "task-open",
+      "actor": "human",
+      "kind": "common",
+      "status": "todo",
+      "priority": "medium",
+      "name": "Planejar a viagem",
+      "description": "",
+      "startedAt": "2026-09-20T12:00:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "parentTaskId": "task-parent",
+      "revision": 3,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z",
+      "artifacts": [],
+      "subtaskIds": [
+        "task-sub-1",
+        "task-sub-2"
+      ],
+      "requests": []
+    },
+    "draft": {
+      "kind": "common",
+      "name": "Planejar a viagem",
+      "status": "todo",
+      "priority": "medium",
+      "startDate": "2026-09-20",
+      "startTime": "09:00",
+      "endDate": "",
+      "endTime": "",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [
+        "task-sub-1",
+        "task-sub-2"
+      ],
+      "artifacts": []
+    },
+    "now": "2026-09-14T15:30:45.123Z",
+    "patch": {
+      "expectedRevision": 3,
+      "parentTaskId": null
+    }
+  },
+  {
+    "name": "parent replaced",
+    "task": {
+      "id": "task-open",
+      "actor": "human",
+      "kind": "common",
+      "status": "todo",
+      "priority": "medium",
+      "name": "Planejar a viagem",
+      "description": "",
+      "startedAt": "2026-09-20T12:00:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "parentTaskId": "task-parent",
+      "revision": 3,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z",
+      "artifacts": [],
+      "subtaskIds": [
+        "task-sub-1",
+        "task-sub-2"
+      ],
+      "requests": []
+    },
+    "draft": {
+      "kind": "common",
+      "name": "Planejar a viagem",
+      "status": "todo",
+      "priority": "medium",
+      "startDate": "2026-09-20",
+      "startTime": "09:00",
+      "endDate": "",
+      "endTime": "",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": "task-parent-2",
+      "subtaskIds": [
+        "task-sub-1",
+        "task-sub-2"
+      ],
+      "artifacts": []
+    },
+    "now": "2026-09-14T15:30:45.123Z",
+    "patch": {
+      "expectedRevision": 3,
+      "parentTaskId": "task-parent-2"
+    }
+  },
+  {
+    "name": "parent set",
+    "task": {
+      "id": "task-lone",
+      "actor": "human",
+      "kind": "common",
+      "status": "todo",
+      "priority": "medium",
+      "name": "Tarefa solta",
+      "description": "",
+      "startedAt": "2026-09-20T12:00:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "revision": 2,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z",
+      "artifacts": [],
+      "subtaskIds": [],
+      "requests": []
+    },
+    "draft": {
+      "kind": "common",
+      "name": "Tarefa solta",
+      "status": "todo",
+      "priority": "medium",
+      "startDate": "2026-09-20",
+      "startTime": "09:00",
+      "endDate": "",
+      "endTime": "",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": "task-parent",
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "now": "2026-09-14T15:30:45.123Z",
+    "patch": {
+      "expectedRevision": 2,
+      "parentTaskId": "task-parent"
+    }
+  },
+  {
+    "name": "subtask added",
+    "task": {
+      "id": "task-open",
+      "actor": "human",
+      "kind": "common",
+      "status": "todo",
+      "priority": "medium",
+      "name": "Planejar a viagem",
+      "description": "",
+      "startedAt": "2026-09-20T12:00:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "parentTaskId": "task-parent",
+      "revision": 3,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z",
+      "artifacts": [],
+      "subtaskIds": [
+        "task-sub-1",
+        "task-sub-2"
+      ],
+      "requests": []
+    },
+    "draft": {
+      "kind": "common",
+      "name": "Planejar a viagem",
+      "status": "todo",
+      "priority": "medium",
+      "startDate": "2026-09-20",
+      "startTime": "09:00",
+      "endDate": "",
+      "endTime": "",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": "task-parent",
+      "subtaskIds": [
+        "task-sub-1",
+        "task-sub-2",
+        "task-created"
+      ],
+      "artifacts": []
+    },
+    "now": "2026-09-14T15:30:45.123Z",
+    "patch": {
+      "expectedRevision": 3,
+      "subtaskIds": [
+        "task-sub-1",
+        "task-sub-2",
+        "task-created"
+      ]
+    }
+  },
+  {
+    "name": "subtask removed",
+    "task": {
+      "id": "task-open",
+      "actor": "human",
+      "kind": "common",
+      "status": "todo",
+      "priority": "medium",
+      "name": "Planejar a viagem",
+      "description": "",
+      "startedAt": "2026-09-20T12:00:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "parentTaskId": "task-parent",
+      "revision": 3,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z",
+      "artifacts": [],
+      "subtaskIds": [
+        "task-sub-1",
+        "task-sub-2"
+      ],
+      "requests": []
+    },
+    "draft": {
+      "kind": "common",
+      "name": "Planejar a viagem",
+      "status": "todo",
+      "priority": "medium",
+      "startDate": "2026-09-20",
+      "startTime": "09:00",
+      "endDate": "",
+      "endTime": "",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": "task-parent",
+      "subtaskIds": [
+        "task-sub-2"
+      ],
+      "artifacts": []
+    },
+    "now": "2026-09-14T15:30:45.123Z",
+    "patch": {
+      "expectedRevision": 3,
+      "subtaskIds": [
+        "task-sub-2"
+      ]
+    }
+  },
+  {
+    "name": "subtasks cleared",
+    "task": {
+      "id": "task-open",
+      "actor": "human",
+      "kind": "common",
+      "status": "todo",
+      "priority": "medium",
+      "name": "Planejar a viagem",
+      "description": "",
+      "startedAt": "2026-09-20T12:00:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "parentTaskId": "task-parent",
+      "revision": 3,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z",
+      "artifacts": [],
+      "subtaskIds": [
+        "task-sub-1",
+        "task-sub-2"
+      ],
+      "requests": []
+    },
+    "draft": {
+      "kind": "common",
+      "name": "Planejar a viagem",
+      "status": "todo",
+      "priority": "medium",
+      "startDate": "2026-09-20",
+      "startTime": "09:00",
+      "endDate": "",
+      "endTime": "",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": "task-parent",
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "now": "2026-09-14T15:30:45.123Z",
+    "patch": {
+      "expectedRevision": 3,
+      "subtaskIds": []
+    }
+  },
+  {
+    "name": "subtasks reordered",
+    "task": {
+      "id": "task-open",
+      "actor": "human",
+      "kind": "common",
+      "status": "todo",
+      "priority": "medium",
+      "name": "Planejar a viagem",
+      "description": "",
+      "startedAt": "2026-09-20T12:00:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "parentTaskId": "task-parent",
+      "revision": 3,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z",
+      "artifacts": [],
+      "subtaskIds": [
+        "task-sub-1",
+        "task-sub-2"
+      ],
+      "requests": []
+    },
+    "draft": {
+      "kind": "common",
+      "name": "Planejar a viagem",
+      "status": "todo",
+      "priority": "medium",
+      "startDate": "2026-09-20",
+      "startTime": "09:00",
+      "endDate": "",
+      "endTime": "",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": "task-parent",
+      "subtaskIds": [
+        "task-sub-2",
+        "task-sub-1"
+      ],
+      "artifacts": []
+    },
+    "now": "2026-09-14T15:30:45.123Z",
+    "patch": {
+      "expectedRevision": 3,
+      "subtaskIds": [
+        "task-sub-2",
+        "task-sub-1"
+      ]
+    }
+  },
+  {
+    "name": "both and the name",
+    "task": {
+      "id": "task-open",
+      "actor": "human",
+      "kind": "common",
+      "status": "todo",
+      "priority": "medium",
+      "name": "Planejar a viagem",
+      "description": "",
+      "startedAt": "2026-09-20T12:00:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "parentTaskId": "task-parent",
+      "revision": 3,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z",
+      "artifacts": [],
+      "subtaskIds": [
+        "task-sub-1",
+        "task-sub-2"
+      ],
+      "requests": []
+    },
+    "draft": {
+      "kind": "common",
+      "name": "Viagem de outubro",
+      "status": "todo",
+      "priority": "medium",
+      "startDate": "2026-09-20",
+      "startTime": "09:00",
+      "endDate": "",
+      "endTime": "",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [
+        "task-created"
+      ],
+      "artifacts": []
+    },
+    "now": "2026-09-14T15:30:45.123Z",
+    "patch": {
+      "expectedRevision": 3,
+      "name": "Viagem de outubro",
+      "parentTaskId": null,
+      "subtaskIds": [
+        "task-created"
+      ]
+    }
+  }
+]
