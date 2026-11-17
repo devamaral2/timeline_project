@@ -687,11 +687,6 @@ private fun SendButton(
     }
 }
 
-/**
- * `.chatBubble`: o pedido é um bloco de largura inteira, com fio, como no Hermes; a
- * resposta é texto solto e o erro fica avermelhado.
- */
-
 /** Linhas em branco separam parágrafos; quebras simples ficam dentro do parágrafo (`splitParagraphs` do web). */
 internal fun splitParagraphs(text: String): List<String> =
     text

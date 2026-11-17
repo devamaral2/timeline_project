@@ -1,9 +1,9 @@
 package app.braid.mobile.ui.notes
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.EventAvailable
 import androidx.compose.material.icons.outlined.Bedtime
 import androidx.compose.material.icons.outlined.Circle
+import androidx.compose.material.icons.outlined.EventAvailable
 import androidx.compose.material.icons.outlined.FitnessCenter
 import androidx.compose.material.icons.outlined.Note
 import androidx.compose.material.icons.outlined.Restaurant
