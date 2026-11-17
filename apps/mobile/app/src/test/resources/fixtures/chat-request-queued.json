@@ -1,0 +1,12 @@
+{
+  "id": "R00000000000000000000000A1",
+  "kind": "request",
+  "route": "steps",
+  "status": "queued",
+  "title": "Criar a reunião de sexta",
+  "createdAt": "2026-09-14T14:48:00.000Z",
+  "updatedAt": "2026-09-14T14:48:00.000Z",
+  "text": "Criar a reunião de sexta",
+  "steps": [],
+  "entities": []
+}

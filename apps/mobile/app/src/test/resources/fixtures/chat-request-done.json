@@ -1,0 +1,60 @@
+{
+  "id": "R00000000000000000000000A1",
+  "kind": "request",
+  "route": "steps",
+  "status": "done",
+  "title": "Criar a reunião de sexta",
+  "createdAt": "2026-09-14T14:48:00.000Z",
+  "updatedAt": "2026-09-14T14:48:09.000Z",
+  "text": "Criar a reunião de sexta",
+  "steps": [
+    {
+      "id": "s1",
+      "agent": "router",
+      "label": "Entendendo o pedido",
+      "status": "done"
+    },
+    {
+      "id": "s2",
+      "agent": "task",
+      "label": "Criando a tarefa",
+      "status": "done"
+    },
+    {
+      "id": "s3",
+      "agent": "writer",
+      "label": "Escrevendo a resposta",
+      "status": "done"
+    }
+  ],
+  "entities": [
+    {
+      "kind": "task",
+      "id": "task-new",
+      "name": "Reunião de sexta",
+      "operation": "create",
+      "linkedTo": []
+    },
+    {
+      "kind": "artifact",
+      "id": "art-new",
+      "name": "Pauta da reunião",
+      "artifactType": "text",
+      "operation": "update",
+      "linkedTo": [
+        {
+          "kind": "task",
+          "id": "task-new"
+        }
+      ]
+    },
+    {
+      "kind": "task",
+      "id": "task-gone",
+      "name": "Reunião antiga",
+      "operation": "delete",
+      "linkedTo": []
+    }
+  ],
+  "message": "Criei a tarefa para sexta às 10h."
+}

@@ -23,7 +23,39 @@ enum class TraceKind(
     }
 }
 
-/** Uma entrada do rastro: o que o agente fez, em ordem; o texto da tela é o [summary] ou, sem ele, o [label]. */
+/** O estado de uma entrada do rastro; [text] é o que o leitor de tela ouve. */
+enum class TraceStatus(
+    val code: String,
+    val text: String,
+) {
+    Pending("pending", "aguardando"),
+    Running("running", "em andamento"),
+    Done("done", "concluído"),
+    Failed("failed", "falhou"),
+    ;
+
+    companion object {
+        fun fromCode(code: String): TraceStatus = entries.firstOrNull { it.code == code } ?: Pending
+    }
+}
+
+/** Um par "Modelo: gpt-x" do resumo de um passo ou do pedido inteiro. */
+data class TraceField(
+    val label: String,
+    val value: String,
+)
+
+/** Um bloco de texto do passo (a entrada, o resultado, o raciocínio); [code] pede fonte mono. */
+data class TraceSection(
+    val title: String,
+    val text: String,
+    val code: Boolean,
+)
+
+/**
+ * Uma entrada do rastro: o que o agente fez, em ordem; o texto da tela é o [summary] ou, sem ele, o [label]. A aba "Processo"
+ * do chat lê também o estado, a duração, os campos, os blocos de texto e o registro bruto ([rawJson], em JSON legível).
+ */
 data class TraceEntry(
     val id: String,
     val kind: TraceKind,
@@ -31,6 +63,29 @@ data class TraceEntry(
     val source: String?,
     val summary: String?,
     val startedAt: Instant?,
+    val status: TraceStatus = TraceStatus.Pending,
+    val durationMs: Double? = null,
+    val fields: List<TraceField> = emptyList(),
+    val sections: List<TraceSection> = emptyList(),
+    val rawJson: String = "",
+)
+
+enum class TraceRunStatus { Running, Done, Failed }
+
+/** O rastro do pedido inteiro, para a aba "Processo" do chat; a rota por passos e a do Hermes falam a mesma forma. */
+data class AgentTrace(
+    val status: TraceRunStatus,
+    val startedAt: Instant?,
+    val durationMs: Double?,
+    val fields: List<TraceField>,
+    val entries: List<TraceEntry>,
+)
+
+/** As linhas de uma consulta, já como texto de célula. */
+data class QueryTable(
+    val columns: List<String>,
+    val rows: List<List<String>>,
+    val truncated: Boolean,
 )
 
 /** Um passo do pedido, com o agente interno que o executa; o [label] já é o texto da tela. */
@@ -39,7 +94,24 @@ data class RequestStep(
     val agent: String,
     val label: String,
     val status: TaskStatus,
+    /** As linhas da consulta, só no passo de consulta. */
+    val result: QueryTable? = null,
 )
+
+/** Por onde o pedido anda: `steps` desdobra em passos, `hermes` entrega ao Hermes; as outras duas o chat não mostra. */
+enum class RequestRoute(
+    val code: String,
+) {
+    Steps("steps"),
+    Hermes("hermes"),
+    Voice("voice"),
+    Food("food"),
+    ;
+
+    companion object {
+        fun fromCode(code: String): RequestRoute = entries.firstOrNull { it.code == code } ?: Steps
+    }
+}
 
 enum class RequestOperation(
     val code: String,
@@ -84,6 +156,11 @@ data class AgentRequest(
     val entries: List<TraceEntry>,
     /** A resposta do Hermes quando o pedido termina; ausente nos pedidos que só mexem na agenda. */
     val message: String? = null,
+    val route: RequestRoute = RequestRoute.Steps,
+    /** O que o usuário escreveu ou falou. */
+    val text: String? = null,
+    /** O rastro com os totais, para a aba "Processo"; [entries] é a lista dele. */
+    val trace: AgentTrace? = null,
 )
 
 /** O primeiro pedido da sessão, que a seção "Sessão" mostra e abre. */

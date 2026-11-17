@@ -54,6 +54,7 @@ import app.braid.mobile.core.designsystem.SvgIcon
 import app.braid.mobile.core.designsystem.SvgPart
 import app.braid.mobile.core.designsystem.braidTokens
 import app.braid.mobile.domain.executor.ViewMode
+import app.braid.mobile.ui.chat.BotState
 
 /** As três seções do app, na ordem da barra inferior. */
 enum class MainTab(
@@ -87,6 +88,10 @@ fun BraidBottomBar(
     onSelectTab: (MainTab) -> Unit,
     onAgent: () -> Unit,
     modifier: Modifier = Modifier,
+    /** O estado do robô do botão do agente, que acompanha o chat mesmo fechado. */
+    bot: BotState = BotState.Idle,
+    /** Com o chat aberto nenhuma seção é preenchida (a atual fica só contornada) e o botão do agente vira X. */
+    chatOpen: Boolean = false,
     menu: @Composable () -> Unit = {},
 ) {
     val background = MaterialTheme.colorScheme.background
@@ -115,12 +120,19 @@ fun BraidBottomBar(
                 mode = mode,
                 filtered = filtered,
                 menuOpen = menuOpen,
+                chatOpen = chatOpen,
                 menu = menu,
                 tabsEnd = tabsEnd,
                 onSelectTab = onSelectTab,
                 modifier = Modifier.fillMaxWidth().padding(end = dockEnd),
             )
-            AgentButton(onClick = onAgent, blended = menuOpen, modifier = Modifier.align(Alignment.BottomEnd))
+            AgentButton(
+                onClick = onAgent,
+                bot = bot,
+                chatOpen = chatOpen,
+                blended = menuOpen,
+                modifier = Modifier.align(Alignment.BottomEnd),
+            )
         }
     }
 }
@@ -131,6 +143,7 @@ private fun Dock(
     mode: ViewMode,
     filtered: Boolean,
     menuOpen: Boolean,
+    chatOpen: Boolean,
     menu: @Composable () -> Unit,
     tabsEnd: Dp,
     onSelectTab: (MainTab) -> Unit,
@@ -170,8 +183,9 @@ private fun Dock(
                     tab = tab,
                     selected = tab == current,
                     mode = mode,
-                    filtered = filtered && tab == current,
+                    filtered = filtered && tab == current && !chatOpen,
                     menuOpen = menuOpen,
+                    chatOpen = chatOpen,
                     onClick = { onSelectTab(tab) },
                 )
             }
@@ -202,12 +216,22 @@ private fun RowScope.DockTab(
     mode: ViewMode,
     filtered: Boolean,
     menuOpen: Boolean,
+    chatOpen: Boolean,
     onClick: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
     val (pill, pillInk) = pillOf(mode)
-    val background by animateColorAsState(if (selected) pill else Color.Transparent, label = "tabPill")
-    val ink by animateColorAsState(if (selected) pillInk else scheme.onSurfaceVariant, label = "tabInk")
+    // Com o chat aberto nenhuma seção é preenchida: a pílula se apaga e a de onde se veio fica só contornada.
+    val filled = selected && !chatOpen
+    val background by animateColorAsState(if (filled) pill else Color.Transparent, label = "tabPill")
+    val ink by animateColorAsState(
+        when {
+            filled -> pillInk
+            selected -> scheme.onBackground
+            else -> scheme.onSurfaceVariant
+        },
+        label = "tabInk",
+    )
     val iconScale by animateFloatAsState(if (selected) 1f else 0.9f, label = "tabIconScale")
     val grow by animateFloatAsState(if (selected) 1.8f else 1f, label = "tabGrow")
 
@@ -218,6 +242,7 @@ private fun RowScope.DockTab(
                 .height(52.dp)
                 .clip(RoundedCornerShape(26.dp))
                 .background(background)
+                .then(if (selected && chatOpen) Modifier.border(1.dp, scheme.outlineVariant, RoundedCornerShape(26.dp)) else Modifier)
                 .clickable(role = Role.Tab, onClick = onClick)
                 .semantics {
                     contentDescription = tab.label
@@ -229,7 +254,13 @@ private fun RowScope.DockTab(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box {
-                SvgIcon(tab.icon, size = 24.dp, color = ink, strokeWidth = 1.75f, modifier = Modifier.scale(iconScale))
+                SvgIcon(
+                    tab.icon,
+                    size = if (chatOpen) 20.dp else 24.dp,
+                    color = ink,
+                    strokeWidth = 1.75f,
+                    modifier = Modifier.scale(iconScale),
+                )
                 FilterDot(visible = filtered, ring = pill, modifier = Modifier.offset(x = 11.dp, y = (-7).dp))
             }
             AnimatedVisibility(

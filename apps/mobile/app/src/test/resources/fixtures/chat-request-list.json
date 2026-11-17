@@ -1,0 +1,67 @@
+[
+  {
+    "id": "R00000000000000000000000C3",
+    "kind": "request",
+    "route": "steps",
+    "status": "running",
+    "title": "Criar nota de compras",
+    "createdAt": "2026-09-14T14:48:00.000Z",
+    "updatedAt": "2026-09-14T14:48:00.000Z",
+    "text": "Criar nota de compras",
+    "steps": [
+      {
+        "id": "c1",
+        "agent": "note",
+        "label": "Criando a nota",
+        "status": "running"
+      }
+    ],
+    "entities": []
+  },
+  {
+    "id": "R00000000000000000000000C2",
+    "kind": "request",
+    "route": "hermes",
+    "status": "running",
+    "title": "Resumir meu e-mail",
+    "createdAt": "2026-09-14T14:48:00.000Z",
+    "updatedAt": "2026-09-14T14:48:00.000Z",
+    "text": "Resumir meu e-mail",
+    "steps": [],
+    "entities": []
+  },
+  {
+    "id": "R00000000000000000000000C1",
+    "kind": "request",
+    "route": "steps",
+    "status": "done",
+    "title": "Já terminou",
+    "createdAt": "2026-09-14T14:48:00.000Z",
+    "updatedAt": "2026-09-14T14:48:00.000Z",
+    "text": "Já terminou",
+    "steps": [],
+    "entities": []
+  },
+  {
+    "id": "R00000000000000000000000C0",
+    "kind": "request",
+    "route": "voice",
+    "status": "running",
+    "title": "Voz aberta",
+    "createdAt": "2026-09-14T14:48:00.000Z",
+    "updatedAt": "2026-09-14T14:48:00.000Z",
+    "steps": [],
+    "entities": []
+  },
+  {
+    "id": "R00000000000000000000000B9",
+    "kind": "request",
+    "route": "steps",
+    "status": "waiting",
+    "title": "Sem texto",
+    "createdAt": "2026-09-14T14:48:00.000Z",
+    "updatedAt": "2026-09-14T14:48:00.000Z",
+    "steps": [],
+    "entities": []
+  }
+]
