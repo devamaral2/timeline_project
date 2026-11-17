@@ -1,0 +1,375 @@
+[
+  {
+    "name": "weekly with end and duration",
+    "draft": {
+      "frequency": "weekly",
+      "interval": 1,
+      "weekdays": 42,
+      "monthDay": 5,
+      "month": 3,
+      "endsOn": "2026-12-31"
+    },
+    "form": {
+      "kind": "common",
+      "name": "Treino de força",
+      "status": null,
+      "priority": "medium",
+      "startDate": "2026-09-21",
+      "startTime": "10:30",
+      "endDate": "2026-09-21",
+      "endTime": "11:30",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "timeZone": "America/Sao_Paulo",
+    "input": {
+      "frequency": "weekly",
+      "interval": 1,
+      "byWeekday": 42,
+      "endsOn": "2026-12-31",
+      "timeOfDay": "10:30",
+      "durationMinutes": 60,
+      "timeZone": "America/Sao_Paulo",
+      "startsOn": "2026-09-21",
+      "template": {
+        "kind": "common",
+        "name": "Treino de força",
+        "description": "",
+        "priority": "medium"
+      }
+    }
+  },
+  {
+    "name": "weekly every two weeks with tags and reminders",
+    "draft": {
+      "frequency": "weekly",
+      "interval": 2,
+      "weekdays": 65,
+      "monthDay": 5,
+      "month": 3,
+      "endsOn": ""
+    },
+    "form": {
+      "kind": "training",
+      "name": "Treino de força",
+      "status": null,
+      "priority": "high",
+      "startDate": "2026-09-21",
+      "startTime": "10:30",
+      "endDate": "2026-09-21",
+      "endTime": "11:30",
+      "description": " Pernas ",
+      "location": "",
+      "reminders": [
+        30,
+        1440
+      ],
+      "tags": [
+        "saúde",
+        "casa"
+      ],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "timeZone": "America/Sao_Paulo",
+    "input": {
+      "frequency": "weekly",
+      "interval": 2,
+      "byWeekday": 65,
+      "timeOfDay": "10:30",
+      "durationMinutes": 60,
+      "timeZone": "America/Sao_Paulo",
+      "startsOn": "2026-09-21",
+      "template": {
+        "kind": "training",
+        "name": "Treino de força",
+        "description": " Pernas ",
+        "priority": "high",
+        "tags": [
+          "saúde",
+          "casa"
+        ],
+        "notifyOffsetsMinutes": [
+          30,
+          1440
+        ]
+      }
+    }
+  },
+  {
+    "name": "daily without end of block",
+    "draft": {
+      "frequency": "daily",
+      "interval": 1,
+      "weekdays": 2,
+      "monthDay": 5,
+      "month": 3,
+      "endsOn": ""
+    },
+    "form": {
+      "kind": "common",
+      "name": "Treino de força",
+      "status": null,
+      "priority": "medium",
+      "startDate": "2026-09-21",
+      "startTime": "07:00",
+      "endDate": "",
+      "endTime": "",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "timeZone": "America/Sao_Paulo",
+    "input": {
+      "frequency": "daily",
+      "interval": 1,
+      "timeOfDay": "07:00",
+      "timeZone": "America/Sao_Paulo",
+      "startsOn": "2026-09-21",
+      "template": {
+        "kind": "common",
+        "name": "Treino de força",
+        "description": "",
+        "priority": "medium"
+      }
+    }
+  },
+  {
+    "name": "monthly",
+    "draft": {
+      "frequency": "monthly",
+      "interval": 1,
+      "weekdays": 2,
+      "monthDay": 5,
+      "month": 3,
+      "endsOn": ""
+    },
+    "form": {
+      "kind": "common",
+      "name": "Treino de força",
+      "status": null,
+      "priority": "medium",
+      "startDate": "2026-09-21",
+      "startTime": "10:30",
+      "endDate": "2026-09-21",
+      "endTime": "11:30",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "timeZone": "America/Sao_Paulo",
+    "input": {
+      "frequency": "monthly",
+      "interval": 1,
+      "byMonthDay": 5,
+      "timeOfDay": "10:30",
+      "durationMinutes": 60,
+      "timeZone": "America/Sao_Paulo",
+      "startsOn": "2026-09-21",
+      "template": {
+        "kind": "common",
+        "name": "Treino de força",
+        "description": "",
+        "priority": "medium"
+      }
+    }
+  },
+  {
+    "name": "yearly",
+    "draft": {
+      "frequency": "yearly",
+      "interval": 1,
+      "weekdays": 2,
+      "monthDay": 5,
+      "month": 3,
+      "endsOn": ""
+    },
+    "form": {
+      "kind": "common",
+      "name": "Treino de força",
+      "status": null,
+      "priority": "medium",
+      "startDate": "2026-09-21",
+      "startTime": "10:30",
+      "endDate": "2026-09-21",
+      "endTime": "11:30",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "timeZone": "America/Sao_Paulo",
+    "input": {
+      "frequency": "yearly",
+      "interval": 1,
+      "byMonthDay": 5,
+      "byMonth": 3,
+      "timeOfDay": "10:30",
+      "durationMinutes": 60,
+      "timeZone": "America/Sao_Paulo",
+      "startsOn": "2026-09-21",
+      "template": {
+        "kind": "common",
+        "name": "Treino de força",
+        "description": "",
+        "priority": "medium"
+      }
+    }
+  },
+  {
+    "name": "end equal to start has no duration",
+    "draft": {
+      "frequency": "weekly",
+      "interval": 1,
+      "weekdays": 2,
+      "monthDay": 5,
+      "month": 3,
+      "endsOn": ""
+    },
+    "form": {
+      "kind": "common",
+      "name": "Treino de força",
+      "status": null,
+      "priority": "medium",
+      "startDate": "2026-09-21",
+      "startTime": "10:30",
+      "endDate": "2026-09-21",
+      "endTime": "10:30",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "timeZone": "America/Sao_Paulo",
+    "input": {
+      "frequency": "weekly",
+      "interval": 1,
+      "byWeekday": 2,
+      "timeOfDay": "10:30",
+      "timeZone": "America/Sao_Paulo",
+      "startsOn": "2026-09-21",
+      "template": {
+        "kind": "common",
+        "name": "Treino de força",
+        "description": "",
+        "priority": "medium"
+      }
+    }
+  },
+  {
+    "name": "name with spaces",
+    "draft": {
+      "frequency": "weekly",
+      "interval": 1,
+      "weekdays": 2,
+      "monthDay": 5,
+      "month": 3,
+      "endsOn": ""
+    },
+    "form": {
+      "kind": "common",
+      "name": "  Corrida  ",
+      "status": null,
+      "priority": "medium",
+      "startDate": "2026-09-21",
+      "startTime": "10:30",
+      "endDate": "2026-09-21",
+      "endTime": "11:30",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "timeZone": "America/Sao_Paulo",
+    "input": {
+      "frequency": "weekly",
+      "interval": 1,
+      "byWeekday": 2,
+      "timeOfDay": "10:30",
+      "durationMinutes": 60,
+      "timeZone": "America/Sao_Paulo",
+      "startsOn": "2026-09-21",
+      "template": {
+        "kind": "common",
+        "name": "Corrida",
+        "description": "",
+        "priority": "medium"
+      }
+    }
+  },
+  {
+    "name": "joining task starts next day",
+    "draft": {
+      "frequency": "weekly",
+      "interval": 1,
+      "weekdays": 2,
+      "monthDay": 5,
+      "month": 3,
+      "endsOn": ""
+    },
+    "form": {
+      "kind": "common",
+      "name": "Treino de força",
+      "status": null,
+      "priority": "medium",
+      "startDate": "2026-09-22",
+      "startTime": "10:30",
+      "endDate": "2026-09-22",
+      "endTime": "11:30",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "timeZone": "America/Sao_Paulo",
+    "input": {
+      "frequency": "weekly",
+      "interval": 1,
+      "byWeekday": 2,
+      "timeOfDay": "10:30",
+      "durationMinutes": 60,
+      "timeZone": "America/Sao_Paulo",
+      "startsOn": "2026-09-22",
+      "template": {
+        "kind": "common",
+        "name": "Treino de força",
+        "description": "",
+        "priority": "medium"
+      }
+    }
+  }
+]

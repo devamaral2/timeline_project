@@ -4,9 +4,11 @@ import androidx.lifecycle.SavedStateHandle
 import app.braid.mobile.data.requests.DefaultAgentRequestRepository
 import app.braid.mobile.data.requests.RequestsApi
 import app.braid.mobile.data.session.StoredSession
+import app.braid.mobile.data.tasks.DefaultRecurrenceRepository
 import app.braid.mobile.data.tasks.DefaultTaskDetailRepository
 import app.braid.mobile.data.tasks.DefaultTaskEditRepository
 import app.braid.mobile.data.tasks.DefaultTaskPickerRepository
+import app.braid.mobile.data.tasks.RecurrenceApi
 import app.braid.mobile.data.tasks.TaskDetailApi
 import app.braid.mobile.data.tasks.TaskEditApi
 import app.braid.mobile.data.tasks.TaskPickerApi
@@ -87,6 +89,7 @@ class TaskHierarchyViewModelTest {
             SavedStateHandle(mapOf("taskId" to taskId)),
             DefaultTaskDetailRepository(detail),
             DefaultTaskEditRepository(graph.apis.create(TaskEditApi::class.java), detail),
+            DefaultRecurrenceRepository(graph.apis.create(RecurrenceApi::class.java)),
             AppClock { now },
             DefaultTaskPickerRepository(graph.apis.create(TaskPickerApi::class.java)),
             DefaultAgentRequestRepository(graph.apis.create(RequestsApi::class.java)),
