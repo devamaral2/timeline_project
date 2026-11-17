@@ -84,8 +84,7 @@ fun AppNavHost(
                     TaskDetailPage(
                         onBack = { navController.popBackStack() },
                         onOpenTask = { navController.navigate(TaskDetailRoute(it)) },
-                        // O detalhe do documento chega com o ticket 11; até lá o toque no que o pedido produziu não leva a lugar nenhum.
-                        onOpenArtifact = {},
+                        onOpenArtifact = { navController.navigate(DocumentDetailRoute(it)) },
                     )
                 }
                 // "Nova tarefa" leva à criação quando o ticket 13 existir.
