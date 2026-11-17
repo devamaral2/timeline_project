@@ -3,10 +3,10 @@ package app.braid.mobile.data.reminder
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringSetPreferencesKey
+import app.braid.mobile.support.closeAndJoin
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -23,7 +23,7 @@ class FiredKeysStoreTest {
     private val scopes = mutableListOf<CoroutineScope>()
 
     @After
-    fun tearDown() = scopes.forEach { it.cancel() }
+    fun tearDown() = runBlocking { scopes.closeAndJoin() }
 
     private fun open() =
         PreferenceDataStoreFactory
@@ -46,7 +46,7 @@ class FiredKeysStoreTest {
                     "task|with|bars:2026-09-14T18:00:00.000Z:5" to Instant.parse("2026-09-15T09:30:00.123Z"),
                 )
             DataStoreFiredKeysStore(open()).write(fired)
-            scopes.forEach { it.cancel() }
+            scopes.closeAndJoin()
 
             assertEquals(fired, DataStoreFiredKeysStore(open()).read())
         }

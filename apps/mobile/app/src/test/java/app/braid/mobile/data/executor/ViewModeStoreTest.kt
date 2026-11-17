@@ -4,10 +4,10 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import app.braid.mobile.domain.executor.ViewMode
+import app.braid.mobile.support.closeAndJoin
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -28,7 +28,7 @@ class ViewModeStoreTest {
     fun setUp() = Unit
 
     @After
-    fun tearDown() = scopes.forEach { it.cancel() }
+    fun tearDown() = runBlocking { scopes.closeAndJoin() }
 
     private fun open() =
         PreferenceDataStoreFactory
@@ -47,7 +47,7 @@ class ViewModeStoreTest {
         runBlocking {
             val firstRun = open()
             DataStoreViewModeRepository(firstRun).select(ViewMode.Agent)
-            scopes.forEach { it.cancel() }
+            scopes.closeAndJoin()
 
             assertEquals(ViewMode.Agent, DataStoreViewModeRepository(open()).mode.first())
         }

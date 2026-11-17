@@ -3,10 +3,10 @@ package app.braid.mobile.data.agenda
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import app.braid.mobile.support.closeAndJoin
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -23,7 +23,7 @@ class FreeTimeStoreTest {
     private val scopes = mutableListOf<CoroutineScope>()
 
     @After
-    fun tearDown() = scopes.forEach { it.cancel() }
+    fun tearDown() = runBlocking { scopes.closeAndJoin() }
 
     private fun open() =
         PreferenceDataStoreFactory
@@ -41,12 +41,12 @@ class FreeTimeStoreTest {
     fun `turning free time off survives closing the app, and on again too`() =
         runBlocking {
             DataStoreFreeTimeRepository(open()).select(false)
-            scopes.forEach { it.cancel() }
+            scopes.closeAndJoin()
             assertEquals(false, DataStoreFreeTimeRepository(open()).enabled.first())
-            scopes.forEach { it.cancel() }
+            scopes.closeAndJoin()
 
             DataStoreFreeTimeRepository(open()).select(true)
-            scopes.forEach { it.cancel() }
+            scopes.closeAndJoin()
             assertEquals(true, DataStoreFreeTimeRepository(open()).enabled.first())
         }
 
