@@ -1,0 +1,48 @@
+{
+  "storageKey": "braid-view-mode",
+  "defaultId": "all",
+  "modes": [
+    {
+      "id": "human",
+      "actor": "human"
+    },
+    {
+      "id": "agent",
+      "actor": "agent"
+    },
+    {
+      "id": "all",
+      "actor": null
+    }
+  ],
+  "lookups": [
+    {
+      "id": "human",
+      "resolved": "human"
+    },
+    {
+      "id": "agent",
+      "resolved": "agent"
+    },
+    {
+      "id": "all",
+      "resolved": "all"
+    },
+    {
+      "id": "HUMAN",
+      "resolved": "all"
+    },
+    {
+      "id": "",
+      "resolved": "all"
+    },
+    {
+      "id": "nobody",
+      "resolved": "all"
+    },
+    {
+      "id": null,
+      "resolved": "all"
+    }
+  ]
+}

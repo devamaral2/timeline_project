@@ -42,6 +42,10 @@ import app.braid.mobile.domain.task.TaskCard
 import app.braid.mobile.domain.timeline.daysBetween
 import app.braid.mobile.domain.timeline.longDate
 import app.braid.mobile.domain.timeline.shiftDayKey
+import app.braid.mobile.ui.shell.MainTab
+import app.braid.mobile.ui.shell.PublishSectionMenu
+import app.braid.mobile.ui.shell.SectionMenuModel
+import app.braid.mobile.ui.shell.SectionSearch
 import app.braid.mobile.ui.tasks.TaskStatusSheet
 import kotlin.math.abs
 
@@ -76,6 +80,16 @@ fun AgendaScreen(viewModel: AgendaViewModel = hiltViewModel()) {
             onDismiss = viewModel::dismissStatusPicker,
         )
     }
+    // O menu da seção (tocar de novo na aba Agenda): a busca filtra as tarefas já lidas pelo nome.
+    PublishSectionMenu(
+        tab = MainTab.Agenda,
+        model =
+            SectionMenuModel(
+                search = SectionSearch(label = "Buscar na agenda", value = state.search, onChange = viewModel::search),
+                filtered = state.searching,
+                onClear = { viewModel.search("") },
+            ),
+    )
 }
 
 @Composable
@@ -155,7 +169,7 @@ fun AgendaContent(
                     .padding(start = 20.dp, end = 20.dp, bottom = 120.dp + bottomInset),
             ) {
                 AgendaDay(
-                    tasks = state.tasksByDay[dayKey],
+                    tasks = state.shownOn(dayKey),
                     load = state.load,
                     now = state.now,
                     onRetry = onRetry,

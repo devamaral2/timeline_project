@@ -1,5 +1,6 @@
 package app.braid.mobile.ui.agenda
 
+import androidx.lifecycle.viewModelScope
 import app.braid.mobile.data.tasks.DefaultTaskRepository
 import app.braid.mobile.data.tasks.TasksApi
 import app.braid.mobile.domain.task.TaskActor
@@ -11,8 +12,10 @@ import app.braid.mobile.support.TestBackend
 import app.braid.mobile.support.TestBackend.Companion.fixture
 import app.braid.mobile.support.TestBackend.Companion.status
 import app.braid.mobile.support.TestGraph
+import app.braid.mobile.support.TestViewModes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -37,7 +40,9 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import java.time.Instant
 
 /** Mudar o status pelo ponto da tarefa de referência na agenda, e a releitura das tarefas de agente abertas. */
@@ -51,26 +56,38 @@ class AgendaStatusViewModelTest {
     private val referencePath = "/api/tasks/task-9"
     private val today = "2026-09-14"
 
+    @get:Rule
+    val folder = TemporaryFolder()
+
     private lateinit var backend: TestBackend
     private lateinit var graph: TestGraph
+    private lateinit var viewModes: TestViewModes
+    private val created = mutableListOf<AgendaViewModel>()
 
     @Before
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         backend = TestBackend()
         graph = TestGraph(backend)
+        viewModes = TestViewModes(folder.root.resolve("settings.preferences_pb"))
     }
 
     @After
     fun tearDown() {
         // Uma releitura ainda em voo termina com o Main trocado, e não depois dele: o ViewModel não tem fim neste teste.
         Thread.sleep(150)
+        created.forEach { it.viewModelScope.cancel() }
+        viewModes.close()
         backend.close()
         Dispatchers.resetMain()
     }
 
     private fun newViewModel(now: Instant = weekNow): AgendaViewModel =
-        AgendaViewModel(DefaultTaskRepository(graph.apis.create(TasksApi::class.java)), AppClock { now })
+        AgendaViewModel(
+            DefaultTaskRepository(graph.apis.create(TasksApi::class.java)),
+            viewModes.repository,
+            AppClock { now },
+        ).also(created::add)
 
     private suspend fun AgendaViewModel.settled(): AgendaUiState = state.first { it.load != AgendaLoad.Loading }
 

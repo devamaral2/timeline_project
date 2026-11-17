@@ -4,13 +4,13 @@
 
 **Blocked by:** 03
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Leia antes:** o [README](README.md). Spec: "Telas e adaptações ao Android". No web: o menu da seção, a navegação mobile e o modo de visualização.
 
-- [ ] Tocar na aba já selecionada abre o menu; tocar fora ou no voltar do sistema o fecha.
-- [ ] Todos, Você e Agentes filtram pela regra do web (skill, agente e roteador contam como "Agentes"), portada e conferida contra fixtures do TS.
-- [ ] A escolha de executor fica no DataStore e é a mesma nas três seções.
-- [ ] A busca filtra as tarefas carregadas da Agenda por texto.
-- [ ] O menu aceita listas extras e engrenagem por seção (usados nos tickets 06, 07 e 11).
-- [ ] "Limpar filtros" volta ao padrão; um ponto na aba indica filtro ativo.
+- [x] Tocar na aba já selecionada abre o menu; tocar fora ou no voltar do sistema o fecha.
+- [x] Todos, Você e Agentes filtram pela regra do web (skill, agente e roteador contam como "Agentes"), portada e conferida contra fixtures do TS.
+- [x] A escolha de executor fica no DataStore e é a mesma nas três seções.
+- [x] A busca filtra as tarefas carregadas da Agenda por texto.
+- [x] O menu aceita listas extras e engrenagem por seção (usados nos tickets 06, 07 e 11).
+- [x] "Limpar filtros" volta ao padrão; um ponto na aba indica filtro ativo.
