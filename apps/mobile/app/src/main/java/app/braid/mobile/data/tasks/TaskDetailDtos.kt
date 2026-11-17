@@ -1,14 +1,11 @@
 package app.braid.mobile.data.tasks
 
-import app.braid.mobile.domain.task.RecurrenceFrequency
-import app.braid.mobile.domain.task.RecurrenceRule
 import app.braid.mobile.domain.task.RequestRelation
 import app.braid.mobile.domain.task.TaskActor
 import app.braid.mobile.domain.task.TaskCard
 import app.braid.mobile.domain.task.TaskDetail
 import app.braid.mobile.domain.task.TaskKind
 import app.braid.mobile.domain.task.TaskPriority
-import app.braid.mobile.domain.task.TaskRecurrence
 import app.braid.mobile.domain.task.TaskRequest
 import app.braid.mobile.domain.task.TaskStatus
 import kotlinx.serialization.Serializable
@@ -33,30 +30,10 @@ data class TaskDetailDto(
     val notifyOffsetsMinutes: List<Int> = emptyList(),
     val tags: List<String> = emptyList(),
     val parentTaskId: String? = null,
-    val recurrence: DetailRecurrenceDto? = null,
+    val recurrence: TaskRecurrenceDto? = null,
     val revision: Int,
     val subtaskIds: List<String> = emptyList(),
     val requests: List<TaskRequestDto> = emptyList(),
-)
-
-@Serializable
-data class DetailRecurrenceDto(
-    val id: String,
-    val occurrenceOn: String,
-    val detached: Boolean,
-    val rule: RecurrenceRuleDto,
-)
-
-@Serializable
-data class RecurrenceRuleDto(
-    val frequency: String,
-    val interval: Int,
-    val byWeekday: Int? = null,
-    val byMonthDay: Int? = null,
-    val byMonth: Int? = null,
-    val timeOfDay: String,
-    val startsOn: String,
-    val endsOn: String? = null,
 )
 
 @Serializable
@@ -93,24 +70,6 @@ fun TaskDetailDto.toDomain(): TaskDetail =
         recurrence = recurrence?.toDomain(),
         subtaskIds = subtaskIds,
         requests = requests.map { it.toDomain() },
-    )
-
-fun DetailRecurrenceDto.toDomain() =
-    TaskRecurrence(
-        id = id,
-        occurrenceOn = occurrenceOn,
-        detached = detached,
-        rule =
-            RecurrenceRule(
-                frequency = RecurrenceFrequency.fromCode(rule.frequency),
-                interval = rule.interval,
-                byWeekday = rule.byWeekday,
-                byMonthDay = rule.byMonthDay,
-                byMonth = rule.byMonth,
-                timeOfDay = rule.timeOfDay,
-                startsOn = rule.startsOn,
-                endsOn = rule.endsOn,
-            ),
     )
 
 private fun TaskRequestDto.toDomain() =

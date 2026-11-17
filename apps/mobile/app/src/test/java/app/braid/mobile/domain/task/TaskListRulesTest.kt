@@ -78,18 +78,13 @@ class TaskListRulesTest {
             val rule = case.getValue("rule").jsonObject
             val parsed =
                 RecurrenceRule(
-                    frequency =
-                        RecurrenceFrequency.valueOf(
-                            rule
-                                .getValue("frequency")
-                                .jsonPrimitive.content
-                                .replaceFirstChar(Char::uppercase),
-                        ),
+                    frequency = RecurrenceFrequency.fromCode(rule.getValue("frequency").jsonPrimitive.content),
                     interval = rule.getValue("interval").jsonPrimitive.int,
                     byWeekday = rule["byWeekday"]?.jsonPrimitive?.int,
                     byMonthDay = rule["byMonthDay"]?.jsonPrimitive?.int,
                     byMonth = rule["byMonth"]?.jsonPrimitive?.int,
                     timeOfDay = rule.getValue("timeOfDay").jsonPrimitive.content,
+                    startsOn = rule["startsOn"]?.jsonPrimitive?.content ?: "2026-01-01",
                 )
 
             assertEquals("$rule", case.getValue("label").jsonPrimitive.content, recurrenceRuleLabel(parsed))

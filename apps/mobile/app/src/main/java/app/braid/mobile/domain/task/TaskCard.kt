@@ -72,14 +72,21 @@ enum class TaskPriority(
     }
 }
 
-enum class RecurrenceFrequency {
-    Daily,
-    Weekly,
-    Monthly,
-    Yearly,
+enum class RecurrenceFrequency(
+    val code: String,
+) {
+    Daily("daily"),
+    Weekly("weekly"),
+    Monthly("monthly"),
+    Yearly("yearly"),
+    ;
+
+    companion object {
+        fun fromCode(code: String): RecurrenceFrequency = entries.firstOrNull { it.code == code } ?: error("Frequência desconhecida: $code")
+    }
 }
 
-/** A regra de uma série, só com o que a linha da lista escreve; [byWeekday] é a máscara de dias (bit 0 = domingo). */
+/** A regra de uma série; [byWeekday] é a máscara de dias (bit 0 = domingo) e as datas são dias civis `YYYY-MM-DD`. */
 data class RecurrenceRule(
     val frequency: RecurrenceFrequency,
     val interval: Int,
@@ -87,6 +94,8 @@ data class RecurrenceRule(
     val byMonthDay: Int?,
     val byMonth: Int?,
     val timeOfDay: String,
+    val startsOn: String,
+    val endsOn: String? = null,
 )
 
 /** A ocorrência de uma série em que o cartão está; [detached] é a que já não segue a regra. */

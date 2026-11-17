@@ -61,6 +61,8 @@ data class RecurrenceRuleDto(
     val byMonthDay: Int? = null,
     val byMonth: Int? = null,
     val timeOfDay: String,
+    val startsOn: String,
+    val endsOn: String? = null,
 )
 
 /** `agendaPageSchema`: a página e o cursor da próxima, que some na última. */
@@ -86,19 +88,21 @@ fun TaskCardDto.toDomain(): TaskCard =
         recurrence = recurrence?.toDomain(),
     )
 
-private fun TaskRecurrenceDto.toDomain() =
+fun TaskRecurrenceDto.toDomain() =
     TaskRecurrence(
         id = id,
         occurrenceOn = occurrenceOn,
         detached = detached,
         rule =
             RecurrenceRule(
-                frequency = RecurrenceFrequency.valueOf(rule.frequency.replaceFirstChar(Char::uppercase)),
+                frequency = RecurrenceFrequency.fromCode(rule.frequency),
                 interval = rule.interval,
                 byWeekday = rule.byWeekday,
                 byMonthDay = rule.byMonthDay,
                 byMonth = rule.byMonth,
                 timeOfDay = rule.timeOfDay,
+                startsOn = rule.startsOn,
+                endsOn = rule.endsOn,
             ),
     )
 

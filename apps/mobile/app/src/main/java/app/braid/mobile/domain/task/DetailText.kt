@@ -6,7 +6,6 @@ import app.braid.mobile.domain.timeline.shortDate
 import app.braid.mobile.domain.timeline.weekday
 import app.braid.mobile.domain.timeline.zonedDayStart
 import java.time.Instant
-import java.util.Locale
 
 /*
  * Port dos textos do detalhe da tarefa: `momentLabel`, `recurrenceLines`, `reminderLabel` e `recurrenceRuleLabel`
@@ -16,7 +15,6 @@ import java.util.Locale
 
 private const val MINUTES_PER_DAY = 1440
 private const val WEEKDAY_ABBREVIATION = 3
-private val WEEKDAY_NAMES = listOf("dom", "seg", "ter", "qua", "qui", "sex", "sáb")
 
 /** "30 min", "1 dia", "2 dias": o lembrete em cartão pequeno; dia exato sai em dias. */
 fun reminderLabel(minutes: Int): String {
@@ -32,35 +30,6 @@ fun momentLabel(instant: Instant): String {
     val dayKey = dayKeyOf(instant)
     val day = "${weekday(dayKey).take(WEEKDAY_ABBREVIATION)}, ${shortDate(dayKey).lowercase()}"
     return if (instant == zonedDayStart(dayKey)) day else "$day · ${formatTime(instant)}"
-}
-
-/** A regra da série em texto: "Todo dia, 18:00", "Seg, qua e sex, 18:30". */
-fun recurrenceRuleLabel(rule: RecurrenceRule): String {
-    val text = "${ruleDaysLabel(rule)}, ${rule.timeOfDay}"
-    return text.replaceFirstChar { it.titlecase(Locale.forLanguageTag("pt-BR")) }
-}
-
-private fun ruleDaysLabel(rule: RecurrenceRule): String {
-    val every = rule.interval
-    return when (rule.frequency) {
-        RecurrenceFrequency.Daily -> if (every == 1) "todo dia" else "a cada $every dias"
-        RecurrenceFrequency.Weekly -> {
-            val days = weekdayList(rule.byWeekday ?: 0)
-            if (every == 1) days else "a cada $every semanas, $days"
-        }
-        RecurrenceFrequency.Monthly -> {
-            val day = rule.byMonthDay?.toString().orEmpty()
-            if (every == 1) "todo dia $day" else "a cada $every meses, dia $day"
-        }
-        RecurrenceFrequency.Yearly -> "todo ano, ${rule.byMonthDay?.toString().orEmpty()}/${rule.byMonth?.toString().orEmpty()}"
-    }
-}
-
-/** Os dias da máscara (bit 0 = domingo): "seg, qua e sex". */
-private fun weekdayList(mask: Int): String {
-    val names = WEEKDAY_NAMES.filterIndexed { index, _ -> mask and (1 shl index) != 0 }
-    if (names.size <= 1) return names.firstOrNull().orEmpty()
-    return "${names.dropLast(1).joinToString(", ")} e ${names.last()}"
 }
 
 data class RecurrenceLines(

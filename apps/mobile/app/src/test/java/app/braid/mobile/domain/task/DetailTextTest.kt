@@ -1,9 +1,9 @@
 package app.braid.mobile.domain.task
 
 import app.braid.mobile.core.network.BraidJson
-import app.braid.mobile.data.tasks.DetailRecurrenceDto
 import app.braid.mobile.data.tasks.RecurrenceRuleDto
 import app.braid.mobile.data.tasks.TaskDetailDto
+import app.braid.mobile.data.tasks.TaskRecurrenceDto
 import app.braid.mobile.data.tasks.toDomain
 import app.braid.mobile.support.Fixtures
 import kotlinx.serialization.json.JsonArray
@@ -30,7 +30,7 @@ class DetailTextTest {
         rule: JsonElement,
         detached: Boolean,
     ): TaskRecurrence =
-        DetailRecurrenceDto(
+        TaskRecurrenceDto(
             id = "r",
             occurrenceOn = "2026-09-14",
             detached = detached,
