@@ -2,6 +2,7 @@ package app.braid.mobile.data.tasks
 
 import app.braid.mobile.domain.task.StaleRevisionException
 import app.braid.mobile.domain.task.StatusPatch
+import app.braid.mobile.domain.task.TaskChanges
 import app.braid.mobile.domain.task.TaskDetail
 import app.braid.mobile.domain.task.TaskDetailRepository
 import app.braid.mobile.domain.task.TaskNotFoundException
@@ -16,6 +17,7 @@ class DefaultTaskDetailRepository
     @Inject
     constructor(
         private val api: TaskDetailApi,
+        private val changes: TaskChanges = TaskChanges(),
     ) : TaskDetailRepository {
         override suspend fun task(id: String): TaskDetail =
             try {
@@ -50,6 +52,7 @@ class DefaultTaskDetailRepository
         override suspend fun delete(taskId: String) {
             try {
                 api.delete(taskId)
+                changes.notifyChanged()
             } catch (failure: HttpException) {
                 if (failure.code() == HTTP_NOT_FOUND) throw TaskNotFoundException(failure)
                 throw failure
@@ -62,6 +65,7 @@ class DefaultTaskDetailRepository
         ) {
             try {
                 api.update(taskId, body)
+                changes.notifyChanged()
             } catch (failure: HttpException) {
                 if (failure.code() == HTTP_CONFLICT) throw StaleRevisionException(failure)
                 throw failure

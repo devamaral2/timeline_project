@@ -1,0 +1,3224 @@
+{
+  "catchUpWindowMs": 3600000,
+  "cards": [
+    {
+      "id": "meeting",
+      "actor": "human",
+      "kind": "common",
+      "status": "todo",
+      "priority": "medium",
+      "name": "Reunião de planejamento",
+      "description": "",
+      "startedAt": "2026-09-14T18:00:00.000Z",
+      "estimatedFinishAt": "2026-09-14T19:00:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [
+        5,
+        30,
+        60,
+        1440
+      ],
+      "tags": [],
+      "artifactTypes": [],
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    },
+    {
+      "id": "project",
+      "actor": "human",
+      "kind": "common",
+      "status": "doing",
+      "priority": "medium",
+      "name": "Entrega do projeto",
+      "description": "",
+      "startedAt": "2026-09-01T12:00:00.000Z",
+      "estimatedFinishAt": "2026-09-16T12:00:00.000Z",
+      "longRunning": true,
+      "notifyOffsetsMinutes": [
+        60,
+        2880
+      ],
+      "tags": [],
+      "artifactTypes": [],
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    },
+    {
+      "id": "bill",
+      "actor": "human",
+      "kind": "common",
+      "priority": "medium",
+      "name": "Pagar o condomínio",
+      "description": "",
+      "startedAt": "2026-09-15T13:00:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [
+        15
+      ],
+      "tags": [],
+      "artifactTypes": [],
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    },
+    {
+      "id": "finished",
+      "actor": "human",
+      "kind": "common",
+      "status": "done",
+      "priority": "medium",
+      "name": "Almoço",
+      "description": "",
+      "startedAt": "2026-09-14T16:00:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [
+        10
+      ],
+      "tags": [],
+      "artifactTypes": [],
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    },
+    {
+      "id": "cancelled",
+      "actor": "human",
+      "kind": "training",
+      "status": "cancel",
+      "priority": "medium",
+      "name": "Treino",
+      "description": "",
+      "startedAt": "2026-09-14T16:00:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [
+        10
+      ],
+      "tags": [],
+      "artifactTypes": [],
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    },
+    {
+      "id": "no-date",
+      "actor": "human",
+      "kind": "common",
+      "status": "toDefine",
+      "priority": "medium",
+      "name": "Ideia sem data",
+      "description": "",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [
+        10
+      ],
+      "tags": [],
+      "artifactTypes": [],
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    },
+    {
+      "id": "long-no-deadline",
+      "actor": "human",
+      "kind": "common",
+      "status": "doing",
+      "priority": "medium",
+      "name": "Estudar sempre",
+      "description": "",
+      "startedAt": "2026-09-01T12:00:00.000Z",
+      "longRunning": true,
+      "notifyOffsetsMinutes": [
+        10
+      ],
+      "tags": [],
+      "artifactTypes": [],
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    },
+    {
+      "id": "agent",
+      "actor": "agent",
+      "kind": "search_request",
+      "status": "queued",
+      "priority": "medium",
+      "name": "Buscar passagens",
+      "description": "",
+      "startedAt": "2026-09-14T17:00:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [
+        10
+      ],
+      "tags": [],
+      "artifactTypes": [],
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    },
+    {
+      "id": "plain",
+      "actor": "human",
+      "kind": "common",
+      "status": "todo",
+      "priority": "medium",
+      "name": "Sem aviso",
+      "description": "",
+      "startedAt": "2026-09-14T17:00:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    },
+    {
+      "id": "month-out",
+      "actor": "human",
+      "kind": "common",
+      "status": "todo",
+      "priority": "medium",
+      "name": "Declarar imposto",
+      "description": "",
+      "startedAt": "2026-10-30T12:00:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [
+        43200,
+        1
+      ],
+      "tags": [],
+      "artifactTypes": [],
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    }
+  ],
+  "anchorOf": [
+    {
+      "args": [
+        "meeting"
+      ],
+      "result": "2026-09-14T18:00:00.000Z"
+    },
+    {
+      "args": [
+        "project"
+      ],
+      "result": "2026-09-16T12:00:00.000Z"
+    },
+    {
+      "args": [
+        "bill"
+      ],
+      "result": "2026-09-15T13:00:00.000Z"
+    },
+    {
+      "args": [
+        "finished"
+      ],
+      "result": null
+    },
+    {
+      "args": [
+        "cancelled"
+      ],
+      "result": null
+    },
+    {
+      "args": [
+        "no-date"
+      ],
+      "result": null
+    },
+    {
+      "args": [
+        "long-no-deadline"
+      ],
+      "result": null
+    },
+    {
+      "args": [
+        "agent"
+      ],
+      "result": "2026-09-14T17:00:00.000Z"
+    },
+    {
+      "args": [
+        "plain"
+      ],
+      "result": "2026-09-14T17:00:00.000Z"
+    },
+    {
+      "args": [
+        "month-out"
+      ],
+      "result": "2026-10-30T12:00:00.000Z"
+    }
+  ],
+  "keyOf": [
+    {
+      "args": [
+        "meeting",
+        5
+      ],
+      "result": "meeting:2026-09-14T18:00:00.000Z:5"
+    },
+    {
+      "args": [
+        "meeting",
+        1440
+      ],
+      "result": "meeting:2026-09-14T18:00:00.000Z:1440"
+    },
+    {
+      "args": [
+        "project",
+        60
+      ],
+      "result": "project:2026-09-16T12:00:00.000Z:60"
+    },
+    {
+      "args": [
+        "bill",
+        15
+      ],
+      "result": "bill:2026-09-15T13:00:00.000Z:15"
+    },
+    {
+      "args": [
+        "finished",
+        10
+      ],
+      "result": "finished::10"
+    },
+    {
+      "args": [
+        "no-date",
+        10
+      ],
+      "result": "no-date::10"
+    }
+  ],
+  "kindOf": [
+    {
+      "args": [
+        "meeting"
+      ],
+      "result": "tracked"
+    },
+    {
+      "args": [
+        "project"
+      ],
+      "result": "tracked"
+    },
+    {
+      "args": [
+        "bill"
+      ],
+      "result": "reference"
+    },
+    {
+      "args": [
+        "finished"
+      ],
+      "result": "tracked"
+    },
+    {
+      "args": [
+        "cancelled"
+      ],
+      "result": "tracked"
+    },
+    {
+      "args": [
+        "no-date"
+      ],
+      "result": "tracked"
+    },
+    {
+      "args": [
+        "long-no-deadline"
+      ],
+      "result": "tracked"
+    },
+    {
+      "args": [
+        "agent"
+      ],
+      "result": "tracked"
+    },
+    {
+      "args": [
+        "plain"
+      ],
+      "result": "tracked"
+    },
+    {
+      "args": [
+        "month-out"
+      ],
+      "result": "tracked"
+    }
+  ],
+  "dueNotificationsOf": [
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-13T17:59:00.000Z",
+        []
+      ],
+      "result": {
+        "due": [],
+        "settled": []
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-13T17:59:00.000Z",
+        [
+          "meeting:2026-09-14T18:00:00.000Z:30"
+        ]
+      ],
+      "result": {
+        "due": [],
+        "settled": []
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-13T17:59:00.000Z",
+        [
+          "meeting:2026-09-14T18:00:00.000Z:30",
+          "meeting:2026-09-14T18:00:00.000Z:5",
+          "project:2026-09-16T12:00:00.000Z:60"
+        ]
+      ],
+      "result": {
+        "due": [],
+        "settled": []
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-13T18:00:00.000Z",
+        []
+      ],
+      "result": {
+        "due": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 1440
+          }
+        ],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-13T18:00:00.000Z",
+        [
+          "meeting:2026-09-14T18:00:00.000Z:30"
+        ]
+      ],
+      "result": {
+        "due": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 1440
+          }
+        ],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-13T18:00:00.000Z",
+        [
+          "meeting:2026-09-14T18:00:00.000Z:30",
+          "meeting:2026-09-14T18:00:00.000Z:5",
+          "project:2026-09-16T12:00:00.000Z:60"
+        ]
+      ],
+      "result": {
+        "due": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 1440
+          }
+        ],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-13T18:59:00.000Z",
+        []
+      ],
+      "result": {
+        "due": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 1440
+          }
+        ],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-13T18:59:00.000Z",
+        [
+          "meeting:2026-09-14T18:00:00.000Z:30"
+        ]
+      ],
+      "result": {
+        "due": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 1440
+          }
+        ],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-13T18:59:00.000Z",
+        [
+          "meeting:2026-09-14T18:00:00.000Z:30",
+          "meeting:2026-09-14T18:00:00.000Z:5",
+          "project:2026-09-16T12:00:00.000Z:60"
+        ]
+      ],
+      "result": {
+        "due": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 1440
+          }
+        ],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-13T19:00:00.000Z",
+        []
+      ],
+      "result": {
+        "due": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 1440
+          }
+        ],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-13T19:00:00.000Z",
+        [
+          "meeting:2026-09-14T18:00:00.000Z:30"
+        ]
+      ],
+      "result": {
+        "due": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 1440
+          }
+        ],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-13T19:00:00.000Z",
+        [
+          "meeting:2026-09-14T18:00:00.000Z:30",
+          "meeting:2026-09-14T18:00:00.000Z:5",
+          "project:2026-09-16T12:00:00.000Z:60"
+        ]
+      ],
+      "result": {
+        "due": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 1440
+          }
+        ],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-13T19:00:00.001Z",
+        []
+      ],
+      "result": {
+        "due": [],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-13T19:00:00.001Z",
+        [
+          "meeting:2026-09-14T18:00:00.000Z:30"
+        ]
+      ],
+      "result": {
+        "due": [],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-13T19:00:00.001Z",
+        [
+          "meeting:2026-09-14T18:00:00.000Z:30",
+          "meeting:2026-09-14T18:00:00.000Z:5",
+          "project:2026-09-16T12:00:00.000Z:60"
+        ]
+      ],
+      "result": {
+        "due": [],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-14T16:59:00.000Z",
+        []
+      ],
+      "result": {
+        "due": [
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "kind": "tracked",
+            "sourceId": "agent",
+            "name": "Buscar passagens",
+            "offsetMinutes": 10
+          }
+        ],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "anchorMs": 1789405200000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-14T16:59:00.000Z",
+        [
+          "meeting:2026-09-14T18:00:00.000Z:30"
+        ]
+      ],
+      "result": {
+        "due": [
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "kind": "tracked",
+            "sourceId": "agent",
+            "name": "Buscar passagens",
+            "offsetMinutes": 10
+          }
+        ],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "anchorMs": 1789405200000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-14T16:59:00.000Z",
+        [
+          "meeting:2026-09-14T18:00:00.000Z:30",
+          "meeting:2026-09-14T18:00:00.000Z:5",
+          "project:2026-09-16T12:00:00.000Z:60"
+        ]
+      ],
+      "result": {
+        "due": [
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "kind": "tracked",
+            "sourceId": "agent",
+            "name": "Buscar passagens",
+            "offsetMinutes": 10
+          }
+        ],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "anchorMs": 1789405200000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-14T17:00:00.000Z",
+        []
+      ],
+      "result": {
+        "due": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 60
+          }
+        ],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "anchorMs": 1789405200000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-14T17:00:00.000Z",
+        [
+          "meeting:2026-09-14T18:00:00.000Z:30"
+        ]
+      ],
+      "result": {
+        "due": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 60
+          }
+        ],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "anchorMs": 1789405200000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-14T17:00:00.000Z",
+        [
+          "meeting:2026-09-14T18:00:00.000Z:30",
+          "meeting:2026-09-14T18:00:00.000Z:5",
+          "project:2026-09-16T12:00:00.000Z:60"
+        ]
+      ],
+      "result": {
+        "due": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 60
+          }
+        ],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "anchorMs": 1789405200000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-14T17:59:00.000Z",
+        []
+      ],
+      "result": {
+        "due": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:5",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 5
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:30",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 30
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 60
+          }
+        ],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:5",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:30",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "anchorMs": 1789405200000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-14T17:59:00.000Z",
+        [
+          "meeting:2026-09-14T18:00:00.000Z:30"
+        ]
+      ],
+      "result": {
+        "due": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:5",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 5
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 60
+          }
+        ],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:5",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "anchorMs": 1789405200000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-14T17:59:00.000Z",
+        [
+          "meeting:2026-09-14T18:00:00.000Z:30",
+          "meeting:2026-09-14T18:00:00.000Z:5",
+          "project:2026-09-16T12:00:00.000Z:60"
+        ]
+      ],
+      "result": {
+        "due": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 60
+          }
+        ],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "anchorMs": 1789405200000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-14T17:30:00.000Z",
+        []
+      ],
+      "result": {
+        "due": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:30",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 30
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 60
+          }
+        ],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:30",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "anchorMs": 1789405200000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-14T17:30:00.000Z",
+        [
+          "meeting:2026-09-14T18:00:00.000Z:30"
+        ]
+      ],
+      "result": {
+        "due": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 60
+          }
+        ],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "anchorMs": 1789405200000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-14T17:30:00.000Z",
+        [
+          "meeting:2026-09-14T18:00:00.000Z:30",
+          "meeting:2026-09-14T18:00:00.000Z:5",
+          "project:2026-09-16T12:00:00.000Z:60"
+        ]
+      ],
+      "result": {
+        "due": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 60
+          }
+        ],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "anchorMs": 1789405200000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-14T17:54:00.000Z",
+        []
+      ],
+      "result": {
+        "due": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:30",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 30
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 60
+          }
+        ],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:30",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "anchorMs": 1789405200000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-14T17:54:00.000Z",
+        [
+          "meeting:2026-09-14T18:00:00.000Z:30"
+        ]
+      ],
+      "result": {
+        "due": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 60
+          }
+        ],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "anchorMs": 1789405200000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-14T17:54:00.000Z",
+        [
+          "meeting:2026-09-14T18:00:00.000Z:30",
+          "meeting:2026-09-14T18:00:00.000Z:5",
+          "project:2026-09-16T12:00:00.000Z:60"
+        ]
+      ],
+      "result": {
+        "due": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 60
+          }
+        ],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "anchorMs": 1789405200000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-14T17:55:00.000Z",
+        []
+      ],
+      "result": {
+        "due": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:5",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 5
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:30",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 30
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 60
+          }
+        ],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:5",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:30",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "anchorMs": 1789405200000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-14T17:55:00.000Z",
+        [
+          "meeting:2026-09-14T18:00:00.000Z:30"
+        ]
+      ],
+      "result": {
+        "due": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:5",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 5
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 60
+          }
+        ],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:5",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "anchorMs": 1789405200000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-14T17:55:00.000Z",
+        [
+          "meeting:2026-09-14T18:00:00.000Z:30",
+          "meeting:2026-09-14T18:00:00.000Z:5",
+          "project:2026-09-16T12:00:00.000Z:60"
+        ]
+      ],
+      "result": {
+        "due": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 60
+          }
+        ],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "anchorMs": 1789405200000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-14T17:59:59.999Z",
+        []
+      ],
+      "result": {
+        "due": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:5",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 5
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:30",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 30
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 60
+          }
+        ],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:5",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:30",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "anchorMs": 1789405200000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-14T17:59:59.999Z",
+        [
+          "meeting:2026-09-14T18:00:00.000Z:30"
+        ]
+      ],
+      "result": {
+        "due": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:5",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 5
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 60
+          }
+        ],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:5",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "anchorMs": 1789405200000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-14T17:59:59.999Z",
+        [
+          "meeting:2026-09-14T18:00:00.000Z:30",
+          "meeting:2026-09-14T18:00:00.000Z:5",
+          "project:2026-09-16T12:00:00.000Z:60"
+        ]
+      ],
+      "result": {
+        "due": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 60
+          }
+        ],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "anchorMs": 1789405200000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-14T18:00:00.000Z",
+        []
+      ],
+      "result": {
+        "due": [],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:5",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:30",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "anchorMs": 1789405200000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-14T18:00:00.000Z",
+        [
+          "meeting:2026-09-14T18:00:00.000Z:30"
+        ]
+      ],
+      "result": {
+        "due": [],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:5",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "anchorMs": 1789405200000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-14T18:00:00.000Z",
+        [
+          "meeting:2026-09-14T18:00:00.000Z:30",
+          "meeting:2026-09-14T18:00:00.000Z:5",
+          "project:2026-09-16T12:00:00.000Z:60"
+        ]
+      ],
+      "result": {
+        "due": [],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "anchorMs": 1789405200000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-14T19:01:00.000Z",
+        []
+      ],
+      "result": {
+        "due": [],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:5",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:30",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "anchorMs": 1789405200000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-14T19:01:00.000Z",
+        [
+          "meeting:2026-09-14T18:00:00.000Z:30"
+        ]
+      ],
+      "result": {
+        "due": [],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:5",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "anchorMs": 1789405200000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-14T19:01:00.000Z",
+        [
+          "meeting:2026-09-14T18:00:00.000Z:30",
+          "meeting:2026-09-14T18:00:00.000Z:5",
+          "project:2026-09-16T12:00:00.000Z:60"
+        ]
+      ],
+      "result": {
+        "due": [],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "anchorMs": 1789405200000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-14T09:00:00.000Z",
+        []
+      ],
+      "result": {
+        "due": [],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-14T09:00:00.000Z",
+        [
+          "meeting:2026-09-14T18:00:00.000Z:30"
+        ]
+      ],
+      "result": {
+        "due": [],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-14T09:00:00.000Z",
+        [
+          "meeting:2026-09-14T18:00:00.000Z:30",
+          "meeting:2026-09-14T18:00:00.000Z:5",
+          "project:2026-09-16T12:00:00.000Z:60"
+        ]
+      ],
+      "result": {
+        "due": [],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-15T12:00:00.000Z",
+        []
+      ],
+      "result": {
+        "due": [],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:5",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:30",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "anchorMs": 1789405200000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-15T12:00:00.000Z",
+        [
+          "meeting:2026-09-14T18:00:00.000Z:30"
+        ]
+      ],
+      "result": {
+        "due": [],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:5",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "anchorMs": 1789405200000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-15T12:00:00.000Z",
+        [
+          "meeting:2026-09-14T18:00:00.000Z:30",
+          "meeting:2026-09-14T18:00:00.000Z:5",
+          "project:2026-09-16T12:00:00.000Z:60"
+        ]
+      ],
+      "result": {
+        "due": [],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "anchorMs": 1789405200000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-16T11:30:00.000Z",
+        []
+      ],
+      "result": {
+        "due": [
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "project",
+            "name": "Entrega do projeto",
+            "offsetMinutes": 60
+          }
+        ],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:5",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:30",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:60",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "bill:2026-09-15T13:00:00.000Z:15",
+            "anchorMs": 1789477200000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "anchorMs": 1789405200000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-16T11:30:00.000Z",
+        [
+          "meeting:2026-09-14T18:00:00.000Z:30"
+        ]
+      ],
+      "result": {
+        "due": [
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "project",
+            "name": "Entrega do projeto",
+            "offsetMinutes": 60
+          }
+        ],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:5",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:60",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "bill:2026-09-15T13:00:00.000Z:15",
+            "anchorMs": 1789477200000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "anchorMs": 1789405200000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-16T11:30:00.000Z",
+        [
+          "meeting:2026-09-14T18:00:00.000Z:30",
+          "meeting:2026-09-14T18:00:00.000Z:5",
+          "project:2026-09-16T12:00:00.000Z:60"
+        ]
+      ],
+      "result": {
+        "due": [],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "bill:2026-09-15T13:00:00.000Z:15",
+            "anchorMs": 1789477200000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "anchorMs": 1789405200000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-16T12:00:00.000Z",
+        []
+      ],
+      "result": {
+        "due": [],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:5",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:30",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:60",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "bill:2026-09-15T13:00:00.000Z:15",
+            "anchorMs": 1789477200000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "anchorMs": 1789405200000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-16T12:00:00.000Z",
+        [
+          "meeting:2026-09-14T18:00:00.000Z:30"
+        ]
+      ],
+      "result": {
+        "due": [],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:5",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:60",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "bill:2026-09-15T13:00:00.000Z:15",
+            "anchorMs": 1789477200000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "anchorMs": 1789405200000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-16T12:00:00.000Z",
+        [
+          "meeting:2026-09-14T18:00:00.000Z:30",
+          "meeting:2026-09-14T18:00:00.000Z:5",
+          "project:2026-09-16T12:00:00.000Z:60"
+        ]
+      ],
+      "result": {
+        "due": [],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "bill:2026-09-15T13:00:00.000Z:15",
+            "anchorMs": 1789477200000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "anchorMs": 1789405200000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-30T12:00:00.000Z",
+        []
+      ],
+      "result": {
+        "due": [
+          {
+            "key": "month-out:2026-10-30T12:00:00.000Z:43200",
+            "kind": "tracked",
+            "sourceId": "month-out",
+            "name": "Declarar imposto",
+            "offsetMinutes": 43200
+          }
+        ],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:5",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:30",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:60",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "bill:2026-09-15T13:00:00.000Z:15",
+            "anchorMs": 1789477200000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "anchorMs": 1789405200000
+          },
+          {
+            "key": "month-out:2026-10-30T12:00:00.000Z:43200",
+            "anchorMs": 1793361600000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-30T12:00:00.000Z",
+        [
+          "meeting:2026-09-14T18:00:00.000Z:30"
+        ]
+      ],
+      "result": {
+        "due": [
+          {
+            "key": "month-out:2026-10-30T12:00:00.000Z:43200",
+            "kind": "tracked",
+            "sourceId": "month-out",
+            "name": "Declarar imposto",
+            "offsetMinutes": 43200
+          }
+        ],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:5",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:60",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "bill:2026-09-15T13:00:00.000Z:15",
+            "anchorMs": 1789477200000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "anchorMs": 1789405200000
+          },
+          {
+            "key": "month-out:2026-10-30T12:00:00.000Z:43200",
+            "anchorMs": 1793361600000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-30T12:00:00.000Z",
+        [
+          "meeting:2026-09-14T18:00:00.000Z:30",
+          "meeting:2026-09-14T18:00:00.000Z:5",
+          "project:2026-09-16T12:00:00.000Z:60"
+        ]
+      ],
+      "result": {
+        "due": [
+          {
+            "key": "month-out:2026-10-30T12:00:00.000Z:43200",
+            "kind": "tracked",
+            "sourceId": "month-out",
+            "name": "Declarar imposto",
+            "offsetMinutes": 43200
+          }
+        ],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "bill:2026-09-15T13:00:00.000Z:15",
+            "anchorMs": 1789477200000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "anchorMs": 1789405200000
+          },
+          {
+            "key": "month-out:2026-10-30T12:00:00.000Z:43200",
+            "anchorMs": 1793361600000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-30T11:59:59.999Z",
+        []
+      ],
+      "result": {
+        "due": [],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:5",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:30",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:60",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "bill:2026-09-15T13:00:00.000Z:15",
+            "anchorMs": 1789477200000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "anchorMs": 1789405200000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-30T11:59:59.999Z",
+        [
+          "meeting:2026-09-14T18:00:00.000Z:30"
+        ]
+      ],
+      "result": {
+        "due": [],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:5",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:60",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "bill:2026-09-15T13:00:00.000Z:15",
+            "anchorMs": 1789477200000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "anchorMs": 1789405200000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-30T11:59:59.999Z",
+        [
+          "meeting:2026-09-14T18:00:00.000Z:30",
+          "meeting:2026-09-14T18:00:00.000Z:5",
+          "project:2026-09-16T12:00:00.000Z:60"
+        ]
+      ],
+      "result": {
+        "due": [],
+        "settled": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "bill:2026-09-15T13:00:00.000Z:15",
+            "anchorMs": 1789477200000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "anchorMs": 1789405200000
+          }
+        ]
+      }
+    }
+  ],
+  "offsetLabel": [
+    {
+      "args": [
+        1
+      ],
+      "result": "1 minuto antes"
+    },
+    {
+      "args": [
+        5
+      ],
+      "result": "5 minutos antes"
+    },
+    {
+      "args": [
+        30
+      ],
+      "result": "30 minutos antes"
+    },
+    {
+      "args": [
+        60
+      ],
+      "result": "60 minutos antes"
+    },
+    {
+      "args": [
+        90
+      ],
+      "result": "90 minutos antes"
+    },
+    {
+      "args": [
+        1440
+      ],
+      "result": "1 dia antes"
+    },
+    {
+      "args": [
+        2880
+      ],
+      "result": "2 dias antes"
+    },
+    {
+      "args": [
+        4320
+      ],
+      "result": "3 dias antes"
+    },
+    {
+      "args": [
+        43200
+      ],
+      "result": "30 dias antes"
+    },
+    {
+      "args": [
+        1441
+      ],
+      "result": "1441 minutos antes"
+    }
+  ]
+}

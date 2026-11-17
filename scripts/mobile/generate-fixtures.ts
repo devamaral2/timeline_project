@@ -15,6 +15,7 @@ import { fileURLToPath } from "node:url";
 import { agendaFixtures } from "./fixtures/agenda";
 import { documentsFixtures } from "./fixtures/documents";
 import { executorFixtures } from "./fixtures/executor";
+import { notificationsFixtures } from "./fixtures/notifications";
 import { sessionFixtures } from "./fixtures/session";
 import { taskListFixtures } from "./fixtures/task-list";
 import { tasksFixtures } from "./fixtures/tasks";
@@ -30,7 +31,7 @@ export const fixtureDirectory = fileURLToPath(new URL("../../apps/mobile/app/src
 
 export function collectFixtures(): Record<string, unknown> {
   const context: FixtureContext = { z: requireFromContracts("zod").z };
-  return { ...sessionFixtures(context), ...timelineFixtures(), ...tasksFixtures(), ...taskListFixtures(), ...executorFixtures(), ...taskDetailFixtures(), ...agendaFixtures(), ...documentsFixtures() };
+  return { ...sessionFixtures(context), ...timelineFixtures(), ...tasksFixtures(), ...taskListFixtures(), ...executorFixtures(), ...taskDetailFixtures(), ...agendaFixtures(), ...documentsFixtures(), ...notificationsFixtures() };
 }
 
 export function generateFixtures(): string[] {

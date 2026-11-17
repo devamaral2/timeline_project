@@ -4,6 +4,7 @@ import app.braid.mobile.domain.task.StaleRevisionException
 import app.braid.mobile.domain.task.StatusPatch
 import app.braid.mobile.domain.task.TaskActor
 import app.braid.mobile.domain.task.TaskCard
+import app.braid.mobile.domain.task.TaskChanges
 import app.braid.mobile.domain.task.TaskFilters
 import app.braid.mobile.domain.task.TaskRepository
 import app.braid.mobile.domain.task.trackedQuery
@@ -16,6 +17,7 @@ class DefaultTaskRepository
     @Inject
     constructor(
         private val api: TasksApi,
+        private val changes: TaskChanges = TaskChanges(),
     ) : TaskRepository {
         override suspend fun agenda(
             from: Instant,
@@ -48,6 +50,7 @@ class DefaultTaskRepository
         ) {
             try {
                 api.update(taskId, patch.toBody())
+                changes.notifyChanged()
             } catch (failure: HttpException) {
                 if (failure.code() == HTTP_CONFLICT) throw StaleRevisionException(failure)
                 throw failure
