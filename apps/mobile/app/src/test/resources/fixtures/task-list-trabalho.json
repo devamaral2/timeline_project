@@ -1,0 +1,62 @@
+[
+  {
+    "id": "task-1",
+    "actor": "human",
+    "kind": "common",
+    "status": "todo",
+    "priority": "high",
+    "name": "Reunião de planejamento",
+    "description": "",
+    "startedAt": "2026-09-14T12:00:00.000Z",
+    "estimatedFinishAt": "2026-09-14T12:50:00.000Z",
+    "longRunning": false,
+    "notifyOffsetsMinutes": [],
+    "tags": [
+      "trabalho",
+      "saúde"
+    ],
+    "artifactTypes": [],
+    "revision": 3,
+    "createdAt": "2026-09-01T12:00:00.000Z",
+    "updatedAt": "2026-09-01T12:00:00.000Z"
+  },
+  {
+    "id": "task-2",
+    "actor": "human",
+    "kind": "common",
+    "status": "doing",
+    "priority": "urgent",
+    "name": "Revisar contrato",
+    "description": "",
+    "startedAt": "2026-09-14T13:00:00.000Z",
+    "longRunning": false,
+    "notifyOffsetsMinutes": [],
+    "tags": [
+      "trabalho"
+    ],
+    "artifactTypes": [],
+    "revision": 1,
+    "createdAt": "2026-09-01T12:00:00.000Z",
+    "updatedAt": "2026-09-01T12:00:00.000Z"
+  },
+  {
+    "id": "task-13",
+    "actor": "human",
+    "kind": "common",
+    "status": "doing",
+    "priority": "medium",
+    "name": "Projeto longo",
+    "description": "",
+    "startedAt": "2026-09-01T12:00:00.000Z",
+    "estimatedFinishAt": "2026-11-30T12:00:00.000Z",
+    "longRunning": true,
+    "notifyOffsetsMinutes": [],
+    "tags": [
+      "trabalho"
+    ],
+    "artifactTypes": [],
+    "revision": 1,
+    "createdAt": "2026-09-01T12:00:00.000Z",
+    "updatedAt": "2026-09-01T12:00:00.000Z"
+  }
+]

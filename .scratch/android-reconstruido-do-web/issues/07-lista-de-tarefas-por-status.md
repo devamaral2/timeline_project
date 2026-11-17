@@ -4,13 +4,13 @@
 
 **Blocked by:** 04, 05
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Leia antes:** o [README](README.md). No web: a tela de tarefas, os grupos e filtros de tarefas e o texto dos cartões.
 
-- [ ] A lista lê `GET /api/tasks/tracked` com executor, status, prioridade, tag e texto.
-- [ ] Os grupos seguem a regra do web, com Feitas e Encerradas começando recolhidas; a regra de grupos e o texto das linhas são portados e conferidos contra fixtures do TS.
-- [ ] Uma série recorrente aparece como uma linha só.
-- [ ] O glifo de uma tarefa de pessoa abre o seletor de status do ticket 04; o de agente só mostra o status.
-- [ ] O menu da seção tem uma lista por tag e a engrenagem com as prioridades.
-- [ ] Lista vazia mostra o estado do web com "Nova tarefa" (que leva à criação quando o ticket 13 existir).
+- [x] A lista lê `GET /api/tasks/tracked` com executor, status, prioridade, tag e texto.
+- [x] Os grupos seguem a regra do web, com Feitas e Encerradas começando recolhidas; a regra de grupos e o texto das linhas são portados e conferidos contra fixtures do TS.
+- [x] Uma série recorrente aparece como uma linha só.
+- [x] O glifo de uma tarefa de pessoa abre o seletor de status do ticket 04; o de agente só mostra o status.
+- [x] O menu da seção tem uma lista por tag e a engrenagem com as prioridades.
+- [x] Lista vazia mostra o estado do web com "Nova tarefa" (que leva à criação quando o ticket 13 existir).

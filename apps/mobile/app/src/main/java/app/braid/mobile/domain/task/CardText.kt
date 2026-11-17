@@ -7,6 +7,7 @@ import app.braid.mobile.domain.timeline.shiftDayKey
 import app.braid.mobile.domain.timeline.shortDate
 import app.braid.mobile.domain.timeline.zonedDayStart
 import java.time.Instant
+import java.util.Locale
 
 /*
  * Port de `apps/web/src/lib/tasks/card-text.ts`: os textos que a linha da lista
@@ -21,11 +22,17 @@ private const val HOURS_IN_DAY = 24
 /** Status de pessoa que ainda pede ação. */
 private val OPEN_HUMAN_STATUSES = setOf(TaskStatus.Todo, TaskStatus.Doing, TaskStatus.InHold, TaskStatus.ToDefine)
 
-/** O quando da linha: "Hoje, 09:00", "Era ontem", "Sem data", "Prazo 30 nov", "na fila · há 3 min"... */
+/**
+ * O quando da linha: "Hoje, 09:00", "Era ontem", "Sem data", "Prazo 30 nov", "na fila · há 3 min"... Com
+ * [ruleInPlaceOfTime], a ocorrência que segue uma série mostra a regra dela no lugar do horário ("Todo dia, 18:00").
+ */
 fun cardWhenLabel(
     card: TaskCard,
     now: Instant,
+    ruleInPlaceOfTime: Boolean = false,
 ): String {
+    val recurrence = card.recurrence
+    if (ruleInPlaceOfTime && recurrence != null && !recurrence.detached) return recurrenceRuleLabel(recurrence.rule)
     if (card.actor == TaskActor.Agent) return agentWhenLabel(card, now)
     if (card.longRunning) {
         return card.estimatedFinishAt?.let { "Prazo ${dayMonthLabel(dayKeyOf(it))}" } ?: "Sem data"
@@ -75,6 +82,36 @@ fun elapsedLabel(
     if (hours < HOURS_IN_DAY) return "há $hours h"
     val days = hours / HOURS_IN_DAY
     return if (days == 1L) "há 1 dia" else "há $days dias"
+}
+
+private val WEEKDAY_NAMES = listOf("dom", "seg", "ter", "qua", "qui", "sex", "sáb")
+private val PORTUGUESE_BRAZIL = Locale.forLanguageTag("pt-BR")
+
+/** A regra da série em texto: "Todo dia, 18:00", "Seg, qua e sex, 18:30". */
+fun recurrenceRuleLabel(rule: RecurrenceRule): String =
+    "${ruleDaysLabel(rule)}, ${rule.timeOfDay}".replaceFirstChar { it.uppercase(PORTUGUESE_BRAZIL) }
+
+private fun ruleDaysLabel(rule: RecurrenceRule): String {
+    val every = rule.interval
+    return when (rule.frequency) {
+        RecurrenceFrequency.Daily -> if (every == 1) "todo dia" else "a cada $every dias"
+        RecurrenceFrequency.Weekly -> {
+            val days = weekdayList(rule.byWeekday ?: 0)
+            if (every == 1) days else "a cada $every semanas, $days"
+        }
+        RecurrenceFrequency.Monthly -> {
+            val day = rule.byMonthDay?.toString().orEmpty()
+            if (every == 1) "todo dia $day" else "a cada $every meses, dia $day"
+        }
+        RecurrenceFrequency.Yearly -> "todo ano, ${rule.byMonthDay?.toString().orEmpty()}/${rule.byMonth?.toString().orEmpty()}"
+    }
+}
+
+/** Os dias da máscara (bit 0 = domingo): "seg, qua e sex". */
+private fun weekdayList(mask: Int): String {
+    val names = WEEKDAY_NAMES.filterIndexed { index, _ -> mask and (1 shl index) != 0 }
+    if (names.size <= 1) return names.firstOrNull().orEmpty()
+    return "${names.dropLast(1).joinToString(", ")} e ${names.last()}"
 }
 
 private fun agentWhenLabel(

@@ -46,6 +46,8 @@ fun TaskRow(
     modifier: Modifier = Modifier,
     /** Quando a tela deixa o glifo de status ser tocado, o que acontece com o toque; sem isso o glifo é só leitura. */
     onStatusClick: (() -> Unit)? = null,
+    /** A lista pede a regra da série no lugar do horário, quando a ocorrência segue uma. */
+    ruleInPlaceOfTime: Boolean = false,
 ) {
     val isAgent = card.actor == TaskActor.Agent
     val overdue = cardIsOverdue(card, now)
@@ -74,7 +76,7 @@ fun TaskRow(
             FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 TaskKindMark(card.kind)
                 Text(
-                    text = cardWhenLabel(card, now),
+                    text = cardWhenLabel(card, now, ruleInPlaceOfTime),
                     color = if (overdue) MaterialTheme.colorScheme.error else muted,
                     fontSize = 13.sp,
                     lineHeight = 18.sp,
