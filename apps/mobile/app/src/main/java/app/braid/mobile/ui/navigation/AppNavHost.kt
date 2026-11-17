@@ -36,6 +36,7 @@ import app.braid.mobile.ui.chat.LocalEntitiesChanged
 import app.braid.mobile.ui.documents.DocumentDetailPage
 import app.braid.mobile.ui.documents.DocumentEditPage
 import app.braid.mobile.ui.documents.DocumentsScreen
+import app.braid.mobile.ui.notifications.NotificationsScreen
 import app.braid.mobile.ui.reminders.ReminderPermissionPrompt
 import app.braid.mobile.ui.shell.BraidBottomBar
 import app.braid.mobile.ui.shell.LocalSectionMenus
@@ -107,6 +108,11 @@ fun AppNavHost(
                         chat.close()
                         navController.navigate(NewDocumentRoute(argument.trim().ifEmpty { null }))
                     },
+                    // `/notificacoes` troca o chat pelo feed; o voltar da tela o reabre.
+                    ChatCommand.Notifications to {
+                        chat.close()
+                        navController.navigate(NotificationsRoute)
+                    },
                 ),
             )
         }
@@ -163,6 +169,15 @@ fun AppNavHost(
                         onEdit = { navController.navigate(EditDocumentRoute(it)) },
                         // Excluído, o documento some: volta para a lista, não para a leitura dele.
                         onDeleted = { navController.openTab(MainTab.Documents) },
+                    )
+                }
+                composable<NotificationsRoute> {
+                    NotificationsScreen(
+                        onBack = {
+                            navController.popBackStack()
+                            chat.open()
+                        },
+                        onOpenTask = { navController.navigate(TaskDetailRoute(it)) },
                     )
                 }
                 composable<NewDocumentRoute> {
