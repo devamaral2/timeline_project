@@ -291,7 +291,7 @@ internal fun FormField(
 
 /**
  * A seção "Informações": uma linha por dado, o rótulo à esquerda e o controle à direita. Início e fim (ou previsão de
- * entrega, na tarefa persistente), a tarefa persistente (só na edição) e os lembretes. A recorrência (ticket 14) entra
+ * entrega, na tarefa persistente), a tarefa persistente (só na edição) e os lembretes. A recorrência (`RecurrenceRow`) entra
  * entre a tarefa persistente e os lembretes.
  */
 @Composable
@@ -299,6 +299,7 @@ internal fun InfoSection(
     draft: TaskDraft,
     errors: TaskDraftErrors,
     creating: Boolean,
+    recurrence: RecurrenceForm,
     actions: TaskEditActions,
 ) {
     Section("Informações") {
@@ -330,7 +331,8 @@ internal fun InfoSection(
             )
             // A tarefa persistente só existe na edição: a criação não a envia.
             if (!creating) PersistentRow(draft.longRunning) { value -> actions.update { it.copy(longRunning = value) } }
-            // Recorrência (ticket 14): a linha "Recorrência" entra aqui.
+            // A tarefa persistente não se repete: a linha some, e uma regra já montada é ignorada ao salvar.
+            if (!draft.longRunning) RecurrenceRow(draft, creating, recurrence, actions)
             ReminderRow(
                 reminders = draft.reminders,
                 noDeadline = draft.longRunning && draft.endDate.isEmpty(),
@@ -767,7 +769,7 @@ internal fun DescriptionSection(
     }
 }
 
-private class Option<T>(
+internal class Option<T>(
     val value: T,
     val label: String,
     val selected: Boolean,
@@ -776,7 +778,7 @@ private class Option<T>(
 /** Uma lista de escolha numa folha inferior (tipo e status): o rótulo de cada opção, a atual marcada. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun <T> OptionSheet(
+internal fun <T> OptionSheet(
     description: String,
     options: List<Option<T>>,
     onPick: (T) -> Unit,
