@@ -3,7 +3,13 @@ package app.braid.mobile.domain.task
 import java.time.Instant
 
 /** Quem executa a tarefa: a pessoa ou um agente. */
-enum class TaskActor { Human, Agent }
+enum class TaskActor(
+    /** O valor do filtro `actor` da API e do contrato. */
+    val code: String,
+) {
+    Human("human"),
+    Agent("agent"),
+}
 
 /** O tipo da tarefa; [code] é o nome que o contrato usa e que a linha escreve em mono. */
 enum class TaskKind(

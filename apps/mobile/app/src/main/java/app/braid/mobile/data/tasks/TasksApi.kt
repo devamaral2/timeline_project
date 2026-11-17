@@ -10,5 +10,7 @@ interface TasksApi {
         @Query("from") from: String,
         @Query("to") to: String,
         @Query("cursor") cursor: String?,
+        /** `human` ou `agent`; ausente (`null`, que o Retrofit não manda) devolve os dois. */
+        @Query("actor") actor: String?,
     ): AgendaPageDto
 }

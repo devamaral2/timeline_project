@@ -38,6 +38,10 @@ import app.braid.mobile.core.designsystem.BraidMonoFont
 import app.braid.mobile.domain.timeline.daysBetween
 import app.braid.mobile.domain.timeline.longDate
 import app.braid.mobile.domain.timeline.shiftDayKey
+import app.braid.mobile.ui.shell.MainTab
+import app.braid.mobile.ui.shell.PublishSectionMenu
+import app.braid.mobile.ui.shell.SectionMenuModel
+import app.braid.mobile.ui.shell.SectionSearch
 import kotlin.math.abs
 
 /** Um século de dias para cada lado de hoje: o swipe não tem borda que alguém alcance. */
@@ -54,6 +58,16 @@ fun AgendaScreen(viewModel: AgendaViewModel = hiltViewModel()) {
         if (firstResume) firstResume = false else viewModel.onResume()
         onPauseOrDispose { }
     }
+    // O menu da seção (tocar de novo na aba Agenda): a busca filtra as tarefas já lidas pelo nome.
+    PublishSectionMenu(
+        tab = MainTab.Agenda,
+        model =
+            SectionMenuModel(
+                search = SectionSearch(label = "Buscar na agenda", value = state.search, onChange = viewModel::search),
+                filtered = state.searching,
+                onClear = { viewModel.search("") },
+            ),
+    )
     AgendaContent(state = state, onSelectDay = viewModel::selectDay, onRetry = viewModel::retry)
 }
 
@@ -124,7 +138,7 @@ fun AgendaContent(
                     .padding(start = 20.dp, end = 20.dp, bottom = 120.dp + bottomInset),
             ) {
                 AgendaDay(
-                    tasks = state.tasksByDay[dayKey],
+                    tasks = state.shownOn(dayKey),
                     load = state.load,
                     now = state.now,
                     onRetry = onRetry,

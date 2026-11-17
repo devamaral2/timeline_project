@@ -1,0 +1,125 @@
+{
+  "names": [
+    "Café com a Ana",
+    "CAFÉ DA MANHÃ",
+    "Reunião de planejamento",
+    "Almoço",
+    "Ação rápida",
+    "Pagar o condomínio",
+    "Ligar para o banco",
+    "Jantar até a meia-noite",
+    "Çedilha e ÀÉÎÕÜ",
+    "Treino de amanhã",
+    "İstanbul",
+    "Prova de 1h30"
+  ],
+  "cases": [
+    {
+      "search": "",
+      "matches": [
+        "Café com a Ana",
+        "CAFÉ DA MANHÃ",
+        "Reunião de planejamento",
+        "Almoço",
+        "Ação rápida",
+        "Pagar o condomínio",
+        "Ligar para o banco",
+        "Jantar até a meia-noite",
+        "Çedilha e ÀÉÎÕÜ",
+        "Treino de amanhã",
+        "İstanbul",
+        "Prova de 1h30"
+      ]
+    },
+    {
+      "search": "   ",
+      "matches": [
+        "Café com a Ana",
+        "CAFÉ DA MANHÃ",
+        "Reunião de planejamento",
+        "Almoço",
+        "Ação rápida",
+        "Pagar o condomínio",
+        "Ligar para o banco",
+        "Jantar até a meia-noite",
+        "Çedilha e ÀÉÎÕÜ",
+        "Treino de amanhã",
+        "İstanbul",
+        "Prova de 1h30"
+      ]
+    },
+    {
+      "search": "cafe",
+      "matches": [
+        "Café com a Ana",
+        "CAFÉ DA MANHÃ"
+      ]
+    },
+    {
+      "search": "CAFÉ",
+      "matches": [
+        "Café com a Ana",
+        "CAFÉ DA MANHÃ"
+      ]
+    },
+    {
+      "search": " café ",
+      "matches": [
+        "Café com a Ana",
+        "CAFÉ DA MANHÃ"
+      ]
+    },
+    {
+      "search": "reuniao",
+      "matches": [
+        "Reunião de planejamento"
+      ]
+    },
+    {
+      "search": "acao",
+      "matches": [
+        "Ação rápida"
+      ]
+    },
+    {
+      "search": "ÇEDILHA",
+      "matches": [
+        "Çedilha e ÀÉÎÕÜ"
+      ]
+    },
+    {
+      "search": "aeiou",
+      "matches": [
+        "Çedilha e ÀÉÎÕÜ"
+      ]
+    },
+    {
+      "search": "condomínio",
+      "matches": [
+        "Pagar o condomínio"
+      ]
+    },
+    {
+      "search": "xyz",
+      "matches": []
+    },
+    {
+      "search": "1h30",
+      "matches": [
+        "Prova de 1h30"
+      ]
+    },
+    {
+      "search": "de a",
+      "matches": [
+        "Treino de amanhã"
+      ]
+    },
+    {
+      "search": "Istanbul",
+      "matches": [
+        "İstanbul"
+      ]
+    }
+  ]
+}

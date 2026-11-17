@@ -2,9 +2,12 @@ package app.braid.mobile.ui.agenda
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.braid.mobile.domain.executor.ViewMode
+import app.braid.mobile.domain.executor.ViewModeRepository
 import app.braid.mobile.domain.task.TaskCard
 import app.braid.mobile.domain.task.TaskRepository
 import app.braid.mobile.domain.task.agendaTasksByDay
+import app.braid.mobile.domain.task.matchingSearch
 import app.braid.mobile.domain.time.AppClock
 import app.braid.mobile.domain.timeline.dayKeyOf
 import app.braid.mobile.domain.timeline.weekOf
@@ -43,13 +46,24 @@ data class AgendaUiState(
     val load: AgendaLoad = AgendaLoad.Loading,
     /** O instante da última leitura: os textos calculados da linha ("Hoje", "há 12 min") saem dele. */
     val now: Instant,
-)
+    /** De quem são as tarefas lidas: vem da escolha do menu, que vale para as três seções. */
+    val viewMode: ViewMode = ViewMode.Default,
+    /** O texto da busca do menu: filtra pelo nome as tarefas já lidas, sem nova leitura. */
+    val search: String = "",
+) {
+    /** Há texto na busca: o tempo livre sai da agenda enquanto se busca. */
+    val searching: Boolean get() = search.isNotBlank()
+
+    /** As tarefas do dia que a busca deixa ver; `null` enquanto o dia não chegou. Um dia sem resultado fica visível, vazio. */
+    fun shownOn(dayKey: String): List<TaskCard>? = tasksByDay[dayKey]?.matchingSearch(search)
+}
 
 @HiltViewModel
 class AgendaViewModel
     @Inject
     constructor(
         private val tasks: TaskRepository,
+        private val modes: ViewModeRepository,
         private val clock: AppClock,
     ) : ViewModel() {
         private val mutableState =
@@ -61,8 +75,21 @@ class AgendaViewModel
         private var generation = 0
 
         init {
-            load(mutableState.value.selectedDay, silent = false)
+            // A escolha guardada chega antes da primeira leitura; trocá-la depois relê a semana com o novo executor.
+            viewModelScope.launch {
+                var first = true
+                modes.mode.collect { mode ->
+                    if (first || mode != mutableState.value.viewMode) {
+                        mutableState.update { it.copy(viewMode = mode, tasksByDay = if (first) it.tasksByDay else emptyMap()) }
+                        load(mutableState.value.selectedDay, silent = false)
+                    }
+                    first = false
+                }
+            }
         }
+
+        /** O texto da busca do menu. */
+        fun search(text: String) = mutableState.update { it.copy(search = text) }
 
         /** Escolhe o dia (faixa da semana, mês, "Hoje" ou swipe); um dia de semana ainda não lida a lê. */
         fun selectDay(dayKey: String) {
@@ -103,7 +130,7 @@ class AgendaViewModel
             loadJob =
                 viewModelScope.launch {
                     try {
-                        val cards = tasks.agenda(zonedDayStart(week.first()), zonedDayEnd(week.last()))
+                        val cards = tasks.agenda(zonedDayStart(week.first()), zonedDayEnd(week.last()), mutableState.value.viewMode.actor)
                         val byDay = agendaTasksByDay(cards)
                         val readAt = clock.now()
                         mutableState.update {

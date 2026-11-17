@@ -1,0 +1,36 @@
+{
+  "cases": [
+    {
+      "type": "text",
+      "actor": "human"
+    },
+    {
+      "type": "food",
+      "actor": "human"
+    },
+    {
+      "type": "sleep",
+      "actor": "human"
+    },
+    {
+      "type": "training",
+      "actor": "human"
+    },
+    {
+      "type": "workout",
+      "actor": "human"
+    },
+    {
+      "type": "skill",
+      "actor": "agent"
+    },
+    {
+      "type": "agent",
+      "actor": "agent"
+    },
+    {
+      "type": "router",
+      "actor": "agent"
+    }
+  ]
+}
