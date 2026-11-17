@@ -308,8 +308,7 @@ vazia com o tema escuro.
     "lint": "./gradlew ktlintCheck lintDebug",
     "test": "./gradlew testDebugUnitTest",
     "build": "./gradlew assembleDebug",
-    "generate:theme": "tsx ../../scripts/mobile/generate-theme.ts",
-    "generate:fixtures": "tsx ../../scripts/mobile/generate-fixtures.ts"
+    "generate:theme": "tsx ../../scripts/mobile/generate-theme.ts"
   }
 }
 ```
@@ -343,8 +342,8 @@ e regenerar deixa o app com a cor nova.
 
 ### 1.4 Contratos: DTOs e testes de fixtures
 
-`scripts/mobile/generate-fixtures.ts` gera JSON em
-`apps/mobile/app/src/test/resources/fixtures/`:
+As fixtures ficam versionadas em `apps/mobile/app/src/test/resources/fixtures/` (o gerador
+`scripts/mobile/generate-fixtures.ts` foi removido) e cobrem:
 
 - **Contratos:** para cada DTO usado pelo app (`TimelineEventPageDto`, `EventDetailDto`, payloads de criar/editar por tipo, `AgentChatTicketDto`, frames do chat, conversas, tags), um ou mais exemplos **validados pelo schema Zod** antes de gravar (`schema.parse(exemplo)`). Inclua casos com campos opcionais ausentes e todas as variantes de união discriminada (tipos de evento, frames).
 - **Lógica:** entradas e saídas de `packages/timeline` (janelas de data, agrupamento por dia) e de `hueForTag`/`tagColors`.
@@ -356,8 +355,8 @@ No Kotlin:
 - `ContractFixturesTest`: decodifica cada fixture, re-encoda e compara.
 - `TimelineParityTest`, `TagColorsParityTest`: rodam o port Kotlin nas entradas e comparam com as saídas do TS.
 
-CI (Fase 9): `generate:fixtures` roda antes dos testes Kotlin, então um contrato
-alterado sem espelho quebra o build.
+CI (Fase 9): não há mais geração nem checagem de fixtures; os testes Kotlin leem as
+fixtures versionadas.
 
 **Pronto quando:** os testes passam e, ao adicionar um campo obrigatório num
 schema Zod, o `ContractFixturesTest` falha.
@@ -520,7 +519,7 @@ Porte primeiro esses componentes compartilhados, na 5.3, e reaproveite-os nas 5.
 
 ## Fase 9 — CI e APK de release
 
-- **9.1 Job `mobile` no `ci.yml`:** roda só com mudanças em `apps/mobile/**`, `packages/contracts/**`, `packages/theme/**`, `packages/timeline/**` ou `scripts/mobile/**` (use `dorny/paths-filter`). Passos: setup de Node e pnpm, `pnpm install`, `actions/setup-java@v4` (Temurin 21), `android-actions/setup-android`, cache do Gradle, `pnpm --filter @repo/mobile run generate:fixtures`, `./gradlew ktlintCheck lintDebug testDebugUnitTest assembleDebug`. O APK debug sobe como artifact.
+- **9.1 Job `mobile` no `ci.yml`:** roda só com mudanças em `apps/mobile/**`, `packages/contracts/**`, `packages/theme/**`, `packages/timeline/**` ou `scripts/mobile/**` (use `dorny/paths-filter`). Passos: setup de Node e pnpm, `pnpm install`, `actions/setup-java@v4` (Temurin 21), `android-actions/setup-android`, cache do Gradle, `./gradlew ktlintCheck lintDebug testDebugUnitTest assembleDebug`. O APK debug sobe como artifact.
 - **9.2 Assinatura de release:** keystore gerado localmente e guardado no 1Password. No CI, os secrets entram em base64 e `assembleRelease` gera o APK assinado como artifact. Sem Play Store por enquanto.
 - **9.3 Validação da v1 contra produção:** instalar o APK de release, fazer login com a conta real e percorrer o `docs/mobile-parity.md` inteiro. Aqui o app aponta pela primeira vez para produção.
 

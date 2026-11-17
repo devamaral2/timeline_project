@@ -37,7 +37,7 @@ const TYPE_ICONS: Record<ArtifactType, LucideIcon> = {
 };
 
 /**
- * Os tipos cujo conteúdo aparece inteiro dentro da tarefa, como as notas do evento antigo: texto,
+ * Os tipos cujo conteúdo aparece inteiro dentro da tarefa, como as notas antigas: texto,
  * roteador, alimento, treino e sono. Skill e agente ficam só na linha (o arquivo do Hermes tem
  * leitura, backups e edição próprios, no detalhe do artefato), e o exercício do catálogo também.
  */

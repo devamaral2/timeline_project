@@ -9,7 +9,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** O decoder estrito do app contra a fixture que o contrato TS gera (`pnpm run generate:fixtures`). */
+/** O decoder estrito do app contra a fixture versionada do contrato TS. */
 class AiProcessContractTest {
     private val processes: Map<String, AiProcessDto> =
         Json

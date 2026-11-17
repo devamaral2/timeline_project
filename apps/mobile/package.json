@@ -8,7 +8,6 @@
     "test": "./gradlew testDebugUnitTest",
     "test:contracts": "cd ../.. && vitest run --workspace apps/mobile/vitest.workspace.ts",
     "build": "./gradlew assembleDebug",
-    "generate:theme": "tsx ../../scripts/mobile/generate-theme.ts",
-    "generate:fixtures": "tsx ../../scripts/mobile/generate-fixtures.ts"
+    "generate:theme": "tsx ../../scripts/mobile/generate-theme.ts"
   }
 }

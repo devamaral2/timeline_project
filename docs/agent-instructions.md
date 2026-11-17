@@ -816,7 +816,6 @@ Sempre a partir da raiz:
 ```bash
 pnpm dev:mobile                 # adb reverse + installDebug + abre o app
 pnpm --filter @repo/mobile run generate:theme
-pnpm --filter @repo/mobile run generate:fixtures
 pnpm --filter @repo/mobile run lint
 pnpm --filter @repo/mobile run test
 ```
