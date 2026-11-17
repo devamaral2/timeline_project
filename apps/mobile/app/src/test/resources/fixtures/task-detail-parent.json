@@ -1,0 +1,22 @@
+{
+  "id": "task-parent",
+  "actor": "human",
+  "kind": "common",
+  "status": "doing",
+  "priority": "medium",
+  "name": "Planejar o trimestre",
+  "description": "",
+  "startedAt": "2026-09-13T15:00:00.000Z",
+  "longRunning": false,
+  "notifyOffsetsMinutes": [],
+  "tags": [],
+  "artifactTypes": [],
+  "revision": 1,
+  "createdAt": "2026-09-01T12:00:00.000Z",
+  "updatedAt": "2026-09-01T12:00:00.000Z",
+  "artifacts": [],
+  "subtaskIds": [
+    "task-1"
+  ],
+  "requests": []
+}

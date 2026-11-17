@@ -21,6 +21,7 @@ import app.braid.mobile.ui.auth.LoginScreen
 import app.braid.mobile.ui.shell.BraidBottomBar
 import app.braid.mobile.ui.shell.EmptyTabScreen
 import app.braid.mobile.ui.shell.MainTab
+import app.braid.mobile.ui.taskdetail.TaskDetailPage
 
 @Composable
 fun AppNavHost(gate: SessionGateViewModel = hiltViewModel()) {
@@ -52,7 +53,13 @@ fun AppNavHost(gate: SessionGateViewModel = hiltViewModel()) {
     Box(Modifier.fillMaxSize()) {
         NavHost(navController = navController, startDestination = LoginRoute) {
             composable<LoginRoute> { if (session !is SessionState.Unknown) LoginScreen() }
-            composable<AgendaRoute> { AgendaScreen() }
+            composable<AgendaRoute> { AgendaScreen(onOpenTask = { navController.navigate(TaskDetailRoute(it)) }) }
+            composable<TaskDetailRoute> {
+                TaskDetailPage(
+                    onBack = { navController.popBackStack() },
+                    onOpenTask = { navController.navigate(TaskDetailRoute(it)) },
+                )
+            }
             composable<TasksRoute> { EmptyTabScreen() }
             composable<DocumentsRoute> { EmptyTabScreen() }
         }

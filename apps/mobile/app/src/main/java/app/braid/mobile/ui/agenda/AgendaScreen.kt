@@ -51,7 +51,10 @@ private const val PAGE_COUNT = DAYS_EACH_SIDE * 2 + 1
 private const val SMOOTH_SCROLL_MAX_DAYS = 7
 
 @Composable
-fun AgendaScreen(viewModel: AgendaViewModel = hiltViewModel()) {
+fun AgendaScreen(
+    onOpenTask: (String) -> Unit = {},
+    viewModel: AgendaViewModel = hiltViewModel(),
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     // O primeiro ON_RESUME é o de abrir a tela, e o ViewModel já leu a semana ao nascer.
     var firstResume by remember { mutableStateOf(true) }
@@ -66,6 +69,7 @@ fun AgendaScreen(viewModel: AgendaViewModel = hiltViewModel()) {
         onSelectDay = viewModel::selectDay,
         onRetry = viewModel::retry,
         onStatusClick = viewModel::openStatusPicker,
+        onOpenTask = onOpenTask,
     )
     state.statusPicker?.let { card ->
         TaskStatusSheet(
@@ -84,6 +88,7 @@ fun AgendaContent(
     onSelectDay: (String) -> Unit,
     onRetry: () -> Unit,
     onStatusClick: (TaskCard) -> Unit,
+    onOpenTask: (String) -> Unit = {},
 ) {
     // O dia da página central é o de quando a tela abriu: de lá cada página é um dia a mais ou a menos.
     val anchorDay = rememberSaveable { state.todayKey }
@@ -160,6 +165,7 @@ fun AgendaContent(
                     now = state.now,
                     onRetry = onRetry,
                     onStatusClick = onStatusClick,
+                    onOpenTask = onOpenTask,
                 )
             }
         }

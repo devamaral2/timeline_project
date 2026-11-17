@@ -44,6 +44,8 @@ fun TaskRow(
     card: TaskCard,
     now: Instant,
     modifier: Modifier = Modifier,
+    /** O toque na linha abre o detalhe da tarefa; sem isso a linha é só leitura. */
+    onClick: (() -> Unit)? = null,
     /** Quando a tela deixa o glifo de status ser tocado, o que acontece com o toque; sem isso o glifo é só leitura. */
     onStatusClick: (() -> Unit)? = null,
 ) {
@@ -53,7 +55,12 @@ fun TaskRow(
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
 
     Row(
-        modifier = modifier.fillMaxWidth().semantics(mergeDescendants = true) {}.padding(vertical = 10.dp),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
+                .semantics(mergeDescendants = true) {}
+                .padding(vertical = 10.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.Top,
     ) {
