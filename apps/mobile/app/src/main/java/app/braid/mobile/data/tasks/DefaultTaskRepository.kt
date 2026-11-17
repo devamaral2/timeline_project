@@ -1,5 +1,6 @@
 package app.braid.mobile.data.tasks
 
+import app.braid.mobile.data.http.HTTP_CONFLICT
 import app.braid.mobile.domain.task.StaleRevisionException
 import app.braid.mobile.domain.task.StatusPatch
 import app.braid.mobile.domain.task.TaskActor
@@ -55,9 +56,5 @@ class DefaultTaskRepository
                 if (failure.code() == HTTP_CONFLICT) throw StaleRevisionException(failure)
                 throw failure
             }
-        }
-
-        private companion object {
-            const val HTTP_CONFLICT = 409
         }
     }

@@ -12,7 +12,6 @@ import app.braid.mobile.domain.chat.HERMES_DISABLED_TEXT
 import app.braid.mobile.domain.chat.HERMES_ENTER_TEXT
 import app.braid.mobile.domain.chat.HERMES_LEAVE_TEXT
 import app.braid.mobile.domain.chat.HERMES_PENDING_LABEL
-import app.braid.mobile.domain.chat.HermesOffException
 import app.braid.mobile.domain.chat.STEPS_PENDING_LABEL
 import app.braid.mobile.domain.chat.chatFailureText
 import app.braid.mobile.domain.chat.hermesStepsOf
@@ -20,6 +19,7 @@ import app.braid.mobile.domain.chat.parseChatCommand
 import app.braid.mobile.domain.chat.parseCommand
 import app.braid.mobile.domain.chat.requestWithWindow
 import app.braid.mobile.domain.request.AgentRequest
+import app.braid.mobile.domain.request.HermesOffException
 import app.braid.mobile.domain.request.RequestRoute
 import app.braid.mobile.domain.request.isOpenRequest
 import app.braid.mobile.domain.session.SessionRepository

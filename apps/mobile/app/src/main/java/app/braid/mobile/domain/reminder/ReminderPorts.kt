@@ -1,5 +1,6 @@
 package app.braid.mobile.domain.reminder
 
+import kotlinx.coroutines.flow.Flow
 import java.time.Instant
 
 /** O AlarmManager, atrás de uma interface para os testes: um alarme por lembrete, identificado pela chave. */
@@ -36,4 +37,12 @@ interface ReadKeysStore {
     suspend fun read(): Map<String, Instant>
 
     suspend fun write(read: Map<String, Instant>)
+}
+
+/** Se o app já pediu a permissão de notificação: o sistema só pergunta duas vezes, então o app pergunta uma e depois explica. */
+interface NotificationPermissionRepository {
+    /** `false` até o app pedir a primeira vez. */
+    val asked: Flow<Boolean>
+
+    suspend fun markAsked()
 }

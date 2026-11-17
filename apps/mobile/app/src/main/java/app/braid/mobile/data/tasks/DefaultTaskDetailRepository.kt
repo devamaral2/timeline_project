@@ -1,5 +1,8 @@
 package app.braid.mobile.data.tasks
 
+import app.braid.mobile.data.http.HTTP_CONFLICT
+import app.braid.mobile.data.http.HTTP_FORBIDDEN
+import app.braid.mobile.data.http.HTTP_NOT_FOUND
 import app.braid.mobile.domain.task.ArtifactLink
 import app.braid.mobile.domain.task.StaleRevisionException
 import app.braid.mobile.domain.task.StatusPatch
@@ -80,11 +83,5 @@ class DefaultTaskDetailRepository
                 if (failure.code() == HTTP_CONFLICT) throw StaleRevisionException(failure)
                 throw failure
             }
-        }
-
-        private companion object {
-            const val HTTP_FORBIDDEN = 403
-            const val HTTP_NOT_FOUND = 404
-            const val HTTP_CONFLICT = 409
         }
     }

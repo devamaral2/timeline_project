@@ -1,6 +1,7 @@
 package app.braid.mobile.domain.agentfile
 
 import app.braid.mobile.domain.request.AgentRequest
+import app.braid.mobile.domain.request.HermesOffException
 import java.time.Instant
 
 /** Um backup de um arquivo do Hermes, sem o texto (a API não o devolve). A lista vem do mais novo para o mais antigo. */
@@ -53,8 +54,3 @@ interface AgentFileRepository {
 class AgentFileForbiddenException(
     cause: Throwable? = null,
 ) : Exception("Só o dono lê os arquivos do agente.", cause)
-
-/** A automação do Hermes está desligada neste servidor. */
-class HermesOffException(
-    cause: Throwable? = null,
-) : Exception("O Hermes está desligado neste servidor.", cause)

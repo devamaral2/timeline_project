@@ -5,10 +5,10 @@ import androidx.lifecycle.viewModelScope
 import app.braid.mobile.domain.agentfile.AgentFileBackup
 import app.braid.mobile.domain.agentfile.AgentFileForbiddenException
 import app.braid.mobile.domain.agentfile.AgentFileRepository
-import app.braid.mobile.domain.agentfile.HermesOffException
 import app.braid.mobile.domain.artifact.AgentFileData
 import app.braid.mobile.domain.request.AgentRequest
 import app.braid.mobile.domain.request.AgentRequestRepository
+import app.braid.mobile.domain.request.HermesOffException
 import app.braid.mobile.domain.request.agentFailureText
 import app.braid.mobile.domain.request.isOpenRequest
 import app.braid.mobile.domain.request.runningStepLabel

@@ -1,5 +1,9 @@
 package app.braid.mobile.data.requests
 
+import app.braid.mobile.data.http.HTTP_CONFLICT
+import app.braid.mobile.data.http.HTTP_FORBIDDEN
+import app.braid.mobile.data.http.HTTP_NOT_FOUND
+import app.braid.mobile.data.http.translatingStartFailures
 import app.braid.mobile.domain.request.AgentRequest
 import app.braid.mobile.domain.request.AgentRequestRepository
 import app.braid.mobile.domain.request.EditEntityType
@@ -34,7 +38,7 @@ class DefaultAgentRequestRepository
             text: String,
             entityType: EditEntityType,
             entityId: String,
-        ): String = api.startEdit(StartEditBody(userId, text, entityType.code, entityId)).requestId
+        ): String = translatingStartFailures { api.startEdit(StartEditBody(userId, text, entityType.code, entityId)).requestId }
 
         override suspend fun cancel(id: String): AgentRequest =
             try {
@@ -43,10 +47,4 @@ class DefaultAgentRequestRepository
                 if (failure.code() == HTTP_CONFLICT) throw FoodRequestCancelException(failure)
                 throw failure
             }
-
-        private companion object {
-            const val HTTP_FORBIDDEN = 403
-            const val HTTP_NOT_FOUND = 404
-            const val HTTP_CONFLICT = 409
-        }
     }
