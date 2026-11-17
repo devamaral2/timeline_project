@@ -8,6 +8,8 @@ Kotlin + Jetpack Compose** que **repercute o web de hoje**. Ele é a fonte de
 verdade da reescrita: cada issue do Linear aponta para uma seção daqui, e cada
 fase termina com o checklist de paridade (`docs/mobile-parity.md`) atualizado.
 
+> **Histórico.** Este runbook descreve a primeira reescrita (o app do modelo antigo, com evento, nota e WebSocket). O app foi apagado e refeito a partir do web de hoje: a decisão, a stack que continua valendo e os tickets estão em [`docs/prd/android-reconstruido-do-web.md`](../prd/android-reconstruido-do-web.md). Onde os dois divergirem, vale a spec nova.
+
 ---
 
 ## 1. Decisões

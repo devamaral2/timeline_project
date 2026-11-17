@@ -2,10 +2,8 @@ package app.braid.mobile.ui.navigation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import app.braid.mobile.data.auth.AuthGateway
-import app.braid.mobile.data.reminders.ReminderScheduler
-import app.braid.mobile.data.session.SessionRepository
-import app.braid.mobile.data.session.SessionState
+import app.braid.mobile.domain.session.SessionRepository
+import app.braid.mobile.domain.session.SessionState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -15,21 +13,11 @@ import javax.inject.Inject
 class SessionGateViewModel
     @Inject
     constructor(
-        private val authGateway: AuthGateway,
-        private val sessionRepository: SessionRepository,
-        private val reminderScheduler: ReminderScheduler,
+        private val session: SessionRepository,
     ) : ViewModel() {
-        val state: StateFlow<SessionState> = sessionRepository.state
+        val state: StateFlow<SessionState> = session.state
 
         init {
-            viewModelScope.launch { sessionRepository.restore() }
-        }
-
-        fun signOut() {
-            viewModelScope.launch {
-                reminderScheduler.cancelAll()
-                sessionRepository.snapshot()?.let { authGateway.logout(it.refreshToken) }
-                sessionRepository.signOut()
-            }
+            viewModelScope.launch { session.restore() }
         }
     }

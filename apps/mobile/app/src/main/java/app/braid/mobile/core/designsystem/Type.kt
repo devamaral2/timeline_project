@@ -13,9 +13,9 @@ import androidx.compose.ui.unit.sp
 import app.braid.mobile.R
 
 /*
- * As três vozes do Braid, as mesmas fontes variáveis do web
- * (`apps/web/src/fonts`): Figtree na interface, Newsreader nos títulos e na
- * assinatura, JetBrains Mono só onde o número é dado técnico.
+ * As três vozes do web (`apps/web/src/fonts`): Figtree na interface, Newsreader
+ * nos títulos e na assinatura, JetBrains Mono onde o número é dado técnico.
+ * Os `.ttf` em `res/font` são cópias dos do web, todos variáveis.
  */
 
 @OptIn(ExperimentalTextApi::class)
@@ -30,7 +30,7 @@ private fun variable(
     variationSettings = FontVariation.Settings(FontVariation.weight(weight.weight)),
 )
 
-/** Interface e leitura, igual ao `font-sans` do web. */
+/** `font-sans` do web: interface e leitura. */
 val BraidSansFont =
     FontFamily(
         variable(R.font.figtree, FontWeight.Normal),
@@ -39,7 +39,7 @@ val BraidSansFont =
         variable(R.font.figtree, FontWeight.Bold),
     )
 
-/** Títulos, assinatura e números de duração, igual ao `font-display` do web. */
+/** `font-display` do web: títulos e a assinatura. */
 val BraidDisplayFont =
     FontFamily(
         variable(R.font.newsreader, FontWeight.Normal),
@@ -48,128 +48,47 @@ val BraidDisplayFont =
         variable(R.font.newsreader_italic, FontWeight.Medium, FontStyle.Italic),
     )
 
-/** Cronômetro, códigos e valores, igual ao `font-mono` do web. */
+/** `font-mono` do web: rótulos de campo, códigos e valores. */
 val BraidMonoFont =
     FontFamily(
         variable(R.font.jetbrains_mono, FontWeight.Normal),
         variable(R.font.jetbrains_mono, FontWeight.Medium),
     )
 
-/** O cronômetro do evento em andamento: JetBrains Mono 500, 22. */
-val BraidStopwatchStyle =
-    TextStyle(
-        fontFamily = BraidMonoFont,
-        fontWeight = FontWeight.Medium,
-        fontSize = 22.sp,
-        letterSpacing = (-0.02).em,
-    )
-
-/** Códigos e valores de token: JetBrains Mono 400, 12. */
-val BraidMonoStyle =
-    TextStyle(
-        fontFamily = BraidMonoFont,
-        fontSize = 12.sp,
-    )
-
 private fun display(
     size: Float,
     lineHeight: Float,
+    weight: FontWeight = FontWeight.Normal,
 ) = TextStyle(
     fontFamily = BraidDisplayFont,
-    fontWeight = FontWeight.Normal,
+    fontWeight = weight,
     fontSize = size.sp,
     lineHeight = lineHeight.sp,
     letterSpacing = (-0.01).em,
 )
 
-/** O título de página (Agenda, Notas): Newsreader 500, 32/1,1, −0,015em. */
-private val pageTitle =
-    display(32f, 35.2f).copy(
-        fontWeight = FontWeight.Medium,
-        letterSpacing = (-0.015).em,
-    )
+private fun sans(
+    size: Float,
+    lineHeight: Float,
+    weight: FontWeight = FontWeight.Normal,
+) = TextStyle(fontFamily = BraidSansFont, fontWeight = weight, fontSize = size.sp, lineHeight = lineHeight.sp)
 
-/**
- * A escala de `design system/Tipografia-html/`: display na Newsreader,
- * títulos, corpo e rótulos na Figtree. O espaçamento aberto dos rótulos em
- * maiúsculas saiu: rótulos e selos são frase, em 12sp no mínimo, como no web.
- */
+/** A escala do web: display na Newsreader, títulos, corpo e rótulos na Figtree, 12sp no mínimo. */
 val BraidTypography =
     Typography(
-        // display-lg: detalhe do evento, assinatura.
         displayLarge = display(52f, 52f),
-        // display-md: título de página no celular — 32, peso 500, como a
-        // receita `title` de `components/ui/page.module.css` no web.
-        displayMedium = pageTitle,
-        // numeral: duração no cartão.
+        displayMedium = display(32f, 35.2f, FontWeight.Medium).copy(letterSpacing = (-0.015).em),
         displaySmall = display(30f, 30f),
-        headlineLarge = pageTitle,
-        // display-sm: cabeçalho de dia.
+        headlineLarge = display(32f, 35.2f, FontWeight.Medium).copy(letterSpacing = (-0.015).em),
         headlineMedium = display(26f, 28.6f),
         headlineSmall = display(22f, 25f),
-        titleLarge =
-            TextStyle(
-                fontFamily = BraidSansFont,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 17.sp,
-                lineHeight = 23.sp,
-            ),
-        // title: nome do evento, título de cartão.
-        titleMedium =
-            TextStyle(
-                fontFamily = BraidSansFont,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 15.sp,
-                lineHeight = 21.sp,
-            ),
-        titleSmall =
-            TextStyle(
-                fontFamily = BraidSansFont,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 13.sp,
-                lineHeight = 18.sp,
-            ),
-        bodyLarge =
-            TextStyle(
-                fontFamily = BraidSansFont,
-                fontSize = 16.sp,
-                lineHeight = 24.sp,
-            ),
-        // body: leitura.
-        bodyMedium =
-            TextStyle(
-                fontFamily = BraidSansFont,
-                fontSize = 15.sp,
-                lineHeight = 23.sp,
-            ),
-        // small: horário, apoio.
-        bodySmall =
-            TextStyle(
-                fontFamily = BraidSansFont,
-                fontSize = 13.sp,
-                lineHeight = 19.5.sp,
-            ),
-        labelLarge =
-            TextStyle(
-                fontFamily = BraidSansFont,
-                fontWeight = FontWeight.Medium,
-                fontSize = 13.sp,
-                lineHeight = 18.sp,
-            ),
-        // label: rótulo de seção.
-        labelMedium =
-            TextStyle(
-                fontFamily = BraidSansFont,
-                fontWeight = FontWeight.Medium,
-                fontSize = 12.sp,
-                lineHeight = 16.sp,
-            ),
-        // tag: selos.
-        labelSmall =
-            TextStyle(
-                fontFamily = BraidSansFont,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 12.sp,
-                lineHeight = 16.sp,
-            ),
+        titleLarge = sans(17f, 23f, FontWeight.SemiBold),
+        titleMedium = sans(15f, 21f, FontWeight.SemiBold),
+        titleSmall = sans(13f, 18f, FontWeight.SemiBold),
+        bodyLarge = sans(16f, 24f),
+        bodyMedium = sans(15f, 23f),
+        bodySmall = sans(13f, 19.5f),
+        labelLarge = sans(13f, 18f, FontWeight.Medium),
+        labelMedium = sans(12f, 16f, FontWeight.Medium),
+        labelSmall = sans(12f, 16f, FontWeight.SemiBold),
     )

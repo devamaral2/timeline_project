@@ -1,0 +1,6 @@
+{
+  "accessToken": "eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ1c2VyLTEifQ.assinatura",
+  "refreshToken": "refresh-token-opaco",
+  "accessTokenExpiresInSeconds": 900,
+  "refreshTokenExpiresAt": "2026-12-17T12:00:00.000Z"
+}

@@ -7,15 +7,11 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
-/** Se o tema ativo é a Noite; lido por quem precisa escolher tokens fora do `colorScheme`, como as tags. */
+/** Se o tema ativo é a Noite; lido por quem escolhe tokens fora do `colorScheme`, como a marca. */
 val LocalBraidDarkTheme = staticCompositionLocalOf { false }
 
-/**
- * Névoa ou Noite, seguindo o esquema do sistema — como o web, que também abre
- * pelo sistema e cai na Névoa sem preferência.
- */
+/** Névoa ou Noite, seguindo o esquema do sistema como o web faz sem escolha salva. */
 @Composable
-@Suppress("ktlint:standard:function-naming")
 fun BraidTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit,
@@ -30,32 +26,6 @@ fun BraidTheme(
     }
 }
 
-/** O verde da marca (`--brand`) do tema ativo: pontos de seleção, ícone de busca e seleção ativa. */
+/** `--brand` do tema ativo: o ponto verde-água da marca e o foco dos campos. */
 @Composable
 fun braidBrand(): Color = if (LocalBraidDarkTheme.current) DarkTokens.brand else LightTokens.brand
-
-/** O verde de sucesso (`--success`) do tema ativo: o check de um passo concluído na caixa de processo. */
-@Composable
-fun braidSuccess(): Color = if (LocalBraidDarkTheme.current) DarkTokens.success else LightTokens.success
-
-/** O verde da marca para texto (`--brand-accent`): o rótulo de quem responde no chat. */
-@Composable
-fun braidBrandAccent(): Color = if (LocalBraidDarkTheme.current) DarkTokens.brandAccent else LightTokens.brandAccent
-
-/** O que vai por cima do verde da marca: o fundo no escuro, o branco no claro (o enviar do chat). */
-@Composable
-fun braidOnBrand(): Color = if (LocalBraidDarkTheme.current) DarkTokens.background else LightTokens.primaryForeground
-
-/** O fundo suave da marca (`--brand-soft`) do tema ativo, usado na opção escolhida de um seletor. */
-@Composable
-fun braidBrandSoft(): Color = if (LocalBraidDarkTheme.current) DarkTokens.brandSoft else LightTokens.brandSoft
-
-/** Os três fios da marca (`--strand-*`) do tema ativo: a trança do chat com IA. */
-@Composable
-fun braidStrandNevoa(): Color = if (LocalBraidDarkTheme.current) DarkTokens.strandNevoa else LightTokens.strandNevoa
-
-@Composable
-fun braidStrandDestaque(): Color = if (LocalBraidDarkTheme.current) DarkTokens.strandDestaque else LightTokens.strandDestaque
-
-@Composable
-fun braidStrandTinta(): Color = if (LocalBraidDarkTheme.current) DarkTokens.strandTinta else LightTokens.strandTinta
