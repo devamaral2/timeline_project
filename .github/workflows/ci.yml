@@ -10,6 +10,69 @@ permissions:
   contents: read
 
 jobs:
+  changes:
+    # Decide se o app Android precisa ser validado. Só roda em pull request: o
+    # deploy de produção chama este workflow no push para main e não deve
+    # depender do mobile, que já foi validado antes do merge.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      mobile: ${{ steps.filter.outputs.mobile }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Detect mobile changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            mobile:
+              - 'apps/mobile/**'
+              - 'packages/contracts/**'
+              - 'packages/timeline/**'
+              - 'packages/theme/**'
+              - 'scripts/mobile/**'
+
+  mobile:
+    needs: changes
+    if: needs.changes.outputs.mobile == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Enable pnpm
+        run: corepack enable
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v4
+      - name: Lint (ktlint and Android lint)
+        run: pnpm --filter @repo/mobile run lint
+      - name: Unit tests (generates the TypeScript fixtures first)
+        run: pnpm --filter @repo/mobile run test
+      - name: Assemble debug APK
+        run: pnpm --filter @repo/mobile run build
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: braid-mobile-debug
+          path: apps/mobile/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 45
