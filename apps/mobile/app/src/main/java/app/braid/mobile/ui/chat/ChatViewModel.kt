@@ -46,6 +46,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
@@ -81,6 +82,9 @@ class ChatViewModel
         val entitiesChanged: SharedFlow<Unit> = mutableEntitiesChanged.asSharedFlow()
 
         private var userId: String? = null
+
+        /** O app está à vista: em segundo plano o acompanhamento do pedido espera, como o das outras telas. */
+        private val visible = MutableStateFlow(true)
 
         /** O primeiro pedido da conversa: toda mensagem seguinte o manda como `sessionId`. */
         private var sessionId: String? = null
@@ -317,6 +321,11 @@ class ChatViewModel
 
         // region Acompanhar
 
+        /** O app está à vista (resumido) ou não; fora de vista o chat deixa de reler o pedido e retoma ao voltar. */
+        fun setVisible(value: Boolean) {
+            visible.value = value
+        }
+
         /**
          * Segue o pedido até o fim, a cada [ChatPolling.intervalMs]. O pedido já foi aceito pela API; se a consulta falhar, o
          * mesmo id (reenvio do "Tentar de novo") retoma o acompanhamento.
@@ -328,6 +337,8 @@ class ChatViewModel
             var elapsed = 0L
             var failures = 0
             while (id in following) {
+                visible.first { it }
+                if (id !in following) return
                 try {
                     val view = repository.request(requestId)
                     failures = 0

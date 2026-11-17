@@ -332,6 +332,32 @@ class ChatViewModelTest {
         }
 
     @Test
+    fun `the request is not read while the app is in the background, and reading resumes on return`() =
+        runTest {
+            serveAccepted()
+            backend.route("GET", firstPath, fixture("chat-request-running"))
+            val chat = newViewModel()
+            chat.send("oi")
+            awaitReads(1)
+
+            chat.setVisible(false)
+            withContext(Dispatchers.Default) { delay(200) } // uma leitura em voo ainda chega
+            val paused = backend.requestsTo("GET", firstPath).size
+            testScheduler.advanceTimeBy(60_000)
+            testScheduler.runCurrent()
+            withContext(Dispatchers.Default) { delay(200) }
+            assertEquals(paused, backend.requestsTo("GET", firstPath).size)
+
+            chat.setVisible(true)
+            awaitReads(paused + 1)
+        }
+
+    private suspend fun awaitReads(count: Int) =
+        withContext(Dispatchers.Default) {
+            withTimeout(5_000) { while (backend.requestsTo("GET", firstPath).size < count) delay(5) }
+        }
+
+    @Test
     fun `a request that changed records tells the agenda, and a plain query does not`() =
         runTest {
             serveSteps()
