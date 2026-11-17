@@ -12,10 +12,13 @@
 import { createRequire } from "node:module";
 import { mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { agendaFixtures } from "./fixtures/agenda";
 import { documentsFixtures } from "./fixtures/documents";
 import { executorFixtures } from "./fixtures/executor";
 import { sessionFixtures } from "./fixtures/session";
+import { taskListFixtures } from "./fixtures/task-list";
 import { tasksFixtures } from "./fixtures/tasks";
+import { taskDetailFixtures } from "./fixtures/task-detail";
 import { timelineFixtures } from "./fixtures/timeline";
 
 /** O zod que o `packages/contracts` resolve: o raiz do repositório não o tem. */
@@ -27,7 +30,7 @@ export const fixtureDirectory = fileURLToPath(new URL("../../apps/mobile/app/src
 
 export function collectFixtures(): Record<string, unknown> {
   const context: FixtureContext = { z: requireFromContracts("zod").z };
-  return { ...sessionFixtures(context), ...timelineFixtures(), ...tasksFixtures(), ...executorFixtures(), ...documentsFixtures() };
+  return { ...sessionFixtures(context), ...timelineFixtures(), ...tasksFixtures(), ...taskListFixtures(), ...executorFixtures(), ...taskDetailFixtures(), ...agendaFixtures(), ...documentsFixtures() };
 }
 
 export function generateFixtures(): string[] {

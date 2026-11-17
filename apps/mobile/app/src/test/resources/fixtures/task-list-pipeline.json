@@ -1,0 +1,877 @@
+{
+  "now": "2026-09-14T15:00:00.000Z",
+  "cards": [
+    {
+      "id": "task-1",
+      "actor": "human",
+      "kind": "common",
+      "status": "todo",
+      "priority": "high",
+      "name": "Reunião de planejamento",
+      "description": "",
+      "startedAt": "2026-09-14T12:00:00.000Z",
+      "estimatedFinishAt": "2026-09-14T12:50:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [
+        "trabalho",
+        "saúde"
+      ],
+      "artifactTypes": [],
+      "revision": 3,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    },
+    {
+      "id": "task-2",
+      "actor": "human",
+      "kind": "common",
+      "status": "doing",
+      "priority": "urgent",
+      "name": "Revisar contrato",
+      "description": "",
+      "startedAt": "2026-09-14T13:00:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [
+        "trabalho"
+      ],
+      "artifactTypes": [],
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    },
+    {
+      "id": "task-3",
+      "actor": "agent",
+      "kind": "search_request",
+      "status": "running",
+      "priority": "medium",
+      "name": "Buscar passagens",
+      "description": "",
+      "startedAt": "2026-09-14T14:48:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    },
+    {
+      "id": "task-4",
+      "actor": "agent",
+      "kind": "build_request",
+      "status": "queued",
+      "priority": "medium",
+      "name": "Montar relatório",
+      "description": "",
+      "startedAt": "2026-09-14T14:57:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    },
+    {
+      "id": "task-5",
+      "actor": "agent",
+      "kind": "inquiry_request",
+      "status": "waiting",
+      "priority": "medium",
+      "name": "Qual hotel prefere?",
+      "description": "",
+      "startedAt": "2026-09-14T13:00:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    },
+    {
+      "id": "task-6",
+      "actor": "human",
+      "kind": "common",
+      "status": "toDefine",
+      "priority": "low",
+      "name": "Ideia sem data",
+      "description": "",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [
+        "casa"
+      ],
+      "artifactTypes": [],
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    },
+    {
+      "id": "task-7",
+      "actor": "human",
+      "kind": "common",
+      "status": "inHold",
+      "priority": "medium",
+      "name": "Esperando retorno do banco",
+      "description": "",
+      "startedAt": "2026-09-16T12:00:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [
+        "casa"
+      ],
+      "artifactTypes": [],
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    },
+    {
+      "id": "task-8",
+      "actor": "human",
+      "kind": "meal",
+      "status": "done",
+      "priority": "medium",
+      "name": "Almoço",
+      "description": "",
+      "startedAt": "2026-09-14T15:00:00.000Z",
+      "estimatedFinishAt": "2026-09-14T16:30:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [
+        "áurea"
+      ],
+      "artifactTypes": [],
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    },
+    {
+      "id": "task-9",
+      "actor": "agent",
+      "kind": "review_request",
+      "status": "done",
+      "priority": "medium",
+      "name": "Resumo pronto",
+      "description": "",
+      "startedAt": "2026-09-12T15:00:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    },
+    {
+      "id": "task-10",
+      "actor": "agent",
+      "kind": "cron",
+      "status": "failed",
+      "priority": "medium",
+      "name": "Backup falhou",
+      "description": "",
+      "startedAt": "2026-09-14T02:00:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    },
+    {
+      "id": "task-11",
+      "actor": "agent",
+      "kind": "request",
+      "status": "cancel",
+      "priority": "medium",
+      "name": "Pedido cancelado",
+      "description": "",
+      "startedAt": "2026-09-14T10:00:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    },
+    {
+      "id": "task-12",
+      "actor": "human",
+      "kind": "common",
+      "status": "missed",
+      "priority": "medium",
+      "name": "Consulta perdida",
+      "description": "",
+      "startedAt": "2026-09-10T12:00:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    },
+    {
+      "id": "task-13",
+      "actor": "human",
+      "kind": "common",
+      "status": "doing",
+      "priority": "medium",
+      "name": "Projeto longo",
+      "description": "",
+      "startedAt": "2026-09-01T12:00:00.000Z",
+      "estimatedFinishAt": "2026-11-30T12:00:00.000Z",
+      "longRunning": true,
+      "notifyOffsetsMinutes": [],
+      "tags": [
+        "trabalho"
+      ],
+      "artifactTypes": [],
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    },
+    {
+      "id": "series-a-1",
+      "actor": "human",
+      "kind": "common",
+      "status": "done",
+      "priority": "medium",
+      "name": "Meditar",
+      "description": "",
+      "startedAt": "2026-09-13T21:00:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "recurrence": {
+        "id": "series-a",
+        "occurrenceOn": "2026-09-13",
+        "detached": false,
+        "rule": {
+          "frequency": "daily",
+          "interval": 1,
+          "timeOfDay": "18:00",
+          "timeZone": "America/Sao_Paulo",
+          "startsOn": "2026-09-01"
+        }
+      },
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    },
+    {
+      "id": "series-a-2",
+      "actor": "human",
+      "kind": "common",
+      "status": "todo",
+      "priority": "medium",
+      "name": "Meditar",
+      "description": "",
+      "startedAt": "2026-09-14T21:00:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "recurrence": {
+        "id": "series-a",
+        "occurrenceOn": "2026-09-14",
+        "detached": false,
+        "rule": {
+          "frequency": "daily",
+          "interval": 1,
+          "timeOfDay": "18:00",
+          "timeZone": "America/Sao_Paulo",
+          "startsOn": "2026-09-01"
+        }
+      },
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    },
+    {
+      "id": "series-a-3",
+      "actor": "human",
+      "kind": "common",
+      "status": "todo",
+      "priority": "medium",
+      "name": "Meditar",
+      "description": "",
+      "startedAt": "2026-09-15T21:00:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "recurrence": {
+        "id": "series-a",
+        "occurrenceOn": "2026-09-15",
+        "detached": false,
+        "rule": {
+          "frequency": "daily",
+          "interval": 1,
+          "timeOfDay": "18:00",
+          "timeZone": "America/Sao_Paulo",
+          "startsOn": "2026-09-01"
+        }
+      },
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    },
+    {
+      "id": "series-a-4",
+      "actor": "human",
+      "kind": "common",
+      "status": "todo",
+      "priority": "medium",
+      "name": "Meditar (manhã)",
+      "description": "",
+      "startedAt": "2026-09-16T10:00:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "recurrence": {
+        "id": "series-a",
+        "occurrenceOn": "2026-09-16",
+        "detached": true,
+        "rule": {
+          "frequency": "daily",
+          "interval": 1,
+          "timeOfDay": "18:00",
+          "timeZone": "America/Sao_Paulo",
+          "startsOn": "2026-09-01"
+        }
+      },
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    },
+    {
+      "id": "series-b-1",
+      "actor": "human",
+      "kind": "training",
+      "status": "done",
+      "priority": "medium",
+      "name": "Academia",
+      "description": "",
+      "startedAt": "2026-09-12T21:30:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "recurrence": {
+        "id": "series-b",
+        "occurrenceOn": "2026-09-12",
+        "detached": false,
+        "rule": {
+          "frequency": "weekly",
+          "interval": 1,
+          "byWeekday": 42,
+          "timeOfDay": "18:30",
+          "timeZone": "America/Sao_Paulo",
+          "startsOn": "2026-09-01"
+        }
+      },
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    },
+    {
+      "id": "series-b-2",
+      "actor": "human",
+      "kind": "training",
+      "status": "done",
+      "priority": "medium",
+      "name": "Academia",
+      "description": "",
+      "startedAt": "2026-09-10T21:30:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "recurrence": {
+        "id": "series-b",
+        "occurrenceOn": "2026-09-10",
+        "detached": false,
+        "rule": {
+          "frequency": "weekly",
+          "interval": 1,
+          "byWeekday": 42,
+          "timeOfDay": "18:30",
+          "timeZone": "America/Sao_Paulo",
+          "startsOn": "2026-09-01"
+        }
+      },
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    },
+    {
+      "id": "series-c-1",
+      "actor": "human",
+      "kind": "common",
+      "status": "cancel",
+      "priority": "medium",
+      "name": "Pagar a luz",
+      "description": "",
+      "startedAt": "2026-09-05T12:00:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "recurrence": {
+        "id": "series-c",
+        "occurrenceOn": "2026-09-05",
+        "detached": false,
+        "rule": {
+          "frequency": "monthly",
+          "interval": 1,
+          "byMonthDay": 5,
+          "timeOfDay": "09:00",
+          "timeZone": "America/Sao_Paulo",
+          "startsOn": "2026-09-01"
+        }
+      },
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    },
+    {
+      "id": "series-c-2",
+      "actor": "human",
+      "kind": "common",
+      "status": "inHold",
+      "priority": "medium",
+      "name": "Pagar a luz",
+      "description": "",
+      "startedAt": "2026-10-05T12:00:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "recurrence": {
+        "id": "series-c",
+        "occurrenceOn": "2026-10-05",
+        "detached": false,
+        "rule": {
+          "frequency": "monthly",
+          "interval": 1,
+          "byMonthDay": 5,
+          "timeOfDay": "09:00",
+          "timeZone": "America/Sao_Paulo",
+          "startsOn": "2026-09-01"
+        }
+      },
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    }
+  ],
+  "rowIds": [
+    "task-1",
+    "task-2",
+    "task-3",
+    "task-4",
+    "task-5",
+    "task-6",
+    "task-7",
+    "task-8",
+    "task-9",
+    "task-10",
+    "task-11",
+    "task-12",
+    "task-13",
+    "series-a-2",
+    "series-a-4",
+    "series-b-2",
+    "series-c-2"
+  ],
+  "groups": [
+    {
+      "key": "doing",
+      "title": "Em curso",
+      "collapsedByDefault": false,
+      "ids": [
+        "task-2",
+        "task-3",
+        "task-13"
+      ]
+    },
+    {
+      "key": "todo",
+      "title": "A fazer",
+      "collapsedByDefault": false,
+      "ids": [
+        "task-1",
+        "task-4",
+        "series-a-2",
+        "series-a-4"
+      ]
+    },
+    {
+      "key": "toDefine",
+      "title": "Sem data",
+      "collapsedByDefault": false,
+      "ids": [
+        "task-6"
+      ]
+    },
+    {
+      "key": "waiting",
+      "title": "Em espera",
+      "collapsedByDefault": false,
+      "ids": [
+        "task-5",
+        "task-7",
+        "series-c-2"
+      ]
+    },
+    {
+      "key": "done",
+      "title": "Feitas",
+      "collapsedByDefault": true,
+      "ids": [
+        "task-8",
+        "task-9",
+        "series-b-2"
+      ]
+    },
+    {
+      "key": "closed",
+      "title": "Encerradas",
+      "collapsedByDefault": true,
+      "ids": [
+        "task-10",
+        "task-11",
+        "task-12"
+      ]
+    }
+  ],
+  "whens": [
+    {
+      "id": "task-1",
+      "showsRule": false,
+      "when": "Hoje, 09:00"
+    },
+    {
+      "id": "task-2",
+      "showsRule": false,
+      "when": "Hoje, 10:00"
+    },
+    {
+      "id": "task-3",
+      "showsRule": false,
+      "when": "há 12 min"
+    },
+    {
+      "id": "task-4",
+      "showsRule": false,
+      "when": "na fila · há 3 min"
+    },
+    {
+      "id": "task-5",
+      "showsRule": false,
+      "when": "aguarda sua resposta"
+    },
+    {
+      "id": "task-6",
+      "showsRule": false,
+      "when": "Sem data"
+    },
+    {
+      "id": "task-7",
+      "showsRule": false,
+      "when": "16 set, 09:00"
+    },
+    {
+      "id": "task-8",
+      "showsRule": false,
+      "when": "Hoje, 12:00"
+    },
+    {
+      "id": "task-9",
+      "showsRule": false,
+      "when": "há 2 dias"
+    },
+    {
+      "id": "task-10",
+      "showsRule": false,
+      "when": "há 13 h"
+    },
+    {
+      "id": "task-11",
+      "showsRule": false,
+      "when": "há 5 h"
+    },
+    {
+      "id": "task-12",
+      "showsRule": false,
+      "when": "10 set, 09:00"
+    },
+    {
+      "id": "task-13",
+      "showsRule": false,
+      "when": "Prazo 30 nov"
+    },
+    {
+      "id": "series-a-1",
+      "showsRule": true,
+      "when": "Todo dia, 18:00"
+    },
+    {
+      "id": "series-a-2",
+      "showsRule": true,
+      "when": "Todo dia, 18:00"
+    },
+    {
+      "id": "series-a-3",
+      "showsRule": true,
+      "when": "Todo dia, 18:00"
+    },
+    {
+      "id": "series-a-4",
+      "showsRule": false,
+      "when": "16 set, 07:00"
+    },
+    {
+      "id": "series-b-1",
+      "showsRule": true,
+      "when": "Seg, qua e sex, 18:30"
+    },
+    {
+      "id": "series-b-2",
+      "showsRule": true,
+      "when": "Seg, qua e sex, 18:30"
+    },
+    {
+      "id": "series-c-1",
+      "showsRule": true,
+      "when": "Todo dia 5, 09:00"
+    },
+    {
+      "id": "series-c-2",
+      "showsRule": true,
+      "when": "Todo dia 5, 09:00"
+    }
+  ],
+  "rules": [
+    {
+      "rule": {
+        "frequency": "daily",
+        "interval": 1,
+        "timeOfDay": "18:00",
+        "timeZone": "America/Sao_Paulo",
+        "startsOn": "2026-09-01"
+      },
+      "label": "Todo dia, 18:00"
+    },
+    {
+      "rule": {
+        "frequency": "daily",
+        "interval": 3,
+        "timeOfDay": "07:15",
+        "timeZone": "America/Sao_Paulo",
+        "startsOn": "2026-09-01"
+      },
+      "label": "A cada 3 dias, 07:15"
+    },
+    {
+      "rule": {
+        "frequency": "weekly",
+        "interval": 1,
+        "timeOfDay": "18:30",
+        "timeZone": "America/Sao_Paulo",
+        "startsOn": "2026-09-01",
+        "byWeekday": 42
+      },
+      "label": "Seg, qua e sex, 18:30"
+    },
+    {
+      "rule": {
+        "frequency": "weekly",
+        "interval": 1,
+        "timeOfDay": "08:00",
+        "timeZone": "America/Sao_Paulo",
+        "startsOn": "2026-09-01",
+        "byWeekday": 1
+      },
+      "label": "Dom, 08:00"
+    },
+    {
+      "rule": {
+        "frequency": "weekly",
+        "interval": 2,
+        "timeOfDay": "08:00",
+        "timeZone": "America/Sao_Paulo",
+        "startsOn": "2026-09-01",
+        "byWeekday": 66
+      },
+      "label": "A cada 2 semanas, seg e sáb, 08:00"
+    },
+    {
+      "rule": {
+        "frequency": "weekly",
+        "interval": 1,
+        "timeOfDay": "08:00",
+        "timeZone": "America/Sao_Paulo",
+        "startsOn": "2026-09-01",
+        "byWeekday": 127
+      },
+      "label": "Dom, seg, ter, qua, qui, sex e sáb, 08:00"
+    },
+    {
+      "rule": {
+        "frequency": "monthly",
+        "interval": 1,
+        "timeOfDay": "09:00",
+        "timeZone": "America/Sao_Paulo",
+        "startsOn": "2026-09-01",
+        "byMonthDay": 5
+      },
+      "label": "Todo dia 5, 09:00"
+    },
+    {
+      "rule": {
+        "frequency": "monthly",
+        "interval": 2,
+        "timeOfDay": "09:00",
+        "timeZone": "America/Sao_Paulo",
+        "startsOn": "2026-09-01",
+        "byMonthDay": 15
+      },
+      "label": "A cada 2 meses, dia 15, 09:00"
+    },
+    {
+      "rule": {
+        "frequency": "yearly",
+        "interval": 1,
+        "timeOfDay": "10:00",
+        "timeZone": "America/Sao_Paulo",
+        "startsOn": "2026-09-01",
+        "byMonthDay": 14,
+        "byMonth": 9
+      },
+      "label": "Todo ano, 14/9, 10:00"
+    }
+  ],
+  "filterCases": [
+    {
+      "filters": {
+        "tag": null,
+        "priorities": [],
+        "query": ""
+      },
+      "count": 0,
+      "query": {}
+    },
+    {
+      "filters": {
+        "tag": "trabalho",
+        "priorities": [],
+        "query": ""
+      },
+      "count": 1,
+      "query": {
+        "tag": "trabalho"
+      }
+    },
+    {
+      "filters": {
+        "tag": null,
+        "priorities": [
+          "low",
+          "urgent"
+        ],
+        "query": ""
+      },
+      "count": 1,
+      "query": {
+        "priority": [
+          "urgent",
+          "low"
+        ]
+      }
+    },
+    {
+      "filters": {
+        "tag": null,
+        "priorities": [
+          "medium",
+          "high",
+          "urgent",
+          "low"
+        ],
+        "query": "contrato"
+      },
+      "count": 2,
+      "query": {
+        "priority": [
+          "urgent",
+          "high",
+          "medium",
+          "low"
+        ],
+        "q": "contrato"
+      }
+    },
+    {
+      "filters": {
+        "tag": "casa",
+        "priorities": [
+          "high"
+        ],
+        "query": "banco"
+      },
+      "count": 3,
+      "query": {
+        "tag": "casa",
+        "priority": [
+          "high"
+        ],
+        "q": "banco"
+      }
+    },
+    {
+      "filters": {
+        "tag": null,
+        "priorities": [],
+        "query": "reunião"
+      },
+      "count": 1,
+      "query": {
+        "q": "reunião"
+      }
+    }
+  ],
+  "priorityOrder": [
+    "urgent",
+    "high",
+    "medium",
+    "low"
+  ],
+  "tagsByUse": [
+    "trabalho",
+    "casa",
+    "áurea",
+    "saúde"
+  ],
+  "patches": {
+    "now": "2026-09-14T15:30:45.123Z",
+    "doing": {
+      "expectedRevision": 3,
+      "status": "doing"
+    },
+    "reopen": {
+      "expectedRevision": 1,
+      "status": "todo",
+      "finishedAt": null
+    }
+  }
+}

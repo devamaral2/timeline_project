@@ -38,14 +38,42 @@ import java.time.Instant
  * grade; a tarefa de agente fecha a linha com o robô, a sua assinatura. Os
  * textos calculados saem do cartão e de [now].
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun TaskRow(
     card: TaskCard,
     now: Instant,
     modifier: Modifier = Modifier,
+    /** O toque na linha abre o detalhe da tarefa; sem isso a linha é só leitura. */
+    onClick: (() -> Unit)? = null,
     /** Quando a tela deixa o glifo de status ser tocado, o que acontece com o toque; sem isso o glifo é só leitura. */
     onStatusClick: (() -> Unit)? = null,
+    /** A lista pede a regra da série no lugar do horário, quando a ocorrência segue uma. */
+    ruleInPlaceOfTime: Boolean = false,
+    /** Um controle na ponta da linha, fora da linha tocável: a fração das subtarefas. */
+    aside: @Composable (() -> Unit)? = null,
+) {
+    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+        TaskRowBody(
+            card = card,
+            now = now,
+            onClick = onClick,
+            onStatusClick = onStatusClick,
+            ruleInPlaceOfTime = ruleInPlaceOfTime,
+            modifier = Modifier.weight(1f),
+        )
+        if (aside != null) Box(Modifier.padding(top = 7.dp)) { aside() }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun TaskRowBody(
+    card: TaskCard,
+    now: Instant,
+    onClick: (() -> Unit)?,
+    onStatusClick: (() -> Unit)?,
+    ruleInPlaceOfTime: Boolean,
+    modifier: Modifier,
 ) {
     val isAgent = card.actor == TaskActor.Agent
     val overdue = cardIsOverdue(card, now)
@@ -53,7 +81,12 @@ fun TaskRow(
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
 
     Row(
-        modifier = modifier.fillMaxWidth().semantics(mergeDescendants = true) {}.padding(vertical = 10.dp),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
+                .semantics(mergeDescendants = true) {}
+                .padding(vertical = 10.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.Top,
     ) {
@@ -74,7 +107,7 @@ fun TaskRow(
             FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 TaskKindMark(card.kind)
                 Text(
-                    text = cardWhenLabel(card, now),
+                    text = cardWhenLabel(card, now, ruleInPlaceOfTime),
                     color = if (overdue) MaterialTheme.colorScheme.error else muted,
                     fontSize = 13.sp,
                     lineHeight = 18.sp,

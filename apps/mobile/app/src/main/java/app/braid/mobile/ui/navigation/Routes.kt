@@ -22,7 +22,7 @@ data class DocumentDetailRoute(
     val documentId: String,
 )
 
-/** O detalhe de uma tarefa, aberto pelas ligações dos outros detalhes; o ViewModel lê o [taskId] do argumento. */
+/** O detalhe de uma tarefa, aberto pela Agenda e pelas ligações do próprio detalhe; o ViewModel lê o [taskId] do argumento. */
 @Serializable
 data class TaskDetailRoute(
     val taskId: String,

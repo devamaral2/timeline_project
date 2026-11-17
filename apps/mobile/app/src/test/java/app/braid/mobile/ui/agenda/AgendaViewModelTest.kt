@@ -65,7 +65,12 @@ class AgendaViewModelTest {
     private val created = mutableListOf<AgendaViewModel>()
 
     private fun newViewModel(clock: AppClock = AppClock { now }): AgendaViewModel =
-        AgendaViewModel(DefaultTaskRepository(graph.apis.create(TasksApi::class.java)), viewModes.repository, clock).also(created::add)
+        AgendaViewModel(
+            DefaultTaskRepository(graph.apis.create(TasksApi::class.java)),
+            viewModes.repository,
+            viewModes.freeTime,
+            clock,
+        ).also(created::add)
 
     private suspend fun AgendaViewModel.settled(): AgendaUiState = state.first { it.load != AgendaLoad.Loading }
 

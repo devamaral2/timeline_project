@@ -30,12 +30,13 @@ import app.braid.mobile.ui.auth.LoginScreen
 import app.braid.mobile.ui.documents.DocumentDetailPage
 import app.braid.mobile.ui.documents.DocumentsScreen
 import app.braid.mobile.ui.shell.BraidBottomBar
-import app.braid.mobile.ui.shell.EmptyTabScreen
 import app.braid.mobile.ui.shell.LocalSectionMenus
 import app.braid.mobile.ui.shell.MainTab
 import app.braid.mobile.ui.shell.SectionMenuBody
 import app.braid.mobile.ui.shell.SectionMenuViewModel
 import app.braid.mobile.ui.shell.SectionMenus
+import app.braid.mobile.ui.taskdetail.TaskDetailPage
+import app.braid.mobile.ui.tasks.TasksScreen
 
 @Composable
 fun AppNavHost(
@@ -78,8 +79,15 @@ fun AppNavHost(
         Box(Modifier.fillMaxSize()) {
             NavHost(navController = navController, startDestination = LoginRoute) {
                 composable<LoginRoute> { if (session !is SessionState.Unknown) LoginScreen() }
-                composable<AgendaRoute> { AgendaScreen() }
-                composable<TasksRoute> { EmptyTabScreen() }
+                composable<AgendaRoute> { AgendaScreen(onOpenTask = { navController.navigate(TaskDetailRoute(it)) }) }
+                composable<TaskDetailRoute> {
+                    TaskDetailPage(
+                        onBack = { navController.popBackStack() },
+                        onOpenTask = { navController.navigate(TaskDetailRoute(it)) },
+                    )
+                }
+                // "Nova tarefa" leva à criação quando o ticket 13 existir.
+                composable<TasksRoute> { TasksScreen(onNewTask = {}, onOpenTask = { navController.navigate(TaskDetailRoute(it)) }) }
                 composable<DocumentsRoute> { DocumentsScreen(onOpenDocument = { navController.navigate(DocumentDetailRoute(it)) }) }
                 composable<DocumentDetailRoute> {
                     DocumentDetailPage(
@@ -87,8 +95,6 @@ fun AppNavHost(
                         onOpenTask = { navController.navigate(TaskDetailRoute(it)) },
                     )
                 }
-                // O detalhe da tarefa chega com o ticket 09; até lá a rota existe para a ligação do documento não quebrar.
-                composable<TaskDetailRoute> { EmptyTabScreen() }
             }
             if (currentTab != null) {
                 if (menuOpen) {

@@ -1,10 +1,14 @@
 package app.braid.mobile.data.tasks
 
 import app.braid.mobile.domain.task.FinishedAtChange
+import app.braid.mobile.domain.task.RecurrenceFrequency
+import app.braid.mobile.domain.task.RecurrenceRule
 import app.braid.mobile.domain.task.StatusPatch
 import app.braid.mobile.domain.task.TaskActor
 import app.braid.mobile.domain.task.TaskCard
 import app.braid.mobile.domain.task.TaskKind
+import app.braid.mobile.domain.task.TaskPriority
+import app.braid.mobile.domain.task.TaskRecurrence
 import app.braid.mobile.domain.task.TaskStatus
 import app.braid.mobile.domain.timeline.toIsoMillis
 import kotlinx.serialization.SerialName
@@ -46,6 +50,19 @@ data class TaskRecurrenceDto(
     val id: String,
     val occurrenceOn: String,
     val detached: Boolean,
+    val rule: RecurrenceRuleDto,
+)
+
+@Serializable
+data class RecurrenceRuleDto(
+    val frequency: String,
+    val interval: Int,
+    val byWeekday: Int? = null,
+    val byMonthDay: Int? = null,
+    val byMonth: Int? = null,
+    val timeOfDay: String,
+    val startsOn: String,
+    val endsOn: String? = null,
 )
 
 /** `agendaPageSchema`: a página e o cursor da próxima, que some na última. */
@@ -67,6 +84,27 @@ fun TaskCardDto.toDomain(): TaskCard =
         longRunning = longRunning,
         tags = tags,
         revision = revision,
+        priority = TaskPriority.fromCode(priority),
+        recurrence = recurrence?.toDomain(),
+        parentTaskId = parentTaskId,
+    )
+
+fun TaskRecurrenceDto.toDomain() =
+    TaskRecurrence(
+        id = id,
+        occurrenceOn = occurrenceOn,
+        detached = detached,
+        rule =
+            RecurrenceRule(
+                frequency = RecurrenceFrequency.fromCode(rule.frequency),
+                interval = rule.interval,
+                byWeekday = rule.byWeekday,
+                byMonthDay = rule.byMonthDay,
+                byMonth = rule.byMonth,
+                timeOfDay = rule.timeOfDay,
+                startsOn = rule.startsOn,
+                endsOn = rule.endsOn,
+            ),
     )
 
 private fun parseInstant(value: String) = OffsetDateTime.parse(value).toInstant()

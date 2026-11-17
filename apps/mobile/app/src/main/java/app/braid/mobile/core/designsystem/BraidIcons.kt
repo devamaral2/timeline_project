@@ -36,6 +36,25 @@ object BraidIcons {
     /** O `Check` do lucide: marca a opção atual numa lista de escolha. */
     val check = listOf(SvgPart("M20 6 9 17l-5-5"))
 
+    /** O `Hash` do lucide: marca a lista de uma tag no menu da seção. */
+    val hash =
+        listOf(
+            SvgPart("M4 9h16"),
+            SvgPart("M4 15h16"),
+            SvgPart("M10 3 8 21"),
+            SvgPart("M16 3l-2 18"),
+        )
+
+    /** O `ListChecks` do lucide: o ícone do estado vazio da lista de tarefas. */
+    val listChecks =
+        listOf(
+            SvgPart("M13 5h8"),
+            SvgPart("M13 12h8"),
+            SvgPart("M13 19h8"),
+            SvgPart("m3 17 2 2 4-4"),
+            SvgPart("m3 7 2 2 4-4"),
+        )
+
     /** O robô de linha que assina a tarefa de agente (lucide `Bot`). */
     val bot =
         listOf(

@@ -17,6 +17,16 @@ interface TaskRepository {
     ): List<TaskCard>
 
     /**
+     * As tarefas acompanhadas, as que têm status, de pessoa e de agente (`GET /api/tasks/tracked`), na ordem do
+     * servidor. [filters] vão como parâmetros da consulta e [actor] pede só um dos executores; `null` traz os dois.
+     * A rota não pagina: o servidor devolve no máximo 100 cartões, como o web lê.
+     */
+    suspend fun tracked(
+        filters: TaskFilters,
+        actor: TaskActor? = null,
+    ): List<TaskCard>
+
+    /**
      * Grava a troca de status com a revisão que a tela leu. Uma revisão velha (409) sobe como
      * [StaleRevisionException]; qualquer outra falha sobe como exceção.
      */
