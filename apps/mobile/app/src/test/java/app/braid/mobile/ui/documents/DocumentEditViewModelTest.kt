@@ -185,6 +185,45 @@ class DocumentEditViewModelTest {
         }
 
     @Test
+    fun `a body changed after a failed create gets a new idempotency key, and the same body keeps the old one`() =
+        runTest {
+            backend.route("POST", "/api/artifacts", status(500))
+            val viewModel = newViewModel()
+            viewModel.setBody("Primeiro texto")
+            viewModel.save()
+            viewModel.saved()
+
+            viewModel.save()
+            viewModel.saved()
+            viewModel.setBody("Texto corrigido")
+            viewModel.save()
+            viewModel.saved()
+
+            val keys = posts().map { it.getHeader("Idempotency-Key") }
+            assertEquals(3, keys.size)
+            assertEquals(keys[0], keys[1])
+            assertNotEquals(keys[1], keys[2])
+        }
+
+    @Test
+    fun `a meal changed after a failed create gets a new idempotency key too`() =
+        runTest {
+            backend.route("POST", "/api/artifacts", status(500))
+            val viewModel = newViewModel()
+            viewModel.selectKind(NewDocumentKind.Meal)
+            viewModel.setMeal("Arroz")
+            viewModel.save()
+            viewModel.saved()
+
+            viewModel.setMeal("Arroz com feijão")
+            viewModel.save()
+            viewModel.saved()
+
+            val keys = posts().map { it.getHeader("Idempotency-Key") }
+            assertNotEquals(keys[0], keys[1])
+        }
+
+    @Test
     fun `a failed create keeps the typed text and says which kind failed`() =
         runTest {
             backend.route("POST", "/api/artifacts", status(500))
