@@ -53,16 +53,6 @@ data class TaskRecurrenceDto(
     val rule: RecurrenceRuleDto,
 )
 
-@Serializable
-data class RecurrenceRuleDto(
-    val frequency: String,
-    val interval: Int,
-    val byWeekday: Int? = null,
-    val byMonthDay: Int? = null,
-    val byMonth: Int? = null,
-    val timeOfDay: String,
-)
-
 /** `agendaPageSchema`: a página e o cursor da próxima, que some na última. */
 @Serializable
 data class AgendaPageDto(
@@ -84,6 +74,7 @@ fun TaskCardDto.toDomain(): TaskCard =
         revision = revision,
         priority = TaskPriority.fromCode(priority),
         recurrence = recurrence?.toDomain(),
+        parentTaskId = parentTaskId,
     )
 
 private fun TaskRecurrenceDto.toDomain() =
@@ -93,12 +84,14 @@ private fun TaskRecurrenceDto.toDomain() =
         detached = detached,
         rule =
             RecurrenceRule(
-                frequency = RecurrenceFrequency.valueOf(rule.frequency.replaceFirstChar(Char::uppercase)),
+                frequency = RecurrenceFrequency.fromCode(rule.frequency),
                 interval = rule.interval,
                 byWeekday = rule.byWeekday,
                 byMonthDay = rule.byMonthDay,
                 byMonth = rule.byMonth,
                 timeOfDay = rule.timeOfDay,
+                startsOn = rule.startsOn,
+                endsOn = rule.endsOn,
             ),
     )
 

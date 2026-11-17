@@ -51,6 +51,7 @@ import app.braid.mobile.core.designsystem.BraidIcons
 import app.braid.mobile.core.designsystem.BraidMonoFont
 import app.braid.mobile.core.designsystem.BraidPill
 import app.braid.mobile.core.designsystem.SvgIcon
+import app.braid.mobile.domain.task.SubtaskTree
 import app.braid.mobile.domain.task.TaskActor
 import app.braid.mobile.domain.task.TaskCard
 import app.braid.mobile.domain.task.TaskGroup
@@ -95,6 +96,7 @@ fun TasksScreen(
         state = state,
         onStatusClick = viewModel::openStatusPicker,
         onToggleGroup = viewModel::toggleGroup,
+        onToggleSubtasks = viewModel::toggleSubtasks,
         onRetry = viewModel::retry,
         onClearFilters = viewModel::clearFilters,
         onNewTask = onNewTask,
@@ -153,6 +155,7 @@ fun TasksContent(
     state: TasksUiState,
     onStatusClick: (TaskCard) -> Unit,
     onToggleGroup: (TaskGroupKey) -> Unit,
+    onToggleSubtasks: (String) -> Unit,
     onRetry: () -> Unit,
     onClearFilters: () -> Unit,
     onNewTask: () -> Unit,
@@ -214,9 +217,12 @@ fun TasksContent(
                     groups.forEach { group ->
                         GroupSection(
                             group = group,
+                            tree = state.tree,
+                            closedSubtasks = state.closedSubtasks,
                             expanded = state.isExpanded(group),
                             now = state.now,
                             onToggle = { onToggleGroup(group.key) },
+                            onToggleSubtasks = onToggleSubtasks,
                             onStatusClick = onStatusClick,
                             onOpenTask = onOpenTask,
                         )
@@ -232,9 +238,12 @@ private val ROW_DIVIDER_INSET = 58.dp
 @Composable
 private fun GroupSection(
     group: TaskGroup,
+    tree: SubtaskTree,
+    closedSubtasks: Set<String>,
     expanded: Boolean,
     now: Instant,
     onToggle: () -> Unit,
+    onToggleSubtasks: (String) -> Unit,
     onStatusClick: (TaskCard) -> Unit,
     onOpenTask: (String) -> Unit,
 ) {
@@ -248,13 +257,33 @@ private fun GroupSection(
             if (index > 0) HorizontalDivider(Modifier.padding(start = ROW_DIVIDER_INSET), color = MaterialTheme.colorScheme.outline)
             // O glifo de uma tarefa de pessoa, com qualquer status, abre a folha; o de agente é só leitura.
             val opensPicker = card.actor == TaskActor.Human
+            val subtasks = tree.subtasksOf(card.id)
+            val drawerOpen = card.id !in closedSubtasks
             TaskRow(
                 card = card,
                 now = now,
                 onClick = { onOpenTask(card.id) },
                 onStatusClick = if (opensPicker) ({ onStatusClick(card) }) else null,
                 ruleInPlaceOfTime = showsSeriesRule(card),
+                aside =
+                    if (subtasks.isEmpty()) {
+                        null
+                    } else {
+                        { SubtaskToggle(card = card, subtasks = subtasks, expanded = drawerOpen, onToggle = { onToggleSubtasks(card.id) }) }
+                    },
             )
+            if (subtasks.isNotEmpty() && drawerOpen) {
+                SubtaskDrawer(
+                    parent = card,
+                    tree = tree,
+                    now = now,
+                    closedIds = closedSubtasks,
+                    onToggle = onToggleSubtasks,
+                    onStatusClick = onStatusClick,
+                    onOpenTask = onOpenTask,
+                    modifier = Modifier.padding(start = 12.dp, top = 2.dp, bottom = 8.dp),
+                )
+            }
         }
     }
 }

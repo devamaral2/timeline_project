@@ -90,6 +90,8 @@ class TaskListRulesTest {
                     byMonthDay = rule["byMonthDay"]?.jsonPrimitive?.int,
                     byMonth = rule["byMonth"]?.jsonPrimitive?.int,
                     timeOfDay = rule.getValue("timeOfDay").jsonPrimitive.content,
+                    startsOn = rule.getValue("startsOn").jsonPrimitive.content,
+                    endsOn = null,
                 )
 
             assertEquals("$rule", case.getValue("label").jsonPrimitive.content, recurrenceRuleLabel(parsed))
