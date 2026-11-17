@@ -8,7 +8,7 @@ describe("emptyTaskDraft e buildCreateTaskInput", () => {
     expect(emptyTaskDraft("comprar pão")).toEqual({
       kind: "common", name: "comprar pão", status: null, priority: "medium",
       startDate: "", startTime: "", endDate: "", endTime: "", description: "", location: "", reminders: [], tags: [], longRunning: false,
-      previousTaskIds: [], nextTaskIds: [], artifacts: [],
+      parentTaskId: null, subtaskIds: [], artifacts: [],
     });
   });
 
@@ -90,10 +90,14 @@ describe("draftFromTask", () => {
     expect(draft).toMatchObject({ startDate: "2026-11-15", startTime: "" });
   });
 
-  it("lê a sequência nos dois lados", () => {
-    const draft = draftFromTask(training({ previousTaskIds: ["ev-2"], nextTaskIds: ["ev-3"] }));
+  it("lê a tarefa principal e as subtarefas", () => {
+    const draft = draftFromTask(training({ parentTaskId: "ev-2", subtaskIds: ["ev-3", "ev-4"] }));
 
-    expect(draft).toMatchObject({ previousTaskIds: ["ev-2"], nextTaskIds: ["ev-3"] });
+    expect(draft).toMatchObject({ parentTaskId: "ev-2", subtaskIds: ["ev-3", "ev-4"] });
+  });
+
+  it("sem tarefa principal, o rascunho guarda null", () => {
+    expect(draftFromTask(training()).parentTaskId).toBeNull();
   });
 
   it("uma tarefa de referência sem data e sem status tem os campos vazios e o status nulo", () => {
@@ -218,19 +222,28 @@ describe("buildTaskPatch", () => {
     expect(buildTaskPatch(task, draftFromTask(task), NOW)).toBeNull();
   });
 
-  it("sequência: manda a lista completa de cada lado, e só quando ela mudou", () => {
-    const task = training({ previousTaskIds: ["ev-2"], nextTaskIds: [] });
+  it("hierarquia: manda a tarefa principal e a lista completa de subtarefas, e só o que mudou", () => {
+    const task = training({ parentTaskId: "ev-2", subtaskIds: [] });
 
-    expect(buildTaskPatch(task, { ...draftFromTask(task), previousTaskIds: ["ev-2", "ev-3"], nextTaskIds: ["ev-4"] }, NOW)).toEqual({
+    expect(buildTaskPatch(task, { ...draftFromTask(task), parentTaskId: "ev-3", subtaskIds: ["ev-4"] }, NOW)).toEqual({
       expectedRevision: 3,
-      previousTaskIds: ["ev-2", "ev-3"],
-      nextTaskIds: ["ev-4"],
+      parentTaskId: "ev-3",
+      subtaskIds: ["ev-4"],
     });
-    expect(buildTaskPatch(task, { ...draftFromTask(task), nextTaskIds: ["ev-4"] }, NOW)).toEqual({
+    expect(buildTaskPatch(task, { ...draftFromTask(task), subtaskIds: ["ev-4"] }, NOW)).toEqual({
       expectedRevision: 3,
-      nextTaskIds: ["ev-4"],
+      subtaskIds: ["ev-4"],
     });
     expect(buildTaskPatch(task, draftFromTask(task), NOW)).toBeNull();
+  });
+
+  it("tirar a tarefa principal manda parentTaskId null", () => {
+    const task = training({ parentTaskId: "ev-2" });
+
+    expect(buildTaskPatch(task, { ...draftFromTask(task), parentTaskId: null }, NOW)).toEqual({
+      expectedRevision: 3,
+      parentTaskId: null,
+    });
   });
 });
 
@@ -358,7 +371,7 @@ describe("lembretes e tags", () => {
   });
 });
 
-describe("artefatos na edição", () => {
+describe("documentos na edição", () => {
   /** Um vínculo como a tarefa o devolve: o artefato inteiro (catálogo global é treino; o próprio, nota). */
   function link(id: string, name: string, relation: TaskArtifactDto["relation"] = "uses") {
     const global = id === "art-gym";
@@ -377,7 +390,7 @@ describe("artefatos na edição", () => {
   const workout = link("art-gym", "Musculação");
   const sheet = link("art-sheet", "Ficha A");
 
-  it("o rascunho lê a lista de artefatos da tarefa, na ordem da API", () => {
+  it("o rascunho lê a lista de documentos da tarefa, na ordem da API", () => {
     const draft = draftFromTask(training({ artifacts: [workout, sheet] }));
 
     expect(draft.artifacts).toEqual([

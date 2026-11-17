@@ -81,13 +81,13 @@ describe("PostgresEntityBatchWriter", () => {
             { op: "update", entity: origin.revise({ name: "Semana planejada" }), expectedRevision: 1 },
             { op: "create", entity: created },
           ],
-          sequence: [{ op: "add", fromId: origin.id, toId: created.id }],
+          subtasks: [{ op: "add", parentId: origin.id, subtaskId: created.id }],
         }),
       );
 
       expect(result).toEqual({});
-      expect(await tasks.findById(origin.id)).toMatchObject({ name: "Semana planejada", revision: 2, nextIds: [created.id] });
-      expect(await tasks.findById(created.id)).toMatchObject({ previousIds: [origin.id], revision: 1 });
+      expect(await tasks.findById(origin.id)).toMatchObject({ name: "Semana planejada", revision: 2, subtaskIds: [created.id] });
+      expect(await tasks.findById(created.id)).toMatchObject({ parentId: origin.id, revision: 1 });
       expect((await tasks.findById(created.id))?.artifactLinks).toEqual([link(note.id, "creates"), link(existing.id)]);
       expect(await artifacts.findById(note.id)).not.toBeNull();
       expect(await artifacts.findById(existing.id)).toMatchObject({ data: { body: "versao final" }, revision: 2 });
@@ -200,63 +200,84 @@ describe("PostgresEntityBatchWriter", () => {
     });
   });
 
-  describe("sequencia entre tarefas", () => {
-    const sequence = (...pairs: Array<[string, string]>): EntityBatch["sequence"] =>
-      pairs.map(([fromId, toId]) => ({ op: "add" as const, fromId, toId }));
+  describe("hierarquia entre tarefas", () => {
+    const subtasks = (...pairs: Array<[string, string]>): EntityBatch["subtasks"] =>
+      pairs.map(([parentId, subtaskId]) => ({ op: "add" as const, parentId, subtaskId }));
     const edges = () =>
-      selectRows(ctx.pool, "SELECT from_task_id, to_task_id, relation FROM task_task_relation ORDER BY relation, from_task_id");
+      selectRows(ctx.pool, "SELECT from_task_id, to_task_id, relation FROM task_task_relation ORDER BY relation, from_task_id, to_task_id");
 
-    test("add grava a aresta precedes, lida nos dois lados, sem revisar nenhum das tarefas", async () => {
-      const a = await saved(trackedTask(USER, "Escolher a cor"));
+    test("add grava a aresta subtask, lida nos dois lados, sem revisar nenhuma das tarefas", async () => {
+      const a = await saved(trackedTask(USER, "Pintar a casa"));
       const b = await saved(trackedTask(USER, "Comprar tinta"));
 
-      await writer.commit(batchOf({ sequence: sequence([a.id, b.id]) }));
+      await writer.commit(batchOf({ subtasks: subtasks([a.id, b.id]) }));
 
-      expect(await edges()).toEqual([{ from_task_id: a.id, to_task_id: b.id, relation: "precedes" }]);
-      expect(await tasks.findById(a.id)).toMatchObject({ previousIds: [], nextIds: [b.id], revision: 1 });
-      expect(await tasks.findById(b.id)).toMatchObject({ previousIds: [a.id], nextIds: [], revision: 1 });
+      expect(await edges()).toEqual([{ from_task_id: a.id, to_task_id: b.id, relation: "subtask" }]);
+      expect(await tasks.findById(a.id)).toMatchObject({ parentId: undefined, subtaskIds: [b.id], revision: 1 });
+      expect(await tasks.findById(b.id)).toMatchObject({ parentId: a.id, subtaskIds: [], revision: 1 });
     });
 
     test("repetir a aresta, no mesmo lote ou em outro, nao duplica", async () => {
       const a = await saved(trackedTask(USER, "A"));
       const b = await saved(trackedTask(USER, "B"));
 
-      await writer.commit(batchOf({ sequence: sequence([a.id, b.id], [a.id, b.id]) }));
-      await writer.commit(batchOf({ sequence: sequence([a.id, b.id]) }));
+      await writer.commit(batchOf({ subtasks: subtasks([a.id, b.id], [a.id, b.id]) }));
+      await writer.commit(batchOf({ subtasks: subtasks([a.id, b.id]) }));
 
-      expect(await countRows(ctx.pool, "task_task_relation", "relation = 'precedes'")).toBe(1);
-      expect((await tasks.findById(b.id))?.previousIds).toEqual([a.id]);
+      expect(await countRows(ctx.pool, "task_task_relation", "relation = 'subtask'")).toBe(1);
+      expect((await tasks.findById(b.id))?.parentId).toBe(a.id);
+    });
+
+    test("pôr a subtarefa sob outra principal tira a ligacao com a anterior", async () => {
+      const [a, b, c] = [await saved(trackedTask(USER, "A")), await saved(trackedTask(USER, "B")), await saved(trackedTask(USER, "C"))];
+      await writer.commit(batchOf({ subtasks: subtasks([a.id, c.id]) }));
+
+      await writer.commit(batchOf({ subtasks: subtasks([b.id, c.id]) }));
+
+      expect(await edges()).toEqual([{ from_task_id: b.id, to_task_id: c.id, relation: "subtask" }]);
+      expect((await tasks.findById(a.id))?.subtaskIds).toEqual([]);
+      expect((await tasks.findById(c.id))?.parentId).toBe(b.id);
+      expect([a, b, c].map((task) => task.revision)).toEqual([1, 1, 1]);
+    });
+
+    test("o banco recusa uma segunda principal gravada por fora do lote", async () => {
+      const [a, b, c] = [await saved(trackedTask(USER, "A")), await saved(trackedTask(USER, "B")), await saved(trackedTask(USER, "C"))];
+      await writer.commit(batchOf({ subtasks: subtasks([a.id, c.id]) }));
+
+      await expect(
+        ctx.pool.query("INSERT INTO task_task_relation (from_task_id, to_task_id, relation) VALUES ($1, $2, 'subtask')", [b.id, c.id]),
+      ).rejects.toThrow(/task_task_subtask_unique/);
     });
 
     test("remove tira so a aresta pedida, e remover o que nao existe nao e erro", async () => {
       const [a, b, c] = [await saved(trackedTask(USER, "A")), await saved(trackedTask(USER, "B")), await saved(trackedTask(USER, "C"))];
-      await writer.commit(batchOf({ sequence: sequence([a.id, b.id], [a.id, c.id]) }));
+      await writer.commit(batchOf({ subtasks: subtasks([a.id, b.id], [a.id, c.id]) }));
 
       await writer.commit(
         batchOf({
-          sequence: [
-            { op: "remove", fromId: a.id, toId: b.id },
-            { op: "remove", fromId: b.id, toId: c.id },
+          subtasks: [
+            { op: "remove", parentId: a.id, subtaskId: b.id },
+            { op: "remove", parentId: b.id, subtaskId: c.id },
           ],
         }),
       );
 
-      expect(await edges()).toEqual([{ from_task_id: a.id, to_task_id: c.id, relation: "precedes" }]);
-      expect((await tasks.findById(b.id))?.previousIds).toEqual([]);
+      expect(await edges()).toEqual([{ from_task_id: a.id, to_task_id: c.id, relation: "subtask" }]);
+      expect((await tasks.findById(b.id))?.parentId).toBeUndefined();
       expect((await tasks.findById(b.id))?.revision).toBe(1);
     });
 
     test("remover e acrescentar a mesma aresta no lote deixa a aresta no fim", async () => {
       const a = await saved(trackedTask(USER, "A"));
       const b = await saved(trackedTask(USER, "B"));
-      await writer.commit(batchOf({ sequence: sequence([a.id, b.id]) }));
+      await writer.commit(batchOf({ subtasks: subtasks([a.id, b.id]) }));
 
-      await writer.commit(batchOf({ sequence: [{ op: "remove", fromId: a.id, toId: b.id }, { op: "add", fromId: a.id, toId: b.id }] }));
+      await writer.commit(batchOf({ subtasks: [{ op: "remove", parentId: a.id, subtaskId: b.id }, { op: "add", parentId: a.id, subtaskId: b.id }] }));
 
-      expect(await countRows(ctx.pool, "task_task_relation", "relation = 'precedes'")).toBe(1);
+      expect(await countRows(ctx.pool, "task_task_relation", "relation = 'subtask'")).toBe(1);
     });
 
-    test("uma ponta pode ser tarefa nova do mesmo lote, mesmo listado depois da aresta", async () => {
+    test("uma ponta pode ser tarefa nova do mesmo lote, mesmo listada depois da aresta", async () => {
       const existing = await saved(trackedTask(USER, "Ja existe"));
       const fresh = trackedTask(USER, "Nasce com o lote");
       const freshToo = trackedTask(USER, "Tambem nasce");
@@ -264,42 +285,42 @@ describe("PostgresEntityBatchWriter", () => {
       await writer.commit(
         batchOf({
           tasks: [fresh, freshToo].map((entity) => ({ op: "create" as const, entity })),
-          sequence: sequence([existing.id, fresh.id], [fresh.id, freshToo.id]),
+          subtasks: subtasks([existing.id, fresh.id], [fresh.id, freshToo.id]),
         }),
       );
 
-      expect(await tasks.findById(fresh.id)).toMatchObject({ previousIds: [existing.id], nextIds: [freshToo.id] });
-      expect((await tasks.findById(existing.id))?.nextIds).toEqual([fresh.id]);
+      expect(await tasks.findById(fresh.id)).toMatchObject({ parentId: existing.id, subtaskIds: [freshToo.id] });
+      expect((await tasks.findById(existing.id))?.subtaskIds).toEqual([fresh.id]);
     });
 
     test("uma ponta pode ser tarefa de agente", async () => {
       const request = await saved(agentTask(USER, "Montar o cardapio", { kind: "build_request" }));
       const person = await saved(trackedTask(USER, "Fazer as compras"));
 
-      await writer.commit(batchOf({ sequence: sequence([request.id, person.id]) }));
+      await writer.commit(batchOf({ subtasks: subtasks([request.id, person.id]) }));
 
-      expect(await tasks.findById(request.id)).toMatchObject({ nextIds: [person.id], revision: 1 });
-      expect((await tasks.findById(person.id))?.previousIds).toEqual([request.id]);
+      expect(await tasks.findById(request.id)).toMatchObject({ subtaskIds: [person.id], revision: 1 });
+      expect((await tasks.findById(person.id))?.parentId).toBe(request.id);
     });
 
-    test("a sequencia nao revisa a tarefa editada no mesmo lote alem da propria edicao", async () => {
+    test("a hierarquia nao revisa a tarefa editada no mesmo lote alem da propria edicao", async () => {
       const a = await saved(trackedTask(USER, "A"));
       const b = await saved(trackedTask(USER, "B"));
 
       await writer.commit(
         batchOf({
           tasks: [{ op: "update", entity: a.revise({ name: "A editado" }), expectedRevision: 1 }],
-          sequence: sequence([a.id, b.id]),
+          subtasks: subtasks([a.id, b.id]),
         }),
       );
 
-      expect(await tasks.findById(a.id)).toMatchObject({ name: "A editado", revision: 2, nextIds: [b.id] });
+      expect(await tasks.findById(a.id)).toMatchObject({ name: "A editado", revision: 2, subtaskIds: [b.id] });
       expect((await tasks.findById(b.id))?.revision).toBe(1);
     });
 
-    test("ciclo direto, por um terceiro ou da tarefa consigo mesmo recusa o lote", async () => {
+    test("ciclo direto, por um terceiro ou da tarefa consigo mesma recusa o lote", async () => {
       const [a, b, c] = [await saved(trackedTask(USER, "A")), await saved(trackedTask(USER, "B")), await saved(trackedTask(USER, "C"))];
-      await writer.commit(batchOf({ sequence: sequence([a.id, b.id], [b.id, c.id]) }));
+      await writer.commit(batchOf({ subtasks: subtasks([a.id, b.id], [b.id, c.id]) }));
 
       for (const [what, pair] of [
         ["direto", [b.id, a.id]],
@@ -307,14 +328,14 @@ describe("PostgresEntityBatchWriter", () => {
       ] as const) {
         const note = textArtifact(USER, "nasceria com o lote");
         await expect(
-          writer.commit(batchOf({ artifacts: [{ op: "create", entity: note }], sequence: sequence([...pair]) })),
+          writer.commit(batchOf({ artifacts: [{ op: "create", entity: note }], subtasks: subtasks([...pair]) })),
           what,
-        ).rejects.toThrow(/Tasks cannot follow each other in a cycle/);
+        ).rejects.toThrow(/A task cannot be a subtask of its own subtask/);
         expect(await artifacts.findById(note.id), what).toBeNull();
       }
-      await expect(writer.commit(batchOf({ sequence: sequence([a.id, a.id]) }))).rejects.toThrow();
+      await expect(writer.commit(batchOf({ subtasks: subtasks([a.id, a.id]) }))).rejects.toThrow();
 
-      expect(await countRows(ctx.pool, "task_task_relation", "relation = 'precedes'")).toBe(2);
+      expect(await countRows(ctx.pool, "task_task_relation", "relation = 'subtask'")).toBe(2);
     });
 
     test("tarefas novas que fecham ciclo entre si recusam o lote inteiro", async () => {
@@ -324,7 +345,7 @@ describe("PostgresEntityBatchWriter", () => {
         writer.commit(
           batchOf({
             tasks: [a, b].map((entity) => ({ op: "create" as const, entity })),
-            sequence: sequence([a.id, b.id], [b.id, a.id]),
+            subtasks: subtasks([a.id, b.id], [b.id, a.id]),
           }),
         ),
       ).rejects.toThrow(TaskValidationError);
@@ -339,10 +360,10 @@ describe("PostgresEntityBatchWriter", () => {
       await tasks.delete(removed.id, USER);
 
       const targets: Array<[string, [string, string]]> = [
-        ["sucessor de outro usuario", [mine.id, foreign.id]],
-        ["antecessor de outro usuario", [foreign.id, mine.id]],
-        ["sucessor apagado", [mine.id, removed.id]],
-        ["antecessor apagado", [removed.id, mine.id]],
+        ["subtarefa de outro usuario", [mine.id, foreign.id]],
+        ["principal de outro usuario", [foreign.id, mine.id]],
+        ["subtarefa apagada", [mine.id, removed.id]],
+        ["principal apagada", [removed.id, mine.id]],
         ["inexistente", [mine.id, ulid()]],
       ];
       for (const [what, pair] of targets) {
@@ -354,7 +375,7 @@ describe("PostgresEntityBatchWriter", () => {
             batchOf({
               artifacts: [{ op: "create", entity: note }],
               tasks: [{ op: "create", entity: created }],
-              sequence: sequence(pair),
+              subtasks: subtasks(pair),
             }),
           ),
           what,
@@ -366,15 +387,15 @@ describe("PostgresEntityBatchWriter", () => {
       expect(await countRows(ctx.pool, "task_task_relation")).toBe(0);
     });
 
-    test("a tarefa apagada no lote some das listas, mas a aresta continua no banco", async () => {
+    test("a tarefa apagada no lote some das leituras, mas a aresta continua no banco", async () => {
       const a = await saved(trackedTask(USER, "A"));
       const b = await saved(trackedTask(USER, "B"));
-      await writer.commit(batchOf({ sequence: sequence([a.id, b.id]) }));
+      await writer.commit(batchOf({ subtasks: subtasks([a.id, b.id]) }));
 
       await writer.commit(batchOf({ tasks: [{ op: "delete", id: a.id, expectedRevision: 1 }] }));
 
-      expect((await tasks.findById(b.id))?.previousIds).toEqual([]);
-      expect(await countRows(ctx.pool, "task_task_relation", "relation = 'precedes'")).toBe(1);
+      expect((await tasks.findById(b.id))?.parentId).toBeUndefined();
+      expect(await countRows(ctx.pool, "task_task_relation", "relation = 'subtask'")).toBe(1);
     });
   });
 

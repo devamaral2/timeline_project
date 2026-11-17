@@ -4,30 +4,30 @@ import styles from "./note-sheet.module.css";
 
 const HERMES_ICONS: Record<string, LucideIcon> = { skill: Wrench, agent: Bot, router: Route };
 
-/** O ícone de um tipo de nota: o do tipo de tarefa nas estruturadas, o do arquivo nas do Hermes, a folha no texto. */
+/** O ícone de um tipo de nota: o do tipo de tarefa nas estruturadas, o do arquivo nas do Hermes, a folha do Lucide no texto. */
 export function noteTypeIcon(type: string): LucideIcon {
   if (type === "meal" || type === "training" || type === "sleep") return visualForItemType(type).Icon;
   return HERMES_ICONS[type] ?? FileText;
 }
 
 /**
- * O desenho da folha em cada tamanho, na caixa quadrada em que ela fica
- * centrada: o contorno com o canto cortado, a dobra e os dois traços de texto
- * embaixo. Os cantos são bem menos arredondados que os do quadrado da tarefa
- * (4 contra 13), para a forma ler como folha de papel. O ícone do tipo é posicionado pelo CSS, no canto de cima à esquerda.
+ * O desenho das páginas em cada tamanho, na caixa quadrada em que elas ficam
+ * centradas: a página da frente inteira e, atrás dela, a borda de cima e a da
+ * direita de uma segunda página. É o mesmo símbolo da aba Documentos da barra
+ * inferior (`components/ui/nav-icons.tsx`), ampliado. Os cantos são bem menos
+ * arredondados que os do quadrado da tarefa (4 contra 13), para a forma ler
+ * como papel. O ícone do tipo é centrado na página da frente pelo CSS.
  */
 const SHEETS = {
   list: {
     box: 44,
-    outline: "M9.5 .5h20l9 9v30a4 4 0 0 1-4 4h-25a4 4 0 0 1-4-4v-35a4 4 0 0 1 4-4Z",
-    fold: "M29.5 .5v7a2 2 0 0 0 2 2h7",
-    lines: "M14.5 28h15M14.5 34h15",
+    front: "M6.5 9.5h22a4 4 0 0 1 4 4v26a4 4 0 0 1-4 4h-22a4 4 0 0 1-4-4v-26a4 4 0 0 1 4-4Z",
+    back: "M13 .5h24.5a4 4 0 0 1 4 4v31",
   },
   cite: {
     box: 32,
-    outline: "M7.5 .5h14l6 6v22a3 3 0 0 1-3 3h-17a3 3 0 0 1-3-3v-25a3 3 0 0 1 3-3Z",
-    fold: "M21.5 .5V5A1.5 1.5 0 0 0 23 6.5h4.5",
-    lines: "M11 21h10M11 25.5h10",
+    front: "M5.5 7.5h15a3 3 0 0 1 3 3v18a3 3 0 0 1-3 3h-15a3 3 0 0 1-3-3v-18a3 3 0 0 1 3-3Z",
+    back: "M10 .5h16.5a3 3 0 0 1 3 3v22",
   },
 } as const;
 
@@ -42,12 +42,12 @@ function LetterGlyph() {
 }
 
 /**
- * A nota como folha: onde a tarefa é um quadrado com o ícone no meio, a nota é
- * uma folha com o canto dobrado em volta do ícone do tipo, que fica menor, no
- * canto de cima à esquerda, com dois traços de texto embaixo. A nota de texto,
- * que não tem ícone de tipo, leva a letra A no lugar dele. `list` é a da lista
- * de notas, do tamanho do quadrado da tarefa; `cite` é a compacta, para a nota
- * citada dentro de uma tarefa ou de uma tarefa.
+ * O documento como páginas empilhadas: onde a tarefa é um quadrado com o ícone
+ * no meio, o documento é o símbolo da aba Documentos com o ícone do tipo no
+ * meio da página da frente. A nota de texto, que não tem ícone de tipo, leva a
+ * letra A no lugar dele. `list` é a da lista de documentos, do tamanho do
+ * quadrado da tarefa; `cite` é a compacta, para o documento citado dentro de
+ * uma tarefa.
  */
 export function NoteSheet({ type, size = "list", className }: { type: string; size?: keyof typeof SHEETS; className?: string }) {
   const sheet = SHEETS[size];
@@ -56,9 +56,8 @@ export function NoteSheet({ type, size = "list", className }: { type: string; si
   return (
     <span className={className ? `${styles.sheet} ${className}` : styles.sheet} data-size={size} data-note-type={type} aria-hidden>
       <svg className={styles.outline} aria-hidden viewBox={`0 0 ${sheet.box} ${sheet.box}`} fill="none" strokeLinecap="round" strokeLinejoin="round">
-        <path d={sheet.outline} />
-        <path d={sheet.fold} />
-        <path className={styles.lines} d={sheet.lines} />
+        <path d={sheet.front} />
+        <path d={sheet.back} />
       </svg>
       {isText ? <LetterGlyph /> : <Icon className={styles.glyph} />}
     </span>

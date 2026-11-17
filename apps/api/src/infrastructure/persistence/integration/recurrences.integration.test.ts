@@ -201,70 +201,68 @@ describe("PostgresRecurrenceRepository", () => {
       expect((await found(recurrence.id)).materializedThrough).toBeUndefined();
     });
 
-    test("previousIds liga cada ocorrencia ao antecessor, sem editar o antecessor", async () => {
+    test("parentId liga cada ocorrencia a principal, sem editar a principal", async () => {
       const recurrence = await saved();
-      const previous = trackedTask(USER, "Projeto");
-      await tasks.save(previous);
+      const parent = trackedTask(USER, "Projeto");
+      await tasks.save(parent);
       const occurrences = DAYS.slice(0, 2).map((day) => occurrenceOf(recurrence, day));
 
-      await recurrences.materialize(recurrence.materializedUntil(DAYS[1]), occurrences, [previous.id]);
+      await recurrences.materialize(recurrence.materializedUntil(DAYS[1]), occurrences, parent.id);
 
-      const readPrevious = await tasks.findById(previous.id);
-      expect([...(readPrevious?.nextIds ?? [])].sort()).toEqual(occurrences.map((task) => task.id).sort());
-      expect(readPrevious?.revision).toBe(1);
-      expect((await tasks.findById(occurrences[0].id))?.previousIds).toEqual([previous.id]);
+      const readParent = await tasks.findById(parent.id);
+      expect([...(readParent?.subtaskIds ?? [])].sort()).toEqual(occurrences.map((task) => task.id).sort());
+      expect(readParent?.revision).toBe(1);
+      expect((await tasks.findById(occurrences[0].id))?.parentId).toBe(parent.id);
 
       // A segunda leitura nao repete a relacao das ocorrencias que ja existem.
       await recurrences.materialize(
         recurrence.materializedUntil(DAYS[2]),
         DAYS.slice(0, 3).map((day) => occurrenceOf(recurrence, day)),
-        [previous.id],
+        parent.id,
       );
-      expect(await countRows(ctx.pool, "task_task_relation", "relation = 'precedes'")).toBe(3);
+      expect(await countRows(ctx.pool, "task_task_relation", "relation = 'subtask'")).toBe(3);
     });
 
-    test("a ocorrencia segue varios antecessores, inclusive uma tarefa de agente", async () => {
+    test("a principal da ocorrencia pode ser uma tarefa de agente", async () => {
       const recurrence = await saved();
-      const person = trackedTask(USER, "Projeto");
       const agent = agentTask(USER, "Pedido", { kind: "build_request" });
-      for (const task of [person, agent]) await tasks.save(task);
+      await tasks.save(agent);
       const occurrence = occurrenceOf(recurrence, DAYS[0]);
 
-      await recurrences.materialize(recurrence.materializedUntil(DAYS[0]), [occurrence], [person.id, agent.id]);
+      await recurrences.materialize(recurrence.materializedUntil(DAYS[0]), [occurrence], agent.id);
 
-      expect([...((await tasks.findById(occurrence.id))?.previousIds ?? [])].sort()).toEqual([person.id, agent.id].sort());
+      expect((await tasks.findById(occurrence.id))?.parentId).toBe(agent.id);
       expect((await tasks.findById(agent.id))?.revision).toBe(1);
     });
 
-    test("ao regerar a serie, a ocorrencia apagada leva a aresta e o antecessor fica sem ela", async () => {
+    test("ao regerar a serie, a ocorrencia apagada leva a aresta e a principal fica sem ela", async () => {
       const recurrence = await saved();
-      const previous = trackedTask(USER, "Projeto");
-      await tasks.save(previous);
+      const parent = trackedTask(USER, "Projeto");
+      await tasks.save(parent);
       await recurrences.materialize(
         recurrence.materializedUntil(DAYS[2]),
         DAYS.slice(0, 3).map((day) => occurrenceOf(recurrence, day)),
-        [previous.id],
+        parent.id,
       );
-      expect(await countRows(ctx.pool, "task_task_relation", "relation = 'precedes'")).toBe(3);
+      expect(await countRows(ctx.pool, "task_task_relation", "relation = 'subtask'")).toBe(3);
 
       await recurrences.update(recurrence.revise({ rule: { timeOfDay: "19:00" } }), USER, 1, DAYS[1]);
 
       // So a primeira ocorrencia (antes de fromDay) sobrevive, com a aresta dela.
       expect(await countRows(ctx.pool, "tasks", "recurrence_id IS NOT NULL")).toBe(1);
-      expect(await countRows(ctx.pool, "task_task_relation", "relation = 'precedes'")).toBe(1);
-      expect((await tasks.findById(previous.id))?.nextIds).toHaveLength(1);
+      expect(await countRows(ctx.pool, "task_task_relation", "relation = 'subtask'")).toBe(1);
+      expect((await tasks.findById(parent.id))?.subtaskIds).toHaveLength(1);
     });
 
-    test("com o antecessor apagado, ou de outro usuario, o lote nao insere nada", async () => {
+    test("com a principal apagada, ou de outro usuario, o lote nao insere nada", async () => {
       const recurrence = await saved();
       const removed = trackedTask(USER, "Projeto apagado");
       const foreign = trackedTask(OTHER_USER, "Projeto do outro");
-      const alive = trackedTask(USER, "Projeto vivo");
-      for (const task of [removed, foreign, alive]) await tasks.save(task);
+      for (const task of [removed, foreign]) await tasks.save(task);
       await tasks.delete(removed.id, USER);
 
-      for (const previousIds of [[removed.id], [foreign.id], [alive.id, removed.id]]) {
-        await recurrences.materialize(recurrence.materializedUntil(DAYS[1]), [occurrenceOf(recurrence, DAYS[0])], previousIds);
+      for (const parentId of [removed.id, foreign.id]) {
+        await recurrences.materialize(recurrence.materializedUntil(DAYS[1]), [occurrenceOf(recurrence, DAYS[0])], parentId);
       }
 
       expect(await countRows(ctx.pool, "tasks", "recurrence_id IS NOT NULL")).toBe(0);

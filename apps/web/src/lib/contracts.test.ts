@@ -10,15 +10,15 @@ const card: TaskCardDto = {
   priority: "medium",
   name: "Caminhada",
   description: "",
-  location: "",
   startedAt: "2026-11-14T08:00:00-03:00",
   estimatedFinishAt: "2026-11-14T08:30:00-03:00",
   longRunning: false,
   notifyOffsetsMinutes: [10],
   tags: ["saude"],
   artifactTypes: ["training"],
-  previousTaskIds: [],
   revision: 1,
+  createdAt: "2026-09-01T12:00:00.000Z",
+  updatedAt: "2026-09-01T12:00:00.000Z",
 };
 
 test("um cartao de tarefa de exemplo passa no esquema do contrato compartilhado", () => {

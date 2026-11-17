@@ -1,9 +1,9 @@
-import type { GeoPointInput } from "@repo/contracts";
 import type { ArtifactRepository, EntityBatchWriter, TaskRepository, RecurrenceRepository } from "../../domain/ports";
 import { AgentRunCancelledError } from "../agent/errors/agent.errors";
 import { AgentChangeSession } from "../agent/services/agent-change-session";
 import { TIME_ZONE } from "../agent/time";
 import type { CreateTaskUseCase } from "../tasks/create-task.usecase";
+import { getMealTaskName } from "../tasks/services/meal-task-name.service";
 import type { PlaceResolver } from "../tasks/services/place-resolver.service";
 import {
   artifactCreateOutput, taskCreateOutput, recurringTaskCreateOutput,
@@ -13,7 +13,18 @@ import { describeRequest, type RequestAgentRunner } from "./request-agent-runner
 import { RuleError, seriesInput } from "./request-recurrence";
 import { runStep, StepFailure, validInstant, type StepPayload } from "./request-step-common";
 import type { CreateAgent } from "./request-steps";
-import type { NewEntity, RequestRecord, RequestStore, StepRecord } from "./request-store";
+import type { LinkRecord, NewEntity, RequestRecord, RequestStore, StepRecord } from "./request-store";
+
+/**
+ * O que o passo criou. `paired` sao as refeicoes: a tarefa e o alimento nascem juntos e ja ligados, entao o
+ * alimento entra finalizado e a finalizacao nao o liga a mais nada. `handedOff` diz que o passo deixou itens
+ * para outro passo do mesmo pedido (o alimento de uma refeicao que a tarefa cria): sem nada proprio, nao falha.
+ */
+interface Staged {
+  entities: NewEntity[];
+  paired: LinkRecord[];
+  handedOff?: boolean;
+}
 
 export interface StepRepositories {
   tasks: TaskRepository;
@@ -46,14 +57,19 @@ export class RequestCreateWorker {
         request.userId, this.deps.repositories, this.deps.createTask, () => request.createdAt,
       );
       const started = performance.now();
-      const entities = await this.stage(agent, request, step, session, signal);
+      const { entities, paired, handedOff } = await this.stage(agent, request, step, session, signal);
       timings.total = Math.round(performance.now() - started);
       if (signal?.aborted) throw new AgentRunCancelledError();
-      if (entities.length === 0) throw new StepFailure("empty");
+      if (entities.length === 0 && !handedOff) throw new StepFailure("empty");
 
       await this.deps.batchWriter.commit({
         ...session.toBatch(),
-        afterWrite: (tx) => store.recordStepSuccess(tx, { requestId: request.id, stepId: step.id, entities, timings }),
+        afterWrite: async (tx) => {
+          await store.recordStepSuccess(tx, { requestId: request.id, stepId: step.id, entities, timings });
+          for (const link of paired) {
+            await store.markFinalized(tx, { kind: "artifact", id: link.from.id, stepId: step.id }, [link]);
+          }
+        },
       });
     });
   }
@@ -64,37 +80,37 @@ export class RequestCreateWorker {
     step: StepRecord,
     session: AgentChangeSession,
     signal?: AbortSignal,
-  ): Promise<NewEntity[]> {
-    const user = describeRequest(request.prompt, step.expected, request.context, step.input?.instruction);
+  ): Promise<Staged> {
+    const user = describeRequest(request.prompt, step.expected, request.context);
     const base = { agent, now: request.createdAt, user, signal, stepId: step.id };
     switch (agent) {
       case "task-create": {
         const { value } = await this.deps.runner.run({ ...base, schema: taskCreateOutput });
-        return this.stageTasks(session, value, request.context?.coordinates);
+        return this.stageTasks(session, value);
       }
       case "artifact-create": {
         const { value } = await this.deps.runner.run({ ...base, schema: artifactCreateOutput });
-        return this.stageArtifacts(session, value, request.createdAt);
+        return this.stageArtifacts(session, value, request);
       }
       case "recurring-task-create": {
         const { value } = await this.deps.runner.run({ ...base, schema: recurringTaskCreateOutput });
-        return this.stageSeries(session, value, request.context?.coordinates);
+        return { entities: await this.stageSeries(session, value), paired: [] };
       }
     }
   }
 
   /**
    * Cada serie nova entra com a primeira ocorrencia no mesmo lote (e uma linha de verdade, que o pedido
-   * mostra). O template nao traz artefatos, nem o alimento de uma refeicao. O lugar dito e procurado no mapa
-   * perto de onde a pessoa esta, e toda ocorrencia nasce com ele.
+   * mostra). O template nao traz artefatos, nem o alimento de uma refeicao. O lugar dito e procurado no mapa,
+   * e toda ocorrencia nasce com ele; sem lugar dito, a serie fica sem local.
    */
   private async stageSeries(
-    session: AgentChangeSession, output: RecurringTaskCreateOutput, coordinates?: GeoPointInput,
+    session: AgentChangeSession, output: RecurringTaskCreateOutput,
   ): Promise<NewEntity[]> {
     const today = session.todayIn(TIME_ZONE);
     for (const series of output.series) {
       const said = series.location?.trim();
-      const location = said ? await (this.deps.places?.resolve(said, coordinates) ?? said) : null;
+      const location = said ? await (this.deps.places?.resolve(said) ?? said) : null;
       let input: ReturnType<typeof seriesInput>;
       try {
         input = seriesInput({ ...series, location }, today, TIME_ZONE);
@@ -111,17 +127,21 @@ export class RequestCreateWorker {
   }
 
   /**
-   * O alimento de uma refeicao nao nasce aqui: quem cria artefatos e outro passo, e a finalizacao os liga. O lugar
-   * dito e procurado no mapa perto de onde a pessoa esta; sem lugar dito, vale o endereco de onde ela esta.
+   * Toda refeicao nasce com o alimento dela, ja ligado, no mesmo lote: com o nome e os alimentos ditos ou, sem
+   * eles, o nome da refeicao. O lugar dito e procurado no mapa; sem lugar dito, a tarefa nasce sem
+   * local.
    */
   private async stageTasks(
-    session: AgentChangeSession, output: TaskCreateOutput, coordinates?: GeoPointInput,
-  ): Promise<NewEntity[]> {
+    session: AgentChangeSession, output: TaskCreateOutput,
+  ): Promise<Staged> {
     const ids: string[] = [];
+    const entities: NewEntity[] = [];
+    const paired: LinkRecord[] = [];
     for (const item of output.tasks) {
       const said = item.location?.trim();
-      const location = said ? await (this.deps.places?.resolve(said, coordinates) ?? said) : undefined;
-      const result = await session.createTask({
+      const location = said ? await (this.deps.places?.resolve(said) ?? said) : undefined;
+      const meal = item.kind === "meal";
+      const result = await this.createTracked(session, {
         name: item.name,
         kind: item.kind,
         status: item.status ?? undefined,
@@ -132,39 +152,92 @@ export class RequestCreateWorker {
         description: item.description ?? undefined,
         tags: item.tags,
         ...(location ? { location } : {}),
-        ...(coordinates ? { coordinates } : {}),
-      }, { derivedArtifacts: false });
-      if (!result.ok) throw new StepFailure("rejected");
-      ids.push(result.id);
-    }
-
-    // A sequencia entre as tarefas da propria lista: a posicao que o agente deu vira o id recem-criado.
-    for (const [index, item] of output.tasks.entries()) {
-      for (const previousIndex of item.followsFrom) {
-        const previous = ids[previousIndex];
-        const next = ids[index];
-        if (!previous || !next || previous === next) throw new StepFailure("rejected");
-        const result = await session.sequenceTasks(previous, next);
-        if (!result.ok) throw new StepFailure("rejected");
+        ...(meal ? { artifacts: [{
+          type: "food" as const,
+          // O alimento leva o nome do que foi comido; sem ele dito, o da refeicao.
+          name: item.foodName?.trim() || item.name,
+          data: { inputText: item.foods?.trim() ?? "" },
+        }] } : {}),
+      });
+      ids.push(result.taskId);
+      entities.push({ kind: "task", id: result.taskId, operation: "create" });
+      for (const foodId of result.foodIds) {
+        entities.push({ kind: "artifact", id: foodId, operation: "create" });
+        paired.push(pairOf(foodId, result.taskId));
       }
     }
-    return ids.map((id): NewEntity => ({ kind: "task", id, operation: "create" }));
+
+    // A hierarquia entre as tarefas da propria lista: a posicao que o agente deu vira o id recem-criado.
+    for (const [index, item] of output.tasks.entries()) {
+      if (item.subtaskOf === null) continue;
+      const parent = ids[item.subtaskOf];
+      const subtask = ids[index];
+      if (!parent || !subtask || parent === subtask) throw new StepFailure("rejected");
+      const result = await session.addSubtask(parent, subtask);
+      if (!result.ok) throw new StepFailure("rejected");
+    }
+    return { entities, paired };
   }
 
-  /** O alimento nasce pendente: gravar o artefato abre o pedido de construcao que calcula os nutrientes. */
-  private async stageArtifacts(session: AgentChangeSession, output: ArtifactCreateOutput, now: Date): Promise<NewEntity[]> {
+  /**
+   * O que foi comido e sempre uma refeicao: tarefa e alimento ligados. Se o pedido tem um passo de criar
+   * tarefas, a refeicao e dele (o agente de tarefas manda os alimentos junto) e este passo deixa o alimento
+   * para ele, para nao haver duas. Sem esse passo, este cria a tarefa da refeicao com o alimento. O alimento
+   * nasce pendente: gravar o artefato abre o pedido de construcao que calcula os nutrientes.
+   */
+  private async stageArtifacts(
+    session: AgentChangeSession, output: ArtifactCreateOutput, request: RequestRecord,
+  ): Promise<Staged> {
     const entities: NewEntity[] = [];
+    const paired: LinkRecord[] = [];
+    let handedOff = false;
+    const tasksStepOwnsMeals = (await this.deps.store.steps(request.id))
+      .some((candidate) => candidate.agent === "task-create" && candidate.status !== "failed" && candidate.status !== "cancel");
     for (const item of output.artifacts) {
       if (item.type === "food") {
-        const food = await session.buildArtifact({ type: "food", name: item.name, data: { inputText: item.content } }, now);
-        session.stageNewArtifact(food);
-        entities.push({ kind: "artifact", id: food.id, operation: "create" });
+        if (tasksStepOwnsMeals) {
+          handedOff = true;
+          continue;
+        }
+        const startedAt = validInstant(item.startedAt);
+        const at = startedAt ? new Date(startedAt) : request.createdAt;
+        // A tarefa leva o nome da refeicao pelo horario ("Almoço"); o alimento, o do que foi comido ("Feijoada").
+        const meal = await this.createTracked(session, {
+          name: getMealTaskName(at, TIME_ZONE),
+          kind: "meal",
+          ...(startedAt ? { startedAt } : {}),
+          artifacts: [{ type: "food", name: item.name, data: { inputText: item.content } }],
+        });
+        entities.push({ kind: "task", id: meal.taskId, operation: "create" });
+        for (const foodId of meal.foodIds) {
+          entities.push({ kind: "artifact", id: foodId, operation: "create" });
+          paired.push(pairOf(foodId, meal.taskId));
+        }
         continue;
       }
       const result = await session.createArtifact({ name: item.name, content: item.content });
       if (!result.ok) throw new StepFailure("rejected");
       entities.push({ kind: "artifact", id: result.id, operation: "create" });
     }
-    return entities;
+    return { entities, paired, handedOff };
+  }
+
+  /** Cria a tarefa no lote e devolve, com ela, os alimentos novos que nasceram ligados a ela. */
+  private async createTracked(
+    session: AgentChangeSession, input: Parameters<AgentChangeSession["createTask"]>[0],
+  ): Promise<{ taskId: string; foodIds: string[] }> {
+    const before = new Set(session.result().created.filter((item) => item.kind === "artifact").map((item) => item.id));
+    const result = await session.createTask(input, { derivedArtifacts: false });
+    if (!result.ok) throw new StepFailure("rejected");
+    const foodIds = session.result().created
+      .filter((item) => item.kind === "artifact" && !before.has(item.id))
+      .map((item) => item.id);
+    return { taskId: result.id, foodIds };
   }
 }
+
+/** O alimento pertence a tarefa da refeicao: a mesma direcao que a finalizacao usa. */
+function pairOf(foodId: string, taskId: string): LinkRecord {
+  return { from: { kind: "artifact", id: foodId }, to: { kind: "task", id: taskId } };
+}
+

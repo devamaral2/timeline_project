@@ -303,37 +303,38 @@ describe("banco novo: checks, restricoes e indices", () => {
     const relate = (from: string, to: string, relation: string) =>
       insert("task_task_relation", { from_task_id: from, to_task_id: to, relation });
 
-    test("uma tarefa pode seguir mais de um antecessor e anteceder mais de um sucessor", async () => {
-      const [first, second, shared, after] = [await task(), await task(), await task(), await task()];
+    test("uma tarefa tem uma so principal e pode ter varias subtarefas", async () => {
+      const [first, second, shared, after, other] = [await task(), await task(), await task(), await task(), await task()];
 
-      await relate(first, shared, "precedes");
-      await relate(second, shared, "precedes");
-      await relate(shared, after, "precedes");
+      await relate(first, shared, "subtask");
+      await relate(shared, after, "subtask");
+      await relate(shared, other, "subtask");
+      await expect(relate(second, shared, "subtask")).rejects.toThrow(/task_task_subtask_unique/);
 
       expect(await count("task_task_relation")).toBe(3);
     });
 
     test("o mesmo par pode ter relacoes de tipos diferentes, mas nao a mesma duas vezes", async () => {
       const [a, b] = [await task(), await task()];
-      await relate(a, b, "precedes");
+      await relate(a, b, "subtask");
       await relate(a, b, "follow_up");
 
-      await expect(relate(a, b, "precedes")).rejects.toThrow(/task_task_relation_.*_pk/);
+      await expect(relate(a, b, "subtask")).rejects.toThrow(/task_task_relation_.*_pk/);
     });
 
     test("uma tarefa nao se relaciona consigo mesmo, e o tipo e do conjunto", async () => {
       const [a, b] = [await task(), await task()];
 
-      await expect(relate(a, a, "precedes")).rejects.toThrow(/task_task_not_self/);
+      await expect(relate(a, a, "subtask")).rejects.toThrow(/task_task_not_self/);
       await expect(relate(a, b, "parent")).rejects.toThrow(/task_task_relation_valid/);
     });
 
-    test("os tipos antigos subtask e blocks nao existem mais", async () => {
+    test("os tipos antigos precedes e blocks nao existem mais", async () => {
       const [a, b] = [await task(), await task()];
 
-      await expect(relate(a, b, "subtask")).rejects.toThrow(/task_task_relation_valid/);
+      await expect(relate(a, b, "precedes")).rejects.toThrow(/task_task_relation_valid/);
       await expect(relate(a, b, "blocks")).rejects.toThrow(/task_task_relation_valid/);
-      for (const relation of ["generates", "updates", "deletes", "step", "precedes", "follow_up"]) {
+      for (const relation of ["generates", "updates", "deletes", "step", "subtask", "follow_up"]) {
         await relate(a, b, relation);
       }
       expect(await count("task_task_relation")).toBe(6);
@@ -348,7 +349,7 @@ describe("banco novo: checks, restricoes e indices", () => {
 
     test("apagar fisicamente uma ponta leva a relacao, e nao a outra ponta", async () => {
       const [project, session] = [await task(), await task()];
-      await relate(project, session, "precedes");
+      await relate(project, session, "subtask");
 
       await ctx.pool.query("DELETE FROM tasks WHERE id = $1", [project]);
 
@@ -579,7 +580,7 @@ describe("banco novo: checks, restricoes e indices", () => {
     test("relacoes para uma tarefa, por tipo", async () => {
       const plan = await planOf(`
         SELECT from_task_id FROM task_task_relation
-        WHERE to_task_id = '01JCZ0000000000000000000AA' AND relation = 'precedes'`);
+        WHERE to_task_id = '01JCZ0000000000000000000AA' AND relation = 'step'`);
 
       expect(plan).toContain("task_task_reverse_idx");
     });

@@ -9,7 +9,7 @@ import styles from "./entity-picker.module.css";
 const SEARCH_DEBOUNCE_MS = 250;
 
 export interface EntityPickerDialogProps<T> {
-  /** O que a lista vai receber: "Segue-se de", "Artefatos". Vira o título do modal. */
+  /** O que a lista vai receber: "Subtarefas", "Documentos". Vira o título do modal. */
   title: string;
   /** O nome do campo de busca: rótulo acessível e placeholder. */
   searchLabel: string;
@@ -28,17 +28,22 @@ export interface EntityPickerDialogProps<T> {
   onPick: (item: T) => void;
   onClose: () => void;
   failedMessage: string;
+  /**
+   * O que fica embaixo dos resultados, fora da rolagem: criar a entidade em vez de ligar uma que existe. Recebe o
+   * texto da busca sem espaços nas pontas, na hora (sem a pausa da busca), e o jeito de fechar o modal.
+   */
+  footer?: (text: string, close: () => void) => ReactNode;
 }
 
 type SearchState = "loading" | "ready" | "failed";
 
 /**
- * O modal de seleção de entidade: abre pelo "+" de uma lista de ligações (sequência, artefatos da tarefa,
+ * O modal de seleção de entidade: abre pelo "+" de uma lista de ligações (tarefa principal e subtarefas, documentos da tarefa,
  * tarefas do artefato), mostra os primeiros itens, filtra pela busca e, ao escolher, entrega o item e fecha.
  * No celular é uma folha que sobe do pé; no desktop, um diálogo centrado. Esc, o "x" e o toque fora fecham
  * sem escolher, e o foco volta para quem abriu. Não sabe de que é a lista: quem usa passa a fonte e o desenho.
  */
-export function EntityPickerDialog<T>({ title, searchLabel, search, keyOf, nameOf, renderItem, exclude, onPick, onClose, failedMessage }: EntityPickerDialogProps<T>) {
+export function EntityPickerDialog<T>({ title, searchLabel, search, keyOf, nameOf, renderItem, exclude, onPick, onClose, failedMessage, footer }: EntityPickerDialogProps<T>) {
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
   const [typed, setTyped] = useState("");
@@ -160,6 +165,7 @@ export function EntityPickerDialog<T>({ title, searchLabel, search, keyOf, nameO
             <p role="status" className={styles.message}>{query ? "Nada encontrado para essa busca." : "Nada para ligar por aqui."}</p>
           ) : null}
         </div>
+        {footer ? <div className={styles.footer}>{footer(typed.trim(), onClose)}</div> : null}
       </div>
     </div>,
     document.body,

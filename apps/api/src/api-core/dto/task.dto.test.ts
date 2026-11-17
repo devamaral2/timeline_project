@@ -26,7 +26,11 @@ function artifact(id: string, body = id): Artifact {
 
 describe("toTaskCardDto", () => {
   test("maps a reference task as it is stored, without a status", () => {
-    const task = Task.create({ id: "task-1", userId, name: "Reunião", description: "Semanal", location: "Sala 3, Av. Paulista, São Paulo", startedAt, tags: ["trabalho"] });
+    const now = new Date("2026-08-10T12:00:00.000Z");
+    const task = Task.create({
+      id: "task-1", userId, name: "Reunião", description: "Semanal", location: "Sala 3, Av. Paulista, São Paulo", startedAt,
+      tags: ["trabalho"], now,
+    });
 
     const card = toTaskCardDto({ task, artifactTypes: ["text", "food"] });
 
@@ -45,15 +49,17 @@ describe("toTaskCardDto", () => {
       notifyOffsetsMinutes: [5],
       tags: ["trabalho"],
       artifactTypes: ["text", "food"],
-      previousTaskIds: [],
       revision: 1,
+      createdAt: "2026-08-10T12:00:00.000Z",
+      updatedAt: "2026-08-10T12:00:00.000Z",
     });
+    expect(card).not.toHaveProperty("parentTaskId");
     expect(card).not.toHaveProperty("status");
     expect(card).not.toHaveProperty("recurrence");
     expect(card).not.toHaveProperty("missed");
   });
 
-  test("maps a tracked task without dates, with its status and the tasks it follows", () => {
+  test("maps a tracked task without dates, with its status and its main task", () => {
     const task = Task.rehydrate({
       id: "task-1",
       userId,
@@ -64,8 +70,10 @@ describe("toTaskCardDto", () => {
       name: "Projeto",
       longRunning: true,
       finishedAt: startedAt,
-      previousIds: ["p1", "p2"],
+      parentId: "p1",
       revision: 4,
+      createdAt: new Date("2026-08-01T10:00:00.000Z"),
+      updatedAt: new Date("2026-08-02T10:00:00.000Z"),
     });
 
     const card = toTaskCardDto({ task, artifactTypes: [] });
@@ -75,10 +83,13 @@ describe("toTaskCardDto", () => {
       priority: "urgent",
       longRunning: true,
       finishedAt: "2026-08-17T15:00:00.000Z",
-      previousTaskIds: ["p1", "p2"],
+      parentTaskId: "p1",
       notifyOffsetsMinutes: [],
       revision: 4,
+      createdAt: "2026-08-01T10:00:00.000Z",
+      updatedAt: "2026-08-02T10:00:00.000Z",
     });
+    expect(card).not.toHaveProperty("location");
     expect(card.startedAt).toBeUndefined();
     expect(card.estimatedFinishAt).toBeUndefined();
   });
@@ -111,14 +122,15 @@ describe("toTaskCardDto", () => {
 
   test("the lists of the dto are copies of the lists of the task", () => {
     const task = Task.rehydrate({
-      id: "task-1", userId, actor: "human", kind: "common", name: "x", startedAt, previousIds: ["p1"], notifyOffsetsMinutes: [5], revision: 1,
+      id: "task-1", userId, actor: "human", kind: "common", name: "x", startedAt, subtaskIds: ["s1"], notifyOffsetsMinutes: [5], revision: 1,
+      createdAt: startedAt, updatedAt: startedAt,
     });
 
-    const card = toTaskCardDto({ task, artifactTypes: [] });
-    card.previousTaskIds.push("p2");
-    card.notifyOffsetsMinutes.push(10);
+    const dto = toTaskDto(task);
+    dto.subtaskIds.push("s2");
+    dto.notifyOffsetsMinutes.push(10);
 
-    expect(task.previousIds).toEqual(["p1"]);
+    expect(task.subtaskIds).toEqual(["s1"]);
     expect(task.notifyOffsetsMinutes).toEqual([5]);
   });
 });
@@ -136,9 +148,11 @@ describe("toTaskDto", () => {
       { artifactId: "gone", relation: "creates", fromRecurrence: false },
       { artifactId: "a", relation: "creates", fromRecurrence: false },
     ],
-    previousIds: ["p1"],
-    nextIds: ["s1", "s2"],
+    parentId: "p1",
+    subtaskIds: ["s1", "s2"],
     revision: 1,
+    createdAt: startedAt,
+    updatedAt: startedAt,
   });
 
   test("returns the artifacts in the order of the links, whatever the order they were loaded in", () => {
@@ -176,10 +190,10 @@ describe("toTaskDto", () => {
     });
   });
 
-  test("adds the tasks that follow it to the card fields", () => {
+  test("adds the subtasks to the card fields", () => {
     const dto = toTaskDto(linked);
 
-    expect(dto).toMatchObject({ id: "task-1", name: "Reunião", previousTaskIds: ["p1"], nextTaskIds: ["s1", "s2"], revision: 1 });
+    expect(dto).toMatchObject({ id: "task-1", name: "Reunião", parentTaskId: "p1", subtaskIds: ["s1", "s2"], revision: 1 });
     expect(dto.artifacts).toEqual([]);
     expect(dto.artifactTypes).toEqual([]);
     expect(dto).not.toHaveProperty("recurrence");

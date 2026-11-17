@@ -457,132 +457,142 @@ describe("artifacts that already exist (`artifactIds`)", () => {
   });
 });
 
-describe("sequence with other tasks", () => {
-  test("`previousTaskIds` and `nextTaskIds` put the new task in the sequence, read back from both sides", async () => {
-    const kit = setup({ tasks: [humanTask("before-1"), humanTask("after-1")] });
+describe("hierarchy with other tasks", () => {
+  test("`parentTaskId` and `subtaskIds` put the new task in the hierarchy, read back from both sides", async () => {
+    const kit = setup({ tasks: [humanTask("parent-1"), humanTask("child-1")] });
 
     const { taskId } = await kit.createTask.execute(
-      { name: "Reforma", status: "todo", previousTaskIds: ["before-1"], nextTaskIds: ["after-1"] },
+      { name: "Reforma", status: "todo", parentTaskId: "parent-1", subtaskIds: ["child-1"] },
       actor,
     );
 
     const saved = await kit.taskRepository.findById(taskId);
-    expect(saved?.previousIds).toEqual(["before-1"]);
-    expect(saved?.nextIds).toEqual(["after-1"]);
-    expect((await kit.taskRepository.findById("before-1"))?.nextIds).toEqual([taskId]);
-    expect((await kit.taskRepository.findById("after-1"))?.previousIds).toEqual([taskId]);
+    expect(saved?.parentId).toBe("parent-1");
+    expect(saved?.subtaskIds).toEqual(["child-1"]);
+    expect((await kit.taskRepository.findById("parent-1"))?.subtaskIds).toEqual([taskId]);
+    expect((await kit.taskRepository.findById("child-1"))?.parentId).toBe(taskId);
     expect(kit.database.edges).toEqual([
-      { fromId: "before-1", toId: taskId },
-      { fromId: taskId, toId: "after-1" },
+      { parentId: "parent-1", subtaskId: taskId },
+      { parentId: taskId, subtaskId: "child-1" },
     ]);
   });
 
-  test("the sequence travels in the batch and no other task is revised", async () => {
+  test("the hierarchy travels in the batch and no other task is revised", async () => {
     const kit = setup({
-      tasks: [humanTask("before-1"), humanTask("before-2", { status: "doing" }), humanTask("after-1")],
+      tasks: [humanTask("parent-1"), humanTask("child-1", { status: "doing" }), humanTask("child-2")],
     });
 
     const { taskId } = await kit.createTask.execute(
-      { name: "Pintar parede", status: "todo", previousTaskIds: ["before-1", "before-2"], nextTaskIds: ["after-1"] },
+      { name: "Pintar parede", status: "todo", parentTaskId: "parent-1", subtaskIds: ["child-1", "child-2"] },
       actor,
     );
 
     expect(kit.batchWriter.commits).toHaveLength(1);
     const [batch] = kit.batchWriter.commits;
     expect(batch?.tasks.map((change) => change.op)).toEqual(["create"]);
-    expect(batch?.sequence).toEqual([
-      { op: "add", fromId: "before-1", toId: taskId },
-      { op: "add", fromId: "before-2", toId: taskId },
-      { op: "add", fromId: taskId, toId: "after-1" },
+    expect(batch?.subtasks).toEqual([
+      { op: "add", parentId: "parent-1", subtaskId: taskId },
+      { op: "add", parentId: taskId, subtaskId: "child-1" },
+      { op: "add", parentId: taskId, subtaskId: "child-2" },
     ]);
-    for (const id of ["before-1", "before-2", "after-1"]) {
+    for (const id of ["parent-1", "child-1", "child-2"]) {
       expect((await kit.taskRepository.findById(id))?.revision).toBe(1);
     }
     expect((await kit.taskRepository.findById(taskId))?.revision).toBe(1);
   });
 
-  test("a new task without lists has an empty sequence", async () => {
+  test("a new task without them is outside any hierarchy", async () => {
     const kit = setup({ tasks: [humanTask("other")] });
 
     const { taskId } = await kit.createTask.execute({ name: "Solta", status: "todo" }, actor);
 
     const saved = await kit.taskRepository.findById(taskId);
-    expect(saved?.previousIds).toEqual([]);
-    expect(saved?.nextIds).toEqual([]);
-    expect(kit.batchWriter.commits[0]?.sequence).toEqual([]);
+    expect(saved?.parentId).toBeUndefined();
+    expect(saved?.subtaskIds).toEqual([]);
+    expect(kit.batchWriter.commits[0]?.subtasks).toEqual([]);
     expect(kit.database.edges).toEqual([]);
   });
 
-  test("a task repeated in the list becomes a single edge", async () => {
-    const kit = setup({ tasks: [humanTask("before-1")] });
+  test("a task repeated in the subtask list becomes a single edge", async () => {
+    const kit = setup({ tasks: [humanTask("child-1")] });
 
     const { taskId } = await kit.createTask.execute(
-      { name: "Filha", status: "todo", previousTaskIds: ["before-1", "before-1"] },
+      { name: "Principal", status: "todo", subtaskIds: ["child-1", "child-1"] },
       actor,
     );
 
-    expect(kit.database.edges).toEqual([{ fromId: "before-1", toId: taskId }]);
-    expect((await kit.taskRepository.findById(taskId))?.previousIds).toEqual(["before-1"]);
+    expect(kit.database.edges).toEqual([{ parentId: taskId, subtaskId: "child-1" }]);
+    expect((await kit.taskRepository.findById(taskId))?.subtaskIds).toEqual(["child-1"]);
   });
 
-  test("touching an occurrence of a series in the sequence does not detach it", async () => {
+  test("a subtask that was under another main task moves to the new one", async () => {
+    const kit = setup({ tasks: [humanTask("old-parent"), humanTask("child-1")] });
+    kit.database.edges.push({ parentId: "old-parent", subtaskId: "child-1" });
+
+    const { taskId } = await kit.createTask.execute({ name: "Nova principal", status: "todo", subtaskIds: ["child-1"] }, actor);
+
+    expect(kit.database.edges).toEqual([{ parentId: taskId, subtaskId: "child-1" }]);
+    expect((await kit.taskRepository.findById("old-parent"))?.revision).toBe(1);
+  });
+
+  test("touching an occurrence of a series in the hierarchy does not detach it", async () => {
     const occurrence = { recurrenceId: "rec-1", occurrenceOn: "2026-08-17", detached: false };
-    const kit = setup({ tasks: [humanTask("before-1", { occurrence })] });
+    const kit = setup({ tasks: [humanTask("parent-1", { occurrence })] });
 
-    await kit.createTask.execute({ name: "Filha", status: "todo", previousTaskIds: ["before-1"] }, actor);
+    await kit.createTask.execute({ name: "Filha", status: "todo", parentTaskId: "parent-1" }, actor);
 
-    const before = await kit.taskRepository.findById("before-1");
-    expect(before?.occurrence).toEqual(occurrence);
-    expect(before?.revision).toBe(1);
+    const parent = await kit.taskRepository.findById("parent-1");
+    expect(parent?.occurrence).toEqual(occurrence);
+    expect(parent?.revision).toBe(1);
   });
 
-  test("a agent task can be on either end of the sequence", async () => {
+  test("a agent task can be on either end of the hierarchy", async () => {
     const request = Task.create({ id: "request-1", userId: actor.userId, actor: "agent", kind: "request", status: "queued", name: "Pedido" });
     const kit = setup({ tasks: [request] });
 
     const { taskId } = await kit.createTask.execute(
-      { name: "Depois do pedido", status: "todo", previousTaskIds: ["request-1"] },
+      { name: "Parte do pedido", status: "todo", parentTaskId: "request-1" },
       actor,
     );
-    const { taskId: beforeId } = await kit.createTask.execute(
-      { name: "Antes do pedido", status: "todo", nextTaskIds: ["request-1"] },
+    const { taskId: parentId } = await kit.createTask.execute(
+      { name: "Acima do pedido", status: "todo", subtaskIds: ["request-1"] },
       actor,
     );
 
-    expect((await kit.taskRepository.findById("request-1"))?.previousIds).toEqual([beforeId]);
-    expect((await kit.taskRepository.findById("request-1"))?.nextIds).toEqual([taskId]);
+    expect((await kit.taskRepository.findById("request-1"))?.parentId).toBe(parentId);
+    expect((await kit.taskRepository.findById("request-1"))?.subtaskIds).toEqual([taskId]);
     expect((await kit.taskRepository.findById("request-1"))?.revision).toBe(1);
   });
 
   test("refuses an end that does not exist or belongs to someone else", async () => {
     const theirs = Task.create({ id: "theirs", userId: "someone-else", name: "Deles", status: "todo" });
     const kit = setup({ tasks: [theirs] });
-    const create = (input: { previousTaskIds?: string[]; nextTaskIds?: string[] }) =>
+    const create = (input: { parentTaskId?: string; subtaskIds?: string[] }) =>
       kit.createTask.execute({ name: "Filha", status: "todo", ...input }, actor);
 
-    await expect(create({ previousTaskIds: ["missing"] })).rejects.toThrow(TaskNotFoundError);
-    await expect(create({ nextTaskIds: ["missing"] })).rejects.toThrow(TaskNotFoundError);
-    await expect(create({ previousTaskIds: ["theirs"] })).rejects.toThrow(TaskOwnershipError);
-    await expect(create({ nextTaskIds: ["theirs"] })).rejects.toThrow(TaskOwnershipError);
+    await expect(create({ parentTaskId: "missing" })).rejects.toThrow(TaskNotFoundError);
+    await expect(create({ subtaskIds: ["missing"] })).rejects.toThrow(TaskNotFoundError);
+    await expect(create({ parentTaskId: "theirs" })).rejects.toThrow(TaskOwnershipError);
+    await expect(create({ subtaskIds: ["theirs"] })).rejects.toThrow(TaskOwnershipError);
     expect(kit.database.tasks).toHaveLength(1);
     expect(kit.database.edges).toEqual([]);
     expect(kit.batchWriter.commits).toEqual([]);
   });
 
-  test("refuses a sequence that closes a cycle", async () => {
+  test("refuses a hierarchy that closes a cycle", async () => {
     const kit = setup({ tasks: [humanTask("first"), humanTask("second")] });
-    kit.database.edges.push({ fromId: "second", toId: "first" });
+    kit.database.edges.push({ parentId: "second", subtaskId: "first" });
 
-    // first -> novo -> second, mas second ja vem antes de first.
+    // first -> nova -> second, mas second ja e principal de first.
     await expect(
-      kit.createTask.execute({ name: "No meio", status: "todo", previousTaskIds: ["first"], nextTaskIds: ["second"] }, actor),
-    ).rejects.toThrow("Tasks cannot follow each other in a cycle");
+      kit.createTask.execute({ name: "No meio", status: "todo", parentTaskId: "first", subtaskIds: ["second"] }, actor),
+    ).rejects.toThrow("A task cannot be a subtask of its own subtask");
   });
 
   test("an end that was deleted between preparing and saving refuses the batch", async () => {
-    const kit = setup({ tasks: [humanTask("before-1")] });
-    const prepared = await kit.createTask.prepare({ name: "Filha", status: "todo", previousTaskIds: ["before-1"] }, actor);
-    await kit.taskRepository.delete("before-1", actor.userId);
+    const kit = setup({ tasks: [humanTask("parent-1")] });
+    const prepared = await kit.createTask.prepare({ name: "Filha", status: "todo", parentTaskId: "parent-1" }, actor);
+    await kit.taskRepository.delete("parent-1", actor.userId);
 
     await expect(kit.createTask.save(prepared)).rejects.toThrow(TaskValidationError);
 
@@ -594,7 +604,7 @@ describe("prepare and toEntityBatch", () => {
   test("prepare writes nothing", async () => {
     const kit = setup({ tasks: [humanTask("before-1")] });
 
-    await kit.createTask.prepare({ kind: "meal", previousTaskIds: ["before-1"] }, actor);
+    await kit.createTask.prepare({ kind: "meal", parentTaskId: "before-1" }, actor);
 
     expect(kit.database.tasks).toHaveLength(1);
     expect(kit.database.edges).toEqual([]);
@@ -602,11 +612,11 @@ describe("prepare and toEntityBatch", () => {
     expect(kit.batchWriter.commits).toEqual([]);
   });
 
-  test("the batch creates the artifacts and the task and carries the sequence, with no other task touched", async () => {
+  test("the batch creates the artifacts and the task and carries the hierarchy, with no other task touched", async () => {
     const original = Artifact.create({ userId: actor.userId, type: "food", name: "Arroz", data: foodData });
     const kit = setup({ tasks: [humanTask("before-1"), humanTask("after-1")], artifacts: [original] });
     const prepared = await kit.createTask.prepare(
-      { artifacts: [{ copyOf: original.id }], previousTaskIds: ["before-1"], nextTaskIds: ["after-1"] },
+      { artifacts: [{ copyOf: original.id }], parentTaskId: "before-1", subtaskIds: ["after-1"] },
       actor,
     );
 
@@ -616,11 +626,11 @@ describe("prepare and toEntityBatch", () => {
     expect(batch.artifacts).toEqual([{ op: "create", entity: prepared.artifacts[0] }]);
     expect(batch.derivations).toEqual([{ originalId: original.id, copyId: prepared.artifacts[0]?.id }]);
     expect(batch.tasks).toEqual([{ op: "create", entity: prepared.task }]);
-    expect(prepared.sequence).toEqual([
-      { op: "add", fromId: "before-1", toId: prepared.task.id },
-      { op: "add", fromId: prepared.task.id, toId: "after-1" },
+    expect(prepared.subtasks).toEqual([
+      { op: "add", parentId: "before-1", subtaskId: prepared.task.id },
+      { op: "add", parentId: prepared.task.id, subtaskId: "after-1" },
     ]);
-    expect(batch.sequence).toEqual(prepared.sequence);
+    expect(batch.subtasks).toEqual(prepared.subtasks);
   });
 
   test("buildArtifact builds what the task creation would, owned by the actor", async () => {
@@ -634,31 +644,20 @@ describe("prepare and toEntityBatch", () => {
   });
 });
 
-describe("location from the coordinates", () => {
-  const point = { latitude: -23.58, longitude: -46.65 };
-  const placeReverse = { reverse: async () => ({ name: "Parque", address: "São Paulo", label: "Parque, São Paulo" }) };
+describe("location", () => {
+  test("a task is born without a location unless someone informs one", async () => {
+    const kit = setup();
 
-  test("without a location, the address of the coordinates becomes the location", async () => {
-    const kit = setup({ placeReverse });
+    const { taskId } = await kit.createTask.execute({ name: "Corrida" }, actor);
 
-    const { taskId } = await kit.createTask.execute({ name: "Corrida", coordinates: point }, actor);
-
-    expect((await kit.taskRepository.findById(taskId))?.location).toBe("Parque, São Paulo");
+    expect((await kit.taskRepository.findById(taskId))?.location).toBeUndefined();
   });
 
-  test("a location the person gave wins over the coordinates", async () => {
-    const kit = setup({ placeReverse });
+  test("the location someone informed is kept, trimmed", async () => {
+    const kit = setup();
 
-    const { taskId } = await kit.createTask.execute({ name: "Corrida", location: "Casa", coordinates: point }, actor);
+    const { taskId } = await kit.createTask.execute({ name: "Corrida", location: "  Parque Ibirapuera " }, actor);
 
-    expect((await kit.taskRepository.findById(taskId))?.location).toBe("Casa");
-  });
-
-  test("no address for the coordinates leaves the task without a location", async () => {
-    const kit = setup({ placeReverse: { reverse: async () => undefined } });
-
-    const { taskId } = await kit.createTask.execute({ name: "Corrida", coordinates: point }, actor);
-
-    expect((await kit.taskRepository.findById(taskId))?.location).toBeFalsy();
+    expect((await kit.taskRepository.findById(taskId))?.location).toBe("Parque Ibirapuera");
   });
 });

@@ -1,7 +1,7 @@
 import type { TaskCardDto } from "@repo/contracts";
 import { taskCardSchema } from "@repo/contracts/schemas";
 import { expect, test } from "vitest";
-import { groupTrackedTasks, oneRowPerSeries, showsSeriesRule } from "./task-groups";
+import { groupTrackedTasks, nestSubtasks, oneRowPerSeries, showsSeriesRule } from "./task-groups";
 
 /** Um cartão válido do contrato: o que o teste não diz fica com o padrão de uma tarefa de pessoa. */
 function card(overrides: { id: string } & Record<string, unknown>): TaskCardDto {
@@ -12,13 +12,13 @@ function card(overrides: { id: string } & Record<string, unknown>): TaskCardDto 
     priority: "medium",
     name: overrides.id,
     description: "",
-    location: "",
     longRunning: false,
     notifyOffsetsMinutes: [],
     tags: [],
     artifactTypes: [],
-    previousTaskIds: [],
     revision: 1,
+    createdAt: "2026-09-01T12:00:00.000Z",
+    updatedAt: "2026-09-01T12:00:00.000Z",
     ...overrides,
   });
 }
@@ -64,15 +64,45 @@ test("mantém a ordem recebida dentro de cada grupo", () => {
   expect(groups[0].cards.map((c) => c.id)).toEqual(["depois", "antes"]);
 });
 
-test("a sequência não esconde ninguém: todo cartão com status vira linha, tenha antecessor na lista ou não", () => {
-  const groups = groupTrackedTasks([
-    card({ id: "proposta", status: "todo" }),
-    card({ id: "ler", status: "done", previousTaskIds: ["proposta"] }),
-    card({ id: "rascunho", status: "todo", previousTaskIds: ["sumiu"] }),
+test("a subtarefa cuja principal está na lista vai para dentro dela, na ordem recebida, e não vira linha", () => {
+  const tree = nestSubtasks([
+    card({ id: "proposta", status: "doing" }),
+    card({ id: "ler", status: "done", parentTaskId: "proposta" }),
+    card({ id: "luz", status: "todo" }),
+    card({ id: "responder", status: "todo", parentTaskId: "proposta" }),
   ]);
 
-  const shown = groups.flatMap((group) => group.cards.map((c) => c.id));
-  expect(shown).toEqual(["proposta", "rascunho", "ler"]);
+  expect(tree.roots.map((c) => c.id)).toEqual(["proposta", "luz"]);
+  expect(tree.subtasksOf("proposta").map((c) => c.id)).toEqual(["ler", "responder"]);
+  expect(tree.subtasksOf("luz")).toEqual([]);
+});
+
+test("a subtarefa cuja principal não está na lista continua sendo linha", () => {
+  const tree = nestSubtasks([card({ id: "rascunho", status: "todo", parentTaskId: "sumiu" })]);
+
+  expect(tree.roots.map((c) => c.id)).toEqual(["rascunho"]);
+});
+
+test("a subtarefa de uma subtarefa fica dentro da sua principal direta", () => {
+  const tree = nestSubtasks([
+    card({ id: "viagem", status: "todo" }),
+    card({ id: "documentos", status: "todo", parentTaskId: "viagem" }),
+    card({ id: "passaporte", status: "inHold", parentTaskId: "documentos" }),
+  ]);
+
+  expect(tree.roots.map((c) => c.id)).toEqual(["viagem"]);
+  expect(tree.subtasksOf("viagem").map((c) => c.id)).toEqual(["documentos"]);
+  expect(tree.subtasksOf("documentos").map((c) => c.id)).toEqual(["passaporte"]);
+});
+
+test("um ciclo vindo da rede não some com as tarefas: elas continuam linhas", () => {
+  const tree = nestSubtasks([
+    card({ id: "a", status: "todo", parentTaskId: "b" }),
+    card({ id: "b", status: "todo", parentTaskId: "a" }),
+  ]);
+
+  expect(tree.roots.map((c) => c.id)).toEqual(["a", "b"]);
+  expect(tree.subtasksOf("a")).toEqual([]);
 });
 
 test("tarefa sem status (de referência) não entra em nenhum grupo", () => {

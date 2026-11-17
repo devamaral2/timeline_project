@@ -43,12 +43,12 @@ describe("what the tracked list shows", () => {
     expect(ids).toEqual(["starts-early", "deadline", "starts-late", "undated-a", "undated-b"]);
   });
 
-  test("returns cards with the status, the dates as stored and the tasks they follow", async () => {
+  test("returns cards with the status, the dates as stored and the main task", async () => {
     const database = new InMemoryTaskDatabase([
       task("project", { longRunning: true }),
       task("review", { status: "inHold", priority: "urgent", estimatedFinishAt: at("2026-08-18T12:00:00.000Z"), tags: ["casa"] }),
     ]);
-    database.edges.push({ fromId: "project", toId: "review" });
+    database.edges.push({ parentId: "project", subtaskId: "review" });
     const useCase = new ListTrackedTasksUseCase(new InMemoryTaskCardQuery(database));
 
     const cards = await useCase.execute(undefined, actor);
@@ -58,13 +58,13 @@ describe("what the tracked list shows", () => {
       priority: "urgent",
       estimatedFinishAt: "2026-08-18T12:00:00.000Z",
       tags: ["casa"],
-      previousTaskIds: ["project"],
+      parentTaskId: "project",
       longRunning: false,
       revision: 1,
     });
     expect(cards.find((card) => card.id === "review")).not.toHaveProperty("missed");
-    expect(cards.find((card) => card.id === "project")).toMatchObject({ previousTaskIds: [] });
-    expect(cards.find((card) => card.id === "project")).not.toHaveProperty("nextTaskIds");
+    expect(cards.find((card) => card.id === "project")).not.toHaveProperty("parentTaskId");
+    expect(cards.find((card) => card.id === "project")).not.toHaveProperty("subtaskIds");
   });
 });
 

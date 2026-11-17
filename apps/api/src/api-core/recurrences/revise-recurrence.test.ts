@@ -23,7 +23,6 @@ const template = {
   priority: "medium",
   notifyOffsetsMinutes: [5],
   artifactIds: ["series-note"],
-  previousTaskIds: [],
 };
 
 function existing(overrides: { materializedThrough?: string; startsOn?: string } = {}): Recurrence {
@@ -34,6 +33,8 @@ function existing(overrides: { materializedThrough?: string; startsOn?: string }
     template,
     revision: 3,
     materializedThrough: overrides.materializedThrough,
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
   });
 }
 
@@ -155,12 +156,10 @@ describe("template", () => {
       status: "todo",
       name: "Nadar",
       description: "",
-      location: "",
       tags: [],
       priority: "medium",
       notifyOffsetsMinutes: [],
       artifactIds: [],
-      previousTaskIds: [],
     });
     expect(artifacts).toEqual([]);
   });
@@ -230,12 +229,12 @@ describe("template", () => {
     const project = Task.create({ id: "project", userId: actor.userId, name: "Projeto", longRunning: true });
     const kit = setup({ tasks: [project] });
 
-    const { recurrence } = await kit.revise(existing(), { rule: {}, template: { name: "Sessão", previousTaskIds: ["project"] } });
+    const { recurrence } = await kit.revise(existing(), { rule: {}, template: { name: "Sessão", parentTaskId: "project" } });
 
-    expect(recurrence.template.previousTaskIds).toEqual(["project"]);
+    expect(recurrence.template.parentTaskId).toBe("project");
     expect(kit.database.tasks[0]?.revision).toBe(1);
     await expect(
-      kit.revise(existing(), { rule: {}, template: { name: "Sessão", previousTaskIds: ["missing"] } }),
+      kit.revise(existing(), { rule: {}, template: { name: "Sessão", parentTaskId: "missing" } }),
     ).rejects.toThrow(TaskNotFoundError);
   });
 

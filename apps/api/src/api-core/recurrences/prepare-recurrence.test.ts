@@ -54,12 +54,10 @@ describe("prepareRecurrence", () => {
       kind: "common",
       name: "Correr",
       description: "",
-      location: "",
       tags: ["saude"],
       priority: "medium",
       notifyOffsetsMinutes: [5],
       artifactIds: [],
-      previousTaskIds: [],
     });
     expect(artifacts).toEqual([]);
     expect(derivations).toEqual([]);
@@ -164,12 +162,12 @@ describe("prepareRecurrence", () => {
 
       const { recurrence } = await kit.prepare({
         ...daily,
-        template: { name: "Sessão", status: "todo", previousTaskIds: ["project", "project"] },
+        template: { name: "Sessão", status: "todo", parentTaskId: "project" },
       });
 
-      expect(recurrence.template.previousTaskIds).toEqual(["project"]);
+      expect(recurrence.template.parentTaskId).toBe("project");
       expect(kit.database.tasks[0]?.revision).toBe(1);
-      expect(kit.database.tasks[0]?.nextIds).toEqual([]);
+      expect(kit.database.tasks[0]?.subtaskIds).toEqual([]);
       expect(kit.database.edges).toEqual([]);
     });
 
@@ -177,10 +175,10 @@ describe("prepareRecurrence", () => {
       const theirs = Task.create({ id: "theirs", userId: "someone-else", name: "Deles", status: "todo" });
       const kit = setup({ tasks: [theirs] });
 
-      await expect(kit.prepare({ ...daily, template: { name: "Filha", previousTaskIds: ["missing"] } })).rejects.toThrow(
+      await expect(kit.prepare({ ...daily, template: { name: "Filha", parentTaskId: "missing" } })).rejects.toThrow(
         TaskNotFoundError,
       );
-      await expect(kit.prepare({ ...daily, template: { name: "Filha", previousTaskIds: ["theirs"] } })).rejects.toThrow(
+      await expect(kit.prepare({ ...daily, template: { name: "Filha", parentTaskId: "theirs" } })).rejects.toThrow(
         TaskOwnershipError,
       );
     });
@@ -264,26 +262,25 @@ describe("recurrence templates", () => {
       status: undefined,
       name: "",
       description: "",
-      location: "",
       tags: [],
       priority: "medium",
       notifyOffsetsMinutes: [],
       artifactIds: [],
-      previousTaskIds: [],
     });
-    expect(storedTemplateOf(series({ kind: "meal", status: "todo", artifactIds: ["a"], previousTaskIds: ["p"] }))).toMatchObject({
+    expect(storedTemplateOf(series({ kind: "meal", status: "todo", artifactIds: ["a"], parentTaskId: "p" }))).toMatchObject({
       kind: "meal",
       status: "todo",
       artifactIds: ["a"],
-      previousTaskIds: ["p"],
+      parentTaskId: "p",
     });
   });
 
-  test("storedTemplateOf ignores the legacy parent list of a template stored before the sequence", () => {
-    const legacy = series({ name: "Sessão", parentTaskIds: ["p"] } as never);
+  test("storedTemplateOf ignores the legacy lists of a template stored before the main task", () => {
+    const legacy = series({ name: "Sessão", parentTaskIds: ["p"], previousTaskIds: ["q"] } as never);
 
-    expect(storedTemplateOf(legacy).previousTaskIds).toEqual([]);
+    expect(storedTemplateOf(legacy).parentTaskId).toBeUndefined();
     expect(storedTemplateOf(legacy)).not.toHaveProperty("parentTaskIds");
+    expect(storedTemplateOf(legacy)).not.toHaveProperty("previousTaskIds");
   });
 
   test("todayOf is the civil day in the time zone of the rule", () => {
@@ -303,7 +300,7 @@ describe("recurrence templates", () => {
       priority: "high",
       notifyOffsetsMinutes: [15],
       artifactIds: ["a1", "a2"],
-      previousTaskIds: ["project"],
+      parentTaskId: "project",
     };
 
     test("copies the template into the window of the day, linked to the series", () => {
@@ -346,8 +343,8 @@ describe("recurrence templates", () => {
     test("the previous tasks are not part of the occurrence: the sequence is written with the batch", () => {
       const occurrence = buildOccurrence(series(template), "2026-09-15");
 
-      expect(occurrence.previousIds).toEqual([]);
-      expect(occurrence.nextIds).toEqual([]);
+      expect(occurrence.parentId).toBeUndefined();
+      expect(occurrence.subtaskIds).toEqual([]);
     });
 
     test("a reference occurrence without a duration gets the typical one of its kind", () => {

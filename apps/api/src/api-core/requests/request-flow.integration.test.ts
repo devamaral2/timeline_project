@@ -27,7 +27,6 @@ import { RequestCreateWorker } from "./request-create-worker";
 import { RequestDispatcher } from "./request-dispatcher";
 import { RequestEditTargetWorker } from "./request-edit-target-worker";
 import { RequestEditWorker } from "./request-edit-worker";
-import { RequestFallback } from "./request-fallback";
 import { RequestFinalizer } from "./request-finalizer";
 import { RequestOperations } from "./request-operations";
 import { RequestQueryWorker } from "./request-query-worker";
@@ -57,7 +56,7 @@ const TODAY = new Date().toISOString().slice(0, 10);
 const iso = (hour: number) => `${TODAY}T${String(hour).padStart(2, "0")}:00:00-03:00`;
 const task = (name: string, kind: string, hour: number, over: Record<string, unknown> = {}) => ({
   name, kind, status: null, priority: null, longRunning: false, startedAt: iso(hour), estimatedFinishAt: null,
-  description: null, tags: [], followsFrom: [], ...over,
+  description: null, tags: [], subtaskOf: null, foods: null, foodName: null, ...over,
 });
 const noTask = {
   name: null, kind: null, status: null, priority: null, startedAt: null, estimatedFinishAt: null, finishedAt: null,
@@ -108,7 +107,6 @@ beforeAll(async () => {
     edit: new RequestEditWorker({ ...deps, sql }),
     query: new RequestQueryWorker({ store, runner, sql }),
     finalizer: new RequestFinalizer({ ...deps, jev: jev.client }),
-    fallback: new RequestFallback({ store, runner }),
     editTarget: new RequestEditTargetWorker({
       store, repositories, files: new FakeAgentFiles(), failureText: (code) => uiConfig.targetFailed[code],
     }),
@@ -158,10 +156,12 @@ async function drain(): Promise<string[]> {
 const jobStatuses = async () =>
   (await ctx.pool.query<{ kind: string; status: string }>("SELECT kind, status FROM jobs ORDER BY created_at, id")).rows;
 
-test("o exemplo-guia: tarefas e alimento criados em passos proprios, ligados na finalizacao, nutrientes calculados depois", async () => {
+test("o exemplo-guia: a refeicao nasce com o alimento ligado, o passo de artefatos o deixa para ela, nutrientes calculados depois", async () => {
   dispatch = { task_create: confident("many"), artifact_create: confident("one") };
-  gateway.outputs.set("task_create", { tasks: [task("Refeição", "meal", 12), task("Nadar na praia", "training", 13)] });
-  gateway.outputs.set("artifact_create", { artifacts: [{ type: "food", name: "Arroz e feijão", content: "300g de arroz" }] });
+  gateway.outputs.set("task_create", { tasks: [
+    task("Refeição", "meal", 12, { foods: "300g de arroz" }), task("Nadar na praia", "training", 13),
+  ] });
+  gateway.outputs.set("artifact_create", { artifacts: [{ type: "food", name: "Arroz", content: "300g de arroz", startedAt: null }] });
 
   const requestId = await operations.start({ userId: "user-1", text: "comendo 300g de arroz, depois vou nadar", context: { screen: "agenda" } }, actor);
   expect(await operations.view(requestId, actor)).toMatchObject({ status: "queued", steps: [], route: "steps" });
@@ -176,22 +176,24 @@ test("o exemplo-guia: tarefas e alimento criados em passos proprios, ligados na 
   const view = await operations.view(requestId, actor);
   expect(view).toMatchObject({ status: "done", title: "comendo 300g de arroz, depois vou nadar", text: "comendo 300g de arroz, depois vou nadar" });
   expect(view.message).toBeUndefined();
+  // O passo de artefatos termina sem criar nada: o alimento da refeicao e do passo de tarefas.
   expect(view.steps.map((step) => [step.agent, step.label, step.status])).toEqual([
     ["task-create", "Criando tarefas", "done"], ["artifact-create", "Criando artefatos", "done"],
   ]);
-  const meal = view.entities.find((entity) => entity.name === "Refeição");
+  const meal = view.entities.find((entity) => entity.kind === "task" && entity.name === "Refeição");
   const swim = view.entities.find((entity) => entity.name === "Nadar na praia");
-  const food = view.entities.find((entity) => entity.kind === "artifact");
+  const foods = view.entities.filter((entity) => entity.kind === "artifact");
+  expect(foods).toHaveLength(1);
+  const food = foods[0];
   expect(food).toMatchObject({ artifactType: "food", operation: "create", linkedTo: [{ kind: "task", id: meal?.id }] });
   expect(meal).toMatchObject({ kind: "task", operation: "create", linkedTo: [{ kind: "artifact", id: food?.id }] });
   expect(swim?.linkedTo).toEqual([]);
   expect(view.trace).toMatchObject({ route: "steps", status: "done" });
-  expect(view.trace?.entries.map((entry) => entry.kind)).toEqual(["request", "routing", "agent", "agent", "answer"]);
 
-  // A tarefa da refeicao passou a criar o alimento; a outra tarefa nao foi tocada.
+  // A refeicao ja nasceu criando o alimento: nenhuma tarefa foi revisada para ligar.
   const stored = await tasks.findById(meal?.id as string);
   expect(stored?.artifactLinks).toEqual([{ artifactId: food?.id, relation: "creates", fromRecurrence: false }]);
-  expect(stored?.revision).toBe(2);
+  expect(stored?.revision).toBe(1);
   expect((await tasks.findById(swim?.id as string))?.revision).toBe(1);
 
   // O alimento nasceu pendente e o pedido de construcao calculou os nutrientes.
@@ -209,6 +211,24 @@ test("o exemplo-guia: tarefas e alimento criados em passos proprios, ligados na 
   // Os pedidos e os passos nao aparecem na consulta do agente nem como tarefa de pessoa.
   const humans = await ctx.pool.query("SELECT name FROM tasks WHERE actor = 'human' ORDER BY name");
   expect(humans.rows.map((row) => row.name)).toEqual(["Nadar na praia", "Refeição"]);
+});
+
+test("so o passo de artefatos recebeu a refeicao: ele cria a tarefa e o alimento, ja ligados", async () => {
+  dispatch = { artifact_create: confident("one") };
+  gateway.outputs.set("artifact_create", { artifacts: [{ type: "food", name: "Arroz", content: "200g de arroz", startedAt: iso(12) }] });
+
+  const requestId = await operations.start({ userId: "user-1", text: "vou comer 200g de arroz daqui 3 min" }, actor);
+  await drain();
+
+  const view = await operations.view(requestId, actor);
+  expect(view.status).toBe("done");
+  const meal = view.entities.find((entity) => entity.kind === "task");
+  const food = view.entities.find((entity) => entity.kind === "artifact");
+  expect(meal).toMatchObject({ name: "Almoço", linkedTo: [{ kind: "artifact", id: food?.id }] });
+  expect(food).toMatchObject({ artifactType: "food", name: "Arroz", linkedTo: [{ kind: "task", id: meal?.id }] });
+  expect(await tasks.findById(meal?.id as string)).toMatchObject({
+    kind: "meal", artifactLinks: [{ artifactId: food?.id, relation: "creates", fromRecurrence: false }],
+  });
 });
 
 test("edicao: o JEV escolhe o candidato, o agente muda so ele; uma continuacao aponta para o primeiro pedido", async () => {
@@ -254,47 +274,46 @@ test("consulta: as linhas ficam no passo e so enxergam as tarefas de pessoa do u
   expect(gateway.calls.at(-1)?.user).toContain("Esquema:");
 });
 
-test("`fallback:` roda em laco: o que os especialistas fizeram volta na rodada seguinte, e o raciocinio fica no passo", async () => {
-  gateway.outputs.set("fallback_loop", { reply: null, invoke: [{ agent: "task-create", instruction: "Criar o almoço" }] });
-  gateway.reasonings.set("fallback_loop", "O pedido pede uma tarefa.");
-  gateway.outputs.set("task_create", { tasks: [task("Almoço", "meal", 12)] });
+test("o fallback e sempre o Hermes: pedido sem passo e `fallback:` vao a ele, na sessao da conversa", async () => {
+  const trace: AgentTraceDto = { route: "hermes", status: "done", fields: [], entries: [] };
+  const seen: Array<{ text: string; sessionId: string }> = [];
+  hermesReply = async (input) => {
+    seen.push({ text: input.text, sessionId: input.sessionId });
+    return { text: `Hermes: ${input.text}`, trace };
+  };
 
-  const requestId = await operations.start({ userId: "user-1", text: "fallback: almocei ao meio-dia" }, actor);
-  // Primeira rodada e o especialista; a segunda rodada so entra depois da finalizacao dele.
-  await jobs.tick();
-  await jobs.idle();
-  await jobs.tick();
-  await jobs.idle();
-  gateway.outputs.set("fallback_loop", { reply: "Registrei o almoço.", invoke: null });
+  // O JEV nao reconhece nenhum passo: o pedido muda para a rota do Hermes, sem passo de fallback.
+  const first = await operations.start({ userId: "user-1", text: "me conta uma piada" }, actor);
   await drain();
+  const view = await operations.view(first, actor);
+  expect(view).toMatchObject({ route: "hermes", status: "done", message: "Hermes: me conta uma piada", steps: [] });
+  expect(gateway.calls).toEqual([]);
 
-  const view = await operations.view(requestId, actor);
-  expect(view).toMatchObject({ status: "done", message: "Registrei o almoço.", text: "almocei ao meio-dia" });
-  expect(view.steps.map((step) => [step.agent, step.status])).toEqual([
-    ["fallback", "done"], ["task-create", "done"], ["fallback", "done"],
+  // `fallback:` pula o JEV e vai direto, sem o prefixo, na mesma sessao do Hermes.
+  const second = await operations.start({ userId: "user-1", text: "fallback: e outra", sessionId: first }, actor);
+  await drain();
+  expect(await operations.view(second, actor)).toMatchObject({ route: "hermes", status: "done", message: "Hermes: e outra" });
+  expect(seen).toEqual([
+    { text: "me conta uma piada", sessionId: `braid-user-1-${first}` },
+    { text: "e outra", sessionId: `braid-user-1-${first}` },
   ]);
-  expect(view.entities).toMatchObject([{ kind: "task", name: "Almoço", operation: "create" }]);
-  const second = gateway.calls.filter((call) => call.schemaName === "fallback_loop")[1]?.user ?? "";
-  expect(second).toContain("Rodada: 2 de 4");
-  expect(second).toContain('"records":[{"kind":"task","operation":"create","name":"Almoço"');
-  expect(view.trace?.entries.filter((entry) => entry.kind === "thought").map((entry) => entry.summary)).toContain("O pedido pede uma tarefa.");
-  expect(view.trace?.entries.find((entry) => entry.kind === "routing")?.summary).toBe("Fallback: pedido direto, pelo prefixo fallback:");
 });
 
 test("um passo que falha nao trava o pedido: ele fecha com a explicacao, e o outro passo fica gravado", async () => {
   dispatch = { task_create: confident("one"), artifact_create: confident("one") };
   gateway.outputs.set("task_create", { tasks: [task("Refeição", "meal", 12)] });
-  gateway.outputs.set("failure_explainer", { message: "Criei a tarefa, mas não consegui criar o alimento." });
+  gateway.outputs.set("failure_explainer", { message: "Criei a refeição, mas não consegui criar a nota." });
 
   const requestId = await operations.start({ userId: "user-1", text: "almocei arroz" }, actor);
   await drain();
 
   const view = await operations.view(requestId, actor);
-  expect(view).toMatchObject({ status: "done", message: "Criei a tarefa, mas não consegui criar o alimento." });
+  expect(view).toMatchObject({ status: "done", message: "Criei a refeição, mas não consegui criar a nota." });
   expect(view.steps.map((step) => [step.agent, step.status, step.errorCode])).toEqual([
     ["task-create", "done", undefined], ["artifact-create", "failed", "internal"],
   ]);
-  expect(view.entities.map((entity) => entity.name)).toEqual(["Refeição"]);
+  // A refeicao e o alimento dela vem do passo que deu certo.
+  expect(view.entities.map((entity) => [entity.kind, entity.name]).sort()).toEqual([["artifact", "Refeição"], ["task", "Refeição"]]);
 });
 
 test("o job de um passo que morre nunca deixa o pedido aberto", async () => {

@@ -12,19 +12,25 @@ import { z } from "zod";
 import type { FakeArea, FakeRequest, FakeResult, FakeStore } from ".";
 import { type ArtifactLink, type TaskArtifactEntry, artifactsOfTask, relinkTaskArtifacts } from "./artifacts";
 
-/** Área de tarefas: agenda, lista acompanhada, tarefa, sequência e tags. */
+/** Área de tarefas: agenda, lista acompanhada, tarefa, hierarquia (tarefa principal e subtarefas) e tags. */
 
 const TASKS = "tasks";
 const CARD_KEYS = [
   "id", "actor", "kind", "status", "priority", "name", "description", "location", "startedAt", "estimatedFinishAt",
-  "finishedAt", "longRunning", "notifyOffsetsMinutes", "tags", "artifactTypes", "previousTaskIds",
-  "recurrence", "revision",
+  "finishedAt", "longRunning", "notifyOffsetsMinutes", "tags", "artifactTypes", "parentTaskId",
+  "recurrence", "revision", "createdAt", "updatedAt",
 ] as const;
-/** Campos que a edição aceita e que o fake aplica; `artifacts` não está aqui porque os vínculos vivem no artefato. */
+/**
+ * Campos que a edição aceita e que o fake aplica; `artifacts` não está aqui porque os vínculos vivem no artefato, e
+ * `parentTaskId`/`subtaskIds` também não, porque a hierarquia mexe nas duas pontas (`planHierarchy`).
+ */
 const EDITABLE_KEYS = [
-  "name", "description", "location", "priority", "notifyOffsetsMinutes", "tags", "longRunning", "previousTaskIds",
-  "nextTaskIds", "kind", "status", "startedAt", "estimatedFinishAt", "finishedAt",
+  "name", "description", "location", "priority", "notifyOffsetsMinutes", "tags", "longRunning",
+  "kind", "status", "startedAt", "estimatedFinishAt", "finishedAt",
 ] as const;
+
+/** O id provisório da tarefa que a criação ainda não gravou, para conferir a hierarquia antes de gastar um id. */
+const NEW_TASK = "\u0000nova";
 
 const createdTaskSchema = z.object({ taskId: z.string() }).strict();
 
@@ -37,15 +43,15 @@ export function taskFixture(overrides: Partial<TaskDto> & { id: string }): TaskD
     priority: "medium",
     name: "Tarefa",
     description: "",
-    location: "",
     longRunning: false,
     notifyOffsetsMinutes: [],
     tags: [],
     artifactTypes: [],
-    previousTaskIds: [],
-    nextTaskIds: [],
+    subtaskIds: [],
     requests: [],
     revision: 1,
+    createdAt: "2026-09-01T12:00:00.000Z",
+    updatedAt: "2026-09-01T12:00:00.000Z",
     artifacts: [],
     ...overrides,
   });
@@ -141,9 +147,12 @@ function tracked(request: FakeRequest, store: FakeStore): FakeResult {
 
 function create(request: FakeRequest, store: FakeStore): FakeResult {
   const input = request.body as CreateTaskInput;
-  // Ids de sequência que não existem a API recusa (404), antes de criar qualquer coisa.
-  if (!allExist(store, [...(input.previousTaskIds ?? []), ...(input.nextTaskIds ?? [])])) return { status: 404 };
-  const id = store.nextId("ev");
+  // A hierarquia que a API recusa (ponta que não existe, ciclo) é recusada antes de criar qualquer coisa.
+  const plan = planHierarchy(store, NEW_TASK, [], { parentTaskId: input.parentTaskId, subtaskIds: input.subtaskIds });
+  if ("status" in plan) return plan;
+  // O contador não sabe das tarefas semeadas: pula os ids já usados, para a nova não sobrescrever uma delas.
+  let id = store.nextId("ev");
+  while (table(store).has(id)) id = store.nextId("ev");
   const task: StoredTask = taskSchema.parse({
     id,
     actor: "human",
@@ -152,7 +161,8 @@ function create(request: FakeRequest, store: FakeStore): FakeResult {
     priority: input.priority ?? "medium",
     name: input.name ?? "",
     description: input.description ?? "",
-    location: input.location ?? "",
+    // So o local informado entra na tarefa.
+    ...(input.location?.trim() ? { location: input.location.trim() } : {}),
     startedAt: input.startedAt,
     estimatedFinishAt: input.estimatedFinishAt,
     finishedAt: input.finishedAt,
@@ -160,14 +170,16 @@ function create(request: FakeRequest, store: FakeStore): FakeResult {
     notifyOffsetsMinutes: input.notifyOffsetsMinutes ?? [],
     tags: input.tags ?? [],
     artifactTypes: [],
-    previousTaskIds: input.previousTaskIds ?? [],
-    nextTaskIds: input.nextTaskIds ?? [],
+    subtaskIds: [],
     requests: [],
     revision: 1,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
     artifacts: [],
   });
   table(store).set(id, task);
-  relinkSequence(store, task, [], []);
+  const moves = plan.moves.map(([child, parent]): Move => [child === NEW_TASK ? id : child, parent === NEW_TASK ? id : parent]);
+  applyHierarchy(store, id, moves, input.subtaskIds);
   return { status: 201, body: createdTaskSchema.parse({ taskId: id }) };
 }
 
@@ -183,10 +195,13 @@ function update(request: FakeRequest, store: FakeStore): FakeResult {
   if (!task) return { status: 404 };
   const input = request.body as Record<string, unknown> & { expectedRevision: number };
   if (input.expectedRevision !== task.revision) return { status: 409 };
-  // A sequência é informativa, mas só liga tarefas que existem; a tarefa não se segue a si mesmo (422).
-  const sequenceIds = [...stringList(input.previousTaskIds), ...stringList(input.nextTaskIds)];
-  if (sequenceIds.includes(task.id)) return { status: 422 };
-  if (!allExist(store, sequenceIds)) return { status: 404 };
+  // A hierarquia é informativa, mas só liga tarefas que existem (404) e não fecha ciclo (400).
+  const desired = {
+    parentTaskId: input.parentTaskId as string | null | undefined,
+    subtaskIds: input.subtaskIds as string[] | undefined,
+  };
+  const plan = planHierarchy(store, task.id, task.subtaskIds, desired);
+  if ("status" in plan) return plan;
 
   // A lista de artefatos é a completa, na ordem enviada: ligar por `id` e criar cópia de alimento (`copyOf`) são
   // modelados. Criar ou editar um artefato novo dentro da tarefa a API faz, mas a API falsa ainda não (400).
@@ -200,45 +215,80 @@ function update(request: FakeRequest, store: FakeStore): FakeResult {
   for (const key of EDITABLE_KEYS) {
     if (!(key in input)) continue;
     const value = input[key];
-    if (value === null) delete next[key];
+    // `null` apaga o campo; no local, texto vazio tambem.
+    if (value === null || (key === "location" && typeof value === "string" && !value.trim())) delete next[key];
     else next[key] = value;
   }
   next.revision = task.revision + 1;
+  next.updatedAt = new Date().toISOString();
   table(store).set(task.id, taskSchema.parse(next));
-  relinkSequence(store, task, task.previousTaskIds, task.nextTaskIds);
+  applyHierarchy(store, task.id, plan.moves, desired.subtaskIds);
   return { status: 204 };
-}
-
-function stringList(value: unknown): string[] {
-  return Array.isArray(value) ? (value as string[]) : [];
 }
 
 function allExist(store: FakeStore, ids: string[]): boolean {
   return ids.every((id) => table(store).has(id));
 }
 
+/** Uma subtarefa e a principal nova dela (`undefined`: fica sem principal). */
+type Move = [child: string, parent: string | undefined];
+
 /**
- * A sequência tem dois lados: esta tarefa guarda os antecessores (`previousTaskIds`) e os sucessores
- * (`nextTaskIds`), e cada tarefa relacionada guarda esta no lado oposto. Quem entra ou sai da lista é religado
- * no outro lado; ninguém além da tarefa do PATCH tem a revisão mexida, como na API real.
- * `oldPrevious`/`oldNext` são as listas de antes do PATCH (vazias na criação); o lado que não veio no corpo não muda e não se religa.
+ * A hierarquia é uma árvore: cada tarefa guarda a principal (`parentTaskId`) e as subtarefas (`subtaskIds`), e as
+ * duas pontas se mantêm juntas. Aqui se confere o pedido e se calcula quem muda de principal, sem gravar nada:
+ * ausente não muda aquele lado, `parentTaskId: null` tira a tarefa de baixo da principal, e `subtaskIds` é a lista
+ * completa. Uma subtarefa que estava sob outra principal muda para esta. Ponta que não existe é 404; a tarefa
+ * como principal ou subtarefa de si mesma, ou um ciclo, é 400, como a API.
  */
-function relinkSequence(store: FakeStore, task: StoredTask, oldPrevious: string[], oldNext: string[]) {
-  const stored = table(store).get(task.id) ?? task;
-  syncSide(store, stored.id, oldPrevious, stored.previousTaskIds, "nextTaskIds");
-  syncSide(store, stored.id, oldNext, stored.nextTaskIds, "previousTaskIds");
+function planHierarchy(
+  store: FakeStore,
+  selfId: string,
+  currentSubtasks: string[],
+  desired: { parentTaskId?: string | null; subtaskIds?: string[] },
+): { moves: Move[] } | { status: number } {
+  const linked = [...(desired.parentTaskId ? [desired.parentTaskId] : []), ...(desired.subtaskIds ?? [])];
+  if (linked.includes(selfId)) return { status: 400 };
+  if (!allExist(store, linked)) return { status: 404 };
+
+  const moves = new Map<string, string | undefined>();
+  if (desired.parentTaskId !== undefined) moves.set(selfId, desired.parentTaskId ?? undefined);
+  if (desired.subtaskIds) {
+    for (const id of currentSubtasks) if (!desired.subtaskIds.includes(id)) moves.set(id, undefined);
+    for (const id of desired.subtaskIds) moves.set(id, selfId);
+  }
+
+  // Sobe a partir de cada tarefa que mudou de principal, já com as mudanças: voltar a ela é ciclo.
+  const parentOf = (id: string) => (moves.has(id) ? moves.get(id) : table(store).get(id)?.parentTaskId);
+  for (const child of moves.keys()) {
+    const seen = new Set<string>();
+    for (let at = parentOf(child); at !== undefined; at = parentOf(at)) {
+      if (at === child) return { status: 400 };
+      if (seen.has(at)) break;
+      seen.add(at);
+    }
+  }
+  return { moves: [...moves] };
 }
 
-function syncSide(store: FakeStore, selfId: string, before: string[], after: string[], otherField: "previousTaskIds" | "nextTaskIds") {
-  for (const id of before) if (!after.includes(id)) setSequenceLink(store, id, otherField, selfId, false);
-  for (const id of after) if (!before.includes(id)) setSequenceLink(store, id, otherField, selfId, true);
-}
-
-function setSequenceLink(store: FakeStore, taskId: string, field: "previousTaskIds" | "nextTaskIds", otherId: string, linked: boolean) {
-  const other = table(store).get(taskId);
-  if (!other) return;
-  const others = other[field].filter((id) => id !== otherId);
-  table(store).set(taskId, { ...other, [field]: linked ? [...others, otherId] : others });
+/**
+ * Grava as mudanças de `planHierarchy` nas duas pontas: a subtarefa sai da lista da principal antiga e entra no fim
+ * da nova. Ninguém tem a revisão mexida aqui, como na API real; a tarefa do PATCH sobe a revisão no próprio
+ * `update`. Quando o pedido trouxe `subtaskIds`, a lista dela fica na ordem enviada.
+ */
+function applyHierarchy(store: FakeStore, selfId: string, moves: Move[], subtaskIds: string[] | undefined) {
+  const tasks = table(store);
+  for (const [child, parent] of moves) {
+    const stored = tasks.get(child);
+    if (!stored || stored.parentTaskId === parent) continue;
+    const old = stored.parentTaskId ? tasks.get(stored.parentTaskId) : undefined;
+    if (old) tasks.set(old.id, { ...old, subtaskIds: old.subtaskIds.filter((id) => id !== child) });
+    const { parentTaskId: _dropped, ...rest } = stored;
+    tasks.set(child, parent ? { ...rest, parentTaskId: parent } : rest);
+    const next = parent ? tasks.get(parent) : undefined;
+    if (next && !next.subtaskIds.includes(child)) tasks.set(next.id, { ...next, subtaskIds: [...next.subtaskIds, child] });
+  }
+  const self = tasks.get(selfId);
+  if (self && subtaskIds) tasks.set(selfId, { ...self, subtaskIds: [...subtaskIds] });
 }
 
 function remove(request: FakeRequest, store: FakeStore): FakeResult {
@@ -260,17 +310,13 @@ function suggestTags(request: FakeRequest, store: FakeStore): FakeResult {
   return { status: 200, body: suggestions };
 }
 
-/** Com a posicao da pessoa (`lat` e `lon`), o local perto dela vem primeiro, como na API. */
+/** Busca so pelo texto, como na API: a posicao da pessoa nunca e enviada. */
 function searchPlaces(request: FakeRequest): FakeResult {
   const query = (request.query.get("query") ?? "").trim();
   if (query.length < 3) return { status: 200, body: [] };
-  const nearby = request.query.get("lat") && request.query.get("lon")
-    ? [{ name: `${query} Perto`, address: "a 1 km de você", label: `${query} Perto, a 1 km de você` }]
-    : [];
   return {
     status: 200,
     body: [
-      ...nearby,
       { name: query, address: "São Paulo, SP, Brasil", label: `${query}, São Paulo, SP, Brasil` },
       { name: `${query} Centro`, address: "Rio de Janeiro, RJ, Brasil", label: `${query} Centro, Rio de Janeiro, RJ, Brasil` },
     ],

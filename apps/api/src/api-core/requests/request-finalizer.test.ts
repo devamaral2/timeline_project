@@ -7,19 +7,23 @@ import { addStep, confident, result, scriptedJev, setupRequest } from "./testing
 const iso = (hour: number) => `2026-10-25T${String(hour).padStart(2, "0")}:00:00-03:00`;
 const evt = (name: string, kind: string, hour: number, over: Record<string, unknown> = {}) => ({
   name, kind, status: null, priority: null, longRunning: false, startedAt: iso(hour), estimatedFinishAt: null,
-  description: null, tags: [], followsFrom: [], ...over,
+  description: null, tags: [], subtaskOf: null, foods: null, foodName: null, ...over,
 });
 
-/** O exemplo-guia ate os passos concluidos: tres tarefas e um alimento, cada um no seu passo. */
+/**
+ * O exemplo-guia ate os passos concluidos: tres tarefas (a refeicao ja com o alimento dela) e uma nota, cada
+ * uma no seu passo. A nota e o que a finalizacao ainda liga: a refeicao e o alimento nascem ligados.
+ */
 async function guideExample() {
-  const ctx = setupRequest("comendo 300g de arroz com 200g de feijão, depois vou nadar na praia...");
+  const ctx = setupRequest("comendo 300g de arroz com 200g de feijão, depois vou nadar na praia; anota: levar a toalha");
   const tasks = await addStep(ctx, "s-tasks", "task-create", "many");
   const artifacts = await addStep(ctx, "s-artifacts", "artifact-create");
   ctx.gateway.outputs.set("task_create", { tasks: [
-    evt("Refeição", "meal", 12), evt("Nadar na praia", "training", 13), evt("Voltar para casa", "common", 15),
+    evt("Refeição", "meal", 12, { foods: "300g de arroz, 200g de feijão" }),
+    evt("Nadar na praia", "training", 13), evt("Voltar para casa", "common", 15),
   ] });
   ctx.gateway.outputs.set("artifact_create", { artifacts: [
-    { type: "food", name: "Arroz e feijão", content: "300g de arroz, 200g de feijão" },
+    { type: "text", name: "Toalha", content: "Levar a toalha para a praia", startedAt: null },
   ] });
   return { ctx, tasks, artifacts };
 }
@@ -34,11 +38,32 @@ describe("fila de finalizacao", () => {
 
     await ctx.finalizer(jev.client).run(tasks);
 
-    expect((await entitiesOf(ctx)).every((entity) => entity.finalized && entity.links.length === 0)).toBe(true);
+    const entities = await entitiesOf(ctx);
+    expect(entities.every((entity) => entity.finalized)).toBe(true);
+    expect(entities.filter((entity) => entity.links.length > 0).map((entity) => entity.summary.name))
+      .toEqual(["Refeição", entities[1]?.summary.name]);
     expect(ctx.store.require("r1").status).toBe("running");
   });
 
-  test("o alimento concluido e ligado à tarefa da refeicao e o pedido fecha", async () => {
+  test("o alimento que nasceu com a refeicao nunca e candidato: nem dela de novo, nem de outra tarefa", async () => {
+    const { ctx, tasks } = await guideExample();
+    await ctx.worker.run("task-create", tasks);
+    const jev = scriptedJev(() => result({ link: confident("c1") }));
+
+    await ctx.finalizer(jev.client).run(tasks);
+
+    // Sem artefato solto no pedido, nenhuma tarefa tem candidato, e o JEV nem e consultado.
+    expect(jev.ask).not.toHaveBeenCalled();
+    const entities = await entitiesOf(ctx);
+    const food = entities.find((entity) => entity.kind === "artifact");
+    const meal = entities.find((entity) => entity.summary.name === "Refeição");
+    expect(food?.links).toEqual([{ from: { kind: "artifact", id: food?.id }, to: { kind: "task", id: meal?.id } }]);
+    const swim = entities.find((entity) => entity.summary.name === "Nadar na praia");
+    expect((await ctx.taskRepository.findById(swim?.id as string))?.artifactLinks).toEqual([]);
+    expect((await ctx.taskRepository.findById(meal?.id as string))?.revision).toBe(1);
+  });
+
+  test("a nota concluida e ligada à tarefa de que trata e o pedido fecha", async () => {
     const { ctx, tasks, artifacts } = await guideExample();
     await ctx.worker.run("task-create", tasks);
     await ctx.finalizer(scriptedJev(() => result({ link: confident("none") })).client).run(tasks);
@@ -46,56 +71,54 @@ describe("fila de finalizacao", () => {
 
     const jev = scriptedJev((questions) => {
       const criteria = (questions.link as { criteria: Record<string, string> }).criteria;
-      const meal = Object.entries(criteria).find(([, text]) => text.includes("Refeição"));
-      return result({ link: confident(meal?.[0] ?? "none") });
+      const swim = Object.entries(criteria).find(([, text]) => text.includes("Nadar"));
+      return result({ link: confident(swim?.[0] ?? "none") });
     });
     await ctx.finalizer(jev.client).run(artifacts);
 
-    // O JEV viu o pedido, o alimento e as tres tarefas (e "nenhum").
+    // O JEV viu o pedido, a nota e as tres tarefas (e "nenhum").
     const [, state, questions] = jev.ask.mock.calls[0] as unknown as [unknown, Record<string, string>, { link: { criteria: Record<string, string> } }];
-    expect(state.message).toContain("300g de arroz");
-    expect(state.entity).toContain("300g de arroz, 200g de feijão");
+    expect(state.message).toContain("levar a toalha");
+    expect(state.entity).toContain("Toalha");
     expect(Object.keys(questions.link.criteria)).toEqual(["none", "c1", "c2", "c3"]);
 
     const entities = await entitiesOf(ctx);
-    const food = entities.find((entity) => entity.kind === "artifact");
-    const meal = entities.find((entity) => entity.summary.name === "Refeição");
-    const link = { from: { kind: "artifact", id: food?.id }, to: { kind: "task", id: meal?.id } };
-    // A ligacao vale para os dois lados.
-    expect(food?.links).toEqual([link]);
-    expect(meal?.links).toEqual([link]);
-
-    // Quem e editado e a tarefa: ela passa a criar o artefato que o pedido fez para ele.
-    const stored = await ctx.taskRepository.findById(meal?.id as string);
-    expect(stored?.artifactLinks).toEqual([{ artifactId: food?.id, relation: "creates", fromRecurrence: false }]);
+    const note = entities.find((entity) => entity.summary.name === "Toalha");
     const swim = entities.find((entity) => entity.summary.name === "Nadar na praia");
-    expect((await ctx.taskRepository.findById(swim?.id as string))?.artifactLinks).toEqual([]);
+    const link = { from: { kind: "artifact", id: note?.id }, to: { kind: "task", id: swim?.id } };
+    // A ligacao vale para os dois lados.
+    expect(note?.links).toEqual([link]);
+    expect(swim?.links).toEqual([link]);
+
+    // Quem e editado e a tarefa: ela passa a criar o artefato que o pedido fez para ela.
+    const stored = await ctx.taskRepository.findById(swim?.id as string);
+    expect(stored?.artifactLinks).toEqual([{ artifactId: note?.id, relation: "creates", fromRecurrence: false }]);
 
     expect(ctx.store.require("r1")).toMatchObject({ status: "done", failedSteps: [] });
-    expect(toRequestDto(ctx.store.require("r1"), ctx.store.stepRecords, entities).entities.find((entity) => entity.kind === "artifact"))
-      .toMatchObject({ artifactType: "food", operation: "create", linkedTo: [{ kind: "task", id: meal?.id }] });
+    expect(toRequestDto(ctx.store.require("r1"), ctx.store.stepRecords, entities).entities.find((entity) => entity.id === note?.id))
+      .toMatchObject({ artifactType: "text", operation: "create", linkedTo: [{ kind: "task", id: swim?.id }] });
   });
 
-  test("a ordem de termino nao importa: alimento primeiro, tarefa depois, e a ligacao acontece quando a tarefa chega", async () => {
+  test("a ordem de termino nao importa: nota primeiro, tarefa depois, e a ligacao acontece quando a tarefa chega", async () => {
     const { ctx, tasks, artifacts } = await guideExample();
     await ctx.worker.run("artifact-create", artifacts);
     await ctx.finalizer(scriptedJev(() => result({})).client).run(artifacts);
     await ctx.worker.run("task-create", tasks);
 
-    // Cada tarefa que chega e comparada com o alimento (e com as outras tarefas); so a refeicao fica com ele.
+    // Cada tarefa que chega e comparada com a nota solta; a refeicao tambem, ja que o alimento dela nao conta.
     const jev = scriptedJev((questions, state) => {
       const criteria = (questions.link as { criteria: Record<string, string> }).criteria;
-      const food = Object.entries(criteria).find(([, text]) => text.startsWith("artefato"));
-      return result({ link: confident(String(state.entity).includes("Refeição") ? food?.[0] ?? "none" : "none") });
+      const note = Object.entries(criteria).find(([, text]) => text.startsWith("artefato"));
+      return result({ link: confident(String(state.entity).includes("Nadar") ? note?.[0] ?? "none" : "none") });
     });
     await ctx.finalizer(jev.client).run(tasks);
 
     expect(jev.ask).toHaveBeenCalledTimes(3);
     const entities = await entitiesOf(ctx);
-    const food = entities.find((entity) => entity.kind === "artifact");
-    const meal = entities.find((entity) => entity.summary.name === "Refeição");
-    expect(meal?.links).toEqual([{ from: { kind: "artifact", id: food?.id }, to: { kind: "task", id: meal?.id } }]);
-    expect((await ctx.taskRepository.findById(meal?.id as string))?.artifactLinks.map((link) => link.artifactId)).toEqual([food?.id]);
+    const note = entities.find((entity) => entity.summary.name === "Toalha");
+    const swim = entities.find((entity) => entity.summary.name === "Nadar na praia");
+    expect(swim?.links).toEqual([{ from: { kind: "artifact", id: note?.id }, to: { kind: "task", id: swim?.id } }]);
+    expect((await ctx.taskRepository.findById(swim?.id as string))?.artifactLinks.map((link) => link.artifactId)).toEqual([note?.id]);
   });
 
   test("duas tarefas nao se ligam: a ordem entre elas nao e decidida na finalizacao, e nenhuma e revisada", async () => {
@@ -129,7 +152,7 @@ describe("fila de finalizacao", () => {
       await ctx.worker.run("artifact-create", artifacts);
       await ctx.finalizer(scriptedJev(reply).client).run(artifacts);
 
-      expect((await entitiesOf(ctx)).find((entity) => entity.kind === "artifact")).toMatchObject({ finalized: true, links: [] });
+      expect((await entitiesOf(ctx)).find((entity) => entity.summary.name === "Toalha")).toMatchObject({ finalized: true, links: [] });
       expect(ctx.batchWriter.commits).toHaveLength(2);
     }
   });
@@ -183,7 +206,7 @@ describe("explicacao da falha", () => {
   }
 
   test("so quando algum passo falha, uma chamada curta diz o que falhou e o que deu certo", async () => {
-    const { ctx, finalize } = await withFailedArtifacts("Criei as tarefas, mas não consegui criar o alimento.");
+    const { ctx, finalize } = await withFailedArtifacts("Criei as tarefas, mas não consegui criar a nota.");
 
     await finalize();
 
@@ -191,8 +214,8 @@ describe("explicacao da falha", () => {
     expect(call?.user).toContain("Criando artefatos (código: internal)");
     expect(call?.user).toContain("Criando tarefas");
     const request = ctx.store.require("r1");
-    expect(request).toMatchObject({ status: "done", answer: "Criei as tarefas, mas não consegui criar o alimento." });
-    expect(toRequestDto(request, ctx.store.stepRecords, []).message).toBe("Criei as tarefas, mas não consegui criar o alimento.");
+    expect(request).toMatchObject({ status: "done", answer: "Criei as tarefas, mas não consegui criar a nota." });
+    expect(toRequestDto(request, ctx.store.stepRecords, []).message).toBe("Criei as tarefas, mas não consegui criar a nota.");
   });
 
   test("se a explicacao tambem falha, vale a linha predefinida", async () => {
@@ -225,7 +248,7 @@ describe("series na finalizacao", () => {
       interval: null, weekdays: ["mon"], monthDay: null, month: null, timeOfDay: "07:00", durationMinutes: null,
       startsOn: null, endsOn: null,
     }] });
-    ctx.gateway.outputs.set("artifact_create", { artifacts: [{ type: "text", name: "Tênis", content: "Preciso de tênis" }] });
+    ctx.gateway.outputs.set("artifact_create", { artifacts: [{ type: "text", name: "Tênis", content: "Preciso de tênis", startedAt: null }] });
     await ctx.worker.run("recurring-task-create", series);
     await ctx.worker.run("artifact-create", artifacts);
     const jev = scriptedJev(() => result({ link: confident("c1") }));

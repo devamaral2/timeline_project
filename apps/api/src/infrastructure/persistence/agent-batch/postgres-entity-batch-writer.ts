@@ -20,7 +20,7 @@ import {
   softDeleteArtifact,
   updateArtifactAggregate,
 } from "../artifacts/repositories/postgres-artifact.repository";
-import { applySequenceChanges } from "../tasks/repositories/task-relations";
+import { applySubtaskChanges } from "../tasks/repositories/task-relations";
 import {
   insertTaskAggregate,
   softDeleteTask,
@@ -79,8 +79,8 @@ export class PostgresEntityBatchWriter implements EntityBatchWriter {
             await updateTaskAggregate(tx, change.entity, batch.userId, change.expectedRevision);
           }
         }
-        // Depois de todas as tarefas: uma ponta da sequencia pode ser uma tarefa nova do lote.
-        await applySequenceChanges(tx, batch.userId, batch.sequence ?? []);
+        // Depois de todas as tarefas: uma ponta da hierarquia pode ser uma tarefa nova do lote.
+        await applySubtaskChanges(tx, batch.userId, batch.subtasks ?? []);
       } catch (error) {
         // Um alvo de relacao que sumiu entre preparar e gravar: o lote inteiro volta.
         if (error instanceof TaskValidationError && /not found/.test(error.message)) {

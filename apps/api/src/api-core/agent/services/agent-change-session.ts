@@ -8,7 +8,7 @@ import {
 import type {
   ArtifactRepository,
   EntityBatch,
-  SequenceChange,
+  SubtaskChange,
   TaskRepository,
   RecurrenceChange,
   RecurrenceRepository,
@@ -74,14 +74,14 @@ export class StagingError extends Error {}
  * contra as anteriores, e o lote inteiro vai para o `EntityBatchWriter` so no fim.
  *
  * O usuario vem do pedido ja autorizado; nenhum agente o recebe. Ligar um artefato a uma tarefa edita a tarefa;
- * pôr uma tarefa na sequencia de outra nao edita nenhuma das duas.
+ * pôr uma tarefa como subtarefa de outra nao edita nenhuma das duas.
  */
 export class AgentChangeSession {
   private readonly tasks = new Map<string, Staged<Task>>();
   private readonly artifacts = new Map<string, Staged<Artifact>>();
   private readonly recurrences = new Map<string, StagedSeries>();
   private readonly derivations: { originalId: string; copyId: string }[] = [];
-  private readonly sequence: SequenceChange[] = [];
+  private readonly subtasks: SubtaskChange[] = [];
 
   constructor(
     readonly userId: string,
@@ -146,9 +146,9 @@ export class AgentChangeSession {
   createTask(input: CreateTaskInput, options?: PrepareTaskOptions): Promise<StageResult> {
     return this.attempt(async () => {
       const prepared = await this.createTaskUseCase.prepare(input, { userId: this.userId }, undefined, options);
+      this.stageSubtasks(prepared.subtasks);
       this.stageTemplateArtifacts(prepared.artifacts, prepared.derivations);
       this.tasks.set(prepared.task.id, { change: { op: "create", entity: prepared.task } });
-      this.stageSequence(prepared.sequence);
       return { ok: true, kind: "task", op: "create", id: prepared.task.id };
     });
   }
@@ -165,16 +165,16 @@ export class AgentChangeSession {
   }
 
   /**
-   * Faz `nextId` seguir-se de `previousId`. Nenhuma das duas e revisada, e qualquer um pode ser tarefa de agente.
-   * O resultado e a tarefa que ganhou o antecessor. Repetir uma ligacao nao faz nada.
+   * Faz `subtaskId` subtarefa de `parentId`; se ela estava sob outra principal, sai de la. Nenhuma das duas e
+   * revisada, e qualquer uma pode ser tarefa de agente. O resultado e a subtarefa. Repetir a ligacao nao faz nada.
    */
-  sequenceTasks(previousId: string, nextId: string): Promise<StageResult> {
+  addSubtask(parentId: string, subtaskId: string): Promise<StageResult> {
     return this.attempt(async () => {
-      if (previousId === nextId) throw new StagingError("Uma tarefa não se segue a ela mesma.");
-      await this.assertSequenceEnd(previousId);
-      await this.assertSequenceEnd(nextId);
-      this.stageSequence([{ op: "add", fromId: previousId, toId: nextId }]);
-      return { ok: true, kind: "task", op: "update", id: nextId };
+      if (parentId === subtaskId) throw new StagingError("Uma tarefa não é subtarefa dela mesma.");
+      await this.assertHierarchyEnd(parentId);
+      await this.assertHierarchyEnd(subtaskId);
+      this.stageSubtasks([{ op: "add", parentId, subtaskId }]);
+      return { ok: true, kind: "task", op: "update", id: subtaskId };
     });
   }
 
@@ -242,7 +242,7 @@ export class AgentChangeSession {
       tasks: changes(this.tasks),
       artifacts: changes(this.artifacts),
       derivations: [...this.derivations],
-      sequence: [...this.sequence],
+      subtasks: [...this.subtasks],
       recurrences: series.filter((staged) => staged.op === "create").map((staged) => staged.recurrence),
       recurrenceChanges: series.flatMap((staged): RecurrenceChange[] =>
         staged.op === "update"
@@ -285,24 +285,38 @@ export class AgentChangeSession {
     return expandOccurrences(recurrence.rule, from, firstSearchLimit(from))[0];
   }
 
-  /** A ocorrencia nasce se seguindo das tarefas do template, como as que a serie gera depois. */
+  /** A ocorrencia nasce subtarefa da principal do template, como as que a serie gera depois. */
   private async stageOccurrence(recurrence: Recurrence, day: string): Promise<void> {
     const occurrence = buildOccurrence(recurrence, day);
     this.tasks.set(occurrence.id, { change: { op: "create", entity: occurrence } });
-    for (const previousId of storedTemplateOf(recurrence).previousTaskIds ?? []) {
-      const related = await this.sequenceTasks(previousId, occurrence.id);
+    const parentId = storedTemplateOf(recurrence).parentTaskId;
+    if (parentId) {
+      const related = await this.addSubtask(parentId, occurrence.id);
       if (!related.ok) throw new StagingError(related.error);
     }
   }
 
-  /** As arestas entram uma vez so: o agente pode repetir a ligacao sem que o lote a grave duas vezes. */
-  private stageSequence(changes: readonly SequenceChange[]): void {
-    for (const change of changes) {
-      const repeated = this.sequence.some(
-        (staged) => staged.op === change.op && staged.fromId === change.fromId && staged.toId === change.toId,
+  /**
+   * As arestas entram uma vez so: o agente pode repetir a ligacao sem que o lote a grave duas vezes. Uma
+   * subtarefa tem uma principal so, entao duas principais para a mesma tarefa no mesmo pedido sao recusadas.
+   */
+  private stageSubtasks(changes: readonly SubtaskChange[]): void {
+    const fresh = changes.filter((change) => !this.subtasks.some(
+      (staged) => staged.op === change.op && staged.parentId === change.parentId && staged.subtaskId === change.subtaskId,
+    ));
+    // Confere tudo antes de guardar qualquer aresta: uma recusa nao deixa o lote pela metade.
+    for (const change of fresh) {
+      if (change.op !== "add") continue;
+      const otherParent = [...this.subtasks, ...fresh].find(
+        (staged) => staged.op === "add" && staged.subtaskId === change.subtaskId && staged.parentId !== change.parentId,
       );
-      if (!repeated) this.sequence.push(change);
+      if (otherParent) {
+        throw new StagingError(
+          `A tarefa ${change.subtaskId} já é subtarefa de ${otherParent.parentId} neste pedido: uma tarefa tem uma só principal.`,
+        );
+      }
     }
+    this.subtasks.push(...fresh);
   }
 
   /** A serie do banco, que ainda nao foi tocada neste pedido nem tem ocorrencia dela alterada aqui. */
@@ -331,8 +345,8 @@ export class AgentChangeSession {
     return task?.actor === "human" ? task : null;
   }
 
-  /** Uma ponta da sequencia: criada neste pedido ou do usuario, de pessoa ou de agente. */
-  private async assertSequenceEnd(id: string): Promise<void> {
+  /** Uma ponta da hierarquia: criada neste pedido ou do usuario, de pessoa ou de agente. */
+  private async assertHierarchyEnd(id: string): Promise<void> {
     if (this.tasks.has(id)) return;
     const found = await this.repositories.tasks.findById(id);
     if (!found || found.userId !== this.userId) throw new StagingError(`Não encontrei a tarefa ${id}.`);

@@ -36,9 +36,9 @@ export const ARTIFACT_TYPES = ["text", "food", "sleep", "training", "workout", "
 /** Os unicos tipos que podem nao ter dono. */
 export const GLOBAL_ARTIFACT_TYPES = ["food", "workout"] as const;
 
-export const TASK_TASK_RELATIONS = ["generates", "updates", "deletes", "step", "precedes", "follow_up"] as const;
-/** A ordem entre tarefas: do antecessor ("segue-se de") para o sucessor ("da sequencia a"). */
-export const SEQUENCE_RELATION = "precedes" as const satisfies (typeof TASK_TASK_RELATIONS)[number];
+export const TASK_TASK_RELATIONS = ["generates", "updates", "deletes", "step", "subtask", "follow_up"] as const;
+/** A hierarquia entre tarefas: da tarefa principal para a subtarefa. Cada tarefa tem no maximo uma principal. */
+export const SUBTASK_RELATION = "subtask" as const satisfies (typeof TASK_TASK_RELATIONS)[number];
 export const TASK_ARTIFACT_RELATIONS = ["creates", "updates", "uses", "deletes"] as const;
 export const ARTIFACT_ARTIFACT_RELATIONS = ["derives"] as const;
 

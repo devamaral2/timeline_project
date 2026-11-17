@@ -1,4 +1,3 @@
-import type { GeoPointInput } from "@repo/contracts";
 import { vi } from "vitest";
 import type { ScopedSqlOutcome } from "../../../domain/ports";
 import { AgentFileNotFoundError } from "../../agent/config/agent-files.service";
@@ -77,11 +76,11 @@ export class ScriptedFoodParsing implements FoodParsingGateway {
 
 /** Um mapa falso: troca o lugar dito pelo endereco combinado (ou devolve o que foi dito) e guarda o que recebeu. */
 export class ScriptedPlaces {
-  readonly calls: Array<{ said: string; near?: GeoPointInput }> = [];
+  readonly calls: Array<{ said: string }> = [];
   readonly addresses = new Map<string, string>();
 
-  async resolve(said: string, near?: GeoPointInput): Promise<string> {
-    this.calls.push({ said, ...(near ? { near } : {}) });
+  async resolve(said: string): Promise<string> {
+    this.calls.push({ said });
     return this.addresses.get(said) ?? said;
   }
 }
@@ -110,7 +109,7 @@ export function setupRequest(prompt = "pedido", sqlOutcome?: ScopedSqlOutcome) {
   const artifactRepository = new InMemoryArtifactRepository(database.artifacts);
   const recurrences = new InMemoryRecurrenceRepository(database);
   const artifactBuilder = new ArtifactBuilder(new InMemoryWorkoutCatalog());
-  const repositories = { tasks: taskRepository, sequence: database, artifacts: artifactRepository, recurrences };
+  const repositories = { tasks: taskRepository, subtasks: database, artifacts: artifactRepository, recurrences };
   const batchWriter = new InMemoryEntityBatchWriter(repositories, database.derivations);
   const createTask = new CreateTaskUseCase(taskRepository, artifactRepository, artifactBuilder, batchWriter, () => NOW);
   const kit = { database, taskRepository, artifactRepository, artifactBuilder, batchWriter, createTask };

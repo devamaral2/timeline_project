@@ -19,13 +19,13 @@ function card(overrides: Partial<TaskCardDto> = {}): TaskCardDto {
     priority: "medium",
     name: "Revisar proposta",
     description: "",
-    location: "",
     longRunning: false,
     notifyOffsetsMinutes: [],
     tags: [],
     artifactTypes: [],
-    previousTaskIds: [],
     revision: 1,
+    createdAt: "2026-09-01T12:00:00.000Z",
+    updatedAt: "2026-09-01T12:00:00.000Z",
     ...overrides,
   };
 }

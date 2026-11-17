@@ -24,15 +24,15 @@ export interface StoredTemplate {
   status?: HumanTaskStatus;
   name: string;
   description: string;
-  /** Onde cada ocorrencia acontece. */
-  location: string;
+  /** Onde cada ocorrencia acontece. Ausente, a serie nao tem local. */
+  location?: string;
   tags: string[];
   priority: TaskPriority;
   notifyOffsetsMinutes: number[];
   /** Os mesmos artefatos em todas as ocorrencias, na ordem; cada uma ganha a propria relacao com eles. */
   artifactIds: string[];
-  /** As tarefas maiores de que cada ocorrencia nasce subtarefa. */
-  previousTaskIds: string[];
+  /** A tarefa principal de que cada ocorrencia nasce subtarefa. */
+  parentTaskId?: string;
 }
 
 export interface PreparedTemplate {
@@ -64,12 +64,12 @@ export function storedTemplateOf(recurrence: Recurrence): StoredTemplate {
     status: template.status,
     name: template.name ?? "",
     description: template.description ?? "",
-    location: template.location ?? "",
+    ...(template.location?.trim() ? { location: template.location.trim() } : {}),
     tags: template.tags ?? [],
     priority: template.priority ?? "medium",
     notifyOffsetsMinutes: template.notifyOffsetsMinutes ?? [],
     artifactIds: template.artifactIds ?? [],
-    previousTaskIds: template.previousTaskIds ?? [],
+    ...(template.parentTaskId ? { parentTaskId: template.parentTaskId } : {}),
   };
 }
 
@@ -88,9 +88,9 @@ export async function prepareTemplate(
   if (typeof template !== "object" || template === null) {
     throw new RecurrenceValidationError("A recurrence template must be an object");
   }
-  // Os antecessores ficam fora do ensaio: seguir-se deles so acontece quando a ocorrencia nasce.
-  const { previousTaskIds = [], ...taskInput } = template;
-  await assertOwnedTasks(deps.tasks, previousTaskIds, actor);
+  // A principal fica fora do ensaio: virar subtarefa dela so acontece quando a ocorrencia nasce.
+  const { parentTaskId, ...taskInput } = template;
+  if (parentTaskId) await assertOwnedTasks(deps.tasks, [parentTaskId], actor);
 
   const { task, artifacts, derivations } = await deps.createTask.prepare(
     taskInput,
@@ -104,12 +104,12 @@ export async function prepareTemplate(
       ...(task.status ? { status: task.status as HumanTaskStatus } : {}),
       name: task.name,
       description: task.description,
-      location: task.location,
+      ...(task.location ? { location: task.location } : {}),
       tags: [...task.tags],
       priority: task.priority,
       notifyOffsetsMinutes: [...task.notifyOffsetsMinutes],
       artifactIds: task.artifactLinks.map((link) => link.artifactId),
-      previousTaskIds: [...new Set(previousTaskIds)],
+      ...(parentTaskId ? { parentTaskId } : {}),
     },
     artifacts,
     derivations,

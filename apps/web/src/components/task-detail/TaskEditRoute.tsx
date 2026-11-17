@@ -71,7 +71,7 @@ export function TaskEditRoute({ userId, taskId }: { userId: string; taskId: stri
   if (state === "loading" || !task) return frame(<DetailMessage>Carregando tarefa…</DetailMessage>);
   if (task.actor === "agent") return frame(<DetailMessage>Esta tarefa é do agente e não se edita aqui.</DetailMessage>);
 
-  return <TaskEditView task={task} onReload={reload} onLeave={leave} />;
+  return <TaskEditView task={task} userId={userId} onReload={reload} onLeave={leave} />;
 }
 
 /** A tarefa de outro usuário responde 403 e o inexistente 404: a tela diz só que não há tarefa. */

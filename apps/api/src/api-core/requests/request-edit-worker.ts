@@ -1,4 +1,3 @@
-import type { GeoPointInput } from "@repo/contracts";
 import type { z } from "zod";
 import type { EntityBatchWriter, ScopedSqlQuery } from "../../domain/ports";
 import { AgentRunCancelledError } from "../agent/errors/agent.errors";
@@ -62,7 +61,7 @@ export class RequestEditWorker {
       switch (agent) {
         case "task-edit":
           await this.applyTasks(
-            session, await this.gather(agent, taskEditOutput, request, step, signal), request.context?.coordinates,
+            session, await this.gather(agent, taskEditOutput, request, step, signal),
           );
           break;
         case "artifact-edit":
@@ -70,7 +69,7 @@ export class RequestEditWorker {
           break;
         case "recurring-task-edit":
           await this.applySeries(
-            session, await this.gather(agent, recurringTaskEditOutput, request, step, signal), request.context?.coordinates,
+            session, await this.gather(agent, recurringTaskEditOutput, request, step, signal),
           );
           break;
       }
@@ -100,7 +99,7 @@ export class RequestEditWorker {
     const allowed = new Set(candidates.map((candidate) => candidate.id));
     const ask = (lookup?: Lookup) => this.deps.runner.run({
       agent, now: request.createdAt, schema, signal, stepId: step.id,
-      user: describeEditRequest(request.prompt, step.expected, request.context, candidates, lookup, step.input?.instruction),
+      user: describeEditRequest(request.prompt, step.expected, request.context, candidates, lookup),
     });
 
     let { value } = await ask();
@@ -115,22 +114,40 @@ export class RequestEditWorker {
     return value.edits;
   }
 
-  /** O lugar novo e procurado no mapa perto de onde a pessoa esta; `""` tira o local. */
+  /**
+   * O lugar novo e procurado no mapa; `""` tira o local. As subtarefas novas nascem no mesmo lote, a fazer quando o
+   * agente nao deu status, e entram sob a tarefa editada, depois das que ela ja tinha.
+   */
   private async applyTasks(
-    session: AgentChangeSession, edits: TaskEditOutput["edits"], coordinates?: GeoPointInput,
+    session: AgentChangeSession, edits: TaskEditOutput["edits"],
   ): Promise<void> {
     for (const edit of edits) {
       const said = edit.location?.trim();
-      const location = said ? await (this.deps.places?.resolve(said, coordinates) ?? said) : said;
+      const location = said ? await (this.deps.places?.resolve(said) ?? said) : said;
       const changes = {
         name: edit.name ?? undefined, kind: edit.kind ?? undefined, status: edit.status ?? undefined,
         priority: edit.priority ?? undefined, description: edit.description ?? undefined, tags: edit.tags ?? undefined,
         startedAt: date(edit.startedAt), estimatedFinishAt: date(edit.estimatedFinishAt), finishedAt: date(edit.finishedAt),
         location,
       };
-      if (Object.values(changes).every((value) => value === undefined)) continue;
-      const result = await session.reviseTask(edit.id, (current) => current.revise(changes));
-      if (!result.ok) throw new StepFailure("rejected");
+      if (Object.values(changes).some((value) => value !== undefined)) {
+        const result = await session.reviseTask(edit.id, (current) => current.revise(changes));
+        if (!result.ok) throw new StepFailure("rejected");
+      }
+      for (const subtask of edit.subtasks) {
+        const created = await session.createTask({
+          name: subtask.name,
+          kind: "common",
+          status: subtask.status ?? "todo",
+          priority: subtask.priority ?? undefined,
+          startedAt: validInstant(subtask.startedAt),
+          estimatedFinishAt: validInstant(subtask.estimatedFinishAt),
+          description: subtask.description ?? undefined,
+        }, { derivedArtifacts: false });
+        if (!created.ok) throw new StepFailure("rejected");
+        const linked = await session.addSubtask(edit.id, created.id);
+        if (!linked.ok) throw new StepFailure("rejected");
+      }
     }
   }
 
@@ -146,15 +163,15 @@ export class RequestEditWorker {
   /**
    * A serie e alterada de hoje em diante: as ocorrencias futuras que ninguem mexeu a mao saem e a primeira da
    * regra nova entra neste lote. O template nunca traz artefatos novos; os da serie ficam. O lugar novo e
-   * procurado no mapa perto de onde a pessoa esta; `""` tira o local.
+   * procurado no mapa; `""` tira o local.
    */
   private async applySeries(
-    session: AgentChangeSession, edits: RecurringTaskEditOutput["edits"], coordinates?: GeoPointInput,
+    session: AgentChangeSession, edits: RecurringTaskEditOutput["edits"],
   ): Promise<void> {
     for (const asked of edits) {
       if (changesNothing(asked)) continue;
       const said = asked.location?.trim();
-      const edit = said ? { ...asked, location: await (this.deps.places?.resolve(said, coordinates) ?? said) } : asked;
+      const edit = said ? { ...asked, location: await (this.deps.places?.resolve(said) ?? said) } : asked;
       const result = await session.updateRecurrence(
         edit.id,
         (current) => {
@@ -171,10 +188,18 @@ export class RequestEditWorker {
     }
   }
 
-  /** O que o passo alterou. Numa serie, a ocorrencia que a mudanca mostra (nova no banco, mas fruto de uma edicao). */
+  /**
+   * O que o passo alterou. Numa serie, a ocorrencia que a mudanca mostra (nova no banco, mas fruto de uma edicao).
+   * Fora da serie, o que nasceu no passo sao as subtarefas novas: entram como criadas, depois das alteradas.
+   */
   private entitiesOf(session: AgentChangeSession, series: boolean): NewEntity[] {
     const { created, updated } = session.result();
-    const touched = series ? [...created, ...updated].filter((item) => item.kind === "task") : updated;
-    return touched.map((item): NewEntity => ({ ...item, operation: "update" }));
+    if (series) {
+      return [...created, ...updated].filter((item) => item.kind === "task").map((item): NewEntity => ({ ...item, operation: "update" }));
+    }
+    return [
+      ...updated.map((item): NewEntity => ({ ...item, operation: "update" })),
+      ...created.map((item): NewEntity => ({ ...item, operation: "create" })),
+    ];
   }
 }

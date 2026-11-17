@@ -32,7 +32,7 @@ export function jevRouterArtifacts(): RouterArtifactSpec[] {
       body: [
         "# JEV · Despacho",
         "Parâmetros de `jev/dispatch.json`. Uma chamada, uma pergunta por operação × entidade, todas respondidas em paralelo; o resultado diz quais agentes o pedido aciona.",
-        `${commonParams(dispatchConfig)}\n- Política de incerteza: \`${dispatchConfig.uncertainPolicy}\` (\`fallback\`: resposta incerta em qualquer pergunta manda o pedido ao fallback; \`ignore\`: conta como nenhum)`,
+        `${commonParams(dispatchConfig)}\n- Política de incerteza: \`${dispatchConfig.uncertainPolicy}\` (\`fallback\`: resposta incerta em qualquer pergunta manda o pedido ao fallback, o Hermes; \`ignore\`: conta como nenhum)`,
         "## Perguntas",
         dispatchQuestions,
       ].join("\n\n"),

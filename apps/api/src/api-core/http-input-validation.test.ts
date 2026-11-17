@@ -33,8 +33,8 @@ describe("assertTaskFields", () => {
         notifyOffsetsMinutes: [5, 1440],
         longRunning: false,
         tags: ["a"],
-        previousTaskIds: ["e1"],
-        nextTaskIds: ["e2", "e3"],
+        parentTaskId: "e1",
+        subtaskIds: ["e2", "e3"],
         artifactIds: ["a1"],
         artifacts: [{ data: { body: "nota" } }],
         startedAt: "2026-08-17T15:00:00.000Z",
@@ -90,12 +90,19 @@ describe("assertTaskFields", () => {
   });
 
   test("every list of ids and the tags are lists of text", () => {
-    for (const field of ["tags", "previousTaskIds", "nextTaskIds", "artifactIds"]) {
+    for (const field of ["tags", "subtaskIds", "artifactIds"]) {
       expect(creating({ [field]: "a" }), field).toThrow(`Invalid ${field}`);
       expect(creating({ [field]: ["a", 1] }), field).toThrow(`Invalid ${field}`);
       // Na edicao a lista de artefatos e `artifacts`; `artifactIds` so existe na criacao.
       if (field !== "artifactIds") expect(editing({ [field]: null }), field).toThrow(`Invalid ${field}`);
     }
+  });
+
+  test("parentTaskId is a task id, or null to take the task out from under its main task", () => {
+    expect(creating({ parentTaskId: "p1" })).not.toThrow();
+    expect(editing({ parentTaskId: null })).not.toThrow();
+    expect(creating({ parentTaskId: ["p1"] })).toThrow("Invalid parentTaskId");
+    expect(editing({ parentTaskId: 1 })).toThrow("Invalid parentTaskId");
   });
 
   test("artifacts is a list", () => {
@@ -112,7 +119,10 @@ describe("assertTaskFields", () => {
       expect(creating({ [named]: ["x"] }), named).toThrow(BadRequestException);
       expect(editing({ [named]: ["x"] }), named).toThrow(`Invalid field ${named}`);
     }
-    expect(editing({ taskId: "t1", previousTaskIds: [] })).not.toThrow();
+    expect(editing({ taskId: "t1", parentTaskId: null })).not.toThrow();
+    // A sequencia entre tarefas saiu: os nomes dela sao campos desconhecidos.
+    expect(editing({ previousTaskIds: [] })).toThrow("Invalid field previousTaskIds");
+    expect(editing({ nextTaskIds: [] })).toThrow("Invalid field nextTaskIds");
   });
 });
 
@@ -251,7 +261,7 @@ describe("the fields each body knows come from the contract schemas", () => {
     expect([...bodyFieldsOf(updateArtifactRequestSchema)].sort()).toEqual([
       "data", "expectedRevision", "name", "schemaVersion", "tags", "taskIds", "type",
     ]);
-    expect(bodyFieldsOf(createTaskInputSchema).has("previousTaskIds")).toBe(true);
+    expect(bodyFieldsOf(createTaskInputSchema).has("parentTaskId")).toBe(true);
     expect(bodyFieldsOf(updateTaskInputSchema).has("expectedRevision")).toBe(true);
   });
 

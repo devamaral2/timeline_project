@@ -202,11 +202,11 @@ e `tags` (lista curta em minúsculas).
 
 ## O que não existe neste agente
 
-- Recorrências, tags novas, exclusão, sequência entre tarefas e alteração de um campo
+- Recorrências, tags novas, exclusão, subtarefas e alteração de um campo
   isolado não têm comando. Se o pedido exigir isso, diga o que não é
   suportado e registre o que for possível.
-- A ligação entre tarefas não tem comando: a sequência entre tarefas existe no
-  banco, mas o plano não a representa.
+- A ligação entre tarefas não tem comando: a subtarefa existe no banco, mas o
+  plano não a representa.
 - Não consulte o Postgres. O estado local é a fonte de verdade deste agente.
 - Não prometa que a análise nutricional da refeição está pronta: a note nasce
   `pending`.

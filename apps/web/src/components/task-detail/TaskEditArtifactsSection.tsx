@@ -26,7 +26,7 @@ interface TaskEditArtifactsSectionProps {
 }
 
 /**
- * "Artefatos" na edição: a lista da tarefa, na ordem da tela. Cada linha tem a posição, o nome, o tipo, de quem é
+ * "Documentos" na edição: a lista da tarefa, na ordem da tela. Cada linha tem a posição, o nome, o tipo, de quem é
  * e a relação, e os botões Subir, Descer e Remover (por teclado e por toque; não há arrastar). O "+" abre o modal
  * de seleção, e o que ele oferece depende do tipo da tarefa: numa refeição, os alimentos (do catálogo global e os
  * seus), que entram como cópia com quantidade; num treino, os exercícios do catálogo global, por referência; nos
@@ -37,9 +37,9 @@ export function TaskEditArtifactsSection({ draft, onChange }: TaskEditArtifactsS
   const positions = draftArtifactPositions(list);
 
   return (
-    <DetailSection title="Artefatos" labelId="task-edit-artifacts" count={list.length}>
+    <DetailSection title="Documentos" labelId="task-edit-artifacts" count={list.length}>
       {list.length > 0 ? (
-        <ul className={edit.list} aria-label="Artefatos ligados">
+        <ul className={edit.list} aria-label="Documentos ligados">
           {list.map((item, index) => (
             <li key={item.id} className={edit.item}>
               <span className={edit.itemLead}>{positions[index] ?? "—"}</span>
@@ -64,7 +64,7 @@ export function TaskEditArtifactsSection({ draft, onChange }: TaskEditArtifactsS
                   <StepButton item={item} list={list} step={1} label={`Descer “${item.name}”`} onChange={onChange} />
                 </span>
               )}
-              <RemoveButton label={`Remover artefato “${item.name}”`} onClick={() => onChange("artifacts", removeDraftArtifact(list, item.id))} />
+              <RemoveButton label={`Remover documento “${item.name}”`} onClick={() => onChange("artifacts", removeDraftArtifact(list, item.id))} />
             </li>
           ))}
         </ul>
@@ -100,18 +100,18 @@ const SOURCES = {
     failedMessage: "Não foi possível buscar exercícios. Tente de novo.",
   },
   other: {
-    title: "Artefatos",
-    addLabel: "Adicionar artefato",
-    searchLabel: "Buscar artefato para ligar",
+    title: "Documentos",
+    addLabel: "Adicionar documento",
+    searchLabel: "Buscar documento para ligar",
     search: searchOwnArtifacts,
-    failedMessage: "Não foi possível buscar artefatos. Tente de novo.",
+    failedMessage: "Não foi possível buscar documentos. Tente de novo.",
   },
 } as const;
 
 /** O "+" da lista e o modal de seleção que ele abre. */
 function LinkPicker({ kind, list, onChange }: LinkPickerProps) {
   const [picking, setPicking] = useState(false);
-  const source = kind === "meal" ? SOURCES.meal : kind === "training" ? SOURCES.training : SOURCES.other;
+  const source = artifactSource(kind);
 
   function pick(artifact: ArtifactDto) {
     // O alimento entra como cópia nova (pode repetir, cada uma com a sua quantidade); o resto, por referência.
@@ -122,23 +122,47 @@ function LinkPicker({ kind, list, onChange }: LinkPickerProps) {
     <>
       <div className={edit.addRow}>
         <AddButton label={source.addLabel} onClick={() => setPicking(true)} />
-        {list.length === 0 ? <p className={edit.empty}>nenhum artefato</p> : null}
+        {list.length === 0 ? <p className={edit.empty}>nenhum documento</p> : null}
       </div>
       {picking ? (
-        <EntityPickerDialog<ArtifactDto>
-          title={source.title}
-          searchLabel={source.searchLabel}
-          search={source.search}
-          keyOf={(artifact) => artifact.id}
-          nameOf={(artifact) => artifact.name}
-          renderItem={(artifact) => <ChoiceView artifact={artifact} />}
-          exclude={kind === "meal" ? undefined : (artifact) => list.some((item) => item.id === artifact.id)}
-          onPick={pick}
-          onClose={() => setPicking(false)}
-          failedMessage={source.failedMessage}
-        />
+        <ArtifactPickerDialog kind={kind} linkedIds={list.map((item) => item.id)} onPick={pick} onClose={() => setPicking(false)} />
       ) : null}
     </>
+  );
+}
+
+/** A fonte do modal para o tipo da tarefa: alimentos na refeição, exercícios no treino, os seus artefatos nos outros. */
+export function artifactSource(kind: TaskDraft["kind"]) {
+  return kind === "meal" ? SOURCES.meal : kind === "training" ? SOURCES.training : SOURCES.other;
+}
+
+interface ArtifactPickerDialogProps {
+  kind: TaskDraft["kind"];
+  /** Os artefatos já ligados: fora da busca, menos na refeição, onde o mesmo alimento pode entrar de novo como cópia. */
+  linkedIds: readonly string[];
+  onPick: (artifact: ArtifactDto) => void;
+  onClose: () => void;
+}
+
+/**
+ * O modal de seleção de artefatos da tarefa, com a fonte do tipo da tarefa (`artifactSource`). Serve à edição, que
+ * guarda a escolha no rascunho, e ao detalhe, que grava na hora.
+ */
+export function ArtifactPickerDialog({ kind, linkedIds, onPick, onClose }: ArtifactPickerDialogProps) {
+  const source = artifactSource(kind);
+  return (
+    <EntityPickerDialog<ArtifactDto>
+      title={source.title}
+      searchLabel={source.searchLabel}
+      search={source.search}
+      keyOf={(artifact) => artifact.id}
+      nameOf={(artifact) => artifact.name}
+      renderItem={(artifact) => <ChoiceView artifact={artifact} />}
+      exclude={kind === "meal" ? undefined : (artifact) => linkedIds.includes(artifact.id)}
+      onPick={onPick}
+      onClose={onClose}
+      failedMessage={source.failedMessage}
+    />
   );
 }
 
@@ -171,7 +195,7 @@ function ChoiceView({ artifact }: { artifact: ArtifactDto }) {
       <span className={edit.itemName}>{artifact.name}</span>
       <span className={edit.itemMeta}>
         <span className={edit.itemCode}>{artifact.type}</span>
-        <span>{artifact.global ? "catálogo global" : "seu artefato"}</span>
+        <span>{artifact.global ? "catálogo global" : "seu documento"}</span>
         {artifact.type === "food" ? <span>{`${Math.round(artifact.data.totals.totalCaloriesKcal)} kcal`}</span> : null}
       </span>
     </>
@@ -182,7 +206,7 @@ function ArtifactMeta({ item, hasPosition }: { item: DraftArtifact; hasPosition:
   return (
     <span className={edit.itemMeta}>
       <span className={edit.itemCode}>{item.type}</span>
-      <span>{item.global ? "catálogo global" : "seu artefato"}</span>
+      <span>{item.global ? "catálogo global" : "seu documento"}</span>
       <span className={edit.itemCode}>{item.relation}</span>
       {item.copyOf === undefined && item.quantity ? <span>{item.quantity}</span> : null}
       {hasPosition ? null : <span>sem posição na lista</span>}

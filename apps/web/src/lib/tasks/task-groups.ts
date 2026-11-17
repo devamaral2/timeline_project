@@ -41,8 +41,8 @@ const GROUPS: readonly Omit<TaskGroup, "cards">[] = [
 ];
 
 /**
- * Agrupa os cartões da lista: todo cartão com status vira uma linha, sem
- * hierarquia (a sequência entre tarefas não muda a lista). Cartão sem status
+ * Agrupa os cartões da lista: cada cartão com status recebido vira uma linha do
+ * seu grupo. Quem tira as subtarefas antes é `nestSubtasks`. Cartão sem status
  * (de referência) fica de fora. Grupo vazio não é devolvido.
  */
 export function groupTrackedTasks(cards: readonly TaskCardDto[]): TaskGroup[] {
@@ -50,6 +50,46 @@ export function groupTrackedTasks(cards: readonly TaskCardDto[]): TaskGroup[] {
     ...group,
     cards: cards.filter((card) => card.status !== undefined && groupOfStatus[card.status] === group.key),
   })).filter((group) => group.cards.length > 0);
+}
+
+export interface SubtaskTree {
+  /** Os cartões que viram linha da lista, na ordem recebida. */
+  roots: TaskCardDto[];
+  /** As subtarefas diretas de uma tarefa da lista, na ordem recebida (vazio quando não tem). */
+  subtasksOf(taskId: string): TaskCardDto[];
+}
+
+/**
+ * A hierarquia da lista (ADR 0017): a subtarefa cuja principal está na lista sai
+ * das linhas e vai para dentro dela; a subtarefa de uma subtarefa fica dentro da
+ * sua principal direta. Sem a principal na lista (filtro, modo, tarefa sem
+ * status), a subtarefa continua linha, para não sumir. Um ciclo vindo da rede
+ * também não esconde ninguém.
+ */
+export function nestSubtasks(cards: readonly TaskCardDto[]): SubtaskTree {
+  const byId = new Map(cards.map((card) => [card.id, card]));
+  /** Sobe pelas principais: só se aninha quem chega a uma raiz sem repetir ninguém. */
+  function reachesRoot(card: TaskCardDto): boolean {
+    const seen = new Set<string>([card.id]);
+    let current = card;
+    while (current.parentTaskId && byId.has(current.parentTaskId)) {
+      if (seen.has(current.parentTaskId)) return false;
+      seen.add(current.parentTaskId);
+      current = byId.get(current.parentTaskId) as TaskCardDto;
+    }
+    return true;
+  }
+  const children = new Map<string, TaskCardDto[]>();
+  const roots: TaskCardDto[] = [];
+  for (const card of cards) {
+    const parentId = card.parentTaskId;
+    if (parentId && byId.has(parentId) && reachesRoot(card)) {
+      children.set(parentId, [...(children.get(parentId) ?? []), card]);
+    } else {
+      roots.push(card);
+    }
+  }
+  return { roots, subtasksOf: (taskId) => children.get(taskId) ?? [] };
 }
 
 /** Status de pessoa em aberto: a série só mostra a ocorrência que ainda pede ação. */

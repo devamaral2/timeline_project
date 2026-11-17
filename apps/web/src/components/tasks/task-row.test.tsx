@@ -13,13 +13,13 @@ function cardOf(overrides: Partial<TaskCardDto>): TaskCardDto {
     priority: "medium",
     name: "Revisar proposta",
     description: "",
-    location: "",
     longRunning: false,
     notifyOffsetsMinutes: [],
     tags: [],
     artifactTypes: [],
-    previousTaskIds: [],
     revision: 1,
+    createdAt: "2026-09-01T12:00:00.000Z",
+    updatedAt: "2026-09-01T12:00:00.000Z",
     ...overrides,
   };
 }
@@ -85,13 +85,13 @@ describe("TaskRow", () => {
     expect(container.querySelector("[data-agent-mark]")).toBeInTheDocument();
   });
 
-  it("a sequência não muda a linha: tarefa em espera que se segue a outra mostra só o quando", () => {
+  it("a hierarquia não muda a linha: subtarefa em espera mostra só o quando", () => {
     const card = cardOf({
       status: "inHold",
       kind: "common",
       name: "Renovar passaporte",
       startedAt: "2026-09-14T09:00:00-03:00",
-      previousTaskIds: ["ev-9"],
+      parentTaskId: "ev-9",
     });
 
     render(<TaskRow card={card} userId="user-1" now={NOW} />);

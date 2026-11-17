@@ -8,7 +8,7 @@
  *
  * So entram as tarefas de pessoa e os artefatos: os pedidos ao agente, os
  * passos e as entradas deles ficam de fora. As relacoes aparecem como visoes
- * com nome (`task_sequence`, `task_artifacts`), e nao como o
+ * com nome (`task_subtasks`, `task_artifacts`), e nao como o
  * grafo de relacoes.
  */
 interface LogicalColumn {
@@ -53,7 +53,7 @@ const TABLES: readonly LogicalTable[] = [
       { name: "id", expr: "e.id", type: "text" },
       { name: "name", expr: "e.name", type: "text" },
       { name: "description", expr: "e.description", type: "text" },
-      { name: "location", expr: "e.location", type: "text", description: "onde a tarefa acontece; vazio se nao tem" },
+      { name: "location", expr: "e.location", type: "text", description: "onde a tarefa acontece; nulo se ninguem informou" },
       { name: "kind", expr: "e.kind", type: "text", description: "default | meal | sleep | training" },
       {
         name: "status", expr: "e.status", type: "text",
@@ -81,13 +81,13 @@ const TABLES: readonly LogicalTable[] = [
     ],
   },
   {
-    name: "task_sequence",
-    description: "Sequencia entre tarefas: next_task_id se segue de previous_task_id (previous vem antes). Uma tarefa pode ter varios antecessores e varios sucessores.",
+    name: "task_subtasks",
+    description: "Hierarquia entre tarefas: subtask_id e subtarefa de parent_task_id (a tarefa principal). Cada tarefa tem no maximo uma principal e pode ter varias subtarefas.",
     from: "public.task_task_relation r JOIN public.tasks p ON p.id = r.from_task_id JOIN public.tasks c ON c.id = r.to_task_id",
-    where: `r.relation = 'precedes' AND ${VISIBLE_TASK("p")} AND ${VISIBLE_TASK("c")}`,
+    where: `r.relation = 'subtask' AND ${VISIBLE_TASK("p")} AND ${VISIBLE_TASK("c")}`,
     columns: [
-      { name: "previous_task_id", expr: "r.from_task_id", type: "text" },
-      { name: "next_task_id", expr: "r.to_task_id", type: "text" },
+      { name: "parent_task_id", expr: "r.from_task_id", type: "text" },
+      { name: "subtask_id", expr: "r.to_task_id", type: "text" },
     ],
   },
   {

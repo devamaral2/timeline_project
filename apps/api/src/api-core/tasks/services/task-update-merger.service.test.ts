@@ -49,7 +49,7 @@ describe("fields", () => {
   test("changes what was sent, keeps the rest and bumps the revision", async () => {
     const { merge } = setup([meeting()]);
 
-    const { task, artifacts, sequence } = await merge("task-1", {
+    const { task, artifacts, subtasks } = await merge("task-1", {
       name: "Retrospectiva",
       priority: "high",
       tags: ["Time"],
@@ -75,7 +75,7 @@ describe("fields", () => {
     expect(task.estimatedFinishAt?.toISOString()).toBe("2026-08-18T16:30:00.000Z");
     expect(task.finishedAt?.toISOString()).toBe("2026-08-18T16:10:00.000Z");
     expect(artifacts).toEqual({ created: [], updated: [], derivations: [] });
-    expect(sequence).toEqual([]);
+    expect(subtasks).toEqual([]);
   });
 
   test("an empty change is still a revision of the task", async () => {
@@ -458,88 +458,84 @@ describe("a meal task always has a food", () => {
   });
 });
 
-describe("sequence (what the task follows and what follows it)", () => {
-  // p1 -> child -> n1, p2 -> child -> n2, p3 solto.
-  function chain() {
+describe("hierarchy (the main task and the subtasks)", () => {
+  // p1 -> child -> s1, s2; p2, p3 e s3 soltas.
+  function tree() {
     const child = taskWith({ id: "child", userId, name: "Pintar", status: "todo" });
     const other = (id: string) => Task.create({ id, userId, name: id, status: "todo" });
-    const kit = setup([child], { tasks: ["p1", "p2", "p3", "n1", "n2", "n3"].map(other) });
+    const kit = setup([child], { tasks: ["p1", "p2", "s1", "s2", "s3"].map(other) });
     kit.database.edges.push(
-      { fromId: "p1", toId: "child" },
-      { fromId: "p2", toId: "child" },
-      { fromId: "child", toId: "n1" },
-      { fromId: "child", toId: "n2" },
+      { parentId: "p1", subtaskId: "child" },
+      { parentId: "child", subtaskId: "s1" },
+      { parentId: "child", subtaskId: "s2" },
     );
     return kit;
   }
 
-  test("reads the sequence of the task from the database", async () => {
-    const { merge } = chain();
+  test("reads the hierarchy of the task from the database", async () => {
+    const { merge } = tree();
 
     const { task } = await merge("child", { name: "Pintar a sala" });
 
-    expect(task.previousIds).toEqual(["p1", "p2"]);
-    expect(task.nextIds).toEqual(["n1", "n2"]);
+    expect(task.parentId).toBe("p1");
+    expect(task.subtaskIds).toEqual(["s1", "s2"]);
   });
 
-  test("absent, the sequence does not change", async () => {
-    const { merge } = chain();
+  test("absent, the hierarchy does not change", async () => {
+    const { merge } = tree();
 
-    const { sequence } = await merge("child", { name: "Pintar a sala" });
+    const { subtasks } = await merge("child", { name: "Pintar a sala" });
 
-    expect(sequence).toEqual([]);
+    expect(subtasks).toEqual([]);
   });
 
-  test("sending the same lists changes nothing", async () => {
-    const { merge } = chain();
+  test("sending the same main task and subtasks changes nothing", async () => {
+    const { merge } = tree();
 
-    const { sequence } = await merge("child", { previousTaskIds: ["p2", "p1"], nextTaskIds: ["n1", "n2"] });
+    const { subtasks } = await merge("child", { parentTaskId: "p1", subtaskIds: ["s2", "s1"] });
 
-    expect(sequence).toEqual([]);
+    expect(subtasks).toEqual([]);
   });
 
   test("plans only the edges that were gained or lost, on either side", async () => {
-    const { merge } = chain();
+    const { merge } = tree();
 
-    const { sequence } = await merge("child", { previousTaskIds: ["p2", "p3"], nextTaskIds: ["n2", "n3"] });
+    const { subtasks } = await merge("child", { parentTaskId: "p2", subtaskIds: ["s2", "s3"] });
 
-    expect(sequence).toEqual(
-      expect.arrayContaining([
-        { op: "add", fromId: "p3", toId: "child" },
-        { op: "remove", fromId: "p1", toId: "child" },
-        { op: "add", fromId: "child", toId: "n3" },
-        { op: "remove", fromId: "child", toId: "n1" },
-      ]),
-    );
-    expect(sequence).toHaveLength(4);
-  });
-
-  test("an empty list removes every edge of that side and leaves the other side alone", async () => {
-    const { merge } = chain();
-
-    const { sequence } = await merge("child", { previousTaskIds: [] });
-
-    expect(sequence).toEqual([
-      { op: "remove", fromId: "p1", toId: "child" },
-      { op: "remove", fromId: "p2", toId: "child" },
+    expect(subtasks).toEqual([
+      { op: "remove", parentId: "p1", subtaskId: "child" },
+      { op: "add", parentId: "p2", subtaskId: "child" },
+      { op: "add", parentId: "child", subtaskId: "s3" },
+      { op: "remove", parentId: "child", subtaskId: "s1" },
     ]);
   });
 
-  test("changing the sequence revises only the edited task, never the ends", async () => {
-    const kit = chain();
+  test("an empty list removes every subtask and leaves the main task alone", async () => {
+    const { merge } = tree();
 
-    const merged = await kit.merge("child", { previousTaskIds: ["p3"], nextTaskIds: [] });
+    const { subtasks } = await merge("child", { subtaskIds: [] });
+
+    expect(subtasks).toEqual([
+      { op: "remove", parentId: "child", subtaskId: "s1" },
+      { op: "remove", parentId: "child", subtaskId: "s2" },
+    ]);
+  });
+
+  test("changing the hierarchy revises only the edited task, never the ends", async () => {
+    const kit = tree();
+
+    const merged = await kit.merge("child", { parentTaskId: "p2", subtaskIds: [] });
     await kit.batchWriter.commit(toUpdateBatch(merged, 1));
 
     const child = await kit.taskRepository.findById("child");
-    expect(child?.previousIds).toEqual(["p3"]);
-    expect(child?.nextIds).toEqual([]);
+    expect(child?.parentId).toBe("p2");
+    expect(child?.subtaskIds).toEqual([]);
     expect(child?.revision).toBe(2);
-    for (const id of ["p1", "p2", "p3", "n1", "n2"]) {
+    for (const id of ["p1", "p2", "s1", "s2"]) {
       expect((await kit.taskRepository.findById(id))?.revision).toBe(1);
     }
-    expect((await kit.taskRepository.findById("p3"))?.nextIds).toEqual(["child"]);
-    expect((await kit.taskRepository.findById("p1"))?.nextIds).toEqual([]);
+    expect((await kit.taskRepository.findById("p2"))?.subtaskIds).toEqual(["child"]);
+    expect((await kit.taskRepository.findById("p1"))?.subtaskIds).toEqual([]);
   });
 
   test("a agent task can be on either end", async () => {
@@ -547,11 +543,11 @@ describe("sequence (what the task follows and what follows it)", () => {
     const request = Task.create({ id: "request-1", userId, actor: "agent", kind: "request", status: "queued", name: "Pedido" });
     const { merge } = setup([child], { tasks: [request] });
 
-    const before = await merge("child", { previousTaskIds: ["request-1"] });
-    const after = await merge("child", { nextTaskIds: ["request-1"] });
+    const asParent = await merge("child", { parentTaskId: "request-1" });
+    const asSubtask = await merge("child", { subtaskIds: ["request-1"] });
 
-    expect(before.sequence).toEqual([{ op: "add", fromId: "request-1", toId: "child" }]);
-    expect(after.sequence).toEqual([{ op: "add", fromId: "child", toId: "request-1" }]);
+    expect(asParent.subtasks).toEqual([{ op: "add", parentId: "request-1", subtaskId: "child" }]);
+    expect(asSubtask.subtasks).toEqual([{ op: "add", parentId: "child", subtaskId: "request-1" }]);
   });
 
   test("refuses an end that does not exist, belongs to someone else or is the task itself", async () => {
@@ -559,23 +555,23 @@ describe("sequence (what the task follows and what follows it)", () => {
     const theirs = Task.create({ id: "theirs", userId: "someone-else", name: "Deles", status: "todo" });
     const { merge } = setup([child], { tasks: [theirs] });
 
-    await expect(merge("child", { previousTaskIds: ["missing"] })).rejects.toThrow(TaskNotFoundError);
-    await expect(merge("child", { nextTaskIds: ["theirs"] })).rejects.toThrow(TaskOwnershipError);
-    await expect(merge("child", { previousTaskIds: ["child"] })).rejects.toThrow("A task cannot follow itself");
-    await expect(merge("child", { nextTaskIds: ["child"] })).rejects.toThrow(TaskValidationError);
+    await expect(merge("child", { parentTaskId: "missing" })).rejects.toThrow(TaskNotFoundError);
+    await expect(merge("child", { subtaskIds: ["theirs"] })).rejects.toThrow(TaskOwnershipError);
+    await expect(merge("child", { parentTaskId: "child" })).rejects.toThrow("A task cannot be its own subtask");
+    await expect(merge("child", { subtaskIds: ["child"] })).rejects.toThrow(TaskValidationError);
   });
 
   test("refuses a change that closes a cycle when it is written", async () => {
-    const kit = chain();
-    // child -> n1 ja existe: n1 nao pode ser antecessor de child.
-    const merged = await kit.merge("child", { previousTaskIds: ["p1", "p2", "n1"] });
+    const kit = tree();
+    // child -> s1 ja existe: s1 nao pode ser a principal de child.
+    const merged = await kit.merge("child", { parentTaskId: "s1" });
 
-    expect(() => kit.database.apply(userId, merged.sequence)).toThrow("Tasks cannot follow each other in a cycle");
+    expect(() => kit.database.apply(userId, merged.subtasks)).toThrow("A task cannot be a subtask of its own subtask");
   });
 });
 
 describe("toUpdateBatch", () => {
-  test("carries the task at the expected revision, the artifacts and the sequence, without other tasks", async () => {
+  test("carries the task at the expected revision, the artifacts and the hierarchy, without other tasks", async () => {
     const original = Artifact.create({ id: "food-1", userId, type: "food", name: "Arroz", data: foodData });
     const parent = Task.create({ id: "parent", userId, name: "Projeto", status: "todo" });
     const kit = setup([meeting([{ id: "note-1", type: "text", data: { body: "pauta" } }])], {
@@ -584,7 +580,7 @@ describe("toUpdateBatch", () => {
     });
     const merged = await kit.merge("task-1", {
       artifacts: [{ id: "note-1", name: "Pauta" }, { copyOf: "food-1" }],
-      previousTaskIds: ["parent"],
+      parentTaskId: "parent",
     });
 
     const batch = toUpdateBatch(merged, 1);
@@ -596,6 +592,6 @@ describe("toUpdateBatch", () => {
     ]);
     expect(batch.derivations).toEqual([{ originalId: "food-1", copyId: merged.artifacts.created[0]?.id }]);
     expect(batch.tasks).toEqual([{ op: "update", entity: merged.task, expectedRevision: 1 }]);
-    expect(batch.sequence).toEqual([{ op: "add", fromId: "parent", toId: "task-1" }]);
+    expect(batch.subtasks).toEqual([{ op: "add", parentId: "parent", subtaskId: "task-1" }]);
   });
 });

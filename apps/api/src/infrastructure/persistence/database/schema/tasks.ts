@@ -50,8 +50,9 @@ export const tasks = pgTable(
     priority: text("priority", { enum: PRIORITIES }).notNull().default("medium"),
     name: text("name").notNull(),
     description: text("description").notNull().default(""),
-    // Onde a tarefa acontece, em texto que o Google Maps entende. So tarefa de pessoa.
-    location: text("location").notNull().default(""),
+    // Onde a tarefa acontece, em texto que o Google Maps entende. So tarefa de pessoa, e so quando alguem o
+    // informou: nulo e "sem local", nunca texto vazio.
+    location: text("location"),
     startedAt: timestamp("started_at", { withTimezone: true }),
     estimatedFinishAt: timestamp("estimated_finish_at", { withTimezone: true }),
     finishedAt: timestamp("finished_at", { withTimezone: true }),
@@ -140,7 +141,8 @@ export const tasks = pgTable(
       "tasks_notify_offsets_valid",
       sql`1 <= ALL(${table.notifyOffsetsMinutes}) AND 43200 >= ALL(${table.notifyOffsetsMinutes})`,
     ),
-    check("tasks_location_human", sql`${table.location} = '' OR ${table.actor} = 'human'`),
+    check("tasks_location_human", sql`${table.location} IS NULL OR ${table.actor} = 'human'`),
+    check("tasks_location_filled", sql`${table.location} IS NULL OR btrim(${table.location}) <> ''`),
     check("tasks_location_length", sql`char_length(${table.location}) <= 300`),
     check("tasks_data_object", sql`jsonb_typeof(${table.data}) = 'object'`),
   ],

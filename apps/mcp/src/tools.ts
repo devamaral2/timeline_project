@@ -290,7 +290,7 @@ function registerReadAndEditTools(server: McpServer, api: ApiClient): void {
     "update_task",
     {
       description:
-        "Edit fields of a task. Send only the fields to change. Its artifacts and its sequence (previous and next tasks) are left untouched.",
+        "Edit fields of a task. Send only the fields to change. Its artifacts and its subtasks (its main task and its subtasks) are left untouched.",
       inputSchema: { taskId: id("task"), expectedRevision: revision, ...taskPatchShape },
       annotations: EDIT,
     },

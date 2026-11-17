@@ -2,10 +2,12 @@
    mesma grade, soltos no fundo; o agente leva o robô como assinatura à direita.
    Cores só por token. */
 
+/* Quebra a linha só para o que vem embaixo (a gaveta das subtarefas, com largura toda). */
 .row {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
-  gap: 12px;
+  gap: 0 12px;
   padding: 10px 0;
   list-style: none;
 }

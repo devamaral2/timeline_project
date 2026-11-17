@@ -1,5 +1,4 @@
 import type { ArtifactDataInput, CreateArtifactInput } from "../artifacts/artifact.input";
-import type { GeoPointInput } from "./place-suggestion.dto";
 import type { TaskArtifactRelation, TaskPriority, HumanTaskKind, HumanTaskStatus } from "./task-types";
 import type { NotificationOffsetMinutes } from "./notification-offset-minutes";
 
@@ -30,20 +29,29 @@ export type UpdateTaskArtifactInput =
 interface TaskFields {
   name?: string;
   description?: string;
-  /** Onde acontece; vazio apaga. Tarefa de pessoa apenas. */
-  location?: string;
   priority?: TaskPriority;
   notifyOffsetsMinutes?: NotificationOffsetMinutes[];
   tags?: string[];
   /** Tarefa longa: fica fora da agenda, tem sempre status e nao se repete. */
   longRunning?: boolean;
-  /** As tarefas de que este se segue ("segue-se de"): a lista completa. Qualquer tarefa, de pessoa ou de agente. */
-  previousTaskIds?: string[];
-  /** As tarefas que se seguem a este ("da sequencia a"): a lista completa. Nenhuma tarefa e revisado por isso. */
-  nextTaskIds?: string[];
+  /**
+   * A tarefa principal desta: qualquer tarefa, de pessoa ou de agente. `null`
+   * tira a tarefa de baixo da principal. Nenhuma das duas e revisada por isso.
+   */
+  parentTaskId?: string | null;
+  /**
+   * As subtarefas desta: a lista completa. Uma subtarefa que estava sob outra
+   * principal sai de la. Nenhuma tarefa e revisada por isso.
+   */
+  subtaskIds?: string[];
 }
 
 export interface CreateTaskInput extends TaskFields {
+  /**
+   * Onde acontece, como o texto que o Google Maps entende. So a tarefa de pessoa tem, e so quando alguem informa:
+   * ausente (ou vazio), a tarefa nasce sem local. A API nunca deduz o local de onde a pessoa esta.
+   */
+  location?: string;
   /** A natureza da tarefa. Ausente e rotina. */
   kind?: HumanTaskKind;
   /** Ausente, a tarefa nasce de referencia: so marca um horario. A tarefa longa nasce `todo`. */
@@ -54,11 +62,6 @@ export interface CreateTaskInput extends TaskFields {
   estimatedFinishAt?: string;
   /** Conclusao real. */
   finishedAt?: string;
-  /**
-   * Onde a pessoa esta ao criar. Sem `location`, a API usa o endereco destas coordenadas como local. Nao e
-   * guardado na tarefa.
-   */
-  coordinates?: GeoPointInput;
   /** Artefatos novos, criados junto com a tarefa, na ordem em que aparecem. */
   artifacts?: CreateTaskArtifactInput[];
   /** Artefatos que ja existem e passam a aparecer na tarefa, depois dos novos. */
@@ -69,6 +72,8 @@ export interface CreateTaskInput extends TaskFields {
 export interface UpdateTaskInput extends TaskFields {
   taskId: string;
   expectedRevision: number;
+  /** Ausente nao muda; `null` ou vazio tira o local. */
+  location?: string | null;
   kind?: HumanTaskKind;
   status?: HumanTaskStatus | null;
   startedAt?: string | null;

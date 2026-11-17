@@ -1,6 +1,6 @@
 /*
- * A seção de relação do detalhe de tarefa: Sequência (os dois lados, "Segue-se
- * de" e "Da sequência a"). Cor só por token, para o tema trocar junto.
+ * As seções de relação do detalhe de tarefa: Tarefa principal, Subtarefas e
+ * Pedidos. Cor só por token, para o tema trocar junto.
  */
 
 .list { list-style: none; margin: 0; padding: 0; }
@@ -8,12 +8,12 @@
 .group { display: flex; flex-direction: column; gap: 4px; padding-top: 14px; }
 .groupLabel { margin: 0; font-family: var(--font-mono); font-size: var(--font-size-xs); font-weight: 400; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
 
-.sequenceRow { display: flex; align-items: flex-start; gap: 14px; padding: 10px 0; border-bottom: 1px solid var(--line); }
-.sequenceRow:last-child { border-bottom: 0; }
-.sequenceBody { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 3px; color: var(--ink); text-decoration: none; }
-.sequenceBody:focus-visible { outline: 2px solid var(--color-ring); outline-offset: 2px; border-radius: 6px; }
-.sequenceName { font-size: 15px; font-weight: 600; line-height: 24px; overflow-wrap: anywhere; }
-.sequenceMeta { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 12px; font-size: 13px; line-height: 20px; color: var(--muted); }
+.taskRow { display: flex; align-items: flex-start; gap: 14px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.taskRow:last-child { border-bottom: 0; }
+.taskBody { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 3px; color: var(--ink); text-decoration: none; }
+.taskBody:focus-visible { outline: 2px solid var(--color-ring); outline-offset: 2px; border-radius: 6px; }
+.taskName { font-size: 15px; font-weight: 600; line-height: 24px; overflow-wrap: anywhere; }
+.taskMeta { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 12px; font-size: 13px; line-height: 20px; color: var(--muted); }
 
 /* Criado por / Atualizado por: o pedido ao agente que criou ou alterou a tarefa. */
 .requestRow { display: flex; align-items: flex-start; gap: 14px; padding: 10px 0; border-bottom: 1px solid var(--line); }
@@ -23,3 +23,12 @@
 .requestBody:focus-visible { outline: 2px solid var(--color-ring); outline-offset: 2px; border-radius: 6px; }
 .requestName { font-size: 15px; font-weight: 600; line-height: 24px; overflow-wrap: anywhere; }
 .requestMeta { font-size: 13px; line-height: 20px; color: var(--muted); }
+
+/* A ação de ligar no detalhe (Adicionar subtarefa, Adicionar artefato): o "+" no círculo e o texto, na linha de baixo da lista. */
+.addAction { display: inline-flex; align-items: center; gap: 12px; min-height: 44px; margin-top: 6px; padding: 0 14px 0 0; border: 0; border-radius: 22px; background: transparent; color: var(--muted); font: inherit; font-size: 14px; font-weight: 500; cursor: pointer; transition: color var(--duration-fast); }
+.addAction:hover { color: var(--ink); }
+.addAction:focus-visible { outline: 2px solid var(--color-ring); outline-offset: 2px; }
+.addAction:disabled { opacity: .5; cursor: default; }
+.addIcon { flex: none; box-sizing: border-box; width: 32px; height: 32px; padding: 7px; border: 1px solid var(--input); border-radius: 50%; color: var(--brand); stroke-width: 1.75; transition: border-color var(--duration-fast); }
+.addAction:hover .addIcon { border-color: var(--brand); }
+@media (prefers-reduced-motion: reduce) { .addAction, .addIcon { transition: none; } }

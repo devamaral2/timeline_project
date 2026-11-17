@@ -7,18 +7,18 @@ import {
   type ArtifactWrites,
   type Task,
 } from "../../../domain/index";
-import type { ArtifactRepository, EntityBatch, TaskRepository, SequenceChange } from "../../../domain/ports";
+import type { ArtifactRepository, EntityBatch, TaskRepository, SubtaskChange } from "../../../domain/ports";
 import type { UpdateTaskArtifactInput, UpdateTaskInput } from "@repo/contracts";
 import type { ArtifactBuilder, ArtifactContentInput } from "../../artifacts/services/artifact-builder.service";
 import { isHumanTaskKind, isHumanTaskStatus } from "../create-task.usecase";
-import { planSequence } from "./task-sequence";
+import { planSubtasks } from "./task-hierarchy";
 
 /** A tarefa revisada e o que precisa ser gravado junto com ela. */
 export interface MergedTaskUpdate {
   task: Task;
   artifacts: Required<ArtifactWrites>;
   /** As arestas da ordem que mudaram. Nenhuma tarefa e revisada por isso. */
-  sequence: SequenceChange[];
+  subtasks: SubtaskChange[];
 }
 
 export interface TaskUpdateDeps {
@@ -45,7 +45,7 @@ export function toUpdateBatch(merged: MergedTaskUpdate, expectedRevision: number
     ],
     derivations: merged.artifacts.derivations,
     tasks: [{ op: "update", entity: merged.task, expectedRevision }],
-    sequence: merged.sequence,
+    subtasks: merged.subtasks,
   };
 }
 
@@ -105,14 +105,14 @@ export async function mergeTaskUpdate(
     artifactLinks: merged.links,
   });
 
-  const sequence = await planSequence(
+  const subtasks = await planSubtasks(
     existingTask.id,
-    { previousIds: existingTask.previousIds, nextIds: existingTask.nextIds },
-    { previousIds: input.previousTaskIds, nextIds: input.nextTaskIds },
+    { parentId: existingTask.parentId, subtaskIds: existingTask.subtaskIds },
+    { parentId: input.parentTaskId, subtaskIds: input.subtaskIds },
     deps.taskRepository,
     existingTask.userId,
   );
-  return { task, artifacts: merged.writes, sequence };
+  return { task, artifacts: merged.writes, subtasks };
 }
 
 /**

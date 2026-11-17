@@ -1,6 +1,5 @@
 "use client";
 
-import { currentCoordinates } from "@/lib/geolocation/current-coordinates";
 import { useRef, useState } from "react";
 import type { TaskDto } from "@repo/contracts";
 import { agendaRefreshEvent } from "@/components/agenda/agenda-refresh";
@@ -27,13 +26,15 @@ import { TaskEditLocationSection } from "./TaskEditLocationSection";
 import { TaskEditPersistentSection } from "./TaskEditPersistentSection";
 import { TaskEditRecurrenceSection } from "./TaskEditRecurrenceSection";
 import { TaskEditReminderSection } from "./TaskEditReminderSection";
-import { TaskEditSequenceSection } from "./TaskEditSequenceSection";
+import { TaskEditHierarchySection } from "./TaskEditHierarchySection";
 import { useTaskDraft } from "./use-task-draft";
 import { useRecurrenceDraft } from "./use-recurrence-draft";
 
 interface TaskEditViewProps {
   /** A tarefa lida. Sem ele, o formulário é de criação: começa vazio e cria uma tarefa nova. */
   task?: TaskDto;
+  /** O dono da tela: os pedidos ao Hermes saem em nome dele. */
+  userId?: string;
   /** O título de uma tarefa nova, vindo de `/tarefa comprar pão`. */
   initialName?: string;
   /** Relê a tarefa depois de uma revisão velha. Não lança. */
@@ -56,7 +57,7 @@ const CREATE_FAILED_MESSAGE = "Não foi possível criar a tarefa. Tente novament
  * dela no `TaskDraft` e em `buildTaskPatch` (e em `buildCreateTaskInput`, se
  * a criação os enviar).
  */
-export function TaskEditView({ task: loaded, initialName, onReload, onLeave }: TaskEditViewProps) {
+export function TaskEditView({ task: loaded, userId, initialName, onReload, onLeave }: TaskEditViewProps) {
   const { task, draft, setField } = useTaskDraft(loaded ?? null, initialName);
   // A recorrência é outra chamada, com a revisão da série: o rascunho dela fica fora do `TaskDraft`.
   const recurrence = useRecurrenceDraft(task?.recurrence?.id ?? null);
@@ -107,12 +108,8 @@ export function TaskEditView({ task: loaded, initialName, onReload, onLeave }: T
       } else if (newSeries) {
         await createRecurrence(newSeries, { idempotencyKey });
       } else {
-        // Sem local digitado, a tarefa nasce com o endereço de onde a pessoa está.
-        const coordinates = draft.location.trim() ? undefined : await currentCoordinates();
-        await createTask(
-          { ...buildCreateTaskInput(draft, new Date()), ...(coordinates ? { coordinates } : {}) },
-          { idempotencyKey },
-        );
+        // Sem local digitado, a tarefa nasce sem local: a posição da pessoa nunca é enviada.
+        await createTask(buildCreateTaskInput(draft, new Date()), { idempotencyKey });
       }
       window.dispatchEvent(new Event(agendaRefreshEvent));
       onLeave();
@@ -182,8 +179,8 @@ export function TaskEditView({ task: loaded, initialName, onReload, onLeave }: T
             onChange={(change) => setField("description", change.target.value)}
           />
         </EditFieldSection>
-        {/* A seção de sequência só existe na edição: a criação ainda não a mostra. */}
-        {task ? <TaskEditSequenceSection taskId={task.id} draft={draft} onChange={setField} /> : null}
+        {/* A hierarquia (tarefa principal e subtarefas) só existe na edição: a criação ainda não a mostra. */}
+        {task ? <TaskEditHierarchySection taskId={task.id} userId={userId} draft={draft} onChange={setField} /> : null}
         {/* A lista de artefatos só existe na edição: a criação ainda não a mostra. */}
         {task ? <TaskEditArtifactsSection draft={draft} onChange={setField} /> : null}
         {failure ? <DetailMessage alert>{failure}</DetailMessage> : null}

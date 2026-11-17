@@ -6,7 +6,7 @@ import type {
   EntityBatchWriter,
   TaskRepository,
   RecurrenceRepository,
-  SequenceChange,
+  SubtaskChange,
   StagedChange,
 } from "../../../domain/ports";
 
@@ -28,8 +28,8 @@ export class InMemoryEntityBatchWriter implements EntityBatchWriter {
   constructor(
     private readonly repositories: {
       tasks: TaskRepository;
-      /** O banco em memoria, onde a sequencia entre tarefas fica registrada. */
-      sequence?: { apply(userId: string, changes: readonly SequenceChange[]): void };
+      /** O banco em memoria, onde a hierarquia entre tarefas fica registrada. */
+      subtasks?: { apply(userId: string, changes: readonly SubtaskChange[]): void };
       artifacts: ArtifactRepository;
       recurrences?: RecurrenceRepository;
     },
@@ -55,7 +55,7 @@ export class InMemoryEntityBatchWriter implements EntityBatchWriter {
       }
     }
     await this.apply(this.repositories.tasks, batch.userId, batch.tasks);
-    this.repositories.sequence?.apply(batch.userId, batch.sequence ?? []);
+    this.repositories.subtasks?.apply(batch.userId, batch.subtasks ?? []);
     await batch.afterWrite?.(undefined);
     this.commits.push(batch);
 

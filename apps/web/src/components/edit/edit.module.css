@@ -150,7 +150,7 @@ button.control[aria-expanded="true"] { border-color: var(--color-ring); }
 .suggestion { height: 36px; padding: 0 12px; border: 1px solid var(--input); border-radius: 18px; background: var(--card); color: var(--ink); font: inherit; font-size: 14px; cursor: pointer; }
 .suggestion[data-highlighted="true"] { border-color: var(--color-ring); }
 
-/* Uma linha de item ligado (sequência, artefato, tarefa do artefato): o glifo, o
+/* Uma linha de item ligado (tarefa principal, subtarefa, artefato, tarefa do artefato): o glifo, o
    nome com a linha de detalhe, o que vai na ponta e o "x". */
 .list { list-style: none; margin: 0; padding: 0; }
 .item { display: flex; align-items: flex-start; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--hairline); }

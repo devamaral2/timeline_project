@@ -35,7 +35,7 @@ function lastQuery(): Record<string, string> {
 
 /** Os ids dos artefatos listados, na ordem da tela (cada item é um link para a nota). */
 function listedIds(): string[] {
-  return within(screen.getByRole("region", { name: "Lista de artefatos" }))
+  return within(screen.getByRole("region", { name: "Lista de documentos" }))
     .queryAllByRole("link")
     .map((link) => link.getAttribute("href")?.split("/").pop() ?? "");
 }
@@ -92,10 +92,10 @@ beforeEach(() => {
 });
 
 describe("lista", () => {
-  test("lista os artefatos do usuário do mais recente para o mais antigo, sem as cópias derivadas", async () => {
+  test("lista os documentos do usuário do mais recente para o mais antigo, sem as cópias derivadas", async () => {
     render(<NotesScreen userId="user-1" />);
 
-    await screen.findByRole("heading", { level: 1, name: "4 artefatos" });
+    await screen.findByRole("heading", { level: 1, name: "4 documentos" });
     expect(listedIds()).toEqual(["art-nova", "art-texto", "art-antiga", "art-sono"]);
     expect(screen.queryByText("Arroz (cópia)")).not.toBeInTheDocument();
     expect(api.calls[0]).toMatchObject({ method: "GET", pathname: "/api/artifacts" });
@@ -103,9 +103,9 @@ describe("lista", () => {
 
   test("cada item mostra o nome, o tipo e as tags, e leva à rota de nota", async () => {
     render(<NotesScreen userId="user-1" />);
-    await screen.findByRole("heading", { level: 1, name: "4 artefatos" });
+    await screen.findByRole("heading", { level: 1, name: "4 documentos" });
 
-    const almoco = within(screen.getByRole("region", { name: "Lista de artefatos" })).getByRole("link", { name: /Almoço/ });
+    const almoco = within(screen.getByRole("region", { name: "Lista de documentos" })).getByRole("link", { name: /Almoço/ });
     expect(almoco).toHaveAttribute("href", "/user-1/notas/art-nova");
     expect(within(almoco).getByText("Refeição")).toBeInTheDocument();
     expect(within(almoco).getByText("#casa")).toBeInTheDocument();
@@ -115,7 +115,7 @@ describe("lista", () => {
 describe("filtros", () => {
   test("o tipo escolhido vai como parâmetro da consulta e filtra a lista", async () => {
     render(<NotesScreen userId="user-1" />);
-    await screen.findByRole("heading", { level: 1, name: "4 artefatos" });
+    await screen.findByRole("heading", { level: 1, name: "4 documentos" });
 
     fireEvent.click(screen.getByRole("button", { name: "Sono" }));
 
@@ -124,9 +124,9 @@ describe("filtros", () => {
     expect(screen.getByRole("button", { name: "Sono" })).toHaveAttribute("aria-pressed", "true");
   });
 
-  test("a tag escolhida vai à consulta, e as opções de tag continuam as de todos os artefatos", async () => {
+  test("a tag escolhida vai à consulta, e as opções de tag continuam as de todos os documentos", async () => {
     render(<NotesScreen userId="user-1" />);
-    await screen.findByRole("heading", { level: 1, name: "4 artefatos" });
+    await screen.findByRole("heading", { level: 1, name: "4 documentos" });
 
     fireEvent.click(screen.getByRole("button", { name: "#leitura" }));
 
@@ -137,9 +137,9 @@ describe("filtros", () => {
 
   test("o texto vai como q e busca no nome e no corpo", async () => {
     render(<NotesScreen userId="user-1" />);
-    await screen.findByRole("heading", { level: 1, name: "4 artefatos" });
+    await screen.findByRole("heading", { level: 1, name: "4 documentos" });
 
-    fireEvent.change(screen.getByRole("searchbox", { name: "Buscar artefatos" }), { target: { value: "leite" } });
+    fireEvent.change(screen.getByRole("searchbox", { name: "Buscar documentos" }), { target: { value: "leite" } });
 
     await waitFor(() => expect(lastQuery()).toEqual({ q: "leite" }));
     expect(listedIds()).toEqual(["art-texto"]);
@@ -147,7 +147,7 @@ describe("filtros", () => {
 
   test("tipo e tag somam-se na consulta, e Limpar filtros volta a lista inteira", async () => {
     render(<NotesScreen userId="user-1" />);
-    await screen.findByRole("heading", { level: 1, name: "4 artefatos" });
+    await screen.findByRole("heading", { level: 1, name: "4 documentos" });
 
     fireEvent.click(screen.getByRole("button", { name: "Nota" }));
     fireEvent.click(screen.getByRole("button", { name: "#casa" }));
@@ -159,14 +159,14 @@ describe("filtros", () => {
     expect(listedIds()).toEqual(["art-nova", "art-texto", "art-antiga", "art-sono"]);
   });
 
-  test("nenhum artefato combina com a busca: avisa e oferece limpar", async () => {
+  test("nenhum documento combina com a busca: avisa e oferece limpar", async () => {
     render(<NotesScreen userId="user-1" />);
-    await screen.findByRole("heading", { level: 1, name: "4 artefatos" });
+    await screen.findByRole("heading", { level: 1, name: "4 documentos" });
 
-    fireEvent.change(screen.getByRole("searchbox", { name: "Buscar artefatos" }), { target: { value: "zzz" } });
+    fireEvent.change(screen.getByRole("searchbox", { name: "Buscar documentos" }), { target: { value: "zzz" } });
 
-    expect(await screen.findByRole("heading", { name: "Nenhum artefato encontrado" })).toBeInTheDocument();
-    expect(within(screen.getByRole("region", { name: "Lista de artefatos" })).getByRole("button", { name: "Limpar filtros" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Nenhum documento encontrado" })).toBeInTheDocument();
+    expect(within(screen.getByRole("region", { name: "Lista de documentos" })).getByRole("button", { name: "Limpar filtros" })).toBeInTheDocument();
   });
 });
 
@@ -175,30 +175,30 @@ describe("estados", () => {
     net.authedFetch.mockReturnValue(new Promise(() => {}));
     render(<NotesScreen userId="user-1" />);
 
-    expect(screen.getByRole("status")).toHaveTextContent("Carregando artefatos…");
+    expect(screen.getByRole("status")).toHaveTextContent("Carregando documentos…");
   });
 
   test("oferece tentar de novo quando a leitura falha", async () => {
     api.failNext("GET", "/api/artifacts", 500);
     render(<NotesScreen userId="user-1" />);
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível carregar os artefatos.");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível carregar os documentos.");
     fireEvent.click(screen.getByRole("button", { name: "Tentar de novo" }));
 
-    expect(await screen.findByRole("heading", { level: 1, name: "4 artefatos" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: "4 documentos" })).toBeInTheDocument();
   });
 
   test("convida a criar a primeira nota quando o usuário não tem nenhuma", async () => {
     install({});
     render(<NotesScreen userId="user-1" />);
 
-    expect(await screen.findByRole("heading", { name: "Nenhum artefato ainda" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Nenhum documento ainda" })).toBeInTheDocument();
   });
 
   test("uma cópia derivada sozinha não conta como nota: a lista continua vazia", async () => {
     install({ artifacts: [artifactFixture({ id: "art-copia", name: "Cópia", type: "food", data: FOOD, derived: true })] });
     render(<NotesScreen userId="user-1" />);
 
-    expect(await screen.findByRole("heading", { name: "Nenhum artefato ainda" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Nenhum documento ainda" })).toBeInTheDocument();
   });
 });

@@ -1,6 +1,5 @@
 "use client";
 
-import { currentCoordinates } from "@/lib/geolocation/current-coordinates";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { RequestDto, RequestEntityDto } from "@repo/contracts";
 import { ApiRequestError } from "@/lib/api/client-request";
@@ -70,10 +69,7 @@ export function useVoiceTaskQueue({ onCreated }: { onCreated: (task: RequestEnti
     let terminal = false;
     try {
       if (!job.requestId) {
-        const coordinates = await currentCoordinates();
-        const requestId = await startVoiceRequest({
-          transcript: job.transcript, clientMessageId: job.id, ...(coordinates ? { coordinates } : {}),
-        });
+        const requestId = await startVoiceRequest({ transcript: job.transcript, clientMessageId: job.id });
         if (!activeRef.current || generationRef.current !== generation) return;
         commit(jobsRef.current.map((item) => item.id !== job.id ? item : { ...item, requestId }));
       } else {

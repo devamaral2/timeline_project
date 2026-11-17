@@ -202,12 +202,10 @@ export const documentedOperations: Record<string, OperationDoc> = {
   "GET /api/places": {
     tag: "Locais",
     summary: "Busca locais por texto",
-    description: "Procura endereços e lugares (OpenStreetMap). Com `lat` e `lon` (onde a pessoa está), os locais mais perto vêm primeiro. Com menos de 3 letras ou com o serviço de mapas fora do ar, devolve lista vazia.",
+    description: "Procura endereços e lugares (OpenStreetMap) só pelo texto: a posição da pessoa não é enviada. Com menos de 3 letras ou com o serviço de mapas fora do ar, devolve lista vazia.",
     query: {
       query: { description: "O que o usuário digitou: nome do lugar ou endereço." },
       limit: limit(10, 6),
-      lat: { description: "Latitude de onde a pessoa está. Só vale junto de `lon`.", type: "number", minimum: -90, maximum: 90 },
-      lon: { description: "Longitude de onde a pessoa está. Só vale junto de `lat`.", type: "number", minimum: -180, maximum: 180 },
     },
     success: { status: 200, description: "Os locais encontrados.", schema: "PlaceSuggestion", list: true },
   },

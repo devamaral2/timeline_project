@@ -1,6 +1,6 @@
 import { and, asc, eq, gte, isNull, lt, or, sql } from "drizzle-orm";
 import {
-  SEQUENCE_RELATION,
+  SUBTASK_RELATION,
   RecurrenceNotFoundError,
   RecurrenceOwnershipError,
   RecurrenceRevisionConflictError,
@@ -42,10 +42,10 @@ export async function updateRecurrenceAggregate(
 ): Promise<void> {
   await writeArtifacts(tx, artifacts);
 
-  const { id: _id, userId: _userId, ...columns } = recurrenceColumnsOf(recurrence);
+  const { id: _id, userId: _userId, createdAt: _createdAt, ...columns } = recurrenceColumnsOf(recurrence);
   const updated = await tx
     .update(schema.recurrences)
-    .set({ ...columns, updatedAt: sql`now()` })
+    .set(columns)
     .where(
       and(
         eq(schema.recurrences.id, recurrence.id),
@@ -188,24 +188,24 @@ export class PostgresRecurrenceRepository implements RecurrenceRepository {
       .onConflictDoNothing();
   }
 
-  async materialize(recurrence: Recurrence, occurrences: Task[], previousIds: readonly string[] = []): Promise<void> {
+  async materialize(recurrence: Recurrence, occurrences: Task[], parentId?: string): Promise<void> {
     await this.db.transaction(async (tx) => {
       // Duas abas lendo a agenda ao mesmo tempo esperam uma pela outra; o
       // indice unico por dia continua sendo a garantia, isto so poupa trabalho.
       await lockUser(tx, recurrence.userId);
 
-      // Com o soft delete o antecessor continua na tabela e a chave estrangeira aceitaria a
-      // ocorrencia, que ficaria visivel seguindo uma tarefa escondido.
-      const previous = await liveTasks(tx, recurrence.userId, previousIds);
-      if (previous.length < previousIds.length) occurrences = [];
+      // Com o soft delete a principal continua na tabela e a chave estrangeira aceitaria a
+      // ocorrencia, que ficaria visivel como subtarefa de uma tarefa escondida.
+      const parents = parentId ? await liveTasks(tx, recurrence.userId, [parentId]) : [];
+      if (parentId && parents.length === 0) occurrences = [];
 
       for (const occurrence of occurrences) {
         if (!(await insertTaskAggregate(tx, occurrence))) continue;
-        if (previous.length === 0) continue;
-        // A relacao faz parte da criacao da ocorrencia: nao conta como edicao do antecessor.
-        await tx.insert(schema.taskTaskRelation).values(
-          previous.map((fromTaskId) => ({ fromTaskId, toTaskId: occurrence.id, relation: SEQUENCE_RELATION })),
-        );
+        if (!parentId) continue;
+        // A relacao faz parte da criacao da ocorrencia: nao conta como edicao da principal.
+        await tx
+          .insert(schema.taskTaskRelation)
+          .values({ fromTaskId: parentId, toTaskId: occurrence.id, relation: SUBTASK_RELATION });
       }
 
       // So avanca a marca d'agua se ninguem editou a regra no meio do caminho:

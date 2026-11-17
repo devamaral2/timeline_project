@@ -14,7 +14,7 @@ const weekly: RecurrenceRule = { ...daily, frequency: "weekly", byWeekday: 0b010
 const monthly: RecurrenceRule = { ...daily, frequency: "monthly", byMonthDay: 5 };
 const yearly: RecurrenceRule = { ...daily, frequency: "yearly", byMonthDay: 15, byMonth: 3 };
 
-const template = { name: "Correr", kind: "common", artifactIds: ["artifact-1"], previousTaskIds: [] };
+const template = { name: "Correr", kind: "common", artifactIds: ["artifact-1"] };
 
 function create(rule: Partial<RecurrenceRule> = {}, base: RecurrenceRule = daily): Recurrence {
   return Recurrence.create({ userId: "user-1", rule: { ...base, ...rule }, template });
@@ -166,8 +166,11 @@ describe("Recurrence.create", () => {
   });
 });
 
+const createdAt = new Date("2026-08-01T12:00:00.000Z");
+const updatedAt = new Date("2026-08-02T12:00:00.000Z");
+
 describe("Recurrence.rehydrate", () => {
-  test("returns the series as stored, with its revision and watermark", () => {
+  test("returns the series as stored, with its revision, watermark and timestamps", () => {
     const recurrence = Recurrence.rehydrate({
       id: "rec-1",
       userId: "user-1",
@@ -175,18 +178,23 @@ describe("Recurrence.rehydrate", () => {
       template,
       revision: 4,
       materializedThrough: "2026-10-30",
+      createdAt,
+      updatedAt,
     });
 
-    expect(recurrence).toMatchObject({ id: "rec-1", revision: 4, materializedThrough: "2026-10-30" });
+    expect(recurrence).toMatchObject({ id: "rec-1", revision: 4, materializedThrough: "2026-10-30", createdAt, updatedAt });
     expect(recurrence.rule).toEqual(weekly);
   });
 
   test("rejects a revision that is not an integer >= 1 and a watermark that is not a day", () => {
-    const row = { id: "rec-1", userId: "user-1", rule: daily, template };
+    const row = { id: "rec-1", userId: "user-1", rule: daily, template, createdAt, updatedAt };
 
     expect(() => Recurrence.rehydrate({ ...row, revision: 0 })).toThrow("Recurrence revision must be an integer >= 1");
     expect(() => Recurrence.rehydrate({ ...row, revision: 1, materializedThrough: "2026-02-31" })).toThrow(
       "Invalid materializedThrough",
+    );
+    expect(() => Recurrence.rehydrate({ ...row, revision: 1, updatedAt: new Date("2026-07-01T00:00:00.000Z") })).toThrow(
+      "updatedAt must be equal to or after createdAt",
     );
   });
 });
@@ -199,6 +207,19 @@ describe("Recurrence.revise", () => {
     template,
     revision: 2,
     materializedThrough: "2026-10-30",
+    createdAt,
+    updatedAt,
+  });
+
+  test("moves updatedAt, keeps createdAt, and advancing the watermark changes neither", () => {
+    const later = new Date("2026-09-01T12:00:00.000Z");
+    const revised = generated.revise({ rule: { timeOfDay: "08:00" } }, later);
+
+    expect(revised.createdAt).toEqual(createdAt);
+    expect(revised.updatedAt).toEqual(later);
+    const advanced = generated.materializedUntil("2026-11-30");
+    expect(advanced.createdAt).toEqual(createdAt);
+    expect(advanced.updatedAt).toEqual(updatedAt);
   });
 
   test("merges the rule changes, bumps the revision and resets the watermark", () => {

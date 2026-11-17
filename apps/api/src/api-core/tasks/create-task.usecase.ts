@@ -1,5 +1,5 @@
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
-import type { ArtifactRepository, EntityBatch, EntityBatchWriter, TaskRepository, SequenceChange } from "../../domain/ports";
+import type { ArtifactRepository, EntityBatch, EntityBatchWriter, TaskRepository, SubtaskChange } from "../../domain/ports";
 import type { CreateTaskArtifactInput, CreateTaskInput } from "@repo/contracts";
 import {
   ArtifactNotFoundError,
@@ -14,9 +14,8 @@ import {
   type HumanTaskKind,
   type HumanTaskStatus,
 } from "../../domain/index";
-import type { PlaceReverseGateway } from "../../infrastructure/places/photon-place-search.gateway";
 import type { ArtifactBuilder } from "../artifacts/services/artifact-builder.service";
-import { planSequence } from "./services/task-sequence";
+import { planSubtasks } from "./services/task-hierarchy";
 import type { ResolvedTaskSchedule } from "./services/task-schedule.service";
 import { getMealTaskName } from "./services/meal-task-name.service";
 
@@ -29,8 +28,8 @@ export interface PreparedTask {
   artifacts: Artifact[];
   /** De qual original saiu cada copia de alimento. */
   derivations: { originalId: string; copyId: string }[];
-  /** A ordem da tarefa: de quais ela se segue e quais se seguem a ela. Ninguem e revisado por isso. */
-  sequence: SequenceChange[];
+  /** A hierarquia da tarefa: a principal dela e as subtarefas. Ninguem e revisado por isso. */
+  subtasks: SubtaskChange[];
 }
 
 /**
@@ -70,7 +69,7 @@ export function toEntityBatch(prepared: PreparedTask): EntityBatch {
     artifacts: prepared.artifacts.map((entity) => ({ op: "create", entity })),
     derivations: prepared.derivations,
     tasks: [{ op: "create", entity: prepared.task }],
-    sequence: prepared.sequence,
+    subtasks: prepared.subtasks,
   };
 }
 
@@ -81,7 +80,6 @@ export class CreateTaskUseCase {
     private readonly artifactBuilder: ArtifactBuilder,
     private readonly batchWriter: EntityBatchWriter,
     private readonly clock: () => Date = () => new Date(),
-    private readonly placeReverse?: PlaceReverseGateway,
   ) {}
 
   async execute(
@@ -170,7 +168,8 @@ export class CreateTaskUseCase {
       priority: input.priority,
       name: input.name ?? deriveName(kind, at, created),
       description: input.description ?? "",
-      location: input.location ?? (await this.locate(input.coordinates)),
+      // So o local que alguem informou: a API nunca deduz um de onde a pessoa esta.
+      location: input.location,
       startedAt,
       estimatedFinishAt,
       finishedAt: parseInstant(input.finishedAt),
@@ -180,20 +179,14 @@ export class CreateTaskUseCase {
       artifactLinks: links,
     });
 
-    const sequence = await planSequence(
+    const subtasks = await planSubtasks(
       task.id,
-      { previousIds: [], nextIds: [] },
-      { previousIds: input.previousTaskIds ?? [], nextIds: input.nextTaskIds ?? [] },
+      { parentId: undefined, subtaskIds: [] },
+      { parentId: input.parentTaskId, subtaskIds: input.subtaskIds ?? [] },
       this.taskRepository,
       actor.userId,
     );
-    return { task, artifacts: created, derivations, sequence };
-  }
-
-  /** O endereco de onde a pessoa esta; sem coordenadas, sem servico ou sem resposta, a tarefa fica sem local. */
-  private async locate(point: CreateTaskInput["coordinates"]): Promise<string | undefined> {
-    if (!point || !this.placeReverse) return undefined;
-    return (await this.placeReverse.reverse(point))?.label;
+    return { task, artifacts: created, derivations, subtasks };
   }
 
   /** Um artefato que ja existe so entra na tarefa se for do usuario ou global. */

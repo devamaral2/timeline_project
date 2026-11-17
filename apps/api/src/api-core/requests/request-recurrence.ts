@@ -155,6 +155,7 @@ export function planSeriesEdit(current: Recurrence, edit: SeriesEdit, timeZone: 
   ) return { rule };
 
   const stored = storedTemplateOf(current);
+  const place = (location ?? stored.location)?.trim();
   return {
     rule,
     // Os artefatos da serie (o alimento de um almoco fixo) ficam: este agente nao cria nem troca artefatos.
@@ -164,11 +165,11 @@ export function planSeriesEdit(current: Recurrence, edit: SeriesEdit, timeZone: 
       ...(stored.status ? { status: stored.status } : {}),
       name: edit.name ?? stored.name,
       description: edit.description ?? stored.description,
-      location: location ?? stored.location,
+      ...(place ? { location: place } : {}),
       tags: edit.tags ?? stored.tags,
       priority: edit.priority ?? stored.priority,
       notifyOffsetsMinutes: stored.notifyOffsetsMinutes as RecurrenceTemplate["notifyOffsetsMinutes"],
-      previousTaskIds: stored.previousTaskIds,
+      ...(stored.parentTaskId ? { parentTaskId: stored.parentTaskId } : {}),
     },
   };
 }

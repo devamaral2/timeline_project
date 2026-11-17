@@ -7,12 +7,3 @@ export interface PlaceSuggestionDto {
   /** `name` e `address` juntos: o que vai para o campo `location` da tarefa. */
   label: string;
 }
-
-/**
- * Onde a pessoa esta, lido pelo navegador. A API converte em endereco (geocodificacao reversa) e grava o
- * resultado em `location`; as coordenadas em si nao sao guardadas.
- */
-export interface GeoPointInput {
-  latitude: number;
-  longitude: number;
-}

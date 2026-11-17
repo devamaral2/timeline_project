@@ -67,77 +67,101 @@ test("the task, the edited and the new artifacts are written in one batch", asyn
   expect(saved?.revision).toBe(2);
 });
 
-test("changing the sequence writes the edges in the same batch and revises only the edited task", async () => {
-  const oldBefore = Task.create({ id: "old", userId: actor.userId, name: "Antigo", status: "todo" });
-  const newBefore = Task.create({ id: "new", userId: actor.userId, name: "Novo", status: "todo" });
-  const after = Task.create({ id: "after", userId: actor.userId, name: "Depois", status: "todo" });
-  const { useCase, taskRepository, batchWriter, database } = setup({ tasks: [meeting(), oldBefore, newBefore, after] });
-  database.edges.push({ fromId: "old", toId: "task-1" });
+test("changing the hierarchy writes the edges in the same batch and revises only the edited task", async () => {
+  const oldParent = Task.create({ id: "old", userId: actor.userId, name: "Antigo", status: "todo" });
+  const newParent = Task.create({ id: "new", userId: actor.userId, name: "Novo", status: "todo" });
+  const child = Task.create({ id: "child", userId: actor.userId, name: "Parte", status: "todo" });
+  const { useCase, taskRepository, batchWriter, database } = setup({ tasks: [meeting(), oldParent, newParent, child] });
+  database.edges.push({ parentId: "old", subtaskId: "task-1" });
 
-  await useCase.execute({ taskId: "task-1", expectedRevision: 1, previousTaskIds: ["new"], nextTaskIds: ["after"] }, actor);
+  await useCase.execute({ taskId: "task-1", expectedRevision: 1, parentTaskId: "new", subtaskIds: ["child"] }, actor);
 
   expect(batchWriter.commits).toHaveLength(1);
   expect(batchWriter.commits[0]?.tasks.map((change) => change.op)).toEqual(["update"]);
-  expect(batchWriter.commits[0]?.sequence).toEqual([
-    { op: "add", fromId: "new", toId: "task-1" },
-    { op: "remove", fromId: "old", toId: "task-1" },
-    { op: "add", fromId: "task-1", toId: "after" },
+  expect(batchWriter.commits[0]?.subtasks).toEqual([
+    { op: "remove", parentId: "old", subtaskId: "task-1" },
+    { op: "add", parentId: "new", subtaskId: "task-1" },
+    { op: "add", parentId: "task-1", subtaskId: "child" },
   ]);
-  expect(await taskRepository.findById("task-1")).toMatchObject({ previousIds: ["new"], nextIds: ["after"], revision: 2 });
-  expect(await taskRepository.findById("old")).toMatchObject({ nextIds: [], revision: 1 });
-  expect(await taskRepository.findById("new")).toMatchObject({ nextIds: ["task-1"], revision: 1 });
-  expect(await taskRepository.findById("after")).toMatchObject({ previousIds: ["task-1"], revision: 1 });
+  expect(await taskRepository.findById("task-1")).toMatchObject({ parentId: "new", subtaskIds: ["child"], revision: 2 });
+  expect(await taskRepository.findById("old")).toMatchObject({ subtaskIds: [], revision: 1 });
+  expect(await taskRepository.findById("new")).toMatchObject({ subtaskIds: ["task-1"], revision: 1 });
+  expect(await taskRepository.findById("child")).toMatchObject({ parentId: "task-1", revision: 1 });
 });
 
-test("an update without the lists keeps the sequence as it is", async () => {
+test("a subtask taken from another main task moves: a task has a single main task", async () => {
+  const other = Task.create({ id: "other", userId: actor.userId, name: "Outra", status: "todo" });
+  const child = Task.create({ id: "child", userId: actor.userId, name: "Parte", status: "todo" });
+  const { useCase, taskRepository, database } = setup({ tasks: [meeting(), other, child] });
+  database.edges.push({ parentId: "other", subtaskId: "child" });
+
+  await useCase.execute({ taskId: "task-1", expectedRevision: 1, subtaskIds: ["child"] }, actor);
+
+  expect(database.edges).toEqual([{ parentId: "task-1", subtaskId: "child" }]);
+  expect(await taskRepository.findById("other")).toMatchObject({ subtaskIds: [], revision: 1 });
+  expect(await taskRepository.findById("child")).toMatchObject({ parentId: "task-1", revision: 1 });
+});
+
+test("null takes the task out from under its main task", async () => {
+  const parent = Task.create({ id: "parent", userId: actor.userId, name: "Principal", status: "todo" });
+  const { useCase, taskRepository, database } = setup({ tasks: [meeting(), parent] });
+  database.edges.push({ parentId: "parent", subtaskId: "task-1" });
+
+  await useCase.execute({ taskId: "task-1", expectedRevision: 1, parentTaskId: null }, actor);
+
+  expect(database.edges).toEqual([]);
+  expect(await taskRepository.findById("task-1")).toMatchObject({ parentId: undefined, revision: 2 });
+});
+
+test("an update without the hierarchy keeps it as it is", async () => {
   const before = Task.create({ id: "before", userId: actor.userId, name: "Antes", status: "todo" });
   const { useCase, taskRepository, batchWriter, database } = setup({ tasks: [meeting(), before] });
-  database.edges.push({ fromId: "before", toId: "task-1" });
+  database.edges.push({ parentId: "before", subtaskId: "task-1" });
 
   await useCase.execute({ taskId: "task-1", expectedRevision: 1, name: "Outro nome" }, actor);
 
-  expect(batchWriter.commits[0]?.sequence).toEqual([]);
-  expect(await taskRepository.findById("task-1")).toMatchObject({ previousIds: ["before"], name: "Outro nome", revision: 2 });
+  expect(batchWriter.commits[0]?.subtasks).toEqual([]);
+  expect(await taskRepository.findById("task-1")).toMatchObject({ parentId: "before", name: "Outro nome", revision: 2 });
 });
 
-test("repeating the same sequence is not a change of the sequence", async () => {
+test("repeating the same main task is not a change of the hierarchy", async () => {
   const before = Task.create({ id: "before", userId: actor.userId, name: "Antes", status: "todo" });
   const { useCase, batchWriter, database } = setup({ tasks: [meeting(), before] });
-  database.edges.push({ fromId: "before", toId: "task-1" });
+  database.edges.push({ parentId: "before", subtaskId: "task-1" });
 
-  await useCase.execute({ taskId: "task-1", expectedRevision: 1, previousTaskIds: ["before"] }, actor);
+  await useCase.execute({ taskId: "task-1", expectedRevision: 1, parentTaskId: "before" }, actor);
 
-  expect(batchWriter.commits[0]?.sequence).toEqual([]);
-  expect(database.edges).toEqual([{ fromId: "before", toId: "task-1" }]);
+  expect(batchWriter.commits[0]?.subtasks).toEqual([]);
+  expect(database.edges).toEqual([{ parentId: "before", subtaskId: "task-1" }]);
 });
 
-test("a agent task can come before or after a human task, and is not revised", async () => {
+test("a agent task can be the main task or a subtask of a human task, and is not revised", async () => {
   const request = Task.create({ id: "request", userId: actor.userId, actor: "agent", kind: "request", status: "running", name: "Pedido" });
   const { useCase, taskRepository, database } = setup({ tasks: [meeting(), request] });
 
-  await useCase.execute({ taskId: "task-1", expectedRevision: 1, previousTaskIds: ["request"] }, actor);
-  await useCase.execute({ taskId: "task-1", expectedRevision: 2, previousTaskIds: [], nextTaskIds: ["request"] }, actor);
+  await useCase.execute({ taskId: "task-1", expectedRevision: 1, parentTaskId: "request" }, actor);
+  await useCase.execute({ taskId: "task-1", expectedRevision: 2, parentTaskId: null, subtaskIds: ["request"] }, actor);
 
-  expect(database.edges).toEqual([{ fromId: "task-1", toId: "request" }]);
-  expect(await taskRepository.findById("request")).toMatchObject({ previousIds: ["task-1"], revision: 1 });
+  expect(database.edges).toEqual([{ parentId: "task-1", subtaskId: "request" }]);
+  expect(await taskRepository.findById("request")).toMatchObject({ parentId: "task-1", revision: 1 });
 });
 
-test("refuses a sequence that closes a cycle, and the task is not revised", async () => {
+test("refuses a hierarchy that closes a cycle, and the task is not revised", async () => {
   const other = Task.create({ id: "other", userId: actor.userId, name: "Outro", status: "todo" });
   const { useCase, database } = setup({ tasks: [meeting(), other] });
-  database.edges.push({ fromId: "task-1", toId: "other" });
+  database.edges.push({ parentId: "task-1", subtaskId: "other" });
 
   await expect(
-    useCase.execute({ taskId: "task-1", expectedRevision: 1, previousTaskIds: ["other"] }, actor),
-  ).rejects.toThrow("Tasks cannot follow each other in a cycle");
+    useCase.execute({ taskId: "task-1", expectedRevision: 1, parentTaskId: "other" }, actor),
+  ).rejects.toThrow("A task cannot be a subtask of its own subtask");
 });
 
-test("refuses a task that follows itself", async () => {
+test("refuses a task that is its own subtask", async () => {
   const { useCase, batchWriter } = setup({ tasks: [meeting()] });
 
   await expect(
-    useCase.execute({ taskId: "task-1", expectedRevision: 1, nextTaskIds: ["task-1"] }, actor),
-  ).rejects.toThrow("A task cannot follow itself");
+    useCase.execute({ taskId: "task-1", expectedRevision: 1, subtaskIds: ["task-1"] }, actor),
+  ).rejects.toThrow("A task cannot be its own subtask");
   expect(batchWriter.commits).toEqual([]);
 });
 
@@ -167,7 +191,7 @@ test("rejects a task that belongs to another user, before looking at the revisio
 });
 
 test("rejects a stale revision before preparing or writing anything", async () => {
-  const stored = Task.rehydrate({ id: "task-1", userId: actor.userId, actor: "human", kind: "common", name: "Reunião", startedAt, revision: 3 });
+  const stored = Task.rehydrate({ id: "task-1", userId: actor.userId, actor: "human", kind: "common", name: "Reunião", startedAt, revision: 3, createdAt: startedAt, updatedAt: startedAt });
   const { useCase, database, batchWriter } = setup({ tasks: [stored] });
 
   await expect(
@@ -186,7 +210,7 @@ test("writes nothing when the change is invalid", async () => {
 
   await expect(
     useCase.execute(
-      { taskId: "task-1", expectedRevision: 1, artifacts: [{ type: "text", data: { body: "nova" } }], previousTaskIds: ["missing"] },
+      { taskId: "task-1", expectedRevision: 1, artifacts: [{ type: "text", data: { body: "nova" } }], parentTaskId: "missing" },
       actor,
     ),
   ).rejects.toThrow(TaskNotFoundError);
@@ -195,7 +219,7 @@ test("writes nothing when the change is invalid", async () => {
   expect(batchWriter.commits).toEqual([]);
 });
 
-test("writes nothing, not even the sequence, when the edited task changed while it was being prepared", async () => {
+test("writes nothing, not even the hierarchy, when the edited task changed while it was being prepared", async () => {
   const before = Task.create({ id: "before", userId: actor.userId, name: "Antes", status: "todo" });
   const kit = setup({ tasks: [meeting(), before] });
   const findByIds = kit.taskRepository.findByIds.bind(kit.taskRepository);
@@ -208,7 +232,7 @@ test("writes nothing, not even the sequence, when the edited task changed while 
   };
 
   await expect(
-    kit.useCase.execute({ taskId: "task-1", expectedRevision: 1, name: "Nova", previousTaskIds: ["before"] }, actor),
+    kit.useCase.execute({ taskId: "task-1", expectedRevision: 1, name: "Nova", parentTaskId: "before" }, actor),
   ).rejects.toThrow(EntityBatchConflictError);
 
   expect(kit.database.tasks.find((task) => task.id === "task-1")).toMatchObject({ name: "Editado em outra aba", revision: 2 });

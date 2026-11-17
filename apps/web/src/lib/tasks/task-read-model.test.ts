@@ -108,7 +108,7 @@ describe("calorias da refeição", () => {
     expect(mealCaloriesKcal([link("food", 200), link("food", 350.5)])).toBe(550.5);
   });
 
-  test("artefatos que não são alimento não entram na soma", () => {
+  test("documentos que não são alimento não entram na soma", () => {
     expect(mealCaloriesKcal([link("food", 200), link("text"), link("workout")])).toBe(200);
   });
 

@@ -42,8 +42,6 @@ describe("passo de editar tarefas", () => {
 
   test("mudar o local: o lugar dito vira o endereco achado no mapa; texto vazio tira o local", async () => {
     const ctx = setupRequest("a consulta vai ser no Hospital Mater Dei");
-    const here = { latitude: -19.92, longitude: -43.94 };
-    ctx.request.context = { screen: "chat", coordinates: here };
     ctx.places.addresses.set("Hospital Mater Dei", "Hospital Mater Dei Santo Agostinho, Rua Gonçalves Dias 3155, Belo Horizonte");
     const task = await seedTask(ctx, "Consulta", { location: "Consultório antigo" });
     const payload = await addStep(ctx, "s1", "task-edit", "one", { candidates: [candidate("task", task.id, "Consulta")] });
@@ -51,7 +49,7 @@ describe("passo de editar tarefas", () => {
 
     await ctx.editWorker.run("task-edit", payload);
 
-    expect(ctx.places.calls).toEqual([{ said: "Hospital Mater Dei", near: here }]);
+    expect(ctx.places.calls).toEqual([{ said: "Hospital Mater Dei" }]);
     expect((await ctx.taskRepository.findById(task.id))?.location).toBe(
       "Hospital Mater Dei Santo Agostinho, Rua Gonçalves Dias 3155, Belo Horizonte",
     );
@@ -64,7 +62,7 @@ describe("passo de editar tarefas", () => {
     await clearing.editWorker.run("task-edit", clear);
 
     expect(clearing.places.calls).toEqual([]);
-    expect((await clearing.taskRepository.findById(located.id))?.location).toBe("");
+    expect((await clearing.taskRepository.findById(located.id))?.location).toBeUndefined();
   });
 
   test("concluir uma tarefa acompanhada: status e conclusao real", async () => {
@@ -172,6 +170,65 @@ describe("passo de editar tarefas", () => {
     ctx.gateway.outputs.set("task_edit", { edits: [{ ...noTask, id: task.id }], query: null });
     await ctx.editWorker.run("task-edit", payload);
     expect(ctx.store.stepRecords[0]).toMatchObject({ status: "failed", errorCode: "nothing_to_change" });
+  });
+
+  test("subtarefas novas: nascem a fazer, sob a tarefa editada, como criadas, no mesmo commit", async () => {
+    const ctx = setupRequest("quebra em comprar a tinta e pintar a sala, a tinta ate sexta");
+    const house = await seedTask(ctx, "Pintar a casa", { status: "todo" });
+    const payload = await addStep(ctx, "s1", "task-edit", "one", { candidates: [candidate("task", house.id, "Pintar a casa")] });
+    ctx.gateway.outputs.set("task_edit", {
+      edits: [{
+        ...noTask,
+        id: house.id,
+        subtasks: [
+          { name: "Comprar a tinta", status: null, priority: "high", startedAt: null, estimatedFinishAt: iso(18), description: null },
+          { name: "Pintar a sala", status: null, priority: null, startedAt: null, estimatedFinishAt: null, description: null },
+        ],
+      }],
+      query: null,
+    });
+
+    await ctx.editWorker.run("task-edit", payload);
+
+    expect(ctx.store.stepRecords[0]?.status).toBe("done");
+    expect(ctx.batchWriter.commits).toHaveLength(1);
+    const parent = await ctx.taskRepository.findById(house.id);
+    // So as arestas mudam: os campos da tarefa maior ficam como estavam.
+    expect(parent?.name).toBe("Pintar a casa");
+    const [paint, room] = await Promise.all((parent?.subtaskIds ?? []).map((id) => ctx.taskRepository.findById(id)));
+    expect(paint).toMatchObject({ name: "Comprar a tinta", kind: "common", status: "todo", priority: "high", parentId: house.id });
+    expect(paint?.estimatedFinishAt?.toISOString()).toBe(new Date(iso(18)).toISOString());
+    expect(room).toMatchObject({ name: "Pintar a sala", status: "todo", parentId: house.id });
+    expect(await updated(ctx)).toMatchObject([
+      { kind: "task", id: paint?.id, operation: "create" },
+      { kind: "task", id: room?.id, operation: "create" },
+    ]);
+  });
+
+  test("mudar campos e criar subtarefa no mesmo item: a tarefa e alterada e a subtarefa nasce sob ela", async () => {
+    const ctx = setupRequest("adia a viagem para as 18h e acrescenta reservar o hotel");
+    const trip = await seedTask(ctx, "Preparar a viagem", { status: "todo" });
+    const payload = await addStep(ctx, "s1", "task-edit", "one", { candidates: [candidate("task", trip.id, "Preparar a viagem")] });
+    ctx.gateway.outputs.set("task_edit", {
+      edits: [{
+        ...noTask,
+        id: trip.id,
+        startedAt: iso(18),
+        subtasks: [{ name: "Reservar o hotel", status: "doing", priority: null, startedAt: null, estimatedFinishAt: null, description: null }],
+      }],
+      query: null,
+    });
+
+    await ctx.editWorker.run("task-edit", payload);
+
+    const stored = await ctx.taskRepository.findById(trip.id);
+    expect(stored?.startedAt?.toISOString()).toBe(new Date(iso(18)).toISOString());
+    const hotel = await ctx.taskRepository.findById(stored?.subtaskIds[0] as string);
+    expect(hotel).toMatchObject({ name: "Reservar o hotel", status: "doing", parentId: trip.id });
+    expect(await updated(ctx)).toMatchObject([
+      { kind: "task", id: trip.id, operation: "update" },
+      { kind: "task", id: hotel?.id, operation: "create" },
+    ]);
   });
 
   test("modelo fora do ar: passo vermelho, sem repetir", async () => {

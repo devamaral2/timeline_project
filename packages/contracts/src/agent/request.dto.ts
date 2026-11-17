@@ -1,6 +1,5 @@
 import type { ArtifactType } from "../artifacts/artifact.dto";
 import type { AgentTaskStatus, AgentRequestKind } from "../tasks/task-types";
-import type { GeoPointInput } from "../tasks/place-suggestion.dto";
 import type { AgentTraceDto } from "./agent-trace.dto";
 
 /**
@@ -24,8 +23,6 @@ export type RequestErrorCode =
 export interface RequestScreenContext {
   screen: string;
   entityId?: string;
-  /** Onde a pessoa esta (lido pelo navegador): as tarefas que o pedido cria nascem com o endereco daqui. */
-  coordinates?: GeoPointInput;
 }
 
 /** As linhas de uma consulta, limitadas pelo servidor. */
@@ -132,8 +129,6 @@ export interface StartHermesRequestInput {
 /** `POST /api/requests/voice`. Responde `202 { requestId }`; a tarefa criada aparece em `entities`. */
 export interface StartVoiceRequestInput {
   transcript: string;
-  /** Onde a pessoa esta: a tarefa criada nasce com o endereco daqui. */
-  coordinates?: GeoPointInput;
   clientMessageId?: string;
 }
 

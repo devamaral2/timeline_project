@@ -1,5 +1,5 @@
 import { Task, TaskValidationError, type Artifact } from "../../../domain/index";
-import type { SequenceChange } from "../../../domain/ports";
+import type { SubtaskChange } from "../../../domain/ports";
 
 /**
  * Estado compartilhado entre os repositorios e as consultas em memoria, para
@@ -12,35 +12,37 @@ export class InMemoryTaskDatabase {
   readonly artifacts: Artifact[];
   /** De qual original saiu cada copia. */
   readonly derivations: { originalId: string; copyId: string }[] = [];
-  /** A sequencia entre tarefas: `fromId` vem antes de `toId`. */
-  edges: { fromId: string; toId: string }[] = [];
+  /** A hierarquia entre tarefas: `parentId` e a principal de `subtaskId`. */
+  edges: { parentId: string; subtaskId: string }[] = [];
 
   constructor(tasks: Task[] = [], artifacts: Artifact[] = []) {
     this.tasks = [...tasks];
     this.artifacts = [...artifacts];
   }
 
-  /** Aplica as arestas como o escritor do Postgres: as pontas existem e sao do usuario, e a ordem nao fecha ciclo. */
-  apply(userId: string, changes: readonly SequenceChange[]): void {
+  /**
+   * Aplica as arestas como o escritor do Postgres: as pontas existem e sao do
+   * usuario, a subtarefa sai da principal anterior e a hierarquia nao fecha ciclo.
+   */
+  apply(userId: string, changes: readonly SubtaskChange[]): void {
     for (const change of changes) {
       if (change.op === "remove") {
-        this.edges = this.edges.filter((edge) => edge.fromId !== change.fromId || edge.toId !== change.toId);
+        this.edges = this.edges.filter((edge) => edge.parentId !== change.parentId || edge.subtaskId !== change.subtaskId);
         continue;
       }
-      for (const id of [change.fromId, change.toId]) {
+      for (const id of [change.parentId, change.subtaskId]) {
         const found = this.tasks.find((task) => task.id === id && task.userId === userId);
         if (!found) throw new TaskValidationError(`Related tasks not found: ${id}`);
       }
-      if (!this.edges.some((edge) => edge.fromId === change.fromId && edge.toId === change.toId)) {
-        this.edges.push({ fromId: change.fromId, toId: change.toId });
-      }
-      if (this.reaches(change.toId, change.fromId)) {
-        throw new TaskValidationError("Tasks cannot follow each other in a cycle");
+      this.edges = this.edges.filter((edge) => edge.subtaskId !== change.subtaskId);
+      this.edges.push({ parentId: change.parentId, subtaskId: change.subtaskId });
+      if (this.reaches(change.subtaskId, change.parentId)) {
+        throw new TaskValidationError("A task cannot be a subtask of its own subtask");
       }
     }
   }
 
-  /** Seguindo a sequencia a partir de `fromId`, chega-se em `targetId`. */
+  /** Descendo a hierarquia a partir de `fromId`, chega-se em `targetId`. */
   private reaches(fromId: string, targetId: string): boolean {
     const seen = new Set<string>();
     const queue = [fromId];
@@ -49,12 +51,12 @@ export class InMemoryTaskDatabase {
       if (id === targetId) return true;
       if (seen.has(id)) continue;
       seen.add(id);
-      for (const edge of this.edges) if (edge.fromId === id) queue.push(edge.toId);
+      for (const edge of this.edges) if (edge.parentId === id) queue.push(edge.subtaskId);
     }
     return false;
   }
 
-  /** A tarefa como o repositorio o devolve: com a sequencia lida das arestas, sem as pontas apagadas. */
+  /** A tarefa como o repositorio a devolve: com a hierarquia lida das arestas, sem as pontas apagadas. */
   hydrate(task: Task): Task {
     const live = (id: string) => this.tasks.some((other) => other.id === id);
     return Task.rehydrate({
@@ -75,10 +77,12 @@ export class InMemoryTaskDatabase {
       longRunning: task.longRunning,
       data: { ...task.data },
       artifactLinks: task.artifactLinks.filter((link) => this.artifacts.some((artifact) => artifact.id === link.artifactId)),
-      previousIds: this.edges.filter((edge) => edge.toId === task.id && live(edge.fromId)).map((edge) => edge.fromId),
-      nextIds: this.edges.filter((edge) => edge.fromId === task.id && live(edge.toId)).map((edge) => edge.toId),
+      parentId: this.edges.find((edge) => edge.subtaskId === task.id && live(edge.parentId))?.parentId,
+      subtaskIds: this.edges.filter((edge) => edge.parentId === task.id && live(edge.subtaskId)).map((edge) => edge.subtaskId),
       occurrence: task.occurrence,
       revision: task.revision,
+      createdAt: task.createdAt,
+      updatedAt: task.updatedAt,
     });
   }
 

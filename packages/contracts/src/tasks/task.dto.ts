@@ -27,8 +27,8 @@ export interface TaskCardDto {
   priority: TaskPriority;
   name: string;
   description: string;
-  /** Onde acontece, como o texto que o Google Maps entende; vazio sem local. So tarefas de pessoa tem. */
-  location: string;
+  /** Onde acontece, como o texto que o Google Maps entende. Ausente sem local: so existe quando alguem o informou. */
+  location?: string;
   /** Inicio planejado. A meia-noite local significa "o dia, sem hora". */
   startedAt?: string;
   /** Fim planejado: o fim do bloco ou, na tarefa longa, o prazo. */
@@ -41,11 +41,15 @@ export interface TaskCardDto {
   tags: string[];
   /** Os tipos dos artefatos da tarefa, na ordem em que aparecem. */
   artifactTypes: ArtifactType[];
-  /** As tarefas de que este se segue ("segue-se de"): os que vem antes dele na sequencia. */
-  previousTaskIds: string[];
+  /** A tarefa principal desta, quando ela e subtarefa. Cada tarefa tem no maximo uma. */
+  parentTaskId?: string;
   recurrence?: TaskRecurrenceDto;
   /** Para o `PATCH` direto da lista (`expectedRevision`), sem ler o detalhe antes. */
   revision: number;
+  /** Quando a tarefa foi criada (ISO 8601). */
+  createdAt: string;
+  /** A ultima gravacao da tarefa (ISO 8601). Igual a `createdAt` enquanto ninguem a editou. */
+  updatedAt: string;
 }
 
 export interface TaskArtifactDto {
@@ -73,8 +77,8 @@ export interface TaskRequestDto {
 export interface TaskDto extends TaskCardDto {
   /** Os artefatos da tarefa, na ordem em que aparecem. */
   artifacts: TaskArtifactDto[];
-  /** As tarefas que se seguem a este ("da sequencia a"). */
-  nextTaskIds: string[];
+  /** As subtarefas desta. */
+  subtaskIds: string[];
   /** Os pedidos que criaram e alteraram a tarefa, do mais antigo ao mais novo. So o detalhe traz. */
   requests: TaskRequestDto[];
 }

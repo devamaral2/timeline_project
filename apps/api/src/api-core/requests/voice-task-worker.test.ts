@@ -55,7 +55,7 @@ test("o lugar citado na fala vira o endereco achado no mapa; sem lugar citado, o
   const plain = setup();
   await plain.worker.run("v1");
   expect(plain.said).toEqual([]);
-  expect(plain.kit.database.tasks[0]?.location).toBe("");
+  expect(plain.kit.database.tasks[0]?.location).toBeUndefined();
 });
 
 test("refeicao falada: a tarefa nasce com o alimento a espera dos nutrientes", async () => {

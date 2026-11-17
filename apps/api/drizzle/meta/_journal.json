@@ -50,6 +50,20 @@
       "when": 1795207078235,
       "tag": "0006_agentes_falam_de_tarefa",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1795293478235,
+      "tag": "0007_subtarefa_no_lugar_de_sequencia",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1795379878235,
+      "tag": "0008_local_opcional",
+      "breakpoints": true
     }
   ]
 }

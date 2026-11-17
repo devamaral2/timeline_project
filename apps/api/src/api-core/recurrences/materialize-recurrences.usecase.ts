@@ -77,7 +77,7 @@ export class MaterializeRecurrencesUseCase implements RecurrenceMaterializer {
     const live = new Set((await this.artifacts.findByIds(template.artifactIds)).map((artifact) => artifact.id));
     const occurrences = batch.map((day) => buildOccurrence(recurrence, day, live));
 
-    await this.recurrences.materialize(recurrence.materializedUntil(watermark), occurrences, template.previousTaskIds);
+    await this.recurrences.materialize(recurrence.materializedUntil(watermark), occurrences, template.parentTaskId);
   }
 }
 

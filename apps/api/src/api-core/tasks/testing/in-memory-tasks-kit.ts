@@ -1,4 +1,3 @@
-import type { PlaceReverseGateway } from "../../../infrastructure/places/photon-place-search.gateway";
 import type { Artifact, Task } from "../../../domain/index";
 import type { RecurrenceRepository, WorkoutCatalog } from "../../../domain/ports";
 import { InMemoryArtifactRepository } from "../../artifacts/testing/in-memory-artifact.repository";
@@ -15,7 +14,6 @@ export interface TasksKitOptions {
   workoutCatalog?: WorkoutCatalog;
   recurrences?: RecurrenceRepository;
   clock?: () => Date;
-  placeReverse?: PlaceReverseGateway;
 }
 
 /**
@@ -29,9 +27,9 @@ export function createTasksKit(options: TasksKitOptions = {}) {
   const artifactRepository = new InMemoryArtifactRepository(database.artifacts);
   const artifactBuilder = new ArtifactBuilder(options.workoutCatalog ?? new InMemoryWorkoutCatalog());
   const batchWriter = new InMemoryEntityBatchWriter(
-    { tasks: taskRepository, sequence: database, artifacts: artifactRepository, recurrences: options.recurrences },
+    { tasks: taskRepository, subtasks: database, artifacts: artifactRepository, recurrences: options.recurrences },
     database.derivations,
   );
-  const createTask = new CreateTaskUseCase(taskRepository, artifactRepository, artifactBuilder, batchWriter, options.clock, options.placeReverse);
+  const createTask = new CreateTaskUseCase(taskRepository, artifactRepository, artifactBuilder, batchWriter, options.clock);
   return { database, taskRepository, artifactRepository, artifactBuilder, batchWriter, createTask };
 }

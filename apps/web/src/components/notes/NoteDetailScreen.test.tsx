@@ -70,18 +70,18 @@ test("mostra título, tipo, tags, o registro e o texto de uma nota própria", as
 
   expect(await screen.findByRole("heading", { level: 1, name: "Ideias para a proposta" })).toBeInTheDocument();
   expect(screen.getByText("Nota")).toBeInTheDocument();
-  expect(screen.getByText("Artefato")).toBeInTheDocument();
+  expect(screen.getByText("Documento")).toBeInTheDocument();
   expect(screen.getByText("#trabalho")).toBeInTheDocument();
   expect(screen.getByText("Começar pelo problema do cliente.")).toBeInTheDocument();
   expect(screen.getByRole("heading", { level: 2, name: "Pontos para a reunião" })).toBeInTheDocument();
   const registro = screen.getByRole("region", { name: "Registro" });
   expect(within(registro).getByText("12 set., 09:00")).toBeInTheDocument();
   expect(within(registro).getByText("ontem, 21:12")).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "Voltar para Artefatos" })).toHaveAttribute("href", "/user-1/notas");
+  expect(screen.getByRole("link", { name: "Voltar para Documentos" })).toHaveAttribute("href", "/user-1/notas");
   expect(api.calls.at(-1)).toMatchObject({ method: "GET", pathname: "/api/artifacts/art-1" });
 });
 
-test("lista as tarefas em que o artefato aparece, com a relação, e cada uma abre o detalhe da tarefa", async () => {
+test("lista as tarefas em que o documento aparece, com a relação, e cada uma abre o detalhe da tarefa", async () => {
   install({
     tasks: [
       taskFixture({ id: "ev-9", name: "Academia", kind: "training", startedAt: "2026-09-14T07:00:00-03:00", estimatedFinishAt: "2026-09-14T08:00:00-03:00" }),
@@ -107,7 +107,7 @@ test("lista as tarefas em que o artefato aparece, com a relação, e cada uma ab
   expect(within(tarefas).getByRole("link", { name: /Almoço/ })).toHaveTextContent("creates");
 });
 
-test("um artefato sem tarefa não mostra a seção Tarefas", async () => {
+test("um documento sem tarefa não mostra a seção Tarefas", async () => {
   install({ artifacts: [artifactFixture({ id: "art-1", name: "Rascunho" })] });
   renderArtifact("art-1");
 
@@ -115,7 +115,7 @@ test("um artefato sem tarefa não mostra a seção Tarefas", async () => {
   expect(screen.queryByRole("region", { name: "Tarefas" })).not.toBeInTheDocument();
 });
 
-test("um artefato global mostra o catálogo global, o conteúdo do tipo e nenhuma ação de editar ou apagar", async () => {
+test("um documento global mostra o catálogo global, o conteúdo do tipo e nenhuma ação de editar ou apagar", async () => {
   install({
     artifacts: [
       artifactFixture({
@@ -253,18 +253,18 @@ test("uma nota de sono usa o cartão da noite e o tempo que durou na agenda", as
   expect(screen.getByRole("img", { name: "Tempo registrado: 7 h 30" })).toBeInTheDocument();
 });
 
-test("um artefato inexistente mostra a tela de não encontrado", async () => {
+test("um documento inexistente mostra a tela de não encontrado", async () => {
   install({});
   renderArtifact("nao-existe");
 
-  expect(await screen.findByRole("alert")).toHaveTextContent("Artefato não encontrado.");
+  expect(await screen.findByRole("alert")).toHaveTextContent("Documento não encontrado.");
 });
 
-test("avisa quando o artefato não carrega por outro motivo", async () => {
+test("avisa quando o documento não carrega por outro motivo", async () => {
   net.authedFetch.mockRejectedValue(new Error("rede"));
   renderArtifact("art-1");
 
-  expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível carregar o artefato.");
+  expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível carregar o documento.");
 });
 
 test("uma nota de texto própria tem Editar, que abre o formulário de edição", async () => {

@@ -1,5 +1,6 @@
 import { Bot } from "lucide-react";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import type { AgentTaskStatus, TaskCardDto, HumanTaskStatus } from "@repo/contracts";
 import { cardDurationLabel, cardIsOverdue, cardWhenLabel } from "@/lib/tasks/card-text";
 import { TaskKindMark } from "./task-kind-mark";
@@ -17,6 +18,10 @@ export interface TaskRowProps {
   ruleInPlaceOfTime?: boolean;
   /** Toque no glifo de uma tarefa de pessoa (a tela abre a escolha de status). */
   onStatusClick?: (card: TaskCardDto, anchor: HTMLElement) => void;
+  /** Controle na ponta direita da linha, fora do link (a fração das subtarefas na lista). */
+  aside?: ReactNode;
+  /** O que vem embaixo da linha, na largura dela (a gaveta das subtarefas na lista). */
+  children?: ReactNode;
 }
 
 /**
@@ -25,7 +30,7 @@ export interface TaskRowProps {
  * mesma grade; a tarefa de agente fecha a linha com o robô, a sua assinatura.
  * O glifo de pessoa é um botão; o de agente não muda status.
  */
-export function TaskRow({ card, userId, now, ruleInPlaceOfTime, onStatusClick }: TaskRowProps) {
+export function TaskRow({ card, userId, now, ruleInPlaceOfTime, onStatusClick, aside, children }: TaskRowProps) {
   const isAgent = card.actor === "agent";
   const overdue = !isAgent && cardIsOverdue(card, now);
   const when = cardWhenLabel(card, now, { ruleInPlaceOfTime });
@@ -72,6 +77,8 @@ export function TaskRow({ card, userId, now, ruleInPlaceOfTime, onStatusClick }:
         {/* Decorativo: o nome do glifo de status já diz "Agente". */}
         {isAgent ? <Bot className={styles.agentMark} size={18} strokeWidth={1.9} aria-hidden="true" data-agent-mark /> : null}
       </Link>
+      {aside}
+      {children}
     </li>
   );
 }

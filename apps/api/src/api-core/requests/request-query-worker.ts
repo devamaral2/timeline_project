@@ -22,7 +22,7 @@ export class RequestQueryWorker {
       const started = performance.now();
       const { value } = await runner.run({
         agent: "query", now: request.createdAt, schema: queryOutput, signal, stepId: step.id,
-        user: [describeRequest(request.prompt, undefined, request.context, step.input?.instruction), "", "Esquema:", sql.describeSchema()].join("\n"),
+        user: [describeRequest(request.prompt, undefined, request.context), "", "Esquema:", sql.describeSchema()].join("\n"),
       });
       const outcome = await sql.run({ userId: request.userId, sql: value.sql });
       if (!outcome.ok) throw new StepFailure("query_rejected");

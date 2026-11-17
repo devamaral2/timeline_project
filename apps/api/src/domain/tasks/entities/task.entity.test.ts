@@ -11,8 +11,14 @@ function props(overrides: Partial<TaskCreateProps> = {}): TaskCreateProps {
   return { userId: "user-1", name: "Planejamento", startedAt, ...overrides };
 }
 
+const createdAt = new Date("2026-08-30T09:00:00.000Z");
+const updatedAt = new Date("2026-08-30T10:00:00.000Z");
+
 function stored(overrides: Partial<TaskRehydrateProps> = {}): TaskRehydrateProps {
-  return { id: "task-1", userId: "user-1", actor: "human", kind: "common", name: "Planejamento", startedAt, revision: 3, ...overrides };
+  return {
+    id: "task-1", userId: "user-1", actor: "human", kind: "common", name: "Planejamento", startedAt, revision: 3,
+    createdAt, updatedAt, ...overrides,
+  };
 }
 
 const link = (artifactId: string, overrides: Partial<ArtifactLink> = {}): ArtifactLink => ({
@@ -36,16 +42,16 @@ describe("Task.create", () => {
     expect(task.longRunning).toBe(false);
     expect(task.data).toEqual({});
     expect(task.artifactLinks).toEqual([]);
-    expect(task.previousIds).toEqual([]);
-    expect(task.nextIds).toEqual([]);
+    expect(task.parentId).toBeUndefined();
+    expect(task.subtaskIds).toEqual([]);
     expect(task.occurrence).toBeUndefined();
   });
 
-  test("a new task never starts in a sequence: the sequence is not a field of the task", () => {
-    const task = Task.create(props({ previousIds: ["p1"], nextIds: ["n1"] } as never));
+  test("a new task never starts in a hierarchy: the hierarchy is not a field of the task", () => {
+    const task = Task.create(props({ parentId: "p1", subtaskIds: ["s1"] } as never));
 
-    expect(task.previousIds).toEqual([]);
-    expect(task.nextIds).toEqual([]);
+    expect(task.parentId).toBeUndefined();
+    expect(task.subtaskIds).toEqual([]);
   });
 
   describe("reference task (no status)", () => {
@@ -263,11 +269,11 @@ describe("Task.create", () => {
       );
     });
 
-    test("rejects a task that appears in its own sequence", () => {
-      expect(() => Task.rehydrate(stored({ id: "task-1", previousIds: ["task-1"] }))).toThrow(
-        "Task cannot follow itself",
+    test("rejects a task that is its own main task or subtask", () => {
+      expect(() => Task.rehydrate(stored({ id: "task-1", parentId: "task-1" }))).toThrow(
+        "A task cannot be its own subtask",
       );
-      expect(() => Task.rehydrate(stored({ id: "task-1", nextIds: ["task-1"] }))).toThrow("Task cannot follow itself");
+      expect(() => Task.rehydrate(stored({ id: "task-1", subtaskIds: ["task-1"] }))).toThrow("A task cannot be its own subtask");
     });
   });
 
@@ -305,18 +311,18 @@ describe("Task.rehydrate", () => {
     expect(() => Task.rehydrate(stored({ longRunning: true }))).toThrow("A long-running task always has a status");
   });
 
-  test("reads the sequence, without repeats: the tasks it follows and the ones that follow it", () => {
-    const task = Task.rehydrate(stored({ previousIds: ["p1", "p1", "p2"], nextIds: ["n1", "n1"] }));
+  test("reads the hierarchy, without repeated subtasks: its main task and its subtasks", () => {
+    const task = Task.rehydrate(stored({ parentId: "p1", subtaskIds: ["s1", "s1", "s2"] }));
 
-    expect(task.previousIds).toEqual(["p1", "p2"]);
-    expect(task.nextIds).toEqual(["n1"]);
+    expect(task.parentId).toBe("p1");
+    expect(task.subtaskIds).toEqual(["s1", "s2"]);
   });
 
-  test("a stored task without a sequence has empty lists", () => {
+  test("a stored task outside any hierarchy has no main task and no subtasks", () => {
     const task = Task.rehydrate(stored());
 
-    expect(task.previousIds).toEqual([]);
-    expect(task.nextIds).toEqual([]);
+    expect(task.parentId).toBeUndefined();
+    expect(task.subtaskIds).toEqual([]);
   });
 
   test("still enforces the invariants on what comes from storage", () => {
@@ -377,8 +383,8 @@ describe("Task.revise", () => {
       notifyOffsetsMinutes: [15],
       tags: ["time"],
       artifactLinks: [link("a1")],
-      previousIds: [],
-      nextIds: [],
+      parentId: undefined,
+      subtaskIds: [],
     });
   });
 
@@ -438,13 +444,13 @@ describe("Task.revise", () => {
     expect(task.revise({ artifactLinks: [] }).artifactLinks).toEqual([]);
   });
 
-  test("keeps the sequence as it was read: revising never changes it", () => {
-    const task = Task.rehydrate(stored({ previousIds: ["p1"], nextIds: ["n1"] }));
+  test("keeps the hierarchy as it was read: revising never changes it", () => {
+    const task = Task.rehydrate(stored({ parentId: "p1", subtaskIds: ["s1"] }));
 
-    const revised = task.revise({ name: "Outro nome", previousIds: ["x"], nextIds: [] } as never);
+    const revised = task.revise({ name: "Outro nome", parentId: "x", subtaskIds: [] } as never);
 
-    expect(revised.previousIds).toEqual(["p1"]);
-    expect(revised.nextIds).toEqual(["n1"]);
+    expect(revised.parentId).toBe("p1");
+    expect(revised.subtaskIds).toEqual(["s1"]);
   });
 
   test("detaches the occurrence from its series, whatever was edited", () => {
@@ -496,16 +502,19 @@ describe("Task.revise", () => {
 });
 
 describe("Task location", () => {
-  test("starts empty, is trimmed, and is kept by rehydrate", () => {
-    expect(Task.create(props()).location).toBe("");
+  test("is absent until someone informs it, is trimmed, and is kept by rehydrate", () => {
+    expect(Task.create(props()).location).toBeUndefined();
+    expect(Task.create(props({ location: "   " })).location).toBeUndefined();
     expect(Task.create(props({ location: "  Parque Ibirapuera, São Paulo " })).location).toBe("Parque Ibirapuera, São Paulo");
     expect(Task.rehydrate(stored({ location: "Casa" })).location).toBe("Casa");
+    expect(Task.rehydrate(stored()).location).toBeUndefined();
   });
 
-  test("revise changes it, clears it with an empty text, and keeps it when absent", () => {
+  test("revise changes it, clears it with null or an empty text, and keeps it when absent", () => {
     const task = Task.create(props({ location: "Casa" }));
     expect(task.revise({ location: "Escritório" }).location).toBe("Escritório");
-    expect(task.revise({ location: "" }).location).toBe("");
+    expect(task.revise({ location: "" }).location).toBeUndefined();
+    expect(task.revise({ location: null }).location).toBeUndefined();
     expect(task.revise({ name: "Outro" }).location).toBe("Casa");
   });
 
@@ -514,5 +523,36 @@ describe("Task location", () => {
     expect(() => Task.rehydrate(stored({ actor: "agent", kind: "request", status: "running", location: "Casa" }))).toThrow(
       TaskValidationError,
     );
+  });
+});
+
+describe("Task timestamps", () => {
+  test("a new task is created and updated at the same instant", () => {
+    const now = new Date("2026-08-31T08:00:00.000Z");
+    const task = Task.create(props({ now }));
+    expect(task.createdAt).toEqual(now);
+    expect(task.updatedAt).toEqual(now);
+  });
+
+  test("rehydrate keeps both as stored", () => {
+    const task = Task.rehydrate(stored());
+    expect(task.createdAt).toEqual(createdAt);
+    expect(task.updatedAt).toEqual(updatedAt);
+  });
+
+  test("revise moves updatedAt and keeps createdAt", () => {
+    const later = new Date("2026-08-31T15:00:00.000Z");
+    const revised = Task.rehydrate(stored()).revise({ name: "Outro" }, later);
+    expect(revised.createdAt).toEqual(createdAt);
+    expect(revised.updatedAt).toEqual(later);
+  });
+
+  test("a clock behind the creation never puts updatedAt before createdAt", () => {
+    const revised = Task.rehydrate(stored()).revise({ name: "Outro" }, new Date("2026-01-01T00:00:00.000Z"));
+    expect(revised.updatedAt).toEqual(createdAt);
+  });
+
+  test("refuses a stored task updated before it was created", () => {
+    expect(() => Task.rehydrate(stored({ updatedAt: new Date("2026-08-29T00:00:00.000Z") }))).toThrow(TaskValidationError);
   });
 });

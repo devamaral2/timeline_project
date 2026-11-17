@@ -56,9 +56,9 @@ test("returns the task with its kind, artifacts and revision for the owner", asy
         },
       },
     ],
-    previousTaskIds: [],
-    nextTaskIds: [],
+    subtaskIds: [],
   });
+  expect(result).not.toHaveProperty("parentTaskId");
   expect(result).not.toHaveProperty("status");
   expect(result).not.toHaveProperty("notes");
   expect(result?.artifacts[0]?.artifact).not.toHaveProperty("tasks");
@@ -95,34 +95,35 @@ test("returns the artifacts in the order of the links, and hides a deleted one",
   expect(result?.artifactTypes).toEqual(["text", "text"]);
 });
 
-test("returns the sequence in both directions: the tasks it follows and the ones that follow it", async () => {
+test("returns the hierarchy in both directions: the main task and the subtasks", async () => {
   const first = Task.create({ id: "first", userId: actor.userId, name: "Pintar", status: "todo" });
   const middle = Task.create({ id: "middle", userId: actor.userId, name: "Mobiliar", status: "todo" });
   const last = Task.create({ id: "last", userId: actor.userId, name: "Inaugurar", status: "todo" });
   const database = new InMemoryTaskDatabase([first, middle, last]);
-  database.edges.push({ fromId: "first", toId: "middle" }, { fromId: "middle", toId: "last" });
+  database.edges.push({ parentId: "first", subtaskId: "middle" }, { parentId: "middle", subtaskId: "last" });
   const { useCase } = setup(database);
 
   const start = await useCase.execute({ taskId: "first" }, actor);
   const center = await useCase.execute({ taskId: "middle" }, actor);
   const end = await useCase.execute({ taskId: "last" }, actor);
 
-  expect(start).toMatchObject({ previousTaskIds: [], nextTaskIds: ["middle"] });
-  expect(center).toMatchObject({ status: "todo", previousTaskIds: ["first"], nextTaskIds: ["last"] });
-  expect(end).toMatchObject({ previousTaskIds: ["middle"], nextTaskIds: [] });
+  expect(start).toMatchObject({ subtaskIds: ["middle"] });
+  expect(start).not.toHaveProperty("parentTaskId");
+  expect(center).toMatchObject({ status: "todo", parentTaskId: "first", subtaskIds: ["last"] });
+  expect(end).toMatchObject({ parentTaskId: "middle", subtaskIds: [] });
   expect(center).not.toHaveProperty("subtaskTaskIds");
   expect(center).not.toHaveProperty("blockedByTaskIds");
 });
 
-test("a agent task appears in the sequence of a human task, and the other way around", async () => {
+test("a agent task can be the main task of a human task, and the other way around", async () => {
   const request = Task.create({ id: "request", userId: actor.userId, actor: "agent", kind: "request", status: "running", name: "Pedido" });
   const human = Task.create({ id: "human", userId: actor.userId, name: "Revisar", status: "todo" });
   const database = new InMemoryTaskDatabase([request, human]);
-  database.edges.push({ fromId: "request", toId: "human" });
+  database.edges.push({ parentId: "request", subtaskId: "human" });
   const { useCase } = setup(database);
 
-  expect((await useCase.execute({ taskId: "human" }, actor))?.previousTaskIds).toEqual(["request"]);
-  expect((await useCase.execute({ taskId: "request" }, actor))?.nextTaskIds).toEqual(["human"]);
+  expect((await useCase.execute({ taskId: "human" }, actor))?.parentTaskId).toBe("request");
+  expect((await useCase.execute({ taskId: "request" }, actor))?.subtaskIds).toEqual(["human"]);
 });
 
 test("an occurrence comes with the rule of its series", async () => {

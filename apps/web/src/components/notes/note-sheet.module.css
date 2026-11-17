@@ -1,5 +1,5 @@
-/* A folha da nota: a caixa tem o lado do quadrado da tarefa (44) para o texto
-   da linha não mudar de lugar; a folha, mais estreita, fica centrada nela. */
+/* As páginas do documento: a caixa tem o lado do quadrado da tarefa (44) para o
+   texto da linha não mudar de lugar; o desenho, mais estreito, fica centrado nela. */
 .sheet { position: relative; flex: none; display: block; width: 44px; height: 44px; color: var(--muted-foreground); }
 .sheet[data-size="cite"] { width: 32px; height: 32px; }
 
@@ -7,13 +7,9 @@
    do shell, `.shell svg` fixa todo svg em 20px com traço de 1,65 e ganharia de
    uma classe só. */
 .sheet > .outline { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; stroke: var(--border); stroke-width: 1; }
-/* Os dois traços de texto ficam no cinza das legendas: a cor do tipo é só do ícone. */
-.sheet .lines { stroke: var(--faint); stroke-width: 1.4; }
-.sheet[data-size="cite"] .lines { stroke-width: 1.3; }
 
-/* O ícone do tipo, no canto de cima à esquerda da folha, com a borda esquerda
-   do desenho na mesma vertical dos dois traços (o lucide deixa 2 de 24 de folga
-   em volta do glifo, daí a caixa começar um pouco antes). O traço cresce na
-   grade de 24 para manter na tela o mesmo peso do ícone de 20px. */
-.sheet > .glyph { position: absolute; top: 7px; left: 13px; width: 14px; height: 14px; stroke-width: 2.35; }
-.sheet[data-size="cite"] > .glyph { top: 5px; left: 10px; width: 11px; height: 11px; stroke-width: 2.75; }
+/* O ícone do tipo, no meio da página da frente (30×34 a partir de 2,5/9,5 na
+   lista; 21×24 a partir de 2,5/7,5 na citação). O traço cresce na grade de 24
+   para manter na tela o mesmo peso do ícone de 20px. */
+.sheet > .glyph { position: absolute; top: 18.5px; left: 9.5px; width: 16px; height: 16px; stroke-width: 2.05; }
+.sheet[data-size="cite"] > .glyph { top: 14px; left: 7.5px; width: 11px; height: 11px; stroke-width: 2.75; }

@@ -47,8 +47,8 @@ export function EditNoteRoute({ userId, noteId }: { userId: string; noteId: stri
   function frame(children: ReactNode) {
     return (
       <DetailFrame
-        leadLabel="Resumo do artefato"
-        bodyLabel="Conteúdo do artefato"
+        leadLabel="Resumo do documento"
+        bodyLabel="Conteúdo do documento"
         lead={<DetailNav label="Navegação do registro" back={<BackButton onClick={back}>Voltar</BackButton>} />}
       >
         {children}
@@ -56,9 +56,9 @@ export function EditNoteRoute({ userId, noteId }: { userId: string; noteId: stri
     );
   }
 
-  if (failed) return frame(<DetailMessage alert>Não foi possível carregar o artefato. Tente novamente.</DetailMessage>);
-  if (!note) return frame(<DetailMessage>Carregando artefato…</DetailMessage>);
-  if (note.type !== "text" || note.global) return frame(<DetailMessage alert>Este artefato não se edita aqui.</DetailMessage>);
+  if (failed) return frame(<DetailMessage alert>Não foi possível carregar o documento. Tente novamente.</DetailMessage>);
+  if (!note) return frame(<DetailMessage>Carregando documento…</DetailMessage>);
+  if (note.type !== "text" || note.global) return frame(<DetailMessage alert>Este documento não se edita aqui.</DetailMessage>);
 
   return <ArtifactEditView existing={note} onSaved={back} onLeave={back} />;
 }

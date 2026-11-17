@@ -76,14 +76,14 @@ describe("creating a series", () => {
         kind: "common",
         name: "Correr",
         description: "",
-        location: "",
         tags: ["saude"],
         priority: "medium",
         notifyOffsetsMinutes: [5],
         artifactIds: [],
-        previousTaskIds: [],
       },
       revision: 1,
+      createdAt: expect.any(String),
+      updatedAt: expect.any(String),
     });
     expect(database.tasks).toEqual([]);
   });
@@ -121,7 +121,7 @@ describe("creating a series", () => {
       create.execute({ ...dailyRun, frequency: "monthly", byMonthDay: 31, startsOn: "2026-04-01", endsOn: "2026-04-30" }, actor),
     ).rejects.toThrow(RecurrenceValidationError);
     await expect(
-      create.execute({ ...dailyRun, template: { name: "Filha", artifacts: [{ data: { body: "nota" } }], previousTaskIds: ["missing"] } }, actor),
+      create.execute({ ...dailyRun, template: { name: "Filha", artifacts: [{ data: { body: "nota" } }], parentTaskId: "missing" } }, actor),
     ).rejects.toThrow(TaskNotFoundError);
     await expect(create.execute({ ...dailyRun, template: {} }, actor)).rejects.toThrow("Task requires a name");
     expect(recurrences.recurrences).toEqual([]);
@@ -369,7 +369,7 @@ describe("ownership", () => {
     const theirs = Task.create({ id: "theirs", userId: intruder.userId, name: "Projeto deles", longRunning: true });
     const { create } = setup({ now }, { tasks: [theirs] });
 
-    await expect(create.execute({ ...dailyRun, template: { name: "Sessão", previousTaskIds: ["theirs"] } }, actor)).rejects.toThrow(
+    await expect(create.execute({ ...dailyRun, template: { name: "Sessão", parentTaskId: "theirs" } }, actor)).rejects.toThrow(
       "Only the task owner can modify it",
     );
   });

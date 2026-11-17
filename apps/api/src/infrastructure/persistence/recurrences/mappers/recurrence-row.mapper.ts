@@ -26,6 +26,8 @@ export function mapRecurrenceRow(row: RecurrenceRow): Recurrence {
     template: row.template as Record<string, unknown>,
     materializedThrough: row.materializedThrough ?? undefined,
     revision: row.revision,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
   });
 }
 
@@ -47,5 +49,7 @@ export function recurrenceColumnsOf(recurrence: Recurrence): RecurrenceInsert {
     endsOn: rule.endsOn ?? null,
     template: recurrence.template,
     materializedThrough: recurrence.materializedThrough ?? null,
+    createdAt: recurrence.createdAt,
+    updatedAt: recurrence.updatedAt,
   };
 }

@@ -8,8 +8,8 @@ export type TaskRow = typeof schema.tasks.$inferSelect;
 export interface TaskRowParts {
   tags?: readonly string[];
   artifactLinks?: readonly ArtifactLink[];
-  nextIds?: readonly string[];
-  previousIds?: readonly string[];
+  parentId?: string;
+  subtaskIds?: readonly string[];
 }
 
 export function mapTaskRow(row: TaskRow, parts: TaskRowParts = {}): Task {
@@ -22,7 +22,7 @@ export function mapTaskRow(row: TaskRow, parts: TaskRowParts = {}): Task {
     priority: row.priority,
     name: row.name,
     description: row.description,
-    location: row.location,
+    location: row.location ?? undefined,
     startedAt: row.startedAt ?? undefined,
     estimatedFinishAt: row.estimatedFinishAt ?? undefined,
     finishedAt: row.finishedAt ?? undefined,
@@ -31,9 +31,11 @@ export function mapTaskRow(row: TaskRow, parts: TaskRowParts = {}): Task {
     longRunning: row.longRunning,
     data: (row.data ?? {}) as Record<string, unknown>,
     artifactLinks: [...(parts.artifactLinks ?? [])],
-    nextIds: [...(parts.nextIds ?? [])],
-    previousIds: [...(parts.previousIds ?? [])],
+    parentId: parts.parentId,
+    subtaskIds: [...(parts.subtaskIds ?? [])],
     occurrence: occurrenceLinkOf(row),
     revision: row.revision,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
   });
 }

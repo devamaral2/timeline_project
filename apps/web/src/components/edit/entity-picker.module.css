@@ -48,6 +48,7 @@
 }
 .result:hover { background: var(--soft); box-shadow: -10px 0 0 var(--soft), 10px 0 0 var(--soft); }
 .result:focus-visible { outline-offset: -2px; }
+.footer { flex: none; margin: 0 -20px; padding: 8px 20px 16px; border-top: 1px solid var(--line); }
 .message { margin: 0; padding: 20px 0; font-size: 14px; line-height: 20px; color: var(--muted); }
 .message[data-alert] { color: var(--destructive); }
 

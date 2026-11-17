@@ -4,12 +4,12 @@ import type { RecurrenceRule } from "./recurrence-rule";
 /**
  * O que cada ocorrencia copia. A janela vem da regra, nunca daqui. So tarefas
  * de pessoa se repetem, e uma tarefa longa nao se repete. `artifactIds` sao os
- * mesmos artefatos em todas as ocorrencias; `previousTaskIds`, as tarefas
- * de que cada ocorrencia nasce se seguindo.
+ * mesmos artefatos em todas as ocorrencias; `parentTaskId`, a tarefa
+ * principal de que cada ocorrencia nasce subtarefa.
  */
 export type RecurrenceTemplate = Omit<
   CreateTaskInput,
-  "startedAt" | "estimatedFinishAt" | "finishedAt" | "longRunning" | "nextTaskIds"
+  "startedAt" | "estimatedFinishAt" | "finishedAt" | "longRunning" | "subtaskIds"
 >;
 
 export type CreateRecurrenceInput = RecurrenceRule & { template: RecurrenceTemplate };
@@ -30,4 +30,8 @@ export type RecurrenceDto = RecurrenceRule & {
   id: string;
   template: Record<string, unknown>;
   revision: number;
+  /** Quando a serie foi criada (ISO 8601). */
+  createdAt: string;
+  /** A ultima gravacao da serie (ISO 8601). */
+  updatedAt: string;
 };

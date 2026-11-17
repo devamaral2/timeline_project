@@ -72,7 +72,7 @@ test("uma tarefa: o pedido leva o tipo e o id da tarefa, mostra o andamento e re
   expect(screen.getByRole("textbox", { name: "Pedir à IA para editar esta tarefa" })).toHaveValue("");
 });
 
-test("um artefato de texto: o pedido leva o tipo artifact e o id da nota", async () => {
+test("um documento de texto: o pedido leva o tipo artifact e o id da nota", async () => {
   setup({ entityType: "artifact", entityId: "art-1" });
   const input = screen.getByRole("textbox", { name: "Pedir à IA para editar esta nota" });
   expect(input).toHaveAttribute("placeholder", "Peça uma mudança nesta nota");

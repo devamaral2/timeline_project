@@ -11,7 +11,7 @@ import { AgentProducedSection } from "./AgentProducedSection";
 import { AgentRecordSection } from "./AgentRecordSection";
 import { AgentSessionSection } from "./AgentSessionSection";
 import { AgentStepsSection } from "./AgentStepsSection";
-import { TaskSequenceSection } from "./TaskSequenceSection";
+import { TaskHierarchySection } from "./TaskHierarchySection";
 import { useAgentRequest } from "./use-agent-request";
 import styles from "./task-detail.module.css";
 
@@ -47,7 +47,7 @@ export function AgentTaskDetailView({ userId, task, onChanged }: AgentTaskDetail
       {request ? (
         <>
           <AgentInfoSection task={task} />
-          <TaskSequenceSection userId={userId} task={task} />
+          <TaskHierarchySection userId={userId} task={task} />
           <AgentEntriesSection entries={request.trace?.entries ?? []} />
           <AgentStepsSection steps={request.steps} />
           <AgentProducedSection userId={userId} entities={request.entities} />

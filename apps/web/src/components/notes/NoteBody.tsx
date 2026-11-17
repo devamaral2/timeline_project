@@ -85,7 +85,7 @@ function BigNumber({ label, children }: { label: string; children: ReactNode }) 
 }
 
 /** O quanto cada macro pesa nas calorias (proteína e carboidrato 4 kcal/g, gordura 9), para a barra e o rótulo dela. */
-function macroShares(totals: FoodData["totals"]): [number, number, number] {
+export function macroShares(totals: FoodData["totals"]): [number, number, number] {
   const kcal = [totals.totalProteinGrams * 4, totals.totalCarbohydrateGrams * 4, totals.totalFatGrams * 9];
   const sum = kcal[0] + kcal[1] + kcal[2];
   if (sum <= 0) return [0, 0, 0];
@@ -133,9 +133,10 @@ export function MealNote({ data }: { data: FoodNoteData }) {
       <MealGenerationStatus data={data} />
     </div>;
   }
+  // O texto digitado so aparece enquanto nao ha a lista de alimentos: com ela, repeti-lo seria redundante.
   return (
     <div className={styles.noteBody}>
-      {data.description ? <p className={styles.noteText}>{data.description}</p> : null}
+      {data.description && data.items.length === 0 ? <p className={styles.noteText}>{data.description}</p> : null}
       <section className={styles.noteBody} aria-label="Informações nutricionais">
         <div className={styles.figures}>
           <BigNumber label="Calorias consumidas">{formatDecimal(totals.totalCaloriesKcal)}<small>kcal</small></BigNumber>

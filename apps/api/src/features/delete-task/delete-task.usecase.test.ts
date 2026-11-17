@@ -21,42 +21,42 @@ test("deletes the task of its owner", async () => {
   expect(database.tasks).toEqual([]);
 });
 
-test("deleting a task that others follow keeps them, which lose only the sequence edge", async () => {
+test("deleting a main task keeps its subtasks, which lose only the edge to it", async () => {
   const first = Task.create({ id: "first", userId: actor.userId, name: "Reforma", status: "todo" });
   const second = Task.create({ id: "second", userId: actor.userId, name: "Pintar", status: "todo" });
   const { database, repository, useCase } = setup([first, second]);
-  database.edges.push({ fromId: "first", toId: "second" });
+  database.edges.push({ parentId: "first", subtaskId: "second" });
 
   await useCase.execute({ taskId: "first" }, actor);
 
   const remaining = await repository.findById("second");
   expect(remaining?.name).toBe("Pintar");
-  expect(remaining?.previousIds).toEqual([]);
+  expect(remaining?.parentId).toBeUndefined();
   expect(remaining?.revision).toBe(1);
 });
 
-test("deleting a task that follows another leaves the first without revising it", async () => {
+test("deleting a subtask leaves its main task without revising it", async () => {
   const first = Task.create({ id: "first", userId: actor.userId, name: "Reforma", status: "todo" });
   const second = Task.create({ id: "second", userId: actor.userId, name: "Pintar", status: "todo" });
   const { database, repository, useCase } = setup([first, second]);
-  database.edges.push({ fromId: "first", toId: "second" });
+  database.edges.push({ parentId: "first", subtaskId: "second" });
 
   await useCase.execute({ taskId: "second" }, actor);
 
   const remaining = await repository.findById("first");
-  expect(remaining?.nextIds).toEqual([]);
+  expect(remaining?.subtaskIds).toEqual([]);
   expect(remaining?.revision).toBe(1);
 });
 
-test("deleting a task in the middle of a sequence keeps both ends, neither revised", async () => {
+test("deleting a task in the middle of the hierarchy keeps both ends, neither revised", async () => {
   const tasks = ["a", "b", "c"].map((id) => Task.create({ id, userId: actor.userId, name: id, status: "todo" }));
   const { database, repository, useCase } = setup(tasks);
-  database.edges.push({ fromId: "a", toId: "b" }, { fromId: "b", toId: "c" });
+  database.edges.push({ parentId: "a", subtaskId: "b" }, { parentId: "b", subtaskId: "c" });
 
   await useCase.execute({ taskId: "b" }, actor);
 
-  expect(await repository.findById("a")).toMatchObject({ nextIds: [], revision: 1 });
-  expect(await repository.findById("c")).toMatchObject({ previousIds: [], revision: 1 });
+  expect(await repository.findById("a")).toMatchObject({ subtaskIds: [], revision: 1 });
+  expect(await repository.findById("c")).toMatchObject({ parentId: undefined, revision: 1 });
 });
 
 test("refuses a task that does not exist or belongs to someone else", async () => {

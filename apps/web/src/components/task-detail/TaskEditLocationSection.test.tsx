@@ -5,8 +5,6 @@ import { mapsUrl } from "@/lib/tasks/maps-link";
 
 const places = vi.hoisted(() => ({ searchPlaces: vi.fn() }));
 vi.mock("@/lib/api/places", () => ({ searchPlaces: places.searchPlaces }));
-const geolocation = vi.hoisted(() => ({ currentCoordinates: vi.fn() }));
-vi.mock("@/lib/geolocation/current-coordinates", () => ({ currentCoordinates: geolocation.currentCoordinates }));
 
 const { TaskEditLocationSection } = await import("./TaskEditLocationSection");
 
@@ -21,8 +19,6 @@ beforeEach(() => {
   vi.useFakeTimers({ shouldAdvanceTime: true });
   places.searchPlaces.mockReset();
   places.searchPlaces.mockResolvedValue([IBIRAPUERA]);
-  geolocation.currentCoordinates.mockReset();
-  geolocation.currentCoordinates.mockResolvedValue(undefined);
 });
 afterEach(() => vi.useRealTimers());
 
@@ -36,7 +32,7 @@ describe("campo Local", () => {
     await vi.advanceTimersByTimeAsync(350);
 
     const option = await screen.findByRole("button", { name: IBIRAPUERA.label });
-    expect(places.searchPlaces).toHaveBeenCalledWith("ibirapuera", 6, undefined);
+    expect(places.searchPlaces).toHaveBeenCalledWith("ibirapuera", 6);
     fireEvent.click(option);
 
     expect(input).toHaveValue(IBIRAPUERA.label);
@@ -46,20 +42,22 @@ describe("campo Local", () => {
     expect(places.searchPlaces).toHaveBeenCalledTimes(1);
   });
 
-  it("busca perto de onde a pessoa está, lendo a posição uma vez ao entrar no campo", async () => {
-    const here = { latitude: -19.92, longitude: -43.94 };
-    geolocation.currentCoordinates.mockResolvedValue(here);
-    render(<Harness />);
-    const input = screen.getByRole("combobox", { name: "Local" });
+  it("nunca pede a posição da pessoa ao navegador", async () => {
+    const getCurrentPosition = vi.fn();
+    vi.stubGlobal("navigator", { ...navigator, geolocation: { getCurrentPosition } });
+    try {
+      render(<Harness />);
+      const input = screen.getByRole("combobox", { name: "Local" });
 
-    fireEvent.focus(input);
-    fireEvent.change(input, { target: { value: "padaria" } });
-    await vi.advanceTimersByTimeAsync(350);
-    fireEvent.change(input, { target: { value: "padaria brasil" } });
-    await vi.advanceTimersByTimeAsync(350);
+      fireEvent.focus(input);
+      fireEvent.change(input, { target: { value: "padaria" } });
+      await vi.advanceTimersByTimeAsync(350);
 
-    expect(places.searchPlaces).toHaveBeenLastCalledWith("padaria brasil", 6, here);
-    expect(geolocation.currentCoordinates).toHaveBeenCalledTimes(1);
+      expect(places.searchPlaces).toHaveBeenLastCalledWith("padaria", 6);
+      expect(getCurrentPosition).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it("não busca com menos de três letras", async () => {

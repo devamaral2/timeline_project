@@ -60,13 +60,13 @@ describe("PostgresTaskRepository", () => {
     return task;
   }
 
-  /** A sequencia so entra pelo lote: cada par e `[antecessor, sucessor]`. */
-  async function follow(...pairs: Array<[string, string]>): Promise<void> {
+  /** A hierarquia so entra pelo lote: cada par e `[principal, subtarefa]`. */
+  async function nest(...pairs: Array<[string, string]>): Promise<void> {
     await writer.commit({
       userId: USER,
       tasks: [],
       artifacts: [],
-      sequence: pairs.map(([fromId, toId]) => ({ op: "add" as const, fromId, toId })),
+      subtasks: pairs.map(([parentId, subtaskId]) => ({ op: "add" as const, parentId, subtaskId })),
     });
   }
 
@@ -299,57 +299,59 @@ describe("PostgresTaskRepository", () => {
     });
   });
 
-  describe("sequencia entre tarefas", () => {
-    test("quem sai da aresta volta em nextIds; quem chega, em previousIds, e nenhuma e revisada", async () => {
-      const first = await saved(trackedTask(USER, "Escolher a cor"));
-      const second = await saved(trackedTask(USER, "Comprar tinta"));
-      const third = await saved(trackedTask(USER, "Pintar a sala"));
-      await follow([first.id, second.id], [second.id, third.id]);
+  describe("hierarquia entre tarefas", () => {
+    test("a principal volta em parentId e as subtarefas em subtaskIds, e nenhuma e revisada", async () => {
+      const first = await saved(trackedTask(USER, "Reformar a casa"));
+      const second = await saved(trackedTask(USER, "Pintar a sala"));
+      const third = await saved(trackedTask(USER, "Comprar tinta"));
+      await nest([first.id, second.id], [second.id, third.id]);
 
-      expect(await found(first.id)).toMatchObject({ previousIds: [], nextIds: [second.id], revision: 1 });
-      expect(await found(second.id)).toMatchObject({ previousIds: [first.id], nextIds: [third.id], revision: 1 });
-      expect(await found(third.id)).toMatchObject({ previousIds: [second.id], nextIds: [], revision: 1 });
+      expect(await found(first.id)).toMatchObject({ parentId: undefined, subtaskIds: [second.id], revision: 1 });
+      expect(await found(second.id)).toMatchObject({ parentId: first.id, subtaskIds: [third.id], revision: 1 });
+      expect(await found(third.id)).toMatchObject({ parentId: second.id, subtaskIds: [], revision: 1 });
       expect(await selectRows(ctx.pool, "SELECT relation FROM task_task_relation")).toEqual([
-        { relation: "precedes" },
-        { relation: "precedes" },
+        { relation: "subtask" },
+        { relation: "subtask" },
       ]);
     });
 
-    test("uma tarefa pode ter varios antecessores e varios sucessores", async () => {
+    test("uma tarefa tem uma so principal e varias subtarefas", async () => {
       const one = await saved(trackedTask(USER, "Reforma"));
       const two = await saved(trackedTask(USER, "Compras do mes"));
       const shared = await saved(trackedTask(USER, "Comprar tinta"));
       const after = await saved(trackedTask(USER, "Pintar"));
       const other = await saved(trackedTask(USER, "Limpar"));
-      await follow([one.id, shared.id], [two.id, shared.id], [shared.id, after.id], [shared.id, other.id]);
+      await nest([one.id, shared.id], [shared.id, after.id], [shared.id, other.id]);
+      await nest([two.id, shared.id]);
 
       const read = await found(shared.id);
-      expect([...read.previousIds].sort()).toEqual([one.id, two.id].sort());
-      expect([...read.nextIds].sort()).toEqual([after.id, other.id].sort());
+      expect(read.parentId).toBe(two.id);
+      expect([...read.subtaskIds].sort()).toEqual([after.id, other.id].sort());
+      expect((await found(one.id)).subtaskIds).toEqual([]);
     });
 
     test("uma ponta pode ser tarefa de agente, nos dois sentidos", async () => {
       const request = await saved(agentTask(USER, "Montar o cardapio", { kind: "build_request" }));
       const person = await saved(trackedTask(USER, "Fazer as compras"));
       const reply = await saved(agentTask(USER, "Conferir a despensa", { kind: "build_request" }));
-      await follow([request.id, person.id], [person.id, reply.id]);
+      await nest([request.id, person.id], [person.id, reply.id]);
 
-      expect(await found(request.id)).toMatchObject({ actor: "agent", nextIds: [person.id], revision: 1 });
-      expect(await found(person.id)).toMatchObject({ previousIds: [request.id], nextIds: [reply.id] });
-      expect((await found(reply.id)).previousIds).toEqual([person.id]);
+      expect(await found(request.id)).toMatchObject({ actor: "agent", subtaskIds: [person.id], revision: 1 });
+      expect(await found(person.id)).toMatchObject({ parentId: request.id, subtaskIds: [reply.id] });
+      expect((await found(reply.id)).parentId).toBe(person.id);
     });
 
-    test("gravar ou editar uma tarefa nao escreve nem apaga arestas da sequencia", async () => {
+    test("gravar ou editar uma tarefa nao escreve nem apaga arestas da hierarquia", async () => {
       const first = await saved(trackedTask(USER, "Primeiro"));
       const second = await saved(trackedTask(USER, "Segundo"));
-      await follow([first.id, second.id]);
+      await nest([first.id, second.id]);
 
       await tasks.update(second.revise({ name: "Segundo, editado", tags: ["casa"] }), USER, 1);
       await tasks.update(first.revise({ name: "Primeiro, editado" }), USER, 1);
 
-      expect(await found(first.id)).toMatchObject({ name: "Primeiro, editado", nextIds: [second.id], revision: 2 });
-      expect(await found(second.id)).toMatchObject({ name: "Segundo, editado", previousIds: [first.id], revision: 2 });
-      expect(await countRows(ctx.pool, "task_task_relation", "relation = 'precedes'")).toBe(1);
+      expect(await found(first.id)).toMatchObject({ name: "Primeiro, editado", subtaskIds: [second.id], revision: 2 });
+      expect(await found(second.id)).toMatchObject({ name: "Segundo, editado", parentId: first.id, revision: 2 });
+      expect(await countRows(ctx.pool, "task_task_relation", "relation = 'subtask'")).toBe(1);
     });
 
     test("a tarefa apagada some das listas de quem aponta para ela e de quem ela aponta", async () => {
@@ -357,25 +359,25 @@ describe("PostgresTaskRepository", () => {
       const middle = await saved(trackedTask(USER, "Meio"));
       const after = await saved(trackedTask(USER, "Depois"));
       const sibling = await saved(trackedTask(USER, "Irmao"));
-      await follow([before.id, middle.id], [middle.id, after.id], [before.id, sibling.id]);
+      await nest([before.id, middle.id], [middle.id, after.id], [before.id, sibling.id]);
 
       await tasks.delete(middle.id, USER);
-      expect((await found(before.id)).nextIds).toEqual([sibling.id]);
-      expect((await found(after.id)).previousIds).toEqual([]);
+      expect((await found(before.id)).subtaskIds).toEqual([sibling.id]);
+      expect((await found(after.id)).parentId).toBeUndefined();
 
       await tasks.delete(before.id, USER);
-      expect((await found(sibling.id)).previousIds).toEqual([]);
+      expect((await found(sibling.id)).parentId).toBeUndefined();
     });
 
-    test("findByIds traz previousIds e nextIds de varias tarefas de uma vez", async () => {
+    test("findByIds traz parentId e subtaskIds de varias tarefas de uma vez", async () => {
       const first = await saved(trackedTask(USER, "Primeiro"));
       const second = await saved(trackedTask(USER, "Segundo"));
-      await follow([first.id, second.id]);
+      await nest([first.id, second.id]);
 
       const read = await tasks.findByIds([first.id, second.id]);
 
-      expect(read.find((task) => task.id === first.id)?.nextIds).toEqual([second.id]);
-      expect(read.find((task) => task.id === second.id)?.previousIds).toEqual([first.id]);
+      expect(read.find((task) => task.id === first.id)?.subtaskIds).toEqual([second.id]);
+      expect(read.find((task) => task.id === second.id)?.parentId).toBe(first.id);
     });
   });
 
@@ -469,6 +471,8 @@ describe("PostgresTaskRepository", () => {
         name: "Forjado",
         startedAt: request.startedAt,
         revision: 2,
+        createdAt: request.createdAt,
+        updatedAt: request.updatedAt,
       });
 
       await expect(tasks.update(forged, USER, 1)).rejects.toThrow(TaskNotFoundError);

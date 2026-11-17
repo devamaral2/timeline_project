@@ -20,11 +20,11 @@ import { ARTIFACT_ARTIFACT_RELATIONS, TASK_ARTIFACT_RELATIONS, TASK_TASK_RELATIO
  * Relacoes com sentido (ADR 0012): de quem produz para o que foi produzido.
  * Uma tabela por par de entidades, cada uma com o seu conjunto de tipos.
  *
- * Nao existe `parent_id`: a ordem entre tarefas e a relacao `precedes`, do
- * antecessor para o sucessor ("segue-se de" e "da sequencia a" sao os dois
- * lados dela), e a sessao de conversa e a estrela `follow_up` do primeiro
- * pedido para cada continuacao. Ciclos e o dono das duas pontas sao
- * conferidos na escrita.
+ * Nao existe `parent_id`: a hierarquia entre tarefas e a relacao `subtask`, da
+ * tarefa principal para a subtarefa (uma principal por tarefa, pelo indice
+ * unico), e a sessao de conversa e a estrela `follow_up` do primeiro pedido
+ * para cada continuacao. Ciclos e o dono das duas pontas sao conferidos na
+ * escrita.
  */
 export const taskTaskRelation = pgTable(
   "task_task_relation",
@@ -46,6 +46,10 @@ export const taskTaskRelation = pgTable(
     uniqueIndex("task_task_follow_up_unique")
       .on(table.toTaskId)
       .where(sql`${table.relation} = 'follow_up'`),
+    // Cada subtarefa tem uma so tarefa principal.
+    uniqueIndex("task_task_subtask_unique")
+      .on(table.toTaskId)
+      .where(sql`${table.relation} = 'subtask'`),
     check("task_task_relation_valid", sql`${table.relation} IN (${sqlList(TASK_TASK_RELATIONS)})`),
     check("task_task_not_self", sql`${table.fromTaskId} <> ${table.toTaskId}`),
   ],

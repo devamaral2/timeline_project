@@ -59,7 +59,7 @@ Tarefa sem status, que só marca um horário na agenda. Continua editável e pod
 _Avoid_: tarefa stateless, agendado, tarefa azul
 
 **Tarefa longa**:
-Tarefa de pessoa, sempre com status, que fica fora da agenda, como um projeto. Pode ter início real e prazo, mas nenhuma data a coloca na agenda. O trabalho nela aparece na agenda como tarefas com horário, ligadas por sequência. Não se repete e não vira perdida: com o prazo vencido, fica atrasada. Toda tarefa que duraria mais de 31 dias é uma tarefa longa.
+Tarefa de pessoa, sempre com status, que fica fora da agenda, como um projeto. Pode ter início real e prazo, mas nenhuma data a coloca na agenda. O trabalho nela aparece na agenda como subtarefas com horário. Não se repete e não vira perdida: com o prazo vencido, fica atrasada. Toda tarefa que duraria mais de 31 dias é uma tarefa longa.
 _Avoid_: projeto, épico, registro longo, tarefa sem data
 
 **Agenda**:
@@ -75,15 +75,15 @@ Quem realiza a tarefa: uma pessoa ou um agente. Cada um tem o seu próprio conju
 _Avoid_: bot, responsável, dono
 
 **Artefato**:
-Objeto que guarda conteúdo e não é um fluxo: não tem status, horário nem executor. É editável. Quem registra que ele foi criado, alterado ou usado é uma tarefa. Substitui a nota.
-_Avoid_: nota (como entidade; fica só como rótulo de tela do artefato de texto), anexo, documento
+Objeto que guarda conteúdo e não é um fluxo: não tem status, horário nem executor. É editável. Quem registra que ele foi criado, alterado ou usado é uma tarefa. Substitui a nota. Na tela ele se chama **documento** (a lista “Documentos”, “Novo documento”); no código, nos contratos, na API e no banco o nome continua artefato (`artifact`).
+_Avoid_: nota (como entidade; fica só como rótulo de tela do artefato de texto), anexo, documento (fora da tela)
 
 **Relação**:
 Ligação com sentido entre tarefas e artefatos. Vai de quem produz para o que foi produzido: a tarefa de origem cria o artefato ou gera a tarefa de destino. Entre tarefa e artefato, parte sempre da tarefa, que cria, altera, usa ou apaga o artefato.
 _Avoid_: vínculo, link, pai e filho
 
 **Alimento**:
-Artefato com calorias e receita. Não se distingue alimento de refeição. O que foi comido numa tarefa é um alimento próprio daquela tarefa, copiado do original com a quantidade, para que editar o original não mude o passado. A cópia é marcada como derivada e não aparece na lista de alimentos.
+Artefato com calorias e receita. Não se distingue alimento de refeição. O que foi comido numa tarefa é um alimento próprio daquela tarefa, copiado do original com a quantidade, para que editar o original não mude o passado. A cópia é marcada como derivada e não aparece na lista de alimentos. Toda refeição pedida à IA nasce como uma tarefa de refeição e um alimento criados juntos e já ligados: o que foi comido nunca vira nota, e o alimento sem tarefa não existe.
 _Avoid_: refeição pronta, item do catálogo, nota de refeição
 
 **Artefato global**:
@@ -126,9 +126,13 @@ _Avoid_: conversa (como entidade), thread, chat
 Registro acrescentado a uma tarefa e nunca alterado: mensagem, pensamento, trace, resultado ou insumo de um passo. O texto do usuário só aparece em mensagens, pensamentos e insumos.
 _Avoid_: log, histórico, trace (como termo geral)
 
-**Sequência entre tarefas**:
-Relação informativa em que uma tarefa vem depois de outra, e as duas podem ser de pessoa ou de agente. Não segura a seguinte em espera nem muda status.
-_Avoid_: subtarefa, bloqueio, dependência, pré-requisito
+**Subtarefa**:
+Tarefa que é parte de outra, a tarefa principal. Cada tarefa tem no máximo uma principal e pode ter várias subtarefas; as duas podem ser de pessoa ou de agente. A ligação é informativa: não segura nada em espera, não muda status e não revisa nenhuma das duas.
+_Avoid_: sequência, filha, etapa, passo, bloqueio, dependência
+
+**Tarefa principal**:
+A tarefa de que uma subtarefa é parte.
+_Avoid_: tarefa pai, tarefa mãe, antecessora, projeto (como nome da relação)
 
 ### Marca
 

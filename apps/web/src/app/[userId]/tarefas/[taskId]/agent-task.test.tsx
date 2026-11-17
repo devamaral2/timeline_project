@@ -116,17 +116,21 @@ test("Informações mostra o início com o tempo decorrido e 'ainda não conclu�
   expect(screen.queryByText("Job")).not.toBeInTheDocument();
 });
 
-test("a tarefa de agente mostra a Sequência, somente leitura, com as pontas de pessoa e de agente", async () => {
-  const review = taskFixture({ id: "rev-1", name: "Revisar o erro", status: "todo", startedAt: "2026-11-14T10:00:00-03:00", previousTaskIds: [ID] });
-  const fix = taskFixture({ id: "fix-1", actor: "agent", kind: "request", status: "queued", name: "Aplicar o conserto", startedAt: "2026-11-14T09:50:00-03:00" });
-  install([agentTask({ previousTaskIds: ["rev-0"], nextTaskIds: ["rev-1"] }), taskFixture({ id: "rev-0", name: "Alerta do monitor", status: "done" }), review, fix], [agentRequest()]);
+test("a tarefa de agente mostra a tarefa principal e as subtarefas, somente leitura, com pontas de pessoa e de agente", async () => {
+  const review = taskFixture({ id: "rev-1", name: "Revisar o erro", status: "todo", startedAt: "2026-11-14T10:00:00-03:00", parentTaskId: ID });
+  const fix = taskFixture({ id: "fix-1", actor: "agent", kind: "request", status: "queued", name: "Aplicar o conserto", startedAt: "2026-11-14T09:50:00-03:00", parentTaskId: ID });
+  const alert = taskFixture({ id: "rev-0", name: "Alerta do monitor", status: "done", subtaskIds: [ID] });
+  install([agentTask({ parentTaskId: "rev-0", subtaskIds: ["rev-1", "fix-1"] }), alert, review, fix], [agentRequest()]);
   renderPage();
   await loaded();
 
-  const section = await screen.findByRole("region", { name: "Sequência" });
-  expect(within(section).getByRole("link", { name: /Alerta do monitor/ })).toHaveAttribute("href", "/user-1/tarefas/rev-0");
-  expect(within(section).getByRole("link", { name: /Revisar o erro/ })).toHaveAttribute("href", "/user-1/tarefas/rev-1");
-  expect(within(section).queryByRole("button")).not.toBeInTheDocument();
+  const parent = await screen.findByRole("region", { name: "Tarefa principal" });
+  expect(within(parent).getByRole("link", { name: /Alerta do monitor/ })).toHaveAttribute("href", "/user-1/tarefas/rev-0");
+  expect(within(parent).queryByRole("button")).not.toBeInTheDocument();
+  const subtasks = screen.getByRole("region", { name: "Subtarefas" });
+  expect(within(subtasks).getByRole("link", { name: /Revisar o erro/ })).toHaveAttribute("href", "/user-1/tarefas/rev-1");
+  expect(within(subtasks).getByRole("link", { name: /Aplicar o conserto/ })).toHaveAttribute("href", "/user-1/tarefas/fix-1");
+  expect(within(subtasks).queryByRole("button")).not.toBeInTheDocument();
   expect(screen.queryByText(/Espera por/)).not.toBeInTheDocument();
 });
 

@@ -28,8 +28,12 @@ export const taskCreateOutput = z.object({
     /** O lugar que o usuario disse, como ele disse: o servidor procura no mapa o endereco de um lugar que existe. */
     location: z.string().nullable().default(null),
     tags,
-    /** As tarefas desta mesma lista de que esta se segue: as que vem antes dela na sequencia. */
-    followsFrom: z.array(position).default([]),
+    /** A posicao, nesta mesma lista, da tarefa principal desta: ela e subtarefa daquela. */
+    subtaskOf: position.nullable().default(null),
+    /** Na refeicao, os alimentos e quantidades como o usuario disse: viram o alimento ligado a ela. */
+    foods: z.string().nullable().default(null),
+    /** Na refeicao, o titulo curto do que foi comido ("Feijoada"): o nome do alimento. */
+    foodName: z.string().nullable().default(null),
   })),
 });
 
@@ -38,11 +42,24 @@ export const artifactCreateOutput = z.object({
     type: z.enum(["text", "food"]),
     name: z.string().min(1),
     content: z.string().min(1),
+    /** No alimento, quando a refeicao acontece: o inicio da tarefa da refeicao que o servidor cria com ele. */
+    startedAt: instant.default(null),
   })),
 });
 
 /** Uma consulta de leitura que o agente de edicao pede quando nenhum candidato serve. */
 const lookup = z.object({ sql: z.string().min(1) }).nullable();
+
+/** Uma subtarefa nova de uma tarefa que ja existe: algo a fazer que e parte dela. O tipo e sempre `common`. */
+const newSubtask = z.object({
+  name: z.string().min(1),
+  /** `null` e "a fazer" (`todo`): a subtarefa e uma parte a cumprir da tarefa maior. */
+  status: status.nullable().default(null),
+  priority: priority.nullable().default(null),
+  startedAt: instant.default(null),
+  estimatedFinishAt: instant.default(null),
+  description: z.string().nullable().default(null),
+});
 
 export const taskEditOutput = z.object({
   edits: z.array(z.object({
@@ -58,6 +75,8 @@ export const taskEditOutput = z.object({
     /** O lugar novo, como o usuario disse (o servidor procura o endereco no mapa); `""` tira o local da tarefa. */
     location: z.string().nullable().default(null),
     tags: z.array(z.string()).nullable(),
+    /** Tarefas novas que nascem como subtarefas desta, quando o pedido a divide em partes. Vazio na maioria dos pedidos. */
+    subtasks: z.array(newSubtask).default([]),
   })),
   query: lookup,
 });
@@ -180,21 +199,6 @@ export const recurringTaskEditOutput = z.object({
   query: lookup,
 });
 
-/** O fallback ou responde, ou chama especialistas (nunca os dois, nunca ele mesmo). */
-export const fallbackOutput = z.object({
-  reply: z.string().min(1).nullable(),
-  invoke: z.array(z.object({
-    agent: z.enum([
-      "task-create", "artifact-create", "task-edit", "artifact-edit",
-      "recurring-task-create", "recurring-task-edit", "query",
-    ]),
-    instruction: z.string().min(1),
-  })).nullable(),
-});
-
-/** A ultima rodada do laco do fallback (`fallback:`): os especialistas estao desativados, so cabe a resposta. */
-export const fallbackFinalOutput = z.object({ reply: z.string().min(1) });
-
 /** Uma frase curta sobre o que falhou, so quando algum passo falhou. */
 export const failureExplanationOutput = z.object({ message: z.string().min(1) });
 
@@ -202,7 +206,6 @@ export type TaskCreateOutput = z.infer<typeof taskCreateOutput>;
 export type ArtifactCreateOutput = z.infer<typeof artifactCreateOutput>;
 export type RecurringTaskCreateOutput = z.infer<typeof recurringTaskCreateOutput>;
 export type RecurringTaskEditOutput = z.infer<typeof recurringTaskEditOutput>;
-export type FallbackOutput = z.infer<typeof fallbackOutput>;
 export type FoodEditOutput = z.infer<typeof foodEditOutput>;
 export type SleepEditOutput = z.infer<typeof sleepEditOutput>;
 export type TrainingEditOutput = z.infer<typeof trainingEditOutput>;

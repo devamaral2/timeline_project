@@ -4,7 +4,7 @@ import {
   TaskNotFoundError,
   TaskOwnershipError,
   TaskRevisionConflictError,
-  SEQUENCE_RELATION,
+  SUBTASK_RELATION,
   type ArtifactLink,
   type ArtifactWrites,
 } from "../../../../domain/index";
@@ -53,13 +53,15 @@ export async function insertTaskAggregate(tx: Tx, task: Task, artifacts?: Artifa
       priority: task.priority,
       name: task.name,
       description: task.description,
-      location: task.location,
+      location: task.location ?? null,
       startedAt: task.startedAt ?? null,
       estimatedFinishAt: task.estimatedFinishAt ?? null,
       finishedAt: task.finishedAt ?? null,
       notifyOffsetsMinutes: [...task.notifyOffsetsMinutes],
       longRunning: task.longRunning,
       data: task.data,
+      createdAt: task.createdAt,
+      updatedAt: task.updatedAt,
       ...occurrenceColumnsOf(task.occurrence),
     })
     .onConflictDoNothing({
@@ -93,7 +95,7 @@ export async function updateTaskAggregate(
         priority = ${task.priority},
         name = ${task.name},
         description = ${task.description},
-        location = ${task.location},
+        location = ${task.location ?? null},
         started_at = ${task.startedAt ?? null},
         estimated_finish_at = ${task.estimatedFinishAt ?? null},
         finished_at = ${task.finishedAt ?? null},
@@ -101,7 +103,7 @@ export async function updateTaskAggregate(
         long_running = ${task.longRunning},
         recurrence_detached = ${task.occurrence?.detached ?? false},
         revision = ${task.revision},
-        updated_at = now()
+        updated_at = ${task.updatedAt}
     WHERE id = ${task.id}
       AND user_id = ${actorUserId}
       AND revision = ${expectedRevision}
@@ -166,15 +168,15 @@ export async function softDeleteTask(tx: Tx, taskId: string, actorUserId: string
 interface MutableTaskParts extends TaskRowParts {
   tags: string[];
   artifactLinks: ArtifactLink[];
-  nextIds: string[];
-  previousIds: string[];
+  parentId?: string;
+  subtaskIds: string[];
 }
 
 /** O que completa cada tarefa, lido das outras tabelas em poucas consultas, para qualquer quantidade de tarefas. */
 export async function loadTaskParts(db: Db | Tx, taskIds: readonly string[]): Promise<Map<string, TaskRowParts>> {
   const parts = new Map<string, MutableTaskParts>();
   for (const id of taskIds) {
-    parts.set(id, { tags: [], artifactLinks: [], nextIds: [], previousIds: [] });
+    parts.set(id, { tags: [], artifactLinks: [], subtaskIds: [] });
   }
   if (taskIds.length === 0) return parts;
   const ids = [...taskIds];
@@ -207,7 +209,7 @@ export async function loadTaskParts(db: Db | Tx, taskIds: readonly string[]): Pr
       .where(
         and(
           inArray(schema.taskTaskRelation.fromTaskId, ids),
-          eq(schema.taskTaskRelation.relation, SEQUENCE_RELATION),
+          eq(schema.taskTaskRelation.relation, SUBTASK_RELATION),
           isNull(schema.tasks.deletedAt),
         ),
       )
@@ -222,7 +224,7 @@ export async function loadTaskParts(db: Db | Tx, taskIds: readonly string[]): Pr
       .where(
         and(
           inArray(schema.taskTaskRelation.toTaskId, ids),
-          eq(schema.taskTaskRelation.relation, SEQUENCE_RELATION),
+          eq(schema.taskTaskRelation.relation, SUBTASK_RELATION),
           isNull(schema.tasks.deletedAt),
         ),
       )
@@ -235,10 +237,12 @@ export async function loadTaskParts(db: Db | Tx, taskIds: readonly string[]): Pr
     parts.get(row.taskId)?.artifactLinks.push(link);
   }
   for (const row of outgoing) {
-    parts.get(row.taskId)?.nextIds.push(row.otherId);
+    parts.get(row.taskId)?.subtaskIds.push(row.otherId);
   }
+  // O indice unico garante uma principal por tarefa.
   for (const row of incoming) {
-    parts.get(row.taskId)?.previousIds.push(row.otherId);
+    const part = parts.get(row.taskId);
+    if (part) part.parentId = row.otherId;
   }
   return parts;
 }

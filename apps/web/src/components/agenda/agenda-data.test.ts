@@ -11,15 +11,15 @@ function card(overrides: Partial<TaskCardDto> = {}): TaskCardDto {
     priority: "medium",
     name: "Planejar o dia",
     description: "",
-    location: "",
     startedAt: "2026-09-14T12:00:00.000Z",
     estimatedFinishAt: "2026-09-14T12:30:00.000Z",
     longRunning: false,
     notifyOffsetsMinutes: [],
     tags: ["pessoal"],
     artifactTypes: [],
-    previousTaskIds: [],
     revision: 1,
+    createdAt: "2026-09-01T12:00:00.000Z",
+    updatedAt: "2026-09-01T12:00:00.000Z",
     ...overrides,
   };
 }

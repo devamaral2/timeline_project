@@ -40,6 +40,8 @@ function rewrite(
     artifactLinks: changes.artifactLinks ?? [...task.artifactLinks],
     occurrence: "occurrence" in changes ? changes.occurrence : task.occurrence,
     revision: task.revision,
+    createdAt: task.createdAt,
+    updatedAt: task.updatedAt,
   });
 }
 
@@ -142,19 +144,19 @@ export class InMemoryRecurrenceRepository implements RecurrenceRepository {
     this.exceptions.set(recurrenceId, days);
   }
 
-  async materialize(recurrence: Recurrence, occurrences: Task[], previousIds: readonly string[] = []): Promise<void> {
+  async materialize(recurrence: Recurrence, occurrences: Task[], parentId?: string): Promise<void> {
     const index = this.recurrences.findIndex((stored) => stored.id === recurrence.id);
     // A regra mudou no meio do caminho: estas ocorrencias sao da regra velha, e nada e gravado.
     if (index === -1 || (this.recurrences[index] as Recurrence).revision !== recurrence.revision) {
       throw new RecurrenceRevisionConflictError(`Recurrence ${recurrence.id} changed while materializing`);
     }
 
-    // Um antecessor que sumiu nao pode ganhar sucessor: a serie avanca sem gerar nada.
-    const previous = [...new Set(previousIds)].filter((previousId) =>
-      this.tasks.tasks.some((task) => task.id === previousId && task.userId === recurrence.userId),
-    );
+    // Uma principal que sumiu nao pode ganhar subtarefa: a serie avanca sem gerar nada.
+    const parentGone =
+      parentId !== undefined &&
+      !this.tasks.tasks.some((task) => task.id === parentId && task.userId === recurrence.userId);
     const inserted: string[] = [];
-    for (const occurrence of previous.length < new Set(previousIds).size ? [] : occurrences) {
+    for (const occurrence of parentGone ? [] : occurrences) {
       const day = occurrence.occurrence?.occurrenceOn;
       // O indice unico do Postgres: um dia da serie existe uma vez so.
       const taken = this.tasks.tasks.some(
@@ -165,8 +167,8 @@ export class InMemoryRecurrenceRepository implements RecurrenceRepository {
       inserted.push(occurrence.id);
     }
 
-    // A relacao faz parte da criacao da ocorrencia: nao conta como edicao do antecessor.
-    for (const fromId of previous) for (const toId of inserted) this.tasks.edges.push({ fromId, toId });
+    // A relacao faz parte da criacao da ocorrencia: nao conta como edicao da principal.
+    if (parentId) for (const subtaskId of inserted) this.tasks.edges.push({ parentId, subtaskId });
     this.recurrences[index] = recurrence;
   }
 

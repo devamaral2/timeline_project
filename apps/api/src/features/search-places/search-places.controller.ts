@@ -1,5 +1,5 @@
 import { Controller, Get, Inject, Module, Query, UseGuards } from "@nestjs/common";
-import type { GeoPointInput, PlaceSuggestionDto } from "@repo/contracts";
+import type { PlaceSuggestionDto } from "@repo/contracts";
 import { GatewayIdentityGuard } from "../../http/request-identity/gateway-identity.guard";
 import {
   PLACE_SEARCH_GATEWAY,
@@ -17,26 +17,13 @@ export class SearchPlacesController {
   execute(
     @Query("query") query?: string,
     @Query("limit") limit?: string,
-    @Query("lat") lat?: string,
-    @Query("lon") lon?: string,
   ): Promise<PlaceSuggestionDto[]> {
     const requestedLimit = Number(limit);
     return this.searchPlaces.execute({
       query: query ?? "",
       limit: Number.isInteger(requestedLimit) && requestedLimit > 0 ? requestedLimit : undefined,
-      near: nearPoint(lat, lon),
     });
   }
-}
-
-/** Onde a pessoa esta, se veio inteiro e dentro do globo. Coordenada torta nao e erro: a busca segue sem ela. */
-export function nearPoint(lat?: string, lon?: string): GeoPointInput | undefined {
-  if (!lat?.trim() || !lon?.trim()) return undefined;
-  const latitude = Number(lat);
-  const longitude = Number(lon);
-  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return undefined;
-  if (Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return undefined;
-  return { latitude, longitude };
 }
 
 @Module({

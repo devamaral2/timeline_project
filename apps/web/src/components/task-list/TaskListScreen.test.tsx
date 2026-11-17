@@ -89,19 +89,65 @@ test("Feitas e Encerradas vêm recolhidas e abrem ao toque", async () => {
   expect(screen.getByRole("link", { name: /Renovar assinatura/ })).toBeInTheDocument();
 });
 
-test("a sequência não esconde linhas: a tarefa que se segue a outra da lista aparece, sem fração nem “Espera por”", async () => {
-  serve([
-    taskFixture({ id: "proposta", name: "Revisar proposta", status: "doing", nextTaskIds: ["ler"] }),
-    taskFixture({ id: "ler", name: "Ler a proposta", status: "todo", previousTaskIds: ["proposta"] }),
-    taskFixture({ id: "pneu", name: "Trocar o pneu", status: "inHold", previousTaskIds: ["proposta"] }),
-  ]);
+const hierarchy = [
+  taskFixture({ id: "proposta", name: "Revisar proposta", status: "doing", subtaskIds: ["ler", "anotar"] }),
+  taskFixture({ id: "ler", name: "Ler a proposta", status: "done", parentTaskId: "proposta", revision: 4 }),
+  taskFixture({ id: "anotar", name: "Anotar as dúvidas", status: "todo", parentTaskId: "proposta", revision: 2 }),
+  taskFixture({ id: "rascunho", name: "Escrever o rascunho", status: "todo", parentTaskId: "fora-da-lista" }),
+];
+
+test("a subtarefa só aparece dentro da principal: a principal mostra a fração e os grupos contam só as principais", async () => {
+  serve(hierarchy);
   render(<TaskListScreen userId="user-1" />);
 
   await screen.findByRole("link", { name: /Revisar proposta/ });
-  expect(screen.getByRole("link", { name: /Ler a proposta/ })).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: /Trocar o pneu/ })).toBeInTheDocument();
-  expect(screen.queryByText(/\d\/\d/)).not.toBeInTheDocument();
-  expect(screen.queryByText(/Espera por/)).not.toBeInTheDocument();
+  // Nenhuma subtarefa é linha de grupo: as duas só existem dentro da gaveta da principal.
+  const drawer = screen.getByRole("list", { name: "Subtarefas de “Revisar proposta”" });
+  expect(screen.getAllByRole("link", { name: /Ler a proposta|Anotar as dúvidas/ }).every((link) => drawer.contains(link))).toBe(true);
+  expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("2 tarefas abertas");
+  expect(screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent)).toEqual(["Em curso1", "A fazer1"]);
+
+  const toggle = screen.getByRole("button", { name: "Subtarefas de “Revisar proposta”: 1 de 2 feitas" });
+  expect(toggle).toHaveAttribute("aria-expanded", "true");
+  expect(toggle).toHaveTextContent("1/2");
+  // A principal fora da lista não segura a subtarefa: ela continua linha.
+  expect(within(screen.getByRole("region", { name: /A fazer/ })).getByRole("link", { name: /Escrever o rascunho/ })).toBeInTheDocument();
+});
+
+test("a gaveta vem aberta com as subtarefas, cada uma levando ao seu detalhe, e a fração fecha e reabre", async () => {
+  serve(hierarchy);
+  render(<TaskListScreen userId="user-1" />);
+
+  const toggle = await screen.findByRole("button", { name: /Subtarefas de “Revisar proposta”/ });
+  expect(toggle).toHaveAttribute("aria-expanded", "true");
+  // Na ordem em que a lista vem da API: a feita depois da aberta.
+  const drawer = screen.getByRole("list", { name: "Subtarefas de “Revisar proposta”" });
+  expect(within(drawer).getAllByRole("link").map((link) => [link.textContent, link.getAttribute("href")])).toEqual([
+    ["Anotar as dúvidas", "/user-1/tarefas/anotar"],
+    ["Ler a proposta", "/user-1/tarefas/ler"],
+  ]);
+
+  fireEvent.click(toggle);
+  expect(toggle).toHaveAttribute("aria-expanded", "false");
+  expect(screen.queryByRole("list", { name: "Subtarefas de “Revisar proposta”" })).not.toBeInTheDocument();
+
+  fireEvent.click(toggle);
+  expect(screen.getByRole("list", { name: "Subtarefas de “Revisar proposta”" })).toBeInTheDocument();
+});
+
+test("o glifo da subtarefa abre a mesma escolha de status e grava com a revisão dela", async () => {
+  const api = serve(hierarchy);
+  render(<TaskListScreen userId="user-1" />);
+
+  fireEvent.click(await screen.findByRole("button", { name: glyphOf("Anotar as dúvidas") }));
+  fireEvent.click(screen.getByRole("option", { name: "Feito" }));
+
+  await waitFor(() => expect(api.calls.some((call) => call.method === "PATCH")).toBe(true));
+  expect(api.calls.find((call) => call.method === "PATCH")).toMatchObject({
+    pathname: "/api/tasks/anotar",
+    body: { expectedRevision: 2, status: "done" },
+  });
+  await waitFor(() => expect(screen.getByRole("button", { name: /Subtarefas de “Revisar proposta”/ })).toHaveTextContent("2/2"));
 });
 
 test("a lista pede as tarefas acompanhadas, e não a agenda", async () => {

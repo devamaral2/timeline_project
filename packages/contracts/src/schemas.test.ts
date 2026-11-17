@@ -49,10 +49,17 @@ test("a training artifact accepts walking as a cardio workout", () => {
 const VELHO = "event";
 const nomeAntigo = (campo: string) => campo.replace("task", VELHO).replace("Task", VELHO[0].toUpperCase() + VELHO.slice(1));
 
-test.each(["previousTaskIds", "nextTaskIds"])("the task input schemas take %s and refuse its old name", (field) => {
-  expect(createTaskInputSchema.safeParse({ [field]: ["t1"] }).success).toBe(true);
+test("the task input schemas take the main task and the subtasks", () => {
+  expect(createTaskInputSchema.safeParse({ parentTaskId: "t1", subtaskIds: ["t2"] }).success).toBe(true);
+  expect(updateTaskInputSchema.safeParse({ taskId: "t1", expectedRevision: 1, parentTaskId: null, subtaskIds: [] }).success).toBe(true);
+  expect(createTaskInputSchema.safeParse({ parentTaskId: ["t1"] }).success).toBe(false);
+});
+
+// A sequencia entre tarefas saiu: nem os nomes dela nem os antigos, de evento, passam.
+test.each(["previousTaskIds", "nextTaskIds"])("the task input schemas refuse %s and its old name", (field) => {
+  expect(createTaskInputSchema.safeParse({ [field]: ["t1"] }).success).toBe(false);
   expect(createTaskInputSchema.safeParse({ [nomeAntigo(field)]: ["t1"] }).success).toBe(false);
-  expect(updateTaskInputSchema.safeParse({ taskId: "t1", expectedRevision: 1, [field]: [] }).success).toBe(true);
+  expect(updateTaskInputSchema.safeParse({ taskId: "t1", expectedRevision: 1, [field]: [] }).success).toBe(false);
   expect(updateTaskInputSchema.safeParse({ taskId: "t1", expectedRevision: 1, [nomeAntigo(field)]: [] }).success).toBe(false);
 });
 

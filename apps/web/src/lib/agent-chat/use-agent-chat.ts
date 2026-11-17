@@ -1,6 +1,5 @@
 "use client";
 
-import { currentCoordinates } from "@/lib/geolocation/current-coordinates";
 import type { AgentTaskStatus, AgentTraceDto, RequestDto, RequestScreenContext } from "@repo/contracts";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "@/lib/api/authed-fetch";
@@ -84,6 +83,7 @@ const PROCESS_POLL_FAILURES = 5;
 const HERMES_DISABLED_TEXT = "O Hermes está desligado neste ambiente (AI_AUTOMATION).";
 const HERMES_ENTER_TEXT = "Agora você está falando com o Hermes. Escreva /app para voltar ao assistente da agenda.";
 const HERMES_LEAVE_TEXT = "De volta ao assistente da agenda.";
+const HERMES_PENDING_LABEL = "Falando com o Hermes";
 
 const ERROR_TEXTS: Record<ChatFailureCode, string> = {
   invalid_input: "Não consegui ler essa mensagem. Tente escrever de outro jeito.",
@@ -213,7 +213,8 @@ export function useAgentChat({
   }, [commitHermesMode, commitPending]);
 
   const fail = useCallback(
-    (id: string, code: ChatFailureCode) => {
+    /** `text` troca o texto do codigo pelo que o servidor escreveu (o aviso do Hermes desligado). */
+    (id: string, code: ChatFailureCode, text?: string) => {
       if (!followingRef.current.has(id)) return;
       followingRef.current.delete(id);
       if (pendingRef.current?.id === id) commitPending(null);
@@ -226,7 +227,7 @@ export function useAgentChat({
         {
           id: `${id}-error`,
           role: "error",
-          text: ERROR_TEXTS[code],
+          text: text ?? ERROR_TEXTS[code],
           retryText: request?.text ?? "",
           messageId: id,
           reuseMessageId: RESUMABLE.has(code),
@@ -247,15 +248,26 @@ export function useAgentChat({
     };
   }, [commitPending]);
 
-  /** Mostra o estado do pedido na caixa de processo e no rastro da aba "Processo". */
+  /**
+   * Mostra o estado do pedido na caixa de processo e no rastro da aba "Processo". O pedido por passos que o
+   * roteador nao reconhece vai ao Hermes (o fallback e sempre ele): a caixa de processo sai e a conversa segue
+   * como no `/hermes`, com os passos do rastro e a resposta.
+   */
   const applyView = useCallback(
     (id: string, view: RequestDto) => {
       const processId = `${id}-process`;
       commitMessages((current) =>
-        current.map((message) => (message.id === processId ? { id: processId, role: "process", request: view } : message)));
+        view.route === "hermes"
+          ? current.filter((message) => message.id !== processId)
+          : current.map((message) => (message.id === processId ? { id: processId, role: "process", request: view } : message)));
+      const route = view.route === "hermes" ? "hermes" : "steps";
       commitTraces((current) =>
         current.map((entry) =>
-          entry.id === id ? { ...entry, running: isRequestOpen(view), trace: view.trace ?? null } : entry));
+          entry.id === id ? { ...entry, route, running: isRequestOpen(view), trace: view.trace ?? null } : entry));
+      if (view.route === "hermes" && isRequestOpen(view) && pendingRef.current?.id === id
+        && pendingRef.current.label !== HERMES_PENDING_LABEL) {
+        commitPending({ ...pendingRef.current, label: HERMES_PENDING_LABEL });
+      }
       // O Hermes não grava passos: os pensamentos e as ferramentas vêm do rastro, ao vivo e depois do fim.
       if (view.route === "hermes") {
         const steps = hermesStepsOf(view.trace?.entries);
@@ -269,7 +281,7 @@ export function useAgentChat({
         }
       }
     },
-    [commitMessages, commitTraces],
+    [commitMessages, commitPending, commitTraces],
   );
 
   /** O pedido terminou: feito (com a agenda atualizada se algo mudou), ou falhou / foi cancelado. */
@@ -291,7 +303,9 @@ export function useAgentChat({
       }
       // Um pedido que falhou ou foi cancelado pode ter gravado algo antes de parar.
       if (view.entities.length > 0) onEntitiesChangedRef.current?.();
-      fail(id, view.status === "cancel" ? "cancelled" : (view.errorCode ?? "internal"));
+      // O Hermes desligado: o servidor escreve o aviso, que diz mais que o texto do codigo.
+      const notice = view.route === "hermes" && view.errorCode === "unavailable" ? view.message : undefined;
+      fail(id, view.status === "cancel" ? "cancelled" : (view.errorCode ?? "internal"), notice);
     },
     [applyView, commitMessages, commitPending, fail],
   );
@@ -344,11 +358,10 @@ export function useAgentChat({
       if (!userId) return;
       let requestId: string;
       try {
-        const coordinates = await currentCoordinates();
         requestId = await startRequest({
           userId,
           text,
-          ...(context || coordinates ? { context: { screen: "chat", ...context, ...(coordinates ? { coordinates } : {}) } } : {}),
+          ...(context ? { context } : {}),
           ...(sessionRef.current ? { sessionId: sessionRef.current } : {}),
           clientMessageId: id,
         });
@@ -402,7 +415,7 @@ export function useAgentChat({
       knownRequestsRef.current.add(request.id);
 
       showTrace({ id, request: text, route: "hermes", running: true, trace: null });
-      commitPending({ id, label: "Falando com o Hermes", requestId: request.id });
+      commitPending({ id, label: HERMES_PENDING_LABEL, requestId: request.id });
       await followRequest(id, request.id);
     },
     [commitHermesMode, commitMessages, commitPending, fail, followRequest, showTrace, userId],

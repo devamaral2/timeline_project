@@ -1,6 +1,6 @@
 import { and, eq, sql } from "drizzle-orm";
-import { TaskValidationError, SEQUENCE_RELATION, type Task } from "../../../../domain/index";
-import type { SequenceChange } from "../../../../domain/ports";
+import { TaskValidationError, SUBTASK_RELATION, type Task } from "../../../../domain/index";
+import type { SubtaskChange } from "../../../../domain/ports";
 import * as schema from "../../database/schema/index";
 import { lockUser, type Tx } from "../../shared/tx";
 
@@ -25,7 +25,7 @@ export async function assertTaskReferences(tx: Tx, task: Task): Promise<void> {
   }
 }
 
-/** Grava as relacoes que saem da tarefa: os artefatos, na ordem. A sequencia entra pelo lote (`applySequenceChanges`). */
+/** Grava as relacoes que saem da tarefa: os artefatos, na ordem. A hierarquia entra pelo lote (`applySubtaskChanges`). */
 export async function insertTaskRelations(tx: Tx, task: Task): Promise<void> {
   if (task.artifactLinks.length === 0) return;
   await tx.insert(schema.taskArtifactRelation).values(
@@ -44,18 +44,18 @@ export async function deleteTaskRelations(tx: Tx, taskId: string): Promise<void>
 }
 
 /**
- * Aplica as arestas da sequencia: as duas pontas existem e sao do usuario, uma
- * aresta nao repete e a ordem nao fecha ciclo. Nenhum das tarefas e revisada:
- * a sequencia nao e campo de nenhuma delas, entao uma tarefa de agente tambem
- * pode ser ponta.
+ * Aplica as arestas da hierarquia: as duas pontas existem e sao do usuario,
+ * cada subtarefa tem uma principal so (pôr sob outra tira da anterior) e a
+ * hierarquia nao fecha ciclo. Nenhuma das tarefas e revisada: a hierarquia nao
+ * e campo de nenhuma delas, entao uma tarefa de agente tambem pode ser ponta.
  */
-export async function applySequenceChanges(tx: Tx, userId: string, changes: readonly SequenceChange[]): Promise<void> {
+export async function applySubtaskChanges(tx: Tx, userId: string, changes: readonly SubtaskChange[]): Promise<void> {
   if (changes.length === 0) return;
   // A conferencia de ciclo le o grafo inteiro do usuario: duas escritas ao mesmo tempo esperam uma pela outra.
   await lockUser(tx, userId);
 
   const added = changes.filter((change) => change.op === "add");
-  const ids = [...new Set(added.flatMap((change) => [change.fromId, change.toId]))].sort();
+  const ids = [...new Set(added.flatMap((change) => [change.parentId, change.subtaskId]))].sort();
   if (ids.length > 0) {
     const found = await tx.execute<{ id: string }>(sql`
       SELECT id FROM tasks
@@ -74,33 +74,36 @@ export async function applySequenceChanges(tx: Tx, userId: string, changes: read
       .delete(schema.taskTaskRelation)
       .where(
         and(
-          eq(schema.taskTaskRelation.fromTaskId, change.fromId),
-          eq(schema.taskTaskRelation.toTaskId, change.toId),
-          eq(schema.taskTaskRelation.relation, SEQUENCE_RELATION),
+          eq(schema.taskTaskRelation.fromTaskId, change.parentId),
+          eq(schema.taskTaskRelation.toTaskId, change.subtaskId),
+          eq(schema.taskTaskRelation.relation, SUBTASK_RELATION),
         ),
       );
   }
-  if (added.length > 0) {
+  for (const change of added) {
+    // Uma principal so: a subtarefa sai da anterior, se tinha.
+    await tx
+      .delete(schema.taskTaskRelation)
+      .where(and(eq(schema.taskTaskRelation.toTaskId, change.subtaskId), eq(schema.taskTaskRelation.relation, SUBTASK_RELATION)));
     await tx
       .insert(schema.taskTaskRelation)
-      .values(added.map((change) => ({ fromTaskId: change.fromId, toTaskId: change.toId, relation: SEQUENCE_RELATION })))
-      .onConflictDoNothing();
-    for (const fromId of new Set(added.map((change) => change.fromId))) await assertAcyclic(tx, fromId);
+      .values({ fromTaskId: change.parentId, toTaskId: change.subtaskId, relation: SUBTASK_RELATION });
   }
+  for (const parentId of new Set(added.map((change) => change.parentId))) await assertAcyclic(tx, parentId);
 }
 
-/** A sequencia nao fecha ciclo: seguindo a relacao a partir da tarefa, ela nao volta a si mesma. */
+/** A hierarquia nao fecha ciclo: descendo a partir da tarefa, ela nao volta a si mesma. */
 async function assertAcyclic(tx: Tx, taskId: string): Promise<void> {
   const result = await tx.execute(sql`
     WITH RECURSIVE reach(id) AS (
       SELECT to_task_id FROM task_task_relation
-      WHERE from_task_id = ${taskId} AND relation = ${SEQUENCE_RELATION}
+      WHERE from_task_id = ${taskId} AND relation = ${SUBTASK_RELATION}
       UNION
       SELECT r.to_task_id FROM task_task_relation r
       JOIN reach ON r.from_task_id = reach.id
-      WHERE r.relation = ${SEQUENCE_RELATION}
+      WHERE r.relation = ${SUBTASK_RELATION}
     )
     SELECT 1 FROM reach WHERE id = ${taskId} LIMIT 1
   `);
-  if (result.rows.length > 0) throw new TaskValidationError("Tasks cannot follow each other in a cycle");
+  if (result.rows.length > 0) throw new TaskValidationError("A task cannot be a subtask of its own subtask");
 }

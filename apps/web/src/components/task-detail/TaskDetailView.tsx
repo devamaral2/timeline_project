@@ -2,7 +2,7 @@
 
 import { Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
-import type { TaskDto, TaskPriority, HumanTaskStatus } from "@repo/contracts";
+import type { ArtifactDto, TaskDto, TaskPriority, HumanTaskStatus } from "@repo/contracts";
 import { agendaRefreshEvent } from "@/components/agenda/agenda-refresh";
 import { BackLink, DetailFrame, DetailMenu, DetailMessage, MenuItem, detailIcon } from "@/components/detail/detail-parts";
 import { EntityAiEditBar } from "@/components/detail/EntityAiEditBar";
@@ -13,10 +13,11 @@ import { ApiRequestError } from "@/lib/api/client-request";
 import { type EditTaskInput, updateTask } from "@/lib/api/tasks";
 import { momentLabel, priorityPatch, statusPatch } from "@/lib/tasks/task-read-model";
 import { TaskArtifactsSection } from "./TaskArtifactsSection";
+import { addDraftArtifact, addFoodCopy, artifactLinkInputs, draftArtifactsFromTask } from "./task-artifact-draft";
 import { TaskDetailHeader } from "./TaskDetailHeader";
 import { TaskInfoSection } from "./TaskInfoSection";
 import { TaskRequestsSection } from "./TaskRequestsSection";
-import { TaskSequenceSection } from "./TaskSequenceSection";
+import { TaskHierarchySection } from "./TaskHierarchySection";
 import styles from "./task-detail.module.css";
 
 interface TaskDetailViewProps {
@@ -32,8 +33,9 @@ const STALE_MESSAGE = "Esta tarefa mudou em outro lugar. Carregamos a versão at
  * O detalhe de tarefa em modo de leitura, a rota única para agenda e lista de
  * tarefas. A tela é uma coluna de seções separadas: o topo (este arquivo e
  * `TaskDetailHeader`), as Informações (`TaskInfoSection`), e as seções de
- * relação: Sequência (`TaskSequenceSection`) Artefatos (`TaskArtifactsSection`) e Pedidos (`TaskRequestsSection`: criado e atualizado por). "Excluir" fica no menu "Mais ações" do
- * topo, ao lado de "Editar" (ticket 23).
+ * relação: Tarefa principal e Subtarefas (`TaskHierarchySection`), Documentos (`TaskArtifactsSection`) e Pedidos (`TaskRequestsSection`: criado e atualizado por). "Excluir" fica no menu "Mais ações" do
+ * topo, ao lado de "Editar" (ticket 23). Documentos aparece sempre, com a ação de ligar um documento embaixo, que
+ * grava na hora, sem passar pela edição. A hierarquia só se lê aqui: subtarefa se liga na edição ou pelo agente.
  */
 export function TaskDetailView({ userId, task, onChanged }: TaskDetailViewProps) {
   const router = useMotionRouter();
@@ -70,6 +72,13 @@ export function TaskDetailView({ userId, task, onChanged }: TaskDetailViewProps)
   const changePriority = (priority: TaskPriority) =>
     change(priorityPatch(task, priority), "Não foi possível trocar a prioridade. Tente novamente.");
 
+  /** Artefato ligado no detalhe: no fim da lista; na refeição, o alimento entra como cópia nova, sem quantidade. */
+  const addArtifact = (artifact: ArtifactDto) => {
+    const current = draftArtifactsFromTask(task.artifacts);
+    const next = task.kind === "meal" ? addFoodCopy(current, artifact, crypto.randomUUID()) : addDraftArtifact(current, artifact);
+    return change({ expectedRevision: task.revision, artifacts: artifactLinkInputs(next) }, "Não foi possível ligar o documento. Tente novamente.");
+  };
+
   const lead = (
     <>
       <nav className={styles.topbar} aria-label="Navegação do registro">
@@ -93,8 +102,8 @@ export function TaskDetailView({ userId, task, onChanged }: TaskDetailViewProps)
   return (
     <DetailFrame type={task.kind} leadLabel="Resumo da tarefa" bodyLabel="Conteúdo da tarefa" lead={lead}>
       <TaskInfoSection task={task} />
-      <TaskSequenceSection userId={userId} task={task} />
-      <TaskArtifactsSection userId={userId} task={task} />
+      <TaskHierarchySection userId={userId} task={task} />
+      <TaskArtifactsSection userId={userId} task={task} busy={saving} onAddArtifact={(artifact) => void addArtifact(artifact)} />
       <TaskRequestsSection userId={userId} task={task} />
       {error ? <DetailMessage alert>{error}</DetailMessage> : null}
       <EntityAiEditBar

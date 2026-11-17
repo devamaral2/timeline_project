@@ -17,13 +17,14 @@ export type RecurrenceChange =
   | { op: "delete"; id: string; fromDay: string };
 
 /**
- * Uma aresta da sequencia entre tarefas: `fromId` vem antes de `toId` (o
- * segundo "segue-se de" o primeiro). Nenhum dos duas tarefas e revisada.
+ * Uma aresta da hierarquia entre tarefas: `parentId` e a tarefa principal de
+ * `subtaskId`. Nenhuma das duas tarefas e revisada. Pôr uma subtarefa sob
+ * outra principal tira a ligacao com a anterior: cada tarefa tem uma so.
  */
-export interface SequenceChange {
+export interface SubtaskChange {
   op: "add" | "remove";
-  fromId: string;
-  toId: string;
+  parentId: string;
+  subtaskId: string;
 }
 
 export interface EntityBatch {
@@ -34,10 +35,10 @@ export interface EntityBatch {
   /** De qual original saiu cada copia nova do lote. */
   derivations?: readonly { originalId: string; copyId: string }[];
   /**
-   * A sequencia entre tarefas. Entra depois de todas as tarefas do lote, para
+   * A hierarquia entre tarefas. Entra depois de todas as tarefas do lote, para
    * que uma ponta possa ser uma tarefa nova do mesmo lote.
    */
-  sequence?: readonly SequenceChange[];
+  subtasks?: readonly SubtaskChange[];
   /**
    * Series novas. A serie e gravada antes das ocorrencias que o lote tambem
    * traz (a primeira, que o agente ja mostra na resposta); as demais saem da

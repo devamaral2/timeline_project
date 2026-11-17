@@ -18,6 +18,8 @@ export interface RecurrenceCreateProps {
 export interface RecurrenceRehydrateProps extends RecurrenceCreateProps {
   revision: number;
   materializedThrough?: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface RecurrenceReviseChanges {
@@ -66,14 +68,19 @@ export class Recurrence {
     readonly template: Readonly<Record<string, unknown>>,
     readonly materializedThrough: string | undefined,
     readonly revision: number,
+    readonly createdAt: Date,
+    /** A ultima revisao da regra ou do template. Avancar a marca d'agua nao conta. */
+    readonly updatedAt: Date,
   ) {}
 
-  static create(props: RecurrenceCreateProps): Recurrence {
+  static create(props: RecurrenceCreateProps, now: Date = new Date()): Recurrence {
     return Recurrence.build({
       ...props,
       id: props.id ?? ulid(),
       revision: 1,
       materializedThrough: undefined,
+      createdAt: now,
+      updatedAt: now,
     });
   }
 
@@ -90,7 +97,7 @@ export class Recurrence {
    * marca d'agua volta, e o repositorio apaga as ocorrencias futuras que
    * ninguem editou a mao.
    */
-  revise(changes: RecurrenceReviseChanges): Recurrence {
+  revise(changes: RecurrenceReviseChanges, now: Date = new Date()): Recurrence {
     return Recurrence.build({
       id: this.id,
       userId: this.userId,
@@ -98,6 +105,8 @@ export class Recurrence {
       template: changes.template ?? { ...this.template },
       materializedThrough: undefined,
       revision: this.revision + 1,
+      createdAt: this.createdAt,
+      updatedAt: now.getTime() < this.createdAt.getTime() ? this.createdAt : now,
     });
   }
 
@@ -110,6 +119,8 @@ export class Recurrence {
       template: { ...this.template },
       materializedThrough: dayKey,
       revision: this.revision,
+      createdAt: this.createdAt,
+      updatedAt: this.updatedAt,
     });
   }
 
@@ -127,6 +138,9 @@ export class Recurrence {
     if (props.materializedThrough !== undefined && !isDayKey(props.materializedThrough)) {
       throw new RecurrenceValidationError("Invalid materializedThrough");
     }
+    if (props.updatedAt.getTime() < props.createdAt.getTime()) {
+      throw new RecurrenceValidationError("updatedAt must be equal to or after createdAt");
+    }
     return new Recurrence(
       props.id,
       props.userId,
@@ -134,6 +148,8 @@ export class Recurrence {
       Object.freeze(structuredClone(props.template)),
       props.materializedThrough,
       props.revision,
+      props.createdAt,
+      props.updatedAt,
     );
   }
 }

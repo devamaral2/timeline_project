@@ -71,25 +71,21 @@ export function assertTaskFields(body: Record<string, unknown>, editing: boolean
   ) {
     throw new BadRequestException("Invalid notifyOffsetsMinutes");
   }
-  if (body?.location !== undefined && (typeof body.location !== "string" || body.location.length > 300)) {
-    throw new BadRequestException("Invalid location");
-  }
-  const point = body?.coordinates as { latitude?: unknown; longitude?: unknown } | undefined;
+  // Na edicao, `null` (ou vazio) tira o local; ausente, nao muda.
   if (
-    point !== undefined &&
-    !(
-      typeof point === "object" && point !== null &&
-      typeof point.latitude === "number" && point.latitude >= -90 && point.latitude <= 90 &&
-      typeof point.longitude === "number" && point.longitude >= -180 && point.longitude <= 180
-    )
+    body?.location !== undefined && !(editing && body.location === null) &&
+    (typeof body.location !== "string" || body.location.length > 300)
   ) {
-    throw new BadRequestException("Invalid coordinates");
+    throw new BadRequestException("Invalid location");
   }
   if (body?.longRunning !== undefined && typeof body.longRunning !== "boolean") {
     throw new BadRequestException("Invalid longRunning");
   }
-  for (const field of ["tags", "previousTaskIds", "nextTaskIds", "artifactIds"]) {
+  for (const field of ["tags", "subtaskIds", "artifactIds"]) {
     if (body?.[field] !== undefined && !isStringList(body[field])) throw new BadRequestException(`Invalid ${field}`);
+  }
+  if (body?.parentTaskId !== undefined && body.parentTaskId !== null && typeof body.parentTaskId !== "string") {
+    throw new BadRequestException("Invalid parentTaskId");
   }
   if (body?.artifacts !== undefined && !Array.isArray(body.artifacts)) throw new BadRequestException("Invalid artifacts");
   for (const field of ["startedAt", "estimatedFinishAt", "finishedAt"]) assertInstant(body?.[field], field, editing);

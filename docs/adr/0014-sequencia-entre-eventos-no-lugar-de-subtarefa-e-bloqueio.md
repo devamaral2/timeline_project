@@ -1,9 +1,12 @@
 ---
-status: accepted
+status: superseded
 date: 2026-11-15
 ---
 
 # Sequência entre eventos no lugar de subtarefa e bloqueio
+
+> Substituída pela [ADR 0016](./0016-subtarefa-no-lugar-da-sequencia.md): a sequência virou subtarefa, numa árvore com
+> uma tarefa principal por tarefa.
 
 ## Contexto
 

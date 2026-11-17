@@ -284,15 +284,15 @@ describe("artifacts of the template", () => {
   });
 });
 
-describe("previous tasks of the template", () => {
+describe("main task of the template", () => {
   const project = () => Task.create({ id: "project", userId: actor.userId, name: "Projeto", longRunning: true });
   const sessions: CreateRecurrenceInput = {
     ...dailyRun,
     endsOn: "2026-09-17",
-    template: { name: "Sessão", status: "todo", previousTaskIds: ["project"] },
+    template: { name: "Sessão", status: "todo", parentTaskId: "project" },
   };
 
-  test("each occurrence is born following the previous tasks, without counting as an edit of them", async () => {
+  test("each occurrence is born a subtask of the main task, without counting as an edit of it", async () => {
     const { create, materializer, database, recurrences, taskRepository } = setup({ tasks: [project()] });
     await create(sessions);
     const materialize = vi.spyOn(recurrences, "materialize");
@@ -300,27 +300,27 @@ describe("previous tasks of the template", () => {
     await materializer.materialize(actor.userId);
 
     expect(materialize).toHaveBeenCalledTimes(1);
-    expect(materialize.mock.calls[0]?.[2]).toEqual(["project"]);
+    expect(materialize.mock.calls[0]?.[2]).toBe("project");
     const parent = await taskRepository.findById("project");
     const occurrences = database.tasks.filter((task) => task.occurrence);
     expect(occurrences).toHaveLength(3);
-    expect(parent?.nextIds).toEqual(occurrences.map((task) => task.id));
+    expect(parent?.subtaskIds).toEqual(occurrences.map((task) => task.id));
     expect(parent?.revision).toBe(1);
-    expect(database.edges).toEqual(occurrences.map((task) => ({ fromId: "project", toId: task.id })));
+    expect(database.edges).toEqual(occurrences.map((task) => ({ parentId: "project", subtaskId: task.id })));
     const first = await taskRepository.findById(occurrences[0]?.id as string);
-    expect(first?.previousIds).toEqual(["project"]);
-    expect(first?.nextIds).toEqual([]);
+    expect(first?.parentId).toBe("project");
+    expect(first?.subtaskIds).toEqual([]);
     expect(occurrences.map((task) => task.occurrence?.occurrenceOn)).toEqual(["2026-09-15", "2026-09-16", "2026-09-17"]);
   });
 
-  test("a series without previous tasks passes none", async () => {
+  test("a series without a main task passes none", async () => {
     const { create, materializer, recurrences } = setup();
     await create(dailyRun);
     const materialize = vi.spyOn(recurrences, "materialize");
 
     await materializer.materialize(actor.userId);
 
-    expect(materialize.mock.calls[0]?.[2]).toEqual([]);
+    expect(materialize.mock.calls[0]?.[2]).toBeUndefined();
   });
 
   test("a previous task that was deleted stops the series from generating, without breaking the read", async () => {

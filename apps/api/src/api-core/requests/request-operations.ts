@@ -15,7 +15,6 @@ import type { RequestDispatcher } from "./request-dispatcher";
 import type { RequestEditTargetWorker } from "./request-edit-target-worker";
 import type { RequestEditWorker } from "./request-edit-worker";
 import { requestErrorCode } from "./request-errors";
-import type { RequestFallback } from "./request-fallback";
 import type { RequestFinalizer } from "./request-finalizer";
 import type { RequestQueryWorker } from "./request-query-worker";
 import type { StepPayload } from "./request-step-common";
@@ -36,7 +35,6 @@ export interface RequestWorkers {
   edit: RequestEditWorker;
   query: RequestQueryWorker;
   finalizer: RequestFinalizer;
-  fallback: RequestFallback;
   editTarget: RequestEditTargetWorker;
   targetEdit: RequestTargetEditWorker;
   hermes: HermesTurnWorker;
@@ -56,7 +54,7 @@ export class RequestOperations implements OnModuleInit {
   onModuleInit(): void {
     const { workers } = this;
     // Um `.md` que falta ou quebrou derruba a subida, em vez de virar "erro interno" na primeira edicao.
-    for (const agent of [...STEP_AGENTS, "fallback", "fallback-loop", "failure-explainer"]) loadAgentDefinition(agent);
+    for (const agent of [...STEP_AGENTS, "failure-explainer"]) loadAgentDefinition(agent);
 
     this.jobs.register(REQUEST_JOBS.dispatch, async (raw, context) => {
       await workers.dispatcher.run((raw as { requestId: string }).requestId, context.signal);
@@ -66,9 +64,6 @@ export class RequestOperations implements OnModuleInit {
     }, { onFailure: this.failRequest(uiConfig.dispatchFailed) });
     this.jobs.register(REQUEST_JOBS.step, async (raw, context) => {
       await this.runStep(raw as StepPayload, context.signal);
-    }, { onFailure: this.failStep });
-    this.jobs.register(REQUEST_JOBS.fallback, async (raw, context) => {
-      await workers.fallback.run(raw as StepPayload, context.signal);
     }, { onFailure: this.failStep });
     this.jobs.register(REQUEST_JOBS.finalize, async (raw, context) => {
       await workers.finalizer.run(raw as StepPayload, context.signal);
@@ -122,7 +117,7 @@ export class RequestOperations implements OnModuleInit {
   async start(input: StartRequestInput, actor: AuthenticatedUser): Promise<string> {
     this.assertSelf(input.userId, actor);
     await this.assertSession(input.sessionId, actor);
-    // `fallback: <pedido>`: o pedido guarda so o pedido e o despacho pula o JEV.
+    // `fallback: <pedido>`: o pedido guarda so o pedido e o despacho pula o JEV, direto ao Hermes.
     const forced = parseFallbackCommand(input.text);
     const { requestId } = await this.store.start({
       userId: input.userId, route: "steps", text: forced ?? input.text, context: input.context,
@@ -165,7 +160,6 @@ export class RequestOperations implements OnModuleInit {
     const { requestId } = await this.store.start({
       userId: actor.userId, route: "voice", text: input.transcript,
       clientMessageId: input.clientMessageId, job: REQUEST_JOBS.voice,
-      ...(input.coordinates ? { context: { screen: "voice", coordinates: input.coordinates } } : {}),
     });
     return requestId;
   }

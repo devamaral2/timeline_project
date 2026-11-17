@@ -20,11 +20,13 @@ import { useOpenAgentRefresh } from "@/lib/tasks/use-open-agent-refresh";
 import { useViewMode } from "@/lib/tasks/view-mode";
 import {
   groupTrackedTasks,
+  nestSubtasks,
   oneRowPerSeries,
   showsSeriesRule,
   type TaskGroupKey,
 } from "@/lib/tasks/task-groups";
 import { useMotionRouter } from "@/components/shell/navigation-motion";
+import { SubtaskDrawer, SubtaskToggle } from "./subtask-drawer";
 import { TaskFilters } from "./TaskFilters";
 import styles from "./tasks.module.css";
 
@@ -46,7 +48,8 @@ function openTasksLabel(open: number): string {
 /**
  * A lista de tarefas: as tarefas com status (de pessoa e de agente) da rota
  * `tracked`, nos grupos do canvas. Feitas e Encerradas vêm recolhidos. Cada
- * linha é a `TaskRow`; o glifo de uma tarefa de pessoa abre a escolha dos
+ * linha é a `TaskRow`; a subtarefa com a principal na lista não vira linha: fica
+ * na gaveta que a fração da principal abre. O glifo de uma tarefa de pessoa abre a escolha dos
  * status, e a linha muda de grupo com o status escolhido. Tag, prioridade e texto são parâmetros da consulta: a
  * tela não filtra na mão. As opções de tag vêm da lista sem filtro. No celular os
  * filtros moram no menu de opções da barra inferior (tocar na aba Tarefas já
@@ -59,6 +62,8 @@ export function TaskListScreen({ userId }: { userId: string }) {
   const [facets, setFacets] = useState<TaskCardDto[] | null>(null);
   const [error, setError] = useState(false);
   const [expanded, setExpanded] = useState<TaskGroupKey[]>([]);
+  /** As tarefas com a gaveta das subtarefas fechada. Começam todas abertas. */
+  const [closedSubtasks, setClosedSubtasks] = useState<string[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   /** A tarefa cujo glifo foi tocado: a escolha de status fica aberta para ela. */
@@ -153,9 +158,11 @@ export function TaskListScreen({ userId }: { userId: string }) {
     }
   }
 
-  // Uma série aparece uma vez; todo cartão com status é uma linha.
+  // Uma série aparece uma vez; a subtarefa com a principal na lista vai para a gaveta dela.
   const rows = useMemo(() => oneRowPerSeries(cards ?? []), [cards]);
-  const groups = useMemo(() => groupTrackedTasks(rows), [rows]);
+  const tree = useMemo(() => nestSubtasks(rows), [rows]);
+  const groups = useMemo(() => groupTrackedTasks(tree.roots), [tree]);
+  const toggleSubtasks = (taskId: string) => setClosedSubtasks((current) => toggleIn(current, taskId));
   const open = groups
     .filter((group) => !group.collapsedByDefault)
     .reduce((total, group) => total + group.cards.length, 0);
@@ -253,16 +260,35 @@ export function TaskListScreen({ userId }: { userId: string }) {
                   )}
                   {isOpen ? (
                     <ul className={styles.list}>
-                      {group.cards.map((card) => (
-                        <TaskRow
-                          key={card.id}
-                          card={card}
-                          userId={userId}
-                          now={now}
-                          ruleInPlaceOfTime={showsSeriesRule(card)}
-                          onStatusClick={openStatusPicker}
-                        />
-                      ))}
+                      {group.cards.map((card) => {
+                        const subtasks = tree.subtasksOf(card.id);
+                        const drawerOpen = subtasks.length > 0 && !closedSubtasks.includes(card.id);
+                        return (
+                          <TaskRow
+                            key={card.id}
+                            card={card}
+                            userId={userId}
+                            now={now}
+                            ruleInPlaceOfTime={showsSeriesRule(card)}
+                            onStatusClick={openStatusPicker}
+                            aside={subtasks.length > 0 ? (
+                              <SubtaskToggle card={card} subtasks={subtasks} expanded={drawerOpen} onToggle={() => toggleSubtasks(card.id)} />
+                            ) : undefined}
+                          >
+                            {drawerOpen ? (
+                              <SubtaskDrawer
+                                parent={card}
+                                tree={tree}
+                                userId={userId}
+                                now={now}
+                                closedIds={closedSubtasks}
+                                onToggle={toggleSubtasks}
+                                onStatusClick={openStatusPicker}
+                              />
+                            ) : null}
+                          </TaskRow>
+                        );
+                      })}
                     </ul>
                   ) : null}
                 </section>

@@ -2,7 +2,7 @@ import { Body, Controller, HttpCode, HttpStatus, Inject, Module, Post, UseGuards
 import type { StartRequestResponse } from "@repo/contracts";
 import { z } from "zod";
 import { InvalidInputError } from "../../api-core/agent/errors/agent.errors";
-import { clientMessageIdSchema, geoPointSchema } from "../../api-core/agent/agent-input.schemas";
+import { clientMessageIdSchema } from "../../api-core/agent/agent-input.schemas";
 import { MAX_TRANSCRIPT_LENGTH } from "../../api-core/requests/voice-task-worker";
 import { ApiCoreModule } from "../../api-core/api-core.module";
 import { RequestOperations } from "../../api-core/requests/request-operations";
@@ -13,7 +13,6 @@ import type { AuthenticatedUser } from "../../http/request-identity/authenticate
 export const startVoiceRequestBody = z.object({
   transcript: z.string().trim().min(1).max(MAX_TRANSCRIPT_LENGTH),
   clientMessageId: clientMessageIdSchema.optional(),
-  coordinates: geoPointSchema.optional(),
 });
 
 /**

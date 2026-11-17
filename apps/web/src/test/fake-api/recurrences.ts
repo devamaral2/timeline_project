@@ -33,6 +33,8 @@ export function recurrenceFixture(overrides: Partial<RecurrenceDto> & { id: stri
     startsOn: "2026-09-01",
     template: { name: "Tarefa", priority: "medium", description: "" },
     revision: 1,
+    createdAt: "2026-09-01T12:00:00.000Z",
+    updatedAt: "2026-09-01T12:00:00.000Z",
     ...overrides,
   });
 }
@@ -97,7 +99,7 @@ function checkedRule(rule: RecurrenceRule): RecurrenceRule | undefined {
 }
 
 function ruleOf(recurrence: RecurrenceDto): RecurrenceRule {
-  const { id: _id, template: _template, revision: _revision, ...rule } = recurrence;
+  const { id: _id, template: _template, revision: _revision, createdAt: _createdAt, updatedAt: _updatedAt, ...rule } = recurrence;
   return rule;
 }
 
@@ -110,7 +112,8 @@ function create(request: FakeRequest, store: FakeStore): FakeResult {
   const checked = checkedRule(rule);
   if (!checked) return { status: 400 };
   const id = store.nextId("rec");
-  table(store).set(id, recurrenceSchema.parse({ ...checked, id, template, revision: 1 }));
+  const now = new Date().toISOString();
+  table(store).set(id, recurrenceSchema.parse({ ...checked, id, template, revision: 1, createdAt: now, updatedAt: now }));
   return { status: 201, body: createdRecurrenceSchema.parse({ recurrenceId: id }) };
 }
 
@@ -130,7 +133,10 @@ function update(request: FakeRequest, store: FakeStore): FakeResult {
   if (!checked) return { status: 400 };
   table(store).set(
     current.id,
-    recurrenceSchema.parse({ ...checked, id: current.id, template: template ?? current.template, revision: current.revision + 1 }),
+    recurrenceSchema.parse({
+      ...checked, id: current.id, template: template ?? current.template, revision: current.revision + 1,
+      createdAt: current.createdAt, updatedAt: new Date().toISOString(),
+    }),
   );
   return { status: 204 };
 }

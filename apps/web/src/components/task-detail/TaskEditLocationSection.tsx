@@ -1,11 +1,10 @@
 "use client";
 
-import type { GeoPointInput, PlaceSuggestionDto } from "@repo/contracts";
+import type { PlaceSuggestionDto } from "@repo/contracts";
 import { MapPin } from "lucide-react";
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useId, useState, type KeyboardEvent } from "react";
 import { EditFieldSection, editStyles as edit } from "@/components/edit/edit-parts";
 import { searchPlaces } from "@/lib/api/places";
-import { currentCoordinates } from "@/lib/geolocation/current-coordinates";
 import { mapsUrl } from "@/lib/tasks/maps-link";
 
 interface TaskEditLocationSectionProps {
@@ -21,8 +20,7 @@ const SUGGESTION_DELAY_MS = 300;
 /**
  * "Local": um campo de texto com sugestões do serviço de mapas (via API). Escolher uma sugestão grava o endereço
  * completo; quem não a usa digita o local à mão. Uma falha na busca não aparece: o campo segue valendo como texto.
- * As sugestões perto de onde a pessoa está vêm primeiro; sem a posição (negada ou ainda não lida), a busca segue
- * sem ela.
+ * A posição da pessoa nunca é lida nem enviada: a tarefa só tem local quando alguém o informa aqui.
  * Com um local preenchido, "Abrir no Google Maps" confere o lugar antes de salvar.
  */
 export function TaskEditLocationSection({ value, error, onChange }: TaskEditLocationSectionProps) {
@@ -32,18 +30,6 @@ export function TaskEditLocationSection({ value, error, onChange }: TaskEditLoca
   const [open, setOpen] = useState(false);
   // Só busca o que a pessoa digitou: escolher uma sugestão muda o valor sem pedir outra busca.
   const [typed, setTyped] = useState("");
-  // Onde a pessoa está, lido uma vez quando ela entra no campo. A busca usa o que já chegou e nunca espera por isto.
-  const near = useRef<GeoPointInput | undefined>(undefined);
-  const located = useRef(false);
-
-  function locate() {
-    if (located.current) return;
-    located.current = true;
-    void currentCoordinates().then((point) => {
-      near.current = point;
-    });
-  }
-
   const query = typed.trim();
   const shown = open && query.length >= MIN_QUERY_LENGTH ? found : [];
 
@@ -51,7 +37,7 @@ export function TaskEditLocationSection({ value, error, onChange }: TaskEditLoca
     if (query.length < MIN_QUERY_LENGTH) return;
     let stale = false;
     const timer = setTimeout(() => {
-      searchPlaces(query, SUGGESTION_LIMIT, near.current)
+      searchPlaces(query, SUGGESTION_LIMIT)
         .then((places) => {
           if (stale) return;
           setFound(places);
@@ -112,13 +98,9 @@ export function TaskEditLocationSection({ value, error, onChange }: TaskEditLoca
             onChange(change.target.value);
             setTyped(change.target.value);
             setOpen(true);
-            locate();
           }}
           onKeyDown={handleKeyDown}
-          onFocus={() => {
-            setOpen(true);
-            locate();
-          }}
+          onFocus={() => setOpen(true)}
           onBlur={() => setOpen(false)}
         />
       </span>

@@ -32,15 +32,13 @@ export class VoiceTaskWorker {
     await store.markRunning(request.id);
 
     const parsed = await this.deps.parsing.parseCommand({ text: request.prompt });
-    const coordinates = request.context?.coordinates;
-    // O lugar citado na fala e procurado no mapa perto de onde a pessoa esta; sem lugar citado, vale o endereco dela.
+    // O lugar citado na fala e procurado no mapa; sem lugar citado, a tarefa nasce sem local.
     const said = parsed.place?.trim();
-    const location = said ? await (this.deps.places?.resolve(said, coordinates) ?? said) : undefined;
+    const location = said ? await (this.deps.places?.resolve(said) ?? said) : undefined;
     // A frase falada sempre vira a descricao, para o usuario saber o que foi entendido ao editar.
     const input: CreateTaskInput = {
       ...parsed.input, description: request.prompt,
       ...(location ? { location } : {}),
-      ...(coordinates ? { coordinates } : {}),
     };
     const schedule = resolveTaskSchedule(parsed.schedule, request.createdAt, TASK_TIME_ZONE);
     const prepared = await this.deps.createTask.prepare(input, { userId: request.userId }, schedule);

@@ -24,7 +24,7 @@ export function toTaskCardDto({ task, artifactTypes, recurrence }: TaskCard): Ta
     priority: task.priority,
     name: task.name,
     description: task.description,
-    location: task.location,
+    ...(task.location ? { location: task.location } : {}),
     startedAt: task.startedAt?.toISOString(),
     estimatedFinishAt: task.estimatedFinishAt?.toISOString(),
     finishedAt: task.finishedAt?.toISOString(),
@@ -32,9 +32,11 @@ export function toTaskCardDto({ task, artifactTypes, recurrence }: TaskCard): Ta
     notifyOffsetsMinutes: [...task.notifyOffsetsMinutes],
     tags: task.tags,
     artifactTypes: artifactTypes as ArtifactType[],
-    previousTaskIds: [...task.previousIds],
+    ...(task.parentId ? { parentTaskId: task.parentId } : {}),
     ...(series ? { recurrence: series } : {}),
     revision: task.revision,
+    createdAt: task.createdAt.toISOString(),
+    updatedAt: task.updatedAt.toISOString(),
   };
 }
 
@@ -60,7 +62,7 @@ export function toTaskDto(
       fromRecurrence: link.fromRecurrence,
       artifact: toArtifactDto(artifact),
     })),
-    nextTaskIds: [...task.nextIds],
+    subtaskIds: [...task.subtaskIds],
     requests: requests.map((link) => ({
       id: link.requestId,
       name: link.name,

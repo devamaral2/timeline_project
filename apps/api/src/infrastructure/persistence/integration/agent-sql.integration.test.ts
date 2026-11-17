@@ -83,18 +83,17 @@ describe("PostgresScopedSqlQuery", () => {
         ('${A_TRACKED}', '${A_SKILL}', 'uses', 0);
 
       INSERT INTO task_task_relation (from_task_id, to_task_id, relation) VALUES
-        ('${A_TRACKED}', '${A_TRAINING}', 'precedes'),
-        ('${A_TRACKED}', '${A_DELETED}', 'precedes'),
-        ('${A_DELETED}', '${A_TRAINING}', 'precedes'),
+        ('${A_TRACKED}', '${A_TRAINING}', 'subtask'),
+        ('${A_TRACKED}', '${A_DELETED}', 'subtask'),
         ('${A_REQUEST}', '${A_STEP}', 'step'),
         ('${A_STEP}', '${A_TRAINING}', 'generates'),
-        -- agente nos dois sentidos: fora da sequencia das pessoas
-        ('${A_REQUEST}', '${A_TRACKED}', 'precedes'),
-        ('${A_TRAINING}', '${A_STEP}', 'precedes'),
+        -- agente nos dois sentidos: fora da hierarquia das pessoas
+        ('${A_REQUEST}', '${A_TRACKED}', 'subtask'),
+        ('${A_TRAINING}', '${A_STEP}', 'subtask'),
         -- cruza usuarios: nao aparece para nenhum dos dois
-        ('${B_TRACKED}', '${A_TRAINING}', 'precedes'),
-        ('${A_TRAINING}', '${B_TRACKED}', 'precedes'),
-        ('${B_TASK}', '${B_TRACKED}', 'precedes');
+        ('${B_TRACKED}', '${A_REQUEST}', 'subtask'),
+        ('${A_TRAINING}', '${B_TASK}', 'subtask'),
+        ('${B_TASK}', '${B_TRACKED}', 'subtask');
 
       INSERT INTO tags (id, user_id, name) VALUES
         ('${id("TB", 1)}', 'user-b', 'segredo'),
@@ -159,10 +158,10 @@ describe("PostgresScopedSqlQuery", () => {
     expect(await rows(`SELECT name FROM artifacts WHERE id = '${A_TEXT}'`)).toEqual([["nota do A"]]);
   });
 
-  test("task_sequence so liga tarefas vivas de pessoa do mesmo usuario, e nao expoe as tabelas antigas", async () => {
-    expect(await rows("SELECT previous_task_id, next_task_id FROM task_sequence")).toEqual([[A_TRACKED, A_TRAINING]]);
-    expect(await rows("SELECT previous_task_id, next_task_id FROM task_sequence", "user-b")).toEqual([[B_TASK, B_TRACKED]]);
-    await expect(rows("SELECT * FROM task_subtasks")).rejects.toThrow();
+  test("task_subtasks so liga tarefas vivas de pessoa do mesmo usuario, e nao expoe as tabelas antigas", async () => {
+    expect(await rows("SELECT parent_task_id, subtask_id FROM task_subtasks")).toEqual([[A_TRACKED, A_TRAINING]]);
+    expect(await rows("SELECT parent_task_id, subtask_id FROM task_subtasks", "user-b")).toEqual([[B_TASK, B_TRACKED]]);
+    await expect(rows("SELECT * FROM task_sequence")).rejects.toThrow();
     await expect(rows("SELECT * FROM task_blocks")).rejects.toThrow();
   });
 
@@ -347,7 +346,7 @@ describe("PostgresScopedSqlQuery", () => {
   test("a descricao do esquema para o prompt lista so as tabelas do escopo", () => {
     const description = query.describeSchema();
 
-    for (const table of ["tasks", "task_sequence", "task_artifacts", "task_tags", "recurrences", "artifacts", "artifact_tags"]) {
+    for (const table of ["tasks", "task_subtasks", "task_artifacts", "task_tags", "recurrences", "artifacts", "artifact_tags"]) {
       expect(description).toContain(`${table}:`);
     }
     expect(description).not.toMatch(/task_entries|jobs|user_id|task_task_relation/);

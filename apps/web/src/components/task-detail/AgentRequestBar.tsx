@@ -1,6 +1,5 @@
 "use client";
 
-import { currentCoordinates } from "@/lib/geolocation/current-coordinates";
 import type { RequestDto } from "@repo/contracts";
 import { ArrowUp, MessageSquare } from "lucide-react";
 import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from "react";
@@ -91,11 +90,7 @@ export function AgentRequestBar({ userId, request, onRequestChange }: AgentReque
     setError(null);
     try {
       const sessionId = tracked.sessionId ?? tracked.id;
-      const coordinates = await currentCoordinates();
-      const id = await startRequest({
-        userId, text: message, sessionId, clientMessageId: operationId(),
-        ...(coordinates ? { context: { screen: "detail", coordinates } } : {}),
-      });
+      const id = await startRequest({ userId, text: message, sessionId, clientMessageId: operationId() });
       setText("");
       setFollowed(null);
       setFollowId(id);

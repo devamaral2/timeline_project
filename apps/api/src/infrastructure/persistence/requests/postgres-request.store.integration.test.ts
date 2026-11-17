@@ -80,7 +80,7 @@ describe("PostgresRequestStore", () => {
 
   test("os passos sao tarefas `step` ligados ao pedido por `step`, com o insumo numa entrada e um job por passo", async () => {
     const { requestId } = await start();
-    const [first, second, loop] = [newOrderedId(), newOrderedId(), newOrderedId()];
+    const [first, second] = [newOrderedId(), newOrderedId()];
     const dispatch = {
       model: "jev-test", latencyMs: 12, answers: { task_create: { choice: "one", confidence: 0.99, probability: 0.98 } },
       uncertain: [], unsupported: [], candidates: { shortlisted: 3, selected: 1 },
@@ -89,22 +89,19 @@ describe("PostgresRequestStore", () => {
       { id: first, agent: "task-create", expected: "many" },
       {
         id: second, agent: "task-edit", expected: "one",
-        input: { instruction: "Concluir o aluguel", candidates: [{ kind: "task", id: "e1", name: "Pagar o aluguel" }] },
+        input: { candidates: [{ kind: "task", id: "e1", name: "Pagar o aluguel" }] },
       },
-      { id: loop, agent: "fallback", expected: "one", input: { round: 2 } },
     ], dispatch);
 
-    expect(await rows("SELECT kind, status, name, data FROM tasks WHERE id = ANY($1::char(26)[]) ORDER BY id", [[first, second, loop]])).toEqual([
+    expect(await rows("SELECT kind, status, name, data FROM tasks WHERE id = ANY($1::char(26)[]) ORDER BY id", [[first, second]])).toEqual([
       { kind: "step", status: "queued", name: "Criando tarefas", data: { agent: "task-create", expected: "many" } },
       { kind: "step", status: "queued", name: "Editando tarefas", data: { agent: "task-edit", expected: "one" } },
-      { kind: "step", status: "queued", name: "Analisando o pedido", data: { agent: "fallback", expected: "one", round: 2 } },
     ]);
     expect(await rows("SELECT to_task_id, relation FROM task_task_relation WHERE from_task_id = $1 ORDER BY to_task_id", [requestId]))
-      .toEqual([first, second, loop].map((id) => ({ to_task_id: id, relation: "step" })));
+      .toEqual([first, second].map((id) => ({ to_task_id: id, relation: "step" })));
     expect((await jobs()).slice(1)).toMatchObject([
       { kind: "request-step", task_id: first, payload: { requestId, stepId: first } },
       { kind: "request-step", task_id: second },
-      { kind: "request-fallback", task_id: loop },
     ]);
 
     // As escolhas ficam no pedido; as medidas, numa entrada de trace sem texto.
@@ -112,24 +109,24 @@ describe("PostgresRequestStore", () => {
     expect(request).toMatchObject({ status: "running", data: { dispatch: { answers: dispatch.answers, candidates: dispatch.candidates } } });
     expect(request?.data).not.toHaveProperty("dispatch.model");
     expect(await rows("SELECT content, data FROM task_entries WHERE task_id = $1 AND kind = 'trace'", [requestId]))
-      .toEqual([{ content: null, data: { stage: "dispatch", model: "jev-test", latencyMs: 12, steps: 3 } }]);
+      .toEqual([{ content: null, data: { stage: "dispatch", model: "jev-test", latencyMs: 12, steps: 2 } }]);
     expect((await store.find(requestId))?.dispatch).toEqual(dispatch);
 
     const steps = await store.steps(requestId);
     expect(steps.map((step) => [step.agent, step.label, step.expected, step.status])).toEqual([
       ["task-create", "Criando tarefas", "many", "queued"],
       ["task-edit", "Editando tarefas", "one", "queued"],
-      ["fallback", "Analisando o pedido", "one", "queued"],
     ]);
     expect(steps[0]?.input).toBeUndefined();
-    expect(steps[1]?.input).toEqual({ instruction: "Concluir o aluguel", candidates: [{ kind: "task", id: "e1", name: "Pagar o aluguel" }] });
-    expect(steps[2]?.input).toEqual({ round: 2 });
+    expect(steps[1]?.input).toEqual({ candidates: [{ kind: "task", id: "e1", name: "Pagar o aluguel" }] });
   });
 
   test("as entradas de um passo ficam na ordem em que foram acrescentadas e nao mexem na revisao da tarefa", async () => {
     const { requestId } = await start();
     const stepId = newOrderedId();
-    await store.beginSteps(requestId, [{ id: stepId, agent: "query", expected: "one", input: { instruction: "Listar hoje" } }]);
+    await store.beginSteps(requestId, [{
+      id: stepId, agent: "task-edit", expected: "one", input: { candidates: [{ kind: "task", id: "e1", name: "Almoço" }] },
+    }]);
     await store.markStepRunning(stepId);
     await store.recordThought(stepId, { text: "Preciso das tarefas de hoje.", at: "2026-10-25T15:00:01.000Z", model: "m" });
     await store.recordThought(stepId, { text: "Monto a consulta.", at: "2026-10-25T15:00:02.000Z" });
@@ -140,7 +137,7 @@ describe("PostgresRequestStore", () => {
 
     const entries = await rows("SELECT kind, role, content, data FROM task_entries WHERE task_id = $1 ORDER BY id", [stepId]);
     expect(entries.map((entry) => entry.kind)).toEqual(["input", "thought", "thought", "trace", "result"]);
-    expect(entries[0]).toMatchObject({ content: "Listar hoje", role: null });
+    expect(entries[0]).toMatchObject({ content: null, role: null, data: { candidates: [{ kind: "task", id: "e1", name: "Almoço" }] } });
     expect(entries[3]).toEqual({ kind: "trace", role: null, content: null, data: { timings: { total: 850 } } });
     expect(entries[4]?.data).toEqual({ type: "query", columns: ["name"], rows: [["Almoço"]], truncated: false });
     expect(await rows("SELECT revision, status, finished_at IS NOT NULL AS finished FROM tasks WHERE id = $1", [stepId]))
@@ -353,26 +350,23 @@ describe("PostgresRequestStore", () => {
     expect(await store.steps(requestId)).toHaveLength(2);
   });
 
-  test("o laco do fallback: a rodada seguinte so entra uma vez, e a resposta fecha passo e pedido juntos", async () => {
-    const { requestId } = await start("fallback");
-    const [round1, called, round2, duplicate] = [newOrderedId(), newOrderedId(), newOrderedId(), newOrderedId()];
-    await store.beginSteps(requestId, [{ id: round1, agent: "fallback", expected: "one", input: { round: 1 } }]);
-    await store.handOff(requestId, round1, [{ id: called, agent: "query", expected: "one", input: { instruction: "Listar" } }]);
-    expect((await store.steps(requestId)).map((step) => [step.agent, step.status])).toEqual([["fallback", "done"], ["query", "queued"]]);
+  test("o fallback e o Hermes: o pedido muda de rota, guarda o despacho e o job do Hermes entra na fila", async () => {
+    const { requestId } = await start("o que você acha disso?");
+    const dispatch = { model: "jev-test", latencyMs: 9, answers: {}, uncertain: [], unsupported: [], fallbackReason: "no_step" };
+    await store.handToHermes(requestId, dispatch);
 
-    await Promise.all([
-      store.continueFallback(requestId, { id: round2, agent: "fallback", expected: "one", input: { round: 2 } }),
-      store.continueFallback(requestId, { id: duplicate, agent: "fallback", expected: "one", input: { round: 2 } }),
+    expect(await store.find(requestId)).toMatchObject({ route: "hermes", status: "queued", dispatch });
+    expect(await store.steps(requestId)).toEqual([]);
+    expect((await jobs()).slice(1)).toMatchObject([
+      { kind: "hermes-turn", task_id: requestId, payload: { requestId } },
     ]);
-    const steps = await store.steps(requestId);
-    expect(steps.filter((step) => step.agent === "fallback").map((step) => step.input?.round)).toEqual([1, 2]);
+    expect(await rows("SELECT data FROM task_entries WHERE task_id = $1 AND kind = 'trace'", [requestId]))
+      .toEqual([{ data: { stage: "dispatch", model: "jev-test", latencyMs: 9, steps: 0 } }]);
 
-    const last = steps.at(-1)?.id as string;
-    await store.finishFallback(requestId, last, "Pronto.", [{ agent: "query", errorCode: "query_rejected" }]);
-    expect(await store.find(requestId)).toMatchObject({
-      status: "done", answer: "Pronto.", failedSteps: [{ agent: "query", errorCode: "query_rejected" }],
-    });
-    expect((await store.steps(requestId)).at(-1)?.status).toBe("done");
+    // Pedido que ja terminou nao volta a andar.
+    await store.finish(requestId, "done", { message: "Oi." });
+    await store.handToHermes(requestId, dispatch);
+    expect(await jobs()).toHaveLength(2);
   });
 
   test("a voz: o pedido gera a tarefa de pessoa e termina na transacao dela", async () => {

@@ -34,10 +34,10 @@ export interface TaskDraft {
   tags: string[];
   /** A tarefa persistente: a tarefa longa, que não é um bloco de tempo e tem a previsão de entrega como prazo. */
   longRunning: boolean;
-  /** A sequência, lado "Segue-se de": as tarefas que vêm antes deste (ids, na ordem da API). */
-  previousTaskIds: string[];
-  /** A sequência, lado "Da sequência a": as tarefas que se seguem a este (ids). */
-  nextTaskIds: string[];
+  /** A tarefa principal desta (id), ou `null`: a tarefa não é subtarefa de nenhuma. */
+  parentTaskId: string | null;
+  /** As subtarefas desta (ids, na ordem da API). */
+  subtaskIds: string[];
   /**
    * Os artefatos ligados, na ordem da lista: é a ordem enviada. O que a tarefa criou (`creates`) segue na lista sem
    * posição. Guarda nome e tipo para a lista mostrar sem outra chamada.
@@ -68,8 +68,8 @@ const FIELD_SET: Record<TaskDraftField, true> = {
   reminders: true,
   tags: true,
   longRunning: true,
-  previousTaskIds: true,
-  nextTaskIds: true,
+  parentTaskId: true,
+  subtaskIds: true,
   artifacts: true,
 };
 export const TASK_DRAFT_FIELDS = Object.keys(FIELD_SET) as TaskDraftField[];
@@ -89,12 +89,12 @@ export function draftFromTask(task: TaskDto): TaskDraft {
     endDate: end.date,
     endTime: end.time,
     description: task.description,
-    location: task.location,
+    location: task.location ?? "",
     reminders: sortReminders(task.notifyOffsetsMinutes),
     tags: [...task.tags],
     longRunning: task.longRunning,
-    previousTaskIds: [...task.previousTaskIds],
-    nextTaskIds: [...task.nextTaskIds],
+    parentTaskId: task.parentTaskId ?? null,
+    subtaskIds: [...task.subtaskIds],
     artifacts: draftArtifactsFromTask(task.artifacts),
   };
 }
@@ -115,8 +115,8 @@ export function emptyTaskDraft(name = ""): TaskDraft {
     reminders: [],
     tags: [],
     longRunning: false,
-    previousTaskIds: [],
-    nextTaskIds: [],
+    parentTaskId: null,
+    subtaskIds: [],
     artifacts: [],
   };
 }
@@ -172,7 +172,8 @@ export function buildTaskPatch(task: TaskDto, draft: TaskDraft, now: Date): Edit
   if (draft.kind !== base.kind) patch.kind = draft.kind;
   if (draft.name.trim() !== base.name.trim()) patch.name = draft.name.trim();
   if (draft.description !== base.description) patch.description = draft.description;
-  if (draft.location.trim() !== base.location.trim()) patch.location = draft.location.trim();
+  // Apagar o local manda `null`: a tarefa volta a nao ter local.
+  if (draft.location.trim() !== base.location.trim()) patch.location = draft.location.trim() || null;
   if (draft.priority !== base.priority) patch.priority = draft.priority;
   if (draft.status !== base.status) Object.assign(patch, statusPatch(task, draft.status, now));
   if (draft.startDate !== base.startDate || draft.startTime !== base.startTime) {
@@ -184,8 +185,8 @@ export function buildTaskPatch(task: TaskDto, draft: TaskDraft, now: Date): Edit
   if (!sameList(draft.reminders, base.reminders)) patch.notifyOffsetsMinutes = draft.reminders;
   if (!sameList(draft.tags, base.tags)) patch.tags = draft.tags;
   if (draft.longRunning !== base.longRunning) patch.longRunning = draft.longRunning;
-  if (!sameList(draft.previousTaskIds, base.previousTaskIds)) patch.previousTaskIds = draft.previousTaskIds;
-  if (!sameList(draft.nextTaskIds, base.nextTaskIds)) patch.nextTaskIds = draft.nextTaskIds;
+  if (draft.parentTaskId !== base.parentTaskId) patch.parentTaskId = draft.parentTaskId;
+  if (!sameList(draft.subtaskIds, base.subtaskIds)) patch.subtaskIds = draft.subtaskIds;
   if (!sameArtifactLinks(draft.artifacts, base.artifacts)) patch.artifacts = artifactLinkInputs(draft.artifacts);
   return Object.keys(patch).length > 1 ? patch : null;
 }

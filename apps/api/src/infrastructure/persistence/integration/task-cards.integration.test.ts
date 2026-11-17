@@ -300,8 +300,8 @@ describe("PostgresTaskCardQuery", () => {
     });
   });
 
-  describe("sequencia", () => {
-    test("a tarefa do cartao traz previousIds e nextIds, sem as tarefas apagadas", async () => {
+  describe("hierarquia", () => {
+    test("a tarefa do cartao traz parentId e subtaskIds, sem as tarefas apagadas", async () => {
       const [before, middle, after, removed, removedNext] = [
         await tracked("Antes"),
         await tracked("Meio"),
@@ -313,11 +313,11 @@ describe("PostgresTaskCardQuery", () => {
         userId: USER,
         tasks: [],
         artifacts: [],
-        sequence: [
-          { op: "add", fromId: before.id, toId: middle.id },
-          { op: "add", fromId: middle.id, toId: after.id },
-          { op: "add", fromId: removed.id, toId: middle.id },
-          { op: "add", fromId: middle.id, toId: removedNext.id },
+        subtasks: [
+          { op: "add", parentId: removed.id, subtaskId: before.id },
+          { op: "add", parentId: before.id, subtaskId: middle.id },
+          { op: "add", parentId: middle.id, subtaskId: after.id },
+          { op: "add", parentId: middle.id, subtaskId: removedNext.id },
         ],
       });
       await tasks.delete(removed.id, USER);
@@ -326,12 +326,12 @@ describe("PostgresTaskCardQuery", () => {
       const found = await cards.cardsOf([before.id, middle.id, after.id]);
 
       expect(found.find((card) => card.task.id === middle.id)?.task).toMatchObject({
-        previousIds: [before.id],
-        nextIds: [after.id],
+        parentId: before.id,
+        subtaskIds: [after.id],
         revision: 1,
       });
-      expect(found.find((card) => card.task.id === before.id)?.task).toMatchObject({ previousIds: [], nextIds: [middle.id] });
-      expect(found.find((card) => card.task.id === after.id)?.task).toMatchObject({ previousIds: [middle.id], nextIds: [] });
+      expect(found.find((card) => card.task.id === before.id)?.task).toMatchObject({ parentId: undefined, subtaskIds: [middle.id] });
+      expect(found.find((card) => card.task.id === after.id)?.task).toMatchObject({ parentId: middle.id, subtaskIds: [] });
     });
   });
 

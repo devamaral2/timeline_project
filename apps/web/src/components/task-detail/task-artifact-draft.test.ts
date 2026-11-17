@@ -14,39 +14,39 @@ import {
 } from "./task-artifact-draft";
 
 function draft(id: string, relation: DraftArtifact["relation"] = "uses"): DraftArtifact {
-  return { id, name: `Artefato ${id}`, type: "text", global: false, relation };
+  return { id, name: `Documento ${id}`, type: "text", global: false, relation };
 }
 
 function artifact(id: string): ArtifactDto {
-  return { id, name: `Artefato ${id}`, type: "text", global: false } as ArtifactDto;
+  return { id, name: `Documento ${id}`, type: "text", global: false } as ArtifactDto;
 }
 
 describe("draftArtifactsFromTask", () => {
-  it("lê os artefatos da tarefa na ordem da API, com a relação de cada uma", () => {
+  it("lê os documentos da tarefa na ordem da API, com a relação de cada uma", () => {
     const links = [
       { relation: "uses", fromRecurrence: false, artifact: { ...artifact("a"), global: true, type: "workout" } },
       { relation: "creates", fromRecurrence: false, artifact: artifact("b") },
     ] as TaskArtifactDto[];
 
     expect(draftArtifactsFromTask(links)).toEqual([
-      { id: "a", name: "Artefato a", type: "workout", global: true, relation: "uses" },
-      { id: "b", name: "Artefato b", type: "text", global: false, relation: "creates" },
+      { id: "a", name: "Documento a", type: "workout", global: true, relation: "uses" },
+      { id: "b", name: "Documento b", type: "text", global: false, relation: "creates" },
     ]);
   });
 });
 
 describe("addDraftArtifact", () => {
-  it("o artefato escolhido entra no fim, com a relação uses", () => {
-    expect(addDraftArtifact([draft("a")], artifact("b"))).toEqual([draft("a"), { ...draft("b"), name: "Artefato b" }]);
+  it("o documento escolhido entra no fim, com a relação uses", () => {
+    expect(addDraftArtifact([draft("a")], artifact("b"))).toEqual([draft("a"), { ...draft("b"), name: "Documento b" }]);
   });
 
-  it("um artefato que já está na lista não entra de novo", () => {
+  it("um documento que já está na lista não entra de novo", () => {
     expect(addDraftArtifact([draft("a")], artifact("a"))).toEqual([draft("a")]);
   });
 });
 
 describe("removeDraftArtifact", () => {
-  it("tira só o artefato pedido, e a ordem do resto fica", () => {
+  it("tira só o documento pedido, e a ordem do resto fica", () => {
     expect(removeDraftArtifact([draft("a"), draft("b"), draft("c")], "b")).toEqual([draft("a"), draft("c")]);
   });
 });
@@ -86,7 +86,7 @@ describe("addFoodCopy e setCopyQuantity", () => {
   it("o alimento escolhido entra no fim como cópia: copyOf é o original, a chave local é só da linha", () => {
     expect(addFoodCopy([draft("a")], food, "row-1")).toEqual([
       draft("a"),
-      { id: "row-1", name: "Artefato food-1", type: "food", global: true, relation: "uses", copyOf: "food-1" },
+      { id: "row-1", name: "Documento food-1", type: "food", global: true, relation: "uses", copyOf: "food-1" },
     ]);
   });
 
@@ -115,7 +115,7 @@ describe("artifactLinkInputs e sameArtifactLinks", () => {
     expect(artifactLinkInputs(setCopyQuantity(addFoodCopy([], food, "row-1"), "row-1", "   "))).toEqual([{ copyOf: "food-1" }]);
   });
 
-  it("uma cópia que já está na tarefa vai como id e relação, como qualquer artefato ligado", () => {
+  it("uma cópia que já está na tarefa vai como id e relação, como qualquer documento ligado", () => {
     const existing = { ...draft("copy-9"), type: "food" as const, quantity: "1 porção" };
     expect(artifactLinkInputs([existing])).toEqual([{ id: "copy-9", relation: "uses" }]);
   });

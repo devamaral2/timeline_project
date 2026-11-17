@@ -40,7 +40,10 @@ export interface TaskCreateProps {
   priority?: TaskPriority;
   name: string;
   description?: string;
-  /** Onde acontece, em texto livre que o Google Maps entende. So tarefa de pessoa tem. */
+  /**
+   * Onde acontece, em texto livre que o Google Maps entende. So tarefa de pessoa tem, e so quando alguem o informa:
+   * ausente ou vazio, a tarefa fica sem local.
+   */
   location?: string;
   /** Inicio planejado. */
   startedAt?: Date;
@@ -56,16 +59,20 @@ export interface TaskCreateProps {
   /** Os artefatos da tarefa, na ordem em que aparecem. */
   artifactLinks?: ArtifactLink[];
   occurrence?: OccurrenceLink;
+  /** Ausente, e o agora. */
+  now?: Date;
 }
 
-export interface TaskRehydrateProps extends TaskCreateProps {
+export interface TaskRehydrateProps extends Omit<TaskCreateProps, "now"> {
   actor: Actor;
   kind: TaskKind;
   revision: number;
-  /** As tarefas de que este se segue ("segue-se de"). A sequencia nao e campo da tarefa: aqui e so leitura. */
-  previousIds?: string[];
-  /** As tarefas que se seguem a este ("da sequencia a"). Idem: so leitura. */
-  nextIds?: string[];
+  createdAt: Date;
+  updatedAt: Date;
+  /** A tarefa principal desta. A hierarquia nao e campo da tarefa: aqui e so leitura. */
+  parentId?: string;
+  /** As subtarefas desta. Idem: so leitura. */
+  subtaskIds?: string[];
 }
 
 /** `null` apaga o campo. Sem status, a tarefa volta a ser de referencia. */
@@ -75,7 +82,8 @@ export interface TaskReviseChanges {
   priority?: TaskPriority;
   name?: string;
   description?: string;
-  location?: string;
+  /** `null` ou vazio tira o local. */
+  location?: string | null;
   startedAt?: Date | null;
   estimatedFinishAt?: Date | null;
   finishedAt?: Date | null;
@@ -94,7 +102,7 @@ interface TaskBuildProps {
   priority: TaskPriority;
   name: string;
   description: string;
-  location: string;
+  location: string | undefined;
   startedAt: Date | undefined;
   estimatedFinishAt: Date | undefined;
   finishedAt: Date | undefined;
@@ -103,10 +111,17 @@ interface TaskBuildProps {
   longRunning: boolean;
   data: Record<string, unknown>;
   artifactLinks: ArtifactLink[];
-  previousIds: string[];
-  nextIds: string[];
+  parentId: string | undefined;
+  subtaskIds: string[];
   occurrence: OccurrenceLink | undefined;
   revision: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/** O local como fica guardado: sem espacos nas pontas, e ausente quando nao sobra texto. */
+function locationOf(text: string | null | undefined): string | undefined {
+  return text?.trim() || undefined;
 }
 
 function includes<T extends string>(values: readonly T[], value: unknown): value is T {
@@ -122,9 +137,9 @@ function unique(ids: readonly string[]): string[] {
  * acao: com status, a tarefa e acompanhada (o que antes era so uma tarefa com status); sem
  * status, so marca um horario na agenda.
  *
- * Este agregado guarda os artefatos da tarefa. A ordem entre tarefas (a
- * relacao `precedes`) nao e campo de nenhuma delas: o agregado so a le, em
- * `previousIds` e `nextIds`, e quem a muda e o lote, sem revisar ninguem.
+ * Este agregado guarda os artefatos da tarefa. A hierarquia entre tarefas (a
+ * relacao `subtask`) nao e campo de nenhuma delas: o agregado so a le, em
+ * `parentId` e `subtaskIds`, e quem a muda e o lote, sem revisar ninguem.
  */
 export class Task {
   readonly id: string;
@@ -135,7 +150,8 @@ export class Task {
   readonly priority: TaskPriority;
   readonly name: string;
   readonly description: string;
-  readonly location: string;
+  /** Ausente: ninguem informou onde a tarefa acontece. */
+  readonly location: string | undefined;
   readonly startedAt: Date | undefined;
   readonly estimatedFinishAt: Date | undefined;
   readonly finishedAt: Date | undefined;
@@ -144,13 +160,16 @@ export class Task {
   readonly longRunning: boolean;
   readonly data: Readonly<Record<string, unknown>>;
   readonly artifactLinks: readonly ArtifactLink[];
-  /** As tarefas de que este se segue. */
-  readonly previousIds: readonly string[];
-  /** As tarefas que se seguem a este. */
-  readonly nextIds: readonly string[];
+  /** A tarefa principal: no maximo uma. */
+  readonly parentId: string | undefined;
+  /** As subtarefas. */
+  readonly subtaskIds: readonly string[];
   /** Presente quando a tarefa e uma ocorrencia de uma serie. */
   readonly occurrence: OccurrenceLink | undefined;
   readonly revision: number;
+  readonly createdAt: Date;
+  /** A ultima gravacao: cada revisao a avanca. */
+  readonly updatedAt: Date;
 
   private constructor(props: TaskBuildProps) {
     this.id = props.id;
@@ -170,10 +189,12 @@ export class Task {
     this.longRunning = props.longRunning;
     this.data = props.data;
     this.artifactLinks = props.artifactLinks;
-    this.previousIds = props.previousIds;
-    this.nextIds = props.nextIds;
+    this.parentId = props.parentId;
+    this.subtaskIds = props.subtaskIds;
     this.occurrence = props.occurrence;
     this.revision = props.revision;
+    this.createdAt = props.createdAt;
+    this.updatedAt = props.updatedAt;
   }
 
   /** Tarefa de referencia: sem status, so marca um horario. So existe para pessoa. */
@@ -204,10 +225,10 @@ export class Task {
       }
     }
 
-    if (props.location.length > MAX_TASK_LOCATION_LENGTH) {
+    if (props.location !== undefined && props.location.length > MAX_TASK_LOCATION_LENGTH) {
       throw new TaskValidationError(`Task location is longer than ${MAX_TASK_LOCATION_LENGTH} characters`);
     }
-    if (props.actor !== "human" && props.location !== "") {
+    if (props.actor !== "human" && props.location !== undefined) {
       throw new TaskValidationError("Only a human task has a location");
     }
 
@@ -235,11 +256,14 @@ export class Task {
     if (!props.notifyOffsetsMinutes.every(isNotificationOffsetMinutes)) {
       throw new TaskValidationError("Invalid notification offset");
     }
-    if (props.previousIds.includes(props.id) || props.nextIds.includes(props.id)) {
-      throw new TaskValidationError("Task cannot follow itself");
+    if (props.parentId === props.id || props.subtaskIds.includes(props.id)) {
+      throw new TaskValidationError("A task cannot be its own subtask");
     }
     if (typeof props.data !== "object" || props.data === null || Array.isArray(props.data)) {
       throw new TaskValidationError("Task data must be an object");
+    }
+    if (props.updatedAt.getTime() < props.createdAt.getTime()) {
+      throw new TaskValidationError("updatedAt must be equal to or after createdAt");
     }
 
     return new Task({
@@ -247,8 +271,7 @@ export class Task {
       tags: TagList.create(props.tags),
       notifyOffsetsMinutes: Array.from(new Set(props.notifyOffsetsMinutes)),
       artifactLinks: normalizeArtifactLinks(props.artifactLinks),
-      previousIds: unique(props.previousIds),
-      nextIds: unique(props.nextIds),
+      subtaskIds: unique(props.subtaskIds),
     });
   }
 
@@ -260,6 +283,7 @@ export class Task {
     const actor = props.actor ?? "human";
     const kind = props.kind ?? DEFAULT_TASK_KIND;
     const longRunning = props.longRunning ?? false;
+    const now = props.now ?? new Date();
     const status = props.status ?? (longRunning ? "todo" : undefined);
     const reference = status === undefined;
     const estimatedFinishAt =
@@ -277,7 +301,7 @@ export class Task {
       priority: props.priority ?? DEFAULT_TASK_PRIORITY,
       name: props.name,
       description: props.description ?? "",
-      location: props.location?.trim() ?? "",
+      location: locationOf(props.location),
       startedAt: props.startedAt,
       estimatedFinishAt,
       finishedAt: props.finishedAt,
@@ -286,10 +310,12 @@ export class Task {
       longRunning,
       data: props.data ?? {},
       artifactLinks: props.artifactLinks ?? [],
-      previousIds: [],
-      nextIds: [],
+      parentId: undefined,
+      subtaskIds: [],
       occurrence: props.occurrence,
       revision: 1,
+      createdAt: now,
+      updatedAt: now,
     });
   }
 
@@ -304,7 +330,7 @@ export class Task {
       priority: props.priority ?? DEFAULT_TASK_PRIORITY,
       name: props.name,
       description: props.description ?? "",
-      location: props.location?.trim() ?? "",
+      location: locationOf(props.location),
       startedAt: props.startedAt,
       estimatedFinishAt: props.estimatedFinishAt,
       finishedAt: props.finishedAt,
@@ -313,10 +339,12 @@ export class Task {
       longRunning: props.longRunning ?? false,
       data: props.data ?? {},
       artifactLinks: props.artifactLinks ?? [],
-      previousIds: props.previousIds ?? [],
-      nextIds: props.nextIds ?? [],
+      parentId: props.parentId,
+      subtaskIds: props.subtaskIds ?? [],
       occurrence: props.occurrence,
       revision: props.revision,
+      createdAt: props.createdAt,
+      updatedAt: props.updatedAt,
     });
   }
 
@@ -325,7 +353,7 @@ export class Task {
    * serie. So tarefas de pessoa sao revisadas: as de agente mudam pelo proprio
    * agente.
    */
-  revise(changes: TaskReviseChanges): Task {
+  revise(changes: TaskReviseChanges, now: Date = new Date()): Task {
     if (this.actor !== "human") throw new TaskValidationError("A agent task cannot be edited");
     const pick = <T>(change: T | null | undefined, current: T | undefined): T | undefined =>
       change === undefined ? current : (change ?? undefined);
@@ -339,7 +367,7 @@ export class Task {
       priority: changes.priority ?? this.priority,
       name: changes.name ?? this.name,
       description: changes.description ?? this.description,
-      location: changes.location === undefined ? this.location : changes.location.trim(),
+      location: changes.location === undefined ? this.location : locationOf(changes.location),
       startedAt: pick(changes.startedAt, this.startedAt),
       estimatedFinishAt: pick(changes.estimatedFinishAt, this.estimatedFinishAt),
       finishedAt: pick(changes.finishedAt, this.finishedAt),
@@ -348,10 +376,13 @@ export class Task {
       longRunning: changes.longRunning ?? this.longRunning,
       data: { ...this.data },
       artifactLinks: changes.artifactLinks ?? [...this.artifactLinks],
-      previousIds: [...this.previousIds],
-      nextIds: [...this.nextIds],
+      parentId: this.parentId,
+      subtaskIds: [...this.subtaskIds],
       occurrence: detachOccurrence(this.occurrence),
       revision: this.revision + 1,
+      createdAt: this.createdAt,
+      // Um relogio que volta nao faz a edicao parecer anterior a criacao.
+      updatedAt: now.getTime() < this.createdAt.getTime() ? this.createdAt : now,
     });
   }
 }

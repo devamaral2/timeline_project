@@ -71,6 +71,21 @@ test("generated nutrition is explicitly an estimate and model recipe is suggeste
   expect(screen.getByText("Sugerida")).toBeInTheDocument();
 });
 
+test("with the food list ready, the typed text is not repeated as a subtitle", () => {
+  const items = [{
+    id: "f1", name: "Feijoada", portion: "200 g", approximateWeightGrams: 200, caloriesKcal: 380,
+    macronutrients: { carbohydratesGrams: 18, proteinsGrams: 23, totalFatGrams: 24, fiberGrams: 6 },
+  }] as FoodData["items"];
+  render(<MealNote data={{ ...meal, description: "200g de feijoada", items, generation: { status: "completed" } }} />);
+  expect(screen.getByText("Feijoada")).toBeInTheDocument();
+  expect(screen.queryByText("200g de feijoada")).not.toBeInTheDocument();
+});
+
+test("without a food list, the typed text is what the note shows", () => {
+  render(<MealNote data={meal} />);
+  expect(screen.getByText(meal.description)).toBeInTheDocument();
+});
+
 test("a walking note shows the cardio summary with distance and pace", () => {
   const data: TrainingData = {
     workouts: [

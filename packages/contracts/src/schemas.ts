@@ -184,9 +184,10 @@ const taskRecurrenceSchema = z.object({
 
 const taskCardShape = {
   id: z.string(), actor: taskActorSchema, kind: taskKindSchema, status: taskStatusSchema.optional(), priority: taskPrioritySchema,
-  name: z.string(), description: z.string(), location: z.string(), startedAt: z.string().optional(), estimatedFinishAt: z.string().optional(),
+  name: z.string(), description: z.string(), location: z.string().optional(), startedAt: z.string().optional(), estimatedFinishAt: z.string().optional(),
   finishedAt: z.string().optional(), longRunning: z.boolean(), notifyOffsetsMinutes: notificationOffsetsSchema,
-  tags: z.array(z.string()), artifactTypes: z.array(artifactTypeSchema), previousTaskIds: z.array(z.string()), recurrence: taskRecurrenceSchema.optional(), revision: z.number().int(),
+  tags: z.array(z.string()), artifactTypes: z.array(artifactTypeSchema), parentTaskId: z.string().optional(), recurrence: taskRecurrenceSchema.optional(), revision: z.number().int(),
+  createdAt: z.string(), updatedAt: z.string(),
 };
 
 export const taskCardSchema = z.object(taskCardShape).strict();
@@ -200,28 +201,27 @@ const taskRequestSchema = z.object({
 export const taskSchema = z.object({
   ...taskCardShape,
   artifacts: z.array(z.object({ relation: taskArtifactRelationSchema, fromRecurrence: z.boolean(), artifact: artifactSchema }).strict()),
-  nextTaskIds: z.array(z.string()),
+  subtaskIds: z.array(z.string()),
   requests: z.array(taskRequestSchema),
 }).strict();
 
 const taskFieldsShape = {
-  name: z.string().optional(), description: z.string().optional(), location: z.string().max(300).optional(),
+  name: z.string().optional(), description: z.string().optional(),
   priority: taskPrioritySchema.optional(),
   notifyOffsetsMinutes: notificationOffsetsSchema.optional(), tags: z.array(z.string()).optional(), longRunning: z.boolean().optional(),
-  previousTaskIds: z.array(z.string()).optional(), nextTaskIds: z.array(z.string()).optional(),
+  parentTaskId: z.string().nullable().optional(), subtaskIds: z.array(z.string()).optional(),
 };
 
-export const geoPointSchema = z.object({ latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180) }).strict();
+const locationSchema = z.string().max(300);
 
 export const createTaskInputSchema = z.object({
-  ...taskFieldsShape, kind: humanTaskKindSchema.optional(), status: humanTaskStatusSchema.optional(),
+  ...taskFieldsShape, location: locationSchema.optional(), kind: humanTaskKindSchema.optional(), status: humanTaskStatusSchema.optional(),
   startedAt: z.string().optional(), estimatedFinishAt: z.string().optional(), finishedAt: z.string().optional(),
   artifacts: z.array(createTaskArtifactSchema).optional(), artifactIds: z.array(z.string()).optional(),
-  coordinates: geoPointSchema.optional(),
 }).strict();
 
 export const updateTaskInputSchema = z.object({
-  ...taskFieldsShape, taskId: z.string(), expectedRevision: z.number().int(), kind: humanTaskKindSchema.optional(),
+  ...taskFieldsShape, location: locationSchema.nullable().optional(), taskId: z.string(), expectedRevision: z.number().int(), kind: humanTaskKindSchema.optional(),
   status: humanTaskStatusSchema.nullable().optional(), startedAt: z.string().nullable().optional(),
   estimatedFinishAt: z.string().nullable().optional(), finishedAt: z.string().nullable().optional(),
   artifacts: z.array(updateTaskArtifactSchema).optional(),
@@ -248,12 +248,13 @@ export const placeSuggestionSchema = z.object({ name: z.string(), address: z.str
 
 export const recurrenceSchema = z.object({
   ...recurrenceRuleShape, id: z.string(), template: z.record(z.string(), z.unknown()), revision: z.number().int(),
+  createdAt: z.string(), updatedAt: z.string(),
 }).strict();
 
 /** O que cada ocorrencia copia: a tarefa sem a janela, que vem da regra. */
 const recurrenceTemplateSchema = createTaskInputSchema.omit({
   startedAt: true, estimatedFinishAt: true, finishedAt: true, longRunning: true,
-  nextTaskIds: true, coordinates: true,
+  subtaskIds: true,
 });
 
 /** `POST /api/recurrences`: a regra e o que cada ocorrencia copia. */
