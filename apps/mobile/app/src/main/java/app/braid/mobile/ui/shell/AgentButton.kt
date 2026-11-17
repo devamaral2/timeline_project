@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -46,6 +47,8 @@ private val IdleBot =
 fun AgentButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Com o menu da seção aberto a dock passa por baixo do círculo e o aro some. */
+    blended: Boolean = false,
 ) {
     val scheme = MaterialTheme.colorScheme
     Box(
@@ -53,8 +56,8 @@ fun AgentButton(
             modifier
                 .size(66.dp)
                 .clip(CircleShape)
-                .background(scheme.surface)
-                .border(1.dp, scheme.outline, CircleShape)
+                .background(if (blended) Color.Transparent else scheme.surface)
+                .border(1.dp, if (blended) Color.Transparent else scheme.outline, CircleShape)
                 .clickable(role = Role.Button, onClick = onClick)
                 .semantics { contentDescription = "Buscar e criar" },
         contentAlignment = Alignment.Center,

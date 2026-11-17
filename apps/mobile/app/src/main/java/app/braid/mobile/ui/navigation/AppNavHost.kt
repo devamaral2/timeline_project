@@ -1,12 +1,21 @@
 package app.braid.mobile.ui.navigation
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hasRoute
@@ -20,12 +29,22 @@ import app.braid.mobile.ui.agenda.AgendaScreen
 import app.braid.mobile.ui.auth.LoginScreen
 import app.braid.mobile.ui.shell.BraidBottomBar
 import app.braid.mobile.ui.shell.EmptyTabScreen
+import app.braid.mobile.ui.shell.LocalSectionMenus
 import app.braid.mobile.ui.shell.MainTab
+import app.braid.mobile.ui.shell.SectionMenuBody
+import app.braid.mobile.ui.shell.SectionMenuViewModel
+import app.braid.mobile.ui.shell.SectionMenus
 import app.braid.mobile.ui.taskdetail.TaskDetailPage
 
 @Composable
-fun AppNavHost(gate: SessionGateViewModel = hiltViewModel()) {
+fun AppNavHost(
+    gate: SessionGateViewModel = hiltViewModel(),
+    sectionMenu: SectionMenuViewModel = hiltViewModel(),
+) {
     val session by gate.state.collectAsStateWithLifecycle()
+    val mode by sectionMenu.mode.collectAsStateWithLifecycle()
+    val menus = remember { SectionMenus() }
+    var menuOpen by rememberSaveable { mutableStateOf(false) }
     val navController = rememberNavController()
     val destination = navController.currentBackStackEntryAsState().value?.destination
     val currentTab =
@@ -35,6 +54,10 @@ fun AppNavHost(gate: SessionGateViewModel = hiltViewModel()) {
             destination?.hasRoute(DocumentsRoute::class) == true -> MainTab.Documents
             else -> null
         }
+
+    // Trocar de seção, ou sair delas, fecha o menu; o voltar do sistema o fecha antes de qualquer outra coisa.
+    LaunchedEffect(currentTab) { menuOpen = false }
+    BackHandler(enabled = menuOpen) { menuOpen = false }
 
     // A sessão manda: entrar abre a Agenda, e perdê-la (renovação recusada, sair) volta ao login.
     LaunchedEffect(session) {
@@ -50,26 +73,55 @@ fun AppNavHost(gate: SessionGateViewModel = hiltViewModel()) {
         }
     }
 
-    Box(Modifier.fillMaxSize()) {
-        NavHost(navController = navController, startDestination = LoginRoute) {
-            composable<LoginRoute> { if (session !is SessionState.Unknown) LoginScreen() }
-            composable<AgendaRoute> { AgendaScreen(onOpenTask = { navController.navigate(TaskDetailRoute(it)) }) }
-            composable<TaskDetailRoute> {
-                TaskDetailPage(
-                    onBack = { navController.popBackStack() },
-                    onOpenTask = { navController.navigate(TaskDetailRoute(it)) },
+    CompositionLocalProvider(LocalSectionMenus provides menus) {
+        Box(Modifier.fillMaxSize()) {
+            NavHost(navController = navController, startDestination = LoginRoute) {
+                composable<LoginRoute> { if (session !is SessionState.Unknown) LoginScreen() }
+                composable<AgendaRoute> { AgendaScreen(onOpenTask = { navController.navigate(TaskDetailRoute(it)) }) }
+                composable<TaskDetailRoute> {
+                    TaskDetailPage(
+                        onBack = { navController.popBackStack() },
+                        onOpenTask = { navController.navigate(TaskDetailRoute(it)) },
+                    )
+                }
+                composable<TasksRoute> { EmptyTabScreen() }
+                composable<DocumentsRoute> { EmptyTabScreen() }
+            }
+            if (currentTab != null) {
+                if (menuOpen) {
+                    // Tocar fora do menu o fecha; o scrim não pinta nada.
+                    Box(
+                        Modifier
+                            .fillMaxSize()
+                            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, role = Role.Button) {
+                                menuOpen = false
+                            },
+                    )
+                }
+                val model = menus[currentTab]
+                BraidBottomBar(
+                    current = currentTab,
+                    mode = mode,
+                    menuOpen = menuOpen,
+                    filtered = model?.filtered == true,
+                    onSelectTab = { tab ->
+                        // Tocar na aba já selecionada abre ou fecha o menu; em outra, só navega.
+                        if (tab == currentTab) menuOpen = !menuOpen else navController.openTab(tab)
+                    },
+                    onAgent = {},
+                    modifier = Modifier.align(Alignment.BottomCenter),
+                    menu = {
+                        SectionMenuBody(
+                            tab = currentTab,
+                            model = model,
+                            mode = mode,
+                            open = menuOpen,
+                            onSelectMode = sectionMenu::select,
+                            onClose = { menuOpen = false },
+                        )
+                    },
                 )
             }
-            composable<TasksRoute> { EmptyTabScreen() }
-            composable<DocumentsRoute> { EmptyTabScreen() }
-        }
-        if (currentTab != null) {
-            BraidBottomBar(
-                current = currentTab,
-                onSelectTab = { navController.openTab(it) },
-                onAgent = {},
-                modifier = Modifier.align(Alignment.BottomCenter),
-            )
         }
     }
 }

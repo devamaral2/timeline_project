@@ -1,15 +1,19 @@
 package app.braid.mobile.ui.agenda
 
+import androidx.lifecycle.viewModelScope
 import app.braid.mobile.data.tasks.DefaultTaskRepository
 import app.braid.mobile.data.tasks.TasksApi
+import app.braid.mobile.domain.executor.ViewMode
 import app.braid.mobile.domain.time.AppClock
 import app.braid.mobile.support.Fixtures
 import app.braid.mobile.support.TestBackend
 import app.braid.mobile.support.TestBackend.Companion.fixture
 import app.braid.mobile.support.TestBackend.Companion.status
 import app.braid.mobile.support.TestGraph
+import app.braid.mobile.support.TestViewModes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -23,7 +27,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import java.time.Instant
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -32,24 +38,34 @@ class AgendaViewModelTest {
     private val now = Instant.parse(window.getValue("now").jsonPrimitive.content)
     private val tasksPath = "/api/tasks"
 
+    @get:Rule
+    val folder = TemporaryFolder()
+
     private lateinit var backend: TestBackend
     private lateinit var graph: TestGraph
+    private lateinit var viewModes: TestViewModes
 
     @Before
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         backend = TestBackend()
         graph = TestGraph(backend)
+        viewModes = TestViewModes(folder.root.resolve("settings.preferences_pb"))
     }
 
     @After
     fun tearDown() {
+        // O ViewModel segue lendo a escolha guardada: para antes de fechar o DataStore e de soltar o Main de teste.
+        created.forEach { it.viewModelScope.cancel() }
+        viewModes.close()
         backend.close()
         Dispatchers.resetMain()
     }
 
+    private val created = mutableListOf<AgendaViewModel>()
+
     private fun newViewModel(clock: AppClock = AppClock { now }): AgendaViewModel =
-        AgendaViewModel(DefaultTaskRepository(graph.apis.create(TasksApi::class.java)), clock)
+        AgendaViewModel(DefaultTaskRepository(graph.apis.create(TasksApi::class.java)), viewModes.repository, clock).also(created::add)
 
     private suspend fun AgendaViewModel.settled(): AgendaUiState = state.first { it.load != AgendaLoad.Loading }
 
@@ -223,5 +239,113 @@ class AgendaViewModelTest {
             assertEquals("2026-09-15", viewModel.state.value.todayKey)
             // Quem deixou o app aberto em "hoje" amanhece em "hoje".
             assertEquals("2026-09-15", viewModel.state.value.selectedDay)
+        }
+
+    @Test
+    fun `choosing You asks the API for human tasks and reads the week again`() =
+        runTest {
+            routeWeekOfToday()
+            val viewModel = newViewModel()
+            viewModel.settled()
+            backend.route("GET", tasksPath, fixture("tasks-agenda-empty"))
+
+            viewModes.repository.select(ViewMode.Human)
+            val state = viewModel.state.first { it.viewMode == ViewMode.Human && it.load == AgendaLoad.Idle && it.tasksByDay.isNotEmpty() }
+
+            val last = backend.requestsTo("GET", tasksPath).last().requestUrl!!
+            assertEquals("human", last.queryParameter("actor"))
+            assertEquals(window.getValue("from").jsonPrimitive.content, last.queryParameter("from"))
+            assertTrue(ids(state, "2026-09-14").isEmpty())
+        }
+
+    @Test
+    fun `choosing Agents asks for agent tasks and Everyone drops the filter`() =
+        runTest {
+            routeWeekOfToday()
+            val viewModel = newViewModel()
+            viewModel.settled()
+
+            viewModes.repository.select(ViewMode.Agent)
+            viewModel.state.first { it.viewMode == ViewMode.Agent && it.load == AgendaLoad.Idle && it.tasksByDay.isNotEmpty() }
+            assertEquals(
+                "agent",
+                backend
+                    .requestsTo("GET", tasksPath)
+                    .last()
+                    .requestUrl!!
+                    .queryParameter("actor"),
+            )
+
+            viewModes.repository.select(ViewMode.All)
+            viewModel.state.first { it.viewMode == ViewMode.All && it.load == AgendaLoad.Idle && it.tasksByDay.isNotEmpty() }
+            assertNull(
+                backend
+                    .requestsTo("GET", tasksPath)
+                    .last()
+                    .requestUrl!!
+                    .queryParameter("actor"),
+            )
+        }
+
+    @Test
+    fun `a choice stored before opening the app is the one the first read uses`() =
+        runTest {
+            viewModes.repository.select(ViewMode.Human)
+            routeWeekOfToday()
+
+            newViewModel().settled()
+
+            val requests = backend.requestsTo("GET", tasksPath)
+            assertTrue(requests.isNotEmpty())
+            assertTrue(requests.all { it.requestUrl!!.queryParameter("actor") == "human" })
+        }
+
+    @Test
+    fun `the search keeps the loaded tasks whose name has the text, ignoring case and accents`() =
+        runTest {
+            routeWeekOfToday()
+            val viewModel = newViewModel()
+            val loaded = viewModel.settled()
+            val requestsBefore = backend.requests.size
+            val names = loaded.tasksByDay.getValue("2026-09-14").associate { it.id to it.name }
+            val target = names.values.first()
+
+            viewModel.search(target.uppercase())
+
+            val state = viewModel.state.value
+            assertTrue(state.searching)
+            assertEquals(
+                names.filterValues { it.equals(target, ignoreCase = true) }.keys.toList(),
+                state.shownOn("2026-09-14")!!.map { it.id },
+            )
+            // Uma busca sem resultado deixa o dia visível e vazio, e a busca não lê nada de novo.
+            viewModel.search("zzz-nada")
+            assertEquals(
+                emptyList<String>(),
+                viewModel.state.value
+                    .shownOn("2026-09-14")!!
+                    .map { it.id },
+            )
+            assertEquals(requestsBefore, backend.requests.size)
+        }
+
+    @Test
+    fun `clearing the search shows every task again and a day that has not arrived stays unknown`() =
+        runTest {
+            routeWeekOfToday()
+            val viewModel = newViewModel()
+            val loaded = viewModel.settled()
+            viewModel.search("reuniao")
+
+            viewModel.search("")
+
+            assertEquals(false, viewModel.state.value.searching)
+            assertEquals(
+                loaded.tasksByDay.getValue("2026-09-14").map { it.id },
+                viewModel.state.value
+                    .shownOn("2026-09-14")!!
+                    .map { it.id },
+            )
+            assertNull(viewModel.state.value.shownOn("2030-01-01"))
         }
 }
