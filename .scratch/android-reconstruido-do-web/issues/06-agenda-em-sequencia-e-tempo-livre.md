@@ -4,11 +4,11 @@
 
 **Blocked by:** 05
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Leia antes:** o [README](README.md). No web: a engrenagem da Agenda, o modo em sequência e o cálculo de tempo livre.
 
-- [ ] A engrenagem da Agenda tem o segmento "Por dia" / "Em sequência" e o interruptor "Tempo livre", guardados como no web.
-- [ ] "Em sequência" carrega de 7 em 7 dias, até 364 dias em cada sentido, sem duplicar tarefas nas bordas.
-- [ ] O tempo livre segue a regra do web (só tarefas de pessoa, intervalos de 15 min ou mais), portada e conferida contra fixtures do TS.
-- [ ] O intervalo livre é um alvo tocável, que o ticket 12 liga ao chat.
+- [x] A engrenagem da Agenda tem o segmento "Por dia" / "Em sequência" e o interruptor "Tempo livre", guardados como no web.
+- [x] "Em sequência" carrega de 7 em 7 dias, até 364 dias em cada sentido, sem duplicar tarefas nas bordas.
+- [x] O tempo livre segue a regra do web (só tarefas de pessoa, intervalos de 15 min ou mais), portada e conferida contra fixtures do TS.
+- [x] O intervalo livre é um alvo tocável, que o ticket 12 liga ao chat.

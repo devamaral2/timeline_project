@@ -314,7 +314,8 @@ private fun ListsPane(
             }
         }
         model?.search?.let { SearchField(it, onSubmit = onClose) }
-        if (model != null && model.filtered && model.onClear != null) ClearFilters(model.onClear)
+        // No web o botão mora na configuração; só uma seção sem engrenagem o mostra aqui, para não ficar inalcançável.
+        if (model != null && model.settings.isEmpty() && model.filtered && model.onClear != null) ClearFilters(model.onClear)
     }
 }
 
