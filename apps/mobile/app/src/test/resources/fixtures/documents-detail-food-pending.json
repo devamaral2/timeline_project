@@ -1,0 +1,28 @@
+{
+  "id": "doc-food-pending",
+  "name": "Prato novo",
+  "schemaVersion": 1,
+  "global": false,
+  "derived": false,
+  "tags": [
+    "casa"
+  ],
+  "revision": 1,
+  "createdAt": "2026-09-10T12:00:00.000Z",
+  "updatedAt": "2026-09-14T12:12:00.000Z",
+  "type": "food",
+  "data": {
+    "description": "Arroz, feijão e frango grelhado",
+    "items": [],
+    "totals": {
+      "totalCaloriesKcal": 0,
+      "totalProteinGrams": 0,
+      "totalCarbohydrateGrams": 0,
+      "totalFatGrams": 0,
+      "totalFiberGrams": 0
+    },
+    "generation": {
+      "status": "pending"
+    }
+  }
+}

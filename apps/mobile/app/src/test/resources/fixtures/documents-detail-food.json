@@ -1,0 +1,87 @@
+{
+  "id": "doc-food",
+  "name": "Almoço de ontem",
+  "schemaVersion": 1,
+  "global": false,
+  "derived": false,
+  "tasks": [
+    {
+      "taskId": "task-2",
+      "relation": "creates",
+      "name": "Almoço",
+      "actor": "human",
+      "kind": "meal",
+      "startedAt": "2026-09-13T15:00:00.000Z"
+    }
+  ],
+  "tags": [
+    "casa"
+  ],
+  "revision": 1,
+  "createdAt": "2026-09-10T12:00:00.000Z",
+  "updatedAt": "2026-09-14T12:12:00.000Z",
+  "type": "food",
+  "data": {
+    "description": "Arroz, feijão e frango grelhado",
+    "items": [
+      {
+        "id": "item-1",
+        "name": "Arroz",
+        "portion": "4 colheres",
+        "approximateWeightGrams": 120,
+        "caloriesKcal": 156,
+        "macronutrients": {
+          "carbohydratesGrams": 34,
+          "proteinsGrams": 3,
+          "totalFatGrams": 0.5,
+          "fiberGrams": 1
+        }
+      },
+      {
+        "id": "item-2",
+        "name": "Frango grelhado",
+        "portion": "",
+        "approximateWeightGrams": 150,
+        "caloriesKcal": 247.5,
+        "macronutrients": {
+          "carbohydratesGrams": 0,
+          "proteinsGrams": 33,
+          "totalFatGrams": 12,
+          "fiberGrams": 0
+        }
+      }
+    ],
+    "totals": {
+      "totalCaloriesKcal": 612.5,
+      "totalProteinGrams": 38.2,
+      "totalCarbohydrateGrams": 64.05,
+      "totalFatGrams": 21.15,
+      "totalFiberGrams": 9
+    },
+    "recipe": {
+      "source": "model",
+      "servings": 2,
+      "prepTimeMinutes": 75,
+      "ingredients": [
+        {
+          "name": "Arroz",
+          "quantity": "300 g"
+        },
+        {
+          "name": "Sal",
+          "quantity": "a gosto"
+        },
+        {
+          "name": "Sal",
+          "quantity": "1 pitada"
+        }
+      ],
+      "steps": [
+        "Lave o arroz.",
+        "Refogue o alho.",
+        "Cozinhe por 20 minutos."
+      ]
+    },
+    "nutritionSource": "model-estimate"
+  }
+}

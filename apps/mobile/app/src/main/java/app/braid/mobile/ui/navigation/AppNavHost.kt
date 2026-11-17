@@ -27,8 +27,9 @@ import androidx.navigation.compose.rememberNavController
 import app.braid.mobile.domain.session.SessionState
 import app.braid.mobile.ui.agenda.AgendaScreen
 import app.braid.mobile.ui.auth.LoginScreen
+import app.braid.mobile.ui.documents.DocumentDetailPage
+import app.braid.mobile.ui.documents.DocumentsScreen
 import app.braid.mobile.ui.shell.BraidBottomBar
-import app.braid.mobile.ui.shell.EmptyTabScreen
 import app.braid.mobile.ui.shell.LocalSectionMenus
 import app.braid.mobile.ui.shell.MainTab
 import app.braid.mobile.ui.shell.SectionMenuBody
@@ -87,7 +88,13 @@ fun AppNavHost(
                 }
                 // "Nova tarefa" leva à criação quando o ticket 13 existir.
                 composable<TasksRoute> { TasksScreen(onNewTask = {}, onOpenTask = { navController.navigate(TaskDetailRoute(it)) }) }
-                composable<DocumentsRoute> { EmptyTabScreen() }
+                composable<DocumentsRoute> { DocumentsScreen(onOpenDocument = { navController.navigate(DocumentDetailRoute(it)) }) }
+                composable<DocumentDetailRoute> {
+                    DocumentDetailPage(
+                        onBack = { navController.popBackStack() },
+                        onOpenTask = { navController.navigate(TaskDetailRoute(it)) },
+                    )
+                }
             }
             if (currentTab != null) {
                 if (menuOpen) {

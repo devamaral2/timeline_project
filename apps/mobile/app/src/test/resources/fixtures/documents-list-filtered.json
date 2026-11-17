@@ -1,0 +1,20 @@
+[
+  {
+    "id": "doc-text",
+    "name": "Ideias para o projeto",
+    "schemaVersion": 1,
+    "global": false,
+    "derived": false,
+    "tags": [
+      "trabalho",
+      "ideias"
+    ],
+    "revision": 1,
+    "createdAt": "2026-09-10T12:00:00.000Z",
+    "updatedAt": "2026-09-14T12:12:00.000Z",
+    "type": "text",
+    "data": {
+      "body": "# Ideias para o projeto\n\nUm **parágrafo** com _ênfase_, `código` e um [link](https://example.com/a).\n\n- Primeiro\n- Segundo\n\n1. Um\n2. Dois\n\n- [x] Feito\n- [ ] A fazer\n\n> Citação\n\n```ts\nconst a = 1;\n```\n"
+    }
+  }
+]
