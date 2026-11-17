@@ -36,6 +36,10 @@ data class TaskDraft(
     val tags: List<String>,
     /** A tarefa persistente: a tarefa longa, cujo fim é um prazo e não um bloco de tempo. */
     val longRunning: Boolean,
+    /** A tarefa principal (id), ou `null`: a tarefa não é subtarefa de nenhuma. Só a edição a tem. */
+    val parentTaskId: String?,
+    /** As subtarefas (ids), na ordem da API; a lista inteira vai no `PATCH`. Só a edição as tem. */
+    val subtaskIds: List<String>,
 )
 
 /** Os campos que a validação sabe recusar; cada um aparece no controle que o causou. */
@@ -53,6 +57,8 @@ enum class TaskDraftField {
     Reminders,
     Tags,
     LongRunning,
+    ParentTask,
+    Subtasks,
 }
 
 typealias TaskDraftErrors = Map<TaskDraftField, String>
@@ -85,6 +91,8 @@ fun emptyTaskDraft(name: String = ""): TaskDraft =
         reminders = emptyList(),
         tags = emptyList(),
         longRunning = false,
+        parentTaskId = null,
+        subtaskIds = emptyList(),
     )
 
 /** O rascunho que a edição abre: a tarefa lida, campo a campo. */
@@ -105,6 +113,8 @@ fun draftFromTask(task: TaskDetail): TaskDraft {
         reminders = sortReminders(task.notifyOffsetsMinutes),
         tags = task.card.tags,
         longRunning = task.card.longRunning,
+        parentTaskId = task.parentTaskId,
+        subtaskIds = task.subtaskIds,
     )
 }
 
@@ -186,6 +196,10 @@ data class TaskPatch(
     val notifyOffsetsMinutes: List<Int>? = null,
     val tags: List<String>? = null,
     val longRunning: Boolean? = null,
+    /** `Clearable(null)` tira a tarefa de baixo da principal; outra principal tira a ligação anterior, sem erro. */
+    val parentTaskId: Clearable<String>? = null,
+    /** A lista completa, não o que mudou. */
+    val subtaskIds: List<String>? = null,
 ) {
     /** Nada além da revisão: não há o que enviar. */
     val isEmpty: Boolean
@@ -243,6 +257,8 @@ fun buildTaskPatch(
             notifyOffsetsMinutes = draft.reminders.takeIf { it != base.reminders },
             tags = draft.tags.takeIf { it != base.tags },
             longRunning = draft.longRunning.takeIf { it != base.longRunning },
+            parentTaskId = if (draft.parentTaskId != base.parentTaskId) Clearable(draft.parentTaskId) else null,
+            subtaskIds = draft.subtaskIds.takeIf { it != base.subtaskIds },
         )
     return patch.takeUnless { it.isEmpty }
 }
@@ -304,5 +320,7 @@ fun rebaseDraft(
         reminders = pick(draft.reminders, before.reminders, after.reminders),
         tags = pick(draft.tags, before.tags, after.tags),
         longRunning = pick(draft.longRunning, before.longRunning, after.longRunning),
+        parentTaskId = pick(draft.parentTaskId, before.parentTaskId, after.parentTaskId),
+        subtaskIds = pick(draft.subtaskIds, before.subtaskIds, after.subtaskIds),
     )
 }

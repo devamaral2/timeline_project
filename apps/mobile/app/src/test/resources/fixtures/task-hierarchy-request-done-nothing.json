@@ -1,0 +1,29 @@
+{
+  "id": "req-hermes",
+  "kind": "request",
+  "route": "steps",
+  "status": "done",
+  "title": "Preparar a viagem",
+  "createdAt": "2026-09-14T15:30:00.000Z",
+  "updatedAt": "2026-09-14T15:30:05.000Z",
+  "text": "Preparar a mala",
+  "steps": [],
+  "entities": [
+    {
+      "kind": "task",
+      "id": "task-open",
+      "name": "Planejar a viagem",
+      "operation": "update",
+      "linkedTo": []
+    },
+    {
+      "kind": "artifact",
+      "id": "art-1",
+      "name": "Lista da mala",
+      "artifactType": "text",
+      "operation": "create",
+      "linkedTo": []
+    }
+  ],
+  "message": "Não encontrei o que criar."
+}

@@ -54,4 +54,6 @@ fun TaskPatch.toBody(): JsonObject =
         notifyOffsetsMinutes?.let { put("notifyOffsetsMinutes", JsonArray(it.map(::JsonPrimitive))) }
         tags?.let { put("tags", JsonArray(it.map(::JsonPrimitive))) }
         longRunning?.let { put("longRunning", it) }
+        parentTaskId?.let { put("parentTaskId", it.json(::JsonPrimitive)) }
+        subtaskIds?.let { put("subtaskIds", JsonArray(it.map(::JsonPrimitive))) }
     }

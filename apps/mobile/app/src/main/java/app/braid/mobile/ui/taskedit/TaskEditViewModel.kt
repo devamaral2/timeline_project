@@ -3,6 +3,8 @@ package app.braid.mobile.ui.taskedit
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.braid.mobile.domain.request.AgentRequestRepository
+import app.braid.mobile.domain.session.SessionRepository
 import app.braid.mobile.domain.task.CreateTask
 import app.braid.mobile.domain.task.InvalidInputException
 import app.braid.mobile.domain.task.StaleRevisionException
@@ -14,12 +16,14 @@ import app.braid.mobile.domain.task.TaskDraftErrors
 import app.braid.mobile.domain.task.TaskEditRepository
 import app.braid.mobile.domain.task.TaskNotFoundException
 import app.braid.mobile.domain.task.TaskPatch
+import app.braid.mobile.domain.task.TaskPickerRepository
 import app.braid.mobile.domain.task.addReminder
 import app.braid.mobile.domain.task.addTag
 import app.braid.mobile.domain.task.buildCreateTask
 import app.braid.mobile.domain.task.buildTaskPatch
 import app.braid.mobile.domain.task.draftFromTask
 import app.braid.mobile.domain.task.emptyTaskDraft
+import app.braid.mobile.domain.task.linkedTaskIds
 import app.braid.mobile.domain.task.normalizeTag
 import app.braid.mobile.domain.task.rebaseDraft
 import app.braid.mobile.domain.task.removeReminder
@@ -33,6 +37,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -90,6 +96,9 @@ class TaskEditViewModel
         private val details: TaskDetailRepository,
         private val edits: TaskEditRepository,
         private val clock: AppClock,
+        picker: TaskPickerRepository,
+        requests: AgentRequestRepository,
+        session: SessionRepository,
     ) : ViewModel() {
         private val taskId: String? = savedState["taskId"]
         private val mutableState = MutableStateFlow<TaskEditUiState>(TaskEditUiState.Loading)
@@ -106,7 +115,28 @@ class TaskEditViewModel
         private var tagJob: Job? = null
         private var placeJob: Job? = null
 
+        /** A tarefa principal e as subtarefas (ticket 15): só a edição as tem. */
+        val hierarchy =
+            TaskHierarchyEditor(
+                scope = viewModelScope,
+                taskId = taskId,
+                draft = { (mutableState.value as? TaskEditUiState.Form)?.draft ?: emptyTaskDraft() },
+                updateDraft = { transform -> update(transform) },
+                details = details,
+                edits = edits,
+                picker = picker,
+                requests = requests,
+                session = session,
+                clock = clock,
+            )
+
         init {
+            viewModelScope.launch {
+                mutableState
+                    .map { (it as? TaskEditUiState.Form)?.draft?.let(::linkedTaskIds).orEmpty() }
+                    .distinctUntilChanged()
+                    .collect(hierarchy::sync)
+            }
             if (taskId == null) {
                 mutableState.value = TaskEditUiState.Form(taskId = null, draft = emptyTaskDraft(savedState["name"] ?: ""))
             } else {

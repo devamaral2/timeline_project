@@ -1,0 +1,14 @@
+{
+  "id": "req-hermes",
+  "kind": "request",
+  "route": "steps",
+  "status": "failed",
+  "title": "Preparar a viagem",
+  "createdAt": "2026-09-14T15:30:00.000Z",
+  "updatedAt": "2026-09-14T15:30:05.000Z",
+  "text": "Preparar a mala",
+  "steps": [],
+  "entities": [],
+  "message": "O Hermes está fora do ar.",
+  "errorCode": "unavailable"
+}

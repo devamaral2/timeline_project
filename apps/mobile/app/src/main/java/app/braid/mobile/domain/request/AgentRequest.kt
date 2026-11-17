@@ -183,11 +183,14 @@ interface AgentRequestRepository {
     /** O pedido pelo id. Não existe ou é de outro usuário (404 e 403) sobe como [RequestNotFoundException]. */
     suspend fun request(id: String): AgentRequest
 
-    /** Abre um pedido na sessão [sessionId] e devolve o id dele; reenviar o mesmo [clientMessageId] não abre outro. */
+    /**
+     * Abre um pedido na sessão [sessionId] (`null`: um pedido sem sessão, como o do seletor de tarefas) e devolve o id
+     * dele; reenviar o mesmo [clientMessageId] não abre outro.
+     */
     suspend fun start(
         userId: String,
         text: String,
-        sessionId: String,
+        sessionId: String?,
         clientMessageId: String,
     ): String
 
