@@ -52,8 +52,26 @@ k3s ctr images list | grep -F "$SHA"
 
 sed "s/REPLACE_SHA/$SHA/g" ops/production/apps.template.yaml > /opt/braid/k8s/apps.yaml
 kubectl apply -f /opt/braid/k8s/apps.yaml
+# Se um rollout nao assenta, mostra por que antes de falhar: status dos pods,
+# ultimo encerramento do container e eventos. Sem `kubectl logs`: o log do
+# Actions e publico e o log da aplicacao pode carregar dados sensiveis.
+rollout_diagnostics() {
+  local app=$1 pod
+  echo "::group::Diagnostico do rollout de $app" >&2
+  kubectl -n braid get pods -l "app=$app" -o wide >&2 || true
+  for pod in $(kubectl -n braid get pods -l "app=$app" -o jsonpath='{.items[*].metadata.name}' 2>/dev/null); do
+    kubectl -n braid get pod "$pod" -o jsonpath='{range .status.containerStatuses[*]}{.name}: ready={.ready} restarts={.restartCount} waiting={.state.waiting.reason} lastExit={.lastState.terminated.exitCode} lastReason={.lastState.terminated.reason}{"\n"}{end}' >&2 || true
+    kubectl -n braid get events --field-selector "involvedObject.name=$pod" --sort-by=.lastTimestamp \
+      -o custom-columns=TYPE:.type,REASON:.reason,MESSAGE:.message >&2 || true
+  done
+  echo "::endgroup::" >&2
+}
+
 for app in api auth web mcp; do
-  kubectl -n braid rollout status "deployment/$app" --timeout=300s
+  if ! kubectl -n braid rollout status "deployment/$app" --timeout=300s; then
+    rollout_diagnostics "$app"
+    exit 1
+  fi
 done
 
 TRAEFIK_IP=$(kubectl -n kube-system get svc traefik -o jsonpath='{.spec.clusterIP}')
