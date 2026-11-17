@@ -33,6 +33,26 @@ Cada ticket cabe numa sessão: leia este arquivo, o ticket e o que ele manda ler
 - **Pronto** é: todos os critérios marcados, os dois comandos verdes e o app rodado no emulador contra o backend local
   (`pnpm dev:mobile`), lado a lado com o web, com screenshot dos dois no PR.
 
+## Onde o ticket e o web divergem, vale o web
+
+O levantamento do web (2026-11-17) achou pontos em que a spec ou o ticket descrevem algo diferente do que o web faz
+na largura mobile. Nesses pontos, siga o web e ignore o critério contrário do ticket:
+
+- **04:** na Agenda, o ponto de status abre o seletor só na tarefa de referência (sem status); tocar no glifo de uma
+  tarefa de pessoa com status não faz nada ali.
+- **05:** o ponto de filtro ativo ignora a escolha de executor, e "Limpar filtros" não volta o executor ao padrão.
+- **11:** na largura mobile não há filtro de tipo nem de tag em Documentos. O alimento em cálculo mostra
+  "Preparando informações nutricionais e receita…" e consulta a cada 1,5 s.
+- **12:** o chat acompanha o pedido a cada 1 s (os 3 s valem para detalhe e listas).
+- **13:** a criação não tem "Tarefa persistente", hierarquia nem documentos (só a edição tem); erro 400 da API mostra
+  uma mensagem geral, não por campo.
+- **14:** a recorrência tem diária, semanal, mensal e anual, com intervalo, como no editor do web; não só dias da semana.
+- **15:** "Criar" no seletor manda também `kind`, `description`, `priority` e `status: "todo"`, como o web.
+- **17:** não há botão "Novo documento"; documentos se criam só pelo `/nota` do chat.
+- **19:** permissão de microfone negada quando a escuta abriu sozinha ao abrir o chat não mostra aviso.
+- **21:** o tema é um interruptor claro/escuro, como no web, com o sistema decidindo até a primeira escolha.
+- **23:** o feed tem lido/não lido (marcar como lido e contador), como no web.
+
 ## Ordem
 
 Um ticket pode começar quando todos os que o bloqueiam estão feitos. Pode começar já: 01. Depois dele, 02 e 03 andam
