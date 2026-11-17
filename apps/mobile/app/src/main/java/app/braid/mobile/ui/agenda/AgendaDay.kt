@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import app.braid.mobile.core.designsystem.BraidMonoFont
 import app.braid.mobile.core.designsystem.BraidPill
+import app.braid.mobile.domain.task.TaskActor
 import app.braid.mobile.domain.task.TaskCard
 import app.braid.mobile.ui.tasks.TaskRow
 import java.time.Instant
@@ -48,12 +49,13 @@ fun AgendaDay(
     load: AgendaLoad,
     now: Instant,
     onRetry: () -> Unit,
+    onStatusClick: (TaskCard) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier.fillMaxWidth()) {
         when {
             tasks != null && tasks.isEmpty() -> FreeDay()
-            tasks != null -> TaskList(tasks, now)
+            tasks != null -> TaskList(tasks, now, onStatusClick)
             load == AgendaLoad.Failed -> LoadFailed(onRetry)
             else -> LoadingDay()
         }
@@ -64,11 +66,14 @@ fun AgendaDay(
 private fun TaskList(
     tasks: List<TaskCard>,
     now: Instant,
+    onStatusClick: (TaskCard) -> Unit,
 ) {
     HorizontalDivider(color = MaterialTheme.colorScheme.outline)
     tasks.forEachIndexed { index, card ->
         if (index > 0) HorizontalDivider(Modifier.padding(start = ROW_DIVIDER_INSET), color = MaterialTheme.colorScheme.outline)
-        TaskRow(card = card, now = now)
+        // O web só abre a escolha pelo ponto azul da tarefa de referência; as outras linhas não reagem ao glifo aqui.
+        val opensPicker = card.actor == TaskActor.Human && card.status == null
+        TaskRow(card = card, now = now, onStatusClick = if (opensPicker) ({ onStatusClick(card) }) else null)
     }
 }
 

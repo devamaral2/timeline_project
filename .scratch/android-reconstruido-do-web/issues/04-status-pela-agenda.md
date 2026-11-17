@@ -4,12 +4,12 @@
 
 **Blocked by:** 03
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Leia antes:** o [README](README.md). Spec: "Sessão e rede", "Domínio e vocabulário". No web: o seletor de status da agenda e a atualização das tarefas de agente abertas.
 
-- [ ] O seletor de status é uma folha inferior com os sete status de pessoa, nos rótulos e glifos do web, reutilizável pelas outras telas.
-- [ ] Escolher manda `PATCH /api/tasks/{id}` com a `revision` lida; `done` envia `finishedAt`, sair de `done` envia `finishedAt` nulo.
-- [ ] Conflito de `revision` relê o dia e mostra o aviso do web.
-- [ ] Tarefas de agente não abrem o seletor.
-- [ ] Com alguma tarefa de agente aberta no dia, a Agenda consulta de novo a cada 3 s, em silêncio, e para quando não há nenhuma ou a tela sai de vista.
+- [x] O seletor de status é uma folha inferior com os sete status de pessoa, nos rótulos e glifos do web, reutilizável pelas outras telas.
+- [x] Escolher manda `PATCH /api/tasks/{id}` com a `revision` lida; `done` envia `finishedAt`, sair de `done` envia `finishedAt` nulo.
+- [x] Conflito de `revision` relê o dia e mostra o aviso do web.
+- [x] Tarefas de agente não abrem o seletor.
+- [x] Com alguma tarefa de agente aberta no dia, a Agenda consulta de novo a cada 3 s, em silêncio, e para quando não há nenhuma ou a tela sai de vista.

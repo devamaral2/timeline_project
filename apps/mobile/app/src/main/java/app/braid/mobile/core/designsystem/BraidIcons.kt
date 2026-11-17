@@ -33,6 +33,9 @@ object BraidIcons {
     val chevronLeft = listOf(SvgPart("m15 18-6-6 6-6"))
     val chevronRight = listOf(SvgPart("m9 18 6-6-6-6"))
 
+    /** O `Check` do lucide: marca a opção atual numa lista de escolha. */
+    val check = listOf(SvgPart("M20 6 9 17l-5-5"))
+
     /** O robô de linha que assina a tarefa de agente (lucide `Bot`). */
     val bot =
         listOf(

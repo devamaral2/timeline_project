@@ -1,0 +1,620 @@
+{
+  "now": "2026-09-14T15:30:45.123Z",
+  "patches": [
+    {
+      "from": null,
+      "to": "todo",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "todo"
+      }
+    },
+    {
+      "from": null,
+      "to": "toDefine",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "toDefine"
+      }
+    },
+    {
+      "from": null,
+      "to": "doing",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "doing"
+      }
+    },
+    {
+      "from": null,
+      "to": "inHold",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "inHold"
+      }
+    },
+    {
+      "from": null,
+      "to": "done",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "done",
+        "finishedAt": "2026-09-14T15:30:45.123Z"
+      }
+    },
+    {
+      "from": null,
+      "to": "cancel",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "cancel"
+      }
+    },
+    {
+      "from": null,
+      "to": "missed",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "missed"
+      }
+    },
+    {
+      "from": "todo",
+      "to": "todo",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "todo"
+      }
+    },
+    {
+      "from": "todo",
+      "to": "toDefine",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "toDefine"
+      }
+    },
+    {
+      "from": "todo",
+      "to": "doing",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "doing"
+      }
+    },
+    {
+      "from": "todo",
+      "to": "inHold",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "inHold"
+      }
+    },
+    {
+      "from": "todo",
+      "to": "done",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "done",
+        "finishedAt": "2026-09-14T15:30:45.123Z"
+      }
+    },
+    {
+      "from": "todo",
+      "to": "cancel",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "cancel"
+      }
+    },
+    {
+      "from": "todo",
+      "to": "missed",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "missed"
+      }
+    },
+    {
+      "from": "toDefine",
+      "to": "todo",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "todo"
+      }
+    },
+    {
+      "from": "toDefine",
+      "to": "toDefine",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "toDefine"
+      }
+    },
+    {
+      "from": "toDefine",
+      "to": "doing",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "doing"
+      }
+    },
+    {
+      "from": "toDefine",
+      "to": "inHold",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "inHold"
+      }
+    },
+    {
+      "from": "toDefine",
+      "to": "done",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "done",
+        "finishedAt": "2026-09-14T15:30:45.123Z"
+      }
+    },
+    {
+      "from": "toDefine",
+      "to": "cancel",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "cancel"
+      }
+    },
+    {
+      "from": "toDefine",
+      "to": "missed",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "missed"
+      }
+    },
+    {
+      "from": "doing",
+      "to": "todo",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "todo"
+      }
+    },
+    {
+      "from": "doing",
+      "to": "toDefine",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "toDefine"
+      }
+    },
+    {
+      "from": "doing",
+      "to": "doing",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "doing"
+      }
+    },
+    {
+      "from": "doing",
+      "to": "inHold",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "inHold"
+      }
+    },
+    {
+      "from": "doing",
+      "to": "done",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "done",
+        "finishedAt": "2026-09-14T15:30:45.123Z"
+      }
+    },
+    {
+      "from": "doing",
+      "to": "cancel",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "cancel"
+      }
+    },
+    {
+      "from": "doing",
+      "to": "missed",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "missed"
+      }
+    },
+    {
+      "from": "inHold",
+      "to": "todo",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "todo"
+      }
+    },
+    {
+      "from": "inHold",
+      "to": "toDefine",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "toDefine"
+      }
+    },
+    {
+      "from": "inHold",
+      "to": "doing",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "doing"
+      }
+    },
+    {
+      "from": "inHold",
+      "to": "inHold",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "inHold"
+      }
+    },
+    {
+      "from": "inHold",
+      "to": "done",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "done",
+        "finishedAt": "2026-09-14T15:30:45.123Z"
+      }
+    },
+    {
+      "from": "inHold",
+      "to": "cancel",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "cancel"
+      }
+    },
+    {
+      "from": "inHold",
+      "to": "missed",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "missed"
+      }
+    },
+    {
+      "from": "done",
+      "to": "todo",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "todo",
+        "finishedAt": null
+      }
+    },
+    {
+      "from": "done",
+      "to": "toDefine",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "toDefine",
+        "finishedAt": null
+      }
+    },
+    {
+      "from": "done",
+      "to": "doing",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "doing",
+        "finishedAt": null
+      }
+    },
+    {
+      "from": "done",
+      "to": "inHold",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "inHold",
+        "finishedAt": null
+      }
+    },
+    {
+      "from": "done",
+      "to": "done",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "done",
+        "finishedAt": "2026-09-14T15:30:45.123Z"
+      }
+    },
+    {
+      "from": "done",
+      "to": "cancel",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "cancel",
+        "finishedAt": null
+      }
+    },
+    {
+      "from": "done",
+      "to": "missed",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "missed",
+        "finishedAt": null
+      }
+    },
+    {
+      "from": "cancel",
+      "to": "todo",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "todo"
+      }
+    },
+    {
+      "from": "cancel",
+      "to": "toDefine",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "toDefine"
+      }
+    },
+    {
+      "from": "cancel",
+      "to": "doing",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "doing"
+      }
+    },
+    {
+      "from": "cancel",
+      "to": "inHold",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "inHold"
+      }
+    },
+    {
+      "from": "cancel",
+      "to": "done",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "done",
+        "finishedAt": "2026-09-14T15:30:45.123Z"
+      }
+    },
+    {
+      "from": "cancel",
+      "to": "cancel",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "cancel"
+      }
+    },
+    {
+      "from": "cancel",
+      "to": "missed",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "missed"
+      }
+    },
+    {
+      "from": "missed",
+      "to": "todo",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "todo"
+      }
+    },
+    {
+      "from": "missed",
+      "to": "toDefine",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "toDefine"
+      }
+    },
+    {
+      "from": "missed",
+      "to": "doing",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "doing"
+      }
+    },
+    {
+      "from": "missed",
+      "to": "inHold",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "inHold"
+      }
+    },
+    {
+      "from": "missed",
+      "to": "done",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "done",
+        "finishedAt": "2026-09-14T15:30:45.123Z"
+      }
+    },
+    {
+      "from": "missed",
+      "to": "cancel",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "cancel"
+      }
+    },
+    {
+      "from": "missed",
+      "to": "missed",
+      "revision": 4,
+      "patch": {
+        "expectedRevision": 4,
+        "status": "missed"
+      }
+    }
+  ],
+  "options": [
+    {
+      "longRunning": false,
+      "statuses": [
+        "todo",
+        "toDefine",
+        "doing",
+        "inHold",
+        "done",
+        "cancel",
+        "missed"
+      ]
+    },
+    {
+      "longRunning": true,
+      "statuses": [
+        "todo",
+        "toDefine",
+        "doing",
+        "inHold",
+        "done",
+        "cancel"
+      ]
+    }
+  ],
+  "openAgent": [
+    {
+      "actor": "agent",
+      "status": "queued",
+      "open": true
+    },
+    {
+      "actor": "agent",
+      "status": "running",
+      "open": true
+    },
+    {
+      "actor": "agent",
+      "status": "waiting",
+      "open": true
+    },
+    {
+      "actor": "agent",
+      "status": "done",
+      "open": false
+    },
+    {
+      "actor": "agent",
+      "status": "failed",
+      "open": false
+    },
+    {
+      "actor": "agent",
+      "status": "cancel",
+      "open": false
+    },
+    {
+      "actor": "human",
+      "status": "todo",
+      "open": false
+    },
+    {
+      "actor": "human",
+      "status": "toDefine",
+      "open": false
+    },
+    {
+      "actor": "human",
+      "status": "doing",
+      "open": false
+    },
+    {
+      "actor": "human",
+      "status": "inHold",
+      "open": false
+    },
+    {
+      "actor": "human",
+      "status": "done",
+      "open": false
+    },
+    {
+      "actor": "human",
+      "status": "cancel",
+      "open": false
+    },
+    {
+      "actor": "human",
+      "status": "missed",
+      "open": false
+    },
+    {
+      "actor": "human",
+      "status": null,
+      "open": false
+    }
+  ]
+}

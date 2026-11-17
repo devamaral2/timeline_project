@@ -28,6 +28,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -35,9 +38,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.braid.mobile.core.designsystem.BraidMonoFont
+import app.braid.mobile.domain.task.TaskCard
 import app.braid.mobile.domain.timeline.daysBetween
 import app.braid.mobile.domain.timeline.longDate
 import app.braid.mobile.domain.timeline.shiftDayKey
+import app.braid.mobile.ui.tasks.TaskStatusSheet
 import kotlin.math.abs
 
 /** Um século de dias para cada lado de hoje: o swipe não tem borda que alguém alcance. */
@@ -52,9 +57,25 @@ fun AgendaScreen(viewModel: AgendaViewModel = hiltViewModel()) {
     var firstResume by remember { mutableStateOf(true) }
     LifecycleResumeEffect(Unit) {
         if (firstResume) firstResume = false else viewModel.onResume()
-        onPauseOrDispose { }
+        // A releitura das tarefas de agente abertas só anda com a tela à vista.
+        viewModel.setVisible(true)
+        onPauseOrDispose { viewModel.setVisible(false) }
     }
-    AgendaContent(state = state, onSelectDay = viewModel::selectDay, onRetry = viewModel::retry)
+    AgendaContent(
+        state = state,
+        onSelectDay = viewModel::selectDay,
+        onRetry = viewModel::retry,
+        onStatusClick = viewModel::openStatusPicker,
+    )
+    state.statusPicker?.let { card ->
+        TaskStatusSheet(
+            taskName = card.name,
+            longRunning = card.longRunning,
+            current = card.status,
+            onPick = viewModel::chooseStatus,
+            onDismiss = viewModel::dismissStatusPicker,
+        )
+    }
 }
 
 @Composable
@@ -62,6 +83,7 @@ fun AgendaContent(
     state: AgendaUiState,
     onSelectDay: (String) -> Unit,
     onRetry: () -> Unit,
+    onStatusClick: (TaskCard) -> Unit,
 ) {
     // O dia da página central é o de quando a tela abriu: de lá cada página é um dia a mais ou a menos.
     val anchorDay = rememberSaveable { state.todayKey }
@@ -110,6 +132,15 @@ fun AgendaContent(
                 }
             }
         }
+        state.notice?.let { notice ->
+            Text(
+                text = notice,
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp).semantics { liveRegion = LiveRegionMode.Assertive },
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 13.sp,
+                lineHeight = 18.sp,
+            )
+        }
         HorizontalPager(
             state = pager,
             modifier = Modifier.fillMaxWidth().weight(1f),
@@ -128,6 +159,7 @@ fun AgendaContent(
                     load = state.load,
                     now = state.now,
                     onRetry = onRetry,
+                    onStatusClick = onStatusClick,
                 )
             }
         }

@@ -2,9 +2,14 @@ package app.braid.mobile.ui.agenda
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.braid.mobile.domain.task.StaleRevisionException
+import app.braid.mobile.domain.task.TaskActor
 import app.braid.mobile.domain.task.TaskCard
 import app.braid.mobile.domain.task.TaskRepository
+import app.braid.mobile.domain.task.TaskStatus
 import app.braid.mobile.domain.task.agendaTasksByDay
+import app.braid.mobile.domain.task.hasOpenAgentTask
+import app.braid.mobile.domain.task.statusPatch
 import app.braid.mobile.domain.time.AppClock
 import app.braid.mobile.domain.timeline.dayKeyOf
 import app.braid.mobile.domain.timeline.weekOf
@@ -13,6 +18,7 @@ import app.braid.mobile.domain.timeline.zonedDayStart
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -43,7 +49,17 @@ data class AgendaUiState(
     val load: AgendaLoad = AgendaLoad.Loading,
     /** O instante da última leitura: os textos calculados da linha ("Hoje", "há 12 min") saem dele. */
     val now: Instant,
+    /** A tarefa de referência cujo ponto foi tocado: a folha de status está aberta para ela. */
+    val statusPicker: TaskCard? = null,
+    /** O aviso da última troca de status que não gravou; some quando a próxima começa. */
+    val notice: String? = null,
 )
+
+/** De quanto em quanto tempo a agenda se relê enquanto há tarefa de agente em aberto. */
+const val AGENT_POLL_MS = 3_000L
+
+const val STALE_STATUS_NOTICE = "Esta tarefa mudou em outro lugar. Carregamos a versão atual; confira e tente de novo."
+const val FAILED_STATUS_NOTICE = "Não foi possível trocar o status. Tente novamente."
 
 @HiltViewModel
 class AgendaViewModel
@@ -59,6 +75,8 @@ class AgendaViewModel
         private var loadJob: Job? = null
         private var loadingWeek: String? = null
         private var generation = 0
+        private var visible = false
+        private var pollJob: Job? = null
 
         init {
             load(mutableState.value.selectedDay, silent = false)
@@ -70,6 +88,70 @@ class AgendaViewModel
             if (dayKey == current.selectedDay) return
             mutableState.update { it.copy(selectedDay = dayKey) }
             if (dayKey !in current.tasksByDay && loadingWeek != weekOf(dayKey).first()) load(dayKey, silent = false)
+            syncPolling()
+        }
+
+        /** Só a tarefa de referência (o ponto azul, sem status) abre a folha de status aqui; tarefa de pessoa com status e de agente não. */
+        fun openStatusPicker(card: TaskCard) {
+            if (card.actor != TaskActor.Human || card.status != null) return
+            mutableState.update { it.copy(statusPicker = card) }
+        }
+
+        fun dismissStatusPicker() = mutableState.update { it.copy(statusPicker = null) }
+
+        /**
+         * Grava o status com a revisão lida. A folha fecha na hora; não há atualização otimista: a linha muda quando a
+         * releitura volta. Revisão velha relê o dia e avisa; outra falha só avisa.
+         */
+        fun chooseStatus(status: TaskStatus) {
+            val card = mutableState.value.statusPicker ?: return
+            mutableState.update { it.copy(statusPicker = null, notice = null) }
+            viewModelScope.launch {
+                try {
+                    tasks.changeStatus(card.id, statusPatch(card, status, clock.now()))
+                    load(mutableState.value.selectedDay, silent = true)
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (stale: StaleRevisionException) {
+                    load(mutableState.value.selectedDay, silent = true)
+                    mutableState.update { it.copy(notice = STALE_STATUS_NOTICE) }
+                } catch (failure: Exception) {
+                    mutableState.update { it.copy(notice = FAILED_STATUS_NOTICE) }
+                }
+            }
+        }
+
+        /** A tela está à vista (resumida) ou não: a releitura das tarefas de agente só anda com ela à vista. */
+        fun setVisible(value: Boolean) {
+            visible = value
+            syncPolling()
+        }
+
+        private fun hasOpenAgentTaskInWeek(): Boolean {
+            val current = mutableState.value
+            return hasOpenAgentTask(weekOf(current.selectedDay).flatMap { current.tasksByDay[it].orEmpty() })
+        }
+
+        /**
+         * Com tarefa de agente em aberto na semana à vista, relê a semana a cada [AGENT_POLL_MS], sem o esqueleto
+         * e sem avisar de falha; para quando não sobra nenhuma ou a tela sai de vista. Uma leitura ainda em curso pula a batida.
+         */
+        private fun syncPolling() {
+            if (!visible || !hasOpenAgentTaskInWeek()) {
+                pollJob?.cancel()
+                pollJob = null
+                return
+            }
+            if (pollJob?.isActive == true) return
+            pollJob =
+                viewModelScope.launch {
+                    while (visible && hasOpenAgentTaskInWeek()) {
+                        delay(AGENT_POLL_MS)
+                        if (loadJob?.isActive == true) continue
+                        load(mutableState.value.selectedDay, silent = true)
+                        loadJob?.join()
+                    }
+                }
         }
 
         fun retry() = load(mutableState.value.selectedDay, silent = false)
@@ -113,6 +195,7 @@ class AgendaViewModel
                                 now = readAt,
                             )
                         }
+                        syncPolling()
                     } catch (cancelled: CancellationException) {
                         throw cancelled
                     } catch (failure: Exception) {
