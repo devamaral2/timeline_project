@@ -1,0 +1,36 @@
+[
+  {
+    "id": "ex-run",
+    "name": "Corrida",
+    "schemaVersion": 1,
+    "global": true,
+    "derived": false,
+    "tags": [],
+    "revision": 1,
+    "createdAt": "2026-09-10T12:00:00.000Z",
+    "updatedAt": "2026-09-14T12:12:00.000Z",
+    "type": "workout",
+    "data": {
+      "code": "running",
+      "category": "cardio",
+      "active": true
+    }
+  },
+  {
+    "id": "ex-bench",
+    "name": "Supino",
+    "schemaVersion": 1,
+    "global": true,
+    "derived": false,
+    "tags": [],
+    "revision": 1,
+    "createdAt": "2026-09-10T12:00:00.000Z",
+    "updatedAt": "2026-09-14T12:12:00.000Z",
+    "type": "workout",
+    "data": {
+      "code": "weightlifting",
+      "category": "strength",
+      "active": true
+    }
+  }
+]

@@ -1,6 +1,8 @@
 package app.braid.mobile.ui.taskedit
 
 import androidx.lifecycle.SavedStateHandle
+import app.braid.mobile.data.artifacts.ArtifactsApi
+import app.braid.mobile.data.artifacts.DefaultArtifactRepository
 import app.braid.mobile.data.requests.DefaultAgentRequestRepository
 import app.braid.mobile.data.requests.RequestsApi
 import app.braid.mobile.data.tasks.DefaultRecurrenceRepository
@@ -88,6 +90,7 @@ class TaskEditViewModelTest {
             DefaultTaskPickerRepository(graph.apis.create(TaskPickerApi::class.java)),
             DefaultAgentRequestRepository(graph.apis.create(RequestsApi::class.java)),
             graph.sessionRepository,
+            DefaultArtifactRepository(graph.apis.create(ArtifactsApi::class.java)),
         )
     }
 

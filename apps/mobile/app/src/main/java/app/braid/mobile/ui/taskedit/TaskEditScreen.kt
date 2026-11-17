@@ -50,6 +50,8 @@ import app.braid.mobile.core.designsystem.SvgIcon
 import app.braid.mobile.domain.task.RecurrenceDraft
 import app.braid.mobile.domain.task.TaskDraft
 import app.braid.mobile.domain.task.TaskDraftField
+import app.braid.mobile.ui.taskartifacts.ArtifactEditActions
+import app.braid.mobile.ui.taskartifacts.TaskEditArtifactsSection
 import app.braid.mobile.ui.taskdetail.DetailIcons
 import app.braid.mobile.ui.taskdetail.Message
 
@@ -84,6 +86,14 @@ fun TaskEditPage(
                 deleteSeries = viewModel::deleteSeries,
                 save = viewModel::save,
                 hierarchy = viewModel.hierarchy,
+                artifacts =
+                    ArtifactEditActions(
+                        picker = viewModel.artifactPicker,
+                        open = viewModel::openArtifactPicker,
+                        setQuantity = viewModel::setArtifactQuantity,
+                        remove = viewModel::removeArtifact,
+                        move = viewModel::moveArtifact,
+                    ),
             ),
     )
 }
@@ -107,6 +117,8 @@ class TaskEditActions(
     val save: () -> Unit,
     /** A hierarquia (ticket 15): só a edição a mostra. */
     val hierarchy: TaskHierarchyEditor? = null,
+    /** Os documentos (ticket 16): só a edição os mostra. */
+    val artifacts: ArtifactEditActions? = null,
 )
 
 @Composable
@@ -211,6 +223,7 @@ private fun ColumnScope.FormBody(
         DescriptionSection(draft.description) { value -> actions.update { it.copy(description = value) } }
         // A hierarquia (tarefa principal e subtarefas, ticket 15) e os documentos (ticket 16) entram aqui, só na edição.
         if (!creating) actions.hierarchy?.let { HierarchySections(it, draft) }
+        if (!creating) actions.artifacts?.let { TaskEditArtifactsSection(draft, it) }
         form.failure?.let { failure ->
             Text(
                 text = failure,

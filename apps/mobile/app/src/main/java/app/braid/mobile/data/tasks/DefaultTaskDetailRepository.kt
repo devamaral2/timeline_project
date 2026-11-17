@@ -1,11 +1,13 @@
 package app.braid.mobile.data.tasks
 
+import app.braid.mobile.domain.task.ArtifactLink
 import app.braid.mobile.domain.task.StaleRevisionException
 import app.braid.mobile.domain.task.StatusPatch
 import app.braid.mobile.domain.task.TaskChanges
 import app.braid.mobile.domain.task.TaskDetail
 import app.braid.mobile.domain.task.TaskDetailRepository
 import app.braid.mobile.domain.task.TaskNotFoundException
+import app.braid.mobile.domain.task.TaskPatch
 import app.braid.mobile.domain.task.TaskPriority
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
@@ -47,6 +49,14 @@ class DefaultTaskDetailRepository
                     put("priority", priority.code)
                 },
             )
+        }
+
+        override suspend fun changeArtifacts(
+            taskId: String,
+            expectedRevision: Int,
+            links: List<ArtifactLink>,
+        ) {
+            update(taskId, TaskPatch(expectedRevision = expectedRevision, artifacts = links).toBody())
         }
 
         override suspend fun delete(taskId: String) {

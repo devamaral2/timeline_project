@@ -26,6 +26,7 @@ class DefaultArtifactRepository
                     scope = if (filters.global) "global" else null,
                     tag = filters.tag?.takeIf { it.isNotBlank() },
                     query = filters.query?.trim()?.takeIf { it.isNotEmpty() },
+                    limit = filters.limit,
                 ).map { it.toDomain() }
 
         override suspend fun get(id: String): Artifact =

@@ -3,6 +3,8 @@ package app.braid.mobile.ui.taskdetail
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.braid.mobile.domain.artifact.Artifact
+import app.braid.mobile.domain.artifact.ArtifactRepository
 import app.braid.mobile.domain.task.StaleRevisionException
 import app.braid.mobile.domain.task.TaskActor
 import app.braid.mobile.domain.task.TaskCard
@@ -11,8 +13,12 @@ import app.braid.mobile.domain.task.TaskDetailRepository
 import app.braid.mobile.domain.task.TaskNotFoundException
 import app.braid.mobile.domain.task.TaskPriority
 import app.braid.mobile.domain.task.TaskStatus
+import app.braid.mobile.domain.task.artifactLinkInputs
+import app.braid.mobile.domain.task.draftArtifactsFromTask
+import app.braid.mobile.domain.task.draftWithPickedArtifact
 import app.braid.mobile.domain.task.statusPatch
 import app.braid.mobile.domain.time.AppClock
+import app.braid.mobile.ui.taskartifacts.TaskArtifactPicker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -22,11 +28,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Instant
+import java.util.UUID
 import javax.inject.Inject
 
 const val STALE_TASK_NOTICE = "Esta tarefa mudou em outro lugar. Carregamos a versão atual; confira e tente de novo."
 const val FAILED_STATUS_NOTICE = "Não foi possível trocar o status. Tente novamente."
 const val FAILED_PRIORITY_NOTICE = "Não foi possível trocar a prioridade. Tente novamente."
+const val FAILED_ARTIFACT_NOTICE = "Não foi possível ligar o documento. Tente novamente."
 const val GONE_TASK_NOTICE = "Esta tarefa já não existe. Ela foi apagada em outro lugar."
 const val FAILED_DELETE_NOTICE = "Não foi possível excluir a tarefa. Tente novamente."
 
@@ -80,11 +88,15 @@ class TaskDetailViewModel
         savedState: SavedStateHandle,
         private val tasks: TaskDetailRepository,
         private val clock: AppClock,
+        artifacts: ArtifactRepository,
     ) : ViewModel() {
         private val taskId: String = checkNotNull(savedState["taskId"]) { "O detalhe abre com o id da tarefa" }
         private val mutableState = MutableStateFlow<TaskDetailUiState>(TaskDetailUiState.Loading)
         val state: StateFlow<TaskDetailUiState> = mutableState.asStateFlow()
         private var linkedJob: Job? = null
+
+        /** O seletor do "+" da seção Documentos: a escolha liga o documento e grava na hora. */
+        val artifactPicker = TaskArtifactPicker(viewModelScope, artifacts)
 
         init {
             load()
@@ -168,6 +180,24 @@ class TaskDetailViewModel
             val content = mutableState.value as? TaskDetailUiState.Content ?: return
             if (!content.task.hasHumanControls || priority == content.task.priority) return
             change(FAILED_PRIORITY_NOTICE) { task -> tasks.changePriority(task.id, task.card.revision, priority) }
+        }
+
+        /** O "+" da seção Documentos: abre o seletor da fonte do tipo da tarefa. */
+        fun openArtifactPicker() {
+            val task = (mutableState.value as? TaskDetailUiState.Content)?.task ?: return
+            artifactPicker.open(task.card.kind, task.artifacts.map { it.artifact.id }, ::linkArtifact)
+        }
+
+        /**
+         * O documento escolhido entra no fim da lista e a lista inteira vai com a revisão lida; na refeição o alimento
+         * entra como cópia nova, sem quantidade.
+         */
+        private fun linkArtifact(artifact: Artifact) {
+            change(FAILED_ARTIFACT_NOTICE) { task ->
+                val next =
+                    draftWithPickedArtifact(draftArtifactsFromTask(task.artifacts), task.card.kind, artifact, UUID.randomUUID().toString())
+                tasks.changeArtifacts(task.id, task.card.revision, artifactLinkInputs(next))
+            }
         }
 
         /** Manda a troca com a revisão lida. Revisão velha: relê a tarefa e avisa, sem gravar nada. Uma troca por vez. */

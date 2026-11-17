@@ -1,0 +1,20 @@
+{
+  "id": "task-common-empty",
+  "actor": "human",
+  "kind": "common",
+  "status": "todo",
+  "priority": "medium",
+  "name": "Ligar para o banco (outra aba)",
+  "description": "",
+  "startedAt": "2026-09-14T15:00:00.000Z",
+  "longRunning": false,
+  "notifyOffsetsMinutes": [],
+  "tags": [],
+  "artifactTypes": [],
+  "revision": 6,
+  "createdAt": "2026-09-01T12:00:00.000Z",
+  "updatedAt": "2026-09-01T12:00:00.000Z",
+  "artifacts": [],
+  "subtaskIds": [],
+  "requests": []
+}

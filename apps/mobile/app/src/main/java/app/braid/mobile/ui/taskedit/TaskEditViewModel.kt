@@ -3,6 +3,7 @@ package app.braid.mobile.ui.taskedit
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.braid.mobile.domain.artifact.ArtifactRepository
 import app.braid.mobile.domain.request.AgentRequestRepository
 import app.braid.mobile.domain.session.SessionRepository
 import app.braid.mobile.domain.task.CreateTask
@@ -31,21 +32,26 @@ import app.braid.mobile.domain.task.buildCreateTask
 import app.braid.mobile.domain.task.buildNewSeries
 import app.braid.mobile.domain.task.buildTaskPatch
 import app.braid.mobile.domain.task.draftFromTask
+import app.braid.mobile.domain.task.draftWithPickedArtifact
 import app.braid.mobile.domain.task.emptyRecurrenceDraft
 import app.braid.mobile.domain.task.emptyTaskDraft
 import app.braid.mobile.domain.task.linkedTaskIds
+import app.braid.mobile.domain.task.moveDraftArtifact
 import app.braid.mobile.domain.task.normalizeTag
 import app.braid.mobile.domain.task.planSeriesEdit
 import app.braid.mobile.domain.task.rebaseDraft
 import app.braid.mobile.domain.task.recurrenceDraftFromRule
+import app.braid.mobile.domain.task.removeDraftArtifact
 import app.braid.mobile.domain.task.removeReminder
 import app.braid.mobile.domain.task.removeTag
 import app.braid.mobile.domain.task.schedule
 import app.braid.mobile.domain.task.scheduleAfterTask
+import app.braid.mobile.domain.task.setCopyQuantity
 import app.braid.mobile.domain.task.validateNewRecurrence
 import app.braid.mobile.domain.task.validateSeriesEdit
 import app.braid.mobile.domain.task.validateTaskDraft
 import app.braid.mobile.domain.time.AppClock
+import app.braid.mobile.ui.taskartifacts.TaskArtifactPicker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -152,6 +158,7 @@ class TaskEditViewModel
         picker: TaskPickerRepository,
         requests: AgentRequestRepository,
         session: SessionRepository,
+        artifacts: ArtifactRepository,
     ) : ViewModel() {
         private val taskId: String? = savedState["taskId"]
         private val mutableState = MutableStateFlow<TaskEditUiState>(TaskEditUiState.Loading)
@@ -183,6 +190,9 @@ class TaskEditViewModel
                 clock = clock,
             )
 
+        /** O seletor de documentos da tarefa (ticket 16): a escolha entra no rascunho, a gravação fica para o Salvar. */
+        val artifactPicker = TaskArtifactPicker(viewModelScope, artifacts)
+
         init {
             viewModelScope.launch {
                 mutableState
@@ -196,6 +206,26 @@ class TaskEditViewModel
                 load(taskId)
             }
         }
+
+        /** O "+" da seção Documentos: abre o seletor da fonte do tipo que o rascunho tem agora. */
+        fun openArtifactPicker() {
+            val draft = (mutableState.value as? TaskEditUiState.Form)?.draft ?: return
+            artifactPicker.open(draft.kind, draft.artifacts.map { it.id }) { artifact ->
+                update { it.copy(artifacts = draftWithPickedArtifact(it.artifacts, it.kind, artifact, UUID.randomUUID().toString())) }
+            }
+        }
+
+        fun setArtifactQuantity(
+            key: String,
+            quantity: String,
+        ) = update { it.copy(artifacts = setCopyQuantity(it.artifacts, key, quantity)) }
+
+        fun removeArtifact(id: String) = update { it.copy(artifacts = removeDraftArtifact(it.artifacts, id)) }
+
+        fun moveArtifact(
+            id: String,
+            step: Int,
+        ) = update { it.copy(artifacts = moveDraftArtifact(it.artifacts, id, step)) }
 
         fun retry() {
             taskId?.let(::load)

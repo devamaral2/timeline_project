@@ -157,6 +157,7 @@ data class FoodDataDto(
     val recipe: FoodRecipeDto? = null,
     val generation: FoodGenerationDto? = null,
     val nutritionSource: String? = null,
+    val quantity: String? = null,
 )
 
 fun ArtifactDto.toDomain(): Artifact {
@@ -253,6 +254,7 @@ private fun FoodDataDto.toDomain() =
                 else -> null
             },
         modelEstimate = nutritionSource == "model-estimate",
+        quantity = quantity,
     )
 
 private fun parseInstant(value: String): Instant = OffsetDateTime.parse(value).toInstant()

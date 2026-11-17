@@ -8,6 +8,8 @@ data class ArtifactFilters(
     val tag: String? = null,
     /** O texto da busca; em branco não filtra. */
     val query: String? = null,
+    /** Quantos documentos pedir (os seletores da tarefa pedem 50); ausente, a API decide. */
+    val limit: Int? = null,
 )
 
 interface ArtifactRepository {

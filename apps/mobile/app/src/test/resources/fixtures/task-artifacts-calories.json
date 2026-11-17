@@ -1,0 +1,345 @@
+[
+  {
+    "task": {
+      "id": "task-meal",
+      "actor": "human",
+      "kind": "meal",
+      "status": "todo",
+      "priority": "medium",
+      "name": "Almoço",
+      "description": "",
+      "startedAt": "2026-09-14T15:00:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "revision": 3,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z",
+      "artifacts": [
+        {
+          "relation": "uses",
+          "fromRecurrence": false,
+          "artifact": {
+            "id": "food-copy-1",
+            "name": "Arroz",
+            "schemaVersion": 1,
+            "global": false,
+            "derived": false,
+            "tags": [],
+            "revision": 1,
+            "createdAt": "2026-09-10T12:00:00.000Z",
+            "updatedAt": "2026-09-14T12:12:00.000Z",
+            "type": "food",
+            "data": {
+              "description": "Arroz",
+              "quantity": "150 g",
+              "items": [
+                {
+                  "id": "food-copy-1-item",
+                  "name": "Arroz",
+                  "portion": "1 porção",
+                  "approximateWeightGrams": 100,
+                  "caloriesKcal": 156,
+                  "macronutrients": {
+                    "carbohydratesGrams": 20,
+                    "proteinsGrams": 10,
+                    "totalFatGrams": 5,
+                    "fiberGrams": 2
+                  }
+                }
+              ],
+              "totals": {
+                "totalCaloriesKcal": 156,
+                "totalProteinGrams": 10,
+                "totalCarbohydrateGrams": 20,
+                "totalFatGrams": 5,
+                "totalFiberGrams": 2
+              },
+              "nutritionSource": "model-estimate"
+            }
+          }
+        },
+        {
+          "relation": "uses",
+          "fromRecurrence": false,
+          "artifact": {
+            "id": "food-pending",
+            "name": "Suco de laranja",
+            "schemaVersion": 1,
+            "global": false,
+            "derived": false,
+            "tags": [],
+            "revision": 1,
+            "createdAt": "2026-09-10T12:00:00.000Z",
+            "updatedAt": "2026-09-14T12:12:00.000Z",
+            "type": "food",
+            "data": {
+              "description": "Suco de laranja",
+              "items": [],
+              "totals": {
+                "totalCaloriesKcal": 0,
+                "totalProteinGrams": 0,
+                "totalCarbohydrateGrams": 0,
+                "totalFatGrams": 0,
+                "totalFiberGrams": 2
+              },
+              "generation": {
+                "status": "pending"
+              }
+            }
+          }
+        },
+        {
+          "relation": "creates",
+          "fromRecurrence": false,
+          "artifact": {
+            "id": "food-created",
+            "name": "Frango grelhado",
+            "schemaVersion": 1,
+            "global": false,
+            "derived": false,
+            "tags": [],
+            "revision": 1,
+            "createdAt": "2026-09-10T12:00:00.000Z",
+            "updatedAt": "2026-09-14T12:12:00.000Z",
+            "type": "food",
+            "data": {
+              "description": "Frango grelhado",
+              "items": [
+                {
+                  "id": "food-created-item",
+                  "name": "Frango grelhado",
+                  "portion": "1 porção",
+                  "approximateWeightGrams": 100,
+                  "caloriesKcal": 247.5,
+                  "macronutrients": {
+                    "carbohydratesGrams": 20,
+                    "proteinsGrams": 10,
+                    "totalFatGrams": 5,
+                    "fiberGrams": 2
+                  }
+                }
+              ],
+              "totals": {
+                "totalCaloriesKcal": 247.5,
+                "totalProteinGrams": 10,
+                "totalCarbohydrateGrams": 20,
+                "totalFatGrams": 5,
+                "totalFiberGrams": 2
+              },
+              "nutritionSource": "model-estimate"
+            }
+          }
+        }
+      ],
+      "subtaskIds": [],
+      "requests": []
+    },
+    "kcal": 403.5
+  },
+  {
+    "task": {
+      "id": "task-meal-empty",
+      "actor": "human",
+      "kind": "meal",
+      "status": "todo",
+      "priority": "medium",
+      "name": "Jantar",
+      "description": "",
+      "startedAt": "2026-09-14T15:00:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "revision": 2,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z",
+      "artifacts": [],
+      "subtaskIds": [],
+      "requests": []
+    },
+    "kcal": 0
+  },
+  {
+    "task": {
+      "id": "task-common",
+      "actor": "human",
+      "kind": "common",
+      "status": "todo",
+      "priority": "medium",
+      "name": "Reunião",
+      "description": "",
+      "startedAt": "2026-09-14T15:00:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "revision": 4,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z",
+      "artifacts": [
+        {
+          "relation": "uses",
+          "fromRecurrence": false,
+          "artifact": {
+            "id": "doc-note",
+            "name": "Ideias para o projeto",
+            "schemaVersion": 1,
+            "global": false,
+            "derived": false,
+            "tags": [
+              "trabalho"
+            ],
+            "revision": 1,
+            "createdAt": "2026-09-10T12:00:00.000Z",
+            "updatedAt": "2026-09-14T12:12:00.000Z",
+            "type": "text",
+            "data": {
+              "body": "# Ideias para o projeto\n\nCorpo da nota **Ideias para o projeto**."
+            }
+          }
+        },
+        {
+          "relation": "updates",
+          "fromRecurrence": false,
+          "artifact": {
+            "id": "doc-skill",
+            "name": "Pesquisar",
+            "schemaVersion": 1,
+            "global": false,
+            "derived": false,
+            "tags": [],
+            "revision": 1,
+            "createdAt": "2026-09-10T12:00:00.000Z",
+            "updatedAt": "2026-09-14T12:12:00.000Z",
+            "type": "skill",
+            "data": {
+              "path": "hermes/skills/pesquisar/SKILL.md",
+              "hash": "abc",
+              "missing": false,
+              "description": "Pesquisa na web"
+            }
+          }
+        },
+        {
+          "relation": "creates",
+          "fromRecurrence": true,
+          "artifact": {
+            "id": "doc-router",
+            "name": "Roteador",
+            "schemaVersion": 1,
+            "global": false,
+            "derived": false,
+            "tags": [],
+            "revision": 1,
+            "createdAt": "2026-09-10T12:00:00.000Z",
+            "updatedAt": "2026-09-14T12:12:00.000Z",
+            "type": "router",
+            "data": {
+              "body": "Roteia pedidos"
+            }
+          }
+        },
+        {
+          "relation": "uses",
+          "fromRecurrence": false,
+          "artifact": {
+            "id": "doc-sleep",
+            "name": "Noite de sono",
+            "schemaVersion": 1,
+            "global": false,
+            "derived": false,
+            "tags": [],
+            "revision": 1,
+            "createdAt": "2026-09-10T12:00:00.000Z",
+            "updatedAt": "2026-09-14T12:12:00.000Z",
+            "type": "sleep",
+            "data": {
+              "trackedSleepTime": 450,
+              "score": 87
+            }
+          }
+        }
+      ],
+      "subtaskIds": [],
+      "requests": []
+    },
+    "kcal": 0
+  },
+  {
+    "task": {
+      "id": "task-training",
+      "actor": "human",
+      "kind": "training",
+      "status": "todo",
+      "priority": "medium",
+      "name": "Treino",
+      "description": "",
+      "startedAt": "2026-09-14T15:00:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "revision": 2,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z",
+      "artifacts": [
+        {
+          "relation": "creates",
+          "fromRecurrence": false,
+          "artifact": {
+            "id": "doc-training",
+            "name": "Treino de peito",
+            "schemaVersion": 1,
+            "global": false,
+            "derived": false,
+            "tags": [],
+            "revision": 1,
+            "createdAt": "2026-09-10T12:00:00.000Z",
+            "updatedAt": "2026-09-14T12:12:00.000Z",
+            "type": "training",
+            "data": {
+              "workouts": [
+                {
+                  "id": "w1",
+                  "workoutCode": "running",
+                  "workoutName": "Corrida",
+                  "calories": 320,
+                  "duration": 30,
+                  "pace": 6.25,
+                  "distance": 4.8
+                }
+              ],
+              "caloriesBurned": 320
+            }
+          }
+        },
+        {
+          "relation": "uses",
+          "fromRecurrence": false,
+          "artifact": {
+            "id": "ex-run",
+            "name": "Corrida",
+            "schemaVersion": 1,
+            "global": true,
+            "derived": false,
+            "tags": [],
+            "revision": 1,
+            "createdAt": "2026-09-10T12:00:00.000Z",
+            "updatedAt": "2026-09-14T12:12:00.000Z",
+            "type": "workout",
+            "data": {
+              "code": "running",
+              "category": "cardio",
+              "active": true
+            }
+          }
+        }
+      ],
+      "subtaskIds": [],
+      "requests": []
+    },
+    "kcal": 0
+  }
+]

@@ -1,6 +1,8 @@
 package app.braid.mobile.ui.taskdetail
 
 import androidx.lifecycle.SavedStateHandle
+import app.braid.mobile.data.artifacts.ArtifactsApi
+import app.braid.mobile.data.artifacts.DefaultArtifactRepository
 import app.braid.mobile.data.tasks.DefaultTaskDetailRepository
 import app.braid.mobile.data.tasks.TaskDetailApi
 import app.braid.mobile.domain.task.RequestRelation
@@ -68,6 +70,7 @@ class TaskDetailViewModelTest {
             SavedStateHandle(mapOf("taskId" to id)),
             DefaultTaskDetailRepository(graph.apis.create(TaskDetailApi::class.java)),
             AppClock { now },
+            DefaultArtifactRepository(graph.apis.create(ArtifactsApi::class.java)),
         )
 
     private suspend fun TaskDetailViewModel.content(): TaskDetailUiState.Content =

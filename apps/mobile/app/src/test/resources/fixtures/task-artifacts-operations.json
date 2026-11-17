@@ -1,0 +1,1442 @@
+[
+  {
+    "name": "add a document",
+    "list": [
+      {
+        "id": "doc-note",
+        "name": "Ideias para o projeto",
+        "type": "text",
+        "global": false,
+        "relation": "uses"
+      },
+      {
+        "id": "doc-skill",
+        "name": "Pesquisar",
+        "type": "skill",
+        "global": false,
+        "relation": "updates"
+      },
+      {
+        "id": "doc-router",
+        "name": "Roteador",
+        "type": "router",
+        "global": false,
+        "relation": "creates"
+      },
+      {
+        "id": "doc-sleep",
+        "name": "Noite de sono",
+        "type": "sleep",
+        "global": false,
+        "relation": "uses"
+      }
+    ],
+    "op": "add",
+    "artifact": {
+      "id": "doc-other",
+      "name": "Pauta da reunião",
+      "schemaVersion": 1,
+      "global": false,
+      "derived": false,
+      "tags": [],
+      "revision": 1,
+      "createdAt": "2026-09-10T12:00:00.000Z",
+      "updatedAt": "2026-09-14T12:12:00.000Z",
+      "type": "text",
+      "data": {
+        "body": "# Pauta da reunião\n\nCorpo da nota **Pauta da reunião**."
+      }
+    },
+    "result": [
+      {
+        "id": "doc-note",
+        "name": "Ideias para o projeto",
+        "type": "text",
+        "global": false,
+        "relation": "uses"
+      },
+      {
+        "id": "doc-skill",
+        "name": "Pesquisar",
+        "type": "skill",
+        "global": false,
+        "relation": "updates"
+      },
+      {
+        "id": "doc-router",
+        "name": "Roteador",
+        "type": "router",
+        "global": false,
+        "relation": "creates"
+      },
+      {
+        "id": "doc-sleep",
+        "name": "Noite de sono",
+        "type": "sleep",
+        "global": false,
+        "relation": "uses"
+      },
+      {
+        "id": "doc-other",
+        "name": "Pauta da reunião",
+        "type": "text",
+        "global": false,
+        "relation": "uses"
+      }
+    ],
+    "positions": [
+      1,
+      2,
+      null,
+      3,
+      4
+    ],
+    "links": [
+      {
+        "id": "doc-note",
+        "relation": "uses"
+      },
+      {
+        "id": "doc-skill",
+        "relation": "updates"
+      },
+      {
+        "id": "doc-router",
+        "relation": "creates"
+      },
+      {
+        "id": "doc-sleep",
+        "relation": "uses"
+      },
+      {
+        "id": "doc-other",
+        "relation": "uses"
+      }
+    ],
+    "same": false
+  },
+  {
+    "name": "add a document that is already linked",
+    "list": [
+      {
+        "id": "doc-note",
+        "name": "Ideias para o projeto",
+        "type": "text",
+        "global": false,
+        "relation": "uses"
+      },
+      {
+        "id": "doc-skill",
+        "name": "Pesquisar",
+        "type": "skill",
+        "global": false,
+        "relation": "updates"
+      },
+      {
+        "id": "doc-router",
+        "name": "Roteador",
+        "type": "router",
+        "global": false,
+        "relation": "creates"
+      },
+      {
+        "id": "doc-sleep",
+        "name": "Noite de sono",
+        "type": "sleep",
+        "global": false,
+        "relation": "uses"
+      }
+    ],
+    "op": "add",
+    "artifact": {
+      "id": "doc-note",
+      "name": "Ideias para o projeto",
+      "schemaVersion": 1,
+      "global": false,
+      "derived": false,
+      "tags": [
+        "trabalho"
+      ],
+      "revision": 1,
+      "createdAt": "2026-09-10T12:00:00.000Z",
+      "updatedAt": "2026-09-14T12:12:00.000Z",
+      "type": "text",
+      "data": {
+        "body": "# Ideias para o projeto\n\nCorpo da nota **Ideias para o projeto**."
+      }
+    },
+    "result": [
+      {
+        "id": "doc-note",
+        "name": "Ideias para o projeto",
+        "type": "text",
+        "global": false,
+        "relation": "uses"
+      },
+      {
+        "id": "doc-skill",
+        "name": "Pesquisar",
+        "type": "skill",
+        "global": false,
+        "relation": "updates"
+      },
+      {
+        "id": "doc-router",
+        "name": "Roteador",
+        "type": "router",
+        "global": false,
+        "relation": "creates"
+      },
+      {
+        "id": "doc-sleep",
+        "name": "Noite de sono",
+        "type": "sleep",
+        "global": false,
+        "relation": "uses"
+      }
+    ],
+    "positions": [
+      1,
+      2,
+      null,
+      3
+    ],
+    "links": [
+      {
+        "id": "doc-note",
+        "relation": "uses"
+      },
+      {
+        "id": "doc-skill",
+        "relation": "updates"
+      },
+      {
+        "id": "doc-router",
+        "relation": "creates"
+      },
+      {
+        "id": "doc-sleep",
+        "relation": "uses"
+      }
+    ],
+    "same": true
+  },
+  {
+    "name": "add an exercise",
+    "list": [
+      {
+        "id": "doc-training",
+        "name": "Treino de peito",
+        "type": "training",
+        "global": false,
+        "relation": "creates"
+      },
+      {
+        "id": "ex-run",
+        "name": "Corrida",
+        "type": "workout",
+        "global": true,
+        "relation": "uses"
+      }
+    ],
+    "op": "add",
+    "artifact": {
+      "id": "ex-bench",
+      "name": "Supino",
+      "schemaVersion": 1,
+      "global": true,
+      "derived": false,
+      "tags": [],
+      "revision": 1,
+      "createdAt": "2026-09-10T12:00:00.000Z",
+      "updatedAt": "2026-09-14T12:12:00.000Z",
+      "type": "workout",
+      "data": {
+        "code": "weightlifting",
+        "category": "strength",
+        "active": true
+      }
+    },
+    "result": [
+      {
+        "id": "doc-training",
+        "name": "Treino de peito",
+        "type": "training",
+        "global": false,
+        "relation": "creates"
+      },
+      {
+        "id": "ex-run",
+        "name": "Corrida",
+        "type": "workout",
+        "global": true,
+        "relation": "uses"
+      },
+      {
+        "id": "ex-bench",
+        "name": "Supino",
+        "type": "workout",
+        "global": true,
+        "relation": "uses"
+      }
+    ],
+    "positions": [
+      null,
+      1,
+      2
+    ],
+    "links": [
+      {
+        "id": "doc-training",
+        "relation": "creates"
+      },
+      {
+        "id": "ex-run",
+        "relation": "uses"
+      },
+      {
+        "id": "ex-bench",
+        "relation": "uses"
+      }
+    ],
+    "same": false
+  },
+  {
+    "name": "add a food copy",
+    "list": [
+      {
+        "id": "food-copy-1",
+        "name": "Arroz",
+        "type": "food",
+        "global": false,
+        "relation": "uses",
+        "quantity": "150 g"
+      },
+      {
+        "id": "food-pending",
+        "name": "Suco de laranja",
+        "type": "food",
+        "global": false,
+        "relation": "uses"
+      },
+      {
+        "id": "food-created",
+        "name": "Frango grelhado",
+        "type": "food",
+        "global": false,
+        "relation": "creates"
+      }
+    ],
+    "op": "copy",
+    "artifact": {
+      "id": "food-global",
+      "name": "Maçã",
+      "schemaVersion": 1,
+      "global": true,
+      "derived": false,
+      "tags": [],
+      "revision": 1,
+      "createdAt": "2026-09-10T12:00:00.000Z",
+      "updatedAt": "2026-09-14T12:12:00.000Z",
+      "type": "food",
+      "data": {
+        "description": "Maçã",
+        "items": [
+          {
+            "id": "food-global-item",
+            "name": "Maçã",
+            "portion": "1 porção",
+            "approximateWeightGrams": 100,
+            "caloriesKcal": 52,
+            "macronutrients": {
+              "carbohydratesGrams": 20,
+              "proteinsGrams": 10,
+              "totalFatGrams": 5,
+              "fiberGrams": 2
+            }
+          }
+        ],
+        "totals": {
+          "totalCaloriesKcal": 52,
+          "totalProteinGrams": 10,
+          "totalCarbohydrateGrams": 20,
+          "totalFatGrams": 5,
+          "totalFiberGrams": 2
+        },
+        "nutritionSource": "model-estimate"
+      }
+    },
+    "key": "key-new-1",
+    "result": [
+      {
+        "id": "food-copy-1",
+        "name": "Arroz",
+        "type": "food",
+        "global": false,
+        "relation": "uses",
+        "quantity": "150 g"
+      },
+      {
+        "id": "food-pending",
+        "name": "Suco de laranja",
+        "type": "food",
+        "global": false,
+        "relation": "uses"
+      },
+      {
+        "id": "food-created",
+        "name": "Frango grelhado",
+        "type": "food",
+        "global": false,
+        "relation": "creates"
+      },
+      {
+        "id": "key-new-1",
+        "name": "Maçã",
+        "type": "food",
+        "global": true,
+        "relation": "uses",
+        "copyOf": "food-global"
+      }
+    ],
+    "positions": [
+      1,
+      2,
+      null,
+      3
+    ],
+    "links": [
+      {
+        "id": "food-copy-1",
+        "relation": "uses"
+      },
+      {
+        "id": "food-pending",
+        "relation": "uses"
+      },
+      {
+        "id": "food-created",
+        "relation": "creates"
+      },
+      {
+        "copyOf": "food-global"
+      }
+    ],
+    "same": false
+  },
+  {
+    "name": "add the same food copy again",
+    "list": [
+      {
+        "id": "food-copy-1",
+        "name": "Arroz",
+        "type": "food",
+        "global": false,
+        "relation": "uses",
+        "quantity": "150 g"
+      },
+      {
+        "id": "food-pending",
+        "name": "Suco de laranja",
+        "type": "food",
+        "global": false,
+        "relation": "uses"
+      },
+      {
+        "id": "food-created",
+        "name": "Frango grelhado",
+        "type": "food",
+        "global": false,
+        "relation": "creates"
+      },
+      {
+        "id": "key-new-1",
+        "name": "Maçã",
+        "type": "food",
+        "global": true,
+        "relation": "uses",
+        "copyOf": "food-global"
+      }
+    ],
+    "op": "copy",
+    "artifact": {
+      "id": "food-global",
+      "name": "Maçã",
+      "schemaVersion": 1,
+      "global": true,
+      "derived": false,
+      "tags": [],
+      "revision": 1,
+      "createdAt": "2026-09-10T12:00:00.000Z",
+      "updatedAt": "2026-09-14T12:12:00.000Z",
+      "type": "food",
+      "data": {
+        "description": "Maçã",
+        "items": [
+          {
+            "id": "food-global-item",
+            "name": "Maçã",
+            "portion": "1 porção",
+            "approximateWeightGrams": 100,
+            "caloriesKcal": 52,
+            "macronutrients": {
+              "carbohydratesGrams": 20,
+              "proteinsGrams": 10,
+              "totalFatGrams": 5,
+              "fiberGrams": 2
+            }
+          }
+        ],
+        "totals": {
+          "totalCaloriesKcal": 52,
+          "totalProteinGrams": 10,
+          "totalCarbohydrateGrams": 20,
+          "totalFatGrams": 5,
+          "totalFiberGrams": 2
+        },
+        "nutritionSource": "model-estimate"
+      }
+    },
+    "key": "key-new-2",
+    "result": [
+      {
+        "id": "food-copy-1",
+        "name": "Arroz",
+        "type": "food",
+        "global": false,
+        "relation": "uses",
+        "quantity": "150 g"
+      },
+      {
+        "id": "food-pending",
+        "name": "Suco de laranja",
+        "type": "food",
+        "global": false,
+        "relation": "uses"
+      },
+      {
+        "id": "food-created",
+        "name": "Frango grelhado",
+        "type": "food",
+        "global": false,
+        "relation": "creates"
+      },
+      {
+        "id": "key-new-1",
+        "name": "Maçã",
+        "type": "food",
+        "global": true,
+        "relation": "uses",
+        "copyOf": "food-global"
+      },
+      {
+        "id": "key-new-2",
+        "name": "Maçã",
+        "type": "food",
+        "global": true,
+        "relation": "uses",
+        "copyOf": "food-global"
+      }
+    ],
+    "positions": [
+      1,
+      2,
+      null,
+      3,
+      4
+    ],
+    "links": [
+      {
+        "id": "food-copy-1",
+        "relation": "uses"
+      },
+      {
+        "id": "food-pending",
+        "relation": "uses"
+      },
+      {
+        "id": "food-created",
+        "relation": "creates"
+      },
+      {
+        "copyOf": "food-global"
+      },
+      {
+        "copyOf": "food-global"
+      }
+    ],
+    "same": false
+  },
+  {
+    "name": "set the quantity of a new copy",
+    "list": [
+      {
+        "id": "food-copy-1",
+        "name": "Arroz",
+        "type": "food",
+        "global": false,
+        "relation": "uses",
+        "quantity": "150 g"
+      },
+      {
+        "id": "food-pending",
+        "name": "Suco de laranja",
+        "type": "food",
+        "global": false,
+        "relation": "uses"
+      },
+      {
+        "id": "food-created",
+        "name": "Frango grelhado",
+        "type": "food",
+        "global": false,
+        "relation": "creates"
+      },
+      {
+        "id": "key-new-1",
+        "name": "Maçã",
+        "type": "food",
+        "global": true,
+        "relation": "uses",
+        "copyOf": "food-global"
+      }
+    ],
+    "op": "quantity",
+    "id": "key-new-1",
+    "quantity": " 2 fatias ",
+    "result": [
+      {
+        "id": "food-copy-1",
+        "name": "Arroz",
+        "type": "food",
+        "global": false,
+        "relation": "uses",
+        "quantity": "150 g"
+      },
+      {
+        "id": "food-pending",
+        "name": "Suco de laranja",
+        "type": "food",
+        "global": false,
+        "relation": "uses"
+      },
+      {
+        "id": "food-created",
+        "name": "Frango grelhado",
+        "type": "food",
+        "global": false,
+        "relation": "creates"
+      },
+      {
+        "id": "key-new-1",
+        "name": "Maçã",
+        "type": "food",
+        "global": true,
+        "relation": "uses",
+        "copyOf": "food-global",
+        "quantity": " 2 fatias "
+      }
+    ],
+    "positions": [
+      1,
+      2,
+      null,
+      3
+    ],
+    "links": [
+      {
+        "id": "food-copy-1",
+        "relation": "uses"
+      },
+      {
+        "id": "food-pending",
+        "relation": "uses"
+      },
+      {
+        "id": "food-created",
+        "relation": "creates"
+      },
+      {
+        "copyOf": "food-global",
+        "quantity": "2 fatias"
+      }
+    ],
+    "same": false
+  },
+  {
+    "name": "set the quantity of an existing food",
+    "list": [
+      {
+        "id": "food-copy-1",
+        "name": "Arroz",
+        "type": "food",
+        "global": false,
+        "relation": "uses",
+        "quantity": "150 g"
+      },
+      {
+        "id": "food-pending",
+        "name": "Suco de laranja",
+        "type": "food",
+        "global": false,
+        "relation": "uses"
+      },
+      {
+        "id": "food-created",
+        "name": "Frango grelhado",
+        "type": "food",
+        "global": false,
+        "relation": "creates"
+      }
+    ],
+    "op": "quantity",
+    "id": "food-copy-1",
+    "quantity": "999 g",
+    "result": [
+      {
+        "id": "food-copy-1",
+        "name": "Arroz",
+        "type": "food",
+        "global": false,
+        "relation": "uses",
+        "quantity": "150 g"
+      },
+      {
+        "id": "food-pending",
+        "name": "Suco de laranja",
+        "type": "food",
+        "global": false,
+        "relation": "uses"
+      },
+      {
+        "id": "food-created",
+        "name": "Frango grelhado",
+        "type": "food",
+        "global": false,
+        "relation": "creates"
+      }
+    ],
+    "positions": [
+      1,
+      2,
+      null
+    ],
+    "links": [
+      {
+        "id": "food-copy-1",
+        "relation": "uses"
+      },
+      {
+        "id": "food-pending",
+        "relation": "uses"
+      },
+      {
+        "id": "food-created",
+        "relation": "creates"
+      }
+    ],
+    "same": true
+  },
+  {
+    "name": "remove a link",
+    "list": [
+      {
+        "id": "doc-note",
+        "name": "Ideias para o projeto",
+        "type": "text",
+        "global": false,
+        "relation": "uses"
+      },
+      {
+        "id": "doc-skill",
+        "name": "Pesquisar",
+        "type": "skill",
+        "global": false,
+        "relation": "updates"
+      },
+      {
+        "id": "doc-router",
+        "name": "Roteador",
+        "type": "router",
+        "global": false,
+        "relation": "creates"
+      },
+      {
+        "id": "doc-sleep",
+        "name": "Noite de sono",
+        "type": "sleep",
+        "global": false,
+        "relation": "uses"
+      }
+    ],
+    "op": "remove",
+    "id": "doc-skill",
+    "result": [
+      {
+        "id": "doc-note",
+        "name": "Ideias para o projeto",
+        "type": "text",
+        "global": false,
+        "relation": "uses"
+      },
+      {
+        "id": "doc-router",
+        "name": "Roteador",
+        "type": "router",
+        "global": false,
+        "relation": "creates"
+      },
+      {
+        "id": "doc-sleep",
+        "name": "Noite de sono",
+        "type": "sleep",
+        "global": false,
+        "relation": "uses"
+      }
+    ],
+    "positions": [
+      1,
+      null,
+      2
+    ],
+    "links": [
+      {
+        "id": "doc-note",
+        "relation": "uses"
+      },
+      {
+        "id": "doc-router",
+        "relation": "creates"
+      },
+      {
+        "id": "doc-sleep",
+        "relation": "uses"
+      }
+    ],
+    "same": false
+  },
+  {
+    "name": "remove what the task created",
+    "list": [
+      {
+        "id": "doc-note",
+        "name": "Ideias para o projeto",
+        "type": "text",
+        "global": false,
+        "relation": "uses"
+      },
+      {
+        "id": "doc-skill",
+        "name": "Pesquisar",
+        "type": "skill",
+        "global": false,
+        "relation": "updates"
+      },
+      {
+        "id": "doc-router",
+        "name": "Roteador",
+        "type": "router",
+        "global": false,
+        "relation": "creates"
+      },
+      {
+        "id": "doc-sleep",
+        "name": "Noite de sono",
+        "type": "sleep",
+        "global": false,
+        "relation": "uses"
+      }
+    ],
+    "op": "remove",
+    "id": "doc-router",
+    "result": [
+      {
+        "id": "doc-note",
+        "name": "Ideias para o projeto",
+        "type": "text",
+        "global": false,
+        "relation": "uses"
+      },
+      {
+        "id": "doc-skill",
+        "name": "Pesquisar",
+        "type": "skill",
+        "global": false,
+        "relation": "updates"
+      },
+      {
+        "id": "doc-sleep",
+        "name": "Noite de sono",
+        "type": "sleep",
+        "global": false,
+        "relation": "uses"
+      }
+    ],
+    "positions": [
+      1,
+      2,
+      3
+    ],
+    "links": [
+      {
+        "id": "doc-note",
+        "relation": "uses"
+      },
+      {
+        "id": "doc-skill",
+        "relation": "updates"
+      },
+      {
+        "id": "doc-sleep",
+        "relation": "uses"
+      }
+    ],
+    "same": false
+  },
+  {
+    "name": "move the first down",
+    "list": [
+      {
+        "id": "doc-note",
+        "name": "Ideias para o projeto",
+        "type": "text",
+        "global": false,
+        "relation": "uses"
+      },
+      {
+        "id": "doc-skill",
+        "name": "Pesquisar",
+        "type": "skill",
+        "global": false,
+        "relation": "updates"
+      },
+      {
+        "id": "doc-router",
+        "name": "Roteador",
+        "type": "router",
+        "global": false,
+        "relation": "creates"
+      },
+      {
+        "id": "doc-sleep",
+        "name": "Noite de sono",
+        "type": "sleep",
+        "global": false,
+        "relation": "uses"
+      }
+    ],
+    "op": "move",
+    "id": "doc-note",
+    "step": 1,
+    "result": [
+      {
+        "id": "doc-skill",
+        "name": "Pesquisar",
+        "type": "skill",
+        "global": false,
+        "relation": "updates"
+      },
+      {
+        "id": "doc-note",
+        "name": "Ideias para o projeto",
+        "type": "text",
+        "global": false,
+        "relation": "uses"
+      },
+      {
+        "id": "doc-router",
+        "name": "Roteador",
+        "type": "router",
+        "global": false,
+        "relation": "creates"
+      },
+      {
+        "id": "doc-sleep",
+        "name": "Noite de sono",
+        "type": "sleep",
+        "global": false,
+        "relation": "uses"
+      }
+    ],
+    "positions": [
+      1,
+      2,
+      null,
+      3
+    ],
+    "links": [
+      {
+        "id": "doc-skill",
+        "relation": "updates"
+      },
+      {
+        "id": "doc-note",
+        "relation": "uses"
+      },
+      {
+        "id": "doc-router",
+        "relation": "creates"
+      },
+      {
+        "id": "doc-sleep",
+        "relation": "uses"
+      }
+    ],
+    "same": false
+  },
+  {
+    "name": "move the second up",
+    "list": [
+      {
+        "id": "doc-note",
+        "name": "Ideias para o projeto",
+        "type": "text",
+        "global": false,
+        "relation": "uses"
+      },
+      {
+        "id": "doc-skill",
+        "name": "Pesquisar",
+        "type": "skill",
+        "global": false,
+        "relation": "updates"
+      },
+      {
+        "id": "doc-router",
+        "name": "Roteador",
+        "type": "router",
+        "global": false,
+        "relation": "creates"
+      },
+      {
+        "id": "doc-sleep",
+        "name": "Noite de sono",
+        "type": "sleep",
+        "global": false,
+        "relation": "uses"
+      }
+    ],
+    "op": "move",
+    "id": "doc-skill",
+    "step": -1,
+    "result": [
+      {
+        "id": "doc-skill",
+        "name": "Pesquisar",
+        "type": "skill",
+        "global": false,
+        "relation": "updates"
+      },
+      {
+        "id": "doc-note",
+        "name": "Ideias para o projeto",
+        "type": "text",
+        "global": false,
+        "relation": "uses"
+      },
+      {
+        "id": "doc-router",
+        "name": "Roteador",
+        "type": "router",
+        "global": false,
+        "relation": "creates"
+      },
+      {
+        "id": "doc-sleep",
+        "name": "Noite de sono",
+        "type": "sleep",
+        "global": false,
+        "relation": "uses"
+      }
+    ],
+    "positions": [
+      1,
+      2,
+      null,
+      3
+    ],
+    "links": [
+      {
+        "id": "doc-skill",
+        "relation": "updates"
+      },
+      {
+        "id": "doc-note",
+        "relation": "uses"
+      },
+      {
+        "id": "doc-router",
+        "relation": "creates"
+      },
+      {
+        "id": "doc-sleep",
+        "relation": "uses"
+      }
+    ],
+    "same": false
+  },
+  {
+    "name": "move over what the task created",
+    "list": [
+      {
+        "id": "doc-note",
+        "name": "Ideias para o projeto",
+        "type": "text",
+        "global": false,
+        "relation": "uses"
+      },
+      {
+        "id": "doc-skill",
+        "name": "Pesquisar",
+        "type": "skill",
+        "global": false,
+        "relation": "updates"
+      },
+      {
+        "id": "doc-router",
+        "name": "Roteador",
+        "type": "router",
+        "global": false,
+        "relation": "creates"
+      },
+      {
+        "id": "doc-sleep",
+        "name": "Noite de sono",
+        "type": "sleep",
+        "global": false,
+        "relation": "uses"
+      }
+    ],
+    "op": "move",
+    "id": "doc-skill",
+    "step": 1,
+    "result": [
+      {
+        "id": "doc-note",
+        "name": "Ideias para o projeto",
+        "type": "text",
+        "global": false,
+        "relation": "uses"
+      },
+      {
+        "id": "doc-sleep",
+        "name": "Noite de sono",
+        "type": "sleep",
+        "global": false,
+        "relation": "uses"
+      },
+      {
+        "id": "doc-router",
+        "name": "Roteador",
+        "type": "router",
+        "global": false,
+        "relation": "creates"
+      },
+      {
+        "id": "doc-skill",
+        "name": "Pesquisar",
+        "type": "skill",
+        "global": false,
+        "relation": "updates"
+      }
+    ],
+    "positions": [
+      1,
+      2,
+      null,
+      3
+    ],
+    "links": [
+      {
+        "id": "doc-note",
+        "relation": "uses"
+      },
+      {
+        "id": "doc-sleep",
+        "relation": "uses"
+      },
+      {
+        "id": "doc-router",
+        "relation": "creates"
+      },
+      {
+        "id": "doc-skill",
+        "relation": "updates"
+      }
+    ],
+    "same": false
+  },
+  {
+    "name": "the first cannot go up",
+    "list": [
+      {
+        "id": "doc-note",
+        "name": "Ideias para o projeto",
+        "type": "text",
+        "global": false,
+        "relation": "uses"
+      },
+      {
+        "id": "doc-skill",
+        "name": "Pesquisar",
+        "type": "skill",
+        "global": false,
+        "relation": "updates"
+      },
+      {
+        "id": "doc-router",
+        "name": "Roteador",
+        "type": "router",
+        "global": false,
+        "relation": "creates"
+      },
+      {
+        "id": "doc-sleep",
+        "name": "Noite de sono",
+        "type": "sleep",
+        "global": false,
+        "relation": "uses"
+      }
+    ],
+    "op": "move",
+    "id": "doc-note",
+    "step": -1,
+    "result": [
+      {
+        "id": "doc-note",
+        "name": "Ideias para o projeto",
+        "type": "text",
+        "global": false,
+        "relation": "uses"
+      },
+      {
+        "id": "doc-skill",
+        "name": "Pesquisar",
+        "type": "skill",
+        "global": false,
+        "relation": "updates"
+      },
+      {
+        "id": "doc-router",
+        "name": "Roteador",
+        "type": "router",
+        "global": false,
+        "relation": "creates"
+      },
+      {
+        "id": "doc-sleep",
+        "name": "Noite de sono",
+        "type": "sleep",
+        "global": false,
+        "relation": "uses"
+      }
+    ],
+    "positions": [
+      1,
+      2,
+      null,
+      3
+    ],
+    "links": [
+      {
+        "id": "doc-note",
+        "relation": "uses"
+      },
+      {
+        "id": "doc-skill",
+        "relation": "updates"
+      },
+      {
+        "id": "doc-router",
+        "relation": "creates"
+      },
+      {
+        "id": "doc-sleep",
+        "relation": "uses"
+      }
+    ],
+    "same": true
+  },
+  {
+    "name": "the last cannot go down",
+    "list": [
+      {
+        "id": "doc-note",
+        "name": "Ideias para o projeto",
+        "type": "text",
+        "global": false,
+        "relation": "uses"
+      },
+      {
+        "id": "doc-skill",
+        "name": "Pesquisar",
+        "type": "skill",
+        "global": false,
+        "relation": "updates"
+      },
+      {
+        "id": "doc-router",
+        "name": "Roteador",
+        "type": "router",
+        "global": false,
+        "relation": "creates"
+      },
+      {
+        "id": "doc-sleep",
+        "name": "Noite de sono",
+        "type": "sleep",
+        "global": false,
+        "relation": "uses"
+      }
+    ],
+    "op": "move",
+    "id": "doc-sleep",
+    "step": 1,
+    "result": [
+      {
+        "id": "doc-note",
+        "name": "Ideias para o projeto",
+        "type": "text",
+        "global": false,
+        "relation": "uses"
+      },
+      {
+        "id": "doc-skill",
+        "name": "Pesquisar",
+        "type": "skill",
+        "global": false,
+        "relation": "updates"
+      },
+      {
+        "id": "doc-router",
+        "name": "Roteador",
+        "type": "router",
+        "global": false,
+        "relation": "creates"
+      },
+      {
+        "id": "doc-sleep",
+        "name": "Noite de sono",
+        "type": "sleep",
+        "global": false,
+        "relation": "uses"
+      }
+    ],
+    "positions": [
+      1,
+      2,
+      null,
+      3
+    ],
+    "links": [
+      {
+        "id": "doc-note",
+        "relation": "uses"
+      },
+      {
+        "id": "doc-skill",
+        "relation": "updates"
+      },
+      {
+        "id": "doc-router",
+        "relation": "creates"
+      },
+      {
+        "id": "doc-sleep",
+        "relation": "uses"
+      }
+    ],
+    "same": true
+  },
+  {
+    "name": "what the task created does not move",
+    "list": [
+      {
+        "id": "doc-note",
+        "name": "Ideias para o projeto",
+        "type": "text",
+        "global": false,
+        "relation": "uses"
+      },
+      {
+        "id": "doc-skill",
+        "name": "Pesquisar",
+        "type": "skill",
+        "global": false,
+        "relation": "updates"
+      },
+      {
+        "id": "doc-router",
+        "name": "Roteador",
+        "type": "router",
+        "global": false,
+        "relation": "creates"
+      },
+      {
+        "id": "doc-sleep",
+        "name": "Noite de sono",
+        "type": "sleep",
+        "global": false,
+        "relation": "uses"
+      }
+    ],
+    "op": "move",
+    "id": "doc-router",
+    "step": 1,
+    "result": [
+      {
+        "id": "doc-note",
+        "name": "Ideias para o projeto",
+        "type": "text",
+        "global": false,
+        "relation": "uses"
+      },
+      {
+        "id": "doc-skill",
+        "name": "Pesquisar",
+        "type": "skill",
+        "global": false,
+        "relation": "updates"
+      },
+      {
+        "id": "doc-router",
+        "name": "Roteador",
+        "type": "router",
+        "global": false,
+        "relation": "creates"
+      },
+      {
+        "id": "doc-sleep",
+        "name": "Noite de sono",
+        "type": "sleep",
+        "global": false,
+        "relation": "uses"
+      }
+    ],
+    "positions": [
+      1,
+      2,
+      null,
+      3
+    ],
+    "links": [
+      {
+        "id": "doc-note",
+        "relation": "uses"
+      },
+      {
+        "id": "doc-skill",
+        "relation": "updates"
+      },
+      {
+        "id": "doc-router",
+        "relation": "creates"
+      },
+      {
+        "id": "doc-sleep",
+        "relation": "uses"
+      }
+    ],
+    "same": true
+  }
+]

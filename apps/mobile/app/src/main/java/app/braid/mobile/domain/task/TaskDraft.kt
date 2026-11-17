@@ -40,6 +40,8 @@ data class TaskDraft(
     val parentTaskId: String?,
     /** As subtarefas (ids), na ordem da API; a lista inteira vai no `PATCH`. Só a edição as tem. */
     val subtaskIds: List<String>,
+    /** Os documentos ligados, na ordem da tela; a lista inteira vai no `PATCH`. Só a edição os tem. */
+    val artifacts: List<DraftArtifact>,
 )
 
 /** Os campos que a validação sabe recusar; cada um aparece no controle que o causou. */
@@ -59,6 +61,7 @@ enum class TaskDraftField {
     LongRunning,
     ParentTask,
     Subtasks,
+    Artifacts,
 }
 
 typealias TaskDraftErrors = Map<TaskDraftField, String>
@@ -93,6 +96,7 @@ fun emptyTaskDraft(name: String = ""): TaskDraft =
         longRunning = false,
         parentTaskId = null,
         subtaskIds = emptyList(),
+        artifacts = emptyList(),
     )
 
 /** O rascunho que a edição abre: a tarefa lida, campo a campo. */
@@ -115,6 +119,7 @@ fun draftFromTask(task: TaskDetail): TaskDraft {
         longRunning = task.card.longRunning,
         parentTaskId = task.parentTaskId,
         subtaskIds = task.subtaskIds,
+        artifacts = draftArtifactsFromTask(task.artifacts),
     )
 }
 
@@ -200,6 +205,8 @@ data class TaskPatch(
     val parentTaskId: Clearable<String>? = null,
     /** A lista completa, não o que mudou. */
     val subtaskIds: List<String>? = null,
+    /** A lista completa de documentos, na ordem da tela; cópias novas de alimento levam `copyOf` e a quantidade. */
+    val artifacts: List<ArtifactLink>? = null,
 ) {
     /** Nada além da revisão: não há o que enviar. */
     val isEmpty: Boolean
@@ -259,6 +266,7 @@ fun buildTaskPatch(
             longRunning = draft.longRunning.takeIf { it != base.longRunning },
             parentTaskId = if (draft.parentTaskId != base.parentTaskId) Clearable(draft.parentTaskId) else null,
             subtaskIds = draft.subtaskIds.takeIf { it != base.subtaskIds },
+            artifacts = if (sameArtifactLinks(draft.artifacts, base.artifacts)) null else artifactLinkInputs(draft.artifacts),
         )
     return patch.takeUnless { it.isEmpty }
 }
@@ -322,5 +330,6 @@ fun rebaseDraft(
         longRunning = pick(draft.longRunning, before.longRunning, after.longRunning),
         parentTaskId = pick(draft.parentTaskId, before.parentTaskId, after.parentTaskId),
         subtaskIds = pick(draft.subtaskIds, before.subtaskIds, after.subtaskIds),
+        artifacts = pick(draft.artifacts, before.artifacts, after.artifacts),
     )
 }
