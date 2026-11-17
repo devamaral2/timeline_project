@@ -17,6 +17,12 @@ interface RequestsApi {
         @Body body: StartRequestBody,
     ): StartRequestResponseDto
 
+    /** O pedido de edição da entidade aberta; responde 202 `{ requestId }`. */
+    @POST("api/requests/edit")
+    suspend fun startEdit(
+        @Body body: StartEditBody,
+    ): StartRequestResponseDto
+
     /** Responde 202 com o pedido inteiro; 404 quando o Hermes está desligado nesta API. */
     @POST("api/requests/hermes")
     suspend fun startHermes(

@@ -191,6 +191,14 @@ interface AgentRequestRepository {
         clientMessageId: String,
     ): String
 
+    /** Abre um pedido de edição da entidade aberta na tela (`POST /api/requests/edit`) e devolve o id dele. */
+    suspend fun startEdit(
+        userId: String,
+        text: String,
+        entityType: EditEntityType,
+        entityId: String,
+    ): String
+
     /** Cancela o que o agente não terminou e devolve o pedido. O pedido de alimento (409) sobe como [FoodRequestCancelException]. */
     suspend fun cancel(id: String): AgentRequest
 }
