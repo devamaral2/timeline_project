@@ -34,6 +34,7 @@ import app.braid.mobile.ui.chat.ChatOverlay
 import app.braid.mobile.ui.chat.ChatViewModel
 import app.braid.mobile.ui.chat.LocalEntitiesChanged
 import app.braid.mobile.ui.documents.DocumentDetailPage
+import app.braid.mobile.ui.documents.DocumentEditPage
 import app.braid.mobile.ui.documents.DocumentsScreen
 import app.braid.mobile.ui.reminders.ReminderPermissionPrompt
 import app.braid.mobile.ui.shell.BraidBottomBar
@@ -101,6 +102,11 @@ fun AppNavHost(
                         chat.close()
                         navController.navigate(TaskEditRoute(name = argument.ifBlank { null }))
                     },
+                    // `/nota ideias` abre a criação do documento já com o nome; o chat fecha para a tela aparecer.
+                    ChatCommand.Document to { argument ->
+                        chat.close()
+                        navController.navigate(NewDocumentRoute(argument.trim().ifEmpty { null }))
+                    },
                 ),
             )
         }
@@ -154,6 +160,27 @@ fun AppNavHost(
                     DocumentDetailPage(
                         onBack = { navController.popBackStack() },
                         onOpenTask = { navController.navigate(TaskDetailRoute(it)) },
+                        onEdit = { navController.navigate(EditDocumentRoute(it)) },
+                        // Excluído, o documento some: volta para a lista, não para a leitura dele.
+                        onDeleted = { navController.openTab(MainTab.Documents) },
+                    )
+                }
+                composable<NewDocumentRoute> {
+                    DocumentEditPage(
+                        // Criado, abre a leitura no lugar do formulário; descartar volta para a lista.
+                        onSaved = { id ->
+                            navController.navigate(DocumentDetailRoute(id)) { popUpTo<NewDocumentRoute> { inclusive = true } }
+                        },
+                        onDiscard = { navController.openTab(MainTab.Documents) },
+                    )
+                }
+                composable<EditDocumentRoute> {
+                    DocumentEditPage(
+                        // Salvo, a leitura é lida de novo: troca a que estava por baixo; descartar volta a ela.
+                        onSaved = { id ->
+                            navController.navigate(DocumentDetailRoute(id)) { popUpTo<DocumentDetailRoute> { inclusive = true } }
+                        },
+                        onDiscard = { navController.popBackStack() },
                     )
                 }
             }

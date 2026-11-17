@@ -22,6 +22,18 @@ data class DocumentDetailRoute(
     val documentId: String,
 )
 
+/** O formulário de um documento novo, aberto pelo `/nota` do chat; [name] é o que foi digitado depois do comando. */
+@Serializable
+data class NewDocumentRoute(
+    val name: String? = null,
+)
+
+/** A edição da nota de texto própria, aberta pelo detalhe do documento. */
+@Serializable
+data class EditDocumentRoute(
+    val documentId: String,
+)
+
 /** O detalhe de uma tarefa, aberto pela Agenda e pelas ligações do próprio detalhe; o ViewModel lê o [taskId] do argumento. */
 @Serializable
 data class TaskDetailRoute(

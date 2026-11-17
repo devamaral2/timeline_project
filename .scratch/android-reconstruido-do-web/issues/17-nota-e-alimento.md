@@ -4,13 +4,13 @@
 
 **Blocked by:** 11, 12
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Leia antes:** o [README](README.md). No web: a criação de documento, o editor de markdown da nota e as regras de quem edita o quê.
 
-- [ ] "Novo documento" oferece Nota e Alimento; criar manda `POST /api/artifacts` com `Idempotency-Key`.
-- [ ] O alimento nasce de texto livre e mostra "calculando" até o agente preencher, como no ticket 11.
-- [ ] A nota própria abre no editor com os modos escrever e ler; Salvar manda `PATCH /api/artifacts/{id}`.
-- [ ] Excluir pede confirmação, manda `DELETE /api/artifacts/{id}` e volta para a lista.
-- [ ] Editar e excluir só aparecem na nota de texto do próprio usuário.
-- [ ] O atalho `/nota` do chat abre a criação, com o nome quando digitado.
+- [x] "Novo documento" oferece Nota e Alimento; criar manda `POST /api/artifacts` com `Idempotency-Key`.
+- [x] O alimento nasce de texto livre e mostra "calculando" até o agente preencher, como no ticket 11.
+- [x] A nota própria abre no editor com os modos escrever e ler; Salvar manda `PATCH /api/artifacts/{id}`.
+- [x] Excluir pede confirmação, manda `DELETE /api/artifacts/{id}` e volta para a lista.
+- [x] Editar e excluir só aparecem na nota de texto do próprio usuário.
+- [x] O atalho `/nota` do chat abre a criação, com o nome quando digitado.

@@ -42,6 +42,12 @@ data class ArtifactDto(
     val updatedAt: String,
 )
 
+/** `createArtifactResponseSchema`. */
+@Serializable
+data class CreateArtifactResponseDto(
+    val artifactId: String,
+)
+
 @Serializable
 data class ArtifactTaskLinkDto(
     val taskId: String,
