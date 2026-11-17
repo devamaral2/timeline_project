@@ -1,11 +1,8 @@
 package app.braid.mobile.domain.reminder
 
 import app.braid.mobile.domain.session.SessionState
-import app.braid.mobile.domain.task.TaskCard
-import app.braid.mobile.domain.task.TaskFilters
 import app.braid.mobile.domain.task.TaskRepository
 import app.braid.mobile.domain.time.AppClock
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
@@ -51,22 +48,17 @@ class ReminderSync(
     suspend fun refresh(): RefreshOutcome =
         mutex.withLock {
             val now = clock.now()
-            val agenda = attempt { tasks.agenda(now.minus(LOOK_BEHIND), now.plus(LOOK_AHEAD)) }
-            val tracked = attempt { tasks.tracked(TaskFilters()) }
-            if (agenda == null && tracked == null) return@withLock RefreshOutcome.Failed
-
-            val cards = LinkedHashMap<String, TaskCard>()
-            // A agenda vence quando a tarefa está nas duas listas, como no web.
-            for (card in agenda.orEmpty() + tracked.orEmpty()) cards.putIfAbsent(card.id, card)
+            val sources = loadReminderSources(tasks, now) ?: return@withLock RefreshOutcome.Failed
+            val cards = sources.cards
 
             val record = fired.read()
-            val result = dueRemindersOf(cards.values, now, record.keys)
+            val result = dueRemindersOf(cards, now, record.keys)
             val settledRecord = settle(record, result.settled, now)
             if (settledRecord != record) fired.write(settledRecord)
             for (reminder in result.due) attempt { notifier.show(reminder) }
 
-            val upcoming = upcomingRemindersOf(cards.values, now, settledRecord.keys).take(maxScheduled)
-            replaceAlarms(upcoming, cancelMissing = agenda != null && tracked != null)
+            val upcoming = upcomingRemindersOf(cards, now, settledRecord.keys).take(maxScheduled)
+            replaceAlarms(upcoming, cancelMissing = sources.complete)
             RefreshOutcome.Refreshed
         }
 
@@ -130,15 +122,6 @@ class ReminderSync(
         settled: List<Reminder>,
         now: Instant,
     ): Map<String, Instant> = if (settled.isEmpty()) record else pruneFired(record + settled.associate { it.key to it.anchor }, now)
-
-    private suspend fun <T> attempt(block: suspend () -> T): T? =
-        try {
-            block()
-        } catch (cancelled: CancellationException) {
-            throw cancelled
-        } catch (_: Exception) {
-            null
-        }
 }
 
 /** Esquece as chaves de tarefas cujo instante de referência passou há mais de um dia. */

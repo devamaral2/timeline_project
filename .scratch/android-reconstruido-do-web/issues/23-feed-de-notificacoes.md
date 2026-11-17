@@ -4,10 +4,10 @@
 
 **Blocked by:** 12, 22
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Leia antes:** o [README](README.md). No web: o feed de notificações do chat.
 
-- [ ] O feed usa o mesmo cálculo do ticket 22 e mostra vencidos (24 h) e próximos, na ordem e nos textos do web.
-- [ ] Tocar num item abre o detalhe da tarefa.
-- [ ] Feed vazio mostra o estado do web.
+- [x] O feed usa o mesmo cálculo do ticket 22 e mostra vencidos (24 h) e próximos, na ordem e nos textos do web.
+- [x] Tocar num item abre o detalhe da tarefa.
+- [x] Feed vazio mostra o estado do web.
