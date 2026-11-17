@@ -1,0 +1,29 @@
+{
+  "id": "doc-sleep",
+  "name": "Noite de sono",
+  "schemaVersion": 1,
+  "global": false,
+  "derived": false,
+  "tasks": [
+    {
+      "taskId": "task-6",
+      "relation": "creates",
+      "name": "Dormir",
+      "actor": "human",
+      "kind": "sleep",
+      "startedAt": "2026-09-15T01:00:00.000Z",
+      "estimatedFinishAt": "2026-09-15T09:00:00.000Z"
+    }
+  ],
+  "tags": [
+    "saúde"
+  ],
+  "revision": 1,
+  "createdAt": "2026-09-10T12:00:00.000Z",
+  "updatedAt": "2026-09-14T12:12:00.000Z",
+  "type": "sleep",
+  "data": {
+    "trackedSleepTime": 450,
+    "score": 87
+  }
+}

@@ -1,24 +1,16 @@
 package app.braid.mobile.domain.chat
 
 import app.braid.mobile.domain.agenda.FreeWindow
+import app.braid.mobile.domain.request.EntityKind
+import app.braid.mobile.domain.request.RequestEntity
+import app.braid.mobile.domain.request.RequestOperation
+import app.braid.mobile.domain.request.agentFailureText
 import app.braid.mobile.domain.timeline.briefDate
 import app.braid.mobile.domain.timeline.formatTime
 import java.time.Instant
 
-/** Os textos de falha do chat (`ERROR_TEXTS` do web). */
-fun chatFailureText(code: ChatFailureCode): String =
-    when (code) {
-        ChatFailureCode.InvalidInput -> "Não consegui ler essa mensagem. Tente escrever de outro jeito."
-        ChatFailureCode.Forbidden -> "Você não tem permissão para acessar esses dados."
-        ChatFailureCode.LimitReached -> "O pedido ficou grande demais e nada foi gravado. Tente dividir em partes menores."
-        ChatFailureCode.Conflict -> "Os dados mudaram enquanto eu preparava a resposta. Nada foi gravado; tente de novo."
-        ChatFailureCode.Unavailable -> "A IA está indisponível agora. Tente de novo em instantes."
-        ChatFailureCode.Cancelled -> "Pedido cancelado."
-        ChatFailureCode.Internal -> "Algo deu errado. Tente de novo."
-        ChatFailureCode.ConnectionLost -> "A conexão caiu antes da resposta. Se o pedido gravava algo, confira a agenda antes de reenviar."
-        ChatFailureCode.ConnectionFailed -> "Não consegui conectar ao assistente. Tente de novo."
-        ChatFailureCode.SessionExpired -> "Sua sessão acabou. Entre de novo para continuar."
-    }
+/** O texto de falha do chat: o mesmo `ERROR_TEXTS` do web, que o detalhe da tarefa de agente também usa. */
+fun chatFailureText(code: ChatFailureCode): String = agentFailureText(code.code)
 
 const val HERMES_DISABLED_TEXT = "O Hermes está desligado neste ambiente (AI_AUTOMATION)."
 const val HERMES_ENTER_TEXT = "Agora você está falando com o Hermes. Escreva /app para voltar ao assistente da agenda."
@@ -27,13 +19,13 @@ const val HERMES_PENDING_LABEL = "Falando com o Hermes"
 const val STEPS_PENDING_LABEL = "Realizando processos"
 
 /** "Tarefa criada", "Nota alterada"…: a linha de um registro que o pedido tocou. Todo documento aparece como "Nota". */
-fun chatEntityText(entity: ChatEntity): String {
-    val noun = if (entity.kind == ChatEntityKind.Task) "Tarefa" else "Nota"
+fun chatEntityText(entity: RequestEntity): String {
+    val noun = if (entity.kind == EntityKind.Task) "Tarefa" else "Nota"
     val change =
-        when (entity.change) {
-            ChatEntityChange.Created -> "criada"
-            ChatEntityChange.Updated -> "alterada"
-            ChatEntityChange.Deleted -> "apagada"
+        when (entity.operation) {
+            RequestOperation.Create -> "criada"
+            RequestOperation.Update -> "alterada"
+            RequestOperation.Delete -> "apagada"
         }
     return "$noun $change"
 }

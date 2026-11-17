@@ -4,13 +4,13 @@
 
 **Blocked by:** 05
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Leia antes:** o [README](README.md). No web: a tela de notas (Documentos), o detalhe do artefato e o conteúdo de cada tipo.
 
-- [ ] A lista lê `GET /api/artifacts` com tipo, tag, texto e `scope=global` quando aplicável; o menu da seção tem as listas do web.
-- [ ] O detalhe lê `GET /api/artifacts/{id}` e mostra o conteúdo de cada tipo como no web, num componente de conteúdo reutilizável pelo detalhe da tarefa (ticket 16).
-- [ ] O markdown renderiza títulos, listas, ênfase, código e links.
-- [ ] O alimento em cálculo mostra "calculando" e consulta até terminar, parando se a tela sai de vista.
-- [ ] As tarefas ligadas aparecem com a relação e levam ao detalhe delas.
-- [ ] Documentos globais e de outros donos não mostram ações de editar ou excluir.
+- [x] A lista lê `GET /api/artifacts` com tipo, tag, texto e `scope=global` quando aplicável; o menu da seção tem as listas do web.
+- [x] O detalhe lê `GET /api/artifacts/{id}` e mostra o conteúdo de cada tipo como no web, num componente de conteúdo reutilizável pelo detalhe da tarefa (ticket 16).
+- [x] O markdown renderiza títulos, listas, ênfase, código e links.
+- [x] O alimento em cálculo mostra "calculando" e consulta até terminar, parando se a tela sai de vista.
+- [x] As tarefas ligadas aparecem com a relação e levam ao detalhe delas.
+- [x] Documentos globais e de outros donos não mostram ações de editar ou excluir.

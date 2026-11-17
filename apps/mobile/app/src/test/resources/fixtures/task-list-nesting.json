@@ -1,0 +1,709 @@
+{
+  "now": "2026-09-14T15:00:00.000Z",
+  "cards": [
+    {
+      "id": "sub-4",
+      "actor": "human",
+      "kind": "common",
+      "status": "todo",
+      "priority": "medium",
+      "name": "Escolher quarto",
+      "description": "",
+      "startedAt": "2026-09-15T12:00:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "parentTaskId": "sub-2",
+      "revision": 2,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    },
+    {
+      "id": "sub-1",
+      "actor": "human",
+      "kind": "common",
+      "status": "done",
+      "priority": "medium",
+      "name": "Reservar hotel",
+      "description": "",
+      "startedAt": "2026-09-12T12:00:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "parentTaskId": "trip",
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    },
+    {
+      "id": "trip",
+      "actor": "human",
+      "kind": "common",
+      "status": "doing",
+      "priority": "medium",
+      "name": "Planejar viagem",
+      "description": "",
+      "startedAt": "2026-09-14T12:00:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "revision": 5,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    },
+    {
+      "id": "sub-2",
+      "actor": "human",
+      "kind": "common",
+      "status": "todo",
+      "priority": "medium",
+      "name": "Comprar passagens",
+      "description": "",
+      "startedAt": "2026-09-13T12:00:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "parentTaskId": "trip",
+      "revision": 3,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    },
+    {
+      "id": "sub-3",
+      "actor": "agent",
+      "kind": "search_request",
+      "status": "running",
+      "priority": "medium",
+      "name": "Buscar roteiro",
+      "description": "",
+      "startedAt": "2026-09-14T14:48:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "parentTaskId": "trip",
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    },
+    {
+      "id": "sub-5",
+      "actor": "human",
+      "kind": "common",
+      "status": "done",
+      "priority": "medium",
+      "name": "Pagar o quarto",
+      "description": "",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "parentTaskId": "sub-4",
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    },
+    {
+      "id": "sub-7",
+      "actor": "human",
+      "kind": "common",
+      "status": "toDefine",
+      "priority": "medium",
+      "name": "Sem dia ainda",
+      "description": "",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "parentTaskId": "trip",
+      "revision": 7,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    },
+    {
+      "id": "sub-8",
+      "actor": "human",
+      "kind": "common",
+      "status": "cancel",
+      "priority": "medium",
+      "name": "Conferir seguro",
+      "description": "",
+      "startedAt": "2026-09-16T12:00:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "parentTaskId": "sub-4",
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    },
+    {
+      "id": "closed-parent",
+      "actor": "human",
+      "kind": "common",
+      "status": "done",
+      "priority": "medium",
+      "name": "Mudança concluída",
+      "description": "",
+      "startedAt": "2026-09-10T12:00:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    },
+    {
+      "id": "sub-6",
+      "actor": "human",
+      "kind": "common",
+      "status": "todo",
+      "priority": "medium",
+      "name": "Devolver a chave",
+      "description": "",
+      "startedAt": "2026-09-11T12:00:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "parentTaskId": "closed-parent",
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    },
+    {
+      "id": "orphan",
+      "actor": "human",
+      "kind": "common",
+      "status": "todo",
+      "priority": "medium",
+      "name": "Subtarefa solta",
+      "description": "",
+      "startedAt": "2026-09-14T18:00:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "parentTaskId": "not-in-the-list",
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    },
+    {
+      "id": "cyc-a",
+      "actor": "human",
+      "kind": "common",
+      "status": "todo",
+      "priority": "medium",
+      "name": "Ciclo A",
+      "description": "",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "parentTaskId": "cyc-b",
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    },
+    {
+      "id": "cyc-b",
+      "actor": "human",
+      "kind": "common",
+      "status": "todo",
+      "priority": "medium",
+      "name": "Ciclo B",
+      "description": "",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "parentTaskId": "cyc-a",
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    },
+    {
+      "id": "cyc-tail",
+      "actor": "human",
+      "kind": "common",
+      "status": "todo",
+      "priority": "medium",
+      "name": "Fim do ciclo",
+      "description": "",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "parentTaskId": "cyc-b",
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    },
+    {
+      "id": "self",
+      "actor": "human",
+      "kind": "common",
+      "status": "inHold",
+      "priority": "medium",
+      "name": "Principal de si",
+      "description": "",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "parentTaskId": "self",
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    }
+  ],
+  "cases": [
+    {
+      "order": [
+        "sub-4",
+        "sub-1",
+        "trip",
+        "sub-2",
+        "sub-3",
+        "sub-5",
+        "sub-7",
+        "sub-8",
+        "closed-parent",
+        "sub-6",
+        "orphan",
+        "cyc-a",
+        "cyc-b",
+        "cyc-tail",
+        "self"
+      ],
+      "roots": [
+        "trip",
+        "closed-parent",
+        "orphan",
+        "cyc-a",
+        "cyc-b",
+        "cyc-tail",
+        "self"
+      ],
+      "subtasks": {
+        "sub-4": [
+          "sub-5",
+          "sub-8"
+        ],
+        "sub-1": [],
+        "trip": [
+          "sub-1",
+          "sub-2",
+          "sub-3",
+          "sub-7"
+        ],
+        "sub-2": [
+          "sub-4"
+        ],
+        "sub-3": [],
+        "sub-5": [],
+        "sub-7": [],
+        "sub-8": [],
+        "closed-parent": [
+          "sub-6"
+        ],
+        "sub-6": [],
+        "orphan": [],
+        "cyc-a": [],
+        "cyc-b": [],
+        "cyc-tail": [],
+        "self": []
+      }
+    },
+    {
+      "order": [
+        "sub-3",
+        "sub-5",
+        "orphan",
+        "sub-8",
+        "sub-6",
+        "cyc-b",
+        "sub-1",
+        "cyc-a",
+        "trip",
+        "cyc-tail",
+        "sub-2",
+        "sub-4",
+        "closed-parent",
+        "self",
+        "sub-7"
+      ],
+      "roots": [
+        "orphan",
+        "cyc-b",
+        "cyc-a",
+        "trip",
+        "cyc-tail",
+        "closed-parent",
+        "self"
+      ],
+      "subtasks": {
+        "sub-3": [],
+        "sub-5": [],
+        "orphan": [],
+        "sub-8": [],
+        "sub-6": [],
+        "cyc-b": [],
+        "sub-1": [],
+        "cyc-a": [],
+        "trip": [
+          "sub-3",
+          "sub-1",
+          "sub-2",
+          "sub-7"
+        ],
+        "cyc-tail": [],
+        "sub-2": [
+          "sub-4"
+        ],
+        "sub-4": [
+          "sub-5",
+          "sub-8"
+        ],
+        "closed-parent": [
+          "sub-6"
+        ],
+        "self": [],
+        "sub-7": []
+      }
+    },
+    {
+      "order": [
+        "cyc-a",
+        "sub-2",
+        "sub-1",
+        "sub-7",
+        "orphan",
+        "closed-parent",
+        "sub-5",
+        "sub-4",
+        "sub-8",
+        "trip",
+        "cyc-tail",
+        "sub-3",
+        "sub-6",
+        "self",
+        "cyc-b"
+      ],
+      "roots": [
+        "cyc-a",
+        "orphan",
+        "closed-parent",
+        "trip",
+        "cyc-tail",
+        "self",
+        "cyc-b"
+      ],
+      "subtasks": {
+        "cyc-a": [],
+        "sub-2": [
+          "sub-4"
+        ],
+        "sub-1": [],
+        "sub-7": [],
+        "orphan": [],
+        "closed-parent": [
+          "sub-6"
+        ],
+        "sub-5": [],
+        "sub-4": [
+          "sub-5",
+          "sub-8"
+        ],
+        "sub-8": [],
+        "trip": [
+          "sub-2",
+          "sub-1",
+          "sub-7",
+          "sub-3"
+        ],
+        "cyc-tail": [],
+        "sub-3": [],
+        "sub-6": [],
+        "self": [],
+        "cyc-b": []
+      }
+    },
+    {
+      "order": [
+        "self",
+        "cyc-tail",
+        "cyc-b",
+        "cyc-a",
+        "orphan",
+        "sub-6",
+        "closed-parent",
+        "sub-8",
+        "sub-7",
+        "sub-5",
+        "sub-3",
+        "sub-2",
+        "trip",
+        "sub-1",
+        "sub-4"
+      ],
+      "roots": [
+        "self",
+        "cyc-tail",
+        "cyc-b",
+        "cyc-a",
+        "orphan",
+        "closed-parent",
+        "trip"
+      ],
+      "subtasks": {
+        "self": [],
+        "cyc-tail": [],
+        "cyc-b": [],
+        "cyc-a": [],
+        "orphan": [],
+        "sub-6": [],
+        "closed-parent": [
+          "sub-6"
+        ],
+        "sub-8": [],
+        "sub-7": [],
+        "sub-5": [],
+        "sub-3": [],
+        "sub-2": [
+          "sub-4"
+        ],
+        "trip": [
+          "sub-7",
+          "sub-3",
+          "sub-2",
+          "sub-1"
+        ],
+        "sub-1": [],
+        "sub-4": [
+          "sub-8",
+          "sub-5"
+        ]
+      }
+    },
+    {
+      "order": [
+        "sub-4",
+        "sub-1",
+        "sub-2",
+        "sub-3",
+        "sub-5",
+        "sub-7",
+        "sub-8",
+        "closed-parent",
+        "sub-6",
+        "orphan",
+        "cyc-a",
+        "cyc-b",
+        "cyc-tail",
+        "self"
+      ],
+      "roots": [
+        "sub-1",
+        "sub-2",
+        "sub-3",
+        "sub-7",
+        "closed-parent",
+        "orphan",
+        "cyc-a",
+        "cyc-b",
+        "cyc-tail",
+        "self"
+      ],
+      "subtasks": {
+        "sub-4": [
+          "sub-5",
+          "sub-8"
+        ],
+        "sub-1": [],
+        "sub-2": [
+          "sub-4"
+        ],
+        "sub-3": [],
+        "sub-5": [],
+        "sub-7": [],
+        "sub-8": [],
+        "closed-parent": [
+          "sub-6"
+        ],
+        "sub-6": [],
+        "orphan": [],
+        "cyc-a": [],
+        "cyc-b": [],
+        "cyc-tail": [],
+        "self": []
+      }
+    },
+    {
+      "order": [
+        "sub-4",
+        "sub-1",
+        "trip",
+        "sub-3",
+        "sub-5",
+        "sub-7",
+        "sub-8",
+        "closed-parent",
+        "sub-6",
+        "orphan",
+        "cyc-a",
+        "cyc-b",
+        "cyc-tail",
+        "self"
+      ],
+      "roots": [
+        "sub-4",
+        "trip",
+        "closed-parent",
+        "orphan",
+        "cyc-a",
+        "cyc-b",
+        "cyc-tail",
+        "self"
+      ],
+      "subtasks": {
+        "sub-4": [
+          "sub-5",
+          "sub-8"
+        ],
+        "sub-1": [],
+        "trip": [
+          "sub-1",
+          "sub-3",
+          "sub-7"
+        ],
+        "sub-3": [],
+        "sub-5": [],
+        "sub-7": [],
+        "sub-8": [],
+        "closed-parent": [
+          "sub-6"
+        ],
+        "sub-6": [],
+        "orphan": [],
+        "cyc-a": [],
+        "cyc-b": [],
+        "cyc-tail": [],
+        "self": []
+      }
+    }
+  ],
+  "groups": [
+    {
+      "key": "doing",
+      "ids": [
+        "trip"
+      ]
+    },
+    {
+      "key": "todo",
+      "ids": [
+        "orphan",
+        "cyc-a",
+        "cyc-b",
+        "cyc-tail"
+      ]
+    },
+    {
+      "key": "waiting",
+      "ids": [
+        "self"
+      ]
+    },
+    {
+      "key": "done",
+      "ids": [
+        "closed-parent"
+      ]
+    }
+  ],
+  "drawer": [
+    {
+      "id": "sub-4",
+      "when": "Amanhã, 09:00",
+      "overdue": false
+    },
+    {
+      "id": "sub-1",
+      "when": "12 set, 09:00",
+      "overdue": false
+    },
+    {
+      "id": "trip",
+      "when": "Hoje, 09:00",
+      "overdue": false
+    },
+    {
+      "id": "sub-2",
+      "when": "Era ontem",
+      "overdue": true
+    },
+    {
+      "id": "sub-3",
+      "when": "há 12 min",
+      "overdue": false
+    },
+    {
+      "id": "sub-5",
+      "when": "Sem data",
+      "overdue": false
+    },
+    {
+      "id": "sub-7",
+      "when": "Sem data",
+      "overdue": false
+    },
+    {
+      "id": "sub-8",
+      "when": "16 set, 09:00",
+      "overdue": false
+    },
+    {
+      "id": "closed-parent",
+      "when": "10 set, 09:00",
+      "overdue": false
+    },
+    {
+      "id": "sub-6",
+      "when": "Era 11 set",
+      "overdue": true
+    },
+    {
+      "id": "orphan",
+      "when": "Hoje, 15:00",
+      "overdue": false
+    },
+    {
+      "id": "cyc-a",
+      "when": "Sem data",
+      "overdue": false
+    },
+    {
+      "id": "cyc-b",
+      "when": "Sem data",
+      "overdue": false
+    },
+    {
+      "id": "cyc-tail",
+      "when": "Sem data",
+      "overdue": false
+    },
+    {
+      "id": "self",
+      "when": "Sem data",
+      "overdue": false
+    }
+  ]
+}

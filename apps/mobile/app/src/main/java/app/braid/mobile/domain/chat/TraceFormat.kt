@@ -1,5 +1,10 @@
 package app.braid.mobile.domain.chat
 
+import app.braid.mobile.domain.request.AgentTrace
+import app.braid.mobile.domain.request.TraceEntry
+import app.braid.mobile.domain.request.TraceKind
+import app.braid.mobile.domain.request.TraceRunStatus
+import app.braid.mobile.domain.request.TraceStatus
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
@@ -85,13 +90,13 @@ data class Timeline(
  * vai até agora, que é até onde o pedido já andou.
  */
 fun timelineBars(
-    trace: ChatTrace,
+    trace: AgentTrace,
     nowMs: Long,
 ): Timeline {
-    val origin = trace.startedAtMs ?: return Timeline(emptyList(), 0.0)
+    val origin = trace.startedAt?.toEpochMilli() ?: return Timeline(emptyList(), 0.0)
     val placed =
         trace.entries.mapNotNull { entry ->
-            entry.startedAtMs?.let { entry to max(0.0, (it - origin).toDouble()) }
+            entry.startedAt?.toEpochMilli()?.let { entry to max(0.0, (it - origin).toDouble()) }
         }
     val known = placed.maxOfOrNull { (entry, start) -> start + (entry.durationMs ?: 0.0) }?.coerceAtLeast(0.0) ?: 0.0
     val elapsed = if (trace.status == TraceRunStatus.Running) (nowMs - origin).toDouble() else 0.0

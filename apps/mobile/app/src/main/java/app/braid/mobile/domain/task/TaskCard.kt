@@ -124,4 +124,8 @@ data class TaskCard(
     val revision: Int,
     val priority: TaskPriority = TaskPriority.Medium,
     val recurrence: TaskRecurrence? = null,
+    /** A tarefa principal, quando esta é subtarefa (ADR 0016); a lista só a usa se a principal também veio. */
+    val parentTaskId: String? = null,
+    /** Quantos minutos antes do início (ou do prazo, na tarefa longa) cada lembrete avisa. */
+    val notifyOffsetsMinutes: List<Int> = emptyList(),
 )

@@ -48,24 +48,25 @@ import androidx.compose.ui.unit.sp
 import app.braid.mobile.core.designsystem.BraidMonoFont
 import app.braid.mobile.core.designsystem.SvgIcon
 import app.braid.mobile.core.designsystem.braidTokens
-import app.braid.mobile.domain.chat.ChatEntity
-import app.braid.mobile.domain.chat.ChatEntityChange
-import app.braid.mobile.domain.chat.ChatEntityKind
-import app.braid.mobile.domain.chat.ChatRequest
-import app.braid.mobile.domain.chat.ChatStatus
 import app.braid.mobile.domain.chat.HermesStep
-import app.braid.mobile.domain.chat.TraceKind
-import app.braid.mobile.domain.chat.TraceStatus
 import app.braid.mobile.domain.chat.chatEntityText
+import app.braid.mobile.domain.request.AgentRequest
+import app.braid.mobile.domain.request.EntityKind
+import app.braid.mobile.domain.request.RequestEntity
+import app.braid.mobile.domain.request.RequestOperation
+import app.braid.mobile.domain.request.TraceKind
+import app.braid.mobile.domain.request.TraceStatus
+import app.braid.mobile.domain.request.isOpenRequest
+import app.braid.mobile.domain.task.TaskStatus
 
 /** Para onde leva cada registro que a resposta tocou; `null` quando a tela de destino ainda não existe, e a linha é só texto. */
 class ChatEntityLinks(
     val openTask: ((String) -> Unit)? = null,
     val openDocument: ((String) -> Unit)? = null,
 ) {
-    fun opener(entity: ChatEntity): (() -> Unit)? {
-        if (entity.change == ChatEntityChange.Deleted) return null
-        val open = if (entity.kind == ChatEntityKind.Task) openTask else openDocument
+    fun opener(entity: RequestEntity): (() -> Unit)? {
+        if (entity.operation == RequestOperation.Delete) return null
+        val open = if (entity.kind == EntityKind.Task) openTask else openDocument
         return open?.let { { it(entity.id) } }
     }
 }
@@ -142,7 +143,7 @@ internal fun ErrorBubble(
 /** A prévia de cada registro que um pedido criou, alterou ou apagou: o ícone do tipo, o que aconteceu e o nome. */
 @Composable
 internal fun EntityRows(
-    entities: List<ChatEntity>,
+    entities: List<RequestEntity>,
     links: ChatEntityLinks,
     onOpened: () -> Unit,
 ) {
@@ -152,7 +153,7 @@ internal fun EntityRows(
         Box(Modifier.fillMaxWidth().height(1.dp).background(scheme.outline))
         for (entity in entities) {
             val open = links.opener(entity)
-            val deleted = entity.change == ChatEntityChange.Deleted
+            val deleted = entity.operation == RequestOperation.Delete
             Row(
                 modifier =
                     Modifier
@@ -176,7 +177,7 @@ internal fun EntityRows(
                     contentAlignment = Alignment.Center,
                 ) {
                     SvgIcon(
-                        if (entity.kind == ChatEntityKind.Task) ChatIcons.calendarDays else ChatIcons.fileText,
+                        if (entity.kind == EntityKind.Task) ChatIcons.calendarDays else ChatIcons.fileText,
                         size = 20.dp,
                         color = scheme.onSurfaceVariant,
                         strokeWidth = 1.75f,
@@ -203,13 +204,14 @@ internal fun EntityRows(
 }
 
 /** Como a caixa mostra cada passo: a marca e o texto que o leitor de tela ouve. */
-private fun stepText(status: ChatStatus): String =
+private fun stepText(status: TaskStatus): String =
     when (status) {
-        ChatStatus.Queued, ChatStatus.Waiting -> "aguardando"
-        ChatStatus.Running -> "em andamento"
-        ChatStatus.Done -> "concluído"
-        ChatStatus.Failed -> "falhou"
-        ChatStatus.Cancel -> "cancelado"
+        TaskStatus.Queued, TaskStatus.Waiting -> "aguardando"
+        TaskStatus.Running -> "em andamento"
+        TaskStatus.Done -> "concluído"
+        TaskStatus.Failed -> "falhou"
+        TaskStatus.Cancel -> "cancelado"
+        else -> "aguardando"
     }
 
 /**
@@ -219,7 +221,7 @@ private fun stepText(status: ChatStatus): String =
  */
 @Composable
 internal fun ProcessBox(
-    request: ChatRequest?,
+    request: AgentRequest?,
     links: ChatEntityLinks,
     onOpenEntity: () -> Unit,
     onCancel: (() -> Unit)?,
@@ -227,7 +229,7 @@ internal fun ProcessBox(
     val scheme = MaterialTheme.colorScheme
     val steps = request?.steps.orEmpty()
     val query = steps.firstOrNull { it.result != null }?.result
-    val open = request == null || request.status.isOpen
+    val open = request == null || isOpenRequest(request.status)
     Column(Modifier.fillMaxWidth().semantics { contentDescription = "Processo" }, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             text = "REALIZANDO PROCESSOS:",
@@ -269,10 +271,10 @@ internal fun ProcessBox(
         }
         EntityRows(request?.entities.orEmpty(), links, onOpenEntity)
         val message = request?.message
-        if (request?.status == ChatStatus.Done && !message.isNullOrEmpty()) {
+        if (request?.status == TaskStatus.Done && !message.isNullOrEmpty()) {
             Text(text = message, fontSize = 15.sp, lineHeight = 24.sp, color = scheme.onBackground)
         }
-        if (onCancel != null && request != null && request.status.isOpen) {
+        if (onCancel != null && request != null && isOpenRequest(request.status)) {
             Box(
                 Modifier
                     .heightIn(min = 44.dp)
@@ -304,15 +306,15 @@ private fun QueryCell(
 @Composable
 private fun StepRow(
     label: String,
-    status: ChatStatus,
+    status: TaskStatus,
 ) {
     val scheme = MaterialTheme.colorScheme
     val tokens = braidTokens()
     val tint =
         when (status) {
-            ChatStatus.Done -> tokens.brand
-            ChatStatus.Failed -> scheme.error
-            ChatStatus.Running -> scheme.tertiary
+            TaskStatus.Done -> tokens.brand
+            TaskStatus.Failed -> scheme.error
+            TaskStatus.Running -> scheme.tertiary
             else -> scheme.onSurfaceVariant
         }
     Row(
@@ -322,9 +324,9 @@ private fun StepRow(
     ) {
         Box(Modifier.size(14.dp), contentAlignment = Alignment.Center) {
             when (status) {
-                ChatStatus.Done -> SvgIcon(ChatIcons.check, size = 14.dp, color = tint, strokeWidth = 2.2f)
-                ChatStatus.Failed -> SvgIcon(ChatIcons.close, size = 14.dp, color = tint, strokeWidth = 2.2f)
-                ChatStatus.Running -> Spinner(14.dp, tint)
+                TaskStatus.Done -> SvgIcon(ChatIcons.check, size = 14.dp, color = tint, strokeWidth = 2.2f)
+                TaskStatus.Failed -> SvgIcon(ChatIcons.close, size = 14.dp, color = tint, strokeWidth = 2.2f)
+                TaskStatus.Running -> Spinner(14.dp, tint)
                 else -> SvgIcon(ChatIcons.circle, size = 14.dp, color = tint, strokeWidth = 2.2f)
             }
         }

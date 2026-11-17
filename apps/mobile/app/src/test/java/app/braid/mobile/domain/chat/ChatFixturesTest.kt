@@ -1,10 +1,13 @@
 package app.braid.mobile.domain.chat
 
 import app.braid.mobile.core.network.BraidJson
-import app.braid.mobile.data.chat.ChatTraceDto
-import app.braid.mobile.data.chat.TraceEntryDto
-import app.braid.mobile.data.chat.toDomain
+import app.braid.mobile.data.requests.RequestDto
+import app.braid.mobile.data.requests.toDomain
 import app.braid.mobile.domain.agenda.FreeWindow
+import app.braid.mobile.domain.request.AgentRequest
+import app.braid.mobile.domain.request.AgentTrace
+import app.braid.mobile.domain.request.EntityKind
+import app.braid.mobile.domain.request.TraceEntry
 import app.braid.mobile.support.fixtureCases
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -96,10 +99,28 @@ class ChatFixturesTest {
         assertEquals(listOf(ChatCommand.Settings), parseCommand("/conf", available = listOf(ChatCommand.Settings))?.matches)
     }
 
-    private fun entriesOf(array: JsonArray): List<TraceEntry> =
-        array.map {
-            BraidJson.decodeFromJsonElement(TraceEntryDto.serializer(), it).toDomain()!!
-        }
+    /** O pedido como a API o entrega, com só o que o caso do fixture traz: o rastro ou as entidades. */
+    private fun requestWith(
+        trace: JsonElement? = null,
+        entities: JsonArray = JsonArray(emptyList()),
+    ): AgentRequest =
+        BraidJson
+            .decodeFromJsonElement(
+                RequestDto.serializer(),
+                buildJsonObject {
+                    put("id", "r1")
+                    put("kind", "request")
+                    put("route", "steps")
+                    put("status", "running")
+                    put("title", "Pedido")
+                    put("createdAt", "2026-09-14T14:48:00.000Z")
+                    put("updatedAt", "2026-09-14T14:48:00.000Z")
+                    put("entities", entities)
+                    if (trace != null) put("trace", trace)
+                },
+            ).toDomain()
+
+    private fun entriesOf(array: JsonArray): List<TraceEntry> = requestWith(trace = buildJsonObject { put("entries", array) }).entries
 
     @Test
     fun `the Hermes steps are the thoughts and tools of the trace, minus what has not started`() {
@@ -123,7 +144,7 @@ class ChatFixturesTest {
         }
     }
 
-    private fun traceOf(element: JsonElement): ChatTrace = BraidJson.decodeFromJsonElement(ChatTraceDto.serializer(), element).toDomain()
+    private fun traceOf(element: JsonElement): AgentTrace = requireNotNull(requestWith(trace = element).trace)
 
     @Test
     fun `the timeline puts each step where the web puts it`() {
@@ -199,19 +220,16 @@ class ChatFixturesTest {
     @Test
     fun `the entity rows say what the web says`() {
         for (case in cases("entityRows")) {
-            val entity =
-                BraidJson
-                    .decodeFromJsonElement(
-                        app.braid.mobile.data.chat.ChatEntityDto
-                            .serializer(),
-                        case.args[0],
-                    ).toDomain()
+            val entity = requestWith(entities = JsonArray(listOf(case.args[0]))).entities.single()
             val expected = case.result.jsonObject
             assertEquals(expected.string("text"), chatEntityText(entity))
             assertEquals(expected.string("id"), entity.id)
             assertEquals(expected.string("label"), entity.name)
-            assertEquals(expected.string("kind") == "task", entity.kind == ChatEntityKind.Task)
-            assertEquals(expected.string("change"), entity.change.name.lowercase())
+            assertEquals(expected.string("kind") == "task", entity.kind == EntityKind.Task)
+            assertEquals(
+                expected.string("change"),
+                mapOf("create" to "created", "update" to "updated", "delete" to "deleted")[entity.operation.code],
+            )
         }
     }
 

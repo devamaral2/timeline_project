@@ -7,10 +7,7 @@ import app.braid.mobile.domain.chat.ChatFailureCode
 import app.braid.mobile.domain.chat.ChatModeCommand
 import app.braid.mobile.domain.chat.ChatPolling
 import app.braid.mobile.domain.chat.ChatRepository
-import app.braid.mobile.domain.chat.ChatRequest
 import app.braid.mobile.domain.chat.ChatRequestException
-import app.braid.mobile.domain.chat.ChatRoute
-import app.braid.mobile.domain.chat.ChatStatus
 import app.braid.mobile.domain.chat.HERMES_DISABLED_TEXT
 import app.braid.mobile.domain.chat.HERMES_ENTER_TEXT
 import app.braid.mobile.domain.chat.HERMES_LEAVE_TEXT
@@ -21,8 +18,12 @@ import app.braid.mobile.domain.chat.chatFailureText
 import app.braid.mobile.domain.chat.hermesStepsOf
 import app.braid.mobile.domain.chat.parseChatCommand
 import app.braid.mobile.domain.chat.requestWithWindow
+import app.braid.mobile.domain.request.AgentRequest
+import app.braid.mobile.domain.request.RequestRoute
+import app.braid.mobile.domain.request.isOpenRequest
 import app.braid.mobile.domain.session.SessionRepository
 import app.braid.mobile.domain.session.SessionState
+import app.braid.mobile.domain.task.TaskStatus
 import app.braid.mobile.domain.time.AppClock
 import app.braid.mobile.domain.timeline.dayKeyOf
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -192,7 +193,7 @@ class ChatViewModel
                 commit {
                     it.copy(
                         messages = it.messages.filter { message -> message.id != processId } + ChatMessage.Process(processId, null),
-                        turns = upsertTurn(it.turns, ChatTurn(id, text, ChatRoute.Steps, running = true, trace = null)),
+                        turns = upsertTurn(it.turns, ChatTurn(id, text, RequestRoute.Steps, running = true, trace = null)),
                         pending = ChatPending(id, STEPS_PENDING_LABEL, requestId),
                     )
                 }
@@ -228,7 +229,7 @@ class ChatViewModel
                 knownRequests += request.id
                 commit {
                     it.copy(
-                        turns = upsertTurn(it.turns, ChatTurn(id, text, ChatRoute.Hermes, running = true, trace = null)),
+                        turns = upsertTurn(it.turns, ChatTurn(id, text, RequestRoute.Hermes, running = true, trace = null)),
                         pending = ChatPending(id, HERMES_PENDING_LABEL, request.id),
                     )
                 }
@@ -255,7 +256,7 @@ class ChatViewModel
                     val view = repository.request(requestId)
                     failures = 0
                     if (id !in following) return
-                    if (!view.status.isOpen) {
+                    if (!isOpenRequest(view.status)) {
                         finishRequest(id, view)
                         return
                     }
@@ -288,10 +289,10 @@ class ChatViewModel
          */
         private fun applyView(
             id: String,
-            view: ChatRequest,
+            view: AgentRequest,
         ) {
             val processId = "$id-process"
-            val hermes = view.route == ChatRoute.Hermes
+            val hermes = view.route == RequestRoute.Hermes
             commit { current ->
                 var messages =
                     if (hermes) {
@@ -301,10 +302,10 @@ class ChatViewModel
                     }
                 // O Hermes não grava passos: os pensamentos e as ferramentas vêm do rastro, ao vivo e depois do fim.
                 if (hermes) {
-                    val steps = hermesStepsOf(view.trace?.entries.orEmpty())
+                    val steps = hermesStepsOf(view.entries)
                     if (steps.isNotEmpty()) {
                         val stepsId = "$id-steps"
-                        val message = ChatMessage.HermesSteps(stepsId, steps, view.status.isOpen)
+                        val message = ChatMessage.HermesSteps(stepsId, steps, isOpenRequest(view.status))
                         messages =
                             if (messages.any { it.id == stepsId }) {
                                 messages.map {
@@ -330,8 +331,8 @@ class ChatViewModel
                                 id
                             ) {
                                 it.copy(
-                                    route = if (hermes) ChatRoute.Hermes else ChatRoute.Steps,
-                                    running = view.status.isOpen,
+                                    route = if (hermes) RequestRoute.Hermes else RequestRoute.Steps,
+                                    running = isOpenRequest(view.status),
                                     trace = view.trace,
                                 )
                             } else {
@@ -339,7 +340,7 @@ class ChatViewModel
                             }
                         },
                     pending =
-                        if (hermes && view.status.isOpen && pending?.id == id && pending.label != HERMES_PENDING_LABEL) {
+                        if (hermes && isOpenRequest(view.status) && pending?.id == id && pending.label != HERMES_PENDING_LABEL) {
                             pending.copy(label = HERMES_PENDING_LABEL)
                         } else {
                             pending
@@ -351,15 +352,15 @@ class ChatViewModel
         /** O pedido terminou: feito (com a agenda atualizada se algo mudou), ou falhou / foi cancelado. */
         private fun finishRequest(
             id: String,
-            view: ChatRequest,
+            view: AgentRequest,
         ) {
             applyView(id, view)
-            if (view.status == ChatStatus.Done) {
+            if (view.status == TaskStatus.Done) {
                 following -= id
                 commit { current ->
                     val answer =
                         if (view.route ==
-                            ChatRoute.Hermes
+                            RequestRoute.Hermes
                         ) {
                             listOf(ChatMessage.Assistant("$id-answer", view.message.orEmpty()))
                         } else {
@@ -371,14 +372,14 @@ class ChatViewModel
                     )
                 }
                 // O Hermes pode ter mexido em qualquer registro; criar, editar e vincular mudam a agenda, uma consulta pura não.
-                if (view.route == ChatRoute.Hermes || view.entities.isNotEmpty()) mutableEntitiesChanged.tryEmit(Unit)
+                if (view.route == RequestRoute.Hermes || view.entities.isNotEmpty()) mutableEntitiesChanged.tryEmit(Unit)
                 return
             }
             // Um pedido que falhou ou foi cancelado pode ter gravado algo antes de parar.
             if (view.entities.isNotEmpty()) mutableEntitiesChanged.tryEmit(Unit)
             // O Hermes desligado: o servidor escreve o aviso, que diz mais que o texto do código.
-            val notice = if (view.route == ChatRoute.Hermes && view.errorCode == "unavailable") view.message else null
-            fail(id, if (view.status == ChatStatus.Cancel) ChatFailureCode.Cancelled else ChatFailureCode.fromCode(view.errorCode), notice)
+            val notice = if (view.route == RequestRoute.Hermes && view.errorCode == "unavailable") view.message else null
+            fail(id, if (view.status == TaskStatus.Cancel) ChatFailureCode.Cancelled else ChatFailureCode.fromCode(view.errorCode), notice)
         }
 
         /** [text] troca o texto do código pelo que o servidor escreveu (o aviso do Hermes desligado). */
@@ -489,8 +490,8 @@ class ChatViewModel
                         repository
                             .recent()
                             .filter {
-                                (it.route == ChatRoute.Steps || it.route == ChatRoute.Hermes) &&
-                                    it.status.isOpen &&
+                                (it.route == RequestRoute.Steps || it.route == RequestRoute.Hermes) &&
+                                    isOpenRequest(it.status) &&
                                     it.id !in knownRequests
                             }.reversed()
                     } catch (cancelled: CancellationException) {
@@ -505,13 +506,13 @@ class ChatViewModel
             }
         }
 
-        private fun restore(open: List<ChatRequest>) {
+        private fun restore(open: List<AgentRequest>) {
             val restored = mutableListOf<ChatMessage>()
             for (request in open) {
                 knownRequests += request.id
                 following += request.id
                 restored += ChatMessage.User(request.id, request.text ?: request.title)
-                if (request.route == ChatRoute.Steps) restored += ChatMessage.Process("${request.id}-process", request)
+                if (request.route == RequestRoute.Steps) restored += ChatMessage.Process("${request.id}-process", request)
             }
             val newest = open.last()
             commit { current ->
@@ -522,7 +523,7 @@ class ChatViewModel
                         current.pending
                             ?: ChatPending(
                                 newest.id,
-                                if (newest.route == ChatRoute.Hermes) HERMES_PENDING_LABEL else STEPS_PENDING_LABEL,
+                                if (newest.route == RequestRoute.Hermes) HERMES_PENDING_LABEL else STEPS_PENDING_LABEL,
                                 newest.id,
                             ),
                 )

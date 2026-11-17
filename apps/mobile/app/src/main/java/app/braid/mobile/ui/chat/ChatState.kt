@@ -1,11 +1,11 @@
 package app.braid.mobile.ui.chat
 
 import app.braid.mobile.domain.agenda.FreeWindow
-import app.braid.mobile.domain.chat.ChatEntity
-import app.braid.mobile.domain.chat.ChatRequest
-import app.braid.mobile.domain.chat.ChatRoute
-import app.braid.mobile.domain.chat.ChatTrace
 import app.braid.mobile.domain.chat.HermesStep
+import app.braid.mobile.domain.request.AgentRequest
+import app.braid.mobile.domain.request.AgentTrace
+import app.braid.mobile.domain.request.RequestEntity
+import app.braid.mobile.domain.request.RequestRoute
 
 /** Uma linha da conversa. */
 sealed interface ChatMessage {
@@ -21,7 +21,7 @@ sealed interface ChatMessage {
     data class Assistant(
         override val id: String,
         val text: String,
-        val entities: List<ChatEntity> = emptyList(),
+        val entities: List<RequestEntity> = emptyList(),
     ) : ChatMessage
 
     /**
@@ -39,7 +39,7 @@ sealed interface ChatMessage {
     /** A caixa de processo: [request] é nulo até o servidor responder o primeiro estado. */
     data class Process(
         override val id: String,
-        val request: ChatRequest?,
+        val request: AgentRequest?,
     ) : ChatMessage
 
     /** Os passos do Hermes (ferramentas e pensamentos), ao vivo e depois do fim do turno. */
@@ -55,9 +55,9 @@ data class ChatTurn(
     /** O id da mensagem do usuário. */
     val id: String,
     val request: String,
-    val route: ChatRoute,
+    val route: RequestRoute,
     val running: Boolean,
-    val trace: ChatTrace?,
+    val trace: AgentTrace?,
 )
 
 data class ChatPending(

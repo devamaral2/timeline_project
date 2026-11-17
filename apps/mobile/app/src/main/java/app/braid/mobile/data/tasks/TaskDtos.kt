@@ -86,6 +86,8 @@ fun TaskCardDto.toDomain(): TaskCard =
         revision = revision,
         priority = TaskPriority.fromCode(priority),
         recurrence = recurrence?.toDomain(),
+        parentTaskId = parentTaskId,
+        notifyOffsetsMinutes = notifyOffsetsMinutes.map { it.toInt() },
     )
 
 fun TaskRecurrenceDto.toDomain() =

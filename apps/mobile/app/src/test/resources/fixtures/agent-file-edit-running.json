@@ -1,0 +1,12 @@
+{
+  "id": "req-edit",
+  "kind": "request",
+  "route": "hermes",
+  "status": "running",
+  "title": "Editar pesquisar/SKILL.md",
+  "createdAt": "2026-09-14T14:48:00.000Z",
+  "updatedAt": "2026-09-14T14:49:00.000Z",
+  "steps": [],
+  "entities": [],
+  "progress": "Avaliando o impacto da mudança…"
+}

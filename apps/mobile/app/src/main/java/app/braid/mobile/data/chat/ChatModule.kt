@@ -1,6 +1,5 @@
 package app.braid.mobile.data.chat
 
-import app.braid.mobile.core.network.ApiClientFactory
 import app.braid.mobile.domain.chat.ChatPolling
 import app.braid.mobile.domain.chat.ChatRepository
 import dagger.Binds
@@ -21,10 +20,6 @@ abstract class ChatBindings {
 @Module
 @InstallIn(SingletonComponent::class)
 object ChatProvider {
-    @Provides
-    @Singleton
-    fun provideChatApi(clients: ApiClientFactory): ChatApi = clients.create(ChatApi::class.java)
-
     @Provides
     fun provideChatPolling(): ChatPolling = ChatPolling()
 }

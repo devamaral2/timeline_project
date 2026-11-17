@@ -4,13 +4,15 @@
 
 **Blocked by:** 07
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Leia antes:** o [README](README.md). ADRs [0016](../../../docs/adr/0016-subtarefa-no-lugar-da-sequencia.md) e [0017](../../../docs/adr/0017-subtarefas-dentro-da-principal-na-lista.md). No web: o aninhamento de subtarefas nos grupos de tarefas.
 
-- [ ] O aninhamento é portado da regra do web e conferido contra fixtures do TS, inclusive o ciclo vindo da rede, que não esconde ninguém.
-- [ ] A principal mostra "n/m" e a pizza das subtarefas diretas; os grupos e a contagem contam só as linhas.
-- [ ] As gavetas começam abertas, inclusive as aninhadas.
-- [ ] Cada subtarefa na gaveta mostra glifo, nome (que leva ao detalhe) e o quando, sem "Sem data".
-- [ ] O glifo de uma subtarefa de pessoa abre o seletor de status e grava com a revisão dela.
-- [ ] Sem a principal na lista (por filtro, por executor ou principal sem status), a subtarefa volta a ser linha.
+- [x] O aninhamento é portado da regra do web e conferido contra fixtures do TS, inclusive o ciclo vindo da rede, que não esconde ninguém.
+- [x] A principal mostra "n/m" e a pizza das subtarefas diretas; os grupos e a contagem contam só as linhas.
+- [x] As gavetas começam abertas, inclusive as aninhadas.
+- [x] Cada subtarefa na gaveta mostra glifo, nome (que leva ao detalhe) e o quando, sem "Sem data".
+- [x] O glifo de uma subtarefa de pessoa abre o seletor de status e grava com a revisão dela.
+- [x] Sem a principal na lista (por filtro, por executor ou principal sem status), a subtarefa volta a ser linha.
+
+**Nota (implementação):** sem emulador nesta sessão, a comparação lado a lado com o web e os screenshots do PR ficam pendentes.

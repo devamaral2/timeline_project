@@ -2,12 +2,12 @@
  * Fixtures da lista de Tarefas: as respostas de `GET /api/tasks/tracked` validadas pelo schema do contrato e as
  * saídas das funções do web que a tela usa (`oneRowPerSeries`, `groupTrackedTasks`, `showsSeriesRule`,
  * `recurrenceRuleLabel`, `cardWhenLabel` com a regra no lugar do horário, `taskFilterCount`, `trackedFilters`,
- * `tagsByUse`). A hierarquia (`nestSubtasks`) é da gaveta de subtarefas, ticket 08.
+ * `tagsByUse`) e a gaveta de subtarefas (`nestSubtasks`, ticket 08).
  */
 import { taskCardSchema } from "../../../packages/contracts/src/schemas";
 import { statusPatch } from "../../../apps/web/src/lib/tasks/task-read-model";
-import { cardWhenLabel, recurrenceRuleLabel } from "../../../apps/web/src/lib/tasks/card-text";
-import { groupTrackedTasks, oneRowPerSeries, showsSeriesRule } from "../../../apps/web/src/lib/tasks/task-groups";
+import { cardIsOverdue, cardWhenLabel, recurrenceRuleLabel } from "../../../apps/web/src/lib/tasks/card-text";
+import { groupTrackedTasks, nestSubtasks, oneRowPerSeries, showsSeriesRule } from "../../../apps/web/src/lib/tasks/task-groups";
 import { PRIORITY_ORDER, tagsByUse, taskFilterCount, trackedFilters } from "../../../apps/web/src/lib/tasks/task-filters";
 import { NOW } from "./tasks";
 
@@ -97,6 +97,50 @@ const filterCases = [
   { tag: null, priorities: [], query: "reunião" },
 ].map((filters) => ({ filters, count: taskFilterCount(filters), query: trackedFilters(filters) }));
 
+/**
+ * Uma lista com hierarquia, na ordem do servidor (filhas antes das principais de propósito): uma principal com
+ * subtarefas de pessoa e de agente, subtarefa de subtarefa em dois níveis, principal feita (grupo recolhido), subtarefa
+ * cuja principal não veio, um ciclo de dois, uma cadeia que termina no ciclo e uma tarefa que é a própria principal.
+ */
+const subtaskCards = [
+  card({ id: "sub-4", name: "Escolher quarto", status: "todo", parentTaskId: "sub-2", startedAt: "2026-09-15T12:00:00.000Z", revision: 2 }),
+  card({ id: "sub-1", name: "Reservar hotel", status: "done", parentTaskId: "trip", startedAt: "2026-09-12T12:00:00.000Z" }),
+  card({ id: "trip", name: "Planejar viagem", status: "doing", startedAt: "2026-09-14T12:00:00.000Z", revision: 5 }),
+  card({ id: "sub-2", name: "Comprar passagens", status: "todo", parentTaskId: "trip", startedAt: "2026-09-13T12:00:00.000Z", revision: 3 }),
+  card({ id: "sub-3", name: "Buscar roteiro", actor: "agent", kind: "search_request", status: "running", parentTaskId: "trip", startedAt: "2026-09-14T14:48:00.000Z" }),
+  card({ id: "sub-5", name: "Pagar o quarto", status: "done", parentTaskId: "sub-4" }),
+  card({ id: "sub-7", name: "Sem dia ainda", status: "toDefine", parentTaskId: "trip", revision: 7 }),
+  card({ id: "sub-8", name: "Conferir seguro", status: "cancel", parentTaskId: "sub-4", startedAt: "2026-09-16T12:00:00.000Z" }),
+  card({ id: "closed-parent", name: "Mudança concluída", status: "done", startedAt: "2026-09-10T12:00:00.000Z" }),
+  card({ id: "sub-6", name: "Devolver a chave", status: "todo", parentTaskId: "closed-parent", startedAt: "2026-09-11T12:00:00.000Z" }),
+  card({ id: "orphan", name: "Subtarefa solta", status: "todo", parentTaskId: "not-in-the-list", startedAt: "2026-09-14T18:00:00.000Z" }),
+  card({ id: "cyc-a", name: "Ciclo A", status: "todo", parentTaskId: "cyc-b" }),
+  card({ id: "cyc-b", name: "Ciclo B", status: "todo", parentTaskId: "cyc-a" }),
+  card({ id: "cyc-tail", name: "Fim do ciclo", status: "todo", parentTaskId: "cyc-b" }),
+  card({ id: "self", name: "Principal de si", status: "inHold", parentTaskId: "self" }),
+];
+
+/** Uma ordem embaralhada, sempre a mesma, para a regra não depender da ordem em que a rede entrega. */
+function shuffled<T>(items: readonly T[], seed: number): T[] {
+  const copy = [...items];
+  let state = seed;
+  for (let index = copy.length - 1; index > 0; index -= 1) {
+    state = (state * 1103515245 + 12345) % 2147483648;
+    const other = state % (index + 1);
+    [copy[index], copy[other]] = [copy[other], copy[index]];
+  }
+  return copy;
+}
+
+function nestingOf(input: ReturnType<typeof card>[]) {
+  const tree = nestSubtasks(input);
+  return {
+    order: input.map((item) => item.id),
+    roots: tree.roots.map((item) => item.id),
+    subtasks: Object.fromEntries(input.map((item) => [item.id, tree.subtasksOf(item.id).map((child) => child.id)])),
+  };
+}
+
 export function taskListFixtures(): Record<string, unknown> {
   const rows = oneRowPerSeries(cards);
   return {
@@ -117,6 +161,38 @@ export function taskListFixtures(): Record<string, unknown> {
     "task-list-after-done": reread({ "task-1": { status: "done", revision: 4 } }),
     /** A releitura de um conflito: outra pessoa já tinha cancelado a tarefa (revisão 9). */
     "task-list-after-conflict": reread({ "task-1": { status: "cancel", revision: 9 } }),
+    "task-list-subtasks": subtaskCards,
+    /** A lista depois de "Comprar passagens" (revisão 3) passar a "done" (revisão 4), pelo próprio servidor. */
+    "task-list-subtasks-after-done": subtaskCards.map((item) => (item.id === "sub-2" ? card({ ...item, status: "done", revision: 4 }) : item)),
+    /** A releitura de um conflito: outra pessoa já tinha cancelado "Comprar passagens" (revisão 9). */
+    "task-list-subtasks-after-conflict": subtaskCards.map((item) => (item.id === "sub-2" ? card({ ...item, status: "cancel", revision: 9 }) : item)),
+    /** Sem a principal (por filtro de tag ou prioridade, ou por não ter status): as subtarefas voltam a ser linhas. */
+    "task-list-subtasks-no-parent": subtaskCards.filter((item) => item.id !== "trip"),
+    /** O filtro de executor "Agentes": só a subtarefa de agente chega, sem a principal de pessoa. */
+    "task-list-subtasks-agents": subtaskCards.filter((item) => item.actor === "agent"),
+    "task-list-nesting": {
+      now: NOW,
+      cards: subtaskCards,
+      /** A ordem do servidor e três embaralhadas: a árvore tem de sair igual em todas. */
+      cases: [
+        nestingOf(subtaskCards),
+        nestingOf(shuffled(subtaskCards, 7)),
+        nestingOf(shuffled(subtaskCards, 42)),
+        nestingOf([...subtaskCards].reverse()),
+        nestingOf(subtaskCards.filter((item) => item.id !== "trip")),
+        nestingOf(subtaskCards.filter((item) => item.id !== "sub-2")),
+      ],
+      groups: groupTrackedTasks(nestSubtasks(oneRowPerSeries(subtaskCards)).roots).map((group) => ({
+        key: group.key,
+        ids: group.cards.map((item) => item.id),
+      })),
+      /** O quando e o atraso de cada cartão na gaveta (sem a regra da série). */
+      drawer: subtaskCards.map((item) => ({
+        id: item.id,
+        when: cardWhenLabel(item, new Date(NOW)),
+        overdue: cardIsOverdue(item, new Date(NOW)),
+      })),
+    },
     "task-list-pipeline": {
       now: NOW,
       cards,

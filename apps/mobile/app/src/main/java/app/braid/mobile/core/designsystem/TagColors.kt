@@ -36,8 +36,15 @@ fun tagRgb(
     name: String,
     lightness: Float,
     chroma: Float,
+): Int = oklchRgb(hueForTag(name).toDouble(), lightness, chroma)
+
+/** `0xRRGGBB` da cor OKLCH de matiz [hue] (em graus), preso ao gamut sRGB. */
+fun oklchRgb(
+    hue: Double,
+    lightness: Float,
+    chroma: Float,
 ): Int {
-    val radians = Math.toRadians(hueForTag(name).toDouble())
+    val radians = Math.toRadians(hue)
     val a = chroma.toDouble() * cos(radians)
     val b = chroma.toDouble() * sin(radians)
     val l = lightness.toDouble()

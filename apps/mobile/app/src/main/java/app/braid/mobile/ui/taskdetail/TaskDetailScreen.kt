@@ -92,9 +92,15 @@ import java.time.Instant
 fun TaskDetailPage(
     onBack: () -> Unit,
     onOpenTask: (String) -> Unit,
+    onOpenArtifact: (String) -> Unit = {},
     viewModel: TaskDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    // A tarefa de agente tem o próprio detalhe: o pedido, a sessão e o rodapé de continuar e cancelar.
+    if ((state as? TaskDetailUiState.Content)?.task?.actor == TaskActor.Agent) {
+        AgentTaskPage(onBack = onBack, onOpenTask = onOpenTask, onOpenArtifact = onOpenArtifact)
+        return
+    }
     val deleted = (state as? TaskDetailUiState.Content)?.deleted == true
     LaunchedEffect(deleted) { if (deleted) onBack() }
     TaskDetailScreen(
@@ -155,7 +161,7 @@ fun TaskDetailScreen(
 }
 
 @Composable
-private fun TopBar(
+internal fun TopBar(
     onBack: () -> Unit,
     onDelete: (() -> Unit)?,
 ) {
@@ -226,7 +232,7 @@ private fun TopBar(
 }
 
 @Composable
-private fun Message(
+internal fun Message(
     text: String,
     alert: Boolean = false,
 ) {
@@ -261,8 +267,6 @@ private fun Body(
             lineHeight = 18.sp,
         )
     }
-    // A tarefa de agente é do ticket 10: aqui ela só tem o topo.
-    if (task.actor == TaskActor.Agent) return
     InfoSection(task)
     content.parent?.let {
         LinkedSection("Tarefa principal", "Carregando tarefa principal…", "A tarefa principal não carregou.", it, content.now, onOpenTask)
@@ -309,25 +313,6 @@ private fun Header(
                     TaskPriorityMark(task.priority)
                     Text(task.priority.label, color = MaterialTheme.colorScheme.onBackground, fontSize = 14.sp, lineHeight = 20.sp)
                 }
-            }
-        } else if (task.actor == TaskActor.Agent && task.status != null) {
-            Row(Modifier.fillMaxWidth().defaultMinSize(minHeight = 40.dp), verticalAlignment = Alignment.CenterVertically) {
-                TaskStatusGlyph(actor = TaskActor.Agent, status = task.status, size = 16.dp)
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    taskStatusName(TaskActor.Agent, task.status),
-                    color = MaterialTheme.colorScheme.onBackground,
-                    fontSize = 14.sp,
-                    lineHeight = 20.sp,
-                )
-                Spacer(Modifier.weight(1f))
-                SvgIcon(
-                    BraidIcons.bot,
-                    size = 20.dp,
-                    color = braidTokens().brand,
-                    strokeWidth = 1.9f,
-                    modifier = Modifier.clearAndSetSemantics {},
-                )
             }
         }
     }
@@ -389,7 +374,10 @@ private fun ChoiceChip(
 
 /** O rótulo de seção: a legenda em mono e um fio até a margem. */
 @Composable
-private fun SectionLabel(text: String) {
+private fun SectionLabel(
+    text: String,
+    count: String? = null,
+) {
     Row(Modifier.fillMaxWidth().semantics { heading() }, verticalAlignment = Alignment.CenterVertically) {
         Text(
             text = text.uppercase(),
@@ -400,25 +388,36 @@ private fun SectionLabel(text: String) {
             lineHeight = 16.sp,
             letterSpacing = 0.08.em,
         )
+        if (count != null) {
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = count,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontFamily = BraidMonoFont,
+                fontSize = 12.sp,
+                lineHeight = 16.sp,
+            )
+        }
         Spacer(Modifier.width(12.dp))
         HorizontalDivider(Modifier.weight(1f), color = MaterialTheme.colorScheme.outline)
     }
 }
 
 @Composable
-private fun Section(
+internal fun Section(
     title: String,
+    count: String? = null,
     content: @Composable () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SectionLabel(title)
+        SectionLabel(title, count)
         content()
     }
 }
 
 /** Uma linha de fato: o rótulo à esquerda, o valor à direita, um fio embaixo. */
 @Composable
-private fun FactRow(
+internal fun FactRow(
     label: String,
     value: @Composable () -> Unit,
 ) {
@@ -436,7 +435,7 @@ private fun FactRow(
 private const val HAIRLINE_ALPHA = 0.6f
 
 @Composable
-private fun FactText(text: String) {
+internal fun FactText(text: String) {
     Text(
         text = text,
         color = MaterialTheme.colorScheme.onBackground,
@@ -620,7 +619,7 @@ private fun Description(text: String) {
 }
 
 @Composable
-private fun LinkedSection(
+internal fun LinkedSection(
     title: String,
     loadingMessage: String,
     failedMessage: String,

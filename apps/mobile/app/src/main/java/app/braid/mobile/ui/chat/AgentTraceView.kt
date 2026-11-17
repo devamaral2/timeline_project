@@ -45,15 +45,16 @@ import app.braid.mobile.core.designsystem.BraidMonoFont
 import app.braid.mobile.core.designsystem.SvgIcon
 import app.braid.mobile.core.designsystem.SvgPart
 import app.braid.mobile.core.designsystem.braidTokens
-import app.braid.mobile.domain.chat.ChatRoute
-import app.braid.mobile.domain.chat.ChatTrace
-import app.braid.mobile.domain.chat.TraceEntry
-import app.braid.mobile.domain.chat.TraceKind
 import app.braid.mobile.domain.chat.TraceLane
-import app.braid.mobile.domain.chat.TraceRunStatus
-import app.braid.mobile.domain.chat.TraceStatus
 import app.braid.mobile.domain.chat.timelineBars
 import app.braid.mobile.domain.chat.traceDuration
+import app.braid.mobile.domain.request.AgentTrace
+import app.braid.mobile.domain.request.RequestRoute
+import app.braid.mobile.domain.request.TraceEntry
+import app.braid.mobile.domain.request.TraceKind
+import app.braid.mobile.domain.request.TraceRunStatus
+import app.braid.mobile.domain.request.TraceStatus
+import app.braid.mobile.domain.request.traceKindName
 import app.braid.mobile.domain.timeline.TIMELINE_TIME_ZONE
 import java.time.Instant
 import java.time.ZoneId
@@ -139,7 +140,7 @@ private fun TraceTurn(
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(
-                text = "${if (turn.route == ChatRoute.Hermes) "Hermes" else "Assistente"} · $stateText".uppercase(),
+                text = "${if (turn.route == RequestRoute.Hermes) "Hermes" else "Assistente"} · $stateText".uppercase(),
                 color = if (failed) scheme.error else scheme.onSurfaceVariant,
                 fontFamily = BraidMonoFont,
                 fontSize = 12.sp,
@@ -195,7 +196,7 @@ private fun statusColor(status: TraceStatus) =
 /** A linha do tempo do pedido, uma raia por tipo de trabalho; tocar numa barra abre o passo na lista. */
 @Composable
 private fun TraceTimeline(
-    trace: ChatTrace,
+    trace: AgentTrace,
     openEntry: String?,
     onToggle: (String) -> Unit,
 ) {
@@ -348,10 +349,10 @@ private fun TraceDetail(entry: TraceEntry) {
             )
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Field("Tipo", entry.kind.title)
+                Field("Tipo", traceKindName(entry.kind))
                 entry.source?.let { Field("Origem", it, mono = true) }
                 Field("Estado", entry.status.text)
-                entry.startedAtMs?.let { Field("Início", clock(it)) }
+                entry.startedAt?.let { Field("Início", clock(it.toEpochMilli())) }
                 entry.durationMs?.let { Field("Duração", traceDuration(it)) }
                 for (field in entry.fields) Field(field.label, field.value)
             }

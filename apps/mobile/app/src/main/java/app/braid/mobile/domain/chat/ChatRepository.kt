@@ -1,5 +1,7 @@
 package app.braid.mobile.domain.chat
 
+import app.braid.mobile.domain.request.AgentRequest
+
 /** Por que um pedido falhou ou não chegou; cada código tem o seu texto em [chatFailureText]. */
 enum class ChatFailureCode(
     val code: String,
@@ -38,11 +40,6 @@ class HermesOffException(
     cause: Throwable? = null,
 ) : Exception("O Hermes está desligado nesta API.", cause)
 
-/** Cancelar um pedido de alimento responde conflito: o alimento se apaga pelo próprio documento. */
-class FoodCancelException(
-    cause: Throwable? = null,
-) : Exception("Este pedido calcula um alimento: apague o alimento para parar o cálculo.", cause)
-
 interface ChatRepository {
     /** Abre o pedido em texto e devolve o id. O [clientMessageId] estável faz o reenvio devolver o mesmo pedido. */
     suspend fun start(
@@ -58,12 +55,12 @@ interface ChatRepository {
         text: String,
         sessionId: String?,
         clientMessageId: String,
-    ): ChatRequest
+    ): AgentRequest
 
-    suspend fun request(id: String): ChatRequest
+    suspend fun request(id: String): AgentRequest
 
     /** Os pedidos do usuário, do mais novo para o mais antigo, sem o rastro. */
-    suspend fun recent(): List<ChatRequest>
+    suspend fun recent(): List<AgentRequest>
 
-    suspend fun cancel(id: String): ChatRequest
+    suspend fun cancel(id: String): AgentRequest
 }

@@ -1,13 +1,14 @@
 package app.braid.mobile.ui.chat
 
 import androidx.lifecycle.viewModelScope
-import app.braid.mobile.data.chat.ChatApi
 import app.braid.mobile.data.chat.DefaultChatRepository
+import app.braid.mobile.data.requests.RequestsApi
 import app.braid.mobile.data.session.StoredSession
 import app.braid.mobile.domain.agenda.FreeWindow
 import app.braid.mobile.domain.chat.ChatPolling
-import app.braid.mobile.domain.chat.ChatRoute
 import app.braid.mobile.domain.chat.start
+import app.braid.mobile.domain.request.RequestRoute
+import app.braid.mobile.domain.task.TaskStatus
 import app.braid.mobile.domain.time.AppClock
 import app.braid.mobile.support.TestBackend
 import app.braid.mobile.support.TestBackend.Companion.fixture
@@ -76,7 +77,7 @@ class ChatViewModelTest {
     private suspend fun newViewModel(polling: ChatPolling = ChatPolling()): ChatViewModel {
         graph.sessionRepository.restore()
         return ChatViewModel(
-            DefaultChatRepository(graph.apis.create(ChatApi::class.java)),
+            DefaultChatRepository(graph.apis.create(RequestsApi::class.java)),
             graph.sessionRepository,
             AppClock { now },
             polling,
@@ -112,7 +113,7 @@ class ChatViewModelTest {
             val done =
                 chat.until {
                     it.pending == null &&
-                        it.messages.any { m -> m is ChatMessage.Process && m.request?.status?.isOpen == false }
+                        it.messages.any { m -> m is ChatMessage.Process && m.request?.status == TaskStatus.Done }
                 }
 
             val body = bodyOf(backend.requestsTo("POST", requestsPath).single())
@@ -132,7 +133,7 @@ class ChatViewModelTest {
                 },
             )
             assertEquals(2, done.messages.size)
-            assertEquals(ChatRoute.Steps, done.turns.single().route)
+            assertEquals(RequestRoute.Steps, done.turns.single().route)
             assertFalse(done.turns.single().running)
         }
 
@@ -390,7 +391,7 @@ class ChatViewModelTest {
             assertFalse(steps.running)
             val answer = done.last() as ChatMessage.Assistant
             assertEquals("Quer o resumo completo? Diga \"só gmail\" ou \"com calendar e drive\".", answer.text)
-            assertEquals(ChatRoute.Hermes, done.turns.single().route)
+            assertEquals(RequestRoute.Hermes, done.turns.single().route)
 
             // A mensagem seguinte continua no Hermes, na mesma sessão.
             chat.send("e agora?")
@@ -589,7 +590,7 @@ class ChatViewModelTest {
             graph.storage.session = null
             val chat =
                 ChatViewModel(
-                    DefaultChatRepository(graph.apis.create(ChatApi::class.java)),
+                    DefaultChatRepository(graph.apis.create(RequestsApi::class.java)),
                     graph.sessionRepository,
                     AppClock { now },
                     ChatPolling(),

@@ -32,8 +32,10 @@ import app.braid.mobile.ui.chat.ChatEntityLinks
 import app.braid.mobile.ui.chat.ChatOverlay
 import app.braid.mobile.ui.chat.ChatViewModel
 import app.braid.mobile.ui.chat.LocalEntitiesChanged
+import app.braid.mobile.ui.documents.DocumentDetailPage
+import app.braid.mobile.ui.documents.DocumentsScreen
+import app.braid.mobile.ui.reminders.ReminderPermissionPrompt
 import app.braid.mobile.ui.shell.BraidBottomBar
-import app.braid.mobile.ui.shell.EmptyTabScreen
 import app.braid.mobile.ui.shell.LocalSectionMenus
 import app.braid.mobile.ui.shell.MainTab
 import app.braid.mobile.ui.shell.SectionMenuBody
@@ -44,6 +46,8 @@ import app.braid.mobile.ui.tasks.TasksScreen
 
 @Composable
 fun AppNavHost(
+    openTaskId: String? = null,
+    onOpenTaskHandled: () -> Unit = {},
     gate: SessionGateViewModel = hiltViewModel(),
     sectionMenu: SectionMenuViewModel = hiltViewModel(),
     chat: ChatViewModel = hiltViewModel(),
@@ -89,9 +93,19 @@ fun AppNavHost(
     val commands = remember { ChatCommandHandlers() }
     val links =
         remember(navController) {
-            // O destino de um documento chega com a tela de documentos; até lá a linha é só texto.
-            ChatEntityLinks(openTask = { navController.navigate(TaskDetailRoute(it)) })
+            ChatEntityLinks(
+                openTask = { navController.navigate(TaskDetailRoute(it)) },
+                openDocument = { navController.navigate(DocumentDetailRoute(it)) },
+            )
         }
+
+    // Tocar numa notificação de lembrete abre o detalhe da tarefa por cima da Agenda, depois de entrar.
+    LaunchedEffect(session, openTaskId) {
+        if (openTaskId != null && session is SessionState.SignedIn) {
+            navController.navigate(TaskDetailRoute(openTaskId))
+            onOpenTaskHandled()
+        }
+    }
 
     CompositionLocalProvider(LocalSectionMenus provides menus, LocalEntitiesChanged provides chat.entitiesChanged) {
         Box(Modifier.fillMaxSize()) {
@@ -111,13 +125,21 @@ fun AppNavHost(
                     TaskDetailPage(
                         onBack = { navController.popBackStack() },
                         onOpenTask = { navController.navigate(TaskDetailRoute(it)) },
+                        onOpenArtifact = { navController.navigate(DocumentDetailRoute(it)) },
                     )
                 }
                 // "Nova tarefa" leva à criação quando o ticket 13 existir.
                 composable<TasksRoute> { TasksScreen(onNewTask = {}, onOpenTask = { navController.navigate(TaskDetailRoute(it)) }) }
-                composable<DocumentsRoute> { EmptyTabScreen() }
+                composable<DocumentsRoute> { DocumentsScreen(onOpenDocument = { navController.navigate(DocumentDetailRoute(it)) }) }
+                composable<DocumentDetailRoute> {
+                    DocumentDetailPage(
+                        onBack = { navController.popBackStack() },
+                        onOpenTask = { navController.navigate(TaskDetailRoute(it)) },
+                    )
+                }
             }
             if (chatState.open) ChatOverlay(chat, commands, links)
+            if (session is SessionState.SignedIn) ReminderPermissionPrompt(Modifier.align(Alignment.TopCenter))
             if (currentTab != null) {
                 if (menuOpen) {
                     // Tocar fora do menu o fecha; o scrim não pinta nada.

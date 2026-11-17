@@ -1,0 +1,4 @@
+{
+  "path": "hermes/skills/pesquisar/SKILL.md",
+  "text": "---\nname: pesquisar\ndescription: Pesquisa na web e resume os achados\nallowed-tools: web.search, web.fetch\n---\n\n# Pesquisar\n\nProcure em **fontes confiáveis** e resuma.\n\n- Cite a fonte\n- Diga o que não achou"
+}
