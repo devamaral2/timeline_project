@@ -29,6 +29,8 @@ data class RequestDto(
     val entities: List<RequestEntityDto> = emptyList(),
     val errorCode: String? = null,
     val progress: String? = null,
+    /** A resposta do Hermes quando o pedido termina (`done`). */
+    val message: String? = null,
     val trace: RequestTraceDto? = null,
 )
 
@@ -90,6 +92,7 @@ fun RequestDto.toDomain(): AgentRequest =
         createdAt = instantOf(createdAt),
         updatedAt = instantOf(updatedAt),
         progress = progress,
+        message = message,
         errorCode = errorCode,
         steps = steps.map { RequestStep(it.id, it.agent, it.label, TaskStatus.fromCode(it.status)) },
         entities = entities.map { it.toDomain() },

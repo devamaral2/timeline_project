@@ -1,0 +1,22 @@
+{
+  "files": [
+    {
+      "path": "hermes/agents/planejador.md",
+      "kind": "agent",
+      "hash": "ffffffff00000000",
+      "missing": false,
+      "tags": [],
+      "description": ""
+    },
+    {
+      "path": "hermes/skills/pesquisar/SKILL.md",
+      "kind": "skill",
+      "hash": "99887766aabbccdd",
+      "missing": false,
+      "tags": [
+        "pesquisa"
+      ],
+      "description": "Pesquisa na web"
+    }
+  ]
+}

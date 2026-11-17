@@ -18,7 +18,7 @@ import kotlin.math.floor
  * conferida contra fixtures geradas pelas funções TS.
  */
 
-private val MONTHS_ABBREVIATED = listOf("jan.", "fev.", "mar.", "abr.", "mai.", "jun.", "jul.", "ago.", "set.", "out.", "nov.", "dez.")
+internal val MONTHS_ABBREVIATED = listOf("jan.", "fev.", "mar.", "abr.", "mai.", "jun.", "jul.", "ago.", "set.", "out.", "nov.", "dez.")
 
 private val MONTHS_LONG =
     listOf("janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro")
