@@ -13,9 +13,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.EventAvailable
 import androidx.compose.material.icons.outlined.Bedtime
 import androidx.compose.material.icons.outlined.Circle
+import androidx.compose.material.icons.outlined.EventAvailable
 import androidx.compose.material.icons.outlined.FitnessCenter
 import androidx.compose.material.icons.outlined.Restaurant
 import androidx.compose.material3.Icon
