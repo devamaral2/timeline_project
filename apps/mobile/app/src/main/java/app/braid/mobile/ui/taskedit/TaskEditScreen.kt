@@ -47,6 +47,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.braid.mobile.core.designsystem.BraidMonoFont
 import app.braid.mobile.core.designsystem.BraidPill
 import app.braid.mobile.core.designsystem.SvgIcon
+import app.braid.mobile.domain.task.RecurrenceDraft
 import app.braid.mobile.domain.task.TaskDraft
 import app.braid.mobile.domain.task.TaskDraftField
 import app.braid.mobile.ui.taskdetail.DetailIcons
@@ -76,6 +77,11 @@ fun TaskEditPage(
                 typeLocation = viewModel::typeLocation,
                 choosePlace = viewModel::choosePlace,
                 dismissPlaces = viewModel::dismissPlaces,
+                defineRecurrence = viewModel::defineRecurrence,
+                changeRecurrence = viewModel::changeRecurrence,
+                clearRecurrence = viewModel::clearRecurrence,
+                resetRecurrence = viewModel::resetRecurrence,
+                deleteSeries = viewModel::deleteSeries,
                 save = viewModel::save,
             ),
     )
@@ -92,6 +98,11 @@ class TaskEditActions(
     val typeLocation: (String) -> Unit,
     val choosePlace: (String) -> Unit,
     val dismissPlaces: () -> Unit,
+    val defineRecurrence: () -> Unit,
+    val changeRecurrence: ((RecurrenceDraft) -> RecurrenceDraft) -> Unit,
+    val clearRecurrence: () -> Unit,
+    val resetRecurrence: () -> Unit,
+    val deleteSeries: () -> Unit,
     val save: () -> Unit,
 )
 
@@ -191,7 +202,7 @@ private fun ColumnScope.FormBody(
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
         HeaderFields(draft, form.errors, actions.update)
-        InfoSection(draft, form.errors, creating, actions)
+        InfoSection(draft, form.errors, creating, form.recurrence, actions)
         LocationSection(draft.location, form, actions)
         TagsSection(draft.tags, form.tagSuggestions, actions)
         DescriptionSection(draft.description) { value -> actions.update { it.copy(description = value) } }

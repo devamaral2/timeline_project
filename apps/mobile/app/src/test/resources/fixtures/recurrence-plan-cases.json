@@ -1,0 +1,399 @@
+[
+  {
+    "name": "unchanged weekly",
+    "series": {
+      "frequency": "weekly",
+      "interval": 1,
+      "byWeekday": 42,
+      "timeOfDay": "10:30",
+      "durationMinutes": 60,
+      "timeZone": "America/Sao_Paulo",
+      "startsOn": "2026-09-21",
+      "id": "rec-1",
+      "template": {
+        "kind": "common",
+        "name": "Treino",
+        "description": "",
+        "priority": "medium"
+      },
+      "revision": 3,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-02T12:00:00.000Z"
+    },
+    "draft": {
+      "frequency": "weekly",
+      "interval": 1,
+      "weekdays": 42,
+      "monthDay": 1,
+      "month": 1,
+      "endsOn": ""
+    },
+    "patch": null
+  },
+  {
+    "name": "unchanged daily",
+    "series": {
+      "frequency": "daily",
+      "interval": 3,
+      "timeOfDay": "10:30",
+      "timeZone": "America/Sao_Paulo",
+      "startsOn": "2026-09-21",
+      "id": "rec-3",
+      "template": {
+        "kind": "common",
+        "name": "Treino",
+        "description": "",
+        "priority": "medium"
+      },
+      "revision": 3,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-02T12:00:00.000Z"
+    },
+    "draft": {
+      "frequency": "daily",
+      "interval": 3,
+      "weekdays": 0,
+      "monthDay": 1,
+      "month": 1,
+      "endsOn": ""
+    },
+    "patch": null
+  },
+  {
+    "name": "unchanged yearly",
+    "series": {
+      "frequency": "yearly",
+      "interval": 1,
+      "byMonthDay": 5,
+      "byMonth": 3,
+      "timeOfDay": "10:30",
+      "timeZone": "America/Sao_Paulo",
+      "startsOn": "2026-09-21",
+      "id": "rec-5",
+      "template": {
+        "kind": "common",
+        "name": "Treino",
+        "description": "",
+        "priority": "medium"
+      },
+      "revision": 3,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-02T12:00:00.000Z"
+    },
+    "draft": {
+      "frequency": "yearly",
+      "interval": 1,
+      "weekdays": 0,
+      "monthDay": 5,
+      "month": 3,
+      "endsOn": ""
+    },
+    "patch": null
+  },
+  {
+    "name": "weekdays",
+    "series": {
+      "frequency": "weekly",
+      "interval": 1,
+      "byWeekday": 42,
+      "timeOfDay": "10:30",
+      "durationMinutes": 60,
+      "timeZone": "America/Sao_Paulo",
+      "startsOn": "2026-09-21",
+      "id": "rec-1",
+      "template": {
+        "kind": "common",
+        "name": "Treino",
+        "description": "",
+        "priority": "medium"
+      },
+      "revision": 3,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-02T12:00:00.000Z"
+    },
+    "draft": {
+      "frequency": "weekly",
+      "interval": 1,
+      "weekdays": 62,
+      "monthDay": 1,
+      "month": 1,
+      "endsOn": ""
+    },
+    "patch": {
+      "expectedRevision": 3,
+      "byWeekday": 62
+    }
+  },
+  {
+    "name": "interval",
+    "series": {
+      "frequency": "weekly",
+      "interval": 1,
+      "byWeekday": 42,
+      "timeOfDay": "10:30",
+      "durationMinutes": 60,
+      "timeZone": "America/Sao_Paulo",
+      "startsOn": "2026-09-21",
+      "id": "rec-1",
+      "template": {
+        "kind": "common",
+        "name": "Treino",
+        "description": "",
+        "priority": "medium"
+      },
+      "revision": 3,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-02T12:00:00.000Z"
+    },
+    "draft": {
+      "frequency": "weekly",
+      "interval": 2,
+      "weekdays": 42,
+      "monthDay": 1,
+      "month": 1,
+      "endsOn": ""
+    },
+    "patch": {
+      "expectedRevision": 3,
+      "interval": 2
+    }
+  },
+  {
+    "name": "end set",
+    "series": {
+      "frequency": "weekly",
+      "interval": 1,
+      "byWeekday": 42,
+      "timeOfDay": "10:30",
+      "durationMinutes": 60,
+      "timeZone": "America/Sao_Paulo",
+      "startsOn": "2026-09-21",
+      "id": "rec-1",
+      "template": {
+        "kind": "common",
+        "name": "Treino",
+        "description": "",
+        "priority": "medium"
+      },
+      "revision": 3,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-02T12:00:00.000Z"
+    },
+    "draft": {
+      "frequency": "weekly",
+      "interval": 1,
+      "weekdays": 42,
+      "monthDay": 1,
+      "month": 1,
+      "endsOn": "2026-12-31"
+    },
+    "patch": {
+      "expectedRevision": 3,
+      "endsOn": "2026-12-31"
+    }
+  },
+  {
+    "name": "end moved",
+    "series": {
+      "frequency": "weekly",
+      "interval": 2,
+      "byWeekday": 2,
+      "timeOfDay": "10:30",
+      "timeZone": "America/Sao_Paulo",
+      "startsOn": "2026-09-21",
+      "endsOn": "2026-12-31",
+      "id": "rec-2",
+      "template": {
+        "kind": "common",
+        "name": "Treino",
+        "description": "",
+        "priority": "medium"
+      },
+      "revision": 3,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-02T12:00:00.000Z"
+    },
+    "draft": {
+      "frequency": "weekly",
+      "interval": 2,
+      "weekdays": 2,
+      "monthDay": 1,
+      "month": 1,
+      "endsOn": "2027-03-01"
+    },
+    "patch": {
+      "expectedRevision": 3,
+      "endsOn": "2027-03-01"
+    }
+  },
+  {
+    "name": "weekly to monthly",
+    "series": {
+      "frequency": "weekly",
+      "interval": 1,
+      "byWeekday": 42,
+      "timeOfDay": "10:30",
+      "durationMinutes": 60,
+      "timeZone": "America/Sao_Paulo",
+      "startsOn": "2026-09-21",
+      "id": "rec-1",
+      "template": {
+        "kind": "common",
+        "name": "Treino",
+        "description": "",
+        "priority": "medium"
+      },
+      "revision": 3,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-02T12:00:00.000Z"
+    },
+    "draft": {
+      "frequency": "monthly",
+      "interval": 1,
+      "weekdays": 42,
+      "monthDay": 12,
+      "month": 1,
+      "endsOn": ""
+    },
+    "patch": {
+      "expectedRevision": 3,
+      "frequency": "monthly",
+      "byMonthDay": 12
+    }
+  },
+  {
+    "name": "weekly to daily",
+    "series": {
+      "frequency": "weekly",
+      "interval": 1,
+      "byWeekday": 42,
+      "timeOfDay": "10:30",
+      "durationMinutes": 60,
+      "timeZone": "America/Sao_Paulo",
+      "startsOn": "2026-09-21",
+      "id": "rec-1",
+      "template": {
+        "kind": "common",
+        "name": "Treino",
+        "description": "",
+        "priority": "medium"
+      },
+      "revision": 3,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-02T12:00:00.000Z"
+    },
+    "draft": {
+      "frequency": "daily",
+      "interval": 1,
+      "weekdays": 42,
+      "monthDay": 1,
+      "month": 1,
+      "endsOn": ""
+    },
+    "patch": {
+      "expectedRevision": 3,
+      "frequency": "daily"
+    }
+  },
+  {
+    "name": "monthly to yearly",
+    "series": {
+      "frequency": "monthly",
+      "interval": 1,
+      "byMonthDay": 5,
+      "timeOfDay": "10:30",
+      "timeZone": "America/Sao_Paulo",
+      "startsOn": "2026-09-21",
+      "id": "rec-4",
+      "template": {
+        "kind": "common",
+        "name": "Treino",
+        "description": "",
+        "priority": "medium"
+      },
+      "revision": 3,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-02T12:00:00.000Z"
+    },
+    "draft": {
+      "frequency": "yearly",
+      "interval": 1,
+      "weekdays": 0,
+      "monthDay": 5,
+      "month": 7,
+      "endsOn": ""
+    },
+    "patch": {
+      "expectedRevision": 3,
+      "frequency": "yearly",
+      "byMonth": 7
+    }
+  },
+  {
+    "name": "monthly day",
+    "series": {
+      "frequency": "monthly",
+      "interval": 1,
+      "byMonthDay": 5,
+      "timeOfDay": "10:30",
+      "timeZone": "America/Sao_Paulo",
+      "startsOn": "2026-09-21",
+      "id": "rec-4",
+      "template": {
+        "kind": "common",
+        "name": "Treino",
+        "description": "",
+        "priority": "medium"
+      },
+      "revision": 3,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-02T12:00:00.000Z"
+    },
+    "draft": {
+      "frequency": "monthly",
+      "interval": 1,
+      "weekdays": 0,
+      "monthDay": 6,
+      "month": 1,
+      "endsOn": ""
+    },
+    "patch": {
+      "expectedRevision": 3,
+      "byMonthDay": 6
+    }
+  },
+  {
+    "name": "yearly month",
+    "series": {
+      "frequency": "yearly",
+      "interval": 1,
+      "byMonthDay": 5,
+      "byMonth": 3,
+      "timeOfDay": "10:30",
+      "timeZone": "America/Sao_Paulo",
+      "startsOn": "2026-09-21",
+      "id": "rec-5",
+      "template": {
+        "kind": "common",
+        "name": "Treino",
+        "description": "",
+        "priority": "medium"
+      },
+      "revision": 3,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-02T12:00:00.000Z"
+    },
+    "draft": {
+      "frequency": "yearly",
+      "interval": 1,
+      "weekdays": 0,
+      "monthDay": 5,
+      "month": 4,
+      "endsOn": ""
+    },
+    "patch": {
+      "expectedRevision": 3,
+      "byMonth": 4
+    }
+  }
+]

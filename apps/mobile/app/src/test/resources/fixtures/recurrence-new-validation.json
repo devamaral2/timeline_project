@@ -1,0 +1,661 @@
+[
+  {
+    "name": "valid weekly",
+    "draft": {
+      "frequency": "weekly",
+      "interval": 1,
+      "weekdays": 2,
+      "monthDay": 5,
+      "month": 3,
+      "endsOn": ""
+    },
+    "form": {
+      "kind": "common",
+      "name": "Treino de força",
+      "status": null,
+      "priority": "medium",
+      "startDate": "2026-09-21",
+      "startTime": "10:30",
+      "endDate": "2026-09-21",
+      "endTime": "11:30",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "errors": {}
+  },
+  {
+    "name": "no start date",
+    "draft": {
+      "frequency": "weekly",
+      "interval": 1,
+      "weekdays": 2,
+      "monthDay": 5,
+      "month": 3,
+      "endsOn": ""
+    },
+    "form": {
+      "kind": "common",
+      "name": "Treino de força",
+      "status": null,
+      "priority": "medium",
+      "startDate": "",
+      "startTime": "10:30",
+      "endDate": "",
+      "endTime": "",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "errors": {
+      "startDate": "Informe a data de início: a série começa nela."
+    }
+  },
+  {
+    "name": "no start time",
+    "draft": {
+      "frequency": "weekly",
+      "interval": 1,
+      "weekdays": 2,
+      "monthDay": 5,
+      "month": 3,
+      "endsOn": ""
+    },
+    "form": {
+      "kind": "common",
+      "name": "Treino de força",
+      "status": null,
+      "priority": "medium",
+      "startDate": "2026-09-21",
+      "startTime": "",
+      "endDate": "",
+      "endTime": "",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "errors": {
+      "startTime": "Informe a hora: a série se repete nesse horário."
+    }
+  },
+  {
+    "name": "neither",
+    "draft": {
+      "frequency": "weekly",
+      "interval": 1,
+      "weekdays": 2,
+      "monthDay": 5,
+      "month": 3,
+      "endsOn": ""
+    },
+    "form": {
+      "kind": "common",
+      "name": "Treino de força",
+      "status": null,
+      "priority": "medium",
+      "startDate": "",
+      "startTime": "",
+      "endDate": "",
+      "endTime": "",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "errors": {
+      "startDate": "Informe a data de início: a série começa nela.",
+      "startTime": "Informe a hora: a série se repete nesse horário."
+    }
+  },
+  {
+    "name": "interval zero",
+    "draft": {
+      "frequency": "weekly",
+      "interval": 0,
+      "weekdays": 2,
+      "monthDay": 5,
+      "month": 3,
+      "endsOn": ""
+    },
+    "form": {
+      "kind": "common",
+      "name": "Treino de força",
+      "status": null,
+      "priority": "medium",
+      "startDate": "2026-09-21",
+      "startTime": "10:30",
+      "endDate": "2026-09-21",
+      "endTime": "11:30",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "errors": {
+      "interval": "Repita a cada 1 ou mais."
+    }
+  },
+  {
+    "name": "interval negative",
+    "draft": {
+      "frequency": "weekly",
+      "interval": -2,
+      "weekdays": 2,
+      "monthDay": 5,
+      "month": 3,
+      "endsOn": ""
+    },
+    "form": {
+      "kind": "common",
+      "name": "Treino de força",
+      "status": null,
+      "priority": "medium",
+      "startDate": "2026-09-21",
+      "startTime": "10:30",
+      "endDate": "2026-09-21",
+      "endTime": "11:30",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "errors": {
+      "interval": "Repita a cada 1 ou mais."
+    }
+  },
+  {
+    "name": "weekly no day",
+    "draft": {
+      "frequency": "weekly",
+      "interval": 1,
+      "weekdays": 0,
+      "monthDay": 5,
+      "month": 3,
+      "endsOn": ""
+    },
+    "form": {
+      "kind": "common",
+      "name": "Treino de força",
+      "status": null,
+      "priority": "medium",
+      "startDate": "2026-09-21",
+      "startTime": "10:30",
+      "endDate": "2026-09-21",
+      "endTime": "11:30",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "errors": {
+      "weekdays": "Escolha pelo menos um dia da semana."
+    }
+  },
+  {
+    "name": "weekly over 127",
+    "draft": {
+      "frequency": "weekly",
+      "interval": 1,
+      "weekdays": 128,
+      "monthDay": 5,
+      "month": 3,
+      "endsOn": ""
+    },
+    "form": {
+      "kind": "common",
+      "name": "Treino de força",
+      "status": null,
+      "priority": "medium",
+      "startDate": "2026-09-21",
+      "startTime": "10:30",
+      "endDate": "2026-09-21",
+      "endTime": "11:30",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "errors": {
+      "weekdays": "Escolha pelo menos um dia da semana."
+    }
+  },
+  {
+    "name": "weekly all days",
+    "draft": {
+      "frequency": "weekly",
+      "interval": 1,
+      "weekdays": 127,
+      "monthDay": 5,
+      "month": 3,
+      "endsOn": ""
+    },
+    "form": {
+      "kind": "common",
+      "name": "Treino de força",
+      "status": null,
+      "priority": "medium",
+      "startDate": "2026-09-21",
+      "startTime": "10:30",
+      "endDate": "2026-09-21",
+      "endTime": "11:30",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "errors": {}
+  },
+  {
+    "name": "daily ignores weekdays",
+    "draft": {
+      "frequency": "daily",
+      "interval": 1,
+      "weekdays": 0,
+      "monthDay": 5,
+      "month": 3,
+      "endsOn": ""
+    },
+    "form": {
+      "kind": "common",
+      "name": "Treino de força",
+      "status": null,
+      "priority": "medium",
+      "startDate": "2026-09-21",
+      "startTime": "10:30",
+      "endDate": "2026-09-21",
+      "endTime": "11:30",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "errors": {}
+  },
+  {
+    "name": "monthly day 0",
+    "draft": {
+      "frequency": "monthly",
+      "interval": 1,
+      "weekdays": 2,
+      "monthDay": 0,
+      "month": 3,
+      "endsOn": ""
+    },
+    "form": {
+      "kind": "common",
+      "name": "Treino de força",
+      "status": null,
+      "priority": "medium",
+      "startDate": "2026-09-21",
+      "startTime": "10:30",
+      "endDate": "2026-09-21",
+      "endTime": "11:30",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "errors": {
+      "monthDay": "Escolha um dia entre 1 e 31."
+    }
+  },
+  {
+    "name": "monthly day 32",
+    "draft": {
+      "frequency": "monthly",
+      "interval": 1,
+      "weekdays": 2,
+      "monthDay": 32,
+      "month": 3,
+      "endsOn": ""
+    },
+    "form": {
+      "kind": "common",
+      "name": "Treino de força",
+      "status": null,
+      "priority": "medium",
+      "startDate": "2026-09-21",
+      "startTime": "10:30",
+      "endDate": "2026-09-21",
+      "endTime": "11:30",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "errors": {
+      "monthDay": "Escolha um dia entre 1 e 31."
+    }
+  },
+  {
+    "name": "monthly day 31",
+    "draft": {
+      "frequency": "monthly",
+      "interval": 1,
+      "weekdays": 2,
+      "monthDay": 31,
+      "month": 3,
+      "endsOn": ""
+    },
+    "form": {
+      "kind": "common",
+      "name": "Treino de força",
+      "status": null,
+      "priority": "medium",
+      "startDate": "2026-09-21",
+      "startTime": "10:30",
+      "endDate": "2026-09-21",
+      "endTime": "11:30",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "errors": {}
+  },
+  {
+    "name": "yearly feb 29",
+    "draft": {
+      "frequency": "yearly",
+      "interval": 1,
+      "weekdays": 2,
+      "monthDay": 29,
+      "month": 2,
+      "endsOn": ""
+    },
+    "form": {
+      "kind": "common",
+      "name": "Treino de força",
+      "status": null,
+      "priority": "medium",
+      "startDate": "2026-09-21",
+      "startTime": "10:30",
+      "endDate": "2026-09-21",
+      "endTime": "11:30",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "errors": {}
+  },
+  {
+    "name": "yearly feb 30",
+    "draft": {
+      "frequency": "yearly",
+      "interval": 1,
+      "weekdays": 2,
+      "monthDay": 30,
+      "month": 2,
+      "endsOn": ""
+    },
+    "form": {
+      "kind": "common",
+      "name": "Treino de força",
+      "status": null,
+      "priority": "medium",
+      "startDate": "2026-09-21",
+      "startTime": "10:30",
+      "endDate": "2026-09-21",
+      "endTime": "11:30",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "errors": {
+      "monthDay": "Esse dia não existe nesse mês."
+    }
+  },
+  {
+    "name": "yearly apr 31",
+    "draft": {
+      "frequency": "yearly",
+      "interval": 1,
+      "weekdays": 2,
+      "monthDay": 31,
+      "month": 4,
+      "endsOn": ""
+    },
+    "form": {
+      "kind": "common",
+      "name": "Treino de força",
+      "status": null,
+      "priority": "medium",
+      "startDate": "2026-09-21",
+      "startTime": "10:30",
+      "endDate": "2026-09-21",
+      "endTime": "11:30",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "errors": {
+      "monthDay": "Esse dia não existe nesse mês."
+    }
+  },
+  {
+    "name": "yearly dec 31",
+    "draft": {
+      "frequency": "yearly",
+      "interval": 1,
+      "weekdays": 2,
+      "monthDay": 31,
+      "month": 12,
+      "endsOn": ""
+    },
+    "form": {
+      "kind": "common",
+      "name": "Treino de força",
+      "status": null,
+      "priority": "medium",
+      "startDate": "2026-09-21",
+      "startTime": "10:30",
+      "endDate": "2026-09-21",
+      "endTime": "11:30",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "errors": {}
+  },
+  {
+    "name": "end before start",
+    "draft": {
+      "frequency": "weekly",
+      "interval": 1,
+      "weekdays": 2,
+      "monthDay": 5,
+      "month": 3,
+      "endsOn": "2026-09-20"
+    },
+    "form": {
+      "kind": "common",
+      "name": "Treino de força",
+      "status": null,
+      "priority": "medium",
+      "startDate": "2026-09-21",
+      "startTime": "10:30",
+      "endDate": "2026-09-21",
+      "endTime": "11:30",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "errors": {
+      "endsOn": "O fim não pode ser antes do início."
+    }
+  },
+  {
+    "name": "end on start",
+    "draft": {
+      "frequency": "weekly",
+      "interval": 1,
+      "weekdays": 2,
+      "monthDay": 5,
+      "month": 3,
+      "endsOn": "2026-09-21"
+    },
+    "form": {
+      "kind": "common",
+      "name": "Treino de força",
+      "status": null,
+      "priority": "medium",
+      "startDate": "2026-09-21",
+      "startTime": "10:30",
+      "endDate": "2026-09-21",
+      "endTime": "11:30",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "errors": {}
+  },
+  {
+    "name": "end after start",
+    "draft": {
+      "frequency": "weekly",
+      "interval": 1,
+      "weekdays": 2,
+      "monthDay": 5,
+      "month": 3,
+      "endsOn": "2026-12-31"
+    },
+    "form": {
+      "kind": "common",
+      "name": "Treino de força",
+      "status": null,
+      "priority": "medium",
+      "startDate": "2026-09-21",
+      "startTime": "10:30",
+      "endDate": "2026-09-21",
+      "endTime": "11:30",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "errors": {}
+  },
+  {
+    "name": "several",
+    "draft": {
+      "frequency": "weekly",
+      "interval": 0,
+      "weekdays": 0,
+      "monthDay": 5,
+      "month": 3,
+      "endsOn": "2026-01-01"
+    },
+    "form": {
+      "kind": "common",
+      "name": "Treino de força",
+      "status": null,
+      "priority": "medium",
+      "startDate": "2026-09-21",
+      "startTime": "10:30",
+      "endDate": "2026-09-21",
+      "endTime": "11:30",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "errors": {
+      "interval": "Repita a cada 1 ou mais.",
+      "weekdays": "Escolha pelo menos um dia da semana.",
+      "endsOn": "O fim não pode ser antes do início."
+    }
+  }
+]
