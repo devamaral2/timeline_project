@@ -1,5 +1,6 @@
 package app.braid.mobile.ui.tasks
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,6 +15,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
@@ -42,6 +44,8 @@ fun TaskRow(
     card: TaskCard,
     now: Instant,
     modifier: Modifier = Modifier,
+    /** Quando a tela deixa o glifo de status ser tocado, o que acontece com o toque; sem isso o glifo é só leitura. */
+    onStatusClick: (() -> Unit)? = null,
 ) {
     val isAgent = card.actor == TaskActor.Agent
     val overdue = cardIsOverdue(card, now)
@@ -53,7 +57,9 @@ fun TaskRow(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.Top,
     ) {
-        Box(Modifier.size(24.dp), contentAlignment = Alignment.Center) {
+        val glyphBox =
+            if (onStatusClick == null) Modifier.size(24.dp) else Modifier.size(24.dp).clickable(role = Role.Button, onClick = onStatusClick)
+        Box(glyphBox, contentAlignment = Alignment.Center) {
             TaskStatusGlyph(actor = card.actor, status = card.status)
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {

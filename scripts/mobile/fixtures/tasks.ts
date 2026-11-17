@@ -7,6 +7,8 @@
 import { agendaPageSchema, taskCardSchema } from "../../../packages/contracts/src/schemas";
 import { dayKeyOf, zonedDayEnd, zonedDayStart, weekOf } from "../../../packages/timeline/src/index";
 import { agendaTasksByDay, isAgendaCard } from "../../../apps/web/src/components/agenda/agenda-data";
+import { hasOpenAgentTask } from "../../../apps/web/src/lib/tasks/agent-request-model";
+import { humanStatusOptions, statusPatch } from "../../../apps/web/src/lib/tasks/task-read-model";
 import { cardDurationLabel, cardIsOverdue, cardWhenLabel, elapsedLabel } from "../../../apps/web/src/lib/tasks/card-text";
 
 /** 14 de setembro de 2026, 12:00 em São Paulo: uma segunda-feira. */
@@ -40,7 +42,7 @@ const cards = [
   card({ id: "task-6", name: "Dormir", kind: "sleep", status: "doing", startedAt: "2026-09-15T01:00:00.000Z", estimatedFinishAt: "2026-09-15T09:00:00.000Z" }),
   card({ id: "task-7", name: "Projeto longo", status: "doing", longRunning: true, startedAt: "2026-09-01T12:00:00.000Z", estimatedFinishAt: "2026-11-30T12:00:00.000Z", tags: ["trabalho"] }),
   card({ id: "task-8", name: "Passo da pesquisa", actor: "agent", kind: "step", status: "done", startedAt: "2026-09-14T14:00:00.000Z" }),
-  card({ id: "task-9", name: "Pagar o condomínio", status: undefined, startedAt: "2026-09-14T03:00:00.000Z" }),
+  card({ id: "task-9", name: "Pagar o condomínio", status: undefined, revision: 4, startedAt: "2026-09-14T03:00:00.000Z" }),
   card({ id: "task-10", name: "Ligar para o banco", status: "todo", startedAt: "2026-09-13T15:00:00.000Z", estimatedFinishAt: "2026-09-13T15:15:00.000Z" }),
   card({ id: "task-11", name: "Devolver o livro", status: "todo", startedAt: "2026-09-11T15:00:00.000Z" }),
   card({ id: "task-12", name: "Ideia sem data", status: "toDefine" }),
@@ -61,12 +63,45 @@ const pageTwo = [WEEK_CARDS[2], ...WEEK_CARDS.slice(6)];
 
 const byDay = agendaTasksByDay(cards);
 
+const HUMAN_STATUSES = ["todo", "toDefine", "doing", "inHold", "done", "cancel", "missed"] as const;
+const AGENT_STATUSES = ["queued", "running", "waiting", "done", "failed", "cancel"] as const;
+const STATUS_NOW = new Date("2026-09-14T15:30:45.123Z");
+
+/** A tarefa de referência da agenda depois que outro lugar a mudou: a releitura que o conflito e o sucesso trazem. */
+function referenceCard(status: string, revision: number) {
+  return card({ id: "task-9", name: "Pagar o condomínio", status, revision, startedAt: "2026-09-14T03:00:00.000Z" });
+}
+
 export function tasksFixtures(): Record<string, unknown> {
   const weekDays = weekOf("2026-09-14");
   return {
     "tasks-agenda-page-1": agendaPageSchema.parse({ items: pageOne, nextCursor: "cursor-1" }),
     "tasks-agenda-page-2": agendaPageSchema.parse({ items: pageTwo }),
     "tasks-agenda-empty": agendaPageSchema.parse({ items: [] }),
+    "tasks-agenda-reference-doing": agendaPageSchema.parse({ items: [referenceCard("doing", 5)] }),
+    "tasks-agenda-reference-done": agendaPageSchema.parse({ items: [referenceCard("done", 5)] }),
+    /** A semana depois que o agente terminou o que estava aberto. */
+    "tasks-agenda-agents-finished": agendaPageSchema.parse({
+      items: [card({ id: "task-3", name: "Buscar passagens", actor: "agent", kind: "search_request", status: "done", startedAt: "2026-09-14T14:48:00.000Z" })],
+    }),
+    /** As saídas de `statusPatch`, `humanStatusOptions` e `hasOpenAgentTask` do web, para todas as entradas que importam. */
+    "tasks-status-change": {
+      now: STATUS_NOW.toISOString(),
+      patches: [null, ...HUMAN_STATUSES].flatMap((from) =>
+        HUMAN_STATUSES.map((to) => ({
+          from,
+          to,
+          revision: 4,
+          patch: statusPatch({ revision: 4, status: from ?? undefined }, to, STATUS_NOW),
+        })),
+      ),
+      options: [false, true].map((longRunning) => ({ longRunning, statuses: humanStatusOptions({ longRunning }) })),
+      openAgent: [
+        ...AGENT_STATUSES.map((status) => ({ actor: "agent", status, open: hasOpenAgentTask([{ actor: "agent", status } as never]) })),
+        ...HUMAN_STATUSES.map((status) => ({ actor: "human", status, open: hasOpenAgentTask([{ actor: "human", status } as never]) })),
+        { actor: "human", status: null, open: hasOpenAgentTask([{ actor: "human" } as never]) },
+      ],
+    },
     "tasks-agenda-window": {
       now: NOW,
       todayKey: dayKeyOf(NOW),

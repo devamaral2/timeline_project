@@ -1,11 +1,19 @@
 package app.braid.mobile.data.tasks
 
+import app.braid.mobile.domain.task.FinishedAtChange
+import app.braid.mobile.domain.task.StatusPatch
 import app.braid.mobile.domain.task.TaskActor
 import app.braid.mobile.domain.task.TaskCard
 import app.braid.mobile.domain.task.TaskKind
 import app.braid.mobile.domain.task.TaskStatus
+import app.braid.mobile.domain.timeline.toIsoMillis
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import java.time.OffsetDateTime
 
 /** `taskCardSchema` do `packages/contracts`, campo a campo. */
@@ -62,3 +70,15 @@ fun TaskCardDto.toDomain(): TaskCard =
     )
 
 private fun parseInstant(value: String) = OffsetDateTime.parse(value).toInstant()
+
+/** O corpo do `PATCH`: `finishedAt` ausente não muda a conclusão e `null` a apaga, então não dá para ser um DTO com padrão. */
+fun StatusPatch.toBody(): JsonObject =
+    buildJsonObject {
+        put("expectedRevision", expectedRevision)
+        put("status", status.code)
+        when (val change = finishedAt) {
+            FinishedAtChange.Unchanged -> Unit
+            FinishedAtChange.Cleared -> put("finishedAt", JsonNull)
+            is FinishedAtChange.Set -> put("finishedAt", JsonPrimitive(toIsoMillis(change.at)))
+        }
+    }

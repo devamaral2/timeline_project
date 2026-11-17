@@ -1,0 +1,21 @@
+{
+  "items": [
+    {
+      "id": "task-3",
+      "actor": "agent",
+      "kind": "search_request",
+      "status": "done",
+      "priority": "medium",
+      "name": "Buscar passagens",
+      "description": "",
+      "startedAt": "2026-09-14T14:48:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    }
+  ]
+}
