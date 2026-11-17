@@ -1,0 +1,27 @@
+{
+  "items": [
+    {
+      "id": "meeting",
+      "actor": "human",
+      "kind": "common",
+      "status": "todo",
+      "priority": "medium",
+      "name": "Reunião de planejamento",
+      "description": "",
+      "startedAt": "2026-09-14T19:00:00.000Z",
+      "estimatedFinishAt": "2026-09-14T20:00:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [
+        5,
+        30,
+        60,
+        1440
+      ],
+      "tags": [],
+      "artifactTypes": [],
+      "revision": 2,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    }
+  ]
+}

@@ -29,6 +29,7 @@ import app.braid.mobile.ui.agenda.AgendaScreen
 import app.braid.mobile.ui.auth.LoginScreen
 import app.braid.mobile.ui.documents.DocumentDetailPage
 import app.braid.mobile.ui.documents.DocumentsScreen
+import app.braid.mobile.ui.reminders.ReminderPermissionPrompt
 import app.braid.mobile.ui.shell.BraidBottomBar
 import app.braid.mobile.ui.shell.LocalSectionMenus
 import app.braid.mobile.ui.shell.MainTab
@@ -40,6 +41,8 @@ import app.braid.mobile.ui.tasks.TasksScreen
 
 @Composable
 fun AppNavHost(
+    openTaskId: String? = null,
+    onOpenTaskHandled: () -> Unit = {},
     gate: SessionGateViewModel = hiltViewModel(),
     sectionMenu: SectionMenuViewModel = hiltViewModel(),
 ) {
@@ -75,6 +78,14 @@ fun AppNavHost(
         }
     }
 
+    // Tocar numa notificação de lembrete abre o detalhe da tarefa por cima da Agenda, depois de entrar.
+    LaunchedEffect(session, openTaskId) {
+        if (openTaskId != null && session is SessionState.SignedIn) {
+            navController.navigate(TaskDetailRoute(openTaskId))
+            onOpenTaskHandled()
+        }
+    }
+
     CompositionLocalProvider(LocalSectionMenus provides menus) {
         Box(Modifier.fillMaxSize()) {
             NavHost(navController = navController, startDestination = LoginRoute) {
@@ -97,6 +108,7 @@ fun AppNavHost(
                     )
                 }
             }
+            if (session is SessionState.SignedIn) ReminderPermissionPrompt(Modifier.align(Alignment.TopCenter))
             if (currentTab != null) {
                 if (menuOpen) {
                     // Tocar fora do menu o fecha; o scrim não pinta nada.
