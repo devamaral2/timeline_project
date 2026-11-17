@@ -1,0 +1,19 @@
+{
+  "id": "task-9",
+  "actor": "human",
+  "kind": "common",
+  "priority": "medium",
+  "name": "Pagar o condomínio",
+  "description": "",
+  "startedAt": "2026-09-14T03:00:00.000Z",
+  "longRunning": false,
+  "notifyOffsetsMinutes": [],
+  "tags": [],
+  "artifactTypes": [],
+  "revision": 4,
+  "createdAt": "2026-09-01T12:00:00.000Z",
+  "updatedAt": "2026-09-01T12:00:00.000Z",
+  "artifacts": [],
+  "subtaskIds": [],
+  "requests": []
+}

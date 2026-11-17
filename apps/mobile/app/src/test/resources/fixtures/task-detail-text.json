@@ -1,0 +1,656 @@
+{
+  "moments": [
+    {
+      "instant": "2026-09-14T21:30:00.000Z",
+      "label": "Seg, 14 set · 18:30"
+    },
+    {
+      "instant": "2026-09-14T03:00:00.000Z",
+      "label": "Seg, 14 set"
+    },
+    {
+      "instant": "2026-09-12T15:05:00.000Z",
+      "label": "Sáb, 12 set · 12:05"
+    },
+    {
+      "instant": "2026-11-30T12:00:00.000Z",
+      "label": "Seg, 30 nov · 09:00"
+    },
+    {
+      "instant": "2026-09-15T02:59:00.000Z",
+      "label": "Seg, 14 set · 23:59"
+    },
+    {
+      "instant": "2026-12-31T23:59:00.000Z",
+      "label": "Qui, 31 dez · 20:59"
+    },
+    {
+      "instant": "2026-09-13T15:00:00.000Z",
+      "label": "Dom, 13 set · 12:00"
+    }
+  ],
+  "recurrences": [
+    {
+      "rule": {
+        "frequency": "weekly",
+        "interval": 1,
+        "byWeekday": 42,
+        "timeOfDay": "18:30",
+        "durationMinutes": 50,
+        "timeZone": "America/Sao_Paulo",
+        "startsOn": "2026-09-01",
+        "endsOn": "2026-11-30"
+      },
+      "label": "Seg, qua e sex, 18:30",
+      "lines": {
+        "rule": "Seg, qua e sex, 18:30",
+        "detail": "desde 1 set · até 30 nov · esta ocorrência segue a série"
+      },
+      "detachedLines": {
+        "rule": "Seg, qua e sex, 18:30",
+        "detail": "desde 1 set · até 30 nov · esta ocorrência não segue a série"
+      }
+    },
+    {
+      "rule": {
+        "frequency": "daily",
+        "interval": 1,
+        "timeOfDay": "07:00",
+        "timeZone": "America/Sao_Paulo",
+        "startsOn": "2026-09-01"
+      },
+      "label": "Todo dia, 07:00",
+      "lines": {
+        "rule": "Todo dia, 07:00",
+        "detail": "desde 1 set · sem fim · esta ocorrência segue a série"
+      },
+      "detachedLines": {
+        "rule": "Todo dia, 07:00",
+        "detail": "desde 1 set · sem fim · esta ocorrência não segue a série"
+      }
+    },
+    {
+      "rule": {
+        "frequency": "daily",
+        "interval": 3,
+        "timeOfDay": "07:00",
+        "timeZone": "America/Sao_Paulo",
+        "startsOn": "2026-09-01"
+      },
+      "label": "A cada 3 dias, 07:00",
+      "lines": {
+        "rule": "A cada 3 dias, 07:00",
+        "detail": "desde 1 set · sem fim · esta ocorrência segue a série"
+      },
+      "detachedLines": {
+        "rule": "A cada 3 dias, 07:00",
+        "detail": "desde 1 set · sem fim · esta ocorrência não segue a série"
+      }
+    },
+    {
+      "rule": {
+        "frequency": "weekly",
+        "interval": 1,
+        "byWeekday": 1,
+        "timeOfDay": "08:00",
+        "timeZone": "America/Sao_Paulo",
+        "startsOn": "2026-09-01"
+      },
+      "label": "Dom, 08:00",
+      "lines": {
+        "rule": "Dom, 08:00",
+        "detail": "desde 1 set · sem fim · esta ocorrência segue a série"
+      },
+      "detachedLines": {
+        "rule": "Dom, 08:00",
+        "detail": "desde 1 set · sem fim · esta ocorrência não segue a série"
+      }
+    },
+    {
+      "rule": {
+        "frequency": "weekly",
+        "interval": 2,
+        "byWeekday": 126,
+        "timeOfDay": "08:15",
+        "timeZone": "America/Sao_Paulo",
+        "startsOn": "2026-09-01"
+      },
+      "label": "A cada 2 semanas, seg, ter, qua, qui, sex e sáb, 08:15",
+      "lines": {
+        "rule": "A cada 2 semanas, seg, ter, qua, qui, sex e sáb, 08:15",
+        "detail": "desde 1 set · sem fim · esta ocorrência segue a série"
+      },
+      "detachedLines": {
+        "rule": "A cada 2 semanas, seg, ter, qua, qui, sex e sáb, 08:15",
+        "detail": "desde 1 set · sem fim · esta ocorrência não segue a série"
+      }
+    },
+    {
+      "rule": {
+        "frequency": "weekly",
+        "interval": 1,
+        "byWeekday": 64,
+        "timeOfDay": "08:00",
+        "timeZone": "America/Sao_Paulo",
+        "startsOn": "2026-09-01",
+        "endsOn": "2026-12-31"
+      },
+      "label": "Sáb, 08:00",
+      "lines": {
+        "rule": "Sáb, 08:00",
+        "detail": "desde 1 set · até 31 dez · esta ocorrência segue a série"
+      },
+      "detachedLines": {
+        "rule": "Sáb, 08:00",
+        "detail": "desde 1 set · até 31 dez · esta ocorrência não segue a série"
+      }
+    },
+    {
+      "rule": {
+        "frequency": "monthly",
+        "interval": 1,
+        "byMonthDay": 5,
+        "timeOfDay": "10:00",
+        "timeZone": "America/Sao_Paulo",
+        "startsOn": "2026-09-01"
+      },
+      "label": "Todo dia 5, 10:00",
+      "lines": {
+        "rule": "Todo dia 5, 10:00",
+        "detail": "desde 1 set · sem fim · esta ocorrência segue a série"
+      },
+      "detachedLines": {
+        "rule": "Todo dia 5, 10:00",
+        "detail": "desde 1 set · sem fim · esta ocorrência não segue a série"
+      }
+    },
+    {
+      "rule": {
+        "frequency": "monthly",
+        "interval": 2,
+        "byMonthDay": 15,
+        "timeOfDay": "10:00",
+        "timeZone": "America/Sao_Paulo",
+        "startsOn": "2026-09-01"
+      },
+      "label": "A cada 2 meses, dia 15, 10:00",
+      "lines": {
+        "rule": "A cada 2 meses, dia 15, 10:00",
+        "detail": "desde 1 set · sem fim · esta ocorrência segue a série"
+      },
+      "detachedLines": {
+        "rule": "A cada 2 meses, dia 15, 10:00",
+        "detail": "desde 1 set · sem fim · esta ocorrência não segue a série"
+      }
+    },
+    {
+      "rule": {
+        "frequency": "yearly",
+        "interval": 1,
+        "byMonthDay": 14,
+        "byMonth": 9,
+        "timeOfDay": "09:00",
+        "timeZone": "America/Sao_Paulo",
+        "startsOn": "2020-09-14"
+      },
+      "label": "Todo ano, 14/9, 09:00",
+      "lines": {
+        "rule": "Todo ano, 14/9, 09:00",
+        "detail": "desde 14 set · sem fim · esta ocorrência segue a série"
+      },
+      "detachedLines": {
+        "rule": "Todo ano, 14/9, 09:00",
+        "detail": "desde 14 set · sem fim · esta ocorrência não segue a série"
+      }
+    }
+  ],
+  "reminders": [
+    {
+      "minutes": 1,
+      "label": "1 min"
+    },
+    {
+      "minutes": 5,
+      "label": "5 min"
+    },
+    {
+      "minutes": 30,
+      "label": "30 min"
+    },
+    {
+      "minutes": 45,
+      "label": "45 min"
+    },
+    {
+      "minutes": 60,
+      "label": "60 min"
+    },
+    {
+      "minutes": 90,
+      "label": "90 min"
+    },
+    {
+      "minutes": 1440,
+      "label": "1 dia"
+    },
+    {
+      "minutes": 2880,
+      "label": "2 dias"
+    },
+    {
+      "minutes": 10080,
+      "label": "7 dias"
+    }
+  ],
+  "maps": [
+    {
+      "location": "Rua Augusta, 100 - São Paulo",
+      "url": "https://www.google.com/maps/search/?api=1&query=Rua%20Augusta%2C%20100%20-%20S%C3%A3o%20Paulo"
+    },
+    {
+      "location": "  Av. Paulista 1578  ",
+      "url": "https://www.google.com/maps/search/?api=1&query=Av.%20Paulista%201578"
+    },
+    {
+      "location": "Café & Cia (Pinheiros)",
+      "url": "https://www.google.com/maps/search/?api=1&query=Caf%C3%A9%20%26%20Cia%20(Pinheiros)"
+    },
+    {
+      "location": "Praça da Sé #1/2",
+      "url": "https://www.google.com/maps/search/?api=1&query=Pra%C3%A7a%20da%20S%C3%A9%20%231%2F2"
+    },
+    {
+      "location": "O'Brien's! *~ pub_1-2.x",
+      "url": "https://www.google.com/maps/search/?api=1&query=O'Brien's!%20*~%20pub_1-2.x"
+    }
+  ],
+  "priorityPatches": [
+    {
+      "priority": "urgent",
+      "patch": {
+        "expectedRevision": 4,
+        "priority": "urgent"
+      }
+    },
+    {
+      "priority": "high",
+      "patch": {
+        "expectedRevision": 4,
+        "priority": "high"
+      }
+    },
+    {
+      "priority": "medium",
+      "patch": {
+        "expectedRevision": 4,
+        "priority": "medium"
+      }
+    },
+    {
+      "priority": "low",
+      "patch": {
+        "expectedRevision": 4,
+        "priority": "low"
+      }
+    }
+  ],
+  "info": [
+    {
+      "id": "task-1",
+      "task": {
+        "id": "task-1",
+        "actor": "human",
+        "kind": "common",
+        "status": "todo",
+        "priority": "high",
+        "name": "Reunião de planejamento",
+        "description": "Pauta do trimestre.\nLevar o relatório impresso.",
+        "location": "Rua Augusta, 100 - São Paulo",
+        "startedAt": "2026-09-14T21:30:00.000Z",
+        "estimatedFinishAt": "2026-09-14T22:20:00.000Z",
+        "longRunning": false,
+        "notifyOffsetsMinutes": [
+          30,
+          1440,
+          2880
+        ],
+        "tags": [
+          "trabalho",
+          "saúde"
+        ],
+        "artifactTypes": [],
+        "parentTaskId": "task-parent",
+        "recurrence": {
+          "id": "rec-1",
+          "occurrenceOn": "2026-09-14",
+          "detached": false,
+          "rule": {
+            "frequency": "weekly",
+            "interval": 1,
+            "byWeekday": 42,
+            "timeOfDay": "18:30",
+            "durationMinutes": 50,
+            "timeZone": "America/Sao_Paulo",
+            "startsOn": "2026-09-01",
+            "endsOn": "2026-11-30"
+          }
+        },
+        "revision": 4,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z",
+        "artifacts": [],
+        "subtaskIds": [
+          "task-sub-1",
+          "task-sub-2"
+        ],
+        "requests": [
+          {
+            "id": "req-1",
+            "name": "Marque a reunião de planejamento",
+            "relation": "generates",
+            "at": "2026-09-01T12:00:00.000Z"
+          },
+          {
+            "id": "req-2",
+            "name": "Mude para as 18h30",
+            "relation": "updates",
+            "at": "2026-09-10T15:00:00.000Z"
+          },
+          {
+            "id": "req-3",
+            "name": "Adicione o local",
+            "relation": "updates",
+            "at": "2026-09-12T15:05:00.000Z"
+          }
+        ]
+      },
+      "info": {
+        "start": "Seg, 14 set · 18:30",
+        "endLabel": "Término",
+        "end": "Seg, 14 set · 19:20",
+        "duration": "50 min",
+        "persistent": false,
+        "recurrence": {
+          "rule": "Seg, qua e sex, 18:30",
+          "detail": "desde 1 set · até 30 nov · esta ocorrência segue a série"
+        },
+        "location": "Rua Augusta, 100 - São Paulo",
+        "reminders": [
+          "30 min",
+          "1 dia",
+          "2 dias"
+        ],
+        "tags": [
+          "trabalho",
+          "saúde"
+        ],
+        "description": "Pauta do trimestre.\nLevar o relatório impresso."
+      }
+    },
+    {
+      "id": "task-9",
+      "task": {
+        "id": "task-9",
+        "actor": "human",
+        "kind": "common",
+        "priority": "medium",
+        "name": "Pagar o condomínio",
+        "description": "",
+        "startedAt": "2026-09-14T03:00:00.000Z",
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 4,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z",
+        "artifacts": [],
+        "subtaskIds": [],
+        "requests": []
+      },
+      "info": {
+        "start": "Seg, 14 set",
+        "endLabel": "Término",
+        "end": "sem data",
+        "duration": null,
+        "persistent": false,
+        "recurrence": null,
+        "location": null,
+        "reminders": [],
+        "tags": [],
+        "description": null
+      }
+    },
+    {
+      "id": "task-7",
+      "task": {
+        "id": "task-7",
+        "actor": "human",
+        "kind": "common",
+        "status": "doing",
+        "priority": "medium",
+        "name": "Projeto longo",
+        "description": "",
+        "startedAt": "2026-09-01T12:00:00.000Z",
+        "estimatedFinishAt": "2026-11-30T12:00:00.000Z",
+        "longRunning": true,
+        "notifyOffsetsMinutes": [],
+        "tags": [
+          "trabalho"
+        ],
+        "artifactTypes": [],
+        "revision": 2,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z",
+        "artifacts": [],
+        "subtaskIds": [],
+        "requests": []
+      },
+      "info": {
+        "start": "Ter, 1 set · 09:00",
+        "endLabel": "Previsão de entrega",
+        "end": "Seg, 30 nov · 09:00",
+        "duration": null,
+        "persistent": true,
+        "recurrence": null,
+        "location": null,
+        "reminders": [],
+        "tags": [
+          "trabalho"
+        ],
+        "description": null
+      }
+    },
+    {
+      "id": "task-14",
+      "task": {
+        "id": "task-14",
+        "actor": "human",
+        "kind": "common",
+        "status": "toDefine",
+        "priority": "medium",
+        "name": "Ideia grande",
+        "description": "",
+        "longRunning": true,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 2,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z",
+        "artifacts": [],
+        "subtaskIds": [],
+        "requests": []
+      },
+      "info": {
+        "start": null,
+        "endLabel": "Previsão de entrega",
+        "end": "sem data",
+        "duration": null,
+        "persistent": true,
+        "recurrence": null,
+        "location": null,
+        "reminders": [],
+        "tags": [],
+        "description": null
+      }
+    },
+    {
+      "id": "task-15",
+      "task": {
+        "id": "task-15",
+        "actor": "human",
+        "kind": "common",
+        "status": "todo",
+        "priority": "medium",
+        "name": "Entregar o documento",
+        "description": "",
+        "startedAt": "2026-09-14T03:00:00.000Z",
+        "estimatedFinishAt": "2026-09-14T03:00:00.000Z",
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z",
+        "artifacts": [],
+        "subtaskIds": [],
+        "requests": []
+      },
+      "info": {
+        "start": "Seg, 14 set",
+        "endLabel": "Término",
+        "end": "Seg, 14 set",
+        "duration": null,
+        "persistent": false,
+        "recurrence": null,
+        "location": null,
+        "reminders": [],
+        "tags": [],
+        "description": null
+      }
+    },
+    {
+      "id": "task-2",
+      "task": {
+        "id": "task-2",
+        "actor": "human",
+        "kind": "common",
+        "status": "todo",
+        "priority": "medium",
+        "name": "Ligar para o banco",
+        "description": "",
+        "startedAt": "2026-09-14T15:00:00.000Z",
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z",
+        "artifacts": [],
+        "subtaskIds": [],
+        "requests": []
+      },
+      "info": {
+        "start": "Seg, 14 set · 12:00",
+        "endLabel": "Término",
+        "end": "sem data",
+        "duration": null,
+        "persistent": false,
+        "recurrence": null,
+        "location": null,
+        "reminders": [],
+        "tags": [],
+        "description": null
+      }
+    },
+    {
+      "id": "task-3",
+      "task": {
+        "id": "task-3",
+        "actor": "human",
+        "kind": "common",
+        "status": "toDefine",
+        "priority": "medium",
+        "name": "Sem data",
+        "description": "",
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z",
+        "artifacts": [],
+        "subtaskIds": [],
+        "requests": []
+      },
+      "info": {
+        "start": "sem data",
+        "endLabel": "Término",
+        "end": "sem data",
+        "duration": null,
+        "persistent": false,
+        "recurrence": null,
+        "location": null,
+        "reminders": [],
+        "tags": [],
+        "description": null
+      }
+    },
+    {
+      "id": "task-16",
+      "task": {
+        "id": "task-16",
+        "actor": "human",
+        "kind": "common",
+        "status": "todo",
+        "priority": "medium",
+        "name": "Aniversário",
+        "description": "",
+        "startedAt": "2026-09-14T15:00:00.000Z",
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "recurrence": {
+          "id": "rec-2",
+          "occurrenceOn": "2026-09-14",
+          "detached": true,
+          "rule": {
+            "frequency": "yearly",
+            "interval": 1,
+            "byMonthDay": 14,
+            "byMonth": 9,
+            "timeOfDay": "09:00",
+            "timeZone": "America/Sao_Paulo",
+            "startsOn": "2020-09-14"
+          }
+        },
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z",
+        "artifacts": [],
+        "subtaskIds": [],
+        "requests": []
+      },
+      "info": {
+        "start": "Seg, 14 set · 12:00",
+        "endLabel": "Término",
+        "end": "sem data",
+        "duration": null,
+        "persistent": false,
+        "recurrence": {
+          "rule": "Todo ano, 14/9, 09:00",
+          "detail": "desde 14 set · sem fim · esta ocorrência não segue a série"
+        },
+        "location": null,
+        "reminders": [],
+        "tags": [],
+        "description": null
+      }
+    }
+  ]
+}

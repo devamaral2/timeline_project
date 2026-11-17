@@ -79,6 +79,7 @@ fun openTasksLabel(open: Int): String =
 @Composable
 fun TasksScreen(
     onNewTask: () -> Unit,
+    onOpenTask: (String) -> Unit = {},
     viewModel: TasksViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -97,6 +98,7 @@ fun TasksScreen(
         onRetry = viewModel::retry,
         onClearFilters = viewModel::clearFilters,
         onNewTask = onNewTask,
+        onOpenTask = onOpenTask,
     )
     state.statusPicker?.let { card ->
         TaskStatusSheet(
@@ -154,6 +156,7 @@ fun TasksContent(
     onRetry: () -> Unit,
     onClearFilters: () -> Unit,
     onNewTask: () -> Unit,
+    onOpenTask: (String) -> Unit = {},
 ) {
     val bottomInset = with(LocalDensity.current) { WindowInsets.navigationBars.getBottom(this).toDp() }
     Column(
@@ -215,6 +218,7 @@ fun TasksContent(
                             now = state.now,
                             onToggle = { onToggleGroup(group.key) },
                             onStatusClick = onStatusClick,
+                            onOpenTask = onOpenTask,
                         )
                     }
             }
@@ -232,6 +236,7 @@ private fun GroupSection(
     now: Instant,
     onToggle: () -> Unit,
     onStatusClick: (TaskCard) -> Unit,
+    onOpenTask: (String) -> Unit,
 ) {
     if (group.collapsedByDefault) {
         CollapsibleHead(group, expanded, onToggle)
@@ -246,6 +251,7 @@ private fun GroupSection(
             TaskRow(
                 card = card,
                 now = now,
+                onClick = { onOpenTask(card.id) },
                 onStatusClick = if (opensPicker) ({ onStatusClick(card) }) else null,
                 ruleInPlaceOfTime = showsSeriesRule(card),
             )

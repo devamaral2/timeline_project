@@ -34,6 +34,7 @@ import app.braid.mobile.ui.shell.MainTab
 import app.braid.mobile.ui.shell.SectionMenuBody
 import app.braid.mobile.ui.shell.SectionMenuViewModel
 import app.braid.mobile.ui.shell.SectionMenus
+import app.braid.mobile.ui.taskdetail.TaskDetailPage
 import app.braid.mobile.ui.tasks.TasksScreen
 
 @Composable
@@ -77,9 +78,15 @@ fun AppNavHost(
         Box(Modifier.fillMaxSize()) {
             NavHost(navController = navController, startDestination = LoginRoute) {
                 composable<LoginRoute> { if (session !is SessionState.Unknown) LoginScreen() }
-                composable<AgendaRoute> { AgendaScreen() }
+                composable<AgendaRoute> { AgendaScreen(onOpenTask = { navController.navigate(TaskDetailRoute(it)) }) }
+                composable<TaskDetailRoute> {
+                    TaskDetailPage(
+                        onBack = { navController.popBackStack() },
+                        onOpenTask = { navController.navigate(TaskDetailRoute(it)) },
+                    )
+                }
                 // "Nova tarefa" leva à criação quando o ticket 13 existir.
-                composable<TasksRoute> { TasksScreen(onNewTask = {}) }
+                composable<TasksRoute> { TasksScreen(onNewTask = {}, onOpenTask = { navController.navigate(TaskDetailRoute(it)) }) }
                 composable<DocumentsRoute> { EmptyTabScreen() }
             }
             if (currentTab != null) {
