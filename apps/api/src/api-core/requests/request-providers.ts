@@ -41,7 +41,6 @@ import { RequestCreateWorker } from "./request-create-worker";
 import { RequestDispatcher } from "./request-dispatcher";
 import { RequestEditTargetWorker } from "./request-edit-target-worker";
 import { RequestEditWorker } from "./request-edit-worker";
-import { RequestFallback } from "./request-fallback";
 import { RequestFinalizer } from "./request-finalizer";
 import { RequestOperations } from "./request-operations";
 import { RequestQueryWorker } from "./request-query-worker";
@@ -112,12 +111,14 @@ export const REQUEST_PROVIDERS: Provider[] = [
         edit: new RequestEditWorker({ ...deps, sql }),
         query: new RequestQueryWorker({ store, runner, sql }),
         finalizer: new RequestFinalizer({ ...deps, jev }),
-        fallback: new RequestFallback({ store, runner }),
         editTarget: new RequestEditTargetWorker({
           store, repositories, files, failureText: (code) => uiConfig.targetFailed[code],
         }),
         targetEdit: new RequestTargetEditWorker({ ...deps, foodParsing, artifactBuilder, files }),
-        hermes: new HermesTurnWorker(store, new HermesClient({ url: env.HERMES_URL, apiKey: env.HERMES_API_KEY })),
+        // O Hermes desligado nao tem cliente: o fallback que chega a ele termina com o aviso.
+        hermes: new HermesTurnWorker(
+          store, env.AI_AUTOMATION === "on" ? new HermesClient({ url: env.HERMES_URL, apiKey: env.HERMES_API_KEY }) : undefined,
+        ),
         voice: new VoiceTaskWorker({ store, parsing: commandParsing, createTask, batchWriter, places }),
         food,
       });

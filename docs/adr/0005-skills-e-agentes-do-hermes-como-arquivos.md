@@ -46,6 +46,9 @@ a rota por processo (ADR 003, agentes em `api-core/process/agents/*.md`) e o Her
 - Só viram nota o `SKILL.md` de cada skill e os `.md` de `hermes/agents/`. O resto da pasta de skills
   (`DESCRIPTION.md`, referências, scripts, estado do Hermes como `.usage.json` e `.bundled_manifest`) pertence
   ao Hermes, fica na pasta mas a API o ignora (pastas ocultas também).
+- Em produção, as skills versionadas em `ops/hermes/skills/` são copiadas para o volume do Hermes a cada
+  deploy e substituem a skill de mesmo caminho (`ops/production/sync-hermes-skills.sh`). Para essas skills a
+  fonte é o repositório, não a pasta: uma edição do Hermes nelas dura até o deploy seguinte.
 - Falta montar a pasta em produção (`ops/production/hermes.yaml`) e incluí-la no `ops/production/backup.sh`.
 
 ## Montagem no Hermes e migração

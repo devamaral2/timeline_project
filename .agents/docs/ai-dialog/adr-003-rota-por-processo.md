@@ -33,6 +33,8 @@ Quatro agentes (`recurring-event-create`, `recurring-task-create`, `recurring-ev
 
 ### Fallback que orquestra e explicação de falha (fase C)
 
+> **Substituído pela [ADR 0018](../../../docs/adr/0018-hermes-como-fallback-do-pedido-por-passos.md):** o fallback agora é o Hermes; o agente `fallback`, o laço e o foco saíram. A explicação de falha continua como abaixo.
+
 O agente de `process-fallback` ou responde (pedido sem relação com os dados) ou devolve até 6 chamadas `{agent, instruction}` a especialistas. O servidor cria esses passos pelo mesmo mecanismo do despacho (`ProcessStore.handOff`), na mesma transação em que o passo do fallback termina, de modo que o processo não fecha no meio. O schema do fallback não aceita `fallback` como especialista. Cada especialista chamado recebe o pedido inteiro mais o **foco** do orquestrador; passos de edição chamados assim nascem sem candidatos escolhidos pelo JEV e usam a consulta do próprio agente. Quando o processo termina com algum passo vermelho, o `failure-explainer` faz **uma** chamada curta (nomes de passos e códigos de erro, nunca o texto do usuário em log) e a frase vai em `response.explanation`; se ela falha, vale a linha predefinida de `ui.json`. Sucesso total nunca chama modelo para texto.
 
 ### Clientes (fase D)

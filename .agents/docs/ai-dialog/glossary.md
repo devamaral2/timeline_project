@@ -17,7 +17,7 @@
 | Processo | Pedido tratado pela rota por processo (ADR 003): gravado antes de qualquer entidade e ligado a cada uma que seus passos criam ou editam. |
 | Passo | Trabalho de um processo entregue à fila de um agente (criar tarefas, criar artefatos...). Termina em verde (sucesso) ou vermelho (falha). |
 | Finalização | Fila com lock por processo em que cada entidade concluída é comparada, pelo JEV, com as já criadas para decidir vínculos. |
-| Fallback | Fila do pedido que não cai em nenhuma operação de entidade; seu agente responde ou, nas fases seguintes, orquestra os especialistas. |
+| Fallback | Destino do pedido que não cai em nenhuma operação de entidade (ou que pede `fallback:`): é sempre o Hermes, que atende o pedido na sessão da conversa (ADR 0018). |
 | Hermes | Agente de terceiros (`nousresearch/hermes-agent`) que roda como container interno e executa as automações. Nunca é exposto: só a API fala com ele (ADR 004). |
 | Automação | Trabalho recorrente ou agendado ("todo dia às 7h...") que o Hermes guarda e dispara pelo cron dele, em vez de virar entidade da agenda. |
 | Rota de automação | Ramo do roteador por processo (ADR 003) que entrega ao Hermes o pedido classificado como automação e devolve a resposta ao mesmo chat. |

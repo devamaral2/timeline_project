@@ -31,7 +31,9 @@ describe("agentes em .md", () => {
       const name = file.replace(/\.md$/, "");
       expect(loadAgentDefinition(name).name).toBe(name);
     }
-    for (const agent of [...STEP_AGENTS, "fallback", "fallback-loop", "failure-explainer"]) expect(files).toContain(`${agent}.md`);
+    for (const agent of [...STEP_AGENTS, "failure-explainer"]) expect(files).toContain(`${agent}.md`);
+    // O fallback e o Hermes: nao ha mais agente proprio para ele.
+    expect(files).not.toContain("fallback.md");
   });
 
   test("os agentes de criacao nao consultam nem criam fora do seu papel", () => {
@@ -75,7 +77,7 @@ describe("parametros do JEV e textos predefinidos em .json", () => {
     expect(linkConfig.minCertainty).toBe(0.92);
   });
 
-  test("todo agente tem rotulo predefinido", () => {
+  test("todo agente tem rotulo predefinido (e o `fallback` antigo, para os pedidos que ainda o tem)", () => {
     for (const agent of [...STEP_AGENTS, "fallback"]) expect(uiConfig.steps[agent]).toBeTruthy();
     expect(stepLabel("task-create")).toBe("Criando tarefas");
     expect(Object.keys(uiConfig.steps).sort()).toEqual([...STEP_AGENTS, "fallback"].sort());

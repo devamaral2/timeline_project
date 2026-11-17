@@ -18,7 +18,7 @@ function setup() {
   };
   const worker = () => ({ run: vi.fn(async () => {}) });
   const workers = {
-    dispatcher: worker(), create: worker(), edit: worker(), query: worker(), finalizer: worker(), fallback: worker(),
+    dispatcher: worker(), create: worker(), edit: worker(), query: worker(), finalizer: worker(),
     editTarget: worker(), targetEdit: worker(), hermes: worker(), voice: worker(),
     food: { execute: vi.fn(async () => "completed"), fail: vi.fn(async () => "failed") },
   };
@@ -34,7 +34,7 @@ describe("fila dos pedidos", () => {
   test("um handler por tipo de job da IA, todos com o que fazer quando o job morre", () => {
     const { handlers } = setup();
     expect([...handlers.keys()].sort()).toEqual([
-      "food-generation", "hermes-turn", "request-dispatch", "request-edit-target", "request-fallback",
+      "food-generation", "hermes-turn", "request-dispatch", "request-edit-target",
       "request-finalize", "request-step", "voice-task",
     ]);
     for (const [kind, handler] of handlers) expect(handler.onFailure, kind).toBeTypeOf("function");
@@ -99,7 +99,7 @@ describe("iniciar um pedido", () => {
     expect(store.jobs).toEqual([{ kind: "request-dispatch", requestId: id }]);
   });
 
-  test("`fallback: <pedido>` guarda so o pedido e marca o despacho para pular o JEV", async () => {
+  test("`fallback: <pedido>` guarda so o pedido e marca o despacho para pular o JEV e ir ao Hermes", async () => {
     const { store, operations } = setup();
     const id = await operations.start({ userId: "user-1", text: "fallback: qual a capital da França?" }, actor);
     expect(store.require(id)).toMatchObject({ prompt: "qual a capital da França?", forceFallback: true });

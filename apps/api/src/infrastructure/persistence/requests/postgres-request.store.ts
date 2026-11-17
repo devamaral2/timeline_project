@@ -11,7 +11,7 @@ import type {
   RequestScreenContext,
 } from "@repo/contracts";
 import { stepLabel } from "../../../api-core/requests/request-config";
-import { finalizeConcurrencyKey, jobKindOf, REQUEST_JOBS, type RequestAgent } from "../../../api-core/requests/request-steps";
+import { finalizeConcurrencyKey, REQUEST_JOBS, type RequestAgent } from "../../../api-core/requests/request-steps";
 import type {
   DispatchRecord,
   EntitySummary,
@@ -239,69 +239,67 @@ export class PostgresRequestStore implements RequestStore {
       const userId = await this.lockOpenRequest(tx, requestId);
       if (!userId) return;
       await this.insertSteps(tx, requestId, userId, steps);
-      // As escolhas ficam no pedido; as medidas (modelo, latencia), numa entrada de trace.
-      const { model, latencyMs, ...choices } = dispatch ?? {};
-      await tx.execute(sql`
-        UPDATE tasks SET status = 'running', updated_at = now(),
-          data = data || ${json(dispatch ? { dispatch: choices } : {})}::jsonb
-        WHERE id = ${requestId}`);
-      if (dispatch) {
-        await this.append(tx, requestId, {
-          kind: "trace",
-          data: { stage: "dispatch", ...(model ? { model } : {}), ...(latencyMs !== undefined ? { latencyMs } : {}), steps: steps.length },
-        });
-      }
+      await this.recordDispatch(tx, requestId, { status: "running" }, dispatch, steps.length);
     });
   }
 
-  async handOff(requestId: string, fallbackStepId: string, steps: readonly NewStep[]): Promise<void> {
+  async handToHermes(requestId: string, dispatch: DispatchRecord): Promise<void> {
     await this.inTransaction(undefined, async (tx) => {
       const userId = await this.lockOpenRequest(tx, requestId);
       if (!userId) return;
-      await this.insertSteps(tx, requestId, userId, steps);
-      await this.closeStep(tx, fallbackStepId, "done");
+      // Continua `queued`: quem o passa a `running` e o job do Hermes, como num pedido que nasce na rota dele.
+      await this.recordDispatch(tx, requestId, { route: "hermes" }, dispatch, 0);
+      await enqueueJobInTransaction(tx, {
+        kind: REQUEST_JOBS.hermes, userId, actorId: userId, taskId: requestId,
+        payload: { requestId }, dedupeKey: `hermes:${requestId}`,
+      });
     });
   }
 
-  async continueFallback(requestId: string, step: NewStep): Promise<void> {
-    await this.inTransaction(undefined, async (tx) => {
-      // A trava no pedido faz duas finalizacoes ao mesmo tempo enxergarem a rodada uma da outra.
-      const userId = await this.lockOpenRequest(tx, requestId, sql`('running')`);
-      if (!userId) return;
-      const rounds = await tx.execute<{ total: number }>(sql`
-        SELECT count(*)::int AS total FROM task_task_relation r JOIN tasks s ON s.id = r.to_task_id
-        WHERE r.from_task_id = ${requestId} AND r.relation = 'step' AND s.data->>'agent' = 'fallback'`);
-      if (Number(rounds.rows[0]?.total ?? 0) !== (step.input?.round ?? 1) - 1) return;
-      await this.insertSteps(tx, requestId, userId, [step]);
-    });
+  /** As escolhas do despacho ficam no pedido (com `patch`); as medidas (modelo, latencia), numa entrada de trace. */
+  private async recordDispatch(
+    tx: Tx,
+    requestId: string,
+    patch: { status?: "running"; route?: "hermes" },
+    dispatch: DispatchRecord | undefined,
+    steps: number,
+  ): Promise<void> {
+    const { model, latencyMs, ...choices } = dispatch ?? {};
+    const data = { ...(patch.route ? { route: patch.route } : {}), ...(dispatch ? { dispatch: choices } : {}) };
+    await tx.execute(sql`
+      UPDATE tasks SET status = ${patch.status ?? sql`status`}, updated_at = now(), data = data || ${json(data)}::jsonb
+      WHERE id = ${requestId}`);
+    if (dispatch) {
+      await this.append(tx, requestId, {
+        kind: "trace",
+        data: { stage: "dispatch", ...(model ? { model } : {}), ...(latencyMs !== undefined ? { latencyMs } : {}), steps },
+      });
+    }
   }
 
   /** O dono do pedido, com a linha travada; nada se o pedido nao existe ou ja terminou. */
-  private async lockOpenRequest(tx: Tx, requestId: string, statuses: SQL = OPEN_REQUEST): Promise<string | undefined> {
+  private async lockOpenRequest(tx: Tx, requestId: string): Promise<string | undefined> {
     const found = await tx.execute<{ user_id: string }>(sql`
       SELECT user_id FROM tasks
-      WHERE id = ${requestId} AND actor = 'agent' AND kind <> 'step' AND status IN ${statuses}
+      WHERE id = ${requestId} AND actor = 'agent' AND kind <> 'step' AND status IN ${OPEN_REQUEST}
       FOR UPDATE`);
     return found.rows[0]?.user_id;
   }
 
   private async insertSteps(tx: Tx, requestId: string, userId: string, steps: readonly NewStep[]): Promise<void> {
     for (const step of steps) {
-      const { round, ...input } = step.input ?? {};
+      const input = step.input ?? {};
       await insertAgentTask(tx, {
         id: step.id, userId, kind: "step", status: "queued", name: stepLabel(step.agent),
-        data: { agent: step.agent, expected: step.expected, ...(round !== undefined ? { round } : {}) },
+        data: { agent: step.agent, expected: step.expected },
       });
       await tx.execute(sql`
         INSERT INTO task_task_relation (from_task_id, to_task_id, relation)
         VALUES (${requestId}, ${step.id}, 'step')`);
-      // O insumo e onde o texto do usuario pode aparecer num passo: o foco, os candidatos, o retrato do alvo.
-      const { instruction, ...rest } = input;
-      if (instruction !== undefined || Object.keys(rest).length > 0) {
-        await this.append(tx, step.id, { kind: "input", content: instruction, data: rest });
-      }
+      // O insumo e onde o texto do usuario pode aparecer num passo: os candidatos, o retrato do alvo.
+      if (Object.keys(input).length > 0) await this.append(tx, step.id, { kind: "input", data: { ...input } });
       await enqueueJobInTransaction(tx, {
-        kind: jobKindOf(step.agent), userId, actorId: userId, taskId: step.id,
+        kind: REQUEST_JOBS.step, userId, actorId: userId, taskId: step.id,
         payload: { requestId, stepId: step.id }, dedupeKey: step.id,
       });
     }
@@ -418,13 +416,6 @@ export class PostgresRequestStore implements RequestStore {
 
   async finish(requestId: string, status: "done" | "failed", outcome: RequestOutcome): Promise<void> {
     await this.inTransaction(undefined, (tx) => this.closeRequest(tx, requestId, status, outcome));
-  }
-
-  async finishFallback(requestId: string, stepId: string, text: string, failedSteps: FailedStep[] = []): Promise<void> {
-    await this.inTransaction(undefined, async (tx) => {
-      if (!(await this.closeStep(tx, stepId, "done"))) return;
-      await this.closeRequest(tx, requestId, "done", { failedSteps, message: text });
-    });
   }
 
   async completeVoice(tx: unknown, input: { requestId: string; taskId: string }): Promise<void> {
@@ -563,13 +554,9 @@ function toRequestRecord(row: Row, entries: readonly EntryRow[]): RequestRecord 
 }
 
 function toStepRecord(requestId: string, row: Row, entries: readonly EntryRow[]): StepRecord {
-  const data = (row.data ?? {}) as { agent: RequestAgent; expected: StepRecord["expected"]; round?: number; errorCode?: string };
+  const data = (row.data ?? {}) as { agent: RequestAgent; expected: StepRecord["expected"]; errorCode?: string };
   const given = entries.find((entry) => entry.kind === "input");
-  const input: StepInput = {
-    ...((given?.data ?? {}) as StepInput),
-    ...(given?.content ? { instruction: given.content } : {}),
-    ...(data.round !== undefined ? { round: data.round } : {}),
-  };
+  const input: StepInput = (given?.data ?? {}) as StepInput;
   const thoughts = entries.filter((entry) => entry.kind === "thought").map((entry): StepThought => ({
     text: entry.content ?? "", at: String(entry.data.at ?? ""), ...(entry.data.model ? { model: String(entry.data.model) } : {}),
   }));

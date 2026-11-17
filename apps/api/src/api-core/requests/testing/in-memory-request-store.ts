@@ -4,7 +4,7 @@ import type { Artifact, Task } from "../../../domain";
 import { newOrderedId } from "../../../infrastructure/persistence/requests/request-rows";
 import { requestTitleOf } from "../../../infrastructure/persistence/requests/postgres-request.store";
 import { stepLabel } from "../request-config";
-import { jobKindOf, REQUEST_JOBS } from "../request-steps";
+import { REQUEST_JOBS } from "../request-steps";
 import type {
   DispatchRecord, EntitySummary, FailedStep, LinkRecord, NewEntity, NewRequest, NewStep, RequestEntityRecord,
   RequestOutcome, RequestRecord, RequestStore, StepRecord, StepThought,
@@ -134,16 +134,12 @@ export class InMemoryRequestStore implements RequestStore {
     request.status = "running";
   }
 
-  async handOff(requestId: string, fallbackStepId: string, steps: readonly NewStep[]): Promise<void> {
-    this.insertSteps(requestId, steps);
-    this.stepOf(fallbackStepId).status = "done";
-  }
-
-  async continueFallback(requestId: string, step: NewStep): Promise<void> {
-    if (this.requests.get(requestId)?.status !== "running") return;
-    const rounds = this.stepRecords.filter((candidate) => candidate.requestId === requestId && candidate.agent === "fallback");
-    if (rounds.length !== (step.input?.round ?? 1) - 1) return;
-    this.insertSteps(requestId, [step]);
+  async handToHermes(requestId: string, dispatch: DispatchRecord): Promise<void> {
+    const request = this.requests.get(requestId);
+    if (!request || !OPEN.has(request.status)) return;
+    request.route = "hermes";
+    request.dispatch = dispatch;
+    this.jobs.push({ kind: REQUEST_JOBS.hermes, requestId });
   }
 
   private insertSteps(requestId: string, steps: readonly NewStep[]): void {
@@ -152,7 +148,7 @@ export class InMemoryRequestStore implements RequestStore {
         id: step.id, requestId, agent: step.agent, label: stepLabel(step.agent), expected: step.expected,
         status: "queued", ...(step.input ? { input: step.input } : {}),
       });
-      this.jobs.push({ kind: jobKindOf(step.agent), requestId, stepId: step.id });
+      this.jobs.push({ kind: REQUEST_JOBS.step, requestId, stepId: step.id });
     }
   }
 
@@ -224,11 +220,6 @@ export class InMemoryRequestStore implements RequestStore {
     if (outcome.message) request.answer = outcome.message;
     if (outcome.thought) request.answerThought = outcome.thought;
     if (outcome.trace) request.trace = outcome.trace;
-  }
-
-  async finishFallback(requestId: string, stepId: string, text: string, failedSteps: FailedStep[] = []): Promise<void> {
-    if (!this.closeStep(stepId, "done")) return;
-    await this.finish(requestId, "done", { failedSteps, message: text });
   }
 
   async completeVoice(_tx: unknown, input: { requestId: string; taskId: string }): Promise<void> {

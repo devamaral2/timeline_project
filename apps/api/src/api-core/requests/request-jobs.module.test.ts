@@ -18,7 +18,7 @@ test("todos os modulos de funcionalidade compartilham um so registro de handlers
     await app.init();
     expect(app.get(RequestOperations)).toBeInstanceOf(RequestOperations);
     expect(register.mock.calls.map(([kind]) => kind).sort()).toEqual([
-      "food-generation", "hermes-turn", "request-dispatch", "request-edit-target", "request-fallback",
+      "food-generation", "hermes-turn", "request-dispatch", "request-edit-target",
       "request-finalize", "request-step", "voice-task",
     ]);
   } finally {

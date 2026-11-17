@@ -9,9 +9,9 @@ import { formatNow } from "../agent/time";
 
 /**
  * O JEV de entrada: uma chamada, uma pergunta por operacao x entidade. Cada resposta diferente de "nenhum"
- * vira um passo na fila propria, todos de uma vez. Pedido sem passo reconhecido, ou com resposta incerta,
- * vai ao fallback. Um pedido escrito como `fallback: <pedido>` vai direto ao fallback, sem a chamada ao JEV, e
- * so nesse caso o fallback roda em laco (`request-fallback-loop.ts`): o passo ja nasce na rodada 1.
+ * vira um passo na fila propria, todos de uma vez. Pedido sem passo reconhecido, com resposta incerta ou com o
+ * JEV fora do ar vai ao fallback, que e sempre o Hermes: o pedido passa para a rota dele (ADR 0018). Um pedido
+ * escrito como `fallback: <pedido>` vai direto ao Hermes, sem a chamada ao JEV.
  */
 export class RequestDispatcher {
   private readonly logger = new Logger(RequestDispatcher.name);
@@ -28,8 +28,8 @@ export class RequestDispatcher {
 
     // `fallback: <pedido>`: quem pediu ja escolheu o caminho; o JEV nem e consultado.
     if (request.forceFallback) {
-      this.logger.log(`request=${requestId} fallback pedido pelo prefixo; JEV de entrada pulado`);
-      await this.fallback(requestId, { answers: {}, uncertain: [], unsupported: [], fallbackReason: "forced" }, true);
+      this.logger.log(`request=${requestId} fallback pedido pelo prefixo; JEV de entrada pulado, direto ao Hermes`);
+      await this.fallback(requestId, { answers: {}, uncertain: [], unsupported: [], fallbackReason: "forced" });
       return;
     }
 
@@ -44,7 +44,7 @@ export class RequestDispatcher {
     } catch (error) {
       if (signal?.aborted) throw error;
       const reason = error instanceof JevUnavailableError ? `jev_${error.reason}` : "jev_error";
-      this.logger.warn(`request=${requestId} JEV de entrada falhou (${reason}); indo ao fallback`);
+      this.logger.warn(`request=${requestId} JEV de entrada falhou (${reason}); indo ao Hermes`);
       await this.fallback(requestId, { answers: {}, uncertain: [], unsupported: [], fallbackReason: reason });
       return;
     }
@@ -169,9 +169,8 @@ export class RequestDispatcher {
     }
   }
 
-  private async fallback(requestId: string, record: DispatchRecord, loop = false): Promise<void> {
-    await this.store.beginSteps(requestId, [{
-      id: newOrderedId(), agent: "fallback", expected: "one", ...(loop ? { input: { round: 1 } } : {}),
-    }], record);
+  /** O fallback e o Hermes: o pedido muda de rota e o job do Hermes entra na fila. */
+  private async fallback(requestId: string, record: DispatchRecord): Promise<void> {
+    await this.store.handToHermes(requestId, record);
   }
 }

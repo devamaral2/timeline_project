@@ -2,7 +2,7 @@ import type { AgentTraceDto } from "@repo/contracts";
 import { expect, test, vi } from "vitest";
 import { HermesRequestError, type HermesChatInput } from "../../infrastructure/hermes/hermes.client";
 import { RetryableJobError } from "../../infrastructure/jobs/jobs.service";
-import { HermesTurnWorker } from "./hermes-turn-worker";
+import { HERMES_OFF_MESSAGE, HermesTurnWorker } from "./hermes-turn-worker";
 import { toRequestDto } from "./request-view";
 import { InMemoryRequestStore } from "./testing/in-memory-request-store";
 
@@ -80,10 +80,10 @@ test("erro que a fila ainda vai tentar de novo nao encerra o pedido", async () =
   expect(store.require("01NEXT").status).toBe("running");
 });
 
-test("sem o Hermes configurado o pedido falha em vez de esperar", async () => {
+test("com o Hermes desligado o pedido falha na hora com o aviso, sem tentar de novo", async () => {
   const { store, run } = setup();
-  await expect(run()).rejects.toThrow("Hermes is not configured");
-  expect(store.require("01NEXT").status).toBe("failed");
+  await run();
+  expect(store.require("01NEXT")).toMatchObject({ status: "failed", errorCode: "unavailable", answer: HERMES_OFF_MESSAGE });
 });
 
 test("pedido cancelado ou ja terminado nao chama o Hermes", async () => {

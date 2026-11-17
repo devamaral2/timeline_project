@@ -57,14 +57,12 @@ describe("despacho pelo JEV de entrada", () => {
     expect(store.require("r1").dispatch).toMatchObject({ model: "jev-test", uncertain: [], unsupported: [] });
   });
 
-  test("nenhuma operacao reconhecida vai ao fallback", async () => {
+  test("nenhuma operacao reconhecida vai ao Hermes: o pedido muda de rota, sem passo", async () => {
     const { store, dispatcher } = setup(() => answers());
     await dispatcher.run("r1");
-    expect(store.stepRecords.map((step) => step.agent)).toEqual(["fallback"]);
-    expect(store.jobs.map((job) => job.kind)).toEqual(["request-fallback"]);
-    // Fallback do despacho: chamada unica, sem rodada.
-    expect(store.stepRecords[0]?.input).toBeUndefined();
-    expect(store.require("r1").dispatch).toMatchObject({ fallbackReason: "no_step" });
+    expect(store.stepRecords).toEqual([]);
+    expect(store.jobs.map((job) => job.kind)).toEqual(["hermes-turn"]);
+    expect(store.require("r1")).toMatchObject({ route: "hermes", status: "queued", dispatch: { fallbackReason: "no_step" } });
   });
 
   test("toda pergunta de operacao do JEV tem agente: nenhum pedido reconhecido sobra sem fila", async () => {
@@ -85,26 +83,27 @@ describe("despacho pelo JEV de entrada", () => {
     expect(store.jobs.map((job) => job.kind)).toEqual(["request-step"]);
   });
 
-  test("resposta incerta em qualquer pergunta manda ao fallback", async () => {
+  test("resposta incerta em qualquer pergunta manda ao Hermes", async () => {
     const { store, dispatcher } = setup(() => answers({
       task_create: confident("one"), artifact_create: confident("one", 0.9),
     }));
     await dispatcher.run("r1");
-    expect(store.stepRecords.map((step) => step.agent)).toEqual(["fallback"]);
+    expect(store.stepRecords).toEqual([]);
+    expect(store.require("r1").route).toBe("hermes");
     expect(store.require("r1").dispatch).toMatchObject({ fallbackReason: "uncertain", uncertain: ["artifact_create"] });
   });
 
   test.each([
     ["sem chave", new JevUnavailableError("no_api_key"), "jev_no_api_key"],
     ["provedor fora", new JevUnavailableError("provider"), "jev_provider"],
-  ])("JEV indisponivel (%s) vai ao fallback", async (_, error, reason) => {
+  ])("JEV indisponivel (%s) vai ao Hermes", async (_, error, reason) => {
     const { store, dispatcher } = setup(() => error);
     await dispatcher.run("r1");
-    expect(store.stepRecords.map((step) => step.agent)).toEqual(["fallback"]);
+    expect(store.jobs.map((job) => job.kind)).toEqual(["hermes-turn"]);
     expect(store.require("r1").dispatch).toMatchObject({ fallbackReason: reason });
   });
 
-  test("pedido com o prefixo fallback: vai direto ao fallback, sem consultar o JEV", async () => {
+  test("pedido com o prefixo fallback: vai direto ao Hermes, sem consultar o JEV", async () => {
     // O JEV reconheceria uma criacao; com o prefixo ele nem e chamado.
     const { store, dispatcher, jev } = setup(() => answers({ task_create: confident("one") }));
 
@@ -112,11 +111,9 @@ describe("despacho pelo JEV de entrada", () => {
     await dispatcher.run("r1");
 
     expect(jev.ask).not.toHaveBeenCalled();
-    expect(store.stepRecords.map((step) => step.agent)).toEqual(["fallback"]);
-    // So o comando liga o laco: o passo ja nasce na rodada 1.
-    expect(store.stepRecords[0]?.input).toEqual({ round: 1 });
-    expect(store.jobs.map((job) => job.kind)).toEqual(["request-fallback"]);
-    expect(store.require("r1").status).toBe("running");
+    expect(store.stepRecords).toEqual([]);
+    expect(store.jobs.map((job) => job.kind)).toEqual(["hermes-turn"]);
+    expect(store.require("r1")).toMatchObject({ route: "hermes", status: "queued" });
     expect(store.require("r1").dispatch).toEqual({ answers: {}, uncertain: [], unsupported: [], fallbackReason: "forced" });
   });
 

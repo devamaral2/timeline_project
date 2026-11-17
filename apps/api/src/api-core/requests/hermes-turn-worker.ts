@@ -1,5 +1,5 @@
 import type { AgentTraceDto } from "@repo/contracts";
-import { HermesRequestError, hermesSessionId, type HermesChat } from "../../infrastructure/hermes/hermes.client";
+import { hermesSessionId, type HermesChat } from "../../infrastructure/hermes/hermes.client";
 import { isRetryableJobError, jobErrorCode } from "../../infrastructure/jobs/jobs.service";
 import { requestErrorCode } from "./request-errors";
 import type { RequestStore } from "./request-store";
@@ -7,15 +7,19 @@ import type { RequestProgress } from "./request-view";
 
 const PROGRESS_INTERVAL_MS = 400;
 
+/** O que o pedido responde quando chega ao Hermes com ele desligado (`AI_AUTOMATION`): pelo `/hermes` ou pelo fallback. */
+export const HERMES_OFF_MESSAGE = "O Hermes está desligado neste ambiente (AI_AUTOMATION), e só ele atende o que os agentes da agenda não reconhecem.";
+
 /**
  * Entrega a mensagem do pedido ao Hermes (ADR 004). Enquanto ele trabalha, o rastro vai para o progresso do job,
  * que e passageiro; quando termina, a resposta e o rastro viram entradas do pedido e sobrevivem ao job. A sessao
- * do Hermes e a do primeiro pedido: uma continuacao segue o mesmo assunto e a mesma memoria.
+ * do Hermes e a do primeiro pedido: uma continuacao segue o mesmo assunto e a mesma memoria. Chegam aqui o
+ * `/hermes` do chat e o fallback do pedido por passos (`RequestStore.handToHermes`).
  */
 export class HermesTurnWorker {
   constructor(
     private readonly store: RequestStore,
-    /** Ausente quando o servidor nao configura o Hermes: o pedido falha sem tentar de novo. */
+    /** Ausente com o Hermes desligado (`AI_AUTOMATION`): o pedido falha com o aviso, sem tentar de novo. */
     private readonly hermes?: HermesChat,
   ) {}
 
@@ -25,6 +29,11 @@ export class HermesTurnWorker {
   ): Promise<void> {
     const request = await this.store.find(requestId);
     if (request?.route !== "hermes" || (request.status !== "queued" && request.status !== "running")) return;
+    if (!this.hermes) {
+      await this.store.finish(request.id, "failed", { errorCode: "unavailable", message: HERMES_OFF_MESSAGE });
+      return;
+    }
+    const hermes = this.hermes;
     await this.store.markRunning(request.id);
 
     // Cada mudanca e uma escrita no banco: so uma por intervalo; o fim grava o rastro completo.
@@ -32,8 +41,7 @@ export class HermesTurnWorker {
     let writes: Promise<unknown> = Promise.resolve();
     let latest: AgentTraceDto | undefined;
     try {
-      if (!this.hermes) throw new HermesRequestError("Hermes is not configured");
-      const reply = await this.hermes.chat({
+      const reply = await hermes.chat({
         text: request.prompt,
         sessionId: hermesSessionId(request.userId, request.sessionId ?? request.id),
         signal: context.signal,

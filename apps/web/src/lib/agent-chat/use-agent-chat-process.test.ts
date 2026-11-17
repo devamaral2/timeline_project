@@ -235,3 +235,33 @@ test("um servidor que nao manda rastro deixa o pedido na aba, sem detalhes", asy
 
   expect(result.current.traces).toMatchObject([{ request: "almoço ao meio-dia", running: false, trace: null }]);
 });
+
+test("o fallback e o Hermes: o pedido que muda para a rota dele troca a caixa de processo pela conversa do Hermes", async () => {
+  const { result, onEntitiesChanged } = setup();
+  const id = await ask(result, "me conta uma piada");
+  await waitFor(() => expect(result.current.messages.map((message) => message.role)).toEqual(["user", "process"]));
+
+  const tool = { id: "t1", kind: "tool" as const, label: "Pensou numa piada", status: "running" as const };
+  advanceRequest(api, id, { route: "hermes", status: "running", trace: { route: "hermes", status: "running", fields: [], entries: [tool] } });
+  await waitFor(() => expect(result.current.messages.map((message) => message.role)).toEqual(["user", "hermes-steps"]));
+  expect(result.current.pending).toMatchObject({ label: "Falando com o Hermes", requestId: id });
+  expect(result.current.traces[0]).toMatchObject({ route: "hermes", running: true });
+
+  advanceRequest(api, id, {
+    route: "hermes", status: "done", message: "Era uma vez…",
+    trace: { route: "hermes", status: "done", fields: [], entries: [{ ...tool, status: "done" }] },
+  });
+  await waitFor(() => expect(result.current.pending).toBeNull());
+  expect(result.current.messages.map((message) => message.role)).toEqual(["user", "hermes-steps", "assistant"]);
+  expect(result.current.messages.at(-1)).toMatchObject({ text: "Era uma vez…" });
+  expect(onEntitiesChanged).toHaveBeenCalledTimes(1);
+});
+
+test("o fallback com o Hermes desligado mostra o aviso do servidor", async () => {
+  const { result } = setup();
+  const id = await ask(result, "me conta uma piada");
+  advanceRequest(api, id, { route: "hermes", status: "failed", errorCode: "unavailable", message: "O Hermes está desligado." });
+
+  await waitFor(() => expect(result.current.pending).toBeNull());
+  expect(result.current.messages.at(-1)).toMatchObject({ role: "error", text: "O Hermes está desligado.", retryText: "me conta uma piada" });
+});

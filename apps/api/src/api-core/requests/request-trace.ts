@@ -1,6 +1,5 @@
 import type { AgentTraceDto, AgentTraceEntryDto, AgentTraceField, AgentTraceSection, AgentTraceStatus } from "@repo/contracts";
 import { dispatchConfig, stepLabel } from "./request-config";
-import { MAX_ROUNDS } from "./request-fallback-loop";
 import type { DispatchRecord, RequestEntityRecord, RequestRecord, StepRecord } from "./request-store";
 
 const MAX_TEXT = 4_000;
@@ -17,6 +16,9 @@ const FALLBACK_REASONS: Record<string, string> = {
   uncertain: "o roteador não teve certeza",
   forced: "pedido direto, pelo prefixo fallback:",
 };
+
+/** O agente de fallback que existia antes de o Hermes ser o fallback: so aparece em pedidos antigos. */
+const LEGACY_FALLBACK_AGENT: string = "fallback";
 
 /** O rotulo de cada registro, no genero da entidade: "Tarefa criada", "Artefato criado". */
 const ENTITY_LABELS: Record<RequestEntityRecord["kind"], Record<RequestEntityRecord["operation"], string>> = {
@@ -96,7 +98,7 @@ function routingEntry(request: RequestRecord, steps: readonly StepRecord[]): Age
   }
   const answers = Object.entries(dispatch.answers).map(([name, answer]) =>
     `${name}: ${answer.choice} · confiança ${percent(answer.confidence)} · probabilidade ${percent(answer.probability)} · ${verdict(name, dispatch)}`);
-  const called = steps.filter((step) => step.agent !== "fallback").map((step) => stepLabel(step.agent));
+  const called = steps.filter((step) => step.agent !== LEGACY_FALLBACK_AGENT).map((step) => stepLabel(step.agent));
   const summary = dispatch.fallbackReason
     ? `Fallback: ${FALLBACK_REASONS[dispatch.fallbackReason] ?? "roteador indisponível"}`
     : called.length > 0 ? `Aciona: ${called.join(", ")}` : undefined;
@@ -126,7 +128,6 @@ function stepEntry(step: StepRecord, entities: readonly RequestEntityRecord[]): 
   const durationMs = elapsed(step.startedAt, step.finishedAt) ?? step.timings?.total;
   // O nome do agente ja vai em `source`.
   const fields: AgentTraceField[] = [{ label: "Quantidade esperada", value: step.expected === "many" ? "vários" : "um" }];
-  if (step.input?.round) fields.push({ label: "Rodada do laço", value: `${step.input.round} de ${MAX_ROUNDS}` });
   if (step.errorCode) fields.push({ label: "Erro", value: step.errorCode });
   for (const [name, value] of Object.entries(step.timings ?? {})) {
     fields.push({ label: name === "total" ? "Tempo do agente" : `Tempo · ${name}`, value: formatDuration(value) });
@@ -135,7 +136,6 @@ function stepEntry(step: StepRecord, entities: readonly RequestEntityRecord[]): 
   fields.push(...usageFields(step.usage));
 
   const sections: AgentTraceSection[] = [];
-  if (step.input?.instruction) sections.push({ title: "Foco dado pelo orquestrador", text: clip(step.input.instruction) });
   if (step.input?.target) {
     sections.push({
       title: "Alvo", code: true,
@@ -178,8 +178,6 @@ function stepEntry(step: StepRecord, entities: readonly RequestEntityRecord[]): 
       // O retrato do alvo e as linhas da consulta ja estao nas secoes; aqui so o que os identifica.
       input: step.input
         ? {
-          instruction: step.input.instruction ?? null,
-          round: step.input.round ?? null,
           target: step.input.target ? { entityType: step.input.target.entityType, id: step.input.target.id } : null,
           candidates: step.input.candidates?.map((candidate) => ({ kind: candidate.kind, id: candidate.id, name: candidate.name })) ?? null,
         }

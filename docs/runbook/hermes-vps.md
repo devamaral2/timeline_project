@@ -476,6 +476,34 @@ surge na agenda e `/app` volta ao assistente normal.
 
 ---
 
+## Skills atualizadas a cada deploy
+
+As skills nossas do Hermes ficam no repositório, em `ops/hermes/skills/`, no
+mesmo caminho que têm no volume (ex.:
+`ops/hermes/skills/productivity/personal-tasks-and-timeline/SKILL.md`). No fim
+de cada deploy, o `deploy-release.sh` chama `ops/production/sync-hermes-skills.sh`,
+que copia essas pastas para `/opt/data/skills` do pod, como usuário `hermes`.
+
+- **O repositório vence.** A pasta da skill no volume é trocada inteira pela do
+  repositório. Se o Hermes editou essa skill, a edição se perde no deploy
+  seguinte; para mantê-la, traga o texto para o repositório.
+- **O resto não é tocado.** Skills embutidas do Hermes e skills que ele criou
+  (fora de `ops/hermes/skills/`) continuam como estão.
+- **Apagar do repositório não apaga do volume.** Remova a pasta à mão no pod.
+- Se o deployment `hermes` não existe, o passo só avisa e o deploy segue. Se a
+  cópia falha, o deploy fica vermelho, mas as aplicações já estão na versão nova.
+- O gateway não é reiniciado. Não verifiquei se uma sessão já aberta do Hermes
+  enxerga a skill nova sem reinício; se não enxergar,
+  `kubectl -n braid rollout restart deployment/hermes`.
+
+Para conferir depois de um deploy:
+
+```bash
+kubectl -n braid exec deploy/hermes -- ls -la /opt/data/skills/productivity/personal-tasks-and-timeline
+```
+
+---
+
 ## O que ainda não funciona em produção depois deste roteiro
 
 - **Skills e agentes como notas e o pedido de edição de arquivo** (ADR 0005). A

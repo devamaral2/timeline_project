@@ -147,9 +147,11 @@ describe("toRequestTrace", () => {
   });
 
   test("a fallback routing explains why; an edit request without dispatch has no routing entry", () => {
+    // Pedidos antigos ainda tem o passo do agente de fallback que existia antes de o Hermes ser o fallback.
+    const legacy = step({ id: "f1", agent: "fallback" as StepRecord["agent"], expected: "one", status: "running" });
     const fallback = toRequestTrace(
       request({ dispatch: { answers: {}, uncertain: [], unsupported: [], fallbackReason: "no_step" } satisfies DispatchRecord }),
-      [step({ id: "f1", agent: "fallback", expected: "one", status: "running" })], [],
+      [legacy], [],
     );
     expect(fallback.entries[1]).toMatchObject({ kind: "routing", summary: "Fallback: nenhum agente reconhecido para o pedido" });
 

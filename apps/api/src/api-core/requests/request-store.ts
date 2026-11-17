@@ -84,7 +84,7 @@ export interface RequestRecord {
   prompt: string;
   context?: RequestScreenContext;
   target?: RequestTarget;
-  /** O pedido veio com `fallback:`: o despacho nao pergunta ao JEV. */
+  /** O pedido veio com `fallback:`: o despacho nao pergunta ao JEV e o entrega direto ao Hermes. */
   forceFallback?: boolean;
   /** O primeiro pedido da sessao; ausente quando este e o primeiro. */
   sessionId?: string;
@@ -113,10 +113,6 @@ export interface StepInput {
   /** Edicao pela tela de detalhe: o unico alvo permitido. Quando existe, nao ha candidatos nem consulta. */
   target?: EditTarget;
   candidates?: EditCandidate[];
-  /** O foco que o fallback deu ao especialista que ele chamou; o pedido inteiro segue junto. */
-  instruction?: string;
-  /** So no passo do fallback pedido por `fallback:`: a rodada do laco, a partir de 1. Sem ela, e chamada unica. */
-  round?: number;
 }
 
 /** O que o modelo pensou numa chamada do passo, para a aba "Processo" conferir. */
@@ -234,17 +230,10 @@ export interface RequestStore {
   /** Encerra o pedido se ele ainda esta aberto. */
   finish(requestId: string, status: "done" | "failed", outcome: RequestOutcome): Promise<void>;
   /**
-   * O fallback chamou especialistas: os passos novos e seus jobs entram e o passo do fallback termina, na
-   * mesma transacao. O pedido nao fecha no meio: os passos novos ja existem quando o fallback termina.
+   * O fallback do pedido por passos e o Hermes: o pedido passa para a rota do Hermes, guarda o que o despacho
+   * escolheu e o job do Hermes entra na fila, na mesma transacao. Nada acontece se o pedido ja terminou.
    */
-  handOff(requestId: string, fallbackStepId: string, steps: readonly NewStep[]): Promise<void>;
-  /**
-   * O laco do fallback (`fallback:`): os especialistas da rodada terminaram e o passo da rodada seguinte entra na
-   * fila. So entra se o pedido segue aberto e essa rodada ainda nao existe: duas finalizacoes nao a duplicam.
-   */
-  continueFallback(requestId: string, step: NewStep): Promise<void>;
-  /** O fallback respondeu: passo concluido e pedido encerrado, juntos. No laco, com o que falhou no caminho. */
-  finishFallback(requestId: string, stepId: string, text: string, failedSteps?: FailedStep[]): Promise<void>;
+  handToHermes(requestId: string, dispatch: DispatchRecord): Promise<void>;
   /** A fala virou uma tarefa de pessoa: a relacao do pedido com ela e o pedido concluido, na transacao da tarefa. */
   completeVoice(tx: unknown, input: { requestId: string; taskId: string }): Promise<void>;
   /**

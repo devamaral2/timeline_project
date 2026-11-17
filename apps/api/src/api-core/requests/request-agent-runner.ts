@@ -25,7 +25,7 @@ export interface AgentRunInput<T> {
   signal?: AbortSignal;
   /** O passo por tras da chamada: o que o modelo pensou fica gravado nele, para a aba "Processo". */
   stepId?: string;
-  /** A chamada pensa antes de responder, no esforco do runner. Sem isto, nao pensa: so o fallback escolhido pede. */
+  /** A chamada pensa antes de responder, no esforco do runner. Sem isto, nao pensa. */
   think?: boolean;
 }
 
@@ -103,11 +103,9 @@ export function describeRequest(
   prompt: string,
   expected: string | undefined,
   context?: RequestScreenContext,
-  focus?: string,
 ): string {
   return [
     ...(expected ? [`Quantidade (dica): ${expected}`, ""] : []),
-    ...(focus ? [`Foco (dado pelo orquestrador): ${focus}`, ""] : []),
     "Pedido:",
     prompt,
     ...(context ? ["", `Tela do usuário: ${context.screen}${context.entityId ? ` (${context.entityId})` : ""}`] : []),
@@ -124,10 +122,9 @@ export function describeEditRequest(
   context: RequestScreenContext | undefined,
   candidates: readonly EditCandidate[],
   lookup?: Pick<RequestQueryResult, "columns" | "rows">,
-  focus?: string,
 ): string {
   return [
-    describeRequest(prompt, expected, context, focus),
+    describeRequest(prompt, expected, context),
     "",
     "Candidatos (JSON):",
     JSON.stringify(candidates.map(({ kind: _kind, ...rest }) => rest)),

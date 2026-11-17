@@ -63,4 +63,8 @@ API_STATUS=$(curl -sS -o /dev/null -w '%{http_code}' -H "Host: api.$DOMAIN" "htt
 test "$API_STATUS" = 401
 
 printf 'export SHA=%q\n' "$SHA" > /opt/braid/release.env
+
+# Depois de registrar a release: uma falha aqui deixa o deploy vermelho, mas as
+# aplicacoes ja estao no ar na versao nova.
+bash ops/production/sync-hermes-skills.sh "$ROOT"
 printf 'Deploy concluído: %s\n' "$SHA"

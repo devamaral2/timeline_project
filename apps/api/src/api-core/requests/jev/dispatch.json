@@ -4,12 +4,12 @@
   "model": "jev-latest",
   "timeoutMs": 8000,
   "minCertainty": 0.92,
-  "_uncertainPolicy": "fallback: resposta incerta em qualquer pergunta manda o pedido ao fallback; ignore: pergunta incerta conta como nenhum.",
+  "_uncertainPolicy": "fallback: resposta incerta em qualquer pergunta manda o pedido ao fallback, que é o Hermes; ignore: pergunta incerta conta como nenhum.",
   "uncertainPolicy": "fallback",
   "questions": {
     "task_create": {
       "type": "choice",
-      "instructions": "Quantas TAREFAS NOVAS o pedido quer criar? Tarefa é tudo o que a pessoa faz ou vai fazer. Relatos de atividades realizadas, em andamento ou planejadas ('almocei', 'comendo arroz', 'vou nadar', 'volto para casa para ver um filme', 'dormi às 23h') são tarefas novas, um por atividade. Algo a fazer, com ou sem prazo ('preciso pagar o aluguel', 'lembrar de ligar para o dentista'), também é uma tarefa nova. Recorrências ('toda segunda', 'todo dia') não contam aqui. Artefatos não contam.",
+      "instructions": "Quantas TAREFAS NOVAS o pedido quer criar? Tarefa é tudo o que a pessoa faz ou vai fazer. Relatos de atividades realizadas, em andamento ou planejadas ('almocei', 'comendo arroz', 'vou nadar', 'volto para casa para ver um filme', 'dormi às 23h') são tarefas novas, um por atividade. Toda refeição é uma tarefa nova, mesmo quando o pedido só cita alimentos e quantidades ('vou comer 200g de arroz daqui 3 min'). Algo a fazer, com ou sem prazo ('preciso pagar o aluguel', 'lembrar de ligar para o dentista'), também é uma tarefa nova. Recorrências ('toda segunda', 'todo dia') não contam aqui. Artefatos não contam. Subtarefas novas de uma tarefa que JÁ EXISTE ('acrescenta reservar o hotel na viagem', 'quebra a mudança em empacotar e contratar o frete') não contam aqui: são uma alteração dessa tarefa.",
       "criteria": {
         "none": "Nenhuma tarefa nova.",
         "one": "Exatamente uma tarefa nova.",
@@ -18,7 +18,7 @@
     },
     "task_edit": {
       "type": "choice",
-      "instructions": "Quantas TAREFAS JÁ EXISTENTES o pedido quer alterar (horário, prazo, concluir, prioridade, nome, status)? 'Parei de trabalhar', 'terminei a reunião', 'mude o jantar para as 21h', 'já paguei o aluguel' alteram tarefas existentes. Recorrências não contam aqui.",
+      "instructions": "Quantas TAREFAS JÁ EXISTENTES o pedido quer alterar (horário, prazo, concluir, prioridade, nome, status)? 'Parei de trabalhar', 'terminei a reunião', 'mude o jantar para as 21h', 'já paguei o aluguel' alteram tarefas existentes. Dividir uma tarefa existente em partes ou acrescentar subtarefas a ela ('quebra a mudança em empacotar e contratar o frete', 'adiciona a subtarefa reservar o hotel na viagem') também altera essa tarefa: conta uma por tarefa dividida. Recorrências não contam aqui.",
       "criteria": {
         "none": "Nenhuma tarefa existente é alterada.",
         "one": "Exatamente uma tarefa existente é alterada.",
@@ -27,7 +27,7 @@
     },
     "artifact_create": {
       "type": "choice",
-      "instructions": "Quantos ARTEFATOS NOVOS o pedido quer criar? Um artefato guarda conteúdo: o que foi comido (alimentos e quantidades de uma refeição), uma observação, uma ideia ou uma lista em texto. Detalhes de alimentos e quantidades ('300g de arroz com 200g de feijão') pedem um artefato de alimento; a tarefa da refeição, à parte, é uma tarefa nova.",
+      "instructions": "Quantos ARTEFATOS DE TEXTO NOVOS o pedido quer criar? Um artefato de texto guarda uma observação, uma ideia ou uma lista. Refeições não contam aqui: o que foi, está sendo ou vai ser comido ou bebido, com ou sem alimentos e quantidades ('300g de arroz com 200g de feijão'), é uma tarefa nova, e os alimentos vão junto com ela.",
       "criteria": {
         "none": "Nenhum artefato novo.",
         "one": "Exatamente um artefato novo.",

@@ -8,7 +8,6 @@ import { failureExplanationOutput } from "./request-agent-schemas";
 import type { RequestAgentRunner } from "./request-agent-runner";
 import { linkConfig, stepLabel } from "./request-config";
 import type { StepRepositories } from "./request-create-worker";
-import { nextLoopRound } from "./request-fallback-loop";
 import type { StepPayload } from "./request-step-common";
 import type { EntityKind } from "./request-steps";
 import type { LinkRecord, RequestEntityRecord, RequestRecord, RequestStore, StepRecord } from "./request-store";
@@ -47,8 +46,7 @@ function describe(entity: RequestEntityRecord): string {
 /**
  * A fila de finalizacao (um job por vez por pedido). Cada entidade concluida e comparada, pelo JEV, com as ja
  * criadas no mesmo pedido; se pertencem uma a outra, liga. Nao espera os outros passos: atualiza a cada elemento
- * concluido, e fecha o pedido quando todos terminaram. No laco do fallback, em vez de fechar, enfileira a rodada
- * seguinte.
+ * concluido, e fecha o pedido quando todos terminaram.
  */
 export class RequestFinalizer {
   constructor(
@@ -83,8 +81,10 @@ export class RequestFinalizer {
     entities: readonly RequestEntityRecord[],
     signal?: AbortSignal,
   ): Promise<void> {
-    // Uma serie vale para todos os dias dela: ligar a ocorrencia de um dia seria enganoso. O que foi apagado nao se liga.
-    const loose = (candidate: RequestEntityRecord) => !candidate.summary.series && candidate.operation !== "delete";
+    // Uma serie vale para todos os dias dela: ligar a ocorrencia de um dia seria enganoso. O que foi apagado nao se
+    // liga. Um artefato pertence a uma tarefa so: o ja ligado (o alimento que nasceu com a refeicao) fica fora.
+    const loose = (candidate: RequestEntityRecord) => !candidate.summary.series && candidate.operation !== "delete"
+      && !(candidate.kind === "artifact" && candidate.links.length > 0);
     const candidates = !loose(entity) ? [] : entities
       .filter((other) => !(other.kind === entity.kind && other.id === entity.id) && loose(other))
       .filter((other) => linkable(entity, other) && !alreadyLinked(entity, other))
@@ -165,12 +165,6 @@ export class RequestFinalizer {
     const [steps, entities] = await Promise.all([store.steps(request.id), store.entities(request.id)]);
     const open = steps.some((step) => step.status === "queued" || step.status === "running");
     if (open || entities.some((entity) => !entity.finalized)) return;
-    // Laco do fallback (`fallback:`): os especialistas da rodada terminaram; quem decide o fim e a rodada seguinte.
-    const round = nextLoopRound(steps);
-    if (round) {
-      await store.continueFallback(request.id, round);
-      return;
-    }
     const failed = steps.filter((step) => step.status === "failed");
     const failedSteps = failed.map((step) => ({ agent: step.agent, errorCode: step.errorCode ?? "internal" }));
     const explained = failed.length > 0 ? await this.explain(request, steps) : undefined;

@@ -1,6 +1,6 @@
 import type { RequestEditEntityType } from "@repo/contracts";
 
-/** Os agentes que a fila de passos executa. O fallback tem fila propria e nao e um passo de entidade. */
+/** Os agentes que a fila de passos executa. O fallback nao e um passo: e o Hermes (`RequestStore.handToHermes`). */
 export const ENTITY_CREATE_AGENTS = ["task-create", "artifact-create"] as const;
 export const SERIES_CREATE_AGENTS = ["recurring-task-create"] as const;
 export const CREATE_AGENTS = [...ENTITY_CREATE_AGENTS, ...SERIES_CREATE_AGENTS] as const;
@@ -11,7 +11,11 @@ export const EDIT_AGENTS = [...ENTITY_EDIT_AGENTS, ...SERIES_EDIT_AGENTS] as con
 export const TARGET_EDIT_AGENTS = ["food-edit", "sleep-edit", "training-edit", "agent-file-edit"] as const;
 export const STEP_AGENTS = [...CREATE_AGENTS, ...EDIT_AGENTS, ...TARGET_EDIT_AGENTS, "query"] as const;
 export type StepAgent = (typeof STEP_AGENTS)[number];
-export type RequestAgent = StepAgent | "fallback";
+/**
+ * O agente de um passo gravado. Pedidos antigos ainda tem passos `fallback` (o agente que existia antes do Hermes
+ * ser o fallback): so a leitura os encontra, e o rotulo deles continua em `ui.json`.
+ */
+export type RequestAgent = StepAgent;
 
 export type CreateAgent = (typeof CREATE_AGENTS)[number];
 export type EditAgent = (typeof EDIT_AGENTS)[number];
@@ -22,17 +26,11 @@ export const REQUEST_JOBS = {
   dispatch: "request-dispatch",
   editTarget: "request-edit-target",
   step: "request-step",
-  fallback: "request-fallback",
   finalize: "request-finalize",
   hermes: "hermes-turn",
   voice: "voice-task",
 } as const;
 export type RequestJobKind = (typeof REQUEST_JOBS)[keyof typeof REQUEST_JOBS];
-
-/** O job que executa o passo de cada agente. */
-export function jobKindOf(agent: RequestAgent): RequestJobKind {
-  return agent === "fallback" ? REQUEST_JOBS.fallback : REQUEST_JOBS.step;
-}
 
 /** A finalizacao de um mesmo pedido roda em serie: um job por vez, em ordem de criacao. */
 export function finalizeConcurrencyKey(requestId: string): string {
@@ -40,7 +38,7 @@ export function finalizeConcurrencyKey(requestId: string): string {
 }
 
 /**
- * `fallback: <pedido>` no chat pula o roteamento do JEV e entrega o pedido direto ao fallback. Devolve o pedido
+ * `fallback: <pedido>` no chat pula o roteamento do JEV e entrega o pedido direto ao Hermes. Devolve o pedido
  * sem o prefixo, ou `null` quando a mensagem nao e esse comando (inclusive o prefixo sozinho, sem pedido).
  */
 export function parseFallbackCommand(text: string): string | null {
