@@ -1,6 +1,6 @@
 package app.braid.mobile.domain.request
 
-import app.braid.mobile.domain.artifact.ArtifactType
+import app.braid.mobile.domain.artifact.artifactTypeLabel
 import app.braid.mobile.domain.task.TaskStatus
 
 /*
@@ -37,20 +37,8 @@ fun entityOperationLabel(operation: RequestOperation): String =
 /** "Tarefa", o tipo do documento ("Nota", "Refeição"…) ou "Nota" quando o contrato não diz o tipo. */
 fun entityKindLabel(entity: RequestEntity): String {
     if (entity.kind == EntityKind.Task) return "Tarefa"
-    return entity.artifactType?.let(::documentTypeLabel) ?: "Nota"
+    return entity.artifactType?.let(::artifactTypeLabel) ?: "Nota"
 }
-
-private fun documentTypeLabel(type: ArtifactType): String =
-    when (type) {
-        ArtifactType.Text -> "Nota"
-        ArtifactType.Food -> "Refeição"
-        ArtifactType.Sleep -> "Sono"
-        ArtifactType.Training -> "Treino"
-        ArtifactType.Workout -> "Exercício"
-        ArtifactType.Skill -> "Skill"
-        ArtifactType.Agent -> "Agente"
-        ArtifactType.Router -> "Roteador"
-    }
 
 /** Os nomes dos tipos de entrada, os mesmos da aba "Processo" do chat. */
 fun traceKindName(kind: TraceKind): String =
