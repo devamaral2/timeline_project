@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import app.braid.mobile.domain.executor.ViewMode
 import app.braid.mobile.domain.executor.ViewModeRepository
 import app.braid.mobile.domain.task.StaleRevisionException
+import app.braid.mobile.domain.task.SubtaskTree
 import app.braid.mobile.domain.task.TaskActor
 import app.braid.mobile.domain.task.TaskCard
 import app.braid.mobile.domain.task.TaskFilters
@@ -15,6 +16,7 @@ import app.braid.mobile.domain.task.TaskRepository
 import app.braid.mobile.domain.task.TaskStatus
 import app.braid.mobile.domain.task.groupTrackedTasks
 import app.braid.mobile.domain.task.hasOpenAgentTask
+import app.braid.mobile.domain.task.nestSubtasks
 import app.braid.mobile.domain.task.oneRowPerSeries
 import app.braid.mobile.domain.task.statusPatch
 import app.braid.mobile.domain.task.tagCounts
@@ -55,6 +57,8 @@ data class TasksUiState(
     val query: String = "",
     /** Os grupos recolhidos que o usuário abriu; só vale para Feitas e Encerradas. */
     val expanded: Set<TaskGroupKey> = emptySet(),
+    /** As tarefas com a gaveta de subtarefas fechada; as gavetas começam abertas, as aninhadas também. */
+    val closedSubtasks: Set<String> = emptySet(),
     /** A tarefa de pessoa cujo glifo foi tocado: a folha de status está aberta para ela. */
     val statusPicker: TaskCard? = null,
     val notice: String? = null,
@@ -66,8 +70,11 @@ data class TasksUiState(
 ) {
     val filters: TaskFilters get() = TaskFilters(tag, priorities, query)
 
-    /** Uma série vale uma linha só; sem a gaveta de subtarefas (ticket 08), toda tarefa com status é linha. */
-    val groups: List<TaskGroup> get() = groupTrackedTasks(oneRowPerSeries(cards.orEmpty()))
+    /** Uma série vale uma linha só; a subtarefa cuja principal está na lista vai para a gaveta dela. */
+    val tree: SubtaskTree by lazy(LazyThreadSafetyMode.NONE) { nestSubtasks(oneRowPerSeries(cards.orEmpty())) }
+
+    /** Os grupos são feitos das linhas: a subtarefa na gaveta não entra neles nem na contagem. */
+    val groups: List<TaskGroup> by lazy(LazyThreadSafetyMode.NONE) { groupTrackedTasks(tree.roots) }
 
     /** As linhas dos grupos que não vêm recolhidos: o número do topo e o do menu. */
     val openCount: Int get() = groups.filterNot { it.collapsedByDefault }.sumOf { it.cards.size }
@@ -80,6 +87,8 @@ data class TasksUiState(
     val hasTasks: Boolean get() = !facets.isNullOrEmpty()
 
     fun isExpanded(group: TaskGroup): Boolean = !group.collapsedByDefault || group.key in expanded
+
+    fun isDrawerOpen(taskId: String): Boolean = taskId !in closedSubtasks
 }
 
 @HiltViewModel
@@ -155,6 +164,12 @@ class TasksViewModel
                             it.expanded + key
                         },
                 )
+            }
+
+        /** Abre ou fecha a gaveta de uma tarefa; fechar a principal guarda o que as filhas tinham escolhido. */
+        fun toggleSubtasks(taskId: String) =
+            mutableState.update {
+                it.copy(closedSubtasks = if (taskId in it.closedSubtasks) it.closedSubtasks - taskId else it.closedSubtasks + taskId)
             }
 
         fun retry() {

@@ -1,0 +1,760 @@
+{
+  "minimumMinutes": 15,
+  "slots": [
+    {
+      "args": [
+        [
+          {
+            "startMs": 1789401600000,
+            "endMs": 1789405200000
+          },
+          {
+            "startMs": 1789426800000,
+            "endMs": 1789430400000
+          }
+        ],
+        "2026-09-14"
+      ],
+      "result": [
+        {
+          "startMs": 1789405200000,
+          "endMs": 1789426800000,
+          "minutes": 360,
+          "endsAtMidnight": false
+        },
+        {
+          "startMs": 1789430400000,
+          "endMs": 1789441200000,
+          "minutes": 180,
+          "endsAtMidnight": true
+        }
+      ]
+    },
+    {
+      "args": [
+        [
+          {
+            "startMs": 1789423200000,
+            "endMs": 1789430400000
+          }
+        ],
+        "2026-09-14"
+      ],
+      "result": [
+        {
+          "startMs": 1789430400000,
+          "endMs": 1789441200000,
+          "minutes": 180,
+          "endsAtMidnight": true
+        }
+      ]
+    },
+    {
+      "args": [
+        [
+          {
+            "startMs": 1789380000000,
+            "endMs": 1789383600000
+          },
+          {
+            "startMs": 1789383600000,
+            "endMs": 1789387200000
+          },
+          {
+            "startMs": 1789387200000,
+            "endMs": 1789439400000
+          },
+          {
+            "startMs": 1789437600000,
+            "endMs": 1789441140000
+          }
+        ],
+        "2026-09-14"
+      ],
+      "result": [
+        {
+          "startMs": 1789441140000,
+          "endMs": 1789441200000,
+          "minutes": 1,
+          "endsAtMidnight": true
+        }
+      ]
+    },
+    {
+      "args": [
+        [
+          {
+            "startMs": 1789434000000,
+            "endMs": 1789462800000
+          }
+        ],
+        "2026-09-14"
+      ],
+      "result": []
+    },
+    {
+      "args": [
+        [
+          {
+            "startMs": 1789387200000,
+            "endMs": 1789398000000
+          },
+          {
+            "startMs": 1789390800000,
+            "endMs": 1789394400000
+          },
+          {
+            "startMs": 1789401600000,
+            "endMs": 1789405200000
+          }
+        ],
+        "2026-09-14"
+      ],
+      "result": [
+        {
+          "startMs": 1789398000000,
+          "endMs": 1789401600000,
+          "minutes": 60,
+          "endsAtMidnight": false
+        },
+        {
+          "startMs": 1789405200000,
+          "endMs": 1789441200000,
+          "minutes": 600,
+          "endsAtMidnight": true
+        }
+      ]
+    },
+    {
+      "args": [
+        [
+          {
+            "startMs": 1789426800000,
+            "endMs": 1789430400000
+          },
+          {
+            "startMs": 1789401600000,
+            "endMs": 1789405200000
+          }
+        ],
+        "2026-09-14"
+      ],
+      "result": [
+        {
+          "startMs": 1789405200000,
+          "endMs": 1789426800000,
+          "minutes": 360,
+          "endsAtMidnight": false
+        },
+        {
+          "startMs": 1789430400000,
+          "endMs": 1789441200000,
+          "minutes": 180,
+          "endsAtMidnight": true
+        }
+      ]
+    },
+    {
+      "args": [
+        [
+          {
+            "startMs": 1789380000000,
+            "endMs": 1789383600000
+          },
+          {
+            "startMs": 1789387200000,
+            "endMs": null
+          },
+          {
+            "startMs": 1789398000000,
+            "endMs": 1789401600000
+          }
+        ],
+        "2026-09-14"
+      ],
+      "result": [
+        {
+          "startMs": 1789383600000,
+          "endMs": 1789387200000,
+          "minutes": 60,
+          "endsAtMidnight": false
+        }
+      ]
+    },
+    {
+      "args": [
+        [],
+        "2026-09-14"
+      ],
+      "result": []
+    },
+    {
+      "args": [
+        [
+          {
+            "startMs": 1789387200000,
+            "endMs": 1789390800000
+          },
+          {
+            "startMs": 1789391640000,
+            "endMs": 1789394400000
+          },
+          {
+            "startMs": 1789395300000,
+            "endMs": 1789398000000
+          },
+          {
+            "startMs": 1789399800000,
+            "endMs": 1789399800000
+          }
+        ],
+        "2026-09-14"
+      ],
+      "result": [
+        {
+          "startMs": 1789390800000,
+          "endMs": 1789391640000,
+          "minutes": 14,
+          "endsAtMidnight": false
+        },
+        {
+          "startMs": 1789394400000,
+          "endMs": 1789395300000,
+          "minutes": 15,
+          "endsAtMidnight": false
+        },
+        {
+          "startMs": 1789398000000,
+          "endMs": 1789399800000,
+          "minutes": 30,
+          "endsAtMidnight": false
+        },
+        {
+          "startMs": 1789399800000,
+          "endMs": 1789441200000,
+          "minutes": 690,
+          "endsAtMidnight": true
+        }
+      ]
+    },
+    {
+      "args": [
+        [
+          {
+            "startMs": 1789387200000,
+            "endMs": 1789387200000
+          },
+          {
+            "startMs": 1789387200000,
+            "endMs": 1789387200000
+          },
+          {
+            "startMs": 1789441140000,
+            "endMs": 1789441140000
+          }
+        ],
+        "2026-09-14"
+      ],
+      "result": [
+        {
+          "startMs": 1789387200000,
+          "endMs": 1789441140000,
+          "minutes": 899,
+          "endsAtMidnight": false
+        },
+        {
+          "startMs": 1789441140000,
+          "endMs": 1789441200000,
+          "minutes": 1,
+          "endsAtMidnight": true
+        }
+      ]
+    },
+    {
+      "args": [
+        [
+          {
+            "startMs": 1541242800000,
+            "endMs": 1541246400000
+          },
+          {
+            "startMs": 1541293200000,
+            "endMs": 1541298600000
+          }
+        ],
+        "2018-11-03"
+      ],
+      "result": [
+        {
+          "startMs": 1541246400000,
+          "endMs": 1541293200000,
+          "minutes": 780,
+          "endsAtMidnight": false
+        }
+      ]
+    },
+    {
+      "args": [
+        [
+          {
+            "startMs": 1541329200000,
+            "endMs": 1541332800000
+          }
+        ],
+        "2018-11-04"
+      ],
+      "result": [
+        {
+          "startMs": 1541332800000,
+          "endMs": 1541383200000,
+          "minutes": 840,
+          "endsAtMidnight": true
+        }
+      ]
+    },
+    {
+      "args": [
+        [
+          {
+            "startMs": 1518917400000,
+            "endMs": 1518919200000
+          }
+        ],
+        "2018-02-17"
+      ],
+      "result": [
+        {
+          "startMs": 1518919200000,
+          "endMs": 1518922800000,
+          "minutes": 60,
+          "endsAtMidnight": true
+        }
+      ]
+    }
+  ],
+  "grades": [
+    {
+      "args": [
+        1
+      ],
+      "result": {
+        "low": 0,
+        "high": 0
+      }
+    },
+    {
+      "args": [
+        14
+      ],
+      "result": {
+        "low": 0,
+        "high": 0
+      }
+    },
+    {
+      "args": [
+        15
+      ],
+      "result": {
+        "low": 0,
+        "high": 0
+      }
+    },
+    {
+      "args": [
+        30
+      ],
+      "result": {
+        "low": 14,
+        "high": 0
+      }
+    },
+    {
+      "args": [
+        60
+      ],
+      "result": {
+        "low": 43,
+        "high": 0
+      }
+    },
+    {
+      "args": [
+        67
+      ],
+      "result": {
+        "low": 50,
+        "high": 0
+      }
+    },
+    {
+      "args": [
+        120
+      ],
+      "result": {
+        "low": 100,
+        "high": 0
+      }
+    },
+    {
+      "args": [
+        121
+      ],
+      "result": {
+        "low": 100,
+        "high": 1
+      }
+    },
+    {
+      "args": [
+        180
+      ],
+      "result": {
+        "low": 100,
+        "high": 50
+      }
+    },
+    {
+      "args": [
+        240
+      ],
+      "result": {
+        "low": 100,
+        "high": 100
+      }
+    },
+    {
+      "args": [
+        241
+      ],
+      "result": {
+        "low": 100,
+        "high": 100
+      }
+    },
+    {
+      "args": [
+        600
+      ],
+      "result": {
+        "low": 100,
+        "high": 100
+      }
+    },
+    {
+      "args": [
+        1440
+      ],
+      "result": {
+        "low": 100,
+        "high": 100
+      }
+    }
+  ],
+  "day": "2026-09-16",
+  "page": {
+    "items": [
+      {
+        "id": "free-1",
+        "actor": "human",
+        "kind": "common",
+        "status": "todo",
+        "priority": "medium",
+        "name": "Primeira",
+        "description": "",
+        "startedAt": "2026-09-16T12:00:00.000Z",
+        "estimatedFinishAt": "2026-09-16T13:00:00.000Z",
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "free-2",
+        "actor": "human",
+        "kind": "common",
+        "status": "todo",
+        "priority": "medium",
+        "name": "Dentro da primeira",
+        "description": "",
+        "startedAt": "2026-09-16T12:30:00.000Z",
+        "estimatedFinishAt": "2026-09-16T12:45:00.000Z",
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "free-3",
+        "actor": "agent",
+        "kind": "search_request",
+        "status": "running",
+        "priority": "medium",
+        "name": "Agente no vão",
+        "description": "",
+        "startedAt": "2026-09-16T13:30:00.000Z",
+        "estimatedFinishAt": "2026-09-16T14:30:00.000Z",
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "free-4",
+        "actor": "human",
+        "kind": "common",
+        "status": "todo",
+        "priority": "medium",
+        "name": "Sem hora de fim",
+        "description": "",
+        "startedAt": "2026-09-16T15:00:00.000Z",
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "free-5",
+        "actor": "human",
+        "kind": "common",
+        "status": "done",
+        "priority": "medium",
+        "name": "Concluída antes do fim planejado",
+        "description": "",
+        "startedAt": "2026-09-16T16:00:00.000Z",
+        "estimatedFinishAt": "2026-09-16T17:00:00.000Z",
+        "finishedAt": "2026-09-16T16:10:00.000Z",
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "free-6",
+        "actor": "human",
+        "kind": "common",
+        "status": "todo",
+        "priority": "medium",
+        "name": "Lacuna de 10 min",
+        "description": "",
+        "startedAt": "2026-09-16T17:10:00.000Z",
+        "estimatedFinishAt": "2026-09-16T17:20:00.000Z",
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "free-7",
+        "actor": "human",
+        "kind": "common",
+        "status": "todo",
+        "priority": "medium",
+        "name": "Lacuna de 15 min",
+        "description": "",
+        "startedAt": "2026-09-16T17:35:00.000Z",
+        "estimatedFinishAt": "2026-09-16T18:00:00.000Z",
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "free-8",
+        "actor": "human",
+        "kind": "common",
+        "status": "todo",
+        "priority": "medium",
+        "name": "Noite",
+        "description": "",
+        "startedAt": "2026-09-17T00:00:00.000Z",
+        "estimatedFinishAt": "2026-09-17T02:50:00.000Z",
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "free-9",
+        "actor": "agent",
+        "kind": "step",
+        "status": "done",
+        "priority": "medium",
+        "name": "Passo da pesquisa",
+        "description": "",
+        "startedAt": "2026-09-16T19:00:00.000Z",
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "free-10",
+        "actor": "human",
+        "kind": "common",
+        "status": "todo",
+        "priority": "medium",
+        "name": "Tarefa longa",
+        "description": "",
+        "startedAt": "2026-09-01T15:00:00.000Z",
+        "estimatedFinishAt": "2026-11-30T15:00:00.000Z",
+        "longRunning": true,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      }
+    ]
+  },
+  "agendaCardIds": [
+    "free-1",
+    "free-2",
+    "free-3",
+    "free-4",
+    "free-5",
+    "free-6",
+    "free-7",
+    "free-8"
+  ],
+  "rowsWithFreeTime": [
+    {
+      "kind": "task",
+      "id": "free-1",
+      "startMs": 1789560000000
+    },
+    {
+      "kind": "task",
+      "id": "free-2",
+      "startMs": 1789561800000
+    },
+    {
+      "kind": "free",
+      "startMs": 1789563600000,
+      "endMs": 1789570800000,
+      "minutes": 120,
+      "endsAtMidnight": false
+    },
+    {
+      "kind": "task",
+      "id": "free-3",
+      "startMs": 1789565400000
+    },
+    {
+      "kind": "task",
+      "id": "free-4",
+      "startMs": 1789570800000
+    },
+    {
+      "kind": "free",
+      "startMs": 1789570800000,
+      "endMs": 1789574400000,
+      "minutes": 60,
+      "endsAtMidnight": false
+    },
+    {
+      "kind": "task",
+      "id": "free-5",
+      "startMs": 1789574400000
+    },
+    {
+      "kind": "task",
+      "id": "free-6",
+      "startMs": 1789578600000
+    },
+    {
+      "kind": "free",
+      "startMs": 1789579200000,
+      "endMs": 1789580100000,
+      "minutes": 15,
+      "endsAtMidnight": false
+    },
+    {
+      "kind": "task",
+      "id": "free-7",
+      "startMs": 1789580100000
+    },
+    {
+      "kind": "free",
+      "startMs": 1789581600000,
+      "endMs": 1789603200000,
+      "minutes": 360,
+      "endsAtMidnight": false
+    },
+    {
+      "kind": "task",
+      "id": "free-8",
+      "startMs": 1789603200000
+    }
+  ],
+  "rowsWithoutFreeTime": [
+    {
+      "kind": "task",
+      "id": "free-1",
+      "startMs": 1789560000000
+    },
+    {
+      "kind": "task",
+      "id": "free-2",
+      "startMs": 1789561800000
+    },
+    {
+      "kind": "task",
+      "id": "free-3",
+      "startMs": 1789565400000
+    },
+    {
+      "kind": "task",
+      "id": "free-4",
+      "startMs": 1789570800000
+    },
+    {
+      "kind": "task",
+      "id": "free-5",
+      "startMs": 1789574400000
+    },
+    {
+      "kind": "task",
+      "id": "free-6",
+      "startMs": 1789578600000
+    },
+    {
+      "kind": "task",
+      "id": "free-7",
+      "startMs": 1789580100000
+    },
+    {
+      "kind": "task",
+      "id": "free-8",
+      "startMs": 1789603200000
+    }
+  ]
+}

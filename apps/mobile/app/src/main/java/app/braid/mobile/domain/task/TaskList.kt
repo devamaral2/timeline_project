@@ -5,8 +5,8 @@ import java.util.Locale
 
 /*
  * Port de `apps/web/src/lib/tasks/task-groups.ts` (grupos e uma linha por série) e de `task-filters.ts` (filtros da
- * lista): funções puras conferidas contra as fixtures geradas pelas funções TS (`TaskListRulesTest`). A hierarquia
- * (`nestSubtasks`) é da gaveta de subtarefas, ticket 08.
+ * lista) e de `nestSubtasks` (a gaveta de subtarefas, ADR 0017): funções puras conferidas contra as fixtures geradas
+ * pelas funções TS (`TaskListRulesTest`, `SubtaskNestingTest`).
  */
 
 enum class TaskGroupKey(
@@ -47,6 +47,48 @@ fun groupTrackedTasks(cards: List<TaskCard>): List<TaskGroup> =
     TaskGroupKey.entries
         .map { key -> TaskGroup(key, cards.filter { card -> card.status?.let(::groupOf) == key }) }
         .filter { it.cards.isNotEmpty() }
+
+/** A hierarquia da lista: as linhas e, para cada uma, as subtarefas diretas que vão para a gaveta. */
+class SubtaskTree(
+    /** Os cartões que viram linha da lista, na ordem recebida. */
+    val roots: List<TaskCard>,
+    private val children: Map<String, List<TaskCard>>,
+) {
+    /** As subtarefas diretas de uma tarefa da lista, na ordem recebida (vazio quando não tem). */
+    fun subtasksOf(taskId: String): List<TaskCard> = children[taskId].orEmpty()
+}
+
+/**
+ * A subtarefa cuja principal está na lista sai das linhas e vai para dentro dela; a subtarefa de uma subtarefa fica
+ * dentro da sua principal direta. Sem a principal na lista (filtro, executor, tarefa sem status), a subtarefa continua
+ * linha, para não sumir. Um ciclo vindo da rede também não esconde ninguém: só se aninha quem, subindo pelas
+ * principais, chega a uma raiz sem repetir ninguém.
+ */
+fun nestSubtasks(cards: List<TaskCard>): SubtaskTree {
+    val byId = cards.associateBy { it.id }
+
+    fun reachesRoot(card: TaskCard): Boolean {
+        val seen = hashSetOf(card.id)
+        var current = card
+        while (true) {
+            val parentId = current.parentTaskId?.takeIf { it.isNotEmpty() && it in byId } ?: return true
+            if (!seen.add(parentId)) return false
+            current = byId.getValue(parentId)
+        }
+    }
+
+    val children = LinkedHashMap<String, MutableList<TaskCard>>()
+    val roots = mutableListOf<TaskCard>()
+    for (card in cards) {
+        val parentId = card.parentTaskId
+        if (!parentId.isNullOrEmpty() && parentId in byId && reachesRoot(card)) {
+            children.getOrPut(parentId) { mutableListOf() }.add(card)
+        } else {
+            roots.add(card)
+        }
+    }
+    return SubtaskTree(roots, children)
+}
 
 /** Status de pessoa em aberto: a série só mostra a ocorrência que ainda pede ação. */
 private val OPEN_STATUSES = setOf(TaskStatus.Todo, TaskStatus.ToDefine, TaskStatus.Doing, TaskStatus.InHold)
