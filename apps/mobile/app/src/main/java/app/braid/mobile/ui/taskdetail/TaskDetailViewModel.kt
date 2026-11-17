@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.braid.mobile.domain.task.StaleRevisionException
+import app.braid.mobile.domain.task.TaskActor
 import app.braid.mobile.domain.task.TaskCard
 import app.braid.mobile.domain.task.TaskDetail
 import app.braid.mobile.domain.task.TaskDetailRepository
@@ -15,9 +16,6 @@ import app.braid.mobile.domain.time.AppClock
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -127,6 +125,8 @@ class TaskDetailViewModel
         /** Tarefa principal e subtarefas: uma leitura por id; as seções só existem quando há ids. */
         private fun loadLinked() {
             val content = mutableState.value as? TaskDetailUiState.Content ?: return
+            // A tarefa de agente tem o próprio detalhe (`AgentTaskViewModel`), que lê a hierarquia dela.
+            if (content.task.actor == TaskActor.Agent) return
             val parentIds = listOfNotNull(content.task.parentTaskId)
             val subtaskIds = content.task.subtaskIds
             val wantsParent = parentIds.isNotEmpty()
@@ -140,31 +140,13 @@ class TaskDetailViewModel
             linkedJob?.cancel()
             linkedJob =
                 viewModelScope.launch {
-                    val parent = if (wantsParent) readLinked(parentIds) else null
-                    val subtasks = if (wantsSubtasks) readLinked(subtaskIds) else null
+                    val parent = if (wantsParent) tasks.readLinked(parentIds) else null
+                    val subtasks = if (wantsSubtasks) tasks.readLinked(subtaskIds) else null
                     mutableState.update {
                         (it as? TaskDetailUiState.Content)?.copy(parent = parent, subtasks = subtasks) ?: it
                     }
                 }
         }
-
-        private suspend fun readLinked(ids: List<String>): LinkedTasks =
-            coroutineScope {
-                val results =
-                    ids
-                        .map { id ->
-                            async {
-                                try {
-                                    tasks.task(id).card
-                                } catch (cancelled: CancellationException) {
-                                    throw cancelled
-                                } catch (failure: Exception) {
-                                    null
-                                }
-                            }
-                        }.awaitAll()
-                LinkedTasks(cards = results.filterNotNull(), failed = results.any { it == null })
-            }
 
         /** Troca o status com a revisão lida; escolher o que já está não grava nada. */
         fun changeStatus(status: TaskStatus) {
