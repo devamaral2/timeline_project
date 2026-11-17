@@ -15,4 +15,4 @@
 - [x] O glifo de uma subtarefa de pessoa abre o seletor de status e grava com a revisão dela.
 - [x] Sem a principal na lista (por filtro, por executor ou principal sem status), a subtarefa volta a ser linha.
 
-**Nota (implementação):** a integração (07 + 09) deixou o app sem compilar: `TaskPriority`, `RecurrenceFrequency`, `RecurrenceRule`, `TaskRecurrence`, `recurrenceRuleLabel` e `RecurrenceRuleDto` estavam declarados duas vezes. Ficou a versão do 09 (a regra com `startsOn` e `endsOn`), e o cartão da lista passou a ler os dois campos. Sem emulador nesta sessão: a comparação lado a lado com o web e os screenshots do PR ficam pendentes.
+**Nota (implementação):** sem emulador nesta sessão, a comparação lado a lado com o web e os screenshots do PR ficam pendentes.
