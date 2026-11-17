@@ -82,6 +82,8 @@ data class AgentRequest(
     val steps: List<RequestStep>,
     val entities: List<RequestEntity>,
     val entries: List<TraceEntry>,
+    /** A resposta do Hermes quando o pedido termina; ausente nos pedidos que só mexem na agenda. */
+    val message: String? = null,
 )
 
 /** O primeiro pedido da sessão, que a seção "Sessão" mostra e abre. */

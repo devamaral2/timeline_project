@@ -1,0 +1,199 @@
+{
+  "frontmatter": [
+    {
+      "text": "---\nname: pesquisar\ndescription: Pesquisa na web e resume os achados\nallowed-tools: web.search, web.fetch\n---\n\n# Pesquisar\n\nProcure em **fontes confiáveis** e resuma.\n\n- Cite a fonte\n- Diga o que não achou",
+      "summary": [
+        {
+          "key": "name",
+          "value": "pesquisar",
+          "line": "name: pesquisar"
+        },
+        {
+          "key": "description",
+          "value": "Pesquisa na web e resume os achados",
+          "line": "description: Pesquisa na web e resume os achados"
+        },
+        {
+          "key": "allowed-tools",
+          "value": "web.search, web.fetch",
+          "line": "allowed-tools: web.search, web.fetch"
+        }
+      ],
+      "body": "\n# Pesquisar\n\nProcure em **fontes confiáveis** e resuma.\n\n- Cite a fonte\n- Diga o que não achou"
+    },
+    {
+      "text": "# Planejador\n\nMonta o dia a partir das tarefas abertas.\n",
+      "summary": [],
+      "body": "# Planejador\n\nMonta o dia a partir das tarefas abertas.\n"
+    },
+    {
+      "text": "",
+      "summary": [],
+      "body": ""
+    },
+    {
+      "text": "---\r\nname: crlf\r\ndescription: Termina em CRLF\r\n---\r\n\r\nCorpo com CRLF\r\n",
+      "summary": [
+        {
+          "key": "name",
+          "value": "crlf",
+          "line": "name: crlf"
+        },
+        {
+          "key": "description",
+          "value": "Termina em CRLF",
+          "line": "description: Termina em CRLF"
+        }
+      ],
+      "body": "\r\nCorpo com CRLF\r\n"
+    },
+    {
+      "text": "---\nname: sem corpo\n---",
+      "summary": [
+        {
+          "key": "name",
+          "value": "sem corpo",
+          "line": "name: sem corpo"
+        }
+      ],
+      "body": ""
+    },
+    {
+      "text": "---\nname: com linha em branco\n\n# comentário solto\nchave sem valor:\n---\nCorpo",
+      "summary": [
+        {
+          "key": "name",
+          "value": "com linha em branco",
+          "line": "name: com linha em branco"
+        },
+        {
+          "key": null,
+          "value": null,
+          "line": "# comentário solto"
+        },
+        {
+          "key": null,
+          "value": null,
+          "line": "chave sem valor:"
+        }
+      ],
+      "body": "Corpo"
+    },
+    {
+      "text": "texto antes\n---\nname: não é cabeçalho\n---\n",
+      "summary": [],
+      "body": "texto antes\n---\nname: não é cabeçalho\n---\n"
+    },
+    {
+      "text": "---\nnão fechou\n# Título\n",
+      "summary": [],
+      "body": "---\nnão fechou\n# Título\n"
+    }
+  ],
+  "sizes": [
+    {
+      "bytes": 0,
+      "label": "0 B"
+    },
+    {
+      "bytes": 1,
+      "label": "1 B"
+    },
+    {
+      "bytes": 512,
+      "label": "512 B"
+    },
+    {
+      "bytes": 1023,
+      "label": "1023 B"
+    },
+    {
+      "bytes": 1024,
+      "label": "1 KB"
+    },
+    {
+      "bytes": 1536,
+      "label": "1,5 KB"
+    },
+    {
+      "bytes": 1640,
+      "label": "1,6 KB"
+    },
+    {
+      "bytes": 2048,
+      "label": "2 KB"
+    },
+    {
+      "bytes": 10240,
+      "label": "10 KB"
+    },
+    {
+      "bytes": 1048575,
+      "label": "1.024 KB"
+    },
+    {
+      "bytes": 1048576,
+      "label": "1 MB"
+    },
+    {
+      "bytes": 1572864,
+      "label": "1,5 MB"
+    },
+    {
+      "bytes": 5242880,
+      "label": "5 MB"
+    },
+    {
+      "bytes": 123456789,
+      "label": "117,7 MB"
+    }
+  ],
+  "whens": [
+    {
+      "instant": "2026-09-14T12:30:00.000Z",
+      "label": "14 de set. de 2026, 09:30"
+    },
+    {
+      "instant": "2026-09-14T03:00:00.000Z",
+      "label": "14 de set. de 2026, 00:00"
+    },
+    {
+      "instant": "2026-09-14T02:59:00.000Z",
+      "label": "13 de set. de 2026, 23:59"
+    },
+    {
+      "instant": "2026-01-05T02:05:00.000Z",
+      "label": "4 de jan. de 2026, 23:05"
+    },
+    {
+      "instant": "2026-05-01T03:00:00.000Z",
+      "label": "1 de mai. de 2026, 00:00"
+    },
+    {
+      "instant": "2026-12-31T23:59:00.000Z",
+      "label": "31 de dez. de 2026, 20:59"
+    },
+    {
+      "instant": "2026-03-10T15:00:00.000Z",
+      "label": "10 de mar. de 2026, 12:00"
+    },
+    {
+      "instant": "2025-11-02T14:45:00.000Z",
+      "label": "2 de nov. de 2025, 11:45"
+    }
+  ],
+  "versions": [
+    {
+      "hash": "abc12345deadbeef",
+      "label": "abc12345"
+    },
+    {
+      "hash": "abc",
+      "label": "abc"
+    },
+    {
+      "hash": "",
+      "label": ""
+    }
+  ]
+}

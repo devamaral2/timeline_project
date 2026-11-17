@@ -69,6 +69,7 @@ import app.braid.mobile.domain.artifact.macroShares
 import app.braid.mobile.domain.artifact.markdownBodyOf
 import app.braid.mobile.domain.artifact.pluralize
 import app.braid.mobile.domain.artifact.sleepAgendaOfArtifact
+import app.braid.mobile.ui.agentfile.AgentFileSection
 import kotlin.math.floor
 import kotlin.math.roundToInt
 
@@ -80,7 +81,7 @@ const val MODEL_ESTIMATE_MESSAGE = "Estimativa nutricional gerada por IA."
  * O conteúdo de um documento aberto, conforme o tipo, como o `ArtifactContent` do web: texto e roteador em markdown
  * (sem o título repetido na primeira linha), alimento, treino e sono com o número principal na serifa, exercício do
  * catálogo com categoria e situação. É o mesmo componente do detalhe do documento e do da tarefa. Skill e agente
- * mostram só o caminho do arquivo; a leitura dele é do ticket 18.
+ * são o arquivo do Hermes (`AgentFileSection`).
  */
 @Composable
 fun ArtifactContent(
@@ -114,17 +115,7 @@ fun ArtifactContent(
                 FactRow("Categoria", data.category.label)
                 FactRow("Situação", if (data.active) "Ativo" else "Inativo")
             }
-        is AgentFileData ->
-            Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(
-                    data.path,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontFamily = BraidMonoFont,
-                    fontSize = 12.sp,
-                    lineHeight = 18.sp,
-                )
-                data.description?.let { Text(it, color = MaterialTheme.colorScheme.onBackground, fontSize = 15.sp, lineHeight = 22.sp) }
-            }
+        is AgentFileData -> AgentFileSection(data, modifier)
     }
 }
 

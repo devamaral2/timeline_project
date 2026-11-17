@@ -1,0 +1,28 @@
+{
+  "backups": [
+    {
+      "id": "bk-4",
+      "path": "hermes/skills/pesquisar/SKILL.md",
+      "createdAt": "2026-09-14T15:00:00.000Z",
+      "sizeBytes": 1700
+    },
+    {
+      "id": "bk-3",
+      "path": "hermes/skills/pesquisar/SKILL.md",
+      "createdAt": "2026-09-14T12:30:00.000Z",
+      "sizeBytes": 1640
+    },
+    {
+      "id": "bk-2",
+      "path": "hermes/skills/pesquisar/SKILL.md",
+      "createdAt": "2026-09-10T18:05:00.000Z",
+      "sizeBytes": 512
+    },
+    {
+      "id": "bk-1",
+      "path": "hermes/skills/pesquisar/SKILL.md",
+      "createdAt": "2026-09-01T09:00:00.000Z",
+      "sizeBytes": 2621440
+    }
+  ]
+}
