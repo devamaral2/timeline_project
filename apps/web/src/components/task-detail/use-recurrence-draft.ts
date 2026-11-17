@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { RecurrenceDto } from "@repo/contracts";
 import { ApiRequestError } from "@/lib/api/client-request";
 import { getRecurrence } from "@/lib/api/recurrences";
@@ -20,15 +20,21 @@ function isNotFound(error: unknown): boolean {
 export function useRecurrenceDraft(recurrenceId: string | null) {
   const [series, setSeries] = useState<RecurrenceDto | null>(null);
   const [loadState, setLoadState] = useState<RecurrenceLoadState>("idle");
-  const [draft, setDraft0] = useState<RecurrenceDraft | null>(null);
-  const setDraft: typeof setDraft0 = (v) => { console.log("SETDRAFT", typeof v === "function" ? "fn" : JSON.stringify(v), new Error().stack?.split("\n").slice(2,4).join("|")); setDraft0(v); };
-  console.log("HOOK", JSON.stringify(draft), recurrenceId);
+  const [draft, setDraft] = useState<RecurrenceDraft | null>(null);
+  // O id da série da passada anterior: voltar ao vazio só vale quando havia uma série e ela sumiu. Na montagem, sem
+  // série, o efeito não pode zerar o rascunho: ele roda depois do primeiro toque em "Definir a regra" quando a tela
+  // está carregada e a máquina, lenta, e apagaria a regra recém-definida.
+  const previousId = useRef<string | null>(null);
 
   useEffect(() => {
+    const hadSeries = previousId.current !== null;
+    previousId.current = recurrenceId;
     if (recurrenceId === null) {
-      setSeries(null);
-      setDraft(null);
-      setLoadState("idle");
+      if (hadSeries) {
+        setSeries(null);
+        setDraft(null);
+        setLoadState("idle");
+      }
       return;
     }
     let cancelled = false;

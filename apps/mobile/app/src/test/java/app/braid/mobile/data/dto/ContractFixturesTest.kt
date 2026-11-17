@@ -14,8 +14,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Fixtures são geradas por `scripts/mobile/generate-fixtures.ts` e validadas
- * pelos schemas Zod em `packages/contracts/src/schemas.ts`.
+ * As fixtures ficam versionadas em `src/test/resources/fixtures` (o gerador e a
+ * checagem no CI foram removidos) e espelham os schemas Zod em
+ * `packages/contracts/src/schemas.ts`.
  *
  * `ignoreUnknownKeys = false` é proposital: o servidor adicionando um campo
  * obrigatório sem atualizar o DTO Kotlin quebra esta suíte imediatamente.

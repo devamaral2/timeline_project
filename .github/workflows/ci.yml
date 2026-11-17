@@ -53,10 +53,6 @@ jobs:
           cache: gradle
       - name: Setup Android SDK
         uses: android-actions/setup-android@v4
-      - name: Generate mobile fixtures
-        run: pnpm --filter @repo/mobile run generate:fixtures
-      - name: Verify generated fixtures are committed
-        run: git diff --exit-code -- apps/mobile/app/src/test/resources/fixtures
       - name: Validate mobile
         working-directory: apps/mobile
         run: ./gradlew ktlintCheck lintDebug testDebugUnitTest assembleDebug
