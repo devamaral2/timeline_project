@@ -1,6 +1,7 @@
 package app.braid.mobile.data.reminder
 
 import app.braid.mobile.domain.reminder.FiredKeysStore
+import app.braid.mobile.domain.reminder.NotificationPermissionRepository
 import app.braid.mobile.domain.reminder.ReadKeysStore
 import app.braid.mobile.domain.reminder.ReminderAlarms
 import app.braid.mobile.domain.reminder.ReminderNotifier
@@ -28,6 +29,9 @@ abstract class ReminderBindings {
 
     @Binds
     abstract fun bindReadKeys(store: DataStoreReadKeysStore): ReadKeysStore
+
+    @Binds
+    abstract fun bindNotificationPermission(repository: DataStoreNotificationPermissionRepository): NotificationPermissionRepository
 }
 
 @Module

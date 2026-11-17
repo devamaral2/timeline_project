@@ -9,14 +9,12 @@ import android.os.Build
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringSetPreferencesKey
+import app.braid.mobile.data.preferences.safeData
 import app.braid.mobile.domain.reminder.Reminder
 import app.braid.mobile.domain.reminder.ReminderAlarms
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
-import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -84,8 +82,8 @@ class AndroidReminderAlarms
         }
 
         override suspend fun scheduledKeys(): Set<String> =
-            store.data
-                .catch { failure -> if (failure is IOException) emit(emptyPreferences()) else throw failure }
+            store
+                .safeData()
                 .first()[SCHEDULED]
                 .orEmpty()
 

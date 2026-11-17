@@ -4,6 +4,7 @@ import app.braid.mobile.core.network.BraidJson
 import app.braid.mobile.data.requests.RequestDto
 import app.braid.mobile.data.requests.toDomain
 import app.braid.mobile.domain.agenda.FreeWindow
+import app.braid.mobile.domain.markdown.MarkdownInline
 import app.braid.mobile.domain.request.AgentRequest
 import app.braid.mobile.domain.request.AgentTrace
 import app.braid.mobile.domain.request.EntityKind
@@ -162,20 +163,20 @@ class ChatFixturesTest {
         }
     }
 
-    private fun nodeOf(inline: Inline): JsonObject =
+    private fun nodeOf(inline: MarkdownInline): JsonObject =
         buildJsonObject {
             when (inline) {
-                is Inline.Text -> {
+                is MarkdownInline.Text -> {
                     put("type", "text")
-                    put("value", inline.value)
+                    put("value", inline.text)
                 }
-                is Inline.Code -> {
+                is MarkdownInline.Code -> {
                     put("type", "inlineCode")
-                    put("value", inline.value)
+                    put("value", inline.text)
                 }
-                is Inline.Strong -> {
+                is MarkdownInline.Strong -> {
                     put("type", "strong")
-                    put("children", JsonArray(inline.children.map(::nodeOf)))
+                    put("children", JsonArray(inline.content.map(::nodeOf)))
                 }
                 else -> error("O fixture só tem texto, código e negrito.")
             }
@@ -187,7 +188,7 @@ class ChatFixturesTest {
             val text = case.string(0)
             val nextIsList = case.args[1].jsonPrimitive.boolean
             val expected = case.result.jsonObject
-            when (val actual = polishParagraph(listOf(Inline.Text(text)), nextIsList)) {
+            when (val actual = polishParagraph(listOf(MarkdownInline.Text(text)), nextIsList)) {
                 is PolishedParagraph.Label -> {
                     assertEquals(case.toString(), true, expected.getValue("label").jsonPrimitive.boolean)
                     assertEquals(expected.getValue("children").jsonArray.map { it.jsonObject.string("value") }, listOf(actual.text))

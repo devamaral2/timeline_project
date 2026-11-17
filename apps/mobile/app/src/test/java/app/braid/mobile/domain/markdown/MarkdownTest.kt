@@ -194,4 +194,48 @@ class MarkdownTest {
         assertEquals(emptyList<MarkdownBlock>(), parseMarkdown(""))
         assertEquals(emptyList<MarkdownBlock>(), parseMarkdown("\n  \n"))
     }
+
+    // Os casos abaixo vieram do leitor das respostas do chat, que agora lê por este mesmo parser.
+
+    @Test
+    fun `strong and emphasis close together, with strike and code beside them`() {
+        assertEquals(
+            listOf(
+                Strong(listOf(text("forte "), Emphasis(listOf(text("e itálico"))))),
+                text(" "),
+                Strike(listOf(text("riscado"))),
+                text(" "),
+                InlineCode("a_b"),
+            ),
+            parseInline("**forte *e itálico*** ~~riscado~~ `a_b`"),
+        )
+    }
+
+    @Test
+    fun `a bare address with www opens over https, and a closing parenthesis only belongs to the address when it opened one`() {
+        assertEquals(
+            listOf(text("veja "), Link("https://www.a.com/x", listOf(text("www.a.com/x"))), text(".")),
+            parseInline("veja www.a.com/x."),
+        )
+        assertEquals(
+            listOf(text("("), Link("https://a.com/x", listOf(text("https://a.com/x"))), text(")")),
+            parseInline("(https://a.com/x)"),
+        )
+        assertEquals(
+            listOf(Link("https://a.com/f_(x)", listOf(text("https://a.com/f_(x)")))),
+            parseInline("https://a.com/f_(x)"),
+        )
+    }
+
+    @Test
+    fun `an ordered list keeps a nested bullet list and the lists beside it`() {
+        val blocks = parseMarkdown("Passos:\n1. um\n2. dois\n   - filho\n\n- [x] feito\n- [ ] falta")
+        assertEquals(3, blocks.size)
+        val ordered = blocks[1] as ListBlock
+        assertEquals(true, ordered.ordered)
+        assertEquals(1, ordered.start)
+        val nested = ordered.items[1].blocks.last() as ListBlock
+        assertEquals(false, nested.ordered)
+        assertEquals(listOf<Boolean?>(true, false), (blocks[2] as ListBlock).items.map { it.checked })
+    }
 }

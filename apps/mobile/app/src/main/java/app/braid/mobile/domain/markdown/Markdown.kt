@@ -381,10 +381,12 @@ fun parseInline(text: String): List<MarkdownInline> {
                 out += MarkdownInline.Link(match.groupValues[1], listOf(MarkdownInline.Text(match.groupValues[1])))
                 index += match.value.length
             }
-            (char == 'h') && isBareUrlAt(text, index) -> {
+            (char == 'h' || char == 'w') && isBareUrlAt(text, index) -> {
                 val url = bareUrl(text, index)
                 flush()
-                out += MarkdownInline.Link(url, listOf(MarkdownInline.Text(url)))
+                // Um endereço que começa em `www.` (sem protocolo) abre em https, como no GFM.
+                val href = if (url.startsWith("www.")) "https://$url" else url
+                out += MarkdownInline.Link(href, listOf(MarkdownInline.Text(url)))
                 index += url.length
             }
             char == '*' || char == '_' || char == '~' -> {
@@ -477,7 +479,14 @@ private fun isBareUrlAt(
     text: String,
     index: Int,
 ): Boolean =
-    (text.startsWith("http://", index) || text.startsWith("https://", index)) &&
+    (
+        text.startsWith(
+            "http://",
+            index,
+        ) ||
+            text.startsWith("https://", index) ||
+            (text.startsWith("www.", index) && index + 4 < text.length)
+    ) &&
         (index == 0 || !text[index - 1].isLetterOrDigit())
 
 private fun bareUrl(
@@ -487,7 +496,9 @@ private fun bareUrl(
     var end = index
     while (end < text.length && !text[end].isWhitespace() && text[end] != '<') end++
     var url = text.substring(index, end)
-    while (url.isNotEmpty() && url.last() in ".,;:!?)*_~\"'") url = url.dropLast(1)
+    while (url.isNotEmpty() && (url.last() in ".,;:!?*_~\"'" || (url.last() == ')' && url.count { it == ')' } > url.count { it == '(' }))) {
+        url = url.dropLast(1)
+    }
     return url
 }
 
@@ -518,14 +529,17 @@ private fun parseEmphasis(
                 // `**` não fecha no meio de `***`.
                 (width == 2 || (after != char && before != char))
         if (closes) {
-            val content = parseInline(text.substring(afterOpen, close))
+            // `**a *b***`: o fecho é o fim da sequência de marcadores, para o de dentro fechar primeiro.
+            var end = close
+            while (width == 2 && char != '~' && text.getOrNull(end + width) == char) end++
+            val content = parseInline(text.substring(afterOpen, end))
             val node =
                 when {
                     char == '~' -> MarkdownInline.Strike(content)
                     width == 2 -> MarkdownInline.Strong(content)
                     else -> MarkdownInline.Emphasis(content)
                 }
-            return node to close + width
+            return node to end + width
         }
         search = close + 1
     }
