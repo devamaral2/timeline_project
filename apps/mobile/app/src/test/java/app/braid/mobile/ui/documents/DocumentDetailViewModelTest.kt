@@ -24,6 +24,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import okhttp3.mockwebserver.MockResponse
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -207,5 +208,85 @@ class DocumentDetailViewModelTest {
 
             assertFalse(ready.pendingMeal)
             assertEquals(1, reads("doc-food-pending"))
+        }
+
+    private fun newOwnTextViewModel(): DocumentDetailViewModel {
+        backend.route("GET", "/api/artifacts/doc-text", fixture("documents-detail-text"))
+        return newViewModel("doc-text")
+    }
+
+    private suspend fun DocumentDetailViewModel.awaitDeleteDone() =
+        withContext(Dispatchers.Default) {
+            withTimeout(5_000) {
+                state.first {
+                    (it as? DocumentDetailUiState.Ready)?.let { ready ->
+                        ready.deleted ||
+                            ready.delete.error != null
+                    } ==
+                        true
+                }
+            }
+        }
+
+    @Test
+    fun `deleting asks first, then sends DELETE and marks the document as gone`() =
+        runTest {
+            backend.route("DELETE", "/api/artifacts/doc-text", MockResponse().setResponseCode(204))
+            val viewModel = newOwnTextViewModel()
+            viewModel.settled()
+
+            viewModel.askDelete()
+            assertTrue((viewModel.state.value as DocumentDetailUiState.Ready).delete.open)
+            assertTrue(backend.requestsTo("DELETE", "/api/artifacts/doc-text").isEmpty())
+
+            viewModel.confirmDelete()
+            val done = viewModel.awaitDeleteDone() as DocumentDetailUiState.Ready
+
+            assertTrue(done.deleted)
+            assertEquals(1, backend.requestsTo("DELETE", "/api/artifacts/doc-text").size)
+        }
+
+    @Test
+    fun `cancelling the confirmation sends nothing`() =
+        runTest {
+            val viewModel = newOwnTextViewModel()
+            viewModel.settled()
+
+            viewModel.askDelete()
+            viewModel.dismissDelete()
+
+            assertFalse((viewModel.state.value as DocumentDetailUiState.Ready).delete.open)
+            assertTrue(backend.requestsTo("DELETE", "/api/artifacts/doc-text").isEmpty())
+        }
+
+    @Test
+    fun `a failed delete keeps the document and shows the web message`() =
+        runTest {
+            backend.route("DELETE", "/api/artifacts/doc-text", status(500))
+            val viewModel = newOwnTextViewModel()
+            viewModel.settled()
+            viewModel.askDelete()
+            viewModel.confirmDelete()
+
+            val failed = viewModel.awaitDeleteDone() as DocumentDetailUiState.Ready
+
+            assertFalse(failed.deleted)
+            assertEquals("Não foi possível excluir a nota. Tente novamente.", failed.delete.error)
+            assertTrue(failed.delete.open)
+            assertFalse(failed.delete.running)
+        }
+
+    @Test
+    fun `a document that is not the person's own text note cannot be deleted`() =
+        runTest {
+            backend.route("GET", "/api/artifacts/doc-food", fixture("documents-detail-food"))
+            val viewModel = newViewModel("doc-food")
+            viewModel.settled()
+
+            viewModel.askDelete()
+            viewModel.confirmDelete()
+            withContext(Dispatchers.Default) { delay(100) }
+
+            assertTrue(backend.requestsTo("DELETE", "/api/artifacts/doc-food").isEmpty())
         }
 }
