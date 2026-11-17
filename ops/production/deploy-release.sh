@@ -67,12 +67,22 @@ rollout_diagnostics() {
   echo "::endgroup::" >&2
 }
 
-for app in api auth web mcp; do
+for app in api auth web; do
   if ! kubectl -n braid rollout status "deployment/$app" --timeout=300s; then
     rollout_diagnostics "$app"
     exit 1
   fi
 done
+
+# O MCP so atende o Hermes (ADR 004); web, auth e API nao dependem dele. Se nao
+# subir, avisa e segue: nao trava a release das aplicacoes. Causa comum: faltam
+# campos do scope mcp-runtime no Environment do 1Password (docs/runbook/hermes.md).
+MCP_READY=1
+if ! kubectl -n braid rollout status deployment/mcp --timeout=300s; then
+  rollout_diagnostics mcp
+  echo "::warning title=MCP fora do ar::O deployment mcp nao assentou; o deploy segue sem ele. Veja 'kubectl -n braid logs deploy/mcp --previous' na VPS." >&2
+  MCP_READY=0
+fi
 
 TRAEFIK_IP=$(kubectl -n kube-system get svc traefik -o jsonpath='{.spec.clusterIP}')
 # Logo após o rollout o Traefik ainda pode apontar para o pod antigo (502); repete até assentar.
@@ -88,3 +98,6 @@ printf 'export SHA=%q\n' "$SHA" > /opt/braid/release.env
 # aplicacoes ja estao no ar na versao nova.
 bash ops/production/sync-hermes-skills.sh "$ROOT"
 printf 'Deploy concluído: %s\n' "$SHA"
+if [[ "$MCP_READY" != 1 ]]; then
+  echo "::warning title=MCP fora do ar::Release $SHA no ar, mas o MCP do Hermes nao esta rodando." >&2
+fi
