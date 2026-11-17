@@ -38,7 +38,7 @@ ainda não aplicados no web e a troca de "Hermes" por "Candeia".
 | Agenda | Faixa da semana, seletor de mês e "Hoje"; swipe entre dias | `components/agenda` | — | Ticket 03. |
 | Agenda | Tarefa que atravessa a meia-noite nos dois dias; tarefas longas e passos fora da agenda | `components/agenda`, `packages/timeline` | — | Ticket 03. |
 | Agenda | Esqueleto de carregamento e erro com "Tentar de novo" | `components/agenda` | — | Ticket 03. |
-| Agenda | Mudar o status pelo ponto da tarefa, com `revision` e recarga no conflito | `components/agenda/task-controls.tsx` | — | Ticket 04. |
+| Agenda | Mudar o status pelo ponto da tarefa de referência (sem status), com `revision` e recarga no conflito | `components/agenda/task-controls.tsx` | — | Ticket 04. |
 | Agenda | Atualização sozinha das tarefas de agente abertas (3 s, só com a tela visível) | `components/agenda` | — | Ticket 04. |
 | Agenda | Modo "Em sequência", de 7 em 7 dias | `components/agenda/agenda-screen.tsx` | — | Ticket 06. |
 | Agenda | Tempo livre de 15 minutos ou mais, e o toque que abre o chat com a janela anexada | `components/agenda/free-time.ts` | — | Ticket 06. |
@@ -54,19 +54,19 @@ ainda não aplicados no web e a troca de "Hermes" por "Candeia".
 | Detalhe da tarefa de pessoa | Caixa de edição por IA no rodapé | `components/detail/EntityAiEditBar.tsx` | — | Ticket 20. |
 | Detalhe da tarefa de agente | Status, informações, hierarquia, entradas, passos, o que produziu, sessão, registro e falha | `components/task-detail` | — | Ticket 10. |
 | Detalhe da tarefa de agente | Continuar a sessão, cancelar (e o 409 do pedido de alimento), atualização sozinha a cada 3 s | `components/task-detail` | — | Ticket 10. |
-| Criação e edição | Criar e editar tarefa: tipo, tarefa de referência, tarefa longa, datas em passos de 5 minutos, lembretes, tags, local | `components/edit`, `components/new-task-forms`, `components/new-item` | — | Ticket 13. |
+| Criação e edição | Criar e editar tarefa (a criação não tem tarefa persistente, hierarquia nem documentos, só a edição): tipo, tarefa de referência, tarefa longa, datas em passos de 5 minutos, lembretes, tags, local | `components/edit`, `components/new-task-forms`, `components/new-item` | — | Ticket 13. |
 | Criação e edição | `Idempotency-Key` na criação, `revision` na edição e aviso de conflito; erros no campo | `components/edit` | — | Ticket 13. |
-| Criação e edição | Recorrência: série, mudar a regra, excluir a série, avulsa que passa a repetir | `components/edit` | — | Ticket 14. |
+| Criação e edição | Recorrência (diária, semanal, mensal e anual, com intervalo): série, mudar a regra, excluir a série, avulsa que passa a repetir | `components/edit` | — | Ticket 14. |
 | Criação e edição | Hierarquia: principal e subtarefas num seletor, trocar de principal, criar ou pedir ao agente que crie | `components/edit/EntityPickerDialog.tsx` | — | Ticket 15. |
 | Criação e edição | Documentos da tarefa: ordenar, adicionar e remover; alimento copiado com a quantidade | `components/edit`, `components/artifact-edit` | — | Ticket 16. |
-| Documentos | Lista com filtros por tipo, tag, texto e executor; skills, agentes e roteadores contam como "Agentes" | `components/notes` | — | Ticket 11. |
+| Documentos | Lista com filtros por texto e executor (na largura mobile o web não tem filtro de tipo nem de tag); skills, agentes e roteadores contam como "Agentes" | `components/notes` | — | Ticket 11. |
 | Documentos | Leitura de texto (markdown), alimento (com "calculando"), sono, treino e exercício; tarefas ligadas | `components/notes`, `components/detail` | — | Ticket 11. |
-| Documentos | Criar, editar e excluir a nota de texto; criar alimento a partir de texto livre; globais só leitura | `components/notes`, `components/artifact-edit` | — | Ticket 17. |
+| Documentos | Criar (pelo `/nota` do chat, sem botão "Novo documento"), editar e excluir a nota de texto; criar alimento a partir de texto livre; globais só leitura | `components/notes`, `components/artifact-edit` | — | Ticket 17. |
 | Documentos | Arquivos do agente (só o dono): caminho, hash, markdown ou texto cru, backups e restauração, edição por IA | `components/notes` | — | Ticket 18. |
 | Chat | Folha que expande para tela cheia, atalhos de comando, pedido com caixa de processo e cancelamento | `components/hub` | — | Ticket 12. |
 | Chat | "Conversa" e "Processo", markdown e botões de escolha, reencontro de pedidos abertos, retry, "Nova conversa", `/hermes` e `/app` | `components/hub` | — | Ticket 12. |
-| Chat | Feed de notificações pelo chat (últimas 24 horas e próximos) | `components/hub` | — | Ticket 23. |
-| Chat | `/configuracoes`: tema (sistema, claro, escuro) e sair | `components/hub` | — | Ticket 21. |
+| Chat | Feed de notificações pelo chat (últimas 24 horas e próximos), com lido/não lido | `components/hub` | — | Ticket 23. |
+| Chat | `/configuracoes`: tema (interruptor claro/escuro, com o sistema decidindo até a primeira escolha) e sair | `components/hub` | — | Ticket 21. |
 | Voz | Escuta ao abrir, 1,8 s de silêncio envia, volta a ouvir até "para" ou "chega", permissão do microfone | `components/hub` | — | Ticket 19. `SpeechRecognizer` em pt-BR atrás de uma interface. |
 | Voz | Microfone nas caixas de edição por IA dos detalhes | `components/detail/EntityAiEditBar.tsx` | — | Ticket 20. |
 | Lembretes | Notificação do Android no horário de cada lembrete, com janela de 1 h e sem repetir; reagenda ao sincronizar e no boot | `lib` de lembretes do web | — | Ticket 22. Alarme exato com queda para o inexato. |
