@@ -4,17 +4,18 @@ import androidx.lifecycle.viewModelScope
 import app.braid.mobile.data.tasks.DefaultTaskRepository
 import app.braid.mobile.data.tasks.TasksApi
 import app.braid.mobile.domain.task.TaskChanges
-import app.braid.mobile.support.InMemoryReadKeys
 import app.braid.mobile.support.MutableClock
 import app.braid.mobile.support.TestBackend
 import app.braid.mobile.support.TestBackend.Companion.fixture
 import app.braid.mobile.support.TestBackend.Companion.status
 import app.braid.mobile.support.TestGraph
+import app.braid.mobile.support.TestReminderStores
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -26,7 +27,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
@@ -44,7 +47,11 @@ class NotificationsViewModelTest {
     private val start = Instant.parse("2026-09-14T15:00:00.000Z")
     private val zone = ZoneId.of("America/Sao_Paulo")
     private val clock = MutableClock(start)
-    private val readKeys = InMemoryReadKeys()
+
+    @get:Rule
+    val folder = TemporaryFolder()
+
+    private lateinit var stores: TestReminderStores
     private lateinit var backend: TestBackend
     private lateinit var graph: TestGraph
     private val created = mutableListOf<NotificationsViewModel>()
@@ -52,6 +59,7 @@ class NotificationsViewModelTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
+        stores = TestReminderStores(folder.root.resolve("notifications.preferences_pb"))
         backend = TestBackend()
         graph = TestGraph(backend)
         backend.route("GET", "/api/tasks", fixture("notifications-agenda-page"))
@@ -62,18 +70,32 @@ class NotificationsViewModelTest {
     fun tearDown() {
         created.forEach { it.viewModelScope.cancel() }
         backend.close()
+        runBlocking { stores.close() }
         Dispatchers.resetMain()
     }
 
     private fun newViewModel(): NotificationsViewModel =
         NotificationsViewModel(
             DefaultTaskRepository(graph.apis.create(TasksApi::class.java), TaskChanges()),
-            readKeys,
+            stores.readKeys,
             clock,
             zone,
         ).also(created::add)
 
     private suspend fun NotificationsViewModel.loaded(): NotificationsUiState = state.first { it.loaded }
+
+    /** As chaves lidas que o aparelho guardou, assim que a gravação (no DataStore de verdade, fora da tela) chega a [until]. */
+    private suspend fun savedKeys(until: (Map<String, Instant>) -> Boolean): Map<String, Instant> =
+        withContext(Dispatchers.Default) {
+            withTimeout(5_000) {
+                var saved = stores.readKeys.read()
+                while (!until(saved)) {
+                    delay(5)
+                    saved = stores.readKeys.read()
+                }
+                saved
+            }
+        }
 
     private suspend fun awaitReads(count: Int) =
         withContext(Dispatchers.Default) {
@@ -133,7 +155,7 @@ class NotificationsViewModelTest {
             val state = viewModel.state.value
             assertEquals(listOf(false, true), state.recent.map { it.unread })
             assertEquals(1, state.unreadCount)
-            assertEquals(mapOf(deliveryKey to Instant.parse("2026-09-16T12:00:00Z")), readKeys.stored)
+            assertEquals(mapOf(deliveryKey to Instant.parse("2026-09-16T12:00:00Z")), savedKeys { it.isNotEmpty() })
 
             val reopened = newViewModel().loaded()
             assertEquals(listOf(false, true), reopened.recent.map { it.unread })
@@ -152,23 +174,24 @@ class NotificationsViewModelTest {
                 viewModel.state.value.recent
                     .none { it.unread },
             )
-            assertEquals(setOf(deliveryKey, meetingKey), readKeys.stored.keys)
+            assertEquals(setOf(deliveryKey, meetingKey), savedKeys { it.size >= 2 }.keys)
         }
 
     @Test
     fun `read keys of tasks older than 48 hours are forgotten when a new one is saved`() =
         runTest {
-            readKeys.stored =
+            stores.readKeys.write(
                 mapOf(
                     "old:2026-09-11T14:59:00.000Z:5" to Instant.parse("2026-09-11T14:59:00Z"),
                     "edge:2026-09-12T15:00:00.000Z:5" to Instant.parse("2026-09-12T15:00:00Z"),
-                )
+                ),
+            )
             val viewModel = newViewModel()
             viewModel.loaded()
 
             viewModel.markRead(deliveryKey)
 
-            assertEquals(setOf("edge:2026-09-12T15:00:00.000Z:5", deliveryKey), readKeys.stored.keys)
+            assertEquals(setOf("edge:2026-09-12T15:00:00.000Z:5", deliveryKey), savedKeys { deliveryKey in it }.keys)
         }
 
     @Test

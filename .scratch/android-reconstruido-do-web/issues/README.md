@@ -20,7 +20,7 @@ Cada ticket cabe numa sessão: leia este arquivo, o ticket e o que ele manda ler
 - **Testes.** Uma fronteira só: o ViewModel da tela com a infraestrutura real (Retrofit, OkHttp, `Authenticator`,
   repositório, serialização) contra um `MockWebServer` que serve fixtures geradas dos schemas Zod. O teste confere o
   `UiState` e as requisições recebidas (método, caminho, query, corpo, `revision`, `Idempotency-Key`). Não escreva
-  repositórios falsos. Só relógio, alarmes, voz e armazenamento cifrado são trocados, cada um atrás de uma interface
+  repositórios falsos. Só relógio, alarmes, notificações do sistema, voz e armazenamento cifrado são trocados, cada um atrás de uma interface
   pequena. Toda lógica portada à mão do TS é conferida contra fixtures geradas pelas funções TS.
 - **Concorrência.** Toda criação manda `Idempotency-Key`; toda edição de tarefa de pessoa manda a `revision` lida, e o
   conflito relê a entidade e avisa. Concluir uma tarefa de pessoa envia `finishedAt` com o instante atual; sair de

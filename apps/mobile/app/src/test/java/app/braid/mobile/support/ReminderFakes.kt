@@ -1,7 +1,5 @@
 package app.braid.mobile.support
 
-import app.braid.mobile.domain.reminder.FiredKeysStore
-import app.braid.mobile.domain.reminder.ReadKeysStore
 import app.braid.mobile.domain.reminder.Reminder
 import app.braid.mobile.domain.reminder.ReminderAlarms
 import app.braid.mobile.domain.reminder.ReminderNotifier
@@ -54,27 +52,5 @@ class FakeReminderNotifier : ReminderNotifier {
 
     override suspend fun show(reminder: Reminder) {
         shown += reminder
-    }
-}
-
-/** As chaves disparadas na memória; "fechar o app" é reabrir a mesma instância. */
-class InMemoryFiredKeys : FiredKeysStore {
-    var stored: Map<String, Instant> = emptyMap()
-
-    override suspend fun read(): Map<String, Instant> = stored
-
-    override suspend fun write(fired: Map<String, Instant>) {
-        stored = fired
-    }
-}
-
-/** As chaves lidas do feed na memória; "fechar o app" é criar outro ViewModel sobre a mesma instância. */
-class InMemoryReadKeys(
-    var stored: Map<String, Instant> = emptyMap(),
-) : ReadKeysStore {
-    override suspend fun read(): Map<String, Instant> = stored
-
-    override suspend fun write(read: Map<String, Instant>) {
-        stored = read
     }
 }

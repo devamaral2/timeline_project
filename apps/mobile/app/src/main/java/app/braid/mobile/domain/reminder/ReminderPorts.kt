@@ -39,6 +39,24 @@ interface ReadKeysStore {
     suspend fun write(read: Map<String, Instant>)
 }
 
+/**
+ * Os lembretes que a última releitura agendou, guardados no aparelho: o sistema apaga os alarmes ao reiniciar, e sem rede
+ * o app ainda sabe o que reagendar. Vive no DataStore.
+ */
+interface ReminderScheduleStore {
+    suspend fun read(): List<Reminder>
+
+    suspend fun write(schedule: List<Reminder>)
+}
+
+/** Se o usuário dispensou o aviso que explica a permissão de alarme exato; vive no DataStore. */
+interface ExactAlarmPromptRepository {
+    /** `true` depois que o usuário dispensou o aviso. */
+    val dismissed: Flow<Boolean>
+
+    suspend fun markDismissed()
+}
+
 /** Se o app já pediu a permissão de notificação: o sistema só pergunta duas vezes, então o app pergunta uma e depois explica. */
 interface NotificationPermissionRepository {
     /** `false` até o app pedir a primeira vez. */

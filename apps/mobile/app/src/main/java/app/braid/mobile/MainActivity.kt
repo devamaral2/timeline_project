@@ -51,7 +51,7 @@ class MainActivity : ComponentActivity() {
         )
         // Com o app aberto a fonte dos lembretes é relida ao abrir, a cada 5 min e a cada mudança de tarefa.
         lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) { reminders.runWhileSignedIn(session.state, taskChanges.signals) }
+            repeatOnLifecycle(Lifecycle.State.STARTED) { reminders.keepFreshWhileSignedIn(session.state, taskChanges.signals) }
         }
         // Lida antes do primeiro quadro: quem escolheu um tema não vê o do sistema piscar na abertura.
         val savedTheme = runBlocking { themes.choice.first() }
