@@ -1,11 +1,15 @@
 package app.braid.mobile.ui.settings
 
+import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.Preferences
+import androidx.lifecycle.viewModelScope
 import app.braid.mobile.data.session.StoredSession
 import app.braid.mobile.data.settings.DataStoreThemeRepository
 import app.braid.mobile.data.tasks.DefaultTaskRepository
 import app.braid.mobile.data.tasks.TasksApi
 import app.braid.mobile.domain.reminder.ReminderSync
+import app.braid.mobile.domain.session.SessionRepository
 import app.braid.mobile.domain.session.SessionState
 import app.braid.mobile.domain.settings.ThemeChoice
 import app.braid.mobile.domain.task.TaskChanges
@@ -23,6 +27,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -52,6 +57,7 @@ class SettingsViewModelTest {
     val folder = TemporaryFolder()
 
     private val scopes = mutableListOf<CoroutineScope>()
+    private val viewModels = mutableListOf<SettingsViewModel>()
     private val stored =
         StoredSession(
             accessToken = "access-velho",
@@ -82,16 +88,29 @@ class SettingsViewModelTest {
     @After
     fun tearDown() {
         backend.close()
+        stopViewModels()
         runBlocking { scopes.closeAndJoin() }
         Dispatchers.resetMain()
     }
 
-    private fun themeStore() =
-        PreferenceDataStoreFactory.create(scope = CoroutineScope(SupervisorJob() + Dispatchers.IO).also(scopes::add)) {
-            folder.root.resolve("settings.preferences_pb")
-        }
+    private var openStore: DataStore<Preferences>? = null
 
-    private fun newViewModel() = SettingsViewModel(DataStoreThemeRepository(themeStore()), graph.sessionRepository, sync)
+    /** Um DataStore por arquivo aberto: fechar o app é soltar este e abrir outro. */
+    private fun themeStore(): DataStore<Preferences> =
+        openStore ?: PreferenceDataStoreFactory
+            .create(scope = CoroutineScope(SupervisorJob() + Dispatchers.IO).also(scopes::add)) {
+                folder.root.resolve("settings.preferences_pb")
+            }.also { openStore = it }
+
+    private fun newViewModel(session: SessionRepository = graph.sessionRepository) =
+        SettingsViewModel(DataStoreThemeRepository(themeStore()), session, sync).also(viewModels::add)
+
+    /** O fim da tela: o `viewModelScope` para de ler o DataStore antes de o arquivo ser fechado e reaberto. */
+    private fun stopViewModels() {
+        viewModels.forEach { it.viewModelScope.cancel() }
+        viewModels.clear()
+        openStore = null
+    }
 
     private suspend fun SettingsViewModel.await(predicate: (SettingsUiState) -> Boolean): SettingsUiState =
         withTimeout(5_000) { state.first(predicate) }
@@ -130,6 +149,7 @@ class SettingsViewModelTest {
             val first = newViewModel()
             first.toggleTheme(currentlyDark = false)
             first.await { it.themeChoice == ThemeChoice.Dark }
+            stopViewModels()
             scopes.closeAndJoin()
 
             assertEquals(ThemeChoice.Dark, newViewModel().await { it.themeChoice != null }.themeChoice)
@@ -143,7 +163,7 @@ class SettingsViewModelTest {
 
             val signedOut = TestGraph(backend)
             signedOut.sessionRepository.restore()
-            val viewModel = SettingsViewModel(DataStoreThemeRepository(themeStore()), signedOut.sessionRepository, sync)
+            val viewModel = newViewModel(signedOut.sessionRepository)
             assertFalse(viewModel.state.value.signedIn)
         }
 
