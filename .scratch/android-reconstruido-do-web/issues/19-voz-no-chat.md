@@ -4,12 +4,12 @@
 
 **Blocked by:** 12
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Leia antes:** o [README](README.md). No web: o laço de voz do chat e as mensagens de erro de fala.
 
-- [ ] O reconhecimento usa o `SpeechRecognizer` do Android em pt-BR, atrás de uma interface que os testes trocam por um falso.
-- [ ] Abrir o chat foca o campo e começa a ouvir; o botão do agente mostra "ouvindo".
-- [ ] 1,8 s de silêncio envia; "para" ou "chega" encerra o laço.
-- [ ] A permissão de microfone é pedida na primeira vez; negada, o chat mostra a explicação e segue por texto.
-- [ ] As mensagens de erro de fala são as do web.
+- [x] O reconhecimento usa o `SpeechRecognizer` do Android em pt-BR, atrás de uma interface que os testes trocam por um falso.
+- [x] Abrir o chat foca o campo e começa a ouvir; o botão do agente mostra "ouvindo".
+- [x] 1,8 s de silêncio envia; "para" ou "chega" encerra o laço.
+- [x] A permissão de microfone é pedida na primeira vez; negada, o chat segue por texto. Pelo web (README, "vale o web"): a explicação só aparece quando a pessoa toca no microfone; com a escuta aberta sozinha, a negação fica quieta.
+- [x] As mensagens de erro de fala são as do web.
