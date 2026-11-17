@@ -1,5 +1,8 @@
 package app.braid.mobile.ui.chat
 
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -25,6 +28,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -43,6 +47,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.SolidColor
@@ -60,6 +66,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.braid.mobile.core.designsystem.BraidDisplayFont
 import app.braid.mobile.core.designsystem.BraidMonoFont
@@ -72,6 +79,8 @@ import app.braid.mobile.domain.chat.end
 import app.braid.mobile.domain.chat.parseCommand
 import app.braid.mobile.domain.chat.start
 import app.braid.mobile.domain.timeline.briefDate
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 
 /** Quanto a barra inferior (dock de 66dp com o respiro de baixo) ocupa: o chat termina logo acima dela. */
 private val DockReserve = 98.dp
@@ -91,6 +100,14 @@ fun ChatOverlay(
     composerActions: @Composable RowScope.() -> Unit = {},
 ) {
     val state by chat.state.collectAsStateWithLifecycle()
+    // O sistema pergunta pelo microfone na primeira vez; a resposta volta ao chat, que liga a escuta ou explica.
+    val askMicrophone =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> chat.microphoneResult(granted) }
+    LaunchedEffect(state.voice.askPermission) {
+        if (state.voice.askPermission) askMicrophone.launch(Manifest.permission.RECORD_AUDIO)
+    }
+    // Com o app fora de vista o microfone não fica aberto.
+    LifecycleStartEffect(Unit) { onStopOrDispose { chat.pauseVoice() } }
     ChatScreen(
         state = state,
         commands = commands,
@@ -104,7 +121,19 @@ fun ChatOverlay(
         onClearWindow = chat::clearFreeWindow,
         onClose = chat::close,
         modifier = modifier,
-        composerActions = composerActions,
+        promptEdits = chat.promptEdits,
+        onTyped = chat::typed,
+        onDraft = chat::syncDraft,
+        composerActions = {
+            if (state.voice.available) {
+                VoiceButton(
+                    listening = state.voice.listening,
+                    enabled = state.ready && state.pending == null,
+                    onClick = chat::toggleVoice,
+                )
+            }
+            composerActions()
+        },
     )
 }
 
@@ -122,11 +151,22 @@ fun ChatScreen(
     onClearWindow: () -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
+    /** O texto novo do campo vindo da voz (a transcrição, ou o campo limpo quando o que foi dito já foi enviado). */
+    promptEdits: Flow<String> = emptyFlow(),
+    /** A pessoa digitou: a primeira tecla desliga o microfone. */
+    onTyped: (String) -> Unit = {},
+    /** O que está escrito no campo, para a fala ser somada a isso. */
+    onDraft: (String) -> Unit = {},
     composerActions: @Composable RowScope.() -> Unit = {},
 ) {
     val scheme = MaterialTheme.colorScheme
     var prompt by rememberSaveable { mutableStateOf("") }
-    val query = parseCommand(prompt, commands.available)
+    LaunchedEffect(promptEdits) { promptEdits.collect { prompt = it.take(MAX_PROMPT) } }
+    LaunchedEffect(prompt) { onDraft(prompt) }
+    // Enquanto o microfone está aberto o campo mostra o que já foi ouvido, depois do que estava escrito.
+    val listening = state.voice.listening
+    val shown = if (listening && state.voice.heard.isNotEmpty()) joinHeard(prompt, state.voice.heard) else prompt
+    val query = if (listening) null else parseCommand(prompt, commands.available)
     val matches = query?.matches.orEmpty()
     val density = LocalDensity.current
     val keyboard = WindowInsets.ime.getBottom(density)
@@ -140,7 +180,7 @@ fun ChatScreen(
             prompt = ""
             return
         }
-        if (prompt.isNotBlank() && onSend(prompt)) prompt = ""
+        if (shown.isNotBlank() && onSend(shown)) prompt = ""
     }
 
     Column(
@@ -171,9 +211,12 @@ fun ChatScreen(
         }
         ChatField(
             state = state,
-            prompt = prompt,
-            onPrompt = { prompt = it.take(MAX_PROMPT) },
-            canSend = state.ready && state.pending == null && (prompt.isNotBlank() || matches.isNotEmpty()),
+            prompt = shown,
+            onPrompt = {
+                onTyped(it.take(MAX_PROMPT))
+                prompt = it.take(MAX_PROMPT)
+            },
+            canSend = state.ready && state.pending == null && (shown.isNotBlank() || matches.isNotEmpty()),
             onSubmit = ::submit,
             onClearWindow = onClearWindow,
             composerActions = composerActions,
@@ -460,8 +503,11 @@ private fun ChatField(
     val scheme = MaterialTheme.colorScheme
     val window = state.freeWindow
     val lastIsError = state.messages.lastOrNull() is ChatMessage.Error
+    val listening = state.voice.listening
     val mark =
-        if (state.pending != null) {
+        if (listening) {
+            BotState.Listening
+        } else if (state.pending != null) {
             BotState.Thinking
         } else if (lastIsError) {
             BotState.Error
@@ -470,13 +516,29 @@ private fun ChatField(
         }
     val status =
         when {
+            listening -> "Ouvindo…"
             state.pending != null -> "${state.pending.label ?: "Pensando"}…"
             lastIsError -> "Não deu certo"
             else -> "Esperando o seu pedido"
         }
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
+    // Abrir o chat foca o campo, para já dar para digitar (o campo só aceita foco depois de a sessão chegar).
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(state.ready) {
+        if (state.ready) runCatching { focus.requestFocus() }
+    }
     Column(Modifier.fillMaxWidth().padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        val notice = state.voice.notice
+        if (notice != null) {
+            Text(
+                text = notice,
+                modifier = Modifier.padding(start = 6.dp).semantics { liveRegion = LiveRegionMode.Polite },
+                color = scheme.onSurfaceVariant,
+                fontSize = 13.sp,
+                lineHeight = 20.sp,
+            )
+        }
         Row(
             Modifier.heightIn(min = 28.dp).padding(start = 6.dp).semantics { liveRegion = LiveRegionMode.Polite },
             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -517,7 +579,7 @@ private fun ChatField(
                     cursorBrush = SolidColor(braidBrand()),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                     keyboardActions = KeyboardActions(onSend = { if (canSend) onSubmit() }),
-                    modifier = Modifier.weight(1f).semantics { contentDescription = "Mensagem para a IA" },
+                    modifier = Modifier.weight(1f).focusRequester(focus).semantics { contentDescription = "Mensagem para a IA" },
                     decorationBox = { inner ->
                         Box(Modifier.heightIn(min = 44.dp).padding(vertical = 11.dp), contentAlignment = Alignment.CenterStart) {
                             if (prompt.isEmpty()) {
@@ -618,4 +680,29 @@ private fun durationShort(minutes: Int): String {
     val hours = minutes / 60
     val rest = minutes % 60
     return listOfNotNull(if (hours > 0) "${hours}h" else null, if (rest > 0) "${rest}min" else null).joinToString(" ")
+}
+
+private fun joinHeard(
+    prompt: String,
+    heard: String,
+): String = (if (prompt.isNotEmpty()) "$prompt $heard" else heard).take(MAX_PROMPT)
+
+/** O botão que liga e desliga a transcrição: a onda do agente, apertada enquanto o microfone está aberto. */
+@Composable
+private fun VoiceButton(
+    listening: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    val scheme = MaterialTheme.colorScheme
+    Box(
+        Modifier
+            .size(44.dp)
+            .alpha(if (enabled || listening) 1f else 0.4f)
+            .toggleable(value = listening, enabled = enabled || listening, role = Role.Switch, onValueChange = { onClick() })
+            .semantics { contentDescription = if (listening) "Parar de transcrever" else "Transcrever o que eu disser" },
+        contentAlignment = Alignment.Center,
+    ) {
+        HermesBotIcon(BotState.Listening, size = 22.dp, color = if (listening) braidBrand() else scheme.onSurfaceVariant)
+    }
 }

@@ -35,6 +35,9 @@ class AppVocabularyTest {
             setOf(
                 "MotionEvent",
                 "KeyEvent",
+                // RecognitionListener, do reconhecimento de voz do Android
+                "onEvent",
+                "eventType",
                 // Turbine
                 "cancelAndIgnoreRemainingEvents",
                 "cancelAndConsumeRemainingEvents",
