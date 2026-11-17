@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TaskDto } from "@repo/contracts";
 import { fieldValue, getField, setField } from "@/components/edit/edit-test-helpers";
@@ -85,7 +85,9 @@ describe("formulário vazio", () => {
     expect(fieldValue("Prioridade")).toBe("medium");
     expect(fieldValue("Data de início")).toBe("");
     expect(field("Descrição")).toHaveValue("");
-    expect(screen.getAllByRole("button").map((button) => button.textContent)).toEqual(["Descartar", "Salvar"]);
+    // O rodapé tem só Descartar e Salvar; as seções de lembretes e tags têm os seus próprios botões.
+    const footer = screen.getByRole("button", { name: "Descartar" }).parentElement as HTMLElement;
+    expect(within(footer).getAllByRole("button").map((button) => button.textContent)).toEqual(["Descartar", "Salvar"]);
   });
 
   it("?nome= põe o título, vindo de /tarefa comprar pão", async () => {
