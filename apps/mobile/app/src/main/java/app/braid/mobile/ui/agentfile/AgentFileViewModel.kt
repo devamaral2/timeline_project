@@ -14,6 +14,7 @@ import app.braid.mobile.domain.request.isOpenRequest
 import app.braid.mobile.domain.request.runningStepLabel
 import app.braid.mobile.domain.task.TaskStatus
 import app.braid.mobile.ui.agenda.AGENT_POLL_MS
+import app.braid.mobile.ui.aiedit.startFailureCode
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
@@ -26,7 +27,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import retrofit2.HttpException
 import java.util.UUID
 
 const val FILE_READ_FAILED_TEXT = "Não foi possível ler o arquivo."
@@ -327,23 +327,3 @@ class AgentFileViewModel
 
         private fun updateEdit(transform: (EditBar) -> EditBar) = mutableState.update { it.copy(edit = transform(it.edit)) }
     }
-
-/** Por que o envio do pedido falhou, do ponto de vista do chat (o `startFailureCode` do web). */
-internal fun startFailureCode(failure: Exception): String =
-    when ((failure as? HttpException)?.code()) {
-        HTTP_UNAUTHORIZED -> "session_expired"
-        HTTP_BAD_REQUEST, HTTP_UNPROCESSABLE -> "invalid_input"
-        HTTP_FORBIDDEN -> "forbidden"
-        HTTP_CONFLICT -> "conflict"
-        HTTP_BAD_GATEWAY, HTTP_UNAVAILABLE, HTTP_GATEWAY_TIMEOUT -> "unavailable"
-        else -> "connection_failed"
-    }
-
-private const val HTTP_BAD_REQUEST = 400
-private const val HTTP_UNAUTHORIZED = 401
-private const val HTTP_FORBIDDEN = 403
-private const val HTTP_CONFLICT = 409
-private const val HTTP_UNPROCESSABLE = 422
-private const val HTTP_BAD_GATEWAY = 502
-private const val HTTP_UNAVAILABLE = 503
-private const val HTTP_GATEWAY_TIMEOUT = 504

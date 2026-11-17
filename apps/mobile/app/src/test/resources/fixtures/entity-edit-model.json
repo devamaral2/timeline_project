@@ -1,0 +1,115 @@
+{
+  "targets": [
+    {
+      "type": "task",
+      "label": "esta tarefa"
+    },
+    {
+      "type": "artifact",
+      "label": "esta nota"
+    },
+    {
+      "type": "food_artifact",
+      "label": "esta refeição"
+    },
+    {
+      "type": "sleep_artifact",
+      "label": "esta nota de sono"
+    },
+    {
+      "type": "training_artifact",
+      "label": "este treino"
+    },
+    {
+      "type": "skill_artifact",
+      "label": "esta skill"
+    },
+    {
+      "type": "agent_artifact",
+      "label": "este agente"
+    }
+  ],
+  "artifacts": [
+    {
+      "type": "text",
+      "global": false,
+      "entityType": "artifact"
+    },
+    {
+      "type": "text",
+      "global": true,
+      "entityType": null
+    },
+    {
+      "type": "food",
+      "global": false,
+      "entityType": "food_artifact"
+    },
+    {
+      "type": "food",
+      "global": true,
+      "entityType": null
+    },
+    {
+      "type": "sleep",
+      "global": false,
+      "entityType": "sleep_artifact"
+    },
+    {
+      "type": "sleep",
+      "global": true,
+      "entityType": null
+    },
+    {
+      "type": "training",
+      "global": false,
+      "entityType": "training_artifact"
+    },
+    {
+      "type": "training",
+      "global": true,
+      "entityType": null
+    },
+    {
+      "type": "workout",
+      "global": false,
+      "entityType": null
+    },
+    {
+      "type": "workout",
+      "global": true,
+      "entityType": null
+    },
+    {
+      "type": "skill",
+      "global": false,
+      "entityType": "skill_artifact"
+    },
+    {
+      "type": "skill",
+      "global": true,
+      "entityType": null
+    },
+    {
+      "type": "agent",
+      "global": false,
+      "entityType": "agent_artifact"
+    },
+    {
+      "type": "agent",
+      "global": true,
+      "entityType": null
+    },
+    {
+      "type": "router",
+      "global": false,
+      "entityType": null
+    },
+    {
+      "type": "router",
+      "global": true,
+      "entityType": null
+    }
+  ],
+  "pendingMealMessage": "Aguarde a geração da refeição para editar a nota."
+}

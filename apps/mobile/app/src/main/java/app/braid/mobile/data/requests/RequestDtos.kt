@@ -125,6 +125,15 @@ data class ScreenContextDto(
     val screen: String,
 )
 
+/** `POST /api/requests/edit`: o tipo e o id da entidade aberta; o servidor confere o tipo com a entidade de verdade. */
+@Serializable
+data class StartEditBody(
+    val userId: String,
+    val text: String,
+    val entityType: String,
+    val entityId: String,
+)
+
 /** `POST /api/requests/hermes`. */
 @Serializable
 data class StartHermesBody(

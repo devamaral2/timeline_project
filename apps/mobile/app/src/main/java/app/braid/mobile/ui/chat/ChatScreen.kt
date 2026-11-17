@@ -689,7 +689,7 @@ private fun joinHeard(
 
 /** O botão que liga e desliga a transcrição: a onda do agente, apertada enquanto o microfone está aberto. */
 @Composable
-private fun VoiceButton(
+internal fun VoiceButton(
     listening: Boolean,
     enabled: Boolean,
     onClick: () -> Unit,

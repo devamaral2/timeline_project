@@ -2,6 +2,7 @@ package app.braid.mobile.data.requests
 
 import app.braid.mobile.domain.request.AgentRequest
 import app.braid.mobile.domain.request.AgentRequestRepository
+import app.braid.mobile.domain.request.EditEntityType
 import app.braid.mobile.domain.request.FoodRequestCancelException
 import app.braid.mobile.domain.request.RequestNotFoundException
 import retrofit2.HttpException
@@ -27,6 +28,13 @@ class DefaultAgentRequestRepository
             sessionId: String?,
             clientMessageId: String,
         ): String = api.start(StartRequestBody(userId, text, sessionId, clientMessageId)).requestId
+
+        override suspend fun startEdit(
+            userId: String,
+            text: String,
+            entityType: EditEntityType,
+            entityId: String,
+        ): String = api.startEdit(StartEditBody(userId, text, entityType.code, entityId)).requestId
 
         override suspend fun cancel(id: String): AgentRequest =
             try {
