@@ -10,6 +10,8 @@ import app.braid.mobile.domain.request.PreviousRequest
 import app.braid.mobile.domain.request.RequestOperation
 import app.braid.mobile.domain.task.TaskStatus
 import app.braid.mobile.domain.time.AppClock
+import app.braid.mobile.support.FakeMicrophone
+import app.braid.mobile.support.FakeSpeechRecognizer
 import app.braid.mobile.support.Fixtures
 import app.braid.mobile.support.TestBackend
 import app.braid.mobile.support.TestBackend.Companion.fixture
@@ -50,6 +52,8 @@ class AgentTaskViewModelTest {
 
     private lateinit var backend: TestBackend
     private lateinit var graph: TestGraph
+    private val speech = FakeSpeechRecognizer()
+    private val microphone = FakeMicrophone()
 
     @Before
     fun setUp() {
@@ -80,6 +84,8 @@ class AgentTaskViewModelTest {
             DefaultAgentRequestRepository(graph.apis.create(RequestsApi::class.java)),
             graph.sessionRepository,
             AppClock { now },
+            speech,
+            microphone,
         )
     }
 
@@ -559,5 +565,80 @@ class AgentTaskViewModelTest {
             assertEquals("Pronto", content.statusLine)
             assertEquals(readsNow, reads("/api/requests/req-new"))
             assertTrue(Fixtures.text("request-follow-done").isNotEmpty())
+        }
+
+    @Test
+    fun `the microphone only dictates into the footer field, never sending`() =
+        runTest {
+            serveAgent()
+            val viewModel = newViewModel()
+            viewModel.settled()
+            viewModel.onDraftChange("Só voos")
+
+            assertTrue(viewModel.voice.value.available)
+            viewModel.toggleVoice()
+            assertTrue(speech.listening)
+            assertTrue(viewModel.voice.value.listening)
+
+            speech.hear("diretos" to true)
+            advanceTimeBy(60_000)
+            runCurrent()
+            assertTrue(speech.listening)
+            viewModel.toggleVoice()
+
+            assertFalse(speech.listening)
+            assertEquals("Só voos diretos", (viewModel.state.value as AgentTaskUiState.Content).composer.draft)
+            assertTrue(backend.requestsTo("POST", "/api/requests").isEmpty())
+        }
+
+    @Test
+    fun `without the microphone permission the system is asked and a refusal explains itself`() =
+        runTest {
+            serveAgent()
+            microphone.granted = false
+            val viewModel = newViewModel()
+            viewModel.settled()
+
+            viewModel.toggleVoice()
+            assertTrue(viewModel.voice.value.askPermission)
+            assertFalse(speech.listening)
+
+            viewModel.microphoneResult(false)
+            assertEquals("Permita o acesso ao microfone para gravar.", viewModel.voice.value.notice)
+            viewModel.toggleVoice()
+            viewModel.microphoneResult(true)
+            assertTrue(speech.listening)
+        }
+
+    @Test
+    fun `sending closes the microphone`() =
+        runTest {
+            serveAgent()
+            backend.route("POST", "/api/requests", fixture("request-accepted").setResponseCode(202))
+            backend.route("GET", "/api/requests/req-new", fixture("request-follow-running"))
+            val viewModel = newViewModel()
+            viewModel.settled()
+
+            viewModel.toggleVoice()
+            speech.hear("mais um" to true)
+            viewModel.onDraftChange("Mais um")
+            viewModel.send()
+            assertFalse(speech.listening)
+            assertEquals(1, speech.cancels)
+        }
+
+    @Test
+    fun `leaving the screen turns the microphone off without delivering what was heard`() =
+        runTest {
+            serveAgent()
+            val viewModel = newViewModel()
+            viewModel.settled()
+            viewModel.toggleVoice()
+            speech.hear("não entregue" to true)
+
+            viewModel.setVisible(false)
+
+            assertFalse(speech.listening)
+            assertEquals("", (viewModel.state.value as AgentTaskUiState.Content).composer.draft)
         }
 }

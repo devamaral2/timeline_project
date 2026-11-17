@@ -8,13 +8,20 @@ import app.braid.mobile.domain.agentfile.AgentFileRepository
 import app.braid.mobile.domain.artifact.AgentFileData
 import app.braid.mobile.domain.request.AgentRequest
 import app.braid.mobile.domain.request.AgentRequestRepository
+import app.braid.mobile.domain.request.EDIT_LISTENING_TEXT
 import app.braid.mobile.domain.request.HermesOffException
+import app.braid.mobile.domain.request.PROMPT_MAX_LENGTH
 import app.braid.mobile.domain.request.agentFailureText
+import app.braid.mobile.domain.request.appendTranscript
 import app.braid.mobile.domain.request.isOpenRequest
 import app.braid.mobile.domain.request.runningStepLabel
+import app.braid.mobile.domain.speech.MicrophonePermission
+import app.braid.mobile.domain.speech.SpeechRecognizer
 import app.braid.mobile.domain.task.TaskStatus
 import app.braid.mobile.ui.agenda.AGENT_POLL_MS
+import app.braid.mobile.ui.aiedit.DraftDictation
 import app.braid.mobile.ui.aiedit.startFailureCode
+import app.braid.mobile.ui.chat.VoiceUiState
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
@@ -34,7 +41,6 @@ const val BACKUPS_FAILED_TEXT = "Não foi possível carregar os backups."
 const val RESTORE_FAILED_TEXT = "Não foi possível restaurar este backup. Tente novamente."
 const val EDIT_LOST_TEXT = "Perdi a conexão antes da resposta. Confira o arquivo antes de repetir."
 const val HERMES_OFF_TEXT = "O Hermes está desligado neste servidor."
-const val EDIT_DRAFT_MAX_LENGTH = 4000
 
 /** Falhas seguidas ao consultar o pedido antes de desistir de acompanhá-lo. */
 const val EDIT_POLL_FAILURES = 5
@@ -83,6 +89,8 @@ data class EditBar(
     val followed: AgentRequest? = null,
     /** Cinco leituras seguidas falharam: o campo deixou de acompanhar o pedido. */
     val lost: Boolean = false,
+    /** O microfone do campo: só dita; `available` falso esconde o botão. */
+    val voice: VoiceUiState = VoiceUiState(),
 ) {
     val open: Boolean get() = followed != null && isOpenRequest(followed.status)
     val finished: Boolean get() = followed != null && !open
@@ -109,6 +117,7 @@ data class EditBar(
     val statusText: String
         get() =
             when {
+                voice.listening -> EDIT_LISTENING_TEXT
                 sending -> "Enviando o pedido…"
                 lost -> "Não consegui acompanhar o pedido"
                 open -> followed?.progress ?: followed?.let { runningStepLabel(it.steps) } ?: "Entendendo o pedido…"
@@ -147,6 +156,8 @@ class AgentFileViewModel
         @Assisted file: AgentFileData,
         private val files: AgentFileRepository,
         private val requests: AgentRequestRepository,
+        speech: SpeechRecognizer,
+        microphone: MicrophonePermission,
     ) : ViewModel() {
         @AssistedFactory
         interface Factory {
@@ -163,6 +174,15 @@ class AgentFileViewModel
         private var pollFailures = 0
         private var notifiedId: String? = null
 
+        private val dictation =
+            DraftDictation(
+                speech,
+                microphone,
+                viewModelScope,
+                onVoice = { voice -> updateEdit { if (it.voice == voice) it else it.copy(voice = voice) } },
+                onTranscript = { transcript -> updateEdit { it.copy(draft = appendTranscript(it.draft, transcript)) } },
+            )
+
         init {
             loadText()
         }
@@ -170,6 +190,7 @@ class AgentFileViewModel
         /** A tela está à vista (resumida) ou não: o acompanhamento do pedido só anda com ela à vista. */
         fun setVisible(value: Boolean) {
             visible = value
+            if (!value) dictation.cancel()
             syncPolling()
         }
 
@@ -245,13 +266,14 @@ class AgentFileViewModel
             }
         }
 
-        fun onDraftChange(text: String) = updateEdit { it.copy(draft = text.take(EDIT_DRAFT_MAX_LENGTH)) }
+        fun onDraftChange(text: String) = updateEdit { it.copy(draft = text.take(PROMPT_MAX_LENGTH)) }
 
         /** Pede a edição ao Hermes e passa a acompanhar o pedido. Falha mantém o texto e avisa. */
         fun send() {
             val bar = mutableState.value.edit
             val message = bar.draft.trim()
             if (bar.busy || message.isEmpty() || bar.hermesOff) return
+            dictation.cancel()
             updateEdit { it.copy(sending = true, error = null, lost = false) }
             viewModelScope.launch {
                 try {
@@ -268,6 +290,17 @@ class AgentFileViewModel
                     updateEdit { it.copy(sending = false, error = agentFailureText(startFailureCode(failure))) }
                 }
             }
+        }
+
+        /** O botão do microfone: parado, liga; ouvindo, para e o que foi ouvido vai para o campo. */
+        fun toggleVoice() = dictation.toggle(blocked = mutableState.value.edit.busy || mutableState.value.edit.hermesOff)
+
+        /** A resposta do pedido de permissão do sistema: negada, diz por quê; concedida, liga a escuta. */
+        fun microphoneResult(granted: Boolean) = dictation.permissionResult(granted)
+
+        override fun onCleared() {
+            dictation.cancel()
+            super.onCleared()
         }
 
         /** "Fechar resultado": só quando o pedido terminou ou se perdeu. */

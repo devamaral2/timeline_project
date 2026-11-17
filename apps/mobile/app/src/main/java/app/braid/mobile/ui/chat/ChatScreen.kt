@@ -78,13 +78,14 @@ import app.braid.mobile.domain.chat.ChatCommand
 import app.braid.mobile.domain.chat.end
 import app.braid.mobile.domain.chat.parseCommand
 import app.braid.mobile.domain.chat.start
+import app.braid.mobile.domain.request.PROMPT_MAX_LENGTH
+import app.braid.mobile.domain.request.appendTranscript
 import app.braid.mobile.domain.timeline.briefDate
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 
 /** Quanto a barra inferior (dock de 66dp com o respiro de baixo) ocupa: o chat termina logo acima dela. */
 private val DockReserve = 98.dp
-private const val MAX_PROMPT = 4000
 
 /**
  * O chat com o agente, que no celular ocupa a tela toda acima da barra inferior (como o web na largura mobile). Estado e
@@ -161,11 +162,11 @@ fun ChatScreen(
 ) {
     val scheme = MaterialTheme.colorScheme
     var prompt by rememberSaveable { mutableStateOf("") }
-    LaunchedEffect(promptEdits) { promptEdits.collect { prompt = it.take(MAX_PROMPT) } }
+    LaunchedEffect(promptEdits) { promptEdits.collect { prompt = it.take(PROMPT_MAX_LENGTH) } }
     LaunchedEffect(prompt) { onDraft(prompt) }
     // Enquanto o microfone está aberto o campo mostra o que já foi ouvido, depois do que estava escrito.
     val listening = state.voice.listening
-    val shown = if (listening && state.voice.heard.isNotEmpty()) joinHeard(prompt, state.voice.heard) else prompt
+    val shown = if (listening && state.voice.heard.isNotEmpty()) appendTranscript(prompt, state.voice.heard) else prompt
     val query = if (listening) null else parseCommand(prompt, commands.available)
     val matches = query?.matches.orEmpty()
     val density = LocalDensity.current
@@ -213,8 +214,8 @@ fun ChatScreen(
             state = state,
             prompt = shown,
             onPrompt = {
-                onTyped(it.take(MAX_PROMPT))
-                prompt = it.take(MAX_PROMPT)
+                onTyped(it.take(PROMPT_MAX_LENGTH))
+                prompt = it.take(PROMPT_MAX_LENGTH)
             },
             canSend = state.ready && state.pending == null && (shown.isNotBlank() || matches.isNotEmpty()),
             onSubmit = ::submit,
@@ -681,11 +682,6 @@ private fun durationShort(minutes: Int): String {
     val rest = minutes % 60
     return listOfNotNull(if (hours > 0) "${hours}h" else null, if (rest > 0) "${rest}min" else null).joinToString(" ")
 }
-
-private fun joinHeard(
-    prompt: String,
-    heard: String,
-): String = (if (prompt.isNotEmpty()) "$prompt $heard" else heard).take(MAX_PROMPT)
 
 /** O botão que liga e desliga a transcrição: a onda do agente, apertada enquanto o microfone está aberto. */
 @Composable

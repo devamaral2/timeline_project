@@ -1,8 +1,5 @@
 package app.braid.mobile.ui.aiedit
 
-import android.Manifest
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -50,12 +47,8 @@ fun EntityEditBar(
         viewModel.setVisible(true)
         onPauseOrDispose { viewModel.setVisible(false) }
     }
-    // O sistema pergunta pelo microfone na primeira vez; a resposta volta ao ViewModel, que liga a escuta ou explica.
-    val askMicrophone =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> viewModel.microphoneResult(granted) }
-    LaunchedEffect(state.voice.askPermission) {
-        if (state.voice.askPermission) askMicrophone.launch(Manifest.permission.RECORD_AUDIO)
-    }
+    // A resposta do sistema volta ao ViewModel, que liga a escuta ou explica.
+    MicrophonePermissionEffect(state.voice.askPermission, viewModel::microphoneResult)
     val locked = state.busy || disabledReason != null
     Box(
         modifier

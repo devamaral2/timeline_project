@@ -59,6 +59,7 @@ import app.braid.mobile.ui.aiedit.AiEditBar
 import app.braid.mobile.ui.aiedit.AiEditBarActions
 import app.braid.mobile.ui.aiedit.AiEditBarModel
 import app.braid.mobile.ui.aiedit.AiEditContext
+import app.braid.mobile.ui.aiedit.MicrophonePermissionEffect
 import app.braid.mobile.ui.documents.MarkdownView
 import app.braid.mobile.ui.taskdetail.DetailIcons
 
@@ -79,6 +80,7 @@ fun AgentFileSection(
         viewModel.setVisible(true)
         onPauseOrDispose { viewModel.setVisible(false) }
     }
+    MicrophonePermissionEffect(state.edit.voice.askPermission, viewModel::microphoneResult)
     AgentFileContent(
         state = state,
         description = file.description,
@@ -91,6 +93,7 @@ fun AgentFileSection(
                 onDraftChange = viewModel::onDraftChange,
                 onSend = viewModel::send,
                 onDismiss = viewModel::dismiss,
+                onToggleVoice = viewModel::toggleVoice,
             ),
         modifier = modifier,
     )
@@ -104,6 +107,7 @@ class AgentFileActions(
     val onDraftChange: (String) -> Unit,
     val onSend: () -> Unit,
     val onDismiss: () -> Unit,
+    val onToggleVoice: () -> Unit = {},
 )
 
 @Composable
@@ -429,7 +433,14 @@ private fun EditSection(
                 message = bar.shown,
                 failed = bar.hasFailure,
                 messageAlert = bar.error != null,
+                voice = bar.voice,
             ),
-        actions = AiEditBarActions(onDraftChange = actions.onDraftChange, onSend = actions.onSend, onDismiss = actions.onDismiss),
+        actions =
+            AiEditBarActions(
+                onDraftChange = actions.onDraftChange,
+                onSend = actions.onSend,
+                onDismiss = actions.onDismiss,
+                onToggleVoice = actions.onToggleVoice,
+            ),
     )
 }

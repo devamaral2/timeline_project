@@ -7,19 +7,25 @@ import app.braid.mobile.domain.request.AgentRequest
 import app.braid.mobile.domain.request.AgentRequestRepository
 import app.braid.mobile.domain.request.FOOD_CANCEL_TEXT
 import app.braid.mobile.domain.request.FoodRequestCancelException
+import app.braid.mobile.domain.request.PROMPT_MAX_LENGTH
 import app.braid.mobile.domain.request.PreviousRequest
 import app.braid.mobile.domain.request.RequestNotFoundException
 import app.braid.mobile.domain.request.agentFailureText
+import app.braid.mobile.domain.request.appendTranscript
 import app.braid.mobile.domain.request.isOpenRequest
 import app.braid.mobile.domain.request.requestStatusLine
 import app.braid.mobile.domain.session.SessionRepository
 import app.braid.mobile.domain.session.SessionState
+import app.braid.mobile.domain.speech.MicrophonePermission
+import app.braid.mobile.domain.speech.SpeechRecognizer
 import app.braid.mobile.domain.task.TaskDetail
 import app.braid.mobile.domain.task.TaskDetailRepository
 import app.braid.mobile.domain.task.TaskNotFoundException
 import app.braid.mobile.domain.task.TaskStatus
 import app.braid.mobile.domain.time.AppClock
 import app.braid.mobile.ui.agenda.AGENT_POLL_MS
+import app.braid.mobile.ui.aiedit.DraftDictation
+import app.braid.mobile.ui.chat.VoiceUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -39,7 +45,6 @@ const val REQUEST_NOT_FOUND_TEXT = "Pedido não encontrado."
 const val REQUEST_LOAD_FAILED_TEXT = "Não foi possível carregar o pedido. Tente novamente."
 const val AGENT_TASK_NOT_FOUND_TEXT = "Tarefa não encontrada."
 const val AGENT_TASK_LOAD_FAILED_TEXT = "Não foi possível carregar a tarefa. Tente novamente."
-const val DRAFT_MAX_LENGTH = 4000
 
 /** O campo do rodapé: o texto, o envio e o cancelamento em voo e o pedido novo que a tela passou a acompanhar. */
 data class Composer(
@@ -103,12 +108,28 @@ class AgentTaskViewModel
         private val requests: AgentRequestRepository,
         private val session: SessionRepository,
         private val clock: AppClock,
+        speech: SpeechRecognizer,
+        microphone: MicrophonePermission,
     ) : ViewModel() {
         private val taskId: String = checkNotNull(savedState["taskId"]) { "O detalhe abre com o id da tarefa" }
         private val mutableState = MutableStateFlow<AgentTaskUiState>(AgentTaskUiState.Loading)
         val state: StateFlow<AgentTaskUiState> = mutableState.asStateFlow()
         private var visible = false
         private var pollJob: Job? = null
+
+        private val mutableVoice = MutableStateFlow(VoiceUiState())
+
+        /** O microfone do campo do rodapé: só dita, nunca envia. */
+        val voice: StateFlow<VoiceUiState> = mutableVoice.asStateFlow()
+
+        private val dictation =
+            DraftDictation(
+                speech,
+                microphone,
+                viewModelScope,
+                onVoice = { mutableVoice.value = it },
+                onTranscript = { transcript -> updateComposer { it.copy(draft = appendTranscript(it.draft, transcript)) } },
+            )
 
         init {
             load()
@@ -175,10 +196,22 @@ class AgentTaskViewModel
         /** A tela está à vista (resumida) ou não: a releitura só anda com ela à vista. */
         fun setVisible(value: Boolean) {
             visible = value
+            if (!value) dictation.cancel()
             syncPolling()
         }
 
-        fun onDraftChange(text: String) = updateComposer { it.copy(draft = text.take(DRAFT_MAX_LENGTH)) }
+        fun onDraftChange(text: String) = updateComposer { it.copy(draft = text.take(PROMPT_MAX_LENGTH)) }
+
+        /** O botão do microfone: parado, liga; ouvindo, para e o que foi ouvido vai para o campo. */
+        fun toggleVoice() = dictation.toggle(blocked = current()?.composer?.sending == true)
+
+        /** A resposta do pedido de permissão do sistema: negada, diz por quê; concedida, liga a escuta. */
+        fun microphoneResult(granted: Boolean) = dictation.permissionResult(granted)
+
+        override fun onCleared() {
+            dictation.cancel()
+            super.onCleared()
+        }
 
         /** Abre um pedido novo na mesma sessão e passa a acompanhá-lo. Falha mantém o texto e avisa. */
         fun send() {
@@ -186,6 +219,7 @@ class AgentTaskViewModel
             val tracked = content.tracked
             val text = content.composer.draft.trim()
             if (tracked == null || !content.canSend || text.isEmpty()) return
+            dictation.cancel()
             updateComposer { it.copy(sending = true, error = null) }
             viewModelScope.launch {
                 try {
