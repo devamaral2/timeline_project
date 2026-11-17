@@ -1,0 +1,380 @@
+[
+  {
+    "name": "valid",
+    "draft": {
+      "kind": "common",
+      "name": "Algo",
+      "status": null,
+      "priority": "medium",
+      "startDate": "",
+      "startTime": "",
+      "endDate": "",
+      "endTime": "",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "errors": {}
+  },
+  {
+    "name": "empty name",
+    "draft": {
+      "kind": "common",
+      "name": "   ",
+      "status": null,
+      "priority": "medium",
+      "startDate": "",
+      "startTime": "",
+      "endDate": "",
+      "endTime": "",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "errors": {
+      "name": "Dê um título à tarefa."
+    }
+  },
+  {
+    "name": "long location",
+    "draft": {
+      "kind": "common",
+      "name": "Algo",
+      "status": null,
+      "priority": "medium",
+      "startDate": "",
+      "startTime": "",
+      "endDate": "",
+      "endTime": "",
+      "description": "",
+      "location": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "errors": {
+      "location": "O local tem no máximo 300 caracteres."
+    }
+  },
+  {
+    "name": "location at limit",
+    "draft": {
+      "kind": "common",
+      "name": "Algo",
+      "status": null,
+      "priority": "medium",
+      "startDate": "",
+      "startTime": "",
+      "endDate": "",
+      "endTime": "",
+      "description": "",
+      "location": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "errors": {}
+  },
+  {
+    "name": "times without dates",
+    "draft": {
+      "kind": "common",
+      "name": "Algo",
+      "status": null,
+      "priority": "medium",
+      "startDate": "",
+      "startTime": "10:00",
+      "endDate": "",
+      "endTime": "11:00",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "errors": {
+      "startTime": "Informe a data para marcar a hora.",
+      "endTime": "Informe a data para marcar a hora."
+    }
+  },
+  {
+    "name": "end before start",
+    "draft": {
+      "kind": "common",
+      "name": "Algo",
+      "status": null,
+      "priority": "medium",
+      "startDate": "2026-09-20",
+      "startTime": "10:00",
+      "endDate": "2026-09-20",
+      "endTime": "09:00",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "errors": {
+      "endDate": "O término não pode ser antes do início."
+    }
+  },
+  {
+    "name": "end equal to start",
+    "draft": {
+      "kind": "common",
+      "name": "Algo",
+      "status": null,
+      "priority": "medium",
+      "startDate": "2026-09-20",
+      "startTime": "10:00",
+      "endDate": "2026-09-20",
+      "endTime": "10:00",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "errors": {}
+  },
+  {
+    "name": "exactly 31 days",
+    "draft": {
+      "kind": "common",
+      "name": "Algo",
+      "status": null,
+      "priority": "medium",
+      "startDate": "2026-09-01",
+      "startTime": "",
+      "endDate": "2026-10-02",
+      "endTime": "",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "errors": {}
+  },
+  {
+    "name": "over 31 days",
+    "draft": {
+      "kind": "common",
+      "name": "Algo",
+      "status": null,
+      "priority": "medium",
+      "startDate": "2026-09-01",
+      "startTime": "",
+      "endDate": "2026-10-03",
+      "endTime": "",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "errors": {
+      "endDate": "Um bloco não dura mais de 31 dias. Para algo que segue por mais tempo, marque como tarefa persistente."
+    }
+  },
+  {
+    "name": "persistent without status",
+    "draft": {
+      "kind": "common",
+      "name": "Algo",
+      "status": null,
+      "priority": "medium",
+      "startDate": "",
+      "startTime": "",
+      "endDate": "",
+      "endTime": "",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": true,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "errors": {
+      "status": "Tarefa persistente precisa de um status: não pode ficar sem status nem como não realizado."
+    }
+  },
+  {
+    "name": "persistent missed",
+    "draft": {
+      "kind": "common",
+      "name": "Algo",
+      "status": "missed",
+      "priority": "medium",
+      "startDate": "",
+      "startTime": "",
+      "endDate": "",
+      "endTime": "",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": true,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "errors": {
+      "status": "Tarefa persistente precisa de um status: não pode ficar sem status nem como não realizado."
+    }
+  },
+  {
+    "name": "persistent over 31 days",
+    "draft": {
+      "kind": "common",
+      "name": "Algo",
+      "status": "doing",
+      "priority": "medium",
+      "startDate": "2026-01-01",
+      "startTime": "",
+      "endDate": "2026-12-31",
+      "endTime": "",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": true,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "errors": {}
+  },
+  {
+    "name": "persistent end before start",
+    "draft": {
+      "kind": "common",
+      "name": "Algo",
+      "status": "doing",
+      "priority": "medium",
+      "startDate": "2026-09-20",
+      "startTime": "",
+      "endDate": "2026-09-10",
+      "endTime": "",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": true,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "errors": {}
+  },
+  {
+    "name": "persistent reminders without deadline",
+    "draft": {
+      "kind": "common",
+      "name": "Algo",
+      "status": "todo",
+      "priority": "medium",
+      "startDate": "",
+      "startTime": "",
+      "endDate": "",
+      "endTime": "",
+      "description": "",
+      "location": "",
+      "reminders": [
+        30
+      ],
+      "tags": [],
+      "longRunning": true,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "errors": {
+      "reminders": "Tarefa persistente sem previsão de entrega não tem lembrete."
+    }
+  },
+  {
+    "name": "persistent reminders with deadline",
+    "draft": {
+      "kind": "common",
+      "name": "Algo",
+      "status": "todo",
+      "priority": "medium",
+      "startDate": "",
+      "startTime": "",
+      "endDate": "2026-12-01",
+      "endTime": "",
+      "description": "",
+      "location": "",
+      "reminders": [
+        30
+      ],
+      "tags": [],
+      "longRunning": true,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "errors": {}
+  },
+  {
+    "name": "several",
+    "draft": {
+      "kind": "common",
+      "name": "",
+      "status": null,
+      "priority": "medium",
+      "startDate": "",
+      "startTime": "",
+      "endDate": "",
+      "endTime": "10:00",
+      "description": "",
+      "location": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "reminders": [],
+      "tags": [],
+      "longRunning": true,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    },
+    "errors": {
+      "name": "Dê um título à tarefa.",
+      "location": "O local tem no máximo 300 caracteres.",
+      "endTime": "Informe a data para marcar a hora.",
+      "status": "Tarefa persistente precisa de um status: não pode ficar sem status nem como não realizado."
+    }
+  }
+]

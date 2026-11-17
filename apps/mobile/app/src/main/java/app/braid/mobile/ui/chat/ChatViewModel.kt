@@ -17,12 +17,21 @@ import app.braid.mobile.domain.chat.STEPS_PENDING_LABEL
 import app.braid.mobile.domain.chat.chatFailureText
 import app.braid.mobile.domain.chat.hermesStepsOf
 import app.braid.mobile.domain.chat.parseChatCommand
+import app.braid.mobile.domain.chat.parseCommand
 import app.braid.mobile.domain.chat.requestWithWindow
 import app.braid.mobile.domain.request.AgentRequest
 import app.braid.mobile.domain.request.RequestRoute
 import app.braid.mobile.domain.request.isOpenRequest
 import app.braid.mobile.domain.session.SessionRepository
 import app.braid.mobile.domain.session.SessionState
+import app.braid.mobile.domain.speech.GrantedMicrophone
+import app.braid.mobile.domain.speech.MicrophonePermission
+import app.braid.mobile.domain.speech.NoSpeechRecognizer
+import app.braid.mobile.domain.speech.SpeechDictation
+import app.braid.mobile.domain.speech.SpeechError
+import app.braid.mobile.domain.speech.SpeechRecognizer
+import app.braid.mobile.domain.speech.isStopSpeech
+import app.braid.mobile.domain.speech.speechErrorMessage
 import app.braid.mobile.domain.task.TaskStatus
 import app.braid.mobile.domain.time.AppClock
 import app.braid.mobile.domain.timeline.dayKeyOf
@@ -43,6 +52,10 @@ import javax.inject.Inject
 private const val BOT_DONE_MS = 2_400L
 private const val BOT_ERROR_MS = 2_600L
 
+/** Quanto silêncio, depois de a pessoa falar, envia o que ela disse. */
+private const val SILENCE_SEND_MS = 1_800L
+private const val MAX_PROMPT = 4_000
+
 /**
  * A conversa com o agente. Vive acima da folha (o `ViewModel` é da atividade): fechar o chat ou trocar de tela não apaga a
  * conversa nem derruba a resposta em andamento; só "Nova conversa" a zera. Cada mensagem vira um pedido na API (rota por
@@ -56,6 +69,8 @@ class ChatViewModel
         private val session: SessionRepository,
         private val clock: AppClock,
         private val polling: ChatPolling,
+        private val speech: SpeechRecognizer = NoSpeechRecognizer,
+        private val microphone: MicrophonePermission = GrantedMicrophone,
     ) : ViewModel() {
         private val mutableState = MutableStateFlow(ChatUiState(todayKey = dayKeyOf(clock.now())))
         val state: StateFlow<ChatUiState> = mutableState.asStateFlow()
@@ -80,7 +95,51 @@ class ChatViewModel
         private var botThinking = false
         private var botTimer: Job? = null
 
+        /** O robô sem a voz: [ChatUiState.bot] é este, ou "ouvindo" enquanto o microfone está aberto. */
+        private var baseBot = BotState.Idle
+
+        // region Estado da voz
+
+        private val mutablePromptEdits = MutableSharedFlow<String>(extraBufferCapacity = 8)
+
+        /** O texto novo do campo quando a voz o muda (a transcrição, ou o campo limpo ao enviar o que foi dito). */
+        val promptEdits: SharedFlow<String> = mutablePromptEdits.asSharedFlow()
+
+        /** O que está escrito no campo (sem o que o microfone ainda ouve): a tela o informa a cada mudança. */
+        private var draft = ""
+
+        /** Pedido feito por voz: depois da resposta o chat volta a ouvir, até "para"/"chega", um toque, digitar ou enviar. */
+        private var voiceLoop = false
+
+        /** O microfone que abriu sozinho não reclama: só o erro de quando a pessoa tocou no botão aparece. */
+        private var quietVoice = true
+
+        /** Abrir o chat arma uma escuta; ela liga assim que dá (a sessão pode chegar depois) e só uma vez por abertura. */
+        private var autoListen = false
+        private var userTyped = false
+        private var askingPermission = false
+        private var permissionDenied = false
+        private var askedByAuto = false
+        private var permissionNotice: String? = null
+
+        private val dictation =
+            SpeechDictation(
+                recognizer = speech,
+                scope = viewModelScope,
+                silenceMs = SILENCE_SEND_MS,
+                onFinalTranscript = { transcript -> fillPrompt(joinSpoken(draft, transcript)) },
+                onSilenceTranscript = ::sendSpoken,
+            )
+
+        // endregion
+
         init {
+            viewModelScope.launch {
+                dictation.state.collect {
+                    refreshVoice()
+                    resumeLoop()
+                }
+            }
             viewModelScope.launch {
                 session.state.collect { current ->
                     val id = (current as? SessionState.SignedIn)?.user?.userId
@@ -90,6 +149,7 @@ class ChatViewModel
                         userId = id
                     }
                     mutableState.value = mutableState.value.copy(ready = id != null, signedOut = current is SessionState.SignedOut)
+                    tryAutoListen()
                 }
             }
         }
@@ -99,10 +159,15 @@ class ChatViewModel
         /** Abre o chat e volta a acompanhar os pedidos que ainda rodam. */
         fun open() {
             mutableState.value = mutableState.value.copy(open = true, todayKey = dayKeyOf(clock.now()))
+            // Aberto pela pessoa, o chat já começa ouvindo (se dá para falar com a IA agora).
+            userTyped = false
+            autoListen = true
+            tryAutoListen()
             recover()
         }
 
         fun close() {
+            pauseVoice()
             mutableState.value = mutableState.value.copy(open = false, freeWindow = null)
         }
 
@@ -127,8 +192,19 @@ class ChatViewModel
 
         /** Envia o que a pessoa escreveu no campo: com a janela livre anexada, ela vai escrita na frente. */
         fun submit(draft: String): Boolean {
+            val sent = sendWithWindow(draft)
+            if (sent) {
+                // Enviar pelo teclado ou pelo botão é pedido de texto: fecha o microfone e acaba o laço de voz.
+                voiceLoop = false
+                dictation.cancel()
+                refreshVoice()
+            }
+            return sent
+        }
+
+        private fun sendWithWindow(text: String): Boolean {
             val window = mutableState.value.freeWindow
-            val sent = send(if (window != null) requestWithWindow(window, draft) else draft)
+            val sent = send(if (window != null) requestWithWindow(window, text) else text)
             if (sent) clearFreeWindow()
             return sent
         }
@@ -538,23 +614,169 @@ class ChatViewModel
 
         /** Aplica a mudança e acompanha o robô do botão: pensa enquanto há pedido e mostra o desfecho por um instante. */
         private fun commit(change: (ChatUiState) -> ChatUiState) {
-            val before = mutableState.value
-            var after = change(before)
+            val after = change(mutableState.value)
             if (after.pending != null) {
                 botThinking = true
                 botTimer?.cancel()
-                after = after.copy(bot = BotState.Thinking)
+                baseBot = BotState.Thinking
             } else if (botThinking) {
                 botThinking = false
                 val failed = after.messages.lastOrNull() is ChatMessage.Error
-                after = after.copy(bot = if (failed) BotState.Error else BotState.Done)
+                baseBot = if (failed) BotState.Error else BotState.Done
                 botTimer?.cancel()
                 botTimer =
                     viewModelScope.launch {
                         delay(if (failed) BOT_ERROR_MS else BOT_DONE_MS)
-                        mutableState.value = mutableState.value.copy(bot = BotState.Idle)
+                        baseBot = BotState.Idle
+                        mutableState.value = withBot(mutableState.value)
                     }
             }
-            mutableState.value = after
+            mutableState.value = withBot(after)
+            tryAutoListen()
+            resumeLoop()
         }
+
+        private fun withBot(state: ChatUiState): ChatUiState = state.copy(bot = if (state.voice.listening) BotState.Listening else baseBot)
+
+        // region Voz
+
+        /** Sincroniza o campo: a tela diz o que está escrito para a fala ser somada a isso. Não mexe no microfone. */
+        fun syncDraft(text: String) {
+            draft = text
+        }
+
+        /** A pessoa digitou: a primeira tecla desliga o microfone, sem entregar a fala, e ele não liga mais sozinho. */
+        fun typed(text: String) {
+            draft = text
+            userTyped = true
+            autoListen = false
+            voiceLoop = false
+            dictation.cancel()
+            refreshVoice()
+        }
+
+        /** O botão do microfone: parado, liga (e mostra os erros); ouvindo, para e a transcrição vai para o campo. */
+        fun toggleVoice() {
+            if (dictation.state.value.listening) {
+                voiceLoop = false
+                dictation.stop()
+                refreshVoice()
+                return
+            }
+            val current = mutableState.value
+            if (!current.ready || current.pending != null) return
+            beginListening(auto = false)
+        }
+
+        /** A resposta do pedido de permissão do sistema. Negada, só explica quando a pessoa foi quem tocou no microfone. */
+        fun microphoneResult(granted: Boolean) {
+            if (!askingPermission) return
+            askingPermission = false
+            val auto = askedByAuto
+            if (!granted) {
+                permissionDenied = true
+                if (!auto) permissionNotice = speechErrorMessage(SpeechError.NotAllowed)
+                refreshVoice()
+                return
+            }
+            permissionDenied = false
+            val current = mutableState.value
+            if (!current.open || (auto && (userTyped || current.pending != null))) {
+                refreshVoice()
+                return
+            }
+            dictation.start()
+        }
+
+        /** A tela saiu de vista ou o chat fechou: o microfone desliga e o laço acaba. */
+        fun pauseVoice() {
+            voiceLoop = false
+            autoListen = false
+            dictation.cancel()
+            refreshVoice()
+        }
+
+        override fun onCleared() {
+            dictation.cancel()
+            super.onCleared()
+        }
+
+        private fun beginListening(auto: Boolean) {
+            if (!speech.available) return
+            quietVoice = auto
+            permissionNotice = null
+            if (!microphone.isGranted()) {
+                // Negada uma vez, o chat não volta a pedir sozinho a cada abertura; só um toque no microfone pede de novo.
+                if (auto && permissionDenied) return
+                askedByAuto = auto
+                askingPermission = true
+                refreshVoice()
+                return
+            }
+            dictation.start()
+        }
+
+        private fun tryAutoListen() {
+            if (!autoListen) return
+            if (userTyped) {
+                autoListen = false
+                return
+            }
+            val current = mutableState.value
+            if (!current.open || !current.ready || current.pending != null) return
+            autoListen = false
+            beginListening(auto = true)
+        }
+
+        /** Com a voz ligada e o chat livre, volta a ouvir. Silêncio não encerra o laço; qualquer outro erro, sim. */
+        private fun resumeLoop() {
+            if (!voiceLoop) return
+            val current = mutableState.value
+            val heard = dictation.state.value
+            if (heard.listening || current.pending != null || !current.ready || !current.open) return
+            val error = heard.error
+            if (error != null && error != SpeechError.NoSpeech && speechErrorMessage(error) != null) {
+                voiceLoop = false
+                refreshVoice()
+                return
+            }
+            dictation.start()
+        }
+
+        /** O que a pessoa disse e o silêncio enviou: a fala que manda parar encerra o laço, o resto vai para a IA. */
+        private fun sendSpoken(transcript: String) {
+            if (isStopSpeech(transcript)) {
+                voiceLoop = false
+                return
+            }
+            val text = joinSpoken(draft, transcript)
+            if (parseCommand(text) == null && sendWithWindow(text)) {
+                voiceLoop = true
+                fillPrompt("")
+                return
+            }
+            // Um comando "/" ou a IA ocupada: o que foi dito cai no campo para a pessoa decidir.
+            voiceLoop = false
+            fillPrompt(text)
+        }
+
+        private fun fillPrompt(text: String) {
+            draft = text
+            mutablePromptEdits.tryEmit(text)
+        }
+
+        private fun joinSpoken(
+            current: String,
+            transcript: String,
+        ): String = (if (current.isNotEmpty()) "$current $transcript" else transcript).take(MAX_PROMPT)
+
+        private fun refreshVoice() {
+            val heard = dictation.state.value
+            val message = heard.error?.let(::speechErrorMessage)
+            val notice = permissionNotice ?: if (!quietVoice && !voiceLoop) message else null
+            val voice = VoiceUiState(speech.available, heard.listening, heard.heard, notice, askingPermission)
+            if (voice != mutableState.value.voice) mutableState.value = withBot(mutableState.value.copy(voice = voice))
+        }
+
+        // endregion
     }
